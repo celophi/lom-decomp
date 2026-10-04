@@ -360,7 +360,7 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
     scene = FIELD_RESOURCE->scene;
     bit_word = 0;
     scene->header = (FieldSceneHeader*)map;
-    scene->secondary_nodes = NULL;
+    scene->sweep_node = NULL;
     node_def = map->node_defs;
     arena.cur = (u8*)(scene + 1);
     tail = (FieldLink*)&scene->nodes;
@@ -381,14 +381,14 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
             node->x_max = 0;
             node->row_end = 0;
             node->row_start = FIELD_BOUNDS_EMPTY;
-            node->unk24 = 0;
-            node->delta_x = 0;
-            node->delta_y = 0;
-            node->unk30 = 0;
-            node->unk34 = 0;
-            node->x = 0;
-            node->y = 0;
-            node->unk40 = 0;
+            node->motion_x = 0;
+            node->motion_height0 = 0;
+            node->motion_height1 = 0;
+            node->motion_z = 0;
+            node->offset_x = 0;
+            node->height0_offset = 0;
+            node->height1_offset = 0;
+            node->offset_z = 0;
             item.run = node_def->runs;
             count = item.run->count & FIELD_NODE_RUN_COUNT_MASK;
             while (count != 0)
@@ -715,7 +715,7 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
                     node->part = field_get_object_part(node_def->obj_index, node_def->part_index);
                     if (node->part->def->u.word & FIELD_PART_SWEEP_MASK)
                     {
-                        scene->secondary_nodes = node;
+                        scene->sweep_node = node;
                     }
                     node->part->node_count++;
                 }

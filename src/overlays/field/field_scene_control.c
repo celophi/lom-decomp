@@ -1058,19 +1058,19 @@ void field_move_part_nodes(FieldPart* part, s32 delta, s32 axis)
                 switch (axis)
                 {
                 case FIELD_AXIS_X:
-                    node->unk24 += delta;
-                    node->unk34 += delta;
+                    node->motion_x += delta;
+                    node->offset_x += delta;
                     break;
                 case FIELD_AXIS_Y:
-                    node->delta_x += delta;
-                    node->delta_y += delta;
-                    node->x += delta;
-                    node->y += delta;
+                    node->motion_height0 += delta;
+                    node->motion_height1 += delta;
+                    node->height0_offset += delta;
+                    node->height1_offset += delta;
                     break;
                 case FIELD_AXIS_Z:
                 default:
-                    node->unk30 += delta;
-                    node->unk40 += delta;
+                    node->motion_z += delta;
+                    node->offset_z += delta;
                     break;
                 }
                 count--;
@@ -1108,19 +1108,19 @@ void field_move_object_nodes(FieldObj* obj, s32 delta, s32 axis)
                 switch (axis)
                 {
                 case FIELD_AXIS_X:
-                    node->unk24 += delta;
-                    node->unk34 += delta;
+                    node->motion_x += delta;
+                    node->offset_x += delta;
                     break;
                 case FIELD_AXIS_Y:
-                    node->delta_x -= delta;
-                    node->delta_y -= delta;
-                    node->x -= delta;
-                    node->y -= delta;
+                    node->motion_height0 -= delta;
+                    node->motion_height1 -= delta;
+                    node->height0_offset -= delta;
+                    node->height1_offset -= delta;
                     break;
                 case FIELD_AXIS_Z:
                 default:
-                    node->unk30 += delta;
-                    node->unk40 += delta;
+                    node->motion_z += delta;
+                    node->offset_z += delta;
                     break;
                 }
                 count--;

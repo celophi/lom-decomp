@@ -191,10 +191,10 @@ void field_clear_node_accumulators(s32 update_mode, s32 force_unscaled)
 
     for (node = g_field_scene.scene->nodes; node != NULL; node = node->next)
     {
-        node->unk24 = 0;
-        node->delta_x = 0;
-        node->delta_y = 0;
-        node->unk30 = 0;
+        node->motion_x = 0;
+        node->motion_height0 = 0;
+        node->motion_height1 = 0;
+        node->motion_z = 0;
     }
 #if defined(VERSION_JP)
     if (update_mode == 0)

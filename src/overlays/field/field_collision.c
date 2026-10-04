@@ -424,7 +424,7 @@ typedef struct FieldCollisionEdgeRun
 
 /**
  * @brief Collision view of a FieldNodeDef: surface kind, heights and outline.
- * @note Same layout as FieldNodeDef; here base_x/base_y are the heights height0/height1.
+ * @note Same layout as FieldNodeDef.
  */
 typedef struct FieldCollisionSurfaceDef
 {
@@ -471,15 +471,16 @@ typedef struct FieldCollisionNode
     s16 max_x;
     s16 max_z;
     s16 min_z;
-    /** Per-frame motion carried onto a mover standing on the node (x, height, ?, z). */
+    /** Movement this frame (24.8), carried onto a mover standing on the node: x, the
+        height of each end, and z. The two heights differ while a sweep tilts the node. */
     s32 motion_x;
-    s32 motion_height;
-    s32 unk2C;
+    s32 motion_height0;
+    s32 motion_height1;
     s32 motion_z;
-    /** World placement in 24.8 fixed point: x, height of the near and far ends, z. */
+    /** World placement (24.8): x, the height added to each end of the surface, and z. */
     s32 offset_x;
-    s32 height_offset;
-    s32 far_height_offset;
+    s32 height0_offset;
+    s32 height1_offset;
     s32 offset_z;
 } FieldCollisionNode;
 
@@ -907,6 +908,11 @@ s32 field_collision_hit_markers(FieldCollisionQuery* query)
  *
  * @param mover Mover state; position, height, floor node and flags are updated in place.
  * @return FIELD_COLLISION_RESULT_* bits, or 0 when the mover did not move.
+ * @note The floor search, the blocked-move retrace and the push-out read every
+ *       node's x, z and height offsets from the first node in the scene's list;
+ *       node classification and the final floor pass use each node's own offsets.
+ * @note In the floor search, once one node's spans contain the footprint centre,
+ *       every later node whose rows cover the centre counts as under the mover too.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/N2GNJ
  */
@@ -1000,7 +1006,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
     s16 node_height16;
     s32 touch_cell_x;
     s32 floor_fixed_candidate;
-    s32 secondary_rise;
+    s32 sweep_rise;
     s32 steps_taken;
     s32 offset_min_x;
     s32 move_z;
@@ -1025,7 +1031,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
     s32 hit;
     s32 step_count;
     s32 move_x_abs;
-    s32 secondary_cell_x;
+    s32 sweep_cell_x;
     s32 move_z_abs;
     s32 cell;
     s32 push_z_abs;
@@ -1037,7 +1043,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
     s32 push_x_abs;
     s32 node_top;
     u8* right_flags;
-    FieldCollisionNode* secondary;
+    FieldCollisionNode* sweep;
     u8* left_flags;
     s16 touch_spans;
     u8 first_spans;
@@ -1107,7 +1113,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                 surface = node->surface;
                 if (node->active != 0)
                 {
-                    node_height16 = nodes->height_offset >> 8;
+                    node_height16 = nodes->height0_offset >> 8;
                     first_top = surface->top + (s16)node_height16;
                     if ((first_top == 0) || (first_top < (next_height16 + mover->height_bias)) || (first_top < (s16)step_height))
                     {
@@ -1215,7 +1221,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                     result |= FIELD_COLLISION_RESULT_CARRIED;
                 }
                 if (!(mover->mode_flags & FIELD_COLLISION_MOVER_AIRBORNE) &&
-                    ((node->motion_x != 0) || (node->motion_height != 0) || (node->unk2C != 0) || (node->motion_z != 0)))
+                    ((node->motion_x != 0) || (node->motion_height0 != 0) || (node->motion_height1 != 0) || (node->motion_z != 0)))
                 {
                     mover->move_x += node->motion_x;
                     old_move_height = mover->move_height;
@@ -1228,7 +1234,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                     }
                     else
                     {
-                        mover->move_height = old_move_height + node->motion_height;
+                        mover->move_height = old_move_height + node->motion_height0;
                     }
                     if (old_move_height != mover->move_height)
                     {
@@ -1241,26 +1247,26 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                 }
                 else
                 {
-                    /* Otherwise a moving secondary node carries the mover, and its slope adds to the floor height. */
-                    secondary = (FieldCollisionNode*)scene->secondary_nodes;
-                    if ((secondary != NULL) && (secondary != node) &&
-                        ((secondary->motion_x != 0) || (secondary->motion_height != 0) || (secondary->unk2C != 0) || (secondary->motion_z != 0)))
+                    /* Otherwise a moving sweep node carries the mover, and its tilt adds to the floor height. */
+                    sweep = (FieldCollisionNode*)scene->sweep_node;
+                    if ((sweep != NULL) && (sweep != node) &&
+                        ((sweep->motion_x != 0) || (sweep->motion_height0 != 0) || (sweep->motion_height1 != 0) || (sweep->motion_z != 0)))
                     {
                         old_move_height = mover->move_height;
-                        mover->move_x += secondary->motion_x;
+                        mover->move_x += sweep->motion_x;
                         origin_x = mover->x;
-                        mover->move_z += secondary->motion_z;
+                        mover->move_z += sweep->motion_z;
                         if (origin_x >= 0)
                         {
-                            secondary_cell_x = origin_x >> 8;
+                            sweep_cell_x = origin_x >> 8;
                         }
                         else
                         {
-                            secondary_cell_x = (origin_x + 0xFF) >> 8;
+                            sweep_cell_x = (origin_x + 0xFF) >> 8;
                         }
-                        probe.x = secondary_cell_x;
+                        probe.x = sweep_cell_x;
                         probe.z = FIELD_COLLISION_CELL(mover->z);
-                        sample = field_collision_slope_height(secondary, &probe.x) - secondary->surface->height0;
+                        sample = field_collision_slope_height(sweep, &probe.x) - sweep->surface->height0;
                         if ((surface->flags & FIELD_COLLISION_KIND_MASK) == FIELD_COLLISION_KIND_SLOPE)
                         {
                             sample += field_collision_slope_height(node, &probe.x);
@@ -1268,7 +1274,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                         }
                         else
                         {
-                            mover->move_height += (node->motion_height - (sample << 8));
+                            mover->move_height += (node->motion_height0 - (sample << 8));
                         }
                         if (old_move_height != mover->move_height)
                         {
@@ -1300,16 +1306,16 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                         switch (FIELD_COLLISION_SURFACE_KIND(surface))
                         {
                         case FIELD_COLLISION_KIND_FLAT:
-                            mover->resolved_height = -(node->height_offset + (surface->height0 << 8));
+                            mover->resolved_height = -(node->height0_offset + (surface->height0 << 8));
                             break;
                         case FIELD_COLLISION_KIND_SLOPE:
                             probe.x = FIELD_COLLISION_CELL(mover->x);
                             probe.z = FIELD_COLLISION_CELL(mover->z);
                             slope_height = field_collision_slope_height(node, &probe.x);
-                            secondary = (FieldCollisionNode*)scene->secondary_nodes;
-                            if ((secondary != NULL) && (secondary != node))
+                            sweep = (FieldCollisionNode*)scene->sweep_node;
+                            if ((sweep != NULL) && (sweep != node))
                             {
-                                slope_height += field_collision_slope_height(secondary, &probe.x) - secondary->surface->height0;
+                                slope_height += field_collision_slope_height(sweep, &probe.x) - sweep->surface->height0;
                             }
                             mover->resolved_height = -(slope_height << 8);
                             break;
@@ -1982,7 +1988,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
     scratch = (u16)probe.z;
     ground_z = scratch;
     touch_iter = FIELD_COLLISION_TOUCH_LIST;
-    secondary = (FieldCollisionNode*)scene->secondary_nodes;
+    sweep = (FieldCollisionNode*)scene->sweep_node;
     touch_count -= 1;
     if (touch_count != -1)
     {
@@ -2012,7 +2018,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                     FIELD_COLLISION_FIND_SPAN(span, scratch, touch_spans, touch_cell_x, 0, hit);
                 }
             }
-            touch_height_raw = nodes->height_offset;
+            touch_height_raw = nodes->height0_offset;
             node_height = touch_height_raw >> 8;
             touch_kind = FIELD_COLLISION_SURFACE_KIND(surface);
             touch_height = node_height;
@@ -2038,7 +2044,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                         if (threshold < floor_candidate)
                         {
                             floor_height = floor_candidate;
-                            floor_fixed = nodes->height_offset + (surface->height0 << 8);
+                            floor_fixed = nodes->height0_offset + (surface->height0 << 8);
                             if (hit != 0)
                             {
                                 mover->collision_node = nodes;
@@ -2051,7 +2057,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                         if (floor_candidate_b >= floor_height)
                         {
                             floor_height = floor_candidate_b;
-                            floor_fixed = nodes->height_offset + (surface->height0 << 8);
+                            floor_fixed = nodes->height0_offset + (surface->height0 << 8);
                             if (hit != 0)
                             {
                                 mover->collision_node = nodes;
@@ -2084,17 +2090,17 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                     if (on_slope != 0)
                     {
                         higher = floor_height < scratch;
-                        if (secondary != NULL)
+                        if (sweep != NULL)
                         {
-                            if (secondary == nodes)
+                            if (sweep == nodes)
                             {
-                                secondary_rise = scratch - nodes->surface->height0;
-                                floor_height += secondary_rise;
-                                floor_fixed += secondary_rise << 8;
+                                sweep_rise = scratch - nodes->surface->height0;
+                                floor_height += sweep_rise;
+                                floor_fixed += sweep_rise << 8;
                             }
                             else
                             {
-                                floor_height = (scratch + floor_height) - secondary->surface->height0;
+                                floor_height = (scratch + floor_height) - sweep->surface->height0;
                                 floor_fixed = floor_height << 8;
                                 if (hit != 0)
                                 {
@@ -2246,7 +2252,7 @@ static void field_collision_classify_nodes(FieldCollisionMoveProbe* probe, Field
             surface = node->surface;
             if (node->active != 0)
             {
-                shift_height = node->height_offset >> 8;
+                shift_height = node->height0_offset >> 8;
                 if (surface->top + shift_height == 0 || (value = surface->top + shift_height) < feet + mover->height_bias || value < step_limit)
                 {
                     shift_z = node->offset_z >> 8;
@@ -2497,8 +2503,8 @@ static s16 field_collision_slope_height(FieldCollisionNode* node, s32* position)
     surface = node->surface;
     vertices = g_field_node_angle_table;
     vertex = &vertices[surface->vertex_a * 2];
-    height0 = (node->height_offset >> 8) + surface->height0;
-    height1 = (node->far_height_offset >> 8) + surface->height1;
+    height0 = (node->height0_offset >> 8) + surface->height0;
+    height1 = (node->height1_offset >> 8) + surface->height1;
     vertex_b = &vertices[surface->vertex_b * 2];
     offset_x = node->offset_x >> 8;
     if (height0 < 0)
@@ -3401,7 +3407,7 @@ void field_collision_collect_groups(u8** allocator_cursor)
                 scratch = 1;
                 for (; work_count != -1; work_count--)
                 {
-                    if (groups[work_count].height == def->base_x)
+                    if (groups[work_count].height == def->height0)
                     {
                         scratch = 0;
                         groups[work_count].kinds |= FIELD_COLLISION_GROUP_SEEN_FLAT;
@@ -3410,7 +3416,7 @@ void field_collision_collect_groups(u8** allocator_cursor)
                 }
                 if (scratch != 0)
                 {
-                    groups[group_count].height = def->base_x;
+                    groups[group_count].height = def->height0;
                     groups[group_count].kinds = FIELD_COLLISION_GROUP_SEEN_FLAT;
                     if (group_count >= FIELD_COLLISION_GROUP_SCAN_MAX)
                     {
@@ -3425,7 +3431,7 @@ void field_collision_collect_groups(u8** allocator_cursor)
                 scratch = 1;
                 for (; work_count != -1; work_count--)
                 {
-                    if (groups[work_count].height == def->base_x)
+                    if (groups[work_count].height == def->height0)
                     {
                         scratch = 0;
                         groups[work_count].kinds |= FIELD_COLLISION_GROUP_SEEN_SLOPE;
@@ -3435,10 +3441,10 @@ void field_collision_collect_groups(u8** allocator_cursor)
                 if (scratch != 0)
                 {
                     /* A newly seen zero height qualifies even without a flat node. */
-                    if (def->base_x != 0)
+                    if (def->height0 != 0)
                     {
                         first_kinds = FIELD_COLLISION_GROUP_SEEN_SLOPE;
-                        groups[group_count].height = def->base_x;
+                        groups[group_count].height = def->height0;
                     }
                     else
                     {
@@ -3456,7 +3462,7 @@ void field_collision_collect_groups(u8** allocator_cursor)
                 scratch = 1;
                 for (work_count = group_count - 1; work_count != -1; work_count--)
                 {
-                    if (groups[work_count].height == def->base_y)
+                    if (groups[work_count].height == def->height1)
                     {
                         scratch = 0;
                         groups[work_count].kinds |= FIELD_COLLISION_GROUP_SEEN_SLOPE;
@@ -3465,10 +3471,10 @@ void field_collision_collect_groups(u8** allocator_cursor)
                 }
                 if (scratch != 0)
                 {
-                    if (def->base_y != 0)
+                    if (def->height1 != 0)
                     {
                         second_kinds = FIELD_COLLISION_GROUP_SEEN_SLOPE;
-                        groups[group_count].height = def->base_y;
+                        groups[group_count].height = def->height1;
                     }
                     else
                     {
@@ -3600,8 +3606,8 @@ too_many_groups:
  * drives plane 0 and the union drives plane 1 of the output words.
  *
  * A node takes part in group @c id when it is solid and @c id >= id_min, or
- * when @c id lies below its floor (@c base_x, or the lower of @c base_x /
- * @c base_y for a slope) and at or above @c id_min.
+ * when @c id lies below its floor (@c height0, or the lower of @c height0 /
+ * @c height1 for a slope) and at or above @c id_min.
  *
  * @param allocator_cursor Unused arena cursor; the maps are taken from the scene.
  * @param clip Optional clipping node. When NULL every tile row of the group is
@@ -3774,8 +3780,8 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
             }
             else if ((def->flags & FIELD_COLLISION_KIND_MASK) == FIELD_COLLISION_KIND_SLOPE)
             {
-                lo = def->base_x;
-                hi = def->base_y;
+                lo = def->height0;
+                hi = def->height1;
                 if (lo < hi)
                 {
                     if ((s16)id < lo)
@@ -3796,7 +3802,7 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
             }
             else
             {
-                scratch = def->base_x;
+                scratch = def->height0;
                 scratch = (s16)id < scratch;
                 if (scratch != 0)
                 {
@@ -3871,8 +3877,8 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
                             }
                             else if ((def->flags & FIELD_COLLISION_KIND_MASK) == FIELD_COLLISION_KIND_SLOPE)
                             {
-                                lo2 = def->base_x;
-                                hi2 = def->base_y;
+                                lo2 = def->height0;
+                                hi2 = def->height1;
                                 if (lo2 < hi2)
                                 {
                                     if (signed_id < lo2)
@@ -3891,7 +3897,7 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
                                     }
                                 }
                             }
-                            else if (signed_id < def->base_x)
+                            else if (signed_id < def->height0)
                             {
                                 if (signed_id >= def->id_min)
                                 {
