@@ -160,19 +160,19 @@
 /** Push-out accumulator value meaning pushes in both directions cancelled out. */
 #define FIELD_COLLISION_PUSH_BLOCKED 0x8000
 
-/** field_collision_move_mover result: the horizontal move was blocked. */
+/** field_collision_resolve_move result: the horizontal move was blocked. */
 #define FIELD_COLLISION_RESULT_BLOCKED 0x1
-/** field_collision_move_mover result: the mover slid along a wall or was pushed out of it. */
+/** field_collision_resolve_move result: the mover slid along a wall or was pushed out of it. */
 #define FIELD_COLLISION_RESULT_SLID 0x2
-/** field_collision_move_mover result: the floor surface scaled the move (slope or slow surface). */
+/** field_collision_resolve_move result: the floor surface scaled the move (slope or slow surface). */
 #define FIELD_COLLISION_RESULT_SLOWED 0x4
-/** field_collision_move_mover result: the floor surface moved or carried the mover. */
+/** field_collision_resolve_move result: the floor surface moved or carried the mover. */
 #define FIELD_COLLISION_RESULT_CARRIED 0x10
-/** field_collision_move_mover result: the mover's height was changed by its floor. */
+/** field_collision_resolve_move result: the mover's height was changed by its floor. */
 #define FIELD_COLLISION_RESULT_HEIGHT 0x20
-/** field_collision_move_mover result: an airborne mover hit a ceiling. */
+/** field_collision_resolve_move result: an airborne mover hit a ceiling. */
 #define FIELD_COLLISION_RESULT_CEILING 0x40
-/** field_collision_move_mover result: an airborne mover landed on a floor. */
+/** field_collision_resolve_move result: an airborne mover landed on a floor. */
 #define FIELD_COLLISION_RESULT_LANDED 0x80
 
 /** field_collision_classify_nodes class bit: the footprint overlaps the node and may stand on it. */
@@ -484,7 +484,7 @@ typedef struct FieldCollisionNode
 } FieldCollisionNode;
 
 /**
- * @brief Actor/mover state resolved by field_collision_move_mover.
+ * @brief Actor/mover state resolved by field_collision_resolve_move.
  * @note Positions are 24.8 fixed point; heights grow downwards (a floor at
  *       height h puts the mover at -(h << 8)). Callers see this record as
  *       FieldMoveRequest (field_contact_geometry.c).
@@ -910,7 +910,7 @@ s32 field_collision_hit_markers(FieldCollisionQuery* query)
  *
  * @see decomp.me (100%) https://decomp.me/scratch/N2GNJ
  */
-s32 field_collision_move_mover(FieldCollisionMover* mover)
+s32 field_collision_resolve_move(FieldCollisionMover* mover)
 {
     FieldCollisionMoveProbe probe;
     s32 hit_count;

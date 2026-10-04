@@ -219,7 +219,7 @@ typedef struct
     FieldLayoutRecord records[1];
 } FieldSceneLayout;
 
-/** @brief Mover handed to field_collision_move_mover (same layout as in field_collision.c). */
+/** @brief Mover handed to field_collision_resolve_move (same layout as in field_collision.c). */
 struct FieldCollisionMover
 {
     s32 x;
@@ -1011,7 +1011,7 @@ static void field_refresh_actor_collisions(void)
                 mover->flags = 0;
                 mover->mode.bits.airborne_high = 0;
                 mover->mode.bits.airborne_low = 0;
-                field_collision_move_mover(mover);
+                field_collision_resolve_move(mover);
                 state->collision_node = mover->collision_node;
                 state->collision_flags = mover->flags;
                 state->movement.half.height = mover->resolved_height >> 8;
@@ -1085,7 +1085,7 @@ void field_move_actor_position(FieldActor* actor, s32* motion)
     mover->mode.bits.airborne_high = 0;
     mover->mode.bits.airborne_low = 0;
 
-    field_collision_move_mover(mover);
+    field_collision_resolve_move(mover);
 
     actor->x = mover->x;
     actor->z = mover->z;

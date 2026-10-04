@@ -1206,7 +1206,7 @@ void field_update_timed_walk(FieldActor* actor, s32 dx, s32 dz)
         mover->mode.bits.bit16 = 0;
         mover->contact = g_field_object_states[actor->object_index].collision_node;
         mover->surface = g_field_object_states[actor->object_index].collision_flags;
-        field_collision_move_mover((struct FieldCollisionMover*)mover);
+        field_collision_resolve_move((struct FieldCollisionMover*)mover);
         g_field_object_states[actor->object_index].collision_node = mover->contact;
         g_field_object_states[actor->object_index].collision_flags = mover->surface;
         g_field_object_states[actor->object_index].movement.half.height = mover->height / 256;

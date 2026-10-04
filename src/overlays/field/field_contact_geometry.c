@@ -131,7 +131,7 @@ typedef struct
 } FieldMoveObject;
 
 /**
- * @brief Mover handed to field_collision_move_mover (same layout as in field_collision.c).
+ * @brief Mover handed to field_collision_resolve_move (same layout as in field_collision.c).
  * @note height and resolved_height are negated heights; collision_node and flags persist in the object state.
  */
 struct FieldCollisionMover
@@ -842,7 +842,7 @@ s32 field_resolve_actor_movement(FieldActor* actor, s32* position, s32 mode)
         mover->mode.bits.airborne_low = 0;
         mover->collision_node = g_field_object_states[actor->object_index].collision_node;
         mover->flags = g_field_object_states[actor->object_index].collision_flags;
-        field_collision_move_mover(mover);
+        field_collision_resolve_move(mover);
         g_field_object_states[actor->object_index].collision_node = mover->collision_node;
         g_field_object_states[actor->object_index].collision_flags = mover->flags;
         resolved_command = actor->command;
