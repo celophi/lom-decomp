@@ -50,7 +50,9 @@ segments:
     start: 0x1
     vram: 0x8004FC70
     subsegments:
-      - [0x1, rodata, wmap]
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
+      - [0x5, rodata, wmap]
       - [0x15E9, .rodata, effects/wmap_land_effect_loader]
       - [0x1671, rodata, wmap_1671]
       - [0x1839, .rodata, map/wmap_land_preview]

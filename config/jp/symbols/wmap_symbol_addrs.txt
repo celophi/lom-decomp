@@ -2,6 +2,8 @@
 // Addresses are the US symbols translated to SLPS_021.70; edit the US file and
 // regenerate, or hand-edit here once the JP layout is maintained by hand.
 
+g_wmap_overlay_id = 0x8004FDD8;
+
 // WMAP.BIN world-map entry called by the resident state machine.
 run_world_map = 0x8006097C; // type:func
 

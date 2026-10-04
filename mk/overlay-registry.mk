@@ -224,6 +224,7 @@ overlay_title_gcc_272_cdk_g0_srcs := \
 	src/overlays/title/title_save.c
 
 OVERLAYS += wmap
+overlay_wmap_gcc_272_cdk_g0_srcs := src/overlays/wmap/overlay_header.c
 overlay_wmap_gcc_280_g0_srcs := \
 	src/overlays/wmap/map/wmap_map_display.c \
 	src/overlays/wmap/travel/wmap_party_travel.c \
