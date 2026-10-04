@@ -664,7 +664,7 @@ static void field_upload_actor_texture(u8* tim, s32 owner)
     s32 width;
     s32 height;
 
-    tim = (u8*)&((Tim*)tim)->flags;
+    tim += sizeof(u32); /* skip the TIM id word */
     cursor = tim;
     g_field_texture_slot_flags[field_owner_tag(owner)] = *cursor;
     cursor += sizeof(u32);
