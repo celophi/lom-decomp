@@ -242,7 +242,8 @@ extern s32 D_801ADB08;
 extern u8 D_801ADBA0[];
 extern RECT D_80051A88;
 extern WmapTileDisplay D_8011D108[6][6];
-extern s32 D_80139830;
+/** @brief Nonzero to replace Gato's map appearance with the rainy Domina artwork. */
+extern s32 g_wmap_gato_appearance_override;
 extern s32 D_80182E20;
 extern WmapMotion g_wmap_actor_motions[];
 
@@ -2274,7 +2275,7 @@ void wmap_refresh_cells(void)
         for (x = 0; x < WMAP_GRID_SIZE; x++)
         {
             land_id = wmap_get_land_at_cell(x, y);
-            if (D_80139830 != 0)
+            if (g_wmap_gato_appearance_override != 0)
             {
                 if (land_id == 5)
                 {
