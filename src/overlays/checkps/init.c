@@ -1,29 +1,29 @@
-#include "init.h"
+#include "internal/init.h"
 #include "include_asm.h"
 
-#include "checkps_internal.h"
+#include "internal/checkps_internal.h"
 
-#include <cdrom.h>
+#include "main/cdrom.h"
 #if defined(VERSION_JP)
-#include "cdrom.h"
+#include "internal/cdrom.h"
 #endif
 
-#include "font.h"
-#include "akao.h"
-#include "cd_resources.h"
-#include "display.h"
-#include "game_state.h"
-#include "gpu_packet.h"
-#include "pad.h"
-#include "tim.h"
+#include "internal/font.h"
+#include "main/audio/akao.h"
+#include "main/cd_resources.h"
+#include "main/display.h"
+#include "main/game_state.h"
+#include "common/gpu_packet.h"
+#include "common/pad.h"
+#include "common/tim.h"
 #include "sdk/libapi.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 #include "sdk/memory.h"
 #include "sdk/rand.h"
 #include "sdk/libetc.h"
-#include "akao_cmd.h"
-#include "controller.h"
+#include "main/audio/akao_cmd.h"
+#include "main/controller.h"
 
 #define CHECKPS_ORDERING_TABLE_LENGTH 4096
 #define CHECKPS_PRIMITIVE_BUFFER_SIZE 16384

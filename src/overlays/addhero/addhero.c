@@ -1,5 +1,5 @@
-#include "field_text.h"
-#include "addhero_internal.h"
+#include "overlays/field/field_text.h"
+#include "internal/addhero_internal.h"
 
 /**
  * @brief Address of the ADDHERO text whose table offset is @p offset.

@@ -87,7 +87,7 @@ endif
 # The generated data takes its types from the overlay's C declarations and the
 # headers they include, so it is rebuilt when any of them change.
 ifeq ($(DATA_AS_C),1)
-$$($(1)_DATA_OBJS): $$($(1)_C_SRCS) $$(wildcard $$($(1)_SRC_DIR)/*.h) $$(DATA_AS_C_HEADERS)
+$$($(1)_DATA_OBJS): $$($(1)_C_SRCS) $$(call rwildcard,$$($(1)_SRC_DIR),*.h) $$(DATA_AS_C_HEADERS)
 endif
 
 # A standalone asset needs an object only when the registry requests one.

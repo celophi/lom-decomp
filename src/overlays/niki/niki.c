@@ -1,6 +1,6 @@
-#include "field_text.h"
-#include "niki_internal.h"
-#include "menu.h"
+#include "overlays/field/field_text.h"
+#include "internal/niki_internal.h"
+#include "overlays/menu/menu.h"
 
 void niki_init_card_events(void);
 u8* niki_draw_progress_bar(u8* prim, s32* ot);

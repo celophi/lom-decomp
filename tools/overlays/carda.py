@@ -46,7 +46,7 @@ from tools.overlays.resources import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OVERLAY_CONFIG = "overlays/CARDA.BIN.yaml"
 SYMBOL_FILE = "symbols/carda_symbol_addrs.txt"
-STEP_HEADER = REPO_ROOT / "src/overlays/carda/carda_internal.h"
+STEP_HEADER = REPO_ROOT / "src/overlays/carda/internal/carda_internal.h"
 
 # CardaSaveIcon in carda_widgets.c: a palette and two 16 x 16, 4-bit frames.
 SAVE_ICON_SIZE = 16

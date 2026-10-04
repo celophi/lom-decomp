@@ -1,5 +1,5 @@
-#include "zukan_category.h"
-#include "saved_game.h"
+#include "internal/zukan_category.h"
+#include "common/saved_game.h"
 
 #define ZUKAN_CATEGORY_RANGE_COUNT 13
 #define ZUKAN_HISTORY_GROUP_COUNT 6

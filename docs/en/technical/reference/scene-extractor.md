@@ -277,11 +277,11 @@ slots are not equally likely; the selected FIELD reference supplies item names
 and the level table used to calculate conditional chances.
 
 The supporting runtime code is in
-[field_scene_transition.c](../../../../src/overlays/field/field_scene_transition.c),
-[field_interaction_start.c](../../../../src/overlays/field/field_interaction_start.c),
-[field_contact_geometry.c](../../../../src/overlays/field/field_contact_geometry.c),
-[field_actor_templates.c](../../../../src/overlays/field/field_actor_templates.c)
-and [field_actor_lifecycle.c](../../../../src/overlays/field/field_actor_lifecycle.c).
+[field_scene_transition.c](../../../../src/overlays/field/scene/field_scene_transition.c),
+[field_interaction_start.c](../../../../src/overlays/field/scene/field_interaction_start.c),
+[field_contact_geometry.c](../../../../src/overlays/field/scene/field_contact_geometry.c),
+[field_actor_templates.c](../../../../src/overlays/field/actors/field_actor_templates.c)
+and [field_actor_lifecycle.c](../../../../src/overlays/field/actors/field_actor_lifecycle.c).
 
 ## Item names and drop chances
 
@@ -363,9 +363,9 @@ on selecting that slot. Other defeat flags can change experience/money pickup
 counts without changing the selected slot.
 
 Sources:
-[field_stat_counter_ops.c](../../../../src/overlays/field/field_stat_counter_ops.c),
-[field_reward_command_ops.c](../../../../src/overlays/field/field_reward_command_ops.c),
-and [field_state_ops.h](../../../../include/field_state_ops.h).
+[field_stat_counter_ops.c](../../../../src/overlays/field/records/field_stat_counter_ops.c),
+[field_reward_command_ops.c](../../../../src/overlays/field/records/field_reward_command_ops.c),
+and [field_state_ops.h](../../../../src/overlays/field/internal/field_state_ops.h).
 
 ## Actor descriptions and actor scripts
 
@@ -424,7 +424,7 @@ u16 directory slot, while `scripts` decodes each distinct referenced range once.
 Instructions show their absolute IMG offset, opcode, command name, named
 operands and original bytes. The command names and sizes follow
 `field_run_actor_script_command` in
-[field_actor_script_ops.c](../../../../src/overlays/field/field_actor_script_ops.c).
+[field_actor_script_ops.c](../../../../src/overlays/field/actors/field_actor_script_ops.c).
 This is a different interpreter from the event scripts and animation resources.
 
 Decoding stops at `end`, an unknown opcode, truncated operands or the next
@@ -456,9 +456,9 @@ The original section now lives at `event_scripts/data.bin`; the byte map points
 to this file and its two descriptive companions.
 
 The formats and command names come from
-[field_script_ops.c](../../../../src/overlays/field/field_script_ops.c),
-[field_script_operands.c](../../../../src/overlays/field/field_script_operands.c)
-and [field_script_commands.c](../../../../src/overlays/field/field_script_commands.c).
+[field_script_ops.c](../../../../src/overlays/field/scripts/field_script_ops.c),
+[field_script_operands.c](../../../../src/overlays/field/scripts/field_script_operands.c)
+and [field_script_commands.c](../../../../src/overlays/field/scripts/field_script_commands.c).
 Basic commands use fixed fields or two-bit operand descriptors. Pair commands
 (`0x40`-`0x5F`) and extended commands (`0x80`-`0x8F`) use four-bit descriptors,
 including implicit constants and variable reads. Descriptor bytes and the
@@ -637,7 +637,7 @@ The slots are not equally likely. FIELD selects them according to monster
 level, a random mask and defeat modifiers. This export describes the stored
 choices. The object report adds conditional probabilities from the selected
 FIELD reference, without inferring the monster's current battle level.
-See [field_reward_command_ops.c](../../../../src/overlays/field/field_reward_command_ops.c).
+See [field_reward_command_ops.c](../../../../src/overlays/field/records/field_reward_command_ops.c).
 
 `name_ascii` is a preview only. It is null when a name contains non-ASCII game
 codes; the encoded bytes are preserved. This does not require guessing the
@@ -653,7 +653,7 @@ Later script-driven changes still require following the runtime behavior.
 ## Chest records
 
 The layout section starts with a u32 count followed by 48-byte
-[`FieldLayoutRecord`](../../../../include/field_interaction_start.h) records.
+[`FieldLayoutRecord`](../../../../include/overlays/field/field_interaction_start.h) records.
 A chest uses the same record structure as other actors. The extractor recognizes
 the common chest resource selector and initializer script before labeling a
 record as `chest`.
@@ -688,8 +688,8 @@ records: a 32-byte palette and 48-by-48 pixels at 4 bits per pixel. Portraits
 aren't TIMs.
 
 This supports the scene IMG layout, not every IMG family or compressed file.
-See the [scene loader](../../../../src/overlays/field/field_scene_transition.c)
-and [portrait representation](../../../../src/overlays/field/field_text.c) for
+See the [scene loader](../../../../src/overlays/field/scene/field_scene_transition.c)
+and [portrait representation](../../../../src/overlays/field/ui/field_text.c) for
 the code that reads these resources.
 
 The Python code follows these structures: `SceneHeader` documents the header

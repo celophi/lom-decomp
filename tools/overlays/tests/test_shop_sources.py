@@ -8,7 +8,7 @@ from tools.overlays import cload, shop, splat_config
 from tools.overlays.tests.test_addhero_sources import c_define
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-SAVED_GAME = REPO_ROOT / "include/saved_game.h"
+SAVED_GAME = REPO_ROOT / "include/common/saved_game.h"
 
 
 class SourceTest(unittest.TestCase):

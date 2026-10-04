@@ -1,6 +1,6 @@
-#include "wmap_resource_support.h"
-#include "wmap_effect_resources.h"
-#include "cdrom.h"
+#include "internal/wmap_resource_support.h"
+#include "internal/wmap_effect_resources.h"
+#include "main/cdrom.h"
 
 extern s32 D_8013B294;
 extern s32 D_80182E3C;

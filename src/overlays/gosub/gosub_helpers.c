@@ -1,4 +1,4 @@
-#include "gosub_internal.h"
+#include "internal/gosub_internal.h"
 
 /**
  * @brief Upload the gosub interface image and CLUT to their fixed VRAM slots.

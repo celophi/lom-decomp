@@ -1,8 +1,8 @@
 /*
- * Shared Shift-JIS number formatting; see include/sjis.h. Included by each
+ * Shared Shift-JIS number formatting; see include/common/sjis.h. Included by each
  * overlay that has it, at the point where it sits in that overlay's binary.
  */
-#include "sjis.h"
+#include "common/sjis.h"
 
 /**
  * @brief Format @p value as full-width Shift-JIS digits without leading zeros and null-terminate it.

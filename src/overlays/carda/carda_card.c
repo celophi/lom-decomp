@@ -1,5 +1,5 @@
-#include "carda_card.h"
-#include "carda_internal.h"
+#include "internal/carda_card.h"
+#include "internal/carda_internal.h"
 #include "sdk/kernel.h"
 
 /** @brief Psy-Q open() mode: read access (FREAD). */

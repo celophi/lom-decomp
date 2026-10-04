@@ -1,5 +1,5 @@
-#include "wmap_land_layout.h"
-#include "wmap_pathfinding.h"
+#include "internal/wmap_land_layout.h"
+#include "internal/wmap_pathfinding.h"
 
 /**
  * @file wmap_pathfinding.c

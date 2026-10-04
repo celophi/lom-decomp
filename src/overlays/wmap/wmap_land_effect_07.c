@@ -1,13 +1,13 @@
-#include "wmap_main.h"
-#include "wmap_land_effect_07.h"
-#include "wmap_sequence_runtime.h"
+#include "internal/wmap_main.h"
+#include "internal/wmap_land_effect_07.h"
+#include "internal/wmap_sequence_runtime.h"
 #include "sdk/libgte.h"
-#include "wmap_effect_primitives.h"
-#include "wmap_view_effects.h"
-#include "wmap_resource_support.h"
-#include "wmap_sprite_render.h"
-#include "wmap_step_sequence.h"
-#include "wmap_cells.h"
+#include "internal/wmap_effect_primitives.h"
+#include "internal/wmap_view_effects.h"
+#include "internal/wmap_resource_support.h"
+#include "internal/wmap_sprite_render.h"
+#include "internal/wmap_step_sequence.h"
+#include "internal/wmap_cells.h"
 
 void wmap_land_effect_07_sequence_10_step_02(void);
 void wmap_land_effect_07_wait_idle_02(void);

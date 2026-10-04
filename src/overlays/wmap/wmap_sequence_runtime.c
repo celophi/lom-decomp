@@ -1,14 +1,14 @@
-#include "wmap_model_render.h"
-#include "wmap_step_sequence.h"
-#include "wmap_map_display.h"
-#include "wmap_resource_support.h"
-#include "wmap_main.h"
-#include "wmap_effect_primitives.h"
-#include "wmap_sequence_runtime.h"
-#include "wmap_sprite_render.h"
+#include "internal/wmap_model_render.h"
+#include "internal/wmap_step_sequence.h"
+#include "internal/wmap_map_display.h"
+#include "internal/wmap_resource_support.h"
+#include "internal/wmap_main.h"
+#include "internal/wmap_effect_primitives.h"
+#include "internal/wmap_sequence_runtime.h"
+#include "internal/wmap_sprite_render.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
-#include "wmap_cells.h"
+#include "internal/wmap_cells.h"
 
 /** @brief Sequence and callback slot counts, and the number of sprite actors. */
 #define WMAP_SEQUENCE_SLOTS 14

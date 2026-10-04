@@ -1,11 +1,11 @@
-#include "wmap_frame_render.h"
-#include "wmap_sequence_runtime.h"
+#include "internal/wmap_frame_render.h"
+#include "internal/wmap_sequence_runtime.h"
 #include "sdk/libgpu.h"
 #include "sdk/libgte.h"
 #include "sdk/libetc.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
-#include "cdrom.h"
+#include "main/cdrom.h"
 
 #define M2C_FIELD(expr, type_ptr, offset) (*(type_ptr)((s8*)(expr) + (offset)))
 #define M2C_UNALIGNED32(expr) (expr)

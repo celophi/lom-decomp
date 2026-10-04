@@ -74,9 +74,9 @@ class SourceTest(unittest.TestCase):
 
     def test_counts_follow_the_c_definitions(self):
         specs = {spec.symbol: spec for spec in wmap.TABLES}
-        display = REPO_ROOT / "include/wmap_map_display.h"
+        display = REPO_ROOT / "src/overlays/wmap/internal/wmap_map_display.h"
         checks = (
-            (specs["g_wmap_artifact_positions"].count, REPO_ROOT / "include/wmap_land_transition.h", "WMAP_ARTIFACT_SLOTS"),
+            (specs["g_wmap_artifact_positions"].count, REPO_ROOT / "src/overlays/wmap/internal/wmap_land_transition.h", "WMAP_ARTIFACT_SLOTS"),
             (specs["g_wmap_land_attributes"].count, SOURCES / "wmap_map_display.c", "WMAP_LAND_COUNT"),
             (specs["g_wmap_menu_triangles"].count, SOURCES / "wmap_main.c", "WMAP_MENU_TRIANGLE_COUNT"),
         )
@@ -90,7 +90,7 @@ class SourceTest(unittest.TestCase):
 
     def test_record_sizes_follow_source_fields(self):
         specs = {spec.symbol: spec for spec in wmap.TABLES}
-        image = struct_body(REPO_ROOT / "include/wmap_land_transition.h", "WmapArtifactImage")
+        image = struct_body(REPO_ROOT / "src/overlays/wmap/internal/wmap_land_transition.h", "WmapArtifactImage")
         self.assertEqual(len(re.findall(r"\bu8\s+\w+;", image)), 4)
         self.assertEqual(len(re.findall(r"\bu16\s+\w+;", image)), 6)
         self.assertEqual(len(re.findall(r"\bs16\s+\w+;", image)), 4)

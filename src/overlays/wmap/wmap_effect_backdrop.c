@@ -1,6 +1,6 @@
-#include "wmap_frame_render.h"
-#include "wmap_resource_support.h"
-#include "wmap_effect_backdrop.h"
+#include "internal/wmap_frame_render.h"
+#include "internal/wmap_resource_support.h"
+#include "internal/wmap_effect_backdrop.h"
 #include "sdk/libgpu.h"
 
 /** @brief Gouraud triangle packet with three packed screen coordinates. */

@@ -1,13 +1,13 @@
-#include "saved_game.h"
-#include "title_internal.h"
-#include "title_save.h"
-#include "screen_transition.h"
-#include "akao_cmd.h"
+#include "common/saved_game.h"
+#include "internal/title_internal.h"
+#include "internal/title_save.h"
+#include "main/screen_transition.h"
+#include "main/audio/akao_cmd.h"
 #include "sdk/memory.h"
-#include "cdrom.h"
+#include "main/cdrom.h"
 #include "sdk/rand.h"
-#include "controller.h"
-#include "field_sound.h"
+#include "main/controller.h"
+#include "overlays/field/field_sound.h"
 
 void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y);
 void stop_title_music(void);

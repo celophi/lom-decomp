@@ -1,4 +1,4 @@
-#include "menu_internal.h"
+#include "internal/menu_internal.h"
 
 /* Memory-card file layout and open flags. */
 #define MEMORY_CARD_HEADER_TYPE_THREE_ICONS 0x13

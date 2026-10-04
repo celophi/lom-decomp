@@ -1,7 +1,7 @@
 """Disassemble the actor-script section of a scene IMG.
 
 Opcode sizes and operand names follow field_run_actor_script_command in
-src/overlays/field/field_actor_script_ops.c. This is the actor movement/action
+src/overlays/field/actors/field_actor_script_ops.c. This is the actor movement/action
 interpreter, not the separate event-script or animation-resource bytecode.
 """
 

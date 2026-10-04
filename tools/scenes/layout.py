@@ -24,7 +24,7 @@ class FieldLayoutRecord:
     """One 48-byte FieldLayoutRecord, all multi-byte values little-endian.
 
     The layout section starts with a u32 count, followed by these records.
-    See include/field_interaction_start.h. scripts[15] selects the initializer;
+    See include/overlays/field/field_interaction_start.h. scripts[15] selects the initializer;
     for the common chest script, scripts[4] is the item and scripts[5] holds the
     collection-variable reference, with bit 15 selecting the alternate facing.
     """

@@ -1,4 +1,4 @@
-#include "shop_trade.h"
+#include "internal/shop_trade.h"
 
 #define SHOP_PROMPT_X 64
 #define SHOP_PROMPT_Y 112

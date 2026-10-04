@@ -1,4 +1,4 @@
-#include "gosub_internal.h"
+#include "internal/gosub_internal.h"
 
 /**
  * @brief Process input, advance scroll interpolation, and draw the active screen.

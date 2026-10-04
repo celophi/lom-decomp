@@ -1,7 +1,7 @@
-#include "wmap_frame_render.h"
-#include "wmap_map_display.h"
-#include "wmap_sprite_render.h"
-#include "wmap_resource_support.h"
+#include "internal/wmap_frame_render.h"
+#include "internal/wmap_map_display.h"
+#include "internal/wmap_sprite_render.h"
+#include "internal/wmap_resource_support.h"
 #include "common.h"
 #include "sdk/libgpu.h"
 #include "sdk/libgte.h"
@@ -9,7 +9,7 @@
 #include "sdk/gte_dmpsx_compat.h"
 
 #include "sdk/memory.h"
-#include "gpu_packet.h"
+#include "common/gpu_packet.h"
 
 /** @brief Parts per sprite frame. */
 #define WMAP_SPRITE_PARTS_MAX 32

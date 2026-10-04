@@ -1,4 +1,4 @@
-#include "wmap_land_preview_lines.h"
+#include "internal/wmap_land_preview_lines.h"
 #include "sdk/libgpu.h"
 
 extern u32 D_800D81FC[];

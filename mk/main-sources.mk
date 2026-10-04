@@ -154,26 +154,26 @@ SRCS_G0 := \
 	src/psyq/libpad/PADPORTD.c \
 	src/psyq/libpad/PADSEQD.c \
 	src/psyq/libmcx/TMP_MCX.c \
-	src/screen_transition.c \
-	src/game_audio.c \
-	src/akao_cmd.c \
-	src/field_runtime.c \
-	src/main.c
+	src/main/screen_transition.c \
+	src/main/audio/game_audio.c \
+	src/main/audio/akao_cmd.c \
+	src/main/field_runtime.c \
+	src/main/main.c
 
 SRCS_G4 := \
-	src/cdrom.c \
-	src/cdrom_decompress.c \
-	src/overlay_memory.c \
-	src/akao_sequencer.c \
-	src/akao_driver.c \
-	src/akao_driver_init_state.c \
-	src/akao_driver_boot.c \
-	src/controller.c \
-	src/akao_voice.c \
-	src/akao_control.c \
-	src/akao_xa_stream.c
+	src/main/cdrom.c \
+	src/main/cdrom_decompress.c \
+	src/main/overlay_memory.c \
+	src/main/audio/akao_sequencer.c \
+	src/main/audio/akao_driver.c \
+	src/main/audio/akao_driver_init_state.c \
+	src/main/audio/akao_driver_boot.c \
+	src/main/controller.c \
+	src/main/audio/akao_voice.c \
+	src/main/audio/akao_control.c \
+	src/main/audio/akao_xa_stream.c
 
 SRCS_GCC_260_G0 := \
-	src/field_runtime_text.c \
-	src/field_runtime_glyph.c \
-	src/card_callbacks.c
+	src/main/field_runtime_text.c \
+	src/main/field_runtime_glyph.c \
+	src/main/card_callbacks.c

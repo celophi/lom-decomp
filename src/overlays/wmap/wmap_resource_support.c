@@ -1,9 +1,9 @@
-#include "wmap_frame_render.h"
-#include "wmap_resource_support.h"
+#include "internal/wmap_frame_render.h"
+#include "internal/wmap_resource_support.h"
 #include "sdk/libgpu.h"
-#include "cdrom.h"
-#include "wmap_sprite_render.h"
-#include "akao_cmd.h"
+#include "main/cdrom.h"
+#include "internal/wmap_sprite_render.h"
+#include "main/audio/akao_cmd.h"
 
 /** @brief Unaligned eight-byte rectangle in a texture block. */
 typedef struct

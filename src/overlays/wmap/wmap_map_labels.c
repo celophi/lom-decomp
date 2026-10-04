@@ -1,10 +1,10 @@
-#include "wmap_frame_render.h"
-#include "wmap_land_layout.h"
-#include "wmap_party_travel.h"
-#include "wmap_resource_support.h"
-#include "wmap_map_labels.h"
+#include "internal/wmap_frame_render.h"
+#include "internal/wmap_land_layout.h"
+#include "internal/wmap_party_travel.h"
+#include "internal/wmap_resource_support.h"
+#include "internal/wmap_map_labels.h"
 #include "sdk/libgpu.h"
-#include "gpu_packet.h"
+#include "common/gpu_packet.h"
 
 /** @brief Screen position of a map label at a particular map scale. */
 typedef struct

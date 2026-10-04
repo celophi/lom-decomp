@@ -17,8 +17,8 @@ ASM_SRCS := \
 
 # JP contains the pet-transfer implementation; the US unit is a compatibility stub.
 ifeq ($(VERSION),jp)
-SRCS_GCC_260_G0 := $(filter-out src/card_callbacks.c,$(SRCS_GCC_260_G0))
-SRCS_G0 += src/card_callbacks.c
+SRCS_GCC_260_G0 := $(filter-out src/main/card_callbacks.c,$(SRCS_GCC_260_G0))
+SRCS_G0 += src/main/card_callbacks.c
 endif
 
 # Some versions still use assembly for individual files or the whole image.
@@ -51,7 +51,7 @@ OBJS_GCC_260_G0  := $(patsubst $(SRC_DIR)/%.c,$(STAGING)/$(BUILD_DIR)/$(SRC_DIR)
 OBJS_ASM        := $(patsubst $(ASM_DIR)/%.s,$(STAGING)/$(BUILD_DIR)/$(ASM_DIR)/%.o,$(ASM_SRCS))
 
 # Preserve the original glyph instructions and explicit delay slots.
-$(STAGING)/$(BUILD_DIR)/$(SRC_DIR)/field_runtime_glyph.o: MASPSX_FLAGS_260 += --passthrough
+$(STAGING)/$(BUILD_DIR)/$(SRC_DIR)/main/field_runtime_glyph.o: MASPSX_FLAGS_260 += --passthrough
 
 OBJECTS  := $(OBJS_G0) $(OBJS_G4) $(OBJS_GCC_260_G0) $(OBJS_ASM)
 
@@ -108,7 +108,7 @@ endif
 # DATA_AS_C=1: the executable's generated data is typed by its C and headers.
 ifeq ($(DATA_AS_C),1)
 $(filter $(STAGING)/$(BUILD_DIR)/$(ASM_DIR)/data/%,$(OBJS_ASM)): \
-	$(wildcard src/*.c src/psyq/*/*.c) $(DATA_AS_C_HEADERS)
+	$(call rwildcard,src/main,*.c) $(wildcard src/psyq/*/*.c) $(DATA_AS_C_HEADERS)
 endif
 
 # Link the main executable

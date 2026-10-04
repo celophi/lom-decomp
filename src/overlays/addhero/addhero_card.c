@@ -1,5 +1,5 @@
-#include "field_text.h"
-#include "addhero_internal.h"
+#include "overlays/field/field_text.h"
+#include "internal/addhero_internal.h"
 
 /** @brief Result of a load step that needs no special handling by the caller. */
 #define ADDHERO_LOAD_RESULT_PENDING 1

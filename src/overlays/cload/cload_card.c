@@ -1,8 +1,8 @@
-#include "cload_internal.h"
+#include "internal/cload_internal.h"
 #include "sdk/memory.h"
 #include "sdk/strings.h"
 #include "sdk/libetc.h"
-#include "controller.h"
+#include "main/controller.h"
 
 void *bcopy(const unsigned char *src, unsigned char *dst, int count);
 void field_reset_input_repeat(void);

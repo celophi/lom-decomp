@@ -202,13 +202,13 @@ YAMLには、もう1つ気になる点があります。
 
 ソースコードも追ってみたい場合は、次の箇所から読むと流れがつかめます。
 
-- [field_scene_transition.c](../../../../src/overlays/field/field_scene_transition.c):
+- [field_scene_transition.c](../../../../src/overlays/field/scene/field_scene_transition.c):
   `field_load_scene_actors()` がレイアウトレコードを順に読み、初期設定を行う処理を呼び出します。
-- [field_interaction_start.c](../../../../src/overlays/field/field_interaction_start.c):
+- [field_interaction_start.c](../../../../src/overlays/field/scene/field_interaction_start.c):
   `field_install_actor_action()` が条件で指定された変数を読み、値が範囲内かを調べ、条件を満たしたレコードの初期設定を行います。
-- [field_script_operands.c](../../../../src/overlays/field/field_script_operands.c):
+- [field_script_operands.c](../../../../src/overlays/field/scripts/field_script_operands.c):
   `field_read_script_var()` が `field_resolve_script_var()` で参照先を求め、その値を読み取ります。
-- [field_interaction_start.h](../../../../include/field_interaction_start.h):
+- [field_interaction_start.h](../../../../include/overlays/field/field_interaction_start.h):
   `FieldLayoutRecord` と、そのフィールドを定義しています。
 - [field_scene.py](../../../../tools/scenes/field_scene.py):
   `FieldLayoutRecord.chest_yaml()` が、宝箱のレイアウトレコードを、この例で使った読みやすいYAMLに変換します。

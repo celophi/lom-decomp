@@ -62,7 +62,7 @@ $(1)_ROUTED_SRCS = \
 # older configurations. Treat tracked C files and explicitly routed generated
 # files as build inputs so stale ignored files cannot enter the build by accident.
 # An overlay without a C layout for this version does not build the C sources.
-$(1)_EXISTING_C_SRCS := $$(wildcard $$($(1)_SRC_DIR)/*.c)
+$(1)_EXISTING_C_SRCS := $$(call rwildcard,$$($(1)_SRC_DIR),*.c)
 $(1)_TRACKED_C_SRCS := $$(if $$(call has-tu-layout,$(1)),\
 	$$(shell git ls-files -- '$$($(1)_SRC_DIR)/*.c' 2>/dev/null))
 $(1)_TRACKED_C_SRCS := $$(filter-out $(ASM_UNITS),\

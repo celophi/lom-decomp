@@ -1,5 +1,5 @@
-#include "wmap_sprite_render.h"
-#include "wmap_effect_primitives.h"
+#include "internal/wmap_sprite_render.h"
+#include "internal/wmap_effect_primitives.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
 

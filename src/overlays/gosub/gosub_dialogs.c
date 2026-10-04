@@ -1,4 +1,4 @@
-#include "gosub_internal.h"
+#include "internal/gosub_internal.h"
 
 /**
  * @brief Handle the Sort/Discard dialog of a logic block.

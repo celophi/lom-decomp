@@ -1,8 +1,8 @@
-#include "cload_internal.h"
-#include "display.h"
+#include "internal/cload_internal.h"
+#include "main/display.h"
 #include "sdk/libetc.h"
-#include "controller.h"
-#include "cdrom.h"
+#include "main/controller.h"
+#include "main/cdrom.h"
 
 void play_menu_sfx(s32 sfx_id, s32 volume);
 void field_set_fade_target(s16 red, s16 green, s16 blue, s16 duration);

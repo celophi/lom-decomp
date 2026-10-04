@@ -49,7 +49,7 @@ class SceneResource:
         result['kind'] = RESOURCE_NAMES.get(resource_id, 'empty' if not self.data else 'unknown')
         if resource_id in CODE_REFERENCES:
             file, symbol = CODE_REFERENCES[resource_id]
-            result['code_reference'] = {'file': 'src/overlays/field/' + file, 'symbol': symbol}
+            result['code_reference'] = {'file': file, 'symbol': symbol}
         if resource_id == BATTLE_RESOURCE_ID:
             result["battle"] = read_battle_resource(self.data, offset, text_encoding)
         elif self.data:

@@ -1,5 +1,5 @@
-#include "carda.h"
-#include "carda_internal.h"
+#include "internal/carda.h"
+#include "internal/carda_internal.h"
 
 /**
  * @brief Card-slot label windows: width, which is also the dimming tile's, and height.

@@ -291,5 +291,5 @@ for example, is at `0x80043004` in the US release.
   golem data, aren't mapped yet.
 
 The C definitions behind this page are in
-[saved_game.h](../../../../include/saved_game.h), if you'd rather read the
+[saved_game.h](../../../../include/common/saved_game.h), if you'd rather read the
 structures directly.

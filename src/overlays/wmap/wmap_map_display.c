@@ -1,21 +1,21 @@
-#include "wmap_frame_render.h"
-#include "wmap_party_travel.h"
+#include "internal/wmap_frame_render.h"
+#include "internal/wmap_party_travel.h"
 /**
  * @file wmap_map_display.c
  * @brief Land sprites, spirit information, and the world-map game.
  */
-#include "wmap_map_display.h"
-#include "wmap_resource_support.h"
+#include "internal/wmap_map_display.h"
+#include "internal/wmap_resource_support.h"
 #include "sdk/libgpu.h"
 #include "sdk/libetc.h"
-#include "wmap_main.h"
-#include "wmap_map_labels.h"
+#include "internal/wmap_main.h"
+#include "internal/wmap_map_labels.h"
 #include "sdk/libgte.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
-#include "wmap_sequence_runtime.h"
-#include "wmap_land_layout.h"
-#include "wmap_cells.h"
+#include "internal/wmap_sequence_runtime.h"
+#include "internal/wmap_land_layout.h"
+#include "internal/wmap_cells.h"
 
 #define WMAP_CELL_SPACING 48
 #define WMAP_CACHE_SLOTS 16

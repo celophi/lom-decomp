@@ -96,7 +96,7 @@ FIELDのテキスト描画処理は、これらを次のように扱います。
 
 この辞書は北米版にしかありません。
 ゲームはこれをRAMに読み込みますが、ディスクのどこから読んでいるのかはまだ調べていません。
-バイトがこの表のとおりに動かない場合は、[field_text.c](../../../../src/overlays/field/field_text.c) の描画処理が正です。
+バイトがこの表のとおりに動かない場合は、[field_text.c](../../../../src/overlays/field/ui/field_text.c) の描画処理が正です。
 
 ### 日本版のテキスト
 
@@ -141,5 +141,5 @@ ADDHEROにもその写しがあり、`make extract-addhero VERSION=jp` はそれ
 
 ソースでは、コードが名前で使う文字列ごとにシンボルを付けています。
 たとえば、メモリーカードがないというメッセージは `g_addhero_text_no_card` です。
-ADDHEROの名前と、各メッセージの用途は [addhero_internal.h](../../../../src/overlays/addhero/addhero_internal.h) にまとめています。
+ADDHEROの名前と、各メッセージの用途は [addhero_internal.h](../../../../src/overlays/addhero/internal/addhero_internal.h) にまとめています。
 メッセージを探すときは、テーブルを順に見るより、オーバーレイのソースをシンボル名で検索するほうがたいてい早く見つかります。

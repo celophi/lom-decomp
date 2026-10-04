@@ -38,7 +38,7 @@ STACK = 801FFFF0
 
 - `CdResourceEntry` は `{ CdlLOCRaw location; s32 data_size; }` で、1件8バイトです。
   4バイトのディスク位置（BCD形式の分・秒・フレームとモード1バイト）に、リトルエンディアンのバイト数が続きます。
-  使用されているエントリーのモードはすべて `0xFF`、空きスロットは `0x00` です。[src/cdrom.c](../../../../src/cdrom.c)を参照してください。
+  使用されているエントリーのモードはすべて `0xFF`、空きスロットは `0x00` です。[src/main/cdrom.c](../../../../src/main/cdrom.c)を参照してください。
 - テーブルはRAM上の `CD_RESOURCE_ENTRIES = 0x801ED998` に置かれます。
 - `CdlLOC` の位置情報は、次の式でLBAに変換できます。
   `(((minute * 60) + second) * 75) + sector - 150 = LBA`
@@ -46,7 +46,7 @@ STACK = 801FFFF0
   CD-ROMサブシステムが、リソース番号、`CdResourceEntry`、LBAの順に参照先を解決します。
   詳しくは[CD-ROMサブシステム（英語）](../../../en/technical/architecture/cdrom.md)を参照してください。
 
-名前の付いたリソース番号は [include/cd_resources.h](../../../../include/cd_resources.h) にあります。
+名前の付いたリソース番号は [include/main/cd_resources.h](../../../../include/main/cd_resources.h) にあります。
 先頭付近の対応は次のとおりです。すべて実際のテーブルを解析して確認しています。
 
 | 番号 | ファイル | 番号 | ファイル |
@@ -155,7 +155,7 @@ STACK = 801FFFF0
   `GIRA.DAT` / `GIRA.STR`、`KAJU.DAT` / `KAJU.STR` の組み合わせや、ボス登場時の音声 `*_BSS*.DAT` などがあります。
   内容はADPCM系の生のサンプルデータで、MDEC映像ではありません。
 
-`MOVIE.BIN` の `movie` オーバーレイが、[cdrom.c](../../../../src/cdrom.c) のストリーミング処理を通して再生します。
+`MOVIE.BIN` の `movie` オーバーレイが、[cdrom.c](../../../../src/main/cdrom.c) のストリーミング処理を通して再生します。
 
 ### オブジェクト画像（`ANA`）
 

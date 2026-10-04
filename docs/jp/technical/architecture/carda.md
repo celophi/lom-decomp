@@ -58,8 +58,8 @@ FIELDは常駐したまま、現在の描画バッファを渡して毎フレー
 その後、FIELDがモーダルを終了させます。
 ロードが完了していた場合は、読み込んだゲームからパーティー、シーン、音楽も復元します。
 
-ソース：[FIELDの起動処理](../../../../src/overlays/field/field_modal_stream_start.c)、
-[FIELDのモーダル処理](../../../../src/overlays/field/field_modal_runtime.c)、
+ソース：[FIELDの起動処理](../../../../src/overlays/field/ui/field_modal_stream_start.c)、
+[FIELDのモーダル処理](../../../../src/overlays/field/ui/field_modal_runtime.c)、
 [CARDAの入口](../../../../src/overlays/carda/carda.c)
 
 ## ウィンドウとカード処理は一緒に進む
@@ -285,13 +285,13 @@ PocketStation用のメッセージも空のままです。
 このページで扱うのは、CARDA側のやり取りです。
 通常のセーブのタグやオプションで未解明のものは、[セーブファイルの形式](../reference/save-file.md)にまとめています。
 
-ソース：[北米版の準備フック](../../../../src/card_callbacks.c)、
+ソース：[北米版の準備フック](../../../../src/main/card_callbacks.c)、
 [日本版でアセンブリを使う単位の一覧](../../../../config/jp/asm_units.txt)、
 [CARDAの地域別分岐](../../../../src/overlays/carda/carda.c)、
 [転送ウィンドウ](../../../../src/overlays/carda/carda_save.c)、
 [確認画面の初期選択](../../../../src/overlays/carda/carda_widgets.c)
 
-UIの型や状態の名前は、[carda_internal.h](../../../../src/overlays/carda/carda_internal.h)から追えます。
+UIの型や状態の名前は、[carda_internal.h](../../../../src/overlays/carda/internal/carda_internal.h)から追えます。
 [carda_glyph.c](../../../../src/overlays/carda/carda_glyph.c) は、カードのタイトルに使う共通の文字キャッシュ処理を組み込んでいます。
 文字コードについては、[テキストテーブル](../reference/text-tables.md)を参照してください。
 [ADDHERO](addhero.md) にも似た一覧画面がありますが、こちらはゲストの主人公を読み込んで書き戻す処理で、セーブのどの部分を書き換えるかが異なります。

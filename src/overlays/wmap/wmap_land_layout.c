@@ -1,8 +1,8 @@
-#include "wmap_land_layout.h"
-#include "wmap_land_transition.h"
-#include "saved_game.h"
-#include "main.h"
-#include "cdrom.h"
+#include "internal/wmap_land_layout.h"
+#include "internal/wmap_land_transition.h"
+#include "common/saved_game.h"
+#include "main/main.h"
+#include "main/cdrom.h"
 
 /* WMAP interprets its portion of the resident save buffer through this view. */
 #define WMAP_SAVED_GAME (*(WmapSave*)&g_saved_game)

@@ -1,6 +1,6 @@
-#include "wmap_land_layout.h"
-#include "wmap_land_transition.h"
-#include "wmap_land_selection.h"
+#include "internal/wmap_land_layout.h"
+#include "internal/wmap_land_transition.h"
+#include "internal/wmap_land_selection.h"
 
 extern s32 D_80139270;
 extern s32 D_80139838[];

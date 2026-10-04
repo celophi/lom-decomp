@@ -122,7 +122,7 @@ version's CLOAD character chart, and the byte map records where the chart came
 from.
 
 Table names come from the `MenuTextTable` enum in
-[`menu_internal.h`](../../../../src/overlays/menu/menu_internal.h). Tables
+[`menu_internal.h`](../../../../src/overlays/menu/internal/menu_internal.h). Tables
 without a name there get only their number, like `02.yaml`. A few of those
 names don't match what's in the table yet. Table 3 is called spell names but
 holds moves like Jump and Defend, and tables 4 and 5, called ability help and

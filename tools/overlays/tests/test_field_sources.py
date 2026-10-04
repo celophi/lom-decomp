@@ -38,21 +38,21 @@ class SourceTest(unittest.TestCase):
     def test_counts_follow_the_c_definitions(self):
         specs = {spec.symbol: spec for spec in field.TABLES}
         checks = (
-            (field.ABILITY_RULE_COUNT, "include/field_ability_progression.h", "FIELD_ABILITY_UNLOCK_RULE_COUNT"),
-            (field.TECHNIQUE_RULE_COUNT, "src/overlays/field/field_dialog_screens.c", "FIELD_TECHNIQUE_UNLOCK_RULE_COUNT"),
-            (field.GOLEM_SHAPE_COUNT, "include/golem_shape.h", "GOLEM_SHAPE_COUNT"),
-            (field.TITLE_CHOICE_INDEX, "src/overlays/field/field_choice_labels.c", "FIELD_TITLE_CHOICE_FIRST_TEXT"),
-            (field.MENU_HEIGHT, "src/overlays/field/field_menu_windows.c", "MENU_FRAME_IMAGE_HEIGHT"),
-            (field.MENU_PALETTE_COUNT, "src/overlays/field/field_menu_windows.c", "MENU_FRAME_STYLES"),
-            (field.TRANSITION_SIZE, "src/overlays/field/field_scene_transition.c", "FIELD_TRANSITION_TILE_SIZE"),
-            (specs["g_field_party_palettes"].count, "src/overlays/field/field_scene_transition.c", "FIELD_PARTY_PALETTE_COUNT"),
-            (specs["g_field_command_patterns"].count, "src/overlays/field/field_command_history.c", "FIELD_COMMAND_PATTERN_COUNT"),
-            (specs["g_equipment_combination_quantity_scale"].count, "src/overlays/field/field_equipment_combination_rules.c", "EQUIPMENT_COMBINATION_RULE_COUNT"),
+            (field.ABILITY_RULE_COUNT, "src/overlays/field/internal/field_ability_progression.h", "FIELD_ABILITY_UNLOCK_RULE_COUNT"),
+            (field.TECHNIQUE_RULE_COUNT, "src/overlays/field/ui/field_dialog_screens.c", "FIELD_TECHNIQUE_UNLOCK_RULE_COUNT"),
+            (field.GOLEM_SHAPE_COUNT, "include/common/golem_shape.h", "GOLEM_SHAPE_COUNT"),
+            (field.TITLE_CHOICE_INDEX, "src/overlays/field/ui/field_choice_labels.c", "FIELD_TITLE_CHOICE_FIRST_TEXT"),
+            (field.MENU_HEIGHT, "src/overlays/field/ui/field_menu_windows.c", "MENU_FRAME_IMAGE_HEIGHT"),
+            (field.MENU_PALETTE_COUNT, "src/overlays/field/ui/field_menu_windows.c", "MENU_FRAME_STYLES"),
+            (field.TRANSITION_SIZE, "src/overlays/field/scene/field_scene_transition.c", "FIELD_TRANSITION_TILE_SIZE"),
+            (specs["g_field_party_palettes"].count, "src/overlays/field/scene/field_scene_transition.c", "FIELD_PARTY_PALETTE_COUNT"),
+            (specs["g_field_command_patterns"].count, "src/overlays/field/actors/field_command_history.c", "FIELD_COMMAND_PATTERN_COUNT"),
+            (specs["g_equipment_combination_quantity_scale"].count, "src/overlays/field/records/field_equipment_combination_rules.c", "EQUIPMENT_COMBINATION_RULE_COUNT"),
         )
         for value, source, name in checks:
             with self.subTest(name=name):
                 self.assertEqual(value, c_define(REPO_ROOT / source, name))
-        width_words = c_define(REPO_ROOT / "src/overlays/field/field_menu_windows.c", "MENU_FRAME_IMAGE_WIDTH")
+        width_words = c_define(REPO_ROOT / "src/overlays/field/ui/field_menu_windows.c", "MENU_FRAME_IMAGE_WIDTH")
         self.assertEqual(field.MENU_WIDTH, width_words * 4)
 
     def test_table_layouts_have_unique_symbols_and_consistent_fields(self):
@@ -68,7 +68,7 @@ class SourceTest(unittest.TestCase):
                 self.assertEqual(spec.format, "I")
 
     def test_builtin_record_sizes_follow_source_fields(self):
-        source = (REPO_ROOT / "src/overlays/field/field_actor_slot_resources.c").read_text()
+        source = (REPO_ROOT / "src/overlays/field/actors/field_actor_slot_resources.c").read_text()
         entry = re.search(r"typedef struct\s*\{([^}]+)\} FieldBuiltinEntry;", source).group(1)
         self.assertEqual(len(re.findall(r"\bu16\s+\w+;", entry)), 4)
         self.assertIn("u8 unk9[7]", entry)

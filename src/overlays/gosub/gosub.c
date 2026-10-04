@@ -1,5 +1,5 @@
-#include "field_text.h"
-#include "gosub_internal.h"
+#include "overlays/field/field_text.h"
+#include "internal/gosub_internal.h"
 
 /* Overlay BSS layout is address-sensitive; do not reorder these definitions. */
 

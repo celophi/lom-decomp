@@ -1,6 +1,6 @@
-#include "kanji.h"
+#include "internal/kanji.h"
 
-#include "checkps_internal.h"
+#include "internal/checkps_internal.h"
 
 #include "sdk/libapi.h"
 #include "sdk/strings.h"

@@ -7,25 +7,25 @@ from pathlib import Path
 from tools.scenes.scene_format import SCENE_HEADER, SceneHeader
 
 
-LOADER_FILE = 'src/overlays/field/field_scene_transition.c'
+LOADER_FILE = 'src/overlays/field/scene/field_scene_transition.c'
 LOADER = {'file': LOADER_FILE, 'symbol': 'field_update_scene'}
 
 # These describe disk layouts, not runtime structures after relocation.
 SECTION_FORMATS = {
     'layout': ('u32 count, then count * 48-byte FieldLayoutRecord records',
-               'include/field_interaction_start.h', 'FieldLayoutRecord'),
+               'include/overlays/field/field_interaction_start.h', 'FieldLayoutRecord'),
     'event_scripts': ('u16 section-relative offsets, followed by variable-length event instructions',
-                      'src/overlays/field/field_actor_key_ops.c', 'field_get_event_script'),
+                      'src/overlays/field/actors/field_actor_key_ops.c', 'field_get_event_script'),
     'strings': ('u16 text-table-relative offsets, followed by encoded text and control tokens',
-                'src/overlays/field/field_text_window_api.c', 'FIELD_SCENE_STRING'),
+                'src/overlays/field/ui/field_text_window_api.c', 'FIELD_SCENE_STRING'),
     'actor_scripts': ('u16 section-relative offsets, followed by variable-length actor instructions',
-                      'src/overlays/field/field_actor_script_ops.c', 'field_run_actor_script_command'),
+                      'src/overlays/field/actors/field_actor_script_ops.c', 'field_run_actor_script_command'),
     'records': ('u32 section-relative offsets, followed by resources identified by a u16 ID',
                 LOADER_FILE, 'field_update_scene'),
     'actors': ('Four u16 header fields, u32 section-relative offsets, 16-byte actor headers and 8-byte action slots',
                LOADER_FILE, 'field_update_scene'),
     'geometry': ('u32 actor resource boundaries; animation/frame directories, timed entries and sprite/placement records',
-                 'src/overlays/field/field_actor_runtime.c', 'field_advance_actor_animation_frame'),
+                 'src/overlays/field/actors/field_actor_runtime.c', 'field_advance_actor_animation_frame'),
     'images': ('u32 section-relative offsets, followed by TIM images', LOADER_FILE, 'field_upload_actor_image'),
     'portraits': ('u32 count, then 1184-byte records: 32 palette bytes and 1152 packed pixel bytes',
                  LOADER_FILE, 'field_update_scene'),

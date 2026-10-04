@@ -39,7 +39,7 @@ consists of an array structure where each element is a `CdResourceEntry`.
 - `CdResourceEntry` = `{ CdlLOCRaw location; s32 data_size; }` (8 bytes each):
   a 4-byte disc location (BCD minute/second/frame + a mode byte) plus a
   little-endian byte size. The mode byte is `0xFF` on every live entry and
-  `0x00` on the null slots. See [src/cdrom.c](../../../../src/cdrom.c).
+  `0x00` on the null slots. See [src/main/cdrom.c](../../../../src/main/cdrom.c).
 - The table lives in RAM at `CD_RESOURCE_ENTRIES = 0x801ED998`.
 - You can use this file and convert `CdlLOC` entries into LBA with math:
 `(((minute * 60) + second) * 75) + sector - 150 = LBA`
@@ -47,7 +47,7 @@ consists of an array structure where each element is a `CdResourceEntry`.
   subsystem resolves index -> `CdResourceEntry` -> LBA. See
   [CD-ROM subsystem architecture](../architecture/cdrom.md).
 
-Named indices are in [include/cd_resources.h](../../../../include/cd_resources.h). The
+Named indices are in [include/main/cd_resources.h](../../../../include/main/cd_resources.h). The
 first entries (all confirmed against the parsed table):
 
 | Idx | File | Idx | File |
@@ -157,7 +157,7 @@ Split into five bucket folders `MAP0`..`MAP4` plus `FDATA`. These are two on-dis
   (`GIRA.DAT`/`GIRA.STR`, `KAJU.DAT`/`KAJU.STR`), plus boss-intro audio
   (`*_BSS*.DAT`). Content is raw ADPCM-style sample data, not MDEC.
 
-Played by the `movie` overlay / `MOVIE.BIN` through the streaming path in [cdrom.c](../../../../src/cdrom.c).
+Played by the `movie` overlay / `MOVIE.BIN` through the streaming path in [cdrom.c](../../../../src/main/cdrom.c).
 
 ### Object graphics (`ANA`)
 

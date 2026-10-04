@@ -1,5 +1,5 @@
-#include "carda_save.h"
-#include "carda_internal.h"
+#include "internal/carda_save.h"
+#include "internal/carda_internal.h"
 
 /** @brief Left edge of the save window text, before the transition offset. */
 #define CARDA_SAVE_TEXT_X (CARDA_MESSAGE_WIDTH / 2)

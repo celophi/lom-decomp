@@ -30,9 +30,9 @@ The main executable handles the return differently in each release:
 rendering loop, and returns `GAME_STATE_INTRO_MOVIE` when that loop ends.
 Unlike CARDA, it doesn't return to a caller after each frame.
 
-Sources: [US main loop](../../../../src/main.c),
+Sources: [US main loop](../../../../src/main/main.c),
 [US CHECKPS startup](../../../../src/overlays/checkps/init.c),
-[game-state names](../../../../include/game_state.h).
+[game-state names](../../../../include/main/game_state.h).
 JP's main loop and CHECKPS startup are listed in the
 [assembly-unit selection](../../../../config/jp/asm_units.txt); the JP source
 locations are collected at the end of this page.
@@ -108,7 +108,7 @@ explains the main driver's recovery sequence. The CHECKPS caller is confirmed
 in JP assembly: `update_checkps_input_and_timeout()` at `0x800506B8`, with its
 startup phase stored in `D_80067E10`.
 
-Sources: [main CD driver](../../../../src/cdrom.c),
+Sources: [main CD driver](../../../../src/main/cdrom.c),
 [JP CHECKPS symbol map](../../../../config/jp/symbols/checkps_symbol_addrs.txt),
 [JP source selection](../../../../config/jp/asm_units.txt).
 

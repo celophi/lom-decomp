@@ -73,8 +73,8 @@ ADDHEROの実行中は0を返します。
 
 結果の初期値は3です。読み込みも保存も最後まで進まなかった場合は、すべてキャンセルとして終わります。
 
-ソース：[FIELDの起動処理](../../../../src/overlays/field/field_modal_stream_start.c)、
-[FIELDのモーダル処理](../../../../src/overlays/field/field_modal_runtime.c)、
+ソース：[FIELDの起動処理](../../../../src/overlays/field/ui/field_modal_stream_start.c)、
+[FIELDのモーダル処理](../../../../src/overlays/field/ui/field_modal_runtime.c)、
 [ADDHEROの入口](../../../../src/overlays/addhero/addhero.c)
 
 ## モード0：ゲストの主人公を読み込む
@@ -278,7 +278,7 @@ ADDHEROは、8つのアニメーション付きウィンドウですべてを描
 | [addhero_widgets.c](../../../../src/overlays/addhero/addhero_widgets.c) | 読み込みの確認、進行中の画面、ダイアログ、モード1のステータスウィンドウ、セーブの検証 |
 | [addhero_card.c](../../../../src/overlays/addhero/addhero_card.c) | カードの手順処理、ディレクトリの読み取り、エントリーの並べ替えと順位付け、カードイベント |
 | [addhero_glyph.c](../../../../src/overlays/addhero/addhero_glyph.c) | カードのタイトル用のシフトJIS字形キャッシュ |
-| [addhero_internal.h](../../../../src/overlays/addhero/addhero_internal.h) | ウィンドウの配置、エントリーの状態、テキストの番号、共通の宣言 |
-| [saved_game.h](../../../../include/saved_game.h) | セーブファイルとセーブデータの構成 |
-| [field_modal_stream_start.c](../../../../src/overlays/field/field_modal_stream_start.c) | オーバーレイの読み込みと開始 |
-| [field_modal_runtime.c](../../../../src/overlays/field/field_modal_runtime.c) | 毎フレームの実行と結果の処理 |
+| [addhero_internal.h](../../../../src/overlays/addhero/internal/addhero_internal.h) | ウィンドウの配置、エントリーの状態、テキストの番号、共通の宣言 |
+| [saved_game.h](../../../../include/common/saved_game.h) | セーブファイルとセーブデータの構成 |
+| [field_modal_stream_start.c](../../../../src/overlays/field/ui/field_modal_stream_start.c) | オーバーレイの読み込みと開始 |
+| [field_modal_runtime.c](../../../../src/overlays/field/ui/field_modal_runtime.c) | 毎フレームの実行と結果の処理 |

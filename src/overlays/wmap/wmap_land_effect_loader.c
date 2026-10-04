@@ -1,8 +1,8 @@
-#include "wmap_map_display.h"
-#include "wmap_land_effect_loader.h"
-#include "wmap_resource_support.h"
-#include "wmap_sequence_runtime.h"
-#include "cdrom.h"
+#include "internal/wmap_map_display.h"
+#include "internal/wmap_land_effect_loader.h"
+#include "internal/wmap_resource_support.h"
+#include "internal/wmap_sequence_runtime.h"
+#include "main/cdrom.h"
 
 extern WmapLandDisplay D_80182508;
 extern s32 D_801ADAF8;

@@ -1,5 +1,5 @@
-/* ADDHERO's copy of the shared glyph-cache text drawing (see include/glyph_cache.h). */
-#include "addhero_internal.h"
+/* ADDHERO's copy of the shared glyph-cache text drawing (see include/common/glyph_cache.h). */
+#include "internal/addhero_internal.h"
 
 #include "../../common/glyph_cache/draw_signed_decimal.inc.c"
 #include "../../common/glyph_cache/draw_hex_byte.inc.c"
