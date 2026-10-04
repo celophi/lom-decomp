@@ -12,7 +12,7 @@
 #include "main/controller_internal.h"
 #include "main/main.h"
 #include "common/vector.h"
-#include "sdk/libgte.h"
+#include <libgte.h>
 #include "../internal/field_actor_routes.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_actor_tables.h"

@@ -2,7 +2,7 @@
 #define WMAP_FRAME_RENDER_H
 
 #include "common.h"
-#include "sdk/libgpu.h"
+#include <libgpu.h>
 
 #define WMAP_OT_COUNT 179
 #define WMAP_PACKET_LIMIT 32000

@@ -14,11 +14,11 @@
 #include "../internal/field_contact_geometry.h"
 #include "../internal/field_actor_sequence_runtime.h"
 #include "common/vector.h"
-#include "sdk/libgte.h"
-#include "sdk/inline_c.h"
+#include <libgte.h>
+#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 #include "overlays/field/field_actor_records.h"
-#include "sdk/abs.h"
+#include <abs.h>
 
 /** @brief Object state @p index of @p base. */
 #define FIELD_OBJECT_STATE_AT(base, index) ((FieldObjectState*)((index) * sizeof(FieldObjectState) + (uintptr_t)(base)))

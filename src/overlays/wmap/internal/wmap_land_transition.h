@@ -3,7 +3,7 @@
 
 #include "common.h"
 #include "wmap_frame_render.h"
-#include "sdk/libgte.h"
+#include <libgte.h>
 
 #define WMAP_ARTIFACT_SLOTS 12
 #define WMAP_CAROUSEL_STEP_FRAMES 4

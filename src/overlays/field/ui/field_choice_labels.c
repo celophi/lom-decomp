@@ -3,7 +3,7 @@
  */
 
 #include "common.h"
-#include "sdk/libgpu.h"
+#include <libgpu.h>
 #include "../internal/field_calls.h"
 #include "overlays/field/field_ui_text.h"
 

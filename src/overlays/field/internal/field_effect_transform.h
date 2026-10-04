@@ -2,7 +2,7 @@
 #define FIELD_EFFECT_TRANSFORM_H
 
 #include "overlays/field/field_types.h"
-#include "sdk/libgpu.h"
+#include <libgpu.h>
 
 /** @brief Primitive RGB and command byte, also copied as a single packed word. */
 typedef union

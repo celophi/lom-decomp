@@ -6,9 +6,9 @@
 #include "main/display.h"
 #include "common/pad.h"
 #include "common/tim.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
-#include "sdk/libetc.h"
+#include <libgte.h>
+#include <libgpu.h>
+#include <libetc.h>
 #include "overlays/menu/menu.h"
 #include "main/controller.h"
 

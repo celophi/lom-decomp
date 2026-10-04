@@ -1,9 +1,9 @@
 #include "../internal/wmap_main.h"
 #include "../internal/wmap_land_effect_02.h"
 #include "../internal/wmap_sequence_runtime.h"
-#include "sdk/libgte.h"
+#include <libgte.h>
 #include "../internal/wmap_sprite_render.h"
-#include "sdk/inline_c.h"
+#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 #include "../internal/wmap_view_effects.h"
 #include "../internal/wmap_resource_support.h"

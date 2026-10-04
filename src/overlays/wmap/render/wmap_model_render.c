@@ -1,8 +1,8 @@
 #include "../internal/wmap_model_render.h"
 #include "../internal/wmap_frame_render.h"
 #include "../internal/wmap_resource_support.h"
-#include "sdk/libgte.h"
-#include "sdk/inline_c.h"
+#include <libgte.h>
+#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 
 #define WMAP_MODEL_COLOR_SHIFT 7

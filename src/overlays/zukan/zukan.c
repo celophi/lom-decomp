@@ -5,11 +5,11 @@
 #include "main/cdrom.h"
 #include "main/display.h"
 #include "common/gpu_packet.h"
-#include "sdk/libgpu.h"
+#include <libgpu.h>
 #include "common/tim.h"
 #include "common/render_context.h"
 #include "overlays/menu/menu.h"
-#include "sdk/libetc.h"
+#include <libetc.h>
 #include "overlays/field/field_sound.h"
 #include "overlays/field/field_text.h"
 #include "overlays/field/field_ui_text.h"

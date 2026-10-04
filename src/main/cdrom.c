@@ -1,10 +1,10 @@
 #include "main/cdrom.h"
 #include "internal/cdrom_internal.h"
-#include "sdk/libetc.h"
-#include "sdk/libcd.h"
-#include "sdk/libpress.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
+#include <libetc.h>
+#include <libcd.h>
+#include <libpress.h>
+#include <libgte.h>
+#include <libgpu.h>
 #include "main/audio/akao_cmd.h"
 #include "overlays/movie/movie.h"
 #include "overlays/movie/movie_state.h"

@@ -1,6 +1,6 @@
 #include "internal/shop_render.h"
 #include "common/encoded_text.h"
-#include "sdk/libgpu.h"
+#include <libgpu.h>
 
 /**
  * @brief Low byte of a window's 9-bit width, read from the whole frame word.

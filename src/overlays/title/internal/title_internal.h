@@ -8,8 +8,8 @@
 #include "main/main.h"
 #include "main/audio/akao.h"
 #include "common/pad.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
+#include <libgte.h>
+#include <libgpu.h>
 #include "main/scene_state.h"
 #include "common/saved_game.h"
 

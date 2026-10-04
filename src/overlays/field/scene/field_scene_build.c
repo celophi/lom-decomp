@@ -7,7 +7,7 @@
 #include "main/scene_state.h"
 #include "../internal/field_calls.h"
 #include "main/display.h"
-#include "sdk/libpress.h"
+#include <libpress.h>
 
 /*
  * FieldObjDef::flags bits (see also FIELD_OBJ_DEF_SCREEN_FIXED). A wrapping

@@ -3,7 +3,7 @@
 
 #include "common.h"
 #include "common/vector.h"
-#include "sdk/libgte.h"
+#include <libgte.h>
 
 /** @brief Integer-coordinate work vector used by actor movement calculations. */
 typedef struct

@@ -4,8 +4,8 @@
 
 #include "common.h"
 #include "common/gpu_packet.h"
-#include "sdk/libgpu.h"
-#include "sdk/memory.h"
+#include <libgpu.h>
+#include <memory.h>
 
 /** @brief Width and height of one digit glyph, in pixels. */
 #define FIELD_DIGIT_SIZE 8

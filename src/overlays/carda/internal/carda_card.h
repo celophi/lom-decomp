@@ -3,7 +3,7 @@
 
 #include "common.h"
 #include "main/field_runtime.h"
-#include "sdk/libgpu.h"
+#include <libgpu.h>
 
 void carda_reset_entry_ranks(void);
 s32 carda_advance_card_sequence(void);

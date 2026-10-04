@@ -8,7 +8,7 @@
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_calls.h"
-#include "sdk/rand.h"
+#include <rand.h>
 
 
 /** @brief First frame of the HUD panel shake started by a hit (counts down to 0). */

@@ -10,7 +10,7 @@
 #include "overlays/field/field_object_state.h"
 #include "main/field_runtime.h"
 #include "common/gpu_packet.h"
-#include "sdk/libgpu.h"
+#include <libgpu.h>
 
 /** @brief Two party members closer than this (whole units) form a pair. */
 #define FIELD_PAIR_RANGE 32

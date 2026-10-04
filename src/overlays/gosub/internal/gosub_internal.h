@@ -3,9 +3,9 @@
 
 #include "common.h"
 #include "common/gpu_packet.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
-#include "sdk/memory.h"
+#include <libgte.h>
+#include <libgpu.h>
+#include <memory.h>
 #include "common/tim.h"
 #include "main/main.h"
 #include "overlays/field/field_ui_text.h"

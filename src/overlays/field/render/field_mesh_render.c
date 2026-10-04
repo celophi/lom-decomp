@@ -17,11 +17,11 @@
 #include "../internal/field_mesh_render.h"
 #include "../internal/field_mesh.h"
 #include "../internal/field_mesh_transform.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
-#include "sdk/libetc.h"
+#include <libgte.h>
+#include <libgpu.h>
+#include <libetc.h>
 #include "common/gpu_packet.h"
-#include "sdk/inline_c.h"
+#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 
 extern FieldMotionRecord g_field_effect_records[];

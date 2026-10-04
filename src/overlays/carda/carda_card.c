@@ -1,6 +1,6 @@
 #include "internal/carda_card.h"
 #include "internal/carda_internal.h"
-#include "sdk/kernel.h"
+#include <kernel.h>
 
 /** @brief Psy-Q open() mode: read access (FREAD). */
 #define CARDA_FILE_READ 0x0001

@@ -13,8 +13,8 @@
 #include "../internal/field_mesh.h"
 #include "../internal/field_mesh_transform.h"
 #include "../internal/field_actor_palette.h"
-#include "sdk/libetc.h"
-#include "sdk/libgpu.h"
+#include <libetc.h>
+#include <libgpu.h>
 
 /** @brief First part effect kind that renders a mesh; kinds up to FIELD_PART_MESH_LAST select meshes 2..0. */
 #define FIELD_PART_MESH_FIRST 0xF7

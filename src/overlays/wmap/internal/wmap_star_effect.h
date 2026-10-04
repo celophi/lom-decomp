@@ -3,7 +3,7 @@
 
 #include "wmap_sequence_runtime.h"
 #include "wmap_sprite_render.h"
-#include "sdk/inline_c.h"
+#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 
 /** @brief Orbiting star state in one 0x14-byte motion slot. */

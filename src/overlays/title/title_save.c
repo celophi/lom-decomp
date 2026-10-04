@@ -2,7 +2,7 @@
 #include "internal/title_internal.h"
 #include "internal/title_save.h"
 #include "overlays/field/field_sound.h"
-#include "sdk/rand.h"
+#include <rand.h>
 #include "common/tim.h"
 
 void reset_save_slot_panel(void);

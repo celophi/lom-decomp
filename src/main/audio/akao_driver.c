@@ -1,7 +1,7 @@
 #include "internal/akao_driver.h"
 #include "main/audio/akao.h"
 #include "internal/akao_voice.h"
-#include "sdk/libspu.h"
+#include <libspu.h>
 
 /* "AKAO" in little-endian */
 #define AKAO_MAGIC 0x4F414B41

@@ -6,8 +6,8 @@
 #include "common/gpu_packet.h"
 #include "main/display.h"
 #include "../internal/field_animation.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
+#include <libgte.h>
+#include <libgpu.h>
 #include "main/audio/akao_cmd.h"
 
 #define FIELD_TEXT_STATE_MASK 7

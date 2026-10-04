@@ -16,13 +16,13 @@
 #include "main/overlay_memory.h"
 #include "main/field_runtime.h"
 #include "main/display.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
-#include "sdk/libapi.h"
-#include "sdk/libetc.h"
-#include "sdk/libmcx.h"
-#include "sdk/libspu.h"
-#include "sdk/rand.h"
+#include <libgte.h>
+#include <libgpu.h>
+#include <libapi.h>
+#include <libetc.h>
+#include <libmcx.h>
+#include <libspu.h>
+#include <rand.h>
 
 #define SECONDARY_OVERLAY_LOAD_ADDR ((void*)SECONDARY_OVERLAY_ADDRESS)
 

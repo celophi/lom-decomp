@@ -2,8 +2,8 @@
 #define MOVIE_STATE_H
 
 #include "common.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
+#include <libgte.h>
+#include <libgpu.h>
 
 /** @brief Saved callback represented as either an SDK return value or handler. */
 typedef union

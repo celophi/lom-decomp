@@ -5,8 +5,8 @@
 #include "overlays/field/field_scene.h"
 #include "overlays/movie/movie.h"
 #include "field_animation.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
+#include <libgte.h>
+#include <libgpu.h>
 
 /**
  * @brief Halve a signed value, rounding toward zero.

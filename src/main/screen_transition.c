@@ -2,9 +2,9 @@
 #include "main/cdrom.h"
 #include "main/controller.h"
 #include "main/display.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
-#include "sdk/libetc.h"
+#include <libgte.h>
+#include <libgpu.h>
+#include <libetc.h>
 
 #define TRANSITION_OT_SIZE 4
 #define TRANSITION_PACKET_WORDS 64

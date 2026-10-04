@@ -1,7 +1,7 @@
 #include "internal/cload_internal.h"
 #include "main/display.h"
-#include "sdk/memory.h"
-#include "sdk/libetc.h"
+#include <memory.h>
+#include <libetc.h>
 
 void play_menu_sfx(s32 sfx_id, s32 volume);
 void field_reset_input_repeat(void);

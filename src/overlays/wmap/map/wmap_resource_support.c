@@ -1,6 +1,6 @@
 #include "../internal/wmap_frame_render.h"
 #include "../internal/wmap_resource_support.h"
-#include "sdk/libgpu.h"
+#include <libgpu.h>
 #include "main/cdrom.h"
 #include "../internal/wmap_sprite_render.h"
 #include "main/audio/akao_cmd.h"

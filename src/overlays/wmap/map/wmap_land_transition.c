@@ -13,10 +13,10 @@
 #include "../internal/wmap_effect_resources.h"
 #include "main/cdrom.h"
 #include "common/gpu_packet.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
-#include "sdk/libetc.h"
-#include "sdk/inline_c.h"
+#include <libgte.h>
+#include <libgpu.h>
+#include <libetc.h>
+#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 #include "main/audio/akao_cmd.h"
 #include "../internal/wmap_cells.h"

@@ -2,7 +2,7 @@
 #define FIELD_EFFECT_GEOMETRY_H
 
 #include "overlays/field/field_types.h"
-#include "sdk/libgte.h"
+#include <libgte.h>
 
 struct FieldObjectPart;
 struct FieldActorSlot;

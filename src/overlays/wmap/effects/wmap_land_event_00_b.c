@@ -8,7 +8,7 @@
 #include "../internal/wmap_main.h"
 #include "../internal/wmap_effect_primitives.h"
 #include "../internal/wmap_effect_resources.h"
-#include "sdk/libgte.h"
+#include <libgte.h>
 #include "../internal/wmap_step_sequence.h"
 
 void wmap_land_event_00_b_sequence_1_step_02(void);

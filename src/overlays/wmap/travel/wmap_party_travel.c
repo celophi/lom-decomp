@@ -7,9 +7,9 @@
 #include "../internal/wmap_sequence_runtime.h"
 #include "../internal/wmap_travel_sequences.h"
 #include "../internal/wmap_land_layout.h"
-#include "sdk/libgte.h"
-#include "sdk/libetc.h"
-#include "sdk/inline_c.h"
+#include <libgte.h>
+#include <libetc.h>
+#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 #include "main/cdrom.h"
 #include "main/audio/akao_cmd.h"

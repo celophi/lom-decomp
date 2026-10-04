@@ -2,8 +2,8 @@
 #include "../internal/wmap_land_effect_13.h"
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_sequence_runtime.h"
-#include "sdk/libgte.h"
-#include "sdk/inline_c.h"
+#include <libgte.h>
+#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 #include "common/vector.h"
 #include "../internal/wmap_view_effects.h"

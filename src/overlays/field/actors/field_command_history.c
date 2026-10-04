@@ -13,8 +13,8 @@
 #include "common.h"
 #include "main/main.h"
 #include "main/controller_internal.h"
-#include "sdk/libetc.h"
-#include "sdk/strings.h"
+#include <libetc.h>
+#include <strings.h>
 #include "../internal/field_actor.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"

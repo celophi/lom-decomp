@@ -8,10 +8,10 @@
 #include "internal/wmap_land_preview.h"
 #include "common.h"
 #include "common/gpu_packet.h"
-#include "sdk/libgpu.h"
-#include "sdk/libgte.h"
-#include "sdk/libetc.h"
-#include "sdk/spadstk.h"
+#include <libgpu.h>
+#include <libgte.h>
+#include <libetc.h>
+#include <spadstk.h>
 #include "internal/wmap_map_labels.h"
 #include "internal/wmap_sequence_runtime.h"
 #include "internal/wmap_effect_backdrop.h"
@@ -24,7 +24,7 @@
 #include "internal/wmap_sprite_render.h"
 #include "main/controller.h"
 #include "internal/wmap_pathfinding.h"
-#include "sdk/rand.h"
+#include <rand.h>
 #include "internal/wmap_map_events.h"
 #include "internal/wmap_cells.h"
 

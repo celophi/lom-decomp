@@ -3,7 +3,7 @@
 
 #include "common.h"
 #include "akao_driver.h"
-#include "sdk/libapi.h"
+#include <libapi.h>
 
 void akao_copy_bytes(s32* src, s32* dst, u32 num_bytes);
 void akao_apply_cdvol_to_spu(void);

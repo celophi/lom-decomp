@@ -2,7 +2,7 @@
 #define CARD_DIRECTORY_H
 
 #include "common.h"
-#include "sdk/kernel.h"
+#include <kernel.h>
 
 /**
  * @file card_directory.h

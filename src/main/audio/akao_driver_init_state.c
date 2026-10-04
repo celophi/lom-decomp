@@ -6,7 +6,7 @@
  */
 
 #include "main/audio/akao.h"
-#include "sdk/libspu.h"
+#include <libspu.h>
 
 #define AKAO_SFX_FIRST_VOICE 12
 #define AKAO_FULL_VOLUME (AKAO_VOLUME_MAX << 8)

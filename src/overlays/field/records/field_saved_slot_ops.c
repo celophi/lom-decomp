@@ -6,7 +6,7 @@
 #include "main/audio/game_audio.h"
 #include "common.h"
 #include "main/main.h"
-#include "sdk/rand.h"
+#include <rand.h>
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
 

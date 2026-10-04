@@ -3,7 +3,7 @@
 #include "../internal/wmap_party_travel.h"
 #include "../internal/wmap_resource_support.h"
 #include "../internal/wmap_map_labels.h"
-#include "sdk/libgpu.h"
+#include <libgpu.h>
 #include "common/gpu_packet.h"
 
 /** @brief Screen position of a map label at a particular map scale. */

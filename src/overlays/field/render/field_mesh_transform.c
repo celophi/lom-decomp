@@ -7,9 +7,9 @@
 #include "overlays/field/field_object_state.h"
 #include "../internal/field_mesh.h"
 #include "../internal/field_mesh_transform.h"
-#include "sdk/libgte.h"
-#include "sdk/libetc.h"
-#include "sdk/inline_c.h"
+#include <libgte.h>
+#include <libetc.h>
+#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 
 extern s32 g_field_track_index;

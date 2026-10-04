@@ -7,8 +7,8 @@
 #include "main/display.h"
 #include "overlays/field/field_text.h"
 #include "common/gpu_packet.h"
-#include "sdk/libgpu.h"
-#include "sdk/memory.h"
+#include <libgpu.h>
+#include <memory.h>
 
 /** @brief Alignment values in the low bits of the draw flags; 0 left-aligns on x. */
 #define FIELD_TEXT_QUAD_ALIGN_RIGHT 1

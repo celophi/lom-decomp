@@ -6,8 +6,8 @@
 #include "../internal/field_calls.h"
 #include "common/gpu_packet.h"
 #include "main/main.h"
-#include "sdk/libgpu.h"
-#include "sdk/memory.h"
+#include <libgpu.h>
+#include <memory.h>
 
 /*
  * VRAM layout of the three player icons: each g_prim_rect_buf slot holds a

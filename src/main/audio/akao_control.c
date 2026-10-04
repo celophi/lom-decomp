@@ -8,8 +8,8 @@
 #include "internal/akao_voice.h"
 #include "internal/akao_sequencer.h"
 #include "internal/akao_control.h"
-#include "sdk/libspu.h"
-#include "sdk/libapi.h"
+#include <libspu.h>
+#include <libapi.h>
 
 /** @brief Number of SFX channel slots. */
 
@@ -1239,9 +1239,9 @@ void akao_seq_set_master_volume(AkaoCommandParam* params)
     }
     else if (g_akao_seq_channel1 != NULL && id != 0 && id == g_akao_seq_channel1->song_id)
     {
-        s32 pending;
+        intptr_t pending;
 
-        pending = g_akao_pending_channels ? (s32)g_akao_pending_channels : (s32)g_akao_pending_channels;
+        pending = g_akao_pending_channels ? (intptr_t)g_akao_pending_channels : (intptr_t)g_akao_pending_channels;
         volume = params[1].value;
         g_akao_seq_channel1->volume_fade_ticks = 0;
         volume = (volume & 0x7F) << 16;

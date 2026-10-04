@@ -1,6 +1,6 @@
 #include "main/field_runtime.h"
-#include "sdk/strings.h"
-#include "sdk/memory.h"
+#include <strings.h>
+#include <memory.h>
 
 #define DIGIT_TO_ASCII(d) ((d) + '0')
 #define HEX_DIGIT_TABLE_SIZE 17

@@ -4,7 +4,7 @@
 
 #include "common.h"
 #include "main/main.h"
-#include "sdk/strings.h"
+#include <strings.h>
 
 /** @brief Number of entries in the known product-code table. */
 #define FIELD_KNOWN_SAVE_CODE_COUNT 11

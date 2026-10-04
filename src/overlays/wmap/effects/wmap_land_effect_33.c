@@ -8,7 +8,7 @@
 #include "../internal/wmap_sequence_runtime.h"
 #include "../internal/wmap_effect_resources.h"
 #include "main/cdrom.h"
-#include "sdk/libgte.h"
+#include <libgte.h>
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_cells.h"
 

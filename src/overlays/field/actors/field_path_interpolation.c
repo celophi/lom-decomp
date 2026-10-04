@@ -11,8 +11,8 @@
 
 #include "common.h"
 #include "../internal/field_path_interpolation.h"
-#include "sdk/libgte.h"
-#include "sdk/rand.h"
+#include <libgte.h>
+#include <rand.h>
 
 /** @brief Control point slots per path group (FIELD_PATH_POINT_COUNT are used). */
 #define FIELD_PATH_POINT_CAPACITY 11

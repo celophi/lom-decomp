@@ -14,8 +14,8 @@
 #include "../internal/field_actor_palette.h"
 #include "../internal/field_effect_types.h"
 #include "../internal/field_mesh.h"
-#include "sdk/memory.h"
-#include "sdk/libgpu.h"
+#include <memory.h>
+#include <libgpu.h>
 #include "common/tim.h"
 
 /** @brief Capacity of the pending resource read queue. */

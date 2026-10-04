@@ -7,8 +7,8 @@
 #include "overlays/field/field_types.h"
 #include "../internal/field_effect_types.h"
 #include "../internal/field_actor.h"
-#include "sdk/libgte.h"
-#include "sdk/inline_c.h"
+#include <libgte.h>
+#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 
 /** @brief Scratchpad vector holding the scaled actor delta. */

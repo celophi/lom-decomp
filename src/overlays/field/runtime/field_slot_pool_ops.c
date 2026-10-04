@@ -8,7 +8,7 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
 #include "../internal/field_script.h"
-#include "sdk/abs.h"
+#include <abs.h>
 
 /** @brief Slot values that stay in slot 4 unless the release flag is set. */
 #define FIELD_SLOT_IS_HIGH_CLASS(value) ((value) >= 0x51 && (value) <= 0x57)

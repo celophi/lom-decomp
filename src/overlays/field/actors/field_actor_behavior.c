@@ -19,14 +19,14 @@
 #include "overlays/field/field_types.h"
 #include "main/controller_internal.h"
 #include "main/scene_state.h"
-#include "sdk/libetc.h"
-#include "sdk/memory.h"
-#include "sdk/rand.h"
-#include "sdk/libgte.h"
-#include "sdk/inline_c.h"
+#include <libetc.h>
+#include <memory.h>
+#include <rand.h>
+#include <libgte.h>
+#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 #include "../internal/field_contact_geometry.h"
-#include "sdk/abs.h"
+#include <abs.h>
 
 s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index);
 void field_start_actor_text(s32 index, s32 text_id);

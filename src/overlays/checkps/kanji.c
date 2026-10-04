@@ -2,9 +2,9 @@
 
 #include "internal/checkps_internal.h"
 
-#include "sdk/libapi.h"
-#include "sdk/strings.h"
-#include "sdk/libgpu.h"
+#include <libapi.h>
+#include <strings.h>
+#include <libgpu.h>
 
 #define CHECKPS_KANJI_LINE_HEIGHT 18
 #define CHECKPS_KANJI_ADVANCE 17

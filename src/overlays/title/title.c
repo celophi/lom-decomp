@@ -3,9 +3,9 @@
 #include "internal/title_save.h"
 #include "main/screen_transition.h"
 #include "main/audio/akao_cmd.h"
-#include "sdk/memory.h"
+#include <memory.h>
 #include "main/cdrom.h"
-#include "sdk/rand.h"
+#include <rand.h>
 #include "main/controller.h"
 #include "overlays/field/field_sound.h"
 

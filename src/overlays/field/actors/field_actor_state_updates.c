@@ -10,9 +10,9 @@
 #include "common/vector.h"
 #include "overlays/field/field_types.h"
 #include "../internal/field_actor.h"
-#include "sdk/inline_c.h"
+#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
-#include "sdk/memory.h"
+#include <memory.h>
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_actor_sequence_runtime.h"
 #include "../internal/field_contact_geometry.h"

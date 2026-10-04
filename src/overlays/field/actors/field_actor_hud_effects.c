@@ -19,9 +19,9 @@
 #include "common/gpu_packet.h"
 #include "common/tim.h"
 #include "common/vector.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
-#include "sdk/rand.h"
+#include <libgte.h>
+#include <libgpu.h>
+#include <rand.h>
 #include "../internal/field_actor_runtime.h"
 
 /** @brief Screen center, added to camera-relative positions. */

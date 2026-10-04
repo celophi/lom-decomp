@@ -10,11 +10,11 @@
 #include "main/main.h"
 #include "common/pad.h"
 #include "common/tim.h"
-#include "sdk/libetc.h"
-#include "sdk/libgpu.h"
-#include "sdk/libgte.h"
-#include "sdk/memory.h"
-#include "sdk/rand.h"
+#include <libetc.h>
+#include <libgpu.h>
+#include <libgte.h>
+#include <memory.h>
+#include <rand.h>
 
 /* Ordering-table slots, from frontmost overlay to background. */
 enum

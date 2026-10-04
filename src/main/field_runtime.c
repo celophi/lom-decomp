@@ -3,14 +3,14 @@
 #include "main/cdrom.h"
 #include "main/controller.h"
 #include "main/overlay_memory.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
+#include <libgte.h>
+#include <libgpu.h>
 #include "main/scene_state.h"
 #include "main/display.h"
 #include "main/audio/akao_cmd.h"
 #include "main/controller_internal.h"
 #include "main/game_state.h"
-#include "sdk/libetc.h"
+#include <libetc.h>
 
 #define FIELD_PROJECTION_DISTANCE 1500
 #define FIELD_ENTRY_FADE_FRAMES 30

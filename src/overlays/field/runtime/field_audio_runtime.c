@@ -18,7 +18,7 @@
 #include "main/cd_resources.h"
 #include "main/cdrom.h"
 #include "main/game_state.h"
-#include "sdk/memory.h"
+#include <memory.h>
 
 /*
  * AKAO driver entry points in the main executable without a shared header

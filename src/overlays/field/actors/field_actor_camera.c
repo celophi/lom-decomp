@@ -10,7 +10,7 @@
  */
 
 #include "common.h"
-#include "sdk/libgte.h"
+#include <libgte.h>
 #include "../internal/field_calls.h"
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_effect_render_state.h"

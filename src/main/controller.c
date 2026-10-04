@@ -1,6 +1,6 @@
 #include "main/controller.h"
-#include "sdk/libetc.h"
-#include "sdk/libpad.h"
+#include <libetc.h>
+#include <libpad.h>
 #include "main/controller_internal.h"
 
 void PadStartCom();

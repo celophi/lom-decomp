@@ -4,10 +4,10 @@
 #include "common.h"
 #include "main/game_state.h"
 #include "common/saved_game.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
-#include "sdk/libapi.h"
-#include "sdk/libetc.h"
+#include <libgte.h>
+#include <libgpu.h>
+#include <libapi.h>
+#include <libetc.h>
 
 /** @brief Value set by field pair opcode 0x49 and cleared at boot. */
 extern s32 g_script_pair_value_49;

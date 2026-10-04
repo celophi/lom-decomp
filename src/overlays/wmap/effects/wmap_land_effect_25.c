@@ -1,7 +1,7 @@
 #include "../internal/wmap_model_render.h"
 #include "../internal/wmap_main.h"
 #include "../internal/wmap_land_effect_25.h"
-#include "sdk/libgte.h"
+#include <libgte.h>
 #include "../internal/wmap_sequence_runtime.h"
 #include "../internal/wmap_resource_support.h"
 #include "../internal/wmap_view_effects.h"

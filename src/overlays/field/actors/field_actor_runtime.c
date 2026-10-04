@@ -11,7 +11,7 @@
 #include "main/cd_resources.h"
 #include "main/display.h"
 #include "main/audio/game_audio.h"
-#include "sdk/libgpu.h"
+#include <libgpu.h>
 #include "../internal/field_calls.h"
 #include "overlays/field/field_types.h"
 #include "../internal/field_actor_tables.h"
@@ -22,9 +22,9 @@
 #include "../internal/field_modal_runtime.h"
 #include "overlays/field/field_scene_transition.h"
 #include "overlays/field/field_text.h"
-#include "sdk/rand.h"
+#include <rand.h>
 #include "../internal/field_contact_geometry.h"
-#include "sdk/memory.h"
+#include <memory.h>
 #include "../internal/field_actor_behavior.h"
 
 s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start);

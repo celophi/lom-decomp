@@ -2,7 +2,7 @@
 #define WMAP_EFFECT_PRIMITIVES_H
 
 #include "common.h"
-#include "sdk/libgte.h"
+#include <libgte.h>
 #include "wmap_sprite_render.h"
 
 void func_8006A2FC(void* arg0, WmapAnimationSlot* animations, s32 arg2, s32 arg3, s32 arg4_value, s32 arg5_value, u32 arg6, void* arg7);
