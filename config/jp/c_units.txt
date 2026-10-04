@@ -45,10 +45,10 @@ src/overlays/niki/niki.c
 src/overlays/shop/shop_render.c
 src/overlays/title/title.c
 src/overlays/title/title_save.c
-src/overlays/wmap/wmap_land_transition.c
+src/overlays/wmap/map/wmap_land_transition.c
 src/overlays/wmap/wmap_main.c
-src/overlays/wmap/wmap_map_display.c
-src/overlays/wmap/wmap_party_travel.c
-src/overlays/wmap/wmap_special_effect_34.c
-src/overlays/wmap/wmap_view_effects.c
+src/overlays/wmap/map/wmap_map_display.c
+src/overlays/wmap/travel/wmap_party_travel.c
+src/overlays/wmap/effects/wmap_special_effect_34.c
+src/overlays/wmap/render/wmap_view_effects.c
 src/overlays/wsel/wsel.c
