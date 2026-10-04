@@ -93,13 +93,11 @@ extern WmapHandler D_800D79B4[];
 extern WmapHandler D_800D79CC[];
 extern WmapHandler D_800D79E4[];
 extern WmapHandler D_800D79FC[];
-extern s32 D_800DBE70;
 extern s32 g_wmap_load_buffer[];
 extern u8 g_wmap_animation_bank_3;
 extern u8 g_wmap_animation_bank_4;
 extern u8 g_wmap_animation_bank_5;
 extern s32 D_80139228;
-extern s32 D_80139978;
 extern s32 D_8013B294;
 extern u32 g_wmap_land_effect_33_step;
 extern s32 g_wmap_land_effect_33_timer;
@@ -319,7 +317,7 @@ WMAP_STEP_RESET(wmap_land_effect_33_step_00, g_wmap_land_effect_33_step, g_wmap_
 
 void wmap_land_effect_33_step_01(void)
 {
-    D_800DBE70 = 0;
+    g_wmap_land_display_limit = 0;
     wmap_reset_focus_screen_position();
     g_wmap_focus_screen_position.point.x = 0xA4;
     g_wmap_focus_screen_position.point.y = 0x69;
@@ -372,7 +370,7 @@ WMAP_STEP_WAIT(wmap_land_effect_33_timeline_step_08, g_wmap_land_effect_33_timel
 
 void wmap_land_effect_33_timeline_step_09(void)
 {
-    D_80139978 = -1;
+    g_wmap_forced_animated_land_id = -1;
     wmap_start_sequence(wmap_land_effect_33_run_sequence_3);
     g_wmap_land_effect_33_timeline_timer = 0x36;
     g_wmap_land_effect_33_timeline_step++;

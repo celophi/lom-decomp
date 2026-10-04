@@ -61,7 +61,6 @@ extern s32 g_wmap_land_event_00_a_timer;
 extern void (*D_800D7204[])(void);
 extern s32 D_800D9228;
 extern s32 D_8011D500;
-extern s32 D_8013B258;
 extern s32 D_80182E38;
 extern s32 D_8013B294;
 extern s32 D_80139228;
@@ -357,7 +356,7 @@ void wmap_land_event_00_a_step_03(void)
     cdrom_wait_queue_empty();
     g_wmap_focus_screen_position.point.x = 0x94;
     g_wmap_focus_screen_position.point.y = 0x31;
-    D_8013B258 = 1;
+    g_wmap_auxiliary_labels_hidden = 1;
     D_80182E38 = 4;
     D_8011D500 = 0x35;
     D_800D9228 = 0x35;

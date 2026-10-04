@@ -56,7 +56,6 @@ typedef struct
 } WmapAfcEntry;
 
 extern u8 D_800DEF18[];
-extern s32 D_8013B258;
 extern s32 g_wmap_vehicle_cell_x;
 extern s32 g_wmap_vehicle_cell_y;
 extern s32 g_wmap_view_scroll_mode;
@@ -205,7 +204,7 @@ void wmap_land_event_17_step_01(void)
     g_wmap_effect_model_pack_2 = D_800DEF18 + 0x2000;
     g_wmap_focus_screen_position.point.x = 0x94;
     g_wmap_focus_screen_position.point.y = 0x31;
-    D_8013B258 = 1;
+    g_wmap_auxiliary_labels_hidden = 1;
     wmap_find_land_cell(0x11, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_view_scroll_mode = 2;
     g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * 0x30) - g_wmap_view.x;

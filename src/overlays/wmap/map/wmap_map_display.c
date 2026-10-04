@@ -209,7 +209,6 @@ extern s32 g_wmap_view_mode;
 extern s32 g_wmap_game_phase;
 
 extern WmapDisplayProjection g_wmap_view;
-extern s32 D_8013B258;
 extern s32 g_wmap_game_round;
 extern s32 g_wmap_game_timer;
 extern s32 g_wmap_game_score;
@@ -231,11 +230,9 @@ extern s32 D_801ADAF8;
 extern WmapMapPoint D_8004FD04[];
 extern s16 D_800D036C[];
 extern s32 g_wmap_land_scale_steps[];
-extern s32 D_800DBE70;
 extern SVECTOR g_wmap_camera_rotation;
 extern SVECTOR D_801398C8;
 extern s32 D_80139958;
-extern s32 D_80139978;
 extern VECTOR D_80182D48;
 extern VECTOR g_wmap_camera_translation;
 extern s32 g_wmap_cell_effect_steps[];
@@ -248,7 +245,6 @@ extern u8 g_wmap_spirit_timers[];
 extern u8 g_wmap_spirit_frames[];
 extern SPRT g_wmap_spirit_level_sprites[16];
 extern SPRT g_wmap_spirit_accent_sprites[16];
-extern s32 D_80129550;
 extern const s32 D_8004FC74[];
 extern WmapDisplayProjection g_wmap_saved_view;
 extern s32 g_wmap_spirit_selection;
@@ -335,7 +331,7 @@ void wmap_update_map_game(void)
                 D_800DBE78 = 1;
                 g_wmap_spirit_target_brightness = 0;
                 g_wmap_spirit_brightness = 0;
-                D_8013B258 = 1;
+                g_wmap_auxiliary_labels_hidden = 1;
                 g_wmap_game_round = 0;
                 g_wmap_game_hits = 15;
                 g_wmap_map_button_mask = 0xF0E0;
@@ -1220,7 +1216,7 @@ void wmap_draw_lands(void)
             {
                 state = 1;
             }
-            else if (object_id == D_80139978)
+            else if (object_id == g_wmap_forced_animated_land_id)
             {
                 state = 2;
             }
@@ -1229,7 +1225,7 @@ void wmap_draw_lands(void)
                 s32 base_state;
 
                 distance_state = wmap_classify_map_point(x * WMAP_CELL_SPACING, y * WMAP_CELL_SPACING);
-                base_state = D_800DBE70;
+                base_state = g_wmap_land_display_limit;
                 if (base_state != 2)
                 {
                     state = base_state;
@@ -1590,7 +1586,7 @@ void wmap_draw_spirit_levels(void)
     {
         wmap_get_artifact_spirit_sprites(wmap_get_selected_artifact(), sprite_indices);
     }
-    else if (D_80129550 == 1)
+    else if (g_wmap_artifact_placement_active == 1)
     {
         wmap_get_proposed_spirit_sprites(x, y, g_wmap_selected_artifact, x, y, sprite_indices);
     }
@@ -1673,7 +1669,7 @@ void wmap_draw_spirit_grid(s32 spirit_index)
         spirits = &cell_spirits;
         do
         {
-            if (D_80129550 == 1 && g_wmap_cells[target_x][target_y].placement_allowed != 0)
+            if (g_wmap_artifact_placement_active == 1 && g_wmap_cells[target_x][target_y].placement_allowed != 0)
             {
                 wmap_get_proposed_spirit_sprites(cur_x, cur_y, g_wmap_selected_artifact, target_x, target_y, cell_spirits.sprite_indices);
             }
@@ -1990,9 +1986,9 @@ void func_80058298(void)
 s32 wmap_get_point_display_mode(s32 x, s32 y, s32 scale)
 {
     s32 current = wmap_classify_map_point(x, y);
-    if (D_800DBE70 != 2)
+    if (g_wmap_land_display_limit != 2)
     {
-        s32 limit = D_800DBE70;
+        s32 limit = g_wmap_land_display_limit;
         if (current >= limit)
         {
             return limit;

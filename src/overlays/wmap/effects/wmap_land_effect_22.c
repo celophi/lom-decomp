@@ -71,12 +71,10 @@ extern s32 g_wmap_land_effect_22_sequence_13_timer;
 extern s32 g_wmap_land_effect_22_sequence_14_timer;
 extern s32 g_wmap_land_effect_22_timer;
 extern void (*D_800D6904[])(void);
-extern s32 D_80139978;
 extern s32 D_8013B294;
 extern s32 D_80139228;
 extern s32 g_wmap_land_effect_22_timeline_timer;
 extern void (*D_800D6914[])(void);
-extern s32 D_800DBE70;
 extern s32 g_wmap_land_effect_22_sequence_1_timer;
 extern void (*D_800D696C[])(void);
 extern u8 g_wmap_animation_bank_1[];
@@ -422,7 +420,7 @@ WMAP_STEP_RESET(wmap_land_effect_22_reset, g_wmap_land_effect_22_step, g_wmap_la
 /** @brief World-map step: arm a timed callback, flag it active, then tick the sub-counter. */
 void wmap_land_effect_22_step_01(void)
 {
-    D_80139978 = 0x17;
+    g_wmap_forced_animated_land_id = 0x17;
     g_wmap_focus_screen_position.point.x = 0xA4;
     g_wmap_focus_screen_position.point.y = 0x69;
     wmap_start_sequence(wmap_land_effect_22_run_timeline);
@@ -482,8 +480,8 @@ void wmap_land_effect_22_timeline_step_09(void)
     wmap_start_sequence(wmap_land_effect_22_run_sequence_10);
     wmap_start_sequence(wmap_land_effect_22_run_sequence_7);
     wmap_start_sequence(wmap_land_effect_22_run_sequence_1);
-    D_800DBE70 = 0;
-    D_80139978 = -1;
+    g_wmap_land_display_limit = 0;
+    g_wmap_forced_animated_land_id = -1;
     g_wmap_land_effect_22_timeline_timer = 0xF;
     g_wmap_land_effect_22_timeline_step += 1;
 }

@@ -1,9 +1,9 @@
+#include "../internal/wmap_main.h"
 #include "../internal/wmap_resource_support.h"
 #include "../internal/wmap_effect_resources.h"
 #include "main/cdrom.h"
 
 extern s32 D_8013B294;
-extern s32 D_80182E3C;
 extern u8 g_wmap_load_buffer[];
 extern u8 D_800DD7B4[];
 extern u8 D_800DDE54[];
@@ -72,11 +72,11 @@ static void func_800A8B38(s32 resource_index);
 void func_800A89DC(s32 index)
 {
     cdrom_wait_queue_empty();
-    if (index == D_80182E3C)
+    if (index == g_wmap_last_effect_resource_set)
     {
         return;
     }
-    D_80182E3C = index;
+    g_wmap_last_effect_resource_set = index;
     if (index >= 36 || index < 0)
     {
         index = 0;

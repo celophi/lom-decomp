@@ -1,3 +1,4 @@
+#include "../internal/wmap_main.h"
 #include "../internal/wmap_frame_render.h"
 #include "../internal/wmap_land_layout.h"
 #include "../internal/wmap_party_travel.h"
@@ -45,7 +46,6 @@ extern s32 D_80051A6C[];
 extern u8 D_800D03EC;
 extern u8 D_800D040C;
 extern s32 D_801398BC;
-extern s32 D_8013B258;
 extern s32 D_8013B28C;
 extern SPRT D_80051A30;
 extern SPRT D_80051A44;
@@ -322,7 +322,7 @@ void func_80060230(void)
     {
         D_8013B28C = D_801398BC;
     }
-    if (D_8013B258 == 0)
+    if (g_wmap_auxiliary_labels_hidden == 0)
     {
         char_index = D_80051A6C[D_8013B28C];
         do

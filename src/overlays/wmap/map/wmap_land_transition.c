@@ -85,7 +85,6 @@ enum WmapCarouselTextureWord
 };
 
 extern const WmapPoint g_wmap_cell_focus_offsets[];
-extern s32 D_800DBE70;
 extern s32 D_800DBE78;
 extern s32 g_wmap_cursor_column;
 extern s32 g_wmap_cursor_row;
@@ -101,13 +100,9 @@ extern s32 D_800CCBF4[];
 extern s32 D_8011CF18;
 extern WmapRouteCell D_8011D108[6][6];
 extern s32 g_wmap_selected_artifact;
-extern s32 D_8011D52C;
-extern s32 D_80129550;
 extern s32 D_801398F4;
 extern WmapProjectionState g_wmap_view;
-extern s32 D_80182DE0;
 
-extern s32 D_801ADAFC;
 extern s32 D_80139838[WMAP_ARTIFACT_SLOTS];
 extern s32 g_wmap_carousel_turn_frames;
 extern s32 g_wmap_carousel_turn_step;
@@ -139,7 +134,7 @@ s32 wmap_begin_land_placement(s32 initialize)
     }
     func_80064F64(wmap_get_land_count_tier() + WMAP_PLACEMENT_RESOURCE_BASE);
     wmap_start_map_tint(0x808080);
-    D_800DBE70 = 2;
+    g_wmap_land_display_limit = 2;
     g_wmap_screen_fade_mode = 1;
     D_800DBE78 = WMAP_CAROUSEL_SLIDE_IN;
     g_wmap_transition_mesh_hidden = 0;
@@ -207,7 +202,7 @@ void wmap_update_artifact_selection(void)
 
         if ((g_wmap_buttons_repeat & input_mask) != 0)
         {
-            if (D_80182DE0 == 0 && g_wmap_party_moving == 0)
+            if (g_wmap_artifact_placement_frame == 0 && g_wmap_party_moving == 0)
             {
                 s32 view_index;
                 s32 first_frame;
@@ -224,15 +219,15 @@ void wmap_update_artifact_selection(void)
                 g_wmap_preview_travel_end = D_8005135C[view_index + 1] - 1;
                 wmap_select_mesh_motion(0, first_frame, D_8005135C);
                 wmap_start_mesh_transition(1);
-                D_80129550 = 0;
+                g_wmap_artifact_placement_active = 0;
                 g_wmap_artifact_transfer_frame = no_artifact;
                 wmap_play_sound(WMAP_SOUND_OPEN_ARTIFACTS, WMAP_SELECTION_VOLUME);
             }
         }
 
-        if (D_80129550 == 1 && (g_wmap_buttons_repeat & WMAP_PAD_CONFIRM) != 0 && g_wmap_selected_artifact != -1 && g_wmap_cells[map_x][map_y].placement_allowed != 0 && D_80182DE0 == 0)
+        if (g_wmap_artifact_placement_active == 1 && (g_wmap_buttons_repeat & WMAP_PAD_CONFIRM) != 0 && g_wmap_selected_artifact != -1 && g_wmap_cells[map_x][map_y].placement_allowed != 0 && g_wmap_artifact_placement_frame == 0)
         {
-            D_80182DE0 = D_80129550;
+            g_wmap_artifact_placement_frame = g_wmap_artifact_placement_active;
             wmap_play_sound(WMAP_SOUND_PLACE_ARTIFACT, WMAP_SELECTION_VOLUME);
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;
@@ -243,19 +238,19 @@ void wmap_update_artifact_selection(void)
 
         if ((g_wmap_buttons_repeat & WMAP_PAD_CANCEL) != 0)
         {
-            D_80182DE0 = 0;
+            g_wmap_artifact_placement_frame = 0;
             g_wmap_map_button_mask = -1;
             cdrom_wait_queue_empty();
         }
 
-        if (g_wmap_cells[map_x][map_y].placement_allowed != 0 && D_80182DE0 != 0)
+        if (g_wmap_cells[map_x][map_y].placement_allowed != 0 && g_wmap_artifact_placement_frame != 0)
         {
-            if (D_80182DE0 < WMAP_PLACEMENT_DELAY_END)
+            if (g_wmap_artifact_placement_frame < WMAP_PLACEMENT_DELAY_END)
             {
-                D_80182DE0++;
+                g_wmap_artifact_placement_frame++;
             }
 
-            if (D_80182DE0 == WMAP_PLACEMENT_DELAY)
+            if (g_wmap_artifact_placement_frame == WMAP_PLACEMENT_DELAY)
             {
                 s32 artifact_id;
 
@@ -263,7 +258,7 @@ void wmap_update_artifact_selection(void)
                 g_wmap_focus_cell_y = map_y;
                 g_wmap_input_locked = 1;
                 g_wmap_buttons_held = 0;
-                D_8011D52C = 1;
+                g_wmap_placement_preview_locked = 1;
                 g_wmap_buttons_repeat = 0;
                 g_wmap_event_active = 1;
                 akao_fade_song_volume_from(0, 60, 127, 1);
@@ -330,7 +325,7 @@ void wmap_update_artifact_selection(void)
             g_wmap_preview_bob_frame = 0;
             if (artifact_id != -1)
             {
-                D_80129550 = 1;
+                g_wmap_artifact_placement_active = 1;
                 for (map_y = 0; map_y < WMAP_GRID_SIZE; map_y++)
                 {
                     for (map_x = 0; map_x < WMAP_GRID_SIZE; map_x++)
@@ -510,7 +505,7 @@ void wmap_draw_artifact_carousel(void)
             setlen(shadow, 9);
             setcode(shadow, 0x2E);
             shadow->tpage = WMAP_ARTIFACT_TPAGE;
-            if (D_801ADAFC != 0)
+            if (g_wmap_artifact_shadows_enabled != 0)
             {
                 addPrim(&g_wmap_current_frame->ordering_table[WMAP_ARTIFACT_SHADOW_OT], shadow);
                 if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)

@@ -83,7 +83,6 @@ extern s32 g_wmap_cursor_row;
 extern s32 D_8011CF18;
 extern s32 D_8011CF20;
 extern s32 g_wmap_sequence_count;
-extern s32 D_80129550;
 extern s32 g_wmap_view_mode;
 extern s32 D_801398B8;
 extern s32 g_wmap_view_scroll_mode;
@@ -306,7 +305,7 @@ void wmap_update_party_travel(void)
             i++;
         } while (i < WMAP_TRAVELER_COUNT);
     }
-    if ((g_wmap_buttons_repeat & WMAP_PAD_CONFIRM) && g_wmap_party_moving == 0 && D_80129550 == 0)
+    if ((g_wmap_buttons_repeat & WMAP_PAD_CONFIRM) && g_wmap_party_moving == 0 && g_wmap_artifact_placement_active == 0)
     {
         selected_x = g_wmap_view.x / WMAP_CELL_SPACING + g_wmap_cursor_column;
         selected_y = g_wmap_view.y / WMAP_CELL_SPACING + g_wmap_cursor_row;

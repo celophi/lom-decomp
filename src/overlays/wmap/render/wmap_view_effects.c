@@ -158,7 +158,6 @@ extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
 extern SVECTOR g_wmap_grid_vertices[];
 extern s16 g_wmap_grid_vertex_indices[];
-extern s32 D_800DBE70;
 extern s32 D_800DBE78;
 extern WmapView g_wmap_saved_view;
 extern s32 g_wmap_selected_artifact;
@@ -868,7 +867,7 @@ void wmap_update_view_zoom(void)
             g_wmap_view = g_wmap_saved_view;
             D_800DBE78 = 0;
             g_wmap_view_mode = WMAP_VIEW_MODE_MAP;
-            D_800DBE70 = mode;
+            g_wmap_land_display_limit = mode;
             return;
         }
         break;
@@ -893,7 +892,7 @@ void wmap_update_view_zoom(void)
             D_800DBE78 = 0;
             g_wmap_view_mode = WMAP_VIEW_MODE_SPIRITS;
             g_wmap_view.y = 0;
-            D_800DBE70 = 1;
+            g_wmap_land_display_limit = 1;
         }
         break;
     }
@@ -1043,7 +1042,7 @@ void wmap_begin_cell_focus(void)
     gte_rtps();
     gte_stsxy(&screen);
     screen_y = screen.point.y;
-    D_800DBE70 = 1;
+    g_wmap_land_display_limit = 1;
     g_wmap_sprite_actors[0].target_shade = 0;
     g_wmap_land_focus_timer = 4;
     g_wmap_focus_origin_x = screen.point.x;
