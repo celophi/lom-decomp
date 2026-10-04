@@ -958,6 +958,9 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
     s32 first_floor;
     s32 first_floor_b;
     s32 footprint_w;
+    s32 move_x;
+    s32 origin_x;
+    s32 z_start;
     s32 node_height;
     u8 left_flag;
     u8 right_flag;
@@ -978,8 +981,8 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
     s32 row;
     FieldCollisionSpan* span;
     s32 node_offset_z;
-    s32 value;
-    s32 scaled;
+    s32 footprint_x_end;
+    s32 push_x_fixed;
     s32 touch_offset_z;
     s32 touch_kind;
     s32 hit_offset_z;
@@ -1245,15 +1248,15 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
                     {
                         old_move_height = mover->move_height;
                         mover->move_x += secondary->motion_x;
-                        value = mover->x;
+                        origin_x = mover->x;
                         mover->move_z += secondary->motion_z;
-                        if (value >= 0)
+                        if (origin_x >= 0)
                         {
-                            secondary_cell_x = value >> 8;
+                            secondary_cell_x = origin_x >> 8;
                         }
                         else
                         {
-                            secondary_cell_x = (value + 0xFF) >> 8;
+                            secondary_cell_x = (origin_x + 0xFF) >> 8;
                         }
                         probe.x = secondary_cell_x;
                         probe.z = FIELD_COLLISION_CELL(mover->z);
@@ -1399,8 +1402,8 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
             bound_x_start = (u16)probe.x - (s16)bound_width / 2;
             bound_z_start = (u16)probe.z - (s16)bound_depth / 2;
             bound_z_end = bound_z_start + bound_depth;
-            value = bound_x_start + bound_width;
-            if (((s16)bound_z_start < 0) || ((s16)bound_z_end >= bound_header->map_depth) || ((s16)bound_x_start < 0) || ((s16)value >= bound_header->map_width))
+            footprint_x_end = bound_x_start + bound_width;
+            if (((s16)bound_z_start < 0) || ((s16)bound_z_end >= bound_header->map_depth) || ((s16)bound_x_start < 0) || ((s16)footprint_x_end >= bound_header->map_width))
             {
                 hit = 1;
             }
@@ -1438,203 +1441,187 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
             step_count = 1;
         }
         step = step_count - 1;
-        if (step_count != 0)
+        for (; step != -1; step--)
         {
-            do
+            x_start = FIELD_COLLISION_CELL(mover->x + mover->move_x * (step_count - step) / step_count) - (s16)mover->footprint_width / 2;
+            width = (u16)mover->footprint_width;
+            x_end = x_start + width;
+            z_start = FIELD_COLLISION_CELL(mover->z + mover->move_z * (step_count - step) / step_count) - (s16)mover->mode_flags / 2;
+            header = scene->header;
+            z_end_raw = z_start + (u16)mover->mode_flags;
+            z_end = z_end_raw;
+            if (header->flags & FIELD_SCENE_HEADER_BOUNDED)
             {
-                x_start = FIELD_COLLISION_CELL(mover->x + mover->move_x * (step_count - step) / step_count) - (s16)mover->footprint_width / 2;
-                width = (u16)mover->footprint_width;
-                x_end = x_start + width;
-                scratch = FIELD_COLLISION_CELL(mover->z + mover->move_z * (step_count - step) / step_count) - (s16)mover->mode_flags / 2;
-                header = scene->header;
-                z_end_raw = scratch + (u16)mover->mode_flags;
-                z_end = z_end_raw;
-                if (header->flags & FIELD_SCENE_HEADER_BOUNDED)
+                if (((s16)z_start < 0) || (z_end >= header->map_depth))
                 {
-                    if (((s16)scratch < 0) || (z_end >= header->map_depth))
-                    {
-                        slide_angle = field_collision_slide_angle(NULL, FIELD_COLLISION_EDGE_WALL_X, move_angle, slide_angle);
-                    }
-                    if (((s16)x_start < 0) || (x_end >= scene->header->map_width))
-                    {
-                        slide_angle = field_collision_slide_angle(NULL, FIELD_COLLISION_EDGE_WALL_Z, move_angle, slide_angle);
-                    }
+                    slide_angle = field_collision_slide_angle(NULL, FIELD_COLLISION_EDGE_WALL_X, move_angle, slide_angle);
                 }
-                hit_iter = FIELD_COLLISION_HIT_LIST;
-                touch_iter = FIELD_COLLISION_TOUCH_LIST;
-                remaining = hit_count;
-                remaining -= 1;
-                touch_count = 0;
-                if (remaining != -1)
+                if (((s16)x_start < 0) || (x_end >= scene->header->map_width))
                 {
-                    box_x_start = (s16)x_start;
-                    box_z_start = (s16)scratch;
-                    box_z_end = z_end;
-                    box_z_last = z_end - 1;
-                    box_x_end = x_end;
-                    box_x_last = x_end - 1;
-                    do
+                    slide_angle = field_collision_slide_angle(NULL, FIELD_COLLISION_EDGE_WALL_Z, move_angle, slide_angle);
+                }
+            }
+            hit_iter = FIELD_COLLISION_HIT_LIST;
+            touch_iter = FIELD_COLLISION_TOUCH_LIST;
+            remaining = hit_count;
+            remaining -= 1;
+            touch_count = 0;
+            if (remaining != -1)
+            {
+                box_x_start = (s16)x_start;
+                box_z_start = (s16)z_start;
+                box_z_end = z_end;
+                box_z_last = z_end - 1;
+                box_x_end = x_end;
+                box_x_last = x_end - 1;
+                for (; remaining != -1; remaining--)
+                {
+                    node = *hit_iter;
+                    hit_iter += 1;
+                    hit_offset_z = nodes->offset_z >> 8;
+                    hit_offset_x = (nodes->offset_x << 8) >> 16;
+                    surface = node->surface;
+                    if (((node->min_x + hit_offset_x) < box_x_end) && (((node->max_x + hit_offset_x) >= box_x_start)))
                     {
-                        node = *hit_iter;
-                        hit_iter += 1;
-                        hit_offset_z = nodes->offset_z >> 8;
-                        hit_offset_x = (nodes->offset_x << 8) >> 16;
-                        surface = node->surface;
-                        if (((node->min_x + hit_offset_x) < box_x_end) && (((node->max_x + hit_offset_x) >= box_x_start)))
+                        hit_row_start = node->min_z + (s16)hit_offset_z;
+                        if (hit_row_start < box_z_end)
                         {
-                            hit_row_start = node->min_z + (s16)hit_offset_z;
-                            if (hit_row_start < box_z_end)
+                            hit_row_end = node->max_z + (s16)hit_offset_z;
+                            if (hit_row_end >= box_z_start)
                             {
-                                hit_row_end = node->max_z + (s16)hit_offset_z;
-                                if (hit_row_end >= box_z_start)
+                                row = hit_row_start;
+                                if (box_z_last < hit_row_end)
                                 {
-                                    row = hit_row_start;
-                                    if (box_z_last < hit_row_end)
+                                    scratch = box_z_last;
+                                }
+                                else
+                                {
+                                    scratch = hit_row_end;
+                                }
+                                if (row < box_z_start)
+                                {
+                                    row = box_z_start;
+                                }
+                                hit_spans = FIELD_COLLISION_SURFACE_SPANS(surface);
+                                row_skip = (row - hit_row_start) * hit_spans;
+                                scratch = ((scratch - row) + 1) * hit_spans;
+                                hit = 0;
+                                span = (FieldCollisionSpan*)node->spans + (row_skip);
+                                left_flags = node->span_flags + (row_skip * 2);
+                                if (surface->flags & FIELD_COLLISION_SURFACE_EDGE_FLAGS)
+                                {
+                                    scratch = scratch - 1;
+                                    right_flags = left_flags + 1;
+                                    for (; scratch != -1; scratch--)
                                     {
-                                        scratch = box_z_last;
-                                    }
-                                    else
-                                    {
-                                        scratch = hit_row_end;
-                                    }
-                                    if (row < box_z_start)
-                                    {
-                                        row = box_z_start;
-                                    }
-                                    hit_spans = FIELD_COLLISION_SURFACE_SPANS(surface);
-                                    row_skip = (row - hit_row_start) * hit_spans;
-                                    scratch = ((scratch - row) + 1) * hit_spans;
-                                    hit = 0;
-                                    span = (FieldCollisionSpan*)node->spans + (row_skip);
-                                    left_flags = node->span_flags + (row_skip * 2);
-                                    if (surface->flags & FIELD_COLLISION_SURFACE_EDGE_FLAGS)
-                                    {
-                                        scratch = scratch - 1;
-                                        right_flags = left_flags + 1;
-                                        if (scratch != -1)
+                                        s32 wall_edge;
+                                        flagged_min_x = span->min_x;
+                                        if ((flagged_min_x < box_x_end) && (span->max_x >= box_x_start))
                                         {
-                                            do
+                                            if ((box_x_start < flagged_min_x) && ((s8)*left_flags >= 0))
                                             {
-                                                s32 wall_edge;
-                                                flagged_min_x = span->min_x;
-                                                if ((flagged_min_x < box_x_end) && (span->max_x >= box_x_start))
-                                                {
-                                                    if ((box_x_start < flagged_min_x) && ((s8)*left_flags >= 0))
-                                                    {
-                                                        slide_angle = field_collision_slide_angle(surface, *left_flags & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
-                                                        hit = 2;
-                                                    }
-                                                    if ((span->max_x < box_x_last) && ((s8)*right_flags >= 0))
-                                                    {
-                                                        slide_angle = field_collision_slide_angle(surface, *right_flags & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
-                                                        hit = 2;
-                                                    }
-                                                    left_flag = *left_flags;
-                                                    if ((s8)left_flag >= 0)
-                                                    {
-                                                        right_flag = *right_flags;
-                                                        if ((s8)right_flag >= 0)
-                                                        {
-                                                            wall_edge = FIELD_COLLISION_EDGE_WALL_X;
-                                                            if (((left_flag == wall_edge) || (right_flag == wall_edge)) && (span->min_x < box_x_start) &&
-                                                                (span->max_x >= box_x_end))
-                                                            {
-                                                                slide_angle = field_collision_slide_angle(surface, FIELD_COLLISION_EDGE_WALL_X, move_angle, slide_angle);
-                                                                hit = 2;
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                span++;
-                                                right_flags += 2;
-                                                scratch -= 1;
-                                                left_flags += 2;
-                                            } while (scratch != -1);
-                                        }
-                                    }
-                                    else if (hit_offset_x != 0)
-                                    {
-                                        s32 scan_bias;
-                                        scan_bias = hit_offset_x;
-                                        scratch = scratch - 1;
-                                        if (scratch != -1)
-                                        {
-                                            do
+                                                slide_angle = field_collision_slide_angle(surface, *left_flags & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
+                                                hit = 2;
+                                            }
+                                            if ((span->max_x < box_x_last) && ((s8)*right_flags >= 0))
                                             {
-                                                offset_min_x = span->min_x + scan_bias;
-                                                if ((offset_min_x < box_x_end) && ((span->max_x + scan_bias) >= box_x_start))
+                                                slide_angle = field_collision_slide_angle(surface, *right_flags & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
+                                                hit = 2;
+                                            }
+                                            left_flag = *left_flags;
+                                            if ((s8)left_flag >= 0)
+                                            {
+                                                right_flag = *right_flags;
+                                                if ((s8)right_flag >= 0)
                                                 {
-                                                    hit = 1;
-                                                    if (box_x_start < offset_min_x)
-                                                    {
-                                                        slide_angle = field_collision_slide_angle(surface, left_flags[0] & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
-                                                    }
-                                                    if ((span->max_x + scan_bias) < box_x_last)
-                                                    {
-                                                        slide_angle = field_collision_slide_angle(surface, left_flags[1] & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
-                                                    }
-                                                    if (((span->min_x + scan_bias) < box_x_start) && ((span->max_x + scan_bias) >= box_x_end))
+                                                    wall_edge = FIELD_COLLISION_EDGE_WALL_X;
+                                                    if (((left_flag == wall_edge) || (right_flag == wall_edge)) && (span->min_x < box_x_start) &&
+                                                        (span->max_x >= box_x_end))
                                                     {
                                                         slide_angle = field_collision_slide_angle(surface, FIELD_COLLISION_EDGE_WALL_X, move_angle, slide_angle);
+                                                        hit = 2;
                                                     }
                                                 }
-                                                span++;
-                                                scratch -= 1;
-                                                left_flags += 2;
-                                            } while (scratch != -1);
+                                            }
                                         }
+                                        span++;
+                                        right_flags += 2;
+                                        left_flags += 2;
                                     }
-                                    else
+                                }
+                                else if (hit_offset_x != 0)
+                                {
+                                    s32 scan_bias;
+                                    scan_bias = hit_offset_x;
+                                    scratch = scratch - 1;
+                                    for (; scratch != -1; scratch--)
                                     {
-                                        scratch = scratch - 1;
-                                        if (scratch != -1)
+                                        offset_min_x = span->min_x + scan_bias;
+                                        if ((offset_min_x < box_x_end) && ((span->max_x + scan_bias) >= box_x_start))
                                         {
-                                            do
+                                            hit = 1;
+                                            if (box_x_start < offset_min_x)
                                             {
-                                                plain_min_x = span->min_x;
-                                                if ((plain_min_x < box_x_end) && (span->max_x >= box_x_start))
-                                                {
-                                                    hit = 1;
-                                                    if (box_x_start < plain_min_x)
-                                                    {
-                                                        slide_angle = field_collision_slide_angle(surface, left_flags[0] & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
-                                                    }
-                                                    if (span->max_x < box_x_last)
-                                                    {
-                                                        slide_angle = field_collision_slide_angle(surface, left_flags[1] & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
-                                                    }
-                                                    if ((span->min_x < box_x_start) && (span->max_x >= box_x_end))
-                                                    {
-                                                        slide_angle = field_collision_slide_angle(surface, FIELD_COLLISION_EDGE_WALL_X, move_angle, slide_angle);
-                                                    }
-                                                }
-                                                span++;
-                                                scratch -= 1;
-                                                left_flags += 2;
-                                            } while (scratch != -1);
+                                                slide_angle = field_collision_slide_angle(surface, left_flags[0] & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
+                                            }
+                                            if ((span->max_x + scan_bias) < box_x_last)
+                                            {
+                                                slide_angle = field_collision_slide_angle(surface, left_flags[1] & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
+                                            }
+                                            if (((span->min_x + scan_bias) < box_x_start) && ((span->max_x + scan_bias) >= box_x_end))
+                                            {
+                                                slide_angle = field_collision_slide_angle(surface, FIELD_COLLISION_EDGE_WALL_X, move_angle, slide_angle);
+                                            }
                                         }
+                                        span++;
+                                        left_flags += 2;
                                     }
-                                    if (hit != 0)
+                                }
+                                else
+                                {
+                                    scratch = scratch - 1;
+                                    for (; scratch != -1; scratch--)
                                     {
-                                        *touch_iter = node;
-                                        touch_iter += 1;
-                                        touch_count += 1;
+                                        plain_min_x = span->min_x;
+                                        if ((plain_min_x < box_x_end) && (span->max_x >= box_x_start))
+                                        {
+                                            hit = 1;
+                                            if (box_x_start < plain_min_x)
+                                            {
+                                                slide_angle = field_collision_slide_angle(surface, left_flags[0] & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
+                                            }
+                                            if (span->max_x < box_x_last)
+                                            {
+                                                slide_angle = field_collision_slide_angle(surface, left_flags[1] & FIELD_COLLISION_EDGE_INDEX, move_angle, slide_angle);
+                                            }
+                                            if ((span->min_x < box_x_start) && (span->max_x >= box_x_end))
+                                            {
+                                                slide_angle = field_collision_slide_angle(surface, FIELD_COLLISION_EDGE_WALL_X, move_angle, slide_angle);
+                                            }
+                                        }
+                                        span++;
+                                        left_flags += 2;
                                     }
+                                }
+                                if (hit != 0)
+                                {
+                                    *touch_iter = node;
+                                    touch_iter += 1;
+                                    touch_count += 1;
                                 }
                             }
                         }
-                        remaining -= 1;
-                    } while (remaining != -1);
+                    }
                 }
-                if (slide_angle != FIELD_COLLISION_SLIDE_NONE)
-                {
-                    break;
-                }
-            } while (--step != -1);
+            }
+            if (slide_angle != FIELD_COLLISION_SLIDE_NONE)
+            {
+                break;
+            }
         }
-        value = mover->move_x;
+        move_x = mover->move_x;
         steps_taken = step_count - (step + 1);
-        delta_x = value * steps_taken / step_count;
+        delta_x = move_x * steps_taken / step_count;
         move_z = mover->move_z;
         slide_z = move_z * steps_taken / step_count;
         delta_z = slide_z;
@@ -1642,7 +1629,7 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
          * node it still overlaps. The shorter push applies first; the longer one only if still needed. */
         if ((slide_angle >= 0) && (delta_x == 0) && (slide_z == 0))
         {
-            sample = SquareRoot0((value * value) + (move_z * move_z));
+            sample = SquareRoot0((move_x * move_x) + (move_z * move_z));
             if ((sample * rcos(slide_angle)) >= 0)
             {
                 delta_x = (sample * rcos(slide_angle)) >> 12;
@@ -1674,7 +1661,7 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
                 }
                 width = (u16)mover->footprint_width;
                 x_end = (s16)x_start + width;
-                scratch = FIELD_COLLISION_CELL(mover->z + delta_z) - (s16)mover->mode_flags / 2;
+                z_start = FIELD_COLLISION_CELL(mover->z + delta_z) - (s16)mover->mode_flags / 2;
                 touch_iter = FIELD_COLLISION_TOUCH_LIST;
                 hit = 0;
                 push_x = 0;
@@ -1682,13 +1669,13 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
                 depth = (u16)mover->mode_flags;
                 push_z = 0;
                 header = scene->header;
-                z_end_raw = scratch + (u16)depth;
+                z_end_raw = z_start + (u16)depth;
                 z_end = z_end_raw;
                 if (header->flags & FIELD_SCENE_HEADER_BOUNDED)
                 {
-                    if ((s16)scratch < 0)
+                    if ((s16)z_start < 0)
                     {
-                        push_z = -(s16)scratch;
+                        push_z = -(s16)z_start;
                         hit = 1;
                     }
                     else
@@ -1720,13 +1707,13 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
                 {
                     push_x_end = x_end;
                     push_x_start = (s16)x_start;
-                    push_z_start = (s16)scratch;
+                    push_z_start = (s16)z_start;
                     push_z_end = z_end;
                     push_z_last = push_z_end - 1;
                     nodes_offset_x = nodes->offset_x >> 8;
                     push_offset_x = (s16)nodes_offset_x;
                     push_offset_z = (nodes->offset_z << 8) >> 16;
-                    do
+                    for (; step_count != -1; step_count--)
                     {
                         node = *touch_iter;
                         touch_iter += 1;
@@ -1756,7 +1743,7 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
                                     if (scratch != -1)
                                     {
                                         push_x_last = push_x_end - 1;
-                                        do
+                                        for (; scratch != -1; scratch--)
                                         {
                                             remaining = FIELD_COLLISION_SURFACE_SPANS(surface);
                                             remaining -= 1;
@@ -1856,21 +1843,19 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
                                                     remaining -= 1;
                                                 } while (remaining != -1);
                                             }
-                                            scratch -= 1;
                                             row += 1;
-                                        } while (scratch != -1);
+                                        }
                                     }
                                 }
                             }
                         }
-                        step_count -= 1;
-                    } while (step_count != -1);
+                    }
                 }
                 if (hit == 0)
                 {
                     break;
                 }
-                scaled = push_x << 8;
+                push_x_fixed = push_x << 8;
                 if (hit_count == 1)
                 {
                     span_push_z = push_z << 8;
@@ -1884,16 +1869,16 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
                     }
                     else if ((push_z == 0) || (push_z == FIELD_COLLISION_PUSH_BLOCKED))
                     {
-                        delta_x += scaled;
+                        delta_x += push_x_fixed;
                         break;
                     }
                     else
                     {
-                        push_x_abs = abs(scaled);
+                        push_x_abs = abs(push_x_fixed);
                         push_z_abs = abs(span_push_z);
                         if (push_z_abs < push_x_abs)
                         {
-                            carry_x = scaled;
+                            carry_x = push_x_fixed;
                             carry_z = 0;
                             delta_z += span_push_z;
                         }
@@ -1901,7 +1886,7 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
                         {
                             carry_z = span_push_z;
                             carry_x = 0;
-                            delta_x += scaled;
+                            delta_x += push_x_fixed;
                         }
                     }
                 }
@@ -1939,8 +1924,8 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
                     retry_x_start = (u16)probe.x - (s16)footprint_width / 2;
                     retry_z_start = (u16)probe.z - (s16)retry_depth / 2;
                     retry_z_end = retry_z_start + retry_depth;
-                    value = retry_x_start + footprint_width;
-                    if (((s16)retry_z_start < 0) || ((s16)retry_z_end >= retry_header->map_depth) || ((s16)retry_x_start < 0) || ((s16)value >= retry_header->map_width))
+                    footprint_x_end = retry_x_start + footprint_width;
+                    if (((s16)retry_z_start < 0) || ((s16)retry_z_end >= retry_header->map_depth) || ((s16)retry_x_start < 0) || ((s16)footprint_x_end >= retry_header->map_width))
                     {
                         hit = 1;
                     }
@@ -2003,7 +1988,7 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
     {
         ground_cell_z = (s16)ground_z;
         step_limit = (s16)step_height;
-        do
+        for (; touch_count != -1; touch_count--)
         {
             touch_node = *touch_iter;
             nodes = touch_node;
@@ -2156,7 +2141,7 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
                 }
                 break;
             }
-        } while (--touch_count != -1);
+        }
     }
     /* Airborne movers hit the ceiling or land; grounded movers follow the floor. */
     if (mover->mode_flags & FIELD_COLLISION_MOVER_AIRBORNE)
