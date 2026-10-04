@@ -844,6 +844,61 @@ s32 field_collision_hit_markers(FieldCollisionQuery* query)
 }
 
 /**
+ * @brief Walk a row's spans until one contains a cell, shifting each span by an offset.
+ * @param span Span cursor; left on the containing span, or past the row.
+ * @param counter Loop counter variable.
+ * @param count Spans in the row.
+ * @param x Cell to look for.
+ * @param offset Node offset added to both span ends.
+ * @param found Set to 1 when a span contains @p x.
+ */
+#define FIELD_COLLISION_FIND_SPAN(span, counter, count, x, offset, found) \
+    for ((counter) = (count) - 1; (counter) != -1; (counter)--) \
+    { \
+        if (((x) >= ((span)->min_x + (offset))) && (((span)->max_x + (offset)) >= (x))) \
+        { \
+            (found) = 1; \
+            break; \
+        } \
+        (span)++; \
+    }
+
+/**
+ * @brief Fold one span's push into the running push along an axis.
+ * @param total Running push; becomes FIELD_COLLISION_PUSH_BLOCKED when pushes disagree in direction.
+ * @param part This span's push; the larger push in the same direction wins.
+ */
+#define FIELD_COLLISION_MERGE_PUSH(total, part) \
+    do \
+    { \
+        if ((part) > 0) \
+        { \
+            if ((total) >= 0) \
+            { \
+                if ((total) < (part)) \
+                { \
+                    (total) = (part); \
+                } \
+            } \
+            else \
+            { \
+                (total) = FIELD_COLLISION_PUSH_BLOCKED; \
+            } \
+        } \
+        else if ((total) <= 0) \
+        { \
+            if ((part) < (total)) \
+            { \
+                (total) = (part); \
+            } \
+        } \
+        else \
+        { \
+            (total) = FIELD_COLLISION_PUSH_BLOCKED; \
+        } \
+    } while (0)
+
+/**
  * @brief Move a mover one frame through the field collision nodes.
  *
  * Finds the floor node under the mover (when asked to), applies the floor's
@@ -1065,27 +1120,11 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
                             span = (FieldCollisionSpan*)node->spans + (((s16)cell_z - first_row_start) * first_spans);
                             if ((s16)node_offset_x != 0)
                             {
-                                for (scratch = first_spans - 1; scratch != -1; scratch--)
-                                {
-                                    if (((s16)first_cell_x >= (span->min_x + (s16)node_offset_x)) && ((span->max_x + (s16)node_offset_x) >= (s16)first_cell_x))
-                                    {
-                                        hit = 1;
-                                        break;
-                                    }
-                                    span++;
-                                }
+                                FIELD_COLLISION_FIND_SPAN(span, scratch, first_spans, (s16)first_cell_x, (s16)node_offset_x, hit);
                             }
                             else
                             {
-                                for (scratch = first_spans - 1; scratch != -1; scratch--)
-                                {
-                                    if (((s16)first_cell_x >= span->min_x) && (span->max_x >= (s16)first_cell_x))
-                                    {
-                                        hit = 1;
-                                        break;
-                                    }
-                                    span++;
-                                }
+                                FIELD_COLLISION_FIND_SPAN(span, scratch, first_spans, (s16)first_cell_x, 0, hit);
                             }
                             if (hit != 0)
                             {
@@ -1800,59 +1839,11 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
                                                                 {
                                                                     if ((push_x != FIELD_COLLISION_PUSH_BLOCKED) && (span_push_x != 0))
                                                                     {
-                                                                        if (span_push_x > 0)
-                                                                        {
-                                                                            if (push_x >= 0)
-                                                                            {
-                                                                                if (push_x < span_push_x)
-                                                                                {
-                                                                                    push_x = span_push_x;
-                                                                                }
-                                                                            }
-                                                                            else
-                                                                            {
-                                                                                push_x = FIELD_COLLISION_PUSH_BLOCKED;
-                                                                            }
-                                                                        }
-                                                                        else if (push_x <= 0)
-                                                                        {
-                                                                            if (span_push_x < push_x)
-                                                                            {
-                                                                                push_x = span_push_x;
-                                                                            }
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            push_x = FIELD_COLLISION_PUSH_BLOCKED;
-                                                                        }
+                                                                        FIELD_COLLISION_MERGE_PUSH(push_x, span_push_x);
                                                                     }
                                                                     if (push_z != FIELD_COLLISION_PUSH_BLOCKED)
                                                                     {
-                                                                        if (span_push_z > 0)
-                                                                        {
-                                                                            if (push_z >= 0)
-                                                                            {
-                                                                                if (push_z < span_push_z)
-                                                                                {
-                                                                                    push_z = span_push_z;
-                                                                                }
-                                                                            }
-                                                                            else
-                                                                            {
-                                                                                push_z = FIELD_COLLISION_PUSH_BLOCKED;
-                                                                            }
-                                                                        }
-                                                                        else if (push_z <= 0)
-                                                                        {
-                                                                            if (span_push_z < push_z)
-                                                                            {
-                                                                                push_z = span_push_z;
-                                                                            }
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            push_z = FIELD_COLLISION_PUSH_BLOCKED;
-                                                                        }
+                                                                        FIELD_COLLISION_MERGE_PUSH(push_z, span_push_z);
                                                                     }
                                                                 }
                                                                 else
@@ -2032,27 +2023,11 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
                 span = (FieldCollisionSpan*)touch_node->spans + ((ground_cell_z - touch_row_start) * touch_spans);
                 if ((s16)touch_offset_x != 0)
                 {
-                    for (scratch = touch_spans - 1; scratch != -1; scratch--)
-                    {
-                        if ((touch_cell_x >= (span->min_x + (s16)touch_offset_x)) && ((span->max_x + (s16)touch_offset_x) >= touch_cell_x))
-                        {
-                            hit = 1;
-                            break;
-                        }
-                        span++;
-                    }
+                    FIELD_COLLISION_FIND_SPAN(span, scratch, touch_spans, touch_cell_x, (s16)touch_offset_x, hit);
                 }
                 else
                 {
-                    for (scratch = touch_spans - 1; scratch != -1; scratch--)
-                    {
-                        if ((touch_cell_x >= span->min_x) && (span->max_x >= touch_cell_x))
-                        {
-                            hit = 1;
-                            break;
-                        }
-                        span++;
-                    }
+                    FIELD_COLLISION_FIND_SPAN(span, scratch, touch_spans, touch_cell_x, 0, hit);
                 }
             }
             touch_height_raw = nodes->height_offset;
