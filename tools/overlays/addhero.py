@@ -51,7 +51,7 @@ from tools.overlays.resources import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OVERLAY_CONFIG = "overlays/ADDHERO.BIN.yaml"
 SYMBOL_FILE = "symbols/addhero_symbol_addrs.txt"
-STEP_HEADER = REPO_ROOT / "src/overlays/addhero/addhero_internal.h"
+STEP_HEADER = REPO_ROOT / "src/overlays/addhero/internal/addhero_internal.h"
 
 CARD_TITLES_NOTE = (
     "# Shift-JIS memory card title templates; the save screen (CARDA) writes them, "
@@ -103,7 +103,7 @@ SYMBOL_NAMES = {
 }
 MESSAGE_SYMBOL_PREFIX = "g_addhero_text_"
 LOCATION_SYMBOL_PREFIX = "g_addhero_location_text_table"
-# The idle table has the shared name every card overlay uses (include/card_events.h).
+# The idle table has the shared name every card overlay uses (include/common/card_events.h).
 CARD_STEP_SYMBOL_PREFIX = ("g_addhero_loadseq_", "g_card_steps_")
 
 

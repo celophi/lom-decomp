@@ -31,7 +31,7 @@ from tools.overlays.resources import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OVERLAY_CONFIG = "overlays/SHOP.BIN.yaml"
 SYMBOL_FILE = "symbols/shop_symbol_addrs.txt"
-HEADER = REPO_ROOT / "src/overlays/shop/shop_internal.h"
+HEADER = REPO_ROOT / "src/overlays/shop/internal/shop_internal.h"
 RENDER_SOURCE = REPO_ROOT / "src/overlays/shop/shop_render.c"
 ITEM_KIND_COUNT = 256
 MATERIAL_COUNT = 64

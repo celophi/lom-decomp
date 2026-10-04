@@ -36,7 +36,7 @@ from tools.overlays.resources import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OVERLAY_CONFIG = "overlays/MENU.BIN.yaml"
 SYMBOL_FILE = "symbols/menu_symbol_addrs.txt"
-HEADER = REPO_ROOT / "src/overlays/menu/menu_internal.h"
+HEADER = REPO_ROOT / "src/overlays/menu/internal/menu_internal.h"
 PAD_HEADER = REPO_ROOT / "include/sdk/libetc.h"
 
 # C layouts from menu_internal.h, menu.h and tim.h; tests keep them in step.

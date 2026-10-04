@@ -1,4 +1,4 @@
-"""Decode the saved-game records described in include/saved_game.h.
+"""Decode the saved-game records described in include/common/saved_game.h.
 
 TITLE's game-state templates are SavedGameLayout images, its hero records are
 FieldCharacterRecords and its starting weapons are FieldItemRecords. The
@@ -16,7 +16,7 @@ import struct
 from typing import Callable
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-HEADER = REPO_ROOT / "include/saved_game.h"
+HEADER = REPO_ROOT / "include/common/saved_game.h"
 
 ITEM_SIZE = 0x40
 ITEM_NAME_LENGTH = 0x14  # FIELD_ITEM_NAME_LENGTH

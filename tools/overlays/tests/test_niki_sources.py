@@ -14,7 +14,7 @@ from tools.overlays.tests.test_addhero_sources import c_define
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 VERSIONS = ("us", "jp")
-HEADER = REPO_ROOT / "src/overlays/niki/niki_internal.h"
+HEADER = REPO_ROOT / "src/overlays/niki/internal/niki_internal.h"
 
 # Each card_data constant, and the NIKI #define that must agree with it.
 C_CONSTANTS = (

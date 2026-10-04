@@ -1,6 +1,6 @@
-#include "field_text.h"
-#include "menu_internal.h"
-#include "cdrom.h"
+#include "overlays/field/field_text.h"
+#include "internal/menu_internal.h"
+#include "main/cdrom.h"
 
 s32 menu_layout_node(s32 node_index, s32 base_pos);
 s32 menu_handle_input(s32 process_actions);

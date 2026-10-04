@@ -1,5 +1,5 @@
-#include "niki_internal.h"
-#include "menu.h"
+#include "internal/niki_internal.h"
+#include "overlays/menu/menu.h"
 
 s32 niki_has_known_entry_type(void);
 

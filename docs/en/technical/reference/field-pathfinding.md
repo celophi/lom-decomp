@@ -1,6 +1,6 @@
 # How field pathfinding works
 
-[English documentation](../../README.md) | [Japanese](../../../jp/technical/reference/field-pathfinding.md) | [Collision source](../../../../src/overlays/field/field_collision.c)
+[English documentation](../../README.md) | [Japanese](../../../jp/technical/reference/field-pathfinding.md) | [Collision source](../../../../src/overlays/field/scene/field_collision.c)
 
 We have a character on one side of a wall and a destination on the other. We
 want the character to walk around it without getting stuck on the corner.
@@ -205,7 +205,7 @@ If something fails, the function returns a negative result:
 | `-5` | Reconstruction couldn't find the next breadcrumb toward the start. |
 
 A failed search doesn't decide what the actor does next. The two actor-script
-call sites in [the movement code](../../../../src/overlays/field/field_actor_script_ops.c)
+call sites in [the movement code](../../../../src/overlays/field/actors/field_actor_script_ops.c)
 fall back to a one-point destination when this function fails. So seeing a
 character still try to move doesn't, by itself, mean pathfinding succeeded.
 
@@ -213,7 +213,7 @@ character still try to move doesn't, by itself, mean pathfinding succeeded.
 
 Once the route makes sense, the long function is a little easier to read.
 These are the main landmarks in
-[`field_collision_find_path`](../../../../src/overlays/field/field_collision.c):
+[`field_collision_find_path`](../../../../src/overlays/field/scene/field_collision.c):
 
 | What we're following | Where to look |
 | --- | --- |

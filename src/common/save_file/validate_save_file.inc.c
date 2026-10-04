@@ -1,8 +1,8 @@
 /*
- * Shared save-file function; see include/save_file.h. Included by each
+ * Shared save-file function; see include/common/save_file.h. Included by each
  * overlay that has it, at the point where it sits in that overlay's binary.
  */
-#include "save_file.h"
+#include "common/save_file.h"
 
 /**
  * @brief Check a save file's stored checksum and its "ANA" magic.

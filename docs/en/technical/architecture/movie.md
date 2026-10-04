@@ -99,13 +99,13 @@ and rechecks the request because a callback may already have serviced it.
 This guard and the volatile handshake fields do not make the subsystem
 reentrant or suitable for multiple simultaneous movies.
 
-Sources: [shared state](../../../../include/movie_state.h),
+Sources: [shared state](../../../../include/overlays/movie/movie_state.h),
 [overlay header](../../../../src/overlays/movie/overlay_header.c),
 [stream callbacks](../../../../src/overlays/movie/movie_stream.c).
 
 ## Playback modes and public contract
 
-The public entry points are declared in [movie.h](../../../../include/movie.h).
+The public entry points are declared in [movie.h](../../../../include/overlays/movie/movie.h).
 
 | Entry point | Contract |
 |---|---|
@@ -164,9 +164,9 @@ waits for drawing and VSync, and disables display output. It does not restore
 a previous display environment itself.
 
 Sources: [initialization and full-screen driver](../../../../src/overlays/movie/movie.c),
-[FIELD workspace setup](../../../../src/overlays/field/field_scene_build.c),
-[FIELD caller](../../../../src/overlays/field/field_animation.c),
-[CD teardown](../../../../src/cdrom.c).
+[FIELD workspace setup](../../../../src/overlays/field/scene/field_scene_build.c),
+[FIELD caller](../../../../src/overlays/field/actors/field_animation.c),
+[CD teardown](../../../../src/main/cdrom.c).
 
 ## Memory layout and buffer lifetime
 
@@ -210,8 +210,8 @@ image reverses presentation.
 | VRAM image | Slice upload pipeline | Caller consumes `frame_ready` and presents the completed image while the other becomes the next destination |
 
 Sources: [buffer layouts](../../../../src/overlays/movie/movie.c),
-[sector types](../../../../src/overlays/movie/movie_internal.h),
-[FIELD allocation](../../../../src/overlays/field/field_scene_build.c).
+[sector types](../../../../src/overlays/movie/internal/movie_internal.h),
+[FIELD allocation](../../../../src/overlays/field/scene/field_scene_build.c).
 
 ## Disc stream and ring protocol
 
@@ -416,9 +416,9 @@ startup. The change from 1 to 2 happens in the audio branch even if that entry
 could not fit, so state 2 alone does not prove data was successfully buffered.
 
 Sources: [MOVIE audio servicing](../../../../src/overlays/movie/movie.c),
-[AKAO commands and position tracking](../../../../src/akao_cmd.c),
-[AKAO SPU stream](../../../../src/akao_xa_stream.c),
-[CD recovery coordination](../../../../src/cdrom.c).
+[AKAO commands and position tracking](../../../../src/main/audio/akao_cmd.c),
+[AKAO SPU stream](../../../../src/main/audio/akao_xa_stream.c),
+[CD recovery coordination](../../../../src/main/cdrom.c).
 
 ## CD coordination and timing
 
@@ -454,9 +454,9 @@ progress depends on encoded data, decode work, disc delivery, GPU availability,
 and caller servicing. `CdGetSector()` polling, drive pause loops, `DrawSync(0)`,
 and VSync waits also mean there is no general bounded-latency API guarantee.
 
-Sources: [CD streaming callbacks](../../../../src/cdrom.c),
+Sources: [CD streaming callbacks](../../../../src/main/cdrom.c),
 [full-screen loop](../../../../src/overlays/movie/movie.c),
-[controller timing](../../../../src/controller.c).
+[controller timing](../../../../src/main/controller.c).
 
 ## Completion and FIELD handoff
 
@@ -513,7 +513,7 @@ independent GPU completion fence: the code has queued the upload at that point.
 
 Sources: [completion checks](../../../../src/overlays/movie/movie.c),
 [final-slice handling](../../../../src/overlays/movie/movie_stream.c),
-[FIELD lifecycle](../../../../src/overlays/field/field_animation.c).
+[FIELD lifecycle](../../../../src/overlays/field/actors/field_animation.c).
 
 ## Assumptions and remaining questions
 
@@ -550,13 +550,13 @@ the document does not assume that a binary match answers them.
 
 | Source | Architectural role |
 |---|---|
-| [movie.h](../../../../include/movie.h) | Caller-facing entry points |
-| [movie_state.h](../../../../include/movie_state.h) | Shared state, callbacks, indices, and flags |
-| [movie_internal.h](../../../../src/overlays/movie/movie_internal.h) | Stream headers, sector geometry, and pipeline constants |
+| [movie.h](../../../../include/overlays/movie/movie.h) | Caller-facing entry points |
+| [movie_state.h](../../../../include/overlays/movie/movie_state.h) | Shared state, callbacks, indices, and flags |
+| [movie_internal.h](../../../../src/overlays/movie/internal/movie_internal.h) | Stream headers, sector geometry, and pipeline constants |
 | [movie.c](../../../../src/overlays/movie/movie.c) | Memory layouts, initialization, full-screen driver, VLC/audio servicing |
 | [movie_stream.c](../../../../src/overlays/movie/movie_stream.c) | Sector producer, ring consumers, slice output, deferred work |
-| [cdrom.c](../../../../src/cdrom.c) | Drive ownership, deferred sector delivery, recovery, teardown |
-| [akao_cmd.c](../../../../src/akao_cmd.c) and [akao_xa_stream.c](../../../../src/akao_xa_stream.c) | Audio queue tracking and RAM-to-SPU streaming |
-| [field_scene_build.c](../../../../src/overlays/field/field_scene_build.c) | FIELD-owned decode workspace |
-| [field_animation.c](../../../../src/overlays/field/field_animation.c) | Embedded playback, cel presentation, final-still handoff |
-| [controller.c](../../../../src/controller.c) | Controller VSync interval behavior |
+| [cdrom.c](../../../../src/main/cdrom.c) | Drive ownership, deferred sector delivery, recovery, teardown |
+| [akao_cmd.c](../../../../src/main/audio/akao_cmd.c) and [akao_xa_stream.c](../../../../src/main/audio/akao_xa_stream.c) | Audio queue tracking and RAM-to-SPU streaming |
+| [field_scene_build.c](../../../../src/overlays/field/scene/field_scene_build.c) | FIELD-owned decode workspace |
+| [field_animation.c](../../../../src/overlays/field/actors/field_animation.c) | Embedded playback, cel presentation, final-still handoff |
+| [controller.c](../../../../src/main/controller.c) | Controller VSync interval behavior |

@@ -63,8 +63,8 @@ down the card events, resets FIELD's text windows and waits for GPU work to
 finish. FIELD then releases the modal. For a completed load, FIELD also rebuilds
 the party and restores the scene and music from the newly loaded game.
 
-Sources: [FIELD launcher](../../../../src/overlays/field/field_modal_stream_start.c),
-[FIELD modal loop](../../../../src/overlays/field/field_modal_runtime.c),
+Sources: [FIELD launcher](../../../../src/overlays/field/ui/field_modal_stream_start.c),
+[FIELD modal loop](../../../../src/overlays/field/ui/field_modal_runtime.c),
 [CARDA entry points](../../../../src/overlays/carda/carda.c).
 
 ## The windows and card operations advance together
@@ -307,14 +307,14 @@ This guide covers CARDA's side of the exchange. The ordinary save's unresolved
 tags and option meanings remain in the
 [save-file reference](../reference/save-file.md#what-we-dont-know-yet).
 
-Sources: [US preparation hook](../../../../src/card_callbacks.c),
+Sources: [US preparation hook](../../../../src/main/card_callbacks.c),
 [JP assembly-unit selection](../../../../config/jp/asm_units.txt),
 [regional CARDA branches](../../../../src/overlays/carda/carda.c),
 [transfer window](../../../../src/overlays/carda/carda_save.c),
 [prompt defaults](../../../../src/overlays/carda/carda_widgets.c).
 
 For the UI types and state names, start with
-[carda_internal.h](../../../../src/overlays/carda/carda_internal.h).
+[carda_internal.h](../../../../src/overlays/carda/internal/carda_internal.h).
 [carda_glyph.c](../../../../src/overlays/carda/carda_glyph.c) supplies the shared
 glyph-cache routines used for card titles; their encoding is covered by
 [text tables](../reference/text-tables.md#memory-card-titles-are-different).

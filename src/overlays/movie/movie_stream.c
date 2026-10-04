@@ -8,7 +8,7 @@
  * Video payloads omit their headers so VLC can read a contiguous bitstream;
  * audio sectors retain their headers for the AKAO stream player.
  */
-#include "movie_internal.h"
+#include "internal/movie_internal.h"
 
 /* The CD streaming callback tests this token for NULL; it never dereferences it. */
 #define MOVIE_STREAM_CONTINUE ((u8*)1)

@@ -19,6 +19,7 @@ Example:
 from __future__ import annotations
 
 import argparse
+import ast
 from dataclasses import dataclass
 from pathlib import Path
 import re
@@ -191,13 +192,26 @@ def read_bytes(blob: Blob, address: int, end: int, what: str) -> bytes:
 def table_lengths() -> dict[str, int]:
     """Array lengths of the four table structs copied by zukan_build_category_entries."""
     source = CATEGORY_SOURCE.read_text(encoding="ascii")
+    defines = dict(re.findall(r"^#define\s+(\w+)\s+([^\n]+)", source, re.MULTILINE))
+
+    def array_length(expression: str, seen: frozenset[str] = frozenset()) -> int:
+        """Resolve integer literals, named counts and sums used by the table arrays."""
+        node = ast.parse(expression, mode="eval").body
+        if isinstance(node, ast.Constant) and type(node.value) is int:
+            return node.value
+        if isinstance(node, ast.Name) and node.id in defines and node.id not in seen:
+            return array_length(defines[node.id], seen | {node.id})
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+            return array_length(ast.unparse(node.left), seen) + array_length(ast.unparse(node.right), seen)
+        raise ValueError(f"{CATEGORY_SOURCE} has an unsupported table length: {expression}")
+
     lengths = {}
     for key, type_name in (("category_ranges", "ZukanCategoryRangeTable"), ("group_ranges", "ZukanGroupRangeTable"),
                            ("entry_values", "ZukanEntryValueTable"), ("display_order", "ZukanDisplayOrderTable")):
-        match = re.search(r"typedef struct\s*\{\s*[su](16|32) values\[(\d+)\];\s*\}\s*" + type_name + ";", source)
+        match = re.search(r"typedef struct\s*\{\s*[su](16|32) values\[([^\]]+)\];\s*\}\s*" + type_name + ";", source)
         if match is None:
             raise ValueError(f"{CATEGORY_SOURCE} has no {type_name}")
-        lengths[key] = int(match[2])
+        lengths[key] = array_length(match[2])
     return lengths
 
 

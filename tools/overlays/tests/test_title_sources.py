@@ -101,7 +101,7 @@ class SourceTest(unittest.TestCase):
 
 
 class SavedGameLayoutTest(unittest.TestCase):
-    """Compare the reader's offsets with the PS1 layout of include/saved_game.h."""
+    """Compare the reader's offsets with the PS1 layout of include/common/saved_game.h."""
 
     @classmethod
     def setUpClass(cls):
@@ -112,7 +112,7 @@ class SavedGameLayoutTest(unittest.TestCase):
         args = ["--target=mipsel-unknown-linux-gnu", "-std=gnu89", "-DVERSION_US", "-Wno-everything",
                 f"-I{REPO_ROOT / 'include'}", f"-I{REPO_ROOT / 'include/sdk'}"]
         unit = ci.Index.create().parse("layout.c", args=args,
-                                       unsaved_files=[("layout.c", '#include "saved_game.h"\n')])
+                                       unsaved_files=[("layout.c", '#include "common/saved_game.h"\n')])
         cls.types = {}
         for cursor in unit.cursor.walk_preorder():
             if cursor.kind == ci.CursorKind.TYPEDEF_DECL:

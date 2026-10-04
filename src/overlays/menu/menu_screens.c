@@ -1,6 +1,6 @@
-#include "menu_internal.h"
+#include "internal/menu_internal.h"
 #include "sdk/abs.h"
-#include "akao_cmd.h"
+#include "main/audio/akao_cmd.h"
 
 s32 menu_find_active_content_item(void);
 s32 menu_count_inventory_items(void);

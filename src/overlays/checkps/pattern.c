@@ -1,9 +1,9 @@
-#include "pattern.h"
+#include "internal/pattern.h"
 
-#include "checkps_internal.h"
+#include "internal/checkps_internal.h"
 
-#include "display.h"
-#include "gpu_packet.h"
+#include "main/display.h"
+#include "common/gpu_packet.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 

@@ -1,4 +1,4 @@
-#include "menu_internal.h"
+#include "internal/menu_internal.h"
 
 s32 menu_find_active_content_item(void);
 s32 menu_clear_pending_status(void);

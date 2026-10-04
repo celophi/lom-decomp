@@ -1,0 +1,94 @@
+/** @file field_frame_commands.c
+ * @brief Construct per-frame field command buffers.
+ */
+
+#include "common.h"
+#include "../internal/field_actor_runtime.h"
+#include "../internal/field_calls.h"
+#include "../internal/field_modal_runtime.h"
+#include "main/field_runtime.h"
+#include "overlays/field/field_text.h"
+#include "main/main.h"
+
+void field_restart_pending_bindings(void);
+void field_update_timed_panel(FieldRenderHalf* render);
+void field_update_actor_texts(FieldRenderHalf* render);
+void field_update_input_repeat(void);
+extern s32 g_field_action_context;
+/** @brief Nonzero while a picture screen is shown (set by func_800A5670). */
+extern s32 g_field_timed_panel_active;
+extern s32 g_field_gover_load_countdown;
+extern s32 g_field_active_group;
+extern s32 g_field_pickup_sound_played;
+extern s32 g_field_hide_actor_panels;
+/** @brief Ring menu state; nonzero while the ring menu is open. */
+extern s32 g_field_ring_menu_state;
+extern s32 g_field_modal_state;
+extern s32 g_field_text_session_active;
+extern s32 g_field_scene_request_pending;
+
+/**
+ * @brief Run one frame of field logic and build its draw commands.
+ *
+ * Reads input, updates the fade, HUD, actors, dialogs, modals and text
+ * session, then emits their packets into @p render_half. Actor updates are
+ * skipped while a modal, text session or game-over load is active, and the
+ * frame stops early when a scene change was requested.
+ *
+ * @param render_half Render half being drawn.
+ * @param alternate Non-zero when drawing the alternate half.
+ */
+void field_build_frame_commands(FieldRenderHalf* render_half, s32 alternate)
+{
+    g_field_render_half = render_half;
+    g_field_pickup_sound_played = 0;
+    g_field_action_context &= 0xFF;
+    field_update_input_repeat();
+    field_process_input(render_half);
+    field_update_and_render_fade(render_half);
+    field_update_battle_entry();
+    if (g_field_active_group != 0)
+    {
+        if (g_field_hide_actor_panels == 0)
+        {
+            field_draw_actor_hud(render_half);
+        }
+    }
+    if ((g_field_timed_panel_active == 0) && (g_field_gover_load_countdown == 0) && (g_field_modal_state == 0) && (g_field_text_session_active == 0))
+    {
+        field_runtime_update();
+        if (g_field_scene_request_pending != 0)
+        {
+            return;
+        }
+        if (g_field_ring_menu_state == 0)
+        {
+            field_update_actor_objects();
+        }
+    }
+    field_update_ring_menu(render_half);
+    field_cancel_animation_bindings();
+    if ((g_field_timed_panel_active == 0) && (g_field_gover_load_countdown == 0) && (g_field_modal_state == 0) && (g_field_ring_menu_state == 0) && (g_field_text_session_active == 0))
+    {
+        field_update_actor_animations();
+    }
+    field_prepare_actor_render_commands((u8*)render_half, alternate);
+    field_render_actor_objects((FieldRenderContext*)render_half);
+    field_draw_fade_prims(render_half);
+    field_update_pair_indicators(render_half);
+    field_pair_indicators_get_list();
+    field_poll_streamed_animations();
+    g_frame_counter++;
+    field_restart_pending_bindings();
+    field_update_dialog_runtime(render_half);
+    field_update_return_to_title_prompt(render_half);
+    field_update_battle_end();
+    field_update_actor_texts(render_half);
+    field_update_modal(render_half);
+    field_modal_frame_stub(render_half);
+    field_update_timed_panel(render_half);
+    field_update_item_menu(render_half);
+    field_update_music_stream();
+    field_update_audio_timer();
+    field_update_gover_load();
+}

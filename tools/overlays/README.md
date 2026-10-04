@@ -491,7 +491,7 @@ are found through the upload table's pointers, which must match the
 each stored palette and 16-bit images directly; color zero is transparent.
 
 Starting weapons, hero records and game states are decoded by `saved_game.py`
-from the layouts in `include/saved_game.h`, with the original bytes beside
+from the layouts in `include/common/saved_game.h`, with the original bytes beside
 them. JP names use CLOAD's character chart; the US records still hold some
 Japanese-coded names, which stay as codes in braces. The last 140 bytes are
 zero-filled menu state, listed without an output file. Neither version has
@@ -643,7 +643,7 @@ GOSUB.
 `wmap_tables.py` lists WMAP's fixed table layouts, the way `field_tables.py`
 does for FIELD. `tim_preview.py` writes PNG previews of 4-, 8- and 16-bit TIMs
 for TITLE, and `saved_game.py` decodes the saved-game records TITLE stores,
-with offsets from `include/saved_game.h`.
+with offsets from `include/common/saved_game.h`.
 
 ## Tests
 
@@ -718,7 +718,7 @@ pointers, UV scaling, layout primitives, starting weapons, the saved-game
 records, JP decoding through CLOAD and complete byte coverage. Bad offsets,
 broken trailing words, symbols out of order and failed writes leave no partial
 output. Source tests check both regional maps, the C counts, and every
-saved-game offset against `include/saved_game.h` through libclang.
+saved-game offset against `include/common/saved_game.h` through libclang.
 
 The WMAP tests cover every table layout, AKAO entry offsets with empty
 channels, repeated sound pointers, input-script commands, step tables with

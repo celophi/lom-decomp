@@ -31,7 +31,7 @@ class SourceTest(unittest.TestCase):
         for value, file, name in (
             (checkps.PATTERN_SIZE_COUNT, "pattern.c", "CHECKPS_PATTERN_SIZE_COUNT"),
             (checkps.PATTERN_QUADRANT_COUNT, "pattern.c", "CHECKPS_PATTERN_QUADRANT_COUNT"),
-            (checkps.WARNING_BYTES, "checkps_internal.h", "CHECKPS_HARDWARE_WARNING_SIZE"),
+            (checkps.WARNING_BYTES, "internal/checkps_internal.h", "CHECKPS_HARDWARE_WARNING_SIZE"),
         ):
             with self.subTest(constant=name):
                 self.assertEqual(value, c_define(REPO_ROOT / "src/overlays/checkps" / file, name))

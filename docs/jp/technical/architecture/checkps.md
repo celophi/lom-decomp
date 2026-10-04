@@ -28,9 +28,9 @@ CHECKPSのロード先は、北米版では `0x8004FC70`、日本版では `0x80
 ループが終わると `GAME_STATE_INTRO_MOVIE` を返します。
 CARDAのように、1フレームごとに呼び出し側へ戻る作りではありません。
 
-ソース：[北米版のメインループ](../../../../src/main.c)、
+ソース：[北米版のメインループ](../../../../src/main/main.c)、
 [北米版のCHECKPS起動処理](../../../../src/overlays/checkps/init.c)、
-[ゲーム状態の名前](../../../../include/game_state.h)
+[ゲーム状態の名前](../../../../include/main/game_state.h)
 日本版のメインループとCHECKPSの起動処理は、[アセンブリを使う単位の一覧](../../../../config/jp/asm_units.txt)にあります。
 日本版を追うときの位置は、このページの最後にまとめています。
 
@@ -101,7 +101,7 @@ flowchart TD
 CHECKPSからの呼び出しは、日本版のアセンブリで確認できます。
 `0x800506B8` の `update_checkps_input_and_timeout()` が担当し、起動処理の段階を `D_80067E10` に保持しています。
 
-ソース：[通常のCDドライバー](../../../../src/cdrom.c)、
+ソース：[通常のCDドライバー](../../../../src/main/cdrom.c)、
 [日本版CHECKPSのシンボル表](../../../../config/jp/symbols/checkps_symbol_addrs.txt)、
 [日本版のソース選択](../../../../config/jp/asm_units.txt)
 

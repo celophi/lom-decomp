@@ -17,10 +17,10 @@ from tools.overlays.resources import (
 
 
 # Shared C values checked by tests/test_addhero_sources.py.
-CHART_ROW_BYTES = 33  # GLYPH_CHART_ROW_BYTES, include/glyph_cache.h
-CHART_COLUMNS = 16  # GLYPH_CHART_COLUMNS, include/glyph_cache.h
-CHART_ROWS_PER_PAGE = 16  # GLYPH_CHART_PAGE_BYTES is 16 rows, include/glyph_cache.h
-CHART_FIRST_CODE = 0x20  # GLYPH_TEXT_FIRST_PRINTABLE, include/glyph_cache.h
+CHART_ROW_BYTES = 33  # GLYPH_CHART_ROW_BYTES, include/common/glyph_cache.h
+CHART_COLUMNS = 16  # GLYPH_CHART_COLUMNS, include/common/glyph_cache.h
+CHART_ROWS_PER_PAGE = 16  # GLYPH_CHART_PAGE_BYTES is 16 rows, include/common/glyph_cache.h
+CHART_FIRST_CODE = 0x20  # GLYPH_TEXT_FIRST_PRINTABLE, include/common/glyph_cache.h
 ICON_HERO_COUNT = 2  # SAVE_ICON_HERO_COUNT, saved_game.h
 ICON_PET_BASE = 0x0E  # SAVE_ICON_PET_BASE, saved_game.h
 ICON_GOLEM_BASE = 0x4F  # SAVE_ICON_GOLEM_BASE, saved_game.h

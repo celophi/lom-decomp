@@ -4,7 +4,7 @@
 The build links one unchanged data blob after title_save.c. Readers describe
 its resources as Parts, reusing the TIM and table parsers in tools/assets, and
 the byte map also records the TIMs' repeated last words and the zero-filled
-menu state at the end. Game-state records follow include/saved_game.h. JP
+menu state at the end. Game-state records follow include/common/saved_game.h. JP
 text uses CLOAD's character chart, as FIELD, GNAME and GOLEM do.
 
 Example:

@@ -1,8 +1,10 @@
 """Keep ZUKAN's extractor aligned with the regional maps and the C code."""
 
 import re
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from tools.overlays import cload, splat_config, zukan
 from tools.overlays.tests.test_addhero_sources import c_define
@@ -52,20 +54,46 @@ class SourceTest(unittest.TestCase):
         record = re.search(r"typedef struct\s*\{([^}]+)\}\s*ZukanUiSpriteRecord;", source).group(1)
         self.assertEqual(re.findall(r"\b(u32|u16)\s+\w+;", record), ["u32", "u32", "u16", "u16"])
         self.assertEqual(zukan.SPRITE_RECORD.size, 12)
-        self.assertIn(f"while (i < 0x{zukan.SPRITE_COUNT:X});", source)
+        self.assertEqual(zukan.SPRITE_COUNT, c_define(zukan.SOURCE, "ZUKAN_UI_SPRITE_COUNT"))
+        self.assertIn("i < ZUKAN_UI_SPRITE_COUNT", source)
         self.assertIn(f"x + {zukan.SPRITE_SCREEN_X_OFFSET}, y", source)
-        self.assertIn("(sprite_record->texture >> 14) & 0x1FF, sprite_record->texture >> 23", source)
-        self.assertIn("((sprite_record->texture >> 8) & 0x3F) | 0x7C80", source)
+        self.assertIn("(sprite_record->v_clut_and_size >> 14) & 0x1FF, sprite_record->v_clut_and_size >> 23", source)
+        self.assertIn("((sprite_record->v_clut_and_size >> 8) & 0x3F) | getClut(0, ZUKAN_UI_CLUT_Y)", source)
+        self.assertEqual(zukan.CLUT_UPLOAD, (0, c_define(zukan.SOURCE, "ZUKAN_UI_CLUT_Y")))
         category = zukan.CATEGORY_SOURCE.read_text(encoding="ascii")
-        for index, end in zukan.CATEGORY_END_OVERRIDES.items():
-            self.assertRegex(category, rf"category == {index}\)\s*\{{\s*category_ranges\[category \+ 1\] = 0x{end:X};")
-        self.assertIn(f"while (display_order[i] != 0x{zukan.DISPLAY_ORDER_END:X})", category)
-        self.assertIn(f"category == 0x{zukan.TECHNIQUE_CATEGORY:X}", category)
-        self.assertIn(f"i < count + 0x{zukan.TECHNIQUE_EXTRA_COUNT:X}", category)
-        self.assertIn(f"count - 0x{zukan.TECHNIQUE_EXTRA_FIRST:X}", category)
-        self.assertIn(f"while (j < {zukan.HISTORY_GROUP_COUNT})", category)
-        self.assertIn(f"group_ranges[j] + 0x{zukan.HISTORY_GROUP_BASE:X}", category)
-        self.assertIn(f"(j + 0x{zukan.HISTORY_GROUP_FIRST_BIT:X}) / 32", category)
+        header = zukan.CATEGORY_SOURCE.parent / "internal/zukan_category.h"
+        for name, end_name in (("CHARACTERS", "ZUKAN_CHARACTER_END"), ("WORLD_HISTORY", "ZUKAN_WORLD_HISTORY_END")):
+            index = c_define(header, f"ZUKAN_CATEGORY_{name}")
+            self.assertEqual(zukan.CATEGORY_END_OVERRIDES[index], c_define(zukan.CATEGORY_SOURCE, end_name))
+            self.assertRegex(category, rf"category == ZUKAN_CATEGORY_{name}\)\s*\{{\s*category_ranges\[category \+ 1\] = {end_name};")
+        for value, name in (
+            (zukan.DISPLAY_ORDER_END, "ZUKAN_DISPLAY_ORDER_END"),
+            (zukan.TECHNIQUE_EXTRA_COUNT, "ZUKAN_EXTRA_TECHNIQUE_COUNT"),
+            (zukan.TECHNIQUE_EXTRA_FIRST, "ZUKAN_CHARACTER_END"),
+            (zukan.HISTORY_GROUP_COUNT, "ZUKAN_HISTORY_GROUP_COUNT"),
+            (zukan.HISTORY_GROUP_BASE, "ZUKAN_WORLD_HISTORY_START"),
+            (zukan.HISTORY_GROUP_FIRST_BIT, "ZUKAN_HISTORY_GROUP_UNLOCK_BIT"),
+        ):
+            self.assertEqual(value, c_define(zukan.CATEGORY_SOURCE, name))
+        self.assertEqual(zukan.TECHNIQUE_CATEGORY, c_define(header, "ZUKAN_CATEGORY_TECHNIQUES"))
+        self.assertIn("display_order[i] != ZUKAN_DISPLAY_ORDER_END", category)
+        self.assertIn("category == ZUKAN_CATEGORY_TECHNIQUES", category)
+        self.assertIn("i < count + ZUKAN_EXTRA_TECHNIQUE_COUNT", category)
+        self.assertIn("i + ZUKAN_CHARACTER_END - count", category)
+        self.assertIn("j < ZUKAN_HISTORY_GROUP_COUNT", category)
+        self.assertIn("group_ranges[j] + ZUKAN_WORLD_HISTORY_START", category)
+        self.assertIn("ZUKAN_ENTRY_UNLOCKED(j + ZUKAN_HISTORY_GROUP_UNLOCK_BIT)", category)
+
+    def test_table_lengths_follow_changed_counts_and_reject_unknown_names(self):
+        source = zukan.CATEGORY_SOURCE.read_text(encoding="ascii")
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "category.c"
+            path.write_text(source.replace("#define ZUKAN_HISTORY_GROUP_COUNT 6", "#define ZUKAN_HISTORY_GROUP_COUNT 8"), encoding="ascii")
+            with patch.object(zukan, "CATEGORY_SOURCE", path):
+                self.assertEqual(zukan.table_lengths()["group_ranges"], 9)
+                path.write_text(source.replace("values[ZUKAN_CATEGORY_RANGE_COUNT]", "values[UNKNOWN_COUNT]"), encoding="ascii")
+                with self.assertRaisesRegex(ValueError, "unsupported table length: UNKNOWN_COUNT"):
+                    zukan.table_lengths()
 
 
 if __name__ == "__main__":

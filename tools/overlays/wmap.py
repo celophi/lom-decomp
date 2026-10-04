@@ -156,9 +156,9 @@ def script_names() -> dict[int, str]:
 def handler_declarations(sources: Path = SOURCES) -> dict[str, str]:
     """Step and handler tables declared in the C sources, each with the first file that declares it."""
     tables: dict[str, str] = {}
-    for path in sorted(sources.glob("*.c")):
+    for path in sorted(sources.rglob("*.c"), key=lambda path: (path.name, path.as_posix())):
         for match in HANDLER_DECLARATION.finditer(path.read_text(encoding="ascii")):
-            tables.setdefault(match[1] or match[2], path.stem)
+            tables.setdefault(match[1] or match[2], path.relative_to(sources).with_suffix("").as_posix())
     return tables
 
 
@@ -321,7 +321,7 @@ def read_handlers(blob: Blob[WmapSymbols], declared: dict[str, str]) -> list[Par
                 steps.append({"data": targets[value]})  # points into WMAP's data, not at code
         groups.setdefault(source, []).append(HandlerTable(symbol, source, address, tuple(steps)))
         start = blob.offset(address)
-        parts.append(Part(symbol, start, start + len(raw), f"handlers/{source}.yaml"))
+        parts.append(Part(symbol, start, start + len(raw), f"handlers/{Path(source).name}.yaml"))
     for source, tables in groups.items():
         tables.sort(key=lambda table: table.address)
         document = Document({

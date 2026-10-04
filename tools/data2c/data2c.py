@@ -89,7 +89,7 @@ def main():
     else:
         region = load_databin(repo, args.asm, symbols)
 
-    sources = sorted({p for g in project.source_globs(args.image) for p in glob.glob(str(repo / g))})
+    sources = sorted({p for g in project.source_globs(args.image) for p in glob.glob(str(repo / g), recursive=True)})
     wanted = {n for a in symbols.in_range(region.start, region.end) for n in symbols.names_at(a)}
     decls = Declarations(sources, wanted, clang_args(args.version, project.include_dirs(args.image)))
     symbols.add_function_names(decls.function_names)

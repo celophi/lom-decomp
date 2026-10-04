@@ -67,7 +67,7 @@ keep their original indices.
 | `color_names.yaml` | 33 |
 
 Section names and message symbols come from
-[`gosub_internal.h`](../../../../src/overlays/gosub/gosub_internal.h).
+[`gosub_internal.h`](../../../../src/overlays/gosub/internal/gosub_internal.h).
 Section offsets are relative to the archive; string offsets are relative to
 their section. The original archive keeps the offset tables, terminators and
 padding too.

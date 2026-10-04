@@ -150,7 +150,7 @@ def build_main_units(config: dict, complete: bool = False) -> list[dict]:
             continue
         base_path = f"{build_path}/{src_path}/{name}.o"
         units.append({
-            "name": f"main/{name}",
+            "name": f"main/{name.removeprefix('main/')}",
             "target_path": f"{build_path}/{asm_path}/{name}.o",
             "base_path": base_path,
             "metadata": {

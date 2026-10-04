@@ -1,4 +1,4 @@
-#include "overlay_header.h"
+#include "internal/overlay_header.h"
 
 /**
  * @brief Overlay header word for SHOP.BIN.

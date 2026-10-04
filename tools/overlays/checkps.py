@@ -37,7 +37,7 @@ OVERLAY_CONFIG = "overlays/CHECKPS.BIN.yaml"
 SYMBOL_FILE = "symbols/checkps_symbol_addrs.txt"
 CD_SOURCE = REPO_ROOT / "src/overlays/checkps/cdrom.c"
 
-# Source layouts: AkaoBankHeader and AkaoArticulation in include/akao.h.
+# Source layouts: AkaoBankHeader and AkaoArticulation in include/main/audio/akao.h.
 AKAO_HEADER_BYTES = 16
 AKAO_BANK_HEADER_BYTES = 64
 AKAO_ARTICULATION_BYTES = 16

@@ -1,8 +1,8 @@
 /*
- * Shared glyph-cache function; see include/glyph_cache.h. Included by each
+ * Shared glyph-cache function; see include/common/glyph_cache.h. Included by each
  * overlay that has it, at the point where it sits in that overlay's binary.
  */
-#include "glyph_cache.h"
+#include "common/glyph_cache.h"
 
 /**
  * @brief Emit one glyph sprite, rasterizing and uploading the glyph to the VRAM

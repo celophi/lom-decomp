@@ -197,15 +197,15 @@ saved.
 
 If you want to follow this in the source, these are the places to start:
 
-- [field_scene_transition.c](../../../../src/overlays/field/field_scene_transition.c):
+- [field_scene_transition.c](../../../../src/overlays/field/scene/field_scene_transition.c):
   `field_load_scene_actors()` walks the layout records and calls the installer.
-- [field_interaction_start.c](../../../../src/overlays/field/field_interaction_start.c):
+- [field_interaction_start.c](../../../../src/overlays/field/scene/field_interaction_start.c):
   `field_install_actor_action()` reads the condition variable, checks its range,
   and sets up records that pass.
-- [field_script_operands.c](../../../../src/overlays/field/field_script_operands.c):
+- [field_script_operands.c](../../../../src/overlays/field/scripts/field_script_operands.c):
   `field_read_script_var()` calls `field_resolve_script_var()` to locate the
   value, then reads it.
-- [field_interaction_start.h](../../../../include/field_interaction_start.h):
+- [field_interaction_start.h](../../../../include/overlays/field/field_interaction_start.h):
   `FieldLayoutRecord` defines the layout record and its fields.
 - [field_scene.py](../../../../tools/scenes/field_scene.py): `FieldLayoutRecord.chest_yaml()`
   turns the chest's layout fields into the readable YAML used in this example.

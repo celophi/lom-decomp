@@ -8,8 +8,8 @@ from tools.overlays import cload, menu, splat_config
 from tools.overlays.tests.test_addhero_sources import c_define
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-TIM_HEADER = REPO_ROOT / "include/tim.h"
-MENU_HEADER = REPO_ROOT / "include/menu.h"
+TIM_HEADER = REPO_ROOT / "include/common/tim.h"
+MENU_HEADER = REPO_ROOT / "include/overlays/menu/menu.h"
 SCREENS = REPO_ROOT / "src/overlays/menu/menu_screens.c"
 
 

@@ -1,8 +1,8 @@
-#include "font.h"
+#include "internal/font.h"
 
-#include "checkps_internal.h"
+#include "internal/checkps_internal.h"
 
-#include "display.h"
+#include "main/display.h"
 #include "sdk/libapi.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"

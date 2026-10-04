@@ -1,4 +1,4 @@
-#include "gosub_internal.h"
+#include "internal/gosub_internal.h"
 
 /**
  * @brief Build the golem parts screen: the equipment list, the instructions and the row description.

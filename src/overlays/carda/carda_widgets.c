@@ -1,6 +1,6 @@
-#include "carda_widgets.h"
-#include "carda_internal.h"
-#include "saved_game.h"
+#include "internal/carda_widgets.h"
+#include "internal/carda_internal.h"
+#include "common/saved_game.h"
 
 /** @brief Bytes cleared when preparing the card header and icon area. */
 #define CARDA_CARD_HEADER_BYTES 512

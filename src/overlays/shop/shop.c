@@ -1,8 +1,8 @@
-#include "shop.h"
-#include "shop_internal.h"
-#include "shop_render.h"
-#include "shop_trade.h"
-#include "field_text.h"
+#include "overlays/shop/shop.h"
+#include "internal/shop_internal.h"
+#include "internal/shop_render.h"
+#include "internal/shop_trade.h"
+#include "overlays/field/field_text.h"
 
 #define SHOP_MONEY_WINDOW_X 160
 #define SHOP_MONEY_WINDOW_Y 32

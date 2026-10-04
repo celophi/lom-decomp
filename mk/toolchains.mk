@@ -54,4 +54,4 @@ MASPSX_FLAGS_G4 = -no-pad-sections --aspsx-version=2.77 $(MASPSX_DIV_FLAG_G4)
 # build time (see tools/data2c/README.md). The generated data is typed by the
 # C, so it depends on these headers as well as each image's own sources.
 DATA_AS_C ?=
-DATA_AS_C_HEADERS := $(wildcard include/*.h include/sdk/*.h)
+DATA_AS_C_HEADERS := $(call rwildcard,include,*.h) $(call rwildcard,src/main,*.h) $(call rwildcard,src/overlays,*.h)

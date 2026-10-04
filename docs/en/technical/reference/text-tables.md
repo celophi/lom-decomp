@@ -101,7 +101,7 @@ bytes where letters should be.
 
 The dictionary only exists in the US release, and the game loads it into RAM
 from somewhere we haven't documented yet. The renderer in
-[field_text.c](../../../../src/overlays/field/field_text.c) is the authority if
+[field_text.c](../../../../src/overlays/field/ui/field_text.c) is the authority if
 a byte doesn't behave the way this table says.
 
 ### Japanese text
@@ -154,6 +154,6 @@ offsets alone.
 In the source, each string the code uses by name gets a symbol, such as
 `g_addhero_text_no_card` for the "No memory card" message. The ADDHERO names
 and what each message is for are listed in
-[addhero_internal.h](../../../../src/overlays/addhero/addhero_internal.h). If
+[addhero_internal.h](../../../../src/overlays/addhero/internal/addhero_internal.h). If
 you're hunting for a message, searching the overlay's source for a string's
 symbol name is usually quicker than scanning the table.

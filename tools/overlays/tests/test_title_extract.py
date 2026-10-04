@@ -263,8 +263,10 @@ class ExtractTest(unittest.TestCase):
         self.assert_no_output()
 
     def test_symbols_out_of_order_write_nothing(self):
-        self.overlay.symbols["g_saveSlotSpriteUvTable"], self.overlay.symbols["g_saveSlotPanelUvTable"] = (
-            self.overlay.symbols["g_saveSlotPanelUvTable"], self.overlay.symbols["g_saveSlotSpriteUvTable"])
+        sprite_uvs = title.SYMBOL_NAMES["sprite_uvs"]
+        panel_uvs = title.SYMBOL_NAMES["panel_uvs"]
+        self.overlay.symbols[sprite_uvs], self.overlay.symbols[panel_uvs] = (
+            self.overlay.symbols[panel_uvs], self.overlay.symbols[sprite_uvs])
         with self.assertRaisesRegex(ValueError, "out of resource order"):
             title.extract(self.overlay.write(self.root), self.output)
         self.assert_no_output()

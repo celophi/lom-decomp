@@ -1,5 +1,5 @@
-#include "shop_render.h"
-#include "encoded_text.h"
+#include "internal/shop_render.h"
+#include "common/encoded_text.h"
 #include "sdk/libgpu.h"
 
 /**

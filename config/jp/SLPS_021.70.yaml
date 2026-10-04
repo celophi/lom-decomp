@@ -65,33 +65,33 @@ segments:
     section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
     subsegments:
       - [0x800, rodata, rodata_data0]        # D_80010000 boot-path string (referenced by unk8)
-      - [0x818, .rodata, main]               # jtbl -> main
-      - [0x844, .rodata, cdrom]              # jtbl -> cdrom
-      - [0xA50, .rodata, cdrom_decompress]
-      - [0xA90, .rodata, controller]         # jtbl -> controller
-      - [0xAAC, .rodata, field_runtime]
+      - [0x818, .rodata, main/main]               # jtbl -> main
+      - [0x844, .rodata, main/cdrom]              # jtbl -> cdrom
+      - [0xA50, .rodata, main/cdrom_decompress]
+      - [0xA90, .rodata, main/controller]         # jtbl -> controller
+      - [0xAAC, .rodata, main/field_runtime]
       - [0xAB0, rodata, rodata_data1]        # g_hex_digit_table + psyq/data constants
       - [0xB44, .rodata, psyq/libc2/PRNT]    # jtbl -> PRNT
       - [0xD34, rodata, rodata_data2]        # psyq/data constants
       - [0x1134, .rodata, psyq/libcd/BIOS]   # jtbl -> BIOS
       - [0x1148, rodata, rodata_data3]       # psyq/data constants
-      - [0x1314, .rodata, akao_cmd]          # jtbl -> akao_cmd
+      - [0x1314, .rodata, main/audio/akao_cmd]          # jtbl -> akao_cmd
       - [0x1328, rodata, rodata_data4]       # data constants
-      - [0x1358, .rodata, akao_sequencer]    # jtbl -> akao_sequencer
+      - [0x1358, .rodata, main/audio/akao_sequencer]    # jtbl -> akao_sequencer
       - [0x1458, .rodata, psyq/libpad/PADENTRY]  # jtbl_80010C58 -> PadInfoAct; merged into
                                               # its module object so the .L local labels resolve
       - [0x1478, .rodata, psyq/libmcx/TMP_MCX]  # jtbl_80010C78/C98/CC0/CD8 -> LIBMCX funcs
-      - [0x1558, c, main]
-      - [0x1B58, c, screen_transition]
-      - [0x1E0C, c, game_audio]
-      - [0x1F10, c, cdrom]
-      - [0x4C48, c, cdrom_decompress]
-      - [0x52DC, c, controller]
-      - [0x6418, c, overlay_memory]
-      - [0x6458, c, field_runtime]
-      - [0x6948, c, field_runtime_text]
-      - [0x6DB8, c, field_runtime_glyph]           # original glyph assembly maintained in C asm blocks
-      - [0x6F50, c, card_callbacks]  # gcc280_g0
+      - [0x1558, c, main/main]
+      - [0x1B58, c, main/screen_transition]
+      - [0x1E0C, c, main/audio/game_audio]
+      - [0x1F10, c, main/cdrom]
+      - [0x4C48, c, main/cdrom_decompress]
+      - [0x52DC, c, main/controller]
+      - [0x6418, c, main/overlay_memory]
+      - [0x6458, c, main/field_runtime]
+      - [0x6948, c, main/field_runtime_text]
+      - [0x6DB8, c, main/field_runtime_glyph]           # original glyph assembly maintained in C asm blocks
+      - [0x6F50, c, main/card_callbacks]  # gcc280_g0
       - [0x70DC, c, psyq/libcard/C112]               # psyq: version undetermined (debug/variant build)
       - [0x70F4, c, psyq/libapi/C114]                # psyq: version-agnostic
       - [0x710C, c, psyq/libapi/C159]                # psyq: version-agnostic
@@ -210,13 +210,13 @@ segments:
       - [0x11C5C, c, psyq/libspu/S_INI]              # psyq 4.1-4.6
       - [0x11DBC, c, psyq/libspu/SPU]                # psyq: version undetermined (debug/variant build)
       - [0x128FC, c, psyq/libspu/S_DCB]              # psyq 4.1-4.6
-      - [0x1292C, c, akao_cmd]
+      - [0x1292C, c, main/audio/akao_cmd]
       - [0x13D38, c, psyq/libspu/S_SI]               # psyq 4.1-4.6
       - [0x13E78, c, psyq/libspu/S_SIA]              # psyq 4.1-4.6
       - [0x13EB8, c, psyq/libspu/S_STSA]             # psyq 4.1-4.6
-      - [0x13F18, c, akao_driver]
-      - [0x141A0, c, akao_driver_init_state] # -G4  isolated: scalar-u8 global decls for 100% (see file header)
-      - [0x14440, c, akao_driver_boot]       # -G4  akao_driver_init / set_bank_data_ptrs / shutdown
+      - [0x13F18, c, main/audio/akao_driver]
+      - [0x141A0, c, main/audio/akao_driver_init_state] # -G4  isolated: scalar-u8 global decls for 100% (see file header)
+      - [0x14440, c, main/audio/akao_driver_boot]       # -G4  akao_driver_init / set_bank_data_ptrs / shutdown
       - [0x145F0, c, psyq/libapi/A13]                # psyq: version-agnostic
       - [0x14600, c, psyq/libapi/A32]                # psyq: version-agnostic
       - [0x14610, c, psyq/libapi/COUNTER]            # psyq 4.1-4.6
@@ -230,18 +230,18 @@ segments:
       - [0x14B10, c, psyq/libspu/S_W]                # psyq 4.1-4.6
       - [0x14B70, c, psyq/libspu/S_STM]              # psyq 4.1-4.6
       - [0x14BA0, c, psyq/libspu/S_STC]              # psyq 4.1-4.6
-      - [0x14BD0, c, akao_voice]
+      - [0x14BD0, c, main/audio/akao_voice]
       - [0x16A3C, c, psyq/libspu/S_SNC]              # psyq: SpuSetNoiseClock
       - [0x16A8C, c, psyq/libspu/S_GVEX]             # psyq: SpuGetVoiceEnvelope
       - [0x16AAC, c, psyq/libspu/S_SRMD]             # psyq: SpuSetReverbModeDepth
-      - [0x16ADC, c, akao_control]
+      - [0x16ADC, c, main/audio/akao_control]
       - [0x19AFC, c, psyq/libspu/S_SRMT]             # psyq 4.1-4.6
       - [0x19CCC, c, psyq/libspu/S_SRA]              # psyq 4.1-4.6
       - [0x1A19C, c, psyq/libspu/S_CRWA]             # psyq 4.1-4.6
       - [0x1A33C, c, psyq/libapi/A10]                # psyq: version-agnostic
       - [0x1A34C, c, psyq/libspu/S_GRMT]             # psyq 4.1-4.6
-      - [0x1A35C, c, akao_sequencer]
-      - [0x1DA4C, c, akao_xa_stream] # -G4  AKAO XA/SFX driver (36 funcs 0x8002D0DC..0x8002E7A8)
+      - [0x1A35C, c, main/audio/akao_sequencer]
+      - [0x1DA4C, c, main/audio/akao_xa_stream] # -G4  AKAO XA/SFX driver (36 funcs 0x8002D0DC..0x8002E7A8)
       - [0x1F118, c, psyq/libsn/SNMAIN]       # SN Systems LIBSN SNMAIN.OBJ: __SN_ENTRY_POINT (0x8002E7A8, raw sp/gp/fp bootstrap + EXE header Initial PC), __main (0x8002E850, ctor runner), __do_global_dtors (0x8002E8C0)
       - [0x1F298, c, psyq/libapi/C57]         # Psy-Q BIOS A(0x39) InitHeap stub (0x8002E928); archive member C57.OBJ
       - [0x1F2A8, c, psyq/libpad/PADENTRY]          # LIBPAD PADENTRY.OBJ: Pad* public wrappers # psyq 4.4-4.5 (PDMAIN2 in 4.6)
@@ -267,7 +267,7 @@ segments:
     bss_size: 0x310
     bss_contains_common: True
     subsegments:
-      - [0x2F800, .bss, screen_transition]
+      - [0x2F800, .bss, main/screen_transition]
   - name: saved_game
     type: code
     start: 0x2F800
@@ -275,5 +275,5 @@ segments:
     bss_size: 0x4000
     bss_contains_common: True
     subsegments:
-      - [0x2F800, .bss, main]
+      - [0x2F800, .bss, main/main]
   - [0x2F800]

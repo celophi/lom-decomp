@@ -156,7 +156,7 @@ eight bytes of `hero_default` too. It starts with 100,000 money, 32 placed
 lands and 50 of each item kind from 0 to 254. JP's copy also has 41 inventory
 items; in US every inventory record has an empty name, which marks it free.
 
-The YAML decodes the fields [saved_game.h](../../../../include/saved_game.h)
+The YAML decodes the fields [saved_game.h](../../../../include/common/saved_game.h)
 names: the summary, money, techniques, proficiencies, identity, lands, party
 characters with their equipment, inventory and item counts. Everything else,
 such as the menu slots, golems and pets, is only in the `.bin`. Free item

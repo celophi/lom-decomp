@@ -1,10 +1,10 @@
 /*
- * Shared memory-card directory function; see include/card_directory.h. Included by
+ * Shared memory-card directory function; see include/common/card_directory.h. Included by
  * each overlay that has it, at the point where it sits in that overlay's binary.
  */
-#include "card_directory.h"
-#include "card_events.h"
-#include "save_file.h"
+#include "common/card_directory.h"
+#include "common/card_events.h"
+#include "common/save_file.h"
 
 /**
  * @brief Parse the hex serial and suffix byte of every Legend of Mana file on the current card.

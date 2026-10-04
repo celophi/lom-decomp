@@ -80,8 +80,8 @@ codes:
 The result starts as 3, so any path that doesn't finish a load or a save ends
 as a cancel.
 
-Sources: [FIELD launcher](../../../../src/overlays/field/field_modal_stream_start.c),
-[FIELD modal loop](../../../../src/overlays/field/field_modal_runtime.c),
+Sources: [FIELD launcher](../../../../src/overlays/field/ui/field_modal_stream_start.c),
+[FIELD modal loop](../../../../src/overlays/field/ui/field_modal_runtime.c),
 [ADDHERO entry points](../../../../src/overlays/addhero/addhero.c).
 
 ## Mode 0: loading a guest hero
@@ -298,7 +298,7 @@ overlay, but they matter if you want to change how it behaves.
 | [addhero_widgets.c](../../../../src/overlays/addhero/addhero_widgets.c) | Load prompt, progress screens, dialogs, mode 1 status window, save validation |
 | [addhero_card.c](../../../../src/overlays/addhero/addhero_card.c) | Card step machine, directory scan, entry sorting and ranking, card events |
 | [addhero_glyph.c](../../../../src/overlays/addhero/addhero_glyph.c) | Shift-JIS glyph cache for card titles |
-| [addhero_internal.h](../../../../src/overlays/addhero/addhero_internal.h) | Window layout, entry states, text indexes, shared declarations |
-| [saved_game.h](../../../../include/saved_game.h) | Save file and saved game layout |
-| [field_modal_stream_start.c](../../../../src/overlays/field/field_modal_stream_start.c) | Loading and starting the overlay |
-| [field_modal_runtime.c](../../../../src/overlays/field/field_modal_runtime.c) | Per-frame stepping and result handling |
+| [addhero_internal.h](../../../../src/overlays/addhero/internal/addhero_internal.h) | Window layout, entry states, text indexes, shared declarations |
+| [saved_game.h](../../../../include/common/saved_game.h) | Save file and saved game layout |
+| [field_modal_stream_start.c](../../../../src/overlays/field/ui/field_modal_stream_start.c) | Loading and starting the overlay |
+| [field_modal_runtime.c](../../../../src/overlays/field/ui/field_modal_runtime.c) | Per-frame stepping and result handling |

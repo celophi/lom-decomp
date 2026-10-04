@@ -1,6 +1,6 @@
 # フィールドの経路探索の仕組み
 
-[日本語ドキュメント](../../README.md) | [English](../../../en/technical/reference/field-pathfinding.md) | [当たり判定のソース](../../../../src/overlays/field/field_collision.c)
+[日本語ドキュメント](../../README.md) | [English](../../../en/technical/reference/field-pathfinding.md) | [当たり判定のソース](../../../../src/overlays/field/scene/field_collision.c)
 
 壁の片側にキャラクターがいて、反対側に目的地があります。
 角に引っかからず、壁を回り込んで歩いてほしい。
@@ -189,14 +189,14 @@
 | `-5` | 出発点へ戻る途中で、次の目印を見つけられなかった。 |
 
 探索に失敗しても、それだけでアクターの次の動きが決まるわけではありません。
-[移動のコード](../../../../src/overlays/field/field_actor_script_ops.c)にある2か所のアクタースクリプトからの呼び出しでは、
+[移動のコード](../../../../src/overlays/field/actors/field_actor_script_ops.c)にある2か所のアクタースクリプトからの呼び出しでは、
 この関数が失敗すると、目的地1つだけの経路に切り替えます。
 そのため、キャラクターがまだ動こうとしているからといって、経路探索に成功したとは限りません。
 
 ## ソースのどこを見ればよいか
 
 経路の流れがわかると、この長い関数も少し読みやすくなります。
-[`field_collision_find_path`](../../../../src/overlays/field/field_collision.c)では、次の部分が目印になります。
+[`field_collision_find_path`](../../../../src/overlays/field/scene/field_collision.c)では、次の部分が目印になります。
 
 | 追っている処理 | 見る場所 |
 | --- | --- |

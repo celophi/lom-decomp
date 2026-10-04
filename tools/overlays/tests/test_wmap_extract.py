@@ -14,7 +14,7 @@ from tools.overlays.wmap_tables import TABLES
 ADDRESS = 0x800C0000
 STEP_A = 0x80010000
 STEP_B = 0x80010010
-DECLARED = {"test_steps": "wmap_test_effect", "test_missing_steps": "wmap_test_effect"}
+DECLARED = {"test_steps": "effects/wmap_test_effect", "test_missing_steps": "effects/wmap_test_effect"}
 
 
 def sound_buffer(sequences: list[tuple[int, int]]) -> bytes:
@@ -168,7 +168,7 @@ class ExtractTest(unittest.TestCase):
     def test_step_tables_name_functions_and_data_targets(self):
         self.extract()
         handlers = self.load("handlers/wmap_test_effect.yaml")
-        self.assertEqual(handlers["source"], "src/overlays/wmap/wmap_test_effect.c")
+        self.assertEqual(handlers["source"], "src/overlays/wmap/effects/wmap_test_effect.c")
         self.assertEqual(handlers["tables"], [{
             "symbol": "test_steps", "address": f"0x{self.overlay.symbols['test_steps']:08X}", "count": 3,
             "steps": ["wmap_test_step_a", None, {"data": "g_wmap_game_displayed_score"}],

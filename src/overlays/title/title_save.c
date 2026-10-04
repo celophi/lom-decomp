@@ -1,9 +1,9 @@
-#include "saved_game.h"
-#include "title_internal.h"
-#include "title_save.h"
-#include "field_sound.h"
+#include "common/saved_game.h"
+#include "internal/title_internal.h"
+#include "internal/title_save.h"
+#include "overlays/field/field_sound.h"
 #include "sdk/rand.h"
-#include "tim.h"
+#include "common/tim.h"
 
 void reset_save_slot_panel(void);
 void handle_save_slot_input(void);

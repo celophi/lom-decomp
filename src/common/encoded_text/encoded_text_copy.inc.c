@@ -1,8 +1,8 @@
 /*
- * Shared encoded-text function; see include/encoded_text.h. Included by each
+ * Shared encoded-text function; see include/common/encoded_text.h. Included by each
  * overlay that has it, at the point where it sits in that overlay's binary.
  */
-#include "encoded_text.h"
+#include "common/encoded_text.h"
 
 /**
  * @brief Copy an encoded string and null-terminate the copy.

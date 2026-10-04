@@ -66,7 +66,7 @@ UIテクスチャとグリフ情報は、USとJPのどちらもGOLEMが持つも
 | `color_names.yaml` | 33 |
 
 セクション名とメッセージのシンボル名は、
-[`gosub_internal.h`](../../../../src/overlays/gosub/gosub_internal.h)から取得します。
+[`gosub_internal.h`](../../../../src/overlays/gosub/internal/gosub_internal.h)から取得します。
 セクションのオフセットはアーカイブ先頭から、文字列のオフセットは各セクションの
 先頭から数えます。元のアーカイブにはオフセット表、終端、パディングも残します。
 

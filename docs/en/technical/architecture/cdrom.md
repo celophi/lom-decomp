@@ -29,8 +29,8 @@ Three properties matter at the architectural level:
   and synchronous loading can wait. Frame-based watchdogs support recovery;
   they do not guarantee a maximum loading time.
 
-This is an implementation description of [the main CD module](../../../../src/cdrom.c)
-and [its decompressor](../../../../src/cdrom_decompress.c). The separate CD implementation
+This is an implementation description of [the main CD module](../../../../src/main/cdrom.c)
+and [its decompressor](../../../../src/main/cdrom_decompress.c). The separate CD implementation
 inside CHECKPS is covered by the [CHECKPS guide](checkps.md). The architecture and known
 limitations below describe the matching code, including behavior retained from
 the original executable.
@@ -99,8 +99,8 @@ Some fields are volatile because callbacks update them. These are local
 coordination mechanisms, not a general thread-safety or reentrancy contract.
 Nested stream loads would share the same metadata and buffers.
 
-Sources: [CD controller](../../../../src/cdrom.c),
-[stream state](../../../../src/cdrom_internal.h), and
+Sources: [CD controller](../../../../src/main/cdrom.c),
+[stream state](../../../../src/main/internal/cdrom_internal.h), and
 [movie deferred-sector integration](../../../../src/overlays/movie/movie_stream.c).
 
 ## Public contract and request lifecycle
@@ -148,9 +148,9 @@ For movie/XA transfers, the callback handles the specialized sector path and
 `NULL` means end the transfer. The generic data path's byte accounting and
 buffer-return contract must not be applied to that mode unchanged.
 
-Sources: [public types and API](../../../../include/cdrom.h), `cdrom_queue_command()`,
+Sources: [public types and API](../../../../include/main/cdrom.h), `cdrom_queue_command()`,
 `cdrom_run_command()`, and `cdrom_process_sector()` in
-[the controller](../../../../src/cdrom.c).
+[the controller](../../../../src/main/cdrom.c).
 
 ### Ordinary read sequence
 
@@ -336,9 +336,9 @@ having the same completion behavior as finite-capacity chunking. No caller of
 `cdrom_stream_chunked()` was found in the inspected C sources; its wider runtime
 use is unconfirmed.
 
-Sources: [stream-loading loops](../../../../src/cdrom.c),
-[buffer callback and decoder](../../../../src/cdrom_decompress.c), and
-[shared metadata](../../../../src/cdrom_internal.h).
+Sources: [stream-loading loops](../../../../src/main/cdrom.c),
+[buffer callback and decoder](../../../../src/main/cdrom_decompress.c), and
+[shared metadata](../../../../src/main/internal/cdrom_internal.h).
 
 ## Initialization, recovery, and callback ownership
 
@@ -352,7 +352,7 @@ drive if the shell-open status is present, and applies
 It does not install the asynchronous disc-validation callback or compare the
 disc ID. The main startup sequence then loads the resource table and begins
 resource loading. Disc-ID validation in this module belongs to automatic
-recovery. See [main startup](../../../../src/main.c).
+recovery. See [main startup](../../../../src/main/main.c).
 
 ### Callback roles change with the active operation
 
@@ -562,11 +562,11 @@ error branch, `response_data[0] & 0x40` tests the invalid-command error bit.
 
 | Source | Start here for |
 |---|---|
-| [src/cdrom.c](../../../../src/cdrom.c) | Queue admission, callbacks, supervisor, recovery, and stream-loading loops |
-| [include/cdrom.h](../../../../include/cdrom.h) | Public entry points and callback contracts |
-| [src/cdrom_internal.h](../../../../src/cdrom_internal.h) | Stream metadata and shared buffer conventions |
-| [src/cdrom_decompress.c](../../../../src/cdrom_decompress.c) | Buffer handoff, input compaction, and bytecode decoding |
-| [src/main.c](../../../../src/main.c) | Startup and blocking overlay loads |
+| [src/main/cdrom.c](../../../../src/main/cdrom.c) | Queue admission, callbacks, supervisor, recovery, and stream-loading loops |
+| [include/main/cdrom.h](../../../../include/main/cdrom.h) | Public entry points and callback contracts |
+| [src/main/internal/cdrom_internal.h](../../../../src/main/internal/cdrom_internal.h) | Stream metadata and shared buffer conventions |
+| [src/main/cdrom_decompress.c](../../../../src/main/cdrom_decompress.c) | Buffer handoff, input compaction, and bytecode decoding |
+| [src/main/main.c](../../../../src/main/main.c) | Startup and blocking overlay loads |
 | [movie.c](../../../../src/overlays/movie/movie.c) and [movie_stream.c](../../../../src/overlays/movie/movie_stream.c) | Movie/XA submission and deferred sector service |
 | [US symbols](../../../../config/us/symbols/shared_symbol_addrs.txt) and [JP symbols](../../../../config/jp/symbols/shared_symbol_addrs.txt) | Fixed-address placement |
 | [Disc layout](../reference/disc-layout.md) | Resource-table contents and disc organization |

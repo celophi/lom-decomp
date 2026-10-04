@@ -64,8 +64,10 @@ class SourceTest(unittest.TestCase):
     def test_handler_tables_are_named_in_both_versions(self):
         declared = wmap.handler_declarations()
         self.assertGreater(len(declared), 400)
-        self.assertEqual(declared["g_wmap_effect35_steps"], "wmap_special_effect_35")
-        self.assertEqual(declared["g_wmap_special_travel_steps"], "wmap_travel_sequences")
+        self.assertEqual(declared["g_wmap_effect35_steps"], "effects/wmap_special_effect_35")
+        self.assertEqual(declared["g_wmap_special_travel_steps"], "travel/wmap_travel_sequences")
+        for source in declared.values():
+            self.assertTrue((SOURCES / f"{source}.c").is_file(), source)
         for version in ("us", "jp"):
             with self.subTest(version=version):
                 names, _ = self.load(version)
@@ -74,10 +76,10 @@ class SourceTest(unittest.TestCase):
 
     def test_counts_follow_the_c_definitions(self):
         specs = {spec.symbol: spec for spec in wmap.TABLES}
-        display = REPO_ROOT / "include/wmap_map_display.h"
+        display = REPO_ROOT / "src/overlays/wmap/internal/wmap_map_display.h"
         checks = (
-            (specs["g_wmap_artifact_positions"].count, REPO_ROOT / "include/wmap_land_transition.h", "WMAP_ARTIFACT_SLOTS"),
-            (specs["g_wmap_land_attributes"].count, SOURCES / "wmap_map_display.c", "WMAP_LAND_COUNT"),
+            (specs["g_wmap_artifact_positions"].count, REPO_ROOT / "src/overlays/wmap/internal/wmap_land_transition.h", "WMAP_ARTIFACT_SLOTS"),
+            (specs["g_wmap_land_attributes"].count, SOURCES / "map/wmap_map_display.c", "WMAP_LAND_COUNT"),
             (specs["g_wmap_menu_triangles"].count, SOURCES / "wmap_main.c", "WMAP_MENU_TRIANGLE_COUNT"),
         )
         for value, source, name in checks:
@@ -85,29 +87,29 @@ class SourceTest(unittest.TestCase):
                 self.assertEqual(value, c_define(source, name))
         scales = c_define(display, "WMAP_QUAD_SCALE_VARIANTS") * c_define(display, "WMAP_QUAD_SCALE_STEPS")
         self.assertEqual(specs["g_wmap_land_quad_scales"].count, scales)
-        self.assertIn("WmapQuadTemplate g_wmap_cell_effect_quads[16];", (SOURCES / "wmap_map_display.c").read_text())
+        self.assertIn("WmapQuadTemplate g_wmap_cell_effect_quads[16];", (SOURCES / "map/wmap_map_display.c").read_text())
         self.assertEqual(specs["g_wmap_cell_effect_quads"].count, 16)
 
     def test_record_sizes_follow_source_fields(self):
         specs = {spec.symbol: spec for spec in wmap.TABLES}
-        image = struct_body(REPO_ROOT / "include/wmap_land_transition.h", "WmapArtifactImage")
+        image = struct_body(REPO_ROOT / "src/overlays/wmap/internal/wmap_land_transition.h", "WmapArtifactImage")
         self.assertEqual(len(re.findall(r"\bu8\s+\w+;", image)), 4)
         self.assertEqual(len(re.findall(r"\bu16\s+\w+;", image)), 6)
         self.assertEqual(len(re.findall(r"\bs16\s+\w+;", image)), 4)
         self.assertEqual(struct.calcsize("<" + specs["g_wmap_artifact_images"].format), 24)
-        frame = struct_body(SOURCES / "wmap_land_preview.c", "WmapArtifactTransferFrame")
+        frame = struct_body(SOURCES / "map/wmap_land_preview.c", "WmapArtifactTransferFrame")
         self.assertEqual(len(re.findall(r"\bs16\s+\w+;", frame)), 6)
         self.assertEqual(struct.calcsize("<" + specs["g_wmap_artifact_pickup_frames"].format), 12)
-        glyph = struct_body(SOURCES / "wmap_map_display.c", "WmapGlyph")
+        glyph = struct_body(SOURCES / "map/wmap_map_display.c", "WmapGlyph")
         self.assertIn("u8 u, v, width, height;", glyph)
         self.assertEqual(struct.calcsize("<" + specs["g_wmap_information_glyphs"].format), 8)
-        texture = struct_body(SOURCES / "wmap_sprite_render.c", "WmapSpriteTexture")
+        texture = struct_body(SOURCES / "render/wmap_sprite_render.c", "WmapSpriteTexture")
         self.assertIn("u16 clut[8];", texture)
         self.assertEqual(struct.calcsize("<" + specs["g_wmap_sprite_textures"].format), 28)
-        attributes = struct_body(SOURCES / "wmap_land_layout.c", "WmapLandAttributes")
+        attributes = struct_body(SOURCES / "map/wmap_land_layout.c", "WmapLandAttributes")
         self.assertIn("u8 bytes[12];", attributes)
         self.assertEqual(struct.calcsize("<" + specs["g_wmap_land_attributes"].format), 12)
-        label = struct_body(SOURCES / "wmap_map_labels.c", "WmapLabelChar")
+        label = struct_body(SOURCES / "render/wmap_map_labels.c", "WmapLabelChar")
         self.assertEqual(len(re.findall(r"\bu8\s+\w+;", label)), 4)
         self.assertEqual(struct.calcsize("<" + specs["D_800D040C"].format), 6)
         for symbol, size in (("g_wmap_game_continue_prompt", 20), ("g_wmap_backdrop_front_quads", 40),

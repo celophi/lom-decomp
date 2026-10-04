@@ -1,5 +1,5 @@
-#include "cload_internal.h"
-#include "display.h"
+#include "internal/cload_internal.h"
+#include "main/display.h"
 #include "sdk/memory.h"
 #include "sdk/libetc.h"
 

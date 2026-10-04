@@ -59,7 +59,7 @@ TIM、顔画像、識別できた宝箱のレコードには、それぞれ1件�
 ## 宝箱のレコード
 
 レイアウトセクションは、u32の件数と、それに続く48バイトの
-[`FieldLayoutRecord`](../../../../include/field_interaction_start.h)で構成されます。
+[`FieldLayoutRecord`](../../../../include/overlays/field/field_interaction_start.h)で構成されます。
 宝箱も、ほかのアクターと同じレコード構造を使います。
 抽出ツールは、共通の宝箱リソースの選択値と初期化スクリプトを確認してから、そのレコードを `chest` として扱います。
 
@@ -89,8 +89,8 @@ TIMの検証には既存のパーサーを使います。
 各レコードは32バイトのパレットと、1ピクセル4ビットの48×48ピクセルの画像を持ちます。顔画像はTIM形式ではありません。
 
 対応しているのは、ここで説明したシーンIMGの構成です。すべてのIMG形式や圧縮ファイルを扱えるわけではありません。
-ゲーム側でこれらを読む処理は、[シーンローダー](../../../../src/overlays/field/field_scene_transition.c)と
-[顔画像の定義](../../../../src/overlays/field/field_text.c)を参照してください。
+ゲーム側でこれらを読む処理は、[シーンローダー](../../../../src/overlays/field/scene/field_scene_transition.c)と
+[顔画像の定義](../../../../src/overlays/field/ui/field_text.c)を参照してください。
 
 Python側も、この構造に沿っています。
 `SceneHeader` がヘッダー、`FieldLayoutRecord` がレイアウトレコードを表します。

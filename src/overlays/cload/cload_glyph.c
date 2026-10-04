@@ -1,5 +1,5 @@
-/* CLOAD's copy of the shared glyph-cache text drawing (see include/glyph_cache.h). */
-#include "cload_internal.h"
+/* CLOAD's copy of the shared glyph-cache text drawing (see include/common/glyph_cache.h). */
+#include "internal/cload_internal.h"
 
 /**
  * @brief g_glyph_chart_page_base as CLOAD reaches it.

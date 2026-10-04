@@ -36,7 +36,7 @@ from tools.overlays.resources import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OVERLAY_CONFIG = "overlays/GOSUB.BIN.yaml"
 SYMBOL_FILE = "symbols/gosub_symbol_addrs.txt"
-HEADER = REPO_ROOT / "src/overlays/gosub/gosub_internal.h"
+HEADER = REPO_ROOT / "src/overlays/gosub/internal/gosub_internal.h"
 GLYPH_COUNT = 82
 SECTION_COUNT = 12
 COLOR_FIRST = 96

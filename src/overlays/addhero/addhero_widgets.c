@@ -1,5 +1,5 @@
-#include "field_text.h"
-#include "addhero_internal.h"
+#include "overlays/field/field_text.h"
+#include "internal/addhero_internal.h"
 
 /** @brief Side of a square party icon, in pixels (4-bit, so a quarter of that in VRAM halfwords). */
 #define ADDHERO_ICON_SIZE 48

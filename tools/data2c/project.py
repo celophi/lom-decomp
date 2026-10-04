@@ -29,12 +29,12 @@ def symbol_files(version: str, image: str) -> list[str]:
 def source_globs(image: str) -> list[str]:
     """The C files whose declarations type the image's data."""
     if image == EXECUTABLE:
-        return ["src/*.c", "src/psyq/*/*.c"]
-    return [f"src/overlays/{image}/*.c"]
+        return ["src/main/*.c", "src/main/audio/*.c", "src/psyq/*/*.c"]
+    return [f"src/overlays/{image}/**/*.c"]
 
 
 def include_dirs(image: str) -> list[str]:
-    return ["src"] if image == EXECUTABLE else [f"src/overlays/{image}"]
+    return ["src/main/internal", "src/main/audio/internal"] if image == EXECUTABLE else [f"src/overlays/{image}/internal"]
 
 
 def data_files(version: str):

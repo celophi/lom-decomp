@@ -46,7 +46,7 @@ from tools.overlays.resources import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OVERLAY_CONFIG = "overlays/NIKI.BIN.yaml"
 SYMBOL_FILE = "symbols/niki_symbol_addrs.txt"
-COMMAND_HEADER = REPO_ROOT / "src/overlays/niki/niki_internal.h"
+COMMAND_HEADER = REPO_ROOT / "src/overlays/niki/internal/niki_internal.h"
 
 CARD_TITLES_NOTE = (
     "# Shift-JIS memory card title templates; the save screen (CARDA) writes them. "

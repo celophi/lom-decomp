@@ -2,7 +2,7 @@
 
 .PHONY: dump-objs target-objects base-objects objdiff-objects objdiff-config
 
-# Write disassembly beside each built object, e.g. build/us/src/cdrom.s.
+# Write disassembly beside each built object, e.g. build/us/src/main/cdrom.s.
 dump-objs:
 	@set -eu; \
 		if [ ! -d $(BUILD_DIR) ]; then \

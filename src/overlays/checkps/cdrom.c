@@ -1,11 +1,11 @@
-#include "cdrom.h"
+#include "internal/cdrom.h"
 
-#include "checkps_internal.h"
+#include "internal/checkps_internal.h"
 
-#include "kanji.h"
-#include "pattern.h"
+#include "internal/kanji.h"
+#include "internal/pattern.h"
 
-#include "display.h"
+#include "main/display.h"
 #include "sdk/libapi.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
