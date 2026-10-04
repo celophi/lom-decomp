@@ -1403,7 +1403,7 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
             bound_z_start = (u16)probe.z - (s16)bound_depth / 2;
             bound_z_end = bound_z_start + bound_depth;
             value = bound_x_start + bound_width;
-            if (((s16)bound_z_start < 0) || ((s16)bound_z_end >= bound_header->unk32) || ((s16)bound_x_start < 0) || ((s16)value >= bound_header->unk30))
+            if (((s16)bound_z_start < 0) || ((s16)bound_z_end >= bound_header->map_depth) || ((s16)bound_x_start < 0) || ((s16)value >= bound_header->map_width))
             {
                 hit = 1;
             }
@@ -1454,11 +1454,11 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
                 z_end = z_end_raw;
                 if (header->flags & FIELD_SCENE_HEADER_BOUNDED)
                 {
-                    if (((s16)scratch < 0) || (z_end >= header->unk32))
+                    if (((s16)scratch < 0) || (z_end >= header->map_depth))
                     {
                         slide_angle = field_collision_slide_angle(NULL, FIELD_COLLISION_EDGE_WALL_X, move_angle, slide_angle);
                     }
-                    if (((s16)x_start < 0) || (x_end >= scene->header->unk30))
+                    if (((s16)x_start < 0) || (x_end >= scene->header->map_width))
                     {
                         slide_angle = field_collision_slide_angle(NULL, FIELD_COLLISION_EDGE_WALL_Z, move_angle, slide_angle);
                     }
@@ -1696,7 +1696,7 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
                     }
                     else
                     {
-                        extent_z = header->unk32;
+                        extent_z = header->map_depth;
                         if (z_end >= extent_z)
                         {
                             push_z = (extent_z - z_end) - 1;
@@ -1710,7 +1710,7 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
                     }
                     else
                     {
-                        extent_x = scene->header->unk30;
+                        extent_x = scene->header->map_width;
                         if (x_end >= extent_x)
                         {
                             push_x = extent_x - x_end - 1;
@@ -1943,7 +1943,7 @@ s32 field_collision_move_mover(FieldCollisionMover* mover)
                     retry_z_start = (u16)probe.z - (s16)retry_depth / 2;
                     retry_z_end = retry_z_start + retry_depth;
                     value = retry_x_start + footprint_width;
-                    if (((s16)retry_z_start < 0) || ((s16)retry_z_end >= retry_header->unk32) || ((s16)retry_x_start < 0) || ((s16)value >= retry_header->unk30))
+                    if (((s16)retry_z_start < 0) || ((s16)retry_z_end >= retry_header->map_depth) || ((s16)retry_x_start < 0) || ((s16)value >= retry_header->map_width))
                     {
                         hit = 1;
                     }
@@ -3558,8 +3558,8 @@ void field_collision_collect_groups(u8** allocator_cursor)
     }
 
     /* Coarser tiles keep large scenes within the collision-map budget. */
-    scratch = scene->header->unk30;
-    scene_depth = scene->header->unk32;
+    scratch = scene->header->map_width;
+    scene_depth = scene->header->map_depth;
     tile_size = FIELD_COLLISION_GROUP_FINE_TILE_SIZE;
     tile_shift = FIELD_COLLISION_GROUP_FINE_TILE_SHIFT;
     work_count = ((scratch + tile_size - 1) >> tile_shift) * ((scene_depth + tile_size * 2 - 1) >> (tile_shift + 1)) * group_count;

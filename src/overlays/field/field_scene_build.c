@@ -1853,7 +1853,7 @@ void field_draw_scene_objects(u8** cursor, u_long* ot, s32 update_mode)
     wrap_size = 0;
     wrap_height = 0;
     scene = g_field_scene.scene;
-    viewport.width = scene->header->unk30;
+    viewport.width = scene->header->map_width;
     viewport.camera_x = SHIFT_TOWARD_ZERO(g_field_camera_x, 8);
     viewport.camera_y = SHIFT_TOWARD_ZERO(g_field_camera_y, 8) - SHIFT_TOWARD_ZERO(g_field_camera_z, 9) + VRAM_DRAW_HEIGHT;
     for (obj = scene->objects; obj != NULL; obj = obj->next)

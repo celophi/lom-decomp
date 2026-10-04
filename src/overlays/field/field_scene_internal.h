@@ -386,13 +386,13 @@ typedef struct FieldSceneHeader
     u8 _pad3[0x2C - 0x2A];
     /** 0x2C scene flags; see FIELD_SCENE_HEADER_BOUNDED. */
     s32 flags;
-    s16 unk30; /* 0x30 */
-    /** 0x32 counterpart of unk30; field_collision_collect_groups uses the pair as the scene's
-        pixel extent when sizing its tile budget. */
-    s16 unk32;
+    /** 0x30 map width in pixels (collision cells), along x. */
+    s16 map_width;
+    /** 0x32 map depth in pixels (collision cells), along z. */
+    s16 map_depth;
 } FieldSceneHeader;
 
-/** FieldSceneHeader::flags bit: movers are kept inside the unk30 x unk32 extent. */
+/** FieldSceneHeader::flags bit: movers are kept inside the map_width x map_depth extent. */
 #define FIELD_SCENE_HEADER_BOUNDED 0x2
 
 /**
@@ -1118,7 +1118,7 @@ typedef struct
     /** Screen-space origin of the grid. */
     s32 x;
     s32 y;
-    /** Scene width in pixels, from FieldSceneHeader::unk30. */
+    /** Scene width in pixels, from FieldSceneHeader::map_width. */
     s32 width;
     /** Camera position in screen pixels. */
     s32 camera_x;
