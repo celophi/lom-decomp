@@ -99,6 +99,15 @@ typedef enum
     WMAP_FADE_DISABLED = 3
 } WmapFadeMode;
 
+/** @brief Land display IDs used by the world-map appearance overrides. */
+typedef enum
+{
+    WMAP_LAND_DISPLAY_DOMINA = 1,
+    WMAP_LAND_DISPLAY_GATO = 5,
+    WMAP_LAND_DISPLAY_GATO_OVERRIDE = 35,
+    WMAP_LAND_DISPLAY_DOMINA_OVERRIDE = 36
+} WmapLandDisplayId;
+
 /** @brief Per-tile display state. */
 typedef struct
 {
@@ -242,8 +251,10 @@ extern s32 D_801ADB08;
 extern u8 D_801ADBA0[];
 extern RECT D_80051A88;
 extern WmapTileDisplay D_8011D108[6][6];
-extern s32 D_80139830;
-extern s32 D_80182E20;
+/** @brief Nonzero to use display resource 35 for Gato's map appearance. */
+extern s32 g_wmap_gato_appearance_override;
+/** @brief Nonzero to use display resource 36 for Domina's map appearance. */
+extern s32 g_wmap_domina_appearance_override;
 extern WmapMotion g_wmap_actor_motions[];
 
 void wmap_init_frame_buffers(void);
@@ -2261,7 +2272,9 @@ void wmap_read_controller(void)
 }
 
 /**
- * @brief Cache land appearances, placement checks, and spirit sprites for every cell.
+ * @brief Cache land display IDs, travel and placement checks, and spirit sprites.
+ * @note Appearance overrides change only the cached display ID. Travel, placement,
+ * and spirit calculations still use the original map cell.
  */
 void wmap_refresh_cells(void)
 {
@@ -2274,18 +2287,18 @@ void wmap_refresh_cells(void)
         for (x = 0; x < WMAP_GRID_SIZE; x++)
         {
             land_id = wmap_get_land_at_cell(x, y);
-            if (D_80139830 != 0)
+            if (g_wmap_gato_appearance_override != 0)
             {
-                if (land_id == 5)
+                if (land_id == WMAP_LAND_DISPLAY_GATO)
                 {
-                    land_id = 35;
+                    land_id = WMAP_LAND_DISPLAY_GATO_OVERRIDE;
                 }
             }
-            if (D_80182E20 != 0)
+            if (g_wmap_domina_appearance_override != 0)
             {
-                if (land_id == 1)
+                if (land_id == WMAP_LAND_DISPLAY_DOMINA)
                 {
-                    land_id = 36;
+                    land_id = WMAP_LAND_DISPLAY_DOMINA_OVERRIDE;
                 }
             }
             g_wmap_cells[x][y].land_id = land_id;
