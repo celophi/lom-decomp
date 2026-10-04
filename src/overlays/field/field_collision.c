@@ -852,15 +852,15 @@ s32 field_collision_hit_markers(FieldCollisionQuery* query)
  * @param offset Node offset added to both span ends.
  * @param found Set to 1 when a span contains @p x.
  */
-#define FIELD_COLLISION_FIND_SPAN(span, counter, count, x, offset, found) \
-    for ((counter) = (count) - 1; (counter) != -1; (counter)--) \
-    { \
-        if (((x) >= ((span)->min_x + (offset))) && (((span)->max_x + (offset)) >= (x))) \
-        { \
-            (found) = 1; \
-            break; \
-        } \
-        (span)++; \
+#define FIELD_COLLISION_FIND_SPAN(span, counter, count, x, offset, found)                   \
+    for ((counter) = (count) - 1; (counter) != -1; (counter)--)                             \
+    {                                                                                       \
+        if (((x) >= ((span)->min_x + (offset))) && (((span)->max_x + (offset)) >= (x)))     \
+        {                                                                                   \
+            (found) = 1;                                                                    \
+            break;                                                                          \
+        }                                                                                   \
+        (span)++;                                                                           \
     }
 
 /**
@@ -868,35 +868,32 @@ s32 field_collision_hit_markers(FieldCollisionQuery* query)
  * @param total Running push; becomes FIELD_COLLISION_PUSH_BLOCKED when pushes disagree in direction.
  * @param part This span's push; the larger push in the same direction wins.
  */
-#define FIELD_COLLISION_MERGE_PUSH(total, part) \
-    do \
-    { \
-        if ((part) > 0) \
-        { \
-            if ((total) >= 0) \
-            { \
-                if ((total) < (part)) \
-                { \
-                    (total) = (part); \
-                } \
-            } \
-            else \
-            { \
-                (total) = FIELD_COLLISION_PUSH_BLOCKED; \
-            } \
-        } \
-        else if ((total) <= 0) \
-        { \
-            if ((part) < (total)) \
-            { \
-                (total) = (part); \
-            } \
-        } \
-        else \
-        { \
-            (total) = FIELD_COLLISION_PUSH_BLOCKED; \
-        } \
-    } while (0)
+#define FIELD_COLLISION_MERGE_PUSH(total, part)                                             \
+    if ((part) > 0)                                                                         \
+    {                                                                                       \
+        if ((total) >= 0)                                                                   \
+        {                                                                                   \
+            if ((total) < (part))                                                           \
+            {                                                                               \
+                (total) = (part);                                                           \
+            }                                                                               \
+        }                                                                                   \
+        else                                                                                \
+        {                                                                                   \
+            (total) = FIELD_COLLISION_PUSH_BLOCKED;                                         \
+        }                                                                                   \
+    }                                                                                       \
+    else if ((total) <= 0)                                                                  \
+    {                                                                                       \
+        if ((part) < (total))                                                               \
+        {                                                                                   \
+            (total) = (part);                                                               \
+        }                                                                                   \
+    }                                                                                       \
+    else                                                                                    \
+    {                                                                                       \
+        (total) = FIELD_COLLISION_PUSH_BLOCKED;                                             \
+    }
 
 /**
  * @brief Move a mover one frame through the field collision nodes.
