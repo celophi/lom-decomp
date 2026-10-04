@@ -1236,9 +1236,7 @@ def _select_encoding(
     """
     first_byte = src[i]
 
-    # ──────────────────────────────────────────────────────────────────
-    # Pattern opcodes F0–FB (collected; best chosen by lookahead below)
-    # ──────────────────────────────────────────────────────────────────
+    # Pattern opcodes F0-FB (collected; best chosen by lookahead below)
     pattern_candidates: list[PatternCandidate] = []
 
     def add_pattern_candidate(encoded, advance, count):
@@ -1253,7 +1251,7 @@ def _select_encoding(
     best_pattern: PatternCandidate | None = None
     best_pattern_score = 0
 
-    # F0: nibble (0-15) repeated 3-18 times → 2 bytes
+    # F0: nibble (0-15) repeated 3-18 times -> 2 bytes
     if first_byte <= NIBBLE_MASK:
         cnt = 1
         while cnt < F0_MAX_RUN and i + cnt < n and src[i + cnt] == first_byte:
@@ -1261,14 +1259,14 @@ def _select_encoding(
         if cnt >= F0_MIN_RUN:
             add_pattern_candidate([OP_F0, (first_byte << 4) | (cnt - F0_MIN_RUN)], cnt, cnt)
 
-    # F1: any byte repeated 4-259 times → 3 bytes
+    # F1: any byte repeated 4-259 times -> 3 bytes
     cnt = 1
     while cnt < F1_MAX_RUN and i + cnt < n and src[i + cnt] == first_byte:
         cnt += 1
     if cnt >= F1_MIN_RUN:
         add_pattern_candidate([OP_F1, cnt - F1_MIN_RUN, first_byte], cnt, cnt)
 
-    # F2: nibble pair (both 0-15) repeated 2-257 times → 3 bytes
+    # F2: nibble pair (both 0-15) repeated 2-257 times -> 3 bytes
     if i + 1 < n:
         b0, b1 = src[i], src[i + 1]
         if b0 <= NIBBLE_MASK and b1 <= NIBBLE_MASK:
@@ -1279,7 +1277,7 @@ def _select_encoding(
             if cnt >= F2_MIN_PAIRS:
                 add_pattern_candidate([OP_F2, cnt - F2_MIN_PAIRS, (b1 << 4) | b0], cnt * 2, cnt)
 
-    # F3: 2-byte pattern repeated 2-257 times → 4 bytes
+    # F3: 2-byte pattern repeated 2-257 times -> 4 bytes
     if i + 1 < n:
         b0, b1 = src[i], src[i + 1]
         cnt = 1
@@ -1289,7 +1287,7 @@ def _select_encoding(
         if cnt >= F3_MIN_PAIRS:
             add_pattern_candidate([OP_F3, cnt - F3_MIN_PAIRS, b0, b1], cnt * 2, cnt)
 
-    # F4: 3-byte pattern repeated 2-257 times → 5 bytes
+    # F4: 3-byte pattern repeated 2-257 times -> 5 bytes
     f4_scan = _scan_f4(src, i, n) if n - i >= FULL_PATTERN_PROBE_BYTES else None
     if f4_scan is not None:
         add_pattern_candidate(
@@ -1337,7 +1335,7 @@ def _select_encoding(
             encoded, f6_scan.triple_count * 3, f6_scan.triple_count
         )
 
-    # F7: {b0, b1, b2, var} quads, 2-257 quads → 5+cnt bytes
+    # F7: {b0, b1, b2, var} quads, 2-257 quads -> 5+cnt bytes
     # Not used when b0==b1==b2 (degenerate case handled by other opcodes).
     f7_scan = _scan_f7(src, i, n)
     if f7_scan is not None:
@@ -1354,21 +1352,21 @@ def _select_encoding(
             encoded, f7_scan.quad_count * 4, f7_scan.quad_count
         )
 
-    # F8: ascending +1 run, 4-259 bytes → 3 bytes
+    # F8: ascending +1 run, 4-259 bytes -> 3 bytes
     cnt = 1
     while cnt < F8_MAX_RUN and i + cnt < n and src[i + cnt] == (first_byte + cnt) & BYTE_MASK:
         cnt += 1
     if cnt >= F8_MIN_RUN:
         add_pattern_candidate([OP_F8, cnt - F8_MIN_RUN, first_byte], cnt, cnt)
 
-    # F9: descending -1 run, 4-259 bytes → 3 bytes
+    # F9: descending -1 run, 4-259 bytes -> 3 bytes
     cnt = 1
     while cnt < F9_MAX_RUN and i + cnt < n and src[i + cnt] == (first_byte - cnt) & BYTE_MASK:
         cnt += 1
     if cnt >= F9_MIN_RUN:
         add_pattern_candidate([OP_F9, cnt - F9_MIN_RUN, first_byte], cnt, cnt)
 
-    # FA: arithmetic run with step, 5-260 bytes → 4 bytes
+    # FA: arithmetic run with step, 5-260 bytes -> 4 bytes
     if i + 1 < n:
         step = (src[i + 1] - first_byte) & BYTE_MASK
         cnt = 1
@@ -1381,7 +1379,7 @@ def _select_encoding(
         if cnt >= FA_MIN_RUN:
             add_pattern_candidate([OP_FA, cnt - FA_MIN_RUN, first_byte, step], cnt, cnt)
 
-    # FB: 16-bit pair run with signed delta, 3-258 pairs → 5 bytes
+    # FB: 16-bit pair run with signed delta, 3-258 pairs -> 5 bytes
     fb_scan = _scan_fb(src, i, n)
     if fb_scan is not None:
         add_pattern_candidate(

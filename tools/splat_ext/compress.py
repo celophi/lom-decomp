@@ -49,7 +49,7 @@ def _savings_ratio(consumed: int, encoded_len: int) -> float:
     return s / encoded_len
 
 
-# ── Opcode encoders ────────────────────────────────────────────────────────────
+# Opcode encoders
 # Each returns (bytes_consumed, encoded_bytes) or None if the opcode doesn't apply.
 
 def _try_f0(src, i, n):
@@ -355,4 +355,4 @@ if __name__ == "__main__":
     with open(output_path, "wb") as f:
         f.write(prefix + compressed)
 
-    print(f"compressed {len(raw)} → {len(prefix) + len(compressed)} bytes")
+    print(f"compressed {len(raw)} -> {len(prefix) + len(compressed)} bytes")
