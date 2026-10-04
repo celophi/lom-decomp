@@ -1,5 +1,6 @@
 #include "main/main.h"
 #include "overlays/field/field_text.h"
+#include "overlays/field/field_golem_logic_blocks.h"
 #include "common/encoded_text.h"
 #include "common/saved_game.h"
 #include "common.h"
@@ -94,13 +95,6 @@ typedef struct
     DISPENV display_env;
     DRAWENV draw_env;
 } GolemRenderContext;
-
-/** @brief Availability and palette data for one logic block. */
-typedef struct
-{
-    u16 is_unavailable;
-    u16 clut;
-} GolemLogicBlockStatus;
 
 /** @brief Packed high texture-height bits and the panel's horizontal position. */
 typedef union
@@ -260,17 +254,8 @@ extern GolemGlyphMetric g_golem_glyph_metrics[];
 extern GolemPanelRecord g_golem_panel_records[GOLEM_PANEL_COUNT];
 extern GolemCompositeIconRow g_golem_composite_icon_rows[];
 
-/* FIELD overlay functions called from the editor; FIELD has no header that declares them. */
+/* Other FIELD overlay functions called from the editor. */
 void func_800A3938(s32 sound_id, s32 pan);
-void* func_800A88A0(void* sprite_cursor, u_long* ordering_table, u8* text, s32 text_color, s32 x, s32 y, s32 flags);
-void func_800A8B90(u8* dest, s32 value, s32 style);
-u32 func_800CB758(void);
-void func_800CB918(s32 block_index, s32 rotation, s32 x, s32 y);
-s32 func_800CBA9C(s32 block_index, s32 rotation, s32 x, s32 y);
-s32 func_800CBC0C(s32 block_index, s32 rotation, s32 x, s32 y);
-s32 func_800CBD70(GolemLogicBlockStatus* block_status);
-void func_800CBE64(s32 block_index);
-void func_800CBEC4(s32* markers);
 void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel);
 u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel);
 void golem_upload_ui_image(void);
@@ -398,7 +383,7 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
         }
     }
 
-    g_golem_grid_size_class = func_800CB758() - 4;
+    g_golem_grid_size_class = golem_rebuild_grid_owners() - 4;
     logic_type = GOLEM_SAVED_GAME->golem_order[D_80122C00];
     g_golem_block_rotation = 0;
     g_golem_block_y = 0;
@@ -410,7 +395,7 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
     g_golem_cursor_y = 0x50;
     g_golem_active_logic_type = logic_type;
     golem_reset_cursor_motion();
-    g_golem_logic_block_count = func_800CBD70(g_golem_block_status);
+    g_golem_logic_block_count = golem_fill_logic_block_status(g_golem_block_status);
     g_golem_scroll_steps = 0;
     g_golem_scroll_y = 0;
     g_golem_scroll_target_y = 0;
@@ -547,7 +532,7 @@ void golem_handle_input(void)
             {
                 g_golem_block_x = saved_x + 1;
             }
-            if (func_800CBC0C(g_golem_selected_block, g_golem_block_rotation, g_golem_block_x, g_golem_block_y) == 0)
+            if (golem_logic_block_fits_grid(g_golem_selected_block, g_golem_block_rotation, g_golem_block_x, g_golem_block_y) == 0)
             {
                 g_golem_block_x = saved_x;
                 g_golem_block_y = saved_y;
@@ -583,7 +568,7 @@ void golem_handle_input(void)
                     g_golem_block_rotation--;
                 }
             }
-            if (func_800CBC0C(g_golem_selected_block, g_golem_block_rotation, g_golem_block_x, g_golem_block_y) == 0)
+            if (golem_logic_block_fits_grid(g_golem_selected_block, g_golem_block_rotation, g_golem_block_x, g_golem_block_y) == 0)
             {
                 golem_reset_block_position();
             }
@@ -593,12 +578,12 @@ void golem_handle_input(void)
         }
         if (input & (PAD_BTN_START | PAD_BTN_L3 | PAD_BTN_CROSS))
         {
-            if (func_800CBA9C(g_golem_selected_block, g_golem_block_rotation, g_golem_block_x, g_golem_block_y) != 0)
+            if (golem_can_place_logic_block(g_golem_selected_block, g_golem_block_rotation, g_golem_block_x, g_golem_block_y) != 0)
             {
                 g_golem_is_placing_block = 0;
                 golem_reset_cursor_motion();
                 func_800A3938(GOLEM_SOUND_PLACE, 0x80);
-                func_800CB918(g_golem_selected_block, g_golem_block_rotation, g_golem_block_x, g_golem_block_y);
+                golem_place_logic_block(g_golem_selected_block, g_golem_block_rotation, g_golem_block_x, g_golem_block_y);
             }
             else
             {
@@ -716,7 +701,7 @@ void golem_handle_input(void)
                     golem_reset_block_position();
                     g_golem_block_rotation = 0;
                 }
-                func_800CBE64(g_golem_selected_block);
+                golem_remove_logic_block(g_golem_selected_block);
                 func_800A3938(GOLEM_SOUND_PICK_UP, 0x80);
             }
             return;
@@ -776,7 +761,7 @@ u8* golem_draw_grid_markers(u8* packet_cursor, u_long* ordering_table)
     s32 vertical_marker;
     s32 horizontal_marker;
 
-    func_800CBEC4(markers);
+    golem_build_grid_markers(markers);
 
     marker_index = 0;
     for (row = 0; row < GOLEM_GRID_SIDE; row++)
@@ -953,17 +938,17 @@ void golem_render(GolemRenderContext* render_context)
         name_index = (u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2;
         archive = &g_golem_text_archive;
         encoded_text_copy(name_text, GOLEM_ARCHIVE_TEXT(archive, names_offset, name_index));
-        if (GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.quantity)
+        if (GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.level)
         {
             encoded_text_append(name_text, FIELD_UI_TEXT_AT(D_800EC3DA, GOLEM_SHARED_PLUS_TEXT_INDEX));
-            func_800A8B90(number_text, GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.quantity, 1);
+            field_format_number(number_text, GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.level, 1);
             encoded_text_append(name_text, number_text);
         }
-        packet_cursor = func_800A88A0(packet_cursor, panel_ordering_table, name_text, 0, 0xA0, 0xA0, 2);
+        packet_cursor = field_draw_text((SPRT*)packet_cursor, panel_ordering_table, name_text, 0, 0xA0, 0xA0, 2);
         descriptions_offset = archive->sections.descriptions_offset;
         description_index = (u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2;
         packet_cursor =
-            func_800A88A0(packet_cursor, panel_ordering_table, GOLEM_ARCHIVE_TEXT(archive, descriptions_offset, description_index), 0, 0xA0, 0xB0, 2);
+            field_draw_text((SPRT*)packet_cursor, panel_ordering_table, GOLEM_ARCHIVE_TEXT(archive, descriptions_offset, description_index), 0, 0xA0, 0xB0, 2);
     }
 
     render_context->packet_cursor = golem_render_fade(packet_cursor, &render_context->ordering_table[GOLEM_LAYER_FADE]);

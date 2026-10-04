@@ -605,7 +605,7 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
         {
             s32 list_x;
             u16 marker_offset;
-            DVECTOR value_pos;
+            Vec2s value_pos;
             u16* text_table;
 
             text_table = &g_addhero_text_table;
@@ -617,8 +617,8 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
                 {
                     if (g_addhero_entry_ranks[entry_index] >= 0)
                     {
-                        value_pos.vx = list_x + ADDHERO_ENTRY_VALUE_X;
-                        value_pos.vy = row_y;
+                        value_pos.x = list_x + ADDHERO_ENTRY_VALUE_X;
+                        value_pos.y = row_y;
                         prim = field_draw_text(
                             field_draw_number(ot, prim, g_card_entry_suffix_values[entry_index], FIELD_TEXT_COLOR_NORMAL, &value_pos, FIELD_TEXT_ALIGN_LEFT),
                             ot, ADDHERO_TEXT_BY_OFFSET(text_table, g_addhero_text_number_label), FIELD_TEXT_COLOR_NORMAL, list_x + ADDHERO_ENTRY_NUMBER_LABEL_X,
@@ -782,7 +782,7 @@ void* addhero_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_
 void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     void* result;
-    DVECTOR pos;
+    Vec2s pos;
     u8 name[0x100];
     s32 slot[FIELD_PARTY_SIZE];
 
@@ -903,8 +903,8 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
                     s32 y = -y_offset;
 
                     base_y = entry->play_time;
-                    pos.vx = (s16)(x + ADDHERO_DETAILS_HOURS_RIGHT_X);
-                    pos.vy = (s16)y;
+                    pos.x = (s16)(x + ADDHERO_DETAILS_HOURS_RIGHT_X);
+                    pos.y = (s16)y;
                     hours = base_y / SAVED_PLAY_TIME_TICKS_PER_HOUR;
                     result = field_draw_number(ot, result, hours, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
                     result = field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, FIELD_UI_TEXT_TIME_SEPARATOR),
@@ -912,12 +912,12 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
                     base_y = (base_y / SAVED_PLAY_TIME_TICKS_PER_MINUTE) - (hours * 60);
                     if (base_y < 10)
                     {
-                        pos.vx = (s16)(x + ADDHERO_DETAILS_MINUTES_TENS_RIGHT_X);
-                        pos.vy = (s16)y;
+                        pos.x = (s16)(x + ADDHERO_DETAILS_MINUTES_TENS_RIGHT_X);
+                        pos.y = (s16)y;
                         result = field_draw_number(ot, result, 0, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
                     }
-                    pos.vx = (s16)(x + ADDHERO_DETAILS_MINUTES_RIGHT_X);
-                    pos.vy = (s16)y;
+                    pos.x = (s16)(x + ADDHERO_DETAILS_MINUTES_RIGHT_X);
+                    pos.y = (s16)y;
                     result = field_draw_number(ot, result, base_y, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
                     result = field_draw_text(result, ot, entry->summary_name, FIELD_TEXT_COLOR_NORMAL, x + ADDHERO_DETAILS_TEXT_X,
                                              y + ADDHERO_DETAILS_LINE_HEIGHT, FIELD_TEXT_ALIGN_LEFT);

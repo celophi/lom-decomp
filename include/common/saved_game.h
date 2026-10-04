@@ -203,12 +203,12 @@ typedef struct FieldItemRecord
 {
     /** @brief Encoded item name; an empty name marks a free record. */
     u8 name[FIELD_ITEM_NAME_LENGTH];
-    /** @brief Bits 8-9 category, 10-15 item type, 16-21 item subtype. */
+    /** @brief Bits 8-9 category, 10-15 item type, 16-21 material. */
     union
     {
         u32 word;
         FieldItemInfo bits;
-        /** @brief Halfword view; halves[1] holds the item subtype in bits 0-5. */
+        /** @brief Halfword view; halves[1] holds the material index in bits 0-5. */
         u16 halves[2];
     } info;
     /** @brief Eight four-bit bonus values. */
@@ -564,7 +564,7 @@ typedef union
     {
         u32 logic_type : 2; /**< Owning logic type; LOGIC_BLOCK_UNASSIGNED when free. */
         u32 id : 6;         /**< Logic-block type index. */
-        u32 quantity : 4;   /**< Level shown after the name; zero hides it. */
+        u32 level : 4;      /**< Level shown after the name; zero hides it. */
         u32 shape : 4;      /**< Index of the block's composite-icon layout. */
         u32 placed : 1;     /**< Set while the block is placed on its golem group's grid. */
         u32 rotation : 2;   /**< Placed rotation, 0-3. */
@@ -593,7 +593,15 @@ typedef struct
     u16 secondary_value; /**< Hit points; the second stat column of the GOSUB roster. */
     u16 primary_value;   /**< Weapon power; the first stat column of the GOSUB roster. */
     u16 stats[COMPANION_STAT_COUNT];
-    u8 unknown_0x22[0x44 - 0x22];
+    u8 unknown_0x22[2];
+    FieldNibbles weapon_bonus; /**< Summed weapon bonus nibbles, 0-9. */
+    FieldNibbles armor_bonus; /**< Summed armor bonus nibbles, 0-9. */
+    FieldStat character_stats[FIELD_CHARACTER_STAT_COUNT]; /**< Effective values 20-99; base values 0. */
+    u8 armor_flags; /**< OR of the source armor items' status_flags. */
+    u8 weapon_flags; /**< OR of the source weapon items' status_flags. */
+    u8 armor_flags2; /**< OR of the source armor items' element_flags. */
+    u8 unknown_0x3f;
+    u32 unknown_0x40;
     u8 logic_layout; /**< Low nibble: logic class; high nibble: grid bound. */
     u8 unknown_0x45;
     u8 unknown_0x46; /**< 75 - 10 * grid bound, clamped to 0-50; shown as a number by MENU. */

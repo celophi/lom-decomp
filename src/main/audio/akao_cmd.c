@@ -114,7 +114,7 @@ s32 akao_register_bank(AkaoHeader* bank)
  * pointer from g_akao_cmd_params[0] when it processes the command.
  *
  * @param sequence_data Pointer to a loaded AKAO-tagged sequence buffer, such
- *                      as @c &D_8003ECA0 in TITLE.
+ *                      as @c g_resident_song_buffer in TITLE.
  * @return Song handle returned by the AKAO command dispatcher.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/iVOOb

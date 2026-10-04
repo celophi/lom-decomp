@@ -76,7 +76,6 @@ extern s32 g_title_menu_exit_state;
  * audio driver.
  */
 extern u8* g_title_audio_bank_base;
-extern unsigned char D_8003ECA0;
 extern s32 g_title_idle_countdown;
 /** @brief g_controller_device_type values at or above this mean no controller is connected. */
 #define TITLE_PAD_UNAVAILABLE 0xFE

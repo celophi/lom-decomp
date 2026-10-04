@@ -10,6 +10,7 @@
 
 #include "main/main.h"
 #include "common.h"
+#include "overlays/field/field_text.h"
 #include "overlays/field/field_scene_transition.h"
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_calls.h"
@@ -129,11 +130,9 @@ extern s32 g_field_secondary_held_buttons, g_field_secondary_repeat_delay, g_fie
 
 void field_restart_actor_animation(FieldActor *actor);
 s32 field_read_controller_buttons(s32 controller);
-void *field_draw_text(void *cursor, u32 *ot, u8 *text, s32 color, s32 x, s32 y, s32 flags);
-void field_format_number(u8 *text, s32 value, s32 wide);
 
 static void field_play_action_refused_sound(void);
-static u8 *field_draw_item_drop_list(u32 *ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, void *element);
+static u8 *field_draw_item_drop_list(u_long* ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, void *element);
 static s32 field_update_item_drop_menu(FieldMenuElement *window);
 
 /**
@@ -208,12 +207,12 @@ static inline FieldMenuElement *claim_menu_element(void)
  * @return Cursor after the text primitives.
  * @note Same as field_draw_number, expanded inline.
  */
-static inline u8 *draw_number(u8 *cursor, u32 *ot, s32 value, s16 *position, s32 color, s32 flags)
+static inline u8 *draw_number(u8 *cursor, u_long* ot, s32 value, s16 *position, s32 color, s32 flags)
 {
     u8 text[64];
 
     field_format_number(text, value, 0);
-    return field_draw_text(cursor, ot, text, color, position[0], position[1], flags);
+    return field_draw_text((SPRT*)cursor, ot, text, color, position[0], position[1], flags);
 }
 
 /** @brief Build the list of droppable items the player owns and open the item-drop menu. */
@@ -293,7 +292,7 @@ static void field_play_action_refused_sound(void)
  * @param element Menu element of the item list.
  * @return Cursor after the list, the highlight tile and its draw-mode packet.
  */
-static u8 *field_draw_item_drop_list(u32 *ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, void *element)
+static u8 *field_draw_item_drop_list(u_long* ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, void *element)
 {
     s16 position[2];
     FieldItemListEntry *entry;
@@ -320,7 +319,7 @@ static u8 *field_draw_item_drop_list(u32 *ot, u8 *cursor, s32 scroll_x, s32 scro
         y = FIELD_ITEM_ROW_Y(i) - scroll_y;
         if (y > -FIELD_ITEM_ROW_HEIGHT && y < (s32)window->size.bits.height)
         {
-            cursor = field_draw_text(cursor, ot, FIELD_ITEM_NAME(names, entry->item_id), FIELD_ITEM_TEXT_COLOR, -scroll_x, y, 0);
+            cursor = field_draw_text((SPRT*)cursor, ot, FIELD_ITEM_NAME(names, entry->item_id), FIELD_ITEM_TEXT_COLOR, -scroll_x, y, 0);
             position[1] = y;
             position[0] = count_x;
             cursor = draw_number(cursor, ot, entry->count, position, FIELD_ITEM_TEXT_COLOR, FIELD_ITEM_COUNT_ALIGN);

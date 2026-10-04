@@ -616,8 +616,8 @@ void func_800A6F3C(void)
 /** @brief World-map step: seed the scroll target from the current cell, then advance. */
 void func_800A703C(void)
 {
-    func_8006D8F0(1);
-    func_8006D870(1);
+    wmap_select_mesh_motion(1);
+    wmap_start_mesh_transition(1);
     wmap_find_land_cell(0x10, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_view_scroll_mode = 2;
     g_wmap_focus_cell_x = g_wmap_vehicle_cell_x;
@@ -631,8 +631,8 @@ void func_800A703C(void)
 /** @brief World-map step: seed the scroll target from the current cell, then advance. */
 void func_800A7108(void)
 {
-    func_8006D8F0(1);
-    func_8006D870(1);
+    wmap_select_mesh_motion(1);
+    wmap_start_mesh_transition(1);
     wmap_find_land_cell(0x17, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_view_scroll_mode = 2;
     g_wmap_focus_cell_x = g_wmap_vehicle_cell_x;

@@ -1,4 +1,5 @@
 #include "internal/carda.h"
+#include "overlays/field/field_text.h"
 #include "internal/carda_internal.h"
 
 /**
@@ -785,7 +786,7 @@ static void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_o
         {
             s32 list_x;
             u16 marker_offset;
-            DVECTOR value_pos;
+            Vec2s value_pos;
             u16* text_table;
             s32 marker_x;
             s32 marker_text_x;
@@ -804,13 +805,13 @@ static void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_o
                 {
                     if (g_carda_entry_ranks[i] >= 0)
                     {
-                        value_pos.vx = list_x + CARDA_ENTRY_VALUE_X;
-                        value_pos.vy = row_y;
+                        value_pos.x = list_x + CARDA_ENTRY_VALUE_X;
+                        value_pos.y = row_y;
                         prim = field_draw_number(ot, prim, g_card_entry_suffix_values[i], color, &value_pos, FIELD_TEXT_ALIGN_LEFT);
                         prim = field_draw_text(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, g_carda_text_number_label), color,
                                                list_x + CARDA_ENTRY_NUMBER_LABEL_X, row_y, FIELD_TEXT_ALIGN_LEFT);
-                        value_pos.vy = row_y;
-                        value_pos.vx = marker_x;
+                        value_pos.y = row_y;
+                        value_pos.x = marker_x;
                         if ((g_carda_rank_count - 1) == g_carda_entry_ranks[i])
                         {
                             marker_offset = text_table[CARDA_TEXT_NEWEST];
@@ -984,7 +985,7 @@ static void* carda_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s
 static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     void* result;
-    DVECTOR pos;
+    Vec2s pos;
     u8 name[256];
     s32 party_icon[FIELD_PARTY_SIZE];
     DVECTOR unused;
@@ -1119,8 +1120,8 @@ static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_off
 
                     base_y = shown_save->play_time;
 
-                    pos.vx = x + CARDA_DETAILS_HOURS_RIGHT_X;
-                    pos.vy = y;
+                    pos.x = x + CARDA_DETAILS_HOURS_RIGHT_X;
+                    pos.y = y;
                     hours = base_y / SAVED_PLAY_TIME_TICKS_PER_HOUR;
                     result = field_draw_number(ot, result, hours, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
                     result = field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, FIELD_UI_TEXT_TIME_SEPARATOR),
@@ -1128,12 +1129,12 @@ static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_off
                     base_y = (base_y / SAVED_PLAY_TIME_TICKS_PER_MINUTE) - (hours * 60);
                     if (base_y < 10)
                     {
-                        pos.vx = x + CARDA_DETAILS_MINUTES_TENS_RIGHT_X;
-                        pos.vy = y;
+                        pos.x = x + CARDA_DETAILS_MINUTES_TENS_RIGHT_X;
+                        pos.y = y;
                         result = field_draw_number(ot, result, 0, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
                     }
-                    pos.vx = x + CARDA_DETAILS_MINUTES_RIGHT_X;
-                    pos.vy = y;
+                    pos.x = x + CARDA_DETAILS_MINUTES_RIGHT_X;
+                    pos.y = y;
                     result = field_draw_number(ot, result, base_y, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
                     result = field_draw_text(result, ot, shown_save->summary_name, FIELD_TEXT_COLOR_NORMAL, x + CARDA_DETAILS_TEXT_X,
                                              y + CARDA_DETAILS_LINE_HEIGHT, FIELD_TEXT_ALIGN_LEFT);

@@ -3,6 +3,18 @@
 
 #include "field_effect_types.h"
 
+/** @brief Weapon-specific technique banks stored in the actor sequence resource. */
+#define FIELD_SEQUENCE_BANK_COUNT 11
+/** @brief Technique sequence rows in each weapon bank. */
+#define FIELD_SEQUENCE_ROW_COUNT 24
+/** @brief Bytes reserved for one technique sequence. */
+#define FIELD_SEQUENCE_ROW_SIZE 32
+/** @brief Bytes in one weapon's technique sequence bank. */
+#define FIELD_SEQUENCE_BANK_SIZE (FIELD_SEQUENCE_ROW_COUNT * FIELD_SEQUENCE_ROW_SIZE)
+
+/** @brief Actor sequence bytecode, arranged by weapon bank, row and byte. */
+extern u8 g_field_actor_sequence_data[FIELD_SEQUENCE_BANK_COUNT * FIELD_SEQUENCE_BANK_SIZE];
+
 struct FieldActor;
 
 /** @brief Binding of an object owner to a temporary animation actor. */

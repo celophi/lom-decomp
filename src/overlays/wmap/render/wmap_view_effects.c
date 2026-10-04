@@ -1027,8 +1027,8 @@ void wmap_begin_cell_focus(void)
     WmapScreenPosition screen;
 
     g_wmap_sequence_busy = 1;
-    func_8006D8F0(1);
-    func_8006D870(1);
+    wmap_select_mesh_motion(1);
+    wmap_start_mesh_transition(1);
     g_wmap_view_scroll_mode = 2;
     g_wmap_scroll_remaining_x = g_wmap_cell_focus_offsets[g_wmap_cursor_row][g_wmap_cursor_column].x;
     g_wmap_scroll_remaining_y = g_wmap_cell_focus_offsets[g_wmap_cursor_row][g_wmap_cursor_column].y;

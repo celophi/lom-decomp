@@ -15,20 +15,14 @@
 #include <memory.h>
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_actor_sequence_runtime.h"
+#include "../internal/field_player_records.h"
+#include "../internal/field_resource_actions.h"
 #include "../internal/field_contact_geometry.h"
 #include "overlays/field/field_actor_records.h"
 #include "../internal/field_actor_behavior.h"
 
 /** @brief Scratchpad vector that receives an actor displacement. */
 #define FIELD_SCRATCH_DISPLACEMENT ((Vec3i*)SCRATCHPAD_ADDRESS)
-
-/** @brief Per-player metadata; the kind byte also selects the bank of sequence rows. */
-typedef struct
-{
-    u8 flags;
-    u8 kind;
-    u8 pad2[0x266];
-} FieldPlayerRecord;
 
 /** @brief Actor template followed by the remaining per-player record data. */
 typedef struct
@@ -37,47 +31,9 @@ typedef struct
     u8 tail[0x24];
 } FieldSequenceTemplate;
 
-/** @brief Action slot command as this file reads it (FieldActionSlot::command). */
-typedef struct
-{
-    u16 command;
-    u8 pad2[6];
-} FieldSequenceActionCommand;
-
-/** @brief Action slot whose flag halfword is also written as a whole (FieldActionSlot). */
-typedef struct
-{
-    u16 command;
-    /** @brief FieldActionFlags; the low byte is the target filter. */
-    union
-    {
-        u16 word;
-        struct
-        {
-            u8 target_filter;
-            u8 high;
-        } bytes;
-    } flags;
-    u16 animation;
-    u16 parameter;
-} FieldSequenceAction;
-
-/** @brief Resource action row (FieldActionRow) as the sequence code uses it. */
-typedef struct
-{
-    FieldSequenceActionCommand slots[2];
-    u8 pad10[0x58 - 0x10];
-    /** @brief Slot that action chains program before performing it. */
-    FieldSequenceAction chain_slot;
-    u8 pad60[0x190 - 0x60];
-} FieldResourceAction;
-
 extern FieldObjectPart g_field_object_parts[];
-extern FieldPlayerRecord g_field_player_records[];
 extern FieldSequenceTemplate g_field_actor_templates[];
 extern FieldActorSlot g_field_shared_actor_template;
-extern u8 g_field_actor_sequence_data[];
-extern FieldResourceAction g_field_resource_actions[];
 extern s32 g_field_active_group;
 extern s32 g_frame_counter;
 
@@ -94,22 +50,17 @@ void field_update_actor_movement_animation(FieldActor* actor, s32 delta_x, s32 d
 
 /** @brief Action slot that action chains program (FIELD_ACTION_COMMAND(FIELD_CHAIN_ACTION_SLOT) performs it). */
 #define FIELD_CHAIN_ACTION_SLOT 11
-/** @brief FieldActionFlags bits cleared when a chain action is programmed: instrument, then target group. */
-#define FIELD_ACTION_FLAG_INSTRUMENT 0x400
-#define FIELD_ACTION_FLAG_TARGET_GROUP 0x300
-/** @brief Target filter of an action without targets. */
-#define FIELD_ACTION_TARGET_NONE 0xFF
 
 /**
  * @brief Program the chain action slot of @p actor's resource action row.
  */
-#define FIELD_SET_CHAIN_ACTION(actor, action_command, action_animation, action_parameter)                                                                      \
-    g_field_resource_actions[(actor)->object_index].chain_slot.flags.word &= ~FIELD_ACTION_FLAG_INSTRUMENT;                                                    \
-    g_field_resource_actions[(actor)->object_index].chain_slot.command = action_command;                                                                        \
-    g_field_resource_actions[(actor)->object_index].chain_slot.flags.bytes.target_filter = FIELD_ACTION_TARGET_NONE;                                           \
-    g_field_resource_actions[(actor)->object_index].chain_slot.animation = action_animation;                                                                    \
-    g_field_resource_actions[(actor)->object_index].chain_slot.parameter = action_parameter;                                                                    \
-    g_field_resource_actions[(actor)->object_index].chain_slot.flags.word &= ~FIELD_ACTION_FLAG_TARGET_GROUP;
+#define FIELD_SET_CHAIN_ACTION(actor, action_command, action_animation, action_parameter)                                          \
+    g_field_resource_actions[(actor)->object_index].slots[FIELD_CHAIN_ACTION_SLOT].flags.instrument = 0;                           \
+    g_field_resource_actions[(actor)->object_index].slots[FIELD_CHAIN_ACTION_SLOT].command = action_command;                       \
+    g_field_resource_actions[(actor)->object_index].slots[FIELD_CHAIN_ACTION_SLOT].flags.target_filter = FIELD_ACTION_TARGET_NONE; \
+    g_field_resource_actions[(actor)->object_index].slots[FIELD_CHAIN_ACTION_SLOT].animation = action_animation;                   \
+    g_field_resource_actions[(actor)->object_index].slots[FIELD_CHAIN_ACTION_SLOT].parameter = action_parameter;                   \
+    g_field_resource_actions[(actor)->object_index].slots[FIELD_CHAIN_ACTION_SLOT].flags.target_group = 0;
 
 /** @brief Height interpolated from height to next_height across the current animation frame, in 1/256 units. */
 #define FIELD_STEP_OFFSET(actor)                                                                                                                              \
@@ -124,8 +75,6 @@ void field_update_actor_movement_animation(FieldActor* actor, s32 delta_x, s32 d
 #define FIELD_SEQUENCE_NO_ACTOR 0xFF
 #define FIELD_SEQUENCE_RESTORE_TEMPLATE 2
 #define FIELD_SEQUENCE_MOTION_SCALE_SHIFT 6
-#define FIELD_SEQUENCE_ROW_SIZE 32
-#define FIELD_SEQUENCE_BANK_SIZE (24 * FIELD_SEQUENCE_ROW_SIZE)
 #define FIELD_SEQUENCE_COMMAND_NONE 0xFFFF
 #define FIELD_SEQUENCE_ANIMATION_OVERRIDE 0x4000
 #define FIELD_SEQUENCE_TRANSIENT_ACTOR 0x8000
@@ -397,7 +346,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                 {
                     if (field_roll_object_evasion(actor->object_index, g_field_object_states[actor->object_index].linked_object_index) != 0)
                     {
-                        if (g_field_player_records[actor->object_index].kind == 8)
+                        if (g_field_player_records[actor->object_index].head.bytes.weapon_type == 8)
                         {
                             field_resolve_object_hit(actor->object_index, g_field_object_states[actor->object_index].linked_object_index, 0xD);
                         }
@@ -407,14 +356,14 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                         }
                         index = actor->object_index;
                         anim_id = 0x64;
-                        if (g_field_player_records[index].kind == 8)
+                        if (g_field_player_records[index].head.bytes.weapon_type == 8)
                         {
                             anim_id = 0x61;
                         }
                     }
                     else
                     {
-                        if (g_field_player_records[actor->object_index].kind == 8)
+                        if (g_field_player_records[actor->object_index].head.bytes.weapon_type == 8)
                         {
                             field_resolve_object_hit(g_field_object_states[actor->object_index].linked_object_index, actor->object_index, 0x18);
                         }
@@ -424,7 +373,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                         }
                         index = actor->object_index;
                         anim_id = 0x65;
-                        if (g_field_player_records[index].kind == 8)
+                        if (g_field_player_records[index].head.bytes.weapon_type == 8)
                         {
                             anim_id = 0x63;
                         }
@@ -489,7 +438,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                 {
                     if (field_roll_object_evasion(actor->object_index, g_field_object_states[actor->object_index].linked_object_index) != 0)
                     {
-                        if (g_field_player_records[actor->object_index].kind == 8)
+                        if (g_field_player_records[actor->object_index].head.bytes.weapon_type == 8)
                         {
                             field_resolve_object_hit(actor->object_index, g_field_object_states[actor->object_index].linked_object_index, 0xD);
                         }
@@ -499,14 +448,14 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                         }
                         index = actor->object_index;
                         anim_id = 0x64;
-                        if (g_field_player_records[index].kind == 8)
+                        if (g_field_player_records[index].head.bytes.weapon_type == 8)
                         {
                             anim_id = 0x61;
                         }
                     }
                     else
                     {
-                        if (g_field_player_records[actor->object_index].kind == 8)
+                        if (g_field_player_records[actor->object_index].head.bytes.weapon_type == 8)
                         {
                             field_resolve_object_hit(g_field_object_states[actor->object_index].linked_object_index, actor->object_index, 0x18);
                         }
@@ -516,7 +465,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                         }
                         index = actor->object_index;
                         anim_id = 0x65;
-                        if (g_field_player_records[index].kind == 8)
+                        if (g_field_player_records[index].head.bytes.weapon_type == 8)
                         {
                             anim_id = 0x63;
                         }
@@ -589,7 +538,7 @@ s32 field_update_pending_action(FieldActor* actor)
                     actor->variant = count + 1;
                 }
                 if (field_get_next_animation_frame_count(actor) == 0 || actor->variant >= 5U ||
-                    (actor->object_index < 2U && g_field_player_records[actor->object_index].kind == 0xA &&
+                    (actor->object_index < 2U && g_field_player_records[actor->object_index].head.bytes.weapon_type == 0xA &&
                      actor->variant >= 3U))
                 {
                     field_command_history_clear(actor->object_index);
@@ -706,7 +655,7 @@ void field_update_instrument_command(FieldActor* actor)
 /**
  * @brief Read one byte of a party member's technique sequence.
  * @param sequence_index Script row within the member's bank.
- * @param object_index Party member whose bank (player record kind) is used.
+ * @param object_index Party member whose weapon selects the sequence bank.
  * @param cursor Byte offset within the row.
  * @return The sequence byte.
  */
@@ -714,10 +663,10 @@ static inline u8 field_sequence_byte(s32 sequence_index, s32 object_index, s32 c
 {
     u8* scripts = g_field_actor_sequence_data;
     FieldPlayerRecord* players = g_field_player_records;
-    s32 row;
+    s32 row_offset;
 
-    row = (sequence_index << 5) + players[object_index].kind * FIELD_SEQUENCE_BANK_SIZE;
-    return *(u8*)(row + (uintptr_t)scripts + cursor);
+    row_offset = sequence_index * FIELD_SEQUENCE_ROW_SIZE + players[object_index].head.bytes.weapon_type * FIELD_SEQUENCE_BANK_SIZE;
+    return *(row_offset + scripts + cursor);
 }
 
 /**
@@ -778,7 +727,7 @@ void field_update_technique_command(FieldActor* actor, s32 sequence_index)
 
                 do
                 {
-                    bank = players[object_index].kind;
+                    bank = players[object_index].head.bytes.weapon_type;
                     row_offset = sequence_index << 5;
                     row_address = bank << 1;
                     row_address += bank;
@@ -797,7 +746,7 @@ void field_update_technique_command(FieldActor* actor, s32 sequence_index)
                 object_index = actor->object_index;
                 do
                 {
-                    bank = players[object_index].kind;
+                    bank = players[object_index].head.bytes.weapon_type;
                     row_address = bank << 1;
                     row_address += bank;
                     row_address <<= 8;
@@ -1591,7 +1540,7 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
     initial_owner = actor->object_index;
     cursor = g_field_object_states[initial_owner].sequence_position;
     initial_program =
-        (script_index * FIELD_SEQUENCE_ROW_SIZE) + (g_field_player_records[initial_owner].kind * FIELD_SEQUENCE_BANK_SIZE) + initial_program_base + cursor;
+        (script_index * FIELD_SEQUENCE_ROW_SIZE) + (g_field_player_records[initial_owner].head.bytes.weapon_type * FIELD_SEQUENCE_BANK_SIZE) + initial_program_base + cursor;
     if (*initial_program == FIELD_SEQUENCE_END)
     {
         return 1;
@@ -1659,12 +1608,12 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
     slots = g_field_object_states;
     script_offset = script_index * FIELD_SEQUENCE_ROW_SIZE;
     command_slot = actor->object_index;
-    opcode_ptr = script_offset + players[command_slot].kind * FIELD_SEQUENCE_BANK_SIZE + programs + cursor;
+    opcode_ptr = script_offset + players[command_slot].head.bytes.weapon_type * FIELD_SEQUENCE_BANK_SIZE + programs + cursor;
     opcode = *opcode_ptr;
     result = 0;
     /* Frame bytes stop dispatch; command bytes may consume additional operands. */
     for (; opcode >= FIELD_SEQUENCE_START_TARGETS_0; command_slot = actor->object_index,
-                                                     bank_offset = script_offset + players[command_slot].kind * FIELD_SEQUENCE_BANK_SIZE,
+                                                     bank_offset = script_offset + players[command_slot].head.bytes.weapon_type * FIELD_SEQUENCE_BANK_SIZE,
                                                      opcode_ptr = (u8*)(bank_offset + (uintptr_t)programs + cursor), opcode = *opcode_ptr)
     {
         switch (opcode)
@@ -1748,7 +1697,7 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
                 result = 0;
                 delay_owner = actor->object_index;
                 pending_state = (FieldObjectState*)(delay_owner * sizeof(*slots));
-                delay_operand = script_offset + players[delay_owner].kind * FIELD_SEQUENCE_BANK_SIZE;
+                delay_operand = script_offset + players[delay_owner].head.bytes.weapon_type * FIELD_SEQUENCE_BANK_SIZE;
                 delay_operand += (uintptr_t)programs;
                 delay_operand += cursor;
                 pending_state = (FieldObjectState*)((uintptr_t)pending_state + (uintptr_t)slots);
@@ -1783,7 +1732,7 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
                 if (actor_index != -1)
                 {
                     resource_owner = actor->object_index;
-                    resource_operand = script_offset + players[resource_owner].kind * FIELD_SEQUENCE_BANK_SIZE;
+                    resource_operand = script_offset + players[resource_owner].head.bytes.weapon_type * FIELD_SEQUENCE_BANK_SIZE;
                     resource_operand += (uintptr_t)programs;
                     resource_operand += cursor;
                     field_start_builtin_animation(resource_owner, actor_index, ((u8*)resource_operand)[1]);
@@ -1842,7 +1791,7 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
             case FIELD_SEQUENCE_SET_ANIMATION:
                 command_owner = actor->object_index;
                 target_state = (FieldObjectState*)(command_owner * sizeof(*slots));
-                animation_operand = script_offset + players[command_owner].kind * FIELD_SEQUENCE_BANK_SIZE;
+                animation_operand = script_offset + players[command_owner].head.bytes.weapon_type * FIELD_SEQUENCE_BANK_SIZE;
                 animation_operand += (uintptr_t)programs;
                 animation_operand += cursor;
                 target_state = (FieldObjectState*)((uintptr_t)target_state + (uintptr_t)slots);
@@ -1909,7 +1858,7 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
         s32 frame_offset;
         frame_programs = g_field_actor_sequence_data;
         frame_players = g_field_player_records;
-        frame_offset = (script_index * FIELD_SEQUENCE_ROW_SIZE) + frame_players[actor->object_index].kind * FIELD_SEQUENCE_BANK_SIZE;
+        frame_offset = (script_index * FIELD_SEQUENCE_ROW_SIZE) + frame_players[actor->object_index].head.bytes.weapon_type * FIELD_SEQUENCE_BANK_SIZE;
         frame_address = frame_offset;
         frame_address += (uintptr_t)frame_programs;
         frame_address += cursor;

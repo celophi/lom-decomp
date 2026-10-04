@@ -75,15 +75,15 @@ g_golem_interpolation_target         = 0x8014C0C8;
 
 // US ELF names not listed above (splat placeholders shared with the C sources).
 func_800A3938 = 0x800A37E8;
-func_800A88A0 = 0x800A8750;
-func_800A8B90 = 0x800A8A40;
-func_800CB758 = 0x800CB324;
-func_800CB918 = 0x800CB4E4;
-func_800CBA9C = 0x800CB668;
-func_800CBC0C = 0x800CB7D8;
-func_800CBD70 = 0x800CB93C;
-func_800CBE64 = 0x800CBA30;
-func_800CBEC4 = 0x800CBA90;
+field_draw_text = 0x800A8750;
+field_format_number = 0x800A8A40;
+golem_rebuild_grid_owners = 0x800CB324;
+golem_place_logic_block = 0x800CB4E4;
+golem_can_place_logic_block = 0x800CB668;
+golem_logic_block_fits_grid = 0x800CB7D8;
+golem_fill_logic_block_status = 0x800CB93C;
+golem_remove_logic_block = 0x800CBA30;
+golem_build_grid_markers = 0x800CBA90;
 D_800EC3DA    = 0x800EBFA6;
 D_80122C00    = 0x8011F688;
 D_8014C26C    = 0x8014C0B4;

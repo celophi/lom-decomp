@@ -85,7 +85,7 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 
 /* Script locals read by field_menu_add_logic_block (halfword indices). */
 #define FIELD_NEW_BLOCK_SHAPE 0xC
-#define FIELD_NEW_BLOCK_QUANTITY 0xD
+#define FIELD_NEW_BLOCK_LEVEL 0xD
 #define FIELD_NEW_BLOCK_ID 0xE
 
 /** @brief FIELD_NEW_BLOCK_ID value that clears the logic-block table. */
@@ -1350,7 +1350,7 @@ void field_menu_set_golem_class(void)
 void field_menu_add_logic_block(void)
 {
     s32 id = FIELD_LOCAL_HALF(FIELD_NEW_BLOCK_ID);
-    s32 quantity = FIELD_LOCAL_HALF(FIELD_NEW_BLOCK_QUANTITY);
+    s32 level = FIELD_LOCAL_HALF(FIELD_NEW_BLOCK_LEVEL);
     s32 shape = FIELD_LOCAL_HALF(FIELD_NEW_BLOCK_SHAPE);
 
     if (id == FIELD_NEW_BLOCK_CLEAR)
@@ -1362,7 +1362,7 @@ void field_menu_add_logic_block(void)
     if (g_saved_game.layout.logic_block_count < LOGIC_BLOCK_CAPACITY)
     {
         g_saved_game.layout.logic_blocks[g_saved_game.layout.logic_block_count].f.id = id;
-        g_saved_game.layout.logic_blocks[g_saved_game.layout.logic_block_count].f.quantity = quantity;
+        g_saved_game.layout.logic_blocks[g_saved_game.layout.logic_block_count].f.level = level;
         g_saved_game.layout.logic_blocks[g_saved_game.layout.logic_block_count].f.shape = shape;
         g_saved_game.layout.logic_blocks[g_saved_game.layout.logic_block_count].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
         g_saved_game.layout.logic_blocks[g_saved_game.layout.logic_block_count].f.placed = 0;

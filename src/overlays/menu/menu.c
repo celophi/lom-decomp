@@ -267,7 +267,7 @@ void menu_tick(RenderContext* render_ctx)
  *
  * @see field_text_build_sprites
  */
-void* menu_build_text_run(SPRT* sprite_cursor, s32* ot, u8* src, s32 text_color, s32 x, s32 y, s32 len, MenuTextAlignment alignment)
+void* menu_build_text_run(SPRT* sprite_cursor, u_long* ot, u8* src, s32 text_color, s32 x, s32 y, s32 len, MenuTextAlignment alignment)
 {
     char buf[0x80];
     s32 count, i, acc;
@@ -656,7 +656,7 @@ void menu_update_slots(RenderContext* render_ctx)
         render_ctx->prim_cursor = menu_draw_frame(render_ctx->prim_cursor, frame_ot, render_ctx->frame_parity, allow_input);
         if (g_menu_help_text != 0)
         {
-            render_ctx->prim_cursor = func_800A88A0(render_ctx->prim_cursor, &render_ctx->ot[MENU_FRAME_OT_INDEX], g_menu_help_text, 1, 0xA0, 0xCA, 2);
+            render_ctx->prim_cursor = field_draw_text(render_ctx->prim_cursor, &render_ctx->ot[MENU_FRAME_OT_INDEX], g_menu_help_text, 1, 0xA0, 0xCA, 2);
         }
     }
 }
@@ -1027,7 +1027,7 @@ u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos
 
     menu_copy_sign_label(label_buffer, value);
 
-    packet_cursor = func_800A88A0(packet_cursor, ot_entry, label_buffer, 1, position->x, position->y, 0);
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ot_entry, label_buffer, 1, position->x, position->y, 0);
 
     return packet_cursor;
 }
@@ -1525,7 +1525,7 @@ u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 a
     actuator_state = MENU_CONTROLLER_ACTUATORS;
 
     /* Emit the full-screen draw environment before the menu layers. */
-    draw_env_packet = menu_draw_scene_content(packet_cursor, (s32*)ot_entry);
+    draw_env_packet = menu_draw_scene_content(packet_cursor, ot_entry);
     draw_y = frame_parity ? SCREEN_HEIGHT : VRAM_BACK_DRAW_Y;
     SetDefDrawEnv(&draw_env, 0, draw_y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
     SetDrawEnv(draw_env_packet, &draw_env);
@@ -1546,7 +1546,7 @@ u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 a
     switch (g_menu_cursor_enable)
     {
     case MENU_CURSOR_MODE_NODE_TREE:
-        frame_cursor = menu_draw_active_node_cursor(draw_env_packet, (s32*)(ot_entry - 1), allow_input);
+        frame_cursor = menu_draw_active_node_cursor(draw_env_packet, ot_entry - 1, allow_input);
         menu_handle_input(0);
         if (allow_input != 0)
         {
@@ -1555,7 +1555,7 @@ u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 a
         break;
 
     case MENU_CURSOR_MODE_CONTENT:
-        frame_cursor = menu_draw_content_cursor(draw_env_packet, (s32*)(ot_entry - 1), allow_input);
+        frame_cursor = menu_draw_content_cursor(draw_env_packet, ot_entry - 1, allow_input);
         if (g_menu_suppress_cursor == 0)
         {
             menu_handle_input(allow_input);
@@ -1563,7 +1563,7 @@ u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 a
         break;
 
     case MENU_CURSOR_MODE_CONTENT_EXIT:
-        frame_cursor = menu_draw_content_cursor(draw_env_packet, (s32*)(ot_entry - 1), allow_input);
+        frame_cursor = menu_draw_content_cursor(draw_env_packet, ot_entry - 1, allow_input);
         if (g_menu_suppress_cursor == 0)
         {
             g_menu_cursor_enable = MENU_CURSOR_MODE_NODE_TREE;
@@ -1575,8 +1575,8 @@ u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 a
     }
 
     /* Draw the node tree and its scroll indicators. */
-    node_tree_end = menu_draw_node_tree(frame_cursor, (s32*)ot_entry);
-    frame_cursor = menu_emit_tree_scroll_arrows(node_tree_end, (s32*)(ot_entry - 1));
+    node_tree_end = menu_draw_node_tree(frame_cursor, ot_entry);
+    frame_cursor = menu_emit_tree_scroll_arrows(node_tree_end, ot_entry - 1);
 
     draw_mode = (DR_TPAGE*)frame_cursor;
     setDrawTPage(draw_mode, 0, 0, MENU_GRID_TPAGE);

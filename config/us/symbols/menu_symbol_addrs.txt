@@ -1,3 +1,7 @@
+// FIELD immediate text exports used by this overlay.
+field_draw_text = 0x800A88A0;
+field_draw_number = 0x800A8A78;
+
 // MENU.BIN
 
 // Functions

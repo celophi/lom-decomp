@@ -1,4 +1,5 @@
 #include "internal/carda_save.h"
+#include "overlays/field/field_text.h"
 #include "internal/carda_internal.h"
 
 /** @brief Left edge of the save window text, before the transition offset. */

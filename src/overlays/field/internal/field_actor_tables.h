@@ -3,6 +3,8 @@
 
 #include "common.h"
 #include "field_actor.h"
+#include "field_player_records.h"
+#include "field_resource_actions.h"
 #include "overlays/field/field_actor_records.h"
 
 /**
@@ -44,9 +46,6 @@
 /** @brief Sentinel returned by the actor lookups when no object matches. */
 #define FIELD_ACTOR_NONE ((FieldActor*)-1)
 
-/** @brief Number of action slots in one resource's action row. */
-#define FIELD_RESOURCE_ACTION_COUNT 50
-
 /** @brief Script index of an actor without a running script. */
 #define FIELD_SCRIPT_NONE 0xFF
 
@@ -76,14 +75,6 @@ typedef struct
 
 
 
-/** @brief FieldPlayerRecord::flags bit: the party member is present. */
-#define FIELD_PLAYER_ACTIVE 0x1
-
-/** @brief FieldPlayerRecord::character_kind values. */
-#define FIELD_PLAYER_KIND_HERO 0
-#define FIELD_PLAYER_KIND_PARTNER 1
-#define FIELD_PLAYER_KIND_COMPANION 2
-
 /** @brief FieldObjectState::hud flag (FieldStatusState::level byte) showing the technique gauge. */
 #define FIELD_HUD_SHOW_TECHNIQUE_GAUGE 0x01
 
@@ -92,81 +83,6 @@ typedef struct
 
 /** @brief FieldObjectPart::spawn_flags bit 23: the object ignores map collision. */
 #define FIELD_PART_IGNORE_MAP_COLLISION 0x800000
-
-/** @brief Flag byte and weapon type of a party member, also updated as one halfword. */
-typedef union FieldPlayerHead
-{
-    u16 word;
-    struct
-    {
-        /** @brief FIELD_PLAYER_ACTIVE and the other bits of @c bits. */
-        u8 flags;
-        /** @brief Weapon type (item type) of the equipped weapon, 0xFF before the first party update. */
-        u8 weapon_type;
-    } bytes;
-    struct
-    {
-        /** @brief Same bit as FIELD_PLAYER_ACTIVE. */
-        u16 active : 1;
-        /** @brief Selects the hero's alternate sprite and portrait set. */
-        u16 alt_appearance : 1;
-        u16 unk2 : 14;
-    } bits;
-} FieldPlayerHead;
-
-/** @brief Per-party-member record (0x268 bytes). */
-typedef struct FieldPlayerRecord
-{
-    FieldPlayerHead head;
-    /** @brief Character within character_kind (partner or companion id). */
-    u8 character_id;
-    /** @brief FIELD_PLAYER_KIND_* value selecting the resource set. */
-    u8 character_kind;
-    u8 unk4[0x254 - 4];
-    /** @brief CD resource id of the loaded sprite package. */
-    u16 resource_id;
-    /** @brief Portrait currently cached for this member, 0xFF for none. */
-    u8 portrait_index;
-    /** @brief Frames left to chain a combo action. */
-    u8 combo_timer;
-    u8 unk258;
-    u8 hit_state;
-    u8 unk25A;
-    u8 unk25B;
-    u8 unk25C;
-    u8 unk25D;
-    /** @brief Frames spent knocked down; at revive_delay the member revives (the HUD shows it as the recovery gauge). */
-    s16 revive_time;
-    s16 revive_delay;
-    /** @brief Animation, effect resource and sound (-1 for none) used when the revive timer runs out. */
-    s16 revive_animation;
-    s16 revive_effect;
-    s16 revive_sound;
-} FieldPlayerRecord;
-
-/** @brief Flag halfword of an action slot. */
-typedef struct
-{
-    u16 target_filter : 8; /**< Target predicate index, FIELD_ACTION_TARGET_NONE for none. */
-    u16 target_group : 2;  /**< Target group mode (opposite / same group). */
-    u16 instrument : 1;    /**< Action plays an instrument (charge) animation. */
-    u16 unkB : 5;
-} FieldActionFlags;
-
-/** @brief One eight-byte action slot of a resource's action row. */
-typedef struct
-{
-    u16 command;            /**< Action command; bit 15 marks a technique. */
-    FieldActionFlags flags;
-    u16 animation;          /**< Animation started by the action, 0 for none. */
-    u16 parameter;          /**< Sequence id or effect flags, depending on the command. */
-} FieldActionSlot;
-
-/** @brief Action row of one resource (g_field_resource_actions). */
-typedef struct
-{
-    FieldActionSlot slots[FIELD_RESOURCE_ACTION_COUNT];
-} FieldActionRow;
 
 /** @brief Parameter curve count of an animation (curve selectors are four bits). */
 #define FIELD_CURVE_COUNT 16
@@ -230,7 +146,6 @@ typedef struct
 extern FieldObjectState g_field_scene_object_states[];
 extern FieldActorBinding g_field_actor_bindings[];
 extern FieldObjectPart g_field_object_parts[];
-extern FieldPlayerRecord g_field_player_records[];
 
 /**
  * @brief Find the field actor whose object state carries @p key.

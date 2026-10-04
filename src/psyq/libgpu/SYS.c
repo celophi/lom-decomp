@@ -1,4 +1,5 @@
 #include "common.h"
+#include <libgpu.h>
 
 INCLUDE_ASM("nonmatchings/psyq/libgpu/SYS", ResetGraph);
 

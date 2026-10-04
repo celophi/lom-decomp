@@ -15,6 +15,7 @@
 #include "../internal/field_calls.h"
 #include "main/audio/akao.h"
 #include "main/audio/akao_cmd.h"
+#include "main/audio/game_audio.h"
 #include "main/cd_resources.h"
 #include "main/cdrom.h"
 #include "main/game_state.h"
@@ -139,14 +140,6 @@ typedef struct
     s32 bank_offset;
 } FieldMusicStreamHeader;
 
-/*
- * D_8003ECA0 is the main executable's resident song area (also used by TITLE).
- * It holds an AKAO container: the section count at D_8003ECA0 and the section
- * offsets at D_8003ECA4.
- */
-extern u8 D_8003ECA0[];
-extern s32 D_8003ECA4[];
-
 extern u8 *g_field_cd_buffer;
 extern s32 g_field_song_volume;
 
@@ -237,7 +230,7 @@ void field_upload_resource_22_bank(void)
  * @details Counterpart of TITLE's load_title_seq.
  * @param music_index Music-file index (0 selects MSC_DATA.DAT); indices above
  *        FIELD_SONG_INDEX_MAX are ignored.
- * @param second_song Non-zero to copy the song to g_field_second_song instead of D_8003ECA0.
+ * @param second_song Non-zero to copy the song to g_field_second_song instead of g_resident_song_buffer.
  */
 void field_load_song(s32 music_index, s32 second_song)
 {
@@ -261,7 +254,7 @@ void field_load_song(s32 music_index, s32 second_song)
         }
         else
         {
-            bcopy(src, D_8003ECA0, count);
+            bcopy(src, g_resident_song_buffer, count);
         }
 
         akao_upload_bank_blocking((AkaoBankHeader *)((u8 *)LOAD_BUFFER_ADDRESS + off[1]), 1);
@@ -271,7 +264,7 @@ void field_load_song(s32 music_index, s32 second_song)
 /**
  * @brief Load the fixed song container (CD resource 146) and upload its bank.
  * @details Unlike field_load_song, the whole container up to its last section
- *          is copied to D_8003ECA0, and the last section is the bank.
+ *          is copied to g_resident_song_buffer, and the last section is the bank.
  */
 void field_load_fixed_song(void)
 {
@@ -282,7 +275,7 @@ void field_load_fixed_song(void)
     cdrom_queue_read(FIELD_FIXED_SONG_RESOURCE, (void *)LOAD_BUFFER_ADDRESS);
     cdrom_wait_queue_empty();
 
-    dst = D_8003ECA0;
+    dst = g_resident_song_buffer;
     count = LOAD_BUFFER_ADDRESS;
     count = *(u32 *)count;
     off_end = (u32 *)FIELD_AUDIO_LOAD_OFFSETS + count;
@@ -317,14 +310,14 @@ void field_stop_second_song(void)
 }
 
 /**
- * @brief Play the song in D_8003ECA0 at the field song volume.
+ * @brief Play the song in g_resident_song_buffer at the field song volume.
  * @note GOVER calls this after staging its own song with field_load_song.
  */
 inline void field_play_song(void)
 {
     s32 song_handle;
 
-    song_handle = akao_play_song((AkaoHeader *)D_8003ECA0);
+    song_handle = akao_play_song((AkaoHeader *)g_resident_song_buffer);
     g_field_song_handles[FIELD_SONG_MAIN] = song_handle;
     akao_set_song_volume(song_handle, g_field_song_volume);
     akao_set_master_volume(0);
@@ -332,7 +325,7 @@ inline void field_play_song(void)
 }
 
 /**
- * @brief Play one section of the container in D_8003ECA0 through AKAO command 0x14.
+ * @brief Play one section of the container in g_resident_song_buffer through AKAO command 0x14.
  * @param section_index Section of the resident container.
  * @param param1 TODO: forwarded to AKAO command 0x14 as its second value.
  */
@@ -340,8 +333,10 @@ void field_play_song_section(s32 section_index, s32 param1)
 {
     s32 song_handle;
 
-    /* D_8003ECA0 + offsets[section_index], with the base formed from the offset table address. */
-    song_handle = akao_start_song_channels((u8 *)&D_8003ECA4 - 4 + D_8003ECA4[section_index], param1, 0);
+    song_handle = akao_start_song_channels((u8 *)g_resident_song_section_offsets -
+                                              OFFSETOF(AkaoContainerHeader, section_offsets) +
+                                              g_resident_song_section_offsets[section_index],
+                                          param1, 0);
     g_field_song_handles[FIELD_SONG_MAIN] = song_handle;
     if (song_handle == -1)
     {
@@ -677,7 +672,7 @@ void field_start_music_stream(s32 music_index)
 
 /**
  * @brief Process the last streamed sector: copy song data, stage and upload bank data, then play.
- * @note The song is assembled in D_8003ECA0 and the bank data is staged at
+ * @note The song is assembled in g_resident_song_buffer and the bank data is staged at
  *       FIELD_STREAM_BANK_BUFFER.
  */
 void field_update_music_stream(void)
@@ -694,7 +689,7 @@ void field_update_music_stream(void)
                 if (g_field_stream_song_remaining < FIELD_STREAM_SECTOR_SIZE)
                 {
                     /* The song ends in this sector; the rest is bank data. */
-                    bcopy(g_field_stream_sector, g_field_stream_song_bytes + D_8003ECA0, g_field_stream_song_remaining);
+                    bcopy(g_field_stream_sector, g_field_stream_song_bytes + g_resident_song_buffer, g_field_stream_song_remaining);
                     bcopy(g_field_stream_sector + g_field_stream_song_remaining, (void *)FIELD_STREAM_BANK_BUFFER,
                           FIELD_STREAM_SECTOR_SIZE - g_field_stream_song_remaining);
                     song_tail = g_field_stream_song_remaining;
@@ -705,7 +700,7 @@ void field_update_music_stream(void)
                 }
                 else
                 {
-                    bcopy(g_field_stream_sector, g_field_stream_song_bytes + D_8003ECA0, FIELD_STREAM_SECTOR_SIZE);
+                    bcopy(g_field_stream_sector, g_field_stream_song_bytes + g_resident_song_buffer, FIELD_STREAM_SECTOR_SIZE);
                     g_field_stream_song_bytes += FIELD_STREAM_SECTOR_SIZE;
                     g_field_stream_song_remaining -= FIELD_STREAM_SECTOR_SIZE;
                     if (g_field_stream_song_remaining == 0)
@@ -756,7 +751,7 @@ void field_update_music_stream(void)
             return;
         case FIELD_STREAM_FIRST_SECTOR:
             g_field_stream_song_remaining = FIELD_MUSIC_STREAM_HEADER->bank_offset - FIELD_MUSIC_STREAM_HEADER->song_offset;
-            bcopy(g_field_stream_sector + FIELD_MUSIC_STREAM_HEADER->song_offset, D_8003ECA0,
+            bcopy(g_field_stream_sector + FIELD_MUSIC_STREAM_HEADER->song_offset, g_resident_song_buffer,
                   FIELD_STREAM_SECTOR_SIZE - FIELD_MUSIC_STREAM_HEADER->song_offset);
             g_field_stream_sector_ready = 0;
             g_field_stream_song_bytes = FIELD_STREAM_SECTOR_SIZE - FIELD_MUSIC_STREAM_HEADER->song_offset;

@@ -3,7 +3,6 @@
 
 #include "common.h"
 
-void func_80074368();
 void wmap_land_effect_13_sequence_6_step_02();
 void wmap_land_effect_13_sequence_6_step_04();
 void wmap_land_effect_13_sequence_7_step_02();

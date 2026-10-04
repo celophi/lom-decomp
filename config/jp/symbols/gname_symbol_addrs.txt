@@ -105,4 +105,4 @@ field_text_reset_scratch             = 0x800640EC;
 field_text_build_sprites             = 0x800641C8;
 
 // US ELF names not listed above (splat placeholders shared with the C sources).
-func_800A88A0 = 0x800A8750;
+field_draw_text = 0x800A8750;

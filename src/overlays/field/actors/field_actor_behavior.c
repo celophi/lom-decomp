@@ -126,21 +126,15 @@ void field_release_object_link(FieldActor* actor);
 /** @brief Resource action slots of the two combo buttons. */
 #define FIELD_RESOURCE_ACTION_COMBO 2
 
-/** @brief FieldResourceAction::command bit: the action runs a technique sequence. */
+/** @brief FieldActionSlot::command bit: the action runs a technique sequence. */
 #define FIELD_ACTION_TECHNIQUE 0x8000
-/** @brief FieldResourceAction::command bits holding the technique index. */
+/** @brief FieldActionSlot::command bits holding the technique index. */
 #define FIELD_ACTION_TECHNIQUE_MASK 0x7FFF
-/** @brief FieldResourceAction::flags bit: the action plays an instrument. */
-#define FIELD_ACTION_INSTRUMENT 0x400
-/** @brief FieldResourceAction::flags value without an action handler. */
+/** @brief FieldActionFlags::target_filter value without an action handler. */
 #define FIELD_ACTION_NO_HANDLER 0xFF
-/** @brief Shift of the two FieldResourceAction::flags target mode bits. */
-#define FIELD_ACTION_TARGET_MODE_SHIFT 8
-/** @brief FieldResourceAction::flags target mode mask (after the shift). */
-#define FIELD_ACTION_TARGET_MODE_MASK 3
-/** @brief FieldResourceAction::flags bits of the action element (after the handler byte). */
+/** @brief Action element bits of FieldActionFlags::target_filter. */
 #define FIELD_ACTION_ELEMENT_MASK 0x0F
-/** @brief FieldResourceAction::animation values that start no animation. */
+/** @brief FieldActionSlot::animation values that start no animation. */
 #define FIELD_ACTION_NO_ANIMATION 0xFFFF
 
 /** @brief Animation request bit: the request plays on the bound animation actor. */
@@ -240,7 +234,7 @@ void field_release_object_link(FieldActor* actor);
  * @brief Action @p index of resource @p resource in g_field_resource_actions.
  */
 #define FIELD_RESOURCE_ACTION(resource, index) \
-    ((FieldResourceAction*)((resource) * (s32)sizeof(g_field_resource_actions[0]) - -(uintptr_t)&g_field_resource_actions[0][(index)]))
+    (&g_field_resource_actions[(resource)].slots[(index)])
 
 /** @brief Binding of a party object: members 0 and 1 own one each, everyone else shares the third. */
 #define FIELD_OBJECT_BINDING(i) ((u32)(i) < FIELD_PLAYER_COUNT ? (i) : FIELD_PLAYER_COUNT)
@@ -273,19 +267,6 @@ struct FieldCollisionMover
     } mode;
 };
 
-/** @brief One action of a resource's action table (eight bytes). */
-typedef struct
-{
-    /** @brief Action command, or FIELD_ACTION_TECHNIQUE plus a technique index. */
-    u16 command;
-    /** @brief Low byte: action handler; bits 8-9: target mode; FIELD_ACTION_INSTRUMENT. */
-    u16 flags;
-    u16 animation;
-    /** @brief Animation request (FIELD_REQUEST_* bits plus an animation resource). */
-    u16 request;
-} FieldResourceAction;
-
-extern FieldResourceAction g_field_resource_actions[][FIELD_RESOURCE_ACTION_COUNT];
 extern u8 g_field_route_animation_history[];
 extern s32 g_field_direction_animation_modes[];
 extern u8 g_field_follower_animation_map[];
@@ -302,15 +283,12 @@ extern s32 D_8010AE58;
 /** @brief Battle entry sequence state (FIELD_BATTLE_ENTRY_*); nonzero locks player input and enemy HUD while a battle starts. */
 extern s32 g_field_battle_entry_state;
 
-s32 func_8001CDAC(s32* in, s32* out);
 void field_route_actor_to_object(FieldActor* actor, s32 target_index, s32 mode);
 void field_restart_actor_animation(FieldActor* actor);
 void field_stop_actor_animations_for_object(FieldActor* actor, s32 force);
 s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group);
 void field_start_actor_contact_interaction(FieldActor* actor, s32 object_index);
-/* Defined as (void) in field_actor_slot_resources.c, but every call here passes the object index. */
-s32 field_count_free_actor_slots(s32 object_index);
-static s32 field_apply_action_animation(FieldActor* actor, FieldObjectState* state, FieldResourceAction* action);
+static s32 field_apply_action_animation(FieldActor* actor, FieldObjectState* state, FieldActionSlot* action);
 static s32 field_actor_action_is_charging(FieldActor* actor);
 static s32 field_start_action_animation(s32 object_index, s32 target_count, u8* targets, s32 request);
 static void field_sample_actor_route(FieldRoutePoint* points, s32 remaining, FieldActor* actor, FieldActor* target, s32 heading_offset, s32 unused_limit);
@@ -547,7 +525,7 @@ static void field_sample_actor_route(FieldRoutePoint* points, s32 remaining, Fie
                 waypoint_dz = waypoint_state->path[0].z - work.position.vz;
                 work.delta.vz = waypoint_dz / 256;
                 work.delta.vy = 0;
-                if (spacing >= SquareRoot0(func_8001CDAC((s32*)&work.delta, (s32*)&work.direction)))
+                if (spacing >= SquareRoot0(VectorNormal(&work.delta, &work.direction)))
                 {
                     waypoint_state = FIELD_WAYPOINT_STATE(states, actor->object_index, waypoint_offset);
                     points->x = waypoint_state->path[0].x / 256;
@@ -1094,7 +1072,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
         work.input.vx = -work.input.vx;
         work.input.vz = -work.input.vz;
     }
-    func_8001CDAC(&work.input.vx, &work.motion.vx);
+    VectorNormal(&work.input, &work.motion);
     movement_actor = actor;
     frame_timer = movement_actor->frame_timer;
     if (frame_timer != 0)
@@ -1266,7 +1244,7 @@ void field_prepare_actor_action(FieldActor* actor)
     u8 object_index;
     u8 action_slot;
     FieldObjectState* state;
-    FieldResourceAction* action;
+    FieldActionSlot* action;
 
     if ((u8)actor->command != FIELD_ACTOR_COMMAND_ACTION)
     {
@@ -1284,20 +1262,20 @@ void field_prepare_actor_action(FieldActor* actor)
     state = &g_field_object_states[actor->object_index];
     action_slot = state->action;
     {
-        uintptr_t action_address = (uintptr_t)&g_field_resource_actions[0][action_slot];
-        action = (FieldResourceAction*)(row_offset + action_address);
+        uintptr_t action_address = (uintptr_t)&g_field_resource_actions[0].slots[action_slot];
+        action = (FieldActionSlot*)(row_offset + action_address);
     }
     if (action_slot == FIELD_RESOURCE_ACTION_REDIRECT)
     {
         state->action = (u8)action->command;
     }
-    if (!(action->flags & FIELD_ACTION_INSTRUMENT) && (action->command == 0) && (action->animation == 0))
+    if (!action->flags.instrument && (action->command == 0) && (action->animation == 0))
     {
         field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
         actor->command = FIELD_ACTOR_COMMAND_NONE;
         return;
     }
-    if ((action->flags & FIELD_ACTION_INSTRUMENT) &&
+    if (action->flags.instrument &&
         ((field_object_has_active_actor_tracks(actor->object_index) != 0) || (field_count_free_actor_slots(actor->object_index) < FIELD_ACTION_MIN_FREE_SLOTS) ||
          (actor->variant != 0)))
     {
@@ -1305,7 +1283,7 @@ void field_prepare_actor_action(FieldActor* actor)
         return;
     }
     g_field_object_states[actor->object_index].contact.word = g_field_object_states[actor->object_index].contact.word & ~FIELD_CONTACT_UNK02;
-    if ((action->command & FIELD_ACTION_TECHNIQUE) && !(action->flags & FIELD_ACTION_INSTRUMENT))
+    if ((action->command & FIELD_ACTION_TECHNIQUE) && !action->flags.instrument)
     {
         if ((field_object_has_active_actor_tracks(actor->object_index) != 0) || (D_8010AE58 != 0) ||
             (field_count_free_actor_slots(actor->object_index) < FIELD_ACTION_MIN_FREE_SLOTS))
@@ -1331,14 +1309,14 @@ void field_prepare_actor_action(FieldActor* actor)
     }
     else
     {
-        request = action->request;
+        request = action->parameter;
         if ((request & FIELD_REQUEST_BOUND) && (field_start_streamed_animation(actor->object_index, request & FIELD_REQUEST_ANIMATION_MASK) == 0))
         {
             actor->command = FIELD_ACTOR_COMMAND_NONE;
             return;
         }
     }
-    if (action->flags & FIELD_ACTION_INSTRUMENT)
+    if (action->flags.instrument)
     {
         g_field_object_states[actor->object_index].hud.word = g_field_object_states[actor->object_index].hud.word & ~1;
         g_field_object_states[actor->object_index].contact.word = g_field_object_states[actor->object_index].contact.word | FIELD_CONTACT_ACTION_PENDING;
@@ -1367,7 +1345,7 @@ void field_prepare_actor_action(FieldActor* actor)
             }
         }
     }
-    field_start_object_ground_effect((struct FieldMotionRecord*)actor, (u8)action->flags);
+    field_start_object_ground_effect((struct FieldMotionRecord*)actor, action->flags.target_filter);
 }
 
 /**
@@ -1547,7 +1525,7 @@ s32 field_update_actor_command(FieldActor* actor)
     typedef struct
     {
         s32 targets[12];
-        FieldResourceAction combo_action;
+        FieldActionSlot combo_action;
         VECTOR displacement;
         VECTOR squared;
     } FieldCommandWork;
@@ -1585,7 +1563,7 @@ s32 field_update_actor_command(FieldActor* actor)
     s32 run_distance_x;
     s32 approach_distance_x;
     SceneState* scene;
-    FieldResourceAction* action;
+    FieldActionSlot* action;
     s32 next_waypoint;
     s32 next_run_waypoint;
     s32 next_screen_waypoint;
@@ -1608,7 +1586,7 @@ s32 field_update_actor_command(FieldActor* actor)
     FieldObjectState* cancel_states;
     FieldObjectState* instrument_states;
     FieldObjectState* charge_state;
-    FieldResourceAction(*action_rows)[FIELD_RESOURCE_ACTION_COUNT];
+    FieldActionRow* action_rows;
     FieldObjectState* action_state;
     FieldObjectState* state;
     FieldObjectState* pending_states;
@@ -1632,7 +1610,7 @@ s32 field_update_actor_command(FieldActor* actor)
     FieldObjectState* target_list_state;
     FieldObjectState* target_count_state;
     FieldObjectState* instrument_start_state;
-    FieldResourceAction* combo_actions;
+    FieldActionSlot* combo_actions;
     FieldObjectState* checked_state;
 
     scene = SCENE_STATE;
@@ -1695,14 +1673,14 @@ s32 field_update_actor_command(FieldActor* actor)
                 if ((field_get_held_action_buttons(actor->object_index, 0, actor) != 0) && (field_get_held_action_buttons(actor->object_index, 1, actor) != 0))
                 {
                     action_rows = g_field_resource_actions;
-                    combo_actions = action_rows[actor->resource_index];
+                    combo_actions = action_rows[actor->resource_index].slots;
                     combo_or_slot = field_find_combined_ability(combo_actions[0].command, combo_actions[1].command);
                     parameter_offset = combo_or_slot * 2;
                     if (combo_or_slot != FIELD_COMBO_NONE)
                     {
                         scratch.combo_action.command = combo_or_slot;
                         scratch.combo_action.animation = g_field_action_animation_parameters[parameter_offset];
-                        scratch.combo_action.request = g_field_action_animation_parameters[parameter_offset + 1];
+                        scratch.combo_action.parameter = g_field_action_animation_parameters[parameter_offset + 1];
                         switch (combo_or_slot)
                         {
                         case 0x34:
@@ -2181,14 +2159,14 @@ s32 field_update_actor_command(FieldActor* actor)
             }
             else
             {
-                action = &g_field_resource_actions[actor->resource_index][FIELD_RESOURCE_ACTION_REDIRECT];
+                action = &g_field_resource_actions[actor->resource_index].slots[FIELD_RESOURCE_ACTION_REDIRECT];
             }
         }
     }
-        if ((u8)action->flags != FIELD_ACTION_NO_HANDLER)
+        if (action->flags.target_filter != FIELD_ACTION_NO_HANDLER)
         {
             s32 action_pending;
-            target_count_or_slot = field_collect_action_targets(actor->object_index, action, (action->flags >> FIELD_ACTION_TARGET_MODE_SHIFT) & FIELD_ACTION_TARGET_MODE_MASK,
+            target_count_or_slot = field_collect_action_targets(actor->object_index, action, action->flags.target_group,
                                                  state->movement.half.flags & FIELD_MOVEMENT_SCALE_MASK, scratch.targets);
             action_pending = 0;
             if (g_field_actions_limited == 0)
@@ -2213,8 +2191,8 @@ s32 field_update_actor_command(FieldActor* actor)
                 pending_states = g_field_object_states;
                 pending_state = &pending_states[actor->object_index];
                 pending_state->contact.word = pending_state->contact.word | FIELD_CONTACT_ACTION_PENDING;
-                field_draw_object_ground_effect(actor, (u8)action->flags);
-                if ((action->flags & FIELD_ACTION_INSTRUMENT) && (actor->animation_state == 0))
+                field_draw_object_ground_effect(actor, action->flags.target_filter);
+                if (action->flags.instrument && (actor->animation_state == 0))
                 {
                     actor->animation_state = 1;
                     actor->animation_active = 1;
@@ -2273,10 +2251,10 @@ s32 field_update_actor_command(FieldActor* actor)
                                                              g_field_actor_bindings[FIELD_OBJECT_BINDING(release_object_index)].slot);
                 actor_slots = g_field_actor_slots;
                 animation_slot = &actor_slots[g_field_actor_bindings[FIELD_OBJECT_BINDING(actor->object_index)].slot];
-                animation_slot->status.word = (animation_slot->status.word & ~FIELD_SLOT_ELEMENT_BITS) | (((u8)action->flags & FIELD_ACTION_ELEMENT_MASK) * 2);
-                if (!(action->request & FIELD_REQUEST_TARGETED))
+                animation_slot->status.word = (animation_slot->status.word & ~FIELD_SLOT_ELEMENT_BITS) | ((action->flags.target_filter & FIELD_ACTION_ELEMENT_MASK) * 2);
+                if (!(action->parameter & FIELD_REQUEST_TARGETED))
                 {
-                    if (field_start_action_animation(actor->object_index, 0, NULL, action->request) == 0)
+                    if (field_start_action_animation(actor->object_index, 0, NULL, action->parameter) == 0)
                     {
                         g_field_object_states[actor->object_index].contact.word |= FIELD_CONTACT_ACTION_PENDING;
                         return;
@@ -2291,7 +2269,7 @@ s32 field_update_actor_command(FieldActor* actor)
                         animation_target_count = FIELD_ACTION_MAX_TARGETS;
                     }
                     if (field_start_action_animation(actor->object_index, animation_target_count, scratch.targets,
-                                                     action->request) != 0)
+                                                     action->parameter) != 0)
                     {
                         target_index = 0;
                         if (eligible_count > 0)
@@ -2324,7 +2302,7 @@ s32 field_update_actor_command(FieldActor* actor)
             }
         }
         {
-            if (action->flags & FIELD_ACTION_INSTRUMENT)
+            if (action->flags.instrument)
             {
                 instrument_states = g_field_object_states;
                 actor->command = FIELD_ACTOR_COMMAND_INSTRUMENT;
@@ -2342,7 +2320,7 @@ s32 field_update_actor_command(FieldActor* actor)
             {
                 g_field_object_states[actor->object_index].technique_gauge = 0;
                 state->sequence_position = 0;
-                state->sequence_id = action->request;
+                state->sequence_id = action->parameter;
                 state->action_parameter = action->animation;
                 state->movement.word = state->movement.word & ~FIELD_MOVEMENT_SEQUENCE_MASK;
                 state->sequence_id = (((action->command & FIELD_ACTION_TECHNIQUE_MASK) + FIELD_TECHNIQUE_SEQUENCE_BASE) | FIELD_SEQUENCE_TECHNIQUE) +
@@ -2516,7 +2494,7 @@ static s32 field_filter_action_targets(s32 count, s32* indices)
  * @param action Action to perform; its command selects the animation.
  * @return Nothing useful; the value is undefined.
  */
-static s32 field_apply_action_animation(FieldActor* actor, FieldObjectState* state, FieldResourceAction* action)
+static s32 field_apply_action_animation(FieldActor* actor, FieldObjectState* state, FieldActionSlot* action)
 {
     s32 animation_index;
     s32 masked_command;
@@ -2524,7 +2502,7 @@ static s32 field_apply_action_animation(FieldActor* actor, FieldObjectState* sta
     u16 gauge;
     u16 next_gauge;
 
-    state->action_parameter = action->request;
+    state->action_parameter = action->parameter;
     command = action->command;
     if (((u32)(command - 0x2F) < 2U) || (masked_command = command & 0xFFFF, (masked_command == 0x44)) || (masked_command == 0x45))
     {

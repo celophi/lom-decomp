@@ -265,8 +265,8 @@ g_cload_location_names                   = 0x80146478;
 McxSync = 0x800322E4;
 func_800A55E4 = 0x800A5494;
 func_800A5638 = 0x800A54E8;
-func_800A88A0 = 0x800A8750;
-func_800A8A78 = 0x800A8928;
+field_draw_text = 0x800A8750;
+field_draw_number = 0x800A8928;
 D_80145EDE    = 0x80145ED6;
 D_80162370    = 0x80163150;
 

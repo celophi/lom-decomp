@@ -1,4 +1,5 @@
 #include "internal/gosub_internal.h"
+#include "overlays/field/field_text.h"
 
 /**
  * @brief Handle the Sort/Discard dialog of a logic block.
@@ -197,7 +198,7 @@ void gosub_open_sort_dialog(void)
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after both actions.
  */
-u8* gosub_draw_block_action_dialog(s32* ordering_table, u8* initial_packet, s32 x_offset, s32 y_offset)
+u8* gosub_draw_block_action_dialog(u_long* ordering_table, u8* initial_packet, s32 x_offset, s32 y_offset)
 {
     void* sort_text;
     void* delete_text;
@@ -213,7 +214,7 @@ u8* gosub_draw_block_action_dialog(s32* ordering_table, u8* initial_packet, s32 
     {
         sort_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = field_draw_text(packet_cursor, ordering_table, sort_text, sort_color, GOSUB_ROW_ACTION_DIALOG_X - x_offset,
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, sort_text, sort_color, GOSUB_ROW_ACTION_DIALOG_X - x_offset,
                                     GOSUB_ROW_ACTION_SORT_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
 
     delete_text = GOSUB_MESSAGE(GOSUB_MSG_DISCARD);
@@ -222,7 +223,7 @@ u8* gosub_draw_block_action_dialog(s32* ordering_table, u8* initial_packet, s32 
     {
         delete_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = field_draw_text(packet_cursor, ordering_table, delete_text, delete_color, GOSUB_ROW_ACTION_DIALOG_X - x_offset,
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, delete_text, delete_color, GOSUB_ROW_ACTION_DIALOG_X - x_offset,
                                     GOSUB_ROW_ACTION_DELETE_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
 
     return packet_cursor;
@@ -236,7 +237,7 @@ u8* gosub_draw_block_action_dialog(s32* ordering_table, u8* initial_packet, s32 
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after all three choices.
  */
-u8* gosub_draw_sort_dialog(s32* ordering_table, u8* initial_packet, s32 x_offset, s32 y_offset)
+u8* gosub_draw_sort_dialog(u_long* ordering_table, u8* initial_packet, s32 x_offset, s32 y_offset)
 {
     void* type_text;
     void* power_text;
@@ -256,7 +257,7 @@ u8* gosub_draw_sort_dialog(s32* ordering_table, u8* initial_packet, s32 x_offset
     {
         type_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = field_draw_text(packet_cursor, ordering_table, type_text, type_color, GOSUB_SORT_DIALOG_X - x_offset, GOSUB_SORT_DIALOG_TYPE_Y - y_offset,
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, type_text, type_color, GOSUB_SORT_DIALOG_X - x_offset, GOSUB_SORT_DIALOG_TYPE_Y - y_offset,
                                     GOSUB_TEXT_ALIGN_CENTER);
 
     power_text = GOSUB_MESSAGE(GOSUB_MSG_SORT_BY_POWER);
@@ -265,7 +266,7 @@ u8* gosub_draw_sort_dialog(s32* ordering_table, u8* initial_packet, s32 x_offset
     {
         text_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = field_draw_text(packet_cursor, ordering_table, power_text, text_color, GOSUB_SORT_DIALOG_X - x_offset, GOSUB_SORT_DIALOG_POWER_Y - y_offset,
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, power_text, text_color, GOSUB_SORT_DIALOG_X - x_offset, GOSUB_SORT_DIALOG_POWER_Y - y_offset,
                                     GOSUB_TEXT_ALIGN_CENTER);
 
     shape_text = GOSUB_MESSAGE(GOSUB_MSG_SORT_BY_SHAPE);
@@ -274,7 +275,7 @@ u8* gosub_draw_sort_dialog(s32* ordering_table, u8* initial_packet, s32 x_offset
     {
         text_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = field_draw_text(packet_cursor, ordering_table, shape_text, text_color, GOSUB_SORT_DIALOG_X - x_offset, GOSUB_SORT_DIALOG_SHAPE_Y - y_offset,
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, shape_text, text_color, GOSUB_SORT_DIALOG_X - x_offset, GOSUB_SORT_DIALOG_SHAPE_Y - y_offset,
                                     GOSUB_TEXT_ALIGN_CENTER);
 
     return packet_cursor;
@@ -313,11 +314,11 @@ void gosub_open_message_dialog(u8* message_text)
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the dialog text.
  */
-u8* gosub_draw_message_dialog(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset)
+u8* gosub_draw_message_dialog(u_long* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset)
 {
     s32 unused[14];
 
-    packet_cursor = field_draw_text(packet_cursor, ordering_table, g_gosub_dialog_text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_MESSAGE_DIALOG_TEXT_X - x_offset,
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, g_gosub_dialog_text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_MESSAGE_DIALOG_TEXT_X - x_offset,
                                     GOSUB_MESSAGE_DIALOG_TEXT_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
     return packet_cursor;
 }
@@ -330,13 +331,13 @@ u8* gosub_draw_message_dialog(s32* ordering_table, u8* packet_cursor, s32 x_offs
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the header and optional details.
  */
-u8* gosub_draw_block_components_header(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset)
+u8* gosub_draw_block_components_header(u_long* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset)
 {
     void* text;
     s32 unused[14];
 
     text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_BLOCK_COMPONENTS);
-    packet_cursor = field_draw_text(packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_DETAIL_HEADER_X - x_offset,
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_DETAIL_HEADER_X - x_offset,
                                     GOSUB_DETAIL_HEADER_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
     if (g_gosub_show_row_details != 0)
     {
@@ -353,17 +354,17 @@ u8* gosub_draw_block_components_header(s32* ordering_table, u8* packet_cursor, s
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after both lines.
  */
-u8* gosub_draw_golem_parts_header(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset)
+u8* gosub_draw_golem_parts_header(u_long* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset)
 {
     void* text;
     s32 unused[14];
 
     text = GOSUB_MESSAGE(GOSUB_MSG_SELECT_GOLEM_PARTS);
-    packet_cursor = field_draw_text(packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_TWO_LINE_HEADER_X - x_offset,
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_TWO_LINE_HEADER_X - x_offset,
                                     GOSUB_TWO_LINE_HEADER_FIRST_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
 
     text = GOSUB_MESSAGE(GOSUB_MSG_PRESS_START_TO_SELECT);
-    packet_cursor = field_draw_text(packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_TWO_LINE_HEADER_X - x_offset,
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_TWO_LINE_HEADER_X - x_offset,
                                     GOSUB_TWO_LINE_HEADER_SECOND_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
 
     return packet_cursor;
@@ -377,14 +378,14 @@ u8* gosub_draw_golem_parts_header(s32* ordering_table, u8* packet_cursor, s32 x_
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the title and both choices.
  */
-u8* gosub_draw_confirmation_prompt(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset)
+u8* gosub_draw_confirmation_prompt(u_long* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset)
 {
     void* text;
     s32 text_color;
     s32 unused[14];
 
     text = GOSUB_MESSAGE(GOSUB_MSG_IS_THIS_OKAY);
-    packet_cursor = field_draw_text(packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_CONFIRMATION_TITLE_X - x_offset,
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_CONFIRMATION_TITLE_X - x_offset,
                                     GOSUB_CONFIRMATION_TITLE_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
 
     text = GOSUB_MESSAGE(GOSUB_MSG_YES);
@@ -393,7 +394,7 @@ u8* gosub_draw_confirmation_prompt(s32* ordering_table, u8* packet_cursor, s32 x
     {
         text_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = field_draw_text(packet_cursor, ordering_table, text, text_color, GOSUB_CONFIRMATION_FIRST_CHOICE_X - x_offset,
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, text_color, GOSUB_CONFIRMATION_FIRST_CHOICE_X - x_offset,
                                     GOSUB_CONFIRMATION_CHOICE_Y - y_offset, GOSUB_TEXT_ALIGN_RIGHT);
 
     text = GOSUB_MESSAGE(GOSUB_MSG_NO);
@@ -402,7 +403,7 @@ u8* gosub_draw_confirmation_prompt(s32* ordering_table, u8* packet_cursor, s32 x
     {
         text_color = GOSUB_TEXT_COLOR_DISABLED;
     }
-    packet_cursor = field_draw_text(packet_cursor, ordering_table, text, text_color, GOSUB_CONFIRMATION_SECOND_CHOICE_X - x_offset,
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, text_color, GOSUB_CONFIRMATION_SECOND_CHOICE_X - x_offset,
                                     GOSUB_CONFIRMATION_CHOICE_Y - y_offset, GOSUB_TEXT_ALIGN_LEFT);
 
     return packet_cursor;
@@ -416,11 +417,11 @@ u8* gosub_draw_confirmation_prompt(s32* ordering_table, u8* packet_cursor, s32 x
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the description and optional details.
  */
-u8* gosub_draw_row_description(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset)
+u8* gosub_draw_row_description(u_long* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset)
 {
     s32 unused[12];
 
-    packet_cursor = field_draw_text(packet_cursor, ordering_table, g_gosub_rows[g_gosub_cursor_row].desc, GOSUB_TEXT_COLOR_NORMAL,
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, g_gosub_rows[g_gosub_cursor_row].desc, GOSUB_TEXT_COLOR_NORMAL,
                                     GOSUB_ROW_DESCRIPTION_X - x_offset, GOSUB_ROW_DESCRIPTION_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
     if (g_gosub_show_row_details != 0)
     {
@@ -437,30 +438,30 @@ u8* gosub_draw_row_description(s32* ordering_table, u8* packet_cursor, s32 x_off
  * @param y_offset Vertical dialog animation offset.
  * @return Packet cursor after the equipment detail line.
  */
-u8* gosub_draw_equipment_details(u8* packet_cursor, s32* ordering_table, s32 x_offset, s32 y_offset)
+u8* gosub_draw_equipment_details(u8* packet_cursor, u_long* ordering_table, s32 x_offset, s32 y_offset)
 {
     s32 equipment_kind;
-    GosubTextPosition number_position;
+    Vec2s number_position;
 
     equipment_kind = g_gosub_rows[g_gosub_cursor_row].equipment_kind;
 
     switch (equipment_kind)
     {
     case GOSUB_EQUIPMENT_KIND_WEAPON:
-        packet_cursor = field_draw_text(packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3EE, FIELD_UI_TEXT_ATTACK_POWER), GOSUB_TEXT_COLOR_NORMAL,
+        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3EE, FIELD_UI_TEXT_ATTACK_POWER), GOSUB_TEXT_COLOR_NORMAL,
                                         GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
         number_position.x = GOSUB_WEAPON_POWER_X - x_offset;
         number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
-        packet_cursor = field_draw_number(ordering_table, packet_cursor, g_gosub_rows[g_gosub_cursor_row].primary_value, GOSUB_TEXT_COLOR_NORMAL,
+        packet_cursor = field_draw_number(ordering_table, (SPRT*)packet_cursor, g_gosub_rows[g_gosub_cursor_row].primary_value, GOSUB_TEXT_COLOR_NORMAL,
                                           &number_position, GOSUB_TEXT_ALIGN_LEFT);
         break;
 
     case GOSUB_EQUIPMENT_KIND_ARMOR:
-        packet_cursor = field_draw_text(packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3F0, FIELD_UI_TEXT_TOTAL_DEFENSE), GOSUB_TEXT_COLOR_NORMAL,
+        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3F0, FIELD_UI_TEXT_TOTAL_DEFENSE), GOSUB_TEXT_COLOR_NORMAL,
                                         GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
         number_position.x = GOSUB_ARMOR_DEFENSE_X - x_offset;
         number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
-        packet_cursor = field_draw_number(ordering_table, packet_cursor,
+        packet_cursor = field_draw_number(ordering_table, (SPRT*)packet_cursor,
                                           g_gosub_rows[g_gosub_cursor_row].stats[0] + g_gosub_rows[g_gosub_cursor_row].stats[1] +
                                               g_gosub_rows[g_gosub_cursor_row].stats[2] + g_gosub_rows[g_gosub_cursor_row].stats[3],
                                           GOSUB_TEXT_COLOR_NORMAL, &number_position, GOSUB_TEXT_ALIGN_LEFT);
@@ -468,14 +469,14 @@ u8* gosub_draw_equipment_details(u8* packet_cursor, s32* ordering_table, s32 x_o
 
     /* Instruments and the reserved fourth kind use the same detail layout. */
     default:
-        packet_cursor = field_draw_text(packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3F2, FIELD_UI_TEXT_POWER), GOSUB_TEXT_COLOR_NORMAL,
+        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3F2, FIELD_UI_TEXT_POWER), GOSUB_TEXT_COLOR_NORMAL,
                                         GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
         number_position.x = GOSUB_INSTRUMENT_POWER_X - x_offset;
         number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
-        packet_cursor = field_draw_number(ordering_table, packet_cursor, g_gosub_rows[g_gosub_cursor_row].primary_value, GOSUB_TEXT_COLOR_NORMAL,
+        packet_cursor = field_draw_number(ordering_table, (SPRT*)packet_cursor, g_gosub_rows[g_gosub_cursor_row].primary_value, GOSUB_TEXT_COLOR_NORMAL,
                                           &number_position, GOSUB_TEXT_ALIGN_LEFT);
         packet_cursor =
-            field_draw_text(packet_cursor, ordering_table, GOSUB_TEXT(GOSUB_TEXT_INSTRUMENT_SPELLS, g_gosub_rows[g_gosub_cursor_row].stats[0]),
+            field_draw_text((SPRT*)packet_cursor, ordering_table, GOSUB_TEXT(GOSUB_TEXT_INSTRUMENT_SPELLS, g_gosub_rows[g_gosub_cursor_row].stats[0]),
                             GOSUB_TEXT_COLOR_NORMAL, GOSUB_INSTRUMENT_EFFECT_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, GOSUB_TEXT_ALIGN_LEFT);
         break;
     }
@@ -490,11 +491,11 @@ u8* gosub_draw_equipment_details(u8* packet_cursor, s32* ordering_table, s32 x_o
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the title.
  */
-u8* gosub_draw_title(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset)
+u8* gosub_draw_title(u_long* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset)
 {
     s32 unused[14];
 
-    packet_cursor = field_draw_text(packet_cursor, ordering_table, g_gosub_title_text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_TEXT_PANEL_WIDTH / 2 - x_offset,
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, g_gosub_title_text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_TEXT_PANEL_WIDTH / 2 - x_offset,
                                     2 - y_offset, GOSUB_TEXT_ALIGN_CENTER);
     return packet_cursor;
 }

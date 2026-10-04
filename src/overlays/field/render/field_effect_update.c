@@ -1727,7 +1727,7 @@ void field_advance_actor_effects(FieldActorSlot *actor_state)
                     segment_delta.vz = 0;
                     segment_delta.vx = screen_position.y;
                     segment_delta.vy = -screen_position.x;
-                    func_8001CDAC(&segment_delta, &segment_angles);
+                    VectorNormal(&segment_delta, &segment_angles);
                     new_effect->rotation_x = segment_angles.vx >> 6;
                     new_effect->heading = segment_angles.vy >> 6;
                     new_effect->pitch = segment_angles.vz >> 6;

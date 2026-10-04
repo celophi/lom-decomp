@@ -92,5 +92,4 @@ g_title_overlay_id = 0x8004FDD8;
 g_controller_device_type = 0x801ED600;
 
 // US ELF names not listed above (splat placeholders shared with the C sources).
-D_8003ECA0 = 0x8003EE10;
 g_playtime_vsync_origin = 0x80043124;

@@ -130,10 +130,10 @@ TABLES = (
         *[f"unknown_{index:02x}" for index in range(8)], *[f"clut{index}" for index in range(8)], "tpage", "unknown_1a",
     ), "Texture page and palettes of each map sprite texture."),
     # Backdrop effect geometry (wmap_effect_backdrop.c).
-    TableSpec("D_800D0FD4", "2h", 528, ("x", "y"), "Vertices of the backdrop triangles, three per triangle."),
-    spec("D_800D1814", POLY_G3, 176, "Backdrop triangles; the code rewrites their vertices from D_800D0FD4."),
-    TableSpec("D_800D2B54", "2i", 528, ("x", "y"), "First backdrop point buffer, 16.16 fixed point."),
-    TableSpec("D_800D3BD4", "2i", 528, ("x", "y"), "Second backdrop point buffer, 16.16 fixed point; zero on disc."),
+    TableSpec("g_wmap_transition_mesh_vertices", "2h", 528, ("x", "y"), "Vertices of the backdrop triangles, three per triangle."),
+    spec("g_wmap_transition_mesh_triangles_0", POLY_G3, 176, "Backdrop triangles; the code rewrites their vertices from g_wmap_transition_mesh_vertices."),
+    TableSpec("g_wmap_transition_mesh_motion_0", "2i", 528, ("x", "y"), "First backdrop per-vertex motion table, 16.16 fixed point."),
+    TableSpec("g_wmap_transition_mesh_motion_1", "2i", 528, ("x", "y"), "Second backdrop per-vertex motion table, 16.16 fixed point; zero on disc."),
     # Travel and land effects.
     TableSpec("g_wmap_route_headings", "h", 10, note="Heading the vehicle must face on each special travel route."),
     TableSpec("D_800D665C", "i", 6,

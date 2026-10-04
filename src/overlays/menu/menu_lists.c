@@ -1,4 +1,5 @@
 #include "internal/menu_internal.h"
+#include "overlays/field/field_text.h"
 
 s32 menu_find_active_content_item(void);
 s32 menu_build_special_technique_nav_entries(void);
@@ -15,7 +16,7 @@ s32 menu_build_special_technique_nav_entries(void);
  * @param active Nonzero to process input and animate the cursor.
  * @return Primitive-buffer cursor after drawing.
  */
-void* scroll_list_draw(void* prim_buf, s32* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active)
+void* scroll_list_draw(void* prim_buf, u_long* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active)
 {
     int steps_remaining;
     if (active)
@@ -117,7 +118,7 @@ void scroll_list_update_target(ScrollListState* state, u32* entries)
  * @param active Nonzero to animate the cursor and draw its semitransparent shadow.
  * @return Primitive-buffer cursor after the sprites and draw-mode packet.
  */
-void* menu_emit_cursor(void* prim_buf, s32* ot, s32 x, s32 y, s32 active)
+void* menu_emit_cursor(void* prim_buf, u_long* ot, s32 x, s32 y, s32 active)
 {
     SPRT* sprite = prim_buf;
     DR_TPAGE* draw_mode;
@@ -196,7 +197,7 @@ void* menu_emit_cursor(void* prim_buf, s32* ot, s32 x, s32 y, s32 active)
  */
 
 
-void* menu_inventory_list_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, s32 active)
+void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, s32 active)
 {
     ScrollListState* list;
     void* packet_cursor;
@@ -377,7 +378,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, void* prim_b
                 {
                     text_palette = 3;
                 }
-                packet_cursor = func_800A88A0(packet_cursor, ot, item_record, text_palette, 0x22 - view_origin->x, (y - scroll_y) - view_origin->y, 0);
+                packet_cursor = field_draw_text(packet_cursor, ot, (u8*)item_record, text_palette, 0x22 - view_origin->x, (y - scroll_y) - view_origin->y, 0);
 
                 if (g_menu_pending_item_row != MENU_NONE)
                 {
@@ -743,7 +744,7 @@ u32 menu_step_item_selection(s32 step)
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-void* menu_spell_list_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
+void* menu_spell_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     s32 selected_index;
     s32 row;
@@ -786,7 +787,7 @@ void* menu_spell_list_callback(s32* ot, ScrollListState* state, void* prim_buf, 
                 if ((relative_y >= -0xF) && (relative_y < (list->viewport_h - 0x10)))
                 {
                     name_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_SPELL_NAMES]);
-                    prim_buf = func_800A88A0(prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (col * 2) + (row * 0x10))), 1,
+                    prim_buf = field_draw_text(prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (col * 2) + (row * 0x10))), 1,
                                              0x10 - view_origin->x, relative_y - view_origin->y, 0);
                 }
                 if (list->navigation.fields.selected_index == (y >> 4))
@@ -827,7 +828,7 @@ void* menu_spell_list_callback(s32* ot, ScrollListState* state, void* prim_buf, 
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-void* menu_equipment_grid_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
+void* menu_equipment_grid_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     ScrollListState* list;
     u32 scroll_y;
@@ -871,7 +872,7 @@ void* menu_equipment_grid_callback(s32* ot, ScrollListState* state, void* prim_b
                 if ((relative_y >= -0xF) && (relative_y < (list->viewport_h - 0x10)))
                 {
                     name_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_EQUIPMENT_NAMES]);
-                    prim_buf = func_800A88A0(prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (col * 2) + (row * 0x10))), 1,
+                    prim_buf = field_draw_text(prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (col * 2) + (row * 0x10))), 1,
                                              0x20 - view_origin->x, relative_y - view_origin->y, 0);
                     if (entry_kind >= 8)
                     {
@@ -920,7 +921,7 @@ void* menu_equipment_grid_callback(s32* ot, ScrollListState* state, void* prim_b
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-void* menu_key_item_list_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
+void* menu_key_item_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     Vec2s pos;
     s32 item_index;
@@ -962,7 +963,7 @@ void* menu_key_item_list_callback(s32* ot, ScrollListState* state, void* prim_bu
 
                 name_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_KEY_ITEM_NAMES]);
                 prim_buf =
-                    func_800A88A0(prim_buf, ot, ((u8*)name_table + ((u16*)name_table)[item_index]), 1, 0x10 - view_origin->x, relative_y - view_origin->y, 0);
+                    field_draw_text(prim_buf, ot, ((u8*)name_table + ((u16*)name_table)[item_index]), 1, 0x10 - view_origin->x, relative_y - view_origin->y, 0);
                 prim_buf = menu_draw_clamped_number(ot, prim_buf, *quantity, 1, &pos, 1);
             }
             if (list->navigation.fields.selected_index == (y >> 4))
@@ -996,7 +997,7 @@ void* menu_key_item_list_callback(s32* ot, ScrollListState* state, void* prim_bu
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-void* menu_ability_list_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
+void* menu_ability_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     u32 scroll_y;
     s32 selected_index;
@@ -1034,7 +1035,7 @@ void* menu_ability_list_callback(s32* ot, ScrollListState* state, void* prim_buf
             if ((relative_y >= -0xF) && (relative_y < (list->viewport_h - 0x10)))
             {
                 name_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ABILITY_NAMES]);
-                prim_buf = func_800A88A0(prim_buf, ot, (void*)((u8*)name_table + ((u16*)name_table)[ability_index]), 1, 0x20 - view_origin->x,
+                prim_buf = field_draw_text(prim_buf, ot, (void*)((u8*)name_table + ((u16*)name_table)[ability_index]), 1, 0x20 - view_origin->x,
                                          relative_y - view_origin->y, 0);
                 if (ability->flags & MENU_ABILITY_FLAG_SHOW_ICON)
                 {
@@ -1077,7 +1078,7 @@ void* menu_ability_list_callback(s32* ot, ScrollListState* state, void* prim_buf
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor (unchanged on the early-return paths).
  */
-void* menu_subtype_action_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
+void* menu_subtype_action_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     MenuSlotRect rect;
     s32 packed;
@@ -1214,10 +1215,10 @@ void* menu_subtype_action_callback(s32* ot, ScrollListState* state, void* prim_b
 
     buf = scroll_list_draw(buf, ot, list, g_menu_item_nav_entries, view_origin, active);
 
-    buf = func_800A88A0(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 61), 1, 0x30 - view_origin->x, -view_origin->y, 2);
-    buf = func_800A88A0(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 62), 1, 0x30 - view_origin->x, 0x10 - view_origin->y, 2);
-    buf = func_800A88A0(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 67), 1, 0x30 - view_origin->x, 0x20 - view_origin->y, 2);
-    buf = func_800A88A0(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 64), 1, 0x30 - view_origin->x, 0x30 - view_origin->y, 2);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 61), 1, 0x30 - view_origin->x, -view_origin->y, 2);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 62), 1, 0x30 - view_origin->x, 0x10 - view_origin->y, 2);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 67), 1, 0x30 - view_origin->x, 0x20 - view_origin->y, 2);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 64), 1, 0x30 - view_origin->x, 0x30 - view_origin->y, 2);
     return buf;
 }
 
@@ -1230,7 +1231,7 @@ void* menu_subtype_action_callback(s32* ot, ScrollListState* state, void* prim_b
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-void* menu_message_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
+void* menu_message_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     Vec2s pos;
     void* buf;
@@ -1244,7 +1245,7 @@ void* menu_message_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec
         menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
     }
 
-    buf = func_800A88A0(buf, ot, g_menu_message_line1, 1, 0x88 - view_origin->x, -view_origin->y, 2);
+    buf = field_draw_text(buf, ot, g_menu_message_line1, 1, 0x88 - view_origin->x, -view_origin->y, 2);
     return buf;
 }
 
@@ -1257,7 +1258,7 @@ void* menu_message_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-void* menu_two_line_message_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
+void* menu_two_line_message_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     Vec2s pos;
     void* buf;
@@ -1271,8 +1272,8 @@ void* menu_two_line_message_callback(s32* ot, ScrollListState* state, void* prim
         menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
     }
 
-    buf = func_800A88A0(buf, ot, g_menu_message_line1, 1, 0x88 - view_origin->x, -view_origin->y, 2);
-    buf = func_800A88A0(buf, ot, g_menu_message_line2, 1, 0x88 - view_origin->x, 0x10 - view_origin->y, 2);
+    buf = field_draw_text(buf, ot, g_menu_message_line1, 1, 0x88 - view_origin->x, -view_origin->y, 2);
+    buf = field_draw_text(buf, ot, g_menu_message_line2, 1, 0x88 - view_origin->x, 0x10 - view_origin->y, 2);
     return buf;
 }
 
@@ -1285,7 +1286,7 @@ void* menu_two_line_message_callback(s32* ot, ScrollListState* state, void* prim
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-void* menu_item_followup_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
+void* menu_item_followup_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     MenuContentItem* item;
     uintptr_t tbl;
@@ -1338,8 +1339,8 @@ void* menu_item_followup_callback(s32* ot, ScrollListState* state, void* prim_bu
 
     buf = scroll_list_draw(buf, ot, list, g_menu_item_nav_entries, view_origin, active);
 
-    buf = func_800A88A0(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 68), 1, 0x30 - view_origin->x, -view_origin->y, 2);
-    buf = func_800A88A0(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 69), 1, 0x30 - view_origin->x, 0x10 - view_origin->y, 2);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 68), 1, 0x30 - view_origin->x, -view_origin->y, 2);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 69), 1, 0x30 - view_origin->x, 0x10 - view_origin->y, 2);
     return buf;
 }
 

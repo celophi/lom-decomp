@@ -614,8 +614,6 @@ void field_set_default_fade_target(void);
 void field_restore_fade_target_with_duration();
 void field_copy_golem_portrait_palette(void* buf, s32 arg1);
 void field_copy_portrait_palette(void* buf, s32 arg1);
-void* field_draw_text(void* prim, u_long* ot, u8* text, s32 color, s32 x, s32 y, s32 mode);
-void* field_draw_number(u_long* ot, void* prim, s32 value, s32 color, DVECTOR* pos, s32 mode);
 void field_flag_known_save();
 void field_apply_region_level_ups(s32 slot);
 

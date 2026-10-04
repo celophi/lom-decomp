@@ -9,6 +9,7 @@
 
 #include "common/saved_game.h"
 #include "common.h"
+#include "overlays/field/field_golem_logic_blocks.h"
 #include "../internal/field_golem_layout.h"
 #include "../internal/field_menu_vars.h"
 #include "../internal/field_records.h"
@@ -24,13 +25,6 @@
 /** @brief Marker value for an edge between two different blocks. */
 #define GOLEM_MARKER_BLOCK_EDGE 0x4F
 
-/** @brief Placement status of one logic block, filled by golem_fill_logic_block_status. */
-typedef struct
-{
-    u16 is_unavailable; /**< Non-zero when the block cannot join the edited group. */
-    u16 clut;           /**< CLUT row used to draw the block's icon. */
-} GolemLogicBlockStatus;
-
 /** @brief Icon CLUT of one logic-block id. */
 typedef struct
 {
@@ -40,18 +34,17 @@ typedef struct
 
 extern s32 g_golem_logic_block_class[];
 extern GolemLogicBlockIcon g_golem_logic_block_icons[];
-extern u8 D_800459AE;
 
 /**
  * @brief Append a new, unassigned logic block to the golem logic-block table.
  * @param block_id Six-bit block id.
- * @param detail Four-bit detail (quantity) value.
+ * @param level Four-bit level; zero hides the level after the block name.
  * @param shape Four-bit shape index into g_golem_shape_table.
  */
-void golem_logic_block_append(u32 block_id, u32 detail, u32 shape)
+void golem_logic_block_append(u32 block_id, u32 level, u32 shape)
 {
     GOLEM.logic_blocks[GOLEM.header.fields.block_count].f.id = block_id;
-    GOLEM.logic_blocks[GOLEM.header.fields.block_count].f.quantity = detail;
+    GOLEM.logic_blocks[GOLEM.header.fields.block_count].f.level = level;
     GOLEM.logic_blocks[GOLEM.header.fields.block_count].f.shape = shape;
     GOLEM.logic_blocks[GOLEM.header.fields.block_count].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
     GOLEM.logic_blocks[GOLEM.header.fields.block_count].f.placed = 0;
@@ -204,9 +197,9 @@ s32 golem_logic_block_fits_grid(s32 index, s32 rotation, s32 x, s32 y)
 /**
  * @brief Fill the placement status of every logic block for the edited group.
  * @param results Output status per logic block.
- * @return The global status byte D_800459AE.
+ * @return Number of stored logic blocks.
  */
-u8 golem_fill_logic_block_status(GolemLogicBlockStatus* results)
+s32 golem_fill_logic_block_status(GolemLogicBlockStatus* results)
 {
     s32 i;
     LogicBlock block;
@@ -229,7 +222,7 @@ u8 golem_fill_logic_block_status(GolemLogicBlockStatus* results)
             results[i].clut = g_golem_logic_block_icons[GOLEM.logic_blocks[i].f.id].clut;
         }
     }
-    return D_800459AE;
+    return g_saved_game.layout.logic_block_count;
 }
 
 /**

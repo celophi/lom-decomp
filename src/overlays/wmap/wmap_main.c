@@ -163,8 +163,6 @@ extern u8 D_80114F18[];
 extern s32 D_8011CF18;
 extern s32 D_8011CF20;
 extern s32 g_wmap_sequence_count;
-extern s32 D_8011CF58;
-extern s32 D_8011CF70;
 extern s32 g_wmap_view_scroll_enabled;
 extern s32 D_8011D4F8;
 extern s32 g_wmap_selected_artifact;
@@ -185,7 +183,6 @@ extern s32 g_wmap_view_scroll_mode;
 extern s32 D_801398F4;
 extern s32 D_80139900;
 extern VECTOR g_wmap_view;
-extern s32 D_80139960;
 extern s32 D_80139978;
 extern s32 D_8013997C;
 extern s32 D_8013B258;
@@ -195,7 +192,6 @@ extern s32 D_8013B290;
 extern s32 D_8013B294;
 extern s32 D_8013B27C;
 extern VECTOR D_80182D48;
-extern s32 D_80182D70;
 extern s32 D_80182D88;
 extern VECTOR g_wmap_camera_translation;
 extern u32 D_80182DD8;
@@ -378,7 +374,7 @@ void wmap_init_state(void)
     g_wmap_sequence_count = 0;
     D_800DCEFC = 0;
     D_80182D88 = 0;
-    func_8006D8F0(0);
+    wmap_select_mesh_motion(0);
     func_800653EC();
     wmap_init_spirit_animation();
     wmap_init_map_packets();
@@ -400,7 +396,7 @@ void wmap_init_state(void)
     g_wmap_menu_page = 0;
     g_wmap_loaded_menu_page = -1;
     func_800605B4();
-    func_8006D870(0);
+    wmap_start_mesh_transition(0);
     D_801ADB04.r = 0x80;
     D_801ADB04.g = 0x80;
     D_801ADB04.b = 0x80;
@@ -417,10 +413,10 @@ void wmap_init_state(void)
     g_wmap_camera_translation.vy = -0x18;
     g_wmap_camera_translation.vz = 0x6D60;
     g_wmap_transition_mesh_hidden = 0;
-    D_8011CF70 = 0;
-    D_80182D70 = 0;
-    D_8011CF58 = 0;
-    D_80139960 = 0;
+    g_wmap_mesh_transition_frames = 0;
+    g_wmap_mesh_previous_selection = 0;
+    g_wmap_mesh_transition_selection = 0;
+    g_wmap_mesh_transition_direction = 0;
     D_80182D48 = g_wmap_zero_translation;
     D_801398C8 = g_wmap_zero_rotation;
     D_8011CF18 = 0;
@@ -1293,7 +1289,7 @@ s32 wmap_run_loop(void)
     D_8013B234 = layout_id;
     D_801ADB08 = -1;
     wmap_init_state();
-    func_8006D520();
+    wmap_init_transition_mesh();
     /* Pending land events may replace the normal map entry sequence. */
     while (1)
     {
@@ -1376,8 +1372,8 @@ s32 wmap_run_loop(void)
             break;
         case 12:
             show_loading_image = 0;
-            func_8006D8F0(1);
-            func_8006D870(1);
+            wmap_select_mesh_motion(1);
+            wmap_start_mesh_transition(1);
             D_801ADB90 = 0;
             g_wmap_party_visible = 0;
             D_80182E34 = 3;
@@ -1392,8 +1388,8 @@ s32 wmap_run_loop(void)
             break;
         case 13:
             show_loading_image = 0;
-            func_8006D8F0(1);
-            func_8006D870(1);
+            wmap_select_mesh_motion(1);
+            wmap_start_mesh_transition(1);
             D_801ADB90 = 0;
             g_wmap_party_visible = 0;
             D_80182E34 = 3;
@@ -1407,8 +1403,8 @@ s32 wmap_run_loop(void)
             break;
         case 9:
             show_loading_image = 0;
-            func_8006D8F0(1);
-            func_8006D870(1);
+            wmap_select_mesh_motion(1);
+            wmap_start_mesh_transition(1);
             D_8011D500 = 0xFF;
             D_800D9228 = 0xFF;
             D_80182E38 = 1;
@@ -1426,8 +1422,8 @@ s32 wmap_run_loop(void)
             break;
         case 10:
             show_loading_image = 0;
-            func_8006D8F0(1);
-            func_8006D870(1);
+            wmap_select_mesh_motion(1);
+            wmap_start_mesh_transition(1);
             D_8011D500 = 0xFF;
             D_800D9228 = 0xFF;
             D_80182E38 = 1;
@@ -1445,8 +1441,8 @@ s32 wmap_run_loop(void)
             break;
         case 24:
             show_loading_image = 0;
-            func_8006D8F0(1);
-            func_8006D870(1);
+            wmap_select_mesh_motion(1);
+            wmap_start_mesh_transition(1);
             D_801ADB90 = 0;
             g_wmap_party_visible = 0;
             D_80182E34 = 3;
@@ -1471,8 +1467,8 @@ s32 wmap_run_loop(void)
 #endif
         case 27:
             show_loading_image = 0;
-            func_8006D8F0(1);
-            func_8006D870(1);
+            wmap_select_mesh_motion(1);
+            wmap_start_mesh_transition(1);
             D_8011D500 = 0;
             D_800D9228 = 0;
             wmap_install_callback(&func_80064D64);
@@ -1854,7 +1850,7 @@ s32 wmap_run_loop(void)
             D_800DBE7C = 0;
             g_wmap_frame_count = (s32)(g_wmap_frame_count + 1);
             if ((g_wmap_input_locked != 0) || (D_8011CF18 >= 3) ||
-                (D_80139960 != 0) || (g_wmap_view_scroll_mode != 0) || (g_wmap_sequence_count != 0))
+                (g_wmap_mesh_transition_direction != 0) || (g_wmap_view_scroll_mode != 0) || (g_wmap_sequence_count != 0))
             {
                 g_wmap_buttons_repeat = 0;
                 g_wmap_buttons_held = 0;
@@ -2073,7 +2069,7 @@ s32 wmap_run_loop(void)
                 wmap_update_map_display();
                 wmap_update_land_preview();
                 wmap_draw_artifact_carousel();
-                func_8006D674();
+                wmap_draw_transition_mesh();
                 ResetSpadStack();
             }
             func_8005D46C();
@@ -2332,7 +2328,7 @@ void wmap_reset_after_transition(void)
     g_wmap_preview_shape = 0;
     func_8005909C();
     D_8011D52C = 0;
-    func_8006D870(0);
+    wmap_start_mesh_transition(0);
     D_800DBE70 = 2;
     g_wmap_placement_overlay_hidden = 0;
     g_wmap_spirit_target_brightness = 0x80;

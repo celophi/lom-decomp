@@ -1,3 +1,7 @@
+// FIELD immediate text exports used by this overlay.
+field_draw_text = 0x800A88A0;
+field_draw_number = 0x800A8A78;
+
 // SHOP.BIN overlay symbols. Shared main-executable and FIELD exports come from
 // shared_symbol_addrs.txt, which SHOP.BIN.yaml lists first.
 
@@ -8,6 +12,7 @@ field_restore_fade_target = 0x80067F28;
 field_set_default_fade_target = 0x80067F8C;
 field_text_reset_windows = 0x800643E0;
 field_text_reset_scratch = 0x8006441C;
+field_format_number = 0x800A8B90;
 play_menu_sfx = 0x800A3938;
 
 // shop.c

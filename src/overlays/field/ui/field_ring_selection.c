@@ -123,7 +123,6 @@ typedef struct
 
 extern Vec2s g_field_screen_scroll;
 extern u8* g_field_cd_buffer;
-extern FieldActionRow g_field_resource_actions[];
 /** @brief Golem sprite CLUTs, two banks of 16. */
 extern u16 g_field_golem_palettes[2][FIELD_GOLEM_BANK_PALETTES * FIELD_CLUT_COLORS];
 /** @brief Golem portrait palettes, two banks of 16. */

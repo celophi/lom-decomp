@@ -24,10 +24,7 @@
 #define FIELD_OBJECT_STATE_AT(base, index) ((FieldObjectState*)((index) * sizeof(FieldObjectState) + (uintptr_t)(base)))
 
 /** @brief CD resource holding the actor sequence bytecode banks. */
-#define FIELD_SEQUENCE_RESOURCE_ID 0x5DD
-#define FIELD_SEQUENCE_BANK_COUNT 11
-#define FIELD_SEQUENCE_ROW_COUNT 24
-#define FIELD_SEQUENCE_ROW_SIZE 32
+#define FIELD_SEQUENCE_RESOURCE_ID 1501
 
 #define FIELD_QUAD_VERTEX_COUNT 4
 /** @brief Most targets one object can collect (FieldObjectState::targets). */
@@ -191,7 +188,6 @@ typedef struct
     VECTOR squared;
 } FieldContactScanWorkspace;
 
-extern u8 g_field_actor_sequence_data[FIELD_SEQUENCE_BANK_COUNT][FIELD_SEQUENCE_ROW_COUNT][FIELD_SEQUENCE_ROW_SIZE];
 extern u8* g_field_cd_buffer;
 extern FieldMoveObject g_field_object_parts[];
 extern s32 g_field_active_group;
@@ -221,6 +217,7 @@ void field_load_actor_sequence_data(void)
     s32 byte_index;
     u8* source;
     u8* row;
+    s32 row_offset;
 
     cdrom_queue_read(FIELD_SEQUENCE_RESOURCE_ID, g_field_cd_buffer);
     cdrom_wait_queue_empty();
@@ -230,9 +227,8 @@ void field_load_actor_sequence_data(void)
         for (row_index = 0; row_index < FIELD_SEQUENCE_ROW_COUNT; row_index++)
         {
             byte_index = 0;
-            /* Offset summed before the base: &g_field_actor_sequence_data[bank][row] adds the other way round. */
-            row = (u8*)g_field_actor_sequence_data +
-                  (bank_index * sizeof(g_field_actor_sequence_data[0]) + row_index * sizeof(g_field_actor_sequence_data[0][0]));
+            row_offset = bank_index * FIELD_SEQUENCE_ROW_COUNT * FIELD_SEQUENCE_ROW_SIZE + row_index * FIELD_SEQUENCE_ROW_SIZE;
+            row = row_offset + g_field_actor_sequence_data;
             do
             {
                 row[byte_index] = *source;

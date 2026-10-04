@@ -1,4 +1,5 @@
 #include "internal/cload_internal.h"
+#include "overlays/field/field_text.h"
 #include "main/display.h"
 #include <memory.h>
 #include <libetc.h>
@@ -187,7 +188,7 @@ void *cload_draw_load_prompt(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
     CloadPromptElement *prompt;
 
     x = -x_offset + 0x90;
-    result = cload_draw_choice_prompt(func_800A88A0(prim, ot, CLOAD_TEXT_AT(g_cload_text_load_prompt, 24), 4, x, -y_offset, 2), ot, x, 0xE - y_offset);
+    result = cload_draw_choice_prompt(field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_load_prompt, 24), 4, x, -y_offset, 2), ot, x, 0xE - y_offset);
 
     status = poll_and_retry_card_info();
     if (status == 1 || status == 2)
@@ -254,10 +255,10 @@ void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offse
     u16 *text_table;
 
     x = -x_offset + 0x90;
-    result = func_800A88A0(prim, ot, CLOAD_TEXT_AT(g_cload_text_loading, 25), 4, x, -y_offset, 2);
+    result = field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_loading, 25), 4, x, -y_offset, 2);
     text_table = CLOAD_TEXT_TABLE(g_cload_text_loading, 25);
-    result = func_800A88A0(result, ot, CLOAD_TEXT(text_table, 15), 4, x, 0xE - y_offset, 2);
-    result = func_800A88A0(result, ot, CLOAD_TEXT(text_table, 89), 4, x, 0x1C - y_offset, 2);
+    result = field_draw_text(result, ot, CLOAD_TEXT(text_table, 15), 4, x, 0xE - y_offset, 2);
+    result = field_draw_text(result, ot, CLOAD_TEXT(text_table, 89), 4, x, 0x1C - y_offset, 2);
     result = cload_draw_progress_bar(result, ot);
 
     if (g_cload_progress_active == 0)
@@ -375,25 +376,25 @@ void *cload_draw_status_dialog(u_long *ot, void *prim, s32 x_offset, s32 y_offse
     switch (g_cload_dialog_state)
     {
     case 0:
-        prim = func_800A88A0(prim, ot, CLOAD_TEXT_AT(g_cload_text_save_failed, 30), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_save_failed, 30), 4, -x_offset + 0x80, -y_offset, 2);
         text_table = CLOAD_TEXT_TABLE(g_cload_text_save_failed, 30);
-        prim = func_800A88A0(prim, ot, CLOAD_TEXT(text_table, 43), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
+        prim = field_draw_text(prim, ot, CLOAD_TEXT(text_table, 43), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
         break;
     case 1:
-        prim = func_800A88A0(prim, ot, CLOAD_TEXT_AT(g_cload_text_load_failed, 31), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_load_failed, 31), 4, -x_offset + 0x80, -y_offset, 2);
         text_table = CLOAD_TEXT_TABLE(g_cload_text_load_failed, 31);
-        prim = func_800A88A0(prim, ot, CLOAD_TEXT(text_table, 43), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
+        prim = field_draw_text(prim, ot, CLOAD_TEXT(text_table, 43), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
         break;
     case 2:
-        prim = func_800A88A0(prim, ot, CLOAD_TEXT_AT(g_cload_text_card_insert_error, 32), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_card_insert_error, 32), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 3:
-        prim = func_800A88A0(prim, ot, CLOAD_TEXT_AT(D_80145EDE, 33), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = field_draw_text(prim, ot, CLOAD_TEXT_AT(D_80145EDE, 33), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 4:
-        prim = func_800A88A0(prim, ot, CLOAD_TEXT_AT(g_cload_text_load_failed, 31), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_load_failed, 31), 4, -x_offset + 0x80, -y_offset, 2);
         text_table = CLOAD_TEXT_TABLE(g_cload_text_load_failed, 31);
-        prim = func_800A88A0(prim, ot, CLOAD_TEXT(text_table, 46), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
+        prim = field_draw_text(prim, ot, CLOAD_TEXT(text_table, 46), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
         break;
     }
 
@@ -593,7 +594,7 @@ void *cload_draw_choice_prompt(void *prim, u_long *ot, s32 x, s32 y)
     {
         color = 5;
     }
-    prim = func_800A88A0(prim, ot, text, color, x - 0x10, y, 1);
+    prim = field_draw_text(prim, ot, text, color, x - 0x10, y, 1);
 
     color = 4;
     text = FIELD_UI_TEXT(text_table, 28);
@@ -601,7 +602,7 @@ void *cload_draw_choice_prompt(void *prim, u_long *ot, s32 x, s32 y)
     {
         color = 5;
     }
-    prim = func_800A88A0(prim, ot, text, color, x + 8, y, 0);
+    prim = field_draw_text(prim, ot, text, color, x + 8, y, 0);
 
     if (g_pad_input & 0xA000)
     {

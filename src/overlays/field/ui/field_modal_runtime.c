@@ -41,6 +41,8 @@ void field_set_cd_error_fade_target(void);
 #define NAME_GLYPH_SIZE_DOUBLE 2
 /** @brief Lead byte of the double-byte digit glyphs (followed by the digit value). */
 #define FIELD_TEXT_DIGIT_LEAD 0x1D
+/** @brief Minus sign entry in the dialog text bank. */
+#define FIELD_TEXT_MINUS_ENTRY 16
 
 /** @brief Largest number of entries in the dialog item list. */
 #define FIELD_DIALOG_ITEM_LIMIT 10
@@ -113,8 +115,6 @@ void field_set_cd_error_fade_target(void);
 /** @brief Saved skill values: none, or an instrument (plus its item record index). */
 #define FIELD_SKILL_NONE 0xFF
 #define FIELD_SKILL_INSTRUMENT 0x80
-/** @brief FieldActionFlags::target_filter of an action without a target predicate. */
-#define FIELD_ACTION_TARGET_NONE 0xFF
 /** @brief Technique actions: command flag and sequence ids (FIELD_TECHNIQUE_SEQUENCE_BASE + weapon type * 24 + technique). */
 #define FIELD_ACTION_TECHNIQUE 0x8000
 #define FIELD_ACTION_TECHNIQUE_MASK 0x7FFF
@@ -186,7 +186,8 @@ typedef struct
 /* Dialog text bank entries (FieldTextOffset). */
 extern FieldTextOffset D_800EC3D2;
 extern FieldTextOffset D_800EC3D4;
-extern FieldTextOffset D_800EC3E4;
+/** @brief Little-endian dialog bank offset of the minus sign for signed numbers. */
+extern FieldTextOffset g_field_minus_sign_text_offset;
 extern FieldTextOffset D_800EC400;
 extern FieldTextOffset g_field_duel_versus_text_offset;
 extern FieldTextOffset g_field_duel_wins_text_offset;
@@ -200,7 +201,6 @@ extern u8 D_800EC3C4[];
 /* Offset tables of the ability and technique names (u16 offsets from the table start). */
 extern u8 g_field_command_names[];
 extern u8 g_field_technique_names[];
-extern FieldActionRow g_field_resource_actions[];
 /* Action slot bound to each hint button (index into FieldCharacterRecord::button_actions). */
 extern u8 g_field_hint_button_map[];
 /* Icon and texture parameters of the action animations, two bytes per action. */
@@ -300,12 +300,10 @@ s32 field_party_reload_reading(void);
 void* field_emit_actor_portrait(SPRT* cursor, u32* ot, s32 index, u32* position);
 void* field_draw_sprite_number(s32* ot, void* cursor, s32 value, s32 digits, u16* position, s32 flags);
 void* field_draw_sprite_glyph(u8* cursor, s32* ot, s32 glyph, s32* position, s32 flags);
-SPRT* field_add_sprite_outline(s32* ot, SPRT* sprite_cursor, s32 count);
+SPRT* field_add_sprite_outline(u_long* ot, SPRT* sprite_cursor, s32 count);
 void* field_draw_player_icon(POLY_FT4* packet_cursor, u_long* ot, s32 player, s32 x, s32 y, s32 flip);
 POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* packet_cursor, u_long* ot, u8* text, s32 color, s32 x, s32 y, s32 align, s32 slot, s32 scale_x, s32 scale_y, s32 arg10, s32 visible);
 
-void* field_draw_text(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s32 x, s32 y, s32 flags);
-void field_format_number(u8* text, s32 number, s32 wide_request);
 s32 field_name_byte_length(u8* name);
 void field_copy_name(u8* destination, u8* source);
 void field_append_name(u8* destination, const u8* source);
@@ -348,7 +346,7 @@ static inline u8* field_dialog_text(FieldTextOffset* entry, s32 index)
  * @param flags Alignment in FIELD_TEXT_ALIGN_MASK, plus FIELD_TEXT_SHADOW for the black outline copies.
  * @return First free primitive after the text and its closing DR_TPAGE.
  */
-void* field_draw_text(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s32 x, s32 y, s32 flags)
+void* field_draw_text(SPRT* sprite_cursor, u_long* ot, u8* text, s32 text_color, s32 x, s32 y, s32 flags)
 {
     s32 glyph_count;
     s32 remaining;
@@ -425,12 +423,12 @@ void* field_draw_text(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s3
  * @param flags field_draw_text alignment and shadow flags.
  * @return First free primitive after the text.
  */
-void* field_draw_number(s32* ot, SPRT* sprite_cursor, s32 value, s32 text_color, s16* position, s32 flags)
+void* field_draw_number(u_long* ot, SPRT* sprite_cursor, s32 value, s32 text_color, Vec2s* position, s32 flags)
 {
     u8 text[64];
 
     field_format_number(text, value, 0);
-    return field_draw_text(sprite_cursor, ot, text, text_color, position[0], position[1], flags);
+    return field_draw_text(sprite_cursor, ot, text, text_color, position->x, position->y, flags);
 }
 
 /**
@@ -444,12 +442,12 @@ void* field_draw_number(s32* ot, SPRT* sprite_cursor, s32 value, s32 text_color,
  * @return First free primitive after the text.
  * @note JP uses double-byte digits; US uses the same digits as field_draw_number.
  */
-void* field_draw_number_wide(s32* ot, SPRT* sprite_cursor, s32 value, s32 text_color, s16* position, s32 flags)
+void* field_draw_number_wide(u_long* ot, SPRT* sprite_cursor, s32 value, s32 text_color, Vec2s* position, s32 flags)
 {
     u8 text[64];
 
     field_format_number(text, value, 1);
-    return field_draw_text(sprite_cursor, ot, text, text_color, position[0], position[1], flags);
+    return field_draw_text(sprite_cursor, ot, text, text_color, position->x, position->y, flags);
 }
 
 /**
@@ -471,7 +469,7 @@ inline void field_format_number(u8* text, s32 number, s32 wide_request)
     if (number < 0)
     {
         number = -number;
-        minus = field_dialog_text(&D_800EC3E4, 16);
+        minus = field_dialog_text(&g_field_minus_sign_text_offset, FIELD_TEXT_MINUS_ENTRY);
         field_copy_name(text, minus);
         text += field_name_byte_length(minus);
     }
@@ -519,7 +517,7 @@ inline void field_format_number(u8* text, s32 number, s32 wide_request)
     if (value < 0)
     {
         value = -value;
-        minus = field_dialog_text(&D_800EC3E4, 16);
+        minus = field_dialog_text(&g_field_minus_sign_text_offset, FIELD_TEXT_MINUS_ENTRY);
         field_copy_name(cursor, minus);
         cursor += field_name_byte_length(minus);
     }
@@ -890,12 +888,12 @@ static void field_draw_cd_error_text(FieldRenderHalf* render)
     /* 2 is CdErrorStatus CD_ERROR_STATUS_DISC_CHECK_PENDING (private to cdrom.c). */
     if (cdrom_get_error_status() == 2)
     {
-        primitive = field_draw_text(primitive, (s32*)ordering_table, field_dialog_text(&D_800EC3D2, 7), FIELD_TEXT_COLOR_NORMAL, SCREEN_WIDTH / 2, 100,
+        primitive = field_draw_text(primitive, ordering_table, field_dialog_text(&D_800EC3D2, 7), FIELD_TEXT_COLOR_NORMAL, SCREEN_WIDTH / 2, 100,
                                     FIELD_TEXT_SHADOW | FIELD_TEXT_ALIGN_CENTER);
     }
     else
     {
-        primitive = field_draw_text(primitive, (s32*)ordering_table, field_dialog_text(&D_800EC3D4, 8), FIELD_TEXT_COLOR_NORMAL, SCREEN_WIDTH / 2, 100,
+        primitive = field_draw_text(primitive, ordering_table, field_dialog_text(&D_800EC3D4, 8), FIELD_TEXT_COLOR_NORMAL, SCREEN_WIDTH / 2, 100,
                                     FIELD_TEXT_SHADOW | FIELD_TEXT_ALIGN_CENTER);
     }
     render->primitive_cursor = (u8*)primitive;
@@ -1069,7 +1067,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                     label_y <<= 5;
                     point.vy = label_y + FIELD_HINT_PORTRAIT_Y;
                     cursor = (u8*)field_emit_actor_portrait((SPRT*)cursor, (u32*)ot, index, (u32*)&point);
-                    cursor = (u8*)field_draw_text((SPRT*)cursor, (s32*)ot, (u8*)text_or_state, FIELD_TEXT_COLOR_NORMAL, FIELD_HINT_TEXT_X,
+                    cursor = (u8*)field_draw_text((SPRT*)cursor, ot, (u8*)text_or_state, FIELD_TEXT_COLOR_NORMAL, FIELD_HINT_TEXT_X,
                                                   label_y + FIELD_HINT_TEXT_Y, FIELD_TEXT_SHADOW);
                     break;
                 }
@@ -1125,7 +1123,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             {
                 text_color = FIELD_TEXT_COLOR_NORMAL;
             }
-            cursor = (u8*)field_draw_text((SPRT*)cursor, (s32*)text_ot, ((FieldObjectState*)text_or_state)->name, text_color, button_or_x, (s32)point.vy,
+            cursor = (u8*)field_draw_text((SPRT*)cursor, text_ot, ((FieldObjectState*)text_or_state)->name, text_color, button_or_x, (s32)point.vy,
                                           FIELD_TEXT_SHADOW | FIELD_TEXT_ALIGN_CENTER);
             left_glyph_ot = ot;
             point.vy = (u16)point.vy - 8;
@@ -2267,7 +2265,7 @@ static void field_draw_empty_shop_notice(FieldRenderHalf* render)
     packet_cursor = (SPRT*)render->primitive_cursor;
     if (g_field_shop_notice_hidden == 0)
     {
-        packet_cursor = field_draw_text(packet_cursor, (s32*)render->ordering_table, field_dialog_text(&D_800EC400, 30), FIELD_TEXT_COLOR_NORMAL,
+        packet_cursor = field_draw_text(packet_cursor, render->ordering_table, field_dialog_text(&D_800EC400, 30), FIELD_TEXT_COLOR_NORMAL,
                                         SCREEN_WIDTH / 2, 104, FIELD_TEXT_ALIGN_CENTER);
     }
     render->primitive_cursor = (u8*)packet_cursor;

@@ -408,6 +408,7 @@ SquareRoot0                         = 0x8001CC7C;
 // psyq/libgte/MSC02
 InvSquareRoot                       = 0x8001CD0C;
 VectorNormalS                       = 0x8001CD98;
+VectorNormal                        = 0x8001CDAC;
 MSC02_OBJ_100                       = 0x8001CE0C;
 MatrixNormal                        = 0x8001CECC;
 
@@ -991,6 +992,7 @@ McxStartCom                         = 0x800319D8;
 g_music_track_table                = 0x800351A0;
 g_game_state                         = 0x8003522C;
 g_disc_validation_id                = 0x80035230;
+GPU_printf                         = 0x800362FC;
 g_akao_spu_zero_primer              = 0x8003D170;
 g_akao_opcode_len_table             = 0x8003D1B0;
 g_akao_opcode_len_table_ext         = 0x8003D210;
@@ -1031,6 +1033,8 @@ g_field_scene_id                        = 0x8003EC90;
 g_field_sound_bank_id                     = 0x8003EC94;
 g_field_audio_timer                 = 0x8003EC98;
 g_save_compatibility_tag                   = 0x8003EC9C;
+g_resident_song_buffer              = 0x8003ECA0;
+g_resident_song_section_offsets     = 0x8003ECA4;
 g_transition_frames                = 0x80042CA0; // size:0x310 allow_addend:True
 g_previous_game_state                 = 0x80042FB0;
 g_current_song_handle               = 0x80042FB8;
@@ -1065,7 +1069,7 @@ g_akao_xa_tracker                   = 0x8004F760;
 g_akao_streaming_state              = 0x8004F820;
 
 // FIELD overlay functions called from other overlays (gosub)
-equipment_combination_find          = 0x800CA480;
+golem_find_logic_block_recipe         = 0x800CA480;
 
 // Shared input / frame / script state (main executable .bss)
 g_frame_counter                     = 0x800F22AC;

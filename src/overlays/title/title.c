@@ -3,6 +3,7 @@
 #include "internal/title_save.h"
 #include "main/screen_transition.h"
 #include "main/audio/akao_cmd.h"
+#include "main/audio/game_audio.h"
 #include <memory.h>
 #include "main/cdrom.h"
 #include <rand.h>
@@ -400,7 +401,7 @@ void load_title_audio_bank(void)
  * @details Counterpart of CHECKPS load_checkps_song_from_disc. Reads CD resource
  * @c CD_RES_MUSIC_FILE(seq_variant) into the 0x80180000 scratch
  * buffer, splits it via its self-referential offset table, copies the
- * sequence sub-block to D_8003ECA0, then uploads the trailing instrument bank.
+ * sequence sub-block to g_resident_song_buffer, then uploads the trailing instrument bank.
  *
  * @param seq_variant Music-file index; 0 selects MSC_DATA.DAT.
  *
@@ -417,7 +418,7 @@ void load_title_seq(s32 seq_variant)
     off = TITLE_LOAD_BUFFER_OFFSETS;
     base = TITLE_LOAD_BUFFER;
 
-    bcopy(base + off[0], (u8*)&D_8003ECA0, (int)(off[1] - off[0]));
+    bcopy(base + off[0], g_resident_song_buffer, (int)(off[1] - off[0]));
     akao_upload_bank_blocking((AkaoBankHeader*)(base + off[1]), 1);
 }
 
@@ -437,14 +438,14 @@ void stop_title_music(void)
  * @brief Start playback of the title-screen background music.
  *
  * @details Counterpart of CHECKPS play_loaded_checkps_song. Plays the SEQ loaded into
- * D_8003ECA0 (by load_title_seq) and sets the song volume to maximum via
+ * g_resident_song_buffer (by load_title_seq) and sets the song volume to maximum via
  * akao_set_song_volume.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/xYPkq
  */
 void start_title_music(void)
 {
-    akao_play_song((AkaoHeader*)&D_8003ECA0);
+    akao_play_song((AkaoHeader*)g_resident_song_buffer);
     akao_set_song_volume(0, AKAO_VOLUME_MAX);
 }
 

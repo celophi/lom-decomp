@@ -83,7 +83,6 @@ extern s32 D_8010CFD4;
 extern u8* g_field_actor_heap;
 extern s32 g_field_boss_hud_shake_frame;
 
-void field_clear_actor_effects(FieldActorSlot* slot);
 s32 field_load_vram_resource(s32 id, RECT* rect, s32 mode);
 void field_clear_pending_binding_restarts(void);
 
@@ -190,9 +189,10 @@ s32 field_object_has_active_actor_tracks(s32 object_index)
 
 /**
  * @brief Count free actor slots in the general-purpose actor pool.
+ * @param object_index Field-object index; unused.
  * @return Number of actor slots whose active flag is clear.
  */
-s32 field_count_free_actor_slots(void)
+s32 field_count_free_actor_slots(s32 object_index)
 {
     s32 free_count;
     s32 slot_index;
@@ -489,7 +489,7 @@ void field_poll_streamed_animations(void)
             {
                 binding->load_id = 0;
                 slot = &g_field_actor_slots[binding->slot];
-                field_unpack_actor_resource(binding->owner, (struct FieldActorSlot*)slot);
+                field_unpack_actor_resource(binding->owner, slot);
                 if (slot->part_count != 0)
                 {
                     slot->owner_object_index = binding->owner;

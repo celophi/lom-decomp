@@ -50,6 +50,7 @@ extern void PopMatrix();
 extern void SetGeomOffset(long ofx, long ofy);
 extern void SetGeomScreen(long h);
 extern long NormalClip(long sxy0, long sxy1, long sxy2);
+extern long VectorNormal(VECTOR *v0, VECTOR *v1);
 extern long VectorNormalS(VECTOR *v0, SVECTOR *v1);
 extern long SquareRoot0(long value);
 extern void InvSquareRoot(long value, long *mantissa, long *exponent);

@@ -5,6 +5,10 @@
 
 /** @brief Music resource selected by each field music index. */
 extern u8 g_music_track_table[];
+/** @brief Resident storage for an AKAO sequence or a section-offset song container. */
+extern u8 g_resident_song_buffer[];
+/** @brief Section offsets in g_resident_song_buffer while it holds a song container. */
+extern s32 g_resident_song_section_offsets[];
 extern s16 g_game_diagnostic_status;
 
 void fade_out_current_song(void);

@@ -149,6 +149,7 @@ void field_free_owner_resources(s32 tag);
 void field_unpack_actor_resource(s32 owner, struct FieldActorSlot *actor);
 
 /* field_actor_runtime.c */
+void field_clear_actor_effects(struct FieldActorSlot* slot);
 s32 field_get_actor_resource_id(s32 unused_slot_index, struct FieldPlayerRecord* player, s32 weapon_set);
 void field_initialize_actor_part(s32 part_index, s32 timer_mode);
 void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index);
@@ -160,6 +161,7 @@ void field_unpack_resource_package(struct FieldCdBuffer *buf, s32 size, s32 slot
 void field_finish_party_slot_reload(s32 actor_slot);
 
 /* field_actor_slot_resources.c */
+s32 field_count_free_actor_slots(s32 object_index);
 s32 field_object_has_active_actor_tracks(s32 object_index);
 void field_bind_builtin_animations(void);
 void field_upload_common_texture(void);
@@ -244,7 +246,7 @@ void field_flag_known_save(char *file_name);
 /* field_choice_labels.c */
 /** @brief Selected return-to-title choice: 0 continues (restores the saved state), 1 returns to the title. */
 extern s32 g_field_return_to_title_choice;
-void field_draw_return_to_title_choices(s32 *ot, void *prim, s32 scroll_x, s32 scroll_y);
+void field_draw_return_to_title_choices(u_long* ot, void *prim, s32 scroll_x, s32 scroll_y);
 
 /* field_collision.c */
 s32 field_collision_hit_markers(struct FieldCollisionQuery *query);
@@ -260,7 +262,7 @@ void field_pair_indicators_reset(void);
 u8 *field_pair_indicators_get_list(void);
 
 /* field_coordinate_icon.c */
-void* field_draw_coordinate_panel(void* ot, u8* prim, s32 x_offset, s32 y_offset);
+void* field_draw_coordinate_panel(u_long* ot, u8* prim, s32 x_offset, s32 y_offset);
 void field_upload_player_icons(void);
 
 /* field_dialog_screens.c */

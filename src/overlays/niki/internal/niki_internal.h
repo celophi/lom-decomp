@@ -136,7 +136,7 @@ typedef struct NikiElement
             u32 reserved : 23;
         } f;
     } dimensions;
-    u8* (*draw)(s32* ot, u8* prim, s32 x_offset, s32 y_offset);
+    u8* (*draw)(u_long* ot, u8* prim, s32 x_offset, s32 y_offset);
 } NikiElement;
 
 /** @brief Bytes read to show an entry: the card header and the first 0x100 bytes of the saved game. */
@@ -176,7 +176,7 @@ typedef struct
  */
 typedef struct NikiFrameState
 {
-    s32 head_tag;
+    u_long head_tag;
     u8 pad4[0x40AE];
     s16 frame_flag;
     u8 pad40B4[4];
@@ -463,29 +463,27 @@ void niki_update_elements(NikiFrameState* frame);
 void niki_update_and_draw_elements(NikiFrameState* frame);
 s32 niki_update_load_sequence(void);
 s32 niki_handle_input(void);
-u8* niki_draw_entry_list(s32* ot, u8* prim, s32 arg2, s32 arg3);
-u8* niki_draw_header_label(s32* ot, u8* prim, s32 arg2, s32 arg3);
-u8* niki_draw_card_slot0_label(s32* ot, u8* prim, s32 arg2, s32 arg3);
-u8* niki_draw_card_slot1_label(s32* ot, u8* prim, s32 arg2, s32 arg3);
-u8* niki_draw_selected_entry_details(s32* ot, u8* prim, s32 arg2, s32 arg3);
-u8* niki_draw_icon_highlight(u8* prim, s32* ot, s32 x, s32 y, s32 width, s32 icon_index, s32 texture_slot, s32 palette_mode);
-u8* niki_draw_footer_label(s32* ot, u8* prim, s32 arg2, s32 arg3);
-u8* niki_draw_state_page(s32* ot, u8* prim, s32 arg2, s32 arg3);
+u8* niki_draw_entry_list(u_long* ot, u8* prim, s32 arg2, s32 arg3);
+u8* niki_draw_header_label(u_long* ot, u8* prim, s32 arg2, s32 arg3);
+u8* niki_draw_card_slot0_label(u_long* ot, u8* prim, s32 arg2, s32 arg3);
+u8* niki_draw_card_slot1_label(u_long* ot, u8* prim, s32 arg2, s32 arg3);
+u8* niki_draw_selected_entry_details(u_long* ot, u8* prim, s32 arg2, s32 arg3);
+u8* niki_draw_icon_highlight(u8* prim, u_long* ot, s32 x, s32 y, s32 width, s32 icon_index, s32 texture_slot, s32 palette_mode);
+u8* niki_draw_footer_label(u_long* ot, u8* prim, s32 arg2, s32 arg3);
+u8* niki_draw_state_page(u_long* ot, u8* prim, s32 arg2, s32 arg3);
 void niki_clear_elements();
 s32 niki_advance_load_sequence(void);
 void func_800A3938();
-u8* niki_draw_status_dialog(s32* ot, u8* prim, s32 arg2, s32 arg3);
-u8* niki_draw_secondary_status_dialog(s32* ot, u8* prim, s32 arg2, s32 arg3);
+u8* niki_draw_status_dialog(u_long* ot, u8* prim, s32 arg2, s32 arg3);
+u8* niki_draw_secondary_status_dialog(u_long* ot, u8* prim, s32 arg2, s32 arg3);
 void niki_close_all_elements();
 void niki_switch_card_slot();
 void niki_commit_selected_entry(void);
 void niki_scroll_to_selection();
 NikiElement* niki_alloc_element();
 void niki_enable_choice_toggle();
-u8* niki_draw_save_confirm_dialog(s32* ot, u8* prim, s32 arg2, s32 arg3);
-u8* niki_draw_confirm_prompt(s32* ot, u8* prim, s32 arg2, s32 arg3);
-u8* func_800A88A0(u8* prim, s32* ot, void* glyph, s32 a3, s32 x, s32 y, s32 mode);
-u8* func_800A8A78(s32* ot, u8* prim, s32 ch, s32 a3, Vec2s* pos, s32 mode);
+u8* niki_draw_save_confirm_dialog(u_long* ot, u8* prim, s32 arg2, s32 arg3);
+u8* niki_draw_confirm_prompt(u_long* ot, u8* prim, s32 arg2, s32 arg3);
 void func_800A55E4(void* buf, s32 arg1);
 void func_800A5638(void* buf, s32 arg1);
 void niki_sort_entries_by_type();
