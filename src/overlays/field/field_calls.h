@@ -248,7 +248,7 @@ void field_draw_return_to_title_choices(s32 *ot, void *prim, s32 scroll_x, s32 s
 
 /* field_collision.c */
 s32 field_collision_hit_markers(struct FieldCollisionQuery *query);
-s32 field_collision_move_mover(struct FieldCollisionMover *mover);
+s32 field_collision_resolve_move(struct FieldCollisionMover *mover);
 void field_collision_rasterize_groups(u8** allocator_cursor, struct FieldNode *clip);
 
 /* field_command_history.c */

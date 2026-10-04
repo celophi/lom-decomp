@@ -704,14 +704,14 @@ static void field_update_part_sweep(FieldPart* part)
         {
         case 1:
         case 2:
-            sweep_origin = scene->header->unk30 / 2;
+            sweep_origin = scene->header->map_width / 2;
             break;
         case 3:
             sweep_origin = 0;
             break;
         case 4:
         default:
-            sweep_origin = scene->header->unk30;
+            sweep_origin = scene->header->map_width;
             break;
         }
         remaining_nodes = part->node_count;
@@ -721,37 +721,37 @@ static void field_update_part_sweep(FieldPart* part)
             {
                 offset = sweep_origin;
                 def = node->def;
-                angle_entry = &angle_table[def->x_angle_index * 2];
+                angle_entry = &angle_table[def->vertex_c * 2];
                 product = (*angle_entry - offset) * negative_sine;
                 offset = product >> 4;
                 if (product < 0)
                 {
                     offset = (product + 0xF) >> 4;
                 }
-                base_offset = def->base_x << 8;
+                base_offset = def->height0 << 8;
                 if ((offset + base_offset) < 0)
                 {
                     offset = -base_offset;
                 }
-                previous = node->x;
-                node->x = offset;
-                node->delta_x = offset - previous;
-                angle_entry = &angle_table[def->y_angle_index * 2];
+                previous = node->height0_offset;
+                node->height0_offset = offset;
+                node->motion_height0 = offset - previous;
+                angle_entry = &angle_table[def->vertex_b * 2];
                 product = (*angle_entry - sweep_origin) * negative_sine;
                 offset = product >> 4;
                 if (product < 0)
                 {
                     offset = (product + 0xF) >> 4;
                 }
-                base_offset = def->base_y << 8;
+                base_offset = def->height1 << 8;
                 if ((offset + base_offset) < 0)
                 {
                     offset = -base_offset;
                 }
-                previous = node->y;
+                previous = node->height1_offset;
                 remaining_nodes -= 1;
-                node->y = offset;
-                node->delta_y = offset - previous;
+                node->height1_offset = offset;
+                node->motion_height1 = offset - previous;
                 if (remaining_nodes == 0)
                 {
                     break;

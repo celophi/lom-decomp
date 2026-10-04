@@ -2539,7 +2539,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldObjectPar
                 mover->contact_flags = 0;
                 mover->mode.bits.unknown_17 = 0;
                 mover->mode.bits.unknown_16 = 0;
-                if (field_collision_move_mover(mover) & 3)
+                if (field_collision_resolve_move(mover) & 3)
                 {
                     rotated_vector->z = 0;
                     rotated_vector->x = 0;

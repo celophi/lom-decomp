@@ -386,13 +386,13 @@ typedef struct FieldSceneHeader
     u8 _pad3[0x2C - 0x2A];
     /** 0x2C scene flags; see FIELD_SCENE_HEADER_BOUNDED. */
     s32 flags;
-    s16 unk30; /* 0x30 */
-    /** 0x32 counterpart of unk30; field_collision_collect_groups uses the pair as the scene's
-        pixel extent when sizing its tile budget. */
-    s16 unk32;
+    /** 0x30 map width in pixels (collision cells), along x. */
+    s16 map_width;
+    /** 0x32 map depth in pixels (collision cells), along z. */
+    s16 map_depth;
 } FieldSceneHeader;
 
-/** FieldSceneHeader::flags bit: movers are kept inside the unk30 x unk32 extent. */
+/** FieldSceneHeader::flags bit: movers are kept inside the map_width x map_depth extent. */
 #define FIELD_SCENE_HEADER_BOUNDED 0x2
 
 /**
@@ -887,8 +887,10 @@ typedef struct
 /**
  * @brief Definition record shared by a FieldNode.
  *
- * x_angle_index/y_angle_index select entries in g_field_node_angle_table;
- * base_x/base_y are the horizontal/vertical base offsets (each shifted by 8).
+ * The node's outline is a list of points in g_field_node_angle_table. A flat
+ * node's floor is at @c height0; a slope rises from @c height0 at point C to
+ * @c height1 at point B. FieldCollisionSurfaceDef is the collision view of
+ * the same record.
  */
 struct FieldNodeDef
 {
@@ -903,11 +905,16 @@ struct FieldNodeDef
     /** 0x09 index of the owning part within that object (field_get_object_part),
         or 0xFF when the node hangs off the object itself. */
     u8 part_index;
-    u16 x_angle_index; /* 0x0A angle-table index for the horizontal step */
-    u16 y_angle_index; /* 0x0C angle-table index for the vertical step */
-    u8 _pad1[0x10 - 0xE];
-    s16 base_x; /* 0x10 horizontal base offset (<< 8) */
-    s16 base_y; /* 0x12 vertical base offset (<< 8) */
+    /** 0x0A g_field_node_angle_table index of outline point C, the end at @c height0. */
+    u16 vertex_c;
+    /** 0x0C g_field_node_angle_table index of outline point B, the end at @c height1. */
+    u16 vertex_b;
+    /** 0x0E g_field_node_angle_table index of outline point A. */
+    u16 vertex_a;
+    /** 0x10 floor height at point C; the whole floor's height when the node is flat. */
+    s16 height0;
+    /** 0x12 floor height at point B; differs from @c height0 on a slope. */
+    s16 height1;
     /** 0x14 lowest group id this definition applies to; field_collision_rasterize_groups skips
         the node when the group id being rasterised is below it. */
     s16 id_min;
@@ -929,9 +936,12 @@ struct FieldNodeDef
 /**
  * @brief Element of the scene's attached-node list (FieldScene offset 0x08).
  *
- * Each node hangs off a FieldPart and carries a swept 2D position that
- * field_update_part_sweep recomputes every frame. The same list is walked by
- * field_clear_node_accumulators in field_scene_load.c.
+ * Each node hangs off a FieldObj or FieldPart and carries a world placement
+ * plus this frame's movement. Moving the owner moves the node
+ * (field_move_object_nodes, field_move_part_nodes); a swinging part tilts it
+ * by raising its two ends separately (field_update_part_sweep).
+ * field_clear_node_accumulators clears the movement every frame.
+ * FieldCollisionNode is the collision view of the same record.
  */
 typedef struct FieldNode FieldNode;
 struct FieldNode
@@ -961,19 +971,22 @@ struct FieldNode
     /** 0x22 first tile row this node covers; also the sort key
         field_collision_rasterize_groups orders the scratch node list by. */
     s16 row_start;
-    /** 0x24 horizontal offset accumulator; the axis-0 half of the pair the two
-        node shift helpers move. */
-    s32 unk24;
-    s32 delta_x; /* 0x28 horizontal delta since the previous frame */
-    s32 delta_y; /* 0x2C vertical delta since the previous frame */
-    /** 0x30 depth offset accumulator, the axis-2 counterpart of unk24. */
-    s32 unk30;
-    /** 0x34 second bank of unk24; every shift writes both banks. */
-    s32 unk34;
-    s32 x; /* 0x38 current horizontal position */
-    s32 y; /* 0x3C current vertical position */
-    /** 0x40 second bank of unk30. */
-    s32 unk40;
+    /** 0x24 x movement this frame (24.8); cleared every frame by field_clear_node_accumulators. */
+    s32 motion_x;
+    /** 0x28 change in @c height0_offset this frame. */
+    s32 motion_height0;
+    /** 0x2C change in @c height1_offset this frame; differs from @c motion_height0 while a sweep tilts the node. */
+    s32 motion_height1;
+    /** 0x30 z movement this frame (24.8). */
+    s32 motion_z;
+    /** 0x34 x placement offset (24.8). */
+    s32 offset_x;
+    /** 0x38 height added to the definition's @c height0 end (24.8). */
+    s32 height0_offset;
+    /** 0x3C height added to the definition's @c height1 end (24.8). */
+    s32 height1_offset;
+    /** 0x40 z placement offset (24.8). */
+    s32 offset_z;
 };
 
 /** @brief Background colour word of a FieldMapObject, tested whole and read by byte. */
@@ -1118,7 +1131,7 @@ typedef struct
     /** Screen-space origin of the grid. */
     s32 x;
     s32 y;
-    /** Scene width in pixels, from FieldSceneHeader::unk30. */
+    /** Scene width in pixels, from FieldSceneHeader::map_width. */
     s32 width;
     /** Camera position in screen pixels. */
     s32 camera_x;

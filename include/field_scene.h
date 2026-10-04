@@ -9,8 +9,9 @@ typedef struct
     struct FieldSceneHeader* header;
     struct FieldObj* objects; /* head of the object list */
     struct FieldNode* nodes;  /* head of the attached-node list */
-    /** secondary node chain consulted by the collision resolver. */
-    struct FieldNode* secondary_nodes;
+    /** last node owned by a swinging part (FIELD_PART_SWEEP_MASK); its movement carries
+        movers in field_collision_resolve_move. */
+    struct FieldNode* sweep_node;
     struct FieldMarker* markers; /* head of the marker list */
     struct FieldSeq* seqs;       /* head of the sequence list */
     struct FieldAnim* anims;     /* head of the animation list */

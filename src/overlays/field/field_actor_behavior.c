@@ -250,7 +250,7 @@ void field_release_object_link(FieldActor* actor);
 #define FIELD_COLLISION_PROBE ((struct FieldCollisionQuery*)SCRATCHPAD_AT(0x40))
 
 /**
- * @brief Collision mover handed to field_collision_move_mover (same layout as in field_collision.c).
+ * @brief Collision mover handed to field_collision_resolve_move (same layout as in field_collision.c).
  * @note The low half of mode_flags doubles as the footprint depth.
  */
 struct FieldCollisionMover
@@ -885,7 +885,7 @@ void field_follow_leader_route(FieldActor* actor, s32 follower_index)
             mover->mode.mode_flags &= ~FIELD_MOVER_AIRBORNE_LOW;
             mover->collision_node = g_field_object_states[actor->object_index].collision_node;
             mover->flags = g_field_object_states[actor->object_index].collision_flags;
-            field_collision_move_mover(mover);
+            field_collision_resolve_move(mover);
             g_field_object_states[actor->object_index].collision_node = mover->collision_node;
             g_field_object_states[actor->object_index].collision_flags = mover->flags;
             actor->y = mover->height;
@@ -1144,7 +1144,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
                 mover->mode.mode_flags &= ~FIELD_MOVER_AIRBORNE_LOW;
                 mover->collision_node = g_field_object_states[movement_actor->object_index].collision_node;
                 mover->flags = g_field_object_states[movement_actor->object_index].collision_flags;
-                if ((field_collision_move_mover(mover) & FIELD_COLLISION_BLOCKED) == FIELD_COLLISION_BLOCKED)
+                if ((field_collision_resolve_move(mover) & FIELD_COLLISION_BLOCKED) == FIELD_COLLISION_BLOCKED)
                 {
                     movement_actor->control.word = movement_actor->control.word & ~FIELD_CONTROL_MOVEMENT_MASK;
                 }
