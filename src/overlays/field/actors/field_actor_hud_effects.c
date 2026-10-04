@@ -306,7 +306,6 @@ s32 field_upload_image_resource(RECT* rect, Tim* resource, s32 mode);
 int abs(int value);
 void bcopy(const void* src, void* dst, int size);
 void field_restart_actor_animation(FieldActor* actor);
-void field_clear_actor_effects(FieldActorSlot* slot);
 static inline void field_clear_link_target_flag(s32 object_index);
 FieldActor* field_lookup_actor(s32 key);
 void field_update_actor_record(s32 actor_id, void* unused);

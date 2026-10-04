@@ -1,3 +1,6 @@
+// FIELD immediate text exports used by this overlay.
+field_draw_text = 0x800A88A0;
+
 // GNAME.BIN
 
 // Shared functions called from gname (defined in MENU.BIN)

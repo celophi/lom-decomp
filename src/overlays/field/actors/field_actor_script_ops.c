@@ -249,7 +249,6 @@ extern s32 g_field_direction_animation_modes[];
 extern s32 g_field_actor_walk_animations[];
 extern s32 g_field_binding_restart_pending[FIELD_ACTOR_BINDING_COUNT];
 extern u16* g_field_actor_scripts;
-extern FieldActionRow g_field_resource_actions[];
 extern s32 g_field_actions_limited;
 extern s32 D_8010AE58;
 extern s32 g_field_boss_hud_shake_frame;
@@ -259,8 +258,6 @@ void field_collision_dilate_query(FieldCollisionQuery* query);
 void field_restart_actor_animation();
 void field_restart_actor_animation_reverse(FieldActor* actor);
 s32 field_get_next_animation_frame_count(FieldActor* actor);
-/* Defined (void); the calls pass the object index. */
-s32 field_count_free_actor_slots();
 void field_start_actor_hit_reaction(FieldActor* actor, s32 guard);
 void field_knock_down_actor(FieldActor* actor, s32 clear_recovery);
 void field_start_actor_jump();

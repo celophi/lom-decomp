@@ -21,8 +21,6 @@
 
 
 
-/** @brief Target filter value of an action that does not look for targets. */
-#define FIELD_ACTION_TARGET_NONE 0xFF
 
 /** @brief Action command map of one controller: command words and disable flags. */
 typedef struct
@@ -32,7 +30,6 @@ typedef struct
     u8 pad;
 } FieldActionCommandMap;
 
-extern FieldActionRow g_field_resource_actions[];
 extern FieldActionCommandMap g_field_action_command_maps[];
 
 /**

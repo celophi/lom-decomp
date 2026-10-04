@@ -2,6 +2,7 @@
 #define GOSUB_INTERNAL_H
 
 #include "common.h"
+#include "common/vector.h"
 #include "common/gpu_packet.h"
 #include <libgte.h>
 #include <libgpu.h>
@@ -402,13 +403,6 @@ typedef enum
     GOSUB_SORT_KEY_COUNT = 3
 } GosubSortKey;
 
-/** @brief Screen-space position pair passed by address to the glyph writer. */
-typedef struct
-{
-    s16 x;
-    s16 y;
-} GosubTextPosition;
-
 /**
  * @brief TILE-shaped GPU packet: the element renderer's packet cursor type,
  *        also used for the scroll bar and the cursor and selection highlights.
@@ -426,7 +420,7 @@ struct GosubTilePacket
 /** @brief Render context fields used by the gosub element renderer. */
 typedef struct
 {
-    s32 tag;
+    u_long tag;
     u8 reserved_0004[0x40AE];
     s16 display_buffer_index;
     u8 reserved_40b4[4];
@@ -434,7 +428,7 @@ typedef struct
 } GosubRenderContext;
 
 /** @brief Draw callback installed on a gosub element. */
-typedef u8* (*GosubElementDrawHandler)(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset);
+typedef u8* (*GosubElementDrawHandler)(u_long* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset);
 
 /** @brief Unconnected flat-line GPU packet. */
 typedef struct
@@ -666,10 +660,6 @@ void field_restore_fade_target(void);
 void field_reset_input_repeat(void);
 void field_compact_inventory(void);
 void play_menu_sfx(s32 sfx_id, s32 volume);
-void field_format_number(u8* text, s32 value, s32 wide);
-s32 equipment_combination_find(s32* record_indices, s32* quantity, s32* variant);
-u8* field_draw_text(u8* prim, s32* ot, void* text, s32 color, s32 x, s32 y, s32 mode);
-u8* field_draw_number(s32* ot, u8* prim, s32 value, s32 color, GosubTextPosition* position, s32 mode);
 void gosub_load_screen_sequence(s32* screen_sequence);
 void gosub_build_golem_parts_elements(void);
 void gosub_build_block_components_elements(void);
@@ -708,36 +698,36 @@ void gosub_clear_elements(void);
 void gosub_render_elements(GosubRenderContext* render_context);
 void gosub_update_and_render_elements(GosubRenderContext* render_context);
 void gosub_open_message_dialog(u8* message_text);
-u8* gosub_draw_message_dialog(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset);
-u8* gosub_draw_block_components_header(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset);
-u8* gosub_draw_golem_parts_header(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset);
-u8* gosub_draw_confirmation_prompt(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset);
-u8* gosub_draw_row_description(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset);
+u8* gosub_draw_message_dialog(u_long* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset);
+u8* gosub_draw_block_components_header(u_long* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset);
+u8* gosub_draw_golem_parts_header(u_long* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset);
+u8* gosub_draw_confirmation_prompt(u_long* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset);
+u8* gosub_draw_row_description(u_long* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset);
 GosubElement* gosub_allocate_element(void);
-void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, s32* ot, s32 x, s32 y, s32 flag);
-GosubTilePacket* gosub_emit_panel(GosubTilePacket* prim, s32* ot, s32 x, s32 y, s32 w, s32 h, s32 flag);
-GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, s32* ot, s32 x, s32 y, s32 w, s32 h, s32 color);
-GosubTilePacket* gosub_emit_panel_corners(SPRT* prim, s32* ot, s32 x, s32 y, s32 w, s32 h);
-u8* gosub_draw_item_list(s32* ot, u8* initial_prim, s32 x_off, s32 y_off);
-u8* gosub_draw_portrait(u8* prim, s32* ot, s32 row, s32 x, s32 y, s32 count);
-u8* gosub_draw_equipment_details(u8* packet_cursor, s32* ordering_table, s32 x_offset, s32 y_offset);
-u8* gosub_draw_composite_icon(u8* packet, s32* ot, s32 x, s32 y, s32 block_id, s32 shape);
-u8* gosub_draw_block_preview(s32* ot, u8* initial_prim, s32 x_off, s32 y_off);
+void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, u_long* ot, s32 x, s32 y, s32 flag);
+GosubTilePacket* gosub_emit_panel(GosubTilePacket* prim, u_long* ot, s32 x, s32 y, s32 w, s32 h, s32 flag);
+GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, u_long* ot, s32 x, s32 y, s32 w, s32 h, s32 color);
+GosubTilePacket* gosub_emit_panel_corners(SPRT* prim, u_long* ot, s32 x, s32 y, s32 w, s32 h);
+u8* gosub_draw_item_list(u_long* ot, u8* initial_prim, s32 x_off, s32 y_off);
+u8* gosub_draw_portrait(u8* prim, u_long* ot, s32 row, s32 x, s32 y, s32 count);
+u8* gosub_draw_equipment_details(u8* packet_cursor, u_long* ordering_table, s32 x_offset, s32 y_offset);
+u8* gosub_draw_composite_icon(u8* packet, u_long* ot, s32 x, s32 y, s32 block_id, s32 shape);
+u8* gosub_draw_block_preview(u_long* ot, u8* initial_prim, s32 x_off, s32 y_off);
 s32 gosub_handle_block_action_dialog(s32 dialog_result);
 s32 gosub_handle_sort_dialog(s32 dialog_result);
 s32 gosub_handle_backtrack_dialog(s32 dialog_result);
 s32 gosub_handle_discard_dialog(s32 dialog_result);
-u8* gosub_draw_title(s32* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset);
-u8* gosub_draw_block_action_dialog(s32* ordering_table, u8* initial_packet, s32 x_offset, s32 y_offset);
-u8* gosub_draw_sort_dialog(s32* ordering_table, u8* initial_packet, s32 x_offset, s32 y_offset);
+u8* gosub_draw_title(u_long* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset);
+u8* gosub_draw_block_action_dialog(u_long* ordering_table, u8* initial_packet, s32 x_offset, s32 y_offset);
+u8* gosub_draw_sort_dialog(u_long* ordering_table, u8* initial_packet, s32 x_offset, s32 y_offset);
 void gosub_open_block_action_dialog(void);
 void gosub_open_sort_dialog(void);
 void gosub_upload_ui_image(void);
 void gosub_upload_image_archive(GosubImageVramLayout* destinations, TimPrefix* tim);
 inline void gosub_copy_logic_block(void* dst, void* src);
 inline void gosub_copy_list_row(void* dst, void* src);
-u8* gosub_emit_glyph(u8* packet_cursor, s32* ordering_table, s32 glyph_id, s32 x, s32 y, s32 clut_index);
-u8* gosub_finish_glyph_run(u8* packet_cursor, s32* ordering_table);
+u8* gosub_emit_glyph(u8* packet_cursor, u_long* ordering_table, s32 glyph_id, s32 x, s32 y, s32 clut_index);
+u8* gosub_finish_glyph_run(u8* packet_cursor, u_long* ordering_table);
 void gosub_delete_logic_block(s32 record_index);
 void gosub_delete_list_row(s32 row);
 s32 gosub_compare_logic_blocks(s32 mode, s32 left_row_index, s32 right_row_index);

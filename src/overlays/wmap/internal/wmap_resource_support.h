@@ -29,7 +29,7 @@ enum WmapSound
 extern AkaoHeader* g_wmap_sfx_buffers[];
 
 void func_80064F14();
-void func_80064F1C(s32* source, s32* destination, s32 byte_count);
+void wmap_copy_words(s32* source, s32* destination, s32 byte_count);
 void func_80064F5C(void);
 void func_80064F64(s32 resource_index);
 void func_80065078(s32 resource_index);

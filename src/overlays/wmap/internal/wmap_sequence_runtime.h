@@ -87,6 +87,10 @@ extern s32 g_wmap_effect_fade_b;
 extern s32 g_wmap_effect_fade_c;
 /** @brief Effect model fade level (draw color scale), usually for slot d. */
 extern s32 g_wmap_effect_fade_d;
+/** @brief Auxiliary fade level shared by model, sprite and particle sequences. */
+extern s32 g_wmap_aux_effect_fade_a;
+/** @brief Auxiliary fade level shared by model, sprite and particle sequences. */
+extern s32 g_wmap_aux_effect_fade_b;
 
 /* Map state the land effects, events and the main loop share. */
 /** @brief Map cell x (first g_wmap_cells index) of the land being placed or focused. */

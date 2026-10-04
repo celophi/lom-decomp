@@ -57,7 +57,7 @@ enum ShopWindowState
 };
 
 /** @brief Draw callback installed on a shop window. */
-typedef u8* (*ShopDrawFunc)(u32* ot, u8* prim, s32 x_inset, s32 y_inset);
+typedef u8* (*ShopDrawFunc)(u_long* ot, u8* prim, s32 x_inset, s32 y_inset);
 
 /** @brief Value of ShopWindow.extent.bits.width_high for a window @p width pixels wide. */
 #define SHOP_WINDOW_WIDTH_HIGH(width) ((width) >> 8)
@@ -180,10 +180,7 @@ void field_reset_input_repeat(void);
 void field_compact_inventory(void);
 FieldItemRecord* field_find_free_inventory_record(void);
 void field_copy_inventory_record(FieldItemRecord* dst, FieldItemRecord* src);
-u8* func_800A88A0(u8* prim, u32* ot, u8* text, s32 color, s32 x, s32 y, s32 mode);
-u8* func_800A8A78(u32* ot, u8* prim, s32 value, s32 color, Vec2s* position, s32 mode);
-void func_800A8B90(u8* dst, s32 value, s32 mode);
-u8* func_800AD850(u8* prim, u32* ot, s32 x, s32 y, s32 width, s32 height, s32 display_buffer_index, s32 is_popup);
-u8* func_800AE76C(u8* prim, u32* ot, s32 x, s32 y, s32 direction);
+u8* func_800AD850(u8* prim, u_long* ot, s32 x, s32 y, s32 width, s32 height, s32 display_buffer_index, s32 is_popup);
+u8* func_800AE76C(u8* prim, u_long* ot, s32 x, s32 y, s32 direction);
 
 #endif

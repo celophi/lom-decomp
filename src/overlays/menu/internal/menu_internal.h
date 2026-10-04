@@ -6,6 +6,7 @@
 #include "main/display.h"
 #include "main/controller.h"
 #include "common/vector.h"
+#include "overlays/field/field_text.h"
 
 /* Encoded-name functions of FIELD, called while FIELD is resident. */
 void field_copy_name(u8* destination, u8* source);
@@ -626,50 +627,48 @@ SPRT* menu_fill_window_interior(SPRT* sprite, u_long* ot_entry, const MenuRectU1
 u_long* menu_build_h_edge(u_long* packet_cursor, u_long* ot_entry, const MenuRectU16* rect, s32 texture_origin);
 u_long* menu_build_v_edge(u_long* packet_cursor, u_long* ot_entry, const MenuRectU16* rect, s32 texture_origin);
 u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 allow_input);
-void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry);
-void* menu_draw_active_node_cursor(void* packet_cursor, s32* ot_entry, s32 draw_label);
-void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label);
+void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry);
+void* menu_draw_active_node_cursor(void* packet_cursor, u_long* ot_entry, s32 draw_label);
+void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label);
 s32 menu_handle_node_input(void);
 u32 menu_step_item_selection(s32 step);
 
 void menu_upload_tim(const MenuTimVramLayout* layout);
-void* menu_draw_clamped_number(s32* ot_entry, void* packet_cursor, s32 value, s32 format, Vec2s* origin, s32 style);
+void* menu_draw_clamped_number(u_long* ot_entry, void* packet_cursor, s32 value, s32 format, Vec2s* origin, s32 style);
 
-void* menu_spell_list_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
-void* menu_equipment_grid_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
-void* menu_key_item_list_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
-void* menu_ability_list_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
-void* menu_message_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
-void* menu_two_line_message_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
-void* menu_inventory_list_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, s32 active);
-void* menu_equipment_action_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
-void* menu_subtype_action_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_spell_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_equipment_grid_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_key_item_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_ability_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_message_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_two_line_message_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, s32 active);
+void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_subtype_action_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
 
-void* menu_emit_cursor(void* prim_buf, s32* ot, s32 x, s32 y, s32 active);
-void* menu_emit_draw_mode_primitive(DR_TPAGE* draw_mode, s32* ot);
+void* menu_emit_cursor(void* prim_buf, u_long* ot, s32 x, s32 y, s32 active);
+void* menu_emit_draw_mode_primitive(DR_TPAGE* draw_mode, u_long* ot);
 void* menu_emit_slot_scroll_arrows(SPRT* sprite, u_long* ot_entry, MenuSlot* slot);
-void* menu_emit_tree_scroll_arrows(SPRT* sprite, s32* ot_entry);
+void* menu_emit_tree_scroll_arrows(SPRT* sprite, u_long* ot_entry);
 
-void* menu_emit_sort_marker(void*, s32*, s16, s16);
+void* menu_emit_sort_marker(void*, u_long*, s16, s16);
 s32 menu_item_is_nondefault(const MenuItemEntry*);
 
-void* menu_draw_node_tree(void* prim_buf, s32* ot);
-void* menu_draw_node_recursive(s32 node_index, void* prim_buf, s32* ot);
+void* menu_draw_node_tree(void* prim_buf, u_long* ot);
+void* menu_draw_node_recursive(s32 node_index, void* prim_buf, u_long* ot);
 
-void* menu_emit_icon_sprite(void*, s32*, s32, s32, s32, s32, s32, s32, s32);
+void* menu_emit_icon_sprite(void*, u_long*, s32, s32, s32, s32, s32, s32, s32);
 
 void scroll_list_update_target(ScrollListState*, u32*);
 
-void* menu_item_followup_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
-void* menu_equipment_compare_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_item_followup_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_equipment_compare_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
 void field_copy_inventory_record();
 void field_compact_inventory();
 MenuItemEntry* field_find_free_inventory_record(void);
-void* menu_special_technique_list_callback(s32* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, s32 active);
+void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, s32 active);
 void menu_swap_item_records(MenuItemEntry*, MenuItemEntry*);
 
-void* func_800A88A0(void* prim, s32* ot, void* text, s32 color, s32 x, s32 y, s32 mode);
-void* func_800A8A78(s32* ot, void* prim, s32 value, s32 color, Vec2s* position, s32 mode);
 void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 value, s32 digit_count, u16* position, s32 flags);
 void* field_draw_sprite_glyph(void* packet_cursor, u_long* ordering_table, s32 glyph, u16* position, s32 flags);
 void menu_play_se(s32 sound_id, s32 volume);
@@ -677,7 +676,7 @@ void menu_play_se(s32 sound_id, s32 volume);
 s32 menu_stage_best_equipment_for_slot0(void);
 s32 menu_stage_best_equipment_for_active_slot(void);
 
-void* scroll_list_draw(void* prim_buf, s32* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active);
+void* scroll_list_draw(void* prim_buf, u_long* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active);
 
 MenuItemEntry* menu_find_best_equipment_for_slot0(void);
 MenuItemEntry* menu_find_best_equipment_for_active_slot(void);
@@ -929,9 +928,9 @@ static inline MenuCharacterRecord* menu_character_record(SavedGameLayout* contex
  * @param text Encoded text to draw.
  * @return First free primitive byte after the label.
  */
-static inline void* menu_emit_content_label(void* packet_cursor, s32* ot, void* text)
+static inline void* menu_emit_content_label(void* packet_cursor, u_long* ot, u8* text)
 {
-    return func_800A88A0(packet_cursor, ot, text, 1, 0xA0, 0xCA, 2);
+    return field_draw_text(packet_cursor, ot, text, 1, 0xA0, 0xCA, 2);
 }
 
 /**

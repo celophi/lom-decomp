@@ -47,7 +47,7 @@ class SourceTest(unittest.TestCase):
             (field.TRANSITION_SIZE, "src/overlays/field/scene/field_scene_transition.c", "FIELD_TRANSITION_TILE_SIZE"),
             (specs["g_field_party_palettes"].count, "src/overlays/field/scene/field_scene_transition.c", "FIELD_PARTY_PALETTE_COUNT"),
             (specs["g_field_command_patterns"].count, "src/overlays/field/actors/field_command_history.c", "FIELD_COMMAND_PATTERN_COUNT"),
-            (specs["g_equipment_combination_quantity_scale"].count, "src/overlays/field/records/field_equipment_combination_rules.c", "EQUIPMENT_COMBINATION_RULE_COUNT"),
+            (specs["g_golem_logic_block_level_scale"].count, "src/overlays/field/records/field_equipment_combination_rules.c", "GOLEM_LOGIC_BLOCK_RECIPE_COUNT"),
         )
         for value, source, name in checks:
             with self.subTest(name=name):

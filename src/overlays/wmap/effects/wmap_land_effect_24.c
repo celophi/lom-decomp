@@ -129,7 +129,6 @@ extern WmapColor3 D_80182D80;
 extern WmapColor3 D_80182D8C;
 extern WmapColor3 D_80182D94;
 extern s32 D_801B25D8;
-extern s32 D_801B25DC;
 extern u32 g_wmap_land_effect_24_step;
 extern s32 g_wmap_land_effect_24_timer;
 extern u32 g_wmap_land_effect_24_timeline_step;
@@ -488,7 +487,7 @@ void wmap_land_effect_24_sequence_12_step_01(void)
 {
     s32 i;
 
-    D_801B25DC = 1;
+    g_wmap_aux_effect_fade_a = 1;
     D_800DCEB0 = 12;
     for (i = 120; i < 156; i++)
     {
@@ -1025,7 +1024,7 @@ WMAP_STEP_RESET(wmap_land_effect_24_sequence_12_step_00, g_wmap_land_effect_24_s
  * @brief Update the particles and increase the shared fade value until the timer expires.
  */
 WMAP_STEP_UPDATE_AND_RAMP(wmap_land_effect_24_sequence_12_step_02, g_wmap_land_effect_24_sequence_12_step, g_wmap_land_effect_24_sequence_12_timer,
-                          D_801B25DC, 8,
+                          g_wmap_aux_effect_fade_a, 8,
                           func_8006B328(0x78, 0x9C, 2, -1, -3, -8, 0, 0x1F, -0xB4, 0x190, -0xA0, 0x190, 0, 0x80, 0, 8, 2))
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_24_sequence_12_step_03, g_wmap_land_effect_24_sequence_12_step, g_wmap_land_effect_24_sequence_12_timer, 0x12,

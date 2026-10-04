@@ -3,6 +3,14 @@
 #include "../internal/wmap_effect_backdrop.h"
 #include <libgpu.h>
 
+#define WMAP_MESH_TRIANGLE_COUNT 176
+#define WMAP_MESH_VERTEX_COUNT (WMAP_MESH_TRIANGLE_COUNT * 3)
+#define WMAP_MESH_OT_INDEX 9
+#define WMAP_MESH_TPAGE 0x7B54
+#define WMAP_MESH_PACKET_WORDS 6
+#define WMAP_MESH_POLY_G3_CODE 0x32
+#define WMAP_MESH_TRANSITION_FRAMES 16
+
 /** @brief Gouraud triangle packet with three packed screen coordinates. */
 typedef struct
 {
@@ -52,46 +60,41 @@ typedef struct
     WmapFixed y;
 } WmapFixedPoint;
 
-extern WmapPoint D_800D0FD4[];
-extern WmapTriangle D_800D1814[];
-extern WmapTriangle D_801B10B8[];
-extern WmapFixedPoint D_8013A188[];
-extern WmapFixedPoint* D_801B23F8;
+extern WmapPoint g_wmap_transition_mesh_vertices[];
+extern WmapTriangle g_wmap_transition_mesh_triangles_0[];
+extern WmapTriangle g_wmap_transition_mesh_triangles_1[];
+extern WmapFixedPoint g_wmap_transition_mesh_positions[];
+extern WmapFixedPoint* g_wmap_transition_mesh_motion;
 
-extern s32 D_8011CF70;
 extern s32 g_wmap_frame_count;
 extern s32 g_wmap_transition_mesh_hidden;
-extern s32 D_80139960;
-extern s32 D_8011CF58;
-extern s32 D_80182D70;
-extern WmapFixedPoint D_800D2B54[];
-extern WmapFixedPoint D_800D3BD4[];
+extern WmapFixedPoint g_wmap_transition_mesh_motion_0[];
+extern WmapFixedPoint g_wmap_transition_mesh_motion_1[];
 
 /** @brief Initialize triangle packets in both buffers and expand their coordinates. */
-void func_8006D520(void)
+void wmap_init_transition_mesh(void)
 {
     s32 i;
 
-    func_8006D8F0(0);
-    for (i = 0; i < 176; i++)
+    wmap_select_mesh_motion(0);
+    for (i = 0; i < WMAP_MESH_TRIANGLE_COUNT; i++)
     {
-        D_800D1814[i].header.packet.length = 6;
-        D_800D1814[i].code = 0x32;
-        /* Copy packed X/Y pairs into the packet coordinate fields. */
-        *(s32*)&D_800D1814[i].x0 = D_800D0FD4[i * 3].packed;
-        *(s32*)&D_800D1814[i].x1 = D_800D0FD4[i * 3 + 1].packed;
-        *(s32*)&D_800D1814[i].x2 = D_800D0FD4[i * 3 + 2].packed;
-        D_801B10B8[i] = D_800D1814[i];
+        g_wmap_transition_mesh_triangles_0[i].header.packet.length = WMAP_MESH_PACKET_WORDS;
+        g_wmap_transition_mesh_triangles_0[i].code = WMAP_MESH_POLY_G3_CODE;
+        *(s32*)&g_wmap_transition_mesh_triangles_0[i].x0 = g_wmap_transition_mesh_vertices[i * 3].packed;
+        *(s32*)&g_wmap_transition_mesh_triangles_0[i].x1 = g_wmap_transition_mesh_vertices[i * 3 + 1].packed;
+        *(s32*)&g_wmap_transition_mesh_triangles_0[i].x2 = g_wmap_transition_mesh_vertices[i * 3 + 2].packed;
+        g_wmap_transition_mesh_triangles_1[i] = g_wmap_transition_mesh_triangles_0[i];
     }
-    for (i = 0; i < 528; i++)
+    for (i = 0; i < WMAP_MESH_VERTEX_COUNT; i++)
     {
-        D_8013A188[i].x.value = D_800D0FD4[i].point.x << 16;
-        D_8013A188[i].y.value = D_800D0FD4[i].point.y << 16;
+        g_wmap_transition_mesh_positions[i].x.value = g_wmap_transition_mesh_vertices[i].point.x << 16;
+        g_wmap_transition_mesh_positions[i].y.value = g_wmap_transition_mesh_vertices[i].point.y << 16;
     }
 }
 
 /** @brief Update the transition mesh and append its triangles for rendering. */
-void func_8006D674(void)
+void wmap_draw_transition_mesh(void)
 {
     WmapTriangle *triangles;
     s32 i;
@@ -99,97 +102,97 @@ void func_8006D674(void)
 
     if (g_wmap_transition_mesh_hidden != 1)
     {
-        if (D_80139960 != 0)
+        if (g_wmap_mesh_transition_direction != 0)
         {
             if (g_wmap_frame_count & 1)
             {
-                triangles = D_800D1814;
+                triangles = g_wmap_transition_mesh_triangles_0;
             }
             else
             {
-                triangles = D_801B10B8;
+                triangles = g_wmap_transition_mesh_triangles_1;
             }
-            if (D_8011CF70 >= 2)
+            if (g_wmap_mesh_transition_frames >= 2)
             {
-                for (i = 0; i < 528; i++)
+                for (i = 0; i < WMAP_MESH_VERTEX_COUNT; i++)
                 {
-                    D_8013A188[i].x.value += D_80139960 * D_801B23F8[i].x.value;
-                    D_8013A188[i].y.value += D_80139960 * D_801B23F8[i].y.value;
+                    g_wmap_transition_mesh_positions[i].x.value += g_wmap_mesh_transition_direction * g_wmap_transition_mesh_motion[i].x.value;
+                    g_wmap_transition_mesh_positions[i].y.value += g_wmap_mesh_transition_direction * g_wmap_transition_mesh_motion[i].y.value;
                 }
             }
-            for (i = 0; i < 176; i++)
+            for (i = 0; i < WMAP_MESH_TRIANGLE_COUNT; i++)
             {
-                triangles->x0 = D_8013A188[i * 3].x.parts.whole;
-                triangles->y0 = D_8013A188[i * 3].y.parts.whole;
-                triangles->x1 = D_8013A188[i * 3 + 1].x.parts.whole;
-                triangles->y1 = D_8013A188[i * 3 + 1].y.parts.whole;
-                triangles->x2 = D_8013A188[i * 3 + 2].x.parts.whole;
-                triangles->y2 = D_8013A188[i * 3 + 2].y.parts.whole;
+                triangles->x0 = g_wmap_transition_mesh_positions[i * 3].x.parts.whole;
+                triangles->y0 = g_wmap_transition_mesh_positions[i * 3].y.parts.whole;
+                triangles->x1 = g_wmap_transition_mesh_positions[i * 3 + 1].x.parts.whole;
+                triangles->y1 = g_wmap_transition_mesh_positions[i * 3 + 1].y.parts.whole;
+                triangles->x2 = g_wmap_transition_mesh_positions[i * 3 + 2].x.parts.whole;
+                triangles->y2 = g_wmap_transition_mesh_positions[i * 3 + 2].y.parts.whole;
                 triangles++;
             }
-            remaining = D_8011CF70 - 1;
-            D_8011CF70 = remaining;
+            remaining = g_wmap_mesh_transition_frames - 1;
+            g_wmap_mesh_transition_frames = remaining;
             if (remaining == 0)
             {
-                D_80139960 = 0;
+                g_wmap_mesh_transition_direction = 0;
             }
         }
         if (g_wmap_frame_count & 1)
         {
-            triangles = D_800D1814;
+            triangles = g_wmap_transition_mesh_triangles_0;
         }
         else
         {
-            triangles = D_801B10B8;
+            triangles = g_wmap_transition_mesh_triangles_1;
         }
-        for (i = 0; i < 176; i++)
+        for (i = 0; i < WMAP_MESH_TRIANGLE_COUNT; i++)
         {
-            addPrim(&g_wmap_current_frame->ordering_table[9], triangles);
+            addPrim(&g_wmap_current_frame->ordering_table[WMAP_MESH_OT_INDEX], triangles);
             triangles++;
         }
-        func_8006534C(0x7B54, 9);
+        func_8006534C(WMAP_MESH_TPAGE, WMAP_MESH_OT_INDEX);
     }
 }
 
 /**
- * @brief Change the current effect selection and retain the previous selection.
- * @param selection New effect selection.
+ * @brief Start a mesh transition when its selection changes.
+ * @param selection Zero reverses the vertex motion; nonzero moves it forward.
  */
-void func_8006D870(s32 selection)
+void wmap_start_mesh_transition(s32 selection)
 {
     s32 previous_selection;
 
-    if (selection != D_8011CF58)
+    if (selection != g_wmap_mesh_transition_selection)
     {
-        if (D_80139960 != 0)
+        if (g_wmap_mesh_transition_direction != 0)
         {
             func_80064F14();
         }
         if (selection == 0)
         {
-            D_80139960 = -1;
+            g_wmap_mesh_transition_direction = -1;
         }
         else
         {
-            D_80139960 = 1;
+            g_wmap_mesh_transition_direction = 1;
         }
-        D_8011CF70 = 0x10;
-        previous_selection = D_8011CF58;
-        D_8011CF58 = selection;
-        D_80182D70 = previous_selection;
+        g_wmap_mesh_transition_frames = WMAP_MESH_TRANSITION_FRAMES;
+        previous_selection = g_wmap_mesh_transition_selection;
+        g_wmap_mesh_transition_selection = selection;
+        g_wmap_mesh_previous_selection = previous_selection;
     }
 }
 
 /**
- * @brief Select one of the two world-map data buffers.
- * @param use_second Nonzero selects the second buffer.
+ * @brief Select the per-vertex motion table for the transition mesh.
+ * @param use_second Nonzero selects the second motion table.
  */
-void func_8006D8F0(s32 use_second)
+void wmap_select_mesh_motion(s32 use_second)
 {
     if (use_second != 0)
     {
-        D_801B23F8 = D_800D3BD4;
+        g_wmap_transition_mesh_motion = g_wmap_transition_mesh_motion_1;
         return;
     }
-    D_801B23F8 = D_800D2B54;
+    g_wmap_transition_mesh_motion = g_wmap_transition_mesh_motion_0;
 }

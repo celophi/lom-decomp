@@ -261,7 +261,6 @@ void field_restart_actor_animation(FieldActor* actor);
 void field_store_entry_settings();
 
 extern FieldRenderHalf* g_field_render_context;
-extern FieldActionRow g_field_resource_actions[];
 extern s32 g_field_direction_animation_modes[];
 extern FieldDirectionOffset g_field_direction_offsets[];
 extern FieldTransitionFade g_field_fade_target;

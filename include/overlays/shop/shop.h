@@ -7,7 +7,7 @@
 /** @brief Frame context the host passes to shop_update; its first word is the ordering-table entry. */
 typedef struct
 {
-    u32 ot;
+    u_long ot;
     u8 unknown_0x0004[0x40AE];
     s16 display_buffer_index;
 } ShopFrameContext;

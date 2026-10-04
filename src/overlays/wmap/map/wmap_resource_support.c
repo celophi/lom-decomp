@@ -5,6 +5,10 @@
 #include "../internal/wmap_sprite_render.h"
 #include "main/audio/akao_cmd.h"
 
+#define WMAP_COPY_WORD_BYTES 4
+#define WMAP_COPY_WORD_SHIFT 2
+#define WMAP_COPY_END -1
+
 /** @brief Unaligned eight-byte rectangle in a texture block. */
 typedef struct
 {
@@ -57,27 +61,27 @@ void func_80064F14(void)
 }
 
 /**
- * @brief Copy whole words from source to destination.
- * @param source Source words.
- * @param destination Destination words.
- * @param byte_count Nonnegative byte count; trailing partial words are ignored.
+ * @brief Copy complete words forward between aligned buffers.
+ * @param source Four-byte-aligned source words.
+ * @param destination Four-byte-aligned destination words.
+ * @param byte_count Nonnegative byte length; partial trailing words are ignored.
  */
-void func_80064F1C(s32* source, s32* destination, s32 byte_count)
+void wmap_copy_words(s32* source, s32* destination, s32 byte_count)
 {
-    s32 limit = byte_count;
+    s32 copy_limit = byte_count;
     if (byte_count < 0)
     {
-        limit = byte_count + 3;
+        copy_limit = byte_count + WMAP_COPY_WORD_BYTES - 1;
     }
-    byte_count = limit >> 2;
-    if (--byte_count != -1)
+    byte_count = copy_limit >> WMAP_COPY_WORD_SHIFT;
+    if (--byte_count != WMAP_COPY_END)
     {
         do
         {
-            limit = -1;
+            copy_limit = WMAP_COPY_END;
             *destination++ = *source++;
             byte_count--;
-        } while (byte_count != limit);
+        } while (byte_count != copy_limit);
     }
 }
 

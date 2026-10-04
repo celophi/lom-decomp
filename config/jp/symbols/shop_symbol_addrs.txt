@@ -71,9 +71,9 @@ g_shop_scroll_frames = 0x80145868;
 
 
 // US ELF names not listed above (splat placeholders shared with the C sources).
-func_800A88A0 = 0x800A8750;
-func_800A8A78 = 0x800A8928;
-func_800A8B90 = 0x800A8A40;
+field_draw_text = 0x800A8750;
+field_draw_number = 0x800A8928;
+field_format_number = 0x800A8A40;
 func_800AD850 = 0x800AD4A4;
 func_800AE76C = 0x800AE3C0;
 D_800EC3C4    = 0x800EBF90;

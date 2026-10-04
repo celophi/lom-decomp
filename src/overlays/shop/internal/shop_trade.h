@@ -3,7 +3,7 @@
 
 #include "shop_internal.h"
 
-u8* shop_draw_notice_window(u32* ot, u8* prim, s32 x_inset, s32 y_inset);
+u8* shop_draw_notice_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset);
 void shop_open_buy_prompt(void);
 void shop_open_sell_prompt(void);
 

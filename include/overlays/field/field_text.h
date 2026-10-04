@@ -2,6 +2,7 @@
 #define FIELD_TEXT_H
 
 #include "common.h"
+#include "common/vector.h"
 struct SPRT;
 
 typedef struct FieldOrderingTags FieldOrderingTags;
@@ -56,5 +57,50 @@ void field_text_close_window(s32 slot);
 s32 field_text_get_status(s32 slot);
 s32 field_text_get_choice(s32 slot);
 void field_text_format_number(s32 window_index, u32 value, u8 digits);
+
+/**
+ * @brief Draw encoded text as glyph sprites followed by a draw-mode packet.
+ * @param sprite_cursor First free sprite in the primitive arena.
+ * @param ot Ordering-table tag receiving the packets.
+ * @param text Encoded text to draw.
+ * @param text_color Text colour passed to the glyph builder.
+ * @param x Horizontal position interpreted by the alignment flags.
+ * @param y Top edge of the text.
+ * @param flags Alignment and optional glyph outline flags.
+ * @return First free primitive after the text and its draw-mode packet.
+ */
+void* field_draw_text(struct SPRT* sprite_cursor, u_long* ot, u8* text, s32 text_color, s32 x, s32 y, s32 flags);
+
+/**
+ * @brief Draw a signed decimal number as glyph sprites.
+ * @param ot Ordering-table tag receiving the packets.
+ * @param sprite_cursor First free sprite in the primitive arena.
+ * @param value Number to draw.
+ * @param text_color Text colour.
+ * @param position Screen coordinates of the text.
+ * @param flags Alignment and optional glyph outline flags.
+ * @return First free primitive after the number.
+ */
+void* field_draw_number(u_long* ot, struct SPRT* sprite_cursor, s32 value, s32 text_color, Vec2s* position, s32 flags);
+
+/**
+ * @brief Draw a signed decimal number, requesting double-byte digits in JP.
+ * @param ot Ordering-table tag receiving the packets.
+ * @param sprite_cursor First free sprite in the primitive arena.
+ * @param value Number to draw.
+ * @param text_color Text colour.
+ * @param position Screen coordinates of the text.
+ * @param flags Alignment and optional glyph outline flags.
+ * @return First free primitive after the number.
+ */
+void* field_draw_number_wide(u_long* ot, struct SPRT* sprite_cursor, s32 value, s32 text_color, Vec2s* position, s32 flags);
+
+/**
+ * @brief Format a signed decimal number of up to eight digits as encoded text.
+ * @param text Buffer receiving the digits, optional minus sign and terminator.
+ * @param number Number to format; negative values use the FIELD text bank's minus sign.
+ * @param wide_request Non-zero requests double-byte digits in JP; ignored in US.
+ */
+void field_format_number(u8* text, s32 number, s32 wide_request);
 
 #endif

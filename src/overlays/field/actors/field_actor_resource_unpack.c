@@ -664,7 +664,7 @@ static void field_upload_actor_texture(u8* tim, s32 owner)
     s32 width;
     s32 height;
 
-    tim += sizeof(u32); /* skip the TIM id word */
+    tim = (u8*)&((Tim*)tim)->flags;
     cursor = tim;
     g_field_texture_slot_flags[field_owner_tag(owner)] = *cursor;
     cursor += sizeof(u32);
@@ -688,11 +688,11 @@ static void field_upload_actor_texture(u8* tim, s32 owner)
         LoadImage(&rect, (u_long*)cursor);
         cursor = cursor + clut_block_size - FIELD_TIM_BLOCK_HEADER;
     }
-    cursor += FIELD_TIM_BLOCK_HEADER - sizeof(TimDimensions);
+    cursor = (u8*)&((TimBlock*)cursor)->dimensions;
     width = *(u16*)cursor;
-    cursor += 2;
+    cursor += sizeof(u16);
     height = *(u16*)cursor;
-    cursor += 2;
+    cursor += sizeof(u16);
     if (owner < FIELD_SHARED_OWNER)
     {
         setRECT(&rect, FIELD_ACTOR_TEXTURE_VRAM_X + owner * FIELD_ACTOR_TEXTURE_VRAM_WIDTH, FIELD_ACTOR_TEXTURE_VRAM_Y, width, height);

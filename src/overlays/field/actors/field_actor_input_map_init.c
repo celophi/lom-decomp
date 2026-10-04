@@ -28,7 +28,6 @@ extern u8 g_field_weapon_action_default_params[FIELD_WEAPON_ACTION_COUNT];
 extern u8 g_field_weapon_action_blunt_params[FIELD_WEAPON_ACTION_COUNT];
 /** @brief Action parameters of bows. */
 extern u8 g_field_weapon_action_bow_params[FIELD_WEAPON_ACTION_COUNT];
-extern FieldActionRow g_field_resource_actions[];
 
 /**
  * @brief Reset both action command maps and the player action slots to their defaults.

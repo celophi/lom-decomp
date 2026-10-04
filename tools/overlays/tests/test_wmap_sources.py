@@ -113,7 +113,7 @@ class SourceTest(unittest.TestCase):
         self.assertEqual(len(re.findall(r"\bu8\s+\w+;", label)), 4)
         self.assertEqual(struct.calcsize("<" + specs["D_800D040C"].format), 6)
         for symbol, size in (("g_wmap_game_continue_prompt", 20), ("g_wmap_backdrop_front_quads", 40),
-                             ("D_800D06BC", 36), ("g_wmap_menu_triangles", 28), ("D_800D1814", 28)):
+                             ("D_800D06BC", 36), ("g_wmap_menu_triangles", 28), ("g_wmap_transition_mesh_triangles_0", 28)):
             self.assertEqual(struct.calcsize("<" + specs[symbol].format), size, symbol)
 
     def test_table_layouts_have_unique_symbols_and_consistent_fields(self):

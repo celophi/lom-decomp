@@ -475,8 +475,6 @@ void addhero_erase_placeholder_files(void);
 void addhero_reset_entry_ranks(void);
 
 /* FIELD functions used by ADDHERO; FIELD stays resident while the overlay runs. */
-void* field_draw_text(void* prim, u_long* ot, u8* text, s32 text_color, s32 x, s32 y, s32 flags);
-void* field_draw_number(u_long* ot, void* prim, s32 value, s32 text_color, DVECTOR* position, s32 flags);
 void field_copy_portrait_palette(void* dest, s32 index);
 void field_copy_golem_portrait_palette(u8* destination, s32 palette);
 void field_flag_known_save(char* file_name);

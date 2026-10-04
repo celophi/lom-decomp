@@ -1,4 +1,5 @@
 #include "internal/cload_internal.h"
+#include "overlays/field/field_text.h"
 #include "main/display.h"
 #include <libetc.h>
 #include "main/controller.h"
@@ -548,23 +549,23 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
     case 0xF8:
         do
         {
-            prim = func_800A88A0(prim, ot, CLOAD_TEXT_AT(g_cload_text_no_lom_save_data, 26), 1, -x_offset + 0x84, -y_offset, 2);
+            prim = field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_no_lom_save_data, 26), 1, -x_offset + 0x84, -y_offset, 2);
         } while (0);
         break;
     case 0xF9:
-        prim = func_800A88A0(prim, ot, CLOAD_TEXT_AT(g_cload_text_no_lom_save_data, 26), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_no_lom_save_data, 26), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFA:
-        prim = func_800A88A0(prim, ot, CLOAD_TEXT_AT(g_cload_text_not_enough_blocks, 1), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_not_enough_blocks, 1), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFD:
-        prim = func_800A88A0(prim, ot, CLOAD_TEXT_AT(g_cload_text_no_memory_card, 2), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_no_memory_card, 2), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFB:
-        prim = func_800A88A0(prim, ot, CLOAD_TEXT_AT(g_cload_text_card_access_failed, 8), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_card_access_failed, 8), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFC:
-        prim = func_800A88A0(prim, ot, CLOAD_TEXT_AT(g_cload_text_no_save_data, 9), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_no_save_data, 9), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFE:
         break;
@@ -580,9 +581,9 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
         case 0xFF:
             x = -x_offset + 0x84;
             text_table = &g_cload_text_check_memory_card;
-            prim = func_800A88A0(prim, ot, CLOAD_TEXT(text_table, 0), 1, x, -y_offset, 2);
-            prim = func_800A88A0(prim, ot, CLOAD_TEXT(text_table, 15), 1, x, 0xE - y_offset, 2);
-            prim = func_800A88A0(prim, ot, CLOAD_TEXT(text_table, 89), 1, x, 0x1C - y_offset, 2);
+            prim = field_draw_text(prim, ot, CLOAD_TEXT(text_table, 0), 1, x, -y_offset, 2);
+            prim = field_draw_text(prim, ot, CLOAD_TEXT(text_table, 15), 1, x, 0xE - y_offset, 2);
+            prim = field_draw_text(prim, ot, CLOAD_TEXT(text_table, 89), 1, x, 0x1C - y_offset, 2);
             break;
         }
         i = 0;
@@ -593,7 +594,7 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
             s32 *flag_ptr;
             u16 marker_offset;
             uintptr_t entry;
-            DVECTOR pos;
+            Vec2s pos;
             u16 *text_table;
 
             off = i;
@@ -609,40 +610,40 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
                     flag_ptr = (s32 *)((u8 *)g_cload_entry_ranks + off);
                     if (*flag_ptr >= 0)
                     {
-                        pos.vx = base_x + CLOAD_ENTRY_VALUE_X;
-                        pos.vy = row_y;
-                        prim = func_800A88A0(func_800A8A78(ot, prim, *(s32*)((u8*)g_card_entry_suffix_values + off), 1, &pos, 0), ot,
+                        pos.x = base_x + CLOAD_ENTRY_VALUE_X;
+                        pos.y = row_y;
+                        prim = field_draw_text(field_draw_number(ot, prim, *(s32*)((u8*)g_card_entry_suffix_values + off), 1, &pos, 0), ot,
                                              CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_number_prefix), 1, base_x + 0x70, row_y, 0);
                         if ((g_cload_rank_count - 1) == *flag_ptr)
                         {
                             marker_offset = text_table[27];
-                            prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, marker_offset), 1, base_x + CLOAD_ENTRY_MARKER_X, row_y, 0);
+                            prim = field_draw_text(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, marker_offset), 1, base_x + CLOAD_ENTRY_MARKER_X, row_y, 0);
                         }
                         else if (*flag_ptr < 2)
                         {
                             marker_offset = text_table[28];
-                            prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, marker_offset), 1, base_x + CLOAD_ENTRY_MARKER_X, row_y, 0);
+                            prim = field_draw_text(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, marker_offset), 1, base_x + CLOAD_ENTRY_MARKER_X, row_y, 0);
                         }
                         if (*skip_hex_digits((u8*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry + 0xC)) == 0x2B)
                         {
-                            prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_plus_marker), 1, 0xF8 - x_offset, row_y, 1);
+                            prim = field_draw_text(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_plus_marker), 1, 0xF8 - x_offset, row_y, 1);
                         }
                     }
                     if (strncmp(g_lom_save_filename_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry), 0xC) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_mana), 1, base_x, row_y, 0);
+                        prim = field_draw_text(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_mana), 1, base_x, row_y, 0);
                     }
                     else if (strncmp(g_lom_pocketstation_filename_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry), 0xC) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_alt_save), 1, base_x, row_y, 0);
+                        prim = field_draw_text(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_alt_save), 1, base_x, row_y, 0);
                     }
                     else if (strncmp(g_new_save_entry_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry), 8) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_new_save), 1, base_x, row_y, 0);
+                        prim = field_draw_text(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_new_save), 1, base_x, row_y, 0);
                     }
                     else
                     {
-                        prim = func_800A88A0(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_other_game), 1, base_x, row_y, 0);
+                        prim = field_draw_text(prim, ot, CLOAD_TEXT_BY_OFFSET(text_table, g_cload_text_other_game), 1, base_x, row_y, 0);
                     }
                 }
                 entry += CARD_DIRECTORY_ENTRY_BYTES;
@@ -686,7 +687,7 @@ void *cload_draw_header_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset
 {
     RECT unused;
 
-    return func_800A88A0(prim, ot, CLOAD_TEXT_AT(g_cload_text_load, 22), 1, -x_offset + 0x50, -y_offset, 2);
+    return field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_load, 22), 1, -x_offset + 0x50, -y_offset, 2);
 }
 
 /**
@@ -709,7 +710,7 @@ void *cload_draw_card_slot0_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
     {
         color = 3;
     }
-    return func_800A88A0(prim, ot, text, color, -x_offset + CLOAD_CARD_LABEL_TEXT_X, -y_offset, 2);
+    return field_draw_text(prim, ot, text, color, -x_offset + CLOAD_CARD_LABEL_TEXT_X, -y_offset, 2);
 }
 
 /**
@@ -732,7 +733,7 @@ void *cload_draw_card_slot1_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
     {
         color = 3;
     }
-    return func_800A88A0(prim, ot, text, color, -x_offset + CLOAD_CARD_LABEL_TEXT_X, -y_offset, 2);
+    return field_draw_text(prim, ot, text, color, -x_offset + CLOAD_CARD_LABEL_TEXT_X, -y_offset, 2);
 }
 
 /**
@@ -749,7 +750,7 @@ void *cload_draw_card_slot1_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
 void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     void* result;
-    DVECTOR pos;
+    Vec2s pos;
     u8 name[0x100];
     s32 party_icon[3];
 
@@ -775,9 +776,9 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
         s32 x = -x_offset;
         u16* text_table;
 
-        result = func_800A88A0(prim, ot, CLOAD_TEXT_AT(g_cload_text_new_save_prompt, 20), 1, x, -y_offset, 0);
+        result = field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_new_save_prompt, 20), 1, x, -y_offset, 0);
         text_table = CLOAD_TEXT_TABLE(g_cload_text_new_save_prompt, 20);
-        return func_800A88A0(result, ot, CLOAD_TEXT(text_table, 21), 1, x, 0x10 - y_offset, 0);
+        return field_draw_text(result, ot, CLOAD_TEXT(text_table, 21), 1, x, 0x10 - y_offset, 0);
     }
     else
     {
@@ -873,29 +874,29 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
 
                     base_y = shown_save->play_time;
 
-                    pos.vx = time_x;
-                    pos.vy = (s16)y;
+                    pos.x = time_x;
+                    pos.y = (s16)y;
                     hours = base_y / 216000;
-                    result = func_800A8A78(ot, result, hours, 1, &pos, 1);
-                    result = func_800A88A0(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, 25), 1, x + CLOAD_DETAILS_SEPARATOR_X, y, 0);
+                    result = field_draw_number(ot, result, hours, 1, &pos, 1);
+                    result = field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, 25), 1, x + CLOAD_DETAILS_SEPARATOR_X, y, 0);
                     base_y = (base_y / 3600) - (hours * 0x3C);
                     if (base_y < 0xA)
                     {
-                        pos.vx = (s16)(x + CLOAD_DETAILS_ZERO_X);
-                        pos.vy = (s16)y;
-                        result = func_800A8A78(ot, result, 0, 1, &pos, 1);
+                        pos.x = (s16)(x + CLOAD_DETAILS_ZERO_X);
+                        pos.y = (s16)y;
+                        result = field_draw_number(ot, result, 0, 1, &pos, 1);
                     }
-                    pos.vx = (s16)(x + CLOAD_DETAILS_MINUTES_X);
-                    pos.vy = (s16)y;
-                    result = func_800A8A78(ot, result, base_y, 1, &pos, 1);
-                    result = func_800A88A0(result, ot, shown_save->summary_name, 1, x + CLOAD_DETAILS_NAME_X, y + 0x10, 0);
-                    result = func_800A88A0(result, ot, CLOAD_TEXT(g_cload_location_names, shown_save->track.bits.music_track), 1, x + CLOAD_DETAILS_NAME_X,
+                    pos.x = (s16)(x + CLOAD_DETAILS_MINUTES_X);
+                    pos.y = (s16)y;
+                    result = field_draw_number(ot, result, base_y, 1, &pos, 1);
+                    result = field_draw_text(result, ot, shown_save->summary_name, 1, x + CLOAD_DETAILS_NAME_X, y + 0x10, 0);
+                    result = field_draw_text(result, ot, CLOAD_TEXT(g_cload_location_names, shown_save->track.bits.music_track), 1, x + CLOAD_DETAILS_NAME_X,
                                            y + 0x20, 0);
                 }
             }
             else
             {
-                result = func_800A88A0(result, ot, CLOAD_TEXT_AT(g_cload_text_version_error, 42), 1, -x_offset, -y_offset, 0);
+                result = field_draw_text(result, ot, CLOAD_TEXT_AT(g_cload_text_version_error, 42), 1, -x_offset, -y_offset, 0);
             }
         }
         else

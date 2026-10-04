@@ -194,6 +194,6 @@ static void field_golem_stamp_block_shape(s32 index, s32 rotation, s32 x, s32 y)
                (y + table.shapes[GOLEM.logic_blocks[index].f.shape].rotations[rotation].parts[i].y) * GOLEM_GRID_WIDTH;
         GOLEM.grid[cell].owner = index;
         GOLEM.grid[cell].block_id = GOLEM.logic_blocks[index].f.id;
-        GOLEM.grid[cell].detail = GOLEM.logic_blocks[index].f.quantity;
+        GOLEM.grid[cell].detail = GOLEM.logic_blocks[index].f.level;
     }
 }

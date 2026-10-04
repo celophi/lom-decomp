@@ -1,4 +1,5 @@
 #include "internal/gosub_internal.h"
+#include "overlays/field/field_text.h"
 
 /**
  * @brief List the color materials held, each with its color.
@@ -162,7 +163,7 @@ void gosub_build_logic_block_list(void)
     for (i = 0; i < g_saved_game_ctx->logic_block_count; i++)
     {
         g_gosub_rows[i].detail_group = g_saved_game_ctx->logic_blocks[i].f.id;
-        g_gosub_rows[i].detail_id = g_saved_game_ctx->logic_blocks[i].f.quantity;
+        g_gosub_rows[i].detail_id = g_saved_game_ctx->logic_blocks[i].f.level;
         row_name = g_gosub_text_buffers[i];
         encoded_text_copy(row_name, GOSUB_TEXT(GOSUB_TEXT_LOGIC_BLOCK_NAMES, g_gosub_rows[i].detail_group));
         if (g_gosub_rows[i].detail_id != 0)

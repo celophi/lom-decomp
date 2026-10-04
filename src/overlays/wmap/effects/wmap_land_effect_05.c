@@ -57,7 +57,6 @@ extern s32 g_wmap_land_effect_05_sequence_5_timer;
 extern u8* D_8011CF2C;
 extern s32 D_801B25D8;
 extern s32 g_wmap_land_effect_05_sequence_6_timer;
-extern s32 D_801B25DC;
 extern s32 g_wmap_land_effect_05_sequence_7_timer;
 extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_05_sequence_8_timer;
@@ -350,11 +349,11 @@ void wmap_land_effect_05_sequence_7_step_02(void)
     }
     PushMatrix();
     wmap_set_model_transform(&D_801B2660, &D_801B2678);
-    wmap_draw_model_default(D_8011CF30, 0, 0xC, 0x35, 0x7840, 1, D_801B25DC);
-    D_801B25DC += 1;
-    if (D_801B25DC >= 0x42)
+    wmap_draw_model_default(D_8011CF30, 0, 0xC, 0x35, 0x7840, 1, g_wmap_aux_effect_fade_a);
+    g_wmap_aux_effect_fade_a += 1;
+    if (g_wmap_aux_effect_fade_a >= 0x42)
     {
-        D_801B25DC = 0x41;
+        g_wmap_aux_effect_fade_a = 0x41;
     }
     D_801B2678.vz += 4;
     PopMatrix();
@@ -376,10 +375,10 @@ void wmap_land_effect_05_sequence_7_step_04(void)
     }
     PushMatrix();
     wmap_set_model_transform(&D_801B2660, &D_801B2678);
-    if (D_801B25DC != 0)
+    if (g_wmap_aux_effect_fade_a != 0)
     {
-        wmap_draw_model_default(D_8011CF30, 0, 0xC, 0x35, 0x7840, 1, D_801B25DC);
-        WMAP_MODEL_FADE_OUT(D_801B25DC, 1, intensity);
+        wmap_draw_model_default(D_8011CF30, 0, 0xC, 0x35, 0x7840, 1, g_wmap_aux_effect_fade_a);
+        WMAP_MODEL_FADE_OUT(g_wmap_aux_effect_fade_a, 1, intensity);
         D_801B2678.vz = (u16) (D_801B2678.vz + 4);
     }
     PopMatrix();
@@ -640,7 +639,7 @@ WMAP_STEP_RUNNER(wmap_land_effect_05_run_sequence_7, D_800D5E88, 0x6, g_wmap_lan
 WMAP_STEP_RESET(wmap_land_effect_05_sequence_7_reset, g_wmap_land_effect_05_sequence_7_step, g_wmap_land_effect_05_sequence_7_timer)
 
 WMAP_STEP_DROP_START(wmap_land_effect_05_sequence_7_step_01, g_wmap_land_effect_05_sequence_7_step, g_wmap_land_effect_05_sequence_7_timer, D_801B2678,
-                     g_wmap_zero_rotation, D_801B2660, D_801B25DC, 1, 0x7530, 0x7C, wmap_land_effect_05_sequence_7_step_02)
+                     g_wmap_zero_rotation, D_801B2660, g_wmap_aux_effect_fade_a, 1, 0x7530, 0x7C, wmap_land_effect_05_sequence_7_step_02)
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_05_sequence_7_step_03, g_wmap_land_effect_05_sequence_7_step, g_wmap_land_effect_05_sequence_7_timer, 0x40,
                     wmap_land_effect_05_sequence_7_step_04)

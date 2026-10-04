@@ -466,7 +466,6 @@ extern u32 g_history_names_off;
 extern u32 g_random_names_off;
 
 /* Cross-module helpers without shared headers. */
-void* func_800A88A0(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s32 x, s32 y, s32 flags);
 
 /**
  * @brief Play a one-shot menu sound effect.
@@ -1520,7 +1519,7 @@ static void* emit_panel_tab_sprite(void* packet_cursor, u_long* ot_entry)
 
     if (navigation_mode <= GNAME_MODE_PANEL_LAST)
     {
-        packet_cursor = func_800A88A0((SPRT*)(packet_cursor), (s32*)ot_entry,
+        packet_cursor = field_draw_text((SPRT*)(packet_cursor), ot_entry,
                                       GNAME_RECORD(PANEL_RECORD_TABLE, g_tab_cursor_pos[navigation_mode + GNAME_CURSOR_POS_TABLE_OFFSET].sprite_idx),
                                       GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_TAB_X, GNAME_PANEL_TAB_Y, GNAME_PANEL_SPRITE_MODE);
     }
@@ -1532,12 +1531,12 @@ static void* emit_panel_tab_sprite(void* packet_cursor, u_long* ot_entry)
         if ((u32)(panel_index - CHAR_PANEL_KANJI_CATEGORY) < (CHAR_PANEL_KANJI - CHAR_PANEL_KANJI_CATEGORY + 1))
         {
             packet_cursor =
-                func_800A88A0((SPRT*)(packet_cursor), (s32*)ot_entry, GNAME_RECORD(PANEL_RECORD_TABLE, panel_index + GNAME_PANEL_TAB_KANJI_RECORD_OFFSET),
+                field_draw_text((SPRT*)(packet_cursor), ot_entry, GNAME_RECORD(PANEL_RECORD_TABLE, panel_index + GNAME_PANEL_TAB_KANJI_RECORD_OFFSET),
                               GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_TAB_X, GNAME_PANEL_TAB_Y, GNAME_PANEL_SPRITE_MODE);
         }
         else
         {
-            packet_cursor = func_800A88A0((SPRT*)(packet_cursor), (s32*)ot_entry, GNAME_RECORD(PANEL_RECORD_TABLE, GNAME_PANEL_TAB_DEFAULT_RECORD),
+            packet_cursor = field_draw_text((SPRT*)(packet_cursor), ot_entry, GNAME_RECORD(PANEL_RECORD_TABLE, GNAME_PANEL_TAB_DEFAULT_RECORD),
                                           GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_TAB_X, GNAME_PANEL_TAB_Y, GNAME_PANEL_SPRITE_MODE);
         }
     }
@@ -1557,12 +1556,12 @@ static void* emit_panel_label(void* packet_cursor, u_long* ot_entry)
 
     if (panel_index < CHAR_PANEL_KANJI)
     {
-        packet_cursor = func_800A88A0((SPRT*)(packet_cursor), (s32*)ot_entry, GNAME_RECORD(PANEL_RECORD_TABLE, panel_index), GNAME_PANEL_SPRITE_COLOR,
+        packet_cursor = field_draw_text((SPRT*)(packet_cursor), ot_entry, GNAME_RECORD(PANEL_RECORD_TABLE, panel_index), GNAME_PANEL_SPRITE_COLOR,
                                       GNAME_PANEL_LABEL_X, GNAME_PANEL_LABEL_Y, GNAME_PANEL_SPRITE_MODE);
     }
     else
     {
-        packet_cursor = func_800A88A0((SPRT*)(packet_cursor), (s32*)ot_entry, g_kanji_cat_name, GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_LABEL_X,
+        packet_cursor = field_draw_text((SPRT*)(packet_cursor), ot_entry, g_kanji_cat_name, GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_LABEL_X,
                                       GNAME_PANEL_LABEL_Y, GNAME_PANEL_SPRITE_MODE);
     }
 
@@ -1598,7 +1597,7 @@ static void render_name_strip(RenderContext* render_ctx, u8* name, s32 strip_wid
 
     /* Emit the name text, decorative glyph, and glyph draw mode. */
     packet_cursor =
-        func_800A88A0((SPRT*)(restore_env_packet + 1), (s32*)ot_entry, name, NAME_STRIP_TEXT_COLOR, NAME_STRIP_TEXT_X, NAME_STRIP_TEXT_Y, NAME_STRIP_TEXT_MODE);
+        field_draw_text((SPRT*)(restore_env_packet + 1), ot_entry, name, NAME_STRIP_TEXT_COLOR, NAME_STRIP_TEXT_X, NAME_STRIP_TEXT_Y, NAME_STRIP_TEXT_MODE);
     packet_cursor = emit_glyph_sprt(packet_cursor, ot_entry, NAME_STRIP_DECOR_GLYPH, 0, 0, 0, 0, 0);
     packet_cursor = emit_draw_mode_prim((DR_TPAGE*)packet_cursor, ot_entry);
 
@@ -1678,7 +1677,7 @@ static void render_char_panel(RenderContext* render_ctx, s32 panel_index)
         glyph_y = (grid_row * NAME_GRID_CELL_SIZE) - g_scroll_pos;
         if (NAME_GRID_ROW_VISIBLE(glyph_y))
         {
-            glyph_packet_cursor = func_800A88A0((SPRT*)(glyph_packet_cursor), (s32*)ot_entry, GNAME_RECORD(glyph_table, glyph_index), CHAR_PANEL_GLYPH_COLOR,
+            glyph_packet_cursor = field_draw_text((SPRT*)(glyph_packet_cursor), ot_entry, GNAME_RECORD(glyph_table, glyph_index), CHAR_PANEL_GLYPH_COLOR,
                                                 grid_column * NAME_GRID_CELL_SIZE, glyph_y, CHAR_PANEL_GLYPH_MODE);
         }
         glyph_index++;

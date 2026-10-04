@@ -564,18 +564,13 @@ WMAP_STEP_START_ACTOR(wmap_land_effect_26_sequence_7_step_01,
     0x80, 0x80, 0,
     0x4A, wmap_land_effect_26_sequence_7_step_02)
 
-/** @brief World-map step: init a sub-object then count down a timer. */
-void wmap_land_effect_26_sequence_7_step_02(void)
-{
-    s32 n = 0xB;
-
-    wmap_step_actor_animation(&g_wmap_sprite_actors[4], &g_wmap_actor_animations[4]);
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[4], g_wmap_focus_screen_position.packed, n, n, 0);
-    if (--g_wmap_land_effect_26_sequence_7_timer == 0)
-    {
-        g_wmap_land_effect_26_sequence_7_step += 1;
-    }
-}
+/**
+ * @brief Animate and draw the effect sprite until its timer expires.
+ */
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_26_sequence_7_step_02,
+    g_wmap_land_effect_26_sequence_7_step, g_wmap_land_effect_26_sequence_7_timer,
+    g_wmap_sprite_actors[4], g_wmap_actor_animations[4],
+    g_wmap_focus_screen_position, 11, 11, 0)
 
 WMAP_STEP_ADVANCE(wmap_land_effect_26_sequence_7_end, g_wmap_land_effect_26_sequence_7_step)
 

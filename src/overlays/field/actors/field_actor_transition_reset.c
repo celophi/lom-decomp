@@ -52,7 +52,6 @@ extern u32 g_field_experience_snapshot[];
 
 void akao_release_all_sfx(void);
 void field_clear_actor_slots(void);
-void field_clear_actor_effects(FieldActorSlot* slot);
 s32 field_find_active_special_attack_actor(void);
 void field_initialize_actor_slots(void);
 void field_reset_global_color_scale(void);

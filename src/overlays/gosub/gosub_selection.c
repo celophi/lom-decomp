@@ -229,7 +229,7 @@ s32 gosub_handle_make_block_dialog(s32 dialog_result)
         if (count < LOGIC_BLOCK_CAPACITY)
         {
             g_saved_game_ctx->logic_blocks[count].f.id = g_gosub_block_id;
-            g_saved_game_ctx->logic_blocks[count].f.quantity = g_gosub_block_level;
+            g_saved_game_ctx->logic_blocks[count].f.level = g_gosub_block_level;
             g_saved_game_ctx->logic_blocks[count].f.shape = g_gosub_block_shape;
             g_saved_game_ctx->logic_blocks[count].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
             g_saved_game_ctx->logic_blocks[count].f.placed = 0;

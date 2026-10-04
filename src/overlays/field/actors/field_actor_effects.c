@@ -189,8 +189,6 @@ static u8* field_build_effect_dome(u_long* ordering_table, u8* packet, VECTOR* p
 static u8* field_build_effect_strips(u_long* ordering_table, u8* packet, VECTOR* position, s32 radius);
 static u8* field_build_effect_curves(u_long* ordering_table, u8* packet, VECTOR* position, s32 extent, s32 forward);
 static u8* field_build_effect_spiral(u_long* ordering_table, u8* packet, VECTOR* position, s32 tilt, s32 facing);
-/* libgte VectorNormal: normalizes @p in to 4096 in @p out, returns the squared length. */
-long func_8001CDAC(VECTOR* in, VECTOR* out);
 extern s32 g_field_effect_angle;
 
 /**
@@ -520,7 +518,7 @@ void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
             if ((work.point.vx | work.point.vy) != 0)
             {
                 /* work.direction = unit direction; the dome moves one unit per 0x400 of it. */
-                func_8001CDAC(&work.point, &work.direction);
+                VectorNormal(&work.point, &work.direction);
                 work.target.vx = actor->x + ((OBJECT_STATE(actor).ground_attachment_points[0].x + (work.direction.vx >> 10)) << 8);
                 work.target.vy = actor->y;
                 work.target.vz = actor->z + ((OBJECT_STATE(actor).ground_attachment_points[0].y + (work.direction.vy >> 10)) << 8);

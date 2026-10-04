@@ -316,8 +316,6 @@ extern s32 g_cload_secondary_poll_countdown;
 extern s32 g_cload_file_handle;
 
 extern int strncmp(char *, char *, int);
-void *func_800A88A0(void *prim, u_long *ot, u8 *text, s32 color, s32 x, s32 y, s32 mode);
-void* func_800A8A78(u_long* ot, void* prim, s32 value, s32 color, DVECTOR* pos, s32 mode);
 
 /* External callees used by the memory-card I/O/load-state block. */
 s32 open(void *, s32);

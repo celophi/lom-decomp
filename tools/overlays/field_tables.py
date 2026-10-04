@@ -89,8 +89,8 @@ TABLES = (
     TableSpec("g_field_level_experience", "I", 32),
     TableSpec("g_field_land_distance_items", "B", 32),
     TableSpec("g_field_menu_ops", "I", 96, resolve_symbols=True),
-    TableSpec("g_equipment_combination_rule_table", "I", 64, resolve_symbols=True),
-    TableSpec("g_equipment_combination_quantity_scale", "B", 64),
+    TableSpec("g_golem_logic_block_recipe_table", "I", 64, resolve_symbols=True),
+    TableSpec("g_golem_logic_block_level_scale", "B", 64),
     TableSpec("g_golem_logic_block_class", "i", 58),
     TableSpec("g_golem_logic_block_icons", "HH", 58, ("clut", "reserved")),
 )

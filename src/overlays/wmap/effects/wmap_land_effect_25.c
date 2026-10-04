@@ -84,7 +84,6 @@ extern s32 D_801B25D8;
 extern s32 g_wmap_land_effect_25_sequence_8_timer;
 extern u8* D_8011CF34;
 extern s32 D_8013923C;
-extern s32 D_801B25DC;
 extern s32 g_wmap_land_effect_25_sequence_9_timer;
 extern s32 g_wmap_land_effect_25_sequence_12_timer;
 extern s32 rand(void);
@@ -93,7 +92,6 @@ extern s32 g_wmap_land_effect_25_sequence_14_timer;
 extern s32 g_wmap_land_effect_25_sequence_15_timer;
 extern s32 D_800D9154;
 extern s32 D_800DCEAC;
-extern s32 D_801B25E0;
 extern s32 g_wmap_land_effect_25_sequence_17_timer;
 extern s32 g_wmap_land_effect_25_timer;
 extern void (*D_800D6FDC[])(void);
@@ -347,9 +345,9 @@ void wmap_land_effect_25_sequence_9_step_02(void)
     s32 intensity;
 
     wmap_set_model_transform(&g_wmap_camera_translation, &D_801B2678);
-    wmap_draw_model(D_8011CF34, (D_8013923C >> 4) & 7, 10, 0x35, 0x7800, 0x1001, D_801B25DC, -1, 7, -1);
+    wmap_draw_model(D_8011CF34, (D_8013923C >> 4) & 7, 10, 0x35, 0x7800, 0x1001, g_wmap_aux_effect_fade_a, -1, 7, -1);
     D_8013923C += 16;
-    WMAP_MODEL_FADE_IN(D_801B25DC, 2, 0x81, intensity);
+    WMAP_MODEL_FADE_IN(g_wmap_aux_effect_fade_a, 2, 0x81, intensity);
     remaining = g_wmap_land_effect_25_sequence_9_timer - 1;
     D_801B2678.vz = (u16) (D_801B2678.vz + 0xC);
     g_wmap_land_effect_25_sequence_9_timer = remaining;
@@ -366,13 +364,13 @@ void wmap_land_effect_25_sequence_9_step_04(void)
     s32 intensity;
 
     wmap_set_model_transform(&g_wmap_camera_translation, &D_801B2678);
-    wmap_draw_model(D_8011CF34, (D_8013923C >> 4) & 7, 10, 0x35, 0x7800, 0x1001, D_801B25DC, -1, 7, -1);
-    intensity = D_801B25DC - 2;
+    wmap_draw_model(D_8011CF34, (D_8013923C >> 4) & 7, 10, 0x35, 0x7800, 0x1001, g_wmap_aux_effect_fade_a, -1, 7, -1);
+    intensity = g_wmap_aux_effect_fade_a - 2;
     D_8013923C += 16;
-    D_801B25DC = intensity;
+    g_wmap_aux_effect_fade_a = intensity;
     if (intensity < 0)
     {
-        D_801B25DC = 0;
+        g_wmap_aux_effect_fade_a = 0;
     }
     remaining = g_wmap_land_effect_25_sequence_9_timer - 1;
     D_801B2678.vz = (u16) (D_801B2678.vz + 0xC);
@@ -529,7 +527,7 @@ void wmap_land_effect_25_sequence_17_step_01(void)
     s32 i;
 
     i = 110;
-    D_801B25E0 = 1;
+    g_wmap_aux_effect_fade_b = 1;
     D_800DCEAC = 1;
 
     do
@@ -890,7 +888,7 @@ WMAP_STEP_RESET(wmap_land_effect_25_sequence_9_reset, g_wmap_land_effect_25_sequ
 WMAP_STEP_START_MODEL(wmap_land_effect_25_sequence_9_step_01,
     g_wmap_land_effect_25_sequence_9_step, g_wmap_land_effect_25_sequence_9_timer,
     D_801B2678, g_wmap_zero_rotation,
-    D_801B25DC, 1, D_8013923C,
+    g_wmap_aux_effect_fade_a, 1, D_8013923C,
     0x84, wmap_land_effect_25_sequence_9_step_02)
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_25_sequence_9_step_03, g_wmap_land_effect_25_sequence_9_step, g_wmap_land_effect_25_sequence_9_timer, 0x40,
@@ -1101,7 +1099,7 @@ WMAP_STEP_RESET(wmap_land_effect_25_sequence_17_reset, g_wmap_land_effect_25_seq
  * @brief Update the particles and increase the shared fade value until the timer expires.
  */
 WMAP_STEP_UPDATE_AND_RAMP(wmap_land_effect_25_sequence_17_step_02, g_wmap_land_effect_25_sequence_17_step, g_wmap_land_effect_25_sequence_17_timer,
-                          D_801B25E0, 8,
+                          g_wmap_aux_effect_fade_b, 8,
                           func_8006B328(0x6E, 0x9B, 2, -1, 3, 2, 0x168, 8, -0x78, 0xF0, -0x78, 0xF0, 0x64, 0x81, 0x81, 4, 1))
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_25_sequence_17_step_03, g_wmap_land_effect_25_sequence_17_step, g_wmap_land_effect_25_sequence_17_timer, 0x5A,

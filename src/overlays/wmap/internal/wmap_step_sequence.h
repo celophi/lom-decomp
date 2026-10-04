@@ -690,11 +690,8 @@
 #define WMAP_STEP_MAP_DROP_UPDATE(name, step, timer, rotation, position, shade, resource, z_delta, shade_step) \
     void name(void)                                                                      \
     {                                                                                    \
-        s32 depth;                                                                       \
-                                                                                         \
-        depth = (position).vz + (z_delta);                                               \
-        (position).vz = depth;                                                           \
-        if (depth < WMAP_DROP_MIN_Z)                                                     \
+        (position).vz += (z_delta);                                                      \
+        if ((position).vz < WMAP_DROP_MIN_Z)                                             \
         {                                                                                \
             (position).vz = WMAP_DROP_MIN_Z;                                             \
         }                                                                                \

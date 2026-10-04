@@ -1,4 +1,5 @@
 #include "internal/carda_widgets.h"
+#include "overlays/field/field_text.h"
 #include "internal/carda_internal.h"
 #include "common/saved_game.h"
 

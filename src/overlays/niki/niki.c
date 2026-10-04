@@ -3,10 +3,10 @@
 #include "overlays/menu/menu.h"
 
 void niki_init_card_events(void);
-u8* niki_draw_progress_bar(u8* prim, s32* ot);
-u8* niki_draw_choice_prompt(u8* prim, s32* ot, s32 x, s32 y);
-u8* func_800AE76C(u8* prim, u32* ot, s32 x, s32 y, s32 direction);
-u8* func_800AD850(u8* prim, u32* ot, s32 x, s32 y, s32 width, s32 height, s32 display_buffer_index, s32 is_popup);
+u8* niki_draw_progress_bar(u8* prim, u_long* ot);
+u8* niki_draw_choice_prompt(u8* prim, u_long* ot, s32 x, s32 y);
+u8* func_800AE76C(u8* prim, u_long* ot, s32 x, s32 y, s32 direction);
+u8* func_800AD850(u8* prim, u_long* ot, s32 x, s32 y, s32 width, s32 height, s32 display_buffer_index, s32 is_popup);
 void func_8001A5D4(NikiPacketHeader* packet, NikiDrawEnvironment* env);
 
 /**
@@ -513,16 +513,16 @@ static inline void niki_link_packet(NikiGpuTag* ot, NikiGpuTag* tag)
  * @param y_offset Vertical scroll offset (subtracted from every row y).
  * @return Advanced primitive-buffer write cursor.
  */
-static inline u8* niki_draw_scan_message(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
+static inline u8* niki_draw_scan_message(u_long* ot, u8* prim, s32 x_offset, s32 y_offset)
 {
     s32 x;
     u8* glyph_table;
 
     x = -x_offset + 0x84;
     glyph_table = (u8*)&g_niki_text_table;
-    prim = func_800A88A0(prim, ot, glyph_table + g_niki_text_table, 4, x, -y_offset, 2);
-    prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_table, 0x1E), 4, x, 0xE - y_offset, 2);
-    prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_table, 0xB2), 4, x, 0x1C - y_offset, 2);
+    prim = field_draw_text((SPRT*)prim, ot, glyph_table + g_niki_text_table, 4, x, -y_offset, 2);
+    prim = field_draw_text((SPRT*)prim, ot, GLYPH_OFF(glyph_table, 0x1E), 4, x, 0xE - y_offset, 2);
+    prim = field_draw_text((SPRT*)prim, ot, GLYPH_OFF(glyph_table, 0xB2), 4, x, 0x1C - y_offset, 2);
     return prim;
 }
 
@@ -535,29 +535,29 @@ static inline u8* niki_draw_scan_message(s32* ot, u8* prim, s32 x_offset, s32 y_
  * @param y_offset Vertical scroll offset (subtracted from every row y).
  * @return Advanced primitive-buffer write cursor.
  */
-u8* niki_draw_entry_list(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
+u8* niki_draw_entry_list(u_long* ot, u8* prim, s32 x_offset, s32 y_offset)
 {
     s32 state = g_card_entry_state;
 
     switch (state)
     {
     case 0xF8:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_game_save_data, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_no_game_save_data, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xF9:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_game_save_data, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_no_game_save_data, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFA:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_not_enough_blocks, 2), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_not_enough_blocks, 2), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFD:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_card, 4), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_no_card, 4), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFB:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_card_access_failed, 0x10), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_card_access_failed, 0x10), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFC:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_save_data, 0x12), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_no_save_data, 0x12), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFE:
         break;
@@ -597,38 +597,38 @@ u8* niki_draw_entry_list(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
                     {
                         pos.x = base_x + NIKI_ENTRY_VALUE_X;
                         pos.y = row_y;
-                        prim = func_800A8A78(ot, prim, g_card_entry_suffix_values[entry_index], 4, &pos, 0);
-                        prim = func_800A88A0(prim, ot, (u8*)(g_niki_text_number_label + glyph_table), 4, base_x + 0x70, row_y, 0);
+                        prim = field_draw_number(ot, (SPRT*)prim, g_card_entry_suffix_values[entry_index], 4, &pos, 0);
+                        prim = field_draw_text((SPRT*)prim, ot, (u8*)(g_niki_text_number_label + glyph_table), 4, base_x + 0x70, row_y, 0);
                         if ((g_niki_rank_count - 1) == *rank)
                         {
                             marker_offset = *(u16*)(glyph_table + 0x36);
-                            prim = func_800A88A0(prim, ot, (u8*)(marker_offset + glyph_table), 4, base_x + NIKI_ENTRY_MARKER_X, row_y, 0);
+                            prim = field_draw_text((SPRT*)prim, ot, (u8*)(marker_offset + glyph_table), 4, base_x + NIKI_ENTRY_MARKER_X, row_y, 0);
                         }
                         else if (*rank < 2)
                         {
                             marker_offset = *(u16*)(glyph_table + 0x38);
-                            prim = func_800A88A0(prim, ot, (u8*)(marker_offset + glyph_table), 4, base_x + NIKI_ENTRY_MARKER_X, row_y, 0);
+                            prim = field_draw_text((SPRT*)prim, ot, (u8*)(marker_offset + glyph_table), 4, base_x + NIKI_ENTRY_MARKER_X, row_y, 0);
                         }
                         if (*skip_hex_digits(&g_card_entries[g_card_slot][entry_index].name[12]) == '+')
                         {
-                            prim = func_800A88A0(prim, ot, (u8*)(g_niki_text_plus_marker + glyph_table), 4, 0xF2 - x_offset, row_y, 1);
+                            prim = field_draw_text((SPRT*)prim, ot, (u8*)(g_niki_text_plus_marker + glyph_table), 4, 0xF2 - x_offset, row_y, 1);
                         }
                     }
                     if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][entry_index].name, 0xC) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (u8*)(glyph_table + g_niki_text_mana_label), 4, 1 - x_offset, row_y, 0);
+                        prim = field_draw_text((SPRT*)prim, ot, (u8*)(glyph_table + g_niki_text_mana_label), 4, 1 - x_offset, row_y, 0);
                     }
                     else if (strncmp(D_800ECF8C, g_card_entries[g_card_slot][entry_index].name, 0xC) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (u8*)(g_niki_text_ring_ring_land_label + glyph_table), 4, 1 - x_offset, row_y, 0);
+                        prim = field_draw_text((SPRT*)prim, ot, (u8*)(g_niki_text_ring_ring_land_label + glyph_table), 4, 1 - x_offset, row_y, 0);
                     }
                     else if (strncmp(D_800ECFC4, g_card_entries[g_card_slot][entry_index].name, 8) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (u8*)(glyph_table + g_niki_text_new_save_label), 4, 1 - x_offset, row_y, 0);
+                        prim = field_draw_text((SPRT*)prim, ot, (u8*)(glyph_table + g_niki_text_new_save_label), 4, 1 - x_offset, row_y, 0);
                     }
                     else
                     {
-                        prim = func_800A88A0(prim, ot, (u8*)(g_niki_text_other_game_label + glyph_table), 4, 1 - x_offset, row_y, 0);
+                        prim = field_draw_text((SPRT*)prim, ot, (u8*)(g_niki_text_other_game_label + glyph_table), 4, 1 - x_offset, row_y, 0);
                     }
                 }
                 entry_index++;
@@ -665,17 +665,17 @@ u8* niki_draw_entry_list(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
  * @param y_offset Vertical scroll offset (subtracted from the banner y).
  * @return Advanced primitive-buffer write cursor.
  */
-u8* niki_draw_header_label(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
+u8* niki_draw_header_label(u_long* ot, u8* prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
 
     if (g_niki_mode == 1)
     {
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_select_item, 0x46), 4, -x_offset + 0x78, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_select_item, 0x46), 4, -x_offset + 0x78, -y_offset, 2);
     }
     else
     {
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_select_save_data, 0x44), 4, -x_offset + 0x78, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_select_save_data, 0x44), 4, -x_offset + 0x78, -y_offset, 2);
     }
     return prim;
 }
@@ -688,7 +688,7 @@ u8* niki_draw_header_label(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
  * @param y_offset Vertical scroll offset (subtracted from the caption y).
  * @return Advanced primitive-buffer write cursor.
  */
-u8* niki_draw_card_slot0_label(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
+u8* niki_draw_card_slot0_label(u_long* ot, u8* prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
     NikiTile* tile;
@@ -707,7 +707,7 @@ u8* niki_draw_card_slot0_label(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
         *ot = (*ot & GPU_TAG_HIGH_MASK) | ((uintptr_t)tile & GPU_ADDR_MASK);
         prim += sizeof(NikiTile);
     }
-    return func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_card_slot0_label, 0xC), 4, -x_offset + NIKI_CARD_LABEL_TEXT_X, -y_offset, 2);
+    return field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_card_slot0_label, 0xC), 4, -x_offset + NIKI_CARD_LABEL_TEXT_X, -y_offset, 2);
 }
 
 /**
@@ -718,7 +718,7 @@ u8* niki_draw_card_slot0_label(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
  * @param y_offset Vertical scroll offset (subtracted from the caption y).
  * @return Advanced primitive-buffer write cursor.
  */
-u8* niki_draw_card_slot1_label(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
+u8* niki_draw_card_slot1_label(u_long* ot, u8* prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
     NikiTile* tile;
@@ -738,7 +738,7 @@ u8* niki_draw_card_slot1_label(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
         prim += sizeof(NikiTile);
     }
 
-    return func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_card_slot1_label, 0xE), 4, -x_offset + NIKI_CARD_LABEL_TEXT_X, -y_offset, 2);
+    return field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_card_slot1_label, 0xE), 4, -x_offset + NIKI_CARD_LABEL_TEXT_X, -y_offset, 2);
 }
 
 /**
@@ -749,7 +749,7 @@ u8* niki_draw_card_slot1_label(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
  * (g_niki_entry_scan_active zero). Depending on g_niki_selection_status it either emits a two-line caption
  * (state 2), or renders the full slot detail: up to three party markers laid out
  * by niki_draw_icon_highlight with an animated highlight (g_niki_icon_phase), the playtime split
- * into hours/minutes via func_800A8A78, and one of three status glyphs. If the
+ * into hours/minutes via field_draw_number, and one of three status glyphs. If the
  * slot compare fails it falls back to drawing the stored name and second line.
  *
  * @param ot Ordering-table pointer.
@@ -758,7 +758,7 @@ u8* niki_draw_card_slot1_label(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
  * @param y_offset Vertical scroll offset (subtracted from every row y).
  * @return Advanced primitive-buffer write cursor.
  */
-u8* niki_draw_selected_entry_details(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
+u8* niki_draw_selected_entry_details(u_long* ot, u8* prim, s32 x_offset, s32 y_offset)
 {
     u8* result;
     Vec2s pos;
@@ -781,9 +781,9 @@ u8* niki_draw_selected_entry_details(s32* ot, u8* prim, s32 x_offset, s32 y_offs
             s32 x = -x_offset;
             u8* base;
 
-            result = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_new_save_title, 0x28), 4, x, -y_offset, 0);
+            result = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_new_save_title, 0x28), 4, x, -y_offset, 0);
             base = (u8*)&g_niki_text_new_save_title - 0x28;
-            return func_800A88A0(result, ot, GLYPH_OFF(base, 0x2A), 4, x, 0x10 - y_offset, 0);
+            return field_draw_text((SPRT*)result, ot, GLYPH_OFF(base, 0x2A), 4, x, 0x10 - y_offset, 0);
         }
         else
         {
@@ -888,39 +888,39 @@ u8* niki_draw_selected_entry_details(s32* ot, u8* prim, s32 x_offset, s32 y_offs
                         pos.x = (s16)(x + NIKI_DETAILS_HOURS_RIGHT_X);
                         pos.y = (s16)y;
                         hours = playtime / 216000;
-                        result = func_800A8A78(ot, result, hours, 4, &pos, 1);
-                        result = func_800A88A0(result, ot, (u8*)(D_800EC3F6[0] + ((uintptr_t)&D_800EC3F6 - 0x32) + (D_800EC3F6[1] << 8)), 4,
+                        result = field_draw_number(ot, (SPRT*)result, hours, 4, &pos, 1);
+                        result = field_draw_text((SPRT*)result, ot, (u8*)(D_800EC3F6[0] + ((uintptr_t)&D_800EC3F6 - 0x32) + (D_800EC3F6[1] << 8)), 4,
                                                x + NIKI_DETAILS_TIME_SEPARATOR_X, y, 0);
                         playtime = (playtime / 3600) - (hours * 0x3C);
                         if (playtime < 0xA)
                         {
                             pos.x = (s16)(x + NIKI_DETAILS_MINUTES_TENS_RIGHT_X);
                             pos.y = (s16)y;
-                            result = func_800A8A78(ot, result, 0, 4, &pos, 1);
+                            result = field_draw_number(ot, (SPRT*)result, 0, 4, &pos, 1);
                         }
                         pos.x = (s16)(x + NIKI_DETAILS_MINUTES_RIGHT_X);
                         pos.y = (s16)y;
-                        result = func_800A8A78(ot, result, playtime, 4, &pos, 1);
-                        result = func_800A88A0(result, ot, preview->summary_name, 4, x + NIKI_DETAILS_TEXT_X, y + 0x10, 0);
+                        result = field_draw_number(ot, (SPRT*)result, playtime, 4, &pos, 1);
+                        result = field_draw_text((SPRT*)result, ot, preview->summary_name, 4, x + NIKI_DETAILS_TEXT_X, y + 0x10, 0);
 
                         if (preview->identity.ids.game_id == g_saved_game_ctx->identity.ids.game_id)
                         {
-                            result = func_800A88A0(result, ot, GLYPH_SYM(g_niki_text_same_hero_data, 0x50), 4, x + NIKI_DETAILS_TEXT_X, y + 0x20, 0);
+                            result = field_draw_text((SPRT*)result, ot, GLYPH_SYM(g_niki_text_same_hero_data, 0x50), 4, x + NIKI_DETAILS_TEXT_X, y + 0x20, 0);
                         }
                         else if (preview->summary_slot_count == 0)
                         {
-                            result = func_800A88A0(result, ot, GLYPH_SYM(g_niki_text_no_items, 0x4E), 4, x + NIKI_DETAILS_TEXT_X, y + 0x20, 0);
+                            result = field_draw_text((SPRT*)result, ot, GLYPH_SYM(g_niki_text_no_items, 0x4E), 4, x + NIKI_DETAILS_TEXT_X, y + 0x20, 0);
                         }
                         else
                         {
-                            result = func_800A88A0(result, ot, GLYPH_OFF((u8*)g_niki_location_names, (preview->track.word & 0x3FFFF) * 2), 4,
+                            result = field_draw_text((SPRT*)result, ot, GLYPH_OFF((u8*)g_niki_location_names, (preview->track.word & 0x3FFFF) * 2), 4,
                                                    x + NIKI_DETAILS_TEXT_X, y + 0x20, 0);
                         }
                     }
                 }
                 else
                 {
-                    result = func_800A88A0(result, ot, GLYPH_SYM(g_niki_text_wrong_version, 0x54), 4, -x_offset, -y_offset, 0);
+                    result = field_draw_text((SPRT*)result, ot, GLYPH_SYM(g_niki_text_wrong_version, 0x54), 4, -x_offset, -y_offset, 0);
                 }
             }
             else
@@ -967,11 +967,11 @@ u8* niki_draw_selected_entry_details(s32* ot, u8* prim, s32 x_offset, s32 y_offs
  * @param y_offset Vertical scroll offset (subtracted from the anchor y).
  * @return Advanced primitive-buffer write cursor.
  */
-u8* niki_draw_footer_label(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
+u8* niki_draw_footer_label(u_long* ot, u8* prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
 
-    return func_800A88A0(prim, ot, (void*)((u8*)g_field_ui_text_cant_hold_more - 0xC + g_field_ui_text_cant_hold_more[0] + (g_field_ui_text_cant_hold_more[1] << 8)), 5, 0x80 - x_offset, -y_offset, 2);
+    return field_draw_text((SPRT*)prim, ot, (void*)((u8*)g_field_ui_text_cant_hold_more - 0xC + g_field_ui_text_cant_hold_more[0] + (g_field_ui_text_cant_hold_more[1] << 8)), 5, 0x80 - x_offset, -y_offset, 2);
 }
 
 /**
@@ -1069,17 +1069,17 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
             {
                 if (entry_count * 14 > g_niki_scroll_y + 88)
                 {
-                    prim = (NikiPacketHeader*)func_800AE76C(prim, frame, 0x114, 0x82, 0);
+                    prim = (NikiPacketHeader*)func_800AE76C(prim, &frame->head_tag, 0x114, 0x82, 0);
                 }
                 if (g_niki_scroll_y != 0)
                 {
-                    prim = (NikiPacketHeader*)func_800AE76C(prim, frame, 0x114, 0x3A, 1);
+                    prim = (NikiPacketHeader*)func_800AE76C(prim, &frame->head_tag, 0x114, 0x3A, 1);
                 }
             }
 
             func_8001A5D4(prim, &draw_area);
             prim->tag = (prim->tag & GPU_TAG_HIGH_MASK) | (frame->head_tag & GPU_ADDR_MASK);
-            frame->head_tag = (s32)((frame->head_tag & GPU_TAG_HIGH_MASK) | ((uintptr_t)prim & GPU_ADDR_MASK));
+            frame->head_tag = ((frame->head_tag & GPU_TAG_HIGH_MASK) | ((uintptr_t)prim & GPU_ADDR_MASK));
             prim = (NikiPacketHeader*)((NikiDrawEnvironmentPacket*)prim + 1);
 
             switch (element->attr.f.state)
@@ -1089,11 +1089,11 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
                 opening_width_low = NIKI_ELEMENT_WIDTH_LOW_BYTE(element);
                 inset_width = (NIKI_ELEMENT_JOIN_WIDTH(element, opening_width_low) * element->attr.f.phase) / 8;
                 inset_height = (element->dimensions.f.height * element->attr.f.phase) / 8;
-                prim = (NikiPacketHeader*)element->draw((s32*)frame, (u8*)prim, (NIKI_ELEMENT_JOIN_WIDTH(element, opening_width_low) - inset_width) / 2,
+                prim = (NikiPacketHeader*)element->draw(&frame->head_tag, (u8*)prim, (NIKI_ELEMENT_JOIN_WIDTH(element, opening_width_low) - inset_width) / 2,
                                                         (element->dimensions.f.height - inset_height) / 2);
                 opening_border_x = element->attr.f.x;
                 opening_border_width_low = NIKI_ELEMENT_WIDTH_LOW_BYTE(element);
-                prim = (NikiPacketHeader*)func_800AD850(prim, frame,
+                prim = (NikiPacketHeader*)func_800AD850(prim, &frame->head_tag,
                                                         opening_border_x + (NIKI_ELEMENT_JOIN_WIDTH(element, opening_border_width_low) - inset_width) / 2,
                                                         element->attr.f.y + (element->dimensions.f.height - inset_height) / 2, inset_width, inset_height,
                                                         frame_arg->frame_flag, element_index == 0);
@@ -1106,10 +1106,10 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
                 break;
 
             case 2:
-                prim = (NikiPacketHeader*)element->draw((s32*)frame, (u8*)prim, 0, 0);
+                prim = (NikiPacketHeader*)element->draw(&frame->head_tag, (u8*)prim, 0, 0);
                 open_border_width_low = NIKI_ELEMENT_WIDTH_LOW_BYTE(element);
                 prim =
-                    (NikiPacketHeader*)func_800AD850(prim, frame, element->attr.f.x, element->attr.f.y, NIKI_ELEMENT_JOIN_WIDTH(element, open_border_width_low),
+                    (NikiPacketHeader*)func_800AD850(prim, &frame->head_tag, element->attr.f.x, element->attr.f.y, NIKI_ELEMENT_JOIN_WIDTH(element, open_border_width_low),
                                                      element->dimensions.f.height, frame_arg->frame_flag, element_index == 0);
                 if (element->attr.f.phase != 0)
                 {
@@ -1122,11 +1122,11 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
                 closing_width_low = NIKI_ELEMENT_WIDTH_LOW_BYTE(element);
                 inset_width = (NIKI_ELEMENT_JOIN_WIDTH(element, closing_width_low) * element->attr.f.phase) / 8;
                 inset_height = (element->dimensions.f.height * element->attr.f.phase) / 8;
-                prim = (NikiPacketHeader*)element->draw((s32*)frame, (u8*)prim, (NIKI_ELEMENT_JOIN_WIDTH(element, closing_width_low) - inset_width) / 2,
+                prim = (NikiPacketHeader*)element->draw(&frame->head_tag, (u8*)prim, (NIKI_ELEMENT_JOIN_WIDTH(element, closing_width_low) - inset_width) / 2,
                                                         (element->dimensions.f.height - inset_height) / 2);
                 closing_border_x = element->attr.f.x;
                 closing_border_width_low = NIKI_ELEMENT_WIDTH_LOW_BYTE(element);
-                prim = (NikiPacketHeader*)func_800AD850(prim, frame,
+                prim = (NikiPacketHeader*)func_800AD850(prim, &frame->head_tag,
                                                         closing_border_x + (NIKI_ELEMENT_JOIN_WIDTH(element, closing_border_width_low) - inset_width) / 2,
                                                         element->attr.f.y + (element->dimensions.f.height - inset_height) / 2, inset_width, inset_height,
                                                         frame_arg->frame_flag, element_index == 0);
@@ -1174,7 +1174,7 @@ void niki_deactivate_primary_element(void)
  * @param y_offset Vertical scroll offset (subtracted from the caption y).
  * @return Advanced primitive-buffer write cursor.
  */
-u8* niki_draw_confirm_prompt(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
+u8* niki_draw_confirm_prompt(u_long* ot, u8* prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
     u8* result;
@@ -1183,7 +1183,7 @@ u8* niki_draw_confirm_prompt(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
     NikiElement* element;
 
     x = -x_offset + 0x90;
-    result = niki_draw_choice_prompt(func_800A88A0(prim, ot, (u8*)&g_niki_text_load_prompt + g_niki_text_load_prompt - 0x30, 4, x, -y_offset, 2), ot, x,
+    result = niki_draw_choice_prompt(field_draw_text((SPRT*)prim, ot, (u8*)&g_niki_text_load_prompt + g_niki_text_load_prompt - 0x30, 4, x, -y_offset, 2), ot, x,
                                      0xE - y_offset);
 
     if ((u32)(poll_and_retry_card_info() - 1) < 2U)
@@ -1247,7 +1247,7 @@ u8* niki_draw_confirm_prompt(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
  * @param y_offset Vertical scroll offset (subtracted from every caption y).
  * @return Advanced primitive-buffer write cursor.
  */
-u8* niki_draw_save_confirm_dialog(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
+u8* niki_draw_save_confirm_dialog(u_long* ot, u8* prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
     u8* base;
@@ -1259,10 +1259,10 @@ u8* niki_draw_save_confirm_dialog(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
     s32 element_index;
 
     x = -x_offset + 0x90;
-    result = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_loading, 0x32), 4, x, -y_offset, 2);
+    result = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_loading, 0x32), 4, x, -y_offset, 2);
     base = (u8*)&g_niki_text_loading - 0x32;
-    result = func_800A88A0(result, ot, base + *(u16*)(base + 0x1E), 4, x, 0xE - y_offset, 2);
-    result = func_800A88A0(result, ot, base + *(u16*)(base + 0xB2), 4, x, 0x1C - y_offset, 2);
+    result = field_draw_text((SPRT*)result, ot, base + *(u16*)(base + 0x1E), 4, x, 0xE - y_offset, 2);
+    result = field_draw_text((SPRT*)result, ot, base + *(u16*)(base + 0xB2), 4, x, 0x1C - y_offset, 2);
     result = niki_draw_progress_bar(result, ot);
 
     if (g_niki_confirm_latch == 0)
@@ -1306,7 +1306,7 @@ u8* niki_draw_save_confirm_dialog(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
  * @param ot Ordering-table entry receiving the bar.
  * @return Advanced packet cursor, or the original cursor when the timer is inactive.
  */
-u8* niki_draw_progress_bar(u8* prim, s32* ot)
+u8* niki_draw_progress_bar(u8* prim, u_long* ot)
 {
     NikiPolyG4Packet* bar;
     s32 elapsed;
@@ -1411,24 +1411,24 @@ void niki_open_secondary_status_dialog(s32 dialog_state)
  * @param y_offset Vertical displacement subtracted from the caption position.
  * @return Advanced primitive-buffer write cursor.
  */
-u8* niki_draw_status_dialog(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
+u8* niki_draw_status_dialog(u_long* ot, u8* prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
 
     switch (g_niki_dialog_state)
     {
     case 0:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_save_failed, 0x3C), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_save_failed, 0x3C), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 2:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_card_not_inserted, 0x40), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_card_not_inserted, 0x40), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 3:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_not_pocketstation, 0x42), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_not_pocketstation, 0x42), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 1:
     case 4:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_load_failed, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_load_failed, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     }
     if (g_pad_input & NIKI_CONFIRM_INPUT_MASK)
@@ -1447,7 +1447,7 @@ u8* niki_draw_status_dialog(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
  * @param y_offset Vertical displacement subtracted from the caption position.
  * @return Advanced primitive-buffer write cursor.
  */
-u8* niki_draw_secondary_status_dialog(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
+u8* niki_draw_secondary_status_dialog(u_long* ot, u8* prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
     NikiElement* element;
@@ -1456,17 +1456,17 @@ u8* niki_draw_secondary_status_dialog(s32* ot, u8* prim, s32 x_offset, s32 y_off
     switch (g_niki_dialog_state)
     {
     case 0:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_save_failed, 0x3C), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_save_failed, 0x3C), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 2:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_card_not_inserted, 0x40), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_card_not_inserted, 0x40), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 3:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_not_pocketstation, 0x42), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_not_pocketstation, 0x42), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 1:
     case 4:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_load_failed, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_load_failed, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     }
     if (g_pad_input & NIKI_CONFIRM_INPUT_MASK)
@@ -1496,7 +1496,7 @@ u8* niki_draw_secondary_status_dialog(s32* ot, u8* prim, s32 x_offset, s32 y_off
  * @param palette_mode Selects the special palette path when one and the icon index is below two.
  * @return Advanced packet cursor, or the original cursor when drawing is skipped.
  */
-u8* niki_draw_icon_highlight(u8* prim, s32* ot, s32 x, s32 y, s32 width, s32 icon_index, s32 texture_slot, s32 palette_mode)
+u8* niki_draw_icon_highlight(u8* prim, u_long* ot, s32 x, s32 y, s32 width, s32 icon_index, s32 texture_slot, s32 palette_mode)
 {
     RECT rect;
     NikiTexturedQuad* quad;
@@ -1579,7 +1579,7 @@ void niki_enable_choice_toggle(void)
  * @param y Caption baseline.
  * @return Advanced GPU packet cursor.
  */
-u8* niki_draw_choice_prompt(u8* prim, s32* ot, s32 x, s32 y)
+u8* niki_draw_choice_prompt(u8* prim, u_long* ot, s32 x, s32 y)
 {
     u8* p;
     u8* base;
@@ -1597,14 +1597,14 @@ u8* niki_draw_choice_prompt(u8* prim, s32* ot, s32 x, s32 y)
     {
         palette = 5;
     }
-    prim = func_800A88A0(prim, ot, (u8*)first_caption, palette, x - 0x10, y, 1);
+    prim = field_draw_text((SPRT*)prim, ot, (u8*)first_caption, palette, x - 0x10, y, 1);
     palette = 4;
     second_caption = base[0x38] + ((base[0x39] << 8) + (uintptr_t)base);
     if (g_niki_choice_toggle == 0)
     {
         palette = 5;
     }
-    prim = func_800A88A0(prim, ot, (u8*)second_caption, palette, x + 8, y, 0);
+    prim = field_draw_text((SPRT*)prim, ot, (u8*)second_caption, palette, x + 8, y, 0);
     if (g_pad_input & 0xA000)
     {
         g_niki_choice_toggle ^= 1;
@@ -1631,7 +1631,7 @@ static inline SavedGameLayout* niki_preview_metadata(void)
  * @param y_offset Vertical displacement subtracted from glyph positions.
  * @return Advanced GPU packet cursor.
  */
-u8* niki_draw_state_page(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
+u8* niki_draw_state_page(u_long* ot, u8* prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
     s32 dispatch;
@@ -1639,10 +1639,10 @@ u8* niki_draw_state_page(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
     switch (dispatch)
     {
     case 0xf8:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_game_save_data, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_no_game_save_data, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xf9:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_game_save_data, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_no_game_save_data, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xff:
     {
@@ -1650,25 +1650,25 @@ u8* niki_draw_state_page(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
         u8* base;
         x = -x_offset + 0x90;
         base = (u8*)&g_niki_text_table;
-        prim = func_800A88A0(prim, ot, base + g_niki_text_table, 4, x, -y_offset, 2);
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, base + g_niki_text_table, 4, x, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
     }
     break;
     case 0xfa:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_game_save_data, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_no_game_save_data, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xfd:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_card, 4), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_no_card, 4), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xfb:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_card_access_failed, 0x10), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_card_access_failed, 0x10), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xfc:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_save_data, 0x12), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_no_save_data, 0x12), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xf7:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_no_load_file, 0x68), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_no_load_file, 0x68), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xf6:
     {
@@ -1682,10 +1682,10 @@ u8* niki_draw_state_page(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
         s32 dialog_state;
 
         x = -x_offset + 0x90;
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_loading, 0x32), 4, x, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_loading, 0x32), 4, x, -y_offset, 2);
         base = (u8*)&g_niki_text_loading - 0x32;
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
 
         next = prim;
         bar = (NikiPolyG4Packet*)prim;
@@ -1769,7 +1769,7 @@ u8* niki_draw_state_page(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
         s32 i;
 
         x = -x_offset;
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_trade_data_not_saved, 0x72), 4, x + 0x90, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_trade_data_not_saved, 0x72), 4, x + 0x90, -y_offset, 2);
         y = 0xE - y_offset;
         p = (u8*)&D_800EC3FA;
         offset_high = p[1] << 8;
@@ -1780,14 +1780,14 @@ u8* niki_draw_state_page(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
         {
             palette = 5;
         }
-        result = func_800A88A0(prim, ot, (u8*)first_caption, palette, x + 0x80, y, 1);
+        result = field_draw_text((SPRT*)prim, ot, (u8*)first_caption, palette, x + 0x80, y, 1);
         palette = 4;
         second_caption = base[0x38] + ((base[0x39] << 8) + (uintptr_t)base);
         if (g_niki_choice_toggle == 0)
         {
             palette = 5;
         }
-        result = func_800A88A0(result, ot, (u8*)second_caption, palette, x + 0x98, y, 0);
+        result = field_draw_text((SPRT*)result, ot, (u8*)second_caption, palette, x + 0x98, y, 0);
         if (g_pad_input & 0xA000)
         {
             g_niki_choice_toggle ^= 1;
@@ -1848,9 +1848,9 @@ u8* niki_draw_state_page(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
         s32 checksum;
 
         x = -x_offset;
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_found_load_file, 0x6A), 4, x + 0x90, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_found_load_file, 0x6A), 4, x + 0x90, -y_offset, 2);
         caption_table = (u8*)&g_niki_text_found_load_file - 0x6A;
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(caption_table, 0x70), 4, x + 0x90, 0xE - y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_OFF(caption_table, 0x70), 4, x + 0x90, 0xE - y_offset, 2);
 
         y = 0x1C - y_offset;
         p = (u8*)&D_800EC3FA;
@@ -1862,14 +1862,14 @@ u8* niki_draw_state_page(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
         {
             palette = 5;
         }
-        result = func_800A88A0(prim, ot, (u8*)first_caption, palette, x + 0x80, y, 1);
+        result = field_draw_text((SPRT*)prim, ot, (u8*)first_caption, palette, x + 0x80, y, 1);
         palette = 4;
         second_caption = base[0x38] + ((base[0x39] << 8) + (uintptr_t)base);
         if (g_niki_choice_toggle == 0)
         {
             palette = 5;
         }
-        result = func_800A88A0(result, ot, (u8*)second_caption, palette, x + 0x98, y, 0);
+        result = field_draw_text((SPRT*)result, ot, (u8*)second_caption, palette, x + 0x98, y, 0);
         if (g_pad_input & 0xA000)
         {
             g_niki_choice_toggle ^= 1;
@@ -1923,10 +1923,10 @@ u8* niki_draw_state_page(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
         s32 i;
 
         x = -x_offset + 0x90;
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_niki_text_saving, 0x1C), 4, x, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_SYM(g_niki_text_saving, 0x1C), 4, x, -y_offset, 2);
         base = (u8*)&g_niki_text_saving - 0x1C;
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
 
         next = prim;
         bar = (NikiPolyG4Packet*)prim;
@@ -1986,9 +1986,9 @@ u8* niki_draw_state_page(s32* ot, u8* prim, s32 x_offset, s32 y_offset)
 
         x = -x_offset + 0x90;
         base = (u8*)&g_niki_text_table;
-        prim = func_800A88A0(prim, ot, base + g_niki_text_table, 4, x, -y_offset, 2);
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, base + g_niki_text_table, 4, x, -y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
+        prim = field_draw_text((SPRT*)prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
 
         if (g_niki_entry_scan_active == 0)
         {

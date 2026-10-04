@@ -61,15 +61,6 @@ typedef struct
     u16 y;
 } ZukanUiSpriteRecord;
 
-/**
- * @brief 2D short position passed to the number/text drawing helpers.
- */
-typedef struct
-{
-    s16 x;
-    s16 y;
-} ZukanPos;
-
 /** @brief Fade color and the number of interpolation steps left. */
 typedef struct
 {
@@ -204,10 +195,8 @@ extern s32 g_zukan_next_resource_id;
  */
 
 /* FIELD routines that stay resident while this overlay is loaded. */
-void* field_draw_text(void* packet_cursor, u_long* ordering_table, u8* text, s32 color, s32 x, s32 y, s32 flags);
-void* field_draw_number_wide(u_long* ordering_table, void* packet_cursor, s32 value, s32 color, ZukanPos* position, s32 flags);
-void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 value, s32 digit_count, ZukanPos* position, s32 flags);
-void* field_draw_sprite_glyph(void* packet_cursor, u_long* ordering_table, s32 glyph, ZukanPos* position, s32 flags);
+void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 value, s32 digit_count, Vec2s* position, s32 flags);
+void* field_draw_sprite_glyph(void* packet_cursor, u_long* ordering_table, s32 glyph, Vec2s* position, s32 flags);
 
 /* Helper routines. */
 void zukan_upload_ui_images(u8* work_buffer);
@@ -771,7 +760,7 @@ void zukan_render_content(RenderContext* render_ctx)
 {
     s32 unused[2];
     DRAWENV draw_env;
-    ZukanPos pos;
+    Vec2s pos;
     u8* packet_cursor;
     u_long* ordering_table;
     s32 entry_index;
@@ -786,7 +775,7 @@ void zukan_render_content(RenderContext* render_ctx)
     {
         ordering_table = &render_ctx->ot[ZUKAN_LAYER_LIST];
 
-        packet_cursor = field_draw_text(packet_cursor, ordering_table, ZUKAN_ARCHIVE_TEXT(category_names_offset, g_zukan_category), 0xA, 0xA0, 0x22,
+        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, ZUKAN_ARCHIVE_TEXT(category_names_offset, g_zukan_category), 0xA, 0xA0, 0x22,
                                         FIELD_TEXT_ALIGN_CENTER);
 
         if (g_zukan_scroll_y != 0)
@@ -841,16 +830,16 @@ void zukan_render_content(RenderContext* render_ctx)
 
             pos.x = 0;
             pos.y = row_y;
-            packet_cursor = field_draw_number_wide(ordering_table, packet_cursor, entry_index + 1, 0, &pos, 0);
+            packet_cursor = field_draw_number_wide(ordering_table, (SPRT*)packet_cursor, entry_index + 1, 0, &pos, 0);
             if (g_zukan_list_entries[entry_index].resource_id_and_available >> 15)
             {
                 packet_cursor =
-                    field_draw_text(packet_cursor, ordering_table, ZUKAN_ARCHIVE_TEXT(entry_names_offset, g_zukan_list_entries[entry_index].name_index), 0,
+                    field_draw_text((SPRT*)packet_cursor, ordering_table, ZUKAN_ARCHIVE_TEXT(entry_names_offset, g_zukan_list_entries[entry_index].name_index), 0,
                                     0x66, row_y, FIELD_TEXT_ALIGN_CENTER);
             }
             else
             {
-                packet_cursor = field_draw_text(packet_cursor, ordering_table, FIELD_UI_TEXT_AT(g_field_ui_text_dashes, FIELD_UI_TEXT_DASHES), 0, 0x66, row_y,
+                packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(g_field_ui_text_dashes, FIELD_UI_TEXT_DASHES), 0, 0x66, row_y,
                                                 FIELD_TEXT_ALIGN_CENTER);
             }
         }
@@ -1129,7 +1118,7 @@ u8* zukan_render_detail_text(u8* packet_cursor, u_long* ordering_table)
             text++;
             x += 12;
         }
-        packet_cursor = field_draw_text(packet_cursor, ordering_table, text, 0, x, line_y, FIELD_TEXT_ALIGN_LEFT);
+        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, 0, x, line_y, FIELD_TEXT_ALIGN_LEFT);
         offsets++;
         line_y += 13;
     }

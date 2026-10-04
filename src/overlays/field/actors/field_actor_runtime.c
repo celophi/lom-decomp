@@ -308,7 +308,6 @@ void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index);
 void field_initialize_actor_part(s32 part_index, s32 timer_mode);
 static void field_build_actor_render_commands(FieldRenderContext* render_ctx, s32 unused);
 s32 field_evaluate_parameter_track(FieldActorSlot* slot, s32 curve_index);
-void field_clear_actor_effects(FieldActorSlot* slot);
 static void field_update_actor_effects(FieldActorSlot* slot);
 static void field_update_actor_part_effects(FieldActorSlot* slot);
 void field_dispatch_actor_audio_event(FieldActorSlot* slot, s32 event_type, s32 event_subtype);

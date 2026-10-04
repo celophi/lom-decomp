@@ -3,6 +3,7 @@
  */
 
 #include "common.h"
+#include "overlays/field/field_text.h"
 #include <libgpu.h>
 #include "../internal/field_calls.h"
 #include "overlays/field/field_ui_text.h"
@@ -34,7 +35,6 @@
 /** @brief Top of the second choice inside the prompt window. */
 #define FIELD_CHOICE_SECOND_Y 17
 
-void* field_draw_text(SPRT* sprite_cursor, s32* ot, u8* text, s32 color, s32 x, s32 y, s32 flags);
 
 /** @brief Offset entry of UI string FIELD_TITLE_CHOICE_FIRST_TEXT (each entry is its own symbol). */
 extern u8 g_field_title_choice_text_entry[];
@@ -46,7 +46,7 @@ extern u8 g_field_title_choice_text_entry[];
  * @param scroll_x Horizontal scroll of the prompt window, subtracted from the text position.
  * @param scroll_y Vertical scroll of the prompt window, subtracted from the text position.
  */
-void field_draw_return_to_title_choices(s32* ot, void* prim, s32 scroll_x, s32 scroll_y)
+void field_draw_return_to_title_choices(u_long* ot, void* prim, s32 scroll_x, s32 scroll_y)
 {
     u8* text_table;
     u8* first_text;

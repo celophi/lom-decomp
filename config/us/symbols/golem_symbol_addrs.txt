@@ -1,6 +1,8 @@
 // Field dialogue/text renderer exports used by this overlay.
 field_text_reset_windows             = 0x800643E0;
 field_text_reset_scratch             = 0x8006441C;
+field_format_number                  = 0x800A8B90;
+field_draw_text                      = 0x800A88A0;
 
 // Shared data named for this overlay's use.
 g_golem_composite_icon_rows          = 0x800F1CD0;
@@ -68,3 +70,11 @@ g_golem_restore_slot_on_cancel       = 0x8014C288;
 g_golem_interpolation_steps          = 0x8014C274;
 g_golem_interpolation_value          = 0x8014C278;
 g_golem_interpolation_target         = 0x8014C280;
+
+golem_rebuild_grid_owners = 0x800CB758;
+golem_place_logic_block = 0x800CB918;
+golem_can_place_logic_block = 0x800CBA9C;
+golem_logic_block_fits_grid = 0x800CBC0C;
+golem_fill_logic_block_status = 0x800CBD70;
+golem_remove_logic_block = 0x800CBE64;
+golem_build_grid_markers = 0x800CBEC4;

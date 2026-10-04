@@ -3,6 +3,7 @@
  */
 
 #include "common.h"
+#include "overlays/field/field_text.h"
 #include "../internal/field_calls.h"
 #include "common/gpu_packet.h"
 #include "main/main.h"
@@ -63,7 +64,6 @@
 #define FIELD_COORDINATE_LABEL_COLOR 4
 
 void* field_draw_player_icon(POLY_FT4* prim, u_long* ordering_table, s32 selector, s32 x, s32 y, s32 flip);
-void* field_draw_text(void* prim, void* ot, void* text, s32 color, s32 x, s32 y, s32 align);
 
 extern s32 g_field_party_has_guest;
 extern u8* g_field_coordinate_labels[];
@@ -76,7 +76,7 @@ extern u8* g_field_coordinate_labels[];
  * @param y_offset Vertical offset subtracted from the panel position.
  * @return Primitive-buffer cursor after all enabled rows.
  */
-void* field_draw_coordinate_panel(void* ot, u8* prim, s32 x_offset, s32 y_offset)
+void* field_draw_coordinate_panel(u_long* ot, u8* prim, s32 x_offset, s32 y_offset)
 {
     void* cursor;
     s32 unused[2];

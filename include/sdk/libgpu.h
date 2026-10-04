@@ -312,6 +312,9 @@ typedef struct {
 #define setLineG2(prim)   (setlen((prim), 4), setcode((prim), 0x50))
 #define setLineF4(prim)   (setlen((prim), 6), setcode((prim), 0x4c), (prim)->pad = 0x55555555)
 
+/** @brief Callback used by the GPU library to print diagnostics. */
+extern int (*GPU_printf)();
+
 extern DISPENV *GetDispEnv(DISPENV *env);
 extern DISPENV *PutDispEnv(DISPENV *env);
 extern DISPENV *SetDefDispEnv(DISPENV *env, int x, int y, int w, int h);

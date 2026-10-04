@@ -677,8 +677,8 @@ extern s32 g_field_text_session_active;
 extern s32 g_field_actor_text_count;
 
 static void field_draw_actor_text(FieldRenderHalf* render, FieldActorText* text);
-static void* field_draw_tinted_text(SPRT* sprite_cursor, s32* ordering_table, u8* text, s32 text_color, s32 x, s32 y, s32 alignment, s32 color);
-SPRT* field_add_sprite_outline(s32* ordering_table, SPRT* sprite_cursor, s32 count);
+static void* field_draw_tinted_text(SPRT* sprite_cursor, u_long* ordering_table, u8* text, s32 text_color, s32 x, s32 y, s32 alignment, s32 color);
+SPRT* field_add_sprite_outline(u_long* ordering_table, SPRT* sprite_cursor, s32 count);
 
 /**
  * @brief Clear the countdown of every actor text.
@@ -830,7 +830,7 @@ static void field_draw_actor_text(FieldRenderHalf* render, FieldActorText* text)
     {
         tint = countdown * 4;
     }
-    render->primitive_cursor = field_draw_tinted_text((SPRT*)cursor, (s32*)ot, text->text, 4, state.bits.x, text->state.bits.y, 2, tint);
+    render->primitive_cursor = field_draw_tinted_text((SPRT*)cursor, ot, text->text, 4, state.bits.x, text->state.bits.y, 2, tint);
 }
 
 /**
@@ -845,7 +845,7 @@ static void field_draw_actor_text(FieldRenderHalf* render, FieldActorText* text)
  * @param color Tint level, or FIELD_TEXT_TINT_NEUTRAL for the neutral tint.
  * @return Primitive-buffer cursor immediately after the generated draw commands.
  */
-static void* field_draw_tinted_text(SPRT* sprite_cursor, s32* ordering_table, u8* text, s32 text_color, s32 x, s32 y, s32 alignment, s32 color)
+static void* field_draw_tinted_text(SPRT* sprite_cursor, u_long* ordering_table, u8* text, s32 text_color, s32 x, s32 y, s32 alignment, s32 color)
 {
     s32 n, count, i, acc;
     SPRT* sprite;
@@ -1239,21 +1239,19 @@ extern void akao_release_all_sfx(void);
 /* Defined in field_resource_load.c. */
 extern s32 field_party_reload_reading(void);
 /* Defined in field_modal_runtime.c and field_actor_hud_effects.c. */
-void* field_draw_text(SPRT* cursor, s32* ot, u8* text, s32 color, s32 x, s32 y, s32 flags);
-void* field_draw_number(void* ot, void* cursor, s32 value, s32 color, Vec2s* position, s32 flags);
 void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* position);
 
 void field_close_battle_results(void);
 static void field_open_unlock_list(void);
 static void field_open_item_list(void);
 static void field_open_party_summary(void);
-static void* field_draw_party_totals(void* ot, void* cursor, s32 x_offset, s32 y_offset);
-static void* field_draw_experience_ranking(void* ot, void* cursor, s32 x_offset, s32 y_offset);
-static void* field_draw_item_list(void* ot, void* cursor, s32 x_offset, s32 y_offset);
-static void* field_draw_unlock_list(void* ot, void* cursor, s32 scroll_x, s32 scroll_y, s32 viewport_height);
-static POLY_FT4* field_draw_animated_icon(u32* ordering_table, POLY_FT4* prim, s32 x, s32 y, s32 wide);
-static void* field_draw_animated_small_icon(s32* ordering_table, POLY_FT4* prim, s32 x, s32 y);
-static void* field_draw_animated_marker(s32* ordering_table, POLY_FT4* prim, s32 x, s32 y);
+static void* field_draw_party_totals(u_long* ot, void* cursor, s32 x_offset, s32 y_offset);
+static void* field_draw_experience_ranking(u_long* ot, void* cursor, s32 x_offset, s32 y_offset);
+static void* field_draw_item_list(u_long* ot, void* cursor, s32 x_offset, s32 y_offset);
+static void* field_draw_unlock_list(u_long* ot, void* cursor, s32 scroll_x, s32 scroll_y, s32 viewport_height);
+static POLY_FT4* field_draw_animated_icon(u_long* ordering_table, POLY_FT4* prim, s32 x, s32 y, s32 wide);
+static void* field_draw_animated_small_icon(u_long* ordering_table, POLY_FT4* prim, s32 x, s32 y);
+static void* field_draw_animated_marker(u_long* ordering_table, POLY_FT4* prim, s32 x, s32 y);
 
 /**
  * @brief Save the game state before a battle so that it can be retried.
@@ -1615,7 +1613,7 @@ static void field_open_party_summary(void)
  * @return Primitive cursor after the row.
  * @note While g_field_results_wait_frames runs it also waits for queued resources.
  */
-static void* field_draw_party_totals(void* ot, void* cursor, s32 x_offset, s32 y_offset)
+static void* field_draw_party_totals(u_long* ot, void* cursor, s32 x_offset, s32 y_offset)
 {
     s32 i;
     s32 total_x;
@@ -1691,7 +1689,7 @@ static void* field_draw_party_totals(void* ot, void* cursor, s32 x_offset, s32 y
  * @return Primitive-buffer address after the final emitted element.
  * @note Equal gains keep party order during the insertion sort.
  */
-static void* field_draw_experience_ranking(void* ordering_table, void* cursor, s32 x_offset, s32 y_offset)
+static void* field_draw_experience_ranking(u_long* ordering_table, void* cursor, s32 x_offset, s32 y_offset)
 {
     FieldRankWork work;
     s32 count;
@@ -1776,7 +1774,7 @@ static void* field_draw_experience_ranking(void* ordering_table, void* cursor, s
  * @param y_offset Vertical window offset.
  * @return Primitive cursor after the list.
  */
-static void* field_draw_item_list(void* ot, void* prim, s32 x_offset, s32 y_offset)
+static void* field_draw_item_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     s32 i;
     Vec2s pos;
@@ -1814,7 +1812,7 @@ static void* field_draw_item_list(void* ot, void* prim, s32 x_offset, s32 y_offs
  * @param viewport_height Bottom clipping boundary.
  * @return Primitive buffer cursor after drawing the visible text.
  */
-static void* field_draw_unlock_list(void* ordering_table, void* cursor, s32 scroll_x, s32 scroll_y, s32 viewport_height)
+static void* field_draw_unlock_list(u_long* ordering_table, void* cursor, s32 scroll_x, s32 scroll_y, s32 viewport_height)
 {
     u8 pad[8];
     u8* ability_names;
@@ -1928,7 +1926,7 @@ static void* field_draw_unlock_list(void* ordering_table, void* cursor, s32 scro
  * @param wide Selects the larger geometry and texture region when nonzero.
  * @return Pointer just past the emitted primitive.
  */
-static POLY_FT4* field_draw_animated_icon(u32* ordering_table, POLY_FT4* prim, s32 x, s32 y, s32 wide)
+static POLY_FT4* field_draw_animated_icon(u_long* ordering_table, POLY_FT4* prim, s32 x, s32 y, s32 wide)
 {
     s32 phase_table[8] = {0, 1, 2, 3, 2, 1, 0, 0};
     s32 phase;
@@ -1987,7 +1985,7 @@ static POLY_FT4* field_draw_animated_icon(u32* ordering_table, POLY_FT4* prim, s
  * @param y Top screen coordinate.
  * @return Buffer address immediately after the emitted primitive.
  */
-static void* field_draw_animated_small_icon(s32* ordering_table, POLY_FT4* prim, s32 x, s32 y)
+static void* field_draw_animated_small_icon(u_long* ordering_table, POLY_FT4* prim, s32 x, s32 y)
 {
     FieldQuadAnimationTable table;
     s32 phase_index;
@@ -2040,7 +2038,7 @@ static void* field_draw_animated_small_icon(s32* ordering_table, POLY_FT4* prim,
  * @param y Vertical origin.
  * @return Buffer address immediately after the emitted primitive.
  */
-static void* field_draw_animated_marker(s32* ordering_table, POLY_FT4* prim, s32 x, s32 y)
+static void* field_draw_animated_marker(u_long* ordering_table, POLY_FT4* prim, s32 x, s32 y)
 {
     s32 frame;
     u32 color;
