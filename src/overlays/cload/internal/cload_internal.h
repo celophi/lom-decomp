@@ -98,7 +98,7 @@ struct CloadElement
  *        word split into its state/phase/x/code bitfields, plus the 0x4
  *        active/y sub-fields and the 0x8 draw callback.
  */
-typedef struct
+typedef struct CloadPromptElement
 {
     union
     {
@@ -218,7 +218,7 @@ typedef struct
  * fixed offsets used by cload_run_menu_loop/cload_init_display.  The trailing
  * region is still unknown and is intentionally left opaque.
  */
-typedef struct
+typedef struct CloadRenderBuffer
 {
     /* 0x0000 */ u8 header[0x40];
     /* 0x0040 */ u_long ordering_table[0x1000];

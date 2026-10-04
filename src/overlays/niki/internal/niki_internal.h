@@ -174,7 +174,7 @@ typedef struct
  * @note prim_cursor is the running GPU-packet write cursor; frame_flag selects
  *       the clip/window variant.
  */
-typedef struct
+typedef struct NikiFrameState
 {
     s32 head_tag;
     u8 pad4[0x40AE];
