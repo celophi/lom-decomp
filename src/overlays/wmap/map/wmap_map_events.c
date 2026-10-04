@@ -101,9 +101,7 @@ extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
 extern s32 D_801B2E44;
 extern u8 D_800DCA98[];
-extern s32 D_800DBE70;
 extern s32 D_80139224;
-extern s32 D_80139978;
 extern s32 D_801B2E74;
 extern void (*D_800D6D34[])(void);
 extern void wmap_draw_vehicle(void);
@@ -647,8 +645,8 @@ void func_800A7108(void)
 void func_800A71D4(void)
 {
     D_80139224 = 0;
-    D_80139978 = 0x18;
-    D_800DBE70 = 0;
+    g_wmap_forced_animated_land_id = 0x18;
+    g_wmap_land_display_limit = 0;
     wmap_find_land_cell(0x18, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_view_scroll_mode = 2;
     g_wmap_focus_cell_x = g_wmap_vehicle_cell_x;

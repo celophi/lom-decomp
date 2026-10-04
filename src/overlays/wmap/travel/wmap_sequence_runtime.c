@@ -66,7 +66,6 @@ extern s32 g_wmap_land_focus_timer;
 extern void (*g_wmap_land_focus_steps[WMAP_LAND_FOCUS_STEPS])(void);
 extern s32 g_wmap_selected_artifact;
 extern s32 D_80182E34;
-extern s32 D_800DBE70;
 extern s32 D_800DBE78;
 extern s32 g_wmap_callback_active[];
 extern WmapSequenceCallback g_wmap_callbacks[];
@@ -214,7 +213,7 @@ WMAP_STEP_WAIT(wmap_land_focus_wait_6, g_wmap_land_focus_step, g_wmap_land_focus
  */
 void wmap_land_focus_lock(void)
 {
-    D_800DBE70 = 0;
+    g_wmap_land_display_limit = 0;
     g_wmap_event_active = 1;
     D_800DBE78 = 1;
     g_wmap_land_focus_timer = 8;

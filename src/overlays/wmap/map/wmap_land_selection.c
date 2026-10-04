@@ -5,8 +5,8 @@
 extern s32 D_80139270;
 extern s32 D_80139838[];
 
-/** @brief Clear the candidate list and search for an available map entry. */
-void func_8005909C(void)
+/** @brief Rebuild the artifact carousel and advance to an available selection. */
+void wmap_reset_artifact_carousel(void)
 {
     s32 i;
 

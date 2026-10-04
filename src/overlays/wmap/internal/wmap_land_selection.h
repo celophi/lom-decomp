@@ -3,6 +3,6 @@
 
 #include "common.h"
 
-void func_8005909C();
+void wmap_reset_artifact_carousel(void);
 
 #endif

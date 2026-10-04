@@ -1,3 +1,4 @@
+#include "../internal/wmap_main.h"
 #include "../internal/wmap_frame_render.h"
 #include "../internal/wmap_resource_support.h"
 #include <libgpu.h>
@@ -46,7 +47,6 @@ typedef struct
 } WmapValueHeader;
 
 extern u8 g_wmap_load_buffer[];
-extern s32 D_801ADAFC;
 extern RECT D_80051A88;
 
 
@@ -118,7 +118,7 @@ void func_80064F64(s32 resource_index)
         {
             LoadImage((RECT*)header, (u_long*)(data + 12));
             DrawSync(0);
-            D_801ADAFC = 1;
+            g_wmap_artifact_shadows_enabled = 1;
         }
     }
     else
@@ -128,7 +128,7 @@ void func_80064F64(s32 resource_index)
         {
             LoadImage((RECT*)&rectangle, (u_long*)(data + 12));
             DrawSync(0);
-            D_801ADAFC = 1;
+            g_wmap_artifact_shadows_enabled = 1;
         }
     }
 }
@@ -159,7 +159,7 @@ void func_80065078(s32 resource_index)
         {
             LoadImage((RECT*)header, (u_long*)(data + 12));
             DrawSync(0);
-            D_801ADAFC = 1;
+            g_wmap_artifact_shadows_enabled = 1;
         }
     }
     else
@@ -169,7 +169,7 @@ void func_80065078(s32 resource_index)
         {
             LoadImage((RECT*)&rectangle, (u_long*)(data + 12));
             DrawSync(0);
-            D_801ADAFC = 1;
+            g_wmap_artifact_shadows_enabled = 1;
         }
     }
 }

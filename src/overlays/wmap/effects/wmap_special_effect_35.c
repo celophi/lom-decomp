@@ -102,7 +102,6 @@ typedef void (*WmapHandler)(void);
 
 extern WmapAnimationSlot g_wmap_actor_animations[];
 extern WmapEffectMotion g_wmap_actor_motions[];
-extern s32 D_800DBE70;
 extern s32 g_wmap_vehicle_cell_x;
 extern s32 g_wmap_vehicle_cell_y;
 extern s32 g_wmap_load_buffer[];
@@ -137,7 +136,6 @@ extern WmapEffectEmitter* g_wmap_effect_params;
 extern s32 g_wmap_view_mode;
 extern s32 g_wmap_view_scroll_mode;
 extern WmapView g_wmap_view;
-extern s32 D_80139978;
 extern s32 D_8013B294;
 extern WmapColor3 D_80182D74;
 extern WmapColor3 D_80182D80;
@@ -808,7 +806,7 @@ WMAP_STEP_RESET(wmap_effect35_reset, g_wmap_effect35_step, g_wmap_effect35_timer
  */
 void wmap_effect35_load(void)
 {
-    D_80139978 = 0x1F;
+    g_wmap_forced_animated_land_id = 0x1F;
     func_800A89DC(WMAP_EFFECT35_RESOURCE);
     cdrom_wait_queue_empty();
     func_800651B4(&D_80182E40);
@@ -884,11 +882,11 @@ void wmap_effect35_timeline_start_sprite_a(void)
 WMAP_STEP_WAIT(wmap_effect35_timeline_wait_04, g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer)
 
 /**
- * @brief Timeline step 5: set D_800DBE70.
+ * @brief Timeline step 5: limit land display to markers.
  */
 void wmap_effect35_timeline_step_05(void)
 {
-    D_800DBE70 = 1;
+    g_wmap_land_display_limit = 1;
     g_wmap_effect35_timeline_timer = 45;
     g_wmap_effect35_timeline_step++;
 }
@@ -904,7 +902,7 @@ WMAP_STEP_WAIT(wmap_effect35_timeline_wait_06, g_wmap_effect35_timeline_step, g_
 void wmap_effect35_timeline_start_drop_a(void)
 {
     wmap_start_sequence(wmap_effect35_run_drop_a);
-    D_800DBE70 = 0;
+    g_wmap_land_display_limit = 0;
     g_wmap_backdrop_target_level = 3;
     wmap_start_map_tint(WMAP_EFFECT35_TINT);
     g_wmap_effect35_timeline_timer = 100;
@@ -1021,7 +1019,7 @@ void wmap_effect35_timeline_start_drop_b(void)
 {
     wmap_start_sequence(wmap_effect35_run_drop_b);
     g_wmap_transition_mesh_hidden = 1;
-    D_80139978 = -1;
+    g_wmap_forced_animated_land_id = -1;
     g_wmap_view_mode = -1;
     g_wmap_effect35_timeline_timer = 2;
     g_wmap_effect35_timeline_step++;
