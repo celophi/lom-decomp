@@ -242,7 +242,7 @@ extern s32 D_801ADB08;
 extern u8 D_801ADBA0[];
 extern RECT D_80051A88;
 extern WmapTileDisplay D_8011D108[6][6];
-/** @brief Nonzero to replace Gato's map appearance with the rainy Domina artwork. */
+/** @brief Nonzero to use display resource 35 for Gato's map appearance. */
 extern s32 g_wmap_gato_appearance_override;
 extern s32 D_80182E20;
 extern WmapMotion g_wmap_actor_motions[];
