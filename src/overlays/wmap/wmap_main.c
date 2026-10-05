@@ -42,6 +42,7 @@
 #define WMAP_BACKDROP_QUAD_WIDTH 160
 #define WMAP_BACKDROP_COLOR_STEP 8
 #define WMAP_FADE_COLOR_STEP 4
+#define WMAP_SCREEN_FADE_OT_INDEX 176
 #define WMAP_ANALOG_REPEAT_BASE_FRAMES 512
 #define WMAP_ANALOG_REPEAT_MAX_SHIFT 7
 #define WMAP_ENTRY_PALETTE_COLORS 16
@@ -125,7 +126,7 @@ typedef enum
     WMAP_SCRIPT_FIND_HOME = 8
 } WmapInputCommand;
 
-/** @brief Direction in which the screen-covering polygon changes intensity. */
+/** @brief Direction in which the fade quad's RGB intensity changes. */
 typedef enum
 {
     WMAP_FADE_HOLD = 0,
@@ -220,8 +221,8 @@ extern WmapColor3 D_80182D74;
 extern WmapColor3 D_80182D80;
 extern WmapColor3 D_80182D8C;
 extern WmapColor3 D_80182D94;
-extern POLY_FT4 D_800D0694;
-extern u8 D_800D0698;
+/** @brief Textured fade quad drawn in the upper-left corner of the map. */
+extern POLY_FT4 g_wmap_screen_fade_quad;
 /** @brief Sprite template shared by menu and scripted input prompts. */
 extern SPRT g_wmap_prompt_sprite_template;
 extern WmapMenuTriangle g_wmap_menu_triangles[WMAP_MENU_TRIANGLE_COUNT];
@@ -752,7 +753,7 @@ s32 wmap_draw_backdrop(s32 initialize)
 }
 
 /**
- * @brief Advance the screen-covering fade and submit its polygon.
+ * @brief Step the map fade quad's intensity and draw it while nonzero.
  * @param initialize Callback initialization flag; unused.
  * @return Zero when disabled, otherwise one to keep the callback active.
  */
@@ -764,26 +765,25 @@ s32 wmap_update_screen_fade(s32 initialize)
     switch (g_wmap_screen_fade_mode)
     {
     case WMAP_FADE_DECREASE:
-        intensity = D_800D0694.b0 - WMAP_FADE_COLOR_STEP;
-        D_800D0694.b0 = intensity;
-        D_800D0694.g0 = intensity;
-        D_800D0694.r0 = intensity;
+        intensity = g_wmap_screen_fade_quad.b0 - WMAP_FADE_COLOR_STEP;
+        g_wmap_screen_fade_quad.b0 = intensity;
+        g_wmap_screen_fade_quad.g0 = intensity;
+        g_wmap_screen_fade_quad.r0 = intensity;
         if (intensity == 0)
         {
             g_wmap_screen_fade_mode = WMAP_FADE_HOLD;
         }
         else
         {
-            /* r0 is known to be nonzero here; the target skips the D_800D0698 test. */
-            goto draw;
+            goto draw_fade;
         }
         break;
     case WMAP_FADE_INCREASE:
-        intensity = D_800D0694.b0 + WMAP_FADE_COLOR_STEP;
-        D_800D0694.b0 = intensity;
-        D_800D0694.g0 = intensity;
-        D_800D0694.r0 = intensity;
-        if (intensity == 128)
+        intensity = g_wmap_screen_fade_quad.b0 + WMAP_FADE_COLOR_STEP;
+        g_wmap_screen_fade_quad.b0 = intensity;
+        g_wmap_screen_fade_quad.g0 = intensity;
+        g_wmap_screen_fade_quad.r0 = intensity;
+        if (intensity == WMAP_FULL_BRIGHTNESS)
         {
             g_wmap_screen_fade_mode = WMAP_FADE_HOLD;
         }
@@ -791,16 +791,17 @@ s32 wmap_update_screen_fade(s32 initialize)
     case WMAP_FADE_DISABLED:
         return 0;
     }
-    if (D_800D0698 != 0)
+    if (g_wmap_screen_fade_quad.r0 != 0)
     {
-    draw:
+    draw_fade:
         packet = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
-        *packet = D_800D0694;
-        if (D_800D0698 != 128)
+        *packet = g_wmap_screen_fade_quad;
+        /* The full-intensity quad is opaque; intermediate levels blend. */
+        if (g_wmap_screen_fade_quad.r0 != WMAP_FULL_BRIGHTNESS)
         {
-            packet->code |= 2;
+            packet->code |= GPU_CODE_SEMI_TRANS;
         }
-        addPrim(&g_wmap_current_frame->ordering_table[176], g_wmap_current_frame->packet_cursor);
+        addPrim(&g_wmap_current_frame->ordering_table[WMAP_SCREEN_FADE_OT_INDEX], g_wmap_current_frame->packet_cursor);
         if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {
             g_wmap_packet_bytes += sizeof(POLY_FT4);

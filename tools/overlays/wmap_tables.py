@@ -120,7 +120,7 @@ TABLES = (
     TableSpec("g_wmap_loop_result", "i", 1, note="Result of the last wmap_run_loop call."),
     spec("g_wmap_backdrop_front_quads", POLY_FT4, 4, "Front backdrop layer quads."),
     spec("g_wmap_backdrop_back_quads", POLY_FT4, 4, "Back backdrop layer quads."),
-    spec("D_800D0694", POLY_FT4, 1, "Fade quad; the code steps its colour, and tests r0 through D_800D0698."),
+    spec("g_wmap_screen_fade_quad", POLY_FT4, 1, "Screen fade quad with equal RGB intensity."),
     spec("g_wmap_backdrop_gradient_template", POLY_G4, 1, "Gradient quad copied into the backdrop state."),
     TableSpec("g_wmap_backdrop_scroll", "i", 1, note="Backdrop scroll offset; zero on disc."),
     spec("g_wmap_prompt_sprite_template", SPRT, 1, "Prompt sprite template."),
