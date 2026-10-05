@@ -2370,121 +2370,116 @@ s32 field_update_actor_command(FieldActor* actor)
  */
 static s32 field_filter_action_targets(s32 count, s32* indices)
 {
-    FieldActor* actor_base;
-    FieldObjectState* state_base;
-    u8* binding_base;
-    s32 group;
-    s32 sentinel;
-    s32 accepted_indices[16];
-    s16 command;
-    s32* output;
-    s32* input;
-    s32* accepted;
-    s32* copy;
-    s32 owner_index;
-    s32 object_index;
-    s32 contact;
-    s32 index;
-    s32 candidate_index;
-    s32 action_contact;
-    s32 i;
-    s32 accepted_count;
-    s32 binding_offset;
-    s32 owner_binding_offset;
+    s32 targets[16];
+    uintptr_t actors;
+    uintptr_t states;
+    uintptr_t bindings;
     FieldActor* actor;
     FieldObjectState* state;
+    FieldActorBinding* binding;
+    FieldActorBinding* owner_binding;
+    s32 no_actor;
+    s32 group;
+    s32 target_count;
+    s32 index;
+    s32 contact;
+    s16 command;
+    s32 offset;
+    s32 object_index;
+    s32 owner;
+    s32 i;
 
-    output = indices;
     i = 0;
-    accepted_count = i;
+    target_count = 0;
     if (count > 0)
     {
-        sentinel = FIELD_ACTOR_UNUSED;
-        actor_base = g_field_actors;
-        state_base = g_field_object_states;
+        no_actor = FIELD_ACTOR_UNUSED;
+        actors = (uintptr_t)g_field_actors;
+        states = (uintptr_t)g_field_object_states;
         group = g_field_active_group;
-        binding_base = (u8*)g_field_actor_bindings;
-        input = output;
-        accepted = accepted_indices;
+        bindings = (uintptr_t)g_field_actor_bindings;
         do
         {
-            candidate_index = *input;
-            if (candidate_index != sentinel)
+            index = indices[i];
+            if (index == no_actor)
             {
-                /* Index-first sums: the target adds the scaled index before the table base. */
-                actor = (FieldActor*)(candidate_index * sizeof(FieldActor) + (uintptr_t)actor_base);
-                state = (FieldObjectState*)(candidate_index * sizeof(FieldObjectState) + (uintptr_t)state_base);
-                if ((actor->presence != sentinel) && (state->current_hp.word != 0))
+                continue;
+            }
+            actor = (FieldActor*)(index * sizeof(FieldActor) + actors);
+            state = (FieldObjectState*)(index * sizeof(FieldObjectState) + states);
+            if (actor->presence == no_actor || state->current_hp.word == 0)
+            {
+                continue;
+            }
+            contact = state->contact.word;
+            if (contact & FIELD_CONTACT_ANIMATION_HIDDEN)
+            {
+                continue;
+            }
+            if (i >= FIELD_PARTY_COUNT && (state->group_flags & FIELD_OBJECT_GROUP_MASK) != group)
+            {
+                continue;
+            }
+            command = actor->command;
+            if (command == FIELD_ACTOR_COMMAND_TECHNIQUE || command == FIELD_ACTOR_COMMAND_DEFEAT_DELAY || command == FIELD_ACTOR_COMMAND_INSTRUMENT)
+            {
+                continue;
+            }
+            if (!(contact & FIELD_CONTACT_ACTION_PENDING))
+            {
+                /* A party member whose bound animation actor is busy is skipped. */
+                if (actor->object_index < FIELD_PLAYER_COUNT)
                 {
-                    contact = state->contact.word;
-                    if (!(contact & FIELD_CONTACT_ANIMATION_HIDDEN) && ((i < FIELD_PARTY_COUNT) || ((state->group_flags & FIELD_OBJECT_GROUP_MASK) == group)))
+                    offset = actor->object_index * sizeof(FieldActorBinding);
+                }
+                else
+                {
+                    offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
+                }
+                binding = (FieldActorBinding*)(bindings + offset);
+                object_index = actor->object_index;
+                owner = binding->owner;
+                if (owner == object_index)
+                {
+                    if ((u8)owner < FIELD_PLAYER_COUNT)
                     {
-                        command = actor->command;
-                        if ((command != FIELD_ACTOR_COMMAND_TECHNIQUE) && (command != FIELD_ACTOR_COMMAND_DEFEAT_DELAY) && (command != FIELD_ACTOR_COMMAND_INSTRUMENT))
-                        {
-                            if (!(contact & FIELD_CONTACT_ACTION_PENDING))
-                            {
-                                /* A party member whose bound animation actor is busy is skipped. */
-                                if (actor->object_index < FIELD_PLAYER_COUNT)
-                                {
-                                    binding_offset = actor->object_index * sizeof(FieldActorBinding);
-                                }
-                                else
-                                {
-                                    binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
-                                }
-                                object_index = actor->object_index;
-                                owner_index = ((FieldActorBinding*)(binding_base + binding_offset))->owner;
-                                if (owner_index == object_index)
-                                {
-                                    if ((u32)(owner_index & 0xFF) < FIELD_PLAYER_COUNT)
-                                    {
-                                        owner_binding_offset = owner_index * sizeof(FieldActorBinding);
-                                    }
-                                    else
-                                    {
-                                        owner_binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
-                                    }
-                                    if (((FieldActorBinding*)(binding_base + owner_binding_offset))->state != 0)
-                                    {
-                                        i += 1;
-                                        input++;
-                                        continue;
-                                    }
-                                }
-                            }
-                            if ((state->collision.word != 0) && !(state->flags & FIELD_OBJECT_UNTARGETABLE_FLAGS))
-                            {
-                                action_contact = state->contact.word;
-                                if (!(action_contact & FIELD_CONTACT_UNK20) && !((u8)action_contact & FIELD_CONTACT_TARGETED) && !(state->movement.word & FIELD_MOVEMENT_TECHNIQUE))
-                                {
-                                    accepted_count += 1;
-                                    *accepted = *input;
-                                    accepted++;
-                                }
-                            }
-                        }
+                        offset = owner * sizeof(FieldActorBinding);
+                    }
+                    else
+                    {
+                        offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
+                    }
+                    owner_binding = (FieldActorBinding*)(bindings + offset);
+                    if (owner_binding->state != FIELD_BINDING_IDLE)
+                    {
+                        continue;
                     }
                 }
             }
-            i += 1;
-            input++;
-        } while (i < count);
+            if (state->collision.word == 0 || (state->flags & FIELD_OBJECT_UNTARGETABLE_FLAGS))
+            {
+                continue;
+            }
+            if (state->contact.word & FIELD_CONTACT_UNK20)
+            {
+                continue;
+            }
+            if (state->contact.word & FIELD_CONTACT_TARGETED)
+            {
+                continue;
+            }
+            if (state->movement.word & FIELD_MOVEMENT_TECHNIQUE)
+            {
+                continue;
+            }
+            targets[target_count++] = indices[i];
+        } while (++i < count);
     }
-    i = 0;
-    if (accepted_count > 0)
+    for (i = 0; i < target_count; i++)
     {
-        copy = accepted_indices;
-        do
-        {
-            index = *copy;
-            copy++;
-            i += 1;
-            *output = index;
-            output++;
-        } while (i < accepted_count);
+        indices[i] = targets[i];
     }
-    return accepted_count;
+    return target_count;
 }
 
 /**
