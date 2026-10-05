@@ -343,7 +343,7 @@ void field_update_battle_end(void)
                     g_field_actors[i].y = 0;
                     if ((g_field_duel_mode != 0) && (g_field_actors[i].command == FIELD_ACTOR_COMMAND_KNOCKED_DOWN))
                     {
-                        g_field_actors[i].animation = (g_field_actors[i].animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_DEFENSELESS;
+                        g_field_actors[i].animation = (g_field_actors[i].animation & FIELD_ANIMATION_FACING) + FIELD_ABILITY_CROUCH;
                     }
                     else
                     {

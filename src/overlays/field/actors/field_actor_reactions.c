@@ -22,7 +22,6 @@
 #define FIELD_OBJECT_FLAG_0100 0x0100
 /** @brief Another object holds a link to this object (FieldContactWord linked bit). */
 #define FIELD_OBJECT_FLAG_LINK_TARGET 0x2000
-#define FIELD_OBJECT_FLAG_4000 0x4000
 /** @brief An action chain is running; its hits are counted in retry_count. */
 #define FIELD_OBJECT_CHAINING 0x8000
 
@@ -36,8 +35,6 @@
 #define FIELD_REQUEST_BOUND 0x8000
 
 #define FIELD_ANIMATION_KNOCKED_DOWN 29
-/** @brief An actor playing this animation ignores hits. */
-#define FIELD_ANIMATION_44 0x44
 
 /** @brief Effect resource played when an action chain reaches the weapon's limit. */
 #define FIELD_CHAIN_LIMIT_EFFECT 0x21
@@ -111,7 +108,7 @@ void field_start_actor_hit_reaction(FieldActor* actor, s32 guard)
                 actor->command = FIELD_ACTOR_COMMAND_HIT;
                 return;
             }
-            if ((actor->animation & FIELD_ANIMATION_INDEX_MASK) != FIELD_ANIMATION_44)
+            if ((actor->animation & FIELD_ANIMATION_INDEX_MASK) != FIELD_ABILITY_DEFENSIVE_LUNGE)
             {
                 state->contact.word &= ~FIELD_CONTACT_IGNORE_BINDING;
                 field_update_sequence_actor_binding(actor, 0);
@@ -121,7 +118,7 @@ void field_start_actor_hit_reaction(FieldActor* actor, s32 guard)
                 actor->variant = 0;
                 if (guard != 0)
                 {
-                    actor->animation = (actor->animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_GUARD_ALT;
+                    actor->animation = (actor->animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_DEFEND_HIT;
                 }
                 else
                 {
@@ -139,7 +136,7 @@ void field_start_actor_hit_reaction(FieldActor* actor, s32 guard)
                 {
                     actor->y = 0;
                 }
-                g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_FLAG_4000;
+                g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_FLAG_DASH;
                 g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_CHAINING;
                 field_stop_actor_animations_for_object(actor, 0);
                 if (actor->object_index < FIELD_PLAYER_COUNT)
@@ -473,7 +470,7 @@ static void field_end_actor_chain(FieldActor* actor)
 {
     g_field_object_states[actor->object_index].retry_count = 0;
     g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_CHAINING;
-    g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_FLAG_4000;
+    g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_FLAG_DASH;
     actor->command = FIELD_ACTOR_COMMAND_WAIT;
     actor->command_param = FIELD_CHAIN_END_WAIT;
     actor->animation_state = 1;

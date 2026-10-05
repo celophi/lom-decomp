@@ -744,11 +744,11 @@ void field_compute_defense(s32 stat_index, s32* defense)
     animation = field_get_actor_animation(g_field_battle->target->meta.bytes.id);
     stat = field_get_status_stat(g_field_battle->target, stat_index);
     target = g_field_battle->target;
-    if ((target->state->effect_flags & FIELD_EFFECT_DEFENSELESS) || animation == FIELD_ANIMATION_DEFENSELESS)
+    if ((target->state->effect_flags & FIELD_EFFECT_DEFENSELESS) || animation == FIELD_ABILITY_CROUCH)
     {
         *defense = 0;
     }
-    else if (animation == FIELD_ANIMATION_GUARD || animation == FIELD_ANIMATION_GUARD_ALT)
+    else if (animation == FIELD_ABILITY_DEFEND || animation == FIELD_ANIMATION_DEFEND_HIT)
     {
         g_field_battle->action_flags.bits.guarded = 1;
         slot = FIELD_DESCRIPTOR_DEFENSE_SLOT(g_field_battle->descriptor);

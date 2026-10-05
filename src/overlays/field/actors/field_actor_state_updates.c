@@ -244,13 +244,13 @@ s32 field_update_actor_action_chain(FieldActor* actor)
     {
 #if defined(VERSION_JP)
         animation_index = actor->animation & 0x7F;
-        if (animation_index == 0x3D)
+        if (animation_index == FIELD_ABILITY_DOUBLE_JUMP)
         {
             if (g_field_resource_actions[actor->object_index].slots[1].command == animation_index &&
                 (anim = ((s32 (*)(FieldActor*, s32))field_resolve_action_command)(actor, actor->object_index)) == FIELD_ACTION_COMMAND(1))
 #else
         tmp = actor->animation & 0x7F;
-        if (tmp == 0x3D)
+        if (tmp == FIELD_ABILITY_DOUBLE_JUMP)
         {
             anim = ((s32 (*)(FieldActor*, s32))field_resolve_action_command)(actor, actor->object_index);
             if (g_field_resource_actions[actor->object_index].slots[1].command == tmp && anim == FIELD_ACTION_COMMAND(1))
@@ -264,11 +264,11 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                 return;
             }
 #if defined(VERSION_JP)
-            else if ((animation_index = actor->animation & 0x7F) == 0x3D &&
+            else if ((animation_index = actor->animation & 0x7F) == FIELD_ABILITY_DOUBLE_JUMP &&
                      g_field_resource_actions[actor->object_index].slots[0].command == animation_index &&
                      (anim = ((s32 (*)(FieldActor*, s32))field_resolve_action_command)(actor, actor->object_index)) == FIELD_ACTION_COMMAND(0))
 #else
-            else if (g_field_resource_actions[actor->object_index].slots[0].command == 0x3D && anim == FIELD_ACTION_COMMAND(0))
+            else if (g_field_resource_actions[actor->object_index].slots[0].command == FIELD_ABILITY_DOUBLE_JUMP && anim == FIELD_ACTION_COMMAND(0))
 #endif
             {
                 actor->command = anim;
@@ -284,44 +284,44 @@ s32 field_update_actor_action_chain(FieldActor* actor)
     {
         switch (actor->animation & 0x7F)
         {
-        case 0x2F:
-        case 0x44:
+        case FIELD_ABILITY_LUNGE:
+        case FIELD_ABILITY_DEFENSIVE_LUNGE:
             actor->command = FIELD_ACTION_COMMAND(8);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);
             break;
-        case 0x3E:
+        case FIELD_ABILITY_TACKLE:
             actor->command = FIELD_ACTION_COMMAND(10);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);
             break;
-        case 0x38:
+        case FIELD_ABILITY_SOMERSAULT:
             actor->command = FIELD_ACTION_COMMAND(10);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);
             break;
-        case 0x3A:
-            FIELD_SET_CHAIN_ACTION(actor, 0x4F, 0x25, 0);
+        case FIELD_ABILITY_BACK_FLIP:
+            FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FLIP_KICK, 0x25, 0);
             actor->command = FIELD_ACTION_COMMAND(FIELD_CHAIN_ACTION_SLOT);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);
             break;
-        case 0x39:
-            FIELD_SET_CHAIN_ACTION(actor, 0x4F, 0x25, 0);
+        case FIELD_ABILITY_BACK_ROLL:
+            FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FLIP_KICK, 0x25, 0);
             actor->command = FIELD_ACTION_COMMAND(FIELD_CHAIN_ACTION_SLOT);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);
             break;
-        case 0x34:
+        case FIELD_ABILITY_SPIN:
             FIELD_SET_CHAIN_ACTION(actor, 0x51, 0x27, 0);
             actor->command = FIELD_ACTION_COMMAND(FIELD_CHAIN_ACTION_SLOT);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);
             break;
-        case 0x8:
-        case 0x3B:
-        case 0x3C:
-        case 0x3D:
+        case FIELD_ABILITY_JUMP:
+        case FIELD_ABILITY_MOONSAULT:
+        case FIELD_ABILITY_HIGH_JUMP:
+        case FIELD_ABILITY_DOUBLE_JUMP:
             if (actor->animation_frame < 3)
             {
                 return;
@@ -335,7 +335,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
             actor->frame_ticks = 1;
             actor->frame_length = 1;
             return;
-        case 0x35:
+        case FIELD_ABILITY_GRAPPLE:
             if ((g_field_object_states[actor->object_index].contact.word >> 1) & 1)
             {
                 g_field_object_states[g_field_object_states[actor->object_index].linked_object_index].flags &= ~0x2000;
@@ -398,18 +398,18 @@ s32 field_update_actor_action_chain(FieldActor* actor)
         switch (actor->animation & 0x7F)
         {
         case 0x25:
-            if (g_field_resource_actions[actor->object_index].slots[tmp].command == 8 ||
-                g_field_resource_actions[actor->object_index].slots[tmp].command == 0x3C)
+            if (g_field_resource_actions[actor->object_index].slots[tmp].command == FIELD_ABILITY_JUMP ||
+                g_field_resource_actions[actor->object_index].slots[tmp].command == FIELD_ABILITY_HIGH_JUMP)
             {
                 actor->command = FIELD_ACTION_COMMAND(9);
                 field_prepare_actor_action(actor);
                 field_command_history_clear(actor->object_index);
             }
             break;
-        case 0x31:
-            if (g_field_resource_actions[actor->object_index].slots[tmp].command == 8)
+        case FIELD_ABILITY_CROUCH:
+            if (g_field_resource_actions[actor->object_index].slots[tmp].command == FIELD_ABILITY_JUMP)
             {
-                FIELD_SET_CHAIN_ACTION(actor, 0x3C, 0, 1);
+                FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_HIGH_JUMP, 0, 1);
                 actor->command = FIELD_ACTION_COMMAND(FIELD_CHAIN_ACTION_SLOT);
                 field_prepare_actor_action(actor);
                 field_command_history_clear(actor->object_index);
@@ -419,7 +419,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
     }
     else if (field_get_held_action_buttons(actor->object_index, 2, actor) != 0)
     {
-        if ((actor->animation & ~0x80) == 0x34)
+        if ((actor->animation & ~0x80) == FIELD_ABILITY_SPIN)
         {
             FIELD_SET_CHAIN_ACTION(actor, 0x50, 0x26, 0);
             actor->command = FIELD_ACTION_COMMAND(FIELD_CHAIN_ACTION_SLOT);

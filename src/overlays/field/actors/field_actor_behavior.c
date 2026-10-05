@@ -2101,7 +2101,7 @@ s32 field_update_actor_command(FieldActor* actor)
             if ((animation & FIELD_ANIMATION_INDEX_MASK) == FIELD_ANIMATION_INSTRUMENT)
             {
                 finish_states = g_field_object_states;
-                actor->animation = (animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_DEFENSELESS;
+                actor->animation = (animation & FIELD_ANIMATION_FACING) + FIELD_ABILITY_CROUCH;
                 actor->animation_state = 1;
                 actor->animation_frame = 0;
                 actor->animation_active = 1;
@@ -2491,51 +2491,51 @@ static s32 field_filter_action_targets(s32 count, s32* indices)
  */
 static s32 field_apply_action_animation(FieldActor* actor, FieldObjectState* state, FieldActionSlot* action)
 {
-    s32 animation_index;
-    s32 masked_command;
-    s32 command;
-    u16 gauge;
-    u16 next_gauge;
+    u16 command;
 
     state->action_parameter = action->parameter;
     command = action->command;
-    if (((u32)(command - 0x2F) < 2U) || (masked_command = command & 0xFFFF, (masked_command == 0x44)) || (masked_command == 0x45))
+    if (command == FIELD_ABILITY_LUNGE || command == FIELD_ABILITY_RETREAT || command == FIELD_ABILITY_DEFENSIVE_LUNGE || command == FIELD_ABILITY_SLIDE)
     {
-        state->flags = state->flags | 0x4000;
+        state->flags |= FIELD_OBJECT_FLAG_DASH;
     }
     if ((action->command == 0x1F) && (actor->variant != 0) &&
         ((actor->object_index >= FIELD_PLAYER_COUNT) || (g_field_player_records[actor->object_index].head.bytes.weapon_type != FIELD_WEAPON_TYPE_NO_VARIANT)))
     {
-        actor->animation = (u8)actor->variant + ((u8)action->command + (actor->animation & FIELD_ANIMATION_FACING));
+        actor->animation = actor->variant + (action->command + (actor->animation & FIELD_ANIMATION_FACING));
     }
     else
     {
-        actor->animation = (u8)action->command + (actor->animation & FIELD_ANIMATION_FACING);
+        actor->animation = action->command + (actor->animation & FIELD_ANIMATION_FACING);
     }
     actor->animation_state = 1;
     actor->animation_frame = 0;
     actor->animation_active = 1;
-    state->movement.word = state->movement.word & ~FIELD_MOVEMENT_SEQUENCE_MASK;
+    state->movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
     field_restart_actor_animation(actor);
-    animation_index = actor->animation & FIELD_ANIMATION_INDEX_MASK;
-    switch (animation_index)
+    switch (actor->animation & FIELD_ANIMATION_INDEX_MASK)
     {
-    case 0x41:
+    case FIELD_ABILITY_TAUNT:
         field_battle_set_watched_record(state->key);
         actor->command = FIELD_ACTOR_COMMAND_RECOVER;
         break;
-    case 0x33:
-        gauge = state->technique_gauge;
-        next_gauge = gauge < FIELD_TECHNIQUE_GAUGE_FULL + 1 - FIELD_TECHNIQUE_GAUGE_STEP ? gauge + FIELD_TECHNIQUE_GAUGE_STEP : FIELD_TECHNIQUE_GAUGE_FULL;
-        state->technique_gauge = next_gauge;
+    case FIELD_ABILITY_CHEER:
+        if (state->technique_gauge <= FIELD_TECHNIQUE_GAUGE_FULL - FIELD_TECHNIQUE_GAUGE_STEP)
+        {
+            state->technique_gauge += FIELD_TECHNIQUE_GAUGE_STEP;
+        }
+        else
+        {
+            state->technique_gauge = FIELD_TECHNIQUE_GAUGE_FULL;
+        }
         actor->command = FIELD_ACTOR_COMMAND_RECOVER;
         break;
-    case 0x08:
-    case 0x0A:
-    case 0x31:
-    case 0x3D:
+    case FIELD_ABILITY_JUMP:
+    case FIELD_ABILITY_DEFEND:
+    case FIELD_ABILITY_CROUCH:
+    case FIELD_ABILITY_DOUBLE_JUMP:
         actor->command = FIELD_ACTOR_COMMAND_RECOVER;
-        actor->control.word = actor->control.word | FIELD_CONTROL_PLAY_ONCE;
+        actor->control.word |= FIELD_CONTROL_PLAY_ONCE;
         break;
     default:
         actor->command = FIELD_ACTOR_COMMAND_RECOVER;

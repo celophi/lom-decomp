@@ -29,14 +29,58 @@
 /** @brief Directional animations come in groups of five (stand, then walk, then run). */
 #define FIELD_ANIMATION_DIRECTIONS 5
 
-/** @brief Shared actor animations (FieldActor::animation without the facing bit). */
-#define FIELD_ANIMATION_GUARD 10
-#define FIELD_ANIMATION_GUARD_ALT 11
+/**
+ * @brief Abilities a player assigns to the action buttons (FieldActionSlot::command).
+ * @note An ability's code is also the animation the actor plays while using it
+ *       (FieldActor::animation without the facing bit). The names follow the
+ *       game's command name table (g_field_command_names), which gives each
+ *       unused code below an ability the same name as that ability.
+ */
+typedef enum FieldAbility
+{
+    FIELD_ABILITY_JUMP = 0x08,
+    /** Guards; held with the button. */
+    FIELD_ABILITY_DEFEND = 0x0A,
+    FIELD_ABILITY_LUNGE = 0x2F,
+    FIELD_ABILITY_RETREAT = 0x30,
+    /** Held with the button. Defense counts as 0 while it plays; also the pose after an instrument or a duel knock-down. */
+    FIELD_ABILITY_CROUCH = 0x31,
+    FIELD_ABILITY_PUSH = 0x32,
+    FIELD_ABILITY_CHEER = 0x33,
+    FIELD_ABILITY_SPIN = 0x34,
+    FIELD_ABILITY_GRAPPLE = 0x35,
+    FIELD_ABILITY_WHIRL = 0x36,
+    FIELD_ABILITY_BASH = 0x37,
+    /** Never touched by effect quads. */
+    FIELD_ABILITY_SOMERSAULT = 0x38,
+    /** Never touched by effect quads. */
+    FIELD_ABILITY_BACK_ROLL = 0x39,
+    FIELD_ABILITY_BACK_FLIP = 0x3A,
+    FIELD_ABILITY_MOONSAULT = 0x3B,
+    /** A player using it is not hit by attack spheres. */
+    FIELD_ABILITY_HIGH_JUMP = 0x3C,
+    /** A player using it keeps its height while moving. */
+    FIELD_ABILITY_DOUBLE_JUMP = 0x3D,
+    FIELD_ABILITY_TACKLE = 0x3E,
+    /** Answers an effect quad with action 2. */
+    FIELD_ABILITY_COUNTERATTACK = 0x3F,
+    /** Answers an effect quad with action 3. */
+    FIELD_ABILITY_COUNTERSTRIKE = 0x40,
+    FIELD_ABILITY_TAUNT = 0x41,
+    FIELD_ABILITY_EVADE = 0x42,
+    FIELD_ABILITY_TOSS = 0x43,
+    /** Ignores hits. */
+    FIELD_ABILITY_DEFENSIVE_LUNGE = 0x44,
+    FIELD_ABILITY_SLIDE = 0x45,
+    FIELD_ABILITY_FLIP_KICK = 0x4F
+} FieldAbility;
+
+/* Shared actor animations (FieldActor::animation without the facing bit). */
+/** @brief Defend pose played when a guarded hit lands. */
+#define FIELD_ANIMATION_DEFEND_HIT 11
 #define FIELD_ANIMATION_13 0x13
 /** @brief First of the two hit animations; one is picked at random. */
 #define FIELD_ANIMATION_HIT 20
-/** @brief Exposed pose after an instrument or a knock-down, also held with the action button; the actor takes more damage. */
-#define FIELD_ANIMATION_DEFENSELESS 0x31
 
 /** @brief Object-state movement bits holding the running action sequence. */
 #define FIELD_MOVEMENT_SEQUENCE_MASK 0x1800
@@ -44,6 +88,8 @@
 #define FIELD_OBJECT_GROUP_MASK 0x0F
 /** @brief Object-state flags bit set while the object is knocked out. */
 #define FIELD_OBJECT_FLAG_KNOCKED_OUT 0x0200
+/** @brief Object-state flags bit set while a dash ability (Lunge, Retreat, Defensive Lunge, Slide) plays. */
+#define FIELD_OBJECT_FLAG_DASH 0x4000
 
 /** @brief Object-state contact bits (the contact word of g_field_object_states). */
 #define FIELD_CONTACT_ANIMATION_HIDDEN 0x01 /**< An animation actor hides the object; it cannot be targeted. */
