@@ -1,636 +1,690 @@
 #include "../internal/wmap_main.h"
 #include "../internal/wmap_resource_support.h"
 #include "../internal/wmap_effect_resources.h"
+#include "../internal/wmap_effect_resource_ids.h"
 #include "main/cdrom.h"
 
+/**
+ * @file wmap_effect_resources.c
+ * @brief Queue per-effect CD reads into shared texture, animation and model storage.
+ * @note Model buffer aliases are offsets inside g_wmap_load_buffer, not separate
+ * allocations. Embedded bundle slots are shared or asset-specific views of it.
+ */
+
 extern u8 g_wmap_load_buffer[];
-extern u8 D_800DD7B4[];
-extern u8 D_800DDE54[];
-extern u8 D_800DDEF4[];
-extern u8 D_800DDF18[];
-extern u8 D_800DE39C[];
-extern u8 D_800DEA88[];
-extern u8 D_800DEED0[];
-extern u8 D_800DEF18[];
-extern u8 D_800DF378[];
-extern u8 D_800DFA64[];
-extern u8 D_800DFEAC[];
-extern u8 D_800E0114[];
-extern u8 D_800E0354[];
-extern u8 D_800E0720[];
-extern u8 D_800E08E4[];
-extern u8 D_800E0EB4[];
-extern u8 D_800E0F18[];
-extern u8 D_800E0F94[];
-extern u8 D_800E1F18[];
-extern u8 D_800E2B1C[];
-extern u8 D_800E2DD8[];
-extern u8 D_800E33AC[];
-extern u8 D_800E3980[];
-extern u8 D_800E4F18[];
-extern u8 D_800E7F64[];
-extern u8 D_800E91C0[];
-extern u8 D_800EA560[];
-extern u8 D_800EAA54[];
-extern u8 D_800EBED8[];
-extern u8 D_800ECEB4[];
-extern u8 D_800ECF18[];
-extern u8 D_800ED310[];
-extern u8 D_800EE2EC[];
-extern u8 D_800F2238[];
-extern u8 D_800F3214[];
-extern u8 D_800F420C[];
-extern u8 D_800FAE60[];
+/** @brief Effect workspace view at byte offset 0x89C. */
+extern u8 g_wmap_mnt_bundle_model_pack_1[];
+/** @brief Effect workspace view at byte offset 0xF3C. */
+extern u8 g_wmap_mnt_bundle_model_pack_2[];
+/** @brief Effect workspace view at byte offset 0xFDC. */
+extern u8 g_wmap_shared_bundle_model_pack_1[];
+/** @brief Effect workspace view at byte offset 0x1000. */
+extern u8 g_wmap_effect_model_buffer_1000[];
+/** @brief Effect workspace view at byte offset 0x1484. */
+extern u8 g_wmap_mnt_bundle_model_pack_3[];
+/** @brief Effect workspace view at byte offset 0x1B70. */
+extern u8 g_wmap_fig_bundle_model_pack_2[];
+/** @brief Effect workspace view at byte offset 0x1FB8. */
+extern u8 g_wmap_shared_bundle_model_pack_2[];
+/** @brief Effect workspace view at byte offset 0x2000. */
+extern u8 g_wmap_effect_model_buffer_2000[];
+/** @brief Effect workspace view at byte offset 0x2460. */
+extern u8 g_wmap_mnt_bundle_model_pack_4[];
+/** @brief Effect workspace view at byte offset 0x2B4C. */
+extern u8 g_wmap_fig_bundle_model_pack_3[];
+/** @brief Effect workspace view at byte offset 0x2F94. */
+extern u8 g_wmap_jul_bundle_model_pack_3[];
+/** @brief Effect workspace view at byte offset 0x31FC. */
+extern u8 g_wmap_fig_bundle_model_pack_4[];
+/** @brief Effect workspace view at byte offset 0x343C. */
+extern u8 g_wmap_mnt_bundle_empty_slot[];
+/** @brief Effect workspace view at byte offset 0x3808. */
+extern u8 g_wmap_jul_bundle_model_pack_4[];
+/** @brief Effect workspace view at byte offset 0x39CC. */
+extern u8 g_wmap_fig_bundle_model_pack_5[];
+/** @brief Effect workspace view at byte offset 0x3F9C. */
+extern u8 g_wmap_fig_bundle_empty_slot[];
+/** @brief Effect workspace view at byte offset 0x4000. */
+extern u8 g_wmap_effect_model_buffer_4000[];
+/** @brief Effect workspace view at byte offset 0x407C. */
+extern u8 g_wmap_jul_bundle_model_pack_5[];
+/** @brief Effect workspace view at byte offset 0x5000. */
+extern u8 g_wmap_effect_model_buffer_5000[];
+/** @brief Effect workspace view at byte offset 0x5C04. */
+extern u8 g_wmap_mgc_bundle_model_pack_3[];
+/** @brief Effect workspace view at byte offset 0x5EC0. */
+extern u8 g_wmap_mgc_bundle_model_pack_4[];
+/** @brief Effect workspace view at byte offset 0x6494. */
+extern u8 g_wmap_mgc_bundle_model_pack_5[];
+/** @brief Effect workspace view at byte offset 0x6A68. */
+extern u8 g_wmap_mgc_bundle_empty_slot[];
+/** @brief Effect workspace view at byte offset 0x8000. */
+extern u8 g_wmap_effect_model_buffer_8000[];
+/** @brief Effect workspace view at byte offset 0xB04C. */
+extern u8 g_wmap_man_bundle_model_pack_1[];
+/** @brief Effect workspace view at byte offset 0xC2A8. */
+extern u8 g_wmap_jul_bundle_model_pack_6[];
+/** @brief Effect workspace view at byte offset 0xD648. */
+extern u8 g_wmap_man_bundle_model_pack_2[];
+/** @brief Effect workspace view at byte offset 0xDB3C. */
+extern u8 g_wmap_man_bundle_model_pack_3[];
+/** @brief Effect workspace view at byte offset 0xEFC0. */
+extern u8 g_wmap_man_bundle_model_pack_4[];
+/** @brief Effect workspace view at byte offset 0xFF9C. */
+extern u8 g_wmap_man_bundle_model_pack_5[];
+/** @brief Effect workspace view at byte offset 0x10000. */
+extern u8 g_wmap_effect_model_buffer_10000[];
+/** @brief Effect workspace view at byte offset 0x103F8. */
+extern u8 g_wmap_man_bundle_model_pack_6[];
+/** @brief Effect workspace view at byte offset 0x113D4. */
+extern u8 g_wmap_man_bundle_model_pack_7[];
+/** @brief Effect workspace view at byte offset 0x15320. */
+extern u8 g_wmap_man_bundle_model_pack_8[];
+/** @brief Effect workspace view at byte offset 0x162FC. */
+extern u8 g_wmap_man_bundle_model_pack_9[];
+/** @brief Effect workspace view at byte offset 0x172F4. */
+extern u8 g_wmap_jul_bundle_empty_slot[];
+/** @brief Effect workspace view at byte offset 0x1DF48. */
+extern u8 g_wmap_man_bundle_empty_slot[];
 extern u8 g_wmap_animation_bank_0[];
 extern u8 g_wmap_animation_bank_1[];
 extern u8 g_wmap_animation_bank_2[];
 extern u8 g_wmap_animation_bank_3[];
 extern u8 g_wmap_animation_bank_4[];
 extern u8 g_wmap_animation_bank_5[];
-extern u8 D_80182E40[];
-extern u8 D_8018B240[];
-extern u8 D_80193640[];
+extern u8 g_wmap_effect_texture_buffer_0[];
+extern u8 g_wmap_effect_texture_buffer_1[];
+extern u8 g_wmap_effect_texture_buffer_2[];
 extern u8* g_wmap_effect_model_pack_1;
 extern u8* g_wmap_effect_model_pack_2;
 extern u8* g_wmap_effect_model_pack_3;
-extern u8* D_8011CF2C;
-extern u8* D_8011CF30;
-extern u8* D_8011CF34;
-extern u8* D_8011CF38;
-extern u8* D_8011CF3C;
-extern u8* D_8011CF40;
-extern u8* D_8011CF84;
-extern void (*D_800D6D5C[])(void);
+extern u8* g_wmap_effect_model_pack_4;
+extern u8* g_wmap_effect_model_pack_5;
+extern u8* g_wmap_effect_model_pack_6;
+extern u8* g_wmap_effect_model_pack_7;
+extern u8* g_wmap_effect_model_pack_8;
+extern u8* g_wmap_effect_model_pack_9;
+/** @brief Pointer to the zero-filled trailing slot in MANBTP.DAT; no known reader. */
+extern u8* g_wmap_effect_empty_model_slot;
+extern void (*g_wmap_effect_resource_loaders[WMAP_EFFECT_RESOURCE_SET_COUNT])(void);
 
-static void func_800A8B38(s32 resource_index);
+static void wmap_queue_effect_texture_2(s32 resource_index);
 
 /**
  * @brief Wait for pending reads and dispatch a resource set when its index changes.
- * @param index Requested resource-set index; invalid indices dispatch set zero.
+ * @param effect_index Requested effect index; invalid indices queue the shared set.
+ * @note The requested index is cached before fallback. Reads queued here finish
+ * at the next queue wait; selecting the cached index still waits for prior reads.
  */
-void func_800A89DC(s32 index)
+void wmap_queue_effect_resources(s32 effect_index)
 {
     cdrom_wait_queue_empty();
-    if (index == g_wmap_last_effect_resource_set)
+    if (effect_index == g_wmap_last_effect_resource_set)
     {
         return;
     }
-    g_wmap_last_effect_resource_set = index;
-    if (index >= 36 || index < 0)
+    g_wmap_last_effect_resource_set = effect_index;
+    if (effect_index >= WMAP_EFFECT_RESOURCE_SET_COUNT || effect_index < 0)
     {
-        index = 0;
+        effect_index = WMAP_EFFECT_SHARED_RESOURCE_SET;
         g_wmap_exit_frame = 1;
     }
-    D_800D6D5C[index]();
+    g_wmap_effect_resource_loaders[effect_index]();
 }
 
 /**
- * @brief Queue a CD read of the given resource into the world-map image buffer.
- * @param resource_index CD resource index to fetch.
+ * @brief Queue a TIM read into effect texture buffer 0.
+ * @param resource_index CD resource index; only its low 16 bits are used.
  */
-void func_800A8AA8(s32 resource_index)
+void wmap_queue_effect_texture_0(s32 resource_index)
 {
-    cdrom_queue_read((u16)resource_index, D_80182E40);
+    cdrom_queue_read((u16)resource_index, g_wmap_effect_texture_buffer_0);
 }
 
 /**
- * @brief Queue a CD read of the given resource into the world-map image buffer.
- * @param resource_index CD resource index to fetch.
+ * @brief Queue a TIM read into effect texture buffer 1.
+ * @param resource_index CD resource index; only its low 16 bits are used.
  */
-void func_800A8AF0(s32 resource_index)
+void wmap_queue_effect_texture_1(s32 resource_index)
 {
-    cdrom_queue_read((u16)resource_index, D_8018B240);
+    cdrom_queue_read((u16)resource_index, g_wmap_effect_texture_buffer_1);
 }
 
 /**
- * @brief Queue a CD read of the given resource into the world-map image buffer.
- * @param resource_index CD resource index to fetch.
+ * @brief Queue a TIM read into effect texture buffer 2.
+ * @param resource_index CD resource index; only its low 16 bits are used.
  */
-static void func_800A8B38(s32 resource_index)
+static void wmap_queue_effect_texture_2(s32 resource_index)
 {
-    cdrom_queue_read((u16)resource_index, D_80193640);
+    cdrom_queue_read((u16)resource_index, g_wmap_effect_texture_buffer_2);
 }
 
-/** @brief Queue the world-map effect resource set. */
-void func_800A8B80(void)
+/** @brief Queue the shared resource set for effects 0, 6, 14, 20, 28, 29. */
+void wmap_queue_shared_land_effect_resources(void)
 {
-    g_wmap_effect_model_pack_1 = D_800E1F18;
+    /* Shared entries use the MHM resource set, including its GAT_FRA model. */
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_5000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x2000;
-    func_800A8AA8(0x11B0);
-    func_800A8AF0(0x11B1);
-    func_800A8B38(0x11B2);
-    cdrom_queue_read(0x11B3, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x11B4, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x11B5, g_wmap_animation_bank_2);
-    cdrom_queue_read(0x11B6, g_wmap_animation_bank_3);
-    cdrom_queue_read(0x11B7, g_wmap_effect_model_pack_2);
-    cdrom_queue_read(0x11B8, g_wmap_effect_model_pack_1);
-    cdrom_queue_read(0x11B9, g_wmap_load_buffer);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_SHARED_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_SHARED_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_SHARED_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_SHARED_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_SHARED_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_SHARED_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_SHARED_ANIMATION_3_RESOURCE, g_wmap_animation_bank_3);
+    cdrom_queue_read(WMAP_EFFECT_SHARED_MODEL_2_RESOURCE, g_wmap_effect_model_pack_2);
+    cdrom_queue_read(WMAP_EFFECT_SHARED_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
+    cdrom_queue_read(WMAP_EFFECT_SHARED_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
 }
 
-/** @brief Set effect resource buffers and queue animation and texture reads. */
-void func_800A8C80(void)
+/** @brief Queue texture, animation and model resources for effect 4. */
+void wmap_queue_effect_04_resources(void)
 {
-    g_wmap_effect_model_pack_1 = D_800DEF18;
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_2000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x2000;
-    func_800A8AA8(0x1197);
-    func_800A8AF0(0x1198);
-    func_800A8B38(0x1199);
-    cdrom_queue_read(0x119A, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x119B, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x119C, g_wmap_animation_bank_2);
-    cdrom_queue_read(0x119D, g_wmap_load_buffer);
-    cdrom_queue_read(0x119E, g_wmap_effect_model_pack_1);
-    cdrom_queue_read(0x119F, g_wmap_effect_model_pack_2);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_04_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_04_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_04_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_04_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_04_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_04_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_04_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_04_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
+    cdrom_queue_read(WMAP_EFFECT_04_MODEL_2_RESOURCE, g_wmap_effect_model_pack_2);
 }
 
-/** @brief Set effect resource buffers and queue animation and texture reads. */
-void func_800A8D6C(void)
+/** @brief Queue texture, animation and model resources for effect 18. */
+void wmap_queue_effect_18_resources(void)
 {
-    func_80064F64(0x1111);
-    func_800A8AA8(0x110A);
-    func_800A8AF0(0x110B);
-    func_800A8B38(0x110C);
-    g_wmap_effect_model_pack_1 = D_800E4F18;
+    func_80064F64(WMAP_EFFECT_18_PALETTE_RESOURCE);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_18_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_18_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_18_TEXTURE_2_RESOURCE);
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_8000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0xC000;
-    cdrom_queue_read(0x1108, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x1109, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x110D, g_wmap_effect_model_pack_1);
-    cdrom_queue_read(0x110E, g_wmap_effect_model_pack_2);
-    cdrom_queue_read(0x110F, g_wmap_effect_model_pack_2 + 0x4000);
-    cdrom_queue_read(0x1110, g_wmap_effect_model_pack_2 + 0x5000);
-    cdrom_queue_read(0x1112, g_wmap_effect_model_pack_2 + 0x6000);
+    cdrom_queue_read(WMAP_EFFECT_18_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_18_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_18_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
+    cdrom_queue_read(WMAP_EFFECT_18_MODEL_2_RESOURCE, g_wmap_effect_model_pack_2);
+    cdrom_queue_read(WMAP_EFFECT_18_MODEL_2_AT_4000_RESOURCE, g_wmap_effect_model_pack_2 + 0x4000);
+    cdrom_queue_read(WMAP_EFFECT_18_MODEL_2_AT_5000_RESOURCE, g_wmap_effect_model_pack_2 + 0x5000);
+    cdrom_queue_read(WMAP_EFFECT_18_MODEL_2_AT_6000_RESOURCE, g_wmap_effect_model_pack_2 + 0x6000);
 }
 
-/** @brief Queue the effect's animation and texture resources. */
-void func_800A8E9C(void)
+/** @brief Queue texture, animation and model resources for effect 1. */
+void wmap_queue_effect_01_resources(void)
 {
-    func_800A8AA8(0x111B);
-    func_800A8AF0(0x111C);
-    func_800A8B38(0x111D);
-    cdrom_queue_read(0x111E, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x111F, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x1120, g_wmap_animation_bank_2);
-    cdrom_queue_read(0x1121, g_wmap_animation_bank_3);
-    cdrom_queue_read(0x1123, g_wmap_animation_bank_4);
-    cdrom_queue_read(0x1124, g_wmap_animation_bank_5);
-    cdrom_queue_read(0x1122, g_wmap_load_buffer);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_01_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_01_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_01_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_01_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_01_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_01_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_01_ANIMATION_3_RESOURCE, g_wmap_animation_bank_3);
+    cdrom_queue_read(WMAP_EFFECT_01_ANIMATION_4_RESOURCE, g_wmap_animation_bank_4);
+    cdrom_queue_read(WMAP_EFFECT_01_ANIMATION_5_RESOURCE, g_wmap_animation_bank_5);
+    cdrom_queue_read(WMAP_EFFECT_01_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
 }
 
-/** @brief Queue the effect's animation and texture resources. */
-void func_800A8F74(void)
+/** @brief Queue texture, animation and model resources for effect 13. */
+void wmap_queue_effect_13_resources(void)
 {
-    func_800A8AA8(0x1125);
-    func_800A8AF0(0x1126);
-    func_800A8B38(0x1127);
-    cdrom_queue_read(0x1129, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x1128, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x112A, g_wmap_animation_bank_2);
-    cdrom_queue_read(0x112B, g_wmap_load_buffer);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_13_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_13_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_13_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_13_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_13_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_13_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_13_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
 }
 
-/** @brief Set effect resource buffers and queue animation and texture reads. */
-void func_800A9010(void)
+/** @brief Queue texture, animation and model resources for effect 26. */
+void wmap_queue_effect_26_resources(void)
 {
-    func_800A8AA8(0x112C);
-    func_800A8AF0(0x112D);
-    func_800A8B38(0x112E);
-    cdrom_queue_read(0x112F, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x1130, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x1131, g_wmap_animation_bank_2);
-    cdrom_queue_read(0x1132, g_wmap_load_buffer);
-    g_wmap_effect_model_pack_1 = D_800DDEF4;
-    g_wmap_effect_model_pack_2 = D_800DEA88;
-    g_wmap_effect_model_pack_3 = D_800DFA64;
-    D_8011CF2C = D_800E0114;
-    D_8011CF30 = D_800E08E4;
-    D_8011CF34 = D_800E0EB4;
+    wmap_queue_effect_texture_0(WMAP_EFFECT_26_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_26_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_26_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_26_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_26_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_26_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_26_MODEL_BUNDLE_RESOURCE, g_wmap_load_buffer);
+    g_wmap_effect_model_pack_1 = g_wmap_shared_bundle_model_pack_1;
+    g_wmap_effect_model_pack_2 = g_wmap_fig_bundle_model_pack_2;
+    g_wmap_effect_model_pack_3 = g_wmap_fig_bundle_model_pack_3;
+    g_wmap_effect_model_pack_4 = g_wmap_fig_bundle_model_pack_4;
+    g_wmap_effect_model_pack_5 = g_wmap_fig_bundle_model_pack_5;
+    /* This bundle also exposes a zero-filled trailing slot. */
+    g_wmap_effect_model_pack_6 = g_wmap_fig_bundle_empty_slot;
 }
 
-/** @brief Divide the effect buffer and queue its animation and texture reads. */
-void func_800A910C(void)
+/** @brief Queue texture, animation and model resources for effect 32. */
+void wmap_queue_effect_32_resources(void)
 {
-    g_wmap_effect_model_pack_1 = D_800DEF18;
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_2000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x2000;
     g_wmap_effect_model_pack_3 = g_wmap_effect_model_pack_2 + 0x2000;
-    D_8011CF2C = g_wmap_effect_model_pack_3 + 0x2000;
-    D_8011CF30 = D_8011CF2C + 0x2000;
-    D_8011CF34 = D_8011CF30 + 0x2000;
-    func_800A8AA8(0x1133);
-    func_800A8AF0(0x1134);
-    func_800A8B38(0x1135);
-    cdrom_queue_read(0x1136, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x1137, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x1138, g_wmap_load_buffer);
-    cdrom_queue_read(0x1139, g_wmap_effect_model_pack_1);
-    cdrom_queue_read(0x113A, g_wmap_effect_model_pack_3);
-    cdrom_queue_read(0x113B, D_8011CF2C);
-    cdrom_queue_read(0x113C, D_8011CF30);
+    g_wmap_effect_model_pack_4 = g_wmap_effect_model_pack_3 + 0x2000;
+    g_wmap_effect_model_pack_5 = g_wmap_effect_model_pack_4 + 0x2000;
+    g_wmap_effect_model_pack_6 = g_wmap_effect_model_pack_5 + 0x2000;
+    wmap_queue_effect_texture_0(WMAP_EFFECT_32_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_32_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_32_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_32_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_32_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_32_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_32_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
+    cdrom_queue_read(WMAP_EFFECT_32_MODEL_3_RESOURCE, g_wmap_effect_model_pack_3);
+    cdrom_queue_read(WMAP_EFFECT_32_MODEL_4_RESOURCE, g_wmap_effect_model_pack_4);
+    cdrom_queue_read(WMAP_EFFECT_32_MODEL_5_RESOURCE, g_wmap_effect_model_pack_5);
 }
 
-/** @brief Set effect resource buffers and queue animation and texture reads. */
-void func_800A926C(void)
+/** @brief Queue texture, animation and model resources for effect 15. */
+void wmap_queue_effect_15_resources(void)
 {
-    func_800A8AA8(0x113D);
-    func_800A8AF0(0x113E);
-    func_800A8B38(0x113F);
-    cdrom_queue_read(0x1140, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x1141, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x1142, g_wmap_animation_bank_2);
-    g_wmap_effect_model_pack_1 = D_800DD7B4;
-    g_wmap_effect_model_pack_2 = D_800DDE54;
-    g_wmap_effect_model_pack_3 = D_800DE39C;
-    D_8011CF2C = D_800DF378;
-    D_8011CF30 = D_800E0354;
-    cdrom_queue_read(0x1143, g_wmap_load_buffer);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_15_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_15_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_15_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_15_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_15_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_15_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    g_wmap_effect_model_pack_1 = g_wmap_mnt_bundle_model_pack_1;
+    g_wmap_effect_model_pack_2 = g_wmap_mnt_bundle_model_pack_2;
+    g_wmap_effect_model_pack_3 = g_wmap_mnt_bundle_model_pack_3;
+    g_wmap_effect_model_pack_4 = g_wmap_mnt_bundle_model_pack_4;
+    /* This bundle also exposes a zero-filled trailing slot. */
+    g_wmap_effect_model_pack_5 = g_wmap_mnt_bundle_empty_slot;
+    cdrom_queue_read(WMAP_EFFECT_15_MODEL_BUNDLE_RESOURCE, g_wmap_load_buffer);
 }
 
-/** @brief Queue the effect's animation and texture resources. */
-void func_800A9358(void)
+/** @brief Queue texture, animation and model resources for effect 2. */
+void wmap_queue_effect_02_resources(void)
 {
-    func_800A8AA8(0x1155);
-    func_800A8AF0(0x1156);
-    cdrom_queue_read(0x1158, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x1159, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x1157, g_wmap_load_buffer);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_02_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_02_TEXTURE_1_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_02_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_02_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_02_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
 }
 
-/** @brief World-map step handler: kick off the batch of resource reads for this map. */
-void func_800A93D4(void)
+/** @brief Queue texture, animation and model resources for effect 7. */
+void wmap_queue_effect_07_resources(void)
 {
-    g_wmap_effect_model_pack_1 = &D_800ECF18;
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_10000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x2000;
-    func_800A8AA8(0x115A);
-    func_800A8AF0(0x115B);
-    func_800A8B38(0x115C);
-    cdrom_queue_read(0x115D, &g_wmap_animation_bank_0);
-    cdrom_queue_read(0x115E, &g_wmap_animation_bank_1);
-    cdrom_queue_read(0x115F, &g_wmap_animation_bank_2);
-    cdrom_queue_read(0x1160, &g_wmap_load_buffer);
-    cdrom_queue_read(0x1161, g_wmap_effect_model_pack_2);
-    cdrom_queue_read(0x1162, g_wmap_effect_model_pack_1);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_07_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_07_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_07_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_07_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_07_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_07_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_07_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_07_MODEL_2_RESOURCE, g_wmap_effect_model_pack_2);
+    cdrom_queue_read(WMAP_EFFECT_07_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
 }
 
-/** @brief Queue the world-map effect resource set. */
-void func_800A94C0(void)
+/** @brief Queue texture, animation and model resources for effect 30. */
+void wmap_queue_effect_30_resources(void)
 {
-    g_wmap_effect_model_pack_1 = D_800ECF18;
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_10000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x2000;
-    func_800A8AA8(0x1163);
-    func_800A8AF0(0x1164);
-    func_800A8B38(0x1165);
-    cdrom_queue_read(0x1168, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x1169, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x116A, g_wmap_animation_bank_2);
-    cdrom_queue_read(0x116B, g_wmap_animation_bank_3);
-    cdrom_queue_read(0x116C, g_wmap_animation_bank_4);
-    cdrom_queue_read(0x116D, g_wmap_animation_bank_5);
-    cdrom_queue_read(0x1166, g_wmap_load_buffer);
-    cdrom_queue_read(0x1167, g_wmap_effect_model_pack_1);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_30_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_30_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_30_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_30_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_30_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_30_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_30_ANIMATION_3_RESOURCE, g_wmap_animation_bank_3);
+    cdrom_queue_read(WMAP_EFFECT_30_ANIMATION_4_RESOURCE, g_wmap_animation_bank_4);
+    cdrom_queue_read(WMAP_EFFECT_30_ANIMATION_5_RESOURCE, g_wmap_animation_bank_5);
+    cdrom_queue_read(WMAP_EFFECT_30_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_30_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
 }
 
-/** @brief World-map step: set up load buffers and queue CD reads for a scene. */
-void func_800A95D4(void)
+/** @brief Queue texture, animation and model resources for effect 12. */
+void wmap_queue_effect_12_resources(void)
 {
-    g_wmap_effect_model_pack_1 = D_800ECF18;
-    g_wmap_effect_model_pack_2 = (u8*)g_wmap_effect_model_pack_1 + 0x2000;
-    func_800A8AA8(0x116E);
-    func_800A8AF0(0x116F);
-    func_800A8B38(0x1170);
-    cdrom_queue_read(0x1171, g_wmap_load_buffer);
-    cdrom_queue_read(0x1172, g_wmap_effect_model_pack_1);
-    cdrom_queue_read(0x1173, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x1174, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x1175, g_wmap_animation_bank_2);
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_10000;
+    g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x2000;
+    wmap_queue_effect_texture_0(WMAP_EFFECT_12_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_12_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_12_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_12_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_12_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
+    cdrom_queue_read(WMAP_EFFECT_12_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_12_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_12_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
 }
 
-/** @brief Queue the world-map effect resource set. */
-void func_800A96AC(void)
+/** @brief Queue texture, animation and model resources for effect 11. */
+void wmap_queue_effect_11_resources(void)
 {
-    g_wmap_effect_model_pack_1 = D_800ECF18;
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_10000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x2000;
     g_wmap_effect_model_pack_3 = g_wmap_effect_model_pack_2 + 0x2000;
-    func_800A8AA8(0x1176);
-    func_800A8AF0(0x1177);
-    func_800A8B38(0x1178);
-    cdrom_queue_read(0x1179, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x117A, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x117B, g_wmap_load_buffer);
-    cdrom_queue_read(0x117C, g_wmap_effect_model_pack_1);
-    cdrom_queue_read(0x117D, g_wmap_effect_model_pack_2);
-    cdrom_queue_read(0x117E, g_wmap_effect_model_pack_3);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_11_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_11_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_11_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_11_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_11_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_11_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_11_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
+    cdrom_queue_read(WMAP_EFFECT_11_MODEL_2_RESOURCE, g_wmap_effect_model_pack_2);
+    cdrom_queue_read(WMAP_EFFECT_11_MODEL_3_RESOURCE, g_wmap_effect_model_pack_3);
 }
 
-/** @brief World-map step: set up load buffers and queue CD reads for a scene. */
-void func_800A97B0(void)
+/** @brief Queue texture, animation and model resources for effect 3. */
+void wmap_queue_effect_03_resources(void)
 {
-    g_wmap_effect_model_pack_1 = D_800ECF18;
-    g_wmap_effect_model_pack_2 = (u8*)g_wmap_effect_model_pack_1 + 0x2000;
-    func_800A8AA8(0x117F);
-    func_800A8AF0(0x1180);
-    func_800A8B38(0x1181);
-    cdrom_queue_read(0x1182, g_wmap_load_buffer);
-    cdrom_queue_read(0x1183, g_wmap_effect_model_pack_1);
-    cdrom_queue_read(0x1184, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x1185, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x1186, g_wmap_animation_bank_2);
-}
-
-/** @brief World-map load: register buffers and queue CD reads for a set. */
-void func_800A9888(void)
-{
-    g_wmap_effect_model_pack_1 = &D_800DEF18;
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_10000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x2000;
-    func_800A8AA8(0x1187);
-    func_800A8AF0(0x1188);
-    func_800A8B38(0x1189);
-    cdrom_queue_read(0x118A, &g_wmap_animation_bank_0);
-    cdrom_queue_read(0x118B, &g_wmap_animation_bank_1);
-    cdrom_queue_read(0x118C, &g_wmap_animation_bank_2);
-    cdrom_queue_read(0x118D, &g_wmap_load_buffer);
-    cdrom_queue_read(0x118E, g_wmap_effect_model_pack_1);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_03_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_03_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_03_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_03_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_03_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
+    cdrom_queue_read(WMAP_EFFECT_03_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_03_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_03_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
 }
 
-/** @brief World-map load: register buffers and queue CD reads for a set. */
-void func_800A9960(void)
+/** @brief Queue texture, animation and model resources for effect 21. */
+void wmap_queue_effect_21_resources(void)
 {
-    g_wmap_effect_model_pack_1 = &D_800DEF18;
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_2000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x2000;
-    func_800A8AA8(0x118F);
-    func_800A8AF0(0x1190);
-    func_800A8B38(0x1191);
-    cdrom_queue_read(0x1192, &g_wmap_animation_bank_0);
-    cdrom_queue_read(0x1193, &g_wmap_animation_bank_1);
-    cdrom_queue_read(0x1194, &g_wmap_animation_bank_2);
-    cdrom_queue_read(0x1195, &g_wmap_load_buffer);
-    cdrom_queue_read(0x1196, g_wmap_effect_model_pack_1);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_21_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_21_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_21_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_21_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_21_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_21_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_21_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_21_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
 }
 
-/** @brief Set effect resource buffers and queue animation and texture reads. */
-void func_800A9A38(void)
+/** @brief Queue texture, animation and model resources for effect 17. */
+void wmap_queue_effect_17_resources(void)
 {
-    func_800A8AA8(0x11A0);
-    func_800A8AF0(0x11A1);
-    func_800A8B38(0x11A2);
-    cdrom_queue_read(0x11A3, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x11A4, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x11A5, g_wmap_animation_bank_2);
-    g_wmap_effect_model_pack_1 = D_800DDEF4;
-    g_wmap_effect_model_pack_2 = D_800DEED0;
-    g_wmap_effect_model_pack_3 = D_800E2B1C;
-    D_8011CF2C = D_800E2DD8;
-    D_8011CF30 = D_800E33AC;
-    D_8011CF34 = D_800E3980;
-    cdrom_queue_read(0x11A6, g_wmap_load_buffer);
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_2000;
+    g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x2000;
+    wmap_queue_effect_texture_0(WMAP_EFFECT_17_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_17_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_17_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_17_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_17_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_17_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_17_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_17_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
 }
 
-/** @brief Set effect resource buffers and queue animation and texture reads. */
-void func_800A9B34(void)
+/** @brief Queue texture, animation and model resources for effect 5. */
+void wmap_queue_effect_05_resources(void)
 {
-    g_wmap_effect_model_pack_1 = D_800E0F18;
+    wmap_queue_effect_texture_0(WMAP_EFFECT_05_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_05_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_05_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_05_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_05_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_05_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    g_wmap_effect_model_pack_1 = g_wmap_shared_bundle_model_pack_1;
+    g_wmap_effect_model_pack_2 = g_wmap_shared_bundle_model_pack_2;
+    g_wmap_effect_model_pack_3 = g_wmap_mgc_bundle_model_pack_3;
+    g_wmap_effect_model_pack_4 = g_wmap_mgc_bundle_model_pack_4;
+    g_wmap_effect_model_pack_5 = g_wmap_mgc_bundle_model_pack_5;
+    /* This bundle also exposes a zero-filled trailing slot. */
+    g_wmap_effect_model_pack_6 = g_wmap_mgc_bundle_empty_slot;
+    cdrom_queue_read(WMAP_EFFECT_05_MODEL_BUNDLE_RESOURCE, g_wmap_load_buffer);
+}
+
+/** @brief Queue texture, animation and model resources for effect 10. */
+void wmap_queue_effect_10_resources(void)
+{
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_4000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x4000;
     g_wmap_effect_model_pack_3 = g_wmap_effect_model_pack_2 + 0xC800;
-    func_800A8AA8(0x11A7);
-    func_800A8AF0(0x11A8);
-    func_800A8B38(0x11A9);
-    cdrom_queue_read(0x11AA, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x11AB, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x11AC, g_wmap_animation_bank_2);
-    cdrom_queue_read(0x11AD, g_wmap_load_buffer);
-    cdrom_queue_read(0x11AE, g_wmap_effect_model_pack_1);
-    cdrom_queue_read(0x11AF, g_wmap_effect_model_pack_2);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_10_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_10_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_10_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_10_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_10_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_10_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_10_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_10_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
+    cdrom_queue_read(WMAP_EFFECT_10_MODEL_2_RESOURCE, g_wmap_effect_model_pack_2);
 }
 
-/** @brief World-map step handler: kick off the batch of resource reads for this map. */
-void func_800A9C38(void)
+/** @brief Queue texture, animation and model resources for effect 8. */
+void wmap_queue_effect_08_resources(void)
 {
-    g_wmap_effect_model_pack_1 = &D_800DEF18;
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_2000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x2000;
-    func_800A8AA8(0x11BA);
-    func_800A8AF0(0x11BB);
-    func_800A8B38(0x11BC);
-    cdrom_queue_read(0x11BD, &g_wmap_animation_bank_0);
-    cdrom_queue_read(0x11BE, &g_wmap_animation_bank_1);
-    cdrom_queue_read(0x11BF, &g_wmap_animation_bank_2);
-    cdrom_queue_read(0x11C0, &g_wmap_load_buffer);
-    cdrom_queue_read(0x11C1, g_wmap_effect_model_pack_1);
-    cdrom_queue_read(0x11C2, g_wmap_effect_model_pack_2);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_08_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_08_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_08_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_08_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_08_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_08_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_08_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_08_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
+    cdrom_queue_read(WMAP_EFFECT_08_MODEL_2_RESOURCE, g_wmap_effect_model_pack_2);
 }
 
-/** @brief Set effect resource buffers and queue animation and texture reads. */
-void func_800A9D24(void)
+/** @brief Queue texture, animation and model resources for effect 9. */
+void wmap_queue_effect_09_resources(void)
 {
-    g_wmap_effect_model_pack_1 = D_800DEF18;
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_2000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x2000;
-    func_800A8AA8(0x11C3);
-    func_800A8AF0(0x11C4);
-    func_800A8B38(0x11C5);
-    cdrom_queue_read(0x11C7, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x11C6, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x11C8, g_wmap_animation_bank_2);
-    cdrom_queue_read(0x11C9, g_wmap_animation_bank_3);
-    cdrom_queue_read(0x11CA, g_wmap_load_buffer);
-    cdrom_queue_read(0x11CB, g_wmap_effect_model_pack_1);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_09_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_09_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_09_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_09_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_09_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_09_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_09_ANIMATION_3_RESOURCE, g_wmap_animation_bank_3);
+    cdrom_queue_read(WMAP_EFFECT_09_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_09_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
 }
 
-/** @brief Set effect resource buffers and queue animation and texture reads. */
-void func_800A9E10(void)
+/** @brief Queue texture, animation and model resources for effect 16. */
+void wmap_queue_effect_16_resources(void)
 {
-    g_wmap_effect_model_pack_1 = D_800DEF18;
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_2000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x2000;
-    func_800A8AA8(0x11CC);
-    func_800A8AF0(0x11CD);
-    func_800A8B38(0x11CE);
-    cdrom_queue_read(0x11CF, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x11D0, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x11D1, g_wmap_animation_bank_2);
-    cdrom_queue_read(0x11D2, g_wmap_load_buffer);
-    cdrom_queue_read(0x11D3, g_wmap_effect_model_pack_1);
-    cdrom_queue_read(0x11D4, g_wmap_effect_model_pack_2);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_16_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_16_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_16_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_16_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_16_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_16_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_16_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_16_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
+    cdrom_queue_read(WMAP_EFFECT_16_MODEL_2_RESOURCE, g_wmap_effect_model_pack_2);
 }
 
-/** @brief Set effect resource buffers and queue animation and texture reads. */
-void func_800A9EFC(void)
+/** @brief Queue texture, animation and model resources for effect 27. */
+void wmap_queue_effect_27_resources(void)
 {
-    g_wmap_effect_model_pack_1 = D_800E0F18;
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_4000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x4000;
     g_wmap_effect_model_pack_3 = g_wmap_effect_model_pack_2 + 0x4000;
-    D_8011CF2C = g_wmap_effect_model_pack_3 + 0x4000;
-    func_800A8AA8(0x11D5);
-    func_800A8AF0(0x11D6);
-    func_800A8B38(0x11D7);
-    cdrom_queue_read(0x11D8, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x11D9, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x11DA, g_wmap_animation_bank_2);
-    cdrom_queue_read(0x11DB, g_wmap_load_buffer);
-    cdrom_queue_read(0x11DC, g_wmap_effect_model_pack_1);
-    cdrom_queue_read(0x11DD, g_wmap_effect_model_pack_2);
-    cdrom_queue_read(0x11DE, g_wmap_effect_model_pack_3);
-    cdrom_queue_read(0x11DF, D_8011CF2C);
+    g_wmap_effect_model_pack_4 = g_wmap_effect_model_pack_3 + 0x4000;
+    wmap_queue_effect_texture_0(WMAP_EFFECT_27_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_27_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_27_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_27_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_27_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_27_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_27_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_27_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
+    cdrom_queue_read(WMAP_EFFECT_27_MODEL_2_RESOURCE, g_wmap_effect_model_pack_2);
+    cdrom_queue_read(WMAP_EFFECT_27_MODEL_3_RESOURCE, g_wmap_effect_model_pack_3);
+    cdrom_queue_read(WMAP_EFFECT_27_MODEL_4_RESOURCE, g_wmap_effect_model_pack_4);
 }
 
-/** @brief Divide the effect buffer and queue its animation and texture reads. */
-void func_800AA040(void)
+/** @brief Queue texture, animation and model resources for effect 23. */
+void wmap_queue_effect_23_resources(void)
 {
-    g_wmap_effect_model_pack_1 = D_800DEF18;
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_2000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x2000;
     g_wmap_effect_model_pack_3 = g_wmap_effect_model_pack_2 + 0x2000;
-    D_8011CF2C = g_wmap_effect_model_pack_3 + 0x2000;
-    func_800A8AA8(0x11E0);
-    func_800A8AF0(0x11E1);
-    func_800A8B38(0x11E2);
-    cdrom_queue_read(0x11E3, g_wmap_load_buffer);
-    cdrom_queue_read(0x11E4, g_wmap_effect_model_pack_1);
-    cdrom_queue_read(0x11E5, g_wmap_effect_model_pack_2);
-    cdrom_queue_read(0x11E6, g_wmap_effect_model_pack_3);
-    cdrom_queue_read(0x11E7, D_8011CF2C);
-    cdrom_queue_read(0x11E8, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x11E9, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x11EA, g_wmap_animation_bank_2);
-    cdrom_queue_read(0x11EB, g_wmap_animation_bank_3);
-    cdrom_queue_read(0x11EC, g_wmap_animation_bank_4);
+    g_wmap_effect_model_pack_4 = g_wmap_effect_model_pack_3 + 0x2000;
+    wmap_queue_effect_texture_0(WMAP_EFFECT_23_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_23_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_23_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_23_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_23_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
+    cdrom_queue_read(WMAP_EFFECT_23_MODEL_2_RESOURCE, g_wmap_effect_model_pack_2);
+    cdrom_queue_read(WMAP_EFFECT_23_MODEL_3_RESOURCE, g_wmap_effect_model_pack_3);
+    cdrom_queue_read(WMAP_EFFECT_23_MODEL_4_RESOURCE, g_wmap_effect_model_pack_4);
+    cdrom_queue_read(WMAP_EFFECT_23_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_23_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_23_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_23_ANIMATION_3_RESOURCE, g_wmap_animation_bank_3);
+    cdrom_queue_read(WMAP_EFFECT_23_ANIMATION_4_RESOURCE, g_wmap_animation_bank_4);
 }
 
-/** @brief Queue the world-map effect resource set. */
-void func_800AA1AC(void)
+/** @brief Queue texture, animation and model resources for effect 19. */
+void wmap_queue_effect_19_resources(void)
 {
-    g_wmap_effect_model_pack_1 = D_800DEF18;
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_2000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x2000;
     g_wmap_effect_model_pack_3 = g_wmap_effect_model_pack_2 + 0x2000;
-    func_800A8AA8(0x11ED);
-    func_800A8AF0(0x11EE);
-    func_800A8B38(0x11EF);
-    cdrom_queue_read(0x11F0, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x11F1, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x11F2, g_wmap_animation_bank_2);
-    cdrom_queue_read(0x11F3, g_wmap_animation_bank_3);
-    cdrom_queue_read(0x11F4, g_wmap_animation_bank_4);
-    cdrom_queue_read(0x11F5, g_wmap_load_buffer);
-    cdrom_queue_read(0x11F6, g_wmap_effect_model_pack_1);
-    cdrom_queue_read(0x11F7, g_wmap_effect_model_pack_2);
-    cdrom_queue_read(0x11F8, g_wmap_effect_model_pack_3);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_19_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_19_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_19_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_19_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_19_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_19_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_19_ANIMATION_3_RESOURCE, g_wmap_animation_bank_3);
+    cdrom_queue_read(WMAP_EFFECT_19_ANIMATION_4_RESOURCE, g_wmap_animation_bank_4);
+    cdrom_queue_read(WMAP_EFFECT_19_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_19_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
+    cdrom_queue_read(WMAP_EFFECT_19_MODEL_2_RESOURCE, g_wmap_effect_model_pack_2);
+    cdrom_queue_read(WMAP_EFFECT_19_MODEL_3_RESOURCE, g_wmap_effect_model_pack_3);
 }
 
-/** @brief Queue the world-map effect resource set. */
-void func_800AA2EC(void)
+/** @brief Queue texture, animation and model resources for effect 22. */
+void wmap_queue_effect_22_resources(void)
 {
-    g_wmap_effect_model_pack_1 = D_800DEF18;
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_2000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x2000;
     g_wmap_effect_model_pack_3 = g_wmap_effect_model_pack_2 + 0x4000;
-    D_8011CF2C = g_wmap_effect_model_pack_3 + 0x4000;
-    func_800A8AA8(0x11F9);
-    func_800A8AF0(0x11FA);
-    func_800A8B38(0x11FB);
-    cdrom_queue_read(0x11FC, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x11FD, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x11FE, g_wmap_animation_bank_2);
-    cdrom_queue_read(0x11FF, g_wmap_animation_bank_3);
-    cdrom_queue_read(0x1200, g_wmap_load_buffer);
-    cdrom_queue_read(0x1201, g_wmap_effect_model_pack_1);
-    cdrom_queue_read(0x1202, g_wmap_effect_model_pack_2);
-    cdrom_queue_read(0x1203, g_wmap_effect_model_pack_3);
-    cdrom_queue_read(0x1204, D_8011CF2C);
+    g_wmap_effect_model_pack_4 = g_wmap_effect_model_pack_3 + 0x4000;
+    wmap_queue_effect_texture_0(WMAP_EFFECT_22_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_22_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_22_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_22_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_22_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_22_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_22_ANIMATION_3_RESOURCE, g_wmap_animation_bank_3);
+    cdrom_queue_read(WMAP_EFFECT_22_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_22_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
+    cdrom_queue_read(WMAP_EFFECT_22_MODEL_2_RESOURCE, g_wmap_effect_model_pack_2);
+    cdrom_queue_read(WMAP_EFFECT_22_MODEL_3_RESOURCE, g_wmap_effect_model_pack_3);
+    cdrom_queue_read(WMAP_EFFECT_22_MODEL_4_RESOURCE, g_wmap_effect_model_pack_4);
 }
 
-/** @brief Set effect resource buffers and queue animation and texture reads. */
-void func_800AA444(void)
+/** @brief Queue texture, animation and model resources for effect 25. */
+void wmap_queue_effect_25_resources(void)
 {
-    g_wmap_effect_model_pack_1 = D_800DDEF4;
-    g_wmap_effect_model_pack_2 = D_800DEED0;
-    g_wmap_effect_model_pack_3 = D_800DFEAC;
-    D_8011CF2C = D_800E0720;
-    D_8011CF30 = D_800E0F94;
-    D_8011CF34 = D_800E91C0;
-    D_8011CF38 = D_800F420C;
-    func_800A8AA8(0x120E);
-    func_800A8AF0(0x120F);
-    func_800A8B38(0x1210);
-    cdrom_queue_read(0x1211, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x1212, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x1213, g_wmap_animation_bank_2);
-    cdrom_queue_read(0x1214, g_wmap_animation_bank_3);
-    cdrom_queue_read(0x1215, g_wmap_load_buffer);
+    g_wmap_effect_model_pack_1 = g_wmap_shared_bundle_model_pack_1;
+    g_wmap_effect_model_pack_2 = g_wmap_shared_bundle_model_pack_2;
+    g_wmap_effect_model_pack_3 = g_wmap_jul_bundle_model_pack_3;
+    g_wmap_effect_model_pack_4 = g_wmap_jul_bundle_model_pack_4;
+    g_wmap_effect_model_pack_5 = g_wmap_jul_bundle_model_pack_5;
+    g_wmap_effect_model_pack_6 = g_wmap_jul_bundle_model_pack_6;
+    /* This bundle also exposes a zero-filled trailing slot. */
+    g_wmap_effect_model_pack_7 = g_wmap_jul_bundle_empty_slot;
+    wmap_queue_effect_texture_0(WMAP_EFFECT_25_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_25_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_25_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_25_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_25_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_25_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_25_ANIMATION_3_RESOURCE, g_wmap_animation_bank_3);
+    cdrom_queue_read(WMAP_EFFECT_25_MODEL_BUNDLE_RESOURCE, g_wmap_load_buffer);
 }
 
-/** @brief Queue the world-map effect resource set. */
-void func_800AA564(void)
+/** @brief Queue texture, animation and model resources for effect 31. */
+void wmap_queue_effect_31_resources(void)
 {
-    g_wmap_effect_model_pack_1 = D_800E7F64;
-    g_wmap_effect_model_pack_2 = D_800EA560;
-    g_wmap_effect_model_pack_3 = D_800EAA54;
-    D_8011CF2C = D_800EBED8;
-    D_8011CF30 = D_800ECEB4;
-    D_8011CF34 = D_800ED310;
-    D_8011CF38 = D_800EE2EC;
-    D_8011CF3C = D_800F2238;
-    D_8011CF40 = D_800F3214;
-    D_8011CF84 = D_800FAE60;
-    func_800A8AA8(0x122C);
-    func_800A8AF0(0x122D);
-    func_800A8B38(0x122E);
-    cdrom_queue_read(0x122F, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x1230, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x1231, g_wmap_animation_bank_2);
-    cdrom_queue_read(0x1232, g_wmap_load_buffer);
+    g_wmap_effect_model_pack_1 = g_wmap_man_bundle_model_pack_1;
+    g_wmap_effect_model_pack_2 = g_wmap_man_bundle_model_pack_2;
+    g_wmap_effect_model_pack_3 = g_wmap_man_bundle_model_pack_3;
+    g_wmap_effect_model_pack_4 = g_wmap_man_bundle_model_pack_4;
+    g_wmap_effect_model_pack_5 = g_wmap_man_bundle_model_pack_5;
+    g_wmap_effect_model_pack_6 = g_wmap_man_bundle_model_pack_6;
+    g_wmap_effect_model_pack_7 = g_wmap_man_bundle_model_pack_7;
+    g_wmap_effect_model_pack_8 = g_wmap_man_bundle_model_pack_8;
+    g_wmap_effect_model_pack_9 = g_wmap_man_bundle_model_pack_9;
+    /* This bundle also exposes a zero-filled trailing slot. */
+    g_wmap_effect_empty_model_slot = g_wmap_man_bundle_empty_slot;
+    wmap_queue_effect_texture_0(WMAP_EFFECT_31_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_31_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_31_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_31_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_31_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_31_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_31_MODEL_BUNDLE_RESOURCE, g_wmap_load_buffer);
 }
 
-/** @brief Queue the world-map effect resource set. */
-void func_800AA6A0(void)
+/** @brief Queue texture, animation and model resources for effect 24. */
+void wmap_queue_effect_24_resources(void)
 {
-    g_wmap_effect_model_pack_1 = D_800DDF18;
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_1000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x1000;
     g_wmap_effect_model_pack_3 = g_wmap_effect_model_pack_2 + 0x1000;
-    D_8011CF2C = g_wmap_effect_model_pack_3 + 0x10800;
-    func_800A8AA8(0x1233);
-    func_800A8AF0(0x1234);
-    func_800A8B38(0x1235);
-    cdrom_queue_read(0x1236, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x1237, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x1238, g_wmap_animation_bank_2);
-    cdrom_queue_read(0x1239, g_wmap_load_buffer);
-    cdrom_queue_read(0x123A, g_wmap_effect_model_pack_1);
-    cdrom_queue_read(0x123B, g_wmap_effect_model_pack_2);
-    cdrom_queue_read(0x123C, g_wmap_effect_model_pack_3);
-    cdrom_queue_read(0x123D, D_8011CF2C);
+    g_wmap_effect_model_pack_4 = g_wmap_effect_model_pack_3 + 0x10800;
+    wmap_queue_effect_texture_0(WMAP_EFFECT_24_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_24_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_24_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_24_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_24_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_24_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_24_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_24_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
+    cdrom_queue_read(WMAP_EFFECT_24_MODEL_2_RESOURCE, g_wmap_effect_model_pack_2);
+    cdrom_queue_read(WMAP_EFFECT_24_MODEL_3_RESOURCE, g_wmap_effect_model_pack_3);
+    cdrom_queue_read(WMAP_EFFECT_24_MODEL_4_RESOURCE, g_wmap_effect_model_pack_4);
 }
 
-/** @brief Queue the resource set used by this world-map sequence. */
-void func_800AA7E8(void)
+/** @brief Queue texture, animation and model resources for effect 33. */
+void wmap_queue_effect_33_resources(void)
 {
-    func_800A8AA8(0x123E);
-    func_800A8AF0(0x123F);
-    func_800A8B38(0x1240);
-    cdrom_queue_read(0x1241, &g_wmap_animation_bank_4);
-    cdrom_queue_read(0x1242, &g_wmap_animation_bank_5);
-    cdrom_queue_read(0x1243, &g_wmap_animation_bank_3);
-    cdrom_queue_read(0x1244, &g_wmap_animation_bank_2);
-    cdrom_queue_read(0x1245, &g_wmap_load_buffer);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_33_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_33_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_33_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_33_ANIMATION_4_RESOURCE, g_wmap_animation_bank_4);
+    cdrom_queue_read(WMAP_EFFECT_33_ANIMATION_5_RESOURCE, g_wmap_animation_bank_5);
+    cdrom_queue_read(WMAP_EFFECT_33_ANIMATION_3_RESOURCE, g_wmap_animation_bank_3);
+    cdrom_queue_read(WMAP_EFFECT_33_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_33_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
 }
 
-/** @brief Queue the resource set used by this world-map sequence. */
-void func_800AA898(void)
+/** @brief Queue texture, animation and model resources for effect 34. */
+void wmap_queue_effect_34_resources(void)
 {
-    func_800A8AA8(0x1246);
-    func_800A8AF0(0x1247);
-    cdrom_queue_read(0x1248, &g_wmap_animation_bank_0);
-    cdrom_queue_read(0x1249, &g_wmap_animation_bank_1);
-    cdrom_queue_read(0x124A, &g_wmap_load_buffer);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_34_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_34_TEXTURE_1_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_34_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_34_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_34_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
 }
 
-/** @brief Queue the world-map effect resource set. */
-void func_800AA914(void)
+/** @brief Queue texture, animation and model resources for effect 35. */
+void wmap_queue_effect_35_resources(void)
 {
-    g_wmap_effect_model_pack_1 = D_800DDF18;
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_1000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x1000;
     g_wmap_effect_model_pack_3 = g_wmap_effect_model_pack_2 + 0x6000;
-    func_800A8AA8(0x124B);
-    func_800A8AF0(0x124C);
-    func_800A8B38(0x124D);
-    cdrom_queue_read(0x124E, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x124F, g_wmap_animation_bank_1);
-    cdrom_queue_read(0x1250, g_wmap_animation_bank_2);
-    cdrom_queue_read(0x1251, g_wmap_load_buffer);
-    cdrom_queue_read(0x1252, g_wmap_effect_model_pack_1);
-    cdrom_queue_read(0x1253, g_wmap_effect_model_pack_2);
-    cdrom_queue_read(0x1254, g_wmap_effect_model_pack_3);
+    wmap_queue_effect_texture_0(WMAP_EFFECT_35_TEXTURE_0_RESOURCE);
+    wmap_queue_effect_texture_1(WMAP_EFFECT_35_TEXTURE_1_RESOURCE);
+    wmap_queue_effect_texture_2(WMAP_EFFECT_35_TEXTURE_2_RESOURCE);
+    cdrom_queue_read(WMAP_EFFECT_35_ANIMATION_0_RESOURCE, g_wmap_animation_bank_0);
+    cdrom_queue_read(WMAP_EFFECT_35_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
+    cdrom_queue_read(WMAP_EFFECT_35_ANIMATION_2_RESOURCE, g_wmap_animation_bank_2);
+    cdrom_queue_read(WMAP_EFFECT_35_BASE_MODEL_RESOURCE, g_wmap_load_buffer);
+    cdrom_queue_read(WMAP_EFFECT_35_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
+    cdrom_queue_read(WMAP_EFFECT_35_MODEL_2_RESOURCE, g_wmap_effect_model_pack_2);
+    cdrom_queue_read(WMAP_EFFECT_35_MODEL_3_RESOURCE, g_wmap_effect_model_pack_3);
 }

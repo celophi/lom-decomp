@@ -69,9 +69,9 @@ extern s32 D_80182DE4;
 extern s32 g_wmap_land_effect_32_sequence_3_timer;
 extern void PushMatrix(void);
 extern void PopMatrix(void);
-extern u8* D_8011CF2C;
+extern u8* g_wmap_effect_model_pack_4;
 extern s32 g_wmap_land_effect_32_sequence_4_timer;
-extern u8* D_8011CF30;
+extern u8* g_wmap_effect_model_pack_5;
 extern s32 g_wmap_land_effect_32_sequence_5_timer;
 extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_32_sequence_6_timer;
@@ -246,7 +246,7 @@ void wmap_land_effect_32_sequence_4_step_02(void)
     PushMatrix();
     q = &D_801B2670;
     wmap_set_model_transform(p, q);
-    wmap_draw_model_default(D_8011CF2C, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_a);
+    wmap_draw_model_default(g_wmap_effect_model_pack_4, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_a);
     WMAP_MODEL_FADE_IN(g_wmap_effect_fade_a, 0x10, 0x81, t);
     *(u16 *)((u8 *)q + 4) -= 3;
     PopMatrix();
@@ -278,7 +278,7 @@ void wmap_land_effect_32_sequence_4_step_04(void)
     wmap_set_model_transform(p, q);
     if (g_wmap_effect_fade_a != 0)
     {
-        wmap_draw_model_default(D_8011CF2C, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_a);
+        wmap_draw_model_default(g_wmap_effect_model_pack_4, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_a);
         WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_a, 2, t);
         *(u16 *)((u8 *)q + 4) -= 3;
     }
@@ -309,7 +309,7 @@ void wmap_land_effect_32_sequence_5_step_02(void)
     PushMatrix();
     q = &D_801B2678;
     wmap_set_model_transform(p, q);
-    wmap_draw_model_default(D_8011CF30, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_b);
+    wmap_draw_model_default(g_wmap_effect_model_pack_5, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_b);
     WMAP_MODEL_FADE_IN(g_wmap_effect_fade_b, 0x10, 0x81, t);
     *(u16 *)((u8 *)q + 4) += 4;
     PopMatrix();
@@ -341,7 +341,7 @@ void wmap_land_effect_32_sequence_5_step_04(void)
     wmap_set_model_transform(p, q);
     if (g_wmap_effect_fade_b != 0)
     {
-        wmap_draw_model_default(D_8011CF30, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_b);
+        wmap_draw_model_default(g_wmap_effect_model_pack_5, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_b);
         WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_b, 2, t);
         *(u16 *)((u8 *)q + 4) += 4;
     }

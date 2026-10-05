@@ -57,7 +57,7 @@ extern s32 g_wmap_land_effect_27_sequence_3_timer;
 extern s32 D_800D665C[];
 extern void *g_wmap_effect_model_pack_2;
 extern void *g_wmap_effect_model_pack_3;
-extern void *D_8011CF2C;
+extern void *g_wmap_effect_model_pack_4;
 extern s32 D_80139234;
 extern s32 g_wmap_land_effect_27_sequence_5_timer;
 extern s32 g_wmap_land_effect_27_sequence_6_timer;
@@ -153,7 +153,7 @@ void wmap_land_effect_27_sequence_5_step_02(void)
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_b_rotation);
     wmap_draw_model(g_wmap_effect_model_pack_3, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, g_wmap_effect_fade_c, 0, -40, -1);
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_c_rotation);
-    wmap_draw_model(D_8011CF2C, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, g_wmap_effect_fade_c, 0, -70, -1);
+    wmap_draw_model(g_wmap_effect_model_pack_4, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, g_wmap_effect_fade_c, 0, -70, -1);
     PopMatrix();
     WMAP_MODEL_FADE_IN(g_wmap_effect_fade_c, 2, 129, intensity);
     angle = g_wmap_effect_model_c_rotation.vz;
@@ -188,7 +188,7 @@ void wmap_land_effect_27_sequence_5_step_04(void)
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_b_rotation);
     wmap_draw_model(g_wmap_effect_model_pack_3, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, g_wmap_effect_fade_c, 0, -40, -1);
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_c_rotation);
-    wmap_draw_model(D_8011CF2C, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, g_wmap_effect_fade_c, 0, -70, -1);
+    wmap_draw_model(g_wmap_effect_model_pack_4, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, g_wmap_effect_fade_c, 0, -70, -1);
     PopMatrix();
     WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_c, 4, intensity);
     angle = g_wmap_effect_model_c_rotation.vz;

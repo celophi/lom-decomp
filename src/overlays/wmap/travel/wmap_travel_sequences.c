@@ -100,8 +100,8 @@ extern u8 g_wmap_animation_bank_0[];
 extern s32 g_wmap_vehicle_bank_flipped;
 extern MATRIX D_8011D0E8;
 extern WmapScreenPosition g_wmap_vehicle_screen_position;
-extern u8 D_80182E40[];
-extern u8 D_8018B240[];
+extern u8 g_wmap_effect_texture_buffer_0[];
+extern u8 g_wmap_effect_texture_buffer_1[];
 
 extern s16 g_wmap_route_headings[];
 extern s32 g_wmap_vehicle_route;
@@ -178,8 +178,8 @@ static inline void wmap_load_vehicle(void)
     g_wmap_saved_view = g_wmap_view;
     cdrom_queue_read(WMAP_VEHICLE_BANK_FILE, g_wmap_animation_bank_0);
     cdrom_queue_read(WMAP_VEHICLE_BANK_FILE_2, g_wmap_animation_bank_0 + WMAP_VEHICLE_BANK_SIZE);
-    func_800A8AA8(WMAP_VEHICLE_TEXTURE_FILE);
-    func_800A8AF0(WMAP_VEHICLE_PALETTE_FILE);
+    wmap_queue_effect_texture_0(WMAP_VEHICLE_TEXTURE_FILE);
+    wmap_queue_effect_texture_1(WMAP_VEHICLE_PALETTE_FILE);
 }
 
 /** @brief Upload the vehicle resources, reset its sprite and orbit, and start drawing it. */
@@ -188,8 +188,8 @@ static inline void wmap_place_vehicle(void)
     WmapSpriteActor* actor = &g_wmap_vehicle_actor;
 
     cdrom_wait_queue_empty();
-    func_800651B4(D_80182E40);
-    func_800651B4(D_8018B240);
+    func_800651B4(g_wmap_effect_texture_buffer_0);
+    func_800651B4(g_wmap_effect_texture_buffer_1);
     g_wmap_vehicle_animation.data = g_wmap_animation_bank_0;
     actor->previous_sequence = -1;
     actor->target_shade = WMAP_VEHICLE_SHADE_NEUTRAL;

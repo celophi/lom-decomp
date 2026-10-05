@@ -638,7 +638,7 @@ void func_800A71D4(void)
     g_wmap_focus_cell_y = g_wmap_vehicle_cell_y;
     g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * 0x30) - g_wmap_view.x;
     g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * 0x30) - g_wmap_view.y;
-    func_800A89DC(0x21);
+    wmap_queue_effect_resources(0x21);
     D_801B2E70 += 1;
     func_800A7400();
 }
@@ -1345,7 +1345,7 @@ WMAP_STEP_WAIT_SCROLL(func_800A8864,
 /** @brief World-map step handler: kick two sub-tasks and expire the step counter. */
 void func_800A88A4(void)
 {
-    func_800A89DC(0x17);
+    wmap_queue_effect_resources(0x17);
     func_800591A8(0x17);
     D_801B2E60 += 1;
 }
@@ -1373,7 +1373,7 @@ WMAP_STEP_WAIT_SCROLL(func_800A8968,
 /** @brief World-map step handler: kick two sub-tasks and expire the step counter. */
 void func_800A89A8(void)
 {
-    func_800A89DC(0x16);
+    wmap_queue_effect_resources(0x16);
     func_800591A8(0x16);
     D_801B2E68 += 1;
 }

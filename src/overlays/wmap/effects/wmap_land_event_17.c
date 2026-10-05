@@ -55,16 +55,16 @@ typedef struct
     s32 unk10;
 } WmapAfcEntry;
 
-extern u8 D_800DEF18[];
+extern u8 g_wmap_effect_model_buffer_2000[];
 extern s32 g_wmap_vehicle_cell_x;
 extern s32 g_wmap_vehicle_cell_y;
 extern s32 g_wmap_view_scroll_mode;
 extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
 extern u8 g_wmap_load_buffer[];
-extern u8 D_80182E40[];
-extern u8 D_8018B240[];
-extern u8 D_80193640[];
+extern u8 g_wmap_effect_texture_buffer_0[];
+extern u8 g_wmap_effect_texture_buffer_1[];
+extern u8 g_wmap_effect_texture_buffer_2[];
 extern s32 g_wmap_land_event_17_timeline_timer;
 extern s32 g_wmap_land_event_17_sequence_1_timer;
 extern s32 g_wmap_land_event_17_sequence_2_timer;
@@ -198,8 +198,8 @@ extern WmapAfcEntry g_wmap_actor_motions[];
 /** @brief Set the effect resources and map-relative position, then advance. */
 void wmap_land_event_17_step_01(void)
 {
-    g_wmap_effect_model_pack_1 = D_800DEF18;
-    g_wmap_effect_model_pack_2 = D_800DEF18 + 0x2000;
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_2000;
+    g_wmap_effect_model_pack_2 = g_wmap_effect_model_buffer_2000 + 0x2000;
     g_wmap_focus_screen_position.point.x = 0x94;
     g_wmap_focus_screen_position.point.y = 0x31;
     g_wmap_auxiliary_labels_hidden = 1;
@@ -221,9 +221,9 @@ void wmap_land_event_17_timeline_step_01(void)
     g_wmap_spirit_target_brightness = 0;
     func_8005FF88(-1);
     cdrom_wait_queue_empty();
-    cdrom_queue_read(0x1205, D_80182E40);
-    cdrom_queue_read(0x1206, D_8018B240);
-    cdrom_queue_read(0x1207, D_80193640);
+    cdrom_queue_read(0x1205, g_wmap_effect_texture_buffer_0);
+    cdrom_queue_read(0x1206, g_wmap_effect_texture_buffer_1);
+    cdrom_queue_read(0x1207, g_wmap_effect_texture_buffer_2);
     cdrom_queue_read(0x1208, g_wmap_animation_bank_0);
     cdrom_queue_read(0x1209, g_wmap_animation_bank_0 + 0x2000);
     cdrom_queue_read(0x120A, g_wmap_animation_bank_0 + 0x4000);
@@ -400,9 +400,9 @@ void wmap_land_event_17_timeline_step_03(void)
 {
     cdrom_wait_queue_empty();
     wmap_play_sound(0x2D, 0x80);
-    func_800651B4(&D_80182E40);
-    func_800651B4(&D_8018B240);
-    func_800651B4(&D_80193640);
+    func_800651B4(&g_wmap_effect_texture_buffer_0);
+    func_800651B4(&g_wmap_effect_texture_buffer_1);
+    func_800651B4(&g_wmap_effect_texture_buffer_2);
     wmap_start_sequence(&wmap_land_event_17_run_sequence_9);
     g_wmap_land_event_17_timeline_timer = 0x12;
     g_wmap_land_event_17_timeline_step += 1;

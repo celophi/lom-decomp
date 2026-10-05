@@ -52,10 +52,10 @@ extern s32 D_8013923C;
 extern s32 D_80139240;
 extern s32 D_8013924C;
 extern s32 g_wmap_view_scroll_mode;
-extern u8 D_80182E40;
+extern u8 g_wmap_effect_texture_buffer_0;
 extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
-extern u8 D_8018B240;
+extern u8 g_wmap_effect_texture_buffer_1;
 extern s32 D_801B3210;
 extern s32 D_801B3214;
 extern u32 g_wmap_special_effect_34_step;
@@ -306,7 +306,7 @@ void wmap_special_effect_34_step_01(void)
     D_801B3210 = field_00;
     D_801B3214 = field_04;
 #endif
-    func_800A89DC(0x22);
+    wmap_queue_effect_resources(0x22);
     g_wmap_special_effect_34_timer = 0x1E;
     g_wmap_special_effect_34_step++;
 }
@@ -316,8 +316,8 @@ WMAP_STEP_WAIT(wmap_special_effect_34_step_02, g_wmap_special_effect_34_step, g_
 void wmap_special_effect_34_step_03(void)
 {
     cdrom_wait_queue_empty();
-    func_800651B4(&D_80182E40);
-    func_800651B4(&D_8018B240);
+    func_800651B4(&g_wmap_effect_texture_buffer_0);
+    func_800651B4(&g_wmap_effect_texture_buffer_1);
     wmap_start_sequence(wmap_special_effect_34_run_timeline);
     g_wmap_sequence_busy = 1;
     g_wmap_special_effect_34_step++;
