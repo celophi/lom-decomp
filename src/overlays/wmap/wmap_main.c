@@ -24,15 +24,12 @@
 #include "main/audio/akao_cmd.h"
 #include "internal/wmap_sprite_render.h"
 #include "main/controller.h"
+#include "main/cdrom.h"
+#include "main/game_state.h"
 #include "internal/wmap_pathfinding.h"
 #include <rand.h>
 #include "internal/wmap_map_events.h"
 #include "internal/wmap_cells.h"
-
-s32 cdrom_get_error_status(void);
-u32 cdrom_process_state(void);
-void set_controller_vsync_interval(u32 interval);
-s32 cdrom_stream(s32 resource_index, u8* destination);
 
 #define WMAP_MAP_CELL_SIZE 48
 #define WMAP_TRAVEL_CELL_SIZE 160
@@ -46,6 +43,33 @@ s32 cdrom_stream(s32 resource_index, u8* destination);
 #define WMAP_FADE_COLOR_STEP 4
 #define WMAP_ANALOG_REPEAT_BASE_FRAMES 512
 #define WMAP_ANALOG_REPEAT_MAX_SHIFT 7
+#define WMAP_ENTRY_PALETTE_COLORS 16
+#define WMAP_INPUT_GRACE_FRAMES 40
+#define WMAP_EVENT_START_DELAY_FRAMES 51
+#define WMAP_EXIT_CAPTURE_FRAME 11
+#define WMAP_EXIT_END_FRAME 120
+#define WMAP_SHADOW_RETRY_MASK 0x1F
+#define WMAP_SHADOW_VSYNC_LIMIT 526
+#define WMAP_RESIDENT_LAND_SLOT 16
+#define WMAP_RESIDENT_LAND_DISPLAY 31
+#define WMAP_CD_ERROR_TEXTURE_HEIGHT 32
+
+/** @brief CD resources loaded while entering the world map. */
+enum WmapEntryResource
+{
+    WMAP_INTERFACE_IMAGE_RESOURCE = 0x10C4,
+    WMAP_LAND_IMAGE_PACK_RESOURCE = 0x10C5,
+    WMAP_RESIDENT_LAND_IMAGE_RESOURCE = 0x10C6,
+    WMAP_RESIDENT_LAND_ANIMATION_RESOURCE = 0x10C7,
+    WMAP_MAP_OVERLAY_IMAGE_RESOURCE = 0x10C8,
+    WMAP_LOADING_IMAGE_RESOURCE_BASE = 0x1453,
+    WMAP_NORMAL_SOUND_BANK_RESOURCE = 0x145E,
+    WMAP_EVENT_SOUND_BANK_RESOURCE = 0x145F,
+    WMAP_SHARED_SOUND_BANK_RESOURCE = 0x1460,
+    WMAP_MUSIC_RESOURCE = 0x1461,
+    WMAP_LAYOUT_IMAGE_RESOURCE_BASE = 0x14DE
+};
+
 
 /** @brief Soft-reset chord (select, start and all four shoulder buttons) and the D-pad bits. */
 #define WMAP_RESET_CHORD (PADselect | PADstart | PADL1 | PADL2 | PADR1 | PADR2)
@@ -125,11 +149,7 @@ typedef struct
     u8 pad_02[0x12];
 } WmapMotion;
 
-s32 akao_stop_all_songs();
-s32 akao_release_all_sfx();
 s32 func_8005B548();
-void cdrom_queue_read();
-s32 cdrom_wait_queue_empty();
 extern s32 wmap_special_effect_34_run(s32 initialize);
 
 extern s32 g_wmap_script_button_mask;
@@ -153,62 +173,45 @@ extern s32 D_800DCEDC;
 
 extern RECT D_80051A80;
 extern s32 D_800D0550;
-extern s32 D_80182228;
-extern s32 D_80182240;
+/** @brief Nonzero to play attract movie one when the world map returns. */
+extern s32 g_wmap_attract_1_requested;
+/** @brief Nonzero to play attract movies two through four after the map returns. */
+extern s32 g_wmap_attract_2_requested;
 extern s32 D_8005136C;
 extern POLY_G4 D_800D06BC;
-extern s32 D_800D9224;
 extern s32 D_800D923C;
 extern POLY_G4 D_800D9240;
 extern s32 D_800DBE6C;
 extern s32 D_800DBE74;
-extern s32 D_800DBE78;
 extern s32 D_800DCEC0;
 extern s32 g_wmap_cursor_column;
 extern s32 g_wmap_cursor_row;
 extern s32 D_800DCEFC;
-extern u8 D_8010CF18[];
-extern u8 D_80114F18[];
-extern s32 D_8011CF18;
 extern s32 D_8011CF20;
 extern s32 g_wmap_sequence_count;
 extern s32 g_wmap_view_scroll_enabled;
-extern s32 D_8011D4F8;
 extern s32 g_wmap_selected_artifact;
-extern s32 D_80129540;
 extern CVECTOR g_wmap_tint;
-extern s32 D_8012954C;
 extern s32 D_80139218;
 extern s32 D_80139224;
-extern s32 D_80139228;
-extern s32 D_80139248;
 extern SVECTOR g_wmap_camera_rotation;
 extern s32* g_wmap_effect_params;
 extern s32 g_wmap_tint_blending;
-extern s32 D_801398B8;
-extern s32 D_801398BC;
 extern SVECTOR D_801398C8;
 extern s32 g_wmap_view_scroll_mode;
 extern s32 D_801398F4;
-extern s32 D_80139900;
 extern VECTOR g_wmap_view;
-extern s32 D_8013997C;
 extern DVECTOR D_8013B260;
 extern s32 D_8013B28C;
 extern s32 D_8013B290;
-extern s32 D_8013B294;
 extern s32 D_8013B27C;
 extern VECTOR D_80182D48;
 extern s32 D_80182D88;
 extern VECTOR g_wmap_camera_translation;
-extern u32 D_80182DD8;
-extern s32 D_80182E00;
-extern s32 D_80182E1C;
-extern s32 D_80182E34;
 extern s32 g_wmap_map_shadow_level;
-extern s32 D_801ADAF0;
 extern CVECTOR D_801ADB04;
-extern s32 D_801ADB90;
+/** @brief Nonzero to start the normal world-map song after loading. */
+extern s32 g_wmap_entry_music_enabled;
 extern POLY_FT4 g_wmap_backdrop_front_quads[4];
 extern POLY_FT4 g_wmap_backdrop_back_quads[4];
 
@@ -218,37 +221,38 @@ extern WmapColor3 D_80182D8C;
 extern WmapColor3 D_80182D94;
 extern POLY_FT4 D_800D0694;
 extern u8 D_800D0698;
-extern SPRT D_800D06E4;
+/** @brief Sprite template shared by menu and scripted input prompts. */
+extern SPRT g_wmap_prompt_sprite_template;
 extern WmapMenuTriangle g_wmap_menu_triangles[WMAP_MENU_TRIANGLE_COUNT];
 extern u8 D_8019D6E0;
 extern s16* g_wmap_input_scripts[];
-extern u8 D_800D0A08[];
-extern s32 D_800D9228;
-extern s32 D_800D9238;
-extern s32 D_800DBE68;
+/** @brief Textured quad shaded at each stage of world-map loading. */
+extern POLY_FT4 g_wmap_loading_quad;
+/** @brief Loaded layout selector used to choose the entry image. */
+extern s32 g_wmap_layout_id;
 extern s32 D_800DBE7C;
 extern u8 g_wmap_load_buffer[];
-extern u16 D_800DCF2C[];
-extern s32 D_8011D0E0;
-extern s32 D_8011D0E4;
-extern s32 D_8011D500;
-extern s8 D_80129538[5];
-extern s32 D_80139238;
-extern s32 D_80139834;
+/** @brief Sixteen-color CLUT of the image loaded on map entry. */
+extern u16 g_wmap_entry_palette[16];
+/** @brief Raw L1 held state from the first controller. */
+extern s32 g_wmap_controller_1_l1_held;
+/** @brief Raw L2 repeat state from the second controller. */
+extern s32 g_wmap_controller_2_l2_repeat;
 extern s32 g_wmap_view_mode;
-extern u32 D_801398F8;
-extern u8 D_80139908[];
-extern u16 D_8013B210;
-extern s32 D_8013B234;
+/** @brief Last land-event flag read from the queue, or the end sentinel. */
+extern u32 g_wmap_last_land_event;
+/** @brief Entry palette expanded into five-bit RGB channels. */
+extern CVECTOR g_wmap_entry_palette_channels[16];
+/** @brief Sixteen-color palette uploaded when its first entry is nonzero. */
+extern u16 g_wmap_pending_palette[16];
+/** @brief Layout selector recorded when world-map entry begins. */
+extern s32 g_wmap_entry_layout_id;
 extern s32 g_wmap_tint_speed;
-extern u16 D_8013B2A0;
-extern u16 D_8013C628;
-extern s32 D_80182D5C;
-extern s32 D_80182DD4;
-extern s32 D_80182E38;
-extern s32 D_801ADAF8;
+/** @brief World-map song loaded from the entry music resource. */
+extern AkaoHeader g_wmap_music_buffer;
 extern s32 D_801ADB08;
-extern u8 D_801ADBA0[];
+/** @brief Animation data for land display 31, kept in cache slot 16. */
+extern u8 g_wmap_resident_land_animation_data[];
 extern RECT D_80051A88;
 extern WmapTileDisplay D_8011D108[6][6];
 /** @brief Nonzero to use display resource 35 for Gato's map appearance. */
@@ -312,13 +316,13 @@ s32 run_world_map(void)
         ClearImage(&clear_rect, 0, 0, 0);
         return 2;
     }
-    if (D_80182228 != 0)
+    if (g_wmap_attract_1_requested != 0)
     {
-        return 9;
+        return GAME_STATE_ATTRACT_1;
     }
-    if (D_80182240 != 0)
+    if (g_wmap_attract_2_requested != 0)
     {
-        return 10;
+        return GAME_STATE_ATTRACT_2;
     }
     return D_800D0550;
 }
@@ -327,34 +331,34 @@ s32 run_world_map(void)
 void wmap_init_state(void)
 {
     s32 transition_mode;
-    D_80182DD8 = 0;
+    g_wmap_special_land_event = 0;
     D_80139224 = 1;
-    D_80182240 = 0;
-    D_80182228 = 0;
+    g_wmap_attract_2_requested = 0;
+    g_wmap_attract_1_requested = 0;
     g_wmap_forced_animated_land_id = -1;
-    D_8013997C = 0;
+    g_wmap_land_event_24_pending = 0;
     D_8011CF20 = 0;
     D_800DBE6C = -1;
     D_800DBE74 = 0;
-    D_801ADAF0 = 0;
-    D_8012954C = 0;
+    g_wmap_land_event_10_active = 0;
+    g_wmap_land_event_09_pending = 0;
     D_800D923C = 0;
     D_800D9240 = D_800D06BC;
-    D_80139228 = 0;
+    g_wmap_exit_mode = WMAP_EXIT_SCREEN_PANELS;
     g_wmap_land_image_load_locked = 0;
     g_wmap_cd_error = 0;
     g_wmap_last_effect_resource_set = -1;
-    D_8011D4F8 = 0;
-    D_80139248 = 0;
-    D_80129540 = 0;
-    D_80139900 = 0;
-    D_801ADB90 = 1;
+    g_wmap_land_event_11_pending = 0;
+    g_wmap_land_event_16_pending = 0;
+    g_wmap_land_event_21_pending = 0;
+    g_wmap_land_event_15_pending = 0;
+    g_wmap_entry_music_enabled = 1;
     g_wmap_tint_blending = 0;
-    D_80182E1C = 0;
-    D_801398B8 = 0;
-    D_80182E00 = 0xFF;
+    g_wmap_third_traveler_enabled = 0;
+    g_wmap_second_traveler_enabled = 0;
+    g_wmap_entry_fade_level = 0xFF;
     D_800DCEC0 = 1;
-    D_800D9224 = 0;
+    g_wmap_pending_event_count = 0;
     g_wmap_information_groups = 0;
     g_wmap_effect_params = (s32*)getScratchAddr(0);
     g_wmap_party_visible = 1;
@@ -367,11 +371,11 @@ void wmap_init_state(void)
     g_wmap_map_button_mask = -1;
     g_wmap_script_button_mask = -1;
     g_wmap_game_start_delay = 60;
-    D_801398BC = 0;
+    g_wmap_auxiliary_label_mode = 0;
     D_8013B28C = 0;
     g_wmap_auxiliary_labels_hidden = 0;
-    g_wmap_frames[0].packet_cursor = D_8010CF18;
-    g_wmap_frames[1].packet_cursor = D_80114F18;
+    g_wmap_frames[0].packet_cursor = g_wmap_packet_buffer_0;
+    g_wmap_frames[1].packet_cursor = g_wmap_packet_buffer_1;
     g_wmap_map_shadow_level = 0x40;
     g_wmap_input_locked = 1;
     g_wmap_sequence_count = 0;
@@ -405,7 +409,7 @@ void wmap_init_state(void)
     D_801ADB04.b = 0x80;
     g_wmap_backdrop_level = 1;
     g_wmap_backdrop_target_level = 0;
-    D_8013B294 = 0;
+    g_wmap_exit_frame = 0;
     g_wmap_view.vx = 0;
     g_wmap_view.vy = 0;
     g_wmap_view.vz = 0x6000;
@@ -422,7 +426,7 @@ void wmap_init_state(void)
     g_wmap_mesh_transition_direction = 0;
     D_80182D48 = g_wmap_zero_translation;
     D_801398C8 = g_wmap_zero_rotation;
-    D_8011CF18 = 0;
+    g_wmap_selection_phase = 0;
     g_wmap_event_active = 0;
     g_wmap_placement_overlay_hidden = 0;
     g_wmap_view_scroll_mode = 0;
@@ -432,7 +436,7 @@ void wmap_init_state(void)
     g_wmap_preview_travel_frame = D_8005136C;
     g_wmap_screen_fade_mode = 0;
     transition_mode = 2;
-    D_800DBE78 = 0;
+    g_wmap_carousel_mode = 0;
     g_wmap_land_display_limit = transition_mode;
     D_801398F4 = 0;
     g_wmap_selected_artifact = -1;
@@ -445,7 +449,7 @@ void wmap_init_state(void)
     g_wmap_preview_draw_x = 0;
     g_wmap_preview_y = 0;
     g_wmap_preview_x = 0;
-    D_80182E34 = 0;
+    g_wmap_status_panel_mode = 0;
     D_8013B260.vy = 0;
     g_wmap_tint.r = 0;
     D_8013B260.vx = 0;
@@ -949,7 +953,7 @@ void wmap_update_menu(s32 buttons)
         }
         func_8006534C(0xB5, 1);
         sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
-        *sprite = D_800D06E4;
+        *sprite = g_wmap_prompt_sprite_template;
         addPrim(&g_wmap_current_frame->ordering_table[1], sprite);
         if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {
@@ -1010,7 +1014,7 @@ void wmap_wait_for_script_event(void)
         }
         break;
     case WMAP_SCRIPT_WAIT_MAP_STATE:
-        if (D_8011CF18 == 3)
+        if (g_wmap_selection_phase == 3)
         {
             g_wmap_script_wait = 0;
         }
@@ -1171,21 +1175,30 @@ void wmap_step_input_script(void)
 }
 
 
-/** @brief Copy the destination rectangle from a TIM block header. */
-static inline void wmap_copy_rectangle(RECT* rectangle, u8* block)
+/**
+ * @brief Copy the destination rectangle from a TIM block header.
+ * @param rectangle Receives the destination rectangle.
+ * @param block TIM block whose header contains the rectangle.
+ */
+static inline void wmap_copy_rectangle(RECT* rectangle, TimBlock* block)
 {
-    *rectangle = *(RECT*)(block + 4);
+    *rectangle = *(RECT*)&block->dx;
 }
 
+/**
+ * @brief Select the CD-error message strip in the error texture.
+ * @param quad Packet receiving the texture coordinates and command.
+ * @param error Message number, from one through five.
+ */
 static inline void wmap_set_error_uv(POLY_FT4* quad, s32 error)
 {
     s32 top;
     setlen(quad, 9);
     setcode(quad, 0x2E);
-    top = (error - 1) << 5;
+    top = (error - 1) * WMAP_CD_ERROR_TEXTURE_HEIGHT;
     quad->v1 = top;
     quad->v0 = top;
-    top += 0x20;
+    top += WMAP_CD_ERROR_TEXTURE_HEIGHT;
     quad->v3 = top;
     quad->v2 = top;
 }
@@ -1195,10 +1208,10 @@ static inline void wmap_set_error_uv(POLY_FT4* quad, s32 error)
  * @param rect Receives the block's destination rectangle.
  * @param block TIM block header (length word, rectangle, then pixel data).
  */
-static inline void wmap_upload_tim_block(RECT* rect, u8* block)
+static inline void wmap_upload_tim_block(RECT* rect, TimBlock* block)
 {
-    *rect = *(RECT*)(block + 4);
-    LoadImage(rect, block + 12);
+    *rect = *(RECT*)&block->dx;
+    LoadImage(rect, (u_long*)(block + 1));
 }
 
 /** @brief Clear the map image destination to black. */
@@ -1213,7 +1226,7 @@ static inline void wmap_clear_map_surface(RECT* rectangle)
  * @param rect Destination rectangle copied from the block header.
  * @param pixels Pixel data following the block header.
  */
-static inline void wmap_upload_image_rect(RECT* rect, u8* pixels)
+static inline void wmap_upload_image_rect(RECT* rect, u_long* pixels)
 {
     if (rect->x != -1)
     {
@@ -1238,14 +1251,13 @@ static inline void wmap_load_pixel_block(TimBlock* block)
 }
 
 /**
- * @brief Load world-map resources and run frames until the map exits.
+ * @brief Load world-map resources, process events, and render frames until exit.
  * @return Two for the controller reset chord, or zero after the exit effect.
  * @note JP handles land events 4-8 inside the event switch and keeps reading the
  *       queue; US stops at the first of them and drains the rest.
  */
 s32 wmap_run_loop(void)
 {
-    u8* palette_color;
     s16 traveler_x;
     s16 traveler_y;
     s32 raw_buttons;
@@ -1262,34 +1274,20 @@ s32 wmap_run_loop(void)
 
     s32 scroll_cell_x;
     s32 scroll_cell_y;
-    s32 next_exit_frame;
     s32 palette_index;
     s32 pixel_index;
-    s32 backdrop_color;
-    s8 error_texture_top;
-    s8 error_texture_bottom;
-    u8* image_header;
-    u8* interface_block;
-    u8* backdrop_block;
-    u8* pixels;
     u16* palette_entry;
     u16* screen_pixel;
-    u8* image_data;
-    u8* map_block;
-    u8* marker_block;
-    u8* marker_header;
     s32 controller_buttons;
     u16 packed_color;
     u32 event;
-    u16* palette_source;
     SPRT* prompt_sprite;
     POLY_FT4* error_quad;
-    u8* pixel_block;
 
     layout_id = wmap_load_land_layout();
     show_loading_image = 1;
-    D_800DBE68 = layout_id;
-    D_8013B234 = layout_id;
+    g_wmap_layout_id = layout_id;
+    g_wmap_entry_layout_id = layout_id;
     D_801ADB08 = -1;
     wmap_init_state();
     wmap_init_transition_mesh();
@@ -1297,20 +1295,20 @@ s32 wmap_run_loop(void)
     while (1)
     {
         event = wmap_next_land_event();
-        D_801398F8 = event;
+        g_wmap_last_land_event = event;
         if (event == -1U)
         {
             break;
         }
-        D_800D9224 += 1;
+        g_wmap_pending_event_count += 1;
 #if !defined(VERSION_JP)
-        if ((u32)(event - 4) < 5U)
+        if ((event - 4) < 5U)
         {
-            D_80182DD8 = event;
+            g_wmap_special_land_event = event;
             g_wmap_input_locked = 1;
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;
-            D_800D9224 = 1;
+            g_wmap_pending_event_count = 1;
             {
                 s32 drain_event;
 
@@ -1328,7 +1326,7 @@ s32 wmap_run_loop(void)
         case 0:
             g_wmap_input_script = 1;
             g_wmap_party_visible = 0;
-            D_80182228 = 1;
+            g_wmap_attract_1_requested = 1;
             break;
         case 1:
             g_wmap_input_script = 2;
@@ -1336,124 +1334,124 @@ s32 wmap_run_loop(void)
         case 28:
             g_wmap_input_script = 3;
             g_wmap_party_visible = 0;
-            D_80182228 = 1;
+            g_wmap_attract_1_requested = 1;
             break;
         case 25:
-            D_80129538[0] = 1;
+            g_wmap_pending_vehicle_events[0] = 1;
             break;
         case 17:
-            D_80129538[1] = 1;
+            g_wmap_pending_vehicle_events[1] = 1;
             break;
         case 18:
-            D_80129538[2] = 1;
+            g_wmap_pending_vehicle_events[2] = 1;
             break;
         case 19:
-            D_80129538[3] = 1;
+            g_wmap_pending_vehicle_events[3] = 1;
             break;
         case 20:
-            D_80129538[4] = 1;
+            g_wmap_pending_vehicle_events[4] = 1;
             break;
         case 22:
-            D_80182E1C = 1;
+            g_wmap_third_traveler_enabled = 1;
             break;
         case 23:
-            D_801398B8 = 1;
+            g_wmap_second_traveler_enabled = 1;
             break;
         case 21:
-            D_80129540 = 1;
+            g_wmap_land_event_21_pending = 1;
             break;
         case 16:
-            D_80139248 = 1;
+            g_wmap_land_event_16_pending = 1;
             break;
         case 11:
             show_loading_image = 0;
-            D_801ADB90 = 0;
-            D_8011D4F8 = 1;
+            g_wmap_entry_music_enabled = 0;
+            g_wmap_land_event_11_pending = 1;
             break;
         case 15:
-            D_80139900 = 1;
+            g_wmap_land_event_15_pending = 1;
             break;
         case 12:
             show_loading_image = 0;
             wmap_select_mesh_motion(1);
             wmap_start_mesh_transition(1);
-            D_801ADB90 = 0;
+            g_wmap_entry_music_enabled = 0;
             g_wmap_party_visible = 0;
-            D_80182E34 = 3;
-            D_800DBE78 = 3;
-            g_wmap_screen_fade_mode = 3;
+            g_wmap_status_panel_mode = 3;
+            g_wmap_carousel_mode = WMAP_CAROUSEL_HIDDEN;
+            g_wmap_screen_fade_mode = WMAP_FADE_DISABLED;
             g_wmap_spirit_brightness = g_wmap_spirit_target_brightness = 0;
             g_wmap_event_active = 1;
-            D_801ADB90 = 0;
-            D_80182D5C = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
-            D_80139834 = 1;
+            g_wmap_entry_music_enabled = 0;
+            g_wmap_entry_day = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
+            g_wmap_land_event_12_pending = 1;
             g_wmap_event_active = 1;
             break;
         case 13:
             show_loading_image = 0;
             wmap_select_mesh_motion(1);
             wmap_start_mesh_transition(1);
-            D_801ADB90 = 0;
+            g_wmap_entry_music_enabled = 0;
             g_wmap_party_visible = 0;
-            D_80182E34 = 3;
-            D_800DBE78 = 3;
-            g_wmap_screen_fade_mode = 3;
+            g_wmap_status_panel_mode = 3;
+            g_wmap_carousel_mode = WMAP_CAROUSEL_HIDDEN;
+            g_wmap_screen_fade_mode = WMAP_FADE_DISABLED;
             g_wmap_spirit_brightness = g_wmap_spirit_target_brightness = 0;
             g_wmap_event_active = 1;
-            D_80182D5C = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
-            D_80139238 = 1;
+            g_wmap_entry_day = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
+            g_wmap_land_event_13_pending = 1;
             g_wmap_event_active = 1;
             break;
         case 9:
             show_loading_image = 0;
             wmap_select_mesh_motion(1);
             wmap_start_mesh_transition(1);
-            D_8011D500 = 0xFF;
-            D_800D9228 = 0xFF;
-            D_80182E38 = 1;
-            D_801ADB90 = 0;
-            D_80182E00 = 0;
+            g_wmap_overlay_fade_target = 0xFF;
+            g_wmap_overlay_fade_level = 0xFF;
+            g_wmap_overlay_fade_depth = 1;
+            g_wmap_entry_music_enabled = 0;
+            g_wmap_entry_fade_level = 0;
             wmap_install_callback(&func_80064D64);
             g_wmap_transition_mesh_hidden = 1;
             g_wmap_event_active = 1;
             g_wmap_party_visible = 0;
-            D_800DBE78 = 3;
-            D_80182E34 = 3;
+            g_wmap_carousel_mode = WMAP_CAROUSEL_HIDDEN;
+            g_wmap_status_panel_mode = 3;
             g_wmap_spirit_brightness = g_wmap_spirit_target_brightness = 0;
-            g_wmap_screen_fade_mode = 3;
-            D_8012954C = 1;
+            g_wmap_screen_fade_mode = WMAP_FADE_DISABLED;
+            g_wmap_land_event_09_pending = 1;
             break;
         case 10:
             show_loading_image = 0;
             wmap_select_mesh_motion(1);
             wmap_start_mesh_transition(1);
-            D_8011D500 = 0xFF;
-            D_800D9228 = 0xFF;
-            D_80182E38 = 1;
-            D_801ADB90 = 0;
+            g_wmap_overlay_fade_target = 0xFF;
+            g_wmap_overlay_fade_level = 0xFF;
+            g_wmap_overlay_fade_depth = 1;
+            g_wmap_entry_music_enabled = 0;
             g_wmap_party_visible = 0;
             g_wmap_event_active = 1;
-            D_80182E00 = 0;
+            g_wmap_entry_fade_level = 0;
             wmap_install_callback(&func_80064D64);
             g_wmap_transition_mesh_hidden = 1;
-            D_80182E34 = 3;
-            D_800DBE78 = 3;
+            g_wmap_status_panel_mode = 3;
+            g_wmap_carousel_mode = WMAP_CAROUSEL_HIDDEN;
             g_wmap_spirit_brightness = g_wmap_spirit_target_brightness = 0;
-            g_wmap_screen_fade_mode = 3;
-            D_801ADAF0 = 1;
+            g_wmap_screen_fade_mode = WMAP_FADE_DISABLED;
+            g_wmap_land_event_10_active = 1;
             break;
         case 24:
             show_loading_image = 0;
             wmap_select_mesh_motion(1);
             wmap_start_mesh_transition(1);
-            D_801ADB90 = 0;
+            g_wmap_entry_music_enabled = 0;
             g_wmap_party_visible = 0;
-            D_80182E34 = 3;
-            D_800DBE78 = 3;
-            g_wmap_screen_fade_mode = 3;
+            g_wmap_status_panel_mode = 3;
+            g_wmap_carousel_mode = WMAP_CAROUSEL_HIDDEN;
+            g_wmap_screen_fade_mode = WMAP_FADE_DISABLED;
             g_wmap_spirit_brightness = g_wmap_spirit_target_brightness = 0;
             g_wmap_event_active = 1;
-            D_8013997C = 1;
+            g_wmap_land_event_24_pending = 1;
             break;
 #if defined(VERSION_JP)
         case 4:
@@ -1464,7 +1462,7 @@ s32 wmap_run_loop(void)
             g_wmap_input_locked = 1;
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;
-            D_80182DD8 = D_801398F8;
+            g_wmap_special_land_event = g_wmap_last_land_event;
             wmap_install_callback(&wmap_special_effect_34_run);
             break;
 #endif
@@ -1472,107 +1470,107 @@ s32 wmap_run_loop(void)
             show_loading_image = 0;
             wmap_select_mesh_motion(1);
             wmap_start_mesh_transition(1);
-            D_8011D500 = 0;
-            D_800D9228 = 0;
+            g_wmap_overlay_fade_target = 0;
+            g_wmap_overlay_fade_level = 0;
             wmap_install_callback(&func_80064D64);
-            D_80182DD4 = 1;
-            D_801ADB90 = 0;
+            g_wmap_land_event_27_pending = 1;
+            g_wmap_entry_music_enabled = 0;
             g_wmap_party_visible = 0;
-            D_80182E34 = 3;
-            D_800DBE78 = 3;
-            g_wmap_screen_fade_mode = 3;
+            g_wmap_status_panel_mode = 3;
+            g_wmap_carousel_mode = WMAP_CAROUSEL_HIDDEN;
+            g_wmap_screen_fade_mode = WMAP_FADE_DISABLED;
             g_wmap_spirit_brightness = g_wmap_spirit_target_brightness = 0;
             g_wmap_event_active = 1;
-            D_80182240 = 1;
+            g_wmap_attract_2_requested = 1;
             break;
         }
     }
     if (show_loading_image != 0)
     {
         {
-            u8* data;
-            u8* header;
-            s32 resource = wmap_get_land_count_tier() + 0x1453;
-            data = g_wmap_load_buffer;
-            cdrom_queue_read(resource & 0xFFFF, data);
+            TimBlock* block;
+            TimPrefix* image;
+            s32 resource = wmap_get_land_count_tier() + WMAP_LOADING_IMAGE_RESOURCE_BASE;
+            block = (TimBlock*)g_wmap_load_buffer;
+            cdrom_queue_read(resource & 0xFFFF, block);
             cdrom_wait_queue_empty();
-            data += 8;
-            header = g_wmap_load_buffer;
-            if (header[4] & 8)
+            block = (TimBlock*)((u8*)block + TIM_HEADER_SIZE);
+            image = (TimPrefix*)g_wmap_load_buffer;
+            if (*(u8*)&image->flags & TIM_FLAG_HAS_CLUT)
             {
-                wmap_load_image_block((TimBlock*)data);
-                data += *(s32*)data;
-                wmap_load_pixel_block((TimBlock*)data);
+                wmap_load_image_block(block);
+                block = TIM_NEXT_BLOCK(block);
+                wmap_load_pixel_block(block);
             }
             else
             {
-                wmap_load_pixel_block((TimBlock*)data);
+                wmap_load_pixel_block(block);
             }
         }
-        D_800D0A08[6] = 0x20;
-        D_800D0A08[5] = 0x20;
-        D_800D0A08[4] = 0x20;
+        g_wmap_loading_quad.b0 = 0x20;
+        g_wmap_loading_quad.g0 = 0x20;
+        g_wmap_loading_quad.r0 = 0x20;
         PutDispEnv(&g_wmap_frames[0].disp_env);
         PutDrawEnv(&g_wmap_frames[0].draw_env);
         SetDispMask(1);
-        DrawPrim(D_800D0A08);
+        DrawPrim(&g_wmap_loading_quad);
         PutDispEnv(&g_wmap_frames[1].disp_env);
         PutDrawEnv(&g_wmap_frames[1].draw_env);
-        DrawPrim(D_800D0A08);
+        DrawPrim(&g_wmap_loading_quad);
     }
     /* Load the sound banks before starting the world-map song. */
-    if (D_8011D4F8 != 0)
+    if (g_wmap_land_event_11_pending != 0)
     {
-        cdrom_queue_read(0x145F, g_wmap_load_buffer);
+        cdrom_queue_read(WMAP_EVENT_SOUND_BANK_RESOURCE, g_wmap_load_buffer);
     }
     else
     {
-        cdrom_queue_read(0x145E, g_wmap_load_buffer);
+        cdrom_queue_read(WMAP_NORMAL_SOUND_BANK_RESOURCE, g_wmap_load_buffer);
     }
     cdrom_wait_queue_empty();
-    akao_upload_bank_blocking(g_wmap_load_buffer, 1);
-    cdrom_queue_read(0x1460, g_wmap_load_buffer);
+    akao_upload_bank_blocking((AkaoBankHeader*)g_wmap_load_buffer, 1);
+    cdrom_queue_read(WMAP_SHARED_SOUND_BANK_RESOURCE, g_wmap_load_buffer);
     cdrom_wait_queue_empty();
-    akao_upload_bank_blocking(g_wmap_load_buffer, 1);
-    cdrom_queue_read(0x1461, &D_8013B2A0);
+    akao_upload_bank_blocking((AkaoBankHeader*)g_wmap_load_buffer, 1);
+    cdrom_queue_read(WMAP_MUSIC_RESOURCE, &g_wmap_music_buffer);
     cdrom_wait_queue_empty();
     if (show_loading_image != 0)
     {
-        D_800D0A08[6] = 0x40;
-        D_800D0A08[5] = 0x40;
-        D_800D0A08[4] = 0x40;
+        g_wmap_loading_quad.b0 = 0x40;
+        g_wmap_loading_quad.g0 = 0x40;
+        g_wmap_loading_quad.r0 = 0x40;
         PutDispEnv(&g_wmap_frames[0].disp_env);
         PutDrawEnv(&g_wmap_frames[0].draw_env);
-        DrawPrim(D_800D0A08);
+        DrawPrim(&g_wmap_loading_quad);
         PutDispEnv(&g_wmap_frames[1].disp_env);
         PutDrawEnv(&g_wmap_frames[1].draw_env);
-        DrawPrim(D_800D0A08);
+        DrawPrim(&g_wmap_loading_quad);
     }
-    if (D_801ADB90 != 0)
+    if (g_wmap_entry_music_enabled != 0)
     {
-        akao_play_song(&D_8013B2A0);
+        akao_play_song(&g_wmap_music_buffer);
         akao_set_master_pan(0);
-        akao_fade_song_volume_from(0, 0x1E, 1, 0x7F);
+        akao_fade_song_volume_from(0, 30, 1, AKAO_VOLUME_MAX);
     }
     {
-        u8* data;
-        u8* header;
-        data = g_wmap_load_buffer;
-        cdrom_stream((D_800DBE68 + 0x14DE) & 0xFFFF, data);
+        TimBlock* block;
+        TimPrefix* image;
+        block = (TimBlock*)g_wmap_load_buffer;
+        cdrom_stream((g_wmap_layout_id + WMAP_LAYOUT_IMAGE_RESOURCE_BASE) & 0xFFFF, (u8*)block);
         cdrom_wait_queue_empty();
-        data += 8;
-        header = g_wmap_load_buffer;
-        if (header[4] & 8)
+        block = (TimBlock*)((u8*)block + TIM_HEADER_SIZE);
+        image = (TimPrefix*)g_wmap_load_buffer;
+        if (*(u8*)&image->flags & TIM_FLAG_HAS_CLUT)
         {
-            wmap_load_image_block((TimBlock*)data);
-            data += *(s32*)data;
+            wmap_load_image_block(block);
+            block = TIM_NEXT_BLOCK(block);
             {
                 RECT rect;
 
-                rect = *(RECT*)(data + 4);
+                rect = *(RECT*)&block->dx;
                 if (rect.x != -1)
                 {
-                    LoadImage(&rect, data + 12);
+                    LoadImage(&rect, (u_long*)(block + 1));
                     DrawSync(0);
                     g_wmap_artifact_shadows_enabled = 1;
                 }
@@ -1582,18 +1580,17 @@ s32 wmap_run_loop(void)
         {
             RECT rect;
 
-            rect = *(RECT*)(data + 4);
-            wmap_upload_image_rect(&rect, data + 12);
+            rect = *(RECT*)&block->dx;
+            wmap_upload_image_rect(&rect, (u_long*)(block + 1));
         }
     }
-    /* Keep the source palette in five-bit channels for later color effects. */
-    palette_source = D_800DCF2C;
-    for (color_index = 0; color_index < 16; color_index++)
+    /* Expand the entry image palette into five-bit RGB channels. */
+    for (color_index = 0; color_index < WMAP_ENTRY_PALETTE_COLORS; color_index++)
     {
-        ((CVECTOR*)D_80139908)[color_index].r = D_800DCF2C[color_index] & 0x1F;
-        ((CVECTOR*)D_80139908)[color_index].g = (D_800DCF2C[color_index] >> 5) & 0x1F;
-        packed_color = D_800DCF2C[color_index];
-        ((CVECTOR*)D_80139908)[color_index].b = (packed_color >> 10) & 0x1F;
+        g_wmap_entry_palette_channels[color_index].r = g_wmap_entry_palette[color_index] & 0x1F;
+        g_wmap_entry_palette_channels[color_index].g = (g_wmap_entry_palette[color_index] >> 5) & 0x1F;
+        packed_color = g_wmap_entry_palette[color_index];
+        g_wmap_entry_palette_channels[color_index].b = (packed_color >> 10) & 0x1F;
     }
     {
         RECT rect;
@@ -1618,31 +1615,31 @@ s32 wmap_run_loop(void)
         RECT rects[3];
 
         {
-            u8* data;
-            u8* header;
-            data = g_wmap_load_buffer;
-            cdrom_stream(0x10C4, data);
+            TimBlock* block;
+            TimPrefix* image;
+            block = (TimBlock*)g_wmap_load_buffer;
+            cdrom_stream(WMAP_INTERFACE_IMAGE_RESOURCE, (u8*)block);
             cdrom_wait_queue_empty();
-            data += 8;
-            header = g_wmap_load_buffer;
-            if (header[4] & 8)
+            block = (TimBlock*)((u8*)block + TIM_HEADER_SIZE);
+            image = (TimPrefix*)g_wmap_load_buffer;
+            if (*(u8*)&image->flags & TIM_FLAG_HAS_CLUT)
             {
-                wmap_upload_tim_block(&rects[0], data);
-                data += *(s32*)data;
-                wmap_copy_rectangle(&rects[0], data);
+                wmap_upload_tim_block(&rects[0], block);
+                block = TIM_NEXT_BLOCK(block);
+                wmap_copy_rectangle(&rects[0], block);
                 if (rects[0].x != -1)
                 {
-                    LoadImage(&rects[0], data + 12);
+                    LoadImage(&rects[0], (u_long*)(block + 1));
                     DrawSync(0);
                     g_wmap_artifact_shadows_enabled = 1;
                 }
             }
             else
             {
-                wmap_copy_rectangle(&rects[0], data);
+                wmap_copy_rectangle(&rects[0], block);
                 if (rects[0].x != -1)
                 {
-                    LoadImage(&rects[0], data + 12);
+                    LoadImage(&rects[0], (u_long*)(block + 1));
                     DrawSync(0);
                     g_wmap_artifact_shadows_enabled = 1;
                 }
@@ -1650,94 +1647,94 @@ s32 wmap_run_loop(void)
         }
         g_wmap_backdrop_target_level = 8;
         wmap_install_callback(&wmap_draw_backdrop);
-        cdrom_stream(0x10C5, &D_8013C628);
+        cdrom_stream(WMAP_LAND_IMAGE_PACK_RESOURCE, (u8*)g_wmap_land_image_pack);
         if (show_loading_image != 0)
         {
-            D_800D0A08[6] = 0x80;
-            D_800D0A08[5] = 0x80;
-            D_800D0A08[4] = 0x80;
+            g_wmap_loading_quad.b0 = 0x80;
+            g_wmap_loading_quad.g0 = 0x80;
+            g_wmap_loading_quad.r0 = 0x80;
             PutDispEnv(&g_wmap_frames[0].disp_env);
             PutDrawEnv(&g_wmap_frames[0].draw_env);
-            DrawPrim(D_800D0A08);
+            DrawPrim(&g_wmap_loading_quad);
             PutDispEnv(&g_wmap_frames[1].disp_env);
             PutDrawEnv(&g_wmap_frames[1].draw_env);
-            DrawPrim(D_800D0A08);
+            DrawPrim(&g_wmap_loading_quad);
         }
         wmap_install_callback(&wmap_update_map_view);
         g_wmap_tint_blending = 1;
-        g_wmap_tint_speed = 0x10;
-        wmap_start_map_tint(0x808080);
+        g_wmap_tint_speed = 16;
+        wmap_start_map_tint(GPU_TINT_NEUTRAL);
         {
-            u8* data;
-            u8* header;
-            cdrom_stream(0x10C6, g_wmap_load_buffer);
+            TimBlock* block;
+            TimPrefix* image;
+            cdrom_stream(WMAP_RESIDENT_LAND_IMAGE_RESOURCE, g_wmap_load_buffer);
             cdrom_wait_queue_empty();
-            data = g_wmap_load_buffer;
-            header = g_wmap_load_buffer;
-            if (header[4] & 8)
+            block = (TimBlock*)g_wmap_load_buffer;
+            image = (TimPrefix*)g_wmap_load_buffer;
+            if (*(u8*)&image->flags & TIM_FLAG_HAS_CLUT)
             {
-                data += 8;
-                wmap_upload_tim_block(&rects[0], data);
-                data += *(s32*)data;
-                rects[0] = *(RECT*)(data + 4);
+                block = (TimBlock*)((u8*)block + TIM_HEADER_SIZE);
+                wmap_upload_tim_block(&rects[0], block);
+                block = TIM_NEXT_BLOCK(block);
+                rects[0] = *(RECT*)&block->dx;
                 if (rects[0].x != -1)
                 {
-                    LoadImage(&rects[0], data + 12);
+                    LoadImage(&rects[0], (u_long*)(block + 1));
                     DrawSync(0);
                 }
             }
             else
             {
-                data += 8;
-                rects[0] = *(RECT*)(data + 4);
+                block = (TimBlock*)((u8*)block + TIM_HEADER_SIZE);
+                rects[0] = *(RECT*)&block->dx;
                 if (rects[0].x != -1)
                 {
-                    LoadImage(&rects[0], data + 12);
+                    LoadImage(&rects[0], (u_long*)(block + 1));
                     DrawSync(0);
                 }
             }
         }
-        cdrom_queue_read(0x10C7, D_801ADBA0);
+        cdrom_queue_read(WMAP_RESIDENT_LAND_ANIMATION_RESOURCE, g_wmap_resident_land_animation_data);
         /* Slot 16 holds the resident land 31 image read above. */
-        g_wmap_land_image_cache[16].animation_data = D_801ADBA0;
-        g_wmap_land_image_cache[16].slot_index = 0x10;
-        g_wmap_land_image_cache[16].resource_id = 0x1F;
-        g_wmap_land_image_cache[16].loaded_frame = 0xFFFF;
-        g_wmap_land_image_cache[16].busy = 0;
-        g_wmap_land_image_cache[16].slot_index = 0x10;
+        g_wmap_land_image_cache[WMAP_RESIDENT_LAND_SLOT].animation_data = g_wmap_resident_land_animation_data;
+        g_wmap_land_image_cache[WMAP_RESIDENT_LAND_SLOT].slot_index = WMAP_RESIDENT_LAND_SLOT;
+        g_wmap_land_image_cache[WMAP_RESIDENT_LAND_SLOT].resource_id = WMAP_RESIDENT_LAND_DISPLAY;
+        g_wmap_land_image_cache[WMAP_RESIDENT_LAND_SLOT].loaded_frame = 0xFFFF;
+        g_wmap_land_image_cache[WMAP_RESIDENT_LAND_SLOT].busy = 0;
+        g_wmap_land_image_cache[WMAP_RESIDENT_LAND_SLOT].slot_index = WMAP_RESIDENT_LAND_SLOT;
         {
-            u8* data;
-            u8* header;
-            data = g_wmap_load_buffer;
-            cdrom_queue_read(0x10C8, data);
+            TimBlock* block;
+            TimPrefix* image;
+            block = (TimBlock*)g_wmap_load_buffer;
+            cdrom_queue_read(WMAP_MAP_OVERLAY_IMAGE_RESOURCE, block);
             cdrom_wait_queue_empty();
-            data += 8;
-            header = g_wmap_load_buffer;
-            if (header[4] & 8)
+            block = (TimBlock*)((u8*)block + TIM_HEADER_SIZE);
+            image = (TimPrefix*)g_wmap_load_buffer;
+            if (*(u8*)&image->flags & TIM_FLAG_HAS_CLUT)
             {
-                wmap_upload_tim_block(&rects[0], data);
-                data += *(s32*)data;
-                wmap_copy_rectangle(&rects[0], data);
+                wmap_upload_tim_block(&rects[0], block);
+                block = TIM_NEXT_BLOCK(block);
+                wmap_copy_rectangle(&rects[0], block);
                 if (rects[0].x != -1)
                 {
-                    LoadImage(&rects[0], data + 12);
+                    LoadImage(&rects[0], (u_long*)(block + 1));
                     DrawSync(0);
                     g_wmap_artifact_shadows_enabled = 1;
                 }
             }
             else
             {
-                wmap_copy_rectangle(&rects[0], data);
+                wmap_copy_rectangle(&rects[0], block);
                 if (rects[0].x != -1)
                 {
-                    LoadImage(&rects[0], data + 12);
+                    LoadImage(&rects[0], (u_long*)(block + 1));
                     DrawSync(0);
                     g_wmap_artifact_shadows_enabled = 1;
                 }
             }
         }
-        g_wmap_land_display[31].previous_animation_index = -1;
-        g_wmap_land_display[31].animation_index = 0;
+        g_wmap_land_display[WMAP_RESIDENT_LAND_DISPLAY].previous_animation_index = -1;
+        g_wmap_land_display[WMAP_RESIDENT_LAND_DISPLAY].animation_index = 0;
         /* Clamp the map origin so the party stays within the scrolling area. */
         wmap_init_party_travel();
         scroll_cell_x = g_wmap_travelers[0].cell_x - 1;
@@ -1762,8 +1759,8 @@ s32 wmap_run_loop(void)
             scroll_cell_y = 3;
             g_wmap_cursor_row = 2;
         }
-        g_wmap_view.vx = (s32)(scroll_cell_x * WMAP_MAP_CELL_SIZE);
-        g_wmap_view.vy = (s32)(scroll_cell_y * WMAP_MAP_CELL_SIZE);
+        g_wmap_view.vx = scroll_cell_x * WMAP_MAP_CELL_SIZE;
+        g_wmap_view.vy = scroll_cell_y * WMAP_MAP_CELL_SIZE;
         g_wmap_travelers[0].next_cell_x = g_wmap_travelers[0].cell_x;
         g_wmap_travelers[0].next_cell_y = g_wmap_travelers[0].cell_y;
         traveler_x = (g_wmap_travelers[0].cell_x - 1) * WMAP_TRAVEL_CELL_SIZE;
@@ -1777,59 +1774,57 @@ s32 wmap_run_loop(void)
         rects[0].y = 0x1FF;
         rects[0].w = 0x100;
         rects[0].h = 1;
-        StoreImage(&rects[0], g_wmap_load_buffer);
+        StoreImage(&rects[0], (u_long*)g_wmap_load_buffer);
         DrawSync(0);
+        /* Leave entry zero unchanged and enable blending for the other colors. */
         {
-        s32 opaque_mask;
-        palette_index = 1;
-        opaque_mask = ~0x7FFF;
-        palette_entry = (u16*)(g_wmap_load_buffer + 2);
-        do
-        {
-            palette_index += 1;
-            *palette_entry |= opaque_mask;
-            palette_entry++;
-        } while (palette_index < 0x100);
+            s16 blend_mask;
+            palette_entry = (u16*)g_wmap_load_buffer;
+            for (palette_index = 1, blend_mask = GPU_STP_BIT;
+                 palette_index < CLUT_ENTRY_COUNT; palette_index++)
+            {
+                palette_entry[palette_index] |= blend_mask;
+            }
         }
         rects[0].x = 0;
         rects[0].y = 0x1FF;
-        LoadImage(&rects[0], g_wmap_load_buffer);
+        LoadImage(&rects[0], (u_long*)g_wmap_load_buffer);
         DrawSync(0);
         {
-            u8* data;
-            u8* header;
-            data = g_wmap_load_buffer;
-            cdrom_queue_read((wmap_get_land_count_tier() + 0x10CE) & 0xFFFF, data);
+            TimBlock* block;
+            TimPrefix* image;
+            block = (TimBlock*)g_wmap_load_buffer;
+            cdrom_queue_read((wmap_get_land_count_tier() + WMAP_PLACEMENT_RESOURCE_BASE) & 0xFFFF, block);
             cdrom_wait_queue_empty();
-            data += 8;
-            header = g_wmap_load_buffer;
-            if (header[4] & 8)
+            block = (TimBlock*)((u8*)block + TIM_HEADER_SIZE);
+            image = (TimPrefix*)g_wmap_load_buffer;
+            if (*(u8*)&image->flags & TIM_FLAG_HAS_CLUT)
             {
-                wmap_upload_tim_block(&rects[1], data);
-                data += *(s32*)data;
-                wmap_copy_rectangle(&rects[1], data);
+                wmap_upload_tim_block(&rects[1], block);
+                block = TIM_NEXT_BLOCK(block);
+                wmap_copy_rectangle(&rects[1], block);
                 if (rects[1].x != -1)
                 {
-                    LoadImage(&rects[1], data + 12);
+                    LoadImage(&rects[1], (u_long*)(block + 1));
                     DrawSync(0);
                     g_wmap_artifact_shadows_enabled = 1;
                 }
             }
             else
             {
-                wmap_copy_rectangle(&rects[1], data);
+                wmap_copy_rectangle(&rects[1], block);
                 if (rects[1].x != -1)
                 {
-                    LoadImage(&rects[1], data + 12);
+                    LoadImage(&rects[1], (u_long*)(block + 1));
                     DrawSync(0);
                     g_wmap_artifact_shadows_enabled = 1;
                 }
             }
         }
         wmap_install_callback(&wmap_update_screen_fade);
-        g_wmap_backdrop_target_level = 0x10;
+        g_wmap_backdrop_target_level = 16;
         g_wmap_map_shadow_level = 1;
-        if (D_800D9224 == 0)
+        if (g_wmap_pending_event_count == 0)
         {
             g_wmap_input_locked = 0;
         }
@@ -1840,19 +1835,19 @@ s32 wmap_run_loop(void)
         {
             if (g_wmap_frame_count & 1)
             {
-                g_wmap_frames[0].packet_cursor = (u8*)D_8010CF18;
+                g_wmap_frames[0].packet_cursor = g_wmap_packet_buffer_0;
                 g_wmap_current_frame = &g_wmap_frames[0];
             }
             else
             {
-                g_wmap_frames[1].packet_cursor = (u8*)D_80114F18;
+                g_wmap_frames[1].packet_cursor = g_wmap_packet_buffer_1;
                 g_wmap_current_frame = &g_wmap_frames[1];
             }
             g_wmap_packet_bytes = 0;
             ClearOTagR(g_wmap_current_frame->ordering_table, WMAP_OT_COUNT);
             D_800DBE7C = 0;
-            g_wmap_frame_count = (s32)(g_wmap_frame_count + 1);
-            if ((g_wmap_input_locked != 0) || (D_8011CF18 >= 3) ||
+            g_wmap_frame_count = g_wmap_frame_count + 1;
+            if ((g_wmap_input_locked != 0) || (g_wmap_selection_phase >= WMAP_SELECTION_SHOW_ARTIFACTS) ||
                 (g_wmap_mesh_transition_direction != 0) || (g_wmap_view_scroll_mode != 0) || (g_wmap_sequence_count != 0))
             {
                 g_wmap_buttons_repeat = 0;
@@ -1862,7 +1857,7 @@ s32 wmap_run_loop(void)
             {
                 wmap_read_controller();
             }
-            if (g_wmap_frame_count < 0x28)
+            if (g_wmap_frame_count < WMAP_INPUT_GRACE_FRAMES)
             {
                 g_wmap_buttons_repeat &= WMAP_DPAD_MASK;
                 g_wmap_buttons_held &= WMAP_DPAD_MASK;
@@ -1889,13 +1884,13 @@ s32 wmap_run_loop(void)
                 }
             }
             controller_buttons = g_wmap_controller_ports[1].published_sample.repeat_buttons;
-            if ((controller_buttons >> 8) & 1)
+            if ((controller_buttons >> 8) & PADL2)
             {
-                D_8011D0E4 = 1;
+                g_wmap_controller_2_l2_repeat = 1;
             }
             else
             {
-                D_8011D0E4 = 0;
+                g_wmap_controller_2_l2_repeat = 0;
             }
             raw_buttons = g_wmap_controller_ports->published_sample.held_buttons;
             raw_buttons = (raw_buttons >> 8) | (raw_buttons << 8);
@@ -1903,15 +1898,15 @@ s32 wmap_run_loop(void)
             {
                 return 2;
             }
-            if (raw_buttons & 4)
+            if (raw_buttons & PADL1)
             {
-                D_8011D0E0 = 1;
+                g_wmap_controller_1_l1_held = 1;
             }
             else
             {
-                D_8011D0E0 = 0;
+                g_wmap_controller_1_l1_held = 0;
             }
-            exit_frame = D_8013B294;
+            exit_frame = g_wmap_exit_frame;
             if (exit_frame != 0)
             {
                 g_wmap_input_locked = 1;
@@ -1919,19 +1914,19 @@ s32 wmap_run_loop(void)
                 g_wmap_buttons_repeat = 0;
                 if ((exit_frame == 1) && (g_wmap_frame_count & 1))
                 {
-                    D_8013B294 = 2;
+                    g_wmap_exit_frame = 2;
                 }
                 else
                 {
-                    D_8013B294 += 1;
+                    g_wmap_exit_frame += 1;
                 }
             }
-            if (D_8013B294 >= 0xB)
+            if (g_wmap_exit_frame >= WMAP_EXIT_CAPTURE_FRAME)
             {
-                if (D_8013B294 == 0xB)
+                if (g_wmap_exit_frame == WMAP_EXIT_CAPTURE_FRAME)
                 {
-                    akao_fade_song_volume_from(0, 0x5A, 0x7F, 0);
-                    if (D_80139228 == 0)
+                    akao_fade_song_volume_from(0, 90, AKAO_VOLUME_MAX, 0);
+                    if (g_wmap_exit_mode == WMAP_EXIT_SCREEN_PANELS)
                     {
                         akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_EXIT - 1], 0, 0x80, 0x7F);
                     }
@@ -1939,7 +1934,7 @@ s32 wmap_run_loop(void)
                     DrawSync(0);
                     /* Save the displayed frame for the exit transition. */
                     screen_pixel = (u16*)g_wmap_load_buffer;
-                    StoreImage(&g_wmap_current_frame->disp_env.disp, g_wmap_load_buffer);
+                    StoreImage(&g_wmap_current_frame->disp_env.disp, (u_long*)g_wmap_load_buffer);
                     MoveImage(&g_wmap_current_frame->disp_env.disp, g_wmap_current_frame->draw_env.tw.x, g_wmap_current_frame->draw_env.tw.y);
                     DrawSync(0);
                     for (pixel_index = 0; pixel_index < SCREEN_WIDTH * SCREEN_HEIGHT; pixel_index++)
@@ -1948,18 +1943,18 @@ s32 wmap_run_loop(void)
                     }
                     /* Reload the captured frame into the 320x240 buffer at x = 320. */
                     rects[1] = (RECT){SCREEN_WIDTH, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
-                    LoadImage(&rects[1], g_wmap_load_buffer);
+                    LoadImage(&rects[1], (u_long*)g_wmap_load_buffer);
                     g_wmap_effect_model_c_rotation.vx = 0;
                     g_wmap_effect_model_c_rotation.vy = 0;
                     g_wmap_effect_model_c_rotation.vz = 0;
-                    g_wmap_effect_model_c_position.vx = 0xA0;
-                    g_wmap_effect_model_c_position.vy = 0x78;
+                    g_wmap_effect_model_c_position.vx = SCREEN_WIDTH / 2;
+                    g_wmap_effect_model_c_position.vy = SCREEN_HEIGHT / 2;
                     g_wmap_effect_model_c_position.vz = 0;
                     g_wmap_effect_model_d_rotation.vx = 0;
                     g_wmap_effect_model_d_rotation.vy = 0;
                     g_wmap_effect_model_d_rotation.vz = 0;
-                    g_wmap_effect_model_d_position.vx = 0xA0;
-                    g_wmap_effect_model_d_position.vy = 0x78;
+                    g_wmap_effect_model_d_position.vx = SCREEN_WIDTH / 2;
+                    g_wmap_effect_model_d_position.vy = SCREEN_HEIGHT / 2;
                     g_wmap_effect_model_d_position.vz = 0;
                     g_wmap_frames[1].draw_env.dtd = 0;
                     g_wmap_frames[0].draw_env.dtd = 0;
@@ -1967,39 +1962,39 @@ s32 wmap_run_loop(void)
                     g_wmap_effect_model_b_position.vy = 0;
                     g_wmap_effect_model_b_position.vz = 0;
                     g_wmap_effect_model_b_rotation.vx = 8;
-                    g_wmap_effect_model_b_rotation.vy = 0xC;
+                    g_wmap_effect_model_b_rotation.vy = 12;
                     g_wmap_effect_model_b_rotation.vz = 0;
                     backdrop_choice = rand() & 3;
                     switch (backdrop_choice)
                     {
                     case 0:
-                        D_800D9238 = 0x201010;
+                        g_wmap_exit_panel_color = 0x201010;
                         break;
                     case 1:
-                        D_800D9238 = 0x101810;
+                        g_wmap_exit_panel_color = 0x101810;
                         break;
                     case 2:
-                        D_800D9238 = 0x201020;
+                        g_wmap_exit_panel_color = 0x201020;
                         break;
                     case 3:
-                        D_800D9238 = 0x202010;
+                        g_wmap_exit_panel_color = 0x202010;
                         break;
                     }
                     DrawSync(0);
                 }
-                if (D_8013B294 == 0x78)
+                if (g_wmap_exit_frame == WMAP_EXIT_END_FRAME)
                 {
                     break;
                 }
-                switch (D_80139228)
+                switch (g_wmap_exit_mode)
                 {
-                case 1:
+                case WMAP_EXIT_FADE_OVERLAY:
                     func_800641DC();
                     break;
-                case 0:
+                case WMAP_EXIT_SCREEN_PANELS:
                     func_8006454C();
                     break;
-                case 2:
+                case WMAP_EXIT_DIRECT:
                     return 0;
                 default:
                     break;
@@ -2011,7 +2006,7 @@ s32 wmap_run_loop(void)
                 if (g_wmap_script_prompt_visible != 0)
                 {
                     prompt_sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
-                    *prompt_sprite = D_800D06E4;
+                    *prompt_sprite = g_wmap_prompt_sprite_template;
                     addPrim(&g_wmap_current_frame->ordering_table[1], prompt_sprite);
                     packet_bytes = g_wmap_packet_bytes;
                     if (packet_bytes < WMAP_PACKET_LIMIT)
@@ -2021,26 +2016,26 @@ s32 wmap_run_loop(void)
                     }
                     func_8006534C(0xD5, 1);
                 }
-                if (g_wmap_view_mode == 0)
+                if (g_wmap_view_mode == WMAP_VIEW_MODE_MAP)
                 {
                     if (g_wmap_selected_artifact != -1)
                     {
-                        D_801398BC = 3;
+                        g_wmap_auxiliary_label_mode = 3;
                     }
-                    else if (D_8011CF18 == 2)
+                    else if (g_wmap_selection_phase == WMAP_SELECTION_ARTIFACTS)
                     {
-                        D_801398BC = D_8011CF18;
+                        g_wmap_auxiliary_label_mode = g_wmap_selection_phase;
                     }
                     else
                     {
-                        D_801398BC = 0;
+                        g_wmap_auxiliary_label_mode = 0;
                     }
                 }
-                else if (g_wmap_view_mode == 1)
+                else if (g_wmap_view_mode == WMAP_VIEW_MODE_SPIRITS)
                 {
-                    D_801398BC = 1;
+                    g_wmap_auxiliary_label_mode = 1;
                 }
-                if ((g_wmap_view_mode == 0) && (g_wmap_game_start_delay != 0))
+                if ((g_wmap_view_mode == WMAP_VIEW_MODE_MAP) && (g_wmap_game_start_delay != 0))
                 {
                     wmap_update_artifact_selection();
                 }
@@ -2054,10 +2049,10 @@ s32 wmap_run_loop(void)
                 {
                     wmap_draw_lands();
                 }
-                if (D_800D9224 != 0)
+                if (g_wmap_pending_event_count != 0)
                 {
                     g_wmap_input_locked = 1;
-                    if (g_wmap_frame_count >= 0x33)
+                    if (g_wmap_frame_count >= WMAP_EVENT_START_DELAY_FRAMES)
                     {
                         func_800A5DFC();
                     }
@@ -2076,32 +2071,32 @@ s32 wmap_run_loop(void)
                 ResetSpadStack();
             }
             func_8005D46C();
-            D_801ADAF8 = 0;
+            g_wmap_land_image_cache_missed = 0;
             vsync_count = VSync(1);
             DrawSync(0);
             set_controller_vsync_interval(2);
             VSync(2);
-            if (vsync_count >= 0x20E)
+            if (vsync_count >= WMAP_SHADOW_VSYNC_LIMIT)
             {
                 g_wmap_artifact_shadows_enabled = 0;
             }
-            if (!(g_wmap_frame_count & 0x1F))
+            if (!(g_wmap_frame_count & WMAP_SHADOW_RETRY_MASK))
             {
                 g_wmap_artifact_shadows_enabled = 1;
             }
             PutDispEnv(&g_wmap_current_frame->disp_env);
             PutDrawEnv(&g_wmap_current_frame->draw_env);
-            if (D_8013B210 != 0)
+            if (g_wmap_pending_palette[0] != 0)
             {
                 rects[1].x = 0x240;
                 rects[1].y = 0x151;
-                D_8013B210 = 0;
+                g_wmap_pending_palette[0] = 0;
                 rects[1].w = 0x10;
                 rects[1].h = 1;
-                LoadImage(&rects[1], &D_8013B210);
+                LoadImage(&rects[1], (u_long*)g_wmap_pending_palette);
             }
             func_80064BF8();
-            DrawOTag(&g_wmap_current_frame->ordering_table[0xB2]);
+            DrawOTag(&g_wmap_current_frame->ordering_table[WMAP_OT_COUNT - 1]);
             update_controllers();
             cdrom_process_state();
             cd_error = cdrom_get_error_status();
@@ -2138,7 +2133,7 @@ s32 wmap_run_loop(void)
                 setaddr(&g_wmap_current_frame->ordering_table[1], error_quad);
                 if (error_packet_bytes < WMAP_PACKET_LIMIT)
                 {
-                    g_wmap_packet_bytes = error_packet_bytes + 0x28;
+                    g_wmap_packet_bytes = error_packet_bytes + sizeof(POLY_FT4);
                     g_wmap_current_frame->packet_cursor += sizeof(POLY_FT4);
                 }
             }

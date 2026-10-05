@@ -74,23 +74,11 @@ typedef struct
 
 typedef struct { s32 w[4]; } WmapBlk16;
 
-extern s32 D_800D9224;
 extern u8 D_800DCEF4[4];
 extern s32 D_8011CF20;
 extern s32 g_wmap_sequence_count;
-extern s32 D_8011D4F8;
-extern u8 D_80129538;
-extern s32 D_80129540;
-extern s32 D_8012954C;
-extern s32 D_80139238;
-extern s32 D_80139248;
-extern s32 D_80139834;
-extern s32 D_80139900;
-extern s32 D_8013997C;
 extern s32 D_8013B288;
 extern s32 D_8018222C;
-extern s32 D_80182DD4;
-extern s32 D_801ADAF0;
 extern s8 D_800DCEF5;
 extern s8 D_800DCEF6;
 extern s8 D_800DCEF7;
@@ -188,9 +176,9 @@ void func_800A5DFC(void)
         g_wmap_input_locked = 1;
         g_wmap_buttons_held = 0;
         g_wmap_buttons_repeat = 0;
-        if (D_80182DD4 != 0)
+        if (g_wmap_land_event_27_pending != 0)
         {
-            D_80182DD4 = 0;
+            g_wmap_land_event_27_pending = 0;
             wmap_start_sequence(&wmap_effect35_run);
         }
         else if (D_8013B288 != 0)
@@ -198,12 +186,12 @@ void func_800A5DFC(void)
             D_8013B288 = 0;
             wmap_start_sequence(&wmap_run_special_travel);
         }
-        else if (D_8013997C != 0)
+        else if (g_wmap_land_event_24_pending != 0)
         {
             cdrom_queue_read(0x1145, &g_wmap_animation_bank_0);
             cdrom_queue_read(0x1146, (u8 *)&g_wmap_animation_bank_0 + 0x2000);
             cdrom_wait_queue_empty();
-            D_8013997C = 0;
+            g_wmap_land_event_24_pending = 0;
             wmap_start_sequence(&func_800A7370);
         }
         else if (D_8011CF20 != 0)
@@ -211,51 +199,51 @@ void func_800A5DFC(void)
             D_8011CF20 = 0;
             wmap_start_sequence(&wmap_run_special_return);
         }
-        else if (D_801ADAF0 != 0)
+        else if (g_wmap_land_event_10_active != 0)
         {
-            D_8012954C = 0;
+            g_wmap_land_event_09_pending = 0;
             wmap_start_sequence(&wmap_land_event_00_b_run_sequence_1);
         }
-        else if (D_8012954C != 0)
+        else if (g_wmap_land_event_09_pending != 0)
         {
-            D_8012954C = 0;
+            g_wmap_land_event_09_pending = 0;
             wmap_start_sequence(&wmap_land_event_00_a_run);
         }
-        else if (D_8011D4F8 != 0)
+        else if (g_wmap_land_event_11_pending != 0)
         {
-            D_8011D4F8 = 0;
+            g_wmap_land_event_11_pending = 0;
             wmap_start_sequence(&wmap_land_event_17_run);
         }
-        else if (D_80139248 != 0)
+        else if (g_wmap_land_event_16_pending != 0)
         {
-            D_80139248 = 0;
+            g_wmap_land_event_16_pending = 0;
             wmap_start_sequence(&func_800A7BE8);
         }
-        else if (D_80129540 != 0)
+        else if (g_wmap_land_event_21_pending != 0)
         {
-            D_80129540 = 0;
+            g_wmap_land_event_21_pending = 0;
             wmap_start_sequence(&func_800A7FD0);
         }
-        else if (D_80139900 != 0)
+        else if (g_wmap_land_event_15_pending != 0)
         {
-            D_80139900 = 0;
+            g_wmap_land_event_15_pending = 0;
             wmap_start_sequence(&func_800A83B8);
         }
-        else if (D_80139238 != 0)
+        else if (g_wmap_land_event_13_pending != 0)
         {
-            D_80139238 = 0;
+            g_wmap_land_event_13_pending = 0;
             wmap_start_sequence(&func_800A87D4);
         }
-        else if (D_80139834 != 0)
+        else if (g_wmap_land_event_12_pending != 0)
         {
-            D_80139834 = 0;
+            g_wmap_land_event_12_pending = 0;
             wmap_start_sequence(&func_800A88D8);
         }
         else
         {
             for (event_index = 0; event_index < 8; event_index++)
             {
-                event = (u8 *)&D_80129538 + event_index;
+                event = &g_wmap_pending_vehicle_events[event_index];
                 if (*event != 0)
                 {
                     *event = 0;
@@ -302,7 +290,7 @@ void func_800A5DFC(void)
                 }
             }
         }
-        D_800D9224 -= 1;
+        g_wmap_pending_event_count -= 1;
     }
 }
 

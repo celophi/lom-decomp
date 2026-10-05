@@ -25,7 +25,6 @@ extern u8 D_801398DC;
 
 extern SPRT D_80182DA0;
 extern s32 D_80182DA4;
-extern s32 D_80182E34;
 extern WmapPoint D_800519E4[];
 extern SPRT D_80051A08;
 extern SPRT D_80051A1C;
@@ -45,7 +44,6 @@ extern s32 D_801ADAE4;
 extern s32 D_80051A6C[];
 extern u8 D_800D03EC;
 extern u8 D_800D040C;
-extern s32 D_801398BC;
 extern s32 D_8013B28C;
 extern SPRT D_80051A30;
 extern SPRT D_80051A44;
@@ -77,7 +75,7 @@ void func_8005F9BC(void)
     WmapShadeTriangle* shade;
     s32 i;
 
-    if (D_80182E34 != 3)
+    if (g_wmap_status_panel_mode != 3)
     {
         sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
         *sprite = *(SPRT*)&D_80051A58;
@@ -318,9 +316,9 @@ void func_80060230(void)
             func_8006534C(D_80182DD0, 3);
         }
     }
-    if (D_8013B28C != D_801398BC)
+    if (D_8013B28C != g_wmap_auxiliary_label_mode)
     {
-        D_8013B28C = D_801398BC;
+        D_8013B28C = g_wmap_auxiliary_label_mode;
     }
     if (g_wmap_auxiliary_labels_hidden == 0)
     {

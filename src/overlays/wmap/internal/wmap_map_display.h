@@ -71,4 +71,9 @@ s32 func_80058488(void);
 void func_80058490(void);
 void func_80058498(void);
 
+/** @brief Resident land image and animation pack, indexed by byte offsets. */
+extern s32 g_wmap_land_image_pack[];
+/** @brief Nonzero after a land-image lookup misses the cache this frame. */
+extern s32 g_wmap_land_image_cache_missed;
+
 #endif

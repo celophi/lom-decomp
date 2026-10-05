@@ -41,4 +41,19 @@ void func_80064AF8(void);
 void func_80064BF8(void);
 s32 func_80064D64(s32 initialize);
 
+/** @brief Packed RGB color used to shade the captured exit panels. */
+extern u32 g_wmap_exit_panel_color;
+/** @brief Dynamic GPU packet storage for the first map frame. */
+extern u8 g_wmap_packet_buffer_0[];
+/** @brief Dynamic GPU packet storage for the second map frame. */
+extern u8 g_wmap_packet_buffer_1[];
+/** @brief Current shade of the screen-covering fade quad. */
+extern s32 g_wmap_overlay_fade_level;
+/** @brief Shade toward which the screen-covering fade moves. */
+extern s32 g_wmap_overlay_fade_target;
+/** @brief Shade of the entry overlay, reduced by eight each frame. */
+extern s32 g_wmap_entry_fade_level;
+/** @brief Ordering-table bucket used by the screen-covering fade. */
+extern s32 g_wmap_overlay_fade_depth;
+
 #endif

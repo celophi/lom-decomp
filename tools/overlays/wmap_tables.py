@@ -123,9 +123,9 @@ TABLES = (
     spec("D_800D0694", POLY_FT4, 1, "Fade quad; the code steps its colour, and tests r0 through D_800D0698."),
     spec("D_800D06BC", POLY_G4, 1, "Gradient quad copied into the backdrop state."),
     TableSpec("g_wmap_backdrop_scroll", "i", 1, note="Backdrop scroll offset; zero on disc."),
-    spec("D_800D06E4", SPRT, 1, "Prompt sprite template."),
+    spec("g_wmap_prompt_sprite_template", SPRT, 1, "Prompt sprite template."),
     spec("g_wmap_menu_triangles", POLY_G3, 28, "Gouraud triangles of the menu cursor."),
-    TableSpec("D_800D0A08", "B", 60, note="Menu cursor primitives, patched byte by byte by the menu code."),
+    spec("g_wmap_loading_quad", POLY_FT4, 1, "Textured quad shaded at each stage of world-map loading."),
     TableSpec("g_wmap_sprite_textures", "8B8H2H", 48, (
         *[f"unknown_{index:02x}" for index in range(8)], *[f"clut{index}" for index in range(8)], "tpage", "unknown_1a",
     ), "Texture page and palettes of each map sprite texture."),
