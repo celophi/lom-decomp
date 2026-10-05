@@ -760,30 +760,23 @@ s32 wmap_draw_backdrop(s32 initialize)
 s32 wmap_update_screen_fade(s32 initialize)
 {
     POLY_FT4* packet;
-    u8 intensity;
 
     switch (g_wmap_screen_fade_mode)
     {
     case WMAP_FADE_DECREASE:
-        intensity = g_wmap_screen_fade_quad.b0 - WMAP_FADE_COLOR_STEP;
-        g_wmap_screen_fade_quad.b0 = intensity;
-        g_wmap_screen_fade_quad.g0 = intensity;
-        g_wmap_screen_fade_quad.r0 = intensity;
-        if (intensity == 0)
+        g_wmap_screen_fade_quad.b0 -= WMAP_FADE_COLOR_STEP;
+        g_wmap_screen_fade_quad.g0 = g_wmap_screen_fade_quad.b0;
+        g_wmap_screen_fade_quad.r0 = g_wmap_screen_fade_quad.b0;
+        if (g_wmap_screen_fade_quad.r0 == 0)
         {
             g_wmap_screen_fade_mode = WMAP_FADE_HOLD;
         }
-        else
-        {
-            goto draw_fade;
-        }
         break;
     case WMAP_FADE_INCREASE:
-        intensity = g_wmap_screen_fade_quad.b0 + WMAP_FADE_COLOR_STEP;
-        g_wmap_screen_fade_quad.b0 = intensity;
-        g_wmap_screen_fade_quad.g0 = intensity;
-        g_wmap_screen_fade_quad.r0 = intensity;
-        if (intensity == WMAP_FULL_BRIGHTNESS)
+        g_wmap_screen_fade_quad.b0 += WMAP_FADE_COLOR_STEP;
+        g_wmap_screen_fade_quad.g0 = g_wmap_screen_fade_quad.b0;
+        g_wmap_screen_fade_quad.r0 = g_wmap_screen_fade_quad.b0;
+        if (g_wmap_screen_fade_quad.r0 == WMAP_FULL_BRIGHTNESS)
         {
             g_wmap_screen_fade_mode = WMAP_FADE_HOLD;
         }
@@ -793,7 +786,6 @@ s32 wmap_update_screen_fade(s32 initialize)
     }
     if (g_wmap_screen_fade_quad.r0 != 0)
     {
-    draw_fade:
         packet = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
         *packet = g_wmap_screen_fade_quad;
         /* The full-intensity quad is opaque; intermediate levels blend. */
