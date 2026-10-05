@@ -2597,20 +2597,12 @@ static s32 field_start_action_animation(s32 object_index, s32 target_count, u8* 
  */
 s32 field_start_bound_action_animation(s32 object_index, s32 target_count, u8* targets, s32 request)
 {
-    u16 layer_value;
-    s32 remaining_layers;
-    s32 result;
-    s32 binding_index;
-    s32 new_slot;
-    s32 layer_index;
-    FieldActorSlot* slot;
     FieldActorBinding* binding;
-    FieldActorSlot* base_slot;
-    FieldAnimationDef* animations;
-    FieldActorSlot* default_slot;
-    FieldActorSlot* selected_slot;
-    FieldActorSlot* layer_slot;
-    FieldActorSlot* initialized_slot;
+    FieldActorSlot* slot;
+    s32 binding_index;
+    s32 layer_count;
+    s32 layer;
+    s32 new_slot;
 
     binding_index = object_index;
     if (object_index >= FIELD_ACTOR_BINDING_COUNT)
@@ -2632,57 +2624,48 @@ s32 field_start_bound_action_animation(s32 object_index, s32 target_count, u8* t
         if (!(request & FIELD_REQUEST_ALL_LAYERS))
         {
             g_field_actor_slots[binding->slot].animation_index = (request >> FIELD_REQUEST_LAYER_SHIFT) & FIELD_REQUEST_LAYER_MASK;
-            layer_slot = &g_field_actor_slots[binding->slot];
-            layer_slot->duration = layer_slot->animations[layer_slot->animation_index].duration;
+            g_field_actor_slots[binding->slot].duration =
+                g_field_actor_slots[binding->slot].animations[g_field_actor_slots[binding->slot].animation_index].duration;
         }
         else
         {
             g_field_actor_slots[binding->slot].animation_index = 0;
-            base_slot = &g_field_actor_slots[binding->slot];
-            remaining_layers = (request >> FIELD_REQUEST_LAYER_SHIFT) & FIELD_REQUEST_LAYER_MASK;
-            base_slot->duration = base_slot->animations->duration;
-            layer_index = 1;
+            layer_count = (request >> FIELD_REQUEST_LAYER_SHIFT) & FIELD_REQUEST_LAYER_MASK;
+            /* Every layer runs for the length of the first animation. */
+            g_field_actor_slots[binding->slot].duration = g_field_actor_slots[binding->slot].animations[0].duration;
+            layer = 1;
             g_field_actor_slots[binding->slot].sequence_active = 1;
-            if (remaining_layers != 0)
+            while (layer_count != 0)
             {
-                do
+                new_slot = field_find_free_actor_slot(object_index, 0);
+                if (new_slot != -1)
                 {
-                    new_slot = field_find_free_actor_slot(object_index, 0);
-                    if (new_slot != -1)
-                    {
-                        slot = &g_field_actor_slots[new_slot];
-                        bcopy((u8*)&g_field_actor_slots[binding->slot], (u8*)slot, sizeof(FieldActorSlot));
-                        animations = slot->animations;
-                        slot->slot_index = new_slot;
-                        slot->animation_index = layer_index;
-                        layer_value = animations->duration;
-                        slot->track_interval = 0;
-                        slot->animation = &animations[layer_index];
-                        result = 1;
-                        slot->sequence_active = result;
-                        slot->active = result;
-                        slot->duration = layer_value;
-                        field_start_actor_animation(new_slot, target_count, targets);
-                    }
-                    remaining_layers -= 1;
-                    layer_index += 1;
-                } while (remaining_layers != 0);
+                    slot = &g_field_actor_slots[new_slot];
+                    bcopy((u8*)&g_field_actor_slots[binding->slot], (u8*)slot, sizeof(FieldActorSlot));
+                    slot->slot_index = new_slot;
+                    slot->animation_index = layer;
+                    slot->duration = slot->animations[0].duration;
+                    slot->track_interval = 0;
+                    slot->animation = &slot->animations[layer];
+                    slot->sequence_active = 1;
+                    slot->active = 1;
+                    field_start_actor_animation(new_slot, target_count, targets);
+                }
+                layer_count--;
+                layer++;
             }
         }
     }
     else
     {
-        default_slot = &g_field_actor_slots[binding->slot];
-        default_slot->duration = default_slot->animations->duration;
+        g_field_actor_slots[binding->slot].duration = g_field_actor_slots[binding->slot].animations[0].duration;
         g_field_actor_slots[binding->slot].animation_index = 0;
     }
-    initialized_slot = &g_field_actor_slots[binding->slot];
-    initialized_slot->track_interval = initialized_slot->animations[initialized_slot->animation_index].track_interval;
-    selected_slot = &g_field_actor_slots[binding->slot];
-    selected_slot->animation = selected_slot->animations + selected_slot->animation_index;
+    g_field_actor_slots[binding->slot].track_interval =
+        g_field_actor_slots[binding->slot].animations[g_field_actor_slots[binding->slot].animation_index].track_interval;
+    g_field_actor_slots[binding->slot].animation = &g_field_actor_slots[binding->slot].animations[g_field_actor_slots[binding->slot].animation_index];
     g_field_actor_slots[binding->slot].active = 1;
     field_start_actor_animation(binding->slot, target_count, targets);
     g_field_object_states[object_index].contact.bytes.animation_actor_index = binding->slot;
-    result = 1;
-    return result;
+    return 1;
 }
