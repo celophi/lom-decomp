@@ -44,7 +44,7 @@ typedef struct
 
 extern s32 g_wmap_vehicle_cell_x;
 extern s32 g_wmap_vehicle_cell_y;
-extern u8 D_800DEF18[];
+extern u8 g_wmap_effect_model_buffer_2000[];
 extern s32 g_wmap_view_scroll_mode;
 extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
@@ -79,7 +79,7 @@ extern u8 g_wmap_animation_bank_0[];
 extern u8 *g_wmap_effect_model_pack_1;
 extern u8 *g_wmap_effect_model_pack_2;
 extern s32* g_wmap_effect_model_pack_3;
-extern s32* D_8011CF2C;
+extern s32* g_wmap_effect_model_pack_4;
 extern u32 g_wmap_land_event_00_a_step;
 extern u8 g_wmap_animation_bank_2;
 extern u8 g_wmap_actor_motions[];
@@ -124,15 +124,15 @@ extern s32* g_wmap_effect_params;
 /** @brief Queue effect resources and establish the map-relative effect position. */
 void wmap_land_event_00_a_step_01(void)
 {
-    g_wmap_effect_model_pack_1 = D_800DEF18;
+    g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_2000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x7000;
     g_wmap_effect_model_pack_3 = g_wmap_effect_model_pack_2 + 0x3000;
-    D_8011CF2C = g_wmap_effect_model_pack_2 + 0x7000;
+    g_wmap_effect_model_pack_4 = g_wmap_effect_model_pack_2 + 0x7000;
     func_80064F64(0x1218);
     func_80064F64(0x1219);
     func_80064F64(0x121A);
     cdrom_queue_read(0x121B, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x121C, D_800DEF18 - 0x2000);
+    cdrom_queue_read(0x121C, g_wmap_effect_model_buffer_2000 - 0x2000);
     cdrom_queue_read(0x121D, g_wmap_effect_model_pack_1);
     cdrom_queue_read(0x121E, g_wmap_effect_model_pack_2);
     cdrom_queue_read(0x121F, g_wmap_effect_model_pack_3);
@@ -545,7 +545,7 @@ WMAP_STEP_RESET(wmap_land_event_00_a_sequence_4_reset, g_wmap_land_event_00_a_se
 void wmap_land_event_00_a_sequence_4_step_02(void)
 {
     func_8006AEE0();
-    func_8008ECF8(0x14, 0x78, D_8011CF2C, &g_wmap_effect_params[30]);
+    func_8008ECF8(0x14, 0x78, g_wmap_effect_model_pack_4, &g_wmap_effect_params[30]);
     wmap_queue_texture_page(0x25, 5);
     if (--g_wmap_land_event_00_a_sequence_4_timer == 0)
     {
@@ -568,7 +568,7 @@ void wmap_land_event_00_a_sequence_4_step_03(void)
 void wmap_land_event_00_a_sequence_4_step_04(void)
 {
     func_8006AEE0();
-    func_8008ECF8(0x14, 0x78, D_8011CF2C, &g_wmap_effect_params[30]);
+    func_8008ECF8(0x14, 0x78, g_wmap_effect_model_pack_4, &g_wmap_effect_params[30]);
     wmap_queue_texture_page(0x25, 5);
     if (--g_wmap_land_event_00_a_sequence_4_timer == 0)
     {

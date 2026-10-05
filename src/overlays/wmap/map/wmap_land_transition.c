@@ -331,7 +331,7 @@ void wmap_update_artifact_selection(void)
                 g_wmap_preview_travel_frame = g_wmap_preview_travel_frame_bounds[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS + 1] - 1;
                 g_wmap_preview_travel_end = g_wmap_preview_travel_frame_bounds[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS];
                 wmap_start_mesh_transition(0);
-                func_800A89DC(g_wmap_selected_artifact);
+                wmap_queue_effect_resources(g_wmap_selected_artifact);
             }
         }
 

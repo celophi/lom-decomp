@@ -5,9 +5,9 @@
 #include "main/cdrom.h"
 
 extern WmapLandDisplay D_80182508;
-extern u8 D_80182E40[];
-extern u8 D_8018B240[];
-extern u8 D_80193640[];
+extern u8 g_wmap_effect_texture_buffer_0[];
+extern u8 g_wmap_effect_texture_buffer_1[];
+extern u8 g_wmap_effect_texture_buffer_2[];
 extern s32 wmap_land_effect_18_run(s32);
 extern s32 wmap_land_effect_04_run(s32);
 extern s32 wmap_land_effect_01_run(s32);
@@ -43,11 +43,11 @@ void func_800591A8(u32 selection)
 {
     g_wmap_land_image_cache_missed = 0;
     cdrom_wait_queue_empty();
-    func_800651B4(D_80182E40);
-    func_800651B4(D_8018B240);
+    func_800651B4(g_wmap_effect_texture_buffer_0);
+    func_800651B4(g_wmap_effect_texture_buffer_1);
     if (selection != 2)
     {
-        func_800651B4(D_80193640);
+        func_800651B4(g_wmap_effect_texture_buffer_2);
     }
     if (selection == 0x16)
     {

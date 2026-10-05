@@ -70,9 +70,9 @@ extern s32 D_801B24B4;
 extern s32 D_80182DE4;
 extern u8* g_wmap_effect_model_pack_3;
 extern s32 g_wmap_land_effect_26_sequence_4_timer;
-extern u8* D_8011CF2C;
+extern u8* g_wmap_effect_model_pack_4;
 extern s32 g_wmap_land_effect_26_sequence_5_timer;
-extern u8* D_8011CF30;
+extern u8* g_wmap_effect_model_pack_5;
 extern s32 g_wmap_land_effect_26_sequence_6_timer;
 extern u8 g_wmap_animation_bank_2[];
 extern s32 g_wmap_land_effect_26_sequence_11_timer;
@@ -276,7 +276,7 @@ void wmap_land_effect_26_sequence_5_step_02(void)
 
     if (g_wmap_effect_fade_a != 0)
     {
-        wmap_draw_model_default(D_8011CF2C, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_a);
+        wmap_draw_model_default(g_wmap_effect_model_pack_4, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_a);
         if (g_wmap_effect_fade_a < 0)
         {
             g_wmap_effect_fade_a = 0;
@@ -307,7 +307,7 @@ void wmap_land_effect_26_sequence_6_step_02(void)
 
     if (g_wmap_effect_fade_b != 0)
     {
-        wmap_draw_model_default(D_8011CF30, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_b);
+        wmap_draw_model_default(g_wmap_effect_model_pack_5, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_b);
         if (g_wmap_effect_fade_b < 0)
         {
             g_wmap_effect_fade_b = 0;

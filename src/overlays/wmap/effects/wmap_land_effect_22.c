@@ -53,7 +53,7 @@ extern s32 g_wmap_land_effect_22_sequence_4_timer;
 extern int rand(void);
 extern s32 D_80139268;
 extern s32 g_wmap_land_effect_22_sequence_6_timer;
-extern s32* D_8011CF2C;
+extern s32* g_wmap_effect_model_pack_4;
 extern s32 D_8013923C;
 extern s32 D_80182DE4;
 extern s32 g_wmap_land_effect_22_sequence_9_timer;
@@ -200,7 +200,7 @@ void wmap_land_effect_22_sequence_9_step_02(void)
     s32 next_timer;
 
     wmap_set_model_transform(&g_wmap_camera_translation, &D_801B2498);
-    wmap_draw_model(D_8011CF2C, (D_8013923C / 0x10) & 3, 0xA, 0x35, 0x7800, 0x1001, D_80182DE4, 0, 0x14, -1);
+    wmap_draw_model(g_wmap_effect_model_pack_4, (D_8013923C / 0x10) & 3, 0xA, 0x35, 0x7800, 0x1001, D_80182DE4, 0, 0x14, -1);
     D_8013923C += 0x10;
     WMAP_MODEL_FADE_IN(D_80182DE4, 2, 0x81, value);
     timer = g_wmap_land_effect_22_sequence_9_timer;
@@ -223,7 +223,7 @@ void wmap_land_effect_22_sequence_9_step_04(void)
     s32 next_timer;
 
     wmap_set_model_transform(&g_wmap_camera_translation, &D_801B2498);
-    wmap_draw_model(D_8011CF2C, (D_8013923C / 0x10) & 3, 0xA, 0x35, 0x7800, 0x1001, D_80182DE4, 0, 0x14, -1);
+    wmap_draw_model(g_wmap_effect_model_pack_4, (D_8013923C / 0x10) & 3, 0xA, 0x35, 0x7800, 0x1001, D_80182DE4, 0, 0x14, -1);
     WMAP_MODEL_FADE_OUT(D_80182DE4, 2, value);
     D_8013923C += 0x10;
     timer = g_wmap_land_effect_22_sequence_9_timer;

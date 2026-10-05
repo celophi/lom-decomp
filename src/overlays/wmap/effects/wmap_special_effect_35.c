@@ -142,9 +142,9 @@ extern WmapColor3 D_80182D94;
 extern VECTOR g_wmap_camera_translation;
 extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
-extern u8 D_80182E40;
-extern u8 D_8018B240;
-extern u8 D_80193640;
+extern u8 g_wmap_effect_texture_buffer_0;
+extern u8 g_wmap_effect_texture_buffer_1;
+extern u8 g_wmap_effect_texture_buffer_2;
 extern u32 g_wmap_effect35_step;
 extern s32 g_wmap_effect35_timer;
 extern u32 g_wmap_effect35_timeline_step;
@@ -805,11 +805,11 @@ WMAP_STEP_RESET(wmap_effect35_reset, g_wmap_effect35_step, g_wmap_effect35_timer
 void wmap_effect35_load(void)
 {
     g_wmap_forced_animated_land_id = 0x1F;
-    func_800A89DC(WMAP_EFFECT35_RESOURCE);
+    wmap_queue_effect_resources(WMAP_EFFECT35_RESOURCE);
     cdrom_wait_queue_empty();
-    func_800651B4(&D_80182E40);
-    func_800651B4(&D_8018B240);
-    func_800651B4(&D_80193640);
+    func_800651B4(&g_wmap_effect_texture_buffer_0);
+    func_800651B4(&g_wmap_effect_texture_buffer_1);
+    func_800651B4(&g_wmap_effect_texture_buffer_2);
     wmap_reset_focus_screen_position();
     wmap_start_sequence(wmap_effect35_run_timeline);
     g_wmap_sequence_busy = 1;

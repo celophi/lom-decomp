@@ -65,7 +65,7 @@ extern s32 D_8013923C;
 extern s32 D_80182DE4;
 extern u8* g_wmap_effect_model_pack_3;
 extern s32 g_wmap_land_effect_15_sequence_4_timer;
-extern u8* D_8011CF2C;
+extern u8* g_wmap_effect_model_pack_4;
 extern s32 g_wmap_land_effect_15_sequence_5_timer;
 extern s32 D_80139240;
 extern s32 D_8013924C;
@@ -162,7 +162,7 @@ WMAP_STEP_DROP_UPDATE(wmap_land_effect_15_sequence_4_step_02,
 WMAP_STEP_DROP_UPDATE(wmap_land_effect_15_sequence_5_step_02,
     g_wmap_land_effect_15_sequence_5_step, g_wmap_land_effect_15_sequence_5_timer,
     g_wmap_effect_model_d_rotation, g_wmap_effect_model_d_position,
-    g_wmap_effect_fade_a, D_8011CF2C, -3500, 4)
+    g_wmap_effect_fade_a, g_wmap_effect_model_pack_4, -3500, 4)
 
 /** @brief Initialize eight effect actors with evenly spaced angles. */
 void wmap_land_effect_15_sequence_7_step_01(void)
