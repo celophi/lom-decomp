@@ -158,7 +158,7 @@ class ExtractTest(unittest.TestCase):
         self.assertEqual(scripts[0]["steps"], [
             {"code": "WMAP_SCRIPT_COMMAND", "command": "WMAP_SCRIPT_VISIBILITY", "argument": 0},
             {"code": "WMAP_SCRIPT_COMMAND", "command": "WMAP_SCRIPT_BUTTON_MASK", "argument": "0xF040"},
-            {"hold_frames": 30, "buttons": "0x0080"},
+            {"delay_frames": 30, "buttons": "0x0080"},
             {"wait_buttons": "0x08F0"},
             {"code": "WMAP_SCRIPT_END"},
         ])

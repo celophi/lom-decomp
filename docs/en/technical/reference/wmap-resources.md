@@ -102,7 +102,7 @@ events 0, 1 and 28 start scripts 1, 2 and 3 when the map opens (see
 
 | Words | Meaning |
 | --- | --- |
-| `N buttons` | Hold `buttons` for N frames (N > 0) |
+| `N buttons` | Publish `buttons` for one frame, then process the next record N frames later (N > 0) |
 | `0 0` | Wait for any real button press |
 | `0 mask` | With bit `0x800` set in `mask`, wait for one of the other masked buttons; any other value stops the script |
 | `-2 command [argument]` | Run a command |
@@ -115,6 +115,14 @@ into VRAM and shows it as the prompt image; an argument of zero or less hides
 it. The US and JP scripts differ only in their button words: the scripted
 confirm press is cross (`0x0040`) in US and circle (`0x0020`) in JP, the same
 swap `wmap_main.h` makes for `WMAP_PAD_CONFIRM`.
+
+Timed records clear the button outputs during the remaining delay frames;
+`delay_frames` in the extracted script is the interval between records.
+Event waits allow live controller input until their condition is met:
+`WAIT_ARTIFACT` waits for a selection, `WAIT_PLACEMENT` for placement to start,
+`WAIT_PREVIEW` for all map sequences to finish, `WAIT_TRAVEL` for movement to
+start, and `WAIT_MAP_STATE` for the artifact panel to begin opening.
+`FIND_HOME` places the lead traveler on the first home cell in row order.
 
 ## Step tables
 

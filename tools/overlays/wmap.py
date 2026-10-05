@@ -260,7 +260,7 @@ def decode_script(words: tuple[int, ...], names: dict[int, str]) -> tuple[list[d
                 step["argument"] = f"0x{argument & 0xFFFF:04X}" if command == "WMAP_SCRIPT_BUTTON_MASK" else argument
                 cursor += 1
         elif duration > 0:
-            step = {"hold_frames": duration, "buttons": f"0x{words[cursor + 1] & 0xFFFF:04X}"}
+            step = {"delay_frames": duration, "buttons": f"0x{words[cursor + 1] & 0xFFFF:04X}"}
             cursor += 2
         else:
             step = {"wait_buttons": f"0x{words[cursor + 1] & 0xFFFF:04X}"}
@@ -284,8 +284,9 @@ def read_input_scripts(blob: Blob[WmapSymbols]) -> list[Part]:
         parts.append(Part(f"input script {index + 1}", start, start + used * 2, "scripts/input_scripts.yaml"))
     document = Document({
         "address": hex_address(table), "count": INPUT_SCRIPT_COUNT, "scripts": scripts,
-        "note": "Scripted controller input, one s16 word at a time: a positive duration holds the buttons that "
-                "follow, zero waits for a button press (0x800 set: only the masked buttons), -2 runs a command.",
+        "note": "Scripted controller input, one s16 word at a time: a positive delay publishes the following "
+                "buttons for one frame, then waits that many frames before the next record. Zero waits for "
+                "a button press (0x800 set: only the masked buttons), -2 runs a command.",
     })
     start = blob.offset(table)
     parts.append(Part("input script table", start, start + len(raw_table), "scripts/input_scripts.yaml", document))

@@ -43,6 +43,8 @@
 #define WMAP_HELP_IMAGE_TPAGE 0xD5
 #define WMAP_HELP_CURSOR_TPAGE 0xB5
 #define WMAP_MENU_TRIANGLE_COUNT 28
+#define WMAP_SCRIPT_WAIT_BUTTONS_FLAG 0x0800
+#define WMAP_HOME_LAND_ID 0
 #define WMAP_BACKDROP_WRAP_WIDTH 640
 #define WMAP_BACKDROP_QUAD_WIDTH 160
 #define WMAP_BACKDROP_COLOR_STEP 8
@@ -128,7 +130,7 @@ typedef struct
     short x2, y2;
 } WmapMenuTriangle;
 
-/** @brief Script words: duration/button pairs, or a command preceded by -2. */
+/** @brief Record markers and command opcodes in signed 16-bit input scripts. */
 typedef enum
 {
     WMAP_SCRIPT_END = -1,
@@ -136,11 +138,11 @@ typedef enum
     WMAP_SCRIPT_IMAGE = 0,
     WMAP_SCRIPT_BUTTON_MASK = 1,
     WMAP_SCRIPT_VISIBILITY = 2,
-    WMAP_SCRIPT_WAIT_ARTIFACT = 3,
-    WMAP_SCRIPT_WAIT_PLACEMENT = 4,
-    WMAP_SCRIPT_WAIT_PREVIEW = 5,
-    WMAP_SCRIPT_WAIT_TRAVEL = 6,
-    WMAP_SCRIPT_WAIT_MAP_STATE = 7,
+    WMAP_SCRIPT_WAIT_ARTIFACT = 3, /* An artifact has been selected. */
+    WMAP_SCRIPT_WAIT_PLACEMENT = 4, /* Placement has started. */
+    WMAP_SCRIPT_WAIT_PREVIEW = 5, /* No map sequences remain active. */
+    WMAP_SCRIPT_WAIT_TRAVEL = 6, /* Party movement has started. */
+    WMAP_SCRIPT_WAIT_MAP_STATE = 7, /* The artifact panel is opening. */
     WMAP_SCRIPT_FIND_HOME = 8
 } WmapInputCommand;
 
@@ -180,9 +182,13 @@ typedef struct
 extern s32 wmap_special_effect_34_run(s32 initialize);
 
 extern s32 g_wmap_script_button_mask;
+/** @brief Offset of the next input-script record in signed 16-bit words. */
 extern s32 g_wmap_script_word;
+/** @brief Frames until the next input-script record is processed. */
 extern s32 g_wmap_script_delay;
+/** @brief Pending WAIT command opcode, or zero when no event is pending. */
 extern s32 g_wmap_script_wait;
+/** @brief One-based input-script index, or zero when scripted input is inactive. */
 extern s32 g_wmap_input_script;
 extern s32 g_wmap_cd_error;
 extern s32 g_wmap_script_prompt_visible;
@@ -982,14 +988,14 @@ void wmap_update_menu(s32 buttons)
 }
 
 /**
- * @brief Wait for a scripted map event while allowing live controller input.
+ * @brief Clear a completed script wait, otherwise allow live controller input.
  */
 void wmap_wait_for_script_event(void)
 {
     switch (g_wmap_script_wait)
     {
     case WMAP_SCRIPT_WAIT_ARTIFACT:
-        if (g_wmap_selected_artifact != -1)
+        if (g_wmap_selected_artifact != WMAP_NO_ARTIFACT)
         {
             g_wmap_script_wait = 0;
         }
@@ -1029,7 +1035,7 @@ void wmap_wait_for_script_event(void)
         }
         break;
     case WMAP_SCRIPT_WAIT_MAP_STATE:
-        if (g_wmap_selection_phase == 3)
+        if (g_wmap_selection_phase == WMAP_SELECTION_SHOW_ARTIFACTS)
         {
             g_wmap_script_wait = 0;
         }
@@ -1042,46 +1048,48 @@ void wmap_wait_for_script_event(void)
 }
 
 /**
- * @brief Consume a scripted-input command or inject a timed button press.
- * @note Commands and button output use the shared script state.
+ * @brief Process one input-script record and schedule its next step.
+ * @note Timed records publish buttons for one frame; the remaining delay frames
+ * clear both button outputs in wmap_run_loop.
  */
 void wmap_step_input_script(void)
 {
     TimPrefix* image;
     TimBlock* image_block;
-    s32 duration;
+    s32 delay_frames;
     s32 command;
     s32 buttons;
     s32 row;
     s32 column;
-    s32 button_result;
-    s16* script;
+    s32 pressed_buttons;
+    s16* cursor;
 
-    script = g_wmap_input_scripts[g_wmap_input_script - 1];
-    script += g_wmap_script_word;
-    duration = *script++;
-    g_wmap_script_delay = (s32)duration;
-    if (duration == WMAP_SCRIPT_END)
+    cursor = g_wmap_input_scripts[g_wmap_input_script - 1];
+    cursor += g_wmap_script_word;
+    delay_frames = *cursor++;
+    g_wmap_script_delay = delay_frames;
+    if (delay_frames == WMAP_SCRIPT_END)
     {
         g_wmap_input_locked = 0;
         g_wmap_input_script = 0;
         g_wmap_script_delay = 1;
         return;
     }
-    if (duration == WMAP_SCRIPT_COMMAND)
+    if (delay_frames == WMAP_SCRIPT_COMMAND)
     {
-        command = *script++;
+        /* Commands occupy two words, plus one for IMAGE, BUTTON_MASK or VISIBILITY. */
+        command = *cursor++;
         switch (command)
         {
         case WMAP_SCRIPT_IMAGE:
-            if (script[0] > 0)
+            if (cursor[0] > 0)
             {
                 image = &g_wmap_help_image;
-                cdrom_queue_read((u16)script[0], image);
+                cdrom_queue_read((u16)cursor[0], image);
                 image_block = &image->clut_block;
                 cdrom_wait_queue_empty();
                 wmap_load_image_block(&image->clut_block);
-                image_block = (TimBlock*)((u8*)image_block + image->clut_block.bnum);
+                image_block = TIM_NEXT_BLOCK(image_block);
                 wmap_load_image_block(image_block);
                 DrawSync(0);
                 g_wmap_artifact_shadows_enabled = 1;
@@ -1094,11 +1102,11 @@ void wmap_step_input_script(void)
             g_wmap_script_word += 3;
             break;
         case WMAP_SCRIPT_BUTTON_MASK:
-            g_wmap_script_button_mask = (s32)script[0];
+            g_wmap_script_button_mask = cursor[0];
             g_wmap_script_word += 3;
             break;
         case WMAP_SCRIPT_VISIBILITY:
-            if (script[0] != 0)
+            if (cursor[0] != 0)
             {
                 g_wmap_auxiliary_labels_hidden = 0;
             }
@@ -1129,11 +1137,12 @@ void wmap_step_input_script(void)
             g_wmap_script_word += 2;
             break;
         case WMAP_SCRIPT_FIND_HOME:
+            /* Place the lead traveler on the first home cell in row order. */
             for (row = 0; row < WMAP_GRID_SIZE; row++)
             {
                 for (column = 0; column < WMAP_GRID_SIZE; column++)
                 {
-                    if (g_wmap_cells[column][row].land_id == 0)
+                    if (g_wmap_cells[column][row].land_id == WMAP_HOME_LAND_ID)
                     {
                         g_wmap_travelers[0].position_x = g_wmap_travelers[0].target_x = column * WMAP_MAP_CELL_SIZE;
                         g_wmap_travelers[0].next_cell_x = column;
@@ -1142,6 +1151,7 @@ void wmap_step_input_script(void)
                         g_wmap_travelers[0].cell_x = g_wmap_travelers[0].destination_x = g_wmap_travelers[0].next_cell_x;
                         g_wmap_travelers[0].cell_y = g_wmap_travelers[0].destination_y = g_wmap_travelers[0].next_cell_y;
                         g_wmap_travelers[0].moving = 0;
+                        /* Finish both scans after placing the traveler. */
                         column = WMAP_GRID_SIZE;
                         row = WMAP_GRID_SIZE;
                     }
@@ -1153,18 +1163,19 @@ void wmap_step_input_script(void)
         g_wmap_script_delay = 1;
         return;
     }
-    if (duration != 0)
+    if (delay_frames != 0)
     {
-        buttons = script[0];
+        buttons = cursor[0];
         g_wmap_script_word += 2;
-        g_wmap_buttons_held = (s32)buttons;
-        g_wmap_buttons_repeat = (s32)buttons;
+        g_wmap_buttons_held = buttons;
+        g_wmap_buttons_repeat = buttons;
         return;
     }
-    if (script[0] == 0)
+    /* Button waits poll real input without forwarding it to the map. */
+    if (cursor[0] == 0)
     {
-        button_result = wmap_get_controller_repeat_buttons();
-        if (button_result != 0)
+        pressed_buttons = wmap_get_controller_repeat_buttons();
+        if (pressed_buttons != 0)
         {
             g_wmap_script_word += 2;
         }
@@ -1173,10 +1184,10 @@ void wmap_step_input_script(void)
         g_wmap_buttons_repeat = 0;
         return;
     }
-    if ((u16)script[0] & 0x800)
+    if ((u16)cursor[0] & WMAP_SCRIPT_WAIT_BUTTONS_FLAG)
     {
-        button_result = wmap_get_controller_repeat_buttons() & (s16)((u16)script[0] & 0xF7FF);
-        if (button_result != 0)
+        pressed_buttons = wmap_get_controller_repeat_buttons() & (s16)((u16)cursor[0] & ~WMAP_SCRIPT_WAIT_BUTTONS_FLAG);
+        if (pressed_buttons != 0)
         {
             g_wmap_script_word += 2;
         }
