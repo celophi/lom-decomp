@@ -1527,25 +1527,25 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
             {
                 switch (actor->hit_reaction)
                 {
-                case 0x34:
+                case FIELD_ABILITY_SPIN:
                     field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x16U);
                     break;
-                case 0x50:
+                case FIELD_ABILITY_FOLLOW_UP_50:
                     field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x12U);
                     break;
-                case 0x51:
+                case FIELD_ABILITY_FOLLOW_UP_51:
                     field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x13U);
                     break;
-                case 0x4E:
+                case FIELD_ABILITY_FOLLOW_UP_4E:
                     field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x14U);
                     break;
-                case 0x4F:
+                case FIELD_ABILITY_FLIP_KICK:
                     field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x15U);
                     break;
-                case 0x3E:
+                case FIELD_ABILITY_TACKLE:
                     field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x19U);
                     break;
-                case 0x45:
+                case FIELD_ABILITY_SLIDE:
                     field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x1AU);
                     break;
                 default:
@@ -1833,22 +1833,22 @@ void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* pa
                     {
                         switch (actor->hit_reaction)
                         {
-                        case 0x50:
+                        case FIELD_ABILITY_FOLLOW_UP_50:
                             field_resolve_object_hit(actor->owner_object_index, target_index, 0x12U);
                             break;
-                        case 0x51:
+                        case FIELD_ABILITY_FOLLOW_UP_51:
                             field_resolve_object_hit(actor->owner_object_index, target_index, 0x13U);
                             break;
-                        case 0x4E:
+                        case FIELD_ABILITY_FOLLOW_UP_4E:
                             field_resolve_object_hit(actor->owner_object_index, target_index, 0x14U);
                             break;
-                        case 0x4F:
+                        case FIELD_ABILITY_FLIP_KICK:
                             field_resolve_object_hit(actor->owner_object_index, target_index, 0x15U);
                             break;
-                        case 0x3E:
+                        case FIELD_ABILITY_TACKLE:
                             field_resolve_object_hit(actor->owner_object_index, target_index, 0x19U);
                             break;
-                        case 0x45:
+                        case FIELD_ABILITY_SLIDE:
                             field_resolve_object_hit(actor->owner_object_index, target_index, 0x1AU);
                             break;
                         default:

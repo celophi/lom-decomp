@@ -72,7 +72,13 @@ typedef enum FieldAbility
     /** Ignores hits. */
     FIELD_ABILITY_DEFENSIVE_LUNGE = 0x44,
     FIELD_ABILITY_SLIDE = 0x45,
-    FIELD_ABILITY_FLIP_KICK = 0x4F
+    /** Follow-up attack with no name of its own; nothing in the field code starts it. */
+    FIELD_ABILITY_FOLLOW_UP_4E = 0x4E,
+    FIELD_ABILITY_FLIP_KICK = 0x4F,
+    /** Follow-up attack Spin chains into while button 2 is held. */
+    FIELD_ABILITY_FOLLOW_UP_50 = 0x50,
+    /** Follow-up attack Spin chains into while button 3 is held. */
+    FIELD_ABILITY_FOLLOW_UP_51 = 0x51
 } FieldAbility;
 
 /* Shared actor animations (FieldActor::animation without the facing bit). */

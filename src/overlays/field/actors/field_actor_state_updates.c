@@ -313,7 +313,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
             field_command_history_clear(actor->object_index);
             break;
         case FIELD_ABILITY_SPIN:
-            FIELD_SET_CHAIN_ACTION(actor, 0x51, 0x27, 0);
+            FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FOLLOW_UP_51, 0x27, 0);
             actor->command = FIELD_ACTION_COMMAND(FIELD_CHAIN_ACTION_SLOT);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);
@@ -421,7 +421,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
     {
         if ((actor->animation & ~0x80) == FIELD_ABILITY_SPIN)
         {
-            FIELD_SET_CHAIN_ACTION(actor, 0x50, 0x26, 0);
+            FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FOLLOW_UP_50, 0x26, 0);
             actor->command = FIELD_ACTION_COMMAND(FIELD_CHAIN_ACTION_SLOT);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);

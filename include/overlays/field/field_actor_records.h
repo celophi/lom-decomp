@@ -63,7 +63,9 @@ typedef union
     struct
     {
         u32 scale : 10;
-        u32 unk10 : 5;
+        /** @brief The action's charge animation has started (FIELD_MOVEMENT_CHARGED). */
+        u32 charged : 1;
+        u32 unk11 : 4;
         u32 flag15 : 1;
         u32 unk16 : 16;
     } bits;
