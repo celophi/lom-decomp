@@ -172,7 +172,8 @@ extern s32 g_wmap_large_motor;
 extern s32 D_800DCEDC;
 
 extern RECT D_80051A80;
-extern s32 D_800D0550;
+/** @brief World-map loop result before attract movie requests are applied. */
+extern s32 g_wmap_loop_result;
 /** @brief Nonzero to play attract movie one when the world map returns. */
 extern s32 g_wmap_attract_1_requested;
 /** @brief Nonzero to play attract movies two through four after the map returns. */
@@ -304,10 +305,10 @@ s32 run_world_map(void)
     wmap_init_frame_buffers();
     g_wmap_frames[0].draw_env.isbg = 0;
     g_wmap_frames[1].draw_env.isbg = 0;
-    D_800D0550 = wmap_run_loop();
+    g_wmap_loop_result = wmap_run_loop();
     akao_stop_all_songs();
     akao_release_all_sfx();
-    if (D_800D0550 == 2)
+    if (g_wmap_loop_result == 2)
     {
         DrawSync(0);
         VSync(0);
@@ -324,7 +325,7 @@ s32 run_world_map(void)
     {
         return GAME_STATE_ATTRACT_2;
     }
-    return D_800D0550;
+    return g_wmap_loop_result;
 }
 
 /** @brief Initialize world-map state, resource slots, and packet templates. */

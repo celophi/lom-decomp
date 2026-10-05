@@ -59,7 +59,7 @@ class SourceTest(unittest.TestCase):
             with self.subTest(version=version):
                 names, _ = self.load(version)
                 self.assertEqual(names.named["g_wmap_information_glyphs"] - names.sounds, wmap.SOUND_COUNT * 4)
-                self.assertEqual(names.named["D_800D0550"] - names.input_scripts, wmap.INPUT_SCRIPT_COUNT * 4)
+                self.assertEqual(names.named["g_wmap_loop_result"] - names.input_scripts, wmap.INPUT_SCRIPT_COUNT * 4)
 
     def test_handler_tables_are_named_in_both_versions(self):
         declared = wmap.handler_declarations()
