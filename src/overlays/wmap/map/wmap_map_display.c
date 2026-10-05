@@ -1,3 +1,4 @@
+#include "../internal/wmap_view_effects.h"
 #include "../internal/wmap_land_transition.h"
 #include "../internal/wmap_frame_render.h"
 #include "../internal/wmap_party_travel.h"
@@ -22,10 +23,8 @@
 #define WMAP_CACHE_SLOTS 16
 #define WMAP_SPIRIT_COUNT 8
 #define WMAP_FADE_STEP 8
-#define WMAP_FULL_BRIGHTNESS 128
 #define WMAP_BLEND_THRESHOLD 64
 #define WMAP_GAME_AREA_SIZE 3
-#define WMAP_GAME_RETRY_DELAY 60
 #define WMAP_LAND_COUNT 64
 #define WMAP_LAND_SCALE_MAX 15
 #define WMAP_EMPTY_LAND 0xFF
@@ -201,7 +200,6 @@ extern s32 g_wmap_game_origin_x;
 extern s32 g_wmap_game_origin_y;
 extern s32 g_wmap_game_hits;
 
-extern s32 D_800DCEC0;
 extern s32 g_wmap_view_scroll_enabled;
 extern s32 g_wmap_selected_artifact;
 extern s32 g_wmap_view_mode;
@@ -227,9 +225,7 @@ extern WmapMapPoint D_8004FD04[];
 extern s16 D_800D036C[];
 extern s32 g_wmap_land_scale_steps[];
 extern SVECTOR g_wmap_camera_rotation;
-extern SVECTOR D_801398C8;
 extern s32 D_80139958;
-extern VECTOR D_80182D48;
 extern VECTOR g_wmap_camera_translation;
 extern s32 g_wmap_cell_effect_steps[];
 extern WmapQuadTemplate g_wmap_cell_effect_quads[16];
@@ -317,7 +313,7 @@ void wmap_update_map_game(void)
                     return;
                 }
 
-                D_800DCEC0 = 0;
+                g_wmap_land_label_updates_enabled = 0;
                 func_80064F64(0x1154);
                 g_wmap_game_score = 0;
                 g_wmap_game_displayed_score = 0;
@@ -480,7 +476,7 @@ void wmap_update_map_game_prompt(void)
             g_wmap_game_start_delay = WMAP_GAME_RETRY_DELAY;
             g_wmap_game_phase = WMAP_GAME_PROMPT;
             g_wmap_view_scroll_enabled = 1;
-            D_800DCEC0 = 1;
+            g_wmap_land_label_updates_enabled = 1;
             g_wmap_carousel_mode = 2;
             wmap_reset_after_transition();
         }
@@ -497,7 +493,7 @@ void wmap_update_map_game_prompt(void)
             g_wmap_game_start_delay = WMAP_GAME_RETRY_DELAY;
             g_wmap_game_phase = WMAP_GAME_PROMPT;
             g_wmap_view_scroll_enabled = 1;
-            D_800DCEC0 = 1;
+            g_wmap_land_label_updates_enabled = 1;
             g_wmap_carousel_mode = 2;
             wmap_reset_after_transition();
         }
@@ -1186,13 +1182,13 @@ void wmap_draw_lands(void)
     s32 part_index;
     s32 distance_state;
 
-    rotation.vx = g_wmap_camera_rotation.vx + D_801398C8.vx;
-    rotation.vy = g_wmap_camera_rotation.vy + D_801398C8.vy;
-    rotation.vz = g_wmap_camera_rotation.vz + D_801398C8.vz;
+    rotation.vx = g_wmap_camera_rotation.vx + g_wmap_effect_camera_rotation_offset.vx;
+    rotation.vy = g_wmap_camera_rotation.vy + g_wmap_effect_camera_rotation_offset.vy;
+    rotation.vz = g_wmap_camera_rotation.vz + g_wmap_effect_camera_rotation_offset.vz;
 
-    world_position.vx = g_wmap_camera_translation.vx + D_80182D48.vx;
-    world_position.vy = g_wmap_camera_translation.vy + D_80182D48.vy;
-    world_position.vz = g_wmap_camera_translation.vz + D_80182D48.vz;
+    world_position.vx = g_wmap_camera_translation.vx + g_wmap_effect_camera_translation_offset.vx;
+    world_position.vy = g_wmap_camera_translation.vy + g_wmap_effect_camera_translation_offset.vy;
+    world_position.vz = g_wmap_camera_translation.vz + g_wmap_effect_camera_translation_offset.vz;
 
     translation = world_position;
     translation.vz = (translation.vz * D_80139958) / 0x6000;

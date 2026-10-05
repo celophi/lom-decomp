@@ -75,7 +75,6 @@ typedef struct
 typedef struct { s32 w[4]; } WmapBlk16;
 
 extern u8 D_800DCEF4[4];
-extern s32 D_8011CF20;
 extern s32 g_wmap_sequence_count;
 extern s32 D_8013B288;
 extern s32 D_8018222C;
@@ -89,7 +88,6 @@ extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
 extern s32 D_801B2E44;
 extern u8 D_800DCA98[];
-extern s32 D_80139224;
 extern s32 D_801B2E74;
 extern void (*D_800D6D34[])(void);
 extern void wmap_draw_vehicle(void);
@@ -98,7 +96,6 @@ extern s32 g_wmap_vehicle_phase;
 extern s32 g_wmap_vehicle_screen_position;
 extern WmapAnimationSlot g_wmap_vehicle_animation;
 extern void (*D_800D6C14[])(void);
-extern s32 D_800DCEC0;
 extern s32 D_801B2E4C;
 extern void (*D_800D6C54[])(void);
 extern s32 D_801B2E54;
@@ -194,9 +191,9 @@ void func_800A5DFC(void)
             g_wmap_land_event_24_pending = 0;
             wmap_start_sequence(&func_800A7370);
         }
-        else if (D_8011CF20 != 0)
+        else if (g_wmap_special_return_pending != 0)
         {
-            D_8011CF20 = 0;
+            g_wmap_special_return_pending = 0;
             wmap_start_sequence(&wmap_run_special_return);
         }
         else if (g_wmap_land_event_10_active != 0)
@@ -632,7 +629,7 @@ void func_800A7108(void)
 /** @brief Set the map-relative effect position, load resources, and advance the sequence. */
 void func_800A71D4(void)
 {
-    D_80139224 = 0;
+    g_wmap_vehicle_flap_sound_enabled = 0;
     g_wmap_forced_animated_land_id = 0x18;
     g_wmap_land_display_limit = 0;
     wmap_find_land_cell(0x18, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
@@ -806,7 +803,7 @@ WMAP_STEP_UPDATE_TWO_AND_WAIT(func_800A7738, D_801B2E40, D_801B2E44,
  */
 void func_800A778C(void)
 {
-    D_800DCEC0 = 0;
+    g_wmap_land_label_updates_enabled = 0;
     D_801B2E44 = 0x1E;
     D_801B2E40 += 1;
     func_800A77CC();
@@ -943,7 +940,7 @@ void func_800A7BB8(void)
 {
     g_wmap_input_locked = 0;
     g_wmap_event_active = 0;
-    D_800DCEC0 = 1;
+    g_wmap_land_label_updates_enabled = 1;
     D_801B2E40 += 1;
 }
 

@@ -113,7 +113,6 @@ extern s32 g_wmap_artifact_return_offsets[];
 extern WmapArtifactTransferFrame g_wmap_artifact_return_frames[];
 extern s32 g_wmap_preview_foreground;
 
-extern s32 D_800DCEC0;
 extern s32 g_wmap_cursor_column;
 extern s32 g_wmap_cursor_row;
 extern s32 g_wmap_preview_bob_y;
@@ -523,7 +522,7 @@ void wmap_update_land_preview(void)
 
             cell_x = (g_wmap_view.x / WMAP_CELL_SPACING) + g_wmap_cursor_column;
             cell_y = (g_wmap_view.y / WMAP_CELL_SPACING) + g_wmap_cursor_row;
-            if ((g_wmap_selection_phase == WMAP_SELECTION_MAP) && (D_800DCEC0 != 0))
+            if ((g_wmap_selection_phase == WMAP_SELECTION_MAP) && (g_wmap_land_label_updates_enabled != 0))
             {
                 land_id = g_wmap_cells[cell_x][cell_y].land_id;
                 if (land_id == WMAP_EMPTY_CELL)

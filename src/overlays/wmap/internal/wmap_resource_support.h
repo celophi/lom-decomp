@@ -38,7 +38,7 @@ void func_800651B4(u8* data);
 void wmap_play_sound(s32 sound_index, s32 pan);
 void func_800652F8(void);
 void func_8006534C();
-void func_800653EC(void);
+void wmap_init_actor_display_states(void);
 s32 wmap_get_controller_repeat_buttons(void);
 
 #endif
