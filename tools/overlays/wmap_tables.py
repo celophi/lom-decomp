@@ -117,7 +117,7 @@ TABLES = (
               "Flat quad template copied for full-screen fills."),
     TableSpec("g_wmap_controller_ports", "I", 1, note="Pointer to the resident controller ports used for world-map input and vibration.",
               resolve_symbols=True),
-    TableSpec("D_800D0550", "i", 1, note="Result of the last wmap_run_loop call."),
+    TableSpec("g_wmap_loop_result", "i", 1, note="Result of the last wmap_run_loop call."),
     spec("g_wmap_backdrop_front_quads", POLY_FT4, 4, "Front backdrop layer quads."),
     spec("g_wmap_backdrop_back_quads", POLY_FT4, 4, "Back backdrop layer quads."),
     spec("D_800D0694", POLY_FT4, 1, "Fade quad; the code steps its colour, and tests r0 through D_800D0698."),
