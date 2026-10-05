@@ -205,7 +205,6 @@ extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_
 #define FIELD_OBJECT_FLAG_0080 0x0080
 #define FIELD_OBJECT_FLAG_0100 0x0100
 #define FIELD_OBJECT_FLAG_2000 0x2000
-#define FIELD_OBJECT_FLAG_4000 0x4000
 #define FIELD_OBJECT_FLAG_8000 0x8000
 
 /** @brief Set for one frame when the object is hit; tints the actor red. */
@@ -1356,7 +1355,7 @@ void field_update_object_effects(s32 index)
     slot = &g_field_actor_slots[FIELD_OBJECT_EFFECT_SLOT_BASE + index];
     if (flags_before & FIELD_OBJECT_IMMOBILE_FLAGS)
     {
-        state->flags &= ~FIELD_OBJECT_FLAG_4000;
+        state->flags &= ~FIELD_OBJECT_FLAG_DASH;
         state->flags &= 0xFFFF7FFF;
     }
     flags_current = state->flags;
@@ -1412,12 +1411,12 @@ void field_update_object_effects(s32 index)
                 field_clear_actor_effects(slot);
                 state->previous_flags &= 0xFFFF7FFF;
             }
-            else if (!(state->flags & FIELD_OBJECT_FLAG_4000) && (state->previous_flags & FIELD_OBJECT_FLAG_4000))
+            else if (!(state->flags & FIELD_OBJECT_FLAG_DASH) && (state->previous_flags & FIELD_OBJECT_FLAG_DASH))
             {
                 slot->active = 0U;
                 slot->track_mask = 0;
                 field_clear_actor_effects(slot);
-                state->previous_flags &= ~FIELD_OBJECT_FLAG_4000;
+                state->previous_flags &= ~FIELD_OBJECT_FLAG_DASH;
             }
             else
             {

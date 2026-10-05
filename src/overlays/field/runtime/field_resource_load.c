@@ -311,7 +311,7 @@ s32 field_queue_battle_entry_change(s32 actor_key, s32 animation, s32 builtin_an
     change->builtin_animation = builtin_animation;
     if (builtin_animation != FIELD_BATTLE_ENTRY_KEEP)
     {
-        change->animation = FIELD_ANIMATION_GUARD;
+        change->animation = FIELD_ABILITY_DEFEND;
     }
     changes[g_field_battle_entry_change_count].sound = sound;
     g_field_battle_entry_change_count += 1;

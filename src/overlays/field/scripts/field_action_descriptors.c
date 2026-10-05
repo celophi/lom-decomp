@@ -7,6 +7,7 @@
 #include "common.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
+#include "../internal/field_actor.h"
 
 void field_battle_run_party_event();
 
@@ -197,7 +198,7 @@ FieldActionDescriptor *field_select_action_descriptor(void)
 /**
  * @brief Return the ACTION_TABLE_COMMAND descriptor of a character command.
  * @param command Command code from info.actions.commands.
- * @return The descriptor, or NULL for command 0x37 and for unknown commands.
+ * @return The descriptor, or NULL for Bash and for unknown commands.
  */
 static FieldActionDescriptor *field_command_action_descriptor(s32 command)
 {
@@ -206,32 +207,32 @@ static FieldActionDescriptor *field_command_action_descriptor(s32 command)
     descriptor = action_table(ACTION_TABLE_COMMAND);
     switch (command)
     {
-    case 0x33:
+    case FIELD_ABILITY_CHEER:
         field_battle_run_party_event(g_field_battle->attacker->meta.bytes.id);
         descriptor += 16;
         break;
-    case 0x34:
+    case FIELD_ABILITY_SPIN:
         descriptor += 15;
         g_field_battle->attacker->counter--;
         break;
-    case 0x32:
+    case FIELD_ABILITY_PUSH:
         break;
-    case 0x36:
+    case FIELD_ABILITY_WHIRL:
         descriptor += 1;
         break;
-    case 0x37:
+    case FIELD_ABILITY_BASH:
         descriptor = NULL;
         break;
-    case 0x3E:
+    case FIELD_ABILITY_TACKLE:
         descriptor += 2;
         break;
-    case 0x43:
+    case FIELD_ABILITY_TOSS:
         descriptor += 3;
         break;
-    case 0x45:
+    case FIELD_ABILITY_SLIDE:
         descriptor += 4;
         break;
-    case 0x4F:
+    case FIELD_ABILITY_FLIP_KICK:
         descriptor += 14;
         break;
     default:

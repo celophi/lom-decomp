@@ -29,9 +29,6 @@
 /** @brief Shift of the mirror bit in an actor's animation byte. */
 #define FIELD_ANIMATION_FACING_SHIFT 7
 
-/** @brief Animation that keeps the action chain alive while no action is queued. */
-#define FIELD_ANIMATION_UNK3D 0x3D
-
 /** @brief Object flag: only the restricted actions are accepted. */
 #define FIELD_OBJECT_ACTIONS_RESTRICTED 0x400
 
@@ -179,7 +176,7 @@ u16 field_resolve_action_command(FieldActor* actor, s32 player)
     {
         g_field_action_context = (g_field_action_context & ~0xFF) | action;
     }
-    else if ((actor->animation & FIELD_ANIMATION_INDEX_MASK) != FIELD_ANIMATION_UNK3D)
+    else if ((actor->animation & FIELD_ANIMATION_INDEX_MASK) != FIELD_ABILITY_DOUBLE_JUMP)
     {
         actor->variant = 0;
         g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_CHAINING;

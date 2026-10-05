@@ -56,14 +56,6 @@
 #define FIELD_ACTOR_ACTION_KIND_MASK 0x1E
 #define FIELD_ACTOR_ACTION_KIND_ATTACK 8
 
-/** @brief Actor animations with a special contact rule (FieldActor::animation without the facing bit). */
-#define FIELD_ANIMATION_38 0x38 /**< 0x38 and 0x39 are never touched by effect quads. */
-#define FIELD_ANIMATION_39 0x39
-#define FIELD_ANIMATION_3C 0x3C /**< A player in this animation is not hit by attack spheres. */
-#define FIELD_ANIMATION_3D 0x3D /**< A player in this animation keeps its height while moving. */
-#define FIELD_ANIMATION_3F 0x3F /**< A player in this animation answers an effect quad with action 2. */
-#define FIELD_ANIMATION_40 0x40 /**< A player in this animation answers an effect quad with action 3. */
-
 /** @brief FieldActorSlot::hit_reaction values below this are passed on as the hit action; higher ones are mapped. */
 #define FIELD_HIT_REACTION_DIRECT_COUNT 12
 /** @brief Actors this high (FieldActor::height) or higher overlap nothing. */
@@ -78,7 +70,7 @@
 #define FIELD_SOUND_INTERACT 0x7D
 #define FIELD_SOUND_PAN_CENTER 0x80
 
-/** @brief Object-state contact bits set by the effect-quad answer of FIELD_ANIMATION_3F / _40. */
+/** @brief Object-state contact bits set by the effect-quad answer of Counterattack / Counterstrike. */
 #define FIELD_CONTACT_QUAD_ANSWER_MASK 0x1C
 #define FIELD_CONTACT_QUAD_ANSWER_2 0x08
 #define FIELD_CONTACT_QUAD_ANSWER_3 0x10
@@ -304,8 +296,8 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
         if ((target->presence == FIELD_ACTOR_UNUSED) || (target_state->flags & FIELD_OBJECT_UNTARGETABLE_FLAGS) ||
             ((target_index >= FIELD_PARTY_COUNT) && ((target_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)) ||
             (target_state->current_hp.word == 0) ||
-            ((target->animation & FIELD_ANIMATION_INDEX_MASK) >= FIELD_ANIMATION_38 &&
-             (target->animation & FIELD_ANIMATION_INDEX_MASK) <= FIELD_ANIMATION_39) ||
+            ((target->animation & FIELD_ANIMATION_INDEX_MASK) >= FIELD_ABILITY_SOMERSAULT &&
+             (target->animation & FIELD_ANIMATION_INDEX_MASK) <= FIELD_ABILITY_BACK_ROLL) ||
             (target->object_index == effect->source_object_index))
         {
             continue;
@@ -435,7 +427,7 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
                             if (target->object_index < FIELD_PLAYER_COUNT)
                             {
                                 animation = target->animation & FIELD_ANIMATION_INDEX_MASK;
-                                if (animation == FIELD_ANIMATION_3F)
+                                if (animation == FIELD_ABILITY_COUNTERATTACK)
                                 {
                                     target->command = FIELD_ACTION_COMMAND(2);
                                     field_prepare_actor_action(target);
@@ -443,7 +435,7 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
                                         (g_field_object_states[target->object_index].contact.word & ~FIELD_CONTACT_QUAD_ANSWER_MASK) | FIELD_CONTACT_QUAD_ANSWER_2;
                                     return 3;
                                 }
-                                if (animation == FIELD_ANIMATION_40)
+                                if (animation == FIELD_ABILITY_COUNTERSTRIKE)
                                 {
                                     target->command = FIELD_ACTION_COMMAND(3);
                                     field_prepare_actor_action(target);
@@ -864,7 +856,7 @@ s32 field_resolve_actor_movement(FieldActor* actor, s32* position, s32 mode)
              (actor->command == FIELD_ACTOR_COMMAND_LEAVE_PATH) || (g_field_active_group == 0) || (field_move_leaves_screen(actor, &delta) == 0)))
         {
             position[0] = mover->x;
-            if (((actor->animation & FIELD_ANIMATION_INDEX_MASK) == FIELD_ANIMATION_3D) && (actor->object_index < FIELD_PLAYER_COUNT))
+            if (((actor->animation & FIELD_ANIMATION_INDEX_MASK) == FIELD_ABILITY_DOUBLE_JUMP) && (actor->object_index < FIELD_PLAYER_COUNT))
             {
                 position[1] = position[1] + actor->y;
             }
@@ -1752,9 +1744,8 @@ void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* pa
             }
             command = target->command;
             if ((command == FIELD_ACTOR_COMMAND_TECHNIQUE) || (command == FIELD_ACTOR_COMMAND_DEFEAT_DELAY) || (command == FIELD_ACTOR_COMMAND_INSTRUMENT) ||
-                ((target_index < FIELD_PLAYER_COUNT) && ((target->animation & FIELD_ANIMATION_INDEX_MASK) == FIELD_ANIMATION_3C)) ||
-                (target->presence == FIELD_ACTOR_UNUSED) || (actor->owner_object_index == target_index) ||
-                (target_state->current_hp.word == 0))
+                ((target_index < FIELD_PLAYER_COUNT) && ((target->animation & FIELD_ANIMATION_INDEX_MASK) == FIELD_ABILITY_HIGH_JUMP)) ||
+                (target->presence == FIELD_ACTOR_UNUSED) || (actor->owner_object_index == target_index) || (target_state->current_hp.word == 0))
             {
                 continue;
             }

@@ -29,8 +29,6 @@
 
 /** @brief FieldObjectState::flags bit set on an object while another object is linked to it. */
 #define FIELD_OBJECT_FLAG_LINK_TARGET 0x2000
-/** @brief FieldObjectState::flags bit cleared when an action ends (placeholder name). */
-#define FIELD_OBJECT_FLAG_4000 0x4000
 /** @brief FieldObjectState::movement sequence bits cleared when an action ends. */
 #define FIELD_MOVEMENT_SEQUENCE_0800 0x0800
 #define FIELD_MOVEMENT_SEQUENCE_1000 0x1000
@@ -89,7 +87,7 @@ s32 field_update_actor_action(FieldActor* actor, s32 update_action)
     if (actor->animation_state == 0)
     {
         animation = actor->animation & FIELD_ANIMATION_INDEX_MASK;
-        if (animation == FIELD_ANIMATION_GUARD || animation == FIELD_ANIMATION_DEFENSELESS)
+        if (animation == FIELD_ABILITY_DEFEND || animation == FIELD_ABILITY_CROUCH)
         {
             if (g_field_object_states[actor->object_index].action < FIELD_BOUND_ACTION_COUNT)
             {
@@ -107,7 +105,7 @@ s32 field_update_actor_action(FieldActor* actor, s32 update_action)
             }
             g_field_object_states[g_field_object_states[actor->object_index].linked_object_index].flags &= ~FIELD_OBJECT_FLAG_LINK_TARGET;
         }
-        g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_FLAG_4000;
+        g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_FLAG_DASH;
         field_update_sequence_actor_binding(actor, 1);
         g_field_object_states[actor->object_index].movement.word &= ~(FIELD_MOVEMENT_SEQUENCE_0800 | FIELD_MOVEMENT_SEQUENCE_1000);
         animation = actor->animation & FIELD_ANIMATION_INDEX_MASK;
