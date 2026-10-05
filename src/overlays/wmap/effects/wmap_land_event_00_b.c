@@ -921,7 +921,7 @@ void wmap_land_event_00_b_sequence_12_step_02(void)
 
     func_8006AEE0();
     func_8008ECF8(0x14, 0x78, D_8011CF2C, (u8*)g_wmap_effect_params + 0x78);
-    func_8006534C(0x25, 5);
+    wmap_queue_texture_page(0x25, 5);
     timer = g_wmap_land_event_00_b_sequence_12_timer - 1;
     g_wmap_land_event_00_b_sequence_12_timer = timer;
     if (timer == 0)
@@ -944,7 +944,7 @@ void wmap_land_event_00_b_sequence_12_step_04(void)
 
     func_8006AEE0();
     func_8008ECF8(0x14, 0x78, D_8011CF2C, (u8*)g_wmap_effect_params + 0x78);
-    func_8006534C(0x25, 5);
+    wmap_queue_texture_page(0x25, 5);
     timer = g_wmap_land_event_00_b_sequence_12_timer - 1;
     g_wmap_land_event_00_b_sequence_12_timer = timer;
     if (timer == 0)

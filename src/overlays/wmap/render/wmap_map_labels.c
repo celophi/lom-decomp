@@ -127,7 +127,7 @@ void func_8005F9BC(void)
             }
             D_801391E8.r0 -= 8;
         }
-        func_8006534C(0xBC, 7);
+        wmap_queue_texture_page(0xBC, 7);
         func_80060230();
         sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
         *(s32*)&D_801398DC = D_80182DA4;
@@ -151,7 +151,7 @@ void func_8005F9BC(void)
                 g_wmap_current_frame->packet_cursor += sizeof(SPRT);
             }
         }
-        func_8006534C(0x3E, 7);
+        wmap_queue_texture_page(0x3E, 7);
         for (i = 0; i < 0x24; i++)
         {
             shade = (WmapShadeTriangle*)g_wmap_current_frame->packet_cursor;
@@ -165,7 +165,7 @@ void func_8005F9BC(void)
                 g_wmap_current_frame->packet_cursor += sizeof(WmapShadeTriangle);
             }
         }
-        func_8006534C(0x20, 8);
+        wmap_queue_texture_page(0x20, 8);
     }
 }
 
@@ -294,7 +294,7 @@ void func_80060230(void)
             g_wmap_packet_bytes += sizeof(SPRT);
             g_wmap_current_frame->packet_cursor += sizeof(SPRT);
         }
-        func_8006534C(D_8011CF78, 3);
+        wmap_queue_texture_page(D_8011CF78, 3);
     }
     fade = D_80182E08.r0;
     if (fade != 0)
@@ -312,7 +312,7 @@ void func_80060230(void)
                 g_wmap_packet_bytes += sizeof(SPRT);
                 g_wmap_current_frame->packet_cursor += sizeof(SPRT);
             }
-            func_8006534C(D_80182DD0, 3);
+            wmap_queue_texture_page(D_80182DD0, 3);
         }
     }
     if (g_wmap_auxiliary_label_draw_mode != g_wmap_auxiliary_label_mode)
@@ -346,7 +346,7 @@ void func_80060230(void)
             }
             char_index += 1;
         } while (D_80051A6C[g_wmap_auxiliary_label_draw_mode + 1] != char_index);
-        func_8006534C(0xB, 1);
+        wmap_queue_texture_page(0xB, 1);
     }
 }
 

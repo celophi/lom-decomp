@@ -517,7 +517,7 @@ void wmap_update_land_preview(void)
                     g_wmap_packet_bytes += sizeof(SPRT);
                     g_wmap_current_frame->packet_cursor += sizeof(SPRT);
                 }
-                func_8006534C(WMAP_ARTIFACT_TPAGE, WMAP_PREVIEW_FRONT_OT);
+                wmap_queue_texture_page(WMAP_ARTIFACT_TPAGE, WMAP_PREVIEW_FRONT_OT);
             }
 
             cell_x = (g_wmap_view.x / WMAP_CELL_SPACING) + g_wmap_cursor_column;

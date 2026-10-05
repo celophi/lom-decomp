@@ -417,7 +417,7 @@ void wmap_update_map_game(void)
         g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
     }
 
-    func_8006534C(0x55, 1);
+    wmap_queue_texture_page(0x55, 1);
 
     if (((g_wmap_game_displayed_score - g_wmap_game_score) >= 0) ? ((g_wmap_game_displayed_score - g_wmap_game_score) < 30)
                                                                  : ((g_wmap_game_score - g_wmap_game_displayed_score) < 30))
@@ -507,7 +507,7 @@ void wmap_update_map_game_prompt(void)
         g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
     }
 
-    func_8006534C(0x55, 1);
+    wmap_queue_texture_page(0x55, 1);
 }
 
 /**
@@ -551,7 +551,7 @@ void wmap_update_map_game_countdown(void)
         g_wmap_game_spawn_timer = WMAP_INITIAL_SPAWN_DELAY;
     }
 
-    func_8006534C(0x55, 1);
+    wmap_queue_texture_page(0x55, 1);
     func_8005FF88(-1);
 }
 
@@ -998,7 +998,7 @@ void wmap_draw_land_marker(s32 map_x, s32 map_y, WmapLandDisplay* marker)
         g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
     }
 
-    func_8006534C(type, depth);
+    wmap_queue_texture_page(type, depth);
 }
 
 /**
@@ -1440,7 +1440,7 @@ void wmap_draw_cell_effect(s32 x, s32 y)
         }
     }
 
-    func_8006534C(0xAE, 0xAE);
+    wmap_queue_texture_page(0xAE, 0xAE);
 }
 
 /**
@@ -1529,7 +1529,7 @@ void wmap_draw_spirit_icons(s32 selected_index)
         }
     }
 
-    func_8006534C(0x3D, 4);
+    wmap_queue_texture_page(0x3D, 4);
 }
 
 /**
@@ -1627,7 +1627,7 @@ void wmap_draw_spirit_levels(void)
         i++;
     } while (i < WMAP_SPIRIT_COUNT);
 
-    func_8006534C(0x3D, 1);
+    wmap_queue_texture_page(0x3D, 1);
 }
 
 /**
@@ -1713,7 +1713,7 @@ void wmap_draw_spirit_grid(s32 spirit_index)
         cur_y++;
     } while (cur_y < WMAP_GRID_SIZE);
 
-    func_8006534C(0x3D, 1);
+    wmap_queue_texture_page(0x3D, 1);
 }
 
 /** @brief Update map rendering and approach the requested fade intensity. */
@@ -1826,7 +1826,7 @@ void wmap_draw_information_labels(void)
             }
         }
     }
-    func_8006534C(59, 2);
+    wmap_queue_texture_page(59, 2);
 }
 
 /**

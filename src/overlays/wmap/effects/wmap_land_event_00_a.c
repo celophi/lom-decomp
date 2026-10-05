@@ -546,7 +546,7 @@ void wmap_land_event_00_a_sequence_4_step_02(void)
 {
     func_8006AEE0();
     func_8008ECF8(0x14, 0x78, D_8011CF2C, &g_wmap_effect_params[30]);
-    func_8006534C(0x25, 5);
+    wmap_queue_texture_page(0x25, 5);
     if (--g_wmap_land_event_00_a_sequence_4_timer == 0)
     {
         g_wmap_land_event_00_a_sequence_4_step += 1;
@@ -569,7 +569,7 @@ void wmap_land_event_00_a_sequence_4_step_04(void)
 {
     func_8006AEE0();
     func_8008ECF8(0x14, 0x78, D_8011CF2C, &g_wmap_effect_params[30]);
-    func_8006534C(0x25, 5);
+    wmap_queue_texture_page(0x25, 5);
     if (--g_wmap_land_event_00_a_sequence_4_timer == 0)
     {
         g_wmap_land_event_00_a_sequence_4_step += 1;

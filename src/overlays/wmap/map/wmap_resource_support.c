@@ -234,7 +234,7 @@ void func_800652F8(void)
  * @param texture_page GPU texture-page bits.
  * @param depth Ordering-table index.
  */
-void func_8006534C(s32 texture_page, s32 depth)
+void wmap_queue_texture_page(s32 texture_page, s32 depth)
 {
     WmapTexturedTriangle* primitive;
     WmapFrame* table_base;

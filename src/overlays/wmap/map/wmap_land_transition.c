@@ -503,6 +503,6 @@ void wmap_draw_artifact_carousel(void)
             }
         }
     }
-    func_8006534C(WMAP_ARTIFACT_TPAGE, WMAP_ARTIFACT_SHADOW_OT);
-    func_8006534C(WMAP_ARTIFACT_TPAGE, WMAP_ARTIFACT_OT);
+    wmap_queue_texture_page(WMAP_ARTIFACT_TPAGE, WMAP_ARTIFACT_SHADOW_OT);
+    wmap_queue_texture_page(WMAP_ARTIFACT_TPAGE, WMAP_ARTIFACT_OT);
 }
