@@ -35,8 +35,13 @@
 #define WMAP_MAP_CELL_SIZE 48
 #define WMAP_TRAVEL_CELL_SIZE 160
 #define WMAP_ACTOR_COUNT 256
-#define WMAP_MENU_ITEM_COUNT 6
 #define WMAP_MENU_ITEM_HEIGHT 16
+#define WMAP_MENU_CURSOR_STEP 4
+#define WMAP_MENU_OT_INDEX 1
+#define WMAP_MENU_SOUND_PAN 0x80
+#define WMAP_HELP_IMAGE_RESOURCE_BASE 0x114B
+#define WMAP_HELP_IMAGE_TPAGE 0xD5
+#define WMAP_HELP_CURSOR_TPAGE 0xB5
 #define WMAP_MENU_TRIANGLE_COUNT 28
 #define WMAP_BACKDROP_WRAP_WIDTH 640
 #define WMAP_BACKDROP_QUAD_WIDTH 160
@@ -80,6 +85,19 @@ enum WmapEntryResource
     WMAP_LAYOUT_IMAGE_RESOURCE_BASE = 0x14DE
 };
 
+
+/** @brief Help pages stored consecutively after WM/WHLP/HELPMENU.TIM. */
+enum WmapHelpPage
+{
+    WMAP_HELP_NOT_LOADED = -1,
+    WMAP_HELP_MENU = 0,
+    WMAP_HELP_DIRECTIONS = 1,
+    WMAP_HELP_MANA = 2,
+    WMAP_HELP_MANA_SPIRITS = 3,
+    WMAP_HELP_ELEMENTAL_PROPERTIES = 4,
+    WMAP_HELP_ENEMY_STRENGTH = 5,
+    WMAP_HELP_LAND_PLACEMENT = 6
+};
 
 /** @brief Soft-reset chord (select, start and all four shoulder buttons) and the D-pad bits. */
 #define WMAP_RESET_CHORD (PADselect | PADstart | PADL1 | PADL2 | PADR1 | PADR2)
@@ -226,7 +244,8 @@ extern POLY_FT4 g_wmap_screen_fade_quad;
 /** @brief Sprite template shared by menu and scripted input prompts. */
 extern SPRT g_wmap_prompt_sprite_template;
 extern WmapMenuTriangle g_wmap_menu_triangles[WMAP_MENU_TRIANGLE_COUNT];
-extern u8 D_8019D6E0;
+/** @brief TIM workspace shared by help pages and scripted prompt images. */
+extern TimPrefix g_wmap_help_image;
 extern s16* g_wmap_input_scripts[];
 /** @brief Textured quad shaded at each stage of world-map loading. */
 extern POLY_FT4 g_wmap_loading_quad;
@@ -403,10 +422,10 @@ void wmap_init_state(void)
     g_wmap_spirit_target_brightness = WMAP_FULL_BRIGHTNESS;
     g_wmap_map_controls_active = 1;
     g_wmap_script_prompt_visible = 0;
-    g_wmap_menu_selection = 1;
+    g_wmap_menu_selection = WMAP_HELP_DIRECTIONS;
     g_wmap_menu_cursor_y = 0;
-    g_wmap_menu_page = 0;
-    g_wmap_loaded_menu_page = -1;
+    g_wmap_menu_page = WMAP_HELP_MENU;
+    g_wmap_loaded_menu_page = WMAP_HELP_NOT_LOADED;
     wmap_init_label_sprites();
     wmap_start_mesh_transition(0);
     g_wmap_backdrop_tint.r = WMAP_FULL_BRIGHTNESS;
@@ -816,7 +835,7 @@ static inline void wmap_load_image_block(TimBlock* block)
 }
 
 /**
- * @brief Handle the Select menu and draw its cursor and current page.
+ * @brief Update the Select help menu and draw its cursor and current page.
  * @param buttons Raw controller buttons; unused. Input comes from the map button globals.
  */
 void wmap_update_menu(s32 buttons)
@@ -834,134 +853,132 @@ void wmap_update_menu(s32 buttons)
 
     if (g_wmap_buttons_repeat & PADselect)
     {
-        if (g_wmap_menu_page == 0)
+        if (g_wmap_menu_page == WMAP_HELP_MENU)
         {
             map_controls_active = g_wmap_map_controls_active == 0;
             g_wmap_map_controls_active = map_controls_active;
             if (map_controls_active != 0)
             {
-                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, 0x80, 0x7F);
+                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, WMAP_MENU_SOUND_PAN, AKAO_VOLUME_MAX);
             }
             else
             {
-                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_OPEN_MENU - 1], 0, 0x80, 0x7F);
+                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_OPEN_MENU - 1], 0, WMAP_MENU_SOUND_PAN, AKAO_VOLUME_MAX);
             }
         }
         else
         {
-            g_wmap_menu_page = 0;
-            akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, 0x80, 0x7F);
+            g_wmap_menu_page = WMAP_HELP_MENU;
+            akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, WMAP_MENU_SOUND_PAN, AKAO_VOLUME_MAX);
         }
         g_wmap_buttons_held = 0;
         g_wmap_buttons_repeat = 0;
     }
-    if (g_wmap_map_controls_active == 0)
+    if (g_wmap_map_controls_active != 0)
     {
-        previous_item = g_wmap_menu_selection - 1;
-        cursor_target_y = previous_item * WMAP_MENU_ITEM_HEIGHT;
-        if (cursor_target_y != g_wmap_menu_cursor_y)
+        return;
+    }
+    previous_item = g_wmap_menu_selection - 1;
+    cursor_target_y = previous_item * WMAP_MENU_ITEM_HEIGHT;
+    if (cursor_target_y != g_wmap_menu_cursor_y)
+    {
+        if (cursor_target_y < g_wmap_menu_cursor_y)
         {
-            if (cursor_target_y < g_wmap_menu_cursor_y)
-            {
-                g_wmap_menu_cursor_y -= 4;
-            }
-            else
-            {
-                g_wmap_menu_cursor_y += 4;
-            }
+            g_wmap_menu_cursor_y -= WMAP_MENU_CURSOR_STEP;
         }
         else
         {
-            if (g_wmap_menu_page == 0)
-            {
-                if (g_wmap_buttons_repeat & PADLup)
-                {
-                    g_wmap_menu_selection = previous_item;
-                    if (previous_item <= 0)
-                    {
-                        g_wmap_menu_selection = WMAP_MENU_ITEM_COUNT;
-                    }
-                    akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_CURSOR - 1], 0, 0x80, 0x7F);
-                }
-                if (g_wmap_buttons_repeat & PADLdown)
-                {
-                    next_item = g_wmap_menu_selection + 1;
-                    g_wmap_menu_selection = next_item;
-                    if (next_item > WMAP_MENU_ITEM_COUNT)
-                    {
-                        g_wmap_menu_selection = 1;
-                    }
-                    akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_CURSOR - 1], 0, 0x80, 0x7F);
-                }
-            }
-            if (g_wmap_buttons_repeat & WMAP_PAD_CONFIRM)
-            {
-                if (g_wmap_menu_page == 0)
-                {
-                    g_wmap_menu_page = g_wmap_menu_selection;
-                    akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_CONFIRM - 1], 0, 0x80, 0x7F);
-                }
-            }
-            if (g_wmap_buttons_repeat & WMAP_PAD_CANCEL)
-            {
-                if (g_wmap_menu_page == 0)
-                {
-                    g_wmap_map_controls_active = g_wmap_map_controls_active == 0;
-                    akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, 0x80, 0x7F);
-                    g_wmap_buttons_held = 0;
-                    g_wmap_buttons_repeat = 0;
-                    return;
-                }
-                g_wmap_menu_page = 0;
-                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, 0x80, 0x7F);
-            }
+            g_wmap_menu_cursor_y += WMAP_MENU_CURSOR_STEP;
         }
-        if (g_wmap_loaded_menu_page != g_wmap_menu_page)
-        {
-            image = (TimPrefix*)&D_8019D6E0;
-            g_wmap_loaded_menu_page = g_wmap_menu_page;
-            cdrom_queue_read(((u16)g_wmap_menu_page + 0x114B) & 0xFFFF, image);
-            image_block = &image->clut_block;
-            cdrom_wait_queue_empty();
-            wmap_load_image_block(&image->clut_block);
-            image_block = (TimBlock*)((u8*)image_block + image->clut_block.bnum);
-            wmap_load_image_block(image_block);
-            DrawSync(0);
-            g_wmap_artifact_shadows_enabled = 1;
-        }
-        if (g_wmap_menu_page == 0)
-        {
-            triangle_index = 0;
-            do
-            {
-                triangle_template = &g_wmap_menu_triangles[triangle_index];
-                triangle = (WmapMenuTriangle*)g_wmap_current_frame->packet_cursor;
-                *triangle = *triangle_template;
-                triangle->y0 = (u16)(triangle->y0 + (u16)g_wmap_menu_cursor_y);
-                triangle->y1 = (u16)(triangle->y1 + (u16)g_wmap_menu_cursor_y);
-                triangle->y2 = (u16)(triangle->y2 + (u16)g_wmap_menu_cursor_y);
-                addPrim(&g_wmap_current_frame->ordering_table[1], triangle);
-                if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
-                {
-                    g_wmap_packet_bytes += sizeof(WmapMenuTriangle);
-                    g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(WmapMenuTriangle);
-                }
-                triangle_index += 1;
-            } while (triangle_index < WMAP_MENU_TRIANGLE_COUNT);
-        }
-        func_8006534C(0xB5, 1);
-        sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
-        *sprite = g_wmap_prompt_sprite_template;
-        addPrim(&g_wmap_current_frame->ordering_table[1], sprite);
-        if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
-        {
-            g_wmap_packet_bytes += sizeof(SPRT);
-            g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(SPRT);
-        }
-        func_8006534C(0xD5, 1);
-        g_wmap_buttons_held = 0;
-        g_wmap_buttons_repeat = 0;
     }
+    else
+    {
+        /* Navigation resumes after the cursor reaches the selected row. */
+        if (g_wmap_menu_page == WMAP_HELP_MENU)
+        {
+            if (g_wmap_buttons_repeat & PADLup)
+            {
+                g_wmap_menu_selection = previous_item;
+                if (previous_item < WMAP_HELP_DIRECTIONS)
+                {
+                    g_wmap_menu_selection = WMAP_HELP_LAND_PLACEMENT;
+                }
+                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_CURSOR - 1], 0, WMAP_MENU_SOUND_PAN, AKAO_VOLUME_MAX);
+            }
+            if (g_wmap_buttons_repeat & PADLdown)
+            {
+                next_item = g_wmap_menu_selection + 1;
+                g_wmap_menu_selection = next_item;
+                if (next_item > WMAP_HELP_LAND_PLACEMENT)
+                {
+                    g_wmap_menu_selection = WMAP_HELP_DIRECTIONS;
+                }
+                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_CURSOR - 1], 0, WMAP_MENU_SOUND_PAN, AKAO_VOLUME_MAX);
+            }
+        }
+        if ((g_wmap_buttons_repeat & WMAP_PAD_CONFIRM) && g_wmap_menu_page == WMAP_HELP_MENU)
+        {
+            g_wmap_menu_page = g_wmap_menu_selection;
+            akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_CONFIRM - 1], 0, WMAP_MENU_SOUND_PAN, AKAO_VOLUME_MAX);
+        }
+        if (g_wmap_buttons_repeat & WMAP_PAD_CANCEL)
+        {
+            if (g_wmap_menu_page == WMAP_HELP_MENU)
+            {
+                g_wmap_map_controls_active = g_wmap_map_controls_active == 0;
+                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, WMAP_MENU_SOUND_PAN, AKAO_VOLUME_MAX);
+                g_wmap_buttons_held = 0;
+                g_wmap_buttons_repeat = 0;
+                return;
+            }
+            g_wmap_menu_page = WMAP_HELP_MENU;
+            akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, WMAP_MENU_SOUND_PAN, AKAO_VOLUME_MAX);
+        }
+    }
+    if (g_wmap_loaded_menu_page != g_wmap_menu_page)
+    {
+        image = &g_wmap_help_image;
+        g_wmap_loaded_menu_page = g_wmap_menu_page;
+        cdrom_queue_read((u16)(g_wmap_menu_page + WMAP_HELP_IMAGE_RESOURCE_BASE), image);
+        image_block = &image->clut_block;
+        cdrom_wait_queue_empty();
+        wmap_load_image_block(&image->clut_block);
+        image_block = TIM_NEXT_BLOCK(image_block);
+        wmap_load_image_block(image_block);
+        DrawSync(0);
+        g_wmap_artifact_shadows_enabled = 1;
+    }
+    if (g_wmap_menu_page == WMAP_HELP_MENU)
+    {
+        for (triangle_index = 0; triangle_index < WMAP_MENU_TRIANGLE_COUNT; triangle_index++)
+        {
+            triangle_template = &g_wmap_menu_triangles[triangle_index];
+            triangle = (WmapMenuTriangle*)g_wmap_current_frame->packet_cursor;
+            *triangle = *triangle_template;
+            triangle->y0 += g_wmap_menu_cursor_y;
+            triangle->y1 += g_wmap_menu_cursor_y;
+            triangle->y2 += g_wmap_menu_cursor_y;
+            addPrim(&g_wmap_current_frame->ordering_table[WMAP_MENU_OT_INDEX], triangle);
+            if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
+            {
+                g_wmap_packet_bytes += sizeof(WmapMenuTriangle);
+                g_wmap_current_frame->packet_cursor += sizeof(WmapMenuTriangle);
+            }
+        }
+    }
+    /* Prepending packets draws the subtractive image before the additive cursor. */
+    wmap_queue_texture_page(WMAP_HELP_CURSOR_TPAGE, WMAP_MENU_OT_INDEX);
+    sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+    *sprite = g_wmap_prompt_sprite_template;
+    addPrim(&g_wmap_current_frame->ordering_table[WMAP_MENU_OT_INDEX], sprite);
+    if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
+    {
+        g_wmap_packet_bytes += sizeof(SPRT);
+        g_wmap_current_frame->packet_cursor += sizeof(SPRT);
+    }
+    wmap_queue_texture_page(WMAP_HELP_IMAGE_TPAGE, WMAP_MENU_OT_INDEX);
+    g_wmap_buttons_held = 0;
+    g_wmap_buttons_repeat = 0;
 }
 
 /**
@@ -1059,7 +1076,7 @@ void wmap_step_input_script(void)
         case WMAP_SCRIPT_IMAGE:
             if (script[0] > 0)
             {
-                image = (TimPrefix*)&D_8019D6E0;
+                image = &g_wmap_help_image;
                 cdrom_queue_read((u16)script[0], image);
                 image_block = &image->clut_block;
                 cdrom_wait_queue_empty();
@@ -2012,7 +2029,7 @@ s32 wmap_run_loop(void)
                         g_wmap_packet_bytes = packet_bytes + sizeof(SPRT);
                         g_wmap_current_frame->packet_cursor += sizeof(SPRT);
                     }
-                    func_8006534C(0xD5, 1);
+                    wmap_queue_texture_page(0xD5, 1);
                 }
                 if (g_wmap_view_mode == WMAP_VIEW_MODE_MAP)
                 {
@@ -2333,10 +2350,10 @@ void wmap_reset_after_transition(void)
     g_wmap_spirit_target_brightness = 0x80;
     g_wmap_backdrop_target_level = 0x10;
     g_wmap_artifact_placement_frame = 0;
-    g_wmap_menu_page = 0;
+    g_wmap_menu_page = WMAP_HELP_MENU;
     g_wmap_menu_cursor_y = 0;
-    g_wmap_menu_selection = 1;
-    g_wmap_loaded_menu_page = -1;
+    g_wmap_menu_selection = WMAP_HELP_DIRECTIONS;
+    g_wmap_loaded_menu_page = WMAP_HELP_NOT_LOADED;
     g_wmap_map_button_mask = -1;
     akao_fade_song_volume_from(0, 0x1E, 1, 0x7F);
     g_wmap_artifact_shadows_enabled = 1;

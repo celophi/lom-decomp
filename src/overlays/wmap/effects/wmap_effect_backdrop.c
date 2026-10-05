@@ -150,7 +150,7 @@ void wmap_draw_transition_mesh(void)
             addPrim(&g_wmap_current_frame->ordering_table[WMAP_MESH_OT_INDEX], triangles);
             triangles++;
         }
-        func_8006534C(WMAP_MESH_TPAGE, WMAP_MESH_OT_INDEX);
+        wmap_queue_texture_page(WMAP_MESH_TPAGE, WMAP_MESH_OT_INDEX);
     }
 }
 

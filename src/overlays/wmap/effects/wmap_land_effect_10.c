@@ -866,6 +866,6 @@ WMAP_STEP_RESET(wmap_land_effect_10_sequence_11_reset, g_wmap_land_effect_10_seq
 /** @brief Draw the effect, select texture page 37, and update the sequence countdown. */
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_land_effect_10_sequence_11_step_02, g_wmap_land_effect_10_sequence_11_step, g_wmap_land_effect_10_sequence_11_timer,
                           func_8008ECF8(100, 150, g_wmap_effect_model_pack_3, (WmapSparkConfig*)&g_wmap_effect_params[30]),
-                          func_8006534C(0x25, 2))
+                          wmap_queue_texture_page(0x25, 2))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_10_sequence_11_end, g_wmap_land_effect_10_sequence_11_step)

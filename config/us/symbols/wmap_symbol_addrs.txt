@@ -1414,7 +1414,7 @@ D_80182E40 = 0x80182E40;
 D_8018B240 = 0x8018B240;
 D_80193640 = 0x80193640;
 g_wmap_land_image_load_locked = 0x8019D6D8;
-D_8019D6E0 = 0x8019D6E0;
+g_wmap_help_image = 0x8019D6E0;
 g_wmap_placement_overlay_hidden = 0x801ADAE0;
 D_801ADAE4 = 0x801ADAE4;
 g_wmap_land_event_10_active = 0x801ADAF0;
@@ -5689,3 +5689,5 @@ wmap_select_mesh_motion = 0x8006D8F0; // type:func size:0x28
 wmap_copy_words = 0x80064F1C; // type:func size:0x40
 
 wmap_land_effect_13_update_particles = 0x80074368; // type:func size:0x23C
+
+wmap_queue_texture_page = 0x8006534C; // type:func size:0xA0
