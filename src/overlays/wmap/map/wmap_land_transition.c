@@ -83,7 +83,6 @@ extern s32 g_wmap_view_mode;
 extern s32 g_wmap_view_scroll_mode;
 extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
-extern const s32 D_8005135C[];
 extern u16 D_800CC776;
 extern s32 D_800CCBF4[];
 extern WmapRouteCell D_8011D108[6][6];
@@ -202,10 +201,10 @@ void wmap_update_artifact_selection(void)
                 func_8005FF88(-1);
 
                 view_index = g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS;
-                first_frame = D_8005135C[view_index];
+                first_frame = g_wmap_preview_travel_frame_bounds[view_index];
                 g_wmap_preview_travel_frame = first_frame;
-                g_wmap_preview_travel_end = D_8005135C[view_index + 1] - 1;
-                wmap_select_mesh_motion(0, first_frame, D_8005135C);
+                g_wmap_preview_travel_end = g_wmap_preview_travel_frame_bounds[view_index + 1] - 1;
+                wmap_select_mesh_motion(0, first_frame, g_wmap_preview_travel_frame_bounds);
                 wmap_start_mesh_transition(1);
                 g_wmap_artifact_placement_active = 0;
                 g_wmap_artifact_transfer_frame = no_artifact;
@@ -271,8 +270,8 @@ void wmap_update_artifact_selection(void)
             func_8005FF88(-1);
             g_wmap_selection_phase = WMAP_SELECTION_SHOW_MAP;
             g_wmap_input_locked = 1;
-            g_wmap_preview_travel_frame = D_8005135C[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS + 1] - 1;
-            g_wmap_preview_travel_end = D_8005135C[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS];
+            g_wmap_preview_travel_frame = g_wmap_preview_travel_frame_bounds[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS + 1] - 1;
+            g_wmap_preview_travel_end = g_wmap_preview_travel_frame_bounds[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS];
             wmap_start_mesh_transition(0);
             g_wmap_selected_artifact = -1;
             g_wmap_preview_artifact_visible = 0;
@@ -329,8 +328,8 @@ void wmap_update_artifact_selection(void)
                 g_wmap_buttons_repeat = 0;
                 g_wmap_artifact_transfer_frame = D_800CCBF4[g_wmap_selected_artifact];
                 g_wmap_artifact_transfer_end = D_800CCBF4[g_wmap_selected_artifact + 1] - 1;
-                g_wmap_preview_travel_frame = D_8005135C[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS + 1] - 1;
-                g_wmap_preview_travel_end = D_8005135C[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS];
+                g_wmap_preview_travel_frame = g_wmap_preview_travel_frame_bounds[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS + 1] - 1;
+                g_wmap_preview_travel_end = g_wmap_preview_travel_frame_bounds[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS];
                 wmap_start_mesh_transition(0);
                 func_800A89DC(g_wmap_selected_artifact);
             }

@@ -11,7 +11,7 @@ void func_8005B540(void)
 }
 
 /** @brief Initialize 16 black, semitransparent two-point line packets. */
-void func_8005B548(void)
+void wmap_init_preview_lines(void)
 {
     s32 index;
     for (index = 0; index < 16; index++)

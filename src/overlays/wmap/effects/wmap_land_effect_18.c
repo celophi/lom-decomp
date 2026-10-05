@@ -77,7 +77,6 @@ extern void (*D_800D4C54[])(void);
 extern u32 g_wmap_selected_artifact;
 extern s32 g_wmap_land_effect_18_sequence_8_timer;
 extern void (*D_800D4D7C[])(void);
-extern SVECTOR D_801398C8;
 extern s16 D_801398CC;
 extern void (*D_800D4D94[])(void);
 extern void (*D_800D4DA4[])(void);
@@ -974,7 +973,7 @@ void wmap_land_effect_18_sequence_8_step_01(void)
 void wmap_land_effect_18_sequence_8_step_02(void)
 {
     s32 remaining_ticks;
-    D_801398C8.vz = (u16)(D_801398C8.vz + D_801B248C);
+    g_wmap_effect_camera_rotation_offset.vz = (u16)(g_wmap_effect_camera_rotation_offset.vz + D_801B248C);
     remaining_ticks = g_wmap_land_effect_18_sequence_8_timer - 1;
     g_wmap_land_effect_18_sequence_8_timer = remaining_ticks;
     if (remaining_ticks == 0)
@@ -997,7 +996,7 @@ void wmap_land_effect_18_sequence_8_step_04(void)
     {
         D_801B248C = 0;
     }
-    D_801398C8.vz = (u16)(D_801398C8.vz + (u16)D_801B248C);
+    g_wmap_effect_camera_rotation_offset.vz = (u16)(g_wmap_effect_camera_rotation_offset.vz + (u16)D_801B248C);
     remaining_ticks = g_wmap_land_effect_18_sequence_8_timer - 1;
     g_wmap_land_effect_18_sequence_8_timer = remaining_ticks;
     if (remaining_ticks == 0)

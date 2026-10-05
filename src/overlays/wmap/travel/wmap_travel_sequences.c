@@ -99,7 +99,6 @@ extern WmapAnimationSlot g_wmap_vehicle_animation;
 extern u8 g_wmap_animation_bank_0[];
 extern s32 g_wmap_vehicle_bank_flipped;
 extern MATRIX D_8011D0E8;
-extern s32 D_80139224;
 extern WmapScreenPosition g_wmap_vehicle_screen_position;
 extern u8 D_80182E40[];
 extern u8 D_8018B240[];
@@ -118,7 +117,6 @@ extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
 extern WmapView g_wmap_view;
 extern WmapView g_wmap_saved_view;
-extern s32 D_800DCEC0;
 extern s32 D_8013B288;
 
 extern u32 g_wmap_special_travel_step;
@@ -176,7 +174,7 @@ static inline void wmap_load_vehicle(void)
     g_wmap_vehicle_bank_flipped = 0;
     g_wmap_event_active = 1;
     func_8005FF88(-1);
-    D_800DCEC0 = 0;
+    g_wmap_land_label_updates_enabled = 0;
     g_wmap_saved_view = g_wmap_view;
     cdrom_queue_read(WMAP_VEHICLE_BANK_FILE, g_wmap_animation_bank_0);
     cdrom_queue_read(WMAP_VEHICLE_BANK_FILE_2, g_wmap_animation_bank_0 + WMAP_VEHICLE_BANK_SIZE);
@@ -330,7 +328,7 @@ s32 wmap_draw_vehicle(s32 initialize)
     gte_ldv0(&position);
     gte_rtps();
     animation_frame = wmap_step_actor_animation(actor, &g_wmap_vehicle_animation);
-    if (D_80139224 != 0)
+    if (g_wmap_vehicle_flap_sound_enabled != 0)
     {
         if (animation_frame == 12 || animation_frame == 22 || animation_frame == 0)
         {
@@ -620,7 +618,7 @@ WMAP_STEP_RESET(wmap_special_travel_reset, g_wmap_special_travel_step, g_wmap_sp
 /** @brief Special travel step 1: lock input, save the view and load the vehicle. */
 void wmap_special_travel_prepare(void)
 {
-    D_80139224 = 1;
+    g_wmap_vehicle_flap_sound_enabled = 1;
     wmap_load_vehicle();
     g_wmap_special_travel_timer = 1;
     g_wmap_special_travel_step += 1;

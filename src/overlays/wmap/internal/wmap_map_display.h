@@ -3,6 +3,17 @@
 
 #include "common.h"
 
+#define WMAP_FULL_BRIGHTNESS 128
+#define WMAP_GAME_RETRY_DELAY 60
+
+/** @brief Visibility limit applied to map lands. */
+enum WmapLandDisplayMode
+{
+    WMAP_LAND_DISPLAY_HIDDEN = 0,
+    WMAP_LAND_DISPLAY_MARKER = 1,
+    WMAP_LAND_DISPLAY_ANIMATED = 2
+};
+
 /** @brief A land's display mode, sprite animation, and map-game timer. */
 typedef struct
 {

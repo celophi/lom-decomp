@@ -12,6 +12,8 @@
 
 #define WMAP_CELL_SPACING 48
 #define WMAP_VIEW_COLUMNS 3
+#define WMAP_PREVIEW_FRAME_BOUND_COUNT (WMAP_VIEW_COLUMNS * WMAP_VIEW_COLUMNS + 1)
+#define WMAP_PREVIEW_CENTER_CELL_INDEX (WMAP_VIEW_COLUMNS * WMAP_VIEW_COLUMNS / 2)
 #define WMAP_ARTIFACT_TPAGE 0xAE
 #define WMAP_ARTIFACT_CLUT 0x7FEC
 #define WMAP_NO_ARTIFACT (-1)
@@ -24,7 +26,6 @@ enum WmapCarouselMode
     WMAP_CAROUSEL_SLIDE_IN,
     WMAP_CAROUSEL_HIDDEN
 };
-
 
 /** @brief Map selection panel animation phases. */
 enum WmapSelectionPhase
@@ -74,5 +75,8 @@ void wmap_draw_artifact_carousel(void);
 extern s32 g_wmap_selection_phase;
 /** @brief Visibility and slide direction of the artifact carousel. */
 extern s32 g_wmap_carousel_mode;
+
+/** @brief Preview travel-frame boundaries for the nine map view cells. */
+extern const s32 g_wmap_preview_travel_frame_bounds[WMAP_PREVIEW_FRAME_BOUND_COUNT];
 
 #endif

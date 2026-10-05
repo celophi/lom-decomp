@@ -51,8 +51,6 @@ extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_22_sequence_2_timer;
 extern s32 g_wmap_land_effect_22_sequence_4_timer;
 extern int rand(void);
-extern s16 D_801398C8[];
-extern s32 D_80182D48[];
 extern s32 D_80139268;
 extern s32 g_wmap_land_effect_22_sequence_6_timer;
 extern s32* D_8011CF2C;
@@ -154,10 +152,10 @@ WMAP_STEP_DROP_UPDATE(wmap_land_effect_22_sequence_4_step_02,
  */
 void wmap_land_effect_22_sequence_6_step_02(void)
 {
-    D_801398C8[0] = rand() * D_80139268 / 16 >> 15;
-    D_801398C8[1] = rand() * D_80139268 / 16 >> 15;
-    D_80182D48[0] = rand() * D_80139268 / 16 >> 15;
-    D_80182D48[1] = rand() * D_80139268 / 16 >> 15;
+    g_wmap_effect_camera_rotation_offset.vx = rand() * D_80139268 / 16 >> 15;
+    g_wmap_effect_camera_rotation_offset.vy = rand() * D_80139268 / 16 >> 15;
+    g_wmap_effect_camera_translation_offset.vx = rand() * D_80139268 / 16 >> 15;
+    g_wmap_effect_camera_translation_offset.vy = rand() * D_80139268 / 16 >> 15;
     if (D_80139268 < 0x80)
     {
         D_80139268 += 4;
@@ -174,16 +172,16 @@ void wmap_land_effect_22_sequence_6_step_02(void)
  */
 void wmap_land_effect_22_sequence_6_step_04(void)
 {
-    D_801398C8[0] = rand() * D_80139268 / 16 >> 15;
-    D_801398C8[1] = rand() * D_80139268 / 16 >> 15;
-    D_80182D48[0] = rand() * D_80139268 / 16 >> 15;
-    D_80182D48[1] = rand() * D_80139268 / 16 >> 15;
+    g_wmap_effect_camera_rotation_offset.vx = rand() * D_80139268 / 16 >> 15;
+    g_wmap_effect_camera_rotation_offset.vy = rand() * D_80139268 / 16 >> 15;
+    g_wmap_effect_camera_translation_offset.vx = rand() * D_80139268 / 16 >> 15;
+    g_wmap_effect_camera_translation_offset.vy = rand() * D_80139268 / 16 >> 15;
     if (--D_80139268 < 0)
     {
-        D_80182D48[1] = 0;
-        D_80182D48[0] = 0;
-        D_801398C8[1] = 0;
-        D_801398C8[0] = 0;
+        g_wmap_effect_camera_translation_offset.vy = 0;
+        g_wmap_effect_camera_translation_offset.vx = 0;
+        g_wmap_effect_camera_rotation_offset.vy = 0;
+        g_wmap_effect_camera_rotation_offset.vx = 0;
         g_wmap_land_effect_22_sequence_6_step += 1;
     }
     else if (--g_wmap_land_effect_22_sequence_6_timer == 0)
@@ -614,10 +612,10 @@ WMAP_STEP_ARM_TIMER(wmap_land_effect_22_sequence_6_step_03, g_wmap_land_effect_2
  */
 void wmap_land_effect_22_sequence_6_step_05(void)
 {
-    D_80182D48[1] = 0;
-    D_80182D48[0] = 0;
-    D_801398C8[1] = 0;
-    D_801398C8[0] = 0;
+    g_wmap_effect_camera_translation_offset.vy = 0;
+    g_wmap_effect_camera_translation_offset.vx = 0;
+    g_wmap_effect_camera_rotation_offset.vy = 0;
+    g_wmap_effect_camera_rotation_offset.vx = 0;
     g_wmap_land_effect_22_sequence_6_step += 1;
 }
 

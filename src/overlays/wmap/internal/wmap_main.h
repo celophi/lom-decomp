@@ -2,6 +2,7 @@
 #define WMAP_MAIN_H
 
 #include "overlays/wmap/world_map.h"
+#include <libgpu.h>
 #include "main/controller_internal.h"
 
 /** @brief Controller ports used for world-map input and vibration commands. */
@@ -96,5 +97,14 @@ extern s32 g_wmap_land_event_27_pending;
 extern s32 g_wmap_land_event_24_pending;
 /** @brief Land-event flag 10 selects the alternate event-00 sequence. */
 extern s32 g_wmap_land_event_10_active;
+
+/** @brief Template for the four-corner backdrop gradient. */
+extern POLY_G4 g_wmap_backdrop_gradient_template;
+
+/** @brief Backdrop gradient whose vertex colors approach their targets. */
+extern POLY_G4 g_wmap_backdrop_gradient;
+
+/** @brief Nonzero to start the special return sequence after party setup. */
+extern s32 g_wmap_special_return_pending;
 
 #endif

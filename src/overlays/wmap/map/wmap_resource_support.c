@@ -257,7 +257,7 @@ void func_8006534C(s32 texture_page, s32 depth)
 }
 
 /** @brief Initialize the 256 resource and display records. */
-void func_800653EC(void)
+void wmap_init_actor_display_states(void)
 {
     s32 index;
     for (index = 0; index < 256; index++)

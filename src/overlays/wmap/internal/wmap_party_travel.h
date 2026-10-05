@@ -60,4 +60,7 @@ extern s32 g_wmap_third_traveler_enabled;
 /** @brief Saved entry day; nonzero selects the alternate first-traveler sprite. */
 extern s32 g_wmap_entry_day;
 
+/** @brief Nonzero to play flap sounds on vehicle wing animation frames. */
+extern s32 g_wmap_vehicle_flap_sound_enabled;
+
 #endif

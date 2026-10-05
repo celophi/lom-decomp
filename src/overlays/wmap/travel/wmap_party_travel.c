@@ -79,7 +79,6 @@ extern u8 D_800DC298[];
 extern u8 D_800DC698[];
 extern s32 g_wmap_cursor_column;
 extern s32 g_wmap_cursor_row;
-extern s32 D_8011CF20;
 extern s32 g_wmap_sequence_count;
 extern s32 g_wmap_view_mode;
 extern s32 g_wmap_view_scroll_mode;
@@ -386,7 +385,7 @@ void wmap_init_party_travel(void)
         g_wmap_buttons_repeat = 0;
         g_wmap_status_panel_mode = 3;
         g_wmap_carousel_mode = 3;
-        D_8011CF20 = 1;
+        g_wmap_special_return_pending = 1;
         g_wmap_sprite_actors[0].resource_index = -1;
         g_wmap_pending_event_count++;
     }

@@ -1,3 +1,4 @@
+#include "../internal/wmap_view_effects.h"
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_effect_primitives.h"
 #include <inline_c.h>
@@ -37,9 +38,7 @@ extern s32 D_8013B284;
 extern WmapMotion g_wmap_actor_motions[];
 extern s32 g_wmap_particle_intensity;
 extern SVECTOR g_wmap_camera_rotation;
-extern SVECTOR D_801398C8;
 extern VECTOR g_wmap_camera_translation;
-extern VECTOR D_80182D48;
 extern MATRIX D_8011D0E8;
 extern u16 D_80139980;
 extern WmapAnimationSlot g_wmap_actor_animations[];
@@ -451,12 +450,12 @@ void func_8006ADD0(VECTOR* translation, SVECTOR* rotation)
     SVECTOR combined_rotation;
     VECTOR combined_translation;
 
-    combined_rotation.vx = g_wmap_camera_rotation.vx + D_801398C8.vx;
-    combined_rotation.vy = g_wmap_camera_rotation.vy + D_801398C8.vy;
-    combined_rotation.vz = g_wmap_camera_rotation.vz + D_801398C8.vz;
-    combined_translation.vx = g_wmap_camera_translation.vx + D_80182D48.vx;
-    combined_translation.vy = g_wmap_camera_translation.vy + D_80182D48.vy;
-    combined_translation.vz = g_wmap_camera_translation.vz + D_80182D48.vz;
+    combined_rotation.vx = g_wmap_camera_rotation.vx + g_wmap_effect_camera_rotation_offset.vx;
+    combined_rotation.vy = g_wmap_camera_rotation.vy + g_wmap_effect_camera_rotation_offset.vy;
+    combined_rotation.vz = g_wmap_camera_rotation.vz + g_wmap_effect_camera_rotation_offset.vz;
+    combined_translation.vx = g_wmap_camera_translation.vx + g_wmap_effect_camera_translation_offset.vx;
+    combined_translation.vy = g_wmap_camera_translation.vy + g_wmap_effect_camera_translation_offset.vy;
+    combined_translation.vz = g_wmap_camera_translation.vz + g_wmap_effect_camera_translation_offset.vz;
     RotMatrix(&combined_rotation, &base);
     TransMatrix(&base, translation);
     SetRotMatrix(&base);
@@ -474,12 +473,12 @@ void func_8006AEE0(void)
     SVECTOR rotation;
     VECTOR translation;
 
-    rotation.vx = g_wmap_camera_rotation.vx + D_801398C8.vx;
-    rotation.vy = g_wmap_camera_rotation.vy + D_801398C8.vy;
-    rotation.vz = g_wmap_camera_rotation.vz + D_801398C8.vz;
-    translation.vx = g_wmap_camera_translation.vx + D_80182D48.vx;
-    translation.vy = g_wmap_camera_translation.vy + D_80182D48.vy;
-    translation.vz = g_wmap_camera_translation.vz + D_80182D48.vz;
+    rotation.vx = g_wmap_camera_rotation.vx + g_wmap_effect_camera_rotation_offset.vx;
+    rotation.vy = g_wmap_camera_rotation.vy + g_wmap_effect_camera_rotation_offset.vy;
+    rotation.vz = g_wmap_camera_rotation.vz + g_wmap_effect_camera_rotation_offset.vz;
+    translation.vx = g_wmap_camera_translation.vx + g_wmap_effect_camera_translation_offset.vx;
+    translation.vy = g_wmap_camera_translation.vy + g_wmap_effect_camera_translation_offset.vy;
+    translation.vz = g_wmap_camera_translation.vz + g_wmap_effect_camera_translation_offset.vz;
     RotMatrix(&rotation, &D_8011D0E8);
     TransMatrix(&D_8011D0E8, &translation);
     SetRotMatrix(&D_8011D0E8);
@@ -1061,69 +1060,69 @@ s32 func_8006C0EC(void)
               (s32)M2C_FIELD(&g_wmap_view, s32*, 8));
     gte_ldv0(&position);
     gte_rtps();
-    if (M2C_FIELD(&D_800DCEB8, s16*, 0) != D_801398C8.vx)
+    if (M2C_FIELD(&D_800DCEB8, s16*, 0) != g_wmap_effect_camera_rotation_offset.vx)
     {
-        if (M2C_FIELD(&D_800DCEB8, s16*, 0) < D_801398C8.vx)
+        if (M2C_FIELD(&D_800DCEB8, s16*, 0) < g_wmap_effect_camera_rotation_offset.vx)
         {
-            D_801398C8.vx = (u16)D_801398C8.vx - D_80139210;
+            g_wmap_effect_camera_rotation_offset.vx = (u16)g_wmap_effect_camera_rotation_offset.vx - D_80139210;
         }
         else
         {
-            D_801398C8.vx = (u16)D_801398C8.vx + D_80139210;
+            g_wmap_effect_camera_rotation_offset.vx = (u16)g_wmap_effect_camera_rotation_offset.vx + D_80139210;
         }
     }
-    if (D_800DCEBA != D_801398C8.vy)
+    if (D_800DCEBA != g_wmap_effect_camera_rotation_offset.vy)
     {
-        if (D_800DCEBA < D_801398C8.vy)
+        if (D_800DCEBA < g_wmap_effect_camera_rotation_offset.vy)
         {
-            D_801398C8.vy = (u16)D_801398C8.vy - D_80139212;
+            g_wmap_effect_camera_rotation_offset.vy = (u16)g_wmap_effect_camera_rotation_offset.vy - D_80139212;
         }
         else
         {
-            D_801398C8.vy = (u16)D_801398C8.vy + D_80139212;
+            g_wmap_effect_camera_rotation_offset.vy = (u16)g_wmap_effect_camera_rotation_offset.vy + D_80139212;
         }
     }
-    if (D_800DCEBC != D_801398C8.vz)
+    if (D_800DCEBC != g_wmap_effect_camera_rotation_offset.vz)
     {
-        if (D_800DCEBC < D_801398C8.vz)
+        if (D_800DCEBC < g_wmap_effect_camera_rotation_offset.vz)
         {
-            D_801398C8.vz = (u16)D_801398C8.vz - D_80139214;
+            g_wmap_effect_camera_rotation_offset.vz = (u16)g_wmap_effect_camera_rotation_offset.vz - D_80139214;
         }
         else
         {
-            D_801398C8.vz = (u16)D_801398C8.vz + D_80139214;
+            g_wmap_effect_camera_rotation_offset.vz = (u16)g_wmap_effect_camera_rotation_offset.vz + D_80139214;
         }
     }
-    if (M2C_FIELD(&D_80139200, s32*, 0) != D_80182D48.vx)
+    if (M2C_FIELD(&D_80139200, s32*, 0) != g_wmap_effect_camera_translation_offset.vx)
     {
-        if (M2C_FIELD(&D_80139200, s32*, 0) < D_80182D48.vx)
+        if (M2C_FIELD(&D_80139200, s32*, 0) < g_wmap_effect_camera_translation_offset.vx)
         {
-            D_80182D48.vx = D_80182D48.vx - D_80139968;
+            g_wmap_effect_camera_translation_offset.vx = g_wmap_effect_camera_translation_offset.vx - D_80139968;
         }
         else
         {
-            D_80182D48.vx = D_80182D48.vx + D_80139968;
+            g_wmap_effect_camera_translation_offset.vx = g_wmap_effect_camera_translation_offset.vx + D_80139968;
         }
     }
-    if (D_80139204 != D_80182D48.vy)
+    if (D_80139204 != g_wmap_effect_camera_translation_offset.vy)
     {
-        if (D_80139204 < D_80182D48.vy)
+        if (D_80139204 < g_wmap_effect_camera_translation_offset.vy)
         {
-            D_80182D48.vy = D_80182D48.vy - D_8013996C;
+            g_wmap_effect_camera_translation_offset.vy = g_wmap_effect_camera_translation_offset.vy - D_8013996C;
         }
         else
         {
-            D_80182D48.vy = D_80182D48.vy + D_8013996C;
+            g_wmap_effect_camera_translation_offset.vy = g_wmap_effect_camera_translation_offset.vy + D_8013996C;
         }
     }
     if (D_8013B29C == 0)
     {
-        D_801398C8.vx = 0;
-        D_801398C8.vy = 0;
-        D_801398C8.vz = 0;
-        D_80182D48.vx = 0;
-        D_80182D48.vy = 0;
-        D_80182D48.vz = 0;
+        g_wmap_effect_camera_rotation_offset.vx = 0;
+        g_wmap_effect_camera_rotation_offset.vy = 0;
+        g_wmap_effect_camera_rotation_offset.vz = 0;
+        g_wmap_effect_camera_translation_offset.vx = 0;
+        g_wmap_effect_camera_translation_offset.vy = 0;
+        g_wmap_effect_camera_translation_offset.vz = 0;
         M2C_FIELD(&D_80139200, s32*, 0) = 0;
         M2C_FIELD(&D_80139200, s32*, 4) = 0;
         M2C_FIELD(&D_80139200, s32*, 8) = 0;

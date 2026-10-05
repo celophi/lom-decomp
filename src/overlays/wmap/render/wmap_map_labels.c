@@ -44,7 +44,6 @@ extern s32 D_801ADAE4;
 extern s32 D_80051A6C[];
 extern u8 D_800D03EC;
 extern u8 D_800D040C;
-extern s32 D_8013B28C;
 extern SPRT D_80051A30;
 extern SPRT D_80051A44;
 extern s8 D_80182E0C;
@@ -316,13 +315,13 @@ void func_80060230(void)
             func_8006534C(D_80182DD0, 3);
         }
     }
-    if (D_8013B28C != g_wmap_auxiliary_label_mode)
+    if (g_wmap_auxiliary_label_draw_mode != g_wmap_auxiliary_label_mode)
     {
-        D_8013B28C = g_wmap_auxiliary_label_mode;
+        g_wmap_auxiliary_label_draw_mode = g_wmap_auxiliary_label_mode;
     }
     if (g_wmap_auxiliary_labels_hidden == 0)
     {
-        char_index = D_80051A6C[D_8013B28C];
+        char_index = D_80051A6C[g_wmap_auxiliary_label_draw_mode];
         do
         {
             SPRT* glyph_sprite;
@@ -346,7 +345,7 @@ void func_80060230(void)
                 g_wmap_current_frame->packet_cursor += sizeof(SPRT);
             }
             char_index += 1;
-        } while (D_80051A6C[D_8013B28C + 1] != char_index);
+        } while (D_80051A6C[g_wmap_auxiliary_label_draw_mode + 1] != char_index);
         func_8006534C(0xB, 1);
     }
 }
@@ -354,7 +353,7 @@ void func_80060230(void)
 /**
  * @brief Restore map sprite templates and reset the display selection.
  */
-void func_800605B4(void)
+void wmap_init_label_sprites(void)
 {
     D_8011D518 = D_80051A1C;
     D_80182DA0 = D_80051A44;

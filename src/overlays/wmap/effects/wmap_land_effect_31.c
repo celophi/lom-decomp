@@ -88,11 +88,6 @@ typedef struct
 
 typedef struct
 {
-    s32 words[9];
-} WmapBlock36;
-
-typedef struct
-{
     s32 field_00;
     s32 field_04;
     s32 field_08;
@@ -146,8 +141,6 @@ extern WmapHandler D_800D769C[];
 extern WmapHandler D_800D76AC[];
 extern WmapHandler D_800D76C4[];
 extern WmapHandler D_800D76DC[];
-extern WmapBlock36 D_800D06BC;
-extern WmapBlock36 D_800D9240;
 extern WmapShort3 D_800DCEB8;
 extern s32 g_wmap_load_buffer[];
 extern s32* g_wmap_effect_model_pack_1;
@@ -406,7 +399,7 @@ void wmap_land_effect_31_timeline_step_41(void)
     D_80182D94.field_00 = 0;
     D_80182D94.field_01 = 0;
     D_80182D94.field_02 = 0;
-    D_800D9240 = D_800D06BC;
+    g_wmap_backdrop_gradient = g_wmap_backdrop_gradient_template;
     g_wmap_land_effect_31_timeline_timer = 0x78;
     g_wmap_land_effect_31_timeline_step++;
 }

@@ -121,7 +121,7 @@ TABLES = (
     spec("g_wmap_backdrop_front_quads", POLY_FT4, 4, "Front backdrop layer quads."),
     spec("g_wmap_backdrop_back_quads", POLY_FT4, 4, "Back backdrop layer quads."),
     spec("D_800D0694", POLY_FT4, 1, "Fade quad; the code steps its colour, and tests r0 through D_800D0698."),
-    spec("D_800D06BC", POLY_G4, 1, "Gradient quad copied into the backdrop state."),
+    spec("g_wmap_backdrop_gradient_template", POLY_G4, 1, "Gradient quad copied into the backdrop state."),
     TableSpec("g_wmap_backdrop_scroll", "i", 1, note="Backdrop scroll offset; zero on disc."),
     spec("g_wmap_prompt_sprite_template", SPRT, 1, "Prompt sprite template."),
     spec("g_wmap_menu_triangles", POLY_G3, 28, "Gouraud triangles of the menu cursor."),

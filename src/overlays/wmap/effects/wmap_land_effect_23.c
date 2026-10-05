@@ -136,9 +136,7 @@ extern s32* g_wmap_effect_params;
 extern WmapSlot14 g_wmap_actor_motions[];
 
 extern VECTOR g_wmap_camera_translation;
-extern VECTOR D_80182D48;
 
-extern SVECTOR D_801398C8;
 
 /** @brief Move the model closer and fade it until the timer expires. */
 WMAP_STEP_DROP_UPDATE(wmap_land_effect_23_sequence_2_step_02,
@@ -349,10 +347,10 @@ void wmap_land_effect_23_sequence_13_step_01(void)
  */
 void wmap_land_effect_23_sequence_14_step_02(void)
 {
-    D_801398C8.vx = rand() * D_80139264 / 16 >> 15;
-    D_801398C8.vy = rand() * D_80139264 / 16 >> 15;
-    D_80182D48.vx = rand() * D_80139264 / 16 >> 15;
-    D_80182D48.vy = rand() * D_80139264 / 16 >> 15;
+    g_wmap_effect_camera_rotation_offset.vx = rand() * D_80139264 / 16 >> 15;
+    g_wmap_effect_camera_rotation_offset.vy = rand() * D_80139264 / 16 >> 15;
+    g_wmap_effect_camera_translation_offset.vx = rand() * D_80139264 / 16 >> 15;
+    g_wmap_effect_camera_translation_offset.vy = rand() * D_80139264 / 16 >> 15;
     if (D_80139264 < 0x80)
     {
         D_80139264 += 4;
@@ -369,16 +367,16 @@ void wmap_land_effect_23_sequence_14_step_02(void)
  */
 void wmap_land_effect_23_sequence_14_step_04(void)
 {
-    D_801398C8.vx = rand() * D_80139264 / 16 >> 15;
-    D_801398C8.vy = rand() * D_80139264 / 16 >> 15;
-    D_80182D48.vx = rand() * D_80139264 / 16 >> 15;
-    D_80182D48.vy = rand() * D_80139264 / 16 >> 15;
+    g_wmap_effect_camera_rotation_offset.vx = rand() * D_80139264 / 16 >> 15;
+    g_wmap_effect_camera_rotation_offset.vy = rand() * D_80139264 / 16 >> 15;
+    g_wmap_effect_camera_translation_offset.vx = rand() * D_80139264 / 16 >> 15;
+    g_wmap_effect_camera_translation_offset.vy = rand() * D_80139264 / 16 >> 15;
     if (--D_80139264 < 0)
     {
-        D_80182D48.vy = 0;
-        D_80182D48.vx = 0;
-        D_801398C8.vy = 0;
-        D_801398C8.vx = 0;
+        g_wmap_effect_camera_translation_offset.vy = 0;
+        g_wmap_effect_camera_translation_offset.vx = 0;
+        g_wmap_effect_camera_rotation_offset.vy = 0;
+        g_wmap_effect_camera_rotation_offset.vx = 0;
         g_wmap_land_effect_23_sequence_14_step += 1;
     }
     else if (--g_wmap_land_effect_23_sequence_14_timer == 0)
@@ -985,9 +983,9 @@ WMAP_STEP_ARM_TIMER(wmap_land_effect_23_sequence_14_step_03, g_wmap_land_effect_
  */
 void wmap_land_effect_23_sequence_14_step_05(void)
 {
-    D_80182D48.vy = 0;
-    D_80182D48.vx = 0;
-    D_801398C8.vy = 0;
-    D_801398C8.vx = 0;
+    g_wmap_effect_camera_translation_offset.vy = 0;
+    g_wmap_effect_camera_translation_offset.vx = 0;
+    g_wmap_effect_camera_rotation_offset.vy = 0;
+    g_wmap_effect_camera_rotation_offset.vx = 0;
     g_wmap_land_effect_23_sequence_14_step += 1;
 }

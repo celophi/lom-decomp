@@ -2,6 +2,7 @@
 #define WMAP_VIEW_EFFECTS_H
 
 #include "common.h"
+#include <libgte.h>
 
 /** @brief g_wmap_view_mode values. */
 #define WMAP_VIEW_MODE_HIDDEN (-1)
@@ -22,5 +23,11 @@ s32 wmap_update_burst_particles(void);
 void wmap_init_burst_particles(void);
 void wmap_begin_cell_focus(void);
 void wmap_project_focus_position(void);
+
+/** @brief Rotation added to the camera while projecting lands and effects. */
+extern SVECTOR g_wmap_effect_camera_rotation_offset;
+
+/** @brief Translation added to the camera while projecting lands and effects. */
+extern VECTOR g_wmap_effect_camera_translation_offset;
 
 #endif
