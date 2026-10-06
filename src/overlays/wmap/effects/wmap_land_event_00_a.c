@@ -165,7 +165,7 @@ void wmap_land_event_00_a_sequence_4_step_01(void)
     do
     {
         *slot = 0;
-        *(void **)(resource_cursor + 4) = resource;
+        ((WmapAnimationSlot*)resource_cursor)->data = resource;
         resource_cursor += 8;
         index += 1;
         slot += 0xA;

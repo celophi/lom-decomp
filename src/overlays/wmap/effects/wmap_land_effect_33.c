@@ -212,6 +212,9 @@ void wmap_land_effect_33_sequence_7_step_01(void)
     wmap_land_effect_33_sequence_7_step_02();
 }
 
+/**
+ * @brief Assign animation resources to the effect actors and start the next step.
+ */
 void wmap_land_effect_33_sequence_8_step_01(void)
 {
     s32 index;
@@ -248,7 +251,7 @@ void wmap_land_effect_33_sequence_8_step_01(void)
         config_offset += 0x14;
         index++;
         *config_entry = 0;
-        *(u8**)(screen_entry + 4) = resource;
+        ((WmapAnimationSlot*)screen_entry)->data = resource;
     } while (index < 34);
 
     g_wmap_land_effect_33_sequence_8_timer = 102;
@@ -256,6 +259,9 @@ void wmap_land_effect_33_sequence_8_step_01(void)
     wmap_land_effect_33_sequence_8_step_02();
 }
 
+/**
+ * @brief Assign animation resources to the effect actors and start the next step.
+ */
 void wmap_land_effect_33_sequence_9_step_01(void)
 {
     s32 index;
@@ -292,7 +298,7 @@ void wmap_land_effect_33_sequence_9_step_01(void)
         config_offset += 0x14;
         index++;
         *config_entry = 0;
-        *(u8**)(screen_entry + 4) = resource;
+        ((WmapAnimationSlot*)screen_entry)->data = resource;
     } while (index < 40);
 
     g_wmap_land_effect_33_sequence_9_timer = 120;
