@@ -155,7 +155,8 @@ extern s32 g_akao_cdvol_acc;
 extern AkaoChannelState* g_akao_pending_channels;
 extern AkaoSongState* g_akao_seq_channel1;
 extern AkaoSongState *g_akao_seq_channel0;
-extern void *D_8003EC58;
+/** @brief Sequence-channel table base recorded during driver initialization. */
+extern void* g_akao_seq_channels_base;
 /** @brief Song state saved by akao_seq_suspend_song (the first 0x70 bytes are used). */
 extern AkaoSongState g_akao_suspended_song;
 /** @brief Channel table saved with g_akao_suspended_song. */
@@ -175,6 +176,7 @@ extern AkaoDriverFlags g_akao_driver_flags;
  * akao_driver_init_state.
  */
 extern s32 g_akao_bank_slot_keys[6];
+/** @brief Reset words: entry 0 is unknown; entry 1 aliases g_akao_song_descriptor_match_value[0]. */
 extern u32 D_8003EC30[2];
 /** @brief Channel table of the primary song (AKAO_CHANNEL_COUNT entries). */
 extern AkaoChannelState g_akao_seq_channels[];

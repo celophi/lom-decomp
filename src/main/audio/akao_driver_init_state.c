@@ -1,27 +1,31 @@
-/*
- * g_akao_seq_master_state and g_akao_seq_channels are declared here as u8
- * objects and reached through casts, so this file does not include
- * akao_driver.h. The *View types mirror the akao_driver.h structures for the
- * fields this file writes.
- */
+/* Song and sequence storage is declared as bytes here and accessed as typed state. */
 
 #include "main/audio/akao.h"
 #include <libspu.h>
 
-#define AKAO_FULL_VOLUME (AKAO_VOLUME_MAX << 8)
+#define AKAO_Q8_SHIFT 8
+#define AKAO_Q16_SHIFT 16
+#define AKAO_FULL_VOLUME (AKAO_VOLUME_MAX << AKAO_Q8_SHIFT)
 #define AKAO_INITIAL_SFX_TEMPO 0x66A80000
 #define AKAO_INITIAL_REVERB_DEPTH 0x03FFF000
 #define AKAO_REVERB_DEPTH_UPDATE_PENDING 0x80
-#define AKAO_DEFAULT_REVERB_TYPE 4
 
 #define SPU_CONTROL_ADDRESS 0x1F801DAA
 #define SPU_INITIAL_CONTROL_MASK 0xFFFA
+#define SPU_CONTROL_CD_ENABLE 0x1
 #define SPU_MASTER_VOLUME_LEFT (*(s16*)0x1F801D80)
 #define SPU_MASTER_VOLUME_RIGHT (*(s16*)0x1F801D82)
 #define SPU_CD_VOLUME_LEFT (*(s16*)0x1F801DB0)
 #define SPU_CD_VOLUME_RIGHT (*(s16*)0x1F801DB2)
 #define SPU_MAX_MASTER_VOLUME 0x3FFF
 #define SPU_MAX_CD_VOLUME 0x7FFF
+
+/**
+ * @brief Recover a channel from the address of its age counter.
+ * @param age Address of the channel's sfx_age field.
+ * @return Channel containing the age counter.
+ */
+#define AKAO_CHANNEL_FROM_AGE(age) ((AkaoChannelState*)((u8*)(age) - OFFSETOF(AkaoChannelState, sfx_age)))
 
 /** @brief SFX channel control block (mirrors SfxControl in akao_driver.h). */
 typedef struct
@@ -56,6 +60,7 @@ typedef struct
 } AkaoXaTrackerView;
 
 void akao_apply_reverb_type(s32 reverb_type);
+/** @brief Reset words: entry 0 is unknown; entry 1 aliases g_akao_song_descriptor_match_value[0]. */
 extern u32 D_8003EC30[2];
 extern s32 g_akao_bank_slot_keys[6];
 extern AkaoDriverFlagsView g_akao_driver_flags;
@@ -78,7 +83,8 @@ extern s32 g_akao_cdvol_tick;
 extern s32 g_akao_mastervol_acc;
 extern s32 g_akao_masterpan_acc;
 extern s32 g_akao_driver_mode_flags;
-extern void* D_8003EC58;
+/** @brief Sequence-channel table base recorded during driver initialization. */
+extern void* g_akao_seq_channels_base;
 extern AkaoSongState* g_akao_seq_channel0;
 
 /**
@@ -86,7 +92,7 @@ extern AkaoSongState* g_akao_seq_channel0;
  *
  * Resets 32 sequence slots to the unassigned SPU voice and assigns the 12 SFX
  * slots to voices 12 through 23. Seeds volume and timing state, configures
- * the SPU mixer, and installs the default reverb type.
+ * the SPU mixer for CD input, and selects the Studio C reverb preset.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/9R0Vj
  */
@@ -95,7 +101,7 @@ void akao_driver_init_state(void)
     u16* spu_control = (u16*)SPU_CONTROL_ADDRESS;
     u32 unassigned_voice = AKAO_VOICE_COUNT;
     AkaoSongState* song;
-    u8* sequence_tick;
+    u8* sequence_age;
     AkaoChannelState* sfx_channel;
     u32 value;
 
@@ -103,7 +109,7 @@ void akao_driver_init_state(void)
     song = (AkaoSongState*)((uintptr_t)song ^ 1);
     song = (AkaoSongState*)((uintptr_t)song ^ 1);
 
-    sequence_tick = &g_akao_seq_channels;
+    sequence_age = &g_akao_seq_channels;
 
     D_8003EC30[1] = 0;
     D_8003EC30[0] = 0;
@@ -124,18 +130,18 @@ void akao_driver_init_state(void)
     song->parked_mask = 0;
     g_akao_suspended_song.song_id = 0;
     g_akao_suspended_song.masks.active_mask = 0;
-    song->volume = (AKAO_VOLUME_MAX << 16);
+    song->volume = (AKAO_VOLUME_MAX << AKAO_Q16_SHIFT);
 
-    D_8003EC58 = sequence_tick;
-    sequence_tick = (u8*)((uintptr_t)sequence_tick ^ 1);
-    sequence_tick = (u8*)((uintptr_t)sequence_tick ^ 1);
-    sequence_tick = (u8*)&((AkaoChannelState*)sequence_tick)->sfx_age;
+    g_akao_seq_channels_base = sequence_age;
+    sequence_age = (u8*)((uintptr_t)sequence_age ^ 1);
+    sequence_age = (u8*)((uintptr_t)sequence_age ^ 1);
+    sequence_age = (u8*)&((AkaoChannelState*)sequence_age)->sfx_age;
     g_akao_seq_channel0 = song;
-    g_akao_seq_channel1 = 0;
-    g_akao_pending_channels = 0;
+    g_akao_seq_channel1 = NULL;
+    g_akao_pending_channels = NULL;
     g_akao_cdvol_tick = 0;
     song->volume_fade_ticks = 0;
-    g_akao_cdvol_acc = (SPU_MAX_CD_VOLUME << 16);
+    g_akao_cdvol_acc = (SPU_MAX_CD_VOLUME << AKAO_Q16_SHIFT);
     g_akao_mastervol_fade_ticks = 0;
     g_akao_mastervol_acc = 0;
     g_akao_masterpan_fade_ticks = 0;
@@ -165,19 +171,19 @@ void akao_driver_init_state(void)
     g_akao_effect_voice_masks[2] = 0;
     g_akao_effect_voice_masks[1] = 0;
     g_akao_effect_voice_masks[0] = 0;
-    *spu_control = (value & SPU_INITIAL_CONTROL_MASK) | 1;
+    *spu_control = (value & SPU_INITIAL_CONTROL_MASK) | SPU_CONTROL_CD_ENABLE;
     value = 0;
     do
     {
         value++;
-        *((u32*)(sequence_tick - 0x24)) = 0;
-        *((u32*)(sequence_tick + 0xA4)) = unassigned_voice;
-        *((u16*)(sequence_tick + 0x0C)) = 0;
-        *((u32*)sequence_tick) = 0;
-        sequence_tick += 0x100;
-        sequence_tick += 0x10;
-        sequence_tick += 0x8;
-    } while ((value & 0xFFFF) < AKAO_CHANNEL_COUNT);
+        AKAO_CHANNEL_FROM_AGE(sequence_age)->flags = 0;
+        AKAO_CHANNEL_FROM_AGE(sequence_age)->voice = unassigned_voice;
+        AKAO_CHANNEL_FROM_AGE(sequence_age)->is_sfx_channel = 0;
+        AKAO_CHANNEL_FROM_AGE(sequence_age)->sfx_age = 0;
+        sequence_age += 0x100;
+        sequence_age += 0x10;
+        sequence_age += 0x8;
+    } while ((u16)value < AKAO_CHANNEL_COUNT);
 
     sfx_channel = (AkaoChannelState*)g_sfx_channels;
     for (value = AKAO_SFX_FIRST_VOICE; (u16)value < AKAO_VOICE_COUNT; value++, sfx_channel++)
@@ -185,7 +191,6 @@ void akao_driver_init_state(void)
         sfx_channel->flags = 0;
         sfx_channel->voice = (u16)value;
         sfx_channel->is_sfx_channel = 1;
-        /* The channel tick counter spans both halfwords at 0x58. */
         sfx_channel->sfx_age = 0;
         sfx_channel->volume_scale = AKAO_FULL_VOLUME;
         sfx_channel->volume_scale_fade_ticks = 0;
@@ -207,6 +212,6 @@ void akao_driver_init_state(void)
     g_akao_seq_channel0->reverb_depth_fade_ticks = 0;
     g_akao_driver_flags.update_flags |= AKAO_REVERB_DEPTH_UPDATE_PENDING;
 
-    akao_apply_reverb_type(AKAO_DEFAULT_REVERB_TYPE);
+    akao_apply_reverb_type(SPU_REV_MODE_STUDIO_C);
     SpuSetReverb(SPU_ON);
 }

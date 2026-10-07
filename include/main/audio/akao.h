@@ -240,9 +240,9 @@ typedef struct AkaoArticulation
 #define AKAO_SONG_VOICE_STOLEN 0x2
 /** @brief Song flag selecting the lower XA SPU area while channels are active or parked. */
 #define AKAO_SONG_LOWER_XA_AREA_FLAG 0x40
-/** @brief Song flag set when descriptor unk14 differs from D_8003EC34[0]. */
+/** @brief Song flag set when descriptor unk14 differs from g_akao_song_descriptor_match_value[0]. */
 #define AKAO_SONG_DESCRIPTOR_MISMATCH 0x20
-/** @brief Song flags selected by comparing the descriptor with D_8003EC34[0]. */
+/** @brief Song flags selected by comparing the descriptor with g_akao_song_descriptor_match_value[0]. */
 #define AKAO_SONG_DESCRIPTOR_FLAGS 0x60
 
 /**
@@ -256,7 +256,7 @@ typedef struct AkaoSongDescriptor
 {
     AkaoHeader header;
     u32 unk10;
-    s32 unk14;                /**< Compared with D_8003EC34 to choose song flag 0x40 or 0x20. */
+    s32 unk14;                /**< Compared with g_akao_song_descriptor_match_value to choose song flag 0x40 or 0x20. */
     u8 _pad18[8];
     s32 channel_mask;         /**< Channels the song uses. */
     s32 voice_alloc_low_mask; /**< Initial AkaoSongMasks::voice_alloc_low_mask. */

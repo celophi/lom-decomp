@@ -15,6 +15,7 @@
 #define SPU_VOICE_LINEARDecN 3
 
 #define SPU_REV_MODE_CLEAR_WA 0x100
+#define SPU_REV_MODE_STUDIO_C 4
 typedef struct {
     short left;
     short right;
