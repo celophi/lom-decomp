@@ -6,10 +6,10 @@
 # per-overlay variables for the second pass: $$($(1)_SRC_DIR) becomes
 # $(checkps_SRC_DIR) when this template is called for checkps.
 
-# A version can use assembly for an entire overlay or just specific C files.
+# A version can use assembly for an entire overlay.
 # Keep that selection here so the registry only needs to list the sources.
 overlay-sources = $(if $(call has-tu-layout,$(1)),\
-	$(filter-out $(ASM_UNITS),$(overlay_$(1)_$(2)_srcs)))
+	$(overlay_$(1)_$(2)_srcs))
 
 # Return every word that occurs more than once in a list.
 duplicate-words = $(sort $(foreach item,$(1),$(if $(word 2,$(filter $(item),$(1))),$(item))))
@@ -65,8 +65,7 @@ $(1)_ROUTED_SRCS = \
 $(1)_EXISTING_C_SRCS := $$(call rwildcard,$$($(1)_SRC_DIR),*.c)
 $(1)_TRACKED_C_SRCS := $$(if $$(call has-tu-layout,$(1)),\
 	$$(shell git ls-files -- '$$($(1)_SRC_DIR)/*.c' 2>/dev/null))
-$(1)_TRACKED_C_SRCS := $$(filter-out $(ASM_UNITS),\
-	$$(filter $$($(1)_EXISTING_C_SRCS),$$($(1)_TRACKED_C_SRCS)))
+$(1)_TRACKED_C_SRCS := $$(filter $$($(1)_EXISTING_C_SRCS),$$($(1)_TRACKED_C_SRCS))
 $(1)_C_SRCS = $$(sort $$($(1)_TRACKED_C_SRCS) \
 	$$(filter $$($(1)_ROUTED_SRCS),$$($(1)_EXISTING_C_SRCS)))
 $(1)_UNROUTED_SRCS = $$(filter-out $$($(1)_ROUTED_SRCS),$$($(1)_C_SRCS))

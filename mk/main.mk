@@ -21,21 +21,12 @@ SRCS_GCC_260_G0 := $(filter-out src/main/card_callbacks.c,$(SRCS_GCC_260_G0))
 SRCS_G0 += src/main/card_callbacks.c
 endif
 
-# Some versions still use assembly for individual files or the whole image.
-SRCS_G0 := $(filter-out $(ASM_UNITS),$(SRCS_G0))
-SRCS_G4 := $(filter-out $(ASM_UNITS),$(SRCS_G4))
-SRCS_GCC_260_G0 := $(filter-out $(ASM_UNITS),$(SRCS_GCC_260_G0))
-
 # Read splat's object list so old assembly left by previous splits stays out.
 # The dependency file won't exist until `make splat` has run.
 MAIN_LINK_DEPS := $(LINKER_DIR)/$(GAME).d
 MAIN_LINK_INPUTS := $(if $(wildcard $(MAIN_LINK_DEPS)),$(file <$(MAIN_LINK_DEPS)))
 MAIN_LINK_ASM_OBJS := $(filter $(BUILD_DIR)/$(ASM_DIR)/%.o,$(MAIN_LINK_INPUTS))
 MAIN_LINK_ASM_SRCS := $(patsubst $(BUILD_DIR)/%.o,%.s,$(MAIN_LINK_ASM_OBJS))
-
-ifneq ($(filter-out src/overlays/%,$(ASM_UNITS)),)
-ASM_SRCS := $(sort $(ASM_SRCS) $(MAIN_LINK_ASM_SRCS))
-endif
 
 ifeq ($(call has-tu-layout,main),)
 SRCS_G0 :=

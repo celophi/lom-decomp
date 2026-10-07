@@ -307,8 +307,7 @@ This guide covers CARDA's side of the exchange. The ordinary save's unresolved
 tags and option meanings remain in the
 [save-file reference](../reference/save-file.md#what-we-dont-know-yet).
 
-Sources: [US preparation hook](../../../../src/main/card_callbacks.c),
-[JP assembly-unit selection](../../../../config/jp/asm_units.txt),
+Sources: [regional preparation hook](../../../../src/main/card_callbacks.c),
 [regional CARDA branches](../../../../src/overlays/carda/carda.c),
 [transfer window](../../../../src/overlays/carda/carda_save.c),
 [prompt defaults](../../../../src/overlays/carda/carda_widgets.c).

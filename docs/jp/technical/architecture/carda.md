@@ -285,8 +285,7 @@ PocketStation用のメッセージも空のままです。
 このページで扱うのは、CARDA側のやり取りです。
 通常のセーブのタグやオプションで未解明のものは、[セーブファイルの形式](../reference/save-file.md)にまとめています。
 
-ソース：[北米版の準備フック](../../../../src/main/card_callbacks.c)、
-[日本版でアセンブリを使う単位の一覧](../../../../config/jp/asm_units.txt)、
+ソース：[地域別の準備フック](../../../../src/main/card_callbacks.c)、
 [CARDAの地域別分岐](../../../../src/overlays/carda/carda.c)、
 [転送ウィンドウ](../../../../src/overlays/carda/carda_save.c)、
 [確認画面の初期選択](../../../../src/overlays/carda/carda_widgets.c)

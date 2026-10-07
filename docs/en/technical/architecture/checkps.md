@@ -30,12 +30,10 @@ The main executable handles the return differently in each release:
 rendering loop, and returns `GAME_STATE_INTRO_MOVIE` when that loop ends.
 Unlike CARDA, it doesn't return to a caller after each frame.
 
-Sources: [US main loop](../../../../src/main/main.c),
-[US CHECKPS startup](../../../../src/overlays/checkps/init.c),
+Sources: [shared main loop](../../../../src/main/main.c),
+[shared CHECKPS startup](../../../../src/overlays/checkps/init.c),
 [game-state names](../../../../include/main/game_state.h).
-JP's main loop and CHECKPS startup are listed in the
-[assembly-unit selection](../../../../config/jp/asm_units.txt); the JP source
-locations are collected at the end of this page.
+The JP source locations are collected at the end of this page.
 
 ## The US screen runs on a timer
 
@@ -110,7 +108,7 @@ startup phase stored in `D_80067E10`.
 
 Sources: [main CD driver](../../../../src/main/cdrom.c),
 [JP CHECKPS symbol map](../../../../config/jp/symbols/checkps_symbol_addrs.txt),
-[JP source selection](../../../../config/jp/asm_units.txt).
+[regional CHECKPS startup](../../../../src/overlays/checkps/init.c).
 
 ## What the CD check does
 
@@ -210,10 +208,9 @@ layout and output options.
 
 ## Reading the regional sources
 
-Most of CHECKPS now has shared C, including the CD check. JP's `init.c` and the
-main executable's `main.c` are still taken from assembly, as recorded in
-[config/jp/asm_units.txt](../../../../config/jp/asm_units.txt). That is why
-reading only the C gives an incomplete account of JP startup.
+Both versions build CHECKPS and the main loop from shared C. Follow the
+`VERSION_JP` branches in `src/overlays/checkps/init.c` and `src/main/main.c`
+for the regional startup behavior.
 
 After `make splat VERSION=jp`, the relevant generated files are
 `asm/jp/main.s` and `asm/jp/overlays/checkps/init.s`. Useful places to start are:

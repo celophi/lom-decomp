@@ -28,10 +28,9 @@ CHECKPSのロード先は、北米版では `0x8004FC70`、日本版では `0x80
 ループが終わると `GAME_STATE_INTRO_MOVIE` を返します。
 CARDAのように、1フレームごとに呼び出し側へ戻る作りではありません。
 
-ソース：[北米版のメインループ](../../../../src/main/main.c)、
-[北米版のCHECKPS起動処理](../../../../src/overlays/checkps/init.c)、
+ソース：[共通のメインループ](../../../../src/main/main.c)、
+[共通のCHECKPS起動処理](../../../../src/overlays/checkps/init.c)、
 [ゲーム状態の名前](../../../../include/main/game_state.h)
-日本版のメインループとCHECKPSの起動処理は、[アセンブリを使う単位の一覧](../../../../config/jp/asm_units.txt)にあります。
 日本版を追うときの位置は、このページの最後にまとめています。
 
 ## 北米版の画面は時間で終わる
@@ -103,7 +102,7 @@ CHECKPSからの呼び出しは、日本版のアセンブリで確認できま�
 
 ソース：[通常のCDドライバー](../../../../src/main/cdrom.c)、
 [日本版CHECKPSのシンボル表](../../../../config/jp/symbols/checkps_symbol_addrs.txt)、
-[日本版のソース選択](../../../../config/jp/asm_units.txt)
+[地域別のCHECKPS起動処理](../../../../src/overlays/checkps/init.c)
 
 ## CDのチェックで行うこと
 
@@ -199,9 +198,9 @@ AKAOのコンテナとバンクのヘッダも復号し、32個のアーティ�
 
 ## 地域別のソースを追う
 
-CDチェックを含め、CHECKPSの多くは共通のCコードになっています。
-日本版の `init.c` とメイン実行ファイルの `main.c` は、[config/jp/asm_units.txt](../../../../config/jp/asm_units.txt) の指定により、まだアセンブリから組み込んでいます。
-Cだけでは日本版の起動処理をすべて説明できないのは、このためです。
+どちらのバージョンでも、CHECKPSとメインループは共通のCコードからビルドされます。
+地域ごとの起動処理は、`src/overlays/checkps/init.c` と `src/main/main.c` の
+`VERSION_JP` 分岐を追ってください。
 
 `make splat VERSION=jp` の後に見るファイルは、`asm/jp/main.s` と `asm/jp/overlays/checkps/init.s` です。
 次の位置から追うと、流れがつかみやすいです。
