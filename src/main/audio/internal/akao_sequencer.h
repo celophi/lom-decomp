@@ -5,7 +5,7 @@
 #include "akao_driver.h"
 #include <libapi.h>
 
-void akao_copy_bytes(s32* src, s32* dst, u32 num_bytes);
+void akao_copy_bytes(s32* source, s32* destination, u32 count);
 void akao_apply_cdvol_to_spu(void);
 
 /* Externs not covered by akao_driver.h */

@@ -7,8 +7,19 @@
 /** @brief Root counter 2 target of one driver tick (akao_irq_handler). */
 #define AKAO_TICK_PERIOD 0x44E8
 
+/** @brief SPU byte address of the zeroed primer sample uploaded at driver startup. */
+#define AKAO_SPU_PRIMER_ADDR 0x1010
+
 /** @brief Number of SPU bank slots (entries of g_akao_bank_slot_keys). */
 #define AKAO_BANK_SLOT_COUNT 6
+
+/** @brief First articulation index and number of articulations reserved per bank slot. */
+#define AKAO_BANK_FIRST_ARTICULATION 0x80
+#define AKAO_BANK_SLOT_ARTICULATIONS 16
+#define AKAO_BANK_SLOT_ARTICULATION_INDEX(slot) (AKAO_BANK_FIRST_ARTICULATION + (slot) * AKAO_BANK_SLOT_ARTICULATIONS)
+
+/** @brief First of the three upper instrument-bank slots; also the upper XA slot. */
+#define AKAO_BANK_FIRST_UPPER_SLOT 3
 
 /** @brief g_akao_driver_flags.upload_flags: an instrument bank is being streamed to the SPU. */
 #define AKAO_UPLOAD_STREAMING 0x1

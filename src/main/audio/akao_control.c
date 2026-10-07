@@ -120,7 +120,7 @@ extern void (*g_akao_command_handlers[256])(AkaoCommandParam*);
 
 void akao_channel_set_articulation(AkaoChannelState* channel, s32 articulation_index);
 u32 akao_collect_voice_mask(AkaoChannelState* channels, s32 channel_mask);
-void akao_sfx_release_channels(void* channel, u32 release_mask);
+void akao_sfx_release_channels(AkaoChannelState* channel, u32 release_mask);
 
 /**
  * @brief Reset a channel's playback state and point it at new sequence bytecode.
@@ -151,7 +151,7 @@ void akao_channel_init_state(AkaoChannelState* channel, u8* seq_data)
     channel->spu_volume_scale = 0;
     channel->pan_lfo_depth = 0;
     channel->volume_lfo_depth = 0;
-    channel->pitch_lfo_depth = 0;
+    channel->pitch_lfo_depth.raw = 0;
     channel->pan_lfo_depth_fade_ticks = 0;
     channel->volume_lfo_depth_fade_ticks = 0;
     channel->pitch_lfo_depth_fade_ticks = 0;
@@ -325,7 +325,7 @@ void akao_seq_start_song(u8* sequence_data, s32 start_mask)
             sequence_data += sizeof(*descriptor->channel_offsets);
             channel->pan_lfo_depth = 0;
             channel->volume_lfo_depth = 0;
-            channel->pitch_lfo_depth = 0;
+            channel->pitch_lfo_depth.raw = 0;
             channel->pan_lfo_depth_fade_ticks = 0;
             channel->flags = static_voice_mask & bit_mask;
             channel->flags = channel->flags == 0 ? AKAO_CH_FULL_GATE : 0;

@@ -36,14 +36,6 @@ extern AkaoBankHeader g_akao_bank_staging;
 #define AKAO_BANK_SLOT_BYTES 0x4800
 #define AKAO_BANK_SLOT_SPU_ADDRESS(slot) (AKAO_BANK_FIRST_SPU_ADDRESS + (slot) * AKAO_BANK_SLOT_BYTES)
 
-/** @brief First articulation index and number of articulations reserved per bank slot. */
-#define AKAO_BANK_FIRST_ARTICULATION 0x80
-#define AKAO_BANK_SLOT_ARTICULATIONS 0x10
-#define AKAO_BANK_SLOT_ARTICULATION_INDEX(slot) (AKAO_BANK_FIRST_ARTICULATION + (slot) * AKAO_BANK_SLOT_ARTICULATIONS)
-
-/** @brief First of the three upper instrument-bank slots; also the upper XA slot. */
-#define AKAO_BANK_FIRST_UPPER_SLOT 3
-
 /** @brief akao_submit_bank result indicating that the upload must be retried. */
 #define AKAO_BANK_UPLOAD_BUSY 1
 

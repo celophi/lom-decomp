@@ -13,6 +13,17 @@
 
 #define SPU_VOICE_LINEARIncN 1
 #define SPU_VOICE_LINEARDecN 3
+#define SPU_VOICE_EXPIncN 5
+#define SPU_VOICE_EXPDec 7
+
+#define SPU_VOICE_ADSR_AMODE (0x01 << 8)
+#define SPU_VOICE_ADSR_SMODE (0x01 << 9)
+#define SPU_VOICE_ADSR_RMODE (0x01 << 10)
+#define SPU_VOICE_ADSR_AR (0x01 << 11)
+#define SPU_VOICE_ADSR_DR (0x01 << 12)
+#define SPU_VOICE_ADSR_SR (0x01 << 13)
+#define SPU_VOICE_ADSR_RR (0x01 << 14)
+#define SPU_VOICE_ADSR_SL (0x01 << 15)
 
 #define SPU_REV_MODE_CLEAR_WA 0x100
 #define SPU_REV_MODE_STUDIO_C 4
