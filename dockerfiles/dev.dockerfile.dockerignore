@@ -1,0 +1,26 @@
+# Only send the development image's installation inputs. This file applies to
+# dev.dockerfile; the pipeline image has a separate context containing its ROM.
+**
+!requirements.txt
+!tools/
+tools/*
+!tools/external/
+tools/external/*
+!tools/external/splat/
+!tools/external/splat/**
+!tools/external/m2c/
+!tools/external/m2c/**
+!tools/objdiff/
+tools/objdiff/*
+!tools/objdiff/install_objdiff.sh
+
+# Keep local metadata and caches out of the included package directories.
+**/.git
+**/__pycache__
+**/*.pyc
+**/.venv
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/*.egg-info
+**/dist
