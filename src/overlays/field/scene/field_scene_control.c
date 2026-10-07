@@ -68,7 +68,7 @@ typedef struct
 extern u16 g_field_pixel_lookup_tables[][32];
 
 static void field_start_animation(FieldSeq* seq);
-void field_set_color_scale(s16 index, u16 red_scale, u16 green_scale, u16 blue_scale);
+void field_set_color_scale(s32 index_value, s32 red_value, s32 green_value, s32 blue_value);
 static void field_tint_part_cells(FieldPart* part);
 static void field_tint_animation_frames(FieldPart* cel, FieldAnim* anim);
 
@@ -559,7 +559,7 @@ void field_update_scene_fade(void)
     {
     case FIELD_FADE_OUT:
         state->fade_level -= FIELD_FADE_STEP;
-        field_set_color_scale(FIELD_ALL_OBJECTS, state->fade_level, state->fade_level, state->fade_level);
+        field_set_color_scale((s16)FIELD_ALL_OBJECTS, (u16)state->fade_level, (u16)state->fade_level, (u16)state->fade_level);
         if (state->fade_level == 0)
         {
             obj = scene->objects;
@@ -619,7 +619,7 @@ void field_update_scene_fade(void)
         break;
     case FIELD_FADE_IN:
         state->fade_level += FIELD_FADE_STEP;
-        field_set_color_scale(FIELD_ALL_OBJECTS, state->fade_level, state->fade_level, state->fade_level);
+        field_set_color_scale((s16)FIELD_ALL_OBJECTS, (u16)state->fade_level, (u16)state->fade_level, (u16)state->fade_level);
         if (state->fade_level == FIELD_FADE_LEVEL_FULL)
         {
             state->fade_mode = FIELD_FADE_IDLE;
@@ -700,13 +700,19 @@ void field_begin_scene_fade_in(void)
  * FIELD_ALL_OBJECTS the tile animations of handler kinds 0 and 1 and every
  * effect are re-tinted from their tint sources as well.
  *
- * @param index Object index, or FIELD_ALL_OBJECTS.
- * @param red_scale Red scale; FIELD_FADE_LEVEL_FULL is neutral.
- * @param green_scale Green scale.
- * @param blue_scale Blue scale.
+ * The index is interpreted as signed 16-bit and each scale as unsigned 16-bit.
+ *
+ * @param index_value Object index, or FIELD_ALL_OBJECTS.
+ * @param red_value Red scale; FIELD_FADE_LEVEL_FULL is neutral.
+ * @param green_value Green scale.
+ * @param blue_value Blue scale.
  */
-void field_set_color_scale(s16 index, u16 red_scale, u16 green_scale, u16 blue_scale)
+void field_set_color_scale(s32 index_value, s32 red_value, s32 green_value, s32 blue_value)
 {
+    s16 index = index_value;
+    u16 red_scale = red_value;
+    u16 green_scale = green_value;
+    u16 blue_scale = blue_value;
     FieldScene* scene;
     FieldTintSrc* owner;
     FieldTintPal* tint;

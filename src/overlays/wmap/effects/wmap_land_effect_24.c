@@ -436,6 +436,9 @@ void wmap_land_effect_24_sequence_10_step_01(void)
     wmap_land_effect_24_sequence_10_step_02();
 }
 
+/**
+ * @brief Assign animation resources to the effect actors and start the next step.
+ */
 void wmap_land_effect_24_sequence_11_step_01(void)
 {
     s32 index;
@@ -472,7 +475,7 @@ void wmap_land_effect_24_sequence_11_step_01(void)
         config_offset += 0x14;
         index++;
         *config_entry = 0;
-        *(u8**)(screen_entry + 4) = resource;
+        ((WmapAnimationSlot*)screen_entry)->data = resource;
     } while (index < 0x1E);
 
     g_wmap_land_effect_24_sequence_11_timer = 0x5A;

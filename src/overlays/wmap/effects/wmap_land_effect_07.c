@@ -435,10 +435,10 @@ void wmap_land_effect_07_sequence_6_step_01(void)
 {
     u8* src = (u8*)&g_wmap_sprite_actors[6];
     u8* dst = (u8*)&g_wmap_sprite_actors[6] + 0x2C;
-    u8* tbl = g_wmap_actor_animations;
+    WmapAnimationSlot* animations = g_wmap_actor_animations;
 
-    *(u8**)&tbl[0x34] = g_wmap_animation_bank_1;
-    *(u8**)&tbl[0x3C] = g_wmap_animation_bank_1;
+    animations[6].data = g_wmap_animation_bank_1;
+    animations[7].data = g_wmap_animation_bank_1;
     src[0x6] = 0xF;
     *(s16*)&src[0xE] = 2;
     *(s16*)&src[0x10] = -1;
@@ -495,10 +495,10 @@ void wmap_land_effect_07_sequence_7_step_01(void)
 {
     u8* src = (u8*)&g_wmap_sprite_actors[8];
     u8* dst = (u8*)&g_wmap_sprite_actors[8] + 0x2C;
-    u8* tbl = g_wmap_actor_animations;
+    WmapAnimationSlot* animations = g_wmap_actor_animations;
 
-    *(u8**)&tbl[0x44] = g_wmap_animation_bank_1;
-    *(u8**)&tbl[0x4C] = g_wmap_animation_bank_1;
+    animations[8].data = g_wmap_animation_bank_1;
+    animations[9].data = g_wmap_animation_bank_1;
     src[0x6] = 0xF;
     *(s16*)&src[0xE] = 2;
     *(s16*)&src[0x10] = -1;
@@ -551,10 +551,10 @@ void wmap_land_effect_07_sequence_8_step_01(void)
 {
     u8* src = (u8*)&g_wmap_sprite_actors[10];
     u8* dst = (u8*)&g_wmap_sprite_actors[10] + 0x2C;
-    u8* tbl = g_wmap_actor_animations;
+    WmapAnimationSlot* animations = g_wmap_actor_animations;
 
-    *(u8**)&tbl[0x54] = g_wmap_animation_bank_1;
-    *(u8**)&tbl[0x5C] = g_wmap_animation_bank_1;
+    animations[10].data = g_wmap_animation_bank_1;
+    animations[11].data = g_wmap_animation_bank_1;
     src[0x6] = 0xF;
     *(s16*)&src[0xE] = 2;
     *(s16*)&src[0x10] = -1;
@@ -607,10 +607,10 @@ void wmap_land_effect_07_sequence_9_step_01(void)
 {
     u8* src = &g_wmap_sprite_actors[12];
     u8* dst = (u8*)&g_wmap_sprite_actors[13];
-    u8* tbl = g_wmap_actor_animations;
+    WmapAnimationSlot* animations = g_wmap_actor_animations;
 
-    *(u8**)&tbl[0x64] = g_wmap_animation_bank_1;
-    *(u8**)&tbl[0x6C] = g_wmap_animation_bank_1;
+    animations[12].data = g_wmap_animation_bank_1;
+    animations[13].data = g_wmap_animation_bank_1;
     src[0x6] = 0xF;
     *(s16*)&src[0xE] = 2;
     *(s16*)&src[0x10] = -1;
