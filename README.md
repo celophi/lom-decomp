@@ -136,10 +136,10 @@ The splat configs also contain expected SHA-1 hashes for the overlay files.
 The project uses multiple historical GCC variants. Build the four local compiler images using the `old-gcc` submodule:
 
 ```bash
-docker build -t old-gcc/gcc-2.8.0-psx -f tools/old-gcc/gcc-2.8.0-psx.Dockerfile tools/old-gcc
-docker build -t old-gcc/gcc-2.7.2-cdk -f tools/old-gcc/gcc-2.7.2-cdk.Dockerfile tools/old-gcc
-docker build -t old-gcc/gcc-2.6.0-psx -f tools/old-gcc/gcc-2.6.0-psx.Dockerfile tools/old-gcc
-docker build -t old-gcc/gcc-2.7.2-psx-gnu -f dockerfiles/gnu-as.dockerfile tools/old-gcc
+docker build -t old-gcc/gcc-2.8.0-psx -f tools/external/old-gcc/gcc-2.8.0-psx.Dockerfile tools/external/old-gcc
+docker build -t old-gcc/gcc-2.7.2-cdk -f tools/external/old-gcc/gcc-2.7.2-cdk.Dockerfile tools/external/old-gcc
+docker build -t old-gcc/gcc-2.6.0-psx -f tools/external/old-gcc/gcc-2.6.0-psx.Dockerfile tools/external/old-gcc
+docker build -t old-gcc/gcc-2.7.2-psx-gnu -f dockerfiles/gnu-as.dockerfile tools/external/old-gcc
 ```
 
 This is normally a one-time setup step. The development Dockerfile uses these local images; no access to a private compiler image is required.

@@ -1,6 +1,6 @@
 # テキストテーブル
 
-[日本語ドキュメント](../../README.md) | [English](../../../en/technical/reference/text-tables.md) | [セーブファイルの形式](save-file.md) | [圧縮ツール（英語）](../../../../tools/compressor/README.md)
+[日本語ドキュメント](../../README.md) | [English](../../../en/technical/reference/text-tables.md) | [セーブファイルの形式](save-file.md) | [圧縮ツール（英語）](../../../../tools/compression/README.md)
 
 『聖剣伝説 LEGEND OF MANA』のメニュー画面に出てくる言葉の多くは、コードの中にはありません。
 各オーバーレイの中にある小さな文字列テーブルに入っていて、コードはテキストそのものではなく「26番の文字列」のように番号で指定します。
@@ -15,7 +15,7 @@ ADDHEROのテキストを読むだけなら、近道があります。
 `make splat` の後に `make extract-addhero` を実行すると、すべてのメッセージと場所の名前がYAMLファイルに、パーティーのアイコンがPNGに書き出されます。
 `make extract-carda` ではセーブ画面のデータを同じように書き出し、アイテム名やメモリーカード用のアイコンも含まれます。
 日本版のデータには、どちらのコマンドにも `VERSION=jp` を付けます。
-詳しくは[オーバーレイのリソース抽出ツール（英語）](../../../../tools/overlays/README.md)を参照してください。
+詳しくは[オーバーレイのリソース抽出ツール（英語）](../../../../tools/data/overlays/README.md)を参照してください。
 この節の残りは、バイト列を直接扱う場合の説明です。
 
 オーバーレイは、ディスクに圧縮された状態で入っています。
@@ -24,7 +24,7 @@ ADDHEROのテキストを読むだけなら、近道があります。
 
 ```sh
 size=$(stat -c %s disc/jp/BIN/ADDHERO.BIN)
-python3 tools/splat_ext/decompress.py disc/jp/BIN/ADDHERO.BIN 1 $((size - 1)) addhero.bin
+python3 tools/compression/decompress.py disc/jp/BIN/ADDHERO.BIN 1 $((size - 1)) addhero.bin
 ```
 
 北米版の場合は、`disc/us/BIN/` から展開してください。
@@ -132,7 +132,7 @@ ADDHEROにもその写しがあり、`make extract-addhero VERSION=jp` はそれ
   テキストの中身は見ていないので、オフセットの順番は変えられません。
   使わない文字列があっても、エントリーの数は変えないでください。
 - **オーバーレイを圧縮し直す必要があります。**
-  ディスク上のファイルは圧縮されているので、編集したオーバーレイは[圧縮ツール（英語）](../../../../tools/compressor/README.md)でもう一度圧縮しないと、ゲームが読み込めません。
+  ディスク上のファイルは圧縮されているので、編集したオーバーレイは[圧縮ツール（英語）](../../../../tools/compression/README.md)でもう一度圧縮しないと、ゲームが読み込めません。
 
 短くするほうが安全です。
 0のバイトで埋めて、オフセットはそのままにしてください。

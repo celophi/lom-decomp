@@ -1,6 +1,6 @@
 # Text tables
 
-[English documentation](../../README.md) | [日本語](../../../jp/technical/reference/text-tables.md) | [Save file format](save-file.md) | [Compressor](../../../../tools/compressor/README.md)
+[English documentation](../../README.md) | [日本語](../../../jp/technical/reference/text-tables.md) | [Save file format](save-file.md) | [Compressor](../../../../tools/compression/README.md)
 
 Most of the words you see on Legend of Mana's menu screens don't live in the
 code. They sit in small string tables inside each overlay, and the code asks
@@ -19,7 +19,7 @@ If you only want to read ADDHERO's text, there's a shortcut. After `make splat`,
 along with the party icons as PNGs. `make extract-carda` does the same for the
 save screen, including its item names and memory card icons. Add `VERSION=jp`
 to either command for the Japanese data. See the
-[overlay resource extractor](../../../../tools/overlays/README.md) for the
+[overlay resource extractor](../../../../tools/data/overlays/README.md) for the
 details. The rest of this section is for working with the bytes directly.
 
 Overlays are stored compressed on the disc. The first byte of the disc file is
@@ -28,7 +28,7 @@ decoder unpacks it:
 
 ```sh
 size=$(stat -c %s disc/us/BIN/ADDHERO.BIN)
-python3 tools/splat_ext/decompress.py disc/us/BIN/ADDHERO.BIN 1 $((size - 1)) addhero.bin
+python3 tools/compression/decompress.py disc/us/BIN/ADDHERO.BIN 1 $((size - 1)) addhero.bin
 ```
 
 The decompressed file is the overlay exactly as it sits in memory. An overlay
@@ -143,7 +143,7 @@ Anything longer takes more care:
   same, even for strings you don't use.
 - **The overlay has to be compressed again.** The disc copy is compressed, so
   an edited overlay needs to go back through the
-  [compressor](../../../../tools/compressor/README.md) before the game can load
+  [compressor](../../../../tools/compression/README.md) before the game can load
   it.
 
 Shorter strings are the safe option. Pad them with the zero byte and leave the

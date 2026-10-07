@@ -1,5 +1,5 @@
 # Build from the repository root:
-# docker build -t old-gcc/gcc-2.7.2-psx-gnu -f dockerfiles/gnu-as.dockerfile tools/old-gcc
+# docker build -t old-gcc/gcc-2.7.2-psx-gnu -f dockerfiles/gnu-as.dockerfile tools/external/old-gcc
 
 FROM ubuntu:22.04 AS binutils-builder
 

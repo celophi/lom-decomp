@@ -1,6 +1,6 @@
 # SHOPのリソース
 
-[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/overlays/README.md) | [English](../../../en/technical/reference/shop-resources.md)
+[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/data/overlays/README.md) | [English](../../../en/technical/reference/shop-resources.md)
 
 SHOPは、フィールドの店で開く売買画面です。持っているデータは多くありません。
 アイテム一覧と詳細ウィンドウのテキスト、アイテムの種類ごとの売値、店の変数だけです。
@@ -111,7 +111,7 @@ USとJPのどちらも武器11種、防具12種、楽器4種で、27から31は�
 買値もここにはありません。店を開くフィールドのスクリプトが、並べる商品をSHOPに渡します。
 その商品一覧の各エントリが自分の値段を持っています。
 
-[`shop.py`](../../../../tools/overlays/shop.py)も、ほかの抽出ツールと同じく、
+[`shop.py`](../../../../tools/data/overlays/shop.py)も、ほかの抽出ツールと同じく、
 読み取り処理、`Part`、書き込み処理を分けています。セクション名は
 `shop_internal.h`の`ShopTextSection`列挙型から取得します。
 抽出結果を編集しても、ビルドがリンクするデータは変わりません。

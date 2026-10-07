@@ -263,7 +263,7 @@ make extract-carda VERSION=jp
 
 `byte-map.yaml` には、パディングやゼロで埋められた実行時バッファも含め、データ全体の内訳が載ります。
 出力は中身を確認するためのもので、ビルドが使うのは元のデータです。
-出力先の指定やPython側の構成は、[抽出ツールの説明](../../../../tools/overlays/README.md)を参照してください。
+出力先の指定やPython側の構成は、[抽出ツールの説明](../../../../tools/data/overlays/README.md)を参照してください。
 
 ## 地域版の違いと、まだ調べること
 

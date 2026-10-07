@@ -1,6 +1,6 @@
 # SHOP resources
 
-[English index](../../README.md) | [Overlay extractors](../../../../tools/overlays/README.md) | [Japanese](../../../jp/technical/reference/shop-resources.md)
+[English index](../../README.md) | [Overlay extractors](../../../../tools/data/overlays/README.md) | [Japanese](../../../jp/technical/reference/shop-resources.md)
 
 SHOP is the buy and sell screen that field shops open. Its data is small: the
 text for the item list and the detail window, the price the shop pays for each
@@ -115,7 +115,7 @@ aren't in this table; each record carries its own value.
 Buy prices aren't here either. The field script that opens a shop passes SHOP
 the stock to show, and every entry in that stock has its own price.
 
-[`shop.py`](../../../../tools/overlays/shop.py) follows the same reader, `Part`
+[`shop.py`](../../../../tools/data/overlays/shop.py) follows the same reader, `Part`
 and writer structure as the other overlay extractors. Section names come from
 the `ShopTextSection` enum in `shop_internal.h`. Editing these exports doesn't
 change what the build links.

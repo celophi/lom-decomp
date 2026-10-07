@@ -7,16 +7,20 @@ project's Python dependencies).
 
 | Directory | Purpose |
 | --- | --- |
-| [assets/](assets/README.md) | Byte-exact asset parsers, builders and validators used by the build |
-| [scenes/](scenes/README.md) | IMG scene extraction and asset byte maps |
-| [overlays/](overlays/README.md) | Viewable exports of overlay data blobs (ADDHERO, CARDA, CHECKPS, CLOAD, FIELD, GNAME, GOLEM, GOSUB, MENU, NIKI, SHOP, TITLE, WMAP, WSEL and ZUKAN resources) |
-| [compressor/](compressor/README.md) | Original overlay compression and whole-file verification |
-| `splat_ext/` | Project-specific splat segments and reference compression routines |
+| [data/formats/](data/formats/README.md) | Byte-exact asset parsers, builders and validators used by the build |
+| [data/scenes/](data/scenes/README.md) | IMG scene extraction and asset byte maps |
+| [data/overlays/](data/overlays/README.md) | Viewable exports of overlay data blobs |
+| [compression/](compression/README.md) | Exact overlay compressor, reference compressor and decoder |
+| [verification/data2c/](verification/data2c/README.md) | Generate typed C data and verify PS1 and host output |
+| `verification/` | Binary comparison and native compile checks |
+| `build/tests/` | Make staging, parallelism and generated-data cleanup tests |
+| `splat_ext/` | Project-specific splat segment adapters |
 | `objdiff/` | Generate objdiff configuration, run comparisons and format reports |
+| `external/` | Third-party submodules |
 
-`assets/tests/` contains the asset format tests. Scene exports go under the
-ignored `assets/exports/` tree. Other extracted game data can go under `output/`
-or outside the repository.
+Tests live beside the tools they exercise. Scene exports go under the ignored
+`assets/exports/` tree. Other extracted game data can go under `output/` or
+outside the repository.
 
 ## Common commands
 
@@ -48,10 +52,10 @@ make extract-wsel
 make extract-zukan
 
 # Choose an exact output directory.
-python3 -m tools.scenes.field_scene /path/to/scene.IMG output/scenes/example
+python3 -m tools.data.scenes.field_scene /path/to/scene.IMG output/scenes/example
 
 # Inspect a standard TIM image.
-python3 tools/assets/psx_tim.py info /path/to/image.tim
+python3 tools/data/formats/psx_tim.py info /path/to/image.tim
 
 # Validate the selected version's generated build assets (in the build container).
 make validate-assets
@@ -60,6 +64,7 @@ make validate-assets VERSION=jp
 
 ## External dependencies
 
-`splat/`, `maspsx/`, `old-gcc/`, `m2c/`, and `decomp-permuter/` are third-party
+`external/splat/`, `external/maspsx/`, `external/old-gcc/`,
+`external/m2c/`, and `external/decomp-permuter/` are third-party
 submodules. Keep their upstream directory layouts; consult each project's README
 for its own tools and tests. `.gitmodules` is the source of truth for dependencies.

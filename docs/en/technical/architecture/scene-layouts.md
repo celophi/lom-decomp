@@ -207,5 +207,5 @@ If you want to follow this in the source, these are the places to start:
   value, then reads it.
 - [field_interaction_start.h](../../../../include/overlays/field/field_interaction_start.h):
   `FieldLayoutRecord` defines the layout record and its fields.
-- [field_scene.py](../../../../tools/scenes/field_scene.py): `FieldLayoutRecord.chest_yaml()`
+- [field_scene.py](../../../../tools/data/scenes/field_scene.py): `FieldLayoutRecord.chest_yaml()`
   turns the chest's layout fields into the readable YAML used in this example.

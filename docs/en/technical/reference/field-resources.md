@@ -1,6 +1,6 @@
 # FIELD resources
 
-[English index](../../README.md) | [Overlay extractors](../../../../tools/overlays/README.md) | [Japanese](../../../jp/technical/reference/field-resources.md)
+[English index](../../README.md) | [Overlay extractors](../../../../tools/data/overlays/README.md) | [Japanese](../../../jp/technical/reference/field-resources.md)
 
 FIELD carries the common graphics and tables the field runtime needs between
 scene loads. Both regional YAMLs now keep that data in one `field_data`
@@ -83,8 +83,8 @@ format. Small array exports keep stored padding where the original array
 length isn't established. Function-pointer tables retain their values and add
 known symbol names; tables that mix pointers and resource ids keep both.
 
-[`field.py`](../../../../tools/overlays/field.py) reads the resources and writes
-the exports. [`field_tables.py`](../../../../tools/overlays/field_tables.py)
+[`field.py`](../../../../tools/data/overlays/field.py) reads the resources and writes
+the exports. [`field_tables.py`](../../../../tools/data/overlays/field_tables.py)
 holds the small table layouts. Jump tables and other rodata before the code
 stay with their existing owners. Nothing in this export feeds back into the
 build.

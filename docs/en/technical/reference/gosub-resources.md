@@ -1,6 +1,6 @@
 # GOSUB resources
 
-[English index](../../README.md) | [Overlay extractors](../../../../tools/overlays/README.md) | [Japanese](../../../jp/technical/reference/gosub-resources.md)
+[English index](../../README.md) | [Overlay extractors](../../../../tools/data/overlays/README.md) | [Japanese](../../../jp/technical/reference/gosub-resources.md)
 
 GOSUB carries the workshop and companion-list screens: item selection, logic
 blocks, pets, golems and eggs. Both regional YAMLs keep its artwork, text and
@@ -84,7 +84,7 @@ The UI glyph records don't select a palette. The caller supplies one, so each
 glyph PNG shows palettes 0 through 15 in a four-by-four grid, left to right,
 then top to bottom. Records 0, 20 and 53 have zero dimensions and stay in the
 YAML without producing empty PNGs. GOLEM and GOSUB use the same preview writer
-in [`glyph_texture.py`](../../../../tools/overlays/glyph_texture.py).
+in [`glyph_texture.py`](../../../../tools/data/overlays/glyph_texture.py).
 
 PNGs show palette value zero as transparent and other colors as opaque.
 Runtime tinting, blending and palette changes aren't applied. Original TIMs
@@ -117,6 +117,6 @@ rodata is 24 bytes in each version. Other rodata stays with its C unit.
 Both exports account for every byte, including zero padding and repeated
 words after the UI TIM and portrait archive. Neither needs an `unknown/`
 folder. Unrecognized nonzero bytes would still be saved there unchanged.
-[`gosub.py`](../../../../tools/overlays/gosub.py) follows the same resource
+[`gosub.py`](../../../../tools/data/overlays/gosub.py) follows the same resource
 readers, `Part` records and writers as the other extractors. Editing an export
 doesn't change what the build links.

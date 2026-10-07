@@ -17,7 +17,7 @@ STAGE_PATHS_REQUIRED := \
 	$(ASM_DIR) \
 	include \
 	$(LINKER_DIR) \
-	tools/maspsx
+	tools/external/maspsx
 
 # Some overlays have no extracted assets. Don't require a missing asset tree.
 STAGE_PATHS_OPTIONAL := $(ASSETS_DIR)

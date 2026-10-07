@@ -1,6 +1,6 @@
 # TITLE resources
 
-[English index](../../README.md) | [Overlay extractors](../../../../tools/overlays/README.md) | [Japanese](../../../jp/technical/reference/title-resources.md)
+[English index](../../README.md) | [Overlay extractors](../../../../tools/data/overlays/README.md) | [Japanese](../../../jp/technical/reference/title-resources.md)
 
 TITLE runs the title menu and the character and weapon selection that follows
 New Game. Its data holds the menu artwork, the selection screen's textures and
@@ -183,9 +183,9 @@ terminator.
   after the C symbols. Which on-screen character each one is hasn't been
   checked against the running game.
 
-[`title.py`](../../../../tools/overlays/title.py) follows the same reader,
+[`title.py`](../../../../tools/data/overlays/title.py) follows the same reader,
 `Part` and writer structure as the other overlay extractors, and reuses the
 TIM, offset table, sequence, upload table, UV and layout parsers from
-`tools/assets/`. The saved-game records are read by
-[`saved_game.py`](../../../../tools/overlays/saved_game.py), whose offsets the
+`tools/data/formats/`. The saved-game records are read by
+[`saved_game.py`](../../../../tools/data/overlays/saved_game.py), whose offsets the
 tests compare with the C header.

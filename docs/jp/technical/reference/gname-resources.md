@@ -1,6 +1,6 @@
 # GNAMEのリソース
 
-[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/overlays/README.md) | [English](../../../en/technical/reference/gname-resources.md)
+[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/data/overlays/README.md) | [English](../../../en/technical/reference/gname-resources.md)
 
 GNAMEには、名前入力画面の画像、文字パネル、名前のリストが入っています。
 以前のYAMLでは複数のアセット形式に分けていましたが、両バージョンとも
@@ -82,9 +82,9 @@ TIMには画像座標(0, 0)と、パレット座標(0, 480)が格納されてい
 終わります。どちらも`unknown/`フォルダは不要です。読み取り後に意味の分からない
 非ゼロのバイト列が残った場合は、そこへ変更せず保存します。
 
-[`gname.py`](../../../../tools/overlays/gname.py)も、ほかのオーバーレイ抽出ツールと
+[`gname.py`](../../../../tools/data/overlays/gname.py)も、ほかのオーバーレイ抽出ツールと
 同じ作りです。境界はシンボルから求め、リソースごとの読み取り処理とバイトマップを
-使います。形式の解析には`tools/assets/`の既存パーサを再利用します。
+使います。形式の解析には`tools/data/formats/`の既存パーサを再利用します。
 アニメーションのYAMLには各フレームの3スロットすべてを残します。
 グリフ番号ゼロのスロットは非表示で、フレームの表示時間に使うのは最初のスロットの
 制御バイトだけです。単位は描画処理の更新回数です。

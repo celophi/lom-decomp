@@ -5,9 +5,9 @@ from typing import Optional
 from splat.segtypes.common.code import CommonSegCode
 from splat.util import log, options
 
-# Load decompress.py from the same directory as this extension
+# Load the shared decoder without requiring splat to import tools as a package.
 _ext_dir = Path(__file__).resolve().parent
-_spec = importlib.util.spec_from_file_location("decompress", _ext_dir / "decompress.py")
+_spec = importlib.util.spec_from_file_location("decompress", _ext_dir.parent / "compression" / "decompress.py")
 _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)
 _decompress = _mod.decompress

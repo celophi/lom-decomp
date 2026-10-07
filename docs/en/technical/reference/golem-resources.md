@@ -1,6 +1,6 @@
 # GOLEM resources
 
-[English index](../../README.md) | [Overlay extractors](../../../../tools/overlays/README.md) | [Japanese](../../../jp/technical/reference/golem-resources.md)
+[English index](../../README.md) | [Overlay extractors](../../../../tools/data/overlays/README.md) | [Japanese](../../../jp/technical/reference/golem-resources.md)
 
 GOLEM is the logic-block grid editor. It carries the editor artwork, block
 names and descriptions, and the records that put the screen together.
@@ -82,7 +82,7 @@ area without writing another file. Every byte is accounted for, so neither
 version needs an `unknown/` folder. Unrecognized nonzero data would still be
 saved there unchanged.
 
-[`golem.py`](../../../../tools/overlays/golem.py) follows the same reader, `Part`
+[`golem.py`](../../../../tools/data/overlays/golem.py) follows the same reader, `Part`
 and writer structure as the other overlay extractors. The rodata before the
 code stays with its existing C unit. Editing these exports doesn't change
 what the build links.

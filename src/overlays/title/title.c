@@ -81,7 +81,7 @@ typedef union
 } TitleFadePrimitive;
 
 /* The complete .data payload is one databin (title_data), linked unchanged
- * and exported by tools/overlays/title.py. Symbols used by the code are
+ * and exported by tools/data/overlays/title.py. Symbols used by the code are
  * declared in title_internal.h and assigned fixed overlay addresses by
  * config/<version>/symbols/title_symbol_addrs.txt. */
 

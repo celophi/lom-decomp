@@ -1,18 +1,15 @@
 [submodule "tools/splat"]
-	path = tools/splat
+	path = tools/external/splat
 	url = https://github.com/ethteck/splat.git
 [submodule "tools/maspsx"]
-	path = tools/maspsx
+	path = tools/external/maspsx
 	url = https://github.com/mkst/maspsx
 [submodule "tools/old-gcc"]
-	path = tools/old-gcc
+	path = tools/external/old-gcc
 	url = https://github.com/decompals/old-gcc
 [submodule "tools/decomp-permuter"]
-	path = tools/decomp-permuter
+	path = tools/external/decomp-permuter
 	url = https://github.com/simonlindholm/decomp-permuter.git
 [submodule "tools/m2c"]
-	path = tools/m2c
+	path = tools/external/m2c
 	url = https://github.com/matt-kempster/m2c
-[submodule "tools/coddog"]
-	path = tools/coddog
-	url = https://github.com/ethteck/coddog

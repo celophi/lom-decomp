@@ -9,12 +9,12 @@ ASSET_BINARIES := $(PSX_TIM_DUPLICATE_WORD_BINARIES)
 .PHONY: validate-psx-tim-assets
 validate-assets: validate-psx-tim-assets
 
-%.tim_trail.bin: %.tim tools/assets/psx_tim.py
-	python3 tools/assets/psx_tim.py build $< $@ --trailing-duplicate-word
+%.tim_trail.bin: %.tim tools/data/formats/psx_tim.py
+	python3 tools/data/formats/psx_tim.py build $< $@ --trailing-duplicate-word
 
 validate-psx-tim-assets: $(PSX_TIM_DUPLICATE_WORD_BINARIES)
 ifneq ($(strip $(PSX_TIM_ASSETS)),)
-	python3 tools/assets/psx_tim.py roundtrip $(PSX_TIM_ASSETS)
+	python3 tools/data/formats/psx_tim.py roundtrip $(PSX_TIM_ASSETS)
 else
 	@:
 endif
@@ -26,12 +26,12 @@ ASSET_BINARIES += $(ASSET_OFFSET_TABLE_BINARIES)
 .PHONY: validate-asset-offset-table-assets
 validate-assets: validate-asset-offset-table-assets
 
-%.asset_offset_table.bin: %.asset_offset_table.yaml tools/assets/asset_offset_table.py
-	python3 tools/assets/asset_offset_table.py build $< $@
+%.asset_offset_table.bin: %.asset_offset_table.yaml tools/data/formats/asset_offset_table.py
+	python3 tools/data/formats/asset_offset_table.py build $< $@
 
 validate-asset-offset-table-assets: $(ASSET_OFFSET_TABLE_BINARIES)
 ifneq ($(strip $(ASSET_OFFSET_TABLE_SOURCES)),)
-	python3 tools/assets/asset_offset_table.py validate $(ASSET_OFFSET_TABLE_SOURCES)
+	python3 tools/data/formats/asset_offset_table.py validate $(ASSET_OFFSET_TABLE_SOURCES)
 else
 	@:
 endif
@@ -43,12 +43,12 @@ ASSET_BINARIES += $(U8_SEQUENCE_BINARIES)
 .PHONY: validate-u8-sequence-assets
 validate-assets: validate-u8-sequence-assets
 
-%.u8_sequence.bin: %.u8_sequence.yaml tools/assets/u8_sequence.py
-	python3 tools/assets/u8_sequence.py build $< $@
+%.u8_sequence.bin: %.u8_sequence.yaml tools/data/formats/u8_sequence.py
+	python3 tools/data/formats/u8_sequence.py build $< $@
 
 validate-u8-sequence-assets: $(U8_SEQUENCE_BINARIES)
 ifneq ($(strip $(U8_SEQUENCE_SOURCES)),)
-	python3 tools/assets/u8_sequence.py validate $(U8_SEQUENCE_SOURCES)
+	python3 tools/data/formats/u8_sequence.py validate $(U8_SEQUENCE_SOURCES)
 else
 	@:
 endif
@@ -60,12 +60,12 @@ ASSET_BINARIES += $(TIM_UPLOAD_TABLE_BINARIES)
 .PHONY: validate-tim-upload-table-assets
 validate-assets: validate-tim-upload-table-assets
 
-%.tim_upload_table.bin: %.tim_upload_table.yaml tools/assets/tim_upload_table.py
-	python3 tools/assets/tim_upload_table.py build $< $@
+%.tim_upload_table.bin: %.tim_upload_table.yaml tools/data/formats/tim_upload_table.py
+	python3 tools/data/formats/tim_upload_table.py build $< $@
 
 validate-tim-upload-table-assets: $(TIM_UPLOAD_TABLE_BINARIES)
 ifneq ($(strip $(TIM_UPLOAD_TABLE_SOURCES)),)
-	python3 tools/assets/tim_upload_table.py validate $(TIM_UPLOAD_TABLE_SOURCES)
+	python3 tools/data/formats/tim_upload_table.py validate $(TIM_UPLOAD_TABLE_SOURCES)
 else
 	@:
 endif
@@ -77,12 +77,12 @@ ASSET_BINARIES += $(UV_RECT_TABLE_BINARIES)
 .PHONY: validate-uv-rect-table-assets
 validate-assets: validate-uv-rect-table-assets
 
-%.uv_rect_table.bin: %.uv_rect_table.yaml tools/assets/uv_rect_table.py
-	python3 tools/assets/uv_rect_table.py build $< $@
+%.uv_rect_table.bin: %.uv_rect_table.yaml tools/data/formats/uv_rect_table.py
+	python3 tools/data/formats/uv_rect_table.py build $< $@
 
 validate-uv-rect-table-assets: $(UV_RECT_TABLE_BINARIES)
 ifneq ($(strip $(UV_RECT_TABLE_SOURCES)),)
-	python3 tools/assets/uv_rect_table.py validate $(UV_RECT_TABLE_SOURCES)
+	python3 tools/data/formats/uv_rect_table.py validate $(UV_RECT_TABLE_SOURCES)
 else
 	@:
 endif
@@ -94,12 +94,12 @@ ASSET_BINARIES += $(SAVE_LAYOUT_TABLE_BINARIES)
 .PHONY: validate-save-layout-table-assets
 validate-assets: validate-save-layout-table-assets
 
-%.save_layout_table.bin: %.save_layout_table.yaml tools/assets/save_layout_table.py
-	python3 tools/assets/save_layout_table.py build $< $@
+%.save_layout_table.bin: %.save_layout_table.yaml tools/data/formats/save_layout_table.py
+	python3 tools/data/formats/save_layout_table.py build $< $@
 
 validate-save-layout-table-assets: $(SAVE_LAYOUT_TABLE_BINARIES)
 ifneq ($(strip $(SAVE_LAYOUT_TABLE_SOURCES)),)
-	python3 tools/assets/save_layout_table.py validate $(SAVE_LAYOUT_TABLE_SOURCES)
+	python3 tools/data/formats/save_layout_table.py validate $(SAVE_LAYOUT_TABLE_SOURCES)
 else
 	@:
 endif
@@ -111,12 +111,12 @@ ASSET_BINARIES += $(STARTING_WEAPON_TABLE_BINARIES)
 .PHONY: validate-starting-weapon-table-assets
 validate-assets: validate-starting-weapon-table-assets
 
-%.starting_weapon_table.bin: %.starting_weapon_table.yaml tools/assets/starting_weapon_table.py
-	python3 tools/assets/starting_weapon_table.py build $< $@
+%.starting_weapon_table.bin: %.starting_weapon_table.yaml tools/data/formats/starting_weapon_table.py
+	python3 tools/data/formats/starting_weapon_table.py build $< $@
 
 validate-starting-weapon-table-assets: $(STARTING_WEAPON_TABLE_BINARIES)
 ifneq ($(strip $(STARTING_WEAPON_TABLE_SOURCES)),)
-	python3 tools/assets/starting_weapon_table.py validate $(STARTING_WEAPON_TABLE_SOURCES)
+	python3 tools/data/formats/starting_weapon_table.py validate $(STARTING_WEAPON_TABLE_SOURCES)
 else
 	@:
 endif
@@ -128,12 +128,12 @@ ASSET_BINARIES += $(GAME_STATE_TEMPLATE_BINARIES)
 .PHONY: validate-game-state-template-assets
 validate-assets: validate-game-state-template-assets
 
-%.game_state_template.bin: %.game_state_template.yaml %.payload.bin tools/assets/game_state_template.py
-	python3 tools/assets/game_state_template.py build $< $@
+%.game_state_template.bin: %.game_state_template.yaml %.payload.bin tools/data/formats/game_state_template.py
+	python3 tools/data/formats/game_state_template.py build $< $@
 
 validate-game-state-template-assets: $(GAME_STATE_TEMPLATE_BINARIES)
 ifneq ($(strip $(GAME_STATE_TEMPLATE_SOURCES)),)
-	python3 tools/assets/game_state_template.py validate $(GAME_STATE_TEMPLATE_SOURCES)
+	python3 tools/data/formats/game_state_template.py validate $(GAME_STATE_TEMPLATE_SOURCES)
 else
 	@:
 endif
@@ -145,12 +145,12 @@ ASSET_BINARIES += $(SPRITE_LAYOUT_BINARIES)
 .PHONY: validate-sprite-layout-assets
 validate-assets: validate-sprite-layout-assets
 
-%.sprite_layout.bin: %.sprite_layout.yaml tools/assets/sprite_layout.py
-	python3 tools/assets/sprite_layout.py build $< $@
+%.sprite_layout.bin: %.sprite_layout.yaml tools/data/formats/sprite_layout.py
+	python3 tools/data/formats/sprite_layout.py build $< $@
 
 validate-sprite-layout-assets: $(SPRITE_LAYOUT_BINARIES)
 ifneq ($(strip $(SPRITE_LAYOUT_SOURCES)),)
-	python3 tools/assets/sprite_layout.py validate $(SPRITE_LAYOUT_SOURCES)
+	python3 tools/data/formats/sprite_layout.py validate $(SPRITE_LAYOUT_SOURCES)
 else
 	@:
 endif
@@ -162,12 +162,12 @@ ASSET_BINARIES += $(SPRITE_ANIMATION_BINARIES)
 .PHONY: validate-sprite-animation-assets
 validate-assets: validate-sprite-animation-assets
 
-%.sprite_animation.bin: %.sprite_animation.yaml tools/assets/sprite_animation.py
-	python3 tools/assets/sprite_animation.py build $< $@
+%.sprite_animation.bin: %.sprite_animation.yaml tools/data/formats/sprite_animation.py
+	python3 tools/data/formats/sprite_animation.py build $< $@
 
 validate-sprite-animation-assets: $(SPRITE_ANIMATION_BINARIES)
 ifneq ($(strip $(SPRITE_ANIMATION_SOURCES)),)
-	python3 tools/assets/sprite_animation.py validate $(SPRITE_ANIMATION_SOURCES)
+	python3 tools/data/formats/sprite_animation.py validate $(SPRITE_ANIMATION_SOURCES)
 else
 	@:
 endif
@@ -179,12 +179,12 @@ ASSET_BINARIES += $(GLYPH_METRICS_BINARIES)
 .PHONY: validate-glyph-metrics-assets
 validate-assets: validate-glyph-metrics-assets
 
-%.glyph_metrics.bin: %.glyph_metrics.yaml tools/assets/glyph_metrics.py
-	python3 tools/assets/glyph_metrics.py build $< $@
+%.glyph_metrics.bin: %.glyph_metrics.yaml tools/data/formats/glyph_metrics.py
+	python3 tools/data/formats/glyph_metrics.py build $< $@
 
 validate-glyph-metrics-assets: $(GLYPH_METRICS_BINARIES)
 ifneq ($(strip $(GLYPH_METRICS_SOURCES)),)
-	python3 tools/assets/glyph_metrics.py validate $(GLYPH_METRICS_SOURCES)
+	python3 tools/data/formats/glyph_metrics.py validate $(GLYPH_METRICS_SOURCES)
 else
 	@:
 endif
@@ -196,12 +196,12 @@ ASSET_BINARIES += $(TAB_CURSOR_LAYOUT_BINARIES)
 .PHONY: validate-tab-cursor-layout-assets
 validate-assets: validate-tab-cursor-layout-assets
 
-%.tab_cursor_layout.bin: %.tab_cursor_layout.yaml tools/assets/tab_cursor_layout.py
-	python3 tools/assets/tab_cursor_layout.py build $< $@
+%.tab_cursor_layout.bin: %.tab_cursor_layout.yaml tools/data/formats/tab_cursor_layout.py
+	python3 tools/data/formats/tab_cursor_layout.py build $< $@
 
 validate-tab-cursor-layout-assets: $(TAB_CURSOR_LAYOUT_BINARIES)
 ifneq ($(strip $(TAB_CURSOR_LAYOUT_SOURCES)),)
-	python3 tools/assets/tab_cursor_layout.py validate $(TAB_CURSOR_LAYOUT_SOURCES)
+	python3 tools/data/formats/tab_cursor_layout.py validate $(TAB_CURSOR_LAYOUT_SOURCES)
 else
 	@:
 endif
@@ -213,12 +213,12 @@ ASSET_BINARIES += $(INDEX_BOUNDARIES_BINARIES)
 .PHONY: validate-index-boundaries-assets
 validate-assets: validate-index-boundaries-assets
 
-%.index_boundaries.bin: %.index_boundaries.yaml tools/assets/index_boundaries.py
-	python3 tools/assets/index_boundaries.py build $< $@
+%.index_boundaries.bin: %.index_boundaries.yaml tools/data/formats/index_boundaries.py
+	python3 tools/data/formats/index_boundaries.py build $< $@
 
 validate-index-boundaries-assets: $(INDEX_BOUNDARIES_BINARIES)
 ifneq ($(strip $(INDEX_BOUNDARIES_SOURCES)),)
-	python3 tools/assets/index_boundaries.py validate $(INDEX_BOUNDARIES_SOURCES)
+	python3 tools/data/formats/index_boundaries.py validate $(INDEX_BOUNDARIES_SOURCES)
 else
 	@:
 endif
@@ -230,12 +230,12 @@ ASSET_BINARIES += $(INDEX_MAP_BINARIES)
 .PHONY: validate-index-map-assets
 validate-assets: validate-index-map-assets
 
-%.index_map.bin: %.index_map.yaml tools/assets/index_map.py
-	python3 tools/assets/index_map.py build $< $@
+%.index_map.bin: %.index_map.yaml tools/data/formats/index_map.py
+	python3 tools/data/formats/index_map.py build $< $@
 
 validate-index-map-assets: $(INDEX_MAP_BINARIES)
 ifneq ($(strip $(INDEX_MAP_SOURCES)),)
-	python3 tools/assets/index_map.py validate $(INDEX_MAP_SOURCES)
+	python3 tools/data/formats/index_map.py validate $(INDEX_MAP_SOURCES)
 else
 	@:
 endif
@@ -247,12 +247,12 @@ ASSET_BINARIES += $(NAME_ENTRY_RESOURCE_BINARIES)
 .PHONY: validate-name-entry-resource-assets
 validate-assets: validate-name-entry-resource-assets
 
-%.name_entry_resource.bin: %.name_entry_resource.yaml tools/assets/name_entry_resource.py
-	python3 tools/assets/name_entry_resource.py build $< $@
+%.name_entry_resource.bin: %.name_entry_resource.yaml tools/data/formats/name_entry_resource.py
+	python3 tools/data/formats/name_entry_resource.py build $< $@
 
 validate-name-entry-resource-assets: $(NAME_ENTRY_RESOURCE_BINARIES)
 ifneq ($(strip $(NAME_ENTRY_RESOURCE_SOURCES)),)
-	python3 tools/assets/name_entry_resource.py validate $(NAME_ENTRY_RESOURCE_SOURCES)
+	python3 tools/data/formats/name_entry_resource.py validate $(NAME_ENTRY_RESOURCE_SOURCES)
 else
 	@:
 endif

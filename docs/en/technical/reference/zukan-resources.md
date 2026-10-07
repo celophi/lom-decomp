@@ -1,6 +1,6 @@
 # ZUKAN resources
 
-[English index](../../README.md) | [Overlay extractors](../../../../tools/overlays/README.md) | [Japanese](../../../jp/technical/reference/zukan-resources.md)
+[English index](../../README.md) | [Overlay extractors](../../../../tools/data/overlays/README.md) | [Japanese](../../../jp/technical/reference/zukan-resources.md)
 
 ZUKAN is the encyclopedia screen: the category lists and the entry pages for
 lands, artifacts, monsters, characters, world history and the rest. Both
@@ -148,7 +148,7 @@ rodatabin and isn't exported.
 
 Both byte maps account for every byte. JP has no unknown gaps. US has one:
 six bytes after the category titles, saved in `unknown/8015741A.bin`.
-[`zukan.py`](../../../../tools/overlays/zukan.py) follows the same resource
+[`zukan.py`](../../../../tools/data/overlays/zukan.py) follows the same resource
 readers, `Part` records and writers as the other extractors. Editing an
 export doesn't change what the build links.
 

@@ -1,6 +1,6 @@
 # CLOAD resources
 
-[English index](../../README.md) | [Overlay extractors](../../../../tools/overlays/README.md) | [Japanese](../../../jp/technical/reference/cload-resources.md)
+[English index](../../README.md) | [Overlay extractors](../../../../tools/data/overlays/README.md) | [Japanese](../../../jp/technical/reference/cload-resources.md)
 
 CLOAD keeps its messages and small tables in one data blob. The build already
 links it that way in both versions. To see what's inside, extract the splat
@@ -50,7 +50,7 @@ There are no memory card title templates in the blob either. The fixed card
 path strings are defined in
 [`cload_card.c`](../../../../src/overlays/cload/cload_card.c).
 
-[`cload.py`](../../../../tools/overlays/cload.py) reads the blob in address
+[`cload.py`](../../../../tools/data/overlays/cload.py) reads the blob in address
 order, using the shared card-format readers. It gets addresses from each
 version's symbol file and step names from the C enum. The tests also check
 that its two-byte chart base agrees with

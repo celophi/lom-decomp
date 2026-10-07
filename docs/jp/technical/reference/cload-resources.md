@@ -1,6 +1,6 @@
 # CLOADのリソース
 
-[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/overlays/README.md) | [English](../../../en/technical/reference/cload-resources.md)
+[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/data/overlays/README.md) | [English](../../../en/technical/reference/cload-resources.md)
 
 CLOADのメッセージと小さなテーブルは、1つのデータblobに入っています。
 ビルドも両バージョンで、すでにそのままリンクしています。中身を見るには、
@@ -48,7 +48,7 @@ CDリソース`0x5E4`からパーティーアイコンを読み込みます。
 メモリーカードのタイトル雛形もblobにはありません。固定のカードパス文字列は
 [`cload_card.c`](../../../../src/overlays/cload/cload_card.c)で定義されています。
 
-[`cload.py`](../../../../tools/overlays/cload.py)はアドレス順にblobを読み、
+[`cload.py`](../../../../tools/data/overlays/cload.py)はアドレス順にblobを読み、
 共通のカード形式の読み取り処理を使います。アドレスは各バージョンのシンボルファイル、
 処理名はCのenumから取得します。2バイト文字表の基準アドレスが
 [`cload_glyph.c`](../../../../src/overlays/cload/cload_glyph.c)と一致することもテストで確認します。

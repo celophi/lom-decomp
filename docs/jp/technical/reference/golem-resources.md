@@ -1,6 +1,6 @@
 # GOLEMのリソース
 
-[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/overlays/README.md) | [English](../../../en/technical/reference/golem-resources.md)
+[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/data/overlays/README.md) | [English](../../../en/technical/reference/golem-resources.md)
 
 GOLEMは、ロジックブロックをグリッドに配置する編集画面です。
 画面用の画像、ブロック名と説明、画面を組み立てるためのレコードを持っています。
@@ -80,7 +80,7 @@ GOLEMは画像を(320, 0)に転送し、256色のパレットを1行に並べて
 全バイトを扱えているため、どちらの版も`unknown/`フォルダは不要です。
 意味の分からない非ゼロのデータが残った場合は、変更せずにそこへ保存します。
 
-[`golem.py`](../../../../tools/overlays/golem.py)も、ほかの抽出ツールと同じく、
+[`golem.py`](../../../../tools/data/overlays/golem.py)も、ほかの抽出ツールと同じく、
 読み取り処理、`Part`、書き込み処理を分けています。
 コードより前にあるrodataは、これまでのC単位に残します。
 抽出結果を編集しても、ビルドがリンクするデータは変わりません。

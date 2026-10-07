@@ -1,6 +1,6 @@
 # GOSUBのリソース
 
-[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/overlays/README.md) | [English](../../../en/technical/reference/gosub-resources.md)
+[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/data/overlays/README.md) | [English](../../../en/technical/reference/gosub-resources.md)
 
 GOSUBは、アイテムの選択やロジックブロック、ペット、ゴーレム、卵の一覧など、
 作成・育成に使う画面を持っています。両バージョンのYAMLでは、画像、テキスト、
@@ -81,7 +81,7 @@ UIのグリフレコードにはパレットの指定がなく、描画時に呼
 各グリフのPNGには、パレット0から15を4列4行で並べます。
 順番は左から右、上から下です。番号0、20、53はサイズがゼロなので、
 YAMLには残しますが空のPNGは作りません。GOLEMとGOSUBは、
-[`glyph_texture.py`](../../../../tools/overlays/glyph_texture.py)の同じ処理でプレビューを作ります。
+[`glyph_texture.py`](../../../../tools/data/overlays/glyph_texture.py)の同じ処理でプレビューを作ります。
 
 PNGではパレット値ゼロを透明、それ以外を不透明にします。
 実行時の色調変更、半透明合成、パレットの変更は適用しません。
@@ -114,6 +114,6 @@ GOSUBは画像を(320, 0)に転送し、256色を1行に並べて(0, 498)へ転�
 ゼロのパディングと、UIのTIMやポートレートアーカイブ末尾の繰り返しワードも含め、
 両版とも全バイトを扱えているため、`unknown/`フォルダは不要です。
 意味の分からない非ゼロのデータが残った場合は、変更せずにそこへ保存します。
-[`gosub.py`](../../../../tools/overlays/gosub.py)は、ほかの抽出ツールと同じく、
+[`gosub.py`](../../../../tools/data/overlays/gosub.py)は、ほかの抽出ツールと同じく、
 リソースの読み取り処理、`Part`レコード、書き込み処理を分けています。
 抽出結果を編集しても、ビルドがリンクするデータは変わりません。

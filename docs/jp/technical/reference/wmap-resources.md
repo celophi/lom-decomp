@@ -1,6 +1,6 @@
 # WMAPのリソース
 
-[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/overlays/README.md) | [English](../../../en/technical/reference/wmap-resources.md)
+[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/data/overlays/README.md) | [English](../../../en/technical/reference/wmap-resources.md)
 
 WMAPはワールドマップです。アーティファクトの配置、アーティファクトを選ぶ
 回転表示、土地の間の移動、マップのミニゲーム、土地ごとの演出を担当します。
@@ -145,8 +145,8 @@ nullのワードが1つ余分にあります。JP版にはありません。
 `g_wmap_spirit_sequence_bounds`の後の3バイトのように、末尾に整列用のバイトを
 含むものがあります。
 
-読み取りと出力は[`wmap.py`](../../../../tools/overlays/wmap.py)、テーブルの形式は
-[`wmap_tables.py`](../../../../tools/overlays/wmap_tables.py)にあります。
+読み取りと出力は[`wmap.py`](../../../../tools/data/overlays/wmap.py)、テーブルの形式は
+[`wmap_tables.py`](../../../../tools/data/overlays/wmap_tables.py)にあります。
 コードより前にあるrodataは、2つの4バイトの整列用blobも含めて変更していません。
 抽出結果を編集しても、ビルドがリンクするデータは変わりません。
 

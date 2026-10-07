@@ -140,10 +140,10 @@ splatの設定ファイルには、各オーバーレイファイルの期待さ
 本プロジェクトでは、複数の古いGCCを使い分けています。`old-gcc` サブモジュールを使って、次の4つのローカルコンパイライメージをビルドしてください。
 
 ```bash
-docker build -t old-gcc/gcc-2.8.0-psx -f tools/old-gcc/gcc-2.8.0-psx.Dockerfile tools/old-gcc
-docker build -t old-gcc/gcc-2.7.2-cdk -f tools/old-gcc/gcc-2.7.2-cdk.Dockerfile tools/old-gcc
-docker build -t old-gcc/gcc-2.6.0-psx -f tools/old-gcc/gcc-2.6.0-psx.Dockerfile tools/old-gcc
-docker build -t old-gcc/gcc-2.7.2-psx-gnu -f dockerfiles/gnu-as.dockerfile tools/old-gcc
+docker build -t old-gcc/gcc-2.8.0-psx -f tools/external/old-gcc/gcc-2.8.0-psx.Dockerfile tools/external/old-gcc
+docker build -t old-gcc/gcc-2.7.2-cdk -f tools/external/old-gcc/gcc-2.7.2-cdk.Dockerfile tools/external/old-gcc
+docker build -t old-gcc/gcc-2.6.0-psx -f tools/external/old-gcc/gcc-2.6.0-psx.Dockerfile tools/external/old-gcc
+docker build -t old-gcc/gcc-2.7.2-psx-gnu -f dockerfiles/gnu-as.dockerfile tools/external/old-gcc
 ```
 
 通常、この作業が必要なのは最初の1回だけです。開発用Dockerfileはこれらのローカルイメージを利用するため、非公開のコンパイライメージへアクセスする必要はありません。
@@ -395,7 +395,7 @@ lom-decomp/
 
 [日本語ドキュメント一覧](docs/jp/README.md)に、ゲームの仕組みの解説と関連資料をまとめています。
 
-- [`tools/compressor/README.md`](tools/compressor/README.md)
+- [`tools/compression/README.md`](tools/compression/README.md)
 
 ## トラブルシューティング
 

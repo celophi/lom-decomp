@@ -1,6 +1,6 @@
 # ZUKANのリソース
 
-[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/overlays/README.md) | [English](../../../en/technical/reference/zukan-resources.md)
+[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/data/overlays/README.md) | [English](../../../en/technical/reference/zukan-resources.md)
 
 ZUKANは図鑑の画面です。ランド、アーティファクト、モンスター、人物、世界事典などの
 一覧と、各項目のページを表示します。両バージョンのYAMLでは、画像、名前、
@@ -144,7 +144,7 @@ N番目の番号から次の番号の手前までの項目が並びます。画�
 
 両版とも、バイトマップは全バイトを扱っています。JPには不明な範囲がありません。
 USには1つあり、分類名の後ろの6バイトを`unknown/8015741A.bin`に保存します。
-[`zukan.py`](../../../../tools/overlays/zukan.py)は、ほかの抽出ツールと同じく、
+[`zukan.py`](../../../../tools/data/overlays/zukan.py)は、ほかの抽出ツールと同じく、
 リソースの読み取り処理、`Part`レコード、書き込み処理を分けています。
 抽出結果を編集しても、ビルドがリンクするデータは変わりません。
 
