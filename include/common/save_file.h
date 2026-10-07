@@ -22,6 +22,6 @@ u8* skip_hex_digits(u8* text);
 void format_hex(s8* out, s32 value, s32 max_chars);
 void hex_nibble_to_ascii(s8* out, s32 value);
 u32 parse_hex(u8* text, s32 digits_left);
-s32 parse_hex_suffix_byte(u8* text);
+s32 parse_hex_suffix_byte(const char* text);
 
 #endif
