@@ -1255,9 +1255,7 @@ void akao_refresh_voice_allocation_state(u32 reserved_voice_mask, s32 xa_voice_m
         unavailable_voice_mask |= g_akao_seq_channel1->masks.active_mask & g_akao_seq_channel1->masks.static_voice_mask;
     }
 
-    voice_index = 0;
-    allocation = g_akao_voice_allocations;
-    do
+    for (voice_index = 0, allocation = g_akao_voice_allocations; voice_index < AKAO_VOICE_COUNT; voice_index++, allocation++)
     {
         if (unavailable_voice_mask & (1 << voice_index))
         {
@@ -1271,9 +1269,7 @@ void akao_refresh_voice_allocation_state(u32 reserved_voice_mask, s32 xa_voice_m
                 akao_clear_voice_assignment(g_akao_seq_channels, voice_index);
             }
         }
-        voice_index++;
-        allocation++;
-    } while (voice_index < AKAO_VOICE_COUNT);
+    }
 }
 
 /**
@@ -1358,10 +1354,8 @@ void akao_flush_voice_updates(s32 sfx_update_mask)
     update_mask = g_akao_sfx_control.active_mask & g_akao_sfx_control.note_on_mask;
     if (update_mask != 0)
     {
-        voice_mask = AKAO_SFX_FIRST_CHANNEL_BIT;
-        sfx_channel = g_sfx_channels;
         key_on_voice_mask |= g_akao_sfx_control.key_on_mask;
-        do
+        for (voice_mask = AKAO_SFX_FIRST_CHANNEL_BIT, sfx_channel = g_sfx_channels; update_mask != 0; voice_mask <<= 1, sfx_channel++)
         {
             if (update_mask & voice_mask)
             {
@@ -1372,9 +1366,7 @@ void akao_flush_voice_updates(s32 sfx_update_mask)
                 }
                 update_mask &= ~voice_mask;
             }
-            voice_mask <<= 1;
-            sfx_channel++;
-        } while (update_mask != 0);
+        }
         g_akao_sfx_control.key_on_mask = 0;
     }
 
