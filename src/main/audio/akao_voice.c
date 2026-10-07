@@ -1107,15 +1107,13 @@ s32 akao_find_free_voice(s32 ignore_voice_reserve)
         voice_index = g_akao_seq_channel0->voice_alloc_base;
     }
 
-    allocation = &g_akao_voice_allocations[voice_index];
-    while (allocation->envelope_level != 0)
+    for (allocation = &g_akao_voice_allocations[voice_index]; allocation->envelope_level != 0; allocation++)
     {
         voice_index++;
         if (voice_index >= AKAO_VOICE_COUNT)
         {
             break;
         }
-        allocation++;
     }
 
     return voice_index;
