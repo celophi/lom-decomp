@@ -1,4 +1,4 @@
-# Shared historical compilers, Psy-Q SDK, and system tools for both images.
+# Shared historical compilers and system tools for both images.
 # Build the four old-gcc images first, then run from the repository root:
 #   docker build -t lom-toolchain -f dockerfiles/toolchain.dockerfile .
 
@@ -57,24 +57,3 @@ COPY --from=psx-gcc-2.7.2-gnuas /g++      /opt/psx-gcc-2.7.2-gnuas/g++
 COPY --from=psx-gcc-2.7.2-gnuas /as       /opt/psx-gcc-2.7.2-gnuas/as
 COPY --from=psx-gcc-2.7.2-gnuas /ld       /opt/psx-gcc-2.7.2-gnuas/ld
 COPY --from=psx-gcc-2.7.2-gnuas /objdump  /opt/psx-gcc-2.7.2-gnuas/objdump
-
-# Wibo (WINE alternative)
-COPY --from=ghcr.io/decompals/wibo:1.0.1 /usr/local/bin/wibo /usr/bin/
-
-RUN mkdir /opt/psyq4.1
-
-RUN wget -O psyq4.1.tar.gz "https://github.com/mkst/esa/releases/download/psyq-binaries/psyq4.1.tar.gz"
-RUN tar xvzf psyq4.1.tar.gz --strip-components=1 -C /opt/psyq4.1
-
-RUN wget -O psyq-obj-parser.tar.gz https://github.com/decompme/compilers/releases/download/compilers/psyq-obj-parser.tar.gz?2025-03-18
-RUN tar xvzf psyq-obj-parser.tar.gz -C /opt/psyq4.1/
-
-RUN cat <<'EOF' > /opt/psyq4.1/SN.INI
-[ccpsx]
-compiler_path=/opt/psyq4.1
-assembler_path=/opt/psyq4.1
-tmpdir=/tmp
-EOF
-
-ENV SN_PATH=/opt/psyq4.1
-

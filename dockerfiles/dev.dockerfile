@@ -1,8 +1,8 @@
 # dev.dockerfile: primary development container for the Legend of Mana decomp.
 #
 # This is the image you build and work inside day-to-day: it bundles every PSX
-# compiler toolchain, the PSYQ 4.1 SDK, and the Python tooling needed to split,
-# build, and diff the ROM. Unlike pipeline.dockerfile (the CI image), it does NOT
+# compiler toolchain and the Python tooling needed to split, build, and diff
+# the ROM. Unlike pipeline.dockerfile (the CI image), it does NOT
 # embed any ROM data; you mount the repo into the running container instead.
 #
 # Build from the repo root (context must be the repo root for requirements.txt
