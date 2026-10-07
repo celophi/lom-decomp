@@ -182,8 +182,6 @@ u8* field_get_event_script(s32 script_id);
 s32 field_get_actor_position(s32 key, Vec3i* position);
 void field_set_actor_control_mode(s32 party_index, s32 mode);
 s32 field_get_actor_facing(s32 actor_id);
-/* Int parameters on purpose: with the (s32, u8, s8) definition the calls would narrow their arguments. */
-s32 field_queue_actor_event(s32 owner_id, s32 event_id, s32 argument);
 FieldActorRecord* field_find_actor_record();
 FieldActorRecord* field_find_actor_record_or_default(u32 actor_id, FieldRuntimeContext* context);
 void field_stop_actor_script(s32 actor_id, s32 flags);

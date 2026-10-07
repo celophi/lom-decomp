@@ -317,8 +317,6 @@ FieldStatusState* field_find_object_state(s32 key);
 FieldActorRecord* field_find_actor_record_or_default(s32 id);
 s32 field_get_actor_position(s32 key, Vec3i* position);
 s32 field_set_actor_position(s32 key, s32 x, s32 y, s32 z);
-/* Int parameters on purpose: with the (s32, u8, s8) definition the calls would narrow their arguments. */
-s32 field_queue_actor_event(s32 owner_id, s32 event_id, s32 argument);
 s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound);
 FieldItemRecord* field_find_free_inventory_record(void);
 void field_sort_keyed_list(FieldRecordDistanceList* list);

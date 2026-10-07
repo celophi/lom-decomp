@@ -17,10 +17,10 @@ FieldActorRecord* field_find_actor_record_or_default(s32 id);
  * @brief Queue an event on an actor when the event is enabled and nothing is pending.
  * @param owner_id Actor id.
  * @param event_id Event index, stored as the pending event.
- * @param argument Event argument stored with the pending event.
+ * @param argument Event argument; the low byte is stored with the pending event.
  * @return Event index on success, otherwise -1.
  */
-s32 field_queue_actor_event(s32 owner_id, u8 event_id, s8 argument)
+s32 field_queue_actor_event(s32 owner_id, u8 event_id, s32 argument)
 {
     s32 index;
     FieldActorRecord* actor;

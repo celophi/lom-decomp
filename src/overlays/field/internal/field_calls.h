@@ -280,6 +280,7 @@ void field_setup_return_to_title_prompt(void);
 void field_reset_draw_state(void);
 
 /* field_event_dispatch.c */
+s32 field_queue_actor_event(s32 owner_id, u8 event_id, s32 argument);
 s32 field_run_actor_event(s32 owner_id, s32 event_id, s32 mode);
 
 /* field_fade.c */
