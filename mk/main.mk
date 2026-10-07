@@ -113,7 +113,10 @@ endif
 
 # Link the main executable
 
-$(TARGET): $(COPY_SENTINEL) $(OBJECTS) $(STAGING)/$(LINKER_DIR)/$(GAME).ld
+MAIN_LINKER_SCRIPTS := $(addprefix $(STAGING)/$(LINKER_DIR)/,\
+	$(GAME).ld undefined_syms_auto.txt undefined_funcs_auto.txt)
+
+$(TARGET): $(COPY_SENTINEL) $(OBJECTS) $(MAIN_LINKER_SCRIPTS)
 	@mkdir -p $(STAGING)/$(BUILD_DIR)
 	cd $(STAGING) && $(LD) -o $(BUILD_DIR)/$(GAME).elf \
 		-T $(LINKER_DIR)/$(GAME).ld \
