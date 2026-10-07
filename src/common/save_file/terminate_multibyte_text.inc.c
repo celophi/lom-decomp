@@ -5,40 +5,41 @@
 #include "common/save_file.h"
 
 /**
- * @brief Zero-fill a card header title from its first null byte onward,
- *        walking Shift-JIS characters two bytes at a time.
- * @param text Start of the title (SaveFileHeader::title, two lines).
+ * @brief Zero-fill a card title from its first null byte at a character boundary.
+ * @param title_text Both lines of SaveFileHeader::title, scanned as one buffer.
+ * @note Bytes at or above SJIS_LEAD_MIN skip two bytes without validating the character.
+ *       A title with no terminator at a character boundary is left unchanged.
  */
-void terminate_multibyte_text(void* text)
+void terminate_multibyte_text(void* title_text)
 {
-    u8* p;
-    s32 i;
+    u8* cursor;
+    s32 byte_offset;
 
-    p = (u8*)text;
-    i = 0;
+    cursor = (u8*)title_text;
+    byte_offset = 0;
     while (1)
     {
-        if (i >= SAVE_FILE_TITLE_LINE_BYTES * 2)
+        if (byte_offset >= SAVE_FILE_TITLE_BYTES)
         {
             return;
         }
-        if (*p == 0)
+        if (*cursor == 0)
         {
-            for (; i < SAVE_FILE_TITLE_LINE_BYTES * 2; i++, p++)
+            for (; byte_offset < SAVE_FILE_TITLE_BYTES; byte_offset++, cursor++)
             {
-                *p = 0;
+                *cursor = 0;
             }
             return;
         }
-        if (*p >= SJIS_LEAD_MIN)
+        if (*cursor >= SJIS_LEAD_MIN)
         {
-            p += 2;
-            i += 2;
+            cursor += SJIS_MULTIBYTE_CHAR_BYTES;
+            byte_offset += SJIS_MULTIBYTE_CHAR_BYTES;
         }
         else
         {
-            p += 1;
-            i += 1;
+            cursor++;
+            byte_offset++;
         }
     }
 }

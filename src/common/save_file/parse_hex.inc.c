@@ -5,46 +5,49 @@
 #include "common/save_file.h"
 
 /**
- * @brief Parse up to @p digits_left leading hex digits.
- * @param text Text to parse.
- * @param digits_left Most digits to read.
- * @return The parsed value; 0 when @p text does not start with a hex digit.
+ * @brief Parse leading hex digits, accepting uppercase and lowercase letters.
+ * @param cursor Text to parse, starting at its first digit.
+ * @param digits_left Nonnegative limit on the number of digits to read.
+ * @return The parsed value; 0 for a zero limit or no leading hex digit.
+ * @note Parsing stops at the first non-hex byte; overflow retains the low 32 bits.
  */
-u32 parse_hex(u8* text, s32 digits_left)
+u32 parse_hex(const u8* cursor, s32 digits_left)
 {
-    u32 result;
+    u32 parsed_value;
 
-    result = 0;
-    while (((u8)(*text - '0') < 10) || ((u8)(*text - 'a') < 6) || ((u8)(*text - 'A') < 6))
+    parsed_value = 0;
+    while ((*cursor >= '0' && *cursor <= '9') ||
+           (*cursor >= 'a' && *cursor <= 'f') ||
+           (*cursor >= 'A' && *cursor <= 'F'))
     {
         if (digits_left == 0)
         {
             break;
         }
-        result <<= 4;
-        if ((u8)(*text - '0') < 10)
+        parsed_value <<= SAVE_HEX_DIGIT_BITS;
+        if (*cursor >= '0' && *cursor <= '9')
         {
             u32 decimal_base;
 
-            decimal_base = result - '0';
-            result = decimal_base + *text;
+            decimal_base = parsed_value - '0';
+            parsed_value = decimal_base + *cursor;
         }
-        else if ((u8)(*text - 'A') < 6)
+        else if (*cursor >= 'A' && *cursor <= 'F')
         {
             u32 uppercase_base;
 
-            uppercase_base = result - ('A' - 10);
-            result = uppercase_base + *text;
+            uppercase_base = parsed_value - ('A' - SAVE_HEX_DECIMAL_DIGITS);
+            parsed_value = uppercase_base + *cursor;
         }
-        else if ((u8)(*text - 'a') < 6)
+        else if (*cursor >= 'a' && *cursor <= 'f')
         {
             u32 lowercase_base;
 
-            lowercase_base = result - ('a' - 10);
-            result = lowercase_base + *text;
+            lowercase_base = parsed_value - ('a' - SAVE_HEX_DECIMAL_DIGITS);
+            parsed_value = lowercase_base + *cursor;
         }
-        text++;
+        cursor++;
         digits_left--;
     }
-    return result;
+    return parsed_value;
 }

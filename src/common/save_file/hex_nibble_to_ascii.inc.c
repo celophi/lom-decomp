@@ -5,22 +5,23 @@
 #include "common/save_file.h"
 
 /**
- * @brief Write one nibble as its hex digit ('0'-'9', 'A'-'F'), or '_' when it is out of range.
- * @param out Destination byte.
- * @param value Nibble to convert.
+ * @brief Write one uppercase hex digit, or '_' for values of 16 or greater.
+ * @param destination Byte to receive the digit; no null terminator is appended.
+ * @param nibble Value to convert, normally in the range 0-15.
+ * @note Negative values also take the numeric-digit branch.
  */
-void hex_nibble_to_ascii(s8* out, s32 value)
+void hex_nibble_to_ascii(s8* destination, s32 nibble)
 {
-    if (value < 10)
+    if (nibble < SAVE_HEX_DECIMAL_DIGITS)
     {
-        *out = value + '0';
+        *destination = nibble + '0';
     }
-    else if (value < 16)
+    else if (nibble < SAVE_HEX_RADIX)
     {
-        *out = value + ('A' - 10);
+        *destination = (nibble - SAVE_HEX_DECIMAL_DIGITS) + 'A';
     }
     else
     {
-        *out = '_';
+        *destination = SAVE_HEX_INVALID_DIGIT;
     }
 }

@@ -17,6 +17,9 @@
 #define CHECKPS_GLYPH_RASTER_BUFFER_SIZE (CHECKPS_GLYPH_CACHE_ENTRY_COUNT * CHECKPS_GLYPH_RASTER_SLOT_SIZE)
 #define CHECKPS_GLYPH_V_COORD_MASK 0xF0
 #define CHECKPS_GLYPH_SOURCE_MSB 0x80
+#define CHECKPS_GLYPH_SOURCE_ROW_BYTES 2
+#define CHECKPS_GLYPH_SOURCE_PIXEL_PAIRS 4
+#define CHECKPS_GLYPH_HIGH_NIBBLE_SCALE 16
 #define CHECKPS_GLYPH_NEUTRAL_COLOR 0x80
 #define CHECKPS_TEXT_WRAP_LIMIT (SCREEN_WIDTH * 2)
 #define CHECKPS_TEXT_FIRST_PRINTABLE 0x20
@@ -174,7 +177,7 @@ void* draw_signed_decimal(void* primitive, u_long* ot_tag, s32 value, s32 x, s32
  * @brief Draw a two-digit hexadecimal value with cached glyphs.
  * @param primitive Primitive-buffer cursor.
  * @param ot_tag Ordering-table tag to append to.
- * @param value Value in the expected two-digit hexadecimal range.
+ * @param value Byte value from 0 to 255; no range checking is performed.
  * @param x Screen-space x coordinate.
  * @param y Screen-space y coordinate.
  * @param alignment One of the CheckPSTextAlignment values.
@@ -275,84 +278,87 @@ void* draw_cached_text(void* primitive, u_long* ot_tag, const u8* text, s32 x, s
 }
 
 /**
- * @brief Resolve one glyph in the cache, uploading it to VRAM when necessary.
+ * @brief Draw a cached glyph, rasterizing and uploading it on a cache miss.
  * @param primitive Primitive-buffer cursor.
  * @param ot_tag Ordering-table tag to append to.
  * @param character_code Shift-JIS character code.
- * @param palette Glyph palette index.
- * @return Updated primitive-buffer cursor.
+ * @param palette Selects color index palette + 1 for newly rasterized glyphs.
+ * @return Updated cursor, or the original cursor if the glyph is missing or the cache is full.
+ * @note Cached glyphs retain the color index used when first rasterized.
  */
 static void* render_cached_glyph(void* primitive, u_long* ot_tag, u16 character_code, s32 palette)
 {
-    u8* font_data;
-    u8* raster;
-    s32 slot;
+    const u8* font_data;
+    u8* raster_cursor;
+    s32 index;
     s32 row;
-    s32 source_byte;
+    s32 row_byte_index;
     s32 color_index;
     s32 high_nibble_color;
-    u16 mask;
-    RECT rect;
+    u16 source_mask;
+    RECT upload_rect;
 
-    for (slot = 0; slot < CHECKPS_GLYPH_CACHE_ENTRY_COUNT; slot++)
+    for (index = 0; index < CHECKPS_GLYPH_CACHE_ENTRY_COUNT; index++)
     {
-        if (character_code == g_glyph_cache[slot].data.character_code)
+        if (character_code == g_glyph_cache[index].data.character_code)
         {
-            return emit_glyph_sprite(primitive, ot_tag, slot);
+            return emit_glyph_sprite(primitive, ot_tag, index);
         }
     }
 
     /* Psy-Q exposes the KROM pointer as a signed integer address. */
-    font_data = (u8*)Krom2RawAdd(character_code);
-    if (font_data == (u8*)CHECKPS_INVALID_KROM_ADDRESS)
+    font_data = (const u8*)Krom2RawAdd(character_code);
+    if (font_data == (const u8*)CHECKPS_INVALID_KROM_ADDRESS)
     {
         return primitive;
     }
 
-    raster = g_glyph_raster_cursor;
+    raster_cursor = g_glyph_raster_cursor;
     row = 0;
     color_index = palette + 1;
-    high_nibble_color = color_index * CHECKPS_GLYPH_WIDTH;
+    high_nibble_color = color_index * CHECKPS_GLYPH_HIGH_NIBBLE_SCALE;
+    /* Expand ROM bits to 4-bit colors, packing two pixels into each output byte. */
     for (; row < CHECKPS_GLYPH_BITMAP_ROWS; row++)
     {
-        for (source_byte = 0; source_byte < 2; source_byte++)
+        for (row_byte_index = 0; row_byte_index < CHECKPS_GLYPH_SOURCE_ROW_BYTES; row_byte_index++)
         {
-            mask = CHECKPS_GLYPH_SOURCE_MSB;
-            for (slot = 0; slot < 4; slot++)
+            source_mask = CHECKPS_GLYPH_SOURCE_MSB;
+            for (index = 0; index < CHECKPS_GLYPH_SOURCE_PIXEL_PAIRS; index++)
             {
-                *raster = (*font_data & mask) ? color_index : 0;
-                mask >>= 1;
-                *raster += (*font_data & mask) ? high_nibble_color : 0;
-                mask >>= 1;
-                raster++;
+                *raster_cursor = (*font_data & source_mask) ? color_index : 0;
+                source_mask >>= 1;
+                *raster_cursor += (*font_data & source_mask) ? high_nibble_color : 0;
+                source_mask >>= 1;
+                raster_cursor++;
             }
             font_data++;
         }
     }
 
-    for (slot = 0; slot < CHECKPS_GLYPH_CACHE_ENTRY_COUNT; slot++)
+    /* A free slot has neither a character code nor a per-frame usage mark. */
+    for (index = 0; index < CHECKPS_GLYPH_CACHE_ENTRY_COUNT; index++)
     {
-        if (g_glyph_cache[slot].raw == 0)
+        if (g_glyph_cache[index].raw == 0)
         {
             break;
         }
     }
 
-    if (slot == CHECKPS_GLYPH_CACHE_ENTRY_COUNT)
+    if (index == CHECKPS_GLYPH_CACHE_ENTRY_COUNT)
     {
         return primitive;
     }
-    g_glyph_cache[slot].raw = character_code;
-    primitive = emit_glyph_sprite(primitive, ot_tag, slot);
+    g_glyph_cache[index].raw = character_code;
+    primitive = emit_glyph_sprite(primitive, ot_tag, index);
 
-    g_glyph_upload_x = (slot % CHECKPS_GLYPH_WIDTH) * CHECKPS_GLYPH_VRAM_WORD_WIDTH;
-    g_glyph_upload_y = slot & CHECKPS_GLYPH_V_COORD_MASK;
+    g_glyph_upload_x = (index % CHECKPS_GLYPH_WIDTH) * CHECKPS_GLYPH_VRAM_WORD_WIDTH;
+    g_glyph_upload_y = index & CHECKPS_GLYPH_V_COORD_MASK;
 
-    setWH(&rect, CHECKPS_GLYPH_VRAM_WORD_WIDTH, CHECKPS_GLYPH_BITMAP_ROWS);
-    rect.x = g_glyph_upload_x + CHECKPS_GLYPH_VRAM_X;
-    rect.y = g_glyph_upload_y;
+    setWH(&upload_rect, CHECKPS_GLYPH_VRAM_WORD_WIDTH, CHECKPS_GLYPH_BITMAP_ROWS);
+    upload_rect.x = g_glyph_upload_x + CHECKPS_GLYPH_VRAM_X;
+    upload_rect.y = g_glyph_upload_y;
 
-    LoadImage(&rect, (u_long*)g_glyph_raster_cursor);
+    LoadImage(&upload_rect, (u_long*)g_glyph_raster_cursor);
     DrawSync(0);
 
     g_glyph_raster_cursor += CHECKPS_GLYPH_RASTER_SLOT_SIZE;

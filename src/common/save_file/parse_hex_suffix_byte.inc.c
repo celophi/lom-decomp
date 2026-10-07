@@ -5,55 +5,62 @@
 #include "common/save_file.h"
 
 /**
- * @brief Read the two-digit hex byte that follows a field's hex serial and its separator.
- * @param field_text A hex serial, one separator byte, then the suffix byte.
- * @return The suffix byte.
+ * @brief Read up to two hex digits after a serial and its separator.
+ * @param field_text Hex serial, one non-hex separator byte, then a null-terminated suffix.
+ * @return Parsed suffix value from 0 to 255, or zero if no suffix digit is present.
+ * @note Accepts either letter case. The separator must be present and is
+ *       skipped without validation.
  */
 s32 parse_hex_suffix_byte(const char* field_text)
 {
-    s32 count;
-    u32 result;
-    const u8* text;
+    s32 digits_left;
+    u32 suffix_value;
+    const u8* cursor;
 
     /* Decode filename characters as unsigned bytes. */
-    text = (const u8*)field_text;
-    while ((*text >= '0' && *text <= '9') || (*text >= 'a' && *text <= 'f') || (*text >= 'A' && *text <= 'F'))
+    cursor = (const u8*)field_text;
+    while ((*cursor >= '0' && *cursor <= '9') ||
+           (*cursor >= 'a' && *cursor <= 'f') ||
+           (*cursor >= 'A' && *cursor <= 'F'))
     {
-        text++;
+        cursor++;
     }
-    text++;
-    count = 2;
-    result = 0;
-    while (((u8)(*text - '0') < 10) || ((u8)(*text - 'a') < 6) || ((u8)(*text - 'A') < 6))
+    /* The first non-hex byte separates the serial from the suffix. */
+    cursor++;
+    digits_left = SAVE_HEX_SUFFIX_DIGITS;
+    suffix_value = 0;
+    while ((*cursor >= '0' && *cursor <= '9') ||
+           (*cursor >= 'a' && *cursor <= 'f') ||
+           (*cursor >= 'A' && *cursor <= 'F'))
     {
-        if (count == 0)
+        if (digits_left == 0)
         {
             break;
         }
-        result <<= 4;
-        if ((u8)(*text - '0') < 10)
+        suffix_value <<= SAVE_HEX_DIGIT_BITS;
+        if (*cursor >= '0' && *cursor <= '9')
         {
             u32 decimal_base;
 
-            decimal_base = result - '0';
-            result = decimal_base + *text;
+            decimal_base = suffix_value - '0';
+            suffix_value = decimal_base + *cursor;
         }
-        else if ((u8)(*text - 'A') < 6)
+        else if (*cursor >= 'A' && *cursor <= 'F')
         {
             u32 uppercase_base;
 
-            uppercase_base = result - ('A' - 10);
-            result = uppercase_base + *text;
+            uppercase_base = suffix_value - ('A' - SAVE_HEX_DECIMAL_DIGITS);
+            suffix_value = uppercase_base + *cursor;
         }
-        else if ((u8)(*text - 'a') < 6)
+        else if (*cursor >= 'a' && *cursor <= 'f')
         {
             u32 lowercase_base;
 
-            lowercase_base = result - ('a' - 10);
-            result = lowercase_base + *text;
+            lowercase_base = suffix_value - ('a' - SAVE_HEX_DECIMAL_DIGITS);
+            suffix_value = lowercase_base + *cursor;
         }
-        text++;
-        count--;
+        cursor++;
+        digits_left--;
     }
-    return result;
+    return suffix_value;
 }
