@@ -897,7 +897,7 @@ void akao_xa_refill_ring(s32 start, s32 end, s32 block_size, SpuIRQCallbackProc 
             akao_spu_arm_xfer();
             akao_xa_next_ring_block(&g_akao_xa_tracker.upload_block);
             SpuWrite(g_akao_xa_tracker.data_cursor + XA_RING_DATA_OFFSET, block_size - XA_RING_DATA_OFFSET);
-            g_akao_xa_tracker.unk20 = hdr->key;
+            g_akao_xa_tracker.last_ring_block_key = hdr->key;
             g_akao_xa_tracker.unk18 = hdr->spu_addr;
             if (hdr->sample_size > hdr->spu_addr)
             {
