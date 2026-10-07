@@ -1,6 +1,6 @@
 # MENU resources
 
-[English index](../../README.md) | [Overlay extractors](../../../../tools/overlays/README.md) | [Japanese](../../../jp/technical/reference/menu-resources.md)
+[English index](../../README.md) | [Overlay extractors](../../../../tools/data/overlays/README.md) | [Japanese](../../../jp/technical/reference/menu-resources.md)
 
 MENU is the in-game menu you open from the field: the node tree on the left,
 the pages it opens, the item and equipment lists, and the help line at the
@@ -193,7 +193,7 @@ marker. The others are all zeros. Button names come from the SDK's
 - Names for the 20 text tables the enum leaves out.
 - Scripts 7-9 and 13-16 are empty rows. TODO: check what starts them.
 
-[`menu.py`](../../../../tools/overlays/menu.py) follows the same reader,
+[`menu.py`](../../../../tools/data/overlays/menu.py) follows the same reader,
 `Part` and writer structure as the other overlay extractors. The two 4-byte
 alignment rodata blobs and the short card strings before the code stay with
 their existing C units. Editing these exports doesn't change what the build

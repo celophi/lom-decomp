@@ -1,6 +1,6 @@
 # WSELのリソース
 
-[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/overlays/README.md) | [English](../../../en/technical/reference/wsel-resources.md)
+[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/data/overlays/README.md) | [English](../../../en/technical/reference/wsel-resources.md)
 
 WSELは「プレイエリアを選択してください。」の画面です。
 最初はワールドマップの前に主人公が立っている画面で、決定を押すとマップへズームし、
@@ -120,7 +120,7 @@ default側、それ以外ならalternate側のシートを使います。
 どちらのバージョンでも`unknown/`フォルダは作られません。
 判別できない0以外のデータがあれば、そのままそこに保存されます。
 
-[`wsel.py`](../../../../tools/overlays/wsel.py)は、ほかのオーバーレイ抽出ツールと同じく
+[`wsel.py`](../../../../tools/data/overlays/wsel.py)は、ほかのオーバーレイ抽出ツールと同じく
 リーダー、`Part`、ライターの構成になっています。出力したファイルを編集しても、ビルドでリンクされる内容は変わりません。
 
 ## まだ分かっていないこと

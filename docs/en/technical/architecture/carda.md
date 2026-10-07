@@ -282,7 +282,7 @@ overlay's character chart; the original text bytes are kept beside it.
 
 `byte-map.yaml` accounts for the whole blob, including padding and the zeroed
 runtime buffers. These exports are for inspection; the build still uses the
-original blob. See the [extractor guide](../../../../tools/overlays/README.md)
+original blob. See the [extractor guide](../../../../tools/data/overlays/README.md)
 for output options and the Python layout.
 
 ## Regional coverage and what still needs work

@@ -1,6 +1,6 @@
 # シーンIMG抽出ツール
 
-[日本語ドキュメント](../../README.md) | [English](../../../en/technical/reference/scene-extractor.md) | [シーンツール（英語）](../../../../tools/scenes/README.md) | [シーンのレイアウトと出現条件](../architecture/scene-layouts.md)
+[日本語ドキュメント](../../README.md) | [English](../../../en/technical/reference/scene-extractor.md) | [シーンツール（英語）](../../../../tools/data/scenes/README.md) | [シーンのレイアウトと出現条件](../architecture/scene-layouts.md)
 
 ゲームの `ANA/INFO_*/*.IMG` を読み込む抽出ツールです。
 セクションのオフセットを確認し、識別できるデータを取り出して、残りのバイト列を未分類のデータとして保存します。

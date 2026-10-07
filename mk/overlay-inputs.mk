@@ -58,9 +58,9 @@ $(1)_ROUTED_SRCS = \
 	$$($(1)_GCC_280_G0_O0_SRCS) \
 	$$($(1)_GCC_280_G4_SRCS) \
 	$$($(1)_GCC_280_G4_NOEXPAND_SRCS)
-# Generated unk*.c files are gitignored and splat does not remove outputs from
-# older configurations. Treat tracked C files and explicitly routed generated
-# files as build inputs so stale ignored files cannot enter the build by accident.
+# Splat does not remove outputs from older configurations. Treat tracked C
+# files and explicitly routed generated files as build inputs so stale files
+# cannot enter the build by accident.
 # An overlay without a C layout for this version does not build the C sources.
 $(1)_EXISTING_C_SRCS := $$(call rwildcard,$$($(1)_SRC_DIR),*.c)
 $(1)_TRACKED_C_SRCS := $$(if $$(call has-tu-layout,$(1)),\

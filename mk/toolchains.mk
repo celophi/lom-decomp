@@ -33,7 +33,7 @@ ASFLAGS_272_GNU    := -O -EL
 CFLAGS_260_G0      := -O2 -G0 -gcoff -msoft-float
 
 # maspsx preprocesses assembly syntax and can invoke GNU as directly.
-MASPSX          := python3 tools/maspsx/maspsx.py
+MASPSX          := python3 tools/external/maspsx/maspsx.py
 MASPSX_AS       := $(MASPSX) --run-assembler
 # Inject include/macro.inc for splat-generated assembly directives.
 MASPSX_PP_FLAGS := --macro-inc
@@ -50,8 +50,8 @@ MASPSX_FLAGS_260     := -no-pad-sections --aspsx-version=2.34 --expand-div
 MASPSX_DIV_FLAG_G4 := --expand-div
 MASPSX_FLAGS_G4 = -no-pad-sections --aspsx-version=2.77 $(MASPSX_DIV_FLAG_G4)
 
-# DATA_AS_C=1 builds every .data region from C that tools/data2c generates at
-# build time (see tools/data2c/README.md). The generated data is typed by the
+# DATA_AS_C=1 builds every .data region from C that tools/verification/data2c generates at
+# build time (see tools/verification/data2c/README.md). The generated data is typed by the
 # C, so it depends on these headers as well as each image's own sources.
 DATA_AS_C ?=
 DATA_AS_C_HEADERS := $(call rwildcard,include,*.h) $(call rwildcard,src/main,*.h) $(call rwildcard,src/overlays,*.h)

@@ -88,7 +88,7 @@ ifeq ($(DATA_AS_C),1)
 		(cd $(STAGING) && cat $(ASM_DIR)/$*.s | \
 			$(MASPSX) $(MASPSX_PP_FLAGS) | \
 			$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o datac/$(BUILD_DIR)/$*.asm.o) && \
-		python3 tools/data2c/data2c.py --quiet --version $(VERSION) --image slus \
+		python3 tools/verification/data2c/data2c.py --quiet --version $(VERSION) --image slus \
 			--asm $(ASM_DIR)/$*.s --object $(STAGING)/datac/$(BUILD_DIR)/$*.asm.o \
 			-o $(STAGING)/datac/$(BUILD_DIR)/$*.c && \
 		cd $(STAGING) && $(CC) $(CFLAGS_G0) -c datac/$(BUILD_DIR)/$*.c -S -o - | \

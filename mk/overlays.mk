@@ -53,14 +53,14 @@ $$($(1)_LINK_ASM_OBJS): $(STAGING)/$$($(1)_ASM_OBJ_DIR)/%.o: $$($(1)_ASM_DIR)/%.
 $$($(1)_DATA_OBJS): $(STAGING)/$$($(1)_ASM_OBJ_DIR)/%.o: $$($(1)_ASM_DIR)/%.s $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
 ifeq ($(DATA_AS_C),1)
-	@# DATA_AS_C=1: .data comes from C that tools/data2c generates at build time,
-	@# typed by this overlay's own declarations (see tools/data2c/README.md).
+	@# DATA_AS_C=1: .data comes from C that tools/verification/data2c generates at build time,
+	@# typed by this overlay's own declarations (see tools/verification/data2c/README.md).
 	@#   databin (one .incbin): data2c reads the blob itself.
 	@#   data assembly:         assembled first, so data2c gets its relocations.
 	@#   anything else (.rodata): assembled as usual.
 	@mkdir -p $(STAGING)/datac/$$($(1)_BUILD_DIR)/$$(dir $$*)
 	if grep -q '^\.section \.data' $$($(1)_ASM_DIR)/$$*.s && grep -q '^\.incbin' $$($(1)_ASM_DIR)/$$*.s; then \
-		python3 tools/data2c/data2c.py --quiet --version $(VERSION) --image $(1) \
+		python3 tools/verification/data2c/data2c.py --quiet --version $(VERSION) --image $(1) \
 			--asm $$($(1)_ASM_DIR)/$$*.s -o $(STAGING)/datac/$$($(1)_BUILD_DIR)/$$*.c && \
 		cd $(STAGING) && $(CC) $(CFLAGS_G0) -c datac/$$($(1)_BUILD_DIR)/$$*.c -S -o - | \
 			$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $$($(1)_ASM_OBJ_DIR)/$$*.o; \
@@ -68,7 +68,7 @@ ifeq ($(DATA_AS_C),1)
 		(cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
 			$(MASPSX) $(MASPSX_PP_FLAGS) | \
 			$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o datac/$$($(1)_BUILD_DIR)/$$*.asm.o) && \
-		python3 tools/data2c/data2c.py --quiet --version $(VERSION) --image $(1) \
+		python3 tools/verification/data2c/data2c.py --quiet --version $(VERSION) --image $(1) \
 			--asm $$($(1)_ASM_DIR)/$$*.s --object $(STAGING)/datac/$$($(1)_BUILD_DIR)/$$*.asm.o \
 			-o $(STAGING)/datac/$$($(1)_BUILD_DIR)/$$*.c && \
 		cd $(STAGING) && $(CC) $(CFLAGS_G0) -c datac/$$($(1)_BUILD_DIR)/$$*.c -S -o - | \

@@ -1,6 +1,6 @@
 # Scene IMG extractor
 
-[English documentation](../../README.md) | [日本語](../../../jp/technical/reference/scene-extractor.md) | [Scene tools](../../../../tools/scenes/README.md) | [Scene layouts and conditions](../architecture/scene-layouts.md)
+[English documentation](../../README.md) | [日本語](../../../jp/technical/reference/scene-extractor.md) | [Scene tools](../../../../tools/data/scenes/README.md) | [Scene layouts and conditions](../architecture/scene-layouts.md)
 
 The extractor documents the stored scene IMG format for decompilation. TXT
 explains the structure and YAML records decoded fields; raw bytes preserve
@@ -61,7 +61,7 @@ partial scene directory.
 The filename alone does not identify an IMG format. Check a file's contents:
 
 ```sh
-python3 -m tools.scenes.identify_img /path/to/file.IMG
+python3 -m tools.data.scenes.identify_img /path/to/file.IMG
 ```
 
 The command prints `scene IMG` or `not scene IMG`, with the failed check for a
@@ -69,7 +69,7 @@ nonmatching file. An explicit file can have any extension. To scan a directory
 and its subdirectories for `.IMG` files (case-insensitive):
 
 ```sh
-python3 -m tools.scenes.identify_img --recursive /path/to/ANA
+python3 -m tools.data.scenes.identify_img --recursive /path/to/ANA
 make identify-img IMG=/path/to/ANA
 ```
 
@@ -125,7 +125,7 @@ one stored file. Empty resource entries are preserved too. Metadata files do
 not own additional byte ranges; their companion binary remains authoritative.
 
 To reconstruct an export in Python, call
-`tools.scenes.field_scene.reconstruct(output_directory)` with a `Path`. It reads
+`tools.data.scenes.field_scene.reconstruct(output_directory)` with a `Path`. It reads
 the byte map, takes `record_bytes` from layout YAML, and concatenates those bytes
 with the original binary files. It checks range positions and sizes. Extraction
 also compares the result with the input. Editing decoded fields does not rebuild
@@ -215,8 +215,8 @@ reports; they do not replace layout records or own any bytes in the byte map.
 
 ```sh
 make inspect-scene-objects SCENE=/path/to/scene.IMG
-python3 -m tools.scenes.scene_report /path/to/scene.IMG --format text
-python3 -m tools.scenes.scene_report /path/to/scene.IMG -o objects.yaml
+python3 -m tools.data.scenes.scene_report /path/to/scene.IMG --format text
+python3 -m tools.data.scenes.scene_report /path/to/scene.IMG -o objects.yaml
 ```
 
 The Make target defaults to text; use `SCENE_REPORT_FORMAT=yaml` for YAML.
@@ -304,9 +304,9 @@ make inspect-scene-objects SCENE=/path/to/scene.IMG SCENE_REFERENCE_VERSION=jp
 For direct Python commands, opt in explicitly:
 
 ```sh
-python3 -m tools.scenes.scene_report scene.IMG --version us --format text
-python3 -m tools.scenes.field_scene scene.IMG new-export --version us
-python3 -m tools.scenes.scene_report scene.IMG --version us --field-bin modified/FIELD.BIN
+python3 -m tools.data.scenes.scene_report scene.IMG --version us --format text
+python3 -m tools.data.scenes.field_scene scene.IMG new-export --version us
+python3 -m tools.data.scenes.scene_report scene.IMG --version us --field-bin modified/FIELD.BIN
 ```
 
 Without `--version`, direct commands still work, but name and probability
@@ -373,14 +373,14 @@ The main extractor now writes readable YAML beside both sections' original
 binary files. You can also inspect either section directly from a scene IMG:
 
 ```sh
-python3 -m tools.scenes.actors /path/to/scene.IMG
-python3 -m tools.scenes.actor_scripts /path/to/scene.IMG
+python3 -m tools.data.scenes.actors /path/to/scene.IMG
+python3 -m tools.data.scenes.actor_scripts /path/to/scene.IMG
 ```
 
 These commands print YAML. To browse actor scripts as a compact text listing:
 
 ```sh
-python3 -m tools.scenes.actor_scripts /path/to/scene.IMG --format text
+python3 -m tools.data.scenes.actor_scripts /path/to/scene.IMG --format text
 make inspect-scene-actor-scripts SCENE=/path/to/scene.IMG SCENE_SCRIPT_FORMAT=text
 ```
 
@@ -445,8 +445,8 @@ Inspect the event section directly, or open `event_scripts/data.txt` in a full
 export:
 
 ```sh
-python3 -m tools.scenes.event_scripts /path/to/scene.IMG --format text
-python3 -m tools.scenes.event_scripts /path/to/scene.IMG -o events.yaml
+python3 -m tools.data.scenes.event_scripts /path/to/scene.IMG --format text
+python3 -m tools.data.scenes.event_scripts /path/to/scene.IMG -o events.yaml
 make inspect-scene-event-scripts SCENE=/path/to/scene.IMG SCENE_EVENT_FORMAT=text
 ```
 
@@ -534,9 +534,9 @@ for structured output. Their Python modules use the same `source`,
 `--format yaml|text`, and `-o new-file` convention as the script readers:
 
 ```sh
-python3 -m tools.scenes.strings scene.IMG --format text
-python3 -m tools.scenes.geometry scene.IMG --format yaml -o geometry.yaml
-python3 -m tools.scenes.scene_resources scene.IMG --format text
+python3 -m tools.data.scenes.strings scene.IMG --format text
+python3 -m tools.data.scenes.geometry scene.IMG --format yaml -o geometry.yaml
+python3 -m tools.data.scenes.scene_resources scene.IMG --format text
 ```
 
 String directory entries contain little-endian u16 offsets relative to the

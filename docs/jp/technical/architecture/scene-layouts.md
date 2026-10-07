@@ -210,5 +210,5 @@ YAMLには、もう1つ気になる点があります。
   `field_read_script_var()` が `field_resolve_script_var()` で参照先を求め、その値を読み取ります。
 - [field_interaction_start.h](../../../../include/overlays/field/field_interaction_start.h):
   `FieldLayoutRecord` と、そのフィールドを定義しています。
-- [field_scene.py](../../../../tools/scenes/field_scene.py):
+- [field_scene.py](../../../../tools/data/scenes/field_scene.py):
   `FieldLayoutRecord.chest_yaml()` が、宝箱のレイアウトレコードを、この例で使った読みやすいYAMLに変換します。

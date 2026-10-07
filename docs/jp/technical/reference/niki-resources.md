@@ -1,6 +1,6 @@
 # NIKIのリソース
 
-[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/overlays/README.md) | [English](../../../en/technical/reference/niki-resources.md)
+[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/data/overlays/README.md) | [English](../../../en/technical/reference/niki-resources.md)
 
 NIKIは日記の画面です。FIELDが`field_open_niki`で開き、どちらのメモリーカードの
 セーブも扱えます。モード0では、カード内のセーブを一覧にして、選んだセーブの詳細を
@@ -143,7 +143,7 @@ NIKIは選んだセーブのパーティー分のパレットとピクセルを�
 - TODO: `NIKI_COMMAND_CHECK_POCKETSTATION`には処理がありますが、テーブル内の
   どのシーケンスも使っていません。ステータスダイアログ3がいつ表示されうるのかは不明です。
 
-[`niki.py`](../../../../tools/overlays/niki.py)はアドレス順にblobを読み、ADDHERO、CARDA、
+[`niki.py`](../../../../tools/data/overlays/niki.py)はアドレス順にblobを読み、ADDHERO、CARDA、
 CLOADと共通のカード形式の読み取り処理を使います。アドレスは各バージョンの
 シンボルファイル、コマンド名はCのenumから取得します。テストでは両地域の配置と、
 文字表とアイコンのサイズが`niki_internal.h`の`#define`や構造体と一致することを確認します。

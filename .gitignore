@@ -1,39 +1,16 @@
-# Ignore the python virtual environment folder
+# Python environments and caches
 .venv/
+__pycache__/
+*.m2c
 
-# Game data files placed in the disc folder cannot be committed due to copyright issues
-disc/*
-
-# Assembly output folder from splat
-asm/
-
-# Linker scripts and auto-generated undefined symbols/functions lists
-linker/
-
-# Build output folder
-build/
-output/
+# Disc data and generated build/extraction output
+/disc/
+/asm/
+/assets/
+/linker/
+/build/
+/output/
 
 # Generated objdiff configuration and locally downloaded CLI binaries
 /objdiff.json
 /tools/objdiff/objdiff-cli*
-
-# Local generated files for matching purposes
-.matching/
-
-# Ignore generated C files
-src/unk*.c
-src/overlays/*/unk*.c
-
-# Generated data-initializer fragments (copyrighted values filled from disc)
-*.gen.inc
-src/overlays/*/gen/
-
-tools/splat_ext/__pycache__/
-tools/compressor/__pycache__/
-__pycache__/
-
-/assets/
-
-# m2c context cache files
-*.m2c

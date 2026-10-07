@@ -1,6 +1,6 @@
 # NIKI resources
 
-[English index](../../README.md) | [Overlay extractors](../../../../tools/overlays/README.md) | [Japanese](../../../jp/technical/reference/niki-resources.md)
+[English index](../../README.md) | [Overlay extractors](../../../../tools/data/overlays/README.md) | [Japanese](../../../jp/technical/reference/niki-resources.md)
 
 NIKI is the diary screen. FIELD opens it through `field_open_niki`, and it
 works with the saves on either memory card. In mode 0 it lists the saves on a
@@ -150,7 +150,7 @@ text aren't in this blob. They're defined in
 - TODO: `NIKI_COMMAND_CHECK_POCKETSTATION` has a handler, but no sequence in
   the table uses it, so it's unclear when status dialog 3 can appear.
 
-[`niki.py`](../../../../tools/overlays/niki.py) reads the blob in address order
+[`niki.py`](../../../../tools/data/overlays/niki.py) reads the blob in address order
 with the card readers ADDHERO, CARDA and CLOAD share. It gets addresses from
 each version's symbol file and command names from the C enum. The tests check
 both regional layouts and the chart and icon sizes against the `#define`s and

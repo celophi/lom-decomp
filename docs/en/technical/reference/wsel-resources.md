@@ -1,6 +1,6 @@
 # WSEL resources
 
-[English index](../../README.md) | [Overlay extractors](../../../../tools/overlays/README.md) | [Japanese](../../../jp/technical/reference/wsel-resources.md)
+[English index](../../README.md) | [Overlay extractors](../../../../tools/data/overlays/README.md) | [Japanese](../../../jp/technical/reference/wsel-resources.md)
 
 WSEL is the "Select play area" screen. It opens on the world map with the hero
 standing in front of it. Confirm zooms into the map and shows the prompt until
@@ -128,7 +128,7 @@ resource, a repeated TIM word or the three padding bytes, so neither version
 needs an `unknown/` folder. Unrecognized nonzero data would still be saved there
 unchanged.
 
-[`wsel.py`](../../../../tools/overlays/wsel.py) follows the same reader, `Part`
+[`wsel.py`](../../../../tools/data/overlays/wsel.py) follows the same reader, `Part`
 and writer structure as the other overlay extractors. Editing these exports
 doesn't change what the build links.
 

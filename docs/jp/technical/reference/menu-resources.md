@@ -1,6 +1,6 @@
 # MENUのリソース
 
-[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/overlays/README.md) | [English](../../../en/technical/reference/menu-resources.md)
+[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/data/overlays/README.md) | [English](../../../en/technical/reference/menu-resources.md)
 
 MENUは、フィールドから開くゲーム内メニューです。左側のノードツリー、
 そこから開くページ、アイテムや装備の一覧、画面下のヘルプ行を担当します。
@@ -190,7 +190,7 @@ Cのdefineから取っています。種類5か0xFでスタイルが7の項目�
 - 列挙型に名前がない20個のテキストテーブルの名前。
 - スクリプト7から9と13から16は空の行です。TODO: 何が起動するのか確認する。
 
-[`menu.py`](../../../../tools/overlays/menu.py)は、ほかのオーバーレイ抽出ツールと
+[`menu.py`](../../../../tools/data/overlays/menu.py)は、ほかのオーバーレイ抽出ツールと
 同じく、リーダー、`Part`、ライターの構成です。コードの前にある4バイトの
 アラインメント用rodata 2つと短いカード用文字列は、既存のCユニットに残しています。
 出力を編集しても、ビルドがリンクする内容は変わりません。

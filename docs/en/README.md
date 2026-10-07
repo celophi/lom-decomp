@@ -43,4 +43,4 @@ ownership, timing, and known limitations. Source links accompany the details.
   text is encoded.
 - [Overlay ID prefix](technical/reference/overlay-id-prefix.md) - overlay identification and
   binary layout.
-- [Compressor](../../tools/compressor/README.md) - compression format and tools.
+- [Compressor](../../tools/compression/README.md) - compression format and tools.

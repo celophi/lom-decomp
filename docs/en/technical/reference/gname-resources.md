@@ -1,6 +1,6 @@
 # GNAME resources
 
-[English index](../../README.md) | [Overlay extractors](../../../../tools/overlays/README.md) | [Japanese](../../../jp/technical/reference/gname-resources.md)
+[English index](../../README.md) | [Overlay extractors](../../../../tools/data/overlays/README.md) | [Japanese](../../../jp/technical/reference/gname-resources.md)
 
 GNAME carries the name-entry screen's artwork, character panels and name lists.
 The old YAML split these into several asset types. Both regions now use one
@@ -83,9 +83,9 @@ seven-frame append animation; JP ends immediately after it. Neither export
 needs an `unknown/` folder. If a reader leaves nonzero bytes it doesn't
 recognize, they are saved there unchanged.
 
-[`gname.py`](../../../../tools/overlays/gname.py) follows the other overlay
+[`gname.py`](../../../../tools/data/overlays/gname.py) follows the other overlay
 extractors: symbol-based boundaries, small resource readers and a complete
-byte map. It reuses the format parsers in `tools/assets/`. The animation YAML
+byte map. It reuses the format parsers in `tools/data/formats/`. The animation YAML
 keeps all three sprite slots per frame. A zero glyph hides a slot, and only
 the first slot's control byte gives the frame duration in render ticks.
 Editing an export doesn't change what the build links.

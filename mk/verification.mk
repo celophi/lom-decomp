@@ -42,7 +42,7 @@ define compressed-overlay-rules
 $(call overlay-raw-rule,$(1))
 
 $(BUILD_DIR)/overlays/$(1)/$(2).BIN: $(BUILD_DIR)/overlays/$(1)/$(1).raw
-	python3 tools/compressor/compressor.py $$< $$@.payload
+	python3 tools/compression/compressor.py $$< $$@.payload
 	{ printf '\001'; cat $$@.payload; } > $$@.tmp
 	mv $$@.tmp $$@
 	rm -f $$@.payload
@@ -67,7 +67,7 @@ $(call overlay-raw-rule,$(1))
 
 $(BUILD_DIR)/overlays/$(1)/$(2).orig.raw: $(ROM_BIN_DIR)/$(2).BIN
 	@mkdir -p $$(@D)
-	python3 tools/splat_ext/decompress.py $$< 1 $$$$(($$$$(stat -c%s $$<) - 1)) $$@
+	python3 tools/compression/decompress.py $$< 1 $$$$(($$$$(stat -c%s $$<) - 1)) $$@
 
 verify-$(1): $(BUILD_DIR)/overlays/$(1)/$(1).raw $(BUILD_DIR)/overlays/$(1)/$(2).orig.raw
 	python3 tools/verification/verify_file.py $(BUILD_DIR)/overlays/$(1)/$(2).orig.raw \
@@ -130,7 +130,7 @@ verify-data-host: all $(OVERLAYS)
 			fi; \
 		}; \
 		trap cleanup EXIT; \
-		python3 tools/data2c/report_all.py --version $(VERSION) --host --verify --strict --out $(BUILD_DIR)/data-host
+		python3 tools/verification/data2c/report_all.py --version $(VERSION) --host --verify --strict --out $(BUILD_DIR)/data-host
 
 .PHONY: verify-data-as-c
 verify-data-as-c:
@@ -139,7 +139,7 @@ verify-data-as-c:
 	$(MAKE) clean-data-as-c
 
 # Check the compressor itself against all 17 original overlays, without needing
-# a build. Run this after any change to tools/compressor/compressor.py.
+# a build. Run this after any change to tools/compression/compressor.py.
 .PHONY: verify-compressor
 verify-compressor:
-	python3 tools/compressor/verify_exact_bins.py --bin-dir $(ROM_BIN_DIR)
+	python3 tools/compression/verify_exact_bins.py --bin-dir $(ROM_BIN_DIR)

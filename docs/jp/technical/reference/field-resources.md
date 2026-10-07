@@ -1,6 +1,6 @@
 # FIELDのリソース
 
-[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/overlays/README.md) | [English](../../../en/technical/reference/field-resources.md)
+[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/data/overlays/README.md) | [English](../../../en/technical/reference/field-resources.md)
 
 FIELDには、シーンを切り替えても使い続ける共通の画像やテーブルが入っています。
 両バージョンのYAMLでは、このデータを1つの`field_data` databinにまとめました。
@@ -81,8 +81,8 @@ FIELDが実際に画像を転送する位置は(384, 0)で、TIMに格納され�
 パディングも値の列に残します。関数ポインタには、判明していればシンボル名も付けます。
 リソース番号とポインタが混在するテーブルでも元の値を維持します。
 
-読み取りと出力は[`field.py`](../../../../tools/overlays/field.py)、小さなテーブルの
-形式は[`field_tables.py`](../../../../tools/overlays/field_tables.py)にあります。
+読み取りと出力は[`field.py`](../../../../tools/data/overlays/field.py)、小さなテーブルの
+形式は[`field_tables.py`](../../../../tools/data/overlays/field_tables.py)にあります。
 コードより前にあるジャンプテーブルなどのrodataは、これまでの所有元に残します。
 抽出結果を編集しても、ビルドがリンクするデータは変わりません。
 

@@ -1,6 +1,6 @@
 # TITLEのリソース
 
-[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/overlays/README.md) | [English](../../../en/technical/reference/title-resources.md)
+[日本語一覧](../../README.md) | [抽出ツール](../../../../tools/data/overlays/README.md) | [English](../../../en/technical/reference/title-resources.md)
 
 TITLEは、タイトルメニューと、ニューゲームの後に続くキャラクターと武器の選択画面を
 動かしています。データには、メニューの画像、選択画面のテクスチャと配置、
@@ -179,8 +179,8 @@ YAMLでは、[saved_game.h](../../../../include/common/saved_game.h)が名前を
   合わせています。それぞれが画面上のどちらのキャラクターかは、
   実際のゲームではまだ確かめていません。
 
-[`title.py`](../../../../tools/overlays/title.py)も、ほかの抽出ツールと同じく、
+[`title.py`](../../../../tools/data/overlays/title.py)も、ほかの抽出ツールと同じく、
 読み取り処理、`Part`、書き込み処理を分けています。TIM、オフセット表、数列、
-転送表、UV表、配置表の解析には`tools/assets/`のパーサーを使います。
-セーブデータのレコードは[`saved_game.py`](../../../../tools/overlays/saved_game.py)が
+転送表、UV表、配置表の解析には`tools/data/formats/`のパーサーを使います。
+セーブデータのレコードは[`saved_game.py`](../../../../tools/data/overlays/saved_game.py)が
 読み、そのオフセットはテストでCのヘッダーと照合しています。

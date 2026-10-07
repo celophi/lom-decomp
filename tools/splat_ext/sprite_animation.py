@@ -8,7 +8,7 @@ from splat.segtypes.common.databin import CommonSegDatabin
 from splat.util import log, options
 
 
-_tool_path = Path(__file__).resolve().parent.parent / "assets" / "sprite_animation.py"
+_tool_path = Path(__file__).resolve().parent.parent / "data" / "formats" / "sprite_animation.py"
 _tool_spec = importlib.util.spec_from_file_location("lom_sprite_animation", _tool_path)
 assert _tool_spec is not None
 _tool_module = importlib.util.module_from_spec(_tool_spec)

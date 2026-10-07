@@ -205,7 +205,7 @@ files; the extractor doesn't play or synthesize them. `byte-map.yaml` covers
 both input files, including padding and the few trailing bytes that remain
 unidentified. The build continues to link the original bytes.
 
-See the [extractor guide](../../../../tools/overlays/README.md) for the file
+See the [extractor guide](../../../../tools/data/overlays/README.md) for the file
 layout and output options.
 
 ## Reading the regional sources

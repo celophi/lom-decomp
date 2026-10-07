@@ -1,6 +1,6 @@
 # WMAP resources
 
-[English index](../../README.md) | [Overlay extractors](../../../../tools/overlays/README.md) | [Japanese](../../../jp/technical/reference/wmap-resources.md)
+[English index](../../README.md) | [Overlay extractors](../../../../tools/data/overlays/README.md) | [Japanese](../../../jp/technical/reference/wmap-resources.md)
 
 WMAP is the world map: placing artifacts, the artifact carousel, travel
 between lands, the map game and the animated land effects. Both regional YAMLs keep its initialized data in one
@@ -144,8 +144,8 @@ zero bytes after the input scripts. Tables without a fixed C array bound
 cover the stored run up to the next resource, so a few end with alignment
 bytes, such as the three after `g_wmap_spirit_sequence_bounds`.
 
-[`wmap.py`](../../../../tools/overlays/wmap.py) reads the resources and writes
-the exports. [`wmap_tables.py`](../../../../tools/overlays/wmap_tables.py) holds
+[`wmap.py`](../../../../tools/data/overlays/wmap.py) reads the resources and writes
+the exports. [`wmap_tables.py`](../../../../tools/data/overlays/wmap_tables.py) holds
 the table layouts. The rodata before the code, including the two 4-byte
 alignment blobs, is unchanged. Editing an export doesn't change what
 the build links.
