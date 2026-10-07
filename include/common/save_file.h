@@ -15,13 +15,28 @@
  * binary, so every overlay still links its own copy.
  */
 
+/** @brief Hex digit layout used to format a 32-bit value. */
+#define SAVE_HEX_MAX_DIGITS 8
+#define SAVE_HEX_DIGIT_BITS 4
+#define SAVE_HEX_DIGIT_MASK 0xF
+
+/** @brief Hex radix and number of numeric digits before 'A'. */
+#define SAVE_HEX_RADIX (SAVE_HEX_DIGIT_MASK + 1)
+#define SAVE_HEX_DECIMAL_DIGITS 10
+
+/** @brief Placeholder written for hex digit values at or above SAVE_HEX_RADIX. */
+#define SAVE_HEX_INVALID_DIGIT '_'
+
+/** @brief Maximum hex digits read from the suffix after a save file's serial. */
+#define SAVE_HEX_SUFFIX_DIGITS 2
+
 s32 validate_save_file(SaveFile* file);
-s32 compute_save_checksum(void* data);
-void terminate_multibyte_text(void* text);
-u8* skip_hex_digits(u8* text);
-void format_hex(s8* out, s32 value, s32 max_chars);
-void hex_nibble_to_ascii(s8* out, s32 value);
-u32 parse_hex(u8* text, s32 digits_left);
-s32 parse_hex_suffix_byte(const char* text);
+s32 compute_save_checksum(const void* save_data);
+void terminate_multibyte_text(void* title_text);
+u8* skip_hex_digits(u8* cursor);
+void format_hex(s8* destination, s32 value, s32 max_digits);
+void hex_nibble_to_ascii(s8* destination, s32 nibble);
+u32 parse_hex(const u8* cursor, s32 digits_left);
+s32 parse_hex_suffix_byte(const char* field_text);
 
 #endif

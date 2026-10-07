@@ -41,6 +41,25 @@
 #define GLYPH_SIZE 16
 #define GLYPH_ROWS 15
 
+/** @brief Each Kanji ROM row contains two bytes of one-bit pixels, read MSB first. */
+#define GLYPH_FONT_ROW_BYTES 2
+#define GLYPH_FONT_SOURCE_MSB 0x80
+
+/** @brief Each source byte expands to four pairs of 4-bit pixels. */
+#define GLYPH_FONT_PIXEL_PAIRS 4
+
+/** @brief Shared glyph colors occupy every second entry of the CLUT. */
+#define GLYPH_PALETTE_COLOR_STRIDE 2
+
+/** @brief Multiplier that places a pixel color in a raster byte's high nibble. */
+#define GLYPH_HIGH_NIBBLE_SCALE 16
+
+/** @brief Number of 4-bit pixels packed into one VRAM word. */
+#define GLYPH_VRAM_WORD_PIXELS 4
+
+/** @brief Krom2RawAdd returns this signed address when the glyph is unavailable. */
+#define GLYPH_INVALID_KROM_ADDRESS (-1)
+
 /** @brief VRAM x of the glyph cache (4-bit texels, so a glyph is GLYPH_SIZE / 4 halfwords wide). */
 #define GLYPH_VRAM_X 320
 
@@ -66,6 +85,13 @@
 #define GLYPH_CHART_ROW_BYTES 33
 #define GLYPH_CHART_COLUMNS 16
 #define GLYPH_CHART_PAGE_BYTES (16 * GLYPH_CHART_ROW_BYTES)
+
+/** @brief Each chart entry stores the two bytes of a Shift-JIS character. */
+#define GLYPH_CHART_GLYPH_BYTES 2
+
+/** @brief The second source byte stores the chart row above the column nibble. */
+#define GLYPH_CHART_ROW_SHIFT 4
+#define GLYPH_CHART_COLUMN_MASK (GLYPH_CHART_COLUMNS - 1)
 
 /** @brief Cached character code and flags recording use in the current frame. */
 typedef union
@@ -111,11 +137,11 @@ extern u16 g_glyph_hex_digits[];
 void* draw_signed_decimal(void* prim, u_long* ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment);
 void draw_hex_byte(void* prim, u_long* ot, s32 value, s32 x, s32 y, s32 alignment);
 void* draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s32 palette, s32 alignment);
-void* render_cached_glyph(void* prim, u_long* ot, u16 code, s32 palette);
+void* render_cached_glyph(void* primitive, u_long* ot_tag, u16 character_code, s32 palette);
 void* emit_glyph_sprite(GlyphSprite* sprite, u_long* ot, s32 cache_slot, s32 palette);
 void begin_glyph_cache_frame(void);
 void evict_unused_glyphs(void);
 void reset_glyph_cache(void);
-void expand_text_glyph_codes(u8* out, u8* in);
+void expand_text_glyph_codes(u8* destination, u8* source);
 
 #endif

@@ -6,45 +6,46 @@
 
 /**
  * @brief Format @p value as full-width Shift-JIS digits without leading zeros and null-terminate it.
- * @param out Destination buffer.
- * @param value Value to format; 1000000 and up is written as g_decimal_overflow_text.
+ * @param destination Buffer with room for up to six two-byte digits and a null byte.
+ * @param value Nonnegative value to format; 1000000 and up becomes full-width "MAX".
  * @return Pointer to the terminator.
  */
-s8* format_decimal(s8* out, s32 value)
+s8* format_decimal(s8* destination, s32 value)
 {
     s32 digit;
     s32 divisor;
-    s32 started;
-    s8* p;
+    s32 emit_zero_digits;
+    s8* cursor;
 
-    p = out;
-    divisor = 100000;
-    if (value >= divisor * 10)
+    cursor = destination;
+    divisor = SJIS_DECIMAL_FIRST_DIVISOR;
+    if (value >= divisor * SJIS_DECIMAL_RADIX)
     {
-        *(SjisDecimalOverflowText*)p = g_decimal_overflow_text;
-        return p + sizeof(SjisDecimalOverflowText) - 1;
+        *(SjisDecimalOverflowText*)cursor = g_decimal_overflow_text;
+        return cursor + sizeof(SjisDecimalOverflowText) - 1;
     }
 
-    started = 0;
-    for (;; divisor /= 10)
+    emit_zero_digits = 0;
+    for (;; divisor /= SJIS_DECIMAL_RADIX)
     {
         digit = value / divisor;
-        if (digit != 0 || started != 0)
+        if (digit != 0 || emit_zero_digits != 0)
         {
-            *p++ = (digit + SJIS_DIGIT_ZERO) >> 8;
-            *p++ = digit + (SJIS_DIGIT_ZERO & 0xFF);
-            started = 1;
+            *cursor++ = (digit + SJIS_DIGIT_ZERO) >> SJIS_CODE_LEAD_SHIFT;
+            *cursor++ = digit + (SJIS_DIGIT_ZERO & SJIS_CODE_TRAIL_MASK);
+            emit_zero_digits = 1;
         }
         if (divisor == 1)
         {
             break;
         }
-        if (divisor == 10)
+        /* Always emit the units digit, even when the value is zero. */
+        if (divisor == SJIS_DECIMAL_RADIX)
         {
-            started = 1;
+            emit_zero_digits = 1;
         }
         value -= digit * divisor;
     }
-    *p = 0;
-    return p;
+    *cursor = 0;
+    return cursor;
 }

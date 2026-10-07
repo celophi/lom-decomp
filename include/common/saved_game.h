@@ -767,11 +767,17 @@ typedef struct SavedGameLayout
 /** @brief SaveFile::magic of a valid save ("ANA"). */
 #define SAVE_FILE_MAGIC 0x00414E41
 
+/** @brief Multiplier applied to the byte sum when computing SaveFile::checksum. */
+#define SAVE_FILE_CHECKSUM_MULTIPLIER 2
+
 /** @brief Added to twice the byte sum of a save file to form SaveFile::checksum. */
 #define SAVE_FILE_CHECKSUM_BIAS 0x0414E410
 
 /** @brief Length of one of the two lines of SaveFileHeader::title. */
 #define SAVE_FILE_TITLE_LINE_BYTES 0x20
+
+/** @brief Combined byte length of both lines of SaveFileHeader::title. */
+#define SAVE_FILE_TITLE_BYTES (SAVE_FILE_TITLE_LINE_BYTES * 2)
 
 /** @brief Standard PSX memory-card file header (0x180 bytes): title and icon. */
 typedef struct

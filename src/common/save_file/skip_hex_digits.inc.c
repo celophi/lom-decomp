@@ -5,15 +5,17 @@
 #include "common/save_file.h"
 
 /**
- * @brief Advance past a run of hex digits ('0'-'9', 'a'-'f', 'A'-'F').
- * @param text Start of the text to scan.
- * @return Pointer to the first byte that is not a hex digit.
+ * @brief Advance past leading hex digits ('0'-'9', 'a'-'f', 'A'-'F').
+ * @param cursor Start of the text to scan.
+ * @return Pointer to the first non-hex byte, unchanged if no digits are present.
  */
-u8* skip_hex_digits(u8* text)
+u8* skip_hex_digits(u8* cursor)
 {
-    while ((*text >= '0' && *text <= '9') || (*text >= 'a' && *text <= 'f') || (*text >= 'A' && *text <= 'F'))
+    while ((*cursor >= '0' && *cursor <= '9') ||
+           (*cursor >= 'a' && *cursor <= 'f') ||
+           (*cursor >= 'A' && *cursor <= 'F'))
     {
-        text++;
+        cursor++;
     }
-    return text;
+    return cursor;
 }

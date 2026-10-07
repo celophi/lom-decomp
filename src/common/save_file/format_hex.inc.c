@@ -5,39 +5,42 @@
 #include "common/save_file.h"
 
 /**
- * @brief Format @p value as uppercase hex without leading zeros and null-terminate it.
- * @param out Destination buffer.
- * @param value Value to format.
- * @param max_chars Most digits to write.
+ * @brief Write a null-terminated uppercase hex string without leading zeros.
+ * @param destination Buffer for the output digits and a null terminator.
+ * @param value Value whose 32-bit representation is formatted.
+ * @param max_digits Nonnegative digit limit, excluding the null terminator.
+ * @note A zero limit produces an empty string; a short limit keeps the most
+ *       significant digits. Zero is written as "0" when the limit is positive.
  */
-void format_hex(s8* out, s32 value, s32 max_chars)
+void format_hex(s8* destination, s32 value, s32 max_digits)
 {
     s32 nibble;
-    s32 shift_index;
-    s32 started;
+    s32 nibble_index;
+    s32 emit_zero_digits;
 
-    shift_index = 7;
-    started = 0;
-    while (max_chars != 0)
+    nibble_index = SAVE_HEX_MAX_DIGITS - 1;
+    emit_zero_digits = 0;
+    while (max_digits != 0)
     {
-        nibble = (value >> (shift_index * 4)) & 0xF;
-        if (nibble != 0 || started != 0)
+        nibble = (value >> (nibble_index * SAVE_HEX_DIGIT_BITS)) & SAVE_HEX_DIGIT_MASK;
+        if (nibble != 0 || emit_zero_digits != 0)
         {
-            hex_nibble_to_ascii(out, nibble);
-            out++;
-            max_chars--;
-            started = 1;
-            value -= nibble << (shift_index * 4);
+            hex_nibble_to_ascii(destination, nibble);
+            destination++;
+            max_digits--;
+            emit_zero_digits = 1;
+            value -= nibble << (nibble_index * SAVE_HEX_DIGIT_BITS);
         }
-        shift_index--;
-        if (shift_index == -1)
+        nibble_index--;
+        if (nibble_index == -1)
         {
             break;
         }
-        if (shift_index == 0)
+        if (nibble_index == 0)
         {
-            started = 1;
+            /* Always emit the final digit so zero formats as "0". */
+            emit_zero_digits = 1;
         }
     }
-    *out = 0;
+    *destination = 0;
 }
