@@ -1,5 +1,6 @@
 name: CARDA.BIN
-sha1: 22615b343b5e34973a5184732972a75dfd4d15fc
+compressed_sha1: 22615b343b5e34973a5184732972a75dfd4d15fc
+sha1: 88ba3ce3fc216a5563fac1c5dee3de08885a956a
 options:
   base_path: ../../../
   basename: CARDA.BIN
@@ -9,7 +10,7 @@ options:
   # project-owned (include_asm.h prefixes the per-version asm directory),
   # so splat must not regenerate them.
   generate_asm_macros_files: False
-  target_path: disc/jp/BIN/CARDA.BIN
+  target_path: build/jp/decompressed/CARDA.BIN
   extensions_path: tools/splat_ext
   asset_path: assets/jp
   elf_path: build/jp/overlays/carda.elf
@@ -43,7 +44,7 @@ options:
 
 segments:
   - name: carda
-    type: decompress_overlay
+    type: code
     start: 0x1
     vram: 0x80140000
     align: 4

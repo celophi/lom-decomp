@@ -1,5 +1,6 @@
 name: CLOAD.BIN
-sha1: b3649aa844c5d94e3da8c591a0192361031a61a2
+compressed_sha1: b3649aa844c5d94e3da8c591a0192361031a61a2
+sha1: 0b265953a801d39410cbe3ba9f1e92268a1f234a
 options:
   base_path: ../../../
   basename: CLOAD.BIN
@@ -9,7 +10,7 @@ options:
   # project-owned (include_asm.h prefixes the per-version asm directory),
   # so splat must not regenerate them.
   generate_asm_macros_files: False
-  target_path: disc/jp/BIN/CLOAD.BIN
+  target_path: build/jp/decompressed/CLOAD.BIN
   extensions_path: tools/splat_ext
   asset_path: assets/jp
   elf_path: build/jp/overlays/cload.elf
@@ -43,7 +44,7 @@ options:
 
 segments:
   - name: cload
-    type: decompress_overlay
+    type: code
     start: 0x1
     vram: 0x80140000
     align: 4

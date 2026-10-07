@@ -97,7 +97,7 @@ class FakeOverlay:
         start = self.address - ADDRESS + 1
         end = start + len(self.data)
         segment = {
-            "name": "checkps", "type": "decompress_overlay", "start": 1, "vram": ADDRESS,
+            "name": "checkps", "type": "code", "start": 1, "vram": ADDRESS,
             "subsegments": [
                 [1, "rodatabin", "warning"], [1 + len(self.rodata), "c", "stub"],
                 [start, "databin", "blob"], [end, "bss", "stub"],

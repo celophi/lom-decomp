@@ -1,5 +1,6 @@
 name: GOVER.BIN
-sha1: 4488f6327fbca7fdb85ef0de836a46165ecbc2ec
+compressed_sha1: 4488f6327fbca7fdb85ef0de836a46165ecbc2ec
+sha1: 757a90991d948318397762a6e79d0cfb2c47eda0
 options:
   base_path: ../../../
   basename: GOVER.BIN
@@ -9,7 +10,7 @@ options:
   # project-owned (include_asm.h prefixes the per-version asm directory),
   # so splat must not regenerate them.
   generate_asm_macros_files: False
-  target_path: disc/jp/BIN/GOVER.BIN
+  target_path: build/jp/decompressed/GOVER.BIN
   extensions_path: tools/splat_ext
   asset_path: assets/jp
   elf_path: build/jp/overlays/gover.elf
@@ -41,7 +42,7 @@ options:
 
 segments:
   - name: gover
-    type: decompress_overlay
+    type: code
     start: 0x1
     vram: 0x80140000
     align: 2

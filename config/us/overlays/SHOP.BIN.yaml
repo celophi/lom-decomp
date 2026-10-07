@@ -1,5 +1,6 @@
 name: SHOP.BIN
-sha1: 09645449948177200d87cb9350a87df165e34453
+compressed_sha1: 09645449948177200d87cb9350a87df165e34453
+sha1: 2319073c0c511c606e1c142956770a8b19708a5f
 options:
   base_path: ../../../
   basename: SHOP.BIN
@@ -9,7 +10,7 @@ options:
   # project-owned (include_asm.h prefixes the per-version asm directory),
   # so splat must not regenerate them.
   generate_asm_macros_files: False
-  target_path: disc/us/BIN/SHOP.BIN
+  target_path: build/us/decompressed/SHOP.BIN
   extensions_path: tools/splat_ext
   asset_path: assets/us
   elf_path: build/us/overlays/shop.elf
@@ -41,7 +42,7 @@ options:
 
 segments:
   - name: shop
-    type: decompress_overlay
+    type: code
     start: 0x1
     vram: 0x80140000
     align: 4

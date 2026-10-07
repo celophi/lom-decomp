@@ -1,5 +1,6 @@
 name: CHECKPS.BIN
-sha1: 237ab08b237827691b91bc8917348a251e449f11
+compressed_sha1: 237ab08b237827691b91bc8917348a251e449f11
+sha1: 3e1bbd617609bae80df17ef04952bdded75ab531
 options:
   base_path: ../../../
   basename: CHECKPS.BIN
@@ -9,7 +10,7 @@ options:
   # project-owned (include_asm.h prefixes the per-version asm directory),
   # so splat must not regenerate them.
   generate_asm_macros_files: False
-  target_path: disc/jp/BIN/CHECKPS.BIN
+  target_path: build/jp/decompressed/CHECKPS.BIN
   extensions_path: tools/splat_ext
   asset_path: assets/jp
   elf_path: build/jp/overlays/checkps.elf
@@ -47,7 +48,7 @@ options:
 
 segments:
   - name: checkps
-    type: decompress_overlay
+    type: code
     start: 0x1
     vram: 0x8004FDD8
     subsegments:

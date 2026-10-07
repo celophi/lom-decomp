@@ -1,5 +1,6 @@
 name: TITLE.BIN
-sha1: 38bfb06a8d9c742935a2bfa754246c4d19f658b8
+compressed_sha1: 38bfb06a8d9c742935a2bfa754246c4d19f658b8
+sha1: d50b0b0c7f5bcc11ebbaa788093e92ad5462f8a7
 options:
   base_path: ../../../
   basename: TITLE.BIN
@@ -9,7 +10,7 @@ options:
   # project-owned (include_asm.h prefixes the per-version asm directory),
   # so splat must not regenerate them.
   generate_asm_macros_files: False
-  target_path: disc/jp/BIN/TITLE.BIN
+  target_path: build/jp/decompressed/TITLE.BIN
   extensions_path: tools/splat_ext
   asset_path: assets/jp
   elf_path: build/jp/overlays/title.elf
@@ -44,7 +45,7 @@ options:
 
 segments:
   - name: title
-    type: decompress_overlay
+    type: code
     start: 0x1
     vram: 0x8004FDD8
     align: 4
