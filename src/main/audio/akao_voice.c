@@ -11,15 +11,6 @@
  */
 #define SPU_VOICE_REG(voice, field) (*(u16*)((u8*)&SPU_VOICE_REGS[0].field + (voice) * sizeof(SpuVoiceRegisters)))
 
-/*
- * SpuVoiceParams::update_flags groups. Each group lists every AKAO update bit
- * that dirties the named SPU voice register.
- */
-#define SPU_UPDATE_START_ADDR 0x80
-#define SPU_UPDATE_ADSR_HIGH 0x6600
-#define SPU_UPDATE_ADSR_LOW 0x9900
-#define SPU_UPDATE_REPEAT_ADDR 0x10000
-
 /* SPU voice bitmap registers; each is split into a low (voices 0-15) and high (voices 16-23) halfword. */
 #define SPU_KEY_ON_LOW (*(u16*)0x1F801D88)
 #define SPU_KEY_ON_HIGH (*(u16*)0x1F801D8A)
@@ -529,8 +520,8 @@ void akao_tick_channel_effects(AkaoChannelState* channel, s32 channel_bit, s32 i
     if (channel->pitch_lfo_depth_fade_ticks != 0)
     {
         channel->pitch_lfo_depth_fade_ticks--;
-        depth = channel->pitch_lfo_depth + channel->pitch_lfo_depth_step;
-        channel->pitch_lfo_depth = depth;
+        depth = channel->pitch_lfo_depth.raw + channel->pitch_lfo_depth_step;
+        channel->pitch_lfo_depth.raw = depth;
         depth_level = (u32)(depth & 0x7F00) >> 8;
 
         if (depth & 0x8000)
@@ -542,7 +533,7 @@ void akao_tick_channel_effects(AkaoChannelState* channel, s32 channel_bit, s32 i
             scaled_depth = (depth_level * ((u32)(channel->pitch * 15) >> 8)) >> 7;
         }
 
-        channel->pitch_lfo_depth_scaled = scaled_depth;
+        channel->pitch_lfo_depth.scaled = scaled_depth;
 
         if ((channel->pitch_lfo_delay_ticks == 0) && (channel->pitch_lfo_restart != 1))
         {
@@ -552,7 +543,7 @@ void akao_tick_channel_effects(AkaoChannelState* channel, s32 channel_bit, s32 i
                 lfo_cursor = (AkaoLfoSample*)((u8*)lfo_cursor + lfo_cursor->relative_offset * 2);
             }
 
-            next = (channel->pitch_lfo_depth_scaled * lfo_cursor->sample) >> 16;
+            next = (channel->pitch_lfo_depth.scaled * lfo_cursor->sample) >> 16;
             if (next != channel->pitch_lfo_value)
             {
                 channel->pitch_lfo_value = next;
@@ -663,7 +654,7 @@ void akao_update_sequence_channel_voice(AkaoChannelState* channel, s32 channel_m
 
                     lfo_samples = channel->pitch_lfo_cursor;
                     waveform_sample = *lfo_samples++;
-                    effect_value = (channel->pitch_lfo_depth_scaled * waveform_sample) >> 16;
+                    effect_value = (channel->pitch_lfo_depth.scaled * waveform_sample) >> 16;
                     channel->pitch_lfo_cursor = lfo_samples;
                 }
                 if (effect_value != channel->pitch_lfo_value)
@@ -842,7 +833,7 @@ void akao_update_sfx_channel_voice(AkaoChannelState* channel, s32 channel_mask)
 
                 lfo_samples = channel->pitch_lfo_cursor;
                 waveform_sample = *lfo_samples++;
-                effect_value = (channel->pitch_lfo_depth_scaled * waveform_sample) >> 16;
+                effect_value = (channel->pitch_lfo_depth.scaled * waveform_sample) >> 16;
                 channel->pitch_lfo_cursor = lfo_samples;
             }
             if (effect_value != channel->pitch_lfo_value)

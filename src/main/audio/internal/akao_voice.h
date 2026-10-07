@@ -9,6 +9,14 @@
 /** @brief Pending update for the SPU pitch register. */
 #define SPU_UPDATE_PITCH 0x10
 
+/** @brief Pending sample-start and loop-address updates. */
+#define SPU_UPDATE_START_ADDR 0x80
+#define SPU_UPDATE_REPEAT_ADDR 0x10000
+
+/** @brief All update bits that dirty each packed ADSR register. */
+#define SPU_UPDATE_ADSR_HIGH 0x6600
+#define SPU_UPDATE_ADSR_LOW 0x9900
+
 /**
  * @brief Voice volume pair (VOLL + VOLR) at the start of each SPU voice
  *        register block. Internal to the SPU register write helpers.

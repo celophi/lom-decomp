@@ -4,9 +4,8 @@
 #include <libspu.h>
 #include <libapi.h>
 
-/* SpuInitMalloc block count, and SPU address/size of the zeroed primer block. */
+/* SpuInitMalloc block count and size of the zeroed primer block. */
 #define AKAO_SPU_MALLOC_BLOCKS 4
-#define AKAO_SPU_PRIMER_ADDR 0x1010
 #define AKAO_SPU_PRIMER_SIZE 0x40
 
 /* Resident bank tables: sequence-offset pairs followed by program bank keys. */

@@ -331,6 +331,13 @@ typedef struct AkaoSongState
     u8 _pad6E[2];
 } AkaoSongState;
 
+/** @brief Packed pitch-LFO depth and its coefficient scaled by the current pitch. */
+typedef struct
+{
+    u16 scaled; /**< Coefficient used to scale pitch-LFO waveform samples. */
+    u16 raw;    /**< Q8 depth; bit 15 selects absolute scaling. */
+} AkaoPitchLfoDepth;
+
 /**
  * @brief State of one sequencer channel (a song track or an SFX channel).
  *
@@ -394,8 +401,7 @@ typedef struct AkaoChannelState
     s16 pitch_lfo_period; /**< Pitch-LFO period. */
     u16 pitch_lfo_restart; /**< Pitch-LFO restart flag (1 = waveform not started). */
     u16 pitch_lfo_waveform; /**< Pitch-LFO waveform index into g_akao_lfo_waveforms. */
-    u16 pitch_lfo_depth_scaled; /**< Pitch-LFO depth scaled by the current pitch. */
-    u16 pitch_lfo_depth; /**< Pitch-LFO raw depth; bit 15 selects the scaling mode. */
+    AkaoPitchLfoDepth pitch_lfo_depth; /**< Raw and pitch-scaled LFO depth. */
     u16 pitch_lfo_depth_fade_ticks; /**< Pitch-LFO depth-slide tick countdown. */
     u16 pitch_lfo_depth_step; /**< Pitch-LFO depth-slide step. */
     u16 _padB4;
