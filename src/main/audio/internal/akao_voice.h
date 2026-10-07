@@ -3,6 +3,31 @@
 
 #include "akao_driver.h"
 
+/** @brief Fractional bits in AKAO volume, pan, pitch and tempo accumulators. */
+#define AKAO_Q7_SHIFT 7
+#define AKAO_Q8_SHIFT 8
+#define AKAO_Q16_SHIFT 16
+
+/** @brief Channel LFO and preceding-channel sidechain flags. */
+#define AKAO_CH_PITCH_LFO 0x01
+#define AKAO_CH_VOLUME_LFO 0x02
+#define AKAO_CH_PAN_LFO 0x04
+#define AKAO_CH_PITCH_SIDECHAIN 0x10
+#define AKAO_CH_PITCH_VOLUME_SIDECHAIN 0x20
+
+/** @brief Integer level bits used to detect accumulator changes. */
+#define AKAO_CHANNEL_VOLUME_MASK (AKAO_VOLUME_MAX << AKAO_Q8_SHIFT)
+#define AKAO_Q8_LEVEL_MASK 0xFF00
+#define AKAO_MASTER_LEVEL_MASK (AKAO_MASTER_VOLUME_MASK << AKAO_Q16_SHIFT)
+
+/** @brief Packed pitch-LFO depth and relative-pitch scaling. */
+#define AKAO_PITCH_LFO_DEPTH_MASK 0x7F00
+#define AKAO_PITCH_LFO_ABSOLUTE_FLAG 0x8000
+#define AKAO_PITCH_LFO_RELATIVE_SCALE 15
+
+/** @brief Fractional bits in the song reverb-depth accumulator. */
+#define AKAO_REVERB_DEPTH_FRACTION_BITS 12
+
 /** @brief Pending updates for the SPU stereo volume registers. */
 #define SPU_UPDATE_VOLUME 0x3
 
@@ -55,7 +80,6 @@ typedef struct
 } SpuVoiceParams;
 
 extern AkaoSongState* g_akao_voice_owners[];
-
 
 /* ---- Common (non-voice) SPU register writers ---- */
 

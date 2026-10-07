@@ -4,12 +4,7 @@
 #include <libspu.h>
 
 /* Channel-role AkaoChannelState.flags bits. */
-#define AKAO_CH_PITCH_LFO 0x01
-#define AKAO_CH_VOLUME_LFO 0x02
-#define AKAO_CH_PAN_LFO 0x04
 #define AKAO_CH_DRUM_MODE 0x08
-#define AKAO_CH_PITCH_SIDECHAIN 0x10
-#define AKAO_CH_PITCH_VOLUME_SIDECHAIN 0x20
 #define AKAO_CH_PAN_BIAS 0x800
 #define AKAO_CH_KEY_MAP 0x1000
 #define AKAO_CH_ADSR_ATTACK 0x01000000
@@ -41,25 +36,16 @@
 #define AKAO_DETUNE_VALUE_MASK 0xFF
 #define AKAO_DETUNE_NEGATIVE_THRESHOLD 0x80
 
-/** @brief Fractional bits in the sequencer's Q7, Q8 and Q16 values. */
-#define AKAO_Q7_SHIFT 7
-#define AKAO_Q8_SHIFT 8
-#define AKAO_Q16_SHIFT 16
-
 /** @brief Signed expression operands are placed above 23 fractional bits. */
 #define AKAO_EXPRESSION_FRACTION_BITS 23
 /** @brief Expression fades retain the upper half of the current accumulator. */
 #define AKAO_EXPRESSION_FADE_MASK 0xFFFF0000
 
-/** @brief Fractional bits in the reverb-depth accumulator. */
-#define AKAO_REVERB_DEPTH_FRACTION_BITS 12
+/** @brief Fractional bits discarded when a reverb-depth fade starts. */
 #define AKAO_REVERB_DEPTH_FRACTION_MASK ((1 << AKAO_REVERB_DEPTH_FRACTION_BITS) - 1)
 
 /** @brief Integer level bits used to detect changes during fades. */
-#define AKAO_Q8_LEVEL_MASK 0xFF00
-#define AKAO_MASTER_LEVEL_MASK (AKAO_MASTER_VOLUME_MASK << AKAO_Q16_SHIFT)
 #define AKAO_SONG_VOLUME_MASK (AKAO_VOLUME_MAX << AKAO_Q16_SHIFT)
-#define AKAO_CHANNEL_VOLUME_MASK (AKAO_VOLUME_MAX << AKAO_Q8_SHIFT)
 
 /** @brief Mask retaining the low 16 bits of a value or accumulator. */
 #define AKAO_LOW_HALF_MASK 0xFFFF
@@ -113,12 +99,6 @@
 /** @brief Pitch jitter uses Q7 for positive offsets and Q9 for negative offsets. */
 #define AKAO_PITCH_JITTER_NEGATIVE_FLAG 0x80
 #define AKAO_PITCH_JITTER_NEGATIVE_SHIFT 9
-
-/** @brief Pitch-LFO depth has a Q8 level and a flag selecting direct base-pitch scaling. */
-#define AKAO_PITCH_LFO_DEPTH_MASK 0x7F00
-#define AKAO_PITCH_LFO_ABSOLUTE_FLAG 0x8000
-/** @brief Relative pitch-LFO depth starts from 15/256 of the base pitch. */
-#define AKAO_PITCH_LFO_RELATIVE_SCALE 15
 
 /** @brief Number of bytes in a relative branch offset. */
 #define AKAO_BRANCH_OFFSET_BYTES 2
