@@ -40,7 +40,6 @@ options:
   undefined_funcs_auto_path: linker/us/undefined_funcs_auto.txt
   undefined_syms_auto_path: linker/us/undefined_syms_auto.txt
 
-  extensions_path: tools/splat_ext
   asset_path: assets/us
 
   subalign: 2
