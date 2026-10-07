@@ -468,7 +468,5 @@ Squaresoft、そして **『Legend of Mana』** の制作に携わった皆さ�
 - [objdiff](https://github.com/encounter/objdiff)
 - [decomp-permuter](https://github.com/simonlindholm/decomp-permuter)
 - [m2c](https://github.com/matt-kempster/m2c)
-- [wibo](https://github.com/decompals/wibo)
-- [psyq-obj-parser](https://github.com/mkst/psyq-obj-parser)
 - [decomp.me](https://decomp.me)
 - [decomp.dev](https://decomp.dev)

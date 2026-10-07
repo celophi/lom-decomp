@@ -29,31 +29,21 @@ jobs:
         run: make test-tools
 
   build-and-report:
-    # One job per game version (see mk/version.mk). Each builds its own objects
-    # and uploads its own progress report, named after the version's main
-    # executable (e.g. SLUS_010.13_report, SLPS_021.70_report).
     name: ${{ matrix.rom_id }}
     runs-on: ubuntu-latest
 
     strategy:
-      # A failure in one version must not cancel the other's report.
       fail-fast: false
       matrix:
         include:
           - version: us
             rom_id: SLUS_010.13
-            # Fully linked: verify every rebuilt binary against the disc.
             verify: true
           - version: jp
             rom_id: SLPS_021.70
-            # Linked purely from the first-pass splat assembly (no C yet), so
-            # the progress report shows 0% matched, but every rebuilt binary is
-            # still checked against the disc (see RAW_VERIFIED_OVERLAYS_jp in
-            # mk/verification.mk for the four checked at raw-image level).
             verify: true
 
     container:
-      # The CI image holds every disc under /rom/<version>/.
       image: ghcr.io/celophi/slus-01013:v6.0
 
     env:
@@ -61,11 +51,9 @@ jobs:
       ROM_ID: ${{ matrix.rom_id }}
       WORKING_DIR: lom
 
-      # Tool paths (relative to working directory)
       OBJDIFF_CLI: objdiff-cli
       OBJDIFF_CONFIG_GENERATOR: tools/objdiff/generate_objdiff_config.py
 
-      # Build artifacts
       PROGRESS_REPORT: build/${{ matrix.version }}/progress.json
 
     defaults:
@@ -104,16 +92,9 @@ jobs:
 
       - name: Verify compressed overlay BINs against ROM
         if: ${{ matrix.verify }}
-        # Builds each verifiable overlay's compressed .BIN and SHA1-compares it
-        # against the original ROM file. On match, the overlay name is appended
-        # to build/<version>/complete_overlays.txt, which the objdiff config
-        # generator reads to stamp metadata.complete = true on those units.
         run: make verify-bins VERSION=${{ env.VERSION }}
 
       - name: Native compile check
-        # Compiles every C file this version builds with the image's gcc, so a
-        # 64-bit build stays possible: a file that compiles must keep
-        # compiling (tools/verification/native_check/baseline_<version>_gcc.txt).
         run: make native-check VERSION=${{ env.VERSION }}
 
       - name: Generate objdiff configuration
@@ -125,21 +106,13 @@ jobs:
 
       - name: Verify the host build of the data
         if: ${{ matrix.verify }}
-        # Compiles every .data region's generated C for x86-64 (data2c --host)
-        # and checks that each field, read through the decomp's own types,
-        # holds the PS1 value. Runs before verify-data-as-c, which removes the
-        # data objects this reads.
         run: make verify-data-host VERSION=${{ env.VERSION }}
 
       - name: Verify binaries with data built from generated C
         if: ${{ matrix.verify }}
-        # Rebuilds every .data region from C that tools/verification/data2c generates at
-        # build time (DATA_AS_C=1) and checks the binaries still match. Runs
-        # after the report so the report comes from the normal build.
         run: make verify-data-as-c VERSION=${{ env.VERSION }}
 
       - name: Unit tests for tools/verification/data2c
-        # The round-trip tests compile for mipsel with clang.
         run: |
           apt-get update && apt-get install -y --no-install-recommends clang
           python3 -m unittest discover -s tools/verification/data2c/tests
