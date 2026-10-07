@@ -102,11 +102,11 @@
 /** PSX scratchpad RAM, used as row work buffers by the rasterisers. */
 #define FIELD_COLLISION_SCRATCH SCRATCHPAD_ADDRESS
 
-/** Fixed RAM list of the nodes that block a probe, filled by field_collision_classify_nodes. */
-#define FIELD_COLLISION_HIT_LIST ((FieldCollisionNode**)COLLISION_LISTS_ADDRESS)
+/** @brief Fixed RAM list of the nodes that block a probe, filled by field_collision_classify_nodes. */
+#define FIELD_COLLISION_HIT_LIST ((FieldCollisionNodeEntry*)COLLISION_LISTS_ADDRESS)
 
-/** Fixed RAM list of the nodes a probe touches without being blocked. */
-#define FIELD_COLLISION_TOUCH_LIST ((FieldCollisionNode**)COLLISION_LISTS_AT(0x100))
+/** @brief Fixed RAM list of the nodes a probe touches without being blocked. */
+#define FIELD_COLLISION_TOUCH_LIST ((FieldCollisionNodeEntry*)COLLISION_LISTS_AT(0x100))
 
 /**
  * @brief Convert a 24.8 fixed-point coordinate to whole collision cells.
@@ -483,6 +483,12 @@ typedef struct FieldCollisionNode
     s32 height1_offset;
     s32 offset_z;
 } FieldCollisionNode;
+
+/** @brief One node reference in the fixed collision hit or touch list. */
+typedef struct FieldCollisionNodeEntry
+{
+    FieldCollisionNode* node;
+} FieldCollisionNodeEntry;
 
 /**
  * @brief Actor/mover state resolved by field_collision_resolve_move.
@@ -933,8 +939,8 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
     s32 move_angle;
     s32 delta_x;
     s32 delta_z;
-    FieldCollisionNode** hit_iter;
-    FieldCollisionNode** touch_iter;
+    FieldCollisionNodeEntry* hit_iter;
+    FieldCollisionNodeEntry* touch_iter;
     s32 box_x_end;
     s32 push_x_end;
     s32 box_z_end;
@@ -1482,7 +1488,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                 box_x_last = x_end - 1;
                 for (; remaining != -1; remaining--)
                 {
-                    node = *hit_iter;
+                    node = hit_iter->node;
                     hit_iter += 1;
                     hit_offset_z = nodes->offset_z >> 8;
                     hit_offset_x = (nodes->offset_x << 8) >> 16;
@@ -1611,7 +1617,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                                 }
                                 if (hit != 0)
                                 {
-                                    *touch_iter = node;
+                                    touch_iter->node = node;
                                     touch_iter += 1;
                                     touch_count += 1;
                                 }
@@ -1721,7 +1727,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                     push_offset_z = (nodes->offset_z << 8) >> 16;
                     for (; step_count != -1; step_count--)
                     {
-                        node = *touch_iter;
+                        node = touch_iter->node;
                         touch_iter += 1;
                         surface = node->surface;
                         if (((node->min_x + push_offset_x) < push_x_end) && (((node->max_x + push_offset_x) >= push_x_start)))
@@ -1996,7 +2002,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
         step_limit = (s16)step_height;
         for (; touch_count != -1; touch_count--)
         {
-            touch_node = *touch_iter;
+            touch_node = touch_iter->node;
             nodes = touch_node;
             touch_cell_x = (s16)cell_x;
             touch_iter += 1;
@@ -2202,8 +2208,8 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
  */
 static void field_collision_classify_nodes(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32* out_hit, s32* out_touch)
 {
-    FieldCollisionNode** hit_list;
-    FieldCollisionNode** touch_list;
+    FieldCollisionNodeEntry* hit_list;
+    FieldCollisionNodeEntry* touch_list;
     FieldCollisionSurfaceDef* surface;
     FieldCollisionMover* mover;
     FieldCollisionSpan* span;
@@ -2423,13 +2429,13 @@ static void field_collision_classify_nodes(FieldCollisionMoveProbe* probe, Field
                                     }
                                     if (result & FIELD_COLLISION_CLASS_BLOCK)
                                     {
-                                        *hit_list = node;
+                                        hit_list->node = node;
                                         hit_list++;
                                         *out_hit += 1;
                                     }
                                     if (result & FIELD_COLLISION_CLASS_TOUCH)
                                     {
-                                        *touch_list = node;
+                                        touch_list->node = node;
                                         touch_list++;
                                         *out_touch += 1;
                                     }
