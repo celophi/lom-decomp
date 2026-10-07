@@ -7,6 +7,8 @@
 # We build in /staging because the old 32-bit tools cannot read some Docker
 # bind-mount inode values. mk/staging.mk copies the inputs and fixes CRLF there.
 
+include mk/parallel.mk
+
 STAGING      := /staging
 MOUNT        := /lom
 

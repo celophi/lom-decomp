@@ -53,6 +53,14 @@ recopy:
 	rm -f $(COPY_SENTINEL)
 	$(MAKE) $(COPY_SENTINEL)
 
+# These inputs are produced by staging, not by a separate copy recipe. Explicit
+# rules let parallel builds wait for the copy before checking a missing file.
+$(STAGING)/$(LINKER_DIR)/%: $(LINKER_DIR)/% | $(COPY_SENTINEL)
+	@test -f "$@"
+
+$(STAGING)/$(ASSETS_DIR)/%: $(ASSETS_DIR)/% | $(COPY_SENTINEL)
+	@test -f "$@"
+
 # Replace the managed paths on native Linux storage, then normalize text inputs
 # consumed by the compiler, assembler, linker, and shell to LF.
 # The sentinel is only written after every copy and conversion succeeds.
