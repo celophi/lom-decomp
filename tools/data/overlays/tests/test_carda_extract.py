@@ -113,7 +113,7 @@ class FakeOverlay:
         (assets / "blob.databin.bin").write_bytes(self.data)
         segment = {
             "name": "carda",
-            "type": "decompress_overlay",
+            "type": "code",
             "start": 1,
             "vram": ADDRESS,
             "subsegments": [[1, "rodatabin", "small"], [1 + len(self.small), "databin", "blob"]],

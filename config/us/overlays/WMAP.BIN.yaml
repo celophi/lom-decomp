@@ -1,5 +1,6 @@
 name: WMAP.BIN
-sha1: 7be4443eb8b28643d161f56c68d9ece0583945b5
+compressed_sha1: 7be4443eb8b28643d161f56c68d9ece0583945b5
+sha1: 18e32dc0a40f1051e54730d6d8a169bb0c741a76
 options:
   base_path: ../../../
   basename: WMAP.BIN
@@ -9,7 +10,7 @@ options:
   # project-owned (include_asm.h prefixes the per-version asm directory),
   # so splat must not regenerate them.
   generate_asm_macros_files: False
-  target_path: disc/us/BIN/WMAP.BIN
+  target_path: build/us/decompressed/WMAP.BIN
   extensions_path: tools/splat_ext
   asset_path: assets/us
   elf_path: build/us/overlays/wmap.elf
@@ -46,7 +47,7 @@ options:
 
 segments:
   - name: wmap
-    type: decompress_overlay
+    type: code
     start: 0x1
     vram: 0x8004FC70
     subsegments:

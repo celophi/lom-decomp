@@ -1,5 +1,6 @@
 name: WSEL.BIN
-sha1: b2c5d4b71c6aa59c12e2af9f012b640a99c8e26e
+compressed_sha1: b2c5d4b71c6aa59c12e2af9f012b640a99c8e26e
+sha1: e7f60491b2c95aef95cc0e23da30e5a0ed30e2a1
 options:
   base_path: ../../../
   basename: WSEL.BIN
@@ -9,7 +10,7 @@ options:
   # project-owned (include_asm.h prefixes the per-version asm directory),
   # so splat must not regenerate them.
   generate_asm_macros_files: False
-  target_path: disc/jp/BIN/WSEL.BIN
+  target_path: build/jp/decompressed/WSEL.BIN
   extensions_path: tools/splat_ext
   asset_path: assets/jp
   elf_path: build/jp/overlays/wsel.elf
@@ -40,7 +41,7 @@ options:
 
 segments:
   - name: wsel
-    type: decompress_overlay
+    type: code
     start: 0x1
     vram: 0x8004FDD8
     align: 4

@@ -1,5 +1,6 @@
 name: MENU.BIN
-sha1: efa8cccdd0549e76c59ceef24e642256836fa828
+compressed_sha1: efa8cccdd0549e76c59ceef24e642256836fa828
+sha1: d2fc21db50e462a413c7439d1db2b87ef21c459a
 options:
   base_path: ../../../
   basename: MENU.BIN
@@ -9,7 +10,7 @@ options:
   # project-owned (include_asm.h prefixes the per-version asm directory),
   # so splat must not regenerate them.
   generate_asm_macros_files: False
-  target_path: disc/us/BIN/MENU.BIN
+  target_path: build/us/decompressed/MENU.BIN
   extensions_path: tools/splat_ext
   asset_path: assets/us
   elf_path: build/us/overlays/menu.elf
@@ -41,7 +42,7 @@ options:
 
 segments:
   - name: menu
-    type: decompress_overlay
+    type: code
     start: 0x1
     vram: 0x80140000
     align: 4

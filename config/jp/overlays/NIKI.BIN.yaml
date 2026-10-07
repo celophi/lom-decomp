@@ -1,5 +1,6 @@
 name: NIKI.BIN
-sha1: 65f913246b043d5eed0f7b83f545c6292da9cbf9
+compressed_sha1: 65f913246b043d5eed0f7b83f545c6292da9cbf9
+sha1: a765a7a0483c1f061355ca8dd7e271eac2aa3b1f
 options:
   base_path: ../../../
   basename: NIKI.BIN
@@ -9,7 +10,7 @@ options:
   # project-owned (include_asm.h prefixes the per-version asm directory),
   # so splat must not regenerate them.
   generate_asm_macros_files: False
-  target_path: disc/jp/BIN/NIKI.BIN
+  target_path: build/jp/decompressed/NIKI.BIN
   extensions_path: tools/splat_ext
   asset_path: assets/jp
   elf_path: build/jp/overlays/niki.elf
@@ -40,7 +41,7 @@ options:
 
 segments:
   - name: niki
-    type: decompress_overlay
+    type: code
     start: 0x1
     vram: 0x80140000
     align: 4

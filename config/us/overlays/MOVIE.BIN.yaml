@@ -1,5 +1,6 @@
 name: MOVIE.BIN
-sha1: 4ede2a498e06efdf712414b052bb21fe0d198298
+compressed_sha1: 4ede2a498e06efdf712414b052bb21fe0d198298
+sha1: c6b4645444f81a0e0975b52f77c622d3a1a47fdc
 options:
   base_path: ../../../
   basename: MOVIE.BIN
@@ -9,7 +10,7 @@ options:
   # project-owned (include_asm.h prefixes the per-version asm directory),
   # so splat must not regenerate them.
   generate_asm_macros_files: False
-  target_path: disc/us/BIN/MOVIE.BIN
+  target_path: build/us/decompressed/MOVIE.BIN
   extensions_path: tools/splat_ext
   asset_path: assets/us
   elf_path: build/us/overlays/movie.elf
@@ -44,7 +45,7 @@ options:
 
 segments:
   - name: movie
-    type: decompress_overlay
+    type: code
     start: 0x1
     vram: 0x80140000
     align: 4

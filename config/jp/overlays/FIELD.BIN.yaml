@@ -1,5 +1,6 @@
 name: FIELD.BIN
-sha1: faa38ef95132afabb9e43851b0bc8961cefd7ff8
+compressed_sha1: faa38ef95132afabb9e43851b0bc8961cefd7ff8
+sha1: 98969aa7b0093b043fef5e993f342e7f9cefcc30
 options:
   base_path: ../../../
   basename: FIELD.BIN
@@ -9,7 +10,7 @@ options:
   # project-owned (include_asm.h prefixes the per-version asm directory),
   # so splat must not regenerate them.
   generate_asm_macros_files: False
-  target_path: disc/jp/BIN/FIELD.BIN
+  target_path: build/jp/decompressed/FIELD.BIN
   extensions_path: tools/splat_ext
   asset_path: assets/jp
   elf_path: build/jp/overlays/field.elf
@@ -44,7 +45,7 @@ options:
 
 segments:
   - name: field
-    type: decompress_overlay
+    type: code
     start: 0x1
     vram: 0x8004FDD8
     align: 4

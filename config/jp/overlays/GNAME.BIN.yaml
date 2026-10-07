@@ -1,5 +1,6 @@
 name: GNAME.BIN
-sha1: 549a0cd0f66267c8b9e8683575793ba99a0f6a6d
+compressed_sha1: 549a0cd0f66267c8b9e8683575793ba99a0f6a6d
+sha1: eb66f9cb5ce4aeb035d0e02b12f0eae8c356eaf7
 options:
   base_path: ../../../
   basename: GNAME.BIN
@@ -9,7 +10,7 @@ options:
   # project-owned (include_asm.h prefixes the per-version asm directory),
   # so splat must not regenerate them.
   generate_asm_macros_files: False
-  target_path: disc/jp/BIN/GNAME.BIN
+  target_path: build/jp/decompressed/GNAME.BIN
   extensions_path: tools/splat_ext
   asset_path: assets/jp
   elf_path: build/jp/overlays/gname.elf
@@ -41,7 +42,7 @@ options:
 
 segments:
   - name: gname
-    type: decompress_overlay
+    type: code
     start: 0x1
     vram: 0x80140000
     align: 4

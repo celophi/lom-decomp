@@ -8,7 +8,8 @@ help:
 		'  all / bin             Main executable ELF / raw binary (all is the default)' \
 		'  <overlay>             One overlay, e.g. make checkps' \
 		'  overlays / everything All overlays / main executable and all overlays' \
-		'  splat                 Extract assembly, linker scripts and assets from disc files' \
+		'  decompress            Prepare decompressed overlay inputs under build/<version>/decompressed/' \
+		'  splat                 Prepare inputs and extract assembly, linker scripts and assets' \
 		'  recopy                Refresh the staged inputs' \
 		'  clean                 Remove the selected build and all shared staging files' \
 		'' \

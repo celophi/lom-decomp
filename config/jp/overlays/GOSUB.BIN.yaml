@@ -1,5 +1,6 @@
 name: GOSUB.BIN
-sha1: 5f7729f9ef7ebae83432d4e2db31a1234d567e9f
+compressed_sha1: 5f7729f9ef7ebae83432d4e2db31a1234d567e9f
+sha1: 74bfb2cee4bed3ed4d88532f5d21200ad9f833ac
 options:
   base_path: ../../../
   basename: GOSUB.BIN
@@ -9,7 +10,7 @@ options:
   # project-owned (include_asm.h prefixes the per-version asm directory),
   # so splat must not regenerate them.
   generate_asm_macros_files: False
-  target_path: disc/jp/BIN/GOSUB.BIN
+  target_path: build/jp/decompressed/GOSUB.BIN
   extensions_path: tools/splat_ext
   asset_path: assets/jp
   elf_path: build/jp/overlays/gosub.elf
@@ -41,7 +42,7 @@ options:
 
 segments:
   - name: gosub
-    type: decompress_overlay
+    type: code
     start: 0x1
     vram: 0x80140000
     align: 4

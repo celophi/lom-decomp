@@ -1,5 +1,6 @@
 name: ZUKAN.BIN
-sha1: ccb3e4f650a62146e703c033ab869fa4a42ce600
+compressed_sha1: ccb3e4f650a62146e703c033ab869fa4a42ce600
+sha1: 6593bc5534a69fef19e7921d661d73ec0cf30bca
 options:
   base_path: ../../../
   basename: ZUKAN.BIN
@@ -9,7 +10,7 @@ options:
   # project-owned (include_asm.h prefixes the per-version asm directory),
   # so splat must not regenerate them.
   generate_asm_macros_files: False
-  target_path: disc/us/BIN/ZUKAN.BIN
+  target_path: build/us/decompressed/ZUKAN.BIN
   extensions_path: tools/splat_ext
   asset_path: assets/us
   elf_path: build/us/overlays/zukan.elf
@@ -41,7 +42,7 @@ options:
 
 segments:
   - name: zukan
-    type: decompress_overlay
+    type: code
     start: 0x1
     vram: 0x80140000
     align: 4
