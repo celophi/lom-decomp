@@ -6,14 +6,17 @@
 
 /**
  * @brief Read the two-digit hex byte that follows a field's hex serial and its separator.
- * @param text Field text: a hex serial, one separator byte, then the suffix byte.
+ * @param field_text A hex serial, one separator byte, then the suffix byte.
  * @return The suffix byte.
  */
-s32 parse_hex_suffix_byte(u8* text)
+s32 parse_hex_suffix_byte(const char* field_text)
 {
     s32 count;
     u32 result;
+    const u8* text;
 
+    /* Decode filename characters as unsigned bytes. */
+    text = (const u8*)field_text;
     while ((*text >= '0' && *text <= '9') || (*text >= 'a' && *text <= 'f') || (*text >= 'A' && *text <= 'F'))
     {
         text++;

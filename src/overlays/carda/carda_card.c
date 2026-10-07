@@ -110,7 +110,7 @@ static s32 carda_rank_entries(void)
     s32 maximum;
     s32 max_suffix;
     u8* cursor;
-    u8* suffix;
+    const char* suffix;
     s32 digits_left;
     s32 value;
     u32 decimal_base;
@@ -157,7 +157,7 @@ static s32 carda_rank_entries(void)
                 cursor++;
                 digits_left--;
             }
-            suffix = (u8*)&g_card_entries[g_card_slot][entry_index].name[CARD_SAVE_FILENAME_PREFIX_LENGTH];
+            suffix = &g_card_entries[g_card_slot][entry_index].name[CARD_SAVE_FILENAME_PREFIX_LENGTH];
             g_card_entry_fields[g_card_slot][entry_index] = value;
             g_card_entry_suffix_values[entry_index] = parse_hex_suffix_byte(suffix);
             suffix_used[g_card_entry_suffix_values[entry_index]] = 1;

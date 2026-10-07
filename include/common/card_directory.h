@@ -22,18 +22,30 @@
 #define CARD_DIRECTORY_ENTRY_BYTES sizeof(struct DIRENTRY)
 #define CARD_DIRECTORY_BYTES (CARD_DIRECTORY_ENTRY_COUNT * CARD_DIRECTORY_ENTRY_BYTES)
 
-/** @brief Length of the Legend of Mana file name prefix before the hex serial ("BASLUS-01013"). */
+/** @brief Length of the Legend of Mana file name prefix before the hex serial. */
 #define CARD_SAVE_FILENAME_PREFIX_LENGTH 12
 
 /** @brief Hex digits parse_entry_fields reads from a file name's serial. */
 #define CARD_SERIAL_DIGITS 5
 
+/** @brief Bits contributed by each hex digit of a save serial. */
+#define CARD_SERIAL_DIGIT_BITS 4
+
+/** @brief Decimal digits before the first letter in a hex alphabet. */
+#define CARD_SERIAL_DECIMAL_DIGITS 10
+
+/** @brief Serial marker for an entry whose name does not have the save prefix. */
+#define CARD_ENTRY_SERIAL_NONE (-1)
+
 /**
- * @brief Address of the hex serial in the name of entry @p index on card @p card.
- * @note Summed as integers, offsets first, like the original code.
+ * @brief Locate the hex serial in a card directory entry's file name.
+ * @param card Memory-card slot.
+ * @param index Directory entry index.
+ * @return Unsigned bytes following the save filename prefix.
  */
-#define CARD_ENTRY_SERIAL_TEXT(card, index)                                                                                                                    \
-    ((u8*)((card) * CARD_DIRECTORY_BYTES + (index) * CARD_DIRECTORY_ENTRY_BYTES + (uintptr_t)g_card_entries + CARD_SAVE_FILENAME_PREFIX_LENGTH))
+#define CARD_ENTRY_SERIAL_TEXT(card, index) \
+    (((card) * CARD_DIRECTORY_BYTES + (index) * CARD_DIRECTORY_ENTRY_BYTES) + \
+     (u8*)&g_card_entries[0][0].name[CARD_SAVE_FILENAME_PREFIX_LENGTH])
 
 /** @brief Directory listing of both cards. */
 extern struct DIRENTRY g_card_entries[CARD_SLOT_COUNT][CARD_DIRECTORY_ENTRY_COUNT];
@@ -47,7 +59,7 @@ extern s32 g_card_entry_state;
 /** @brief Hex serial of each Legend of Mana entry, or -1 for other files. */
 extern s32 g_card_entry_fields[CARD_SLOT_COUNT][CARD_DIRECTORY_ENTRY_COUNT];
 
-/** @brief Suffix byte after each Legend of Mana entry's serial, or 0 for other files. */
+/** @brief Hex suffix after each save's serial and separator, or zero for other files. */
 extern s32 g_card_entry_suffix_values[];
 
 extern char g_lom_save_filename_prefix[];
