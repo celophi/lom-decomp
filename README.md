@@ -146,11 +146,13 @@ This is normally a one-time setup step. The development Dockerfile uses these lo
 
 ### 4. Build the development container
 
+Run this from the repository root using [`dockerfiles/dev.dockerfile`](dockerfiles/dev.dockerfile):
+
 ```bash
 docker build -t lom-dev -f dockerfiles/dev.dockerfile .
 ```
 
-The image contains the compilers, Psy-Q tooling, MIPS binutils, splat, maspsx, objdiff support, and Python dependencies used by the project.
+The image contains the compilers, Psy-Q tooling, MIPS binutils, splat, maspsx, the pinned objdiff CLI, and Python dependencies used by the project.
 
 ### 5. Start the container
 

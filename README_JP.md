@@ -150,11 +150,13 @@ docker build -t old-gcc/gcc-2.7.2-psx-gnu -f dockerfiles/gnu-as.dockerfile tools
 
 ### 4. 開発用コンテナをビルドする
 
+リポジトリのルートディレクトリから、[`dockerfiles/dev.dockerfile`](dockerfiles/dev.dockerfile) を指定して実行してください。
+
 ```bash
 docker build -t lom-dev -f dockerfiles/dev.dockerfile .
 ```
 
-このイメージには、本プロジェクトで使用するコンパイラ、Psy-Qツール、MIPS binutils、splat、maspsx、objdiff関連ツール、Python依存パッケージが含まれています。
+このイメージには、本プロジェクトで使用するコンパイラ、Psy-Qツール、MIPS binutils、splat、maspsx、バージョンを固定したobjdiff CLI、Python依存パッケージが含まれています。
 
 ### 5. コンテナを起動する
 
