@@ -23,6 +23,9 @@ extern AkaoCommandParam g_akao_cmd_params[];
 /** @brief Number of SPU hardware voices; also the "no voice assigned" marker. */
 #define AKAO_VOICE_COUNT 24
 
+/** @brief Mask of the 24 SPU voice bits; also bounds the SFX channel-bit scan. */
+#define AKAO_VOICE_MASK ((1 << AKAO_VOICE_COUNT) - 1)
+
 /** @brief Number of channels in one song's channel table. */
 #define AKAO_CHANNEL_COUNT 32
 
@@ -32,11 +35,29 @@ extern AkaoCommandParam g_akao_cmd_params[];
 /** @brief Channel-mask bit of the first SFX channel; SFX channels use bits 12-23. */
 #define AKAO_SFX_FIRST_CHANNEL_BIT 0x1000
 
+/** @brief Mask retaining the low 10 bits of a sound id. */
+#define AKAO_SFX_ID_MASK 0x3FF
+
+/** @brief Mask retaining the low 24 caller-defined bits of an SFX tag. */
+#define AKAO_SFX_TAG_MASK 0xFFFFFF
+
 /** @brief AkaoChannelState::sfx_tag bit that exempts an SFX from global volume/pan/pause control. */
 #define AKAO_SFX_FLAG_SUPPRESS 0x02000000
 
 /** Maximum representable value for AKAO's 7-bit volume controls. */
 #define AKAO_VOLUME_MAX 0x7F
+
+/** @brief Mask retaining the low 8 bits of a pan command parameter. */
+#define AKAO_PAN_MASK 0xFF
+
+/** @brief Mask retaining the low 8 bits of a pitch-bend command parameter. */
+#define AKAO_PITCH_BEND_MASK 0xFF
+
+/** @brief Mask retaining the low 8 bits of a master-volume command parameter. */
+#define AKAO_MASTER_VOLUME_MASK 0xFF
+
+/** @brief Mask retaining the low 8 bits of a combined master pan/volume parameter. */
+#define AKAO_MASTER_PAN_VOLUME_MASK 0xFF
 
 /**
  * @brief Commands queued by akao_send_command.

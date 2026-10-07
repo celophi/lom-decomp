@@ -24,7 +24,7 @@ s32 akao_init(void);
 s32 akao_shutdown(void);
 
 /* Songs */
-void akao_stop_song(s32 stop_mode);
+void akao_stop_song(s32 song_key);
 void akao_suspend_song(void);
 s32 akao_start_song_channels(void* sequence, s32 channel_mask, s32 unused);
 s32 akao_switch_song(void* sequence, s32 volume);
@@ -40,8 +40,8 @@ void akao_play_sfx(s32 sound_id, s32 tag, s32 pan, s32 volume);
 uintptr_t akao_play_sfx_from_buffer(AkaoHeader* buffer, s32 tag, s32 pan, s32 volume);
 void akao_play_sound(s32 sound_id);
 void akao_stop_sfx(s32 sound_id, s32 tag_mask);
-s32 akao_get_active_sfx_ids(void);
-s32 akao_is_sfx_playing(s32 sound_id);
+s32 akao_get_active_sfx_tags(void);
+s32 akao_is_sfx_playing(s32 sfx_tag);
 void akao_set_sfx_volume(s32 sound_id, s32 tag_mask, s32 volume);
 void akao_fade_sfx_volume(s32 sound_id, s32 tag_mask, s32 ticks, s32 volume);
 void akao_set_sfx_pan(s32 sound_id, s32 tag_mask, s32 pan);
@@ -77,7 +77,7 @@ s32 akao_set_cd_mix(s32 volume);
 /* Instrument banks */
 s32 akao_get_xfer_state(void);
 s32 akao_reset_xfer_state(void);
-s32 akao_streaming_upload_tick(u8* source, u32 avail, s32 wait_for_spu);
+s32 akao_streaming_upload_tick(u8* source, u32 available_bytes, s32 wait_for_spu);
 s32 akao_load_bank(AkaoBankHeader* bank, s32 wait_for_completion);
 s32 akao_upload_bank_slot(void* bank, s32 slot, s32 wait_for_completion);
 s32 akao_load_bank_slot(void* bank, s32 slot, s32 wait_for_completion);
@@ -91,7 +91,7 @@ s32 akao_fade_xa_volume(s32 ticks, s32 volume);
 s32 akao_set_xa_pan(s32 pan);
 s32 akao_upload_xa_program(void* buffer, s32 upper_slot);
 s32 akao_play_staged_xa(s32 pan, s32 use_reverb);
-void akao_play_xa_one_shot(void* buf, s32 pan, s32 upper_slot, s32 use_reverb);
+void akao_play_xa_one_shot(void* buffer, s32 pan, s32 upper_slot, s32 use_reverb);
 s32 akao_start_xa_stream(void* ring_base, u32 byte_count);
 s32 akao_xa_advance_frame(void);
 s32 akao_xa_get_position(void);

@@ -113,7 +113,7 @@ typedef struct
     u32 bytes_remaining;   /**< Data still to upload. */
     s32 unk18;             /**< Copied from AkaoXaProgramHeader.spu_addr; not read. */
     u32 loop_bytes;        /**< bytes_remaining to reload when the program loops. */
-    s32 unk20;             /**< Key of the last ring block; not read. */
+    s32 last_ring_block_key; /**< Last uploaded ring block's AKAO id/length word; not read. */
     s32 filled_blocks;     /**< Ring blocks reported by the CD reader. */
     s32 uploaded_blocks;   /**< Ring blocks uploaded to the SPU. */
     union

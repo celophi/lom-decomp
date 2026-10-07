@@ -31,7 +31,7 @@ void akao_stop_sfx(s32 value0, s32 value1);
 s32 akao_fade_song_volume(s32 song_handle, s32 frames, s32 volume);
 s32 akao_set_master_pan(s32 value0);
 s32 akao_set_master_volume(s32 value0);
-s32 akao_is_sfx_playing(s32 voice_mask);
+s32 akao_is_sfx_playing(s32 sfx_tag);
 s32 akao_get_xfer_state(void);
 s32 akao_reset_xfer_state(void);
 s32 akao_load_bank_slot(void *bank, s32 slot, s32 wait_for_completion);

@@ -34,16 +34,55 @@ extern AkaoBankHeader g_akao_bank_staging;
 /** @brief Number of SPU bank slots (entries of g_akao_bank_slot_keys). */
 #define AKAO_BANK_SLOT_COUNT 6
 
+/** @brief Base SPU address and byte spacing of the six instrument-bank slots. */
+#define AKAO_BANK_FIRST_SPU_ADDRESS 0x43100
+#define AKAO_BANK_SLOT_BYTES 0x4800
+#define AKAO_BANK_SLOT_SPU_ADDRESS(slot) (AKAO_BANK_FIRST_SPU_ADDRESS + (slot) * AKAO_BANK_SLOT_BYTES)
+
+/** @brief First articulation index and number of articulations reserved per bank slot. */
+#define AKAO_BANK_FIRST_ARTICULATION 0x80
+#define AKAO_BANK_SLOT_ARTICULATIONS 0x10
+#define AKAO_BANK_SLOT_ARTICULATION_INDEX(slot) (AKAO_BANK_FIRST_ARTICULATION + (slot) * AKAO_BANK_SLOT_ARTICULATIONS)
+
+/** @brief First of the three upper instrument-bank slots; also the upper XA slot. */
+#define AKAO_BANK_FIRST_UPPER_SLOT 3
+
+/** @brief akao_submit_bank result indicating that the upload must be retried. */
+#define AKAO_BANK_UPLOAD_BUSY 1
+
+/** @brief Word size used by akao_copy_bytes when rounding down its byte count. */
+#define AKAO_COPY_WORD_SHIFT 2
+#define AKAO_COPY_WORD_BYTES 4
+
+/** @brief Gain of each CD-to-SPU route in mono mode, in Q17 (about 0.35437). */
+#define AKAO_CD_MONO_GAIN_Q17 0xB570
+/** @brief Fractional bits in the mono CD mix gain. */
+#define AKAO_CD_MONO_GAIN_SHIFT 17
+
+/** @brief Song flag that lowers the XA SPU area while song channels are active or parked. */
+#define AKAO_SONG_LOWER_XA_AREA_FLAG 0x40
+/** @brief Distance from the usual XA SPU area to the lower area. */
+#define AKAO_XA_SPU_AREA_OFFSET 0x30000
+
+/** @brief Fractional bits in XA volume and pan command parameters. */
+#define AKAO_XA_FIXED_POINT_SHIFT 8
+
+/** @brief XA ring block size and the next-fill index that permits playback to start. */
+#define AKAO_XA_RING_BLOCK_SHIFT 12
+#define AKAO_XA_RING_BLOCK_BYTES (1 << AKAO_XA_RING_BLOCK_SHIFT)
+#define AKAO_XA_START_FILL_BLOCK 2
+
+/** @brief Upload-block marker used before the first XA ring block is uploaded. */
+#define AKAO_XA_UPLOAD_BLOCK_NONE (-1)
+
 /* g_akao_seq_channel0, read through its fixed address. */
 #define AKAO_PRIMARY_SONG (*(AkaoSongState**)AKAO_PRIMARY_SONG_ADDRESS)
 
 /**
- * Central dispatcher for the AKAO sound driver. Each high-level wrapper
- * (akao_play_song, akao_stop_song, akao_play_sfx, etc.) writes its inputs
- * into g_akao_cmd_params and then invokes this function with a one-byte
- * command opcode. Known opcodes used in this codebase: 0x10 play song,
- * 0x11 stop song, 0x12, 0x14, 0x19, 0x20 play SFX, 0x21, 0x24, 0x30, 0x40,
- * 0x80/0x81, 0x90/0x92, 0xA0/0xA1/0xA8/0xA9, 0xC0/0xC1, 0xF0/0xF1.
+ * @brief Dispatch an AKAO sound command using g_akao_cmd_params.
+ *
+ * High-level wrappers store their inputs in g_akao_cmd_params before calling
+ * this function. AkaoCmd documents the supported command opcodes.
  *
  * @param opcode Command opcode; only the low byte is significant.
  * @return For opcodes 0x10/0x12/0x14/0x19 (load/change song), the newly
@@ -126,19 +165,19 @@ s32 akao_play_song(AkaoHeader* sequence_data)
 }
 
 /**
- * @brief AKAO command 0x11 - stop the currently-playing sequence.
+ * @brief Queue command 0x11: stop songs selected by their key.
  *
- * Pushes @p stop_mode into the AKAO command parameter buffer and dispatches the
- * "stop song" command. Callers in TITLE/CHECKPS pass 0; the precise meaning
- * of non-zero values (likely a fade-out duration or flag) is not yet known.
+ * A zero key stops the primary song unconditionally. A nonzero key stops
+ * matching primary and secondary songs.
  *
- * @param stop_mode  Stop-modifier parameter; observed value is 0 in all callers.
+ * @param song_key Song key to match, or 0 to stop the primary song.
+ * @see akao_seq_stop_song_by_key
  *
  * @see decomp.me (100%) https://decomp.me/scratch/9M4hF
  */
-void akao_stop_song(s32 stop_mode)
+void akao_stop_song(s32 song_key)
 {
-    g_akao_cmd_params[0].value = stop_mode;
+    g_akao_cmd_params[0].value = song_key;
     akao_send_command(AKAO_CMD_STOP_SONG);
 }
 
@@ -184,7 +223,7 @@ s32 akao_switch_song(void* sequence, s32 volume)
 
     g_akao_cmd_params[0].buffer = sequence;
     result = akao_send_command(AKAO_CMD_SWITCH_SONG);
-    g_akao_cmd_params[0].value = (volume & 0x7F);
+    g_akao_cmd_params[0].value = (volume & AKAO_VOLUME_MAX);
     g_akao_cmd_params[3].value = 0;
     akao_send_command(AKAO_CMD_SET_SONG_VOLUME);
     return result;
@@ -213,10 +252,10 @@ void akao_play_song_with_ticks(s32 sequence, s32 ticks)
  */
 void akao_play_sfx(s32 sound_id, s32 tag, s32 pan, s32 volume)
 {
-    g_akao_cmd_params[0].value = (sound_id & 0x3FF);
-    g_akao_cmd_params[1].value = (tag & 0xFFFFFF);
-    g_akao_cmd_params[2].value = (pan & 0xFF);
-    g_akao_cmd_params[3].value = (volume & 0x7F);
+    g_akao_cmd_params[0].value = (sound_id & AKAO_SFX_ID_MASK);
+    g_akao_cmd_params[1].value = (tag & AKAO_SFX_TAG_MASK);
+    g_akao_cmd_params[2].value = (pan & AKAO_PAN_MASK);
+    g_akao_cmd_params[3].value = (volume & AKAO_VOLUME_MAX);
     akao_send_command(AKAO_CMD_PLAY_SFX);
 }
 
@@ -239,9 +278,9 @@ uintptr_t akao_play_sfx_from_buffer(AkaoHeader* buffer, s32 tag, s32 pan, s32 vo
     }
 
     g_akao_cmd_params[0].buffer = buffer;
-    g_akao_cmd_params[1].value = tag & 0xFFFFFF;
-    g_akao_cmd_params[2].value = pan & 0xFF;
-    g_akao_cmd_params[3].value = volume & 0x7F;
+    g_akao_cmd_params[1].value = tag & AKAO_SFX_TAG_MASK;
+    g_akao_cmd_params[2].value = pan & AKAO_PAN_MASK;
+    g_akao_cmd_params[3].value = volume & AKAO_VOLUME_MAX;
     akao_send_command(AKAO_CMD_PLAY_SFX_LIST);
 
     return (uintptr_t)buffer;
@@ -257,7 +296,7 @@ uintptr_t akao_play_sfx_from_buffer(AkaoHeader* buffer, s32 tag, s32 pan, s32 vo
 void akao_stop_sfx(s32 sound_id, s32 tag_mask)
 {
     g_akao_cmd_params[0].value = sound_id;
-    g_akao_cmd_params[1].value = (tag_mask & 0xFFFFFF);
+    g_akao_cmd_params[1].value = (tag_mask & AKAO_SFX_TAG_MASK);
     akao_send_command(AKAO_CMD_STOP_SFX);
 }
 
@@ -268,73 +307,64 @@ void akao_stop_sfx(s32 sound_id, s32 tag_mask)
  */
 void akao_play_sound(s32 sound_id)
 {
-    g_akao_cmd_params[0].value = sound_id & 0x3FF;
+    g_akao_cmd_params[0].value = sound_id & AKAO_SFX_ID_MASK;
     akao_send_command(AKAO_CMD_PLAY_SOUND);
 }
 
 /**
- * @brief Scans active SFX channels and ORs together their sfx_tag values.
- *
- * Walks the AKAO_SFX_CHANNEL_COUNT channels in @c g_sfx_channels, gated by
- * @c g_akao_sfx_control.active_mask (one bit per channel from
- * AKAO_SFX_FIRST_CHANNEL_BIT), and ORs together the @c sfx_tag of every active
- * channel, masked to 24 bits.
- *
- * @return Bitwise OR of active channel identifiers, masked to 24 bits.
- *
+ * @brief OR together the tags of active SFX channels.
+ * @return Combined active channel tags, masked to their low 24 bits.
  * @see decomp.me (100%) https://decomp.me/scratch/yZloM
  */
-s32 akao_get_active_sfx_ids(void)
+s32 akao_get_active_sfx_tags(void)
 {
-    s32 active_channels;
-    AkaoChannelState* channel;
-    s32 active_ids;
+    s32 active_mask;
+    const AkaoChannelState* channel;
+    s32 active_tags;
     u32 channel_bit;
 
-    active_channels = g_akao_sfx_control.active_mask;
-    if (active_channels == 0)
+    active_mask = g_akao_sfx_control.active_mask;
+    if (active_mask == 0)
     {
         return 0;
     }
     channel = g_sfx_channels;
-    active_ids = 0;
+    active_tags = 0;
     channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
     do
     {
-        if (active_channels & channel_bit)
+        if (active_mask & channel_bit)
         {
-            active_ids |= channel->sfx_tag;
+            active_tags |= channel->sfx_tag;
         }
         channel_bit <<= 1;
         channel++;
-    } while (channel_bit & 0xFFFFFF);
-    active_ids &= 0xFFFFFF;
-    return active_ids;
+    } while (channel_bit & AKAO_VOICE_MASK);
+    active_tags &= AKAO_SFX_TAG_MASK;
+    return active_tags;
 }
 
 /**
- * @brief Returns 1 if any active SFX channel's @c sfx_tag equals @p sound_id.
+ * @brief Test whether an active SFX channel carries the requested tag.
  *
- * Same walk as @c akao_get_active_sfx_ids, but compares each active channel's
- * @c sfx_tag to @p sound_id; returns 1 on the first match, 0 otherwise.
- *
- * @param sound_id  Sound id / handle to look for.
- * @return 1 if a matching active channel exists, 0 otherwise.
+ * @param sfx_tag Exact channel tag to find; 0 never matches.
+ * @return 1 if a matching active channel exists, otherwise 0.
+ * @note Compares the complete stored tag, including flag bits.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/OvqYq
  */
-s32 akao_is_sfx_playing(s32 sound_id)
+s32 akao_is_sfx_playing(s32 sfx_tag)
 {
-    s32 active_channels;
-    AkaoChannelState* channel;
+    s32 active_mask;
+    const AkaoChannelState* channel;
     u32 channel_bit;
 
-    if (sound_id == 0)
+    if (sfx_tag == 0)
     {
         return 0;
     }
-    active_channels = g_akao_sfx_control.active_mask;
-    if (active_channels == 0)
+    active_mask = g_akao_sfx_control.active_mask;
+    if (active_mask == 0)
     {
         return 0;
     }
@@ -342,13 +372,13 @@ s32 akao_is_sfx_playing(s32 sound_id)
     channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
     do
     {
-        if ((active_channels & channel_bit) && sound_id == channel->sfx_tag)
+        if ((active_mask & channel_bit) && sfx_tag == channel->sfx_tag)
         {
             return 1;
         }
         channel_bit <<= 1;
         channel++;
-    } while (channel_bit & 0xFFFFFF);
+    } while (channel_bit & AKAO_VOICE_MASK);
     return 0;
 }
 
@@ -455,7 +485,7 @@ void akao_resume_audio(u32 target)
  */
 s32 akao_set_all_sfx_volume(s32 volume)
 {
-    g_akao_cmd_params[0].value = volume & 0x7F;
+    g_akao_cmd_params[0].value = volume & AKAO_VOLUME_MAX;
     return akao_send_command(AKAO_CMD_SET_ALL_SFX_VOLUME);
 }
 
@@ -468,7 +498,7 @@ s32 akao_set_all_sfx_volume(s32 volume)
 void akao_fade_all_sfx_volume(s32 ticks, s32 volume)
 {
     g_akao_cmd_params[0].value = ticks;
-    g_akao_cmd_params[1].value = (volume & 0x7F);
+    g_akao_cmd_params[1].value = (volume & AKAO_VOLUME_MAX);
     akao_send_command(AKAO_CMD_FADE_ALL_SFX_VOLUME);
 }
 
@@ -482,8 +512,8 @@ void akao_fade_all_sfx_volume(s32 ticks, s32 volume)
 void akao_set_sfx_volume(s32 sound_id, s32 tag_mask, s32 volume)
 {
     g_akao_cmd_params[0].value = sound_id;
-    g_akao_cmd_params[1].value = (tag_mask & 0xFFFFFF);
-    g_akao_cmd_params[2].value = (volume & 0x7F);
+    g_akao_cmd_params[1].value = (tag_mask & AKAO_SFX_TAG_MASK);
+    g_akao_cmd_params[2].value = (volume & AKAO_VOLUME_MAX);
     akao_send_command(AKAO_CMD_SET_SFX_VOLUME);
 }
 
@@ -498,9 +528,9 @@ void akao_set_sfx_volume(s32 sound_id, s32 tag_mask, s32 volume)
 void akao_fade_sfx_volume(s32 sound_id, s32 tag_mask, s32 ticks, s32 volume)
 {
     g_akao_cmd_params[0].value = sound_id;
-    g_akao_cmd_params[1].value = (tag_mask & 0xFFFFFF);
+    g_akao_cmd_params[1].value = (tag_mask & AKAO_SFX_TAG_MASK);
     g_akao_cmd_params[2].value = ticks;
-    g_akao_cmd_params[3].value = (volume & 0x7F);
+    g_akao_cmd_params[3].value = (volume & AKAO_VOLUME_MAX);
     akao_send_command(AKAO_CMD_FADE_SFX_VOLUME);
 }
 
@@ -511,7 +541,7 @@ void akao_fade_sfx_volume(s32 sound_id, s32 tag_mask, s32 ticks, s32 volume)
  */
 void akao_set_all_sfx_pan(s32 pan)
 {
-    g_akao_cmd_params[0].value = pan & 0xFF;
+    g_akao_cmd_params[0].value = pan & AKAO_PAN_MASK;
     akao_send_command(AKAO_CMD_SET_ALL_SFX_PAN);
 }
 
@@ -524,7 +554,7 @@ void akao_set_all_sfx_pan(s32 pan)
 void akao_fade_all_sfx_pan(s32 ticks, s32 pan)
 {
     g_akao_cmd_params[0].value = ticks;
-    g_akao_cmd_params[1].value = (pan & 0xFF);
+    g_akao_cmd_params[1].value = (pan & AKAO_PAN_MASK);
     akao_send_command(AKAO_CMD_FADE_ALL_SFX_PAN);
 }
 
@@ -538,8 +568,8 @@ void akao_fade_all_sfx_pan(s32 ticks, s32 pan)
 void akao_set_sfx_pan(s32 sound_id, s32 tag_mask, s32 pan)
 {
     g_akao_cmd_params[0].value = sound_id;
-    g_akao_cmd_params[1].value = (tag_mask & 0xFFFFFF);
-    g_akao_cmd_params[2].value = (pan & 0xFF);
+    g_akao_cmd_params[1].value = (tag_mask & AKAO_SFX_TAG_MASK);
+    g_akao_cmd_params[2].value = (pan & AKAO_PAN_MASK);
     akao_send_command(AKAO_CMD_SET_SFX_PAN);
 }
 
@@ -554,9 +584,9 @@ void akao_set_sfx_pan(s32 sound_id, s32 tag_mask, s32 pan)
 void akao_fade_sfx_pan(s32 sound_id, s32 tag_mask, s32 ticks, s32 pan)
 {
     g_akao_cmd_params[0].value = sound_id;
-    g_akao_cmd_params[1].value = (tag_mask & 0xFFFFFF);
+    g_akao_cmd_params[1].value = (tag_mask & AKAO_SFX_TAG_MASK);
     g_akao_cmd_params[2].value = ticks;
-    g_akao_cmd_params[3].value = (pan & 0xFF);
+    g_akao_cmd_params[3].value = (pan & AKAO_PAN_MASK);
     akao_send_command(AKAO_CMD_FADE_SFX_PAN);
 }
 
@@ -567,7 +597,7 @@ void akao_fade_sfx_pan(s32 sound_id, s32 tag_mask, s32 ticks, s32 pan)
  */
 void akao_set_all_sfx_pitch_bend(s32 bend)
 {
-    g_akao_cmd_params[0].value = bend & 0xFF;
+    g_akao_cmd_params[0].value = bend & AKAO_PITCH_BEND_MASK;
     akao_send_command(AKAO_CMD_SET_ALL_SFX_PITCH_BEND);
 }
 
@@ -580,7 +610,7 @@ void akao_set_all_sfx_pitch_bend(s32 bend)
 void akao_fade_all_sfx_pitch_bend(s32 ticks, s32 bend)
 {
     g_akao_cmd_params[0].value = ticks;
-    g_akao_cmd_params[1].value = (bend & 0xFF);
+    g_akao_cmd_params[1].value = (bend & AKAO_PITCH_BEND_MASK);
     akao_send_command(AKAO_CMD_FADE_ALL_SFX_PITCH_BEND);
 }
 
@@ -595,8 +625,8 @@ void akao_fade_all_sfx_pitch_bend(s32 ticks, s32 bend)
 s32 akao_set_sfx_pitch_bend(s32 sound_id, s32 tag_mask, s32 bend)
 {
     g_akao_cmd_params[0].value = sound_id;
-    g_akao_cmd_params[1].value = (tag_mask & 0xFFFFFF);
-    g_akao_cmd_params[2].value = (bend & 0xFF);
+    g_akao_cmd_params[1].value = (tag_mask & AKAO_SFX_TAG_MASK);
+    g_akao_cmd_params[2].value = (bend & AKAO_PITCH_BEND_MASK);
     return akao_send_command(AKAO_CMD_SET_SFX_PITCH_BEND);
 }
 
@@ -612,9 +642,9 @@ s32 akao_set_sfx_pitch_bend(s32 sound_id, s32 tag_mask, s32 bend)
 s32 akao_fade_sfx_pitch_bend(s32 sound_id, s32 tag_mask, s32 ticks, s32 bend)
 {
     g_akao_cmd_params[0].value = sound_id;
-    g_akao_cmd_params[1].value = (tag_mask & 0xFFFFFF);
+    g_akao_cmd_params[1].value = (tag_mask & AKAO_SFX_TAG_MASK);
     g_akao_cmd_params[2].value = ticks;
-    g_akao_cmd_params[3].value = (bend & 0xFF);
+    g_akao_cmd_params[3].value = (bend & AKAO_PITCH_BEND_MASK);
     return akao_send_command(AKAO_CMD_FADE_SFX_PITCH_BEND);
 }
 
@@ -646,7 +676,7 @@ s32 akao_fade_song_volume(s32 song_handle, s32 ticks, s32 volume)
 {
     g_akao_cmd_params[0].value = song_handle;
     g_akao_cmd_params[1].value = ticks;
-    g_akao_cmd_params[2].value = (volume & 0x7F);
+    g_akao_cmd_params[2].value = (volume & AKAO_VOLUME_MAX);
     return akao_send_command(AKAO_CMD_FADE_SONG_VOLUME);
 }
 
@@ -663,8 +693,8 @@ s32 akao_fade_song_volume_from(s32 song_handle, s32 ticks, s32 start_volume, s32
 {
     g_akao_cmd_params[0].value = song_handle;
     g_akao_cmd_params[1].value = ticks;
-    g_akao_cmd_params[2].value = (start_volume & 0x7F);
-    g_akao_cmd_params[3].value = (volume & 0x7F);
+    g_akao_cmd_params[2].value = (start_volume & AKAO_VOLUME_MAX);
+    g_akao_cmd_params[3].value = (volume & AKAO_VOLUME_MAX);
     return akao_send_command(AKAO_CMD_FADE_SONG_VOLUME_FROM);
 }
 
@@ -718,7 +748,7 @@ s32 akao_fade_cd_volume_from(s32 ticks, s32 start_volume, s32 volume)
  */
 s32 akao_set_master_pan(s32 pan)
 {
-    g_akao_cmd_params[0].value = pan & 0xFF;
+    g_akao_cmd_params[0].value = pan & AKAO_PAN_MASK;
     return akao_send_command(AKAO_CMD_SET_MASTER_PAN);
 }
 
@@ -732,7 +762,7 @@ s32 akao_set_master_pan(s32 pan)
 s32 akao_fade_master_pan(s32 ticks, s32 pan)
 {
     g_akao_cmd_params[0].value = ticks;
-    g_akao_cmd_params[1].value = (pan & 0xFF);
+    g_akao_cmd_params[1].value = (pan & AKAO_PAN_MASK);
     return akao_send_command(AKAO_CMD_FADE_MASTER_PAN);
 }
 
@@ -747,8 +777,8 @@ s32 akao_fade_master_pan(s32 ticks, s32 pan)
 s32 akao_fade_master_pan_from(s32 ticks, s32 start_pan, s32 pan)
 {
     g_akao_cmd_params[0].value = ticks;
-    g_akao_cmd_params[1].value = (start_pan & 0xFF);
-    g_akao_cmd_params[2].value = (pan & 0xFF);
+    g_akao_cmd_params[1].value = (start_pan & AKAO_PAN_MASK);
+    g_akao_cmd_params[2].value = (pan & AKAO_PAN_MASK);
     return akao_send_command(AKAO_CMD_FADE_MASTER_PAN_FROM);
 }
 
@@ -760,7 +790,7 @@ s32 akao_fade_master_pan_from(s32 ticks, s32 start_pan, s32 pan)
  */
 s32 akao_set_master_volume(s32 volume)
 {
-    g_akao_cmd_params[0].value = volume & 0xFF;
+    g_akao_cmd_params[0].value = volume & AKAO_MASTER_VOLUME_MASK;
     return akao_send_command(AKAO_CMD_SET_MASTER_VOLUME);
 }
 
@@ -774,7 +804,7 @@ s32 akao_set_master_volume(s32 volume)
 s32 akao_fade_master_volume(s32 ticks, s32 volume)
 {
     g_akao_cmd_params[0].value = ticks;
-    g_akao_cmd_params[1].value = (volume & 0xFF);
+    g_akao_cmd_params[1].value = (volume & AKAO_MASTER_VOLUME_MASK);
     return akao_send_command(AKAO_CMD_FADE_MASTER_VOLUME);
 }
 
@@ -788,8 +818,8 @@ s32 akao_fade_master_volume(s32 ticks, s32 volume)
 void akao_fade_master_volume_from(s32 ticks, s32 start_volume, s32 volume)
 {
     g_akao_cmd_params[0].value = ticks;
-    g_akao_cmd_params[1].value = (start_volume & 0xFF);
-    g_akao_cmd_params[2].value = (volume & 0xFF);
+    g_akao_cmd_params[1].value = (start_volume & AKAO_MASTER_VOLUME_MASK);
+    g_akao_cmd_params[2].value = (volume & AKAO_MASTER_VOLUME_MASK);
     akao_send_command(AKAO_CMD_FADE_MASTER_VOLUME_FROM);
 }
 
@@ -801,7 +831,7 @@ void akao_fade_master_volume_from(s32 ticks, s32 start_volume, s32 volume)
  */
 s32 akao_set_master_pan_and_volume(s32 value)
 {
-    g_akao_cmd_params[0].value = value & 0xFF;
+    g_akao_cmd_params[0].value = value & AKAO_MASTER_PAN_VOLUME_MASK;
     return akao_send_command(AKAO_CMD_SET_MASTER_PAN_AND_VOLUME);
 }
 
@@ -815,7 +845,7 @@ s32 akao_set_master_pan_and_volume(s32 value)
 s32 akao_fade_master_pan_and_volume(s32 ticks, s32 value)
 {
     g_akao_cmd_params[0].value = ticks;
-    g_akao_cmd_params[1].value = (value & 0xFF);
+    g_akao_cmd_params[1].value = (value & AKAO_MASTER_PAN_VOLUME_MASK);
     return akao_send_command(AKAO_CMD_FADE_MASTER_PAN_AND_VOLUME);
 }
 
@@ -830,8 +860,8 @@ s32 akao_fade_master_pan_and_volume(s32 ticks, s32 value)
 s32 akao_fade_master_pan_and_volume_from(s32 ticks, s32 start_value, s32 value)
 {
     g_akao_cmd_params[0].value = ticks;
-    g_akao_cmd_params[1].value = (start_value & 0xFF);
-    g_akao_cmd_params[2].value = (value & 0xFF);
+    g_akao_cmd_params[1].value = (start_value & AKAO_MASTER_PAN_VOLUME_MASK);
+    g_akao_cmd_params[2].value = (value & AKAO_MASTER_PAN_VOLUME_MASK);
     return akao_send_command(AKAO_CMD_FADE_MASTER_PAN_AND_VOLUME_FROM);
 }
 
@@ -868,16 +898,16 @@ s32 akao_release_all_sfx(void)
  */
 void akao_upload_bank_blocking(AkaoBankHeader* bank, s32 wait_for_completion)
 {
-    g_akao_driver_flags.upload_flags &= ~1;
-    while (akao_submit_bank(bank, wait_for_completion) == 1)
+    g_akao_driver_flags.upload_flags &= ~AKAO_UPLOAD_STREAMING;
+    while (akao_submit_bank(bank, wait_for_completion) == AKAO_BANK_UPLOAD_BUSY)
     {
     }
 }
 
 /**
- * @brief Returns the current SPU/AKAO transfer state latch (g_akao_spu_xfer_pending).
+ * @brief Return the current SPU/AKAO transfer-status latch.
  *
- * @return Current transfer or position latch.
+ * @return Current value of g_akao_spu_xfer_pending.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/ecQHb
  */
@@ -889,7 +919,7 @@ s32 akao_get_xfer_state(void)
 /**
  * @brief Restart the streaming bank upload and mark it pending.
  *
- * Clears the next SPU address (g_akao_streaming_state.spu_addr, g_akao_streaming_state.spu_addr),
+ * Clears the next SPU address (g_akao_streaming_state.spu_addr),
  * so the next akao_streaming_upload_tick treats its input as a new bank.
  *
  * @return 0 after the operation completes.
@@ -899,66 +929,35 @@ s32 akao_get_xfer_state(void)
 s32 akao_reset_xfer_state(void)
 {
     g_akao_streaming_state.spu_addr = 0;
-    g_akao_driver_flags.upload_flags |= 1;
+    g_akao_driver_flags.upload_flags |= AKAO_UPLOAD_STREAMING;
     return 0;
 }
 
 /**
- * @brief Advances one tick of the AKAO bank-streaming upload state machine.
+ * @brief Continue a streaming bank upload through its header, articulations and samples.
  *
- * Each tick is a single bounded copy step. The driver loads an instrument
- * bank in three stages - header, articulation table, sample blob - and the
- * caller drives this function repeatedly with whatever fresh bytes it has
- * read from disk so far.
+ * The first call validates and stages the bank header. Available articulation
+ * bytes are copied and relocated when the table is complete, then remaining
+ * input is uploaded as samples. The streaming flag clears when no samples
+ * remain, including when the header fails its magic check.
  *
- * Stage 1 (first tick - @c g_akao_streaming_state.spu_addr == 0):
- *   - Magic-check @p source. On failure, zero the residual counters so the
- *     subsequent stages all short-circuit and the streaming-pending bit
- *     gets cleared at the bottom.
- *   - Copy the 0x40-byte AkaoBankHeader into @c g_akao_bank_staging and
- *     copied_bytes @p source/@p avail past it.
- *   - Seed @c g_akao_streaming_state from the staged header:
- *       @c spu_addr               = spu_dest_addr
- *       @c sample_remaining       = sample_size
- *       @c articulation_dst       = &g_akao_articulation_slots[bank_id * 0x10]
- *       @c articulation_remaining = articulation_count * 0x10
- *
- * Stage 2 (articulation copy):
- *   - memcpy up to @c articulation_remaining bytes of the source into the
- *     driver's articulation slot, advancing both pointers and shrinking
- *     the residual.
- *   - When the residual hits zero, rebase the articulation entries onto
- *     the SPU base via @c akao_relocate_articulations.
- *
- * Stage 3 (sample upload):
- *   - SpuSetTransferStartAddr(@c spu_addr), then akao_spu_write the source.
- *   - Advance @c spu_addr by the sample chunk size and shrink @c sample_remaining.
- *   - If @p wait_for_spu is non-zero, block on akao_spu_wait.
- *
- * Clears the pending bit when input remains after sample exhaustion, or when
- * the external status latch is zero. Articulation copies advance by whole words.
- *
- * @param source Source byte pointer in main RAM. Starts at the AKAO
- *                     header on the first tick and advances through the
- *                     articulation and sample regions across subsequent
- *                     ticks.
- * @param avail        Number of fresh bytes available to consume this tick.
- * @param wait_for_spu Non-zero means block on @c akao_spu_wait after the SPU
- *                     write completes.
- *
- * @return Sample bytes still to upload (@c g_akao_streaming_state.sample_remaining, the address of
- *         g_akao_streaming_state.sample_remaining).
+ * @param source Input chunk, starting with the bank header on the first call.
+ * @param available_bytes Number of input bytes available in this chunk.
+ * @param wait_for_spu Non-zero to wait for the sample transfer to complete.
+ * @return Sample bytes still to upload.
+ * @note The first chunk must contain the complete bank header. Articulation
+ *       chunks must contain whole words; akao_copy_bytes drops partial words.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/0IPqT
  */
-s32 akao_streaming_upload_tick(u8* source, u32 avail, s32 wait_for_spu)
+s32 akao_streaming_upload_tick(u8* source, u32 available_bytes, s32 wait_for_spu)
 {
     s32 copied_bytes;
     u32 articulation_chunk;
     u32 sample_chunk;
     AkaoArticulation* articulations;
 
-    if (g_akao_driver_flags.upload_flags & 1)
+    if (g_akao_driver_flags.upload_flags & AKAO_UPLOAD_STREAMING)
     {
         if (g_akao_streaming_state.spu_addr == 0)
         {
@@ -966,7 +965,7 @@ s32 akao_streaming_upload_tick(u8* source, u32 avail, s32 wait_for_spu)
             {
                 akao_copy_bytes((s32*)source, (s32*)&g_akao_bank_staging, sizeof(AkaoBankHeader));
                 source = (u8*)((AkaoBankHeader*)source + 1);
-                avail -= sizeof(AkaoBankHeader);
+                available_bytes -= sizeof(AkaoBankHeader);
                 g_akao_streaming_state.spu_addr = g_akao_bank_staging.spu_dest_addr;
                 g_akao_streaming_state.sample_remaining = g_akao_bank_staging.sample_size;
                 g_akao_streaming_state.articulation_dst = (u8*)&((AkaoArticulation*)g_akao_articulation_slots)[g_akao_bank_staging.bank_id];
@@ -974,7 +973,7 @@ s32 akao_streaming_upload_tick(u8* source, u32 avail, s32 wait_for_spu)
             }
             else
             {
-                avail = 0;
+                available_bytes = 0;
                 g_akao_streaming_state.sample_remaining = 0U;
                 g_akao_streaming_state.articulation_remaining = 0U;
             }
@@ -982,16 +981,16 @@ s32 akao_streaming_upload_tick(u8* source, u32 avail, s32 wait_for_spu)
         if (g_akao_streaming_state.articulation_remaining != 0)
         {
             articulation_chunk = g_akao_streaming_state.articulation_remaining;
-            if (avail != 0)
+            if (available_bytes != 0)
             {
-                if (articulation_chunk >= avail)
+                if (articulation_chunk >= available_bytes)
                 {
-                    articulation_chunk = avail;
+                    articulation_chunk = available_bytes;
                 }
                 akao_copy_bytes((s32*)source, (s32*)g_akao_streaming_state.articulation_dst, articulation_chunk);
-                copied_bytes = (articulation_chunk >> 2) * 4;
+                copied_bytes = (articulation_chunk >> AKAO_COPY_WORD_SHIFT) * AKAO_COPY_WORD_BYTES;
                 source += copied_bytes;
-                avail -= articulation_chunk;
+                available_bytes -= articulation_chunk;
                 g_akao_streaming_state.articulation_dst = g_akao_streaming_state.articulation_dst + copied_bytes;
                 g_akao_streaming_state.articulation_remaining -= articulation_chunk;
                 if (g_akao_streaming_state.articulation_remaining == 0)
@@ -1001,24 +1000,24 @@ s32 akao_streaming_upload_tick(u8* source, u32 avail, s32 wait_for_spu)
                 }
             }
         }
-        if (avail != 0 && g_akao_streaming_state.sample_remaining == 0)
+        if (available_bytes != 0 && g_akao_streaming_state.sample_remaining == 0)
         {
-            g_akao_driver_flags.upload_flags &= ~1;
+            g_akao_driver_flags.upload_flags &= ~AKAO_UPLOAD_STREAMING;
         }
         else
         {
-            if (avail != 0)
+            if (available_bytes != 0)
             {
                 sample_chunk = g_akao_streaming_state.sample_remaining;
-                if (g_akao_streaming_state.sample_remaining >= avail)
+                if (g_akao_streaming_state.sample_remaining >= available_bytes)
                 {
-                    sample_chunk = avail;
+                    sample_chunk = available_bytes;
                 }
-                avail = sample_chunk;
+                available_bytes = sample_chunk;
                 SpuSetTransferStartAddr(g_akao_streaming_state.spu_addr);
-                akao_spu_write(source, avail);
-                g_akao_streaming_state.spu_addr += avail;
-                g_akao_streaming_state.sample_remaining -= avail;
+                akao_spu_write(source, available_bytes);
+                g_akao_streaming_state.spu_addr += available_bytes;
+                g_akao_streaming_state.sample_remaining -= available_bytes;
                 if (wait_for_spu != 0)
                 {
                     akao_spu_wait();
@@ -1026,7 +1025,7 @@ s32 akao_streaming_upload_tick(u8* source, u32 avail, s32 wait_for_spu)
             }
             if (g_akao_streaming_state.sample_remaining == 0)
             {
-                g_akao_driver_flags.upload_flags &= ~1;
+                g_akao_driver_flags.upload_flags &= ~AKAO_UPLOAD_STREAMING;
             }
         }
     }
@@ -1048,7 +1047,7 @@ s32 akao_load_bank(AkaoBankHeader* bank, s32 wait_for_completion)
 }
 
 /**
- * @brief Routes an AKAO bank to one of six SPU base/slot pairs by @p slot, records the bank id, and uploads.
+ * @brief Route a bank to one of six SPU slots, record its key and upload it.
  *
  * @param bank AKAO instrument bank in RAM.
  * @param slot Slot 1 through 5; other values select slot 0.
@@ -1075,38 +1074,38 @@ s32 akao_upload_bank_slot(void* bank, s32 slot, s32 wait_for_completion)
     switch (slot)
     {
     case 1:
-        spu_base = 0x47900;
-        articulation_index = 0x90;
+        spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(1);
+        articulation_index = AKAO_BANK_SLOT_ARTICULATION_INDEX(1);
         g_akao_bank_slot_keys[1] = identity->key;
         break;
 
     case 2:
-        spu_base = 0x4C100;
-        articulation_index = 0xA0;
+        spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(2);
+        articulation_index = AKAO_BANK_SLOT_ARTICULATION_INDEX(2);
         g_akao_bank_slot_keys[2] = identity->key;
         break;
 
     case 3:
-        spu_base = 0x50900;
-        articulation_index = 0xB0;
+        spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(3);
+        articulation_index = AKAO_BANK_SLOT_ARTICULATION_INDEX(3);
         g_akao_bank_slot_keys[3] = identity->key;
         break;
 
     case 4:
-        spu_base = 0x55100;
-        articulation_index = 0xC0;
+        spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(4);
+        articulation_index = AKAO_BANK_SLOT_ARTICULATION_INDEX(4);
         g_akao_bank_slot_keys[4] = identity->key;
         break;
 
     case 5:
-        spu_base = 0x59900;
-        articulation_index = 0xD0;
+        spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(5);
+        articulation_index = AKAO_BANK_SLOT_ARTICULATION_INDEX(5);
         g_akao_bank_slot_keys[5] = identity->key;
         break;
 
     default:
-        spu_base = 0x43100;
-        articulation_index = 0x80;
+        spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(0);
+        articulation_index = AKAO_BANK_SLOT_ARTICULATION_INDEX(0);
         g_akao_bank_slot_keys[0] = identity->key;
         break;
     }
@@ -1132,11 +1131,9 @@ s32 akao_load_bank_slot(void* bank, s32 slot, s32 wait_for_completion)
 }
 
 /**
- * @brief Wrapper: biases @p slot by 3 before calling akao_upload_bank_slot
- *        (0 through 2 select slots 3 through 5; other values follow the callee
- *        fallback to slot 0 after the bias).
+ * @brief Add AKAO_BANK_FIRST_UPPER_SLOT to @p slot and upload the bank.
  * @param bank AKAO instrument bank in RAM.
- * @param slot Slot selector forwarded to akao_upload_bank_slot.
+ * @param slot Slot offset; 0 through 2 select slots 3 through 5.
  * @param wait_for_completion Non-zero to wait for the SPU transfer.
  * @return 0 after the operation completes.
  *
@@ -1144,7 +1141,7 @@ s32 akao_load_bank_slot(void* bank, s32 slot, s32 wait_for_completion)
  */
 s32 akao_load_upper_bank_slot(void* bank, s32 slot, s32 wait_for_completion)
 {
-    akao_upload_bank_slot(bank, slot + 3, wait_for_completion);
+    akao_upload_bank_slot(bank, slot + AKAO_BANK_FIRST_UPPER_SLOT, wait_for_completion);
     return 0;
 }
 
@@ -1152,7 +1149,9 @@ s32 akao_load_upper_bank_slot(void* bank, s32 slot, s32 wait_for_completion)
  * @brief Program the CD audio mix for the current output mode.
  *
  * Stereo routes CD left to SPU left and CD right to SPU right. Mono sends both
- * CD channels to both outputs, each scaled by 0xB570 / 0x20000 (about -3 dB).
+ * CD channels to both outputs, each scaled by about 0.35437. For identical
+ * left and right signals, the combined mono gain is about 0.70874 (-3 dB)
+ * before integer rounding.
  *
  * @param volume CD mix volume (0-127).
  * @return 0.
@@ -1160,12 +1159,12 @@ s32 akao_load_upper_bank_slot(void* bank, s32 slot, s32 wait_for_completion)
  */
 s32 akao_set_cd_mix(s32 volume)
 {
-    if (g_akao_driver_flags.output_mode & 2)
+    if (g_akao_driver_flags.output_mode & AKAO_OUTPUT_MONO)
     {
-        g_akao_cdmix.val3 = (u32)(volume * 0xB570) >> 17;
-        g_akao_cdmix.val1 = (u32)(volume * 0xB570) >> 17;
-        g_akao_cdmix.val2 = (u32)(volume * 0xB570) >> 17;
-        g_akao_cdmix.val0 = (u32)(volume * 0xB570) >> 17;
+        g_akao_cdmix.val3 = (u32)(volume * AKAO_CD_MONO_GAIN_Q17) >> AKAO_CD_MONO_GAIN_SHIFT;
+        g_akao_cdmix.val1 = (u32)(volume * AKAO_CD_MONO_GAIN_Q17) >> AKAO_CD_MONO_GAIN_SHIFT;
+        g_akao_cdmix.val2 = (u32)(volume * AKAO_CD_MONO_GAIN_Q17) >> AKAO_CD_MONO_GAIN_SHIFT;
+        g_akao_cdmix.val0 = (u32)(volume * AKAO_CD_MONO_GAIN_Q17) >> AKAO_CD_MONO_GAIN_SHIFT;
     }
     else
     {
@@ -1190,7 +1189,7 @@ void akao_play_xa_buffer(AkaoHeader* buffer, s32 pan, s32 use_reverb)
     if (akao_check_magic(buffer) == 0)
     {
         g_akao_cmd_params[0].buffer = buffer;
-        g_akao_cmd_params[1].value = ((pan & 0xFF) << 8);
+        g_akao_cmd_params[1].value = ((pan & AKAO_PAN_MASK) << AKAO_XA_FIXED_POINT_SHIFT);
         g_akao_cmd_params[2].value = use_reverb;
         akao_send_command(AKAO_CMD_PLAY_XA_BUFFER);
     }
@@ -1214,7 +1213,7 @@ s32 akao_stop_xa(void)
  */
 s32 akao_set_xa_volume(s32 volume)
 {
-    g_akao_cmd_params[0].value = (volume & 0x7F) << 8;
+    g_akao_cmd_params[0].value = (volume & AKAO_VOLUME_MAX) << AKAO_XA_FIXED_POINT_SHIFT;
     return akao_send_command(AKAO_CMD_SET_XA_VOLUME);
 }
 
@@ -1228,7 +1227,7 @@ s32 akao_set_xa_volume(s32 volume)
 s32 akao_fade_xa_volume(s32 ticks, s32 volume)
 {
     g_akao_cmd_params[0].value = ticks;
-    g_akao_cmd_params[1].value = ((volume & 0x7F) << 8);
+    g_akao_cmd_params[1].value = ((volume & AKAO_VOLUME_MAX) << AKAO_XA_FIXED_POINT_SHIFT);
     return akao_send_command(AKAO_CMD_FADE_XA_VOLUME);
 }
 
@@ -1240,20 +1239,18 @@ s32 akao_fade_xa_volume(s32 ticks, s32 volume)
  */
 s32 akao_set_xa_pan(s32 pan)
 {
-    g_akao_cmd_params[0].value = (pan & 0xFF) << 8;
+    g_akao_cmd_params[0].value = (pan & AKAO_PAN_MASK) << AKAO_XA_FIXED_POINT_SHIFT;
     return akao_send_command(AKAO_CMD_SET_XA_PAN);
 }
 
 /**
  * @brief Magic-checks an AKAO XA program and stages it for the SPU.
  *
- * After verifying the AKAO magic, picks a hardcoded SPU base
- * (@c 0x50900 if @p upper_slot != 0, otherwise @c 0x43100) - and subtracts
- * @c 0x30000 when channel 0's song-state bit 0x40 is set with any in-flight
- * activity. Programs @c SpuSetTransferStartAddr, kicks off the sample upload
- * (akao_spu_write), caches the SPU base back into the buffer's
- * @c spu_addr field, then copies the header and first 16 sample bytes
- * to @c g_akao_xa_program_staging.
+ * Uses bank slot 0 or AKAO_BANK_FIRST_UPPER_SLOT as the SPU destination,
+ * lowered by AKAO_XA_SPU_AREA_OFFSET when a loaded song selects the lower area.
+ * Waits for the previous SPU transfer, uploads the sample data and records the
+ * destination in the input header. Stages the header and first 16 sample bytes
+ * in g_akao_xa_program_staging.
  *
  * @param buffer  Pointer to an AKAO buffer in main RAM.
  * @param upper_slot  Selects the upper SPU slot (non-zero) vs the lower slot.
@@ -1273,15 +1270,16 @@ s32 akao_upload_xa_program(void* buffer, s32 upper_slot)
     if (result == 0)
     {
         akao_spu_wait();
-        spu_base = 0x50900;
+        spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(AKAO_BANK_FIRST_UPPER_SLOT);
         if (upper_slot == 0)
         {
-            spu_base = 0x43100;
+            spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(0);
         }
-        /* A song is loaded (running or suspended) and has song flag 0x40 set. */
-        if (((AKAO_PRIMARY_SONG->masks.active_mask | AKAO_PRIMARY_SONG->parked_mask) != 0) && (AKAO_PRIMARY_SONG->flags & 0x40))
+        /* Loaded songs with this flag use the lower XA area. */
+        if (((AKAO_PRIMARY_SONG->masks.active_mask | AKAO_PRIMARY_SONG->parked_mask) != 0) &&
+            (AKAO_PRIMARY_SONG->flags & AKAO_SONG_LOWER_XA_AREA_FLAG))
         {
-            spu_base -= 0x30000;
+            spu_base -= AKAO_XA_SPU_AREA_OFFSET;
         }
         program = buffer;
         buffer = program + 1;
@@ -1305,7 +1303,7 @@ s32 akao_upload_xa_program(void* buffer, s32 upper_slot)
  */
 s32 akao_play_staged_xa(s32 pan, s32 use_reverb)
 {
-    g_akao_cmd_params[0].value = ((pan & 0xFF) << 8);
+    g_akao_cmd_params[0].value = ((pan & AKAO_PAN_MASK) << AKAO_XA_FIXED_POINT_SHIFT);
     g_akao_cmd_params[1].value = use_reverb;
     return akao_send_command(AKAO_CMD_PLAY_STAGED_XA);
 }
@@ -1313,33 +1311,33 @@ s32 akao_play_staged_xa(s32 pan, s32 use_reverb)
 /**
  * @brief Queue command 0xEC: upload an XA program to SPU RAM and play it once.
  *
- * The program goes to the lower (0x43100) or upper (0x50900) XA area, both
- * moved down by 0x30000 while a loaded song has song flag 0x40 set.
+ * Uses the same SPU placement rule as akao_upload_xa_program.
  *
- * @param buf AKAO-tagged XA program in main RAM; ignored if the magic does not match.
+ * @param buffer AKAO-tagged XA program in main RAM; ignored if the magic does not match.
  * @param pan Pan; only the low 8 bits are used.
  * @param upper_slot Non-zero selects the upper SPU area.
  * @param use_reverb Non-zero to send the stream voices through reverb.
  * @see decomp.me (100%) https://decomp.me/scratch/SgcFo
  */
-void akao_play_xa_one_shot(void* buf, s32 pan, s32 upper_slot, s32 use_reverb)
+void akao_play_xa_one_shot(void* buffer, s32 pan, s32 upper_slot, s32 use_reverb)
 {
     s32 spu_base;
 
-    if (akao_check_magic(buf) != 0)
+    if (akao_check_magic(buffer) != 0)
     {
         return;
     }
 
-    spu_base = upper_slot == 0 ? 0x43100 : 0x50900;
+    spu_base = upper_slot == 0 ? AKAO_BANK_SLOT_SPU_ADDRESS(0) : AKAO_BANK_SLOT_SPU_ADDRESS(AKAO_BANK_FIRST_UPPER_SLOT);
 
-    if (((AKAO_PRIMARY_SONG->masks.active_mask | AKAO_PRIMARY_SONG->parked_mask) != 0) && (AKAO_PRIMARY_SONG->flags & 0x40))
+    if (((AKAO_PRIMARY_SONG->masks.active_mask | AKAO_PRIMARY_SONG->parked_mask) != 0) &&
+        (AKAO_PRIMARY_SONG->flags & AKAO_SONG_LOWER_XA_AREA_FLAG))
     {
-        spu_base -= 0x30000;
+        spu_base -= AKAO_XA_SPU_AREA_OFFSET;
     }
 
-    g_akao_cmd_params[0].buffer = buf;
-    g_akao_cmd_params[1].value = ((pan & 0xFF) << 8);
+    g_akao_cmd_params[0].buffer = buffer;
+    g_akao_cmd_params[1].value = ((pan & AKAO_PAN_MASK) << AKAO_XA_FIXED_POINT_SHIFT);
     g_akao_cmd_params[2].value = spu_base;
     g_akao_cmd_params[3].value = use_reverb;
     akao_send_command(AKAO_CMD_PLAY_XA_ONE_SHOT);
@@ -1348,8 +1346,8 @@ void akao_play_xa_one_shot(void* buf, s32 pan, s32 upper_slot, s32 use_reverb)
 /**
  * @brief Queue command 0xE8: prepare a CD-fed XA ring stream.
  *
- * The ring holds @p byte_count / 0x1000 blocks. The caller fills it and
- * reports each block with akao_xa_advance_frame.
+ * The ring holds @p byte_count / AKAO_XA_RING_BLOCK_BYTES blocks. The caller
+ * fills it and reports each block with akao_xa_advance_frame.
  *
  * @param ring_base First ring block in main RAM.
  * @param byte_count Ring size in bytes.
@@ -1366,12 +1364,12 @@ s32 akao_start_xa_stream(void* ring_base, u32 byte_count)
     SpuSetIRQAddr(0);
     g_akao_cmd_params[0].buffer = ring_base;
     g_akao_cmd_params[1].value = byte_count;
-    g_akao_xa_tracker.upload_block = -1;
-    g_akao_xa_tracker.unk20 = 0;
+    g_akao_xa_tracker.upload_block = AKAO_XA_UPLOAD_BLOCK_NONE;
+    g_akao_xa_tracker.last_ring_block_key = 0;
     g_akao_xa_tracker.filled_blocks = 0;
     g_akao_xa_tracker.uploaded_blocks = 0;
     g_akao_xa_tracker.fill_block = 0;
-    g_akao_xa_tracker.ring_block_count = byte_count >> 12;
+    g_akao_xa_tracker.ring_block_count = byte_count >> AKAO_XA_RING_BLOCK_SHIFT;
     akao_send_command(AKAO_CMD_PREPARE_XA_RING);
     return 0;
 }
@@ -1381,8 +1379,8 @@ s32 akao_start_xa_stream(void* ring_base, u32 byte_count)
  *
  * Increments @c g_akao_xa_tracker.filled_blocks and advances @c fill_block,
  * wrapping after the last ring block. For a ring stream (XA_FLAG_RING_STREAM),
- * once the reader has moved past the first two blocks, calls
- * akao_xa_start_ring_stream so the SPU upload can begin.
+ * calls akao_xa_start_ring_stream whenever the next-fill index is at least
+ * AKAO_XA_START_FILL_BLOCK so the SPU upload can begin.
  *
  * @return Index of the next ring block the SPU upload will read.
  *
@@ -1390,16 +1388,16 @@ s32 akao_start_xa_stream(void* ring_base, u32 byte_count)
  */
 s32 akao_xa_advance_frame(void)
 {
-    u32 next_frame;
+    u32 next_fill_block;
 
     g_akao_xa_tracker.filled_blocks = g_akao_xa_tracker.filled_blocks + 1;
-    next_frame = g_akao_xa_tracker.fill_block + 1;
-    g_akao_xa_tracker.fill_block = next_frame;
-    if (next_frame > g_akao_xa_tracker.ring_block_count - 1)
+    next_fill_block = g_akao_xa_tracker.fill_block + 1;
+    g_akao_xa_tracker.fill_block = next_fill_block;
+    if (next_fill_block > g_akao_xa_tracker.ring_block_count - 1)
     {
         g_akao_xa_tracker.fill_block = 0;
     }
-    if ((g_akao_xa_tracker.flags & XA_FLAG_RING_STREAM) && (g_akao_xa_tracker.fill_block >= 2))
+    if ((g_akao_xa_tracker.flags & XA_FLAG_RING_STREAM) && (g_akao_xa_tracker.fill_block >= AKAO_XA_START_FILL_BLOCK))
     {
         akao_xa_start_ring_stream();
     }
