@@ -132,7 +132,7 @@ void akao_xa_stop(void)
  * @brief Find a free adjacent SPU voice pair for a stereo XA/stream voice.
  *
  * Scans pairs (22,23) down to (12,13) against the voices held by SFX
- * channels. When every pair is busy, stops the lowest-priority SFX and
+ * channels. When every pair is busy, stops the oldest untagged SFX and
  * retries until stopping frees nothing more.
  *
  * @return First voice of the free pair, or -1 when none could be freed.
@@ -165,7 +165,7 @@ s32 akao_xa_alloc_voice_pair(void)
         {
             return pair + XA_FIRST_VOICE_BIAS;
         }
-        akao_sfx_stop_channels(0, 0x40000000);
+        akao_sfx_stop_channels(0, AKAO_SFX_STOP_OLDEST);
         if (busy_voices == (g_akao_sfx_control.active_mask | g_akao_sfx_control.paused_mask))
         {
             return -1;

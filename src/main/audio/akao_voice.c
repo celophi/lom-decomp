@@ -15,8 +15,6 @@
  * SpuVoiceParams::update_flags groups. Each group lists every AKAO update bit
  * that dirties the named SPU voice register.
  */
-#define SPU_UPDATE_VOLUME 0x3
-#define SPU_UPDATE_PITCH 0x10
 #define SPU_UPDATE_START_ADDR 0x80
 #define SPU_UPDATE_ADSR_HIGH 0x6600
 #define SPU_UPDATE_ADSR_LOW 0x9900

@@ -8,7 +8,6 @@
 #include "main/audio/akao.h"
 #include <libspu.h>
 
-#define AKAO_SFX_FIRST_VOICE 12
 #define AKAO_FULL_VOLUME (AKAO_VOLUME_MAX << 8)
 #define AKAO_INITIAL_SFX_TEMPO 0x66A80000
 #define AKAO_INITIAL_REVERB_DEPTH 0x03FFF000
