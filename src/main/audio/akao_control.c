@@ -112,7 +112,8 @@ typedef struct
     u16 second_offset;
 } AkaoSfxSequencePair;
 
-extern s32 D_8003EC34[];
+/** @brief Reference compared with descriptor unk14 to select the song's area flags. */
+extern s32 g_akao_song_descriptor_match_value[];
 extern u8 g_akao_silent_sequence[];
 extern AkaoCommandParam g_akao_dispatch_params[6];
 extern void (*g_akao_command_handlers[256])(AkaoCommandParam*);
@@ -255,7 +256,7 @@ void akao_seq_start_song(u8* sequence_data, s32 start_mask)
     cleared_flags = flags & ~(AKAO_SONG_DESCRIPTOR_FLAGS | AKAO_SONG_VOICE_DROPPED | AKAO_SONG_VOICE_STOLEN);
     song->flags = cleared_flags;
     flags = descriptor->unk14;
-    if (flags == D_8003EC34[0])
+    if (flags == g_akao_song_descriptor_match_value[0])
     {
         flags = cleared_flags | AKAO_SONG_LOWER_XA_AREA_FLAG;
     }
@@ -895,7 +896,7 @@ void akao_seq_resume_song(AkaoSongDescriptor* descriptor)
     song_flags = g_akao_seq_channel0->flags & ~AKAO_SONG_DESCRIPTOR_FLAGS;
     g_akao_seq_channel0->flags = song_flags;
     song = g_akao_seq_channel0;
-    if (descriptor->unk14 == D_8003EC34[0])
+    if (descriptor->unk14 == g_akao_song_descriptor_match_value[0])
     {
         song_flags |= AKAO_SONG_LOWER_XA_AREA_FLAG;
     }
