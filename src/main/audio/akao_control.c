@@ -11,8 +11,6 @@
 #include <libspu.h>
 #include <libapi.h>
 
-/** @brief Number of SFX channel slots. */
-
 /**
  * @brief Resolve one u16 offset of an SFX list entry pair.
  * @note Offsets are relative to the end of the 4-byte entry pair; @p skip is the
@@ -20,6 +18,99 @@
  *       address as an integer.
  */
 #define SFX_ENTRY_DATA(entry, skip) ((u8*)((u32)(*(u16*)(entry)) + (uintptr_t)(entry) + (skip)))
+
+/** @brief Initial channel expression, volume scale and song tempo accumulators. */
+#define AKAO_SONG_INITIAL_EXPRESSION 0x3FFF0000
+#define AKAO_SONG_INITIAL_VOLUME_SCALE 0x4000
+#define AKAO_SONG_INITIAL_TEMPO 0xFFFF0000
+
+/** @brief Fractional bits in a song master-volume accumulator. */
+#define AKAO_SONG_VOLUME_SHIFT 16
+
+/** @brief Fractional bits in the CD volume accumulator; its high half feeds the SPU. */
+#define AKAO_CD_VOLUME_SHIFT 16
+
+/** @brief Fractional bits in the driver master pan and volume accumulators. */
+#define AKAO_MASTER_FIXED_POINT_SHIFT 16
+
+/** @brief Startup delays for channels selected to play. */
+#define AKAO_SONG_START_NOTE_TICKS 4
+#define AKAO_SONG_START_GATE_TICKS 2
+
+/** @brief Extra note and gate ticks before a restored channel resumes. */
+#define AKAO_SONG_RESUME_DELAY_TICKS 2
+
+/** @brief Restore volume, pitch, sample addresses and ADSR registers on resumed voices. */
+#define AKAO_SONG_RESUME_VOICE_UPDATES 0x1FF93
+
+/** @brief Delays for channels started on the silent sequence. */
+#define AKAO_SONG_SILENT_NOTE_TICKS 3
+#define AKAO_SONG_SILENT_GATE_TICKS 1
+
+/** @brief ADSR release shift used when silencing a song or reusing an SFX voice. */
+#define AKAO_VOICE_STOP_RELEASE_SHIFT 5
+
+/** @brief Attack and sustain rate fields installed while voices are paused. */
+#define AKAO_PAUSE_ENVELOPE_RATE 0x7F
+
+/** @brief Restore volume, pitch and ADSR registers after resuming paused channels. */
+#define AKAO_PAUSE_RESUME_VOICE_UPDATES 0x2B13
+
+/** @brief Fractional bits in SFX pan, volume and pitch-bend accumulators. */
+#define AKAO_SFX_FIXED_POINT_SHIFT 8
+
+/** @brief Initial SFX note and gate countdowns. */
+#define AKAO_SFX_START_NOTE_TICKS 2
+#define AKAO_SFX_START_GATE_TICKS 1
+
+/** @brief Initial SFX age, incremented on each unpaused SFX tick. */
+#define AKAO_SFX_INITIAL_AGE (-2)
+
+/** @brief Sound id and stop-selection tag used when playing supplied SFX sequences with defaults. */
+#define AKAO_SFX_DEFAULT_ID 0x400
+#define AKAO_SFX_DEFAULT_TAG 0x1000000
+
+/** @brief Pending ADSR release-rate updates and mask clearing its five rate bits. */
+#define AKAO_RELEASE_RATE_UPDATE_PENDING 0x4400
+#define AKAO_RELEASE_RATE_CLEAR_MASK 0xFFE0
+
+/** @brief Mask selecting every sequencer channel. */
+#define AKAO_ALL_CHANNELS_MASK (-1)
+
+/** @brief First song channel, included in every partial start request. */
+#define AKAO_SONG_FIRST_CHANNEL_BIT 1
+
+/** @brief Stop-mode bits selecting channels by overlapping SFX tags. */
+#define AKAO_SFX_STOP_TAG_MASK 0x0FFFFFFF
+/** @brief Stop mode selecting the sound ids on an adjacent channel pair. */
+#define AKAO_SFX_STOP_PAIR 0x80000000U
+/** @brief Sound-id selector matching every negative SFX id. */
+#define AKAO_SFX_STOP_NEGATIVE_IDS (-1)
+
+/** @brief Program-table offset marking an absent SFX sequence. */
+#define AKAO_PROGRAM_NO_SEQUENCE 0xFFFF
+
+/** @brief Number of sequence offsets stored per bank program. */
+#define AKAO_PROGRAM_SEQUENCE_COUNT 2
+
+/**
+ * @brief Header of an SFX list; entry offsets are relative to the data after this header.
+ */
+typedef struct
+{
+    u32 magic;
+    s32 entry_count;
+    s32 bank_key;
+    u8 reserved[4];
+    s32 entry_offsets[4];
+} AkaoSfxListHeader;
+
+/** @brief Sequence offsets relative to the end of an SFX list entry; 0xFFFF marks an absent sequence. */
+typedef struct
+{
+    u16 first_offset;
+    u16 second_offset;
+} AkaoSfxSequencePair;
 
 extern s32 D_8003EC34[];
 extern u8 g_akao_silent_sequence[];
@@ -98,67 +189,62 @@ u32 akao_collect_voice_mask(AkaoChannelState* channels, s32 channel_mask)
 }
 
 /**
- * @brief Initialize the primary song-sequencer state and start playback of a
- *        song descriptor.
+ * @brief Prepare the primary song and initialize its channels for playback.
  *
- * Records @p song_data into the (song-role) @c pitch field, seeds
- * voice_alloc_low_mask/static_voice_mask and the song flags from
- * the descriptor, sets up the articulation-map and note-table self-relative
- * pointers, then walks all 32 channels: channels selected by @p start_mask
- * get a full note-start reset (LFOs, envelopes, timers) plus a fresh
- * articulation; channels present in the descriptor's own mask but not in
- * @p start_mask instead get a lighter "silence" reset. Finishes by
- * resetting the song's tempo/master-volume/measure state to defaults.
+ * Selected descriptor channels receive fresh playback state. Other channels
+ * run the silent sequence while releasing their notes. Channel-offset entries
+ * exist only for bits present in the descriptor's channel mask.
  *
- * @param song_data Song data, laid out as an AkaoSongDescriptor.
- * @param start_mask Channels to actually start now.
+ * @param sequence_data AKAO song descriptor and its sequence data.
+ * @param start_mask Descriptor channels to start; selected channels are parked
+ *        instead when song playback is paused.
  */
-void akao_seq_start_song(u8* song_data, s32 start_mask)
+void akao_seq_start_song(u8* sequence_data, s32 start_mask)
 {
-    s32 channel_mask;
+    s32 remaining_channels;
     s32 flags;
     s32 cleared_flags;
-    s32 rel;
-    u8* table;
-    u8* key_map;
-    u8* note_table;
+    s32 table_offset;
+    u8* resolved_table;
+    u8* key_map_data;
+    u8* note_table_data;
     AkaoSongDescriptor* descriptor;
     AkaoChannelState* channel;
-    u32 i;
-    s32 bit;
+    u32 channel_index;
+    s32 bit_mask;
     s32 static_voice_mask;
-    u8* silence_ptr;
-    s32 driver_mode;
-    AkaoSongState* song_tables;
+    u8* silent_sequence;
+    s32 song_paused;
+    AkaoSongState* table_owner;
     AkaoSongState* song;
 
-    g_akao_seq_channel0->song_data = song_data;
-    descriptor = (AkaoSongDescriptor*)song_data;
-    channel_mask = descriptor->channel_mask;
+    g_akao_seq_channel0->song_data = sequence_data;
+    descriptor = (AkaoSongDescriptor*)sequence_data;
+    remaining_channels = descriptor->channel_mask;
 
     if (g_akao_seq_channel1 != NULL)
     {
-        bit = akao_collect_voice_mask(g_akao_pending_channels, g_akao_seq_channel1->masks.active_mask);
+        bit_mask = akao_collect_voice_mask(g_akao_pending_channels, g_akao_seq_channel1->masks.active_mask);
     }
     else
     {
-        bit = 0;
+        bit_mask = 0;
     }
 
-    g_akao_sfx_control.key_off_mask |= (~bit & 0xFFFFFF) & ~(g_akao_sfx_control.active_mask | g_akao_xa_tracker.voice_mask);
-    driver_mode = g_akao_driver_mode_flags & AKAO_MODE_SONG_PAUSED;
+    g_akao_sfx_control.key_off_mask |= (~bit_mask & AKAO_VOICE_MASK) & ~(g_akao_sfx_control.active_mask | g_akao_xa_tracker.voice_mask);
+    song_paused = g_akao_driver_mode_flags & AKAO_MODE_SONG_PAUSED;
 
     g_akao_seq_channel0->key_off_mask = 0;
 
-    if (driver_mode)
+    if (song_paused)
     {
         g_akao_seq_channel0->masks.active_mask = 0;
-        g_akao_seq_channel0->parked_mask |= channel_mask & start_mask;
+        g_akao_seq_channel0->parked_mask |= remaining_channels & start_mask;
     }
     else
     {
         g_akao_seq_channel0->parked_mask = 0;
-        g_akao_seq_channel0->masks.active_mask |= channel_mask & start_mask;
+        g_akao_seq_channel0->masks.active_mask |= remaining_channels & start_mask;
     }
 
     g_akao_seq_channel0->masks.voice_alloc_low_mask = descriptor->voice_alloc_low_mask;
@@ -166,55 +252,55 @@ void akao_seq_start_song(u8* song_data, s32 start_mask)
     song->masks.static_voice_mask = descriptor->static_voice_mask;
 
     flags = song->flags;
-    cleared_flags = flags & ~0x63;
+    cleared_flags = flags & ~(AKAO_SONG_DESCRIPTOR_FLAGS | AKAO_SONG_VOICE_DROPPED | AKAO_SONG_VOICE_STOLEN);
     song->flags = cleared_flags;
     flags = descriptor->unk14;
     if (flags == D_8003EC34[0])
     {
-        flags = cleared_flags | 0x40;
+        flags = cleared_flags | AKAO_SONG_LOWER_XA_AREA_FLAG;
     }
     else
     {
-        flags = cleared_flags | 0x20;
+        flags = cleared_flags | AKAO_SONG_DESCRIPTOR_MISMATCH;
     }
     song->flags = flags;
 
-    table = NULL;
-    rel = descriptor->key_map_offset;
-    song_tables = g_akao_seq_channel0;
-    key_map = (u8*)&descriptor->key_map_offset + rel;
-    if (rel != 0)
+    resolved_table = NULL;
+    table_offset = descriptor->key_map_offset;
+    table_owner = g_akao_seq_channel0;
+    key_map_data = (u8*)&descriptor->key_map_offset + table_offset;
+    if (table_offset != 0)
     {
-        table = key_map;
+        resolved_table = key_map_data;
     }
-    song_tables->key_map_base = table;
+    table_owner->key_map_base = resolved_table;
 
-    table = NULL;
-    rel = descriptor->note_table_offset;
-    note_table = (u8*)&descriptor->note_table_offset + rel;
-    if (rel != 0)
+    resolved_table = NULL;
+    table_offset = descriptor->note_table_offset;
+    note_table_data = (u8*)&descriptor->note_table_offset + table_offset;
+    if (table_offset != 0)
     {
-        table = note_table;
+        resolved_table = note_table_data;
     }
 
-    bit = 1;
-    i = 0;
+    bit_mask = 1;
+    channel_index = 0;
     channel = g_akao_seq_channels;
-    song_data += 0x40;
-    silence_ptr = g_akao_silent_sequence;
+    sequence_data = (u8*)((AkaoSongDescriptor*)sequence_data)->channel_offsets;
+    silent_sequence = g_akao_silent_sequence;
 
-    song_tables->note_table = (u8*)table;
-    song_tables->voice_alloc_base = 0;
+    table_owner->note_table = resolved_table;
+    table_owner->voice_alloc_base = 0;
     do
     {
-        if ((channel_mask & bit) & start_mask)
+        if ((remaining_channels & bit_mask) & start_mask)
         {
-            channel->seq_cursor = song_data + *(u16*)song_data;
-            channel->note_ticks = 4;
-            channel->gate_ticks = 2;
-            channel->volume = 0x7F00;
-            channel->expression = 0x3FFF0000;
-            channel->volume_scale = 0x4000;
+            channel->seq_cursor = sequence_data + *(u16*)sequence_data;
+            channel->note_ticks = AKAO_SONG_START_NOTE_TICKS;
+            channel->gate_ticks = AKAO_SONG_START_GATE_TICKS;
+            channel->volume = AKAO_VOLUME_MAX << 8;
+            channel->expression = AKAO_SONG_INITIAL_EXPRESSION;
+            channel->volume_scale = AKAO_SONG_INITIAL_VOLUME_SCALE;
             channel->detune = 0;
             channel->transpose = 0;
             channel->portamento_speed = 0;
@@ -223,7 +309,7 @@ void akao_seq_start_song(u8* song_data, s32 start_mask)
             channel->pitch_slide_ticks = 0;
             channel->note_duration_adjust = 0;
             channel->note_duration = 0;
-            channel->pan = 0x8000;
+            channel->pan = AKAO_PAN_CENTER << 8;
             channel->pan_fade_ticks = 0;
             channel->portamento_speed = 0;
             channel->volume_scale_fade_ticks = 0;
@@ -235,13 +321,13 @@ void akao_seq_start_song(u8* song_data, s32 start_mask)
             channel->pan_lfo_value = 0;
             channel->loop_depth = 0;
             static_voice_mask = g_akao_seq_channel0->masks.static_voice_mask;
-            song_data += 2;
+            sequence_data += sizeof(*descriptor->channel_offsets);
             channel->pan_lfo_depth = 0;
             channel->volume_lfo_depth = 0;
             channel->pitch_lfo_depth = 0;
             channel->pan_lfo_depth_fade_ticks = 0;
-            channel->flags = static_voice_mask & bit;
-            channel->flags = (channel->flags == 0) << 6;
+            channel->flags = static_voice_mask & bit_mask;
+            channel->flags = channel->flags == 0 ? AKAO_CH_FULL_GATE : 0;
             channel->volume_lfo_depth_fade_ticks = 0;
             channel->pitch_lfo_depth_fade_ticks = 0;
             channel->pitch_mod_toggle_ticks = 0;
@@ -250,27 +336,24 @@ void akao_seq_start_song(u8* song_data, s32 start_mask)
         }
         else
         {
-            if (channel_mask & bit)
+            if ((remaining_channels & bit_mask) && !(bit_mask & start_mask))
             {
-                if (!(bit & start_mask))
-                {
-                    song_data += 2;
-                }
+                sequence_data += sizeof(*descriptor->channel_offsets);
             }
-            channel->note_ticks = 3;
-            channel->gate_ticks = 1;
-            channel->seq_cursor = silence_ptr;
-            channel->update_flags |= 0x4400;
-            channel->spu_adsr_high = (channel->spu_adsr_high & 0xFFE0) | 5;
+            channel->note_ticks = AKAO_SONG_SILENT_NOTE_TICKS;
+            channel->gate_ticks = AKAO_SONG_SILENT_GATE_TICKS;
+            channel->seq_cursor = silent_sequence;
+            channel->update_flags |= AKAO_RELEASE_RATE_UPDATE_PENDING;
+            channel->spu_adsr_high = (channel->spu_adsr_high & AKAO_RELEASE_RATE_CLEAR_MASK) | AKAO_VOICE_STOP_RELEASE_SHIFT;
         }
         channel->voice = AKAO_VOICE_COUNT;
-        channel_mask &= ~bit;
+        remaining_channels &= ~bit_mask;
         channel++;
-        i++;
-        bit <<= 1;
-    } while (i < AKAO_CHANNEL_COUNT);
+        channel_index++;
+        bit_mask <<= 1;
+    } while (channel_index < AKAO_CHANNEL_COUNT);
 
-    g_akao_seq_channel0->tempo = 0xFFFF0000;
+    g_akao_seq_channel0->tempo = AKAO_SONG_INITIAL_TEMPO;
     g_akao_seq_channel0->tempo_acc = 1;
     g_akao_seq_channel0->tempo_fade_ticks = 0;
     g_akao_seq_channel0->reverb_depth = 0;
@@ -291,187 +374,193 @@ void akao_seq_start_song(u8* song_data, s32 start_mask)
 }
 
 /**
- * @brief Stop a song: key off every voice, park its channels on the silent sequence and release its voices.
+ * @brief Stop an active song by silencing its channels and releasing its voices.
+ *
+ * Songs with no active channels are left untouched. A nonzero key must match
+ * the song's id. Matching songs queue key-off for all channels and relinquish
+ * their SPU voices with a linear release.
+ *
  * @param song Song state to stop.
  * @param channels Channel table owned by @p song.
- * @param song_key Song key that must match @p song, or 0 to stop unconditionally.
+ * @param song_key Required song id, or 0 to stop any active song.
  */
 void akao_seq_stop_song(AkaoSongState* song, AkaoChannelState* channels, s32 song_key)
 {
-    u32 i;
+    u32 index;
 
     if (song->masks.active_mask == 0)
     {
         return;
     }
-    if (song_key != 0)
+    if (song_key != 0 && song_key != song->song_id)
     {
-        if (song_key != song->song_id)
-        {
-            return;
-        }
+        return;
     }
-    song->key_off_mask = -1;
+    song->key_off_mask = AKAO_ALL_CHANNELS_MASK;
 
-    i = 0x20;
-    do
+    for (index = AKAO_CHANNEL_COUNT; index != 0; index--)
     {
-        channels->note_ticks = 3;
-        channels->gate_ticks = 1;
+        channels->note_ticks = AKAO_SONG_SILENT_NOTE_TICKS;
+        channels->gate_ticks = AKAO_SONG_SILENT_GATE_TICKS;
         channels->seq_cursor = g_akao_silent_sequence;
         channels++;
-        i--;
-    } while (i != 0);
+    }
 
     song->song_id = 0;
     song->note_on_mask = 0;
     song->masks.key_on_mask = 0;
 
-    for (i = 0; i < AKAO_VOICE_COUNT; i++)
+    for (index = 0; index < AKAO_VOICE_COUNT; index++)
     {
-        if (g_akao_voice_owners[i] == song)
+        if (g_akao_voice_owners[index] == song)
         {
-            g_akao_voice_owners[i] = NULL;
-            spu_set_voice_release_mode(i, 5, 3);
+            g_akao_voice_owners[index] = NULL;
+            spu_set_voice_release_mode(index, AKAO_VOICE_STOP_RELEASE_SHIFT, SPU_VOICE_LINEARDecN);
         }
     }
 }
 
 /**
- * @brief Stop SFX channels selected by id, by flag mask or by priority.
- * @param sfx_id SFX id to stop (-1 selects every tagged SFX), or the first channel index when @p mode is negative.
- * @param mode Channel flag mask to match; negative stops the channel pair at @p sfx_id; 0x40000000 stops the highest-priority channels.
+ * @brief Stop SFX selected by tag, channel pair, age or sound id.
+ *
+ * Considers active and paused channels. Tag selection takes precedence over
+ * pair selection, then oldest-channel selection, then sound-id matching.
+ * Deferred-stop channels record a pending stop; other matches release now.
+ *
+ * @param sfx_id Sound id to match, AKAO_SFX_STOP_NEGATIVE_IDS for negative ids,
+ *        or the first channel index when pair selection is requested.
+ * @param mode Tag mask, AKAO_SFX_STOP_PAIR, AKAO_SFX_STOP_OLDEST, or 0 for id matching.
  */
 void akao_sfx_stop_channels(s32 sfx_id, s32 mode)
 {
-    AkaoChannelState* ch;
-    s32 mask;
-    u32 i;
-    s32 active;
+    AkaoChannelState* channel;
+    s32 channel_bit;
+    u32 channel_index;
+    s32 active_mask;
     s32 flags;
-    s32 priority;
-    s32 channel_priority;
+    s32 oldest_age;
+    s32 channel_age;
 
-    mask = AKAO_SFX_FIRST_CHANNEL_BIT;
-    ch = g_sfx_channels;
-    active = g_akao_sfx_control.active_mask | g_akao_sfx_control.paused_mask;
+    channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+    channel = g_sfx_channels;
+    active_mask = g_akao_sfx_control.active_mask | g_akao_sfx_control.paused_mask;
 
-    if (mode & 0x0FFFFFFF)
+    if (mode & AKAO_SFX_STOP_TAG_MASK)
     {
-        for (i = 0; i < AKAO_SFX_CHANNEL_COUNT; i++, ch++, mask <<= 1)
+        for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if ((active & mask) && (ch->sfx_tag & mode))
+            if ((active_mask & channel_bit) && (channel->sfx_tag & mode))
             {
-                flags = ch->flags;
-                if (flags & 0x100000)
+                flags = channel->flags;
+                if (flags & AKAO_CH_DEFERRED_STOP)
                 {
-                    ch->flags = flags | 0x200000;
+                    channel->flags = flags | AKAO_CH_STOP_PENDING;
                 }
                 else
                 {
-                    g_akao_sfx_control.key_off_mask |= mask;
-                    akao_sfx_release_channels(ch, mask);
-                    ch->flags = 0;
+                    g_akao_sfx_control.key_off_mask |= channel_bit;
+                    akao_sfx_release_channels(channel, channel_bit);
+                    channel->flags = 0;
                 }
             }
         }
     }
-    else if (mode < 0)
+    else if (mode & AKAO_SFX_STOP_PAIR)
     {
-        ch += sfx_id;
-        mask <<= sfx_id;
-        if (active & mask)
+        channel += sfx_id;
+        channel_bit <<= sfx_id;
+        if (active_mask & channel_bit)
         {
-            akao_sfx_stop_channels(ch->sfx_id, 0);
+            akao_sfx_stop_channels(channel->sfx_id, 0);
         }
-        mask <<= 1;
-        ch++;
-        if (active & mask)
+        channel_bit <<= 1;
+        channel++;
+        if (active_mask & channel_bit)
         {
-            akao_sfx_stop_channels(ch->sfx_id, 0);
+            akao_sfx_stop_channels(channel->sfx_id, 0);
         }
         return;
     }
-    else if (mode & 0x40000000)
+    else if (mode & AKAO_SFX_STOP_OLDEST)
     {
-        for (i = 0; i < AKAO_SFX_CHANNEL_COUNT; i++, ch++, mask <<= 1)
+        for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if (ch->sfx_tag != 0)
+            if (channel->sfx_tag != 0)
             {
-                active &= ~mask;
+                active_mask &= ~channel_bit;
             }
         }
 
-        ch = g_sfx_channels;
-        mask = AKAO_SFX_FIRST_CHANNEL_BIT;
-        priority = 0;
-        for (i = 0; i < AKAO_SFX_CHANNEL_COUNT; i++, ch++, mask <<= 1)
+        channel = g_sfx_channels;
+        channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+        oldest_age = 0;
+        for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if (active & mask)
+            if (active_mask & channel_bit)
             {
-                channel_priority = ch->sfx_age;
-                if (priority < channel_priority)
+                channel_age = channel->sfx_age;
+                if (oldest_age < channel_age)
                 {
-                    priority = channel_priority;
+                    oldest_age = channel_age;
                 }
             }
         }
 
-        ch = g_sfx_channels;
-        mask = AKAO_SFX_FIRST_CHANNEL_BIT;
-        for (i = 0; i < AKAO_SFX_CHANNEL_COUNT; i++, ch++, mask <<= 1)
+        channel = g_sfx_channels;
+        channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+        for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if ((active & mask) && (priority == ch->sfx_age))
+            if ((active_mask & channel_bit) && (oldest_age == channel->sfx_age))
             {
-                flags = ch->flags;
-                if (flags & 0x100000)
+                flags = channel->flags;
+                if (flags & AKAO_CH_DEFERRED_STOP)
                 {
-                    ch->flags = flags | 0x200000;
+                    channel->flags = flags | AKAO_CH_STOP_PENDING;
                 }
                 else
                 {
-                    g_akao_sfx_control.key_off_mask |= mask;
-                    akao_sfx_release_channels(ch, mask);
-                    ch->flags = 0;
+                    g_akao_sfx_control.key_off_mask |= channel_bit;
+                    akao_sfx_release_channels(channel, channel_bit);
+                    channel->flags = 0;
                 }
             }
         }
     }
     else
     {
-        for (i = 0; i < AKAO_SFX_CHANNEL_COUNT; i++, ch++, mask <<= 1)
+        for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if (active & mask)
+            if (active_mask & channel_bit)
             {
-                if (sfx_id == -1)
+                if (sfx_id == AKAO_SFX_STOP_NEGATIVE_IDS)
                 {
-                    if ((s32)ch->sfx_id < 0)
+                    if ((s32)channel->sfx_id < 0)
                     {
-                        flags = ch->flags;
-                        if (flags & 0x100000)
+                        flags = channel->flags;
+                        if (flags & AKAO_CH_DEFERRED_STOP)
                         {
-                            ch->flags = flags | 0x200000;
+                            channel->flags = flags | AKAO_CH_STOP_PENDING;
                         }
                         else
                         {
-                            g_akao_sfx_control.key_off_mask |= mask;
-                            akao_sfx_release_channels(ch, mask);
-                            ch->flags = 0;
+                            g_akao_sfx_control.key_off_mask |= channel_bit;
+                            akao_sfx_release_channels(channel, channel_bit);
+                            channel->flags = 0;
                         }
                     }
                 }
-                else if ((s32)ch->sfx_id == sfx_id)
+                else if ((s32)channel->sfx_id == sfx_id)
                 {
-                    flags = ch->flags;
-                    if (flags & 0x100000)
+                    flags = channel->flags;
+                    if (flags & AKAO_CH_DEFERRED_STOP)
                     {
-                        ch->flags = flags | 0x200000;
+                        channel->flags = flags | AKAO_CH_STOP_PENDING;
                     }
                     else
                     {
-                        g_akao_sfx_control.key_off_mask |= mask;
-                        akao_sfx_release_channels(ch, mask);
-                        ch->flags = 0;
+                        g_akao_sfx_control.key_off_mask |= channel_bit;
+                        akao_sfx_release_channels(channel, channel_bit);
+                        channel->flags = 0;
                     }
                 }
             }
@@ -481,35 +570,40 @@ void akao_sfx_stop_channels(s32 sfx_id, s32 mode)
 }
 
 /**
- * @brief Initialize one SFX channel from a play-parameter block and mark it active.
+ * @brief Initialize SFX playback and release the channel's previous SPU voice.
+ *
+ * Queues key-off and clears pending note-on and effect masks for this channel.
+ * When SFX playback is paused, parks every active channel without the
+ * AKAO_SFX_FLAG_SUPPRESS exemption.
+ *
  * @param channel SFX channel to start.
- * @param params Play parameters: id, flags, pan bias, volume scale and articulation bank.
+ * @param params Play parameters: sound id, tag, pan bias, volume scale and bank slot.
  * @param channel_mask Channel-mask bit of @p channel.
- * @param seq_data Sequence bytecode the channel plays.
+ * @param sequence_data Sequence bytecode the channel plays.
  */
-void akao_sfx_start_channel(AkaoChannelState* channel, AkaoCommandParam* params, s32 channel_mask, u8* seq_data)
+void akao_sfx_start_channel(AkaoChannelState* channel, AkaoCommandParam* params, s32 channel_mask, u8* sequence_data)
 {
-    s32 n;
+    s32 channels_remaining;
 
     channel->sfx_id = params[0].value;
     channel->sfx_tag = params[1].value;
-    channel->pan_bias = (u8)params[2].value << 8;
+    channel->pan_bias = (u8)params[2].value << AKAO_SFX_FIXED_POINT_SHIFT;
     channel->pan_bias_fade_ticks = 0;
-    channel->pan = 0x8000;
+    channel->pan = AKAO_PAN_CENTER << AKAO_SFX_FIXED_POINT_SHIFT;
     channel->pan_fade_ticks = 0;
-    channel->volume_scale = ((u16)params[3].value & 0x7F) << 8;
+    channel->volume_scale = ((u16)params[3].value & AKAO_VOLUME_MAX) << AKAO_SFX_FIXED_POINT_SHIFT;
     channel->volume_scale_fade_ticks = 0;
     channel->sfx_bank = params[4].value;
-    channel->note_ticks = 2;
-    channel->gate_ticks = 1;
+    channel->note_ticks = AKAO_SFX_START_NOTE_TICKS;
+    channel->gate_ticks = AKAO_SFX_START_GATE_TICKS;
     channel->is_sfx_channel = 1;
-    channel->sfx_age = -2;
+    channel->sfx_age = AKAO_SFX_INITIAL_AGE;
     channel->sfx_pitch_bend = 0;
     channel->sfx_pitch_bend_fade_ticks = 0;
-    akao_channel_init_state(channel, seq_data);
+    akao_channel_init_state(channel, sequence_data);
 
     g_akao_voice_owners[channel->voice] = NULL;
-    spu_set_voice_release_mode(channel->voice, 5, 3);
+    spu_set_voice_release_mode(channel->voice, AKAO_VOICE_STOP_RELEASE_SHIFT, SPU_VOICE_LINEARDecN);
 
     g_akao_sfx_control.active_mask |= channel_mask;
     g_akao_sfx_control.key_off_mask |= channel_mask;
@@ -524,15 +618,12 @@ void akao_sfx_start_channel(AkaoChannelState* channel, AkaoCommandParam* params,
     {
         channel_mask = AKAO_SFX_FIRST_CHANNEL_BIT;
         channel = g_sfx_channels;
-        for (n = AKAO_SFX_CHANNEL_COUNT; n != 0; n--, channel++, channel_mask <<= 1)
+        for (channels_remaining = AKAO_SFX_CHANNEL_COUNT; channels_remaining != 0; channels_remaining--, channel++, channel_mask <<= 1)
         {
-            if (g_akao_sfx_control.active_mask & channel_mask)
+            if ((g_akao_sfx_control.active_mask & channel_mask) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
             {
-                if (!(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
-                {
-                    g_akao_sfx_control.active_mask &= ~channel_mask;
-                    g_akao_sfx_control.paused_mask |= channel_mask;
-                }
+                g_akao_sfx_control.active_mask &= ~channel_mask;
+                g_akao_sfx_control.paused_mask |= channel_mask;
             }
         }
     }
@@ -540,86 +631,96 @@ void akao_sfx_start_channel(AkaoChannelState* channel, AkaoCommandParam* params,
 
 /**
  * @brief Detach an SPU voice from every sequence channel that owns it.
- * @param channels Sequence channel table to scan.
- * @param voice_index SPU voice being taken over.
+ *
+ * Marks matching channels as unassigned and clears their sounding-note bits
+ * in the current song. Voice indices outside the SPU range are ignored.
+ *
+ * @param channels Table of AKAO_CHANNEL_COUNT channels belonging to the current song.
+ * @param voice_index SPU voice being taken over, or AKAO_VOICE_COUNT if unassigned.
  */
 void akao_unassign_voice(AkaoChannelState* channels, u32 voice_index)
 {
     u32 channel_index;
     s32 unassigned_voice;
-    s32 bit;
+    u32 channel_bit;
     AkaoSongState* song;
 
-    if (voice_index < AKAO_VOICE_COUNT)
+    if (voice_index >= AKAO_VOICE_COUNT)
     {
-        channel_index = 0;
-        unassigned_voice = AKAO_VOICE_COUNT;
-        song = g_akao_seq_channel0;
-        do
+        return;
+    }
+
+    channel_index = 0;
+    unassigned_voice = AKAO_VOICE_COUNT;
+    song = g_akao_seq_channel0;
+    for (; channel_index < AKAO_CHANNEL_COUNT; channel_index++, channels++)
+    {
+        if (channels->voice == voice_index)
         {
-            if (channels->voice == voice_index)
-            {
-                bit = 1 << channel_index;
-                channels->voice = unassigned_voice;
-                song->note_on_mask &= ~bit;
-            }
-            channel_index++;
-            channels++;
-        } while (channel_index < AKAO_CHANNEL_COUNT);
+            channel_bit = 1U << channel_index;
+            channels->voice = unassigned_voice;
+            song->note_on_mask &= ~channel_bit;
+        }
     }
 }
 
 /**
- * @brief Start an SFX on one free SFX channel, or on a free adjacent pair when it has two sequences.
+ * @brief Allocate SFX channels and start one or two sequences.
+ *
+ * Searches from the highest SFX channel down, requiring an adjacent pair when
+ * both sequences are present. If none are free, stops the oldest untagged SFX
+ * and retries while the occupied-channel mask changes. Sequence channels lose
+ * any SPU voices taken over by the new SFX.
+ *
  * @param params Play parameters (see akao_sfx_start_channel); word 1 also selects channels to stop first.
- * @param seq_data0 Sequence for the first channel, or NULL.
- * @param seq_data1 Sequence for the second channel, or NULL.
- * @param skip_stop Nonzero to skip stopping the channels selected by params word 1.
+ * @param first_sequence First sequence, or NULL.
+ * @param second_sequence Second sequence, or NULL; plays alone if the first is NULL.
+ * @param skip_stop Nonzero to skip the initial stop request selected by params word 1.
  */
-void akao_sfx_play(AkaoCommandParam* params, u8* seq_data0, u8* seq_data1, s32 skip_stop)
+void akao_sfx_play(AkaoCommandParam* params, u8* first_sequence, u8* second_sequence, s32 skip_stop)
 {
-    AkaoChannelState* ch;
-    u32 mask;
-    u32 pair_bits;
-    u32 test_mask;
-    s32 busy;
-    s32 n;
-    s32 stop_mask;
+    AkaoChannelState* channel;
+    u32 channel_bit;
+    u32 second_channel_bit;
+    u32 channel_pair_mask;
+    u32 busy_mask;
+    s32 candidates_remaining;
+    s32 tag_mask;
 
-    if (seq_data0 == 0 && seq_data1 == 0)
+    if (first_sequence == NULL && second_sequence == NULL)
     {
         return;
     }
 
     if (skip_stop == 0)
     {
-        stop_mask = params[1].value;
-        if (stop_mask != 0)
+        tag_mask = params[1].value;
+        if (tag_mask != 0)
         {
-            akao_sfx_stop_channels(0, stop_mask);
+            akao_sfx_stop_channels(0, tag_mask);
         }
     }
 
     do
     {
-        ch = &(g_sfx_channels)[AKAO_SFX_CHANNEL_COUNT - 1];
-        mask = 0x800000;
-        busy = (g_akao_sfx_control.active_mask | g_akao_sfx_control.paused_mask) | g_akao_xa_tracker.voice_mask;
-        if (seq_data0 != 0 && seq_data1 != 0)
+        channel = &g_sfx_channels[AKAO_SFX_CHANNEL_COUNT - 1];
+        channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT << (AKAO_SFX_CHANNEL_COUNT - 1);
+        busy_mask = (g_akao_sfx_control.active_mask | g_akao_sfx_control.paused_mask) | g_akao_xa_tracker.voice_mask;
+        if (first_sequence != NULL && second_sequence != NULL)
         {
-            n = 0xB;
-            ch--;
-            mask = 0x400000;
+            candidates_remaining = AKAO_SFX_CHANNEL_COUNT - 1;
+            channel--;
+            channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT << (AKAO_SFX_CHANNEL_COUNT - 2);
             while (1)
             {
-                pair_bits = mask << 1;
-                test_mask = mask | pair_bits;
-                if (busy & test_mask)
+                second_channel_bit = channel_bit << 1;
+                channel_pair_mask = channel_bit | second_channel_bit;
+                if (busy_mask & channel_pair_mask)
                 {
-                    n--;
-                    ch--;
-                    mask >>= 1;
-                    if (n == 0)
+                    candidates_remaining--;
+                    channel--;
+                    channel_bit >>= 1;
+                    if (candidates_remaining == 0)
                     {
                         break;
                     }
@@ -630,242 +731,226 @@ void akao_sfx_play(AkaoCommandParam* params, u8* seq_data0, u8* seq_data1, s32 s
         }
         else
         {
-            n = AKAO_SFX_CHANNEL_COUNT;
-            for (; n != 0; n--, ch--, mask >>= 1)
+            candidates_remaining = AKAO_SFX_CHANNEL_COUNT;
+            for (; candidates_remaining != 0; candidates_remaining--, channel--, channel_bit >>= 1)
             {
-                if (!(busy & mask))
+                if (!(busy_mask & channel_bit))
                 {
                     break;
                 }
             }
         }
-        if (n != 0)
+        if (candidates_remaining != 0)
         {
             break;
         }
-        akao_sfx_stop_channels(0, 0x40000000);
-        if (busy == (s32)((g_akao_sfx_control.active_mask | g_akao_sfx_control.paused_mask) | g_akao_xa_tracker.voice_mask))
+        akao_sfx_stop_channels(0, AKAO_SFX_STOP_OLDEST);
+        if (busy_mask == ((g_akao_sfx_control.active_mask | g_akao_sfx_control.paused_mask) | g_akao_xa_tracker.voice_mask))
         {
             return;
         }
-    } while (n == 0);
+    } while (candidates_remaining == 0);
 
-    if (seq_data0 != 0)
+    if (first_sequence != NULL)
     {
-        akao_sfx_start_channel(ch, params, mask, seq_data0);
-        akao_unassign_voice(g_akao_seq_channels, ch->voice);
+        akao_sfx_start_channel(channel, params, channel_bit, first_sequence);
+        akao_unassign_voice(g_akao_seq_channels, channel->voice);
     }
-    if (seq_data1 != 0)
+    if (second_sequence != NULL)
     {
-        if (seq_data0 != 0)
+        if (first_sequence != NULL)
         {
-            ch++;
-            mask <<= 1;
+            channel++;
+            channel_bit <<= 1;
         }
-        akao_sfx_start_channel(ch, params, mask, seq_data1);
-        akao_unassign_voice(g_akao_seq_channels, ch->voice);
-        if (seq_data0 != 0)
+        akao_sfx_start_channel(channel, params, channel_bit, second_sequence);
+        akao_unassign_voice(g_akao_seq_channels, channel->voice);
+        if (first_sequence != NULL)
         {
-            ch->flags |= 0x10000;
+            channel->flags |= AKAO_CH_SFX_PITCH_MOD;
         }
     }
     g_akao_driver_flags.update_flags |= (AKAO_EFFECT_MASKS_UPDATE_PENDING | AKAO_NOISE_CLOCK_UPDATE_PENDING);
 }
 
 /**
- * @brief Resolve a program's two data pointers from the bank program table.
+ * @brief Resolve both SFX sequences from a bank program's offset pair.
  *
- * Masks @p program_index to 10 bits and reads the two consecutive u16 offset
- * entries from the flat u16 table @c g_akao_bank_prog_base at halfword indices
- * @c 2*n and @c 2*n+1. Each entry is an offset into the region-C data block
- * (@c g_akao_bank_region_c); the sentinel @c 0xFFFF resolves to a null pointer.
- * Used by the SFX launcher to obtain the two seq-data pointers it passes to
- * akao_sfx_play.
+ * Each program stores two u16 offsets relative to g_akao_bank_region_c.
+ * AKAO_PROGRAM_NO_SEQUENCE marks an absent sequence and resolves to NULL.
  *
- * @param out0 Receives the resolved pointer for the first entry (2*n).
- * @param out1 Receives the resolved pointer for the second entry (2*n + 1).
- * @param program_index Program id; masked to 0..0x3FF.
- *
+ * @param out_first_sequence Receives the first sequence pointer, or NULL.
+ * @param out_second_sequence Receives the second sequence pointer, or NULL.
+ * @param program_index Bank program index; only the low 10 bits are used.
  */
-void akao_resolve_program_data(u8** out0, u8** out1, s32 program_index)
+void akao_resolve_program_data(u8** out_first_sequence, u8** out_second_sequence, s32 program_index)
 {
-    u8* result;
+    u8* sequence_data;
 
-    program_index &= 0x3FF;
-    program_index <<= 1;
+    program_index &= AKAO_SFX_ID_MASK;
+    program_index *= AKAO_PROGRAM_SEQUENCE_COUNT;
 
-    if (((u16*)g_akao_bank_prog_base)[program_index] != 0xFFFF)
+    if (((u16*)g_akao_bank_prog_base)[program_index] != AKAO_PROGRAM_NO_SEQUENCE)
     {
-        result = g_akao_bank_region_c + ((u16*)g_akao_bank_prog_base)[program_index];
+        sequence_data = g_akao_bank_region_c + ((u16*)g_akao_bank_prog_base)[program_index];
     }
     else
     {
-        result = NULL;
+        sequence_data = NULL;
     }
-    *out0 = result;
+    *out_first_sequence = sequence_data;
 
     program_index++;
-    if (((u16*)g_akao_bank_prog_base)[program_index] != 0xFFFF)
+    if (((u16*)g_akao_bank_prog_base)[program_index] != AKAO_PROGRAM_NO_SEQUENCE)
     {
-        result = g_akao_bank_region_c + ((u16*)g_akao_bank_prog_base)[program_index];
+        sequence_data = g_akao_bank_region_c + ((u16*)g_akao_bank_prog_base)[program_index];
     }
     else
     {
-        result = NULL;
+        sequence_data = NULL;
     }
-    *out1 = result;
+    *out_second_sequence = sequence_data;
 }
 
 /**
- * @brief Flag every active channel of a song for a pending SPU volume re-apply.
- * @param song Song whose active_mask selects the channels.
- * @param channels Channel table owned by @p song.
+ * @brief Mark active song channels for a pending SPU stereo volume update.
+ * @param song Song whose active mask selects the channels to update.
+ * @param channels Song channel table; its first entry corresponds to active-mask bit zero.
  */
 void akao_seq_flag_volume_update(AkaoSongState* song, AkaoChannelState* channels)
 {
-    s32 mask;
-    s32 bit;
-    s32 song_mask;
+    u32 remaining_channels;
+    u32 channel_bit;
+    u32 active_channels;
 
-    song_mask = song->masks.active_mask;
-    if (song_mask != 0)
+    active_channels = song->masks.active_mask;
+    if (active_channels != 0)
     {
-        mask = song_mask;
-        bit = 1;
+        remaining_channels = active_channels;
+        channel_bit = 1U;
         do
         {
-            if (mask & bit)
+            if (remaining_channels & channel_bit)
             {
-                mask ^= bit;
-                channels->update_flags |= 3;
+                remaining_channels ^= channel_bit;
+                channels->update_flags |= SPU_UPDATE_VOLUME;
             }
             channels++;
-            bit <<= 1;
-        } while (mask != 0);
+            channel_bit <<= 1;
+        } while (remaining_channels != 0);
     }
 }
 
 /**
- * @brief Flag every SFX channel active in @c g_akao_sfx_control for a pending
- *        SPU volume re-apply.
+ * @brief Mark active SFX channels for a pending SPU stereo volume update.
  */
 void akao_sfx_flag_volume_update(void)
 {
-    s32 mask;
-    s32 bit;
-    s32 sfx_mask;
+    u32 remaining_channels;
+    u32 channel_bit;
+    u32 active_channels;
     AkaoChannelState* channel;
 
     channel = g_sfx_channels;
-    sfx_mask = g_akao_sfx_control.active_mask;
-    if (sfx_mask != 0)
+    active_channels = g_akao_sfx_control.active_mask;
+    if (active_channels != 0)
     {
-        mask = sfx_mask;
-        bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+        remaining_channels = active_channels;
+        channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
         do
         {
-            if (mask & bit)
+            if (remaining_channels & channel_bit)
             {
-                mask ^= bit;
-                channel->update_flags |= 3;
+                remaining_channels ^= channel_bit;
+                channel->update_flags |= SPU_UPDATE_VOLUME;
             }
             channel++;
-            bit <<= 1;
-        } while (mask != 0);
+            channel_bit <<= 1;
+        } while (remaining_channels != 0);
     }
 }
 
 /**
- * @brief Restore the previously-suspended song state from the backup slots
- *        and rebase every bytecode-relative channel pointer to @p descriptor.
+ * @brief Restore the suspended primary song and rebase its saved sequence pointers.
  *
- * Restores @c g_akao_seq_channel0 (0x70 bytes) and the full @c g_akao_seq_channels
- * array from the @c g_akao_suspended_song / @c g_akao_suspended_channels backup slots, then adds the
- * delta between @p descriptor and the saved base (@c g_akao_suspended_song.song_data)
- * to every pointer field that was computed relative to the old descriptor
- * address (seq_cursor, the loop-cursor stack, the key_map
- * pointer use).
+ * Requeues sounding notes and releases unused voices, preserving the global
+ * song-pause state.
  *
- * @param descriptor Newly (re)loaded song descriptor; same shape consumed by
- *        akao_seq_start_song.
- *
+ * @param descriptor Reloaded descriptor of the suspended song, possibly at a new address.
  */
 void akao_seq_resume_song(AkaoSongDescriptor* descriptor)
 {
     AkaoChannelState* channel;
     AkaoSongState* song;
-    s32 flags;
-    s32 delta;
-    s32 mask;
-    s32 bit;
-    u32 i;
-    s32 keep_mask;
+    u32 song_flags;
+    intptr_t relocation_delta;
+    u32 active_mask;
+    u32 channel_bit;
+    u32 channels_remaining;
+    u32 voice_mask_limit;
 
     akao_copy_bytes((s32*)&g_akao_suspended_song, (s32*)g_akao_seq_channel0, sizeof(AkaoSongState));
     akao_copy_bytes((s32*)g_akao_suspended_channels, (s32*)g_akao_seq_channels, AKAO_CHANNEL_COUNT * sizeof(AkaoChannelState));
 
-    flags = g_akao_seq_channel0->flags & ~0x60;
-    g_akao_seq_channel0->flags = flags;
+    song_flags = g_akao_seq_channel0->flags & ~AKAO_SONG_DESCRIPTOR_FLAGS;
+    g_akao_seq_channel0->flags = song_flags;
     song = g_akao_seq_channel0;
     if (descriptor->unk14 == D_8003EC34[0])
     {
-        flags |= 0x40;
+        song_flags |= AKAO_SONG_LOWER_XA_AREA_FLAG;
     }
     else
     {
-        flags |= 0x20;
+        song_flags |= AKAO_SONG_DESCRIPTOR_MISMATCH;
     }
-    song->flags = flags;
+    song->flags = song_flags;
     g_akao_seq_channel0->song_data = (u8*)descriptor;
     g_akao_seq_channel0->masks.key_on_mask = 0;
 
     g_akao_driver_flags.update_flags |= (AKAO_REVERB_DEPTH_UPDATE_PENDING | AKAO_NOISE_CLOCK_UPDATE_PENDING);
 
-    mask = g_akao_seq_channel0->masks.active_mask;
-    delta = (u8*)descriptor - g_akao_suspended_song.song_data;
-    g_akao_seq_channel0->key_map_base += delta;
-    g_akao_seq_channel0->note_table += delta;
+    active_mask = g_akao_seq_channel0->masks.active_mask;
+    relocation_delta = (intptr_t)descriptor - (intptr_t)g_akao_suspended_song.song_data;
+    g_akao_seq_channel0->key_map_base += relocation_delta;
+    g_akao_seq_channel0->note_table += relocation_delta;
     g_akao_seq_channel0->masks.key_on_mask = g_akao_seq_channel0->note_on_mask;
 
     channel = g_akao_seq_channels;
-    i = 0x20;
-    bit = 1;
-    do
+    for (channels_remaining = AKAO_CHANNEL_COUNT, channel_bit = 1U; channels_remaining != 0; channels_remaining--, channel++, channel_bit <<= 1)
     {
-        if (mask & bit)
+        if (active_mask & channel_bit)
         {
-            channel->seq_cursor += delta;
-            channel->key_map += delta;
-            channel->loop_cursor[0] += delta;
-            channel->loop_cursor[1] += delta;
-            channel->loop_cursor[2] += delta;
-            channel->loop_cursor[3] += delta;
-            channel->note_ticks += 2;
-            channel->gate_ticks += 2;
-            channel->update_flags |= 0x1FF93;
+            channel->seq_cursor += relocation_delta;
+            channel->key_map += relocation_delta;
+            channel->loop_cursor[0] += relocation_delta;
+            channel->loop_cursor[1] += relocation_delta;
+            channel->loop_cursor[2] += relocation_delta;
+            channel->loop_cursor[3] += relocation_delta;
+            channel->note_ticks += AKAO_SONG_RESUME_DELAY_TICKS;
+            channel->gate_ticks += AKAO_SONG_RESUME_DELAY_TICKS;
+            channel->update_flags |= AKAO_SONG_RESUME_VOICE_UPDATES;
         }
         else
         {
-            channel->note_ticks = 4;
-            channel->gate_ticks = 2;
+            channel->note_ticks = AKAO_SONG_START_NOTE_TICKS;
+            channel->gate_ticks = AKAO_SONG_START_GATE_TICKS;
             channel->seq_cursor = g_akao_silent_sequence;
         }
         channel->voice = AKAO_VOICE_COUNT;
-        i--;
-        channel++;
-        bit <<= 1;
-    } while (i != 0);
+    }
 
-    mask = 0;
+    /* Preserve voices used by the secondary song, SFX and XA playback. */
+    active_mask = 0;
     if (g_akao_seq_channel1 != NULL)
     {
-        mask = akao_collect_voice_mask(g_akao_pending_channels, g_akao_seq_channel1->masks.active_mask & g_akao_seq_channel1->masks.voice_alloc_low_mask);
+        active_mask =
+            akao_collect_voice_mask(g_akao_pending_channels, g_akao_seq_channel1->masks.active_mask & g_akao_seq_channel1->masks.voice_alloc_low_mask);
     }
 
     g_akao_seq_channel0->key_off_mask = 0;
     g_akao_suspended_song.song_id = 0;
-    keep_mask = 0xFFFFFF;
-    g_akao_sfx_control.key_off_mask |= (~mask & (~(g_akao_sfx_control.active_mask | g_akao_xa_tracker.voice_mask) & keep_mask));
+    voice_mask_limit = AKAO_VOICE_MASK;
+    g_akao_sfx_control.key_off_mask |= (~active_mask & (~(g_akao_sfx_control.active_mask | g_akao_xa_tracker.voice_mask) & voice_mask_limit));
     g_akao_driver_flags.update_flags |= AKAO_EFFECT_MASKS_UPDATE_PENDING;
 
     if (g_akao_driver_mode_flags & AKAO_MODE_SONG_PAUSED)
@@ -876,337 +961,308 @@ void akao_seq_resume_song(AkaoSongDescriptor* descriptor)
 }
 
 /**
- * @brief Find which bank program slot (0-4) holds @p key, or 5 if @p key is
- *        the reserved "always resident" sentinel.
- *
- * @param key Bank program key to search for; 0 means "no bank".
- * @return Slot index 0-4 if found among @c g_akao_bank_slot_keys, 5 if
- *         @p key is in slot 5, otherwise 0.
+ * @brief Find the highest-numbered bank slot holding a key.
+ * @param key Bank key to search for; 0 skips the search.
+ * @return Highest matching slot index, or slot 0 for a zero or missing key.
  */
 s32 akao_bank_find_slot(s32 key)
 {
-    s32 result;
-    s32 index;
-    s32* slot;
-    s32* base;
+    s32 slots_remaining;
+    s32 next_slot_index;
+    s32* slot_key;
+    s32* slot_keys;
 
-    result = 0;
+    slots_remaining = 0;
     if (key != 0)
     {
-        result = 6;
-        slot = &g_akao_bank_slot_keys[5];
+        slots_remaining = AKAO_BANK_SLOT_COUNT;
+        slot_key = &g_akao_bank_slot_keys[AKAO_BANK_SLOT_COUNT - 1];
         do
         {
-            if (key == *slot)
+            if (key == *slot_key)
             {
-                result--;
+                slots_remaining--;
                 break;
             }
 
-            result--;
-            if (result != 0)
+            slots_remaining--;
+            if (slots_remaining != 0)
             {
-                base = g_akao_bank_slot_keys;
-                index = result - 1;
-                slot = base + index;
+                slot_keys = g_akao_bank_slot_keys;
+                next_slot_index = slots_remaining - 1;
+                slot_key = slot_keys + next_slot_index;
             }
-        } while (result != 0);
+        } while (slots_remaining != 0);
     }
 
-    return result;
+    return slots_remaining;
 }
 
 /**
- * @brief Dispatch a (re)loaded song descriptor to resume or a fresh start.
+ * @brief Resume a matching suspended song or start the loaded song from the beginning.
  *
- * @p params carries the descriptor pointer at offset 0 and an id at
- * offset 8. If the backed-up song state's @c song_id matches that id, the
- * descriptor is the same song reloaded at a new address, so the suspended
- * state is resumed (akao_seq_resume_song); otherwise it is a genuinely new
- * song (akao_seq_start_song), and the new id is recorded for next time.
+ * A nonzero suspended song id must match the requested id to resume. Otherwise,
+ * start all channels selected by the descriptor and record the requested id.
  *
- * @param params Descriptor load result: u8* descriptor in params[0], s32 id
- *        [2].
+ * @param params Load result: descriptor in params[0].buffer and song id in params[2].value.
  */
 void akao_seq_reload_song(AkaoCommandParam* params)
 {
-    AkaoSongState* backup;
-
-    backup = &g_akao_suspended_song;
-    if (backup->song_id != 0 && backup->song_id == params[2].value)
+    if (g_akao_suspended_song.song_id != 0 && g_akao_suspended_song.song_id == params[2].value)
     {
         akao_seq_resume_song(params[0].buffer);
     }
     else
     {
-        akao_seq_start_song(params[0].buffer, -1);
+        akao_seq_start_song(params[0].buffer, AKAO_ALL_CHANNELS_MASK);
         g_akao_seq_channel0->song_id = (u16)params[2].value;
     }
 }
 
 /**
- * @brief Start a freshly-loaded song descriptor with an explicit channel
- *        mask, and seed the pending tick countdown.
+ * @brief Start a loaded song on selected channels and seed its pending advance count.
  *
- * @param params Descriptor load result: u8* descriptor in params[0], id at
- *        [2], channel mask in params[3], initial tick count in params[4].
+ * The sequencer consumes the pending count at measure boundaries. Zero leaves
+ * advancement disabled; other requests are reduced by one.
+ *
+ * @param params Load result: descriptor in params[0].buffer, song id in params[2].value,
+ *        channel mask in params[3].value and advance count in params[4].value.
  */
 void akao_seq_start_loaded_song(AkaoCommandParam* params)
 {
-    s32 result;
-    s32 ticks;
+    s32 pending_advance_count;
+    s32 requested_advance_count;
 
     akao_seq_start_song(params[0].buffer, params[3].value);
     g_akao_seq_channel0->song_id = (u16)params[2].value;
-    ticks = params[4].value;
-    result = 0;
-    if (ticks != 0)
+    requested_advance_count = params[4].value;
+    pending_advance_count = 0;
+    if (requested_advance_count != 0)
     {
-        result = ticks - 1;
+        pending_advance_count = requested_advance_count - 1;
     }
-    g_akao_seq_pending_ticks = result;
+    g_akao_seq_pending_ticks = pending_advance_count;
 }
 
 /**
- * @brief Back up the current song state if a song is active.
+ * @brief Save the active primary song and its channels for later resume.
  *
- * Counterpart to akao_seq_resume_song: saves @c g_akao_seq_channel0 (0x70
- * bytes) and the full @c g_akao_seq_channels array into the @c g_akao_suspended_song /
- * @c g_akao_suspended_channels backup slots.
+ * Playback continues after the snapshot is saved. Songs with no active
+ * channels leave the previous snapshot intact.
+ * @see akao_seq_resume_song
  */
 void akao_seq_suspend_song(void)
 {
-    if (g_akao_seq_channel0->masks.active_mask != 0)
+    if (g_akao_seq_channel0->masks.active_mask == 0)
     {
-        akao_copy_bytes((s32*)g_akao_seq_channel0, (s32*)&g_akao_suspended_song, sizeof(AkaoSongState));
-        akao_copy_bytes((s32*)g_akao_seq_channels, (s32*)g_akao_suspended_channels, AKAO_CHANNEL_COUNT * sizeof(AkaoChannelState));
+        return;
     }
+
+    akao_copy_bytes((s32*)g_akao_seq_channel0, (s32*)&g_akao_suspended_song, sizeof(g_akao_suspended_song));
+    akao_copy_bytes((s32*)g_akao_seq_channels, (s32*)g_akao_suspended_channels, AKAO_CHANNEL_COUNT * sizeof(*g_akao_seq_channels));
 }
 
 /**
- * @brief Start a new primary song, demoting the current one to the
- *        secondary slot first if it is still active and no other secondary
- *        song already holds that slot.
+ * @brief Start a loaded song, retaining the active primary song in an available secondary slot.
  *
- * When @c g_akao_seq_channel0 is active and @c g_akao_seq_channel1 is either
- * unset or not a genuinely occupied secondary song (its @c song_id is 0), the
- * current primary state is copied into the @c g_akao_suspended_song / @c g_akao_suspended_channels
- * backup slots and @c g_akao_seq_channel1 / @c g_akao_pending_channels are
- * repointed there, so the old song keeps ticking as the secondary while the
- * new one takes over as primary.
+ * The old song keeps playing from the saved state when the secondary song is
+ * absent or has a zero id. An occupied secondary song keeps its current state.
  *
- * @param params Descriptor load result: u8* descriptor in params[0], id at
- *        [2].
+ * @param params Load result: descriptor in params[0].buffer and song id in params[2].value.
  */
 void akao_seq_switch_song(AkaoCommandParam* params)
 {
-    if (g_akao_seq_channel0->masks.active_mask != 0)
+    if (g_akao_seq_channel0->masks.active_mask != 0 && (g_akao_seq_channel1 == NULL || g_akao_seq_channel1->song_id == 0))
     {
-        if (g_akao_seq_channel1 == NULL || g_akao_seq_channel1->song_id == 0)
-        {
-            g_akao_seq_channel1 = &g_akao_suspended_song;
-            g_akao_pending_channels = g_akao_suspended_channels;
-            akao_copy_bytes((s32*)g_akao_seq_channel0, (s32*)&g_akao_suspended_song, sizeof(AkaoSongState));
-            akao_copy_bytes((s32*)g_akao_seq_channels, (s32*)g_akao_pending_channels, AKAO_CHANNEL_COUNT * sizeof(AkaoChannelState));
-        }
+        g_akao_seq_channel1 = &g_akao_suspended_song;
+        g_akao_pending_channels = g_akao_suspended_channels;
+        akao_copy_bytes((s32*)g_akao_seq_channel0, (s32*)&g_akao_suspended_song, sizeof(g_akao_suspended_song));
+        akao_copy_bytes((s32*)g_akao_seq_channels, (s32*)g_akao_pending_channels, AKAO_CHANNEL_COUNT * sizeof(*g_akao_seq_channels));
     }
-    akao_seq_start_song(params[0].buffer, -1);
+    akao_seq_start_song(params[0].buffer, AKAO_ALL_CHANNELS_MASK);
     g_akao_seq_channel0->song_id = (u16)params[2].value;
 }
 
 /**
- * @brief akao_seq_reload_song, then seed the pending tick countdown from
- *        the load result.
+ * @brief Reload a song and seed its pending advance count.
  *
- * @param params Descriptor load result: passed through to
- *        akao_seq_reload_song; initial tick count in params[4].
+ * The sequencer consumes the pending count at measure boundaries. Zero leaves
+ * advancement disabled; other requests are reduced by one.
+ *
+ * @param params Load result: descriptor in params[0].buffer, song id in params[2].value
+ *        and advance count in params[4].value.
+ * @see akao_seq_reload_song
  */
 void akao_seq_reload_song_with_ticks(AkaoCommandParam* params)
 {
-    s32 result;
-    s32 ticks;
+    s32 pending_advance_count;
+    s32 requested_advance_count;
 
     akao_seq_reload_song(params);
-    ticks = params[4].value;
-    result = 0;
-    if (ticks != 0)
+    requested_advance_count = params[4].value;
+    pending_advance_count = 0;
+    if (requested_advance_count != 0)
     {
-        result = ticks - 1;
+        pending_advance_count = requested_advance_count - 1;
     }
-    g_akao_seq_pending_ticks = result;
+    g_akao_seq_pending_ticks = pending_advance_count;
 }
 
 /**
- * @brief Play an SFX with fixed default parameters (sound id 0x400,
- *        tag 0x1000000, pan 0x80, volume 0x7F, bank slot 0).
+ * @brief Play supplied SFX sequences with centered pan, maximum volume and the default tag.
  *
- * @p params doubles as input and output: on entry, offsets in params[0]/[1] hold
- * the two seq_data pointers to play; this function reads them out first,
- * then overwrites the whole buffer with the default parameter block before
- * calling akao_sfx_play.
+ * Uses the default sound id and bank slot zero. Existing SFX sharing the default
+ * tag receive a stop request before playback.
  *
- * @param params Buffer holding the two seq_data pointers on entry; rebuilt
- *        in place into an akao_sfx_play parameter block.
+ * @param params Sequences in params[0].buffer and params[1].buffer, each optionally NULL;
+ *        entries 0-4 are replaced with the default play parameters.
  */
 void akao_sfx_play_default(AkaoCommandParam* params)
 {
-    u8* seq_data0;
-    u8* seq_data1;
+    u8* first_sequence;
+    u8* second_sequence;
 
-    seq_data0 = params[0].buffer;
-    seq_data1 = params[1].buffer;
-    params[0].value = 0x400;
-    params[1].value = 0x1000000;
-    params[2].value = 0x80;
-    params[3].value = 0x7F;
+    first_sequence = params[0].buffer;
+    second_sequence = params[1].buffer;
+    params[0].value = AKAO_SFX_DEFAULT_ID;
+    params[1].value = AKAO_SFX_DEFAULT_TAG;
+    params[2].value = AKAO_PAN_CENTER;
+    params[3].value = AKAO_VOLUME_MAX;
     params[4].value = 0;
-    akao_sfx_play(params, seq_data0, seq_data1, 0);
+    akao_sfx_play(params, first_sequence, second_sequence, 0);
 }
 
 /**
- * @brief Play an SFX resolved from a bank program index, tagging the
- *        channel with the bank slot that program resolved to.
+ * @brief Play a bank program with centered pan, maximum volume and suppressed global SFX controls.
  *
- * @p params holds the program index at offset in params[0] on entry.
- * akao_resolve_program_data resolves it to the two seq_data pointers, the
- * program's key is looked up in @c g_akao_bank_region_b to find which bank
- * slot holds it (akao_bank_find_slot), and the fixed tag/pan/
- * volume_scale fields are filled in like akao_sfx_play_default.
+ * Resolves the program's sequences and bank slot. SFX sharing the suppression
+ * tag receive a stop request before playback.
  *
- * @param params Buffer holding the program index on entry; rebuilt in
- *        place into an akao_sfx_play parameter block.
+ * @param params Program index in params[0].value; tag, pan, volume and bank slot
+ *        in entries 1-4 are replaced with the resolved play parameters.
  */
 void akao_sfx_play_program(AkaoCommandParam* params)
 {
-    u8* seq_data0;
-    u8* seq_data1;
+    u8* first_sequence;
+    u8* second_sequence;
     u16 program_key;
-    s32 slot;
+    s32 bank_slot;
 
-    akao_resolve_program_data(&seq_data0, &seq_data1, params[0].value);
-    params[1].value = 0x2000000;
-    params[2].value = 0x80;
-    params[3].value = 0x7F;
-    program_key = *(u16*)(g_akao_bank_region_b + params[0].value * 2);
-    slot = akao_bank_find_slot(program_key);
-    params[4].value = slot;
-    akao_sfx_play(params, seq_data0, seq_data1, 0);
+    akao_resolve_program_data(&first_sequence, &second_sequence, params[0].value);
+    params[1].value = AKAO_SFX_FLAG_SUPPRESS;
+    params[2].value = AKAO_PAN_CENTER;
+    params[3].value = AKAO_VOLUME_MAX;
+    program_key = ((u16*)g_akao_bank_region_b)[params[0].value];
+    bank_slot = akao_bank_find_slot(program_key);
+    params[4].value = bank_slot;
+    akao_sfx_play(params, first_sequence, second_sequence, 0);
 }
 
 /**
- * @brief Play an SFX resolved from a bank program index, tagging the
- *        channel with the bank slot that program resolved to, without
- *        touching the reverb/tempo/pan/volume fields (caller-set).
- *
- * @param params Buffer holding the program index in params[0] on entry; its
- *        bank slot (params[4]) is filled in before the call.
+ * @brief Play a bank program using the caller's tag, pan and volume.
+ * @param params Play parameters with a program index in params[0].value;
+ *        params[4].value receives the resolved bank slot.
  */
 void akao_sfx_play_program_raw(AkaoCommandParam* params)
 {
-    u8* seq_data0;
-    u8* seq_data1;
+    u8* first_sequence;
+    u8* second_sequence;
     u16 program_key;
-    s32 slot;
+    s32 bank_slot;
 
-    akao_resolve_program_data(&seq_data0, &seq_data1, params[0].value);
-    program_key = *(u16*)(g_akao_bank_region_b + params[0].value * 2);
-    slot = akao_bank_find_slot(program_key);
-    params[4].value = slot;
-    akao_sfx_play(params, seq_data0, seq_data1, 0);
+    akao_resolve_program_data(&first_sequence, &second_sequence, params[0].value);
+    program_key = ((u16*)g_akao_bank_region_b)[params[0].value];
+    bank_slot = akao_bank_find_slot(program_key);
+    params[4].value = bank_slot;
+    akao_sfx_play(params, first_sequence, second_sequence, 0);
 }
 
 /**
- * @brief Play a list of SFX entries back to back, tagging the channel with
- *        the resolved bank slot and stopping other channels only for the
- *        first entry.
+ * @brief Play every entry of an SFX list, requesting tagged stops only before the first entry.
  *
- * @p params holds a pointer to a list header in params[0]: [1] the entry
- * count, [2] the bank program key (for akao_bank_find_slot), [4] an
- * array of s32 offsets into the string/data region starting at +0x20. Each
- * entry resolves two u16 sub-offsets the same way akao_resolve_program_data
- * does (0xFFFF means no data). The first entry plays with skip_stop=0, the
- * rest with skip_stop=1.
+ * Each entry can provide one or two sequences. All entries use the same tag,
+ * pan, volume and resolved bank slot.
  *
- * @param params Buffer holding the list pointer on entry; bank slot
- *        ([4]) is filled in before the calls.
- *
+ * @param params Nonempty list in params[0].buffer and play settings in entries 1-3;
+ *        params[4].value receives the resolved bank slot.
  */
 void akao_sfx_play_list(AkaoCommandParam* params)
 {
-    u8* list0;
-    u8* list;
-    u8* base;
-    u8* cursor;
-    u8* index_ptr;
-    s32 count;
-    s32 sentinel;
-    u8* seq_data0;
-    u8* seq_data1;
+    AkaoSfxListHeader* bank_header;
+    AkaoSfxListHeader* list;
+    u8* entry_data;
+    u16* sequence_offset;
+    s32* entry_offset;
+    s32 entries_remaining;
+    s32 no_sequence;
+    u8* first_sequence;
+    u8* second_sequence;
 
-    list0 = params[0].buffer;
-    params[4].value = akao_bank_find_slot(*(s32*)(list0 + 8));
+    bank_header = params[0].buffer;
+    params[4].value = akao_bank_find_slot(bank_header->bank_key);
 
     list = params[0].buffer;
-    index_ptr = list + 0x10;
-    base = list;
-    base += 0x20;
-    count = *(s32*)(list + 4);
+    entry_offset = list->entry_offsets;
+    entry_data = (u8*)list;
+    entry_data += sizeof(*list);
+    entries_remaining = list->entry_count;
 
-    cursor = base + *(s32*)index_ptr;
-    if (*(u16*)cursor != 0xFFFF)
+    sequence_offset = (u16*)(entry_data + *entry_offset);
+    if (*sequence_offset != AKAO_PROGRAM_NO_SEQUENCE)
     {
-        seq_data0 = SFX_ENTRY_DATA(cursor, 4);
+        first_sequence = SFX_ENTRY_DATA(sequence_offset, sizeof(AkaoSfxSequencePair));
     }
     else
     {
-        seq_data0 = NULL;
+        first_sequence = NULL;
     }
-    cursor += 2;
-    if (*(u16*)cursor != 0xFFFF)
+    sequence_offset++;
+    if (*sequence_offset != AKAO_PROGRAM_NO_SEQUENCE)
     {
-        seq_data1 = SFX_ENTRY_DATA(cursor, 2);
+        second_sequence = SFX_ENTRY_DATA(sequence_offset, sizeof(*sequence_offset));
     }
     else
     {
-        seq_data1 = NULL;
+        second_sequence = NULL;
     }
-    akao_sfx_play(params, seq_data0, seq_data1, 0);
+    akao_sfx_play(params, first_sequence, second_sequence, 0);
 
-    sentinel = 0xFFFF;
-    count--;
-    if (count != 0)
+    no_sequence = AKAO_PROGRAM_NO_SEQUENCE;
+    entries_remaining--;
+    if (entries_remaining != 0)
     {
-        index_ptr += 4;
+        entry_offset++;
         do
         {
-            cursor = base + *(s32*)index_ptr;
-            if (*(u16*)cursor != sentinel)
+            sequence_offset = (u16*)(entry_data + *entry_offset);
+            if (*sequence_offset != no_sequence)
             {
-                seq_data0 = SFX_ENTRY_DATA(cursor, 4);
+                first_sequence = SFX_ENTRY_DATA(sequence_offset, sizeof(AkaoSfxSequencePair));
             }
             else
             {
-                seq_data0 = NULL;
+                first_sequence = NULL;
             }
-            cursor += 2;
-            if (*(u16*)cursor != sentinel)
+            sequence_offset++;
+            if (*sequence_offset != no_sequence)
             {
-                seq_data1 = SFX_ENTRY_DATA(cursor, 2);
+                second_sequence = SFX_ENTRY_DATA(sequence_offset, sizeof(*sequence_offset));
             }
             else
             {
-                seq_data1 = NULL;
+                second_sequence = NULL;
             }
-            akao_sfx_play(params, seq_data0, seq_data1, 1);
-            count--;
-            index_ptr += 4;
-        } while (count != 0);
+            akao_sfx_play(params, first_sequence, second_sequence, 1);
+            entries_remaining--;
+            entry_offset++;
+        } while (entries_remaining != 0);
     }
 }
 
 /**
- * @brief Stop SFX channels using a (sfx_id, mode) pair read from a buffer.
- * @param params sfx_id in params[0], mode in params[1]; see akao_sfx_stop_channels.
+ * @brief Stop SFX channels selected by a sound id and stop mode.
+ * @param params Sound id in params[0].value and stop mode in params[1].value.
+ * @see akao_sfx_stop_channels
  */
 void akao_sfx_stop_channels_from_params(AkaoCommandParam* params)
 {
@@ -1214,130 +1270,121 @@ void akao_sfx_stop_channels_from_params(AkaoCommandParam* params)
 }
 
 /**
- * @brief Set a song's master volume directly, canceling any in-progress
- *        fade, and flag its channels for a volume re-apply.
+ * @brief Set a song's master volume, cancel its fade and request channel volume updates.
  *
- * @p params holds a song id in params[0] (0 always means the primary song) and
- * the new volume (7 bits) [1]. Matches against @c g_akao_seq_channel0
- * first, then @c g_akao_seq_channel1, and is a no-op if neither matches.
+ * A zero id selects the primary song. Other ids match the primary song first,
+ * then the secondary song; unmatched ids leave both songs unchanged.
  *
- * @param params Song id in params[0], new volume in params[1].
- *
+ * @param params Song id in params[0].value and volume in params[1].value; only the low seven volume bits are used.
  */
 void akao_seq_set_master_volume(AkaoCommandParam* params)
 {
-    s32 id;
+    s32 song_id;
     s32 volume;
 
-    id = params[0].value;
-    if (id == 0 || id == g_akao_seq_channel0->song_id)
+    song_id = params[0].value;
+    if (song_id == 0 || song_id == g_akao_seq_channel0->song_id)
     {
-        volume = (params[1].value & 0x7F) << 16;
+        volume = (params[1].value & AKAO_VOLUME_MAX) << AKAO_SONG_VOLUME_SHIFT;
         g_akao_seq_channel0->volume = volume;
         g_akao_seq_channel0->volume_fade_ticks = 0;
         akao_seq_flag_volume_update(g_akao_seq_channel0, g_akao_seq_channels);
     }
-    else if (g_akao_seq_channel1 != NULL && id != 0 && id == g_akao_seq_channel1->song_id)
+    else if (g_akao_seq_channel1 != NULL && song_id != 0 && song_id == g_akao_seq_channel1->song_id)
     {
         intptr_t pending;
 
         pending = g_akao_pending_channels ? (intptr_t)g_akao_pending_channels : (intptr_t)g_akao_pending_channels;
         volume = params[1].value;
         g_akao_seq_channel1->volume_fade_ticks = 0;
-        volume = (volume & 0x7F) << 16;
+        volume = (volume & AKAO_VOLUME_MAX) << AKAO_SONG_VOLUME_SHIFT;
         g_akao_seq_channel1->volume = volume;
         akao_seq_flag_volume_update(g_akao_seq_channel1, (AkaoChannelState*)pending);
     }
 }
 
 /**
- * @brief Start a linear fade of a song's master volume to a target level
- *        over a given tick count, and flag its channels for a volume
- *        re-apply.
+ * @brief Fade a song's master volume from its current level to the requested level.
  *
- * @p params holds a song id in params[0] (0 always means the primary song), a
- * tick count in params[1] (0 is treated as 1), and the target volume (7 bits)
- * [2]. The per-tick step is computed as (target - current) / ticks and
- * stored in volume_step; volume_fade_ticks is set to the tick count so the
- * per-tick fade in akao_tick_channel_effects picks it up.
+ * A zero id selects the primary song; other ids match the primary song first,
+ * then the secondary song. A zero duration is treated as one tick.
  *
- * @param params Song id in params[0], tick count in params[1], target volume in params[2].
+ * @param params Song id in params[0].value, duration in params[1].value and target volume
+ *        in params[2].value; only the low seven volume bits are used.
  */
 void akao_seq_fade_master_volume(AkaoCommandParam* params)
 {
-    s32 id;
-    s32 raw_ticks;
-    s32 ticks;
+    s32 song_id;
+    s32 requested_ticks;
+    s32 fade_ticks;
     s32 target_volume;
     s32 current_volume;
-    s32 step;
+    s32 volume_step;
     AkaoChannelState* channels;
 
-    raw_ticks = params[1].value;
-    ticks = 1;
-    if (raw_ticks != 0)
+    requested_ticks = params[1].value;
+    fade_ticks = 1;
+    if (requested_ticks != 0)
     {
-        ticks = raw_ticks;
+        fade_ticks = requested_ticks;
     }
-    target_volume = (params[2].value & 0x7F) << 16;
-    id = params[0].value;
-    if (id == 0 || id == g_akao_seq_channel0->song_id)
+    target_volume = (params[2].value & AKAO_VOLUME_MAX) << AKAO_SONG_VOLUME_SHIFT;
+    song_id = params[0].value;
+    if (song_id == 0 || song_id == g_akao_seq_channel0->song_id)
     {
         current_volume = g_akao_seq_channel0->volume;
         target_volume -= current_volume;
-        step = target_volume / ticks;
+        volume_step = target_volume / fade_ticks;
         channels = g_akao_seq_channels;
-        g_akao_seq_channel0->volume_fade_ticks = ticks;
-        g_akao_seq_channel0->volume_step = step;
+        g_akao_seq_channel0->volume_fade_ticks = fade_ticks;
+        g_akao_seq_channel0->volume_step = volume_step;
         akao_seq_flag_volume_update(g_akao_seq_channel0, channels);
     }
-    else if (g_akao_seq_channel1 != NULL && id != 0 && id == g_akao_seq_channel1->song_id)
+    else if (g_akao_seq_channel1 != NULL && song_id != 0 && song_id == g_akao_seq_channel1->song_id)
     {
         current_volume = g_akao_seq_channel1->volume;
         target_volume -= current_volume;
-        step = target_volume / ticks;
+        volume_step = target_volume / fade_ticks;
         channels = g_akao_pending_channels;
-        g_akao_seq_channel1->volume_fade_ticks = ticks;
-        g_akao_seq_channel1->volume_step = step;
+        g_akao_seq_channel1->volume_fade_ticks = fade_ticks;
+        g_akao_seq_channel1->volume_step = volume_step;
         akao_seq_flag_volume_update(g_akao_seq_channel1, channels);
     }
 }
 
 /**
- * @brief Jump a song's master volume to an explicit start level, then fade
- *        it to a target level over a given tick count.
+ * @brief Set a song's starting master volume and fade to the requested target level.
  *
- * Same song/tick resolution as akao_seq_fade_master_volume, but the start
- * volume comes from @p params in params[2] (written immediately) instead of the
- * song's current volume, and the target comes from in params[3].
+ * Song selection and zero-duration handling follow akao_seq_fade_master_volume.
+ * Both volume levels use their low seven bits.
  *
- * @param params Song id in params[0], tick count in params[1], start volume in params[2],
- *        target volume in params[3].
+ * @param params Song id in params[0].value, duration in params[1].value,
+ *        starting volume in params[2].value and target volume in params[3].value.
  */
 void akao_seq_fade_master_volume_from(AkaoCommandParam* params)
 {
-    s32 id;
-    s32 raw_ticks;
-    s32 ticks;
+    s32 song_id;
+    s32 requested_ticks;
+    s32 fade_ticks;
     s32 start_volume;
     s32 target_volume;
-    s32 step;
+    s32 volume_step;
     AkaoChannelState* channels;
     AkaoSongState* song;
 
-    raw_ticks = params[1].value;
-    ticks = 1;
-    if (raw_ticks != 0)
+    requested_ticks = params[1].value;
+    fade_ticks = 1;
+    if (requested_ticks != 0)
     {
-        ticks = raw_ticks;
+        fade_ticks = requested_ticks;
     }
-    id = params[0].value;
-    if (id == 0 || id == g_akao_seq_channel0->song_id)
+    song_id = params[0].value;
+    if (song_id == 0 || song_id == g_akao_seq_channel0->song_id)
     {
         song = g_akao_seq_channel0;
         channels = g_akao_seq_channels;
     }
-    else if (g_akao_seq_channel1 != NULL && id != 0 && id == g_akao_seq_channel1->song_id)
+    else if (g_akao_seq_channel1 != NULL && song_id != 0 && song_id == g_akao_seq_channel1->song_id)
     {
         song = g_akao_seq_channel1;
         channels = g_akao_pending_channels;
@@ -1346,20 +1393,19 @@ void akao_seq_fade_master_volume_from(AkaoCommandParam* params)
     {
         return;
     }
-    start_volume = (params[2].value & 0x7F) << 16;
+    start_volume = (params[2].value & AKAO_VOLUME_MAX) << AKAO_SONG_VOLUME_SHIFT;
     song->volume = start_volume;
-    target_volume = (params[3].value & 0x7F) << 16;
+    target_volume = (params[3].value & AKAO_VOLUME_MAX) << AKAO_SONG_VOLUME_SHIFT;
     target_volume -= start_volume;
-    step = target_volume / ticks;
-    song->volume_fade_ticks = ticks;
-    song->volume_step = step;
+    volume_step = target_volume / fade_ticks;
+    song->volume_fade_ticks = fade_ticks;
+    song->volume_step = volume_step;
     akao_seq_flag_volume_update(song, channels);
 }
 
 /**
- * @brief Set the CD-audio volume accumulator directly, canceling any
- *        in-progress fade, and push it to the SPU immediately.
- * @param params Target volume (u16, shifted into the high half) in params[0].
+ * @brief Set the CD volume immediately and cancel its fade.
+ * @param params CD volume in the low 16 bits of params[0].value.
  */
 void akao_cd_set_volume(AkaoCommandParam* params)
 {
@@ -1367,642 +1413,630 @@ void akao_cd_set_volume(AkaoCommandParam* params)
 
     volume = (u16)params[0].value;
     g_akao_cdvol_fade_ticks = 0;
-    volume = volume << 16;
+    volume = (u32)volume << AKAO_CD_VOLUME_SHIFT;
     g_akao_cdvol_acc = volume;
     akao_apply_cdvol_to_spu();
 }
 
 /**
- * @brief Start a linear fade of the CD-audio volume accumulator to a
- *        target level over a given tick count.
- *
- * @param params Tick count in params[0] (0 is treated as 1), target volume
- *        (u16, shifted into the high half like the master-volume fades)
- *        [1].
+ * @brief Fade the CD volume from its current level to a target.
+ * @param params Tick count in params[0].value (zero becomes one) and target volume
+ *        in the low 16 bits of params[1].value.
  */
 void akao_cd_fade_volume(AkaoCommandParam* params)
 {
-    s32 raw_ticks;
-    s32 ticks;
-    s32 target;
-    s32 step;
+    s32 requested_ticks;
+    s32 fade_ticks;
+    s32 target_volume;
+    s32 volume_step;
 
-    raw_ticks = params[0].value;
-    ticks = 1;
-    if (raw_ticks != 0)
+    requested_ticks = params[0].value;
+    fade_ticks = 1;
+    if (requested_ticks != 0)
     {
-        ticks = raw_ticks;
+        fade_ticks = requested_ticks;
     }
-    target = (u16)params[1].value;
-    target = target << 16;
-    target -= g_akao_cdvol_acc;
-    step = target / ticks;
-    g_akao_cdvol_fade_ticks = ticks;
-    g_akao_cdvol_step = step;
+    target_volume = (u16)params[1].value;
+    target_volume = (u32)target_volume << AKAO_CD_VOLUME_SHIFT;
+    target_volume -= g_akao_cdvol_acc;
+    volume_step = target_volume / fade_ticks;
+    g_akao_cdvol_fade_ticks = fade_ticks;
+    g_akao_cdvol_step = volume_step;
 }
 
 /**
- * @brief Jump the CD-audio volume accumulator to an explicit start level,
- *        then fade it to a target level over a given tick count.
- * @param params Tick count in params[0], start volume (u16) [1], target
- *        volume (u16) [2].
+ * @brief Fade the CD volume between explicit start and target levels.
+ * @param params Tick count in params[0].value (zero becomes one), start volume in
+ *        params[1].value and target volume in params[2].value; volumes use their low 16 bits.
  */
 void akao_cd_fade_volume_from(AkaoCommandParam* params)
 {
-    s32 raw_ticks;
-    s32 ticks;
-    s32 target;
-    s32 start;
-    s32 step;
+    s32 requested_ticks;
+    s32 fade_ticks;
+    s32 target_volume;
+    s32 start_volume;
+    s32 volume_step;
 
-    raw_ticks = params[0].value;
-    ticks = 1;
-    if (raw_ticks != 0)
+    requested_ticks = params[0].value;
+    fade_ticks = 1;
+    if (requested_ticks != 0)
     {
-        ticks = raw_ticks;
+        fade_ticks = requested_ticks;
     }
-    target = (u16)params[2].value;
-    start = (u16)params[1].value;
-    target = target << 16;
-    start = start << 16;
-    target -= start;
-    step = target / ticks;
-    g_akao_cdvol_fade_ticks = ticks;
-    g_akao_cdvol_acc = start;
-    g_akao_cdvol_step = step;
+    target_volume = (u16)params[2].value;
+    start_volume = (u16)params[1].value;
+    target_volume = (u32)target_volume << AKAO_CD_VOLUME_SHIFT;
+    start_volume = (u32)start_volume << AKAO_CD_VOLUME_SHIFT;
+    target_volume -= start_volume;
+    volume_step = target_volume / fade_ticks;
+    g_akao_cdvol_fade_ticks = fade_ticks;
+    g_akao_cdvol_acc = start_volume;
+    g_akao_cdvol_step = volume_step;
 }
 
 /**
- * @brief Apply a new volume scale to active SFX channels, selected either
- *        by a tag mask or by an exact sfx id match.
+ * @brief Set the volume scale of selected active SFX channels and cancel their fades.
  *
- * When @p params in params[1] is non-zero, it is used as a bitmask tested against
- * each active channel's sfx_tag. Otherwise, each
- * active channel's sfx_id is compared against @p params in params[0].
+ * A nonzero tag mask selects channels with any overlapping tag bit. A zero mask
+ * selects channels by their exact sound id.
  *
- * @param params sfx id in params[0], tag mask in params[1] (0 selects the
- *        id-match mode instead), new volume scale (7 bits) [2].
+ * @param params Sound id in params[0].value, tag mask in params[1].value and
+ *        volume scale in the low 7 bits of params[2].value.
  */
 void akao_sfx_set_volume_scale(AkaoCommandParam* params)
 {
     AkaoChannelState* channel;
-    s32 active;
-    s32 bit;
-    u32 count;
-    s32 scale;
+    s32 active_channels;
+    s32 channel_bit;
+    u32 channel_index;
+    s32 volume_scale;
 
     channel = g_sfx_channels;
-    active = g_akao_sfx_control.active_mask;
-    bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+    active_channels = g_akao_sfx_control.active_mask;
+    channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
     if (params[1].value != 0)
     {
-        for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+        for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if ((active & bit) && (channel->sfx_tag & params[1].value))
+            if ((active_channels & channel_bit) && (channel->sfx_tag & params[1].value))
             {
-                scale = (u16)params[2].value;
+                volume_scale = (u16)params[2].value;
                 channel->volume_scale_fade_ticks = 0;
-                channel->volume_scale = (scale & 0x7F) << 8;
-                channel->update_flags |= 3;
+                channel->volume_scale = (volume_scale & AKAO_VOLUME_MAX) << AKAO_SFX_FIXED_POINT_SHIFT;
+                channel->update_flags |= SPU_UPDATE_VOLUME;
             }
         }
     }
     else
     {
-        bit = AKAO_SFX_FIRST_CHANNEL_BIT;
-        for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+        for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if ((active & bit) && ((s32)channel->sfx_id == params[0].value))
+            if ((active_channels & channel_bit) && ((s32)channel->sfx_id == params[0].value))
             {
-                scale = (u16)params[2].value;
+                volume_scale = (u16)params[2].value;
                 channel->volume_scale_fade_ticks = 0;
-                channel->volume_scale = (scale & 0x7F) << 8;
-                channel->update_flags |= 3;
+                channel->volume_scale = (volume_scale & AKAO_VOLUME_MAX) << AKAO_SFX_FIXED_POINT_SHIFT;
+                channel->update_flags |= SPU_UPDATE_VOLUME;
             }
         }
     }
 }
 
 /**
- * @brief Start a fade of the volume scale on active SFX channels, selected
- *        either by a tag mask or by an exact sfx id match (same
- *        selection rule as akao_sfx_set_volume_scale).
- *
- * @param params sfx id in params[0], tag mask in params[1] (0 selects the
- *        id-match mode instead), tick count in params[2] (0 is treated as 1),
- *        target volume scale (7 bits) [3].
- *
+ * @brief Fade the volume scale of active SFX channels selected by tag mask or sound id.
+ * @param params Sound id in params[0].value, tag mask in params[1].value (zero selects
+ *        by id), tick count in params[2].value (zero becomes one) and target scale
+ *        in the low 7 bits of params[3].value.
+ * @see akao_sfx_set_volume_scale
  */
 void akao_sfx_fade_volume_scale(AkaoCommandParam* params)
 {
     AkaoChannelState* channel;
-    s32 active;
-    s32 bit;
-    u32 count;
-    s16 tick_count;
+    s32 active_channels;
+    s32 channel_bit;
+    u32 channel_index;
+    s16 fade_ticks;
     u16 target_scale;
     s32 current_scale;
-    s16 delta;
+    s16 volume_delta;
 
     channel = g_sfx_channels;
-    active = g_akao_sfx_control.active_mask;
-    bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+    active_channels = g_akao_sfx_control.active_mask;
+    channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
     if (params[1].value != 0)
     {
-        for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+        for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if ((active & bit) && (channel->sfx_tag & params[1].value))
+            if ((active_channels & channel_bit) && (channel->sfx_tag & params[1].value))
             {
                 if (params[2].value != 0)
                 {
-                    tick_count = (u16)params[2].value;
+                    fade_ticks = (u16)params[2].value;
                 }
                 else
                 {
-                    tick_count = 1;
+                    fade_ticks = 1;
                 }
-                target_scale = ((u16)params[3].value & 0x7F) << 8;
+                target_scale = ((u16)params[3].value & AKAO_VOLUME_MAX) << AKAO_SFX_FIXED_POINT_SHIFT;
                 current_scale = channel->volume_scale;
-                delta = target_scale - current_scale;
-                channel->volume_scale_step = delta / tick_count;
-                channel->volume_scale_fade_ticks = tick_count;
+                volume_delta = target_scale - current_scale;
+                channel->volume_scale_step = volume_delta / fade_ticks;
+                channel->volume_scale_fade_ticks = fade_ticks;
             }
         }
     }
     else
     {
-        bit = AKAO_SFX_FIRST_CHANNEL_BIT;
-        for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+        for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if ((active & bit) && ((s32)channel->sfx_id == params[0].value))
+            if ((active_channels & channel_bit) && ((s32)channel->sfx_id == params[0].value))
             {
                 if (params[2].value != 0)
                 {
-                    tick_count = (u16)params[2].value;
+                    fade_ticks = (u16)params[2].value;
                 }
                 else
                 {
-                    tick_count = 1;
+                    fade_ticks = 1;
                 }
-                target_scale = ((u16)params[3].value & 0x7F) << 8;
+                target_scale = ((u16)params[3].value & AKAO_VOLUME_MAX) << AKAO_SFX_FIXED_POINT_SHIFT;
                 current_scale = channel->volume_scale;
-                delta = target_scale - current_scale;
-                channel->volume_scale_step = delta / tick_count;
-                channel->volume_scale_fade_ticks = tick_count;
+                volume_delta = target_scale - current_scale;
+                channel->volume_scale_step = volume_delta / fade_ticks;
+                channel->volume_scale_fade_ticks = fade_ticks;
             }
         }
     }
 }
 
 /**
- * @brief Apply a new volume scale to every active SFX channel whose
- *        sfx_tag does not have AKAO_SFX_FLAG_SUPPRESS
- *        set.
- * @param params New volume scale (7 bits, u16) to apply.
+ * @brief Set the volume scale of active SFX channels that allow global controls.
+ *
+ * Cancels their volume-scale fades and skips channels tagged AKAO_SFX_FLAG_SUPPRESS.
+ *
+ * @param params Volume scale in the low 7 bits of params[0].value.
  */
 void akao_sfx_set_volume_scale_unsuppressed(AkaoCommandParam* params)
 {
     AkaoChannelState* channel;
-    s32 active;
-    s32 bit;
-    u32 count;
-    s32 scale;
+    s32 active_channels;
+    s32 channel_bit;
+    u32 channel_index;
+    s32 volume_scale;
 
-    bit = AKAO_SFX_FIRST_CHANNEL_BIT;
-    active = g_akao_sfx_control.active_mask;
+    channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+    active_channels = g_akao_sfx_control.active_mask;
     channel = g_sfx_channels;
-    for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+    for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
     {
-        if ((active & bit) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
+        if ((active_channels & channel_bit) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
         {
-            scale = (u16)params[0].value;
+            volume_scale = (u16)params[0].value;
             channel->volume_scale_fade_ticks = 0;
-            channel->volume_scale = (scale & 0x7F) << 8;
-            channel->update_flags |= 3;
+            channel->volume_scale = (volume_scale & AKAO_VOLUME_MAX) << AKAO_SFX_FIXED_POINT_SHIFT;
+            channel->update_flags |= SPU_UPDATE_VOLUME;
         }
     }
 }
 
 /**
- * @brief Start a fade of the volume scale on every active SFX channel
- *        whose sfx_tag does not have AKAO_SFX_FLAG_SUPPRESS set.
- * @param params Tick count in params[0] (0 is treated as 1), target volume
- *        scale (7 bits, u16) [1].
+ * @brief Fade the volume scale of active SFX channels that allow global controls.
  *
+ * Skips channels tagged AKAO_SFX_FLAG_SUPPRESS.
+ *
+ * @param params Tick count in params[0].value (zero becomes one) and target scale
+ *        in the low 7 bits of params[1].value.
  */
 void akao_sfx_fade_volume_scale_unsuppressed(AkaoCommandParam* params)
 {
     AkaoChannelState* channel;
-    s32 active;
-    s32 bit;
-    u32 count;
-    s16 tick_count;
+    s32 active_channels;
+    s32 channel_bit;
+    u32 channel_index;
+    s16 fade_ticks;
     u16 target_scale;
     s32 current_scale;
-    s16 delta;
+    s16 volume_delta;
 
-    bit = AKAO_SFX_FIRST_CHANNEL_BIT;
-    active = g_akao_sfx_control.active_mask;
+    channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+    active_channels = g_akao_sfx_control.active_mask;
     channel = g_sfx_channels;
-    for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+    for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
     {
-        if ((active & bit) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
+        if ((active_channels & channel_bit) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
         {
             if (params[0].value != 0)
             {
-                tick_count = (u16)params[0].value;
+                fade_ticks = (u16)params[0].value;
             }
             else
             {
-                tick_count = 1;
+                fade_ticks = 1;
             }
-            target_scale = ((u16)params[1].value & 0x7F) << 8;
+            target_scale = ((u16)params[1].value & AKAO_VOLUME_MAX) << AKAO_SFX_FIXED_POINT_SHIFT;
             current_scale = channel->volume_scale;
-            delta = target_scale - current_scale;
-            channel->volume_scale_step = delta / tick_count;
-            channel->volume_scale_fade_ticks = tick_count;
+            volume_delta = target_scale - current_scale;
+            channel->volume_scale_step = volume_delta / fade_ticks;
+            channel->volume_scale_fade_ticks = fade_ticks;
         }
     }
 }
 
 /**
- * @brief Set the pan bias on active SFX channels, selected either by a
- *        tag mask or by an exact sfx id match (same selection
- *        rule as akao_sfx_set_volume_scale), and cancel any pan-bias fade.
- * @param params sfx id in params[0], tag mask in params[1] (0 selects the
- *        id-match mode instead), new pan bias (u8) [2].
+ * @brief Set the pan bias of selected active SFX channels and cancel their fades.
+ * @param params Sound id in params[0].value, tag mask in params[1].value (zero selects
+ *        by id) and pan bias in the low 8 bits of params[2].value.
+ * @see akao_sfx_set_volume_scale
  */
 void akao_sfx_set_pan_bias(AkaoCommandParam* params)
 {
     AkaoChannelState* channel;
-    s32 active;
-    s32 bit;
-    u32 count;
-    s32 bias;
+    s32 active_channels;
+    s32 channel_bit;
+    u32 channel_index;
+    s32 pan_bias;
 
     channel = g_sfx_channels;
-    active = g_akao_sfx_control.active_mask;
-    bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+    active_channels = g_akao_sfx_control.active_mask;
+    channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
     if (params[1].value != 0)
     {
-        for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+        for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if ((active & bit) && (channel->sfx_tag & params[1].value))
+            if ((active_channels & channel_bit) && (channel->sfx_tag & params[1].value))
             {
-                bias = (u8)params[2].value;
+                pan_bias = (u8)params[2].value;
                 channel->pan_bias_fade_ticks = 0;
-                channel->pan_bias = bias << 8;
-                channel->update_flags |= 3;
+                channel->pan_bias = pan_bias << AKAO_SFX_FIXED_POINT_SHIFT;
+                channel->update_flags |= SPU_UPDATE_VOLUME;
             }
         }
     }
     else
     {
-        bit = AKAO_SFX_FIRST_CHANNEL_BIT;
-        for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+        for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if ((active & bit) && ((s32)channel->sfx_id == params[0].value))
+            if ((active_channels & channel_bit) && ((s32)channel->sfx_id == params[0].value))
             {
-                bias = (u8)params[2].value;
+                pan_bias = (u8)params[2].value;
                 channel->pan_bias_fade_ticks = 0;
-                channel->pan_bias = bias << 8;
-                channel->update_flags |= 3;
+                channel->pan_bias = pan_bias << AKAO_SFX_FIXED_POINT_SHIFT;
+                channel->update_flags |= SPU_UPDATE_VOLUME;
             }
         }
     }
 }
 
 /**
- * @brief Start a fade of the pan bias on active SFX channels, selected
- *        either by a tag mask or by an exact sfx id match (same
- *        selection rule as akao_sfx_set_volume_scale).
- * @param params sfx id in params[0], tag mask in params[1] (0 selects the
- *        id-match mode instead), tick count in params[2] (0 is treated as 1),
- *        target pan bias (u8) [3].
+ * @brief Fade the pan bias of active SFX channels selected by tag mask or sound id.
+ * @param params Sound id in params[0].value, tag mask in params[1].value (zero selects
+ *        by id), tick count in params[2].value (zero becomes one) and target bias
+ *        in the low 8 bits of params[3].value.
+ * @see akao_sfx_set_volume_scale
  */
 void akao_sfx_fade_pan_bias(AkaoCommandParam* params)
 {
     AkaoChannelState* channel;
-    s32 active;
-    s32 bit;
-    u32 count;
-    s16 tick_count;
+    s32 active_channels;
+    s32 channel_bit;
+    u32 channel_index;
+    s16 fade_ticks;
     u16 target_bias;
     s32 current_bias;
-    s16 delta;
+    s16 pan_delta;
 
     channel = g_sfx_channels;
-    active = g_akao_sfx_control.active_mask;
-    bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+    active_channels = g_akao_sfx_control.active_mask;
+    channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
     if (params[1].value != 0)
     {
-        for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+        for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if ((active & bit) && (channel->sfx_tag & params[1].value))
+            if ((active_channels & channel_bit) && (channel->sfx_tag & params[1].value))
             {
                 if (params[2].value != 0)
                 {
-                    tick_count = (u16)params[2].value;
+                    fade_ticks = (u16)params[2].value;
                 }
                 else
                 {
-                    tick_count = 1;
+                    fade_ticks = 1;
                 }
-                target_bias = (u8)params[3].value << 8;
+                target_bias = (u8)params[3].value << AKAO_SFX_FIXED_POINT_SHIFT;
                 current_bias = channel->pan_bias;
-                delta = target_bias - current_bias;
-                channel->pan_bias_step = delta / tick_count;
-                channel->pan_bias_fade_ticks = tick_count;
+                pan_delta = target_bias - current_bias;
+                channel->pan_bias_step = pan_delta / fade_ticks;
+                channel->pan_bias_fade_ticks = fade_ticks;
             }
         }
     }
     else
     {
-        for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+        for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if ((active & bit) && ((s32)channel->sfx_id == params[0].value))
+            if ((active_channels & channel_bit) && ((s32)channel->sfx_id == params[0].value))
             {
                 if (params[2].value != 0)
                 {
-                    tick_count = (u16)params[2].value;
+                    fade_ticks = (u16)params[2].value;
                 }
                 else
                 {
-                    tick_count = 1;
+                    fade_ticks = 1;
                 }
-                target_bias = (u8)params[3].value << 8;
+                target_bias = (u8)params[3].value << AKAO_SFX_FIXED_POINT_SHIFT;
                 current_bias = channel->pan_bias;
-                delta = target_bias - current_bias;
-                channel->pan_bias_step = delta / tick_count;
-                channel->pan_bias_fade_ticks = tick_count;
+                pan_delta = target_bias - current_bias;
+                channel->pan_bias_step = pan_delta / fade_ticks;
+                channel->pan_bias_fade_ticks = fade_ticks;
             }
         }
     }
 }
 
 /**
- * @brief Set the pan bias on every active SFX channel whose tempo_acc does
- *        not have the suppress bit (0x02000000) set, and cancel any
- *        pan-bias fade.
- * @param params New pan bias (u8) to apply.
+ * @brief Set the pan bias of active SFX channels that allow global controls.
+ *
+ * Cancels their pan-bias fades and skips channels tagged AKAO_SFX_FLAG_SUPPRESS.
+ *
+ * @param params Pan bias in the low 8 bits of params[0].value.
  */
 void akao_sfx_set_pan_bias_unsuppressed(AkaoCommandParam* params)
 {
     AkaoChannelState* channel;
-    s32 active;
-    s32 bit;
-    u32 count;
-    s32 bias;
+    s32 active_channels;
+    s32 channel_bit;
+    u32 channel_index;
+    s32 pan_bias;
 
-    bit = AKAO_SFX_FIRST_CHANNEL_BIT;
-    active = g_akao_sfx_control.active_mask;
+    channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+    active_channels = g_akao_sfx_control.active_mask;
     channel = g_sfx_channels;
-    for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+    for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
     {
-        if ((active & bit) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
+        if ((active_channels & channel_bit) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
         {
-            bias = (u8)params[0].value;
+            pan_bias = (u8)params[0].value;
             channel->pan_bias_fade_ticks = 0;
-            channel->pan_bias = bias << 8;
-            channel->update_flags |= 3;
+            channel->pan_bias = pan_bias << AKAO_SFX_FIXED_POINT_SHIFT;
+            channel->update_flags |= SPU_UPDATE_VOLUME;
         }
     }
 }
 
 /**
- * @brief Start a fade of the pan bias on every active SFX channel whose
- *        sfx_tag does not have AKAO_SFX_FLAG_SUPPRESS set.
- * @param params Tick count in params[0] (0 is treated as 1), target pan bias
- *        (u8) [1].
+ * @brief Fade the pan bias of active SFX channels that allow global controls.
+ *
+ * Skips channels tagged AKAO_SFX_FLAG_SUPPRESS.
+ *
+ * @param params Tick count in params[0].value (zero becomes one) and target bias
+ *        in the low 8 bits of params[1].value.
  */
 void akao_sfx_fade_pan_bias_unsuppressed(AkaoCommandParam* params)
 {
     AkaoChannelState* channel;
-    s32 active;
-    s32 bit;
-    u32 count;
-    s16 tick_count;
+    s32 active_channels;
+    s32 channel_bit;
+    u32 channel_index;
+    s16 fade_ticks;
     u16 target_bias;
     s32 current_bias;
-    s16 delta;
+    s16 pan_delta;
 
-    bit = AKAO_SFX_FIRST_CHANNEL_BIT;
-    active = g_akao_sfx_control.active_mask;
+    channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+    active_channels = g_akao_sfx_control.active_mask;
     channel = g_sfx_channels;
-    for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+    for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
     {
-        if ((active & bit) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
+        if ((active_channels & channel_bit) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
         {
             if (params[0].value != 0)
             {
-                tick_count = (u16)params[0].value;
+                fade_ticks = (u16)params[0].value;
             }
             else
             {
-                tick_count = 1;
+                fade_ticks = 1;
             }
-            target_bias = (u8)params[1].value << 8;
+            target_bias = (u8)params[1].value << AKAO_SFX_FIXED_POINT_SHIFT;
             current_bias = channel->pan_bias;
-            delta = target_bias - current_bias;
-            channel->pan_bias_step = delta / tick_count;
-            channel->pan_bias_fade_ticks = tick_count;
+            pan_delta = target_bias - current_bias;
+            channel->pan_bias_step = pan_delta / fade_ticks;
+            channel->pan_bias_fade_ticks = fade_ticks;
         }
     }
 }
 
 /**
- * @brief Set sfx_pitch_bend on active SFX channels, selected either by a tag
- *        mask or by an exact sfx id match (same selection rule as
- *        akao_sfx_set_volume_scale), cancel any pitch-bend fade, and flag a
- *        pending pitch update (channel update_flags bit 0x10).
- * @param params sfx id in params[0], tag mask in params[1] (0 selects the
- *        id-match mode instead), new value (u8, shifted into the high
- *        byte) [2].
+ * @brief Set the pitch bend of selected active SFX channels and cancel their fades.
+ * @param params Sound id in params[0].value, tag mask in params[1].value (zero selects
+ *        by id) and pitch bend in the low 8 bits of params[2].value.
+ * @see akao_sfx_set_volume_scale
  */
 void akao_sfx_set_pitch_bend(AkaoCommandParam* params)
 {
     AkaoChannelState* channel;
-    s32 active;
-    s32 bit;
-    u32 count;
-    s32 value;
+    s32 active_channels;
+    s32 channel_bit;
+    u32 channel_index;
+    s32 pitch_bend;
 
     channel = g_sfx_channels;
-    active = g_akao_sfx_control.active_mask;
-    bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+    active_channels = g_akao_sfx_control.active_mask;
+    channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
     if (params[1].value != 0)
     {
-        for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+        for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if ((active & bit) && (channel->sfx_tag & params[1].value))
+            if ((active_channels & channel_bit) && (channel->sfx_tag & params[1].value))
             {
-                value = (u8)params[2].value;
+                pitch_bend = (u8)params[2].value;
                 channel->sfx_pitch_bend_fade_ticks = 0;
-                channel->sfx_pitch_bend = value << 8;
-                channel->update_flags |= 0x10;
+                channel->sfx_pitch_bend = pitch_bend << AKAO_SFX_FIXED_POINT_SHIFT;
+                channel->update_flags |= SPU_UPDATE_PITCH;
             }
         }
     }
     else
     {
-        bit = AKAO_SFX_FIRST_CHANNEL_BIT;
-        for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+        for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if ((active & bit) && ((s32)channel->sfx_id == params[0].value))
+            if ((active_channels & channel_bit) && ((s32)channel->sfx_id == params[0].value))
             {
-                value = (u8)params[2].value;
+                pitch_bend = (u8)params[2].value;
                 channel->sfx_pitch_bend_fade_ticks = 0;
-                channel->sfx_pitch_bend = value << 8;
-                channel->update_flags |= 0x10;
+                channel->sfx_pitch_bend = pitch_bend << AKAO_SFX_FIXED_POINT_SHIFT;
+                channel->update_flags |= SPU_UPDATE_PITCH;
             }
         }
     }
 }
 
 /**
- * @brief Start a sfx_pitch_bend fade on active SFX channels selected either
- *        by a tag mask or by an exact sfx id match.
- * @param params sfx id in params[0], tag mask in params[1] (0 selects the
- *        id-match mode instead), tick count in params[2] (0 is treated as 1),
- *        target value (u8) [3].
- *
+ * @brief Fade the pitch bend of active SFX channels selected by tag mask or sound id.
+ * @param params Sound id in params[0].value, tag mask in params[1].value (zero selects
+ *        by id), tick count in params[2].value (zero becomes one) and target bend
+ *        in the low 8 bits of params[3].value.
+ * @see akao_sfx_set_volume_scale
  */
 void akao_sfx_fade_pitch_bend(AkaoCommandParam* params)
 {
     AkaoChannelState* channel;
-    s32 active;
-    s32 bit;
-    u32 count;
-    s16 tick_count;
-    u16 target;
-    s32 current;
-    s16 delta;
-    s16 step;
+    s32 active_channels;
+    s32 channel_bit;
+    u32 channel_index;
+    s16 fade_ticks;
+    u16 target_bend;
+    s32 current_bend;
+    s16 bend_delta;
+    s16 bend_step;
 
     channel = g_sfx_channels;
-    active = g_akao_sfx_control.active_mask;
-    bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+    active_channels = g_akao_sfx_control.active_mask;
+    channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
     if (params[1].value != 0)
     {
-        for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+        for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if ((active & bit) && (channel->sfx_tag & params[1].value))
+            if ((active_channels & channel_bit) && (channel->sfx_tag & params[1].value))
             {
                 if (params[2].value != 0)
                 {
-                    tick_count = (u16)params[2].value;
+                    fade_ticks = (u16)params[2].value;
                 }
                 else
                 {
-                    tick_count = 1;
+                    fade_ticks = 1;
                 }
-                target = (u8)params[3].value << 8;
-                current = HALF_LOW_U16(channel->sfx_pitch_bend);
-                delta = target - current;
-                step = delta / tick_count;
-                channel->sfx_pitch_bend_step = step;
-                channel->sfx_pitch_bend_fade_ticks = tick_count;
+                target_bend = (u8)params[3].value << AKAO_SFX_FIXED_POINT_SHIFT;
+                current_bend = HALF_LOW_U16(channel->sfx_pitch_bend);
+                bend_delta = target_bend - current_bend;
+                bend_step = bend_delta / fade_ticks;
+                channel->sfx_pitch_bend_step = bend_step;
+                channel->sfx_pitch_bend_fade_ticks = fade_ticks;
             }
         }
     }
     else
     {
-        bit = AKAO_SFX_FIRST_CHANNEL_BIT;
-        for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+        for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if ((active & bit) && ((s32)channel->sfx_id == params[0].value))
+            if ((active_channels & channel_bit) && ((s32)channel->sfx_id == params[0].value))
             {
                 if (params[2].value != 0)
                 {
-                    tick_count = (u16)params[2].value;
+                    fade_ticks = (u16)params[2].value;
                 }
                 else
                 {
-                    tick_count = 1;
+                    fade_ticks = 1;
                 }
-                target = (u8)params[3].value << 8;
-                current = HALF_LOW_U16(channel->sfx_pitch_bend);
-                delta = target - current;
-                step = delta / tick_count;
-                channel->sfx_pitch_bend_step = step;
-                channel->sfx_pitch_bend_fade_ticks = tick_count;
+                target_bend = (u8)params[3].value << AKAO_SFX_FIXED_POINT_SHIFT;
+                current_bend = HALF_LOW_U16(channel->sfx_pitch_bend);
+                bend_delta = target_bend - current_bend;
+                bend_step = bend_delta / fade_ticks;
+                channel->sfx_pitch_bend_step = bend_step;
+                channel->sfx_pitch_bend_fade_ticks = fade_ticks;
             }
         }
     }
 }
 
 /**
- * @brief Set sfx_pitch_bend on every SFX channel whose sfx_tag does not
- *        have AKAO_SFX_FLAG_SUPPRESS set (no active-channel filter here).
- * @param params New value (u8, shifted into the high byte) to apply.
+ * @brief Set the pitch bend of SFX channels that allow global controls.
+ *
+ * Includes inactive channels, cancels their pitch-bend fades and skips channels
+ * tagged AKAO_SFX_FLAG_SUPPRESS.
+ *
+ * @param params Pitch bend in the low 8 bits of params[0].value.
  */
 void akao_sfx_set_pitch_bend_unsuppressed(AkaoCommandParam* params)
 {
     AkaoChannelState* channel;
-    u32 count;
-    s32 value;
+    u32 channels_remaining;
+    s32 pitch_bend;
 
     channel = g_sfx_channels;
-    for (count = AKAO_SFX_CHANNEL_COUNT; count != 0; count--, channel++)
+    for (channels_remaining = AKAO_SFX_CHANNEL_COUNT; channels_remaining != 0; channels_remaining--, channel++)
     {
         if (!(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
         {
-            value = (u8)params[0].value;
+            pitch_bend = (u8)params[0].value;
             channel->sfx_pitch_bend_fade_ticks = 0;
-            channel->sfx_pitch_bend = value << 8;
-            channel->update_flags |= 0x10;
+            channel->sfx_pitch_bend = pitch_bend << AKAO_SFX_FIXED_POINT_SHIFT;
+            channel->update_flags |= SPU_UPDATE_PITCH;
         }
     }
 }
 
 /**
- * @brief Start a sfx_pitch_bend fade on every active SFX channel whose
- *        sfx_tag does not have AKAO_SFX_FLAG_SUPPRESS set.
- * @param params Tick count in params[0] (0 is treated as 1), target value (u8)
- *        [1].
+ * @brief Fade the pitch bend of active SFX channels that allow global controls.
  *
+ * Skips channels tagged AKAO_SFX_FLAG_SUPPRESS.
+ *
+ * @param params Tick count in params[0].value (zero becomes one) and target bend
+ *        in the low 8 bits of params[1].value.
  */
 void akao_sfx_fade_pitch_bend_unsuppressed(AkaoCommandParam* params)
 {
     AkaoChannelState* channel;
-    s32 active;
-    s32 bit;
-    u32 count;
-    s16 tick_count;
-    u16 target;
-    s32 current;
-    s16 delta;
-    s16 step;
+    s32 active_channels;
+    s32 channel_bit;
+    u32 channel_index;
+    s16 fade_ticks;
+    u16 target_bend;
+    s32 current_bend;
+    s16 bend_delta;
+    s16 bend_step;
 
-    bit = AKAO_SFX_FIRST_CHANNEL_BIT;
-    active = g_akao_sfx_control.active_mask;
+    channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+    active_channels = g_akao_sfx_control.active_mask;
     channel = g_sfx_channels;
-    for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+    for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
     {
-        if ((active & bit) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
+        if ((active_channels & channel_bit) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
         {
             if (params[0].value != 0)
             {
-                tick_count = (u16)params[0].value;
+                fade_ticks = (u16)params[0].value;
             }
             else
             {
-                tick_count = 1;
+                fade_ticks = 1;
             }
-            target = (u8)params[1].value << 8;
-            current = HALF_LOW_U16(channel->sfx_pitch_bend);
-            delta = target - current;
-            step = delta / tick_count;
-            channel->sfx_pitch_bend_step = step;
-            channel->sfx_pitch_bend_fade_ticks = tick_count;
+            target_bend = (u8)params[1].value << AKAO_SFX_FIXED_POINT_SHIFT;
+            current_bend = HALF_LOW_U16(channel->sfx_pitch_bend);
+            bend_delta = target_bend - current_bend;
+            bend_step = bend_delta / fade_ticks;
+            channel->sfx_pitch_bend_step = bend_step;
+            channel->sfx_pitch_bend_fade_ticks = fade_ticks;
         }
     }
 }
 
 /**
- * @brief Set the master pan accumulator directly, canceling any
- *        in-progress fade.
- * @param params Signed target pan value (byte, shifted into the high half).
+ * @brief Set the driver master pan and cancel its fade.
+ * @param params Signed pan in the low 8 bits of params[0].value.
  */
 void akao_master_set_pan(AkaoCommandParam* params)
 {
@@ -2010,78 +2044,73 @@ void akao_master_set_pan(AkaoCommandParam* params)
 
     pan = (s8)params[0].value;
     g_akao_masterpan_fade_ticks = 0;
-    pan = pan << 16;
+    pan = (u32)pan << AKAO_MASTER_FIXED_POINT_SHIFT;
     g_akao_masterpan_acc = pan;
 }
 
 /**
- * @brief Start a linear fade of the master pan accumulator to a target
- *        level over a given tick count.
- * @param params Tick count in params[0] (0 is treated as 1), signed target pan
- *        (byte) [1].
+ * @brief Fade the driver master pan from its current position to a target.
+ * @param params Tick count in params[0].value (zero becomes one) and signed target pan
+ *        in the low 8 bits of params[1].value.
  */
 void akao_master_fade_pan(AkaoCommandParam* params)
 {
-    s32 raw_ticks;
-    s32 ticks;
-    s32 target;
-    s32 step;
+    s32 requested_ticks;
+    s32 fade_ticks;
+    s32 target_pan;
+    s32 pan_step;
 
-    raw_ticks = params[0].value;
-    ticks = 1;
-    if (raw_ticks != 0)
+    requested_ticks = params[0].value;
+    fade_ticks = 1;
+    if (requested_ticks != 0)
     {
-        ticks = raw_ticks;
+        fade_ticks = requested_ticks;
     }
-    target = (s8)params[1].value;
-    target = target << 16;
-    target -= g_akao_masterpan_acc;
-    step = target / ticks;
-    g_akao_masterpan_fade_ticks = ticks;
-    g_akao_masterpan_step = step;
+    target_pan = (s8)params[1].value;
+    target_pan = (u32)target_pan << AKAO_MASTER_FIXED_POINT_SHIFT;
+    target_pan -= g_akao_masterpan_acc;
+    pan_step = target_pan / fade_ticks;
+    g_akao_masterpan_fade_ticks = fade_ticks;
+    g_akao_masterpan_step = pan_step;
 }
 
 /**
- * @brief Jump the master pan accumulator to an explicit start level, then
- *        fade it to a target level over a given tick count.
+ * @brief Fade the driver master pan between explicit start and target positions.
  *
- * Unlike the other fade functions in this file, the tick-count value and
- * its zero-check read different offsets: the check reads in params[1] (the same
- * word as the start pan, tested as an s32 before being reread as a
- * signed byte), and the actual tick count comes from in params[0].
+ * A zero start-pan parameter selects a one-tick fade. Otherwise the tick count
+ * comes directly from params[0].value, including when that count is zero.
  *
- * @param params Tick count in params[0], signed start pan (byte) [1],
- *        signed target pan (byte) [2].
+ * @param params Tick count in params[0].value, signed start pan in params[1].value
+ *        and signed target pan in params[2].value; pan values use their low 8 bits.
  */
 void akao_master_fade_pan_from(AkaoCommandParam* params)
 {
-    s32 raw_ticks;
-    s32 ticks;
-    s32 target;
-    s32 start;
-    s32 step;
+    s32 start_pan_param;
+    s32 fade_ticks;
+    s32 target_pan;
+    s32 start_pan;
+    s32 pan_step;
 
-    raw_ticks = params[1].value;
-    ticks = 1;
-    if (raw_ticks != 0)
+    start_pan_param = params[1].value;
+    fade_ticks = 1;
+    if (start_pan_param != 0)
     {
-        ticks = params[0].value;
+        fade_ticks = params[0].value;
     }
-    start = (s8)params[1].value;
-    start = start << 16;
-    g_akao_masterpan_acc = start;
-    target = (s8)params[2].value;
-    target = target << 16;
-    target -= start;
-    step = target / ticks;
-    g_akao_masterpan_fade_ticks = ticks;
-    g_akao_masterpan_step = step;
+    start_pan = (s8)params[1].value;
+    start_pan = (u32)start_pan << AKAO_MASTER_FIXED_POINT_SHIFT;
+    g_akao_masterpan_acc = start_pan;
+    target_pan = (s8)params[2].value;
+    target_pan = (u32)target_pan << AKAO_MASTER_FIXED_POINT_SHIFT;
+    target_pan -= start_pan;
+    pan_step = target_pan / fade_ticks;
+    g_akao_masterpan_fade_ticks = fade_ticks;
+    g_akao_masterpan_step = pan_step;
 }
 
 /**
- * @brief Set the driver-wide master volume accumulator directly,
- *        canceling any in-progress fade.
- * @param params Signed target volume (byte, shifted into the high half).
+ * @brief Set the driver master volume and cancel its fade.
+ * @param params Signed volume in the low 8 bits of params[0].value.
  */
 void akao_master_set_volume(AkaoCommandParam* params)
 {
@@ -2089,72 +2118,68 @@ void akao_master_set_volume(AkaoCommandParam* params)
 
     volume = (s8)params[0].value;
     g_akao_mastervol_fade_ticks = 0;
-    volume = volume << 16;
+    volume = (u32)volume << AKAO_MASTER_FIXED_POINT_SHIFT;
     g_akao_mastervol_acc = volume;
 }
 
 /**
- * @brief Start a linear fade of the driver-wide master volume accumulator
- *        to a target level over a given tick count.
- * @param params Tick count in params[0] (0 is treated as 1), signed target
- *        volume (byte) [1].
+ * @brief Fade the driver master volume from its current level to a target.
+ * @param params Tick count in params[0].value (zero becomes one) and signed target volume
+ *        in the low 8 bits of params[1].value.
  */
 void akao_master_fade_volume(AkaoCommandParam* params)
 {
-    s32 raw_ticks;
-    s32 ticks;
-    s32 target;
-    s32 step;
+    s32 requested_ticks;
+    s32 fade_ticks;
+    s32 target_volume;
+    s32 volume_step;
 
-    raw_ticks = params[0].value;
-    ticks = 1;
-    if (raw_ticks != 0)
+    requested_ticks = params[0].value;
+    fade_ticks = 1;
+    if (requested_ticks != 0)
     {
-        ticks = raw_ticks;
+        fade_ticks = requested_ticks;
     }
-    target = (s8)params[1].value;
-    target = target << 16;
-    target -= g_akao_mastervol_acc;
-    step = target / ticks;
-    g_akao_mastervol_fade_ticks = ticks;
-    g_akao_mastervol_step = step;
+    target_volume = (s8)params[1].value;
+    target_volume = (u32)target_volume << AKAO_MASTER_FIXED_POINT_SHIFT;
+    target_volume -= g_akao_mastervol_acc;
+    volume_step = target_volume / fade_ticks;
+    g_akao_mastervol_fade_ticks = fade_ticks;
+    g_akao_mastervol_step = volume_step;
 }
 
 /**
- * @brief Jump the driver-wide master volume accumulator to an explicit
- *        start level, then fade it to a target level over a given tick
- *        count.
+ * @brief Fade the driver master volume between explicit start and target levels.
  *
- * Same offset quirk as akao_master_fade_pan_from: the tick-count zero
- * check reads in params[1] (the same word as the start volume), the actual tick
- * count comes from in params[0].
+ * A zero start-volume parameter selects a one-tick fade. Otherwise the tick count
+ * comes directly from params[0].value, including when that count is zero.
  *
- * @param params Tick count in params[0], signed start volume (byte) [1],
- *        signed target volume (byte) [2].
+ * @param params Tick count in params[0].value, signed start volume in params[1].value
+ *        and signed target volume in params[2].value; volumes use their low 8 bits.
  */
 void akao_master_fade_volume_from(AkaoCommandParam* params)
 {
-    s32 raw_ticks;
-    s32 ticks;
-    s32 target;
-    s32 start;
-    s32 step;
+    s32 start_volume_param;
+    s32 fade_ticks;
+    s32 target_volume;
+    s32 start_volume;
+    s32 volume_step;
 
-    raw_ticks = params[1].value;
-    ticks = 1;
-    if (raw_ticks != 0)
+    start_volume_param = params[1].value;
+    fade_ticks = 1;
+    if (start_volume_param != 0)
     {
-        ticks = params[0].value;
+        fade_ticks = params[0].value;
     }
-    start = (s8)params[1].value;
-    start = start << 16;
-    g_akao_mastervol_acc = start;
-    target = (s8)params[2].value;
-    target = target << 16;
-    target -= start;
-    step = target / ticks;
-    g_akao_mastervol_fade_ticks = ticks;
-    g_akao_mastervol_step = step;
+    start_volume = (s8)params[1].value;
+    start_volume = (u32)start_volume << AKAO_MASTER_FIXED_POINT_SHIFT;
+    g_akao_mastervol_acc = start_volume;
+    target_volume = (s8)params[2].value;
+    target_volume = (u32)target_volume << AKAO_MASTER_FIXED_POINT_SHIFT;
+    target_volume -= start_volume;
+    volume_step = target_volume / fade_ticks;
+    g_akao_mastervol_fade_ticks = fade_ticks;
+    g_akao_mastervol_step = volume_step;
 }
 
 /**
@@ -2171,9 +2196,9 @@ void akao_seq_stop_all_songs(void)
 }
 
 /**
- * @brief Stop the primary song by key, and the secondary song too if one
- *        is loaded and the key is nonzero.
- * @param params Song key in params[0]; see akao_seq_stop_song.
+ * @brief Stop songs matching a key, or stop only the primary song when the key is zero.
+ * @param params Song key in params[0].value; zero stops the primary song unconditionally.
+ * @see akao_seq_stop_song
  */
 void akao_seq_stop_song_by_key(AkaoCommandParam* params)
 {
@@ -2197,17 +2222,17 @@ void akao_seq_stop_song_by_key(AkaoCommandParam* params)
 void akao_sfx_release_all_channels(void)
 {
     AkaoChannelState* channel;
-    s32 bit;
-    u32 count;
+    s32 channel_bit;
+    u32 channel_index;
 
     channel = g_sfx_channels;
-    bit = AKAO_SFX_FIRST_CHANNEL_BIT;
-    for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+    channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+    for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
     {
-        if ((g_akao_sfx_control.active_mask & bit) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
+        if ((g_akao_sfx_control.active_mask & channel_bit) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
         {
-            g_akao_sfx_control.key_off_mask |= bit;
-            akao_sfx_release_channels(channel, bit);
+            g_akao_sfx_control.key_off_mask |= channel_bit;
+            akao_sfx_release_channels(channel, channel_bit);
             channel->flags = 0;
         }
     }
@@ -2215,8 +2240,7 @@ void akao_sfx_release_all_channels(void)
 }
 
 /**
- * @brief Flag every channel of every active song and every active SFX
- *        channel for a pending SPU volume re-apply.
+ * @brief Select stereo output and flag active song and SFX channels for a volume update.
  */
 void akao_select_stereo_output(void)
 {
@@ -2230,9 +2254,7 @@ void akao_select_stereo_output(void)
 }
 
 /**
- * @brief Flag every channel of every active song and every active SFX
- *        channel for a pending SPU update, tagged mode 2 (see
- *        akao_select_stereo_output, tagged mode 1).
+ * @brief Select mono output and flag active song and SFX channels for a volume update.
  */
 void akao_select_mono_output(void)
 {
@@ -2246,29 +2268,25 @@ void akao_select_mono_output(void)
 }
 
 /**
- * @brief Store a new value into g_akao_muted_channel_mask, then flag every primary song
- *        channel for a pending SPU update.
- * @param params New value for g_akao_muted_channel_mask.
+ * @brief Set the primary song's muted channels and request volume updates.
+ * @param params Muted channel mask in params[0].value.
  */
 void akao_seq_set_muted_channels(AkaoCommandParam* params)
 {
     AkaoChannelState* channel;
-    u32 count;
+    u32 channel_index;
 
     g_akao_muted_channel_mask = params[0].value;
     channel = g_akao_seq_channels;
-    count = 0;
-    do
+    for (channel_index = 0; channel_index < AKAO_CHANNEL_COUNT; channel_index++, channel++)
     {
-        count++;
-        channel->update_flags |= 3;
-        channel++;
-    } while (count < AKAO_CHANNEL_COUNT);
+        channel->update_flags |= SPU_UPDATE_VOLUME;
+    }
 }
 
 /**
  * @brief Set the primary song's conditional-jump variable (condition).
- * @param params New value in word 0.
+ * @param params Condition value in the low 16 bits of params[0].value.
  */
 void akao_seq_set_condition(AkaoCommandParam* params)
 {
@@ -2276,173 +2294,169 @@ void akao_seq_set_condition(AkaoCommandParam* params)
 }
 
 /**
- * @brief Silence every SPU voice not currently claimed by an SFX channel
- *        or the XA/streaming reservation, park the primary song's
- *        active_mask into parked_mask (pausing it without releasing voices),
- *        and set the driver "paused" mode bit.
+ * @brief Pause the primary song and silence voices outside the SFX and XA reservations.
+ *
+ * Saves active channels in parked_mask without releasing their assigned voices.
  */
 void akao_seq_silence_unused_voices_and_pause(void)
 {
-    s32 keep_mask;
-    s32 bit;
-    s32 voice;
-    s32 active_mask;
+    s32 voices_to_silence;
+    s32 voice_bit;
+    s32 voice_index;
+    s32 active_channels;
 
     if (g_akao_seq_channel0->masks.active_mask != 0)
     {
-        keep_mask = ~(g_akao_sfx_control.active_mask | g_akao_xa_tracker.voice_mask) & 0xFFFFFF;
-        if (keep_mask != 0)
+        voices_to_silence = ~(g_akao_sfx_control.active_mask | g_akao_xa_tracker.voice_mask) & AKAO_VOICE_MASK;
+        if (voices_to_silence != 0)
         {
-            bit = 1;
-            voice = 0;
+            voice_bit = 1;
+            voice_index = 0;
             do
             {
-                if (keep_mask & bit)
+                if (voices_to_silence & voice_bit)
                 {
-                    spu_set_voice_volume(voice, 0, 0, 0);
-                    spu_set_voice_pitch(voice, 0);
-                    spu_set_voice_attack(voice, 0x7F, 1);
-                    spu_set_voice_sustain_mode(voice, 0x7F, 3);
-                    keep_mask &= ~bit;
+                    spu_set_voice_volume(voice_index, 0, 0, 0);
+                    spu_set_voice_pitch(voice_index, 0);
+                    spu_set_voice_attack(voice_index, AKAO_PAUSE_ENVELOPE_RATE, SPU_VOICE_LINEARIncN);
+                    spu_set_voice_sustain_mode(voice_index, AKAO_PAUSE_ENVELOPE_RATE, SPU_VOICE_LINEARDecN);
+                    voices_to_silence &= ~voice_bit;
                 }
-                bit <<= 1;
-                voice++;
-            } while (keep_mask != 0);
+                voice_bit <<= 1;
+                voice_index++;
+            } while (voices_to_silence != 0);
         }
-        active_mask = g_akao_seq_channel0->masks.active_mask;
+        active_channels = g_akao_seq_channel0->masks.active_mask;
         g_akao_seq_channel0->masks.active_mask = 0;
-        g_akao_seq_channel0->parked_mask = active_mask;
+        g_akao_seq_channel0->parked_mask = active_channels;
     }
     g_akao_driver_mode_flags |= AKAO_MODE_SONG_PAUSED;
 }
 
 /**
- * @brief Resume the primary song from the paused state set by
- *        akao_seq_silence_unused_voices_and_pause: restore active_mask
- *        from parked_mask, flag every channel that was parked for a full SPU
- *        re-apply, and clear the driver "paused" mode bit.
+ * @brief Resume the primary song and request volume, pitch and ADSR updates.
+ *
+ * Restores its parked channels and clears the song-pause mode flag.
+ * @see akao_seq_silence_unused_voices_and_pause
  */
 void akao_seq_resume_and_apply_pending_voices(void)
 {
-    s32 raw_mask;
-    s32 mask;
-    s32 bit;
+    s32 parked_channels;
+    s32 remaining_channels;
+    u32 channel_bit;
     AkaoChannelState* channel;
-    s32 saved_mask;
+    s32 restored_channels;
 
-    raw_mask = g_akao_seq_channel0->parked_mask;
-    if (raw_mask != 0)
+    parked_channels = g_akao_seq_channel0->parked_mask;
+    if (parked_channels != 0)
     {
-        mask = raw_mask;
-        bit = 1;
+        remaining_channels = parked_channels;
+        channel_bit = 1;
         channel = g_akao_seq_channels;
         do
         {
-            if (mask & bit)
+            if (remaining_channels & channel_bit)
             {
-                mask &= ~bit;
-                channel->update_flags |= 0x2B13;
+                remaining_channels &= ~channel_bit;
+                channel->update_flags |= AKAO_PAUSE_RESUME_VOICE_UPDATES;
             }
-            bit <<= 1;
+            channel_bit <<= 1;
             channel++;
-        } while (mask != 0);
+        } while (remaining_channels != 0);
 
-        saved_mask = g_akao_seq_channel0->parked_mask;
+        restored_channels = g_akao_seq_channel0->parked_mask;
         g_akao_seq_channel0->parked_mask = 0;
-        g_akao_seq_channel0->masks.active_mask = saved_mask;
+        g_akao_seq_channel0->masks.active_mask = restored_channels;
         g_akao_driver_flags.update_flags |= AKAO_EFFECT_MASKS_UPDATE_PENDING;
     }
     g_akao_driver_mode_flags &= ~AKAO_MODE_SONG_PAUSED;
 }
 
 /**
- * @brief SFX counterpart of akao_seq_silence_unused_voices_and_pause:
- *        filters the active SFX channel mask down to non-suppressed
- *        channels, parks it in g_akao_sfx_control.paused_mask, clears those bits
- *        from unk0, silences their SPU voices, and sets the driver
- *        "SFX paused" mode bit (AKAO_MODE_SFX_PAUSED).
+ * @brief Park and silence active SFX channels that allow global controls.
+ *
+ * Channels tagged AKAO_SFX_FLAG_SUPPRESS keep playing. Sets the SFX-pause mode flag.
  */
 void akao_sfx_silence_unused_voices_and_pause(void)
 {
     AkaoChannelState* channel;
-    s32 raw_active;
-    s32 voice;
-    s32 active;
-    s32 bit;
-    u32 count;
+    s32 active_channels;
+    s32 voice_index;
+    s32 channels_to_pause;
+    s32 channel_bit;
+    u32 channel_index;
 
-    raw_active = g_akao_sfx_control.active_mask;
-    if (raw_active != 0)
+    active_channels = g_akao_sfx_control.active_mask;
+    if (active_channels != 0)
     {
-        active = raw_active;
+        channels_to_pause = active_channels;
         channel = g_sfx_channels;
-        bit = AKAO_SFX_FIRST_CHANNEL_BIT;
-        for (count = 0; count < AKAO_SFX_CHANNEL_COUNT; count++, channel++, bit <<= 1)
+        channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+        for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if ((active & bit) && (channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
+            if ((channels_to_pause & channel_bit) && (channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
             {
-                active &= ~bit;
+                channels_to_pause &= ~channel_bit;
             }
         }
-        bit = AKAO_SFX_FIRST_CHANNEL_BIT;
-        voice = 0xC;
-        g_akao_sfx_control.paused_mask = active;
-        g_akao_sfx_control.active_mask &= ~active;
-        if (active != 0)
+        channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+        voice_index = AKAO_SFX_FIRST_VOICE;
+        g_akao_sfx_control.paused_mask = channels_to_pause;
+        g_akao_sfx_control.active_mask &= ~channels_to_pause;
+        if (channels_to_pause != 0)
         {
             do
             {
-                if (active & bit)
+                if (channels_to_pause & channel_bit)
                 {
-                    spu_set_voice_volume(voice, 0, 0, 0);
-                    spu_set_voice_pitch(voice, 0);
-                    spu_set_voice_attack(voice, 0x7F, 1);
-                    spu_set_voice_sustain_mode(voice, 0x7F, 3);
-                    active &= ~bit;
+                    spu_set_voice_volume(voice_index, 0, 0, 0);
+                    spu_set_voice_pitch(voice_index, 0);
+                    spu_set_voice_attack(voice_index, AKAO_PAUSE_ENVELOPE_RATE, SPU_VOICE_LINEARIncN);
+                    spu_set_voice_sustain_mode(voice_index, AKAO_PAUSE_ENVELOPE_RATE, SPU_VOICE_LINEARDecN);
+                    channels_to_pause &= ~channel_bit;
                 }
-                bit <<= 1;
-                voice++;
-            } while (active != 0);
+                channel_bit <<= 1;
+                voice_index++;
+            } while (channels_to_pause != 0);
         }
     }
     g_akao_driver_mode_flags |= AKAO_MODE_SFX_PAUSED;
 }
 
 /**
- * @brief Resume SFX channels from the paused state set by
- *        akao_sfx_silence_unused_voices_and_pause: flag every parked
- *        channel for a full SPU re-apply, restore the active mask from
- *        the parked g_akao_sfx_control.paused_mask value, and clear the driver "SFX paused"
- *        mode bit.
+ * @brief Resume parked SFX channels and request volume, pitch and ADSR updates.
+ *
+ * Keeps already active channels and clears the SFX-pause mode flag.
+ * @see akao_sfx_silence_unused_voices_and_pause
  */
 void akao_sfx_resume_and_apply_pending_voices(void)
 {
     AkaoChannelState* channel;
-    s32 raw_mask;
-    s32 mask;
-    s32 bit;
-    s32 parked;
+    s32 parked_channels;
+    s32 remaining_channels;
+    s32 channel_bit;
+    s32 restored_channels;
 
-    raw_mask = g_akao_sfx_control.paused_mask;
-    if (raw_mask != 0)
+    parked_channels = g_akao_sfx_control.paused_mask;
+    if (parked_channels != 0)
     {
-        mask = raw_mask;
+        remaining_channels = parked_channels;
         channel = g_sfx_channels;
-        bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+        channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
         do
         {
-            if (mask & bit)
+            if (remaining_channels & channel_bit)
             {
-                mask &= ~bit;
-                channel->update_flags |= 0x2B13;
+                remaining_channels &= ~channel_bit;
+                channel->update_flags |= AKAO_PAUSE_RESUME_VOICE_UPDATES;
             }
-            bit <<= 1;
+            channel_bit <<= 1;
             channel++;
-        } while (mask != 0);
+        } while (remaining_channels != 0);
 
-        parked = g_akao_sfx_control.paused_mask;
+        restored_channels = g_akao_sfx_control.paused_mask;
         g_akao_sfx_control.paused_mask = 0;
-        g_akao_sfx_control.active_mask |= parked;
+        g_akao_sfx_control.active_mask |= restored_channels;
         g_akao_driver_flags.update_flags |= AKAO_EFFECT_MASKS_UPDATE_PENDING;
     }
     g_akao_driver_mode_flags &= ~AKAO_MODE_SFX_PAUSED;
@@ -2474,16 +2488,14 @@ void akao_xa_restore_voice_pitch(void)
 }
 
 /**
- * @brief Empty function; body is a bare return.
+ * @brief Ignore an unused command opcode.
  */
 void akao_ignore_command(void)
 {
 }
 
 /**
- * @brief Toggle the SPU global reverb mode if @p reverb_type differs from the
- *        currently active one; brackets the change with reverb off/on so the
- *        SPU does not glitch mid-update.
+ * @brief Change the SPU reverb mode if needed, clearing its work area with reverb disabled.
  * @param reverb_type New reverb mode (an @c AkaoHeader::reverb_type value).
  */
 void akao_apply_reverb_type(s32 reverb_type)
@@ -2500,128 +2512,123 @@ void akao_apply_reverb_type(s32 reverb_type)
 }
 
 /**
- * @brief Central low-level dispatcher for the AKAO sound driver.
+ * @brief Dispatch an AKAO command while the sequencer tick event is disabled.
  *
- * Masks @p opcode to a byte and routes it to a fixed handler-pointer table
- * (@c g_akao_command_handlers), indexed either directly by the opcode or by a small set of
- * remapped indices for opcodes that fan out into several handlers at once
- * (0x98/0x99) or that go through a dedicated indirect callback instead of the
- * table (0xD8/0xD9/0xDA). Opcodes 0x10/0x12/0x14/0x19 (song load/change)
- * additionally validate the AKAO magic on @c g_akao_cmd_params[0] and skip the
- * update entirely when the requested song is already active on both channels.
- * The driver's rcnt2 tick event is disabled for the duration of the dispatch
- * so a tick cannot observe a half-updated command-parameter buffer.
+ * Song commands validate the header and prepare the descriptor, id, channel
+ * mask and pending advance count for their handler. A matching primary song is skipped
+ * unless a loaded secondary song has a different id.
+ *
+ * Combined master pan/volume commands call the pan handler before the volume
+ * handler. Pause/resume-all commands call the song, SFX and XA handlers in order.
+ * Other commands copy all six input slots before calling their table handler.
  *
  * @param opcode Command opcode; only the low byte is significant.
- * @return For opcodes 0x10/0x12/0x14/0x19, the newly loaded sequence id, 0 if
- *         the requested song was already active on both channels, or -1 if
- *         the header failed the AKAO magic check. Ignored by most other
- *         callers (see the doc comment on the forward declaration in
- *         akao_cmd.c).
+ * @return Song id for a dispatched song command, -1 for a bad song header,
+ *         or 0 for a skipped song command or any other command.
  */
 s32 akao_send_command(u32 opcode)
 {
     s32 result;
     s32 requested_mask;
     s32 start_mask;
-    AkaoCommandParam* params;
-    AkaoHeader* header;
-    u16 current_id;
+    AkaoCommandParam* dispatch_params;
+    AkaoHeader* song_header;
+    u16 current_song_id;
 
     result = 0;
     DisableEvent(g_akao_rcnt2_event);
-    opcode = opcode & 0xFF;
-    params = g_akao_dispatch_params;
+    opcode = (u8)opcode;
+    dispatch_params = g_akao_dispatch_params;
 
     switch (opcode)
     {
-    case 0x10:
-    case 0x12:
-    case 0x14:
-    case 0x19:
+    case AKAO_CMD_PLAY_SONG:
+    case AKAO_CMD_PLAY_SONG_WITH_TICKS:
+    case AKAO_CMD_START_SONG_CHANNELS:
+    case AKAO_CMD_SWITCH_SONG:
         if (akao_check_magic(g_akao_cmd_params[0].buffer) == 0)
         {
-            header = g_akao_cmd_params[0].buffer;
-            current_id = g_akao_seq_channel0->song_id;
-            if ((current_id != header->id) || ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->song_id != current_id)))
+            song_header = g_akao_cmd_params[0].buffer;
+            current_song_id = g_akao_seq_channel0->song_id;
+            if ((current_song_id != song_header->id) || ((g_akao_seq_channel1 != NULL) && (g_akao_seq_channel1->song_id != current_song_id)))
             {
-                akao_apply_reverb_type(header->reverb_type);
-                params[0].buffer = header;
-                params[2].value = header->id;
-                if (opcode == 0x12)
+                akao_apply_reverb_type(song_header->reverb_type);
+                dispatch_params[0].buffer = song_header;
+                dispatch_params[2].value = song_header->id;
+                if (opcode == AKAO_CMD_PLAY_SONG_WITH_TICKS)
                 {
-                    params[4].value = g_akao_cmd_params[1].value;
+                    dispatch_params[4].value = g_akao_cmd_params[1].value;
                 }
                 else
                 {
                     requested_mask = g_akao_cmd_params[1].value;
-                    start_mask = -1;
+                    start_mask = AKAO_ALL_CHANNELS_MASK;
                     if (requested_mask != 0)
                     {
-                        start_mask = requested_mask | 1;
+                        start_mask = requested_mask | AKAO_SONG_FIRST_CHANNEL_BIT;
                     }
-                    params[3].value = start_mask;
-                    params[4].value = g_akao_cmd_params[2].value;
+                    dispatch_params[3].value = start_mask;
+                    dispatch_params[4].value = g_akao_cmd_params[2].value;
                 }
-                result = header->id;
+                result = song_header->id;
             }
             else
             {
-                opcode = 0;
+                opcode = AKAO_CMD_IGNORE;
                 result = 0;
             }
         }
         else
         {
-            opcode = 0;
+            opcode = AKAO_CMD_IGNORE;
             result = -1;
         }
         break;
 
-    case 0xD8:
-        params[0].value = g_akao_cmd_params[0].value;
-        g_akao_command_handlers[0xD0](params);
-        opcode = 0xD4;
+    case AKAO_CMD_SET_MASTER_PAN_AND_VOLUME:
+        dispatch_params[0].value = g_akao_cmd_params[0].value;
+        g_akao_command_handlers[AKAO_CMD_SET_MASTER_PAN](dispatch_params);
+        opcode = AKAO_CMD_SET_MASTER_VOLUME;
         break;
 
-    case 0xD9:
-        params[0].value = g_akao_cmd_params[0].value;
-        params[1].value = g_akao_cmd_params[1].value;
-        g_akao_command_handlers[0xD1](params);
-        opcode = 0xD5;
+    case AKAO_CMD_FADE_MASTER_PAN_AND_VOLUME:
+        dispatch_params[0].value = g_akao_cmd_params[0].value;
+        dispatch_params[1].value = g_akao_cmd_params[1].value;
+        g_akao_command_handlers[AKAO_CMD_FADE_MASTER_PAN](dispatch_params);
+        opcode = AKAO_CMD_FADE_MASTER_VOLUME;
         break;
 
-    case 0xDA:
-        params[0].value = g_akao_cmd_params[0].value;
-        params[1].value = g_akao_cmd_params[1].value;
-        params[2].value = g_akao_cmd_params[2].value;
-        g_akao_command_handlers[0xD2](params);
-        opcode = 0xD6;
+    case AKAO_CMD_FADE_MASTER_PAN_AND_VOLUME_FROM:
+        dispatch_params[0].value = g_akao_cmd_params[0].value;
+        dispatch_params[1].value = g_akao_cmd_params[1].value;
+        dispatch_params[2].value = g_akao_cmd_params[2].value;
+        g_akao_command_handlers[AKAO_CMD_FADE_MASTER_PAN_FROM](dispatch_params);
+        opcode = AKAO_CMD_FADE_MASTER_VOLUME_FROM;
         break;
 
-    case 0x99:
-        g_akao_command_handlers[0x9B](params);
-        g_akao_command_handlers[0x9D](params);
-        opcode = 0x9F;
+    case AKAO_CMD_PAUSE_ALL:
+        g_akao_command_handlers[AKAO_CMD_PAUSE_SONG](dispatch_params);
+        g_akao_command_handlers[AKAO_CMD_PAUSE_SFX](dispatch_params);
+        opcode = AKAO_CMD_PAUSE_XA;
         break;
 
-    case 0x98:
-        g_akao_command_handlers[0x9A](params);
-        g_akao_command_handlers[0x9C](params);
-        opcode = 0x9E;
+    case AKAO_CMD_RESUME_ALL:
+        g_akao_command_handlers[AKAO_CMD_RESUME_SONG](dispatch_params);
+        g_akao_command_handlers[AKAO_CMD_RESUME_SFX](dispatch_params);
+        opcode = AKAO_CMD_RESUME_XA;
         break;
 
     default:
-        params[0].value = g_akao_cmd_params[0].value;
-        params[1].value = g_akao_cmd_params[1].value;
-        params[2].value = g_akao_cmd_params[2].value;
-        params[3].value = g_akao_cmd_params[3].value;
-        params[4].value = g_akao_cmd_params[4].value;
-        params[5].value = g_akao_cmd_params[5].value;
+        dispatch_params[0].value = g_akao_cmd_params[0].value;
+        dispatch_params[1].value = g_akao_cmd_params[1].value;
+        dispatch_params[2].value = g_akao_cmd_params[2].value;
+        dispatch_params[3].value = g_akao_cmd_params[3].value;
+        dispatch_params[4].value = g_akao_cmd_params[4].value;
+        dispatch_params[5].value = g_akao_cmd_params[5].value;
         break;
     }
 
-    g_akao_command_handlers[opcode](params);
+    g_akao_command_handlers[opcode](dispatch_params);
     EnableEvent(g_akao_rcnt2_event);
     return result;
 }

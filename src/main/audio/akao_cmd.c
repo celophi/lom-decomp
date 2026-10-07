@@ -31,9 +31,6 @@ extern CdlATV g_akao_cdmix;
 extern AkaoStreamingState g_akao_streaming_state;
 extern AkaoBankHeader g_akao_bank_staging;
 
-/** @brief Number of SPU bank slots (entries of g_akao_bank_slot_keys). */
-#define AKAO_BANK_SLOT_COUNT 6
-
 /** @brief Base SPU address and byte spacing of the six instrument-bank slots. */
 #define AKAO_BANK_FIRST_SPU_ADDRESS 0x43100
 #define AKAO_BANK_SLOT_BYTES 0x4800
@@ -59,8 +56,6 @@ extern AkaoBankHeader g_akao_bank_staging;
 /** @brief Fractional bits in the mono CD mix gain. */
 #define AKAO_CD_MONO_GAIN_SHIFT 17
 
-/** @brief Song flag that lowers the XA SPU area while song channels are active or parked. */
-#define AKAO_SONG_LOWER_XA_AREA_FLAG 0x40
 /** @brief Distance from the usual XA SPU area to the lower area. */
 #define AKAO_XA_SPU_AREA_OFFSET 0x30000
 

@@ -3,6 +3,12 @@
 
 #include "akao_driver.h"
 
+/** @brief Pending updates for the SPU stereo volume registers. */
+#define SPU_UPDATE_VOLUME 0x3
+
+/** @brief Pending update for the SPU pitch register. */
+#define SPU_UPDATE_PITCH 0x10
+
 /**
  * @brief Voice volume pair (VOLL + VOLR) at the start of each SPU voice
  *        register block. Internal to the SPU register write helpers.

@@ -32,6 +32,9 @@ extern AkaoCommandParam g_akao_cmd_params[];
 /** @brief Number of SFX channels (g_sfx_channels). */
 #define AKAO_SFX_CHANNEL_COUNT 12
 
+/** @brief First SPU voice assigned to SFX channels; SFX use voices 12-23. */
+#define AKAO_SFX_FIRST_VOICE 12
+
 /** @brief Channel-mask bit of the first SFX channel; SFX channels use bits 12-23. */
 #define AKAO_SFX_FIRST_CHANNEL_BIT 0x1000
 
@@ -43,6 +46,9 @@ extern AkaoCommandParam g_akao_cmd_params[];
 
 /** @brief AkaoChannelState::sfx_tag bit that exempts an SFX from global volume/pan/pause control. */
 #define AKAO_SFX_FLAG_SUPPRESS 0x02000000
+
+/** @brief Stop mode selecting the oldest untagged SFX channels. */
+#define AKAO_SFX_STOP_OLDEST 0x40000000
 
 /** Maximum representable value for AKAO's 7-bit volume controls. */
 #define AKAO_VOLUME_MAX 0x7F
@@ -69,6 +75,7 @@ extern AkaoCommandParam g_akao_cmd_params[];
  */
 typedef enum AkaoCmd
 {
+    AKAO_CMD_IGNORE                          = 0x00, /**< Ignore the command. */
     AKAO_CMD_PLAY_SONG                       = 0x10, /**< Play a song (slot 0: AKAO sequence). */
     AKAO_CMD_STOP_SONG                       = 0x11, /**< Stop the song whose key matches slot 0. */
     AKAO_CMD_PLAY_SONG_WITH_TICKS            = 0x12, /**< Play a song and seed its pending tick count. */
@@ -231,7 +238,11 @@ typedef struct AkaoArticulation
 #define AKAO_SONG_VOICE_DROPPED 0x1
 /** @brief AkaoSongState.flags: a note had to steal a voice. */
 #define AKAO_SONG_VOICE_STOLEN 0x2
-/** @brief AkaoSongState.flags bits taken from the song descriptor when it starts. */
+/** @brief Song flag selecting the lower XA SPU area while channels are active or parked. */
+#define AKAO_SONG_LOWER_XA_AREA_FLAG 0x40
+/** @brief Song flag set when descriptor unk14 differs from D_8003EC34[0]. */
+#define AKAO_SONG_DESCRIPTOR_MISMATCH 0x20
+/** @brief Song flags selected by comparing the descriptor with D_8003EC34[0]. */
 #define AKAO_SONG_DESCRIPTOR_FLAGS 0x60
 
 /**
@@ -265,6 +276,17 @@ typedef struct AkaoSongMasks
     u32 static_voice_mask;    /**< Channels that always play on the voice matching their index. */
     u32 key_on_mask;          /**< Channels whose note still needs a voice keyed on. */
 } AkaoSongMasks;
+
+/** @brief Channel flag retaining the full note duration before key-off. */
+#define AKAO_CH_FULL_GATE 0x40
+
+/** @brief Channel flag permitting SFX pitch modulation on the second channel of a pair. */
+#define AKAO_CH_SFX_PITCH_MOD 0x10000
+
+/** @brief Channel flag deferring stop requests until a sequence loop ends. */
+#define AKAO_CH_DEFERRED_STOP 0x100000
+/** @brief Channel flag recording a stop request for the sequence loop opcodes. */
+#define AKAO_CH_STOP_PENDING 0x200000
 
 /**
  * @brief Per-song sequencer state.

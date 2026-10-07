@@ -7,6 +7,9 @@
 /** @brief Root counter 2 target of one driver tick (akao_irq_handler). */
 #define AKAO_TICK_PERIOD 0x44E8
 
+/** @brief Number of SPU bank slots (entries of g_akao_bank_slot_keys). */
+#define AKAO_BANK_SLOT_COUNT 6
+
 /** @brief g_akao_driver_flags.upload_flags: an instrument bank is being streamed to the SPU. */
 #define AKAO_UPLOAD_STREAMING 0x1
 

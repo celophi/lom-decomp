@@ -11,6 +11,9 @@
 
 #define SPU_ALLCH 0xFFFFFFL
 
+#define SPU_VOICE_LINEARIncN 1
+#define SPU_VOICE_LINEARDecN 3
+
 #define SPU_REV_MODE_CLEAR_WA 0x100
 typedef struct {
     short left;
