@@ -7,7 +7,7 @@
 #define SONG_FADE_OUT_TICKS 300
 #define SONG_INDEX_NONE 0xFF
 #define SONG_SEQUENCE_BUFFER_SIZE 1024
-#define SONG_LOAD_BUFFER ((void*)LOAD_BUFFER_ADDRESS)
+#define SONG_LOAD_BUFFER ((AkaoContainerHeader*)LOAD_BUFFER_ADDRESS)
 
 /** @brief Resident song sequence with its AKAO header. */
 typedef union
@@ -43,6 +43,8 @@ void load_and_play_song(s32 song_index)
     u16 resource_index;
     AkaoBankHeader* bank;
     u32* section_offsets;
+    u32 sequence_offset;
+    u32 sequence_bytes;
 
     if (song_index == SONG_INDEX_NONE)
     {
@@ -55,7 +57,10 @@ void load_and_play_song(s32 song_index)
     cdrom_wait_queue_empty();
     section_offsets = container->section_offsets;
 
-    bcopy(AKAO_CONTAINER_DATA_AT(container, section_offsets[0]), g_music_sequence.bytes, section_offsets[1] - section_offsets[0]);
+    /* Keep the sequence resident while the instrument bank is uploaded to the SPU. */
+    sequence_offset = section_offsets[0];
+    sequence_bytes = section_offsets[1] - sequence_offset;
+    bcopy(AKAO_CONTAINER_DATA_AT(container, sequence_offset), g_music_sequence.bytes, sequence_bytes);
     bank = (AkaoBankHeader*)AKAO_CONTAINER_DATA_AT(container, section_offsets[1]);
     akao_upload_bank_blocking(bank, TRUE);
 

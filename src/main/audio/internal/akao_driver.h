@@ -45,6 +45,10 @@
 /** @brief g_akao_driver_mode_flags: tick the sequencers every frame regardless of tempo; no top-level code sets it. */
 #define AKAO_MODE_FORCE_TICK 0x4
 
+/** @brief Size of one CD ring block used by XA streaming. */
+#define AKAO_XA_RING_BLOCK_SHIFT 12
+#define AKAO_XA_RING_BLOCK_BYTES (1 << AKAO_XA_RING_BLOCK_SHIFT)
+
 /** @brief Driver-wide state words. */
 typedef struct
 {
@@ -125,7 +129,7 @@ typedef struct
     s32 voice_mask;        /**< Voice mask of the stream's voice pair; 0 when idle. */
     s32 first_voice;       /**< First voice of the pair. */
     u32 bytes_remaining;   /**< Data still to upload. */
-    s32 unk18;             /**< Copied from AkaoXaProgramHeader.spu_addr; not read. */
+    s32 last_program_spu_addr; /**< Copied from AkaoXaProgramHeader.spu_addr; not read. */
     u32 loop_bytes;        /**< bytes_remaining to reload when the program loops. */
     s32 last_ring_block_key; /**< Last uploaded ring block's AKAO id/length word; not read. */
     s32 filled_blocks;     /**< Ring blocks reported by the CD reader. */
