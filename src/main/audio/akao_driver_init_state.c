@@ -1,22 +1,15 @@
-/* Song and sequence storage is declared as bytes here and accessed as typed state. */
-
-#include "main/audio/akao.h"
+#include "internal/akao_control.h"
+#include "internal/akao_voice.h"
 #include <libspu.h>
 
-#define AKAO_Q8_SHIFT 8
-#define AKAO_Q16_SHIFT 16
-#define AKAO_FULL_VOLUME (AKAO_VOLUME_MAX << AKAO_Q8_SHIFT)
 #define AKAO_INITIAL_SFX_TEMPO 0x66A80000
 #define AKAO_INITIAL_REVERB_DEPTH 0x03FFF000
-#define AKAO_REVERB_DEPTH_UPDATE_PENDING 0x80
 
 #define SPU_CONTROL_ADDRESS 0x1F801DAA
 #define SPU_INITIAL_CONTROL_MASK 0xFFFA
 #define SPU_CONTROL_CD_ENABLE 0x1
 #define SPU_MASTER_VOLUME_LEFT (*(s16*)0x1F801D80)
 #define SPU_MASTER_VOLUME_RIGHT (*(s16*)0x1F801D82)
-#define SPU_CD_VOLUME_LEFT (*(s16*)0x1F801DB0)
-#define SPU_CD_VOLUME_RIGHT (*(s16*)0x1F801DB2)
 #define SPU_MAX_MASTER_VOLUME 0x3FFF
 #define SPU_MAX_CD_VOLUME 0x7FFF
 
@@ -26,66 +19,6 @@
  * @return Channel containing the age counter.
  */
 #define AKAO_CHANNEL_FROM_AGE(age) ((AkaoChannelState*)((u8*)(age) - OFFSETOF(AkaoChannelState, sfx_age)))
-
-/** @brief SFX channel control block (mirrors SfxControl in akao_driver.h). */
-typedef struct
-{
-    u32 active_mask;
-    s32 key_on_mask;
-    u32 note_on_mask;
-    u32 key_off_mask;
-    u32 paused_mask;
-    u32 tempo;
-    u32 tempo_acc;
-    u32 noise_mask;
-    u32 reverb_mask;
-    u32 pitch_mod_mask;
-} SfxControlView;
-
-/** @brief AKAO driver state flags (mirrors AkaoDriverFlags in akao_driver.h). */
-typedef struct
-{
-    u32 upload_flags;
-    u32 output_mode;
-    u32 update_flags;
-} AkaoDriverFlagsView;
-
-/** @brief Streamed-voice volume fields of g_akao_xa_tracker. */
-typedef struct
-{
-    u8 _pad00[0x40];
-    s32 volume;
-    s32 volume_step;
-    s32 volume_fade_ticks;
-} AkaoXaTrackerView;
-
-void akao_apply_reverb_type(s32 reverb_type);
-/** @brief Reset words: entry 0 is unknown; entry 1 aliases g_akao_song_descriptor_match_value[0]. */
-extern u32 D_8003EC30[2];
-extern s32 g_akao_bank_slot_keys[6];
-extern AkaoDriverFlagsView g_akao_driver_flags;
-extern SfxControlView g_akao_sfx_control;
-extern u8 g_akao_seq_master_state;
-extern AkaoSongState g_akao_suspended_song;
-extern AkaoXaTrackerView g_akao_xa_tracker;
-extern u32 g_akao_effect_voice_masks[3];
-extern u8 g_akao_seq_channels;
-extern u8 g_sfx_channels[];
-extern AkaoChannelState* g_akao_pending_channels;
-extern AkaoSongState* g_akao_seq_channel1;
-extern s16 g_akao_mastervol_fade_ticks;
-extern s16 g_akao_masterpan_fade_ticks;
-extern s32 g_akao_seq_pending_ticks;
-extern s16 g_akao_cdvol_fade_ticks;
-extern s32 g_akao_cdvol_acc;
-extern s32 g_akao_muted_channel_mask;
-extern s32 g_akao_cdvol_tick;
-extern s32 g_akao_mastervol_acc;
-extern s32 g_akao_masterpan_acc;
-extern s32 g_akao_driver_mode_flags;
-/** @brief Sequence-channel table base recorded during driver initialization. */
-extern void* g_akao_seq_channels_base;
-extern AkaoSongState* g_akao_seq_channel0;
 
 /**
  * @brief Initializes song, sequence-channel, SFX and SPU mixer state.
@@ -104,12 +37,13 @@ void akao_driver_init_state(void)
     u8* sequence_age;
     AkaoChannelState* sfx_channel;
     u32 value;
+    u32 channel_index;
 
     song = (AkaoSongState*)&g_akao_seq_master_state;
     song = (AkaoSongState*)((uintptr_t)song ^ 1);
     song = (AkaoSongState*)((uintptr_t)song ^ 1);
 
-    sequence_age = &g_akao_seq_channels;
+    sequence_age = (u8*)g_akao_seq_channels;
 
     D_8003EC30[1] = 0;
     D_8003EC30[0] = 0;
@@ -133,8 +67,6 @@ void akao_driver_init_state(void)
     song->volume = (AKAO_VOLUME_MAX << AKAO_Q16_SHIFT);
 
     g_akao_seq_channels_base = sequence_age;
-    sequence_age = (u8*)((uintptr_t)sequence_age ^ 1);
-    sequence_age = (u8*)((uintptr_t)sequence_age ^ 1);
     sequence_age = (u8*)&((AkaoChannelState*)sequence_age)->sfx_age;
     g_akao_seq_channel0 = song;
     g_akao_seq_channel1 = NULL;
@@ -152,6 +84,10 @@ void akao_driver_init_state(void)
     g_akao_sfx_control.reverb_mask = 0;
 
     value = *spu_control;
+    spu_control = (u16*)((uintptr_t)spu_control ^ value);
+    spu_control = (u16*)((uintptr_t)spu_control ^ value);
+    spu_control = (u16*)((uintptr_t)spu_control ^ value);
+    spu_control = (u16*)((uintptr_t)spu_control ^ value);
     song->reverb_mask = 0;
     SPU_MASTER_VOLUME_LEFT = SPU_MAX_MASTER_VOLUME;
     SPU_MASTER_VOLUME_RIGHT = SPU_MAX_MASTER_VOLUME;
@@ -163,7 +99,7 @@ void akao_driver_init_state(void)
     song->beat = 0;
     song->beats_per_measure = 0;
     song->measure = 0;
-    g_akao_xa_tracker.volume = AKAO_FULL_VOLUME;
+    g_akao_xa_tracker.volume = AKAO_CHANNEL_VOLUME_MASK;
     g_akao_xa_tracker.volume_fade_ticks = 0;
     g_akao_seq_pending_ticks = 0;
     g_akao_muted_channel_mask = 0;
@@ -173,16 +109,16 @@ void akao_driver_init_state(void)
     g_akao_effect_voice_masks[0] = 0;
     *spu_control = (value & SPU_INITIAL_CONTROL_MASK) | SPU_CONTROL_CD_ENABLE;
     value = 0;
+    channel_index = 0;
     do
     {
+        u8* age = sequence_age + channel_index * sizeof(AkaoChannelState);
         value++;
-        AKAO_CHANNEL_FROM_AGE(sequence_age)->flags = 0;
-        AKAO_CHANNEL_FROM_AGE(sequence_age)->voice = unassigned_voice;
-        AKAO_CHANNEL_FROM_AGE(sequence_age)->is_sfx_channel = 0;
-        AKAO_CHANNEL_FROM_AGE(sequence_age)->sfx_age = 0;
-        sequence_age += 0x100;
-        sequence_age += 0x10;
-        sequence_age += 0x8;
+        AKAO_CHANNEL_FROM_AGE(age)->flags = 0;
+        AKAO_CHANNEL_FROM_AGE(age)->voice = unassigned_voice;
+        AKAO_CHANNEL_FROM_AGE(age)->is_sfx_channel = 0;
+        AKAO_CHANNEL_FROM_AGE(age)->sfx_age = 0;
+        channel_index++;
     } while ((u16)value < AKAO_CHANNEL_COUNT);
 
     sfx_channel = (AkaoChannelState*)g_sfx_channels;
@@ -192,7 +128,7 @@ void akao_driver_init_state(void)
         sfx_channel->voice = (u16)value;
         sfx_channel->is_sfx_channel = 1;
         sfx_channel->sfx_age = 0;
-        sfx_channel->volume_scale = AKAO_FULL_VOLUME;
+        sfx_channel->volume_scale = AKAO_CHANNEL_VOLUME_MASK;
         sfx_channel->volume_scale_fade_ticks = 0;
         sfx_channel->sfx_pitch_bend_fade_ticks = 0;
         sfx_channel->sfx_pitch_bend = 0;

@@ -3,9 +3,6 @@
 #include "internal/akao_voice.h"
 #include <libspu.h>
 
-/* "AKAO" in little-endian */
-#define AKAO_MAGIC 0x4F414B41
-
 /**
  * @brief Relocates an AKAO articulation table by adding the SPU upload base
  *        address into each entry as it is copied.

@@ -32,18 +32,12 @@
 #define SPU_ADDRESS_UNIT_SHIFT 3
 
 /* Packed ADSR1 fields and the mode selector shared by attack and release. */
-#define SPU_ADSR_DECAY_SUSTAIN_MASK 0x00FF
-#define SPU_ADSR_ATTACK_RATE_SHIFT 8
 #define SPU_ADSR_ATTACK_MODE_SHIFT 15
 #define SPU_ADSR_MODE_INPUT_SHIFT 2
-#define SPU_ADSR_DECAY_RATE_SHIFT 4
-#define SPU_ADSR_DECAY_RATE_MASK 0x00F0
-#define SPU_ADSR_SUSTAIN_LEVEL_MASK 0x000F
 
 /* ADSR2 sustain fields occupy the bits above the release fields. */
 #define SPU_ADSR_RELEASE_MASK 0x003F
 #define SPU_ADSR_SUSTAIN_MASK 0xFFC0
-#define SPU_ADSR_SUSTAIN_RATE_SHIFT 6
 #define SPU_ADSR_SUSTAIN_MODE_SHIFT 14
 #define SPU_ADSR_SUSTAIN_MODE_INPUT_SHIFT 1
 #define SPU_ADSR_RELEASE_MODE_SHIFT 5

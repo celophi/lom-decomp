@@ -4,6 +4,14 @@
 #include "common.h"
 #include "main/audio/akao.h"
 
+/** @brief Common AKAO resource magic, stored in little-endian byte order. */
+#define AKAO_MAGIC 0x4F414B41
+
+/** @brief Fractional bits in AKAO volume, pan, pitch and tempo accumulators. */
+#define AKAO_Q7_SHIFT 7
+#define AKAO_Q8_SHIFT 8
+#define AKAO_Q16_SHIFT 16
+
 /** @brief Root counter 2 target of one driver tick (akao_irq_handler). */
 #define AKAO_TICK_PERIOD 0x44E8
 
@@ -159,6 +167,7 @@ extern s32 g_akao_driver_mode_flags;
 extern s32 g_akao_muted_channel_mask;
 extern s32 g_akao_seq_pending_ticks;
 extern AkaoXaTracker g_akao_xa_tracker;
+extern AkaoXaProgramStaging g_akao_xa_program_staging;
 extern s16 g_akao_cdvol_fade_ticks;
 extern s32 g_akao_masterpan_acc;
 extern s16 g_akao_masterpan_fade_ticks;

@@ -3,11 +3,6 @@
 
 #include "akao_driver.h"
 
-/** @brief Fractional bits in AKAO volume, pan, pitch and tempo accumulators. */
-#define AKAO_Q7_SHIFT 7
-#define AKAO_Q8_SHIFT 8
-#define AKAO_Q16_SHIFT 16
-
 /** @brief Channel LFO and preceding-channel sidechain flags. */
 #define AKAO_CH_PITCH_LFO 0x01
 #define AKAO_CH_VOLUME_LFO 0x02
@@ -41,6 +36,18 @@
 /** @brief All update bits that dirty each packed ADSR register. */
 #define SPU_UPDATE_ADSR_HIGH 0x6600
 #define SPU_UPDATE_ADSR_LOW 0x9900
+
+/** @brief CD input volume registers shared by initialization and volume fades. */
+#define SPU_CD_VOLUME_LEFT (*(s16*)0x1F801DB0)
+#define SPU_CD_VOLUME_RIGHT (*(s16*)0x1F801DB2)
+
+/** @brief Packed ADSR fields shared by sequence operands and SPU register writers. */
+#define SPU_ADSR_DECAY_SUSTAIN_MASK 0x00FF
+#define SPU_ADSR_ATTACK_RATE_SHIFT 8
+#define SPU_ADSR_DECAY_RATE_SHIFT 4
+#define SPU_ADSR_DECAY_RATE_MASK 0x00F0
+#define SPU_ADSR_SUSTAIN_LEVEL_MASK 0x000F
+#define SPU_ADSR_SUSTAIN_RATE_SHIFT 6
 
 /**
  * @brief Voice volume pair (VOLL + VOLR) at the start of each SPU voice
