@@ -54,9 +54,7 @@ extern AkaoBankHeader g_akao_bank_staging;
 /** @brief Fractional bits in XA volume and pan command parameters. */
 #define AKAO_XA_FIXED_POINT_SHIFT 8
 
-/** @brief XA ring block size and the next-fill index that permits playback to start. */
-#define AKAO_XA_RING_BLOCK_SHIFT 12
-#define AKAO_XA_RING_BLOCK_BYTES (1 << AKAO_XA_RING_BLOCK_SHIFT)
+/** @brief Next-fill index that permits XA ring playback to start. */
 #define AKAO_XA_START_FILL_BLOCK 2
 
 /** @brief Upload-block marker used before the first XA ring block is uploaded. */
