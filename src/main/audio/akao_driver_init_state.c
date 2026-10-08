@@ -1,4 +1,3 @@
-#define AKAO_DRIVER_INIT_STATE
 #include "internal/akao_control.h"
 #include "internal/akao_voice.h"
 #include <libspu.h>
@@ -38,12 +37,13 @@ void akao_driver_init_state(void)
     u8* sequence_age;
     AkaoChannelState* sfx_channel;
     u32 value;
+    u32 channel_index;
 
     song = (AkaoSongState*)&g_akao_seq_master_state;
     song = (AkaoSongState*)((uintptr_t)song ^ 1);
     song = (AkaoSongState*)((uintptr_t)song ^ 1);
 
-    sequence_age = &g_akao_seq_channels;
+    sequence_age = (u8*)g_akao_seq_channels;
 
     D_8003EC30[1] = 0;
     D_8003EC30[0] = 0;
@@ -67,8 +67,6 @@ void akao_driver_init_state(void)
     song->volume = (AKAO_VOLUME_MAX << AKAO_Q16_SHIFT);
 
     g_akao_seq_channels_base = sequence_age;
-    sequence_age = (u8*)((uintptr_t)sequence_age ^ 1);
-    sequence_age = (u8*)((uintptr_t)sequence_age ^ 1);
     sequence_age = (u8*)&((AkaoChannelState*)sequence_age)->sfx_age;
     g_akao_seq_channel0 = song;
     g_akao_seq_channel1 = NULL;
@@ -86,6 +84,10 @@ void akao_driver_init_state(void)
     g_akao_sfx_control.reverb_mask = 0;
 
     value = *spu_control;
+    spu_control = (u16*)((uintptr_t)spu_control ^ value);
+    spu_control = (u16*)((uintptr_t)spu_control ^ value);
+    spu_control = (u16*)((uintptr_t)spu_control ^ value);
+    spu_control = (u16*)((uintptr_t)spu_control ^ value);
     song->reverb_mask = 0;
     SPU_MASTER_VOLUME_LEFT = SPU_MAX_MASTER_VOLUME;
     SPU_MASTER_VOLUME_RIGHT = SPU_MAX_MASTER_VOLUME;
@@ -107,16 +109,16 @@ void akao_driver_init_state(void)
     g_akao_effect_voice_masks[0] = 0;
     *spu_control = (value & SPU_INITIAL_CONTROL_MASK) | SPU_CONTROL_CD_ENABLE;
     value = 0;
+    channel_index = 0;
     do
     {
+        u8* age = sequence_age + channel_index * sizeof(AkaoChannelState);
         value++;
-        AKAO_CHANNEL_FROM_AGE(sequence_age)->flags = 0;
-        AKAO_CHANNEL_FROM_AGE(sequence_age)->voice = unassigned_voice;
-        AKAO_CHANNEL_FROM_AGE(sequence_age)->is_sfx_channel = 0;
-        AKAO_CHANNEL_FROM_AGE(sequence_age)->sfx_age = 0;
-        sequence_age += 0x100;
-        sequence_age += 0x10;
-        sequence_age += 0x8;
+        AKAO_CHANNEL_FROM_AGE(age)->flags = 0;
+        AKAO_CHANNEL_FROM_AGE(age)->voice = unassigned_voice;
+        AKAO_CHANNEL_FROM_AGE(age)->is_sfx_channel = 0;
+        AKAO_CHANNEL_FROM_AGE(age)->sfx_age = 0;
+        channel_index++;
     } while ((u16)value < AKAO_CHANNEL_COUNT);
 
     sfx_channel = (AkaoChannelState*)g_sfx_channels;

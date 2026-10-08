@@ -202,15 +202,8 @@ extern AkaoDriverFlags g_akao_driver_flags;
 extern s32 g_akao_bank_slot_keys[6];
 /** @brief Reset words: entry 0 is unknown; entry 1 aliases g_akao_song_descriptor_match_value[0]. */
 extern u32 D_8003EC30[2];
-/**
- * @brief Channel table of the primary song (AKAO_CHANNEL_COUNT entries).
- * @note The initializer uses a scalar byte view to preserve base-address code generation.
- */
-#if defined(AKAO_DRIVER_INIT_STATE)
-extern u8 g_akao_seq_channels;
-#else
+/** @brief Channel table of the primary song (AKAO_CHANNEL_COUNT entries). */
 extern AkaoChannelState g_akao_seq_channels[];
-#endif
 extern AkaoSongState g_akao_seq_master_state;
 extern char g_akao_spu_malloc_table[];
 extern char g_akao_spu_zero_primer[];
