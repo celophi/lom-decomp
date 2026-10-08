@@ -11,6 +11,8 @@
 #include "common.h"
 #include <libspu.h>
 #include "internal/akao_voice.h"
+#include "internal/akao_control.h"
+#include "main/audio/akao_cmd.h"
 
 /* Voice mask of SPU voices 22 and 23, the highest pair the stream may use. */
 #define XA_TOP_VOICE_PAIR_MASK 0xC00000
@@ -18,9 +20,6 @@
 #define XA_VOICE_PAIR_COUNT (AKAO_VOICE_COUNT - AKAO_SFX_FIRST_VOICE - 1)
 /* Pair index 1 maps to voice 12. */
 #define XA_FIRST_VOICE_BIAS (AKAO_SFX_FIRST_VOICE - 1)
-
-/* "AKAO" in little-endian. */
-#define XA_AKAO_MAGIC 0x4F414B41
 
 /* SPU addresses of the double-buffered streaming area. */
 #define XA_SPU_SILENCE 0x1030
@@ -74,12 +73,8 @@ typedef struct
     u8 sample_data[AKAO_XA_RING_BLOCK_BYTES - XA_RING_DATA_OFFSET];
 } AkaoXaRingBlock;
 
-extern AkaoXaProgramStaging g_akao_xa_program_staging;
-
 void akao_release_channels(AkaoChannelState* channel, u32 release_mask);
-void akao_sfx_stop_channels(s32 sfx_id, s32 mode);
 void akao_spu_arm_xfer(void);
-s32 akao_fade_xa_volume(s32 ticks, s32 volume);
 
 void akao_xa_begin_mono_buffer(void);
 void akao_xa_begin_stereo_buffer(void);
@@ -910,7 +905,7 @@ void akao_xa_refill_ring(s32 left_addr, s32 right_addr, s32 block_bytes, SpuIRQC
     }
     block = (AkaoXaRingBlock*)g_akao_xa_tracker.data_cursor;
     program = &block->program;
-    if (program->magic != XA_AKAO_MAGIC)
+    if (program->magic != AKAO_MAGIC)
     {
         return;
     }

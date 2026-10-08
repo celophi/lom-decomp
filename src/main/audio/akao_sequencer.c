@@ -23,10 +23,6 @@
 /** @brief Read a little-endian signed 16-bit bytecode operand. */
 #define AKAO_READ_S16(p) ((s16)((p)[0] | ((p)[1] << 8)))
 
-/** @brief SPU CD-audio input volume registers (left/right). */
-#define SPU_CD_VOLUME_LEFT (*(s16*)0x1F801DB0)
-#define SPU_CD_VOLUME_RIGHT (*(s16*)0x1F801DB2)
-
 /** @brief Number of semitones used to wrap a pitch-table index or shift an octave. */
 #define AKAO_SEMITONES_PER_OCTAVE 12
 /** @brief Increment and decrement opcodes wrap the octave across 16 values. */
@@ -125,16 +121,10 @@
 #define AKAO_NOISE_RELATIVE_MASK 0xC0
 
 /** @brief Packed fields of the SPU's ADSR low register. */
-#define AKAO_ADSR_ATTACK_RATE_SHIFT 8
 #define AKAO_ADSR_ATTACK_RATE_MASK 0x7F00
 #define AKAO_ADSR_ATTACK_MODE_MASK 0x8000
-#define AKAO_ADSR_DECAY_SUSTAIN_MASK 0x00FF
-#define AKAO_ADSR_DECAY_RATE_SHIFT 4
-#define AKAO_ADSR_DECAY_RATE_MASK 0x00F0
-#define AKAO_ADSR_SUSTAIN_LEVEL_MASK 0x000F
 
 /** @brief Packed fields of the SPU's ADSR high register. */
-#define AKAO_ADSR_SUSTAIN_RATE_SHIFT 6
 #define AKAO_ADSR_SUSTAIN_RATE_MASK 0x1FC0
 #define AKAO_ADSR_SUSTAIN_DIRECTION_MASK 0x4000
 #define AKAO_ADSR_SUSTAIN_EXPONENTIAL_MASK 0x8000
@@ -898,19 +888,19 @@ void akao_bind_articulation_for_key(AkaoChannelState* channel, u32 key, s32 next
 
     if (!(channel_flags & AKAO_CH_ADSR_ATTACK))
     {
-        channel->spu_adsr_low = entry->attack_rate << AKAO_ADSR_ATTACK_RATE_SHIFT;
+        channel->spu_adsr_low = entry->attack_rate << SPU_ADSR_ATTACK_RATE_SHIFT;
     }
     else
     {
         channel->spu_adsr_low &= AKAO_ADSR_ATTACK_RATE_MASK;
     }
 
-    channel->spu_adsr_low |= articulation_data->pitch_misc.half.lo & (AKAO_ADSR_ATTACK_MODE_MASK | AKAO_ADSR_DECAY_SUSTAIN_MASK);
+    channel->spu_adsr_low |= articulation_data->pitch_misc.half.lo & (AKAO_ADSR_ATTACK_MODE_MASK | SPU_ADSR_DECAY_SUSTAIN_MASK);
 
     if (!(channel_flags & AKAO_CH_ADSR_SUSTAIN_RATE))
     {
         channel->spu_adsr_high &= AKAO_ADSR_REPLACE_SUSTAIN_RATE_MASK;
-        channel->spu_adsr_high |= entry->sustain_rate << AKAO_ADSR_SUSTAIN_RATE_SHIFT;
+        channel->spu_adsr_high |= entry->sustain_rate << SPU_ADSR_SUSTAIN_RATE_SHIFT;
     }
     else
     {
@@ -1060,17 +1050,17 @@ s32 akao_channel_start_note(AkaoChannelState* channel, s32 channel_bit, s32 slot
     channel->spu_loop_addr = articulation_data->loop_addr;
     if (!(channel_flags & AKAO_CH_ADSR_ATTACK))
     {
-        channel->spu_adsr_low = slot->attack_rate << AKAO_ADSR_ATTACK_RATE_SHIFT;
+        channel->spu_adsr_low = slot->attack_rate << SPU_ADSR_ATTACK_RATE_SHIFT;
     }
     else
     {
         channel->spu_adsr_low &= AKAO_ADSR_ATTACK_RATE_MASK;
     }
-    channel->spu_adsr_low |= articulation_data->pitch_misc.half.lo & (AKAO_ADSR_ATTACK_MODE_MASK | AKAO_ADSR_DECAY_SUSTAIN_MASK);
+    channel->spu_adsr_low |= articulation_data->pitch_misc.half.lo & (AKAO_ADSR_ATTACK_MODE_MASK | SPU_ADSR_DECAY_SUSTAIN_MASK);
     if (!(channel_flags & AKAO_CH_ADSR_SUSTAIN_RATE))
     {
         channel->spu_adsr_high &= AKAO_ADSR_REPLACE_SUSTAIN_RATE_MASK;
-        channel->spu_adsr_high |= slot->sustain_rate << AKAO_ADSR_SUSTAIN_RATE_SHIFT;
+        channel->spu_adsr_high |= slot->sustain_rate << SPU_ADSR_SUSTAIN_RATE_SHIFT;
     }
     else
     {
@@ -2607,7 +2597,7 @@ void akao_seq_op_set_adsr_attack(AkaoChannelState* channel)
 
     channel_flags = channel->flags | AKAO_CH_ADSR_ATTACK;
 
-    adsr_low = (channel->spu_adsr_low & (AKAO_ADSR_ATTACK_MODE_MASK | AKAO_ADSR_DECAY_SUSTAIN_MASK)) | ((u16)attack_rate << AKAO_ADSR_ATTACK_RATE_SHIFT);
+    adsr_low = (channel->spu_adsr_low & (AKAO_ADSR_ATTACK_MODE_MASK | SPU_ADSR_DECAY_SUSTAIN_MASK)) | ((u16)attack_rate << SPU_ADSR_ATTACK_RATE_SHIFT);
 
     channel->flags = channel_flags;
     channel->spu_adsr_low = adsr_low;
@@ -2631,7 +2621,7 @@ void akao_seq_op_set_adsr_decay(AkaoChannelState* channel, s32 channel_mask)
     channel->seq_cursor = cursor + 1;
 
     pending_updates = channel->update_flags | SPU_VOICE_ADSR_DR;
-    adsr_low = (channel->spu_adsr_low & (AKAO_LOW_HALF_MASK ^ AKAO_ADSR_DECAY_RATE_MASK)) | (decay_rate << AKAO_ADSR_DECAY_RATE_SHIFT);
+    adsr_low = (channel->spu_adsr_low & (AKAO_LOW_HALF_MASK ^ SPU_ADSR_DECAY_RATE_MASK)) | (decay_rate << SPU_ADSR_DECAY_RATE_SHIFT);
 
     channel->update_flags = pending_updates;
     channel->spu_adsr_low = adsr_low;
@@ -2654,7 +2644,7 @@ void akao_seq_op_set_adsr_sustain_level(AkaoChannelState* channel, s32 channel_m
     sustain_level = *cursor;
     channel->seq_cursor = cursor + 1;
     pending_updates = channel->update_flags | SPU_VOICE_ADSR_SL;
-    adsr_low = (channel->spu_adsr_low & (AKAO_LOW_HALF_MASK ^ AKAO_ADSR_SUSTAIN_LEVEL_MASK)) | sustain_level;
+    adsr_low = (channel->spu_adsr_low & (AKAO_LOW_HALF_MASK ^ SPU_ADSR_SUSTAIN_LEVEL_MASK)) | sustain_level;
     channel->update_flags = pending_updates;
     channel->spu_adsr_low = adsr_low;
 }
@@ -2678,7 +2668,7 @@ void akao_seq_op_set_adsr_sustain_rate(AkaoChannelState* channel)
 
     pending_updates = channel->update_flags | (SPU_VOICE_ADSR_SMODE | SPU_VOICE_ADSR_SR);
     channel_flags = channel->flags | AKAO_CH_ADSR_SUSTAIN_RATE;
-    adsr_high = (channel->spu_adsr_high & (AKAO_LOW_HALF_MASK ^ AKAO_ADSR_SUSTAIN_RATE_MASK)) | (sustain_rate << AKAO_ADSR_SUSTAIN_RATE_SHIFT);
+    adsr_high = (channel->spu_adsr_high & (AKAO_LOW_HALF_MASK ^ AKAO_ADSR_SUSTAIN_RATE_MASK)) | (sustain_rate << SPU_ADSR_SUSTAIN_RATE_SHIFT);
 
     channel->update_flags = pending_updates;
     channel->flags = channel_flags;

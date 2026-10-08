@@ -26,7 +26,6 @@ typedef struct
     s32 key;
 } AkaoBankIdentity;
 
-extern AkaoXaProgramStaging g_akao_xa_program_staging;
 extern CdlATV g_akao_cdmix;
 extern AkaoStreamingState g_akao_streaming_state;
 extern AkaoBankHeader g_akao_bank_staging;
@@ -50,9 +49,6 @@ extern AkaoBankHeader g_akao_bank_staging;
 
 /** @brief Distance from the usual XA SPU area to the lower area. */
 #define AKAO_XA_SPU_AREA_OFFSET 0x30000
-
-/** @brief Fractional bits in XA volume and pan command parameters. */
-#define AKAO_XA_FIXED_POINT_SHIFT 8
 
 /** @brief Next-fill index that permits XA ring playback to start. */
 #define AKAO_XA_START_FILL_BLOCK 2
@@ -1174,7 +1170,7 @@ void akao_play_xa_buffer(AkaoHeader* buffer, s32 pan, s32 use_reverb)
     if (akao_check_magic(buffer) == 0)
     {
         g_akao_cmd_params[0].buffer = buffer;
-        g_akao_cmd_params[1].value = ((pan & AKAO_PAN_MASK) << AKAO_XA_FIXED_POINT_SHIFT);
+        g_akao_cmd_params[1].value = ((pan & AKAO_PAN_MASK) << AKAO_Q8_SHIFT);
         g_akao_cmd_params[2].value = use_reverb;
         akao_send_command(AKAO_CMD_PLAY_XA_BUFFER);
     }
@@ -1198,7 +1194,7 @@ s32 akao_stop_xa(void)
  */
 s32 akao_set_xa_volume(s32 volume)
 {
-    g_akao_cmd_params[0].value = (volume & AKAO_VOLUME_MAX) << AKAO_XA_FIXED_POINT_SHIFT;
+    g_akao_cmd_params[0].value = (volume & AKAO_VOLUME_MAX) << AKAO_Q8_SHIFT;
     return akao_send_command(AKAO_CMD_SET_XA_VOLUME);
 }
 
@@ -1212,7 +1208,7 @@ s32 akao_set_xa_volume(s32 volume)
 s32 akao_fade_xa_volume(s32 ticks, s32 volume)
 {
     g_akao_cmd_params[0].value = ticks;
-    g_akao_cmd_params[1].value = ((volume & AKAO_VOLUME_MAX) << AKAO_XA_FIXED_POINT_SHIFT);
+    g_akao_cmd_params[1].value = ((volume & AKAO_VOLUME_MAX) << AKAO_Q8_SHIFT);
     return akao_send_command(AKAO_CMD_FADE_XA_VOLUME);
 }
 
@@ -1224,7 +1220,7 @@ s32 akao_fade_xa_volume(s32 ticks, s32 volume)
  */
 s32 akao_set_xa_pan(s32 pan)
 {
-    g_akao_cmd_params[0].value = (pan & AKAO_PAN_MASK) << AKAO_XA_FIXED_POINT_SHIFT;
+    g_akao_cmd_params[0].value = (pan & AKAO_PAN_MASK) << AKAO_Q8_SHIFT;
     return akao_send_command(AKAO_CMD_SET_XA_PAN);
 }
 
@@ -1288,7 +1284,7 @@ s32 akao_upload_xa_program(void* buffer, s32 upper_slot)
  */
 s32 akao_play_staged_xa(s32 pan, s32 use_reverb)
 {
-    g_akao_cmd_params[0].value = ((pan & AKAO_PAN_MASK) << AKAO_XA_FIXED_POINT_SHIFT);
+    g_akao_cmd_params[0].value = ((pan & AKAO_PAN_MASK) << AKAO_Q8_SHIFT);
     g_akao_cmd_params[1].value = use_reverb;
     return akao_send_command(AKAO_CMD_PLAY_STAGED_XA);
 }
@@ -1322,7 +1318,7 @@ void akao_play_xa_one_shot(void* buffer, s32 pan, s32 upper_slot, s32 use_reverb
     }
 
     g_akao_cmd_params[0].buffer = buffer;
-    g_akao_cmd_params[1].value = ((pan & AKAO_PAN_MASK) << AKAO_XA_FIXED_POINT_SHIFT);
+    g_akao_cmd_params[1].value = ((pan & AKAO_PAN_MASK) << AKAO_Q8_SHIFT);
     g_akao_cmd_params[2].value = spu_base;
     g_akao_cmd_params[3].value = use_reverb;
     akao_send_command(AKAO_CMD_PLAY_XA_ONE_SHOT);

@@ -24,15 +24,6 @@
 #define AKAO_SONG_INITIAL_VOLUME_SCALE 0x4000
 #define AKAO_SONG_INITIAL_TEMPO 0xFFFF0000
 
-/** @brief Fractional bits in a song master-volume accumulator. */
-#define AKAO_SONG_VOLUME_SHIFT 16
-
-/** @brief Fractional bits in the CD volume accumulator; its high half feeds the SPU. */
-#define AKAO_CD_VOLUME_SHIFT 16
-
-/** @brief Fractional bits in the driver master pan and volume accumulators. */
-#define AKAO_MASTER_FIXED_POINT_SHIFT 16
-
 /** @brief Startup delays for channels selected to play. */
 #define AKAO_SONG_START_NOTE_TICKS 4
 #define AKAO_SONG_START_GATE_TICKS 2
@@ -55,9 +46,6 @@
 
 /** @brief Restore volume, pitch and ADSR registers after resuming paused channels. */
 #define AKAO_PAUSE_RESUME_VOICE_UPDATES 0x2B13
-
-/** @brief Fractional bits in SFX pan, volume and pitch-bend accumulators. */
-#define AKAO_SFX_FIXED_POINT_SHIFT 8
 
 /** @brief Initial SFX note and gate countdowns. */
 #define AKAO_SFX_START_NOTE_TICKS 2
@@ -588,11 +576,11 @@ void akao_sfx_start_channel(AkaoChannelState* channel, AkaoCommandParam* params,
 
     channel->sfx_id = params[0].value;
     channel->sfx_tag = params[1].value;
-    channel->pan_bias = (u8)params[2].value << AKAO_SFX_FIXED_POINT_SHIFT;
+    channel->pan_bias = (u8)params[2].value << AKAO_Q8_SHIFT;
     channel->pan_bias_fade_ticks = 0;
-    channel->pan = AKAO_PAN_CENTER << AKAO_SFX_FIXED_POINT_SHIFT;
+    channel->pan = AKAO_PAN_CENTER << AKAO_Q8_SHIFT;
     channel->pan_fade_ticks = 0;
-    channel->volume_scale = ((u16)params[3].value & AKAO_VOLUME_MAX) << AKAO_SFX_FIXED_POINT_SHIFT;
+    channel->volume_scale = ((u16)params[3].value & AKAO_VOLUME_MAX) << AKAO_Q8_SHIFT;
     channel->volume_scale_fade_ticks = 0;
     channel->sfx_bank = params[4].value;
     channel->note_ticks = AKAO_SFX_START_NOTE_TICKS;
@@ -1286,7 +1274,7 @@ void akao_seq_set_master_volume(AkaoCommandParam* params)
     song_id = params[0].value;
     if (song_id == 0 || song_id == g_akao_seq_channel0->song_id)
     {
-        volume = (params[1].value & AKAO_VOLUME_MAX) << AKAO_SONG_VOLUME_SHIFT;
+        volume = (params[1].value & AKAO_VOLUME_MAX) << AKAO_Q16_SHIFT;
         g_akao_seq_channel0->volume = volume;
         g_akao_seq_channel0->volume_fade_ticks = 0;
         akao_seq_flag_volume_update(g_akao_seq_channel0, g_akao_seq_channels);
@@ -1298,7 +1286,7 @@ void akao_seq_set_master_volume(AkaoCommandParam* params)
         pending = g_akao_pending_channels ? (intptr_t)g_akao_pending_channels : (intptr_t)g_akao_pending_channels;
         volume = params[1].value;
         g_akao_seq_channel1->volume_fade_ticks = 0;
-        volume = (volume & AKAO_VOLUME_MAX) << AKAO_SONG_VOLUME_SHIFT;
+        volume = (volume & AKAO_VOLUME_MAX) << AKAO_Q16_SHIFT;
         g_akao_seq_channel1->volume = volume;
         akao_seq_flag_volume_update(g_akao_seq_channel1, (AkaoChannelState*)pending);
     }
@@ -1329,7 +1317,7 @@ void akao_seq_fade_master_volume(AkaoCommandParam* params)
     {
         fade_ticks = requested_ticks;
     }
-    target_volume = (params[2].value & AKAO_VOLUME_MAX) << AKAO_SONG_VOLUME_SHIFT;
+    target_volume = (params[2].value & AKAO_VOLUME_MAX) << AKAO_Q16_SHIFT;
     song_id = params[0].value;
     if (song_id == 0 || song_id == g_akao_seq_channel0->song_id)
     {
@@ -1394,9 +1382,9 @@ void akao_seq_fade_master_volume_from(AkaoCommandParam* params)
     {
         return;
     }
-    start_volume = (params[2].value & AKAO_VOLUME_MAX) << AKAO_SONG_VOLUME_SHIFT;
+    start_volume = (params[2].value & AKAO_VOLUME_MAX) << AKAO_Q16_SHIFT;
     song->volume = start_volume;
-    target_volume = (params[3].value & AKAO_VOLUME_MAX) << AKAO_SONG_VOLUME_SHIFT;
+    target_volume = (params[3].value & AKAO_VOLUME_MAX) << AKAO_Q16_SHIFT;
     target_volume -= start_volume;
     volume_step = target_volume / fade_ticks;
     song->volume_fade_ticks = fade_ticks;
@@ -1414,7 +1402,7 @@ void akao_cd_set_volume(AkaoCommandParam* params)
 
     volume = (u16)params[0].value;
     g_akao_cdvol_fade_ticks = 0;
-    volume = (u32)volume << AKAO_CD_VOLUME_SHIFT;
+    volume = (u32)volume << AKAO_Q16_SHIFT;
     g_akao_cdvol_acc = volume;
     akao_apply_cdvol_to_spu();
 }
@@ -1438,7 +1426,7 @@ void akao_cd_fade_volume(AkaoCommandParam* params)
         fade_ticks = requested_ticks;
     }
     target_volume = (u16)params[1].value;
-    target_volume = (u32)target_volume << AKAO_CD_VOLUME_SHIFT;
+    target_volume = (u32)target_volume << AKAO_Q16_SHIFT;
     target_volume -= g_akao_cdvol_acc;
     volume_step = target_volume / fade_ticks;
     g_akao_cdvol_fade_ticks = fade_ticks;
@@ -1466,8 +1454,8 @@ void akao_cd_fade_volume_from(AkaoCommandParam* params)
     }
     target_volume = (u16)params[2].value;
     start_volume = (u16)params[1].value;
-    target_volume = (u32)target_volume << AKAO_CD_VOLUME_SHIFT;
-    start_volume = (u32)start_volume << AKAO_CD_VOLUME_SHIFT;
+    target_volume = (u32)target_volume << AKAO_Q16_SHIFT;
+    start_volume = (u32)start_volume << AKAO_Q16_SHIFT;
     target_volume -= start_volume;
     volume_step = target_volume / fade_ticks;
     g_akao_cdvol_fade_ticks = fade_ticks;
@@ -1503,7 +1491,7 @@ void akao_sfx_set_volume_scale(AkaoCommandParam* params)
             {
                 volume_scale = (u16)params[2].value;
                 channel->volume_scale_fade_ticks = 0;
-                channel->volume_scale = (volume_scale & AKAO_VOLUME_MAX) << AKAO_SFX_FIXED_POINT_SHIFT;
+                channel->volume_scale = (volume_scale & AKAO_VOLUME_MAX) << AKAO_Q8_SHIFT;
                 channel->update_flags |= SPU_UPDATE_VOLUME;
             }
         }
@@ -1516,7 +1504,7 @@ void akao_sfx_set_volume_scale(AkaoCommandParam* params)
             {
                 volume_scale = (u16)params[2].value;
                 channel->volume_scale_fade_ticks = 0;
-                channel->volume_scale = (volume_scale & AKAO_VOLUME_MAX) << AKAO_SFX_FIXED_POINT_SHIFT;
+                channel->volume_scale = (volume_scale & AKAO_VOLUME_MAX) << AKAO_Q8_SHIFT;
                 channel->update_flags |= SPU_UPDATE_VOLUME;
             }
         }
@@ -1558,7 +1546,7 @@ void akao_sfx_fade_volume_scale(AkaoCommandParam* params)
                 {
                     fade_ticks = 1;
                 }
-                target_scale = ((u16)params[3].value & AKAO_VOLUME_MAX) << AKAO_SFX_FIXED_POINT_SHIFT;
+                target_scale = ((u16)params[3].value & AKAO_VOLUME_MAX) << AKAO_Q8_SHIFT;
                 current_scale = channel->volume_scale;
                 volume_delta = target_scale - current_scale;
                 channel->volume_scale_step = volume_delta / fade_ticks;
@@ -1580,7 +1568,7 @@ void akao_sfx_fade_volume_scale(AkaoCommandParam* params)
                 {
                     fade_ticks = 1;
                 }
-                target_scale = ((u16)params[3].value & AKAO_VOLUME_MAX) << AKAO_SFX_FIXED_POINT_SHIFT;
+                target_scale = ((u16)params[3].value & AKAO_VOLUME_MAX) << AKAO_Q8_SHIFT;
                 current_scale = channel->volume_scale;
                 volume_delta = target_scale - current_scale;
                 channel->volume_scale_step = volume_delta / fade_ticks;
@@ -1614,7 +1602,7 @@ void akao_sfx_set_volume_scale_unsuppressed(AkaoCommandParam* params)
         {
             volume_scale = (u16)params[0].value;
             channel->volume_scale_fade_ticks = 0;
-            channel->volume_scale = (volume_scale & AKAO_VOLUME_MAX) << AKAO_SFX_FIXED_POINT_SHIFT;
+            channel->volume_scale = (volume_scale & AKAO_VOLUME_MAX) << AKAO_Q8_SHIFT;
             channel->update_flags |= SPU_UPDATE_VOLUME;
         }
     }
@@ -1654,7 +1642,7 @@ void akao_sfx_fade_volume_scale_unsuppressed(AkaoCommandParam* params)
             {
                 fade_ticks = 1;
             }
-            target_scale = ((u16)params[1].value & AKAO_VOLUME_MAX) << AKAO_SFX_FIXED_POINT_SHIFT;
+            target_scale = ((u16)params[1].value & AKAO_VOLUME_MAX) << AKAO_Q8_SHIFT;
             current_scale = channel->volume_scale;
             volume_delta = target_scale - current_scale;
             channel->volume_scale_step = volume_delta / fade_ticks;
@@ -1688,7 +1676,7 @@ void akao_sfx_set_pan_bias(AkaoCommandParam* params)
             {
                 pan_bias = (u8)params[2].value;
                 channel->pan_bias_fade_ticks = 0;
-                channel->pan_bias = pan_bias << AKAO_SFX_FIXED_POINT_SHIFT;
+                channel->pan_bias = pan_bias << AKAO_Q8_SHIFT;
                 channel->update_flags |= SPU_UPDATE_VOLUME;
             }
         }
@@ -1701,7 +1689,7 @@ void akao_sfx_set_pan_bias(AkaoCommandParam* params)
             {
                 pan_bias = (u8)params[2].value;
                 channel->pan_bias_fade_ticks = 0;
-                channel->pan_bias = pan_bias << AKAO_SFX_FIXED_POINT_SHIFT;
+                channel->pan_bias = pan_bias << AKAO_Q8_SHIFT;
                 channel->update_flags |= SPU_UPDATE_VOLUME;
             }
         }
@@ -1743,7 +1731,7 @@ void akao_sfx_fade_pan_bias(AkaoCommandParam* params)
                 {
                     fade_ticks = 1;
                 }
-                target_bias = (u8)params[3].value << AKAO_SFX_FIXED_POINT_SHIFT;
+                target_bias = (u8)params[3].value << AKAO_Q8_SHIFT;
                 current_bias = channel->pan_bias;
                 pan_delta = target_bias - current_bias;
                 channel->pan_bias_step = pan_delta / fade_ticks;
@@ -1765,7 +1753,7 @@ void akao_sfx_fade_pan_bias(AkaoCommandParam* params)
                 {
                     fade_ticks = 1;
                 }
-                target_bias = (u8)params[3].value << AKAO_SFX_FIXED_POINT_SHIFT;
+                target_bias = (u8)params[3].value << AKAO_Q8_SHIFT;
                 current_bias = channel->pan_bias;
                 pan_delta = target_bias - current_bias;
                 channel->pan_bias_step = pan_delta / fade_ticks;
@@ -1799,7 +1787,7 @@ void akao_sfx_set_pan_bias_unsuppressed(AkaoCommandParam* params)
         {
             pan_bias = (u8)params[0].value;
             channel->pan_bias_fade_ticks = 0;
-            channel->pan_bias = pan_bias << AKAO_SFX_FIXED_POINT_SHIFT;
+            channel->pan_bias = pan_bias << AKAO_Q8_SHIFT;
             channel->update_flags |= SPU_UPDATE_VOLUME;
         }
     }
@@ -1839,7 +1827,7 @@ void akao_sfx_fade_pan_bias_unsuppressed(AkaoCommandParam* params)
             {
                 fade_ticks = 1;
             }
-            target_bias = (u8)params[1].value << AKAO_SFX_FIXED_POINT_SHIFT;
+            target_bias = (u8)params[1].value << AKAO_Q8_SHIFT;
             current_bias = channel->pan_bias;
             pan_delta = target_bias - current_bias;
             channel->pan_bias_step = pan_delta / fade_ticks;
@@ -1873,7 +1861,7 @@ void akao_sfx_set_pitch_bend(AkaoCommandParam* params)
             {
                 pitch_bend = (u8)params[2].value;
                 channel->sfx_pitch_bend_fade_ticks = 0;
-                channel->sfx_pitch_bend = pitch_bend << AKAO_SFX_FIXED_POINT_SHIFT;
+                channel->sfx_pitch_bend = pitch_bend << AKAO_Q8_SHIFT;
                 channel->update_flags |= SPU_UPDATE_PITCH;
             }
         }
@@ -1886,7 +1874,7 @@ void akao_sfx_set_pitch_bend(AkaoCommandParam* params)
             {
                 pitch_bend = (u8)params[2].value;
                 channel->sfx_pitch_bend_fade_ticks = 0;
-                channel->sfx_pitch_bend = pitch_bend << AKAO_SFX_FIXED_POINT_SHIFT;
+                channel->sfx_pitch_bend = pitch_bend << AKAO_Q8_SHIFT;
                 channel->update_flags |= SPU_UPDATE_PITCH;
             }
         }
@@ -1929,7 +1917,7 @@ void akao_sfx_fade_pitch_bend(AkaoCommandParam* params)
                 {
                     fade_ticks = 1;
                 }
-                target_bend = (u8)params[3].value << AKAO_SFX_FIXED_POINT_SHIFT;
+                target_bend = (u8)params[3].value << AKAO_Q8_SHIFT;
                 current_bend = HALF_LOW_U16(channel->sfx_pitch_bend);
                 bend_delta = target_bend - current_bend;
                 bend_step = bend_delta / fade_ticks;
@@ -1952,7 +1940,7 @@ void akao_sfx_fade_pitch_bend(AkaoCommandParam* params)
                 {
                     fade_ticks = 1;
                 }
-                target_bend = (u8)params[3].value << AKAO_SFX_FIXED_POINT_SHIFT;
+                target_bend = (u8)params[3].value << AKAO_Q8_SHIFT;
                 current_bend = HALF_LOW_U16(channel->sfx_pitch_bend);
                 bend_delta = target_bend - current_bend;
                 bend_step = bend_delta / fade_ticks;
@@ -1984,7 +1972,7 @@ void akao_sfx_set_pitch_bend_unsuppressed(AkaoCommandParam* params)
         {
             pitch_bend = (u8)params[0].value;
             channel->sfx_pitch_bend_fade_ticks = 0;
-            channel->sfx_pitch_bend = pitch_bend << AKAO_SFX_FIXED_POINT_SHIFT;
+            channel->sfx_pitch_bend = pitch_bend << AKAO_Q8_SHIFT;
             channel->update_flags |= SPU_UPDATE_PITCH;
         }
     }
@@ -2025,7 +2013,7 @@ void akao_sfx_fade_pitch_bend_unsuppressed(AkaoCommandParam* params)
             {
                 fade_ticks = 1;
             }
-            target_bend = (u8)params[1].value << AKAO_SFX_FIXED_POINT_SHIFT;
+            target_bend = (u8)params[1].value << AKAO_Q8_SHIFT;
             current_bend = HALF_LOW_U16(channel->sfx_pitch_bend);
             bend_delta = target_bend - current_bend;
             bend_step = bend_delta / fade_ticks;
@@ -2045,7 +2033,7 @@ void akao_master_set_pan(AkaoCommandParam* params)
 
     pan = (s8)params[0].value;
     g_akao_masterpan_fade_ticks = 0;
-    pan = (u32)pan << AKAO_MASTER_FIXED_POINT_SHIFT;
+    pan = (u32)pan << AKAO_Q16_SHIFT;
     g_akao_masterpan_acc = pan;
 }
 
@@ -2068,7 +2056,7 @@ void akao_master_fade_pan(AkaoCommandParam* params)
         fade_ticks = requested_ticks;
     }
     target_pan = (s8)params[1].value;
-    target_pan = (u32)target_pan << AKAO_MASTER_FIXED_POINT_SHIFT;
+    target_pan = (u32)target_pan << AKAO_Q16_SHIFT;
     target_pan -= g_akao_masterpan_acc;
     pan_step = target_pan / fade_ticks;
     g_akao_masterpan_fade_ticks = fade_ticks;
@@ -2099,10 +2087,10 @@ void akao_master_fade_pan_from(AkaoCommandParam* params)
         fade_ticks = params[0].value;
     }
     start_pan = (s8)params[1].value;
-    start_pan = (u32)start_pan << AKAO_MASTER_FIXED_POINT_SHIFT;
+    start_pan = (u32)start_pan << AKAO_Q16_SHIFT;
     g_akao_masterpan_acc = start_pan;
     target_pan = (s8)params[2].value;
-    target_pan = (u32)target_pan << AKAO_MASTER_FIXED_POINT_SHIFT;
+    target_pan = (u32)target_pan << AKAO_Q16_SHIFT;
     target_pan -= start_pan;
     pan_step = target_pan / fade_ticks;
     g_akao_masterpan_fade_ticks = fade_ticks;
@@ -2119,7 +2107,7 @@ void akao_master_set_volume(AkaoCommandParam* params)
 
     volume = (s8)params[0].value;
     g_akao_mastervol_fade_ticks = 0;
-    volume = (u32)volume << AKAO_MASTER_FIXED_POINT_SHIFT;
+    volume = (u32)volume << AKAO_Q16_SHIFT;
     g_akao_mastervol_acc = volume;
 }
 
@@ -2142,7 +2130,7 @@ void akao_master_fade_volume(AkaoCommandParam* params)
         fade_ticks = requested_ticks;
     }
     target_volume = (s8)params[1].value;
-    target_volume = (u32)target_volume << AKAO_MASTER_FIXED_POINT_SHIFT;
+    target_volume = (u32)target_volume << AKAO_Q16_SHIFT;
     target_volume -= g_akao_mastervol_acc;
     volume_step = target_volume / fade_ticks;
     g_akao_mastervol_fade_ticks = fade_ticks;
@@ -2173,10 +2161,10 @@ void akao_master_fade_volume_from(AkaoCommandParam* params)
         fade_ticks = params[0].value;
     }
     start_volume = (s8)params[1].value;
-    start_volume = (u32)start_volume << AKAO_MASTER_FIXED_POINT_SHIFT;
+    start_volume = (u32)start_volume << AKAO_Q16_SHIFT;
     g_akao_mastervol_acc = start_volume;
     target_volume = (s8)params[2].value;
-    target_volume = (u32)target_volume << AKAO_MASTER_FIXED_POINT_SHIFT;
+    target_volume = (u32)target_volume << AKAO_Q16_SHIFT;
     target_volume -= start_volume;
     volume_step = target_volume / fade_ticks;
     g_akao_mastervol_fade_ticks = fade_ticks;
