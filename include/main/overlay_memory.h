@@ -3,6 +3,8 @@
 
 #include "common.h"
 
+/** @brief Linker symbol at the first byte past the main executable image. */
+extern u8 g_overlay_load_base;
 /** @brief Destination used for the primary overlay image. */
 extern void* const g_overlay_load_address;
 

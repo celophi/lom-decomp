@@ -192,7 +192,7 @@ void main_game_loop(void)
             screen_transition(0);
             cdrom_wait_queue_empty();
             field_restore_entry_music();
-            field_scene_reset(0);
+            field_scene_reset(NULL);
             g_field_audio_timer = 0;
             player_name = g_saved_game.layout.characters[0].name;
             g_game_state = gname_run((RenderContext*)GNAME_RENDER_ADDRESS, player_name, player_name,
@@ -233,7 +233,7 @@ void main_game_loop(void)
             cdrom_stream(CD_RES_CLOAD_BIN, SECONDARY_OVERLAY_LOAD_ADDR);
             screen_transition(0);
             cdrom_wait_queue_empty();
-            field_scene_reset(0);
+            field_scene_reset(NULL);
             spawn_id = &g_field_spawn_id;
             g_save_compatibility_tag = SAVE_TAG_STARTUP;
             if (cload_main() != 0)

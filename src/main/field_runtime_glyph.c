@@ -42,7 +42,7 @@
  * @see decomp.me (prior C/inline-asm version, 100% in-tree) https://decomp.me/scratch/1IyXY
  * @see decomp.me (prior C/inline-asm version, 100% in-tree) https://decomp.me/scratch/BhIpy
  */
-void field_draw_glyph(u8 character, s32 ot_depth, s32 clut_offset);
+void field_draw_glyph(s32 character, s32 ot_depth, s32 clut_offset);
 
 __asm__(
     ".section .text\n"

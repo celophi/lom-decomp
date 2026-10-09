@@ -1,6 +1,5 @@
 #include "main/overlay_memory.h"
 
-extern u8 g_overlay_load_base;
 extern u8 g_field_render_buffers;
 extern u8 g_world_map_overlay_end;
 extern u8 g_title_overlay_end;

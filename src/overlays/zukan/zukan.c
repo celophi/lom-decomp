@@ -93,9 +93,6 @@ typedef struct
 
 /* Rendering constants. */
 
-#define ZUKAN_FADE_NEUTRAL 0x100
-#define ZUKAN_FADE_ADDITIVE_THRESHOLD (ZUKAN_FADE_NEUTRAL + 1)
-
 /* Ordering-table slots used in the in-game RenderContext. NAV_SPRITES holds UI sprites 0-5
  * (the previous/next/return controls tinted during transitions), UI_SPRITES the remaining ones. */
 #define ZUKAN_LAYER_NAV_SPRITES 10
@@ -237,7 +234,7 @@ u8* zukan_initialize_state(u8* work_buffer, s32 category)
     g_zukan_work_buffer = (u8*)(((uintptr_t)work_buffer + 3) & ~3);
     zukan_upload_ui_images((next_buffer = work_buffer + 0x8000, work_buffer));
     field_reset_input_repeat();
-    zukan_set_fade_target(ZUKAN_FADE_NEUTRAL, ZUKAN_FADE_NEUTRAL, ZUKAN_FADE_NEUTRAL, ZUKAN_FADE_STEPS);
+    zukan_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, ZUKAN_FADE_STEPS);
     g_zukan_transition_state = ZUKAN_TRANSITION_IDLE;
     g_zukan_view_mode = ZUKAN_VIEW_LIST;
     g_zukan_selected_entry = 0;
@@ -701,7 +698,7 @@ void zukan_update_transition(RenderContext* render_ctx)
                 g_zukan_transition_state = ZUKAN_TRANSITION_NEXT_FADE_IN;
                 g_zukan_transition_frame = 0;
                 g_zukan_displayed_entry = g_zukan_selected_entry;
-                zukan_set_fade_target(ZUKAN_FADE_NEUTRAL, ZUKAN_FADE_NEUTRAL, ZUKAN_FADE_NEUTRAL, ZUKAN_FADE_STEPS);
+                zukan_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, ZUKAN_FADE_STEPS);
             }
             break;
         case ZUKAN_TRANSITION_NEXT_FADE_IN:
@@ -717,7 +714,7 @@ void zukan_update_transition(RenderContext* render_ctx)
                 g_zukan_transition_state = ZUKAN_TRANSITION_PREVIOUS_FADE_IN;
                 g_zukan_transition_frame = 0;
                 g_zukan_displayed_entry = g_zukan_selected_entry;
-                zukan_set_fade_target(ZUKAN_FADE_NEUTRAL, ZUKAN_FADE_NEUTRAL, ZUKAN_FADE_NEUTRAL, ZUKAN_FADE_STEPS);
+                zukan_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, ZUKAN_FADE_STEPS);
             }
             break;
         case ZUKAN_TRANSITION_PREVIOUS_FADE_IN:
@@ -733,7 +730,7 @@ void zukan_update_transition(RenderContext* render_ctx)
                 g_zukan_transition_state = ZUKAN_TRANSITION_NEXT_FADE_IN;
                 g_zukan_transition_frame = 0;
                 g_zukan_view_mode = ZUKAN_VIEW_LIST;
-                zukan_set_fade_target(ZUKAN_FADE_NEUTRAL, ZUKAN_FADE_NEUTRAL, ZUKAN_FADE_NEUTRAL, ZUKAN_FADE_STEPS);
+                zukan_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, ZUKAN_FADE_STEPS);
             }
             break;
         case ZUKAN_TRANSITION_OPEN_DETAIL:
@@ -744,7 +741,7 @@ void zukan_update_transition(RenderContext* render_ctx)
                 g_zukan_view_mode = ZUKAN_VIEW_DETAIL;
                 g_zukan_transition_frame = 0;
                 g_zukan_displayed_entry = g_zukan_selected_entry;
-                zukan_set_fade_target(ZUKAN_FADE_NEUTRAL, ZUKAN_FADE_NEUTRAL, ZUKAN_FADE_NEUTRAL, ZUKAN_FADE_STEPS);
+                zukan_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, ZUKAN_FADE_STEPS);
             }
             break;
         }
@@ -985,16 +982,16 @@ TILE* zukan_render_fade(TILE* tile, u_long* ordering_table)
         g_zukan_fade_current.blue = g_zukan_fade_target.blue;
     }
 
-    if ((g_zukan_fade_current.red != ZUKAN_FADE_NEUTRAL) || (g_zukan_fade_current.green != g_zukan_fade_current.red) ||
+    if ((g_zukan_fade_current.red != FADE_NEUTRAL) || (g_zukan_fade_current.green != g_zukan_fade_current.red) ||
         (g_zukan_fade_current.blue != g_zukan_fade_current.green))
     {
-        if (g_zukan_fade_current.red >= ZUKAN_FADE_ADDITIVE_THRESHOLD)
+        if (g_zukan_fade_current.red >= FADE_ADDITIVE_THRESHOLD)
         {
             setRGB0(tile, g_zukan_fade_current.red - 1, g_zukan_fade_current.green - 1, g_zukan_fade_current.blue - 1);
         }
         else
         {
-            if (g_zukan_fade_current.red == ZUKAN_FADE_NEUTRAL)
+            if (g_zukan_fade_current.red == FADE_NEUTRAL)
             {
                 tile->r0 = 0;
             }
@@ -1002,7 +999,7 @@ TILE* zukan_render_fade(TILE* tile, u_long* ordering_table)
             {
                 tile->r0 = ~g_zukan_fade_current.red;
             }
-            if (g_zukan_fade_current.green == ZUKAN_FADE_NEUTRAL)
+            if (g_zukan_fade_current.green == FADE_NEUTRAL)
             {
                 tile->g0 = 0;
             }
@@ -1010,7 +1007,7 @@ TILE* zukan_render_fade(TILE* tile, u_long* ordering_table)
             {
                 tile->g0 = ~g_zukan_fade_current.green;
             }
-            if (g_zukan_fade_current.blue == ZUKAN_FADE_NEUTRAL)
+            if (g_zukan_fade_current.blue == FADE_NEUTRAL)
             {
                 tile->b0 = 0;
             }
@@ -1030,7 +1027,7 @@ TILE* zukan_render_fade(TILE* tile, u_long* ordering_table)
 
         tile++;
         tpage = (DR_TPAGE*)tile;
-        if (g_zukan_fade_current.red < ZUKAN_FADE_ADDITIVE_THRESHOLD)
+        if (g_zukan_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
             draw_mode = getTPage(0, 2, ZUKAN_PAGE_IMAGE_X, ZUKAN_PAGE_IMAGE_Y);
         }

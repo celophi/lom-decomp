@@ -31,12 +31,7 @@
 #define CHECKPS_RESERVED_BSS_WORDS 32769
 
 #define CHECKPS_FRAME_VSYNC_INTERVAL 2
-#define CHECKPS_FADE_ADDITIVE_DRAW_MODE 0x25
-#define CHECKPS_FADE_SUBTRACTIVE_DRAW_MODE 0x45
 #define CHECKPS_IMAGE_TPAGE 5
-#define CHECKPS_GEOMETRY_SCREEN_DISTANCE 1500
-#define CHECKPS_FADE_NEUTRAL 256
-#define CHECKPS_FADE_ADDITIVE_THRESHOLD (CHECKPS_FADE_NEUTRAL + 1)
 #define CHECKPS_DEFAULT_FADE_STEPS 20
 #define CHECKPS_IMAGE_DISPLAY_FRAMES 120
 #define CHECKPS_IMAGE_COUNT 100
@@ -345,7 +340,7 @@ static void run_checkps_display_loop(CheckPSRenderState* render_state)
 static void init_checkps_display(CheckPSRenderState* render_state)
 {
     RECT rect;
-    SetGeomScreen(CHECKPS_GEOMETRY_SCREEN_DISTANCE);
+    SetGeomScreen(SCREEN_PROJECTION_DISTANCE);
     SetGeomOffset(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
     setRECT(&render_state->frames[0].display.clear_rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     setRECT(&render_state->frames[1].display.clear_rect, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -371,7 +366,7 @@ static void init_checkps_display(CheckPSRenderState* render_state)
     ClearImage(&rect, 0, 0, 0);
     reset_glyph_renderer();
     reset_fade_state();
-    set_fade_target(CHECKPS_FADE_NEUTRAL, CHECKPS_FADE_NEUTRAL, CHECKPS_FADE_NEUTRAL, CHECKPS_DEFAULT_FADE_STEPS);
+    set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, CHECKPS_DEFAULT_FADE_STEPS);
     load_checkps_image();
     g_checkps_exit_reason = CHECKPS_EXIT_NONE;
 #if defined(VERSION_JP)
@@ -511,15 +506,15 @@ static void update_and_draw_fade(CheckPSFrame* frame)
         g_fade_current.green = g_fade_target.green;
         g_fade_current.blue = g_fade_target.blue;
     }
-    if (g_fade_current.red != CHECKPS_FADE_NEUTRAL || g_fade_current.green != g_fade_current.red || g_fade_current.blue != g_fade_current.green)
+    if (g_fade_current.red != FADE_NEUTRAL || g_fade_current.green != g_fade_current.red || g_fade_current.blue != g_fade_current.green)
     {
-        if (g_fade_current.red >= CHECKPS_FADE_ADDITIVE_THRESHOLD)
+        if (g_fade_current.red >= FADE_ADDITIVE_THRESHOLD)
         {
             setRGB0(&primitive->tile, g_fade_current.red - 1, g_fade_current.green - 1, g_fade_current.blue - 1);
         }
         else
         {
-            if (g_fade_current.red == CHECKPS_FADE_NEUTRAL)
+            if (g_fade_current.red == FADE_NEUTRAL)
             {
                 primitive->tile.r0 = 0;
             }
@@ -527,7 +522,7 @@ static void update_and_draw_fade(CheckPSFrame* frame)
             {
                 primitive->tile.r0 = ~g_fade_current.red;
             }
-            if (g_fade_current.green == CHECKPS_FADE_NEUTRAL)
+            if (g_fade_current.green == FADE_NEUTRAL)
             {
                 primitive->tile.g0 = 0;
             }
@@ -535,7 +530,7 @@ static void update_and_draw_fade(CheckPSFrame* frame)
             {
                 primitive->tile.g0 = ~g_fade_current.green;
             }
-            if (g_fade_current.blue == CHECKPS_FADE_NEUTRAL)
+            if (g_fade_current.blue == FADE_NEUTRAL)
             {
                 primitive->tile.b0 = 0;
             }
@@ -550,11 +545,11 @@ static void update_and_draw_fade(CheckPSFrame* frame)
         setWH(&primitive->tile, SCREEN_WIDTH, SCREEN_HEIGHT);
 
         addPrim(ordering_table_tag, &primitive->tile);
-        draw_mode = CHECKPS_FADE_ADDITIVE_DRAW_MODE;
+        draw_mode = FADE_ADDITIVE_TPAGE;
         primitive = CHECKPS_NEXT_FADE_PRIMITIVE(primitive, TILE);
-        if (g_fade_current.red < CHECKPS_FADE_ADDITIVE_THRESHOLD)
+        if (g_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
-            draw_mode = CHECKPS_FADE_SUBTRACTIVE_DRAW_MODE;
+            draw_mode = FADE_SUBTRACTIVE_TPAGE;
         }
         setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
 

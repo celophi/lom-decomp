@@ -608,7 +608,6 @@ s32 _card_clear(s32);
 s32 _card_format();
 s32 func_80033E7C(s32);
 s32 func_80034648(s32, s32, s32);
-s32 field_set_fade_target();
 void field_restore_fade_target(void);
 void field_set_default_fade_target(void);
 void field_restore_fade_target_with_duration();

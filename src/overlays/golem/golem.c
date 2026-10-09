@@ -41,10 +41,6 @@ void field_update_input_repeat(void);
 #define GOLEM_ACTIVATE_PANEL(word) (((word) & ~GOLEM_PANEL_FLASH_MASK) | (GOLEM_PANEL_FLASH_FRAMES << GOLEM_PANEL_FLASH_SHIFT))
 #define GOLEM_SET_PANEL_FLASH(word, frames) (((word) & ~GOLEM_PANEL_FLASH_MASK) | (((frames) & 0xF) << GOLEM_PANEL_FLASH_SHIFT))
 #define GOLEM_SHARED_PLUS_TEXT_INDEX 11
-#define GOLEM_FADE_NEUTRAL 0x100
-#define GOLEM_FADE_ADDITIVE_THRESHOLD (GOLEM_FADE_NEUTRAL + 1)
-#define GOLEM_FADE_ADDITIVE_DRAW_MODE 0x25
-#define GOLEM_FADE_SUBTRACTIVE_DRAW_MODE 0x45
 /**
  * @brief Address of string @p index in the archive section @p offset bytes into @p archive.
  */
@@ -402,7 +398,7 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
     g_golem_selected_block = 0;
     golem_upload_ui_image();
     field_reset_input_repeat();
-    golem_set_fade_target(0x100, 0x100, 0x100, 6);
+    golem_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, 6);
     D_8014C26C = 0;
     g_golem_interpolation_target = 0;
     g_golem_interpolation_value = 0;
@@ -1455,16 +1451,16 @@ u8* golem_render_fade(u8* packet_cursor, u_long* ordering_table_tag)
         g_golem_fade_current.green = g_golem_fade_target.green;
         g_golem_fade_current.blue = g_golem_fade_target.blue;
     }
-    if ((g_golem_fade_current.red != GOLEM_FADE_NEUTRAL) || (g_golem_fade_current.green != g_golem_fade_current.red) ||
+    if ((g_golem_fade_current.red != FADE_NEUTRAL) || (g_golem_fade_current.green != g_golem_fade_current.red) ||
         (g_golem_fade_current.blue != g_golem_fade_current.green))
     {
-        if (g_golem_fade_current.red >= GOLEM_FADE_ADDITIVE_THRESHOLD)
+        if (g_golem_fade_current.red >= FADE_ADDITIVE_THRESHOLD)
         {
             setRGB0((TILE*)packet_cursor, g_golem_fade_current.red - 1, g_golem_fade_current.green - 1, g_golem_fade_current.blue - 1);
         }
         else
         {
-            if (g_golem_fade_current.red == GOLEM_FADE_NEUTRAL)
+            if (g_golem_fade_current.red == FADE_NEUTRAL)
             {
                 ((TILE*)packet_cursor)->r0 = 0;
             }
@@ -1472,7 +1468,7 @@ u8* golem_render_fade(u8* packet_cursor, u_long* ordering_table_tag)
             {
                 ((TILE*)packet_cursor)->r0 = ~g_golem_fade_current.red;
             }
-            if (g_golem_fade_current.green == GOLEM_FADE_NEUTRAL)
+            if (g_golem_fade_current.green == FADE_NEUTRAL)
             {
                 ((TILE*)packet_cursor)->g0 = 0;
             }
@@ -1480,7 +1476,7 @@ u8* golem_render_fade(u8* packet_cursor, u_long* ordering_table_tag)
             {
                 ((TILE*)packet_cursor)->g0 = ~g_golem_fade_current.green;
             }
-            if (g_golem_fade_current.blue == GOLEM_FADE_NEUTRAL)
+            if (g_golem_fade_current.blue == FADE_NEUTRAL)
             {
                 ((TILE*)packet_cursor)->b0 = 0;
             }
@@ -1493,15 +1489,15 @@ u8* golem_render_fade(u8* packet_cursor, u_long* ordering_table_tag)
         setTile((TILE*)packet_cursor);
         setSemiTrans((TILE*)packet_cursor, 1);
         ((TILE*)packet_cursor)->w = SCREEN_WIDTH;
-        draw_mode = GOLEM_FADE_ADDITIVE_DRAW_MODE;
+        draw_mode = FADE_ADDITIVE_TPAGE;
         SET_YX0((TILE*)packet_cursor, 0, 0);
         ((TILE*)packet_cursor)->h = SCREEN_HEIGHT;
         addPrim(ordering_table_tag, (TILE*)packet_cursor);
 
         packet_cursor += sizeof(TILE);
-        if (g_golem_fade_current.red < GOLEM_FADE_ADDITIVE_THRESHOLD)
+        if (g_golem_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
-            draw_mode = GOLEM_FADE_SUBTRACTIVE_DRAW_MODE;
+            draw_mode = FADE_SUBTRACTIVE_TPAGE;
         }
         draw_mode_packet = (DR_TPAGE*)packet_cursor;
         setDrawTPage(draw_mode_packet, 0, 0, draw_mode);
