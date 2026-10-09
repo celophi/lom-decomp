@@ -3,6 +3,7 @@
 #include "internal/carda_internal.h"
 #include "common/saved_game.h"
 #include "common/gpu_packet.h"
+#include "main/audio/akao.h"
 
 /** @brief Bytes cleared when preparing the card header and icon area. */
 #define CARDA_CARD_HEADER_BYTES 512
@@ -265,7 +266,7 @@ void* carda_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
     {
         g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state = CARDA_ELEMENT_FREE;
         field_reset_input_repeat();
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
         g_card_entry_state = CARDA_ENTRY_STATE_CHECKING_CARD;
         carda_reset_entry_ranks();
         if (CARDA_IS_POCKETSTATION_MODE(g_carda_mode))
@@ -283,7 +284,7 @@ void* carda_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         {
             g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state = CARDA_ELEMENT_FREE;
             field_reset_input_repeat();
-            field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
             g_card_step = g_carda_steps_card_reset;
         }
         else if (g_pad_input & CARDA_CONFIRM_BUTTON_MASK)
@@ -292,12 +293,12 @@ void* carda_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
             {
                 g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state = CARDA_ELEMENT_FREE;
                 field_reset_input_repeat();
-                field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
                 g_card_step = g_carda_steps_card_reset;
             }
             else
             {
-                field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
                 g_carda_progress_active = 1;
                 g_card_step = g_carda_steps_load_selected_save;
                 prompt = g_carda_element_pool;
@@ -363,7 +364,7 @@ static void* carda_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 
             return result;
         }
 
-        field_play_sound(FIELD_SOUND_LOAD_DONE, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_LOAD_DONE, AKAO_PAN_CENTER);
         bcopy((u8*)&blob->saved_game, (u8*)g_saved_game_ctx, SAVED_GAME_DATA_SIZE);
         g_playtime_vsync_origin = VSync(-1);
         field_restore_fade_target();
@@ -478,7 +479,7 @@ void* carda_draw_save_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
     {
         g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state = CARDA_ELEMENT_FREE;
         field_reset_input_repeat();
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
         g_card_entry_state = CARDA_ENTRY_STATE_CHECKING_CARD;
         carda_reset_entry_ranks();
         g_card_step = NULL;
@@ -489,7 +490,7 @@ void* carda_draw_save_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         {
             g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state = CARDA_ELEMENT_FREE;
             field_reset_input_repeat();
-            field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
             g_card_step = g_carda_steps_card_reset;
         }
         else if (g_pad_input & CARDA_CONFIRM_BUTTON_MASK)
@@ -498,12 +499,12 @@ void* carda_draw_save_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
             {
                 g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state = CARDA_ELEMENT_FREE;
                 field_reset_input_repeat();
-                field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
                 g_card_step = g_carda_steps_card_reset;
             }
             else
             {
-                field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
                 g_carda_progress_bar_active = 0;
                 g_carda_save_in_progress = 1;
                 if (CARDA_IS_POCKETSTATION_MODE(g_carda_mode))
@@ -557,7 +558,7 @@ void* carda_draw_overwrite_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_of
     {
         g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state = CARDA_ELEMENT_FREE;
         field_reset_input_repeat();
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
         g_card_entry_state = CARDA_ENTRY_STATE_CHECKING_CARD;
         carda_reset_entry_ranks();
         g_card_step = NULL;
@@ -568,7 +569,7 @@ void* carda_draw_overwrite_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_of
         {
             g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state = CARDA_ELEMENT_FREE;
             field_reset_input_repeat();
-            field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
             g_card_step = g_carda_steps_card_reset;
         }
         else if (g_pad_input & CARDA_CONFIRM_BUTTON_MASK)
@@ -577,12 +578,12 @@ void* carda_draw_overwrite_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_of
             {
                 g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state = CARDA_ELEMENT_FREE;
                 field_reset_input_repeat();
-                field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
                 g_card_step = g_carda_steps_card_reset;
             }
             else
             {
-                field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
                 g_carda_progress_bar_active = 0;
                 g_carda_save_in_progress = 1;
                 if (CARDA_IS_POCKETSTATION_MODE(g_carda_mode))
@@ -637,7 +638,7 @@ static void* carda_draw_save_progress(u_long* ot, void* prim, s32 x_offset, s32 
 
     if (g_carda_save_in_progress == 0)
     {
-        field_play_sound(FIELD_SOUND_SAVE_DONE, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_SAVE_DONE, AKAO_PAN_CENTER);
         g_card_entry_state = CARDA_ENTRY_STATE_CHECKING_CARD;
         message = g_carda_element_pool;
         message->draw = carda_draw_save_complete;
@@ -670,7 +671,7 @@ static void* carda_draw_save_complete(u_long* ot, void* prim, s32 x_offset, s32 
                              -y_offset, FIELD_TEXT_ALIGN_CENTER);
     if (g_pad_input & (CARDA_CONFIRM_BUTTON_MASK | PAD_BTN_CIRCLE))
     {
-        field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state = CARDA_ELEMENT_FREE;
         field_reset_input_repeat();
     }
@@ -740,7 +741,7 @@ void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
     status = poll_and_retry_card_info();
     if (status == 1 || status == 2)
     {
-        field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state = CARDA_ELEMENT_FREE;
         field_reset_input_repeat();
         g_card_entry_state = CARDA_ENTRY_STATE_CHECKING_CARD;
@@ -760,7 +761,7 @@ void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
         if ((status & PAD_BTN_CIRCLE) || ((status & CARDA_CONFIRM_BUTTON_MASK) && g_carda_choice_toggle != 0))
         {
             g_carda_format_declined = 1;
-            field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
             g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state = CARDA_ELEMENT_FREE;
             field_reset_input_repeat();
             g_card_entry_state = CARDA_ENTRY_STATE_CHECKING_CARD;
@@ -777,7 +778,7 @@ void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
         }
         else if (status & CARDA_CONFIRM_BUTTON_MASK)
         {
-            field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
             g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state = CARDA_ELEMENT_FREE;
             carda_reset_entry_ranks();
             g_carda_format_frames = 0;
@@ -945,7 +946,7 @@ void carda_open_status_dialog(s32 dialog_state)
         carda_reset_entry_ranks();
         g_carda_dialog_state = dialog_state;
         _card_wait(g_card_slot);
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
 
         if (CARDA_IS_POCKETSTATION_MODE(g_carda_mode))
         {
@@ -1201,7 +1202,7 @@ static void* carda_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y)
     if (g_pad_input & CARDA_CHOICE_BUTTON_MASK)
     {
         g_carda_choice_toggle ^= 1;
-        field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         g_pad_input = 0;
     }
     return prim;

@@ -17,6 +17,7 @@
 #include "../internal/wmap_map_labels.h"
 #include "../internal/wmap_sequence_runtime.h"
 #include "../internal/wmap_effect_backdrop.h"
+#include "main/audio/akao.h"
 
 /** @brief Map tiles drawn inside the one-tile border of the grid. */
 #define WMAP_MAP_VISIBLE_FIRST 1
@@ -55,7 +56,6 @@
 #define WMAP_TILE_CODE_BLENDED 0x2E
 
 /** @brief Pan position of the screen center. */
-#define WMAP_PAN_CENTER 128
 #define WMAP_PAN_PER_COLUMN 24
 
 /** @brief Map scroll limit, map scroll speed and the map distance of one cursor step. */
@@ -361,7 +361,7 @@ s32 wmap_update_map_view(s32 initialize)
     {
         if (g_wmap_buttons_repeat & PADLleft)
         {
-            left_pan = ((g_wmap_cursor_column - 2) * WMAP_PAN_PER_COLUMN) + WMAP_PAN_CENTER;
+            left_pan = ((g_wmap_cursor_column - 2) * WMAP_PAN_PER_COLUMN) + AKAO_PAN_CENTER;
             g_wmap_cursor_column -= 1;
             wmap_play_sound(WMAP_SOUND_CURSOR, left_pan);
             if (g_wmap_cursor_column < 0)
@@ -379,7 +379,7 @@ s32 wmap_update_map_view(s32 initialize)
         }
         if (g_wmap_buttons_repeat & PADLright)
         {
-            right_pan = (g_wmap_cursor_column * WMAP_PAN_PER_COLUMN) + WMAP_PAN_CENTER;
+            right_pan = (g_wmap_cursor_column * WMAP_PAN_PER_COLUMN) + AKAO_PAN_CENTER;
             g_wmap_cursor_column += 1;
             wmap_play_sound(WMAP_SOUND_CURSOR, right_pan);
             if (g_wmap_cursor_column > g_wmap_cursor_limits[g_wmap_view_mode])
@@ -397,7 +397,7 @@ s32 wmap_update_map_view(s32 initialize)
         }
         if (g_wmap_buttons_repeat & PADLup)
         {
-            wmap_play_sound(WMAP_SOUND_CURSOR, ((g_wmap_cursor_column - 1) * WMAP_PAN_PER_COLUMN) + WMAP_PAN_CENTER);
+            wmap_play_sound(WMAP_SOUND_CURSOR, ((g_wmap_cursor_column - 1) * WMAP_PAN_PER_COLUMN) + AKAO_PAN_CENTER);
             row = g_wmap_cursor_row - 1;
             g_wmap_cursor_row = row;
             if (row < 0)
@@ -415,7 +415,7 @@ s32 wmap_update_map_view(s32 initialize)
         }
         if (g_wmap_buttons_repeat & PADLdown)
         {
-            wmap_play_sound(WMAP_SOUND_CURSOR, ((g_wmap_cursor_column - 1) * WMAP_PAN_PER_COLUMN) + WMAP_PAN_CENTER);
+            wmap_play_sound(WMAP_SOUND_CURSOR, ((g_wmap_cursor_column - 1) * WMAP_PAN_PER_COLUMN) + AKAO_PAN_CENTER);
             g_wmap_cursor_row += 1;
             if (g_wmap_cursor_row > g_wmap_cursor_limits[g_wmap_view_mode])
             {
@@ -832,7 +832,7 @@ void wmap_update_view_zoom(void)
             g_wmap_zoom_step.x = -(g_wmap_view.x * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES));
             g_wmap_zoom_step.y = -(g_wmap_view.y * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES));
             g_wmap_zoom_step.projection_scale = WMAP_SPIRIT_VIEW_SCALE * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES) - g_wmap_view.projection_scale * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES);
-            wmap_play_sound(WMAP_SOUND_ZOOM_OUT, WMAP_PAN_CENTER);
+            wmap_play_sound(WMAP_SOUND_ZOOM_OUT, AKAO_PAN_CENTER);
             g_wmap_map_button_mask = PADLleft | PADLright | PADselect | PADRup | WMAP_PAD_CANCEL;
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;
@@ -843,7 +843,7 @@ void wmap_update_view_zoom(void)
         {
             g_wmap_view_mode = WMAP_VIEW_MODE_ZOOM_IN;
             g_wmap_sprite_actors[0].target_shade = WMAP_ACTOR_SHADE_NEUTRAL;
-            wmap_play_sound(WMAP_SOUND_ZOOM_IN, WMAP_PAN_CENTER);
+            wmap_play_sound(WMAP_SOUND_ZOOM_IN, AKAO_PAN_CENTER);
             g_wmap_map_button_mask = -1;
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;

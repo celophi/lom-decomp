@@ -240,7 +240,6 @@ extern u16 g_akao_irq_frame_counter;
 extern s32 g_akao_irq_timing_total;
 
 void akao_seq_step_opcode(AkaoChannelState* channel, s32 channel_bit);
-void akao_flush_voice_key_offs(void);
 
 /** @brief 12-entry semitone pitch-ratio table indexed by note % 12 in akao_compute_pitch. */
 extern u32 g_akao_pitch_table[];

@@ -10,6 +10,7 @@ from tools.data.overlays.tests.test_addhero_sources import c_define
 REPO_ROOT = Path(__file__).resolve().parents[4]
 TIM_HEADER = REPO_ROOT / "include/common/tim.h"
 MENU_HEADER = REPO_ROOT / "include/overlays/menu/menu.h"
+DISPLAY_HEADER = REPO_ROOT / "include/main/display.h"
 SCREENS = REPO_ROOT / "src/overlays/menu/menu_screens.c"
 
 
@@ -65,13 +66,13 @@ class SourceTest(unittest.TestCase):
             (menu.GRID_SPRITE_COUNT, "MENU_GRID_SPRITE_COUNT"),
             (menu.GRID_ALT_CLUT_START, "MENU_GRID_ALT_CLUT_START"),
             (menu.TIM_IMAGE_BLOCK_SIZE, "MENU_TIM_IMAGE_BLOCK_SIZE"),
-            (menu.ICON_CLUT_Y_BASE, "MENU_ICON_CLUT_Y_BASE"),
             (menu.CONTENT_X_MASK, "MENU_CONTENT_X_MASK"),
             (menu.CONTENT_STYLE_SHIFT, "MENU_CONTENT_STYLE_SHIFT"),
             (menu.CONTENT_STYLE_MASK, "MENU_CONTENT_STYLE_MASK"),
             (menu.CONTENT_TYPE_SHIFT, "MENU_CONTENT_TYPE_SHIFT"),
         ):
             self.assertEqual(constant, c_define(header, name), name)
+        self.assertEqual(menu.ICON_CLUT_Y_BASE, c_define(DISPLAY_HEADER, "VRAM_CLUT_Y"))
         self.assertEqual(menu.CLUT_ENTRY_COUNT, c_define(TIM_HEADER, "CLUT_ENTRY_COUNT"))
         self.assertEqual(menu.SCRIPT_END, c_define(MENU_HEADER, "MENU_SCRIPT_END"))
         self.assertEqual(menu.text_table_count(), 34)

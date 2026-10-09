@@ -4,6 +4,7 @@
 #include "common.h"
 #include "main/game_state.h"
 #include "common/saved_game.h"
+#include "main/field_entry.h"
 #include <libgte.h>
 #include <libgpu.h>
 #include <libapi.h>
@@ -12,26 +13,10 @@
 /** @brief Value set by field pair opcode 0x49 and cleared at boot. */
 extern s32 g_script_pair_value_49;
 
-/*
- * Field entry settings handed to field_set_scene_parameters on each field entry
- * and saved with the game (SavedGameLayout).
- */
-/** @brief Spawn record of the next field entry; the top seven bits are flags. */
-extern u32 g_field_spawn_id;
-/** @brief Scene of the next field entry. */
-extern u16 g_field_scene_id;
-/** @brief Sound-bank resource of the current field; -1 clears the loaded bank header. */
-extern s32 g_field_sound_bank_id;
 /** @brief Countdown timer for delayed music/SFX trigger on field entry. */
 extern s32 g_field_audio_timer;
 /** @brief The running game's save compatibility tag (see SAVE_TAG_ANY in saved_game.h). */
 extern s32 g_save_compatibility_tag;
-/** @brief Primary music resource of the current field. */
-extern s32 g_field_music_id;
-/** @brief Field object selected for the render context on field entry. */
-extern s32 g_field_object_id;
-/** @brief Secondary music resource of the current field; -1 retains the current one. */
-extern s32 g_field_secondary_music_id;
 /** @brief Index into g_music_track_table[] selecting the current music track. */
 extern u16 g_music_track_index;
 

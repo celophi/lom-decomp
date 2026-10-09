@@ -28,6 +28,7 @@
 #include "../internal/field_actor_behavior.h"
 #include "main/overlay_memory.h"
 #include "common/gpu_packet.h"
+#include "overlays/field/field_actor_records.h"
 
 s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start);
 void field_copy_portrait_palette(void* dest, s32 index);
@@ -147,7 +148,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 /** @brief FieldObjectState::contact bits 6 and 7 cleared when an actor is initialized. */
 #define FIELD_CONTACT_UNK40 0x40
 
-
 /** @brief FieldActor::presence value of an object hidden by an animation actor. */
 #define FIELD_ANIMATION_HIDDEN FIELD_ACTOR_HIDDEN
 
@@ -159,8 +159,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 #define FIELD_SPECIAL_ATTACK_END 0x24
 /** @brief Flag ORed into the object index returned for a special attack. */
 #define FIELD_SPECIAL_ATTACK_RESULT 0x200
-
-
 
 /** @brief Packed red and green halves of a neutral colour scale. */
 #define FIELD_COLOR_SCALE_NEUTRAL_RG 0x1000100UL
@@ -201,7 +199,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 #define FIELD_PART_RENDER_MODE_MASK 0xC00000
 /** @brief Z/X scale of a part initialized with and without the timer mode. */
 #define FIELD_PART_SCALE_SMALL 0x30
-#define FIELD_PART_SCALE_FULL 0x40
 
 /** @brief Sound event types and command kinds of an animation (FieldAnimationDef bytes 2..9). */
 #define FIELD_SOUND_EVENT_START 1
@@ -2582,8 +2579,8 @@ void field_initialize_actor_part(s32 part_index, s32 timer_mode)
     }
     else
     {
-        g_field_object_parts[part_index].appearance.fields.scale_xz = FIELD_PART_SCALE_FULL;
-        g_field_object_parts[part_index].scale_y = FIELD_PART_SCALE_FULL;
+        g_field_object_parts[part_index].appearance.fields.scale_xz = FIELD_PART_FULL_SCALE;
+        g_field_object_parts[part_index].scale_y = FIELD_PART_FULL_SCALE;
     }
 
     g_field_object_parts[part_index].turn_end_age = 0xFF;

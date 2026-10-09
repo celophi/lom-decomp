@@ -1,6 +1,7 @@
 #include "internal/carda_save.h"
 #include "overlays/field/field_text.h"
 #include "internal/carda_internal.h"
+#include "main/audio/akao.h"
 
 /** @brief Left edge of the save window text, before the transition offset. */
 #define CARDA_SAVE_TEXT_X (CARDA_MESSAGE_WIDTH / 2)
@@ -220,7 +221,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                                    FIELD_TEXT_ALIGN_CENTER);
             if (g_pad_input & CARDA_CONFIRM_BUTTON_MASK)
             {
-                field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
                 g_card_entry_state = CARDA_ENTRY_STATE_SELECT_SLOT;
                 g_carda_choice_toggle = g_card_slot;
                 field_reset_input_repeat();
@@ -332,13 +333,13 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         if (g_pad_input & CARDA_CHOICE_BUTTON_MASK)
         {
             g_carda_choice_toggle ^= 1;
-            field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
             g_pad_input = 0;
         }
         prim = choice_prim;
         if (g_pad_input & PAD_BTN_CIRCLE)
         {
-            field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
             g_carda_choice_toggle = g_card_slot;
             g_card_entry_state = CARDA_ENTRY_STATE_SELECT_SLOT;
             field_reset_input_repeat();
@@ -348,13 +349,13 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         {
             if (g_carda_choice_toggle != 0)
             {
-                field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
                 g_carda_choice_toggle = g_card_slot;
                 g_card_entry_state = CARDA_ENTRY_STATE_SELECT_SLOT;
                 field_reset_input_repeat();
                 break;
             }
-            field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
             g_carda_new_save_file = 0;
             g_carda_progress_start_tick = VSync(-1);
             g_carda_progress_active = 1;
@@ -387,7 +388,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         {
             break;
         }
-        field_play_sound(FIELD_SOUND_LOAD_DONE, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_LOAD_DONE, AKAO_PAN_CENTER);
         g_card_entry_state = CARDA_ENTRY_STATE_CONFIRM_DOWNLOAD;
         g_carda_pet_already_on_ranch = 0;
         save_id = CARDA_SAVE_DATA->record.unique_id;
@@ -504,7 +505,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
             if (g_pad_input & CARDA_CHOICE_BUTTON_MASK)
             {
                 g_carda_choice_toggle ^= 1;
-                field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
                 g_pad_input = 0;
             }
             prim = choice_prim;
@@ -551,21 +552,21 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
             if (g_pad_input & CARDA_CHOICE_BUTTON_MASK)
             {
                 g_carda_choice_toggle ^= 1;
-                field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
                 g_pad_input = 0;
             }
             prim = choice_prim;
         }
         if ((g_pad_input & PAD_BTN_CIRCLE) || ((g_pad_input & CARDA_CONFIRM_BUTTON_MASK) && g_carda_choice_toggle != 0))
         {
-            field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
             g_card_entry_state = CARDA_ENTRY_STATE_SELECT_SLOT;
             g_carda_choice_toggle = g_card_slot;
             field_reset_input_repeat();
         }
         else if (g_pad_input & CARDA_CONFIRM_BUTTON_MASK)
         {
-            field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
             g_carda_received_item_count = 0;
             if (g_carda_new_save_file == 0)
             {
@@ -603,7 +604,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         if (g_carda_save_in_progress == 0)
         {
             g_field_card_overlay_mode = CARDA_RESULT_PET_SENT;
-            field_play_sound(FIELD_SOUND_SAVE_DONE, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_SAVE_DONE, AKAO_PAN_CENTER);
             if (g_gosub_result_values == PET_RECORD_COUNT)
             {
                 g_saved_game_ctx->pets[g_field_card_pet_slot].name[0] = 0;
@@ -749,7 +750,7 @@ static void* carda_draw_slot_prompt(void* prim, u_long* ot, s32 x, s32 y)
     {
         g_card_entry_state = CARDA_ENTRY_STATE_SELECT_SLOT;
         g_card_slot ^= 1;
-        field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         return result;
     }
 
@@ -767,7 +768,7 @@ static void* carda_draw_slot_prompt(void* prim, u_long* ot, s32 x, s32 y)
             g_field_card_overlay_mode = CARDA_RESULT_CANCELLED;
             break;
         }
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
         field_restore_fade_target();
         element = g_carda_element_pool;
         for (i = 0; i < CARDA_ELEMENT_COUNT; i++, element++)
@@ -785,7 +786,7 @@ static void* carda_draw_slot_prompt(void* prim, u_long* ot, s32 x, s32 y)
     {
         s32 slot;
 
-        field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         slot = g_card_slot;
         g_carda_format_declined = 0;
         g_card_step = NULL;
@@ -815,7 +816,7 @@ static void* carda_draw_slot_prompt(void* prim, u_long* ot, s32 x, s32 y)
  */
 void carda_open_save_status_dialog(s32 dialog_state)
 {
-    field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+    field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
     field_reset_input_repeat();
     g_carda_save_in_progress = 0;
     g_carda_progress_active = 0;
@@ -983,7 +984,7 @@ void* carda_draw_item_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         {
             if (g_carda_scroll_y != 0)
             {
-                field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
                 g_carda_scroll_frames = CARDA_SCROLL_FRAMES;
                 g_carda_scroll_target_y -= CARDA_TEXT_LINE_HEIGHT;
             }
@@ -992,14 +993,14 @@ void* carda_draw_item_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         {
             if ((g_carda_received_item_count * CARDA_TEXT_LINE_HEIGHT - g_carda_scroll_y) >= 141)
             {
-                field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
                 g_carda_scroll_frames = CARDA_SCROLL_FRAMES;
                 g_carda_scroll_target_y += CARDA_TEXT_LINE_HEIGHT;
             }
         }
         else if (g_pad_input & CARDA_CONFIRM_BUTTON_MASK)
         {
-            field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
             carda_save_clear_elements();
             field_restore_fade_target_with_duration(8);
         }

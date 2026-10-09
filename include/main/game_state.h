@@ -24,6 +24,8 @@
 #define GAME_STATE_NONE 0xFF         /**< Sentinel indicating no previous state. */
 
 extern u32 g_game_state;
+/** @brief State the field asks the main loop to switch to; nonzero ends run_field_scene. */
+extern s32 g_pending_game_state;
 extern u32 g_previous_game_state;
 
 #endif

@@ -27,6 +27,8 @@
 #include "sdk/gte_dmpsx_compat.h"
 #include "../internal/field_contact_geometry.h"
 #include <abs.h>
+#include "main/audio/akao.h"
+#include "overlays/field/field_actor_records.h"
 
 s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index);
 void field_start_actor_text(s32 index, s32 text_id);
@@ -169,8 +171,6 @@ void field_release_object_link(FieldActor* actor);
 
 /** @brief Sound played when an action cannot start. */
 #define FIELD_SOUND_ACTION_REFUSED 0x78
-/** @brief Centre pan for field_play_sound. */
-#define FIELD_SOUND_PAN_CENTRE 0x80
 /** @brief g_field_action_sound_ids value without a sound. */
 #define FIELD_SOUND_NONE 0xFF
 
@@ -196,8 +196,6 @@ void field_release_object_link(FieldActor* actor);
 #define FIELD_SCREEN_CENTRE_Y 112
 /** @brief Collision result bits of a fully blocked move. */
 #define FIELD_COLLISION_BLOCKED 3
-/** @brief FieldObjectPart::appearance scale_xz of a full-size object; full-size objects use the large footprint. */
-#define FIELD_PART_FULL_SCALE 0x40
 /** @brief Collision footprint of large and normal actors (width, depth), and the step height. */
 #define FIELD_FOOTPRINT_LARGE_WIDTH 12
 #define FIELD_FOOTPRINT_LARGE_DEPTH 8
@@ -1271,7 +1269,7 @@ void field_prepare_actor_action(FieldActor* actor)
     }
     if (!action->flags.instrument && (action->command == 0) && (action->animation == 0))
     {
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
         actor->command = FIELD_ACTOR_COMMAND_NONE;
         return;
     }
@@ -1294,7 +1292,7 @@ void field_prepare_actor_action(FieldActor* actor)
         object_index = actor->object_index;
         if (g_field_object_states[object_index].technique_gauge != FIELD_TECHNIQUE_GAUGE_FULL)
         {
-            field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
             actor->command = FIELD_ACTOR_COMMAND_NONE;
             return;
         }
@@ -2309,7 +2307,7 @@ static s32 field_apply_action_animation(FieldActor* actor, FieldObjectState* sta
     }
     if ((actor->object_index < FIELD_PLAYER_COUNT) && (g_field_action_sound_ids[actor->animation & FIELD_ANIMATION_INDEX_MASK] != FIELD_SOUND_NONE))
     {
-        field_play_sound(g_field_action_sound_ids[actor->animation & FIELD_ANIMATION_INDEX_MASK], FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(g_field_action_sound_ids[actor->animation & FIELD_ANIMATION_INDEX_MASK], AKAO_PAN_CENTER);
     }
 }
 

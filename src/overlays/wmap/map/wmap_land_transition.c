@@ -21,6 +21,7 @@
 #include "main/audio/akao_cmd.h"
 #include "../internal/wmap_cells.h"
 #include "../internal/wmap_sprite_render.h"
+#include "main/audio/akao.h"
 
 #define WMAP_PLACEMENT_DELAY 30
 #define WMAP_PLACEMENT_DELAY_END 31
@@ -35,9 +36,7 @@
 #define WMAP_CAROUSEL_TPAGE 0x1B
 #define WMAP_ARTIFACT_SHADOW_CLUT 0x7FC0
 #define WMAP_ARTIFACT_SHADOW_SKEW 10
-#define WMAP_SELECTION_VOLUME 128
 #define WMAP_CAROUSEL_VOLUME 143
-
 
 /** @brief Signed map-screen coordinate pair. */
 typedef struct
@@ -208,14 +207,14 @@ void wmap_update_artifact_selection(void)
                 wmap_start_mesh_transition(1);
                 g_wmap_artifact_placement_active = 0;
                 g_wmap_artifact_transfer_frame = no_artifact;
-                wmap_play_sound(WMAP_SOUND_OPEN_ARTIFACTS, WMAP_SELECTION_VOLUME);
+                wmap_play_sound(WMAP_SOUND_OPEN_ARTIFACTS, AKAO_SFX_DEFAULT_VOLUME);
             }
         }
 
         if (g_wmap_artifact_placement_active == 1 && (g_wmap_buttons_repeat & WMAP_PAD_CONFIRM) != 0 && g_wmap_selected_artifact != -1 && g_wmap_cells[map_x][map_y].placement_allowed != 0 && g_wmap_artifact_placement_frame == 0)
         {
             g_wmap_artifact_placement_frame = g_wmap_artifact_placement_active;
-            wmap_play_sound(WMAP_SOUND_PLACE_ARTIFACT, WMAP_SELECTION_VOLUME);
+            wmap_play_sound(WMAP_SOUND_PLACE_ARTIFACT, AKAO_SFX_DEFAULT_VOLUME);
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;
             g_wmap_map_button_mask = WMAP_PAD_CANCEL;
@@ -275,7 +274,7 @@ void wmap_update_artifact_selection(void)
             wmap_start_mesh_transition(0);
             g_wmap_selected_artifact = -1;
             g_wmap_preview_artifact_visible = 0;
-            wmap_play_sound(WMAP_SOUND_CLOSE_ARTIFACTS, WMAP_SELECTION_VOLUME);
+            wmap_play_sound(WMAP_SOUND_CLOSE_ARTIFACTS, AKAO_SFX_DEFAULT_VOLUME);
             g_wmap_input_locked = 1;
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;

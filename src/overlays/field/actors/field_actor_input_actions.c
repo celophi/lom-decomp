@@ -10,6 +10,7 @@
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_calls.h"
 #include "overlays/field/field_text.h"
+#include "main/audio/akao.h"
 #define FIELD_HELD_ACTION_BUTTONS_OUT_OF_LINE
 #include "../internal/field_held_action_buttons.h"
 
@@ -37,7 +38,6 @@
 
 /** @brief Sound played when a restricted object tries another action, and its pan. */
 #define FIELD_SOUND_ACTION_REFUSED 0x78
-#define FIELD_SOUND_PAN_CENTRE 0x80
 
 /** @brief Buttons that confirm (start an interaction). */
 #define FIELD_CONFIRM_BUTTONS (PAD_BTN_CROSS | PAD_BTN_L3)
@@ -188,7 +188,7 @@ u16 field_resolve_action_command(FieldActor* actor, s32 player)
         {
             if (action != FIELD_ACTION_NONE)
             {
-                field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
             }
             return 0;
         }

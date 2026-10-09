@@ -12,6 +12,7 @@
 #include "overlays/menu/menu.h"
 #include "main/controller.h"
 #include "common/gpu_packet.h"
+#include "main/game_state.h"
 
 void field_update_input_repeat(void);
 
@@ -72,7 +73,6 @@ extern void func_800A39A8(s32 sfx_index, s32 pan, s32 unused, s32 channel_group)
 /** @brief AKAO music volume applied by func_800A380C. */
 extern s32 g_akao_music_volume;
 
-extern s32 g_pending_game_state;
 extern SfxTableBuffer g_sfx_table_buffer;
 
 /** Byte offset of vram_rect within a Game Over frame. */
@@ -104,9 +104,6 @@ extern SfxTableBuffer g_sfx_table_buffer;
 
 /** Disables Game Over music playback. */
 #define GOVER_MUSIC_DISABLED (-1)
-
-/** Center position for the staged Game Over SFX. */
-#define AKAO_PAN_CENTER 0x80
 
 /** RAM staging buffer used to load an SFX resource from CD. */
 #define GOVER_SFX_LOAD_BUFFER ((u8*)LOAD_BUFFER_ADDRESS)
@@ -145,7 +142,6 @@ s32 g_fade_level;
 
 /** Typed view used for ordinary frame-array access. */
 #define g_gover_frames ((GoverFrameHalf*)g_gover_frame_header)
-
 
 static void gover_load_sfx_bank(s32 sfx_bank_index);
 static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestinations* destinations);
@@ -302,7 +298,7 @@ static void gover_run(void)
     akao_release_all_sfx();
     SetDispMask(0);
     /* GOVER clears the whole 32-bit slot, not just the u16 scene mode. */
-    *(u32*)&g_field_scene_id = 0;
+    g_field_entry_scene.word = 0;
     field_reset_input_repeat();
     g_pending_game_state = 1;
 }

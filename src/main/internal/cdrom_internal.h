@@ -15,9 +15,6 @@
 #define CD_STREAM_DECOMPRESS_GUARD_SIZE 280
 #define CD_STREAM_WRAP_START (CD_STREAM_BUFFER_START + CD_STREAM_DECOMPRESS_GUARD_SIZE)
 #define CD_DECOMPRESS_UNBOUNDED_END ((u8*)0xFFFFFFFCU)
-#define CD_BYTES_PER_WORD 4
-#define CD_BYTES_PER_WORD_SHIFT 2
-#define CD_BYTES_PER_WORD_MASK (CD_BYTES_PER_WORD - 1)
 
 /** @brief Byte and word views of an aligned stream-copy cursor. */
 typedef union

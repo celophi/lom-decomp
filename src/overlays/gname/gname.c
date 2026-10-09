@@ -15,6 +15,7 @@
 #include <libgte.h>
 #include <memory.h>
 #include <rand.h>
+#include "main/audio/akao.h"
 
 /* Ordering-table slots, from frontmost overlay to background. */
 enum
@@ -128,8 +129,6 @@ enum
     GNAME_SFX_CONFIRM,
     GNAME_SFX_CANCEL
 };
-
-#define GNAME_SFX_VOLUME 0x80
 
 /* Character selection grid layout constants. */
 #define NAME_GRID_COLUMNS 10
@@ -886,12 +885,12 @@ static void gname_update_state(void)
 
     if ((name_glyph_count(g_active_name) != 0) && (name_is_blank(g_active_name) == FALSE))
     {
-        play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
+        play_menu_sfx(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
         g_overlay_result = GNAME_RESULT_CONFIRM;
         return;
     }
 
-    play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME);
+    play_menu_sfx(GNAME_SFX_ERROR, AKAO_SFX_DEFAULT_VOLUME);
 }
 
 /**
@@ -949,24 +948,24 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                 case GNAME_MODE_ACTION_OK:
                     if ((name_glyph_count(g_active_name) != 0) && (!name_is_blank(g_active_name)))
                     {
-                        play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
+                        play_menu_sfx(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
                         g_overlay_result = GNAME_RESULT_CONFIRM;
                     }
                     else
                     {
-                        play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME);
+                        play_menu_sfx(GNAME_SFX_ERROR, AKAO_SFX_DEFAULT_VOLUME);
                     }
                     break;
 
                 case GNAME_MODE_ACTION_DELETE:
-                    play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
+                    play_menu_sfx(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
                     name_pop_last_glyph(g_active_name);
                     recalc_name_width();
                     g_strip_width_steps = NAME_STRIP_LERP_STEPS;
                     break;
 
                 case GNAME_MODE_ACTION_RANDOM:
-                    play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
+                    play_menu_sfx(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
                     if (g_name_source_mode == GNAME_SRC_RAND_PRIMARY)
                     {
                         g_name_clipboard[0] = 0;
@@ -997,7 +996,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     }
                     else
                     {
-                        play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
+                        play_menu_sfx(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
                         g_name_clipboard[0] = 0;
                         encoded_text_copy(g_active_name, g_initial_name);
                     }
@@ -1006,7 +1005,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     break;
 
                 case GNAME_MODE_ACTION_DEFAULT:
-                    play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
+                    play_menu_sfx(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
                     g_name_clipboard[0] = 0;
                     encoded_text_copy(g_active_name, g_initial_name);
                     recalc_name_width();
@@ -1035,7 +1034,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                         mode = (mode < GNAME_MODE_ACTION_DEFAULT) ? (mode + GNAME_NAVIGATION_STEP) : GNAME_MODE_ACTION_OK;
                     }
                 }
-                play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
+                play_menu_sfx(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
                 g_cursor_x_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].x - GNAME_TAB_CURSOR_X_BIAS;
                 g_cursor_y_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].y;
                 g_cursor_lerp_steps = GNAME_CURSOR_LERP_STEPS;
@@ -1061,7 +1060,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     g_scroll_pos = 0;
                     g_scroll_steps = 0;
                     g_char_cursor = 0;
-                    play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
+                    play_menu_sfx(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
                     continue;
                 }
             }
@@ -1083,7 +1082,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     mode = (mode < GNAME_MODE_PANEL_NAV_LAST) ? (mode + navigation_step) : GNAME_MODE_PANEL_BASE;
                 }
             }
-            play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
+            play_menu_sfx(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
             g_cursor_x_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].x - GNAME_TAB_CURSOR_X_BIAS;
             g_cursor_y_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].y;
             g_cursor_lerp_steps = GNAME_CURSOR_LERP_STEPS;
@@ -1105,11 +1104,11 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                         name_append(g_active_name, selected_glyph);
                         recalc_name_width();
                         g_strip_width_steps = NAME_STRIP_LERP_STEPS;
-                        play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
+                        play_menu_sfx(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
                     }
                     else
                     {
-                        play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME);
+                        play_menu_sfx(GNAME_SFX_ERROR, AKAO_SFX_DEFAULT_VOLUME);
                     }
                 }
                 else if (g_char_panel == CHAR_PANEL_KANJI_CATEGORY)
@@ -1129,7 +1128,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     g_cursor_lerp_steps = GNAME_GRID_LERP_STEPS;
                     g_char_cursor = 0;
                     g_kanji_cat_name = GNAME_RECORD_IN_RANGE(PANEL_CHARACTER_TABLE, g_kanji_cat_names_offset, g_kanji_cat);
-                    play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
+                    play_menu_sfx(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
                 }
                 else if (g_char_panel == CHAR_PANEL_KANJI)
                 {
@@ -1142,11 +1141,11 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                         name_append(g_active_name, selected_glyph);
                         recalc_name_width();
                         g_strip_width_steps = NAME_STRIP_LERP_STEPS;
-                        play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
+                        play_menu_sfx(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
                     }
                     else
                     {
-                        play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME);
+                        play_menu_sfx(GNAME_SFX_ERROR, AKAO_SFX_DEFAULT_VOLUME);
                     }
                 }
                 repeat_dispatch = GNAME_REDISPATCH_DONE;
@@ -1190,7 +1189,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     }
                 }
 
-                play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
+                play_menu_sfx(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
                 g_cursor_x_target = ((g_char_cursor % NAME_GRID_COLUMNS) * NAME_GRID_CELL_SIZE) + NAME_GRID_X_BASE;
                 g_cursor_y_target = ((g_char_cursor / NAME_GRID_COLUMNS) * NAME_GRID_CELL_SIZE) + NAME_GRID_Y_TOP - g_scroll_pos;
 
@@ -1263,7 +1262,7 @@ static void gname_process_input(void)
         name_prepend_glyph(g_name_clipboard, moved_glyph);
         recalc_name_width();
         g_strip_width_steps = NAME_STRIP_LERP_STEPS;
-        volume_or_nav_mask = GNAME_SFX_VOLUME;
+        volume_or_nav_mask = AKAO_SFX_DEFAULT_VOLUME;
         play_menu_sfx(GNAME_SFX_MOVE, volume_or_nav_mask);
     }
     /* Redo: move the first clipboard glyph back into the active name. */
@@ -1282,11 +1281,11 @@ static void gname_process_input(void)
                 recalc_name_width();
                 g_strip_width_steps = NAME_STRIP_LERP_STEPS;
             }
-            play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
+            play_menu_sfx(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
         }
         else
         {
-            play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME);
+            play_menu_sfx(GNAME_SFX_ERROR, AKAO_SFX_DEFAULT_VOLUME);
         }
     }
     else if (g_pad_input & GNAME_BTN_CANCEL)
@@ -1294,10 +1293,10 @@ static void gname_process_input(void)
         if ((g_allow_empty_cancel != 0) && (name_glyph_count(g_active_name) == 0))
         {
             g_overlay_result = GNAME_RESULT_CANCEL;
-            play_menu_sfx(GNAME_SFX_CANCEL, GNAME_SFX_VOLUME);
+            play_menu_sfx(GNAME_SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
             return;
         }
-        play_menu_sfx(GNAME_SFX_CANCEL, GNAME_SFX_VOLUME);
+        play_menu_sfx(GNAME_SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
         name_pop_last_glyph(g_active_name);
         recalc_name_width();
         g_strip_width_steps = NAME_STRIP_LERP_STEPS;
@@ -1305,7 +1304,7 @@ static void gname_process_input(void)
     /* Dormant in the shipped data: cycle kanji categories, skipping empty entries. */
     if (((g_navigation_mode == GNAME_MODE_GRID) && (g_char_panel == CHAR_PANEL_KANJI)) && (g_pad_input & GNAME_BTN_KANJI_NAV))
     {
-        play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
+        play_menu_sfx(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
         while (g_pad_input & GNAME_BTN_KANJI_NAV)
         {
             if (g_pad_input & GNAME_BTN_KANJI_PREV)

@@ -173,7 +173,6 @@ extern u8 g_field_weekday_names[];
 extern u8 g_field_element_level_by_land_level[];
 extern u8 g_field_talk_plane_masks[];
 extern s32 g_field_interaction_active;
-extern s32 g_pending_game_state;
 extern FieldMapPoint g_field_player_map_position;
 
 /* Functions of other FIELD files without a shared prototype. */

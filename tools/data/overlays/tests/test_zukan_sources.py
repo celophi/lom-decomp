@@ -10,6 +10,7 @@ from tools.data.overlays import cload, splat_config, zukan
 from tools.data.overlays.tests.test_addhero_sources import c_define
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
+DISPLAY_HEADER = REPO_ROOT / "include/main/display.h"
 
 
 class SourceTest(unittest.TestCase):
@@ -58,8 +59,8 @@ class SourceTest(unittest.TestCase):
         self.assertIn("i < ZUKAN_UI_SPRITE_COUNT", source)
         self.assertIn(f"x + {zukan.SPRITE_SCREEN_X_OFFSET}, y", source)
         self.assertIn("(sprite_record->v_clut_and_size >> 14) & 0x1FF, sprite_record->v_clut_and_size >> 23", source)
-        self.assertIn("((sprite_record->v_clut_and_size >> 8) & 0x3F) | getClut(0, ZUKAN_UI_CLUT_Y)", source)
-        self.assertEqual(zukan.CLUT_UPLOAD, (0, c_define(zukan.SOURCE, "ZUKAN_UI_CLUT_Y")))
+        self.assertIn("((sprite_record->v_clut_and_size >> 8) & 0x3F) | getClut(0, VRAM_CLUT_Y)", source)
+        self.assertEqual(zukan.CLUT_UPLOAD, (0, c_define(DISPLAY_HEADER, "VRAM_CLUT_Y")))
         category = zukan.CATEGORY_SOURCE.read_text(encoding="ascii")
         header = zukan.CATEGORY_SOURCE.parent / "internal/zukan_category.h"
         for name, end_name in (("CHARACTERS", "ZUKAN_CHARACTER_END"), ("WORLD_HISTORY", "ZUKAN_WORLD_HISTORY_END")):

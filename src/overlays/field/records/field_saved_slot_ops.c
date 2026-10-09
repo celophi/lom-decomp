@@ -73,7 +73,7 @@ s32 field_add_stored_companion(s32 template_index)
     table = field_find_resource(FIELD_RESOURCE_COMPANION_TEMPLATES);
     if (table == NULL)
     {
-        record_game_diagnostic(DIAG_ERROR, DIAG_NO_COMPANION_TEMPLATES, template_index, g_field_scene_id);
+        record_game_diagnostic(DIAG_ERROR, DIAG_NO_COMPANION_TEMPLATES, template_index, g_field_entry_scene.id);
         return FIELD_COMPANION_NONE;
     }
 

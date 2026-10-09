@@ -13,6 +13,7 @@
 #include "overlays/field/field_sound.h"
 #include "overlays/field/field_text.h"
 #include "overlays/field/field_ui_text.h"
+#include "main/audio/akao.h"
 
 /*
  * Encyclopedia overlay UI, entry navigation, resource loading and rendering.
@@ -139,7 +140,6 @@ typedef struct
 #define ZUKAN_BORDER_IMAGE_Y 0x100
 #define ZUKAN_ENTRY_IMAGE_X 0x380
 #define ZUKAN_ENTRY_IMAGE_Y 0x100
-#define ZUKAN_UI_CLUT_Y 0x1F2
 #define ZUKAN_ENTRY_CLUT_Y 0x1EE
 
 #define ZUKAN_LIST_CAPACITY 0x200
@@ -263,13 +263,13 @@ void zukan_upload_ui_images(u8* work_buffer)
     destinations.x = ZUKAN_BORDER_IMAGE_X;
     destinations.y = ZUKAN_BORDER_IMAGE_Y;
     destinations.clut_x = 0;
-    destinations.clut_y = ZUKAN_UI_CLUT_Y;
+    destinations.clut_y = VRAM_CLUT_Y;
     zukan_upload_tim(&destinations, (TimPrefix*)(archive + ((ZukanArchiveHeader*)archive)->border_image_offset));
 
     destinations.x = ZUKAN_PAGE_IMAGE_X;
     destinations.y = ZUKAN_PAGE_IMAGE_Y;
     destinations.clut_x = 0;
-    destinations.clut_y = ZUKAN_UI_CLUT_Y;
+    destinations.clut_y = VRAM_CLUT_Y;
     zukan_upload_tim(&destinations, (TimPrefix*)(archive + ((ZukanArchiveHeader*)archive)->page_image_offset));
 }
 
@@ -367,7 +367,7 @@ s32 zukan_handle_input(void)
         {
             if (g_zukan_list_entries[g_zukan_selected_entry].resource_id_and_available >> 15)
             {
-                field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
                 zukan_set_fade_target(0, 0, 0, ZUKAN_FADE_STEPS);
                 zukan_load_entry(g_zukan_selected_entry);
                 g_zukan_transition_state = ZUKAN_TRANSITION_OPEN_DETAIL;
@@ -375,7 +375,7 @@ s32 zukan_handle_input(void)
             }
             else
             {
-                field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
             }
             return;
         }
@@ -420,7 +420,7 @@ s32 zukan_handle_input(void)
 
         if (selection_moved != 0)
         {
-            field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
             zukan_scroll_to_selection();
         }
         return;
@@ -428,7 +428,7 @@ s32 zukan_handle_input(void)
 
     if (g_pad_input & (PADRdown | PADRright | PADi))
     {
-        field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
         zukan_set_fade_target(0, 0, 0, ZUKAN_FADE_STEPS);
         g_zukan_transition_state = ZUKAN_TRANSITION_RETURN_TO_LIST;
         g_zukan_transition_frame = 0;
@@ -437,7 +437,7 @@ s32 zukan_handle_input(void)
 
     if (g_pad_input & (PADLright | PADR1))
     {
-        field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         zukan_start_next_entry_transition();
         related_resource_id = g_zukan_next_resource_id;
         if ((related_resource_id != 0) && (g_pad_input & PADLright))
@@ -466,7 +466,7 @@ s32 zukan_handle_input(void)
 
     if (g_pad_input & (PADLleft | PADL1))
     {
-        field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         zukan_start_previous_entry_transition();
         related_resource_id = g_zukan_previous_resource_id;
         if ((related_resource_id != 0) && (g_pad_input & PADLleft))
@@ -634,7 +634,7 @@ void* zukan_emit_ui_sprite(SPRT* sprite, u_long* ordering_table, u32 sprite_inde
     sprite_record = &g_zukan_ui_sprites[sprite_index];
     setWH(sprite, (sprite_record->v_clut_and_size >> 14) & 0x1FF, sprite_record->v_clut_and_size >> 23);
     setUV0(sprite, sprite_record->source_and_u >> 8, sprite_record->v_clut_and_size);
-    sprite->clut = ((sprite_record->v_clut_and_size >> 8) & 0x3F) | getClut(0, ZUKAN_UI_CLUT_Y);
+    sprite->clut = ((sprite_record->v_clut_and_size >> 8) & 0x3F) | getClut(0, VRAM_CLUT_Y);
 
     addPrim(ordering_table, sprite);
 

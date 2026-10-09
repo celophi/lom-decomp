@@ -1,4 +1,5 @@
 #include "internal/gosub_internal.h"
+#include "main/display.h"
 
 /**
  * @brief Upload the gosub interface image and CLUT to their fixed VRAM slots.
@@ -10,7 +11,7 @@ void gosub_upload_ui_image(void)
     destinations.pixel_x = GOSUB_UI_IMAGE_X;
     destinations.pixel_y = 0;
     destinations.clut_x = 0;
-    destinations.clut_y = GOSUB_GLYPH_CLUT_Y;
+    destinations.clut_y = VRAM_CLUT_Y;
     gosub_upload_image_archive(&destinations, &g_gosub_image_archive);
 }
 
@@ -120,7 +121,7 @@ u8* gosub_emit_glyph(u8* packet_cursor, u_long* ordering_table, s32 glyph_id, s3
     setXY0(sprite, x, y);
     setWH(sprite, g_gosub_glyph_metrics[glyph_id].w, g_gosub_glyph_metrics[glyph_id].h);
     setUV0(sprite, g_gosub_glyph_metrics[glyph_id].u0, g_gosub_glyph_metrics[glyph_id].v0);
-    setClut(sprite, clut_index << GOSUB_GLYPH_CLUT_X_SHIFT, GOSUB_GLYPH_CLUT_Y);
+    setClut(sprite, clut_index << GOSUB_GLYPH_CLUT_X_SHIFT, VRAM_CLUT_Y);
     addPrim(ordering_table, sprite);
     return packet_cursor + sizeof(SPRT);
 }

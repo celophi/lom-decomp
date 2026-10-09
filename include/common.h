@@ -33,6 +33,11 @@ typedef s32 intptr_t;
 #include <stdint.h>
 #endif
 
+/** @brief Bytes in a 32-bit word, and the shift and mask that go with it. */
+#define BYTES_PER_WORD 4
+#define BYTES_PER_WORD_SHIFT 2
+#define BYTES_PER_WORD_MASK (BYTES_PER_WORD - 1)
+
 /* Boolean / null macros */
 #define TRUE    1
 #define FALSE   0

@@ -7,6 +7,9 @@
 
 void akao_copy_bytes(s32* source, s32* destination, u32 count);
 void akao_apply_cdvol_to_spu(void);
+void akao_release_channels(AkaoChannelState* channel, u32 release_mask);
+void akao_sfx_release_channels(AkaoChannelState* channel, u32 release_mask);
+void akao_channel_set_articulation(AkaoChannelState* channel, s32 articulation_index);
 
 /* Externs not covered by akao_driver.h */
 extern s16 g_akao_cdvol_current;

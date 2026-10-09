@@ -423,6 +423,9 @@ typedef struct FieldObjectPart
     s16 unk46;
 } FieldObjectPart;
 
+/** @brief FieldObjectPart::appearance scale_xz of a full-size object; smaller objects use the small collision footprint. */
+#define FIELD_PART_FULL_SCALE 0x40
+
 /**
  * @brief Animation definition played by an animation actor slot (0x1C bytes).
  * @note An actor can select one of up to three consecutive definitions.

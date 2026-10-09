@@ -60,7 +60,6 @@
 #define WSEL_SFX_CURSOR 0x7D
 #define WSEL_SFX_CONFIRM 0x7E
 #define WSEL_SFX_CANCEL 0x7F
-#define WSEL_SFX_PAN_CENTER 0x80
 
 /* Sprite layers in g_wsel_sprites; wsel_load_resources uploads TIM n to layer n. */
 #define WSEL_SPRITE_LAND_MAP 0
@@ -663,7 +662,7 @@ static void wsel_draw_frame(WselRenderBuffer* buffer)
         prim = wsel_draw_zoom_quad((POLY_FT4*)prim, ot, &quad, 0, WSEL_ZOOM_QUAD_COLOR);
         if (g_wsel_buttons_held & WSEL_CONFIRM_BUTTONS)
         {
-            wsel_play_sfx(WSEL_SFX_CONFIRM, WSEL_SFX_PAN_CENTER);
+            wsel_play_sfx(WSEL_SFX_CONFIRM, AKAO_PAN_CENTER);
             g_wsel_state = WSEL_STATE_SELECT_CELL;
             g_wsel_transition_timer = WSEL_LAND_FADE_FRAMES;
         }
@@ -1077,7 +1076,7 @@ static void wsel_update_input(void)
     case WSEL_STATE_WORLD_MAP:
         if (g_wsel_buttons_pressed & WSEL_CONFIRM_BUTTONS)
         {
-            wsel_play_sfx(WSEL_SFX_CONFIRM, WSEL_SFX_PAN_CENTER);
+            wsel_play_sfx(WSEL_SFX_CONFIRM, AKAO_PAN_CENTER);
             wsel_reset_scroll();
             g_wsel_transition_timer = WSEL_ZOOM_FRAMES;
             g_wsel_zoom_rect.corners[0].x = WSEL_ZOOM_SMALL_LEFT;
@@ -1093,7 +1092,7 @@ static void wsel_update_input(void)
         }
         if ((g_wsel_buttons_pressed & WSEL_CANCEL_BUTTONS) && !g_saved_game.layout.options.bits.flag_3)
         {
-            wsel_play_sfx(WSEL_SFX_CANCEL, WSEL_SFX_PAN_CENTER);
+            wsel_play_sfx(WSEL_SFX_CANCEL, AKAO_PAN_CENTER);
             g_wsel_exit_state = WSEL_EXIT_CANCELLED;
         }
         return;
@@ -1105,7 +1104,7 @@ static void wsel_update_input(void)
         }
         if (g_wsel_buttons_pressed & WSEL_CANCEL_BUTTONS)
         {
-            wsel_play_sfx(WSEL_SFX_CANCEL, WSEL_SFX_PAN_CENTER);
+            wsel_play_sfx(WSEL_SFX_CANCEL, AKAO_PAN_CENTER);
             g_wsel_transition_timer = WSEL_ZOOM_FRAMES;
             g_wsel_zoom_target.corners[0].x = WSEL_ZOOM_SMALL_LEFT;
             g_wsel_zoom_target.corners[1].x = WSEL_ZOOM_SMALL_RIGHT;
@@ -1128,12 +1127,12 @@ static void wsel_update_input(void)
             row = WSEL_CURSOR_CELL_ROW();
             if (g_wsel_cell_occupied[WSEL_CELL_INDEX(column, row)] == 0)
             {
-                wsel_play_sfx(WSEL_SFX_CONFIRM, WSEL_SFX_PAN_CENTER);
+                wsel_play_sfx(WSEL_SFX_CONFIRM, AKAO_PAN_CENTER);
                 g_wsel_state = WSEL_STATE_CONFIRM;
                 g_wsel_mask_shade = 0;
                 return;
             }
-            wsel_play_sfx(WSEL_SFX_ERROR, WSEL_SFX_PAN_CENTER);
+            wsel_play_sfx(WSEL_SFX_ERROR, AKAO_PAN_CENTER);
             return;
         }
 
@@ -1192,7 +1191,7 @@ static void wsel_update_input(void)
         }
         if ((g_wsel_buttons_held & WSEL_DPAD_BUTTONS) && (g_wsel_cursor_frames != 0 || g_wsel_map_scroll_frames != 0))
         {
-            wsel_play_sfx(WSEL_SFX_CURSOR, WSEL_SFX_PAN_CENTER);
+            wsel_play_sfx(WSEL_SFX_CURSOR, AKAO_PAN_CENTER);
             return;
         }
         break;
@@ -1200,7 +1199,7 @@ static void wsel_update_input(void)
     case WSEL_STATE_CONFIRM:
         if (g_wsel_buttons_pressed & WSEL_FINAL_CONFIRM_BUTTONS)
         {
-            wsel_play_sfx(WSEL_SFX_CONFIRM, WSEL_SFX_PAN_CENTER);
+            wsel_play_sfx(WSEL_SFX_CONFIRM, AKAO_PAN_CENTER);
             column = WSEL_CURSOR_CELL_COLUMN();
             row = WSEL_CURSOR_CELL_ROW();
             g_saved_game.layout.world_map_cell = WSEL_CELL_INDEX(column, row);
@@ -1210,7 +1209,7 @@ static void wsel_update_input(void)
         }
         if (g_wsel_buttons_pressed & WSEL_CANCEL_BUTTONS)
         {
-            wsel_play_sfx(WSEL_SFX_CURSOR, WSEL_SFX_PAN_CENTER);
+            wsel_play_sfx(WSEL_SFX_CURSOR, AKAO_PAN_CENTER);
             g_wsel_state = WSEL_STATE_SELECT_CELL;
         }
         break;

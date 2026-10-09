@@ -1,5 +1,7 @@
 #include "internal/menu_internal.h"
 #include "overlays/field/field_text.h"
+#include "main/audio/akao.h"
+#include "main/display.h"
 
 s32 menu_find_active_content_item(void);
 s32 menu_build_special_technique_nav_entries(void);
@@ -63,7 +65,7 @@ void* scroll_list_draw(void* prim_buf, u_long* ot, ScrollListState* state, u32* 
 
         if (g_pad_input & MENU_PAD_VERTICAL)
         {
-            menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
+            menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
         }
         if (g_pad_input & PADLleft)
         {
@@ -215,7 +217,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
 
     if ((g_pad_input & 0x10) && (active != 0))
     {
-        menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
+        menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
         switch (g_menu_active_item_category)
         {
         case 0:
@@ -281,7 +283,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
+        menu_play_se(MENU_SE_CLOSE, AKAO_SFX_DEFAULT_VOLUME);
         if (g_menu_scene_type < 0x13)
         {
             s32 item_kind;
@@ -309,7 +311,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
             g_menu_nodes[0x16].label_id = 0x14;
             g_menu_nodes[0x19].label_id = 0x16;
             g_menu_content_ready = 0;
-            menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
+            menu_play_se(MENU_SE_CLOSE, AKAO_SFX_DEFAULT_VOLUME);
             menu_reset_content_view();
             g_pad_input = 0;
         }
@@ -389,7 +391,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                         SET_BGR0_PACKED((SPRT*)packet_cursor, GPU_COLOR_WORD(0x50, 0x50, 0x50));
                         setSprt((SPRT*)packet_cursor);
                         SET_SPRT_UV0_PACKED((SPRT*)packet_cursor, 0x80);
-                        SET_SPRT_CLUT((SPRT*)packet_cursor, getClut(0x60, MENU_ICON_CLUT_Y_BASE));
+                        SET_SPRT_CLUT((SPRT*)packet_cursor, getClut(0x60, VRAM_CLUT_Y));
                         SET_SPRT_WH_PACKED((SPRT*)packet_cursor, 16, 16);
                         SET_YX0((SPRT*)packet_cursor, (y - scroll_y) - view_y, -2 - view_x);
                         addPrim(ot, (SPRT*)packet_cursor);
@@ -551,7 +553,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                             ctx += g_menu_active_subtype;
                             ctx[0x609] = (s8)((u8)g_menu_active_subtype + 0x7D);
                         }
-                        menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
+                        menu_play_se(MENU_SE_SELECT, AKAO_SFX_DEFAULT_VOLUME);
                         g_menu_nodes[(g_menu_char_slot * 3) + 2].idx_nav.s.self_idx = (s8)sub;
                         g_menu_nodes[(g_menu_char_slot * 3) + 2].label_id = (u8)((g_menu_char_slot * 3) + 2);
                         menu_clear_slots();
@@ -571,10 +573,10 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                         }
                         if (ability_flags & (u8)g_menu_ability_mask)
                         {
-                            menu_play_se(MENU_SE_ERROR, MENU_SE_VOLUME);
+                            menu_play_se(MENU_SE_ERROR, AKAO_SFX_DEFAULT_VOLUME);
                             return packet_cursor;
                         }
-                        menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
+                        menu_play_se(MENU_SE_SELECT, AKAO_SFX_DEFAULT_VOLUME);
                         menu_clear_slots();
                         if (menu_item_is_nondefault(g_menu_active_equipped_item) != 0)
                         {
@@ -612,7 +614,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                     g_menu_nodes[0x13].label_id = 0x11;
                     g_menu_nodes[0x16].label_id = 0x14;
                     g_menu_nodes[0x19].label_id = 0x16;
-                    menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
+                    menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
                     sel = list->navigation.fields.selected_index;
                     if (sel != g_menu_pending_item_row)
                     {
@@ -762,7 +764,7 @@ void* menu_spell_list_callback(u_long* ot, ScrollListState* state, void* prim_bu
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
+        menu_play_se(MENU_SE_CLOSE, AKAO_SFX_DEFAULT_VOLUME);
         list->active = MENU_SLOT_STATE_CLOSING;
         g_pad_input = 0;
     }
@@ -806,7 +808,7 @@ void* menu_spell_list_callback(u_long* ot, ScrollListState* state, void* prim_bu
     if ((g_pad_input & 0x220) && (active != 0))
     {
         *((u8*)g_saved_game_ctx + (g_menu_char_slot * 0x250) + g_menu_active_subtype + (row = 0x609)) = selected_index;
-        menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
+        menu_play_se(MENU_SE_SELECT, AKAO_SFX_DEFAULT_VOLUME);
         list->active = MENU_SLOT_STATE_CLOSING;
     }
 
@@ -849,7 +851,7 @@ void* menu_equipment_grid_callback(u_long* ot, ScrollListState* state, void* pri
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
+        menu_play_se(MENU_SE_CLOSE, AKAO_SFX_DEFAULT_VOLUME);
         menu_reset_content_view();
         g_pad_input = 0;
     }
@@ -940,7 +942,7 @@ void* menu_key_item_list_callback(u_long* ot, ScrollListState* state, void* prim
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
+        menu_play_se(MENU_SE_CLOSE, AKAO_SFX_DEFAULT_VOLUME);
         menu_reset_content_view();
         g_pad_input = 0;
     }
@@ -1016,7 +1018,7 @@ void* menu_ability_list_callback(u_long* ot, ScrollListState* state, void* prim_
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
+        menu_play_se(MENU_SE_CLOSE, AKAO_SFX_DEFAULT_VOLUME);
         menu_reset_content_view();
         g_pad_input = 0;
     }
@@ -1098,12 +1100,12 @@ void* menu_subtype_action_callback(u_long* ot, ScrollListState* state, void* pri
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
+        menu_play_se(MENU_SE_CLOSE, AKAO_SFX_DEFAULT_VOLUME);
         list->active = MENU_SLOT_STATE_CLOSING;
     }
     else if ((g_pad_input & 0x220) && (active != 0))
     {
-        menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
+        menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
         switch (list->navigation.fields.selected_index)
         {
         case 0:
@@ -1242,7 +1244,7 @@ void* menu_message_callback(u_long* ot, ScrollListState* state, void* prim_buf, 
     {
         state->anim_frame = 0;
         state->active = 0;
-        menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
+        menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
     }
 
     buf = field_draw_text(buf, ot, g_menu_message_line1, 1, 0x88 - view_origin->x, -view_origin->y, 2);
@@ -1269,7 +1271,7 @@ void* menu_two_line_message_callback(u_long* ot, ScrollListState* state, void* p
     {
         state->anim_frame = 0;
         state->active = 0;
-        menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
+        menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
     }
 
     buf = field_draw_text(buf, ot, g_menu_message_line1, 1, 0x88 - view_origin->x, -view_origin->y, 2);
@@ -1301,12 +1303,12 @@ void* menu_item_followup_callback(u_long* ot, ScrollListState* state, void* prim
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
+        menu_play_se(MENU_SE_CLOSE, AKAO_SFX_DEFAULT_VOLUME);
         list->active = MENU_SLOT_STATE_CLOSING;
     }
     else if ((g_pad_input & 0x220) && (active != 0))
     {
-        menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
+        menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
         if (list->navigation.fields.selected_index != 0)
         {
             list->active = MENU_SLOT_STATE_CLOSING;

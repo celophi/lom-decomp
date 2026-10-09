@@ -10,8 +10,6 @@
 
 /** @brief VRAM row of player 0's actor CLUT; player 1 uses the row two below. */
 #define FIELD_ACTOR_CLUT_VRAM_Y 0x1EE
-/** @brief VRAM row of the CLUT shared by the other actors. */
-#define FIELD_SHARED_CLUT_VRAM_Y 0x1F2
 
 /** @brief VRAM position of player 0's actor texture; player 1's follows it. */
 #define FIELD_ACTOR_TEXTURE_VRAM_X 0x340

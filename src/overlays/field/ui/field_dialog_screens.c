@@ -30,6 +30,7 @@
 #include "common/gpu_packet.h"
 #include "main/game_state.h"
 #include <memory.h>
+#include "main/display.h"
 
 extern u8* g_field_cd_buffer;
 
@@ -39,7 +40,6 @@ extern u8* g_field_cd_buffer;
 #define FIELD_TIMED_PANEL_RESOURCE_BASE 0x1060
 /** @brief VRAM position of the panel image and its palette row. */
 #define FIELD_TIMED_PANEL_VRAM_X 320
-#define FIELD_TIMED_PANEL_CLUT_Y 498
 /** @brief Frames a panel stays up, and the lengths of its fades. */
 #define FIELD_TIMED_PANEL_FRAMES 150
 #define FIELD_TIMED_PANEL_FADE_IN_FRAMES 32
@@ -136,7 +136,7 @@ void field_start_timed_panel(s32 index)
     }
 
     /* x/y: image destination, w/h: palette destination; the loader returns the image size in x/y. */
-    setRECT(&rect, FIELD_TIMED_PANEL_VRAM_X, 0, 0, FIELD_TIMED_PANEL_CLUT_Y);
+    setRECT(&rect, FIELD_TIMED_PANEL_VRAM_X, 0, 0, VRAM_CLUT_Y);
     field_load_vram_resource(index + FIELD_TIMED_PANEL_RESOURCE_BASE, &rect, 1);
 
     g_field_timed_panel_index = index;
@@ -517,7 +517,7 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
             prim->v0 = prim->v1 = QUAD_OF_FLAGS(quad_flags)->v;
             palette_mask = 0xF0;
             prim->v2 = prim->v3 = QUAD_OF_FLAGS(quad_flags)->v + QUAD_OF_FLAGS(quad_flags)->height - 1;
-            prim->clut = getClut(QUAD_OF_FLAGS(quad_flags)->flags & palette_mask, FIELD_TIMED_PANEL_CLUT_Y);
+            prim->clut = getClut(QUAD_OF_FLAGS(quad_flags)->flags & palette_mask, VRAM_CLUT_Y);
             prim->tpage = getTPage(QUAD_OF_FLAGS(quad_flags)->flags & 3, (QUAD_OF_FLAGS(quad_flags)->flags >> 9) & 3, FIELD_TIMED_PANEL_VRAM_X, 0);
             addPrim(ordering_table, prim);
             if (g_field_timed_panel_brightness < FIELD_TIMED_PANEL_FADE_LIMIT)
@@ -611,7 +611,7 @@ static POLY_FT4* field_draw_timed_panel_image(POLY_FT4 *prim, u_long *ordering_t
     value0--;
     prim->y3 = value0;
     prim->y2 = value0;
-    value0 = getClut(0, FIELD_TIMED_PANEL_CLUT_Y);
+    value0 = getClut(0, VRAM_CLUT_Y);
     prim->u2 = 0;
     prim->u0 = 0;
     value1 = g_field_timed_panel_width;
@@ -1228,7 +1228,6 @@ extern s32 g_field_dialog_item_count;
 extern s32 g_field_dialog_screen_mode;
 extern s32 g_field_money_snapshot;
 extern s32 g_pad_input;
-extern s32 g_pending_game_state;
 extern s32 g_field_return_to_title_prompt_state;
 extern s32 g_field_return_to_title_prompt_delay;
 extern s32 g_frame_counter;

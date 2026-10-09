@@ -23,6 +23,7 @@
 #include <libgpu.h>
 #include <rand.h>
 #include "../internal/field_actor_runtime.h"
+#include "overlays/field/field_actor_records.h"
 
 /** @brief Screen center, added to camera-relative positions. */
 #define FIELD_SCREEN_CENTER_X (SCREEN_WIDTH / 2)
@@ -172,7 +173,6 @@ extern u8* g_field_cd_buffer;
 
 /* ---- Object flag handlers and fading primitives ---------------------------- */
 
-
 /** @brief Number of bits in FieldObjectState.flags that have a handler entry. */
 #define FIELD_OBJECT_HANDLER_COUNT 16
 
@@ -239,7 +239,6 @@ extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_
 #define FIELD_HIT_FLASH_TINT 0x20
 
 /** @brief FieldObjectPart scale values: 0x40 is full size. */
-#define FIELD_PART_SCALE_FULL 0x40
 #define FIELD_PART_SCALE_HALF 0x20
 
 /** @brief Number of primitives in the fading primitive pool. */
@@ -1553,8 +1552,8 @@ void field_set_actor_horizontal_scale(FieldActor* actor, s32 half_scale)
     }
     else
     {
-        g_field_object_parts[actor->object_index].appearance.fields.scale_xz = FIELD_PART_SCALE_FULL;
-        g_field_object_parts[actor->object_index].scale_y = FIELD_PART_SCALE_FULL;
+        g_field_object_parts[actor->object_index].appearance.fields.scale_xz = FIELD_PART_FULL_SCALE;
+        g_field_object_parts[actor->object_index].scale_y = FIELD_PART_FULL_SCALE;
     }
 }
 

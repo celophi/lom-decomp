@@ -5,6 +5,7 @@
 #include <rand.h>
 #include "common/tim.h"
 #include "common/gpu_packet.h"
+#include "main/audio/akao.h"
 
 void reset_save_slot_panel(void);
 void handle_save_slot_input(void);
@@ -155,7 +156,7 @@ void handle_save_slot_input(void)
         if (g_debounced_input & (PAD_BTN_LEFT | PAD_BTN_RIGHT))
         {
             SaveLayoutEntry* entry;
-            play_title_sfx(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+            play_title_sfx(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
             entry = g_save_layout_table;
             if (entry[18].type != 0)
             {
@@ -169,7 +170,7 @@ void handle_save_slot_input(void)
         }
         if (g_debounced_input & (PAD_BTN_START | PAD_BTN_L3 | PAD_BTN_CROSS))
         {
-            play_title_sfx(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+            play_title_sfx(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
             if (g_save_layout_table[18].type != 0)
             {
                 scroll_slots_right();
@@ -182,7 +183,7 @@ void handle_save_slot_input(void)
         }
         if (g_debounced_input & PAD_BTN_CIRCLE)
         {
-            play_title_sfx(FIELD_SOUND_CANCEL, FIELD_SOUND_PAN_CENTRE);
+            play_title_sfx(FIELD_SOUND_CANCEL, AKAO_PAN_CENTER);
             g_title_menu_exit_state = 2;
         }
     }
@@ -235,13 +236,13 @@ void handle_save_slot_input(void)
                         g_saved_game.layout.technique_bits[i] = 0;
                     }
                 }
-                play_title_sfx(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+                play_title_sfx(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
             }
             g_title_menu_exit_state = 1;
         }
         else if (g_debounced_input & PAD_BTN_CIRCLE)
         {
-            play_title_sfx(FIELD_SOUND_CANCEL, FIELD_SOUND_PAN_CENTRE);
+            play_title_sfx(FIELD_SOUND_CANCEL, AKAO_PAN_CENTER);
             if (g_slot_slide_x > 0)
             {
                 scroll_slots_left();
@@ -257,7 +258,7 @@ void handle_save_slot_input(void)
         {
             if ((g_debounced_input & PAD_BTN_UP) != 0U)
             {
-                play_title_sfx(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+                play_title_sfx(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
                 prev_index = g_slot_selected_index - 1;
                 g_slot_selected_index = prev_index;
                 if (prev_index < 0)
@@ -267,7 +268,7 @@ void handle_save_slot_input(void)
             }
             if (g_debounced_input & PAD_BTN_DOWN)
             {
-                play_title_sfx(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+                play_title_sfx(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
                 next_index = g_slot_selected_index + 1;
                 g_slot_selected_index = next_index;
                 if (next_index >= 0xB)
@@ -818,14 +819,14 @@ void load_saved_game_template(s32 field_start)
     if (field_start == 0)
     {
         src = (s32*)&g_new_game_template;
-        g_field_scene_id = 0xD;
+        g_field_entry_scene.id = 0xD;
         g_music_track_index = 0;
         g_field_music_id = 0;
     }
     else
     {
         src = (s32*)&g_field_start_template;
-        g_field_scene_id = 0;
+        g_field_entry_scene.id = 0;
         g_music_track_index = 0;
         g_field_music_id = 0;
     }

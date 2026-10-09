@@ -11,6 +11,7 @@
 #include "main/controller.h"
 #include "overlays/field/field_sound.h"
 #include "common/gpu_packet.h"
+#include "main/audio/akao.h"
 
 void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y);
 void stop_title_music(void);
@@ -667,19 +668,19 @@ void handle_title_menu_input(void)
     g_title_idle_countdown -= 1;
     if (g_debounced_input & (PADh | PADi | PADRright))
     {
-        play_title_sfx(0x7C, FIELD_SOUND_PAN_CENTRE);
+        play_title_sfx(0x7C, AKAO_PAN_CENTER);
         g_title_menu_exit_state = 1;
         return;
     }
     if (g_debounced_input & (PADLup | PADLleft))
     {
         menu_cursor_up();
-        play_title_sfx(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+        play_title_sfx(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
     }
     else if (g_debounced_input & (PADLdown | PADLright | PADselect))
     {
         menu_cursor_down();
-        play_title_sfx(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+        play_title_sfx(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
     }
 }
 

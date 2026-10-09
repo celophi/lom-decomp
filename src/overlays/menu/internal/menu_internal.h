@@ -1,3 +1,4 @@
+#include "main/audio/akao.h"
 #ifndef LOM_MENU_INTERNAL_H
 #define LOM_MENU_INTERNAL_H
 
@@ -215,10 +216,7 @@ s32 field_name_byte_length(u8* name);
 #define MENU_TREE_DRAW_WIDTH 36
 #define MENU_TREE_DRAW_HEIGHT 170
 
-/** @brief Base CLUT row used by menu icon sprites. */
-#define MENU_ICON_CLUT_Y_BASE 0x1F2
-
-/* Sound-effect ids passed to menu_play_se; volume is always MENU_SE_VOLUME. */
+/* Sound-effect ids passed to menu_play_se; volume is always AKAO_SFX_DEFAULT_VOLUME. */
 /** @brief Scroll navigation sound (D-up / D-down / Circle to scroll). */
 #define MENU_SE_NAVIGATE 0x7D
 /** @brief Open / select sound (Circle or D-right to enter a node). */
@@ -227,8 +225,6 @@ s32 field_name_byte_length(u8* name);
 #define MENU_SE_CLOSE 0x7F
 /** @brief Invalid-action sound. */
 #define MENU_SE_ERROR 0x78
-/** @brief Full volume level for all menu sound effects (128). */
-#define MENU_SE_VOLUME 0x80
 
 /** @brief Byte offset of the learned Special Technique bitsets in SavedGameLayout. */
 #define MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET 0x34
@@ -1019,7 +1015,7 @@ static inline u_long* menu_image_upload_source(void* buffer, s32 byte_offset)
 /** @brief Convert a packed menu icon palette code to a Psy-Q CLUT id. */
 static inline u16 menu_icon_clut(u8 code)
 {
-    return getClut((code & 0xF) << 4, (code >> 4) + MENU_ICON_CLUT_Y_BASE);
+    return getClut((code & 0xF) << 4, (code >> 4) + VRAM_CLUT_Y);
 }
 
 /**
