@@ -11,7 +11,7 @@
 /* Read enough of a Mana save to display the hero details. */
 #define ADDHERO_ENTRY_READ_BYTES 0x280
 
-/* Other games only need the card title and palette. */
+/* The short read includes the card title and icon palette, but no icon frames. */
 #define ADDHERO_ENTRY_TITLE_READ_BYTES 0x80
 
 /* Retry limits for file operations, save transfers and card loads. */
