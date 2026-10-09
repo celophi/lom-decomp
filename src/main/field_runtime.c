@@ -71,7 +71,7 @@ s32 run_field_scene(void)
     {
         next_state = FIELD_ENTRY_FADE_FRAMES;
         g_field_scene_request_pending = 0;
-        field_set_scene_parameters(g_field_scene_id.word, g_field_object_id, g_field_spawn_id, g_field_music_id, g_field_sound_bank_id,
+        field_set_scene_parameters(g_field_entry_scene.word, g_field_object_id, g_field_spawn_id, g_field_music_id, g_field_sound_bank_id,
                                    g_field_secondary_music_id);
         field_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, next_state);
         field_run_frame_loop(render_buffers);

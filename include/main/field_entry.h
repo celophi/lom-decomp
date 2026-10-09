@@ -21,7 +21,7 @@ typedef union FieldSceneId
 
 /** @brief Spawn record of the next field entry; the top seven bits are flags. */
 extern u32 g_field_spawn_id;
-extern FieldSceneId g_field_scene_id;
+extern FieldSceneId g_field_entry_scene;
 /** @brief Sound-bank resource of the current field; -1 clears the loaded bank header. */
 extern s32 g_field_sound_bank_id;
 /** @brief Primary music resource of the current field. */

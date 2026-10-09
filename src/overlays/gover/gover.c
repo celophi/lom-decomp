@@ -298,7 +298,7 @@ static void gover_run(void)
     akao_release_all_sfx();
     SetDispMask(0);
     /* GOVER clears the whole 32-bit slot, not just the u16 scene mode. */
-    g_field_scene_id.word = 0;
+    g_field_entry_scene.word = 0;
     field_reset_input_repeat();
     g_pending_game_state = 1;
 }

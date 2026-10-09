@@ -459,7 +459,7 @@ void field_update_scene(void)
         i = 0;
         cdrom_wait_queue_empty();
         field_upload_transition_tiles();
-        g_field_scene_id.word = scene_id;
+        g_field_entry_scene.word = scene_id;
         g_field_active_group = 0;
         g_field_duel_mode = 0;
         field_reset_battle_entry();
@@ -807,7 +807,7 @@ void field_update_scene(void)
         field_reset_actor_resources();
         field_command_history_reset();
         field_clear_fade_prims();
-        saved_scene_id = g_field_scene_id.word;
+        saved_scene_id = g_field_entry_scene.word;
         if (g_field_scene_mode_bit != 0)
         {
             saved_scene_id += FIELD_SCENE_MODE_FLAG;

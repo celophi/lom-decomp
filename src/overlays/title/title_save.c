@@ -819,14 +819,14 @@ void load_saved_game_template(s32 field_start)
     if (field_start == 0)
     {
         src = (s32*)&g_new_game_template;
-        g_field_scene_id.id = 0xD;
+        g_field_entry_scene.id = 0xD;
         g_music_track_index = 0;
         g_field_music_id = 0;
     }
     else
     {
         src = (s32*)&g_field_start_template;
-        g_field_scene_id.id = 0;
+        g_field_entry_scene.id = 0;
         g_music_track_index = 0;
         g_field_music_id = 0;
     }

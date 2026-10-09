@@ -123,7 +123,7 @@ void func_8005DF50(s32 arg0, s32 arg1)
     func_8005DBB8();
     sp20 = wmap_get_land_at_cell(arg0, arg1);
     sp24 = (sp20 * 4) + ((D_800432C8[sp20 * WMAP_NODE_RECORD_SIZE] >> 4) & 3);
-    g_field_scene_id.id = g_wmap_land_scenes[sp24];
+    g_field_entry_scene.id = g_wmap_land_scenes[sp24];
     g_field_music_id = g_wmap_land_entry_flags[sp24];
     g_music_track_index = wmap_get_land_at_cell(arg0, arg1);
 
@@ -137,7 +137,7 @@ void func_8005DF50(s32 arg0, s32 arg1)
                 g_music_track_index = D_800D01F0[sp10];
                 sp20 = D_800D01B0[sp10];
                 sp24 = (sp20 * 4) + ((D_800432C8[sp20 * WMAP_NODE_RECORD_SIZE] >> 4) & 3);
-                g_field_scene_id.id = g_wmap_land_scenes[sp24];
+                g_field_entry_scene.id = g_wmap_land_scenes[sp24];
                 g_field_music_id = g_wmap_land_entry_flags[sp24];
                 if (sp10 == 0xC)
                 {
