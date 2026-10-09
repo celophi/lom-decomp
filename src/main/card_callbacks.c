@@ -1,13 +1,16 @@
 #include "main/card_callbacks.h"
 #include "common/saved_game.h"
 
-#if defined(VERSION_JP)
+/** @brief Bytes of resource header in front of the transfer state. */
 #define CARD_RESOURCE_HEADER_SIZE 768
+/** @brief Reward slots in the transfer state. */
 #define CARD_REWARD_COUNT 50
-#define CARD_LAND_MASK_COUNT 20
-#define CARD_FIRST_MANA_LAND 7
+/** @brief First land that records its maxed spirits; lower lands are only counted. */
+#define CARD_FIRST_SPIRIT_LAND 7
+/** @brief Last land the transfer records. */
 #define CARD_LAST_LAND 31
-#define CARD_MAX_MANA_LEVEL 6
+/** @brief Lands CARD_FIRST_SPIRIT_LAND to CARD_LAST_LAND, less the five unused ids. */
+#define CARD_SPIRIT_LAND_COUNT 20
 
 /** @brief Initial game state passed to the pet-transfer resource. */
 typedef struct
@@ -18,10 +21,14 @@ typedef struct
     u8 reserved[2];
     u8 egg_species;
     u8 level;
+    /** @brief Enabled lands below CARD_FIRST_SPIRIT_LAND. */
     u8 early_land_count;
+    /** @brief Enabled lands in all. */
     u8 land_count;
+    /** @brief One bit per recorded land, in land order; set when the land is enabled. */
     s32 land_bits;
-    u8 mana_masks[CARD_LAND_MASK_COUNT];
+    /** @brief Per land from CARD_FIRST_SPIRIT_LAND: bit n set when spirit n is at FIELD_LAND_SPIRIT_MAX. */
+    u8 maxed_spirits[CARD_SPIRIT_LAND_COUNT];
     PetRecord pet;
 } CardPetTransfer;
 
@@ -32,11 +39,9 @@ typedef struct
     CardPetTransfer transfer;
 } CardPetResource;
 
-#endif
-
 /**
  * @brief Fill the PocketStation pet-transfer resource: the pet record, cleared
- *        rewards, and the placed-land and maxed-mana masks.
+ *        rewards, and which lands are enabled and have maxed spirits.
  * @param resource Loaded CARD resource containing the transfer state.
  * @param pet Pet to copy into the resource.
  * @see decomp.me (100%) https://decomp.me/scratch/LO4aD
@@ -48,8 +53,8 @@ void card_prepare_pet_transfer(u8* resource, PetRecord* pet)
     CardPetTransfer* transfer;
     u8* destination;
     u8* source;
-    u8* mana_masks;
-    u8* mana;
+    u8* maxed_spirits;
+    u8* level;
     s32 i;
     u32 land_id;
     s32 land_bit;
@@ -58,7 +63,7 @@ void card_prepare_pet_transfer(u8* resource, PetRecord* pet)
     u8 land_count;
     u8 enabled;
     FieldLandRecord* land;
-    u32 mana_mask;
+    u32 spirit_mask;
 
     transfer = &((CardPetResource*)resource)->transfer;
     transfer->egg_species = pet->egg_species;
@@ -76,7 +81,8 @@ void card_prepare_pet_transfer(u8* resource, PetRecord* pet)
     {
         *destination++ = *source++;
     }
-    mana_masks = transfer->mana_masks;
+
+    maxed_spirits = transfer->maxed_spirits;
     land_bit = 1;
     land_bits = 0;
     land_id = 1;
@@ -84,21 +90,23 @@ void card_prepare_pet_transfer(u8* resource, PetRecord* pet)
     land_count = 0;
     do
     {
-        if (land_id == 14 || land_id == 20 || land_id == 22 || land_id == 28 || land_id == 29)
+        if (land_id == FIELD_LAND_UNUSED_14 || land_id == FIELD_LAND_UNUSED_20 || land_id == FIELD_LAND_UNUSED_22 || land_id == FIELD_LAND_UNUSED_28 ||
+            land_id == FIELD_LAND_UNUSED_29)
         {
             continue;
         }
+
         enabled = 0;
-        if (land_id == 24)
+        if (land_id == FIELD_LAND_LUCEMIA)
         {
-            land = &g_saved_game.layout.lands[33];
+            land = &g_saved_game.layout.lands[FIELD_LAND_LUCEMIA_2];
             if (land->flags & FIELD_LAND_FLAG_04)
             {
                 enabled = 1;
             }
             else
             {
-                land = &g_saved_game.layout.lands[24];
+                land = &g_saved_game.layout.lands[FIELD_LAND_LUCEMIA];
                 if (land->flags & FIELD_LAND_FLAG_02)
                 {
                     enabled = 1;
@@ -107,9 +115,9 @@ void card_prepare_pet_transfer(u8* resource, PetRecord* pet)
         }
         else
         {
-            if (land_id == 6)
+            if (land_id == FIELD_LAND_UNNAMED_06)
             {
-                land = &g_saved_game.layout.lands[32];
+                land = &g_saved_game.layout.lands[FIELD_LAND_ORCHARDS];
             }
             else
             {
@@ -120,34 +128,38 @@ void card_prepare_pet_transfer(u8* resource, PetRecord* pet)
                 enabled = 1;
             }
         }
+
         if (enabled)
         {
             land_bits |= land_bit;
             land_count++;
-            if (land_id < CARD_FIRST_MANA_LAND)
+            if (land_id < CARD_FIRST_SPIRIT_LAND)
             {
                 early_land_count++;
             }
         }
         land_bit <<= 1;
-        if (land_id >= CARD_FIRST_MANA_LAND)
+
+        if (land_id >= CARD_FIRST_SPIRIT_LAND)
         {
-            mana_mask = 0;
+            /* Each spirit's bit enters at the top and shifts down, so spirit n ends in bit n. */
+            spirit_mask = 0;
             if (enabled)
             {
-                mana = land->levels;
-                for (i = sizeof(land->levels) - 1; i != -1; i--)
+                level = land->levels;
+                for (i = FIELD_LAND_SPIRIT_COUNT - 1; i != -1; i--)
                 {
-                    if (*mana++ == CARD_MAX_MANA_LEVEL)
+                    if (*level++ == FIELD_LAND_SPIRIT_MAX)
                     {
-                        mana_mask |= 1U << (sizeof(land->levels) / sizeof(land->levels[0]));
+                        spirit_mask |= 1 << FIELD_LAND_SPIRIT_COUNT;
                     }
-                    mana_mask >>= 1;
+                    spirit_mask >>= 1;
                 }
             }
-            *mana_masks++ = mana_mask;
+            *maxed_spirits++ = spirit_mask;
         }
     } while (land_id++ < CARD_LAST_LAND);
+
     transfer->early_land_count = early_land_count;
     transfer->land_count = land_count;
     transfer->land_bits = land_bits;

@@ -331,6 +331,61 @@ typedef struct FieldCharacterRecord
 /** @brief FieldLandRecord::x and ::z of a land that is not on the map. */
 #define FIELD_LAND_CELL_NONE 15
 
+/** @brief Mana spirits; every land keeps one level for each. */
+#define FIELD_LAND_SPIRIT_COUNT 8
+/** @brief Spirit level a land starts from; levels above it strengthen the spirit. */
+#define FIELD_LAND_SPIRIT_NEUTRAL 3
+/** @brief Highest spirit level a land can reach. */
+#define FIELD_LAND_SPIRIT_MAX 6
+
+/**
+ * @brief Land ids: indexes into SavedGameLayout::lands and the location-name tables.
+ * @note Ids without a location name have neutral spirits and no artifact flags.
+ */
+typedef enum FieldLandId
+{
+    FIELD_LAND_HOME = 0,
+    FIELD_LAND_DOMINA = 1,
+    FIELD_LAND_GATO_GROTTOES = 2,
+    FIELD_LAND_POLPOTA_HARBOR = 3,
+    FIELD_LAND_LUMINA = 4,
+    FIELD_LAND_GEO = 5,
+    /** @brief No location name; the pet transfer counts it with the record of FIELD_LAND_ORCHARDS. */
+    FIELD_LAND_UNNAMED_06 = 6,
+    FIELD_LAND_MADORA_BEACH = 7,
+    FIELD_LAND_ULKAN_MINES = 8,
+    FIELD_LAND_BONE_FORTRESS = 9,
+    FIELD_LAND_LAKE_KILMA = 10,
+    FIELD_LAND_TOWER_OF_LEIRES = 11,
+    FIELD_LAND_WHITE_FOREST = 12,
+    FIELD_LAND_MEKIV_CAVERNS = 13,
+    FIELD_LAND_UNUSED_14 = 14,
+    FIELD_LAND_NORN_PEAKS = 15,
+    FIELD_LAND_UNDERWORLD = 16,
+    FIELD_LAND_DUMA_DESERT = 17,
+    FIELD_LAND_LUON_HIGHWAY = 18,
+    FIELD_LAND_JUNKYARD = 19,
+    FIELD_LAND_UNUSED_20 = 20,
+    FIELD_LAND_JUNGLE = 21,
+    FIELD_LAND_UNUSED_22 = 22,
+    FIELD_LAND_FLAMES = 23,
+    /** @brief Moves to FIELD_LAND_LUCEMIA_2 once it gains FIELD_LAND_FLAG_04. */
+    FIELD_LAND_LUCEMIA = 24,
+    FIELD_LAND_BEJEWELED_CITY = 25,
+    FIELD_LAND_FIEG_SNOWFIELDS = 26,
+    FIELD_LAND_SS_BUCCANEER = 27,
+    FIELD_LAND_UNUSED_28 = 28,
+    FIELD_LAND_UNUSED_29 = 29,
+    FIELD_LAND_MINDAS_RUINS = 30,
+    FIELD_LAND_TREE_OF_MANA = 31,
+    FIELD_LAND_ORCHARDS = 32,
+    /**
+     * @brief Second form of Lucemia (its world-map assets are ESL2_*, Lucemia's are ESL_*);
+     *        takes over the map cell and placement order of FIELD_LAND_LUCEMIA. No location name.
+     */
+    FIELD_LAND_LUCEMIA_2 = 33
+} FieldLandId;
+
 /** @brief Per-land record (0xC bytes). */
 typedef struct FieldLandRecord
 {
@@ -342,7 +397,8 @@ typedef struct FieldLandRecord
     u8 unk2;
     /** @brief Placement order: SavedGameLayout placed_land_count when the land was placed. */
     u8 count;
-    u8 levels[8];
+    /** @brief Level of each mana spirit, 0 to FIELD_LAND_SPIRIT_MAX. */
+    u8 levels[FIELD_LAND_SPIRIT_COUNT];
 } FieldLandRecord;
 
 /** @brief A FieldLandRecord whose first four bytes are also read as one word. */

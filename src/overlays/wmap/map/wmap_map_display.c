@@ -18,10 +18,10 @@
 #include "../internal/wmap_sequence_runtime.h"
 #include "../internal/wmap_land_layout.h"
 #include "../internal/wmap_cells.h"
+#include "common/saved_game.h"
 
 #define WMAP_CELL_SPACING 48
 #define WMAP_CACHE_SLOTS 16
-#define WMAP_SPIRIT_COUNT 8
 #define WMAP_FADE_STEP 8
 #define WMAP_BLEND_THRESHOLD 64
 #define WMAP_GAME_AREA_SIZE 3
@@ -179,7 +179,7 @@ typedef struct
 /** @brief Sprite indices for the eight spirits at one map cell. */
 typedef struct
 {
-    s32 sprite_indices[WMAP_SPIRIT_COUNT];
+    s32 sprite_indices[FIELD_LAND_SPIRIT_COUNT];
 } WmapSpiritIndices;
 
 /** @brief Position word and remaining bytes in a spirit sprite packet. */
@@ -1488,7 +1488,7 @@ void wmap_draw_spirit_icons(s32 selected_index)
 {
     s32 i;
 
-    for (i = 0; i < WMAP_SPIRIT_COUNT; i++)
+    for (i = 0; i < FIELD_LAND_SPIRIT_COUNT; i++)
     {
         SPRT* sprite;
         u8 frame;
@@ -1537,7 +1537,7 @@ void wmap_draw_spirit_icons(s32 selected_index)
  */
 void wmap_draw_spirit_levels(void)
 {
-    s32 sprite_indices[WMAP_SPIRIT_COUNT];
+    s32 sprite_indices[FIELD_LAND_SPIRIT_COUNT];
     s32 x;
     s32 y;
     s32 i;
@@ -1625,7 +1625,7 @@ void wmap_draw_spirit_levels(void)
         }
 
         i++;
-    } while (i < WMAP_SPIRIT_COUNT);
+    } while (i < FIELD_LAND_SPIRIT_COUNT);
 
     wmap_queue_texture_page(0x3D, 1);
 }
@@ -1993,7 +1993,7 @@ s32 wmap_get_point_display_mode(s32 x, s32 y, s32 scale)
 void wmap_init_spirit_animation(void)
 {
     s32 index;
-    for (index = 0; index < WMAP_SPIRIT_COUNT; index++)
+    for (index = 0; index < FIELD_LAND_SPIRIT_COUNT; index++)
     {
         g_wmap_spirit_timers[index] = 1;
         g_wmap_spirit_frames[index] = g_wmap_spirit_sequence_bounds[index + 1];
