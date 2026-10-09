@@ -232,7 +232,6 @@ extern u8 g_niki_read_saved_copy_sequence[];
 /** @brief Reset retries and write the replacement save. */
 extern u8 g_niki_write_save_sequence[];
 extern s32 g_niki_entry_value_limit;
-extern const CardPathTemplate g_niki_file_template;
 extern s32 g_niki_file_handle;
 extern s32 g_niki_retry_count;
 extern s32 g_niki_selected_entry_extended;
@@ -242,8 +241,6 @@ extern s32 g_niki_secondary_poll_countdown;
 extern s32 g_niki_preserve_old_save;
 /** @brief Path written before renaming the replacement to the selected save path. */
 extern u8 g_niki_temporary_save_path[];
-/** @brief Directory search path matching every file on the card ("bu00:*"). */
-extern const CardPathTemplate g_niki_entry_header_template;
 /** @brief Read and poll the selected entry's preview header. */
 extern u8 g_niki_preview_sequence[];
 

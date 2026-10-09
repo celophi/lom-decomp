@@ -131,9 +131,8 @@ NIKIは選んだセーブのパーティー分のパレットとピクセルを�
 別のファイルにはしません。
 
 `bu00:`のデバイス名、`bu00:*`の検索パス、全角の`ＭＡＸ`はこのblobにはありません。
-パスは[`niki.c`](../../../../src/overlays/niki/niki.c)と
-[`niki_io.c`](../../../../src/overlays/niki/niki_io.c)で定義されています。
-`ＭＡＸ`は共有の[`format_decimal.inc.c`](../../../../src/common/sjis/format_decimal.inc.c)にある文字列です。
+これらは[`niki_io.c`](../../../../src/overlays/niki/niki_io.c)と共有の
+[`format_decimal.inc.c`](../../../../src/common/sjis/format_decimal.inc.c)にある文字列リテラルです。
 
 ## まだわかっていないこと
 
