@@ -9,140 +9,11 @@
 #include "../../common/save_file/parse_hex_suffix_byte.inc.c"
 #include "../../common/card_directory/parse_entry_fields.inc.c"
 
-/**
- * @brief Rank recognized entries and select the entry with the greatest field value.
- * @return Index of the greatest field value, or zero when none is present.
- */
-s32 niki_rank_entries(void)
-{
-    s32 entry_index;
-    s32 previous_index;
-    s32 higher_count;
-    s32 next_rank;
-    s32 maximum;
-    s32 max_suffix;
-
-    parse_entry_fields();
-    maximum = -1;
-    niki_sort_entries_by_type();
-    max_suffix = parse_entry_fields();
-    niki_reset_entry_ranks();
-    next_rank = 1;
-    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
-    {
-        if (g_card_entry_fields[g_card_slot][entry_index] >= 0)
-        {
-            if (g_card_entry_fields[g_card_slot][entry_index] >= maximum)
-            {
-                g_niki_entry_ranks[entry_index] = next_rank;
-                maximum = g_card_entry_fields[g_card_slot][entry_index];
-                next_rank++;
-            }
-            else
-            {
-                higher_count = 0;
-                for (previous_index = 0; previous_index < entry_index; previous_index++)
-                {
-                    if (g_card_entry_fields[g_card_slot][entry_index] < g_card_entry_fields[g_card_slot][previous_index])
-                    {
-                        higher_count++;
-                        g_niki_entry_ranks[previous_index]++;
-                    }
-                }
-                g_niki_entry_ranks[entry_index] = next_rank - higher_count;
-                next_rank++;
-            }
-        }
-    }
-    g_niki_rank_count = next_rank;
-    /* Reuse next_rank as the running maximum and maximum as its index. */
-    next_rank = -1;
-    maximum = 0;
-    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
-    {
-        if (next_rank < g_card_entry_fields[g_card_slot][entry_index])
-        {
-            next_rank = g_card_entry_fields[g_card_slot][entry_index];
-            maximum = entry_index;
-        }
-    }
-    g_niki_entry_value_limit = next_rank + 1;
-    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
-    {
-        if (strncmp(&g_new_save_entry_prefix[0], g_card_entries[g_card_slot][entry_index].name, 8) == 0)
-        {
-            g_card_entry_suffix_values[entry_index] = max_suffix + 1;
-            break;
-        }
-    }
-    return maximum;
-}
-
-/** @brief Mark all fifteen rank slots unused and reset the rank-count sentinel. */
-void niki_reset_entry_ranks(void)
-{
-    s32 rank_index;
-    s32 unused_rank;
-
-    g_niki_rank_count = 0x28;
-    unused_rank = -1;
-    for (rank_index = 14; rank_index >= 0; rank_index--)
-    {
-        g_niki_entry_ranks[rank_index] = unused_rank;
-    }
-}
-
-/**
- * @brief Check whether the selected card contains either recognized save-file prefix.
- * @return One if a recognized entry exists, otherwise zero.
- */
-s32 niki_has_known_entry_type(void)
-{
-    s32 entry_index;
-
-    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
-    {
-        if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][entry_index].name, 12) == 0 ||
-            strncmp(g_lom_pocketstation_filename_prefix, g_card_entries[g_card_slot][entry_index].name, 12) == 0)
-        {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-/**
- * @brief Check whether directory entries occupy at least fourteen memory-card blocks.
- * @return One when the block limit is reached, otherwise zero.
- */
-s32 niki_entry_blocks_reach_limit(void)
-{
-    s32 entry_index;
-    s32 total_blocks;
-
-    total_blocks = 0;
-    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
-    {
-        total_blocks += g_card_entries[g_card_slot][entry_index].size / CARD_BLOCK_BYTES;
-    }
-    return total_blocks >= 14;
-}
-
-/** @brief Remove both placeholder save files from the selected memory card. */
-inline void niki_remove_placeholder_saves(void)
-{
-    CardFilePath path;
-
-    strcpy(path.text, CARD_DEVICE_PREFIX);
-    path.device.characters.slot += (u8)g_card_slot;
-    strcat(path.text, g_lom_save_dummy_filename);
-    erase(path.text);
-
-    strcpy(path.text, CARD_DEVICE_PREFIX);
-    path.device.characters.slot += (u8)g_card_slot;
-    strcat(path.text, g_lom_pocketstation_dummy_filename);
-    erase(path.text);
-}
+#include "../../common/card_directory/card_rank_entries.inc.c"
+#include "../../common/card_directory/card_reset_entry_ranks.inc.c"
+#include "../../common/card_directory/card_has_known_entry_type.inc.c"
+#include "../../common/card_directory/card_entry_blocks_reach_limit.inc.c"
+#include "../../common/card_directory/card_erase_placeholder_files.inc.c"
 
 /**
  * @brief Execute the current memory-card load/save command and advance its sequence.
@@ -157,8 +28,6 @@ s32 niki_advance_load_sequence(void)
     s32 wait_attempts;
     s32 poll_result;
     s32 io_result;
-    s32 rank_index;
-    s32 rank_value;
     s32 command;
 
     strcpy(path.text, CARD_DEVICE_PREFIX);
@@ -192,12 +61,7 @@ s32 niki_advance_load_sequence(void)
             g_card_step = g_card_step + 1;
             break;
         case 3:
-            g_niki_rank_count = 0x28;
-            rank_value = -1;
-            for (rank_index = 14; rank_index >= 0; rank_index--)
-            {
-                g_niki_entry_ranks[rank_index] = rank_value;
-            }
+            card_reset_entry_ranks();
             g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
             g_card_step = g_niki_card_setup_sequence;
             break;
@@ -243,7 +107,7 @@ s32 niki_advance_load_sequence(void)
         break;
 
     case CARD_MENU_STEP_SCAN_ENTRIES:
-        niki_remove_placeholder_saves();
+        card_erase_placeholder_files();
         g_niki_entry_scan_active = 1;
         if (niki_begin_entry_scan(g_card_slot) == 0)
         {
@@ -261,7 +125,7 @@ s32 niki_advance_load_sequence(void)
             {
                 if (g_niki_mode != 0)
                 {
-                    g_niki_selected_row = 0;
+                    g_card_menu_selected_row = 0;
                 }
                 g_niki_entry_scan_active = 0;
                 if (g_card_entry_state == CARD_MENU_ENTRY_STATE_NO_GAME_DATA)
@@ -301,7 +165,7 @@ s32 niki_advance_load_sequence(void)
         break;
 
     case CARD_MENU_EXCHANGE_STEP_ERASE_ENTRY:
-        strcat(path.text, g_card_entries[g_card_slot][g_niki_selected_row].name);
+        strcat(path.text, g_card_entries[g_card_slot][g_card_menu_selected_row].name);
         wait_attempts = 0;
         _card_wait(g_card_slot);
         do
@@ -705,10 +569,10 @@ s32 niki_begin_entry_scan(s32 card_slot)
     CardSearchPattern pattern;
 
     strcpy(pattern.text, CARD_SEARCH_PATTERN);
-    g_niki_selected_row = 0;
-    g_niki_scroll_frames = 0;
-    g_niki_scroll_target_y = 0;
-    g_niki_scroll_y = 0;
+    g_card_menu_selected_row = 0;
+    g_card_menu_scroll_frames = 0;
+    g_card_menu_scroll_target_y = 0;
+    g_card_menu_scroll_y = 0;
     g_card_entry_state = 0;
     pattern.device.characters.slot += card_slot;
     if (firstfile(pattern.text, g_card_entries[card_slot]) != 0)
@@ -727,10 +591,7 @@ s32 niki_begin_entry_scan(s32 card_slot)
  */
 s32 niki_scan_next_entry(s32 page)
 {
-    s32 used_blocks;
-    s32 entry_index;
     s32 selected;
-    s32 card_full;
 
     if (nextfile(&g_card_entries[page][g_card_entry_state]) != 0)
     {
@@ -740,47 +601,41 @@ s32 niki_scan_next_entry(s32 page)
     }
 
     field_reset_input_repeat();
-    if ((g_niki_mode == 0) && (niki_has_known_entry_type() == 0))
+    if ((g_niki_mode == 0) && (card_has_known_entry_type() == 0))
     {
         g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_GAME_DATA;
     }
     else
     {
-        used_blocks = 0;
         g_niki_preserve_old_save = 0;
-        for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
+        if (card_entry_blocks_reach_limit())
         {
-            used_blocks += g_card_entries[g_card_slot][entry_index].size / CARD_BLOCK_BYTES;
-        }
-        card_full = used_blocks >= 0xE;
-        if (card_full != 0)
-        {
-            selected = niki_rank_entries();
-            if (niki_has_known_entry_type() == 0)
+            selected = card_rank_entries();
+            if (card_has_known_entry_type() == 0)
             {
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_CARD_FULL;
-                g_niki_entry_value_limit = 0;
+                g_card_entry_value_limit = 0;
             }
             else
             {
-                g_niki_selected_row = selected;
-                niki_scroll_to_selection();
+                g_card_menu_selected_row = selected;
+                card_menu_scroll_to_selection();
             }
         }
         else
         {
             g_niki_preserve_old_save = 1;
-            selected = niki_rank_entries();
-            if (niki_has_known_entry_type() == 0)
+            selected = card_rank_entries();
+            if (card_has_known_entry_type() == 0)
             {
-                g_niki_selected_row = 0;
-                niki_scroll_to_selection();
-                g_niki_entry_value_limit = 0;
+                g_card_menu_selected_row = 0;
+                card_menu_scroll_to_selection();
+                g_card_entry_value_limit = 0;
             }
             else
             {
-                g_niki_selected_row = selected;
-                niki_scroll_to_selection();
+                g_card_menu_selected_row = selected;
+                card_menu_scroll_to_selection();
             }
         }
     }
@@ -801,7 +656,7 @@ void niki_commit_selected_entry(void)
         return;
     }
     {
-        if (strncmp(&g_new_save_entry_prefix[0], g_card_entries[g_card_slot][g_niki_selected_row].name, 8) == 0)
+        if (strncmp(&g_new_save_entry_prefix[0], g_card_entries[g_card_slot][g_card_menu_selected_row].name, 8) == 0)
         {
             g_niki_selection_status = 2;
             return;
@@ -810,7 +665,7 @@ void niki_commit_selected_entry(void)
     strcpy(path.text, CARD_DEVICE_PREFIX);
     path_bytes = (u8*)&path;
     {
-        strcat(path_bytes, g_card_entries[g_card_slot][g_niki_selected_row].name);
+        strcat(path_bytes, g_card_entries[g_card_slot][g_card_menu_selected_row].name);
     }
     {
         s32 slot;
@@ -824,7 +679,7 @@ void niki_commit_selected_entry(void)
     }
     g_card_step = &g_niki_preview_sequence[0];
     {
-        if (strncmp(&g_lom_save_filename_prefix[0], g_card_entries[g_card_slot][g_niki_selected_row].name, 0xC) == 0)
+        if (strncmp(&g_lom_save_filename_prefix[0], g_card_entries[g_card_slot][g_card_menu_selected_row].name, 0xC) == 0)
         {
             g_niki_selected_entry_extended = 1;
         }
@@ -845,7 +700,7 @@ void niki_commit_selected_entry(void)
  * @brief Group recognized save-file types by suffix, then append other entries.
  * @note Preserves directory order within each type and suffix group.
  */
-void niki_sort_entries_by_type(void)
+void card_sort_entries_by_type(void)
 {
     struct DIRENTRY sorted[CARD_DIRECTORY_ENTRY_COUNT];
     s32 output_index = 0;

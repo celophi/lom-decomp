@@ -86,14 +86,14 @@ class AddheroSymbols(CardSymbols):
 SYMBOL_NAMES = {
     "messages": "g_addhero_text_table",
     "locations": "g_addhero_location_text_table",
-    "icon_offsets": "g_addhero_icon_image_table",
+    "icon_offsets": "g_card_menu_icon_offsets",
     "card_steps": "g_addhero_loadseq_start",
     "chart": "g_glyph_single_byte_chart",
     "chart_pages": "g_glyph_chart_page_base",
     "decimal_glyphs": "g_glyph_decimal_digits",
     "hex_glyphs": "g_glyph_hex_digits",
 }
-MESSAGE_SYMBOL_PREFIX = "g_addhero_text_"
+MESSAGE_SYMBOL_PREFIX = ("g_addhero_text_", "g_card_menu_text_")
 LOCATION_SYMBOL_PREFIX = "g_addhero_location_text_table"
 # The idle table has the shared name every card overlay uses (include/common/card_events.h).
 CARD_STEP_SYMBOL_PREFIX = ("g_addhero_loadseq_", "g_card_steps_")

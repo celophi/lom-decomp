@@ -87,7 +87,7 @@ class FakeOverlay:
         mark("hex_glyphs")
         data += b"".join(bytes([0x82, 0x4F + i]) for i in range(10))
         data += b"".join(bytes([0x82, 0x60 + i]) for i in range(6)) + bytes(4)
-        self.symbols["g_carda_scroll_target_y"] = self.address + len(data)
+        self.symbols["g_card_menu_scroll_target_y"] = self.address + len(data)
         data += bytes(32)
         self.data = data
 

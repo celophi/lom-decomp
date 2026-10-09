@@ -29,10 +29,6 @@
 
 /* Declarations shared by ADDHERO implementation files. */
 
-/** @brief Save files a memory card holds (its 15 data blocks). */
-#define ADDHERO_CARD_SAVE_SLOTS 15
-#define ADDHERO_USED_BLOCK_LIMIT 14
-
 /**
  * @brief g_card_entry_state values.
  *
@@ -48,22 +44,15 @@
 #define ADDHERO_ENTRY_STATE_NO_LOAD_FILE 0xF7       /**< The selected entry is not a load file. */
 
 extern struct DIRENTRY g_card_entries[][CARD_DIRECTORY_ENTRY_COUNT];
-extern s32 g_addhero_scroll_y;
 extern s32 g_addhero_progress_active;
-extern s32 g_addhero_scroll_target_y;
 extern s32 g_addhero_mode;
-extern s32 g_addhero_selected_row;
 extern s32 g_addhero_selection_status;
-extern s32 g_addhero_scroll_frames;
 extern s32 g_addhero_io_busy;
 extern s32 g_addhero_progress_bar_active;
 extern s32 g_addhero_progress_start_tick;
 extern s32 g_addhero_entry_scan_active;
 extern s32 g_addhero_write_in_progress;
-extern s32 g_addhero_rank_count;
-extern s32 g_addhero_entry_ranks[];
 extern s32 g_addhero_selected_entry_extended;
-extern s32 g_addhero_entry_value_limit;
 extern s32 g_addhero_has_free_entry_space;
 extern u8 g_addhero_loadseq_start;
 /** @brief Save file read or written by the load and save sequences. */
@@ -75,14 +64,10 @@ extern SaveFile g_addhero_save_file;
 extern SaveFile g_addhero_entry_file;
 extern char g_addhero_save_file_path[];
 
-void addhero_scroll_to_selection(void);
 void addhero_open_status_dialog(s32 message_id);
 void addhero_open_exit_dialog(s32 message_id);
-s32 addhero_rank_entries(void);
-s32 addhero_has_known_entry_type(void);
 s32 addhero_begin_entry_scan(s32 page);
 s32 addhero_scan_next_entry(s32 page);
-void addhero_sort_entries_by_type(void);
 void addhero_init_card_events(void);
 void addhero_commit_selected_entry(void);
 s32 addhero_advance_load_sequence(void);
@@ -95,7 +80,6 @@ s32 addhero_advance_load_sequence(void);
 #define ADDHERO_RESULT_SAVED 2
 #define ADDHERO_RESULT_CANCELLED 3
 
-extern CardMenuElement g_addhero_element_pool[CARD_MENU_ELEMENT_COUNT];
 
 extern s32 g_save_compatibility_tag;
 
@@ -111,25 +95,17 @@ extern s32 g_addhero_icon_phase;
 extern FieldItemRecord* g_addhero_items;
 extern s32 g_addhero_result;
 extern s32 g_addhero_work_ram_base;
-extern s32 g_addhero_exit_requested;
-extern s32 g_addhero_choice_toggle;
 extern s32 g_addhero_load_flow_active;
-extern s32 g_addhero_icon_palette;
-extern s32 g_addhero_frame_parity;
 extern s32 g_addhero_dialog_state;
-extern s32 g_addhero_icon_image_table[];
 extern u8 g_addhero_loadseq_abort[];
 extern u8 g_addhero_loadseq_load_begin[];
 extern u8 g_addhero_loadseq_load_progress[];
 extern u8 g_addhero_loadseq_save_begin[];
-extern u8 g_addhero_icon_context[];
 extern u16 g_addhero_text_table;
 extern u16 g_addhero_text_not_enough_blocks;
 extern u16 g_addhero_text_no_card;
 extern u16 g_addhero_text_mana_label;
 extern u16 g_addhero_text_other_game_label;
-extern u16 g_addhero_text_card_slot0_label;
-extern u16 g_addhero_text_card_slot1_label;
 extern u16 g_addhero_text_card_access_failed;
 extern u16 g_addhero_text_no_save_data;
 extern u16 g_addhero_text_new_save_label;
@@ -160,33 +136,18 @@ extern u16 g_addhero_location_text_table[];
 void addhero_init(s32 work_base, s32 mode);
 s32 addhero_state_step(FieldRenderHalf* draw_state);
 void addhero_build_ui_elements(void);
-void addhero_update_state(FieldRenderHalf* draw_state);
 s32 addhero_update_load_sequence(void);
 s32 addhero_handle_input(void);
 void addhero_reset_state(void);
-void addhero_close_all_elements(void);
-void addhero_update_elements(FieldRenderHalf* draw_state);
 void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* addhero_draw_mode_glyph(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void* addhero_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void* addhero_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void addhero_clear_elements(void);
-CardMenuElement* addhero_alloc_element(void);
-void addhero_update_and_draw_elements(FieldRenderHalf* draw_state);
-void addhero_deactivate_primary_element(void);
 void* addhero_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* addhero_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* addhero_draw_progress_bar(POLY_G4* quad, u_long* ot);
 void* addhero_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* addhero_draw_exit_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void* addhero_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 width, s32 icon, s32 index, s32 row);
-void addhero_enable_choice_toggle(void);
-void* addhero_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y);
-s32 addhero_entry_blocks_reach_limit(void);
-void addhero_erase_placeholder_files(void);
-
-void addhero_reset_entry_ranks(void);
 
 #endif

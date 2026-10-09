@@ -139,17 +139,11 @@ extern s32 g_niki_icon_phase;
 extern s32 g_niki_confirm_latch;
 extern s32 D_80164AE4;
 extern s32 g_niki_mode;
-extern s32 g_niki_exit_requested;
 extern s32 g_niki_selection_status;
-extern s32 g_niki_frame_parity;
 extern s32 g_niki_progress_active;
 /** @brief The saved game's item records (g_saved_game_ctx->items). */
 extern FieldItemRecord* g_niki_items;
-extern s32 g_niki_selected_row;
 extern s32 g_pad_input;
-extern s32 g_niki_scroll_frames;
-extern s32 g_niki_scroll_y;
-extern s32 g_niki_scroll_target_y;
 extern s32 D_80164B80;
 /** @brief Clear/load card state, then scan its directory. */
 extern u8 g_niki_card_setup_sequence[];
@@ -157,11 +151,9 @@ extern u8 g_niki_card_setup_sequence[];
 extern u8 g_niki_rescan_sequence[];
 /** @brief Release primary events, then request and poll card information. */
 extern u8 g_niki_card_info_sequence[];
-extern CardMenuElement g_niki_element_pool[CARD_MENU_ELEMENT_COUNT];
 extern s32 g_niki_entry_scan_active;
 extern s32 g_field_niki_addhero_state;
 extern s32 g_save_compatibility_tag;
-extern s32 g_niki_icon_palette;
 extern s32 g_niki_dialog_state;
 /**
  * @brief Start of the selected entry's save file: only the card header and the
@@ -178,8 +170,6 @@ extern u16 g_niki_text_not_enough_blocks;
 extern u16 g_niki_text_no_card;
 extern u16 g_niki_text_mana_label;
 extern u16 g_niki_text_other_game_label;
-extern u16 g_niki_text_card_slot0_label;
-extern u16 g_niki_text_card_slot1_label;
 extern u16 g_niki_text_card_access_failed;
 extern u16 g_niki_text_no_save_data;
 extern u16 g_niki_text_new_save_label;
@@ -206,7 +196,6 @@ extern u16 g_niki_text_plus_marker;
 /** @brief Location names, picked by the music track stored in a save. */
 extern u16 g_niki_location_names[];
 extern u8 g_field_ui_text_cant_hold_more[];
-extern s32 g_niki_choice_toggle;
 
 /** @brief Reset retries and read the selected save into the transfer buffer. */
 extern u8 g_niki_load_save_sequence[];
@@ -222,16 +211,10 @@ extern s32 D_8011F418;
 extern u8 g_field_shared_items[];
 extern s32 g_niki_progress_bar_active;
 extern s32 g_niki_progress_start_tick;
-extern s32 g_niki_entry_ranks[];
-extern s32 g_niki_rank_count;
-/** @brief Party icon offsets, counted from the icon count word just before them. */
-extern s32 g_niki_icon_offsets[];
-extern u8 g_niki_icon_context[];
 /** @brief Read the existing save before modifying and writing it back. */
 extern u8 g_niki_read_saved_copy_sequence[];
 /** @brief Reset retries and write the replacement save. */
 extern u8 g_niki_write_save_sequence[];
-extern s32 g_niki_entry_value_limit;
 extern s32 g_niki_file_handle;
 extern s32 g_niki_retry_count;
 extern s32 g_niki_selected_entry_extended;
@@ -244,38 +227,24 @@ extern u8 g_niki_temporary_save_path[];
 /** @brief Read and poll the selected entry's preview header. */
 extern u8 g_niki_preview_sequence[];
 
-void niki_update_elements(FieldRenderHalf* frame);
-void niki_update_and_draw_elements(FieldRenderHalf* frame);
 s32 niki_update_load_sequence(void);
 s32 niki_handle_input(void);
 void* niki_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* niki_draw_header_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void* niki_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void* niki_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-u8* niki_draw_icon_highlight(u8* prim, u_long* ot, s32 x, s32 y, s32 width, s32 icon_index, s32 texture_slot, s32 palette_mode);
 void* niki_draw_footer_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void niki_clear_elements();
 s32 niki_advance_load_sequence(void);
 void* niki_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* niki_draw_secondary_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void niki_close_all_elements();
 void niki_switch_card_slot();
 void niki_commit_selected_entry(void);
-void niki_scroll_to_selection();
-CardMenuElement* niki_alloc_element();
-void niki_enable_choice_toggle();
 void* niki_draw_save_confirm_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* niki_draw_confirm_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void niki_sort_entries_by_type();
-void niki_reset_entry_ranks(void);
-s32 niki_rank_entries(void);
 s32 niki_begin_entry_scan(s32);
 s32 niki_scan_next_entry(s32);
 void niki_open_status_dialog(s32);
 void niki_open_secondary_status_dialog(s32);
 void niki_build_ui_elements(void);
-void niki_update_menu(FieldRenderHalf* frame);
 
 #endif
