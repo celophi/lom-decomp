@@ -19,6 +19,7 @@
 #include "../internal/wmap_land_layout.h"
 #include "../internal/wmap_cells.h"
 #include "common/saved_game.h"
+#include "common/gpu_packet.h"
 
 #define WMAP_CELL_SPACING 48
 #define WMAP_CACHE_SLOTS 16
@@ -1148,7 +1149,7 @@ void wmap_draw_land_animation(s32 x, s32 y, WmapLandDisplay* state, s32 resource
         packet->v3 = quad->v + quad->height + texture->upload.uv.v_offset;
         *(u32*)&packet->r0 = 0x80808080;
         locals.blend_mode = (s8)quad->blend_mode;
-        packet->tpage = getTPage(0, quad->blend_mode & 3, texture->tpage_x, texture->tpage_y);
+        packet->tpage = getTPage(GPU_TEXTURE_4BIT, quad->blend_mode & 3, texture->tpage_x, texture->tpage_y);
         packet->clut = *(u16*)((u8*)texture_base->clut + (quad->texture_index * 2 + texture_offset));
         setPolyFT4(packet);
         setSemiTrans(packet, 1);

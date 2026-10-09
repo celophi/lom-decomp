@@ -3,6 +3,7 @@
  * overlay that has it, at the point where it sits in that overlay's binary.
  */
 #include "common/glyph_cache.h"
+#include "common/gpu_packet.h"
 
 /**
  * @brief Render a multibyte string through the glyph cache: measure it, apply
@@ -90,7 +91,7 @@ void* draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s32 palet
     }
 
     draw_mode = prim;
-    setDrawTPage(draw_mode, 0, 0, getTPage(0, 0, GLYPH_VRAM_X, 0));
+    setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, GLYPH_VRAM_X, 0));
     addPrim(ot, draw_mode);
     return draw_mode + 1;
 }

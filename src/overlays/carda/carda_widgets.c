@@ -2,6 +2,7 @@
 #include "overlays/field/field_text.h"
 #include "internal/carda_internal.h"
 #include "common/saved_game.h"
+#include "common/gpu_packet.h"
 
 /** @brief Bytes cleared when preparing the card header and icon area. */
 #define CARDA_CARD_HEADER_BYTES 512
@@ -1151,7 +1152,7 @@ void* carda_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 wi
     quad->v3 = 255;
     quad->v2 = 255;
     quad->clut = getClut(index * 16, 498);
-    quad->tpage = getTPage(0, 0, 320, 0);
+    quad->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, 320, 0);
     addPrim(ot, quad);
 
     return quad + 1;

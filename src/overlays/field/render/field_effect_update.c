@@ -28,6 +28,7 @@
 #include "../internal/field_actor_runtime.h"
 #include "overlays/field/field_sound.h"
 #include "../internal/field_actor_behavior.h"
+#include "common/gpu_packet.h"
 
 void field_play_set_sfx(s32 sfx_index, s32 pan, s32 unused, s32 channel_group);
 s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action);
@@ -6892,7 +6893,7 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
     {
         u32 behavior_flags = part->behavior_flags.word;
         quad->gpu.clut = getClut(80, 492);
-        quad->gpu.tpage = (u16)(((behavior_flags >> 17) & 0x60) | getTPage(0, 0, 448, 0));
+        quad->gpu.tpage = (u16)(((behavior_flags >> 17) & 0x60) | getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, 448, 0));
     }
 
     gte_SetRotMatrix(rotation);
@@ -7440,7 +7441,7 @@ u8* field_emit_effect_texture_page(FieldMotionRecord* effect, FieldObjectPart* p
 {
     s32 index;
 
-    setDrawTPage(packet_cursor, 0, 0, getTPage(0, (part->behavior_flags.word >> 22), 320, 0));
+    setDrawTPage(packet_cursor, 0, 0, getTPage(GPU_TEXTURE_4BIT, (part->behavior_flags.word >> 22), 320, 0));
 
     index = effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
     if (index < 0)

@@ -3,6 +3,7 @@
 #include "main/display.h"
 #include <memory.h>
 #include <libetc.h>
+#include "common/gpu_packet.h"
 
 void play_menu_sfx(s32 sfx_id, s32 volume);
 void field_reset_input_repeat(void);
@@ -80,7 +81,7 @@ CloadGpuPacket *cload_emit_window_frame(CloadGpuPacket *prim, u_long *ot, s32 x,
         addPrim(ot, tile);
 
         draw_mode = (DR_TPAGE *)(tile + 1);
-        setDrawTPage(draw_mode, 0, 0, getTPage(0, 2, 320, 0));
+        setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 320, 0));
         addPrim(ot, draw_mode);
         next_prim = draw_mode + 1;
     }
@@ -164,7 +165,7 @@ CloadGpuPacket *cload_emit_scroll_arrow(SPRT *sprite, u_long *ot, s32 x, s32 y, 
 
     sprite++;
     draw_mode = (DR_TPAGE *)sprite;
-    setDrawTPage(draw_mode, 0, 0, getTPage(1, 0, 640, 0));
+    setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_8BIT, GPU_BLEND_HALF, 640, 0));
     addPrim(ot, draw_mode);
     return (CloadGpuPacket *)(draw_mode + 1);
 }
@@ -475,7 +476,7 @@ void *cload_draw_icon_highlight(POLY_FT4 *quad, u_long *ot, s32 x, s32 y, s32 wi
     quad->v3 = 255;
     quad->v2 = 255;
     quad->clut = getClut(index * 16, VRAM_CLUT_Y);
-    quad->tpage = getTPage(0, 0, 320, 0);
+    quad->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, 320, 0);
     addPrim(ot, quad);
 
     return quad + 1;
@@ -550,7 +551,7 @@ CloadGpuPacket *cload_emit_icon_highlight_strip(SPRT *sprite, u_long *ot)
         sprite++;
 
         draw_mode = (DR_TPAGE *)sprite;
-        setDrawTPage(draw_mode, 0, 0, getTPage(1, 0, 512 + i * 64, 0));
+        setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_8BIT, GPU_BLEND_HALF, 512 + i * 64, 0));
         addPrim(ot, draw_mode);
         sprite = (SPRT *)(draw_mode + 1);
     }

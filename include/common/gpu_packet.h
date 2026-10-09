@@ -144,6 +144,17 @@
 /** @brief Command-code bit that makes a primitive semi-transparent, as setSemiTrans sets it. */
 #define GPU_CODE_SEMI_TRANS 0x02
 
+/** @brief Texture colour depth of a texture page (the tp argument of getTPage). */
+#define GPU_TEXTURE_4BIT 0
+#define GPU_TEXTURE_8BIT 1
+#define GPU_TEXTURE_16BIT 2
+
+/** @brief Semi-transparency rate of a texture page (the abr argument of getTPage). */
+#define GPU_BLEND_HALF 0        /**< Half background plus half foreground. */
+#define GPU_BLEND_ADD 1         /**< Background plus foreground. */
+#define GPU_BLEND_SUBTRACT 2    /**< Background minus foreground. */
+#define GPU_BLEND_ADD_QUARTER 3 /**< Background plus a quarter of the foreground. */
+
 /*
  * Size of a GPU packet type T in u_long words, for advancing a u_long*
  * primitive cursor one packet at a time: `prim += PRIM_WORDS(SPRT);`.

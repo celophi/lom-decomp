@@ -26,6 +26,8 @@
 #include "../internal/field_contact_geometry.h"
 #include <memory.h>
 #include "../internal/field_actor_behavior.h"
+#include "main/overlay_memory.h"
+#include "common/gpu_packet.h"
 
 s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start);
 void field_copy_portrait_palette(void* dest, s32 index);
@@ -56,8 +58,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 /** @brief Music fade time requested when the game-over transition starts. */
 #define FIELD_GOVER_MUSIC_FADE 120
 
-/** @brief Load address of the sub-overlays (GOVER.BIN here). */
-#define FIELD_SUBOVERLAY_ADDRESS ((void*)SECONDARY_OVERLAY_ADDRESS)
 /** @brief Work area handed to the game-over overlay. */
 #define FIELD_GOVER_WORK_ADDRESS SECONDARY_OVERLAY_AT(0x20000)
 
@@ -517,7 +517,7 @@ void field_update_gover_load(void)
         controller->ports[0].actuator_control.fields.large_motor_command = 0;
         controller->ports[1].small_motor_command = 0;
         controller->ports[0].small_motor_command = 0;
-        cdrom_stream(CD_RES_GOVER_BIN, FIELD_SUBOVERLAY_ADDRESS);
+        cdrom_stream(CD_RES_GOVER_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
         cdrom_wait_queue_empty();
         func_80140004(FIELD_GOVER_WORK_ADDRESS, g_field_gover_image_resource_id, g_field_gover_music_resource_id, g_field_gover_audio_clip_id);
         field_reset_actor_resources();
@@ -1661,7 +1661,7 @@ static void field_build_actor_render_commands(FieldRenderContext* render_ctx, s3
                     blend_mode = (((slot->animation->flags >> FIELD_ANIM_BLEND_SHIFT) & 3) + 1) & 3;
                     packet += sizeof(TILE) / sizeof(u32);
                     tpage = (DR_TPAGE*)packet;
-                    setDrawTPage(tpage, 0, 0, getTPage(0, blend_mode, 320, 0));
+                    setDrawTPage(tpage, 0, 0, getTPage(GPU_TEXTURE_4BIT, blend_mode, 320, 0));
                     addPrim(ordering_table, tpage);
                     packet += sizeof(DR_TPAGE) / sizeof(u32);
                 }

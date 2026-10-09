@@ -17,6 +17,7 @@
 #include <libgpu.h>
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_menu_element.h"
+#include "common/gpu_packet.h"
 
 /** @brief First item id that can be dropped on the field; its actor animation is 0. */
 #define FIELD_DROP_ITEM_FIRST 0x60
@@ -335,7 +336,7 @@ static u8 *field_draw_item_drop_list(u_long* ot, u8 *cursor, s32 scroll_x, s32 s
     tile->h = FIELD_ITEM_HIGHLIGHT_HEIGHT;
     tile->y = FIELD_ITEM_ROW_Y(g_field_item_list_cursor) - scroll_y;
     addPrim(ot, tile);
-    setDrawTPage(mode, 0, 0, getTPage(0, 0, 320, 0));
+    setDrawTPage(mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, 320, 0));
     addPrim(ot, mode);
     return (u8 *)(mode + 1);
 }

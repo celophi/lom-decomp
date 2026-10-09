@@ -1716,7 +1716,7 @@ void field_text_init(void)
     setRECT(&rect, FIELD_TEXT_CACHE_VRAM_X, FIELD_TEXT_FRAME_VRAM_Y, FIELD_TEXT_FRAME_TILE_WIDTH, FIELD_TEXT_FRAME_TILE_HEIGHT);
     LoadImage(&rect, (u_long*)(FIELD_TEXT_CACHE + 16 * 4));
 
-    draw_mode = _get_mode(1, 0, getTPage(0, 0, FIELD_TEXT_CACHE_VRAM_X, FIELD_TEXT_TPAGE_VRAM_Y));
+    draw_mode = _get_mode(1, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, FIELD_TEXT_CACHE_VRAM_X, FIELD_TEXT_TPAGE_VRAM_Y));
     text_sys->draw_mode0 = draw_mode;
     text_sys->draw_mode1 = draw_mode;
     text_sys->text_clut = getClut(FIELD_TEXT_CLUT_X, FIELD_TEXT_TEXT_CLUT_Y);
@@ -3206,7 +3206,7 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
     texture_command = FIELD_TEXT_QUAD_COLOR;
     texture_u_origin = 0;
     texture_v_origin = FIELD_TEXT_FRAME_V;
-    tpage = getTPage(0, 0, FIELD_TEXT_CACHE_VRAM_X, FIELD_TEXT_TPAGE_VRAM_Y) << 16;
+    tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, FIELD_TEXT_CACHE_VRAM_X, FIELD_TEXT_TPAGE_VRAM_Y) << 16;
     vertex = FIELD_TEXT_MESH;
     packet_height = 8;
     remaining = 1;
@@ -3431,7 +3431,7 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
     /* The final eight mesh vertices hold the portrait shadow and image quads. */
     if (state->portrait != NULL)
     {
-        tpage = getTPage(0, 0, FIELD_TEXT_CACHE_VRAM_X, FIELD_TEXT_TPAGE_VRAM_Y) << 16;
+        tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, FIELD_TEXT_CACHE_VRAM_X, FIELD_TEXT_TPAGE_VRAM_Y) << 16;
         poly = (FieldTextPacket*)packet_cursor;
         packet_cursor += sizeof(POLY_FT4);
         frame_rows = FIELD_TEXT_MESH_ROWS(state->height) + 3;

@@ -521,7 +521,7 @@ void zukan_scroll_to_selection(void)
  */
 static DR_TPAGE* zukan_emit_draw_mode_5(DR_TPAGE* draw_mode, u_long* ordering_table)
 {
-    setDrawTPage(draw_mode, 0, 0, getTPage(0, 0, ZUKAN_PAGE_IMAGE_X, ZUKAN_PAGE_IMAGE_Y));
+    setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, ZUKAN_PAGE_IMAGE_X, ZUKAN_PAGE_IMAGE_Y));
     addPrim(ordering_table, draw_mode);
     return draw_mode + 1;
 }
@@ -534,7 +534,7 @@ static DR_TPAGE* zukan_emit_draw_mode_5(DR_TPAGE* draw_mode, u_long* ordering_ta
  */
 static DR_TPAGE* zukan_emit_draw_mode_1d(DR_TPAGE* draw_mode, u_long* ordering_table)
 {
-    setDrawTPage(draw_mode, 0, 0, getTPage(0, 0, ZUKAN_BORDER_IMAGE_X, ZUKAN_BORDER_IMAGE_Y));
+    setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, ZUKAN_BORDER_IMAGE_X, ZUKAN_BORDER_IMAGE_Y));
     addPrim(ordering_table, draw_mode);
     return draw_mode + 1;
 }
@@ -547,7 +547,7 @@ static DR_TPAGE* zukan_emit_draw_mode_1d(DR_TPAGE* draw_mode, u_long* ordering_t
  */
 static DR_TPAGE* zukan_emit_texture_draw_mode(DR_TPAGE* draw_mode, u_long* ordering_table)
 {
-    setDrawTPage(draw_mode, 0, 0, getTPage(g_zukan_image_mode, 0, ZUKAN_ENTRY_IMAGE_X, ZUKAN_ENTRY_IMAGE_Y));
+    setDrawTPage(draw_mode, 0, 0, getTPage(g_zukan_image_mode, GPU_BLEND_HALF, ZUKAN_ENTRY_IMAGE_X, ZUKAN_ENTRY_IMAGE_Y));
     addPrim(ordering_table, draw_mode);
     return draw_mode + 1;
 }
@@ -643,12 +643,12 @@ void* zukan_emit_ui_sprite(SPRT* sprite, u_long* ordering_table, u32 sprite_inde
     switch ((u8)sprite_record->source_and_u)
     {
     case 0:
-        setDrawTPage(draw_mode, 0, 0, getTPage(0, 0, ZUKAN_PAGE_IMAGE_X, ZUKAN_PAGE_IMAGE_Y));
+        setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, ZUKAN_PAGE_IMAGE_X, ZUKAN_PAGE_IMAGE_Y));
         addPrim(ordering_table, draw_mode);
         sprite = (SPRT*)(draw_mode + 1);
         break;
     case 1:
-        setDrawTPage(draw_mode, 0, 0, getTPage(0, 0, ZUKAN_BORDER_IMAGE_X, ZUKAN_BORDER_IMAGE_Y));
+        setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, ZUKAN_BORDER_IMAGE_X, ZUKAN_BORDER_IMAGE_Y));
         addPrim(ordering_table, draw_mode);
         sprite = (SPRT*)(draw_mode + 1);
         break;
@@ -1020,7 +1020,7 @@ TILE* zukan_render_fade(TILE* tile, u_long* ordering_table)
         setTile(tile);
         setSemiTrans(tile, 1);
         tile->w = SCREEN_WIDTH;
-        draw_mode = getTPage(0, 1, ZUKAN_PAGE_IMAGE_X, ZUKAN_PAGE_IMAGE_Y);
+        draw_mode = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, ZUKAN_PAGE_IMAGE_X, ZUKAN_PAGE_IMAGE_Y);
         SET_YX0(tile, 0, 0);
         tile->h = SCREEN_HEIGHT;
         addPrim(ordering_table, tile);
@@ -1029,7 +1029,7 @@ TILE* zukan_render_fade(TILE* tile, u_long* ordering_table)
         tpage = (DR_TPAGE*)tile;
         if (g_zukan_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
-            draw_mode = getTPage(0, 2, ZUKAN_PAGE_IMAGE_X, ZUKAN_PAGE_IMAGE_Y);
+            draw_mode = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, ZUKAN_PAGE_IMAGE_X, ZUKAN_PAGE_IMAGE_Y);
         }
         setDrawTPage(tpage, 0, 0, draw_mode);
         addPrim(ordering_table, tpage);
@@ -1171,7 +1171,7 @@ void* zukan_render_detail_sprites(SPRT* sprite, u_long* ordering_table)
     }
 
     mode = (DR_TPAGE*)sprite;
-    setDrawTPage(mode, 0, 0, getTPage(g_zukan_image_mode, 0, ZUKAN_ENTRY_IMAGE_X, ZUKAN_ENTRY_IMAGE_Y));
+    setDrawTPage(mode, 0, 0, getTPage(g_zukan_image_mode, GPU_BLEND_HALF, ZUKAN_ENTRY_IMAGE_X, ZUKAN_ENTRY_IMAGE_Y));
     addPrim(ordering_table, mode);
     return mode + 1;
 }

@@ -623,7 +623,7 @@ static POLY_FT4* field_draw_timed_panel_image(POLY_FT4 *prim, u_long *ordering_t
     prim->u3 = value1;
     prim->u1 = value1;
     value0 = (u8)g_field_timed_panel_height;
-    value1 = getTPage(0, 1, FIELD_TIMED_PANEL_VRAM_X, 0);
+    value1 = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, FIELD_TIMED_PANEL_VRAM_X, 0);
     prim->tpage = value1;
     value0--;
     prim->v3 = value0;
@@ -1154,7 +1154,7 @@ void field_advance_ability_progression(void)
 #define FIELD_RESULTS_NAME_X 0x80
 /** @brief Palette and texture page of the animated result icons. */
 #define FIELD_RESULTS_ICON_CLUT getClut(112, 490)
-#define FIELD_RESULTS_ICON_TPAGE getTPage(0, 1, 384, 0)
+#define FIELD_RESULTS_ICON_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 384, 0)
 
 /** @brief Resource with the ability and technique name tables. */
 #define FIELD_RES_UNLOCK_NAMES 0x5DF

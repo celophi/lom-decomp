@@ -833,7 +833,7 @@ u8* golem_finish_grid_marker_run(u8* packet_cursor, u_long* ordering_table)
 {
     DR_TPAGE* draw_mode = (DR_TPAGE*)packet_cursor;
 
-    setDrawTPage(draw_mode, 0, 0, getTPage(0, 1, 320, 0));
+    setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 320, 0));
     addPrim(ordering_table, draw_mode);
     return packet_cursor + sizeof(DR_TPAGE);
 }
@@ -882,7 +882,7 @@ u8* golem_draw_cursor(u8* packet_cursor, GolemRenderContext* render_context)
     }
 
     draw_mode = (DR_TPAGE*)packet_cursor;
-    setDrawTPage(draw_mode, 0, 0, getTPage(0, 1, 320, 0));
+    setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 320, 0));
     addPrim(ordering_table, draw_mode);
     return packet_cursor + sizeof(DR_TPAGE);
 }

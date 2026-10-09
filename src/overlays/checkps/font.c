@@ -6,6 +6,7 @@
 #include <libapi.h>
 #include <libgte.h>
 #include <libgpu.h>
+#include "common/gpu_packet.h"
 
 #define CHECKPS_GLYPH_CACHE_ENTRY_COUNT 256
 #define CHECKPS_GLYPH_CACHE_USED_FLAG 0x10000
@@ -272,7 +273,7 @@ void* draw_cached_text(void* primitive, u_long* ot_tag, const u8* text, s32 x, s
     }
 
     draw_mode_packet = primitive;
-    setDrawTPage(draw_mode_packet, 0, 0, getTPage(0, 0, CHECKPS_GLYPH_VRAM_X, 0));
+    setDrawTPage(draw_mode_packet, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, CHECKPS_GLYPH_VRAM_X, 0));
     addPrim(ot_tag, draw_mode_packet);
     return draw_mode_packet + 1;
 }

@@ -11,6 +11,7 @@
 #include <libetc.h>
 #include "overlays/menu/menu.h"
 #include "main/controller.h"
+#include "common/gpu_packet.h"
 
 void field_update_input_repeat(void);
 
@@ -348,7 +349,7 @@ static void gover_build_otag(u8* frame_buffer)
 
     primitive_a += sizeof(SPRT);
 
-    setDrawTPage((DR_TPAGE*)primitive_a, 0, 0, getTPage(1, 1, SCREEN_WIDTH, 0));
+    setDrawTPage((DR_TPAGE*)primitive_a, 0, 0, getTPage(GPU_TEXTURE_8BIT, GPU_BLEND_ADD, SCREEN_WIDTH, 0));
     addPrim(frame_buffer, primitive_a);
 
     primitive_b = primitive_a + sizeof(DR_TPAGE);
@@ -366,7 +367,7 @@ static void gover_build_otag(u8* frame_buffer)
 
     primitive_a += sizeof(SPRT);
 
-    setDrawTPage((DR_TPAGE*)primitive_a, 0, 0, getTPage(1, 1, GOVER_SECOND_TPAGE_X, 0));
+    setDrawTPage((DR_TPAGE*)primitive_a, 0, 0, getTPage(GPU_TEXTURE_8BIT, GPU_BLEND_ADD, GOVER_SECOND_TPAGE_X, 0));
     primitive_b = primitive_a;
     primitive_b += sizeof(DR_TPAGE);
 

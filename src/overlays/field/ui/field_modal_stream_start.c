@@ -7,9 +7,7 @@
 #include "common.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_modal_runtime.h"
-
-/** @brief Load address of the modal sub-overlays. */
-#define FIELD_SUBOVERLAY_ADDRESS ((void*)SECONDARY_OVERLAY_ADDRESS)
+#include "main/overlay_memory.h"
 
 /** @brief Render buffers handed to the GOLEM entry point. */
 #define FIELD_GOLEM_RENDER_BUFFERS ((void*)SECONDARY_OVERLAY_AT(0x10000))
@@ -38,7 +36,7 @@ void field_open_carda(s32 mode)
     if (g_field_modal_state == FIELD_MODAL_NONE)
     {
         field_reset_actor_resources();
-        cdrom_stream(CD_RES_CARDA_BIN, FIELD_SUBOVERLAY_ADDRESS);
+        cdrom_stream(CD_RES_CARDA_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
         cdrom_wait_queue_empty();
         g_field_card_overlay_mode = mode + 1;
         g_field_gosub_state = 1;
@@ -55,7 +53,7 @@ void field_open_carda(s32 mode)
 void field_run_golem(void)
 {
     field_reset_actor_resources();
-    cdrom_stream(CD_RES_GOLEM_BIN, FIELD_SUBOVERLAY_ADDRESS);
+    cdrom_stream(CD_RES_GOLEM_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
     cdrom_wait_queue_empty();
     golem_run(FIELD_GOLEM_RENDER_BUFFERS, 0);
     field_golem_rebuild_current_grid();
@@ -79,7 +77,7 @@ void field_open_niki(s32 mode)
     if (g_field_modal_state == FIELD_MODAL_NONE)
     {
         field_reset_actor_resources();
-        cdrom_stream(CD_RES_NIKI_BIN, FIELD_SUBOVERLAY_ADDRESS);
+        cdrom_stream(CD_RES_NIKI_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
         cdrom_wait_queue_empty();
         g_field_niki_addhero_state = 1;
         g_field_modal_state = FIELD_MODAL_NIKI;
@@ -96,7 +94,7 @@ void field_open_addhero(s32 mode)
     if (g_field_modal_state == FIELD_MODAL_NONE)
     {
         field_reset_actor_resources();
-        cdrom_stream(CD_RES_ADDHERO_BIN, FIELD_SUBOVERLAY_ADDRESS);
+        cdrom_stream(CD_RES_ADDHERO_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
         cdrom_wait_queue_empty();
         g_field_niki_addhero_state = 1;
         g_field_modal_state = FIELD_MODAL_ADDHERO;

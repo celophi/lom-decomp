@@ -16,8 +16,6 @@
 
 /** @brief Maps below this id are read with a blocking queued read instead of a stream. */
 #define FIELD_MAP_QUEUED_READ_LIMIT 15
-/** @brief Where MOVIE.BIN is streamed to. */
-#define FIELD_MOVIE_LOAD_ADDRESS ((u8*)SECONDARY_OVERLAY_ADDRESS)
 /** @brief Where a field map resource is read to. */
 #define FIELD_MAP_LOAD_ADDRESS ((u8*)LOAD_BUFFER_ADDRESS)
 /** @brief First ordering-table entry the scene draws into; the entries in front of it belong to the text windows. */
@@ -224,7 +222,7 @@ void field_init_with_fmv(void* unused, FieldRenderHalf* buffers)
     SceneState* state = SCENE_STATE;
 
     DrawSync(0);
-    cdrom_stream(CD_RES_MOVIE_BIN, FIELD_MOVIE_LOAD_ADDRESS);
+    cdrom_stream(CD_RES_MOVIE_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
     movie_play(0);
     field_load_map(state->map_id);
     object_index = state->object_index;
@@ -257,7 +255,7 @@ void field_init_with_fmv_alloc(void)
 
     buffers = get_field_render_buffers();
     DrawSync(0);
-    cdrom_stream(CD_RES_MOVIE_BIN, FIELD_MOVIE_LOAD_ADDRESS);
+    cdrom_stream(CD_RES_MOVIE_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
     movie_play(0);
     field_load_map(g_field_map_id);
     object_index = g_field_object_index;

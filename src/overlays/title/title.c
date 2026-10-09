@@ -10,6 +10,7 @@
 #include <rand.h>
 #include "main/controller.h"
 #include "overlays/field/field_sound.h"
+#include "common/gpu_packet.h"
 
 void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y);
 void stop_title_music(void);
@@ -636,7 +637,7 @@ void render_title_backdrop(TitleMenuContext* ctx)
         prim->u1 = prim->u3 = TITLE_BACKDROP_STRIP_WIDTH;
         prim->v0 = prim->v1 = 8;
         prim->v2 = prim->v3 = 8 + VRAM_DRAW_HEIGHT;
-        prim->tpage = getTPage(2, 0, page_x, 0x100);
+        prim->tpage = getTPage(GPU_TEXTURE_16BIT, GPU_BLEND_HALF, page_x, 0x100);
         prim->clut = getClut(0, 481);
         addPrim(ot + TITLE_OT_LENGTH - 1, prim);
         prim++;
@@ -860,7 +861,7 @@ void* emit_menu_item_quad(u_long* ot_head, void* prim, s32 tex_row, s32 x, s32 y
     quad->v2 = v_bottom;
     quad->x2 = (u16)x;
     quad->x0 = (u16)x;
-    quad->tpage = getTPage(0, 0, 0x140, 0);
+    quad->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, 0x140, 0);
     x_right = (u16)(x + width);
     quad->x3 = x_right;
     quad->x1 = x_right;
