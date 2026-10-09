@@ -51,7 +51,7 @@ class FakeOverlay:
 
         palette = struct.pack("<16H", 0, *range(1, 16))
         icon = palette + bytes(index % 256 for index in range(icon_set.PIXEL_BYTES))
-        names["g_addhero_icon_image_table"] = len(blob) + 4
+        names["g_card_menu_icon_offsets"] = len(blob) + 4
         blob += struct.pack("<II", 1, 8) + icon
         blob += blob[-4:]  # the repeated trailing word
 
@@ -147,8 +147,8 @@ class ExtractTest(unittest.TestCase):
         self.assertNotIn("unknown", names)
 
     def test_a_missing_symbol_names_itself_and_writes_nothing(self):
-        inputs = self.overlay.write(self.root, skip_symbol="g_addhero_icon_image_table")
-        with self.assertRaisesRegex(ValueError, "g_addhero_icon_image_table.*SYMBOL_NAMES"):
+        inputs = self.overlay.write(self.root, skip_symbol="g_card_menu_icon_offsets")
+        with self.assertRaisesRegex(ValueError, "g_card_menu_icon_offsets.*SYMBOL_NAMES"):
             addhero.extract(inputs, self.root / "out")
         self.assertEqual(list(self.root.glob("out*")) + list(self.root.glob(".out*")), [])
 

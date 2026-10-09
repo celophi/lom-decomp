@@ -155,8 +155,6 @@ extern u16 g_carda_text_no_card;
 extern u16 g_carda_text_mana_label;
 extern u16 g_carda_text_other_game_label;
 extern u16 g_carda_text_save_title;
-extern u16 g_carda_text_card_slot0_label;
-extern u16 g_carda_text_card_slot1_label;
 extern u16 g_carda_text_card_access_failed;
 extern u16 g_carda_text_no_save_data;
 extern u16 g_carda_text_new_save_label;
@@ -209,7 +207,6 @@ extern u8 g_carda_save_title_template[];
 extern u8 g_carda_bad_title_template[];
 extern s32 g_carda_save_icon_offsets[];
 extern u16 g_carda_location_names[];
-extern s32 g_carda_icon_image_offsets[];
 
 /* Card-sequence step scripts (g_card_step points into these). */
 extern u8 g_carda_steps_initial_scan[];
@@ -227,34 +224,24 @@ extern u8 g_carda_steps_read_save_prefix[];
 extern u8 g_carda_steps_overwrite_alt_save[];
 
 /* CARDA state. */
-extern s32 g_carda_scroll_target_y;
 extern s32 g_carda_new_save_file;
 extern s32 g_carda_growth_delta;
 extern u8 g_carda_received_item_ids[];
 extern s32 g_carda_pet_already_on_ranch;
-extern CardMenuElement g_carda_element_pool[8]; /**< UI element pool. */
 extern CardMenuElement g_carda_element1_state;
-extern s32 g_carda_exit_requested;
 extern s32 g_carda_dialog_state;
 extern s32 g_carda_received_item_count;
 extern u8* g_carda_save_blob;
-extern s32 g_carda_selected_row;
-extern s32 g_carda_choice_toggle;
-extern s32 g_carda_scroll_frames;
 extern s32 g_carda_io_busy;
-extern s32 g_carda_frame_parity;
 extern u8 g_carda_saved_record_copy[];
 extern s32 g_carda_icon_phase;
-extern s32 g_carda_icon_palette;
 extern s32 g_carda_progress_active;
 extern s32 g_carda_format_frames;
 extern s32 g_carda_mode;
-extern u8 g_carda_icon_context[];
 extern s32 g_carda_format_declined;
 extern s32 g_carda_selection_status;
 /** @brief The saved game's item records (g_saved_game_ctx->items). */
 extern FieldItemRecord* g_carda_items;
-extern s32 g_carda_scroll_y;
 extern s32 g_carda_save_in_progress;
 /**
  * @brief Start of the selected entry's save file: only the card header and the
@@ -262,10 +249,8 @@ extern s32 g_carda_save_in_progress;
  */
 extern SaveFile g_carda_selected_file;
 extern s32 g_carda_file_handle;
-extern s32 g_carda_entry_ranks[];
 /** @brief Full card path of the selected entry ("buX0:" plus file name), 64 bytes. */
 extern u8 g_carda_selected_card_path[];
-extern s32 g_carda_rank_count;
 extern s32 g_carda_retry_count;
 extern s32 g_carda_selected_entry_extended;
 extern s32 g_carda_primary_poll_countdown;

@@ -146,4 +146,24 @@ s32 parse_entry_fields(void);
  */
 void field_flag_known_save(char* file_name);
 
+/** @brief Save files a memory card holds (its 15 data blocks), and the used-block count that leaves no room for a new save. */
+#define CARD_SAVE_SLOTS 15
+#define CARD_USED_BLOCK_LIMIT 14
+
+/** @brief Rank of each Legend of Mana save on the current card, 1 for the lowest serial; -1 for other entries. */
+extern s32 g_card_entry_ranks[];
+
+/** @brief Next rank card_rank_entries would assign, one past the newest save. */
+extern s32 g_card_rank_count;
+
+/** @brief One past the highest save serial on the current card: the serial a new save gets. */
+extern s32 g_card_entry_value_limit;
+
+s32 card_rank_entries(void);
+void card_reset_entry_ranks(void);
+s32 card_has_known_entry_type(void);
+s32 card_entry_blocks_reach_limit(void);
+void card_erase_placeholder_files(void);
+void card_sort_entries_by_type(void);
+
 #endif

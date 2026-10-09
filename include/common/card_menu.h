@@ -6,6 +6,7 @@
 #include "common/pad.h"
 #include "main/display.h"
 #include "common/gpu_packet.h"
+#include "main/field_runtime.h"
 
 /**
  * @file card_menu.h
@@ -464,5 +465,52 @@ typedef struct CardMenuElement
 
 /** @brief Address of the text whose table offset is @p offset. */
 #define CARD_MENU_TEXT_BY_OFFSET(table, offset) ((u8*)((uintptr_t)(offset) + (uintptr_t)(table)))
+
+
+/** @brief Pool of menu windows; CARD_MENU_ELEMENT_MODAL is the primary dialog. */
+extern CardMenuElement g_card_menu_element_pool[CARD_MENU_ELEMENT_COUNT];
+
+/** @brief Selected entry in the save list, and the list's scroll position, target and remaining scroll frames. */
+extern s32 g_card_menu_selected_row;
+extern s32 g_card_menu_scroll_y;
+extern s32 g_card_menu_scroll_target_y;
+extern s32 g_card_menu_scroll_frames;
+
+/** @brief Yes/no prompt selection, CARD_MENU_CHOICE_YES or CARD_MENU_CHOICE_NO. */
+extern s32 g_card_menu_choice_toggle;
+
+/** @brief Nonzero once the menu has finished; the next frame update shuts the menu down. */
+extern s32 g_card_menu_exit_requested;
+
+/** @brief Flipped once per frame by the menu update. */
+extern s32 g_card_menu_frame_parity;
+
+/** @brief Portrait CLUT staged for LoadImage (one 4-bit palette), and the golem palette of the selected save. */
+extern u8 g_card_menu_icon_context[GPU_CLUT_4BIT_COLORS * 2];
+extern s32 g_card_menu_icon_palette;
+
+/** @brief Text offset-table entries of the card slot 0 and slot 1 labels (CARD_MENU_TEXT_CARD_SLOT0_LABEL and the next text). */
+extern u16 g_card_menu_text_card_slot0_label;
+extern u16 g_card_menu_text_card_slot1_label;
+
+/** @brief Party icon offsets, counted from the icon count word just before them (see CARD_MENU_ICON_IMAGE). */
+extern s32 g_card_menu_icon_offsets[];
+
+void card_menu_deactivate_primary_element(void);
+void card_menu_close_all_elements(void);
+void card_menu_scroll_to_selection(void);
+CardMenuElement* card_menu_alloc_element(void);
+void card_menu_enable_choice_toggle(void);
+void card_menu_clear_elements(void);
+void card_menu_update_elements(FieldRenderHalf* render);
+s32 card_menu_update_frame(FieldRenderHalf* render);
+void* card_menu_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y);
+void* card_menu_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 width, s32 icon, s32 index, s32 row);
+void* card_menu_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+void* card_menu_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+
+/** @brief Each overlay's own per-frame menu logic and window drawing, called by the shared functions above. */
+void card_menu_update_state(FieldRenderHalf* render);
+void card_menu_update_and_draw_elements(FieldRenderHalf* render);
 
 #endif

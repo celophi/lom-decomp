@@ -78,7 +78,7 @@ class NikiSymbols(CardSymbols):
 SYMBOL_NAMES = {
     "messages": "g_niki_text_table",
     "locations": "g_niki_location_names",
-    "icon_offsets": "g_niki_icon_offsets",
+    "icon_offsets": "g_card_menu_icon_offsets",
     "card_steps": "g_niki_card_setup_sequence",
     "chart": "g_glyph_single_byte_chart",
     "decimal_glyphs": "g_glyph_decimal_digits",
@@ -86,7 +86,7 @@ SYMBOL_NAMES = {
     "chart_pages": "g_glyph_chart_page_base",
 }
 BLOB_ORDER = ("messages", "locations", "icon_offsets", "card_steps", "chart", "decimal_glyphs", "hex_glyphs")
-MESSAGE_SYMBOL_PREFIX = "g_niki_text_"
+MESSAGE_SYMBOL_PREFIX = ("g_niki_text_", "g_card_menu_text_")
 LOCATION_SYMBOL_PREFIX = "g_niki_location_names"
 
 

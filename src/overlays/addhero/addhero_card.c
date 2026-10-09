@@ -17,143 +17,11 @@ extern u8 g_addhero_loadseq_file_ready[];
 
 #include "../../common/card_directory/parse_entry_fields.inc.c"
 
-/**
- * @brief Rank saves by serial number and assign the next suffix to the new-save entry.
- * @return Index of the save with the highest serial, or zero if none is found.
- */
-s32 addhero_rank_entries(void)
-{
-    s32 entry_index;
-    s32 previous_index;
-    s32 higher_count;
-    s32 next_rank;
-    s32 maximum;
-    s32 max_suffix;
-
-    parse_entry_fields();
-    maximum = -1;
-    addhero_sort_entries_by_type();
-    max_suffix = parse_entry_fields();
-    addhero_reset_entry_ranks();
-    next_rank = 1;
-    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
-    {
-        if (g_card_entry_fields[g_card_slot][entry_index] >= 0)
-        {
-            if (g_card_entry_fields[g_card_slot][entry_index] >= maximum)
-            {
-                g_addhero_entry_ranks[entry_index] = next_rank;
-                maximum = g_card_entry_fields[g_card_slot][entry_index];
-                next_rank++;
-            }
-            else
-            {
-                higher_count = 0;
-                for (previous_index = 0; previous_index < entry_index; previous_index++)
-                {
-                    if (g_card_entry_fields[g_card_slot][entry_index] < g_card_entry_fields[g_card_slot][previous_index])
-                    {
-                        higher_count++;
-                        g_addhero_entry_ranks[previous_index]++;
-                    }
-                }
-                g_addhero_entry_ranks[entry_index] = next_rank - higher_count;
-                next_rank++;
-            }
-        }
-    }
-    g_addhero_rank_count = next_rank;
-    next_rank = -1;
-    maximum = 0;
-    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
-    {
-        if (next_rank < g_card_entry_fields[g_card_slot][entry_index])
-        {
-            next_rank = g_card_entry_fields[g_card_slot][entry_index];
-            maximum = entry_index;
-        }
-    }
-    g_addhero_entry_value_limit = next_rank + 1;
-    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
-    {
-        if (strncmp(g_new_save_entry_prefix, g_card_entries[g_card_slot][entry_index].name, CARD_MENU_NEW_SAVE_NAME_LENGTH) == 0)
-        {
-            g_card_entry_suffix_values[entry_index] = max_suffix + 1;
-            break;
-        }
-    }
-    return maximum;
-}
-
-/**
- * @brief Clear the save ranks and reset the rank count.
- */
-void addhero_reset_entry_ranks(void)
-{
-    s32 entry_index;
-    s32 empty_rank;
-
-    g_addhero_rank_count = 40;
-    empty_rank = -1;
-    for (entry_index = ADDHERO_CARD_SAVE_SLOTS - 1; entry_index >= 0; entry_index--)
-    {
-        g_addhero_entry_ranks[entry_index] = empty_rank;
-    }
-}
-
-/**
- * @brief Check for a Mana or PocketStation save on the current card.
- * @return 1 if a known-type entry exists, 0 otherwise.
- */
-s32 addhero_has_known_entry_type(void)
-{
-    s32 entry_index;
-
-    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
-    {
-        if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][entry_index].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0 ||
-            strncmp(g_lom_pocketstation_filename_prefix, g_card_entries[g_card_slot][entry_index].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
-        {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-/**
- * @brief Check whether fewer than two card blocks remain free.
- * @return 1 when the used blocks reach ADDHERO_USED_BLOCK_LIMIT, 0 otherwise.
- */
-inline s32 addhero_entry_blocks_reach_limit(void)
-{
-    s32 entry_index;
-    s32 used_blocks;
-
-    used_blocks = 0;
-    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
-    {
-        used_blocks += g_card_entries[g_card_slot][entry_index].size / CARD_BLOCK_BYTES;
-    }
-    return used_blocks >= ADDHERO_USED_BLOCK_LIMIT;
-}
-
-/**
- * @brief Remove both placeholder save filenames from the active card.
- */
-inline void addhero_erase_placeholder_files(void)
-{
-    CardFilePath card_path;
-
-    strcpy(card_path.text, CARD_DEVICE_PREFIX);
-    card_path.device.characters.slot += g_card_slot;
-    strcat(card_path.text, g_lom_save_dummy_filename);
-    erase(card_path.text);
-
-    strcpy(card_path.text, CARD_DEVICE_PREFIX);
-    card_path.device.characters.slot += g_card_slot;
-    strcat(card_path.text, g_lom_pocketstation_dummy_filename);
-    erase(card_path.text);
-}
+#include "../../common/card_directory/card_rank_entries.inc.c"
+#include "../../common/card_directory/card_reset_entry_ranks.inc.c"
+#include "../../common/card_directory/card_has_known_entry_type.inc.c"
+#include "../../common/card_directory/card_entry_blocks_reach_limit.inc.c"
+#include "../../common/card_directory/card_erase_placeholder_files.inc.c"
 
 /**
  * @brief Run the current step of the card load/save sequence.
@@ -169,8 +37,6 @@ s32 addhero_advance_load_sequence(void)
     s32 result;
     s32 attempts;
     s32 poll_status;
-    s32 entry_index;
-    s32 empty_rank;
 
     strcpy(card_path.text, CARD_DEVICE_PREFIX);
     result = CARD_MENU_SEQUENCE_WAIT;
@@ -201,12 +67,7 @@ s32 addhero_advance_load_sequence(void)
                 g_card_step++;
                 break;
             case CARD_EVENT_NEW_CARD:
-                g_addhero_rank_count = 40;
-                empty_rank = -1;
-                for (entry_index = ADDHERO_CARD_SAVE_SLOTS - 1; entry_index >= 0; entry_index--)
-                {
-                    g_addhero_entry_ranks[entry_index] = empty_rank;
-                }
+                card_reset_entry_ranks();
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
                 g_card_step = &g_addhero_loadseq_start;
                 break;
@@ -244,7 +105,7 @@ s32 addhero_advance_load_sequence(void)
             break;
 
         case CARD_MENU_STEP_SCAN_ENTRIES:
-            addhero_erase_placeholder_files();
+            card_erase_placeholder_files();
             g_addhero_entry_scan_active = 1;
             if (addhero_begin_entry_scan(g_card_slot) == 0)
             {
@@ -261,7 +122,7 @@ s32 addhero_advance_load_sequence(void)
                 {
                     if (g_addhero_mode != 0)
                     {
-                        g_addhero_selected_row = 0;
+                        g_card_menu_selected_row = 0;
                     }
                     g_addhero_entry_scan_active = 0;
                     if (g_card_entry_state != CARD_MENU_ENTRY_STATE_NO_GAME_DATA && g_card_entry_state != CARD_MENU_ENTRY_STATE_CARD_FULL)
@@ -295,7 +156,7 @@ s32 addhero_advance_load_sequence(void)
             break;
 
         case CARD_MENU_EXCHANGE_STEP_ERASE_ENTRY:
-            strcat(card_path.text, g_card_entries[g_card_slot][g_addhero_selected_row].name);
+            strcat(card_path.text, g_card_entries[g_card_slot][g_card_menu_selected_row].name);
             for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
             {
                 if (erase(card_path.text) != 0)
@@ -672,10 +533,10 @@ s32 addhero_begin_entry_scan(s32 page)
     CardSearchPattern pattern;
 
     strcpy(pattern.text, CARD_SEARCH_PATTERN);
-    g_addhero_selected_row = 0;
-    g_addhero_scroll_frames = 0;
-    g_addhero_scroll_target_y = 0;
-    g_addhero_scroll_y = 0;
+    g_card_menu_selected_row = 0;
+    g_card_menu_scroll_frames = 0;
+    g_card_menu_scroll_target_y = 0;
+    g_card_menu_scroll_y = 0;
     g_card_entry_state = 0;
     pattern.device.characters.slot += page;
     if (firstfile(pattern.text, &g_card_entries[page][0]) != 0)
@@ -704,49 +565,49 @@ s32 addhero_scan_next_entry(s32 page)
     }
 
     field_reset_input_repeat();
-    if (g_addhero_mode == 0 && addhero_has_known_entry_type() == 0)
+    if (g_addhero_mode == 0 && card_has_known_entry_type() == 0)
     {
         g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_GAME_DATA;
     }
     else
     {
         g_addhero_has_free_entry_space = 0;
-        if (addhero_entry_blocks_reach_limit())
+        if (card_entry_blocks_reach_limit())
         {
-            selected_entry = addhero_rank_entries();
-            if (addhero_has_known_entry_type() == 0)
+            selected_entry = card_rank_entries();
+            if (card_has_known_entry_type() == 0)
             {
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_CARD_FULL;
-                g_addhero_entry_value_limit = 0;
+                g_card_entry_value_limit = 0;
             }
             else
             {
                 if (g_addhero_mode != 0)
                 {
-                    g_addhero_selected_row = 0;
+                    g_card_menu_selected_row = 0;
                 }
-                g_addhero_selected_row = selected_entry;
-                addhero_scroll_to_selection();
+                g_card_menu_selected_row = selected_entry;
+                card_menu_scroll_to_selection();
             }
         }
         else
         {
             g_addhero_has_free_entry_space = 1;
-            selected_entry = addhero_rank_entries();
-            if (addhero_has_known_entry_type() == 0)
+            selected_entry = card_rank_entries();
+            if (card_has_known_entry_type() == 0)
             {
-                g_addhero_selected_row = 0;
-                addhero_scroll_to_selection();
-                g_addhero_entry_value_limit = 0;
+                g_card_menu_selected_row = 0;
+                card_menu_scroll_to_selection();
+                g_card_entry_value_limit = 0;
             }
             else
             {
                 if (g_addhero_mode != 0)
                 {
-                    g_addhero_selected_row = 0;
+                    g_card_menu_selected_row = 0;
                 }
-                g_addhero_selected_row = selected_entry;
-                addhero_scroll_to_selection();
+                g_card_menu_selected_row = selected_entry;
+                card_menu_scroll_to_selection();
             }
         }
     }
@@ -765,18 +626,18 @@ void addhero_commit_selected_entry(void)
         g_addhero_selection_status = CARD_MENU_SELECTION_EMPTY_CARD;
         return;
     }
-    if (strncmp(g_new_save_entry_prefix, g_card_entries[g_card_slot][g_addhero_selected_row].name, CARD_MENU_NEW_SAVE_NAME_LENGTH) == 0)
+    if (strncmp(g_new_save_entry_prefix, g_card_entries[g_card_slot][g_card_menu_selected_row].name, CARD_MENU_NEW_SAVE_NAME_LENGTH) == 0)
     {
         g_addhero_selection_status = CARD_MENU_SELECTION_NEW_SAVE;
         return;
     }
     strcpy(card_path.text, CARD_DEVICE_PREFIX);
-    strcat(card_path.text, g_card_entries[g_card_slot][g_addhero_selected_row].name);
+    strcat(card_path.text, g_card_entries[g_card_slot][g_card_menu_selected_row].name);
     card_path.device.characters.slot += g_card_slot;
     g_addhero_selection_status = CARD_MENU_SELECTION_NONE;
     strcpy(g_addhero_save_file_path, card_path.text);
     g_card_step = g_addhero_loadseq_file_ready;
-    if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_addhero_selected_row].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
+    if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_card_menu_selected_row].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
     {
         g_addhero_selected_entry_extended = 1;
     }
@@ -795,7 +656,7 @@ void addhero_commit_selected_entry(void)
 /**
  * @brief Group Mana saves by suffix, then PocketStation saves, new saves and other files.
  */
-void addhero_sort_entries_by_type(void)
+void card_sort_entries_by_type(void)
 {
     struct DIRENTRY sorted[CARD_DIRECTORY_ENTRY_COUNT];
     s32 output_index = 0;

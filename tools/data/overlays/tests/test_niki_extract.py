@@ -62,7 +62,7 @@ class FakeOverlay:
 
         palette = struct.pack("<16H", 0, *range(0x7C00, 0x7C0F))
         pixels = bytes([0x21]) + bytes(icon_set.PIXEL_BYTES - 1)
-        names["g_niki_icon_offsets"] = len(data) + 4
+        names["g_card_menu_icon_offsets"] = len(data) + 4
         data += struct.pack("<II", 1, 8) + palette + pixels
         data += data[-4:]
 
@@ -229,7 +229,7 @@ class ExtractTest(unittest.TestCase):
         self.assert_no_output()
 
     def test_bad_icon_offset_writes_nothing(self):
-        start = self.overlay.symbols["g_niki_icon_offsets"] - ADDRESS
+        start = self.overlay.symbols["g_card_menu_icon_offsets"] - ADDRESS
         self.overlay.data[start : start + 4] = struct.pack("<I", 0x100000)
         with self.assertRaisesRegex(ValueError, "icon 0 has an invalid offset"):
             niki.extract(self.overlay.write(self.root), self.output)

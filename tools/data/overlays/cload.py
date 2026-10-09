@@ -95,9 +95,9 @@ SYMBOL_NAMES = {
     "double_byte_chart": "g_cload_double_byte_char_table",
     "decimal_glyphs": "g_glyph_decimal_digits",
     "hex_glyphs": "g_glyph_hex_digits",
-    "variables": "g_cload_element_pool",
+    "variables": "g_card_menu_element_pool",
 }
-MESSAGE_SYMBOL_PREFIX = "g_cload_text_"
+MESSAGE_SYMBOL_PREFIX = ("g_cload_text_", "g_card_menu_text_")
 CARD_STEP_SYMBOL_PREFIX = "g_cload_steps_"
 
 

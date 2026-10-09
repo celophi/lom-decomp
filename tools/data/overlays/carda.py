@@ -95,14 +95,14 @@ SYMBOL_NAMES = {
     "bad_title": "g_carda_bad_title_template",
     "save_icon_offsets": "g_carda_save_icon_offsets",
     "locations": "g_carda_location_names",
-    "icon_offsets": "g_carda_icon_image_offsets",
+    "icon_offsets": "g_card_menu_icon_offsets",
     "card_steps": "g_carda_steps_initial_scan",
     "chart": "g_glyph_single_byte_chart",
     "chart_pages": "g_glyph_chart_page_base",
     "decimal_glyphs": "g_glyph_decimal_digits",
     "hex_glyphs": "g_glyph_hex_digits",
 }
-MESSAGE_SYMBOL_PREFIX = "g_carda_text_"
+MESSAGE_SYMBOL_PREFIX = ("g_carda_text_", "g_card_menu_text_")
 CARD_STEP_SYMBOL_PREFIX = ("g_carda_steps_", "g_card_steps_")
 
 

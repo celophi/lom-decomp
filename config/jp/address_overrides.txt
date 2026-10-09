@@ -38,7 +38,7 @@ field_apply_flags2d_mask = 0x800BF5A0;
 // start 4 bytes earlier than their US addresses (the map kept the US ones;
 // splat then named the real starts func_8014082C, func_80140914 and
 // func_80140BA8, 4-byte stubs). carda_switch_card at 0x801410E0 confirms -4.
-carda_update_menu = 0x8014082C;
+card_menu_update_state = 0x8014082C;
 carda_update_save_sequence = 0x80140914;
 carda_handle_input = 0x80140BA8;
 

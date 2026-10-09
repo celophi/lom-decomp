@@ -55,7 +55,7 @@ make extract-niki VERSION=jp
 | メッセージ | `0x801470F8`、0x499バイト | `0x801470E4`、0x5E1バイト | `g_niki_text_table` |
 | カードタイトル雛形 | `0x80147594`、0x15バイト x 2 | `0x801476C8`、0x15バイト x 2 | なし |
 | 場所名 | `0x801475C4`、0x1E0バイト | `0x801476F8`、0x175バイト | `g_niki_location_names` |
-| パーティーアイコン | `0x801477A8`、0x18F1Cバイト | `0x80147870`、0x18F1Cバイト | `g_niki_icon_offsets`は4バイト後ろ |
+| パーティーアイコン | `0x801477A8`、0x18F1Cバイト | `0x80147870`、0x18F1Cバイト | `g_card_menu_icon_offsets`は4バイト後ろ |
 | カード処理 | `0x801606C8`、0x34バイト | `0x80160790`、0x34バイト | `g_niki_card_setup_sequence` |
 | 文字表 | `0x801606FC`、0x338バイト | `0x801607C4`、0x1044バイト | `g_glyph_single_byte_chart` |
 | 数字グリフ | `0x80160A34`、0x3Cバイト | `0x80161808`、0x40バイト | `g_glyph_decimal_digits` |

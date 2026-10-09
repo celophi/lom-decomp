@@ -43,7 +43,7 @@ s32 cload_main(void)
 
     g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
     g_card_slot = 0;
-    cload_reset_entry_ranks();
+    card_reset_entry_ranks();
     cload_load_icon_resources();
     cload_init_display();
     g_cload_result = 0;
@@ -56,8 +56,8 @@ s32 cload_main(void)
     g_cload_progress_active = 0;
     g_cload_selection_status = 0;
     g_cload_io_busy = 0;
-    g_cload_frame_parity = 0;
-    g_cload_exit_requested = 0;
+    g_card_menu_frame_parity = 0;
+    g_card_menu_exit_requested = 0;
     field_reset_input_repeat();
     cload_build_ui_elements();
     cload_run_menu_loop();
@@ -98,7 +98,7 @@ void cload_run_menu_loop(void)
             g_pad_input = dpad_input;
         }
         field_update_and_render_fade(frame);
-        if (cload_update_frame(frame) != 0)
+        if (card_menu_update_frame(frame) != 0)
         {
             break;
         }
@@ -148,28 +148,7 @@ void cload_init_display(void)
     field_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, 0x14);
 }
 
-/**
- * @brief Advance one CLOAD menu frame and report whether it should exit.
- * @param frame Render buffer being built this frame.
- * @return 1 when the overlay should exit, otherwise 0.
- */
-s32 cload_update_frame(FieldRenderHalf *frame)
-{
-    if (g_cload_exit_requested != 0)
-    {
-        shutdown_card_events();
-        field_text_reset_windows();
-        DrawSync(0);
-        return 1;
-    }
-    field_text_reset_scratch();
-    begin_glyph_cache_frame();
-    cload_update_menu(frame);
-    evict_unused_glyphs();
-    field_text_upload_immediate_cache();
-    g_cload_frame_parity ^= 1;
-    return 0;
-}
+#include "../../common/card_menu/card_menu_update_frame.inc.c"
 
 /**
  * @brief Allocate and lay out the five fixed windows of the load screen.
@@ -179,14 +158,14 @@ void cload_build_ui_elements(void)
     CardMenuElement *element;
     s32 unused[2];
 
-    g_cload_scroll_frames = 0;
-    g_cload_scroll_target_y = 0;
-    g_cload_scroll_y = 0;
-    g_cload_selected_row = 0;
+    g_card_menu_scroll_frames = 0;
+    g_card_menu_scroll_target_y = 0;
+    g_card_menu_scroll_y = 0;
+    g_card_menu_selected_row = 0;
     g_cload_selection_status = 0;
     cload_clear_elements();
     /* Hold slot 0 so the fixed elements below are allocated from slot 1 on. */
-    g_cload_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_OPENING;
+    g_card_menu_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_OPENING;
 
     element = cload_alloc_element();
     element->draw = cload_draw_entry_list;
@@ -242,18 +221,18 @@ void cload_build_ui_elements(void)
     element->size.bits.width_high = 1;
     CLOAD_SET_ELEMENT_HEIGHT(element, 51);
 
-    g_cload_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
+    g_card_menu_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
 }
 
 /**
  * @brief Update input, loading state, scrolling, and UI elements for one frame.
  * @param frame Render buffer being built this frame.
  */
-void cload_update_menu(FieldRenderHalf *frame)
+void card_menu_update_state(FieldRenderHalf *frame)
 {
     s32 delta;
 
-    cload_update_elements(frame);
+    card_menu_update_elements(frame);
     g_cload_icon_phase += 2;
     if ((g_cload_element1_state & 0x7F) == 2)
     {
@@ -264,16 +243,16 @@ void cload_update_menu(FieldRenderHalf *frame)
         g_pad_input = 0;
     }
     cload_handle_input();
-    if (g_cload_scroll_frames != 0)
+    if (g_card_menu_scroll_frames != 0)
     {
-        s32 base = g_cload_scroll_y;
-        delta = (g_cload_scroll_target_y - g_cload_scroll_y) / g_cload_scroll_frames;
-        g_cload_scroll_frames -= 1;
-        g_cload_scroll_y += delta;
+        s32 base = g_card_menu_scroll_y;
+        delta = (g_card_menu_scroll_target_y - g_card_menu_scroll_y) / g_card_menu_scroll_frames;
+        g_card_menu_scroll_frames -= 1;
+        g_card_menu_scroll_y += delta;
     }
     else
     {
-        g_cload_scroll_y = g_cload_scroll_target_y;
+        g_card_menu_scroll_y = g_card_menu_scroll_target_y;
     }
 }
 
@@ -322,20 +301,20 @@ s32 cload_handle_input(void)
     s32 sfx_id;
     CardMenuElement *prompt;
 
-    if (g_cload_element_pool[1].attr.bits.state == CARD_MENU_ELEMENT_FREE)
+    if (g_card_menu_element_pool[1].attr.bits.state == CARD_MENU_ELEMENT_FREE)
     {
-        g_cload_exit_requested = 1;
+        g_card_menu_exit_requested = 1;
         return;
     }
-    if (g_cload_exit_requested != 0)
-    {
-        return;
-    }
-    if (g_cload_element_pool[1].attr.bits.state >= CARD_MENU_ELEMENT_CLOSING)
+    if (g_card_menu_exit_requested != 0)
     {
         return;
     }
-    if (g_cload_element_pool[0].attr.bits.state != CARD_MENU_ELEMENT_FREE)
+    if (g_card_menu_element_pool[1].attr.bits.state >= CARD_MENU_ELEMENT_CLOSING)
+    {
+        return;
+    }
+    if (g_card_menu_element_pool[0].attr.bits.state != CARD_MENU_ELEMENT_FREE)
     {
         return;
     }
@@ -359,7 +338,7 @@ s32 cload_handle_input(void)
     status = g_pad_input;
     if (status & 0x40)
     {
-        g_cload_exit_requested = 1;
+        g_card_menu_exit_requested = 1;
         g_cload_result = 1;
         field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
         return;
@@ -367,15 +346,15 @@ s32 cload_handle_input(void)
     if (status & CARD_MENU_CARD_SWITCH_BUTTON_MASK)
     {
         field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
-        g_cload_scroll_frames = 0;
-        g_cload_scroll_target_y = 0;
-        g_cload_scroll_y = 0;
-        g_cload_selected_row = 0;
+        g_card_menu_scroll_frames = 0;
+        g_card_menu_scroll_target_y = 0;
+        g_card_menu_scroll_y = 0;
+        g_card_menu_selected_row = 0;
         g_cload_load_step = NULL;
         g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
         g_cload_selection_status = 0;
         g_card_slot ^= 1;
-        cload_reset_entry_ranks();
+        card_reset_entry_ranks();
         return;
     }
     if (pending >= 0x10)
@@ -397,18 +376,18 @@ s32 cload_handle_input(void)
     {
         if (g_pad_input & 0x1000)
         {
-            g_cload_selected_row -= 1;
-            if (g_cload_selected_row < 0)
+            g_card_menu_selected_row -= 1;
+            if (g_card_menu_selected_row < 0)
             {
-                g_cload_selected_row = g_card_entry_state - 1;
+                g_card_menu_selected_row = g_card_entry_state - 1;
             }
         }
         if (g_pad_input & 0x4000)
         {
-            g_cload_selected_row += 1;
-            if (g_cload_selected_row >= g_card_entry_state)
+            g_card_menu_selected_row += 1;
+            if (g_card_menu_selected_row >= g_card_entry_state)
             {
-                g_cload_selected_row = 0;
+                g_card_menu_selected_row = 0;
             }
         }
         count -= 1;
@@ -422,7 +401,7 @@ s32 cload_handle_input(void)
     }
     if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
     {
-        if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_cload_selected_row].name, 0xC) != 0)
+        if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_card_menu_selected_row].name, 0xC) != 0)
         {
             sfx_id = 0x78;
         }
@@ -460,7 +439,7 @@ void cload_close_all_elements(void)
     CardMenuElement *element;
     s32 i;
 
-    element = g_cload_element_pool;
+    element = g_card_menu_element_pool;
     for (i = 0; i < CARD_MENU_ELEMENT_COUNT; i++, element++)
     {
         if (element->attr.bits.state != CARD_MENU_ELEMENT_FREE)
@@ -479,28 +458,21 @@ void cload_scroll_to_selection(void)
     s32 base;
     s32 delta;
 
-    base = g_cload_selected_row * CARD_MENU_ENTRY_ROW_HEIGHT;
-    delta = base - g_cload_scroll_y;
+    base = g_card_menu_selected_row * CARD_MENU_ENTRY_ROW_HEIGHT;
+    delta = base - g_card_menu_scroll_y;
     if (delta >= 0x3C)
     {
-        g_cload_scroll_target_y = base - 0x38;
-        g_cload_scroll_frames = CARD_MENU_SCROLL_FRAMES;
+        g_card_menu_scroll_target_y = base - 0x38;
+        g_card_menu_scroll_frames = CARD_MENU_SCROLL_FRAMES;
     }
     if (delta < 0)
     {
-        g_cload_scroll_target_y = g_cload_selected_row * CARD_MENU_ENTRY_ROW_HEIGHT;
-        g_cload_scroll_frames = CARD_MENU_SCROLL_FRAMES;
+        g_card_menu_scroll_target_y = g_card_menu_selected_row * CARD_MENU_ENTRY_ROW_HEIGHT;
+        g_card_menu_scroll_frames = CARD_MENU_SCROLL_FRAMES;
     }
 }
 
-/**
- * @brief Run the UI element update/draw pass.
- * @param frame Render buffer being built this frame.
- */
-void cload_update_elements(FieldRenderHalf *frame)
-{
-    cload_update_and_draw_elements(frame);
-}
+#include "../../common/card_menu/card_menu_update_elements.inc.c"
 
 /**
  * @brief Draw the visible save-entry list and selection cursor.
@@ -574,17 +546,17 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
             off = i;
             do
             {
-                row_y = ((i * CARD_MENU_ENTRY_ROW_HEIGHT) - y_offset) - g_cload_scroll_y;
+                row_y = ((i * CARD_MENU_ENTRY_ROW_HEIGHT) - y_offset) - g_card_menu_scroll_y;
                 if (row_y >= -13 && row_y <= 72)
                 {
-                    flag_ptr = (s32 *)((u8 *)g_cload_entry_ranks + off);
+                    flag_ptr = (s32 *)((u8 *)g_card_entry_ranks + off);
                     if (*flag_ptr >= 0)
                     {
                         pos.x = base_x + CARD_MENU_ENTRY_VALUE_X;
                         pos.y = row_y;
                         prim = field_draw_text(field_draw_number(ot, prim, *(s32*)((u8*)g_card_entry_suffix_values + off), 1, &pos, 0), ot,
                                              CARD_MENU_TEXT_BY_OFFSET(text_table, g_cload_text_number_prefix), 1, base_x + 0x70, row_y, 0);
-                        if ((g_cload_rank_count - 1) == *flag_ptr)
+                        if ((g_card_rank_count - 1) == *flag_ptr)
                         {
                             marker_offset = text_table[27];
                             prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, marker_offset), 1, base_x + CLOAD_ENTRY_MARKER_X, row_y, 0);
@@ -621,7 +593,7 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
                 i++;
             } while (i < g_card_entry_state);
         }
-            row_y = ((g_cload_selected_row * CARD_MENU_ENTRY_ROW_HEIGHT) - y_offset) - g_cload_scroll_y;
+            row_y = ((g_card_menu_selected_row * CARD_MENU_ENTRY_ROW_HEIGHT) - y_offset) - g_card_menu_scroll_y;
 
             if (g_cload_entry_scan_active == 0)
             {
@@ -675,7 +647,7 @@ void *cload_draw_card_slot0_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
     RECT unused;
 
     color = 1;
-    text = CARD_MENU_TEXT_AT(g_cload_text_card_slot_1, CARD_MENU_TEXT_CARD_SLOT0_LABEL);
+    text = CARD_MENU_TEXT_AT(g_card_menu_text_card_slot0_label, CARD_MENU_TEXT_CARD_SLOT0_LABEL);
     if (g_card_slot != 0)
     {
         color = 3;
@@ -698,7 +670,7 @@ void *cload_draw_card_slot1_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
     RECT unused;
 
     color = 1;
-    text = CARD_MENU_TEXT_AT(g_cload_text_card_slot_2, CARD_MENU_TEXT_CARD_SLOT1_LABEL);
+    text = CARD_MENU_TEXT_AT(g_card_menu_text_card_slot1_label, CARD_MENU_TEXT_CARD_SLOT1_LABEL);
     if (g_card_slot == 0)
     {
         color = 3;
@@ -752,7 +724,7 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
     }
     else
     {
-        if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_cload_selected_row].name, 0xC) == 0)
+        if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_card_menu_selected_row].name, 0xC) == 0)
         {
             SavedGameLayout* save = &g_cload_selected_file.saved_game;
 
@@ -772,7 +744,7 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
                 party_icon[0] = save->spawn.bits.party_icon_0;
                 party_icon[1] = save->track.bits.party_icon_1;
                 party_icon[2] = save->track.bits.party_icon_2;
-                g_cload_icon_palette = save->icon_palette;
+                g_card_menu_icon_palette = save->icon_palette;
 
                 present_count = 0;
                 for (i = 0; i < 3; i++)
@@ -911,7 +883,7 @@ void cload_clear_elements(void)
     CardMenuElement *p;
     s32 i;
 
-    p = g_cload_element_pool;
+    p = g_card_menu_element_pool;
     for (i = 0; i < CARD_MENU_ELEMENT_COUNT; i++)
     {
         p->attr.bits.state = CARD_MENU_ELEMENT_FREE;
@@ -928,7 +900,7 @@ CardMenuElement *cload_alloc_element(void)
     CardMenuElement *p;
     s32 i;
 
-    p = g_cload_element_pool;
+    p = g_card_menu_element_pool;
     for (i = 0; i < CARD_MENU_ELEMENT_COUNT; i++, p++)
     {
         if (p->attr.bits.state == CARD_MENU_ELEMENT_FREE)
@@ -938,7 +910,7 @@ CardMenuElement *cload_alloc_element(void)
             return p;
         }
     }
-    return g_cload_element_pool;
+    return g_card_menu_element_pool;
 }
 
 /**
@@ -950,7 +922,7 @@ CardMenuElement *cload_alloc_element(void)
  *
  * @param frame Render buffer being built; primitive_cursor is read on entry and written back on exit.
  */
-void cload_update_and_draw_elements(FieldRenderHalf *frame)
+void card_menu_update_and_draw_elements(FieldRenderHalf *frame)
 {
     void *arrow_prim;
     void *prim;
@@ -966,11 +938,11 @@ void cload_update_and_draw_elements(FieldRenderHalf *frame)
 
     if ((g_card_entry_state < 0x10) && ((g_cload_element1_state & CARD_MENU_ELEMENT_STATE_MASK) == 2))
     {
-        if ((g_card_entry_state * CARD_MENU_ENTRY_ROW_HEIGHT) > (g_cload_scroll_y + 0x49))
+        if ((g_card_entry_state * CARD_MENU_ENTRY_ROW_HEIGHT) > (g_card_menu_scroll_y + 0x49))
         {
             arrow_prim = cload_emit_scroll_arrow(arrow_prim, ot, 0x114, 0x87, 0);
         }
-        if (g_cload_scroll_y != 0)
+        if (g_card_menu_scroll_y != 0)
         {
             arrow_prim = cload_emit_scroll_arrow(arrow_prim, ot, 0x114, 0x4A, 1);
         }
@@ -986,7 +958,7 @@ void cload_update_and_draw_elements(FieldRenderHalf *frame)
     }
 
     prim = arrow_prim;
-    element = g_cload_element_pool;
+    element = g_card_menu_element_pool;
     for (i = 0; i < CARD_MENU_ELEMENT_COUNT; i++, element++)
     {
         if (element->attr.bits.state != 0)

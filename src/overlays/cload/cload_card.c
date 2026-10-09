@@ -43,152 +43,11 @@ void *bcopy(const unsigned char *src, unsigned char *dst, int count);
 #include "../../common/save_file/parse_hex_suffix_byte.inc.c"
 #include "../../common/card_directory/parse_entry_fields.inc.c"
 
-/**
- * @brief Rank the current page's entries and select the highest-scoring slot.
- * @return Index of the entry holding the maximum value.
- */
-s32 cload_rank_entries(void)
-{
-    s32 entry_index;
-    s32 previous_index;
-    s32 higher_count;
-    s32 next_rank;
-    s32 maximum;
-    s32 max_suffix;
-
-    parse_entry_fields();
-    maximum = -1;
-    cload_sort_entries_by_type();
-    max_suffix = parse_entry_fields();
-    cload_reset_entry_ranks();
-    next_rank = 1;
-    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
-    {
-        if (g_card_entry_fields[g_card_slot][entry_index] >= 0)
-        {
-            if (g_card_entry_fields[g_card_slot][entry_index] >= maximum)
-            {
-                g_cload_entry_ranks[entry_index] = next_rank;
-                maximum = g_card_entry_fields[g_card_slot][entry_index];
-                next_rank++;
-            }
-            else
-            {
-                higher_count = 0;
-                for (previous_index = 0; previous_index < entry_index; previous_index++)
-                {
-                    if (g_card_entry_fields[g_card_slot][entry_index] < g_card_entry_fields[g_card_slot][previous_index])
-                    {
-                        higher_count++;
-                        g_cload_entry_ranks[previous_index]++;
-                    }
-                }
-                g_cload_entry_ranks[entry_index] = next_rank - higher_count;
-                next_rank++;
-            }
-        }
-    }
-    g_cload_rank_count = next_rank;
-    /* Reuse next_rank as the running maximum and maximum as its index. */
-    next_rank = -1;
-    maximum = 0;
-    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
-    {
-        if (next_rank < g_card_entry_fields[g_card_slot][entry_index])
-        {
-            next_rank = g_card_entry_fields[g_card_slot][entry_index];
-            maximum = entry_index;
-        }
-    }
-    g_cload_entry_value_limit = next_rank + 1;
-    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
-    {
-        if (strncmp(g_new_save_entry_prefix, g_card_entries[g_card_slot][entry_index].name, 8) == 0)
-        {
-            g_card_entry_suffix_values[entry_index] = max_suffix + 1;
-            break;
-        }
-    }
-    return maximum;
-}
-
-/**
- * @brief Reset the cload menu state: set the row-count/pitch field to 0x28 and
- *        clear all 15 slot entries of g_cload_entry_ranks to -1 (empty).
- */
-void cload_reset_entry_ranks(void)
-{
-    s32 rank_index;
-    s32 empty_rank;
-
-    g_cload_rank_count = 0x28;
-    empty_rank = -1;
-    for (rank_index = 14; rank_index >= 0; rank_index--)
-    {
-        g_cload_entry_ranks[rank_index] = empty_rank;
-    }
-}
-
-/**
- * @brief Scan up to g_card_entry_state entries of the g_card_entries table (row
- *        selected by g_card_slot, stride 0x28) and report whether any entry
- *        matches one of the two known-type patterns g_lom_save_filename_prefix / g_lom_pocketstation_filename_prefix.
- * @return 1 on the first entry that matches either pattern (strncmp returns 0
- *         on a match), 0 if no entry matches.
- */
-s32 cload_has_known_entry_type(void)
-{
-    s32 entry_index;
-
-    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
-    {
-        if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][entry_index].name, 0xC) == 0 ||
-            strncmp(g_lom_pocketstation_filename_prefix, g_card_entries[g_card_slot][entry_index].name, 0xC) == 0)
-        {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-/**
- * @brief Check whether the current card's directory entries use at least 14 blocks.
- * @return 1 if the summed block count is >= 14, otherwise 0.
- * @note Inlined into cload_scan_next_entry.
- */
-inline s32 cload_entry_blocks_reach_limit(void)
-{
-    s32 entry_index;
-    s32 used_blocks;
-
-    used_blocks = 0;
-    for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
-    {
-        used_blocks += g_card_entries[g_card_slot][entry_index].size / CARD_BLOCK_BYTES;
-    }
-    return used_blocks >= 14;
-}
-
-/**
- * @brief Erase the two fixed per-slot memory-card files.
- * @note Each erase starts from the six-byte "bu00:" device path, adjusts the
- *       slot digit, appends one fixed filename suffix, and calls Psy-Q erase().
- * @note Inlined into cload_advance_load_sequence.
- */
-inline void cload_erase_fixed_card_files(void)
-{
-    CardFilePath card_path;
-
-    strcpy(card_path.text, CARD_DEVICE_PREFIX);
-    card_path.device.characters.slot += (u8)g_card_slot;
-    strcat(card_path.text, g_lom_save_dummy_filename);
-    erase(&card_path);
-
-    strcpy(card_path.text, CARD_DEVICE_PREFIX);
-    card_path.device.characters.slot += (u8)g_card_slot;
-    strcat(card_path.text, g_lom_pocketstation_dummy_filename);
-    erase(&card_path);
-}
+#include "../../common/card_directory/card_rank_entries.inc.c"
+#include "../../common/card_directory/card_reset_entry_ranks.inc.c"
+#include "../../common/card_directory/card_has_known_entry_type.inc.c"
+#include "../../common/card_directory/card_entry_blocks_reach_limit.inc.c"
+#include "../../common/card_directory/card_erase_placeholder_files.inc.c"
 
 /**
  * @brief Run the current memory-card load step and advance g_cload_load_step.
@@ -206,8 +65,6 @@ s32 cload_advance_load_sequence(void)
     s32 phase_result;
     s32 scan_attempts;
     s32 wait_attempts;
-    s32 rank_index;
-    s32 rank_fill;
     s32 poll_result;
 
     /* Builds the "bu00:" slot path like the erase helper; never used afterwards. */
@@ -238,15 +95,10 @@ s32 cload_advance_load_sequence(void)
                 g_cload_selection_status = 0;
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;
                 g_cload_load_step++;
-                cload_deactivate_primary_element();
+                card_menu_deactivate_primary_element();
                 break;
             case CARD_EVENT_NEW_CARD:
-                g_cload_rank_count = 0x28;
-                rank_fill = -1;
-                for (rank_index = 14; rank_index >= 0; rank_index--)
-                {
-                    g_cload_entry_ranks[rank_index] = rank_fill;
-                }
+                card_reset_entry_ranks();
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
                 g_cload_load_step = g_cload_steps_initial_scan;
                 break;
@@ -282,7 +134,7 @@ s32 cload_advance_load_sequence(void)
             break;
 
         case CARD_MENU_STEP_SCAN_ENTRIES:
-            cload_erase_fixed_card_files();
+            card_erase_placeholder_files();
             g_cload_entry_scan_active = 1;
             if (cload_begin_entry_scan(g_card_slot) == 0)
             {
@@ -551,10 +403,10 @@ s32 cload_begin_entry_scan(s32 page)
     CardSearchPattern search_path;
 
     strcpy(search_path.text, CARD_SEARCH_PATTERN);
-    g_cload_scroll_frames = 0;
-    g_cload_scroll_target_y = 0;
-    g_cload_scroll_y = 0;
-    g_cload_selected_row = 0;
+    g_card_menu_scroll_frames = 0;
+    g_card_menu_scroll_target_y = 0;
+    g_card_menu_scroll_y = 0;
+    g_card_menu_selected_row = 0;
     g_card_entry_state = 0;
     search_path.device.characters.slot += page;
     if (firstfile(&search_path, &g_card_entries[page][0]) != 0)
@@ -570,9 +422,9 @@ s32 cload_begin_entry_scan(s32 page)
  *        recompute the page's fixed-point total and update the selection state.
  * @param page Page index (each page is 0x320 bytes / 20 records in g_card_entries).
  * @return 1 if nextfile accepted the new record (count bumped), else 0.
- * @note When the directory is complete, cload_entry_blocks_reach_limit decides
+ * @note When the directory is complete, card_entry_blocks_reach_limit decides
  *       whether a full card clamps the state (0xFA) or the selection
- *       (g_cload_selected_row) is set from cload_rank_entries's result.
+ *       (g_card_menu_selected_row) is set from card_rank_entries's result.
  */
 s32 cload_scan_next_entry(s32 page)
 {
@@ -584,38 +436,38 @@ s32 cload_scan_next_entry(s32 page)
         return 1;
     }
     field_reset_input_repeat();
-    if (cload_has_known_entry_type() == 0)
+    if (card_has_known_entry_type() == 0)
     {
         g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_GAME_DATA;
     }
     else
     {
-        if (cload_entry_blocks_reach_limit())
+        if (card_entry_blocks_reach_limit())
         {
-            selected = cload_rank_entries();
-            if (cload_has_known_entry_type() == 0)
+            selected = card_rank_entries();
+            if (card_has_known_entry_type() == 0)
             {
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_CARD_FULL;
-                g_cload_entry_value_limit = 0;
+                g_card_entry_value_limit = 0;
             }
             else
             {
-                g_cload_selected_row = selected;
+                g_card_menu_selected_row = selected;
                 cload_scroll_to_selection();
             }
         }
         else
         {
-            selected = cload_rank_entries();
-            if (cload_has_known_entry_type() == 0)
+            selected = card_rank_entries();
+            if (card_has_known_entry_type() == 0)
             {
-                g_cload_selected_row = 0;
+                g_card_menu_selected_row = 0;
                 cload_scroll_to_selection();
-                g_cload_entry_value_limit = 0;
+                g_card_entry_value_limit = 0;
             }
             else
             {
-                g_cload_selected_row = selected;
+                g_card_menu_selected_row = selected;
                 cload_scroll_to_selection();
             }
         }
@@ -638,18 +490,18 @@ void cload_commit_selected_entry(void)
         g_cload_selection_status = 3;
         return;
     }
-    if (strncmp(g_new_save_entry_prefix, g_card_entries[g_card_slot][g_cload_selected_row].name, 8) == 0)
+    if (strncmp(g_new_save_entry_prefix, g_card_entries[g_card_slot][g_card_menu_selected_row].name, 8) == 0)
     {
         g_cload_selection_status = 2;
         return;
     }
     strcpy(card_path.text, CARD_DEVICE_PREFIX);
-    strcat(card_path.text, g_card_entries[g_card_slot][g_cload_selected_row].name);
+    strcat(card_path.text, g_card_entries[g_card_slot][g_card_menu_selected_row].name);
     card_path.device.characters.slot += (u8)g_card_slot;
     g_cload_selection_status = 0;
     strcpy(g_cload_selected_card_path, card_path.text);
     g_cload_load_step = &g_cload_steps_read_selected_header[0];
-    if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_cload_selected_row].name, 0xC) == 0)
+    if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_card_menu_selected_row].name, 0xC) == 0)
     {
         g_cload_selected_entry_extended = 1;
         return;
@@ -668,7 +520,7 @@ void cload_commit_selected_entry(void)
  *       g_new_save_entry_prefix, then the remainder, copying each 0x28-byte record with
  *       bcopy before writing the ordered set back to the page.
  */
-void cload_sort_entries_by_type(void)
+void card_sort_entries_by_type(void)
 {
     struct DIRENTRY sorted_entries[CARD_DIRECTORY_ENTRY_COUNT];
     s32 output_count = 0;

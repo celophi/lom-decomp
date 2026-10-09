@@ -57,7 +57,7 @@ in US and 161,652 bytes in JP.
 | Messages | `0x801470F8`, 0x499 bytes | `0x801470E4`, 0x5E1 bytes | `g_niki_text_table` |
 | Card title templates | `0x80147594`, two of 0x15 bytes | `0x801476C8`, two of 0x15 bytes | none |
 | Locations | `0x801475C4`, 0x1E0 bytes | `0x801476F8`, 0x175 bytes | `g_niki_location_names` |
-| Party icons | `0x801477A8`, 0x18F1C bytes | `0x80147870`, 0x18F1C bytes | `g_niki_icon_offsets` is 4 bytes in |
+| Party icons | `0x801477A8`, 0x18F1C bytes | `0x80147870`, 0x18F1C bytes | `g_card_menu_icon_offsets` is 4 bytes in |
 | Card steps | `0x801606C8`, 0x34 bytes | `0x80160790`, 0x34 bytes | `g_niki_card_setup_sequence` |
 | Character chart | `0x801606FC`, 0x338 bytes | `0x801607C4`, 0x1044 bytes | `g_glyph_single_byte_chart` |
 | Digit glyphs | `0x80160A34`, 0x3C bytes | `0x80161808`, 0x40 bytes | `g_glyph_decimal_digits` |
