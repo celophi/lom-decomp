@@ -25,7 +25,7 @@ make extract-cload VERSION=jp
 | --- | --- |
 | `text/messages.yaml` | 北米版91件、日本版90件のメッセージ。番号、判明しているシンボル名、元のバイト列付き |
 | `text/locations.yaml` | セーブに記録された曲番号で選ぶ、63件の場所名エントリ |
-| `tables/card_steps.yaml` | 6つのカード処理シーケンス。処理名は`CloadLoadStep`から取得 |
+| `tables/card_steps.yaml` | 6つのカード処理シーケンス。処理名は`CardMenuStep`(card_menu.h)から取得 |
 | `tables/text_conversion.yaml` | ゲームの文字コードとShift-JISの対応表 |
 | `tables/digit_glyphs.yaml` | 10進数と16進数に使う全角数字 |
 | `byte-map.yaml` | パディングと実行時バッファも含む、全範囲の対応表 |

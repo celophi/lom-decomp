@@ -42,8 +42,6 @@ enum
 #define FIELD_RING_IMAGE_Y 0
 /** @brief Width in texels of the 4-bit icon sheet page. */
 #define FIELD_RING_PAGE_WIDTH 256
-/** @brief Colors in a 4-bit CLUT; each ring icon has its own, in one VRAM row from x = 0. */
-#define FIELD_CLUT_COLORS 16
 
 /** @brief Screen center used by FIELD_RING_AT_SCREEN_CENTER and as the player offset. */
 #define FIELD_RING_CENTER_X (SCREEN_WIDTH / 2)
@@ -125,9 +123,9 @@ typedef struct
 extern Vec2s g_field_screen_scroll;
 extern u8* g_field_cd_buffer;
 /** @brief Golem sprite CLUTs, two banks of 16. */
-extern u16 g_field_golem_palettes[2][FIELD_GOLEM_BANK_PALETTES * FIELD_CLUT_COLORS];
+extern u16 g_field_golem_palettes[2][FIELD_GOLEM_BANK_PALETTES * GPU_CLUT_4BIT_COLORS];
 /** @brief Golem portrait palettes, two banks of 16. */
-extern u16 g_field_golem_portrait_palettes[2][FIELD_GOLEM_BANK_PALETTES * FIELD_CLUT_COLORS];
+extern u16 g_field_golem_portrait_palettes[2][FIELD_GOLEM_BANK_PALETTES * GPU_CLUT_4BIT_COLORS];
 
 extern u16 g_field_ring_excluded_mask;
 extern s32 g_field_ring_menu_id;
@@ -476,7 +474,7 @@ static void field_draw_ring_menu(FieldRenderHalf* render_half)
         prim->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, FIELD_RING_IMAGE_X, FIELD_RING_IMAGE_Y);
         prim->y2 = prim->y3 = prim->y0 + height;
         prim->x1 = prim->x3 = prim->x0 + v_or_width;
-        prim->clut = getClut(g_field_ring_entries[index] * FIELD_CLUT_COLORS, VRAM_CLUT_Y);
+        prim->clut = getClut(g_field_ring_entries[index] * GPU_CLUT_4BIT_COLORS, VRAM_CLUT_Y);
         if (FIELD_RING_DEPTH(u_or_angle) <= 0)
         {
             addPrim(ot - FIELD_RING_DEPTH(u_or_angle), prim);
@@ -637,14 +635,14 @@ void field_upload_golem_palettes(void)
         {
             if ((u32)g_saved_game_ctx->golem_records[i].palette < FIELD_GOLEM_BANK_PALETTES)
             {
-                setRECT(&rect, FIELD_GOLEM_CLUT_X, FIELD_GOLEM_CLUT_Y + i, FIELD_CLUT_COLORS, 1);
-                LoadImage(&rect, (u_long*)&g_field_golem_palettes[0][g_saved_game_ctx->golem_records[i].palette * FIELD_CLUT_COLORS]);
+                setRECT(&rect, FIELD_GOLEM_CLUT_X, FIELD_GOLEM_CLUT_Y + i, GPU_CLUT_4BIT_COLORS, 1);
+                LoadImage(&rect, (u_long*)&g_field_golem_palettes[0][g_saved_game_ctx->golem_records[i].palette * GPU_CLUT_4BIT_COLORS]);
             }
             else
             {
-                setRECT(&rect, FIELD_GOLEM_CLUT_X, FIELD_GOLEM_CLUT_Y + i, FIELD_CLUT_COLORS, 1);
+                setRECT(&rect, FIELD_GOLEM_CLUT_X, FIELD_GOLEM_CLUT_Y + i, GPU_CLUT_4BIT_COLORS, 1);
                 LoadImage(&rect,
-                          (u_long*)&g_field_golem_palettes[1][(g_saved_game_ctx->golem_records[i].palette - FIELD_GOLEM_BANK_PALETTES) * FIELD_CLUT_COLORS]);
+                          (u_long*)&g_field_golem_palettes[1][(g_saved_game_ctx->golem_records[i].palette - FIELD_GOLEM_BANK_PALETTES) * GPU_CLUT_4BIT_COLORS]);
             }
         }
     }
@@ -659,11 +657,11 @@ void field_copy_golem_portrait_palette(u8* destination, s32 palette)
 {
     if (palette < FIELD_GOLEM_BANK_PALETTES)
     {
-        bcopy((u8*)&g_field_golem_portrait_palettes[0][palette * FIELD_CLUT_COLORS], destination, FIELD_CLUT_COLORS * sizeof(u16));
+        bcopy((u8*)&g_field_golem_portrait_palettes[0][palette * GPU_CLUT_4BIT_COLORS], destination, GPU_CLUT_4BIT_COLORS * sizeof(u16));
     }
     else
     {
-        bcopy((u8*)&g_field_golem_portrait_palettes[1][(palette - FIELD_GOLEM_BANK_PALETTES) * FIELD_CLUT_COLORS], destination,
-              FIELD_CLUT_COLORS * sizeof(u16));
+        bcopy((u8*)&g_field_golem_portrait_palettes[1][(palette - FIELD_GOLEM_BANK_PALETTES) * GPU_CLUT_4BIT_COLORS], destination,
+              GPU_CLUT_4BIT_COLORS * sizeof(u16));
     }
 }

@@ -1,4 +1,5 @@
 #include "main/audio/akao.h"
+#include "overlays/field/field_portrait.h"
 #ifndef LOM_MENU_INTERNAL_H
 #define LOM_MENU_INTERNAL_H
 
@@ -62,23 +63,6 @@ s32 field_name_byte_length(u8* name);
 /** Prefix range for encoded text units with one following byte. */
 #define MENU_TEXT_PREFIX_FIRST 0x19U
 #define MENU_TEXT_PREFIX_COUNT 7U
-
-/* VRAM placement for each slot's cursor strip and content texture block. */
-#define PRIM_CURSOR_STRIP_VRAM_X 0x110  /* 272  - VRAM column                */
-#define PRIM_CURSOR_STRIP_VRAM_Y0 0x1D8 /* 472  - VRAM row for slot 0        */
-#define PRIM_CURSOR_STRIP_W 0x10        /* 16 halfwords wide                 */
-#define PRIM_CURSOR_STRIP_H 1           /* 1 scanline tall                   */
-#define PRIM_CONTENT_VRAM_X 0x3F4       /* 1012 - VRAM column for slots 0, 1 */
-#define PRIM_CONTENT_VRAM_X2 0x3E8      /* 1000 - VRAM column for slot 2     */
-#define PRIM_CONTENT_VRAM_Y0 0x120      /* 288  - VRAM row for slot 0        */
-#define PRIM_CONTENT_VRAM_Y1 0x150      /* 336  - VRAM row for slots 1, 2    */
-#define PRIM_CONTENT_W 0xC              /* 12 halfwords wide                 */
-#define PRIM_CONTENT_H 0x30             /* 48 scanlines tall                 */
-#define PRIM_SLOT_COUNT 3
-#define PRIM_CURSOR_STRIP_BYTE_SIZE (PRIM_CURSOR_STRIP_W * PRIM_CURSOR_STRIP_H * sizeof(u16))
-#define PRIM_CONTENT_BYTE_SIZE (PRIM_CONTENT_W * PRIM_CONTENT_H * sizeof(u16))
-#define PRIM_CONTENT_BUF_OFFSET PRIM_CURSOR_STRIP_BYTE_SIZE
-#define PRIM_SLOT_BYTE_SIZE (PRIM_CURSOR_STRIP_BYTE_SIZE + PRIM_CONTENT_BYTE_SIZE)
 
 /*
  * Node / scroll / layout constants

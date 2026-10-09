@@ -23,7 +23,6 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
-import re
 import shutil
 import sys
 import tempfile
@@ -46,7 +45,6 @@ from tools.data.overlays.resources import (
 REPO_ROOT = Path(__file__).resolve().parents[3]
 OVERLAY_CONFIG = "overlays/NIKI.BIN.yaml"
 SYMBOL_FILE = "symbols/niki_symbol_addrs.txt"
-COMMAND_HEADER = REPO_ROOT / "src/overlays/niki/internal/niki_internal.h"
 
 CARD_TITLES_NOTE = (
     "# Shift-JIS memory card title templates; the save screen (CARDA) writes them. "
@@ -118,12 +116,8 @@ class NikiCardSteps(CardSteps):
 
 
 def card_step_names() -> dict[int, str]:
-    """NikiLoadCommand values from the C header, so the names stay in one place."""
-    text = COMMAND_HEADER.read_text(encoding="ascii")
-    match = re.search(r"typedef enum\s*\{([^}]+)\}\s*NikiLoadCommand;", text)
-    if match is None:
-        raise ValueError(f"{COMMAND_HEADER} has no NikiLoadCommand")
-    return {int(value): name for name, value in re.findall(r"(NIKI_COMMAND_\w+)\s*=\s*(\d+)", match[1])}
+    """Step opcode names from the C headers, so the names stay in one place."""
+    return card_data.card_menu_step_names(exchange=True)
 
 
 # ---------------------------------------------------------------------------
@@ -169,7 +163,7 @@ def read_locations(blob: Blob[NikiSymbols], chart: Chart) -> Part:
 
 
 def read_card_steps(blob: Blob[NikiSymbols]) -> Part:
-    """Follow every sequence symbol in the table to NIKI_COMMAND_STOP.
+    """Follow every sequence symbol in the table to CARD_MENU_STEP_DONE.
 
     Sequences may share a tail. Nonzero bytes that no sequence reaches are
     listed, since the export would otherwise only keep them in the raw bytes.
@@ -188,7 +182,7 @@ def read_card_steps(blob: Blob[NikiSymbols]) -> Part:
         position = blob.offset(address)
         stop = blob.data.find(b"\x00", position, end)
         if stop < 0:
-            raise ValueError(f"{name} has no NIKI_COMMAND_STOP before the character chart")
+            raise ValueError(f"{name} has no CARD_MENU_STEP_DONE before the character chart")
         raw = blob.data[position : stop + 1]
         reached.update(range(position, stop + 1))
         sequences.append(StepSequence(name, tuple(names.get(value, f"0x{value:02X}") for value in raw), raw))

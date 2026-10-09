@@ -5,6 +5,7 @@
  */
 
 #include "common.h"
+#include "overlays/field/field_portrait.h"
 #include "main/controller_internal.h"
 #include "main/main.h"
 #include "main/cdrom.h"
@@ -29,9 +30,9 @@
 #include "main/overlay_memory.h"
 #include "common/gpu_packet.h"
 #include "overlays/field/field_actor_records.h"
+#include "overlays/field/field_input.h"
 
 s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start);
-void field_copy_portrait_palette(void* dest, s32 index);
 void field_retire_effect(FieldMotionRecord* effect, FieldObjectPart* part);
 void field_record_actor_position(FieldActor* record);
 s32 field_update_actor_command(FieldActor* actor);
@@ -104,8 +105,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 /** @brief First portrait of the companions in the portrait archive (partners start at 2). */
 #define FIELD_PORTRAIT_PARTNER_BASE 2
 #define FIELD_PORTRAIT_COMPANION_BASE 0xE
-/** @brief Size of one cached portrait image. */
-#define FIELD_PORTRAIT_SIZE 0x4A0
 
 /** @brief Per-player block of the saved game and its control byte (bit 7: controller in use). */
 #define FIELD_SAVED_PLAYER_STRIDE 0x250
@@ -225,8 +224,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 #define FIELD_SEGMENT_LENGTH_MASK 0x3FF
 #define FIELD_SEGMENT_VALUE_SHIFT 10
 
-/** @brief Palette tracks interpolate 16 colours from four-bit palette selectors. */
-#define FIELD_PALETTE_COLORS 16
 #define FIELD_PALETTE_SELECTOR_BITS 4
 #define FIELD_PALETTE_SELECTOR_END 16
 
@@ -291,7 +288,6 @@ typedef struct
 /** @brief Action 1 and 5 commands restored by field_restore_default_action_animation_mappings(). */
 
 void func_80140004(s32 work_address, s32 image_resource_index, s32 music_resource_index, s32 audio_clip_index);
-void field_reset_input_repeat();
 void field_draw_dialog_windows(FieldRenderHalf* render_half);
 void field_merge_dialog_items(void);
 void akao_fade_song_volume(s32, s32, s32);
@@ -697,7 +693,7 @@ void field_interpolate_palette_track(FieldActorSlot* slot, s32 palette_sequence,
             color_index++;
             start_palette++;
             end_palette++;
-        } while (color_index < FIELD_PALETTE_COLORS);
+        } while (color_index < GPU_CLUT_4BIT_COLORS);
     }
 }
 
@@ -3594,15 +3590,15 @@ static void field_refresh_actor_portraits(void)
         cdrom_wait_queue_empty();
 
         g_field_player_records[0].portrait_index = g_field_player_records[0].head.bits.alt_appearance;
-        bcopy((u8*)g_field_cd_buffer + g_field_cd_buffer->offsets[g_field_player_records[0].portrait_index + 1], g_prim_rect_buf, FIELD_PORTRAIT_SIZE);
+        bcopy((u8*)g_field_cd_buffer + g_field_cd_buffer->offsets[g_field_player_records[0].portrait_index + 1], g_field_party_portraits, FIELD_PORTRAIT_BYTES);
 
-        partner_portrait = g_prim_rect_buf + FIELD_PORTRAIT_SIZE;
+        partner_portrait = g_field_party_portraits + FIELD_PORTRAIT_BYTES;
         g_field_player_records[1].portrait_index = partner_portrait_index;
-        bcopy((u8*)g_field_cd_buffer + g_field_cd_buffer->offsets[g_field_player_records[1].portrait_index + 1], partner_portrait, FIELD_PORTRAIT_SIZE);
+        bcopy((u8*)g_field_cd_buffer + g_field_cd_buffer->offsets[g_field_player_records[1].portrait_index + 1], partner_portrait, FIELD_PORTRAIT_BYTES);
 
-        companion_portrait = g_prim_rect_buf + FIELD_PORTRAIT_SIZE * 2;
+        companion_portrait = g_field_party_portraits + FIELD_PORTRAIT_BYTES * 2;
         g_field_player_records[2].portrait_index = g_field_player_records[2].character_id + FIELD_PORTRAIT_COMPANION_BASE;
-        bcopy((u8*)g_field_cd_buffer + g_field_cd_buffer->offsets[g_field_player_records[2].portrait_index + 1], companion_portrait, FIELD_PORTRAIT_SIZE);
+        bcopy((u8*)g_field_cd_buffer + g_field_cd_buffer->offsets[g_field_player_records[2].portrait_index + 1], companion_portrait, FIELD_PORTRAIT_BYTES);
 
         if (g_field_player_records[1].character_kind == FIELD_PLAYER_KIND_HERO)
         {

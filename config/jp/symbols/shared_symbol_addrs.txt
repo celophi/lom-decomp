@@ -1077,7 +1077,7 @@ golem_find_logic_block_recipe         = 0x800CA04C;
 
 // Shared input / frame / script state (main executable .bss)
 g_frame_counter                     = 0x800F1D54;
-g_prim_rect_buf                     = 0x800FE220;
+g_field_party_portraits                     = 0x800FE220;
 g_saved_game_ctx                           = 0x8011F1C4;
 g_script_repeat_count               = 0x8011F1D8;
 g_active_script                     = 0x8011F370;

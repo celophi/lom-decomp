@@ -2,6 +2,7 @@
 #define GOSUB_INTERNAL_H
 
 #include "common.h"
+#include "overlays/field/field_portrait.h"
 #include "common/vector.h"
 #include "common/gpu_packet.h"
 #include <libgte.h>
@@ -14,6 +15,8 @@
 #include "main/display.h"
 #include "common/pad.h"
 #include "common/golem_shape.h"
+#include "overlays/field/field_fade.h"
+#include "overlays/field/field_input.h"
 
 typedef struct GosubTilePacket GosubTilePacket;
 
@@ -88,12 +91,9 @@ typedef struct GosubTilePacket GosubTilePacket;
 #define GOSUB_TEXT_BUFFER_COUNT 256
 #define GOSUB_TEXT_BUFFER_SIZE 0x50
 
-/** @brief Companion portraits: 48x48 4-bit images uploaded to one of five slots per frame buffer. */
-#define GOSUB_PORTRAIT_SIZE 48
 #define GOSUB_PORTRAIT_SLOTS 5
 #define GOSUB_PORTRAIT_VRAM_X 0x140
-#define GOSUB_PORTRAIT_VRAM_WIDTH (GOSUB_PORTRAIT_SIZE / 4)
-#define GOSUB_PORTRAIT_CLUT_SIZE 16
+#define GOSUB_PORTRAIT_VRAM_WIDTH (FIELD_PORTRAIT_SIZE / 4)
 
 /** @brief Offsets of a portrait's pixels and CLUT from its g_gosub_portrait_archive entry. */
 #define GOSUB_PORTRAIT_PIXEL_OFFSET 0x1C
@@ -652,9 +652,6 @@ extern u32 g_golem_logic_block_icons[];
 /* External and forward function declarations. */
 
 /* FIELD exports with no project header. FIELD stays resident while GOSUB runs. */
-void field_set_default_fade_target(void);
-void field_restore_fade_target(void);
-void field_reset_input_repeat(void);
 void field_compact_inventory(void);
 void play_menu_sfx(s32 sfx_id, s32 volume);
 void gosub_load_screen_sequence(s32* screen_sequence);

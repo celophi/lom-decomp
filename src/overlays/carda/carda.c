@@ -299,7 +299,7 @@ static s32 carda_update_card_sequence(void)
     do
     {
         result = carda_advance_card_sequence();
-    } while (result == CARDA_SEQUENCE_RUN_AGAIN);
+    } while (result == CARD_MENU_SEQUENCE_RUN_AGAIN);
 
     if (g_carda_format_declined != 0 && (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK))
     {
@@ -322,12 +322,12 @@ static s32 carda_update_card_sequence(void)
 
     switch (result)
     {
-    case CARDA_SEQUENCE_NONE:
+    case CARD_MENU_SEQUENCE_NONE:
         break;
-    case CARDA_SEQUENCE_FINISHED:
+    case CARD_MENU_SEQUENCE_FINISHED:
         g_card_step = g_carda_steps_card_reset;
         break;
-    case CARDA_SEQUENCE_NO_CARD:
+    case CARD_MENU_SEQUENCE_NO_CARD:
         if (CARDA_IS_POCKETSTATION_MODE(g_carda_mode))
         {
             g_card_step = NULL;
@@ -338,7 +338,7 @@ static s32 carda_update_card_sequence(void)
         }
         g_carda_format_declined = 0;
         break;
-    case CARDA_SEQUENCE_UNFORMATTED:
+    case CARD_MENU_SEQUENCE_UNFORMATTED:
         if (g_carda_mode == CARDA_MODE_LOAD || g_carda_mode == CARDA_MODE_RETURN_PET)
         {
             g_card_entry_state = CARD_MENU_ENTRY_STATE_UNFORMATTED;
@@ -413,7 +413,7 @@ static s32 carda_handle_input(void)
     {
         return;
     }
-    if (*g_card_step >= CARDA_STEP_SCAN_ENTRIES && *g_card_step <= CARDA_STEP_SCAN_DONE)
+    if (*g_card_step >= CARD_MENU_STEP_SCAN_ENTRIES && *g_card_step <= CARD_MENU_STEP_SCAN_DONE)
     {
         return;
     }

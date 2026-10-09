@@ -2,9 +2,6 @@
 #include "internal/addhero_internal.h"
 #include <fcntl.h>
 
-/** @brief Result of a load step that needs no special handling by the caller. */
-#define ADDHERO_LOAD_RESULT_PENDING 1
-
 extern s32 g_addhero_retry_count;
 extern s32 g_addhero_primary_poll_countdown;
 extern s32 g_addhero_secondary_poll_countdown;
@@ -161,7 +158,7 @@ inline void addhero_erase_placeholder_files(void)
 
 /**
  * @brief Run the current step of the card load/save sequence.
- * @return ADDHERO_LOAD_RESULT_* status for the caller.
+ * @return CARD_MENU_SEQUENCE_* result for the caller.
  * @note g_card_step walks one of the g_addhero_loadseq_* byte tables;
  *       opcodes with no case are no-ops.
  */
@@ -177,21 +174,21 @@ s32 addhero_advance_load_sequence(void)
     s32 empty_rank;
 
     memcpy(card_path.text, &g_addhero_file_template, CARD_DEVICE_BYTES);
-    result = ADDHERO_LOAD_RESULT_PENDING;
+    result = CARD_MENU_SEQUENCE_WAIT;
     card_path.device.characters.slot += g_card_slot;
 
     if (g_card_step != NULL)
     {
         switch (*g_card_step)
         {
-        case ADDHERO_STEP_CARD_INFO:
-            result = ADDHERO_LOAD_RESULT_CONTINUE;
+        case CARD_MENU_STEP_CARD_INFO:
+            result = CARD_MENU_SEQUENCE_RUN_AGAIN;
             _card_wait(g_card_slot);
             _card_info(CARD_CHANNEL(g_card_slot));
             g_card_step++;
             break;
 
-        case ADDHERO_STEP_POLL_CARD_INFO:
+        case CARD_MENU_STEP_POLL_CARD_INFO:
             switch (poll_software_card_events())
             {
             case CARD_EVENT_COMPLETE:
@@ -199,7 +196,7 @@ s32 addhero_advance_load_sequence(void)
                 break;
             case CARD_EVENT_ERROR:
             case CARD_EVENT_TIMEOUT:
-                result = ADDHERO_LOAD_RESULT_COMPLETE;
+                result = CARD_MENU_SEQUENCE_NO_CARD;
                 g_addhero_selection_status = CARD_MENU_SELECTION_NONE;
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;
                 g_card_step++;
@@ -217,12 +214,12 @@ s32 addhero_advance_load_sequence(void)
             }
             break;
 
-        case ADDHERO_STEP_CLEAR_SOFTWARE_EVENTS:
+        case CARD_MENU_STEP_CLEAR_SOFTWARE_EVENTS:
             clear_software_card_events();
             g_card_step++;
             break;
 
-        case ADDHERO_STEP_POLL_HARDWARE_EVENTS:
+        case CARD_MENU_STEP_POLL_HARDWARE_EVENTS:
             do
             {
                 poll_status = poll_hardware_card_events();
@@ -235,24 +232,24 @@ s32 addhero_advance_load_sequence(void)
             case CARD_EVENT_ERROR:
             case CARD_EVENT_TIMEOUT:
             case CARD_EVENT_NEW_CARD:
-                result = ADDHERO_LOAD_RESULT_COMPLETE;
+                result = CARD_MENU_SEQUENCE_NO_CARD;
                 g_addhero_selection_status = CARD_MENU_SELECTION_NONE;
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;
                 break;
             }
             break;
 
-        case ADDHERO_STEP_CLEAR_HARDWARE_EVENTS:
+        case CARD_MENU_STEP_CLEAR_HARDWARE_EVENTS:
             clear_hardware_card_events();
             g_card_step++;
             break;
 
-        case ADDHERO_STEP_SCAN_ENTRIES:
+        case CARD_MENU_STEP_SCAN_ENTRIES:
             addhero_erase_placeholder_files();
             g_addhero_entry_scan_active = 1;
             if (addhero_begin_entry_scan(g_card_slot) == 0)
             {
-                result = ADDHERO_LOAD_RESULT_ABORT;
+                result = CARD_MENU_SEQUENCE_FINISHED;
                 g_card_step = NULL;
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_GAME_DATA;
                 g_addhero_entry_scan_active = 0;
@@ -277,15 +274,15 @@ s32 addhero_advance_load_sequence(void)
             }
             break;
 
-        case ADDHERO_STEP_CLEAR_CARD:
-            result = ADDHERO_LOAD_RESULT_CONTINUE;
+        case CARD_MENU_STEP_CLEAR_CARD:
+            result = CARD_MENU_SEQUENCE_RUN_AGAIN;
             _card_wait(g_card_slot);
             _card_clear(CARD_CHANNEL(g_card_slot));
             g_card_step++;
             break;
 
-        case ADDHERO_STEP_LOAD_CARD:
-            result = ADDHERO_LOAD_RESULT_CONTINUE;
+        case CARD_MENU_STEP_LOAD_CARD:
+            result = CARD_MENU_SEQUENCE_RUN_AGAIN;
             _card_wait(g_card_slot);
             _card_load(CARD_CHANNEL(g_card_slot));
             g_addhero_primary_poll_countdown = CARD_MENU_CARD_LOAD_RETRIES;
@@ -293,12 +290,12 @@ s32 addhero_advance_load_sequence(void)
             g_card_step++;
             break;
 
-        case ADDHERO_STEP_DONE:
-            result = ADDHERO_LOAD_RESULT_ABORT;
+        case CARD_MENU_STEP_DONE:
+            result = CARD_MENU_SEQUENCE_FINISHED;
             g_addhero_write_in_progress = 0;
             break;
 
-        case ADDHERO_STEP_ERASE_ENTRY:
+        case CARD_MENU_EXCHANGE_STEP_ERASE_ENTRY:
             strcat(card_path.text, g_card_entries[g_card_slot][g_addhero_selected_row].name);
             for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
             {
@@ -310,7 +307,7 @@ s32 addhero_advance_load_sequence(void)
             g_card_step++;
             break;
 
-        case ADDHERO_STEP_POLL_CARD_LOAD:
+        case CARD_MENU_STEP_POLL_CARD_LOAD:
             switch (poll_software_card_events())
             {
             case CARD_EVENT_COMPLETE:
@@ -328,7 +325,7 @@ s32 addhero_advance_load_sequence(void)
                 }
                 else
                 {
-                    result = ADDHERO_LOAD_RESULT_COMPLETE;
+                    result = CARD_MENU_SEQUENCE_NO_CARD;
                     g_addhero_selection_status = CARD_MENU_SELECTION_NONE;
                     g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;
                 }
@@ -344,7 +341,7 @@ s32 addhero_advance_load_sequence(void)
                 }
                 else
                 {
-                    result = ADDHERO_LOAD_RESULT_CARD_ERROR;
+                    result = CARD_MENU_SEQUENCE_UNFORMATTED;
                     g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_SAVE_DATA;
                     g_card_step = g_card_steps_idle;
                 }
@@ -352,7 +349,7 @@ s32 addhero_advance_load_sequence(void)
             }
             break;
 
-        case ADDHERO_STEP_WAIT_HARDWARE_EVENTS:
+        case CARD_MENU_STEP_WAIT_HARDWARE_EVENTS:
             do
             {
                 poll_status = poll_hardware_card_events();
@@ -360,7 +357,7 @@ s32 addhero_advance_load_sequence(void)
             g_card_step++;
             break;
 
-        case ADDHERO_STEP_READ_ENTRY:
+        case CARD_MENU_STEP_READ_ENTRY:
             g_addhero_io_busy = 1;
             g_addhero_selection_status = CARD_MENU_SELECTION_NONE;
             _card_wait(g_card_slot);
@@ -380,7 +377,7 @@ s32 addhero_advance_load_sequence(void)
             g_card_step++;
             break;
 
-        case ADDHERO_STEP_POLL_ENTRY_READ:
+        case CARD_MENU_STEP_POLL_ENTRY_READ:
             if (g_addhero_io_busy != 0)
             {
                 poll_status = poll_software_card_events();
@@ -403,7 +400,7 @@ s32 addhero_advance_load_sequence(void)
             }
             break;
 
-        case ADDHERO_STEP_READ_SAVE:
+        case CARD_MENU_STEP_READ_SAVE:
             g_addhero_progress_active = 1;
             g_addhero_progress_start_tick = VSync(-1);
             g_addhero_progress_bar_active = 1;
@@ -425,7 +422,7 @@ s32 addhero_advance_load_sequence(void)
             g_card_step++;
             break;
 
-        case ADDHERO_STEP_POLL_SAVE_READ:
+        case CARD_MENU_STEP_POLL_SAVE_READ:
             switch (poll_software_card_events())
             {
             case CARD_EVENT_COMPLETE:
@@ -444,13 +441,13 @@ s32 addhero_advance_load_sequence(void)
                     addhero_open_status_dialog(CARD_MENU_DIALOG_LOAD_FAILED);
                     return result;
                 }
-                /* Rewind to ADDHERO_STEP_READ_SAVE and try again. */
+                /* Rewind to CARD_MENU_STEP_READ_SAVE and try again. */
                 g_card_step--;
                 break;
             }
             break;
 
-        case ADDHERO_STEP_CHECK_POCKETSTATION:
+        case CARD_MENU_STEP_CHECK_POCKETSTATION:
             for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
             {
                 if (McxCardType(CARD_CHANNEL(g_card_slot)) == MCX_COMMAND_ISSUED)
@@ -471,12 +468,12 @@ s32 addhero_advance_load_sequence(void)
             addhero_open_status_dialog(CARD_MENU_DIALOG_NOT_POCKETSTATION);
             break;
 
-        case ADDHERO_STEP_INIT_RETRIES:
+        case CARD_MENU_STEP_INIT_RETRIES:
             g_addhero_retry_count = CARD_MENU_SAVE_RETRIES;
             g_card_step++;
             break;
 
-        case ADDHERO_STEP_READ_BEFORE_WRITE:
+        case CARD_MENU_EXCHANGE_STEP_READ_BEFORE_WRITE:
             g_addhero_progress_active = 1;
             g_addhero_progress_start_tick = VSync(-1);
             g_addhero_progress_bar_active = 1;
@@ -498,7 +495,7 @@ s32 addhero_advance_load_sequence(void)
             g_card_step++;
             break;
 
-        case ADDHERO_STEP_POLL_PREWRITE_READ:
+        case CARD_MENU_EXCHANGE_STEP_POLL_PREWRITE_READ:
             switch (poll_software_card_events())
             {
             case CARD_EVENT_COMPLETE:
@@ -516,14 +513,14 @@ s32 addhero_advance_load_sequence(void)
                     addhero_open_exit_dialog(CARD_MENU_DIALOG_LOAD_FAILED);
                     return result;
                 }
-                /* Rewind to ADDHERO_STEP_READ_BEFORE_WRITE and try again. */
+                /* Rewind to CARD_MENU_EXCHANGE_STEP_READ_BEFORE_WRITE and try again. */
                 close(g_addhero_file_handle);
                 g_card_step--;
                 break;
             }
             break;
 
-        case ADDHERO_STEP_WRITE_SAVE:
+        case CARD_MENU_EXCHANGE_STEP_WRITE_SAVE:
             if (g_addhero_has_free_entry_space == 0)
             {
                 _card_wait(g_card_slot);
@@ -585,7 +582,7 @@ s32 addhero_advance_load_sequence(void)
             g_card_step++;
             break;
 
-        case ADDHERO_STEP_POLL_SAVE_WRITE:
+        case CARD_MENU_EXCHANGE_STEP_POLL_SAVE_WRITE:
             switch (poll_software_card_events())
             {
             case CARD_EVENT_COMPLETE:
@@ -622,7 +619,7 @@ s32 addhero_advance_load_sequence(void)
                     addhero_open_exit_dialog(CARD_MENU_DIALOG_SAVE_FAILED);
                     return result;
                 }
-                /* Rewind to ADDHERO_STEP_WRITE_SAVE and try again. */
+                /* Rewind to CARD_MENU_EXCHANGE_STEP_WRITE_SAVE and try again. */
                 close(g_addhero_file_handle);
                 g_card_step--;
                 break;

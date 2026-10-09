@@ -180,7 +180,7 @@ class ExtractTest(unittest.TestCase):
         inner = sequences["g_carda_steps_write_save_keep_handles"]
         self.assertEqual(outer["bytes"], "03 0a 1e 0b 0c 0d 00")
         self.assertEqual(inner["steps"], outer["steps"][1:])
-        self.assertEqual(inner["steps"][-1], "CARDA_STEP_DONE")
+        self.assertEqual(inner["steps"][-1], "CARD_MENU_STEP_DONE")
 
     def test_byte_map_covers_the_whole_blob_once(self):
         carda.extract(self.overlay.write(self.root), self.output)
@@ -220,7 +220,7 @@ class ExtractTest(unittest.TestCase):
 
     def test_sequence_without_done_is_rejected(self):
         self.overlay.data[self.overlay.steps_end - 8 : self.overlay.steps_end] = bytes([3]) * 8
-        with self.assertRaisesRegex(ValueError, "g_carda_steps_write_save has no CARDA_STEP_DONE"):
+        with self.assertRaisesRegex(ValueError, "g_carda_steps_write_save has no CARD_MENU_STEP_DONE"):
             carda.extract(self.overlay.write(self.root), self.output)
         self.assert_no_output()
 

@@ -28,8 +28,7 @@
 #define MENU_CLUT_Y 499
 #define MENU_FRAME_IMAGE_X 272
 #define MENU_FRAME_IMAGE_Y 480
-/** @brief Size of the palettes and of the artwork, in VRAM halfwords. */
-#define MENU_CLUT_COLORS 16
+/** @brief Frame styles, and size of the artwork in VRAM halfwords. */
 #define MENU_FRAME_STYLES 2
 #define MENU_FRAME_IMAGE_WIDTH 16
 #define MENU_FRAME_IMAGE_HEIGHT 32
@@ -81,7 +80,7 @@
 /** @brief The frame palettes followed by the frame artwork. */
 typedef struct
 {
-    u16 cluts[MENU_FRAME_STYLES][MENU_CLUT_COLORS];
+    u16 cluts[MENU_FRAME_STYLES][GPU_CLUT_4BIT_COLORS];
     u16 pixels[MENU_FRAME_IMAGE_HEIGHT][MENU_FRAME_IMAGE_WIDTH];
 } MenuFrameImage;
 
@@ -243,7 +242,7 @@ void field_load_menu_frame_image(void)
 {
     RECT rect;
 
-    setRECT(&rect, MENU_CLUT_X, MENU_CLUT_Y, MENU_CLUT_COLORS, MENU_FRAME_STYLES);
+    setRECT(&rect, MENU_CLUT_X, MENU_CLUT_Y, GPU_CLUT_4BIT_COLORS, MENU_FRAME_STYLES);
     LoadImage(&rect, (u_long*)g_field_menu_frame_image.cluts);
     setRECT(&rect, MENU_FRAME_IMAGE_X, MENU_FRAME_IMAGE_Y, MENU_FRAME_IMAGE_WIDTH, MENU_FRAME_IMAGE_HEIGHT);
     LoadImage(&rect, (u_long*)g_field_menu_frame_image.pixels);

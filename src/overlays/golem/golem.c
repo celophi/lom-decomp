@@ -15,8 +15,7 @@
 #include <libgte.h>
 #include <libgpu.h>
 #include "overlays/menu/menu.h"
-
-void field_update_input_repeat(void);
+#include "overlays/field/field_input.h"
 
 #define GOLEM_ORDERING_TABLE_SIZE 16
 #define GOLEM_PACKET_BUFFER_SIZE 0x4000
@@ -1216,7 +1215,6 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
             {
                 setcode(sprite, 0x66); /* setSemiTrans(sprite, 1); */ 
             }
-
 
             setXY0(sprite, (x + 8) + x_offset, y + y_offset);
             setWH(sprite, segment_width, row_height);

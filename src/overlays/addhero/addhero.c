@@ -4,29 +4,6 @@
 #include "main/audio/akao.h"
 
 /**
- * @brief Left edge of the card slot 0 label window.
- * @note JP moves it right.
- */
-#if defined(VERSION_JP)
-#define ADDHERO_CARD_SLOT0_LABEL_X 0x28
-#else
-#define ADDHERO_CARD_SLOT0_LABEL_X 0x18
-#endif
-
-/**
- * @brief Entry list column of the rank marker.
- * @note JP moves it right.
- */
-#if defined(VERSION_JP)
-#define ADDHERO_ENTRY_MARKER_X 0xCC
-#else
-#define ADDHERO_ENTRY_MARKER_X 0xC0
-#endif
-
-/** @brief Right edge of the entry list's "+" marker. */
-#define ADDHERO_ENTRY_PLUS_RIGHT_X 242
-
-/**
  * @brief Reset overlay state and build the initial UI elements.
  * @param work_base Work-RAM base (always 0x80170000); stored in g_addhero_work_ram_base, unused so far.
  * @param mode Mode selector, stored in g_addhero_mode.
@@ -68,7 +45,7 @@ void addhero_init(s32 work_base, s32 mode)
  * @param draw_state Frame drawing context passed through to the element renderer.
  * @return Non-zero exit code when exiting, 0 while running.
  */
-s32 addhero_state_step(AddheroDrawState* draw_state)
+s32 addhero_state_step(FieldRenderHalf* draw_state)
 {
     if (g_addhero_exit_requested != 0)
     {
@@ -112,7 +89,7 @@ void addhero_build_ui_elements(void)
         element->draw = addhero_draw_transfer_status;
         element->attr.bits.transition_step = 1;
         element->attr.bits.x = CARD_MENU_MESSAGE_X;
-        element->attr.bits.y = ADDHERO_MESSAGE_Y;
+        element->attr.bits.y = CARD_MENU_EXCHANGE_MESSAGE_Y;
         element->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
         element->size.bits.height = CARD_MENU_MESSAGE_HEIGHT;
         CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_MESSAGE_WIDTH);
@@ -120,8 +97,8 @@ void addhero_build_ui_elements(void)
         element = addhero_alloc_element();
         element->draw = addhero_draw_card_slot0_label;
         element->attr.bits.transition_step = 1;
-        element->attr.bits.x = ADDHERO_CARD_SLOT0_LABEL_X;
-        element->attr.bits.y = ADDHERO_CARD_LABEL_TRANSFER_Y;
+        element->attr.bits.x = CARD_MENU_EXCHANGE_CARD_SLOT0_LABEL_X;
+        element->attr.bits.y = CARD_MENU_EXCHANGE_CARD_LABEL_TRANSFER_Y;
         element->size.bits.width_high = 0;
         element->size.bits.height = CARD_MENU_CARD_LABEL_HEIGHT;
         CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_CARD_LABEL_WIDTH);
@@ -129,8 +106,8 @@ void addhero_build_ui_elements(void)
         element = addhero_alloc_element();
         element->draw = addhero_draw_card_slot1_label;
         element->attr.bits.transition_step = 1;
-        element->attr.bits.x = ADDHERO_CARD_SLOT1_LABEL_X;
-        element->attr.bits.y = ADDHERO_CARD_LABEL_TRANSFER_Y;
+        element->attr.bits.x = CARD_MENU_EXCHANGE_CARD_SLOT1_LABEL_X;
+        element->attr.bits.y = CARD_MENU_EXCHANGE_CARD_LABEL_TRANSFER_Y;
         element->size.bits.width_high = 0;
         element->size.bits.height = CARD_MENU_CARD_LABEL_HEIGHT;
         CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_CARD_LABEL_WIDTH);
@@ -142,27 +119,27 @@ void addhero_build_ui_elements(void)
     element = addhero_alloc_element();
     element->draw = addhero_draw_entry_list;
     element->attr.bits.transition_step = 1;
-    element->attr.bits.x = ADDHERO_LIST_X;
+    element->attr.bits.x = CARD_MENU_EXCHANGE_LIST_X;
     element->attr.bits.y = CARD_MENU_LIST_Y;
-    element->size.bits.width_high = ADDHERO_LIST_WIDTH >> 8;
+    element->size.bits.width_high = CARD_MENU_EXCHANGE_LIST_WIDTH >> 8;
     element->size.bits.height = CARD_MENU_LIST_HEIGHT;
-    CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, ADDHERO_LIST_WIDTH);
+    CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_EXCHANGE_LIST_WIDTH);
     element->size.bits.flag = 1;
 
     element = addhero_alloc_element();
     element->draw = addhero_draw_mode_glyph;
     element->attr.bits.transition_step = 1;
-    element->attr.bits.x = ADDHERO_TITLE_X;
-    element->attr.bits.y = ADDHERO_TITLE_Y;
-    element->size.bits.width_high = ADDHERO_TITLE_WIDTH >> 8;
-    element->size.bits.height = ADDHERO_TITLE_HEIGHT;
-    CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, ADDHERO_TITLE_WIDTH);
+    element->attr.bits.x = CARD_MENU_EXCHANGE_TITLE_X;
+    element->attr.bits.y = CARD_MENU_EXCHANGE_TITLE_Y;
+    element->size.bits.width_high = CARD_MENU_EXCHANGE_TITLE_WIDTH >> 8;
+    element->size.bits.height = CARD_MENU_EXCHANGE_TITLE_HEIGHT;
+    CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_EXCHANGE_TITLE_WIDTH);
 
     element = addhero_alloc_element();
     element->draw = addhero_draw_card_slot0_label;
     element->attr.bits.transition_step = 1;
-    element->attr.bits.x = ADDHERO_CARD_SLOT0_LABEL_X;
-    element->attr.bits.y = ADDHERO_CARD_LABEL_BROWSER_Y;
+    element->attr.bits.x = CARD_MENU_EXCHANGE_CARD_SLOT0_LABEL_X;
+    element->attr.bits.y = CARD_MENU_EXCHANGE_CARD_LABEL_BROWSER_Y;
     element->size.bits.width_high = 0;
     element->size.bits.height = CARD_MENU_CARD_LABEL_HEIGHT;
     CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_CARD_LABEL_WIDTH);
@@ -170,8 +147,8 @@ void addhero_build_ui_elements(void)
     element = addhero_alloc_element();
     element->draw = addhero_draw_card_slot1_label;
     element->attr.bits.transition_step = 1;
-    element->attr.bits.x = ADDHERO_CARD_SLOT1_LABEL_X;
-    element->attr.bits.y = ADDHERO_CARD_LABEL_BROWSER_Y;
+    element->attr.bits.x = CARD_MENU_EXCHANGE_CARD_SLOT1_LABEL_X;
+    element->attr.bits.y = CARD_MENU_EXCHANGE_CARD_LABEL_BROWSER_Y;
     element->size.bits.width_high = 0;
     element->size.bits.height = CARD_MENU_CARD_LABEL_HEIGHT;
     CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_CARD_LABEL_WIDTH);
@@ -192,7 +169,7 @@ void addhero_build_ui_elements(void)
  *        sequence when armed, sample pad input, and step the scroll animation.
  * @param draw_state Frame drawing context passed to the element renderer.
  */
-void addhero_update_state(AddheroDrawState* draw_state)
+void addhero_update_state(FieldRenderHalf* draw_state)
 {
     addhero_update_elements(draw_state);
     g_addhero_icon_phase += 2;
@@ -235,7 +212,7 @@ s32 addhero_update_load_sequence(void)
     do
     {
         result = addhero_advance_load_sequence();
-    } while (result == ADDHERO_LOAD_RESULT_CONTINUE);
+    } while (result == CARD_MENU_SEQUENCE_RUN_AGAIN);
 
     if ((g_addhero_load_flow_active != 0) && (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK))
     {
@@ -253,13 +230,13 @@ s32 addhero_update_load_sequence(void)
     {
         switch (result)
         {
-        case ADDHERO_LOAD_RESULT_NONE:
+        case CARD_MENU_SEQUENCE_NONE:
             break;
-        case ADDHERO_LOAD_RESULT_COMPLETE:
+        case CARD_MENU_SEQUENCE_NO_CARD:
             g_card_step = g_addhero_loadseq_done;
             g_addhero_load_flow_active = 0;
             break;
-        case ADDHERO_LOAD_RESULT_CARD_ERROR:
+        case CARD_MENU_SEQUENCE_UNFORMATTED:
             if (g_addhero_mode == 0)
             {
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_UNFORMATTED;
@@ -269,7 +246,7 @@ s32 addhero_update_load_sequence(void)
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_GAME_DATA;
             }
             /* fallthrough */
-        case ADDHERO_LOAD_RESULT_ABORT:
+        case CARD_MENU_SEQUENCE_FINISHED:
             g_card_step = g_addhero_loadseq_abort;
             break;
         }
@@ -320,7 +297,7 @@ s32 addhero_handle_input(void)
     {
         return;
     }
-    if (*g_card_step >= ADDHERO_STEP_SCAN_ENTRIES && *g_card_step <= ADDHERO_STEP_SCAN_DONE)
+    if (*g_card_step >= CARD_MENU_STEP_SCAN_ENTRIES && *g_card_step <= CARD_MENU_STEP_SCAN_DONE)
     {
         return;
     }
@@ -400,9 +377,9 @@ s32 addhero_handle_input(void)
                 prompt = addhero_alloc_element();
                 prompt->attr.bits.transition_step = 1;
                 prompt->attr.bits.x = CARD_MENU_MESSAGE_X;
-                prompt->attr.bits.y = ADDHERO_MESSAGE_Y;
+                prompt->attr.bits.y = CARD_MENU_EXCHANGE_MESSAGE_Y;
                 prompt->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
-                prompt->size.bits.height = ADDHERO_PROMPT_HEIGHT;
+                prompt->size.bits.height = CARD_MENU_EXCHANGE_PROMPT_HEIGHT;
                 CARD_MENU_SET_ELEMENT_WIDTH_LOW(prompt, CARD_MENU_MESSAGE_WIDTH);
                 addhero_enable_choice_toggle();
                 prompt->draw = addhero_draw_load_prompt;
@@ -484,7 +461,7 @@ inline void addhero_scroll_to_selection(void)
  *        draw state.
  * @param draw_state Frame drawing context to update.
  */
-void addhero_update_elements(AddheroDrawState* draw_state)
+void addhero_update_elements(FieldRenderHalf* draw_state)
 {
     addhero_update_and_draw_elements(draw_state);
 }
@@ -507,27 +484,27 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
     {
     case CARD_MENU_ENTRY_STATE_NO_GAME_DATA:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + ADDHERO_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_EXCHANGE_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_UNFORMATTED:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + ADDHERO_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_EXCHANGE_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_CARD_FULL:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_not_enough_blocks, CARD_MENU_TEXT_NOT_ENOUGH_BLOCKS), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + ADDHERO_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_EXCHANGE_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_NO_CARD:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_no_card, CARD_MENU_TEXT_NO_CARD), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + ADDHERO_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_EXCHANGE_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_ACCESS_FAILED:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_card_access_failed, CARD_MENU_TEXT_CARD_ACCESS_FAILED), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + ADDHERO_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_EXCHANGE_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_NO_SAVE_DATA:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_no_save_data, CARD_MENU_TEXT_NO_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + ADDHERO_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_EXCHANGE_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_BLANK:
         break;
@@ -536,7 +513,7 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
         s32 message_x;
         u16* text_table;
 
-        message_x = -x_offset + ADDHERO_LIST_WIDTH / 2;
+        message_x = -x_offset + CARD_MENU_EXCHANGE_LIST_WIDTH / 2;
         text_table = &g_addhero_text_table;
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECKING_CARD), FIELD_TEXT_COLOR_NORMAL, message_x, -y_offset,
                                FIELD_TEXT_ALIGN_CENTER);
@@ -556,7 +533,7 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
             s32 message_x;
             u16* text_table;
 
-            message_x = -x_offset + ADDHERO_LIST_WIDTH / 2;
+            message_x = -x_offset + CARD_MENU_EXCHANGE_LIST_WIDTH / 2;
             text_table = &g_addhero_text_table;
             prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECKING_CARD), FIELD_TEXT_COLOR_NORMAL, message_x, -y_offset,
                                    FIELD_TEXT_ALIGN_CENTER);
@@ -593,18 +570,18 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
                         {
                             marker_offset = text_table[CARD_MENU_TEXT_NEWEST];
                             prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, marker_offset), FIELD_TEXT_COLOR_NORMAL,
-                                                   list_x + ADDHERO_ENTRY_MARKER_X, row_y, FIELD_TEXT_ALIGN_LEFT);
+                                                   list_x + CARD_MENU_EXCHANGE_ENTRY_MARKER_X, row_y, FIELD_TEXT_ALIGN_LEFT);
                         }
                         else if (g_addhero_entry_ranks[entry_index] < 2)
                         {
                             marker_offset = text_table[CARD_MENU_TEXT_OLDEST];
                             prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, marker_offset), FIELD_TEXT_COLOR_NORMAL,
-                                                   list_x + ADDHERO_ENTRY_MARKER_X, row_y, FIELD_TEXT_ALIGN_LEFT);
+                                                   list_x + CARD_MENU_EXCHANGE_ENTRY_MARKER_X, row_y, FIELD_TEXT_ALIGN_LEFT);
                         }
                         if (*skip_hex_digits(&g_card_entries[g_card_slot][entry_index].name[CARD_SAVE_FILENAME_PREFIX_LENGTH]) == '+')
                         {
                             prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_addhero_text_plus_marker), FIELD_TEXT_COLOR_NORMAL,
-                                                   ADDHERO_ENTRY_PLUS_RIGHT_X - x_offset, row_y, FIELD_TEXT_ALIGN_RIGHT);
+                                                   CARD_MENU_EXCHANGE_ENTRY_PLUS_RIGHT_X - x_offset, row_y, FIELD_TEXT_ALIGN_RIGHT);
                         }
                     }
                     if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][entry_index].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
@@ -640,7 +617,7 @@ void* addhero_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset
             *(u32*)&tile->r0 = CARD_MENU_HIGHLIGHT_COLOR;
             setlen(tile, 3);
             setcode(tile, GPU_CODE_TILE | GPU_CODE_SEMI_TRANS);
-            tile->w = ADDHERO_LIST_WIDTH;
+            tile->w = CARD_MENU_EXCHANGE_LIST_WIDTH;
             setXY0(tile, 0, row_y);
             tile->h = CARD_MENU_ENTRY_ROW_HEIGHT;
             addPrim(ot, tile);
@@ -667,12 +644,12 @@ void* addhero_draw_mode_glyph(u_long* ot, void* prim, s32 x_offset, s32 y_offset
     if (g_addhero_mode == 1)
     {
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_select_item, CARD_MENU_TEXT_SELECT_ITEM), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + ADDHERO_TITLE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_EXCHANGE_TITLE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
     }
     else
     {
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_select_save_data, CARD_MENU_TEXT_SELECT_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + ADDHERO_TITLE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_EXCHANGE_TITLE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
     }
     return prim;
 }
@@ -983,7 +960,7 @@ CardMenuElement* addhero_alloc_element(void)
  * @brief Update and render the active ADDHERO UI elements.
  * @param draw_state Draw state holding the primitive cursor and frame flag.
  */
-void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
+void addhero_update_and_draw_elements(FieldRenderHalf* draw_state)
 {
     void* prim;
     u_long* ot;
@@ -993,23 +970,23 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
     s32 scaled_width;
     s32 scaled_height;
 
-    prim = draw_state->prim_cursor;
-    ot = &draw_state->ot;
+    prim = draw_state->primitive_cursor;
+    ot = draw_state->ordering_table;
 
     if ((g_card_entry_state < CARD_MENU_ENTRY_COUNT_LIMIT) && (g_addhero_element_pool[CARD_MENU_ELEMENT_MAIN].attr.bits.state == CARD_MENU_ELEMENT_OPEN) &&
         (g_addhero_element_pool[CARD_MENU_ELEMENT_MAIN].size.bits.flag != 0))
     {
         if ((g_card_entry_state * CARD_MENU_ENTRY_ROW_HEIGHT) > (g_addhero_scroll_y + CARD_MENU_LIST_HEIGHT))
         {
-            prim = field_draw_menu_scroll_arrow(prim, ot, ADDHERO_SCROLL_ARROW_X, CARD_MENU_SCROLL_ARROW_DOWN_Y, FIELD_MENU_ARROW_DOWN);
+            prim = field_draw_menu_scroll_arrow(prim, ot, CARD_MENU_EXCHANGE_SCROLL_ARROW_X, CARD_MENU_SCROLL_ARROW_DOWN_Y, FIELD_MENU_ARROW_DOWN);
         }
         if (g_addhero_scroll_y != 0)
         {
-            prim = field_draw_menu_scroll_arrow(prim, ot, ADDHERO_SCROLL_ARROW_X, CARD_MENU_SCROLL_ARROW_UP_Y, FIELD_MENU_ARROW_UP);
+            prim = field_draw_menu_scroll_arrow(prim, ot, CARD_MENU_EXCHANGE_SCROLL_ARROW_X, CARD_MENU_SCROLL_ARROW_UP_Y, FIELD_MENU_ARROW_UP);
         }
     }
 
-    if (draw_state->display_buffer_index != 0)
+    if (draw_state->display_rect.y != 0)
     {
         SetDefDrawEnv(&draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
     }
@@ -1045,7 +1022,7 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
 
                     prim = field_draw_menu_frame(prim, ot, x + (CARD_MENU_ELEMENT_WIDTH(element, width_low) - scaled_width) / 2,
                                                  element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
-                                                 draw_state->display_buffer_index, i == CARD_MENU_ELEMENT_MODAL);
+                                                 draw_state->display_rect.y, i == CARD_MENU_ELEMENT_MODAL);
                 }
                 element->attr.bits.transition_step++;
                 if (element->attr.bits.transition_step == CARD_MENU_ELEMENT_TRANSITION_STEPS)
@@ -1061,7 +1038,7 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
                     u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
 
                     prim = field_draw_menu_frame(prim, ot, element->attr.bits.x, element->attr.bits.y, CARD_MENU_ELEMENT_WIDTH(element, width_low),
-                                                 element->size.bits.height, draw_state->display_buffer_index, i == CARD_MENU_ELEMENT_MODAL);
+                                                 element->size.bits.height, draw_state->display_rect.y, i == CARD_MENU_ELEMENT_MODAL);
                 }
                 if (element->attr.bits.transition_step != 0)
                 {
@@ -1085,7 +1062,7 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
 
                     prim = field_draw_menu_frame(prim, ot, x + (CARD_MENU_ELEMENT_WIDTH(element, width_low) - scaled_width) / 2,
                                                  element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
-                                                 draw_state->display_buffer_index, i == CARD_MENU_ELEMENT_MODAL);
+                                                 draw_state->display_rect.y, i == CARD_MENU_ELEMENT_MODAL);
                 }
                 element->attr.bits.transition_step--;
                 if (element->attr.bits.transition_step == 0)
@@ -1107,7 +1084,7 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
         }
     }
 
-    draw_state->prim_cursor = prim;
+    draw_state->primitive_cursor = prim;
 }
 
 /**
@@ -1172,7 +1149,7 @@ void* addhero_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
         element->attr.bits.transition_step = 1;
         element->attr.bits.state = CARD_MENU_ELEMENT_OPENING;
         element->attr.bits.x = CARD_MENU_MESSAGE_X;
-        element->attr.bits.y = ADDHERO_MESSAGE_Y;
+        element->attr.bits.y = CARD_MENU_EXCHANGE_MESSAGE_Y;
         element->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
         element->size.bits.height = CARD_MENU_MESSAGE_HEIGHT;
         CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_MESSAGE_WIDTH);
@@ -1228,7 +1205,7 @@ void* addhero_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_off
         g_saved_game_ctx->guest_origin.ids.save_id = file->saved_game.identity.ids.save_id;
         g_saved_game_ctx->guest_loaded = 1;
         addhero_close_all_elements();
-        field_restore_fade_target_with_duration(ADDHERO_EXIT_FADE_FRAMES);
+        field_restore_fade_target_with_duration(CARD_MENU_EXIT_FADE_FRAMES);
         g_addhero_result = ADDHERO_RESULT_LOADED;
     }
 
@@ -1284,11 +1261,11 @@ inline void addhero_open_status_dialog(s32 message_id)
     element->draw = addhero_draw_status_dialog;
     element->attr.bits.transition_step = 1;
     element->attr.bits.state = CARD_MENU_ELEMENT_OPENING;
-    element->attr.bits.x = ADDHERO_DIALOG_X;
-    element->attr.bits.y = ADDHERO_DIALOG_Y;
-    element->size.bits.width_high = ADDHERO_DIALOG_WIDTH >> 8;
-    element->size.bits.height = ADDHERO_DIALOG_HEIGHT;
-    CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, ADDHERO_DIALOG_WIDTH);
+    element->attr.bits.x = CARD_MENU_DIALOG_X;
+    element->attr.bits.y = CARD_MENU_EXCHANGE_DIALOG_Y;
+    element->size.bits.width_high = CARD_MENU_DIALOG_WIDTH >> 8;
+    element->size.bits.height = CARD_MENU_EXCHANGE_DIALOG_HEIGHT;
+    CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_DIALOG_WIDTH);
     field_reset_input_repeat();
     g_addhero_write_in_progress = 0;
     g_addhero_progress_active = 0;
@@ -1314,11 +1291,11 @@ void addhero_open_exit_dialog(s32 message_id)
     element->draw = addhero_draw_exit_dialog;
     element->attr.bits.transition_step = 1;
     element->attr.bits.state = CARD_MENU_ELEMENT_OPENING;
-    element->attr.bits.x = ADDHERO_DIALOG_X;
-    element->attr.bits.y = ADDHERO_DIALOG_Y;
-    element->size.bits.width_high = ADDHERO_DIALOG_WIDTH >> 8;
-    element->size.bits.height = ADDHERO_DIALOG_HEIGHT;
-    CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, ADDHERO_DIALOG_WIDTH);
+    element->attr.bits.x = CARD_MENU_DIALOG_X;
+    element->attr.bits.y = CARD_MENU_EXCHANGE_DIALOG_Y;
+    element->size.bits.width_high = CARD_MENU_DIALOG_WIDTH >> 8;
+    element->size.bits.height = CARD_MENU_EXCHANGE_DIALOG_HEIGHT;
+    CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_DIALOG_WIDTH);
     field_reset_input_repeat();
     g_addhero_write_in_progress = 0;
     g_addhero_progress_active = 0;
@@ -1345,20 +1322,20 @@ void* addhero_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_off
     {
     case CARD_MENU_DIALOG_SAVE_FAILED:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_save_failed, CARD_MENU_TEXT_SAVE_FAILED), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + ADDHERO_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_DIALOG_CARD_NOT_INSERTED:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_card_not_inserted, CARD_MENU_TEXT_CARD_NOT_INSERTED), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + ADDHERO_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_DIALOG_NOT_POCKETSTATION:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_not_pocketstation, CARD_MENU_TEXT_NOT_POCKETSTATION), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + ADDHERO_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_DIALOG_LOAD_FAILED:
     case ADDHERO_DIALOG_INVALID_SAVE:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_load_failed, CARD_MENU_TEXT_LOAD_FAILED), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + ADDHERO_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     }
     if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
@@ -1386,27 +1363,27 @@ void* addhero_draw_exit_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offse
     {
     case CARD_MENU_DIALOG_SAVE_FAILED:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_save_failed, CARD_MENU_TEXT_SAVE_FAILED), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + ADDHERO_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_DIALOG_CARD_NOT_INSERTED:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_card_not_inserted, CARD_MENU_TEXT_CARD_NOT_INSERTED), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + ADDHERO_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_DIALOG_NOT_POCKETSTATION:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_not_pocketstation, CARD_MENU_TEXT_NOT_POCKETSTATION), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + ADDHERO_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_DIALOG_LOAD_FAILED:
     case ADDHERO_DIALOG_INVALID_SAVE:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_load_failed, CARD_MENU_TEXT_LOAD_FAILED), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + ADDHERO_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     }
     if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
     {
         g_addhero_result = ADDHERO_RESULT_CANCELLED;
         addhero_clear_elements();
-        field_restore_fade_target_with_duration(ADDHERO_EXIT_FADE_FRAMES);
+        field_restore_fade_target_with_duration(CARD_MENU_EXIT_FADE_FRAMES);
         field_reset_input_repeat();
     }
     return prim;
@@ -1524,7 +1501,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
             field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
             g_addhero_result = ADDHERO_RESULT_CANCELLED;
             addhero_clear_elements();
-            field_restore_fade_target_with_duration(ADDHERO_EXIT_FADE_FRAMES);
+            field_restore_fade_target_with_duration(CARD_MENU_EXIT_FADE_FRAMES);
             field_reset_input_repeat();
         }
     }
@@ -1583,7 +1560,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
             g_saved_game_ctx->characters[FIELD_PARTY_GUEST].name[0] = 0;
             field_play_sound(FIELD_SOUND_SAVE_DONE, AKAO_PAN_CENTER);
             addhero_clear_elements();
-            field_restore_fade_target_with_duration(ADDHERO_EXIT_FADE_FRAMES);
+            field_restore_fade_target_with_duration(CARD_MENU_EXIT_FADE_FRAMES);
             g_addhero_result = ADDHERO_RESULT_SAVED;
         }
     }
@@ -1607,7 +1584,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
             {
                 return prim;
             }
-            if (*g_card_step >= ADDHERO_STEP_SCAN_ENTRIES && *g_card_step <= ADDHERO_STEP_SCAN_DONE)
+            if (*g_card_step >= CARD_MENU_STEP_SCAN_ENTRIES && *g_card_step <= CARD_MENU_STEP_SCAN_DONE)
             {
                 return prim;
             }
@@ -1692,7 +1669,7 @@ void* addhero_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 
         return quad;
     }
 
-    setRECT(&rect, index * 16, VRAM_CLUT_Y, 16, 1);
+    setRECT(&rect, index * GPU_CLUT_4BIT_COLORS, VRAM_CLUT_Y, GPU_CLUT_4BIT_COLORS, 1);
     if ((row == FIELD_PARTY_GUEST) && (icon < SAVE_ICON_HERO_COUNT))
     {
         field_copy_portrait_palette(g_addhero_icon_context, icon);
@@ -1710,7 +1687,7 @@ void* addhero_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 
         LoadImage(&rect, (u_long*)CARD_MENU_ICON_IMAGE(g_addhero_icon_image_table, icon)->clut);
     }
 
-    setRECT(&rect, index * (CARD_MENU_ICON_SIZE / 4) + CARD_MENU_ICON_VRAM_X, CARD_MENU_ICON_VRAM_Y, CARD_MENU_ICON_SIZE / 4, CARD_MENU_ICON_SIZE);
+    setRECT(&rect, index * (FIELD_PORTRAIT_SIZE / 4) + CARD_MENU_ICON_VRAM_X, CARD_MENU_ICON_VRAM_Y, FIELD_PORTRAIT_SIZE / 4, FIELD_PORTRAIT_SIZE);
     LoadImage(&rect, (u_long*)CARD_MENU_ICON_IMAGE(g_addhero_icon_image_table, icon)->pixels);
 
     SET_BGR0_PACKED(quad, GPU_TINT_NEUTRAL);
@@ -1718,13 +1695,13 @@ void* addhero_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 
     quad->x0 = quad->x2 = x;
     quad->y0 = quad->y1 = y;
     quad->x1 = quad->x3 = x + width;
-    quad->y2 = quad->y3 = y + CARD_MENU_ICON_SIZE - 1;
-    u = index * CARD_MENU_ICON_SIZE;
+    quad->y2 = quad->y3 = y + FIELD_PORTRAIT_SIZE - 1;
+    u = index * FIELD_PORTRAIT_SIZE;
     quad->u0 = quad->u2 = u;
-    quad->u1 = quad->u3 = u + CARD_MENU_ICON_SIZE - 1;
+    quad->u1 = quad->u3 = u + FIELD_PORTRAIT_SIZE - 1;
     quad->v0 = quad->v1 = CARD_MENU_ICON_VRAM_Y;
-    quad->v2 = quad->v3 = CARD_MENU_ICON_VRAM_Y + CARD_MENU_ICON_SIZE - 1;
-    quad->clut = getClut(index * 16, VRAM_CLUT_Y);
+    quad->v2 = quad->v3 = CARD_MENU_ICON_VRAM_Y + FIELD_PORTRAIT_SIZE - 1;
+    quad->clut = getClut(index * GPU_CLUT_4BIT_COLORS, VRAM_CLUT_Y);
     quad->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, CARD_MENU_ICON_VRAM_X, 0);
     addPrim(ot, quad);
 

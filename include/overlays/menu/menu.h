@@ -10,9 +10,9 @@
 #include <libgte.h>
 #include <libgpu.h>
 #include <strings.h>
+#include "overlays/field/field_input.h"
 
-extern void field_reset_input_repeat(void);
-extern void menu_init_prim_rects(void);
+extern void menu_upload_party_portraits(void);
 extern void menu_upload_graphics(void);
 extern void menu_state_init(void);
 extern void menu_reset_slots(void);

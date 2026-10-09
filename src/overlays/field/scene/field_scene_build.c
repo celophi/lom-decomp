@@ -1524,7 +1524,7 @@ static void field_build_animation_list(FieldAnimDef* def, u8** arena, FieldAnim*
             {
                 if (def->u.clut.clut_mode == 0)
                 {
-                    *arena += sizeof(FieldImageReq) + FIELD_ANIM_SCRATCH_BYTES(FIELD_CLUT_4BIT_COLORS);
+                    *arena += sizeof(FieldImageReq) + FIELD_ANIM_SCRATCH_BYTES(GPU_CLUT_4BIT_COLORS);
                 }
                 else
                 {
@@ -1535,7 +1535,7 @@ static void field_build_animation_list(FieldAnimDef* def, u8** arena, FieldAnim*
             {
                 if (def->u.clut.clut_mode == 0)
                 {
-                    *arena += def->u.clut.length * FIELD_ANIM_SCRATCH_BYTES(FIELD_CLUT_4BIT_COLORS) + sizeof(FieldImageReq);
+                    *arena += def->u.clut.length * FIELD_ANIM_SCRATCH_BYTES(GPU_CLUT_4BIT_COLORS) + sizeof(FieldImageReq);
                 }
                 else
                 {

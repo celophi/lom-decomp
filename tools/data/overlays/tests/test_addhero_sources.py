@@ -91,8 +91,8 @@ class CSourceTest(unittest.TestCase):
 
     def test_card_step_names_come_from_the_header(self):
         names = addhero.card_step_names()
-        self.assertEqual(names[0], "ADDHERO_STEP_DONE")
-        self.assertEqual(names[14], "ADDHERO_STEP_WAIT")
+        self.assertEqual(names[0], "CARD_MENU_STEP_DONE")
+        self.assertEqual(names[14], "CARD_MENU_STEP_WAIT")
 
 
 if __name__ == "__main__":

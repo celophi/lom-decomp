@@ -40,9 +40,6 @@ extern FieldMotionRecord g_field_effect_records[];
 /** @brief Byte offset, and VRAM x, of the sub-palette in bits 8-11 of palette_animation. */
 #define FIELD_PALETTE_ANIMATION_SUBPALETTE_OFFSET(word) (((word) >> 3) & 0x1E0)
 #define FIELD_PALETTE_ANIMATION_SUBPALETTE_X(word) (((word) >> 4) & 0xF0)
-/** @brief Colours of a CLUT row and of one of its sub-palettes. */
-#define FIELD_CLUT_COLORS 256
-#define FIELD_CLUT_SUBPALETTE_COLORS 16
 
 /** @brief Screen-space centre added to every projected mesh vertex. */
 #define FIELD_MESH_SCREEN_CENTER_X (SCREEN_WIDTH / 2)
@@ -120,10 +117,10 @@ s32 field_update_actor_palette_animation(FieldActorSlot *actor)
 
             animation_word = actor->animation->palette_animation;
             buf = &FIELD_ACTOR_CLUT_BUFFER(owner)[FIELD_PALETTE_ANIMATION_SUBPALETTE_OFFSET(animation_word)];
-            field_rotate_palette_row((u16 *)buf + 1, FIELD_CLUT_SUBPALETTE_COLORS - 1, FIELD_PALETTE_ANIMATION_RIGHT(animation_word));
+            field_rotate_palette_row((u16 *)buf + 1, GPU_CLUT_4BIT_COLORS - 1, FIELD_PALETTE_ANIMATION_RIGHT(animation_word));
             rect.x = FIELD_PALETTE_ANIMATION_SUBPALETTE_X(actor->animation->palette_animation);
             rect.y = (actor->owner_object_index * 2) + FIELD_ACTOR_CLUT_VRAM_Y;
-            rect.w = FIELD_CLUT_SUBPALETTE_COLORS;
+            rect.w = GPU_CLUT_4BIT_COLORS;
             rect.h = 1;
         }
         else
@@ -131,10 +128,10 @@ s32 field_update_actor_palette_animation(FieldActorSlot *actor)
             u16 animation_word = actor->animation->palette_animation;
 
             buf = &g_field_shared_clut_buffer[FIELD_PALETTE_ANIMATION_SUBPALETTE_OFFSET(animation_word)];
-            field_rotate_palette_row((u16 *)buf + 1, FIELD_CLUT_SUBPALETTE_COLORS - 1, FIELD_PALETTE_ANIMATION_RIGHT(animation_word));
+            field_rotate_palette_row((u16 *)buf + 1, GPU_CLUT_4BIT_COLORS - 1, FIELD_PALETTE_ANIMATION_RIGHT(animation_word));
             rect.x = FIELD_PALETTE_ANIMATION_SUBPALETTE_X(actor->animation->palette_animation);
             rect.y = VRAM_CLUT_Y;
-            rect.w = FIELD_CLUT_SUBPALETTE_COLORS;
+            rect.w = GPU_CLUT_4BIT_COLORS;
             rect.h = 1;
         }
         break;
@@ -144,18 +141,18 @@ s32 field_update_actor_palette_animation(FieldActorSlot *actor)
         if (actor->owner_object_index < FIELD_ACTOR_PALETTE_OWNERS)
         {
             buf = FIELD_ACTOR_CLUT_BUFFER(actor->owner_object_index);
-            field_rotate_palette_row((u16 *)buf + 1, FIELD_CLUT_COLORS - 1, FIELD_PALETTE_ANIMATION_RIGHT(actor->animation->palette_animation));
+            field_rotate_palette_row((u16 *)buf + 1, GPU_CLUT_8BIT_COLORS - 1, FIELD_PALETTE_ANIMATION_RIGHT(actor->animation->palette_animation));
             rect.x = 0;
             rect.y = (actor->owner_object_index * 2) + FIELD_ACTOR_CLUT_VRAM_Y;
-            rect.w = FIELD_CLUT_COLORS;
+            rect.w = GPU_CLUT_8BIT_COLORS;
             rect.h = 1;
         }
         else
         {
             buf = g_field_shared_clut_buffer;
-            field_rotate_palette_row((u16 *)buf + 1, FIELD_CLUT_COLORS - 1, FIELD_PALETTE_ANIMATION_RIGHT(actor->animation->palette_animation));
+            field_rotate_palette_row((u16 *)buf + 1, GPU_CLUT_8BIT_COLORS - 1, FIELD_PALETTE_ANIMATION_RIGHT(actor->animation->palette_animation));
             rect.y = VRAM_CLUT_Y;
-            rect.w = FIELD_CLUT_COLORS;
+            rect.w = GPU_CLUT_8BIT_COLORS;
             rect.x = 0;
             rect.h = 1;
         }

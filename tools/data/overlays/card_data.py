@@ -7,6 +7,7 @@ readers and writers handle the formats CARDA and ADDHERO have in common.
 from __future__ import annotations
 
 import codecs
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -17,6 +18,7 @@ from tools.data.overlays.resources import (
 
 
 # Shared C values checked by tests/test_addhero_sources.py.
+CARD_MENU_HEADER = Path(__file__).resolve().parents[3] / "include/common/card_menu.h"
 CHART_ROW_BYTES = 33  # GLYPH_CHART_ROW_BYTES, include/common/glyph_cache.h
 CHART_COLUMNS = 16  # GLYPH_CHART_COLUMNS, include/common/glyph_cache.h
 CHART_ROWS_PER_PAGE = 16  # GLYPH_CHART_PAGE_BYTES is 16 rows, include/common/glyph_cache.h
@@ -146,6 +148,20 @@ class DigitGlyphs:
 
 # ---------------------------------------------------------------------------
 # Reading
+
+
+def card_menu_step_names(exchange: bool = False) -> dict[int, str]:
+    """Opcode names of the card step tables from card_menu.h.
+
+    Every card menu uses the CARD_MENU_STEP_* opcodes; ADDHERO and NIKI add the
+    CARD_MENU_EXCHANGE_STEP_* ones.
+    """
+    text = CARD_MENU_HEADER.read_text(encoding="ascii")
+    prefixes = ["CARD_MENU_STEP_"] + (["CARD_MENU_EXCHANGE_STEP_"] if exchange else [])
+    names: dict[int, str] = {}
+    for prefix in prefixes:
+        names.update({int(value): name for name, value in re.findall(rf"\b({prefix}\w+)\s*=\s*(\d+)", text)})
+    return names
 
 
 def read_text_list(blob: Blob, chart: Chart, table: int, prefix: str) -> tuple[TextList, int]:

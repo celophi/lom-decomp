@@ -3,6 +3,7 @@
  */
 
 #include "common.h"
+#include "overlays/field/field_portrait.h"
 #include "overlays/field/field_text.h"
 #include "../internal/field_calls.h"
 #include "common/gpu_packet.h"
@@ -10,31 +11,11 @@
 #include <libgpu.h>
 #include <memory.h>
 
-/*
- * VRAM layout of the three player icons: each g_prim_rect_buf slot holds a
- * 16-color palette strip followed by a 12x48 (16-bit units) image block.
- */
-#define PRIM_STRIP_VRAM_X 0x110
-#define PRIM_STRIP_VRAM_Y0 0x1D8
-#define PRIM_STRIP_W 16
-#define PRIM_STRIP_H 1
-#define PRIM_BLOCK_VRAM_X 0x3F4
-#define PRIM_BLOCK_VRAM_X2 0x3E8
-#define PRIM_BLOCK_VRAM_Y0 0x120
-#define PRIM_BLOCK_VRAM_Y1 0x150
-#define PRIM_BLOCK_W 12
-#define PRIM_BLOCK_H 48
-#define PRIM_SLOT_COUNT 3
-#define PRIM_STRIP_BYTE_SIZE (PRIM_STRIP_W * PRIM_STRIP_H * sizeof(u16))
-#define PRIM_BLOCK_BYTE_SIZE (PRIM_BLOCK_W * PRIM_BLOCK_H * sizeof(u16))
-#define PRIM_BLOCK_BUF_OFFSET PRIM_STRIP_BYTE_SIZE
-#define PRIM_SLOT_STRIDE (PRIM_STRIP_BYTE_SIZE + PRIM_BLOCK_BYTE_SIZE)
-
 /**
  * @brief Word-aligned upload source at byte @p offset of @p base.
  * @note Summed as integers: the target adds the scaled offset before the base.
  */
-#define PRIM_UPLOAD_PTR(base, offset) ((u_long*)((((offset) >> 2) << 2) + (uintptr_t)(base)))
+#define FIELD_PORTRAIT_UPLOAD_SOURCE(base, offset) ((u_long*)((((offset) >> 2) << 2) + (uintptr_t)(base)))
 
 /** @brief Player icon selectors (the palette row and the texture cell). */
 #define FIELD_PLAYER_ICON_FIRST 0
@@ -101,30 +82,30 @@ void* field_draw_coordinate_panel(u_long* ot, u8* prim, s32 x_offset, s32 y_offs
 }
 
 /**
- * @brief Upload the palette strip and image block of the three player icons to VRAM.
+ * @brief Upload the CLUTs and pixels of the three party portraits to VRAM.
  */
 void field_upload_player_icons(void)
 {
     s32 slot = 0;
-    u8* buffer = g_prim_rect_buf;
-    s32 block_offset = PRIM_BLOCK_BUF_OFFSET;
-    s32 strip_offset = 0;
+    u8* buffer = g_field_party_portraits;
+    s32 pixels_offset = FIELD_PORTRAIT_PIXELS_OFFSET;
+    s32 clut_offset = 0;
     RECT rect;
     u_long* upload_src;
 
-    for (; slot < PRIM_SLOT_COUNT; slot++)
+    for (; slot < FIELD_PARTY_PORTRAIT_COUNT; slot++)
     {
-        setRECT(&rect, PRIM_STRIP_VRAM_X, slot + PRIM_STRIP_VRAM_Y0, PRIM_STRIP_W, PRIM_STRIP_H);
-        upload_src = PRIM_UPLOAD_PTR(buffer, strip_offset);
+        setRECT(&rect, FIELD_PARTY_PORTRAIT_CLUT_X, slot + FIELD_PARTY_PORTRAIT_CLUT_Y, GPU_CLUT_4BIT_COLORS, 1);
+        upload_src = FIELD_PORTRAIT_UPLOAD_SOURCE(buffer, clut_offset);
         LoadImage(&rect, upload_src);
 
-        setRECT(&rect, (slot == PRIM_SLOT_COUNT - 1) ? PRIM_BLOCK_VRAM_X2 : PRIM_BLOCK_VRAM_X, (slot == 0) ? PRIM_BLOCK_VRAM_Y0 : PRIM_BLOCK_VRAM_Y1,
-                PRIM_BLOCK_W, PRIM_BLOCK_H);
-        upload_src = PRIM_UPLOAD_PTR(buffer, block_offset);
+        setRECT(&rect, (slot == FIELD_PARTY_PORTRAIT_COUNT - 1) ? FIELD_PARTY_PORTRAIT_VRAM_X2 : FIELD_PARTY_PORTRAIT_VRAM_X, (slot == 0) ? FIELD_PARTY_PORTRAIT_VRAM_Y0 : FIELD_PARTY_PORTRAIT_VRAM_Y1,
+                FIELD_PORTRAIT_SIZE / 4, FIELD_PORTRAIT_SIZE);
+        upload_src = FIELD_PORTRAIT_UPLOAD_SOURCE(buffer, pixels_offset);
         LoadImage(&rect, upload_src);
 
-        block_offset += PRIM_SLOT_STRIDE;
-        strip_offset += PRIM_SLOT_STRIDE;
+        pixels_offset += FIELD_PORTRAIT_BYTES;
+        clut_offset += FIELD_PORTRAIT_BYTES;
     }
 }
 
@@ -175,7 +156,7 @@ void* field_draw_player_icon(POLY_FT4* handle, u_long* ordering_table, s32 selec
         prim->u3 = u_value;
     }
 
-    prim->clut = getClut(PRIM_STRIP_VRAM_X, selector + PRIM_STRIP_VRAM_Y0);
+    prim->clut = getClut(FIELD_PARTY_PORTRAIT_CLUT_X, selector + FIELD_PARTY_PORTRAIT_CLUT_Y);
     prim->tpage = FIELD_PLAYER_ICON_TPAGE;
     addPrim(ordering_table, prim);
 

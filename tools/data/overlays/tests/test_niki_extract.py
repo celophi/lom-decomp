@@ -148,13 +148,13 @@ class ExtractTest(unittest.TestCase):
         sequences = {sequence["symbol"]: sequence for sequence in steps["sequences"]}
         self.assertEqual(
             sequences["g_niki_card_setup_sequence"]["steps"],
-            ["NIKI_COMMAND_RELEASE_PRIMARY", "NIKI_COMMAND_REQUEST_CARD_INFO",
-             "NIKI_COMMAND_POLL_CARD_INFO", "NIKI_COMMAND_STOP"],
+            ["CARD_MENU_STEP_CLEAR_SOFTWARE_EVENTS", "CARD_MENU_STEP_CARD_INFO",
+             "CARD_MENU_STEP_POLL_CARD_INFO", "CARD_MENU_STEP_DONE"],
         )
-        self.assertEqual(sequences["g_card_steps_idle"]["steps"], ["0x0E", "NIKI_COMMAND_STOP"])
+        self.assertEqual(sequences["g_card_steps_idle"]["steps"], ["CARD_MENU_STEP_WAIT", "CARD_MENU_STEP_DONE"])
         self.assertEqual(sequences["g_niki_write_save_sequence"]["bytes"], "1e 19 1a 00")
         address = self.overlay.symbols["g_niki_write_save_sequence"] - 1
-        self.assertEqual(steps["unreached"], [{"address": f"0x{address:08X}", "step": "NIKI_COMMAND_RELEASE_PRIMARY"}])
+        self.assertEqual(steps["unreached"], [{"address": f"0x{address:08X}", "step": "CARD_MENU_STEP_CLEAR_SOFTWARE_EVENTS"}])
 
     def test_icon_png_uses_the_stored_palette(self):
         niki.extract(self.overlay.write(self.root), self.output)
@@ -238,7 +238,7 @@ class ExtractTest(unittest.TestCase):
     def test_sequence_cannot_run_into_the_chart(self):
         end = self.overlay.steps_end
         self.overlay.data[end - 1] = 26
-        with self.assertRaisesRegex(ValueError, "g_niki_write_save_sequence has no NIKI_COMMAND_STOP"):
+        with self.assertRaisesRegex(ValueError, "g_niki_write_save_sequence has no CARD_MENU_STEP_DONE"):
             niki.extract(self.overlay.write(self.root), self.output)
         self.assert_no_output()
 

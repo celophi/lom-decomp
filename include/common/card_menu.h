@@ -2,6 +2,7 @@
 #define CARD_MENU_H
 
 #include "common.h"
+#include "overlays/field/field_portrait.h"
 #include "common/pad.h"
 #include "main/display.h"
 #include "common/gpu_packet.h"
@@ -40,6 +41,55 @@
 #define CARD_MENU_ENTRY_STATE_NO_CARD 0xFD      /**< No card answers: an event error or the retries ran out. */
 #define CARD_MENU_ENTRY_STATE_BLANK 0xFE        /**< Shows nothing; no menu sets it. */
 #define CARD_MENU_ENTRY_STATE_CHECKING_CARD 0xFF /**< The card is being checked; no entries yet. */
+
+/**
+ * @brief Opcodes of the card load/save step tables every card menu runs one
+ *        byte at a time (g_card_step). Opcodes without a handler make the
+ *        sequence wait on them; each overlay adds its own opcodes in the gaps.
+ */
+typedef enum
+{
+    CARD_MENU_STEP_DONE = 0,                  /**< End of a step table; report CARD_MENU_SEQUENCE_FINISHED. */
+    CARD_MENU_STEP_CARD_INFO = 1,             /**< Issue _card_info on the current slot. */
+    CARD_MENU_STEP_POLL_CARD_INFO = 2,        /**< Wait for the _card_info result. */
+    CARD_MENU_STEP_CLEAR_SOFTWARE_EVENTS = 3, /**< Clear the software card events. */
+    CARD_MENU_STEP_POLL_HARDWARE_EVENTS = 4,  /**< Wait for and check the hardware card events. */
+    CARD_MENU_STEP_CLEAR_HARDWARE_EVENTS = 5, /**< Clear the hardware card events. */
+    CARD_MENU_STEP_SCAN_ENTRIES = 6,          /**< Erase the placeholder files and scan the card directory. */
+    CARD_MENU_STEP_SCAN_DONE = 7,             /**< No handler: the sequence waits here after the scan. */
+    CARD_MENU_STEP_CLEAR_CARD = 8,            /**< Issue _card_clear on the current slot. */
+    CARD_MENU_STEP_LOAD_CARD = 9,             /**< Issue _card_load and arm the poll countdowns. */
+    CARD_MENU_STEP_WAIT = 14,                 /**< No handler: the sequence waits here until other code replaces it. */
+    CARD_MENU_STEP_POLL_CARD_LOAD = 15,       /**< Wait for the _card_clear/_card_load result, retrying. */
+    CARD_MENU_STEP_WAIT_HARDWARE_EVENTS = 16, /**< Wait for any hardware card event. */
+    CARD_MENU_STEP_READ_ENTRY = 17,           /**< Open the selected save and start reading its header. */
+    CARD_MENU_STEP_POLL_ENTRY_READ = 18,      /**< Wait for the header read to finish. */
+    CARD_MENU_STEP_READ_SAVE = 19,            /**< Open the selected save and start reading it. */
+    CARD_MENU_STEP_POLL_SAVE_READ = 20,       /**< Wait for the save read to finish, retrying. */
+    CARD_MENU_STEP_CHECK_POCKETSTATION = 24,  /**< Check that the card is a PocketStation (McxCardType). */
+    CARD_MENU_STEP_INIT_RETRIES = 30          /**< Arm the read/write retry counter. */
+} CardMenuStep;
+
+/** @brief Step opcodes of the screens that write another player's save back (ADDHERO and NIKI). */
+typedef enum
+{
+    CARD_MENU_EXCHANGE_STEP_ERASE_ENTRY = 10,        /**< Erase the selected directory entry. */
+    CARD_MENU_EXCHANGE_STEP_WRITE_SAVE = 25,         /**< Create the placeholder file and start writing the save. */
+    CARD_MENU_EXCHANGE_STEP_POLL_SAVE_WRITE = 26,    /**< Wait for the write and rename it over the selected save. */
+    CARD_MENU_EXCHANGE_STEP_READ_BEFORE_WRITE = 27,  /**< Open the selected save and read it before writing. */
+    CARD_MENU_EXCHANGE_STEP_POLL_PREWRITE_READ = 28  /**< Wait for that read to finish, retrying. */
+} CardMenuExchangeStep;
+
+/** @brief What running one step of the card sequence reports to its caller. */
+typedef enum
+{
+    CARD_MENU_SEQUENCE_NONE = 0,       /**< Never returned. */
+    CARD_MENU_SEQUENCE_WAIT = 1,       /**< Step handled; poll again next frame. */
+    CARD_MENU_SEQUENCE_FINISHED = 2,   /**< The step table ended. */
+    CARD_MENU_SEQUENCE_RUN_AGAIN = 3,  /**< A card command was issued; run the next step now. */
+    CARD_MENU_SEQUENCE_NO_CARD = 4,    /**< The card stopped answering; the entry state says so. */
+    CARD_MENU_SEQUENCE_UNFORMATTED = 5 /**< _card_load kept reporting a new card: the card is not formatted. */
+} CardMenuSequenceResult;
 
 /** @brief Bytes read to show an entry: the card header and the first 0x100 bytes of the saved game. */
 #define CARD_MENU_ENTRY_READ_BYTES 0x280
@@ -92,25 +142,15 @@
 #define CARD_MENU_PROGRESS_BOTTOM_LEFT_COLOR GPU_COLOR_WORD(0, 0xFF, 0xFF)  /**< Cyan. */
 #define CARD_MENU_PROGRESS_BOTTOM_RIGHT_COLOR GPU_COLOR_WORD(0, 0, 0xFF)    /**< Blue. */
 
-/** @brief Side of a square party icon, in pixels (4-bit, so a quarter of that in VRAM halfwords). */
-#define CARD_MENU_ICON_SIZE 48
-
-/** @brief VRAM area, right of the display buffers, the party icons are uploaded to side by side. */
+/** @brief VRAM area, right of the display buffers, the party icons (portraits) are uploaded to side by side. */
 #define CARD_MENU_ICON_VRAM_X SCREEN_WIDTH
 #define CARD_MENU_ICON_VRAM_Y 208
-
-/** @brief One party icon in an icon set: a 16-color CLUT followed by 48x48 4-bit pixels. */
-typedef struct
-{
-    u16 clut[16];
-    u8 pixels[CARD_MENU_ICON_SIZE * CARD_MENU_ICON_SIZE / 2];
-} CardMenuIconImage;
 
 /**
  * @brief Icon @p icon of an icon set whose first per-icon offset is @p offsets.
  * @note The offsets count from the icon-set start, which is the word just before them.
  */
-#define CARD_MENU_ICON_IMAGE(offsets, icon) ((CardMenuIconImage*)((u8*)(offsets) - 4 + (offsets)[icon]))
+#define CARD_MENU_ICON_IMAGE(offsets, icon) ((FieldPortrait*)((u8*)(offsets) - 4 + (offsets)[icon]))
 
 /** @brief Menu windows (elements) in a card menu's pool. */
 #define CARD_MENU_ELEMENT_COUNT 8
@@ -259,6 +299,45 @@ typedef struct CardMenuElement
 #define CARD_MENU_MESSAGE_X 16
 #define CARD_MENU_MESSAGE_WIDTH 288
 #define CARD_MENU_MESSAGE_HEIGHT 44
+
+/** @brief Left edge and width of the dialog window (its top and height differ per screen). */
+#define CARD_MENU_DIALOG_X 32
+#define CARD_MENU_DIALOG_WIDTH 256
+
+/** @brief Frames of the fade back to the host screen when a card menu exits. */
+#define CARD_MENU_EXIT_FADE_FRAMES 8
+
+/**
+ * @brief Layout of the screens that read another player's save (ADDHERO and
+ *        NIKI): the browser layout (mode 0) and the transfer layout (mode 1).
+ */
+#define CARD_MENU_EXCHANGE_LIST_X 28
+#define CARD_MENU_EXCHANGE_LIST_WIDTH 264
+#define CARD_MENU_EXCHANGE_SCROLL_ARROW_X (CARD_MENU_EXCHANGE_LIST_X + CARD_MENU_EXCHANGE_LIST_WIDTH - 16)
+#define CARD_MENU_EXCHANGE_TITLE_X 36
+#define CARD_MENU_EXCHANGE_TITLE_Y 10
+#define CARD_MENU_EXCHANGE_TITLE_WIDTH 240
+#define CARD_MENU_EXCHANGE_TITLE_HEIGHT 16
+#if defined(VERSION_JP)
+#define CARD_MENU_EXCHANGE_CARD_SLOT0_LABEL_X 0x28 /**< JP moves the narrower slot 0 label right. */
+#else
+#define CARD_MENU_EXCHANGE_CARD_SLOT0_LABEL_X 0x18
+#endif
+#define CARD_MENU_EXCHANGE_CARD_SLOT1_LABEL_X 160
+#define CARD_MENU_EXCHANGE_CARD_LABEL_BROWSER_Y 30
+#define CARD_MENU_EXCHANGE_CARD_LABEL_TRANSFER_Y 77
+#define CARD_MENU_EXCHANGE_MESSAGE_Y 97
+#define CARD_MENU_EXCHANGE_PROMPT_HEIGHT 30 /**< Two lines. */
+#define CARD_MENU_EXCHANGE_DIALOG_Y 112
+#define CARD_MENU_EXCHANGE_DIALOG_HEIGHT 20
+
+/** @brief Entry list columns of the rank marker (JP moves it right) and of the "+" marker's right edge. */
+#if defined(VERSION_JP)
+#define CARD_MENU_EXCHANGE_ENTRY_MARKER_X 0xCC
+#else
+#define CARD_MENU_EXCHANGE_ENTRY_MARKER_X 0xC0
+#endif
+#define CARD_MENU_EXCHANGE_ENTRY_PLUS_RIGHT_X 242
 
 /** @brief Dialog messages every card menu shows; each overlay adds its own from 4 up. */
 #define CARD_MENU_DIALOG_SAVE_FAILED 0

@@ -24,7 +24,7 @@ import shutil
 import sys
 import tempfile
 
-from tools.data.overlays import icon_set, png, splat_config, symbols, text_table
+from tools.data.overlays import card_data, icon_set, png, splat_config, symbols, text_table
 from tools.data.overlays.card_data import (
     CARD_TITLE_NOTES,
     CardSteps,
@@ -136,10 +136,11 @@ class Inputs:
 
 
 def card_step_names() -> dict[int, str]:
-    """CardaCardStep values from the C header, so names stay in one place."""
+    """Step opcode names from the C headers: the shared ones and CARDA's own, so names stay in one place."""
+    names = card_data.card_menu_step_names()
     text = STEP_HEADER.read_text(encoding="ascii")
-    pairs = re.findall(r"\b(CARDA_STEP_\w+)\s*=\s*(\d+)", text)
-    return {int(value): name for name, value in pairs}
+    names.update({int(value): name for name, value in re.findall(r"\b(CARDA_STEP_\w+)\s*=\s*(\d+)", text)})
+    return names
 
 
 @dataclass(frozen=True)
@@ -273,7 +274,7 @@ def read_card_steps(blob: Blob[CardaSymbols]) -> Part:
             raise ValueError(f"{name} is outside the card step table")
         stop = blob.data.find(b"\x00", position, end)
         if stop < 0:
-            raise ValueError(f"{name} has no CARDA_STEP_DONE before the character chart")
+            raise ValueError(f"{name} has no CARD_MENU_STEP_DONE before the character chart")
         raw = blob.data[position : stop + 1]
         steps = tuple(names.get(value, f"0x{value:02X}") for value in raw)
         sequences.append(StepSequence(name, steps, raw))

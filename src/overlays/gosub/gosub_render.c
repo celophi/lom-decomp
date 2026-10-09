@@ -703,25 +703,25 @@ u8* gosub_draw_portrait(u8* prim, u_long* ot, s32 row, s32 x, s32 y, s32 count)
 
     rect.x = count * GOSUB_PORTRAIT_VRAM_WIDTH + GOSUB_PORTRAIT_VRAM_X;
     rect.w = GOSUB_PORTRAIT_VRAM_WIDTH;
-    rect.h = GOSUB_PORTRAIT_SIZE;
-    rect.y = g_gosub_frame_parity * GOSUB_PORTRAIT_SIZE;
+    rect.h = FIELD_PORTRAIT_SIZE;
+    rect.y = g_gosub_frame_parity * FIELD_PORTRAIT_SIZE;
     LoadImage(&rect, (u_long*)((u8*)g_gosub_portrait_archive + g_gosub_portrait_archive[portrait] + GOSUB_PORTRAIT_PIXEL_OFFSET));
 
     rect.y = VRAM_CLUT_Y;
-    rect.w = GOSUB_PORTRAIT_CLUT_SIZE;
+    rect.w = GPU_CLUT_4BIT_COLORS;
     rect.h = 1;
-    rect.x = count * GOSUB_PORTRAIT_CLUT_SIZE + g_gosub_frame_parity * (GOSUB_PORTRAIT_SLOTS * GOSUB_PORTRAIT_CLUT_SIZE);
+    rect.x = count * GPU_CLUT_4BIT_COLORS + g_gosub_frame_parity * (GOSUB_PORTRAIT_SLOTS * GPU_CLUT_4BIT_COLORS);
     LoadImage(&rect, (u_long*)((u8*)g_gosub_portrait_archive + g_gosub_portrait_archive[portrait] + GOSUB_PORTRAIT_CLUT_OFFSET));
 
     sprite = (SPRT*)prim;
     SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
     setSprt(sprite);
-    sprite->u0 = count * GOSUB_PORTRAIT_SIZE;
+    sprite->u0 = count * FIELD_PORTRAIT_SIZE;
     sprite->x0 = x;
-    sprite->v0 = g_gosub_frame_parity * GOSUB_PORTRAIT_SIZE;
+    sprite->v0 = g_gosub_frame_parity * FIELD_PORTRAIT_SIZE;
     sprite->y0 = y;
-    setWH(sprite, GOSUB_PORTRAIT_SIZE, GOSUB_PORTRAIT_SIZE);
-    setClut(sprite, count * GOSUB_PORTRAIT_CLUT_SIZE + g_gosub_frame_parity * (GOSUB_PORTRAIT_SLOTS * GOSUB_PORTRAIT_CLUT_SIZE), VRAM_CLUT_Y);
+    setWH(sprite, FIELD_PORTRAIT_SIZE, FIELD_PORTRAIT_SIZE);
+    setClut(sprite, count * GPU_CLUT_4BIT_COLORS + g_gosub_frame_parity * (GOSUB_PORTRAIT_SLOTS * GPU_CLUT_4BIT_COLORS), VRAM_CLUT_Y);
     addPrim(ot, sprite);
     return gosub_finish_glyph_run((u8*)(sprite + 1), ot);
 }

@@ -313,7 +313,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_WILL_BE_ERASED), FIELD_TEXT_COLOR_NORMAL, x + CARDA_SAVE_TEXT_X,
                                CARD_MENU_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
         y = CARD_MENU_LINE_HEIGHT * 3 - y_offset;
-        choice_entry = &g_text_choice_glyph_offsets;
+        choice_entry = g_text_choice_glyph_offsets;
         first_high = choice_entry[1] << CARD_MENU_ELEMENT_COUNT;
         choice_table = FIELD_UI_TEXT_TABLE(choice_entry, FIELD_UI_TEXT_YES);
         color = FIELD_TEXT_COLOR_NORMAL;
@@ -426,7 +426,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                     element->attr.bits.state = CARD_MENU_ELEMENT_FREE;
                     element++;
                 }
-                field_restore_fade_target_with_duration(8);
+                field_restore_fade_target_with_duration(CARD_MENU_EXIT_FADE_FRAMES);
                 break;
             }
             carda_apply_save_items();
@@ -448,7 +448,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                     element->attr.bits.state = CARD_MENU_ELEMENT_FREE;
                     element++;
                 }
-                field_restore_fade_target_with_duration(8);
+                field_restore_fade_target_with_duration(CARD_MENU_EXIT_FADE_FRAMES);
                 break;
             }
             carda_open_item_list();
@@ -486,7 +486,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                                    CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
             color = FIELD_TEXT_COLOR_NORMAL;
             y = CARD_MENU_LINE_HEIGHT * 2 - y_offset;
-            choice_entry = &g_text_choice_glyph_offsets;
+            choice_entry = g_text_choice_glyph_offsets;
             first_high = choice_entry[1] << CARD_MENU_ELEMENT_COUNT;
             choice_table = FIELD_UI_TEXT_TABLE(choice_entry, FIELD_UI_TEXT_YES);
             first_text = (u8*)(choice_entry[0] + (first_high + (uintptr_t)choice_table));
@@ -533,7 +533,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                                    CARD_MENU_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
             color = FIELD_TEXT_COLOR_NORMAL;
             y = CARD_MENU_LINE_HEIGHT * 3 - y_offset;
-            choice_entry = &g_text_choice_glyph_offsets;
+            choice_entry = g_text_choice_glyph_offsets;
             first_high = choice_entry[1] << CARD_MENU_ELEMENT_COUNT;
             choice_table = FIELD_UI_TEXT_TABLE(choice_entry, FIELD_UI_TEXT_YES);
             first_text = (u8*)(choice_entry[0] + (first_high + (uintptr_t)choice_table));
@@ -625,7 +625,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                 element->attr.bits.state = CARD_MENU_ELEMENT_FREE;
                 element++;
             }
-            field_restore_fade_target_with_duration(8);
+            field_restore_fade_target_with_duration(CARD_MENU_EXIT_FADE_FRAMES);
         }
         break;
     }
@@ -644,7 +644,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CARD_OR_CONTROLLER), FIELD_TEXT_COLOR_NORMAL, x,
                                CARD_MENU_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
         /* Search one entry per frame, unless a directory scan (opcode 6 or 7) is running. */
-        if (g_carda_entry_scan_active == 0 && g_carda_io_busy == 0 && (u32)(*g_card_step - CARDA_STEP_SCAN_ENTRIES) >= 2U)
+        if (g_carda_entry_scan_active == 0 && g_carda_io_busy == 0 && (u32)(*g_card_step - CARD_MENU_STEP_SCAN_ENTRIES) >= 2U)
         {
             if (strncmp(g_lom_pocketstation_filename_prefix, g_card_entries[g_card_slot][g_carda_selected_row].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) != 0)
             {
@@ -898,7 +898,7 @@ static void* carda_draw_save_status_dialog(u_long* ot, void* prim, s32 x_offset,
     if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
     {
         carda_save_clear_elements();
-        field_restore_fade_target_with_duration(8);
+        field_restore_fade_target_with_duration(CARD_MENU_EXIT_FADE_FRAMES);
         field_reset_input_repeat();
     }
     return prim;
@@ -1002,7 +1002,7 @@ void* carda_draw_item_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         {
             field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
             carda_save_clear_elements();
-            field_restore_fade_target_with_duration(8);
+            field_restore_fade_target_with_duration(CARD_MENU_EXIT_FADE_FRAMES);
         }
     }
     return result;

@@ -1,4 +1,5 @@
 #include "overlays/field/field_text.h"
+#include "overlays/field/field_portrait.h"
 #include "main/audio/akao.h"
 #include "main/cdrom.h"
 #include "main/cd_resources.h"
@@ -38,7 +39,6 @@
 #define FIELD_TEXT_STAGING_ROW_WORDS 5
 #define FIELD_TEXT_LINE_HEIGHT 12
 #define FIELD_TEXT_LINE_SPACING 16
-#define FIELD_TEXT_PORTRAIT_SIZE 48
 #define FIELD_TEXT_PORTRAIT_MARGIN 56
 #define FIELD_TEXT_TRANSITION_FRAMES 4
 /** Display time of a timed window, in frames. */
@@ -200,13 +200,6 @@ typedef enum
     FIELD_TEXT_CMD_EXTENDED_GLYPH_RUN = 31,
 } FieldTextCommand;
 
-/** @brief A 16-color palette followed by a 48-by-48, 4bpp portrait. */
-typedef struct
-{
-    u16 palette[16];
-    u8 pixels[FIELD_TEXT_PORTRAIT_SIZE][FIELD_TEXT_PORTRAIT_SIZE / 2];
-} FieldTextPortrait;
-
 /** @brief Byte view of a field text flags word. */
 typedef struct
 {
@@ -236,7 +229,7 @@ typedef struct
     /* JP has no glyph cursor, so every later field sits 4 bytes lower. */
     u8* glyph_cursor;
 #endif
-    FieldTextPortrait* portrait;
+    FieldPortrait* portrait;
     FieldTextFlags flags;
     u8 flow_code;
     u8 line_count;
@@ -294,7 +287,7 @@ typedef union
 /** @brief Pending configuration copied into a field text-window state. */
 struct FieldTextConfig
 {
-    FieldTextPortrait* portrait;
+    FieldPortrait* portrait;
     u16 x;
     u16 y;
     u16 width;
@@ -406,7 +399,7 @@ static void field_text_queue_uploads(FieldTextState* state, u8** cursor);
 static void field_text_save_config(u16 slot);
 static void field_text_close(FieldTextState* state, s32 animate);
 static void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingTags* ot);
-static void field_text_queue_portrait_upload(FieldTextPortrait* image, u8** cursor, s32 slot, s32 mirror);
+static void field_text_queue_portrait_upload(FieldPortrait* image, u8** cursor, s32 slot, s32 mirror);
 static void field_text_restore_window(u16 slot, s32 placement_mode);
 
 extern s16 g_field_text_portrait_slots;
@@ -2033,7 +2026,7 @@ void field_text_open_fixed_window(slot) u16 slot;
     else
     {
         x = 0;
-        y = FIELD_TEXT_PORTRAIT_SIZE;
+        y = FIELD_PORTRAIT_SIZE;
     }
     h = state->height;
     state->dirty_start_u = x;
@@ -2104,9 +2097,9 @@ static void field_text_apply_config(FieldTextState* state)
     }
     config_value = config->height;
     width = config->width;
-    if ((state->portrait != NULL) && ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) != FIELD_TEXT_PORTRAIT_OUTSIDE) && ((s32)config_value < FIELD_TEXT_PORTRAIT_SIZE))
+    if ((state->portrait != NULL) && ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) != FIELD_TEXT_PORTRAIT_OUTSIDE) && ((s32)config_value < FIELD_PORTRAIT_SIZE))
     {
-        config_value = FIELD_TEXT_PORTRAIT_SIZE;
+        config_value = FIELD_PORTRAIT_SIZE;
     }
     state->remaining_width = width;
     state->width = width;
@@ -2533,7 +2526,7 @@ static void field_text_build_transition_quad(FieldTextState* state, FieldTextQua
  */
 static inline s32 field_text_portrait_y_word(s32 y, s32 h)
 {
-    h -= FIELD_TEXT_PORTRAIT_SIZE;
+    h -= FIELD_PORTRAIT_SIZE;
     h >>= 1;
     h += 8;
     y += h;
@@ -2828,7 +2821,7 @@ static void field_text_build_window_packets(FieldTextState* state, u8** cursor, 
             prim->sprite_words.rgbc = FIELD_TEXT_SPRITE_SHADOW;
             xy |= field_text_portrait_y_word(window_y, window_height);
             prim->sprite_words.xy = xy + 0x20002;
-            uv = ((((FIELD_TEXT_PORTRAIT_INDEX(flags) * FIELD_TEXT_PORTRAIT_SIZE) + FIELD_TEXT_PORTRAIT_VRAM_Y) & 0xFF) << 8) | FIELD_TEXT_PORTRAIT_U;
+            uv = ((((FIELD_TEXT_PORTRAIT_INDEX(flags) * FIELD_PORTRAIT_SIZE) + FIELD_TEXT_PORTRAIT_VRAM_Y) & 0xFF) << 8) | FIELD_TEXT_PORTRAIT_U;
             prim->sprite_words.uv = (text_system->text_clut << 16) | uv;
             prim->sprite_words.wh = 0x300030;
             prim = (FieldTextPacket*)packet_cursor;
@@ -3440,7 +3433,7 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
         poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
         poly->quad_words.rgbc = FIELD_TEXT_QUAD_SHADOW;
         vertex = (frame_rows * (FIELD_TEXT_MESH_COLUMNS(content_width) + 3)) + FIELD_TEXT_MESH + text_vertex_count;
-        texture_uv = ((((sel * FIELD_TEXT_PORTRAIT_SIZE) + FIELD_TEXT_PORTRAIT_VRAM_Y) & 0xFF) << 8) | FIELD_TEXT_PORTRAIT_U;
+        texture_uv = ((((sel * FIELD_PORTRAIT_SIZE) + FIELD_TEXT_PORTRAIT_VRAM_Y) & 0xFF) << 8) | FIELD_TEXT_PORTRAIT_U;
         poly->quad_words.uv0 = clut | texture_uv;
         poly->quad_words.uv2 = texture_uv + 0x3000;
         poly->quad_words.uv1 = (texture_uv + 0x2F) | tpage;
@@ -3453,7 +3446,7 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
         poly = (FieldTextPacket*)packet_cursor;
         packet_cursor += sizeof(POLY_FT4);
         clut = text_system->portrait_clut[FIELD_TEXT_PORTRAIT_INDEX(state->flags.word)] << 16;
-        texture_uv = ((((FIELD_TEXT_PORTRAIT_INDEX(state->flags.word) * FIELD_TEXT_PORTRAIT_SIZE) + FIELD_TEXT_PORTRAIT_VRAM_Y) & 0xFF) << 8) | FIELD_TEXT_PORTRAIT_U;
+        texture_uv = ((((FIELD_TEXT_PORTRAIT_INDEX(state->flags.word) * FIELD_PORTRAIT_SIZE) + FIELD_TEXT_PORTRAIT_VRAM_Y) & 0xFF) << 8) | FIELD_TEXT_PORTRAIT_U;
         poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
         poly->quad_words.rgbc = texture_command;
         poly->quad_words.uv2 = texture_uv + 0x3000;
@@ -3832,7 +3825,7 @@ static void field_text_render_window(FieldTextState* state, u8** cursor, FieldOr
  * @param slot Portrait VRAM slot.
  * @param mirror Non-zero mirrors the portrait horizontally before upload.
  */
-static void field_text_queue_portrait_upload(FieldTextPortrait* image, u8** cursor, s32 slot, s32 mirror)
+static void field_text_queue_portrait_upload(FieldPortrait* image, u8** cursor, s32 slot, s32 mirror)
 {
     FieldImageReq* req;
     u8* packet_cursor;
@@ -3850,13 +3843,13 @@ static void field_text_queue_portrait_upload(FieldTextPortrait* image, u8** curs
     req->rect.y = slot + FIELD_TEXT_PORTRAIT_CLUT_Y;
     req->rect.w = 16;
     req->rect.h = 1;
-    req->data = (u_long*)image->palette;
+    req->data = (u_long*)image->clut;
     field_queue_vram_upload(req);
     req += 1;
     req->rect.x = FIELD_TEXT_PORTRAIT_VRAM_X;
-    req->rect.y = (slot * FIELD_TEXT_PORTRAIT_SIZE) + FIELD_TEXT_PORTRAIT_VRAM_Y;
-    req->rect.w = FIELD_TEXT_PORTRAIT_SIZE / 4;
-    req->rect.h = FIELD_TEXT_PORTRAIT_SIZE;
+    req->rect.y = (slot * FIELD_PORTRAIT_SIZE) + FIELD_TEXT_PORTRAIT_VRAM_Y;
+    req->rect.w = FIELD_PORTRAIT_SIZE / 4;
+    req->rect.h = FIELD_PORTRAIT_SIZE;
     /* Reverse the byte order and the two pixels within each byte. */
     if (mirror != 0)
     {
@@ -3864,12 +3857,12 @@ static void field_text_queue_portrait_upload(FieldTextPortrait* image, u8** curs
         dst = packet_cursor;
         packet_cursor += sizeof(image->pixels);
         req->data = (u_long*)dst;
-        dst += FIELD_TEXT_PORTRAIT_SIZE / 2 - 1;
-        rows = FIELD_TEXT_PORTRAIT_SIZE - 1;
+        dst += FIELD_PORTRAIT_SIZE / 2 - 1;
+        rows = FIELD_PORTRAIT_SIZE - 1;
         do
         {
             row_end = dst;
-            columns_remaining = FIELD_TEXT_PORTRAIT_SIZE / 2 - 1;
+            columns_remaining = FIELD_PORTRAIT_SIZE / 2 - 1;
             do
             {
                 pixels = *src;
@@ -3879,7 +3872,7 @@ static void field_text_queue_portrait_upload(FieldTextPortrait* image, u8** curs
                 row_end -= 1;
             } while (columns_remaining != -1);
             rows -= 1;
-            dst += FIELD_TEXT_PORTRAIT_SIZE / 2;
+            dst += FIELD_PORTRAIT_SIZE / 2;
         } while (rows != -1);
     }
     else

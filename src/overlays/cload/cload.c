@@ -4,15 +4,11 @@
 #include <libetc.h>
 #include "main/controller.h"
 #include "main/cdrom.h"
+#include "overlays/field/field_fade.h"
+#include "overlays/field/field_input.h"
 
-void play_menu_sfx(s32 sfx_id, s32 volume);
-void field_set_fade_target(s16 red, s16 green, s16 blue, s16 duration);
-void field_reset_fade_state(void);
 void reset_controller_vsync_state(void);
 void set_controller_vsync_interval(u32 interval);
-void field_update_and_render_fade();
-void field_update_input_repeat(void);
-void field_reset_input_repeat(void);
 void cload_init_card_events(void);
 
 /**
@@ -74,7 +70,7 @@ s32 cload_main(void)
 void cload_run_menu_loop(void)
 {
     RECT rect;
-    CloadRenderBuffer *frame;
+    FieldRenderHalf *frame;
     u_long *ordering_table;
     s32 buffer_index;
     s32 dpad_input;
@@ -85,16 +81,16 @@ void cload_run_menu_loop(void)
     ClearImage(&rect, 0, 0, 0);
     frame = &g_cload_render_buffers[0];
     buffer_index = 0;
-    ClearOTagR(frame->ordering_table, 0x1000);
-    ClearOTagR(g_cload_render_buffers[1].ordering_table, 0x1000);
+    ClearOTagR(&frame->ordering_table[FIELD_FADE_OT_INDEX], CLOAD_OT_SIZE);
+    ClearOTagR(&g_cload_render_buffers[1].ordering_table[FIELD_FADE_OT_INDEX], CLOAD_OT_SIZE);
     PutDispEnv(&frame->disp_env);
     update_controllers();
     SetDispMask(1);
     do
     {
-        ordering_table = frame->ordering_table;
-        ClearOTagR(ordering_table, 0x1000);
-        frame->prim_cursor = (CloadGpuPacket *)g_cload_primitive_buffers[buffer_index];
+        ordering_table = &frame->ordering_table[FIELD_FADE_OT_INDEX];
+        ClearOTagR(ordering_table, CLOAD_OT_SIZE);
+        frame->primitive_cursor = g_cload_primitive_buffers[buffer_index];
         field_update_input_repeat();
         dpad_input = g_pad_input & 0xF000;
         if (dpad_input != 0)
@@ -109,7 +105,7 @@ void cload_run_menu_loop(void)
         DrawSync(0);
         set_controller_vsync_interval(2);
         VSync(2);
-        ClearImage(&frame->clear_rect, 0, 0, 0);
+        ClearImage(&frame->display_rect, 0, 0, 0);
         buffer_index = 0;
         if (frame == &g_cload_render_buffers[0])
         {
@@ -122,7 +118,7 @@ void cload_run_menu_loop(void)
         }
         PutDispEnv(&frame->disp_env);
         PutDrawEnv(&frame->draw_env);
-        DrawOTag(ordering_table + 0xFFF);
+        DrawOTag(ordering_table + CLOAD_OT_SIZE - 1);
         update_controllers();
         cdrom_process_state();
     } while (1);
@@ -138,8 +134,8 @@ void cload_init_display(void)
     s32 stack_frame_pad[2];
     SetGeomScreen(SCREEN_PROJECTION_DISTANCE);
     SetGeomOffset(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
-    setRECT(&g_cload_render_buffers[0].clear_rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    setRECT(&g_cload_render_buffers[1].clear_rect, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    setRECT(&g_cload_render_buffers[0].display_rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    setRECT(&g_cload_render_buffers[1].display_rect, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
     DrawSync(0);
     VSync(0);
     SetDefDispEnv(&g_cload_render_buffers[0].disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -157,7 +153,7 @@ void cload_init_display(void)
  * @param frame Render buffer being built this frame.
  * @return 1 when the overlay should exit, otherwise 0.
  */
-s32 cload_update_frame(CloadRenderBuffer *frame)
+s32 cload_update_frame(FieldRenderHalf *frame)
 {
     if (g_cload_exit_requested != 0)
     {
@@ -253,7 +249,7 @@ void cload_build_ui_elements(void)
  * @brief Update input, loading state, scrolling, and UI elements for one frame.
  * @param frame Render buffer being built this frame.
  */
-void cload_update_menu(CloadRenderBuffer *frame)
+void cload_update_menu(FieldRenderHalf *frame)
 {
     s32 delta;
 
@@ -365,12 +361,12 @@ s32 cload_handle_input(void)
     {
         g_cload_exit_requested = 1;
         g_cload_result = 1;
-        play_menu_sfx(0x78, 0x80);
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
         return;
     }
     if (status & CARD_MENU_CARD_SWITCH_BUTTON_MASK)
     {
-        play_menu_sfx(0x7D, 0x80);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         g_cload_scroll_frames = 0;
         g_cload_scroll_target_y = 0;
         g_cload_scroll_y = 0;
@@ -420,7 +416,7 @@ s32 cload_handle_input(void)
     if (g_pad_input & 0x5000)
     {
         cload_commit_selected_entry();
-        play_menu_sfx(0x7D, 0x80);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         cload_scroll_to_selection();
         return;
     }
@@ -452,7 +448,7 @@ s32 cload_handle_input(void)
                 sfx_id = 0x78;
             }
         }
-        play_menu_sfx(sfx_id, 0x80);
+        field_play_sound(sfx_id, 0x80);
     }
 }
 
@@ -501,7 +497,7 @@ void cload_scroll_to_selection(void)
  * @brief Run the UI element update/draw pass.
  * @param frame Render buffer being built this frame.
  */
-void cload_update_elements(CloadRenderBuffer *frame)
+void cload_update_elements(FieldRenderHalf *frame)
 {
     cload_update_and_draw_elements(frame);
 }
@@ -952,9 +948,9 @@ CardMenuElement *cload_alloc_element(void)
  * table, then animates it by state: an opening window grows, an open window
  * holds, a closing window shrinks, and a closed window counts down to free.
  *
- * @param frame Render buffer being built; prim_cursor is read on entry and written back on exit.
+ * @param frame Render buffer being built; primitive_cursor is read on entry and written back on exit.
  */
-void cload_update_and_draw_elements(CloadRenderBuffer *frame)
+void cload_update_and_draw_elements(FieldRenderHalf *frame)
 {
     void *arrow_prim;
     void *prim;
@@ -965,8 +961,8 @@ void cload_update_and_draw_elements(CloadRenderBuffer *frame)
     s32 scaled_width;
     s32 scaled_height;
 
-    arrow_prim = frame->prim_cursor;
-    ot = frame->ordering_table;
+    arrow_prim = frame->primitive_cursor;
+    ot = &frame->ordering_table[FIELD_FADE_OT_INDEX];
 
     if ((g_card_entry_state < 0x10) && ((g_cload_element1_state & CARD_MENU_ELEMENT_STATE_MASK) == 2))
     {
@@ -980,7 +976,7 @@ void cload_update_and_draw_elements(CloadRenderBuffer *frame)
         }
     }
 
-    if (frame->clear_rect.y != 0)
+    if (frame->display_rect.y != 0)
     {
         SetDefDrawEnv(&draw_env, 0, 0xF0, 0x140, 0xE0);
     }
@@ -1017,7 +1013,7 @@ void cload_update_and_draw_elements(CloadRenderBuffer *frame)
 
                     prim = cload_emit_window_frame(prim, ot, x + (CARD_MENU_ELEMENT_WIDTH(element, width_low) - scaled_width) / 2,
                                                    element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
-                                                   frame->clear_rect.y, element->size.bits.flag);
+                                                   frame->display_rect.y, element->size.bits.flag);
                 }
                 element->attr.bits.transition_step++;
                 if (element->attr.bits.transition_step == CARD_MENU_ELEMENT_TRANSITION_STEPS)
@@ -1033,7 +1029,7 @@ void cload_update_and_draw_elements(CloadRenderBuffer *frame)
                     u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
 
                     prim = cload_emit_window_frame(prim, ot, element->attr.bits.x, element->attr.bits.y, CARD_MENU_ELEMENT_WIDTH(element, width_low),
-                                                   element->size.bits.height, frame->clear_rect.y, element->size.bits.flag);
+                                                   element->size.bits.height, frame->display_rect.y, element->size.bits.flag);
                 }
                 if (element->attr.bits.transition_step != 0)
                 {
@@ -1057,7 +1053,7 @@ void cload_update_and_draw_elements(CloadRenderBuffer *frame)
 
                     prim = cload_emit_window_frame(prim, ot, x + (CARD_MENU_ELEMENT_WIDTH(element, width_low) - scaled_width) / 2,
                                                    element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
-                                                   frame->clear_rect.y, element->size.bits.flag);
+                                                   frame->display_rect.y, element->size.bits.flag);
                 }
                 element->attr.bits.transition_step--;
                 if (element->attr.bits.transition_step == 0)
@@ -1079,7 +1075,7 @@ void cload_update_and_draw_elements(CloadRenderBuffer *frame)
         }
     }
 
-    frame->prim_cursor = cload_emit_icon_highlight_strip(prim, ot);
+    frame->primitive_cursor = (u8 *)cload_emit_icon_highlight_strip(prim, ot);
 }
 
 #include "../../common/encoded_text/encoded_text_append.inc.c"

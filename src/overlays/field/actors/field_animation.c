@@ -384,7 +384,7 @@ void field_update_scene_animations(void)
                 }
                 if (strip_definition->u.clut.clut_mode == 0)
                 {
-                    source_pixels = header->pixel_data + strip_definition->u.clut.clut_slot * FIELD_CLUT_4BIT_COLORS + strip_definition->u.clut.clut_offset + wrap_count;
+                    source_pixels = header->pixel_data + strip_definition->u.clut.clut_slot * GPU_CLUT_4BIT_COLORS + strip_definition->u.clut.clut_offset + wrap_count;
                 }
                 else
                 {
@@ -400,7 +400,7 @@ void field_update_scene_animations(void)
                 {
                     if (strip_definition->u.clut.clut_mode == 0)
                     {
-                        source_pixels = header->pixel_data + strip_definition->u.clut.clut_slot * FIELD_CLUT_4BIT_COLORS + strip_definition->u.clut.clut_offset;
+                        source_pixels = header->pixel_data + strip_definition->u.clut.clut_slot * GPU_CLUT_4BIT_COLORS + strip_definition->u.clut.clut_offset;
                     }
                     else
                     {
@@ -438,7 +438,7 @@ void field_update_scene_animations(void)
                     upload->rect.h = 1;
                     if (anim->flags.b.state == 0)
                     {
-                        upload->data = (u_long*)(header->pixel_data + definition->u.clut.clut_slot * FIELD_CLUT_4BIT_COLORS + (definition->u.clut.clut_offset & 0xE));
+                        upload->data = (u_long*)(header->pixel_data + definition->u.clut.clut_slot * GPU_CLUT_4BIT_COLORS + (definition->u.clut.clut_offset & 0xE));
                     }
                     else
                     {
@@ -477,12 +477,12 @@ void field_update_scene_animations(void)
                     upload->rect.h = (definition->u.clut.length + 0xF) / 0x10;
                     if (anim->flags.b.state == 0)
                     {
-                        upload->data = (u_long*)(header->pixel_data + definition->u.clut.clut_slot * FIELD_CLUT_4BIT_COLORS);
+                        upload->data = (u_long*)(header->pixel_data + definition->u.clut.clut_slot * GPU_CLUT_4BIT_COLORS);
                     }
                     else
                     {
                         upload->data =
-                            (u_long*)(header->pixel_data + header->pixel_stride + definition->u.clut.pixel_offset + (anim->flags.b.state - 1) * definition->u.clut.length * FIELD_CLUT_4BIT_COLORS);
+                            (u_long*)(header->pixel_data + header->pixel_stride + definition->u.clut.pixel_offset + (anim->flags.b.state - 1) * definition->u.clut.length * GPU_CLUT_4BIT_COLORS);
                     }
                 }
                 else
@@ -1414,10 +1414,10 @@ static u_long* field_blend_animation_frames(FieldAnimDef* def, FieldAnim* anim)
     }
     if (definition_copy->u.clut.clut_mode == 0)
     {
-        pixel_count = definition_copy->u.clut.length * FIELD_CLUT_4BIT_COLORS;
+        pixel_count = definition_copy->u.clut.length * GPU_CLUT_4BIT_COLORS;
         if (anim->flags.b.state == 0)
         {
-            current_pixels = header->pixel_data + definition_copy->u.clut.clut_slot * FIELD_CLUT_4BIT_COLORS;
+            current_pixels = header->pixel_data + definition_copy->u.clut.clut_slot * GPU_CLUT_4BIT_COLORS;
         }
         else
         {
@@ -1425,7 +1425,7 @@ static u_long* field_blend_animation_frames(FieldAnimDef* def, FieldAnim* anim)
         }
         if (other_frame == 0)
         {
-            other_pixels = header->pixel_data + definition_copy->u.clut.clut_slot * FIELD_CLUT_4BIT_COLORS;
+            other_pixels = header->pixel_data + definition_copy->u.clut.clut_slot * GPU_CLUT_4BIT_COLORS;
         }
         else
         {

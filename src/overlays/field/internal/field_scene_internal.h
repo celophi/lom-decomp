@@ -2,6 +2,7 @@
 #define FIELD_SCENE_INTERNAL_H
 
 #include "common.h"
+#include "common/gpu_packet.h"
 #include "overlays/field/field_scene.h"
 #include "overlays/movie/movie.h"
 #include "field_animation.h"
@@ -740,8 +741,6 @@ enum
 /** The node starts active (FIELD_ANIM_FLAG_ACTIVE) when its first span has keyframes. */
 #define FIELD_ANIM_DEF_ACTIVE 0x80
 
-/** Colours in one 4 bpp CLUT; one 8 bpp CLUT fills a whole 256-colour row. */
-#define FIELD_CLUT_4BIT_COLORS 16
 #define FIELD_CLUT_8BIT_COLORS 256
 
 typedef union

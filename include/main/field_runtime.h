@@ -44,7 +44,6 @@ void field_scene_reset(FieldRenderHalf* render_buffers);
 void field_initialize_subsystems(FieldRenderHalf* render_context);
 void field_build_frame_commands(FieldRenderHalf* render_half, s32 alternate);
 void field_flush_vram_uploads(void);
-void field_set_fade_target(s16 red, s16 green, s16 blue, s16 duration);
 void field_stop_song(void);
 #if defined(VERSION_JP)
 void field_draw_frame(s32 alternate_half, FieldRenderHalf* buffer, s32 update_mode);

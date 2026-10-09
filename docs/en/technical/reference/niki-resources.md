@@ -38,7 +38,7 @@ behind. Editing the export doesn't change what the build links.
 | `text/locations.yaml` | 63 location names, picked by the music track stored in a save |
 | `icons/icons.yaml` | Icon ids, what kind of character each is, offsets and stored palettes |
 | `icons/icon_00.png` ... | The 86 party icons, 48 x 48 each |
-| `tables/card_steps.yaml` | Eight memory card sequences, with step names from `NikiLoadCommand` |
+| `tables/card_steps.yaml` | Eight memory card sequences, with step names from `CardMenuStep` and `CardMenuExchangeStep` (card_menu.h) |
 | `tables/text_conversion.yaml` | The character chart: what each text code becomes in Shift-JIS |
 | `tables/digit_glyphs.yaml` | Full-width decimal and hexadecimal digits |
 
@@ -85,7 +85,7 @@ FIELD, not from this table.
 Entries 29 and 33 are empty in US. JP has "Ring Ring Land" and "This is not a
 PocketStation" there. NIKI uses entry 29 as the list label for Ring Ring Land
 files, so those rows have no label in US. Entry 33 belongs to status dialog 3,
-which only opens when `NIKI_COMMAND_CHECK_POCKETSTATION` fails.
+which only opens when `CARD_MENU_STEP_CHECK_POCKETSTATION` fails.
 
 The card title templates are the two Shift-JIS titles a memory card save uses.
 NIKI keeps the title a save already has and never writes these, so this is
@@ -103,15 +103,16 @@ so those icons don't look right here.
 ## Card steps
 
 A card sequence is a list of one-byte commands, run in order until
-`NIKI_COMMAND_STOP` (0). The export follows every symbol in the table to its
-stop byte and names each command from the `NikiLoadCommand` enum in
-`niki_internal.h`. `g_card_steps_idle` holds command 14, which NIKI doesn't
-handle, so the sequence waits there until the menu picks another one. It shows
-up as `0x0E`.
+`CARD_MENU_STEP_DONE` (0). The export follows every symbol in the table to its
+stop byte and names each command from the `CardMenuStep` and
+`CardMenuExchangeStep` enums in `include/common/card_menu.h`, which ADDHERO,
+CARDA and CLOAD share. `g_card_steps_idle` holds `CARD_MENU_STEP_WAIT` (14),
+which has no handler, so the sequence waits there until the menu picks another
+one.
 
 One byte in the table is never run. The byte just before
 `g_niki_write_save_sequence` (`0x801606F4` in US, `0x801607BC` in JP) is
-`NIKI_COMMAND_RELEASE_PRIMARY`, but the code starts the write sequence one byte
+`CARD_MENU_STEP_CLEAR_SOFTWARE_EVENTS`, but the code starts the write sequence one byte
 later. The export lists it under `unreached`, and the whole table is kept in
 `bytes`.
 
@@ -147,7 +148,7 @@ text aren't in this blob. They're defined in
   be saved. Is this OK?" (`g_niki_text_trade_data_not_saved`).
 - TODO: what mode 1 was for. `niki_draw_header_label` shows message 35,
   "Select Item.", in mode 1, but NIKI only creates the header in mode 0.
-- TODO: `NIKI_COMMAND_CHECK_POCKETSTATION` has a handler, but no sequence in
+- TODO: `CARD_MENU_STEP_CHECK_POCKETSTATION` has a handler, but no sequence in
   the table uses it, so it's unclear when status dialog 3 can appear.
 
 [`niki.py`](../../../../tools/data/overlays/niki.py) reads the blob in address order

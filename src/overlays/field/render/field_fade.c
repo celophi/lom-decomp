@@ -10,8 +10,6 @@
 #include <libgte.h>
 #include <libgpu.h>
 
-/** @brief Ordering-table entry the fade packets are linked into. */
-#define FIELD_FADE_OT_INDEX 0x10
 /** @brief Frames the preset and restore fades take. */
 #define FIELD_FADE_DEFAULT_FRAMES 5
 /** @brief Channel level of the dimmed modal-overlay fade. */

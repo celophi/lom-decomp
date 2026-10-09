@@ -4,70 +4,18 @@
 #include <fcntl.h>
 #include <libetc.h>
 #include "main/controller.h"
+#include "overlays/field/field_input.h"
 
 void *bcopy(const unsigned char *src, unsigned char *dst, int count);
-void field_reset_input_repeat(void);
-
-/**
- * @brief Load-sequence step opcodes stored in the g_cload_steps_* byte tables.
- * @note Opcodes without a case (7, 10-14, 21-23, 25-29) are no-ops; 14 is the
- *       idle opcode that g_cload_steps_idle parks on.
- */
-typedef enum CloadLoadStep
-{
-    CLOAD_STEP_DONE = 0,               /**< End of a step table; report phase 2. */
-    CLOAD_STEP_CARD_INFO = 1,          /**< Issue _card_info on the current slot. */
-    CLOAD_STEP_POLL_CARD_INFO = 2,     /**< Wait for the _card_info result. */
-    CLOAD_STEP_RELEASE_PRIMARY = 3,    /**< Clear the primary card event group. */
-    CLOAD_STEP_WAIT_SECONDARY = 4,     /**< Wait for and check the secondary card events. */
-    CLOAD_STEP_RELEASE_SECONDARY = 5,  /**< Clear the secondary card event group. */
-    CLOAD_STEP_SCAN_ENTRIES = 6,       /**< Erase the dummy files and scan the card directory. */
-    CLOAD_STEP_CARD_CLEAR = 8,         /**< Issue _card_clear on the current slot. */
-    CLOAD_STEP_CARD_LOAD = 9,          /**< Issue _card_load and arm the poll countdowns. */
-    CLOAD_STEP_IDLE = 14,              /**< No-op step that never advances. */
-    CLOAD_STEP_POLL_CARD_LOAD = 15,    /**< Wait for the _card_clear/_card_load result, retrying. */
-    CLOAD_STEP_DRAIN_SECONDARY = 16,   /**< Wait for any secondary card event. */
-    CLOAD_STEP_READ_HEADER = 17,       /**< Open the selected save and start reading its header. */
-    CLOAD_STEP_POLL_HEADER_READ = 18,  /**< Wait for the header read to finish. */
-    CLOAD_STEP_READ_SAVE = 19,         /**< Open the selected save and start reading the blob. */
-    CLOAD_STEP_POLL_SAVE_READ = 20,    /**< Wait for the blob read to finish, retrying. */
-    CLOAD_STEP_CHECK_POCKETSTATION = 24,   /**< Check that the card is a PocketStation (McxCardType). */
-    CLOAD_STEP_ARM_SAVE_RETRIES = 30   /**< Arm the save read retry counter. */
-} CloadLoadStep;
-
-/**
- * @brief Result index returned by the card event group pollers.
- * @note Matches the order of the SwCARD IOE/ERROR/TIMEOUT/NEWCARD events.
- */
-typedef enum CloadCardEvent
-{
-    CLOAD_CARD_EVENT_READY = 0,     /**< Operation completed. */
-    CLOAD_CARD_EVENT_ERROR = 1,     /**< Card reported an error. */
-    CLOAD_CARD_EVENT_TIMEOUT = 2,   /**< No card or no response. */
-    CLOAD_CARD_EVENT_NEW_CARD = 3   /**< A different card was inserted. */
-} CloadCardEvent;
-
-/**
- * @brief Phase codes returned by cload_advance_load_sequence.
- * @see cload_update_load_sequence
- */
-typedef enum CloadLoadResult
-{
-    CLOAD_LOAD_CONTINUE = 1,      /**< Step handled; poll again next frame. */
-    CLOAD_LOAD_FINISHED = 2,      /**< Step table ended; caller arms card_reset. */
-    CLOAD_LOAD_REPEAT = 3,        /**< Card command issued; run the next step now. */
-    CLOAD_LOAD_REFRESH = 4,       /**< Card missing or failed; caller arms refresh_entries. */
-    CLOAD_LOAD_CARD_CHANGED = 5   /**< Card replaced during load; caller reports CARD_MENU_ENTRY_STATE_UNFORMATTED. */
-} CloadLoadResult;
 
 /**
  * @brief Report "no memory card" and ask the caller to refresh the entry list.
- * @param result Phase-result variable that receives CLOAD_LOAD_REFRESH.
+ * @param result Phase-result variable that receives CARD_MENU_SEQUENCE_NO_CARD.
  */
 #define CLOAD_REQUEST_REFRESH(result)                                                                                                                          \
     do                                                                                                                                                         \
     {                                                                                                                                                          \
-        (result) = CLOAD_LOAD_REFRESH;                                                                                                                         \
+        (result) = CARD_MENU_SEQUENCE_NO_CARD;                                                                                                                         \
         g_cload_selection_status = 0;                                                                                                                          \
         g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;                                                                                                                             \
     } while (0)
@@ -75,7 +23,7 @@ typedef enum CloadLoadResult
 /**
  * @brief Finish the current step table with a result, an entry status and a next table.
  * @param result Phase-result variable that receives @p code.
- * @param code CloadLoadResult to return to the caller.
+ * @param code CardMenuSequenceResult to return to the caller.
  * @param entry_state New g_card_entry_state status code.
  * @param next_step New g_cload_load_step table (NULL stops the sequence).
  */
@@ -167,7 +115,6 @@ s32 cload_rank_entries(void)
     return maximum;
 }
 
-
 /**
  * @brief Reset the cload menu state: set the row-count/pitch field to 0x28 and
  *        clear all 15 slot entries of g_cload_entry_ranks to -1 (empty).
@@ -207,7 +154,6 @@ s32 cload_has_known_entry_type(void)
     return 0;
 }
 
-
 /**
  * @brief Check whether the current card's directory entries use at least 14 blocks.
  * @return 1 if the summed block count is >= 14, otherwise 0.
@@ -225,7 +171,6 @@ inline s32 cload_entry_blocks_reach_limit(void)
     }
     return used_blocks >= 14;
 }
-
 
 /**
  * @brief Erase the two fixed per-slot memory-card files.
@@ -250,9 +195,9 @@ inline void cload_erase_fixed_card_files(void)
 
 /**
  * @brief Run the current memory-card load step and advance g_cload_load_step.
- * @return CloadLoadResult phase code for cload_update_load_sequence.
+ * @return CardMenuSequenceResult phase code for cload_update_load_sequence.
  * @note g_cload_load_step walks one of the g_cload_steps_* byte tables; each
- *       CloadLoadStep opcode issues or polls a card command, reads the selected
+ *       CardMenuStep opcode issues or polls a card command, reads the selected
  *       save, or scans the card directory, and updates g_card_entry_state /
  *       g_cload_selection_status. Opcodes with no case are no-ops.
  */
@@ -270,35 +215,35 @@ s32 cload_advance_load_sequence(void)
 
     /* Builds the "bu00:" slot path like the erase helper; never used afterwards. */
     memcpy(&card_path, &g_cload_card_path_prefix, CARD_DEVICE_BYTES);
-    phase_result = CLOAD_LOAD_CONTINUE;
+    phase_result = CARD_MENU_SEQUENCE_WAIT;
     card_path.device.characters.slot += *(u8*)&g_card_slot;
 
     if (g_cload_load_step != NULL)
     {
         switch (*g_cload_load_step)
         {
-        case CLOAD_STEP_CARD_INFO:
-            phase_result = CLOAD_LOAD_REPEAT;
+        case CARD_MENU_STEP_CARD_INFO:
+            phase_result = CARD_MENU_SEQUENCE_RUN_AGAIN;
             _card_wait(g_card_slot);
             _card_info(g_card_slot * 0x10);
             g_cload_load_step++;
             break;
 
-        case CLOAD_STEP_POLL_CARD_INFO:
+        case CARD_MENU_STEP_POLL_CARD_INFO:
             switch (poll_software_card_events())
             {
-            case CLOAD_CARD_EVENT_READY:
+            case CARD_EVENT_COMPLETE:
                 g_cload_load_step++;
                 break;
-            case CLOAD_CARD_EVENT_ERROR:
-            case CLOAD_CARD_EVENT_TIMEOUT:
-                phase_result = CLOAD_LOAD_REFRESH;
+            case CARD_EVENT_ERROR:
+            case CARD_EVENT_TIMEOUT:
+                phase_result = CARD_MENU_SEQUENCE_NO_CARD;
                 g_cload_selection_status = 0;
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;
                 g_cload_load_step++;
                 cload_deactivate_primary_element();
                 break;
-            case CLOAD_CARD_EVENT_NEW_CARD:
+            case CARD_EVENT_NEW_CARD:
                 g_cload_rank_count = 0x28;
                 rank_fill = -1;
                 for (rank_index = 14; rank_index >= 0; rank_index--)
@@ -311,40 +256,40 @@ s32 cload_advance_load_sequence(void)
             }
             break;
 
-        case CLOAD_STEP_RELEASE_PRIMARY:
+        case CARD_MENU_STEP_CLEAR_SOFTWARE_EVENTS:
             clear_software_card_events();
             g_cload_load_step++;
             break;
 
-        case CLOAD_STEP_WAIT_SECONDARY:
+        case CARD_MENU_STEP_POLL_HARDWARE_EVENTS:
             do
             {
                 poll_result = poll_hardware_card_events();
             } while (poll_result == -1);
             switch (poll_result)
             {
-            case CLOAD_CARD_EVENT_READY:
+            case CARD_EVENT_COMPLETE:
                 g_cload_load_step++;
                 break;
-            case CLOAD_CARD_EVENT_ERROR:
-            case CLOAD_CARD_EVENT_TIMEOUT:
-            case CLOAD_CARD_EVENT_NEW_CARD:
+            case CARD_EVENT_ERROR:
+            case CARD_EVENT_TIMEOUT:
+            case CARD_EVENT_NEW_CARD:
                 CLOAD_REQUEST_REFRESH(phase_result);
                 break;
             }
             break;
 
-        case CLOAD_STEP_RELEASE_SECONDARY:
+        case CARD_MENU_STEP_CLEAR_HARDWARE_EVENTS:
             clear_hardware_card_events();
             g_cload_load_step++;
             break;
 
-        case CLOAD_STEP_SCAN_ENTRIES:
+        case CARD_MENU_STEP_SCAN_ENTRIES:
             cload_erase_fixed_card_files();
             g_cload_entry_scan_active = 1;
             if (cload_begin_entry_scan(g_card_slot) == 0)
             {
-                CLOAD_END_STEP_TABLE(phase_result, CLOAD_LOAD_FINISHED, CARD_MENU_ENTRY_STATE_NO_GAME_DATA, NULL);
+                CLOAD_END_STEP_TABLE(phase_result, CARD_MENU_SEQUENCE_FINISHED, CARD_MENU_ENTRY_STATE_NO_GAME_DATA, NULL);
                 g_cload_entry_scan_active = 0;
                 break;
             }
@@ -365,15 +310,15 @@ s32 cload_advance_load_sequence(void)
             } while (scan_attempts < CARD_MENU_FILE_OP_ATTEMPTS);
             break;
 
-        case CLOAD_STEP_CARD_CLEAR:
-            phase_result = CLOAD_LOAD_REPEAT;
+        case CARD_MENU_STEP_CLEAR_CARD:
+            phase_result = CARD_MENU_SEQUENCE_RUN_AGAIN;
             _card_wait(g_card_slot);
             _card_clear(g_card_slot * 0x10);
             g_cload_load_step++;
             break;
 
-        case CLOAD_STEP_CARD_LOAD:
-            phase_result = CLOAD_LOAD_REPEAT;
+        case CARD_MENU_STEP_LOAD_CARD:
+            phase_result = CARD_MENU_SEQUENCE_RUN_AGAIN;
             _card_wait(g_card_slot);
             _card_load(g_card_slot * 0x10);
             g_cload_primary_poll_countdown = CARD_MENU_CARD_LOAD_RETRIES;
@@ -381,19 +326,19 @@ s32 cload_advance_load_sequence(void)
             g_cload_load_step++;
             break;
 
-        case CLOAD_STEP_DONE:
-            phase_result = CLOAD_LOAD_FINISHED;
+        case CARD_MENU_STEP_DONE:
+            phase_result = CARD_MENU_SEQUENCE_FINISHED;
             D_80162370 = 0;
             break;
 
-        case CLOAD_STEP_POLL_CARD_LOAD:
+        case CARD_MENU_STEP_POLL_CARD_LOAD:
             switch (poll_software_card_events())
             {
-            case CLOAD_CARD_EVENT_READY:
+            case CARD_EVENT_COMPLETE:
                 g_cload_load_step++;
                 break;
-            case CLOAD_CARD_EVENT_ERROR:
-            case CLOAD_CARD_EVENT_TIMEOUT:
+            case CARD_EVENT_ERROR:
+            case CARD_EVENT_TIMEOUT:
                 g_cload_secondary_poll_countdown--;
                 if (g_cload_secondary_poll_countdown == 0)
                 {
@@ -407,7 +352,7 @@ s32 cload_advance_load_sequence(void)
                     _card_load(g_card_slot * 0x10);
                 }
                 break;
-            case CLOAD_CARD_EVENT_NEW_CARD:
+            case CARD_EVENT_NEW_CARD:
                 g_cload_primary_poll_countdown--;
                 if (g_cload_primary_poll_countdown != 0)
                 {
@@ -418,14 +363,14 @@ s32 cload_advance_load_sequence(void)
                 }
                 else
                 {
-                    CLOAD_END_STEP_TABLE(phase_result, CLOAD_LOAD_CARD_CHANGED, CARD_MENU_ENTRY_STATE_NO_SAVE_DATA,
+                    CLOAD_END_STEP_TABLE(phase_result, CARD_MENU_SEQUENCE_UNFORMATTED, CARD_MENU_ENTRY_STATE_NO_SAVE_DATA,
                                          g_cload_steps_idle);
                 }
                 break;
             }
             break;
 
-        case CLOAD_STEP_DRAIN_SECONDARY:
+        case CARD_MENU_STEP_WAIT_HARDWARE_EVENTS:
             do
             {
                 poll_result = poll_hardware_card_events();
@@ -433,7 +378,7 @@ s32 cload_advance_load_sequence(void)
             g_cload_load_step++;
             break;
 
-        case CLOAD_STEP_READ_HEADER:
+        case CARD_MENU_STEP_READ_ENTRY:
             g_cload_io_busy = 1;
             g_cload_selection_status = 0;
             _card_wait(g_card_slot);
@@ -455,9 +400,9 @@ s32 cload_advance_load_sequence(void)
             }
             break;
 
-        case CLOAD_STEP_POLL_HEADER_READ:
+        case CARD_MENU_STEP_POLL_ENTRY_READ:
             poll_result = poll_software_card_events();
-            if (poll_result == CLOAD_CARD_EVENT_READY)
+            if (poll_result == CARD_EVENT_COMPLETE)
             {
                 g_cload_io_busy = 0;
                 g_cload_selection_status = 1;
@@ -473,12 +418,12 @@ s32 cload_advance_load_sequence(void)
             }
             break;
 
-        case CLOAD_STEP_ARM_SAVE_RETRIES:
+        case CARD_MENU_STEP_INIT_RETRIES:
             g_cload_retry_count = CARD_MENU_SAVE_RETRIES;
             g_cload_load_step++;
             break;
 
-        case CLOAD_STEP_READ_SAVE:
+        case CARD_MENU_STEP_READ_SAVE:
             g_cload_progress_active = 1;
             g_cload_progress_bar_active = 1;
             g_cload_progress_start_tick = VSync(-1);
@@ -499,21 +444,21 @@ s32 cload_advance_load_sequence(void)
             }
             break;
 
-        case CLOAD_STEP_POLL_SAVE_READ:
+        case CARD_MENU_STEP_POLL_SAVE_READ:
             switch (poll_software_card_events())
             {
-            case CLOAD_CARD_EVENT_READY:
+            case CARD_EVENT_COMPLETE:
                 g_cload_progress_active = 0;
                 g_cload_load_step++;
                 close(g_cload_file_handle);
                 break;
-            case CLOAD_CARD_EVENT_ERROR:
-            case CLOAD_CARD_EVENT_TIMEOUT:
-            case CLOAD_CARD_EVENT_NEW_CARD:
+            case CARD_EVENT_ERROR:
+            case CARD_EVENT_TIMEOUT:
+            case CARD_EVENT_NEW_CARD:
                 g_cload_retry_count--;
                 if (g_cload_retry_count != 0)
                 {
-                    /* Rewind to CLOAD_STEP_READ_SAVE and try again. */
+                    /* Rewind to CARD_MENU_STEP_READ_SAVE and try again. */
                     close(g_cload_file_handle);
                     g_cload_load_step--;
                     break;
@@ -525,8 +470,8 @@ s32 cload_advance_load_sequence(void)
             }
             break;
 
-        case CLOAD_STEP_CHECK_POCKETSTATION:
-            for (wait_attempts = 0; wait_attempts < 0x14; wait_attempts++)
+        case CARD_MENU_STEP_CHECK_POCKETSTATION:
+            for (wait_attempts = 0; wait_attempts < CARD_MENU_FILE_OP_ATTEMPTS; wait_attempts++)
             {
                 if (McxCardType(g_card_slot * 0x10) == MCX_COMMAND_ISSUED)
                 {

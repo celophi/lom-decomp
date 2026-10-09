@@ -10,11 +10,11 @@
 #include "overlays/field/field_text.h"
 #include "main/main.h"
 #include "main/field_entry.h"
+#include "overlays/field/field_input.h"
 
 void field_restart_pending_bindings(void);
 void field_update_timed_panel(FieldRenderHalf* render);
 void field_update_actor_texts(FieldRenderHalf* render);
-void field_update_input_repeat(void);
 extern s32 g_field_action_context;
 /** @brief Nonzero while a picture screen is shown (set by func_800A5670). */
 extern s32 g_field_timed_panel_active;

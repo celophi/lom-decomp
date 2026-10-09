@@ -37,6 +37,7 @@
 #include "main/overlay_memory.h"
 #include "overlays/gname/gname.h"
 #include "main/audio/akao.h"
+#include "overlays/field/field_input.h"
 
 void field_set_cd_error_fade_target(void);
 
@@ -306,7 +307,6 @@ s32 field_name_byte_length(u8* name);
 void field_copy_name(u8* destination, u8* source);
 void field_append_name(u8* destination, const u8* source);
 s32 field_read_controller_buttons(s32 index);
-void field_reset_input_repeat(void);
 void field_draw_text_session(FieldRenderHalf* render);
 void field_restore_label_actor_parts(void);
 static void field_init_actor_labels(void);

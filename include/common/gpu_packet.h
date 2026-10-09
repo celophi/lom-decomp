@@ -3,81 +3,36 @@
 
 #include "common.h"
 
-/*
- * Custom GPU primitive-packing macros.
+/**
+ * @file gpu_packet.h
+ * @brief Primitive setters and GPU constants that libgpu doesn't provide.
  *
- * These complement the stock Psy-Q libgpu setters (setRGB0, setWH, setUV0,
- * setClut, ...). The original game code frequently builds a primitive by
- * writing several adjacent fields with a single wide store (one word or one
- * halfword) instead of the per-field stores the libgpu macros expand to.
- * Reproducing that exact store width is required for a byte-for-byte match,
- * so the packed variants below exist alongside the libgpu ones.
- *
- * Naming: ALL_CAPS with underscores. Macros that target a field common to
- * every primitive (the P_TAG color word at offset 4) are primitive-agnostic.
- * Macros whose field offset is specific to one primitive type carry that type
- * in the name (e.g. "SPRT") and address the packet through a raw byte offset
- * so they can be called on a void* / u8* cursor without a typed cast.
+ * The game often fills two or three neighbouring primitive fields with one
+ * word or halfword store instead of a store per field. The *_PACKED and
+ * *_WORD setters below do that. The SPRT and POLY_G4 ones address the packet
+ * by byte offset, so they also work on a void* or u8* cursor.
  */
 
-/* --- Position setters --- */
-
-/*
- * Set x0 and y0 writing y before x, matching the store order emitted by
- * code that writes the y0 field (higher offset) first and then x0. libgpu's
- * setXY0 writes x before y; use SET_YX0 when the original instruction stream
- * stores y0 first and the reversed order is required for a matching build.
- */
+/** @brief Set y0, then x0 (libgpu's setXY0 writes x0 first). */
 #define SET_YX0(p, _y0, _x0) \
     (p)->y0 = (_y0), (p)->x0 = (_x0)
 
-/* --- Color word (P_TAG: r0,g0,b0,code at offset 4; valid for any prim) --- */
-
-/*
- * Set b0/g0/r0 with three separate byte stores; leaves the code byte alone.
- * Mirrors the libgpu setRGB0 ordering but in b,g,r argument order.
- */
+/** @brief Set the colour of any primitive one byte at a time, blue first. The code byte is left alone. */
 #define SET_BGR0(p, _b0, _g0, _r0) \
     (p)->b0 = _b0, (p)->g0 = _g0, (p)->r0 = _r0
 
-/*
- * Store a pre-packed color word at offset 4 with one 32-bit write, matching
- * the hand-written `*(u32*)(p + 4) = 0x00bbggrr;` idiom. Use this (not
- * SET_BGR0) when the original emits one word store rather than three byte
- * stores. The argument is the full 32-bit value in P_TAG layout:
- *   byte 0 (LSB) = r0, byte 1 = g0, byte 2 = b0, byte 3 (MSB) = code.
- * Pack with @c GPU_COLOR_WORD or use a named constant like @c GPU_TINT_NEUTRAL.
- */
+/** @brief Write the whole r0/g0/b0/code word of any primitive at once (see GPU_COLOR_WORD). */
 #define SET_BGR0_PACKED(p, _word) \
     (*(u32*)((u8*)(p) + 4) = (u32)(_word))
 
-/*
- * Build a packed P_TAG color word (code byte = 0) from r/g/b components.
- * Matches the byte layout `0x00bbggrr` so it can be passed directly to
- * @ref SET_BGR0_PACKED. Constant-folded for literal arguments.
- */
+/** @brief Pack a colour into a primitive colour word (0x00bbggrr), with a zero code byte. */
 #define GPU_COLOR_WORD(_r, _g, _b) \
     (((u32)(_b) << 16) | ((u32)(_g) << 8) | (u32)(_r))
 
-/*
- * Neutral tint for a textured primitive: each channel = 0x80, the PSX GPU's
- * 1.0x modulation factor (texel rendered as-is, no brightness change). The
- * code byte is 0; the caller fills it in via @c setcode / @c setSprt / etc.
- */
+/** @brief Draws a texture at its own brightness: 0x80 is the GPU's 1.0 for each channel. */
 #define GPU_TINT_NEUTRAL GPU_COLOR_WORD(0x80, 0x80, 0x80)
 
-/* --- POLY_G4-specific packed color words (single store) --- */
-
-/*
- * Store a pre-packed color word into one of POLY_G4's three later vertex
- * colors with a single 32-bit write, matching `*(u32*)(p + off) = word;`.
- * The first vertex color (r0/g0/b0/code at offset 4) is the shared P_TAG word,
- * so use @ref SET_BGR0_PACKED for it; these cover vertices 1, 2, and 3 at
- * offsets 0x0C, 0x14, and 0x1C. The argument is the full 32-bit value in
- * r/g/b/pad layout (byte 0 = r, byte 1 = g, byte 2 = b, byte 3 = pad); pack it
- * with @ref GPU_COLOR_WORD. Use these when the original emits one word store
- * per color rather than the three byte stores setRGB1/2/3 would expand to.
- */
+/** @brief Write vertex 1, 2 or 3's colour word of a POLY_G4 at once. Vertex 0 uses SET_BGR0_PACKED. */
 #define SET_POLY_G4_BGR1_PACKED(p, _word) \
     (*(u32*)((u8*)(p) + 0x0C) = (u32)(_word))
 #define SET_POLY_G4_BGR2_PACKED(p, _word) \
@@ -85,80 +40,51 @@
 #define SET_POLY_G4_BGR3_PACKED(p, _word) \
     (*(u32*)((u8*)(p) + 0x1C) = (u32)(_word))
 
-/* --- SPRT-specific packed setters (single store) --- */
-
-/*
- * Store a pre-packed x0/y0 pair (shorts at offset 0x08 / 0x0A) with a
- * single word write.
- */
+/** @brief Write an SPRT's x0 and y0 from one packed word (y0 in the high half). */
 #define SET_SPRT_XY0_WORD(p, _xy) \
     (*(u32*)((u8*)(p) + 0x08) = (u32)(_xy))
 
-/*
- * Store a pre-packed width/height pair (shorts at offset 0x10 / 0x12) with a
- * single word write.
- */
+/** @brief Write an SPRT's w and h from one packed word (h in the high half). */
 #define SET_SPRT_WH_WORD(p, _wh) \
     (*(u32*)((u8*)(p) + 0x10) = (u32)(_wh))
 
-/*
- * Set an SPRT's width and height (shorts at offset 0x10 / 0x12) with a single
- * word store, matching `*(u32*)(p + 0x10) = 0x00hh00ww;`. libgpu's setWH
- * emits two short stores.
- */
+/** @brief Write an SPRT's w and h with one store. */
 #define SET_SPRT_WH_PACKED(p, _w, _h) \
     (*(u32*)((u8*)(p) + 0x10) = ((u32)(u16)(_h) << 16) | (u32)(u16)(_w))
 
-/*
- * Set an SPRT's u0 and v0 (bytes at offset 0x0C / 0x0D) with a single
- * halfword store, matching `*(u16*)(p + 0x0C) = uv;`. libgpu's setUV0 emits
- * two byte stores.
- */
+/** @brief Write an SPRT's u0 and v0 from one packed halfword (v0 in the high byte). */
 #define SET_SPRT_UV0_PACKED(p, _uv) \
     (*(u16*)((u8*)(p) + 0x0C) = (u16)(_uv))
 
-/*
- * Store a pre-packed u0/v0/clut word (u0/v0 bytes at 0x0C/0x0D, clut id at
- * 0x0E) with a single word write, matching `*(u32*)(p + 0x0C) = word;`. Use
- * this when the original builds the whole texcoord+clut word in a register and
- * emits one store, rather than the separate byte/halfword stores that
- * @ref SET_SPRT_UV0_PACKED and @ref SET_SPRT_CLUT expand to.
- */
+/** @brief Write an SPRT's u0, v0 and clut from one packed word (clut in the high half). */
 #define SET_SPRT_UV_CLUT_WORD(p, _word) \
     (*(u32*)((u8*)(p) + 0x0C) = (u32)(_word))
 
-/*
- * Store a raw CLUT id into an SPRT (halfword at offset 0x0E). libgpu's
- * setClut takes VRAM coordinates and computes the id via getClut; this sets
- * a precomputed id directly.
- */
+/** @brief Set an SPRT's CLUT id directly; libgpu's setClut takes VRAM coordinates instead. */
 #define SET_SPRT_CLUT(p, _clut) \
     (*(u16*)((u8*)(p) + 0x0E) = (u16)(_clut))
 
-/** @brief GPU command code of a POLY_G4 (Gouraud-shaded quad), as setPolyG4 sets it. */
+/** @brief GPU command codes of a POLY_G4 and a TILE, and the bit that makes a primitive semi-transparent. */
 #define GPU_CODE_POLY_G4 0x38
-
-/** @brief GPU command code of a TILE (variable-size rectangle), as setTile sets it. */
 #define GPU_CODE_TILE 0x60
-
-/** @brief Command-code bit that makes a primitive semi-transparent, as setSemiTrans sets it. */
 #define GPU_CODE_SEMI_TRANS 0x02
 
-/** @brief Texture colour depth of a texture page (the tp argument of getTPage). */
+/** @brief Texture colour depths (the tp argument of getTPage). */
 #define GPU_TEXTURE_4BIT 0
 #define GPU_TEXTURE_8BIT 1
 #define GPU_TEXTURE_16BIT 2
 
-/** @brief Semi-transparency rate of a texture page (the abr argument of getTPage). */
-#define GPU_BLEND_HALF 0        /**< Half background plus half foreground. */
-#define GPU_BLEND_ADD 1         /**< Background plus foreground. */
-#define GPU_BLEND_SUBTRACT 2    /**< Background minus foreground. */
-#define GPU_BLEND_ADD_QUARTER 3 /**< Background plus a quarter of the foreground. */
+/** @brief Colours in a 4-bit and in an 8-bit texture's CLUT. An 8-bit CLUT fills a whole VRAM row. */
+#define GPU_CLUT_4BIT_COLORS 16
+#define GPU_CLUT_8BIT_COLORS 256
 
-/*
- * Size of a GPU packet type T in u_long words, for advancing a u_long*
- * primitive cursor one packet at a time: `prim += PRIM_WORDS(SPRT);`.
- */
+/** @brief Semi-transparency modes (the abr argument of getTPage). */
+#define GPU_BLEND_HALF 0        /**< Half the background plus half the primitive. */
+#define GPU_BLEND_ADD 1         /**< Background plus primitive. */
+#define GPU_BLEND_SUBTRACT 2    /**< Background minus primitive. */
+#define GPU_BLEND_ADD_QUARTER 3 /**< Background plus a quarter of the primitive. */
+
+/** @brief Size of packet type T in words, for stepping a u_long* cursor: `prim += PRIM_WORDS(SPRT);`. */
 #define PRIM_WORDS(T) (sizeof(T) / sizeof(u_long))
 
 #endif

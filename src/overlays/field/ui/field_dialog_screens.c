@@ -31,6 +31,8 @@
 #include "main/game_state.h"
 #include <memory.h>
 #include "main/display.h"
+#include "overlays/field/field_input.h"
+#include "overlays/field/field_portrait.h"
 
 extern u8* g_field_cd_buffer;
 
@@ -1233,7 +1235,6 @@ extern s32 g_field_return_to_title_prompt_delay;
 extern s32 g_frame_counter;
 extern s32 g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_secondary_music_id, g_field_pending_scene_id, g_field_pending_object_id, g_field_pending_sound_bank_id;
 
-extern void field_reset_input_repeat(void);
 extern void akao_release_all_sfx(void);
 /* Defined in field_resource_load.c. */
 extern s32 field_party_reload_reading(void);
