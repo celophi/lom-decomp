@@ -1,72 +1,33 @@
 #include "overlays/field/field_text.h"
 #include "internal/addhero_internal.h"
+#include <fcntl.h>
 
 /** @brief Result of a load step that needs no special handling by the caller. */
 #define ADDHERO_LOAD_RESULT_PENDING 1
 
-/** @brief Psy-Q open() mode: read access (FREAD). */
-#define ADDHERO_FILE_READ 0x0001
-
-/** @brief Psy-Q open() mode: write access (FWRITE). */
-#define ADDHERO_FILE_WRITE 0x0002
-
-/** @brief Psy-Q open() mode: create the file (FCREAT). */
-#define ADDHERO_FILE_CREATE 0x0200
-
-/** @brief Psy-Q open() mode: asynchronous I/O (FASYNC). */
-#define ADDHERO_FILE_ASYNC 0x8000
-
-/** @brief Psy-Q open() mode: number of 8 KiB blocks to allocate on create. */
+/* The upper half of the create mode gives the number of card blocks. */
 #define ADDHERO_FILE_BLOCKS(count) ((count) << 16)
 
-/** @brief Bytes read to show an entry: the card header and the first 0x100 bytes of the saved game. */
+/* Read enough of a Mana save to display the hero details. */
 #define ADDHERO_ENTRY_READ_BYTES 0x280
 
-/** @brief Bytes read to show an entry that is not a Legend of Mana save: its card header title and CLUT. */
+/* The short read includes the card title and icon palette, but no icon frames. */
 #define ADDHERO_ENTRY_TITLE_READ_BYTES 0x80
 
-/** @brief Attempts made at a synchronous card file operation before giving up. */
+/* Retry limits for file operations, save transfers and card loads. */
 #define ADDHERO_FILE_OP_ATTEMPTS 20
-
-/** @brief Retries of a failed asynchronous save read or write (ADDHERO_STEP_INIT_RETRIES). */
 #define ADDHERO_SAVE_RETRIES 5
-
-/** @brief Retries of _card_load, counted separately for errors and for a newly inserted card. */
 #define ADDHERO_CARD_LOAD_RETRIES 16
 
-/** @brief Bytes of the "bu00:" device prefix copied from g_addhero_file_template, with its terminator. */
+/* Include the terminator when copying the device prefix or search pattern. */
 #define ADDHERO_CARD_DEVICE_BYTES sizeof("bu00:")
-
-/** @brief Bytes of the "bu00:*" directory pattern copied from g_addhero_entry_header_template, with its terminator. */
 #define ADDHERO_CARD_PATTERN_BYTES sizeof("bu00:*")
 
-/** @brief Card-path workspace retained while advancing a load/save sequence. */
-typedef union
-{
-    AddheroCardDevice device;
-    char text[104];
-} AddheroSequenceFilePath;
+/* Slot digit in a "bu00:" device name. */
+#define ADDHERO_CARD_SLOT_CHAR 2
 
-/** @brief Card path used to remove a placeholder save file. */
-typedef union
-{
-    AddheroCardDevice device;
-    char text[32];
-} AddheroProbeFilePath;
-
-/** @brief Directory search pattern, including the card device and wildcard. */
-typedef union
-{
-    AddheroCardDevice device;
-    char text[16];
-} AddheroDirectoryPattern;
-
-/** @brief Buffer for the selected save file's complete card path. */
-typedef union
-{
-    AddheroCardDevice device;
-    char text[256];
-} AddheroSelectedFilePath;
+/* Save filenames are grouped by suffixes 0 through 7. */
+#define ADDHERO_SAVE_SUFFIX_COUNT 8
 
 extern s32 g_addhero_retry_count;
 extern s32 g_addhero_primary_poll_countdown;
@@ -85,9 +46,8 @@ extern u8 g_addhero_loadseq_file_ready[];
 #include "../../common/card_directory/parse_entry_fields.inc.c"
 
 /**
- * @brief Rank the current card's entries by parsed field value, tag "full"
- *        entries, and pick the highest-valued entry to select.
- * @return Index of the highest-valued entry.
+ * @brief Rank saves by serial number and assign the next suffix to the new-save entry.
+ * @return Index of the save with the highest serial, or zero if none is found.
  */
 s32 addhero_rank_entries(void)
 {
@@ -131,7 +91,6 @@ s32 addhero_rank_entries(void)
         }
     }
     g_addhero_rank_count = next_rank;
-    /* Reuse next_rank as the running maximum and maximum as its index. */
     next_rank = -1;
     maximum = 0;
     for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
@@ -155,24 +114,23 @@ s32 addhero_rank_entries(void)
 }
 
 /**
- * @brief Reset the per-entry rank slots to -1 and the rank count to 0x28.
+ * @brief Clear the save ranks and reset the rank count.
  */
 void addhero_reset_entry_ranks(void)
 {
-    s32 i;
-    s32 val;
+    s32 entry_index;
+    s32 empty_rank;
 
-    g_addhero_rank_count = 0x28;
-    val = -1;
-    for (i = ADDHERO_CARD_SAVE_SLOTS - 1; i >= 0; i--)
+    g_addhero_rank_count = 40;
+    empty_rank = -1;
+    for (entry_index = ADDHERO_CARD_SAVE_SLOTS - 1; entry_index >= 0; entry_index--)
     {
-        g_addhero_entry_ranks[i] = val;
+        g_addhero_entry_ranks[entry_index] = empty_rank;
     }
 }
 
 /**
- * @brief Test whether the active card holds at least one entry matching a known
- *        save-name prefix.
+ * @brief Check for a Mana or PocketStation save on the current card.
  * @return 1 if a known-type entry exists, 0 otherwise.
  */
 s32 addhero_has_known_entry_type(void)
@@ -191,10 +149,8 @@ s32 addhero_has_known_entry_type(void)
 }
 
 /**
- * @brief Sum the block usage of the active card's entries and test whether it
- *        has reached the card's capacity.
+ * @brief Check whether fewer than two card blocks remain free.
  * @return 1 when the used blocks reach ADDHERO_USED_BLOCK_LIMIT, 0 otherwise.
- * @note Inlined into addhero_scan_next_entry.
  */
 inline s32 addhero_entry_blocks_reach_limit(void)
 {
@@ -211,33 +167,31 @@ inline s32 addhero_entry_blocks_reach_limit(void)
 
 /**
  * @brief Remove both placeholder save filenames from the active card.
- * @note Inlined into addhero_advance_load_sequence.
  */
 inline void addhero_erase_placeholder_files(void)
 {
-    AddheroProbeFilePath buf;
+    char card_path[32];
 
-    memcpy(&buf, &g_addhero_file_template, ADDHERO_CARD_DEVICE_BYTES);
-    buf.device.characters.slot += (u8)g_card_slot;
-    strcat(buf.text, g_lom_save_dummy_filename);
-    erase(buf.text);
+    memcpy(card_path, &g_addhero_file_template, ADDHERO_CARD_DEVICE_BYTES);
+    card_path[ADDHERO_CARD_SLOT_CHAR] += g_card_slot;
+    strcat(card_path, g_lom_save_dummy_filename);
+    erase(card_path);
 
-    memcpy(&buf, &g_addhero_file_template, ADDHERO_CARD_DEVICE_BYTES);
-    buf.device.characters.slot += (u8)g_card_slot;
-    strcat(buf.text, g_lom_pocketstation_dummy_filename);
-    erase(buf.text);
+    memcpy(card_path, &g_addhero_file_template, ADDHERO_CARD_DEVICE_BYTES);
+    card_path[ADDHERO_CARD_SLOT_CHAR] += g_card_slot;
+    strcat(card_path, g_lom_pocketstation_dummy_filename);
+    erase(card_path);
 }
 
 /**
- * @brief Advance the active memory-card load/save sequence by one step.
- * @return One of the ADDHERO_LOAD_RESULT_* values describing how the caller
- *         should continue the sequence.
+ * @brief Run the current step of the card load/save sequence.
+ * @return ADDHERO_LOAD_RESULT_* status for the caller.
  * @note g_card_step walks one of the g_addhero_loadseq_* byte tables;
  *       opcodes with no case are no-ops.
  */
 s32 addhero_advance_load_sequence(void)
 {
-    AddheroSequenceFilePath card_path;
+    char card_path[104];
     long card_command;
     long card_result;
     s32 result;
@@ -246,9 +200,9 @@ s32 addhero_advance_load_sequence(void)
     s32 entry_index;
     s32 empty_rank;
 
-    memcpy(&card_path, &g_addhero_file_template, ADDHERO_CARD_DEVICE_BYTES);
+    memcpy(card_path, &g_addhero_file_template, ADDHERO_CARD_DEVICE_BYTES);
     result = ADDHERO_LOAD_RESULT_PENDING;
-    card_path.device.characters.slot += (u8)g_card_slot;
+    card_path[ADDHERO_CARD_SLOT_CHAR] += g_card_slot;
 
     if (g_card_step != NULL)
     {
@@ -275,7 +229,7 @@ s32 addhero_advance_load_sequence(void)
                 g_card_step++;
                 break;
             case CARD_EVENT_NEW_CARD:
-                g_addhero_rank_count = 0x28;
+                g_addhero_rank_count = 40;
                 empty_rank = -1;
                 for (entry_index = ADDHERO_CARD_SAVE_SLOTS - 1; entry_index >= 0; entry_index--)
                 {
@@ -369,10 +323,10 @@ s32 addhero_advance_load_sequence(void)
             break;
 
         case ADDHERO_STEP_ERASE_ENTRY:
-            strcat(card_path.text, g_card_entries[g_card_slot][g_addhero_selected_row].name);
+            strcat(card_path, g_card_entries[g_card_slot][g_addhero_selected_row].name);
             for (attempts = 0; attempts < ADDHERO_FILE_OP_ATTEMPTS; attempts++)
             {
-                if (erase(card_path.text) != 0)
+                if (erase(card_path) != 0)
                 {
                     break;
                 }
@@ -434,7 +388,7 @@ s32 addhero_advance_load_sequence(void)
             g_addhero_io_busy = 1;
             g_addhero_selection_status = ADDHERO_SELECTION_NONE;
             _card_wait(g_card_slot);
-            g_addhero_file_handle = open(g_addhero_save_file_path, ADDHERO_FILE_ASYNC | ADDHERO_FILE_READ);
+            g_addhero_file_handle = open(g_addhero_save_file_path, FASYNC | FREAD);
             if (g_addhero_file_handle == -1)
             {
                 break;
@@ -478,7 +432,7 @@ s32 addhero_advance_load_sequence(void)
             g_addhero_progress_start_tick = VSync(-1);
             g_addhero_progress_bar_active = 1;
             _card_wait(g_card_slot);
-            g_addhero_file_handle = open(g_addhero_save_file_path, ADDHERO_FILE_ASYNC | ADDHERO_FILE_READ);
+            g_addhero_file_handle = open(g_addhero_save_file_path, FASYNC | FREAD);
             clear_software_card_events();
             _card_wait(g_card_slot);
             if (read(g_addhero_file_handle, &g_addhero_save_file, SAVE_FILE_BYTES) == -1)
@@ -551,7 +505,7 @@ s32 addhero_advance_load_sequence(void)
             g_addhero_progress_start_tick = VSync(-1);
             g_addhero_progress_bar_active = 1;
             _card_wait(g_card_slot);
-            g_addhero_file_handle = open(g_addhero_save_file_path, ADDHERO_FILE_ASYNC | ADDHERO_FILE_READ);
+            g_addhero_file_handle = open(g_addhero_save_file_path, FASYNC | FREAD);
             clear_software_card_events();
             _card_wait(g_card_slot);
             if (read(g_addhero_file_handle, &g_addhero_save_file, SAVE_FILE_BYTES) == -1)
@@ -605,15 +559,15 @@ s32 addhero_advance_load_sequence(void)
                     }
                 }
             }
-            strcat(card_path.text, g_lom_save_dummy_filename);
+            strcat(card_path, g_lom_save_dummy_filename);
             _card_wait(g_card_slot);
-            g_addhero_file_handle = open(card_path.text, ADDHERO_FILE_CREATE | ADDHERO_FILE_BLOCKS(2));
+            g_addhero_file_handle = open(card_path, FCREAT | ADDHERO_FILE_BLOCKS(SAVE_FILE_BYTES / ADDHERO_CARD_BLOCK_BYTES));
             if (g_addhero_file_handle == -1)
             {
                 close(-1);
                 for (attempts = 0; attempts < ADDHERO_FILE_OP_ATTEMPTS; attempts++)
                 {
-                    if (erase(card_path.text) != 0)
+                    if (erase(card_path) != 0)
                     {
                         break;
                     }
@@ -627,9 +581,9 @@ s32 addhero_advance_load_sequence(void)
                 break;
             }
             close(g_addhero_file_handle);
-            strcpy(g_addhero_target_file_path, card_path.text);
+            strcpy(g_addhero_target_file_path, card_path);
             _card_wait(g_card_slot);
-            g_addhero_file_handle = open(g_addhero_target_file_path, ADDHERO_FILE_ASYNC | ADDHERO_FILE_WRITE);
+            g_addhero_file_handle = open(g_addhero_target_file_path, FASYNC | FWRITE);
             clear_software_card_events();
             g_addhero_progress_start_tick = VSync(-1);
             g_addhero_progress_bar_active = 1;
@@ -707,8 +661,7 @@ s32 addhero_advance_load_sequence(void)
 #include "../../common/card_events/poll_and_retry_card_info.inc.c"
 
 /**
- * @brief Register and enable software and hardware memory-card events, then
- *        clear the progress and scan flags.
+ * @brief Set up card events and clear the transfer flags.
  */
 void addhero_init_card_events(void)
 {
@@ -738,23 +691,22 @@ void addhero_init_card_events(void)
 #include "../../common/card_events/shutdown_card_events.inc.c"
 
 /**
- * @brief Reset browser state and read the first directory entry of the given
- *        card page, priming the scan.
- * @param page Card page index to begin scanning.
- * @return 1 if a first entry was read, 0 if the page is empty.
+ * @brief Reset the browser and read the first entry on a card.
+ * @param page Memory-card slot to scan.
+ * @return 1 if an entry was read, 0 if the directory search failed.
  */
 s32 addhero_begin_entry_scan(s32 page)
 {
-    AddheroDirectoryPattern buf;
+    char pattern[16];
 
-    memcpy(&buf, &g_addhero_entry_header_template, ADDHERO_CARD_PATTERN_BYTES);
+    memcpy(pattern, &g_addhero_entry_header_template, ADDHERO_CARD_PATTERN_BYTES);
     g_addhero_selected_row = 0;
     g_addhero_scroll_frames = 0;
     g_addhero_scroll_target_y = 0;
     g_addhero_scroll_y = 0;
     g_card_entry_state = 0;
-    buf.device.characters.slot += page;
-    if (firstfile(buf.text, &g_card_entries[page][0]) != 0)
+    pattern[ADDHERO_CARD_SLOT_CHAR] += page;
+    if (firstfile(pattern, &g_card_entries[page][0]) != 0)
     {
         field_flag_known_save(g_card_entries[page][g_card_entry_state].name);
         g_card_entry_state += 1;
@@ -764,9 +716,9 @@ s32 addhero_begin_entry_scan(s32 page)
 }
 
 /**
- * @brief Advance one step of the add-hero entry load scan for the given page.
- * @param page Page index whose entry block is being scanned.
- * @return 1 if an entry was consumed this step, 0 otherwise.
+ * @brief Read the next directory entry, or finish the scan and select a save.
+ * @param page Memory-card slot being scanned.
+ * @return 1 if another entry was read, 0 when the scan ends.
  */
 s32 addhero_scan_next_entry(s32 page)
 {
@@ -780,7 +732,7 @@ s32 addhero_scan_next_entry(s32 page)
     }
 
     field_reset_input_repeat();
-    if ((g_addhero_mode == 0) && (addhero_has_known_entry_type() == 0))
+    if (g_addhero_mode == 0 && addhero_has_known_entry_type() == 0)
     {
         g_card_entry_state = ADDHERO_ENTRY_STATE_NO_GAME_DATA;
     }
@@ -830,12 +782,11 @@ s32 addhero_scan_next_entry(s32 page)
 }
 
 /**
- * @brief Prepare the currently selected directory entry for loading: set the
- *        selection status, build its file spec, and arm the read step.
+ * @brief Build the selected save path and start reading its details.
  */
 void addhero_commit_selected_entry(void)
 {
-    AddheroSelectedFilePath path;
+    char card_path[256];
 
     if (g_card_entry_state == 0)
     {
@@ -847,11 +798,11 @@ void addhero_commit_selected_entry(void)
         g_addhero_selection_status = ADDHERO_SELECTION_NEW_SAVE;
         return;
     }
-    memcpy(&path, &g_addhero_file_template, ADDHERO_CARD_DEVICE_BYTES);
-    strcat(path.text, g_card_entries[g_card_slot][g_addhero_selected_row].name);
-    path.device.characters.slot += (u8)g_card_slot;
+    memcpy(card_path, &g_addhero_file_template, ADDHERO_CARD_DEVICE_BYTES);
+    strcat(card_path, g_card_entries[g_card_slot][g_addhero_selected_row].name);
+    card_path[ADDHERO_CARD_SLOT_CHAR] += g_card_slot;
     g_addhero_selection_status = ADDHERO_SELECTION_NONE;
-    strcpy(g_addhero_save_file_path, path.text);
+    strcpy(g_addhero_save_file_path, card_path);
     g_card_step = g_addhero_loadseq_file_ready;
     if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_addhero_selected_row].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
     {
@@ -870,9 +821,7 @@ void addhero_commit_selected_entry(void)
 #include "../../common/card_events/poll_hardware_card_events.inc.c"
 
 /**
- * @brief Reorder the active card's directory entries into a stable grouping:
- *        by suffix value within each known name prefix, then a third prefix,
- *        then any remaining entries, writing the result back in place.
+ * @brief Group Mana saves by suffix, then PocketStation saves, new saves and other files.
  */
 void addhero_sort_entries_by_type(void)
 {
@@ -881,7 +830,7 @@ void addhero_sort_entries_by_type(void)
     s32 suffix;
     s32 entry_index;
 
-    for (suffix = 0; suffix < 8; suffix++)
+    for (suffix = 0; suffix < ADDHERO_SAVE_SUFFIX_COUNT; suffix++)
     {
         for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
         {
@@ -894,7 +843,7 @@ void addhero_sort_entries_by_type(void)
         }
     }
 
-    for (suffix = 0; suffix < 8; suffix++)
+    for (suffix = 0; suffix < ADDHERO_SAVE_SUFFIX_COUNT; suffix++)
     {
         for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
         {
