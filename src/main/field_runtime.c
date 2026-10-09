@@ -11,6 +11,7 @@
 #include "main/controller_internal.h"
 #include "main/game_state.h"
 #include <libetc.h>
+#include "common/gpu_packet.h"
 
 #define FIELD_ENTRY_FADE_FRAMES 30
 #define FIELD_TEXT_IMAGE_RESOURCE 1500
@@ -18,7 +19,7 @@
 #define FIELD_TEXT_IMAGE_Y 480
 #define FIELD_TEXT_CLUT_X 256
 #define FIELD_TEXT_CLUT_Y 511
-#define FIELD_TEXT_TPAGE getTPage(0, 1, 256, 256)
+#define FIELD_TEXT_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 256, 256)
 
 /** @brief Field allocation cursor, text state, and primitive-buffer bases. */
 typedef struct

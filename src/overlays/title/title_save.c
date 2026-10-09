@@ -4,6 +4,7 @@
 #include "overlays/field/field_sound.h"
 #include <rand.h>
 #include "common/tim.h"
+#include "common/gpu_packet.h"
 
 void reset_save_slot_panel(void);
 void handle_save_slot_input(void);
@@ -652,7 +653,7 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
                     addPrim(ot, tile);
 
                     tp = (DR_TPAGE*)(ptr + sizeof(TILE));
-                    setDrawTPage(tp, 0, 0, getTPage(0, 1, 0x140, 0));
+                    setDrawTPage(tp, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 0x140, 0));
                     addPrim(ot, tp);
 
                     ptr += sizeof(TILE) + sizeof(DR_TPAGE);

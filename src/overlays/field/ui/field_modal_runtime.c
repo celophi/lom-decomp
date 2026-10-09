@@ -34,6 +34,8 @@
 #include "main/game_state.h"
 #include <memory.h>
 #include "common/render_context.h"
+#include "main/overlay_memory.h"
+#include "overlays/gname/gname.h"
 
 void field_set_cd_error_fade_target(void);
 
@@ -123,13 +125,10 @@ void field_set_cd_error_fade_target(void);
 /** @brief Action animation of a technique. */
 #define FIELD_TECHNIQUE_ANIMATION 2
 
-/** @brief Load address of the sub-overlays (MENU, GOLEM, GNAME, ZUKAN, GOSUB, SHOP). */
-#define FIELD_SUBOVERLAY_ADDRESS ((void*)SECONDARY_OVERLAY_ADDRESS)
 /** @brief Work buffers handed to the sub-overlays. */
 #define FIELD_MENU_RENDER_BUFFERS ((void*)SECONDARY_OVERLAY_AT(0x30000))
 #define FIELD_GOLEM_WORK_BUFFER SECONDARY_OVERLAY_AT(0x10000)
 #define FIELD_SHOP_WORK_BUFFER ((void*)SECONDARY_OVERLAY_AT(0x10000))
-#define FIELD_GNAME_WORK_BUFFER ((void*)SECONDARY_OVERLAY_AT(0x20000))
 #define FIELD_GOSUB_WORK_BUFFER ((void*)SECONDARY_OVERLAY_AT(0x35000))
 
 /** @brief Screens the MENU overlay returns: 0 closes the menu, others open GNAME with that mode. */
@@ -283,7 +282,7 @@ extern s32 g_field_rename_source;
 void akao_play_sound(s32 id);
 void akao_set_mono_output(s32 mode);
 
-/* Sub-overlay entry points, valid once their overlay is loaded at FIELD_SUBOVERLAY_ADDRESS. */
+/* Sub-overlay entry points, valid once their overlay is loaded at SECONDARY_OVERLAY_LOAD_ADDRESS. */
 /* GNAME and SHOP share this entry address but have different parameter lists. */
 void func_80140004();
 void golem_run(u32 work, s32 mode);
@@ -1577,7 +1576,7 @@ static void field_run_menu(void* render_buffers, s32 controller)
 
     while (1)
     {
-        cdrom_stream(CD_RES_MENU_BIN, FIELD_SUBOVERLAY_ADDRESS);
+        cdrom_stream(CD_RES_MENU_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
         cdrom_wait_queue_empty();
         screen_id = func_801405B0(render_buffers);
         if (screen_id == FIELD_MENU_CLOSED)
@@ -1588,7 +1587,7 @@ static void field_run_menu(void* render_buffers, s32 controller)
         if (screen_id == FIELD_MENU_GOLEM)
         {
             field_rebuild_party_actions(1);
-            cdrom_stream(CD_RES_GOLEM_BIN, FIELD_SUBOVERLAY_ADDRESS);
+            cdrom_stream(CD_RES_GOLEM_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
             cdrom_wait_queue_empty();
             golem_run(FIELD_GOLEM_WORK_BUFFER, 1);
             field_golem_rebuild_current_grid();
@@ -1600,15 +1599,15 @@ static void field_run_menu(void* render_buffers, s32 controller)
         else
         {
             field_rebuild_party_actions(1);
-            cdrom_stream(CD_RES_GNAME_BIN, FIELD_SUBOVERLAY_ADDRESS);
+            cdrom_stream(CD_RES_GNAME_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
             cdrom_wait_queue_empty();
             if ((screen_id == FIELD_MENU_NAME_ENTRY_B) || (screen_id == FIELD_MENU_NAME_ENTRY_C))
             {
-                func_80140004(FIELD_GNAME_WORK_BUFFER, g_field_rename_initial_name, g_field_rename_target, 1, g_field_rename_source, g_field_rename_custom_name, 0);
+                func_80140004(GNAME_RENDER_BUFFERS, g_field_rename_initial_name, g_field_rename_target, 1, g_field_rename_source, g_field_rename_custom_name, 0);
             }
             else
             {
-                func_80140004(FIELD_GNAME_WORK_BUFFER, g_field_rename_initial_name, g_field_rename_target, screen_id, g_field_rename_source, g_field_rename_custom_name, 0);
+                func_80140004(GNAME_RENDER_BUFFERS, g_field_rename_initial_name, g_field_rename_target, screen_id, g_field_rename_source, g_field_rename_custom_name, 0);
             }
             field_text_reset_windows();
             g_script_repeat_count = g_field_rename_source;
@@ -1970,9 +1969,9 @@ void field_rebuild_party_actions(s32 refresh_only)
 void field_run_name_entry(u8* initial_name, u8* active_name, s32 source_mode, s32 history_index, s32 custom_name)
 {
     field_reset_actor_resources();
-    cdrom_stream(CD_RES_GNAME_BIN, FIELD_SUBOVERLAY_ADDRESS);
+    cdrom_stream(CD_RES_GNAME_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
     cdrom_wait_queue_empty();
-    func_80140004(FIELD_GNAME_WORK_BUFFER, initial_name, active_name, source_mode, history_index, custom_name, 0);
+    func_80140004(GNAME_RENDER_BUFFERS, initial_name, active_name, source_mode, history_index, custom_name, 0);
     field_text_reset_windows();
     field_reset_actor_resources();
 }
@@ -1984,9 +1983,9 @@ void field_run_name_entry(u8* initial_name, u8* active_name, s32 source_mode, s3
 void field_run_zukan(s32 context)
 {
     field_reset_actor_resources();
-    cdrom_stream(CD_RES_ZUKAN_BIN, FIELD_SUBOVERLAY_ADDRESS);
+    cdrom_stream(CD_RES_ZUKAN_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
     cdrom_wait_queue_empty();
-    zukan_run(FIELD_GNAME_WORK_BUFFER, context);
+    zukan_run(GNAME_RENDER_BUFFERS, context);
     field_reset_actor_resources();
 }
 
@@ -2004,7 +2003,7 @@ void field_open_gosub_screen_sequence(void* screen_sequence)
         g_field_gosub_state = 1;
         g_gosub_result_count = 0;
         field_reset_actor_resources();
-        cdrom_stream(CD_RES_GOSUB_BIN, FIELD_SUBOVERLAY_ADDRESS);
+        cdrom_stream(CD_RES_GOSUB_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
         cdrom_wait_queue_empty();
         g_field_modal_state = FIELD_MODAL_GOSUB;
         g_field_gosub_phase = FIELD_GOSUB_RUNNING;
@@ -2048,7 +2047,7 @@ void field_open_shop_mode_0(s32 shop_options)
         else
         {
             field_reset_actor_resources();
-            cdrom_stream(CD_RES_SHOP_BIN, FIELD_SUBOVERLAY_ADDRESS);
+            cdrom_stream(CD_RES_SHOP_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
             cdrom_wait_queue_empty();
             g_field_shop_active = 1;
             g_field_modal_state = FIELD_MODAL_SHOP;
@@ -2069,7 +2068,7 @@ void field_open_shop_mode_1(s32 entry_count, struct ShopEntry* entries, struct F
     if (g_field_modal_state == FIELD_MODAL_NONE)
     {
         field_reset_actor_resources();
-        cdrom_stream(CD_RES_SHOP_BIN, FIELD_SUBOVERLAY_ADDRESS);
+        cdrom_stream(CD_RES_SHOP_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
         cdrom_wait_queue_empty();
         g_field_shop_active = 1;
         g_field_modal_state = FIELD_MODAL_SHOP;

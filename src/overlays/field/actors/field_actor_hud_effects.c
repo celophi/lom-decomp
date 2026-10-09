@@ -1033,7 +1033,7 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
     ((SPRT*)sprite_cursor)->clut = FIELD_HUD_CLUT;
     addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], sprite_cursor);
     sprite_cursor += sizeof(SPRT);
-    setDrawTPage((DR_TPAGE*)sprite_cursor, 0, 0, getTPage(0, 0, 960, 256));
+    setDrawTPage((DR_TPAGE*)sprite_cursor, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, 960, 256));
     addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], sprite_cursor);
     render_half->primitive_cursor = sprite_cursor + sizeof(DR_TPAGE);
 }
@@ -1246,11 +1246,11 @@ void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* positi
     mode = (DR_TPAGE*)(sprt + 1);
     if (index >= 2)
     {
-        setDrawTPage(mode, 0, 0, getTPage(0, 1, 0x340 - (index << 6), 0));
+        setDrawTPage(mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 0x340 - (index << 6), 0));
     }
     else
     {
-        setDrawTPage(mode, 0, 0, getTPage(0, 1, 0x380 - (index << 7), 0));
+        setDrawTPage(mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 0x380 - (index << 7), 0));
     }
     addPrim(ot, mode);
     return mode + 1;

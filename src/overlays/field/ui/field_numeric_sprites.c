@@ -23,7 +23,7 @@
 #define FIELD_GLYPH_UV(u, v) ((u) + ((v) << 8))
 
 /** @brief Texture page holding the digit glyphs. */
-#define FIELD_DIGIT_TPAGE getTPage(0, 0, 448, 0)
+#define FIELD_DIGIT_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, 448, 0)
 
 /** @brief Default (style 0) digit palette. */
 #define FIELD_DIGIT_CLUT_NORMAL getClut(48, 492)

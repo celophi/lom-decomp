@@ -3,6 +3,9 @@
 
 #include "common/render_context.h"
 
+/** @brief GNAME's render buffers, 0x20000 into the secondary overlay slot. */
+#define GNAME_RENDER_BUFFERS ((RenderContext*)SECONDARY_OVERLAY_AT(0x20000))
+
 /**
  * @brief Run the name-entry UI until the user confirms or cancels.
  * @param render_buffers Double-buffered frame render contexts.

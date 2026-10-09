@@ -5,13 +5,13 @@
 #include <libgte.h>
 #include <libgpu.h>
 #include <libetc.h>
+#include "common/gpu_packet.h"
 
 #define TRANSITION_OT_SIZE 4
 #define TRANSITION_PACKET_WORDS 64
 #define TRANSITION_FRAME_COUNT 16
 #define TRANSITION_FADE_LEVEL 32
-#define TRANSITION_BLEND_SUBTRACT 2
-#define TRANSITION_SUBTRACT_TPAGE getTPage(0, TRANSITION_BLEND_SUBTRACT, 0, 0)
+#define TRANSITION_SUBTRACT_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 0, 0)
 
 /** @brief Rendering workspace for one half of the screen transition. */
 typedef struct

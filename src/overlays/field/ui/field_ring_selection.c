@@ -17,6 +17,7 @@
 #include <libgpu.h>
 #include <libgte.h>
 #include <memory.h>
+#include "common/gpu_packet.h"
 
 /** @brief Ring menu states (g_field_ring_menu_state). */
 enum
@@ -97,8 +98,8 @@ enum
 /** @brief Width of one thumbnail strip on screen (a quarter of the 64-texel column). */
 #define FIELD_THUMBNAIL_STRIP_WIDTH 16
 /** @brief Texture pages of framebuffer rows 0-255 and 256-511 at x = 0 (15-bit direct); OR in the 64-texel page column. */
-#define FIELD_THUMBNAIL_TPAGE_TOP getTPage(2, 1, 0, 0)
-#define FIELD_THUMBNAIL_TPAGE_BOTTOM getTPage(2, 1, 0, 256)
+#define FIELD_THUMBNAIL_TPAGE_TOP getTPage(GPU_TEXTURE_16BIT, GPU_BLEND_ADD, 0, 0)
+#define FIELD_THUMBNAIL_TPAGE_BOTTOM getTPage(GPU_TEXTURE_16BIT, GPU_BLEND_ADD, 0, 256)
 /** @brief Unmodulated grey of the thumbnail quads (r = g = b = 0x80). */
 #define FIELD_THUMBNAIL_GREY 0x808080
 
@@ -472,7 +473,7 @@ static void field_draw_ring_menu(FieldRenderHalf* render_half)
         /* The ellipse is a quarter as tall as it is wide. */
         prim->x0 = prim->x2 = g_field_ring_center_x + ((g_field_ring_radius * rsin(u_or_angle)) >> 12) - (v_or_width >> 1);
         prim->y1 = prim->y0 = g_field_ring_center_y + ((g_field_ring_radius * rcos(u_or_angle)) >> 14) - (height >> 1);
-        prim->tpage = getTPage(0, 1, FIELD_RING_IMAGE_X, FIELD_RING_IMAGE_Y);
+        prim->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, FIELD_RING_IMAGE_X, FIELD_RING_IMAGE_Y);
         prim->y2 = prim->y3 = prim->y0 + height;
         prim->x1 = prim->x3 = prim->x0 + v_or_width;
         prim->clut = getClut(g_field_ring_entries[index] * FIELD_CLUT_COLORS, VRAM_CLUT_Y);

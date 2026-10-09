@@ -117,7 +117,7 @@ POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* output, u_long* ot, u8* text, s3
         output->u1 = output->u3 = texture_u_end;
         output->v2 = output->v3 = sprites[0].h + texture_v - 1;
         output->clut = sprites[0].clut;
-        output->tpage = getTPage(0, 1, FIELD_TEXT_QUAD_SCRATCH_X, 0);
+        output->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, FIELD_TEXT_QUAD_SCRATCH_X, 0);
         addPrim(ot, output);
         if (add_fade_copy != 0)
         {

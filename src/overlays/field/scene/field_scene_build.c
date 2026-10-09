@@ -8,6 +8,7 @@
 #include "../internal/field_calls.h"
 #include "main/display.h"
 #include <libpress.h>
+#include "common/gpu_packet.h"
 
 /*
  * FieldObjDef::flags bits (see also FIELD_OBJ_DEF_SCREEN_FIXED). A wrapping
@@ -739,7 +740,7 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
     field_prepare_animation_definitions(map->anim_defs[2], FIELD_ANIM_GROUP_TINT);
     field_prepare_animation_definitions(map->anim_defs[3], FIELD_ANIM_GROUP_EFFECT);
     /* getTPage's Y bit for the lower texture bank. */
-    lower_bank_y_bit = getTPage(0, 0, 0, FIELD_TILE_LOWER_BANK_VRAM_Y);
+    lower_bank_y_bit = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, 0, FIELD_TILE_LOWER_BANK_VRAM_Y);
     obj = scene->objects;
     if (obj != NULL)
     {

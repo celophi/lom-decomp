@@ -50,9 +50,9 @@
 #define MENU_FRAME_CLUT getClut(MENU_CLUT_X, MENU_CLUT_Y)
 #define MENU_FRAME_CLUT_ALTERNATE getClut(MENU_CLUT_X, MENU_CLUT_Y + 1)
 /** @brief Texture page of the frame artwork. */
-#define MENU_FRAME_TPAGE getTPage(0, 0, MENU_TPAGE_X, MENU_TPAGE_Y)
+#define MENU_FRAME_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, MENU_TPAGE_X, MENU_TPAGE_Y)
 /** @brief Draw mode linked after the fill (so drawn before it): subtractive blending. */
-#define MENU_FILL_TPAGE getTPage(0, 2, MENU_TPAGE_X, MENU_TPAGE_Y)
+#define MENU_FILL_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, MENU_TPAGE_X, MENU_TPAGE_Y)
 
 /** @brief Fill colours subtracted from the scene inside a frame. */
 #define MENU_FILL_COLOR GPU_COLOR_WORD(0x30, 0x30, 0x30)

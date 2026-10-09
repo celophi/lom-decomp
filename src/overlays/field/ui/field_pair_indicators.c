@@ -302,7 +302,7 @@ static void field_draw_pair_indicator(s32 slot, FieldRenderHalf* render_half)
             quad->uv1.c.v = quad->uv3.c.v;
             quad->uv3.c.v = swap;
         }
-        quad->tpage = getTPage(0, 1, 448, 0);
+        quad->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 448, 0);
         quad->clut = getClut(80, 492);
         addPrim(&ordering_table[FIELD_INDICATOR_OT_INDEX], quad);
         quad++;

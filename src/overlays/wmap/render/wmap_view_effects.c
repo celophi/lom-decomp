@@ -27,7 +27,7 @@
 #define WMAP_MAP_OT_INDEX 175
 
 /** @brief Tile page and palette of the map texture. */
-#define WMAP_MAP_TPAGE getTPage(0, 0, 576, 0)
+#define WMAP_MAP_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, 576, 0)
 #define WMAP_MAP_CLUT getClut(576, 384)
 /** @brief VRAM x of the two map texture pages and y of the lower one. */
 #define WMAP_MAP_PAGE_X 576
@@ -41,7 +41,7 @@
 #define WMAP_MAP_TEXEL_EDGE (WMAP_MAP_PAGE_TEXELS - (WMAP_MAP_TEXEL_TILE - WMAP_MAP_TEXEL_WRAP))
 
 /** @brief Subtractive-blend texture page selected for the shadow polygons. */
-#define WMAP_SHADOW_TPAGE getTPage(0, 2, 320, 0)
+#define WMAP_SHADOW_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 320, 0)
 /** @brief Brightest shadow level and the shadow's vertical offset. */
 #define WMAP_SHADOW_LEVEL_MAX 64
 #define WMAP_SHADOW_OFFSET_Y 10
@@ -800,7 +800,7 @@ void wmap_update_map_texcoords(void)
     {
         for (column = WMAP_MAP_VISIBLE_FIRST; column < WMAP_MAP_VISIBLE_END; column++)
         {
-            g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column].tpage = getTPage(0, 0, g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column].pad2,
+            g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column].tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column].pad2,
                                                                                          g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column].pad1);
         }
     }

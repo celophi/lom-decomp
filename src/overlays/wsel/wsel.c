@@ -16,9 +16,6 @@
 #include "common/tim.h"
 
 #define WSEL_FADE_IN_FRAMES 20
-/** Semi-transparency rates (texture page abr field). */
-#define WSEL_BLEND_ADD 1      /**< Background plus foreground. */
-#define WSEL_BLEND_SUBTRACT 2 /**< Background minus foreground. */
 /** Fixed RAM buffer that CD resources are staged into before being unpacked. */
 #define WSEL_LOAD_BUFFER ((u8*)LOAD_BUFFER_ADDRESS)
 /** Offset table at the head of a staged music file: [0] sequence, [1] instrument bank. */
@@ -595,9 +592,9 @@ static void wsel_draw_frame(WselRenderBuffer* buffer)
             else
             {
                 g_wsel_sprites[WSEL_SPRITE_LAND_MAP].semi_trans = 1;
-                g_wsel_sprites[WSEL_SPRITE_LAND_MAP].blend_mode = WSEL_BLEND_ADD;
+                g_wsel_sprites[WSEL_SPRITE_LAND_MAP].blend_mode = GPU_BLEND_ADD;
                 g_wsel_sprites[WSEL_SPRITE_CURSOR].semi_trans = 1;
-                g_wsel_sprites[WSEL_SPRITE_CURSOR].blend_mode = WSEL_BLEND_ADD;
+                g_wsel_sprites[WSEL_SPRITE_CURSOR].blend_mode = GPU_BLEND_ADD;
             }
         }
         prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_CURSOR);
@@ -765,7 +762,7 @@ static void* wsel_draw_selection_mask(TILE* tile, u_long* ot)
     tile++;
 
     draw_mode = (DR_TPAGE*)tile;
-    setDrawTPage(draw_mode, 0, 0, getTPage(0, WSEL_BLEND_SUBTRACT, 0, 0));
+    setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 0, 0));
     addPrim(ot, draw_mode);
     return draw_mode + 1;
 }
@@ -929,11 +926,11 @@ static void* wsel_draw_shade_tile(TILE* tile, u_long* ot, s32 x, s32 y, s32 inte
     draw_mode = (DR_TPAGE*)(tile + 1);
     if (intensity < WSEL_SHADE_ADDITIVE)
     {
-        setDrawTPage(draw_mode, 0, 0, getTPage(0, WSEL_BLEND_SUBTRACT, 0, 0));
+        setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 0, 0));
     }
     else
     {
-        setDrawTPage(draw_mode, 0, 0, getTPage(0, WSEL_BLEND_ADD, 0, 0));
+        setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 0, 0));
     }
     addPrim(ot, draw_mode);
     return draw_mode + 1;

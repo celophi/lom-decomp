@@ -24,6 +24,7 @@
 #include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 #include <rand.h>
+#include "common/gpu_packet.h"
 
 /** @brief Number of scattered-dome points (FieldObjectState::ground_attachment_points). */
 #define SCATTER_POINT_COUNT 3
@@ -51,7 +52,7 @@
 #define EFFECT_DEPTH_SHIFT 7
 
 /** @brief Draw mode page: additive blending (0x20), texture page at X 320. */
-#define EFFECT_TPAGE getTPage(0, 1, 320, 0)
+#define EFFECT_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 320, 0)
 
 /** @brief Channel level of the brightest effect vertex. */
 #define EFFECT_LEVEL 160

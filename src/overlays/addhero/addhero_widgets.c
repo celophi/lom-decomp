@@ -1,5 +1,6 @@
 #include "overlays/field/field_text.h"
 #include "internal/addhero_internal.h"
+#include "common/gpu_packet.h"
 
 /** @brief Side of a square party icon, in pixels (4-bit, so a quarter of that in VRAM halfwords). */
 #define ADDHERO_ICON_SIZE 48
@@ -832,7 +833,7 @@ void* addhero_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 
     quad->v3 = ADDHERO_ICON_VRAM_Y + ADDHERO_ICON_SIZE - 1;
     quad->v2 = ADDHERO_ICON_VRAM_Y + ADDHERO_ICON_SIZE - 1;
     quad->clut = getClut(index * 16, VRAM_CLUT_Y);
-    quad->tpage = getTPage(0, 0, ADDHERO_ICON_VRAM_X, 0);
+    quad->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, ADDHERO_ICON_VRAM_X, 0);
     addPrim(ot, quad);
 
     return quad + 1;
