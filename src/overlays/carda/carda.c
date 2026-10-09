@@ -2855,12 +2855,12 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
             }
             carda_apply_save_items();
             carda_restore_active_record();
-            strcpy(g_carda_selected_card_path.raw, "bu00:");
+            strcpy(g_carda_selected_card_path, CARD_DEVICE_PREFIX);
             g_gosub_result_values = g_field_card_pet_slot;
-            g_carda_selected_card_path.raw[2] += (u8)g_card_slot;
-            strcat(g_carda_selected_card_path.raw, g_lom_pocketstation_filename_prefix);
+            g_carda_selected_card_path[CARD_DEVICE_SLOT_DIGIT] += (u8)g_card_slot;
+            strcat(g_carda_selected_card_path, g_lom_pocketstation_filename_prefix);
             _card_wait(g_card_slot);
-            erase(&g_carda_selected_card_path);
+            erase(g_carda_selected_card_path);
             if (g_carda_received_item_count == 0)
             {
                 CardMenuElement* element;
@@ -3013,10 +3013,10 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                         g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_GAME_DATA;
                         break;
                     }
-                    strcpy(g_carda_selected_card_path.raw, "bu00:");
+                    strcpy(g_carda_selected_card_path, CARD_DEVICE_PREFIX);
                     g_carda_new_save_file = 1;
-                    g_carda_selected_card_path.raw[2] += (u8)g_card_slot;
-                    strcat(g_carda_selected_card_path.raw, g_lom_pocketstation_filename_prefix);
+                    g_carda_selected_card_path[CARD_DEVICE_SLOT_DIGIT] += (u8)g_card_slot;
+                    strcat(g_carda_selected_card_path, g_lom_pocketstation_filename_prefix);
                     carda_store_active_record();
                     g_card_entry_state = CARDA_ENTRY_STATE_CONFIRM_DOWNLOAD;
                     carda_enable_choice_toggle();

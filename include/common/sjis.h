@@ -23,17 +23,8 @@
 #define SJIS_DECIMAL_RADIX 10
 #define SJIS_DECIMAL_FIRST_DIVISOR 100000
 
-/** @brief Three full-width characters and their terminator, written instead of a number that is too large. */
-typedef struct
-{
-    s8 data[7];
-} SjisDecimalOverflowText;
-
-/**
- * @brief "MAX" in full-width characters, written by format_decimal for values of 1000000 and up.
- * @note Each overlay that includes format_decimal has its own copy.
- */
-extern const SjisDecimalOverflowText g_decimal_overflow_text;
+/** @brief Full-width "MAX" in Shift-JIS, written by format_decimal for values of 1000000 and up. */
+#define SJIS_DECIMAL_OVERFLOW_TEXT "\x82\x6c\x82\x60\x82\x77"
 
 /**
  * @brief Format @p value as full-width Shift-JIS digits without leading zeros and null-terminate it.

@@ -71,7 +71,6 @@ addhero/
         messages.yaml      every message on the 2P screens, with its index and symbol
         locations.yaml     the location names shown next to each save
         card_titles.yaml   the memory card title templates, in Shift-JIS, with what each is for
-        fixed_strings.yaml the number overflow text and the card path templates
     icons/
         icons.yaml         icon ids, what kind of character each is, original palettes
         icon_00.png ...    the 86 party icons, 48 x 48 each

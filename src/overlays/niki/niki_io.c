@@ -539,7 +539,7 @@ s32 niki_advance_load_sequence(void)
 }
 
 /** @brief Wildcard matching all files on memory-card slot zero. */
-const CardPathTemplate g_niki_entry_header_template = {"bu00:*"};
+const CardPathTemplate g_niki_entry_header_template = {CARD_SEARCH_PATTERN};
 
 #include "../../common/card_events/restart_card_sequence.inc.c"
 #include "../../common/card_events/poll_and_retry_card_info.inc.c"

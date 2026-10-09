@@ -32,11 +32,9 @@ def pad(data: bytearray, alignment: int = 4) -> None:
 
 
 class FakeOverlay:
-    """Builds the three data files, their splat config and a symbol file."""
+    """Builds the data blob, its splat config and a symbol file."""
 
     def __init__(self):
-        small = "ＭＡＸ".encode("shift_jis") + b"\x00\x00" + b"bu00:\x00\x00\x00"
-        pattern = b"bu00:*\x00\x00"
         blob = bytearray()
         names = {}
 
@@ -78,22 +76,17 @@ class FakeOverlay:
         names["g_addhero_icon_phase"] = len(blob)  # first variable
         blob += bytes(32)
 
-        self.small, self.pattern, self.blob = small, pattern, bytes(blob)
-        self.blob_address = ADDRESS + len(small) + len(pattern)
+        self.blob = bytes(blob)
+        self.blob_address = ADDRESS
         self.symbols = {name: self.blob_address + offset for name, offset in names.items()}
         page_base = names["g_glyph_chart_page_base"]
         self.symbols["g_glyph_chart_page_base"] = self.blob_address + page_base
-        self.symbols["g_decimal_overflow_text"] = ADDRESS
-        self.symbols["g_addhero_file_template"] = ADDRESS + 8
-        self.symbols["g_addhero_entry_header_template"] = ADDRESS + len(small)
 
     def write(self, root: Path, skip_symbol: str | None = None) -> addhero.Inputs:
         config, assets = root / "config", root / "assets"
         (config / "symbols").mkdir(parents=True)
         (config / "overlays").mkdir()
         assets.mkdir()
-        (assets / "small.rodatabin.bin").write_bytes(self.small)
-        (assets / "pattern.rodatabin.bin").write_bytes(self.pattern)
         (assets / "blob.databin.bin").write_bytes(self.blob)
         start = 0x1
         segment = {
@@ -101,13 +94,9 @@ class FakeOverlay:
             "type": "decompress_overlay",
             "start": start,
             "vram": ADDRESS,
-            "subsegments": [
-                [start, "rodatabin", "small"],
-                [start + len(self.small), "rodatabin", "pattern"],
-                [start + len(self.small) + len(self.pattern), "databin", "blob"],
-            ],
+            "subsegments": [[start, "databin", "blob"]],
         }
-        end = start + len(self.small) + len(self.pattern) + len(self.blob)
+        end = start + len(self.blob)
         (config / addhero.OVERLAY_CONFIG).write_text(yaml.safe_dump({"segments": [segment, [end]]}))
         lines = [
             f"{name} = 0x{address:08X};"
@@ -143,8 +132,6 @@ class ExtractTest(unittest.TestCase):
         self.assertEqual(steps[1]["steps"], ["CARD_MENU_STEP_WAIT", "CARD_MENU_STEP_DONE"])
         self.assertEqual(self.load("tables/text_conversion.yaml")["one_byte"]["0x4_"], "Ａ" * 16)
         self.assertEqual(len(self.load("tables/digit_glyphs.yaml")["hexadecimal"]["glyphs"]), 16)
-        strings = [entry["text"] for entry in self.load("text/fixed_strings.yaml")["strings"]]
-        self.assertEqual(strings, ["ＭＡＸ", "bu00:", "bu00:*"])
 
     def test_byte_map_covers_the_whole_blob_in_order(self):
         addhero.extract(self.overlay.write(self.root), self.root / "out")

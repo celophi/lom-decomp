@@ -7,7 +7,6 @@ extern s32 g_addhero_primary_poll_countdown;
 extern s32 g_addhero_secondary_poll_countdown;
 extern s32 g_addhero_file_handle;
 extern char g_addhero_target_file_path[];
-extern CardPathTemplate g_addhero_entry_header_template;
 extern u8 g_addhero_loadseq_file_ready[];
 
 #include "../../common/sjis/format_decimal.inc.c"
@@ -145,12 +144,12 @@ inline void addhero_erase_placeholder_files(void)
 {
     CardFilePath card_path;
 
-    memcpy(card_path.text, &g_addhero_file_template, CARD_DEVICE_BYTES);
+    strcpy(card_path.text, CARD_DEVICE_PREFIX);
     card_path.device.characters.slot += g_card_slot;
     strcat(card_path.text, g_lom_save_dummy_filename);
     erase(card_path.text);
 
-    memcpy(card_path.text, &g_addhero_file_template, CARD_DEVICE_BYTES);
+    strcpy(card_path.text, CARD_DEVICE_PREFIX);
     card_path.device.characters.slot += g_card_slot;
     strcat(card_path.text, g_lom_pocketstation_dummy_filename);
     erase(card_path.text);
@@ -173,7 +172,7 @@ s32 addhero_advance_load_sequence(void)
     s32 entry_index;
     s32 empty_rank;
 
-    memcpy(card_path.text, &g_addhero_file_template, CARD_DEVICE_BYTES);
+    strcpy(card_path.text, CARD_DEVICE_PREFIX);
     result = CARD_MENU_SEQUENCE_WAIT;
     card_path.device.characters.slot += g_card_slot;
 
@@ -672,7 +671,7 @@ s32 addhero_begin_entry_scan(s32 page)
 {
     CardSearchPattern pattern;
 
-    memcpy(pattern.text, &g_addhero_entry_header_template, CARD_SEARCH_PATTERN_BYTES);
+    strcpy(pattern.text, CARD_SEARCH_PATTERN);
     g_addhero_selected_row = 0;
     g_addhero_scroll_frames = 0;
     g_addhero_scroll_target_y = 0;
@@ -771,7 +770,7 @@ void addhero_commit_selected_entry(void)
         g_addhero_selection_status = CARD_MENU_SELECTION_NEW_SAVE;
         return;
     }
-    memcpy(card_path.text, &g_addhero_file_template, CARD_DEVICE_BYTES);
+    strcpy(card_path.text, CARD_DEVICE_PREFIX);
     strcat(card_path.text, g_card_entries[g_card_slot][g_addhero_selected_row].name);
     card_path.device.characters.slot += g_card_slot;
     g_addhero_selection_status = CARD_MENU_SELECTION_NONE;

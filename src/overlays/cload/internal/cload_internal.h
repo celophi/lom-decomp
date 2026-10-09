@@ -125,8 +125,6 @@ extern u16 g_cload_location_names[];
 extern u8 g_cload_steps_idle[];
 extern u8 g_cload_steps_read_selected_header[];
 extern char g_cload_selected_card_path[0x40];
-extern const CardPathTemplate g_cload_card_path_prefix;
-extern const CardPathTemplate g_cload_card_search_path;
 extern s32 g_cload_retry_count;
 extern s32 g_cload_primary_poll_countdown;
 extern s32 g_cload_entry_value_limit;

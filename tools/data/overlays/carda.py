@@ -74,9 +74,6 @@ class CardaSymbols(CardSymbols):
     save_title: int
     bad_title: int
     save_icon_offsets: int
-    overflow_text: int
-    card_path: int
-    directory_pattern: int
 
     @classmethod
     def load(cls, path: Path) -> CardaSymbols:
@@ -104,9 +101,6 @@ SYMBOL_NAMES = {
     "chart_pages": "g_glyph_chart_page_base",
     "decimal_glyphs": "g_glyph_decimal_digits",
     "hex_glyphs": "g_glyph_hex_digits",
-    "overflow_text": "g_decimal_overflow_text",
-    "card_path": "g_carda_card_path_prefix",
-    "directory_pattern": "g_carda_card_search_path",
 }
 MESSAGE_SYMBOL_PREFIX = "g_carda_text_"
 CARD_STEP_SYMBOL_PREFIX = ("g_carda_steps_", "g_card_steps_")
@@ -293,39 +287,6 @@ def read_variables(blob: Blob[CardaSymbols]) -> Part:
     return Part("variables", start, end, note=note)
 
 
-def read_fixed_strings(
-    files: list[splat_config.DataFile], names: CardaSymbols
-) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
-    """Number overflow text and card paths from the small rodata files."""
-    wanted = (
-        ("overflow_text", "shift_jis", "Shown instead of a number above 999999."),
-        ("card_path", "ascii", "Memory card device used by the card step machine."),
-        ("directory_pattern", "ascii", "Directory search pattern for the whole card."),
-    )
-    strings = []
-    sources = {}
-    for key, encoding, note in wanted:
-        address = getattr(names, key)
-        source = splat_config.file_containing(files, address, SYMBOL_NAMES[key])
-        data = source.path.read_bytes()
-        start = address - source.start
-        text = data[start : data.index(b"\x00", start)].decode(encoding)
-        strings.append(
-            {"symbol": SYMBOL_NAMES[key], "address": hex_address(address), "text": text, "note": note}
-        )
-        sources[source.name] = source
-    byte_map = [
-        {
-            "file": source.path.name,
-            "address": hex_address(source.start),
-            "size": f"0x{source.end - source.start:X}",
-            "exported": "text/fixed_strings.yaml",
-        }
-        for source in sources.values()
-    ]
-    return strings, byte_map
-
-
 # ---------------------------------------------------------------------------
 # Writing
 
@@ -357,7 +318,7 @@ def _write_save_icons(content: SaveIcons, path: Path) -> None:
 # Putting it together
 
 
-def load_blob(inputs: Inputs) -> tuple[Blob[CardaSymbols], list[splat_config.DataFile]]:
+def load_blob(inputs: Inputs) -> Blob[CardaSymbols]:
     """Find the data blob through the splat config and check it against its declared size."""
     names = CardaSymbols.load(inputs.symbol_file)
     files = splat_config.data_files(inputs.overlay_config, inputs.assets)
@@ -373,22 +334,20 @@ def load_blob(inputs: Inputs) -> tuple[Blob[CardaSymbols], list[splat_config.Dat
     ):
         if not source.contains(getattr(names, key)):
             raise ValueError(f"{SYMBOL_NAMES[key]} is outside {source.path}; check the splat config")
-    return Blob(data, source.start, source.path.name, inputs.version, names), files
+    return Blob(data, source.start, source.path.name, inputs.version, names)
 
 
 def extract(inputs: Inputs, output: Path) -> None:
     """Read everything before writing; move the finished folder into place at the end."""
     if output.exists():
         raise FileExistsError(f"{output} already exists")
-    blob, files = load_blob(inputs)
+    blob = load_blob(inputs)
     parts = read_blob(blob)
-    strings, other_files = read_fixed_strings(files, blob.symbols)
     byte_map = {
         "source": blob.file_name,
         "address": hex_address(blob.address),
         "size": f"0x{len(blob.data):X}",
         "ranges": [byte_map_entry(blob, part) for part in parts],
-        "other_files": other_files,
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix=f".{output.name}-", dir=output.parent))
@@ -396,7 +355,6 @@ def extract(inputs: Inputs, output: Path) -> None:
         for part in parts:
             if part.content is not None:
                 write_part(part.content, staging / part.file)
-        dump_yaml(staging / "text/fixed_strings.yaml", {"strings": strings})
         dump_yaml(staging / "byte-map.yaml", byte_map)
         staging.rename(output)
     except BaseException:

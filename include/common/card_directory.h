@@ -28,9 +28,16 @@
 /** @brief open() mode bits that allocate @p count blocks when the file is created (with FCREAT). */
 #define CARD_FILE_BLOCKS(count) ((count) << 16)
 
-/** @brief Bytes of the device prefix "bu00:" and of the search pattern "bu00:*", with their terminators. */
-#define CARD_DEVICE_BYTES sizeof("bu00:")
-#define CARD_SEARCH_PATTERN_BYTES sizeof("bu00:*")
+/** @brief Memory-card device prefix and whole-card directory search pattern; the slot digit is patched in. */
+#define CARD_DEVICE_PREFIX "bu00:"
+#define CARD_SEARCH_PATTERN "bu00:*"
+
+/** @brief Index of the slot digit in CARD_DEVICE_PREFIX; adding a card slot to it selects that card. */
+#define CARD_DEVICE_SLOT_DIGIT 2
+
+/** @brief Bytes of CARD_DEVICE_PREFIX and CARD_SEARCH_PATTERN, with their terminators. */
+#define CARD_DEVICE_BYTES sizeof(CARD_DEVICE_PREFIX)
+#define CARD_SEARCH_PATTERN_BYTES sizeof(CARD_SEARCH_PATTERN)
 
 /** @brief Memory-card device prefix, such as "bu00"; adding a card slot to its slot digit selects that card. */
 typedef union

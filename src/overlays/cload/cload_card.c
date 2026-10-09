@@ -35,9 +35,6 @@ void *bcopy(const unsigned char *src, unsigned char *dst, int count);
         g_cload_load_step = (next_step);                                                                                                                       \
     } while (0)
 
-/** @brief Memory-card device path prefix for card files. */
-const CardPathTemplate g_cload_card_path_prefix = {"bu00:"};
-
 #include "../../common/save_file/validate_save_file.inc.c"
 #include "../../common/save_file/compute_save_checksum.inc.c"
 #include "../../common/save_file/format_hex.inc.c"
@@ -182,12 +179,12 @@ inline void cload_erase_fixed_card_files(void)
 {
     CardFilePath card_path;
 
-    memcpy(&card_path, &g_cload_card_path_prefix, CARD_DEVICE_BYTES);
+    strcpy(card_path.text, CARD_DEVICE_PREFIX);
     card_path.device.characters.slot += (u8)g_card_slot;
     strcat(card_path.text, g_lom_save_dummy_filename);
     erase(&card_path);
 
-    memcpy(&card_path, &g_cload_card_path_prefix, CARD_DEVICE_BYTES);
+    strcpy(card_path.text, CARD_DEVICE_PREFIX);
     card_path.device.characters.slot += (u8)g_card_slot;
     strcat(card_path.text, g_lom_pocketstation_dummy_filename);
     erase(&card_path);
@@ -214,7 +211,7 @@ s32 cload_advance_load_sequence(void)
     s32 poll_result;
 
     /* Builds the "bu00:" slot path like the erase helper; never used afterwards. */
-    memcpy(&card_path, &g_cload_card_path_prefix, CARD_DEVICE_BYTES);
+    strcpy(card_path.text, CARD_DEVICE_PREFIX);
     phase_result = CARD_MENU_SEQUENCE_WAIT;
     card_path.device.characters.slot += *(u8*)&g_card_slot;
 
@@ -495,8 +492,6 @@ s32 cload_advance_load_sequence(void)
     return phase_result;
 }
 
-const CardPathTemplate g_cload_card_search_path = {"bu00:*"};
-
 /**
  * @brief Reset the cached resource handles and arm the first load step.
  * @note Releases the handles (clear_software_card_events), rewinds the CD channel, and points
@@ -555,7 +550,7 @@ s32 cload_begin_entry_scan(s32 page)
 {
     CardSearchPattern search_path;
 
-    memcpy(&search_path, &g_cload_card_search_path, CARD_SEARCH_PATTERN_BYTES);
+    strcpy(search_path.text, CARD_SEARCH_PATTERN);
     g_cload_scroll_frames = 0;
     g_cload_scroll_target_y = 0;
     g_cload_scroll_y = 0;
@@ -648,7 +643,7 @@ void cload_commit_selected_entry(void)
         g_cload_selection_status = 2;
         return;
     }
-    memcpy(&card_path, &g_cload_card_path_prefix, CARD_DEVICE_BYTES);
+    strcpy(card_path.text, CARD_DEVICE_PREFIX);
     strcat(card_path.text, g_card_entries[g_card_slot][g_cload_selected_row].name);
     card_path.device.characters.slot += (u8)g_card_slot;
     g_cload_selection_status = 0;

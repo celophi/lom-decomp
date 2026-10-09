@@ -24,11 +24,6 @@ class SourceTest(unittest.TestCase):
                     "locations", "icon_offsets", "card_steps", "chart", "decimal_glyphs", "hex_glyphs",
                 ):
                     self.assertTrue(blobs[0].contains(getattr(names, key)), key)
-                for key in (
-                    "overflow_text", "card_path", "directory_pattern",
-                ):
-                    source = splat_config.file_containing(files, getattr(names, key), key)
-                    self.assertEqual(source.kind, "rodatabin", key)
                 sequences = names.with_prefix(carda.CARD_STEP_SYMBOL_PREFIX)
                 self.assertIn(names.card_steps, sequences.values())
 
