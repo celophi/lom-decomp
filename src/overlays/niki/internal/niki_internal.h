@@ -5,6 +5,8 @@
 #include "common/saved_game.h"
 #include "common/vector.h"
 #include "main/display.h"
+#include "overlays/field/field_menu_window.h"
+#include "common/card_menu.h"
 #include <kernel.h>
 #include <libetc.h>
 #include <libmcx.h>
@@ -19,18 +21,9 @@
 
 #define NIKI_SJIS_FULLWIDTH_ZERO 0x4F82
 #define NIKI_SJIS_MINUS 0x5B81
-#define NIKI_PROGRESS_DURATION 256
-#define NIKI_PROGRESS_WIDTH 288
-#define NIKI_PROGRESS_HEIGHT 44
-#define NIKI_CONFIRM_INPUT_MASK 0x220
-#define NIKI_CANCEL_INPUT_MASK 0x40
-#define NIKI_ELEMENT_COUNT 8
+#define NIKI_CANCEL_INPUT_MASK PAD_BTN_CIRCLE
 #define NIKI_ELEMENT_WORD_STRIDE 3
-#define NIKI_ELEMENT_STATE_MASK 7
-#define NIKI_ELEMENT_PHASE_MASK 0x78
-#define NIKI_MEMORY_CARD_BLOCK_BYTES 8192
-#define NIKI_SET_ELEMENT_WIDTH_LOW(e, c) ((e)->attr.word = ((e)->attr.word & 0x00FFFFFF) | ((u32)(c) << 24))
-#define GLYPH_SYM(sym, off) ((void*)(((u8*)&(sym) - (off)) + (sym)))
+#define NIKI_ELEMENT_TRANSITION_STEP_MASK 0x78
 #define GLYPH_OFF(base, off) ((void*)((base) + *(u16*)((base) + (off))))
 #define GPU_ADDR_MASK 0xFFFFFF
 #define GPU_TAG_HIGH_MASK 0xFF000000
@@ -94,53 +87,6 @@ typedef union
     NikiLoadedSavePayload loaded;
     u8 bytes[SAVE_FILE_BYTES];
 } NikiSaveBuffer;
-
-/** @brief Sixteen-color palette followed by a 48-by-48 four-bit icon raster. */
-typedef struct
-{
-    u16 palette[16];
-    u16 pixels[48][12];
-} NikiIcon;
-
-/**
- * @brief Packed window position, dimensions, animation state, and draw callback.
- * @note Width is split between attr.word bits 24..31 and dimensions.f.width_high.
- */
-typedef struct NikiElement
-{
-    union
-    {
-        u32 word;
-        struct
-        {
-            u16 state_phase_x;
-            u8 y;
-            u8 width_low;
-        } bytes;
-        struct
-        {
-            u32 state : 3;
-            u32 phase : 4;
-            u32 x : 9;
-            u32 y : 8;
-            u32 width_low : 8;
-        } f;
-    } attr;
-    union
-    {
-        u32 word;
-        struct
-        {
-            u32 width_high : 1;
-            u32 height : 8;
-            u32 reserved : 23;
-        } f;
-    } dimensions;
-    u8* (*draw)(u_long* ot, u8* prim, s32 x_offset, s32 y_offset);
-} NikiElement;
-
-/** @brief Bytes read to show an entry: the card header and the first 0x100 bytes of the saved game. */
-#define NIKI_ENTRY_READ_BYTES 0x280
 
 /** @brief Linked-list tag shared by GPU packets of different sizes. */
 typedef struct
@@ -233,65 +179,6 @@ typedef struct
     s16 y3;
 } NikiPolyG4Packet;
 
-/** @brief Textured quadrilateral used to display a save-file icon. */
-typedef struct
-{
-    NikiGpuTag tag;
-    NikiGpuColor color;
-    s16 x0, y0;
-    u8 u0, v0;
-    s16 clut;
-    s16 x1, y1;
-    u8 u1, v1;
-    s16 tpage;
-    s16 x2, y2;
-    u8 u2, v2;
-    u8 padding2[2];
-    s16 x3, y3;
-    u8 u3, v3;
-    u8 padding3[2];
-} NikiTexturedQuad;
-
-/** @brief Word-aligned memory-card device prefix, such as "bu00". */
-typedef union
-{
-    u32 word;
-    struct
-    {
-        u8 name[2];
-        u8 slot;
-        u8 port;
-    } characters;
-} NikiCardDevice;
-
-/** @brief Card path used to remove a placeholder save file. */
-typedef struct
-{
-    NikiCardDevice device;
-    u8 suffix[28];
-} NikiPlaceholderPath;
-
-/** @brief Memory-card path workspace for the load/save sequence. */
-typedef struct
-{
-    NikiCardDevice device;
-    u8 suffix[100];
-} NikiSequencePath;
-
-/** @brief Memory-card directory search path, including the device and wildcard. */
-typedef struct
-{
-    NikiCardDevice device;
-    u8 suffix[12];
-} NikiDirectoryPattern;
-
-/** @brief Complete memory-card path for the selected save file. */
-typedef struct
-{
-    NikiCardDevice device;
-    u8 suffix[252];
-} NikiSelectedFilePath;
-
 typedef struct
 {
     unsigned addr : 24;
@@ -349,7 +236,7 @@ extern u8 g_niki_card_setup_sequence[];
 extern u8 g_niki_rescan_sequence[];
 /** @brief Release primary events, then request and poll card information. */
 extern u8 g_niki_card_info_sequence[];
-extern NikiElement g_niki_element_pool[NIKI_ELEMENT_COUNT];
+extern CardMenuElement g_niki_element_pool[CARD_MENU_ELEMENT_COUNT];
 extern s32 g_niki_entry_scan_active;
 extern s32 g_field_niki_addhero_state;
 extern s32 g_save_compatibility_tag;
@@ -357,7 +244,7 @@ extern s32 g_niki_icon_palette;
 extern s32 g_niki_dialog_state;
 /**
  * @brief Start of the selected entry's save file: only the card header and the
- *        first 0x100 bytes of the saved game are read (NIKI_ENTRY_READ_BYTES).
+ *        first 0x100 bytes of the saved game are read (CARD_MENU_ENTRY_READ_BYTES).
  */
 extern SaveFile g_niki_entry_file;
 /**
@@ -400,22 +287,8 @@ extern u16 g_niki_location_names[];
 extern u8 D_800EC3F6[2];
 extern u8 D_800EC3FA[];
 extern u8 g_field_ui_text_cant_hold_more[];
-extern s32 g_menu_element_counter;
 extern s32 g_niki_choice_toggle;
 
-/** @brief g_niki_choice_toggle values: the selected choice of a confirmation prompt. */
-#define NIKI_CHOICE_YES 0
-#define NIKI_CHOICE_NO 1
-
-/**
- * @brief Choice a confirmation prompt starts on.
- * @note JP starts on yes, US on no.
- */
-#if defined(VERSION_JP)
-#define NIKI_CHOICE_DEFAULT NIKI_CHOICE_YES
-#else
-#define NIKI_CHOICE_DEFAULT NIKI_CHOICE_NO
-#endif
 /** @brief Reset retries and read the selected save into the transfer buffer. */
 extern u8 g_niki_load_save_sequence[];
 extern NikiSaveBuffer g_niki_save_blob;
@@ -442,7 +315,7 @@ extern u8 g_niki_read_saved_copy_sequence[];
 /** @brief Reset retries and write the replacement save. */
 extern u8 g_niki_write_save_sequence[];
 extern s32 g_niki_entry_value_limit;
-extern const char g_niki_file_template[8] __attribute__((aligned(4)));
+extern const CardPathTemplate g_niki_file_template;
 extern char D_800ECF9C[];
 extern char D_800ECFB0[];
 extern s32 g_niki_file_handle;
@@ -455,7 +328,7 @@ extern s32 g_niki_preserve_old_save;
 /** @brief Path written before renaming the replacement to the selected save path. */
 extern u8 g_niki_temporary_save_path[];
 /** @brief Directory search path matching every file on the card ("bu00:*"). */
-extern const char g_niki_entry_header_template[7] __attribute__((aligned(4)));
+extern const CardPathTemplate g_niki_entry_header_template;
 /** @brief Read and poll the selected entry's preview header. */
 extern u8 g_niki_preview_sequence[];
 
@@ -463,27 +336,27 @@ void niki_update_elements(NikiFrameState* frame);
 void niki_update_and_draw_elements(NikiFrameState* frame);
 s32 niki_update_load_sequence(void);
 s32 niki_handle_input(void);
-u8* niki_draw_entry_list(u_long* ot, u8* prim, s32 arg2, s32 arg3);
-u8* niki_draw_header_label(u_long* ot, u8* prim, s32 arg2, s32 arg3);
-u8* niki_draw_card_slot0_label(u_long* ot, u8* prim, s32 arg2, s32 arg3);
-u8* niki_draw_card_slot1_label(u_long* ot, u8* prim, s32 arg2, s32 arg3);
-u8* niki_draw_selected_entry_details(u_long* ot, u8* prim, s32 arg2, s32 arg3);
+void* niki_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+void* niki_draw_header_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+void* niki_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+void* niki_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 u8* niki_draw_icon_highlight(u8* prim, u_long* ot, s32 x, s32 y, s32 width, s32 icon_index, s32 texture_slot, s32 palette_mode);
-u8* niki_draw_footer_label(u_long* ot, u8* prim, s32 arg2, s32 arg3);
-u8* niki_draw_state_page(u_long* ot, u8* prim, s32 arg2, s32 arg3);
+void* niki_draw_footer_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void niki_clear_elements();
 s32 niki_advance_load_sequence(void);
 void func_800A3938();
-u8* niki_draw_status_dialog(u_long* ot, u8* prim, s32 arg2, s32 arg3);
-u8* niki_draw_secondary_status_dialog(u_long* ot, u8* prim, s32 arg2, s32 arg3);
+void* niki_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+void* niki_draw_secondary_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void niki_close_all_elements();
 void niki_switch_card_slot();
 void niki_commit_selected_entry(void);
 void niki_scroll_to_selection();
-NikiElement* niki_alloc_element();
+CardMenuElement* niki_alloc_element();
 void niki_enable_choice_toggle();
-u8* niki_draw_save_confirm_dialog(u_long* ot, u8* prim, s32 arg2, s32 arg3);
-u8* niki_draw_confirm_prompt(u_long* ot, u8* prim, s32 arg2, s32 arg3);
+void* niki_draw_save_confirm_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+void* niki_draw_confirm_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void func_800A55E4(void* buf, s32 arg1);
 void func_800A5638(void* buf, s32 arg1);
 void niki_sort_entries_by_type();

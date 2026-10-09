@@ -15,6 +15,7 @@ from tools.data.overlays.tests.test_addhero_sources import c_define
 REPO_ROOT = Path(__file__).resolve().parents[4]
 VERSIONS = ("us", "jp")
 HEADER = REPO_ROOT / "src/overlays/niki/internal/niki_internal.h"
+CARD_MENU_HEADER = REPO_ROOT / "include/common/card_menu.h"
 
 # Each card_data constant, and the NIKI #define that must agree with it.
 C_CONSTANTS = (
@@ -72,14 +73,15 @@ class SourceTest(unittest.TestCase):
         self.assertEqual(card_data.CHART_LEADS.start, c_define(HEADER, "NIKI_TEXT_EXTENDED_LEAD_FIRST"))
         self.assertEqual(len(card_data.CHART_LEADS), c_define(HEADER, "NIKI_TEXT_EXTENDED_PAGE_COUNT"))
 
-    def test_icon_layout_matches_niki_icon(self):
-        header = HEADER.read_text(encoding="ascii")
-        body = re.search(r"typedef struct\s*\{([^}]+)\}\s*NikiIcon;", header).group(1)
-        palette = re.search(r"u16 palette\[(\d+)\];", body)
-        pixels = re.search(r"u16 pixels\[(\d+)\]\[(\d+)\];", body)
+    def test_icon_layout_matches_card_menu_icon_image(self):
+        header = CARD_MENU_HEADER.read_text(encoding="ascii")
+        body = re.search(r"typedef struct\s*\{([^}]+)\}\s*CardMenuIconImage;", header).group(1)
+        palette = re.search(r"u16 clut\[(\d+)\];", body)
+        icon_size = c_define(CARD_MENU_HEADER, "CARD_MENU_ICON_SIZE")
+        self.assertRegex(body, r"u8 pixels\[CARD_MENU_ICON_SIZE \* CARD_MENU_ICON_SIZE / 2\];")
         self.assertEqual(int(palette[1]), icon_set.PALETTE_COLORS)
-        self.assertEqual(int(pixels[1]), icon_set.ICON_SIZE)
-        self.assertEqual(int(pixels[1]) * int(pixels[2]) * 2, icon_set.PIXEL_BYTES)
+        self.assertEqual(icon_size, icon_set.ICON_SIZE)
+        self.assertEqual(icon_size * icon_size // 2, icon_set.PIXEL_BYTES)
 
     def test_command_names_come_from_the_header(self):
         names = niki.card_step_names()

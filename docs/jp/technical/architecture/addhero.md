@@ -186,7 +186,7 @@ ADDHEROは、元のファイルを直接上書きしません。
 元のファイルを消した後に書き込みが失敗すると、プレイヤーのセーブは失われます。
 これは元のゲームの動作です。このあたりを変更する前に、知っておく価値があります。
 
-ソース：[読み込みと保存の画面](../../../../src/overlays/addhero/addhero_widgets.c)、
+ソース：[読み込みと保存の画面](../../../../src/overlays/addhero/addhero.c)、
 [カード処理](../../../../src/overlays/addhero/addhero_card.c)
 
 ## メモリーカードの扱い方
@@ -274,8 +274,8 @@ ADDHEROは、8つのアニメーション付きウィンドウですべてを描
 
 | ソース | 役割 |
 |---|---|
-| [addhero.c](../../../../src/overlays/addhero/addhero.c) | 入口、一覧画面の入力、エントリーの一覧、詳細ウィンドウ、ウィンドウのアニメーション |
-| [addhero_widgets.c](../../../../src/overlays/addhero/addhero_widgets.c) | 読み込みの確認、進行中の画面、ダイアログ、モード1のステータスウィンドウ、セーブの検証 |
+| [addhero.c](../../../../src/overlays/addhero/addhero.c) | 入口、一覧画面の入力、エントリーの一覧、詳細ウィンドウ、ウィンドウのアニメーション、読み込みの確認、進行中の画面、ダイアログ、モード1のステータスウィンドウ、セーブの検証 |
+| [card_menu.h](../../../../include/common/card_menu.h) | CARDA、CLOAD、NIKIと共有する、はい/いいえの選択、進行バー、パーティーのアイコンの値 |
 | [addhero_card.c](../../../../src/overlays/addhero/addhero_card.c) | カードの手順処理、ディレクトリの読み取り、エントリーの並べ替えと順位付け、カードイベント |
 | [addhero_glyph.c](../../../../src/overlays/addhero/addhero_glyph.c) | カードのタイトル用のシフトJIS字形キャッシュ |
 | [addhero_internal.h](../../../../src/overlays/addhero/internal/addhero_internal.h) | ウィンドウの配置、エントリーの状態、テキストの番号、共通の宣言 |

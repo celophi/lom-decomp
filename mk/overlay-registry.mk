@@ -24,7 +24,6 @@ OVERLAYS += addhero
 overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/overlay_header.c \
 	src/overlays/addhero/addhero.c \
-	src/overlays/addhero/addhero_widgets.c \
 	src/overlays/addhero/addhero_card.c \
 	src/overlays/addhero/addhero_glyph.c
 

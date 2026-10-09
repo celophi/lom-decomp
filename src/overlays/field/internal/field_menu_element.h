@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "main/field_runtime.h"
+#include "overlays/field/field_menu_window.h"
 
 /**
  * @file
@@ -116,17 +117,12 @@ struct FieldMenuElement
 /** @brief The eight menu elements. */
 extern FieldMenuElement g_field_menu_elements[FIELD_MENU_ELEMENT_COUNT];
 
-/** @brief Frame style: 0 for the field frame, 0x20 for the sub-overlay frame. */
-extern s32 g_menu_element_counter;
-
-void *field_draw_menu_frame(void *packet, u_long *ot, s32 x, s32 y, s32 width, s32 height, s32 display_y, s32 bright);
 void field_load_menu_frame_image(void);
 void field_reset_menu_elements(void);
 s32 field_menu_elements_animating(void);
 void field_close_menu_elements(void);
 FieldMenuElement *field_claim_menu_element(void);
 void field_draw_menu_elements(FieldRenderHalf *render_half);
-void *field_draw_menu_scroll_arrow(void *buffer, u_long *ot, s32 x, s32 y, s32 up);
 s32 field_count_text_glyphs(u8 *text);
 
 #endif

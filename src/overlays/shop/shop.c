@@ -517,7 +517,7 @@ static void shop_reset_windows(void)
     ShopWindow* window;
     s32 i;
 
-    g_menu_element_counter = 0x20;
+    g_field_menu_frame_style = FIELD_MENU_FRAME_STYLE_SUBSCREEN;
     window = g_shop_windows;
     for (i = 0; i < SHOP_WINDOW_COUNT; i++)
     {

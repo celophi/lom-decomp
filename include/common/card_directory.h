@@ -22,6 +22,63 @@
 #define CARD_DIRECTORY_ENTRY_BYTES sizeof(struct DIRENTRY)
 #define CARD_DIRECTORY_BYTES (CARD_DIRECTORY_ENTRY_COUNT * CARD_DIRECTORY_ENTRY_BYTES)
 
+/** @brief Bytes in one memory-card block. */
+#define CARD_BLOCK_BYTES 8192
+
+/** @brief open() mode bits that allocate @p count blocks when the file is created (with FCREAT). */
+#define CARD_FILE_BLOCKS(count) ((count) << 16)
+
+/** @brief Bytes of the device prefix "bu00:" and of the search pattern "bu00:*", with their terminators. */
+#define CARD_DEVICE_BYTES sizeof("bu00:")
+#define CARD_SEARCH_PATTERN_BYTES sizeof("bu00:*")
+
+/** @brief Memory-card device prefix, such as "bu00"; adding a card slot to its slot digit selects that card. */
+typedef union
+{
+    u32 word;
+    struct
+    {
+        u8 name[2];
+        u8 slot;
+        u8 port;
+    } characters;
+} CardDevice;
+
+/** @brief Eight-byte path template in the overlay data: the device prefix "bu00:" or the search pattern "bu00:*". */
+typedef union
+{
+    char text[8];
+    CardDevice device;
+} CardPathTemplate;
+
+/** @brief Directory search pattern buffer, built from the "bu00:*" template. */
+typedef union
+{
+    char text[16];
+    CardDevice device;
+} CardSearchPattern;
+
+/** @brief Path of one file on the card: the device prefix and a directory entry name. */
+typedef union
+{
+    char text[32];
+    CardDevice device;
+} CardFilePath;
+
+/** @brief Path workspace of the card load/save sequence. */
+typedef union
+{
+    char text[104];
+    CardDevice device;
+} CardSequencePath;
+
+/** @brief Path of the selected directory entry, built to read its save header. */
+typedef union
+{
+    char text[256];
+    CardDevice device;
+} CardEntryPath;
+
 /** @brief Length of the Legend of Mana file name prefix before the hex serial. */
 #define CARD_SAVE_FILENAME_PREFIX_LENGTH 12
 

@@ -197,7 +197,7 @@ written. The second path doesn't have that luxury. If the write fails after the
 original was erased, the player's save is gone. This is original game behavior,
 and it's worth knowing before changing anything in this area.
 
-Sources: [load and save screens](../../../../src/overlays/addhero/addhero_widgets.c),
+Sources: [load and save screens](../../../../src/overlays/addhero/addhero.c),
 [card sequence](../../../../src/overlays/addhero/addhero_card.c).
 
 ## Working with the memory card
@@ -294,8 +294,8 @@ overlay, but they matter if you want to change how it behaves.
 
 | Source | Architectural role |
 |---|---|
-| [addhero.c](../../../../src/overlays/addhero/addhero.c) | Entry points, browser input, entry list, details window, window animation |
-| [addhero_widgets.c](../../../../src/overlays/addhero/addhero_widgets.c) | Load prompt, progress screens, dialogs, mode 1 status window, save validation |
+| [addhero.c](../../../../src/overlays/addhero/addhero.c) | Entry points, browser input, entry list, details window, window animation, load prompt, progress screens, dialogs, mode 1 status window, save validation |
+| [card_menu.h](../../../../include/common/card_menu.h) | Yes/no prompt, progress bar and party icon values shared with CARDA, CLOAD and NIKI |
 | [addhero_card.c](../../../../src/overlays/addhero/addhero_card.c) | Card step machine, directory scan, entry sorting and ranking, card events |
 | [addhero_glyph.c](../../../../src/overlays/addhero/addhero_glyph.c) | Shift-JIS glyph cache for card titles |
 | [addhero_internal.h](../../../../src/overlays/addhero/internal/addhero_internal.h) | Window layout, entry states, text indexes, shared declarations |

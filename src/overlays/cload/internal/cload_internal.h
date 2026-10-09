@@ -2,6 +2,7 @@
 #define CLOAD_INTERNAL_H
 
 #include "overlays/field/field_text.h"
+#include "overlays/field/field_ui_text.h"
 #include "overlays/cload/cload.h"
 #include "common/saved_game.h"
 #include "common.h"
@@ -14,160 +15,16 @@
 #include "common/glyph_cache.h"
 #include "common/card_events.h"
 #include "common/card_directory.h"
-
-/**
- * @brief Draw callback of a CLOAD UI element: emits the element's content at
- *        the given transition offsets and returns the advanced primitive cursor.
- */
-typedef void *(*CloadElementDrawFunc)(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
-
-/**
- * @brief One animated CLOAD UI element (a framed window plus its content).
- *
- * The nine-bit window width straddles the two state words: its low eight bits
- * are the top byte of attr and its high bit is size.f.width_high.  No bitfield
- * can span that boundary, so the low byte is always read and written through
- * attr.word (see CLOAD_ELEMENT_WIDTH and CLOAD_SET_ELEMENT_WIDTH_LOW).  The
- * height is likewise written through size.word (CLOAD_SET_ELEMENT_HEIGHT).
- */
-typedef struct CloadElement CloadElement;
-struct CloadElement
-{
-    union
-    {
-        u32 word;
-        struct
-        {
-            u32 state : 3;
-            u32 phase : 4;
-            u32 x : 9;
-            u32 y : 8;
-            u32 width_low : 8;
-        } f;
-    } attr;
-    union
-    {
-        u32 word;
-        struct
-        {
-            u32 width_high : 1;
-            u32 height : 8;
-            u32 framed : 1;
-        } f;
-    } size;
-    CloadElementDrawFunc draw;
-};
-
-/** @brief CloadElement.attr.f.state values. */
-#define CLOAD_ELEMENT_FREE 0
-#define CLOAD_ELEMENT_OPENING 1
-#define CLOAD_ELEMENT_OPEN 2
-#define CLOAD_ELEMENT_CLOSING 3
-#define CLOAD_ELEMENT_CLOSED 4
-
-/** @brief Number of phase steps an opening window takes to reach full size. */
-#define CLOAD_ELEMENT_PHASE_STEPS 8
-
-/** @brief Bit position of the width's low byte inside CloadElement.attr.word. */
-#define CLOAD_ELEMENT_WIDTH_SHIFT 24
-
-/** @brief Low eight bits of a CloadElement's window width. */
-#define CLOAD_ELEMENT_WIDTH_LOW(element) ((element)->attr.word >> CLOAD_ELEMENT_WIDTH_SHIFT)
-
-/**
- * @brief Full nine-bit window width of a CloadElement.
- * @param element Element whose width is read.
- * @param width_low The width's low byte, as read by CLOAD_ELEMENT_WIDTH_LOW.
- */
-#define CLOAD_ELEMENT_WIDTH(element, width_low) ((s32)(((element)->size.f.width_high << 8) | (width_low)))
-
-/** @brief Store the low eight bits of a CloadElement's window width. */
-#define CLOAD_SET_ELEMENT_WIDTH_LOW(element, width)                                                                        \
-    ((element)->attr.word = ((element)->attr.word & ((1 << CLOAD_ELEMENT_WIDTH_SHIFT) - 1)) | ((width) << CLOAD_ELEMENT_WIDTH_SHIFT))
-
-/** @brief Bit position and mask of the height inside CloadElement.size.word. */
+#include "common/card_menu.h"
+/** @brief Bit position and mask of the height inside CardMenuElement.size.word. */
 #define CLOAD_ELEMENT_HEIGHT_SHIFT 1
 #define CLOAD_ELEMENT_HEIGHT_MASK (0xFF << CLOAD_ELEMENT_HEIGHT_SHIFT)
 
-/** @brief Store the window height of a CloadElement. */
+/** @brief Store the window height of a CardMenuElement. */
 #define CLOAD_SET_ELEMENT_HEIGHT(element, height) \
     ((element)->size.word = ((element)->size.word & ~CLOAD_ELEMENT_HEIGHT_MASK) | ((height) << CLOAD_ELEMENT_HEIGHT_SHIFT))
 
-/**
- * @brief Element-pool head viewed as the CD-load prompt element: the 0x0 state
- *        word split into its state/phase/x/code bitfields, plus the 0x4
- *        active/y sub-fields and the 0x8 draw callback.
- */
-typedef struct CloadPromptElement
-{
-    union
-    {
-        u32 word;
-        struct
-        {
-            u32 state : 3;
-            u32 phase : 4;
-            u32 x : 9;
-            u32 code : 8;
-        } f;
-    } attr;
-    u32 active : 1;
-    u32 y : 8;
-    u32 rest : 23;
-    void *draw;
-    s32 unused;
-} CloadPromptElement;
-
-/**
- * @brief 0x20-byte, word-aligned memory-card path scratch buffer.
- * The first six bytes are initialized from the "bu00:" device prefix before a
- * filename suffix is appended.
- */
-typedef union
-{
-    u8 bytes[0x20];
-    u32 align;
-} CloadCardPathScratch;
-
-/** @brief 0x68-byte, word-aligned scratch buffer used by cload_advance_load_sequence. */
-typedef union
-{
-    u8 bytes[0x68];
-    u32 align;
-} CloadLoadScratch;
-
-/** @brief 0x100-byte, word-aligned memory-card path buffer. */
-typedef union
-{
-    u8 bytes[0x100];
-    u32 align;
-} CloadCardPathBuffer;
-
-/** @brief 0x10-byte, word-aligned buffer initialized from the "bu00:*" search path. */
-typedef union
-{
-    u8 bytes[0x10];
-    u32 align;
-} CloadCardSearchPathBuffer;
-
-/** @brief Eight-byte, word-aligned memory-card path template. */
-typedef union
-{
-    char text[8];
-    u32 align[2];
-} CloadCardPathTemplate;
-
 /* CLOAD layout/state constants. */
-#define CLOAD_ELEMENT_COUNT 8
-#define CLOAD_CARD_COUNT 2
-#define CLOAD_ELEMENT_STATE_MASK 7
-#define CLOAD_ENTRY_GROUP_COUNT 8
-#define CLOAD_MEMORY_CARD_BLOCK_BYTES 8192
-/** @brief Bytes read to show an entry: the card header and the first 0x100 bytes of the saved game. */
-#define CLOAD_ENTRY_READ_BYTES 0x280
-/** @brief Bytes read to show an entry that is not a Legend of Mana save: its card header title and CLUT. */
-#define CLOAD_ENTRY_TITLE_READ_BYTES 0x80
-#define CLOAD_ENTRY_ROW_HEIGHT 14
 #define CLOAD_GLYPH_CACHE_SLOTS 0x100
 #define CLOAD_GLYPH_CACHE_COLUMNS 16
 #define CLOAD_GLYPH_CACHE_ROW_MASK 0xF0
@@ -175,30 +32,6 @@ typedef union
 #define CLOAD_GLYPH_CACHE_USED 0x10000
 #define CLOAD_GLYPH_RASTER_BUFFER_BYTES 0x8000
 #define CLOAD_COLOR_WHITE 0xFFFFFF
-
-/**
- * @brief Address of CLOAD text @p index, reached through its own u16 offset-table entry @p entry.
- * @note The table start is derived back from the entry symbol, like FIELD_UI_TEXT_AT.
- */
-#define CLOAD_TEXT_AT(entry, index) ((u8 *)&(entry) - (index) * 2 + (entry))
-
-/**
- * @brief Address of FIELD UI string @p index, given its two-byte offset entry @p entry.
- * @note The table start is derived back from the entry symbol, as in FIELD's own lookups.
- */
-#define FIELD_UI_TEXT_AT(entry, index) ((entry) - (index) * 2 + (entry)[0] + ((entry)[1] << 8))
-
-/**
- * @brief Address of FIELD UI string @p index, given the start of the offset table in @p table.
- * @note Summed as integers, offset bytes first, like FIELD's own string lookups.
- */
-#define FIELD_UI_TEXT(table, index) ((u8 *)((table)[(index) * 2] + (((table)[(index) * 2 + 1] << 8) + (uintptr_t)(table))))
-
-/** @brief Start of the CLOAD text offset table, derived from entry @p entry at @p index. */
-#define CLOAD_TEXT_TABLE(entry, index) (&(entry) - (index))
-
-/** @brief Address of CLOAD text @p index in the u16 offset table starting at @p table. */
-#define CLOAD_TEXT(table, index) ((u8 *)(table) + (table)[index])
 
 /** @brief Generic GPU packet prefix used while advancing the primitive buffer. */
 typedef struct
@@ -231,8 +64,8 @@ typedef struct CloadRenderBuffer
 
 extern s32 g_pad_input;
 extern s32 g_cload_exit_requested;
-extern CloadElement g_cload_element_pool[CLOAD_ELEMENT_COUNT];
-extern CloadRenderBuffer g_cload_render_buffers[CLOAD_CARD_COUNT];
+extern CardMenuElement g_cload_element_pool[CARD_MENU_ELEMENT_COUNT];
+extern CloadRenderBuffer g_cload_render_buffers[CARD_SLOT_COUNT];
 extern s32 g_cload_io_busy;
 extern u8 *g_cload_icon_resource;
 extern s32 g_cload_scroll_y;
@@ -241,7 +74,7 @@ extern s32 g_cload_progress_active;
 extern s32 g_cload_scroll_target_y;
 extern s32 g_cload_icon_phase;
 extern u_long g_cload_icon_context[8];
-extern u8 g_cload_primitive_buffers[CLOAD_CARD_COUNT][0x4000];
+extern u8 g_cload_primitive_buffers[CARD_SLOT_COUNT][0x4000];
 extern s32 g_cload_selected_row;
 extern s32 g_cload_result;
 extern s32 g_cload_scroll_frames;
@@ -250,7 +83,7 @@ extern s32 g_cload_frame_parity;
 extern s32 D_80162370;
 /**
  * @brief Start of the selected entry's save file: only the card header and the
- *        first 0x100 bytes of the saved game are read (CLOAD_ENTRY_READ_BYTES).
+ *        first 0x100 bytes of the saved game are read (CARD_MENU_ENTRY_READ_BYTES).
  */
 extern SaveFile g_cload_selected_file;
 extern s32 g_cload_element1_state;
@@ -306,8 +139,8 @@ extern char g_lom_pocketstation_dummy_filename[];
 extern u8 g_cload_steps_idle[];
 extern u8 g_cload_steps_read_selected_header[];
 extern char g_cload_selected_card_path[0x40];
-extern const CloadCardPathTemplate g_cload_card_path_prefix;
-extern const CloadCardPathTemplate g_cload_card_search_path;
+extern const CardPathTemplate g_cload_card_path_prefix;
+extern const CardPathTemplate g_cload_card_search_path;
 extern s32 g_cload_retry_count;
 extern s32 g_cload_primary_poll_countdown;
 extern s32 g_cload_entry_value_limit;
@@ -360,7 +193,7 @@ void *cload_draw_card_slot0_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
 void *cload_draw_card_slot1_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
 void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void cload_clear_elements(void);
-CloadElement *cload_alloc_element(void);
+CardMenuElement *cload_alloc_element(void);
 void cload_update_and_draw_elements(CloadRenderBuffer* frame);
 CloadGpuPacket *cload_emit_window_frame(CloadGpuPacket *prim, u_long *ot, s32 x, s32 y, s32 w, s32 h, s32 flag, s32 draw_fill);
 CloadGpuPacket *cload_emit_rect_outline(LINE_F2 *line, u_long *ot, s32 x, s32 y, s32 w, s32 h, s32 color);

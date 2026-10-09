@@ -186,7 +186,6 @@ g_glyph_single_byte_chart           = 0x801605A8;
 g_addhero_file_template                    = 0x80140090;
 g_addhero_entry_header_template            = 0x80140114;
 g_addhero_element_pool                      = 0x80160940;
-g_addhero_element1                         = 0x8016094C;
 jtbl_80140098                             = 0x80140098;
 
 // Shared engine / PSY-Q / libc functions called from addhero (addresses in main executable)
@@ -230,7 +229,7 @@ g_lom_pocketstation_filename_prefix             = 0x800ECF8C;
 g_lom_save_dummy_filename                  = 0x800ECF9C;
 g_lom_pocketstation_dummy_filename              = 0x800ECFB0;
 g_new_save_entry_prefix                    = 0x800ECFC4;
-g_menu_element_counter                     = 0x8012298C;
+g_field_menu_frame_style                     = 0x8012298C;
 
 SetDrawEnv = 0x8001A5D4;
 SetDefDrawEnv = 0x8001C56C;

@@ -5,7 +5,7 @@
  * The frame artwork is a 64x32 4-bit image in the texture page at (256, 256)
  * holding two 32x32 frame styles side by side, each with 8-pixel corners,
  * 16-pixel edges and the two scroll arrows in the middle. Its two palettes
- * sit at (256, 499). @c g_menu_element_counter selects the style: 0 for the
+ * sit at (256, 499). @c g_field_menu_frame_style selects the style: 0 for the
  * field frame, 32 (the u of the second style) for the frame of the
  * sub-overlays (shops, save screens), which also takes the second palette.
  */
@@ -127,30 +127,30 @@ void* field_draw_menu_frame(void* packet, u_long* ot, s32 x, s32 y, s32 width, s
 
     /* The border straddles the window edge: corners, top and bottom edges, left and right edges. */
     setRECT(&destination, x - MENU_FRAME_BORDER / 2, y - MENU_FRAME_BORDER / 2, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
-    setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U, MENU_FRAME_TEX_V, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
+    setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U, MENU_FRAME_TEX_V, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
     packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
     setRECT(&destination, x + width - MENU_FRAME_BORDER / 2, y - MENU_FRAME_BORDER / 2, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
-    setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U + MENU_FRAME_FAR, MENU_FRAME_TEX_V, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
+    setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U + MENU_FRAME_FAR, MENU_FRAME_TEX_V, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
     packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
     setRECT(&destination, x - MENU_FRAME_BORDER / 2, y + height - MENU_FRAME_BORDER / 2, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
-    setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U, MENU_FRAME_TEX_V + MENU_FRAME_FAR, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
+    setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U, MENU_FRAME_TEX_V + MENU_FRAME_FAR, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
     packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
     setRECT(&destination, x + width - MENU_FRAME_BORDER / 2, y + height - MENU_FRAME_BORDER / 2, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
-    setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U + MENU_FRAME_FAR, MENU_FRAME_TEX_V + MENU_FRAME_FAR, MENU_FRAME_BORDER,
+    setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U + MENU_FRAME_FAR, MENU_FRAME_TEX_V + MENU_FRAME_FAR, MENU_FRAME_BORDER,
             MENU_FRAME_BORDER);
     packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
     setRECT(&destination, x + MENU_FRAME_BORDER / 2, y - MENU_FRAME_BORDER / 2, width - MENU_FRAME_BORDER, MENU_FRAME_BORDER);
-    setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U + MENU_FRAME_BORDER, MENU_FRAME_TEX_V, MENU_FRAME_EDGE, MENU_FRAME_BORDER);
+    setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U + MENU_FRAME_BORDER, MENU_FRAME_TEX_V, MENU_FRAME_EDGE, MENU_FRAME_BORDER);
     packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
     setRECT(&destination, x + MENU_FRAME_BORDER / 2, y + height - MENU_FRAME_BORDER / 2, width - MENU_FRAME_BORDER, MENU_FRAME_BORDER);
-    setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U + MENU_FRAME_BORDER, MENU_FRAME_TEX_V + MENU_FRAME_FAR, MENU_FRAME_EDGE,
+    setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U + MENU_FRAME_BORDER, MENU_FRAME_TEX_V + MENU_FRAME_FAR, MENU_FRAME_EDGE,
             MENU_FRAME_BORDER);
     packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
     setRECT(&destination, x - MENU_FRAME_BORDER / 2, y + MENU_FRAME_BORDER / 2, MENU_FRAME_BORDER, height - MENU_FRAME_BORDER);
-    setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U, MENU_FRAME_TEX_V + MENU_FRAME_BORDER, MENU_FRAME_BORDER, MENU_FRAME_EDGE);
+    setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U, MENU_FRAME_TEX_V + MENU_FRAME_BORDER, MENU_FRAME_BORDER, MENU_FRAME_EDGE);
     packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
     setRECT(&destination, x + width - MENU_FRAME_BORDER / 2, y + MENU_FRAME_BORDER / 2, MENU_FRAME_BORDER, height - MENU_FRAME_BORDER);
-    setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U + MENU_FRAME_FAR, MENU_FRAME_TEX_V + MENU_FRAME_BORDER, MENU_FRAME_BORDER,
+    setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U + MENU_FRAME_FAR, MENU_FRAME_TEX_V + MENU_FRAME_BORDER, MENU_FRAME_BORDER,
             MENU_FRAME_EDGE);
     packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
 
@@ -221,7 +221,7 @@ static void* field_draw_menu_sprite_tiles(void* packet, u_long* ot, RECT* destin
                 setXY0(sprite, destination->x + x_offset, destination->y + y_offset);
                 setUV0(sprite, texture->x, texture->y);
                 setWH(sprite, tile_width, tile_height);
-                sprite->clut = (g_menu_element_counter != 0) ? MENU_FRAME_CLUT_ALTERNATE : MENU_FRAME_CLUT;
+                sprite->clut = (g_field_menu_frame_style != 0) ? MENU_FRAME_CLUT_ALTERNATE : MENU_FRAME_CLUT;
                 addPrim(ot, sprite);
                 sprite++;
 
@@ -257,7 +257,7 @@ void field_reset_menu_elements(void)
     FieldMenuElement* element;
     s32 i;
 
-    g_menu_element_counter = 0;
+    g_field_menu_frame_style = FIELD_MENU_FRAME_STYLE_FIELD;
     element = g_field_menu_elements;
     for (i = 0; i < FIELD_MENU_ELEMENT_COUNT; i++)
     {
@@ -526,12 +526,12 @@ void* field_draw_menu_scroll_arrow(void* buffer, u_long* ot, s32 x, s32 y, s32 u
     setRECT(&destination, x - MENU_ARROW_WIDTH / 2, y - MENU_ARROW_HEIGHT / 2, MENU_ARROW_WIDTH, MENU_ARROW_HEIGHT);
     if (up != 0)
     {
-        setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U + MENU_FRAME_BORDER, MENU_FRAME_TEX_V + MENU_FRAME_BORDER, MENU_ARROW_WIDTH,
+        setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U + MENU_FRAME_BORDER, MENU_FRAME_TEX_V + MENU_FRAME_BORDER, MENU_ARROW_WIDTH,
                 MENU_ARROW_HEIGHT);
     }
     else
     {
-        setRECT(&texture, g_menu_element_counter + MENU_FRAME_TEX_U + MENU_FRAME_BORDER + MENU_ARROW_WIDTH, MENU_FRAME_TEX_V + MENU_FRAME_BORDER,
+        setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U + MENU_FRAME_BORDER + MENU_ARROW_WIDTH, MENU_FRAME_TEX_V + MENU_FRAME_BORDER,
                 MENU_ARROW_WIDTH, MENU_ARROW_HEIGHT);
     }
     packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);

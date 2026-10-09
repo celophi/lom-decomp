@@ -6,7 +6,7 @@
 field_text_reset_windows             = 0x800640B0;
 field_text_reset_scratch             = 0x800640EC;
 g_carda_overlay_id = 0x80140000;
-g_menu_element_counter                     = 0x8011F414;
+g_field_menu_frame_style                     = 0x8011F414;
 
 // Interior byte-addressed data symbols inside aligned databin spans.
 g_carda_steps_write_save_keep_handles = 0x80165BF1;
