@@ -47,7 +47,7 @@ typedef struct
 #define CD_STREAM_STATE (*(CdStreamState*)getScratchAddr(0))
 
 s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst_end);
-u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining);
+u8* cdrom_handle_stream_data(s32 byte_count, u32 bytes_remaining);
 void cdrom_clear_data_ready(volatile u8* data_ready);
 
 #endif

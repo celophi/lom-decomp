@@ -4,27 +4,34 @@
 #define CD_STREAM_PAYLOAD_START (CD_STREAM_BUFFER_START + 1)
 #define CD_DECOMPRESS_LOW_NIBBLE_MASK 0x0F
 #define CD_DECOMPRESS_HIGH_NIBBLE_MASK 0xF0
-#define CD_DECOMPRESS_COPY_8_BIT_BASE_LENGTH 0x14
+/** @brief Shortest copy CD_DECOMPRESS_COPY_8_BIT can encode. */
+#define CD_DECOMPRESS_COPY_8_BIT_BASE_LENGTH 20
 
-/** @brief Control bytes in the compressed resource format. */
+/**
+ * @brief Control bytes in the compressed resource format.
+ *
+ * Bytes 0x00 to 0xEF start a literal run of (byte + 1) bytes. In the formats
+ * below, n is the count byte that follows the opcode. Back-reference distances
+ * count from the previous output byte, so distance 0 repeats that byte.
+ */
 typedef enum CdDecompressOpcode
 {
-    CD_DECOMPRESS_REPEAT_NIBBLE = 0xF0,
-    CD_DECOMPRESS_REPEAT_BYTE = 0xF1,
-    CD_DECOMPRESS_REPEAT_NIBBLE_PAIR = 0xF2,
-    CD_DECOMPRESS_REPEAT_PAIR = 0xF3,
-    CD_DECOMPRESS_REPEAT_TRIPLET = 0xF4,
-    CD_DECOMPRESS_INTERLEAVE_BYTE = 0xF5,
-    CD_DECOMPRESS_INTERLEAVE_PAIR = 0xF6,
-    CD_DECOMPRESS_INTERLEAVE_TRIPLET = 0xF7,
-    CD_DECOMPRESS_ASCENDING_RUN = 0xF8,
-    CD_DECOMPRESS_DESCENDING_RUN = 0xF9,
-    CD_DECOMPRESS_STEPPED_RUN = 0xFA,
-    CD_DECOMPRESS_PAIR_DELTA_RUN = 0xFB,
-    CD_DECOMPRESS_COPY_12_BIT = 0xFC,
-    CD_DECOMPRESS_COPY_8_BIT = 0xFD,
-    CD_DECOMPRESS_COPY_NIBBLE = 0xFE,
-    CD_DECOMPRESS_END = 0xFF,
+    CD_DECOMPRESS_REPEAT_NIBBLE = 0xF0,      /**< [b]: high nibble of b, (low nibble + 3) times. */
+    CD_DECOMPRESS_REPEAT_BYTE = 0xF1,        /**< [n, v]: v, n + 4 times. */
+    CD_DECOMPRESS_REPEAT_NIBBLE_PAIR = 0xF2, /**< [n, b]: low nibble then high nibble of b, n + 2 times. */
+    CD_DECOMPRESS_REPEAT_PAIR = 0xF3,        /**< [n, a, b]: a, b, n + 2 times. */
+    CD_DECOMPRESS_REPEAT_TRIPLET = 0xF4,     /**< [n, a, b, c]: a, b, c, n + 2 times. */
+    CD_DECOMPRESS_INTERLEAVE_BYTE = 0xF5,    /**< [n, a, then n + 4 literals]: a before each literal. */
+    CD_DECOMPRESS_INTERLEAVE_PAIR = 0xF6,    /**< [n, a, b, then n + 3 literals]: a, b before each literal. */
+    CD_DECOMPRESS_INTERLEAVE_TRIPLET = 0xF7, /**< [n, a, b, c, then n + 2 literals]: a, b, c before each literal. */
+    CD_DECOMPRESS_ASCENDING_RUN = 0xF8,      /**< [n, v]: n + 4 bytes counting up from v. */
+    CD_DECOMPRESS_DESCENDING_RUN = 0xF9,     /**< [n, v]: n + 4 bytes counting down from v. */
+    CD_DECOMPRESS_STEPPED_RUN = 0xFA,        /**< [n, v, step]: n + 5 bytes from v, adding step each time. */
+    CD_DECOMPRESS_PAIR_DELTA_RUN = 0xFB,     /**< [n, lo, hi, d]: n + 3 little-endian halfwords from hi:lo, adding signed d. */
+    CD_DECOMPRESS_COPY_12_BIT = 0xFC,        /**< [lo, b]: copy (high nibble of b) + 4 bytes from distance (low nibble of b):lo. */
+    CD_DECOMPRESS_COPY_8_BIT = 0xFD,         /**< [d, n]: copy n + 20 bytes from distance d. */
+    CD_DECOMPRESS_COPY_NIBBLE = 0xFE,        /**< [b]: copy (low nibble + 3) bytes from distance (high nibble * 8) + 7. */
+    CD_DECOMPRESS_END = 0xFF,                /**< End of the stream. */
 } CdDecompressOpcode;
 
 /**
@@ -65,7 +72,8 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
     u32 high_word;
     u32 next_value;
 
-    s32 delta_bits;
+    s32 delta;
+
     u16 distance;
 
     source = *src_cursor;
@@ -82,7 +90,7 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
 
             source += 2;
             iterations = (pattern_first & CD_DECOMPRESS_LOW_NIBBLE_MASK) + 3;
-            pattern_first = pattern_first >> 4;
+            pattern_first >>= 4;
 
             do
             {
@@ -147,12 +155,11 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
 
             do
             {
-                *destination = pattern_first;
+                destination[0] = pattern_first;
                 destination[1] = pattern_second;
                 destination[2] = pattern_third;
                 destination += 3;
             } while (--iterations != 0);
-
             break;
 
         case CD_DECOMPRESS_INTERLEAVE_BYTE:
@@ -168,7 +175,6 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
                 destination[1] = *source++;
                 destination += 2;
             } while (--iterations != 0);
-
             break;
 
         case CD_DECOMPRESS_INTERLEAVE_PAIR:
@@ -186,7 +192,6 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
                 destination[2] = *source++;
                 destination += 3;
             } while (--iterations != 0);
-
             break;
 
         case CD_DECOMPRESS_INTERLEAVE_TRIPLET:
@@ -206,7 +211,6 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
                 destination[3] = *source++;
                 destination += 4;
             } while (--iterations != 0);
-
             break;
 
         case CD_DECOMPRESS_ASCENDING_RUN:
@@ -221,7 +225,6 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
                 *destination++ = pattern_first;
                 pattern_first += 1;
             } while (--iterations != 0);
-
             break;
 
         case CD_DECOMPRESS_DESCENDING_RUN:
@@ -236,7 +239,6 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
                 *destination++ = pattern_first;
                 pattern_first -= 1;
             } while (--iterations != 0);
-
             break;
 
         case CD_DECOMPRESS_STEPPED_RUN:
@@ -252,7 +254,6 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
                 *destination++ = pattern_first;
                 pattern_first += pattern_second;
             } while (--iterations != 0);
-
             break;
 
         case CD_DECOMPRESS_PAIR_DELTA_RUN:
@@ -262,7 +263,7 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
             pattern_third = source[4];
 
             iterations = count_byte + 3;
-            delta_bits = (u32)pattern_third << 24;
+            delta = pattern_third;
             source += 5;
 
             do
@@ -271,24 +272,24 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
                 destination[1] = value_high;
                 destination += 2;
 
-                next_value = delta_bits >> 24;
+                next_value = (s8)delta;
 
                 high_word = value_high << 8;
                 next_value += value_low | high_word;
 
                 value_low = next_value;
-                value_high = (next_value >> 8);
+                value_high = next_value >> 8;
             } while (--iterations != 0);
             break;
 
         case CD_DECOMPRESS_COPY_12_BIT:
             pattern_first = source[1];
-            opcode = source[2];
+            value_high = source[2];
 
             source += 3;
-            iterations = (opcode >> 4) + 4;
+            iterations = (value_high >> 4) + 4;
 
-            distance = pattern_first | ((opcode & CD_DECOMPRESS_LOW_NIBBLE_MASK) << 8);
+            distance = pattern_first | ((value_high & CD_DECOMPRESS_LOW_NIBBLE_MASK) << 8);
             copy_source = destination - distance;
 
             do
@@ -296,7 +297,6 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
                 *destination++ = copy_source[-1];
                 copy_source++;
             } while (--iterations != 0);
-
             break;
 
         case CD_DECOMPRESS_COPY_8_BIT:
@@ -312,7 +312,6 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
                 *destination++ = copy_source[-1];
                 copy_source++;
             } while (--iterations != 0);
-
             break;
 
         case CD_DECOMPRESS_COPY_NIBBLE:
@@ -327,7 +326,6 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
                 *destination++ = copy_source[-8];
                 copy_source++;
             } while (--iterations != 0);
-
             break;
 
         case CD_DECOMPRESS_END:
@@ -343,7 +341,6 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
             {
                 *destination++ = *source++;
             } while (--iterations != 0);
-
             break;
         }
 
@@ -360,22 +357,19 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
  * Initializes the scratchpad stream state, compacts unread input after the
  * consumer releases it, and wraps incoming sectors when the upper buffer fills.
  *
- * @param bytes_transferred Bytes delivered before the pending sector.
+ * @param byte_count Bytes delivered before the pending sector; zero for the first sector.
  * @param bytes_remaining Bytes remaining, including the pending sector.
  *
  * @return Next sector destination, or NULL when the sector must be retried.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/UDwSD
  */
-u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
+u8* cdrom_handle_stream_data(s32 byte_count, u32 bytes_remaining)
 {
-    s32 unconsumed_bytes;
     s32 alignment_padding;
-    s32 wrapped_word_count;
-    s32 linear_word_count;
+    s32 word_count;
     CdStreamCopyCursor destination;
-    CdStreamCopyCursor wrapped_source;
-    CdStreamCopyCursor linear_source;
+    CdStreamCopyCursor copy_source;
     u32 bytes_buffered;
     u32 bytes_consumed;
     u32 wrap_overflow;
@@ -393,9 +387,9 @@ u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
         transfer_size = CD_DATA_SECTOR_SIZE;
     }
 
-    if (bytes_transferred == 0)
+    if (byte_count == 0)
     {
-        // The first byte is a stream header; compressed input begins at byte one.
+        /* The first byte is a stream header; compressed input begins at byte one. */
         CD_STREAM_STATE.data_ready = TRUE;
         CD_STREAM_STATE.input_cursor = CD_STREAM_PAYLOAD_START;
         CD_STREAM_STATE.buffer_start = CD_STREAM_PAYLOAD_START;
@@ -406,24 +400,25 @@ u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
 
     if (!CD_STREAM_STATE.data_ready)
     {
-        unconsumed_bytes = CD_STREAM_STATE.bytes_buffered - CD_STREAM_STATE.bytes_consumed;
+        /* From here on byte_count is the number of bytes the decompressor has not read. */
+        byte_count = CD_STREAM_STATE.bytes_buffered - CD_STREAM_STATE.bytes_consumed;
         bytes_consumed = CD_STREAM_STATE.bytes_consumed;
         wrap_overflow = CD_STREAM_STATE.wrap_overflow;
-        alignment_padding = (CD_STREAM_COPY_WORD_SIZE - (unconsumed_bytes & CD_STREAM_COPY_WORD_MASK)) & CD_STREAM_COPY_WORD_MASK;
+        alignment_padding = (CD_STREAM_COPY_WORD_SIZE - (byte_count & CD_STREAM_COPY_WORD_MASK)) & CD_STREAM_COPY_WORD_MASK;
         if (wrap_overflow != 0)
         {
             wrapped_read_ptr = CD_STREAM_STATE.buffer_start;
-            destination.bytes = CD_STREAM_WRAP_START - unconsumed_bytes;
+            destination.bytes = CD_STREAM_WRAP_START - byte_count;
             CD_STREAM_STATE.input_cursor = destination.bytes;
             CD_STREAM_STATE.buffer_start = destination.bytes;
             destination.bytes -= alignment_padding;
-            CD_STREAM_STATE.bytes_buffered = (wrap_overflow + unconsumed_bytes) + transfer_size;
-            wrapped_source.bytes = (wrapped_read_ptr + bytes_consumed) - alignment_padding;
-            wrapped_word_count = (unconsumed_bytes + CD_STREAM_COPY_WORD_MASK) / CD_STREAM_COPY_WORD_SIZE;
-            for (wrapped_word_count--; wrapped_word_count != -1; wrapped_word_count--)
+            CD_STREAM_STATE.bytes_buffered = (wrap_overflow + byte_count) + transfer_size;
+            copy_source.bytes = (wrapped_read_ptr + bytes_consumed) - alignment_padding;
+            word_count = (byte_count + CD_STREAM_COPY_WORD_MASK) / CD_STREAM_COPY_WORD_SIZE;
+            for (word_count--; word_count != -1; word_count--)
             {
-                *destination.words = *wrapped_source.words;
-                wrapped_source.bytes += CD_STREAM_COPY_WORD_SIZE;
+                *destination.words = *copy_source.words;
+                copy_source.bytes += CD_STREAM_COPY_WORD_SIZE;
                 destination.bytes += CD_STREAM_COPY_WORD_SIZE;
             }
             destination.bytes += CD_STREAM_STATE.wrap_overflow;
@@ -432,17 +427,17 @@ u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
         else
         {
             destination.bytes = CD_STREAM_BUFFER_START;
-            CD_STREAM_STATE.bytes_buffered = unconsumed_bytes + transfer_size;
+            CD_STREAM_STATE.bytes_buffered = byte_count + transfer_size;
             linear_read_ptr = CD_STREAM_STATE.buffer_start;
             aligned_buffer_start = CD_STREAM_BUFFER_START + alignment_padding;
             CD_STREAM_STATE.input_cursor = aligned_buffer_start;
             CD_STREAM_STATE.buffer_start = aligned_buffer_start;
-            linear_source.bytes = (linear_read_ptr + bytes_consumed) - alignment_padding;
-            linear_word_count = (unconsumed_bytes + CD_STREAM_COPY_WORD_MASK) / CD_STREAM_COPY_WORD_SIZE;
-            for (linear_word_count--; linear_word_count != -1; linear_word_count--)
+            copy_source.bytes = (linear_read_ptr + bytes_consumed) - alignment_padding;
+            word_count = (byte_count + CD_STREAM_COPY_WORD_MASK) / CD_STREAM_COPY_WORD_SIZE;
+            for (word_count--; word_count != -1; word_count--)
             {
-                *destination.words = *linear_source.words;
-                linear_source.bytes += CD_STREAM_COPY_WORD_SIZE;
+                *destination.words = *copy_source.words;
+                copy_source.bytes += CD_STREAM_COPY_WORD_SIZE;
                 destination.bytes += CD_STREAM_COPY_WORD_SIZE;
             }
         }
@@ -470,8 +465,7 @@ u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
     }
     else
     {
-        unconsumed_bytes = bytes_buffered;
-        CD_STREAM_STATE.bytes_buffered = unconsumed_bytes + transfer_size;
+        CD_STREAM_STATE.bytes_buffered = bytes_buffered + transfer_size;
     }
 
     next_sector_dst = destination.bytes;
@@ -497,9 +491,7 @@ u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
 void cdrom_decompress_buffer(u8* source, u8* destination)
 {
     source++;
-    while (cdrom_decompress_data(&source, &destination, CD_DECOMPRESS_UNBOUNDED_END, CD_DECOMPRESS_UNBOUNDED_END) != FALSE)
-    {
-    }
+    while (cdrom_decompress_data(&source, &destination, CD_DECOMPRESS_UNBOUNDED_END, CD_DECOMPRESS_UNBOUNDED_END) != FALSE);
 }
 
 /**
