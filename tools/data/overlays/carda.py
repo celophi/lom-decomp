@@ -48,7 +48,7 @@ OVERLAY_CONFIG = "overlays/CARDA.BIN.yaml"
 SYMBOL_FILE = "symbols/carda_symbol_addrs.txt"
 STEP_HEADER = REPO_ROOT / "src/overlays/carda/internal/carda_internal.h"
 
-# CardaSaveIcon in carda_widgets.c: a palette and two 16 x 16, 4-bit frames.
+# CardaSaveIcon in carda.c: a palette and two 16 x 16, 4-bit frames.
 SAVE_ICON_SIZE = 16
 SAVE_ICON_FRAMES = 2
 SAVE_ICON_FRAME_BYTES = SAVE_ICON_SIZE * SAVE_ICON_SIZE // 2
@@ -74,10 +74,7 @@ class CardaSymbols(CardSymbols):
     save_title: int
     bad_title: int
     save_icon_offsets: int
-    title_dash: int
-    title_colon: int
     overflow_text: int
-    save_card_path: int
     card_path: int
     directory_pattern: int
 
@@ -107,10 +104,7 @@ SYMBOL_NAMES = {
     "chart_pages": "g_glyph_chart_page_base",
     "decimal_glyphs": "g_glyph_decimal_digits",
     "hex_glyphs": "g_glyph_hex_digits",
-    "title_dash": "g_carda_title_dash",
-    "title_colon": "g_carda_title_colon",
     "overflow_text": "g_decimal_overflow_text",
-    "save_card_path": "g_carda_save_card_path_prefix",
     "card_path": "g_carda_card_path_prefix",
     "directory_pattern": "g_carda_card_search_path",
 }
@@ -302,11 +296,8 @@ def read_variables(blob: Blob[CardaSymbols]) -> Part:
 def read_fixed_strings(
     files: list[splat_config.DataFile], names: CardaSymbols
 ) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
-    """Title punctuation, number overflow text and paths from the small rodata files."""
+    """Number overflow text and card paths from the small rodata files."""
     wanted = (
-        ("title_dash", "shift_jis", "Separates the save number from the play time."),
-        ("title_colon", "shift_jis", "Separates the hours and minutes in the play time."),
-        ("save_card_path", "ascii", "Memory card device used by the save screen."),
         ("overflow_text", "shift_jis", "Shown instead of a number above 999999."),
         ("card_path", "ascii", "Memory card device used by the card step machine."),
         ("directory_pattern", "ascii", "Directory search pattern for the whole card."),

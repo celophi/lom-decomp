@@ -33,9 +33,6 @@ class FakeOverlay:
         small = bytearray()
         self.symbols = {}
         for key, raw in (
-            ("title_dash", bytes.fromhex("81 7c")),
-            ("title_colon", bytes.fromhex("81 46")),
-            ("save_card_path", b"bu00:"),
             ("overflow_text", bytes.fromhex("82 6c 82 60 82 77")),
             ("card_path", b"bu00:"),
             ("directory_pattern", b"bu00:*"),
@@ -151,7 +148,7 @@ class ExtractTest(unittest.TestCase):
         self.assertEqual(self.load("text/items.yaml")["entries"][0]["text"], "Item")
         self.assertEqual(self.load("text/locations.yaml")["entries"][0]["text"], "Home")
         self.assertEqual(len(self.load("text/card_titles.yaml")["titles"]), 2)
-        self.assertEqual(len(self.load("text/fixed_strings.yaml")["strings"]), 6)
+        self.assertEqual(len(self.load("text/fixed_strings.yaml")["strings"]), 3)
         self.assertEqual(len(self.load("tables/digit_glyphs.yaml")["hexadecimal"]["glyphs"]), 16)
         self.assertEqual(self.load("tables/text_conversion.yaml")["one_byte"]["0x4_"], "\uff21" * 16)
         self.assertEqual(len(self.load("icons/icons.yaml")["icons"]), 1)

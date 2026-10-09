@@ -31,8 +31,6 @@ OVERLAYS += carda
 overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/overlay_header.c \
 	src/overlays/carda/carda.c \
-	src/overlays/carda/carda_widgets.c \
-	src/overlays/carda/carda_save.c \
 	src/overlays/carda/carda_card.c \
 	src/overlays/carda/carda_glyph.c
 

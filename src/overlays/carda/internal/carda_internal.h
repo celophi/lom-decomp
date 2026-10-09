@@ -27,8 +27,6 @@
 #include <strings.h>
 #include <libetc.h>
 #include "carda.h"
-#include "carda_widgets.h"
-#include "carda_save.h"
 #include "carda_card.h"
 #include "overlays/field/field_fade.h"
 #include "overlays/field/field_input.h"
@@ -155,9 +153,6 @@ extern s32 g_field_card_overlay_mode;
 /* FIELD UI strings and memory-card file names. */
 extern u8 g_field_ui_text_cant_hold_more[];
 extern char g_card_full_entry_name[];
-
-/* CARDA read-only data. */
-extern const CardaFileHeaderScratch g_carda_save_card_path_prefix;
 
 /* CARDA text offset-table entries. */
 extern u16 g_carda_text_checking_card;
