@@ -25,6 +25,7 @@ int PadSetActAlign(int port, unsigned char* alignment);
 int PadSetMainMode(int port, int mode, int lock);
 void PadSetAct(int port, unsigned char* actuator_data, int length);
 int PadChkVsync(void);
+void PadStartCom(void);
 void PadStopCom(void);
 
 #endif

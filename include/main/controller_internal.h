@@ -86,6 +86,11 @@ enum
 #define CONTROLLER_IS_DISCONNECTED(status) (((status) >> 8) & 1)
 #define CONTROLLER_ACTUATOR_SETUP_STATE(status) (((status) >> 9) & 3)
 #define CONTROLLER_IS_WITHIN_ANALOG_DEADZONE(delta) ((u32)((delta) + CONTROLLER_ANALOG_DEADZONE) < CONTROLLER_ANALOG_DEADZONE_WIDTH)
+/**
+ * @brief Scale a centred stick offset down to sample range, rounding toward zero.
+ * @param delta Signed offset from the stick centre.
+ */
+#define CONTROLLER_SCALE_ANALOG(delta) (((delta) >= 0) ? (delta) >> CONTROLLER_ANALOG_SCALE_SHIFT : (delta) / (1 << CONTROLLER_ANALOG_SCALE_SHIFT))
 
 /**
  * @brief One 16-byte processed controller sample.

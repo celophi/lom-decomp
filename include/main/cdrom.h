@@ -3,6 +3,11 @@
 
 #include "common.h"
 
+/** @brief User-data bytes in one data sector (Mode 1, or Mode 2 Form 1). */
+#define CD_DATA_SECTOR_SIZE 2048
+/** @brief Error code in the first reply byte when the drive rejects a command. */
+#define CD_DRIVE_ERROR_INVALID_COMMAND 0x40
+
 /**
  * @brief Supplies the next data-sector destination, or handles an XA sector.
  * @note NULL retries an ordinary data sector but ends an XA/movie transfer.

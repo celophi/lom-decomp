@@ -4,8 +4,6 @@
 #include "main/cdrom.h"
 #include <libetc.h>
 
-#define CD_DATA_SECTOR_SIZE 2048
-
 /*
  * Streamed resources are received into a four-sector ring. The first
  * CD_STREAM_DECOMPRESS_GUARD_SIZE bytes are kept free so an unread tail can be
@@ -17,8 +15,9 @@
 #define CD_STREAM_DECOMPRESS_GUARD_SIZE 280
 #define CD_STREAM_WRAP_START (CD_STREAM_BUFFER_START + CD_STREAM_DECOMPRESS_GUARD_SIZE)
 #define CD_DECOMPRESS_UNBOUNDED_END ((u8*)0xFFFFFFFCU)
-#define CD_STREAM_COPY_WORD_SIZE 4
-#define CD_STREAM_COPY_WORD_MASK 3
+#define CD_BYTES_PER_WORD 4
+#define CD_BYTES_PER_WORD_SHIFT 2
+#define CD_BYTES_PER_WORD_MASK (CD_BYTES_PER_WORD - 1)
 
 /** @brief Byte and word views of an aligned stream-copy cursor. */
 typedef union

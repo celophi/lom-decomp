@@ -5,11 +5,13 @@
 #include "internal/kanji.h"
 #include "internal/pattern.h"
 
+#include "main/cdrom.h"
 #include "main/display.h"
 #include <libapi.h>
 #include <libgte.h>
 #include <libgpu.h>
 #include <libetc.h>
+#include <libcd.h>
 
 /** @brief BIOS exit: ends the program (a K&R declaration, as the original call site requires). */
 void exit();
@@ -26,11 +28,6 @@ void exit();
 #define CHECKPS_WARNING_SHADOW_COLOR 0x8000
 #define CHECKPS_SPU_CONTROL_REGISTER ((u16*)0x1F801DAA)
 
-/* These mirror CdlDiskError/CdlStatShellOpen; libcd.h is not GCC 2.7.2-clean. */
-#define CHECKPS_CD_IRQ_DISK_ERROR 5
-#define CHECKPS_CD_STATUS_SHELL_OPEN 0x10
-#define CHECKPS_CD_STATUS_ERROR 0x01
-#define CHECKPS_CD_ERROR_INVALID_COMMAND 0x40
 #define CHECKPS_CD_SEEK_DELAY_FRAMES 3
 #define CHECKPS_CD_TEST_DELAY_FRAMES 200
 #define CHECKPS_CD_PAUSE_DELAY_FRAMES 10
@@ -378,9 +375,9 @@ s32 run_cd_integrity_check(s32 single_step)
             {
                 u8* response_cursor = g_cd_response.bytes;
                 u8* response_base = response_cursor;
-                if (response_base[0] & CHECKPS_CD_STATUS_ERROR)
+                if (response_base[0] & CdlStatError)
                 {
-                    if (*++response_cursor & CHECKPS_CD_ERROR_INVALID_COMMAND)
+                    if (*++response_cursor & CD_DRIVE_ERROR_INVALID_COMMAND)
                     {
                         u8 seek_minute_bcd = g_cd_seek_position_bcd[0];
                         u8 seek_second_bcd = g_cd_seek_position_bcd[1];
@@ -968,7 +965,7 @@ static CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command)
             if (g_cd_irq_code_sum >= irq_code_sum_target)
             {
                 g_cd_irq_code_sum = 0;
-                if (irq_code == CHECKPS_CD_IRQ_DISK_ERROR)
+                if (irq_code == CdlDiskError)
                 {
                     while (1)
                     {
@@ -978,7 +975,7 @@ static CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command)
                     g_cd_response.fields.detail = *g_cd_response_register;
                     *g_cd_status_register = 1;
                     *g_cd_data_register = CHECKPS_CD_IRQ_ACK_MASK;
-                    if (!(g_cd_response.fields.status & CHECKPS_CD_STATUS_SHELL_OPEN))
+                    if (!(g_cd_response.fields.status & CdlStatShellOpen))
                     {
                         return CHECKPS_CD_POLL_DISK_ERROR;
                     }
@@ -1006,7 +1003,7 @@ static CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command)
                             return CHECKPS_CD_POLL_SHELL_OPEN;
                         }
                         response_index = g_cd_response.fields.status;
-                        response_index &= CHECKPS_CD_STATUS_SHELL_OPEN;
+                        response_index &= CdlStatShellOpen;
                         if (!response_index)
                         {
                             break;
