@@ -161,8 +161,8 @@ void cload_run_menu_loop(void)
 void cload_init_display(void)
 {
     s32 stack_frame_pad[2];
-    SetGeomScreen(0x5DC);
-    SetGeomOffset(0xA0, 0x78);
+    SetGeomScreen(SCREEN_PROJECTION_DISTANCE);
+    SetGeomOffset(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
     setRECT(&g_cload_render_buffers[0].clear_rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     setRECT(&g_cload_render_buffers[1].clear_rect, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
     DrawSync(0);
@@ -174,7 +174,7 @@ void cload_init_display(void)
     g_cload_render_buffers[1].draw_env.dtd = 0;
     g_cload_render_buffers[0].draw_env.dtd = 0;
     field_reset_fade_state();
-    field_set_fade_target(0x100, 0x100, 0x100, 0x14);
+    field_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, 0x14);
 }
 
 /**

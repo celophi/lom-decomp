@@ -12,9 +12,7 @@
 #include "main/game_state.h"
 #include <libetc.h>
 
-#define FIELD_PROJECTION_DISTANCE 1500
 #define FIELD_ENTRY_FADE_FRAMES 30
-#define FIELD_FADE_NEUTRAL 256
 #define FIELD_TEXT_IMAGE_RESOURCE 1500
 #define FIELD_TEXT_IMAGE_X 288
 #define FIELD_TEXT_IMAGE_Y 480
@@ -33,14 +31,12 @@ typedef struct
 
 #define FIELD_WORKSPACE ((FieldWorkspace*)FIELD_WORKSPACE_ADDRESS)
 
-extern void field_set_fade_target(s16, s16, s16, s16);
+/*
+ * FIELD defines this as field_load_vram_resource(id, rect, mode). The main
+ * executable calls it without the mode argument.
+ */
+void field_load_vram_resource(s32 id, RECT* rect);
 
-extern void field_stop_song(void);
-
-extern void field_build_frame_commands(FieldRenderHalf*, s32);
-extern void field_initialize_subsystems(FieldRenderHalf*);
-extern void field_flush_vram_uploads(void);
-extern void field_load_vram_resource(s32, s16*);
 extern s32 g_field_scene_id;
 extern s32 g_field_object_id;
 extern u32 g_field_spawn_id;
@@ -53,10 +49,6 @@ extern FieldRenderHalf* g_field_current_render_half;
 extern void* g_field_primitive_cursor;
 extern s32 g_field_force_two_primitives;
 extern s32 g_field_draw_count;
-extern s32 g_text_clut_base;
-extern s32 g_text_cursor_x;
-extern s32 g_text_cursor_y;
-extern u8 g_overlay_load_base;
 
 void* const g_overlay_load_address = &g_overlay_load_base;
 
@@ -86,7 +78,7 @@ s32 run_field_scene(void)
         next_state = FIELD_ENTRY_FADE_FRAMES;
         g_field_scene_request_pending = 0;
         field_set_scene_parameters(g_field_scene_id, g_field_object_id, g_field_spawn_id, g_field_music_id, g_field_sound_bank_id, g_field_secondary_music_id);
-        field_set_fade_target(FIELD_FADE_NEUTRAL, FIELD_FADE_NEUTRAL, FIELD_FADE_NEUTRAL, next_state);
+        field_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, next_state);
         field_run_frame_loop(render_buffers);
     } while (g_pending_game_state == 0);
     field_stop_song();
@@ -189,7 +181,7 @@ void field_init_display(FieldRenderHalf* render_buffers)
 {
     RECT vram_rect;
 
-    SetGeomScreen(FIELD_PROJECTION_DISTANCE);
+    SetGeomScreen(SCREEN_PROJECTION_DISTANCE);
     SetGeomOffset(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 
     setRECT(&render_buffers[0].display_rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -221,15 +213,12 @@ void field_init_display(FieldRenderHalf* render_buffers)
  */
 void field_init_text_renderer(FieldRenderHalf* render_buffers)
 {
-    s16 font_vram_layout[4];
+    RECT font_rect;
 
     g_text_cursor_y = 0;
     g_text_cursor_x = 0;
-    font_vram_layout[0] = FIELD_TEXT_IMAGE_X;
-    font_vram_layout[1] = FIELD_TEXT_IMAGE_Y;
-    font_vram_layout[2] = FIELD_TEXT_CLUT_X;
-    font_vram_layout[3] = FIELD_TEXT_CLUT_Y;
-    field_load_vram_resource(FIELD_TEXT_IMAGE_RESOURCE, font_vram_layout);
+    setRECT(&font_rect, FIELD_TEXT_IMAGE_X, FIELD_TEXT_IMAGE_Y, FIELD_TEXT_CLUT_X, FIELD_TEXT_CLUT_Y);
+    field_load_vram_resource(FIELD_TEXT_IMAGE_RESOURCE, &font_rect);
     cdrom_wait_queue_empty();
     g_text_clut_base = getClut(FIELD_TEXT_CLUT_X, FIELD_TEXT_CLUT_Y);
     setDrawTPage(&render_buffers[0].draw_mode, 0, 1, FIELD_TEXT_TPAGE);

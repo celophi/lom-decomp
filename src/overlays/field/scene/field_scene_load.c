@@ -107,9 +107,10 @@ void field_init_ctx(FieldRenderHalf* buffers, u16 object_index)
 
 /**
  * @brief Reset the scene selection in the shared scene state and the fade state.
+ * @param render_buffers Unused; the main executable passes the field render buffers or NULL.
  * @see decomp.me (100%) https://decomp.me/scratch/S4vVP
  */
-void field_scene_reset(void)
+void field_scene_reset(FieldRenderHalf* render_buffers)
 {
     SceneState* state = SCENE_STATE;
 

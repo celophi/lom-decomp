@@ -176,13 +176,9 @@ enum
 #define NAME_GRID_ROW_VISIBLE(y) (((u32)((y) + NAME_GRID_OVERSCAN)) <= (NAME_GRID_VIS_HEIGHT + NAME_GRID_OVERSCAN - 1))
 
 /* Fade channels above neutral use additive blending. */
-#define FADE_CHAN_NEUTRAL 0x100
-#define FADE_CHAN_ADDITIVE 0x101
-#define FADE_ADDITIVE_BIAS (FADE_CHAN_ADDITIVE - FADE_CHAN_NEUTRAL)
+#define FADE_ADDITIVE_BIAS (FADE_ADDITIVE_THRESHOLD - FADE_NEUTRAL)
 
 /* Full-screen fade blend pages. */
-#define FADE_TPAGE_ADD 0x25
-#define FADE_TPAGE_SUB 0x45
 
 /* 4-bit glyph texture page at VRAM x=320. */
 #define GNAME_GLYPH_TPAGE 5
@@ -555,7 +551,7 @@ s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_
     g_render_buf_base[GNAME_RENDER_BUFFER_B].frame_parity = GNAME_RENDER_BUFFER_B;
 
     reset_fade_state();
-    set_fade_target(FADE_CHAN_NEUTRAL, FADE_CHAN_NEUTRAL, FADE_CHAN_NEUTRAL, GNAME_FADE_IN_FRAMES);
+    set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, GNAME_FADE_IN_FRAMES);
     gname_init();
 
     /* Clear both ordering tables before enabling display output. */
@@ -694,18 +690,18 @@ static void render_fade_overlay(RenderContext* render_ctx)
     }
 
     /* A neutral fade emits no GPU packets. */
-    if ((g_fade_current.red != FADE_CHAN_NEUTRAL) || (g_fade_current.green != FADE_CHAN_NEUTRAL) || (g_fade_current.blue != FADE_CHAN_NEUTRAL))
+    if ((g_fade_current.red != FADE_NEUTRAL) || (g_fade_current.green != FADE_NEUTRAL) || (g_fade_current.blue != FADE_NEUTRAL))
     {
-        if (g_fade_current.red >= FADE_CHAN_ADDITIVE)
+        if (g_fade_current.red >= FADE_ADDITIVE_THRESHOLD)
         {
-            /* Decode additive channels with FADE_CHAN_ADDITIVE as zero intensity. */
+            /* Decode additive channels with FADE_ADDITIVE_THRESHOLD as zero intensity. */
             setRGB0((TILE*)packet_cursor, g_fade_current.red - FADE_ADDITIVE_BIAS, g_fade_current.green - FADE_ADDITIVE_BIAS,
                     g_fade_current.blue - FADE_ADDITIVE_BIAS);
         }
         else
         {
             /* Decode subtractive channels while preserving neutral as zero intensity. */
-            if (g_fade_current.red == FADE_CHAN_NEUTRAL)
+            if (g_fade_current.red == FADE_NEUTRAL)
             {
                 ((TILE*)packet_cursor)->r0 = 0;
             }
@@ -714,7 +710,7 @@ static void render_fade_overlay(RenderContext* render_ctx)
                 ((TILE*)packet_cursor)->r0 = ~g_fade_current.red;
             }
 
-            if (g_fade_current.green == FADE_CHAN_NEUTRAL)
+            if (g_fade_current.green == FADE_NEUTRAL)
             {
                 ((TILE*)packet_cursor)->g0 = 0;
             }
@@ -723,7 +719,7 @@ static void render_fade_overlay(RenderContext* render_ctx)
                 ((TILE*)packet_cursor)->g0 = ~g_fade_current.green;
             }
 
-            if (g_fade_current.blue == FADE_CHAN_NEUTRAL)
+            if (g_fade_current.blue == FADE_NEUTRAL)
             {
                 ((TILE*)packet_cursor)->b0 = 0;
             }
@@ -740,7 +736,7 @@ static void render_fade_overlay(RenderContext* render_ctx)
         addPrim(ot_entry, (TILE*)packet_cursor);
         packet_cursor += sizeof(TILE);
 
-        blend_mode_tpage = g_fade_current.red < FADE_CHAN_ADDITIVE ? FADE_TPAGE_SUB : FADE_TPAGE_ADD;
+        blend_mode_tpage = g_fade_current.red < FADE_ADDITIVE_THRESHOLD ? FADE_SUBTRACTIVE_TPAGE : FADE_ADDITIVE_TPAGE;
 
         setDrawTPage((DR_TPAGE*)packet_cursor, 0, 0, blend_mode_tpage);
         addPrim(ot_entry, (DR_TPAGE*)packet_cursor);

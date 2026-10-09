@@ -6,11 +6,7 @@
 #define HEX_DIGIT_TABLE_SIZE 17
 #define FIELD_GLYPH_ADVANCE 8
 
-extern s32 g_text_cursor_x;
-extern s32 g_text_cursor_y;
 extern u8 g_hex_digit_table[HEX_DIGIT_TABLE_SIZE];
-
-void field_draw_glyph(s32 character, s32 ot_depth, s32 clut_offset);
 
 /**
  * @brief Draw a string at a fixed screen position using the field text engine.
@@ -84,7 +80,7 @@ void field_draw_uint3(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut_offset)
     digit = DIGIT_TO_ASCII(digit);
     if (digit == DIGIT_TO_ASCII(0))
     {
-        g_text_cursor_x = x + FIELD_GLYPH_ADVANCE;
+        g_text_cursor_x += FIELD_GLYPH_ADVANCE;
     }
     else
     {
@@ -96,11 +92,7 @@ void field_draw_uint3(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut_offset)
     digit = value / 10;
     digit_value = digit * 10;
     digit = DIGIT_TO_ASCII(digit);
-    if (blanking == 0)
-    {
-        field_draw_glyph(digit, ot_depth, clut_offset);
-    }
-    else if (digit == DIGIT_TO_ASCII(0))
+    if (blanking != 0 && digit == DIGIT_TO_ASCII(0))
     {
         g_text_cursor_x += FIELD_GLYPH_ADVANCE;
     }
@@ -121,25 +113,25 @@ void field_draw_uint3(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut_offset)
  * @param clut_offset Font CLUT/color variant, added to g_text_clut_base.
  * @see decomp.me (100%) https://decomp.me/scratch/S8Wds
  */
-void field_draw_hex_byte_clamped(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut_offset)
+void field_draw_hex_byte_clamped(u16 value, s32 x, s32 y, s32 ot_depth, s32 clut_offset)
 {
     u8 digit_table[HEX_DIGIT_TABLE_SIZE];
-    s32 clamped;
     u32 high_nibble;
     u32 high_value;
+    u16 low_nibble;
 
-    clamped = value;
     memcpy(digit_table, g_hex_digit_table, sizeof(digit_table));
     g_text_cursor_x = x;
     g_text_cursor_y = y;
-    if ((clamped & 0xFFFFU) > 0xFF)
+    if (value > 0xFF)
     {
-        clamped = 0xFF;
+        value = 0xFF;
     }
-    high_nibble = (clamped & 0xFFFFU) >> 4;
+    high_nibble = value >> 4;
     high_value = high_nibble << 4;
     field_draw_glyph(digit_table[high_nibble], ot_depth, clut_offset);
-    field_draw_glyph(digit_table[(u16)(clamped - high_value)], ot_depth, clut_offset);
+    low_nibble = value - high_value;
+    field_draw_glyph(digit_table[low_nibble], ot_depth, clut_offset);
 }
 
 /**
@@ -154,12 +146,12 @@ void field_draw_hex_byte_clamped(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut
 void field_draw_hex_word(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut_offset)
 {
     u8 digit_table[HEX_DIGIT_TABLE_SIZE];
-    u32 word;
+    u16 word;
 
     memcpy(digit_table, g_hex_digit_table, sizeof(digit_table));
     g_text_cursor_x = x;
     g_text_cursor_y = y;
-    word = value & 0xFFFF;
+    word = value;
     field_draw_glyph(digit_table[(word >> 12) & 0xF], ot_depth, clut_offset);
     field_draw_glyph(digit_table[(word >> 8) & 0xF], ot_depth, clut_offset);
     field_draw_glyph(digit_table[(word >> 4) & 0xF], ot_depth, clut_offset);

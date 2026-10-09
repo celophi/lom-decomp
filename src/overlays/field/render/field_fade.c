@@ -12,14 +12,6 @@
 
 /** @brief Ordering-table entry the fade packets are linked into. */
 #define FIELD_FADE_OT_INDEX 0x10
-/** @brief Fade channel value that leaves the screen unchanged. */
-#define FIELD_FADE_NEUTRAL 0x100
-/** @brief Smallest red value drawn with additive blending. */
-#define FIELD_FADE_ADDITIVE_THRESHOLD (FIELD_FADE_NEUTRAL + 1)
-/** @brief Texture-page word for the additive blend pass. */
-#define FIELD_FADE_ADDITIVE_DRAW_MODE getTPage(0, 1, 320, 0)
-/** @brief Texture-page word for the subtractive blend pass. */
-#define FIELD_FADE_SUBTRACTIVE_DRAW_MODE getTPage(0, 2, 320, 0)
 /** @brief Frames the preset and restore fades take. */
 #define FIELD_FADE_DEFAULT_FRAMES 5
 /** @brief Channel level of the dimmed modal-overlay fade. */
@@ -105,16 +97,16 @@ void field_update_and_render_fade(FieldRenderHalf* render_half)
         g_field_fade_current.green = g_field_fade_target.green;
         g_field_fade_current.blue = g_field_fade_target.blue;
     }
-    if ((g_field_fade_current.red != FIELD_FADE_NEUTRAL) || (g_field_fade_current.green != g_field_fade_current.red) ||
+    if ((g_field_fade_current.red != FADE_NEUTRAL) || (g_field_fade_current.green != g_field_fade_current.red) ||
         (g_field_fade_current.blue != g_field_fade_current.green))
     {
-        if (g_field_fade_current.red >= FIELD_FADE_ADDITIVE_THRESHOLD)
+        if (g_field_fade_current.red >= FADE_ADDITIVE_THRESHOLD)
         {
             setRGB0(&primitive->tile, g_field_fade_current.red - 1, g_field_fade_current.green - 1, g_field_fade_current.blue - 1);
         }
         else
         {
-            if (g_field_fade_current.red == FIELD_FADE_NEUTRAL)
+            if (g_field_fade_current.red == FADE_NEUTRAL)
             {
                 primitive->tile.r0 = 0;
             }
@@ -122,7 +114,7 @@ void field_update_and_render_fade(FieldRenderHalf* render_half)
             {
                 primitive->tile.r0 = ~g_field_fade_current.red;
             }
-            if (g_field_fade_current.green == FIELD_FADE_NEUTRAL)
+            if (g_field_fade_current.green == FADE_NEUTRAL)
             {
                 primitive->tile.g0 = 0;
             }
@@ -130,7 +122,7 @@ void field_update_and_render_fade(FieldRenderHalf* render_half)
             {
                 primitive->tile.g0 = ~g_field_fade_current.green;
             }
-            if (g_field_fade_current.blue == FIELD_FADE_NEUTRAL)
+            if (g_field_fade_current.blue == FADE_NEUTRAL)
             {
                 primitive->tile.b0 = 0;
             }
@@ -143,15 +135,15 @@ void field_update_and_render_fade(FieldRenderHalf* render_half)
         setTile(&primitive->tile);
         setSemiTrans(&primitive->tile, 1);
         primitive->tile.w = SCREEN_WIDTH;
-        draw_mode = FIELD_FADE_ADDITIVE_DRAW_MODE;
+        draw_mode = FADE_ADDITIVE_TPAGE;
         SET_YX0(&primitive->tile, 0, 0);
         primitive->tile.h = SCREEN_HEIGHT;
         addPrim(ordering_table_tag, &primitive->tile);
 
         primitive = FIELD_NEXT_FADE_PRIMITIVE(primitive, TILE);
-        if (g_field_fade_current.red < FIELD_FADE_ADDITIVE_THRESHOLD)
+        if (g_field_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
-            draw_mode = FIELD_FADE_SUBTRACTIVE_DRAW_MODE;
+            draw_mode = FADE_SUBTRACTIVE_TPAGE;
         }
         setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
         addPrim(ordering_table_tag, &primitive->draw_mode);
@@ -185,8 +177,8 @@ void field_set_fade_target(s16 red, s16 green, s16 blue, s16 duration)
 void field_set_cd_error_fade_target(void)
 {
     g_field_fade_target.red = FIELD_FADE_CD_ERROR_RED;
-    g_field_fade_target.green = FIELD_FADE_NEUTRAL;
-    g_field_fade_target.blue = FIELD_FADE_NEUTRAL;
+    g_field_fade_target.green = FADE_NEUTRAL;
+    g_field_fade_target.blue = FADE_NEUTRAL;
     g_field_fade_target.duration = FIELD_FADE_DEFAULT_FRAMES;
 }
 

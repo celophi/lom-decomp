@@ -45,6 +45,22 @@
 /** Height of the draw region for each buffer. */
 #define VRAM_DRAW_HEIGHT    224
 
+/** GTE projection distance (SetGeomScreen) of the field and menu screens. */
+#define SCREEN_PROJECTION_DISTANCE 1500
+
+/**
+ * Neutral level of a screen fade (1.0 in 8.8 fixed point): colours are unchanged.
+ * Levels above it brighten additively; levels below darken subtractively.
+ */
+#define FADE_NEUTRAL 0x100
+
+/** Lowest fade level drawn by adding light; levels below FADE_NEUTRAL subtract it. */
+#define FADE_ADDITIVE_THRESHOLD (FADE_NEUTRAL + 1)
+
+/** Draw-mode texture pages of the full-screen fade quad: additive and subtractive blending. */
+#define FADE_ADDITIVE_TPAGE getTPage(0, 1, 320, 0)
+#define FADE_SUBTRACTIVE_TPAGE getTPage(0, 2, 320, 0)
+
 /** Y coordinate of the CLUT storage row in VRAM.
  * Overlays store their 256-entry palettes in the lines starting here,
  * below both display buffers. */

@@ -42,7 +42,6 @@ typedef struct
 #define TITLE_OT_LENGTH 0x1000
 
 /** @brief Fade colour component that leaves the screen unchanged, and the length of a fade. */
-#define TITLE_FADE_NEUTRAL 0x100
 #define TITLE_FADE_FRAMES 0x14
 
 /** @brief Shift applied to the second rand() value when two are combined into the game id. */

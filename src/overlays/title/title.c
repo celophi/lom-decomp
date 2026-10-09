@@ -1,4 +1,5 @@
 #include "common/saved_game.h"
+#include "main/display.h"
 #include "internal/title_internal.h"
 #include "internal/title_save.h"
 #include "main/screen_transition.h"
@@ -68,10 +69,6 @@ void handle_title_menu_input(void);
 #define TITLE_IDLE_COUNTDOWN_FRAMES 0xE10
 
 /* Full-screen fade encoding and blend modes. */
-#define TITLE_FADE_NEUTRAL 0x100
-#define TITLE_FADE_ADDITIVE_THRESHOLD (TITLE_FADE_NEUTRAL + 1)
-#define TITLE_FADE_ADDITIVE_DRAW_MODE 0x25
-#define TITLE_FADE_SUBTRACTIVE_DRAW_MODE 0x45
 
 /** @brief Packet view for a fade TILE or draw-mode command. */
 typedef union
@@ -254,7 +251,7 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
 
     init_save_slot_menu();
     screen_transition(0);
-    set_fade_target(TITLE_FADE_NEUTRAL, TITLE_FADE_NEUTRAL, TITLE_FADE_NEUTRAL, TITLE_FADE_FRAMES);
+    set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, TITLE_FADE_FRAMES);
     DrawSync(0);
     VSync(0);
     setRECT(&rect, 0, 0, SCREEN_WIDTH, VRAM_BACK_DISP_Y + SCREEN_HEIGHT);
@@ -320,7 +317,7 @@ void init_title_display(TitleMenuContext* ctx_base)
     hw[0x92] = 0;
 
     akao_set_mono_output(0);
-    SetGeomScreen(0x5DC);
+    SetGeomScreen(SCREEN_PROJECTION_DISTANCE);
     SetGeomOffset(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 
     ctx_base->front_screen.x = 0;
@@ -353,7 +350,7 @@ void init_title_display(TitleMenuContext* ctx_base)
     ctx_base->draw_env.dtd = 0;
 
     reset_fade_state();
-    set_fade_target(TITLE_FADE_NEUTRAL, TITLE_FADE_NEUTRAL, TITLE_FADE_NEUTRAL, TITLE_FADE_FRAMES);
+    set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, TITLE_FADE_FRAMES);
     init_title_menu_state();
 
     g_title_menu_exit_state = 0;
@@ -523,15 +520,15 @@ void render_fade_overlay(TitleMenuContext* ctx)
         g_fade_current.green = g_fade_target.green;
         g_fade_current.blue = g_fade_target.blue;
     }
-    if (!(((g_fade_current.red == TITLE_FADE_NEUTRAL) && (g_fade_current.green == TITLE_FADE_NEUTRAL)) && (g_fade_current.blue == TITLE_FADE_NEUTRAL)))
+    if (!(((g_fade_current.red == FADE_NEUTRAL) && (g_fade_current.green == FADE_NEUTRAL)) && (g_fade_current.blue == FADE_NEUTRAL)))
     {
-        if (g_fade_current.red >= TITLE_FADE_ADDITIVE_THRESHOLD)
+        if (g_fade_current.red >= FADE_ADDITIVE_THRESHOLD)
         {
             setRGB0(&primitive->tile, g_fade_current.red - 1, g_fade_current.green - 1, g_fade_current.blue - 1);
         }
         else
         {
-            if (g_fade_current.red == TITLE_FADE_NEUTRAL)
+            if (g_fade_current.red == FADE_NEUTRAL)
             {
                 primitive->tile.r0 = 0;
             }
@@ -539,7 +536,7 @@ void render_fade_overlay(TitleMenuContext* ctx)
             {
                 primitive->tile.r0 = ~g_fade_current.red;
             }
-            if (g_fade_current.green == TITLE_FADE_NEUTRAL)
+            if (g_fade_current.green == FADE_NEUTRAL)
             {
                 primitive->tile.g0 = 0;
             }
@@ -547,7 +544,7 @@ void render_fade_overlay(TitleMenuContext* ctx)
             {
                 primitive->tile.g0 = ~g_fade_current.green;
             }
-            if (g_fade_current.blue == TITLE_FADE_NEUTRAL)
+            if (g_fade_current.blue == FADE_NEUTRAL)
             {
                 primitive->tile.b0 = 0;
             }
@@ -563,11 +560,11 @@ void render_fade_overlay(TitleMenuContext* ctx)
         setWH(&primitive->tile, SCREEN_WIDTH, SCREEN_HEIGHT);
         addPrim(ordering_table_tag, &primitive->tile);
 
-        draw_mode = TITLE_FADE_ADDITIVE_DRAW_MODE;
+        draw_mode = FADE_ADDITIVE_TPAGE;
         primitive = TITLE_NEXT_FADE_PRIMITIVE(primitive, TILE);
-        if (g_fade_current.red < TITLE_FADE_ADDITIVE_THRESHOLD)
+        if (g_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
-            draw_mode = TITLE_FADE_SUBTRACTIVE_DRAW_MODE;
+            draw_mode = FADE_SUBTRACTIVE_TPAGE;
         }
         setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
         addPrim(ordering_table_tag, &primitive->draw_mode);

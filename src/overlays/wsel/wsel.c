@@ -15,15 +15,10 @@
 #include <memory.h>
 #include "common/tim.h"
 
-#define WSEL_FADE_NEUTRAL 0x100
-#define WSEL_FADE_ADDITIVE_THRESHOLD (WSEL_FADE_NEUTRAL + 1)
 #define WSEL_FADE_IN_FRAMES 20
-#define WSEL_PROJECTION_DISTANCE 1500
 /** Semi-transparency rates (texture page abr field). */
 #define WSEL_BLEND_ADD 1      /**< Background plus foreground. */
 #define WSEL_BLEND_SUBTRACT 2 /**< Background minus foreground. */
-#define WSEL_FADE_ADDITIVE_DRAW_MODE getTPage(0, WSEL_BLEND_ADD, 320, 0)
-#define WSEL_FADE_SUBTRACTIVE_DRAW_MODE getTPage(0, WSEL_BLEND_SUBTRACT, 320, 0)
 /** Fixed RAM buffer that CD resources are staged into before being unpacked. */
 #define WSEL_LOAD_BUFFER ((u8*)LOAD_BUFFER_ADDRESS)
 /** Offset table at the head of a staged music file: [0] sequence, [1] instrument bank. */
@@ -377,7 +372,7 @@ static void wsel_init(WselRenderBuffer* buffers)
 {
     RECT vram_rect;
 
-    SetGeomScreen(WSEL_PROJECTION_DISTANCE);
+    SetGeomScreen(SCREEN_PROJECTION_DISTANCE);
     SetGeomOffset(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 
     buffers[0].clear_rect.x = 0;
@@ -393,7 +388,7 @@ static void wsel_init(WselRenderBuffer* buffers)
     ClearImage(&vram_rect, 0, 0, 0);
 
     wsel_reset_fade();
-    wsel_set_fade_target(WSEL_FADE_NEUTRAL, WSEL_FADE_NEUTRAL, WSEL_FADE_NEUTRAL, WSEL_FADE_IN_FRAMES);
+    wsel_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, WSEL_FADE_IN_FRAMES);
     SetDefDispEnv(&buffers[0].disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     SetDefDispEnv(&buffers[1].disp_env, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
     SetDefDrawEnv(&buffers[0].draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
@@ -474,7 +469,7 @@ static void wsel_reset_fade(void)
 /**
  * @brief Step the screen fade toward its target and queue the full-screen tint tile.
  * @param buffer Render buffer whose packet cursor and ordering table receive the tile.
- * @note Levels above WSEL_FADE_NEUTRAL brighten additively, levels below darken subtractively.
+ * @note Levels above FADE_NEUTRAL brighten additively, levels below darken subtractively.
  * @see TITLE render_fade_overlay
  */
 static void wsel_draw_fade(WselRenderBuffer* buffer)
@@ -496,10 +491,9 @@ static void wsel_draw_fade(WselRenderBuffer* buffer)
         g_wsel_fade_current.green = g_wsel_fade_target.green;
         g_wsel_fade_current.blue = g_wsel_fade_target.blue;
     }
-    if (!((g_wsel_fade_current.red == WSEL_FADE_NEUTRAL) && (g_wsel_fade_current.green == WSEL_FADE_NEUTRAL) &&
-          (g_wsel_fade_current.blue == WSEL_FADE_NEUTRAL)))
+    if (!((g_wsel_fade_current.red == FADE_NEUTRAL) && (g_wsel_fade_current.green == FADE_NEUTRAL) && (g_wsel_fade_current.blue == FADE_NEUTRAL)))
     {
-        if (g_wsel_fade_current.red >= WSEL_FADE_ADDITIVE_THRESHOLD)
+        if (g_wsel_fade_current.red >= FADE_ADDITIVE_THRESHOLD)
         {
             primitive->tile.r0 = g_wsel_fade_current.red - 1;
             primitive->tile.g0 = g_wsel_fade_current.green - 1;
@@ -507,7 +501,7 @@ static void wsel_draw_fade(WselRenderBuffer* buffer)
         }
         else
         {
-            if (g_wsel_fade_current.red == WSEL_FADE_NEUTRAL)
+            if (g_wsel_fade_current.red == FADE_NEUTRAL)
             {
                 primitive->tile.r0 = 0;
             }
@@ -515,7 +509,7 @@ static void wsel_draw_fade(WselRenderBuffer* buffer)
             {
                 primitive->tile.r0 = ~g_wsel_fade_current.red;
             }
-            if (g_wsel_fade_current.green == WSEL_FADE_NEUTRAL)
+            if (g_wsel_fade_current.green == FADE_NEUTRAL)
             {
                 primitive->tile.g0 = 0;
             }
@@ -523,7 +517,7 @@ static void wsel_draw_fade(WselRenderBuffer* buffer)
             {
                 primitive->tile.g0 = ~g_wsel_fade_current.green;
             }
-            if (g_wsel_fade_current.blue == WSEL_FADE_NEUTRAL)
+            if (g_wsel_fade_current.blue == FADE_NEUTRAL)
             {
                 primitive->tile.b0 = 0;
             }
@@ -539,11 +533,11 @@ static void wsel_draw_fade(WselRenderBuffer* buffer)
         setWH(&primitive->tile, SCREEN_WIDTH, SCREEN_HEIGHT);
         addPrim(ot, &primitive->tile);
 
-        draw_mode = WSEL_FADE_ADDITIVE_DRAW_MODE;
+        draw_mode = FADE_ADDITIVE_TPAGE;
         primitive = WSEL_NEXT_FADE_PRIMITIVE(primitive, TILE);
-        if (g_wsel_fade_current.red < WSEL_FADE_ADDITIVE_THRESHOLD)
+        if (g_wsel_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
-            draw_mode = WSEL_FADE_SUBTRACTIVE_DRAW_MODE;
+            draw_mode = FADE_SUBTRACTIVE_TPAGE;
         }
         setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
         addPrim(ot, &primitive->draw_mode);
@@ -555,7 +549,7 @@ static void wsel_draw_fade(WselRenderBuffer* buffer)
 
 /**
  * @brief Start a fade toward the given color levels.
- * @param red Target red level (WSEL_FADE_NEUTRAL is unchanged).
+ * @param red Target red level (FADE_NEUTRAL is unchanged).
  * @param green Target green level.
  * @param blue Target blue level.
  * @param steps Number of frames over which to interpolate.
