@@ -41,9 +41,9 @@ class SourceTest(unittest.TestCase):
 
     def test_step_names_follow_the_c_enum(self):
         names = carda.card_step_names()
-        self.assertEqual(names[0], "CARDA_STEP_DONE")
-        self.assertEqual(names[14], "CARDA_STEP_IDLE")
-        self.assertEqual(names[30], "CARDA_STEP_ARM_RETRIES")
+        self.assertEqual(names[0], "CARD_MENU_STEP_DONE")
+        self.assertEqual(names[14], "CARD_MENU_STEP_WAIT")
+        self.assertEqual(names[30], "CARD_MENU_STEP_INIT_RETRIES")
 
 
 if __name__ == "__main__":

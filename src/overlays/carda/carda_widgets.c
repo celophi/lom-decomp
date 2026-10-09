@@ -964,9 +964,9 @@ void carda_open_status_dialog(s32 dialog_state)
         dialog = g_carda_element_pool;
         dialog->attr.bits.transition_step = 1;
         dialog->attr.bits.state = CARD_MENU_ELEMENT_OPENING;
-        dialog->attr.bits.x = 0x20;
-        dialog->attr.word &= 0x00FFFFFF;
-        dialog->size.bits.width_high = 1;
+        dialog->attr.bits.x = CARD_MENU_DIALOG_X;
+        CARD_MENU_SET_ELEMENT_WIDTH_LOW(dialog, CARD_MENU_DIALOG_WIDTH);
+        dialog->size.bits.width_high = CARD_MENU_DIALOG_WIDTH >> 8;
         if (dialog_state < 2 || dialog_state == 4 || dialog_state == 5)
         {
             dialog->attr.bits.y = 0x60;
@@ -1095,17 +1095,17 @@ void* carda_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 wi
         return quad;
     }
 
-    setRECT(&rect, index * 16, VRAM_CLUT_Y, 16, 1);
+    setRECT(&rect, index * GPU_CLUT_4BIT_COLORS, VRAM_CLUT_Y, GPU_CLUT_4BIT_COLORS, 1);
     if ((row == 1) && (icon < 2))
     {
         field_copy_portrait_palette(g_carda_icon_context, icon);
-        LoadImage(&rect, g_carda_icon_context);
+        LoadImage(&rect, (u_long*)g_carda_icon_context);
         DrawSync(0);
     }
     else if (icon >= SAVE_ICON_GOLEM_BASE)
     {
         field_copy_golem_portrait_palette(g_carda_icon_context, g_carda_icon_palette);
-        LoadImage(&rect, g_carda_icon_context);
+        LoadImage(&rect, (u_long*)g_carda_icon_context);
         DrawSync(0);
     }
     else
@@ -1114,7 +1114,7 @@ void* carda_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 wi
     }
 
     column = index * 3;
-    setRECT(&rect, column * 4 + CARD_MENU_ICON_VRAM_X, CARD_MENU_ICON_VRAM_Y, CARD_MENU_ICON_SIZE / 4, CARD_MENU_ICON_SIZE);
+    setRECT(&rect, column * 4 + CARD_MENU_ICON_VRAM_X, CARD_MENU_ICON_VRAM_Y, FIELD_PORTRAIT_SIZE / 4, FIELD_PORTRAIT_SIZE);
     LoadImage(&rect, (u_long*)CARD_MENU_ICON_IMAGE(g_carda_icon_image_offsets, icon)->pixels);
 
     SET_BGR0_PACKED(quad, GPU_TINT_NEUTRAL);
@@ -1127,17 +1127,17 @@ void* carda_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 wi
     u = column * 16;
     quad->u2 = u;
     quad->u0 = u;
-    u += CARD_MENU_ICON_SIZE - 1;
+    u += FIELD_PORTRAIT_SIZE - 1;
     quad->u3 = u;
     quad->u1 = u;
     quad->v1 = CARD_MENU_ICON_VRAM_Y;
     quad->v0 = CARD_MENU_ICON_VRAM_Y;
     quad->x1 = x + width;
-    quad->y3 = y + CARD_MENU_ICON_SIZE - 1;
-    quad->y2 = y + CARD_MENU_ICON_SIZE - 1;
-    quad->v3 = CARD_MENU_ICON_VRAM_Y + CARD_MENU_ICON_SIZE - 1;
-    quad->v2 = CARD_MENU_ICON_VRAM_Y + CARD_MENU_ICON_SIZE - 1;
-    quad->clut = getClut(index * 16, VRAM_CLUT_Y);
+    quad->y3 = y + FIELD_PORTRAIT_SIZE - 1;
+    quad->y2 = y + FIELD_PORTRAIT_SIZE - 1;
+    quad->v3 = CARD_MENU_ICON_VRAM_Y + FIELD_PORTRAIT_SIZE - 1;
+    quad->v2 = CARD_MENU_ICON_VRAM_Y + FIELD_PORTRAIT_SIZE - 1;
+    quad->clut = getClut(index * GPU_CLUT_4BIT_COLORS, VRAM_CLUT_Y);
     quad->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, CARD_MENU_ICON_VRAM_X, 0);
     addPrim(ot, quad);
 
@@ -1168,8 +1168,8 @@ static void* carda_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y)
     s32 color;
 
     color = FIELD_TEXT_COLOR_NORMAL;
-    text = FIELD_UI_TEXT_AT(&g_text_choice_glyph_offsets, FIELD_UI_TEXT_YES);
-    text_table = FIELD_UI_TEXT_TABLE(&g_text_choice_glyph_offsets, FIELD_UI_TEXT_YES);
+    text = FIELD_UI_TEXT_AT(g_text_choice_glyph_offsets, FIELD_UI_TEXT_YES);
+    text_table = FIELD_UI_TEXT_TABLE(g_text_choice_glyph_offsets, FIELD_UI_TEXT_YES);
     if (g_carda_choice_toggle != 0)
     {
         color = FIELD_TEXT_COLOR_DIM;

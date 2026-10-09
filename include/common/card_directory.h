@@ -121,6 +121,22 @@ extern s32 g_card_entry_suffix_values[];
 
 extern char g_lom_save_filename_prefix[];
 
+/** @brief File name prefix of the PocketStation mini-game (Ring Ring Land) save. */
+extern char g_lom_pocketstation_filename_prefix[];
+
+/** @brief Name prefix of the new-save placeholder entry (CARD_MENU_NEW_SAVE_NAME_LENGTH characters). */
+extern char g_new_save_entry_prefix[];
+
+/** @brief Temporary file names a save, and a PocketStation save, are written under before the rename. */
+extern char g_lom_save_dummy_filename[];
+extern char g_lom_pocketstation_dummy_filename[];
+
 s32 parse_entry_fields(void);
+
+/**
+ * @brief Set the SavedGameLayout.known_save_flags bit of every product code that @p file_name starts with (FIELD).
+ * @param file_name Memory-card file name of one directory entry.
+ */
+void field_flag_known_save(char* file_name);
 
 #endif

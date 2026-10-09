@@ -3,6 +3,7 @@
  */
 
 #include "overlays/field/field_scene_transition.h"
+#include "overlays/field/field_portrait.h"
 #include "overlays/field/field_text.h"
 #include "main/cdrom.h"
 #include "main/cd_resources.h"
@@ -46,8 +47,6 @@
 #define FIELD_ACTOR_IMAGE_COUNT 6
 /** @brief Image index that ends an actor description's image list. */
 #define FIELD_ACTOR_IMAGE_END 0xFF
-/** @brief Bytes of one scene portrait. */
-#define FIELD_SCENE_PORTRAIT_SIZE 1184
 /** @brief Shared chest resource; scene actor selector 5 follows the three party entries. */
 #define FIELD_CHEST_RESOURCE 8
 /** @brief Texture slot containing the chest sprites in the common FIELD texture. */
@@ -59,8 +58,6 @@
 /** @brief Texture slots the allocator skips (FIELD_IMAGE_SLOT_SKIP_COUNT slots from this one). */
 #define FIELD_IMAGE_SLOT_SKIP_FIRST 6
 #define FIELD_IMAGE_SLOT_SKIP_COUNT 4
-/** @brief Width of one CLUT row in VRAM halfwords. */
-#define FIELD_CLUT_ROW_WIDTH 256
 /** @brief Resource image slots from this one on use the second VRAM texture row. */
 #define FIELD_IMAGE_SLOT_SECOND_ROW 10
 /**
@@ -538,7 +535,7 @@ void field_update_scene(void)
             {
                 image_count++;
                 *data_output++ = *section_source++;
-            } while (image_count < FIELD_SCENE_PORTRAIT_SIZE);
+            } while (image_count < FIELD_PORTRAIT_BYTES);
             i++;
         }
         g_field_scene_data_size = data_output - g_field_scene_data_buffer;
@@ -640,7 +637,7 @@ void field_update_scene(void)
                 {
                     /* No images of its own: reuse the previous actor's CLUT and texture slot. */
                     rect.y = i + FIELD_ACTOR_CLUT_VRAM_Y + FIELD_PARTY_COUNT - 1;
-                    rect.w = FIELD_CLUT_ROW_WIDTH;
+                    rect.w = GPU_CLUT_8BIT_COLORS;
                     rect.x = 0;
                     rect.h = 1;
                     MoveImage(&rect, 0, i + FIELD_ACTOR_CLUT_VRAM_Y + FIELD_PARTY_COUNT);

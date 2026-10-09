@@ -2,13 +2,13 @@
 #include "internal/menu_internal.h"
 #include "main/cdrom.h"
 #include "main/audio/akao.h"
+#include "overlays/field/field_input.h"
 
 s32 menu_layout_node(s32 node_index, s32 base_pos);
 s32 menu_handle_input(s32 process_actions);
 s32 menu_find_nav_node_index(s32 node_id);
 s32 menu_find_active_content_item(void);
 s32 menu_count_inventory_items(void);
-void field_update_input_repeat(void);
 
 /* ----- Initialization and Core Frame Processing ----- */
 
@@ -129,37 +129,34 @@ void menu_init(void)
     g_active_slot = -1;
     field_reset_input_repeat();
     g_menu_compare_window_active = 0;
-    menu_init_prim_rects();
+    menu_upload_party_portraits();
     g_menu_frame = 0;
     g_script_cursor = 0;
     menu_node_tree_init();
 }
 
 /**
- * @brief Upload each menu slot's cursor strip and content texture to VRAM.
- * Each RAM slot stores the cursor strip first, followed by the content texture.
+ * @brief Upload the CLUTs and pixels of the three party portraits to VRAM.
  */
-void menu_init_prim_rects(void)
+void menu_upload_party_portraits(void)
 {
     s32 slot = 0;
-    u8* upload_buffer = g_prim_rect_buf;
-    s32 content_byte_offset = PRIM_CONTENT_BUF_OFFSET;
-    s32 strip_byte_offset = 0;
+    u8* portraits = g_field_party_portraits;
+    s32 pixels_offset = FIELD_PORTRAIT_PIXELS_OFFSET;
+    s32 clut_offset = 0;
     RECT rect;
 
-    for (; slot < PRIM_SLOT_COUNT; slot++)
+    for (; slot < FIELD_PARTY_PORTRAIT_COUNT; slot++)
     {
-        /* Upload the slot's cursor-highlight strip. */
-        setRECT(&rect, PRIM_CURSOR_STRIP_VRAM_X, slot + PRIM_CURSOR_STRIP_VRAM_Y0, PRIM_CURSOR_STRIP_W, PRIM_CURSOR_STRIP_H);
-        LoadImage(&rect, menu_image_upload_source(upload_buffer, strip_byte_offset));
+        setRECT(&rect, FIELD_PARTY_PORTRAIT_CLUT_X, slot + FIELD_PARTY_PORTRAIT_CLUT_Y, GPU_CLUT_4BIT_COLORS, 1);
+        LoadImage(&rect, menu_image_upload_source(portraits, clut_offset));
 
-        /* Upload the slot's content texture block. */
-        setRECT(&rect, (slot == PRIM_SLOT_COUNT - 1) ? PRIM_CONTENT_VRAM_X2 : PRIM_CONTENT_VRAM_X, (slot == 0) ? PRIM_CONTENT_VRAM_Y0 : PRIM_CONTENT_VRAM_Y1,
-                PRIM_CONTENT_W, PRIM_CONTENT_H);
-        LoadImage(&rect, menu_image_upload_source(upload_buffer, content_byte_offset));
+        setRECT(&rect, (slot == FIELD_PARTY_PORTRAIT_COUNT - 1) ? FIELD_PARTY_PORTRAIT_VRAM_X2 : FIELD_PARTY_PORTRAIT_VRAM_X, (slot == 0) ? FIELD_PARTY_PORTRAIT_VRAM_Y0 : FIELD_PARTY_PORTRAIT_VRAM_Y1,
+                FIELD_PORTRAIT_SIZE / 4, FIELD_PORTRAIT_SIZE);
+        LoadImage(&rect, menu_image_upload_source(portraits, pixels_offset));
 
-        content_byte_offset += PRIM_SLOT_BYTE_SIZE;
-        strip_byte_offset += PRIM_SLOT_BYTE_SIZE;
+        pixels_offset += FIELD_PORTRAIT_BYTES;
+        clut_offset += FIELD_PORTRAIT_BYTES;
     }
 }
 

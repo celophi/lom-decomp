@@ -3,31 +3,8 @@
 #include "overlays/menu/menu.h"
 
 void niki_init_card_events(void);
-u8* niki_draw_progress_bar(u8* prim, u_long* ot);
+void* niki_draw_progress_bar(POLY_G4* quad, u_long* ot);
 u8* niki_draw_choice_prompt(u8* prim, u_long* ot, s32 x, s32 y);
-u8* func_800AE76C(u8* prim, u_long* ot, s32 x, s32 y, s32 direction);
-u8* func_800AD850(u8* prim, u_long* ot, s32 x, s32 y, s32 width, s32 height, s32 display_buffer_index, s32 is_popup);
-void func_8001A5D4(NikiPacketHeader* packet, NikiDrawEnvironment* env);
-
-/**
- * @brief Left edge of the card slot 0 label window.
- * @note JP moves it right.
- */
-#if defined(VERSION_JP)
-#define NIKI_CARD_SLOT0_LABEL_X 0x28
-#else
-#define NIKI_CARD_SLOT0_LABEL_X 0x18
-#endif
-
-/**
- * @brief Entry list column of the rank marker.
- * @note JP moves it right.
- */
-#if defined(VERSION_JP)
-#define NIKI_ENTRY_MARKER_X 0xCC
-#else
-#define NIKI_ENTRY_MARKER_X 0xC0
-#endif
 
 /**
  * @brief Initialize card browsing, drawing resources, and the selected menu mode.
@@ -44,12 +21,12 @@ void niki_init(s32 context_value, s32 mode)
     niki_reset_entry_ranks();
     niki_init_card_events();
     g_niki_icon_phase = 0;
-    func_80067F8C();
+    field_set_default_fade_target();
     rect.x = OVERLAY_INIT_CLEAR_VRAM_X;
     rect.y = OVERLAY_INIT_CLEAR_VRAM_Y;
     rect.w = OVERLAY_INIT_CLEAR_VRAM_W;
     rect.h = OVERLAY_INIT_CLEAR_VRAM_H;
-    func_8001990C(&rect, 0, 0, 0);
+    ClearImage(&rect, 0, 0, 0);
     reset_glyph_cache();
     g_niki_progress_active = 0;
     g_niki_confirm_latch = 0;
@@ -67,7 +44,7 @@ void niki_init(s32 context_value, s32 mode)
  * @param frame Draw context receiving this frame's GPU packets.
  * @return One when the menu has exited, otherwise zero.
  */
-s32 niki_update_frame(NikiFrameState* frame)
+s32 niki_update_frame(FieldRenderHalf* frame)
 {
     if (g_niki_exit_requested != 0)
     {
@@ -103,90 +80,90 @@ void niki_build_ui_elements(void)
     D_80164B80 = 0;
     if (g_niki_mode != 0)
     {
-        g_niki_element_pool[0].attr.bits.state = 1;
+        g_niki_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_OPENING;
         element = niki_alloc_element();
         element->draw = niki_draw_state_page;
         element->attr.bits.transition_step = 1;
-        element->attr.bits.x = 0x10;
-        element->attr.bits.y = 0x61;
-        element->size.bits.width_high = 1;
-        element->size.bits.height = 0x2C;
-        CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, 0x20);
+        element->attr.bits.x = CARD_MENU_MESSAGE_X;
+        element->attr.bits.y = CARD_MENU_EXCHANGE_MESSAGE_Y;
+        element->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
+        element->size.bits.height = CARD_MENU_MESSAGE_HEIGHT;
+        CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_MESSAGE_WIDTH);
 
         element = niki_alloc_element();
         element->draw = niki_draw_card_slot0_label;
         element->attr.bits.transition_step = 1;
-        element->attr.bits.x = NIKI_CARD_SLOT0_LABEL_X;
-        element->attr.bits.y = 0x4D;
+        element->attr.bits.x = CARD_MENU_EXCHANGE_CARD_SLOT0_LABEL_X;
+        element->attr.bits.y = CARD_MENU_EXCHANGE_CARD_LABEL_TRANSFER_Y;
         element->size.bits.width_high = 0;
-        element->size.bits.height = 0x10;
+        element->size.bits.height = CARD_MENU_CARD_LABEL_HEIGHT;
         CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_CARD_LABEL_WIDTH);
 
         element = niki_alloc_element();
         element->draw = niki_draw_card_slot1_label;
         element->attr.bits.transition_step = 1;
-        element->attr.bits.x = 0xA0;
-        element->attr.bits.y = 0x4D;
+        element->attr.bits.x = CARD_MENU_EXCHANGE_CARD_SLOT1_LABEL_X;
+        element->attr.bits.y = CARD_MENU_EXCHANGE_CARD_LABEL_TRANSFER_Y;
         element->size.bits.width_high = 0;
-        element->size.bits.height = 0x10;
+        element->size.bits.height = CARD_MENU_CARD_LABEL_HEIGHT;
         CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_CARD_LABEL_WIDTH);
-        g_niki_element_pool[0].attr.bits.state = 0;
+        g_niki_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_FREE;
         return;
     }
 
-    g_niki_element_pool[0].attr.bits.state = 1;
+    g_niki_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_OPENING;
     element = niki_alloc_element();
     element->draw = niki_draw_entry_list;
     element->attr.bits.transition_step = 1;
-    element->attr.bits.x = 0x1C;
-    element->attr.bits.y = 0x32;
-    element->size.bits.width_high = 1;
-    element->size.bits.height = 0x58;
-    CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, 8);
+    element->attr.bits.x = CARD_MENU_EXCHANGE_LIST_X;
+    element->attr.bits.y = CARD_MENU_LIST_Y;
+    element->size.bits.width_high = CARD_MENU_EXCHANGE_LIST_WIDTH >> 8;
+    element->size.bits.height = CARD_MENU_LIST_HEIGHT;
+    CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_EXCHANGE_LIST_WIDTH);
 
     element = niki_alloc_element();
     element->draw = niki_draw_header_label;
     element->attr.bits.transition_step = 1;
-    element->attr.bits.x = 0x24;
-    element->attr.bits.y = 0x0A;
-    element->size.bits.width_high = 0;
-    element->size.bits.height = 0x10;
-    CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, 0xF0);
+    element->attr.bits.x = CARD_MENU_EXCHANGE_TITLE_X;
+    element->attr.bits.y = CARD_MENU_EXCHANGE_TITLE_Y;
+    element->size.bits.width_high = CARD_MENU_EXCHANGE_TITLE_WIDTH >> 8;
+    element->size.bits.height = CARD_MENU_EXCHANGE_TITLE_HEIGHT;
+    CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_EXCHANGE_TITLE_WIDTH);
 
     element = niki_alloc_element();
     element->draw = niki_draw_card_slot0_label;
     element->attr.bits.transition_step = 1;
-    element->attr.bits.x = NIKI_CARD_SLOT0_LABEL_X;
-    element->attr.bits.y = 0x1E;
+    element->attr.bits.x = CARD_MENU_EXCHANGE_CARD_SLOT0_LABEL_X;
+    element->attr.bits.y = CARD_MENU_EXCHANGE_CARD_LABEL_BROWSER_Y;
     element->size.bits.width_high = 0;
-    element->size.bits.height = 0x10;
+    element->size.bits.height = CARD_MENU_CARD_LABEL_HEIGHT;
     CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_CARD_LABEL_WIDTH);
 
     element = niki_alloc_element();
     element->draw = niki_draw_card_slot1_label;
     element->attr.bits.transition_step = 1;
-    element->attr.bits.x = 0xA0;
-    element->attr.bits.y = 0x1E;
+    element->attr.bits.x = CARD_MENU_EXCHANGE_CARD_SLOT1_LABEL_X;
+    element->attr.bits.y = CARD_MENU_EXCHANGE_CARD_LABEL_BROWSER_Y;
     element->size.bits.width_high = 0;
-    element->size.bits.height = 0x10;
+    element->size.bits.height = CARD_MENU_CARD_LABEL_HEIGHT;
     CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_CARD_LABEL_WIDTH);
 
     element = niki_alloc_element();
     element->draw = niki_draw_selected_entry_details;
     element->attr.bits.transition_step = 1;
-    element->attr.bits.x = 0x1E;
-    element->attr.bits.y = 0x8E;
-    element->size.bits.width_high = 1;
-    element->size.bits.height = 0x34;
-    CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, 4);
-    g_niki_element_pool[0].attr.bits.state = 0;
+    element->attr.bits.x = CARD_MENU_DETAILS_X;
+    element->attr.bits.y = CARD_MENU_DETAILS_Y;
+    element->size.bits.width_high = CARD_MENU_DETAILS_WIDTH >> 8;
+    element->size.bits.height = CARD_MENU_DETAILS_HEIGHT;
+    CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_DETAILS_WIDTH);
+    g_niki_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_FREE;
 }
 
 /**
  * @brief Draw menu elements, process input and advance scrolling.
  * @param frame Draw context receiving the menu packets.
  */
-void niki_update_menu(NikiFrameState* frame)
+void niki_update_menu(FieldRenderHalf* frame)
 {
     s32 delta;
 
@@ -222,7 +199,7 @@ s32 niki_update_load_sequence(void)
 {
     s32 result;
 
-    if (g_card_entry_state >= 0x10)
+    if (g_card_entry_state >= CARD_MENU_ENTRY_COUNT_LIMIT)
     {
         if (g_card_step == NULL)
         {
@@ -233,7 +210,7 @@ s32 niki_update_load_sequence(void)
     do
     {
         result = niki_advance_load_sequence();
-    } while (result == 3);
+    } while (result == CARD_MENU_SEQUENCE_RUN_AGAIN);
 
     if ((D_80164B80 != 0) && (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK))
     {
@@ -244,16 +221,16 @@ s32 niki_update_load_sequence(void)
     {
         switch (result)
         {
-        case 0:
+        case CARD_MENU_SEQUENCE_NONE:
             break;
-        case 4:
+        case CARD_MENU_SEQUENCE_NO_CARD:
             g_card_step = g_niki_rescan_sequence;
             D_80164B80 = 0;
             break;
-        case 5:
+        case CARD_MENU_SEQUENCE_UNFORMATTED:
             g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_GAME_DATA;
             /* fallthrough */
-        case 2:
+        case CARD_MENU_SEQUENCE_FINISHED:
             g_card_step = g_niki_card_info_sequence;
             break;
         }
@@ -315,13 +292,13 @@ s32 niki_handle_input(void)
     if (status & NIKI_CANCEL_INPUT_MASK)
     {
         g_field_niki_addhero_state = 3;
-        func_800A3938(0x78, 0x80);
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
         niki_close_all_elements();
         return;
     }
     if (status & CARD_MENU_CARD_SWITCH_BUTTON_MASK)
     {
-        func_800A3938(0x7D, 0x80);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         niki_switch_card_slot();
         return;
     }
@@ -366,7 +343,7 @@ s32 niki_handle_input(void)
     if (g_pad_input & 0x5000)
     {
         niki_commit_selected_entry();
-        func_800A3938(0x7D, 0x80);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         niki_scroll_to_selection();
         return;
     }
@@ -385,19 +362,19 @@ s32 niki_handle_input(void)
             {
                 element = niki_alloc_element();
                 element->attr.bits.transition_step = 1;
-                element->attr.bits.x = 0x10;
-                element->attr.bits.y = 0x61;
-                element->size.bits.width_high = 1;
-                element->size.bits.height = 0x1E;
-                CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, 0x20);
+                element->attr.bits.x = CARD_MENU_MESSAGE_X;
+                element->attr.bits.y = CARD_MENU_EXCHANGE_MESSAGE_Y;
+                element->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
+                element->size.bits.height = CARD_MENU_EXCHANGE_PROMPT_HEIGHT;
+                CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_MESSAGE_WIDTH);
                 niki_enable_choice_toggle();
                 element->draw = niki_draw_confirm_prompt;
                 restart_card_sequence();
-                func_800A3938(0x7E, 0x80);
+                field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
                 return;
             }
         }
-        func_800A3938(0x78, 0x80);
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
     }
 }
 
@@ -423,7 +400,7 @@ void niki_close_all_elements(void)
     CardMenuElement* element;
     s32 closing_attributes;
 
-    func_80067F28();
+    field_restore_fade_target();
     element = g_niki_element_pool;
     element_index = 0;
     for (; element_index < CARD_MENU_ELEMENT_COUNT; element_index++, element++)
@@ -468,7 +445,7 @@ void niki_scroll_to_selection(void)
  * @brief Update and draw the active menu elements.
  * @param frame Draw context receiving the element packets.
  */
-void niki_update_elements(NikiFrameState* frame)
+void niki_update_elements(FieldRenderHalf* frame)
 {
     niki_update_and_draw_elements(frame);
 }
@@ -580,27 +557,27 @@ void* niki_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                         if ((g_niki_rank_count - 1) == *rank)
                         {
                             marker_offset = *(u16*)(glyph_table + 0x36);
-                            prim = field_draw_text((SPRT*)prim, ot, (u8*)(marker_offset + glyph_table), 4, base_x + NIKI_ENTRY_MARKER_X, row_y, 0);
+                            prim = field_draw_text((SPRT*)prim, ot, (u8*)(marker_offset + glyph_table), 4, base_x + CARD_MENU_EXCHANGE_ENTRY_MARKER_X, row_y, 0);
                         }
                         else if (*rank < 2)
                         {
                             marker_offset = *(u16*)(glyph_table + 0x38);
-                            prim = field_draw_text((SPRT*)prim, ot, (u8*)(marker_offset + glyph_table), 4, base_x + NIKI_ENTRY_MARKER_X, row_y, 0);
+                            prim = field_draw_text((SPRT*)prim, ot, (u8*)(marker_offset + glyph_table), 4, base_x + CARD_MENU_EXCHANGE_ENTRY_MARKER_X, row_y, 0);
                         }
                         if (*skip_hex_digits(&g_card_entries[g_card_slot][entry_index].name[12]) == '+')
                         {
-                            prim = field_draw_text((SPRT*)prim, ot, (u8*)(g_niki_text_plus_marker + glyph_table), 4, 0xF2 - x_offset, row_y, 1);
+                            prim = field_draw_text((SPRT*)prim, ot, (u8*)(g_niki_text_plus_marker + glyph_table), 4, CARD_MENU_EXCHANGE_ENTRY_PLUS_RIGHT_X - x_offset, row_y, 1);
                         }
                     }
                     if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][entry_index].name, 0xC) == 0)
                     {
                         prim = field_draw_text((SPRT*)prim, ot, (u8*)(glyph_table + g_niki_text_mana_label), 4, 1 - x_offset, row_y, 0);
                     }
-                    else if (strncmp(D_800ECF8C, g_card_entries[g_card_slot][entry_index].name, 0xC) == 0)
+                    else if (strncmp(g_lom_pocketstation_filename_prefix, g_card_entries[g_card_slot][entry_index].name, 0xC) == 0)
                     {
                         prim = field_draw_text((SPRT*)prim, ot, (u8*)(g_niki_text_ring_ring_land_label + glyph_table), 4, 1 - x_offset, row_y, 0);
                     }
-                    else if (strncmp(D_800ECFC4, g_card_entries[g_card_slot][entry_index].name, 8) == 0)
+                    else if (strncmp(g_new_save_entry_prefix, g_card_entries[g_card_slot][entry_index].name, 8) == 0)
                     {
                         prim = field_draw_text((SPRT*)prim, ot, (u8*)(glyph_table + g_niki_text_new_save_label), 4, 1 - x_offset, row_y, 0);
                     }
@@ -867,7 +844,7 @@ void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32
                         pos.y = (s16)y;
                         hours = playtime / 216000;
                         result = field_draw_number(ot, (SPRT*)result, hours, 4, &pos, 1);
-                        result = field_draw_text((SPRT*)result, ot, (u8*)(D_800EC3F6[0] + ((uintptr_t)&D_800EC3F6 - 0x32) + (D_800EC3F6[1] << 8)), 4,
+                        result = field_draw_text((SPRT*)result, ot, (u8*)(g_text_time_separator_offset_bytes[0] + ((uintptr_t)&g_text_time_separator_offset_bytes - 0x32) + (g_text_time_separator_offset_bytes[1] << 8)), 4,
                                                x + CARD_MENU_DETAILS_TIME_SEPARATOR_X, y, 0);
                         playtime = (playtime / 3600) - (hours * 0x3C);
                         if (playtime < 0xA)
@@ -1000,10 +977,10 @@ CardMenuElement* niki_alloc_element(void)
  * @brief Animate element windows and append their content and borders to the frame.
  * @param frame_arg Draw context supplying the clip variant and primitive cursor.
  */
-void niki_update_and_draw_elements(NikiFrameState* frame_arg)
+void niki_update_and_draw_elements(FieldRenderHalf* frame_arg)
 {
     NikiPacketHeader* prim;
-    NikiFrameState* frame;
+    FieldRenderHalf* frame;
     CardMenuElement* element;
     s32 inset_width;
     s32 inset_height;
@@ -1016,18 +993,18 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
     s32 closing_border_x;
     s32 closing_border_width_low;
     s32 open_border_width_low;
-    NikiDrawEnvironment draw_area;
+    DRAWENV draw_area;
 
-    prim = frame_arg->prim_cursor;
+    prim = (NikiPacketHeader*)frame_arg->primitive_cursor;
     frame = frame_arg;
 
-    if (frame_arg->frame_flag != 0)
+    if (frame_arg->display_rect.y != 0)
     {
-        func_8001C56C(&draw_area, 0, SCREEN_HEIGHT, SCREEN_WIDTH, 224);
+        SetDefDrawEnv(&draw_area, 0, SCREEN_HEIGHT, SCREEN_WIDTH, 224);
     }
     else
     {
-        func_8001C56C(&draw_area, 0, 8, SCREEN_WIDTH, 224);
+        SetDefDrawEnv(&draw_area, 0, 8, SCREEN_WIDTH, 224);
     }
 
     element = g_niki_element_pool;
@@ -1040,18 +1017,18 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
             {
                 if (entry_count * 14 > g_niki_scroll_y + 88)
                 {
-                    prim = (NikiPacketHeader*)func_800AE76C(prim, &frame->head_tag, 0x114, 0x82, 0);
+                    prim = (NikiPacketHeader*)field_draw_menu_scroll_arrow(prim, frame->ordering_table, CARD_MENU_EXCHANGE_SCROLL_ARROW_X, CARD_MENU_SCROLL_ARROW_DOWN_Y, FIELD_MENU_ARROW_DOWN);
                 }
                 if (g_niki_scroll_y != 0)
                 {
-                    prim = (NikiPacketHeader*)func_800AE76C(prim, &frame->head_tag, 0x114, 0x3A, 1);
+                    prim = (NikiPacketHeader*)field_draw_menu_scroll_arrow(prim, frame->ordering_table, CARD_MENU_EXCHANGE_SCROLL_ARROW_X, CARD_MENU_SCROLL_ARROW_UP_Y, FIELD_MENU_ARROW_UP);
                 }
             }
 
-            func_8001A5D4(prim, &draw_area);
-            prim->tag = (prim->tag & GPU_TAG_HIGH_MASK) | (frame->head_tag & GPU_ADDR_MASK);
-            frame->head_tag = ((frame->head_tag & GPU_TAG_HIGH_MASK) | ((uintptr_t)prim & GPU_ADDR_MASK));
-            prim = (NikiPacketHeader*)((NikiDrawEnvironmentPacket*)prim + 1);
+            SetDrawEnv((DR_ENV*)prim, &draw_area);
+            prim->tag = (prim->tag & GPU_TAG_HIGH_MASK) | (frame->ordering_table[0] & GPU_ADDR_MASK);
+            frame->ordering_table[0] = ((frame->ordering_table[0] & GPU_TAG_HIGH_MASK) | ((uintptr_t)prim & GPU_ADDR_MASK));
+            prim = (NikiPacketHeader*)((DR_ENV*)prim + 1);
 
             switch (element->attr.bits.state)
             {
@@ -1060,14 +1037,14 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
                 opening_width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
                 inset_width = (CARD_MENU_ELEMENT_WIDTH(element, opening_width_low) * element->attr.bits.transition_step) / 8;
                 inset_height = (element->size.bits.height * element->attr.bits.transition_step) / 8;
-                prim = (NikiPacketHeader*)element->draw(&frame->head_tag, (u8*)prim, (CARD_MENU_ELEMENT_WIDTH(element, opening_width_low) - inset_width) / 2,
+                prim = (NikiPacketHeader*)element->draw(frame->ordering_table, (u8*)prim, (CARD_MENU_ELEMENT_WIDTH(element, opening_width_low) - inset_width) / 2,
                                                         (element->size.bits.height - inset_height) / 2);
                 opening_border_x = element->attr.bits.x;
                 opening_border_width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
-                prim = (NikiPacketHeader*)func_800AD850(prim, &frame->head_tag,
+                prim = (NikiPacketHeader*)field_draw_menu_frame(prim, frame->ordering_table,
                                                         opening_border_x + (CARD_MENU_ELEMENT_WIDTH(element, opening_border_width_low) - inset_width) / 2,
                                                         element->attr.bits.y + (element->size.bits.height - inset_height) / 2, inset_width, inset_height,
-                                                        frame_arg->frame_flag, element_index == 0);
+                                                        frame_arg->display_rect.y, element_index == 0);
                 element->attr.bits.transition_step++;
                 if (element->attr.bits.transition_step == 8)
                 {
@@ -1077,11 +1054,11 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
                 break;
 
             case 2:
-                prim = (NikiPacketHeader*)element->draw(&frame->head_tag, (u8*)prim, 0, 0);
+                prim = (NikiPacketHeader*)element->draw(frame->ordering_table, (u8*)prim, 0, 0);
                 open_border_width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
                 prim =
-                    (NikiPacketHeader*)func_800AD850(prim, &frame->head_tag, element->attr.bits.x, element->attr.bits.y, CARD_MENU_ELEMENT_WIDTH(element, open_border_width_low),
-                                                     element->size.bits.height, frame_arg->frame_flag, element_index == 0);
+                    (NikiPacketHeader*)field_draw_menu_frame(prim, frame->ordering_table, element->attr.bits.x, element->attr.bits.y, CARD_MENU_ELEMENT_WIDTH(element, open_border_width_low),
+                                                     element->size.bits.height, frame_arg->display_rect.y, element_index == 0);
                 if (element->attr.bits.transition_step != 0)
                 {
                     element->attr.bits.transition_step--;
@@ -1093,14 +1070,14 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
                 closing_width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
                 inset_width = (CARD_MENU_ELEMENT_WIDTH(element, closing_width_low) * element->attr.bits.transition_step) / 8;
                 inset_height = (element->size.bits.height * element->attr.bits.transition_step) / 8;
-                prim = (NikiPacketHeader*)element->draw(&frame->head_tag, (u8*)prim, (CARD_MENU_ELEMENT_WIDTH(element, closing_width_low) - inset_width) / 2,
+                prim = (NikiPacketHeader*)element->draw(frame->ordering_table, (u8*)prim, (CARD_MENU_ELEMENT_WIDTH(element, closing_width_low) - inset_width) / 2,
                                                         (element->size.bits.height - inset_height) / 2);
                 closing_border_x = element->attr.bits.x;
                 closing_border_width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
-                prim = (NikiPacketHeader*)func_800AD850(prim, &frame->head_tag,
+                prim = (NikiPacketHeader*)field_draw_menu_frame(prim, frame->ordering_table,
                                                         closing_border_x + (CARD_MENU_ELEMENT_WIDTH(element, closing_border_width_low) - inset_width) / 2,
                                                         element->attr.bits.y + (element->size.bits.height - inset_height) / 2, inset_width, inset_height,
-                                                        frame_arg->frame_flag, element_index == 0);
+                                                        frame_arg->display_rect.y, element_index == 0);
                 element->attr.bits.transition_step--;
                 if (element->attr.bits.transition_step == 0)
                 {
@@ -1121,7 +1098,7 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
         }
     }
 
-    frame_arg->prim_cursor = prim;
+    frame_arg->primitive_cursor = (u8*)prim;
 }
 
 /**
@@ -1159,9 +1136,9 @@ void* niki_draw_confirm_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
 
     if ((u32)(poll_and_retry_card_info() - 1) < 2U)
     {
-        g_niki_element_pool[0].attr.bits.state = 0;
+        g_niki_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_FREE;
         field_reset_input_repeat();
-        func_800A3938(0x78, 0x80);
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
         g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
         niki_reset_entry_ranks();
         g_card_step = 0;
@@ -1171,34 +1148,34 @@ void* niki_draw_confirm_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
         status = g_pad_input;
         if (status & NIKI_CANCEL_INPUT_MASK)
         {
-            g_niki_element_pool[0].attr.bits.state = 0;
+            g_niki_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_FREE;
             field_reset_input_repeat();
-            func_800A3938(0x78, 0x80);
+            field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
             g_card_step = g_niki_card_info_sequence;
         }
         else if (status & CARD_MENU_CONFIRM_BUTTON_MASK)
         {
             if (g_niki_choice_toggle != 0)
             {
-                g_niki_element_pool[0].attr.bits.state = 0;
+                g_niki_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_FREE;
                 field_reset_input_repeat();
-                func_800A3938(0x78, 0x80);
+                field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
                 g_card_step = g_niki_card_info_sequence;
             }
             else
             {
-                func_800A3938(0x7E, 0x80);
+                field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
                 g_niki_confirm_latch = 1;
                 g_card_step = g_niki_load_save_sequence;
                 element = g_niki_element_pool;
                 element->draw = niki_draw_save_confirm_dialog;
                 element->attr.bits.transition_step = 1;
                 element->attr.bits.state = 1;
-                element->attr.bits.x = 0x10;
-                element->attr.bits.y = 0x61;
-                element->size.bits.width_high = 1;
-                element->size.bits.height = 0x2C;
-                CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, 0x20);
+                element->attr.bits.x = CARD_MENU_MESSAGE_X;
+                element->attr.bits.y = CARD_MENU_EXCHANGE_MESSAGE_Y;
+                element->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
+                element->size.bits.height = CARD_MENU_MESSAGE_HEIGHT;
+                CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_MESSAGE_WIDTH);
             }
         }
     }
@@ -1225,7 +1202,7 @@ void* niki_draw_save_confirm_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_
     NikiSaveBuffer* resource;
     CardMenuElement* element;
     CardMenuElement* closing_element;
-    u8* result;
+    void* result;
     s32 x;
     s32 element_index;
 
@@ -1247,14 +1224,14 @@ void* niki_draw_save_confirm_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_
             return result;
         }
 
-        func_800A3938(0x7B, 0x80);
+        field_play_sound(FIELD_SOUND_LOAD_DONE, AKAO_PAN_CENTER);
         g_field_niki_state = 1;
         D_801227CC = resource->loaded.unknown_0x254;
         D_801227F4 = resource->loaded.unknown_0x256;
         D_8011F418 = g_card_slot;
-        func_800170BC(D_8011F3D8, g_niki_selected_save_path);
-        func_80016E7C(resource->loaded.trailing_data, D_80122A08, sizeof(resource->loaded.trailing_data));
-        func_80067F28();
+        strcpy(D_8011F3D8, g_niki_selected_save_path);
+        bcopy(resource->loaded.trailing_data, g_field_shared_items, sizeof(resource->loaded.trailing_data));
+        field_restore_fade_target();
 
         closing_element = element;
         for (element_index = 0; element_index < CARD_MENU_ELEMENT_COUNT; element_index++, closing_element++)
@@ -1265,58 +1242,45 @@ void* niki_draw_save_confirm_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_
                 closing_element->attr.bits.transition_step = 8;
             }
         }
-        func_80067F5C(8);
+        field_restore_fade_target_with_duration(CARD_MENU_EXIT_FADE_FRAMES);
     }
 
     return result;
 }
 
 /**
- * @brief Draw the active save-progress bar with width determined by elapsed ticks.
- * @param prim GPU packet write cursor.
+ * @brief Draw the transfer progress bar: a gradient across the top of the message
+ *        window that fills over CARD_MENU_PROGRESS_FULL_TICKS VSyncs.
+ * @param quad Primitive-buffer cursor the bar is written to.
  * @param ot Ordering-table entry receiving the bar.
  * @return Advanced packet cursor, or the original cursor when the timer is inactive.
  */
-u8* niki_draw_progress_bar(u8* prim, u_long* ot)
+inline void* niki_draw_progress_bar(POLY_G4* quad, u_long* ot)
 {
-    NikiPolyG4Packet* bar;
     s32 elapsed;
-    s32 extent;
-    s32 color;
+    s32 width;
 
-    bar = (NikiPolyG4Packet*)prim;
     if (g_niki_progress_bar_active != 0)
     {
         elapsed = VSync(-1) - g_niki_progress_start_tick;
-        if (elapsed >= CARD_MENU_PROGRESS_FULL_TICKS + 1)
+        if (elapsed > CARD_MENU_PROGRESS_FULL_TICKS)
         {
             elapsed = CARD_MENU_PROGRESS_FULL_TICKS;
         }
-        color = CARD_MENU_PROGRESS_BOTTOM_LEFT_COLOR;
-        extent = elapsed * CARD_MENU_MESSAGE_WIDTH;
-        bar->color0.word = CARD_MENU_PROGRESS_TOP_LEFT_COLOR;
-        bar->color1.word = CARD_MENU_PROGRESS_TOP_RIGHT_COLOR;
-        bar->color3.word = CARD_MENU_PROGRESS_BOTTOM_RIGHT_COLOR;
-        bar->tag.bytes.length = 8;
-        bar->color2.word = color;
-        bar->color0.bytes.code = GPU_CODE_POLY_G4;
-        bar->x2 = 0;
-        bar->x0 = 0;
-        if (extent < 0)
-        {
-            extent += 0xFF;
-        }
-        bar->x3 = extent >> 8;
-        bar->x1 = extent >> 8;
-        bar->y1 = 0;
-        bar->y0 = 0;
-        bar->y3 = CARD_MENU_MESSAGE_HEIGHT;
-        bar->y2 = CARD_MENU_MESSAGE_HEIGHT;
-        bar->tag.word = (bar->tag.word & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | ((uintptr_t)prim & 0xFFFFFF);
-        prim += sizeof(NikiPolyG4Packet);
+        width = elapsed * CARD_MENU_MESSAGE_WIDTH;
+        SET_BGR0_PACKED(quad, CARD_MENU_PROGRESS_TOP_LEFT_COLOR);
+        SET_POLY_G4_BGR1_PACKED(quad, CARD_MENU_PROGRESS_TOP_RIGHT_COLOR);
+        SET_POLY_G4_BGR3_PACKED(quad, CARD_MENU_PROGRESS_BOTTOM_RIGHT_COLOR);
+        SET_POLY_G4_BGR2_PACKED(quad, CARD_MENU_PROGRESS_BOTTOM_LEFT_COLOR);
+        setPolyG4(quad);
+        quad->x0 = quad->x2 = 0;
+        quad->x1 = quad->x3 = width / CARD_MENU_PROGRESS_FULL_TICKS;
+        quad->y0 = quad->y1 = 0;
+        quad->y2 = quad->y3 = CARD_MENU_MESSAGE_HEIGHT;
+        addPrim(ot, quad);
+        quad++;
     }
-    return prim;
+    return quad;
 }
 
 /**
@@ -1325,15 +1289,15 @@ u8* niki_draw_progress_bar(u8* prim, u_long* ot)
  */
 void niki_open_status_dialog(s32 dialog_state)
 {
-    func_800A3938(0x78, 0x80);
+    field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
     g_niki_element_pool[0].draw = niki_draw_status_dialog;
     g_niki_element_pool[0].attr.bits.transition_step = 1;
-    g_niki_element_pool[0].attr.bits.state = 1;
-    g_niki_element_pool[0].attr.bits.x = 0x20;
-    g_niki_element_pool[0].attr.bits.y = 0x70;
-    g_niki_element_pool[0].size.bits.width_high = 1;
-    g_niki_element_pool[0].size.bits.height = 0x14;
-    CARD_MENU_SET_ELEMENT_WIDTH_LOW(&g_niki_element_pool[0], 0);
+    g_niki_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_OPENING;
+    g_niki_element_pool[0].attr.bits.x = CARD_MENU_DIALOG_X;
+    g_niki_element_pool[0].attr.bits.y = CARD_MENU_EXCHANGE_DIALOG_Y;
+    g_niki_element_pool[0].size.bits.width_high = CARD_MENU_DIALOG_WIDTH >> 8;
+    g_niki_element_pool[0].size.bits.height = CARD_MENU_EXCHANGE_DIALOG_HEIGHT;
+    CARD_MENU_SET_ELEMENT_WIDTH_LOW(&g_niki_element_pool[0], CARD_MENU_DIALOG_WIDTH);
     field_reset_input_repeat();
     g_niki_progress_active = 0;
     g_niki_confirm_latch = 0;
@@ -1353,16 +1317,16 @@ void niki_open_secondary_status_dialog(s32 dialog_state)
 {
     CardMenuElement* element;
 
-    func_800A3938(0x78, 0x80);
+    field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
     element = &g_niki_element_pool[1];
     element->draw = niki_draw_secondary_status_dialog;
     element->attr.bits.transition_step = 1;
     element->attr.bits.state = 1;
-    element->attr.bits.x = 0x20;
-    element->attr.bits.y = 0x70;
-    element->size.bits.width_high = 1;
-    element->size.bits.height = 0x14;
-    CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, 0);
+    element->attr.bits.x = CARD_MENU_DIALOG_X;
+    element->attr.bits.y = CARD_MENU_EXCHANGE_DIALOG_Y;
+    element->size.bits.width_high = CARD_MENU_DIALOG_WIDTH >> 8;
+    element->size.bits.height = CARD_MENU_EXCHANGE_DIALOG_HEIGHT;
+    CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_DIALOG_WIDTH);
     field_reset_input_repeat();
     g_field_niki_state = 2;
     g_niki_progress_active = 0;
@@ -1404,7 +1368,7 @@ void* niki_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset
     }
     if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
     {
-        g_niki_element_pool[0].attr.bits.state = 0;
+        g_niki_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_FREE;
         field_reset_input_repeat();
     }
     return prim;
@@ -1449,7 +1413,7 @@ void* niki_draw_secondary_status_dialog(u_long* ot, void* prim, s32 x_offset, s3
             element->attr.word &= ~CARD_MENU_ELEMENT_STATE_MASK;
             element++;
         }
-        func_80067F5C(8);
+        field_restore_fade_target_with_duration(CARD_MENU_EXIT_FADE_FRAMES);
         field_reset_input_repeat();
     }
     return prim;
@@ -1478,16 +1442,16 @@ u8* niki_draw_icon_highlight(u8* prim, u_long* ot, s32 x, s32 y, s32 width, s32 
         return prim;
     }
 
-    setRECT(&rect, texture_slot * 16, VRAM_CLUT_Y, 16, 1);
+    setRECT(&rect, texture_slot * GPU_CLUT_4BIT_COLORS, VRAM_CLUT_Y, GPU_CLUT_4BIT_COLORS, 1);
     if ((palette_mode == FIELD_PARTY_GUEST) && (icon_index < SAVE_ICON_HERO_COUNT))
     {
-        func_800A5638(g_niki_icon_context, icon_index);
+        field_copy_portrait_palette(g_niki_icon_context, icon_index);
         LoadImage(&rect, (u_long*)g_niki_icon_context);
         DrawSync(0);
     }
     else if (icon_index >= SAVE_ICON_GOLEM_BASE)
     {
-        func_800A55E4(g_niki_icon_context, g_niki_icon_palette);
+        field_copy_golem_portrait_palette(g_niki_icon_context, g_niki_icon_palette);
         LoadImage(&rect, (u_long*)g_niki_icon_context);
         DrawSync(0);
     }
@@ -1496,7 +1460,7 @@ u8* niki_draw_icon_highlight(u8* prim, u_long* ot, s32 x, s32 y, s32 width, s32 
         LoadImage(&rect, (u_long*)CARD_MENU_ICON_IMAGE(g_niki_icon_offsets, icon_index)->clut);
     }
 
-    setRECT(&rect, texture_slot * (CARD_MENU_ICON_SIZE / 4) + CARD_MENU_ICON_VRAM_X, CARD_MENU_ICON_VRAM_Y, CARD_MENU_ICON_SIZE / 4, CARD_MENU_ICON_SIZE);
+    setRECT(&rect, texture_slot * (FIELD_PORTRAIT_SIZE / 4) + CARD_MENU_ICON_VRAM_X, CARD_MENU_ICON_VRAM_Y, FIELD_PORTRAIT_SIZE / 4, FIELD_PORTRAIT_SIZE);
     LoadImage(&rect, (u_long*)CARD_MENU_ICON_IMAGE(g_niki_icon_offsets, icon_index)->pixels);
 
     quad = (POLY_FT4*)prim;
@@ -1505,13 +1469,13 @@ u8* niki_draw_icon_highlight(u8* prim, u_long* ot, s32 x, s32 y, s32 width, s32 
     quad->x0 = quad->x2 = x;
     quad->y0 = quad->y1 = y;
     quad->x1 = quad->x3 = x + width;
-    quad->y2 = quad->y3 = y + CARD_MENU_ICON_SIZE - 1;
-    u = texture_slot * CARD_MENU_ICON_SIZE;
+    quad->y2 = quad->y3 = y + FIELD_PORTRAIT_SIZE - 1;
+    u = texture_slot * FIELD_PORTRAIT_SIZE;
     quad->u0 = quad->u2 = u;
-    quad->u1 = quad->u3 = u + CARD_MENU_ICON_SIZE - 1;
+    quad->u1 = quad->u3 = u + FIELD_PORTRAIT_SIZE - 1;
     quad->v0 = quad->v1 = CARD_MENU_ICON_VRAM_Y;
-    quad->v2 = quad->v3 = CARD_MENU_ICON_VRAM_Y + CARD_MENU_ICON_SIZE - 1;
-    quad->clut = getClut(texture_slot * 16, VRAM_CLUT_Y);
+    quad->v2 = quad->v3 = CARD_MENU_ICON_VRAM_Y + FIELD_PORTRAIT_SIZE - 1;
+    quad->clut = getClut(texture_slot * GPU_CLUT_4BIT_COLORS, VRAM_CLUT_Y);
     quad->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, CARD_MENU_ICON_VRAM_X, 0);
     addPrim(ot, quad);
 
@@ -1543,7 +1507,7 @@ u8* niki_draw_choice_prompt(u8* prim, u_long* ot, s32 x, s32 y)
     s32 offset_high;
     s32 palette;
 
-    p = (u8*)&D_800EC3FA;
+    p = (u8*)&g_text_choice_glyph_offsets;
     offset_high = p[1] << 8;
     base = p - 0x36;
     palette = 4;
@@ -1563,7 +1527,7 @@ u8* niki_draw_choice_prompt(u8* prim, u_long* ot, s32 x, s32 y)
     if (g_pad_input & CARD_MENU_CHOICE_BUTTON_MASK)
     {
         g_niki_choice_toggle ^= 1;
-        func_800A3938(0x7D, 0x80);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         g_pad_input = 0;
     }
     return prim;
@@ -1629,11 +1593,6 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
     {
         s32 x;
         u8* base;
-        NikiPolyG4Packet* bar;
-        u8* next;
-        s32 elapsed;
-        s32 extent;
-        s32 color;
         s32 dialog_state;
 
         x = -x_offset + 0x90;
@@ -1642,54 +1601,21 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         prim = field_draw_text((SPRT*)prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
         prim = field_draw_text((SPRT*)prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
 
-        next = prim;
-        bar = (NikiPolyG4Packet*)prim;
-        if (g_niki_progress_bar_active != 0)
-        {
-            elapsed = VSync(-1) - g_niki_progress_start_tick;
-            if (elapsed >= CARD_MENU_PROGRESS_FULL_TICKS + 1)
-            {
-                elapsed = CARD_MENU_PROGRESS_FULL_TICKS;
-            }
-            color = CARD_MENU_PROGRESS_BOTTOM_LEFT_COLOR;
-            extent = elapsed * CARD_MENU_MESSAGE_WIDTH;
-            bar->color0.word = CARD_MENU_PROGRESS_TOP_LEFT_COLOR;
-            bar->color1.word = CARD_MENU_PROGRESS_TOP_RIGHT_COLOR;
-            bar->color3.word = CARD_MENU_PROGRESS_BOTTOM_RIGHT_COLOR;
-            bar->tag.bytes.length = 8;
-            bar->color2.word = color;
-            bar->color0.bytes.code = GPU_CODE_POLY_G4;
-            bar->x2 = 0;
-            bar->x0 = 0;
-            if (extent < 0)
-            {
-                extent += 0xFF;
-            }
-            bar->x3 = extent >> 8;
-            bar->x1 = extent >> 8;
-            bar->y1 = 0;
-            bar->y0 = 0;
-            bar->y3 = CARD_MENU_MESSAGE_HEIGHT;
-            bar->y2 = CARD_MENU_MESSAGE_HEIGHT;
-            bar->tag.word = (bar->tag.word & 0xFF000000) | (*ot & 0xFFFFFF);
-            *ot = (*ot & 0xFF000000) | ((uintptr_t)prim & 0xFFFFFF);
-            next = prim + sizeof(NikiPolyG4Packet);
-        }
-        prim = next;
+        prim = niki_draw_progress_bar(prim, ot);
 
         if (g_niki_confirm_latch == 0)
         {
             if (validate_save_file(&g_niki_save_blob.save) == 0)
             {
-                func_800A3938(0x78, 0x80);
+                field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
                 g_niki_element_pool[0].draw = niki_draw_status_dialog;
                 g_niki_element_pool[0].attr.bits.transition_step = 1;
-                g_niki_element_pool[0].attr.bits.state = 1;
-                g_niki_element_pool[0].attr.bits.x = 0x20;
-                g_niki_element_pool[0].attr.bits.y = 0x70;
-                g_niki_element_pool[0].size.bits.width_high = 1;
-                g_niki_element_pool[0].size.bits.height = 0x14;
-                CARD_MENU_SET_ELEMENT_WIDTH_LOW(&g_niki_element_pool[0], 0);
+                g_niki_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_OPENING;
+                g_niki_element_pool[0].attr.bits.x = CARD_MENU_DIALOG_X;
+                g_niki_element_pool[0].attr.bits.y = CARD_MENU_EXCHANGE_DIALOG_Y;
+                g_niki_element_pool[0].size.bits.width_high = CARD_MENU_DIALOG_WIDTH >> 8;
+                g_niki_element_pool[0].size.bits.height = CARD_MENU_EXCHANGE_DIALOG_HEIGHT;
+                CARD_MENU_SET_ELEMENT_WIDTH_LOW(&g_niki_element_pool[0], CARD_MENU_DIALOG_WIDTH);
                 field_reset_input_repeat();
                 g_niki_progress_active = 0;
                 g_niki_selection_status = 0;
@@ -1702,7 +1628,7 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                 g_niki_dialog_state = dialog_state;
                 return prim;
             }
-            func_800A3938(0x7B, 0x80);
+            field_play_sound(FIELD_SOUND_LOAD_DONE, AKAO_PAN_CENTER);
             g_card_entry_state = 0xF4;
             g_niki_choice_toggle = CARD_MENU_CHOICE_DEFAULT;
             field_reset_input_repeat();
@@ -1726,7 +1652,7 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         x = -x_offset;
         prim = field_draw_text((SPRT*)prim, ot, CARD_MENU_TEXT_AT(g_niki_text_trade_data_not_saved, CARD_MENU_TEXT_TRADE_DATA_NOT_SAVED), 4, x + 0x90, -y_offset, 2);
         y = 0xE - y_offset;
-        p = (u8*)&D_800EC3FA;
+        p = (u8*)&g_text_choice_glyph_offsets;
         offset_high = p[1] << 8;
         base = p - 0x36;
         palette = 4;
@@ -1746,7 +1672,7 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         if (g_pad_input & CARD_MENU_CHOICE_BUTTON_MASK)
         {
             g_niki_choice_toggle ^= 1;
-            func_800A3938(0x7D, 0x80);
+            field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
             g_pad_input = 0;
         }
 
@@ -1754,7 +1680,7 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 
         if (g_pad_input & NIKI_CANCEL_INPUT_MASK)
         {
-            func_800A3938(0x78, 0x80);
+            field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
             g_niki_choice_toggle = CARD_MENU_CHOICE_DEFAULT;
             g_card_entry_state = 0xF4;
             field_reset_input_repeat();
@@ -1763,14 +1689,14 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         {
             if (g_niki_choice_toggle != 0)
             {
-                func_800A3938(0x78, 0x80);
+                field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
                 g_niki_choice_toggle = CARD_MENU_CHOICE_DEFAULT;
                 g_card_entry_state = 0xF4;
                 field_reset_input_repeat();
             }
             else
             {
-                func_800A3938(0x7D, 0x80);
+                field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
                 packet = g_niki_element_pool;
                 g_field_niki_state = 2;
                 g_field_menu_frame_style = FIELD_MENU_FRAME_STYLE_SUBSCREEN;
@@ -1778,7 +1704,7 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                 {
                     packet->attr.bits.state = 0;
                 }
-                func_80067F5C(8);
+                field_restore_fade_target_with_duration(CARD_MENU_EXIT_FADE_FRAMES);
                 field_reset_input_repeat();
             }
         }
@@ -1808,7 +1734,7 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         prim = field_draw_text((SPRT*)prim, ot, GLYPH_OFF(caption_table, 0x70), 4, x + 0x90, 0xE - y_offset, 2);
 
         y = 0x1C - y_offset;
-        p = (u8*)&D_800EC3FA;
+        p = (u8*)&g_text_choice_glyph_offsets;
         offset_high = p[1] << 8;
         base = p - 0x36;
         palette = 4;
@@ -1828,7 +1754,7 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         if (g_pad_input & CARD_MENU_CHOICE_BUTTON_MASK)
         {
             g_niki_choice_toggle ^= 1;
-            func_800A3938(0x7D, 0x80);
+            field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
             g_pad_input = 0;
         }
 
@@ -1838,15 +1764,15 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         {
             g_niki_choice_toggle = CARD_MENU_CHOICE_DEFAULT;
             g_card_entry_state = 0xF3;
-            func_800A3938(0x78, 0x80);
+            field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
             field_reset_input_repeat();
         }
         else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
         {
-            func_800A3938(0x7E, 0x80);
-            records = (u8(*)[64])D_80122A08;
+            field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
+            records = (u8(*)[64])g_field_shared_items;
             resource = &g_niki_save_blob;
-            func_80016E7C(D_80122A08, resource->loaded.trailing_data, sizeof(resource->loaded.trailing_data));
+            bcopy(g_field_shared_items, resource->loaded.trailing_data, sizeof(resource->loaded.trailing_data));
             record_count = 0;
             for (record_index = 0; record_index < 4; record_index++)
             {
@@ -1869,11 +1795,6 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
     {
         s32 x;
         u8* base;
-        NikiPolyG4Packet* bar;
-        u8* next;
-        s32 elapsed;
-        s32 extent;
-        s32 color;
         CardMenuElement* packet;
         s32 i;
 
@@ -1883,51 +1804,18 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         prim = field_draw_text((SPRT*)prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
         prim = field_draw_text((SPRT*)prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
 
-        next = prim;
-        bar = (NikiPolyG4Packet*)prim;
-        if (g_niki_progress_bar_active != 0)
-        {
-            elapsed = VSync(-1) - g_niki_progress_start_tick;
-            if (elapsed >= CARD_MENU_PROGRESS_FULL_TICKS + 1)
-            {
-                elapsed = CARD_MENU_PROGRESS_FULL_TICKS;
-            }
-            color = CARD_MENU_PROGRESS_BOTTOM_LEFT_COLOR;
-            extent = elapsed * CARD_MENU_MESSAGE_WIDTH;
-            bar->color0.word = CARD_MENU_PROGRESS_TOP_LEFT_COLOR;
-            bar->color1.word = CARD_MENU_PROGRESS_TOP_RIGHT_COLOR;
-            bar->color3.word = CARD_MENU_PROGRESS_BOTTOM_RIGHT_COLOR;
-            bar->tag.bytes.length = 8;
-            bar->color2.word = color;
-            bar->color0.bytes.code = GPU_CODE_POLY_G4;
-            bar->x2 = 0;
-            bar->x0 = 0;
-            if (extent < 0)
-            {
-                extent += 0xFF;
-            }
-            bar->x3 = extent >> 8;
-            bar->x1 = extent >> 8;
-            bar->y1 = 0;
-            bar->y0 = 0;
-            bar->y3 = CARD_MENU_MESSAGE_HEIGHT;
-            bar->y2 = CARD_MENU_MESSAGE_HEIGHT;
-            bar->tag.word = (bar->tag.word & 0xFF000000) | (*ot & 0xFFFFFF);
-            *ot = (*ot & 0xFF000000) | ((uintptr_t)prim & 0xFFFFFF);
-            next = prim + sizeof(NikiPolyG4Packet);
-        }
-        prim = next;
+        prim = niki_draw_progress_bar(prim, ot);
 
         if (g_niki_progress_active == 0)
         {
-            func_800A3938(0x7A, 0x80);
+            field_play_sound(FIELD_SOUND_SAVE_DONE, AKAO_PAN_CENTER);
             g_field_menu_frame_style = FIELD_MENU_FRAME_STYLE_SUBSCREEN;
             packet = g_niki_element_pool;
             for (i = 0; i < CARD_MENU_ELEMENT_COUNT; i++, packet++)
             {
                 packet->attr.bits.state = 0;
             }
-            func_80067F5C(8);
+            field_restore_fade_target_with_duration(CARD_MENU_EXIT_FADE_FRAMES);
             g_field_niki_state = 0;
         }
     }
@@ -2028,8 +1916,8 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         s32 i;
         s32 word;
         g_field_niki_addhero_state = 3;
-        func_800A3938(0x78, 0x80);
-        func_80067F28();
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+        field_restore_fade_target();
         element = g_niki_element_pool;
         i = 0;
         do
@@ -2047,7 +1935,7 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 
     if ((g_pad_input & CARD_MENU_CARD_SWITCH_BUTTON_MASK) && (g_card_entry_state != CARD_MENU_ENTRY_STATE_CHECKING_CARD))
     {
-        func_800A3938(0x7D, 0x80);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         D_80164B80 = 0;
         g_card_step = 0;
         g_niki_scroll_frames = 0;
@@ -2139,7 +2027,7 @@ s32 niki_rank_entries(void)
     g_niki_entry_value_limit = next_rank + 1;
     for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
     {
-        if (strncmp(&D_800ECFC4[0], g_card_entries[g_card_slot][entry_index].name, 8) == 0)
+        if (strncmp(&g_new_save_entry_prefix[0], g_card_entries[g_card_slot][entry_index].name, 8) == 0)
         {
             g_card_entry_suffix_values[entry_index] = max_suffix + 1;
             break;
@@ -2173,7 +2061,7 @@ s32 niki_has_known_entry_type(void)
     for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
     {
         if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][entry_index].name, 12) == 0 ||
-            strncmp(D_800ECF8C, g_card_entries[g_card_slot][entry_index].name, 12) == 0)
+            strncmp(g_lom_pocketstation_filename_prefix, g_card_entries[g_card_slot][entry_index].name, 12) == 0)
         {
             return 1;
         }
@@ -2205,13 +2093,13 @@ void niki_remove_placeholder_saves(void)
 
     memcpy(&path, &g_niki_file_template, CARD_DEVICE_BYTES);
     path.device.characters.slot += (u8)g_card_slot;
-    func_80016F9C(&path, &D_800ECF9C);
-    func_8001686C(&path);
+    strcat(path.text, g_lom_save_dummy_filename);
+    erase(path.text);
 
     memcpy(&path, &g_niki_file_template, CARD_DEVICE_BYTES);
     path.device.characters.slot += (u8)g_card_slot;
-    func_80016F9C(&path, &D_800ECFB0);
-    func_8001686C(&path);
+    strcat(path.text, g_lom_pocketstation_dummy_filename);
+    erase(path.text);
 }
 
 /** @brief Device prefix used to construct memory-card file paths. */

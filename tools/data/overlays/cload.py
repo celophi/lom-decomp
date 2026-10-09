@@ -19,12 +19,11 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
-import re
 import shutil
 import sys
 import tempfile
 
-from tools.data.overlays import splat_config, symbols, text_table
+from tools.data.overlays import card_data, splat_config, symbols, text_table
 from tools.data.overlays.card_data import (
     CHART_LEADS,
     CHART_PAGE_BYTES,
@@ -41,7 +40,6 @@ from tools.data.overlays.resources import (
 REPO_ROOT = Path(__file__).resolve().parents[3]
 OVERLAY_CONFIG = "overlays/CLOAD.BIN.yaml"
 SYMBOL_FILE = "symbols/cload_symbol_addrs.txt"
-STEP_SOURCE = REPO_ROOT / "src/overlays/cload/cload_card.c"
 
 
 # ---------------------------------------------------------------------------
@@ -121,10 +119,8 @@ class Inputs:
 
 
 def card_step_names() -> dict[int, str]:
-    """CloadLoadStep values from the C source, so names stay in one place."""
-    text = STEP_SOURCE.read_text(encoding="ascii")
-    pairs = re.findall(r"\b(CLOAD_STEP_\w+)\s*=\s*(\d+)", text)
-    return {int(value): name for name, value in pairs}
+    """Step opcode names from the C headers, so names stay in one place."""
+    return card_data.card_menu_step_names()
 
 
 # ---------------------------------------------------------------------------
@@ -179,7 +175,7 @@ def read_card_steps(blob: Blob[CloadSymbols]) -> Part:
             raise ValueError(f"{name} is outside the card step table")
         done = blob.data.find(b"\x00", position, end)
         if done < 0:
-            raise ValueError(f"{name} has no CLOAD_STEP_DONE before the character chart")
+            raise ValueError(f"{name} has no CARD_MENU_STEP_DONE before the character chart")
         raw = blob.data[position : done + 1]
         steps = tuple(names.get(value, f"0x{value:02X}") for value in raw)
         sequences.append(StepSequence(name, steps, raw))

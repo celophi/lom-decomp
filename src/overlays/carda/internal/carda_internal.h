@@ -30,6 +30,9 @@
 #include "carda_widgets.h"
 #include "carda_save.h"
 #include "carda_card.h"
+#include "overlays/field/field_fade.h"
+#include "overlays/field/field_input.h"
+#include "overlays/field/field_portrait.h"
 /**
  * @brief g_carda_mode values: what FIELD opened the card screen for.
  * @note The US release keeps the PocketStation modes but leaves their texts empty.
@@ -81,55 +84,22 @@
 /** @brief Entry-state values below this count as entry counts for the card sequence and the input handler. */
 #define CARDA_ENTRY_COUNT_INPUT_LIMIT 0x12
 
-/**
- * @brief Commands in the card sequence bytecode that g_card_step walks.
- * @note Opcodes without a case (7, 14) are no-ops that hold the sequence in place.
- */
+/** @brief CARDA's own opcodes in the card step tables, in the gaps of the shared CardMenuStep ones. */
 typedef enum CardaCardStep
 {
-    CARDA_STEP_DONE = 0,                                /**< End of a step table; report CARDA_SEQUENCE_FINISHED. */
-    CARDA_STEP_CARD_INFO = 1,                           /**< Issue _card_info on the current slot. */
-    CARDA_STEP_POLL_CARD_INFO = 2,                      /**< Wait for the _card_info result. */
-    CARDA_STEP_CLEAR_SOFTWARE_EVENTS = 3,               /**< Clear the software card events. */
-    CARDA_STEP_POLL_HARDWARE_EVENTS = 4,                /**< Wait for and check the hardware card events. */
-    CARDA_STEP_CLEAR_HARDWARE_EVENTS = 5,               /**< Clear the hardware card events. */
-    CARDA_STEP_SCAN_ENTRIES = 6,                        /**< Erase the placeholder files and scan the card directory. */
-    CARDA_STEP_SCAN_DONE = 7,                           /**< No case: the sequence waits here after the scan. */
-    CARDA_STEP_CARD_CLEAR = 8,                          /**< Issue _card_clear on the current slot. */
-    CARDA_STEP_CARD_LOAD = 9,                           /**< Issue _card_load and arm the poll countdowns. */
     CARDA_STEP_SKIP = 10,                               /**< Advance without doing anything; entry point of the write tables. */
     CARDA_STEP_CREATE_TEMP_SAVE = 11,                   /**< Create the two-block save under the placeholder name. */
     CARDA_STEP_WRITE_TEMP_SAVE = 12,                    /**< Start writing the save file into the placeholder. */
     CARDA_STEP_POLL_TEMP_SAVE_WRITE = 13,               /**< Wait for the write, rename the file and patch its title. */
-    CARDA_STEP_IDLE = 14,                               /**< No case: the sequence waits here until other code replaces it. */
-    CARDA_STEP_POLL_CARD_LOAD = 15,                     /**< Wait for the _card_clear/_card_load result, retrying. */
-    CARDA_STEP_CARD_WAIT = 16,                          /**< Wait for the pending card command to finish. */
-    CARDA_STEP_READ_HEADER = 17,                        /**< Open the selected save and start reading its header. */
-    CARDA_STEP_POLL_HEADER_READ = 18,                   /**< Wait for the header read to finish. */
-    CARDA_STEP_READ_SAVE = 19,                          /**< Open the selected save and start reading it. */
-    CARDA_STEP_POLL_SAVE_READ = 20,                     /**< Wait for the save read to finish. */
     CARDA_STEP_CREATE_POCKETSTATION_SAVE = 21,          /**< Create the six-block Ring Ring Land file. */
     CARDA_STEP_WRITE_POCKETSTATION_SAVE = 22,           /**< Start writing Ring Ring Land. */
     CARDA_STEP_POLL_POCKETSTATION_SAVE_WRITE = 23,      /**< Wait for the Ring Ring Land write and finish the file. */
-    CARDA_STEP_CHECK_POCKETSTATION = 24,                /**< Check that the card is a PocketStation (McxCardType). */
     CARDA_STEP_POLL_CARD_PRESENT = 25,                  /**< Wait for the _card_info result; report a failure. */
     CARDA_STEP_WRITE_TEMP_POCKETSTATION_SAVE = 26,      /**< Create the Ring Ring Land placeholder file and start writing it. */
     CARDA_STEP_POLL_TEMP_POCKETSTATION_SAVE_WRITE = 27, /**< Wait for the write and rename it over the selected file. */
     CARDA_STEP_READ_SAVE_PREFIX = 28,                   /**< Open the selected file and start reading its first 1 KiB. */
-    CARDA_STEP_POLL_SAVE_PREFIX_READ = 29,              /**< Wait for the 1 KiB read to finish. */
-    CARDA_STEP_ARM_RETRIES = 30                         /**< Arm the file operation retry counter. */
+    CARDA_STEP_POLL_SAVE_PREFIX_READ = 29               /**< Wait for the 1 KiB read to finish. */
 } CardaCardStep;
-
-/** @brief Results of carda_advance_card_sequence. */
-typedef enum CardaSequenceResult
-{
-    CARDA_SEQUENCE_NONE = 0,       /**< Never returned. */
-    CARDA_SEQUENCE_WAIT = 1,       /**< Step handled; poll again next frame. */
-    CARDA_SEQUENCE_FINISHED = 2,   /**< The step table ended. */
-    CARDA_SEQUENCE_RUN_AGAIN = 3,  /**< A card command was issued; run the next step now. */
-    CARDA_SEQUENCE_NO_CARD = 4,    /**< The card stopped answering; the entry state says so. */
-    CARDA_SEQUENCE_UNFORMATTED = 5 /**< _card_load kept reporting a new card: the card is not formatted. */
-} CardaSequenceResult;
 
 /** @brief CARDA's own carda_open_status_dialog messages, after the shared CARD_MENU_DIALOG_* ones. */
 #define CARDA_DIALOG_SAVE_CORRUPT 4
@@ -184,12 +154,6 @@ extern s32 g_field_card_overlay_mode;
 
 /* FIELD UI strings and memory-card file names. */
 extern u8 g_field_ui_text_cant_hold_more[];
-extern u8 g_text_time_separator_offset_bytes[2];
-extern u8 g_text_choice_glyph_offsets;
-extern char g_lom_pocketstation_filename_prefix[];
-extern char g_lom_save_dummy_filename[];
-extern char g_lom_pocketstation_dummy_filename[];
-extern char g_new_save_entry_prefix[];
 extern char g_card_full_entry_name[];
 
 /* CARDA read-only data. */
@@ -296,7 +260,7 @@ extern s32 g_carda_icon_palette;
 extern s32 g_carda_progress_active;
 extern s32 g_carda_format_frames;
 extern s32 g_carda_mode;
-extern u_long g_carda_icon_context[];
+extern u8 g_carda_icon_context[];
 extern s32 g_carda_format_declined;
 extern s32 g_carda_selection_status;
 /** @brief The saved game's item records (g_saved_game_ctx->items). */
@@ -324,7 +288,6 @@ extern s32 g_carda_secondary_poll_countdown;
 extern u8 g_carda_temp_card_path[];
 
 /* FIELD entry points and library calls used by CARDA. */
-void field_reset_input_repeat(void);
 s32 OpenEvent(s32, s32, s32, s32);
 void CloseEvent(s32);
 s32 TestEvent(s32);
@@ -350,12 +313,6 @@ s32 _card_clear(s32);
 s32 _card_format();
 s32 func_80033E7C(s32);
 s32 func_80034648(s32, s32, s32);
-void field_restore_fade_target(void);
-void field_set_default_fade_target(void);
-void field_restore_fade_target_with_duration();
-void field_copy_golem_portrait_palette(void* buf, s32 arg1);
-void field_copy_portrait_palette(void* buf, s32 arg1);
-void field_flag_known_save();
 void field_apply_region_level_ups(s32 slot);
 
 #endif /* CARDA_INTERNAL_H */

@@ -18,6 +18,9 @@
 #include "field_progression_ops.h"
 #include "field_effect_dispatch.h"
 #include "common/vector.h"
+#include "overlays/field/field_fade.h"
+#include "overlays/field/field_portrait.h"
+#include "common/card_directory.h"
 
 struct AkaoHeader;
 
@@ -241,7 +244,6 @@ s32 field_get_card_clock(struct FieldCardClock *clock);
 void field_capture_card_clock(void);
 
 /* field_character_name_flags.c */
-void field_flag_known_save(char *file_name);
 
 /* field_choice_labels.c */
 /** @brief Selected return-to-title choice: 0 continues (restores the saved state), 1 returns to the title. */
@@ -284,12 +286,7 @@ s32 field_queue_actor_event(s32 owner_id, u8 event_id, s32 argument);
 s32 field_run_actor_event(s32 owner_id, s32 event_id, s32 mode);
 
 /* field_fade.c */
-void field_reset_fade_state(void);
-void field_restore_fade_target(void);
-void field_restore_fade_target_with_duration(s16 duration);
-void field_set_fade_target(s16 red, s16 green, s16 blue, s16 duration);
 void field_set_fade_target_only(s16 red, s16 green, s16 blue, s16 duration);
-void field_update_and_render_fade(struct FieldRenderHalf *ctx);
 
 /* field_generated_record_ops.c */
 void field_write_staged_item(void);
@@ -415,7 +412,6 @@ s32 field_get_ring_cursor_entry(void);
 s32 field_update_ring_menu(struct FieldRenderHalf *render_half);
 void field_load_party_script_page(s32 party_slot, s32 resource_id);
 void field_upload_golem_palettes(void);
-void field_copy_golem_portrait_palette(u8 *destination, s32 palette);
 
 /* field_saved_slot_ops.c */
 s32 field_add_stored_companion(s32 template_index);

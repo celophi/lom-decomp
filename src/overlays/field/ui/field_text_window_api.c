@@ -3,6 +3,7 @@
  */
 
 #include "common.h"
+#include "overlays/field/field_portrait.h"
 #include "../internal/field_calls.h"
 #include "overlays/field/field_text.h"
 #include "main/main.h"
@@ -16,8 +17,6 @@
 #define FIELD_TEXT_LAYOUT_FIRST_PACKED 5 /**< First packed-window layout; lower layouts are fixed windows. */
 #define FIELD_TEXT_LAYOUT_BOLD 6        /**< Layout drawn in the bold text style. */
 
-/** @brief Size of one portrait (16-color palette plus 48 by 48 4bpp pixels). */
-#define FIELD_TEXT_PORTRAIT_SIZE (16 * 2 + 48 * 48 / 2)
 
 /** @brief Portraits in one scene portrait block. */
 #define FIELD_TEXT_SCENE_BLOCK_PORTRAITS 63
@@ -25,7 +24,7 @@
 /** @brief Portrait selector bits (-1 selects no portrait). */
 #define FIELD_TEXT_PORTRAIT_INDEX_MASK 0x3F /**< Portrait index. */
 #define FIELD_TEXT_PORTRAIT_SELECT_RIGHT 0x40 /**< Show the portrait on the right. */
-#define FIELD_TEXT_PORTRAIT_SELECT_SHARED 0x80 /**< Take the portrait from the shared bank in g_prim_rect_buf. */
+#define FIELD_TEXT_PORTRAIT_SELECT_SHARED 0x80 /**< Take the portrait from the shared bank in g_field_party_portraits. */
 
 /** @brief Pending-config flag bits (field_text_apply_config moves them into the window flags). */
 #define FIELD_TEXT_CONFIG_STYLE_BOLD 0x100
@@ -121,11 +120,11 @@ void field_open_text_window(s32 window_slot, s32 layout_index, s32 unused, s32 p
     }
     else if (portrait_selector & FIELD_TEXT_PORTRAIT_SELECT_SHARED)
     {
-        cfg->portrait = g_prim_rect_buf + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_TEXT_PORTRAIT_SIZE;
+        cfg->portrait = g_field_party_portraits + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_PORTRAIT_BYTES;
     }
     else
     {
-        cfg->portrait = g_field_scene_portraits + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_TEXT_PORTRAIT_SIZE;
+        cfg->portrait = g_field_scene_portraits + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_PORTRAIT_BYTES;
     }
 
     cfg->flags.b.low = 0;
@@ -189,11 +188,11 @@ void field_open_text_window_with_string(s32 string_index, s32 window_slot, s32 l
     }
     else if (portrait_selector & FIELD_TEXT_PORTRAIT_SELECT_SHARED)
     {
-        cfg->portrait = g_prim_rect_buf + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_TEXT_PORTRAIT_SIZE;
+        cfg->portrait = g_field_party_portraits + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_PORTRAIT_BYTES;
     }
     else
     {
-        cfg->portrait = g_field_scene_portraits + portrait_selector * FIELD_TEXT_SCENE_BLOCK_PORTRAITS * FIELD_TEXT_PORTRAIT_SIZE;
+        cfg->portrait = g_field_scene_portraits + portrait_selector * FIELD_TEXT_SCENE_BLOCK_PORTRAITS * FIELD_PORTRAIT_BYTES;
     }
 
     cfg->flags.b.low = 0;

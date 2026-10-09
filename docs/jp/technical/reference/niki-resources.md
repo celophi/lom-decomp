@@ -37,7 +37,7 @@ make extract-niki VERSION=jp
 | `text/locations.yaml` | セーブに記録された曲番号で選ぶ63件の場所名 |
 | `icons/icons.yaml` | アイコン番号、キャラクターの種類、オフセット、保存されているパレット |
 | `icons/icon_00.png` ... | 48 x 48のパーティーアイコン86個 |
-| `tables/card_steps.yaml` | 8つのメモリーカード処理シーケンス。処理名は`NikiLoadCommand`から取得 |
+| `tables/card_steps.yaml` | 8つのメモリーカード処理シーケンス。処理名は`CardMenuStep`と`CardMenuExchangeStep`(card_menu.h)から取得 |
 | `tables/text_conversion.yaml` | 文字表。各テキストコードがShift-JISの何になるか |
 | `tables/digit_glyphs.yaml` | 10進数と16進数に使う全角数字 |
 
@@ -83,7 +83,7 @@ u16オフセットの一覧のあとに、ゼロ終端の文字列が続きま�
 「ポケットステーションではありません」が入っています。NIKIはエントリ29を
 リング・りんぐ・ランドのファイルの一覧ラベルに使うので、北米版ではその行に
 ラベルが出ません。エントリ33はステータスダイアログ3で使われ、このダイアログは
-`NIKI_COMMAND_CHECK_POCKETSTATION`が失敗したときにだけ開きます。
+`CARD_MENU_STEP_CHECK_POCKETSTATION`が失敗したときにだけ開きます。
 
 カードタイトル雛形は、メモリーカードのセーブに使うShift-JISのタイトル2つです。
 NIKIはセーブにもともと付いているタイトルをそのまま残し、これらは書き込みません。
@@ -99,15 +99,16 @@ NIKIは選んだセーブのパーティー分のパレットとピクセルを�
 
 ## カード処理シーケンス
 
-カード処理シーケンスは1バイトのコマンドの並びで、`NIKI_COMMAND_STOP`(0)まで
+カード処理シーケンスは1バイトのコマンドの並びで、`CARD_MENU_STEP_DONE`(0)まで
 順に実行されます。出力では、テーブル内のすべてのシンボルから停止バイトまでをたどり、
-各コマンドに`niki_internal.h`の`NikiLoadCommand`から名前を付けます。
-`g_card_steps_idle`にはNIKIが処理しないコマンド14が入っているので、
-メニューが別のシーケンスを選ぶまでそこで待ち続けます。出力では`0x0E`と表示されます。
+各コマンドにADDHERO、CARDA、CLOADと共有する`include/common/card_menu.h`の
+`CardMenuStep`と`CardMenuExchangeStep`から名前を付けます。
+`g_card_steps_idle`には処理のない`CARD_MENU_STEP_WAIT`(14)が入っているので、
+メニューが別のシーケンスを選ぶまでそこで待ち続けます。
 
 テーブルには一度も実行されないバイトが1つあります。`g_niki_write_save_sequence`の
 直前のバイト(北米版`0x801606F4`、日本版`0x801607BC`)は
-`NIKI_COMMAND_RELEASE_PRIMARY`ですが、コードは書き込みシーケンスをその次のバイトから
+`CARD_MENU_STEP_CLEAR_SOFTWARE_EVENTS`ですが、コードは書き込みシーケンスをその次のバイトから
 始めます。出力では`unreached`に記載し、テーブル全体も`bytes`に残します。
 
 ## 文字表、数字、変数
@@ -140,7 +141,7 @@ NIKIは選んだセーブのパーティー分のパレットとピクセルを�
   よろしいですか」(`g_niki_text_trade_data_not_saved`)を表示します。
 - TODO: モード1の用途。`niki_draw_header_label`はモード1のときメッセージ35
   「アイテムを選んでください」を表示しますが、NIKIがヘッダーを作るのはモード0のときだけです。
-- TODO: `NIKI_COMMAND_CHECK_POCKETSTATION`には処理がありますが、テーブル内の
+- TODO: `CARD_MENU_STEP_CHECK_POCKETSTATION`には処理がありますが、テーブル内の
   どのシーケンスも使っていません。ステータスダイアログ3がいつ表示されうるのかは不明です。
 
 [`niki.py`](../../../../tools/data/overlays/niki.py)はアドレス順にblobを読み、ADDHERO、CARDA、

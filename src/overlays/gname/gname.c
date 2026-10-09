@@ -1,6 +1,7 @@
 #include "overlays/field/field_text.h"
 #include "overlays/gname/gname.h"
 #include "common/encoded_text.h"
+#include "overlays/field/field_input.h"
 
 #include "main/cdrom.h"
 #include "common.h"
@@ -470,8 +471,6 @@ extern u32 g_random_names_off;
 void play_menu_sfx(s32 sfx_id, s32 volume);
 
 void field_update_audio_timer(void);
-void field_update_input_repeat(void);
-void field_reset_input_repeat(void);
 
 static void reset_fade_state(void);
 static void render_fade_overlay(RenderContext* render_ctx);

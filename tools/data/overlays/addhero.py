@@ -27,7 +27,6 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
-import re
 import shutil
 import sys
 import tempfile
@@ -51,7 +50,6 @@ from tools.data.overlays.resources import (
 REPO_ROOT = Path(__file__).resolve().parents[3]
 OVERLAY_CONFIG = "overlays/ADDHERO.BIN.yaml"
 SYMBOL_FILE = "symbols/addhero_symbol_addrs.txt"
-STEP_HEADER = REPO_ROOT / "src/overlays/addhero/internal/addhero_internal.h"
 
 CARD_TITLES_NOTE = (
     "# Shift-JIS memory card title templates; the save screen (CARDA) writes them, "
@@ -125,10 +123,8 @@ class Inputs:
 
 
 def card_step_names() -> dict[int, str]:
-    """AddheroCardStep values from the C header, so the names stay in one place."""
-    text = STEP_HEADER.read_text(encoding="ascii")
-    pairs = re.findall(r"\b(ADDHERO_STEP_\w+)\s*=\s*(\d+)", text)
-    return {int(value): name for name, value in pairs}
+    """Step opcode names from the C headers, so the names stay in one place."""
+    return card_data.card_menu_step_names(exchange=True)
 
 
 # ---------------------------------------------------------------------------
@@ -187,7 +183,7 @@ def read_card_steps(blob: Blob[AddheroSymbols]) -> Part:
         steps = []
         for value in raw:
             steps.append(names.get(value, f"0x{value:02X}"))
-            if value == 0:  # ADDHERO_STEP_DONE; any bytes after it are padding
+            if value == 0:  # CARD_MENU_STEP_DONE; any bytes after it are padding
                 break
         sequences.append(StepSequence(name, tuple(steps), raw))
     first = starts[0][0]

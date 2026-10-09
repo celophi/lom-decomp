@@ -15,7 +15,8 @@ from tools.data.overlays.tests.test_addhero_sources import c_define
 REPO_ROOT = Path(__file__).resolve().parents[4]
 VERSIONS = ("us", "jp")
 HEADER = REPO_ROOT / "src/overlays/niki/internal/niki_internal.h"
-CARD_MENU_HEADER = REPO_ROOT / "include/common/card_menu.h"
+PORTRAIT_HEADER = REPO_ROOT / "include/overlays/field/field_portrait.h"
+GPU_HEADER = REPO_ROOT / "include/common/gpu_packet.h"
 
 # Each card_data constant, and the NIKI #define that must agree with it.
 C_CONSTANTS = (
@@ -73,21 +74,21 @@ class SourceTest(unittest.TestCase):
         self.assertEqual(card_data.CHART_LEADS.start, c_define(HEADER, "NIKI_TEXT_EXTENDED_LEAD_FIRST"))
         self.assertEqual(len(card_data.CHART_LEADS), c_define(HEADER, "NIKI_TEXT_EXTENDED_PAGE_COUNT"))
 
-    def test_icon_layout_matches_card_menu_icon_image(self):
-        header = CARD_MENU_HEADER.read_text(encoding="ascii")
-        body = re.search(r"typedef struct\s*\{([^}]+)\}\s*CardMenuIconImage;", header).group(1)
-        palette = re.search(r"u16 clut\[(\d+)\];", body)
-        icon_size = c_define(CARD_MENU_HEADER, "CARD_MENU_ICON_SIZE")
-        self.assertRegex(body, r"u8 pixels\[CARD_MENU_ICON_SIZE \* CARD_MENU_ICON_SIZE / 2\];")
-        self.assertEqual(int(palette[1]), icon_set.PALETTE_COLORS)
-        self.assertEqual(icon_size, icon_set.ICON_SIZE)
-        self.assertEqual(icon_size * icon_size // 2, icon_set.PIXEL_BYTES)
+    def test_icon_layout_matches_field_portrait(self):
+        header = PORTRAIT_HEADER.read_text(encoding="ascii")
+        body = re.search(r"typedef struct\s*\{([^}]+)\}\s*FieldPortrait;", header).group(1)
+        size = c_define(PORTRAIT_HEADER, "FIELD_PORTRAIT_SIZE")
+        self.assertRegex(body, r"u16 clut\[GPU_CLUT_4BIT_COLORS\];")
+        self.assertRegex(body, r"u8 pixels\[FIELD_PORTRAIT_SIZE\]\[FIELD_PORTRAIT_SIZE / 2\];")
+        self.assertEqual(c_define(GPU_HEADER, "GPU_CLUT_4BIT_COLORS"), icon_set.PALETTE_COLORS)
+        self.assertEqual(size, icon_set.ICON_SIZE)
+        self.assertEqual(size * size // 2, icon_set.PIXEL_BYTES)
 
     def test_command_names_come_from_the_header(self):
         names = niki.card_step_names()
-        self.assertEqual(names[0], "NIKI_COMMAND_STOP")
-        self.assertEqual(names[30], "NIKI_COMMAND_RESET_RETRIES")
-        self.assertNotIn(14, names)
+        self.assertEqual(names[0], "CARD_MENU_STEP_DONE")
+        self.assertEqual(names[30], "CARD_MENU_STEP_INIT_RETRIES")
+        self.assertEqual(names[14], "CARD_MENU_STEP_WAIT")
 
 
 if __name__ == "__main__":

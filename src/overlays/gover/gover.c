@@ -13,8 +13,7 @@
 #include "main/controller.h"
 #include "common/gpu_packet.h"
 #include "main/game_state.h"
-
-void field_update_input_repeat(void);
+#include "overlays/field/field_input.h"
 
 /** @brief VRAM destinations for a TIM's pixel and palette blocks. */
 typedef struct

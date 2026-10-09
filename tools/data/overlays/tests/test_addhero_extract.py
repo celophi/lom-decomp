@@ -140,7 +140,7 @@ class ExtractTest(unittest.TestCase):
         self.assertEqual(self.load("text/locations.yaml")["entries"][0]["text"], "Home")
         self.assertTrue((self.root / "out/icons/icon_00.png").exists())
         steps = self.load("tables/card_steps.yaml")["sequences"]
-        self.assertEqual(steps[1]["steps"], ["ADDHERO_STEP_WAIT", "ADDHERO_STEP_DONE"])
+        self.assertEqual(steps[1]["steps"], ["CARD_MENU_STEP_WAIT", "CARD_MENU_STEP_DONE"])
         self.assertEqual(self.load("tables/text_conversion.yaml")["one_byte"]["0x4_"], "Ａ" * 16)
         self.assertEqual(len(self.load("tables/digit_glyphs.yaml")["hexadecimal"]["glyphs"]), 16)
         strings = [entry["text"] for entry in self.load("text/fixed_strings.yaml")["strings"]]

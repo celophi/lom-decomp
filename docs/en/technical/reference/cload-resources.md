@@ -25,7 +25,7 @@ reads the original blob.
 | --- | --- |
 | `text/messages.yaml` | 91 US or 90 JP messages, with table indices, known symbols and raw bytes |
 | `text/locations.yaml` | 63 location entries, selected by the music track stored in the save |
-| `tables/card_steps.yaml` | Six card sequences, with names from `CloadLoadStep` |
+| `tables/card_steps.yaml` | Six card sequences, with names from `CardMenuStep` (card_menu.h) |
 | `tables/text_conversion.yaml` | The character chart and its Shift-JIS mappings |
 | `tables/digit_glyphs.yaml` | Full-width decimal and hexadecimal digits |
 | `byte-map.yaml` | Every byte range, including padding and runtime buffers |

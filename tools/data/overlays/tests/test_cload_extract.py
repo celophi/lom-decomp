@@ -111,7 +111,7 @@ class ExtractTest(unittest.TestCase):
         sequences = self.load("tables/card_steps.yaml")["sequences"]
         self.assertEqual(sequences[0]["bytes"], "03 01 02 00")
         self.assertEqual(sequences[1]["steps"], sequences[0]["steps"][1:])
-        self.assertEqual(sequences[2]["steps"], ["CLOAD_STEP_IDLE", "CLOAD_STEP_DONE"])
+        self.assertEqual(sequences[2]["steps"], ["CARD_MENU_STEP_WAIT", "CARD_MENU_STEP_DONE"])
         self.assertFalse((self.output / "icons").exists())
 
     def test_japanese_text_keeps_a_zero_second_byte(self):
@@ -169,7 +169,7 @@ class ExtractTest(unittest.TestCase):
 
     def test_sequence_cannot_run_into_the_chart(self):
         self.overlay.data[self.overlay.steps_end - 4 : self.overlay.steps_end] = bytes([14]) * 4
-        with self.assertRaisesRegex(ValueError, "g_cload_steps_idle has no CLOAD_STEP_DONE"):
+        with self.assertRaisesRegex(ValueError, "g_cload_steps_idle has no CARD_MENU_STEP_DONE"):
             cload.extract(self.overlay.write(self.root), self.output)
         self.assert_no_output()
 

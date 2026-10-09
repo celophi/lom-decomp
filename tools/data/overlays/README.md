@@ -98,7 +98,7 @@ The `icons/` folder still holds the 86 party icons shown in the save browser;
 card. Those are two separate sets in the blob.
 
 CARDA's step table has several entry points inside other sequences. The export
-follows each named entry to `CARDA_STEP_DONE`, so a shorter sequence can share
+follows each named entry to `CARD_MENU_STEP_DONE`, so a shorter sequence can share
 the end of a longer one. The byte map counts the table's bytes only once.
 
 The card overlays' US text is shown as ASCII, with anything else written as a
@@ -407,7 +407,7 @@ niki/
         icons.yaml         icon ids, character groups, offsets and stored palettes
         icon_00.png ...    the 86 party icons, 48 x 48 each
     tables/
-        card_steps.yaml    eight card sequences, named from NikiLoadCommand
+        card_steps.yaml    eight card sequences, named from CardMenuStep
         digit_glyphs.yaml  full-width decimal and hexadecimal digits
         text_conversion.yaml   the character chart and its Shift-JIS mappings
 ```
@@ -418,7 +418,7 @@ the card title templates, the chart and the digits. About 30 messages have a
 `g_niki_text_*` symbol, and the export shows it next to the entry. JP text is
 decoded through NIKI's own chart, so CLOAD isn't needed.
 
-The step export follows each named sequence to `NIKI_COMMAND_STOP`. One byte
+The step export follows each named sequence to `CARD_MENU_STEP_DONE`. One byte
 just before `g_niki_write_save_sequence` is never run, since the code starts
 one byte later. It's listed under `unreached`, and the table's raw bytes are
 kept too. Command 14, the idle wait, has no name in the enum and shows as

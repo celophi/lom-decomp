@@ -13,6 +13,7 @@
 #include <libetc.h>
 #include "common/gpu_packet.h"
 #include "main/field_entry.h"
+#include "overlays/field/field_fade.h"
 
 #define FIELD_ENTRY_FADE_FRAMES 30
 #define FIELD_TEXT_IMAGE_RESOURCE 1500

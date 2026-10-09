@@ -4,9 +4,8 @@
 #include <memory.h>
 #include <libetc.h>
 #include "common/gpu_packet.h"
+#include "overlays/field/field_input.h"
 
-void play_menu_sfx(s32 sfx_id, s32 volume);
-void field_reset_input_repeat(void);
 
 /** @brief CD resource index of the save-icon set. */
 #define CLOAD_ICON_SET_RESOURCE 0x5E4
@@ -23,7 +22,7 @@ typedef struct
 } CloadIconSetHeader;
 
 /** @brief Icon @p icon in the loaded icon table, which holds per-icon byte offsets after a leading word. */
-#define CLOAD_ICON_IMAGE(icon) ((CardMenuIconImage *)(g_cload_icon_resource + ((s32 *)g_cload_icon_resource)[(icon) + 1]))
+#define CLOAD_ICON_IMAGE(icon) ((FieldPortrait *)(g_cload_icon_resource + ((s32 *)g_cload_icon_resource)[(icon) + 1]))
 
 /**
  * @brief Emit the GPU packets for a CLOAD window frame: a clipped draw
@@ -189,7 +188,7 @@ void *cload_draw_load_prompt(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
     {
         g_cload_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
         field_reset_input_repeat();
-        play_menu_sfx(0x78, 0x80);
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
         g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
         cload_reset_entry_ranks();
         g_cload_load_step = 0;
@@ -200,7 +199,7 @@ void *cload_draw_load_prompt(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
         {
             g_cload_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
             field_reset_input_repeat();
-            play_menu_sfx(0x78, 0x80);
+            field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
             g_cload_load_step = g_cload_steps_card_reset;
         }
         else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
@@ -209,12 +208,12 @@ void *cload_draw_load_prompt(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
             {
                 g_cload_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
                 field_reset_input_repeat();
-                play_menu_sfx(0x78, 0x80);
+                field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
                 g_cload_load_step = g_cload_steps_card_reset;
             }
             else
             {
-                play_menu_sfx(0x7E, 0x80);
+                field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
                 g_cload_progress_active = 1;
                 g_cload_load_step = g_cload_steps_load_selected_save;
                 prompt = &g_cload_element_pool[CARD_MENU_ELEMENT_MODAL];
@@ -263,7 +262,7 @@ void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offse
         }
         else
         {
-            play_menu_sfx(0x7B, 0x80);
+            field_play_sound(FIELD_SOUND_LOAD_DONE, AKAO_PAN_CENTER);
             g_cload_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
             bcopy((u8*)&g_cload_save_file.saved_game, g_saved_game.bytes, SAVED_GAME_DATA_SIZE);
             g_save_compatibility_tag = g_saved_game.layout.compatibility_tag;
@@ -323,13 +322,13 @@ void cload_open_status_dialog(s32 dialog_state)
     CardMenuElement *dialog;
     s32 code;
 
-    play_menu_sfx(0x78, 0x80);
+    field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
     dialog = &g_cload_element_pool[CARD_MENU_ELEMENT_MODAL];
     dialog->attr.bits.transition_step = 1;
     dialog->attr.bits.state = 1;
-    dialog->attr.bits.x = 0x20;
-    dialog->attr.word &= 0x00FFFFFF;
-    dialog->size.bits.width_high = 1;
+    dialog->attr.bits.x = CARD_MENU_DIALOG_X;
+    CARD_MENU_SET_ELEMENT_WIDTH_LOW(dialog, CARD_MENU_DIALOG_WIDTH);
+    dialog->size.bits.width_high = CARD_MENU_DIALOG_WIDTH >> 8;
     if (dialog_state < 2 || dialog_state == 4)
     {
         dialog->size.bits.height = 0x1F;
@@ -409,7 +408,7 @@ void *cload_draw_status_dialog(u_long *ot, void *prim, s32 x_offset, s32 y_offse
  * @param y Quad top edge.
  * @param width Quad width.
  * @param icon Icon id; CLOAD_NO_ICON draws nothing, ids below 2 in row 1 and ids from
- *             0x4F up get a generated CLUT (func_800A5638 / func_800A55E4).
+ *             0x4F up get a generated CLUT (field_copy_portrait_palette / field_copy_golem_portrait_palette).
  * @param index VRAM icon slot; selects the CLUT row entry and the texture column.
  * @param row Entry row; row 1 uses the generated CLUT for icons 0 and 1.
  * @return Primitive-buffer cursor after the quad, or @p quad unchanged for CLOAD_NO_ICON.
@@ -425,17 +424,17 @@ void *cload_draw_icon_highlight(POLY_FT4 *quad, u_long *ot, s32 x, s32 y, s32 wi
         return quad;
     }
 
-    setRECT(&rect, index * 16, VRAM_CLUT_Y, 16, 1);
+    setRECT(&rect, index * GPU_CLUT_4BIT_COLORS, VRAM_CLUT_Y, GPU_CLUT_4BIT_COLORS, 1);
     if ((row == 1) && (icon < 2))
     {
-        func_800A5638(g_cload_icon_context, icon);
-        LoadImage(&rect, g_cload_icon_context);
+        field_copy_portrait_palette(g_cload_icon_context, icon);
+        LoadImage(&rect, (u_long *)g_cload_icon_context);
         DrawSync(0);
     }
     else if (icon >= SAVE_ICON_GOLEM_BASE)
     {
-        func_800A55E4(g_cload_icon_context, g_cload_icon_palette);
-        LoadImage(&rect, g_cload_icon_context);
+        field_copy_golem_portrait_palette(g_cload_icon_context, g_cload_icon_palette);
+        LoadImage(&rect, (u_long *)g_cload_icon_context);
         DrawSync(0);
     }
     else
@@ -444,7 +443,7 @@ void *cload_draw_icon_highlight(POLY_FT4 *quad, u_long *ot, s32 x, s32 y, s32 wi
     }
 
     column = index * 3;
-    setRECT(&rect, column * 4 + CARD_MENU_ICON_VRAM_X, CARD_MENU_ICON_VRAM_Y, CARD_MENU_ICON_SIZE / 4, CARD_MENU_ICON_SIZE);
+    setRECT(&rect, column * 4 + CARD_MENU_ICON_VRAM_X, CARD_MENU_ICON_VRAM_Y, FIELD_PORTRAIT_SIZE / 4, FIELD_PORTRAIT_SIZE);
     LoadImage(&rect, (u_long *)CLOAD_ICON_IMAGE(icon)->pixels);
 
     SET_BGR0_PACKED(quad, GPU_TINT_NEUTRAL);
@@ -457,17 +456,17 @@ void *cload_draw_icon_highlight(POLY_FT4 *quad, u_long *ot, s32 x, s32 y, s32 wi
     u = column * 16;
     quad->u2 = u;
     quad->u0 = u;
-    u += CARD_MENU_ICON_SIZE - 1;
+    u += FIELD_PORTRAIT_SIZE - 1;
     quad->u3 = u;
     quad->u1 = u;
     quad->v1 = CARD_MENU_ICON_VRAM_Y;
     quad->v0 = CARD_MENU_ICON_VRAM_Y;
     quad->x1 = x + width;
-    quad->y3 = y + CARD_MENU_ICON_SIZE - 1;
-    quad->y2 = y + CARD_MENU_ICON_SIZE - 1;
-    quad->v3 = CARD_MENU_ICON_VRAM_Y + CARD_MENU_ICON_SIZE - 1;
-    quad->v2 = CARD_MENU_ICON_VRAM_Y + CARD_MENU_ICON_SIZE - 1;
-    quad->clut = getClut(index * 16, VRAM_CLUT_Y);
+    quad->y3 = y + FIELD_PORTRAIT_SIZE - 1;
+    quad->y2 = y + FIELD_PORTRAIT_SIZE - 1;
+    quad->v3 = CARD_MENU_ICON_VRAM_Y + FIELD_PORTRAIT_SIZE - 1;
+    quad->v2 = CARD_MENU_ICON_VRAM_Y + FIELD_PORTRAIT_SIZE - 1;
+    quad->clut = getClut(index * GPU_CLUT_4BIT_COLORS, VRAM_CLUT_Y);
     quad->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, CARD_MENU_ICON_VRAM_X, 0);
     addPrim(ot, quad);
 
@@ -598,7 +597,7 @@ void *cload_draw_choice_prompt(void *prim, u_long *ot, s32 x, s32 y)
     if (g_pad_input & CARD_MENU_CHOICE_BUTTON_MASK)
     {
         g_cload_choice_toggle ^= 1;
-        play_menu_sfx(0x7D, 0x80);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         g_pad_input = 0;
     }
     return prim;

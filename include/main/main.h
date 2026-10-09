@@ -32,8 +32,8 @@ extern u16 g_music_track_index;
 /** @brief Global frame counter, advanced once per rendered frame. */
 extern s32 g_frame_counter;
 
-/** @brief Base of the primitive-rect scratch buffer (stride 0x4A0 per record). */
-extern u8 g_prim_rect_buf[];
+/** @brief Portraits of the three party members (FieldPortrait records, FIELD_PORTRAIT_BYTES each), loaded with the party. */
+extern u8 g_field_party_portraits[];
 
 /** @brief Forward selection steps applied when menu scripts 1-3 terminate. */
 extern s32 g_script_repeat_count;

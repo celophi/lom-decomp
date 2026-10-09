@@ -18,6 +18,13 @@
 #include <strings.h>
 #include "main/controller.h"
 #include <libapi.h>
+#include "overlays/field/field_fade.h"
+#include "overlays/field/field_input.h"
+#include "overlays/field/field_sound.h"
+#include "main/audio/akao.h"
+#include <memory.h>
+#include <libgpu.h>
+#include "overlays/field/field_ui_text.h"
 
 #define NIKI_SJIS_FULLWIDTH_ZERO 0x4F82
 #define NIKI_SJIS_MINUS 0x5B81
@@ -40,32 +47,6 @@
 #define NIKI_SJIS_CODES_PER_ROW 16
 #define NIKI_SJIS_ROWS_PER_PAGE 16
 
-/** @brief Memory-card sequence commands; unassigned values leave the sequence unchanged. */
-typedef enum
-{
-    NIKI_COMMAND_STOP = 0,
-    NIKI_COMMAND_REQUEST_CARD_INFO = 1,
-    NIKI_COMMAND_POLL_CARD_INFO = 2,
-    NIKI_COMMAND_RELEASE_PRIMARY = 3,
-    NIKI_COMMAND_WAIT_SECONDARY = 4,
-    NIKI_COMMAND_RELEASE_SECONDARY = 5,
-    NIKI_COMMAND_SCAN_DIRECTORY = 6,
-    NIKI_COMMAND_REQUEST_CARD_CLEAR = 8,
-    NIKI_COMMAND_REQUEST_CARD_LOAD = 9,
-    NIKI_COMMAND_ERASE_SELECTED_FILE = 10,
-    NIKI_COMMAND_POLL_CARD_READY = 15,
-    NIKI_COMMAND_WAIT_SECONDARY_COMPLETE = 16,
-    NIKI_COMMAND_READ_ENTRY_PREVIEW = 17,
-    NIKI_COMMAND_POLL_ENTRY_PREVIEW = 18,
-    NIKI_COMMAND_READ_SAVE = 19,
-    NIKI_COMMAND_POLL_SAVE_READ = 20,
-    NIKI_COMMAND_CHECK_POCKETSTATION = 24,
-    NIKI_COMMAND_WRITE_SAVE = 25,
-    NIKI_COMMAND_POLL_SAVE_WRITE = 26,
-    NIKI_COMMAND_READ_SAVED_COPY = 27,
-    NIKI_COMMAND_POLL_SAVED_COPY = 28,
-    NIKI_COMMAND_RESET_RETRIES = 30
-} NikiLoadCommand;
 #define NIKI_SJIS_ROW_SHIFT 4
 
 /** @brief Fields restored from a loaded save before returning to the game. */
@@ -93,41 +74,6 @@ typedef struct
 {
     s32 tag;
 } NikiPacketHeader;
-
-/** @brief GPU draw-environment packet, matching the Psy-Q DR_ENV layout. */
-typedef struct
-{
-    u32 tag;
-    u32 commands[15];
-} NikiDrawEnvironmentPacket;
-
-/** @brief Drawing clip, offsets, texture window, and cached GPU environment packet. */
-typedef struct
-{
-    RECT clip;
-    s16 offset[2];
-    RECT texture_window;
-    u16 texture_page;
-    u8 dither;
-    u8 draw_to_display;
-    u8 clear_background;
-    u8 r, g, b;
-    NikiDrawEnvironmentPacket packet;
-} NikiDrawEnvironment;
-
-/**
- * @brief Per-frame draw context passed to niki_update_and_draw_elements.
- * @note prim_cursor is the running GPU-packet write cursor; frame_flag selects
- *       the clip/window variant.
- */
-typedef struct NikiFrameState
-{
-    u_long head_tag;
-    u8 pad4[0x40AE];
-    s16 frame_flag;
-    u8 pad40B4[4];
-    NikiPacketHeader* prim_cursor;
-} NikiFrameState;
 
 /** @brief GPU linked-list address and packet length, with a packed word view. */
 typedef union
@@ -161,37 +107,12 @@ typedef struct
     s16 h;
 } NikiTile;
 
-/** @brief Field layout of the POLY_G4 timer-bar packet built by niki_draw_progress_bar. */
-typedef struct
-{
-    NikiGpuTag tag;
-    NikiGpuColor color0;
-    s16 x0;
-    s16 y0;
-    NikiGpuColor color1;
-    s16 x1;
-    s16 y1;
-    NikiGpuColor color2;
-    s16 x2;
-    s16 y2;
-    NikiGpuColor color3;
-    s16 x3;
-    s16 y3;
-} NikiPolyG4Packet;
-
 typedef struct
 {
     unsigned addr : 24;
     unsigned len : 8;
     u8 r0, g0, b0, code;
 } NikiPrimTag;
-
-/** @brief GPU packet selecting the drawing mode and texture page. */
-typedef struct
-{
-    u32 tag;
-    u32 command;
-} NikiDrawModePacket;
 
 /** @brief Two bytes of a Shift-JIS character in the glyph lookup tables. */
 typedef struct NikiSjisCode
@@ -284,8 +205,6 @@ extern u16 g_niki_text_trade_data_not_saved;
 extern u16 g_niki_text_plus_marker;
 /** @brief Location names, picked by the music track stored in a save. */
 extern u16 g_niki_location_names[];
-extern u8 D_800EC3F6[2];
-extern u8 D_800EC3FA[];
 extern u8 g_field_ui_text_cant_hold_more[];
 extern s32 g_niki_choice_toggle;
 
@@ -300,11 +219,9 @@ extern s32 g_field_niki_state;
 extern s32 D_801227CC;
 extern s32 D_801227F4;
 extern s32 D_8011F418;
-extern u8 D_80122A08[];
+extern u8 g_field_shared_items[];
 extern s32 g_niki_progress_bar_active;
 extern s32 g_niki_progress_start_tick;
-extern char D_800ECF8C[];
-extern char D_800ECFC4[];
 extern s32 g_niki_entry_ranks[];
 extern s32 g_niki_rank_count;
 /** @brief Party icon offsets, counted from the icon count word just before them. */
@@ -316,8 +233,6 @@ extern u8 g_niki_read_saved_copy_sequence[];
 extern u8 g_niki_write_save_sequence[];
 extern s32 g_niki_entry_value_limit;
 extern const CardPathTemplate g_niki_file_template;
-extern char D_800ECF9C[];
-extern char D_800ECFB0[];
 extern s32 g_niki_file_handle;
 extern s32 g_niki_retry_count;
 extern s32 g_niki_selected_entry_extended;
@@ -332,8 +247,8 @@ extern const CardPathTemplate g_niki_entry_header_template;
 /** @brief Read and poll the selected entry's preview header. */
 extern u8 g_niki_preview_sequence[];
 
-void niki_update_elements(NikiFrameState* frame);
-void niki_update_and_draw_elements(NikiFrameState* frame);
+void niki_update_elements(FieldRenderHalf* frame);
+void niki_update_and_draw_elements(FieldRenderHalf* frame);
 s32 niki_update_load_sequence(void);
 s32 niki_handle_input(void);
 void* niki_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
@@ -346,7 +261,6 @@ void* niki_draw_footer_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void niki_clear_elements();
 s32 niki_advance_load_sequence(void);
-void func_800A3938();
 void* niki_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* niki_draw_secondary_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void niki_close_all_elements();
@@ -357,27 +271,14 @@ CardMenuElement* niki_alloc_element();
 void niki_enable_choice_toggle();
 void* niki_draw_save_confirm_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* niki_draw_confirm_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void func_800A55E4(void* buf, s32 arg1);
-void func_800A5638(void* buf, s32 arg1);
 void niki_sort_entries_by_type();
 void niki_reset_entry_ranks(void);
 s32 niki_rank_entries(void);
-s32 func_80016F9C(void*, void*);
-s32 func_8001686C(void*);
-s32 func_8001680C(void*, s32);
-s32 func_8001681C(s32, void*, s32);
-s32 func_8001682C(s32, void*, s32);
-s32 func_8001683C(s32);
-s32 func_8001685C(void*, void*);
-s32 func_800170BC(void*, void*, ...);
-s32 func_8001725C(s32);
-s32 func_800172AC(s32);
 s32 niki_begin_entry_scan(s32);
 s32 niki_scan_next_entry(s32);
 void niki_open_status_dialog(s32);
 void niki_open_secondary_status_dialog(s32);
-void func_80016E7C();
 void niki_build_ui_elements(void);
-void niki_update_menu(NikiFrameState* frame);
+void niki_update_menu(FieldRenderHalf* frame);
 
 #endif

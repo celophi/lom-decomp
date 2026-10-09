@@ -8,6 +8,8 @@
 #include "overlays/field/field_menu_window.h"
 #include "overlays/field/field_ui_text.h"
 #include "common/vector.h"
+#include "overlays/field/field_fade.h"
+#include "overlays/field/field_input.h"
 
 #define SHOP_WINDOW_COUNT 8
 /** @brief Window slot reserved for the notice and quantity-prompt popups. */
@@ -163,11 +165,7 @@ extern u8 D_800EC3F4[];
 extern u8 D_800EC3F8[];
 extern u8 D_800EC3FE[];
 
-
 void play_menu_sfx(s32 sfx_id, s32 volume);
-void field_set_default_fade_target(void);
-void field_restore_fade_target(void);
-void field_reset_input_repeat(void);
 void field_compact_inventory(void);
 FieldItemRecord* field_find_free_inventory_record(void);
 void field_copy_inventory_record(FieldItemRecord* dst, FieldItemRecord* src);

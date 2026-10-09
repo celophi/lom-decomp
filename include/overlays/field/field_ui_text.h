@@ -33,4 +33,8 @@
  */
 #define FIELD_UI_TEXT(table, index) ((u8*)((table)[(index) * 2] + (((table)[(index) * 2 + 1] << 8) + (uintptr_t)(table))))
 
+/** @brief Offset entries of the FIELD UI strings FIELD_UI_TEXT_YES and FIELD_UI_TEXT_TIME_SEPARATOR. */
+extern u8 g_text_choice_glyph_offsets[];
+extern u8 g_text_time_separator_offset_bytes[2];
+
 #endif

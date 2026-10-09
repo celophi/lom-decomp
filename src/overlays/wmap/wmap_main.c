@@ -50,7 +50,6 @@
 #define WMAP_SCREEN_FADE_OT_INDEX 176
 #define WMAP_ANALOG_REPEAT_BASE_FRAMES 512
 #define WMAP_ANALOG_REPEAT_MAX_SHIFT 7
-#define WMAP_ENTRY_PALETTE_COLORS 16
 #define WMAP_INPUT_GRACE_FRAMES 40
 #define WMAP_EVENT_START_DELAY_FRAMES 51
 #define WMAP_EXIT_CAPTURE_FRAME 11
@@ -1598,7 +1597,7 @@ s32 wmap_run_loop(void)
         }
     }
     /* Expand the entry image palette into five-bit RGB channels. */
-    for (color_index = 0; color_index < WMAP_ENTRY_PALETTE_COLORS; color_index++)
+    for (color_index = 0; color_index < GPU_CLUT_4BIT_COLORS; color_index++)
     {
         g_wmap_entry_palette_channels[color_index].r = g_wmap_entry_palette[color_index] & 0x1F;
         g_wmap_entry_palette_channels[color_index].g = (g_wmap_entry_palette[color_index] >> 5) & 0x1F;

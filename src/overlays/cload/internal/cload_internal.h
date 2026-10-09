@@ -16,6 +16,9 @@
 #include "common/card_events.h"
 #include "common/card_directory.h"
 #include "common/card_menu.h"
+#include "overlays/field/field_sound.h"
+#include "main/audio/akao.h"
+#include "overlays/field/field_fade.h"
 /** @brief Bit position and mask of the height inside CardMenuElement.size.word. */
 #define CLOAD_ELEMENT_HEIGHT_SHIFT 1
 #define CLOAD_ELEMENT_HEIGHT_MASK (0xFF << CLOAD_ELEMENT_HEIGHT_SHIFT)
@@ -44,28 +47,17 @@ typedef struct
     /* 0xE */ u16 unkE;
 } CloadGpuPacket;
 
-/**
- * @brief One half of CLOAD's double-buffered GPU render state.
- *
- * The 0x7CC4-byte stride and the SDK object boundaries are recovered from the
- * fixed offsets used by cload_run_menu_loop/cload_init_display.  The trailing
- * region is still unknown and is intentionally left opaque.
- */
-typedef struct CloadRenderBuffer
-{
-    /* 0x0000 */ u8 header[0x40];
-    /* 0x0040 */ u_long ordering_table[0x1000];
-    /* 0x4040 */ DISPENV disp_env;
-    /* 0x4054 */ DRAWENV draw_env;
-    /* 0x40B0 */ RECT clear_rect;
-    /* 0x40B8 */ CloadGpuPacket *prim_cursor;
-    /* 0x40BC */ u8 trailing[0x3C08];
-} CloadRenderBuffer;
-
 extern s32 g_pad_input;
 extern s32 g_cload_exit_requested;
 extern CardMenuElement g_cload_element_pool[CARD_MENU_ELEMENT_COUNT];
-extern CloadRenderBuffer g_cload_render_buffers[CARD_SLOT_COUNT];
+/**
+ * @brief Entries of CLOAD's ordering table, which starts at FIELD's fade entry
+ *        (FIELD_FADE_OT_INDEX) of each render half so that the fade covers
+ *        everything CLOAD draws.
+ */
+#define CLOAD_OT_SIZE (FIELD_ORDERING_TABLE_SIZE - FIELD_FADE_OT_INDEX)
+
+extern FieldRenderHalf g_cload_render_buffers[CARD_SLOT_COUNT];
 extern s32 g_cload_io_busy;
 extern u8 *g_cload_icon_resource;
 extern s32 g_cload_scroll_y;
@@ -73,7 +65,7 @@ extern s32 g_cload_icon_palette;
 extern s32 g_cload_progress_active;
 extern s32 g_cload_scroll_target_y;
 extern s32 g_cload_icon_phase;
-extern u_long g_cload_icon_context[8];
+extern u8 g_cload_icon_context[GPU_CLUT_4BIT_COLORS * 2];
 extern u8 g_cload_primitive_buffers[CARD_SLOT_COUNT][0x4000];
 extern s32 g_cload_selected_row;
 extern s32 g_cload_result;
@@ -95,8 +87,6 @@ extern s32 g_cload_choice_toggle;
 extern u8 *g_cload_load_step;
 extern s32 g_save_compatibility_tag;
 extern s32 g_cload_entry_scan_active;
-extern char g_lom_pocketstation_filename_prefix[];
-extern char g_new_save_entry_prefix[];
 extern u16 g_cload_text_check_memory_card;
 extern u16 g_cload_text_not_enough_blocks;
 extern u16 g_cload_text_no_memory_card;
@@ -129,13 +119,9 @@ extern u16 g_cload_text_version_error;
 extern u16 g_cload_text_plus_marker;
 extern s32 g_cload_rank_count;
 extern s32 g_cload_entry_ranks[];
-extern u8 g_text_time_separator_offset_bytes[2];
 extern u16 g_cload_location_names[];
 
 /* Globals used by the memory-card I/O, load-state, and glyph-cache block. */
-extern u8 g_text_choice_glyph_offsets[];
-extern char g_lom_save_dummy_filename[];
-extern char g_lom_pocketstation_dummy_filename[];
 extern u8 g_cload_steps_idle[];
 extern u8 g_cload_steps_read_selected_header[];
 extern char g_cload_selected_card_path[0x40];
@@ -160,12 +146,10 @@ s32 _card_load(s32);
 s32 _card_wait(s32);
 s32 _card_clear(s32);
 void EnterCriticalSection(void);
-void func_800A55E4(void *clut, s32 palette);
 u8 *Krom2RawAdd(u16 sjis_code);
 s32 field_upload_image_resource(RECT *rect, void *resource, s32 mode);
 s32 cdrom_queue_read(s32 resource_index, void *dst_buffer);
 void cdrom_wait_queue_empty(void);
-void func_800A5638(void *clut, s32 icon);
 void CloseEvent(s32);
 void ExitCriticalSection(void);
 s32 OpenEvent(u32, s32, s32, s32);
@@ -179,14 +163,14 @@ char *strcpy(char *, const char *);
 s32 cload_main(void);
 void cload_run_menu_loop(void);
 void cload_init_display(void);
-s32 cload_update_frame(CloadRenderBuffer *frame);
+s32 cload_update_frame(FieldRenderHalf *frame);
 void cload_build_ui_elements(void);
-void cload_update_menu(CloadRenderBuffer *frame);
+void cload_update_menu(FieldRenderHalf *frame);
 void cload_update_load_sequence(void);
 s32 cload_handle_input(void);
 void cload_close_all_elements(void);
 void cload_scroll_to_selection(void);
-void cload_update_elements(CloadRenderBuffer *frame);
+void cload_update_elements(FieldRenderHalf *frame);
 void* cload_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void *cload_draw_header_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
 void *cload_draw_card_slot0_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
@@ -194,7 +178,7 @@ void *cload_draw_card_slot1_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
 void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void cload_clear_elements(void);
 CardMenuElement *cload_alloc_element(void);
-void cload_update_and_draw_elements(CloadRenderBuffer* frame);
+void cload_update_and_draw_elements(FieldRenderHalf* frame);
 CloadGpuPacket *cload_emit_window_frame(CloadGpuPacket *prim, u_long *ot, s32 x, s32 y, s32 w, s32 h, s32 flag, s32 draw_fill);
 CloadGpuPacket *cload_emit_rect_outline(LINE_F2 *line, u_long *ot, s32 x, s32 y, s32 w, s32 h, s32 color);
 CloadGpuPacket *cload_emit_scroll_arrow(SPRT *sprite, u_long *ot, s32 x, s32 y, s32 flag);

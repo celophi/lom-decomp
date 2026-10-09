@@ -58,7 +58,7 @@ VSync                               = 0x800206BC;
 McxCardType                         = 0x8003443C;
 g_save_compatibility_tag                   = 0x8003EE08;
 g_saved_game                        = 0x80043140; // size:0x4000 allow_addend:True
-play_menu_sfx                       = 0x800A37E8;
+field_play_sound                       = 0x800A37E8;
 
 // Icon-resource header fields inside the 0x80180000 scratch buffer. It is a raw
 // load target, not real data symbols, so keep splat from symbolizing the four
@@ -263,8 +263,8 @@ g_cload_location_names                   = 0x80146478;
 
 // US ELF names not listed above (splat placeholders shared with the C sources).
 McxSync = 0x800322E4;
-func_800A55E4 = 0x800A5494;
-func_800A5638 = 0x800A54E8;
+field_copy_golem_portrait_palette = 0x800A5494;
+field_copy_portrait_palette = 0x800A54E8;
 field_draw_text = 0x800A8750;
 field_draw_number = 0x800A8928;
 D_80145EDE    = 0x80145ED6;
