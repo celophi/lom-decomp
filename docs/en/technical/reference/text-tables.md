@@ -152,7 +152,7 @@ offsets alone.
 ## Where the code uses them
 
 In the source, each string the code uses by name gets a symbol, such as
-`g_addhero_text_no_card` for the "No memory card" message. The ADDHERO names
+`g_card_menu_text_no_card` for the "No memory card" message. The ADDHERO names
 and what each message is for are listed in
 [addhero_internal.h](../../../../src/overlays/addhero/internal/addhero_internal.h). If
 you're hunting for a message, searching the overlay's source for a string's

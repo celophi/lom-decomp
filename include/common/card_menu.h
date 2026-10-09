@@ -340,11 +340,12 @@ typedef struct CardMenuElement
 #endif
 #define CARD_MENU_EXCHANGE_ENTRY_PLUS_RIGHT_X 242
 
-/** @brief Dialog messages every card menu shows; each overlay adds its own from 4 up. */
+/** @brief Dialog messages every card menu shows; each overlay adds its own from 5 up. */
 #define CARD_MENU_DIALOG_SAVE_FAILED 0
 #define CARD_MENU_DIALOG_LOAD_FAILED 1
 #define CARD_MENU_DIALOG_CARD_NOT_INSERTED 2
 #define CARD_MENU_DIALOG_NOT_POCKETSTATION 3 /**< The card is not a PocketStation; the US release has no text for it. */
+#define CARD_MENU_DIALOG_INVALID_SAVE 4      /**< The save failed validation; shows the load-failed text. */
 
 /** @brief What the details window shows for the selected entry. */
 #define CARD_MENU_SELECTION_NONE 0       /**< Nothing to show yet. */
@@ -496,6 +497,60 @@ extern u16 g_card_menu_text_card_slot1_label;
 /** @brief Party icon offsets, counted from the icon count word just before them (see CARD_MENU_ICON_IMAGE). */
 extern s32 g_card_menu_icon_offsets[];
 
+/** @brief Overlay mode passed in by FIELD; each overlay defines its own values. */
+extern s32 g_card_menu_mode;
+
+/** @brief Result of committing the selected entry (CARD_MENU_SELECTION_*). */
+extern s32 g_card_menu_selection_status;
+
+/** @brief Message the status dialog shows (CARD_MENU_DIALOG_* or an overlay's own). */
+extern s32 g_card_menu_dialog_state;
+
+/** @brief Set while a card operation is running. */
+extern s32 g_card_menu_io_busy;
+
+/** @brief Set while the directory scan is running. */
+extern s32 g_card_menu_entry_scan_active;
+
+/** @brief Set while a load or save transfer is running, and once the save has been built and is being written. */
+extern s32 g_card_menu_progress_active;
+extern s32 g_card_menu_write_in_progress;
+
+/** @brief Whether the progress bar is shown, and the VSync count it started at. */
+extern s32 g_card_menu_progress_bar_active;
+extern s32 g_card_menu_progress_start_tick;
+
+/** @brief Nonzero to read the selected entry up to CARD_MENU_ENTRY_READ_BYTES, zero to read only its title (CARD_MENU_ENTRY_TITLE_READ_BYTES). */
+extern s32 g_card_menu_selected_entry_extended;
+
+/** @brief Animation phase of the selected entry's party icons. */
+extern s32 g_card_menu_icon_phase;
+
+/**
+ * @brief Text offset-table entries of the shared card-menu messages (indexes CARD_MENU_TEXT_*).
+ * @note g_card_menu_text_table is the first entry; not every overlay has every message.
+ */
+extern u16 g_card_menu_text_table;
+extern u16 g_card_menu_text_no_card;
+extern u16 g_card_menu_text_mana_label;
+extern u16 g_card_menu_text_other_game_label;
+extern u16 g_card_menu_text_new_save_label;
+extern u16 g_card_menu_text_number_label;
+extern u16 g_card_menu_text_ring_ring_land_label;
+extern u16 g_card_menu_text_plus_marker;
+extern u16 g_card_menu_text_no_save_data;
+extern u16 g_card_menu_text_no_game_save_data;
+extern u16 g_card_menu_text_not_enough_blocks;
+extern u16 g_card_menu_text_card_access_failed;
+extern u16 g_card_menu_text_load_prompt;
+extern u16 g_card_menu_text_select_item;
+extern u16 g_card_menu_text_select_save_data;
+extern u16 g_card_menu_text_save_failed;
+extern u16 g_card_menu_text_load_failed;
+extern u16 g_card_menu_text_card_not_inserted;
+/** @brief "Not a PocketStation" dialog text; empty in the US release. */
+extern u16 g_card_menu_text_not_pocketstation;
+
 void card_menu_deactivate_primary_element(void);
 void card_menu_close_all_elements(void);
 void card_menu_scroll_to_selection(void);
@@ -508,6 +563,18 @@ void* card_menu_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y);
 void* card_menu_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 width, s32 icon, s32 index, s32 row);
 void* card_menu_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* card_menu_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+
+void card_menu_open_status_dialog(s32 message_id);
+void* card_menu_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+void* card_menu_draw_save_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+void* card_menu_draw_progress_bar(POLY_G4* quad, u_long* ot);
+void card_menu_init_card_events(void);
+s32 card_menu_begin_entry_scan(s32 page);
+void card_menu_commit_selected_entry(void);
+void* card_menu_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+void* card_menu_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+void* card_menu_draw_mode_title(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+void* card_menu_draw_cant_hold_more(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 
 /** @brief Each overlay's own per-frame menu logic and window drawing, called by the shared functions above. */
 void card_menu_update_state(FieldRenderHalf* render);

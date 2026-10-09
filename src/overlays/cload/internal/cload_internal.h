@@ -56,13 +56,9 @@ extern s32 g_pad_input;
 #define CLOAD_OT_SIZE (FIELD_ORDERING_TABLE_SIZE - FIELD_FADE_OT_INDEX)
 
 extern FieldRenderHalf g_cload_render_buffers[CARD_SLOT_COUNT];
-extern s32 g_cload_io_busy;
 extern u8 *g_cload_icon_resource;
-extern s32 g_cload_progress_active;
-extern s32 g_cload_icon_phase;
 extern u8 g_cload_primitive_buffers[CARD_SLOT_COUNT][0x4000];
 extern s32 g_cload_result;
-extern s32 g_cload_selection_status;
 extern s32 D_80162370;
 /**
  * @brief Start of the selected entry's save file: only the card header and the
@@ -76,35 +72,24 @@ extern u8 g_cload_steps_card_reset[];
 extern u8 g_cload_steps_load_selected_save[];
 extern u8 *g_cload_load_step;
 extern s32 g_save_compatibility_tag;
-extern s32 g_cload_entry_scan_active;
 extern u16 g_cload_text_check_memory_card;
-extern u16 g_cload_text_not_enough_blocks;
 extern u16 g_cload_text_no_memory_card;
 extern u16 g_cload_text_mana;
 extern u16 g_cload_text_other_game;
-extern u16 g_cload_text_card_access_failed;
-extern u16 g_cload_text_no_save_data;
 extern u16 g_cload_text_new_save;
 extern u16 g_cload_text_new_save_prompt;
 extern u16 g_cload_text_load;
 extern u16 g_cload_text_number_prefix;
-extern u16 g_cload_text_load_prompt;
 extern u16 g_cload_text_loading;
 /** @brief Save file read by the load sequence. */
 extern SaveFile g_cload_save_file;
 
 extern s32 g_playtime_vsync_origin;
-extern s32 g_cload_progress_bar_active;
-extern s32 g_cload_progress_start_tick;
-extern s32 g_cload_dialog_state;
 extern u16 g_cload_text_no_lom_save_data;
 extern u16 g_cload_text_alt_save;
-extern u16 g_cload_text_save_failed;
-extern u16 g_cload_text_load_failed;
 extern u16 g_cload_text_card_insert_error;
 extern u16 D_80145EDE;
 extern u16 g_cload_text_version_error;
-extern u16 g_cload_text_plus_marker;
 extern u16 g_cload_location_names[];
 
 /* Globals used by the memory-card I/O, load-state, and glyph-cache block. */
@@ -113,7 +98,6 @@ extern u8 g_cload_steps_read_selected_header[];
 extern char g_cload_selected_card_path[0x40];
 extern s32 g_cload_retry_count;
 extern s32 g_cload_primary_poll_countdown;
-extern s32 g_cload_selected_entry_extended;
 extern s32 g_cload_secondary_poll_countdown;
 extern s32 g_cload_file_handle;
 
@@ -147,8 +131,8 @@ s32 cload_main(void);
 void cload_run_menu_loop(void);
 void cload_init_display(void);
 void cload_build_ui_elements(void);
-void cload_update_load_sequence(void);
-s32 cload_handle_input(void);
+void card_menu_update_card_sequence(void);
+s32 card_menu_handle_input(void);
 void cload_close_all_elements(void);
 void cload_scroll_to_selection(void);
 void* cload_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset);

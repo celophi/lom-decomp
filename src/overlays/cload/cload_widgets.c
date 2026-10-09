@@ -181,7 +181,7 @@ void *cload_draw_load_prompt(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
     CardMenuElement *prompt;
 
     x = -x_offset + 0x90;
-    result = cload_draw_choice_prompt(field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_load_prompt, CARD_MENU_TEXT_LOAD_PROMPT), 4, x, -y_offset, 2), ot, x, 0xE - y_offset);
+    result = cload_draw_choice_prompt(field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_load_prompt, CARD_MENU_TEXT_LOAD_PROMPT), 4, x, -y_offset, 2), ot, x, 0xE - y_offset);
 
     status = poll_and_retry_card_info();
     if (status == 1 || status == 2)
@@ -214,7 +214,7 @@ void *cload_draw_load_prompt(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
             else
             {
                 field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
-                g_cload_progress_active = 1;
+                g_card_menu_progress_active = 1;
                 g_cload_load_step = g_cload_steps_load_selected_save;
                 prompt = &g_card_menu_element_pool[CARD_MENU_ELEMENT_MODAL];
                 prompt->draw = cload_draw_load_progress;
@@ -254,7 +254,7 @@ void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offse
     result = field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CARD_OR_CONTROLLER), 4, x, 0x1C - y_offset, 2);
     result = cload_draw_progress_bar(result, ot);
 
-    if (g_cload_progress_active == 0)
+    if (g_card_menu_progress_active == 0)
     {
         if (validate_save_file(&g_cload_save_file) == 0)
         {
@@ -278,17 +278,17 @@ void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offse
  * @param quad Quad packet to fill.
  * @param ot Ordering-table entry the quad is linked into.
  * @return Primitive-buffer cursor after the quad, or @p quad unchanged while
- *         g_cload_progress_bar_active is 0.
- * @note The bar is 288 pixels wide after 256 frames since g_cload_progress_start_tick.
+ *         g_card_menu_progress_bar_active is 0.
+ * @note The bar is 288 pixels wide after 256 frames since g_card_menu_progress_start_tick.
  */
 CloadGpuPacket *cload_draw_progress_bar(POLY_G4 *quad, u_long *ot)
 {
     s32 elapsed;
     s32 width;
 
-    if (g_cload_progress_bar_active != 0)
+    if (g_card_menu_progress_bar_active != 0)
     {
-        elapsed = VSync(-1) - g_cload_progress_start_tick;
+        elapsed = VSync(-1) - g_card_menu_progress_start_tick;
         if (elapsed > CARD_MENU_PROGRESS_FULL_TICKS)
         {
             elapsed = CARD_MENU_PROGRESS_FULL_TICKS;
@@ -343,13 +343,13 @@ void cload_open_status_dialog(s32 dialog_state)
     dialog->draw = cload_draw_status_dialog;
     field_reset_input_repeat();
     D_80162370 = 0;
-    g_cload_progress_active = 0;
-    g_cload_selection_status = 0;
-    g_cload_io_busy = 0;
+    g_card_menu_progress_active = 0;
+    g_card_menu_selection_status = 0;
+    g_card_menu_io_busy = 0;
     g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
     card_reset_entry_ranks();
     g_cload_load_step = 0;
-    g_cload_dialog_state = dialog_state;
+    g_card_menu_dialog_state = dialog_state;
 }
 
 /**
@@ -365,16 +365,16 @@ void *cload_draw_status_dialog(u_long *ot, void *prim, s32 x_offset, s32 y_offse
     s32 unused[2];
     u16 *text_table;
 
-    switch (g_cload_dialog_state)
+    switch (g_card_menu_dialog_state)
     {
     case 0:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_save_failed, CARD_MENU_TEXT_SAVE_FAILED), 4, -x_offset + 0x80, -y_offset, 2);
-        text_table = CARD_MENU_TEXT_TABLE(g_cload_text_save_failed, 30);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_save_failed, CARD_MENU_TEXT_SAVE_FAILED), 4, -x_offset + 0x80, -y_offset, 2);
+        text_table = CARD_MENU_TEXT_TABLE(g_card_menu_text_save_failed, 30);
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECK_CARD_INSERTED), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
         break;
     case 1:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_load_failed, CARD_MENU_TEXT_LOAD_FAILED), 4, -x_offset + 0x80, -y_offset, 2);
-        text_table = CARD_MENU_TEXT_TABLE(g_cload_text_load_failed, 31);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_load_failed, CARD_MENU_TEXT_LOAD_FAILED), 4, -x_offset + 0x80, -y_offset, 2);
+        text_table = CARD_MENU_TEXT_TABLE(g_card_menu_text_load_failed, 31);
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECK_CARD_INSERTED), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
         break;
     case 2:
@@ -384,8 +384,8 @@ void *cload_draw_status_dialog(u_long *ot, void *prim, s32 x_offset, s32 y_offse
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(D_80145EDE, CARD_MENU_TEXT_NOT_POCKETSTATION), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 4:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_load_failed, CARD_MENU_TEXT_LOAD_FAILED), 4, -x_offset + 0x80, -y_offset, 2);
-        text_table = CARD_MENU_TEXT_TABLE(g_cload_text_load_failed, 31);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_load_failed, CARD_MENU_TEXT_LOAD_FAILED), 4, -x_offset + 0x80, -y_offset, 2);
+        text_table = CARD_MENU_TEXT_TABLE(g_card_menu_text_load_failed, 31);
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_SAVE_CORRUPT), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
         break;
     }

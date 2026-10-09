@@ -96,7 +96,7 @@ you're following an operation in the source, you need its window callback as
 well as `carda_advance_card_sequence()`.
 
 A card step can ask to run again immediately, wait for an event, or finish.
-`carda_update_card_sequence()` keeps going in the same frame while the result
+`card_menu_update_card_sequence()` keeps going in the same frame while the result
 is `CARDA_SEQUENCE_RUN_AGAIN`. This is driven by the game loop, but some steps
 also call `_card_wait()` or poll in a loop, so it isn't entirely nonblocking.
 

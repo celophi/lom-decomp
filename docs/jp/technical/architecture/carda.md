@@ -90,7 +90,7 @@ PocketStationのウィンドウは、転送の流れの大部分を扱います�
 ソースで処理を追うときは、`carda_advance_card_sequence()` と、その操作を担当するウィンドウのコールバックを一緒に読む必要があります。
 
 カードのステップは、続けて実行する、イベントを待つ、完了する、のいずれかを返します。
-`carda_update_card_sequence()` は、結果が `CARDA_SEQUENCE_RUN_AGAIN` の間、同じフレーム内で処理を続けます。
+`card_menu_update_card_sequence()` は、結果が `CARDA_SEQUENCE_RUN_AGAIN` の間、同じフレーム内で処理を続けます。
 ゲームループから進める仕組みですが、途中には `_card_wait()` やポーリングのループもあります。
 すべての処理が待たずに戻るわけではありません。
 

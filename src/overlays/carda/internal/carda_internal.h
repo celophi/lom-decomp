@@ -32,7 +32,7 @@
 #include "overlays/field/field_input.h"
 #include "overlays/field/field_portrait.h"
 /**
- * @brief g_carda_mode values: what FIELD opened the card screen for.
+ * @brief g_card_menu_mode values: what FIELD opened the card screen for.
  * @note The US release keeps the PocketStation modes but leaves their texts empty.
  */
 #define CARDA_MODE_SAVE 0       /**< Save the game to a memory card. */
@@ -66,7 +66,7 @@
 #define CARDA_ENTRY_STATE_PET_ALREADY_ON_RANCH 0xE9       /**< The pet on the PocketStation is already on the ranch. */
 #define CARDA_ENTRY_STATE_CONFIRM_RETURN 0xEA             /**< Asks whether to return the pet and erase Ring Ring Land. */
 #define CARDA_ENTRY_STATE_FORMAT_FAILED 0xEB              /**< Status dialog CARDA_DIALOG_FORMAT_FAILED. */
-#define CARDA_ENTRY_STATE_SAVE_CORRUPT 0xEC               /**< Status dialog CARDA_DIALOG_SAVE_CORRUPT. */
+#define CARDA_ENTRY_STATE_SAVE_CORRUPT 0xEC               /**< Status dialog CARD_MENU_DIALOG_INVALID_SAVE. */
 #define CARDA_ENTRY_STATE_NO_POCKETSTATION 0xED           /**< Status dialog CARD_MENU_DIALOG_NOT_POCKETSTATION. */
 #define CARDA_ENTRY_STATE_POCKETSTATION_NOT_INSERTED 0xEE /**< Status dialog CARD_MENU_DIALOG_CARD_NOT_INSERTED. */
 #define CARDA_ENTRY_STATE_UPLOAD_FAILED 0xEF              /**< Status dialog CARD_MENU_DIALOG_LOAD_FAILED. */
@@ -100,10 +100,9 @@ typedef enum CardaCardStep
 } CardaCardStep;
 
 /** @brief CARDA's own carda_open_status_dialog messages, after the shared CARD_MENU_DIALOG_* ones. */
-#define CARDA_DIALOG_SAVE_CORRUPT 4
 #define CARDA_DIALOG_FORMAT_FAILED 5
 
-/** @brief CARDA's own g_carda_selection_status value, after the shared CARD_MENU_SELECTION_* ones. */
+/** @brief CARDA's own g_card_menu_selection_status value, after the shared CARD_MENU_SELECTION_* ones. */
 #define CARDA_SELECTION_CARD_FULL 4  /**< The full-card placeholder is selected. */
 
 /** @brief Length of the full-card placeholder entry name ("Fulldummy"). */
@@ -150,14 +149,7 @@ extern char g_card_full_entry_name[];
 
 /* CARDA text offset-table entries. */
 extern u16 g_carda_text_checking_card;
-extern u16 g_carda_text_not_enough_blocks;
-extern u16 g_carda_text_no_card;
-extern u16 g_carda_text_mana_label;
-extern u16 g_carda_text_other_game_label;
 extern u16 g_carda_text_save_title;
-extern u16 g_carda_text_card_access_failed;
-extern u16 g_carda_text_no_save_data;
-extern u16 g_carda_text_new_save_label;
 extern u16 g_carda_text_save_prompt;
 extern u16 g_carda_text_overwrite_prompt;
 extern u16 g_carda_text_saving;
@@ -165,15 +157,8 @@ extern u16 g_carda_text_saved;
 extern u16 g_carda_text_format_prompt;
 extern u16 g_carda_text_new_save_title;
 extern u16 g_carda_text_load_title;
-extern u16 g_carda_text_number_label;
-extern u16 g_carda_text_load_prompt;
 extern u16 g_carda_text_loading;
 extern u16 g_carda_text_no_lom_save_data;
-extern u16 g_carda_text_ring_ring_land_label;
-extern u16 g_carda_text_save_failed;
-extern u16 g_carda_text_load_failed;
-extern u16 g_carda_text_card_not_inserted;
-extern u16 g_carda_text_not_pocketstation;
 extern u16 g_carda_text_wrong_version;
 extern u16 g_carda_text_formatting;
 extern u16 g_carda_text_needs_two_blocks;
@@ -197,7 +182,6 @@ extern u16 g_carda_text_download_failed;
 extern u16 g_carda_text_upload_failed;
 extern u16 g_carda_text_downloading;
 extern u16 g_carda_text_pet_already_on_ranch;
-extern u16 g_carda_text_plus_marker;
 extern u16 g_carda_text_card_unformatted;
 #if defined(VERSION_JP)
 extern u16 g_carda_text_memory_card_is;
@@ -229,17 +213,11 @@ extern s32 g_carda_growth_delta;
 extern u8 g_carda_received_item_ids[];
 extern s32 g_carda_pet_already_on_ranch;
 extern CardMenuElement g_carda_element1_state;
-extern s32 g_carda_dialog_state;
 extern s32 g_carda_received_item_count;
 extern u8* g_carda_save_blob;
-extern s32 g_carda_io_busy;
 extern u8 g_carda_saved_record_copy[];
-extern s32 g_carda_icon_phase;
-extern s32 g_carda_progress_active;
 extern s32 g_carda_format_frames;
-extern s32 g_carda_mode;
 extern s32 g_carda_format_declined;
-extern s32 g_carda_selection_status;
 /** @brief The saved game's item records (g_saved_game_ctx->items). */
 extern FieldItemRecord* g_carda_items;
 extern s32 g_carda_save_in_progress;
@@ -252,13 +230,9 @@ extern s32 g_carda_file_handle;
 /** @brief Full card path of the selected entry ("buX0:" plus file name), 64 bytes. */
 extern u8 g_carda_selected_card_path[];
 extern s32 g_carda_retry_count;
-extern s32 g_carda_selected_entry_extended;
 extern s32 g_carda_primary_poll_countdown;
 extern s32 g_carda_next_save_serial;
-extern s32 g_carda_progress_bar_active;
-extern s32 g_carda_entry_scan_active;
 extern s32 g_carda_preserve_old_save;
-extern s32 g_carda_progress_start_tick;
 extern s32 g_carda_secondary_poll_countdown;
 extern u8 g_carda_temp_card_path[];
 

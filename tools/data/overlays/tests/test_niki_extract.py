@@ -45,8 +45,8 @@ class FakeOverlay:
         names = {}
         data = bytearray()
 
-        names["g_niki_text_table"] = 0
-        names["g_niki_text_no_card"] = 2
+        names["g_card_menu_text_table"] = 0
+        names["g_card_menu_text_no_card"] = 2
         strings = [b"Load?", b"No card"] if version == "us" else [b"\x41\x19\x10", b"\x42"]
         data += make_table(strings)
         for title in ("ＭＡＮＡ", "ＢＡＤ"):
@@ -66,11 +66,11 @@ class FakeOverlay:
         data += struct.pack("<II", 1, 8) + palette + pixels
         data += data[-4:]
 
-        names["g_niki_card_setup_sequence"] = len(data)
+        names["g_card_steps_initial_scan"] = len(data)
         data += bytes([3, 1, 2, 0])
         names["g_card_steps_idle"] = len(data)
         data += bytes([14, 0, 0, 0, 3])
-        names["g_niki_write_save_sequence"] = len(data)
+        names["g_card_steps_write_save"] = len(data)
         data += bytes([30, 25, 26, 0])
         self.steps_end = len(data)
 
@@ -90,7 +90,7 @@ class FakeOverlay:
         names["g_glyph_hex_digits"] = len(data)
         data += "０１２３４５６７８９ＡＢＣＤＥＦ".encode("shift_jis") + b"\x00\x00"
         pad(data, 8)
-        names["g_niki_dialog_state"] = len(data)
+        names["g_card_menu_dialog_state"] = len(data)
         data += bytes(28)
         names["g_glyph_cursor_y"] = len(data)
         data += bytes(4)
@@ -131,8 +131,8 @@ class ExtractTest(unittest.TestCase):
         niki.extract(self.overlay.write(self.root), self.output)
         messages = self.load("text/messages.yaml")["entries"]
         self.assertEqual([entry["text"] for entry in messages], ["Load?", "No card"])
-        self.assertEqual(messages[0]["symbol"], "g_niki_text_table")
-        self.assertEqual(messages[1]["symbol"], "g_niki_text_no_card")
+        self.assertEqual(messages[0]["symbol"], "g_card_menu_text_table")
+        self.assertEqual(messages[1]["symbol"], "g_card_menu_text_no_card")
         titles = self.load("text/card_titles.yaml")["titles"]
         self.assertEqual([title["text"] for title in titles], ["ＭＡＮＡ", "ＢＡＤ"])
         self.assertEqual(self.load("text/locations.yaml")["entries"][0]["text"], "Home")
@@ -147,13 +147,13 @@ class ExtractTest(unittest.TestCase):
         steps = self.load("tables/card_steps.yaml")
         sequences = {sequence["symbol"]: sequence for sequence in steps["sequences"]}
         self.assertEqual(
-            sequences["g_niki_card_setup_sequence"]["steps"],
+            sequences["g_card_steps_initial_scan"]["steps"],
             ["CARD_MENU_STEP_CLEAR_SOFTWARE_EVENTS", "CARD_MENU_STEP_CARD_INFO",
              "CARD_MENU_STEP_POLL_CARD_INFO", "CARD_MENU_STEP_DONE"],
         )
         self.assertEqual(sequences["g_card_steps_idle"]["steps"], ["CARD_MENU_STEP_WAIT", "CARD_MENU_STEP_DONE"])
-        self.assertEqual(sequences["g_niki_write_save_sequence"]["bytes"], "1e 19 1a 00")
-        address = self.overlay.symbols["g_niki_write_save_sequence"] - 1
+        self.assertEqual(sequences["g_card_steps_write_save"]["bytes"], "1e 19 1a 00")
+        address = self.overlay.symbols["g_card_steps_write_save"] - 1
         self.assertEqual(steps["unreached"], [{"address": f"0x{address:08X}", "step": "CARD_MENU_STEP_CLEAR_SOFTWARE_EVENTS"}])
 
     def test_icon_png_uses_the_stored_palette(self):
@@ -238,7 +238,7 @@ class ExtractTest(unittest.TestCase):
     def test_sequence_cannot_run_into_the_chart(self):
         end = self.overlay.steps_end
         self.overlay.data[end - 1] = 26
-        with self.assertRaisesRegex(ValueError, "g_niki_write_save_sequence has no CARD_MENU_STEP_DONE"):
+        with self.assertRaisesRegex(ValueError, "g_card_steps_write_save has no CARD_MENU_STEP_DONE"):
             niki.extract(self.overlay.write(self.root), self.output)
         self.assert_no_output()
 

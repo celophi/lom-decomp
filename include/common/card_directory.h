@@ -159,6 +159,9 @@ extern s32 g_card_rank_count;
 /** @brief One past the highest save serial on the current card: the serial a new save gets. */
 extern s32 g_card_entry_value_limit;
 
+/** @brief Path of the save selected for loading or replacing ("buX0:" plus file name). */
+extern char g_card_selected_save_path[];
+
 s32 card_rank_entries(void);
 void card_reset_entry_ranks(void);
 s32 card_has_known_entry_type(void);

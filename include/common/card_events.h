@@ -37,6 +37,27 @@ extern u8* g_card_step;
 /** @brief Step table the sequence waits on after a restart. */
 extern u8 g_card_steps_idle[];
 
+/** @brief Clear/load card state, then scan its directory. */
+extern u8 g_card_steps_initial_scan[];
+
+/** @brief Release card events, refresh card information, and rescan entries. */
+extern u8 g_card_steps_rescan[];
+
+/** @brief Release primary events, then request and poll card information. */
+extern u8 g_card_steps_card_info[];
+
+/** @brief Read and poll the selected entry's preview header. */
+extern u8 g_card_steps_read_selected_header[];
+
+/** @brief Reset retries and read the selected save into the transfer buffer. */
+extern u8 g_card_steps_read_save[];
+
+/** @brief Read the existing save before modifying and writing it back. */
+extern u8 g_card_steps_read_saved_copy[];
+
+/** @brief Reset retries and write the replacement save. */
+extern u8 g_card_steps_write_save[];
+
 /** @brief Software (SwCARD) event handles. */
 extern s32 g_card_software_event_io_complete;
 extern s32 g_card_software_event_error;

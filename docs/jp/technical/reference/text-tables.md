@@ -140,6 +140,6 @@ ADDHEROにもその写しがあり、`make extract-addhero VERSION=jp` はそれ
 ## コードでの使われ方
 
 ソースでは、コードが名前で使う文字列ごとにシンボルを付けています。
-たとえば、メモリーカードがないというメッセージは `g_addhero_text_no_card` です。
+たとえば、メモリーカードがないというメッセージは `g_card_menu_text_no_card` です。
 ADDHEROの名前と、各メッセージの用途は [addhero_internal.h](../../../../src/overlays/addhero/internal/addhero_internal.h) にまとめています。
 メッセージを探すときは、テーブルを順に見るより、オーバーレイのソースをシンボル名で検索するほうがたいてい早く見つかります。
