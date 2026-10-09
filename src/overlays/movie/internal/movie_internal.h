@@ -58,10 +58,9 @@ typedef enum
 #define CONTINUATION_AUDIO 1
 
 /** @brief CD sector geometry consumed by @ref cd_sector_callback. */
-#define CD_SECTOR_BYTES 2048
 #define CD_HEADER_WORDS 8
 #define CD_HEADER_BYTES (CD_HEADER_WORDS * sizeof(u32))
-#define CD_PAYLOAD_BYTES (CD_SECTOR_BYTES - CD_HEADER_BYTES)
+#define CD_PAYLOAD_BYTES (CD_DATA_SECTOR_SIZE - CD_HEADER_BYTES)
 #define CD_PAYLOAD_WORDS (CD_PAYLOAD_BYTES / sizeof(u32))
 
 /**

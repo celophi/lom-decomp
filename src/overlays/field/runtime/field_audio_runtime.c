@@ -81,12 +81,9 @@ s32 akao_load_upper_bank_slot(void *bank, s32 slot, s32 wait_for_completion);
 /** @brief Previous game state 6 (no GAME_STATE_ name yet); CHECKPS also treats the bank as resident after it. */
 #define FIELD_AUDIO_BANK_RESIDENT_STATE 6
 
-/** @brief Size of one streamed CD sector. */
-#define FIELD_STREAM_SECTOR_SIZE 0x800
-
 /** @brief The two alternating sector buffers of the music stream. */
 #define FIELD_STREAM_SECTOR_BUFFER CD_STREAM_BUFFER_ADDRESS
-#define FIELD_STREAM_SECTOR_BUFFER_UPPER CD_STREAM_BUFFER_AT(0x800)
+#define FIELD_STREAM_SECTOR_BUFFER_UPPER CD_STREAM_BUFFER_AT(CD_DATA_SECTOR_SIZE)
 
 /** @brief Staging buffer for the streamed instrument bank data. */
 #define FIELD_STREAM_BANK_BUFFER CD_STREAM_BUFFER_AT(0x1000)
@@ -686,23 +683,23 @@ void field_update_music_stream(void)
         case FIELD_STREAM_SECTOR:
             if (g_field_stream_song_remaining != 0)
             {
-                if (g_field_stream_song_remaining < FIELD_STREAM_SECTOR_SIZE)
+                if (g_field_stream_song_remaining < CD_DATA_SECTOR_SIZE)
                 {
                     /* The song ends in this sector; the rest is bank data. */
                     bcopy(g_field_stream_sector, g_field_stream_song_bytes + g_resident_song_buffer, g_field_stream_song_remaining);
                     bcopy(g_field_stream_sector + g_field_stream_song_remaining, (void *)FIELD_STREAM_BANK_BUFFER,
-                          FIELD_STREAM_SECTOR_SIZE - g_field_stream_song_remaining);
+                          CD_DATA_SECTOR_SIZE - g_field_stream_song_remaining);
                     song_tail = g_field_stream_song_remaining;
                     g_field_stream_bank_pending = 1;
                     g_field_stream_song_remaining = 0;
-                    g_field_stream_bank_bytes = FIELD_STREAM_SECTOR_SIZE - song_tail;
+                    g_field_stream_bank_bytes = CD_DATA_SECTOR_SIZE - song_tail;
                     g_field_stream_song_bytes += song_tail;
                 }
                 else
                 {
-                    bcopy(g_field_stream_sector, g_field_stream_song_bytes + g_resident_song_buffer, FIELD_STREAM_SECTOR_SIZE);
-                    g_field_stream_song_bytes += FIELD_STREAM_SECTOR_SIZE;
-                    g_field_stream_song_remaining -= FIELD_STREAM_SECTOR_SIZE;
+                    bcopy(g_field_stream_sector, g_field_stream_song_bytes + g_resident_song_buffer, CD_DATA_SECTOR_SIZE);
+                    g_field_stream_song_bytes += CD_DATA_SECTOR_SIZE;
+                    g_field_stream_song_remaining -= CD_DATA_SECTOR_SIZE;
                     if (g_field_stream_song_remaining == 0)
                     {
                         g_field_stream_bank_bytes = 0;
@@ -716,11 +713,11 @@ void field_update_music_stream(void)
             {
                 /* First bank sector: restart the upload. */
                 bcopy(g_field_stream_sector, (u8 *)FIELD_STREAM_BANK_BUFFER + g_field_stream_bank_bytes,
-                      FIELD_STREAM_SECTOR_SIZE);
-                g_field_stream_bank_bytes += FIELD_STREAM_SECTOR_SIZE;
+                      CD_DATA_SECTOR_SIZE);
+                g_field_stream_bank_bytes += CD_DATA_SECTOR_SIZE;
                 akao_reset_xfer_state();
-                akao_streaming_upload_tick((u8 *)FIELD_STREAM_BANK_BUFFER, FIELD_STREAM_SECTOR_SIZE, 1);
-                g_field_stream_bank_bytes -= FIELD_STREAM_SECTOR_SIZE;
+                akao_streaming_upload_tick((u8 *)FIELD_STREAM_BANK_BUFFER, CD_DATA_SECTOR_SIZE, 1);
+                g_field_stream_bank_bytes -= CD_DATA_SECTOR_SIZE;
                 field_stream_copy_bytes((u8 *)FIELD_STREAM_BANK_BUFFER, (u8 *)FIELD_STREAM_BANK_OVERFLOW,
                                         g_field_stream_bank_bytes);
                 g_field_stream_state = FIELD_STREAM_WAIT_UPLOAD;
@@ -728,8 +725,8 @@ void field_update_music_stream(void)
             else
             {
                 bcopy(g_field_stream_sector, (u8 *)FIELD_STREAM_BANK_BUFFER + g_field_stream_bank_bytes,
-                      FIELD_STREAM_SECTOR_SIZE);
-                if (g_field_stream_bytes_left < (u32)FIELD_STREAM_SECTOR_SIZE)
+                      CD_DATA_SECTOR_SIZE);
+                if (g_field_stream_bytes_left < (u32)CD_DATA_SECTOR_SIZE)
                 {
                     /* Last sector: upload what is left, then play once the transfer is done. */
                     g_field_stream_bank_bytes += g_field_stream_bytes_left;
@@ -739,10 +736,10 @@ void field_update_music_stream(void)
                 }
                 else
                 {
-                    g_field_stream_bank_bytes += FIELD_STREAM_SECTOR_SIZE;
-                    akao_streaming_upload_tick((u8 *)FIELD_STREAM_BANK_BUFFER, FIELD_STREAM_SECTOR_SIZE, 1);
+                    g_field_stream_bank_bytes += CD_DATA_SECTOR_SIZE;
+                    akao_streaming_upload_tick((u8 *)FIELD_STREAM_BANK_BUFFER, CD_DATA_SECTOR_SIZE, 1);
                     g_field_stream_state = FIELD_STREAM_WAIT_UPLOAD;
-                    g_field_stream_bank_bytes -= FIELD_STREAM_SECTOR_SIZE;
+                    g_field_stream_bank_bytes -= CD_DATA_SECTOR_SIZE;
                     field_stream_copy_bytes((u8 *)FIELD_STREAM_BANK_BUFFER, (u8 *)FIELD_STREAM_BANK_OVERFLOW,
                                             g_field_stream_bank_bytes);
                 }
@@ -752,10 +749,10 @@ void field_update_music_stream(void)
         case FIELD_STREAM_FIRST_SECTOR:
             g_field_stream_song_remaining = FIELD_MUSIC_STREAM_HEADER->bank_offset - FIELD_MUSIC_STREAM_HEADER->song_offset;
             bcopy(g_field_stream_sector + FIELD_MUSIC_STREAM_HEADER->song_offset, g_resident_song_buffer,
-                  FIELD_STREAM_SECTOR_SIZE - FIELD_MUSIC_STREAM_HEADER->song_offset);
+                  CD_DATA_SECTOR_SIZE - FIELD_MUSIC_STREAM_HEADER->song_offset);
             g_field_stream_sector_ready = 0;
-            g_field_stream_song_bytes = FIELD_STREAM_SECTOR_SIZE - FIELD_MUSIC_STREAM_HEADER->song_offset;
-            g_field_stream_song_remaining -= FIELD_STREAM_SECTOR_SIZE - FIELD_MUSIC_STREAM_HEADER->song_offset;
+            g_field_stream_song_bytes = CD_DATA_SECTOR_SIZE - FIELD_MUSIC_STREAM_HEADER->song_offset;
+            g_field_stream_song_remaining -= CD_DATA_SECTOR_SIZE - FIELD_MUSIC_STREAM_HEADER->song_offset;
             return;
         case FIELD_STREAM_WAIT_UPLOAD:
             if (akao_get_xfer_state() == 0)
@@ -807,7 +804,7 @@ static u8 *field_stream_sector_callback(s32 bytes_transferred, u32 bytes_remaini
 
     if (g_field_stream_sector_ready == 0)
     {
-        if (bytes_transferred & FIELD_STREAM_SECTOR_SIZE)
+        if (bytes_transferred & CD_DATA_SECTOR_SIZE)
         {
             g_field_stream_sector = buffer = (u8 *)FIELD_STREAM_SECTOR_BUFFER_UPPER;
         }
