@@ -137,9 +137,10 @@ with `g_glyph_cursor_y`. They're all zero on the disc. The byte map lists the
 range without writing another file.
 
 The `bu00:` device prefix, the `bu00:*` search path and the full-width `MAX`
-text aren't in this blob. They're defined in
+text aren't in this blob. The paths are defined in
 [`niki.c`](../../../../src/overlays/niki/niki.c) and
-[`niki_io.c`](../../../../src/overlays/niki/niki_io.c).
+[`niki_io.c`](../../../../src/overlays/niki/niki_io.c). `MAX` is a string in
+the shared [`format_decimal.inc.c`](../../../../src/common/sjis/format_decimal.inc.c).
 
 ## What we don't know yet
 

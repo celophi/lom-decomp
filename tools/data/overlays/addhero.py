@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Export ADDHERO's data as files people can read.
 
-ADDHERO keeps its text, party icons and small tables in one data blob, and two
-short strings in separate rodata files. The build links those bytes unchanged.
+ADDHERO keeps its text, party icons and small tables in one data blob. The
+build links those bytes unchanged.
 This tool reads them and writes YAML and PNG files plus a byte map; the build
 never reads anything back from here.
 
@@ -69,9 +69,6 @@ class AddheroSymbols(CardSymbols):
     in the config, change it there; ``load`` reports any name it can't find.
     """
 
-    overflow_text: int  # text shown for a number above 999999
-    file_template: int  # memory card device prefix
-    directory_pattern: int  # memory card directory search pattern
 
     @classmethod
     def load(cls, path: Path) -> AddheroSymbols:
@@ -95,9 +92,6 @@ SYMBOL_NAMES = {
     "chart_pages": "g_glyph_chart_page_base",
     "decimal_glyphs": "g_glyph_decimal_digits",
     "hex_glyphs": "g_glyph_hex_digits",
-    "overflow_text": "g_decimal_overflow_text",
-    "file_template": "g_addhero_file_template",
-    "directory_pattern": "g_addhero_entry_header_template",
 }
 MESSAGE_SYMBOL_PREFIX = "g_addhero_text_"
 LOCATION_SYMBOL_PREFIX = "g_addhero_location_text_table"
@@ -209,57 +203,10 @@ def read_variables(blob: Blob[AddheroSymbols]) -> Part:
 
 
 # ---------------------------------------------------------------------------
-# The two small rodata files
-
-
-def read_fixed_strings(
-    files: list[splat_config.DataFile], names: AddheroSymbols
-) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
-    """The number overflow text and the two memory card path templates.
-
-    Returns the strings to write and the byte map entries for the files they
-    came from. Each file is found through the splat config by the address of
-    the symbol inside it.
-    """
-    wanted = (
-        ("overflow_text", "shift_jis", "Shown instead of a number above 999999."),
-        ("file_template", "ascii", "Memory card device; the slot digit is patched before use."),
-        ("directory_pattern", "ascii", "Directory search pattern for the whole card."),
-    )
-    strings = []
-    sources: dict[str, splat_config.DataFile] = {}
-    for key, encoding, note in wanted:
-        address = getattr(names, key)
-        source = splat_config.file_containing(files, address, SYMBOL_NAMES[key])
-        data = source.path.read_bytes()
-        start = address - source.start
-        text = data[start : data.index(b"\x00", start)].decode(encoding)
-        strings.append(
-            {
-                "symbol": SYMBOL_NAMES[key],
-                "address": hex_address(address),
-                "text": text,
-                "note": note,
-            }
-        )
-        sources[source.name] = source
-    byte_map = [
-        {
-            "file": source.path.name,
-            "address": hex_address(source.start),
-            "size": f"0x{source.end - source.start:X}",
-            "exported": "text/fixed_strings.yaml",
-        }
-        for source in sources.values()
-    ]
-    return strings, byte_map
-
-
-# ---------------------------------------------------------------------------
 # Putting it together
 
 
-def load_blob(inputs: Inputs) -> tuple[Blob[AddheroSymbols], list[splat_config.DataFile]]:
+def load_blob(inputs: Inputs) -> Blob[AddheroSymbols]:
     """Find the blob through the splat config: the data file holding the message table."""
     names = AddheroSymbols.load(inputs.symbol_file)
     files = splat_config.data_files(inputs.overlay_config, inputs.assets)
@@ -267,7 +214,7 @@ def load_blob(inputs: Inputs) -> tuple[Blob[AddheroSymbols], list[splat_config.D
     if not source.path.exists():
         raise ValueError(f"{source.path} is missing; run make splat first")
     blob = Blob(source.path.read_bytes(), source.start, source.path.name, inputs.version, names)
-    return blob, files
+    return blob
 
 
 def extract(inputs: Inputs, output: Path) -> None:
@@ -278,15 +225,13 @@ def extract(inputs: Inputs, output: Path) -> None:
     """
     if output.exists():
         raise FileExistsError(f"{output} already exists")
-    blob, files = load_blob(inputs)
+    blob = load_blob(inputs)
     parts = read_blob(blob)
-    strings, other_files = read_fixed_strings(files, blob.symbols)
     byte_map = {
         "source": blob.file_name,
         "address": hex_address(blob.address),
         "size": f"0x{len(blob.data):X}",
         "ranges": [byte_map_entry(blob, part) for part in parts],
-        "other_files": other_files,
     }
 
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -295,7 +240,6 @@ def extract(inputs: Inputs, output: Path) -> None:
         for part in parts:
             if part.content is not None:
                 write_part(part.content, staging / part.file)
-        dump_yaml(staging / "text/fixed_strings.yaml", {"strings": strings})
         dump_yaml(staging / "byte-map.yaml", byte_map)
         staging.rename(output)
     except BaseException:

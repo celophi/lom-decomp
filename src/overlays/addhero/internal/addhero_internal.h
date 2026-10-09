@@ -48,7 +48,6 @@
 #define ADDHERO_ENTRY_STATE_NO_LOAD_FILE 0xF7       /**< The selected entry is not a load file. */
 
 extern struct DIRENTRY g_card_entries[][CARD_DIRECTORY_ENTRY_COUNT];
-extern CardPathTemplate g_addhero_file_template;
 extern s32 g_addhero_scroll_y;
 extern s32 g_addhero_progress_active;
 extern s32 g_addhero_scroll_target_y;

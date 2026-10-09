@@ -24,16 +24,11 @@ class SourceTest(unittest.TestCase):
                     "locations", "icon_offsets", "card_steps", "chart", "decimal_glyphs", "hex_glyphs",
                 ):
                     self.assertTrue(blobs[0].contains(getattr(names, key)), key)
-                for key in (
-                    "title_dash", "title_colon", "save_card_path", "overflow_text", "card_path", "directory_pattern",
-                ):
-                    source = splat_config.file_containing(files, getattr(names, key), key)
-                    self.assertEqual(source.kind, "rodatabin", key)
                 sequences = names.with_prefix(carda.CARD_STEP_SYMBOL_PREFIX)
                 self.assertIn(names.card_steps, sequences.values())
 
     def test_save_icon_dimensions_follow_the_c_struct(self):
-        source = (REPO_ROOT / "src/overlays/carda/carda_widgets.c").read_text(encoding="ascii")
+        source = (REPO_ROOT / "src/overlays/carda/carda.c").read_text(encoding="ascii")
         layout = re.search(r"typedef struct\s*\{([^}]+)\} CardaSaveIcon;", source).group(1)
         frames, frame_bytes = map(int, re.search(r"frames\[(\d+)\]\[(\d+)\]", layout).groups())
         self.assertEqual(carda.SAVE_ICON_FRAMES, frames)

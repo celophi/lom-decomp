@@ -26,25 +26,12 @@ def pad(data: bytearray) -> None:
 
 
 class FakeOverlay:
-    """Build CARDA's data blob, fixed strings and the config that points to them."""
+    """Build CARDA's data blob and the config that points to it."""
 
     def __init__(self, version="us"):
         self.version = version
-        small = bytearray()
         self.symbols = {}
-        for key, raw in (
-            ("title_dash", bytes.fromhex("81 7c")),
-            ("title_colon", bytes.fromhex("81 46")),
-            ("save_card_path", b"bu00:"),
-            ("overflow_text", bytes.fromhex("82 6c 82 60 82 77")),
-            ("card_path", b"bu00:"),
-            ("directory_pattern", b"bu00:*"),
-        ):
-            self.symbols[carda.SYMBOL_NAMES[key]] = ADDRESS + len(small)
-            small += raw + b"\x00"
-            pad(small)
-        self.small = bytes(small)
-        self.address = ADDRESS + len(small)
+        self.address = ADDRESS
         data = bytearray()
 
         def mark(key):
@@ -109,16 +96,15 @@ class FakeOverlay:
         (config / "symbols").mkdir(parents=True)
         (config / "overlays").mkdir()
         assets.mkdir()
-        (assets / "small.rodatabin.bin").write_bytes(self.small)
         (assets / "blob.databin.bin").write_bytes(self.data)
         segment = {
             "name": "carda",
             "type": "code",
             "start": 1,
             "vram": ADDRESS,
-            "subsegments": [[1, "rodatabin", "small"], [1 + len(self.small), "databin", "blob"]],
+            "subsegments": [[1, "databin", "blob"]],
         }
-        end = 1 + len(self.small) + len(self.data)
+        end = 1 + len(self.data)
         (config / carda.OVERLAY_CONFIG).write_text(yaml.safe_dump({"segments": [segment, [end]]}))
         lines = [
             f"{name} = 0x{address:08X};"
@@ -151,7 +137,6 @@ class ExtractTest(unittest.TestCase):
         self.assertEqual(self.load("text/items.yaml")["entries"][0]["text"], "Item")
         self.assertEqual(self.load("text/locations.yaml")["entries"][0]["text"], "Home")
         self.assertEqual(len(self.load("text/card_titles.yaml")["titles"]), 2)
-        self.assertEqual(len(self.load("text/fixed_strings.yaml")["strings"]), 6)
         self.assertEqual(len(self.load("tables/digit_glyphs.yaml")["hexadecimal"]["glyphs"]), 16)
         self.assertEqual(self.load("tables/text_conversion.yaml")["one_byte"]["0x4_"], "\uff21" * 16)
         self.assertEqual(len(self.load("icons/icons.yaml")["icons"]), 1)

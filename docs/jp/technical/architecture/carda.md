@@ -108,9 +108,8 @@ CARDAは8つすべてを `EvMdNOINTR` で開き、ポーリングします。
 通常の読み書きでは256カウントで最大幅になり、PocketStationでは処理に応じて時間の倍率を変えます。
 完了したかどうかはカードの状態で判断するので、バーの長さと転送済みの量が対応しているわけではありません。
 
-ソース：[ウィンドウの更新](../../../../src/overlays/carda/carda.c)、
-[カードのステップとイベント](../../../../src/overlays/carda/carda_card.c)、
-[確認画面と進行表示](../../../../src/overlays/carda/carda_widgets.c)
+ソース：[ウィンドウの更新、確認画面と進行表示](../../../../src/overlays/carda/carda.c)、
+[カードのステップとイベント](../../../../src/overlays/carda/carda_card.c)
 
 ## セーブしたゲームをロードする
 
@@ -154,9 +153,8 @@ sequenceDiagram
 I/Oに失敗した場合はロード失敗のダイアログ、チェックサムかマーカーが合わない場合はセーブ破損のダイアログになります。
 どちらの経路でも、読み込んだゲームを `g_saved_game_ctx` へコピーしません。
 
-ソース：[一覧の選択処理](../../../../src/overlays/carda/carda.c)、
-[ディレクトリとプレビューの読み込み](../../../../src/overlays/carda/carda_card.c)、
-[ロード時の検証](../../../../src/overlays/carda/carda_widgets.c)
+ソース：[一覧の選択処理とロード時の検証](../../../../src/overlays/carda/carda.c)、
+[ディレクトリとプレビューの読み込み](../../../../src/overlays/carda/carda_card.c)
 
 ## セーブを書き込む
 
@@ -208,7 +206,7 @@ sequenceDiagram
 フォーマットを決定すると、その後にセーブや転送ファイルの作成へ進みます。
 空の一覧に戻るだけの処理ではなく、書き込みの流れの一部です。
 
-ソース：[セーブの組み立てと確認画面](../../../../src/overlays/carda/carda_widgets.c)、
+ソース：[セーブの組み立てと確認画面](../../../../src/overlays/carda/carda.c)、
 [書き込み、名前の変更、タイトル修正](../../../../src/overlays/carda/carda_card.c)
 
 ## ペットを送り、受け取る
@@ -241,7 +239,7 @@ CARDAは先にそのペットを読み、同じ固有IDのペットが牧場に�
 ここで変わるのは実行中のゲームです。
 この転送処理が、通常の2ブロックのゲームセーブまで書き込むことはありません。
 
-ソース：[転送の流れとアイテム処理](../../../../src/overlays/carda/carda_save.c)、
+ソース：[転送の流れとアイテム処理](../../../../src/overlays/carda/carda.c)、
 [転送ファイルのI/O](../../../../src/overlays/carda/carda_card.c)
 
 ## データの中身を見る
@@ -286,9 +284,7 @@ PocketStation用のメッセージも空のままです。
 通常のセーブのタグやオプションで未解明のものは、[セーブファイルの形式](../reference/save-file.md)にまとめています。
 
 ソース：[地域別の準備フック](../../../../src/main/card_callbacks.c)、
-[CARDAの地域別分岐](../../../../src/overlays/carda/carda.c)、
-[転送ウィンドウ](../../../../src/overlays/carda/carda_save.c)、
-[確認画面の初期選択](../../../../src/overlays/carda/carda_widgets.c)
+[CARDAの地域別分岐、転送ウィンドウ、確認画面の初期選択](../../../../src/overlays/carda/carda.c)
 
 UIの型や状態の名前は、[carda_internal.h](../../../../src/overlays/carda/internal/carda_internal.h)から追えます。
 [carda_glyph.c](../../../../src/overlays/carda/carda_glyph.c) は、カードのタイトルに使う共通の文字キャッシュ処理を組み込んでいます。

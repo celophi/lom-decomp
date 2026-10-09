@@ -117,9 +117,8 @@ full width after 256 ticks; PocketStation transfers scale that timer according
 to the operation. Completion comes from the card state, independently of how
 full the bar looks.
 
-Sources: [window updates](../../../../src/overlays/carda/carda.c),
-[card steps and events](../../../../src/overlays/carda/carda_card.c),
-[prompts and progress](../../../../src/overlays/carda/carda_widgets.c).
+Sources: [window updates, prompts and progress](../../../../src/overlays/carda/carda.c),
+[card steps and events](../../../../src/overlays/carda/carda_card.c).
 
 ## Loading a saved game
 
@@ -164,9 +163,8 @@ An I/O failure goes to the load-failed dialog; an invalid checksum or marker
 goes to the corrupt-save dialog. Neither path copies the incoming game into
 `g_saved_game_ctx`.
 
-Sources: [browser selection](../../../../src/overlays/carda/carda.c),
-[directory and preview reads](../../../../src/overlays/carda/carda_card.c),
-[load validation](../../../../src/overlays/carda/carda_widgets.c).
+Sources: [browser selection and load validation](../../../../src/overlays/carda/carda.c),
+[directory and preview reads](../../../../src/overlays/carda/carda_card.c).
 
 ## Writing a save
 
@@ -220,7 +218,7 @@ to format it; load and return-pet modes report that state instead. Confirming
 formatting leads into creating a save or transfer file, so it is part of the
 write flow, not just a return to an empty browser.
 
-Sources: [save builder and prompts](../../../../src/overlays/carda/carda_widgets.c),
+Sources: [save builder and prompts](../../../../src/overlays/carda/carda.c),
 [write, rename and title patch](../../../../src/overlays/carda/carda_card.c).
 
 ## Sending and returning pets
@@ -260,7 +258,7 @@ additions; it doesn't postpone applying them until the player dismisses it.
 These changes affect the running game. The transfer flow doesn't also write
 an ordinary two-block game save.
 
-Sources: [transfer flow and item handling](../../../../src/overlays/carda/carda_save.c),
+Sources: [transfer flow and item handling](../../../../src/overlays/carda/carda.c),
 [transfer I/O](../../../../src/overlays/carda/carda_card.c).
 
 ## Looking at the data
@@ -308,9 +306,7 @@ tags and option meanings remain in the
 [save-file reference](../reference/save-file.md#what-we-dont-know-yet).
 
 Sources: [regional preparation hook](../../../../src/main/card_callbacks.c),
-[regional CARDA branches](../../../../src/overlays/carda/carda.c),
-[transfer window](../../../../src/overlays/carda/carda_save.c),
-[prompt defaults](../../../../src/overlays/carda/carda_widgets.c).
+[regional CARDA branches, transfer window and prompt defaults](../../../../src/overlays/carda/carda.c).
 
 For the UI types and state names, start with
 [carda_internal.h](../../../../src/overlays/carda/internal/carda_internal.h).

@@ -21,8 +21,8 @@ s8* format_decimal(s8* destination, s32 value)
     divisor = SJIS_DECIMAL_FIRST_DIVISOR;
     if (value >= divisor * SJIS_DECIMAL_RADIX)
     {
-        *(SjisDecimalOverflowText*)cursor = g_decimal_overflow_text;
-        return cursor + sizeof(SjisDecimalOverflowText) - 1;
+        strcpy(cursor, SJIS_DECIMAL_OVERFLOW_TEXT);
+        return cursor + sizeof(SJIS_DECIMAL_OVERFLOW_TEXT) - 1;
     }
 
     emit_zero_digits = 0;

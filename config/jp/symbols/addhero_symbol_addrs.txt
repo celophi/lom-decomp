@@ -81,7 +81,6 @@ expand_text_glyph_codes            = 0x80146E28;
 
 // Raw ADDHERO read-only/data labels retained until their semantics are recovered.
 g_addhero_overlay_id                       = 0x80140000;
-g_decimal_overflow_text                                = 0x80140088;
 g_addhero_text_table                                = 0x80146F9C;
 g_addhero_text_not_enough_blocks                                = 0x80146F9E;
 g_addhero_text_no_card                                = 0x80146FA0;
@@ -187,8 +186,6 @@ g_glyph_decimal_digits                   = 0x801616C0;
 g_glyph_hex_digits                       = 0x801616D8;
 g_glyph_chart_page_base           = 0x8015D4BC;
 g_glyph_single_byte_chart           = 0x8016067C;
-g_addhero_file_template                    = 0x80140090;
-g_addhero_entry_header_template            = 0x80140114;
 g_addhero_element_pool                      = 0x80161720;
 jtbl_80140098                             = 0x80140098;
 

@@ -146,7 +146,6 @@ g_glyph_single_byte_chart                = 0x801606FC;
 // Absolute labels retained in binary-backed NIKI data and rodata.
 jtbl_80140054                              = 0x80140054;
 jtbl_80140098                              = 0x80140098;
-g_decimal_overflow_text                  = 0x80140088;
 g_niki_text_table                                   = 0x801470F8;
 g_niki_text_not_enough_blocks                                   = 0x801470FA;
 g_niki_text_no_card                                   = 0x801470FC;

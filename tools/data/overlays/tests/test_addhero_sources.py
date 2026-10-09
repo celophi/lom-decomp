@@ -72,9 +72,6 @@ class SplatConfigTest(unittest.TestCase):
                 for key in IN_BLOB:
                     address = getattr(names, key)
                     self.assertTrue(blob.contains(address), f"{key} is outside the blob")
-                for key in ("overflow_text", "file_template", "directory_pattern"):
-                    source = splat_config.file_containing(files, getattr(names, key), key)
-                    self.assertEqual(source.kind, "rodatabin", key)
 
 
 class CSourceTest(unittest.TestCase):

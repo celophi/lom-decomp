@@ -1955,9 +1955,6 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 
 #include "../../common/save_file/skip_hex_digits.inc.c"
 
-/** @brief Full-width MAX text used when a decimal value exceeds five digits. */
-const SjisDecimalOverflowText g_decimal_overflow_text __attribute__((aligned(4))) = {{0x82, 0x6C, 0x82, 0x60, 0x82, 0x77, 0}};
-
 #include "../../common/save_file/validate_save_file.inc.c"
 #include "../../common/save_file/compute_save_checksum.inc.c"
 #include "../../common/sjis/format_decimal.inc.c"
@@ -2103,4 +2100,4 @@ void niki_remove_placeholder_saves(void)
 }
 
 /** @brief Device prefix used to construct memory-card file paths. */
-const CardPathTemplate g_niki_file_template = {"bu00:"};
+const CardPathTemplate g_niki_file_template = {CARD_DEVICE_PREFIX};
