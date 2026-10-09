@@ -1,5 +1,6 @@
 #include "main/main.h"
 #include "overlays/field/field_text.h"
+#include "overlays/field/field_ui_text.h"
 #include "overlays/field/field_golem_logic_blocks.h"
 #include "common/encoded_text.h"
 #include "common/saved_game.h"
@@ -45,8 +46,6 @@ void field_update_input_repeat(void);
  * @brief Address of string @p index in the archive section @p offset bytes into @p archive.
  */
 #define GOLEM_ARCHIVE_TEXT(archive, offset, index) ((u8*)((offset) + (*(u16*)((index) * 2 + (offset) + (uintptr_t)(archive)) + (uintptr_t)(archive))))
-/** @brief Address of the FIELD UI string whose offset pair is @p entry, the @p index-th table entry. */
-#define FIELD_UI_TEXT_AT(entry, index) ((entry) - (index) * 2 + (entry)[0] + ((entry)[1] << 8))
 
 /** @brief Animated controls within the panel record array. */
 typedef enum

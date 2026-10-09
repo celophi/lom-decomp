@@ -304,6 +304,7 @@ typedef struct {
 #define setPolyG3(prim)   (setlen((prim), 6), setcode((prim), 0x30))
 #define setPolyGT3(prim)  (setlen((prim), 9), setcode((prim), 0x34))
 #define setPolyF4(prim)   (setlen((prim), 5), setcode((prim), 0x28))
+#define setPolyG4(prim)   (setlen((prim), 8), setcode((prim), 0x38))
 #define setPolyFT4(prim)  (setlen((prim), 9), setcode((prim), 0x2c))
 #define setSprt16(prim)   (setlen((prim), 3), setcode((prim), 0x7c))
 #define setSprt(prim)     (setlen((prim), 4), setcode((prim), 0x64))

@@ -4,17 +4,6 @@
 #include "main/audio/akao.h"
 
 /**
- * @brief Card-slot label windows: width, which is also the dimming tile's, and height.
- * @note JP narrows both labels.
- */
-#if defined(VERSION_JP)
-#define CARDA_CARD_LABEL_WIDTH 112
-#else
-#define CARDA_CARD_LABEL_WIDTH 128
-#endif
-#define CARDA_CARD_LABEL_HEIGHT 16
-
-/**
  * @brief Card-slot label window positions: slot 0 and slot 1 X, and Y by layout.
  * @note JP moves the narrower slot 0 label right.
  */
@@ -38,57 +27,9 @@
 #define CARDA_POCKETSTATION_TITLE_Y 34
 #define CARDA_POCKETSTATION_TITLE_WIDTH 256
 
-/** @brief Details window of the browser layout. */
-#define CARDA_DETAILS_X 30
-#define CARDA_DETAILS_Y 142
-#define CARDA_DETAILS_WIDTH 260
-#define CARDA_DETAILS_HEIGHT 52
-
-/**
- * @brief X of the entry list's suffix value column.
- * @note JP moves it right.
- */
-#if defined(VERSION_JP)
-#define CARDA_ENTRY_VALUE_X 148
-#else
-#define CARDA_ENTRY_VALUE_X 134
-#endif
-
-/** @brief Entry list columns shared by both versions: the file label, number label, rank marker and "+" marker (right edge). */
-#define CARDA_ENTRY_LABEL_X 1
-#define CARDA_ENTRY_NUMBER_LABEL_X 112
+/** @brief Entry list columns of the rank marker and the "+" marker (right edge). */
 #define CARDA_ENTRY_MARKER_X 214
 #define CARDA_ENTRY_PLUS_RIGHT_X 268
-
-/** @brief Colour of the semi-transparent selected-row highlight. */
-#define CARDA_HIGHLIGHT_COLOR GPU_COLOR_WORD(0xF0, 0x80, 0xF0)
-
-/** @brief Colour of the semi-transparent tile that dims the inactive card slot's label. */
-#define CARDA_INACTIVE_LABEL_COLOR GPU_COLOR_WORD(0x10, 0x10, 0x10)
-
-/**
- * @brief Details window text: second column, line spacing and the play-time digits (right edges).
- * @note JP moves the columns left.
- */
-#define CARDA_DETAILS_LINE_HEIGHT 16
-#if defined(VERSION_JP)
-#define CARDA_DETAILS_TEXT_X 80
-#define CARDA_DETAILS_HOURS_RIGHT_X 100
-#define CARDA_DETAILS_TIME_SEPARATOR_X 100
-#define CARDA_DETAILS_MINUTES_TENS_RIGHT_X 120
-#define CARDA_DETAILS_MINUTES_RIGHT_X 130
-#else
-#define CARDA_DETAILS_TEXT_X 84
-#define CARDA_DETAILS_HOURS_RIGHT_X 112
-#define CARDA_DETAILS_TIME_SEPARATOR_X 111
-#define CARDA_DETAILS_MINUTES_TENS_RIGHT_X 125
-#define CARDA_DETAILS_MINUTES_RIGHT_X 133
-#endif
-
-/**
- * @brief Address of the CARDA text whose table offset is @p offset.
- */
-#define CARDA_TEXT_BY_OFFSET(table, offset) ((u8*)((uintptr_t)(offset) + (uintptr_t)(table)))
 
 static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 static void carda_build_ui_elements(void);
@@ -115,7 +56,7 @@ void carda_init(void* work, s32 mode)
     RECT rect;
 
     g_carda_mode = mode;
-    g_card_entry_state = CARDA_ENTRY_STATE_CHECKING_CARD;
+    g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
     g_card_slot = 0;
     carda_reset_entry_ranks();
     carda_init_card_events();
@@ -128,7 +69,7 @@ void carda_init(void* work, s32 mode)
 
     g_carda_save_in_progress = 0;
     g_carda_progress_active = 0;
-    g_carda_selection_status = CARDA_SELECTION_NONE;
+    g_carda_selection_status = CARD_MENU_SELECTION_NONE;
     g_carda_io_busy = 0;
     g_carda_frame_parity = 0;
     g_carda_exit_requested = 0;
@@ -177,46 +118,46 @@ s32 carda_update_frame(FieldRenderHalf* render)
 static void carda_build_ui_elements(void)
 {
     s32 unused[2];
-    CardaElement* element;
+    CardMenuElement* element;
 
     g_carda_scroll_frames = 0;
     g_carda_scroll_target_y = 0;
     g_carda_scroll_y = 0;
     g_carda_selected_row = 0;
-    g_carda_selection_status = CARDA_SELECTION_NONE;
+    g_carda_selection_status = CARD_MENU_SELECTION_NONE;
     g_carda_items = g_saved_game_ctx->items;
     carda_clear_elements();
     g_carda_format_declined = 0;
 
-    g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state = CARDA_ELEMENT_OPENING;
+    g_carda_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_OPENING;
     if (CARDA_IS_POCKETSTATION_MODE(g_carda_mode))
     {
         element = carda_alloc_element();
         element->draw = carda_draw_save_flow;
         element->attr.bits.transition_step = 1;
-        element->attr.bits.x = CARDA_MESSAGE_X;
+        element->attr.bits.x = CARD_MENU_MESSAGE_X;
         element->attr.bits.y = CARDA_TRANSFER_Y;
-        element->size.bits.width_high = CARDA_MESSAGE_WIDTH >> 8;
+        element->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
         element->size.bits.height = CARDA_TRANSFER_HEIGHT;
-        CARDA_SET_ELEMENT_WIDTH_LOW(element, CARDA_MESSAGE_WIDTH);
+        CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_MESSAGE_WIDTH);
 
         element = carda_alloc_element();
         element->draw = carda_draw_card_slot0_label;
         element->attr.bits.transition_step = 1;
         element->attr.bits.x = CARDA_CARD_SLOT0_LABEL_X;
         element->attr.bits.y = CARDA_CARD_LABEL_POCKETSTATION_Y;
-        element->size.bits.width_high = CARDA_CARD_LABEL_WIDTH >> 8;
-        element->size.bits.height = CARDA_CARD_LABEL_HEIGHT;
-        CARDA_SET_ELEMENT_WIDTH_LOW(element, CARDA_CARD_LABEL_WIDTH);
+        element->size.bits.width_high = CARD_MENU_CARD_LABEL_WIDTH >> 8;
+        element->size.bits.height = CARD_MENU_CARD_LABEL_HEIGHT;
+        CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_CARD_LABEL_WIDTH);
 
         element = carda_alloc_element();
         element->draw = carda_draw_card_slot1_label;
         element->attr.bits.transition_step = 1;
         element->attr.bits.x = CARDA_CARD_SLOT1_LABEL_X;
         element->attr.bits.y = CARDA_CARD_LABEL_POCKETSTATION_Y;
-        element->size.bits.width_high = CARDA_CARD_LABEL_WIDTH >> 8;
-        element->size.bits.height = CARDA_CARD_LABEL_HEIGHT;
-        CARDA_SET_ELEMENT_WIDTH_LOW(element, CARDA_CARD_LABEL_WIDTH);
+        element->size.bits.width_high = CARD_MENU_CARD_LABEL_WIDTH >> 8;
+        element->size.bits.height = CARD_MENU_CARD_LABEL_HEIGHT;
+        CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_CARD_LABEL_WIDTH);
 
         element = carda_alloc_element();
         element->draw = carda_draw_title;
@@ -225,7 +166,7 @@ static void carda_build_ui_elements(void)
         element->attr.bits.y = CARDA_POCKETSTATION_TITLE_Y;
         element->size.bits.width_high = CARDA_POCKETSTATION_TITLE_WIDTH >> 8;
         element->size.bits.height = CARDA_TITLE_HEIGHT;
-        CARDA_SET_ELEMENT_WIDTH_LOW(element, CARDA_POCKETSTATION_TITLE_WIDTH);
+        CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARDA_POCKETSTATION_TITLE_WIDTH);
     }
     else
     {
@@ -233,10 +174,10 @@ static void carda_build_ui_elements(void)
         element->draw = carda_draw_entry_list;
         element->attr.bits.transition_step = 1;
         element->attr.bits.x = CARDA_LIST_X;
-        element->attr.bits.y = CARDA_LIST_Y;
+        element->attr.bits.y = CARD_MENU_LIST_Y;
         element->size.bits.width_high = CARDA_LIST_WIDTH >> 8;
-        element->size.bits.height = CARDA_LIST_HEIGHT;
-        CARDA_SET_ELEMENT_WIDTH_LOW(element, CARDA_LIST_WIDTH);
+        element->size.bits.height = CARD_MENU_LIST_HEIGHT;
+        CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARDA_LIST_WIDTH);
 
         element = carda_alloc_element();
         element->draw = carda_draw_title;
@@ -245,36 +186,36 @@ static void carda_build_ui_elements(void)
         element->attr.bits.y = CARDA_TITLE_Y;
         element->size.bits.width_high = CARDA_TITLE_WIDTH >> 8;
         element->size.bits.height = CARDA_TITLE_HEIGHT;
-        CARDA_SET_ELEMENT_WIDTH_LOW(element, CARDA_TITLE_WIDTH);
+        CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARDA_TITLE_WIDTH);
 
         element = carda_alloc_element();
         element->draw = carda_draw_card_slot0_label;
         element->attr.bits.transition_step = 1;
         element->attr.bits.x = CARDA_CARD_SLOT0_LABEL_X;
         element->attr.bits.y = CARDA_CARD_LABEL_BROWSER_Y;
-        element->size.bits.width_high = CARDA_CARD_LABEL_WIDTH >> 8;
-        element->size.bits.height = CARDA_CARD_LABEL_HEIGHT;
-        CARDA_SET_ELEMENT_WIDTH_LOW(element, CARDA_CARD_LABEL_WIDTH);
+        element->size.bits.width_high = CARD_MENU_CARD_LABEL_WIDTH >> 8;
+        element->size.bits.height = CARD_MENU_CARD_LABEL_HEIGHT;
+        CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_CARD_LABEL_WIDTH);
 
         element = carda_alloc_element();
         element->draw = carda_draw_card_slot1_label;
         element->attr.bits.transition_step = 1;
         element->attr.bits.x = CARDA_CARD_SLOT1_LABEL_X;
         element->attr.bits.y = CARDA_CARD_LABEL_BROWSER_Y;
-        element->size.bits.width_high = CARDA_CARD_LABEL_WIDTH >> 8;
-        element->size.bits.height = CARDA_CARD_LABEL_HEIGHT;
-        CARDA_SET_ELEMENT_WIDTH_LOW(element, CARDA_CARD_LABEL_WIDTH);
+        element->size.bits.width_high = CARD_MENU_CARD_LABEL_WIDTH >> 8;
+        element->size.bits.height = CARD_MENU_CARD_LABEL_HEIGHT;
+        CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_CARD_LABEL_WIDTH);
 
         element = carda_alloc_element();
         element->draw = carda_draw_selected_entry_details;
         element->attr.bits.transition_step = 1;
-        element->attr.bits.x = CARDA_DETAILS_X;
-        element->attr.bits.y = CARDA_DETAILS_Y;
-        element->size.bits.width_high = CARDA_DETAILS_WIDTH >> 8;
-        element->size.bits.height = CARDA_DETAILS_HEIGHT;
-        CARDA_SET_ELEMENT_WIDTH_LOW(element, CARDA_DETAILS_WIDTH);
+        element->attr.bits.x = CARD_MENU_DETAILS_X;
+        element->attr.bits.y = CARD_MENU_DETAILS_Y;
+        element->size.bits.width_high = CARD_MENU_DETAILS_WIDTH >> 8;
+        element->size.bits.height = CARD_MENU_DETAILS_HEIGHT;
+        CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_DETAILS_WIDTH);
     }
-    g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state = CARDA_ELEMENT_FREE;
+    g_carda_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_FREE;
 }
 
 /**
@@ -286,7 +227,7 @@ static void carda_update_menu(FieldRenderHalf* render)
 {
     carda_update_elements(render);
     g_carda_icon_phase += 2;
-    if (g_carda_element1_state.attr.bits.state == CARDA_ELEMENT_OPEN && g_carda_element1_state.attr.bits.transition_step == 0)
+    if (g_carda_element1_state.attr.bits.state == CARD_MENU_ELEMENT_OPEN && g_carda_element1_state.attr.bits.transition_step == 0)
     {
         carda_update_card_sequence();
     }
@@ -319,7 +260,7 @@ static void carda_update_menu(FieldRenderHalf* render)
 static s32 carda_update_card_sequence(void)
 {
     s32 result;
-    CardaElement* prompt;
+    CardMenuElement* prompt;
 
     if (CARDA_IS_POCKETSTATION_MODE(g_carda_mode))
     {
@@ -336,13 +277,13 @@ static s32 carda_update_card_sequence(void)
             case CARDA_ENTRY_STATE_DOWNLOAD_FAILED:
             case CARDA_ENTRY_STATE_SELECT_SLOT:
             case CARDA_ENTRY_STATE_NOT_POCKETSTATION:
-            case CARDA_ENTRY_STATE_NO_GAME_DATA:
-            case CARDA_ENTRY_STATE_UNFORMATTED:
-            case CARDA_ENTRY_STATE_CARD_FULL:
-            case CARDA_ENTRY_STATE_ACCESS_FAILED:
-            case CARDA_ENTRY_STATE_NO_SAVE_DATA:
-            case CARDA_ENTRY_STATE_NO_CARD:
-            case CARDA_ENTRY_STATE_CHECKING_CARD:
+            case CARD_MENU_ENTRY_STATE_NO_GAME_DATA:
+            case CARD_MENU_ENTRY_STATE_UNFORMATTED:
+            case CARD_MENU_ENTRY_STATE_CARD_FULL:
+            case CARD_MENU_ENTRY_STATE_ACCESS_FAILED:
+            case CARD_MENU_ENTRY_STATE_NO_SAVE_DATA:
+            case CARD_MENU_ENTRY_STATE_NO_CARD:
+            case CARD_MENU_ENTRY_STATE_CHECKING_CARD:
                 return;
             default:
                 g_card_step = g_carda_steps_initial_scan;
@@ -360,18 +301,18 @@ static s32 carda_update_card_sequence(void)
         result = carda_advance_card_sequence();
     } while (result == CARDA_SEQUENCE_RUN_AGAIN);
 
-    if (g_carda_format_declined != 0 && (g_pad_input & CARDA_CONFIRM_BUTTON_MASK))
+    if (g_carda_format_declined != 0 && (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK))
     {
-        g_card_entry_state = CARDA_ENTRY_STATE_UNFORMATTED;
+        g_card_entry_state = CARD_MENU_ENTRY_STATE_UNFORMATTED;
         g_carda_format_declined = 0;
 
         prompt = g_carda_element_pool;
-        prompt->attr.bits.state = CARDA_ELEMENT_OPENING;
+        prompt->attr.bits.state = CARD_MENU_ELEMENT_OPENING;
         prompt->attr.bits.transition_step = 1;
-        prompt->attr.bits.x = CARDA_MESSAGE_X;
+        prompt->attr.bits.x = CARD_MENU_MESSAGE_X;
         prompt->attr.bits.y = CARDA_TRANSFER_Y;
-        CARDA_SET_ELEMENT_WIDTH_LOW(prompt, CARDA_MESSAGE_WIDTH);
-        prompt->size.bits.width_high = CARDA_MESSAGE_WIDTH >> 8;
+        CARD_MENU_SET_ELEMENT_WIDTH_LOW(prompt, CARD_MENU_MESSAGE_WIDTH);
+        prompt->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
         prompt->size.bits.height = CARDA_TRANSFER_HEIGHT;
         carda_enable_choice_toggle();
         prompt->draw = carda_draw_format_prompt;
@@ -400,7 +341,7 @@ static s32 carda_update_card_sequence(void)
     case CARDA_SEQUENCE_UNFORMATTED:
         if (g_carda_mode == CARDA_MODE_LOAD || g_carda_mode == CARDA_MODE_RETURN_PET)
         {
-            g_card_entry_state = CARDA_ENTRY_STATE_UNFORMATTED;
+            g_card_entry_state = CARD_MENU_ENTRY_STATE_UNFORMATTED;
             if (g_carda_mode == CARDA_MODE_LOAD)
             {
                 g_card_step = g_carda_steps_initial_scan;
@@ -408,16 +349,16 @@ static s32 carda_update_card_sequence(void)
         }
         else
         {
-            g_card_entry_state = CARDA_ENTRY_STATE_UNFORMATTED;
+            g_card_entry_state = CARD_MENU_ENTRY_STATE_UNFORMATTED;
             g_carda_format_declined = 0;
 
             prompt = g_carda_element_pool;
-            prompt->attr.bits.state = CARDA_ELEMENT_OPENING;
+            prompt->attr.bits.state = CARD_MENU_ELEMENT_OPENING;
             prompt->attr.bits.transition_step = 1;
-            prompt->attr.bits.x = CARDA_MESSAGE_X;
+            prompt->attr.bits.x = CARD_MENU_MESSAGE_X;
             prompt->attr.bits.y = CARDA_TRANSFER_Y;
-            CARDA_SET_ELEMENT_WIDTH_LOW(prompt, CARDA_MESSAGE_WIDTH);
-            prompt->size.bits.width_high = CARDA_MESSAGE_WIDTH >> 8;
+            CARD_MENU_SET_ELEMENT_WIDTH_LOW(prompt, CARD_MENU_MESSAGE_WIDTH);
+            prompt->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
             prompt->size.bits.height = CARDA_TRANSFER_HEIGHT;
             carda_enable_choice_toggle();
             prompt->draw = carda_draw_format_prompt;
@@ -436,9 +377,9 @@ static s32 carda_handle_input(void)
     s32 entry_count;
     s32 input;
     s32 move_count;
-    CardaElement* prompt;
+    CardMenuElement* prompt;
 
-    if (g_carda_element_pool[CARDA_ELEMENT_MAIN].attr.bits.state == CARDA_ELEMENT_FREE)
+    if (g_carda_element_pool[CARD_MENU_ELEMENT_MAIN].attr.bits.state == CARD_MENU_ELEMENT_FREE)
     {
         g_carda_exit_requested = 1;
         return;
@@ -447,11 +388,11 @@ static s32 carda_handle_input(void)
     {
         return;
     }
-    if (g_carda_element_pool[CARDA_ELEMENT_MAIN].attr.bits.state >= CARDA_ELEMENT_CLOSING)
+    if (g_carda_element_pool[CARD_MENU_ELEMENT_MAIN].attr.bits.state >= CARD_MENU_ELEMENT_CLOSING)
     {
         return;
     }
-    if (g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state != CARDA_ELEMENT_FREE)
+    if (g_carda_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state != CARD_MENU_ELEMENT_FREE)
     {
         return;
     }
@@ -460,7 +401,7 @@ static s32 carda_handle_input(void)
         return;
     }
     entry_count = g_card_entry_state;
-    if (entry_count == CARDA_ENTRY_STATE_CHECKING_CARD)
+    if (entry_count == CARD_MENU_ENTRY_STATE_CHECKING_CARD)
     {
         return;
     }
@@ -485,7 +426,7 @@ static s32 carda_handle_input(void)
         carda_close_all_elements();
         return;
     }
-    if (input & CARDA_CARD_SWITCH_BUTTON_MASK)
+    if (input & CARD_MENU_CARD_SWITCH_BUTTON_MASK)
     {
         field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         carda_switch_card();
@@ -536,7 +477,7 @@ static s32 carda_handle_input(void)
         return;
     }
 
-    if (g_pad_input & CARDA_CONFIRM_BUTTON_MASK)
+    if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
     {
         if (g_carda_mode == CARDA_MODE_LOAD)
         {
@@ -546,11 +487,11 @@ static s32 carda_handle_input(void)
                 {
                     prompt = carda_alloc_element();
                     prompt->attr.bits.transition_step = 1;
-                    prompt->attr.bits.x = CARDA_MESSAGE_X;
+                    prompt->attr.bits.x = CARD_MENU_MESSAGE_X;
                     prompt->attr.bits.y = CARDA_MESSAGE_Y;
-                    prompt->size.bits.width_high = CARDA_MESSAGE_WIDTH >> 8;
-                    prompt->size.bits.height = CARDA_MESSAGE_HEIGHT;
-                    CARDA_SET_ELEMENT_WIDTH_LOW(prompt, CARDA_MESSAGE_WIDTH);
+                    prompt->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
+                    prompt->size.bits.height = CARD_MENU_MESSAGE_HEIGHT;
+                    CARD_MENU_SET_ELEMENT_WIDTH_LOW(prompt, CARD_MENU_MESSAGE_WIDTH);
                     carda_build_save_file();
                     carda_enable_choice_toggle();
                     prompt->draw = carda_draw_load_prompt;
@@ -562,15 +503,15 @@ static s32 carda_handle_input(void)
         }
         else
         {
-            if (strncmp(g_new_save_entry_prefix, g_card_entries[g_card_slot][g_carda_selected_row].name, CARDA_NEW_SAVE_ENTRY_NAME_LENGTH) == 0)
+            if (strncmp(g_new_save_entry_prefix, g_card_entries[g_card_slot][g_carda_selected_row].name, CARD_MENU_NEW_SAVE_NAME_LENGTH) == 0)
             {
                 prompt = carda_alloc_element();
                 prompt->attr.bits.transition_step = 1;
-                prompt->attr.bits.x = CARDA_MESSAGE_X;
+                prompt->attr.bits.x = CARD_MENU_MESSAGE_X;
                 prompt->attr.bits.y = CARDA_MESSAGE_Y;
-                prompt->size.bits.width_high = CARDA_MESSAGE_WIDTH >> 8;
-                prompt->size.bits.height = CARDA_MESSAGE_HEIGHT;
-                CARDA_SET_ELEMENT_WIDTH_LOW(prompt, CARDA_MESSAGE_WIDTH);
+                prompt->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
+                prompt->size.bits.height = CARD_MENU_MESSAGE_HEIGHT;
+                CARD_MENU_SET_ELEMENT_WIDTH_LOW(prompt, CARD_MENU_MESSAGE_WIDTH);
                 carda_build_save_file();
                 carda_enable_choice_toggle();
                 prompt->draw = carda_draw_save_prompt;
@@ -582,11 +523,11 @@ static s32 carda_handle_input(void)
             {
                 prompt = carda_alloc_element();
                 prompt->attr.bits.transition_step = 1;
-                prompt->attr.bits.x = CARDA_MESSAGE_X;
+                prompt->attr.bits.x = CARD_MENU_MESSAGE_X;
                 prompt->attr.bits.y = CARDA_MESSAGE_Y;
-                prompt->size.bits.width_high = CARDA_MESSAGE_WIDTH >> 8;
-                prompt->size.bits.height = CARDA_MESSAGE_HEIGHT;
-                CARDA_SET_ELEMENT_WIDTH_LOW(prompt, CARDA_MESSAGE_WIDTH);
+                prompt->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
+                prompt->size.bits.height = CARD_MENU_MESSAGE_HEIGHT;
+                CARD_MENU_SET_ELEMENT_WIDTH_LOW(prompt, CARD_MENU_MESSAGE_WIDTH);
                 carda_build_save_file();
                 carda_enable_choice_toggle();
                 prompt->draw = carda_draw_overwrite_prompt;
@@ -606,12 +547,12 @@ static void carda_switch_card(void)
 {
     g_carda_format_declined = 0;
     g_card_step = NULL;
-    g_card_entry_state = CARDA_ENTRY_STATE_CHECKING_CARD;
+    g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
     g_carda_scroll_frames = 0;
     g_carda_scroll_target_y = 0;
     g_carda_scroll_y = 0;
     g_carda_selected_row = 0;
-    g_carda_selection_status = CARDA_SELECTION_NONE;
+    g_carda_selection_status = CARD_MENU_SELECTION_NONE;
     g_card_slot ^= 1;
     carda_reset_entry_ranks();
     clear_hardware_card_events();
@@ -623,17 +564,17 @@ static void carda_switch_card(void)
  */
 static void carda_close_all_elements(void)
 {
-    CardaElement* element;
+    CardMenuElement* element;
     s32 i;
 
     field_restore_fade_target();
     element = g_carda_element_pool;
-    for (i = 0; i < CARDA_ELEMENT_COUNT; i++, element++)
+    for (i = 0; i < CARD_MENU_ELEMENT_COUNT; i++, element++)
     {
-        if (element->attr.bits.state != CARDA_ELEMENT_FREE)
+        if (element->attr.bits.state != CARD_MENU_ELEMENT_FREE)
         {
-            element->attr.bits.state = CARDA_ELEMENT_CLOSING;
-            element->attr.bits.transition_step = CARDA_ELEMENT_TRANSITION_STEPS;
+            element->attr.bits.state = CARD_MENU_ELEMENT_CLOSING;
+            element->attr.bits.transition_step = CARD_MENU_ELEMENT_TRANSITION_STEPS;
         }
     }
 }
@@ -646,17 +587,17 @@ void carda_scroll_to_selection(void)
     s32 row_y;
     s32 relative_y;
 
-    row_y = g_carda_selected_row * CARDA_ENTRY_ROW_HEIGHT;
+    row_y = g_carda_selected_row * CARD_MENU_ENTRY_ROW_HEIGHT;
     relative_y = row_y - g_carda_scroll_y;
-    if (relative_y > CARDA_LIST_HEIGHT - CARDA_ENTRY_ROW_HEIGHT)
+    if (relative_y > CARD_MENU_LIST_HEIGHT - CARD_MENU_ENTRY_ROW_HEIGHT)
     {
-        g_carda_scroll_target_y = row_y - CARDA_LIST_LAST_ROW_Y;
-        g_carda_scroll_frames = CARDA_SCROLL_FRAMES;
+        g_carda_scroll_target_y = row_y - CARD_MENU_LIST_LAST_ROW_Y;
+        g_carda_scroll_frames = CARD_MENU_SCROLL_FRAMES;
     }
     if (relative_y < 0)
     {
-        g_carda_scroll_target_y = g_carda_selected_row * CARDA_ENTRY_ROW_HEIGHT;
-        g_carda_scroll_frames = CARDA_SCROLL_FRAMES;
+        g_carda_scroll_target_y = g_carda_selected_row * CARD_MENU_ENTRY_ROW_HEIGHT;
+        g_carda_scroll_frames = CARD_MENU_SCROLL_FRAMES;
     }
 }
 
@@ -681,15 +622,15 @@ static void carda_update_elements(FieldRenderHalf* render)
 static void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     /* A prompt or dialog covers the status messages, except the blank one. */
-    if (g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state != CARDA_ELEMENT_FREE)
+    if (g_carda_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state != CARD_MENU_ELEMENT_FREE)
     {
-        if (g_card_entry_state >= CARDA_ENTRY_STATE_NO_GAME_DATA)
+        if (g_card_entry_state >= CARD_MENU_ENTRY_STATE_NO_GAME_DATA)
         {
-            if (g_card_entry_state < CARDA_ENTRY_STATE_BLANK)
+            if (g_card_entry_state < CARD_MENU_ENTRY_STATE_BLANK)
             {
                 return prim;
             }
-            if (g_card_entry_state == CARDA_ENTRY_STATE_CHECKING_CARD)
+            if (g_card_entry_state == CARD_MENU_ENTRY_STATE_CHECKING_CARD)
             {
                 return prim;
             }
@@ -698,41 +639,41 @@ static void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_o
 
     switch (g_card_entry_state)
     {
-    case CARDA_ENTRY_STATE_NO_GAME_DATA:
-        prim = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_no_lom_save_data, CARDA_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
+    case CARD_MENU_ENTRY_STATE_NO_GAME_DATA:
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_carda_text_no_lom_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
                                -x_offset + CARDA_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
-    case CARDA_ENTRY_STATE_UNFORMATTED:
-        prim = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_card_unformatted, CARDA_TEXT_CARD_UNFORMATTED), FIELD_TEXT_COLOR_NORMAL,
+    case CARD_MENU_ENTRY_STATE_UNFORMATTED:
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_carda_text_card_unformatted, CARD_MENU_TEXT_CARD_UNFORMATTED), FIELD_TEXT_COLOR_NORMAL,
                                -x_offset + CARDA_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARDA_ENTRY_STATE_NOT_POCKETSTATION:
-        prim = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_not_pocketstation, CARDA_TEXT_NOT_POCKETSTATION), FIELD_TEXT_COLOR_NORMAL,
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_carda_text_not_pocketstation, CARD_MENU_TEXT_NOT_POCKETSTATION), FIELD_TEXT_COLOR_NORMAL,
                                -x_offset + CARDA_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
-    case CARDA_ENTRY_STATE_CHECKING_CARD:
+    case CARD_MENU_ENTRY_STATE_CHECKING_CARD:
     {
         s32 message_x = -x_offset + CARDA_LIST_WIDTH / 2;
         u16* text_table = &g_carda_text_checking_card;
 
         prim =
-            field_draw_text(prim, ot, CARDA_TEXT(text_table, CARDA_TEXT_CHECKING_CARD), FIELD_TEXT_COLOR_NORMAL, message_x, -y_offset, FIELD_TEXT_ALIGN_CENTER);
-        prim = field_draw_text(prim, ot, CARDA_TEXT(text_table, CARDA_TEXT_DO_NOT_REMOVE_CARD), FIELD_TEXT_COLOR_NORMAL, message_x,
-                               CARDA_TEXT_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
-        prim = field_draw_text(prim, ot, CARDA_TEXT(text_table, CARDA_TEXT_CARD_OR_CONTROLLER), FIELD_TEXT_COLOR_NORMAL, message_x,
-                               CARDA_TEXT_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
+            field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECKING_CARD), FIELD_TEXT_COLOR_NORMAL, message_x, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), FIELD_TEXT_COLOR_NORMAL, message_x,
+                               CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CARD_OR_CONTROLLER), FIELD_TEXT_COLOR_NORMAL, message_x,
+                               CARD_MENU_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     }
-    case CARDA_ENTRY_STATE_CARD_FULL:
+    case CARD_MENU_ENTRY_STATE_CARD_FULL:
     {
         s32 message_x = -x_offset + CARDA_LIST_WIDTH / 2;
         u16* text_table;
 
-        prim = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_not_enough_blocks, CARDA_TEXT_NOT_ENOUGH_BLOCKS), FIELD_TEXT_COLOR_NORMAL, message_x,
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_carda_text_not_enough_blocks, CARD_MENU_TEXT_NOT_ENOUGH_BLOCKS), FIELD_TEXT_COLOR_NORMAL, message_x,
                                -y_offset, FIELD_TEXT_ALIGN_CENTER);
-        text_table = CARDA_TEXT_TABLE(g_carda_text_not_enough_blocks, CARDA_TEXT_NOT_ENOUGH_BLOCKS);
-        prim = field_draw_text(prim, ot, CARDA_TEXT(text_table, CARDA_TEXT_NEEDS_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, message_x,
-                               CARDA_DETAILS_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
+        text_table = CARD_MENU_TEXT_TABLE(g_carda_text_not_enough_blocks, CARD_MENU_TEXT_NOT_ENOUGH_BLOCKS);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_NEEDS_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, message_x,
+                               CARD_MENU_DETAILS_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     }
     case CARDA_ENTRY_STATE_NO_ROOM_FOR_DOWNLOAD:
@@ -740,28 +681,28 @@ static void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_o
         s32 message_x = -x_offset + CARDA_LIST_WIDTH / 2;
         u16* text_table;
 
-        prim = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_not_enough_blocks, CARDA_TEXT_NOT_ENOUGH_BLOCKS), FIELD_TEXT_COLOR_NORMAL, message_x,
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_carda_text_not_enough_blocks, CARD_MENU_TEXT_NOT_ENOUGH_BLOCKS), FIELD_TEXT_COLOR_NORMAL, message_x,
                                -y_offset, FIELD_TEXT_ALIGN_CENTER);
-        text_table = CARDA_TEXT_TABLE(g_carda_text_not_enough_blocks, CARDA_TEXT_NOT_ENOUGH_BLOCKS);
-        prim = field_draw_text(prim, ot, CARDA_TEXT(text_table, CARDA_TEXT_DOWNLOAD_RING_RING_LAND), FIELD_TEXT_COLOR_NORMAL, message_x,
-                               CARDA_DETAILS_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
-        prim = field_draw_text(prim, ot, CARDA_TEXT(text_table, CARDA_TEXT_NEEDS_SIX_BLOCKS), FIELD_TEXT_COLOR_NORMAL, message_x,
-                               CARDA_DETAILS_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
+        text_table = CARD_MENU_TEXT_TABLE(g_carda_text_not_enough_blocks, CARD_MENU_TEXT_NOT_ENOUGH_BLOCKS);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DOWNLOAD_RING_RING_LAND), FIELD_TEXT_COLOR_NORMAL, message_x,
+                               CARD_MENU_DETAILS_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_NEEDS_SIX_BLOCKS), FIELD_TEXT_COLOR_NORMAL, message_x,
+                               CARD_MENU_DETAILS_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     }
-    case CARDA_ENTRY_STATE_NO_CARD:
-        prim = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_no_card, CARDA_TEXT_NO_CARD), FIELD_TEXT_COLOR_NORMAL, -x_offset + CARDA_LIST_WIDTH / 2,
+    case CARD_MENU_ENTRY_STATE_NO_CARD:
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_carda_text_no_card, CARD_MENU_TEXT_NO_CARD), FIELD_TEXT_COLOR_NORMAL, -x_offset + CARDA_LIST_WIDTH / 2,
                                -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
-    case CARDA_ENTRY_STATE_ACCESS_FAILED:
-        prim = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_card_access_failed, CARDA_TEXT_CARD_ACCESS_FAILED), FIELD_TEXT_COLOR_NORMAL,
+    case CARD_MENU_ENTRY_STATE_ACCESS_FAILED:
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_carda_text_card_access_failed, CARD_MENU_TEXT_CARD_ACCESS_FAILED), FIELD_TEXT_COLOR_NORMAL,
                                -x_offset + CARDA_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
-    case CARDA_ENTRY_STATE_NO_SAVE_DATA:
-        prim = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_no_save_data, CARDA_TEXT_NO_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
+    case CARD_MENU_ENTRY_STATE_NO_SAVE_DATA:
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_carda_text_no_save_data, CARD_MENU_TEXT_NO_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
                                -x_offset + CARDA_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
-    case CARDA_ENTRY_STATE_BLANK:
+    case CARD_MENU_ENTRY_STATE_BLANK:
         break;
     default:
     {
@@ -773,12 +714,12 @@ static void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_o
             s32 message_x = -x_offset + CARDA_LIST_WIDTH / 2;
             u16* text_table = &g_carda_text_checking_card;
 
-            prim = field_draw_text(prim, ot, CARDA_TEXT(text_table, CARDA_TEXT_CHECKING_CARD), FIELD_TEXT_COLOR_NORMAL, message_x, -y_offset,
+            prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECKING_CARD), FIELD_TEXT_COLOR_NORMAL, message_x, -y_offset,
                                    FIELD_TEXT_ALIGN_CENTER);
-            prim = field_draw_text(prim, ot, CARDA_TEXT(text_table, CARDA_TEXT_DO_NOT_REMOVE_CARD), FIELD_TEXT_COLOR_NORMAL, message_x,
-                                   CARDA_TEXT_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
-            prim = field_draw_text(prim, ot, CARDA_TEXT(text_table, CARDA_TEXT_CARD_OR_CONTROLLER), FIELD_TEXT_COLOR_NORMAL, message_x,
-                                   CARDA_TEXT_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
+            prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), FIELD_TEXT_COLOR_NORMAL, message_x,
+                                   CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
+            prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CARD_OR_CONTROLLER), FIELD_TEXT_COLOR_NORMAL, message_x,
+                                   CARD_MENU_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
             break;
         }
 
@@ -800,79 +741,79 @@ static void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_o
             {
                 color = FIELD_TEXT_COLOR_NORMAL;
                 marker_x = list_x + CARDA_ENTRY_MARKER_X;
-                label_x = CARDA_ENTRY_LABEL_X - x_offset;
-                row_y = ((i * CARDA_ENTRY_ROW_HEIGHT) - y_offset) - g_carda_scroll_y + 1;
-                if (row_y > -CARDA_ENTRY_ROW_HEIGHT && row_y < CARDA_LIST_HEIGHT)
+                label_x = CARD_MENU_ENTRY_LABEL_X - x_offset;
+                row_y = ((i * CARD_MENU_ENTRY_ROW_HEIGHT) - y_offset) - g_carda_scroll_y + 1;
+                if (row_y > -CARD_MENU_ENTRY_ROW_HEIGHT && row_y < CARD_MENU_LIST_HEIGHT)
                 {
                     if (g_carda_entry_ranks[i] >= 0)
                     {
-                        value_pos.x = list_x + CARDA_ENTRY_VALUE_X;
+                        value_pos.x = list_x + CARD_MENU_ENTRY_VALUE_X;
                         value_pos.y = row_y;
                         prim = field_draw_number(ot, prim, g_card_entry_suffix_values[i], color, &value_pos, FIELD_TEXT_ALIGN_LEFT);
-                        prim = field_draw_text(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, g_carda_text_number_label), color,
-                                               list_x + CARDA_ENTRY_NUMBER_LABEL_X, row_y, FIELD_TEXT_ALIGN_LEFT);
+                        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_carda_text_number_label), color,
+                                               list_x + CARD_MENU_ENTRY_NUMBER_LABEL_X, row_y, FIELD_TEXT_ALIGN_LEFT);
                         value_pos.y = row_y;
                         value_pos.x = marker_x;
                         if ((g_carda_rank_count - 1) == g_carda_entry_ranks[i])
                         {
-                            marker_offset = text_table[CARDA_TEXT_NEWEST];
+                            marker_offset = text_table[CARD_MENU_TEXT_NEWEST];
                             marker_text_x = (s16)marker_x;
                             prim =
-                                field_draw_text(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, marker_offset), color, marker_text_x, row_y, FIELD_TEXT_ALIGN_LEFT);
+                                field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, marker_offset), color, marker_text_x, row_y, FIELD_TEXT_ALIGN_LEFT);
                         }
                         else if (g_carda_entry_ranks[i] < 2)
                         {
-                            marker_offset = text_table[CARDA_TEXT_OLDEST];
+                            marker_offset = text_table[CARD_MENU_TEXT_OLDEST];
                             marker_text_x = (s16)marker_x;
                             prim =
-                                field_draw_text(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, marker_offset), color, marker_text_x, row_y, FIELD_TEXT_ALIGN_LEFT);
+                                field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, marker_offset), color, marker_text_x, row_y, FIELD_TEXT_ALIGN_LEFT);
                         }
                         if (*skip_hex_digits(&g_card_entries[g_card_slot][i].name[CARD_SAVE_FILENAME_PREFIX_LENGTH]) == '+')
                         {
-                            prim = field_draw_text(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, g_carda_text_plus_marker), color,
+                            prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_carda_text_plus_marker), color,
                                                    CARDA_ENTRY_PLUS_RIGHT_X - x_offset, row_y, FIELD_TEXT_ALIGN_RIGHT);
                         }
                     }
                     if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][i].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
                     {
                         prim =
-                            field_draw_text(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, g_carda_text_mana_label), color, label_x, row_y, FIELD_TEXT_ALIGN_LEFT);
+                            field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_carda_text_mana_label), color, label_x, row_y, FIELD_TEXT_ALIGN_LEFT);
                     }
                     else if (strncmp(g_lom_pocketstation_filename_prefix, g_card_entries[g_card_slot][i].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
                     {
-                        prim = field_draw_text(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, g_carda_text_ring_ring_land_label), color, label_x, row_y,
+                        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_carda_text_ring_ring_land_label), color, label_x, row_y,
                                                FIELD_TEXT_ALIGN_LEFT);
                     }
-                    else if (strncmp(g_new_save_entry_prefix, g_card_entries[g_card_slot][i].name, CARDA_NEW_SAVE_ENTRY_NAME_LENGTH) == 0)
+                    else if (strncmp(g_new_save_entry_prefix, g_card_entries[g_card_slot][i].name, CARD_MENU_NEW_SAVE_NAME_LENGTH) == 0)
                     {
-                        prim = field_draw_text(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, g_carda_text_new_save_label), color, label_x, row_y,
+                        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_carda_text_new_save_label), color, label_x, row_y,
                                                FIELD_TEXT_ALIGN_LEFT);
                     }
                     else if (strncmp(g_card_full_entry_name, g_card_entries[g_card_slot][i].name, CARDA_CARD_FULL_ENTRY_NAME_LENGTH) == 0)
                     {
-                        prim = field_draw_text(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, g_carda_text_card_full_label), color, label_x, row_y,
+                        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_carda_text_card_full_label), color, label_x, row_y,
                                                FIELD_TEXT_ALIGN_LEFT);
                     }
                     else
                     {
-                        prim = field_draw_text(prim, ot, CARDA_TEXT_BY_OFFSET(text_table, g_carda_text_other_game_label), color, label_x, row_y,
+                        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_carda_text_other_game_label), color, label_x, row_y,
                                                FIELD_TEXT_ALIGN_LEFT);
                     }
                 }
             }
         }
 
-        row_y = ((g_carda_selected_row * CARDA_ENTRY_ROW_HEIGHT) - y_offset) - g_carda_scroll_y;
+        row_y = ((g_carda_selected_row * CARD_MENU_ENTRY_ROW_HEIGHT) - y_offset) - g_carda_scroll_y;
         if (g_carda_entry_scan_active == 0)
         {
             TILE* tile = (TILE*)prim;
 
-            *(u32*)&tile->r0 = CARDA_HIGHLIGHT_COLOR;
+            *(u32*)&tile->r0 = CARD_MENU_HIGHLIGHT_COLOR;
             setlen(tile, 3);
             setcode(tile, GPU_CODE_TILE | GPU_CODE_SEMI_TRANS);
             tile->w = CARDA_LIST_WIDTH;
             setXY0(tile, 0, row_y);
-            tile->h = CARDA_ENTRY_ROW_HEIGHT;
+            tile->h = CARD_MENU_ENTRY_ROW_HEIGHT;
             addPrim(ot, tile);
             prim = tile + 1;
         }
@@ -896,17 +837,17 @@ static void* carda_draw_title(u_long* ot, void* prim, s32 x_offset, s32 y_offset
 
     if (CARDA_IS_POCKETSTATION_MODE(g_carda_mode))
     {
-        prim = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_ring_ring_land_title, CARDA_TEXT_RING_RING_LAND_TITLE), FIELD_TEXT_COLOR_NORMAL,
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_carda_text_ring_ring_land_title, CARD_MENU_TEXT_RING_RING_LAND_TITLE), FIELD_TEXT_COLOR_NORMAL,
                                -x_offset + CARDA_POCKETSTATION_TITLE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
     }
     else if (g_carda_mode == CARDA_MODE_LOAD)
     {
-        prim = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_load_title, CARDA_TEXT_LOAD_TITLE), FIELD_TEXT_COLOR_NORMAL,
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_carda_text_load_title, CARD_MENU_TEXT_LOAD_TITLE), FIELD_TEXT_COLOR_NORMAL,
                                -x_offset + CARDA_TITLE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
     }
     else
     {
-        prim = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_save_title, CARDA_TEXT_SAVE_TITLE), FIELD_TEXT_COLOR_NORMAL,
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_carda_text_save_title, CARD_MENU_TEXT_SAVE_TITLE), FIELD_TEXT_COLOR_NORMAL,
                                -x_offset + CARDA_TITLE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
     }
 
@@ -929,16 +870,16 @@ static void* carda_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s
     if (g_card_slot != 0)
     {
         tile = (TILE*)prim;
-        *(u32*)&tile->r0 = CARDA_INACTIVE_LABEL_COLOR;
+        *(u32*)&tile->r0 = CARD_MENU_INACTIVE_LABEL_COLOR;
         setlen(tile, 3);
         setcode(tile, GPU_CODE_TILE | GPU_CODE_SEMI_TRANS);
         setXY0(tile, 0, 0);
-        setWH(tile, CARDA_CARD_LABEL_WIDTH, CARDA_CARD_LABEL_HEIGHT);
+        setWH(tile, CARD_MENU_CARD_LABEL_WIDTH, CARD_MENU_CARD_LABEL_HEIGHT);
         addPrim(ot, tile);
         prim = tile + 1;
     }
-    return field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_card_slot0_label, CARDA_TEXT_CARD_SLOT0_LABEL), FIELD_TEXT_COLOR_NORMAL,
-                           -x_offset + CARDA_CARD_LABEL_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+    return field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_carda_text_card_slot0_label, CARD_MENU_TEXT_CARD_SLOT0_LABEL), FIELD_TEXT_COLOR_NORMAL,
+                           -x_offset + CARD_MENU_CARD_LABEL_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
 }
 
 /**
@@ -957,16 +898,16 @@ static void* carda_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s
     if (g_card_slot == 0)
     {
         tile = (TILE*)prim;
-        *(u32*)&tile->r0 = CARDA_INACTIVE_LABEL_COLOR;
+        *(u32*)&tile->r0 = CARD_MENU_INACTIVE_LABEL_COLOR;
         setlen(tile, 3);
         setcode(tile, GPU_CODE_TILE | GPU_CODE_SEMI_TRANS);
         setXY0(tile, 0, 0);
-        setWH(tile, CARDA_CARD_LABEL_WIDTH, CARDA_CARD_LABEL_HEIGHT);
+        setWH(tile, CARD_MENU_CARD_LABEL_WIDTH, CARD_MENU_CARD_LABEL_HEIGHT);
         addPrim(ot, tile);
         prim = tile + 1;
     }
-    return field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_card_slot1_label, CARDA_TEXT_CARD_SLOT1_LABEL), FIELD_TEXT_COLOR_NORMAL,
-                           -x_offset + CARDA_CARD_LABEL_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+    return field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_carda_text_card_slot1_label, CARD_MENU_TEXT_CARD_SLOT1_LABEL), FIELD_TEXT_COLOR_NORMAL,
+                           -x_offset + CARD_MENU_CARD_LABEL_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
 }
 
 /**
@@ -992,7 +933,7 @@ static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_off
     DVECTOR unused;
 
     result = prim;
-    if (g_carda_selection_status == CARDA_SELECTION_NONE)
+    if (g_carda_selection_status == CARD_MENU_SELECTION_NONE)
     {
         return result;
     }
@@ -1000,32 +941,32 @@ static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_off
     {
         return result;
     }
-    if (g_carda_selection_status == CARDA_SELECTION_EMPTY_CARD)
+    if (g_carda_selection_status == CARD_MENU_SELECTION_EMPTY_CARD)
     {
         return result;
     }
-    if (g_card_entry_state == CARDA_ENTRY_STATE_CARD_FULL)
+    if (g_card_entry_state == CARD_MENU_ENTRY_STATE_CARD_FULL)
     {
         return result;
     }
-    if (g_card_entry_state >= CARDA_ENTRY_COUNT_LIMIT)
+    if (g_card_entry_state >= CARD_MENU_ENTRY_COUNT_LIMIT)
     {
         return result;
     }
-    if (g_carda_selection_status == CARDA_SELECTION_NEW_SAVE)
+    if (g_carda_selection_status == CARD_MENU_SELECTION_NEW_SAVE)
     {
         s32 x = -x_offset;
         u16* text_table;
 
-        result = field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_new_save_title, CARDA_TEXT_NEW_SAVE_TITLE), FIELD_TEXT_COLOR_NORMAL, x, -y_offset,
+        result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_carda_text_new_save_title, CARD_MENU_TEXT_NEW_SAVE_TITLE), FIELD_TEXT_COLOR_NORMAL, x, -y_offset,
                                  FIELD_TEXT_ALIGN_LEFT);
-        text_table = CARDA_TEXT_TABLE(g_carda_text_new_save_title, CARDA_TEXT_NEW_SAVE_TITLE);
-        return field_draw_text(result, ot, CARDA_TEXT(text_table, CARDA_TEXT_USES_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, x, CARDA_DETAILS_LINE_HEIGHT - y_offset,
+        text_table = CARD_MENU_TEXT_TABLE(g_carda_text_new_save_title, CARD_MENU_TEXT_NEW_SAVE_TITLE);
+        return field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_USES_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, x, CARD_MENU_DETAILS_LINE_HEIGHT - y_offset,
                                FIELD_TEXT_ALIGN_LEFT);
     }
     else if (g_carda_selection_status == CARDA_SELECTION_CARD_FULL)
     {
-        return field_draw_text(prim, ot, CARDA_TEXT_AT(g_carda_text_needs_two_blocks, CARDA_TEXT_NEEDS_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, -x_offset,
+        return field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_carda_text_needs_two_blocks, CARD_MENU_TEXT_NEEDS_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, -x_offset,
                                -y_offset, FIELD_TEXT_ALIGN_LEFT);
     }
     else
@@ -1121,31 +1062,31 @@ static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_off
 
                     base_y = shown_save->play_time;
 
-                    pos.x = x + CARDA_DETAILS_HOURS_RIGHT_X;
+                    pos.x = x + CARD_MENU_DETAILS_HOURS_RIGHT_X;
                     pos.y = y;
                     hours = base_y / SAVED_PLAY_TIME_TICKS_PER_HOUR;
                     result = field_draw_number(ot, result, hours, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
                     result = field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, FIELD_UI_TEXT_TIME_SEPARATOR),
-                                             FIELD_TEXT_COLOR_NORMAL, x + CARDA_DETAILS_TIME_SEPARATOR_X, y, FIELD_TEXT_ALIGN_LEFT);
+                                             FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TIME_SEPARATOR_X, y, FIELD_TEXT_ALIGN_LEFT);
                     base_y = (base_y / SAVED_PLAY_TIME_TICKS_PER_MINUTE) - (hours * 60);
                     if (base_y < 10)
                     {
-                        pos.x = x + CARDA_DETAILS_MINUTES_TENS_RIGHT_X;
+                        pos.x = x + CARD_MENU_DETAILS_MINUTES_TENS_RIGHT_X;
                         pos.y = y;
                         result = field_draw_number(ot, result, 0, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
                     }
-                    pos.x = x + CARDA_DETAILS_MINUTES_RIGHT_X;
+                    pos.x = x + CARD_MENU_DETAILS_MINUTES_RIGHT_X;
                     pos.y = y;
                     result = field_draw_number(ot, result, base_y, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
-                    result = field_draw_text(result, ot, shown_save->summary_name, FIELD_TEXT_COLOR_NORMAL, x + CARDA_DETAILS_TEXT_X,
-                                             y + CARDA_DETAILS_LINE_HEIGHT, FIELD_TEXT_ALIGN_LEFT);
-                    result = field_draw_text(result, ot, CARDA_TEXT(g_carda_location_names, shown_save->track.bits.music_track), FIELD_TEXT_COLOR_NORMAL,
-                                             x + CARDA_DETAILS_TEXT_X, y + CARDA_DETAILS_LINE_HEIGHT * 2, FIELD_TEXT_ALIGN_LEFT);
+                    result = field_draw_text(result, ot, shown_save->summary_name, FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TEXT_X,
+                                             y + CARD_MENU_DETAILS_LINE_HEIGHT, FIELD_TEXT_ALIGN_LEFT);
+                    result = field_draw_text(result, ot, CARD_MENU_TEXT(g_carda_location_names, shown_save->track.bits.music_track), FIELD_TEXT_COLOR_NORMAL,
+                                             x + CARD_MENU_DETAILS_TEXT_X, y + CARD_MENU_DETAILS_LINE_HEIGHT * 2, FIELD_TEXT_ALIGN_LEFT);
                 }
             }
             else
             {
-                result = field_draw_text(result, ot, CARDA_TEXT_AT(g_carda_text_wrong_version, CARDA_TEXT_WRONG_VERSION), FIELD_TEXT_COLOR_NORMAL, -x_offset,
+                result = field_draw_text(result, ot, CARD_MENU_TEXT_AT(g_carda_text_wrong_version, CARD_MENU_TEXT_WRONG_VERSION), FIELD_TEXT_COLOR_NORMAL, -x_offset,
                                          -y_offset, FIELD_TEXT_ALIGN_LEFT);
             }
         }
@@ -1170,7 +1111,7 @@ static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_off
                     name[j] = g_carda_selected_file.header.title[1][j];
                 }
                 name[j] = 0;
-                result = draw_cached_text(result, ot, name, -x_offset, -y_offset + CARDA_DETAILS_LINE_HEIGHT, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_LEFT);
+                result = draw_cached_text(result, ot, name, -x_offset, -y_offset + CARD_MENU_DETAILS_LINE_HEIGHT, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_LEFT);
             }
         }
     }
@@ -1197,18 +1138,18 @@ void* carda_draw_cant_hold_more(u_long* ot, void* prim, s32 x_offset, s32 y_offs
 }
 
 /**
- * @brief Free every element of the pool and reset g_menu_element_counter to 0x20.
+ * @brief Free every element of the pool and select the sub-overlay frame style.
  */
 void carda_clear_elements(void)
 {
-    CardaElement* p;
+    CardMenuElement* p;
     s32 i;
 
-    g_menu_element_counter = 0x20;
+    g_field_menu_frame_style = FIELD_MENU_FRAME_STYLE_SUBSCREEN;
     p = g_carda_element_pool;
-    for (i = 0; i < CARDA_ELEMENT_COUNT; i++)
+    for (i = 0; i < CARD_MENU_ELEMENT_COUNT; i++)
     {
-        p->attr.bits.state = CARDA_ELEMENT_FREE;
+        p->attr.bits.state = CARD_MENU_ELEMENT_FREE;
         p++;
     }
 }
@@ -1217,17 +1158,17 @@ void carda_clear_elements(void)
  * @brief Claim the first free pool element and start its opening transition.
  * @return The claimed element, or the pool base element when none is free.
  */
-CardaElement* carda_alloc_element(void)
+CardMenuElement* carda_alloc_element(void)
 {
-    CardaElement* p;
+    CardMenuElement* p;
     s32 i;
 
     p = g_carda_element_pool;
-    for (i = 0; i < CARDA_ELEMENT_COUNT; i++, p++)
+    for (i = 0; i < CARD_MENU_ELEMENT_COUNT; i++, p++)
     {
-        if (p->attr.bits.state == CARDA_ELEMENT_FREE)
+        if (p->attr.bits.state == CARD_MENU_ELEMENT_FREE)
         {
-            p->attr.bits.state = CARDA_ELEMENT_OPENING;
+            p->attr.bits.state = CARD_MENU_ELEMENT_OPENING;
             return p;
         }
     }
@@ -1248,7 +1189,7 @@ static void carda_update_and_draw_elements(FieldRenderHalf* render)
 {
     void* prim;
     u_long* ot;
-    CardaElement* element;
+    CardMenuElement* element;
     s32 i;
     DRAWENV draw_env;
     s32 scaled_width;
@@ -1257,24 +1198,24 @@ static void carda_update_and_draw_elements(FieldRenderHalf* render)
     prim = render->primitive_cursor;
     ot = render->ordering_table;
 
-    if (g_carda_element_pool[CARDA_ELEMENT_MAIN].draw == carda_draw_entry_list)
+    if (g_carda_element_pool[CARD_MENU_ELEMENT_MAIN].draw == carda_draw_entry_list)
     {
-        if ((g_card_entry_state < CARDA_ENTRY_COUNT_LIMIT) && (g_carda_element_pool[CARDA_ELEMENT_MAIN].attr.bits.state == CARDA_ELEMENT_OPEN))
+        if ((g_card_entry_state < CARD_MENU_ENTRY_COUNT_LIMIT) && (g_carda_element_pool[CARD_MENU_ELEMENT_MAIN].attr.bits.state == CARD_MENU_ELEMENT_OPEN))
         {
-            if ((g_card_entry_state * CARDA_ENTRY_ROW_HEIGHT) > (g_carda_scroll_y + CARDA_LIST_HEIGHT))
+            if ((g_card_entry_state * CARD_MENU_ENTRY_ROW_HEIGHT) > (g_carda_scroll_y + CARD_MENU_LIST_HEIGHT))
             {
-                prim = field_draw_menu_scroll_arrow(prim, ot, CARDA_SCROLL_ARROW_X, CARDA_SCROLL_ARROW_DOWN_Y, FIELD_MENU_ARROW_DOWN);
+                prim = field_draw_menu_scroll_arrow(prim, ot, CARDA_SCROLL_ARROW_X, CARD_MENU_SCROLL_ARROW_DOWN_Y, FIELD_MENU_ARROW_DOWN);
             }
             if (g_carda_scroll_y != 0)
             {
-                prim = field_draw_menu_scroll_arrow(prim, ot, CARDA_SCROLL_ARROW_X, CARDA_SCROLL_ARROW_UP_Y, FIELD_MENU_ARROW_UP);
+                prim = field_draw_menu_scroll_arrow(prim, ot, CARDA_SCROLL_ARROW_X, CARD_MENU_SCROLL_ARROW_UP_Y, FIELD_MENU_ARROW_UP);
             }
         }
     }
-    else if ((g_carda_element_pool[CARDA_ELEMENT_MAIN].draw == carda_draw_item_list) &&
-             (g_carda_element_pool[CARDA_ELEMENT_MAIN].attr.bits.state == CARDA_ELEMENT_OPEN))
+    else if ((g_carda_element_pool[CARD_MENU_ELEMENT_MAIN].draw == carda_draw_item_list) &&
+             (g_carda_element_pool[CARD_MENU_ELEMENT_MAIN].attr.bits.state == CARD_MENU_ELEMENT_OPEN))
     {
-        if (((g_carda_received_item_count * CARDA_TEXT_LINE_HEIGHT) - g_carda_scroll_y) > CARDA_ITEM_LIST_VISIBLE_ROWS * CARDA_TEXT_LINE_HEIGHT)
+        if (((g_carda_received_item_count * CARD_MENU_LINE_HEIGHT) - g_carda_scroll_y) > CARDA_ITEM_LIST_VISIBLE_ROWS * CARD_MENU_LINE_HEIGHT)
         {
             prim = field_draw_menu_scroll_arrow(prim, ot, CARDA_ITEM_SCROLL_ARROW_X, CARDA_ITEM_SCROLL_ARROW_DOWN_Y, FIELD_MENU_ARROW_DOWN);
         }
@@ -1294,9 +1235,9 @@ static void carda_update_and_draw_elements(FieldRenderHalf* render)
     }
 
     element = g_carda_element_pool;
-    for (i = 0; i < CARDA_ELEMENT_COUNT; i++, element++)
+    for (i = 0; i < CARD_MENU_ELEMENT_COUNT; i++, element++)
     {
-        if (element->attr.bits.state != CARDA_ELEMENT_FREE)
+        if (element->attr.bits.state != CARD_MENU_ELEMENT_FREE)
         {
             SetDrawEnv((DR_ENV*)prim, &draw_env);
             addPrim(ot, prim);
@@ -1304,39 +1245,39 @@ static void carda_update_and_draw_elements(FieldRenderHalf* render)
 
             switch (element->attr.bits.state)
             {
-            case CARDA_ELEMENT_OPENING:
+            case CARD_MENU_ELEMENT_OPENING:
                 g_pad_input = 0;
                 {
-                    u32 width_low = CARDA_ELEMENT_WIDTH_LOW(element);
-                    s32 width = CARDA_ELEMENT_WIDTH(element, width_low);
+                    u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
+                    s32 width = CARD_MENU_ELEMENT_WIDTH(element, width_low);
 
-                    scaled_width = (width * element->attr.bits.transition_step) / CARDA_ELEMENT_TRANSITION_STEPS;
-                    scaled_height = (element->size.bits.height * element->attr.bits.transition_step) / CARDA_ELEMENT_TRANSITION_STEPS;
+                    scaled_width = (width * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                    scaled_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
                     prim = element->draw(ot, prim, (width - scaled_width) / 2, (element->size.bits.height - scaled_height) / 2);
                 }
                 {
                     s32 x = element->attr.bits.x;
-                    u32 width_low = CARDA_ELEMENT_WIDTH_LOW(element);
+                    u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
 
-                    prim = field_draw_menu_frame(prim, ot, x + (CARDA_ELEMENT_WIDTH(element, width_low) - scaled_width) / 2,
+                    prim = field_draw_menu_frame(prim, ot, x + (CARD_MENU_ELEMENT_WIDTH(element, width_low) - scaled_width) / 2,
                                                  element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
-                                                 render->display_rect.y, i == CARDA_ELEMENT_MODAL);
+                                                 render->display_rect.y, i == CARD_MENU_ELEMENT_MODAL);
                 }
                 element->attr.bits.transition_step++;
-                if (element->attr.bits.transition_step == CARDA_ELEMENT_TRANSITION_STEPS)
+                if (element->attr.bits.transition_step == CARD_MENU_ELEMENT_TRANSITION_STEPS)
                 {
                     field_reset_input_repeat();
-                    element->attr.bits.state = CARDA_ELEMENT_OPEN;
+                    element->attr.bits.state = CARD_MENU_ELEMENT_OPEN;
                 }
                 break;
 
-            case CARDA_ELEMENT_OPEN:
+            case CARD_MENU_ELEMENT_OPEN:
                 prim = element->draw(ot, prim, 0, 0);
                 {
-                    u32 width_low = CARDA_ELEMENT_WIDTH_LOW(element);
+                    u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
 
-                    prim = field_draw_menu_frame(prim, ot, element->attr.bits.x, element->attr.bits.y, CARDA_ELEMENT_WIDTH(element, width_low),
-                                                 element->size.bits.height, render->display_rect.y, i == CARDA_ELEMENT_MODAL);
+                    prim = field_draw_menu_frame(prim, ot, element->attr.bits.x, element->attr.bits.y, CARD_MENU_ELEMENT_WIDTH(element, width_low),
+                                                 element->size.bits.height, render->display_rect.y, i == CARD_MENU_ELEMENT_MODAL);
                 }
                 if (element->attr.bits.transition_step != 0)
                 {
@@ -1344,38 +1285,38 @@ static void carda_update_and_draw_elements(FieldRenderHalf* render)
                 }
                 break;
 
-            case CARDA_ELEMENT_CLOSING:
+            case CARD_MENU_ELEMENT_CLOSING:
                 g_pad_input = 0;
                 {
-                    u32 width_low = CARDA_ELEMENT_WIDTH_LOW(element);
-                    s32 width = CARDA_ELEMENT_WIDTH(element, width_low);
+                    u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
+                    s32 width = CARD_MENU_ELEMENT_WIDTH(element, width_low);
 
-                    scaled_width = (width * element->attr.bits.transition_step) / CARDA_ELEMENT_TRANSITION_STEPS;
-                    scaled_height = (element->size.bits.height * element->attr.bits.transition_step) / CARDA_ELEMENT_TRANSITION_STEPS;
+                    scaled_width = (width * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                    scaled_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
                     prim = element->draw(ot, prim, (width - scaled_width) / 2, (element->size.bits.height - scaled_height) / 2);
                 }
                 {
                     s32 x = element->attr.bits.x;
-                    u32 width_low = CARDA_ELEMENT_WIDTH_LOW(element);
+                    u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
 
-                    prim = field_draw_menu_frame(prim, ot, x + (CARDA_ELEMENT_WIDTH(element, width_low) - scaled_width) / 2,
+                    prim = field_draw_menu_frame(prim, ot, x + (CARD_MENU_ELEMENT_WIDTH(element, width_low) - scaled_width) / 2,
                                                  element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
-                                                 render->display_rect.y, i == CARDA_ELEMENT_MODAL);
+                                                 render->display_rect.y, i == CARD_MENU_ELEMENT_MODAL);
                 }
                 element->attr.bits.transition_step--;
                 if (element->attr.bits.transition_step == 0)
                 {
-                    element->attr.bits.transition_step = CARDA_ELEMENT_CLOSED_FRAMES;
-                    element->attr.bits.state = CARDA_ELEMENT_CLOSED;
+                    element->attr.bits.transition_step = CARD_MENU_ELEMENT_CLOSED_FRAMES;
+                    element->attr.bits.state = CARD_MENU_ELEMENT_CLOSED;
                 }
                 break;
 
-            case CARDA_ELEMENT_CLOSED:
+            case CARD_MENU_ELEMENT_CLOSED:
                 g_pad_input = 0;
                 element->attr.bits.transition_step--;
                 if (element->attr.bits.transition_step == 0)
                 {
-                    element->attr.bits.state = CARDA_ELEMENT_FREE;
+                    element->attr.bits.state = CARD_MENU_ELEMENT_FREE;
                 }
                 break;
             }
@@ -1390,7 +1331,7 @@ static void carda_update_and_draw_elements(FieldRenderHalf* render)
  */
 void carda_deactivate_primary_element(void)
 {
-    g_carda_element_pool[CARDA_ELEMENT_MODAL].attr.bits.state = CARDA_ELEMENT_FREE;
+    g_carda_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_FREE;
 }
 
 #include "../../common/encoded_text/encoded_text_append.inc.c"

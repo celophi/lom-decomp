@@ -8,11 +8,21 @@
  * @brief FIELD's resident menu-window drawing, used by the menu overlays.
  */
 
+/**
+ * @brief g_field_menu_frame_style values: the u offset of a frame style's artwork
+ *        in the menu texture page.
+ */
+#define FIELD_MENU_FRAME_STYLE_FIELD 0      /**< Field frame, with the first palette. */
+#define FIELD_MENU_FRAME_STYLE_SUBSCREEN 32 /**< Frame of the sub-overlay screens (shops, save screens), with the second palette. */
+
 /** @brief field_draw_menu_scroll_arrow direction: the down arrow. */
 #define FIELD_MENU_ARROW_DOWN 0
 
 /** @brief field_draw_menu_scroll_arrow direction: the up arrow. */
 #define FIELD_MENU_ARROW_UP 1
+
+/** @brief Frame style of every menu window: a FIELD_MENU_FRAME_STYLE_* value. */
+extern s32 g_field_menu_frame_style;
 
 /**
  * @brief Emit a bordered menu frame: its clip area, frame tiles and fill.

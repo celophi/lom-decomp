@@ -21,6 +21,7 @@
 #include "common/card_events.h"
 #include "main/card_callbacks.h"
 #include "common/card_directory.h"
+#include "common/card_menu.h"
 #include "main/cdrom.h"
 #include "main/controller.h"
 #include <strings.h>
@@ -29,88 +30,6 @@
 #include "carda_widgets.h"
 #include "carda_save.h"
 #include "carda_card.h"
-
-/**
- * @brief Draw callback of a CARDA UI element: emits the element's content at
- *        the given transition offsets and returns the advanced primitive cursor.
- */
-typedef void* (*CardaElementDrawFunc)(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-
-/**
- * @brief One animated CARDA UI element (a framed window plus its content).
- *
- * Eight of these form the element pool starting at g_carda_element_pool.  The nine-bit
- * window width straddles the two state words: its low eight bits are the top
- * byte of attr and its high bit is size.bits.width_high.  No bitfield can span
- * that boundary, so the low byte is always read and written through attr.word
- * (see CARDA_ELEMENT_WIDTH and CARDA_SET_ELEMENT_WIDTH_LOW).
- */
-typedef struct CardaElement
-{
-    union
-    {
-        u32 word;
-        struct
-        {
-            u32 state : 3;
-            u32 transition_step : 4;
-            u32 x : 9;
-            u32 y : 8;
-            u32 width_low : 8;
-        } bits;
-    } attr;
-    union
-    {
-        u32 word;
-        struct
-        {
-            u32 width_high : 1;
-            u32 height : 8;
-            u32 unk9 : 23;
-        } bits;
-    } size;
-    CardaElementDrawFunc draw;
-} CardaElement;
-
-/** @brief CardaElement.attr.bits.state values. */
-#define CARDA_ELEMENT_FREE 0
-#define CARDA_ELEMENT_OPENING 1
-#define CARDA_ELEMENT_OPEN 2
-#define CARDA_ELEMENT_CLOSING 3
-#define CARDA_ELEMENT_CLOSED 4
-
-/** @brief Number of elements in the CARDA UI element pool. */
-#define CARDA_ELEMENT_COUNT 8
-
-/** @brief Frames an element takes to open or close; its window scales by transition_step / this. */
-#define CARDA_ELEMENT_TRANSITION_STEPS 8
-
-/** @brief Frames a closed element stays in CARDA_ELEMENT_CLOSED before it is freed. */
-#define CARDA_ELEMENT_CLOSED_FRAMES 3
-
-/** @brief Pool slot of the modal window (prompts, dialogs, progress), drawn with the bright frame; the builders hold it while allocating. */
-#define CARDA_ELEMENT_MODAL 0
-
-/** @brief Pool slot of the first allocated window: the entry list, the PocketStation transfer window or the item list. */
-#define CARDA_ELEMENT_MAIN 1
-
-/** @brief Bit position of the width's low byte inside CardaElement.attr.word. */
-#define CARDA_ELEMENT_WIDTH_SHIFT 24
-
-/** @brief Low eight bits of a CardaElement's window width. */
-#define CARDA_ELEMENT_WIDTH_LOW(element) ((element)->attr.word >> CARDA_ELEMENT_WIDTH_SHIFT)
-
-/**
- * @brief Full nine-bit window width of a CardaElement.
- * @param element Element whose width is read.
- * @param width_low The width's low byte, as read by CARDA_ELEMENT_WIDTH_LOW.
- */
-#define CARDA_ELEMENT_WIDTH(element, width_low) ((s32)(((element)->size.bits.width_high << 8) | (width_low)))
-
-/** @brief Store the low eight bits of a CardaElement's window width. */
-#define CARDA_SET_ELEMENT_WIDTH_LOW(element, width)                                                                                                            \
-    ((element)->attr.word = ((element)->attr.word & ((1 << CARDA_ELEMENT_WIDTH_SHIFT) - 1)) | ((u32)(width) << CARDA_ELEMENT_WIDTH_SHIFT))
-
 /**
  * @brief g_carda_mode values: what FIELD opened the card screen for.
  * @note The US release keeps the PocketStation modes but leaves their texts empty.
@@ -137,19 +56,20 @@ typedef struct CardaElement
 /**
  * @brief g_card_entry_state values.
  *
- * Below CARDA_ENTRY_COUNT_LIMIT the value is the number of directory entries
+ * Below CARD_MENU_ENTRY_COUNT_LIMIT the value is the number of directory entries
  * read from the current card. From 0xE9 up it is a status whose message the
  * entry list or the PocketStation window shows instead of the entries; the
- * values below 0xF6 are only used by the PocketStation modes.
+ * values below 0xF6 are only used by the PocketStation modes. The states from
+ * 0xF8 up are the shared CARD_MENU_ENTRY_STATE_* values.
  */
 #define CARDA_ENTRY_STATE_PET_ALREADY_ON_RANCH 0xE9       /**< The pet on the PocketStation is already on the ranch. */
 #define CARDA_ENTRY_STATE_CONFIRM_RETURN 0xEA             /**< Asks whether to return the pet and erase Ring Ring Land. */
 #define CARDA_ENTRY_STATE_FORMAT_FAILED 0xEB              /**< Status dialog CARDA_DIALOG_FORMAT_FAILED. */
 #define CARDA_ENTRY_STATE_SAVE_CORRUPT 0xEC               /**< Status dialog CARDA_DIALOG_SAVE_CORRUPT. */
-#define CARDA_ENTRY_STATE_NO_POCKETSTATION 0xED           /**< Status dialog CARDA_DIALOG_NOT_POCKETSTATION. */
-#define CARDA_ENTRY_STATE_POCKETSTATION_NOT_INSERTED 0xEE /**< Status dialog CARDA_DIALOG_CARD_NOT_INSERTED. */
-#define CARDA_ENTRY_STATE_UPLOAD_FAILED 0xEF              /**< Status dialog CARDA_DIALOG_LOAD_FAILED. */
-#define CARDA_ENTRY_STATE_DOWNLOAD_FAILED 0xF0            /**< Status dialog CARDA_DIALOG_SAVE_FAILED. */
+#define CARDA_ENTRY_STATE_NO_POCKETSTATION 0xED           /**< Status dialog CARD_MENU_DIALOG_NOT_POCKETSTATION. */
+#define CARDA_ENTRY_STATE_POCKETSTATION_NOT_INSERTED 0xEE /**< Status dialog CARD_MENU_DIALOG_CARD_NOT_INSERTED. */
+#define CARDA_ENTRY_STATE_UPLOAD_FAILED 0xEF              /**< Status dialog CARD_MENU_DIALOG_LOAD_FAILED. */
+#define CARDA_ENTRY_STATE_DOWNLOAD_FAILED 0xF0            /**< Status dialog CARD_MENU_DIALOG_SAVE_FAILED. */
 #define CARDA_ENTRY_STATE_SELECT_SLOT 0xF1                /**< Only the slot prompt is shown. */
 #define CARDA_ENTRY_STATE_CONFIRM_DOWNLOAD 0xF2           /**< Asks whether to download Ring Ring Land. */
 #define CARDA_ENTRY_STATE_DOWNLOADING 0xF3                /**< Writing Ring Ring Land; progress bar. */
@@ -157,17 +77,6 @@ typedef struct CardaElement
 #define CARDA_ENTRY_STATE_NO_RING_RING_LAND 0xF5          /**< Ring Ring Land was not found; CARDA never sets it. */
 #define CARDA_ENTRY_STATE_NOT_POCKETSTATION 0xF6          /**< The card is not a PocketStation. */
 #define CARDA_ENTRY_STATE_NO_ROOM_FOR_DOWNLOAD 0xF7       /**< Not enough free blocks for Ring Ring Land. */
-#define CARDA_ENTRY_STATE_NO_GAME_DATA 0xF8               /**< The card holds no Legend of Mana save data. */
-#define CARDA_ENTRY_STATE_UNFORMATTED 0xF9                /**< The card is not formatted. */
-#define CARDA_ENTRY_STATE_CARD_FULL 0xFA                  /**< Not enough free blocks for a new save. */
-#define CARDA_ENTRY_STATE_ACCESS_FAILED 0xFB              /**< The card could not be accessed. */
-#define CARDA_ENTRY_STATE_NO_SAVE_DATA 0xFC               /**< The card holds no save data. */
-#define CARDA_ENTRY_STATE_NO_CARD 0xFD                    /**< No card answers. */
-#define CARDA_ENTRY_STATE_BLANK 0xFE                      /**< Shows nothing; CARDA never sets it. */
-#define CARDA_ENTRY_STATE_CHECKING_CARD 0xFF              /**< The card is being checked; no entries yet. */
-
-/** @brief Entry-state values below this are entry counts the list draws. */
-#define CARDA_ENTRY_COUNT_LIMIT 0x10
 
 /** @brief Entry-state values below this count as entry counts for the card sequence and the input handler. */
 #define CARDA_ENTRY_COUNT_INPUT_LIMIT 0x12
@@ -222,76 +131,25 @@ typedef enum CardaSequenceResult
     CARDA_SEQUENCE_UNFORMATTED = 5 /**< _card_load kept reporting a new card: the card is not formatted. */
 } CardaSequenceResult;
 
-/** @brief carda_open_status_dialog messages (g_carda_dialog_state). */
-#define CARDA_DIALOG_SAVE_FAILED 0
-#define CARDA_DIALOG_LOAD_FAILED 1
-#define CARDA_DIALOG_CARD_NOT_INSERTED 2
-#define CARDA_DIALOG_NOT_POCKETSTATION 3
+/** @brief CARDA's own carda_open_status_dialog messages, after the shared CARD_MENU_DIALOG_* ones. */
 #define CARDA_DIALOG_SAVE_CORRUPT 4
 #define CARDA_DIALOG_FORMAT_FAILED 5
 
-/** @brief g_carda_selection_status values: what the details window shows. */
-#define CARDA_SELECTION_NONE 0       /**< Nothing to show yet. */
-#define CARDA_SELECTION_ENTRY_READ 1 /**< The selected entry's header has been read. */
-#define CARDA_SELECTION_NEW_SAVE 2   /**< The new-save placeholder is selected. */
-#define CARDA_SELECTION_EMPTY_CARD 3 /**< The card has no entries. */
+/** @brief CARDA's own g_carda_selection_status value, after the shared CARD_MENU_SELECTION_* ones. */
 #define CARDA_SELECTION_CARD_FULL 4  /**< The full-card placeholder is selected. */
-
-/** @brief Buttons that confirm a choice. */
-#define CARDA_CONFIRM_BUTTON_MASK (PAD_BTN_CROSS | PAD_BTN_L3)
-
-/** @brief Buttons that switch to the other card slot. */
-#define CARDA_CARD_SWITCH_BUTTON_MASK (PAD_BTN_SELECT | PAD_BTN_RIGHT | PAD_BTN_LEFT)
-
-/** @brief Buttons that move a yes/no choice. */
-#define CARDA_CHOICE_BUTTON_MASK (PAD_BTN_RIGHT | PAD_BTN_LEFT)
-
-/** @brief g_carda_choice_toggle values: the selected choice of a yes/no prompt. */
-#define CARDA_CHOICE_YES 0
-#define CARDA_CHOICE_NO 1
-
-/**
- * @brief Choice a yes/no prompt starts on.
- * @note JP starts on yes, US on no.
- */
-#if defined(VERSION_JP)
-#define CARDA_CHOICE_DEFAULT CARDA_CHOICE_YES
-#else
-#define CARDA_CHOICE_DEFAULT CARDA_CHOICE_NO
-#endif
-
-/** @brief Length of the new-save placeholder entry name ("AKIdummy"). */
-#define CARDA_NEW_SAVE_ENTRY_NAME_LENGTH 8
 
 /** @brief Length of the full-card placeholder entry name ("Fulldummy"). */
 #define CARDA_CARD_FULL_ENTRY_NAME_LENGTH 9
 
-/** @brief Height of one entry-list row and of one message line, in pixels. */
-#define CARDA_TEXT_LINE_HEIGHT 14
-
-/** @brief Entry-list window of the browser layout (save and load modes). */
+/** @brief Left edge and width of the entry-list window of the browser layout (save and load modes). */
 #define CARDA_LIST_X 10
-#define CARDA_LIST_Y 50
 #define CARDA_LIST_WIDTH 300
-#define CARDA_LIST_HEIGHT 88
 
-/** @brief Rows that fit in the entry list, and the top of the last one. */
-#define CARDA_LIST_VISIBLE_ROWS (CARDA_LIST_HEIGHT / CARDA_ENTRY_ROW_HEIGHT)
-#define CARDA_LIST_LAST_ROW_Y ((CARDA_LIST_VISIBLE_ROWS - 1) * CARDA_ENTRY_ROW_HEIGHT)
-
-/** @brief Frames a list scroll takes to reach its target. */
-#define CARDA_SCROLL_FRAMES 4
-
-/** @brief Scroll arrows, inset from the entry list's right edge, top and bottom. */
+/** @brief X of the scroll arrows, inset from the entry list's right edge. */
 #define CARDA_SCROLL_ARROW_X (CARDA_LIST_X + CARDA_LIST_WIDTH - 8)
-#define CARDA_SCROLL_ARROW_UP_Y (CARDA_LIST_Y + 8)
-#define CARDA_SCROLL_ARROW_DOWN_Y (CARDA_LIST_Y + CARDA_LIST_HEIGHT - 8)
 
-/** @brief Message window: prompts and progress messages. */
-#define CARDA_MESSAGE_X 16
+/** @brief Top of the message window (prompts and progress messages). */
 #define CARDA_MESSAGE_Y 90
-#define CARDA_MESSAGE_WIDTH 288
-#define CARDA_MESSAGE_HEIGHT 44 /**< Three lines. */
 
 /** @brief PocketStation transfer window, also used for the format prompt. */
 #define CARDA_TRANSFER_Y 76
@@ -302,131 +160,16 @@ typedef enum CardaSequenceResult
 #define CARDA_ITEM_LIST_Y 54
 #define CARDA_ITEM_LIST_WIDTH 256
 #define CARDA_ITEM_LIST_HEIGHT 144
-#define CARDA_ITEM_LIST_VISIBLE_ROWS (CARDA_ITEM_LIST_HEIGHT / CARDA_TEXT_LINE_HEIGHT)
+#define CARDA_ITEM_LIST_VISIBLE_ROWS (CARDA_ITEM_LIST_HEIGHT / CARD_MENU_LINE_HEIGHT)
 #define CARDA_ITEM_SCROLL_ARROW_X (CARDA_ITEM_LIST_X + CARDA_ITEM_LIST_WIDTH - 8)
 #define CARDA_ITEM_SCROLL_ARROW_UP_Y (CARDA_ITEM_LIST_Y + 8)
 #define CARDA_ITEM_SCROLL_ARROW_DOWN_Y (CARDA_ITEM_LIST_Y + CARDA_ITEM_LIST_HEIGHT - 8)
-
-/**
- * @brief CARDA text table indexes.
- *
- * CARDA_TEXT_AT needs the index of the entry symbol it is given. The US
- * release leaves the PocketStation texts empty (29, 33, 47-49 and 58-87).
- * The order of the card-access message lines differs by version: US line 2 is
- * CARDA_TEXT_DO_NOT_REMOVE_CARD and line 3 CARDA_TEXT_CARD_OR_CONTROLLER,
- * JP the other way round.
- */
-#define CARDA_TEXT_CHECKING_CARD 0
-#define CARDA_TEXT_NOT_ENOUGH_BLOCKS 1
-#define CARDA_TEXT_NO_CARD 2
-#define CARDA_TEXT_MANA_LABEL 3
-#define CARDA_TEXT_OTHER_GAME_LABEL 4
-#define CARDA_TEXT_SAVE_TITLE 5
-#define CARDA_TEXT_CARD_SLOT0_LABEL 6
-#define CARDA_TEXT_CARD_SLOT1_LABEL 7
-#define CARDA_TEXT_CARD_ACCESS_FAILED 8
-#define CARDA_TEXT_NO_SAVE_DATA 9
-#define CARDA_TEXT_NEW_SAVE_LABEL 10
-#define CARDA_TEXT_SAVE_PROMPT 11
-#define CARDA_TEXT_OVERWRITE_PROMPT 12
-#define CARDA_TEXT_SAVING 14
-#define CARDA_TEXT_DO_NOT_REMOVE_CARD 15
-#define CARDA_TEXT_SAVED 16
-#define CARDA_TEXT_MEMORY_CARD_IS 17 /**< JP only: subject line "The memory card is". */
-#define CARDA_TEXT_NOT_FORMATTED 18 /**< Second line after a subject such as CARDA_TEXT_POCKETSTATION_IS. */
-#define CARDA_TEXT_FORMAT_PROMPT 19
-#define CARDA_TEXT_NEW_SAVE_TITLE 20
-#define CARDA_TEXT_USES_TWO_BLOCKS 21
-#define CARDA_TEXT_LOAD_TITLE 22
-#define CARDA_TEXT_NUMBER_LABEL 23
-#define CARDA_TEXT_LOAD_PROMPT 24
-#define CARDA_TEXT_LOADING 25
-#define CARDA_TEXT_NO_GAME_SAVE_DATA 26
-#define CARDA_TEXT_NEWEST 27
-#define CARDA_TEXT_OLDEST 28
-#define CARDA_TEXT_RING_RING_LAND_LABEL 29
-#define CARDA_TEXT_SAVE_FAILED 30
-#define CARDA_TEXT_LOAD_FAILED 31
-#define CARDA_TEXT_CARD_NOT_INSERTED 32
-#define CARDA_TEXT_NOT_POCKETSTATION 33
-#define CARDA_TEXT_WRONG_VERSION 42
-#define CARDA_TEXT_CHECK_CARD_INSERTED 43
-#define CARDA_TEXT_FORMATTING 44
-#define CARDA_TEXT_NEEDS_TWO_BLOCKS 45
-#define CARDA_TEXT_SAVE_CORRUPT 46
-#define CARDA_TEXT_DOWNLOAD_RING_RING_LAND 48
-#define CARDA_TEXT_NEEDS_SIX_BLOCKS 49
-#define CARDA_TEXT_FORMAT_FAILED 50
-#define CARDA_TEXT_CARD_FULL_LABEL 51
-#define CARDA_TEXT_CHECKING_POCKETSTATION 58
-#define CARDA_TEXT_NO_POCKETSTATION 59
-#define CARDA_TEXT_POCKETSTATION_ACCESS_FAILED 60
-#define CARDA_TEXT_POCKETSTATION_OR_CONTROLLER 61
-#define CARDA_TEXT_POCKETSTATION_IS 62
-#define CARDA_TEXT_POCKETSTATION_NOT_INSERTED 63
-#define CARDA_TEXT_RING_RING_LAND_WAS 65
-#define CARDA_TEXT_NOT_FOUND 66
-#define CARDA_TEXT_RECEIVED_ITEMS 67
-#define CARDA_TEXT_RETURN_PET 69
-#define CARDA_TEXT_SWAP_PETS 71
-#define CARDA_TEXT_GAME_FROM_POCKETSTATION 73
-#define CARDA_TEXT_GAME_TO_POCKETSTATION 74
-#define CARDA_TEXT_DOWNLOAD_OK 75
-#define CARDA_TEXT_OVERWRITE_OK 76
-#define CARDA_TEXT_SELECT_SLOT 77
-#define CARDA_TEXT_RING_RING_LAND_TITLE 78
-#define CARDA_TEXT_DOWNLOAD_FAILED 79
-#define CARDA_TEXT_UPLOAD_FAILED 80
-#define CARDA_TEXT_DOWNLOADING 81
-#define CARDA_TEXT_UPLOADING 83
-#define CARDA_TEXT_RING_RING_LAND_SIX_BLOCKS 85
-#define CARDA_TEXT_WILL_BE_ERASED 86
-#define CARDA_TEXT_PET_ALREADY_ON_RANCH 87
-#define CARDA_TEXT_PLUS_MARKER 88
-#define CARDA_TEXT_CARD_OR_CONTROLLER 89
-
-/**
- * @brief Address of CARDA text @p index, reached through its own u16 offset-table entry @p entry.
- * @note The table start is derived back from the entry symbol, like FIELD_UI_TEXT_AT.
- */
-#define CARDA_TEXT_AT(entry, index) ((u8*)&(entry) - (index) * 2 + (entry))
-
-/**
- * @brief Text table index of the entry g_carda_text_card_unformatted names.
- * @note JP reorders the text offset table; this entry is index 18 there.
- */
-#if defined(VERSION_JP)
-#define CARDA_TEXT_CARD_UNFORMATTED 18
-#else
-#define CARDA_TEXT_CARD_UNFORMATTED 90
-#endif
-
-/** @brief Start of the CARDA text offset table, derived from entry @p entry at @p index. */
-#define CARDA_TEXT_TABLE(entry, index) (&(entry) - (index))
-
-/** @brief Address of CARDA text @p index in the u16 offset table starting at @p table. */
-#define CARDA_TEXT(table, index) ((u8*)(table) + (table)[index])
-
-/** @brief Height in pixels of one row of the save-file list. */
-#define CARDA_ENTRY_ROW_HEIGHT 14
-
-/** @brief Number of suffix groups the directory sort buckets saves into. */
-#define CARDA_ENTRY_GROUP_COUNT 8
-
-/** @brief Byte size of one memory-card block. */
-#define CARDA_MEMORY_CARD_BLOCK_BYTES 8192
 
 /** @brief Six-byte memory-card path buffer ("bu00:" plus terminator), byte aligned. */
 typedef struct
 {
     u8 raw[6];
 } CardaFileHeaderScratch;
-
-/** @brief Bytes read to show an entry: the card header and the first 0x100 bytes of the saved game. */
-#define CARDA_ENTRY_READ_BYTES 0x280
-
-/** @brief Bytes read to show an entry that is not a Legend of Mana save: its card header title and CLUT. */
-#define CARDA_ENTRY_TITLE_READ_BYTES 0x80
 
 /** @brief Highest count an item stack can reach. */
 #define CARDA_ITEM_COUNT_MAX 99
@@ -438,7 +181,6 @@ extern s32 g_field_card_pet_slot;
 extern s32 g_pad_input;
 extern s32 g_gosub_result_values;
 extern s32 g_field_card_overlay_mode;
-extern s32 g_menu_element_counter;
 
 /* FIELD UI strings and memory-card file names. */
 extern u8 g_field_ui_text_cant_hold_more[];
@@ -537,8 +279,8 @@ extern s32 g_carda_new_save_file;
 extern s32 g_carda_growth_delta;
 extern u8 g_carda_received_item_ids[];
 extern s32 g_carda_pet_already_on_ranch;
-extern CardaElement g_carda_element_pool[8]; /**< UI element pool. */
-extern CardaElement g_carda_element1_state;
+extern CardMenuElement g_carda_element_pool[8]; /**< UI element pool. */
+extern CardMenuElement g_carda_element1_state;
 extern s32 g_carda_exit_requested;
 extern s32 g_carda_dialog_state;
 extern s32 g_carda_received_item_count;
@@ -563,7 +305,7 @@ extern s32 g_carda_scroll_y;
 extern s32 g_carda_save_in_progress;
 /**
  * @brief Start of the selected entry's save file: only the card header and the
- *        first 0x100 bytes of the saved game are read (CARDA_ENTRY_READ_BYTES).
+ *        first 0x100 bytes of the saved game are read (CARD_MENU_ENTRY_READ_BYTES).
  */
 extern SaveFile g_carda_selected_file;
 extern s32 g_carda_file_handle;

@@ -5,6 +5,8 @@
 #include "main/main.h"
 #include "overlays/shop/shop.h"
 #include "common/pad.h"
+#include "overlays/field/field_menu_window.h"
+#include "overlays/field/field_ui_text.h"
 #include "common/vector.h"
 
 #define SHOP_WINDOW_COUNT 8
@@ -161,16 +163,6 @@ extern u8 D_800EC3F4[];
 extern u8 D_800EC3F8[];
 extern u8 D_800EC3FE[];
 
-/** @brief Address of the FIELD UI string whose offset pair is @p entry, the @p index-th table entry. */
-#define FIELD_UI_TEXT_AT(entry, index) ((entry) - (index) * 2 + (entry)[0] + ((entry)[1] << 8))
-
-/**
- * @brief Address of FIELD UI string @p index, given the start of the offset table in @p table.
- * @note Summed as integers, offset bytes first, like FIELD's own string lookups.
- */
-#define FIELD_UI_TEXT(table, index) ((u8*)((table)[(index) * 2] + (((table)[(index) * 2 + 1] << 8) + (uintptr_t)(table))))
-
-extern s32 g_menu_element_counter;
 
 void play_menu_sfx(s32 sfx_id, s32 volume);
 void field_set_default_fade_target(void);

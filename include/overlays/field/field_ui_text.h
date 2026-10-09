@@ -22,7 +22,10 @@
  * one per string, relative to the table start. Each offset entry is its own
  * symbol, so the table start is derived back from the entry.
  */
-#define FIELD_UI_TEXT_AT(entry, index) ((entry) - (index) * 2 + (entry)[0] + ((entry)[1] << 8))
+#define FIELD_UI_TEXT_AT(entry, index) (FIELD_UI_TEXT_TABLE(entry, index) + (entry)[0] + ((entry)[1] << 8))
+
+/** @brief Start of the FIELD UI string table, derived from the offset entry @p entry of string @p index. */
+#define FIELD_UI_TEXT_TABLE(entry, index) ((entry) - (index) * 2)
 
 /**
  * @brief Address of FIELD UI string @p index, given the start of the offset table in @p table.

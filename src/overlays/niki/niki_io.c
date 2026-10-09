@@ -1,19 +1,20 @@
 #include "internal/niki_internal.h"
 #include "overlays/menu/menu.h"
+#include <fcntl.h>
 
 s32 niki_has_known_entry_type(void);
 
 /** @brief Remove placeholder save files before starting the card operation. */
 static inline void niki_erase_placeholder_paths(void)
 {
-    NikiPlaceholderPath p;
+    CardFilePath p;
 
-    memcpy(&p, &g_niki_file_template, 6);
+    memcpy(&p, &g_niki_file_template, CARD_DEVICE_BYTES);
     p.device.characters.slot += (u8)g_card_slot;
     func_80016F9C(&p, &D_800ECF9C);
     func_8001686C(&p);
 
-    memcpy(&p, &g_niki_file_template, 6);
+    memcpy(&p, &g_niki_file_template, CARD_DEVICE_BYTES);
     p.device.characters.slot += (u8)g_card_slot;
     func_80016F9C(&p, &D_800ECFB0);
     func_8001686C(&p);
@@ -25,7 +26,7 @@ static inline void niki_erase_placeholder_paths(void)
  */
 s32 niki_advance_load_sequence(void)
 {
-    NikiSequencePath path;
+    CardSequencePath path;
     long card_command;
     long card_result;
     s32 phase_result;
@@ -36,7 +37,7 @@ s32 niki_advance_load_sequence(void)
     s32 rank_value;
     s32 command;
 
-    memcpy(&path, &g_niki_file_template, 6);
+    memcpy(&path, &g_niki_file_template, CARD_DEVICE_BYTES);
     phase_result = 1;
     path.device.characters.slot += (u8)g_card_slot;
 
@@ -63,7 +64,7 @@ s32 niki_advance_load_sequence(void)
         case 2:
             phase_result = 4;
             g_niki_selection_status = 0;
-            g_card_entry_state = 0xFD;
+            g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;
             g_card_step = g_card_step + 1;
             break;
         case 3:
@@ -73,7 +74,7 @@ s32 niki_advance_load_sequence(void)
             {
                 g_niki_entry_ranks[rank_index] = rank_value;
             }
-            g_card_entry_state = 0xFF;
+            g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
             g_card_step = g_niki_card_setup_sequence;
             break;
         case 0:
@@ -109,7 +110,7 @@ s32 niki_advance_load_sequence(void)
         }
         phase_result = 4;
         g_niki_selection_status = 0;
-        g_card_entry_state = 0xFD;
+        g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;
         break;
 
     case NIKI_COMMAND_RELEASE_SECONDARY:
@@ -124,7 +125,7 @@ s32 niki_advance_load_sequence(void)
         {
             phase_result = 2;
             g_card_step = NULL;
-            g_card_entry_state = 0xF8;
+            g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_GAME_DATA;
             g_niki_entry_scan_active = 0;
             break;
         }
@@ -139,11 +140,11 @@ s32 niki_advance_load_sequence(void)
                     g_niki_selected_row = 0;
                 }
                 g_niki_entry_scan_active = 0;
-                if (g_card_entry_state == 0xF8)
+                if (g_card_entry_state == CARD_MENU_ENTRY_STATE_NO_GAME_DATA)
                 {
                     return phase_result;
                 }
-                if (g_card_entry_state == 0xFA)
+                if (g_card_entry_state == CARD_MENU_ENTRY_STATE_CARD_FULL)
                 {
                     break;
                 }
@@ -165,8 +166,8 @@ s32 niki_advance_load_sequence(void)
         phase_result = 3;
         _card_wait(g_card_slot);
         func_8001725C(g_card_slot * 0x10);
-        g_niki_primary_poll_countdown = 0x10;
-        g_niki_secondary_poll_countdown = 0x10;
+        g_niki_primary_poll_countdown = CARD_MENU_CARD_LOAD_RETRIES;
+        g_niki_secondary_poll_countdown = CARD_MENU_CARD_LOAD_RETRIES;
         g_card_step = g_card_step + 1;
         break;
 
@@ -202,7 +203,7 @@ s32 niki_advance_load_sequence(void)
             {
                 phase_result = 4;
                 g_niki_selection_status = 0;
-                g_card_entry_state = 0xFD;
+                g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;
                 break;
             }
             _card_wait(g_card_slot);
@@ -221,7 +222,7 @@ s32 niki_advance_load_sequence(void)
                 break;
             }
             phase_result = 5;
-            g_card_entry_state = 0xFC;
+            g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_SAVE_DATA;
             g_card_step = g_card_steps_idle;
             break;
         case 0:
@@ -242,14 +243,14 @@ s32 niki_advance_load_sequence(void)
         g_niki_io_busy = 1;
         g_niki_selection_status = 0;
         _card_wait(g_card_slot);
-        g_niki_file_handle = func_8001680C(g_niki_selected_save_path, 0x8001);
+        g_niki_file_handle = func_8001680C(g_niki_selected_save_path, FASYNC | FREAD);
         if (g_niki_file_handle == -1)
         {
             break;
         }
         clear_software_card_events();
         _card_wait(g_card_slot);
-        if (func_8001681C(g_niki_file_handle, &g_niki_entry_file, g_niki_selected_entry_extended != 0 ? NIKI_ENTRY_READ_BYTES : 0x80) == -1)
+        if (func_8001681C(g_niki_file_handle, &g_niki_entry_file, g_niki_selected_entry_extended != 0 ? CARD_MENU_ENTRY_READ_BYTES : 0x80) == -1)
         {
             func_8001683C(g_niki_file_handle);
             break;
@@ -273,7 +274,7 @@ s32 niki_advance_load_sequence(void)
         }
         g_niki_io_busy = 0;
         func_8001683C(g_niki_file_handle);
-        g_card_entry_state = 0xFF;
+        g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
         g_card_step = g_niki_card_setup_sequence;
         break;
 
@@ -282,7 +283,7 @@ s32 niki_advance_load_sequence(void)
         g_niki_progress_bar_active = 1;
         g_niki_progress_start_tick = VSync(-1);
         _card_wait(g_card_slot);
-        g_niki_file_handle = func_8001680C(g_niki_selected_save_path, 0x8001);
+        g_niki_file_handle = func_8001680C(g_niki_selected_save_path, FASYNC | FREAD);
         clear_software_card_events();
         _card_wait(g_card_slot);
         if (func_8001681C(g_niki_file_handle, g_niki_save_blob.bytes, SAVE_FILE_BYTES) == -1)
@@ -353,7 +354,7 @@ s32 niki_advance_load_sequence(void)
         g_niki_progress_bar_active = 1;
         g_niki_progress_start_tick = VSync(-1);
         _card_wait(g_card_slot);
-        g_niki_file_handle = func_8001680C(g_niki_selected_save_path, 0x8001);
+        g_niki_file_handle = func_8001680C(g_niki_selected_save_path, FASYNC | FREAD);
         clear_software_card_events();
         _card_wait(g_card_slot);
         if (func_8001681C(g_niki_file_handle, g_niki_save_blob.bytes, SAVE_FILE_BYTES) == -1)
@@ -400,7 +401,7 @@ s32 niki_advance_load_sequence(void)
         break;
 
     case NIKI_COMMAND_RESET_RETRIES:
-        g_niki_retry_count = 5;
+        g_niki_retry_count = CARD_MENU_SAVE_RETRIES;
         g_card_step = g_card_step + 1;
         break;
 
@@ -420,7 +421,7 @@ s32 niki_advance_load_sequence(void)
         }
         func_80016F9C(&path, D_800ECF9C);
         _card_wait(g_card_slot);
-        g_niki_file_handle = func_8001680C(&path, 0x20200);
+        g_niki_file_handle = func_8001680C(&path, FCREAT | CARD_FILE_BLOCKS(2));
         if (g_niki_file_handle == -1)
         {
             func_8001683C(-1);
@@ -445,7 +446,7 @@ s32 niki_advance_load_sequence(void)
         func_8001683C(g_niki_file_handle);
         func_800170BC(g_niki_temporary_save_path, &path);
         _card_wait(g_card_slot);
-        g_niki_file_handle = func_8001680C(g_niki_temporary_save_path, 0x8002);
+        g_niki_file_handle = func_8001680C(g_niki_temporary_save_path, FASYNC | FWRITE);
         clear_software_card_events();
         g_niki_progress_bar_active = 1;
         g_niki_progress_start_tick = VSync(-1);
@@ -538,7 +539,7 @@ s32 niki_advance_load_sequence(void)
 }
 
 /** @brief Wildcard matching all files on memory-card slot zero. */
-const char g_niki_entry_header_template[7] __attribute__((aligned(4))) = "bu00:*";
+const CardPathTemplate g_niki_entry_header_template = {"bu00:*"};
 
 #include "../../common/card_events/restart_card_sequence.inc.c"
 #include "../../common/card_events/poll_and_retry_card_info.inc.c"
@@ -580,9 +581,9 @@ void niki_init_card_events(void)
  */
 s32 niki_begin_entry_scan(s32 card_slot)
 {
-    NikiDirectoryPattern pattern;
+    CardSearchPattern pattern;
 
-    memcpy(&pattern, &g_niki_entry_header_template, 7);
+    memcpy(&pattern, &g_niki_entry_header_template, CARD_SEARCH_PATTERN_BYTES);
     g_niki_selected_row = 0;
     g_niki_scroll_frames = 0;
     g_niki_scroll_target_y = 0;
@@ -620,7 +621,7 @@ s32 niki_scan_next_entry(s32 page)
     field_reset_input_repeat();
     if ((g_niki_mode == 0) && (niki_has_known_entry_type() == 0))
     {
-        g_card_entry_state = 0xF8;
+        g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_GAME_DATA;
     }
     else
     {
@@ -628,7 +629,7 @@ s32 niki_scan_next_entry(s32 page)
         g_niki_preserve_old_save = 0;
         for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
         {
-            used_blocks += g_card_entries[g_card_slot][entry_index].size / NIKI_MEMORY_CARD_BLOCK_BYTES;
+            used_blocks += g_card_entries[g_card_slot][entry_index].size / CARD_BLOCK_BYTES;
         }
         card_full = used_blocks >= 0xE;
         if (card_full != 0)
@@ -636,7 +637,7 @@ s32 niki_scan_next_entry(s32 page)
             selected = niki_rank_entries();
             if (niki_has_known_entry_type() == 0)
             {
-                g_card_entry_state = 0xFA;
+                g_card_entry_state = CARD_MENU_ENTRY_STATE_CARD_FULL;
                 g_niki_entry_value_limit = 0;
             }
             else
@@ -670,7 +671,7 @@ s32 niki_scan_next_entry(s32 page)
  */
 void niki_commit_selected_entry(void)
 {
-    NikiSelectedFilePath path;
+    CardEntryPath path;
     u8* path_bytes;
 
     if (g_card_entry_state == 0)
@@ -685,7 +686,7 @@ void niki_commit_selected_entry(void)
             return;
         }
     }
-    memcpy(&path, &g_niki_file_template, 6);
+    memcpy(&path, &g_niki_file_template, CARD_DEVICE_BYTES);
     path_bytes = (u8*)&path;
     {
         func_80016F9C(path_bytes, g_card_entries[g_card_slot][g_niki_selected_row].name);
@@ -730,7 +731,7 @@ void niki_sort_entries_by_type(void)
     s32 suffix;
     s32 entry_index;
 
-    for (suffix = 0; suffix < 8; suffix++)
+    for (suffix = 0; suffix < CARD_MENU_ENTRY_GROUP_COUNT; suffix++)
     {
         for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
         {
@@ -743,7 +744,7 @@ void niki_sort_entries_by_type(void)
         }
     }
 
-    for (suffix = 0; suffix < 8; suffix++)
+    for (suffix = 0; suffix < CARD_MENU_ENTRY_GROUP_COUNT; suffix++)
     {
         for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
         {

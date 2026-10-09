@@ -160,7 +160,7 @@ static inline void reset_menu_elements(void)
     FieldMenuElement *element;
     s32 i;
 
-    g_menu_element_counter = 0;
+    g_field_menu_frame_style = FIELD_MENU_FRAME_STYLE_FIELD;
     element = g_field_menu_elements;
     for (i = 0; i < FIELD_MENU_ELEMENT_COUNT; i++)
     {

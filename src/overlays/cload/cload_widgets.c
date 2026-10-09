@@ -22,15 +22,8 @@ typedef struct
     s32 image_offsets[3];
 } CloadIconSetHeader;
 
-/** @brief One save icon in the icon-set resource: a 16-color CLUT followed by 48x48 4-bit pixels. */
-typedef struct
-{
-    u16 clut[16];
-    u8 pixels[48 * 48 / 2];
-} CloadIconImage;
-
 /** @brief Icon @p icon in the loaded icon table, which holds per-icon byte offsets after a leading word. */
-#define CLOAD_ICON_IMAGE(icon) ((CloadIconImage *)(g_cload_icon_resource + ((s32 *)g_cload_icon_resource)[(icon) + 1]))
+#define CLOAD_ICON_IMAGE(icon) ((CardMenuIconImage *)(g_cload_icon_resource + ((s32 *)g_cload_icon_resource)[(icon) + 1]))
 
 /**
  * @brief Emit the GPU packets for a CLOAD window frame: a clipped draw
@@ -186,18 +179,18 @@ void *cload_draw_load_prompt(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
     void *result;
     s32 x;
     s32 status;
-    CloadPromptElement *prompt;
+    CardMenuElement *prompt;
 
     x = -x_offset + 0x90;
-    result = cload_draw_choice_prompt(field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_load_prompt, 24), 4, x, -y_offset, 2), ot, x, 0xE - y_offset);
+    result = cload_draw_choice_prompt(field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_load_prompt, CARD_MENU_TEXT_LOAD_PROMPT), 4, x, -y_offset, 2), ot, x, 0xE - y_offset);
 
     status = poll_and_retry_card_info();
     if (status == 1 || status == 2)
     {
-        g_cload_element_pool[0].attr.f.state = CLOAD_ELEMENT_FREE;
+        g_cload_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
         field_reset_input_repeat();
         play_menu_sfx(0x78, 0x80);
-        g_card_entry_state = 0xFF;
+        g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
         cload_reset_entry_ranks();
         g_cload_load_step = 0;
     }
@@ -205,16 +198,16 @@ void *cload_draw_load_prompt(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
     {
         if (g_pad_input & 0x40)
         {
-            g_cload_element_pool[0].attr.f.state = CLOAD_ELEMENT_FREE;
+            g_cload_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
             field_reset_input_repeat();
             play_menu_sfx(0x78, 0x80);
             g_cload_load_step = g_cload_steps_card_reset;
         }
-        else if (g_pad_input & 0x220)
+        else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
         {
             if (g_cload_choice_toggle != 0)
             {
-                g_cload_element_pool[0].attr.f.state = CLOAD_ELEMENT_FREE;
+                g_cload_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
                 field_reset_input_repeat();
                 play_menu_sfx(0x78, 0x80);
                 g_cload_load_step = g_cload_steps_card_reset;
@@ -224,14 +217,14 @@ void *cload_draw_load_prompt(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
                 play_menu_sfx(0x7E, 0x80);
                 g_cload_progress_active = 1;
                 g_cload_load_step = g_cload_steps_load_selected_save;
-                prompt = (CloadPromptElement *)&g_cload_element_pool;
+                prompt = &g_cload_element_pool[CARD_MENU_ELEMENT_MODAL];
                 prompt->draw = cload_draw_load_progress;
-                prompt->attr.f.phase = 1;
-                prompt->attr.f.state = 1;
-                prompt->attr.f.x = 0x10;
-                prompt->attr.f.code = 0x5B;
-                prompt->active = 1;
-                prompt->y = 0x2B;
+                prompt->attr.bits.transition_step = 1;
+                prompt->attr.bits.state = 1;
+                prompt->attr.bits.x = 0x10;
+                prompt->attr.bits.y = 0x5B;
+                prompt->size.bits.width_high = 1;
+                prompt->size.bits.height = 0x2B;
                 prompt->attr.word = (prompt->attr.word & 0x00FFFFFF) | ((u32)0x20 << 24);
             }
         }
@@ -256,10 +249,10 @@ void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offse
     u16 *text_table;
 
     x = -x_offset + 0x90;
-    result = field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_loading, 25), 4, x, -y_offset, 2);
-    text_table = CLOAD_TEXT_TABLE(g_cload_text_loading, 25);
-    result = field_draw_text(result, ot, CLOAD_TEXT(text_table, 15), 4, x, 0xE - y_offset, 2);
-    result = field_draw_text(result, ot, CLOAD_TEXT(text_table, 89), 4, x, 0x1C - y_offset, 2);
+    result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_loading, CARD_MENU_TEXT_LOADING), 4, x, -y_offset, 2);
+    text_table = CARD_MENU_TEXT_TABLE(g_cload_text_loading, 25);
+    result = field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), 4, x, 0xE - y_offset, 2);
+    result = field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CARD_OR_CONTROLLER), 4, x, 0x1C - y_offset, 2);
     result = cload_draw_progress_bar(result, ot);
 
     if (g_cload_progress_active == 0)
@@ -271,7 +264,7 @@ void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offse
         else
         {
             play_menu_sfx(0x7B, 0x80);
-            g_cload_element_pool[0].attr.f.state = CLOAD_ELEMENT_FREE;
+            g_cload_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
             bcopy((u8*)&g_cload_save_file.saved_game, g_saved_game.bytes, SAVED_GAME_DATA_SIZE);
             g_save_compatibility_tag = g_saved_game.layout.compatibility_tag;
             g_playtime_vsync_origin = VSync(-1);
@@ -297,20 +290,19 @@ CloadGpuPacket *cload_draw_progress_bar(POLY_G4 *quad, u_long *ot)
     if (g_cload_progress_bar_active != 0)
     {
         elapsed = VSync(-1) - g_cload_progress_start_tick;
-        if (elapsed > 256)
+        if (elapsed > CARD_MENU_PROGRESS_FULL_TICKS)
         {
-            elapsed = 256;
+            elapsed = CARD_MENU_PROGRESS_FULL_TICKS;
         }
-        width = elapsed * 288;
-        SET_BGR0_PACKED(quad, GPU_COLOR_WORD(0xFF, 0, 0));
-        SET_POLY_G4_BGR1_PACKED(quad, GPU_COLOR_WORD(0xFF, 0xFF, 0));
-        SET_POLY_G4_BGR3_PACKED(quad, GPU_COLOR_WORD(0, 0, 0xFF));
-        setlen(quad, 8);
-        SET_POLY_G4_BGR2_PACKED(quad, GPU_COLOR_WORD(0, 0xFF, 0xFF));
-        setcode(quad, 0x38);
+        width = elapsed * CARD_MENU_MESSAGE_WIDTH;
+        SET_BGR0_PACKED(quad, CARD_MENU_PROGRESS_TOP_LEFT_COLOR);
+        SET_POLY_G4_BGR1_PACKED(quad, CARD_MENU_PROGRESS_TOP_RIGHT_COLOR);
+        SET_POLY_G4_BGR3_PACKED(quad, CARD_MENU_PROGRESS_BOTTOM_RIGHT_COLOR);
+        SET_POLY_G4_BGR2_PACKED(quad, CARD_MENU_PROGRESS_BOTTOM_LEFT_COLOR);
+        setPolyG4(quad);
         quad->x2 = 0;
         quad->x0 = 0;
-        quad->x1 = quad->x3 = width / 256;
+        quad->x1 = quad->x3 = width / CARD_MENU_PROGRESS_FULL_TICKS;
         quad->y1 = 0;
         quad->y0 = 0;
         quad->y3 = 53;
@@ -328,34 +320,34 @@ CloadGpuPacket *cload_draw_progress_bar(POLY_G4 *quad, u_long *ot)
  */
 void cload_open_status_dialog(s32 dialog_state)
 {
-    CloadPromptElement *dialog;
+    CardMenuElement *dialog;
     s32 code;
 
     play_menu_sfx(0x78, 0x80);
-    dialog = (CloadPromptElement *)&g_cload_element_pool;
-    dialog->attr.f.phase = 1;
-    dialog->attr.f.state = 1;
-    dialog->attr.f.x = 0x20;
+    dialog = &g_cload_element_pool[CARD_MENU_ELEMENT_MODAL];
+    dialog->attr.bits.transition_step = 1;
+    dialog->attr.bits.state = 1;
+    dialog->attr.bits.x = 0x20;
     dialog->attr.word &= 0x00FFFFFF;
-    dialog->active = 1;
+    dialog->size.bits.width_high = 1;
     if (dialog_state < 2 || dialog_state == 4)
     {
-        dialog->y = 0x1F;
+        dialog->size.bits.height = 0x1F;
         code = 0x60;
     }
     else
     {
-        dialog->y = 0x0F;
+        dialog->size.bits.height = 0x0F;
         code = 0x70;
     }
-    dialog->attr.f.code = code;
+    dialog->attr.bits.y = code;
     dialog->draw = cload_draw_status_dialog;
     field_reset_input_repeat();
     D_80162370 = 0;
     g_cload_progress_active = 0;
     g_cload_selection_status = 0;
     g_cload_io_busy = 0;
-    g_card_entry_state = 0xFF;
+    g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
     cload_reset_entry_ranks();
     g_cload_load_step = 0;
     g_cload_dialog_state = dialog_state;
@@ -377,31 +369,31 @@ void *cload_draw_status_dialog(u_long *ot, void *prim, s32 x_offset, s32 y_offse
     switch (g_cload_dialog_state)
     {
     case 0:
-        prim = field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_save_failed, 30), 4, -x_offset + 0x80, -y_offset, 2);
-        text_table = CLOAD_TEXT_TABLE(g_cload_text_save_failed, 30);
-        prim = field_draw_text(prim, ot, CLOAD_TEXT(text_table, 43), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_save_failed, CARD_MENU_TEXT_SAVE_FAILED), 4, -x_offset + 0x80, -y_offset, 2);
+        text_table = CARD_MENU_TEXT_TABLE(g_cload_text_save_failed, 30);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECK_CARD_INSERTED), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
         break;
     case 1:
-        prim = field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_load_failed, 31), 4, -x_offset + 0x80, -y_offset, 2);
-        text_table = CLOAD_TEXT_TABLE(g_cload_text_load_failed, 31);
-        prim = field_draw_text(prim, ot, CLOAD_TEXT(text_table, 43), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_load_failed, CARD_MENU_TEXT_LOAD_FAILED), 4, -x_offset + 0x80, -y_offset, 2);
+        text_table = CARD_MENU_TEXT_TABLE(g_cload_text_load_failed, 31);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECK_CARD_INSERTED), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
         break;
     case 2:
-        prim = field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_card_insert_error, 32), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_card_insert_error, CARD_MENU_TEXT_CARD_NOT_INSERTED), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 3:
-        prim = field_draw_text(prim, ot, CLOAD_TEXT_AT(D_80145EDE, 33), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(D_80145EDE, CARD_MENU_TEXT_NOT_POCKETSTATION), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 4:
-        prim = field_draw_text(prim, ot, CLOAD_TEXT_AT(g_cload_text_load_failed, 31), 4, -x_offset + 0x80, -y_offset, 2);
-        text_table = CLOAD_TEXT_TABLE(g_cload_text_load_failed, 31);
-        prim = field_draw_text(prim, ot, CLOAD_TEXT(text_table, 46), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_load_failed, CARD_MENU_TEXT_LOAD_FAILED), 4, -x_offset + 0x80, -y_offset, 2);
+        text_table = CARD_MENU_TEXT_TABLE(g_cload_text_load_failed, 31);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_SAVE_CORRUPT), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
         break;
     }
 
-    if (g_pad_input & 0x220)
+    if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
     {
-        g_cload_element_pool[0].attr.f.state = CLOAD_ELEMENT_FREE;
+        g_cload_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
         field_reset_input_repeat();
     }
 
@@ -440,7 +432,7 @@ void *cload_draw_icon_highlight(POLY_FT4 *quad, u_long *ot, s32 x, s32 y, s32 wi
         LoadImage(&rect, g_cload_icon_context);
         DrawSync(0);
     }
-    else if (icon >= 0x4F)
+    else if (icon >= SAVE_ICON_GOLEM_BASE)
     {
         func_800A55E4(g_cload_icon_context, g_cload_icon_palette);
         LoadImage(&rect, g_cload_icon_context);
@@ -452,7 +444,7 @@ void *cload_draw_icon_highlight(POLY_FT4 *quad, u_long *ot, s32 x, s32 y, s32 wi
     }
 
     column = index * 3;
-    setRECT(&rect, column * 4 + 320, 208, 12, 48);
+    setRECT(&rect, column * 4 + CARD_MENU_ICON_VRAM_X, CARD_MENU_ICON_VRAM_Y, CARD_MENU_ICON_SIZE / 4, CARD_MENU_ICON_SIZE);
     LoadImage(&rect, (u_long *)CLOAD_ICON_IMAGE(icon)->pixels);
 
     SET_BGR0_PACKED(quad, GPU_TINT_NEUTRAL);
@@ -465,18 +457,18 @@ void *cload_draw_icon_highlight(POLY_FT4 *quad, u_long *ot, s32 x, s32 y, s32 wi
     u = column * 16;
     quad->u2 = u;
     quad->u0 = u;
-    u += 47;
+    u += CARD_MENU_ICON_SIZE - 1;
     quad->u3 = u;
     quad->u1 = u;
-    quad->v1 = 208;
-    quad->v0 = 208;
+    quad->v1 = CARD_MENU_ICON_VRAM_Y;
+    quad->v0 = CARD_MENU_ICON_VRAM_Y;
     quad->x1 = x + width;
-    quad->y3 = y + 47;
-    quad->y2 = y + 47;
-    quad->v3 = 255;
-    quad->v2 = 255;
+    quad->y3 = y + CARD_MENU_ICON_SIZE - 1;
+    quad->y2 = y + CARD_MENU_ICON_SIZE - 1;
+    quad->v3 = CARD_MENU_ICON_VRAM_Y + CARD_MENU_ICON_SIZE - 1;
+    quad->v2 = CARD_MENU_ICON_VRAM_Y + CARD_MENU_ICON_SIZE - 1;
     quad->clut = getClut(index * 16, VRAM_CLUT_Y);
-    quad->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, 320, 0);
+    quad->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, CARD_MENU_ICON_VRAM_X, 0);
     addPrim(ot, quad);
 
     return quad + 1;
@@ -487,7 +479,7 @@ void *cload_draw_icon_highlight(POLY_FT4 *quad, u_long *ot, s32 x, s32 y, s32 wi
  */
 void cload_deactivate_primary_element(void)
 {
-    g_cload_element_pool[0].attr.f.state = CLOAD_ELEMENT_FREE;
+    g_cload_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
 }
 
 /**
@@ -565,10 +557,8 @@ CloadGpuPacket *cload_emit_icon_highlight_strip(SPRT *sprite, u_long *ot)
  */
 s32 cload_enable_choice_toggle(void)
 {
-#if defined(VERSION_JP)
-    g_cload_choice_toggle = 0;
-#else
-    g_cload_choice_toggle = 1;
+    g_cload_choice_toggle = CARD_MENU_CHOICE_DEFAULT;
+#if !defined(VERSION_JP)
     return 1;
 #endif
 }
@@ -578,7 +568,7 @@ s32 cload_enable_choice_toggle(void)
  *        highlighting the selected one, and toggle the selection on left/right.
  * @param prim Primitive-buffer cursor.
  * @param ot Ordering-table entry the text is linked into.
- * @param x Prompt center; the choices are drawn at x - 16 and x + 8.
+ * @param x Prompt center; the choices are drawn CARD_MENU_CHOICE_YES_GAP left and CARD_MENU_CHOICE_NO_GAP right of it.
  * @param y Prompt baseline.
  * @return Advanced primitive-buffer cursor.
  */
@@ -588,24 +578,24 @@ void *cload_draw_choice_prompt(void *prim, u_long *ot, s32 x, s32 y)
     u8 *text;
     s32 color;
 
-    color = 4;
-    text = FIELD_UI_TEXT_AT(g_text_choice_glyph_offsets, 27);
-    text_table = g_text_choice_glyph_offsets - 27 * 2;
+    color = FIELD_TEXT_COLOR_NORMAL;
+    text = FIELD_UI_TEXT_AT(g_text_choice_glyph_offsets, FIELD_UI_TEXT_YES);
+    text_table = FIELD_UI_TEXT_TABLE(g_text_choice_glyph_offsets, FIELD_UI_TEXT_YES);
     if (g_cload_choice_toggle != 0)
     {
-        color = 5;
+        color = FIELD_TEXT_COLOR_DIM;
     }
-    prim = field_draw_text(prim, ot, text, color, x - 0x10, y, 1);
+    prim = field_draw_text(prim, ot, text, color, x - CARD_MENU_CHOICE_YES_GAP, y, FIELD_TEXT_ALIGN_RIGHT);
 
-    color = 4;
-    text = FIELD_UI_TEXT(text_table, 28);
+    color = FIELD_TEXT_COLOR_NORMAL;
+    text = FIELD_UI_TEXT(text_table, FIELD_UI_TEXT_NO);
     if (g_cload_choice_toggle == 0)
     {
-        color = 5;
+        color = FIELD_TEXT_COLOR_DIM;
     }
-    prim = field_draw_text(prim, ot, text, color, x + 8, y, 0);
+    prim = field_draw_text(prim, ot, text, color, x + CARD_MENU_CHOICE_NO_GAP, y, FIELD_TEXT_ALIGN_LEFT);
 
-    if (g_pad_input & 0xA000)
+    if (g_pad_input & CARD_MENU_CHOICE_BUTTON_MASK)
     {
         g_cload_choice_toggle ^= 1;
         play_menu_sfx(0x7D, 0x80);
