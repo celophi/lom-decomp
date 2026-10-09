@@ -369,7 +369,7 @@ typedef enum FieldLandId
     FIELD_LAND_JUNGLE = 21,
     FIELD_LAND_UNUSED_22 = 22,
     FIELD_LAND_FLAMES = 23,
-    /** @brief Moves to FIELD_LAND_LUCEMIA_REPLACEMENT once it gains FIELD_LAND_FLAG_04. */
+    /** @brief Moves to FIELD_LAND_LUCEMIA_2 once it gains FIELD_LAND_FLAG_04. */
     FIELD_LAND_LUCEMIA = 24,
     FIELD_LAND_BEJEWELED_CITY = 25,
     FIELD_LAND_FIEG_SNOWFIELDS = 26,
@@ -379,8 +379,11 @@ typedef enum FieldLandId
     FIELD_LAND_MINDAS_RUINS = 30,
     FIELD_LAND_TREE_OF_MANA = 31,
     FIELD_LAND_ORCHARDS = 32,
-    /** @brief No location name; takes over the map cell and placement order of FIELD_LAND_LUCEMIA. */
-    FIELD_LAND_LUCEMIA_REPLACEMENT = 33
+    /**
+     * @brief Second form of Lucemia (its world-map assets are ESL2_*, Lucemia's are ESL_*);
+     *        takes over the map cell and placement order of FIELD_LAND_LUCEMIA. No location name.
+     */
+    FIELD_LAND_LUCEMIA_2 = 33
 } FieldLandId;
 
 /** @brief Per-land record (0xC bytes). */

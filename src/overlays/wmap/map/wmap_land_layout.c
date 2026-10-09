@@ -805,22 +805,22 @@ s32 wmap_load_land_layout(void)
         WMAP_SAVED_GAME.events[0] = (s32)(WMAP_SAVED_GAME.events[0] | 2);
     }
     if ((WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].status.word & WMAP_LAND_ACTIVE) &&
-        !(WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_REPLACEMENT].status.word & WMAP_LAND_ACTIVE))
+        !(WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].status.word & WMAP_LAND_ACTIVE))
     {
-        status = WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_REPLACEMENT].status.word | 7;
+        status = WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].status.word | 7;
         status &= ~WMAP_STATUS_X_MASK;
         status |= WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].status.word & WMAP_STATUS_X_MASK;
         status &= ~WMAP_STATUS_Y_MASK;
         status |= WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].status.word & WMAP_STATUS_Y_MASK;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_REPLACEMENT].status.word = status;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_REPLACEMENT].spirits[0] = 3;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_REPLACEMENT].spirits[1] = 3;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_REPLACEMENT].spirits[2] = 3;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_REPLACEMENT].spirits[3] = 3;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_REPLACEMENT].spirits[4] = 3;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_REPLACEMENT].spirits[5] = 3;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_REPLACEMENT].spirits[6] = 3;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_REPLACEMENT].spirits[7] = 3;
+        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].status.word = status;
+        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].spirits[0] = 3;
+        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].spirits[1] = 3;
+        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].spirits[2] = 3;
+        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].spirits[3] = 3;
+        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].spirits[4] = 3;
+        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].spirits[5] = 3;
+        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].spirits[6] = 3;
+        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].spirits[7] = 3;
         saved_first = WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].status.data.placement_order;
         saved_second = WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].status.data.artifact_order;
         WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].status.word &= ~2;
@@ -836,8 +836,8 @@ s32 wmap_load_land_layout(void)
         WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].spirits[5] = 0;
         WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].spirits[6] = 0;
         WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].spirits[7] = 0;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_REPLACEMENT].status.data.placement_order = saved_first;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_REPLACEMENT].status.data.artifact_order = saved_second;
+        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].status.data.placement_order = saved_first;
+        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].status.data.artifact_order = saved_second;
     }
     empty = WMAP_NO_LAND;
     index = 0x23;
@@ -909,7 +909,7 @@ void wmap_rebuild_land_lookup(void)
         {
             if (index == FIELD_LAND_LUCEMIA)
             {
-                if (!(WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_REPLACEMENT].status.word & WMAP_LAND_ACTIVE))
+                if (!(WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].status.word & WMAP_LAND_ACTIVE))
                 {
                     position = ((WmapSave*)(g_saved_game.bytes + FIELD_LAND_LUCEMIA * (s32)sizeof(WmapSavedLand)))->lands[0].status.data.position;
                     x = position & WMAP_COORD_MASK;
