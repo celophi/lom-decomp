@@ -36,6 +36,7 @@
 #include "common/render_context.h"
 #include "main/overlay_memory.h"
 #include "overlays/gname/gname.h"
+#include "main/audio/akao.h"
 
 void field_set_cd_error_fade_target(void);
 
@@ -96,7 +97,6 @@ void field_set_cd_error_fade_target(void);
 #define FIELD_SOUND_DUEL_INTRO 0x125
 #define FIELD_SOUND_DUEL_RESULT 0x126
 #define FIELD_SOUND_DUEL_PANEL_OUT 0x127
-#define FIELD_SOUND_PAN_CENTRE 0x80
 
 /** @brief FieldPlayerRecord weapon type before the first party update. */
 #define FIELD_WEAPON_TYPE_UNSET 0xFF
@@ -217,7 +217,6 @@ extern s32 g_pad_input_inject;
 extern s32 g_save_compatibility_tag;
 extern u16 g_music_track_index;
 extern s32 g_frame_counter;
-extern s32 g_pending_game_state;
 extern s32 g_active_script;
 extern s32 g_script_repeat_count;
 
@@ -1512,7 +1511,7 @@ void field_process_input(FieldRenderHalf* render)
                         field_open_item_drop_menu();
                         return;
                     }
-                    field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+                    field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
                 }
             }
         }
@@ -1532,14 +1531,14 @@ static s32 field_play_low_hp_warning(void)
         {
             if ((g_field_object_states[0].current_hp.word != 0) && ((u32)(g_field_object_states[0].current_hp.word * 4) < (u32)g_field_object_states[0].maximum_hp))
             {
-                field_play_sound(FIELD_SOUND_LOW_HP, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_LOW_HP, AKAO_PAN_CENTER);
             }
         }
 
         if (!((g_frame_counter + 0x10) & 0x1F) && !(g_field_actors[1].control.word & FIELD_CONTROL_MODE_MASK) && (g_field_object_states[1].current_hp.word != 0) &&
             ((u32)(g_field_object_states[1].current_hp.word * 4) < (u32)g_field_object_states[1].maximum_hp))
         {
-            field_play_sound(FIELD_SOUND_LOW_HP, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_LOW_HP, AKAO_PAN_CENTER);
         }
     }
 }
@@ -1569,7 +1568,7 @@ static void field_run_menu(void* render_buffers, s32 controller)
         field_begin_text_session();
         return;
     }
-    field_play_sound(FIELD_SOUND_MENU_OPEN, FIELD_SOUND_PAN_CENTRE);
+    field_play_sound(FIELD_SOUND_MENU_OPEN, AKAO_PAN_CENTER);
     field_reset_actor_resources();
 
     g_active_script = 0;
@@ -2212,7 +2211,7 @@ void field_update_modal(FieldRenderHalf* render)
         {
             return;
         }
-        field_play_set_sfx(0, FIELD_SOUND_PAN_CENTRE, 0, 3);
+        field_play_set_sfx(0, AKAO_PAN_CENTER, 0, 3);
         field_text_reset_windows();
         index = 0;
         g_field_modal_state = FIELD_MODAL_NONE;
@@ -2249,7 +2248,7 @@ static void field_begin_empty_shop_notice(s32 hidden)
 {
     g_field_modal_state = FIELD_MODAL_EMPTY_SHOP;
     field_set_fade_target_only(0xC0, 0x80, 0x80, 8);
-    field_play_sound(FIELD_SOUND_EMPTY_SHOP, FIELD_SOUND_PAN_CENTRE);
+    field_play_sound(FIELD_SOUND_EMPTY_SHOP, AKAO_PAN_CENTER);
     g_field_shop_notice_hidden = hidden;
 }
 
@@ -2278,7 +2277,7 @@ void field_begin_duel_intro(void)
     g_field_modal_state = FIELD_MODAL_DUEL_INTRO;
     field_set_fade_target_only(0xC0, 0xC0, 0xC0, 8);
     field_upload_player_icons();
-    field_play_sound(FIELD_SOUND_DUEL_INTRO, FIELD_SOUND_PAN_CENTRE);
+    field_play_sound(FIELD_SOUND_DUEL_INTRO, AKAO_PAN_CENTER);
     g_field_duel_panel_phase = FIELD_DUEL_SLIDE_IN;
     g_field_duel_panel_hold_frames = 0;
     g_field_duel_panel_offset = FIELD_DUEL_PANEL_START_OFFSET;
@@ -2292,7 +2291,7 @@ void field_begin_duel_result(void)
     g_field_modal_state = FIELD_MODAL_DUEL_RESULT;
     field_set_fade_target_only(0xC0, 0xC0, 0xC0, 8);
     field_upload_player_icons();
-    field_play_sound(FIELD_SOUND_DUEL_RESULT, FIELD_SOUND_PAN_CENTRE);
+    field_play_sound(FIELD_SOUND_DUEL_RESULT, AKAO_PAN_CENTER);
     g_field_duel_panel_phase = FIELD_DUEL_SLIDE_IN;
     g_field_duel_panel_hold_frames = 0;
     g_field_duel_panel_offset = FIELD_DUEL_PANEL_START_OFFSET;
@@ -2345,7 +2344,7 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render)
         g_field_duel_panel_hold_frames--;
         if (g_field_duel_panel_hold_frames == 0)
         {
-            field_play_sound(FIELD_SOUND_DUEL_PANEL_OUT, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_DUEL_PANEL_OUT, AKAO_PAN_CENTER);
             g_field_duel_panel_phase = FIELD_DUEL_SLIDE_OUT;
             g_field_duel_panel_offset = -1;
         }
@@ -2423,7 +2422,7 @@ static s32 field_draw_duel_result(FieldRenderHalf* render)
         g_field_duel_panel_hold_frames--;
         if (g_field_duel_panel_hold_frames == 0)
         {
-            field_play_sound(FIELD_SOUND_DUEL_PANEL_OUT, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_DUEL_PANEL_OUT, AKAO_PAN_CENTER);
             g_field_duel_panel_phase = FIELD_DUEL_SLIDE_OUT;
             g_field_duel_panel_offset = -1;
         }

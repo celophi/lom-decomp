@@ -1,5 +1,6 @@
 #include "overlays/field/field_text.h"
 #include "internal/addhero_internal.h"
+#include "main/audio/akao.h"
 
 /**
  * @brief Address of the ADDHERO text whose table offset is @p offset.
@@ -367,13 +368,13 @@ s32 addhero_handle_input(void)
     if (input & PAD_BTN_CIRCLE)
     {
         D_80122718 = 3;
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
         addhero_close_all_elements();
         return;
     }
     if (input & ADDHERO_CARD_SWITCH_BUTTON_MASK)
     {
-        field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         addhero_reset_state();
         return;
     }
@@ -417,7 +418,7 @@ s32 addhero_handle_input(void)
     if (g_pad_input & (PAD_BTN_UP | PAD_BTN_DOWN))
     {
         addhero_commit_selected_entry();
-        field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         addhero_scroll_to_selection();
         return;
     }
@@ -441,11 +442,11 @@ s32 addhero_handle_input(void)
                 addhero_enable_choice_toggle();
                 prompt->draw_handler = addhero_draw_load_prompt;
                 restart_card_sequence();
-                field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
                 return;
             }
         }
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
     }
 }
 

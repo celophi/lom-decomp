@@ -56,6 +56,12 @@ extern AkaoCommandParam g_akao_cmd_params[];
 /** @brief Mask retaining the low 8 bits of a pan command parameter. */
 #define AKAO_PAN_MASK 0xFF
 
+/** @brief Pan position of a centred sound. */
+#define AKAO_PAN_CENTER 0x80
+
+/** @brief Volume the menus and the world map play their sound effects at. */
+#define AKAO_SFX_DEFAULT_VOLUME 0x80
+
 /** @brief Mask retaining the low 8 bits of a pitch-bend command parameter. */
 #define AKAO_PITCH_BEND_MASK 0xFF
 

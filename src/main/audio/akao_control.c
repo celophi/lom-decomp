@@ -106,9 +106,7 @@ extern u8 g_akao_silent_sequence[];
 extern AkaoCommandParam g_akao_dispatch_params[6];
 extern void (*g_akao_command_handlers[256])(AkaoCommandParam*);
 
-void akao_channel_set_articulation(AkaoChannelState* channel, s32 articulation_index);
 u32 akao_collect_voice_mask(AkaoChannelState* channels, s32 channel_mask);
-void akao_sfx_release_channels(AkaoChannelState* channel, u32 release_mask);
 
 /**
  * @brief Reset a channel's playback state and point it at new sequence bytecode.

@@ -133,7 +133,7 @@ s32 field_update_actor_palette_animation(FieldActorSlot *actor)
             buf = &g_field_shared_clut_buffer[FIELD_PALETTE_ANIMATION_SUBPALETTE_OFFSET(animation_word)];
             field_rotate_palette_row((u16 *)buf + 1, FIELD_CLUT_SUBPALETTE_COLORS - 1, FIELD_PALETTE_ANIMATION_RIGHT(animation_word));
             rect.x = FIELD_PALETTE_ANIMATION_SUBPALETTE_X(actor->animation->palette_animation);
-            rect.y = FIELD_SHARED_CLUT_VRAM_Y;
+            rect.y = VRAM_CLUT_Y;
             rect.w = FIELD_CLUT_SUBPALETTE_COLORS;
             rect.h = 1;
         }
@@ -154,7 +154,7 @@ s32 field_update_actor_palette_animation(FieldActorSlot *actor)
         {
             buf = g_field_shared_clut_buffer;
             field_rotate_palette_row((u16 *)buf + 1, FIELD_CLUT_COLORS - 1, FIELD_PALETTE_ANIMATION_RIGHT(actor->animation->palette_animation));
-            rect.y = FIELD_SHARED_CLUT_VRAM_Y;
+            rect.y = VRAM_CLUT_Y;
             rect.w = FIELD_CLUT_COLORS;
             rect.x = 0;
             rect.h = 1;
@@ -281,7 +281,7 @@ static inline void* add_mesh_prim(s32* ot, FieldMotionRecord* effect, s32* depth
         } \
         else \
         { \
-            (clut) = getClut((part)->appearance.fields.palette_selector * 16, FIELD_SHARED_CLUT_VRAM_Y); \
+            (clut) = getClut((part)->appearance.fields.palette_selector * 16, VRAM_CLUT_Y); \
             (tpage) = getTPage(FIELD_PART_TEXTURE_MODE(part), FIELD_PART_BLEND_MODE(part), FIELD_SHARED_TEXTURE_VRAM_X, FIELD_SHARED_TEXTURE_VRAM_Y); \
         } \
         if (((part)->track_flags.word >> 21) & 1) \

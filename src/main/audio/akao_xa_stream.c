@@ -13,6 +13,9 @@
 #include "internal/akao_voice.h"
 #include "internal/akao_control.h"
 #include "main/audio/akao_cmd.h"
+#include "internal/akao_sequencer.h"
+#include "internal/akao_driver.h"
+#include "internal/akao_xa_stream.h"
 
 /* Voice mask of SPU voices 22 and 23, the highest pair the stream may use. */
 #define XA_TOP_VOICE_PAIR_MASK 0xC00000
@@ -72,9 +75,6 @@ typedef struct
     u8 _padC0[XA_RING_DATA_OFFSET - XA_RING_HEADER_OFFSET - sizeof(AkaoXaProgramHeader)];
     u8 sample_data[AKAO_XA_RING_BLOCK_BYTES - XA_RING_DATA_OFFSET];
 } AkaoXaRingBlock;
-
-void akao_release_channels(AkaoChannelState* channel, u32 release_mask);
-void akao_spu_arm_xfer(void);
 
 void akao_xa_begin_mono_buffer(void);
 void akao_xa_begin_stereo_buffer(void);

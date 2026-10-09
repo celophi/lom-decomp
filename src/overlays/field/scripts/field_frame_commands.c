@@ -9,6 +9,7 @@
 #include "main/field_runtime.h"
 #include "overlays/field/field_text.h"
 #include "main/main.h"
+#include "main/field_entry.h"
 
 void field_restart_pending_bindings(void);
 void field_update_timed_panel(FieldRenderHalf* render);
@@ -25,7 +26,6 @@ extern s32 g_field_hide_actor_panels;
 extern s32 g_field_ring_menu_state;
 extern s32 g_field_modal_state;
 extern s32 g_field_text_session_active;
-extern s32 g_field_scene_request_pending;
 
 /**
  * @brief Run one frame of field logic and build its draw commands.

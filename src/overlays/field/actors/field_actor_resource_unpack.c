@@ -17,6 +17,8 @@
 #include <memory.h>
 #include <libgpu.h>
 #include "common/tim.h"
+#include "main/display.h"
+#include "main/field_entry.h"
 
 /** @brief Capacity of the pending resource read queue. */
 #define FIELD_RESOURCE_QUEUE_CAPACITY 16
@@ -125,7 +127,6 @@ void* memcpy(void* dst, const void* src, s32 size);
 /** @brief Command of the player actor (g_field_actors[0].command); 0 while idle. */
 extern s16 g_field_player_command;
 extern s32 g_field_scene_contact_latched;
-extern s32 g_field_scene_request_pending;
 extern u8* g_field_actor_heap;
 extern u8* g_field_cd_buffer;
 extern s32 g_field_resource_queue_count;
@@ -681,7 +682,7 @@ static void field_upload_actor_texture(u8* tim, s32 owner)
         }
         else
         {
-            setRECT(&rect, 0, FIELD_SHARED_CLUT_VRAM_Y, CLUT_ENTRY_COUNT, 1);
+            setRECT(&rect, 0, VRAM_CLUT_Y, CLUT_ENTRY_COUNT, 1);
             memcpy(g_field_shared_clut_buffer, cursor,
                    clut_block_size - FIELD_TIM_BLOCK_HEADER > FIELD_CLUT_BYTES ? FIELD_CLUT_BYTES : clut_block_size - FIELD_TIM_BLOCK_HEADER);
         }

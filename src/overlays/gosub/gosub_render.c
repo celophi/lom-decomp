@@ -1,6 +1,7 @@
 #include "internal/gosub_internal.h"
 #include "overlays/field/field_text.h"
 #include "overlays/field/field_equipment_combination_rules.h"
+#include "main/display.h"
 
 /**
  * @brief Width of an element: the low eight bits live in the top byte of
@@ -706,7 +707,7 @@ u8* gosub_draw_portrait(u8* prim, u_long* ot, s32 row, s32 x, s32 y, s32 count)
     rect.y = g_gosub_frame_parity * GOSUB_PORTRAIT_SIZE;
     LoadImage(&rect, (u_long*)((u8*)g_gosub_portrait_archive + g_gosub_portrait_archive[portrait] + GOSUB_PORTRAIT_PIXEL_OFFSET));
 
-    rect.y = GOSUB_GLYPH_CLUT_Y;
+    rect.y = VRAM_CLUT_Y;
     rect.w = GOSUB_PORTRAIT_CLUT_SIZE;
     rect.h = 1;
     rect.x = count * GOSUB_PORTRAIT_CLUT_SIZE + g_gosub_frame_parity * (GOSUB_PORTRAIT_SLOTS * GOSUB_PORTRAIT_CLUT_SIZE);
@@ -720,7 +721,7 @@ u8* gosub_draw_portrait(u8* prim, u_long* ot, s32 row, s32 x, s32 y, s32 count)
     sprite->v0 = g_gosub_frame_parity * GOSUB_PORTRAIT_SIZE;
     sprite->y0 = y;
     setWH(sprite, GOSUB_PORTRAIT_SIZE, GOSUB_PORTRAIT_SIZE);
-    setClut(sprite, count * GOSUB_PORTRAIT_CLUT_SIZE + g_gosub_frame_parity * (GOSUB_PORTRAIT_SLOTS * GOSUB_PORTRAIT_CLUT_SIZE), GOSUB_GLYPH_CLUT_Y);
+    setClut(sprite, count * GOSUB_PORTRAIT_CLUT_SIZE + g_gosub_frame_parity * (GOSUB_PORTRAIT_SLOTS * GOSUB_PORTRAIT_CLUT_SIZE), VRAM_CLUT_Y);
     addPrim(ot, sprite);
     return gosub_finish_glyph_run((u8*)(sprite + 1), ot);
 }

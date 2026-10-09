@@ -1,6 +1,7 @@
 #include "overlays/field/field_text.h"
 #include "internal/addhero_internal.h"
 #include "common/gpu_packet.h"
+#include "main/audio/akao.h"
 
 /** @brief Side of a square party icon, in pixels (4-bit, so a quarter of that in VRAM halfwords). */
 #define ADDHERO_ICON_SIZE 48
@@ -55,7 +56,7 @@ void* addhero_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
     {
         g_addhero_element_pool[ADDHERO_ELEMENT_MODAL].attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
         field_reset_input_repeat();
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
         g_card_entry_state = ADDHERO_ENTRY_STATE_CHECKING_CARD;
         addhero_reset_entry_ranks();
         g_card_step = NULL;
@@ -66,7 +67,7 @@ void* addhero_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
         {
             g_addhero_element_pool[ADDHERO_ELEMENT_MODAL].attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
             field_reset_input_repeat();
-            field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
             g_card_step = g_addhero_loadseq_abort;
         }
         else if (g_pad_input & ADDHERO_CONFIRM_BUTTON_MASK)
@@ -75,12 +76,12 @@ void* addhero_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
             {
                 g_addhero_element_pool[ADDHERO_ELEMENT_MODAL].attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
                 field_reset_input_repeat();
-                field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
                 g_card_step = g_addhero_loadseq_abort;
             }
             else
             {
-                field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
                 g_addhero_progress_active = 1;
                 g_card_step = g_addhero_loadseq_load_begin;
                 p = &g_addhero_element_pool[ADDHERO_ELEMENT_MODAL];
@@ -138,7 +139,7 @@ void* addhero_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_off
             return result;
         }
 
-        field_play_sound(FIELD_SOUND_LOAD_DONE, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_LOAD_DONE, AKAO_PAN_CENTER);
         pad_controlled = g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.bytes[0] >> FIELD_CHARACTER_PAD_CONTROLLED_SHIFT;
         bcopy((u8*)&file->saved_game.characters[FIELD_PARTY_HERO], (u8*)&g_saved_game_ctx->characters[FIELD_PARTY_GUEST], sizeof(FieldCharacterRecord));
         g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word =
@@ -211,7 +212,7 @@ void* addhero_draw_progress_bar(POLY_G4* quad, u_long* ot)
  */
 void addhero_open_status_dialog(s32 message_id)
 {
-    field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+    field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
     g_addhero_element_pool[ADDHERO_ELEMENT_MODAL].draw_handler = addhero_draw_status_dialog;
     g_addhero_element_pool[ADDHERO_ELEMENT_MODAL].attr.bits.transition_step = 1;
     g_addhero_element_pool[ADDHERO_ELEMENT_MODAL].attr.bits.state = ADDHERO_ELEMENT_STATE_OPENING;
@@ -238,7 +239,7 @@ void addhero_open_status_dialog(s32 message_id)
  */
 void addhero_open_exit_dialog(s32 message_id)
 {
-    field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+    field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
     g_addhero_element1.draw_handler = addhero_draw_exit_dialog;
     g_addhero_element1.attr.bits.transition_step = 1;
     g_addhero_element1.attr.bits.state = ADDHERO_ELEMENT_STATE_OPENING;
@@ -457,7 +458,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
             {
                 s32 message_id = ADDHERO_DIALOG_INVALID_SAVE;
 
-                field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
                 g_addhero_element_pool[ADDHERO_ELEMENT_MODAL].draw_handler = addhero_draw_status_dialog;
                 g_addhero_element_pool[ADDHERO_ELEMENT_MODAL].attr.bits.transition_step = 1;
                 g_addhero_element_pool[ADDHERO_ELEMENT_MODAL].attr.bits.state = ADDHERO_ELEMENT_STATE_OPENING;
@@ -477,7 +478,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
                 g_addhero_dialog_state = message_id;
                 return prim;
             }
-            field_play_sound(FIELD_SOUND_LOAD_DONE, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_LOAD_DONE, AKAO_PAN_CENTER);
             g_card_entry_state = ADDHERO_ENTRY_STATE_SAVE_CONFIRM;
             addhero_enable_choice_toggle();
             field_reset_input_repeat();
@@ -496,7 +497,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         prim = addhero_draw_choice_prompt(prim, ot, message_x, ADDHERO_TEXT_LINE_HEIGHT - y_offset);
         if (g_pad_input & PAD_BTN_CIRCLE)
         {
-            field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
             addhero_enable_choice_toggle();
             g_card_entry_state = ADDHERO_ENTRY_STATE_SAVE_CONFIRM;
             field_reset_input_repeat();
@@ -505,14 +506,14 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         {
             if (g_addhero_choice_toggle != 0)
             {
-                field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
                 addhero_enable_choice_toggle();
                 g_card_entry_state = ADDHERO_ENTRY_STATE_SAVE_CONFIRM;
                 field_reset_input_repeat();
             }
             else
             {
-                field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
                 g_addhero_result = ADDHERO_RESULT_CANCELLED;
                 g_menu_element_counter = 0x20;
                 element = g_addhero_element_pool;
@@ -544,7 +545,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         {
             addhero_enable_choice_toggle();
             g_card_entry_state = ADDHERO_ENTRY_STATE_CONFIRM_NO_SAVE;
-            field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
             field_reset_input_repeat();
         }
         else if (g_pad_input & ADDHERO_CONFIRM_BUTTON_MASK)
@@ -553,12 +554,12 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
             {
                 addhero_enable_choice_toggle();
                 g_card_entry_state = ADDHERO_ENTRY_STATE_CONFIRM_NO_SAVE;
-                field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
                 field_reset_input_repeat();
             }
             else
             {
-                field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
                 buffer = (u8*)&g_addhero_save_file;
                 bcopy((u8*)&g_saved_game_ctx->characters[FIELD_PARTY_GUEST], (u8*)&((SaveFile*)buffer)->saved_game.characters[FIELD_PARTY_HERO],
                       sizeof(FieldCharacterRecord));
@@ -620,7 +621,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         if (g_addhero_write_in_progress == 0)
         {
             g_saved_game_ctx->characters[FIELD_PARTY_GUEST].name[0] = 0;
-            field_play_sound(FIELD_SOUND_SAVE_DONE, FIELD_SOUND_PAN_CENTRE);
+            field_play_sound(FIELD_SOUND_SAVE_DONE, AKAO_PAN_CENTER);
             g_menu_element_counter = 0x20;
             element = g_addhero_element_pool;
             for (i = 0; i < ADDHERO_ELEMENT_COUNT; i++, element++)
@@ -731,7 +732,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         s32 i;
 
         D_80122718 = 3;
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
         field_restore_fade_target();
         element = g_addhero_element_pool;
         for (i = 0; i < ADDHERO_ELEMENT_COUNT; i++, element++)
@@ -747,7 +748,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
 
     if ((g_pad_input & ADDHERO_CARD_SWITCH_BUTTON_MASK) && (g_card_entry_state != ADDHERO_ENTRY_STATE_CHECKING_CARD))
     {
-        field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         g_addhero_load_flow_active = 0;
         g_card_step = NULL;
         g_addhero_scroll_frames = 0;
@@ -886,7 +887,7 @@ void* addhero_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y)
     if (g_pad_input & (PAD_BTN_LEFT | PAD_BTN_RIGHT))
     {
         g_addhero_choice_toggle ^= 1;
-        field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         g_pad_input = 0;
     }
     return prim;

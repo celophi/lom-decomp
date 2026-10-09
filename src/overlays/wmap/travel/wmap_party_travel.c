@@ -15,6 +15,7 @@
 #include "main/cdrom.h"
 #include "main/audio/akao_cmd.h"
 #include "../internal/wmap_cells.h"
+#include "main/audio/akao.h"
 
 #define WMAP_CELL_SPACING 48
 #define WMAP_TRAVEL_CELL_UNITS 160
@@ -24,7 +25,6 @@
 #define WMAP_TRAVEL_SCALE_INDEX 15
 #define WMAP_TRAVEL_SHADE 128
 #define WMAP_TRAVEL_SOUND 21
-#define WMAP_TRAVEL_SOUND_VOLUME 128
 #define WMAP_TRAVEL_TEXTURE_ROW 0x100
 #define WMAP_TRAVEL_OT_FALLBACK 31
 #define WMAP_TRAVEL_OT_BASE 42
@@ -211,7 +211,7 @@ void wmap_update_travelers(void)
     {
         if (g_wmap_party_moving != 0 && g_wmap_sequence_count == 0)
         {
-            wmap_play_sound(WMAP_TRAVEL_SOUND, WMAP_TRAVEL_SOUND_VOLUME);
+            wmap_play_sound(WMAP_TRAVEL_SOUND, AKAO_SFX_DEFAULT_VOLUME);
             g_wmap_travel_sound_active = g_wmap_party_moving;
         }
         if (g_wmap_party_moving != g_wmap_travel_sound_active && g_wmap_party_moving == 0)

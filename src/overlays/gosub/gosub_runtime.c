@@ -1,4 +1,5 @@
 #include "internal/gosub_internal.h"
+#include "main/audio/akao.h"
 
 /**
  * @brief Process input, advance scroll interpolation, and draw the active screen.
@@ -56,7 +57,7 @@ s32 gosub_handle_input(void)
             }
             if (g_gosub_suppress_dialog_sound == 0)
             {
-                play_menu_sfx(GOSUB_SFX_CURSOR, GOSUB_SFX_VOLUME);
+                play_menu_sfx(GOSUB_SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
                 field_restore_fade_target();
                 gosub_close_elements();
                 return;
@@ -68,7 +69,7 @@ s32 gosub_handle_input(void)
 
         if (g_pad_input & GOSUB_BUTTONS_PREVIOUS)
         {
-            play_menu_sfx(GOSUB_SFX_CURSOR, GOSUB_SFX_VOLUME);
+            play_menu_sfx(GOSUB_SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
             g_gosub_dialog_choice -= 1;
             if (g_gosub_dialog_choice < 0)
             {
@@ -79,7 +80,7 @@ s32 gosub_handle_input(void)
 
         if (g_pad_input & GOSUB_BUTTONS_NEXT)
         {
-            play_menu_sfx(GOSUB_SFX_CURSOR, GOSUB_SFX_VOLUME);
+            play_menu_sfx(GOSUB_SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
             g_gosub_dialog_choice += 1;
             if (g_gosub_dialog_choice == GOSUB_DIALOG_CHOICE_COUNT)
             {
@@ -90,7 +91,7 @@ s32 gosub_handle_input(void)
 
         if (g_pad_input & GOSUB_BUTTONS_CONFIRM)
         {
-            play_menu_sfx(GOSUB_SFX_CURSOR, GOSUB_SFX_VOLUME);
+            play_menu_sfx(GOSUB_SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
             if (g_gosub_dialog_handler == 0)
             {
                 return;
@@ -106,7 +107,7 @@ s32 gosub_handle_input(void)
 
         if (g_pad_input & GOSUB_BUTTON_CANCEL)
         {
-            play_menu_sfx(GOSUB_SFX_CURSOR, GOSUB_SFX_VOLUME);
+            play_menu_sfx(GOSUB_SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
             if (g_gosub_dialog_handler == 0)
             {
                 return;
@@ -176,14 +177,14 @@ s32 gosub_handle_input(void)
 
     if (g_pad_input & (PAD_BTN_UP | PAD_BTN_DOWN))
     {
-        play_menu_sfx(GOSUB_SFX_CURSOR, GOSUB_SFX_VOLUME);
+        play_menu_sfx(GOSUB_SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
         gosub_scroll_to_cursor();
         return;
     }
 
     if (g_pad_input & GOSUB_BUTTONS_CONFIRM)
     {
-        play_menu_sfx(GOSUB_SFX_CURSOR, GOSUB_SFX_VOLUME);
+        play_menu_sfx(GOSUB_SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
         if (g_gosub_rows[g_gosub_cursor_row].text_color != GOSUB_TEXT_COLOR_NORMAL)
         {
             return;
@@ -245,7 +246,7 @@ s32 gosub_handle_input(void)
 
     if (g_pad_input & GOSUB_BUTTON_FINISH)
     {
-        play_menu_sfx(GOSUB_SFX_CURSOR, GOSUB_SFX_VOLUME);
+        play_menu_sfx(GOSUB_SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
         if (g_gosub_finish_handler != 0)
         {
             if (g_gosub_finish_handler() == 0)
@@ -274,7 +275,7 @@ s32 gosub_handle_input(void)
         return;
     }
 
-    play_menu_sfx(GOSUB_SFX_CANCEL, GOSUB_SFX_VOLUME);
+    play_menu_sfx(GOSUB_SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
 
     if (g_gosub_selection_count != 0)
     {

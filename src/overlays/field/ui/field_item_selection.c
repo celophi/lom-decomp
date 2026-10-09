@@ -18,6 +18,7 @@
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_menu_element.h"
 #include "common/gpu_packet.h"
+#include "main/audio/akao.h"
 
 /** @brief First item id that can be dropped on the field; its actor animation is 0. */
 #define FIELD_DROP_ITEM_FIRST 0x60
@@ -66,7 +67,6 @@
 #define FIELD_SOUND_SELECT 0x7E
 #define FIELD_SOUND_CANCEL 0x7F
 #define FIELD_SOUND_WINDOW_OPEN 0xB9
-#define FIELD_SOUND_PAN_CENTRE 0x80
 
 /** @brief Initial held-button delay set when the menu flushes the pads. */
 #define FIELD_PAD_REPEAT_DELAY 15
@@ -244,7 +244,7 @@ void field_open_item_drop_menu(void)
     }
 
     g_field_item_drop_menu_open = 1;
-    field_play_sound(FIELD_SOUND_WINDOW_OPEN, FIELD_SOUND_PAN_CENTRE);
+    field_play_sound(FIELD_SOUND_WINDOW_OPEN, AKAO_PAN_CENTER);
     window = claim_menu_element();
     window->draw = (FieldMenuDrawFn)field_draw_item_drop_list;
     window->scroll = 0;
@@ -280,7 +280,7 @@ void field_open_item_drop_menu(void)
 /** @brief Play the sound for an action that cannot be taken. */
 static void field_play_action_refused_sound(void)
 {
-    field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+    field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
 }
 
 /**
@@ -423,7 +423,7 @@ static s32 field_update_item_drop_menu(FieldMenuElement *window)
     if (g_field_buffered_input & FIELD_ITEM_MENU_CONFIRM)
     {
         flush_input();
-        field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
         reset_menu_elements();
         g_field_item_drop_menu_open = 0;
         g_saved_game_ctx->item_counts[g_field_item_list[g_field_item_list_cursor].item_id]--;
@@ -434,7 +434,7 @@ static s32 field_update_item_drop_menu(FieldMenuElement *window)
     {
         flush_input();
         reset_menu_elements();
-        field_play_sound(FIELD_SOUND_CANCEL, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_CANCEL, AKAO_PAN_CENTER);
         g_field_item_drop_menu_open = 0;
         return;
     }
@@ -443,7 +443,7 @@ static s32 field_update_item_drop_menu(FieldMenuElement *window)
         return;
     }
 
-    field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+    field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
     steps = 1;
     if (g_field_buffered_input & PADR1)
     {

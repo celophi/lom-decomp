@@ -45,7 +45,6 @@ typedef struct GosubTilePacket GosubTilePacket;
 /** @brief Menu sound effects and their volume. */
 #define GOSUB_SFX_CURSOR 0x7D
 #define GOSUB_SFX_CANCEL 0x7F
-#define GOSUB_SFX_VOLUME 0x80
 
 /** @brief Buttons that confirm, cancel, and move the cursor. */
 #define GOSUB_BUTTONS_CONFIRM (PAD_BTN_CROSS | PAD_BTN_L3)
@@ -129,8 +128,6 @@ typedef struct GosubTilePacket GosubTilePacket;
 /** @brief Texture page containing the gosub font and panel-corner sprites. */
 #define GOSUB_FONT_TPAGE 5
 
-/** @brief VRAM row containing the selectable glyph palettes. */
-#define GOSUB_GLYPH_CLUT_Y 0x1F2
 /** @brief Convert a glyph CLUT slot to its VRAM x coordinate. */
 #define GOSUB_GLYPH_CLUT_X_SHIFT 4
 

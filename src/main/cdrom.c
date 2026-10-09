@@ -37,8 +37,8 @@
 #define CD_SECTOR_POSITION_MASK 0x00FFFFFF
 #define CD_DISC_VALIDATION_WORDS 8
 #define CD_IS_SJIS_LEAD_BYTE(character) (((character) >= 0x80 && (character) <= 0x9F) || ((character) >= 0xE0 && (character) <= 0xEF))
-#define CD_DATA_SECTOR_WORDS (CD_DATA_SECTOR_SIZE / CD_BYTES_PER_WORD)
-#define CD_BYTES_TO_WORDS(size) (((size) + CD_BYTES_PER_WORD_MASK) >> CD_BYTES_PER_WORD_SHIFT)
+#define CD_DATA_SECTOR_WORDS (CD_DATA_SECTOR_SIZE / BYTES_PER_WORD)
+#define CD_BYTES_TO_WORDS(size) (((size) + BYTES_PER_WORD_MASK) >> BYTES_PER_WORD_SHIFT)
 #define CD_RECOVERY_SECTOR_RETRY_LIMIT 17
 #define CD_DISC_READY_RETRY_LIMIT 13
 #define CD_IDLE_STATUS_RETRY_LIMIT 11
@@ -513,26 +513,26 @@ s32 cdrom_stream(s32 resource_index, u8* destination)
             {
                 overflow_size = CD_STREAM_STATE.wrap_overflow;
                 unprocessed_bytes = CD_STREAM_STATE.bytes_buffered - bytes_consumed;
-                alignment = unprocessed_bytes & CD_BYTES_PER_WORD_MASK;
+                alignment = unprocessed_bytes & BYTES_PER_WORD_MASK;
                 relocation_dst.bytes = CD_STREAM_WRAP_START - unprocessed_bytes;
                 previous_read_ptr = CD_STREAM_STATE.buffer_start;
 
-                copy_size = CD_BYTES_PER_WORD - alignment;
+                copy_size = BYTES_PER_WORD - alignment;
                 CD_STREAM_STATE.input_cursor = relocation_dst.bytes;
                 CD_STREAM_STATE.buffer_start = relocation_dst.bytes;
-                copy_size &= CD_BYTES_PER_WORD_MASK;
-                alignment = unprocessed_bytes + CD_BYTES_PER_WORD_MASK;
+                copy_size &= BYTES_PER_WORD_MASK;
+                alignment = unprocessed_bytes + BYTES_PER_WORD_MASK;
 
                 relocation_dst.bytes -= copy_size;
                 relocation_src.bytes = (previous_read_ptr + bytes_consumed) - copy_size;
 
                 CD_STREAM_STATE.bytes_buffered = overflow_size + unprocessed_bytes;
-                unprocessed_bytes = alignment / CD_BYTES_PER_WORD;
+                unprocessed_bytes = alignment / BYTES_PER_WORD;
                 for (unprocessed_bytes--; unprocessed_bytes != -1; unprocessed_bytes--)
                 {
                     *relocation_dst.words = *relocation_src.words;
-                    relocation_src.bytes += CD_BYTES_PER_WORD;
-                    relocation_dst.bytes += CD_BYTES_PER_WORD;
+                    relocation_src.bytes += BYTES_PER_WORD;
+                    relocation_dst.bytes += BYTES_PER_WORD;
                 }
             }
             else
@@ -662,7 +662,7 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
                         total_bytes_delivered += staging_bytes_produced;
                         chunk_bytes_remaining -= staging_bytes_produced;
 
-                        loop_count = (uintptr_t)destination & CD_BYTES_PER_WORD_MASK;
+                        loop_count = (uintptr_t)destination & BYTES_PER_WORD_MASK;
                         if ((loop_count != 0) && (loop_count < staging_bytes_produced))
                         {
                             staging_bytes_produced -= loop_count;
@@ -672,15 +672,15 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
                             }
                         }
 
-                        alignment_check = (uintptr_t)source_ptr & CD_BYTES_PER_WORD_MASK;
+                        alignment_check = (uintptr_t)source_ptr & BYTES_PER_WORD_MASK;
                         if (alignment_check == 0)
                         {
-                            loop_count = staging_bytes_produced >> CD_BYTES_PER_WORD_SHIFT;
-                            staging_bytes_produced -= loop_count * CD_BYTES_PER_WORD;
+                            loop_count = staging_bytes_produced >> BYTES_PER_WORD_SHIFT;
+                            staging_bytes_produced -= loop_count * BYTES_PER_WORD;
                             for (loop_count--; loop_count != -1; loop_count--)
                             {
                                 source_word = *(u32*)source_ptr;
-                                source_ptr += CD_BYTES_PER_WORD;
+                                source_ptr += BYTES_PER_WORD;
                                 /* Store a word and step destination (a u8 *) by one word. */
                                 *(*(u32**)&destination)++ = source_word;
                             }
@@ -745,9 +745,9 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
             if (stream_state->wrap_overflow != 0)
             {
                 staging_bytes_produced = stream_state->bytes_buffered - bytes_buffered;
-                copy_size = (staging_bytes_produced & CD_BYTES_PER_WORD_MASK);
-                alignment_check = CD_BYTES_PER_WORD - copy_size;
-                loop_count = alignment_check & CD_BYTES_PER_WORD_MASK;
+                copy_size = (staging_bytes_produced & BYTES_PER_WORD_MASK);
+                alignment_check = BYTES_PER_WORD - copy_size;
+                loop_count = alignment_check & BYTES_PER_WORD_MASK;
 
                 relocation_dst.bytes = CD_STREAM_WRAP_START - staging_bytes_produced;
                 previous_read_ptr = (previous_read_ptr + bytes_buffered) - loop_count;
@@ -757,12 +757,12 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
                 relocation_dst.bytes = relocation_dst.bytes - loop_count;
 
                 stream_state->bytes_buffered = overflow_size + staging_bytes_produced;
-                staging_bytes_produced = (staging_bytes_produced + CD_BYTES_PER_WORD_MASK) / CD_BYTES_PER_WORD;
+                staging_bytes_produced = (staging_bytes_produced + BYTES_PER_WORD_MASK) / BYTES_PER_WORD;
                 for (staging_bytes_produced--; staging_bytes_produced != -1; staging_bytes_produced--)
                 {
                     *relocation_dst.words = *(u32*)previous_read_ptr;
-                    previous_read_ptr += CD_BYTES_PER_WORD;
-                    relocation_dst.bytes += CD_BYTES_PER_WORD;
+                    previous_read_ptr += BYTES_PER_WORD;
+                    relocation_dst.bytes += BYTES_PER_WORD;
                 }
             }
             else

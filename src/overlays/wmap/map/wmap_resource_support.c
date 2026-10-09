@@ -6,7 +6,6 @@
 #include "../internal/wmap_sprite_render.h"
 #include "main/audio/akao_cmd.h"
 
-#define WMAP_COPY_WORD_BYTES 4
 #define WMAP_COPY_WORD_SHIFT 2
 #define WMAP_COPY_END -1
 
@@ -42,7 +41,6 @@ typedef struct
 extern u8 g_wmap_load_buffer[];
 extern RECT D_80051A88;
 
-
 extern WmapInitDisplay g_wmap_actor_motions[];
 
 /**
@@ -63,7 +61,7 @@ void wmap_copy_words(s32* source, s32* destination, s32 byte_count)
     s32 copy_limit = byte_count;
     if (byte_count < 0)
     {
-        copy_limit = byte_count + WMAP_COPY_WORD_BYTES - 1;
+        copy_limit = byte_count + BYTES_PER_WORD - 1;
     }
     byte_count = copy_limit >> WMAP_COPY_WORD_SHIFT;
     if (--byte_count != WMAP_COPY_END)

@@ -12,6 +12,7 @@
 #include "main/game_state.h"
 #include <libetc.h>
 #include "common/gpu_packet.h"
+#include "main/field_entry.h"
 
 #define FIELD_ENTRY_FADE_FRAMES 30
 #define FIELD_TEXT_IMAGE_RESOURCE 1500
@@ -38,14 +39,6 @@ typedef struct
  */
 void field_load_vram_resource(s32 id, RECT* rect);
 
-extern s32 g_field_scene_id;
-extern s32 g_field_object_id;
-extern u32 g_field_spawn_id;
-extern s32 g_field_music_id;
-extern s32 g_field_sound_bank_id;
-extern s32 g_field_secondary_music_id;
-extern s32 g_pending_game_state;
-extern s32 g_field_scene_request_pending;
 extern FieldRenderHalf* g_field_current_render_half;
 extern void* g_field_primitive_cursor;
 extern s32 g_field_force_two_primitives;
@@ -78,7 +71,8 @@ s32 run_field_scene(void)
     {
         next_state = FIELD_ENTRY_FADE_FRAMES;
         g_field_scene_request_pending = 0;
-        field_set_scene_parameters(g_field_scene_id, g_field_object_id, g_field_spawn_id, g_field_music_id, g_field_sound_bank_id, g_field_secondary_music_id);
+        field_set_scene_parameters(g_field_scene_id.word, g_field_object_id, g_field_spawn_id, g_field_music_id, g_field_sound_bank_id,
+                                   g_field_secondary_music_id);
         field_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, next_state);
         field_run_frame_loop(render_buffers);
     } while (g_pending_game_state == 0);

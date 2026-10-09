@@ -87,7 +87,7 @@ void main_game_loop(void)
     g_field_music_id = 0;
     g_field_secondary_music_id = -1;
     g_field_sound_bank_id = -1;
-    g_field_scene_id = 0;
+    g_field_scene_id.id = 0;
     g_save_compatibility_tag = SAVE_TAG_STARTUP;
     g_script_pair_value_49 = 0;
 #if defined(VERSION_JP)
@@ -235,7 +235,7 @@ void main_game_loop(void)
             else
             {
                 *spawn_id = FIELD_SPAWN_LOAD_GAME;
-                g_field_scene_id = g_saved_game.layout.scene_id;
+                g_field_scene_id.id = g_saved_game.layout.scene_id;
                 g_field_object_id = g_saved_game.layout.object_id;
                 g_field_music_id = g_saved_game.layout.music_id;
                 g_field_sound_bank_id = g_saved_game.layout.sound_bank_id;

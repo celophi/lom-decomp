@@ -22,6 +22,7 @@
 #include "../internal/field_calls.h"
 #include "overlays/field/field_scene_transition.h"
 #include "../internal/field_state_ops.h"
+#include "main/audio/akao.h"
 
 /** @brief Capacity of g_field_battle_entry_changes. */
 #define FIELD_BATTLE_ENTRY_CHANGE_COUNT 8
@@ -54,7 +55,6 @@ enum
 
 /** @brief Sound played when a battle starts. */
 #define FIELD_SOUND_BATTLE_ENTRY 0x79
-#define FIELD_SOUND_PAN_CENTRE 0x80
 
 /** @brief Change applied to one actor on battle entry; FIELD_BATTLE_ENTRY_KEEP leaves a field unchanged. */
 typedef struct
@@ -172,7 +172,7 @@ void field_update_battle_entry(void)
             }
             if (g_field_battle_entry_changes[i].sound != FIELD_BATTLE_ENTRY_KEEP)
             {
-                field_play_sound(g_field_battle_entry_changes[i].sound, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(g_field_battle_entry_changes[i].sound, AKAO_PAN_CENTER);
                 VSync(0);
             }
         }
@@ -222,7 +222,7 @@ void field_update_battle_entry(void)
                             g_field_object_parts[i].spawn_flags.word &= ~FIELD_PART_IGNORE_MAP_COLLISION;
                             g_field_actors[i].command = FIELD_ACTOR_COMMAND_NONE;
                         }
-                        field_play_sound(FIELD_SOUND_BATTLE_ENTRY, FIELD_SOUND_PAN_CENTRE);
+                        field_play_sound(FIELD_SOUND_BATTLE_ENTRY, AKAO_PAN_CENTER);
                         for (i = 0; i < FIELD_PLAYER_COUNT; i++)
                         {
                             if (g_field_party_reload_resource_ids[i] != 0)

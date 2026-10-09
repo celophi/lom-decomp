@@ -15,6 +15,8 @@
 #include "main/scene_state.h"
 #include <libgpu.h>
 #include <libgte.h>
+#include "main/audio/akao.h"
+#include "overlays/field/field_actor_records.h"
 
 /** @brief Control mode of an actor driven by its script. */
 #define FIELD_CONTROL_SCRIPTED 2
@@ -42,9 +44,6 @@
 /** @brief Half of a 45 degree facing sector in ratan2 units. */
 #define FIELD_FACING_HALF_SECTOR (ONE / 16)
 
-/** @brief Full-size object part scale; smaller objects use the small footprint. */
-#define FIELD_PART_FULL_SCALE 0x40
-
 /** @brief Collision footprints of full-size and small objects. */
 #define FIELD_FOOTPRINT_LARGE_WIDTH 12
 #define FIELD_FOOTPRINT_LARGE_DEPTH 8
@@ -59,9 +58,6 @@
 
 /** @brief Tint timer started by a revive. */
 #define FIELD_REVIVE_TINT_FRAMES 60
-
-/** @brief Pan value of a centred sound effect. */
-#define FIELD_SOUND_PAN_CENTRE 0x80
 
 /** @brief Wait value that keeps a command running until it finishes by itself. */
 #define FIELD_WAIT_UNTIL_DONE 0xFF
@@ -435,17 +431,17 @@ static void field_run_actor_script_command(FieldActor* actor)
         actor->script_offset++;
         return;
     case FIELD_SCRIPT_OP_PLAY_SOUND:
-        field_play_sound(script[1], FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(script[1], AKAO_PAN_CENTER);
         actor->script_offset += 2;
         return;
     case FIELD_SCRIPT_OP_PLAY_OBJECT_SOUND:
         if (actor->object_index < (u32)FIELD_PARTY_COUNT)
         {
-            field_play_weapon_sfx(script[1], FIELD_SOUND_PAN_CENTRE, actor->object_index);
+            field_play_weapon_sfx(script[1], AKAO_PAN_CENTER, actor->object_index);
         }
         else if (actor->object_index < (u32)(FIELD_PARTY_COUNT * 2))
         {
-            field_play_set_sfx(script[1], FIELD_SOUND_PAN_CENTRE, actor->object_index - FIELD_PARTY_COUNT, actor->object_index);
+            field_play_set_sfx(script[1], AKAO_PAN_CENTER, actor->object_index - FIELD_PARTY_COUNT, actor->object_index);
         }
         actor->script_offset += 2;
         return;
@@ -1356,7 +1352,7 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound)
     }
     if (sound != -1)
     {
-        field_play_sound(sound, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(sound, AKAO_PAN_CENTER);
     }
     field_count_revived_record(g_field_object_states[actor->object_index].key);
     g_field_object_states[actor->object_index].flags = 0;

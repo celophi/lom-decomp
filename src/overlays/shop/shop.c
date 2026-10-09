@@ -3,6 +3,7 @@
 #include "internal/shop_render.h"
 #include "internal/shop_trade.h"
 #include "overlays/field/field_text.h"
+#include "main/audio/akao.h"
 
 #define SHOP_MONEY_WINDOW_X 160
 #define SHOP_MONEY_WINDOW_Y 32
@@ -369,7 +370,7 @@ static s32 shop_handle_list_input(void)
 
     if (g_pad_input & (PAD_BTN_UP | PAD_BTN_DOWN))
     {
-        play_menu_sfx(SHOP_SFX_CURSOR, SHOP_SFX_VOLUME);
+        play_menu_sfx(SHOP_SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
         target_y = g_shop_cursor << SHOP_ROW_HEIGHT_SHIFT;
         current_scroll = g_shop_scroll_y;
         delta = target_y - current_scroll;
@@ -389,7 +390,7 @@ static s32 shop_handle_list_input(void)
     {
         if (g_shop_quantity >= 2)
         {
-            play_menu_sfx(SHOP_SFX_CURSOR, SHOP_SFX_VOLUME);
+            play_menu_sfx(SHOP_SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
             g_shop_quantity--;
         }
     }
@@ -401,7 +402,7 @@ static s32 shop_handle_list_input(void)
         {
             if (g_shop_quantity < stock->count)
             {
-                play_menu_sfx(SHOP_SFX_CURSOR, SHOP_SFX_VOLUME);
+                play_menu_sfx(SHOP_SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
                 g_shop_quantity++;
             }
         }
@@ -409,7 +410,7 @@ static s32 shop_handle_list_input(void)
         {
             if (g_shop_quantity < SHOP_MAX_ITEM_COUNT)
             {
-                play_menu_sfx(SHOP_SFX_CURSOR, SHOP_SFX_VOLUME);
+                play_menu_sfx(SHOP_SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
                 g_shop_quantity++;
             }
         }
@@ -428,7 +429,7 @@ static s32 shop_handle_list_input(void)
                     {
                         if (field_find_free_inventory_record() == 0)
                         {
-                            play_menu_sfx(SHOP_SFX_ERROR, SHOP_SFX_VOLUME);
+                            play_menu_sfx(SHOP_SFX_ERROR, AKAO_SFX_DEFAULT_VOLUME);
                             shop_open_notice(SHOP_NOTICE_CANNOT_CARRY);
                         }
                         else
@@ -438,7 +439,7 @@ static s32 shop_handle_list_input(void)
                     }
                     else if (g_saved_game_ctx->item_counts[entry->id] >= SHOP_MAX_ITEM_COUNT)
                     {
-                        play_menu_sfx(SHOP_SFX_ERROR, SHOP_SFX_VOLUME);
+                        play_menu_sfx(SHOP_SFX_ERROR, AKAO_SFX_DEFAULT_VOLUME);
                         shop_open_notice(SHOP_NOTICE_CANNOT_CARRY);
                     }
                     else
@@ -448,7 +449,7 @@ static s32 shop_handle_list_input(void)
                 }
                 else
                 {
-                    play_menu_sfx(SHOP_SFX_ERROR, SHOP_SFX_VOLUME);
+                    play_menu_sfx(SHOP_SFX_ERROR, AKAO_SFX_DEFAULT_VOLUME);
                 }
             }
             else
@@ -460,7 +461,7 @@ static s32 shop_handle_list_input(void)
 
     if (g_pad_input & SHOP_CANCEL_BUTTONS)
     {
-        play_menu_sfx(SHOP_SFX_CANCEL, SHOP_SFX_VOLUME);
+        play_menu_sfx(SHOP_SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
         if (g_shop_is_buying == 0)
         {
             field_compact_inventory();

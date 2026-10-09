@@ -1,5 +1,6 @@
 #include "internal/menu_internal.h"
 #include "overlays/field/field_text.h"
+#include "main/audio/akao.h"
 
 s32 menu_find_active_content_item(void);
 s32 menu_clear_pending_status(void);
@@ -72,12 +73,12 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
+        menu_play_se(MENU_SE_CLOSE, AKAO_SFX_DEFAULT_VOLUME);
         list->active = MENU_SLOT_STATE_CLOSING;
     }
     else if ((g_pad_input & 0x220) && (active != 0))
     {
-        menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
+        menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
         switch (list->navigation.fields.selected_index)
         {
         case 0:
@@ -357,7 +358,7 @@ void* menu_equipment_compare_callback(u_long* ot, ScrollListState* state, void* 
 
         if ((list->navigation.fields.selected_index != 0) || (g_pad_input & 0x40))
         {
-            menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
+            menu_play_se(MENU_SE_CLOSE, AKAO_SFX_DEFAULT_VOLUME);
             list->active = MENU_SLOT_STATE_CLOSING;
 
             i = 0;
@@ -389,7 +390,7 @@ void* menu_equipment_compare_callback(u_long* ot, ScrollListState* state, void* 
         }
         else
         {
-            menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
+            menu_play_se(MENU_SE_SELECT, AKAO_SFX_DEFAULT_VOLUME);
             list->active = MENU_SLOT_STATE_CLOSING;
 
             if (g_item_slot_flags[0] != 0)
@@ -513,7 +514,7 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
+        menu_play_se(MENU_SE_CLOSE, AKAO_SFX_DEFAULT_VOLUME);
         state->active = MENU_SLOT_STATE_CLOSING;
         return prim;
     }
@@ -589,12 +590,12 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
             character_ctx = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
             character_ctx += g_menu_active_subtype;
             *(character_ctx + 0x609) = selected_technique % MENU_SPECIAL_TECHNIQUES_PER_GROUP;
-            menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
+            menu_play_se(MENU_SE_SELECT, AKAO_SFX_DEFAULT_VOLUME);
             state->active = MENU_SLOT_STATE_CLOSING;
         }
         else
         {
-            menu_play_se(MENU_SE_ERROR, MENU_SE_VOLUME);
+            menu_play_se(MENU_SE_ERROR, AKAO_SFX_DEFAULT_VOLUME);
         }
     }
 

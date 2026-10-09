@@ -20,6 +20,8 @@
 #include <libgpu.h>
 #include <libetc.h>
 #include <libgte.h>
+#include "overlays/field/field_actor_records.h"
+#include "main/field_entry.h"
 
 /** @brief World coordinates are 24.8 fixed point. */
 #define FIELD_POSITION_SHIFT 8
@@ -85,8 +87,6 @@
 #define FIELD_FOOTPRINT_WIDTH 9
 #define FIELD_FOOTPRINT_DEPTH 6
 #define FIELD_FOOTPRINT_STEP 16
-/** @brief Full model scale of an object part (FieldObjectPart::appearance scale_xz). */
-#define FIELD_PART_FULL_SCALE 0x40
 /** @brief Transition tile image size and VRAM positions. */
 #define FIELD_TRANSITION_TILE_SIZE 32
 #define FIELD_TRANSITION_TILE_X 288
@@ -285,7 +285,6 @@ extern s32 g_field_pending_secondary_music_id;
 extern s32 g_field_pending_scene_id;
 extern s32 g_field_pending_object_id;
 extern s32 g_field_pending_sound_bank_id;
-extern s32 g_field_scene_request_pending;
 extern s32 g_field_scene_data_size;
 extern s32 g_field_active_group;
 extern u32 g_field_group_bounds[];
@@ -312,11 +311,6 @@ extern u8* g_field_scene_portraits;
 extern u8* g_field_scene_strings;
 extern s32 g_field_dialog_item_count;
 extern s32 g_field_audio_timer;
-/* Declared here, not through main.h: FIELD reads and writes g_field_scene_id as a whole word. */
-extern s32 g_field_scene_id;
-extern s32 g_field_music_id;
-extern s32 g_field_sound_bank_id;
-extern s32 g_field_secondary_music_id;
 
 static void field_setup_chest_resource(void);
 void field_upload_actor_image(FieldTimData* image, s32 image_slot, s32 actor_index, s32 upload_palette);
@@ -465,7 +459,7 @@ void field_update_scene(void)
         i = 0;
         cdrom_wait_queue_empty();
         field_upload_transition_tiles();
-        g_field_scene_id = scene_id;
+        g_field_scene_id.word = scene_id;
         g_field_active_group = 0;
         g_field_duel_mode = 0;
         field_reset_battle_entry();
@@ -813,7 +807,7 @@ void field_update_scene(void)
         field_reset_actor_resources();
         field_command_history_reset();
         field_clear_fade_prims();
-        saved_scene_id = g_field_scene_id;
+        saved_scene_id = g_field_scene_id.word;
         if (g_field_scene_mode_bit != 0)
         {
             saved_scene_id += FIELD_SCENE_MODE_FLAG;

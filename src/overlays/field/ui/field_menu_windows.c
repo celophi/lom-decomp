@@ -19,6 +19,7 @@
 #include <libgpu.h>
 #include <libetc.h>
 #include "../internal/field_menu_element.h"
+#include "main/audio/akao.h"
 
 /** @brief VRAM position of the texture page, palettes and artwork of the frames. */
 #define MENU_TPAGE_X 256
@@ -76,7 +77,6 @@
 #define MENU_BLINK_GROW 2
 
 #define FIELD_SOUND_CURSOR 0x7D
-#define FIELD_SOUND_PAN_CENTRE 0x80
 
 /** @brief The frame palettes followed by the frame artwork. */
 typedef struct
@@ -401,7 +401,7 @@ void field_draw_menu_elements(FieldRenderHalf* render_half)
                     {
                         if ((g_pad_input & PADLdown) && element->scroll + element->size.bits.height < element->size.fields.content_height)
                         {
-                            field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+                            field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
                             element->scroll_target += MENU_SCROLL_STEP;
                             if (element->scroll_target > element->size.fields.content_height - element->size.bits.height)
                             {
@@ -411,7 +411,7 @@ void field_draw_menu_elements(FieldRenderHalf* render_half)
                         }
                         else if ((g_pad_input & PADLup) && element->scroll > 0)
                         {
-                            field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+                            field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
                             element->scroll_target -= MENU_SCROLL_STEP;
                             if (element->scroll_target < 0)
                             {

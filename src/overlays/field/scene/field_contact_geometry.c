@@ -19,6 +19,7 @@
 #include "sdk/gte_dmpsx_compat.h"
 #include "overlays/field/field_actor_records.h"
 #include <abs.h>
+#include "main/audio/akao.h"
 
 /** @brief Object state @p index of @p base. */
 #define FIELD_OBJECT_STATE_AT(base, index) ((FieldObjectState*)((index) * sizeof(FieldObjectState) + (uintptr_t)(base)))
@@ -38,8 +39,6 @@
 
 /** @brief FieldMoveObject::flags bit 23: the object moves without map collision. */
 #define FIELD_PART_IGNORE_MAP_COLLISION_BIT 23
-/** @brief FieldMoveObject::scale_z of a full-size object (the large collision footprint). */
-#define FIELD_PART_FULL_SCALE 0x40
 /** @brief Collision footprint of a moving actor (map units), normal and large. */
 #define FIELD_MOVE_WIDTH 9
 #define FIELD_MOVE_STEP 6
@@ -68,7 +67,6 @@
 #define FIELD_CONTACT_INTERACTION_DELAY 10
 /** @brief Sound played when an interaction probe finds a talk target. */
 #define FIELD_SOUND_INTERACT 0x7D
-#define FIELD_SOUND_PAN_CENTER 0x80
 
 /** @brief Object-state contact bits set by the effect-quad answer of Counterattack / Counterstrike. */
 #define FIELD_CONTACT_QUAD_ANSWER_MASK 0x1C
@@ -1213,7 +1211,7 @@ void field_probe_actor_interaction(FieldActor* actor)
         state = (FieldObjectState*)result_or_state;
         if (state->interaction_kind != 0)
         {
-            field_play_sound(FIELD_SOUND_INTERACT, FIELD_SOUND_PAN_CENTER);
+            field_play_sound(FIELD_SOUND_INTERACT, AKAO_PAN_CENTER);
             field_pick_up_item_actor(object_index);
             return;
         }

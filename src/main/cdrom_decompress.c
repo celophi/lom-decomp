@@ -404,7 +404,7 @@ u8* cdrom_handle_stream_data(s32 byte_count, u32 bytes_remaining)
         byte_count = CD_STREAM_STATE.bytes_buffered - CD_STREAM_STATE.bytes_consumed;
         bytes_consumed = CD_STREAM_STATE.bytes_consumed;
         wrap_overflow = CD_STREAM_STATE.wrap_overflow;
-        alignment_padding = (CD_BYTES_PER_WORD - (byte_count & CD_BYTES_PER_WORD_MASK)) & CD_BYTES_PER_WORD_MASK;
+        alignment_padding = (BYTES_PER_WORD - (byte_count & BYTES_PER_WORD_MASK)) & BYTES_PER_WORD_MASK;
         if (wrap_overflow != 0)
         {
             wrapped_read_ptr = CD_STREAM_STATE.buffer_start;
@@ -414,12 +414,12 @@ u8* cdrom_handle_stream_data(s32 byte_count, u32 bytes_remaining)
             destination.bytes -= alignment_padding;
             CD_STREAM_STATE.bytes_buffered = (wrap_overflow + byte_count) + transfer_size;
             copy_source.bytes = (wrapped_read_ptr + bytes_consumed) - alignment_padding;
-            word_count = (byte_count + CD_BYTES_PER_WORD_MASK) / CD_BYTES_PER_WORD;
+            word_count = (byte_count + BYTES_PER_WORD_MASK) / BYTES_PER_WORD;
             for (word_count--; word_count != -1; word_count--)
             {
                 *destination.words = *copy_source.words;
-                copy_source.bytes += CD_BYTES_PER_WORD;
-                destination.bytes += CD_BYTES_PER_WORD;
+                copy_source.bytes += BYTES_PER_WORD;
+                destination.bytes += BYTES_PER_WORD;
             }
             destination.bytes += CD_STREAM_STATE.wrap_overflow;
             CD_STREAM_STATE.wrap_overflow = 0;
@@ -433,12 +433,12 @@ u8* cdrom_handle_stream_data(s32 byte_count, u32 bytes_remaining)
             CD_STREAM_STATE.input_cursor = aligned_buffer_start;
             CD_STREAM_STATE.buffer_start = aligned_buffer_start;
             copy_source.bytes = (linear_read_ptr + bytes_consumed) - alignment_padding;
-            word_count = (byte_count + CD_BYTES_PER_WORD_MASK) / CD_BYTES_PER_WORD;
+            word_count = (byte_count + BYTES_PER_WORD_MASK) / BYTES_PER_WORD;
             for (word_count--; word_count != -1; word_count--)
             {
                 *destination.words = *copy_source.words;
-                copy_source.bytes += CD_BYTES_PER_WORD;
-                destination.bytes += CD_BYTES_PER_WORD;
+                copy_source.bytes += BYTES_PER_WORD;
+                destination.bytes += BYTES_PER_WORD;
             }
         }
         CD_STREAM_STATE.data_ready = TRUE;

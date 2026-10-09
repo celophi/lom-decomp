@@ -1,6 +1,7 @@
 #include "internal/carda.h"
 #include "overlays/field/field_text.h"
 #include "internal/carda_internal.h"
+#include "main/audio/akao.h"
 
 /**
  * @brief Card-slot label windows: width, which is also the dimming tile's, and height.
@@ -480,13 +481,13 @@ static s32 carda_handle_input(void)
     if (input & PAD_BTN_CIRCLE)
     {
         g_field_card_overlay_mode = CARDA_RESULT_CANCELLED;
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
         carda_close_all_elements();
         return;
     }
     if (input & CARDA_CARD_SWITCH_BUTTON_MASK)
     {
-        field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         carda_switch_card();
         return;
     }
@@ -530,7 +531,7 @@ static s32 carda_handle_input(void)
     if (g_pad_input & (PAD_BTN_UP | PAD_BTN_DOWN))
     {
         carda_commit_selected_entry();
-        field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         carda_scroll_to_selection();
         return;
     }
@@ -554,7 +555,7 @@ static s32 carda_handle_input(void)
                     carda_enable_choice_toggle();
                     prompt->draw = carda_draw_load_prompt;
                     restart_card_sequence();
-                    field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+                    field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
                     return;
                 }
             }
@@ -574,7 +575,7 @@ static s32 carda_handle_input(void)
                 carda_enable_choice_toggle();
                 prompt->draw = carda_draw_save_prompt;
                 restart_card_sequence();
-                field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
                 return;
             }
             if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_carda_selected_row].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
@@ -590,11 +591,11 @@ static s32 carda_handle_input(void)
                 carda_enable_choice_toggle();
                 prompt->draw = carda_draw_overwrite_prompt;
                 restart_card_sequence();
-                field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_PAN_CENTRE);
+                field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
                 return;
             }
         }
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, FIELD_SOUND_PAN_CENTRE);
+        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
     }
 }
 

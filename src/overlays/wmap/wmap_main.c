@@ -31,6 +31,7 @@
 #include <rand.h>
 #include "internal/wmap_map_events.h"
 #include "internal/wmap_cells.h"
+#include "main/audio/akao.h"
 
 #define WMAP_MAP_CELL_SIZE 48
 #define WMAP_TRAVEL_CELL_SIZE 160
@@ -38,7 +39,6 @@
 #define WMAP_MENU_ITEM_HEIGHT 16
 #define WMAP_MENU_CURSOR_STEP 4
 #define WMAP_MENU_OT_INDEX 1
-#define WMAP_MENU_SOUND_PAN 0x80
 #define WMAP_HELP_IMAGE_RESOURCE_BASE 0x114B
 #define WMAP_HELP_IMAGE_TPAGE 0xD5
 #define WMAP_HELP_CURSOR_TPAGE 0xB5
@@ -84,7 +84,6 @@ enum WmapEntryResource
     WMAP_MUSIC_RESOURCE = 0x1461,
     WMAP_LAYOUT_IMAGE_RESOURCE_BASE = 0x14DE
 };
-
 
 /** @brief Help pages stored consecutively after WM/WHLP/HELPMENU.TIM. */
 enum WmapHelpPage
@@ -859,17 +858,17 @@ void wmap_update_menu(s32 buttons)
             g_wmap_map_controls_active = map_controls_active;
             if (map_controls_active != 0)
             {
-                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, WMAP_MENU_SOUND_PAN, AKAO_VOLUME_MAX);
+                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, AKAO_PAN_CENTER, AKAO_VOLUME_MAX);
             }
             else
             {
-                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_OPEN_MENU - 1], 0, WMAP_MENU_SOUND_PAN, AKAO_VOLUME_MAX);
+                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_OPEN_MENU - 1], 0, AKAO_PAN_CENTER, AKAO_VOLUME_MAX);
             }
         }
         else
         {
             g_wmap_menu_page = WMAP_HELP_MENU;
-            akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, WMAP_MENU_SOUND_PAN, AKAO_VOLUME_MAX);
+            akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, AKAO_PAN_CENTER, AKAO_VOLUME_MAX);
         }
         g_wmap_buttons_held = 0;
         g_wmap_buttons_repeat = 0;
@@ -903,7 +902,7 @@ void wmap_update_menu(s32 buttons)
                 {
                     g_wmap_menu_selection = WMAP_HELP_LAND_PLACEMENT;
                 }
-                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_CURSOR - 1], 0, WMAP_MENU_SOUND_PAN, AKAO_VOLUME_MAX);
+                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_CURSOR - 1], 0, AKAO_PAN_CENTER, AKAO_VOLUME_MAX);
             }
             if (g_wmap_buttons_repeat & PADLdown)
             {
@@ -913,26 +912,26 @@ void wmap_update_menu(s32 buttons)
                 {
                     g_wmap_menu_selection = WMAP_HELP_DIRECTIONS;
                 }
-                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_CURSOR - 1], 0, WMAP_MENU_SOUND_PAN, AKAO_VOLUME_MAX);
+                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_CURSOR - 1], 0, AKAO_PAN_CENTER, AKAO_VOLUME_MAX);
             }
         }
         if ((g_wmap_buttons_repeat & WMAP_PAD_CONFIRM) && g_wmap_menu_page == WMAP_HELP_MENU)
         {
             g_wmap_menu_page = g_wmap_menu_selection;
-            akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_CONFIRM - 1], 0, WMAP_MENU_SOUND_PAN, AKAO_VOLUME_MAX);
+            akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_CONFIRM - 1], 0, AKAO_PAN_CENTER, AKAO_VOLUME_MAX);
         }
         if (g_wmap_buttons_repeat & WMAP_PAD_CANCEL)
         {
             if (g_wmap_menu_page == WMAP_HELP_MENU)
             {
                 g_wmap_map_controls_active = g_wmap_map_controls_active == 0;
-                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, WMAP_MENU_SOUND_PAN, AKAO_VOLUME_MAX);
+                akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, AKAO_PAN_CENTER, AKAO_VOLUME_MAX);
                 g_wmap_buttons_held = 0;
                 g_wmap_buttons_repeat = 0;
                 return;
             }
             g_wmap_menu_page = WMAP_HELP_MENU;
-            akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, WMAP_MENU_SOUND_PAN, AKAO_VOLUME_MAX);
+            akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_BACK - 1], 0, AKAO_PAN_CENTER, AKAO_VOLUME_MAX);
         }
     }
     if (g_wmap_loaded_menu_page != g_wmap_menu_page)
@@ -1188,7 +1187,6 @@ void wmap_step_input_script(void)
     g_wmap_input_script = 0;
     g_wmap_script_delay = 1;
 }
-
 
 /**
  * @brief Copy the destination rectangle from a TIM block header.

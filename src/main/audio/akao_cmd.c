@@ -2,6 +2,8 @@
 #include "internal/akao_sequencer.h"
 #include <libcd.h>
 #include <libspu.h>
+#include "internal/akao_control.h"
+#include "internal/akao_xa_stream.h"
 
 /**
  * @brief Pending articulation and sample bytes for a streaming bank upload.
@@ -38,10 +40,6 @@ extern AkaoBankHeader g_akao_bank_staging;
 /** @brief akao_submit_bank result indicating that the upload must be retried. */
 #define AKAO_BANK_UPLOAD_BUSY 1
 
-/** @brief Word size used by akao_copy_bytes when rounding down its byte count. */
-#define AKAO_COPY_WORD_SHIFT 2
-#define AKAO_COPY_WORD_BYTES 4
-
 /** @brief Gain of each CD-to-SPU route in mono mode, in Q17 (about 0.35437). */
 #define AKAO_CD_MONO_GAIN_Q17 0xB570
 /** @brief Fractional bits in the mono CD mix gain. */
@@ -58,21 +56,6 @@ extern AkaoBankHeader g_akao_bank_staging;
 
 /* g_akao_seq_channel0, read through its fixed address. */
 #define AKAO_PRIMARY_SONG (*(AkaoSongState**)AKAO_PRIMARY_SONG_ADDRESS)
-
-/**
- * @brief Dispatch an AKAO sound command using g_akao_cmd_params.
- *
- * High-level wrappers store their inputs in g_akao_cmd_params before calling
- * this function. AkaoCmd documents the supported command opcodes.
- *
- * @param opcode Command opcode; only the low byte is significant.
- * @return For opcodes 0x10/0x12/0x14/0x19 (load/change song), the newly
- *         loaded sequence id, or 0 if the requested song was already active,
- *         or -1 if the header failed the AKAO magic check. Unused/ignored by
- *         most callers otherwise.
- */
-s32 akao_send_command(u32 opcode);
-void akao_xa_start_ring_stream(void);
 
 /**
  * @brief Public init entry - wraps akao_driver_init and returns 0.
@@ -969,7 +952,7 @@ s32 akao_streaming_upload_tick(u8* source, u32 available_bytes, s32 wait_for_spu
                     articulation_chunk = available_bytes;
                 }
                 akao_copy_bytes((s32*)source, (s32*)g_akao_streaming_state.articulation_dst, articulation_chunk);
-                copied_bytes = (articulation_chunk >> AKAO_COPY_WORD_SHIFT) * AKAO_COPY_WORD_BYTES;
+                copied_bytes = (articulation_chunk >> BYTES_PER_WORD_SHIFT) * BYTES_PER_WORD;
                 source += copied_bytes;
                 available_bytes -= articulation_chunk;
                 g_akao_streaming_state.articulation_dst = g_akao_streaming_state.articulation_dst + copied_bytes;
