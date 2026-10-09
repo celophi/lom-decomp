@@ -8,7 +8,6 @@
 struct CardMenuElement;
 
 void carda_init(void* work, s32 mode);
-void* carda_draw_cant_hold_more(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 
 void carda_build_save_file(void);
 s32 carda_test_option_flag_2(void);

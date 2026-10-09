@@ -16,7 +16,7 @@ void *bcopy(const unsigned char *src, unsigned char *dst, int count);
     do                                                                                                                                                         \
     {                                                                                                                                                          \
         (result) = CARD_MENU_SEQUENCE_NO_CARD;                                                                                                                         \
-        g_cload_selection_status = 0;                                                                                                                          \
+        g_card_menu_selection_status = 0;                                                                                                                          \
         g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;                                                                                                                             \
     } while (0)
 
@@ -51,11 +51,11 @@ void *bcopy(const unsigned char *src, unsigned char *dst, int count);
 
 /**
  * @brief Run the current memory-card load step and advance g_cload_load_step.
- * @return CardMenuSequenceResult phase code for cload_update_load_sequence.
+ * @return CardMenuSequenceResult phase code for card_menu_update_card_sequence.
  * @note g_cload_load_step walks one of the g_cload_steps_* byte tables; each
  *       CardMenuStep opcode issues or polls a card command, reads the selected
  *       save, or scans the card directory, and updates g_card_entry_state /
- *       g_cload_selection_status. Opcodes with no case are no-ops.
+ *       g_card_menu_selection_status. Opcodes with no case are no-ops.
  */
 s32 cload_advance_load_sequence(void)
 {
@@ -92,7 +92,7 @@ s32 cload_advance_load_sequence(void)
             case CARD_EVENT_ERROR:
             case CARD_EVENT_TIMEOUT:
                 phase_result = CARD_MENU_SEQUENCE_NO_CARD;
-                g_cload_selection_status = 0;
+                g_card_menu_selection_status = 0;
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;
                 g_cload_load_step++;
                 card_menu_deactivate_primary_element();
@@ -135,11 +135,11 @@ s32 cload_advance_load_sequence(void)
 
         case CARD_MENU_STEP_SCAN_ENTRIES:
             card_erase_placeholder_files();
-            g_cload_entry_scan_active = 1;
+            g_card_menu_entry_scan_active = 1;
             if (cload_begin_entry_scan(g_card_slot) == 0)
             {
                 CLOAD_END_STEP_TABLE(phase_result, CARD_MENU_SEQUENCE_FINISHED, CARD_MENU_ENTRY_STATE_NO_GAME_DATA, NULL);
-                g_cload_entry_scan_active = 0;
+                g_card_menu_entry_scan_active = 0;
                 break;
             }
             scan_attempts = 0;
@@ -148,7 +148,7 @@ s32 cload_advance_load_sequence(void)
             {
                 if (cload_scan_next_entry(g_card_slot) == 0)
                 {
-                    g_cload_entry_scan_active = 0;
+                    g_card_menu_entry_scan_active = 0;
                     if (g_card_entry_state != CARD_MENU_ENTRY_STATE_NO_GAME_DATA && g_card_entry_state != CARD_MENU_ENTRY_STATE_CARD_FULL)
                     {
                         cload_commit_selected_entry();
@@ -228,8 +228,8 @@ s32 cload_advance_load_sequence(void)
             break;
 
         case CARD_MENU_STEP_READ_ENTRY:
-            g_cload_io_busy = 1;
-            g_cload_selection_status = 0;
+            g_card_menu_io_busy = 1;
+            g_card_menu_selection_status = 0;
             _card_wait(g_card_slot);
             g_cload_file_handle = open(g_cload_selected_card_path, FASYNC | FREAD);
             if (g_cload_file_handle == -1)
@@ -239,7 +239,7 @@ s32 cload_advance_load_sequence(void)
             clear_software_card_events();
             _card_wait(g_card_slot);
             if (read(g_cload_file_handle, &g_cload_selected_file,
-                     g_cload_selected_entry_extended != 0 ? CARD_MENU_ENTRY_READ_BYTES : CARD_MENU_ENTRY_TITLE_READ_BYTES) != -1)
+                     g_card_menu_selected_entry_extended != 0 ? CARD_MENU_ENTRY_READ_BYTES : CARD_MENU_ENTRY_TITLE_READ_BYTES) != -1)
             {
                 g_cload_load_step++;
             }
@@ -253,14 +253,14 @@ s32 cload_advance_load_sequence(void)
             poll_result = poll_software_card_events();
             if (poll_result == CARD_EVENT_COMPLETE)
             {
-                g_cload_io_busy = 0;
-                g_cload_selection_status = 1;
+                g_card_menu_io_busy = 0;
+                g_card_menu_selection_status = 1;
                 g_cload_load_step++;
                 close(g_cload_file_handle);
             }
             else if (poll_result != -1)
             {
-                g_cload_io_busy = 0;
+                g_card_menu_io_busy = 0;
                 close(g_cload_file_handle);
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
                 g_cload_load_step = g_cload_steps_initial_scan;
@@ -273,9 +273,9 @@ s32 cload_advance_load_sequence(void)
             break;
 
         case CARD_MENU_STEP_READ_SAVE:
-            g_cload_progress_active = 1;
-            g_cload_progress_bar_active = 1;
-            g_cload_progress_start_tick = VSync(-1);
+            g_card_menu_progress_active = 1;
+            g_card_menu_progress_bar_active = 1;
+            g_card_menu_progress_start_tick = VSync(-1);
             _card_wait(g_card_slot);
             g_cload_file_handle = open(g_cload_selected_card_path, FASYNC | FREAD);
             clear_software_card_events();
@@ -297,7 +297,7 @@ s32 cload_advance_load_sequence(void)
             switch (poll_software_card_events())
             {
             case CARD_EVENT_COMPLETE:
-                g_cload_progress_active = 0;
+                g_card_menu_progress_active = 0;
                 g_cload_load_step++;
                 close(g_cload_file_handle);
                 break;
@@ -313,7 +313,7 @@ s32 cload_advance_load_sequence(void)
                     break;
                 }
                 close(g_cload_file_handle);
-                g_cload_progress_bar_active = 0;
+                g_card_menu_progress_bar_active = 0;
                 cload_open_status_dialog(1);
                 break;
             }
@@ -363,7 +363,7 @@ void cload_restart_load_sequence(void)
  * @brief Allocate and register the eight streaming buffers for this overlay.
  * @note Brackets the eight OpenEvent allocations (handles stored in
  *       g_card_software_event_io_complete..g_card_hardware_event_new_card) with EnterCriticalSection / ExitCriticalSection and resets the
- *       stream bookkeeping (g_cload_entry_scan_active, g_cload_progress_start_tick, g_cload_progress_bar_active).
+ *       stream bookkeeping (g_card_menu_entry_scan_active, g_card_menu_progress_start_tick, g_card_menu_progress_bar_active).
  */
 void cload_init_card_events(void)
 {
@@ -386,9 +386,9 @@ void cload_init_card_events(void)
     EnableEvent(g_card_hardware_event_timeout);
     EnableEvent(g_card_hardware_event_new_card);
     ExitCriticalSection();
-    g_cload_entry_scan_active = 0;
-    g_cload_progress_start_tick = VSync(-1);
-    g_cload_progress_bar_active = 0;
+    g_card_menu_entry_scan_active = 0;
+    g_card_menu_progress_start_tick = VSync(-1);
+    g_card_menu_progress_bar_active = 0;
 }
 
 #include "../../common/card_events/shutdown_card_events.inc.c"
@@ -487,26 +487,26 @@ void cload_commit_selected_entry(void)
 
     if (g_card_entry_state == 0)
     {
-        g_cload_selection_status = 3;
+        g_card_menu_selection_status = 3;
         return;
     }
     if (strncmp(g_new_save_entry_prefix, g_card_entries[g_card_slot][g_card_menu_selected_row].name, 8) == 0)
     {
-        g_cload_selection_status = 2;
+        g_card_menu_selection_status = 2;
         return;
     }
     strcpy(card_path.text, CARD_DEVICE_PREFIX);
     strcat(card_path.text, g_card_entries[g_card_slot][g_card_menu_selected_row].name);
     card_path.device.characters.slot += (u8)g_card_slot;
-    g_cload_selection_status = 0;
+    g_card_menu_selection_status = 0;
     strcpy(g_cload_selected_card_path, card_path.text);
     g_cload_load_step = &g_cload_steps_read_selected_header[0];
     if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_card_menu_selected_row].name, 0xC) == 0)
     {
-        g_cload_selected_entry_extended = 1;
+        g_card_menu_selected_entry_extended = 1;
         return;
     }
-    g_cload_selected_entry_extended = 0;
+    g_card_menu_selected_entry_extended = 0;
 }
 
 #include "../../common/card_events/clear_software_card_events.inc.c"

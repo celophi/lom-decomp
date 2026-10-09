@@ -54,14 +54,14 @@ in US and 161,652 bytes in JP.
 
 | Range | US | JP | Symbol |
 | --- | --- | --- | --- |
-| Messages | `0x801470F8`, 0x499 bytes | `0x801470E4`, 0x5E1 bytes | `g_niki_text_table` |
+| Messages | `0x801470F8`, 0x499 bytes | `0x801470E4`, 0x5E1 bytes | `g_card_menu_text_table` |
 | Card title templates | `0x80147594`, two of 0x15 bytes | `0x801476C8`, two of 0x15 bytes | none |
 | Locations | `0x801475C4`, 0x1E0 bytes | `0x801476F8`, 0x175 bytes | `g_niki_location_names` |
 | Party icons | `0x801477A8`, 0x18F1C bytes | `0x80147870`, 0x18F1C bytes | `g_card_menu_icon_offsets` is 4 bytes in |
-| Card steps | `0x801606C8`, 0x34 bytes | `0x80160790`, 0x34 bytes | `g_niki_card_setup_sequence` |
+| Card steps | `0x801606C8`, 0x34 bytes | `0x80160790`, 0x34 bytes | `g_card_steps_initial_scan` |
 | Character chart | `0x801606FC`, 0x338 bytes | `0x801607C4`, 0x1044 bytes | `g_glyph_single_byte_chart` |
 | Digit glyphs | `0x80160A34`, 0x3C bytes | `0x80161808`, 0x40 bytes | `g_glyph_decimal_digits` |
-| Variables | `0x80160A70`, 0xD010 bytes | `0x80161848`, 0xD010 bytes | `g_niki_dialog_state` |
+| Variables | `0x80160A70`, 0xD010 bytes | `0x80161848`, 0xD010 bytes | `g_card_menu_dialog_state` |
 
 Between these are 13 bytes of zero padding in US and 12 in JP, plus the four
 bytes after the icon set that repeat its last word.
@@ -79,7 +79,7 @@ The message table is a copy of the one ADDHERO, CARDA and CLOAD carry, so it
 also contains text NIKI never shows. NIKI draws about 30 of the entries. Those
 have a `g_niki_text_*` symbol for their slot in the offset table, and the
 export puts that name next to the entry, for example
-`g_niki_text_select_save_data` on entry 34. The yes/no choice text comes from
+`g_card_menu_text_select_save_data` on entry 34. The yes/no choice text comes from
 FIELD, not from this table.
 
 Entries 29 and 33 are empty in US. JP has "Ring Ring Land" and "This is not a
@@ -111,7 +111,7 @@ which has no handler, so the sequence waits there until the menu picks another
 one.
 
 One byte in the table is never run. The byte just before
-`g_niki_write_save_sequence` (`0x801606F4` in US, `0x801607BC` in JP) is
+`g_card_steps_write_save` (`0x801606F4` in US, `0x801607BC` in JP) is
 `CARD_MENU_STEP_CLEAR_SOFTWARE_EVENTS`, but the code starts the write sequence one byte
 later. The export lists it under `unreached`, and the whole table is kept in
 `bytes`.
@@ -146,7 +146,7 @@ text aren't in this blob. They're string literals in
 - TODO: what the 256-byte block NIKI's other mode copies into a save holds. It
   is four 64-byte records, and that page asks message 57, "Trade data will not
   be saved. Is this OK?" (`g_niki_text_trade_data_not_saved`).
-- TODO: what mode 1 was for. `niki_draw_header_label` shows message 35,
+- TODO: what mode 1 was for. `card_menu_draw_mode_title` shows message 35,
   "Select Item.", in mode 1, but NIKI only creates the header in mode 0.
 - TODO: `CARD_MENU_STEP_CHECK_POCKETSTATION` has a handler, but no sequence in
   the table uses it, so it's unclear when status dialog 3 can appear.

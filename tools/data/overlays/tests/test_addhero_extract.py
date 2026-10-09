@@ -38,8 +38,8 @@ class FakeOverlay:
         blob = bytearray()
         names = {}
 
-        names["g_addhero_text_table"] = len(blob)
-        names["g_addhero_text_no_card"] = len(blob) + 2  # entry 1
+        names["g_card_menu_text_table"] = len(blob)
+        names["g_card_menu_text_no_card"] = len(blob) + 2  # entry 1
         blob += text_table([b"Load?", b"No card"])
         for title in ("ＭＡＮＡ", "ＢＡＤ"):
             pad(blob)
@@ -55,7 +55,7 @@ class FakeOverlay:
         blob += struct.pack("<II", 1, 8) + icon
         blob += blob[-4:]  # the repeated trailing word
 
-        names["g_addhero_loadseq_start"] = len(blob)
+        names["g_card_steps_initial_scan"] = len(blob)
         blob += bytes([1, 2, 0, 0])
         names["g_card_steps_idle"] = len(blob)
         blob += bytes([14, 0, 0, 0])
@@ -73,7 +73,7 @@ class FakeOverlay:
         names["g_glyph_hex_digits"] = len(blob)
         blob += "０１２３４５６７８９ＡＢＣＤＥＦ".encode("shift_jis") + b"\x00\x00"
         pad(blob, 8)
-        names["g_addhero_icon_phase"] = len(blob)  # first variable
+        names["g_card_menu_icon_phase"] = len(blob)  # first variable
         blob += bytes(32)
 
         self.blob = bytes(blob)
@@ -123,7 +123,7 @@ class ExtractTest(unittest.TestCase):
         addhero.extract(self.overlay.write(self.root), self.root / "out")
         messages = self.load("text/messages.yaml")["entries"]
         self.assertEqual([entry["text"] for entry in messages], ["Load?", "No card"])
-        self.assertEqual(messages[1]["symbol"], "g_addhero_text_no_card")
+        self.assertEqual(messages[1]["symbol"], "g_card_menu_text_no_card")
         titles = self.load("text/card_titles.yaml")["titles"]
         self.assertEqual([title["text"] for title in titles], ["ＭＡＮＡ", "ＢＡＤ"])
         self.assertEqual(self.load("text/locations.yaml")["entries"][0]["text"], "Home")

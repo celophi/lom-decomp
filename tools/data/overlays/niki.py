@@ -76,10 +76,10 @@ class NikiSymbols(CardSymbols):
 
 # In blob order, except chart_pages: the decoder's page base lies inside the icon set.
 SYMBOL_NAMES = {
-    "messages": "g_niki_text_table",
+    "messages": "g_card_menu_text_table",
     "locations": "g_niki_location_names",
     "icon_offsets": "g_card_menu_icon_offsets",
-    "card_steps": "g_niki_card_setup_sequence",
+    "card_steps": "g_card_steps_initial_scan",
     "chart": "g_glyph_single_byte_chart",
     "decimal_glyphs": "g_glyph_decimal_digits",
     "hex_glyphs": "g_glyph_hex_digits",

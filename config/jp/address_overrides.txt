@@ -40,7 +40,7 @@ field_apply_flags2d_mask = 0x800BF5A0;
 // func_80140BA8, 4-byte stubs). carda_switch_card at 0x801410E0 confirms -4.
 card_menu_update_state = 0x8014082C;
 carda_update_save_sequence = 0x80140914;
-carda_handle_input = 0x80140BA8;
+card_menu_handle_input = 0x80140BA8;
 
 // field_init_text_macros indexes it exactly like US (weekday & 0x7F, s16
 // offsets from the table start); splat labelled it D_800EF118 in data_c.

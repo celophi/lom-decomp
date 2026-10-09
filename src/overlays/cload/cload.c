@@ -48,14 +48,14 @@ s32 cload_main(void)
     cload_init_display();
     g_cload_result = 0;
     cload_init_card_events();
-    g_cload_icon_phase = 0;
+    g_card_menu_icon_phase = 0;
     setRECT(&rect, 0x140, 0, 0x40, 0x100);
     ClearImage(&rect, 0, 0, 0);
     reset_glyph_cache();
     D_80162370 = 0;
-    g_cload_progress_active = 0;
-    g_cload_selection_status = 0;
-    g_cload_io_busy = 0;
+    g_card_menu_progress_active = 0;
+    g_card_menu_selection_status = 0;
+    g_card_menu_io_busy = 0;
     g_card_menu_frame_parity = 0;
     g_card_menu_exit_requested = 0;
     field_reset_input_repeat();
@@ -162,7 +162,7 @@ void cload_build_ui_elements(void)
     g_card_menu_scroll_target_y = 0;
     g_card_menu_scroll_y = 0;
     g_card_menu_selected_row = 0;
-    g_cload_selection_status = 0;
+    g_card_menu_selection_status = 0;
     cload_clear_elements();
     /* Hold slot 0 so the fixed elements below are allocated from slot 1 on. */
     g_card_menu_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_OPENING;
@@ -233,16 +233,16 @@ void card_menu_update_state(FieldRenderHalf *frame)
     s32 delta;
 
     card_menu_update_elements(frame);
-    g_cload_icon_phase += 2;
+    g_card_menu_icon_phase += 2;
     if ((g_cload_element1_state & 0x7F) == 2)
     {
-        cload_update_load_sequence();
+        card_menu_update_card_sequence();
     }
     if ((u16)g_pad_input == 0xFFFF)
     {
         g_pad_input = 0;
     }
-    cload_handle_input();
+    card_menu_handle_input();
     if (g_card_menu_scroll_frames != 0)
     {
         s32 base = g_card_menu_scroll_y;
@@ -259,7 +259,7 @@ void card_menu_update_state(FieldRenderHalf *frame)
 /**
  * @brief Advance the active load sequence and react to its phase result.
  */
-void cload_update_load_sequence(void)
+void card_menu_update_card_sequence(void)
 {
     s32 phase;
 
@@ -293,7 +293,7 @@ void cload_update_load_sequence(void)
  * @brief Handle CLOAD menu navigation, confirm, and cancel input.
  * @return Input-handler status used by the caller.
  */
-s32 cload_handle_input(void)
+s32 card_menu_handle_input(void)
 {
     s32 pending;
     s32 status;
@@ -323,11 +323,11 @@ s32 cload_handle_input(void)
     {
         return;
     }
-    if (g_cload_entry_scan_active != 0)
+    if (g_card_menu_entry_scan_active != 0)
     {
         return;
     }
-    if (g_cload_io_busy != 0)
+    if (g_card_menu_io_busy != 0)
     {
         return;
     }
@@ -352,7 +352,7 @@ s32 cload_handle_input(void)
         g_card_menu_selected_row = 0;
         g_cload_load_step = NULL;
         g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
-        g_cload_selection_status = 0;
+        g_card_menu_selection_status = 0;
         g_card_slot ^= 1;
         card_reset_entry_ranks();
         return;
@@ -498,16 +498,16 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_no_lom_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case CARD_MENU_ENTRY_STATE_CARD_FULL:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_not_enough_blocks, CARD_MENU_TEXT_NOT_ENOUGH_BLOCKS), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_not_enough_blocks, CARD_MENU_TEXT_NOT_ENOUGH_BLOCKS), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case CARD_MENU_ENTRY_STATE_NO_CARD:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_no_memory_card, CARD_MENU_TEXT_NO_CARD), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case CARD_MENU_ENTRY_STATE_ACCESS_FAILED:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_card_access_failed, CARD_MENU_TEXT_CARD_ACCESS_FAILED), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_card_access_failed, CARD_MENU_TEXT_CARD_ACCESS_FAILED), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case CARD_MENU_ENTRY_STATE_NO_SAVE_DATA:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_no_save_data, CARD_MENU_TEXT_NO_SAVE_DATA), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_save_data, CARD_MENU_TEXT_NO_SAVE_DATA), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case CARD_MENU_ENTRY_STATE_BLANK:
         break;
@@ -516,7 +516,7 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
             s32 row_y;
             s32 i;
 
-        if (g_cload_entry_scan_active != 0)
+        if (g_card_menu_entry_scan_active != 0)
         {
             s32 x;
             u16 *text_table;
@@ -568,7 +568,7 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
                         }
                         if (*skip_hex_digits((u8*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry + 0xC)) == 0x2B)
                         {
-                            prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_cload_text_plus_marker), 1, 0xF8 - x_offset, row_y, 1);
+                            prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_card_menu_text_plus_marker), 1, 0xF8 - x_offset, row_y, 1);
                         }
                     }
                     if (strncmp(g_lom_save_filename_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry), 0xC) == 0)
@@ -595,7 +595,7 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
         }
             row_y = ((g_card_menu_selected_row * CARD_MENU_ENTRY_ROW_HEIGHT) - y_offset) - g_card_menu_scroll_y;
 
-            if (g_cload_entry_scan_active == 0)
+            if (g_card_menu_entry_scan_active == 0)
             {
                 TILE *tile = (TILE *)prim;
 
@@ -697,15 +697,15 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
     s32 party_icon[3];
 
     result = prim;
-    if (g_cload_selection_status == 0)
+    if (g_card_menu_selection_status == 0)
     {
         return result;
     }
-    if (g_cload_entry_scan_active != 0)
+    if (g_card_menu_entry_scan_active != 0)
     {
         return result;
     }
-    if (g_cload_selection_status == 3)
+    if (g_card_menu_selection_status == 3)
     {
         return result;
     }
@@ -713,7 +713,7 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
     {
         return result;
     }
-    if (g_cload_selection_status == 2)
+    if (g_card_menu_selection_status == 2)
     {
         s32 x = -x_offset;
         u16* text_table;
@@ -760,17 +760,17 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
                 case 2:
                     step = 0x20;
                     half_step = 0x10;
-                    g_cload_icon_phase %= 0x20;
+                    g_card_menu_icon_phase %= 0x20;
                     break;
                 case 3:
                     step = 0x10;
                     half_step = 0x20;
-                    g_cload_icon_phase %= 0x60;
+                    g_card_menu_icon_phase %= 0x60;
                     break;
                 default:
                     step = 0x10;
                     half_step = 0x20;
-                    g_cload_icon_phase = 0x1F;
+                    g_card_menu_icon_phase = 0x1F;
                     break;
                 }
 
@@ -786,19 +786,19 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
                         s32 rem;
                         s32 hi;
 
-                        if (g_cload_icon_phase >= base_y && g_cload_icon_phase < base_x)
+                        if (g_card_menu_icon_phase >= base_y && g_card_menu_icon_phase < base_x)
                         {
-                            adjust += g_cload_icon_phase - base_y;
+                            adjust += g_card_menu_icon_phase - base_y;
                         }
                         else
                         {
                             rem = base_x % (half_step * present_count);
-                            if (g_cload_icon_phase >= rem)
+                            if (g_card_menu_icon_phase >= rem)
                             {
                                 hi = rem + half_step;
-                                if (g_cload_icon_phase < hi)
+                                if (g_card_menu_icon_phase < hi)
                                 {
-                                    adjust += hi - g_cload_icon_phase;
+                                    adjust += hi - g_card_menu_icon_phase;
                                 }
                             }
                         }

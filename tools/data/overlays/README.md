@@ -418,7 +418,7 @@ the card title templates, the chart and the digits. About 30 messages have a
 decoded through NIKI's own chart, so CLOAD isn't needed.
 
 The step export follows each named sequence to `CARD_MENU_STEP_DONE`. One byte
-just before `g_niki_write_save_sequence` is never run, since the code starts
+just before `g_card_steps_write_save` is never run, since the code starts
 one byte later. It's listed under `unreached`, and the table's raw bytes are
 kept too. Command 14, the idle wait, has no name in the enum and shows as
 `0x0E`.

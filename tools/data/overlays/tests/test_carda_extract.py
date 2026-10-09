@@ -38,7 +38,7 @@ class FakeOverlay:
             self.symbols[carda.SYMBOL_NAMES[key]] = self.address + len(data)
 
         mark("messages")
-        self.symbols["g_carda_text_no_card"] = self.address + 2
+        self.symbols["g_card_menu_text_no_card"] = self.address + 2
         strings = [b"Save?", b"No card"] if version == "us" else [b"\x41\x19\x00", b"\x41"]
         data += make_table(strings)
         pad(data)
@@ -133,7 +133,7 @@ class ExtractTest(unittest.TestCase):
         carda.extract(self.overlay.write(self.root), self.output)
         messages = self.load("text/messages.yaml")["entries"]
         self.assertEqual([entry["text"] for entry in messages], ["Save?", "No card"])
-        self.assertEqual(messages[1]["symbol"], "g_carda_text_no_card")
+        self.assertEqual(messages[1]["symbol"], "g_card_menu_text_no_card")
         self.assertEqual(self.load("text/items.yaml")["entries"][0]["text"], "Item")
         self.assertEqual(self.load("text/locations.yaml")["entries"][0]["text"], "Home")
         self.assertEqual(len(self.load("text/card_titles.yaml")["titles"]), 2)
