@@ -27,23 +27,6 @@
 #include "overlays/field/field_ui_text.h"
 
 #define NIKI_CANCEL_INPUT_MASK PAD_BTN_CIRCLE
-#define GLYPH_OFF(base, off) ((void*)((base) + *(u16*)((base) + (off))))
-#define GPU_ADDR_MASK 0xFFFFFF
-#define GPU_TAG_HIGH_MASK 0xFF000000
-#define NIKI_SET_PACKET_LENGTH(prim, length) (((NikiPrimTag*)(prim))->len = (u8)(length))
-#define NIKI_SET_PACKET_ADDRESS(prim, address) (((NikiPrimTag*)(prim))->addr = (uintptr_t)(address))
-#define NIKI_SET_PACKET_CODE(prim, command) (((NikiPrimTag*)(prim))->code = (u8)(command))
-#define NIKI_GET_PACKET_ADDRESS(prim) ((u32)(((NikiPrimTag*)(prim))->addr))
-#define NIKI_ADD_PRIMITIVE(ordering_table, prim)                                                                                                               \
-    (NIKI_SET_PACKET_ADDRESS((prim), NIKI_GET_PACKET_ADDRESS(ordering_table)), NIKI_SET_PACKET_ADDRESS((ordering_table), (prim)))
-#define NIKI_TEXT_EXTENDED_LEAD_FIRST 0x19
-#define NIKI_TEXT_EXTENDED_PAGE_COUNT 7
-#define NIKI_TEXT_SINGLE_BYTE_BASE 0x20
-#define NIKI_TEXT_PRINTABLE_FIRST 0x21
-#define NIKI_SJIS_CODES_PER_ROW 16
-#define NIKI_SJIS_ROWS_PER_PAGE 16
-
-#define NIKI_SJIS_ROW_SHIFT 4
 
 /** @brief Fields restored from a loaded save before returning to the game. */
 typedef struct
@@ -64,39 +47,6 @@ typedef union
     NikiLoadedSavePayload loaded;
     u8 bytes[SAVE_FILE_BYTES];
 } NikiSaveBuffer;
-
-/** @brief Linked-list tag shared by GPU packets of different sizes. */
-typedef struct
-{
-    s32 tag;
-} NikiPacketHeader;
-
-typedef struct
-{
-    unsigned addr : 24;
-    unsigned len : 8;
-    u8 r0, g0, b0, code;
-} NikiPrimTag;
-
-/** @brief Two bytes of a Shift-JIS character in the glyph lookup tables. */
-typedef struct NikiSjisCode
-{
-    u8 lead;
-    u8 trail;
-} NikiSjisCode;
-
-/** @brief Sixteen Shift-JIS characters followed by the table row delimiter. */
-typedef struct NikiSjisRow
-{
-    NikiSjisCode codes[NIKI_SJIS_CODES_PER_ROW];
-    u8 newline;
-} NikiSjisRow;
-
-/** @brief Lookup page selected by an extended character lead byte. */
-typedef struct NikiSjisPage
-{
-    NikiSjisRow rows[NIKI_SJIS_ROWS_PER_PAGE];
-} NikiSjisPage;
 
 extern s32 D_80164AE4;
 /** @brief The saved game's item records (g_saved_game_ctx->items). */
@@ -124,8 +74,6 @@ extern u16 g_niki_text_wrong_version;
 extern u16 g_niki_text_no_load_file;
 extern u16 g_niki_text_found_load_file;
 extern u16 g_niki_text_trade_data_not_saved;
-/** @brief Location names, picked by the music track stored in a save. */
-extern u16 g_niki_location_names[];
 extern u8 g_field_ui_text_cant_hold_more[];
 
 extern NikiSaveBuffer g_niki_save_blob;

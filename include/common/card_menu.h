@@ -44,6 +44,16 @@
 #define CARD_MENU_ENTRY_STATE_CHECKING_CARD 0xFF /**< The card is being checked; no entries yet. */
 
 /**
+ * @brief g_card_entry_state values of the save-exchange menus (ADDHERO and NIKI).
+ * @note CARDA uses these values for its own, different states.
+ */
+#define CARD_MENU_EXCHANGE_STATE_CONFIRM_NO_SAVE 0xF3 /**< Asks whether to leave without saving the 2P or trade data. */
+#define CARD_MENU_EXCHANGE_STATE_SAVE_CONFIRM 0xF4    /**< A load file was found; asks whether to overwrite the 2P or trade data. */
+#define CARD_MENU_EXCHANGE_STATE_SAVE_PROGRESS 0xF5   /**< Writing the save; progress bar. */
+#define CARD_MENU_EXCHANGE_STATE_LOAD_PROGRESS 0xF6   /**< Reading the selected save; progress bar. */
+#define CARD_MENU_EXCHANGE_STATE_NO_LOAD_FILE 0xF7    /**< The selected entry is not a load file. */
+
+/**
  * @brief Opcodes of the card load/save step tables every card menu runs one
  *        byte at a time (g_card_step). Opcodes without a handler make the
  *        sequence wait on them; each overlay adds its own opcodes in the gaps.
@@ -414,6 +424,7 @@ typedef struct CardMenuElement
 #define CARD_MENU_TEXT_FOUND_LOAD_FILE 53
 #define CARD_MENU_TEXT_OVERWRITE_2P_DATA 54
 #define CARD_MENU_TEXT_2P_DATA_NOT_SAVED 55
+#define CARD_MENU_TEXT_OVERWRITE_TRADE_DATA 56
 #define CARD_MENU_TEXT_TRADE_DATA_NOT_SAVED 57
 #define CARD_MENU_TEXT_CHECKING_POCKETSTATION 58
 #define CARD_MENU_TEXT_NO_POCKETSTATION 59
@@ -493,6 +504,9 @@ extern s32 g_card_menu_icon_palette;
 /** @brief Text offset-table entries of the card slot 0 and slot 1 labels (CARD_MENU_TEXT_CARD_SLOT0_LABEL and the next text). */
 extern u16 g_card_menu_text_card_slot0_label;
 extern u16 g_card_menu_text_card_slot1_label;
+
+/** @brief Location names of the save list, as a u16 offset table indexed by a save's music track (see CARD_MENU_TEXT). */
+extern u16 g_card_menu_location_names[];
 
 /** @brief Party icon offsets, counted from the icon count word just before them (see CARD_MENU_ICON_IMAGE). */
 extern s32 g_card_menu_icon_offsets[];

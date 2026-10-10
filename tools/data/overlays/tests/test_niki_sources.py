@@ -14,15 +14,16 @@ from tools.data.overlays.tests.test_addhero_sources import c_define
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 VERSIONS = ("us", "jp")
-HEADER = REPO_ROOT / "src/overlays/niki/internal/niki_internal.h"
 PORTRAIT_HEADER = REPO_ROOT / "include/overlays/field/field_portrait.h"
 GPU_HEADER = REPO_ROOT / "include/common/gpu_packet.h"
 
-# Each card_data constant, and the NIKI #define that must agree with it.
+GLYPH_HEADER = REPO_ROOT / "include/common/glyph_cache.h"
+
+# Each card_data constant, and the shared glyph-chart #define that must agree with it.
 C_CONSTANTS = (
-    ("CHART_COLUMNS", "NIKI_SJIS_CODES_PER_ROW"),
-    ("CHART_ROWS_PER_PAGE", "NIKI_SJIS_ROWS_PER_PAGE"),
-    ("CHART_FIRST_CODE", "NIKI_TEXT_SINGLE_BYTE_BASE"),
+    ("CHART_COLUMNS", "GLYPH_CHART_COLUMNS"),
+    ("CHART_ROWS_PER_PAGE", "GLYPH_CHART_ROWS_PER_PAGE"),
+    ("CHART_FIRST_CODE", "GLYPH_TEXT_FIRST_PRINTABLE"),
 )
 
 
@@ -67,12 +68,12 @@ class SourceTest(unittest.TestCase):
                 self.assertEqual(len(steps), 8)
                 self.assertIn(names.named["g_card_steps_idle"], steps)
 
-    def test_chart_constants_match_the_niki_defines(self):
+    def test_chart_constants_match_the_glyph_chart_defines(self):
         for attribute, define in C_CONSTANTS:
             with self.subTest(constant=attribute):
-                self.assertEqual(getattr(card_data, attribute), c_define(HEADER, define))
-        self.assertEqual(card_data.CHART_LEADS.start, c_define(HEADER, "NIKI_TEXT_EXTENDED_LEAD_FIRST"))
-        self.assertEqual(len(card_data.CHART_LEADS), c_define(HEADER, "NIKI_TEXT_EXTENDED_PAGE_COUNT"))
+                self.assertEqual(getattr(card_data, attribute), c_define(GLYPH_HEADER, define))
+        self.assertEqual(card_data.CHART_LEADS.start, c_define(GLYPH_HEADER, "GLYPH_CHART_FIRST_LEAD"))
+        self.assertEqual(len(card_data.CHART_LEADS), c_define(GLYPH_HEADER, "GLYPH_CHART_PAGE_COUNT"))
 
     def test_icon_layout_matches_field_portrait(self):
         header = PORTRAIT_HEADER.read_text(encoding="ascii")

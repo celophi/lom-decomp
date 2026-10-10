@@ -89,7 +89,7 @@ class CloadSymbols:
 
 SYMBOL_NAMES = {
     "messages": "g_cload_text_check_memory_card",
-    "locations": "g_cload_location_names",
+    "locations": "g_card_menu_location_names",
     "card_steps": "g_cload_steps_initial_scan",
     "chart": "g_glyph_single_byte_chart",
     "double_byte_chart": "g_cload_double_byte_char_table",
@@ -153,7 +153,7 @@ def read_messages(blob: Blob[CloadSymbols], chart: Chart) -> Part:
 def read_locations(blob: Blob[CloadSymbols], chart: Chart) -> Part:
     """Location names picked by the music track stored in each save."""
     table = blob.symbols.locations
-    content, end = read_text_list(blob, chart, table, "g_cload_location_names")
+    content, end = read_text_list(blob, chart, table, "g_card_menu_location_names")
     if end > blob.offset(blob.symbols.card_steps):
         raise ValueError("location table extends into the card steps")
     return Part("locations", blob.offset(table), end, "text/locations.yaml", content)

@@ -256,7 +256,7 @@ field_reset_input_repeat = 0x800A9E74;
 field_upload_image_resource              = 0x8008602C;
 g_cload_text_alt_save                    = 0x80145ECE;
 g_card_menu_text_plus_marker                 = 0x80145F44;
-g_cload_location_names                   = 0x80146478;
+g_card_menu_location_names                   = 0x80146478;
 
 // US ELF names not listed above (splat placeholders shared with the C sources).
 McxSync = 0x800322E4;

@@ -802,7 +802,7 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
                     pos.y = (s16)y;
                     result = field_draw_number(ot, result, base_y, 1, &pos, 1);
                     result = field_draw_text(result, ot, shown_save->summary_name, 1, x + CARD_MENU_DETAILS_TEXT_X, y + 0x10, 0);
-                    result = field_draw_text(result, ot, CARD_MENU_TEXT(g_cload_location_names, shown_save->track.bits.music_track), 1, x + CARD_MENU_DETAILS_TEXT_X,
+                    result = field_draw_text(result, ot, CARD_MENU_TEXT(g_card_menu_location_names, shown_save->track.bits.music_track), 1, x + CARD_MENU_DETAILS_TEXT_X,
                                            y + 0x20, 0);
                 }
             }

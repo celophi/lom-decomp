@@ -674,7 +674,7 @@ void card_sort_entries_by_type(void)
 /*
  * The extended table linker symbol is biased backwards by 0x19 pages.  This
  * lets the original code index it directly with the encoded lead byte
- * (0x19..0x1F) instead of subtracting NIKI_TEXT_EXTENDED_LEAD_FIRST first.
+ * (0x19..0x1F) instead of subtracting GLYPH_CHART_FIRST_LEAD first.
  */
 
 #include "../../common/glyph_cache/expand_text_glyph_codes.inc.c"

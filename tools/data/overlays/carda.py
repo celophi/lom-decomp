@@ -94,7 +94,7 @@ SYMBOL_NAMES = {
     "save_title": "g_carda_save_title_template",
     "bad_title": "g_carda_bad_title_template",
     "save_icon_offsets": "g_carda_save_icon_offsets",
-    "locations": "g_carda_location_names",
+    "locations": "g_card_menu_location_names",
     "icon_offsets": "g_card_menu_icon_offsets",
     "card_steps": "g_carda_steps_initial_scan",
     "chart": "g_glyph_single_byte_chart",
@@ -241,7 +241,7 @@ def read_save_icons(blob: Blob[CardaSymbols]) -> list[Part]:
 def read_locations(blob: Blob[CardaSymbols], chart: Chart) -> Part:
     """Location names selected by each save's music track."""
     table = blob.symbols.locations
-    content, end = read_text_list(blob, chart, table, "g_carda_location_names")
+    content, end = read_text_list(blob, chart, table, "g_card_menu_location_names")
     return Part("locations", blob.offset(table), end, "text/locations.yaml", content)
 
 

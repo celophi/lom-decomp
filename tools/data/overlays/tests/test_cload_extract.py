@@ -142,8 +142,8 @@ class ExtractTest(unittest.TestCase):
         self.assertEqual((self.output / "unknown/variables.bin").read_bytes(), bytes(31) + b"Z")
 
     def test_missing_symbol_reports_what_to_update(self):
-        inputs = self.overlay.write(self.root, skip_symbol="g_cload_location_names")
-        with self.assertRaisesRegex(ValueError, "g_cload_location_names.*SYMBOL_NAMES"):
+        inputs = self.overlay.write(self.root, skip_symbol="g_card_menu_location_names")
+        with self.assertRaisesRegex(ValueError, "g_card_menu_location_names.*SYMBOL_NAMES"):
             cload.extract(inputs, self.output)
         self.assert_no_output()
 
@@ -163,7 +163,7 @@ class ExtractTest(unittest.TestCase):
 
     def test_out_of_order_symbols_are_rejected(self):
         self.overlay.symbols[cload.SYMBOL_NAMES["locations"]] = ADDRESS
-        with self.assertRaisesRegex(ValueError, "g_cload_location_names is out of resource order"):
+        with self.assertRaisesRegex(ValueError, "g_card_menu_location_names is out of resource order"):
             cload.extract(self.overlay.write(self.root), self.output)
         self.assert_no_output()
 

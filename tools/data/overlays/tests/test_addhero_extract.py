@@ -45,7 +45,7 @@ class FakeOverlay:
             pad(blob)
             blob += title.encode("shift_jis") + b"\x00"
         pad(blob)
-        names["g_addhero_location_text_table"] = len(blob)
+        names["g_card_menu_location_names"] = len(blob)
         blob += text_table([b"Home"])
         pad(blob)
 
