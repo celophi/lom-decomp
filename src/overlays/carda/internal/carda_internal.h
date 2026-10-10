@@ -212,7 +212,6 @@ extern s32 g_carda_new_save_file;
 extern s32 g_carda_growth_delta;
 extern u8 g_carda_received_item_ids[];
 extern s32 g_carda_pet_already_on_ranch;
-extern CardMenuElement g_carda_element1_state;
 extern s32 g_carda_received_item_count;
 extern u8* g_carda_save_blob;
 extern u8 g_carda_saved_record_copy[];

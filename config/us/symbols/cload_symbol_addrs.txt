@@ -170,7 +170,6 @@ g_cload_render_buffers                   = 0x8014A988; // size:0xF988 allow_adde
 g_cload_primitive_buffers                = 0x8015A350;
 g_card_menu_exit_requested                   = 0x80146918;
 g_card_menu_element_pool                     = 0x801468B8;
-g_cload_element1_state                   = 0x801468C4;
 g_card_slot                        = 0x8014A920;
 g_card_menu_choice_toggle                    = 0x8014A924;
 g_card_menu_io_busy                          = 0x8015A310;

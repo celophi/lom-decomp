@@ -65,7 +65,6 @@ extern s32 D_80162370;
  *        first 0x100 bytes of the saved game are read (CARD_MENU_ENTRY_READ_BYTES).
  */
 extern SaveFile g_cload_selected_file;
-extern s32 g_cload_element1_state;
 extern u8 g_cload_steps_initial_scan[];
 extern u8 g_cload_steps_refresh_entries[];
 extern u8 g_cload_steps_card_reset[];

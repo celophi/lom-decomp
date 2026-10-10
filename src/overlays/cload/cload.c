@@ -224,37 +224,7 @@ void cload_build_ui_elements(void)
     g_card_menu_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
 }
 
-/**
- * @brief Update input, loading state, scrolling, and UI elements for one frame.
- * @param frame Render buffer being built this frame.
- */
-void card_menu_update_state(FieldRenderHalf *frame)
-{
-    s32 delta;
-
-    card_menu_update_elements(frame);
-    g_card_menu_icon_phase += 2;
-    if ((g_cload_element1_state & 0x7F) == 2)
-    {
-        card_menu_update_card_sequence();
-    }
-    if ((u16)g_pad_input == 0xFFFF)
-    {
-        g_pad_input = 0;
-    }
-    card_menu_handle_input();
-    if (g_card_menu_scroll_frames != 0)
-    {
-        s32 base = g_card_menu_scroll_y;
-        delta = (g_card_menu_scroll_target_y - g_card_menu_scroll_y) / g_card_menu_scroll_frames;
-        g_card_menu_scroll_frames -= 1;
-        g_card_menu_scroll_y += delta;
-    }
-    else
-    {
-        g_card_menu_scroll_y = g_card_menu_scroll_target_y;
-    }
-}
+#include "../../common/card_menu/card_menu_update_state.inc.c"
 
 /**
  * @brief Advance the active load sequence and react to its phase result.
@@ -936,7 +906,7 @@ void card_menu_update_and_draw_elements(FieldRenderHalf *frame)
     arrow_prim = frame->primitive_cursor;
     ot = &frame->ordering_table[FIELD_FADE_OT_INDEX];
 
-    if ((g_card_entry_state < 0x10) && ((g_cload_element1_state & CARD_MENU_ELEMENT_STATE_MASK) == 2))
+    if ((g_card_entry_state < 0x10) && (g_card_menu_element_pool[CARD_MENU_ELEMENT_MAIN].attr.bits.state == CARD_MENU_ELEMENT_OPEN))
     {
         if ((g_card_entry_state * CARD_MENU_ENTRY_ROW_HEIGHT) > (g_card_menu_scroll_y + 0x49))
         {
