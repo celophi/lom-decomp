@@ -108,7 +108,6 @@ expand_text_glyph_codes = 0x8014AE98;
 
 // CARDA overlay data.
 g_card_menu_element_pool = 0x80166CF8;
-g_carda_element1_state = 0x80166D04;
 g_card_menu_exit_requested = 0x80166D58;
 g_card_menu_dialog_state = 0x80166D5C;
 g_carda_received_item_count = 0x80166D60;

@@ -252,34 +252,7 @@ static void carda_build_ui_elements(void)
     g_card_menu_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_FREE;
 }
 
-/**
- * @brief Run one frame of overlay logic: update the windows, advance the card
- *        sequence once the main window is open, handle input and step the scroll.
- * @param render FIELD render buffer being built this frame.
- */
-void card_menu_update_state(FieldRenderHalf* render)
-{
-    card_menu_update_elements(render);
-    g_card_menu_icon_phase += 2;
-    if (g_carda_element1_state.attr.bits.state == CARD_MENU_ELEMENT_OPEN && g_carda_element1_state.attr.bits.transition_step == 0)
-    {
-        card_menu_update_card_sequence();
-    }
-    if ((u16)g_pad_input == PAD_ALL_BUTTONS)
-    {
-        g_pad_input = 0;
-    }
-    card_menu_handle_input();
-    if (g_card_menu_scroll_frames != 0)
-    {
-        g_card_menu_scroll_y += (g_card_menu_scroll_target_y - g_card_menu_scroll_y) / g_card_menu_scroll_frames;
-        g_card_menu_scroll_frames--;
-    }
-    else
-    {
-        g_card_menu_scroll_y = g_card_menu_scroll_target_y;
-    }
-}
+#include "../../common/card_menu/card_menu_update_state.inc.c"
 
 /**
  * @brief Drive the card sequence one frame and act on its result.
@@ -2851,6 +2824,8 @@ static void* carda_draw_slot_prompt(void* prim, u_long* ot, s32 x, s32 y)
  */
 void carda_open_save_status_dialog(s32 dialog_state)
 {
+    CardMenuElement* element;
+
     field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
     field_reset_input_repeat();
     g_carda_save_in_progress = 0;
@@ -2888,14 +2863,15 @@ void carda_open_save_status_dialog(s32 dialog_state)
         return;
     }
 
-    g_carda_element1_state.draw = card_menu_draw_save_status_dialog;
-    g_carda_element1_state.attr.bits.transition_step = 1;
-    g_carda_element1_state.attr.bits.state = CARD_MENU_ELEMENT_OPENING;
-    g_carda_element1_state.attr.bits.x = 0x20;
-    g_carda_element1_state.attr.bits.y = 0x70;
-    g_carda_element1_state.size.bits.width_high = 1;
-    g_carda_element1_state.size.bits.height = 0x14;
-    CARD_MENU_SET_ELEMENT_WIDTH_LOW(&g_carda_element1_state, 0);
+    element = &g_card_menu_element_pool[CARD_MENU_ELEMENT_MAIN];
+    element->draw = card_menu_draw_save_status_dialog;
+    element->attr.bits.transition_step = 1;
+    element->attr.bits.state = CARD_MENU_ELEMENT_OPENING;
+    element->attr.bits.x = CARD_MENU_DIALOG_X;
+    element->attr.bits.y = CARD_MENU_EXCHANGE_DIALOG_Y;
+    element->size.bits.width_high = CARD_MENU_DIALOG_WIDTH >> 8;
+    element->size.bits.height = CARD_MENU_EXCHANGE_DIALOG_HEIGHT;
+    CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_DIALOG_WIDTH);
 }
 
 #include "../../common/card_menu/card_menu_draw_save_status_dialog.inc.c"
