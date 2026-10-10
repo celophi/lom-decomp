@@ -286,6 +286,7 @@ def format_overview(source: Path, header: SceneHeader, size: int, assets: list[A
 
 def write_asset(staging: Path, data: bytes, asset: AssetRange, chest_report: dict | None) -> dict:
     """Write one byte range and its decoded companions; return its byte-map entry."""
+    # Layout records become YAML holding their original bytes; everything else is copied as is.
     path = staging / asset.filename
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = data[asset.offset:asset.offset + asset.size]
@@ -294,6 +295,8 @@ def write_asset(staging: Path, data: bytes, asset: AssetRange, chest_report: dic
     else:
         path.write_text(asset.layout.layout_yaml(payload, chest=asset.name == "chest", chest_report=chest_report),
                         encoding="ascii")
+
+    # Decoded documents and readable listings go beside the file and are recorded in the byte map.
     entry = {"name": asset.name, "offset": asset.offset, "size": asset.size, "file": asset.filename}
     if asset.document is not None:
         metadata = path.with_suffix(".yaml")
@@ -337,9 +340,13 @@ def extract(source: Path, output: Path, reference: ReferenceData | None = None, 
     """
     if output.exists():
         raise FileExistsError(f"Output already exists: {output}")
+
+    # Split the IMG into byte ranges and decode them.
     data = source.read_bytes()
     header = SceneHeader.parse(data)
     assets = split_scene(data, text_encoding)
+
+    # Build the object report; chest files reuse its kind, reward and other placements.
     documents = {asset.name: asset.document for asset in assets if asset.document is not None}
     report = build_report(data, header, documents["event_scripts"], documents["actors"], reference)
     chests = {obj["file"]: obj for obj in report["objects"] if "chest" in obj}
@@ -347,6 +354,7 @@ def extract(source: Path, output: Path, reference: ReferenceData | None = None, 
         for obj in chests.values():
             obj["chest"]["also_placed_in"] = other_placements.get(obj["index"], [])
 
+    # Write everything to a temporary directory, so a failure leaves no partial export.
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=f".{output.name}-", dir=output.parent) as temporary:
         staging = Path(temporary) / "scene"
@@ -355,11 +363,15 @@ def extract(source: Path, output: Path, reference: ReferenceData | None = None, 
         for asset in assets:
             chest = chests.get(asset.filename)
             entries.append(write_asset(staging, data, asset, chest["chest"] if chest else None))
+
+        # Add the byte map, overview and object report.
         (staging / "byte-map.yaml").write_text(format_byte_map(source, entries), encoding="ascii")
         write_yaml(staging / "scene.yaml", describe_scene(source, header, len(data), assets))
         (staging / "scene.txt").write_text(format_overview(source, header, len(data), assets), encoding="utf-8")
         write_yaml(staging / "objects.yaml", report, "scene_report")
         (staging / "objects.txt").write_text(format_report(report), encoding="utf-8")
+
+        # Move it into place only after it rebuilds the original IMG.
         publish(staging, output, source, data)
     return list(chests.values())
 
@@ -419,12 +431,16 @@ def extract_all(ana_directory: Path, output: Path, reference: ReferenceData | No
                 text_encoding: str = "us", progress: bool = False) -> BatchSummary:
     """Extract INFO_* and MAPINFO scenes and catalogue their chests; optionally report progress to stderr."""
     scenes = find_scenes(ana_directory)
+
     # Check every destination before starting, so an existing export stops the batch early.
     for destination in [output / name for name in scenes] + [output / CATALOGUE_FILE]:
         if destination.exists():
             raise FileExistsError(f"Output already exists: {destination}")
 
+    # Find every chest first, so each export can list the other scenes placing the same chest.
     chest_index = ChestIndex.scan(scenes)
+
+    # Extract each scene and collect its chests for the catalogue.
     placements = []
     status = BatchProgress(len(scenes), progress)
     status.begin(output)
@@ -439,6 +455,7 @@ def extract_all(ana_directory: Path, output: Path, reference: ReferenceData | No
         status.done()
         placements.extend(placement_entry(name, chest) for chest in chests)
 
+    # Write chests.yaml once every scene is in place.
     catalogue = build_catalogue(placements)
     write_catalogue(output / CATALOGUE_FILE, catalogue)
     return BatchSummary(len(scenes), ChestTotals(**catalogue["summary"]))

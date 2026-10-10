@@ -60,12 +60,15 @@ class ChestIndex:
         """Read only the layout of each scene. Broken scenes are left for extraction to report."""
         placements = []
         for name, source in scenes.items():
+            # Parse only the header and layout records.
             data = source.read_bytes()
             try:
                 header = SceneHeader.parse(data)
                 records = read_layout_records(data, header)
             except ValueError:
                 continue
+
+            # Keep the records that run the common chest initializer.
             event_scripts = data[header.event_scripts:header.strings]
             placements.extend(ChestPlacement(name, index, record.chest_id)
                               for index, record in enumerate(records) if record.is_common_chest(event_scripts))
@@ -90,11 +93,14 @@ class ChestTotals:
 
 def placement_entry(scene: str, obj: dict) -> dict:
     """Describe one placement from its object report entry; money chests have no item."""
+    # A money chest stores an amount, so it gets no item name.
     chest = obj["chest"]
     if "money" in chest:
         reward = {"money": chest["money"]}
     else:
         reward = {"item_id": chest["item_id"], "item": item_label(chest["item_id"], chest["item"])}
+
+    # scene and chest_id are for grouping; the catalogue drops them from each placement.
     return {"scene": scene, "chest_id": chest["collection_variable_ref"], "file": f"{scene}/{obj['file']}",
             "kind": chest["kind"], **reward, "x": obj["position"]["x"], "z": obj["position"]["z"]}
 
@@ -103,23 +109,31 @@ def catalogue_entry(chest_id: int, placements: list[dict]) -> dict:
     """Show the kind and reward once when every placement agrees on them."""
     listed = [{key: value for key, value in placement.items() if key not in ("scene", "chest_id")}
               for placement in placements]
+
+    # One kind for the chest, or mixed if its placements disagree.
     kinds = {placement["kind"] for placement in placements}
     entry = {"chest_id": chest_id, "kind": kinds.pop() if len(kinds) == 1 else "mixed"}
+
+    # Show the reward once if it's the same everywhere; otherwise each placement keeps its own.
     rewards = [{key: placement[key] for key in REWARD_FIELDS if key in placement} for placement in listed]
     if all(reward == rewards[0] for reward in rewards):
         entry.update(rewards[0])
     else:
         entry["items_differ"] = True
+
     entry["placements"] = listed
     return entry
 
 
 def build_catalogue(placements: list[dict]) -> dict:
     """Group placement entries by chest ID and count them."""
+    # One entry per chest ID, in ID order.
     groups: dict[int, list[dict]] = defaultdict(list)
     for placement in placements:
         groups[placement["chest_id"]].append(placement)
     chests = [catalogue_entry(chest_id, groups[chest_id]) for chest_id in sorted(groups)]
+
+    # Count chests by ID; placements and scenes count the records behind them.
     totals = ChestTotals(
         chests=len(chests),
         loot=sum(1 for chest in chests if chest["kind"] == "loot"),
