@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import yaml
 
+from tools.data.scenes.chest_catalogue import ChestTotals, build_catalogue
 from tools.data.scenes.field_scene import COMMON_CHEST_INITIALIZER, SceneHeader, extract, extract_all, reconstruct
 from tools.data.scenes.tests.test_identify_img import make_scene
 from tools.data.scenes.tests.test_scene_resources import battle_resource
@@ -56,6 +57,10 @@ class SceneExportTests(unittest.TestCase):
             self.assertEqual(chest["item_id"], 0x96)
             self.assertEqual(chest["collection_variable_ref"], 0xBC0)
             self.assertTrue(chest["alternate_facing"])
+            self.assertEqual(chest["chest_id"], 0xBC0)
+            # The fixture has no step handing over 0xE040, so it is not loot.
+            self.assertEqual(chest["chest_kind"], "quest")
+            self.assertNotIn("also_placed_in", chest)
             battle = yaml.safe_load((output / "records/000.yaml").read_text())
             self.assertEqual(battle["battle"]["monsters"][0]["id"], 7)
             self.assertTrue((output / "event_scripts").is_dir())
@@ -109,13 +114,67 @@ class SceneExportTests(unittest.TestCase):
                 folder.mkdir(parents=True)
                 (folder / "sample.img").write_bytes(sample_scene())
             output = root / "export"
-            self.assertEqual(extract_all(ana, output), 2)
+            summary = extract_all(ana, output)
+            self.assertEqual(summary.scenes, 2)
             self.assertTrue((output / "MAPINFO/sample/scene.yaml").exists())
             self.assertFalse((output / "BTL_OBJ").exists())
             (ana / "INFO_TEST/another.IMG").write_bytes(sample_scene())
             with self.assertRaises(FileExistsError):
                 extract_all(ana, output)
             self.assertFalse((output / "INFO_TEST/another").exists())
+
+    def test_batch_links_placements_of_one_chest(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ana = root / "ANA"
+            for group in ("INFO_TEST", "MAPINFO"):
+                folder = ana / group
+                folder.mkdir(parents=True)
+                (folder / "sample.IMG").write_bytes(sample_scene())
+            output = root / "export"
+            summary = extract_all(ana, output)
+            self.assertEqual(summary.chests, ChestTotals(chests=1, loot=0, quest=1, placements=2, scenes=2))
+            chest = yaml.safe_load((output / "INFO_TEST/sample/chests/001.yaml").read_text())
+            self.assertEqual(chest["also_placed_in"], ["MAPINFO/sample/chests/001.yaml"])
+            report = yaml.safe_load((output / "MAPINFO/sample/objects.yaml").read_text())
+            self.assertEqual(report["objects"][1]["chest"]["also_placed_in"], ["INFO_TEST/sample/chests/001.yaml"])
+            self.assertIn("Also placed in: INFO_TEST/sample/chests/001.yaml",
+                          (output / "MAPINFO/sample/objects.txt").read_text())
+            catalogue = yaml.safe_load((output / "chests.yaml").read_text())
+            self.assertEqual(catalogue["summary"], {"chests": 1, "loot": 0, "quest": 1, "placements": 2, "scenes": 2})
+            entry = catalogue["chests"][0]
+            self.assertEqual((entry["chest_id"], entry["kind"], entry["item_id"]), (0xBC0, "quest", 0x96))
+            self.assertNotIn("items_differ", entry)
+            self.assertEqual([placement["file"] for placement in entry["placements"]],
+                             ["INFO_TEST/sample/chests/001.yaml", "MAPINFO/sample/chests/001.yaml"])
+            other = root / "other"
+            other.mkdir()
+            (other / "chests.yaml").write_text("keep")
+            with self.assertRaisesRegex(FileExistsError, "chests.yaml"):
+                extract_all(ana, other)
+            self.assertEqual(sorted(path.name for path in other.iterdir()), ["chests.yaml"])
+
+    def test_catalogue_marks_placements_with_different_items(self):
+        placements = [
+            {"scene": "A/S0", "chest_id": 0xB04, "file": "A/S0/chests/002.yaml", "kind": "loot",
+             "item_id": 0xE5, "item": "a", "x": 1, "z": 2},
+            {"scene": "A/S1", "chest_id": 0xB04, "file": "A/S1/chests/002.yaml", "kind": "loot",
+             "item_id": 0x90, "item": "b", "x": 1, "z": 2},
+        ]
+        catalogue = build_catalogue(placements)
+        entry = catalogue["chests"][0]
+        self.assertTrue(entry["items_differ"])
+        self.assertNotIn("item_id", entry)
+        self.assertEqual([placement["item_id"] for placement in entry["placements"]], [0xE5, 0x90])
+        self.assertEqual(catalogue["summary"]["chests"], 1)
+
+    def test_catalogue_keeps_money_rewards_as_amounts(self):
+        placements = [{"scene": "MAPINFO/MHM_RM00", "chest_id": 0xB00, "file": "MAPINFO/MHM_RM00/chests/007.yaml",
+                       "kind": "loot", "money": 100, "x": 42, "z": 206}]
+        entry = build_catalogue(placements)["chests"][0]
+        self.assertEqual(entry["money"], 100)
+        self.assertNotIn("item_id", entry)
+        self.assertNotIn("items_differ", entry)
 
 
 class BatchProgressTests(unittest.TestCase):
@@ -142,7 +201,9 @@ class BatchProgressTests(unittest.TestCase):
             self.assertIn("[2/2] Extracting MAPINFO/sample.IMG ... done", result.stderr)
             self.assertEqual(result.stderr.count("... done"), 2)
             self.assertIn("elapsed ", result.stderr)
-            self.assertEqual(result.stdout, f"Extracted 2 scenes to {output}\n")
+            self.assertEqual(result.stdout, f"Extracted 2 scenes to {output}\n"
+                             f"Chests: 1 (0 loot, 1 quest) in 2 placements across 2 scenes; "
+                             f"see {output / 'chests.yaml'}\n")
             for group in ("INFO_TEST", "MAPINFO"):
                 self.assertEqual(reconstruct(output / group / "sample"), original)
 
@@ -177,7 +238,9 @@ class BatchProgressTests(unittest.TestCase):
             result = self.run_batch(ana, output, "--no-progress")
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stderr, "")
-            self.assertEqual(result.stdout, f"Extracted 1 scenes to {output}\n")
+            self.assertEqual(result.stdout, f"Extracted 1 scenes to {output}\n"
+                             f"Chests: 1 (0 loot, 1 quest) in 1 placements across 1 scenes; "
+                             f"see {output / 'chests.yaml'}\n")
 
 
 if __name__ == "__main__":

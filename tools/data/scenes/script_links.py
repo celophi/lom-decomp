@@ -85,6 +85,9 @@ def describe_operation(instruction: dict, chest: dict | None = None,
                 return f"Give the item held in variable 0xE040 (initialized to chest item {label})."
             item = literal(argument)
             return f"Give inventory item {item_label(item, resolve_item(item, reference))}." if item is not None else f"Give the inventory item selected by {value}."
+        if command == 0x39 and chest and chest["initializer_enabled"] and argument.get("reference") == 0xE040:
+            amount = chest.get("money", chest.get("item_id"))
+            return f"Receive the money held in variable 0xE040 (initialized to chest amount {amount} Lucre)."
         if command in (0x12, 0x14) and literal(argument) is not None:
             item = literal(argument)
             value = item_label(item, resolve_item(item, reference))
