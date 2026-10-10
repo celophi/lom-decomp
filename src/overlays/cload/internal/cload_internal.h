@@ -89,7 +89,6 @@ extern u16 g_cload_text_alt_save;
 extern u16 g_cload_text_card_insert_error;
 extern u16 D_80145EDE;
 extern u16 g_cload_text_version_error;
-extern u16 g_cload_location_names[];
 
 /* Globals used by the memory-card I/O, load-state, and glyph-cache block. */
 extern u8 g_cload_steps_idle[];

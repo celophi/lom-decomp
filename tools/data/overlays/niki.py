@@ -77,7 +77,7 @@ class NikiSymbols(CardSymbols):
 # In blob order, except chart_pages: the decoder's page base lies inside the icon set.
 SYMBOL_NAMES = {
     "messages": "g_card_menu_text_table",
-    "locations": "g_niki_location_names",
+    "locations": "g_card_menu_location_names",
     "icon_offsets": "g_card_menu_icon_offsets",
     "card_steps": "g_card_steps_initial_scan",
     "chart": "g_glyph_single_byte_chart",
@@ -87,7 +87,7 @@ SYMBOL_NAMES = {
 }
 BLOB_ORDER = ("messages", "locations", "icon_offsets", "card_steps", "chart", "decimal_glyphs", "hex_glyphs")
 MESSAGE_SYMBOL_PREFIX = ("g_niki_text_", "g_card_menu_text_")
-LOCATION_SYMBOL_PREFIX = "g_niki_location_names"
+LOCATION_SYMBOL_PREFIX = "g_card_menu_location_names"
 
 
 @dataclass(frozen=True)

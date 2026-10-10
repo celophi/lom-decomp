@@ -84,7 +84,12 @@
 /** @brief Character chart: 33-byte rows of 16 two-byte Shift-JIS characters plus a newline, 16 rows per page. */
 #define GLYPH_CHART_ROW_BYTES 33
 #define GLYPH_CHART_COLUMNS 16
-#define GLYPH_CHART_PAGE_BYTES (16 * GLYPH_CHART_ROW_BYTES)
+#define GLYPH_CHART_ROWS_PER_PAGE 16
+#define GLYPH_CHART_PAGE_BYTES (GLYPH_CHART_ROWS_PER_PAGE * GLYPH_CHART_ROW_BYTES)
+
+/** @brief Lead bytes of the chart's two-byte pages: GLYPH_CHART_PAGE_COUNT pages from GLYPH_CHART_FIRST_LEAD. */
+#define GLYPH_CHART_FIRST_LEAD 0x19
+#define GLYPH_CHART_PAGE_COUNT 7
 
 /** @brief Each chart entry stores the two bytes of a Shift-JIS character. */
 #define GLYPH_CHART_GLYPH_BYTES 2

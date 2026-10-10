@@ -562,7 +562,7 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
                     else
                     {
                         result =
-                            field_draw_text(result, ot, CARD_MENU_TEXT(g_addhero_location_text_table, entry->track.bits.music_track), FIELD_TEXT_COLOR_NORMAL,
+                            field_draw_text(result, ot, CARD_MENU_TEXT(g_card_menu_location_names, entry->track.bits.music_track), FIELD_TEXT_COLOR_NORMAL,
                                             x + CARD_MENU_DETAILS_TEXT_X, y + CARD_MENU_DETAILS_LINE_HEIGHT * 2, FIELD_TEXT_ALIGN_LEFT);
                     }
                 }
@@ -956,11 +956,11 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_save_data, CARD_MENU_TEXT_NO_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
                                -x_offset + CARD_MENU_MESSAGE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
-    case ADDHERO_ENTRY_STATE_NO_LOAD_FILE:
+    case CARD_MENU_EXCHANGE_STATE_NO_LOAD_FILE:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_no_load_file, CARD_MENU_TEXT_NO_LOAD_FILE), FIELD_TEXT_COLOR_NORMAL,
                                -x_offset + CARD_MENU_MESSAGE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
-    case ADDHERO_ENTRY_STATE_LOAD_PROGRESS:
+    case CARD_MENU_EXCHANGE_STATE_LOAD_PROGRESS:
     {
         s32 message_x;
         u16* text_table;
@@ -983,13 +983,13 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
                 return prim;
             }
             field_play_sound(FIELD_SOUND_LOAD_DONE, AKAO_PAN_CENTER);
-            g_card_entry_state = ADDHERO_ENTRY_STATE_SAVE_CONFIRM;
+            g_card_entry_state = CARD_MENU_EXCHANGE_STATE_SAVE_CONFIRM;
             card_menu_enable_choice_toggle();
             field_reset_input_repeat();
         }
     }
     break;
-    case ADDHERO_ENTRY_STATE_CONFIRM_NO_SAVE:
+    case CARD_MENU_EXCHANGE_STATE_CONFIRM_NO_SAVE:
     {
         s32 message_x;
 
@@ -1001,7 +1001,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         {
             field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
             card_menu_enable_choice_toggle();
-            g_card_entry_state = ADDHERO_ENTRY_STATE_SAVE_CONFIRM;
+            g_card_entry_state = CARD_MENU_EXCHANGE_STATE_SAVE_CONFIRM;
             field_reset_input_repeat();
         }
         else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
@@ -1014,7 +1014,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         }
     }
     break;
-    case ADDHERO_ENTRY_STATE_SAVE_CONFIRM:
+    case CARD_MENU_EXCHANGE_STATE_SAVE_CONFIRM:
     {
         s32 message_x;
         u16* text_table;
@@ -1030,7 +1030,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         if ((g_pad_input & PAD_BTN_CIRCLE) || ((g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK) && (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)))
         {
             card_menu_enable_choice_toggle();
-            g_card_entry_state = ADDHERO_ENTRY_STATE_CONFIRM_NO_SAVE;
+            g_card_entry_state = CARD_MENU_EXCHANGE_STATE_CONFIRM_NO_SAVE;
             field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
             field_reset_input_repeat();
         }
@@ -1045,11 +1045,11 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
             file->checksum = checksum;
             g_card_menu_write_in_progress = 1;
             g_card_step = g_card_steps_write_save;
-            g_card_entry_state = ADDHERO_ENTRY_STATE_SAVE_PROGRESS;
+            g_card_entry_state = CARD_MENU_EXCHANGE_STATE_SAVE_PROGRESS;
         }
     }
     break;
-    case ADDHERO_ENTRY_STATE_SAVE_PROGRESS:
+    case CARD_MENU_EXCHANGE_STATE_SAVE_PROGRESS:
     {
         s32 message_x;
         u16* text_table;
@@ -1104,7 +1104,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
                 {
                     if (g_card_entry_state != 0)
                     {
-                        g_card_entry_state = ADDHERO_ENTRY_STATE_NO_LOAD_FILE;
+                        g_card_entry_state = CARD_MENU_EXCHANGE_STATE_NO_LOAD_FILE;
                     }
                     else
                     {
@@ -1122,7 +1122,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
                 g_card_menu_progress_start_tick = VSync(-1);
                 g_card_menu_progress_active = 1;
                 g_card_step = g_card_steps_read_saved_copy;
-                g_card_entry_state = ADDHERO_ENTRY_STATE_LOAD_PROGRESS;
+                g_card_entry_state = CARD_MENU_EXCHANGE_STATE_LOAD_PROGRESS;
             }
         }
     }
@@ -1131,8 +1131,8 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         break;
     }
 
-    if (g_card_menu_io_busy != 0 || g_card_entry_state == ADDHERO_ENTRY_STATE_LOAD_PROGRESS || g_card_entry_state == ADDHERO_ENTRY_STATE_SAVE_PROGRESS ||
-        g_card_entry_state == ADDHERO_ENTRY_STATE_SAVE_CONFIRM || g_card_entry_state == ADDHERO_ENTRY_STATE_CONFIRM_NO_SAVE)
+    if (g_card_menu_io_busy != 0 || g_card_entry_state == CARD_MENU_EXCHANGE_STATE_LOAD_PROGRESS || g_card_entry_state == CARD_MENU_EXCHANGE_STATE_SAVE_PROGRESS ||
+        g_card_entry_state == CARD_MENU_EXCHANGE_STATE_SAVE_CONFIRM || g_card_entry_state == CARD_MENU_EXCHANGE_STATE_CONFIRM_NO_SAVE)
     {
         return prim;
     }

@@ -29,20 +29,6 @@
 
 /* Declarations shared by ADDHERO implementation files. */
 
-/**
- * @brief g_card_entry_state values.
- *
- * Below CARD_MENU_ENTRY_COUNT_LIMIT the value is the number of save entries
- * read from the current card (a card holds 15). From 0xF3 up it is a status
- * whose message the list or transfer window shows instead of the entries; the
- * states from 0xF8 up are the shared CARD_MENU_ENTRY_STATE_* values.
- */
-#define ADDHERO_ENTRY_STATE_CONFIRM_NO_SAVE 0xF3    /**< Asks whether to leave without saving the 2P data. */
-#define ADDHERO_ENTRY_STATE_SAVE_CONFIRM 0xF4       /**< A load file was found; asks whether to overwrite the 2P data. */
-#define ADDHERO_ENTRY_STATE_SAVE_PROGRESS 0xF5      /**< Writing the save; progress bar. */
-#define ADDHERO_ENTRY_STATE_LOAD_PROGRESS 0xF6      /**< Reading the selected save; progress bar. */
-#define ADDHERO_ENTRY_STATE_NO_LOAD_FILE 0xF7       /**< The selected entry is not a load file. */
-
 extern struct DIRENTRY g_card_entries[][CARD_DIRECTORY_ENTRY_COUNT];
 extern s32 g_addhero_has_free_entry_space;
 /** @brief Save file read or written by the load and save sequences. */
@@ -85,7 +71,6 @@ extern u16 g_addhero_text_wrong_version;
 extern u16 g_addhero_text_2p_data_not_saved;
 extern u16 g_addhero_text_no_load_file;
 extern u16 g_addhero_text_found_load_file;
-extern u16 g_addhero_location_text_table[];
 
 /* Overlay function declarations. */
 void addhero_init(s32 work_base, s32 mode);

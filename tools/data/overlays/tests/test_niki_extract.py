@@ -53,7 +53,7 @@ class FakeOverlay:
             pad(data)
             data += title.encode("shift_jis") + b"\x00"
         pad(data)
-        names["g_niki_location_names"] = len(data)
+        names["g_card_menu_location_names"] = len(data)
         data += make_table([b"Home"] if version == "us" else [b"\x42\x41"])
         self.unknown_start = len(data)
         pad(data)
@@ -197,8 +197,8 @@ class ExtractTest(unittest.TestCase):
         self.assertEqual((self.output / "unknown/variables.bin").read_bytes()[-1:], b"Z")
 
     def test_missing_symbol_reports_what_to_update(self):
-        inputs = self.overlay.write(self.root, skip_symbol="g_niki_location_names")
-        with self.assertRaisesRegex(ValueError, "g_niki_location_names.*SYMBOL_NAMES"):
+        inputs = self.overlay.write(self.root, skip_symbol="g_card_menu_location_names")
+        with self.assertRaisesRegex(ValueError, "g_card_menu_location_names.*SYMBOL_NAMES"):
             niki.extract(inputs, self.output)
         self.assert_no_output()
 
@@ -217,8 +217,8 @@ class ExtractTest(unittest.TestCase):
         self.assert_no_output()
 
     def test_out_of_order_symbols_are_rejected(self):
-        self.overlay.symbols["g_niki_location_names"] = ADDRESS
-        with self.assertRaisesRegex(ValueError, "g_niki_location_names is out of resource order"):
+        self.overlay.symbols["g_card_menu_location_names"] = ADDRESS
+        with self.assertRaisesRegex(ValueError, "g_card_menu_location_names is out of resource order"):
             niki.extract(self.overlay.write(self.root), self.output)
         self.assert_no_output()
 

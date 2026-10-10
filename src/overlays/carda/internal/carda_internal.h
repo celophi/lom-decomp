@@ -190,7 +190,6 @@ extern u16 g_carda_item_names[];
 extern u8 g_carda_save_title_template[];
 extern u8 g_carda_bad_title_template[];
 extern s32 g_carda_save_icon_offsets[];
-extern u16 g_carda_location_names[];
 
 /* Card-sequence step scripts (g_card_step points into these). */
 extern u8 g_carda_steps_initial_scan[];

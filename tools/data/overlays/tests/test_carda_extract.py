@@ -185,8 +185,8 @@ class ExtractTest(unittest.TestCase):
         self.assertEqual((self.output / "unknown/variables.bin").read_bytes(), bytes(31) + b"Z")
 
     def test_missing_symbol_reports_the_name_and_writes_nothing(self):
-        inputs = self.overlay.write(self.root, skip_symbol="g_carda_location_names")
-        with self.assertRaisesRegex(ValueError, "g_carda_location_names.*SYMBOL_NAMES"):
+        inputs = self.overlay.write(self.root, skip_symbol="g_card_menu_location_names")
+        with self.assertRaisesRegex(ValueError, "g_card_menu_location_names.*SYMBOL_NAMES"):
             carda.extract(inputs, self.output)
         self.assert_no_output()
 

@@ -990,7 +990,7 @@ static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_off
                     result = field_draw_number(ot, result, base_y, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
                     result = field_draw_text(result, ot, shown_save->summary_name, FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TEXT_X,
                                              y + CARD_MENU_DETAILS_LINE_HEIGHT, FIELD_TEXT_ALIGN_LEFT);
-                    result = field_draw_text(result, ot, CARD_MENU_TEXT(g_carda_location_names, shown_save->track.bits.music_track), FIELD_TEXT_COLOR_NORMAL,
+                    result = field_draw_text(result, ot, CARD_MENU_TEXT(g_card_menu_location_names, shown_save->track.bits.music_track), FIELD_TEXT_COLOR_NORMAL,
                                              x + CARD_MENU_DETAILS_TEXT_X, y + CARD_MENU_DETAILS_LINE_HEIGHT * 2, FIELD_TEXT_ALIGN_LEFT);
                 }
             }
