@@ -166,6 +166,14 @@ class SceneExportTests(unittest.TestCase):
         self.assertEqual([placement["item_id"] for placement in entry["placements"]], [0xE5, 0x90])
         self.assertEqual(catalogue["summary"]["chests"], 1)
 
+    def test_catalogue_keeps_money_rewards_as_amounts(self):
+        placements = [{"file": "MAPINFO/MHM_RM00/chests/007.yaml", "chest_id": 0xB00, "kind": "loot",
+                       "money": 100, "x": 42, "z": 206}]
+        entry = chest_catalogue(placements)["chests"][0]
+        self.assertEqual(entry["money"], 100)
+        self.assertNotIn("item_id", entry)
+        self.assertNotIn("items_differ", entry)
+
 
 class BatchProgressTests(unittest.TestCase):
     def run_batch(self, source, output, *options):

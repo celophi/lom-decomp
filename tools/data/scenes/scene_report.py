@@ -35,7 +35,7 @@ CHEST_FLAG_SETUP = bytes.fromhex(
 # inventory item (command 0x13) or money (command 0x39). A quest chest has no
 # such step; its interaction runs scene-specific script instead.
 CHEST_REWARD_VARIABLE = 0xE040
-CHEST_REWARD_COMMANDS = (0x13, 0x39)
+CHEST_REWARD_COMMANDS = {0x13: "item", 0x39: "money"}
 
 
 def is_chest_reward(instruction: dict) -> bool:
@@ -45,6 +45,13 @@ def is_chest_reward(instruction: dict) -> bool:
     operands = instruction["operands"]
     return (operands["subcommand"].get("value") in CHEST_REWARD_COMMANDS
             and operands["argument"].get("reference") == CHEST_REWARD_VARIABLE)
+
+
+def chest_reward_label(chest: dict) -> str:
+    """Name a chest's reward: an amount of Lucre, or the item with its ID."""
+    if "money" in chest:
+        return f"{chest['money']} Lucre"
+    return item_label(chest["item_id"], chest["item"])
 
 
 def describe_drop(drop: dict, rewards: list[dict]) -> str:
@@ -224,12 +231,14 @@ def build_report(data: bytes, header: SceneHeader, events: dict, actors: dict,
             item["monster_template"] = link
         operations = {}
         reward_offsets = set()
+        rewards = set()
         for script in scripts:
             if script["kind"] != "event_script" or not script["enabled"]:
                 continue
             for instruction in links.resolve(script["entry"])["instructions"]:
                 if is_chest_reward(instruction):
                     reward_offsets.add(instruction["offset"])
+                    rewards.add(CHEST_REWARD_COMMANDS[instruction["operands"]["subcommand"]["value"]])
                 description = describe_operation(instruction, chest_info, reference)
                 if description is None:
                     continue
@@ -245,7 +254,13 @@ def build_report(data: bytes, header: SceneHeader, events: dict, actors: dict,
                             operation.update(item_id=item_id, item=resolve_item(item_id, reference))
                 operation["via_slots"].append(script["slot"])
         if chest_info is not None:
-            chest_info.update(kind="loot" if reward_offsets else "quest", reward_offsets=sorted(reward_offsets))
+            chest_info.update(kind="loot" if reward_offsets else "quest", reward_offsets=sorted(reward_offsets),
+                              reward="mixed" if len(rewards) > 1 else rewards.pop() if rewards else None)
+            if chest_info["reward"] == "money":
+                # scripts[4] holds an amount of Lucre here, not an item ID.
+                chest_info["money"] = chest_info.pop("item_id")
+                chest_info["money_offset"] = chest_info.pop("item_id_offset")
+                del chest_info["item"]
         item["possible_operations"] = list(operations.values())
         objects.append(item)
     return {"layout_count": len(records), "objects": objects, "monster_templates": templates,
@@ -296,11 +311,14 @@ def format_report(document: dict) -> str:
             lines.append("  Starts hidden.")
         if "chest" in obj:
             chest = obj["chest"]
-            lines.extend([f"  Item: {item_label(chest['item_id'], chest['item'])} [IMG 0x{chest['item_id_offset']:08X}]",
-                          f"  Collected flag reference: 0x{chest['collection_variable_ref']:04X} [IMG 0x{chest['collection_setting_offset']:08X}]",
+            if "money" in chest:
+                lines.append(f"  Money: {chest_reward_label(chest)} [IMG 0x{chest['money_offset']:08X}]")
+            else:
+                lines.append(f"  Item: {chest_reward_label(chest)} [IMG 0x{chest['item_id_offset']:08X}]")
+            lines.extend([f"  Collected flag reference: 0x{chest['collection_variable_ref']:04X} [IMG 0x{chest['collection_setting_offset']:08X}]",
                           f"  Alternate facing: {'yes' if chest['alternate_facing'] else 'no'}",
-                          "  Initializer code loads the item into 0xE040 and collection/facing settings into 0xE050."])
-            if "name_offset" in chest["item"]:
+                          "  Initializer code loads the reward into 0xE040 and collection/facing settings into 0xE050."])
+            if "name_offset" in chest.get("item", {}):
                 lines.append(f"  Item name: decompressed FIELD 0x{chest['item']['name_offset']:08X}")
             if chest["flag_binding"]:
                 lines.append("  Confirmed setup splits facing from the collection reference, stored in 0xE030.")

@@ -676,6 +676,10 @@ complete original record as hex.
 The decoded fields describe that saved record; editing them does not change
 `record_bytes`.
 
+Not every chest gives an item. The one in your house (`MHM_RM00.IMG`) gives
+100 Lucre, and `scripts[4]` is just the amount. Its file shows `money: 100`
+instead of `item_id`, otherwise you'd see 100 read as an item ID (Pear o'Heels).
+
 For example, `WAL_B020.IMG` has a chest at `(395, 180)` with item `0x96` and
 collection-variable reference `0x0BC0`. It is exported as `chests/002.yaml` because it is layout
 record 2. Event scripts are decoded under `event_scripts/`; the tool does not

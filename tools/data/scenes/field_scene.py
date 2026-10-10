@@ -313,6 +313,7 @@ def extract(source: Path, output: Path, reference: ReferenceData | None = None, 
             if asset.name == "chest":
                 chest = chests[int(path.stem)]["chest"]
                 path.write_text(asset.layout.layout_yaml(payload, chest=True, chest_kind=chest["kind"],
+                                                         chest_reward=chest["reward"],
                                                          also_placed_in=chest.get("also_placed_in")),
                                 encoding="ascii")
             elif asset.layout is not None:
@@ -340,10 +341,18 @@ def extract(source: Path, output: Path, reference: ReferenceData | None = None, 
         if output.exists():
             raise FileExistsError(f"Output already exists: {output}")
         staging.rename(output)
-    return [{"file": obj["file"], "chest_id": obj["chest"]["collection_variable_ref"], "kind": obj["chest"]["kind"],
-             "item_id": obj["chest"]["item_id"], "item": item_label(obj["chest"]["item_id"], obj["chest"]["item"]),
-             "x": obj["position"]["x"], "z": obj["position"]["z"]}
-            for obj in chests.values()]
+    return [chest_summary(obj) for obj in chests.values()]
+
+
+def chest_summary(obj: dict) -> dict:
+    """Describe one placement for the batch catalogue, from its object report entry."""
+    chest = obj["chest"]
+    if "money" in chest:
+        reward = {"money": chest["money"]}
+    else:
+        reward = {"item_id": chest["item_id"], "item": item_label(chest["item_id"], chest["item"])}
+    return {"file": obj["file"], "chest_id": chest["collection_variable_ref"], "kind": chest["kind"],
+            **reward, "x": obj["position"]["x"], "z": obj["position"]["z"]}
 
 
 @dataclass(frozen=True)
@@ -386,8 +395,9 @@ def chest_catalogue(placements: list[dict]) -> dict:
         group = groups[chest_id]
         kinds = {placement["kind"] for placement in group}
         entry = {"chest_id": chest_id, "kind": kinds.pop() if len(kinds) == 1 else "mixed"}
-        if len({placement["item_id"] for placement in group}) == 1:
-            entry.update(item_id=group[0]["item_id"], item=group[0]["item"])
+        rewards = {(placement.get("item_id"), placement.get("money")) for placement in group}
+        if len(rewards) == 1:
+            entry.update({key: group[0][key] for key in ("item_id", "item", "money") if key in group[0]})
         else:
             entry["items_differ"] = True
         entry["placements"] = [{key: value for key, value in placement.items() if key != "chest_id"}
@@ -409,7 +419,8 @@ def write_chest_catalogue(path: Path, catalogue: dict) -> None:
         "One entry per chest, identified by its collection flag (chest_id).",
         "A chest can be placed in several scene versions of one room; opening it in one removes it from all.",
         "loot: a script hands over the item or money loaded into 0xE040. quest: no script does.",
-        "items_differ: placements store different items under one flag; the item depends on the scene version.",
+        "money: the chest gives this many Lucre instead of an item.",
+        "items_differ: placements store different rewards under one flag; it depends on the scene version.",
         "Files are relative to this directory. Coordinates are decimal; IDs are hexadecimal integers.",
     ]
     heading = "".join(f"# {note}\n" for note in notes)

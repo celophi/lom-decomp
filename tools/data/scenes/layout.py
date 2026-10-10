@@ -74,18 +74,20 @@ class FieldLayoutRecord:
         return self.layout_yaml(record_bytes, chest=True)
 
     def layout_yaml(self, record_bytes: bytes, chest: bool = False, chest_kind: str | None = None,
-                    also_placed_in: list[str] | None = None) -> str:
+                    chest_reward: str | None = None, also_placed_in: list[str] | None = None) -> str:
         """Show every layout field, plus decoded chest settings and packed bits.
 
         Script slots contain both references and parameters. Their comments
         describe the common chest template, not a rule for other actor kinds.
         The original record remains the source for byte-preserving recovery.
         also_placed_in is only known to a batch export; None leaves it out.
+        A money chest stores an amount of Lucre in scripts[4], not an item ID.
         """
+        money = chest and chest_reward == "money"
         slot_roles = {
             0: "interaction script",
             1: "interaction script",
-            4: "item ID",
+            4: "money amount" if money else "item ID",
             5: "collection-variable reference and alternate-facing bit",
             8: "idle script",
             15: "initialization script",
@@ -110,7 +112,7 @@ class FieldLayoutRecord:
         lines += [
             f"x: {self.position & 0xFFFF}",
             f"z: {(self.position >> 16) & 0x7FF}",
-            f"item_id: 0x{self.scripts[4]:04X}",
+            f"money: {self.scripts[4]}" if money else f"item_id: 0x{self.scripts[4]:04X}",
             "# Reference to a collection variable, not its current saved value.",
             f"collection_variable_ref: 0x{self.scripts[5] & 0x7FFF:04X}",
             f"alternate_facing: {'true' if self.scripts[5] & 0x8000 else 'false'}",

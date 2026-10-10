@@ -22,7 +22,7 @@ HEX_WIDTHS = {
     "raise_mask": 2, "lower_mask": 2, "immunity_flags": 2,
     "weak_elements": 2, "resist_elements": 2, "unknown_flag_bits": 2,
     "target_filter": 2, "resource_id": 4, "item_id": 2,
-    "chest_id": 4, "reward_offsets": 8,
+    "chest_id": 4, "reward_offsets": 8, "money_offset": 8,
 }
 EMPTY_FIELDS = {"operands", "remaining_bytes", "trailing_bytes", "directory_trailing_bytes"}
 NOTES = {

@@ -20,7 +20,7 @@ from tools.data.scenes.tests.test_field_scene import sample_scene
 from tools.data.scenes.tests.test_scene_resources import battle_resource
 
 
-def report_scene():
+def report_scene(reward_command=0x13):
     scene = bytearray(sample_scene())
     header = SceneHeader.parse(scene)
     actor = header.layout + 4
@@ -33,7 +33,7 @@ def report_scene():
     struct.pack_into('<H', scene, chest + 16, 0x8001)
     struct.pack_into('<H', scene, chest + 16 + 8 * 2, 0x8001)
     initializer = COMMON_CHEST_INITIALIZER + CHEST_FLAG_SETUP
-    give_item = bytes.fromhex('44 30 13 40 e0 44 30 2b 30 e0 00')
+    give_item = bytes([0x44, 0x30, reward_command]) + bytes.fromhex('40 e0 44 30 2b 30 e0 00')
     section = struct.pack('<HH', 4, 4 + len(initializer)) + initializer + give_item
     section += bytes(-len(section) % 4)
     return replace_section(bytes(scene), 'event_scripts', section)
@@ -115,6 +115,33 @@ class ObjectReportTests(unittest.TestCase):
         self.assertEqual(obj['kind'], 'script_only_actor')
         self.assertNotIn('monster_template', obj)
         self.assertNotIn('actor_resource', obj)
+
+    def test_money_chest_reports_an_amount_not_an_item(self):
+        chest = report(report_scene(reward_command=0x39))['objects'][1]
+        self.assertEqual(chest['chest']['kind'], 'loot')
+        self.assertEqual(chest['chest']['reward'], 'money')
+        self.assertEqual(chest['chest']['money'], 0x96)
+        self.assertNotIn('item_id', chest['chest'])
+        self.assertNotIn('item', chest['chest'])
+        descriptions = [operation['description'] for operation in chest['possible_operations']]
+        self.assertIn('Receive the money held in variable 0xE040 (initialized to chest amount 150 Lucre).', descriptions)
+        text = format_report(report(report_scene(reward_command=0x39)))
+        self.assertIn('  Money: 150 Lucre [IMG ', text)
+        self.assertNotIn('  Item: ', text)
+
+    def test_money_chest_export_shows_the_amount(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / 'money.IMG'
+            original = report_scene(reward_command=0x39)
+            source.write_bytes(original)
+            output = root / 'export'
+            extract(source, output)
+            chest = yaml.safe_load((output / 'chests/001.yaml').read_text())
+            self.assertEqual(chest['money'], 150)
+            self.assertNotIn('item_id', chest)
+            self.assertIn('money amount', (output / 'chests/001.yaml').read_text())
+            self.assertEqual(reconstruct(output), original)
 
     def test_disabled_initializer_does_not_claim_live_chest_bindings(self):
         scene = bytearray(report_scene())
