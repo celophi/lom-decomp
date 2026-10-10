@@ -31,6 +31,20 @@ CHEST_FLAG_SETUP = bytes.fromhex(
     "08 0a 50 e0 00 80 ff ff 05 0a 00 40 94 27 b0 01 07 00 "
     "40 84 27 b0 1c 58 50 e0 ff 7f 30 e0 00"
 )
+# A loot chest hands over the value its initializer loaded into 0xE040, as an
+# inventory item (command 0x13) or money (command 0x39). A quest chest has no
+# such step; its interaction runs scene-specific script instead.
+CHEST_REWARD_VARIABLE = 0xE040
+CHEST_REWARD_COMMANDS = (0x13, 0x39)
+
+
+def is_chest_reward(instruction: dict) -> bool:
+    """Match command 0x44 giving the item or money held in the chest reward variable."""
+    if instruction["opcode"] != 0x44:
+        return False
+    operands = instruction["operands"]
+    return (operands["subcommand"].get("value") in CHEST_REWARD_COMMANDS
+            and operands["argument"].get("reference") == CHEST_REWARD_VARIABLE)
 
 
 def describe_drop(drop: dict, rewards: list[dict]) -> str:
@@ -209,10 +223,13 @@ def build_report(data: bytes, header: SceneHeader, events: dict, actors: dict,
                 link.update(status="no_match", reason="No matching template in the scene's battle resources.")
             item["monster_template"] = link
         operations = {}
+        reward_offsets = set()
         for script in scripts:
             if script["kind"] != "event_script" or not script["enabled"]:
                 continue
             for instruction in links.resolve(script["entry"])["instructions"]:
+                if is_chest_reward(instruction):
+                    reward_offsets.add(instruction["offset"])
                 description = describe_operation(instruction, chest_info, reference)
                 if description is None:
                     continue
@@ -227,6 +244,8 @@ def build_report(data: bytes, header: SceneHeader, events: dict, actors: dict,
                         if item_id is not None:
                             operation.update(item_id=item_id, item=resolve_item(item_id, reference))
                 operation["via_slots"].append(script["slot"])
+        if chest_info is not None:
+            chest_info.update(kind="loot" if reward_offsets else "quest", reward_offsets=sorted(reward_offsets))
         item["possible_operations"] = list(operations.values())
         objects.append(item)
     return {"layout_count": len(records), "objects": objects, "monster_templates": templates,
@@ -285,6 +304,13 @@ def format_report(document: dict) -> str:
                 lines.append(f"  Item name: decompressed FIELD 0x{chest['item']['name_offset']:08X}")
             if chest["flag_binding"]:
                 lines.append("  Confirmed setup splits facing from the collection reference, stored in 0xE030.")
+            if chest["kind"] == "loot":
+                offsets = ", ".join(f"0x{offset:08X}" for offset in chest["reward_offsets"])
+                lines.append(f"  Kind: loot (a script hands over the value in 0xE040) [IMG {offsets}]")
+            else:
+                lines.append("  Kind: quest (no enabled script hands over the value in 0xE040)")
+            if "also_placed_in" in chest:
+                lines.append("  Also placed in: " + (", ".join(chest["also_placed_in"]) or "no other scene"))
         if "actor_resource" in obj:
             resource = obj["actor_resource"]
             detail = resource.get("file", resource.get("kind", resource.get("unresolved", "")))

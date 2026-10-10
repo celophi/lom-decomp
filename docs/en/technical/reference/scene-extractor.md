@@ -44,8 +44,15 @@ elapsed batch time:
 
 Progress is flushed immediately to standard error, so the current scene stays
 visible while extraction runs. A failing scene ends its progress line with
-`failed` and reports the error. The final summary uses standard output. The
-Python command accepts `--no-progress` to hide batch updates; calls to
+`failed` and reports the error. The final summary goes to standard output,
+with a chest count at the end:
+
+```text
+Extracted 930 scenes to assets/exports/us/scenes
+Chests: 160 (159 loot, 1 quest) in 169 placements across 141 scenes; see assets/exports/us/scenes/chests.yaml
+```
+
+The Python command accepts `--no-progress` to hide batch updates; calls to
 `extract_all()` remain silent unless `progress=True` is passed.
 
 Every scene destination must be new. The tool checks for existing destinations
@@ -98,7 +105,8 @@ An empty directory is an input error.
 | `header.bin` | The 40-byte section-offset header |
 | `layout/count.bin` | Original layout record count |
 | `layout/<index>.yaml` | Every non-chest layout record, with original bytes |
-| `chests/<index>.yaml` | Recognized chest records, retaining the existing format |
+| `chests/<index>.yaml` | Recognized chest records, with their chest ID and kind |
+| `chests.yaml` | Batch only, in the output root: one entry per chest with all its placements |
 | `records/directory.bin` and `.yaml` | Resource offsets and their file references |
 | `records/<index>.bin`, `.yaml` and `.txt` | Original resource, stored fields and readable listing; index is its first directory slot |
 | `textures/directory.bin` and `.yaml` | Original image offsets and their TIM references |
@@ -674,6 +682,34 @@ record 2. Event scripts are decoded under `event_scripts/`; the tool does not
 execute them. Item names appear in `objects.txt` and `objects.yaml` when a FIELD
 reference is selected. Records using other initializers still get
 generic layout YAML, without the chest-specific parameter interpretation.
+
+### Chests in more than one scene
+
+Some rooms have more than one scene file. The Fork of Garbage is either
+`GRB_E01A.IMG` or `GRB_E01B.IMG`, and both place the same Little Eye chest with
+collection flag `0x0B84`. The chest only shows up while that flag is zero, so
+once you open it in one version, it's gone from both. That's why the flag is
+used as the chest's ID:
+
+```yaml
+chest_id: 0x0B84
+chest_kind: loot
+also_placed_in:
+  - INFO_GRB/GRB_E01B/chests/003.yaml
+```
+
+`chest_kind` is `loot` if a script gives you the item or money the chest loaded
+into `0xE040`, and `quest` if nothing does. In the US scenes, the only quest
+chest is the Buried Treasure one in `SEA_EVT2.IMG`, which plays a cutscene
+instead.
+
+`also_placed_in` is only filled in by a batch, since a single scene doesn't know
+about the others. A batch also writes `chests.yaml` with one entry per chest. If
+the placements store different items, the entry is marked `items_differ: true`.
+The Caves of Chobin Hoods chest `0x0B04` is like this, with Grave Dirt in
+`WST_BS10.IMG` and Sharp Claw in `WST_BS11.IMG`.
+
+TODO: Work out what decides which version of a room gets loaded.
 
 ## Supported format
 

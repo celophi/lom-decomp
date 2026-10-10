@@ -64,16 +64,23 @@ class FieldLayoutRecord:
             return False
         return event_scripts[script_offset:].startswith(COMMON_CHEST_INITIALIZER)
 
+    @property
+    def chest_id(self) -> int:
+        """Collection flag of a common chest; every placement of one chest shares it."""
+        return self.scripts[5] & 0x7FFF
+
     def chest_yaml(self, record_bytes: bytes) -> str:
         """Keep the existing chest export, including its decoded parameters."""
         return self.layout_yaml(record_bytes, chest=True)
 
-    def layout_yaml(self, record_bytes: bytes, chest: bool = False) -> str:
+    def layout_yaml(self, record_bytes: bytes, chest: bool = False, chest_kind: str | None = None,
+                    also_placed_in: list[str] | None = None) -> str:
         """Show every layout field, plus decoded chest settings and packed bits.
 
         Script slots contain both references and parameters. Their comments
         describe the common chest template, not a rule for other actor kinds.
         The original record remains the source for byte-preserving recovery.
+        also_placed_in is only known to a batch export; None leaves it out.
         """
         slot_roles = {
             0: "interaction script",
@@ -83,7 +90,24 @@ class FieldLayoutRecord:
             8: "idle script",
             15: "initialization script",
         }
-        lines = [
+        lines = []
+        if chest:
+            lines.extend([
+                "# The collection flag identifies the chest. Scene versions of one room can",
+                "# place the same chest; opening it in one removes it from all of them.",
+                f"chest_id: 0x{self.chest_id:04X}",
+            ])
+            if chest_kind is not None:
+                lines.extend([
+                    "# loot: a script hands over the item or money loaded into 0xE040.",
+                    "# quest: no script does; the interaction runs scene-specific script.",
+                    f"chest_kind: {chest_kind}",
+                ])
+            if also_placed_in is not None:
+                lines.append("# Other scene versions placing this chest, relative to the batch output.")
+                lines.append("also_placed_in:" + ("" if also_placed_in else " []"))
+                lines.extend(f"  - {path}" for path in also_placed_in)
+        lines += [
             f"x: {self.position & 0xFFFF}",
             f"z: {(self.position >> 16) & 0x7FF}",
             f"item_id: 0x{self.scripts[4]:04X}",

@@ -50,6 +50,8 @@ class ObjectReportTests(unittest.TestCase):
         self.assertEqual(chest['chest']['item_id'], 0x96)
         self.assertEqual(chest['chest']['collection_variable_ref'], 0xBC0)
         self.assertTrue(chest['chest']['flag_binding'])
+        self.assertEqual(chest['chest']['kind'], 'loot')
+        self.assertEqual(len(chest['chest']['reward_offsets']), 1)
         self.assertEqual(chest['interaction'], {'touch': False, 'action_button': True})
         scripts = {item['slot']: item for item in chest['scripts']}
         self.assertEqual(scripts[15]['entry'], 0)

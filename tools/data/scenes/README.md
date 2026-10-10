@@ -35,6 +35,12 @@ recognized chest records. It saves the remaining bytes as unknown data.
 in `chests/<layout-index>.yaml`, with the original record bytes saved as hex.
 Other assets and unknown data are copied unchanged.
 
+Chests are identified by their collection flag (`chest_id`), since some rooms
+have more than one scene file holding the same chest. A batch fills in
+`also_placed_in` on each chest and writes `chests.yaml` with one entry per
+chest. `chest_kind` is `loot` for a normal chest, or `quest` when its script
+does something else instead.
+
 Run from the repository root with Python 3.10 or newer. The destination must be
 new; the tool won't overwrite an existing directory. Generated files are ignored
 by Git under `assets/exports/` and `output/`.
