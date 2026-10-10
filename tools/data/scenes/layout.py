@@ -73,17 +73,47 @@ class FieldLayoutRecord:
         """Keep the existing chest export, including its decoded parameters."""
         return self.layout_yaml(record_bytes, chest=True)
 
-    def layout_yaml(self, record_bytes: bytes, chest: bool = False, chest_kind: str | None = None,
-                    chest_reward: str | None = None, also_placed_in: list[str] | None = None) -> str:
+    def chest_lines(self, report: dict, money: bool) -> list[str]:
+        """Chest identity, kind and settings, shown above the generic layout fields.
+
+        A money chest stores an amount of Lucre in scripts[4], not an item ID.
+        also_placed_in is only known to a batch export, so it can be missing.
+        """
+        lines = [
+            "# The collection flag identifies the chest. Scene versions of one room can",
+            "# place the same chest; opening it in one removes it from all of them.",
+            f"chest_id: 0x{self.chest_id:04X}",
+        ]
+        if "kind" in report:
+            lines.extend([
+                "# loot: a script hands over the item or money loaded into 0xE040.",
+                "# quest: no script does; the interaction runs scene-specific script.",
+                f"chest_kind: {report['kind']}",
+            ])
+        if "also_placed_in" in report:
+            others = report["also_placed_in"]
+            lines.append("# Other scene versions placing this chest, relative to the batch output.")
+            lines.append("also_placed_in:" + ("" if others else " []"))
+            lines.extend(f"  - {path}" for path in others)
+        lines.extend([
+            f"x: {self.position & 0xFFFF}",
+            f"z: {(self.position >> 16) & 0x7FF}",
+            f"money: {self.scripts[4]}" if money else f"item_id: 0x{self.scripts[4]:04X}",
+            "# Reference to a collection variable, not its current saved value.",
+            f"collection_variable_ref: 0x{self.chest_id:04X}",
+            f"alternate_facing: {'true' if self.scripts[5] & 0x8000 else 'false'}",
+        ])
+        return lines
+
+    def layout_yaml(self, record_bytes: bytes, chest: bool = False, chest_report: dict | None = None) -> str:
         """Show every layout field, plus decoded chest settings and packed bits.
 
         Script slots contain both references and parameters. Their comments
         describe the common chest template, not a rule for other actor kinds.
         The original record remains the source for byte-preserving recovery.
-        also_placed_in is only known to a batch export; None leaves it out.
-        A money chest stores an amount of Lucre in scripts[4], not an item ID.
+        chest_report is the chest part of the scene's object report, when known.
         """
-        money = chest and chest_reward == "money"
+        money = chest_report is not None and chest_report.get("reward") == "money"
         slot_roles = {
             0: "interaction script",
             1: "interaction script",
@@ -92,31 +122,7 @@ class FieldLayoutRecord:
             8: "idle script",
             15: "initialization script",
         }
-        lines = []
-        if chest:
-            lines.extend([
-                "# The collection flag identifies the chest. Scene versions of one room can",
-                "# place the same chest; opening it in one removes it from all of them.",
-                f"chest_id: 0x{self.chest_id:04X}",
-            ])
-            if chest_kind is not None:
-                lines.extend([
-                    "# loot: a script hands over the item or money loaded into 0xE040.",
-                    "# quest: no script does; the interaction runs scene-specific script.",
-                    f"chest_kind: {chest_kind}",
-                ])
-            if also_placed_in is not None:
-                lines.append("# Other scene versions placing this chest, relative to the batch output.")
-                lines.append("also_placed_in:" + ("" if also_placed_in else " []"))
-                lines.extend(f"  - {path}" for path in also_placed_in)
-        lines += [
-            f"x: {self.position & 0xFFFF}",
-            f"z: {(self.position >> 16) & 0x7FF}",
-            f"money: {self.scripts[4]}" if money else f"item_id: 0x{self.scripts[4]:04X}",
-            "# Reference to a collection variable, not its current saved value.",
-            f"collection_variable_ref: 0x{self.scripts[5] & 0x7FFF:04X}",
-            f"alternate_facing: {'true' if self.scripts[5] & 0x8000 else 'false'}",
-        ] if chest else []
+        lines = self.chest_lines(chest_report or {}, money) if chest else []
         lines.extend([
             "# The current variable value must be within this inclusive range.",
             "condition:",

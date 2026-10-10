@@ -10,8 +10,8 @@ from unittest.mock import patch
 
 import yaml
 
-from tools.data.scenes.field_scene import (COMMON_CHEST_INITIALIZER, SceneHeader, chest_catalogue, extract,
-                                          extract_all, reconstruct)
+from tools.data.scenes.chest_catalogue import ChestTotals, build_catalogue
+from tools.data.scenes.field_scene import COMMON_CHEST_INITIALIZER, SceneHeader, extract, extract_all, reconstruct
 from tools.data.scenes.tests.test_identify_img import make_scene
 from tools.data.scenes.tests.test_scene_resources import battle_resource
 
@@ -133,7 +133,7 @@ class SceneExportTests(unittest.TestCase):
                 (folder / "sample.IMG").write_bytes(sample_scene())
             output = root / "export"
             summary = extract_all(ana, output)
-            self.assertEqual((summary.chests, summary.quest, summary.placements, summary.chest_scenes), (1, 1, 2, 2))
+            self.assertEqual(summary.chests, ChestTotals(chests=1, loot=0, quest=1, placements=2, scenes=2))
             chest = yaml.safe_load((output / "INFO_TEST/sample/chests/001.yaml").read_text())
             self.assertEqual(chest["also_placed_in"], ["MAPINFO/sample/chests/001.yaml"])
             report = yaml.safe_load((output / "MAPINFO/sample/objects.yaml").read_text())
@@ -156,10 +156,12 @@ class SceneExportTests(unittest.TestCase):
 
     def test_catalogue_marks_placements_with_different_items(self):
         placements = [
-            {"file": "A/S0/chests/002.yaml", "chest_id": 0xB04, "kind": "loot", "item_id": 0xE5, "item": "a", "x": 1, "z": 2},
-            {"file": "A/S1/chests/002.yaml", "chest_id": 0xB04, "kind": "loot", "item_id": 0x90, "item": "b", "x": 1, "z": 2},
+            {"scene": "A/S0", "chest_id": 0xB04, "file": "A/S0/chests/002.yaml", "kind": "loot",
+             "item_id": 0xE5, "item": "a", "x": 1, "z": 2},
+            {"scene": "A/S1", "chest_id": 0xB04, "file": "A/S1/chests/002.yaml", "kind": "loot",
+             "item_id": 0x90, "item": "b", "x": 1, "z": 2},
         ]
-        catalogue = chest_catalogue(placements)
+        catalogue = build_catalogue(placements)
         entry = catalogue["chests"][0]
         self.assertTrue(entry["items_differ"])
         self.assertNotIn("item_id", entry)
@@ -167,9 +169,9 @@ class SceneExportTests(unittest.TestCase):
         self.assertEqual(catalogue["summary"]["chests"], 1)
 
     def test_catalogue_keeps_money_rewards_as_amounts(self):
-        placements = [{"file": "MAPINFO/MHM_RM00/chests/007.yaml", "chest_id": 0xB00, "kind": "loot",
-                       "money": 100, "x": 42, "z": 206}]
-        entry = chest_catalogue(placements)["chests"][0]
+        placements = [{"scene": "MAPINFO/MHM_RM00", "chest_id": 0xB00, "file": "MAPINFO/MHM_RM00/chests/007.yaml",
+                       "kind": "loot", "money": 100, "x": 42, "z": 206}]
+        entry = build_catalogue(placements)["chests"][0]
         self.assertEqual(entry["money"], 100)
         self.assertNotIn("item_id", entry)
         self.assertNotIn("items_differ", entry)

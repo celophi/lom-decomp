@@ -27,16 +27,18 @@ from tools.data.scenes.actors import read_actors
 from tools.data.scenes.layout import COMMON_CHEST_INITIALIZER, LAYOUT_RECORD, FieldLayoutRecord, read_layout_records
 from tools.data.scenes.actor_scripts import format_disassembly as format_actor_scripts, read_actor_scripts
 from tools.data.scenes.event_scripts import format_disassembly as format_event_scripts, read_event_scripts
-from tools.data.scenes.presentation import SceneDumper, dump_yaml, format_value
+from tools.data.scenes.chest_catalogue import (CATALOGUE_FILE, ChestIndex, ChestTotals, build_catalogue,
+                                               placement_entry, write_catalogue)
+from tools.data.scenes.presentation import dump_yaml
 from tools.data.scenes.scene_report import build_report, format_report
-from tools.data.scenes.reference_data import (ReferenceData, add_reference_arguments, item_label,
-                                              reference_from_arguments)
+from tools.data.scenes.reference_data import ReferenceData, add_reference_arguments, reference_from_arguments
 from tools.data.scenes.scene_format import SCENE_HEADER, SceneHeader, SceneSection
 from tools.data.scenes.structure import describe_scene, format_structure
 
 
 PORTRAIT_SIZE = 1184
-CHEST_CATALOGUE = "chests.yaml"
+LISTING_RENDERERS = {"actor_scripts": format_actor_scripts, "event_scripts": format_event_scripts,
+                     "strings": format_strings, "geometry": format_geometry, "resource": format_resource}
 
 @dataclass(frozen=True)
 class AssetRange:
@@ -181,25 +183,28 @@ def cover_section(section: SceneSection, assets: list[AssetRange]) -> list[Asset
     return result
 
 
+def whole_section(name: str, start: int, end: int, document: dict) -> list[AssetRange]:
+    """Export a section as one binary file with its decoded document beside it."""
+    return [AssetRange(name, start, end - start, f"{name}/data.bin", document=document)]
+
+
 def split_scene(data: bytes, text_encoding: str = "us") -> list[AssetRange]:
     """Parse the container and return a complete map of its original bytes."""
     header = SceneHeader.parse(data)
     assets_by_section = {
         "layout": read_layout(data, header),
         "records": read_resources(data, header, text_encoding),
-        "strings": [AssetRange("strings", header.strings, header.actor_scripts - header.strings,
-                                "strings/data.bin", document=read_strings(data, header, text_encoding=text_encoding))],
-        "geometry": [AssetRange("geometry", header.geometry, header.images - header.geometry,
-                                 "geometry/data.bin", document=read_geometry(data, header))],
+        "strings": whole_section("strings", header.strings, header.actor_scripts,
+                                 read_strings(data, header, text_encoding=text_encoding)),
+        "geometry": whole_section("geometry", header.geometry, header.images, read_geometry(data, header)),
         "group_bounds": read_group_bounds(data, header),
         "images": read_textures(data, header),
         "portraits": read_portraits(data, header),
-        "actors": [AssetRange("actors", header.actors, header.geometry - header.actors,
-                               "actors/data.bin", document=read_actors(data, header))],
-        "event_scripts": [AssetRange("event_scripts", header.event_scripts, header.strings - header.event_scripts,
-                                      "event_scripts/data.bin", document=read_event_scripts(data, header))],
-        "actor_scripts": [AssetRange("actor_scripts", header.actor_scripts, header.records - header.actor_scripts,
-                                      "actor_scripts/data.bin", document=read_actor_scripts(data, header))],
+        "actors": whole_section("actors", header.actors, header.geometry, read_actors(data, header)),
+        "event_scripts": whole_section("event_scripts", header.event_scripts, header.strings,
+                                       read_event_scripts(data, header)),
+        "actor_scripts": whole_section("actor_scripts", header.actor_scripts, header.records,
+                                       read_actor_scripts(data, header)),
     }
     result = [AssetRange("header", 0, SCENE_HEADER.size, "header.bin")]
     for section in header.sections(len(data)):
@@ -279,13 +284,56 @@ def format_overview(source: Path, header: SceneHeader, size: int, assets: list[A
     return "\n".join(lines) + "\n"
 
 
+def write_asset(staging: Path, data: bytes, asset: AssetRange, chest_report: dict | None) -> dict:
+    """Write one byte range and its decoded companions; return its byte-map entry."""
+    path = staging / asset.filename
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = data[asset.offset:asset.offset + asset.size]
+    if asset.layout is None:
+        path.write_bytes(payload)
+    else:
+        path.write_text(asset.layout.layout_yaml(payload, chest=asset.name == "chest", chest_report=chest_report),
+                        encoding="ascii")
+    entry = {"name": asset.name, "offset": asset.offset, "size": asset.size, "file": asset.filename}
+    if asset.document is not None:
+        metadata = path.with_suffix(".yaml")
+        write_yaml(metadata, asset.document, asset.name)
+        entry["metadata"] = metadata.relative_to(staging).as_posix()
+        renderer = LISTING_RENDERERS.get(asset.name)
+        if renderer is not None:
+            listing = path.with_suffix(".txt")
+            listing.write_text(renderer(asset.document), encoding="ascii")
+            entry["listing"] = listing.relative_to(staging).as_posix()
+    return entry
+
+
+def format_byte_map(source: Path, entries: list[dict]) -> str:
+    """List every exported range in IMG order; reconstruct() reads it back."""
+    lines = [f"source: {json.dumps(source.name)}",
+             "# Offsets and sizes are bytes in the original IMG.", "sections:"]
+    for entry in entries:
+        lines.extend([f"  - name: {entry['name']}", f"    offset: 0x{entry['offset']:08X}",
+                      f"    size: {entry['size']}", f"    file: {entry['file']}"])
+        lines.extend(f"    {key}: {entry[key]}" for key in ("metadata", "listing") if key in entry)
+    return "\n".join(lines) + "\n"
+
+
+def publish(staging: Path, output: Path, source: Path, data: bytes) -> None:
+    """Move a staged export into place, but only if it rebuilds the original bytes."""
+    if reconstruct(staging) != data:
+        raise ValueError(f"export does not reconstruct {source}")
+    if output.exists():
+        raise FileExistsError(f"Output already exists: {output}")
+    staging.rename(output)
+
+
 def extract(source: Path, output: Path, reference: ReferenceData | None = None, *, text_encoding: str = "us",
-            also_placed_in: dict[int, list[str]] | None = None) -> list[dict]:
+            other_placements: dict[int, list[str]] | None = None) -> list[dict]:
     """Validate, write and reconstruct one scene before publishing its directory.
 
-    also_placed_in maps a chest's layout index to its other placements; a batch
-    supplies it, and a single-scene export leaves the field out. Returns one
-    summary per chest for the batch catalogue.
+    other_placements maps a chest's layout index to the files of the same chest
+    in other scenes. Only a batch knows them; a single export leaves them out.
+    Returns the object report entries of the scene's chests.
     """
     if output.exists():
         raise FileExistsError(f"Output already exists: {output}")
@@ -294,143 +342,30 @@ def extract(source: Path, output: Path, reference: ReferenceData | None = None, 
     assets = split_scene(data, text_encoding)
     documents = {asset.name: asset.document for asset in assets if asset.document is not None}
     report = build_report(data, header, documents["event_scripts"], documents["actors"], reference)
-    chests = {obj["index"]: obj for obj in report["objects"] if "chest" in obj}
-    if also_placed_in is not None:
-        for index, obj in chests.items():
-            obj["chest"]["also_placed_in"] = also_placed_in.get(index, [])
+    chests = {obj["file"]: obj for obj in report["objects"] if "chest" in obj}
+    if other_placements is not None:
+        for obj in chests.values():
+            obj["chest"]["also_placed_in"] = other_placements.get(obj["index"], [])
+
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=f".{output.name}-", dir=output.parent) as temporary:
         staging = Path(temporary) / "scene"
         staging.mkdir()
-        renderers = {"actor_scripts": format_actor_scripts, "event_scripts": format_event_scripts,
-                     "strings": format_strings, "geometry": format_geometry, "resource": format_resource}
-        lines = [f"source: {json.dumps(source.name)}",
-                 "# Offsets and sizes are bytes in the original IMG.", "sections:"]
+        entries = []
         for asset in assets:
-            path = staging / asset.filename
-            path.parent.mkdir(parents=True, exist_ok=True)
-            payload = data[asset.offset:asset.offset + asset.size]
-            if asset.name == "chest":
-                chest = chests[int(path.stem)]["chest"]
-                path.write_text(asset.layout.layout_yaml(payload, chest=True, chest_kind=chest["kind"],
-                                                         chest_reward=chest["reward"],
-                                                         also_placed_in=chest.get("also_placed_in")),
-                                encoding="ascii")
-            elif asset.layout is not None:
-                path.write_text(asset.layout.layout_yaml(payload), encoding="ascii")
-            else:
-                path.write_bytes(payload)
-            lines.extend([f"  - name: {asset.name}", f"    offset: 0x{asset.offset:08X}",
-                          f"    size: {asset.size}", f"    file: {asset.filename}"])
-            if asset.document is not None:
-                metadata = path.with_suffix(".yaml")
-                write_yaml(metadata, asset.document, asset.name)
-                lines.append(f"    metadata: {metadata.relative_to(staging).as_posix()}")
-                if asset.name in renderers:
-                    listing = path.with_suffix(".txt")
-                    renderer = renderers[asset.name]
-                    listing.write_text(renderer(asset.document), encoding="ascii")
-                    lines.append(f"    listing: {listing.relative_to(staging).as_posix()}")
-        (staging / "byte-map.yaml").write_text("\n".join(lines) + "\n", encoding="ascii")
+            chest = chests.get(asset.filename)
+            entries.append(write_asset(staging, data, asset, chest["chest"] if chest else None))
+        (staging / "byte-map.yaml").write_text(format_byte_map(source, entries), encoding="ascii")
         write_yaml(staging / "scene.yaml", describe_scene(source, header, len(data), assets))
         (staging / "scene.txt").write_text(format_overview(source, header, len(data), assets), encoding="utf-8")
         write_yaml(staging / "objects.yaml", report, "scene_report")
         (staging / "objects.txt").write_text(format_report(report), encoding="utf-8")
-        if reconstruct(staging) != data:
-            raise ValueError(f"export does not reconstruct {source}")
-        if output.exists():
-            raise FileExistsError(f"Output already exists: {output}")
-        staging.rename(output)
-    return [chest_summary(obj) for obj in chests.values()]
+        publish(staging, output, source, data)
+    return list(chests.values())
 
 
-def chest_summary(obj: dict) -> dict:
-    """Describe one placement for the batch catalogue, from its object report entry."""
-    chest = obj["chest"]
-    if "money" in chest:
-        reward = {"money": chest["money"]}
-    else:
-        reward = {"item_id": chest["item_id"], "item": item_label(chest["item_id"], chest["item"])}
-    return {"file": obj["file"], "chest_id": chest["collection_variable_ref"], "kind": chest["kind"],
-            **reward, "x": obj["position"]["x"], "z": obj["position"]["z"]}
-
-
-@dataclass(frozen=True)
-class BatchSummary:
-    """Scene and chest totals of one batch export; chests count distinct chest IDs."""
-
-    scenes: int
-    chests: int
-    loot: int
-    quest: int
-    placements: int
-    chest_scenes: int
-
-
-def find_chest_placements(scenes: list[Path]) -> dict[int, list[str]]:
-    """Map each chest ID to its chest YAML paths, relative to the batch output.
-
-    Scenes that fail to parse are skipped here; the extraction pass reports them.
-    """
-    placements: dict[int, list[str]] = {}
-    for scene in scenes:
-        data = scene.read_bytes()
-        try:
-            chests = read_chests(data, SceneHeader.parse(data))
-        except ValueError:
-            continue
-        for asset in chests:
-            path = f"{scene.parent.name}/{scene.stem}/{asset.filename}"
-            placements.setdefault(asset.layout.chest_id, []).append(path)
-    return placements
-
-
-def chest_catalogue(placements: list[dict]) -> dict:
-    """Group chest placements by chest ID; item and kind move up when all placements agree."""
-    groups: dict[int, list[dict]] = {}
-    for placement in placements:
-        groups.setdefault(placement["chest_id"], []).append(placement)
-    chests = []
-    for chest_id in sorted(groups):
-        group = groups[chest_id]
-        kinds = {placement["kind"] for placement in group}
-        entry = {"chest_id": chest_id, "kind": kinds.pop() if len(kinds) == 1 else "mixed"}
-        rewards = {(placement.get("item_id"), placement.get("money")) for placement in group}
-        if len(rewards) == 1:
-            entry.update({key: group[0][key] for key in ("item_id", "item", "money") if key in group[0]})
-        else:
-            entry["items_differ"] = True
-        entry["placements"] = [{key: value for key, value in placement.items() if key != "chest_id"}
-                               for placement in group]
-        chests.append(entry)
-    summary = {
-        "chests": len(chests),
-        "loot": sum(1 for chest in chests if chest["kind"] == "loot"),
-        "quest": sum(1 for chest in chests if chest["kind"] == "quest"),
-        "placements": len(placements),
-        "scenes": len({placement["file"].rsplit("/chests/", 1)[0] for placement in placements}),
-    }
-    return {"summary": summary, "chests": chests}
-
-
-def write_chest_catalogue(path: Path, catalogue: dict) -> None:
-    """Write the batch chest catalogue with a short reading guide."""
-    notes = [
-        "One entry per chest, identified by its collection flag (chest_id).",
-        "A chest can be placed in several scene versions of one room; opening it in one removes it from all.",
-        "loot: a script hands over the item or money loaded into 0xE040. quest: no script does.",
-        "money: the chest gives this many Lucre instead of an item.",
-        "items_differ: placements store different rewards under one flag; it depends on the scene version.",
-        "Files are relative to this directory. Coordinates are decimal; IDs are hexadecimal integers.",
-    ]
-    heading = "".join(f"# {note}\n" for note in notes)
-    path.write_text(heading + "\n" + yaml.dump(format_value(catalogue), Dumper=SceneDumper, sort_keys=False,
-                                               allow_unicode=False, width=100), encoding="ascii")
-
-
-def extract_all(ana_directory: Path, output: Path, reference: ReferenceData | None = None, *,
-                text_encoding: str = "us", progress: bool = False) -> BatchSummary:
-    """Extract INFO_* and MAPINFO scenes and catalogue their chests; optionally report progress to stderr."""
+def find_scenes(ana_directory: Path) -> dict[str, Path]:
+    """Map batch names such as INFO_PRT/WAL_B020 to the INFO_* and MAPINFO scene files."""
     if not ana_directory.is_dir():
         raise ValueError(f"ANA directory not found: {ana_directory}")
     groups = sorted(path for path in ana_directory.iterdir()
@@ -439,53 +374,74 @@ def extract_all(ana_directory: Path, output: Path, reference: ReferenceData | No
                     if path.is_file() and path.suffix.lower() == ".img")
     if not scenes:
         raise ValueError(f"No INFO_* or MAPINFO scenes found under {ana_directory}")
+    return {f"{scene.parent.name}/{scene.stem}": scene for scene in scenes}
 
+
+class BatchProgress:
+    """One stderr line per scene: printed at the start, then ended with done or failed."""
+
+    def __init__(self, total: int, enabled: bool):
+        self.total = total
+        self.enabled = enabled
+        self.count = 0
+        self.batch_started = self.scene_started = time.monotonic()
+
+    def print(self, text: str, end: str = "\n") -> None:
+        if self.enabled:
+            print(text, end=end, file=sys.stderr, flush=True)
+
+    def begin(self, output: Path) -> None:
+        self.print(f"Extracting {self.total} scenes to {output}")
+
+    def start(self, name: Path) -> None:
+        self.count += 1
+        self.scene_started = time.monotonic()
+        self.print(f"[{self.count:>{len(str(self.total))}}/{self.total}] Extracting {name} ... ", end="")
+
+    def done(self) -> None:
+        now = time.monotonic()
+        elapsed = timedelta(seconds=int(now - self.batch_started))
+        self.print(f"done ({now - self.scene_started:.1f}s; elapsed {elapsed})")
+
+    def failed(self) -> None:
+        self.print("failed")
+
+
+@dataclass(frozen=True)
+class BatchSummary:
+    """Number of extracted scenes and the chest catalogue counts."""
+
+    scenes: int
+    chests: ChestTotals
+
+
+def extract_all(ana_directory: Path, output: Path, reference: ReferenceData | None = None, *,
+                text_encoding: str = "us", progress: bool = False) -> BatchSummary:
+    """Extract INFO_* and MAPINFO scenes and catalogue their chests; optionally report progress to stderr."""
+    scenes = find_scenes(ana_directory)
     # Check every destination before starting, so an existing export stops the batch early.
-    for scene in scenes:
-        destination = output / scene.parent.name / scene.stem
+    for destination in [output / name for name in scenes] + [output / CATALOGUE_FILE]:
         if destination.exists():
             raise FileExistsError(f"Output already exists: {destination}")
-    catalogue_path = output / CHEST_CATALOGUE
-    if catalogue_path.exists():
-        raise FileExistsError(f"Output already exists: {catalogue_path}")
-    chest_ids = find_chest_placements(scenes)
+
+    chest_index = ChestIndex.scan(scenes)
     placements = []
-    total = len(scenes)
-    started = time.monotonic()
-    if progress:
-        print(f"Extracting {total} scenes to {output}", file=sys.stderr, flush=True)
-    for index, scene in enumerate(scenes, 1):
-        destination = output / scene.parent.name / scene.stem
-        scene_started = time.monotonic()
-        if progress:
-            name = scene.relative_to(ana_directory)
-            print(f"[{index:>{len(str(total))}}/{total}] Extracting {name} ... ",
-                  end="", file=sys.stderr, flush=True)
-        prefix = f"{scene.parent.name}/{scene.stem}/"
-        also_placed_in = {}
-        for paths in chest_ids.values():
-            for path in paths:
-                if path.startswith(prefix):
-                    layout_index = int(Path(path).stem)
-                    also_placed_in[layout_index] = [other for other in paths if other != path]
+    status = BatchProgress(len(scenes), progress)
+    status.begin(output)
+    for name, source in scenes.items():
+        status.start(source.relative_to(ana_directory))
         try:
-            chests = extract(scene, destination, reference, text_encoding=text_encoding,
-                             also_placed_in=also_placed_in)
-            placements.extend(dict(chest, file=prefix + chest["file"]) for chest in chests)
+            chests = extract(source, output / name, reference, text_encoding=text_encoding,
+                             other_placements=chest_index.other_placements(name))
         except (OSError, ValueError) as error:
-            if progress:
-                print("failed", file=sys.stderr, flush=True)
-            raise ValueError(f"{scene}: {error}") from error
-        if progress:
-            now = time.monotonic()
-            elapsed = timedelta(seconds=int(now - started))
-            print(f"done ({now - scene_started:.1f}s; elapsed {elapsed})",
-                  file=sys.stderr, flush=True)
-    catalogue = chest_catalogue(placements)
-    write_chest_catalogue(catalogue_path, catalogue)
-    summary = catalogue["summary"]
-    return BatchSummary(total, summary["chests"], summary["loot"], summary["quest"],
-                        summary["placements"], summary["scenes"])
+            status.failed()
+            raise ValueError(f"{source}: {error}") from error
+        status.done()
+        placements.extend(placement_entry(name, chest) for chest in chests)
+
+    catalogue = build_catalogue(placements)
+    write_catalogue(output / CATALOGUE_FILE, catalogue)
+    return BatchSummary(len(scenes), ChestTotals(**catalogue["summary"]))
 
 
 def main() -> None:
@@ -504,10 +460,11 @@ def main() -> None:
         if args.all:
             summary = extract_all(args.source, args.output, reference,
                                   text_encoding=args.text_encoding, progress=not args.no_progress)
+            chests = summary.chests
             print(f"Extracted {summary.scenes} scenes to {args.output}")
-            print(f"Chests: {summary.chests} ({summary.loot} loot, {summary.quest} quest) in "
-                  f"{summary.placements} placements across {summary.chest_scenes} scenes; "
-                  f"see {args.output / CHEST_CATALOGUE}")
+            print(f"Chests: {chests.chests} ({chests.loot} loot, {chests.quest} quest) in "
+                  f"{chests.placements} placements across {chests.scenes} scenes; "
+                  f"see {args.output / CATALOGUE_FILE}")
         else:
             extract(args.source, args.output, reference, text_encoding=args.text_encoding)
             print(f"Extracted to {args.output}")
