@@ -459,10 +459,7 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
     switch (state)
     {
     case CARD_MENU_ENTRY_STATE_NO_GAME_DATA:
-        do
-        {
-            prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_no_lom_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), 1, -x_offset + 0x84, -y_offset, 2);
-        } while (0);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_no_lom_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case CARD_MENU_ENTRY_STATE_UNFORMATTED:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_no_lom_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), 1, -x_offset + 0x84, -y_offset, 2);
@@ -481,6 +478,18 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
         break;
     case CARD_MENU_ENTRY_STATE_BLANK:
         break;
+    case CARD_MENU_ENTRY_STATE_CHECKING_CARD:
+    {
+        s32 x;
+        u16 *text_table;
+
+        x = -x_offset + 0x84;
+        text_table = &g_cload_text_check_memory_card;
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECKING_CARD), 1, x, -y_offset, 2);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), 1, x, 0xE - y_offset, 2);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CARD_OR_CONTROLLER), 1, x, 0x1C - y_offset, 2);
+    }
+    break;
     default:
         {
             s32 row_y;
@@ -490,7 +499,7 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
         {
             s32 x;
             u16 *text_table;
-        case CARD_MENU_ENTRY_STATE_CHECKING_CARD:
+
             x = -x_offset + 0x84;
             text_table = &g_cload_text_check_memory_card;
             prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECKING_CARD), 1, x, -y_offset, 2);
