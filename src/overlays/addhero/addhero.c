@@ -452,14 +452,17 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
             s32 window_start;
             s32 icon_x;
             s32 hours;
+            SavedGameLayout* party_entry;
+            SavedGameLayout* summary_entry;
+            s32 x;
+            s32 y;
+            s32 time;
 
-            {
-                SavedGameLayout* entry = &g_addhero_entry_file.saved_game;
-                icons[0] = entry->spawn.bits.party_icon_0;
-                icons[1] = entry->track.bits.party_icon_1;
-                icons[2] = entry->track.bits.party_icon_2;
-                g_card_menu_icon_palette = entry->icon_palette;
-            }
+            party_entry = &g_addhero_entry_file.saved_game;
+            icons[0] = party_entry->spawn.bits.party_icon_0;
+            icons[1] = party_entry->track.bits.party_icon_1;
+            icons[2] = party_entry->track.bits.party_icon_2;
+            g_card_menu_icon_palette = party_entry->icon_palette;
 
             icon_x = 0;
             icon_count = 0;
@@ -523,43 +526,38 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
                 }
             }
 
+            summary_entry = &g_addhero_entry_file.saved_game;
+            x = -x_offset;
+            y = -y_offset;
+            time = summary_entry->play_time;
+            pos.x = x + CARD_MENU_DETAILS_HOURS_RIGHT_X;
+            pos.y = y;
+            hours = time / SAVED_PLAY_TIME_TICKS_PER_HOUR;
+            result = field_draw_number(ot, result, hours, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
+            result = field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, FIELD_UI_TEXT_TIME_SEPARATOR), FIELD_TEXT_COLOR_NORMAL,
+                                     x + CARD_MENU_DETAILS_TIME_SEPARATOR_X, y, FIELD_TEXT_ALIGN_LEFT);
+            time = (time / SAVED_PLAY_TIME_TICKS_PER_MINUTE) - (hours * 60);
+            if (time < 10)
             {
-                SavedGameLayout* entry = &g_addhero_entry_file.saved_game;
-                s32 x = -x_offset;
-                s32 y = -y_offset;
-                s32 time;
-
-                time = entry->play_time;
-                pos.x = x + CARD_MENU_DETAILS_HOURS_RIGHT_X;
+                pos.x = x + CARD_MENU_DETAILS_MINUTES_TENS_RIGHT_X;
                 pos.y = y;
-                hours = time / SAVED_PLAY_TIME_TICKS_PER_HOUR;
-                result = field_draw_number(ot, result, hours, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
-                result = field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, FIELD_UI_TEXT_TIME_SEPARATOR),
-                                         FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TIME_SEPARATOR_X, y, FIELD_TEXT_ALIGN_LEFT);
-                time = (time / SAVED_PLAY_TIME_TICKS_PER_MINUTE) - (hours * 60);
-                if (time < 10)
-                {
-                    pos.x = x + CARD_MENU_DETAILS_MINUTES_TENS_RIGHT_X;
-                    pos.y = y;
-                    result = field_draw_number(ot, result, 0, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
-                }
-                pos.x = x + CARD_MENU_DETAILS_MINUTES_RIGHT_X;
-                pos.y = y;
-                result = field_draw_number(ot, result, time, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
-                result = field_draw_text(result, ot, entry->summary_name, FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TEXT_X,
-                                         y + CARD_MENU_DETAILS_LINE_HEIGHT, FIELD_TEXT_ALIGN_LEFT);
+                result = field_draw_number(ot, result, 0, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
+            }
+            pos.x = x + CARD_MENU_DETAILS_MINUTES_RIGHT_X;
+            pos.y = y;
+            result = field_draw_number(ot, result, time, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
+            result = field_draw_text(result, ot, summary_entry->summary_name, FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TEXT_X,
+                                     y + CARD_MENU_DETAILS_LINE_HEIGHT, FIELD_TEXT_ALIGN_LEFT);
 
-                if (entry->identity.ids.game_id == g_saved_game_ctx->identity.ids.game_id)
-                {
-                    result =
-                        field_draw_text(result, ot, CARD_MENU_TEXT_AT(g_addhero_text_same_hero_data, CARD_MENU_TEXT_SAME_HERO_DATA), FIELD_TEXT_COLOR_NORMAL,
-                                        x + CARD_MENU_DETAILS_TEXT_X, y + CARD_MENU_DETAILS_LINE_HEIGHT * 2, FIELD_TEXT_ALIGN_LEFT);
-                }
-                else
-                {
-                    result = field_draw_text(result, ot, CARD_MENU_TEXT(g_card_menu_location_names, entry->track.bits.music_track), FIELD_TEXT_COLOR_NORMAL,
-                                             x + CARD_MENU_DETAILS_TEXT_X, y + CARD_MENU_DETAILS_LINE_HEIGHT * 2, FIELD_TEXT_ALIGN_LEFT);
-                }
+            if (summary_entry->identity.ids.game_id == g_saved_game_ctx->identity.ids.game_id)
+            {
+                result = field_draw_text(result, ot, CARD_MENU_TEXT_AT(g_addhero_text_same_hero_data, CARD_MENU_TEXT_SAME_HERO_DATA), FIELD_TEXT_COLOR_NORMAL,
+                                         x + CARD_MENU_DETAILS_TEXT_X, y + CARD_MENU_DETAILS_LINE_HEIGHT * 2, FIELD_TEXT_ALIGN_LEFT);
+            }
+            else
+            {
+                result = field_draw_text(result, ot, CARD_MENU_TEXT(g_card_menu_location_names, summary_entry->track.bits.music_track), FIELD_TEXT_COLOR_NORMAL,
+                                         x + CARD_MENU_DETAILS_TEXT_X, y + CARD_MENU_DETAILS_LINE_HEIGHT * 2, FIELD_TEXT_ALIGN_LEFT);
             }
         }
         else
@@ -631,6 +629,8 @@ void card_menu_update_and_draw_elements(FieldRenderHalf* draw_state)
     DRAWENV draw_env;
     s32 scaled_width;
     s32 scaled_height;
+    s32 opening_x;
+    s32 closing_x;
 
     prim = draw_state->primitive_cursor;
     ot = draw_state->ordering_table;
@@ -670,20 +670,13 @@ void card_menu_update_and_draw_elements(FieldRenderHalf* draw_state)
             {
             case CARD_MENU_ELEMENT_OPENING:
                 g_pad_input = 0;
-                {
-                    s32 width = card_menu_element_width(element);
-
-                    scaled_width = (width * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
-                    scaled_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
-                    prim = element->draw(ot, prim, (width - scaled_width) / 2, (element->size.bits.height - scaled_height) / 2);
-                }
-                {
-                    s32 x = element->attr.bits.x;
-
-                    prim = field_draw_menu_frame(prim, ot, x + (card_menu_element_width(element) - scaled_width) / 2,
-                                                 element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
-                                                 draw_state->display_rect.y, i == CARD_MENU_ELEMENT_MODAL);
-                }
+                scaled_width = (card_menu_element_width(element) * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                scaled_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                prim = element->draw(ot, prim, (card_menu_element_width(element) - scaled_width) / 2, (element->size.bits.height - scaled_height) / 2);
+                opening_x = element->attr.bits.x;
+                prim = field_draw_menu_frame(prim, ot, opening_x + (card_menu_element_width(element) - scaled_width) / 2,
+                                             element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
+                                             draw_state->display_rect.y, i == CARD_MENU_ELEMENT_MODAL);
                 element->attr.bits.transition_step++;
                 if (element->attr.bits.transition_step == CARD_MENU_ELEMENT_TRANSITION_STEPS)
                 {
@@ -704,20 +697,13 @@ void card_menu_update_and_draw_elements(FieldRenderHalf* draw_state)
 
             case CARD_MENU_ELEMENT_CLOSING:
                 g_pad_input = 0;
-                {
-                    s32 width = card_menu_element_width(element);
-
-                    scaled_width = (width * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
-                    scaled_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
-                    prim = element->draw(ot, prim, (width - scaled_width) / 2, (element->size.bits.height - scaled_height) / 2);
-                }
-                {
-                    s32 x = element->attr.bits.x;
-
-                    prim = field_draw_menu_frame(prim, ot, x + (card_menu_element_width(element) - scaled_width) / 2,
-                                                 element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
-                                                 draw_state->display_rect.y, i == CARD_MENU_ELEMENT_MODAL);
-                }
+                scaled_width = (card_menu_element_width(element) * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                scaled_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                prim = element->draw(ot, prim, (card_menu_element_width(element) - scaled_width) / 2, (element->size.bits.height - scaled_height) / 2);
+                closing_x = element->attr.bits.x;
+                prim = field_draw_menu_frame(prim, ot, closing_x + (card_menu_element_width(element) - scaled_width) / 2,
+                                             element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
+                                             draw_state->display_rect.y, i == CARD_MENU_ELEMENT_MODAL);
                 element->attr.bits.transition_step--;
                 if (element->attr.bits.transition_step == 0)
                 {
@@ -899,6 +885,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
 {
     RECT unused;
     SaveFile* file;
+    s32 checksum;
 
     switch (g_card_entry_state)
     {
@@ -1003,7 +990,6 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
     {
         s32 message_x;
         u16* text_table;
-        s32 checksum;
 
         message_x = -x_offset + CARD_MENU_MESSAGE_WIDTH / 2;
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_found_load_file, CARD_MENU_TEXT_FOUND_LOAD_FILE), FIELD_TEXT_COLOR_NORMAL, message_x,
