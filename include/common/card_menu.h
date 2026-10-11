@@ -26,6 +26,9 @@
 /** @brief Pad buttons that switch the browser to the other card slot. */
 #define CARD_MENU_CARD_SWITCH_BUTTON_MASK (PAD_BTN_SELECT | PAD_BTN_RIGHT | PAD_BTN_LEFT)
 
+/** @brief Rows the selection moves for R1/L1; the move loop can page, but the game moves one row like a d-pad press. */
+#define CARD_MENU_PAGE_MOVE_ROWS 1
+
 /**
  * @brief g_card_entry_state values shared by every card menu.
  *
@@ -235,6 +238,18 @@ typedef struct CardMenuElement
  * @param width_low The width's low byte, as read by CARD_MENU_ELEMENT_WIDTH_LOW.
  */
 #define CARD_MENU_ELEMENT_WIDTH(element, width_low) ((s32)(((element)->size.bits.width_high << 8) | (width_low)))
+
+/**
+ * @brief Full nine-bit width of a window, reading the low byte first.
+ * @param element Window whose width is read.
+ * @return Width in pixels.
+ */
+static inline s32 card_menu_element_width(CardMenuElement* element)
+{
+    u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
+
+    return CARD_MENU_ELEMENT_WIDTH(element, width_low);
+}
 
 /** @brief Store the low eight bits of a window's width. */
 #define CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, width) \

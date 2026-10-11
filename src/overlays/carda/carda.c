@@ -448,12 +448,12 @@ static s32 card_menu_handle_input(void)
     if (input & PAD_BTN_R1)
     {
         g_pad_input = PAD_BTN_DOWN;
-        move_count = 1;
+        move_count = CARD_MENU_PAGE_MOVE_ROWS;
     }
     if (g_pad_input & PAD_BTN_L1)
     {
         g_pad_input = PAD_BTN_UP;
-        move_count = 1;
+        move_count = CARD_MENU_PAGE_MOVE_ROWS;
     }
 
     for (; move_count != 0; move_count--)
