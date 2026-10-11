@@ -940,9 +940,9 @@ void card_menu_update_and_draw_elements(FieldRenderHalf *frame)
     element = g_card_menu_element_pool;
     for (i = 0; i < CARD_MENU_ELEMENT_COUNT; i++, element++)
     {
-        if (element->attr.bits.state != 0)
+        if (element->attr.bits.state != CARD_MENU_ELEMENT_FREE)
         {
-            SetDrawEnv((DR_ENV *)prim, &draw_env);
+            SetDrawEnv(prim, &draw_env);
             addPrim(ot, prim);
             prim = (DR_ENV *)prim + 1;
 
@@ -951,18 +951,16 @@ void card_menu_update_and_draw_elements(FieldRenderHalf *frame)
             case CARD_MENU_ELEMENT_OPENING:
                 g_pad_input = 0;
                 {
-                    u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
-                    s32 width = CARD_MENU_ELEMENT_WIDTH(element, width_low);
+                    s32 width = card_menu_element_width(element);
 
-                    scaled_width = (width * element->attr.bits.transition_step) / 8;
-                    scaled_height = (element->size.bits.height * element->attr.bits.transition_step) / 8;
+                    scaled_width = (width * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                    scaled_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
                     prim = element->draw(ot, prim, (width - scaled_width) / 2, (element->size.bits.height - scaled_height) / 2);
                 }
                 {
                     s32 x = element->attr.bits.x;
-                    u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
 
-                    prim = cload_emit_window_frame(prim, ot, x + (CARD_MENU_ELEMENT_WIDTH(element, width_low) - scaled_width) / 2,
+                    prim = cload_emit_window_frame(prim, ot, x + (card_menu_element_width(element) - scaled_width) / 2,
                                                    element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
                                                    frame->display_rect.y, element->size.bits.flag);
                 }
@@ -976,12 +974,8 @@ void card_menu_update_and_draw_elements(FieldRenderHalf *frame)
 
             case CARD_MENU_ELEMENT_OPEN:
                 prim = element->draw(ot, prim, 0, 0);
-                {
-                    u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
-
-                    prim = cload_emit_window_frame(prim, ot, element->attr.bits.x, element->attr.bits.y, CARD_MENU_ELEMENT_WIDTH(element, width_low),
-                                                   element->size.bits.height, frame->display_rect.y, element->size.bits.flag);
-                }
+                prim = cload_emit_window_frame(prim, ot, element->attr.bits.x, element->attr.bits.y, card_menu_element_width(element),
+                                               element->size.bits.height, frame->display_rect.y, element->size.bits.flag);
                 if (element->attr.bits.transition_step != 0)
                 {
                     element->attr.bits.transition_step--;
@@ -991,25 +985,23 @@ void card_menu_update_and_draw_elements(FieldRenderHalf *frame)
             case CARD_MENU_ELEMENT_CLOSING:
                 g_pad_input = 0;
                 {
-                    u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
-                    s32 width = CARD_MENU_ELEMENT_WIDTH(element, width_low);
+                    s32 width = card_menu_element_width(element);
 
-                    scaled_width = (width * element->attr.bits.transition_step) / 8;
-                    scaled_height = (element->size.bits.height * element->attr.bits.transition_step) / 8;
+                    scaled_width = (width * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                    scaled_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
                     prim = element->draw(ot, prim, (width - scaled_width) / 2, (element->size.bits.height - scaled_height) / 2);
                 }
                 {
                     s32 x = element->attr.bits.x;
-                    u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
 
-                    prim = cload_emit_window_frame(prim, ot, x + (CARD_MENU_ELEMENT_WIDTH(element, width_low) - scaled_width) / 2,
+                    prim = cload_emit_window_frame(prim, ot, x + (card_menu_element_width(element) - scaled_width) / 2,
                                                    element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
                                                    frame->display_rect.y, element->size.bits.flag);
                 }
                 element->attr.bits.transition_step--;
                 if (element->attr.bits.transition_step == 0)
                 {
-                    element->attr.bits.transition_step = 3;
+                    element->attr.bits.transition_step = CARD_MENU_ELEMENT_CLOSED_FRAMES;
                     element->attr.bits.state = CARD_MENU_ELEMENT_CLOSED;
                 }
                 break;

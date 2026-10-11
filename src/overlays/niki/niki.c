@@ -2,13 +2,12 @@
 #include "internal/niki_internal.h"
 #include "overlays/menu/menu.h"
 
-
 /**
  * @brief Initialize card browsing, drawing resources, and the selected menu mode.
- * @param context_value Caller value retained for the overlay; its meaning is unresolved.
+ * @param work Work buffer from FIELD; it is kept in g_niki_work_buffer, which nothing reads.
  * @param mode Menu mode, with zero selecting the entry browser.
  */
-void niki_init(s32 context_value, s32 mode)
+void niki_init(void* work, s32 mode)
 {
     RECT rect;
 
@@ -19,21 +18,18 @@ void niki_init(s32 context_value, s32 mode)
     card_menu_init_card_events();
     g_card_menu_icon_phase = 0;
     field_set_default_fade_target();
-    rect.x = OVERLAY_INIT_CLEAR_VRAM_X;
-    rect.y = OVERLAY_INIT_CLEAR_VRAM_Y;
-    rect.w = OVERLAY_INIT_CLEAR_VRAM_W;
-    rect.h = OVERLAY_INIT_CLEAR_VRAM_H;
+    setRECT(&rect, OVERLAY_INIT_CLEAR_VRAM_X, OVERLAY_INIT_CLEAR_VRAM_Y, OVERLAY_INIT_CLEAR_VRAM_W, OVERLAY_INIT_CLEAR_VRAM_H);
     ClearImage(&rect, 0, 0, 0);
     reset_glyph_cache();
     g_card_menu_write_in_progress = 0;
     g_card_menu_progress_active = 0;
-    g_card_menu_selection_status = 0;
+    g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
     g_card_menu_io_busy = 0;
     g_card_menu_frame_parity = 0;
     g_card_menu_exit_requested = 0;
     field_reset_input_repeat();
     niki_build_ui_elements();
-    D_80164AE4 = context_value;
+    g_niki_work_buffer = work;
 }
 
 #include "../../common/card_menu/card_menu_update_frame.inc.c"
@@ -582,13 +578,6 @@ void card_menu_update_and_draw_elements(FieldRenderHalf* frame_arg)
     s32 inset_height;
     s32 element_index;
     s32 entry_count;
-    s32 opening_width_low;
-    s32 closing_width_low;
-    s32 opening_border_x;
-    s32 opening_border_width_low;
-    s32 closing_border_x;
-    s32 closing_border_width_low;
-    s32 open_border_width_low;
     DRAWENV draw_area;
 
     prim = frame_arg->primitive_cursor;
@@ -621,7 +610,7 @@ void card_menu_update_and_draw_elements(FieldRenderHalf* frame_arg)
                 }
             }
 
-            SetDrawEnv((DR_ENV*)prim, &draw_area);
+            SetDrawEnv(prim, &draw_area);
             addPrim(frame->ordering_table, prim);
             prim = (DR_ENV*)prim + 1;
 
@@ -629,31 +618,32 @@ void card_menu_update_and_draw_elements(FieldRenderHalf* frame_arg)
             {
             case CARD_MENU_ELEMENT_OPENING:
                 g_pad_input = 0;
-                opening_width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
-                inset_width = (CARD_MENU_ELEMENT_WIDTH(element, opening_width_low) * element->attr.bits.transition_step) / 8;
-                inset_height = (element->size.bits.height * element->attr.bits.transition_step) / 8;
-                prim = element->draw(frame->ordering_table, prim, (CARD_MENU_ELEMENT_WIDTH(element, opening_width_low) - inset_width) / 2,
-                                                        (element->size.bits.height - inset_height) / 2);
-                opening_border_x = element->attr.bits.x;
-                opening_border_width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
-                prim = field_draw_menu_frame(prim, frame->ordering_table,
-                                                        opening_border_x + (CARD_MENU_ELEMENT_WIDTH(element, opening_border_width_low) - inset_width) / 2,
-                                                        element->attr.bits.y + (element->size.bits.height - inset_height) / 2, inset_width, inset_height,
-                                                        frame_arg->display_rect.y, element_index == 0);
+                {
+                    s32 width = card_menu_element_width(element);
+
+                    inset_width = (width * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                    inset_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                    prim = element->draw(frame->ordering_table, prim, (width - inset_width) / 2, (element->size.bits.height - inset_height) / 2);
+                }
+                {
+                    s32 x = element->attr.bits.x;
+
+                    prim = field_draw_menu_frame(prim, frame->ordering_table, x + (card_menu_element_width(element) - inset_width) / 2,
+                                                 element->attr.bits.y + (element->size.bits.height - inset_height) / 2, inset_width, inset_height,
+                                                 frame_arg->display_rect.y, element_index == CARD_MENU_ELEMENT_MODAL);
+                }
                 element->attr.bits.transition_step++;
-                if (element->attr.bits.transition_step == 8)
+                if (element->attr.bits.transition_step == CARD_MENU_ELEMENT_TRANSITION_STEPS)
                 {
                     field_reset_input_repeat();
-                    element->attr.bits.state = 2;
+                    element->attr.bits.state = CARD_MENU_ELEMENT_OPEN;
                 }
                 break;
 
             case CARD_MENU_ELEMENT_OPEN:
                 prim = element->draw(frame->ordering_table, prim, 0, 0);
-                open_border_width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
-                prim =
-                    field_draw_menu_frame(prim, frame->ordering_table, element->attr.bits.x, element->attr.bits.y, CARD_MENU_ELEMENT_WIDTH(element, open_border_width_low),
-                                                     element->size.bits.height, frame_arg->display_rect.y, element_index == 0);
+                prim = field_draw_menu_frame(prim, frame->ordering_table, element->attr.bits.x, element->attr.bits.y, card_menu_element_width(element),
+                                             element->size.bits.height, frame_arg->display_rect.y, element_index == CARD_MENU_ELEMENT_MODAL);
                 if (element->attr.bits.transition_step != 0)
                 {
                     element->attr.bits.transition_step--;
@@ -662,22 +652,25 @@ void card_menu_update_and_draw_elements(FieldRenderHalf* frame_arg)
 
             case CARD_MENU_ELEMENT_CLOSING:
                 g_pad_input = 0;
-                closing_width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
-                inset_width = (CARD_MENU_ELEMENT_WIDTH(element, closing_width_low) * element->attr.bits.transition_step) / 8;
-                inset_height = (element->size.bits.height * element->attr.bits.transition_step) / 8;
-                prim = element->draw(frame->ordering_table, prim, (CARD_MENU_ELEMENT_WIDTH(element, closing_width_low) - inset_width) / 2,
-                                                        (element->size.bits.height - inset_height) / 2);
-                closing_border_x = element->attr.bits.x;
-                closing_border_width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
-                prim = field_draw_menu_frame(prim, frame->ordering_table,
-                                                        closing_border_x + (CARD_MENU_ELEMENT_WIDTH(element, closing_border_width_low) - inset_width) / 2,
-                                                        element->attr.bits.y + (element->size.bits.height - inset_height) / 2, inset_width, inset_height,
-                                                        frame_arg->display_rect.y, element_index == 0);
+                {
+                    s32 width = card_menu_element_width(element);
+
+                    inset_width = (width * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                    inset_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                    prim = element->draw(frame->ordering_table, prim, (width - inset_width) / 2, (element->size.bits.height - inset_height) / 2);
+                }
+                {
+                    s32 x = element->attr.bits.x;
+
+                    prim = field_draw_menu_frame(prim, frame->ordering_table, x + (card_menu_element_width(element) - inset_width) / 2,
+                                                 element->attr.bits.y + (element->size.bits.height - inset_height) / 2, inset_width, inset_height,
+                                                 frame_arg->display_rect.y, element_index == CARD_MENU_ELEMENT_MODAL);
+                }
                 element->attr.bits.transition_step--;
                 if (element->attr.bits.transition_step == 0)
                 {
-                    element->attr.bits.transition_step = 3;
-                    element->attr.bits.state = 4;
+                    element->attr.bits.transition_step = CARD_MENU_ELEMENT_CLOSED_FRAMES;
+                    element->attr.bits.state = CARD_MENU_ELEMENT_CLOSED;
                 }
                 break;
 
@@ -686,7 +679,7 @@ void card_menu_update_and_draw_elements(FieldRenderHalf* frame_arg)
                 element->attr.bits.transition_step--;
                 if (element->attr.bits.transition_step == 0)
                 {
-                    element->attr.bits.state = 0;
+                    element->attr.bits.state = CARD_MENU_ELEMENT_FREE;
                 }
                 break;
             }

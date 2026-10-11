@@ -1109,8 +1109,7 @@ void card_menu_update_and_draw_elements(FieldRenderHalf* render)
             case CARD_MENU_ELEMENT_OPENING:
                 g_pad_input = 0;
                 {
-                    u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
-                    s32 width = CARD_MENU_ELEMENT_WIDTH(element, width_low);
+                    s32 width = card_menu_element_width(element);
 
                     scaled_width = (width * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
                     scaled_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
@@ -1118,9 +1117,8 @@ void card_menu_update_and_draw_elements(FieldRenderHalf* render)
                 }
                 {
                     s32 x = element->attr.bits.x;
-                    u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
 
-                    prim = field_draw_menu_frame(prim, ot, x + (CARD_MENU_ELEMENT_WIDTH(element, width_low) - scaled_width) / 2,
+                    prim = field_draw_menu_frame(prim, ot, x + (card_menu_element_width(element) - scaled_width) / 2,
                                                  element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
                                                  render->display_rect.y, i == CARD_MENU_ELEMENT_MODAL);
                 }
@@ -1134,12 +1132,8 @@ void card_menu_update_and_draw_elements(FieldRenderHalf* render)
 
             case CARD_MENU_ELEMENT_OPEN:
                 prim = element->draw(ot, prim, 0, 0);
-                {
-                    u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
-
-                    prim = field_draw_menu_frame(prim, ot, element->attr.bits.x, element->attr.bits.y, CARD_MENU_ELEMENT_WIDTH(element, width_low),
-                                                 element->size.bits.height, render->display_rect.y, i == CARD_MENU_ELEMENT_MODAL);
-                }
+                prim = field_draw_menu_frame(prim, ot, element->attr.bits.x, element->attr.bits.y, card_menu_element_width(element), element->size.bits.height,
+                                             render->display_rect.y, i == CARD_MENU_ELEMENT_MODAL);
                 if (element->attr.bits.transition_step != 0)
                 {
                     element->attr.bits.transition_step--;
@@ -1149,8 +1143,7 @@ void card_menu_update_and_draw_elements(FieldRenderHalf* render)
             case CARD_MENU_ELEMENT_CLOSING:
                 g_pad_input = 0;
                 {
-                    u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
-                    s32 width = CARD_MENU_ELEMENT_WIDTH(element, width_low);
+                    s32 width = card_menu_element_width(element);
 
                     scaled_width = (width * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
                     scaled_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
@@ -1158,9 +1151,8 @@ void card_menu_update_and_draw_elements(FieldRenderHalf* render)
                 }
                 {
                     s32 x = element->attr.bits.x;
-                    u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
 
-                    prim = field_draw_menu_frame(prim, ot, x + (CARD_MENU_ELEMENT_WIDTH(element, width_low) - scaled_width) / 2,
+                    prim = field_draw_menu_frame(prim, ot, x + (card_menu_element_width(element) - scaled_width) / 2,
                                                  element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
                                                  render->display_rect.y, i == CARD_MENU_ELEMENT_MODAL);
                 }

@@ -196,7 +196,7 @@ typedef void* (*CardMenuElementDrawFunc)(u_long* ot, void* prim, s32 x_offset, s
  * The nine-bit window width straddles the two words: its low eight bits are
  * the top byte of attr and its high bit is size.bits.width_high. No bitfield
  * can span that boundary, so the low byte is read and written through
- * attr.word (see CARD_MENU_ELEMENT_WIDTH and CARD_MENU_SET_ELEMENT_WIDTH_LOW).
+ * attr.word (see card_menu_element_width and CARD_MENU_SET_ELEMENT_WIDTH_LOW).
  */
 typedef struct CardMenuElement
 {
@@ -233,13 +233,6 @@ typedef struct CardMenuElement
 #define CARD_MENU_ELEMENT_WIDTH_LOW(element) ((element)->attr.word >> CARD_MENU_ELEMENT_WIDTH_SHIFT)
 
 /**
- * @brief Full nine-bit width of a window.
- * @param element Window whose width is read.
- * @param width_low The width's low byte, as read by CARD_MENU_ELEMENT_WIDTH_LOW.
- */
-#define CARD_MENU_ELEMENT_WIDTH(element, width_low) ((s32)(((element)->size.bits.width_high << 8) | (width_low)))
-
-/**
  * @brief Full nine-bit width of a window, reading the low byte first.
  * @param element Window whose width is read.
  * @return Width in pixels.
@@ -248,7 +241,7 @@ static inline s32 card_menu_element_width(CardMenuElement* element)
 {
     u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
 
-    return CARD_MENU_ELEMENT_WIDTH(element, width_low);
+    return (element->size.bits.width_high << 8) | width_low;
 }
 
 /** @brief Store the low eight bits of a window's width. */
