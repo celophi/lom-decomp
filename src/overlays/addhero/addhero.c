@@ -477,19 +477,20 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
             switch (icon_count)
             {
             case 2:
-                base_width = 32;
-                grow_width = 16;
-                g_card_menu_icon_phase %= 32;
+                base_width = CARD_MENU_ICON_SQUEEZED_WIDTH(2);
+                grow_width = CARD_MENU_ICON_GROW_WIDTH(2);
+                g_card_menu_icon_phase %= CARD_MENU_ICON_PHASE_CYCLE(2);
                 break;
             case 3:
-                base_width = 16;
-                grow_width = 32;
-                g_card_menu_icon_phase %= 96;
+                base_width = CARD_MENU_ICON_SQUEEZED_WIDTH(3);
+                grow_width = CARD_MENU_ICON_GROW_WIDTH(3);
+                g_card_menu_icon_phase %= CARD_MENU_ICON_PHASE_CYCLE(3);
                 break;
             default:
-                base_width = 16;
-                grow_width = 32;
-                g_card_menu_icon_phase = 31;
+                /* A lone icon keeps the three-icon sizes, held at the end of its first grow. */
+                base_width = CARD_MENU_ICON_SQUEEZED_WIDTH(3);
+                grow_width = CARD_MENU_ICON_GROW_WIDTH(3);
+                g_card_menu_icon_phase = CARD_MENU_ICON_GROW_WIDTH(3) - 1;
                 break;
             }
 

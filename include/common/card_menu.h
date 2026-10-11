@@ -314,6 +314,21 @@ static inline s32 card_menu_element_width(CardMenuElement* element)
 #define CARD_MENU_DETAILS_HEIGHT 52
 #define CARD_MENU_DETAILS_LINE_HEIGHT 16
 
+/**
+ * @brief Width of the details window's party icon strip.
+ * @note One icon at a time grows to the full FIELD_PORTRAIT_SIZE and shrinks back while the others stay squeezed.
+ */
+#define CARD_MENU_ICON_STRIP_WIDTH 80
+
+/** @brief Squeezed width of each icon when @p count icons share the strip. */
+#define CARD_MENU_ICON_SQUEEZED_WIDTH(count) ((CARD_MENU_ICON_STRIP_WIDTH - FIELD_PORTRAIT_SIZE) / ((count) - 1))
+
+/** @brief Pixels a squeezed icon grows by, which is also the number of phase steps it takes to grow. */
+#define CARD_MENU_ICON_GROW_WIDTH(count) (FIELD_PORTRAIT_SIZE - CARD_MENU_ICON_SQUEEZED_WIDTH(count))
+
+/** @brief Phase steps in one animation cycle, in which each of the @p count icons grows once. */
+#define CARD_MENU_ICON_PHASE_CYCLE(count) ((count) * CARD_MENU_ICON_GROW_WIDTH(count))
+
 /** @brief Details window text: second column and the play-time digits (right edges). */
 #if defined(VERSION_JP)
 #define CARD_MENU_DETAILS_TEXT_X 80

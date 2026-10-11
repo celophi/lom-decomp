@@ -839,7 +839,7 @@ static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_off
     void* result;
     Vec2s pos;
     u8 name[256];
-    s32 party_icon[FIELD_PARTY_SIZE];
+    s32 icons[FIELD_PARTY_SIZE];
     DVECTOR unused;
 
     result = prim;
@@ -887,81 +887,81 @@ static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_off
                 g_carda_selected_file.saved_game.compatibility_tag == SAVE_TAG_ANY)
             {
                 SavedGameLayout* save = &g_carda_selected_file.saved_game;
-                s32 present_count;
+                s32 icon_count;
                 s32 i;
                 s32 j;
-                s32 step;
-                s32 half_step;
-                s32 base_x;
-                s32 base_y;
-                s32 total;
+                s32 base_width;
+                s32 grow_width;
+                s32 window_end;
+                s32 window_start;
+                s32 icon_x;
                 s32 hours;
 
-                total = 0;
-                party_icon[0] = save->spawn.bits.party_icon_0;
-                party_icon[1] = save->track.bits.party_icon_1;
-                party_icon[2] = save->track.bits.party_icon_2;
+                icon_x = 0;
+                icons[0] = save->spawn.bits.party_icon_0;
+                icons[1] = save->track.bits.party_icon_1;
+                icons[2] = save->track.bits.party_icon_2;
                 g_card_menu_icon_palette = save->icon_palette;
 
-                present_count = 0;
+                icon_count = 0;
                 for (i = 0; i < FIELD_PARTY_SIZE; i++)
                 {
-                    if (party_icon[i] != SAVE_NO_ICON)
+                    if (icons[i] != SAVE_NO_ICON)
                     {
-                        present_count += 1;
+                        icon_count++;
                     }
                 }
 
-                switch (present_count)
+                switch (icon_count)
                 {
                 case 2:
-                    step = 32;
-                    half_step = 16;
-                    g_card_menu_icon_phase %= 32;
+                    base_width = CARD_MENU_ICON_SQUEEZED_WIDTH(2);
+                    grow_width = CARD_MENU_ICON_GROW_WIDTH(2);
+                    g_card_menu_icon_phase %= CARD_MENU_ICON_PHASE_CYCLE(2);
                     break;
                 case 3:
-                    step = 16;
-                    half_step = 32;
-                    g_card_menu_icon_phase %= 96;
+                    base_width = CARD_MENU_ICON_SQUEEZED_WIDTH(3);
+                    grow_width = CARD_MENU_ICON_GROW_WIDTH(3);
+                    g_card_menu_icon_phase %= CARD_MENU_ICON_PHASE_CYCLE(3);
                     break;
                 default:
-                    step = 16;
-                    half_step = 32;
-                    g_card_menu_icon_phase = 31;
+                    /* A lone icon keeps the three-icon sizes, held at the end of its first grow. */
+                    base_width = CARD_MENU_ICON_SQUEEZED_WIDTH(3);
+                    grow_width = CARD_MENU_ICON_GROW_WIDTH(3);
+                    g_card_menu_icon_phase = CARD_MENU_ICON_GROW_WIDTH(3) - 1;
                     break;
                 }
 
                 i = 0;
-                j = i;
-                for (; j < FIELD_PARTY_SIZE; j++)
+                for (j = 0; j < FIELD_PARTY_SIZE; j++)
                 {
-                    base_y = i * half_step;
-                    base_x = base_y + half_step;
-                    if (party_icon[j] != SAVE_NO_ICON)
+                    window_start = i * grow_width;
+                    window_end = window_start + grow_width;
+                    if (icons[j] != SAVE_NO_ICON)
                     {
-                        s32 adjust = step;
-                        s32 rem;
-                        s32 hi;
+                        s32 width = base_width;
+                        s32 next_start;
+                        s32 next_end;
 
-                        if (g_card_menu_icon_phase >= base_y && g_card_menu_icon_phase < base_x)
+                        if (g_card_menu_icon_phase >= window_start && g_card_menu_icon_phase < window_end)
                         {
-                            adjust += g_card_menu_icon_phase - base_y;
+                            width += g_card_menu_icon_phase - window_start;
                         }
                         else
                         {
-                            rem = base_x % (half_step * present_count);
-                            if (g_card_menu_icon_phase >= rem)
+                            next_start = window_end % (grow_width * icon_count);
+                            if (g_card_menu_icon_phase >= next_start)
                             {
-                                hi = rem + half_step;
-                                if (g_card_menu_icon_phase < hi)
+                                next_end = next_start + grow_width;
+                                if (g_card_menu_icon_phase < next_end)
                                 {
-                                    adjust += hi - g_card_menu_icon_phase;
+                                    width += next_end - g_card_menu_icon_phase;
                                 }
                             }
                         }
-                        result = card_menu_draw_icon_highlight(result, ot, total - x_offset, -y_offset, adjust, party_icon[j], i, j);
-                        total += adjust;
-                        i += 1;
+                        result = card_menu_draw_icon_highlight(result, ot, icon_x - x_offset, -y_offset, width, icons[j], i, j);
+                        icon_x += width;
+                        i++;
                     }
                 }
 
@@ -969,17 +969,18 @@ static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_off
                     SavedGameLayout* shown_save = &g_carda_selected_file.saved_game;
                     s32 x = -x_offset;
                     s32 y = -y_offset;
+                    s32 time;
 
-                    base_y = shown_save->play_time;
+                    time = shown_save->play_time;
 
                     pos.x = x + CARD_MENU_DETAILS_HOURS_RIGHT_X;
                     pos.y = y;
-                    hours = base_y / SAVED_PLAY_TIME_TICKS_PER_HOUR;
+                    hours = time / SAVED_PLAY_TIME_TICKS_PER_HOUR;
                     result = field_draw_number(ot, result, hours, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
                     result = field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, FIELD_UI_TEXT_TIME_SEPARATOR),
                                              FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TIME_SEPARATOR_X, y, FIELD_TEXT_ALIGN_LEFT);
-                    base_y = (base_y / SAVED_PLAY_TIME_TICKS_PER_MINUTE) - (hours * 60);
-                    if (base_y < 10)
+                    time = (time / SAVED_PLAY_TIME_TICKS_PER_MINUTE) - (hours * 60);
+                    if (time < 10)
                     {
                         pos.x = x + CARD_MENU_DETAILS_MINUTES_TENS_RIGHT_X;
                         pos.y = y;
@@ -987,7 +988,7 @@ static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_off
                     }
                     pos.x = x + CARD_MENU_DETAILS_MINUTES_RIGHT_X;
                     pos.y = y;
-                    result = field_draw_number(ot, result, base_y, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
+                    result = field_draw_number(ot, result, time, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
                     result = field_draw_text(result, ot, shown_save->summary_name, FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TEXT_X,
                                              y + CARD_MENU_DETAILS_LINE_HEIGHT, FIELD_TEXT_ALIGN_LEFT);
                     result =
