@@ -628,7 +628,8 @@ void card_sort_entries_by_type(void)
     {
         for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
         {
-            if (g_card_entry_suffix_values[entry_index] == suffix && strncmp(g_lom_pocketstation_filename_prefix, g_card_entries[g_card_slot][entry_index].name, 12) == 0)
+            if (g_card_entry_suffix_values[entry_index] == suffix &&
+                strncmp(g_lom_pocketstation_filename_prefix, g_card_entries[g_card_slot][entry_index].name, 12) == 0)
             {
                 bcopy((u8*)&g_card_entries[g_card_slot][entry_index], (u8*)&sorted[output_index], sizeof(struct DIRENTRY));
                 output_index++;

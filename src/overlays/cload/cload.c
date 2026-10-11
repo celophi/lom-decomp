@@ -70,8 +70,8 @@ s32 cload_main(void)
 void cload_run_menu_loop(void)
 {
     RECT rect;
-    FieldRenderHalf *frame;
-    u_long *ordering_table;
+    FieldRenderHalf* frame;
+    u_long* ordering_table;
     s32 buffer_index;
     s32 dpad_input;
 
@@ -155,7 +155,7 @@ void cload_init_display(void)
  */
 void cload_build_ui_elements(void)
 {
-    CardMenuElement *element;
+    CardMenuElement* element;
     s32 unused[2];
 
     g_card_menu_scroll_frames = 0;
@@ -269,7 +269,7 @@ s32 card_menu_handle_input(void)
     s32 status;
     s32 count;
     s32 sfx_id;
-    CardMenuElement *prompt;
+    CardMenuElement* prompt;
 
     if (g_card_menu_element_pool[1].attr.bits.state == CARD_MENU_ELEMENT_FREE)
     {
@@ -406,7 +406,7 @@ s32 card_menu_handle_input(void)
  */
 void cload_close_all_elements(void)
 {
-    CardMenuElement *element;
+    CardMenuElement* element;
     s32 i;
 
     element = g_card_menu_element_pool;
@@ -452,7 +452,7 @@ void cload_scroll_to_selection(void)
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
  */
-void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
+void* cload_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     s32 state = g_card_entry_state;
 
@@ -465,13 +465,15 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_no_lom_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case CARD_MENU_ENTRY_STATE_CARD_FULL:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_not_enough_blocks, CARD_MENU_TEXT_NOT_ENOUGH_BLOCKS), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_not_enough_blocks, CARD_MENU_TEXT_NOT_ENOUGH_BLOCKS), 1, -x_offset + 0x84,
+                               -y_offset, 2);
         break;
     case CARD_MENU_ENTRY_STATE_NO_CARD:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_no_memory_card, CARD_MENU_TEXT_NO_CARD), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case CARD_MENU_ENTRY_STATE_ACCESS_FAILED:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_card_access_failed, CARD_MENU_TEXT_CARD_ACCESS_FAILED), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_card_access_failed, CARD_MENU_TEXT_CARD_ACCESS_FAILED), 1, -x_offset + 0x84,
+                               -y_offset, 2);
         break;
     case CARD_MENU_ENTRY_STATE_NO_SAVE_DATA:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_save_data, CARD_MENU_TEXT_NO_SAVE_DATA), 1, -x_offset + 0x84, -y_offset, 2);
@@ -481,7 +483,7 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
     case CARD_MENU_ENTRY_STATE_CHECKING_CARD:
     {
         s32 x;
-        u16 *text_table;
+        u16* text_table;
 
         x = -x_offset + 0x84;
         text_table = &g_cload_text_check_memory_card;
@@ -491,14 +493,14 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
     }
     break;
     default:
-        {
-            s32 row_y;
-            s32 i;
+    {
+        s32 row_y;
+        s32 i;
 
         if (g_card_menu_entry_scan_active != 0)
         {
             s32 x;
-            u16 *text_table;
+            u16* text_table;
 
             x = -x_offset + 0x84;
             text_table = &g_cload_text_check_memory_card;
@@ -512,11 +514,11 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
         {
             s32 off;
             s32 base_x;
-            s32 *flag_ptr;
+            s32* flag_ptr;
             u16 marker_offset;
             uintptr_t entry;
             Vec2s pos;
-            u16 *text_table;
+            u16* text_table;
 
             off = i;
             base_x = -x_offset;
@@ -528,13 +530,13 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
                 row_y = ((i * CARD_MENU_ENTRY_ROW_HEIGHT) - y_offset) - g_card_menu_scroll_y;
                 if (row_y >= -13 && row_y <= 72)
                 {
-                    flag_ptr = (s32 *)((u8 *)g_card_entry_ranks + off);
+                    flag_ptr = (s32*)((u8*)g_card_entry_ranks + off);
                     if (*flag_ptr >= 0)
                     {
                         pos.x = base_x + CARD_MENU_ENTRY_VALUE_X;
                         pos.y = row_y;
                         prim = field_draw_text(field_draw_number(ot, prim, *(s32*)((u8*)g_card_entry_suffix_values + off), 1, &pos, 0), ot,
-                                             CARD_MENU_TEXT_BY_OFFSET(text_table, g_cload_text_number_prefix), 1, base_x + 0x70, row_y, 0);
+                                               CARD_MENU_TEXT_BY_OFFSET(text_table, g_cload_text_number_prefix), 1, base_x + 0x70, row_y, 0);
                         if ((g_card_rank_count - 1) == *flag_ptr)
                         {
                             marker_offset = text_table[27];
@@ -572,24 +574,24 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
                 i++;
             } while (i < g_card_entry_state);
         }
-            row_y = ((g_card_menu_selected_row * CARD_MENU_ENTRY_ROW_HEIGHT) - y_offset) - g_card_menu_scroll_y;
+        row_y = ((g_card_menu_selected_row * CARD_MENU_ENTRY_ROW_HEIGHT) - y_offset) - g_card_menu_scroll_y;
 
-            if (g_card_menu_entry_scan_active == 0)
-            {
-                TILE *tile = (TILE *)prim;
+        if (g_card_menu_entry_scan_active == 0)
+        {
+            TILE* tile = (TILE*)prim;
 
-                *(u32 *)&tile->r0 = CARD_MENU_HIGHLIGHT_COLOR;
-                setlen(tile, 3);
-                setcode(tile, 0x62);
-                tile->y0 = (s16)(row_y - 1);
-                tile->w = 0x108;
-                tile->x0 = 0;
-                tile->h = 0xE;
-                addPrim(ot, tile);
-                prim = tile + 1;
-            }
+            *(u32*)&tile->r0 = CARD_MENU_HIGHLIGHT_COLOR;
+            setlen(tile, 3);
+            setcode(tile, 0x62);
+            tile->y0 = (s16)(row_y - 1);
+            tile->w = 0x108;
+            tile->x0 = 0;
+            tile->h = 0xE;
+            addPrim(ot, tile);
+            prim = tile + 1;
         }
-        break;
+    }
+    break;
     }
     return prim;
 }
@@ -604,7 +606,7 @@ void *cload_draw_entry_list(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
  */
-void *cload_draw_header_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
+void* cload_draw_header_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     RECT unused;
 
@@ -619,10 +621,10 @@ void *cload_draw_header_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
  */
-void *cload_draw_card_slot0_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
+void* cload_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     s32 color;
-    u8 *text;
+    u8* text;
     RECT unused;
 
     color = 1;
@@ -642,10 +644,10 @@ void *cload_draw_card_slot0_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
  */
-void *cload_draw_card_slot1_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
+void* cload_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     s32 color;
-    u8 *text;
+    u8* text;
     RECT unused;
 
     color = 1;
@@ -799,7 +801,8 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
                     pos.y = (s16)y;
                     hours = base_y / 216000;
                     result = field_draw_number(ot, result, hours, 1, &pos, 1);
-                    result = field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, 25), 1, x + CARD_MENU_DETAILS_TIME_SEPARATOR_X, y, 0);
+                    result =
+                        field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, 25), 1, x + CARD_MENU_DETAILS_TIME_SEPARATOR_X, y, 0);
                     base_y = (base_y / 3600) - (hours * 0x3C);
                     if (base_y < 0xA)
                     {
@@ -811,8 +814,8 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
                     pos.y = (s16)y;
                     result = field_draw_number(ot, result, base_y, 1, &pos, 1);
                     result = field_draw_text(result, ot, shown_save->summary_name, 1, x + CARD_MENU_DETAILS_TEXT_X, y + 0x10, 0);
-                    result = field_draw_text(result, ot, CARD_MENU_TEXT(g_card_menu_location_names, shown_save->track.bits.music_track), 1, x + CARD_MENU_DETAILS_TEXT_X,
-                                           y + 0x20, 0);
+                    result = field_draw_text(result, ot, CARD_MENU_TEXT(g_card_menu_location_names, shown_save->track.bits.music_track), 1,
+                                             x + CARD_MENU_DETAILS_TEXT_X, y + 0x20, 0);
                 }
             }
             else
@@ -859,7 +862,7 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
  */
 void cload_clear_elements(void)
 {
-    CardMenuElement *p;
+    CardMenuElement* p;
     s32 i;
 
     p = g_card_menu_element_pool;
@@ -874,9 +877,9 @@ void cload_clear_elements(void)
  * @brief Activate and return the first free UI element.
  * @return First free element, or the pool head if all slots are busy.
  */
-CardMenuElement *cload_alloc_element(void)
+CardMenuElement* cload_alloc_element(void)
 {
-    CardMenuElement *p;
+    CardMenuElement* p;
     s32 i;
 
     p = g_card_menu_element_pool;
@@ -901,16 +904,18 @@ CardMenuElement *cload_alloc_element(void)
  *
  * @param frame Render buffer being built; primitive_cursor is read on entry and written back on exit.
  */
-void card_menu_update_and_draw_elements(FieldRenderHalf *frame)
+void card_menu_update_and_draw_elements(FieldRenderHalf* frame)
 {
-    void *arrow_prim;
-    void *prim;
-    u_long *ot;
-    CardMenuElement *element;
+    void* arrow_prim;
+    void* prim;
+    u_long* ot;
+    CardMenuElement* element;
     s32 i;
     DRAWENV draw_env;
     s32 scaled_width;
     s32 scaled_height;
+    s32 opening_x;
+    s32 closing_x;
 
     arrow_prim = frame->primitive_cursor;
     ot = &frame->ordering_table[FIELD_FADE_OT_INDEX];
@@ -944,26 +949,19 @@ void card_menu_update_and_draw_elements(FieldRenderHalf *frame)
         {
             SetDrawEnv(prim, &draw_env);
             addPrim(ot, prim);
-            prim = (DR_ENV *)prim + 1;
+            prim = (DR_ENV*)prim + 1;
 
             switch (element->attr.bits.state)
             {
             case CARD_MENU_ELEMENT_OPENING:
                 g_pad_input = 0;
-                {
-                    s32 width = card_menu_element_width(element);
-
-                    scaled_width = (width * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
-                    scaled_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
-                    prim = element->draw(ot, prim, (width - scaled_width) / 2, (element->size.bits.height - scaled_height) / 2);
-                }
-                {
-                    s32 x = element->attr.bits.x;
-
-                    prim = cload_emit_window_frame(prim, ot, x + (card_menu_element_width(element) - scaled_width) / 2,
-                                                   element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
-                                                   frame->display_rect.y, element->size.bits.flag);
-                }
+                scaled_width = (card_menu_element_width(element) * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                scaled_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                prim = element->draw(ot, prim, (card_menu_element_width(element) - scaled_width) / 2, (element->size.bits.height - scaled_height) / 2);
+                opening_x = element->attr.bits.x;
+                prim = cload_emit_window_frame(prim, ot, opening_x + (card_menu_element_width(element) - scaled_width) / 2,
+                                               element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
+                                               frame->display_rect.y, element->size.bits.flag);
                 element->attr.bits.transition_step++;
                 if (element->attr.bits.transition_step == CARD_MENU_ELEMENT_TRANSITION_STEPS)
                 {
@@ -984,20 +982,13 @@ void card_menu_update_and_draw_elements(FieldRenderHalf *frame)
 
             case CARD_MENU_ELEMENT_CLOSING:
                 g_pad_input = 0;
-                {
-                    s32 width = card_menu_element_width(element);
-
-                    scaled_width = (width * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
-                    scaled_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
-                    prim = element->draw(ot, prim, (width - scaled_width) / 2, (element->size.bits.height - scaled_height) / 2);
-                }
-                {
-                    s32 x = element->attr.bits.x;
-
-                    prim = cload_emit_window_frame(prim, ot, x + (card_menu_element_width(element) - scaled_width) / 2,
-                                                   element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
-                                                   frame->display_rect.y, element->size.bits.flag);
-                }
+                scaled_width = (card_menu_element_width(element) * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                scaled_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                prim = element->draw(ot, prim, (card_menu_element_width(element) - scaled_width) / 2, (element->size.bits.height - scaled_height) / 2);
+                closing_x = element->attr.bits.x;
+                prim = cload_emit_window_frame(prim, ot, closing_x + (card_menu_element_width(element) - scaled_width) / 2,
+                                               element->attr.bits.y + (element->size.bits.height - scaled_height) / 2, scaled_width, scaled_height,
+                                               frame->display_rect.y, element->size.bits.flag);
                 element->attr.bits.transition_step--;
                 if (element->attr.bits.transition_step == 0)
                 {
@@ -1018,7 +1009,7 @@ void card_menu_update_and_draw_elements(FieldRenderHalf *frame)
         }
     }
 
-    frame->primitive_cursor = (u8 *)cload_emit_icon_highlight_strip(prim, ot);
+    frame->primitive_cursor = (u8*)cload_emit_icon_highlight_strip(prim, ot);
 }
 
 #include "../../common/encoded_text/encoded_text_append.inc.c"

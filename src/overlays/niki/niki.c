@@ -386,9 +386,11 @@ void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32
             s32 x = -x_offset;
             u16* text_table;
 
-            result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_new_save_title, CARD_MENU_TEXT_NEW_SAVE_TITLE), FIELD_TEXT_COLOR_NORMAL, x, -y_offset, FIELD_TEXT_ALIGN_LEFT);
+            result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_new_save_title, CARD_MENU_TEXT_NEW_SAVE_TITLE), FIELD_TEXT_COLOR_NORMAL, x,
+                                     -y_offset, FIELD_TEXT_ALIGN_LEFT);
             text_table = CARD_MENU_TEXT_TABLE(g_niki_text_new_save_title, CARD_MENU_TEXT_NEW_SAVE_TITLE);
-            return field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_USES_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, x, 0x10 - y_offset, FIELD_TEXT_ALIGN_LEFT);
+            return field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_USES_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, x, 0x10 - y_offset,
+                                   FIELD_TEXT_ALIGN_LEFT);
         }
         else
         {
@@ -477,7 +479,7 @@ void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32
                                 }
                             }
                             result = card_menu_draw_icon_highlight(result, ot, icon_x - x_offset, -y_offset, icon_width, icons[slot_index], visible_icon_index,
-                                                              slot_index);
+                                                                   slot_index);
                             visible_icon_index += 1;
                             icon_x += icon_width;
                         }
@@ -494,8 +496,10 @@ void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32
                         pos.y = (s16)y;
                         hours = playtime / 216000;
                         result = field_draw_number(ot, result, hours, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
-                        result = field_draw_text(result, ot, (u8*)(g_text_time_separator_offset_bytes[0] + ((uintptr_t)&g_text_time_separator_offset_bytes - 0x32) + (g_text_time_separator_offset_bytes[1] << 8)), FIELD_TEXT_COLOR_NORMAL,
-                                               x + CARD_MENU_DETAILS_TIME_SEPARATOR_X, y, FIELD_TEXT_ALIGN_LEFT);
+                        result = field_draw_text(result, ot,
+                                                 (u8*)(g_text_time_separator_offset_bytes[0] + ((uintptr_t)&g_text_time_separator_offset_bytes - 0x32) +
+                                                       (g_text_time_separator_offset_bytes[1] << 8)),
+                                                 FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TIME_SEPARATOR_X, y, FIELD_TEXT_ALIGN_LEFT);
                         playtime = (playtime / 3600) - (hours * 0x3C);
                         if (playtime < 0xA)
                         {
@@ -506,26 +510,30 @@ void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32
                         pos.x = (s16)(x + CARD_MENU_DETAILS_MINUTES_RIGHT_X);
                         pos.y = (s16)y;
                         result = field_draw_number(ot, result, playtime, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
-                        result = field_draw_text(result, ot, preview->summary_name, FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TEXT_X, y + 0x10, FIELD_TEXT_ALIGN_LEFT);
+                        result = field_draw_text(result, ot, preview->summary_name, FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TEXT_X, y + 0x10,
+                                                 FIELD_TEXT_ALIGN_LEFT);
 
                         if (preview->identity.ids.game_id == g_saved_game_ctx->identity.ids.game_id)
                         {
-                            result = field_draw_text(result, ot, CARD_MENU_TEXT_AT(g_niki_text_same_hero_data, CARD_MENU_TEXT_SAME_HERO_DATA), FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TEXT_X, y + 0x20, FIELD_TEXT_ALIGN_LEFT);
+                            result = field_draw_text(result, ot, CARD_MENU_TEXT_AT(g_niki_text_same_hero_data, CARD_MENU_TEXT_SAME_HERO_DATA),
+                                                     FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TEXT_X, y + 0x20, FIELD_TEXT_ALIGN_LEFT);
                         }
                         else if (preview->summary_slot_count == 0)
                         {
-                            result = field_draw_text(result, ot, CARD_MENU_TEXT_AT(g_niki_text_no_items, CARD_MENU_TEXT_NO_ITEMS), FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TEXT_X, y + 0x20, FIELD_TEXT_ALIGN_LEFT);
+                            result = field_draw_text(result, ot, CARD_MENU_TEXT_AT(g_niki_text_no_items, CARD_MENU_TEXT_NO_ITEMS), FIELD_TEXT_COLOR_NORMAL,
+                                                     x + CARD_MENU_DETAILS_TEXT_X, y + 0x20, FIELD_TEXT_ALIGN_LEFT);
                         }
                         else
                         {
-                            result = field_draw_text(result, ot, CARD_MENU_TEXT(g_card_menu_location_names, preview->track.bits.music_track), FIELD_TEXT_COLOR_NORMAL,
-                                                   x + CARD_MENU_DETAILS_TEXT_X, y + 0x20, FIELD_TEXT_ALIGN_LEFT);
+                            result = field_draw_text(result, ot, CARD_MENU_TEXT(g_card_menu_location_names, preview->track.bits.music_track),
+                                                     FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TEXT_X, y + 0x20, FIELD_TEXT_ALIGN_LEFT);
                         }
                     }
                 }
                 else
                 {
-                    result = field_draw_text(result, ot, CARD_MENU_TEXT_AT(g_niki_text_wrong_version, CARD_MENU_TEXT_WRONG_VERSION), FIELD_TEXT_COLOR_NORMAL, -x_offset, -y_offset, FIELD_TEXT_ALIGN_LEFT);
+                    result = field_draw_text(result, ot, CARD_MENU_TEXT_AT(g_niki_text_wrong_version, CARD_MENU_TEXT_WRONG_VERSION), FIELD_TEXT_COLOR_NORMAL,
+                                             -x_offset, -y_offset, FIELD_TEXT_ALIGN_LEFT);
                 }
             }
             else
@@ -576,6 +584,8 @@ void card_menu_update_and_draw_elements(FieldRenderHalf* frame_arg)
     CardMenuElement* element;
     s32 inset_width;
     s32 inset_height;
+    s32 opening_x;
+    s32 closing_x;
     s32 element_index;
     s32 entry_count;
     DRAWENV draw_area;
@@ -598,15 +608,18 @@ void card_menu_update_and_draw_elements(FieldRenderHalf* frame_arg)
         if (element->attr.bits.state != CARD_MENU_ELEMENT_FREE)
         {
             entry_count = g_card_entry_state;
-            if ((entry_count < CARD_MENU_ENTRY_COUNT_LIMIT) && (element->draw == card_menu_draw_entry_list) && (g_card_menu_element_pool[CARD_MENU_ELEMENT_MAIN].attr.bits.state == CARD_MENU_ELEMENT_OPEN))
+            if ((entry_count < CARD_MENU_ENTRY_COUNT_LIMIT) && (element->draw == card_menu_draw_entry_list) &&
+                (g_card_menu_element_pool[CARD_MENU_ELEMENT_MAIN].attr.bits.state == CARD_MENU_ELEMENT_OPEN))
             {
                 if (entry_count * CARD_MENU_ENTRY_ROW_HEIGHT > g_card_menu_scroll_y + CARD_MENU_LIST_HEIGHT)
                 {
-                    prim = field_draw_menu_scroll_arrow(prim, frame->ordering_table, CARD_MENU_EXCHANGE_SCROLL_ARROW_X, CARD_MENU_SCROLL_ARROW_DOWN_Y, FIELD_MENU_ARROW_DOWN);
+                    prim = field_draw_menu_scroll_arrow(prim, frame->ordering_table, CARD_MENU_EXCHANGE_SCROLL_ARROW_X, CARD_MENU_SCROLL_ARROW_DOWN_Y,
+                                                        FIELD_MENU_ARROW_DOWN);
                 }
                 if (g_card_menu_scroll_y != 0)
                 {
-                    prim = field_draw_menu_scroll_arrow(prim, frame->ordering_table, CARD_MENU_EXCHANGE_SCROLL_ARROW_X, CARD_MENU_SCROLL_ARROW_UP_Y, FIELD_MENU_ARROW_UP);
+                    prim = field_draw_menu_scroll_arrow(prim, frame->ordering_table, CARD_MENU_EXCHANGE_SCROLL_ARROW_X, CARD_MENU_SCROLL_ARROW_UP_Y,
+                                                        FIELD_MENU_ARROW_UP);
                 }
             }
 
@@ -618,20 +631,14 @@ void card_menu_update_and_draw_elements(FieldRenderHalf* frame_arg)
             {
             case CARD_MENU_ELEMENT_OPENING:
                 g_pad_input = 0;
-                {
-                    s32 width = card_menu_element_width(element);
-
-                    inset_width = (width * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
-                    inset_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
-                    prim = element->draw(frame->ordering_table, prim, (width - inset_width) / 2, (element->size.bits.height - inset_height) / 2);
-                }
-                {
-                    s32 x = element->attr.bits.x;
-
-                    prim = field_draw_menu_frame(prim, frame->ordering_table, x + (card_menu_element_width(element) - inset_width) / 2,
-                                                 element->attr.bits.y + (element->size.bits.height - inset_height) / 2, inset_width, inset_height,
-                                                 frame_arg->display_rect.y, element_index == CARD_MENU_ELEMENT_MODAL);
-                }
+                inset_width = (card_menu_element_width(element) * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                inset_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                prim = element->draw(frame->ordering_table, prim, (card_menu_element_width(element) - inset_width) / 2,
+                                     (element->size.bits.height - inset_height) / 2);
+                opening_x = element->attr.bits.x;
+                prim = field_draw_menu_frame(prim, frame->ordering_table, opening_x + (card_menu_element_width(element) - inset_width) / 2,
+                                             element->attr.bits.y + (element->size.bits.height - inset_height) / 2, inset_width, inset_height,
+                                             frame_arg->display_rect.y, element_index == CARD_MENU_ELEMENT_MODAL);
                 element->attr.bits.transition_step++;
                 if (element->attr.bits.transition_step == CARD_MENU_ELEMENT_TRANSITION_STEPS)
                 {
@@ -652,20 +659,14 @@ void card_menu_update_and_draw_elements(FieldRenderHalf* frame_arg)
 
             case CARD_MENU_ELEMENT_CLOSING:
                 g_pad_input = 0;
-                {
-                    s32 width = card_menu_element_width(element);
-
-                    inset_width = (width * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
-                    inset_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
-                    prim = element->draw(frame->ordering_table, prim, (width - inset_width) / 2, (element->size.bits.height - inset_height) / 2);
-                }
-                {
-                    s32 x = element->attr.bits.x;
-
-                    prim = field_draw_menu_frame(prim, frame->ordering_table, x + (card_menu_element_width(element) - inset_width) / 2,
-                                                 element->attr.bits.y + (element->size.bits.height - inset_height) / 2, inset_width, inset_height,
-                                                 frame_arg->display_rect.y, element_index == CARD_MENU_ELEMENT_MODAL);
-                }
+                inset_width = (card_menu_element_width(element) * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                inset_height = (element->size.bits.height * element->attr.bits.transition_step) / CARD_MENU_ELEMENT_TRANSITION_STEPS;
+                prim = element->draw(frame->ordering_table, prim, (card_menu_element_width(element) - inset_width) / 2,
+                                     (element->size.bits.height - inset_height) / 2);
+                closing_x = element->attr.bits.x;
+                prim = field_draw_menu_frame(prim, frame->ordering_table, closing_x + (card_menu_element_width(element) - inset_width) / 2,
+                                             element->attr.bits.y + (element->size.bits.height - inset_height) / 2, inset_width, inset_height,
+                                             frame_arg->display_rect.y, element_index == CARD_MENU_ELEMENT_MODAL);
                 element->attr.bits.transition_step--;
                 if (element->attr.bits.transition_step == 0)
                 {
@@ -720,10 +721,13 @@ void* card_menu_draw_transfer_window(u_long* ot, void* prim, s32 x_offset, s32 y
     s32 x;
 
     x = -x_offset + 0x90;
-    result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_loading, CARD_MENU_TEXT_LOADING), FIELD_TEXT_COLOR_NORMAL, x, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+    result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_loading, CARD_MENU_TEXT_LOADING), FIELD_TEXT_COLOR_NORMAL, x, -y_offset,
+                             FIELD_TEXT_ALIGN_CENTER);
     text_table = CARD_MENU_TEXT_TABLE(g_niki_text_loading, CARD_MENU_TEXT_LOADING);
-    result = field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), FIELD_TEXT_COLOR_NORMAL, x, CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
-    result = field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CARD_OR_CONTROLLER), FIELD_TEXT_COLOR_NORMAL, x, CARD_MENU_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
+    result = field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), FIELD_TEXT_COLOR_NORMAL, x,
+                             CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
+    result = field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CARD_OR_CONTROLLER), FIELD_TEXT_COLOR_NORMAL, x,
+                             CARD_MENU_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
     result = card_menu_draw_progress_bar(result, ot);
 
     if (g_card_menu_progress_active == 0)
@@ -819,10 +823,12 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
     switch (dispatch)
     {
     case CARD_MENU_ENTRY_STATE_NO_GAME_DATA:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL, -x_offset + 0x90, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
+                               -x_offset + 0x90, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_UNFORMATTED:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL, -x_offset + 0x90, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
+                               -x_offset + 0x90, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_CHECKING_CARD:
     {
@@ -830,25 +836,33 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         u16* text_table;
         x = -x_offset + 0x90;
         text_table = &g_card_menu_text_table;
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECKING_CARD), FIELD_TEXT_COLOR_NORMAL, x, -y_offset, FIELD_TEXT_ALIGN_CENTER);
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), FIELD_TEXT_COLOR_NORMAL, x, CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CARD_OR_CONTROLLER), FIELD_TEXT_COLOR_NORMAL, x, CARD_MENU_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim =
+            field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECKING_CARD), FIELD_TEXT_COLOR_NORMAL, x, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), FIELD_TEXT_COLOR_NORMAL, x,
+                               CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CARD_OR_CONTROLLER), FIELD_TEXT_COLOR_NORMAL, x,
+                               CARD_MENU_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
     }
     break;
     case CARD_MENU_ENTRY_STATE_CARD_FULL:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL, -x_offset + 0x90, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
+                               -x_offset + 0x90, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_NO_CARD:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_card, CARD_MENU_TEXT_NO_CARD), FIELD_TEXT_COLOR_NORMAL, -x_offset + 0x90, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_card, CARD_MENU_TEXT_NO_CARD), FIELD_TEXT_COLOR_NORMAL, -x_offset + 0x90,
+                               -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_ACCESS_FAILED:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_card_access_failed, CARD_MENU_TEXT_CARD_ACCESS_FAILED), FIELD_TEXT_COLOR_NORMAL, -x_offset + 0x90, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_card_access_failed, CARD_MENU_TEXT_CARD_ACCESS_FAILED), FIELD_TEXT_COLOR_NORMAL,
+                               -x_offset + 0x90, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_NO_SAVE_DATA:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_save_data, CARD_MENU_TEXT_NO_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL, -x_offset + 0x90, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_save_data, CARD_MENU_TEXT_NO_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
+                               -x_offset + 0x90, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_EXCHANGE_STATE_NO_LOAD_FILE:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_no_load_file, CARD_MENU_TEXT_NO_LOAD_FILE), FIELD_TEXT_COLOR_NORMAL, -x_offset + 0x90, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_no_load_file, CARD_MENU_TEXT_NO_LOAD_FILE), FIELD_TEXT_COLOR_NORMAL, -x_offset + 0x90,
+                               -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_EXCHANGE_STATE_LOAD_PROGRESS:
     {
@@ -857,10 +871,13 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         s32 dialog_state;
 
         x = -x_offset + 0x90;
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_loading, CARD_MENU_TEXT_LOADING), FIELD_TEXT_COLOR_NORMAL, x, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_loading, CARD_MENU_TEXT_LOADING), FIELD_TEXT_COLOR_NORMAL, x, -y_offset,
+                               FIELD_TEXT_ALIGN_CENTER);
         text_table = CARD_MENU_TEXT_TABLE(g_niki_text_loading, CARD_MENU_TEXT_LOADING);
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), FIELD_TEXT_COLOR_NORMAL, x, CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CARD_OR_CONTROLLER), FIELD_TEXT_COLOR_NORMAL, x, CARD_MENU_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), FIELD_TEXT_COLOR_NORMAL, x,
+                               CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CARD_OR_CONTROLLER), FIELD_TEXT_COLOR_NORMAL, x,
+                               CARD_MENU_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
 
         prim = card_menu_draw_progress_bar(prim, ot);
 
@@ -885,7 +902,8 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         CardMenuElement* packet;
 
         x = -x_offset;
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_trade_data_not_saved, CARD_MENU_TEXT_TRADE_DATA_NOT_SAVED), FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_MESSAGE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_trade_data_not_saved, CARD_MENU_TEXT_TRADE_DATA_NOT_SAVED), FIELD_TEXT_COLOR_NORMAL,
+                               x + CARD_MENU_MESSAGE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         y = CARD_MENU_LINE_HEIGHT - y_offset;
         prim = card_menu_draw_choice_prompt(prim, ot, x + CARD_MENU_MESSAGE_WIDTH / 2, y);
 
@@ -929,9 +947,11 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         s32 checksum;
 
         x = -x_offset;
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_found_load_file, CARD_MENU_TEXT_FOUND_LOAD_FILE), FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_MESSAGE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_found_load_file, CARD_MENU_TEXT_FOUND_LOAD_FILE), FIELD_TEXT_COLOR_NORMAL,
+                               x + CARD_MENU_MESSAGE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         text_table = CARD_MENU_TEXT_TABLE(g_niki_text_found_load_file, CARD_MENU_TEXT_FOUND_LOAD_FILE);
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_OVERWRITE_TRADE_DATA), FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_MESSAGE_WIDTH / 2, CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_OVERWRITE_TRADE_DATA), FIELD_TEXT_COLOR_NORMAL,
+                               x + CARD_MENU_MESSAGE_WIDTH / 2, CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
 
         y = CARD_MENU_LINE_HEIGHT * 2 - y_offset;
         prim = card_menu_draw_choice_prompt(prim, ot, x + CARD_MENU_MESSAGE_WIDTH / 2, y);
@@ -973,10 +993,13 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         u16* text_table;
 
         x = -x_offset + 0x90;
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_saving, CARD_MENU_TEXT_SAVING), FIELD_TEXT_COLOR_NORMAL, x, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_saving, CARD_MENU_TEXT_SAVING), FIELD_TEXT_COLOR_NORMAL, x, -y_offset,
+                               FIELD_TEXT_ALIGN_CENTER);
         text_table = CARD_MENU_TEXT_TABLE(g_niki_text_saving, CARD_MENU_TEXT_SAVING);
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), FIELD_TEXT_COLOR_NORMAL, x, CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CARD_OR_CONTROLLER), FIELD_TEXT_COLOR_NORMAL, x, CARD_MENU_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), FIELD_TEXT_COLOR_NORMAL, x,
+                               CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CARD_OR_CONTROLLER), FIELD_TEXT_COLOR_NORMAL, x,
+                               CARD_MENU_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
 
         prim = card_menu_draw_progress_bar(prim, ot);
 
@@ -996,9 +1019,12 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 
         x = -x_offset + 0x90;
         text_table = &g_card_menu_text_table;
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECKING_CARD), FIELD_TEXT_COLOR_NORMAL, x, -y_offset, FIELD_TEXT_ALIGN_CENTER);
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), FIELD_TEXT_COLOR_NORMAL, x, CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CARD_OR_CONTROLLER), FIELD_TEXT_COLOR_NORMAL, x, CARD_MENU_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim =
+            field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECKING_CARD), FIELD_TEXT_COLOR_NORMAL, x, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), FIELD_TEXT_COLOR_NORMAL, x,
+                               CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CARD_OR_CONTROLLER), FIELD_TEXT_COLOR_NORMAL, x,
+                               CARD_MENU_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
 
         if (g_card_menu_entry_scan_active == 0)
         {

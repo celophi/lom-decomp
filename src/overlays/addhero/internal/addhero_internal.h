@@ -40,7 +40,7 @@ extern SaveFile g_addhero_save_file;
 extern SaveFile g_addhero_entry_file;
 
 void addhero_open_exit_dialog(s32 message_id);
-s32 addhero_scan_next_entry(s32 page);
+s32 addhero_scan_next_entry(s32 slot);
 s32 addhero_advance_load_sequence(void);
 
 

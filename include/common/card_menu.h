@@ -591,7 +591,7 @@ void* card_menu_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_o
 void* card_menu_draw_save_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* card_menu_draw_progress_bar(POLY_G4* quad, u_long* ot);
 void card_menu_init_card_events(void);
-s32 card_menu_begin_entry_scan(s32 page);
+s32 card_menu_begin_entry_scan(s32 slot);
 void card_menu_commit_selected_entry(void);
 void* card_menu_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* card_menu_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset);

@@ -72,15 +72,13 @@ void expand_text_glyph_codes(u8* destination, u8* source)
             /* Single-byte codes index the chart starting at the space glyph. */
             character_code = *source;
             glyph_index = character_code - GLYPH_TEXT_FIRST_PRINTABLE;
-            *destination = g_glyph_single_byte_chart[
-                (glyph_index / GLYPH_CHART_COLUMNS) * GLYPH_CHART_ROW_BYTES +
-                (glyph_index & GLYPH_CHART_COLUMN_MASK) * GLYPH_CHART_GLYPH_BYTES];
+            *destination = g_glyph_single_byte_chart[(glyph_index / GLYPH_CHART_COLUMNS) * GLYPH_CHART_ROW_BYTES +
+                                                     (glyph_index & GLYPH_CHART_COLUMN_MASK) * GLYPH_CHART_GLYPH_BYTES];
             destination++;
             character_code = *source;
             glyph_index = character_code - GLYPH_TEXT_FIRST_PRINTABLE;
-            *destination = g_glyph_single_byte_chart[
-                (glyph_index / GLYPH_CHART_COLUMNS) * GLYPH_CHART_ROW_BYTES +
-                (glyph_index & GLYPH_CHART_COLUMN_MASK) * GLYPH_CHART_GLYPH_BYTES + 1];
+            *destination = g_glyph_single_byte_chart[(glyph_index / GLYPH_CHART_COLUMNS) * GLYPH_CHART_ROW_BYTES +
+                                                     (glyph_index & GLYPH_CHART_COLUMN_MASK) * GLYPH_CHART_GLYPH_BYTES + 1];
             destination++;
             source++;
         }
