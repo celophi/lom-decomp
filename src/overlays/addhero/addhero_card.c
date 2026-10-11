@@ -156,13 +156,7 @@ s32 addhero_advance_load_sequence(void)
 
         case CARD_MENU_EXCHANGE_STEP_ERASE_ENTRY:
             strcat(card_path.text, g_card_entries[g_card_slot][g_card_menu_selected_row].name);
-            for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
-            {
-                if (erase(card_path.text) != 0)
-                {
-                    break;
-                }
-            }
+            CARD_ERASE_WITH_RETRIES(attempts, card_path.text);
             g_card_step++;
             break;
 
@@ -383,27 +377,15 @@ s32 addhero_advance_load_sequence(void)
             if (g_addhero_has_free_entry_space == 0)
             {
                 _card_wait(g_card_slot);
-                for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
-                {
-                    if (erase(g_card_selected_save_path) != 0)
-                    {
-                        break;
-                    }
-                }
+                CARD_ERASE_WITH_RETRIES(attempts, g_card_selected_save_path);
             }
             strcat(card_path.text, g_lom_save_dummy_filename);
             _card_wait(g_card_slot);
             g_addhero_file_handle = open(card_path.text, FCREAT | CARD_FILE_BLOCKS(SAVE_FILE_BYTES / CARD_BLOCK_BYTES));
             if (g_addhero_file_handle == -1)
             {
-                close(-1);
-                for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
-                {
-                    if (erase(card_path.text) != 0)
-                    {
-                        break;
-                    }
-                }
+                close(g_addhero_file_handle);
+                CARD_ERASE_WITH_RETRIES(attempts, card_path.text);
                 g_addhero_retry_count--;
                 if (g_addhero_retry_count == 0)
                 {
@@ -423,13 +405,7 @@ s32 addhero_advance_load_sequence(void)
             if (write(g_addhero_file_handle, &g_addhero_save_file, SAVE_FILE_BYTES) == -1)
             {
                 close(g_addhero_file_handle);
-                for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
-                {
-                    if (erase(g_addhero_target_file_path) != 0)
-                    {
-                        break;
-                    }
-                }
+                CARD_ERASE_WITH_RETRIES(attempts, g_addhero_target_file_path);
                 g_addhero_retry_count--;
                 if (g_addhero_retry_count == 0)
                 {
@@ -448,13 +424,7 @@ s32 addhero_advance_load_sequence(void)
                 if (g_addhero_has_free_entry_space != 0)
                 {
                     _card_wait(g_card_slot);
-                    for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
-                    {
-                        if (erase(g_card_selected_save_path) != 0)
-                        {
-                            break;
-                        }
-                    }
+                    CARD_ERASE_WITH_RETRIES(attempts, g_card_selected_save_path);
                 }
                 _card_wait(g_card_slot);
                 for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
@@ -500,17 +470,17 @@ s32 addhero_advance_load_sequence(void)
 
 /**
  * @brief Read the next directory entry, or finish the scan and select a save.
- * @param page Memory-card slot being scanned.
+ * @param slot Memory-card slot being scanned.
  * @return 1 if another entry was read, 0 when the scan ends.
  */
-s32 addhero_scan_next_entry(s32 page)
+s32 addhero_scan_next_entry(s32 slot)
 {
     s32 selected_entry;
 
-    if (nextfile(&g_card_entries[page][g_card_entry_state]) != 0)
+    if (nextfile(&g_card_entries[slot][g_card_entry_state]) != 0)
     {
-        field_flag_known_save(g_card_entries[page][g_card_entry_state].name);
-        g_card_entry_state += 1;
+        field_flag_known_save(g_card_entries[slot][g_card_entry_state].name);
+        g_card_entry_state++;
         return 1;
     }
 

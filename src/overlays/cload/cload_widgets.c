@@ -6,12 +6,11 @@
 #include "common/gpu_packet.h"
 #include "overlays/field/field_input.h"
 
-
 /** @brief CD resource index of the save-icon set. */
 #define CLOAD_ICON_SET_RESOURCE 0x5E4
 
 /** @brief Fixed scratch buffer the icon set is read into. */
-#define CLOAD_ICON_SET_BUFFER ((CloadIconSetHeader *)LOAD_BUFFER_ADDRESS)
+#define CLOAD_ICON_SET_BUFFER ((CloadIconSetHeader*)LOAD_BUFFER_ADDRESS)
 
 /** @brief Header of the save-icon set resource; all offsets are bytes from its start. */
 typedef struct
@@ -22,7 +21,7 @@ typedef struct
 } CloadIconSetHeader;
 
 /** @brief Icon @p icon in the loaded icon table, which holds per-icon byte offsets after a leading word. */
-#define CLOAD_ICON_IMAGE(icon) ((FieldPortrait *)(g_cload_icon_resource + ((s32 *)g_cload_icon_resource)[(icon) + 1]))
+#define CLOAD_ICON_IMAGE(icon) ((FieldPortrait*)(g_cload_icon_resource + ((s32*)g_cload_icon_resource)[(icon) + 1]))
 
 /**
  * @brief Emit the GPU packets for a CLOAD window frame: a clipped draw
@@ -37,15 +36,15 @@ typedef struct
  * @param draw_fill Nonzero to emit the outline and fill packets.
  * @return Advanced primitive-buffer cursor.
  */
-CloadGpuPacket *cload_emit_window_frame(CloadGpuPacket *prim, u_long *ot, s32 x, s32 y, s32 w, s32 h, s32 flag, s32 draw_fill)
+CloadGpuPacket* cload_emit_window_frame(CloadGpuPacket* prim, u_long* ot, s32 x, s32 y, s32 w, s32 h, s32 flag, s32 draw_fill)
 {
     DRAWENV draw_env;
-    DR_ENV *env_packet;
-    TILE *tile;
-    DR_TPAGE *draw_mode;
-    void *next_prim;
+    DR_ENV* env_packet;
+    TILE* tile;
+    DR_TPAGE* draw_mode;
+    void* next_prim;
 
-    env_packet = (DR_ENV *)prim;
+    env_packet = (DR_ENV*)prim;
     if (flag != 0)
     {
         SetDefDrawEnv(&draw_env, x + 2, y + SCREEN_HEIGHT + 2, w - 4, h - 3);
@@ -72,7 +71,7 @@ CloadGpuPacket *cload_emit_window_frame(CloadGpuPacket *prim, u_long *ot, s32 x,
         setWH(tile, w, h);
         addPrim(ot, tile);
 
-        draw_mode = (DR_TPAGE *)(tile + 1);
+        draw_mode = (DR_TPAGE*)(tile + 1);
         setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 320, 0));
         addPrim(ot, draw_mode);
         next_prim = draw_mode + 1;
@@ -91,7 +90,7 @@ CloadGpuPacket *cload_emit_window_frame(CloadGpuPacket *prim, u_long *ot, s32 x,
  * @param color Packed 0x00BBGGRR line color.
  * @return Primitive-buffer cursor after the fourth line.
  */
-CloadGpuPacket *cload_emit_rect_outline(LINE_F2 *line, u_long *ot, s32 x, s32 y, s32 w, s32 h, s32 color)
+CloadGpuPacket* cload_emit_rect_outline(LINE_F2* line, u_long* ot, s32 x, s32 y, s32 w, s32 h, s32 color)
 {
     SET_BGR0_PACKED(line, color);
     setLineF2(line);
@@ -123,7 +122,7 @@ CloadGpuPacket *cload_emit_rect_outline(LINE_F2 *line, u_long *ot, s32 x, s32 y,
     line->x1 = x;
     line->y1 = y + h;
     addPrim(ot, line);
-    return (CloadGpuPacket *)(line + 1);
+    return (CloadGpuPacket*)(line + 1);
 }
 
 /**
@@ -135,9 +134,9 @@ CloadGpuPacket *cload_emit_rect_outline(LINE_F2 *line, u_long *ot, s32 x, s32 y,
  * @param flag Nonzero for the upper arrow (texture row 0), zero for the lower arrow (row 16).
  * @return Primitive-buffer cursor after the texture-page packet.
  */
-CloadGpuPacket *cload_emit_scroll_arrow(SPRT *sprite, u_long *ot, s32 x, s32 y, s32 flag)
+CloadGpuPacket* cload_emit_scroll_arrow(SPRT* sprite, u_long* ot, s32 x, s32 y, s32 flag)
 {
-    DR_TPAGE *draw_mode;
+    DR_TPAGE* draw_mode;
 
     SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
     setSprt(sprite);
@@ -156,10 +155,10 @@ CloadGpuPacket *cload_emit_scroll_arrow(SPRT *sprite, u_long *ot, s32 x, s32 y, 
     addPrim(ot, sprite);
 
     sprite++;
-    draw_mode = (DR_TPAGE *)sprite;
+    draw_mode = (DR_TPAGE*)sprite;
     setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_8BIT, GPU_BLEND_HALF, 640, 0));
     addPrim(ot, draw_mode);
-    return (CloadGpuPacket *)(draw_mode + 1);
+    return (CloadGpuPacket*)(draw_mode + 1);
 }
 
 /**
@@ -172,16 +171,17 @@ CloadGpuPacket *cload_emit_scroll_arrow(SPRT *sprite, u_long *ot, s32 x, s32 y, 
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
  */
-void *cload_draw_load_prompt(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
+void* cload_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     s32 unused[2];
-    void *result;
+    void* result;
     s32 x;
     s32 status;
-    CardMenuElement *prompt;
+    CardMenuElement* prompt;
 
     x = -x_offset + 0x90;
-    result = cload_draw_choice_prompt(field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_load_prompt, CARD_MENU_TEXT_LOAD_PROMPT), 4, x, -y_offset, 2), ot, x, 0xE - y_offset);
+    result = cload_draw_choice_prompt(
+        field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_load_prompt, CARD_MENU_TEXT_LOAD_PROMPT), 4, x, -y_offset, 2), ot, x, 0xE - y_offset);
 
     status = poll_and_retry_card_info();
     if (status == 1 || status == 2)
@@ -240,12 +240,12 @@ void *cload_draw_load_prompt(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
  */
-void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
+void* cload_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     s32 unused[2];
     s32 x;
-    void *result;
-    u16 *text_table;
+    void* result;
+    u16* text_table;
 
     x = -x_offset + 0x90;
     result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_loading, CARD_MENU_TEXT_LOADING), 4, x, -y_offset, 2);
@@ -281,7 +281,7 @@ void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offse
  *         g_card_menu_progress_bar_active is 0.
  * @note The bar is 288 pixels wide after 256 frames since g_card_menu_progress_start_tick.
  */
-CloadGpuPacket *cload_draw_progress_bar(POLY_G4 *quad, u_long *ot)
+CloadGpuPacket* cload_draw_progress_bar(POLY_G4* quad, u_long* ot)
 {
     s32 elapsed;
     s32 width;
@@ -309,7 +309,7 @@ CloadGpuPacket *cload_draw_progress_bar(POLY_G4 *quad, u_long *ot)
         addPrim(ot, quad);
         quad++;
     }
-    return (CloadGpuPacket *)quad;
+    return (CloadGpuPacket*)quad;
 }
 
 /**
@@ -319,7 +319,7 @@ CloadGpuPacket *cload_draw_progress_bar(POLY_G4 *quad, u_long *ot)
  */
 void cload_open_status_dialog(s32 dialog_state)
 {
-    CardMenuElement *dialog;
+    CardMenuElement* dialog;
     s32 code;
 
     field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
@@ -360,10 +360,10 @@ void cload_open_status_dialog(s32 dialog_state)
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
  */
-void *cload_draw_status_dialog(u_long *ot, void *prim, s32 x_offset, s32 y_offset)
+void* cload_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 {
     s32 unused[2];
-    u16 *text_table;
+    u16* text_table;
 
     switch (g_card_menu_dialog_state)
     {
@@ -378,7 +378,8 @@ void *cload_draw_status_dialog(u_long *ot, void *prim, s32 x_offset, s32 y_offse
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECK_CARD_INSERTED), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
         break;
     case 2:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_card_insert_error, CARD_MENU_TEXT_CARD_NOT_INSERTED), 4, -x_offset + 0x80, -y_offset, 2);
+        prim =
+            field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_card_insert_error, CARD_MENU_TEXT_CARD_NOT_INSERTED), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 3:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(D_80145EDE, CARD_MENU_TEXT_NOT_POCKETSTATION), 4, -x_offset + 0x80, -y_offset, 2);
@@ -413,7 +414,7 @@ void *cload_draw_status_dialog(u_long *ot, void *prim, s32 x_offset, s32 y_offse
  * @param row Entry row; row 1 uses the generated CLUT for icons 0 and 1.
  * @return Primitive-buffer cursor after the quad, or @p quad unchanged for CLOAD_NO_ICON.
  */
-void *cload_draw_icon_highlight(POLY_FT4 *quad, u_long *ot, s32 x, s32 y, s32 width, s32 icon, s32 index, s32 row)
+void* cload_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 width, s32 icon, s32 index, s32 row)
 {
     RECT rect;
     s32 column;
@@ -428,23 +429,23 @@ void *cload_draw_icon_highlight(POLY_FT4 *quad, u_long *ot, s32 x, s32 y, s32 wi
     if ((row == 1) && (icon < 2))
     {
         field_copy_portrait_palette(g_card_menu_icon_context, icon);
-        LoadImage(&rect, (u_long *)g_card_menu_icon_context);
+        LoadImage(&rect, (u_long*)g_card_menu_icon_context);
         DrawSync(0);
     }
     else if (icon >= SAVE_ICON_GOLEM_BASE)
     {
         field_copy_golem_portrait_palette(g_card_menu_icon_context, g_card_menu_icon_palette);
-        LoadImage(&rect, (u_long *)g_card_menu_icon_context);
+        LoadImage(&rect, (u_long*)g_card_menu_icon_context);
         DrawSync(0);
     }
     else
     {
-        LoadImage(&rect, (u_long *)CLOAD_ICON_IMAGE(icon)->clut);
+        LoadImage(&rect, (u_long*)CLOAD_ICON_IMAGE(icon)->clut);
     }
 
     column = index * 3;
     setRECT(&rect, column * 4 + CARD_MENU_ICON_VRAM_X, CARD_MENU_ICON_VRAM_Y, FIELD_PORTRAIT_SIZE / 4, FIELD_PORTRAIT_SIZE);
-    LoadImage(&rect, (u_long *)CLOAD_ICON_IMAGE(icon)->pixels);
+    LoadImage(&rect, (u_long*)CLOAD_ICON_IMAGE(icon)->pixels);
 
     SET_BGR0_PACKED(quad, GPU_TINT_NEUTRAL);
     setPolyFT4(quad);
@@ -484,7 +485,7 @@ void *cload_draw_icon_highlight(POLY_FT4 *quad, u_long *ot, s32 x, s32 y, s32 wi
  */
 void cload_load_icon_resources(void)
 {
-    CloadIconSetHeader *icon_set;
+    CloadIconSetHeader* icon_set;
     RECT rect;
 
     cdrom_queue_read(CLOAD_ICON_SET_RESOURCE, CLOAD_ICON_SET_BUFFER);
@@ -492,16 +493,16 @@ void cload_load_icon_resources(void)
 
     icon_set = CLOAD_ICON_SET_BUFFER;
 
-    g_cload_icon_resource = (u8 *)icon_set + icon_set->icon_table_offset;
+    g_cload_icon_resource = (u8*)icon_set + icon_set->icon_table_offset;
 
     setRECT(&rect, 0x200, 0, 0, 0x1F4);
-    field_upload_image_resource(&rect, (u8 *)icon_set + icon_set->image_offsets[0], 1);
+    field_upload_image_resource(&rect, (u8*)icon_set + icon_set->image_offsets[0], 1);
 
     setRECT(&rect, 0x240, 0, 0, 0x1F5);
-    field_upload_image_resource(&rect, (u8 *)icon_set + icon_set->image_offsets[1], 1);
+    field_upload_image_resource(&rect, (u8*)icon_set + icon_set->image_offsets[1], 1);
 
     setRECT(&rect, 0x280, 0, 0, 0x1F6);
-    field_upload_image_resource(&rect, (u8 *)icon_set + icon_set->image_offsets[2], 1);
+    field_upload_image_resource(&rect, (u8*)icon_set + icon_set->image_offsets[2], 1);
 }
 
 /**
@@ -511,10 +512,10 @@ void cload_load_icon_resources(void)
  * @param ot Ordering-table entry the packets are linked into.
  * @return Primitive-buffer cursor after the last texture-page packet.
  */
-CloadGpuPacket *cload_emit_icon_highlight_strip(SPRT *sprite, u_long *ot)
+CloadGpuPacket* cload_emit_icon_highlight_strip(SPRT* sprite, u_long* ot)
 {
     s32 i;
-    DR_TPAGE *draw_mode;
+    DR_TPAGE* draw_mode;
 
     for (i = 0; i < 3; i++)
     {
@@ -535,12 +536,12 @@ CloadGpuPacket *cload_emit_icon_highlight_strip(SPRT *sprite, u_long *ot)
         addPrim(ot, sprite);
         sprite++;
 
-        draw_mode = (DR_TPAGE *)sprite;
+        draw_mode = (DR_TPAGE*)sprite;
         setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_8BIT, GPU_BLEND_HALF, 512 + i * 64, 0));
         addPrim(ot, draw_mode);
-        sprite = (SPRT *)(draw_mode + 1);
+        sprite = (SPRT*)(draw_mode + 1);
     }
-    return (CloadGpuPacket *)sprite;
+    return (CloadGpuPacket*)sprite;
 }
 
 /**
@@ -565,10 +566,10 @@ s32 cload_enable_choice_toggle(void)
  * @param y Prompt baseline.
  * @return Advanced primitive-buffer cursor.
  */
-void *cload_draw_choice_prompt(void *prim, u_long *ot, s32 x, s32 y)
+void* cload_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y)
 {
-    u8 *text_table;
-    u8 *text;
+    u8* text_table;
+    u8* text;
     s32 color;
 
     color = FIELD_TEXT_COLOR_NORMAL;

@@ -6,7 +6,7 @@
 #include "main/controller.h"
 #include "overlays/field/field_input.h"
 
-void *bcopy(const unsigned char *src, unsigned char *dst, int count);
+void* bcopy(const unsigned char* src, unsigned char* dst, int count);
 
 /**
  * @brief Report "no memory card" and ask the caller to refresh the entry list.
@@ -15,9 +15,9 @@ void *bcopy(const unsigned char *src, unsigned char *dst, int count);
 #define CLOAD_REQUEST_REFRESH(result)                                                                                                                          \
     do                                                                                                                                                         \
     {                                                                                                                                                          \
-        (result) = CARD_MENU_SEQUENCE_NO_CARD;                                                                                                                         \
-        g_card_menu_selection_status = 0;                                                                                                                          \
-        g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;                                                                                                                             \
+        (result) = CARD_MENU_SEQUENCE_NO_CARD;                                                                                                                 \
+        g_card_menu_selection_status = 0;                                                                                                                      \
+        g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;                                                                                                    \
     } while (0)
 
 /**
@@ -212,8 +212,7 @@ s32 cload_advance_load_sequence(void)
                 }
                 else
                 {
-                    CLOAD_END_STEP_TABLE(phase_result, CARD_MENU_SEQUENCE_UNFORMATTED, CARD_MENU_ENTRY_STATE_NO_SAVE_DATA,
-                                         g_cload_steps_idle);
+                    CLOAD_END_STEP_TABLE(phase_result, CARD_MENU_SEQUENCE_UNFORMATTED, CARD_MENU_ENTRY_STATE_NO_SAVE_DATA, g_cload_steps_idle);
                 }
                 break;
             }

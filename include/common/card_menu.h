@@ -26,6 +26,9 @@
 /** @brief Pad buttons that switch the browser to the other card slot. */
 #define CARD_MENU_CARD_SWITCH_BUTTON_MASK (PAD_BTN_SELECT | PAD_BTN_RIGHT | PAD_BTN_LEFT)
 
+/** @brief Rows the selection moves for R1/L1; the move loop can page, but the game moves one row like a d-pad press. */
+#define CARD_MENU_PAGE_MOVE_ROWS 1
+
 /**
  * @brief g_card_entry_state values shared by every card menu.
  *
@@ -117,6 +120,21 @@ typedef enum
 /** @brief Attempts made at a synchronous card file operation before giving up. */
 #define CARD_MENU_FILE_OP_ATTEMPTS 20
 
+/**
+ * @brief Erase card file @p path, retrying up to CARD_MENU_FILE_OP_ATTEMPTS times.
+ * @param attempts Caller's loop counter.
+ * @param path Full card path of the file to erase.
+ * @note Expands to a for statement, so use it only as a braced statement of its own.
+ */
+#define CARD_ERASE_WITH_RETRIES(attempts, path)                                 \
+    for ((attempts) = 0; (attempts) < CARD_MENU_FILE_OP_ATTEMPTS; (attempts)++) \
+    {                                                                           \
+        if (erase(path) != 0)                                                   \
+        {                                                                       \
+            break;                                                              \
+        }                                                                       \
+    }
+
 /** @brief Retries of a failed asynchronous save read or write. */
 #define CARD_MENU_SAVE_RETRIES 5
 
@@ -193,7 +211,7 @@ typedef void* (*CardMenuElementDrawFunc)(u_long* ot, void* prim, s32 x_offset, s
  * The nine-bit window width straddles the two words: its low eight bits are
  * the top byte of attr and its high bit is size.bits.width_high. No bitfield
  * can span that boundary, so the low byte is read and written through
- * attr.word (see CARD_MENU_ELEMENT_WIDTH and CARD_MENU_SET_ELEMENT_WIDTH_LOW).
+ * attr.word (see card_menu_element_width and CARD_MENU_SET_ELEMENT_WIDTH_LOW).
  */
 typedef struct CardMenuElement
 {
@@ -230,11 +248,16 @@ typedef struct CardMenuElement
 #define CARD_MENU_ELEMENT_WIDTH_LOW(element) ((element)->attr.word >> CARD_MENU_ELEMENT_WIDTH_SHIFT)
 
 /**
- * @brief Full nine-bit width of a window.
+ * @brief Full nine-bit width of a window, reading the low byte first.
  * @param element Window whose width is read.
- * @param width_low The width's low byte, as read by CARD_MENU_ELEMENT_WIDTH_LOW.
+ * @return Width in pixels.
  */
-#define CARD_MENU_ELEMENT_WIDTH(element, width_low) ((s32)(((element)->size.bits.width_high << 8) | (width_low)))
+static inline s32 card_menu_element_width(CardMenuElement* element)
+{
+    u32 width_low = CARD_MENU_ELEMENT_WIDTH_LOW(element);
+
+    return (element->size.bits.width_high << 8) | width_low;
+}
 
 /** @brief Store the low eight bits of a window's width. */
 #define CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, width) \
@@ -290,6 +313,21 @@ typedef struct CardMenuElement
 #define CARD_MENU_DETAILS_WIDTH 260
 #define CARD_MENU_DETAILS_HEIGHT 52
 #define CARD_MENU_DETAILS_LINE_HEIGHT 16
+
+/**
+ * @brief Width of the details window's party icon strip.
+ * @note One icon at a time grows to the full FIELD_PORTRAIT_SIZE and shrinks back while the others stay squeezed.
+ */
+#define CARD_MENU_ICON_STRIP_WIDTH 80
+
+/** @brief Squeezed width of each icon when @p count icons share the strip. */
+#define CARD_MENU_ICON_SQUEEZED_WIDTH(count) ((CARD_MENU_ICON_STRIP_WIDTH - FIELD_PORTRAIT_SIZE) / ((count) - 1))
+
+/** @brief Pixels a squeezed icon grows by, which is also the number of phase steps it takes to grow. */
+#define CARD_MENU_ICON_GROW_WIDTH(count) (FIELD_PORTRAIT_SIZE - CARD_MENU_ICON_SQUEEZED_WIDTH(count))
+
+/** @brief Phase steps in one animation cycle, in which each of the @p count icons grows once. */
+#define CARD_MENU_ICON_PHASE_CYCLE(count) ((count) * CARD_MENU_ICON_GROW_WIDTH(count))
 
 /** @brief Details window text: second column and the play-time digits (right edges). */
 #if defined(VERSION_JP)
@@ -583,7 +621,7 @@ void* card_menu_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_o
 void* card_menu_draw_save_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* card_menu_draw_progress_bar(POLY_G4* quad, u_long* ot);
 void card_menu_init_card_events(void);
-s32 card_menu_begin_entry_scan(s32 page);
+s32 card_menu_begin_entry_scan(s32 slot);
 void card_menu_commit_selected_entry(void);
 void* card_menu_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* card_menu_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset);

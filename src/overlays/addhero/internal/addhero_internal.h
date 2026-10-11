@@ -40,7 +40,7 @@ extern SaveFile g_addhero_save_file;
 extern SaveFile g_addhero_entry_file;
 
 void addhero_open_exit_dialog(s32 message_id);
-s32 addhero_scan_next_entry(s32 page);
+s32 addhero_scan_next_entry(s32 slot);
 s32 addhero_advance_load_sequence(void);
 
 
@@ -61,7 +61,8 @@ extern s32 g_pad_input;
 /** @brief The saved game's item records (g_saved_game_ctx->items). */
 extern FieldItemRecord* g_addhero_items;
 extern s32 g_addhero_result;
-extern s32 g_addhero_work_ram_base;
+/** @brief Work buffer FIELD passed to addhero_init; stored but never read. */
+extern void* g_addhero_work_buffer;
 extern s32 g_addhero_load_flow_active;
 extern u16 g_addhero_text_saving;
 extern u16 g_addhero_text_new_save_title;
@@ -73,7 +74,7 @@ extern u16 g_addhero_text_no_load_file;
 extern u16 g_addhero_text_found_load_file;
 
 /* Overlay function declarations. */
-void addhero_init(s32 work_base, s32 mode);
+void addhero_init(void* work, s32 mode);
 s32 addhero_state_step(FieldRenderHalf* draw_state);
 void addhero_build_ui_elements(void);
 s32 card_menu_update_card_sequence(void);

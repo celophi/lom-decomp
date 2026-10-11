@@ -48,7 +48,8 @@ typedef union
     u8 bytes[SAVE_FILE_BYTES];
 } NikiSaveBuffer;
 
-extern s32 D_80164AE4;
+/** @brief Work buffer FIELD passed to niki_init; stored but never read. */
+extern void* g_niki_work_buffer;
 /** @brief The saved game's item records (g_saved_game_ctx->items). */
 extern FieldItemRecord* g_niki_items;
 extern s32 g_pad_input;
