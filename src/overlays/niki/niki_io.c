@@ -397,31 +397,15 @@ s32 niki_advance_load_sequence(void)
         if (g_niki_preserve_old_save == 0)
         {
             /* A full card needs the old save's blocks before writing its replacement. */
-            wait_attempts = 0;
-            do
-            {
-                if (erase(g_card_selected_save_path) != 0)
-                {
-                    break;
-                }
-                wait_attempts = wait_attempts + 1;
-            } while (wait_attempts < CARD_MENU_FILE_OP_ATTEMPTS);
+            CARD_ERASE_WITH_RETRIES(wait_attempts, g_card_selected_save_path);
         }
         strcat(path.text, g_lom_save_dummy_filename);
         _card_wait(g_card_slot);
         g_niki_file_handle = open(path.text, FCREAT | CARD_FILE_BLOCKS(2));
         if (g_niki_file_handle == -1)
         {
-            close(-1);
-            wait_attempts = 0;
-            do
-            {
-                if (erase(path.text) != 0)
-                {
-                    break;
-                }
-                wait_attempts = wait_attempts + 1;
-            } while (wait_attempts < CARD_MENU_FILE_OP_ATTEMPTS);
+            close(g_niki_file_handle);
+            CARD_ERASE_WITH_RETRIES(wait_attempts, path.text);
             g_niki_retry_count = g_niki_retry_count - 1;
             if (g_niki_retry_count == 0)
             {
@@ -442,15 +426,7 @@ s32 niki_advance_load_sequence(void)
         if (write(g_niki_file_handle, g_niki_save_blob.bytes, SAVE_FILE_BYTES) == -1)
         {
             close(g_niki_file_handle);
-            wait_attempts = 0;
-            do
-            {
-                if (erase(g_niki_temporary_save_path) != 0)
-                {
-                    break;
-                }
-                wait_attempts = wait_attempts + 1;
-            } while (wait_attempts < CARD_MENU_FILE_OP_ATTEMPTS);
+            CARD_ERASE_WITH_RETRIES(wait_attempts, g_niki_temporary_save_path);
             g_niki_retry_count = g_niki_retry_count - 1;
             if (g_niki_retry_count == 0)
             {
@@ -471,15 +447,7 @@ s32 niki_advance_load_sequence(void)
             {
                 /* The replacement has finished writing; the old save can now be removed. */
                 _card_wait(g_card_slot);
-                wait_attempts = 0;
-                do
-                {
-                    if (erase(g_card_selected_save_path) != 0)
-                    {
-                        break;
-                    }
-                    wait_attempts = wait_attempts + 1;
-                } while (wait_attempts < CARD_MENU_FILE_OP_ATTEMPTS);
+                CARD_ERASE_WITH_RETRIES(wait_attempts, g_card_selected_save_path);
             }
             _card_wait(g_card_slot);
             wait_attempts = 0;
@@ -507,15 +475,7 @@ s32 niki_advance_load_sequence(void)
             }
             g_card_menu_progress_bar_active = 0;
             niki_open_secondary_status_dialog(0);
-            wait_attempts = 0;
-            do
-            {
-                if (erase(g_niki_temporary_save_path) != 0)
-                {
-                    break;
-                }
-                wait_attempts = wait_attempts + 1;
-            } while (wait_attempts < CARD_MENU_FILE_OP_ATTEMPTS);
+            CARD_ERASE_WITH_RETRIES(wait_attempts, g_niki_temporary_save_path);
             break;
         }
         break;

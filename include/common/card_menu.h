@@ -120,6 +120,21 @@ typedef enum
 /** @brief Attempts made at a synchronous card file operation before giving up. */
 #define CARD_MENU_FILE_OP_ATTEMPTS 20
 
+/**
+ * @brief Erase card file @p path, retrying up to CARD_MENU_FILE_OP_ATTEMPTS times.
+ * @param attempts Caller's loop counter.
+ * @param path Full card path of the file to erase.
+ * @note Expands to a for statement, so use it only as a braced statement of its own.
+ */
+#define CARD_ERASE_WITH_RETRIES(attempts, path)                                 \
+    for ((attempts) = 0; (attempts) < CARD_MENU_FILE_OP_ATTEMPTS; (attempts)++) \
+    {                                                                           \
+        if (erase(path) != 0)                                                   \
+        {                                                                       \
+            break;                                                              \
+        }                                                                       \
+    }
+
 /** @brief Retries of a failed asynchronous save read or write. */
 #define CARD_MENU_SAVE_RETRIES 5
 
