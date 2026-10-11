@@ -827,29 +827,25 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
         {
             s32 j;
 
+            terminate_multibyte_text(g_cload_selected_file.header.title);
+            if (g_cload_selected_file.header.title[1][0] != 0 && g_cload_selected_file.header.title[1][0] < SJIS_LEAD_MIN)
             {
-                SaveFileHeader* header;
-                terminate_multibyte_text(g_cload_selected_file.header.title);
-                header = &g_cload_selected_file.header;
-                if (header->title[1][0] != 0 && header->title[1][0] < 0x80)
-                {
-                    return result;
-                }
-
-                for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
-                {
-                    name[j] = *(header->title[0] + j);
-                }
-                name[j] = 0;
-                result = draw_cached_text(result, ot, name, -x_offset, -y_offset, 1, 0);
-
-                for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
-                {
-                    name[j] = g_cload_selected_file.header.title[1][j];
-                }
-                name[j] = 0;
-                result = draw_cached_text(result, ot, name, -x_offset, -y_offset + 0x10, 1, 0);
+                return result;
             }
+
+            for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
+            {
+                name[j] = g_cload_selected_file.header.title[0][j];
+            }
+            name[j] = 0;
+            result = draw_cached_text(result, ot, name, -x_offset, -y_offset, 1, FIELD_TEXT_ALIGN_LEFT);
+
+            for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
+            {
+                name[j] = g_cload_selected_file.header.title[1][j];
+            }
+            name[j] = 0;
+            result = draw_cached_text(result, ot, name, -x_offset, -y_offset + CARD_MENU_DETAILS_LINE_HEIGHT, 1, FIELD_TEXT_ALIGN_LEFT);
         }
     }
     return result;
