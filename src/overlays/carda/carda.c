@@ -1005,15 +1005,13 @@ static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_off
         else
         {
             s32 j;
-            SaveFileHeader* header;
 
             terminate_multibyte_text(g_carda_selected_file.header.title);
-            header = &g_carda_selected_file.header;
-            if (header->title[1][0] == 0 || header->title[1][0] >= SJIS_LEAD_MIN)
+            if (g_carda_selected_file.header.title[1][0] == 0 || g_carda_selected_file.header.title[1][0] >= SJIS_LEAD_MIN)
             {
                 for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
                 {
-                    name[j] = *(header->title[0] + j);
+                    name[j] = g_carda_selected_file.header.title[0][j];
                 }
                 name[j] = 0;
                 result = draw_cached_text(result, ot, name, -x_offset, -y_offset, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_LEFT);

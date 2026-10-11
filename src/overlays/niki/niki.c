@@ -538,26 +538,25 @@ void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32
             }
             else
             {
-                s32 slot_index;
-                SaveFileHeader* header;
+                s32 j;
 
                 terminate_multibyte_text(g_niki_entry_file.header.title);
-                header = &g_niki_entry_file.header;
-                if ((u32)(header->title[1][0] - 1) >= 0x7FU)
+                if (g_niki_entry_file.header.title[1][0] == 0 || g_niki_entry_file.header.title[1][0] >= SJIS_LEAD_MIN)
                 {
-                    for (slot_index = 0; slot_index < 0x20; slot_index++)
+                    for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
                     {
-                        name[slot_index] = *(header->title[0] + slot_index);
+                        name[j] = g_niki_entry_file.header.title[0][j];
                     }
-                    name[slot_index] = 0;
-                    result = draw_cached_text(result, ot, name, -x_offset, -y_offset, 4, 0);
+                    name[j] = 0;
+                    result = draw_cached_text(result, ot, name, -x_offset, -y_offset, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_LEFT);
 
-                    for (slot_index = 0; slot_index < 0x20; slot_index++)
+                    for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
                     {
-                        name[slot_index] = g_niki_entry_file.header.title[1][slot_index];
+                        name[j] = g_niki_entry_file.header.title[1][j];
                     }
-                    name[slot_index] = 0;
-                    result = draw_cached_text(result, ot, name, -x_offset, -y_offset + 0x10, 4, 0);
+                    name[j] = 0;
+                    result = draw_cached_text(result, ot, name, -x_offset, -y_offset + CARD_MENU_DETAILS_LINE_HEIGHT, FIELD_TEXT_COLOR_NORMAL,
+                                              FIELD_TEXT_ALIGN_LEFT);
                 }
             }
         }
