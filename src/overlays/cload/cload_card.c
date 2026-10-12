@@ -33,8 +33,8 @@ void* bcopy(const unsigned char* src, unsigned char* dst, int count);
 s32 cload_advance_load_sequence(void)
 {
     CardSequencePath card_path;
-    long status0;
-    long status1;
+    long mcx_command;
+    long mcx_result;
     s32 phase_result;
     s32 scan_attempts;
     s32 wait_attempts;
@@ -87,7 +87,7 @@ s32 cload_advance_load_sequence(void)
             do
             {
                 poll_result = poll_hardware_card_events();
-            } while (poll_result == -1);
+            } while (poll_result == CARD_EVENT_NONE);
             if (poll_result == CARD_EVENT_COMPLETE)
             {
                 g_card_step++;
@@ -211,7 +211,7 @@ s32 cload_advance_load_sequence(void)
             do
             {
                 poll_result = poll_hardware_card_events();
-            } while (poll_result == -1);
+            } while (poll_result == CARD_EVENT_NONE);
             g_card_step++;
             break;
 
@@ -220,14 +220,14 @@ s32 cload_advance_load_sequence(void)
             g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
             _card_wait(g_card_slot);
             g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
-            if (g_card_menu_file_handle == -1)
+            if (g_card_menu_file_handle == CARD_FILE_ERROR)
             {
                 break;
             }
             clear_software_card_events();
             _card_wait(g_card_slot);
             if (read(g_card_menu_file_handle, &g_cload_selected_file,
-                     g_card_menu_selected_entry_extended != 0 ? CARD_MENU_ENTRY_READ_BYTES : CARD_MENU_ENTRY_TITLE_READ_BYTES) != -1)
+                     g_card_menu_selected_entry_extended != 0 ? CARD_MENU_ENTRY_READ_BYTES : CARD_MENU_ENTRY_TITLE_READ_BYTES) != CARD_FILE_ERROR)
             {
                 g_card_step++;
             }
@@ -246,7 +246,7 @@ s32 cload_advance_load_sequence(void)
                 g_card_step++;
                 close(g_card_menu_file_handle);
             }
-            else if (poll_result != -1)
+            else if (poll_result != CARD_EVENT_NONE)
             {
                 g_card_menu_io_busy = 0;
                 close(g_card_menu_file_handle);
@@ -268,7 +268,7 @@ s32 cload_advance_load_sequence(void)
             g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
             clear_software_card_events();
             _card_wait(g_card_slot);
-            if (read(g_card_menu_file_handle, &g_cload_save_file, sizeof(g_cload_save_file)) != -1)
+            if (read(g_card_menu_file_handle, &g_cload_save_file, sizeof(g_cload_save_file)) != CARD_FILE_ERROR)
             {
                 g_card_step++;
                 break;
@@ -277,7 +277,7 @@ s32 cload_advance_load_sequence(void)
             g_card_menu_retry_count--;
             if (g_card_menu_retry_count == 0)
             {
-                cload_open_status_dialog(1);
+                cload_open_status_dialog(CARD_MENU_DIALOG_LOAD_FAILED);
             }
             break;
 
@@ -302,7 +302,7 @@ s32 cload_advance_load_sequence(void)
                 }
                 close(g_card_menu_file_handle);
                 g_card_menu_progress_bar_active = 0;
-                cload_open_status_dialog(1);
+                cload_open_status_dialog(CARD_MENU_DIALOG_LOAD_FAILED);
                 break;
             }
             break;
@@ -318,8 +318,8 @@ s32 cload_advance_load_sequence(void)
             }
             if (wait_attempts != CARD_MENU_FILE_OP_ATTEMPTS)
             {
-                McxSync(MCX_SYNC_WAIT, &status0, &status1);
-                if (status1 == McxErrSuccess)
+                McxSync(MCX_SYNC_WAIT, &mcx_command, &mcx_result);
+                if (mcx_result == McxErrSuccess)
                 {
                     g_card_step++;
                     break;
@@ -333,9 +333,8 @@ s32 cload_advance_load_sequence(void)
 }
 
 /**
- * @brief Reset the cached resource handles and arm the first load step.
- * @note Releases the handles (clear_software_card_events), rewinds the CD channel, and points
- *       g_card_step at the g_card_steps_idle step table.
+ * @brief Restart the card sequence: clear the software card events, request
+ *        the card's info and point g_card_step at g_card_steps_idle.
  */
 void cload_restart_load_sequence(void)
 {
@@ -348,10 +347,10 @@ void cload_restart_load_sequence(void)
 #include "../../common/card_events/poll_and_retry_card_info.inc.c"
 
 /**
- * @brief Allocate and register the eight streaming buffers for this overlay.
- * @note Brackets the eight OpenEvent allocations (handles stored in
- *       g_card_software_event_io_complete..g_card_hardware_event_new_card) with EnterCriticalSection / ExitCriticalSection and resets the
- *       stream bookkeeping (g_card_menu_entry_scan_active, g_card_menu_progress_start_tick, g_card_menu_progress_bar_active).
+ * @brief Open and enable the four software and four hardware memory-card
+ *        events, then reset the scan flag and the progress bar.
+ * @note Unlike card_menu_init_card_events, it also restarts the progress timer
+ *       (g_card_menu_progress_start_tick).
  */
 void cload_init_card_events(void)
 {
@@ -382,45 +381,45 @@ void cload_init_card_events(void)
 #include "../../common/card_events/shutdown_card_events.inc.c"
 
 /**
- * @brief Begin streaming the page's first g_card_entries record.
- * @param page Page index (each page is 0x320 bytes in g_card_entries).
- * @return 1 if firstfile accepted the record (count bumped), else 0.
+ * @brief Reset the list position and read the first directory entry of card
+ *        slot @p slot into g_card_entries.
+ * @param slot Card slot to scan.
+ * @return 1 if the card has a first entry (the entry count becomes 1), otherwise 0.
  */
-s32 cload_begin_entry_scan(s32 page)
+s32 cload_begin_entry_scan(s32 slot)
 {
-    CardSearchPattern search_path;
+    CardSearchPattern pattern;
 
-    strcpy(search_path.text, CARD_SEARCH_PATTERN);
+    strcpy(pattern.text, CARD_SEARCH_PATTERN);
     g_card_menu_scroll_frames = 0;
     g_card_menu_scroll_target_y = 0;
     g_card_menu_scroll_y = 0;
     g_card_menu_selected_row = 0;
     g_card_entry_state = 0;
-    search_path.device.characters.slot += page;
-    if (firstfile(search_path.text, &g_card_entries[page][0]) != 0)
+    pattern.device.characters.slot += slot;
+    if (firstfile(pattern.text, &g_card_entries[slot][0]) != 0)
     {
-        g_card_entry_state += 1;
+        g_card_entry_state++;
         return 1;
     }
     return 0;
 }
 
 /**
- * @brief Try to append the page's next g_card_entries record; if it cannot,
- *        recompute the page's fixed-point total and update the selection state.
- * @param page Page index (each page is 0x320 bytes / 20 records in g_card_entries).
- * @return 1 if nextfile accepted the new record (count bumped), else 0.
- * @note When the directory is complete, card_entry_blocks_reach_limit decides
- *       whether a full card clamps the state (0xFA) or the selection
- *       (g_card_menu_selected_row) is set from card_rank_entries's result.
+ * @brief Read the next directory entry of card slot @p slot; at the end of the
+ *        directory, rank the saves and select the newest one.
+ * @param slot Card slot being scanned.
+ * @return 1 if another entry was read (the entry count grows), 0 at the end of the directory.
+ * @note With no Legend of Mana entries the state becomes CARD_MENU_ENTRY_STATE_NO_GAME_DATA;
+ *       a full card with none left after ranking becomes CARD_MENU_ENTRY_STATE_CARD_FULL.
  */
-s32 cload_scan_next_entry(s32 page)
+s32 cload_scan_next_entry(s32 slot)
 {
     s32 selected;
 
-    if (nextfile(&g_card_entries[page][g_card_entry_state]) != 0)
+    if (nextfile(&g_card_entries[slot][g_card_entry_state]) != 0)
     {
-        g_card_entry_state += 1;
+        g_card_entry_state++;
         return 1;
     }
     field_reset_input_repeat();
@@ -485,10 +484,10 @@ void cload_commit_selected_entry(void)
     }
     strcpy(card_path.text, CARD_DEVICE_PREFIX);
     strcat(card_path.text, g_card_entries[g_card_slot][g_card_menu_selected_row].name);
-    card_path.device.characters.slot += (u8)g_card_slot;
+    card_path.device.characters.slot += g_card_slot;
     g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
     strcpy(g_card_selected_save_path, card_path.text);
-    g_card_step = &g_card_steps_read_selected_header[0];
+    g_card_step = g_card_steps_read_selected_header;
     if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_card_menu_selected_row].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
     {
         g_card_menu_selected_entry_extended = 1;

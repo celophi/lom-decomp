@@ -333,13 +333,13 @@ s32 memory_card_create_save_file(char* path, void* save_buffer)
 
     /* Allocate one card block, then reopen the file for writing. */
     file_descriptor = open(path, CARD_FILE_BLOCKS(g_card_header_block_count) | FCREAT);
-    if (file_descriptor == -1)
+    if (file_descriptor == CARD_FILE_ERROR)
     {
         return 0;
     }
     close(file_descriptor);
     file_descriptor = open(path, FWRITE);
-    if (file_descriptor == -1)
+    if (file_descriptor == CARD_FILE_ERROR)
     {
         return 0;
     }

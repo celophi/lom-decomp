@@ -126,9 +126,9 @@ void *cload_emit_icon_highlight_strip(SPRT *sprite, u_long *ot);
 s32 cload_enable_choice_toggle(void);
 void* cload_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y);
 s32 cload_advance_load_sequence(void);
-void cload_restart_load_sequence();
-s32 cload_begin_entry_scan();
-s32 cload_scan_next_entry();
-void cload_commit_selected_entry();
+void cload_restart_load_sequence(void);
+s32 cload_begin_entry_scan(s32 slot);
+s32 cload_scan_next_entry(s32 slot);
+void cload_commit_selected_entry(void);
 
 #endif /* CLOAD_INTERNAL_H */

@@ -105,6 +105,9 @@ typedef union
 /** @brief Decimal digits before the first letter in a hex alphabet. */
 #define CARD_SERIAL_DECIMAL_DIGITS 10
 
+/** @brief Result of the BIOS open, read and write calls on a card file when they fail. */
+#define CARD_FILE_ERROR (-1)
+
 /** @brief Serial marker for an entry whose name does not have the save prefix. */
 #define CARD_ENTRY_SERIAL_NONE (-1)
 
