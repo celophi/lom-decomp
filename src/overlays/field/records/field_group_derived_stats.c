@@ -8,6 +8,7 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_golem_layout.h"
 #include "../internal/field_records.h"
+#include "overlays/field/field_overlay_handoff.h"
 
 /** @brief field_find_resource id of the golem name text table. */
 #define FIELD_RESOURCE_GOLEM_NAME_TEXT 0x100
@@ -66,8 +67,6 @@ typedef struct
 extern GolemWeaponClassTable D_80051C50;
 /** @brief Signed stat modifier for each four-bit modifier index (index 4 is 0; range -10 to +20). */
 extern s8 g_field_stat_modifier_values[];
-extern s32 g_gosub_result_count;
-extern s32 g_gosub_result_values[];
 
 /**
  * @brief Start offset of a golem name text entry in GolemNameText.bytes.

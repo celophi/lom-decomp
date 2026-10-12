@@ -38,6 +38,7 @@
 #include "overlays/gname/gname.h"
 #include "main/audio/akao.h"
 #include "overlays/field/field_input.h"
+#include "overlays/field/field_overlay_handoff.h"
 
 void field_set_cd_error_fade_target(void);
 
@@ -260,12 +261,7 @@ extern s32 g_field_scene_mode_bit;
 /* Modal overlays. */
 extern s32 g_field_modal_state;
 extern s32 g_field_gosub_phase;
-extern s32 g_field_gosub_state;
 extern s32 g_field_shop_active;
-extern s32 g_gosub_result_count;
-extern s32 g_gosub_result_values;
-extern s32 g_field_niki_addhero_state;
-extern s32 g_field_card_overlay_mode;
 extern s32 g_field_shop_notice_hidden;
 extern s32 g_field_duel_panel_phase;
 extern s32 g_field_duel_panel_offset;
@@ -2140,7 +2136,7 @@ void field_update_modal(FieldRenderHalf* render)
                 break;
             case 6:
             case 7:
-                g_gosub_result_values = 6;
+                g_gosub_result_values[0] = 6;
                 /* fall through */
             default:
             case 3:

@@ -177,10 +177,15 @@ typedef enum
 #define CARD_MENU_ICON_VRAM_Y 208
 
 /**
- * @brief Icon @p icon of an icon set whose first per-icon offset is @p offsets.
- * @note The offsets count from the icon-set start, which is the word just before them.
+ * @brief Entry @p index of a counted offset table: a count word followed by
+ *        byte offsets that count from the count word.
+ * @param offsets The table's first offset, one word after its count.
+ * @param index Entry to look up.
  */
-#define CARD_MENU_ICON_IMAGE(offsets, icon) ((FieldPortrait*)((u8*)(offsets) - 4 + (offsets)[icon]))
+#define CARD_OFFSET_TABLE_ENTRY(offsets, index) ((u8*)(offsets) - sizeof(s32) + (offsets)[index])
+
+/** @brief Icon @p icon of an icon set stored as a counted offset table (CARD_OFFSET_TABLE_ENTRY). */
+#define CARD_MENU_ICON_IMAGE(offsets, icon) ((FieldPortrait*)CARD_OFFSET_TABLE_ENTRY(offsets, icon))
 
 /** @brief Menu windows (elements) in a card menu's pool. */
 #define CARD_MENU_ELEMENT_COUNT 8
@@ -353,6 +358,9 @@ static inline s32 card_menu_element_width(CardMenuElement* element)
 /** @brief Left edge and width of the dialog window (its top and height differ per screen). */
 #define CARD_MENU_DIALOG_X 32
 #define CARD_MENU_DIALOG_WIDTH 256
+
+/** @brief Line spacing of the dialog window and of the two-line block-count notices. */
+#define CARD_MENU_DIALOG_LINE_HEIGHT 16
 
 /** @brief Frames of the fade back to the host screen when a card menu exits. */
 #define CARD_MENU_EXIT_FADE_FRAMES 8

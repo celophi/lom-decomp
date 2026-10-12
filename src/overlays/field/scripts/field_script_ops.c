@@ -14,6 +14,7 @@
 #include "../internal/field_script_ops.h"
 #include "../internal/field_records.h"
 #include "overlays/shop/shop.h"
+#include "overlays/field/field_overlay_handoff.h"
 
 void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s32 y, s32 z);
 void field_play_song_section();
@@ -269,10 +270,8 @@ extern FieldDispatchFn g_field_script_pair_op_table[];
 extern FieldRuntimeContext* g_field_runtime;
 extern FieldBattleContext* g_field_battle;
 extern s32 g_field_niki_state;
-extern s32 g_field_gosub_state;
 extern s32 g_field_interaction_active;
 extern s32 g_field_hide_actor_panels, g_field_duel_mode, g_field_pair_indicators_disabled, g_field_item_drop_enabled;
-extern s32 g_gosub_result_count, g_gosub_result_values;
 
 void field_script_op_00(void);
 static void field_script_dispatch_pair_op(void);
@@ -2147,7 +2146,7 @@ void field_script_misc_command(u32 command, s32 operand)
         return;
     case FIELD_SCRIPT_CMD_SET_GOSUB_RESULT:
         g_gosub_result_count = 1;
-        g_gosub_result_values = operand;
+        g_gosub_result_values[0] = operand;
         return;
     case FIELD_SCRIPT_CMD_SET_MONEY:
         g_field_game_state->money = operand;

@@ -7,6 +7,7 @@
 #include "../internal/field_records.h"
 #include "main/main.h"
 #include <abs.h>
+#include "overlays/field/field_overlay_handoff.h"
 
 void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s32 y, s32 z);
 
@@ -478,10 +479,7 @@ extern u8 D_80122C1E;
 extern u8 D_80122C1F;
 extern FieldMenuItemRecord g_field_shared_items[4];
 extern FieldGosubSequence D_80051EB4;
-extern s32 g_gosub_result_count;
-extern s32 g_gosub_result_values[];
 extern void (*g_field_menu_ops[])(s32 arg0);
-extern s32 g_field_gosub_state;
 extern FieldGosubSequence D_800F19AC;
 extern FieldGosubSequence D_800F19B8;
 extern FieldGosubSequence D_800F19C4;

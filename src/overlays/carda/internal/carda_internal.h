@@ -4,6 +4,7 @@
 #include "overlays/field/field_text.h"
 #include "common.h"
 #include "common/saved_game.h"
+#include "common/sjis.h"
 #include "common/pad.h"
 #include "common/vector.h"
 #include "common/gpu_packet.h"
@@ -34,6 +35,7 @@
 #include "overlays/field/field_fade.h"
 #include "overlays/field/field_input.h"
 #include "overlays/field/field_portrait.h"
+#include "overlays/field/field_overlay_handoff.h"
 /**
  * @brief g_card_menu_mode values: what FIELD opened the card screen for.
  * @note The US release keeps the PocketStation modes but leaves their texts empty.
@@ -126,6 +128,18 @@ typedef enum CardaCardStep
 #define CARDA_TRANSFER_WIDTH CARD_MENU_MESSAGE_WIDTH
 #define CARDA_TRANSFER_HEIGHT 72 /**< Five lines. */
 
+/** @brief One-line "Saved." window, one message line below the message window's top. */
+#define CARDA_SAVE_COMPLETE_Y (CARDA_MESSAGE_Y + CARD_MENU_LINE_HEIGHT)
+#define CARDA_SAVE_COMPLETE_HEIGHT 16
+
+/** @brief Dialog window for the two-line failure texts: one dialog line taller than the one-line dialog, and as much higher. */
+#define CARDA_TWO_LINE_DIALOG_Y (CARD_MENU_EXCHANGE_DIALOG_Y - CARD_MENU_DIALOG_LINE_HEIGHT)
+#define CARDA_TWO_LINE_DIALOG_HEIGHT (CARD_MENU_EXCHANGE_DIALOG_HEIGHT + CARD_MENU_DIALOG_LINE_HEIGHT)
+
+/** @brief Title window above the item list. */
+#define CARDA_ITEM_LIST_TITLE_Y 26
+#define CARDA_ITEM_LIST_TITLE_HEIGHT 16
+
 /** @brief Item list window (received items) and its arrows. */
 #define CARDA_ITEM_LIST_X 32
 #define CARDA_ITEM_LIST_Y 54
@@ -142,14 +156,20 @@ typedef enum CardaCardStep
 /* FIELD / main-executable globals used by this overlay. */
 extern s32 g_save_compatibility_tag;
 extern s32 g_playtime_vsync_origin;
-extern s32 g_field_card_pet_slot;
 extern s32 g_pad_input;
-extern s32 g_gosub_result_values;
-extern s32 g_field_card_overlay_mode;
 
 /* FIELD UI strings and memory-card file names. */
 extern u8 g_field_ui_text_cant_hold_more[];
 extern char g_card_full_entry_name[];
+
+/** @brief Offset of SaveFileHeader::title, after the magic, icon flags and block count. */
+#define CARDA_TITLE_OFFSET 4
+
+/** @brief Bytes of g_carda_save_title_template; the save number follows them on the first title line. */
+#define CARDA_TITLE_TEMPLATE_BYTES 18
+
+/** @brief Byte index of the fifth character of the first title line, which gets SJIS_NOTE_SIGN when carda_test_option_flag_2 is set. */
+#define CARDA_TITLE_NOTE_INDEX (4 * SJIS_MULTIBYTE_CHAR_BYTES)
 
 /* CARDA text offset-table entries. */
 extern u16 g_carda_text_checking_card;
@@ -193,6 +213,7 @@ extern u16 g_carda_text_memory_card_is;
 extern u16 g_carda_item_names[];
 extern u8 g_carda_save_title_template[];
 extern u8 g_carda_bad_title_template[];
+/** @brief Save-icon offsets, counted from the icon count word just before them (see CARD_OFFSET_TABLE_ENTRY). */
 extern s32 g_carda_save_icon_offsets[];
 
 /* Card-sequence step scripts (g_card_step points into these). */

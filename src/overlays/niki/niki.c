@@ -389,7 +389,7 @@ void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32
             result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_new_save_title, CARD_MENU_TEXT_NEW_SAVE_TITLE), FIELD_TEXT_COLOR_NORMAL, x,
                                      -y_offset, FIELD_TEXT_ALIGN_LEFT);
             text_table = CARD_MENU_TEXT_TABLE(g_niki_text_new_save_title, CARD_MENU_TEXT_NEW_SAVE_TITLE);
-            return field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_USES_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, x, 0x10 - y_offset,
+            return field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_USES_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, x, CARD_MENU_DIALOG_LINE_HEIGHT - y_offset,
                                    FIELD_TEXT_ALIGN_LEFT);
         }
         else

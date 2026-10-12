@@ -8,6 +8,7 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_modal_runtime.h"
 #include "main/overlay_memory.h"
+#include "overlays/field/field_overlay_handoff.h"
 
 /** @brief Render buffers handed to the GOLEM entry point. */
 #define FIELD_GOLEM_RENDER_BUFFERS ((void*)SECONDARY_OVERLAY_AT(0x10000))
@@ -16,12 +17,6 @@
 #define FIELD_MODAL_WORK_BUFFER ((void*)SECONDARY_OVERLAY_AT(0x30000))
 
 extern s32 g_field_modal_state;
-extern s32 g_field_card_overlay_mode;
-extern s32 g_field_niki_addhero_state;
-extern s32 g_field_card_pet_slot;
-extern s32 g_field_gosub_state;
-extern s32 g_gosub_result_count;
-extern s32 g_gosub_result_values[];
 
 void carda_init(void* work, s32 mode);
 void golem_run(void* render_buffers, s32 restore_slot_on_cancel);

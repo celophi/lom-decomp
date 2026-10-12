@@ -9,6 +9,7 @@
 #include <rand.h>
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
+#include "overlays/field/field_overlay_handoff.h"
 
 /** @brief Resource id of the companion template table. */
 #define FIELD_RESOURCE_COMPANION_TEMPLATES 7
@@ -51,9 +52,6 @@ typedef struct
     PetRecord templates[1];
 } FieldCompanionTemplateTable;
 
-extern s32 g_gosub_result_count;
-extern s32 g_gosub_result_values[];
-extern s32 g_field_gosub_state;
 
 /**
  * @brief Copy a companion template into the first free stored record and give it a unique id.

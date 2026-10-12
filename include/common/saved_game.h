@@ -25,6 +25,12 @@
 /** @brief Spawn record a save file is written with; loading a game enters the field through it. */
 #define FIELD_SPAWN_LOAD_GAME 6
 
+/** @brief Bytes of SavedGameLayout::summary_name, the hero name shown by the save browsers. */
+#define SAVED_GAME_SUMMARY_NAME_BYTES 21
+
+/** @brief Entries of SavedGameLayout::summary_records. */
+#define SAVED_GAME_SUMMARY_RECORD_COUNT 4
+
 /** @brief Save-browser party icon of an empty party slot. */
 #define SAVE_NO_ICON 0x7F
 
@@ -673,9 +679,11 @@ typedef struct
 typedef struct SavedGameLayout
 {
     /** @brief Hero name shown by the save browsers; copied from characters[0] when saving. */
-    u8 summary_name[21];
-    u8 unk15;
-    u8 unk16;
+    u8 summary_name[SAVED_GAME_SUMMARY_NAME_BYTES];
+    /** @brief Hero level, stored for the save browsers when saving. */
+    u8 summary_level;
+    /** @brief Low byte of the hero's weapon power, stored for the save browsers when saving. */
+    u8 summary_weapon_power;
     /** @brief Number of in-use save slot records, stored for the save browsers. */
     u8 summary_slot_count;
     /** @brief Word 0x18: spawn record of the current field scene, and the first party icon. */
@@ -811,7 +819,7 @@ typedef struct SavedGameLayout
     {
         u8 in_use;
         u8 unk01[0x3F];
-    } summary_records[4];
+    } summary_records[SAVED_GAME_SUMMARY_RECORD_COUNT];
 } SavedGameLayout;
 
 /** @brief Size of a Legend of Mana save file: two 8 KiB memory-card blocks. */
@@ -835,6 +843,13 @@ typedef struct SavedGameLayout
 /** @brief Combined byte length of both lines of SaveFileHeader::title. */
 #define SAVE_FILE_TITLE_BYTES (SAVE_FILE_TITLE_LINE_BYTES * 2)
 
+/** @brief Bytes of a memory-card icon CLUT: 16 colors of 16 bits. */
+#define SAVE_FILE_ICON_CLUT_BYTES 0x20
+
+/** @brief Animation frames of a memory-card icon, and the bytes of one 16x16 4-bit frame. */
+#define SAVE_FILE_ICON_FRAME_COUNT 2
+#define SAVE_FILE_ICON_FRAME_BYTES 0x80
+
 /** @brief Standard PSX memory-card file header (0x180 bytes): title and icon. */
 typedef struct
 {
@@ -845,8 +860,8 @@ typedef struct
     u8 title[2][SAVE_FILE_TITLE_LINE_BYTES];
     u8 reserved[0x1C];
     /** @brief 16-color icon CLUT (16-bit entries), stored as bytes. */
-    u8 clut[0x20];
-    u8 icon_frames[2][0x80];
+    u8 clut[SAVE_FILE_ICON_CLUT_BYTES];
+    u8 icon_frames[SAVE_FILE_ICON_FRAME_COUNT][SAVE_FILE_ICON_FRAME_BYTES];
 } SaveFileHeader;
 
 /**

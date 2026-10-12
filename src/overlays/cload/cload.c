@@ -702,7 +702,7 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
 
         result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_new_save_prompt, CARD_MENU_TEXT_NEW_SAVE_TITLE), 1, x, -y_offset, 0);
         text_table = CARD_MENU_TEXT_TABLE(g_cload_text_new_save_prompt, 20);
-        return field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_USES_TWO_BLOCKS), 1, x, 0x10 - y_offset, 0);
+        return field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_USES_TWO_BLOCKS), 1, x, CARD_MENU_DIALOG_LINE_HEIGHT - y_offset, 0);
     }
     else
     {
