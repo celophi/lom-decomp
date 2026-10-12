@@ -12,7 +12,7 @@
  * @note A zero limit produces an empty string; a short limit keeps the most
  *       significant digits. Zero is written as "0" when the limit is positive.
  */
-void format_hex(s8* destination, s32 value, s32 max_digits)
+inline void format_hex(char* destination, s32 value, s32 max_digits)
 {
     s32 nibble;
     s32 nibble_index;

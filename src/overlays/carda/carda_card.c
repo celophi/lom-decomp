@@ -1,28 +1,41 @@
 #include "internal/carda_card.h"
 #include "internal/carda_internal.h"
-#include <kernel.h>
 #include <fcntl.h>
-
-/** @brief Size of the main save blob (two memory-card blocks). */
-#define CARDA_SAVE_BYTES 0x4000
 
 /** @brief Size of the PocketStation (Ring Ring Land) save file: six memory-card blocks. */
 #define CARDA_POCKETSTATION_SAVE_BYTES 0xC000
 
+/** @brief Used-block count that leaves no room for the Ring Ring Land file. */
+#define CARDA_POCKETSTATION_USED_BLOCK_LIMIT (CARD_SAVE_SLOTS + 1 - CARDA_POCKETSTATION_SAVE_BYTES / CARD_BLOCK_BYTES)
+
+/** @brief Frames (two seconds) to wait for McxCardType to accept its command. */
+#define CARDA_CARD_TYPE_WAIT_FRAMES 120
+
+/** @brief Rank slots carda_reset_entry_ranks clears, two more than CARD_SAVE_SLOTS. */
+#define CARDA_RANK_SLOTS 17
+
+/** @brief Suffix values whose use carda_rank_entries records. */
+#define CARDA_SUFFIX_FLAG_COUNT 10
+
+/** @brief Highest suffix the new-save entry can take; it gets the lowest unused one from 1 up. */
+#define CARDA_NEW_SAVE_SUFFIX_MAX 8
+
 /** @brief Leading part of a save read back by CARDA_STEP_READ_SAVE_PREFIX. */
 #define CARDA_SAVE_PREFIX_BYTES 0x400
 
-/** @brief Number of 128-byte sectors in one memory-card block. */
-#define CARDA_SECTORS_PER_BLOCK 64
-
-/** @brief Length of the title template (g_carda_save_title_template) copied into a save's title frame. */
+/** @brief Bytes of g_carda_save_title_template copied over a new save's title. */
 #define CARDA_TITLE_TEMPLATE_BYTES 18
 
-/** @brief Offset of the title in a memory-card title frame. */
-#define CARDA_TITLE_OFFSET 4
+/** @brief Offset of the title in a card file's first sector. */
+#define CARDA_TITLE_OFFSET OFFSETOF(SaveFileHeader, title)
+
+/** @brief Offset of the fifth title character, which gets SJIS_NOTE_SIGN when carda_test_option_flag_2 is set. */
+#define CARDA_TITLE_NOTE_OFFSET (CARDA_TITLE_OFFSET + 4 * SJIS_MULTIBYTE_CHAR_BYTES)
 
 static s32 carda_rank_entries(void);
 static s32 carda_has_known_entry_type(void);
+s32 carda_card_lacks_free_blocks(void);
+void carda_erase_placeholder_files(void);
 static s32 carda_begin_entry_scan(s32 page);
 static s32 carda_scan_next_entry(s32 page);
 static void carda_sort_entries_by_type(void);
@@ -36,34 +49,31 @@ static void carda_sort_entries_by_type(void);
 #include "../../common/card_directory/parse_entry_fields.inc.c"
 
 /**
- * @brief Sort and rank the current card's entries and number the new-save entry.
+ * @brief Sort the current card's directory, rank its saves and number the new-save entry.
  *
- * Recognized saves are ranked by their field value into g_card_entry_ranks, the next
- * field value is stored in g_carda_next_save_serial, and the new-save placeholder entry gets
- * the lowest suffix byte (1-8) that no recognized save uses.
+ * Legend of Mana saves are ranked by serial into g_card_entry_ranks, the serial a
+ * new save gets goes to g_card_entry_value_limit, and the new-save placeholder gets
+ * the lowest suffix (1 to 8) that no save on the card uses.
  *
- * @return Index of the entry holding the greatest field value.
+ * @return Index of the save with the highest serial, or 0 when there is none.
  */
 static s32 carda_rank_entries(void)
 {
-    s32 suffix_used[10];
+    s32 suffix_used[CARDA_SUFFIX_FLAG_COUNT];
     s32 entry_index;
     s32 previous_index;
     s32 higher_count;
     s32 next_rank;
     s32 maximum;
     s32 max_suffix;
-    u8* cursor;
-    const char* suffix;
+    u8* serial_text;
+    const char* filename_fields;
     s32 digits_left;
-    s32 value;
-    u32 decimal_base;
-    u32 uppercase_base;
-    u32 lowercase_base;
+    s32 serial_value;
 
     parse_entry_fields();
     carda_sort_entries_by_type();
-    for (entry_index = 9; entry_index >= 0; entry_index--)
+    for (entry_index = CARDA_SUFFIX_FLAG_COUNT - 1; entry_index >= 0; entry_index--)
     {
         suffix_used[entry_index] = 0;
     }
@@ -74,36 +84,42 @@ static s32 carda_rank_entries(void)
         if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][entry_index].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
         {
             digits_left = CARD_SERIAL_DIGITS;
-            cursor = CARD_ENTRY_SERIAL_TEXT(g_card_slot, entry_index);
-            value = 0;
-            while (((u8)(*cursor - '0') < 10) || ((u8)(*cursor - 'a') < 6) || ((u8)(*cursor - 'A') < 6))
+            serial_text = CARD_ENTRY_SERIAL_TEXT(g_card_slot, entry_index);
+            serial_value = 0;
+            while ((*serial_text >= '0' && *serial_text <= '9') || (*serial_text >= 'a' && *serial_text <= 'f') || (*serial_text >= 'A' && *serial_text <= 'F'))
             {
                 if (digits_left == 0)
                 {
                     break;
                 }
-                value <<= 4;
-                if ((u8)(*cursor - '0') < 10)
+                serial_value <<= CARD_SERIAL_DIGIT_BITS;
+                if (*serial_text >= '0' && *serial_text <= '9')
                 {
-                    decimal_base = value - '0';
-                    value = decimal_base + *cursor;
+                    u32 adjusted_serial;
+
+                    adjusted_serial = serial_value - '0';
+                    serial_value = adjusted_serial + *serial_text;
                 }
-                else if ((u8)(*cursor - 'A') < 6)
+                else if (*serial_text >= 'A' && *serial_text <= 'F')
                 {
-                    uppercase_base = value - ('A' - 10);
-                    value = uppercase_base + *cursor;
+                    u32 adjusted_serial;
+
+                    adjusted_serial = serial_value - ('A' - CARD_SERIAL_DECIMAL_DIGITS);
+                    serial_value = adjusted_serial + *serial_text;
                 }
-                else if ((u8)(*cursor - 'a') < 6)
+                else if (*serial_text >= 'a' && *serial_text <= 'f')
                 {
-                    lowercase_base = value - ('a' - 10);
-                    value = lowercase_base + *cursor;
+                    u32 adjusted_serial;
+
+                    adjusted_serial = serial_value - ('a' - CARD_SERIAL_DECIMAL_DIGITS);
+                    serial_value = adjusted_serial + *serial_text;
                 }
-                cursor++;
+                serial_text++;
                 digits_left--;
             }
-            suffix = &g_card_entries[g_card_slot][entry_index].name[CARD_SAVE_FILENAME_PREFIX_LENGTH];
-            g_card_entry_fields[g_card_slot][entry_index] = value;
-            g_card_entry_suffix_values[entry_index] = parse_hex_suffix_byte(suffix);
+            filename_fields = &g_card_entries[g_card_slot][entry_index].name[CARD_SAVE_FILENAME_PREFIX_LENGTH];
+            g_card_entry_fields[g_card_slot][entry_index] = serial_value;
+            g_card_entry_suffix_values[entry_index] = parse_hex_suffix_byte(filename_fields);
             suffix_used[g_card_entry_suffix_values[entry_index]] = 1;
             if (max_suffix < g_card_entry_suffix_values[entry_index])
             {
@@ -112,7 +128,7 @@ static s32 carda_rank_entries(void)
         }
         else
         {
-            g_card_entry_fields[g_card_slot][entry_index] = -1;
+            g_card_entry_fields[g_card_slot][entry_index] = CARD_ENTRY_SERIAL_NONE;
             g_card_entry_suffix_values[entry_index] = 0;
         }
     }
@@ -158,10 +174,10 @@ static s32 carda_rank_entries(void)
             maximum = entry_index;
         }
     }
-    g_carda_next_save_serial = next_rank + 1;
+    g_card_entry_value_limit = next_rank + 1;
 
     /* Reuse max_suffix as the lowest suffix no recognized entry uses. */
-    for (max_suffix = 1; max_suffix < 9; max_suffix++)
+    for (max_suffix = 1; max_suffix <= CARDA_NEW_SAVE_SUFFIX_MAX; max_suffix++)
     {
         if (suffix_used[max_suffix] == 0)
         {
@@ -179,24 +195,24 @@ static s32 carda_rank_entries(void)
     return maximum;
 }
 
-/** @brief Mark all seventeen rank slots unused and reset the rank-count sentinel. */
+/** @brief Mark every rank slot unused and reset the rank count. */
 inline void carda_reset_entry_ranks(void)
 {
     s32 rank_index;
     s32 empty_rank;
 
-    g_card_rank_count = 0x28;
+    g_card_rank_count = CARD_RANK_COUNT_NONE;
     empty_rank = -1;
-    for (rank_index = 16; rank_index >= 0; rank_index--)
+    for (rank_index = CARDA_RANK_SLOTS - 1; rank_index >= 0; rank_index--)
     {
         g_card_entry_ranks[rank_index] = empty_rank;
     }
 }
 
 /**
- * @brief Check whether the current card holds a save this mode can use.
- * @return 1 if an entry matches g_lom_save_filename_prefix or g_lom_pocketstation_filename_prefix (only g_lom_pocketstation_filename_prefix in mode 2),
- * otherwise 0.
+ * @brief Check whether the current card holds a file this mode can use.
+ * @return 1 if an entry is a Legend of Mana save or a Ring Ring Land file (only
+ *         Ring Ring Land when sending a pet), otherwise 0.
  */
 static s32 carda_has_known_entry_type(void)
 {
@@ -222,10 +238,10 @@ static s32 carda_has_known_entry_type(void)
 }
 
 /**
- * @brief Check whether the current card lacks room for a new save.
- * @return 1 if the used blocks leave no room for the mode's save file, otherwise 0.
- * @note A mode-2 save needs six blocks (fewer than 10 used), any other save two
- *       (fewer than 14 used). Inlined into carda_scan_next_entry.
+ * @brief Check whether the current card lacks room for a new file.
+ * @return 1 if the used blocks leave no room for the mode's file, otherwise 0.
+ * @note Sending a pet writes the six-block Ring Ring Land file; every other mode
+ *       writes a two-block save.
  */
 inline s32 carda_card_lacks_free_blocks(void)
 {
@@ -237,7 +253,8 @@ inline s32 carda_card_lacks_free_blocks(void)
     {
         used_blocks += g_card_entries[g_card_slot][entry_index].size / CARD_BLOCK_BYTES;
     }
-    if ((used_blocks < 14 && g_card_menu_mode != CARDA_MODE_SEND_PET) || (used_blocks < 10 && g_card_menu_mode == CARDA_MODE_SEND_PET))
+    if ((used_blocks < CARD_USED_BLOCK_LIMIT && g_card_menu_mode != CARDA_MODE_SEND_PET) ||
+        (used_blocks < CARDA_POCKETSTATION_USED_BLOCK_LIMIT && g_card_menu_mode == CARDA_MODE_SEND_PET))
     {
         return 0;
     }
@@ -245,21 +262,20 @@ inline s32 carda_card_lacks_free_blocks(void)
 }
 
 /**
- * @brief Erase the two fixed per-slot memory-card files and clear pending card events.
- * @note Each erase starts from the six-byte "bu00:" device path, adjusts the slot
- *       digit and appends one fixed file name.
+ * @brief Erase the save and Ring Ring Land placeholder files left by an interrupted
+ *        write, then clear pending card events.
  */
 inline void carda_erase_placeholder_files(void)
 {
     CardFilePath card_path;
 
     strcpy(card_path.text, CARD_DEVICE_PREFIX);
-    card_path.device.characters.slot += (u8)g_card_slot;
+    card_path.device.characters.slot += g_card_slot;
     strcat(card_path.text, g_lom_save_dummy_filename);
     erase(card_path.text);
 
     strcpy(card_path.text, CARD_DEVICE_PREFIX);
-    card_path.device.characters.slot += (u8)g_card_slot;
+    card_path.device.characters.slot += g_card_slot;
     strcat(card_path.text, g_lom_pocketstation_dummy_filename);
     erase(card_path.text);
     clear_software_card_events();
@@ -267,43 +283,37 @@ inline void carda_erase_placeholder_files(void)
 }
 
 /**
- * @brief Run the current memory-card save step and advance g_card_step.
- * @return CardMenuSequenceResult phase code.
- * @note g_card_step walks one of the step byte tables at g_carda_steps_initial_scan; each
- *       CardaCardStep opcode issues or polls a card command, writes or reads a
- *       save file, or scans the card directory, and updates g_card_entry_state /
- *       g_card_menu_selection_status. New saves are written under a dummy filename first and then
- *       renamed. Opcodes with no case are no-ops.
+ * @brief Run the current step of the card sequence and advance g_card_step.
+ * @return CardMenuSequenceResult for the caller.
+ * @note g_card_step walks one of the g_card_steps_* or g_carda_steps_* byte tables.
+ *       Each CardMenuStep or CardaCardStep opcode issues or polls a card command,
+ *       reads or writes a save, or scans the card directory. New files are written
+ *       under a placeholder name first and renamed once the write has finished.
+ *       Opcodes without a case make the sequence wait on them.
  */
 s32 carda_advance_card_sequence(void)
 {
     CardFilePath card_path;
     CardFilePath file_name;
     CardFilePath device_path;
-    u8 title_frame[0x80];
+    u8 title_frame[CARD_SECTOR_BYTES];
     struct DIRENTRY dir_entry;
     s32 attempts;
     s32 check_attempts;
     s32 poll_result;
     s32 phase_result;
-    long status0;
-    long status1;
-    s32 nibble;
-    s32 started;
-    s32 serial;
-    s32 digits_left;
-    s32 digit_index;
-    s8* digit_out;
+    long command;
+    long result;
     u8* title_src;
     u8* title_dst;
 
     strcpy(card_path.text, CARD_DEVICE_PREFIX);
-    card_path.device.characters.slot += (u8)g_card_slot;
+    card_path.device.characters.slot += g_card_slot;
     strcpy(device_path.text, card_path.text);
     phase_result = CARD_MENU_SEQUENCE_WAIT;
     if (CARDA_IS_POCKETSTATION_MODE(g_card_menu_mode))
     {
-        if (g_card_step == g_carda_steps_initial_scan)
+        if (g_card_step == g_card_steps_initial_scan)
         {
             g_card_step = g_carda_steps_initial_scan_check_type;
         }
@@ -337,7 +347,7 @@ s32 carda_advance_card_sequence(void)
             case CARD_EVENT_NEW_CARD:
                 carda_reset_entry_ranks();
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
-                g_card_step = g_carda_steps_initial_scan;
+                g_card_step = g_card_steps_initial_scan;
                 break;
             }
             break;
@@ -426,14 +436,14 @@ s32 carda_advance_card_sequence(void)
             phase_result = CARD_MENU_SEQUENCE_RUN_AGAIN;
             _card_wait(g_card_slot);
             _card_load(CARD_CHANNEL(g_card_slot));
-            g_carda_primary_poll_countdown = 0x10;
-            g_carda_secondary_poll_countdown = 0x10;
+            g_card_menu_new_card_retries = CARD_MENU_CARD_LOAD_RETRIES;
+            g_card_menu_load_error_retries = CARD_MENU_CARD_LOAD_RETRIES;
             g_card_step++;
             break;
 
         case CARD_MENU_STEP_DONE:
             phase_result = CARD_MENU_SEQUENCE_FINISHED;
-            g_carda_save_in_progress = 0;
+            g_card_menu_write_in_progress = 0;
             break;
 
         case CARDA_STEP_SKIP:
@@ -441,7 +451,7 @@ s32 carda_advance_card_sequence(void)
             break;
 
         case CARDA_STEP_CREATE_TEMP_SAVE:
-            if (g_carda_preserve_old_save == 0)
+            if (g_card_menu_has_free_space == 0)
             {
                 strcat(card_path.text, g_card_entries[g_card_slot][g_card_menu_selected_row].name);
                 CARD_ERASE_WITH_RETRIES(attempts, card_path.text);
@@ -452,11 +462,11 @@ s32 carda_advance_card_sequence(void)
             strcpy(file_name.text, g_lom_save_dummy_filename);
             strcat(card_path.text, file_name.text);
             _card_wait(g_card_slot);
-            g_carda_file_handle = open(card_path.text, FCREAT | CARD_FILE_BLOCKS(2));
-            if (g_carda_file_handle == -1)
+            g_card_menu_file_handle = open(card_path.text, FCREAT | CARD_FILE_BLOCKS(SAVE_FILE_BYTES / CARD_BLOCK_BYTES));
+            if (g_card_menu_file_handle == -1)
             {
-                g_carda_retry_count--;
-                if (g_carda_retry_count == 0)
+                g_card_menu_retry_count--;
+                if (g_card_menu_retry_count == 0)
                 {
                     clear_software_card_events();
                     clear_hardware_card_events();
@@ -465,24 +475,24 @@ s32 carda_advance_card_sequence(void)
                 }
                 break;
             }
-            close(g_carda_file_handle);
-            strcpy(g_carda_temp_card_path, card_path.text);
+            close(g_card_menu_file_handle);
+            strcpy(g_card_temp_save_path, card_path.text);
             g_card_step++;
             break;
 
         case CARDA_STEP_WRITE_TEMP_SAVE:
             _card_wait(g_card_slot);
-            g_carda_file_handle = open(g_carda_temp_card_path, FASYNC | FWRITE);
+            g_card_menu_file_handle = open(g_card_temp_save_path, FASYNC | FWRITE);
             clear_software_card_events();
             g_card_menu_progress_bar_active = 1;
             g_card_menu_progress_start_tick = VSync(-1);
             _card_wait(g_card_slot);
-            if (write(g_carda_file_handle, g_carda_save_blob, CARDA_SAVE_BYTES) == -1)
+            if (write(g_card_menu_file_handle, g_carda_save_blob, SAVE_FILE_BYTES) == -1)
             {
-                close(g_carda_file_handle);
-                CARD_ERASE_WITH_RETRIES(attempts, g_carda_temp_card_path);
-                g_carda_retry_count--;
-                if (g_carda_retry_count != 0)
+                close(g_card_menu_file_handle);
+                CARD_ERASE_WITH_RETRIES(attempts, g_card_temp_save_path);
+                g_card_menu_retry_count--;
+                if (g_card_menu_retry_count != 0)
                 {
                     /* Rewind to CARDA_STEP_CREATE_TEMP_SAVE and try again. */
                     g_card_step--;
@@ -500,7 +510,7 @@ s32 carda_advance_card_sequence(void)
             switch (poll_software_card_events())
             {
             case CARD_EVENT_COMPLETE:
-                if (g_carda_preserve_old_save != 0)
+                if (g_card_menu_has_free_space != 0)
                 {
                     strcpy(card_path.text, device_path.text);
                     strcat(card_path.text, g_card_entries[g_card_slot][g_card_menu_selected_row].name);
@@ -513,33 +523,7 @@ s32 carda_advance_card_sequence(void)
                 /* Final name: prefix, serial in hex without leading zeros, then +/- and the suffix digit. */
                 strcpy(card_path.text, device_path.text);
                 strcpy(file_name.text, g_lom_save_filename_prefix);
-                digit_out = (s8*)&file_name.text[CARD_SAVE_FILENAME_PREFIX_LENGTH];
-                serial = g_carda_next_save_serial;
-                digits_left = CARD_SERIAL_DIGITS;
-                digit_index = 7;
-                started = 0;
-                while (digits_left != 0)
-                {
-                    nibble = (serial >> (digit_index * 4)) & 0xF;
-                    if (nibble != 0 || started != 0)
-                    {
-                        hex_nibble_to_ascii(digit_out, nibble);
-                        digit_out++;
-                        digits_left--;
-                        started = 1;
-                        serial -= nibble << (digit_index * 4);
-                    }
-                    digit_index--;
-                    if (digit_index == -1)
-                    {
-                        break;
-                    }
-                    if (digit_index == 0)
-                    {
-                        started = 1;
-                    }
-                }
-                *digit_out = 0;
+                format_hex(&file_name.text[CARD_SAVE_FILENAME_PREFIX_LENGTH], g_card_entry_value_limit, CARD_SERIAL_DIGITS);
                 strcat(card_path.text, file_name.text);
                 if (carda_test_option_flag_2() != 0)
                 {
@@ -556,7 +540,7 @@ s32 carda_advance_card_sequence(void)
                 _card_wait(g_card_slot);
                 for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
                 {
-                    if (rename(g_carda_temp_card_path, &card_path) != 0)
+                    if (rename(g_card_temp_save_path, card_path.text) != 0)
                     {
                         break;
                     }
@@ -571,50 +555,48 @@ s32 carda_advance_card_sequence(void)
                 }
                 if (attempts != CARD_MENU_FILE_OP_ATTEMPTS)
                 {
-                    /* Patch the title in the file's first sector. */
+                    /* Replace the title in the file's first sector. */
                     _card_wait(g_card_slot);
                     _card_read(CARD_CHANNEL(g_card_slot), dir_entry.head, title_frame);
                     _card_wait(g_card_slot);
                     title_dst = &title_frame[CARDA_TITLE_OFFSET];
-                    title_src = &g_carda_save_title_template[0];
+                    title_src = g_carda_save_title_template;
                     attempts = 0;
                     while (attempts < CARDA_TITLE_TEMPLATE_BYTES)
                     {
                         attempts++;
                         *title_dst++ = *title_src++;
                     }
-                    /* Put a Shift-JIS note sign (0x81F4) into the fifth title character. */
                     if (carda_test_option_flag_2() != 0)
                     {
-                        title_frame[0xC] = 0x81;
-                        title_frame[0xD] = 0xF4;
+                        title_frame[CARDA_TITLE_NOTE_OFFSET] = SJIS_NOTE_SIGN >> SJIS_CODE_LEAD_SHIFT;
+                        title_frame[CARDA_TITLE_NOTE_OFFSET + 1] = SJIS_NOTE_SIGN & SJIS_CODE_TRAIL_MASK;
                     }
                     _card_wait(g_card_slot);
                     _card_write(CARD_CHANNEL(g_card_slot), dir_entry.head, title_frame);
                     _card_wait(g_card_slot);
                 }
-                g_carda_save_in_progress = 0;
-                /* Advanced, then replaced by the rescan table below. */
+                g_card_menu_write_in_progress = 0;
                 g_card_step++;
-                close(g_carda_file_handle);
+                close(g_card_menu_file_handle);
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
-                g_card_step = g_carda_steps_initial_scan;
+                g_card_step = g_card_steps_initial_scan;
                 break;
             case CARD_EVENT_ERROR:
             case CARD_EVENT_TIMEOUT:
             case CARD_EVENT_NEW_CARD:
-                g_carda_retry_count--;
-                if (g_carda_retry_count != 0)
+                g_card_menu_retry_count--;
+                if (g_card_menu_retry_count != 0)
                 {
                     /* Rewind to CARDA_STEP_CREATE_TEMP_SAVE and try again. */
-                    close(g_carda_file_handle);
-                    CARD_ERASE_WITH_RETRIES(attempts, g_carda_temp_card_path);
+                    close(g_card_menu_file_handle);
+                    CARD_ERASE_WITH_RETRIES(attempts, g_card_temp_save_path);
                     g_card_step -= 2;
                 }
                 else
                 {
-                    close(g_carda_file_handle);
-                    CARD_ERASE_WITH_RETRIES(attempts, g_carda_temp_card_path);
+                    close(g_card_menu_file_handle);
+                    CARD_ERASE_WITH_RETRIES(attempts, g_card_temp_save_path);
                     g_card_menu_progress_bar_active = 0;
                     g_card_menu_progress_start_tick = VSync(-1);
                     clear_software_card_events();
@@ -639,34 +621,34 @@ s32 carda_advance_card_sequence(void)
             strcpy(card_path.text, device_path.text);
             strcat(card_path.text, g_lom_pocketstation_filename_prefix);
             _card_wait(g_card_slot);
-            g_carda_file_handle = open(card_path.text, FCREAT | CARD_FILE_BLOCKS(6));
-            if (g_carda_file_handle == -1)
+            g_card_menu_file_handle = open(card_path.text, FCREAT | CARD_FILE_BLOCKS(CARDA_POCKETSTATION_SAVE_BYTES / CARD_BLOCK_BYTES));
+            if (g_card_menu_file_handle == -1)
             {
-                g_carda_retry_count--;
-                if (g_carda_retry_count == 0)
+                g_card_menu_retry_count--;
+                if (g_card_menu_retry_count == 0)
                 {
-                    close(g_carda_file_handle);
+                    close(g_card_menu_file_handle);
                     carda_open_status_dialog(CARD_MENU_DIALOG_SAVE_FAILED);
                     return phase_result;
                 }
                 break;
             }
-            close(g_carda_file_handle);
-            strcpy(g_carda_temp_card_path, card_path.text);
+            close(g_card_menu_file_handle);
+            strcpy(g_card_temp_save_path, card_path.text);
             g_card_step++;
             break;
 
         case CARDA_STEP_WRITE_POCKETSTATION_SAVE:
             _card_wait(g_card_slot);
-            g_carda_file_handle = open(g_carda_temp_card_path, FASYNC | FWRITE);
+            g_card_menu_file_handle = open(g_card_temp_save_path, FASYNC | FWRITE);
             _card_wait(g_card_slot);
-            if (write(g_carda_file_handle, g_carda_save_blob, CARDA_POCKETSTATION_SAVE_BYTES) == -1)
+            if (write(g_card_menu_file_handle, g_carda_save_blob, CARDA_POCKETSTATION_SAVE_BYTES) == -1)
             {
-                func_80033E7C(CARD_CHANNEL(g_card_slot));
-                close(g_carda_file_handle);
-                CARD_ERASE_WITH_RETRIES(attempts, g_carda_temp_card_path);
-                g_carda_retry_count--;
-                if (g_carda_retry_count != 0)
+                McxHideTrans(CARD_CHANNEL(g_card_slot));
+                close(g_card_menu_file_handle);
+                CARD_ERASE_WITH_RETRIES(attempts, g_card_temp_save_path);
+                g_card_menu_retry_count--;
+                if (g_card_menu_retry_count != 0)
                 {
                     /* Rewind to CARDA_STEP_CREATE_POCKETSTATION_SAVE and try again. */
                     g_card_step--;
@@ -684,21 +666,20 @@ s32 carda_advance_card_sequence(void)
             switch (poll_software_card_events())
             {
             case CARD_EVENT_COMPLETE:
-                g_carda_save_in_progress = 0;
-                /* Advanced, then replaced by the rescan table below. */
+                g_card_menu_write_in_progress = 0;
                 g_card_step++;
-                close(g_carda_file_handle);
-                g_card_step = g_carda_steps_initial_scan;
+                close(g_card_menu_file_handle);
+                g_card_step = g_card_steps_initial_scan;
                 for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
                 {
-                    if (firstfile(g_carda_temp_card_path, &dir_entry) != 0)
+                    if (firstfile(g_card_temp_save_path, &dir_entry) != 0)
                     {
                         break;
                     }
                 }
                 if (attempts == CARD_MENU_FILE_OP_ATTEMPTS)
                 {
-                    CARD_ERASE_WITH_RETRIES(attempts, g_carda_temp_card_path);
+                    CARD_ERASE_WITH_RETRIES(attempts, g_card_temp_save_path);
                     clear_software_card_events();
                     clear_hardware_card_events();
                     carda_open_status_dialog(CARD_MENU_DIALOG_SAVE_FAILED);
@@ -706,7 +687,7 @@ s32 carda_advance_card_sequence(void)
                 }
                 for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
                 {
-                    if (func_80034648(CARD_CHANNEL(g_card_slot), dir_entry.head / CARDA_SECTORS_PER_BLOCK, 1) != 0)
+                    if (McxExecFlag(CARD_CHANNEL(g_card_slot), dir_entry.head / CARD_BLOCK_SECTORS, 1) != 0)
                     {
                         break;
                     }
@@ -715,7 +696,7 @@ s32 carda_advance_card_sequence(void)
                 {
                     return phase_result;
                 }
-                CARD_ERASE_WITH_RETRIES(attempts, g_carda_temp_card_path);
+                CARD_ERASE_WITH_RETRIES(attempts, g_card_temp_save_path);
                 clear_software_card_events();
                 clear_hardware_card_events();
                 carda_open_status_dialog(CARD_MENU_DIALOG_SAVE_FAILED);
@@ -723,18 +704,18 @@ s32 carda_advance_card_sequence(void)
             case CARD_EVENT_ERROR:
             case CARD_EVENT_TIMEOUT:
             case CARD_EVENT_NEW_CARD:
-                g_carda_retry_count--;
-                if (g_carda_retry_count != 0)
+                g_card_menu_retry_count--;
+                if (g_card_menu_retry_count != 0)
                 {
                     /* Rewind to CARDA_STEP_CREATE_POCKETSTATION_SAVE and try again. */
-                    close(g_carda_file_handle);
-                    CARD_ERASE_WITH_RETRIES(attempts, g_carda_temp_card_path);
+                    close(g_card_menu_file_handle);
+                    CARD_ERASE_WITH_RETRIES(attempts, g_card_temp_save_path);
                     g_card_step -= 2;
                 }
                 else
                 {
-                    close(g_carda_file_handle);
-                    CARD_ERASE_WITH_RETRIES(attempts, g_carda_temp_card_path);
+                    close(g_card_menu_file_handle);
+                    CARD_ERASE_WITH_RETRIES(attempts, g_card_temp_save_path);
                     clear_software_card_events();
                     clear_hardware_card_events();
                     carda_open_status_dialog(CARD_MENU_DIALOG_SAVE_FAILED);
@@ -753,8 +734,8 @@ s32 carda_advance_card_sequence(void)
                 break;
             case CARD_EVENT_ERROR:
             case CARD_EVENT_TIMEOUT:
-                g_carda_secondary_poll_countdown--;
-                if (g_carda_secondary_poll_countdown != 0)
+                g_card_menu_load_error_retries--;
+                if (g_card_menu_load_error_retries != 0)
                 {
                     _card_wait(g_card_slot);
                     _card_clear(CARD_CHANNEL(g_card_slot));
@@ -768,8 +749,8 @@ s32 carda_advance_card_sequence(void)
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;
                 break;
             case CARD_EVENT_NEW_CARD:
-                g_carda_primary_poll_countdown--;
-                if (g_carda_primary_poll_countdown != 0)
+                g_card_menu_new_card_retries--;
+                if (g_card_menu_new_card_retries != 0)
                 {
                     _card_wait(g_card_slot);
                     _card_clear(CARD_CHANNEL(g_card_slot));
@@ -794,15 +775,15 @@ s32 carda_advance_card_sequence(void)
             g_card_menu_io_busy = 1;
             g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
             _card_wait(g_card_slot);
-            g_carda_file_handle = open(g_carda_selected_card_path, FASYNC | FREAD);
-            if (g_carda_file_handle != -1)
+            g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
+            if (g_card_menu_file_handle != -1)
             {
                 clear_software_card_events();
                 _card_wait(g_card_slot);
-                if (read(g_carda_file_handle, &g_carda_selected_file,
+                if (read(g_card_menu_file_handle, &g_carda_selected_file,
                          g_card_menu_selected_entry_extended != 0 ? CARD_MENU_ENTRY_READ_BYTES : CARD_MENU_ENTRY_TITLE_READ_BYTES) == -1)
                 {
-                    close(g_carda_file_handle);
+                    close(g_card_menu_file_handle);
                     return phase_result;
                 }
                 g_card_step++;
@@ -816,14 +797,14 @@ s32 carda_advance_card_sequence(void)
                 g_card_menu_io_busy = 0;
                 g_card_menu_selection_status = CARD_MENU_SELECTION_ENTRY_READ;
                 g_card_step++;
-                close(g_carda_file_handle);
+                close(g_card_menu_file_handle);
             }
             else if (poll_result != CARD_EVENT_NONE)
             {
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
                 g_card_menu_io_busy = 0;
-                close(g_carda_file_handle);
-                g_card_step = g_carda_steps_initial_scan;
+                close(g_card_menu_file_handle);
+                g_card_step = g_card_steps_initial_scan;
             }
             break;
 
@@ -832,10 +813,10 @@ s32 carda_advance_card_sequence(void)
             g_card_menu_progress_start_tick = VSync(-1);
             g_card_menu_progress_bar_active = 1;
             _card_wait(g_card_slot);
-            g_carda_file_handle = open(g_carda_selected_card_path, FASYNC | FREAD);
+            g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
             clear_software_card_events();
             _card_wait(g_card_slot);
-            if (read(g_carda_file_handle, g_carda_save_blob, CARDA_SAVE_BYTES) == -1)
+            if (read(g_card_menu_file_handle, g_carda_save_blob, SAVE_FILE_BYTES) == -1)
             {
                 carda_open_status_dialog(CARD_MENU_DIALOG_LOAD_FAILED);
                 return phase_result;
@@ -849,7 +830,7 @@ s32 carda_advance_card_sequence(void)
             case CARD_EVENT_COMPLETE:
                 g_card_menu_progress_active = 0;
                 g_card_step++;
-                close(g_carda_file_handle);
+                close(g_card_menu_file_handle);
                 break;
             case CARD_EVENT_ERROR:
             case CARD_EVENT_TIMEOUT:
@@ -864,7 +845,7 @@ s32 carda_advance_card_sequence(void)
         case CARD_MENU_STEP_CHECK_POCKETSTATION:
             for (check_attempts = 0; check_attempts < CARD_MENU_FILE_OP_ATTEMPTS; check_attempts++)
             {
-                for (attempts = 0; attempts < 120; attempts++)
+                for (attempts = 0; attempts < CARDA_CARD_TYPE_WAIT_FRAMES; attempts++)
                 {
                     if (McxCardType(CARD_CHANNEL(g_card_slot)) == MCX_COMMAND_ISSUED)
                     {
@@ -873,11 +854,10 @@ s32 carda_advance_card_sequence(void)
                     VSync(0);
                 }
                 VSync(0);
-                /* The wait above allows 120 frames, but only 20 counts as a timeout. */
-                if (attempts != 20)
+                if (attempts != CARD_MENU_FILE_OP_ATTEMPTS)
                 {
-                    McxSync(MCX_SYNC_WAIT, &status0, &status1);
-                    switch (status1)
+                    McxSync(MCX_SYNC_WAIT, &command, &result);
+                    switch (result)
                     {
                     case McxErrSuccess:
                         g_card_step++;
@@ -901,10 +881,10 @@ s32 carda_advance_card_sequence(void)
             g_card_menu_progress_start_tick = VSync(-1);
             g_card_menu_progress_bar_active = 1;
             _card_wait(g_card_slot);
-            g_carda_file_handle = open(g_carda_selected_card_path, FASYNC | FREAD);
+            g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
             clear_software_card_events();
             _card_wait(g_card_slot);
-            if (read(g_carda_file_handle, g_carda_save_blob, CARDA_SAVE_PREFIX_BYTES) == -1)
+            if (read(g_card_menu_file_handle, g_carda_save_blob, CARDA_SAVE_PREFIX_BYTES) == -1)
             {
                 carda_open_save_status_dialog(CARD_MENU_DIALOG_LOAD_FAILED);
                 return phase_result;
@@ -918,7 +898,7 @@ s32 carda_advance_card_sequence(void)
             case CARD_EVENT_COMPLETE:
                 g_card_menu_progress_active = 0;
                 g_card_step++;
-                close(g_carda_file_handle);
+                close(g_card_menu_file_handle);
                 break;
             case CARD_EVENT_ERROR:
             case CARD_EVENT_TIMEOUT:
@@ -930,44 +910,44 @@ s32 carda_advance_card_sequence(void)
             break;
 
         case CARD_MENU_STEP_INIT_RETRIES:
-            g_carda_retry_count = CARD_MENU_SAVE_RETRIES;
+            g_card_menu_retry_count = CARD_MENU_SAVE_RETRIES;
             g_card_step++;
             break;
 
         case CARDA_STEP_WRITE_TEMP_POCKETSTATION_SAVE:
-            if (g_carda_preserve_old_save == 0)
+            if (g_card_menu_has_free_space == 0)
             {
-                CARD_ERASE_WITH_RETRIES(attempts, g_carda_selected_card_path);
+                CARD_ERASE_WITH_RETRIES(attempts, g_card_selected_save_path);
             }
             strcat(card_path.text, g_lom_pocketstation_dummy_filename);
             _card_wait(g_card_slot);
-            g_carda_file_handle = open(card_path.text, FCREAT | CARD_FILE_BLOCKS(6));
-            if (g_carda_file_handle == -1)
+            g_card_menu_file_handle = open(card_path.text, FCREAT | CARD_FILE_BLOCKS(CARDA_POCKETSTATION_SAVE_BYTES / CARD_BLOCK_BYTES));
+            if (g_card_menu_file_handle == -1)
             {
-                g_carda_retry_count--;
-                if (g_carda_retry_count == 0)
+                g_card_menu_retry_count--;
+                if (g_card_menu_retry_count == 0)
                 {
-                    close(g_carda_file_handle);
+                    close(g_card_menu_file_handle);
                     CARD_ERASE_WITH_RETRIES(attempts, card_path.text);
                     carda_open_save_status_dialog(CARD_MENU_DIALOG_SAVE_FAILED);
                     return phase_result;
                 }
                 break;
             }
-            close(g_carda_file_handle);
-            strcpy(g_carda_temp_card_path, card_path.text);
+            close(g_card_menu_file_handle);
+            strcpy(g_card_temp_save_path, card_path.text);
             _card_wait(g_card_slot);
-            g_carda_file_handle = open(g_carda_temp_card_path, FASYNC | FWRITE);
+            g_card_menu_file_handle = open(g_card_temp_save_path, FASYNC | FWRITE);
             clear_software_card_events();
             g_card_menu_progress_start_tick = VSync(-1);
             g_card_menu_progress_bar_active = 1;
             _card_wait(g_card_slot);
-            if (write(g_carda_file_handle, g_carda_save_blob, CARDA_POCKETSTATION_SAVE_BYTES) == -1)
+            if (write(g_card_menu_file_handle, g_carda_save_blob, CARDA_POCKETSTATION_SAVE_BYTES) == -1)
             {
-                close(g_carda_file_handle);
-                CARD_ERASE_WITH_RETRIES(attempts, g_carda_temp_card_path);
-                g_carda_retry_count--;
-                if (g_carda_retry_count == 0)
+                close(g_card_menu_file_handle);
+                CARD_ERASE_WITH_RETRIES(attempts, g_card_temp_save_path);
+                g_card_menu_retry_count--;
+                if (g_card_menu_retry_count == 0)
                 {
                     carda_open_save_status_dialog(CARD_MENU_DIALOG_SAVE_FAILED);
                     return phase_result;
@@ -981,38 +961,37 @@ s32 carda_advance_card_sequence(void)
             switch (poll_software_card_events())
             {
             case CARD_EVENT_COMPLETE:
-                if (g_carda_preserve_old_save != 0)
+                if (g_card_menu_has_free_space != 0)
                 {
                     _card_wait(g_card_slot);
-                    CARD_ERASE_WITH_RETRIES(attempts, g_carda_selected_card_path);
+                    CARD_ERASE_WITH_RETRIES(attempts, g_card_selected_save_path);
                 }
                 _card_wait(g_card_slot);
                 for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
                 {
-                    if (rename(g_carda_temp_card_path, g_carda_selected_card_path) != 0)
+                    if (rename(g_card_temp_save_path, g_card_selected_save_path) != 0)
                     {
                         break;
                     }
                 }
-                g_carda_save_in_progress = 0;
-                /* Advanced, then replaced by the rescan table below. */
+                g_card_menu_write_in_progress = 0;
                 g_card_step++;
-                close(g_carda_file_handle);
-                g_card_step = g_carda_steps_initial_scan;
+                close(g_card_menu_file_handle);
+                g_card_step = g_card_steps_initial_scan;
                 break;
             case CARD_EVENT_ERROR:
             case CARD_EVENT_TIMEOUT:
             case CARD_EVENT_NEW_CARD:
-                g_carda_retry_count--;
-                if (g_carda_retry_count == 0)
+                g_card_menu_retry_count--;
+                if (g_card_menu_retry_count == 0)
                 {
-                    close(g_carda_file_handle);
+                    close(g_card_menu_file_handle);
                     g_card_menu_progress_bar_active = 0;
                     carda_open_save_status_dialog(CARD_MENU_DIALOG_SAVE_FAILED);
                     return phase_result;
                 }
                 /* Rewind to CARDA_STEP_WRITE_TEMP_POCKETSTATION_SAVE and try again. */
-                close(g_carda_file_handle);
+                close(g_card_menu_file_handle);
                 g_card_step--;
                 break;
             }
@@ -1023,9 +1002,9 @@ s32 carda_advance_card_sequence(void)
 }
 
 /**
- * @brief Wait for the current card, then reset the list to a single new-save entry.
+ * @brief Format the current card and reset the list to a single new-save entry.
  */
-void carda_reset_to_new_save_entry(void)
+void carda_format_card(void)
 {
     s32 unused[4];
     s32 attempt;
@@ -1038,7 +1017,7 @@ void carda_reset_to_new_save_entry(void)
         }
     }
 
-    g_carda_preserve_old_save = 0;
+    g_card_menu_has_free_space = 0;
     g_card_menu_selected_row = 0;
     strcpy(g_card_entries[g_card_slot][0].name, g_new_save_entry_prefix);
 }
@@ -1141,7 +1120,7 @@ static s32 carda_scan_next_entry(s32 page)
     }
     else
     {
-        g_carda_preserve_old_save = 0;
+        g_card_menu_has_free_space = 0;
         if (carda_card_lacks_free_blocks())
         {
             if (g_card_menu_mode == CARDA_MODE_SAVE || g_card_menu_mode == CARDA_MODE_SEND_PET)
@@ -1161,7 +1140,7 @@ static s32 carda_scan_next_entry(s32 page)
                 {
                     g_card_entry_state = CARD_MENU_ENTRY_STATE_CARD_FULL;
                 }
-                g_carda_next_save_serial = 0;
+                g_card_entry_value_limit = 0;
             }
             else
             {
@@ -1171,17 +1150,17 @@ static s32 carda_scan_next_entry(s32 page)
         }
         else
         {
-            g_carda_preserve_old_save = 1;
+            g_card_menu_has_free_space = 1;
             if (CARDA_IS_POCKETSTATION_MODE(g_card_menu_mode))
             {
                 strcpy(g_card_entries[page][g_card_entry_state].name, g_new_save_entry_prefix);
-                g_card_entries[page][g_card_entry_state].size = 0xC000;
+                g_card_entries[page][g_card_entry_state].size = CARDA_POCKETSTATION_SAVE_BYTES;
                 g_card_entry_state += 1;
             }
             else if (g_card_menu_mode == CARDA_MODE_SAVE)
             {
                 strcpy(g_card_entries[page][g_card_entry_state].name, g_new_save_entry_prefix);
-                g_card_entries[page][g_card_entry_state].size = 0x4000;
+                g_card_entries[page][g_card_entry_state].size = SAVE_FILE_BYTES;
                 g_card_entry_state += 1;
             }
             selected = carda_rank_entries();
@@ -1189,7 +1168,7 @@ static s32 carda_scan_next_entry(s32 page)
             {
                 g_card_menu_selected_row = 0;
                 card_menu_scroll_to_selection();
-                g_carda_next_save_serial = 0;
+                g_card_entry_value_limit = 0;
             }
             else
             {
@@ -1202,9 +1181,10 @@ static s32 carda_scan_next_entry(s32 page)
 }
 
 /**
- * @brief Validate the selected entry and start reading its file header.
- * @note Sets g_card_menu_selection_status to 3 for an empty card, 2 for the new-save entry, 4 for the
- *       full-card entry, otherwise builds "buX0:<name>" into g_carda_selected_card_path and arms g_carda_steps_read_selected_header.
+ * @brief Commit the selected entry and start reading its file header.
+ * @note An empty card, the new-save placeholder and the full-card placeholder only
+ *       set g_card_menu_selection_status. Any other entry gets its path built into
+ *       g_card_selected_save_path and the g_card_steps_read_selected_header table armed.
  */
 void carda_commit_selected_entry(void)
 {
@@ -1227,10 +1207,10 @@ void carda_commit_selected_entry(void)
     }
     strcpy(card_path.text, CARD_DEVICE_PREFIX);
     strcat(card_path.text, g_card_entries[g_card_slot][g_card_menu_selected_row].name);
-    card_path.device.characters.slot += (u8)g_card_slot;
+    card_path.device.characters.slot += g_card_slot;
     g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
-    strcpy(g_carda_selected_card_path, card_path.text);
-    g_card_step = &g_carda_steps_read_selected_header[0];
+    strcpy(g_card_selected_save_path, card_path.text);
+    g_card_step = g_card_steps_read_selected_header;
     g_card_menu_io_busy = 1;
     if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_card_menu_selected_row].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
     {
@@ -1248,9 +1228,9 @@ void carda_commit_selected_entry(void)
 #include "../../common/card_events/poll_hardware_card_events.inc.c"
 
 /**
- * @brief Reorder the current card's directory by save type and suffix byte.
- * @note g_lom_save_filename_prefix saves come first, then g_lom_pocketstation_filename_prefix saves (each by suffix group),
- *       then the placeholder entries, then everything else.
+ * @brief Reorder the current card's directory by save type and suffix.
+ * @note Legend of Mana saves come first, then Ring Ring Land files (each grouped by
+ *       suffix), then the new-save and full-card placeholders, then every other file.
  */
 static void carda_sort_entries_by_type(void)
 {

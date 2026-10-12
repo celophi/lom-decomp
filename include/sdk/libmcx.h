@@ -22,5 +22,7 @@ void McxStartCom(void);
 int McxSync(int mode, long* cmd, long* result);
 int McxGetTime(int port, unsigned char* time);
 int McxCardType(int port);
+int McxHideTrans(int port);
+int McxExecFlag(int port, int block, int exec);
 
 #endif

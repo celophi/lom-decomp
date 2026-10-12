@@ -54,7 +54,7 @@ s32 cload_main(void)
     reset_glyph_cache();
     D_80162370 = 0;
     g_card_menu_progress_active = 0;
-    g_card_menu_selection_status = 0;
+    g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
     g_card_menu_io_busy = 0;
     g_card_menu_frame_parity = 0;
     g_card_menu_exit_requested = 0;
@@ -162,7 +162,7 @@ void cload_build_ui_elements(void)
     g_card_menu_scroll_target_y = 0;
     g_card_menu_scroll_y = 0;
     g_card_menu_selected_row = 0;
-    g_card_menu_selection_status = 0;
+    g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
     cload_clear_elements();
     /* Hold slot 0 so the fixed elements below are allocated from slot 1 on. */
     g_card_menu_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_OPENING;
@@ -235,9 +235,9 @@ void card_menu_update_card_sequence(void)
 
     if (g_card_entry_state >= 0x10)
     {
-        if (g_cload_load_step == NULL)
+        if (g_card_step == NULL)
         {
-            g_cload_load_step = g_cload_steps_initial_scan;
+            g_card_step = g_card_steps_initial_scan;
         }
     }
     do
@@ -246,16 +246,16 @@ void card_menu_update_card_sequence(void)
     } while (phase == 3);
     if (phase == 2)
     {
-        g_cload_load_step = g_cload_steps_card_reset;
+        g_card_step = g_card_steps_card_info;
     }
     if (phase == 4)
     {
-        g_cload_load_step = g_cload_steps_refresh_entries;
+        g_card_step = g_card_steps_rescan;
     }
     if (phase == 5)
     {
         g_card_entry_state = CARD_MENU_ENTRY_STATE_UNFORMATTED;
-        g_cload_load_step = g_cload_steps_card_reset;
+        g_card_step = g_card_steps_card_info;
     }
 }
 
@@ -301,7 +301,7 @@ s32 card_menu_handle_input(void)
     {
         return;
     }
-    if (*g_cload_load_step >= 6 && *g_cload_load_step <= 7)
+    if (*g_card_step >= CARD_MENU_STEP_SCAN_ENTRIES && *g_card_step <= CARD_MENU_STEP_SCAN_DONE)
     {
         return;
     }
@@ -320,9 +320,9 @@ s32 card_menu_handle_input(void)
         g_card_menu_scroll_target_y = 0;
         g_card_menu_scroll_y = 0;
         g_card_menu_selected_row = 0;
-        g_cload_load_step = NULL;
+        g_card_step = NULL;
         g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
-        g_card_menu_selection_status = 0;
+        g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
         g_card_slot ^= 1;
         card_reset_entry_ranks();
         return;
@@ -371,7 +371,7 @@ s32 card_menu_handle_input(void)
     }
     if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
     {
-        if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_card_menu_selected_row].name, 0xC) != 0)
+        if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_card_menu_selected_row].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) != 0)
         {
             sfx_id = 0x78;
         }
@@ -552,15 +552,16 @@ void* cload_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                             prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_card_menu_text_plus_marker), 1, 0xF8 - x_offset, row_y, 1);
                         }
                     }
-                    if (strncmp(g_lom_save_filename_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry), 0xC) == 0)
+                    if (strncmp(g_lom_save_filename_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry), CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
                     {
                         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_cload_text_mana), 1, base_x, row_y, 0);
                     }
-                    else if (strncmp(g_lom_pocketstation_filename_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry), 0xC) == 0)
+                    else if (strncmp(g_lom_pocketstation_filename_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry),
+                                     CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
                     {
                         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_cload_text_alt_save), 1, base_x, row_y, 0);
                     }
-                    else if (strncmp(g_new_save_entry_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry), 8) == 0)
+                    else if (strncmp(g_new_save_entry_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry), CARD_MENU_NEW_SAVE_NAME_LENGTH) == 0)
                     {
                         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_cload_text_new_save), 1, base_x, row_y, 0);
                     }
@@ -678,7 +679,7 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
     s32 party_icon[3];
 
     result = prim;
-    if (g_card_menu_selection_status == 0)
+    if (g_card_menu_selection_status == CARD_MENU_SELECTION_NONE)
     {
         return result;
     }
@@ -686,7 +687,7 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
     {
         return result;
     }
-    if (g_card_menu_selection_status == 3)
+    if (g_card_menu_selection_status == CARD_MENU_SELECTION_EMPTY_CARD)
     {
         return result;
     }
@@ -694,7 +695,7 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
     {
         return result;
     }
-    if (g_card_menu_selection_status == 2)
+    if (g_card_menu_selection_status == CARD_MENU_SELECTION_NEW_SAVE)
     {
         s32 x = -x_offset;
         u16* text_table;
@@ -705,7 +706,7 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
     }
     else
     {
-        if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_card_menu_selected_row].name, 0xC) == 0)
+        if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_card_menu_selected_row].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
         {
             SavedGameLayout* save = &g_cload_selected_file.saved_game;
 

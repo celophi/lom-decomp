@@ -106,16 +106,16 @@ g_card_entry_fields                        = 0x80164F20;
 g_card_entries                             = 0x80165018;
 
 // Additional NIKI state recovered from the CLOAD sibling implementation.
-g_niki_retry_count                           = 0x80164B94;
-g_niki_file_handle                           = 0x80164E1C;
+g_card_menu_retry_count                           = 0x80164B94;
+g_card_menu_file_handle                           = 0x80164E1C;
 g_card_menu_selected_entry_extended               = 0x80164EB4;
-g_niki_primary_poll_countdown                = 0x80164F0C;
+g_card_menu_new_card_retries                = 0x80164F0C;
 g_card_entry_value_limit                     = 0x80164F14;
 g_card_software_event_io_complete                       = 0x80164FC4;
 g_card_software_event_error                       = 0x80164FC8;
 g_card_software_event_timeout                       = 0x80164FCC;
 g_card_software_event_new_card                       = 0x80164FD0;
-g_niki_secondary_poll_countdown              = 0x80164FC0;
+g_card_menu_load_error_retries              = 0x80164FC0;
 g_card_hardware_event_io_complete                     = 0x80165658;
 g_card_hardware_event_error                     = 0x8016565C;
 g_card_hardware_event_timeout                     = 0x80165660;
@@ -189,8 +189,8 @@ g_niki_work_buffer                           = 0x80164AE4;
 D_80164B80                                   = 0x80164B80;
 g_niki_entry_file                         = 0x80164B98; // size:0x280 allow_addend:True
 g_card_selected_save_path                                   = 0x80164E70;
-g_niki_preserve_old_save                                   = 0x80164FD4;
-g_niki_temporary_save_path                                   = 0x80164FD8;
+g_card_menu_has_free_space                                   = 0x80164FD4;
+g_card_temp_save_path                                   = 0x80164FD8;
 g_niki_overlay_id                            = 0x80140000;
 g_field_menu_frame_style                     = 0x8012298C;
 

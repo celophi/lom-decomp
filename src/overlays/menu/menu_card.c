@@ -1,14 +1,12 @@
 #include "internal/menu_internal.h"
+#include "common/card_directory.h"
+#include "common/card_events.h"
+#include <fcntl.h>
 
-/* Memory-card file layout and open flags. */
+/* Memory-card file layout. */
 #define MEMORY_CARD_HEADER_TYPE_THREE_ICONS 0x13
 #define MEMORY_CARD_SAVE_TITLE_SIZE 0x11
 #define MEMORY_CARD_HEADER_PADDING_SIZE 0x1C
-#define MEMORY_CARD_OPEN_BLOCK_COUNT_SHIFT 16
-#define MEMORY_CARD_OPEN_CREATE_FLAG 0x200
-#define MEMORY_CARD_OPEN_WRITE_FLAG 0x02
-#define MEMORY_CARD_SECTOR_SIZE 128
-#define MEMORY_CARD_BLOCK_SIZE 8192
 
 /** @brief Save-file header followed by its palette and three icon frames. */
 typedef struct
@@ -20,15 +18,6 @@ typedef struct
     u8 reserved[MEMORY_CARD_HEADER_PADDING_SIZE];
     u8 palette_and_icons[416];
 } MemoryCardFileHeader;
-
-/** @brief Result returned by the memory-card event polling helpers. */
-typedef enum
-{
-    MEMORY_CARD_EVENT_COMPLETE = 0,
-    MEMORY_CARD_EVENT_ERROR = 1,
-    MEMORY_CARD_EVENT_TIMEOUT = 2,
-    MEMORY_CARD_EVENT_NEW = 3
-} MemoryCardEventResult;
 
 s32 memory_card_wait_software_event(void);
 void memory_card_clear_software_events(void);
@@ -141,11 +130,11 @@ s32 memory_card_prepare_slot1(void)
 
     _card_info(0);
     status = memory_card_wait_software_event();
-    if ((status == MEMORY_CARD_EVENT_ERROR) || (status == MEMORY_CARD_EVENT_TIMEOUT))
+    if ((status == CARD_EVENT_ERROR) || (status == CARD_EVENT_TIMEOUT))
     {
         return 0;
     }
-    if (status == MEMORY_CARD_EVENT_NEW)
+    if (status == CARD_EVENT_NEW_CARD)
     {
         memory_card_clear_hardware_events();
         _card_clear(0);
@@ -153,7 +142,7 @@ s32 memory_card_prepare_slot1(void)
     }
     memory_card_clear_software_events();
     _card_load(0);
-    if (memory_card_wait_software_event() == MEMORY_CARD_EVENT_NEW)
+    if (memory_card_wait_software_event() == CARD_EVENT_NEW_CARD)
     {
         if (_card_format(0) == 0)
         {
@@ -174,7 +163,7 @@ void memory_card_write_test_save(void)
 
 /**
  * @brief Block until one of the four SwCARD events fires and report which.
- * @return MEMORY_CARD_EVENT_* result for the first event observed.
+ * @return CardEvent result for the first event observed.
  */
 s32 memory_card_wait_software_event(void)
 {
@@ -182,19 +171,19 @@ s32 memory_card_wait_software_event(void)
     {
         if (TestEvent(g_card_sw_io_event) == 1)
         {
-            return MEMORY_CARD_EVENT_COMPLETE;
+            return CARD_EVENT_COMPLETE;
         }
         if (TestEvent(g_card_sw_error_event) == 1)
         {
-            return MEMORY_CARD_EVENT_ERROR;
+            return CARD_EVENT_ERROR;
         }
         if (TestEvent(g_card_sw_timeout_event) == 1)
         {
-            return MEMORY_CARD_EVENT_TIMEOUT;
+            return CARD_EVENT_TIMEOUT;
         }
         if (TestEvent(g_card_sw_new_event) == 1)
         {
-            return MEMORY_CARD_EVENT_NEW;
+            return CARD_EVENT_NEW_CARD;
         }
     }
 }
@@ -212,7 +201,7 @@ void memory_card_clear_software_events(void)
 
 /**
  * @brief Block until one of the four HwCARD events fires and report which.
- * @return MEMORY_CARD_EVENT_* result for the first event observed.
+ * @return CardEvent result for the first event observed.
  */
 s32 memory_card_wait_hardware_event(void)
 {
@@ -220,19 +209,19 @@ s32 memory_card_wait_hardware_event(void)
     {
         if (TestEvent(g_card_hw_io_event) == 1)
         {
-            return MEMORY_CARD_EVENT_COMPLETE;
+            return CARD_EVENT_COMPLETE;
         }
         if (TestEvent(g_card_hw_error_event) == 1)
         {
-            return MEMORY_CARD_EVENT_ERROR;
+            return CARD_EVENT_ERROR;
         }
         if (TestEvent(g_card_hw_timeout_event) == 1)
         {
-            return MEMORY_CARD_EVENT_TIMEOUT;
+            return CARD_EVENT_TIMEOUT;
         }
         if (TestEvent(g_card_hw_new_event) == 1)
         {
-            return MEMORY_CARD_EVENT_NEW;
+            return CARD_EVENT_NEW_CARD;
         }
     }
 }
@@ -280,7 +269,7 @@ s32 memory_card_scan_files(char* path, struct DIRENTRY* entry)
  */
 s32 memory_card_check_formatted(s32 channel)
 {
-    u8 header[MEMORY_CARD_SECTOR_SIZE];
+    u8 header[CARD_SECTOR_BYTES];
     s32 status;
     s32 event_ready;
     s32* io_event;
@@ -299,20 +288,20 @@ s32 memory_card_check_formatted(s32 channel)
         io_event = &g_card_hw_io_event;
         event_ready = 1;
         error_event = &g_card_hw_error_event;
-        status = MEMORY_CARD_EVENT_NEW;
+        status = CARD_EVENT_NEW_CARD;
         if (TestEvent(*io_event) == event_ready)
         {
-            status = MEMORY_CARD_EVENT_COMPLETE;
+            status = CARD_EVENT_COMPLETE;
             break;
         }
         if (TestEvent(*error_event) == event_ready)
         {
-            status = MEMORY_CARD_EVENT_ERROR;
+            status = CARD_EVENT_ERROR;
             break;
         }
         if (TestEvent(g_card_hw_timeout_event) == event_ready)
         {
-            status = MEMORY_CARD_EVENT_TIMEOUT;
+            status = CARD_EVENT_TIMEOUT;
             break;
         }
         if (TestEvent(g_card_hw_new_event) == event_ready)
@@ -320,7 +309,7 @@ s32 memory_card_check_formatted(s32 channel)
             break;
         }
     }
-    if (status != MEMORY_CARD_EVENT_COMPLETE)
+    if (status != CARD_EVENT_COMPLETE)
     {
         return -1;
     }
@@ -356,20 +345,20 @@ s32 memory_card_create_save_file(char* path, void* save_buffer)
     memcpy(save_buffer, g_card_header, sizeof(MemoryCardFileHeader));
 
     /* Allocate one card block, then reopen the file for writing. */
-    file_descriptor = open(path, (g_card_header_block_count << MEMORY_CARD_OPEN_BLOCK_COUNT_SHIFT) | MEMORY_CARD_OPEN_CREATE_FLAG);
+    file_descriptor = open(path, CARD_FILE_BLOCKS(g_card_header_block_count) | FCREAT);
     if (file_descriptor == -1)
     {
         return 0;
     }
     close(file_descriptor);
-    file_descriptor = open(path, MEMORY_CARD_OPEN_WRITE_FLAG);
+    file_descriptor = open(path, FWRITE);
     if (file_descriptor == -1)
     {
         return 0;
     }
 
     /* Each memory-card block contains 8 KiB. */
-    byte_count = block_count * MEMORY_CARD_BLOCK_SIZE;
+    byte_count = block_count * CARD_BLOCK_BYTES;
     if (write(file_descriptor, save_buffer, byte_count) != byte_count)
     {
         close(file_descriptor);

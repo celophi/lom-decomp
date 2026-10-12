@@ -2,6 +2,7 @@
 #define CARD_MENU_H
 
 #include "common.h"
+#include "common/card_directory.h"
 #include "overlays/field/field_portrait.h"
 #include "common/pad.h"
 #include "main/display.h"
@@ -109,7 +110,7 @@ typedef enum
 #define CARD_MENU_ENTRY_READ_BYTES 0x280
 
 /** @brief Bytes read to show an entry that is not a Legend of Mana save: its card header title and CLUT. */
-#define CARD_MENU_ENTRY_TITLE_READ_BYTES 0x80
+#define CARD_MENU_ENTRY_TITLE_READ_BYTES CARD_SECTOR_BYTES
 
 /** @brief Suffix groups (0 to 7) the directory sort buckets saves into. */
 #define CARD_MENU_ENTRY_GROUP_COUNT 8
@@ -567,6 +568,19 @@ extern s32 g_card_menu_entry_scan_active;
 /** @brief Set while a load or save transfer is running, and once the save has been built and is being written. */
 extern s32 g_card_menu_progress_active;
 extern s32 g_card_menu_write_in_progress;
+
+/** @brief Handle of the card file being read or written. */
+extern long g_card_menu_file_handle;
+
+/** @brief Read or write attempts left, armed with CARD_MENU_SAVE_RETRIES. */
+extern s32 g_card_menu_retry_count;
+
+/** @brief Card-load polls left that may report a new card, and that may fail, armed with CARD_MENU_CARD_LOAD_RETRIES. */
+extern s32 g_card_menu_new_card_retries;
+extern s32 g_card_menu_load_error_retries;
+
+/** @brief Nonzero when the card has room to write the new save before the old one is erased. */
+extern s32 g_card_menu_has_free_space;
 
 /** @brief Whether the progress bar is shown, and the VSync count it started at. */
 extern s32 g_card_menu_progress_bar_active;

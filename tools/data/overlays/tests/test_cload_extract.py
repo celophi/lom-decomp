@@ -40,8 +40,8 @@ class FakeOverlay:
         pad()
         mark("card_steps")
         data += bytes([3, 1, 2, 0])
-        self.symbols["g_cload_steps_card_reset"] = ADDRESS + len(data) - 3
-        self.symbols["g_cload_steps_idle"] = ADDRESS + len(data)
+        self.symbols["g_card_steps_card_info"] = ADDRESS + len(data) - 3
+        self.symbols["g_card_steps_idle"] = ADDRESS + len(data)
         data += bytes([14, 0, 0, 0])
         self.steps_end = len(data)
         mark("chart")
@@ -169,13 +169,13 @@ class ExtractTest(unittest.TestCase):
 
     def test_sequence_cannot_run_into_the_chart(self):
         self.overlay.data[self.overlay.steps_end - 4 : self.overlay.steps_end] = bytes([14]) * 4
-        with self.assertRaisesRegex(ValueError, "g_cload_steps_idle has no CARD_MENU_STEP_DONE"):
+        with self.assertRaisesRegex(ValueError, "g_card_steps_idle has no CARD_MENU_STEP_DONE"):
             cload.extract(self.overlay.write(self.root), self.output)
         self.assert_no_output()
 
     def test_step_symbol_outside_the_table_is_rejected(self):
-        self.overlay.symbols["g_cload_steps_idle"] = ADDRESS
-        with self.assertRaisesRegex(ValueError, "g_cload_steps_idle is outside"):
+        self.overlay.symbols["g_card_steps_idle"] = ADDRESS
+        with self.assertRaisesRegex(ValueError, "g_card_steps_idle is outside"):
             cload.extract(self.overlay.write(self.root), self.output)
         self.assert_no_output()
 

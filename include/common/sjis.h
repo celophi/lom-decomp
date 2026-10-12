@@ -15,6 +15,9 @@
 /** @brief Shift-JIS full-width "0"; the other digits follow it. */
 #define SJIS_DIGIT_ZERO 0x824F
 
+/** @brief Shift-JIS eighth-note sign. */
+#define SJIS_NOTE_SIGN 0x81F4
+
 /** @brief Shift and mask for the leading and trailing bytes of a Shift-JIS code. */
 #define SJIS_CODE_LEAD_SHIFT 8
 #define SJIS_CODE_TRAIL_MASK 0xFF

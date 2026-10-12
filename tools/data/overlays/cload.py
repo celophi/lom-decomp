@@ -90,7 +90,7 @@ class CloadSymbols:
 SYMBOL_NAMES = {
     "messages": "g_cload_text_check_memory_card",
     "locations": "g_card_menu_location_names",
-    "card_steps": "g_cload_steps_initial_scan",
+    "card_steps": "g_card_steps_initial_scan",
     "chart": "g_glyph_single_byte_chart",
     "double_byte_chart": "g_cload_double_byte_char_table",
     "decimal_glyphs": "g_glyph_decimal_digits",
@@ -98,7 +98,7 @@ SYMBOL_NAMES = {
     "variables": "g_card_menu_element_pool",
 }
 MESSAGE_SYMBOL_PREFIX = ("g_cload_text_", "g_card_menu_text_")
-CARD_STEP_SYMBOL_PREFIX = "g_cload_steps_"
+CARD_STEP_SYMBOL_PREFIX = "g_card_steps_"
 
 
 @dataclass(frozen=True)
