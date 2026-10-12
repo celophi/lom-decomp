@@ -41,9 +41,6 @@ typedef struct
 /** @brief Ordering-table entries of each TITLE frame buffer. */
 #define TITLE_OT_LENGTH 0x1000
 
-/** @brief Fade colour component that leaves the screen unchanged, and the length of a fade. */
-#define TITLE_FADE_FRAMES 0x14
-
 /** @brief Shift applied to the second rand() value when two are combined into the game id. */
 #define TITLE_RNG_HIGH_SHIFT 15
 
@@ -82,7 +79,6 @@ extern s32 g_title_idle_countdown;
 #define TITLE_INITIAL_REPEAT_DELAY 15
 #define TITLE_ANALOG_LOW_THRESHOLD -1
 #define TITLE_ANALOG_HIGH_THRESHOLD 2
-#define TITLE_DPAD_BUTTONS (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT)
 /** @brief Buttons other than the face buttons that still count as the same held input for repeat. */
 #define TITLE_NON_REPEAT_BUTTON_MASK                                                                                                                           \
     (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1 | PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_SELECT | PAD_BTN_L3 | PAD_BTN_START)

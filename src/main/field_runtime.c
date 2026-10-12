@@ -29,7 +29,7 @@ typedef struct
     u8* allocation_cursor;
     void* text_window_configs;
     u8* timed_text;
-    u8* primitive_buffers[2];
+    u8* primitive_buffers[DISPLAY_BUFFER_COUNT];
 } FieldWorkspace;
 
 #define FIELD_WORKSPACE ((FieldWorkspace*)FIELD_WORKSPACE_ADDRESS)
@@ -146,8 +146,8 @@ void field_run_frame_loop(FieldRenderHalf* render_buffers)
 #endif
             VSync(1);
             DrawSync(0);
-            set_controller_vsync_interval(2);
-            VSync(2);
+            set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
+            VSync(FRAME_VSYNC_INTERVAL);
             draw_half = (draw_half == render_buffers) ? &draw_half[1] : render_buffers;
             PutDispEnv(&draw_half->disp_env);
             PutDrawEnv(&draw_half->draw_env);

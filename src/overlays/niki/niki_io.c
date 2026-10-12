@@ -82,7 +82,7 @@ s32 niki_advance_load_sequence(void)
         do
         {
             poll_result = poll_hardware_card_events();
-        } while (poll_result == -1);
+        } while (poll_result == CARD_EVENT_NONE);
         if (poll_result == 0)
         {
             g_card_step = g_card_step + 1;
@@ -223,7 +223,7 @@ s32 niki_advance_load_sequence(void)
         do
         {
             poll_result = poll_hardware_card_events();
-        } while (poll_result == -1);
+        } while (poll_result == CARD_EVENT_NONE);
         g_card_step = g_card_step + 1;
         break;
 
@@ -232,13 +232,13 @@ s32 niki_advance_load_sequence(void)
         g_card_menu_selection_status = 0;
         _card_wait(g_card_slot);
         g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
-        if (g_card_menu_file_handle == -1)
+        if (g_card_menu_file_handle == CARD_FILE_ERROR)
         {
             break;
         }
         clear_software_card_events();
         _card_wait(g_card_slot);
-        if (read(g_card_menu_file_handle, &g_niki_entry_file, g_card_menu_selected_entry_extended != 0 ? CARD_MENU_ENTRY_READ_BYTES : 0x80) == -1)
+        if (read(g_card_menu_file_handle, &g_niki_entry_file, g_card_menu_selected_entry_extended != 0 ? CARD_MENU_ENTRY_READ_BYTES : CARD_MENU_ENTRY_TITLE_READ_BYTES) == CARD_FILE_ERROR)
         {
             close(g_card_menu_file_handle);
             break;
@@ -256,7 +256,7 @@ s32 niki_advance_load_sequence(void)
             close(g_card_menu_file_handle);
             break;
         }
-        if (poll_result == -1)
+        if (poll_result == CARD_EVENT_NONE)
         {
             break;
         }
@@ -274,7 +274,7 @@ s32 niki_advance_load_sequence(void)
         g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
         clear_software_card_events();
         _card_wait(g_card_slot);
-        if (read(g_card_menu_file_handle, g_niki_save_blob.bytes, SAVE_FILE_BYTES) == -1)
+        if (read(g_card_menu_file_handle, g_niki_save_blob.bytes, SAVE_FILE_BYTES) == CARD_FILE_ERROR)
         {
             g_card_menu_retry_count = g_card_menu_retry_count - 1;
             if (g_card_menu_retry_count == 0)
@@ -345,7 +345,7 @@ s32 niki_advance_load_sequence(void)
         g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
         clear_software_card_events();
         _card_wait(g_card_slot);
-        if (read(g_card_menu_file_handle, g_niki_save_blob.bytes, SAVE_FILE_BYTES) == -1)
+        if (read(g_card_menu_file_handle, g_niki_save_blob.bytes, SAVE_FILE_BYTES) == CARD_FILE_ERROR)
         {
             close(g_card_menu_file_handle);
             g_card_menu_retry_count = g_card_menu_retry_count - 1;
@@ -402,7 +402,7 @@ s32 niki_advance_load_sequence(void)
         strcat(path.text, g_lom_save_dummy_filename);
         _card_wait(g_card_slot);
         g_card_menu_file_handle = open(path.text, FCREAT | CARD_FILE_BLOCKS(2));
-        if (g_card_menu_file_handle == -1)
+        if (g_card_menu_file_handle == CARD_FILE_ERROR)
         {
             close(g_card_menu_file_handle);
             CARD_ERASE_WITH_RETRIES(wait_attempts, path.text);
@@ -423,7 +423,7 @@ s32 niki_advance_load_sequence(void)
         g_card_menu_progress_bar_active = 1;
         g_card_menu_progress_start_tick = VSync(-1);
         _card_wait(g_card_slot);
-        if (write(g_card_menu_file_handle, g_niki_save_blob.bytes, SAVE_FILE_BYTES) == -1)
+        if (write(g_card_menu_file_handle, g_niki_save_blob.bytes, SAVE_FILE_BYTES) == CARD_FILE_ERROR)
         {
             close(g_card_menu_file_handle);
             CARD_ERASE_WITH_RETRIES(wait_attempts, g_card_temp_save_path);

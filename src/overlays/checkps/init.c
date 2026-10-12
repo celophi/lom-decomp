@@ -26,13 +26,10 @@
 #include "main/controller.h"
 
 #define CHECKPS_ORDERING_TABLE_LENGTH 4096
-#define CHECKPS_PRIMITIVE_BUFFER_SIZE 16384
 #define CHECKPS_SONG_BUFFER_SIZE 16384
 #define CHECKPS_RESERVED_BSS_WORDS 32769
 
-#define CHECKPS_FRAME_VSYNC_INTERVAL 2
 #define CHECKPS_IMAGE_TPAGE 5
-#define CHECKPS_DEFAULT_FADE_STEPS 20
 #define CHECKPS_IMAGE_DISPLAY_FRAMES 120
 #define CHECKPS_IMAGE_COUNT 100
 #define CHECKPS_IMAGE_INITIAL_Y 112
@@ -59,7 +56,6 @@
 #define CHECKPS_CONTROLLER_UNAVAILABLE 0xFE
 #define CHECKPS_INITIAL_REPEAT_DELAY 15
 #define CHECKPS_REPEAT_DELAY 2
-#define CHECKPS_DPAD_MASK (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT)
 #define CHECKPS_NON_REPEAT_BUTTON_MASK                                                                                                                         \
     (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1 | PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_SELECT | PAD_BTN_L3 | PAD_BTN_START)
 
@@ -121,7 +117,7 @@ typedef struct
     u8 reserved_header[0x40];
     u_long ordering_table[CHECKPS_ORDERING_TABLE_LENGTH];
     CheckPSDisplayBuffer display;
-    u8 primitive_buffer[CHECKPS_PRIMITIVE_BUFFER_SIZE];
+    u8 primitive_buffer[FRAME_PRIMITIVE_BUFFER_SIZE];
     void* primitive_cursor;
     u8 reserved_tail[0x3C10];
 } CheckPSFrame;
@@ -131,7 +127,7 @@ typedef struct
  */
 struct CheckPSRenderState
 {
-    CheckPSFrame frames[2];
+    CheckPSFrame frames[DISPLAY_BUFFER_COUNT];
 };
 
 #if defined(VERSION_JP)
@@ -309,9 +305,9 @@ static void run_checkps_display_loop(CheckPSRenderState* render_state)
         evict_unused_glyphs();
         DrawSync(0);
 #if !defined(VERSION_JP)
-        set_controller_vsync_interval(CHECKPS_FRAME_VSYNC_INTERVAL);
+        set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
 #endif
-        VSync(CHECKPS_FRAME_VSYNC_INTERVAL);
+        VSync(FRAME_VSYNC_INTERVAL);
         ClearImage(&frame->display.clear_rect, 0, 0, 0);
         next_frame = &render_state->frames[0];
         if (frame == next_frame)
@@ -366,7 +362,7 @@ static void init_checkps_display(CheckPSRenderState* render_state)
     ClearImage(&rect, 0, 0, 0);
     reset_glyph_renderer();
     reset_fade_state();
-    set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, CHECKPS_DEFAULT_FADE_STEPS);
+    set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, SCREEN_FADE_FRAMES);
     load_checkps_image();
     g_checkps_exit_reason = CHECKPS_EXIT_NONE;
 #if defined(VERSION_JP)
@@ -545,11 +541,11 @@ static void update_and_draw_fade(CheckPSFrame* frame)
         setWH(&primitive->tile, SCREEN_WIDTH, SCREEN_HEIGHT);
 
         addPrim(ordering_table_tag, &primitive->tile);
-        draw_mode = FADE_ADDITIVE_TPAGE;
+        draw_mode = BLEND_ADD_TPAGE;
         primitive = CHECKPS_NEXT_FADE_PRIMITIVE(primitive, TILE);
         if (g_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
-            draw_mode = FADE_SUBTRACTIVE_TPAGE;
+            draw_mode = BLEND_SUBTRACT_TPAGE;
         }
         setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
 
@@ -965,9 +961,9 @@ static void process_controller_input(void)
         (input_state != 0))
     {
         /* Held input repeats directional buttons only. */
-        if ((input_state & CHECKPS_DPAD_MASK) != 0)
+        if ((input_state & PAD_BTN_DPAD) != 0)
         {
-            input_state &= CHECKPS_DPAD_MASK;
+            input_state &= PAD_BTN_DPAD;
         }
         if (g_input_repeat_timer == 0)
         {

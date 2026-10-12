@@ -421,9 +421,9 @@ GosubTilePacket* gosub_emit_panel(GosubTilePacket* prim, u_long* ot, s32 x, s32 
     draw_env_packet++;
 
     outline = (GosubLinePacket*)gosub_emit_panel_corners((SPRT*)draw_env_packet, ot, x, y, w, h);
-    outline = gosub_emit_panel_outline(outline, ot, x, y, w, h, 0xFFFFFF);
-    outline = gosub_emit_panel_outline(outline, ot, x + 1, y + 1, w - 2, h - 2, 0);
-    outline = gosub_emit_panel_outline(outline, ot, x - 1, y - 1, w + 2, h + 2, 0);
+    outline = gosub_emit_panel_outline(outline, ot, x, y, w, h, GPU_COLOR_WHITE);
+    outline = gosub_emit_panel_outline(outline, ot, x + 1, y + 1, w - 2, h - 2, GPU_COLOR_BLACK);
+    outline = gosub_emit_panel_outline(outline, ot, x - 1, y - 1, w + 2, h + 2, GPU_COLOR_BLACK);
     do
     {
         working_value = (uintptr_t)outline;

@@ -278,9 +278,13 @@ static inline s32 card_menu_element_width(CardMenuElement* element)
 #define CARD_MENU_LIST_Y 50
 #define CARD_MENU_LIST_HEIGHT 88
 
+/** @brief Entry rows that fit in a list window @p list_height pixels tall, and the top of the last one. */
+#define CARD_MENU_VISIBLE_ROWS(list_height) ((list_height) / CARD_MENU_ENTRY_ROW_HEIGHT)
+#define CARD_MENU_LAST_ROW_Y(list_height) ((CARD_MENU_VISIBLE_ROWS(list_height) - 1) * CARD_MENU_ENTRY_ROW_HEIGHT)
+
 /** @brief Rows that fit in the entry list, and the top of the last one. */
-#define CARD_MENU_LIST_VISIBLE_ROWS (CARD_MENU_LIST_HEIGHT / CARD_MENU_ENTRY_ROW_HEIGHT)
-#define CARD_MENU_LIST_LAST_ROW_Y ((CARD_MENU_LIST_VISIBLE_ROWS - 1) * CARD_MENU_ENTRY_ROW_HEIGHT)
+#define CARD_MENU_LIST_VISIBLE_ROWS CARD_MENU_VISIBLE_ROWS(CARD_MENU_LIST_HEIGHT)
+#define CARD_MENU_LIST_LAST_ROW_Y CARD_MENU_LAST_ROW_Y(CARD_MENU_LIST_HEIGHT)
 
 /** @brief Distance of a list's scroll arrows from the list window's edges. */
 #define CARD_MENU_SCROLL_ARROW_INSET 8
@@ -374,6 +378,7 @@ static inline s32 card_menu_element_width(CardMenuElement* element)
  */
 #define CARD_MENU_EXCHANGE_LIST_X 28
 #define CARD_MENU_EXCHANGE_LIST_WIDTH 264
+#define CARD_MENU_EXCHANGE_LIST_CENTER_X (CARD_MENU_EXCHANGE_LIST_WIDTH / 2)
 #define CARD_MENU_EXCHANGE_SCROLL_ARROW_X (CARD_MENU_EXCHANGE_LIST_X + CARD_MENU_EXCHANGE_LIST_WIDTH - 16)
 #define CARD_MENU_EXCHANGE_TITLE_X 36
 #define CARD_MENU_EXCHANGE_TITLE_Y 10

@@ -258,9 +258,9 @@ static void gover_run(void)
         field_update_input_repeat();
         gover_build_otag((u8*)drawing_frame);
         DrawSync(0);
-        set_controller_vsync_interval(2);
+        set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
 
-        VSync(2);
+        VSync(FRAME_VSYNC_INTERVAL);
 
         if ((g_fade_level == GOVER_FADE_FULL) && (g_pad_input & GOVER_DISMISS_BUTTON_MASK))
         {

@@ -23,7 +23,7 @@ typedef struct
     RECT display_rect;
 } TransitionFrame;
 
-static TransitionFrame g_transition_frames[2];
+static TransitionFrame g_transition_frames[DISPLAY_BUFFER_COUNT];
 
 /**
  * @brief Fade out the screen while continuing controller and CD processing.

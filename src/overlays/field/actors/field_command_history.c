@@ -18,6 +18,7 @@
 #include "../internal/field_actor.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
+#include "common/pad.h"
 
 /** @brief Entries in one player's history row. */
 #define FIELD_HISTORY_LENGTH 16
@@ -43,8 +44,6 @@
 /** @brief Returned by field_command_history_match() when no command was found. */
 #define FIELD_COMMAND_NONE 0xFF
 
-/** @brief Pad direction bits (after the byte swap). */
-#define FIELD_PAD_DIRECTIONS (PADLup | PADLright | PADLdown | PADLleft)
 
 /** @brief Shift from a pad direction bit to its history nibble. */
 #define FIELD_PAD_DIRECTION_SHIFT 12
@@ -160,8 +159,8 @@ void field_command_history_record(s32 player, s32 age_sequence)
                 buttons |= PADLdown;
             }
         }
-        previous_direction = g_field_command_prev_buttons[player] & FIELD_PAD_DIRECTIONS;
-        if ((previous_direction != (buttons & FIELD_PAD_DIRECTIONS)) && (previous_direction != 0))
+        previous_direction = g_field_command_prev_buttons[player] & PAD_BTN_DPAD;
+        if ((previous_direction != (buttons & PAD_BTN_DPAD)) && (previous_direction != 0))
         {
             g_field_command_history[player][g_field_command_history_count[player]] = previous_direction >> FIELD_PAD_DIRECTION_SHIFT;
             if (g_field_command_history_count[player] < FIELD_HISTORY_LENGTH - 1)
@@ -179,7 +178,7 @@ void field_command_history_record(s32 player, s32 age_sequence)
             pressed_bit = (u16)buttons & button_mask;
             if ((pressed_bit != 0) && ((g_field_command_prev_buttons[player] & button_mask) != pressed_bit))
             {
-                if (buttons & FIELD_PAD_DIRECTIONS)
+                if (buttons & PAD_BTN_DPAD)
                 {
                     g_field_command_history[player][g_field_command_history_count[player]] = (u16)buttons >> FIELD_PAD_DIRECTION_SHIFT;
                     if (g_field_command_history_count[player] < FIELD_HISTORY_LENGTH - 1)

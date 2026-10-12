@@ -131,9 +131,18 @@ extern u8 g_glyph_single_byte_chart[];
 /**
  * @brief Base the two-byte character pages are reached from: page @c lead starts at
  *        this address + lead * GLYPH_CHART_PAGE_BYTES, inside the character chart.
- * @note Not a table of its own; the address itself falls inside other data.
+ * @note Not a table of its own: it lies ENCODED_TEXT_DOUBLE_BYTE_LEAD_FIRST pages
+ *       before the two-byte chart, so the address falls inside other data or code.
  */
 extern u8 g_glyph_chart_page_base[];
+
+/**
+ * @brief Page base used by expand_text_glyph_codes. An overlay whose page base
+ *        falls inside its own code defines this before including the header.
+ */
+#ifndef GLYPH_CHART_PAGE_BASE
+#define GLYPH_CHART_PAGE_BASE g_glyph_chart_page_base
+#endif
 
 /** @brief Full-width digit characters "0"-"9" and "0"-"F". */
 extern u16 g_glyph_decimal_digits[];

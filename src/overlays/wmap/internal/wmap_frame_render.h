@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include <libgpu.h>
+#include "main/display.h"
 
 #define WMAP_OT_COUNT 179
 #define WMAP_PACKET_LIMIT 32000
@@ -29,7 +30,7 @@ typedef struct
 } WmapFrame;
 
 /** @brief Double-buffered world-map drawing state. */
-extern WmapFrame g_wmap_frames[2];
+extern WmapFrame g_wmap_frames[DISPLAY_BUFFER_COUNT];
 /** @brief Frame receiving the current ordering table and GPU packets. */
 extern WmapFrame* g_wmap_current_frame;
 /** @brief Bytes committed to the current frame's dynamic packet buffer. */

@@ -1325,7 +1325,7 @@ void field_handle_return_to_title_prompt(void)
             field_begin_return_to_title_prompt_close();
             return;
         }
-        if (g_pad_input & (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT | PAD_BTN_SELECT))
+        if (g_pad_input & (PAD_BTN_DPAD | PAD_BTN_SELECT))
         {
             field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_CENTER);
             g_field_return_to_title_choice ^= 1;

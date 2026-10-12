@@ -1,6 +1,7 @@
 #include "internal/movie_internal.h"
 #include "overlays/field/field_scene.h"
 #include <libetc.h>
+#include "main/display.h"
 
 /** @brief Fixed configuration used by @ref movie_play. */
 #define MOVIE_DISPLAY_WIDTH 320
@@ -115,7 +116,7 @@ typedef union
  */
 void movie_play(u16 movie_index)
 {
-    DISPENV display_envs[2];
+    DISPENV display_envs[DISPLAY_BUFFER_COUNT];
     DISPENV* display_env;
     MovieState* state;
     s32 audio_fade_vol;

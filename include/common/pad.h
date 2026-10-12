@@ -33,6 +33,9 @@ typedef enum
     PAD_BTN_LEFT = 0x8000
 } PadButton;
 
+/** @brief The four d-pad direction buttons. */
+#define PAD_BTN_DPAD (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT)
+
 /** @brief Input word with every button set; menus treat it as an invalid controller read and clear it. */
 #define PAD_ALL_BUTTONS 0xFFFF
 

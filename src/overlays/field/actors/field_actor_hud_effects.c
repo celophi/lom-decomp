@@ -120,7 +120,6 @@
 
 /** @brief Gray used for the recovery gauge's dark edge. */
 #define FIELD_HUD_RECOVERY_DARK GPU_COLOR_WORD(0x20, 0x20, 0x20)
-#define FIELD_HUD_WHITE GPU_COLOR_WORD(0xFF, 0xFF, 0xFF)
 #define FIELD_HUD_RED GPU_COLOR_WORD(0xFF, 0, 0)
 
 /**
@@ -803,8 +802,8 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
         SET_POLY_G4_BGR2_PACKED(bar, FIELD_HUD_RECOVERY_DARK);
         setlen(bar, FIELD_POLY_G4_LENGTH);
         setcode(bar, FIELD_POLY_G4_CODE);
-        SET_POLY_G4_BGR1_PACKED(bar, FIELD_HUD_WHITE);
-        SET_POLY_G4_BGR3_PACKED(bar, FIELD_HUD_WHITE);
+        SET_POLY_G4_BGR1_PACKED(bar, GPU_COLOR_WHITE);
+        SET_POLY_G4_BGR3_PACKED(bar, GPU_COLOR_WHITE);
         recovery_width = (s16)player->revive_delay;
         recovery_width = (s32)(g_field_hud_bar_width * player->revive_time) / (s32)recovery_width;
         field_hud_set_bar_geometry(bar, x, y, recovery_width);
@@ -1208,7 +1207,7 @@ static POLY_F4* field_emit_hud_healing_quad(POLY_F4* prim, s32 y, u_long* ot)
     {
         prim->x1 = prim->x0 + 1;
     }
-    SET_BGR0_PACKED(prim, FIELD_HUD_WHITE);
+    SET_BGR0_PACKED(prim, GPU_COLOR_WHITE);
     setPolyF4(prim);
     return field_hud_link_change_quad(prim, y, ot);
 }

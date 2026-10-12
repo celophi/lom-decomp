@@ -209,14 +209,14 @@ s32 addhero_advance_load_sequence(void)
             g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
             _card_wait(g_card_slot);
             g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
-            if (g_card_menu_file_handle == -1)
+            if (g_card_menu_file_handle == CARD_FILE_ERROR)
             {
                 break;
             }
             clear_software_card_events();
             _card_wait(g_card_slot);
             if (read(g_card_menu_file_handle, &g_addhero_entry_file,
-                     g_card_menu_selected_entry_extended != 0 ? CARD_MENU_ENTRY_READ_BYTES : CARD_MENU_ENTRY_TITLE_READ_BYTES) == -1)
+                     g_card_menu_selected_entry_extended != 0 ? CARD_MENU_ENTRY_READ_BYTES : CARD_MENU_ENTRY_TITLE_READ_BYTES) == CARD_FILE_ERROR)
             {
                 close(g_card_menu_file_handle);
                 break;
@@ -255,7 +255,7 @@ s32 addhero_advance_load_sequence(void)
             g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
             clear_software_card_events();
             _card_wait(g_card_slot);
-            if (read(g_card_menu_file_handle, &g_addhero_save_file, SAVE_FILE_BYTES) == -1)
+            if (read(g_card_menu_file_handle, &g_addhero_save_file, SAVE_FILE_BYTES) == CARD_FILE_ERROR)
             {
                 close(g_card_menu_file_handle);
                 g_card_menu_retry_count--;
@@ -328,7 +328,7 @@ s32 addhero_advance_load_sequence(void)
             g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
             clear_software_card_events();
             _card_wait(g_card_slot);
-            if (read(g_card_menu_file_handle, &g_addhero_save_file, SAVE_FILE_BYTES) == -1)
+            if (read(g_card_menu_file_handle, &g_addhero_save_file, SAVE_FILE_BYTES) == CARD_FILE_ERROR)
             {
                 close(g_card_menu_file_handle);
                 g_card_menu_retry_count--;
@@ -376,7 +376,7 @@ s32 addhero_advance_load_sequence(void)
             strcat(card_path.text, g_lom_save_dummy_filename);
             _card_wait(g_card_slot);
             g_card_menu_file_handle = open(card_path.text, FCREAT | CARD_FILE_BLOCKS(SAVE_FILE_BYTES / CARD_BLOCK_BYTES));
-            if (g_card_menu_file_handle == -1)
+            if (g_card_menu_file_handle == CARD_FILE_ERROR)
             {
                 close(g_card_menu_file_handle);
                 CARD_ERASE_WITH_RETRIES(attempts, card_path.text);
@@ -396,7 +396,7 @@ s32 addhero_advance_load_sequence(void)
             g_card_menu_progress_start_tick = VSync(-1);
             g_card_menu_progress_bar_active = 1;
             _card_wait(g_card_slot);
-            if (write(g_card_menu_file_handle, &g_addhero_save_file, SAVE_FILE_BYTES) == -1)
+            if (write(g_card_menu_file_handle, &g_addhero_save_file, SAVE_FILE_BYTES) == CARD_FILE_ERROR)
             {
                 close(g_card_menu_file_handle);
                 CARD_ERASE_WITH_RETRIES(attempts, g_card_temp_save_path);

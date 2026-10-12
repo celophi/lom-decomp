@@ -36,7 +36,7 @@ class SourceTest(unittest.TestCase):
         for version, branch in zip(("jp", "us"), branches.groups()):
             with self.subTest(version=version):
                 function, offset = re.search(
-                    r"#define CLOAD_GLYPH_CHART_PAGE_BASE \(\(u8\*\)(\w+) \+ (0x[0-9A-Fa-f]+)\)", branch
+                    r"#define GLYPH_CHART_PAGE_BASE \(\(u8\*\)(\w+) \+ (0x[0-9A-Fa-f]+)\)", branch
                 ).groups()
                 names = cload.CloadSymbols.load(REPO_ROOT / "config" / version / cload.SYMBOL_FILE)
                 self.assertEqual(names.chart_pages, names.named[function] + int(offset, 16))

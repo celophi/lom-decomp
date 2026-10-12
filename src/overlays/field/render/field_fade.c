@@ -133,7 +133,7 @@ void field_update_and_render_fade(FieldRenderHalf* render_half)
         setTile(&primitive->tile);
         setSemiTrans(&primitive->tile, 1);
         primitive->tile.w = SCREEN_WIDTH;
-        draw_mode = FADE_ADDITIVE_TPAGE;
+        draw_mode = BLEND_ADD_TPAGE;
         SET_YX0(&primitive->tile, 0, 0);
         primitive->tile.h = SCREEN_HEIGHT;
         addPrim(ordering_table_tag, &primitive->tile);
@@ -141,7 +141,7 @@ void field_update_and_render_fade(FieldRenderHalf* render_half)
         primitive = FIELD_NEXT_FADE_PRIMITIVE(primitive, TILE);
         if (g_field_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
-            draw_mode = FADE_SUBTRACTIVE_TPAGE;
+            draw_mode = BLEND_SUBTRACT_TPAGE;
         }
         setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
         addPrim(ordering_table_tag, &primitive->draw_mode);

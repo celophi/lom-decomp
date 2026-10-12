@@ -15,7 +15,6 @@
 #include <memory.h>
 #include "common/tim.h"
 
-#define WSEL_FADE_IN_FRAMES 20
 /** Fixed RAM buffer that CD resources are staged into before being unpacked. */
 #define WSEL_LOAD_BUFFER ((u8*)LOAD_BUFFER_ADDRESS)
 /** Offset table at the head of a staged music file: [0] sequence, [1] instrument bank. */
@@ -54,7 +53,6 @@
 #define WSEL_CONFIRM_BUTTONS (PAD_BTN_CROSS | PAD_BTN_L3)
 #define WSEL_FINAL_CONFIRM_BUTTONS (PAD_BTN_CROSS | PAD_BTN_L3 | PAD_BTN_START)
 #define WSEL_CANCEL_BUTTONS PAD_BTN_CIRCLE
-#define WSEL_DPAD_BUTTONS (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT)
 
 #define WSEL_SFX_ERROR 0x78
 #define WSEL_SFX_CURSOR 0x7D
@@ -337,8 +335,8 @@ static void wsel_run_loop(WselRenderBuffer* buffers)
         wsel_draw_frame(buffer);
         wsel_update_input();
         DrawSync(0);
-        set_controller_vsync_interval(2);
-        VSync(2);
+        set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
+        VSync(FRAME_VSYNC_INTERVAL);
         ClearImage(&buffer->clear_rect, 0, 0, 0);
         if (buffer == buffers)
         {
@@ -384,7 +382,7 @@ static void wsel_init(WselRenderBuffer* buffers)
     ClearImage(&vram_rect, 0, 0, 0);
 
     wsel_reset_fade();
-    wsel_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, WSEL_FADE_IN_FRAMES);
+    wsel_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, SCREEN_FADE_FRAMES);
     SetDefDispEnv(&buffers[0].disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     SetDefDispEnv(&buffers[1].disp_env, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
     SetDefDrawEnv(&buffers[0].draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
@@ -529,11 +527,11 @@ static void wsel_draw_fade(WselRenderBuffer* buffer)
         setWH(&primitive->tile, SCREEN_WIDTH, SCREEN_HEIGHT);
         addPrim(ot, &primitive->tile);
 
-        draw_mode = FADE_ADDITIVE_TPAGE;
+        draw_mode = BLEND_ADD_TPAGE;
         primitive = WSEL_NEXT_FADE_PRIMITIVE(primitive, TILE);
         if (g_wsel_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
-            draw_mode = FADE_SUBTRACTIVE_TPAGE;
+            draw_mode = BLEND_SUBTRACT_TPAGE;
         }
         setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
         addPrim(ot, &primitive->draw_mode);
@@ -1189,7 +1187,7 @@ static void wsel_update_input(void)
                 g_wsel_cursor_frames = WSEL_CURSOR_MOVE_FRAMES;
             }
         }
-        if ((g_wsel_buttons_held & WSEL_DPAD_BUTTONS) && (g_wsel_cursor_frames != 0 || g_wsel_map_scroll_frames != 0))
+        if ((g_wsel_buttons_held & PAD_BTN_DPAD) && (g_wsel_cursor_frames != 0 || g_wsel_map_scroll_frames != 0))
         {
             wsel_play_sfx(WSEL_SFX_CURSOR, AKAO_PAN_CENTER);
             return;
@@ -1459,9 +1457,9 @@ static void wsel_update_pad_repeat(void)
         (input_state != 0))
     {
         /* Held input repeats directional buttons only. */
-        if ((input_state & WSEL_DPAD_BUTTONS) != 0)
+        if ((input_state & PAD_BTN_DPAD) != 0)
         {
-            input_state &= WSEL_DPAD_BUTTONS;
+            input_state &= PAD_BTN_DPAD;
         }
         if (g_wsel_repeat_timer == 0)
         {

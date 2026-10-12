@@ -457,7 +457,7 @@ s32 carda_advance_card_sequence(void)
             strcat(card_path.text, file_name.text);
             _card_wait(g_card_slot);
             g_card_menu_file_handle = open(card_path.text, FCREAT | CARD_FILE_BLOCKS(SAVE_FILE_BYTES / CARD_BLOCK_BYTES));
-            if (g_card_menu_file_handle == -1)
+            if (g_card_menu_file_handle == CARD_FILE_ERROR)
             {
                 g_card_menu_retry_count--;
                 if (g_card_menu_retry_count == 0)
@@ -481,7 +481,7 @@ s32 carda_advance_card_sequence(void)
             g_card_menu_progress_bar_active = 1;
             g_card_menu_progress_start_tick = VSync(-1);
             _card_wait(g_card_slot);
-            if (write(g_card_menu_file_handle, g_carda_save_blob, SAVE_FILE_BYTES) == -1)
+            if (write(g_card_menu_file_handle, g_carda_save_blob, SAVE_FILE_BYTES) == CARD_FILE_ERROR)
             {
                 close(g_card_menu_file_handle);
                 CARD_ERASE_WITH_RETRIES(attempts, g_card_temp_save_path);
@@ -616,7 +616,7 @@ s32 carda_advance_card_sequence(void)
             strcat(card_path.text, g_lom_pocketstation_filename_prefix);
             _card_wait(g_card_slot);
             g_card_menu_file_handle = open(card_path.text, FCREAT | CARD_FILE_BLOCKS(CARDA_POCKETSTATION_SAVE_BYTES / CARD_BLOCK_BYTES));
-            if (g_card_menu_file_handle == -1)
+            if (g_card_menu_file_handle == CARD_FILE_ERROR)
             {
                 g_card_menu_retry_count--;
                 if (g_card_menu_retry_count == 0)
@@ -636,7 +636,7 @@ s32 carda_advance_card_sequence(void)
             _card_wait(g_card_slot);
             g_card_menu_file_handle = open(g_card_temp_save_path, FASYNC | FWRITE);
             _card_wait(g_card_slot);
-            if (write(g_card_menu_file_handle, g_carda_save_blob, CARDA_POCKETSTATION_SAVE_BYTES) == -1)
+            if (write(g_card_menu_file_handle, g_carda_save_blob, CARDA_POCKETSTATION_SAVE_BYTES) == CARD_FILE_ERROR)
             {
                 McxHideTrans(CARD_CHANNEL(g_card_slot));
                 close(g_card_menu_file_handle);
@@ -770,12 +770,12 @@ s32 carda_advance_card_sequence(void)
             g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
             _card_wait(g_card_slot);
             g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
-            if (g_card_menu_file_handle != -1)
+            if (g_card_menu_file_handle != CARD_FILE_ERROR)
             {
                 clear_software_card_events();
                 _card_wait(g_card_slot);
                 if (read(g_card_menu_file_handle, &g_carda_selected_file,
-                         g_card_menu_selected_entry_extended != 0 ? CARD_MENU_ENTRY_READ_BYTES : CARD_MENU_ENTRY_TITLE_READ_BYTES) == -1)
+                         g_card_menu_selected_entry_extended != 0 ? CARD_MENU_ENTRY_READ_BYTES : CARD_MENU_ENTRY_TITLE_READ_BYTES) == CARD_FILE_ERROR)
                 {
                     close(g_card_menu_file_handle);
                     return phase_result;
@@ -810,7 +810,7 @@ s32 carda_advance_card_sequence(void)
             g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
             clear_software_card_events();
             _card_wait(g_card_slot);
-            if (read(g_card_menu_file_handle, g_carda_save_blob, SAVE_FILE_BYTES) == -1)
+            if (read(g_card_menu_file_handle, g_carda_save_blob, SAVE_FILE_BYTES) == CARD_FILE_ERROR)
             {
                 carda_open_status_dialog(CARD_MENU_DIALOG_LOAD_FAILED);
                 return phase_result;
@@ -878,7 +878,7 @@ s32 carda_advance_card_sequence(void)
             g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
             clear_software_card_events();
             _card_wait(g_card_slot);
-            if (read(g_card_menu_file_handle, g_carda_save_blob, CARDA_SAVE_PREFIX_BYTES) == -1)
+            if (read(g_card_menu_file_handle, g_carda_save_blob, CARDA_SAVE_PREFIX_BYTES) == CARD_FILE_ERROR)
             {
                 carda_open_save_status_dialog(CARD_MENU_DIALOG_LOAD_FAILED);
                 return phase_result;
@@ -916,7 +916,7 @@ s32 carda_advance_card_sequence(void)
             strcat(card_path.text, g_lom_pocketstation_dummy_filename);
             _card_wait(g_card_slot);
             g_card_menu_file_handle = open(card_path.text, FCREAT | CARD_FILE_BLOCKS(CARDA_POCKETSTATION_SAVE_BYTES / CARD_BLOCK_BYTES));
-            if (g_card_menu_file_handle == -1)
+            if (g_card_menu_file_handle == CARD_FILE_ERROR)
             {
                 g_card_menu_retry_count--;
                 if (g_card_menu_retry_count == 0)
@@ -936,7 +936,7 @@ s32 carda_advance_card_sequence(void)
             g_card_menu_progress_start_tick = VSync(-1);
             g_card_menu_progress_bar_active = 1;
             _card_wait(g_card_slot);
-            if (write(g_card_menu_file_handle, g_carda_save_blob, CARDA_POCKETSTATION_SAVE_BYTES) == -1)
+            if (write(g_card_menu_file_handle, g_carda_save_blob, CARDA_POCKETSTATION_SAVE_BYTES) == CARD_FILE_ERROR)
             {
                 close(g_card_menu_file_handle);
                 CARD_ERASE_WITH_RETRIES(attempts, g_card_temp_save_path);

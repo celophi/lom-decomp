@@ -2,6 +2,7 @@
 #include "../internal/wmap_land_transition.h"
 #include "../internal/wmap_frame_render.h"
 #include "../internal/wmap_party_travel.h"
+#include "common/pad.h"
 /**
  * @file wmap_map_display.c
  * @brief Land sprites, spirit information, and the world-map game.
@@ -1773,7 +1774,7 @@ void wmap_draw_information_labels(void)
     WmapGlyph* image;
     SPRT* packet;
 
-    if ((g_wmap_buttons_repeat & (PADLup | PADLright | PADLdown | PADLleft)) || g_wmap_view_scroll_mode != 0)
+    if ((g_wmap_buttons_repeat & PAD_BTN_DPAD) || g_wmap_view_scroll_mode != 0)
     {
         g_wmap_information_groups = 0;
     }

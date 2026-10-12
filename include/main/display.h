@@ -59,12 +59,27 @@
 /** Fade level of a fade to black. */
 #define FADE_BLACK 0
 
+/** Frames of a standalone screen's fade in from (or out to) black: title, name entry, world select, load menu, hardware check. */
+#define SCREEN_FADE_FRAMES 20
+
+/** Display buffers of a double-buffered screen: one is shown while the other is drawn. */
+#define DISPLAY_BUFFER_COUNT 2
+
+/** Bytes of one display buffer's GPU primitive buffer on the standalone screens. */
+#define FRAME_PRIMITIVE_BUFFER_SIZE 0x4000
+
+/** Vertical blanks per frame of the 30 fps game loop, passed to VSync and set_controller_vsync_interval. */
+#define FRAME_VSYNC_INTERVAL 2
+
 /** Lowest fade level drawn by adding light; levels below FADE_NEUTRAL subtract it. */
 #define FADE_ADDITIVE_THRESHOLD (FADE_NEUTRAL + 1)
 
-/** Draw-mode texture pages of the full-screen fade quad: additive and subtractive blending. */
-#define FADE_ADDITIVE_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 320, 0)
-#define FADE_SUBTRACTIVE_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 320, 0)
+/**
+ * Draw-mode texture pages that select additive or subtractive blending for the
+ * primitives after them: fade quads, glows, shadows and darkened window fills.
+ */
+#define BLEND_ADD_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 320, 0)
+#define BLEND_SUBTRACT_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 320, 0)
 
 /** Y coordinate of the CLUT storage row in VRAM.
  * Overlays store their 256-entry palettes in the lines starting here,

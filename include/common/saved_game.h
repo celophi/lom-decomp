@@ -46,8 +46,11 @@
 /** @brief SavedGameLayout::play_time ticks in one minute (60 ticks per second). */
 #define SAVED_PLAY_TIME_TICKS_PER_MINUTE 3600
 
+/** @brief Minutes in one hour of play time. */
+#define SAVED_PLAY_TIME_MINUTES_PER_HOUR 60
+
 /** @brief SavedGameLayout::play_time ticks in one hour. */
-#define SAVED_PLAY_TIME_TICKS_PER_HOUR (SAVED_PLAY_TIME_TICKS_PER_MINUTE * 60)
+#define SAVED_PLAY_TIME_TICKS_PER_HOUR (SAVED_PLAY_TIME_TICKS_PER_MINUTE * SAVED_PLAY_TIME_MINUTES_PER_HOUR)
 
 #define FIELD_PARTY_SIZE 3
 /** @brief Party slot of the hero. */

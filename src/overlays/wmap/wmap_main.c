@@ -97,9 +97,8 @@ enum WmapHelpPage
     WMAP_HELP_LAND_PLACEMENT = 6
 };
 
-/** @brief Soft-reset chord (select, start and all four shoulder buttons) and the D-pad bits. */
+/** @brief Soft-reset chord: select, start and all four shoulder buttons. */
 #define WMAP_RESET_CHORD (PADselect | PADstart | PADL1 | PADL2 | PADR1 | PADR2)
-#define WMAP_DPAD_MASK (PADLup | PADLright | PADLdown | PADLleft)
 /** @brief 15-bit pixel semi-transparency (mask) bit. */
 #define WMAP_PIXEL_MASK_BIT 0x8000
 
@@ -1871,8 +1870,8 @@ s32 wmap_run_loop(void)
             }
             if (g_wmap_frame_count < WMAP_INPUT_GRACE_FRAMES)
             {
-                g_wmap_buttons_repeat &= WMAP_DPAD_MASK;
-                g_wmap_buttons_held &= WMAP_DPAD_MASK;
+                g_wmap_buttons_repeat &= PAD_BTN_DPAD;
+                g_wmap_buttons_held &= PAD_BTN_DPAD;
             }
             if (g_wmap_input_script != 0)
             {
@@ -2086,8 +2085,8 @@ s32 wmap_run_loop(void)
             g_wmap_land_image_cache_missed = 0;
             vsync_count = VSync(1);
             DrawSync(0);
-            set_controller_vsync_interval(2);
-            VSync(2);
+            set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
+            VSync(FRAME_VSYNC_INTERVAL);
             if (vsync_count >= WMAP_SHADOW_VSYNC_LIMIT)
             {
                 g_wmap_artifact_shadows_enabled = 0;
