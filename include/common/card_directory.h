@@ -2,6 +2,7 @@
 #define CARD_DIRECTORY_H
 
 #include "common.h"
+#include "common/card_file.h"
 #include <kernel.h>
 
 /**

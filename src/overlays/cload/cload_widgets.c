@@ -179,7 +179,7 @@ void* cload_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
     s32 status;
     CardMenuElement* prompt;
 
-    x = -x_offset + 0x90;
+    x = -x_offset + CARD_MENU_MESSAGE_CENTER_X;
     result = cload_draw_choice_prompt(
         field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_load_prompt, CARD_MENU_TEXT_LOAD_PROMPT), 4, x, -y_offset, 2), ot, x, 0xE - y_offset);
 
@@ -220,11 +220,11 @@ void* cload_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                 prompt->draw = cload_draw_load_progress;
                 prompt->attr.bits.transition_step = 1;
                 prompt->attr.bits.state = 1;
-                prompt->attr.bits.x = 0x10;
+                prompt->attr.bits.x = CARD_MENU_MESSAGE_X;
                 prompt->attr.bits.y = 0x5B;
-                prompt->size.bits.width_high = 1;
+                prompt->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
                 prompt->size.bits.height = 0x2B;
-                prompt->attr.word = (prompt->attr.word & 0x00FFFFFF) | ((u32)0x20 << 24);
+                CARD_MENU_SET_ELEMENT_WIDTH_LOW(prompt, CARD_MENU_MESSAGE_WIDTH);
             }
         }
     }
@@ -247,7 +247,7 @@ void* cload_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offse
     void* result;
     u16* text_table;
 
-    x = -x_offset + 0x90;
+    x = -x_offset + CARD_MENU_MESSAGE_CENTER_X;
     result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_loading, CARD_MENU_TEXT_LOADING), 4, x, -y_offset, 2);
     text_table = CARD_MENU_TEXT_TABLE(g_cload_text_loading, 25);
     result = field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), 4, x, 0xE - y_offset, 2);
@@ -370,12 +370,12 @@ void* cload_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offse
     case 0:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_save_failed, CARD_MENU_TEXT_SAVE_FAILED), 4, -x_offset + 0x80, -y_offset, 2);
         text_table = CARD_MENU_TEXT_TABLE(g_card_menu_text_save_failed, 30);
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECK_CARD_INSERTED), 4, -x_offset + 0x80, -y_offset + CARD_MENU_DIALOG_LINE_HEIGHT, 2);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECK_CARD_INSERTED), 4, -x_offset + 0x80, -y_offset + FIELD_TEXT_LINE_SPACING, 2);
         break;
     case 1:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_load_failed, CARD_MENU_TEXT_LOAD_FAILED), 4, -x_offset + 0x80, -y_offset, 2);
         text_table = CARD_MENU_TEXT_TABLE(g_card_menu_text_load_failed, 31);
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECK_CARD_INSERTED), 4, -x_offset + 0x80, -y_offset + CARD_MENU_DIALOG_LINE_HEIGHT, 2);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECK_CARD_INSERTED), 4, -x_offset + 0x80, -y_offset + FIELD_TEXT_LINE_SPACING, 2);
         break;
     case 2:
         prim =
@@ -387,7 +387,7 @@ void* cload_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offse
     case 4:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_load_failed, CARD_MENU_TEXT_LOAD_FAILED), 4, -x_offset + 0x80, -y_offset, 2);
         text_table = CARD_MENU_TEXT_TABLE(g_card_menu_text_load_failed, 31);
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_SAVE_CORRUPT), 4, -x_offset + 0x80, -y_offset + CARD_MENU_DIALOG_LINE_HEIGHT, 2);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_SAVE_CORRUPT), 4, -x_offset + 0x80, -y_offset + FIELD_TEXT_LINE_SPACING, 2);
         break;
     }
 

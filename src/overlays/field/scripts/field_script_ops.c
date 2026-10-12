@@ -49,9 +49,7 @@ s32 field_set_actor_animation();
 /** @brief Most entries a scripted shop list can hold. */
 #define FIELD_SHOP_LIST_CAPACITY 32
 
-/** @brief Largest quantity of one item kind. */
-#define FIELD_ITEM_QUANTITY_MAX 99
-/** @brief Item kinds that opcode 0x0F subcommand 7 fills to FIELD_ITEM_QUANTITY_MAX. */
+/** @brief Item kinds that opcode 0x0F subcommand 7 fills to ITEM_COUNT_MAX. */
 #define FIELD_DEBUG_ITEM_KIND_COUNT 253
 
 /** @brief First opcode dispatched through g_field_script_pair_op_table. */
@@ -1832,7 +1830,7 @@ void field_script_op_0f(void)
     case 7:
         for (i = 0; i < FIELD_DEBUG_ITEM_KIND_COUNT; i++)
         {
-            g_field_game_state->item_counts[i] = FIELD_ITEM_QUANTITY_MAX;
+            g_field_game_state->item_counts[i] = ITEM_COUNT_MAX;
         }
         break;
     }

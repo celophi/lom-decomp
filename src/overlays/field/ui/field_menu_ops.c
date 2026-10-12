@@ -2169,7 +2169,7 @@ void field_place_actor_beside_actor0(void)
 
 /**
  * @brief Free the action slot selected by D_80122C0D and give its item back.
- * @note The item count is clamped to 0-99.
+ * @note The item count is clamped to 0-ITEM_COUNT_MAX.
  */
 void field_menu_release_action_slot(void)
 {
@@ -2187,8 +2187,8 @@ void field_menu_release_action_slot(void)
     count += 1;
     if (count >= 0)
     {
-        clamped = 99;
-        if (count < 100)
+        clamped = ITEM_COUNT_MAX;
+        if (count <= ITEM_COUNT_MAX)
         {
             clamped = count;
         }

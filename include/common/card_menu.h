@@ -8,6 +8,7 @@
 #include "main/display.h"
 #include "common/gpu_packet.h"
 #include "main/field_runtime.h"
+#include "overlays/field/field_text.h"
 
 /**
  * @file card_menu.h
@@ -281,9 +282,12 @@ static inline s32 card_menu_element_width(CardMenuElement* element)
 #define CARD_MENU_LIST_VISIBLE_ROWS (CARD_MENU_LIST_HEIGHT / CARD_MENU_ENTRY_ROW_HEIGHT)
 #define CARD_MENU_LIST_LAST_ROW_Y ((CARD_MENU_LIST_VISIBLE_ROWS - 1) * CARD_MENU_ENTRY_ROW_HEIGHT)
 
+/** @brief Distance of a list's scroll arrows from the list window's edges. */
+#define CARD_MENU_SCROLL_ARROW_INSET 8
+
 /** @brief Scroll arrows, inset from the entry list's top and bottom. */
-#define CARD_MENU_SCROLL_ARROW_UP_Y (CARD_MENU_LIST_Y + 8)
-#define CARD_MENU_SCROLL_ARROW_DOWN_Y (CARD_MENU_LIST_Y + CARD_MENU_LIST_HEIGHT - 8)
+#define CARD_MENU_SCROLL_ARROW_UP_Y (CARD_MENU_LIST_Y + CARD_MENU_SCROLL_ARROW_INSET)
+#define CARD_MENU_SCROLL_ARROW_DOWN_Y (CARD_MENU_LIST_Y + CARD_MENU_LIST_HEIGHT - CARD_MENU_SCROLL_ARROW_INSET)
 
 /** @brief Frames a list scroll takes to reach its target. */
 #define CARD_MENU_SCROLL_FRAMES 4
@@ -311,14 +315,13 @@ static inline s32 card_menu_element_width(CardMenuElement* element)
 #define CARD_MENU_CARD_LABEL_WIDTH 0x80
 #define CARD_MENU_CARD_LABEL_TEXT_X 0x40
 #endif
-#define CARD_MENU_CARD_LABEL_HEIGHT 16
+#define CARD_MENU_CARD_LABEL_HEIGHT FIELD_TEXT_LINE_SPACING /**< One line. */
 
-/** @brief Details window of the browser layout, and its line spacing. */
+/** @brief Details window of the browser layout. */
 #define CARD_MENU_DETAILS_X 30
 #define CARD_MENU_DETAILS_Y 142
 #define CARD_MENU_DETAILS_WIDTH 260
 #define CARD_MENU_DETAILS_HEIGHT 52
-#define CARD_MENU_DETAILS_LINE_HEIGHT 16
 
 /**
  * @brief Width of the details window's party icon strip.
@@ -355,12 +358,12 @@ static inline s32 card_menu_element_width(CardMenuElement* element)
 #define CARD_MENU_MESSAGE_WIDTH 288
 #define CARD_MENU_MESSAGE_HEIGHT 44
 
+/** @brief Horizontal centre of the message window, where its centred text is drawn. */
+#define CARD_MENU_MESSAGE_CENTER_X (CARD_MENU_MESSAGE_WIDTH / 2)
+
 /** @brief Left edge and width of the dialog window (its top and height differ per screen). */
 #define CARD_MENU_DIALOG_X 32
 #define CARD_MENU_DIALOG_WIDTH 256
-
-/** @brief Line spacing of the dialog window and of the two-line block-count notices. */
-#define CARD_MENU_DIALOG_LINE_HEIGHT 16
 
 /** @brief Frames of the fade back to the host screen when a card menu exits. */
 #define CARD_MENU_EXIT_FADE_FRAMES 8
@@ -375,7 +378,7 @@ static inline s32 card_menu_element_width(CardMenuElement* element)
 #define CARD_MENU_EXCHANGE_TITLE_X 36
 #define CARD_MENU_EXCHANGE_TITLE_Y 10
 #define CARD_MENU_EXCHANGE_TITLE_WIDTH 240
-#define CARD_MENU_EXCHANGE_TITLE_HEIGHT 16
+#define CARD_MENU_EXCHANGE_TITLE_HEIGHT FIELD_TEXT_LINE_SPACING /**< One line. */
 #if defined(VERSION_JP)
 #define CARD_MENU_EXCHANGE_CARD_SLOT0_LABEL_X 0x28 /**< JP moves the narrower slot 0 label right. */
 #else

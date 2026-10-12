@@ -31,7 +31,9 @@ class SourceTest(unittest.TestCase):
         source = (REPO_ROOT / "src/overlays/carda/carda.c").read_text(encoding="ascii")
         layout = re.search(r"typedef struct\s*\{([^}]+)\} CardaSaveIcon;", source).group(1)
         frame_names = re.search(r"frames\[(\w+)\]\[(\w+)\]", layout).groups()
-        header = (REPO_ROOT / "include/common/saved_game.h").read_text(encoding="ascii")
+        header = "".join(
+            (REPO_ROOT / "include/common" / name).read_text(encoding="ascii") for name in ("saved_game.h", "card_file.h")
+        )
         defines = dict(re.findall(r"^#define (\w+) (0x[0-9A-Fa-f]+|\d+)\b", header, re.M))
         frames, frame_bytes = (int(defines.get(name, name), 0) for name in frame_names)
         self.assertEqual(carda.SAVE_ICON_FRAMES, frames)

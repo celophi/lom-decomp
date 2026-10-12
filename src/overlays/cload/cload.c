@@ -383,11 +383,11 @@ s32 card_menu_handle_input(void)
                 prompt = cload_alloc_element();
                 prompt->draw = cload_draw_load_prompt;
                 prompt->attr.bits.transition_step = 1;
-                prompt->attr.bits.x = 16;
+                prompt->attr.bits.x = CARD_MENU_MESSAGE_X;
                 prompt->attr.bits.y = 91;
-                prompt->size.bits.width_high = 1;
+                prompt->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
                 prompt->size.bits.height = 43;
-                CARD_MENU_SET_ELEMENT_WIDTH_LOW(prompt, 0x20);
+                CARD_MENU_SET_ELEMENT_WIDTH_LOW(prompt, CARD_MENU_MESSAGE_WIDTH);
                 cload_enable_choice_toggle();
                 cload_restart_load_sequence();
                 sfx_id = 0x7E;
@@ -702,7 +702,7 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
 
         result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_new_save_prompt, CARD_MENU_TEXT_NEW_SAVE_TITLE), 1, x, -y_offset, 0);
         text_table = CARD_MENU_TEXT_TABLE(g_cload_text_new_save_prompt, 20);
-        return field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_USES_TWO_BLOCKS), 1, x, CARD_MENU_DIALOG_LINE_HEIGHT - y_offset, 0);
+        return field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_USES_TWO_BLOCKS), 1, x, FIELD_TEXT_LINE_SPACING - y_offset, 0);
     }
     else
     {
@@ -834,19 +834,19 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
                 return result;
             }
 
-            for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
+            for (j = 0; j < CARD_FILE_TITLE_LINE_BYTES; j++)
             {
                 name[j] = g_cload_selected_file.header.title[0][j];
             }
             name[j] = 0;
             result = draw_cached_text(result, ot, name, -x_offset, -y_offset, 1, FIELD_TEXT_ALIGN_LEFT);
 
-            for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
+            for (j = 0; j < CARD_FILE_TITLE_LINE_BYTES; j++)
             {
                 name[j] = g_cload_selected_file.header.title[1][j];
             }
             name[j] = 0;
-            result = draw_cached_text(result, ot, name, -x_offset, -y_offset + CARD_MENU_DETAILS_LINE_HEIGHT, 1, FIELD_TEXT_ALIGN_LEFT);
+            result = draw_cached_text(result, ot, name, -x_offset, -y_offset + FIELD_TEXT_LINE_SPACING, 1, FIELD_TEXT_ALIGN_LEFT);
         }
     }
     return result;

@@ -408,7 +408,7 @@ static s32 shop_handle_list_input(void)
         }
         else
         {
-            if (g_shop_quantity < SHOP_MAX_ITEM_COUNT)
+            if (g_shop_quantity < ITEM_COUNT_MAX)
             {
                 play_menu_sfx(SHOP_SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
                 g_shop_quantity++;
@@ -437,7 +437,7 @@ static s32 shop_handle_list_input(void)
                             shop_open_buy_prompt();
                         }
                     }
-                    else if (g_saved_game_ctx->item_counts[entry->id] >= SHOP_MAX_ITEM_COUNT)
+                    else if (g_saved_game_ctx->item_counts[entry->id] >= ITEM_COUNT_MAX)
                     {
                         play_menu_sfx(SHOP_SFX_ERROR, AKAO_SFX_DEFAULT_VOLUME);
                         shop_open_notice(SHOP_NOTICE_CANNOT_CARRY);

@@ -24,7 +24,7 @@
 #define CARDA_SAVE_PREFIX_BYTES 0x400
 
 /** @brief Offset of the title's note sign (CARDA_TITLE_NOTE_INDEX) in a card file's first sector. */
-#define CARDA_TITLE_NOTE_OFFSET (CARDA_TITLE_OFFSET + CARDA_TITLE_NOTE_INDEX)
+#define CARDA_TITLE_NOTE_OFFSET (CARD_FILE_TITLE_OFFSET + CARDA_TITLE_NOTE_INDEX)
 
 static s32 carda_rank_entries(void);
 static s32 carda_has_known_entry_type(void);
@@ -553,7 +553,7 @@ s32 carda_advance_card_sequence(void)
                     _card_wait(g_card_slot);
                     _card_read(CARD_CHANNEL(g_card_slot), dir_entry.head, title_frame);
                     _card_wait(g_card_slot);
-                    title_dst = &title_frame[CARDA_TITLE_OFFSET];
+                    title_dst = &title_frame[CARD_FILE_TITLE_OFFSET];
                     title_src = g_carda_save_title_template;
                     attempts = 0;
                     while (attempts < CARDA_TITLE_TEMPLATE_BYTES)

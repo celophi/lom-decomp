@@ -9,8 +9,6 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
 
-/** @brief Largest quantity an item count can hold. */
-#define FIELD_ITEM_COUNT_MAX 99
 
 /** @brief Item kinds at or above this value are rejected with a diagnostic. */
 #define FIELD_ITEM_KIND_LIMIT 0xFF
@@ -65,7 +63,7 @@ s32 field_get_item_count(s32 kind)
 }
 
 /**
- * @brief Add one item, saturating at FIELD_ITEM_COUNT_MAX, and put its name in text macro 0.
+ * @brief Add one item, saturating at ITEM_COUNT_MAX, and put its name in text macro 0.
  * @param kind Item kind, or FIELD_ITEM_KIND_LIMIT and above to report an invalid kind.
  */
 void field_receive_item(s32 kind)
@@ -73,9 +71,9 @@ void field_receive_item(s32 kind)
     if (kind < FIELD_ITEM_KIND_LIMIT)
     {
         g_field_game_state->item_counts[kind]++;
-        if (g_field_game_state->item_counts[kind] > FIELD_ITEM_COUNT_MAX)
+        if (g_field_game_state->item_counts[kind] > ITEM_COUNT_MAX)
         {
-            g_field_game_state->item_counts[kind] = FIELD_ITEM_COUNT_MAX;
+            g_field_game_state->item_counts[kind] = ITEM_COUNT_MAX;
         }
         field_set_item_name_macro(kind);
     }

@@ -118,7 +118,7 @@ typedef enum CardaCardStep
 #define CARDA_LIST_WIDTH 300
 
 /** @brief X of the scroll arrows, inset from the entry list's right edge. */
-#define CARDA_SCROLL_ARROW_X (CARDA_LIST_X + CARDA_LIST_WIDTH - 8)
+#define CARDA_SCROLL_ARROW_X (CARDA_LIST_X + CARDA_LIST_WIDTH - CARD_MENU_SCROLL_ARROW_INSET)
 
 /** @brief Top of the message window (prompts and progress messages). */
 #define CARDA_MESSAGE_Y 90
@@ -130,15 +130,15 @@ typedef enum CardaCardStep
 
 /** @brief One-line "Saved." window, one message line below the message window's top. */
 #define CARDA_SAVE_COMPLETE_Y (CARDA_MESSAGE_Y + CARD_MENU_LINE_HEIGHT)
-#define CARDA_SAVE_COMPLETE_HEIGHT 16
+#define CARDA_SAVE_COMPLETE_HEIGHT FIELD_TEXT_LINE_SPACING
 
 /** @brief Dialog window for the two-line failure texts: one dialog line taller than the one-line dialog, and as much higher. */
-#define CARDA_TWO_LINE_DIALOG_Y (CARD_MENU_EXCHANGE_DIALOG_Y - CARD_MENU_DIALOG_LINE_HEIGHT)
-#define CARDA_TWO_LINE_DIALOG_HEIGHT (CARD_MENU_EXCHANGE_DIALOG_HEIGHT + CARD_MENU_DIALOG_LINE_HEIGHT)
+#define CARDA_TWO_LINE_DIALOG_Y (CARD_MENU_EXCHANGE_DIALOG_Y - FIELD_TEXT_LINE_SPACING)
+#define CARDA_TWO_LINE_DIALOG_HEIGHT (CARD_MENU_EXCHANGE_DIALOG_HEIGHT + FIELD_TEXT_LINE_SPACING)
 
 /** @brief Title window above the item list. */
 #define CARDA_ITEM_LIST_TITLE_Y 26
-#define CARDA_ITEM_LIST_TITLE_HEIGHT 16
+#define CARDA_ITEM_LIST_TITLE_HEIGHT FIELD_TEXT_LINE_SPACING
 
 /** @brief Item list window (received items) and its arrows. */
 #define CARDA_ITEM_LIST_X 32
@@ -146,12 +146,10 @@ typedef enum CardaCardStep
 #define CARDA_ITEM_LIST_WIDTH 256
 #define CARDA_ITEM_LIST_HEIGHT 144
 #define CARDA_ITEM_LIST_VISIBLE_ROWS (CARDA_ITEM_LIST_HEIGHT / CARD_MENU_LINE_HEIGHT)
-#define CARDA_ITEM_SCROLL_ARROW_X (CARDA_ITEM_LIST_X + CARDA_ITEM_LIST_WIDTH - 8)
-#define CARDA_ITEM_SCROLL_ARROW_UP_Y (CARDA_ITEM_LIST_Y + 8)
-#define CARDA_ITEM_SCROLL_ARROW_DOWN_Y (CARDA_ITEM_LIST_Y + CARDA_ITEM_LIST_HEIGHT - 8)
+#define CARDA_ITEM_SCROLL_ARROW_X (CARDA_ITEM_LIST_X + CARDA_ITEM_LIST_WIDTH - CARD_MENU_SCROLL_ARROW_INSET)
+#define CARDA_ITEM_SCROLL_ARROW_UP_Y (CARDA_ITEM_LIST_Y + CARD_MENU_SCROLL_ARROW_INSET)
+#define CARDA_ITEM_SCROLL_ARROW_DOWN_Y (CARDA_ITEM_LIST_Y + CARDA_ITEM_LIST_HEIGHT - CARD_MENU_SCROLL_ARROW_INSET)
 
-/** @brief Highest count an item stack can reach. */
-#define CARDA_ITEM_COUNT_MAX 99
 
 /* FIELD / main-executable globals used by this overlay. */
 extern s32 g_save_compatibility_tag;
@@ -161,9 +159,6 @@ extern s32 g_pad_input;
 /* FIELD UI strings and memory-card file names. */
 extern u8 g_field_ui_text_cant_hold_more[];
 extern char g_card_full_entry_name[];
-
-/** @brief Offset of SaveFileHeader::title, after the magic, icon flags and block count. */
-#define CARDA_TITLE_OFFSET 4
 
 /** @brief Bytes of g_carda_save_title_template; the save number follows them on the first title line. */
 #define CARDA_TITLE_TEMPLATE_BYTES 18

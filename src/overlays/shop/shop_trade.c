@@ -120,7 +120,7 @@ static u8* shop_draw_buy_prompt(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
             }
             else
             {
-                room = SHOP_MAX_ITEM_COUNT - g_saved_game_ctx->item_counts[entry->id];
+                room = ITEM_COUNT_MAX - g_saved_game_ctx->item_counts[entry->id];
                 if (room < g_shop_quantity)
                 {
                     g_shop_quantity = room;

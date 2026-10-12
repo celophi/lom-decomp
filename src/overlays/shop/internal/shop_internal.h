@@ -22,7 +22,6 @@
 /** @brief Entry id of a sold-out entry. */
 #define SHOP_ENTRY_EMPTY 0xFFFF
 
-#define SHOP_MAX_ITEM_COUNT 99
 #define SHOP_MAX_MONEY 10000000
 #define SHOP_ROW_HEIGHT 16
 #define SHOP_ROW_HEIGHT_SHIFT 4

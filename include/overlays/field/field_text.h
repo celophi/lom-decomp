@@ -23,6 +23,10 @@ extern FieldTextConfig* g_field_text_saved_configs;
 #define FIELD_TEXT_COLOR_NORMAL 4
 #define FIELD_TEXT_COLOR_DIM 5
 
+/** @brief Glyph height of the field font, and the line advance of text drawn with it. */
+#define FIELD_TEXT_LINE_HEIGHT 12
+#define FIELD_TEXT_LINE_SPACING 16
+
 /** @brief Number of text window slots. */
 #define FIELD_TEXT_WINDOW_SLOTS 4
 

@@ -3,21 +3,8 @@
 #include "common/card_events.h"
 #include <fcntl.h>
 
-/* Memory-card file layout. */
-#define MEMORY_CARD_HEADER_TYPE_THREE_ICONS 0x13
+/** @brief Bytes of g_card_save_title_sjis copied into the title. */
 #define MEMORY_CARD_SAVE_TITLE_SIZE 0x11
-#define MEMORY_CARD_HEADER_PADDING_SIZE 0x1C
-
-/** @brief Save-file header followed by its palette and three icon frames. */
-typedef struct
-{
-    u8 signature[2];
-    u8 icon_type;
-    u8 block_count;
-    u8 title[64];
-    u8 reserved[MEMORY_CARD_HEADER_PADDING_SIZE];
-    u8 palette_and_icons[416];
-} MemoryCardFileHeader;
 
 s32 memory_card_wait_software_event(void);
 void memory_card_clear_software_events(void);
@@ -335,14 +322,14 @@ s32 memory_card_create_save_file(char* path, void* save_buffer)
     s32 byte_count;
 
     /* Build the 512-byte memory-card file header. */
-    ((MemoryCardFileHeader*)g_card_header)->signature[0] = 'S';
-    ((MemoryCardFileHeader*)g_card_header)->signature[1] = 'C';
-    ((MemoryCardFileHeader*)g_card_header)->icon_type = MEMORY_CARD_HEADER_TYPE_THREE_ICONS;
+    ((CardFileHeader*)g_card_header)->magic[0] = 'S';
+    ((CardFileHeader*)g_card_header)->magic[1] = 'C';
+    ((CardFileHeader*)g_card_header)->icon_type = CARD_FILE_ICON_TYPE(CARD_FILE_ICON_MAX_FRAMES);
     block_count = 1;
-    ((MemoryCardFileHeader*)g_card_header)->block_count = block_count;
-    memcpy(((MemoryCardFileHeader*)g_card_header)->title, g_card_save_title_sjis, MEMORY_CARD_SAVE_TITLE_SIZE);
-    bzero(((MemoryCardFileHeader*)g_card_header)->reserved, MEMORY_CARD_HEADER_PADDING_SIZE);
-    memcpy(save_buffer, g_card_header, sizeof(MemoryCardFileHeader));
+    ((CardFileHeader*)g_card_header)->block_count = block_count;
+    memcpy(((CardFileHeader*)g_card_header)->title, g_card_save_title_sjis, MEMORY_CARD_SAVE_TITLE_SIZE);
+    bzero(((CardFileHeader*)g_card_header)->reserved, CARD_FILE_RESERVED_BYTES);
+    memcpy(save_buffer, g_card_header, sizeof(CardFileHeader));
 
     /* Allocate one card block, then reopen the file for writing. */
     file_descriptor = open(path, CARD_FILE_BLOCKS(g_card_header_block_count) | FCREAT);

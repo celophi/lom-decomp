@@ -19,13 +19,13 @@ void terminate_multibyte_text(void* title_text)
     byte_offset = 0;
     while (1)
     {
-        if (byte_offset >= SAVE_FILE_TITLE_BYTES)
+        if (byte_offset >= CARD_FILE_TITLE_BYTES)
         {
             return;
         }
         if (*cursor == 0)
         {
-            for (; byte_offset < SAVE_FILE_TITLE_BYTES; byte_offset++, cursor++)
+            for (; byte_offset < CARD_FILE_TITLE_BYTES; byte_offset++, cursor++)
             {
                 *cursor = 0;
             }
