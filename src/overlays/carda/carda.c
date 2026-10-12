@@ -174,9 +174,9 @@ static void carda_build_ui_elements(void)
         element->attr.bits.transition_step = 1;
         element->attr.bits.x = CARD_MENU_MESSAGE_X;
         element->attr.bits.y = CARDA_TRANSFER_Y;
-        element->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
+        element->size.bits.width_high = CARDA_TRANSFER_WIDTH >> 8;
         element->size.bits.height = CARDA_TRANSFER_HEIGHT;
-        CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_MESSAGE_WIDTH);
+        CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARDA_TRANSFER_WIDTH);
 
         element = card_menu_alloc_element();
         element->draw = card_menu_draw_card_slot0_label;
@@ -321,8 +321,8 @@ static s32 card_menu_update_card_sequence(void)
         prompt->attr.bits.transition_step = 1;
         prompt->attr.bits.x = CARD_MENU_MESSAGE_X;
         prompt->attr.bits.y = CARDA_TRANSFER_Y;
-        CARD_MENU_SET_ELEMENT_WIDTH_LOW(prompt, CARD_MENU_MESSAGE_WIDTH);
-        prompt->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
+        CARD_MENU_SET_ELEMENT_WIDTH_LOW(prompt, CARDA_TRANSFER_WIDTH);
+        prompt->size.bits.width_high = CARDA_TRANSFER_WIDTH >> 8;
         prompt->size.bits.height = CARDA_TRANSFER_HEIGHT;
         card_menu_enable_choice_toggle();
         prompt->draw = carda_draw_format_prompt;
@@ -367,8 +367,8 @@ static s32 card_menu_update_card_sequence(void)
             prompt->attr.bits.transition_step = 1;
             prompt->attr.bits.x = CARD_MENU_MESSAGE_X;
             prompt->attr.bits.y = CARDA_TRANSFER_Y;
-            CARD_MENU_SET_ELEMENT_WIDTH_LOW(prompt, CARD_MENU_MESSAGE_WIDTH);
-            prompt->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
+            CARD_MENU_SET_ELEMENT_WIDTH_LOW(prompt, CARDA_TRANSFER_WIDTH);
+            prompt->size.bits.width_high = CARDA_TRANSFER_WIDTH >> 8;
             prompt->size.bits.height = CARDA_TRANSFER_HEIGHT;
             card_menu_enable_choice_toggle();
             prompt->draw = carda_draw_format_prompt;
@@ -1496,9 +1496,10 @@ static void* carda_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 
  * @param ot Ordering-table entry the quad is linked into.
  * @return Primitive-buffer cursor after the quad, or @p quad unchanged while
  *         g_card_menu_progress_bar_active is 0.
- * @note The bar is 288 pixels wide after 256 frames since g_card_menu_progress_start_tick; in
- *       overlay modes 2 and 3 it runs 16 times faster for entry state 0xF4
- *       and three times slower otherwise.
+ * @note The bar spans its window (the transfer window in overlay modes 2 and 3,
+ *       otherwise the message window) after 256 frames since
+ *       g_card_menu_progress_start_tick; in overlay modes 2 and 3 it runs 16 times
+ *       faster for entry state 0xF4 and three times slower otherwise.
  */
 void* carda_draw_progress_bar(POLY_G4* quad, u_long* ot)
 {
@@ -1529,12 +1530,16 @@ void* carda_draw_progress_bar(POLY_G4* quad, u_long* ot)
         SET_POLY_G4_BGR3_PACKED(quad, CARD_MENU_PROGRESS_BOTTOM_RIGHT_COLOR);
         setPolyG4(quad);
         SET_POLY_G4_BGR2_PACKED(quad, CARD_MENU_PROGRESS_BOTTOM_LEFT_COLOR);
-        do
+        bar = quad;
+        quad->x0 = quad->x2 = 0;
+        if (CARDA_IS_POCKETSTATION_MODE(g_card_menu_mode))
         {
-            bar = quad;
-            quad->x0 = quad->x2 = 0;
-        } while (0);
-        width = elapsed * CARD_MENU_MESSAGE_WIDTH;
+            width = elapsed * CARDA_TRANSFER_WIDTH;
+        }
+        else
+        {
+            width = elapsed * CARD_MENU_MESSAGE_WIDTH;
+        }
         if (width < 0)
         {
             quad->x1 = quad->x3 = (width + CARD_MENU_PROGRESS_FULL_TICKS - 1) >> CARDA_PROGRESS_TICK_SHIFT;
@@ -1891,9 +1896,9 @@ void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
                 message->attr.bits.y = CARDA_TRANSFER_Y;
                 attr = message->attr.word;
                 attr &= (1 << CARD_MENU_ELEMENT_WIDTH_SHIFT) - 1;
-                attr |= 0x20 << CARD_MENU_ELEMENT_WIDTH_SHIFT;
+                attr |= (CARDA_TRANSFER_WIDTH & 0xFF) << CARD_MENU_ELEMENT_WIDTH_SHIFT;
                 message->attr.word = attr;
-                message->size.bits.width_high = 1;
+                message->size.bits.width_high = CARDA_TRANSFER_WIDTH >> 8;
                 message->size.bits.height = CARDA_TRANSFER_HEIGHT;
             }
             else
@@ -1902,9 +1907,9 @@ void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
                 message->attr.bits.y = CARDA_MESSAGE_Y;
                 attr = message->attr.word;
                 attr &= (1 << CARD_MENU_ELEMENT_WIDTH_SHIFT) - 1;
-                attr |= 0x20 << CARD_MENU_ELEMENT_WIDTH_SHIFT;
+                attr |= (CARD_MENU_MESSAGE_WIDTH & 0xFF) << CARD_MENU_ELEMENT_WIDTH_SHIFT;
                 message->attr.word = attr;
-                message->size.bits.width_high = 1;
+                message->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
                 message->size.bits.height = CARD_MENU_MESSAGE_HEIGHT;
             }
             message->draw = carda_draw_format_progress;

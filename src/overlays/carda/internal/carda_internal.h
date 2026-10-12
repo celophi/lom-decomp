@@ -123,6 +123,7 @@ typedef enum CardaCardStep
 
 /** @brief PocketStation transfer window, also used for the format prompt. */
 #define CARDA_TRANSFER_Y 76
+#define CARDA_TRANSFER_WIDTH CARD_MENU_MESSAGE_WIDTH
 #define CARDA_TRANSFER_HEIGHT 72 /**< Five lines. */
 
 /** @brief Item list window (received items) and its arrows. */
