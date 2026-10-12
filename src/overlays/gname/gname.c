@@ -115,7 +115,6 @@ enum
 /* Run-loop timing and the party companion kind. */
 #define GNAME_FRAME_VSYNC_INTERVAL 2U
 #define GNAME_INIT_STACK_PAD_WORDS 2
-#define GNAME_FADE_IN_FRAMES 20
 #define GNAME_STARTUP_DELAY_FRAMES 40
 #define GNAME_NAME_BUFFER_SIZE 48
 #define GNAME_COMPANION_IS_GOLEM(ctx) (((ctx)->characters[FIELD_PARTY_COMPANION].info.word & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GOLEM)
@@ -549,7 +548,7 @@ s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_
     g_render_buf_base[GNAME_RENDER_BUFFER_B].frame_parity = GNAME_RENDER_BUFFER_B;
 
     reset_fade_state();
-    set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, GNAME_FADE_IN_FRAMES);
+    set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, SCREEN_FADE_FRAMES);
     gname_init();
 
     /* Clear both ordering tables before enabling display output. */
@@ -734,7 +733,7 @@ static void render_fade_overlay(RenderContext* render_ctx)
         addPrim(ot_entry, (TILE*)packet_cursor);
         packet_cursor += sizeof(TILE);
 
-        blend_mode_tpage = g_fade_current.red < FADE_ADDITIVE_THRESHOLD ? FADE_SUBTRACTIVE_TPAGE : FADE_ADDITIVE_TPAGE;
+        blend_mode_tpage = g_fade_current.red < FADE_ADDITIVE_THRESHOLD ? BLEND_SUBTRACT_TPAGE : BLEND_ADD_TPAGE;
 
         setDrawTPage((DR_TPAGE*)packet_cursor, 0, 0, blend_mode_tpage);
         addPrim(ot_entry, (DR_TPAGE*)packet_cursor);

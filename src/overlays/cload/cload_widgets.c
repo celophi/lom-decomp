@@ -25,9 +25,18 @@ typedef struct
 #define CLOAD_ICON_SET_VRAM_STEP 64
 #define CLOAD_ICON_SET_CLUT_Y 500
 
+/** @brief Left edge of the backdrop on screen. */
+#define CLOAD_BACKDROP_X 8
+
 /** @brief Width of the two full backdrop slices and of the third image's backdrop part. */
 #define CLOAD_BACKDROP_SLICE_WIDTH 128
 #define CLOAD_BACKDROP_LAST_SLICE_WIDTH 48
+
+/** @brief Width and height of a scroll arrow; the two arrows are stacked in the third icon-set image. */
+#define CLOAD_SCROLL_ARROW_SIZE 16
+
+/** @brief Inset of a window's clipped contents from its frame. */
+#define CLOAD_FRAME_BORDER 2
 
 /** @brief Icon @p icon in the loaded icon table (a counted offset table at the table start). */
 #define CLOAD_ICON_IMAGE(icon) ((FieldPortrait*)CARD_OFFSET_TABLE_ENTRY((s32*)g_cload_icon_resource + 1, icon))
@@ -41,11 +50,13 @@ typedef struct
  * @param y Window top edge.
  * @param w Window width.
  * @param h Window height.
- * @param flag Nonzero when drawing into the front buffer (draw area at y = SCREEN_HEIGHT).
+ * @param front_buffer Nonzero when drawing into the buffer whose draw area starts at y = SCREEN_HEIGHT.
  * @param draw_fill Nonzero to emit the outline and fill packets.
  * @return Advanced primitive-buffer cursor.
+ * @note The contents are clipped CLOAD_FRAME_BORDER pixels inside the frame; the
+ *       clip is one row taller than h - 2 * CLOAD_FRAME_BORDER (see CLOAD_WINDOW_HEIGHT).
  */
-void* cload_emit_window_frame(void* prim, u_long* ot, s32 x, s32 y, s32 w, s32 h, s32 flag, s32 draw_fill)
+void* cload_emit_window_frame(void* prim, u_long* ot, s32 x, s32 y, s32 w, s32 h, s32 front_buffer, s32 draw_fill)
 {
     DRAWENV draw_env;
     DR_ENV* env_packet;
@@ -54,13 +65,15 @@ void* cload_emit_window_frame(void* prim, u_long* ot, s32 x, s32 y, s32 w, s32 h
     void* next_prim;
 
     env_packet = (DR_ENV*)prim;
-    if (flag != 0)
+    if (front_buffer != 0)
     {
-        SetDefDrawEnv(&draw_env, x + 2, y + SCREEN_HEIGHT + 2, w - 4, h - 3);
+        SetDefDrawEnv(&draw_env, x + CLOAD_FRAME_BORDER, y + SCREEN_HEIGHT + CLOAD_FRAME_BORDER, w - 2 * CLOAD_FRAME_BORDER,
+                      h + 1 - 2 * CLOAD_FRAME_BORDER);
     }
     else
     {
-        SetDefDrawEnv(&draw_env, x + 2, y + VRAM_BACK_DRAW_Y + 2, w - 4, h - 3);
+        SetDefDrawEnv(&draw_env, x + CLOAD_FRAME_BORDER, y + VRAM_BACK_DRAW_Y + CLOAD_FRAME_BORDER, w - 2 * CLOAD_FRAME_BORDER,
+                      h + 1 - 2 * CLOAD_FRAME_BORDER);
     }
     SetDrawEnv(env_packet, &draw_env);
     addPrim(ot, env_packet);
@@ -68,9 +81,9 @@ void* cload_emit_window_frame(void* prim, u_long* ot, s32 x, s32 y, s32 w, s32 h
     next_prim = env_packet + 1;
     if (draw_fill != 0)
     {
-        next_prim = cload_emit_rect_outline(next_prim, ot, x, y, w, h, CLOAD_COLOR_WHITE);
-        next_prim = cload_emit_rect_outline(next_prim, ot, x + 1, y + 1, w - 2, h - 2, 0);
-        next_prim = cload_emit_rect_outline(next_prim, ot, x - 1, y - 1, w + 2, h + 2, 0);
+        next_prim = cload_emit_rect_outline(next_prim, ot, x, y, w, h, GPU_COLOR_WHITE);
+        next_prim = cload_emit_rect_outline(next_prim, ot, x + 1, y + 1, w - 2, h - 2, GPU_COLOR_BLACK);
+        next_prim = cload_emit_rect_outline(next_prim, ot, x - 1, y - 1, w + 2, h + 2, GPU_COLOR_BLACK);
 
         tile = next_prim;
         SET_BGR0_PACKED(tile, GPU_TINT_NEUTRAL);
@@ -81,7 +94,7 @@ void* cload_emit_window_frame(void* prim, u_long* ot, s32 x, s32 y, s32 w, s32 h
         addPrim(ot, tile);
 
         draw_mode = (DR_TPAGE*)(tile + 1);
-        setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 320, 0));
+        setDrawTPage(draw_mode, 0, 0, BLEND_SUBTRACT_TPAGE);
         addPrim(ot, draw_mode);
         next_prim = draw_mode + 1;
     }
@@ -135,31 +148,31 @@ void* cload_emit_rect_outline(LINE_F2* line, u_long* ot, s32 x, s32 y, s32 w, s3
 }
 
 /**
- * @brief Emit a 16x16 scroll-arrow sprite from the third icon-set image and its texture-page packet.
+ * @brief Emit a scroll-arrow sprite from the third icon-set image and its texture-page packet.
  * @param sprite Sprite packet to fill; the DR_TPAGE follows it.
  * @param ot Ordering-table entry the packets are linked into.
  * @param x Sprite left edge.
  * @param y Sprite top edge.
- * @param flag Nonzero for the upper arrow (texture row 0), zero for the lower arrow (row 16).
+ * @param upper Nonzero for the upper arrow; the lower arrow is the texture row below it.
  * @return Primitive-buffer cursor after the texture-page packet.
  */
-void* cload_emit_scroll_arrow(SPRT* sprite, u_long* ot, s32 x, s32 y, s32 flag)
+void* cload_emit_scroll_arrow(SPRT* sprite, u_long* ot, s32 x, s32 y, s32 upper)
 {
     DR_TPAGE* draw_mode;
 
     SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
     setSprt(sprite);
     setXY0(sprite, x, y);
-    if (flag != 0)
+    if (upper != 0)
     {
         sprite->v0 = 0;
     }
     else
     {
-        sprite->v0 = 16;
+        sprite->v0 = CLOAD_SCROLL_ARROW_SIZE;
     }
     sprite->u0 = CLOAD_BACKDROP_LAST_SLICE_WIDTH;
-    setWH(sprite, 16, 16);
+    setWH(sprite, CLOAD_SCROLL_ARROW_SIZE, CLOAD_SCROLL_ARROW_SIZE);
     sprite->clut = getClut(0, CLOAD_ICON_SET_CLUT_Y + 2);
     addPrim(ot, sprite);
 
@@ -417,16 +430,16 @@ void* cload_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offse
  * @param x Quad left edge.
  * @param y Quad top edge.
  * @param width Quad width.
- * @param icon Icon id; CLOAD_NO_ICON draws nothing, ids below 2 in row 1 and ids from
- *             0x4F up get a generated CLUT (field_copy_portrait_palette / field_copy_golem_portrait_palette).
+ * @param icon Save-browser party icon; SAVE_NO_ICON draws nothing. The guest's hero
+ *             portraits (below SAVE_ICON_HERO_COUNT) and golems (from SAVE_ICON_GOLEM_BASE)
+ *             get a generated CLUT (field_copy_portrait_palette / field_copy_golem_portrait_palette).
  * @param index VRAM icon slot; selects the CLUT row entry and the texture column.
- * @param row Entry row; row 1 uses the generated CLUT for icons 0 and 1.
- * @return Primitive-buffer cursor after the quad, or @p quad unchanged for CLOAD_NO_ICON.
+ * @param row Party slot the icon belongs to (FIELD_PARTY_GUEST uses the hero portrait CLUTs).
+ * @return Primitive-buffer cursor after the quad, or @p quad unchanged for SAVE_NO_ICON.
  */
 void* cload_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 width, s32 icon, s32 index, s32 row)
 {
     RECT rect;
-    s32 column;
     u8 u;
 
     if (icon == SAVE_NO_ICON)
@@ -452,8 +465,7 @@ void* cload_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 wi
         LoadImage(&rect, (u_long*)CLOAD_ICON_IMAGE(icon)->clut);
     }
 
-    column = index * 3;
-    setRECT(&rect, column * 4 + CARD_MENU_ICON_VRAM_X, CARD_MENU_ICON_VRAM_Y, FIELD_PORTRAIT_SIZE / 4, FIELD_PORTRAIT_SIZE);
+    setRECT(&rect, index * (FIELD_PORTRAIT_SIZE / 4) + CARD_MENU_ICON_VRAM_X, CARD_MENU_ICON_VRAM_Y, FIELD_PORTRAIT_SIZE / 4, FIELD_PORTRAIT_SIZE);
     LoadImage(&rect, (u_long*)CLOAD_ICON_IMAGE(icon)->pixels);
 
     SET_BGR0_PACKED(quad, GPU_TINT_NEUTRAL);
@@ -463,7 +475,7 @@ void* cload_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 wi
     quad->y1 = y;
     quad->y0 = y;
     quad->x3 = x + width;
-    u = column * 16;
+    u = index * FIELD_PORTRAIT_SIZE;
     quad->u2 = u;
     quad->u0 = u;
     u += FIELD_PORTRAIT_SIZE - 1;
@@ -515,13 +527,14 @@ void cload_load_icon_resources(void)
 }
 
 /**
- * @brief Draw the three icon-set images side by side (128 + 128 + 48 pixels
- *        wide), each as a sprite with its own texture-page packet.
+ * @brief Draw CLOAD's backdrop picture: the three icon-set images side by side,
+ *        CLOAD_BACKDROP_SLICE_WIDTH + CLOAD_BACKDROP_SLICE_WIDTH + CLOAD_BACKDROP_LAST_SLICE_WIDTH
+ *        pixels wide and VRAM_DRAW_HEIGHT tall, each with its own texture-page packet.
  * @param sprite First sprite packet to fill.
  * @param ot Ordering-table entry the packets are linked into.
  * @return Primitive-buffer cursor after the last texture-page packet.
  */
-void* cload_emit_icon_highlight_strip(SPRT* sprite, u_long* ot)
+void* cload_draw_backdrop(SPRT* sprite, u_long* ot)
 {
     s32 i;
     DR_TPAGE* draw_mode;
@@ -530,7 +543,7 @@ void* cload_emit_icon_highlight_strip(SPRT* sprite, u_long* ot)
     {
         SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
         setSprt(sprite);
-        setXY0(sprite, i * CLOAD_BACKDROP_SLICE_WIDTH + 8, 0);
+        setXY0(sprite, CLOAD_BACKDROP_X + i * CLOAD_BACKDROP_SLICE_WIDTH, 0);
         setUV0(sprite, 0, 0);
         if (i == CLOAD_ICON_SET_IMAGE_COUNT - 1)
         {

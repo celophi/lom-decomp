@@ -77,7 +77,7 @@ class CloadSymbols:
         """The decoder adds the lead byte times a page to this base.
 
         The named double-byte chart starts at lead 0x19. Counting back gives
-        the same base as CLOAD_GLYPH_CHART_PAGE_BASE in cload_glyph.c.
+        the same base as GLYPH_CHART_PAGE_BASE in cload_glyph.c.
         """
         return self.double_byte_chart - CHART_LEADS.start * CHART_PAGE_BYTES
 

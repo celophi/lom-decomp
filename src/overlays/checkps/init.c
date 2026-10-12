@@ -32,7 +32,6 @@
 
 #define CHECKPS_FRAME_VSYNC_INTERVAL 2
 #define CHECKPS_IMAGE_TPAGE 5
-#define CHECKPS_DEFAULT_FADE_STEPS 20
 #define CHECKPS_IMAGE_DISPLAY_FRAMES 120
 #define CHECKPS_IMAGE_COUNT 100
 #define CHECKPS_IMAGE_INITIAL_Y 112
@@ -366,7 +365,7 @@ static void init_checkps_display(CheckPSRenderState* render_state)
     ClearImage(&rect, 0, 0, 0);
     reset_glyph_renderer();
     reset_fade_state();
-    set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, CHECKPS_DEFAULT_FADE_STEPS);
+    set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, SCREEN_FADE_FRAMES);
     load_checkps_image();
     g_checkps_exit_reason = CHECKPS_EXIT_NONE;
 #if defined(VERSION_JP)
@@ -545,11 +544,11 @@ static void update_and_draw_fade(CheckPSFrame* frame)
         setWH(&primitive->tile, SCREEN_WIDTH, SCREEN_HEIGHT);
 
         addPrim(ordering_table_tag, &primitive->tile);
-        draw_mode = FADE_ADDITIVE_TPAGE;
+        draw_mode = BLEND_ADD_TPAGE;
         primitive = CHECKPS_NEXT_FADE_PRIMITIVE(primitive, TILE);
         if (g_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
-            draw_mode = FADE_SUBTRACTIVE_TPAGE;
+            draw_mode = BLEND_SUBTRACT_TPAGE;
         }
         setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
 

@@ -6,8 +6,6 @@
 #include "main/controller.h"
 #include "overlays/field/field_input.h"
 
-void* bcopy(const unsigned char* src, unsigned char* dst, int count);
-
 #include "../../common/save_file/validate_save_file.inc.c"
 #include "../../common/save_file/compute_save_checksum.inc.c"
 #include "../../common/save_file/format_hex.inc.c"

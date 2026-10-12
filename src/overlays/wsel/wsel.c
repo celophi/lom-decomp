@@ -15,7 +15,6 @@
 #include <memory.h>
 #include "common/tim.h"
 
-#define WSEL_FADE_IN_FRAMES 20
 /** Fixed RAM buffer that CD resources are staged into before being unpacked. */
 #define WSEL_LOAD_BUFFER ((u8*)LOAD_BUFFER_ADDRESS)
 /** Offset table at the head of a staged music file: [0] sequence, [1] instrument bank. */
@@ -384,7 +383,7 @@ static void wsel_init(WselRenderBuffer* buffers)
     ClearImage(&vram_rect, 0, 0, 0);
 
     wsel_reset_fade();
-    wsel_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, WSEL_FADE_IN_FRAMES);
+    wsel_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, SCREEN_FADE_FRAMES);
     SetDefDispEnv(&buffers[0].disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     SetDefDispEnv(&buffers[1].disp_env, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
     SetDefDrawEnv(&buffers[0].draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
@@ -529,11 +528,11 @@ static void wsel_draw_fade(WselRenderBuffer* buffer)
         setWH(&primitive->tile, SCREEN_WIDTH, SCREEN_HEIGHT);
         addPrim(ot, &primitive->tile);
 
-        draw_mode = FADE_ADDITIVE_TPAGE;
+        draw_mode = BLEND_ADD_TPAGE;
         primitive = WSEL_NEXT_FADE_PRIMITIVE(primitive, TILE);
         if (g_wsel_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
-            draw_mode = FADE_SUBTRACTIVE_TPAGE;
+            draw_mode = BLEND_SUBTRACT_TPAGE;
         }
         setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
         addPrim(ot, &primitive->draw_mode);

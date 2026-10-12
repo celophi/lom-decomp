@@ -59,12 +59,18 @@
 /** Fade level of a fade to black. */
 #define FADE_BLACK 0
 
+/** Frames of a standalone screen's fade in from (or out to) black: title, name entry, world select, load menu, hardware check. */
+#define SCREEN_FADE_FRAMES 20
+
 /** Lowest fade level drawn by adding light; levels below FADE_NEUTRAL subtract it. */
 #define FADE_ADDITIVE_THRESHOLD (FADE_NEUTRAL + 1)
 
-/** Draw-mode texture pages of the full-screen fade quad: additive and subtractive blending. */
-#define FADE_ADDITIVE_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 320, 0)
-#define FADE_SUBTRACTIVE_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 320, 0)
+/**
+ * Draw-mode texture pages that select additive or subtractive blending for the
+ * primitives after them: fade quads, glows, shadows and darkened window fills.
+ */
+#define BLEND_ADD_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 320, 0)
+#define BLEND_SUBTRACT_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 320, 0)
 
 /** Y coordinate of the CLUT storage row in VRAM.
  * Overlays store their 256-entry palettes in the lines starting here,

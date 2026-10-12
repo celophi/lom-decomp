@@ -8,6 +8,7 @@
 #include <libetc.h>
 #include <libgpu.h>
 #include "common/gpu_packet.h"
+#include "main/display.h"
 #include "../internal/wmap_resource_support.h"
 #include "../internal/wmap_effect_primitives.h"
 #include <libgte.h>
@@ -41,8 +42,6 @@
 /** @brief Last texel column at which a tile still starts on the first page. */
 #define WMAP_MAP_TEXEL_EDGE (WMAP_MAP_PAGE_TEXELS - (WMAP_MAP_TEXEL_TILE - WMAP_MAP_TEXEL_WRAP))
 
-/** @brief Subtractive-blend texture page selected for the shadow polygons. */
-#define WMAP_SHADOW_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 320, 0)
 /** @brief Brightest shadow level and the shadow's vertical offset. */
 #define WMAP_SHADOW_LEVEL_MAX 64
 #define WMAP_SHADOW_OFFSET_Y 10
@@ -234,7 +233,7 @@ void wmap_init_map_packets(void)
     for (buffer_index = 0; buffer_index < 2; buffer_index++)
     {
         buffer = &g_wmap_frames[buffer_index];
-        buffer->tpage_select.tpage = WMAP_SHADOW_TPAGE;
+        buffer->tpage_select.tpage = BLEND_SUBTRACT_TPAGE;
         g_wmap_current_frame = buffer;
         /* Each vertex is cleared as one packed x/y word. */
         *(u32*)&buffer->tpage_select.x2 = 0;

@@ -51,8 +51,6 @@
 /** @brief World Z to ordering-table bucket shift. */
 #define EFFECT_DEPTH_SHIFT 7
 
-/** @brief Draw mode page: additive blending (0x20), texture page at X 320. */
-#define EFFECT_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 320, 0)
 
 /** @brief Channel level of the brightest effect vertex. */
 #define EFFECT_LEVEL 160
@@ -671,7 +669,7 @@ static u8* field_build_effect_dome(u_long* ordering_table, u8* packet, VECTOR* p
     ADD_PRIM_BY_DEPTH(position->vz >> EFFECT_DEPTH_SHIFT, POLY_G4);
     ADD_PRIM_BY_DEPTH(position->vz >> EFFECT_DEPTH_SHIFT, POLY_G4);
 
-    setDrawTPage((DR_TPAGE*)cursor, 0, 0, EFFECT_TPAGE);
+    setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
     ADD_PRIM_BY_DEPTH((position->vz + v[1].vz) >> EFFECT_DEPTH_SHIFT, DR_TPAGE);
 
     /* Eight arch segments of 22.5 degrees, drawn for two opposite quarters. */
@@ -713,7 +711,7 @@ static u8* field_build_effect_dome(u_long* ordering_table, u8* packet, VECTOR* p
         setSemiTrans(QUAD(0), 1);
         ADD_PRIM_BY_DEPTH((position->vz + v[1].vz) >> EFFECT_DEPTH_SHIFT, POLY_G4);
 
-        setDrawTPage((DR_TPAGE*)cursor, 0, 0, EFFECT_TPAGE);
+        setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
         ADD_PRIM_BY_DEPTH((position->vz + v[1].vz) >> EFFECT_DEPTH_SHIFT, DR_TPAGE);
 
         v[0].vx = position->vx - v[1].vz;
@@ -741,7 +739,7 @@ static u8* field_build_effect_dome(u_long* ordering_table, u8* packet, VECTOR* p
         setSemiTrans(QUAD(0), 1);
         ADD_PRIM_BY_DEPTH((position->vz + v[1].vz) >> EFFECT_DEPTH_SHIFT, POLY_G4);
 
-        setDrawTPage((DR_TPAGE*)cursor, 0, 0, EFFECT_TPAGE);
+        setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
         ADD_PRIM_BY_DEPTH((position->vz + v[1].vz) >> EFFECT_DEPTH_SHIFT, DR_TPAGE);
 
         v[1].vx = v[2].vx;
@@ -838,7 +836,7 @@ static u8* field_build_effect_strips(u_long* ordering_table, u8* packet, VECTOR*
         SetPolyG4(QUAD(0));
         setSemiTrans(QUAD(0), 1);
         ADD_PRIM_BY_DEPTH((p0.vz + v[1].vz) >> EFFECT_DEPTH_SHIFT, POLY_G4);
-        setDrawTPage((DR_TPAGE*)cursor, 0, 0, EFFECT_TPAGE);
+        setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
         ADD_PRIM_BY_DEPTH((p0.vz + v[1].vz) >> EFFECT_DEPTH_SHIFT, DR_TPAGE);
         for (j = 1; j <= STRIP_SEGMENT_COUNT; j++)
         {
@@ -871,7 +869,7 @@ static u8* field_build_effect_strips(u_long* ordering_table, u8* packet, VECTOR*
             SetPolyG4(QUAD(0));
             setSemiTrans(QUAD(0), 1);
             ADD_PRIM_BY_DEPTH((p0.vz + v[1].vz) >> EFFECT_DEPTH_SHIFT, POLY_G4);
-            setDrawTPage((DR_TPAGE*)cursor, 0, 0, EFFECT_TPAGE);
+            setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
             ADD_PRIM_BY_DEPTH((p0.vz + v[1].vz) >> EFFECT_DEPTH_SHIFT, DR_TPAGE);
             v[1].vx = v[2].vx;
             v[1].vy = v[2].vy;
@@ -986,7 +984,7 @@ static u8* field_build_effect_curves(u_long* ordering_table, u8* packet, VECTOR*
         ADD_PRIM_BY_DEPTH(position->vz >> EFFECT_DEPTH_SHIFT, POLY_G4);
         offset += 2 * CURVE_STRIP_WIDTH;
     } while (offset < (extent << 8) && ++strip_index < STRIP_COUNT);
-    setDrawTPage((DR_TPAGE*)cursor, 0, 0, EFFECT_TPAGE);
+    setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
     ADD_PRIM_BY_DEPTH(position->vz >> EFFECT_DEPTH_SHIFT, DR_TPAGE);
     return cursor;
 }
@@ -1071,7 +1069,7 @@ static u8* field_build_effect_spiral(u_long* ordering_table, u8* packet, VECTOR*
         }
         strip_index++;
     } while (strip_index < STRIP_COUNT);
-    setDrawTPage((DR_TPAGE*)cursor, 0, 0, EFFECT_TPAGE);
+    setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
     ADD_PRIM_BY_DEPTH(position->vz >> EFFECT_DEPTH_SHIFT, DR_TPAGE);
     return cursor;
 }

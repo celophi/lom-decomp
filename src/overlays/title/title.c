@@ -253,7 +253,7 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
 
     init_save_slot_menu();
     screen_transition(0);
-    set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, TITLE_FADE_FRAMES);
+    set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, SCREEN_FADE_FRAMES);
     DrawSync(0);
     VSync(0);
     setRECT(&rect, 0, 0, SCREEN_WIDTH, VRAM_BACK_DISP_Y + SCREEN_HEIGHT);
@@ -352,7 +352,7 @@ void init_title_display(TitleMenuContext* ctx_base)
     ctx_base->draw_env.dtd = 0;
 
     reset_fade_state();
-    set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, TITLE_FADE_FRAMES);
+    set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, SCREEN_FADE_FRAMES);
     init_title_menu_state();
 
     g_title_menu_exit_state = 0;
@@ -562,11 +562,11 @@ void render_fade_overlay(TitleMenuContext* ctx)
         setWH(&primitive->tile, SCREEN_WIDTH, SCREEN_HEIGHT);
         addPrim(ordering_table_tag, &primitive->tile);
 
-        draw_mode = FADE_ADDITIVE_TPAGE;
+        draw_mode = BLEND_ADD_TPAGE;
         primitive = TITLE_NEXT_FADE_PRIMITIVE(primitive, TILE);
         if (g_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
-            draw_mode = FADE_SUBTRACTIVE_TPAGE;
+            draw_mode = BLEND_SUBTRACT_TPAGE;
         }
         setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
         addPrim(ordering_table_tag, &primitive->draw_mode);

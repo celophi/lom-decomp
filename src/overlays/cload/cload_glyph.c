@@ -6,7 +6,7 @@
  *        so it is reached through the function it falls in.
  */
 #if defined(VERSION_JP)
-#define GLYPH_CHART_PAGE_BASE ((u8*)cload_emit_icon_highlight_strip + 0x70)
+#define GLYPH_CHART_PAGE_BASE ((u8*)cload_draw_backdrop + 0x70)
 #else
 #define GLYPH_CHART_PAGE_BASE ((u8*)cload_load_icon_resources + 0x2C)
 #endif

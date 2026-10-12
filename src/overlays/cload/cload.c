@@ -7,10 +7,6 @@
 #include "overlays/field/field_fade.h"
 #include "overlays/field/field_input.h"
 
-void reset_controller_vsync_state(void);
-void set_controller_vsync_interval(u32 interval);
-void cload_init_card_events(void);
-
 /**
  * @brief Left edges of the two card slot label windows.
  * @note JP moves both right by 8.
@@ -35,9 +31,6 @@ void cload_init_card_events(void);
 
 /** @brief Right edge of an entry row's "+" marker. */
 #define CLOAD_ENTRY_PLUS_RIGHT_X 248
-
-/** @brief Frames of the fade in from black when CLOAD opens. */
-#define CLOAD_FADE_IN_FRAMES 20
 
 /** @brief Title window. */
 #define CLOAD_TITLE_X 80
@@ -167,7 +160,7 @@ void cload_init_display(void)
     g_cload_render_buffers[1].draw_env.dtd = 0;
     g_cload_render_buffers[0].draw_env.dtd = 0;
     field_reset_fade_state();
-    field_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, CLOAD_FADE_IN_FRAMES);
+    field_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, SCREEN_FADE_FRAMES);
 }
 
 #include "../../common/card_menu/card_menu_update_frame.inc.c"
@@ -480,24 +473,24 @@ void* cload_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
     switch (state)
     {
     case CARD_MENU_ENTRY_STATE_NO_GAME_DATA:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_MENU, -x_offset + CLOAD_LIST_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_MENU, -x_offset + CARD_MENU_EXCHANGE_LIST_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_UNFORMATTED:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_MENU, -x_offset + CLOAD_LIST_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_MENU, -x_offset + CARD_MENU_EXCHANGE_LIST_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_CARD_FULL:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_not_enough_blocks, CARD_MENU_TEXT_NOT_ENOUGH_BLOCKS), FIELD_TEXT_COLOR_MENU, -x_offset + CLOAD_LIST_CENTER_X,
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_not_enough_blocks, CARD_MENU_TEXT_NOT_ENOUGH_BLOCKS), FIELD_TEXT_COLOR_MENU, -x_offset + CARD_MENU_EXCHANGE_LIST_CENTER_X,
                                -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_NO_CARD:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_card, CARD_MENU_TEXT_NO_CARD), FIELD_TEXT_COLOR_MENU, -x_offset + CLOAD_LIST_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_card, CARD_MENU_TEXT_NO_CARD), FIELD_TEXT_COLOR_MENU, -x_offset + CARD_MENU_EXCHANGE_LIST_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_ACCESS_FAILED:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_card_access_failed, CARD_MENU_TEXT_CARD_ACCESS_FAILED), FIELD_TEXT_COLOR_MENU, -x_offset + CLOAD_LIST_CENTER_X,
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_card_access_failed, CARD_MENU_TEXT_CARD_ACCESS_FAILED), FIELD_TEXT_COLOR_MENU, -x_offset + CARD_MENU_EXCHANGE_LIST_CENTER_X,
                                -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_NO_SAVE_DATA:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_save_data, CARD_MENU_TEXT_NO_SAVE_DATA), FIELD_TEXT_COLOR_MENU, -x_offset + CLOAD_LIST_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_save_data, CARD_MENU_TEXT_NO_SAVE_DATA), FIELD_TEXT_COLOR_MENU, -x_offset + CARD_MENU_EXCHANGE_LIST_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_BLANK:
         break;
@@ -506,7 +499,7 @@ void* cload_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         s32 x;
         u16* text_table;
 
-        x = -x_offset + CLOAD_LIST_CENTER_X;
+        x = -x_offset + CARD_MENU_EXCHANGE_LIST_CENTER_X;
         text_table = &g_card_menu_text_table;
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECKING_CARD), FIELD_TEXT_COLOR_MENU, x, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), FIELD_TEXT_COLOR_MENU, x, CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
@@ -523,7 +516,7 @@ void* cload_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
             s32 x;
             u16* text_table;
 
-            x = -x_offset + CLOAD_LIST_CENTER_X;
+            x = -x_offset + CARD_MENU_EXCHANGE_LIST_CENTER_X;
             text_table = &g_card_menu_text_table;
             prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECKING_CARD), FIELD_TEXT_COLOR_MENU, x, -y_offset, FIELD_TEXT_ALIGN_CENTER);
             prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), FIELD_TEXT_COLOR_MENU, x, CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
@@ -1018,7 +1011,7 @@ void card_menu_update_and_draw_elements(FieldRenderHalf* frame)
         }
     }
 
-    frame->primitive_cursor = (u8*)cload_emit_icon_highlight_strip(prim, ot);
+    frame->primitive_cursor = (u8*)cload_draw_backdrop(prim, ot);
 }
 
 #include "../../common/encoded_text/encoded_text_append.inc.c"

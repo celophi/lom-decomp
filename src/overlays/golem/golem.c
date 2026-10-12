@@ -831,7 +831,7 @@ u8* golem_finish_grid_marker_run(u8* packet_cursor, u_long* ordering_table)
 {
     DR_TPAGE* draw_mode = (DR_TPAGE*)packet_cursor;
 
-    setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 320, 0));
+    setDrawTPage(draw_mode, 0, 0, BLEND_ADD_TPAGE);
     addPrim(ordering_table, draw_mode);
     return packet_cursor + sizeof(DR_TPAGE);
 }
@@ -880,7 +880,7 @@ u8* golem_draw_cursor(u8* packet_cursor, GolemRenderContext* render_context)
     }
 
     draw_mode = (DR_TPAGE*)packet_cursor;
-    setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 320, 0));
+    setDrawTPage(draw_mode, 0, 0, BLEND_ADD_TPAGE);
     addPrim(ordering_table, draw_mode);
     return packet_cursor + sizeof(DR_TPAGE);
 }
@@ -1480,7 +1480,7 @@ u8* golem_render_fade(u8* packet_cursor, u_long* ordering_table_tag)
         setTile((TILE*)packet_cursor);
         setSemiTrans((TILE*)packet_cursor, 1);
         ((TILE*)packet_cursor)->w = SCREEN_WIDTH;
-        draw_mode = FADE_ADDITIVE_TPAGE;
+        draw_mode = BLEND_ADD_TPAGE;
         SET_YX0((TILE*)packet_cursor, 0, 0);
         ((TILE*)packet_cursor)->h = SCREEN_HEIGHT;
         addPrim(ordering_table_tag, (TILE*)packet_cursor);
@@ -1488,7 +1488,7 @@ u8* golem_render_fade(u8* packet_cursor, u_long* ordering_table_tag)
         packet_cursor += sizeof(TILE);
         if (g_golem_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
-            draw_mode = FADE_SUBTRACTIVE_TPAGE;
+            draw_mode = BLEND_SUBTRACT_TPAGE;
         }
         draw_mode_packet = (DR_TPAGE*)packet_cursor;
         setDrawTPage(draw_mode_packet, 0, 0, draw_mode);

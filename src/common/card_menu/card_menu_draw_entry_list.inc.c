@@ -18,27 +18,27 @@ void* card_menu_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offs
     {
     case CARD_MENU_ENTRY_STATE_NO_GAME_DATA:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + CARD_MENU_EXCHANGE_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_EXCHANGE_LIST_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_UNFORMATTED:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + CARD_MENU_EXCHANGE_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_EXCHANGE_LIST_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_CARD_FULL:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_not_enough_blocks, CARD_MENU_TEXT_NOT_ENOUGH_BLOCKS), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + CARD_MENU_EXCHANGE_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_EXCHANGE_LIST_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_NO_CARD:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_card, CARD_MENU_TEXT_NO_CARD), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + CARD_MENU_EXCHANGE_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_EXCHANGE_LIST_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_ACCESS_FAILED:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_card_access_failed, CARD_MENU_TEXT_CARD_ACCESS_FAILED), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + CARD_MENU_EXCHANGE_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_EXCHANGE_LIST_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_NO_SAVE_DATA:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_save_data, CARD_MENU_TEXT_NO_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + CARD_MENU_EXCHANGE_LIST_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_EXCHANGE_LIST_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_BLANK:
         break;
@@ -47,7 +47,7 @@ void* card_menu_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offs
         s32 message_x;
         u16* text_table;
 
-        message_x = -x_offset + CARD_MENU_EXCHANGE_LIST_WIDTH / 2;
+        message_x = -x_offset + CARD_MENU_EXCHANGE_LIST_CENTER_X;
         text_table = &g_card_menu_text_table;
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECKING_CARD), FIELD_TEXT_COLOR_NORMAL, message_x, -y_offset,
                                FIELD_TEXT_ALIGN_CENTER);
@@ -67,7 +67,7 @@ void* card_menu_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offs
             s32 message_x;
             u16* text_table;
 
-            message_x = -x_offset + CARD_MENU_EXCHANGE_LIST_WIDTH / 2;
+            message_x = -x_offset + CARD_MENU_EXCHANGE_LIST_CENTER_X;
             text_table = &g_card_menu_text_table;
             prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECKING_CARD), FIELD_TEXT_COLOR_NORMAL, message_x, -y_offset,
                                    FIELD_TEXT_ALIGN_CENTER);
