@@ -85,14 +85,6 @@ extern s32 D_801227CC;
 extern s32 D_801227F4;
 extern s32 D_8011F418;
 extern u8 g_field_shared_items[];
-extern s32 g_niki_file_handle;
-extern s32 g_niki_retry_count;
-extern s32 g_niki_primary_poll_countdown;
-extern s32 g_niki_secondary_poll_countdown;
-/** @brief Card has space to keep the old save until its replacement is written. */
-extern s32 g_niki_preserve_old_save;
-/** @brief Path written before renaming the replacement to the selected save path. */
-extern u8 g_niki_temporary_save_path[];
 
 s32 card_menu_update_card_sequence(void);
 s32 card_menu_handle_input(void);

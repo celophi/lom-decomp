@@ -9,7 +9,10 @@
 #include "common/gpu_packet.h"
 #include <libgte.h>
 #include <libgpu.h>
+#include <kernel.h>
+#include <libapi.h>
 #include <libmcx.h>
+#include <strings.h>
 #include "common/encoded_text.h"
 #include "common/save_file.h"
 #include "common/glyph_cache.h"
@@ -65,11 +68,6 @@ extern s32 D_80162370;
  *        first 0x100 bytes of the saved game are read (CARD_MENU_ENTRY_READ_BYTES).
  */
 extern SaveFile g_cload_selected_file;
-extern u8 g_cload_steps_initial_scan[];
-extern u8 g_cload_steps_refresh_entries[];
-extern u8 g_cload_steps_card_reset[];
-extern u8 g_cload_steps_load_selected_save[];
-extern u8 *g_cload_load_step;
 extern s32 g_save_compatibility_tag;
 extern u16 g_cload_text_check_memory_card;
 extern u16 g_cload_text_no_memory_card;
@@ -90,39 +88,10 @@ extern u16 g_cload_text_card_insert_error;
 extern u16 D_80145EDE;
 extern u16 g_cload_text_version_error;
 
-/* Globals used by the memory-card I/O, load-state, and glyph-cache block. */
-extern u8 g_cload_steps_idle[];
-extern u8 g_cload_steps_read_selected_header[];
-extern char g_cload_selected_card_path[0x40];
-extern s32 g_cload_retry_count;
-extern s32 g_cload_primary_poll_countdown;
-extern s32 g_cload_secondary_poll_countdown;
-extern s32 g_cload_file_handle;
-
-extern int strncmp(char *, char *, int);
-
-/* External callees used by the memory-card I/O/load-state block. */
-s32 open(void *, s32);
-s32 read(s32, void *, s32);
-s32 close(s32);
-void erase(void *);
-s32 _card_info(s32);
-s32 _card_load(s32);
-s32 _card_wait(s32);
-s32 _card_clear(s32);
-void EnterCriticalSection(void);
-u8 *Krom2RawAdd(u16 sjis_code);
+/* FIELD and main-executable entry points used by CLOAD. */
 s32 field_upload_image_resource(RECT *rect, void *resource, s32 mode);
 s32 cdrom_queue_read(s32 resource_index, void *dst_buffer);
 void cdrom_wait_queue_empty(void);
-void CloseEvent(s32);
-void ExitCriticalSection(void);
-s32 OpenEvent(u32, s32, s32, s32);
-void EnableEvent(s32);
-s32 TestEvent(s32);
-s32 firstfile(void *, void *);
-s32 nextfile(void *);
-char *strcpy(char *, const char *);
 
 /* Functions shared across the CLOAD translation units. */
 s32 cload_main(void);

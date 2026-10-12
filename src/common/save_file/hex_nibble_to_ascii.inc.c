@@ -10,7 +10,7 @@
  * @param nibble Value to convert, normally in the range 0-15.
  * @note Negative values also take the numeric-digit branch.
  */
-void hex_nibble_to_ascii(s8* destination, s32 nibble)
+void hex_nibble_to_ascii(char* destination, s32 nibble)
 {
     if (nibble < SAVE_HEX_DECIMAL_DIGITS)
     {

@@ -25,6 +25,12 @@
 /** @brief Bytes in one memory-card block. */
 #define CARD_BLOCK_BYTES 8192
 
+/** @brief Bytes in one memory-card sector, the unit _card_read and _card_write transfer. */
+#define CARD_SECTOR_BYTES 128
+
+/** @brief Sectors in one memory-card block. */
+#define CARD_BLOCK_SECTORS (CARD_BLOCK_BYTES / CARD_SECTOR_BYTES)
+
 /** @brief open() mode bits that allocate @p count blocks when the file is created (with FCREAT). */
 #define CARD_FILE_BLOCKS(count) ((count) << 16)
 
@@ -156,11 +162,17 @@ extern s32 g_card_entry_ranks[];
 /** @brief Next rank card_rank_entries would assign, one past the newest save. */
 extern s32 g_card_rank_count;
 
+/** @brief g_card_rank_count before ranking: above every real rank, so no entry is marked newest. */
+#define CARD_RANK_COUNT_NONE 40
+
 /** @brief One past the highest save serial on the current card: the serial a new save gets. */
 extern s32 g_card_entry_value_limit;
 
 /** @brief Path of the save selected for loading or replacing ("buX0:" plus file name). */
 extern char g_card_selected_save_path[];
+
+/** @brief Path of the placeholder file a save is written under before the rename. */
+extern char g_card_temp_save_path[];
 
 s32 card_rank_entries(void);
 void card_reset_entry_ranks(void);

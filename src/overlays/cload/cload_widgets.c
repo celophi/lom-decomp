@@ -191,7 +191,7 @@ void* cload_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
         g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
         card_reset_entry_ranks();
-        g_cload_load_step = 0;
+        g_card_step = 0;
     }
     else
     {
@@ -200,7 +200,7 @@ void* cload_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
             g_card_menu_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
             field_reset_input_repeat();
             field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
-            g_cload_load_step = g_cload_steps_card_reset;
+            g_card_step = g_card_steps_card_info;
         }
         else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
         {
@@ -209,13 +209,13 @@ void* cload_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                 g_card_menu_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
                 field_reset_input_repeat();
                 field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
-                g_cload_load_step = g_cload_steps_card_reset;
+                g_card_step = g_card_steps_card_info;
             }
             else
             {
                 field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
                 g_card_menu_progress_active = 1;
-                g_cload_load_step = g_cload_steps_load_selected_save;
+                g_card_step = g_card_steps_read_save;
                 prompt = &g_card_menu_element_pool[CARD_MENU_ELEMENT_MODAL];
                 prompt->draw = cload_draw_load_progress;
                 prompt->attr.bits.transition_step = 1;
@@ -344,11 +344,11 @@ void cload_open_status_dialog(s32 dialog_state)
     field_reset_input_repeat();
     D_80162370 = 0;
     g_card_menu_progress_active = 0;
-    g_card_menu_selection_status = 0;
+    g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
     g_card_menu_io_busy = 0;
     g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
     card_reset_entry_ranks();
-    g_cload_load_step = 0;
+    g_card_step = 0;
     g_card_menu_dialog_state = dialog_state;
 }
 

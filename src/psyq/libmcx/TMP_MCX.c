@@ -88,7 +88,7 @@ INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", func_80033D4C);
 
 INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", _mcxTxSetTrans);
 
-INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", func_80033E7C);
+INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", McxHideTrans);
 
 INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", func_80033F20);
 
@@ -116,7 +116,7 @@ INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", func_800344E4);
 
 INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", func_80034508);
 
-INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", func_80034648);
+INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", McxExecFlag);
 
 INCLUDE_ASM("nonmatchings/psyq/libmcx/TMP_MCX", func_80034710);
 

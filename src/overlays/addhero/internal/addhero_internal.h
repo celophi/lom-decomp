@@ -29,8 +29,6 @@
 
 /* Declarations shared by ADDHERO implementation files. */
 
-extern struct DIRENTRY g_card_entries[][CARD_DIRECTORY_ENTRY_COUNT];
-extern s32 g_addhero_has_free_entry_space;
 /** @brief Save file read or written by the load and save sequences. */
 extern SaveFile g_addhero_save_file;
 /**

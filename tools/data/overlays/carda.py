@@ -96,7 +96,7 @@ SYMBOL_NAMES = {
     "save_icon_offsets": "g_carda_save_icon_offsets",
     "locations": "g_card_menu_location_names",
     "icon_offsets": "g_card_menu_icon_offsets",
-    "card_steps": "g_carda_steps_initial_scan",
+    "card_steps": "g_card_steps_initial_scan",
     "chart": "g_glyph_single_byte_chart",
     "chart_pages": "g_glyph_chart_page_base",
     "decimal_glyphs": "g_glyph_decimal_digits",

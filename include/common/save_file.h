@@ -34,8 +34,8 @@ s32 validate_save_file(SaveFile* file);
 s32 compute_save_checksum(const void* save_data);
 void terminate_multibyte_text(void* title_text);
 u8* skip_hex_digits(u8* cursor);
-void format_hex(s8* destination, s32 value, s32 max_digits);
-void hex_nibble_to_ascii(s8* destination, s32 nibble);
+void format_hex(char* destination, s32 value, s32 max_digits);
+void hex_nibble_to_ascii(char* destination, s32 nibble);
 u32 parse_hex(const u8* cursor, s32 digits_left);
 s32 parse_hex_suffix_byte(const char* field_text);
 

@@ -10,7 +10,10 @@
 #include "main/display.h"
 #include <libgte.h>
 #include <libgpu.h>
+#include <kernel.h>
+#include <libapi.h>
 #include <libmcx.h>
+#include <rand.h>
 #include "overlays/field/field_menu_window.h"
 #include "main/field_runtime.h"
 #include "overlays/field/field_sound.h"
@@ -120,6 +123,7 @@ typedef enum CardaCardStep
 
 /** @brief PocketStation transfer window, also used for the format prompt. */
 #define CARDA_TRANSFER_Y 76
+#define CARDA_TRANSFER_WIDTH CARD_MENU_MESSAGE_WIDTH
 #define CARDA_TRANSFER_HEIGHT 72 /**< Five lines. */
 
 /** @brief Item list window (received items) and its arrows. */
@@ -192,14 +196,10 @@ extern u8 g_carda_bad_title_template[];
 extern s32 g_carda_save_icon_offsets[];
 
 /* Card-sequence step scripts (g_card_step points into these). */
-extern u8 g_carda_steps_initial_scan[];
-extern u8 g_carda_steps_refresh_entries[];
-extern u8 g_carda_steps_card_reset[];
 extern u8 g_carda_steps_write_save[];
 extern u8 g_carda_steps_write_save_keep_handles[];
 extern u8 g_carda_steps_scan_and_write_alt_save[];
 extern u8 g_carda_steps_write_alt_save[];
-extern u8 g_carda_steps_read_selected_header[];
 extern u8 g_carda_steps_load_selected_save[];
 extern u8 g_carda_steps_card_check[];
 extern u8 g_carda_steps_initial_scan_check_type[];
@@ -218,48 +218,13 @@ extern s32 g_carda_format_frames;
 extern s32 g_carda_format_declined;
 /** @brief The saved game's item records (g_saved_game_ctx->items). */
 extern FieldItemRecord* g_carda_items;
-extern s32 g_carda_save_in_progress;
 /**
  * @brief Start of the selected entry's save file: only the card header and the
  *        first 0x100 bytes of the saved game are read (CARD_MENU_ENTRY_READ_BYTES).
  */
 extern SaveFile g_carda_selected_file;
-extern s32 g_carda_file_handle;
-/** @brief Full card path of the selected entry ("buX0:" plus file name), 64 bytes. */
-extern u8 g_carda_selected_card_path[];
-extern s32 g_carda_retry_count;
-extern s32 g_carda_primary_poll_countdown;
-extern s32 g_carda_next_save_serial;
-extern s32 g_carda_preserve_old_save;
-extern s32 g_carda_secondary_poll_countdown;
-extern u8 g_carda_temp_card_path[];
 
-/* FIELD entry points and library calls used by CARDA. */
-s32 OpenEvent(s32, s32, s32, s32);
-void CloseEvent(s32);
-s32 TestEvent(s32);
-void EnableEvent(s32);
-void EnterCriticalSection(void);
-void ExitCriticalSection(void);
-s32 open(void*, s32);
-s32 read(s32, void*, s32);
-s32 write(s32, void*, s32);
-s32 close(s32);
-s32 nextfile();
-s32 rename(void*, void*);
-s32 erase(void*);
-u8* Krom2RawAdd(u16 sjis_code);
-s32 firstfile();
-s32 rand();
-s32 _card_info(s32);
-s32 _card_load(s32);
-s32 _card_write(s32, s32, void*);
-s32 _card_read(s32, s32, void*);
-s32 _card_wait(s32);
-s32 _card_clear(s32);
-s32 _card_format();
-s32 func_80033E7C(s32);
-s32 func_80034648(s32, s32, s32);
+/* FIELD entry points used by CARDA. */
 void field_apply_region_level_ups(s32 slot);
 
 #endif /* CARDA_INTERNAL_H */

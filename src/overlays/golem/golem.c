@@ -1122,7 +1122,7 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
     s32 segment_width;
     s32 available_width;
     s32 remaining_height;
-    s32 packet_code;
+    s32 code;
     s32 bottom_texture_height;
     DR_TPAGE* draw_mode;
     u8 unused[16];
@@ -1185,7 +1185,7 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
         row_height = remaining_height;
         segment_width = g_golem_panel_records[panel_index].texture >> 26;
         cell_height = ((g_golem_panel_records[panel_index].dimensions.packed & 7) << 6) | segment_width;
-        packet_code = 0x64;
+        code = GPU_CODE_SPRT;
         x_offset = 0;
         if (cell_height < row_height)
         {
@@ -1202,18 +1202,10 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
             }
             SET_BGR0_PACKED(sprite, tint);
             setlen(sprite, 4);
-            
-
-            do
-            {
-                do
-                {
-                    setcode(sprite, packet_code);
-                } while (0);
-            } while (0);
+            setcode(sprite, code);
             if ((g_golem_panel_records[panel_index].attributes >> 2) & 1)
             {
-                setcode(sprite, 0x66); /* setSemiTrans(sprite, 1); */ 
+                setcode(sprite, GPU_CODE_SPRT | GPU_CODE_SEMI_TRANS);
             }
 
             setXY0(sprite, (x + 8) + x_offset, y + y_offset);
@@ -1231,7 +1223,9 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
     }
 
     draw_mode = (DR_TPAGE*)packet_cursor;
-    setDrawTPage(draw_mode, 0, 0, ((g_golem_panel_records[panel_index].attributes & 3) << 5) | 5);
+    setlen(draw_mode, 1);
+    code = getTPage(GPU_TEXTURE_4BIT, g_golem_panel_records[panel_index].attributes & 3, 320, 0);
+    draw_mode->code[0] = _get_mode(0, 0, code);
     addPrim(ordering_table, draw_mode);
     packet_cursor += sizeof(DR_TPAGE);
     return packet_cursor;
