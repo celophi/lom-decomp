@@ -25,6 +25,7 @@
 #include <memory.h>
 #include <libgpu.h>
 #include "overlays/field/field_ui_text.h"
+#include "overlays/field/field_overlay_handoff.h"
 
 #define NIKI_CANCEL_INPUT_MASK PAD_BTN_CIRCLE
 
@@ -54,7 +55,6 @@ extern void* g_niki_work_buffer;
 extern FieldItemRecord* g_niki_items;
 extern s32 g_pad_input;
 extern s32 D_80164B80;
-extern s32 g_field_niki_addhero_state;
 extern s32 g_save_compatibility_tag;
 /**
  * @brief Start of the selected entry's save file: only the card header and the

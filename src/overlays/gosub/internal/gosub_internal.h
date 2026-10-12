@@ -17,6 +17,7 @@
 #include "common/golem_shape.h"
 #include "overlays/field/field_fade.h"
 #include "overlays/field/field_input.h"
+#include "overlays/field/field_overlay_handoff.h"
 
 typedef struct GosubTilePacket GosubTilePacket;
 
@@ -596,9 +597,6 @@ typedef struct
 
 /* External data. */
 
-extern s32 g_field_gosub_state;
-extern s32 g_gosub_result_count;
-extern s32 g_gosub_result_values[];
 /**
  * @brief Overlay text archive: a section count word, one offset word per
  *        GosubTextSection, then the sections. Section offsets are relative

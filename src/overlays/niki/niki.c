@@ -248,20 +248,20 @@ s32 card_menu_handle_input(void)
     }
 
     navigation_steps = 1;
-    if (status & 8)
+    if (status & PAD_BTN_R1)
     {
-        g_pad_input = 0x4000;
+        g_pad_input = PAD_BTN_DOWN;
         navigation_steps = 1;
     }
-    if (g_pad_input & 4)
+    if (g_pad_input & PAD_BTN_L1)
     {
-        g_pad_input = 0x1000;
+        g_pad_input = PAD_BTN_UP;
         navigation_steps = 1;
     }
 
     while (navigation_steps != 0)
     {
-        if (g_pad_input & 0x1000)
+        if (g_pad_input & PAD_BTN_UP)
         {
             g_card_menu_selected_row -= 1;
             if (g_card_menu_selected_row < 0)
@@ -269,7 +269,7 @@ s32 card_menu_handle_input(void)
                 g_card_menu_selected_row = g_card_entry_state - 1;
             }
         }
-        if (g_pad_input & 0x4000)
+        if (g_pad_input & PAD_BTN_DOWN)
         {
             g_card_menu_selected_row += 1;
             if (g_card_menu_selected_row >= g_card_entry_state)
@@ -280,7 +280,7 @@ s32 card_menu_handle_input(void)
         navigation_steps -= 1;
     }
 
-    if (g_pad_input & 0x5000)
+    if (g_pad_input & (PAD_BTN_UP | PAD_BTN_DOWN))
     {
         card_menu_commit_selected_entry();
         field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
@@ -381,7 +381,7 @@ void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32
     }
     if (g_card_menu_selection_status != 3 && g_card_entry_state < 0x10)
     {
-        if (g_card_menu_selection_status == 2)
+        if (g_card_menu_selection_status == CARD_MENU_SELECTION_NEW_SAVE)
         {
             s32 x = -x_offset;
             u16* text_table;
@@ -389,7 +389,7 @@ void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32
             result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_new_save_title, CARD_MENU_TEXT_NEW_SAVE_TITLE), FIELD_TEXT_COLOR_NORMAL, x,
                                      -y_offset, FIELD_TEXT_ALIGN_LEFT);
             text_table = CARD_MENU_TEXT_TABLE(g_niki_text_new_save_title, CARD_MENU_TEXT_NEW_SAVE_TITLE);
-            return field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_USES_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, x, 0x10 - y_offset,
+            return field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_USES_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, x, FIELD_TEXT_LINE_SPACING - y_offset,
                                    FIELD_TEXT_ALIGN_LEFT);
         }
         else
@@ -543,19 +543,19 @@ void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32
                 terminate_multibyte_text(g_niki_entry_file.header.title);
                 if (g_niki_entry_file.header.title[1][0] == 0 || g_niki_entry_file.header.title[1][0] >= SJIS_LEAD_MIN)
                 {
-                    for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
+                    for (j = 0; j < CARD_FILE_TITLE_LINE_BYTES; j++)
                     {
                         name[j] = g_niki_entry_file.header.title[0][j];
                     }
                     name[j] = 0;
                     result = draw_cached_text(result, ot, name, -x_offset, -y_offset, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_LEFT);
 
-                    for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
+                    for (j = 0; j < CARD_FILE_TITLE_LINE_BYTES; j++)
                     {
                         name[j] = g_niki_entry_file.header.title[1][j];
                     }
                     name[j] = 0;
-                    result = draw_cached_text(result, ot, name, -x_offset, -y_offset + CARD_MENU_DETAILS_LINE_HEIGHT, FIELD_TEXT_COLOR_NORMAL,
+                    result = draw_cached_text(result, ot, name, -x_offset, -y_offset + FIELD_TEXT_LINE_SPACING, FIELD_TEXT_COLOR_NORMAL,
                                               FIELD_TEXT_ALIGN_LEFT);
                 }
             }
@@ -719,7 +719,7 @@ void* card_menu_draw_transfer_window(u_long* ot, void* prim, s32 x_offset, s32 y
     void* result;
     s32 x;
 
-    x = -x_offset + 0x90;
+    x = -x_offset + CARD_MENU_MESSAGE_CENTER_X;
     result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_loading, CARD_MENU_TEXT_LOADING), FIELD_TEXT_COLOR_NORMAL, x, -y_offset,
                              FIELD_TEXT_ALIGN_CENTER);
     text_table = CARD_MENU_TEXT_TABLE(g_niki_text_loading, CARD_MENU_TEXT_LOADING);
@@ -823,17 +823,17 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
     {
     case CARD_MENU_ENTRY_STATE_NO_GAME_DATA:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + 0x90, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_MESSAGE_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_UNFORMATTED:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + 0x90, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_MESSAGE_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_CHECKING_CARD:
     {
         s32 x;
         u16* text_table;
-        x = -x_offset + 0x90;
+        x = -x_offset + CARD_MENU_MESSAGE_CENTER_X;
         text_table = &g_card_menu_text_table;
         prim =
             field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECKING_CARD), FIELD_TEXT_COLOR_NORMAL, x, -y_offset, FIELD_TEXT_ALIGN_CENTER);
@@ -845,22 +845,22 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
     break;
     case CARD_MENU_ENTRY_STATE_CARD_FULL:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + 0x90, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_MESSAGE_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_NO_CARD:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_card, CARD_MENU_TEXT_NO_CARD), FIELD_TEXT_COLOR_NORMAL, -x_offset + 0x90,
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_card, CARD_MENU_TEXT_NO_CARD), FIELD_TEXT_COLOR_NORMAL, -x_offset + CARD_MENU_MESSAGE_CENTER_X,
                                -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_ACCESS_FAILED:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_card_access_failed, CARD_MENU_TEXT_CARD_ACCESS_FAILED), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + 0x90, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_MESSAGE_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_NO_SAVE_DATA:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_save_data, CARD_MENU_TEXT_NO_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + 0x90, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_MESSAGE_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_EXCHANGE_STATE_NO_LOAD_FILE:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_no_load_file, CARD_MENU_TEXT_NO_LOAD_FILE), FIELD_TEXT_COLOR_NORMAL, -x_offset + 0x90,
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_no_load_file, CARD_MENU_TEXT_NO_LOAD_FILE), FIELD_TEXT_COLOR_NORMAL, -x_offset + CARD_MENU_MESSAGE_CENTER_X,
                                -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_EXCHANGE_STATE_LOAD_PROGRESS:
@@ -869,7 +869,7 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         u16* text_table;
         s32 dialog_state;
 
-        x = -x_offset + 0x90;
+        x = -x_offset + CARD_MENU_MESSAGE_CENTER_X;
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_loading, CARD_MENU_TEXT_LOADING), FIELD_TEXT_COLOR_NORMAL, x, -y_offset,
                                FIELD_TEXT_ALIGN_CENTER);
         text_table = CARD_MENU_TEXT_TABLE(g_niki_text_loading, CARD_MENU_TEXT_LOADING);
@@ -902,9 +902,9 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 
         x = -x_offset;
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_trade_data_not_saved, CARD_MENU_TEXT_TRADE_DATA_NOT_SAVED), FIELD_TEXT_COLOR_NORMAL,
-                               x + CARD_MENU_MESSAGE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               x + CARD_MENU_MESSAGE_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         y = CARD_MENU_LINE_HEIGHT - y_offset;
-        prim = card_menu_draw_choice_prompt(prim, ot, x + CARD_MENU_MESSAGE_WIDTH / 2, y);
+        prim = card_menu_draw_choice_prompt(prim, ot, x + CARD_MENU_MESSAGE_CENTER_X, y);
 
         if (g_pad_input & NIKI_CANCEL_INPUT_MASK)
         {
@@ -947,13 +947,13 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 
         x = -x_offset;
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_found_load_file, CARD_MENU_TEXT_FOUND_LOAD_FILE), FIELD_TEXT_COLOR_NORMAL,
-                               x + CARD_MENU_MESSAGE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               x + CARD_MENU_MESSAGE_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         text_table = CARD_MENU_TEXT_TABLE(g_niki_text_found_load_file, CARD_MENU_TEXT_FOUND_LOAD_FILE);
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_OVERWRITE_TRADE_DATA), FIELD_TEXT_COLOR_NORMAL,
-                               x + CARD_MENU_MESSAGE_WIDTH / 2, CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               x + CARD_MENU_MESSAGE_CENTER_X, CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
 
         y = CARD_MENU_LINE_HEIGHT * 2 - y_offset;
-        prim = card_menu_draw_choice_prompt(prim, ot, x + CARD_MENU_MESSAGE_WIDTH / 2, y);
+        prim = card_menu_draw_choice_prompt(prim, ot, x + CARD_MENU_MESSAGE_CENTER_X, y);
 
         if ((g_pad_input & NIKI_CANCEL_INPUT_MASK) || ((g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK) && g_card_menu_choice_toggle != 0))
         {
@@ -991,7 +991,7 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         s32 x;
         u16* text_table;
 
-        x = -x_offset + 0x90;
+        x = -x_offset + CARD_MENU_MESSAGE_CENTER_X;
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_niki_text_saving, CARD_MENU_TEXT_SAVING), FIELD_TEXT_COLOR_NORMAL, x, -y_offset,
                                FIELD_TEXT_ALIGN_CENTER);
         text_table = CARD_MENU_TEXT_TABLE(g_niki_text_saving, CARD_MENU_TEXT_SAVING);
@@ -1016,7 +1016,7 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         s32 x;
         u16* text_table;
 
-        x = -x_offset + 0x90;
+        x = -x_offset + CARD_MENU_MESSAGE_CENTER_X;
         text_table = &g_card_menu_text_table;
         prim =
             field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECKING_CARD), FIELD_TEXT_COLOR_NORMAL, x, -y_offset, FIELD_TEXT_ALIGN_CENTER);

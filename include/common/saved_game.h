@@ -8,6 +8,7 @@
  */
 
 #include "common.h"
+#include "common/card_file.h"
 
 #define SAVED_GAME_DATA_SIZE 0x3268
 #define SAVED_GAME_BUFFER_SIZE 0x4000
@@ -24,6 +25,15 @@
 
 /** @brief Spawn record a save file is written with; loading a game enters the field through it. */
 #define FIELD_SPAWN_LOAD_GAME 6
+
+/** @brief Largest quantity SavedGameLayout::item_counts holds of one item kind. */
+#define ITEM_COUNT_MAX 99
+
+/** @brief Bytes of SavedGameLayout::summary_name, the hero name shown by the save browsers. */
+#define SAVED_GAME_SUMMARY_NAME_BYTES 21
+
+/** @brief Entries of SavedGameLayout::summary_records. */
+#define SAVED_GAME_SUMMARY_RECORD_COUNT 4
 
 /** @brief Save-browser party icon of an empty party slot. */
 #define SAVE_NO_ICON 0x7F
@@ -673,9 +683,11 @@ typedef struct
 typedef struct SavedGameLayout
 {
     /** @brief Hero name shown by the save browsers; copied from characters[0] when saving. */
-    u8 summary_name[21];
-    u8 unk15;
-    u8 unk16;
+    u8 summary_name[SAVED_GAME_SUMMARY_NAME_BYTES];
+    /** @brief Hero level, stored for the save browsers when saving. */
+    u8 summary_level;
+    /** @brief Low byte of the hero's weapon power, stored for the save browsers when saving. */
+    u8 summary_weapon_power;
     /** @brief Number of in-use save slot records, stored for the save browsers. */
     u8 summary_slot_count;
     /** @brief Word 0x18: spawn record of the current field scene, and the first party icon. */
@@ -777,7 +789,7 @@ typedef struct SavedGameLayout
     FieldLandRecord lands[FIELD_LAND_COUNT];
     FieldCharacterRecord characters[FIELD_PARTY_SIZE];
     FieldItemRecord items[FIELD_ITEM_COUNT];
-    /** @brief Quantity held of each consumable item. */
+    /** @brief Quantity held of each consumable item, at most ITEM_COUNT_MAX. */
     u8 item_counts[FIELD_ITEM_KIND_COUNT];
     u8 pad26E0[0x26E4 - 0x26E0];
     FieldMenuSlotGroup menu_slots[2];
@@ -811,7 +823,7 @@ typedef struct SavedGameLayout
     {
         u8 in_use;
         u8 unk01[0x3F];
-    } summary_records[4];
+    } summary_records[SAVED_GAME_SUMMARY_RECORD_COUNT];
 } SavedGameLayout;
 
 /** @brief Size of a Legend of Mana save file: two 8 KiB memory-card blocks. */
@@ -829,24 +841,24 @@ typedef struct SavedGameLayout
 /** @brief Added to twice the byte sum of a save file to form SaveFile::checksum. */
 #define SAVE_FILE_CHECKSUM_BIAS 0x0414E410
 
-/** @brief Length of one of the two lines of SaveFileHeader::title. */
-#define SAVE_FILE_TITLE_LINE_BYTES 0x20
+/** @brief Icon animation frames of a save file. */
+#define SAVE_FILE_ICON_FRAME_COUNT 2
 
-/** @brief Combined byte length of both lines of SaveFileHeader::title. */
-#define SAVE_FILE_TITLE_BYTES (SAVE_FILE_TITLE_LINE_BYTES * 2)
-
-/** @brief Standard PSX memory-card file header (0x180 bytes): title and icon. */
+/**
+ * @brief Card file header of a save file (0x180 bytes): a CardFileHeader with
+ *        two icon frames, after which the saved game starts.
+ */
 typedef struct
 {
     char magic[2];
-    u8 icon_flags;
+    u8 icon_type;
     u8 block_count;
     /** @brief Shift-JIS title in two lines. */
-    u8 title[2][SAVE_FILE_TITLE_LINE_BYTES];
-    u8 reserved[0x1C];
+    u8 title[2][CARD_FILE_TITLE_LINE_BYTES];
+    u8 reserved[CARD_FILE_RESERVED_BYTES];
     /** @brief 16-color icon CLUT (16-bit entries), stored as bytes. */
-    u8 clut[0x20];
-    u8 icon_frames[2][0x80];
+    u8 clut[CARD_FILE_ICON_CLUT_BYTES];
+    u8 icon_frames[SAVE_FILE_ICON_FRAME_COUNT][CARD_FILE_ICON_FRAME_BYTES];
 } SaveFileHeader;
 
 /**

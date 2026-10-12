@@ -13,6 +13,7 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
 #include "../internal/field_script.h"
+#include "overlays/field/field_overlay_handoff.h"
 
 /** @brief field_find_resource id of the weapon and armor generation table. */
 #define FIELD_ITEM_TABLE 4
@@ -47,9 +48,6 @@
 /** @brief Largest row or column of the instrument grid. */
 #define FIELD_GRID_MAX 7
 
-extern s32 g_field_gosub_state;
-extern s32 g_gosub_result_count;
-extern s32 g_gosub_result_values[];
 extern FieldRuntimeContext* g_field_runtime;
 
 FieldItemRecord* field_find_free_inventory_record(void);

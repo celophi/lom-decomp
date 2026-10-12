@@ -13,6 +13,7 @@
 #include "main/main.h"
 #include "main/field_runtime.h"
 #include "overlays/menu/menu.h"
+#include "overlays/field/field_overlay_handoff.h"
 
 /** @brief Fixed work areas of the field overlay: CD read buffer and actor resource heap. */
 #define FIELD_CD_BUFFER_AREA ((u8*)SECONDARY_OVERLAY_ADDRESS)
@@ -45,7 +46,6 @@ extern s32 g_field_party_routes_stale;
 extern s32 g_field_actor_text_count;
 extern s32 g_field_ring_menu_state;
 extern s32 g_field_gover_load_countdown;
-extern s32 g_field_gosub_state;
 extern s32 g_field_return_to_title_prompt_delay;
 extern s32 g_field_return_to_title_prompt_state;
 /** @brief Nonzero while a timed panel image is shown; pauses the field runtime, actor animation and the field menu. */

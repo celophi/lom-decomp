@@ -30,7 +30,12 @@ class SourceTest(unittest.TestCase):
     def test_save_icon_dimensions_follow_the_c_struct(self):
         source = (REPO_ROOT / "src/overlays/carda/carda.c").read_text(encoding="ascii")
         layout = re.search(r"typedef struct\s*\{([^}]+)\} CardaSaveIcon;", source).group(1)
-        frames, frame_bytes = map(int, re.search(r"frames\[(\d+)\]\[(\d+)\]", layout).groups())
+        frame_names = re.search(r"frames\[(\w+)\]\[(\w+)\]", layout).groups()
+        header = "".join(
+            (REPO_ROOT / "include/common" / name).read_text(encoding="ascii") for name in ("saved_game.h", "card_file.h")
+        )
+        defines = dict(re.findall(r"^#define (\w+) (0x[0-9A-Fa-f]+|\d+)\b", header, re.M))
+        frames, frame_bytes = (int(defines.get(name, name), 0) for name in frame_names)
         self.assertEqual(carda.SAVE_ICON_FRAMES, frames)
         self.assertEqual(carda.SAVE_ICON_FRAME_BYTES, frame_bytes)
 

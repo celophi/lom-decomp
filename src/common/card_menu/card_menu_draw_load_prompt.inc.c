@@ -18,7 +18,7 @@ void* card_menu_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_off
     s32 status;
     CardMenuElement* element;
 
-    x = -x_offset + CARD_MENU_MESSAGE_WIDTH / 2;
+    x = -x_offset + CARD_MENU_MESSAGE_CENTER_X;
     result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_load_prompt, CARD_MENU_TEXT_LOAD_PROMPT), FIELD_TEXT_COLOR_NORMAL, x, -y_offset,
                              FIELD_TEXT_ALIGN_CENTER);
     result = card_menu_draw_choice_prompt(result, ot, x, CARD_MENU_LINE_HEIGHT - y_offset);

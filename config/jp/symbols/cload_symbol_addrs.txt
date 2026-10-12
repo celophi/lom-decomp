@@ -144,25 +144,25 @@ reset_glyph_cache                  = 0x80145CD0;
 expand_text_glyph_codes            = 0x80145D20;
 
 // CLOAD text-table entries decoded from the overlay data table.
-g_cload_text_check_memory_card           = 0x80145E94;
+g_card_menu_text_table           = 0x80145E94;
 g_card_menu_text_not_enough_blocks           = 0x80145E96;
-g_cload_text_no_memory_card              = 0x80145E98;
-g_cload_text_mana                        = 0x80145E9A;
-g_cload_text_other_game                  = 0x80145E9C;
+g_card_menu_text_no_card              = 0x80145E98;
+g_card_menu_text_mana_label                        = 0x80145E9A;
+g_card_menu_text_other_game_label                  = 0x80145E9C;
 g_card_menu_text_card_slot0_label                 = 0x80145EA0;
 g_card_menu_text_card_slot1_label                 = 0x80145EA2;
 g_card_menu_text_card_access_failed          = 0x80145EA4;
 g_card_menu_text_no_save_data                = 0x80145EA6;
-g_cload_text_new_save                    = 0x80145EA8;
+g_card_menu_text_new_save_label                    = 0x80145EA8;
 g_cload_text_new_save_prompt             = 0x80145EBC;
 g_cload_text_load                        = 0x80145EC0;
-g_cload_text_number_prefix               = 0x80145EC2;
+g_card_menu_text_number_label               = 0x80145EC2;
 g_card_menu_text_load_prompt                 = 0x80145EC4;
 g_cload_text_loading                     = 0x80145EC6;
-g_cload_text_no_lom_save_data            = 0x80145EC8;
+g_card_menu_text_no_game_save_data            = 0x80145EC8;
 g_card_menu_text_save_failed                 = 0x80145ED0;
 g_card_menu_text_load_failed                 = 0x80145ED2;
-g_cload_text_card_insert_error           = 0x80145ED4;
+g_card_menu_text_card_not_inserted           = 0x80145ED4;
 g_cload_text_version_error               = 0x80145EE8;
 
 // CLOAD data/BSS symbols named from their observed roles.
@@ -254,7 +254,7 @@ field_text_upload_immediate_cache = 0x80063214;
 field_update_input_repeat = 0x800A9CC0;
 field_reset_input_repeat = 0x800A9E74;
 field_upload_image_resource              = 0x8008602C;
-g_cload_text_alt_save                    = 0x80145ECE;
+g_card_menu_text_ring_ring_land_label                    = 0x80145ECE;
 g_card_menu_text_plus_marker                 = 0x80145F44;
 g_card_menu_location_names                   = 0x80146478;
 
@@ -264,6 +264,6 @@ field_copy_golem_portrait_palette = 0x800A5494;
 field_copy_portrait_palette = 0x800A54E8;
 field_draw_text = 0x800A8750;
 field_draw_number = 0x800A8928;
-D_80145EDE    = 0x80145ED6;
-D_80162370    = 0x80163150;
+g_card_menu_text_not_pocketstation    = 0x80145ED6;
+g_card_menu_write_in_progress    = 0x80163150;
 

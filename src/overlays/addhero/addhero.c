@@ -436,7 +436,7 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
                                  -y_offset, FIELD_TEXT_ALIGN_LEFT);
         text_table = CARD_MENU_TEXT_TABLE(g_addhero_text_new_save_title, CARD_MENU_TEXT_NEW_SAVE_TITLE);
         return field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_USES_TWO_BLOCKS), FIELD_TEXT_COLOR_NORMAL, x,
-                               CARD_MENU_DETAILS_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_LEFT);
+                               FIELD_TEXT_LINE_SPACING - y_offset, FIELD_TEXT_ALIGN_LEFT);
     }
 
     if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_card_menu_selected_row].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
@@ -548,17 +548,17 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
             pos.y = y;
             result = field_draw_number(ot, result, time, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
             result = field_draw_text(result, ot, summary_entry->summary_name, FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TEXT_X,
-                                     y + CARD_MENU_DETAILS_LINE_HEIGHT, FIELD_TEXT_ALIGN_LEFT);
+                                     y + FIELD_TEXT_LINE_SPACING, FIELD_TEXT_ALIGN_LEFT);
 
             if (summary_entry->identity.ids.game_id == g_saved_game_ctx->identity.ids.game_id)
             {
                 result = field_draw_text(result, ot, CARD_MENU_TEXT_AT(g_addhero_text_same_hero_data, CARD_MENU_TEXT_SAME_HERO_DATA), FIELD_TEXT_COLOR_NORMAL,
-                                         x + CARD_MENU_DETAILS_TEXT_X, y + CARD_MENU_DETAILS_LINE_HEIGHT * 2, FIELD_TEXT_ALIGN_LEFT);
+                                         x + CARD_MENU_DETAILS_TEXT_X, y + FIELD_TEXT_LINE_SPACING * 2, FIELD_TEXT_ALIGN_LEFT);
             }
             else
             {
                 result = field_draw_text(result, ot, CARD_MENU_TEXT(g_card_menu_location_names, summary_entry->track.bits.music_track), FIELD_TEXT_COLOR_NORMAL,
-                                         x + CARD_MENU_DETAILS_TEXT_X, y + CARD_MENU_DETAILS_LINE_HEIGHT * 2, FIELD_TEXT_ALIGN_LEFT);
+                                         x + CARD_MENU_DETAILS_TEXT_X, y + FIELD_TEXT_LINE_SPACING * 2, FIELD_TEXT_ALIGN_LEFT);
             }
         }
         else
@@ -574,19 +574,19 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
         terminate_multibyte_text(g_addhero_entry_file.header.title);
         if (g_addhero_entry_file.header.title[1][0] == 0 || g_addhero_entry_file.header.title[1][0] >= SJIS_LEAD_MIN)
         {
-            for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
+            for (j = 0; j < CARD_FILE_TITLE_LINE_BYTES; j++)
             {
                 name[j] = g_addhero_entry_file.header.title[0][j];
             }
             name[j] = 0;
             result = draw_cached_text(result, ot, name, -x_offset, -y_offset, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_LEFT);
 
-            for (j = 0; j < SAVE_FILE_TITLE_LINE_BYTES; j++)
+            for (j = 0; j < CARD_FILE_TITLE_LINE_BYTES; j++)
             {
                 name[j] = g_addhero_entry_file.header.title[1][j];
             }
             name[j] = 0;
-            result = draw_cached_text(result, ot, name, -x_offset, -y_offset + CARD_MENU_DETAILS_LINE_HEIGHT, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_LEFT);
+            result = draw_cached_text(result, ot, name, -x_offset, -y_offset + FIELD_TEXT_LINE_SPACING, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_LEFT);
         }
     }
     return result;
@@ -754,7 +754,7 @@ void* card_menu_draw_transfer_window(u_long* ot, void* prim, s32 x_offset, s32 y
     s32 x;
     u32 pad_controlled;
 
-    x = -x_offset + CARD_MENU_MESSAGE_WIDTH / 2;
+    x = -x_offset + CARD_MENU_MESSAGE_CENTER_X;
     result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_loading, CARD_MENU_TEXT_LOADING), FIELD_TEXT_COLOR_NORMAL, x, -y_offset,
                              FIELD_TEXT_ALIGN_CENTER);
     text_table = CARD_MENU_TEXT_TABLE(g_addhero_text_loading, CARD_MENU_TEXT_LOADING);
@@ -890,18 +890,18 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
     {
     case CARD_MENU_ENTRY_STATE_NO_GAME_DATA:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + CARD_MENU_MESSAGE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_MESSAGE_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_UNFORMATTED:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + CARD_MENU_MESSAGE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_MESSAGE_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_CHECKING_CARD:
     {
         s32 message_x;
         u16* text_table;
 
-        message_x = -x_offset + CARD_MENU_MESSAGE_WIDTH / 2;
+        message_x = -x_offset + CARD_MENU_MESSAGE_CENTER_X;
         text_table = &g_card_menu_text_table;
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECKING_CARD), FIELD_TEXT_COLOR_NORMAL, message_x, -y_offset,
                                FIELD_TEXT_ALIGN_CENTER);
@@ -913,30 +913,30 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
     break;
     case CARD_MENU_ENTRY_STATE_CARD_FULL:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_game_save_data, CARD_MENU_TEXT_NO_GAME_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + CARD_MENU_MESSAGE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_MESSAGE_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_NO_CARD:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_card, CARD_MENU_TEXT_NO_CARD), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + CARD_MENU_MESSAGE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_MESSAGE_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_ACCESS_FAILED:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_card_access_failed, CARD_MENU_TEXT_CARD_ACCESS_FAILED), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + CARD_MENU_MESSAGE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_MESSAGE_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_ENTRY_STATE_NO_SAVE_DATA:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_no_save_data, CARD_MENU_TEXT_NO_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + CARD_MENU_MESSAGE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_MESSAGE_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_EXCHANGE_STATE_NO_LOAD_FILE:
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_no_load_file, CARD_MENU_TEXT_NO_LOAD_FILE), FIELD_TEXT_COLOR_NORMAL,
-                               -x_offset + CARD_MENU_MESSAGE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+                               -x_offset + CARD_MENU_MESSAGE_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     case CARD_MENU_EXCHANGE_STATE_LOAD_PROGRESS:
     {
         s32 message_x;
         u16* text_table;
 
-        message_x = -x_offset + CARD_MENU_MESSAGE_WIDTH / 2;
+        message_x = -x_offset + CARD_MENU_MESSAGE_CENTER_X;
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_loading, CARD_MENU_TEXT_LOADING), FIELD_TEXT_COLOR_NORMAL, message_x, -y_offset,
                                FIELD_TEXT_ALIGN_CENTER);
         text_table = CARD_MENU_TEXT_TABLE(g_addhero_text_loading, CARD_MENU_TEXT_LOADING);
@@ -964,7 +964,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
     {
         s32 message_x;
 
-        message_x = -x_offset + CARD_MENU_MESSAGE_WIDTH / 2;
+        message_x = -x_offset + CARD_MENU_MESSAGE_CENTER_X;
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_2p_data_not_saved, CARD_MENU_TEXT_2P_DATA_NOT_SAVED), FIELD_TEXT_COLOR_NORMAL,
                                message_x, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         prim = card_menu_draw_choice_prompt(prim, ot, message_x, CARD_MENU_LINE_HEIGHT - y_offset);
@@ -990,7 +990,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         s32 message_x;
         u16* text_table;
 
-        message_x = -x_offset + CARD_MENU_MESSAGE_WIDTH / 2;
+        message_x = -x_offset + CARD_MENU_MESSAGE_CENTER_X;
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_found_load_file, CARD_MENU_TEXT_FOUND_LOAD_FILE), FIELD_TEXT_COLOR_NORMAL, message_x,
                                -y_offset, FIELD_TEXT_ALIGN_CENTER);
         text_table = CARD_MENU_TEXT_TABLE(g_addhero_text_found_load_file, CARD_MENU_TEXT_FOUND_LOAD_FILE);
@@ -1024,7 +1024,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         s32 message_x;
         u16* text_table;
 
-        message_x = -x_offset + CARD_MENU_MESSAGE_WIDTH / 2;
+        message_x = -x_offset + CARD_MENU_MESSAGE_CENTER_X;
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_saving, CARD_MENU_TEXT_SAVING), FIELD_TEXT_COLOR_NORMAL, message_x, -y_offset,
                                FIELD_TEXT_ALIGN_CENTER);
         text_table = CARD_MENU_TEXT_TABLE(g_addhero_text_saving, CARD_MENU_TEXT_SAVING);
@@ -1048,7 +1048,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         s32 message_x;
         u16* text_table;
 
-        message_x = -x_offset + CARD_MENU_MESSAGE_WIDTH / 2;
+        message_x = -x_offset + CARD_MENU_MESSAGE_CENTER_X;
         text_table = &g_card_menu_text_table;
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECKING_CARD), FIELD_TEXT_COLOR_NORMAL, message_x, -y_offset,
                                FIELD_TEXT_ALIGN_CENTER);

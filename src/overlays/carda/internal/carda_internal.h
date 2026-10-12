@@ -4,6 +4,7 @@
 #include "overlays/field/field_text.h"
 #include "common.h"
 #include "common/saved_game.h"
+#include "common/sjis.h"
 #include "common/pad.h"
 #include "common/vector.h"
 #include "common/gpu_packet.h"
@@ -34,6 +35,8 @@
 #include "overlays/field/field_fade.h"
 #include "overlays/field/field_input.h"
 #include "overlays/field/field_portrait.h"
+#include "overlays/field/field_overlay_handoff.h"
+#include "main/cd_resources.h"
 /**
  * @brief g_card_menu_mode values: what FIELD opened the card screen for.
  * @note The US release keeps the PocketStation modes but leaves their texts empty.
@@ -105,6 +108,9 @@ typedef enum CardaCardStep
 /** @brief CARDA's own carda_open_status_dialog messages, after the shared CARD_MENU_DIALOG_* ones. */
 #define CARDA_DIALOG_FORMAT_FAILED 5
 
+/** @brief Frame of the formatting message on which the card is formatted; the save is built on the next. */
+#define CARDA_FORMAT_FRAME 12
+
 /** @brief CARDA's own g_card_menu_selection_status value, after the shared CARD_MENU_SELECTION_* ones. */
 #define CARDA_SELECTION_CARD_FULL 4  /**< The full-card placeholder is selected. */
 
@@ -116,7 +122,7 @@ typedef enum CardaCardStep
 #define CARDA_LIST_WIDTH 300
 
 /** @brief X of the scroll arrows, inset from the entry list's right edge. */
-#define CARDA_SCROLL_ARROW_X (CARDA_LIST_X + CARDA_LIST_WIDTH - 8)
+#define CARDA_SCROLL_ARROW_X (CARDA_LIST_X + CARDA_LIST_WIDTH - CARD_MENU_SCROLL_ARROW_INSET)
 
 /** @brief Top of the message window (prompts and progress messages). */
 #define CARDA_MESSAGE_Y 90
@@ -126,30 +132,42 @@ typedef enum CardaCardStep
 #define CARDA_TRANSFER_WIDTH CARD_MENU_MESSAGE_WIDTH
 #define CARDA_TRANSFER_HEIGHT 72 /**< Five lines. */
 
+/** @brief One-line "Saved." window, one message line below the message window's top. */
+#define CARDA_SAVE_COMPLETE_Y (CARDA_MESSAGE_Y + CARD_MENU_LINE_HEIGHT)
+#define CARDA_SAVE_COMPLETE_HEIGHT FIELD_TEXT_LINE_SPACING
+
+/** @brief Height of the dialog for the two-line failure texts (top: CARD_MENU_TWO_LINE_DIALOG_Y). */
+#define CARDA_TWO_LINE_DIALOG_HEIGHT (CARD_MENU_EXCHANGE_DIALOG_HEIGHT + FIELD_TEXT_LINE_SPACING)
+
+/** @brief Title window above the item list. */
+#define CARDA_ITEM_LIST_TITLE_Y 26
+#define CARDA_ITEM_LIST_TITLE_HEIGHT FIELD_TEXT_LINE_SPACING
+
 /** @brief Item list window (received items) and its arrows. */
 #define CARDA_ITEM_LIST_X 32
 #define CARDA_ITEM_LIST_Y 54
 #define CARDA_ITEM_LIST_WIDTH 256
 #define CARDA_ITEM_LIST_HEIGHT 144
 #define CARDA_ITEM_LIST_VISIBLE_ROWS (CARDA_ITEM_LIST_HEIGHT / CARD_MENU_LINE_HEIGHT)
-#define CARDA_ITEM_SCROLL_ARROW_X (CARDA_ITEM_LIST_X + CARDA_ITEM_LIST_WIDTH - 8)
-#define CARDA_ITEM_SCROLL_ARROW_UP_Y (CARDA_ITEM_LIST_Y + 8)
-#define CARDA_ITEM_SCROLL_ARROW_DOWN_Y (CARDA_ITEM_LIST_Y + CARDA_ITEM_LIST_HEIGHT - 8)
+#define CARDA_ITEM_SCROLL_ARROW_X (CARDA_ITEM_LIST_X + CARDA_ITEM_LIST_WIDTH - CARD_MENU_SCROLL_ARROW_INSET)
+#define CARDA_ITEM_SCROLL_ARROW_UP_Y (CARDA_ITEM_LIST_Y + CARD_MENU_SCROLL_ARROW_INSET)
+#define CARDA_ITEM_SCROLL_ARROW_DOWN_Y (CARDA_ITEM_LIST_Y + CARDA_ITEM_LIST_HEIGHT - CARD_MENU_SCROLL_ARROW_INSET)
 
-/** @brief Highest count an item stack can reach. */
-#define CARDA_ITEM_COUNT_MAX 99
 
 /* FIELD / main-executable globals used by this overlay. */
 extern s32 g_save_compatibility_tag;
 extern s32 g_playtime_vsync_origin;
-extern s32 g_field_card_pet_slot;
 extern s32 g_pad_input;
-extern s32 g_gosub_result_values;
-extern s32 g_field_card_overlay_mode;
 
 /* FIELD UI strings and memory-card file names. */
 extern u8 g_field_ui_text_cant_hold_more[];
 extern char g_card_full_entry_name[];
+
+/** @brief Bytes of g_carda_save_title_template; the save number follows them on the first title line. */
+#define CARDA_TITLE_TEMPLATE_BYTES 18
+
+/** @brief Byte index of the fifth character of the first title line, which gets SJIS_NOTE_SIGN when carda_test_option_flag_2 is set. */
+#define CARDA_TITLE_NOTE_INDEX (4 * SJIS_MULTIBYTE_CHAR_BYTES)
 
 /* CARDA text offset-table entries. */
 extern u16 g_carda_text_checking_card;
@@ -193,6 +211,7 @@ extern u16 g_carda_text_memory_card_is;
 extern u16 g_carda_item_names[];
 extern u8 g_carda_save_title_template[];
 extern u8 g_carda_bad_title_template[];
+/** @brief Save-icon offsets, counted from the icon count word just before them (see CARD_OFFSET_TABLE_ENTRY). */
 extern s32 g_carda_save_icon_offsets[];
 
 /* Card-sequence step scripts (g_card_step points into these). */

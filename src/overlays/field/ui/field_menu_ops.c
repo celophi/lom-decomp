@@ -7,6 +7,7 @@
 #include "../internal/field_records.h"
 #include "main/main.h"
 #include <abs.h>
+#include "overlays/field/field_overlay_handoff.h"
 
 void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s32 y, s32 z);
 
@@ -478,10 +479,7 @@ extern u8 D_80122C1E;
 extern u8 D_80122C1F;
 extern FieldMenuItemRecord g_field_shared_items[4];
 extern FieldGosubSequence D_80051EB4;
-extern s32 g_gosub_result_count;
-extern s32 g_gosub_result_values[];
 extern void (*g_field_menu_ops[])(s32 arg0);
-extern s32 g_field_gosub_state;
 extern FieldGosubSequence D_800F19AC;
 extern FieldGosubSequence D_800F19B8;
 extern FieldGosubSequence D_800F19C4;
@@ -2171,7 +2169,7 @@ void field_place_actor_beside_actor0(void)
 
 /**
  * @brief Free the action slot selected by D_80122C0D and give its item back.
- * @note The item count is clamped to 0-99.
+ * @note The item count is clamped to 0-ITEM_COUNT_MAX.
  */
 void field_menu_release_action_slot(void)
 {
@@ -2189,8 +2187,8 @@ void field_menu_release_action_slot(void)
     count += 1;
     if (count >= 0)
     {
-        clamped = 99;
-        if (count < 100)
+        clamped = ITEM_COUNT_MAX;
+        if (count <= ITEM_COUNT_MAX)
         {
             clamped = count;
         }

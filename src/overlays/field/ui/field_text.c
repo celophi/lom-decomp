@@ -37,8 +37,6 @@
 #define FIELD_TEXT_CACHE_ROW_BYTES (FIELD_TEXT_CACHE_ROW_WORDS * 2)
 /** Glyph staging rows in the scratchpad: 16 glyph pixels plus the 4 carried from the previous glyph. */
 #define FIELD_TEXT_STAGING_ROW_WORDS 5
-#define FIELD_TEXT_LINE_HEIGHT 12
-#define FIELD_TEXT_LINE_SPACING 16
 #define FIELD_TEXT_PORTRAIT_MARGIN 56
 #define FIELD_TEXT_TRANSITION_FRAMES 4
 /** Display time of a timed window, in frames. */

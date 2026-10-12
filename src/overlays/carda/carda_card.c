@@ -23,14 +23,8 @@
 /** @brief Leading part of a save read back by CARDA_STEP_READ_SAVE_PREFIX. */
 #define CARDA_SAVE_PREFIX_BYTES 0x400
 
-/** @brief Bytes of g_carda_save_title_template copied over a new save's title. */
-#define CARDA_TITLE_TEMPLATE_BYTES 18
-
-/** @brief Offset of the title in a card file's first sector. */
-#define CARDA_TITLE_OFFSET OFFSETOF(SaveFileHeader, title)
-
-/** @brief Offset of the fifth title character, which gets SJIS_NOTE_SIGN when carda_test_option_flag_2 is set. */
-#define CARDA_TITLE_NOTE_OFFSET (CARDA_TITLE_OFFSET + 4 * SJIS_MULTIBYTE_CHAR_BYTES)
+/** @brief Offset of the title's note sign (CARDA_TITLE_NOTE_INDEX) in a card file's first sector. */
+#define CARDA_TITLE_NOTE_OFFSET (CARD_FILE_TITLE_OFFSET + CARDA_TITLE_NOTE_INDEX)
 
 static s32 carda_rank_entries(void);
 static s32 carda_has_known_entry_type(void);
@@ -559,7 +553,7 @@ s32 carda_advance_card_sequence(void)
                     _card_wait(g_card_slot);
                     _card_read(CARD_CHANNEL(g_card_slot), dir_entry.head, title_frame);
                     _card_wait(g_card_slot);
-                    title_dst = &title_frame[CARDA_TITLE_OFFSET];
+                    title_dst = &title_frame[CARD_FILE_TITLE_OFFSET];
                     title_src = g_carda_save_title_template;
                     attempts = 0;
                     while (attempts < CARDA_TITLE_TEMPLATE_BYTES)

@@ -148,9 +148,9 @@ void* card_menu_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offs
         {
             TILE* tile = (TILE*)prim;
 
-            *(u32*)&tile->r0 = CARD_MENU_HIGHLIGHT_COLOR;
-            setlen(tile, 3);
-            setcode(tile, GPU_CODE_TILE | GPU_CODE_SEMI_TRANS);
+            SET_BGR0_PACKED(tile, CARD_MENU_HIGHLIGHT_COLOR);
+            setTile(tile);
+            setSemiTrans(tile, 1);
             tile->w = CARD_MENU_EXCHANGE_LIST_WIDTH;
             setXY0(tile, 0, row_y);
             tile->h = CARD_MENU_ENTRY_ROW_HEIGHT;

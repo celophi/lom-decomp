@@ -4,6 +4,7 @@
 #include "../internal/field_script.h"
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_records.h"
+#include "overlays/field/field_overlay_handoff.h"
 
 /** @brief Number of guest characters with a template in resource 3. */
 #define FIELD_GUEST_COUNT 12
@@ -85,9 +86,6 @@ typedef struct
 
 /** @brief Experience needed to reach each level; entry n is for level n + 1. */
 extern s32 g_field_level_experience[FIELD_LEVEL_EXPERIENCE_COUNT];
-extern s32 g_gosub_result_count;
-extern s32 g_gosub_result_values[];
-extern s32 g_field_gosub_state;
 
 static void field_load_companion(s32 companion_index);
 static void field_store_companion(void);

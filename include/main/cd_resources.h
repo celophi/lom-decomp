@@ -87,6 +87,18 @@ typedef enum CdResourceId
     /* First field map resource; map ids index from this entry. */
     CD_RES_FIELD_MAP_BASE = 180,
 
+    /* PocketStation pet-transfer program, filled in and written to the card by CARDA. */
+    CD_RES_POCKETSTATION_PET_TRANSFER = 1506,
+
+    /* ZUKAN encyclopedia screen textures and text. */
+    CD_RES_ZUKAN_UI = 1507,
+
+    /* CLOAD backdrop images and save-list party icons. */
+    CD_RES_CLOAD_ICON_SET = 1508,
+
+    /* FIELD portrait archive; resource entry packages are numbered from it. */
+    CD_RES_FIELD_PORTRAITS = 1509,
+
     /* First field scene resource; scene selectors index from this entry. */
     CD_RES_FIELD_SCENE_BASE = 1548,
 } CdResourceId;

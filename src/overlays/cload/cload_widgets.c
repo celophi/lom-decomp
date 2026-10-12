@@ -6,22 +6,31 @@
 #include "common/gpu_packet.h"
 #include "overlays/field/field_input.h"
 
-/** @brief CD resource index of the save-icon set. */
-#define CLOAD_ICON_SET_RESOURCE 0x5E4
-
 /** @brief Fixed scratch buffer the icon set is read into. */
 #define CLOAD_ICON_SET_BUFFER ((CloadIconSetHeader*)LOAD_BUFFER_ADDRESS)
+
+/** @brief Images in the icon set: two 128-pixel backdrop slices and a third holding the last 48 pixels and the scroll arrows. */
+#define CLOAD_ICON_SET_IMAGE_COUNT 3
 
 /** @brief Header of the save-icon set resource; all offsets are bytes from its start. */
 typedef struct
 {
-    s32 unk0;
+    s32 unknown_0; /**< TODO: unknown; CLOAD never reads it. */
     s32 icon_table_offset;
-    s32 image_offsets[3];
+    s32 image_offsets[CLOAD_ICON_SET_IMAGE_COUNT];
 } CloadIconSetHeader;
 
-/** @brief Icon @p icon in the loaded icon table, which holds per-icon byte offsets after a leading word. */
-#define CLOAD_ICON_IMAGE(icon) ((FieldPortrait*)(g_cload_icon_resource + ((s32*)g_cload_icon_resource)[(icon) + 1]))
+/** @brief VRAM home of the icon-set images: left edge of the first, the step between them, and the first one's CLUT row. */
+#define CLOAD_ICON_SET_VRAM_X 512
+#define CLOAD_ICON_SET_VRAM_STEP 64
+#define CLOAD_ICON_SET_CLUT_Y 500
+
+/** @brief Width of the two full backdrop slices and of the third image's backdrop part. */
+#define CLOAD_BACKDROP_SLICE_WIDTH 128
+#define CLOAD_BACKDROP_LAST_SLICE_WIDTH 48
+
+/** @brief Icon @p icon in the loaded icon table (a counted offset table at the table start). */
+#define CLOAD_ICON_IMAGE(icon) ((FieldPortrait*)CARD_OFFSET_TABLE_ENTRY((s32*)g_cload_icon_resource + 1, icon))
 
 /**
  * @brief Emit the GPU packets for a CLOAD window frame: a clipped draw
@@ -149,14 +158,14 @@ CloadGpuPacket* cload_emit_scroll_arrow(SPRT* sprite, u_long* ot, s32 x, s32 y, 
     {
         sprite->v0 = 16;
     }
-    sprite->u0 = 48;
+    sprite->u0 = CLOAD_BACKDROP_LAST_SLICE_WIDTH;
     setWH(sprite, 16, 16);
-    sprite->clut = getClut(0, 502);
+    sprite->clut = getClut(0, CLOAD_ICON_SET_CLUT_Y + 2);
     addPrim(ot, sprite);
 
     sprite++;
     draw_mode = (DR_TPAGE*)sprite;
-    setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_8BIT, GPU_BLEND_HALF, 640, 0));
+    setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_8BIT, GPU_BLEND_HALF, CLOAD_ICON_SET_VRAM_X + CLOAD_ICON_SET_VRAM_STEP * 2, 0));
     addPrim(ot, draw_mode);
     return (CloadGpuPacket*)(draw_mode + 1);
 }
@@ -179,34 +188,34 @@ void* cload_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
     s32 status;
     CardMenuElement* prompt;
 
-    x = -x_offset + 0x90;
+    x = -x_offset + CARD_MENU_MESSAGE_CENTER_X;
     result = cload_draw_choice_prompt(
-        field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_load_prompt, CARD_MENU_TEXT_LOAD_PROMPT), 4, x, -y_offset, 2), ot, x, 0xE - y_offset);
+        field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_load_prompt, CARD_MENU_TEXT_LOAD_PROMPT), FIELD_TEXT_COLOR_NORMAL, x, -y_offset, FIELD_TEXT_ALIGN_CENTER), ot, x, CARD_MENU_LINE_HEIGHT - y_offset);
 
     status = poll_and_retry_card_info();
-    if (status == 1 || status == 2)
+    if (status == CARD_EVENT_ERROR || status == CARD_EVENT_TIMEOUT)
     {
-        g_card_menu_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
+        g_card_menu_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_FREE;
         field_reset_input_repeat();
         field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
         g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
         card_reset_entry_ranks();
-        g_card_step = 0;
+        g_card_step = NULL;
     }
     else
     {
-        if (g_pad_input & 0x40)
+        if (g_pad_input & PAD_BTN_CIRCLE)
         {
-            g_card_menu_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
+            g_card_menu_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_FREE;
             field_reset_input_repeat();
             field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
             g_card_step = g_card_steps_card_info;
         }
         else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
         {
-            if (g_card_menu_choice_toggle != 0)
+            if (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)
             {
-                g_card_menu_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
+                g_card_menu_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_FREE;
                 field_reset_input_repeat();
                 field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
                 g_card_step = g_card_steps_card_info;
@@ -219,12 +228,12 @@ void* cload_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                 prompt = &g_card_menu_element_pool[CARD_MENU_ELEMENT_MODAL];
                 prompt->draw = cload_draw_load_progress;
                 prompt->attr.bits.transition_step = 1;
-                prompt->attr.bits.state = 1;
-                prompt->attr.bits.x = 0x10;
-                prompt->attr.bits.y = 0x5B;
-                prompt->size.bits.width_high = 1;
-                prompt->size.bits.height = 0x2B;
-                prompt->attr.word = (prompt->attr.word & 0x00FFFFFF) | ((u32)0x20 << 24);
+                prompt->attr.bits.state = CARD_MENU_ELEMENT_OPENING;
+                prompt->attr.bits.x = CARD_MENU_MESSAGE_X;
+                prompt->attr.bits.y = CLOAD_MESSAGE_Y;
+                prompt->size.bits.width_high = CARD_MENU_MESSAGE_WIDTH >> 8;
+                prompt->size.bits.height = CLOAD_WINDOW_HEIGHT(CARD_MENU_MESSAGE_HEIGHT);
+                CARD_MENU_SET_ELEMENT_WIDTH_LOW(prompt, CARD_MENU_MESSAGE_WIDTH);
             }
         }
     }
@@ -247,23 +256,23 @@ void* cload_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offse
     void* result;
     u16* text_table;
 
-    x = -x_offset + 0x90;
-    result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_loading, CARD_MENU_TEXT_LOADING), 4, x, -y_offset, 2);
-    text_table = CARD_MENU_TEXT_TABLE(g_cload_text_loading, 25);
-    result = field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), 4, x, 0xE - y_offset, 2);
-    result = field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CARD_OR_CONTROLLER), 4, x, 0x1C - y_offset, 2);
+    x = -x_offset + CARD_MENU_MESSAGE_CENTER_X;
+    result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_loading, CARD_MENU_TEXT_LOADING), FIELD_TEXT_COLOR_NORMAL, x, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+    text_table = CARD_MENU_TEXT_TABLE(g_cload_text_loading, CARD_MENU_TEXT_LOADING);
+    result = field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_DO_NOT_REMOVE_CARD), FIELD_TEXT_COLOR_NORMAL, x, CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
+    result = field_draw_text(result, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CARD_OR_CONTROLLER), FIELD_TEXT_COLOR_NORMAL, x, CARD_MENU_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
     result = cload_draw_progress_bar(result, ot);
 
     if (g_card_menu_progress_active == 0)
     {
         if (validate_save_file(&g_cload_save_file) == 0)
         {
-            cload_open_status_dialog(4);
+            cload_open_status_dialog(CARD_MENU_DIALOG_INVALID_SAVE);
         }
         else
         {
             field_play_sound(FIELD_SOUND_LOAD_DONE, AKAO_PAN_CENTER);
-            g_card_menu_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
+            g_card_menu_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_FREE;
             bcopy((u8*)&g_cload_save_file.saved_game, g_saved_game.bytes, SAVED_GAME_DATA_SIZE);
             g_save_compatibility_tag = g_saved_game.layout.compatibility_tag;
             g_playtime_vsync_origin = VSync(-1);
@@ -304,8 +313,8 @@ CloadGpuPacket* cload_draw_progress_bar(POLY_G4* quad, u_long* ot)
         quad->x1 = quad->x3 = width / CARD_MENU_PROGRESS_FULL_TICKS;
         quad->y1 = 0;
         quad->y0 = 0;
-        quad->y3 = 53;
-        quad->y2 = 53;
+        quad->y3 = CLOAD_PROGRESS_BAR_HEIGHT;
+        quad->y2 = CLOAD_PROGRESS_BAR_HEIGHT;
         addPrim(ot, quad);
         quad++;
     }
@@ -315,34 +324,34 @@ CloadGpuPacket* cload_draw_progress_bar(POLY_G4* quad, u_long* ot)
 /**
  * @brief Open the status dialog in the first element slot and abandon any
  *        load in progress.
- * @param dialog_state Message to show (0 save failed, 1 and 4 load failed, 2 insert card, 3 TODO: unknown).
+ * @param dialog_state CARD_MENU_DIALOG_* message to show.
  */
 void cload_open_status_dialog(s32 dialog_state)
 {
     CardMenuElement* dialog;
-    s32 code;
+    s32 y;
 
     field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
     dialog = &g_card_menu_element_pool[CARD_MENU_ELEMENT_MODAL];
     dialog->attr.bits.transition_step = 1;
-    dialog->attr.bits.state = 1;
+    dialog->attr.bits.state = CARD_MENU_ELEMENT_OPENING;
     dialog->attr.bits.x = CARD_MENU_DIALOG_X;
     CARD_MENU_SET_ELEMENT_WIDTH_LOW(dialog, CARD_MENU_DIALOG_WIDTH);
     dialog->size.bits.width_high = CARD_MENU_DIALOG_WIDTH >> 8;
-    if (dialog_state < 2 || dialog_state == 4)
+    if (dialog_state <= CARD_MENU_DIALOG_LOAD_FAILED || dialog_state == CARD_MENU_DIALOG_INVALID_SAVE)
     {
-        dialog->size.bits.height = 0x1F;
-        code = 0x60;
+        dialog->size.bits.height = CLOAD_DIALOG_HEIGHT(2);
+        y = CARD_MENU_TWO_LINE_DIALOG_Y;
     }
     else
     {
-        dialog->size.bits.height = 0x0F;
-        code = 0x70;
+        dialog->size.bits.height = CLOAD_DIALOG_HEIGHT(1);
+        y = CARD_MENU_EXCHANGE_DIALOG_Y;
     }
-    dialog->attr.bits.y = code;
+    dialog->attr.bits.y = y;
     dialog->draw = cload_draw_status_dialog;
     field_reset_input_repeat();
-    D_80162370 = 0;
+    g_card_menu_write_in_progress = 0;
     g_card_menu_progress_active = 0;
     g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
     g_card_menu_io_busy = 0;
@@ -367,33 +376,33 @@ void* cload_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offse
 
     switch (g_card_menu_dialog_state)
     {
-    case 0:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_save_failed, CARD_MENU_TEXT_SAVE_FAILED), 4, -x_offset + 0x80, -y_offset, 2);
-        text_table = CARD_MENU_TEXT_TABLE(g_card_menu_text_save_failed, 30);
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECK_CARD_INSERTED), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
+    case CARD_MENU_DIALOG_SAVE_FAILED:
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_save_failed, CARD_MENU_TEXT_SAVE_FAILED), FIELD_TEXT_COLOR_NORMAL, -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        text_table = CARD_MENU_TEXT_TABLE(g_card_menu_text_save_failed, CARD_MENU_TEXT_SAVE_FAILED);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECK_CARD_INSERTED), FIELD_TEXT_COLOR_NORMAL, -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset + FIELD_TEXT_LINE_SPACING, FIELD_TEXT_ALIGN_CENTER);
         break;
-    case 1:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_load_failed, CARD_MENU_TEXT_LOAD_FAILED), 4, -x_offset + 0x80, -y_offset, 2);
-        text_table = CARD_MENU_TEXT_TABLE(g_card_menu_text_load_failed, 31);
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECK_CARD_INSERTED), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
+    case CARD_MENU_DIALOG_LOAD_FAILED:
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_load_failed, CARD_MENU_TEXT_LOAD_FAILED), FIELD_TEXT_COLOR_NORMAL, -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        text_table = CARD_MENU_TEXT_TABLE(g_card_menu_text_load_failed, CARD_MENU_TEXT_LOAD_FAILED);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_CHECK_CARD_INSERTED), FIELD_TEXT_COLOR_NORMAL, -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset + FIELD_TEXT_LINE_SPACING, FIELD_TEXT_ALIGN_CENTER);
         break;
-    case 2:
+    case CARD_MENU_DIALOG_CARD_NOT_INSERTED:
         prim =
-            field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_cload_text_card_insert_error, CARD_MENU_TEXT_CARD_NOT_INSERTED), 4, -x_offset + 0x80, -y_offset, 2);
+            field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_card_not_inserted, CARD_MENU_TEXT_CARD_NOT_INSERTED), FIELD_TEXT_COLOR_NORMAL, -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
-    case 3:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(D_80145EDE, CARD_MENU_TEXT_NOT_POCKETSTATION), 4, -x_offset + 0x80, -y_offset, 2);
+    case CARD_MENU_DIALOG_NOT_POCKETSTATION:
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_not_pocketstation, CARD_MENU_TEXT_NOT_POCKETSTATION), FIELD_TEXT_COLOR_NORMAL, -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
-    case 4:
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_load_failed, CARD_MENU_TEXT_LOAD_FAILED), 4, -x_offset + 0x80, -y_offset, 2);
-        text_table = CARD_MENU_TEXT_TABLE(g_card_menu_text_load_failed, 31);
-        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_SAVE_CORRUPT), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
+    case CARD_MENU_DIALOG_INVALID_SAVE:
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_load_failed, CARD_MENU_TEXT_LOAD_FAILED), FIELD_TEXT_COLOR_NORMAL, -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
+        text_table = CARD_MENU_TEXT_TABLE(g_card_menu_text_load_failed, CARD_MENU_TEXT_LOAD_FAILED);
+        prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_SAVE_CORRUPT), FIELD_TEXT_COLOR_NORMAL, -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset + FIELD_TEXT_LINE_SPACING, FIELD_TEXT_ALIGN_CENTER);
         break;
     }
 
     if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
     {
-        g_card_menu_element_pool[0].attr.bits.state = CARD_MENU_ELEMENT_FREE;
+        g_card_menu_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_FREE;
         field_reset_input_repeat();
     }
 
@@ -426,7 +435,7 @@ void* cload_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 wi
     }
 
     setRECT(&rect, index * GPU_CLUT_4BIT_COLORS, VRAM_CLUT_Y, GPU_CLUT_4BIT_COLORS, 1);
-    if ((row == 1) && (icon < 2))
+    if ((row == FIELD_PARTY_GUEST) && (icon < SAVE_ICON_HERO_COUNT))
     {
         field_copy_portrait_palette(g_card_menu_icon_context, icon);
         LoadImage(&rect, (u_long*)g_card_menu_icon_context);
@@ -478,8 +487,8 @@ void* cload_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 wi
 
 /**
  * @brief Read the save-icon set into its fixed scratch buffer, upload its three
- *        images to VRAM x 0x200/0x240/0x280 (CLUT rows 0x1F4..0x1F6) and point
- *        g_cload_icon_resource at its icon table.
+ *        images to VRAM from CLOAD_ICON_SET_VRAM_X (CLUT rows from
+ *        CLOAD_ICON_SET_CLUT_Y) and point g_cload_icon_resource at its icon table.
  * @note D_80180004/8/C/10 are marked `ignore:true` in cload_symbol_addrs.txt;
  *       the header fields are only reached through CLOAD_ICON_SET_BUFFER.
  */
@@ -488,20 +497,20 @@ void cload_load_icon_resources(void)
     CloadIconSetHeader* icon_set;
     RECT rect;
 
-    cdrom_queue_read(CLOAD_ICON_SET_RESOURCE, CLOAD_ICON_SET_BUFFER);
+    cdrom_queue_read(CD_RES_CLOAD_ICON_SET, CLOAD_ICON_SET_BUFFER);
     cdrom_wait_queue_empty();
 
     icon_set = CLOAD_ICON_SET_BUFFER;
 
     g_cload_icon_resource = (u8*)icon_set + icon_set->icon_table_offset;
 
-    setRECT(&rect, 0x200, 0, 0, 0x1F4);
+    setRECT(&rect, CLOAD_ICON_SET_VRAM_X, 0, 0, CLOAD_ICON_SET_CLUT_Y);
     field_upload_image_resource(&rect, (u8*)icon_set + icon_set->image_offsets[0], 1);
 
-    setRECT(&rect, 0x240, 0, 0, 0x1F5);
+    setRECT(&rect, CLOAD_ICON_SET_VRAM_X + CLOAD_ICON_SET_VRAM_STEP, 0, 0, CLOAD_ICON_SET_CLUT_Y + 1);
     field_upload_image_resource(&rect, (u8*)icon_set + icon_set->image_offsets[1], 1);
 
-    setRECT(&rect, 0x280, 0, 0, 0x1F6);
+    setRECT(&rect, CLOAD_ICON_SET_VRAM_X + CLOAD_ICON_SET_VRAM_STEP * 2, 0, 0, CLOAD_ICON_SET_CLUT_Y + 2);
     field_upload_image_resource(&rect, (u8*)icon_set + icon_set->image_offsets[2], 1);
 }
 
@@ -517,27 +526,27 @@ CloadGpuPacket* cload_emit_icon_highlight_strip(SPRT* sprite, u_long* ot)
     s32 i;
     DR_TPAGE* draw_mode;
 
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < CLOAD_ICON_SET_IMAGE_COUNT; i++)
     {
         SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
         setSprt(sprite);
-        setXY0(sprite, i * 128 + 8, 0);
+        setXY0(sprite, i * CLOAD_BACKDROP_SLICE_WIDTH + 8, 0);
         setUV0(sprite, 0, 0);
-        if (i == 2)
+        if (i == CLOAD_ICON_SET_IMAGE_COUNT - 1)
         {
-            sprite->w = 48;
+            sprite->w = CLOAD_BACKDROP_LAST_SLICE_WIDTH;
         }
         else
         {
-            sprite->w = 128;
+            sprite->w = CLOAD_BACKDROP_SLICE_WIDTH;
         }
-        sprite->h = 224;
-        sprite->clut = getClut(0, 500 + i);
+        sprite->h = VRAM_DRAW_HEIGHT;
+        sprite->clut = getClut(0, CLOAD_ICON_SET_CLUT_Y + i);
         addPrim(ot, sprite);
         sprite++;
 
         draw_mode = (DR_TPAGE*)sprite;
-        setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_8BIT, GPU_BLEND_HALF, 512 + i * 64, 0));
+        setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_8BIT, GPU_BLEND_HALF, CLOAD_ICON_SET_VRAM_X + i * CLOAD_ICON_SET_VRAM_STEP, 0));
         addPrim(ot, draw_mode);
         sprite = (SPRT*)(draw_mode + 1);
     }
@@ -575,7 +584,7 @@ void* cload_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y)
     color = FIELD_TEXT_COLOR_NORMAL;
     text = FIELD_UI_TEXT_AT(g_text_choice_glyph_offsets, FIELD_UI_TEXT_YES);
     text_table = FIELD_UI_TEXT_TABLE(g_text_choice_glyph_offsets, FIELD_UI_TEXT_YES);
-    if (g_card_menu_choice_toggle != 0)
+    if (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)
     {
         color = FIELD_TEXT_COLOR_DIM;
     }
@@ -583,7 +592,7 @@ void* cload_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y)
 
     color = FIELD_TEXT_COLOR_NORMAL;
     text = FIELD_UI_TEXT(text_table, FIELD_UI_TEXT_NO);
-    if (g_card_menu_choice_toggle == 0)
+    if (g_card_menu_choice_toggle == CARD_MENU_CHOICE_YES)
     {
         color = FIELD_TEXT_COLOR_DIM;
     }
