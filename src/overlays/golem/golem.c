@@ -321,8 +321,8 @@ void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel)
         golem_update_frame(draw_buffer);
         field_text_upload_immediate_cache();
         DrawSync(0);
-        set_controller_vsync_interval(2);
-        VSync(2);
+        set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
+        VSync(FRAME_VSYNC_INTERVAL);
 
         if (g_golem_exit_requested != 0)
         {
@@ -506,7 +506,7 @@ void golem_handle_input(void)
     if (g_golem_is_placing_block != 0)
     {
         input = g_pad_input;
-        if (input & (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT))
+        if (input & PAD_BTN_DPAD)
         {
             saved_x = g_golem_block_x;
             saved_y = g_golem_block_y;

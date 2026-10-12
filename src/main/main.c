@@ -228,7 +228,7 @@ void main_game_loop(void)
             field_scene_reset(NULL);
             spawn_id = &g_field_spawn_id;
             g_save_compatibility_tag = SAVE_TAG_STARTUP;
-            if (cload_main() != 0)
+            if (cload_main() != CLOAD_RESULT_LOADED)
             {
                 g_game_state = GAME_STATE_TITLE;
             }

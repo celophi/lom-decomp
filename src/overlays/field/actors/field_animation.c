@@ -13,6 +13,7 @@
 #include "main/controller.h"
 #include "main/scene_state.h"
 #include "../internal/field_calls.h"
+#include "main/display.h"
 
 void field_begin_scene_fade_in(void);
 
@@ -245,7 +246,7 @@ void field_update_scene_animations(void)
                     }
                     if (definition->head.b.unk1 < FIELD_SCENE_MOVIE_COUNT)
                     {
-                        set_controller_vsync_interval(2);
+                        set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
                     }
                     movie_update();
                     movie_service_video_ops();

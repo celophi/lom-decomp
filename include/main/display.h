@@ -62,6 +62,9 @@
 /** Frames of a standalone screen's fade in from (or out to) black: title, name entry, world select, load menu, hardware check. */
 #define SCREEN_FADE_FRAMES 20
 
+/** Vertical blanks per frame of the 30 fps game loop, passed to VSync and set_controller_vsync_interval. */
+#define FRAME_VSYNC_INTERVAL 2
+
 /** Lowest fade level drawn by adding light; levels below FADE_NEUTRAL subtract it. */
 #define FADE_ADDITIVE_THRESHOLD (FADE_NEUTRAL + 1)
 

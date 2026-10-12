@@ -73,8 +73,8 @@ s32 func_801405B0(RenderContext* render_buffers)
         field_text_upload_immediate_cache();
         func_80068440();
         DrawSync(0);
-        set_controller_vsync_interval(2);
-        VSync(2);
+        set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
+        VSync(FRAME_VSYNC_INTERVAL);
 
         if (g_menu_load_request != 0 || g_pad_input == PAD_BTN_START)
         {
@@ -195,7 +195,7 @@ void menu_tick(RenderContext* render_ctx)
     {
         g_pad_input = input_mask;
     }
-    input_mask = g_pad_input & MENU_PAD_DIRECTIONS;
+    input_mask = g_pad_input & PAD_BTN_DPAD;
     if (input_mask)
     {
         g_pad_input = input_mask;

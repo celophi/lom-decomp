@@ -94,7 +94,6 @@ extern MenuScript g_script_table[];
  * @{ */
 /** @brief Vertical directional-pad input used for menu navigation. */
 #define MENU_PAD_VERTICAL (PADLup | PADLdown)
-#define MENU_PAD_DIRECTIONS (PADLup | PADLright | PADLdown | PADLleft)
 #define MENU_PAD_SHOULDERS (PADL1 | PADL2 | PADR1 | PADR2) /* 0x000F: L1 | L2 | R1 | R2 */
 /** @} */
 

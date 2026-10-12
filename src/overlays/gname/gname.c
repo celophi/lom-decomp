@@ -55,7 +55,7 @@ enum
 #define GNAME_BTN_KANJI_PREV PAD_BTN_L1
 #define GNAME_BTN_KANJI_NEXT PAD_BTN_R1
 #define GNAME_BTN_KANJI_NAV (GNAME_BTN_KANJI_PREV | GNAME_BTN_KANJI_NEXT)
-#define GNAME_BTN_NAV_MASK (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT | GNAME_BTN_CONFIRM)
+#define GNAME_BTN_NAV_MASK (PAD_BTN_DPAD | GNAME_BTN_CONFIRM)
 
 /* Navigation regions and action entries. */
 enum
@@ -112,8 +112,7 @@ enum
     GNAME_RENDER_BUFFER_B
 };
 
-/* Run-loop timing and the party companion kind. */
-#define GNAME_FRAME_VSYNC_INTERVAL 2U
+/* Startup timing and the party companion kind. */
 #define GNAME_INIT_STACK_PAD_WORDS 2
 #define GNAME_STARTUP_DELAY_FRAMES 40
 #define GNAME_NAME_BUFFER_SIZE 48
@@ -580,8 +579,8 @@ s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_
 
         field_update_audio_timer();
         DrawSync(0);
-        set_controller_vsync_interval(GNAME_FRAME_VSYNC_INTERVAL);
-        VSync(GNAME_FRAME_VSYNC_INTERVAL);
+        set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
+        VSync(FRAME_VSYNC_INTERVAL);
 
         if (g_overlay_result != GNAME_RESULT_PENDING)
         {

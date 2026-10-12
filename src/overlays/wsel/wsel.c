@@ -53,7 +53,6 @@
 #define WSEL_CONFIRM_BUTTONS (PAD_BTN_CROSS | PAD_BTN_L3)
 #define WSEL_FINAL_CONFIRM_BUTTONS (PAD_BTN_CROSS | PAD_BTN_L3 | PAD_BTN_START)
 #define WSEL_CANCEL_BUTTONS PAD_BTN_CIRCLE
-#define WSEL_DPAD_BUTTONS (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT)
 
 #define WSEL_SFX_ERROR 0x78
 #define WSEL_SFX_CURSOR 0x7D
@@ -336,8 +335,8 @@ static void wsel_run_loop(WselRenderBuffer* buffers)
         wsel_draw_frame(buffer);
         wsel_update_input();
         DrawSync(0);
-        set_controller_vsync_interval(2);
-        VSync(2);
+        set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
+        VSync(FRAME_VSYNC_INTERVAL);
         ClearImage(&buffer->clear_rect, 0, 0, 0);
         if (buffer == buffers)
         {
@@ -1188,7 +1187,7 @@ static void wsel_update_input(void)
                 g_wsel_cursor_frames = WSEL_CURSOR_MOVE_FRAMES;
             }
         }
-        if ((g_wsel_buttons_held & WSEL_DPAD_BUTTONS) && (g_wsel_cursor_frames != 0 || g_wsel_map_scroll_frames != 0))
+        if ((g_wsel_buttons_held & PAD_BTN_DPAD) && (g_wsel_cursor_frames != 0 || g_wsel_map_scroll_frames != 0))
         {
             wsel_play_sfx(WSEL_SFX_CURSOR, AKAO_PAN_CENTER);
             return;
@@ -1458,9 +1457,9 @@ static void wsel_update_pad_repeat(void)
         (input_state != 0))
     {
         /* Held input repeats directional buttons only. */
-        if ((input_state & WSEL_DPAD_BUTTONS) != 0)
+        if ((input_state & PAD_BTN_DPAD) != 0)
         {
-            input_state &= WSEL_DPAD_BUTTONS;
+            input_state &= PAD_BTN_DPAD;
         }
         if (g_wsel_repeat_timer == 0)
         {

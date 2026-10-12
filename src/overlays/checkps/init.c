@@ -30,7 +30,6 @@
 #define CHECKPS_SONG_BUFFER_SIZE 16384
 #define CHECKPS_RESERVED_BSS_WORDS 32769
 
-#define CHECKPS_FRAME_VSYNC_INTERVAL 2
 #define CHECKPS_IMAGE_TPAGE 5
 #define CHECKPS_IMAGE_DISPLAY_FRAMES 120
 #define CHECKPS_IMAGE_COUNT 100
@@ -58,7 +57,6 @@
 #define CHECKPS_CONTROLLER_UNAVAILABLE 0xFE
 #define CHECKPS_INITIAL_REPEAT_DELAY 15
 #define CHECKPS_REPEAT_DELAY 2
-#define CHECKPS_DPAD_MASK (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT)
 #define CHECKPS_NON_REPEAT_BUTTON_MASK                                                                                                                         \
     (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1 | PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_SELECT | PAD_BTN_L3 | PAD_BTN_START)
 
@@ -308,9 +306,9 @@ static void run_checkps_display_loop(CheckPSRenderState* render_state)
         evict_unused_glyphs();
         DrawSync(0);
 #if !defined(VERSION_JP)
-        set_controller_vsync_interval(CHECKPS_FRAME_VSYNC_INTERVAL);
+        set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
 #endif
-        VSync(CHECKPS_FRAME_VSYNC_INTERVAL);
+        VSync(FRAME_VSYNC_INTERVAL);
         ClearImage(&frame->display.clear_rect, 0, 0, 0);
         next_frame = &render_state->frames[0];
         if (frame == next_frame)
@@ -964,9 +962,9 @@ static void process_controller_input(void)
         (input_state != 0))
     {
         /* Held input repeats directional buttons only. */
-        if ((input_state & CHECKPS_DPAD_MASK) != 0)
+        if ((input_state & PAD_BTN_DPAD) != 0)
         {
-            input_state &= CHECKPS_DPAD_MASK;
+            input_state &= PAD_BTN_DPAD;
         }
         if (g_input_repeat_timer == 0)
         {

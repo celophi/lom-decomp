@@ -180,7 +180,6 @@ s32 card_menu_update_card_sequence(void)
 /**
  * @brief Handle card switching, entry navigation, cancellation, and load confirmation.
  * @return Unspecified; callers ignore the return value.
- * @return Unspecified; callers ignore the return value.
  */
 s32 card_menu_handle_input(void)
 {

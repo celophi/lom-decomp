@@ -56,7 +56,7 @@ void field_set_cd_error_fade_target(void);
 #define FIELD_PAD_REPEAT_DELAY 15
 /** @brief Frames between two repeats of a held button (it fires every third frame). */
 #define FIELD_PAD_REPEAT_INTERVAL 2
-#define FIELD_PAD_DIRECTIONS (PADLup | PADLdown | PADLleft | PADLright)
+#define PAD_BTN_DPAD (PADLup | PADLdown | PADLleft | PADLright)
 /** @brief Buttons whose presses count as still holding the repeating buttons. */
 #define FIELD_PAD_HOLD_BUTTONS (PADh | PADi | PADselect | PADRdown | PADRright | PADL1 | PADL2 | PADR1 | PADR2)
 /** @brief Button combination that resets the game to the title screen. */
@@ -1310,7 +1310,7 @@ void field_update_input_repeat(void)
          ((g_field_primary_held_buttons != 0) && (buttons & (g_field_primary_held_buttons | FIELD_PAD_HOLD_BUTTONS)))) &&
         buttons != 0)
     {
-        directions = buttons & FIELD_PAD_DIRECTIONS;
+        directions = buttons & PAD_BTN_DPAD;
 
         if ((directions != 0) && (g_field_modal_state != 0))
         {
@@ -1344,7 +1344,7 @@ void field_update_input_repeat(void)
          ((g_field_secondary_held_buttons != 0) && (buttons & (g_field_secondary_held_buttons | FIELD_PAD_HOLD_BUTTONS)))) &&
         buttons != 0)
     {
-        directions = buttons & FIELD_PAD_DIRECTIONS;
+        directions = buttons & PAD_BTN_DPAD;
 
         if ((directions != 0) && (g_field_modal_state != 0))
         {

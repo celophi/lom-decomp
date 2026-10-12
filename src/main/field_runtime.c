@@ -146,8 +146,8 @@ void field_run_frame_loop(FieldRenderHalf* render_buffers)
 #endif
             VSync(1);
             DrawSync(0);
-            set_controller_vsync_interval(2);
-            VSync(2);
+            set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
+            VSync(FRAME_VSYNC_INTERVAL);
             draw_half = (draw_half == render_buffers) ? &draw_half[1] : render_buffers;
             PutDispEnv(&draw_half->disp_env);
             PutDrawEnv(&draw_half->draw_env);

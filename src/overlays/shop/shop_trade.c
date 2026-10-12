@@ -85,7 +85,7 @@ static u8* shop_draw_buy_prompt(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
     confirm_mask = SHOP_CONFIRM_BUTTONS;
     if (g_shop_windows[SHOP_POPUP_WINDOW].frame.bits.state == SHOP_WINDOW_OPEN)
     {
-        if (g_pad_input & SHOP_DPAD_BUTTONS)
+        if (g_pad_input & PAD_BTN_DPAD)
         {
             play_menu_sfx(SHOP_SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
             g_shop_confirm_choice ^= 1;
@@ -248,7 +248,7 @@ static u8* shop_draw_sell_prompt(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
     y = y_inset;
     if (state == SHOP_WINDOW_OPEN)
     {
-        if (g_pad_input & SHOP_DPAD_BUTTONS)
+        if (g_pad_input & PAD_BTN_DPAD)
         {
             play_menu_sfx(SHOP_SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
             g_shop_confirm_choice ^= 1;

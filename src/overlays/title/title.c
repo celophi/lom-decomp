@@ -201,8 +201,8 @@ void render_menu(TitleMenuContext* context)
         if (g_title_menu_exit_state == 0)
         {
             DrawSync(0);
-            set_controller_vsync_interval(2);
-            VSync(2);
+            set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
+            VSync(FRAME_VSYNC_INTERVAL);
 
             next_context = context;
             if (current == context)
@@ -274,8 +274,8 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
         render_fade_overlay(current);
         render_save_slot_menu(current);
         DrawSync(0);
-        set_controller_vsync_interval(2);
-        VSync(2);
+        set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
+        VSync(FRAME_VSYNC_INTERVAL);
         next_context = ctx_base;
         if (current == ctx_base)
         {
@@ -1124,9 +1124,9 @@ void update_menu_input(void)
         (input_state != 0))
     {
         /* Held input repeats directional buttons only. */
-        if ((input_state & TITLE_DPAD_BUTTONS) != 0)
+        if ((input_state & PAD_BTN_DPAD) != 0)
         {
-            input_state &= TITLE_DPAD_BUTTONS;
+            input_state &= PAD_BTN_DPAD;
         }
         if (g_input_repeat_timer == 0)
         {

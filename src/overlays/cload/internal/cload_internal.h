@@ -65,6 +65,7 @@
 extern FieldRenderHalf g_cload_render_buffers[CARD_SLOT_COUNT];
 extern u8 *g_cload_icon_resource;
 extern u8 g_cload_primitive_buffers[CARD_SLOT_COUNT][0x4000];
+/** @brief Result cload_main returns: a CLOAD_RESULT_* code. */
 extern s32 g_cload_result;
 /**
  * @brief Start of the selected entry's save file: only the card header and the
