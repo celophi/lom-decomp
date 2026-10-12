@@ -62,6 +62,12 @@
 /** Frames of a standalone screen's fade in from (or out to) black: title, name entry, world select, load menu, hardware check. */
 #define SCREEN_FADE_FRAMES 20
 
+/** Display buffers of a double-buffered screen: one is shown while the other is drawn. */
+#define DISPLAY_BUFFER_COUNT 2
+
+/** Bytes of one display buffer's GPU primitive buffer on the standalone screens. */
+#define FRAME_PRIMITIVE_BUFFER_SIZE 0x4000
+
 /** Vertical blanks per frame of the 30 fps game loop, passed to VSync and set_controller_vsync_interval. */
 #define FRAME_VSYNC_INTERVAL 2
 

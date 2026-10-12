@@ -101,7 +101,7 @@ void cload_run_menu_loop(void)
     PutDispEnv(&frame->disp_env);
     update_controllers();
     SetDispMask(1);
-    do
+    while (1)
     {
         ordering_table = &frame->ordering_table[FIELD_FADE_OT_INDEX];
         ClearOTagR(ordering_table, CLOAD_OT_SIZE);
@@ -136,7 +136,7 @@ void cload_run_menu_loop(void)
         DrawOTag(ordering_table + CLOAD_OT_SIZE - 1);
         update_controllers();
         cdrom_process_state();
-    } while (1);
+    }
     reset_controller_vsync_state();
     VSync(0);
 }
@@ -808,7 +808,7 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
             result = field_draw_number(ot, result, hours, FIELD_TEXT_COLOR_MENU, &pos, FIELD_TEXT_ALIGN_RIGHT);
             result = field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, FIELD_UI_TEXT_TIME_SEPARATOR), FIELD_TEXT_COLOR_MENU,
                                      x + CARD_MENU_DETAILS_TIME_SEPARATOR_X, y, FIELD_TEXT_ALIGN_LEFT);
-            time = (time / SAVED_PLAY_TIME_TICKS_PER_MINUTE) - (hours * 60);
+            time = (time / SAVED_PLAY_TIME_TICKS_PER_MINUTE) - (hours * SAVED_PLAY_TIME_MINUTES_PER_HOUR);
             if (time < 10)
             {
                 pos.x = x + CARD_MENU_DETAILS_MINUTES_TENS_RIGHT_X;

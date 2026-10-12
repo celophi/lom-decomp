@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "main/main.h"
+#include "main/display.h"
 
 /** @brief Frame context the host passes to shop_update; its first word is the ordering-table entry. */
 typedef struct
@@ -15,7 +16,7 @@ typedef struct
 /** @brief One of the two double-buffered packet heaps at the start of the shop work buffer. */
 typedef struct
 {
-    u8 packets[0x4000];
+    u8 packets[FRAME_PRIMITIVE_BUFFER_SIZE];
     u8* prim_cursor;
 } ShopPacketBuffer;
 

@@ -29,7 +29,7 @@ typedef struct
     u8* allocation_cursor;
     void* text_window_configs;
     u8* timed_text;
-    u8* primitive_buffers[2];
+    u8* primitive_buffers[DISPLAY_BUFFER_COUNT];
 } FieldWorkspace;
 
 #define FIELD_WORKSPACE ((FieldWorkspace*)FIELD_WORKSPACE_ADDRESS)

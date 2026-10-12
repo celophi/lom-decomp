@@ -50,7 +50,7 @@ static ShopWindow* shop_alloc_window(void);
 void shop_init(u8* work, s32 is_buying, s32 entry_count, ShopEntry* entries, FieldItemRecord* item_records, s32 title_text_id)
 {
     g_shop_work_buffer = (ShopPacketBuffer*)work;
-    work += 2 * sizeof(ShopPacketBuffer);
+    work += DISPLAY_BUFFER_COUNT * sizeof(ShopPacketBuffer);
     field_set_default_fade_target();
     g_shop_frame_index = 0;
     g_shop_finished = 0;

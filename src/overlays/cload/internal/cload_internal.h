@@ -25,6 +25,7 @@
 #include "main/cd_resources.h"
 #include "main/cdrom.h"
 #include "main/main.h"
+#include "main/display.h"
 /** @brief Bit position and mask of the height inside CardMenuElement.size.word. */
 #define CLOAD_ELEMENT_HEIGHT_SHIFT 1
 #define CLOAD_ELEMENT_HEIGHT_MASK (0xFF << CLOAD_ELEMENT_HEIGHT_SHIFT)
@@ -62,9 +63,9 @@
  */
 #define CLOAD_OT_SIZE (FIELD_ORDERING_TABLE_SIZE - FIELD_FADE_OT_INDEX)
 
-extern FieldRenderHalf g_cload_render_buffers[CARD_SLOT_COUNT];
+extern FieldRenderHalf g_cload_render_buffers[DISPLAY_BUFFER_COUNT];
 extern u8 *g_cload_icon_resource;
-extern u8 g_cload_primitive_buffers[CARD_SLOT_COUNT][0x4000];
+extern u8 g_cload_primitive_buffers[DISPLAY_BUFFER_COUNT][FRAME_PRIMITIVE_BUFFER_SIZE];
 /** @brief Result cload_main returns: a CLOAD_RESULT_* code. */
 extern s32 g_cload_result;
 /**

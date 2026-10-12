@@ -25,6 +25,13 @@ typedef struct
 #define CLOAD_ICON_SET_VRAM_STEP 64
 #define CLOAD_ICON_SET_CLUT_Y 500
 
+/** @brief VRAM left edge and CLUT row of icon-set image @p image. */
+#define CLOAD_ICON_SET_IMAGE_X(image) (CLOAD_ICON_SET_VRAM_X + (image) * CLOAD_ICON_SET_VRAM_STEP)
+#define CLOAD_ICON_SET_IMAGE_CLUT_Y(image) (CLOAD_ICON_SET_CLUT_Y + (image))
+
+/** @brief The last icon-set image: the backdrop's narrow right slice and the scroll arrows. */
+#define CLOAD_ICON_SET_LAST_IMAGE (CLOAD_ICON_SET_IMAGE_COUNT - 1)
+
 /** @brief Left edge of the backdrop on screen. */
 #define CLOAD_BACKDROP_X 8
 
@@ -173,12 +180,12 @@ void* cload_emit_scroll_arrow(SPRT* sprite, u_long* ot, s32 x, s32 y, s32 upper)
     }
     sprite->u0 = CLOAD_BACKDROP_LAST_SLICE_WIDTH;
     setWH(sprite, CLOAD_SCROLL_ARROW_SIZE, CLOAD_SCROLL_ARROW_SIZE);
-    sprite->clut = getClut(0, CLOAD_ICON_SET_CLUT_Y + 2);
+    sprite->clut = getClut(0, CLOAD_ICON_SET_IMAGE_CLUT_Y(CLOAD_ICON_SET_LAST_IMAGE));
     addPrim(ot, sprite);
 
     sprite++;
     draw_mode = (DR_TPAGE*)sprite;
-    setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_8BIT, GPU_BLEND_HALF, CLOAD_ICON_SET_VRAM_X + CLOAD_ICON_SET_VRAM_STEP * 2, 0));
+    setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_8BIT, GPU_BLEND_HALF, CLOAD_ICON_SET_IMAGE_X(CLOAD_ICON_SET_LAST_IMAGE), 0));
     addPrim(ot, draw_mode);
     return draw_mode + 1;
 }
@@ -516,13 +523,13 @@ void cload_load_icon_resources(void)
 
     g_cload_icon_resource = (u8*)icon_set + icon_set->icon_table_offset;
 
-    setRECT(&rect, CLOAD_ICON_SET_VRAM_X, 0, 0, CLOAD_ICON_SET_CLUT_Y);
+    setRECT(&rect, CLOAD_ICON_SET_IMAGE_X(0), 0, 0, CLOAD_ICON_SET_IMAGE_CLUT_Y(0));
     field_upload_image_resource(&rect, (u8*)icon_set + icon_set->image_offsets[0], 1);
 
-    setRECT(&rect, CLOAD_ICON_SET_VRAM_X + CLOAD_ICON_SET_VRAM_STEP, 0, 0, CLOAD_ICON_SET_CLUT_Y + 1);
+    setRECT(&rect, CLOAD_ICON_SET_IMAGE_X(1), 0, 0, CLOAD_ICON_SET_IMAGE_CLUT_Y(1));
     field_upload_image_resource(&rect, (u8*)icon_set + icon_set->image_offsets[1], 1);
 
-    setRECT(&rect, CLOAD_ICON_SET_VRAM_X + CLOAD_ICON_SET_VRAM_STEP * 2, 0, 0, CLOAD_ICON_SET_CLUT_Y + 2);
+    setRECT(&rect, CLOAD_ICON_SET_IMAGE_X(2), 0, 0, CLOAD_ICON_SET_IMAGE_CLUT_Y(2));
     field_upload_image_resource(&rect, (u8*)icon_set + icon_set->image_offsets[2], 1);
 }
 
@@ -545,7 +552,7 @@ void* cload_draw_backdrop(SPRT* sprite, u_long* ot)
         setSprt(sprite);
         setXY0(sprite, CLOAD_BACKDROP_X + i * CLOAD_BACKDROP_SLICE_WIDTH, 0);
         setUV0(sprite, 0, 0);
-        if (i == CLOAD_ICON_SET_IMAGE_COUNT - 1)
+        if (i == CLOAD_ICON_SET_LAST_IMAGE)
         {
             sprite->w = CLOAD_BACKDROP_LAST_SLICE_WIDTH;
         }
@@ -554,12 +561,12 @@ void* cload_draw_backdrop(SPRT* sprite, u_long* ot)
             sprite->w = CLOAD_BACKDROP_SLICE_WIDTH;
         }
         sprite->h = VRAM_DRAW_HEIGHT;
-        sprite->clut = getClut(0, CLOAD_ICON_SET_CLUT_Y + i);
+        sprite->clut = getClut(0, CLOAD_ICON_SET_IMAGE_CLUT_Y(i));
         addPrim(ot, sprite);
         sprite++;
 
         draw_mode = (DR_TPAGE*)sprite;
-        setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_8BIT, GPU_BLEND_HALF, CLOAD_ICON_SET_VRAM_X + i * CLOAD_ICON_SET_VRAM_STEP, 0));
+        setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_8BIT, GPU_BLEND_HALF, CLOAD_ICON_SET_IMAGE_X(i), 0));
         addPrim(ot, draw_mode);
         sprite = (SPRT*)(draw_mode + 1);
     }

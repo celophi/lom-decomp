@@ -26,7 +26,6 @@
 #include "main/controller.h"
 
 #define CHECKPS_ORDERING_TABLE_LENGTH 4096
-#define CHECKPS_PRIMITIVE_BUFFER_SIZE 16384
 #define CHECKPS_SONG_BUFFER_SIZE 16384
 #define CHECKPS_RESERVED_BSS_WORDS 32769
 
@@ -118,7 +117,7 @@ typedef struct
     u8 reserved_header[0x40];
     u_long ordering_table[CHECKPS_ORDERING_TABLE_LENGTH];
     CheckPSDisplayBuffer display;
-    u8 primitive_buffer[CHECKPS_PRIMITIVE_BUFFER_SIZE];
+    u8 primitive_buffer[FRAME_PRIMITIVE_BUFFER_SIZE];
     void* primitive_cursor;
     u8 reserved_tail[0x3C10];
 } CheckPSFrame;
@@ -128,7 +127,7 @@ typedef struct
  */
 struct CheckPSRenderState
 {
-    CheckPSFrame frames[2];
+    CheckPSFrame frames[DISPLAY_BUFFER_COUNT];
 };
 
 #if defined(VERSION_JP)
