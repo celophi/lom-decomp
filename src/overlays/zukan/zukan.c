@@ -14,6 +14,7 @@
 #include "overlays/field/field_text.h"
 #include "overlays/field/field_ui_text.h"
 #include "main/audio/akao.h"
+#include "main/cd_resources.h"
 
 /*
  * Encyclopedia overlay UI, entry navigation, resource loading and rendering.
@@ -152,7 +153,6 @@ typedef struct
 #define ZUKAN_ENTRY_AVAILABLE_FLAG 0x8000
 #define ZUKAN_RESOURCE_ID_MASK 0x7FFF
 #define ZUKAN_ENTRY_RESOURCE_BASE 0xBFC
-#define ZUKAN_UI_RESOURCE_ID 0x5E3
 
 /* Overlay state. */
 
@@ -1218,7 +1218,7 @@ void zukan_load_ui_resource(void)
     RECT rect;
     s32 size;
 
-    cdrom_queue_read(ZUKAN_UI_RESOURCE_ID, g_zukan_resource_archive);
+    cdrom_queue_read(CD_RES_ZUKAN_UI, g_zukan_resource_archive);
     size = *(s32*)g_zukan_resource_archive;
     size++;
     size--;

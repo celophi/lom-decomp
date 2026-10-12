@@ -10,6 +10,7 @@
 #include "common/vector.h"
 #include "overlays/field/field_fade.h"
 #include "overlays/field/field_input.h"
+#include "overlays/field/field_text.h"
 
 #define SHOP_WINDOW_COUNT 8
 /** @brief Window slot reserved for the notice and quantity-prompt popups. */
@@ -35,8 +36,7 @@
 #define SHOP_SFX_CANCEL 0x7F
 #define SHOP_SFX_TRADE 0xB4
 
-#define SHOP_TEXT_COLOR_NORMAL 4
-#define SHOP_TEXT_COLOR_DISABLED 5
+/** @brief Text colour of the shop's notices; the others are FIELD_TEXT_COLOR_NORMAL and FIELD_TEXT_COLOR_DIM. */
 #define SHOP_TEXT_COLOR_NOTICE 6
 
 #define SHOP_NOTICE_WINDOW_X 32

@@ -179,10 +179,10 @@ static u8* shop_draw_buy_prompt(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
     text = FIELD_UI_TEXT_AT(D_800EC3F8, 26);
     /* D_800EC3F8 is table entry 26, so this is the start of FIELD's UI string table. */
     text_table = D_800EC3F8 - 26 * 2;
-    prim = field_draw_text((SPRT*)prim, ot, text, SHOP_TEXT_COLOR_NORMAL, 96 - x_inset, -y_inset, 2);
+    prim = field_draw_text((SPRT*)prim, ot, text, FIELD_TEXT_COLOR_NORMAL, 96 - x_inset, -y_inset, 2);
 
-    value = SHOP_TEXT_COLOR_DISABLED;
-    color = SHOP_TEXT_COLOR_NORMAL;
+    value = FIELD_TEXT_COLOR_DIM;
+    color = FIELD_TEXT_COLOR_NORMAL;
     text = FIELD_UI_TEXT(text_table, 27);
     if (g_shop_confirm_choice != 0)
     {
@@ -191,11 +191,11 @@ static u8* shop_draw_buy_prompt(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
     row_y = 16 - y_inset;
     prim = field_draw_text((SPRT*)prim, ot, text, color, 72 - x_inset, row_y, 1);
 
-    color = SHOP_TEXT_COLOR_DISABLED;
+    color = FIELD_TEXT_COLOR_DIM;
     text = FIELD_UI_TEXT(text_table, 28);
     if (g_shop_confirm_choice != 0)
     {
-        color = SHOP_TEXT_COLOR_NORMAL;
+        color = FIELD_TEXT_COLOR_NORMAL;
     }
     prim = field_draw_text((SPRT*)prim, ot, text, color, 104 - x_inset, row_y, 0);
     return prim;
@@ -295,22 +295,22 @@ static u8* shop_draw_sell_prompt(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
     text = FIELD_UI_TEXT_AT(D_800EC3F8, 26);
     /* D_800EC3F8 is table entry 26, so this is the start of FIELD's UI string table. */
     text_table = D_800EC3F8 - 26 * 2;
-    prim = field_draw_text((SPRT*)prim, ot, text, SHOP_TEXT_COLOR_NORMAL, 96 - x_inset, -y, 2);
+    prim = field_draw_text((SPRT*)prim, ot, text, FIELD_TEXT_COLOR_NORMAL, 96 - x_inset, -y, 2);
 
-    color = SHOP_TEXT_COLOR_NORMAL;
+    color = FIELD_TEXT_COLOR_NORMAL;
     text = FIELD_UI_TEXT(text_table, 27);
     if (g_shop_confirm_choice != 0)
     {
-        color = SHOP_TEXT_COLOR_DISABLED;
+        color = FIELD_TEXT_COLOR_DIM;
     }
     row_y = 16 - y;
     prim = field_draw_text((SPRT*)prim, ot, text, color, 88 - x_inset, row_y, 1);
 
-    color = SHOP_TEXT_COLOR_DISABLED;
+    color = FIELD_TEXT_COLOR_DIM;
     text = FIELD_UI_TEXT(text_table, 28);
     if (g_shop_confirm_choice != 0)
     {
-        color = SHOP_TEXT_COLOR_NORMAL;
+        color = FIELD_TEXT_COLOR_NORMAL;
     }
     prim = field_draw_text((SPRT*)prim, ot, text, color, 104 - x_inset, row_y, 0);
     return prim;

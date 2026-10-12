@@ -177,7 +177,7 @@ s32 cload_advance_load_sequence(void)
 
         case CARD_MENU_STEP_DONE:
             phase_result = CARD_MENU_SEQUENCE_FINISHED;
-            D_80162370 = 0;
+            g_card_menu_write_in_progress = 0;
             break;
 
         case CARD_MENU_STEP_POLL_CARD_LOAD:
@@ -336,7 +336,7 @@ s32 cload_advance_load_sequence(void)
                     break;
                 }
             }
-            cload_open_status_dialog(3);
+            cload_open_status_dialog(CARD_MENU_DIALOG_NOT_POCKETSTATION);
             break;
         }
     }

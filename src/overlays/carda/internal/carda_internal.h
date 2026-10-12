@@ -36,6 +36,7 @@
 #include "overlays/field/field_input.h"
 #include "overlays/field/field_portrait.h"
 #include "overlays/field/field_overlay_handoff.h"
+#include "main/cd_resources.h"
 /**
  * @brief g_card_menu_mode values: what FIELD opened the card screen for.
  * @note The US release keeps the PocketStation modes but leaves their texts empty.
@@ -135,8 +136,7 @@ typedef enum CardaCardStep
 #define CARDA_SAVE_COMPLETE_Y (CARDA_MESSAGE_Y + CARD_MENU_LINE_HEIGHT)
 #define CARDA_SAVE_COMPLETE_HEIGHT FIELD_TEXT_LINE_SPACING
 
-/** @brief Dialog window for the two-line failure texts: one dialog line taller than the one-line dialog, and as much higher. */
-#define CARDA_TWO_LINE_DIALOG_Y (CARD_MENU_EXCHANGE_DIALOG_Y - FIELD_TEXT_LINE_SPACING)
+/** @brief Height of the dialog for the two-line failure texts (top: CARD_MENU_TWO_LINE_DIALOG_Y). */
 #define CARDA_TWO_LINE_DIALOG_HEIGHT (CARD_MENU_EXCHANGE_DIALOG_HEIGHT + FIELD_TEXT_LINE_SPACING)
 
 /** @brief Title window above the item list. */

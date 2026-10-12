@@ -1349,7 +1349,7 @@ void* carda_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                                           ot, x, CARD_MENU_LINE_HEIGHT - y_offset);
 
     status = poll_and_retry_card_info();
-    if (status == 1 || status == 2)
+    if (status == CARD_EVENT_ERROR || status == CARD_EVENT_TIMEOUT)
     {
         card_menu_deactivate_primary_element();
         field_reset_input_repeat();
@@ -1376,7 +1376,7 @@ void* carda_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         }
         else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
         {
-            if (g_card_menu_choice_toggle != 0)
+            if (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)
             {
                 card_menu_deactivate_primary_element();
                 field_reset_input_repeat();
@@ -1551,7 +1551,7 @@ void* carda_draw_save_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                                           ot, x, CARD_MENU_LINE_HEIGHT - y_offset);
 
     status = poll_and_retry_card_info();
-    if (status == 1 || status == 2)
+    if (status == CARD_EVENT_ERROR || status == CARD_EVENT_TIMEOUT)
     {
         card_menu_deactivate_primary_element();
         field_reset_input_repeat();
@@ -1571,7 +1571,7 @@ void* carda_draw_save_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         }
         else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
         {
-            if (g_card_menu_choice_toggle != 0)
+            if (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)
             {
                 card_menu_deactivate_primary_element();
                 field_reset_input_repeat();
@@ -1630,7 +1630,7 @@ void* carda_draw_overwrite_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_of
                                           ot, x, CARD_MENU_LINE_HEIGHT - y_offset);
 
     status = poll_and_retry_card_info();
-    if (status == 1 || status == 2)
+    if (status == CARD_EVENT_ERROR || status == CARD_EVENT_TIMEOUT)
     {
         card_menu_deactivate_primary_element();
         field_reset_input_repeat();
@@ -1650,7 +1650,7 @@ void* carda_draw_overwrite_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_of
         }
         else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
         {
-            if (g_card_menu_choice_toggle != 0)
+            if (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)
             {
                 card_menu_deactivate_primary_element();
                 field_reset_input_repeat();
@@ -1816,7 +1816,7 @@ void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
     prim = card_menu_draw_choice_prompt(prim, ot, x, CARD_MENU_LINE_HEIGHT * 3 - y);
 
     status = poll_and_retry_card_info();
-    if (status == 1 || status == 2)
+    if (status == CARD_EVENT_ERROR || status == CARD_EVENT_TIMEOUT)
     {
         field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
         card_menu_deactivate_primary_element();
@@ -1835,7 +1835,7 @@ void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
     else
     {
         status = g_pad_input;
-        if ((status & PAD_BTN_CIRCLE) || ((status & CARD_MENU_CONFIRM_BUTTON_MASK) && g_card_menu_choice_toggle != 0))
+        if ((status & PAD_BTN_CIRCLE) || ((status & CARD_MENU_CONFIRM_BUTTON_MASK) && g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES))
         {
             g_carda_format_declined = 1;
             field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
@@ -2061,7 +2061,7 @@ void carda_open_status_dialog(s32 dialog_state)
         dialog->size.bits.width_high = CARD_MENU_DIALOG_WIDTH >> 8;
         if (dialog_state <= CARD_MENU_DIALOG_LOAD_FAILED || dialog_state == CARD_MENU_DIALOG_INVALID_SAVE || dialog_state == CARDA_DIALOG_FORMAT_FAILED)
         {
-            dialog->attr.bits.y = CARDA_TWO_LINE_DIALOG_Y;
+            dialog->attr.bits.y = CARD_MENU_TWO_LINE_DIALOG_Y;
             dialog->size.bits.height = CARDA_TWO_LINE_DIALOG_HEIGHT;
         }
         else
@@ -2409,7 +2409,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         }
         if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
         {
-            if (g_card_menu_choice_toggle != 0)
+            if (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)
             {
                 field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
                 g_card_menu_choice_toggle = g_card_slot;
@@ -2549,7 +2549,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                                    CARD_MENU_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
             prim = card_menu_draw_choice_prompt(prim, ot, x + CARD_MENU_MESSAGE_CENTER_X, CARD_MENU_LINE_HEIGHT * 3 - y_offset);
         }
-        if ((g_pad_input & PAD_BTN_CIRCLE) || ((g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK) && g_card_menu_choice_toggle != 0))
+        if ((g_pad_input & PAD_BTN_CIRCLE) || ((g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK) && g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES))
         {
             field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
             g_card_entry_state = CARDA_ENTRY_STATE_SELECT_SLOT;
@@ -2690,7 +2690,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
  */
 void carda_store_active_record(void)
 {
-    cdrom_queue_read(0x5E2, g_carda_save_blob);
+    cdrom_queue_read(CD_RES_POCKETSTATION_PET_TRANSFER, g_carda_save_blob);
     cdrom_wait_queue_empty();
     card_prepare_pet_transfer(g_carda_save_blob, &g_saved_game_ctx->pets[g_field_card_pet_slot]);
 }

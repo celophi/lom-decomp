@@ -88,7 +88,7 @@ class CloadSymbols:
 
 
 SYMBOL_NAMES = {
-    "messages": "g_cload_text_check_memory_card",
+    "messages": "g_card_menu_text_table",
     "locations": "g_card_menu_location_names",
     "card_steps": "g_card_steps_initial_scan",
     "chart": "g_glyph_single_byte_chart",

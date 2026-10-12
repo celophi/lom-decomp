@@ -22,6 +22,7 @@
 #include "overlays/field/field_sound.h"
 #include "main/audio/akao.h"
 #include "overlays/field/field_fade.h"
+#include "main/cd_resources.h"
 /** @brief Bit position and mask of the height inside CardMenuElement.size.word. */
 #define CLOAD_ELEMENT_HEIGHT_SHIFT 1
 #define CLOAD_ELEMENT_HEIGHT_MASK (0xFF << CLOAD_ELEMENT_HEIGHT_SHIFT)
@@ -39,15 +40,39 @@
 #define CLOAD_GLYPH_RASTER_BUFFER_BYTES 0x8000
 #define CLOAD_COLOR_WHITE 0xFFFFFF
 
+/**
+ * @brief Stored height of a CLOAD window that covers @p height pixels.
+ * @note cload_emit_window_frame clips its contents to h - 3 rows rather than
+ *       h - 4, so CLOAD's windows store one less than the FIELD-launched card
+ *       menus' windows of the same size.
+ */
+#define CLOAD_WINDOW_HEIGHT(height) ((height) - 1)
+
+/** @brief Stored height of CLOAD's status dialog for @p lines lines of text. */
+#define CLOAD_DIALOG_HEIGHT(lines) CLOAD_WINDOW_HEIGHT((lines) * FIELD_TEXT_LINE_SPACING)
+
+/** @brief Entry list window (left edge and width as CARD_MENU_EXCHANGE_LIST_*). */
+#define CLOAD_LIST_Y 74
+#define CLOAD_LIST_HEIGHT 73
+#define CLOAD_LIST_CENTER_X (CARD_MENU_EXCHANGE_LIST_WIDTH / 2)
+#define CLOAD_LIST_VISIBLE_ROWS (CLOAD_LIST_HEIGHT / CARD_MENU_ENTRY_ROW_HEIGHT)
+#define CLOAD_LIST_LAST_ROW_Y ((CLOAD_LIST_VISIBLE_ROWS - 1) * CARD_MENU_ENTRY_ROW_HEIGHT)
+
+/** @brief Top of the message window (left edge, width and height as CARD_MENU_MESSAGE_*). */
+#define CLOAD_MESSAGE_Y 91
+
+/** @brief Height of the load progress bar drawn in the message window. */
+#define CLOAD_PROGRESS_BAR_HEIGHT 53
+
 /** @brief Generic GPU packet prefix used while advancing the primitive buffer. */
 typedef struct
 {
     /* 0x0 */ s32 tag;
-    /* 0x4 */ s32 word4;
+    /* 0x4 */ s32 color_code; /**< Colour in the low three bytes, GPU command code in the top byte. */
     /* 0x8 */ s16 x0;
     /* 0xA */ s16 y0;
-    /* 0xC */ s16 unkC;
-    /* 0xE */ u16 unkE;
+    /* 0xC */ s16 w;
+    /* 0xE */ u16 h;
 } CloadGpuPacket;
 
 extern s32 g_pad_input;
@@ -62,30 +87,19 @@ extern FieldRenderHalf g_cload_render_buffers[CARD_SLOT_COUNT];
 extern u8 *g_cload_icon_resource;
 extern u8 g_cload_primitive_buffers[CARD_SLOT_COUNT][0x4000];
 extern s32 g_cload_result;
-extern s32 D_80162370;
 /**
  * @brief Start of the selected entry's save file: only the card header and the
  *        first 0x100 bytes of the saved game are read (CARD_MENU_ENTRY_READ_BYTES).
  */
 extern SaveFile g_cload_selected_file;
 extern s32 g_save_compatibility_tag;
-extern u16 g_cload_text_check_memory_card;
-extern u16 g_cload_text_no_memory_card;
-extern u16 g_cload_text_mana;
-extern u16 g_cload_text_other_game;
-extern u16 g_cload_text_new_save;
 extern u16 g_cload_text_new_save_prompt;
 extern u16 g_cload_text_load;
-extern u16 g_cload_text_number_prefix;
 extern u16 g_cload_text_loading;
 /** @brief Save file read by the load sequence. */
 extern SaveFile g_cload_save_file;
 
 extern s32 g_playtime_vsync_origin;
-extern u16 g_cload_text_no_lom_save_data;
-extern u16 g_cload_text_alt_save;
-extern u16 g_cload_text_card_insert_error;
-extern u16 D_80145EDE;
 extern u16 g_cload_text_version_error;
 
 /* FIELD and main-executable entry points used by CLOAD. */

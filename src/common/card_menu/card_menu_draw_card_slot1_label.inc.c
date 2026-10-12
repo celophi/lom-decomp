@@ -17,9 +17,9 @@ void* card_menu_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 
     if (g_card_slot == 0)
     {
         tile = (TILE*)prim;
-        *(u32*)&tile->r0 = CARD_MENU_INACTIVE_LABEL_COLOR;
-        setlen(tile, 3);
-        setcode(tile, GPU_CODE_TILE | GPU_CODE_SEMI_TRANS);
+        SET_BGR0_PACKED(tile, CARD_MENU_INACTIVE_LABEL_COLOR);
+        setTile(tile);
+        setSemiTrans(tile, 1);
         setXY0(tile, 0, 0);
         setWH(tile, CARD_MENU_CARD_LABEL_WIDTH, CARD_MENU_CARD_LABEL_HEIGHT);
         addPrim(ot, tile);

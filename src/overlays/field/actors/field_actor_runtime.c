@@ -98,8 +98,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 /** @brief CD resource id bases of the partner and companion voice banks. */
 #define FIELD_RES_PARTNER_VOICES 0xA37
 #define FIELD_RES_COMPANION_VOICES 0xA9B
-/** @brief CD resource id of the portrait archive and the id base of resource entry packages. */
-#define FIELD_RES_PORTRAITS 0x5E5
 #define FIELD_RES_ENTRY_PACKAGES 0xB52
 
 /** @brief First portrait of the companions in the portrait archive (partners start at 2). */
@@ -3586,7 +3584,7 @@ static void field_refresh_actor_portraits(void)
             field_load_party_script_page(2, g_field_player_records[2].character_id + FIELD_RES_COMPANION_VOICES);
         }
 
-        cdrom_stream(FIELD_RES_PORTRAITS, g_field_cd_buffer);
+        cdrom_stream(CD_RES_FIELD_PORTRAITS, g_field_cd_buffer);
         cdrom_wait_queue_empty();
 
         g_field_player_records[0].portrait_index = g_field_player_records[0].head.bits.alt_appearance;

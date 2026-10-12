@@ -392,6 +392,9 @@ static inline s32 card_menu_element_width(CardMenuElement* element)
 #define CARD_MENU_EXCHANGE_DIALOG_Y 112
 #define CARD_MENU_EXCHANGE_DIALOG_HEIGHT 20
 
+/** @brief Top of a two-line dialog: one text line above the one-line dialog. */
+#define CARD_MENU_TWO_LINE_DIALOG_Y (CARD_MENU_EXCHANGE_DIALOG_Y - FIELD_TEXT_LINE_SPACING)
+
 /** @brief Entry list columns of the rank marker (JP moves it right) and of the "+" marker's right edge. */
 #if defined(VERSION_JP)
 #define CARD_MENU_EXCHANGE_ENTRY_MARKER_X 0xCC

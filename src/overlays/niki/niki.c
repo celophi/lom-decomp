@@ -248,20 +248,20 @@ s32 card_menu_handle_input(void)
     }
 
     navigation_steps = 1;
-    if (status & 8)
+    if (status & PAD_BTN_R1)
     {
-        g_pad_input = 0x4000;
+        g_pad_input = PAD_BTN_DOWN;
         navigation_steps = 1;
     }
-    if (g_pad_input & 4)
+    if (g_pad_input & PAD_BTN_L1)
     {
-        g_pad_input = 0x1000;
+        g_pad_input = PAD_BTN_UP;
         navigation_steps = 1;
     }
 
     while (navigation_steps != 0)
     {
-        if (g_pad_input & 0x1000)
+        if (g_pad_input & PAD_BTN_UP)
         {
             g_card_menu_selected_row -= 1;
             if (g_card_menu_selected_row < 0)
@@ -269,7 +269,7 @@ s32 card_menu_handle_input(void)
                 g_card_menu_selected_row = g_card_entry_state - 1;
             }
         }
-        if (g_pad_input & 0x4000)
+        if (g_pad_input & PAD_BTN_DOWN)
         {
             g_card_menu_selected_row += 1;
             if (g_card_menu_selected_row >= g_card_entry_state)
@@ -280,7 +280,7 @@ s32 card_menu_handle_input(void)
         navigation_steps -= 1;
     }
 
-    if (g_pad_input & 0x5000)
+    if (g_pad_input & (PAD_BTN_UP | PAD_BTN_DOWN))
     {
         card_menu_commit_selected_entry();
         field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
@@ -381,7 +381,7 @@ void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32
     }
     if (g_card_menu_selection_status != 3 && g_card_entry_state < 0x10)
     {
-        if (g_card_menu_selection_status == 2)
+        if (g_card_menu_selection_status == CARD_MENU_SELECTION_NEW_SAVE)
         {
             s32 x = -x_offset;
             u16* text_table;

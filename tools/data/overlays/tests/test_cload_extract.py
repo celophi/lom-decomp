@@ -29,7 +29,7 @@ class FakeOverlay:
             data.extend(bytes(-len(data) % 4))
 
         mark("messages")
-        self.symbols["g_cload_text_no_memory_card"] = ADDRESS + 2
+        self.symbols["g_card_menu_text_no_card"] = ADDRESS + 2
         strings = [b"Load?", b"No card"] if version == "us" else [b"\x41\x19\x00", b"\x41"]
         data += make_table(strings)
         self.unknown_start = len(data)
@@ -100,7 +100,7 @@ class ExtractTest(unittest.TestCase):
         cload.extract(self.overlay.write(self.root), self.output)
         messages = self.load("text/messages.yaml")["entries"]
         self.assertEqual([entry["text"] for entry in messages], ["Load?", "No card"])
-        self.assertEqual(messages[1]["symbol"], "g_cload_text_no_memory_card")
+        self.assertEqual(messages[1]["symbol"], "g_card_menu_text_no_card")
         self.assertEqual(self.load("text/locations.yaml")["entries"][0]["text"], "Home")
         chart = self.load("tables/text_conversion.yaml")
         self.assertEqual(chart["one_byte"]["0x4_"], "\uff21" * 16)
