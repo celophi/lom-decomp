@@ -64,17 +64,6 @@
 /** @brief Height of the load progress bar drawn in the message window. */
 #define CLOAD_PROGRESS_BAR_HEIGHT 53
 
-/** @brief Generic GPU packet prefix used while advancing the primitive buffer. */
-typedef struct
-{
-    /* 0x0 */ s32 tag;
-    /* 0x4 */ s32 color_code; /**< Colour in the low three bytes, GPU command code in the top byte. */
-    /* 0x8 */ s16 x0;
-    /* 0xA */ s16 y0;
-    /* 0xC */ s16 w;
-    /* 0xE */ u16 h;
-} CloadGpuPacket;
-
 extern s32 g_pad_input;
 /**
  * @brief Entries of CLOAD's ordering table, which starts at FIELD's fade entry
@@ -123,17 +112,17 @@ void *cload_draw_card_slot1_label(u_long *ot, void *prim, s32 x_offset, s32 y_of
 void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void cload_clear_elements(void);
 CardMenuElement *cload_alloc_element(void);
-CloadGpuPacket *cload_emit_window_frame(CloadGpuPacket *prim, u_long *ot, s32 x, s32 y, s32 w, s32 h, s32 flag, s32 draw_fill);
-CloadGpuPacket *cload_emit_rect_outline(LINE_F2 *line, u_long *ot, s32 x, s32 y, s32 w, s32 h, s32 color);
-CloadGpuPacket *cload_emit_scroll_arrow(SPRT *sprite, u_long *ot, s32 x, s32 y, s32 flag);
+void *cload_emit_window_frame(void *prim, u_long *ot, s32 x, s32 y, s32 w, s32 h, s32 flag, s32 draw_fill);
+void *cload_emit_rect_outline(LINE_F2 *line, u_long *ot, s32 x, s32 y, s32 w, s32 h, s32 color);
+void *cload_emit_scroll_arrow(SPRT *sprite, u_long *ot, s32 x, s32 y, s32 flag);
 void *cload_draw_load_prompt(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
 void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
-CloadGpuPacket *cload_draw_progress_bar(POLY_G4 *quad, u_long *ot);
+void *cload_draw_progress_bar(POLY_G4 *quad, u_long *ot);
 void cload_open_status_dialog(s32 dialog_state);
 void *cload_draw_status_dialog(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
 void *cload_draw_icon_highlight(POLY_FT4 *quad, u_long *ot, s32 x, s32 y, s32 width, s32 icon, s32 index, s32 row);
 void cload_load_icon_resources(void);
-CloadGpuPacket *cload_emit_icon_highlight_strip(SPRT *sprite, u_long *ot);
+void *cload_emit_icon_highlight_strip(SPRT *sprite, u_long *ot);
 s32 cload_enable_choice_toggle(void);
 void* cload_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y);
 s32 cload_advance_load_sequence(void);

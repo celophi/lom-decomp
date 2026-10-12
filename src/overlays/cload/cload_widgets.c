@@ -45,7 +45,7 @@ typedef struct
  * @param draw_fill Nonzero to emit the outline and fill packets.
  * @return Advanced primitive-buffer cursor.
  */
-CloadGpuPacket* cload_emit_window_frame(CloadGpuPacket* prim, u_long* ot, s32 x, s32 y, s32 w, s32 h, s32 flag, s32 draw_fill)
+void* cload_emit_window_frame(void* prim, u_long* ot, s32 x, s32 y, s32 w, s32 h, s32 flag, s32 draw_fill)
 {
     DRAWENV draw_env;
     DR_ENV* env_packet;
@@ -99,7 +99,7 @@ CloadGpuPacket* cload_emit_window_frame(CloadGpuPacket* prim, u_long* ot, s32 x,
  * @param color Packed 0x00BBGGRR line color.
  * @return Primitive-buffer cursor after the fourth line.
  */
-CloadGpuPacket* cload_emit_rect_outline(LINE_F2* line, u_long* ot, s32 x, s32 y, s32 w, s32 h, s32 color)
+void* cload_emit_rect_outline(LINE_F2* line, u_long* ot, s32 x, s32 y, s32 w, s32 h, s32 color)
 {
     SET_BGR0_PACKED(line, color);
     setLineF2(line);
@@ -131,7 +131,7 @@ CloadGpuPacket* cload_emit_rect_outline(LINE_F2* line, u_long* ot, s32 x, s32 y,
     line->x1 = x;
     line->y1 = y + h;
     addPrim(ot, line);
-    return (CloadGpuPacket*)(line + 1);
+    return line + 1;
 }
 
 /**
@@ -143,7 +143,7 @@ CloadGpuPacket* cload_emit_rect_outline(LINE_F2* line, u_long* ot, s32 x, s32 y,
  * @param flag Nonzero for the upper arrow (texture row 0), zero for the lower arrow (row 16).
  * @return Primitive-buffer cursor after the texture-page packet.
  */
-CloadGpuPacket* cload_emit_scroll_arrow(SPRT* sprite, u_long* ot, s32 x, s32 y, s32 flag)
+void* cload_emit_scroll_arrow(SPRT* sprite, u_long* ot, s32 x, s32 y, s32 flag)
 {
     DR_TPAGE* draw_mode;
 
@@ -167,7 +167,7 @@ CloadGpuPacket* cload_emit_scroll_arrow(SPRT* sprite, u_long* ot, s32 x, s32 y, 
     draw_mode = (DR_TPAGE*)sprite;
     setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_8BIT, GPU_BLEND_HALF, CLOAD_ICON_SET_VRAM_X + CLOAD_ICON_SET_VRAM_STEP * 2, 0));
     addPrim(ot, draw_mode);
-    return (CloadGpuPacket*)(draw_mode + 1);
+    return draw_mode + 1;
 }
 
 /**
@@ -290,7 +290,7 @@ void* cload_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offse
  *         g_card_menu_progress_bar_active is 0.
  * @note The bar is 288 pixels wide after 256 frames since g_card_menu_progress_start_tick.
  */
-CloadGpuPacket* cload_draw_progress_bar(POLY_G4* quad, u_long* ot)
+void* cload_draw_progress_bar(POLY_G4* quad, u_long* ot)
 {
     s32 elapsed;
     s32 width;
@@ -318,7 +318,7 @@ CloadGpuPacket* cload_draw_progress_bar(POLY_G4* quad, u_long* ot)
         addPrim(ot, quad);
         quad++;
     }
-    return (CloadGpuPacket*)quad;
+    return quad;
 }
 
 /**
@@ -521,7 +521,7 @@ void cload_load_icon_resources(void)
  * @param ot Ordering-table entry the packets are linked into.
  * @return Primitive-buffer cursor after the last texture-page packet.
  */
-CloadGpuPacket* cload_emit_icon_highlight_strip(SPRT* sprite, u_long* ot)
+void* cload_emit_icon_highlight_strip(SPRT* sprite, u_long* ot)
 {
     s32 i;
     DR_TPAGE* draw_mode;
@@ -550,7 +550,7 @@ CloadGpuPacket* cload_emit_icon_highlight_strip(SPRT* sprite, u_long* ot)
         addPrim(ot, draw_mode);
         sprite = (SPRT*)(draw_mode + 1);
     }
-    return (CloadGpuPacket*)sprite;
+    return sprite;
 }
 
 /**

@@ -152,7 +152,8 @@ void cload_run_menu_loop(void)
  */
 void cload_init_display(void)
 {
-    s32 stack_frame_pad[2];
+    s32 unused[2];
+
     SetGeomScreen(SCREEN_PROJECTION_DISTANCE);
     SetGeomOffset(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
     setRECT(&g_cload_render_buffers[0].display_rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -288,7 +289,7 @@ s32 card_menu_handle_input(void)
 {
     s32 pending;
     s32 status;
-    s32 count;
+    s32 move_count;
     s32 sfx_id;
     CardMenuElement* prompt;
 
@@ -352,22 +353,22 @@ s32 card_menu_handle_input(void)
     {
         return;
     }
-    count = 1;
+    move_count = 1;
     if (status & PAD_BTN_R1)
     {
         g_pad_input = PAD_BTN_DOWN;
-        count = 1;
+        move_count = CARD_MENU_PAGE_MOVE_ROWS;
     }
     if (g_pad_input & PAD_BTN_L1)
     {
         g_pad_input = PAD_BTN_UP;
-        count = 1;
+        move_count = CARD_MENU_PAGE_MOVE_ROWS;
     }
-    while (count != 0)
+    for (; move_count != 0; move_count--)
     {
         if (g_pad_input & PAD_BTN_UP)
         {
-            g_card_menu_selected_row -= 1;
+            g_card_menu_selected_row--;
             if (g_card_menu_selected_row < 0)
             {
                 g_card_menu_selected_row = g_card_entry_state - 1;
@@ -375,13 +376,12 @@ s32 card_menu_handle_input(void)
         }
         if (g_pad_input & PAD_BTN_DOWN)
         {
-            g_card_menu_selected_row += 1;
+            g_card_menu_selected_row++;
             if (g_card_menu_selected_row >= g_card_entry_state)
             {
                 g_card_menu_selected_row = 0;
             }
         }
-        count -= 1;
     }
     if (g_pad_input & (PAD_BTN_UP | PAD_BTN_DOWN))
     {
@@ -533,56 +533,48 @@ void* cload_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         i = 0;
         if (state > 0)
         {
-            s32 off;
             s32 base_x;
-            s32* flag_ptr;
             u16 marker_offset;
-            uintptr_t entry;
             Vec2s pos;
             u16* text_table;
 
-            off = i;
             base_x = -x_offset;
             text_table = &g_card_menu_text_table;
-            entry = (uintptr_t)g_card_entries;
-            off = i;
             do
             {
                 row_y = ((i * CARD_MENU_ENTRY_ROW_HEIGHT) - y_offset) - g_card_menu_scroll_y;
                 if (row_y > -CARD_MENU_ENTRY_ROW_HEIGHT && row_y < CLOAD_LIST_HEIGHT)
                 {
-                    flag_ptr = (s32*)((u8*)g_card_entry_ranks + off);
-                    if (*flag_ptr >= 0)
+                    if (g_card_entry_ranks[i] >= 0)
                     {
                         pos.x = base_x + CARD_MENU_ENTRY_VALUE_X;
                         pos.y = row_y;
-                        prim = field_draw_text(field_draw_number(ot, prim, *(s32*)((u8*)g_card_entry_suffix_values + off), FIELD_TEXT_COLOR_MENU, &pos, FIELD_TEXT_ALIGN_LEFT), ot,
+                        prim = field_draw_text(field_draw_number(ot, prim, g_card_entry_suffix_values[i], FIELD_TEXT_COLOR_MENU, &pos, FIELD_TEXT_ALIGN_LEFT), ot,
                                                CARD_MENU_TEXT_BY_OFFSET(text_table, g_card_menu_text_number_label), FIELD_TEXT_COLOR_MENU, base_x + CARD_MENU_ENTRY_NUMBER_LABEL_X, row_y, FIELD_TEXT_ALIGN_LEFT);
-                        if ((g_card_rank_count - 1) == *flag_ptr)
+                        if ((g_card_rank_count - 1) == g_card_entry_ranks[i])
                         {
                             marker_offset = text_table[CARD_MENU_TEXT_NEWEST];
                             prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, marker_offset), FIELD_TEXT_COLOR_MENU, base_x + CLOAD_ENTRY_MARKER_X, row_y, FIELD_TEXT_ALIGN_LEFT);
                         }
-                        else if (*flag_ptr < 2)
+                        else if (g_card_entry_ranks[i] < 2)
                         {
                             marker_offset = text_table[CARD_MENU_TEXT_OLDEST];
                             prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, marker_offset), FIELD_TEXT_COLOR_MENU, base_x + CLOAD_ENTRY_MARKER_X, row_y, FIELD_TEXT_ALIGN_LEFT);
                         }
-                        if (*skip_hex_digits((u8*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry + CARD_SAVE_FILENAME_PREFIX_LENGTH)) == '+')
+                        if (*skip_hex_digits(&g_card_entries[g_card_slot][i].name[CARD_SAVE_FILENAME_PREFIX_LENGTH]) == '+')
                         {
                             prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_card_menu_text_plus_marker), FIELD_TEXT_COLOR_MENU, CLOAD_ENTRY_PLUS_RIGHT_X - x_offset, row_y, FIELD_TEXT_ALIGN_RIGHT);
                         }
                     }
-                    if (strncmp(g_lom_save_filename_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry), CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
+                    if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][i].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
                     {
                         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_card_menu_text_mana_label), FIELD_TEXT_COLOR_MENU, base_x, row_y, FIELD_TEXT_ALIGN_LEFT);
                     }
-                    else if (strncmp(g_lom_pocketstation_filename_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry),
-                                     CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
+                    else if (strncmp(g_lom_pocketstation_filename_prefix, g_card_entries[g_card_slot][i].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
                     {
                         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_card_menu_text_ring_ring_land_label), FIELD_TEXT_COLOR_MENU, base_x, row_y, FIELD_TEXT_ALIGN_LEFT);
                     }
-                    else if (strncmp(g_new_save_entry_prefix, (char*)((g_card_slot * CARD_DIRECTORY_BYTES) + entry), CARD_MENU_NEW_SAVE_NAME_LENGTH) == 0)
+                    else if (strncmp(g_new_save_entry_prefix, g_card_entries[g_card_slot][i].name, CARD_MENU_NEW_SAVE_NAME_LENGTH) == 0)
                     {
                         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_card_menu_text_new_save_label), FIELD_TEXT_COLOR_MENU, base_x, row_y, FIELD_TEXT_ALIGN_LEFT);
                     }
@@ -591,8 +583,6 @@ void* cload_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_BY_OFFSET(text_table, g_card_menu_text_other_game_label), FIELD_TEXT_COLOR_MENU, base_x, row_y, FIELD_TEXT_ALIGN_LEFT);
                     }
                 }
-                entry += CARD_DIRECTORY_ENTRY_BYTES;
-                off += 4;
                 i++;
             } while (i < g_card_entry_state);
         }

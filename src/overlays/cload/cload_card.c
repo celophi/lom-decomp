@@ -8,33 +8,6 @@
 
 void* bcopy(const unsigned char* src, unsigned char* dst, int count);
 
-/**
- * @brief Report "no memory card" and ask the caller to refresh the entry list.
- * @param result Phase-result variable that receives CARD_MENU_SEQUENCE_NO_CARD.
- */
-#define CLOAD_REQUEST_REFRESH(result)                                                                                                                          \
-    do                                                                                                                                                         \
-    {                                                                                                                                                          \
-        (result) = CARD_MENU_SEQUENCE_NO_CARD;                                                                                                                 \
-        g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;                                                                                               \
-        g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;                                                                                                    \
-    } while (0)
-
-/**
- * @brief Finish the current step table with a result, an entry status and a next table.
- * @param result Phase-result variable that receives @p code.
- * @param code CardMenuSequenceResult to return to the caller.
- * @param entry_state New g_card_entry_state status code.
- * @param next_step New g_card_step table (NULL stops the sequence).
- */
-#define CLOAD_END_STEP_TABLE(result, code, entry_state, next_step)                                                                                             \
-    do                                                                                                                                                         \
-    {                                                                                                                                                          \
-        (result) = (code);                                                                                                                                     \
-        g_card_entry_state = (entry_state);                                                                                                                    \
-        g_card_step = (next_step);                                                                                                                             \
-    } while (0)
-
 #include "../../common/save_file/validate_save_file.inc.c"
 #include "../../common/save_file/compute_save_checksum.inc.c"
 #include "../../common/save_file/format_hex.inc.c"
@@ -70,7 +43,7 @@ s32 cload_advance_load_sequence(void)
     /* Builds the "bu00:" slot path like the erase helper; never used afterwards. */
     strcpy(card_path.text, CARD_DEVICE_PREFIX);
     phase_result = CARD_MENU_SEQUENCE_WAIT;
-    card_path.device.characters.slot += *(u8*)&g_card_slot;
+    card_path.device.characters.slot += g_card_slot;
 
     if (g_card_step != NULL)
     {
@@ -115,17 +88,22 @@ s32 cload_advance_load_sequence(void)
             {
                 poll_result = poll_hardware_card_events();
             } while (poll_result == -1);
-            switch (poll_result)
+            if (poll_result == CARD_EVENT_COMPLETE)
             {
-            case CARD_EVENT_COMPLETE:
                 g_card_step++;
                 break;
-            case CARD_EVENT_ERROR:
-            case CARD_EVENT_TIMEOUT:
-            case CARD_EVENT_NEW_CARD:
-                CLOAD_REQUEST_REFRESH(phase_result);
-                break;
             }
+            if (poll_result < 0)
+            {
+                return phase_result;
+            }
+            if (poll_result > CARD_EVENT_NEW_CARD)
+            {
+                return phase_result;
+            }
+            phase_result = CARD_MENU_SEQUENCE_NO_CARD;
+            g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
+            g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;
             break;
 
         case CARD_MENU_STEP_CLEAR_HARDWARE_EVENTS:
@@ -138,7 +116,9 @@ s32 cload_advance_load_sequence(void)
             g_card_menu_entry_scan_active = 1;
             if (cload_begin_entry_scan(g_card_slot) == 0)
             {
-                CLOAD_END_STEP_TABLE(phase_result, CARD_MENU_SEQUENCE_FINISHED, CARD_MENU_ENTRY_STATE_NO_GAME_DATA, NULL);
+                phase_result = CARD_MENU_SEQUENCE_FINISHED;
+                g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_GAME_DATA;
+                g_card_step = NULL;
                 g_card_menu_entry_scan_active = 0;
                 break;
             }
@@ -149,10 +129,15 @@ s32 cload_advance_load_sequence(void)
                 if (cload_scan_next_entry(g_card_slot) == 0)
                 {
                     g_card_menu_entry_scan_active = 0;
-                    if (g_card_entry_state != CARD_MENU_ENTRY_STATE_NO_GAME_DATA && g_card_entry_state != CARD_MENU_ENTRY_STATE_CARD_FULL)
+                    if (g_card_entry_state == CARD_MENU_ENTRY_STATE_NO_GAME_DATA)
                     {
-                        cload_commit_selected_entry();
+                        return phase_result;
                     }
+                    if (g_card_entry_state == CARD_MENU_ENTRY_STATE_CARD_FULL)
+                    {
+                        return phase_result;
+                    }
+                    cload_commit_selected_entry();
                     break;
                 }
                 scan_attempts++;
@@ -191,7 +176,9 @@ s32 cload_advance_load_sequence(void)
                 g_card_menu_load_error_retries--;
                 if (g_card_menu_load_error_retries == 0)
                 {
-                    CLOAD_REQUEST_REFRESH(phase_result);
+                    phase_result = CARD_MENU_SEQUENCE_NO_CARD;
+                    g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
+                    g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;
                 }
                 else
                 {
@@ -212,7 +199,9 @@ s32 cload_advance_load_sequence(void)
                 }
                 else
                 {
-                    CLOAD_END_STEP_TABLE(phase_result, CARD_MENU_SEQUENCE_UNFORMATTED, CARD_MENU_ENTRY_STATE_NO_SAVE_DATA, g_card_steps_idle);
+                    phase_result = CARD_MENU_SEQUENCE_UNFORMATTED;
+                    g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_SAVE_DATA;
+                    g_card_step = g_card_steps_idle;
                 }
                 break;
             }

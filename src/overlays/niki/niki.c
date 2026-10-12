@@ -242,7 +242,7 @@ s32 card_menu_handle_input(void)
         niki_switch_card_slot();
         return;
     }
-    if (entry_count >= 0x10)
+    if (entry_count >= CARD_MENU_ENTRY_COUNT_LIMIT)
     {
         return;
     }
@@ -251,12 +251,12 @@ s32 card_menu_handle_input(void)
     if (status & PAD_BTN_R1)
     {
         g_pad_input = PAD_BTN_DOWN;
-        navigation_steps = 1;
+        navigation_steps = CARD_MENU_PAGE_MOVE_ROWS;
     }
     if (g_pad_input & PAD_BTN_L1)
     {
         g_pad_input = PAD_BTN_UP;
-        navigation_steps = 1;
+        navigation_steps = CARD_MENU_PAGE_MOVE_ROWS;
     }
 
     while (navigation_steps != 0)
