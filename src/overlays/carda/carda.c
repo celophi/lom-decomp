@@ -57,6 +57,9 @@ typedef struct
  */
 #define CARDA_SAVE_ICON(icon) ((CardaSaveIcon*)((u8*)&g_carda_save_icon_offsets - 4 + g_carda_save_icon_offsets[icon]))
 
+/** @brief Bits below the binary point of a scaled progress width (CARD_MENU_PROGRESS_FULL_TICKS = 1 << 8). */
+#define CARDA_PROGRESS_TICK_SHIFT 8
+
 /** @brief Left edge of the save window text, before the transition offset. */
 #define CARDA_SAVE_TEXT_X (CARD_MENU_MESSAGE_WIDTH / 2)
 
@@ -1526,29 +1529,23 @@ void* carda_draw_progress_bar(POLY_G4* quad, u_long* ot)
         SET_POLY_G4_BGR3_PACKED(quad, CARD_MENU_PROGRESS_BOTTOM_RIGHT_COLOR);
         setPolyG4(quad);
         SET_POLY_G4_BGR2_PACKED(quad, CARD_MENU_PROGRESS_BOTTOM_LEFT_COLOR);
-        /* TODO: recover a structured form for the horizontal bounds. */
         do
         {
-            do
-            {
-                bar = quad;
-                quad->x2 = 0;
-            } while (0);
-            width = elapsed * CARD_MENU_MESSAGE_WIDTH;
-            quad->x0 = 0;
-            if (width < 0)
-            {
-                bar = quad;
-                width += 255;
-            }
-            quad->x3 = width >> 8;
+            bar = quad;
+            quad->x0 = quad->x2 = 0;
         } while (0);
-        quad->x1 = width >> 8;
+        width = elapsed * CARD_MENU_MESSAGE_WIDTH;
+        if (width < 0)
+        {
+            quad->x1 = quad->x3 = (width + CARD_MENU_PROGRESS_FULL_TICKS - 1) >> CARDA_PROGRESS_TICK_SHIFT;
+        }
+        else
+        {
+            quad->x1 = quad->x3 = width >> CARDA_PROGRESS_TICK_SHIFT;
+        }
         quad = bar + 1;
-        bar->y1 = 0;
-        bar->y0 = 0;
-        bar->y3 = CARDA_TRANSFER_HEIGHT;
-        bar->y2 = CARDA_TRANSFER_HEIGHT;
+        bar->y0 = bar->y1 = 0;
+        bar->y2 = bar->y3 = CARDA_TRANSFER_HEIGHT;
         addPrim(ot, bar);
     }
     return quad;
