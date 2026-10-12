@@ -368,7 +368,7 @@ s32 zukan_handle_input(void)
             if (g_zukan_list_entries[g_zukan_selected_entry].resource_id_and_available >> 15)
             {
                 field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
-                zukan_set_fade_target(0, 0, 0, ZUKAN_FADE_STEPS);
+                zukan_set_fade_target(FADE_BLACK, FADE_BLACK, FADE_BLACK, ZUKAN_FADE_STEPS);
                 zukan_load_entry(g_zukan_selected_entry);
                 g_zukan_transition_state = ZUKAN_TRANSITION_OPEN_DETAIL;
                 g_zukan_transition_frame = 0;
@@ -429,7 +429,7 @@ s32 zukan_handle_input(void)
     if (g_pad_input & (PADRdown | PADRright | PADi))
     {
         field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
-        zukan_set_fade_target(0, 0, 0, ZUKAN_FADE_STEPS);
+        zukan_set_fade_target(FADE_BLACK, FADE_BLACK, FADE_BLACK, ZUKAN_FADE_STEPS);
         g_zukan_transition_state = ZUKAN_TRANSITION_RETURN_TO_LIST;
         g_zukan_transition_frame = 0;
         return;
@@ -662,7 +662,7 @@ void* zukan_emit_ui_sprite(SPRT* sprite, u_long* ordering_table, u32 sprite_inde
  */
 void zukan_start_next_entry_transition(void)
 {
-    zukan_set_fade_target(0, 0, 0, ZUKAN_FADE_STEPS);
+    zukan_set_fade_target(FADE_BLACK, FADE_BLACK, FADE_BLACK, ZUKAN_FADE_STEPS);
     g_zukan_transition_state = ZUKAN_TRANSITION_NEXT_FADE_OUT;
     g_zukan_transition_frame = 0;
 }
@@ -672,7 +672,7 @@ void zukan_start_next_entry_transition(void)
  */
 void zukan_start_previous_entry_transition(void)
 {
-    zukan_set_fade_target(0, 0, 0, ZUKAN_FADE_STEPS);
+    zukan_set_fade_target(FADE_BLACK, FADE_BLACK, FADE_BLACK, ZUKAN_FADE_STEPS);
     g_zukan_transition_state = ZUKAN_TRANSITION_PREVIOUS_FADE_OUT;
     g_zukan_transition_frame = 0;
 }

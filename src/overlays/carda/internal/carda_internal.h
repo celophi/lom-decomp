@@ -107,6 +107,9 @@ typedef enum CardaCardStep
 /** @brief CARDA's own carda_open_status_dialog messages, after the shared CARD_MENU_DIALOG_* ones. */
 #define CARDA_DIALOG_FORMAT_FAILED 5
 
+/** @brief Frame of the formatting message on which the card is formatted; the save is built on the next. */
+#define CARDA_FORMAT_FRAME 12
+
 /** @brief CARDA's own g_card_menu_selection_status value, after the shared CARD_MENU_SELECTION_* ones. */
 #define CARDA_SELECTION_CARD_FULL 4  /**< The full-card placeholder is selected. */
 

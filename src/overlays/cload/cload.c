@@ -581,9 +581,9 @@ void* cload_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         {
             TILE* tile = (TILE*)prim;
 
-            *(u32*)&tile->r0 = CARD_MENU_HIGHLIGHT_COLOR;
-            setlen(tile, 3);
-            setcode(tile, 0x62);
+            SET_BGR0_PACKED(tile, CARD_MENU_HIGHLIGHT_COLOR);
+            setTile(tile);
+            setSemiTrans(tile, 1);
             tile->y0 = (s16)(row_y - 1);
             tile->w = 0x108;
             tile->x0 = 0;

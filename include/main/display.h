@@ -56,6 +56,9 @@
  */
 #define FADE_NEUTRAL 0x100
 
+/** Fade level of a fade to black. */
+#define FADE_BLACK 0
+
 /** Lowest fade level drawn by adding light; levels below FADE_NEUTRAL subtract it. */
 #define FADE_ADDITIVE_THRESHOLD (FADE_NEUTRAL + 1)
 

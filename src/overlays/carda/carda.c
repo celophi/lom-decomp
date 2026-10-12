@@ -748,9 +748,9 @@ static void* carda_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_o
         {
             TILE* tile = (TILE*)prim;
 
-            *(u32*)&tile->r0 = CARD_MENU_HIGHLIGHT_COLOR;
-            setlen(tile, 3);
-            setcode(tile, GPU_CODE_TILE | GPU_CODE_SEMI_TRANS);
+            SET_BGR0_PACKED(tile, CARD_MENU_HIGHLIGHT_COLOR);
+            setTile(tile);
+            setSemiTrans(tile, 1);
             tile->w = CARDA_LIST_WIDTH;
             setXY0(tile, 0, row_y);
             tile->h = CARD_MENU_ENTRY_ROW_HEIGHT;
@@ -1456,7 +1456,7 @@ static void* carda_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 
         bcopy((u8*)&blob->saved_game, (u8*)g_saved_game_ctx, SAVED_GAME_DATA_SIZE);
         g_playtime_vsync_origin = VSync(-1);
         card_menu_close_all_elements();
-        field_set_fade_target(0, 0, 0, 8);
+        field_set_fade_target(FADE_BLACK, FADE_BLACK, FADE_BLACK, CARD_MENU_EXIT_FADE_FRAMES);
     }
 
     return result;
@@ -1892,8 +1892,8 @@ void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
 
 /**
  * @brief Draw the formatting message (or, once done, the saving message);
- *        on frame 12 format the card, on frame 13 build the save file and
- *        switch to the saving window.
+ *        on frame CARDA_FORMAT_FRAME format the card, on the next frame build
+ *        the save file and switch to the saving window.
  * @param ot Ordering table used for the text primitives.
  * @param prim Current primitive packet cursor.
  * @param x_offset Horizontal placement offset.
@@ -1904,7 +1904,7 @@ static void* carda_draw_format_progress(u_long* ot, void* prim, s32 x_offset, s3
 {
     s32 unused[2];
 
-    if (g_carda_format_frames >= 13)
+    if (g_carda_format_frames > CARDA_FORMAT_FRAME)
     {
         if (CARDA_IS_POCKETSTATION_MODE(g_card_menu_mode))
         {
@@ -1960,12 +1960,12 @@ static void* carda_draw_format_progress(u_long* ot, void* prim, s32 x_offset, s3
         }
     }
 
-    if (g_carda_format_frames == 12)
+    if (g_carda_format_frames == CARDA_FORMAT_FRAME)
     {
         carda_format_card();
         g_card_step = g_carda_steps_card_check;
     }
-    else if (g_carda_format_frames >= 13)
+    else if (g_carda_format_frames > CARDA_FORMAT_FRAME)
     {
         g_card_menu_selected_row = 0;
         g_card_entry_suffix_values[0] = 1;
@@ -2146,10 +2146,10 @@ static void* carda_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 
     {
         switch (g_card_menu_mode)
         {
-        case 2:
+        case CARDA_MODE_SEND_PET:
             g_field_card_overlay_mode = CARDA_RESULT_SEND_PET_CANCELLED;
             break;
-        case 3:
+        case CARDA_MODE_RETURN_PET:
             g_field_card_overlay_mode = CARDA_RESULT_RETURN_PET_CANCELLED;
             break;
         default:
@@ -2734,10 +2734,10 @@ static void* carda_draw_slot_prompt(void* prim, u_long* ot, s32 x, s32 y)
     {
         switch (g_card_menu_mode)
         {
-        case 2:
+        case CARDA_MODE_SEND_PET:
             g_field_card_overlay_mode = CARDA_RESULT_SEND_PET_CANCELLED;
             break;
-        case 3:
+        case CARDA_MODE_RETURN_PET:
             g_field_card_overlay_mode = CARDA_RESULT_RETURN_PET_CANCELLED;
             break;
         default:
