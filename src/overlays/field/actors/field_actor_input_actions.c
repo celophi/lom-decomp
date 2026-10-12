@@ -14,9 +14,6 @@
 #define FIELD_HELD_ACTION_BUTTONS_OUT_OF_LINE
 #include "../internal/field_held_action_buttons.h"
 
-/** @brief Number of actions with an entry in an action command map. */
-#define FIELD_ACTION_MAP_ENTRY_COUNT 11
-
 /** @brief Action returned by the command history when no action is queued. */
 #define FIELD_ACTION_NONE 0xFF
 
@@ -70,19 +67,10 @@ typedef struct
 /** @brief The live saved game, viewed through FieldSavedParty. */
 #define FIELD_SAVED_PARTY ((FieldSavedParty*)g_saved_game_ctx)
 
-/** @brief One action command map: eleven actor command words and their disable flags. */
-typedef struct
-{
-    u16 commands[FIELD_ACTION_MAP_ENTRY_COUNT];
-    u8 disabled[FIELD_ACTION_MAP_ENTRY_COUNT];
-    u8 pad;
-} FieldActionMap;
-
 extern s32 g_field_active_group;
 extern s32 g_field_dialog_screen_mode;
 extern s32 g_field_interaction_active;
 extern s32 g_field_buffered_input;
-extern FieldActionMap g_field_action_command_maps[];
 extern s32 g_field_action_context;
 extern s32 g_field_actions_limited;
 

@@ -275,16 +275,6 @@ typedef struct FieldCdBuffer
     u16 data;
 } FieldCdBuffer;
 
-/** @brief Action command map of one controller: command words and disable flags. */
-typedef struct
-{
-    u16 commands[11];
-    u8 disabled[11];
-    u8 pad;
-} FieldActionCommandMap;
-
-/** @brief Action 1 and 5 commands restored by field_restore_default_action_animation_mappings(). */
-
 void func_80140004(s32 work_address, s32 image_resource_index, s32 music_resource_index, s32 audio_clip_index);
 void field_draw_dialog_windows(FieldRenderHalf* render_half);
 void field_merge_dialog_items(void);
@@ -355,7 +345,6 @@ extern s32 D_80105760;
 extern FieldCdBuffer* g_field_cd_buffer;
 extern s32 g_field_dialog_screen_mode;
 extern s32 g_field_duel_mode[];
-extern FieldActionCommandMap g_field_action_command_maps[];
 
 /*
  * Retail addresses of g_field_resource_entries[3].unk8, g_field_player_records[1]'s flag

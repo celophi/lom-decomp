@@ -85,6 +85,8 @@ typedef enum FieldAbility
 /** @brief Defend pose played when a guarded hit lands. */
 #define FIELD_ANIMATION_DEFEND_HIT 11
 #define FIELD_ANIMATION_13 0x13
+/** @brief First combo attack animation; later combo steps follow it. */
+#define FIELD_ANIMATION_COMBO 0x1F
 /** @brief First of the two hit animations; one is picked at random. */
 #define FIELD_ANIMATION_HIT 20
 
@@ -251,6 +253,20 @@ enum
 
 /** @brief Actor command word that performs action slot @p action. */
 #define FIELD_ACTION_COMMAND(action) (((action) << 8) | FIELD_ACTOR_COMMAND_ACTION)
+
+/** @brief Number of actions with an entry in an action command map. */
+#define FIELD_ACTION_MAP_ENTRY_COUNT 11
+
+/** @brief Action command map of one player: command words and disable flags. */
+typedef struct
+{
+    u16 commands[FIELD_ACTION_MAP_ENTRY_COUNT];
+    u8 disabled[FIELD_ACTION_MAP_ENTRY_COUNT];
+    u8 pad;
+} FieldActionCommandMap;
+
+/** @brief Action command maps, one per player. */
+extern FieldActionCommandMap g_field_action_command_maps[FIELD_PLAYER_COUNT];
 
 extern FieldActor g_field_actors[];
 extern FieldActor g_field_scene_actors[];

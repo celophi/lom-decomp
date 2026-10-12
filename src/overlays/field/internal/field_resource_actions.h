@@ -10,6 +10,8 @@
 
 /** @brief Number of action slots in one resource's action row. */
 #define FIELD_RESOURCE_ACTION_COUNT 50
+/** @brief Action slot of the combo attack; slots 0 and 1 below it hold the player-assigned abilities. */
+#define FIELD_RESOURCE_ACTION_COMBO 2
 /** @brief Target filter of an action without a target predicate. */
 #define FIELD_ACTION_TARGET_NONE 0xFF
 

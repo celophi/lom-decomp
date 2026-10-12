@@ -109,9 +109,6 @@
 #define FIELD_ACTION_LIMITED_FIRST 4
 #define FIELD_ACTION_LIMITED_COUNT 4
 
-/** @brief Combo action slot; its variant animations follow FIELD_ANIMATION_COMBO. */
-#define FIELD_RESOURCE_ACTION_COMBO 2
-#define FIELD_ANIMATION_COMBO 0x1F
 /** @brief Combo steps; a chain at the last step ends. */
 #define FIELD_COMBO_VARIANTS 5
 /** @brief Frames the sequence wait lasts after a combo chain ends. */

@@ -125,8 +125,6 @@ void field_release_object_link(FieldActor* actor);
 #define FIELD_RESOURCE_ACTION_BUTTONS 12
 /** @brief Action slot a mode-11 action redirects through. */
 #define FIELD_RESOURCE_ACTION_REDIRECT 11
-/** @brief Resource action slots of the two combo buttons. */
-#define FIELD_RESOURCE_ACTION_COMBO 2
 
 /** @brief FieldActionSlot::command bit: the action runs a technique sequence. */
 #define FIELD_ACTION_TECHNIQUE 0x8000
