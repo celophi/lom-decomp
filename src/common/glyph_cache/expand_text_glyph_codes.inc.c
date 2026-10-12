@@ -35,7 +35,7 @@ void expand_text_glyph_codes(u8* destination, u8* source)
             column = source[1];
             row = column >> GLYPH_CHART_ROW_SHIFT;
             column &= GLYPH_CHART_COLUMN_MASK;
-            first_glyph_byte = g_glyph_chart_page_base + column * GLYPH_CHART_GLYPH_BYTES;
+            first_glyph_byte = GLYPH_CHART_PAGE_BASE + column * GLYPH_CHART_GLYPH_BYTES;
             first_glyph_byte += row * GLYPH_CHART_ROW_BYTES;
             character_code = *source;
             first_glyph_byte += character_code * GLYPH_CHART_PAGE_BYTES;
@@ -44,7 +44,7 @@ void expand_text_glyph_codes(u8* destination, u8* source)
             column = source[1];
             row = column >> GLYPH_CHART_ROW_SHIFT;
             column &= GLYPH_CHART_COLUMN_MASK;
-            second_glyph_byte = g_glyph_chart_page_base + 1 + column * GLYPH_CHART_GLYPH_BYTES;
+            second_glyph_byte = GLYPH_CHART_PAGE_BASE + 1 + column * GLYPH_CHART_GLYPH_BYTES;
             second_glyph_byte += row * GLYPH_CHART_ROW_BYTES;
             character_code = *source;
             second_glyph_byte += character_code * GLYPH_CHART_PAGE_BYTES;

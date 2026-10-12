@@ -266,4 +266,3 @@ field_draw_text = 0x800A8750;
 field_draw_number = 0x800A8928;
 g_card_menu_text_not_pocketstation    = 0x80145ED6;
 g_card_menu_write_in_progress    = 0x80163150;
-
