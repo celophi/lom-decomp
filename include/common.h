@@ -55,6 +55,9 @@ typedef s32 intptr_t;
 /* Round x up to the nearest multiple of 64 (PSX texture page width alignment) */
 #define ALIGN64(x) (((x) + 0x3F) & 0xFFC0)
 
+/** @brief The smaller of @p a and @p b (each evaluated twice). */
+#define MIN(a, b) ((a) > (b) ? (b) : (a))
+
 /** @brief Address or byte count @p x rounded up to a multiple of 4, as an integer. */
 #define ALIGN4(x) (((uintptr_t)(x) + 3) & ~3)
 

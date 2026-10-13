@@ -115,6 +115,9 @@ typedef union
     FieldAnimationExtensionBytes* extension;
     FieldAnimationDefBytes* alternate;
     FieldAnimationTailBytes* tail;
+    TimBlock* tim_block;
+    TimDimensions* dimensions;
+    u_long* image;
 } FieldStreamPointer;
 
 /** @brief Heap block holding an actor's animation definitions with every optional section. */
@@ -608,46 +611,42 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
  */
 static void field_upload_actor_texture(u8* tim, s32 owner)
 {
-    u8* cursor;
+    FieldStreamPointer cursor;
     s32 clut_block_size;
     u8* clut_buffer;
     RECT rect;
     s32 width;
     s32 height;
 
-    tim += sizeof(u32); /* skip the TIM id word */
-    cursor = tim;
-    g_field_texture_slot_flags[FIELD_OWNER_TAG(owner)] = *cursor;
-    cursor += sizeof(u32);
+    cursor.bytes = tim;
+    cursor.words++; /* skip the TIM id word */
+    g_field_texture_slot_flags[FIELD_OWNER_TAG(owner)] = *cursor.bytes;
+    cursor.words++;
 
     if (g_field_texture_slot_flags[FIELD_OWNER_TAG(owner)] & TIM_FLAG_HAS_CLUT)
     {
-        clut_block_size = ((TimBlock*)cursor)->bnum;
-        cursor += FIELD_TIM_BLOCK_HEADER;
+        clut_block_size = cursor.tim_block->bnum;
+        cursor.tim_block++;
 
         if (owner < FIELD_SHARED_OWNER)
         {
             setRECT(&rect, 0, FIELD_ACTOR_CLUT_VRAM_Y + owner * 2, CLUT_ENTRY_COUNT, 1);
             clut_buffer = g_field_actor_clut_buffers;
-            memcpy(clut_buffer + owner * FIELD_ACTOR_CLUT_BUFFER_SIZE, cursor,
-                   clut_block_size - FIELD_TIM_BLOCK_HEADER > FIELD_CLUT_BYTES ? FIELD_CLUT_BYTES : clut_block_size - FIELD_TIM_BLOCK_HEADER);
+            memcpy(clut_buffer + owner * FIELD_ACTOR_CLUT_BUFFER_SIZE, cursor.bytes, MIN(clut_block_size - FIELD_TIM_BLOCK_HEADER, FIELD_CLUT_BYTES));
         }
         else
         {
             setRECT(&rect, 0, VRAM_CLUT_Y, CLUT_ENTRY_COUNT, 1);
-            memcpy(g_field_shared_clut_buffer, cursor,
-                   clut_block_size - FIELD_TIM_BLOCK_HEADER > FIELD_CLUT_BYTES ? FIELD_CLUT_BYTES : clut_block_size - FIELD_TIM_BLOCK_HEADER);
+            memcpy(g_field_shared_clut_buffer, cursor.bytes, MIN(clut_block_size - FIELD_TIM_BLOCK_HEADER, FIELD_CLUT_BYTES));
         }
 
-        LoadImage(&rect, (u_long*)cursor);
-        cursor = cursor + clut_block_size - FIELD_TIM_BLOCK_HEADER;
+        LoadImage(&rect, cursor.image);
+        cursor.bytes = cursor.bytes + clut_block_size - FIELD_TIM_BLOCK_HEADER;
     }
 
-    cursor = (u8*)&((TimBlock*)cursor)->dimensions;
-    width = *(u16*)cursor;
-    cursor += sizeof(u16);
-    height = *(u16*)cursor;
-    cursor += sizeof(u16);
+    cursor.dimensions = &cursor.tim_block->dimensions;
+    width = *cursor.halves++;
+    height = *cursor.halves++;
 
     if (owner < FIELD_SHARED_OWNER)
     {
@@ -658,5 +657,5 @@ static void field_upload_actor_texture(u8* tim, s32 owner)
         setRECT(&rect, FIELD_SHARED_TEXTURE_VRAM_X, FIELD_SHARED_TEXTURE_VRAM_Y, width, height);
     }
 
-    LoadImage(&rect, (u_long*)cursor);
+    LoadImage(&rect, cursor.image);
 }
