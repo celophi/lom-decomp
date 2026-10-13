@@ -160,7 +160,7 @@ void field_update_battle_entry(void)
             if (g_field_battle_entry_changes[i].builtin_animation != FIELD_BATTLE_ENTRY_KEEP)
             {
                 actor_slot = field_find_free_actor_slot(actor->object_index, 0);
-                if ((actor_slot != -1) &&
+                if ((actor_slot != FIELD_ACTOR_SLOT_NONE) &&
                     (field_start_builtin_animation(actor->object_index, actor_slot, g_field_battle_entry_changes[i].builtin_animation) != 0))
                 {
                     field_start_actor_animation(actor_slot, 0, NULL);

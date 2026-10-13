@@ -131,7 +131,7 @@ void field_upload_common_texture(void)
  * @brief Find a free animation actor slot not already claimed by a binding.
  * @param binding_index Owner object index (owners 2 and up share binding 2).
  * @param require_idle When non-zero, fail unless the owner's binding is idle.
- * @return Index of the first free, unclaimed actor slot, or -1 if none.
+ * @return Index of the first free, unclaimed actor slot, or FIELD_ACTOR_SLOT_NONE.
  */
 inline s32 field_find_free_actor_slot(s32 binding_index, s32 require_idle)
 {
@@ -144,7 +144,7 @@ inline s32 field_find_free_actor_slot(s32 binding_index, s32 require_idle)
         bindings = g_field_actor_bindings;
         if (bindings[FIELD_BINDING_INDEX(binding_index)].state != FIELD_BINDING_IDLE)
         {
-            return -1;
+            return FIELD_ACTOR_SLOT_NONE;
         }
     }
 
@@ -165,7 +165,7 @@ inline s32 field_find_free_actor_slot(s32 binding_index, s32 require_idle)
             }
         }
     }
-    return -1;
+    return FIELD_ACTOR_SLOT_NONE;
 }
 
 /**
@@ -420,7 +420,7 @@ s32 field_start_streamed_animation(s32 owner, s32 resource_id)
         return 0;
     }
     free_slot = field_find_free_actor_slot(owner, 1);
-    if (free_slot == -1)
+    if (free_slot == FIELD_ACTOR_SLOT_NONE)
     {
         return 0;
     }
@@ -558,7 +558,7 @@ void field_reset_object_states(void)
         g_field_object_states[i].hp_display.bits.value = g_field_object_states[i].current_hp.bits.value;
         g_field_object_states[i].hp_display.bits.unk24 = 0;
         g_field_object_states[i].hp_display.bits.flag31 = 0;
-        g_field_object_states[i].hud.word |= 1;
+        g_field_object_states[i].hud.word |= FIELD_HUD_SPECIAL_GAUGE;
         g_field_object_states[i].movement.bits.scale = 50;
         g_field_object_states[i].movement.half.height = 0;
         g_field_object_states[i].contact.bits.flag0 = 0;

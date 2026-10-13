@@ -141,6 +141,8 @@ typedef enum FieldAbility
 #define FIELD_CONTACT_NO_HIT_TEST 0x20      /**< The object takes no hits and is never an action target. */
 #define FIELD_CONTACT_ACTION_PENDING 0x40   /**< The object charges or waits for an action; hits land even while its own bound animation runs. */
 #define FIELD_CONTACT_TARGETED 0x80         /**< The object is being targeted. */
+/** @brief Object-state hud flags bit: the HUD shows the object's special attack gauge. */
+#define FIELD_HUD_SPECIAL_GAUGE 0x01
 /** @brief Object-state flag bits that make an object an invalid target. */
 #define FIELD_OBJECT_UNTARGETABLE_FLAGS 0x2280
 

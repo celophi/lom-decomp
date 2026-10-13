@@ -717,8 +717,8 @@ void field_start_actor_text(s32 index, s32 text_id)
                 g_field_actor_texts[index].text = (u8 *)(((u16 *)g_field_technique_names)[text_id] + (uintptr_t)g_field_technique_names);
             }
             g_field_actor_texts[index].state.bits.countdown = FIELD_ACTOR_TEXT_FRAMES;
-            point[0] = g_field_view_offset_x / 256 + (s16)(g_field_actors[index].x / 256 + 160);
-            point[1] = g_field_view_offset_y / 256 + (s16)(g_field_actors[index].y / 256 + 112) - g_field_actors[index].z / 512 - g_field_view_offset_z / 512;
+            point[0] = g_field_view_offset_x / 256 + (s16)(g_field_actors[index].x / 256 + FIELD_SCREEN_CENTER_X);
+            point[1] = g_field_view_offset_y / 256 + (s16)(g_field_actors[index].y / 256 + FIELD_SCREEN_CENTER_Y) - g_field_actors[index].z / 512 - g_field_view_offset_z / 512;
             width = field_count_text_glyphs(g_field_actor_texts[index].text) * 6;
             if (point[0] + width >= 321)
             {

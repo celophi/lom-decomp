@@ -37,7 +37,6 @@ s32 field_resolve_contact_hit(s32 source_index, s32 target_index);
 s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* effect, FieldContactResult* contact);
 void field_start_actor_animation(s32 slot_index, s32 target_count, u8* targets);
 s32 field_start_builtin_animation(s32 object_index, s32 slot_index, s32 animation_id);
-s32 field_find_free_actor_slot(s32 binding_index, s32 require_idle);
 POLY_FT4* field_render_actor_ground_shadow();
 u8* field_advance_actor_part_animation_frame();
 void field_play_object_animation();
@@ -146,19 +145,6 @@ static void field_set_action_context(s32 recipient_id, s32 source_id, s32 action
 void field_retire_effect(FieldMotionRecord *effect, FieldObjectPart *part);
 s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldObjectPart *part);
 s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldObjectPart *part);
-
-/**
- * @brief Look up the track binding that serves an object slot.
- * @param object_index Object slot; slots 0 and 1 are the players, every other slot shares entry 2.
- * @return Binding record for the slot.
- */
-static inline FieldSequenceBinding *field_get_track_binding(s32 object_index)
-{
-    FieldSequenceBinding *bindings = g_field_actor_bindings;
-    s32 offset = (u8) object_index < 2 ? object_index * sizeof(FieldSequenceBinding) : 2 * sizeof(FieldSequenceBinding);
-
-    return (FieldSequenceBinding *) ((u8 *) bindings + offset);
-}
 
 /**
  * @brief Spawn an effect record for one actor part and resolve its initial placement.
@@ -512,8 +498,8 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
             return -1;
         }
         if ((!((g_field_object_states[actor->targets[g_field_track_index]].contact.word >> 6) & 1) &&
-             (binding_index = field_get_track_binding(actor->targets[g_field_track_index])->owner_object_index) == actor->targets[g_field_track_index] &&
-             field_get_track_binding(binding_index)->state != 0) ||
+             (binding_index = field_object_binding(actor->targets[g_field_track_index])->owner) == actor->targets[g_field_track_index] &&
+             field_object_binding(binding_index)->state != 0) ||
             ((g_field_object_states[actor->targets[g_field_track_index]].contact.bytes.flags & 1) &&
              g_field_object_states[actor->targets[g_field_track_index]].contact.bytes.controller_index != actor->slot_index))
         {
@@ -1647,8 +1633,8 @@ void field_advance_actor_effects(FieldActorSlot *actor_state)
             }
             if (((part->behavior_flags.word >> 4) & 3) == 3)
             {
-                screen_position.x = 0xA0 + g_field_view_offset_x / 256 + effect->x / 256;
-                screen_position.y = 0x70 + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512;
+                screen_position.x = FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256;
+                screen_position.y = FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512;
                 if (screen_position.x < -0x140 || screen_position.x > 0x280 || screen_position.y >= 0x1E1 || screen_position.y < -0xF0)
                 {
                     previous_state = effect->state;
@@ -3636,9 +3622,9 @@ typedef struct
  * @param object_index Object slot; slots 0 and 1 own their bindings, later slots share entry 2.
  * @return Binding record for the slot.
  */
-static inline FieldSequenceBinding *field_get_object_binding(s32 object_index)
+static inline FieldActorBinding *field_get_object_binding(s32 object_index)
 {
-    FieldSequenceBinding *bindings = g_field_actor_bindings;
+    FieldActorBinding *bindings = g_field_actor_bindings;
 
     return &bindings[object_index < 3 ? object_index : 2];
 }
@@ -3744,8 +3730,8 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
     field_build_effect_part_matrix(rec, part, mtx, actor);
     gte_SetRotMatrix(mtx);
 
-    sxy->x = 0xA0 + g_field_view_offset_x / 256 + rec->x / 256;
-    screen_y = 0x70 + g_field_view_offset_y / 256 + rec->y / 256 - rec->z / 512 - g_field_view_offset_z / 512;
+    sxy->x = FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + rec->x / 256;
+    screen_y = FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + rec->y / 256 - rec->z / 512 - g_field_view_offset_z / 512;
     sxy->y = screen_y;
     lift_start = rec->vertical_offset;
     lift_end = rec->unknown_0x38;
@@ -4116,7 +4102,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                             !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
                         {
                             x_offset = field_find_free_actor_slot(rec->source_object_index, 0);
-                            if (x_offset != -1)
+                            if (x_offset != FIELD_ACTOR_SLOT_NONE)
                             {
                                 if (field_start_builtin_animation(rec->source_object_index, x_offset, slot->action_parameter) != 0)
                                 {
@@ -4282,8 +4268,8 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                 {
                                     actor->track_mask |= 1 << actor->target_count;
                                     actor->targets[actor->target_count] = contact.index;
-                                    target_screen->x = 0xA0 + g_field_view_offset_x / 256 + g_field_actors[contact.index].x / 256;
-                                    target_screen->y = 0x70 + g_field_view_offset_y / 256 + g_field_actors[contact.index].y / 256 - g_field_actors[contact.index].z / 512 - g_field_view_offset_z / 512;
+                                    target_screen->x = FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + g_field_actors[contact.index].x / 256;
+                                    target_screen->y = FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + g_field_actors[contact.index].y / 256 - g_field_actors[contact.index].z / 512 - g_field_view_offset_z / 512;
                                     if (g_field_actors[contact.index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                                     {
                                         actor->track_offsets[actor->target_count].x = target_screen->x - contact.x;
@@ -4329,7 +4315,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                         if ((slot->action_parameter == 0x59) || (slot->action_parameter == 0x66) || (slot->action_parameter == 0x2B))
                                         {
                                             if ((!((g_field_object_states[contact.index].contact.word >> 6) & 1) &&
-                                                 (bound_index = field_get_object_binding(contact.index)->owner_object_index) == contact.index &&
+                                                 (bound_index = field_get_object_binding(contact.index)->owner) == contact.index &&
                                                  field_get_object_binding(bound_index)->state != 0) ||
                                                 (g_field_object_states[contact.index].contact.bytes.flags & 1))
                                             {
@@ -4418,7 +4404,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                     else if (slot->action_parameter != 0)
                                     {
                                         x_offset = field_find_free_actor_slot(rec->source_object_index, 0);
-                                        if (x_offset != -1)
+                                        if (x_offset != FIELD_ACTOR_SLOT_NONE)
                                         {
                                             switch ((slot->contact.word >> 2) & 7)
                                             {
@@ -4459,7 +4445,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                             {
                                 slot->action_parameter = 0x1E;
                                 x_offset = field_find_free_actor_slot(rec->source_object_index, 0);
-                                if (x_offset != -1)
+                                if (x_offset != FIELD_ACTOR_SLOT_NONE)
                                 {
                                     if (field_start_builtin_animation(rec->source_object_index, x_offset, slot->action_parameter) != 0)
                                     {
@@ -4600,7 +4586,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                 else
                                 {
                                     x_offset = field_find_free_actor_slot(rec->source_object_index, 0);
-                                    if (x_offset != -1)
+                                    if (x_offset != FIELD_ACTOR_SLOT_NONE)
                                     {
                                         if (field_start_builtin_animation(rec->source_object_index, x_offset, slot->action_parameter) != 0)
                                         {
@@ -4741,8 +4727,8 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
     field_build_effect_part_matrix(rec, part, mtx, actor);
     gte_SetRotMatrix(mtx);
 
-    sxy->x = 0xA0 + g_field_view_offset_x / 256 + rec->x / 256;
-    screen_y = 0x70 + g_field_view_offset_y / 256 + rec->y / 256 - rec->z / 512 - g_field_view_offset_z / 512;
+    sxy->x = FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + rec->x / 256;
+    screen_y = FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + rec->y / 256 - rec->z / 512 - g_field_view_offset_z / 512;
     sxy->y = screen_y;
     lift_start = rec->vertical_offset;
     lift_end = rec->unknown_0x38;
@@ -5091,8 +5077,8 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                                     {
                                         actor->track_mask = (u8) (actor->track_mask | (1 << actor->target_count));
                                         actor->targets[actor->target_count] = (u8) contact.index;
-                                        target_screen->x = 0xA0 + g_field_view_offset_x / 256 + g_field_actors[contact.index].x / 256;
-                                        target_screen->y = 0x70 + g_field_view_offset_y / 256 + g_field_actors[contact.index].y / 256 - g_field_actors[contact.index].z / 512 - g_field_view_offset_z / 512;
+                                        target_screen->x = FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + g_field_actors[contact.index].x / 256;
+                                        target_screen->y = FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + g_field_actors[contact.index].y / 256 - g_field_actors[contact.index].z / 512 - g_field_view_offset_z / 512;
                                         if (g_field_actors[contact.index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                                         {
                                             actor->track_offsets[actor->target_count].x = target_screen->x - contact.x;
@@ -5143,7 +5129,7 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                                         else
                                         {
                                             offset_x = field_find_free_actor_slot(rec->source_object_index, 0);
-                                            if (offset_x != -1)
+                                            if (offset_x != FIELD_ACTOR_SLOT_NONE)
                                             {
                                                 if (field_start_builtin_animation(rec->source_object_index, offset_x, slot->action_parameter) != 0)
                                                 {
@@ -5169,7 +5155,7 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                                 {
                                     slot->action_parameter = 0x1E;
                                     offset_x = field_find_free_actor_slot(rec->source_object_index, 0);
-                                    if (offset_x != -1)
+                                    if (offset_x != FIELD_ACTOR_SLOT_NONE)
                                     {
                                         if (field_start_builtin_animation(rec->source_object_index, offset_x, slot->action_parameter) != 0)
                                         {
@@ -5202,7 +5188,7 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                         if (!(slot->action_parameter & 0x8000) && (slot->action_parameter != 0xFFFF) && ((rec->motion_parameter == 0x91) || (rec->motion_parameter == 0x85) || (rec->motion_parameter == 0x86) || (rec->motion_parameter == 0x98)) && !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
                         {
                             offset_x = field_find_free_actor_slot(rec->source_object_index, 0);
-                            if ((offset_x != -1) && (field_start_builtin_animation(rec->source_object_index, offset_x, slot->action_parameter) != 0))
+                            if ((offset_x != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(rec->source_object_index, offset_x, slot->action_parameter) != 0))
                             {
                                 slot->contact.bytes.animation_actor_index = offset_x;
                                 field_start_actor_animation(offset_x, 0, NULL);
@@ -5388,7 +5374,7 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                             else
                             {
                                 offset_x = field_find_free_actor_slot(rec->source_object_index, 0);
-                                if (offset_x != -1)
+                                if (offset_x != FIELD_ACTOR_SLOT_NONE)
                                 {
                                     if (field_start_builtin_animation(rec->source_object_index, offset_x, slot->action_parameter) != 0)
                                     {

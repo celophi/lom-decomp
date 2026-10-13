@@ -15,6 +15,7 @@
 #include "overlays/field/field_sound.h"
 #include "../internal/field_effect_render_state.h"
 #include "../internal/field_actor_runtime.h"
+#include "../internal/field_actor_sequence_runtime.h"
 #include "../internal/field_ability_progression.h"
 #include "../internal/field_calls.h"
 #include "overlays/field/field_types.h"
@@ -31,9 +32,6 @@
 #include "main/audio/akao.h"
 #include "overlays/field/field_actor_records.h"
 
-s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index);
-void field_restart_sequence_animation(FieldActor* actor);
-void field_apply_sequence_displacement(FieldActor* actor, s32 direction_x, s32 vertical_step, s32 direction_z);
 s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound);
 
 /** @brief Route history entries between the leader and each follower. */
@@ -94,9 +92,11 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound);
 #define FIELD_ACTION_MAX_TARGETS 9
 /** @brief Free actor slots an action needs before it may start. */
 #define FIELD_ACTION_MIN_FREE_SLOTS 3
+/** @brief First action whose name is stored in the saved character (the name record is action - this). */
+#define FIELD_ACTION_SAVED_NAME_FIRST 4
 /** @brief Frames the combo timer runs after a combo action. */
 #define FIELD_COMBO_WINDOW 10
-/** @brief Weapon type without a variant animation for command 0x1F. */
+/** @brief Weapon type without a variant animation for the combo command (FIELD_ANIMATION_COMBO). */
 #define FIELD_WEAPON_TYPE_NO_VARIANT 10
 /** @brief Sequence id bit marking a technique sequence. */
 #define FIELD_SEQUENCE_TECHNIQUE 0x8000
@@ -149,7 +149,7 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound);
     (&g_field_resource_actions[(resource)].slots[(index)])
 
 /** @brief Binding of a party object: members 0 and 1 own one each, everyone else shares the third. */
-#define FIELD_OBJECT_BINDING(i) ((u32)(i) < FIELD_PLAYER_COUNT ? (i) : FIELD_PLAYER_COUNT)
+#define FIELD_OBJECT_BINDING(i) ((u32)(i) < FIELD_SHARED_BINDING ? (i) : FIELD_SHARED_BINDING)
 
 /** @brief Scratchpad collision probe, after the collision mover. */
 #define FIELD_COLLISION_PROBE ((struct FieldCollisionQuery*)SCRATCHPAD_AT(0x40))
@@ -1184,7 +1184,7 @@ void field_prepare_actor_action(FieldActor* actor)
     }
     if (action->flags.instrument)
     {
-        g_field_object_states[actor->object_index].hud.word = g_field_object_states[actor->object_index].hud.word & ~1;
+        g_field_object_states[actor->object_index].hud.word = g_field_object_states[actor->object_index].hud.word & ~FIELD_HUD_SPECIAL_GAUGE;
         g_field_object_states[actor->object_index].contact.word = g_field_object_states[actor->object_index].contact.word | FIELD_CONTACT_ACTION_PENDING;
         actor->animation_state = 1;
         actor->animation_active = 1;
@@ -1204,7 +1204,7 @@ void field_prepare_actor_action(FieldActor* actor)
         if ((animation != FIELD_ACTION_NO_ANIMATION) && (animation != 0))
         {
             animation_slot = field_find_free_actor_slot(actor->object_index, 0);
-            if ((animation_slot != -1) && (field_start_builtin_animation(actor->object_index, animation_slot, action->animation) != 0))
+            if ((animation_slot != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor->object_index, animation_slot, action->animation) != 0))
             {
                 field_start_actor_animation(animation_slot, 0, 0);
                 g_field_object_states[actor->object_index].contact.bytes.animation_actor_index = animation_slot;
@@ -1489,7 +1489,7 @@ s32 field_update_actor_command(FieldActor* actor)
                         if ((scratch.combo_action.animation != FIELD_ACTION_NO_ANIMATION) && (scratch.combo_action.animation != 0))
                         {
                             combo_or_slot = field_find_free_actor_slot(actor->object_index, 0);
-                            if ((combo_or_slot != -1) &&
+                            if ((combo_or_slot != FIELD_ACTOR_SLOT_NONE) &&
                                 (field_start_builtin_animation(actor->object_index, combo_or_slot, scratch.combo_action.animation) != 0))
                             {
                                 field_start_actor_animation(combo_or_slot, 0, 0);
@@ -1875,12 +1875,11 @@ s32 field_update_actor_command(FieldActor* actor)
                 {
                     g_field_object_states[actor->object_index].movement.word |= FIELD_MOVEMENT_CHARGED;
                     target_count_or_slot = field_find_free_actor_slot(actor->object_index, 0);
-                    if ((target_count_or_slot != -1) && (field_start_builtin_animation(actor->object_index, target_count_or_slot, action->animation) != 0))
+                    if ((target_count_or_slot != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor->object_index, target_count_or_slot, action->animation) != 0))
                     {
                         field_start_actor_animation(target_count_or_slot, 0, 0);
                         g_field_object_states[actor->object_index].contact.bytes.animation_actor_index = target_count_or_slot;
-                        field_start_actor_text(actor->object_index,
-                                               (0x80000000 | (actor->object_index << 16)) | (g_field_object_states[actor->object_index].action - 4));
+                        field_start_actor_text(actor->object_index, FIELD_ACTOR_TEXT_SAVED_NAME(actor->object_index, g_field_object_states[actor->object_index].action - FIELD_ACTION_SAVED_NAME_FIRST));
                         return;
                     }
                 }
@@ -1904,7 +1903,7 @@ s32 field_update_actor_command(FieldActor* actor)
                 field_filter_action_targets(target_count_or_slot, scratch.targets, g_field_actor_bindings[FIELD_OBJECT_BINDING(actor->object_index)].slot);
             slots = g_field_actor_slots;
             bound_slot = &slots[g_field_actor_bindings[FIELD_OBJECT_BINDING(actor->object_index)].slot];
-            bound_slot->status.word = (bound_slot->status.word & ~FIELD_SLOT_ELEMENT_BITS) | ((action->flags.target_filter & FIELD_ACTION_ELEMENT_MASK) * 2);
+            bound_slot->status.word = (bound_slot->status.word & ~FIELD_SLOT_ELEMENT_BITS) | ((action->flags.target_filter & FIELD_ACTION_ELEMENT_MASK) << FIELD_SLOT_ELEMENT_SHIFT);
             if (!(action->parameter & FIELD_REQUEST_TARGETED))
             {
                 if (field_start_action_animation(actor->object_index, 0, NULL, action->parameter) == 0)
@@ -2132,7 +2131,7 @@ static s32 field_apply_action_animation(FieldActor* actor, FieldObjectState* sta
     {
         state->flags |= FIELD_OBJECT_FLAG_DASH;
     }
-    if ((action->command == 0x1F) && (actor->variant != 0) &&
+    if ((action->command == FIELD_ANIMATION_COMBO) && (actor->variant != 0) &&
         ((actor->object_index >= FIELD_PLAYER_COUNT) || (g_field_player_records[actor->object_index].head.bytes.weapon_type != FIELD_WEAPON_TYPE_NO_VARIANT)))
     {
         actor->animation = actor->variant + (action->command + (actor->animation & FIELD_ANIMATION_FACING));
@@ -2208,7 +2207,7 @@ static s32 field_start_action_animation(s32 object_index, s32 target_count, u8* 
     }
 
     animation_slot = field_find_free_actor_slot(object_index, 0);
-    if ((animation_slot != -1) && (field_start_builtin_animation(object_index, animation_slot, request & FIELD_REQUEST_ANIMATION_MASK) != 0))
+    if ((animation_slot != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(object_index, animation_slot, request & FIELD_REQUEST_ANIMATION_MASK) != 0))
     {
         field_start_actor_animation(animation_slot, target_count, targets);
         g_field_object_states[object_index].contact.bytes.animation_actor_index = animation_slot;
@@ -2271,7 +2270,7 @@ s32 field_start_bound_action_animation(s32 object_index, s32 target_count, u8* t
             while (layer_count != 0)
             {
                 new_slot = field_find_free_actor_slot(object_index, 0);
-                if (new_slot != -1)
+                if (new_slot != FIELD_ACTOR_SLOT_NONE)
                 {
                     slot = &g_field_actor_slots[new_slot];
                     bcopy((u8*)&g_field_actor_slots[binding->slot], (u8*)slot, sizeof(FieldActorSlot));

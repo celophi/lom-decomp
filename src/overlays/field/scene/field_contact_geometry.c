@@ -223,8 +223,8 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
     FieldContactPoint* target_quad;
     FieldObjectState* list_state;
     FieldObjectState* object_states;
-    FieldSequenceBinding* bindings;
-    FieldSequenceBinding* binding;
+    FieldActorBinding* bindings;
+    FieldActorBinding* binding;
     FieldActorSlot* slots;
     FieldContactPoint* input_vertex;
     FieldObjectState* target_list;
@@ -298,24 +298,24 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
             /* Skip an object whose own bound animation is running. */
             if (target->object_index < FIELD_PLAYER_COUNT)
             {
-                binding_offset = target->object_index * sizeof(FieldSequenceBinding);
+                binding_offset = target->object_index * sizeof(FieldActorBinding);
             }
             else
             {
-                binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldSequenceBinding);
+                binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
             }
-            binding = (FieldSequenceBinding*)((u8*)bindings + binding_offset);
-            if (binding->owner_object_index == target->object_index)
+            binding = (FieldActorBinding*)((u8*)bindings + binding_offset);
+            if (binding->owner == target->object_index)
             {
-                if ((u32)(binding->owner_object_index & 0xFF) < FIELD_PLAYER_COUNT)
+                if ((u32)(binding->owner & 0xFF) < FIELD_PLAYER_COUNT)
                 {
-                    owner_binding_offset = binding->owner_object_index * sizeof(FieldSequenceBinding);
+                    owner_binding_offset = binding->owner * sizeof(FieldActorBinding);
                 }
                 else
                 {
-                    owner_binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldSequenceBinding);
+                    owner_binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
                 }
-                if (((FieldSequenceBinding*)((u8*)bindings + owner_binding_offset))->state != 0)
+                if (((FieldActorBinding*)((u8*)bindings + owner_binding_offset))->state != 0)
                 {
                     continue;
                 }
@@ -938,7 +938,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
     s32 target_end;
     s32 binding_offset;
     s32 owner_binding_offset;
-    FieldSequenceBinding* binding;
+    FieldActorBinding* binding;
     s8 actor_height;
     s8 target_height;
     FieldObjectState* actor_state;
@@ -1028,28 +1028,28 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
                             base_or_index = (uintptr_t)g_field_actor_bindings;
                             if ((u32)index < FIELD_PLAYER_COUNT)
                             {
-                                binding_offset = index * sizeof(FieldSequenceBinding);
+                                binding_offset = index * sizeof(FieldActorBinding);
                             }
                             else
                             {
-                                binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldSequenceBinding);
+                                binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
                             }
-                            binding = (FieldSequenceBinding*)(base_or_index + binding_offset);
+                            binding = (FieldActorBinding*)(base_or_index + binding_offset);
                             base_or_index = target->object_index;
-                            index = binding->owner_object_index;
+                            index = binding->owner;
                             if (index == base_or_index)
                             {
                                 bindings = (u8*)g_field_actor_bindings;
                                 if ((u32)(index & 0xFF) < FIELD_PLAYER_COUNT)
                                 {
-                                    owner_binding_offset = index * sizeof(FieldSequenceBinding);
+                                    owner_binding_offset = index * sizeof(FieldActorBinding);
                                 }
                                 else
                                 {
-                                    owner_binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldSequenceBinding);
+                                    owner_binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
                                 }
 
-                                if (((FieldSequenceBinding*)(bindings + owner_binding_offset))->state != 0)
+                                if (((FieldActorBinding*)(bindings + owner_binding_offset))->state != 0)
                                 {
                                     goto no_contact;
                                 }
@@ -1059,7 +1059,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
                         if (target->command == FIELD_ACTOR_COMMAND_NONE)
                         {
                             animation_slot = field_find_free_actor_slot(target->object_index, 0);
-                            if (animation_slot != -1)
+                            if (animation_slot != FIELD_ACTOR_SLOT_NONE)
                             {
                                 scratch.targets.words[0] = (s32)actor->object_index;
 
@@ -1212,8 +1212,8 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
 {
     FieldActor* actors;
     FieldObjectState* states;
-    FieldSequenceBinding* bindings;
-    FieldSequenceBinding* binding;
+    FieldActorBinding* bindings;
+    FieldActorBinding* binding;
     s32 bound_x_a;
     s32 bound_y_a;
     s16 command;
@@ -1340,27 +1340,27 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
                 s32 object_index;
                 if (candidate->object_index < FIELD_PLAYER_COUNT)
                 {
-                    binding_offset = candidate->object_index * sizeof(FieldSequenceBinding);
+                    binding_offset = candidate->object_index * sizeof(FieldActorBinding);
                 }
                 else
                 {
-                    binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldSequenceBinding);
+                    binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
                 }
 
-                binding = (FieldSequenceBinding*)((u8*)bindings + binding_offset);
+                binding = (FieldActorBinding*)((u8*)bindings + binding_offset);
                 object_index = candidate->object_index;
-                binding_owner = binding->owner_object_index;
+                binding_owner = binding->owner;
                 if (binding_owner == object_index)
                 {
                     if ((u32)(binding_owner & 0xFF) < FIELD_PLAYER_COUNT)
                     {
-                        owner_binding_offset = binding_owner * sizeof(FieldSequenceBinding);
+                        owner_binding_offset = binding_owner * sizeof(FieldActorBinding);
                     }
                     else
                     {
-                        owner_binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldSequenceBinding);
+                        owner_binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
                     }
-                    if (((FieldSequenceBinding*)((u8*)bindings + owner_binding_offset))->state != 0)
+                    if (((FieldActorBinding*)((u8*)bindings + owner_binding_offset))->state != 0)
                     {
                         continue;
                     }
@@ -1712,25 +1712,25 @@ void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* pa
             {
                 if (target->object_index < FIELD_PLAYER_COUNT)
                 {
-                    binding_offset = target->object_index * sizeof(FieldSequenceBinding);
+                    binding_offset = target->object_index * sizeof(FieldActorBinding);
                 }
                 else
                 {
-                    binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldSequenceBinding);
+                    binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
                 }
                 object_index = target->object_index;
-                binding_owner = ((FieldSequenceBinding*)((u8*)bindings + binding_offset))->owner_object_index;
+                binding_owner = ((FieldActorBinding*)((u8*)bindings + binding_offset))->owner;
                 if (binding_owner == object_index)
                 {
                     if ((u32)(binding_owner & 0xFF) < FIELD_PLAYER_COUNT)
                     {
-                        binding_offset = binding_owner * sizeof(FieldSequenceBinding);
+                        binding_offset = binding_owner * sizeof(FieldActorBinding);
                     }
                     else
                     {
-                        binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldSequenceBinding);
+                        binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
                     }
-                    if (((FieldSequenceBinding*)((u8*)bindings + binding_offset))->state != 0)
+                    if (((FieldActorBinding*)((u8*)bindings + binding_offset))->state != 0)
                     {
                         continue;
                     }

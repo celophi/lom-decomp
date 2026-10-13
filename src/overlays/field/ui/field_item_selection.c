@@ -395,7 +395,7 @@ static inline void drop_selected_item(void)
             field_restart_actor_animation(actor);
             field_spawn_item_record(state->key, g_field_item_list[g_field_item_list_cursor].item_id);
             animation_slot = field_find_free_actor_slot(actor_index, 0);
-            if ((animation_slot != -1) && (field_start_builtin_animation(actor_index, animation_slot, FIELD_ITEM_DROP_ANIMATION) != 0))
+            if ((animation_slot != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor_index, animation_slot, FIELD_ITEM_DROP_ANIMATION) != 0))
             {
                 field_start_actor_animation(animation_slot, 0, NULL);
             }

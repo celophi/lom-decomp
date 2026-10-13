@@ -442,7 +442,7 @@ void field_count_chain_hit(s32 object_index)
             if (actor != FIELD_ACTOR_NONE)
             {
                 effect_slot = field_find_free_actor_slot(0, 0);
-                if ((effect_slot != -1) && (field_start_builtin_animation(actor->object_index, effect_slot, FIELD_CHAIN_LIMIT_EFFECT) != 0))
+                if ((effect_slot != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor->object_index, effect_slot, FIELD_CHAIN_LIMIT_EFFECT) != 0))
                 {
                     field_start_actor_animation(effect_slot, 0, 0);
                 }

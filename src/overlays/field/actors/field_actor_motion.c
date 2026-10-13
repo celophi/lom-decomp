@@ -8,6 +8,7 @@
 #include "main/display.h"
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_calls.h"
+#include "../internal/field_actor_sequence_runtime.h"
 #include "../internal/field_held_action_buttons.h"
 #include "../internal/field_effect_render_state.h"
 #include "overlays/field/field_types.h"
@@ -49,15 +50,9 @@ typedef struct
     Vec2s screen;
 } FieldScreenProbe;
 
-/* The owner header src/overlays/field/internal/field_actor_sequence_runtime.h declares its own
- * g_field_actor_bindings type, which conflicts with field_actor_tables.h. */
-void field_update_sequence_actor_binding(FieldActor* actor, s32 release_actor);
-void field_restart_sequence_animation(FieldActor* actor);
-
 /* src/overlays/field/internal/field_contact_geometry.h pulls in the FieldMotionRecord view of the
  * actor tables, which conflicts with field_actor_tables.h. */
 s32 field_resolve_actor_movement(FieldActor* actor, Vec3i* delta, s32 mode);
-
 
 /**
  * @brief Run one frame of an actor's action command.

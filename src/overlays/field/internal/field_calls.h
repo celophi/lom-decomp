@@ -237,6 +237,8 @@ s32 field_count_free_actor_slots(s32 object_index);
 s32 field_object_has_active_actor_tracks(s32 object_index);
 void field_bind_builtin_animations(void);
 void field_upload_common_texture(void);
+/** @brief field_find_free_actor_slot result when no animation actor slot is free. */
+#define FIELD_ACTOR_SLOT_NONE (-1)
 s32 field_find_free_actor_slot(s32 binding_index, s32 require_idle);
 s32 field_start_builtin_animation(s32 object_index, s32 slot_index, s32 animation_id);
 void field_stop_actor_slot(struct FieldActor* actor, struct FieldActorSlot* slot, s32 force);
@@ -350,6 +352,8 @@ void field_close_battle_results(void);
 void field_open_battle_results(void);
 void field_open_duel_results(void);
 void field_setup_return_to_title_prompt(void);
+/** @brief field_start_actor_text id of name record @p record stored in saved character @p character. */
+#define FIELD_ACTOR_TEXT_SAVED_NAME(character, record) (0x80000000 | ((character) << 16) | (record))
 void field_start_actor_text(s32 index, s32 text_id);
 
 /* field_draw_state.c */

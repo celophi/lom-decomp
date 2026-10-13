@@ -2,6 +2,7 @@
 #define FIELD_ACTOR_SEQUENCE_RUNTIME_H
 
 #include "field_effect_types.h"
+#include "field_actor_binding.h"
 
 /** @brief Weapon-specific technique banks stored in the actor sequence resource. */
 #define FIELD_SEQUENCE_BANK_COUNT 11
@@ -16,18 +17,6 @@
 extern u8 g_field_actor_sequence_data[FIELD_SEQUENCE_BANK_COUNT * FIELD_SEQUENCE_BANK_SIZE];
 
 struct FieldActor;
-
-/** @brief Binding of an object owner to a temporary animation actor. */
-typedef struct
-{
-    s32 state;
-    u8 pad_0x4[8];
-    s32 owner_object_index;
-    u8 pad_0x10[8];
-    s32 actor_index;
-} FieldSequenceBinding;
-
-extern FieldSequenceBinding g_field_actor_bindings[];
 
 void field_apply_sequence_displacement(struct FieldActor* actor, s32 direction_x, s32 vertical_step, s32 direction_z);
 void field_update_sequence_actor_binding(struct FieldActor* actor, s32 release_actor);

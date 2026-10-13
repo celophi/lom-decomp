@@ -22,9 +22,6 @@
 /** @brief Control mode of an actor driven by its script. */
 #define FIELD_CONTROL_SCRIPTED 2
 
-/** @brief Binding shared by every object from FIELD_PLAYER_COUNT up. */
-#define FIELD_SHARED_BINDING (FIELD_ACTOR_BINDING_COUNT - 1)
-
 /** @brief Lowest actor record a script may spawn a child actor into. */
 #define FIELD_FIRST_SPAWN_ACTOR 3
 
@@ -438,7 +435,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                     spawn_state->contact.word = contact_or_z;
                     field_restart_actor_animation(spawn_actor, spawn_control);
                     spawn_slot = field_find_free_actor_slot(index_or_count, 0);
-                    if (spawn_slot != -1)
+                    if (spawn_slot != FIELD_ACTOR_SLOT_NONE)
                     {
                         if (field_start_builtin_animation(index_or_count, spawn_slot, FIELD_SPAWN_EFFECT_RESOURCE) != 0)
                         {
@@ -611,7 +608,7 @@ static void field_run_actor_script_command(FieldActor* actor)
             if ((slot_animation != FIELD_ACTION_NO_ANIMATION) && (slot_animation != 0))
             {
                 key_or_index = field_find_free_actor_slot(actor->object_index, 0);
-                if ((key_or_index != -1) && (field_start_builtin_animation(actor->object_index, key_or_index, action_slot->animation) != 0))
+                if ((key_or_index != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor->object_index, key_or_index, action_slot->animation) != 0))
                 {
                     slot_owner = actor->object_index;
                     g_field_actor_slots[key_or_index].hit_reaction = g_field_object_states[slot_owner].action;
@@ -1212,7 +1209,7 @@ s32 field_retire_actor(s32 key, s32 resource_index)
     if (resource_index != -1)
     {
         slot_index = field_find_free_actor_slot(actor->object_index, 0);
-        if ((slot_index != -1) && (field_start_builtin_animation(actor->object_index, slot_index, resource_index) != 0))
+        if ((slot_index != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor->object_index, slot_index, resource_index) != 0))
         {
             field_start_actor_animation(slot_index, 0, 0);
         }
@@ -1293,7 +1290,7 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound)
     if (effect != -1)
     {
         slot_index = field_find_free_actor_slot(actor->object_index, 0);
-        if ((slot_index != -1) && (field_start_builtin_animation(actor->object_index, slot_index, effect) != 0))
+        if ((slot_index != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor->object_index, slot_index, effect) != 0))
         {
             field_start_actor_animation(slot_index, 0, 0);
             g_field_object_states[actor->object_index].contact.bytes.animation_actor_index = slot_index;
@@ -2088,7 +2085,7 @@ s32 field_spawn_animation_actor(s32 key, s32 resource_index)
         return -1;
     }
     slot_index = field_find_free_actor_slot(actor->object_index, 0);
-    if ((slot_index != -1) && (field_start_builtin_animation(actor->object_index, slot_index, resource_index) != 0))
+    if ((slot_index != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor->object_index, slot_index, resource_index) != 0))
     {
         field_start_actor_animation(slot_index, 0, 0);
         return 0;
@@ -2113,7 +2110,7 @@ s32 field_spawn_shared_animation_actor(s32 key, s32 resource_index)
         return -1;
     }
     slot_index = field_find_free_actor_slot(0, 0);
-    if ((slot_index != -1) && (field_start_builtin_animation(actor->object_index, slot_index, resource_index) != 0))
+    if ((slot_index != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor->object_index, slot_index, resource_index) != 0))
     {
         field_start_actor_animation(slot_index, 0, 0);
         return 0;
@@ -2154,7 +2151,7 @@ s32 field_spawn_targeted_animation_actor(s32 key, s32 resource_index, s32 target
         return -1;
     }
     slot_index = field_find_free_actor_slot(actor->object_index, 0);
-    if ((slot_index != -1) && (field_start_builtin_animation(actor->object_index, slot_index, resource_index) != 0))
+    if ((slot_index != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor->object_index, slot_index, resource_index) != 0))
     {
         field_start_actor_animation(slot_index, target_count, (u8*)targets);
         return 0;
