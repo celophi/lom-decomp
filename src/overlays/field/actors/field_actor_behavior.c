@@ -157,15 +157,12 @@ void field_reset_leader_position_history(void)
     s32 i;
 
     point = g_field_object_states[0].route_history;
-    i = 0;
-    do
+    for (i = 0; i < FIELD_ROUTE_HISTORY_LENGTH; i++, point++)
     {
         point->x = g_field_actors[0].x / 256;
         point->z = g_field_actors[0].z / 256;
         g_field_route_animation_history[i] = g_field_actors[0].animation;
-        i++;
-        point++;
-    } while (i < FIELD_ROUTE_HISTORY_LENGTH);
+    }
 }
 
 /**
@@ -460,15 +457,13 @@ void field_record_actor_position(FieldActor* actor)
         }
     }
 
-    index = 0;
     history = g_field_object_states[actor->object_index].route_history;
     /* Each X/Z pair moves as one word. */
-    do
+    for (index = 0; index < FIELD_ROUTE_HISTORY_LENGTH - 1; index++)
     {
-        index++;
         *(s32*)history = *(s32*)(history + 1);
         history++;
-    } while (index < FIELD_ROUTE_HISTORY_LENGTH - 1);
+    }
 
     history->x = actor->x / 256;
     history->z = actor->z / 256;
@@ -476,13 +471,11 @@ void field_record_actor_position(FieldActor* actor)
     if (actor->object_index == 0)
     {
         animation_history = g_field_route_animation_history;
-        index = 0;
-        do
+        for (index = 0; index < FIELD_ROUTE_HISTORY_LENGTH - 1; index++)
         {
-            index++;
             animation_history[0] = animation_history[1];
             animation_history++;
-        } while (index < FIELD_ROUTE_HISTORY_LENGTH - 1);
+        }
         *animation_history = actor->animation;
     }
 }
@@ -2235,7 +2228,7 @@ s32 field_start_bound_action_animation(s32 object_index, s32 target_count, u8* t
             g_field_actor_slots[binding->slot].duration = g_field_actor_slots[binding->slot].animations[0].duration;
             layer = 1;
             g_field_actor_slots[binding->slot].sequence_active = 1;
-            while (layer_count != 0)
+            for (; layer_count != 0; layer++)
             {
                 new_slot = field_find_free_actor_slot(object_index, 0);
                 if (new_slot != FIELD_ACTOR_SLOT_NONE)
@@ -2252,7 +2245,6 @@ s32 field_start_bound_action_animation(s32 object_index, s32 target_count, u8* t
                     field_start_actor_animation(new_slot, target_count, targets);
                 }
                 layer_count--;
-                layer++;
             }
         }
     }
