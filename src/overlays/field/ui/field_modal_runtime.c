@@ -102,8 +102,6 @@ void field_set_cd_error_fade_target(void);
 #define FIELD_WEAPON_TYPE_UNSET 0xFF
 /** @brief FieldPlayerRecord::portrait_index when no portrait is cached. */
 #define FIELD_PORTRAIT_NONE 0xFF
-/** @brief Party record of the companion. */
-#define FIELD_COMPANION_INDEX 2
 /** @brief Golem companions use character ids from this value on. */
 #define FIELD_COMPANION_GOLEM_ID_BASE 0x41
 /** @brief Resource id base of the companion action packages (field_load_party_script_page). */
@@ -1832,9 +1830,9 @@ void field_rebuild_party_actions(s32 refresh_only)
                     equipment_offset += sizeof(FieldItemRecord);
                 } while (equipment_index < FIELD_EQUIPMENT_SLOT_COUNT);
             }
-            if (player_index == FIELD_COMPANION_INDEX && g_field_player_records[FIELD_COMPANION_INDEX].character_kind == player_index)
+            if (player_index == FIELD_PARTY_COMPANION && g_field_player_records[FIELD_PARTY_COMPANION].character_kind == player_index)
             {
-                field_load_party_script_page(2, g_field_player_records[FIELD_COMPANION_INDEX].character_id + FIELD_RES_COMPANION_ACTIONS);
+                field_load_party_script_page(2, g_field_player_records[FIELD_PARTY_COMPANION].character_id + FIELD_RES_COMPANION_ACTIONS);
             }
             else
             {

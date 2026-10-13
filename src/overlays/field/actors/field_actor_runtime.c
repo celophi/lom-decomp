@@ -80,9 +80,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 /** @brief Animation targets are passed as the low byte of one word each. */
 #define FIELD_TARGET_STRIDE 4
 
-/** @brief Party record used for the companion. */
-#define FIELD_COMPANION_INDEX 2
-
 /** @brief Character ids of companions from this value on are drawn in a selectable colour. */
 #define FIELD_COMPANION_COLOR_ID_MIN 0x41
 
@@ -1766,9 +1763,9 @@ void field_initialize_actor_system(void)
             if (g_field_player_records[j].head.bytes.flags & FIELD_PLAYER_ACTIVE)
             {
                 g_field_loaded_actor_count++;
-                if (j == FIELD_COMPANION_INDEX)
+                if (j == FIELD_PARTY_COMPANION)
                 {
-                    work_value = field_get_actor_resource_id(FIELD_COMPANION_INDEX, &g_field_player_records[FIELD_COMPANION_INDEX], 1);
+                    work_value = field_get_actor_resource_id(FIELD_PARTY_COMPANION, &g_field_player_records[FIELD_PARTY_COMPANION], 1);
                     i = work_value;
                 }
                 else
@@ -1778,9 +1775,9 @@ void field_initialize_actor_system(void)
                 if (i != g_field_player_records[j].resource_id)
                 {
                     g_field_player_records[j].resource_id = i;
-                    if (j == FIELD_COMPANION_INDEX)
+                    if (j == FIELD_PARTY_COMPANION)
                     {
-                        field_load_actor_resource_slot(FIELD_COMPANION_INDEX, FIELD_COMPANION_INDEX, i, 1);
+                        field_load_actor_resource_slot(FIELD_PARTY_COMPANION, FIELD_PARTY_COMPANION, i, 1);
                     }
                     else
                     {
@@ -1790,7 +1787,7 @@ void field_initialize_actor_system(void)
                 else
                 {
                     field_relocate_resource_buffer(j);
-                    companion_index = FIELD_COMPANION_INDEX;
+                    companion_index = FIELD_PARTY_COMPANION;
                     if (j == companion_index)
                     {
                         g_field_resource_entries[companion_index].flags = g_field_resource_entries[companion_index].flags | FIELD_RESOURCE_HAS_ACTIONS;
@@ -2211,9 +2208,9 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
     player_block = pad_context + slot * FIELD_SAVED_PLAYER_STRIDE;
     g_field_actors[slot].control.word = (control_flags & ~FIELD_CONTROL_MODE_MASK) | ((player_block[FIELD_SAVED_PLAYER_CONTROL] >> 7) ^ 1);
 
-    if ((slot == FIELD_COMPANION_INDEX) && (resource_variant >= FIELD_COMPANION_COLOR_ID_MIN))
+    if ((slot == FIELD_PARTY_COMPANION) && (resource_variant >= FIELD_COMPANION_COLOR_ID_MIN))
     {
-        FieldActor* companion = &g_field_actors[FIELD_COMPANION_INDEX];
+        FieldActor* companion = &g_field_actors[FIELD_PARTY_COMPANION];
 
         companion->control.word = (companion->control.word & ~FIELD_CONTROL_VARIANT_MASK) |
                                   ((((u8)((SavedGameLayout*)pad_context)->joined_golem + 1) & 3) << FIELD_CONTROL_VARIANT_SHIFT);
@@ -2496,9 +2493,9 @@ void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index)
     g_field_actors[actor_index].tint_green = FIELD_TINT_NEUTRAL;
     g_field_actors[actor_index].tint_red = FIELD_TINT_NEUTRAL;
 
-    if (actor_index == FIELD_COMPANION_INDEX && D_800FDCEA >= FIELD_COMPANION_COLOR_ID_MIN)
+    if (actor_index == FIELD_PARTY_COMPANION && D_800FDCEA >= FIELD_COMPANION_COLOR_ID_MIN)
     {
-        FieldActor* companion = &g_field_actors[FIELD_COMPANION_INDEX];
+        FieldActor* companion = &g_field_actors[FIELD_PARTY_COMPANION];
 
         companion->control.word =
             (companion->control.word & ~FIELD_CONTROL_VARIANT_MASK) | ((((u8)g_saved_game_ctx->joined_golem + 1) & 3) << FIELD_CONTROL_VARIANT_SHIFT);

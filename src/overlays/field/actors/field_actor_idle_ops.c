@@ -13,9 +13,6 @@
 #include "../internal/field_actor_sequence_runtime.h"
 #include "overlays/field/field_object_state.h"
 
-/** @brief Objects 0 and 1 are the two player characters. */
-#define PLAYER_OBJECT_COUNT 2
-
 /** @brief Fall speed per frame while the actor is above the ground (up is negative y). */
 #define FALL_STEP 0x800
 
@@ -47,9 +44,9 @@ void field_update_hit_reaction(FieldMotionRecord* actor)
         actor->y = 0;
         actor->motion_parameter = 0;
         field_update_sequence_actor_binding(actor, 1);
-        g_field_object_states[actor->source_object_index].movement.word &= ~FIELD_OBJECT_MOVEMENT_MODE_MASK;
+        g_field_object_states[actor->source_object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
         field_restart_sequence_animation(actor);
-        if (actor->source_object_index < PLAYER_OBJECT_COUNT)
+        if (actor->source_object_index < FIELD_PLAYER_COUNT)
         {
             field_command_history_clear(actor->source_object_index);
             actor->reference_index = 0;
@@ -68,7 +65,7 @@ void field_idle_actor_after_animation(FieldMotionRecord* actor)
     {
         actor->motion_parameter = 0;
         field_update_sequence_actor_binding(actor, 1);
-        g_field_object_states[actor->source_object_index].movement.word &= ~FIELD_OBJECT_MOVEMENT_MODE_MASK;
+        g_field_object_states[actor->source_object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
         field_restart_sequence_animation(actor);
     }
 }
@@ -88,7 +85,7 @@ void field_idle_actor_after_reload(FieldMotionRecord* actor)
         field_finish_party_slot_reload(actor->source_object_index);
         actor->motion_parameter = 0;
         field_update_sequence_actor_binding(actor, 1);
-        g_field_object_states[actor->source_object_index].movement.word &= ~FIELD_OBJECT_MOVEMENT_MODE_MASK;
+        g_field_object_states[actor->source_object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
         actor->facing_or_reward_kind = (actor->facing_or_reward_kind & ANIMATION_MIRROR_BIT) + 2;
         field_restart_sequence_animation(actor);
     }

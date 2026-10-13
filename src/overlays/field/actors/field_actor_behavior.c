@@ -5,6 +5,7 @@
  */
 
 #include "common.h"
+#include "common/pad.h"
 #include "common/saved_game.h"
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_actor_routes.h"
@@ -59,8 +60,6 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound);
 
 /** @brief Gauge added by the gauge-up animation. */
 #define FIELD_TECHNIQUE_GAUGE_STEP 0x20
-/** @brief FieldObjectState::action_charge below which an action still charges. */
-#define FIELD_ACTION_CHARGE_FULL 0xFF
 /** @brief FieldObjectState::action_charge from which the charge animation starts. */
 #define FIELD_ACTION_CHARGE_ANIMATION 0x41
 
@@ -127,7 +126,7 @@ extern s32 g_field_actor_diagonal_walk_animations[];
 extern u8 g_field_actor_turn_animations[];
 extern u8 g_field_action_sound_ids[];
 extern u8 g_field_collision_disabled;
-extern s32 g_field_pad_buttons;
+extern u32 g_field_pad_buttons;
 void field_restart_actor_animation(FieldActor* actor);
 
 static s32 field_apply_action_animation(FieldActor* actor, FieldObjectState* state, FieldActionSlot* action);
@@ -795,9 +794,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
         g_field_pad_buttons = ((held << 8) & 0xFF00) | (held >> 8);
     }
 #if !defined(VERSION_JP)
-    /* Swap the up/left and right/down face buttons. */
-    g_field_pad_buttons = ((u32)(g_field_pad_buttons & PADRdown) >> 1) | ((g_field_pad_buttons & PADRright) * 2) | ((u32)(g_field_pad_buttons & PADRleft) >> 3) |
-                          ((g_field_pad_buttons & PADRup) * 8) | (g_field_pad_buttons & ~(PADRup | PADRright | PADRdown | PADRleft));
+    g_field_pad_buttons = PAD_REMAP_FACE_BITS(g_field_pad_buttons);
 #endif
     command = actor->command;
     record_input = 0;

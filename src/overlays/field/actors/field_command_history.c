@@ -44,7 +44,6 @@
 /** @brief Returned by field_command_history_match() when no command was found. */
 #define FIELD_COMMAND_NONE 0xFF
 
-
 /** @brief Shift from a pad direction bit to its history nibble. */
 #define FIELD_PAD_DIRECTION_SHIFT 12
 
@@ -131,9 +130,7 @@ void field_command_history_record(s32 player, s32 age_sequence)
             buttons = (raw_buttons << 8) | (raw_buttons >> 8);
         }
 #if !defined(VERSION_JP)
-        /* Swap the up/left and right/down face buttons. */
-        value = ((u32)(buttons & PADRdown) >> 1) | ((buttons & PADRright) * 2) | ((u32)(buttons & PADRleft) >> 3) |
-                ((buttons & PADRup) * 8) | (buttons & (u16)~(PADRup | PADRright | PADRdown | PADRleft));
+        value = PAD_REMAP_FACE_BITS_16(buttons);
         buttons = value;
 #endif
         stick_x_port = ports + player;

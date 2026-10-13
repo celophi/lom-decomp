@@ -37,6 +37,10 @@ extern FieldResourceEntry g_field_resource_entries[];
 
 /** @brief Number of field object states (g_field_object_states). */
 #define FIELD_OBJECT_COUNT 13
+/** @brief Objects 0 and 1 are the two player-controlled party members; each has its own binding. */
+#define FIELD_PLAYER_COUNT 2
+/** @brief Objects 0 to 2 are the party: the two players and the companion. */
+#define FIELD_PARTY_COUNT 3
 
 /** @brief Number of recorded positions in an object's route history. */
 #define FIELD_ROUTE_HISTORY_LENGTH 48
@@ -78,6 +82,14 @@ typedef union
         s16 height;
     } half;
 } FieldMovementWord;
+
+/** @brief FieldMovementWord low bits holding the effect scale (ground effect radius). */
+#define FIELD_MOVEMENT_SCALE_MASK 0x3FF
+/** @brief FieldMovementWord bits holding the running action sequence (0, 0x800 or 0x1000). */
+#define FIELD_MOVEMENT_SEQUENCE_MASK 0x1800
+
+/** @brief Full FieldObjectState::action_charge; below it an action still charges. */
+#define FIELD_ACTION_CHARGE_FULL 0xFF
 
 /** @brief Packed contact word: flag bits, the bound animation actor and the collected target count. */
 typedef union

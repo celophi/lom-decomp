@@ -83,4 +83,13 @@ extern u8 g_controller_device_type;
      (((b) & PAD_BTN_SQUARE)   << 3)   |    \
      ((b) & ~0xF0))
 
+/**
+ * Same face-button swap for a byte-swapped word that may carry stray bits above
+ * bit 15: the swapped bits are shifted as unsigned values and only the low 16
+ * bits of the other buttons are kept.
+ */
+#define PAD_REMAP_FACE_BITS_16(b)                                                                               \
+    (((u32)((b) & PAD_BTN_CIRCLE) >> 1) | (((b) & PAD_BTN_CROSS) << 1) | ((u32)((b) & PAD_BTN_TRIANGLE) >> 3) |     \
+     (((b) & PAD_BTN_SQUARE) << 3) | ((b) & (u16)~0xF0))
+
 #endif

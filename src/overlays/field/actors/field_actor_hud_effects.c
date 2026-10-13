@@ -256,8 +256,6 @@ typedef struct
 
 #define SHADOW_SCREEN_POSITION ((ShadowScreenPosition*)SCRATCHPAD_AT(0xC0))
 #define SHADOW_WORLD_POSITION ((ShadowWorldPosition*)SCRATCHPAD_AT(0xC4))
-#define SHADOW_OT_SIZE 4096
-#define SHADOW_DEPTH_SHIFT 7
 
 /** @brief How far @p actor stands above ground height @p height; grows the shadow and pulls its edges in. */
 #define SHADOW_ELEVATION(actor, height) (((actor)->y - ((height) << 8)) >> 11)
@@ -1844,20 +1842,20 @@ POLY_FT4* field_render_actor_ground_shadow(FieldActor* actor, POLY_FT4* prim, s3
         prim->u0 = 0;
         setClut(prim, 256, 481);
 
-        depth = actor->z >> SHADOW_DEPTH_SHIFT;
+        depth = actor->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
         if (depth < 0)
         {
             addPrim(&ordering_table[0], prim);
             prim++;
         }
-        else if (depth >= SHADOW_OT_SIZE)
+        else if (depth >= FIELD_WORLD_OT_SIZE)
         {
-            addPrim(&ordering_table[SHADOW_OT_SIZE - 1], prim);
+            addPrim(&ordering_table[FIELD_WORLD_OT_SIZE - 1], prim);
             prim++;
         }
         else
         {
-            addPrim(&ordering_table[actor->z >> SHADOW_DEPTH_SHIFT], prim);
+            addPrim(&ordering_table[actor->z >> FIELD_WORLD_OT_DEPTH_SHIFT], prim);
             prim++;
         }
     }

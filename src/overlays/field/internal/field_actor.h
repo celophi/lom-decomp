@@ -2,6 +2,7 @@
 #define FIELD_ACTOR_H
 
 #include "common.h"
+#include "overlays/field/field_actor_records.h"
 #include "field_actor_binding.h"
 
 /**
@@ -12,10 +13,6 @@
 
 /** @brief Number of objects in the parallel field object tables. */
 #define FIELD_ACTOR_COUNT 13
-/** @brief Objects 0 and 1 are the two player-controlled party members; each has its own binding. */
-#define FIELD_PLAYER_COUNT 2
-/** @brief Objects 0 to 2 are the party: the two players and the companion. */
-#define FIELD_PARTY_COUNT 3
 /** @brief Animation binding of an object: party members own bindings 0-2, all others share the last. */
 #define FIELD_BINDING_INDEX(object_index) ((object_index) < FIELD_PARTY_COUNT ? (object_index) : FIELD_PARTY_COUNT - 1)
 
@@ -114,12 +111,8 @@ typedef enum FieldAbility
 /** @brief First of the two hit animations; one is picked at random. */
 #define FIELD_ANIMATION_HIT 20
 
-/** @brief Object-state movement low bits holding the effect scale. */
-#define FIELD_MOVEMENT_SCALE_MASK 0x3FF
 /** @brief Object-state movement bit: the charge animation was started. */
 #define FIELD_MOVEMENT_CHARGED 0x400
-/** @brief Object-state movement bits holding the running action sequence. */
-#define FIELD_MOVEMENT_SEQUENCE_MASK 0x1800
 /** @brief Object-state movement bit: the object overlaps another one. */
 #define FIELD_MOVEMENT_OVERLAPPING_BIT 14
 #define FIELD_MOVEMENT_OVERLAPPING (1 << FIELD_MOVEMENT_OVERLAPPING_BIT)

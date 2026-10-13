@@ -2013,7 +2013,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldObjectPar
         }
         if ((part->palette_extent.word) & 0x01000000)
         {
-            local_vector->y = (s16) ((g_field_object_states[actor->owner_object_index].movement.half.flags & FIELD_OBJECT_EFFECT_SCALE_MASK) * (s16) (u16) local_vector->y / 100);
+            local_vector->y = (s16) ((g_field_object_states[actor->owner_object_index].movement.half.flags & FIELD_MOVEMENT_SCALE_MASK) * (s16) (u16) local_vector->y / 100);
         }
         {
             u32 bounds_flags;
@@ -5411,8 +5411,6 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
 }
 
 /* Untextured effect renderers: ring, fan, marker, trail, radial fan, and radial lines. */
-#define FIELD_EFFECT_OT_SIZE 4096
-#define FIELD_EFFECT_OT_DEPTH_SHIFT 7
 #define FIELD_RING_SEGMENTS 32
 #define FIELD_RING_ANGLE_STEP (ONE / FIELD_RING_SEGMENTS)
 #define FIELD_RADIAL_MAX_SEGMENTS 20
@@ -5670,53 +5668,53 @@ u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* 
         packets[3].tag = packet_tag;
         packets[3].color0.signed_word = packets[0].color0.signed_word;
         packets[2].xy2.signed_pair.y = rim_y;
-        first_depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+        first_depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
         next_packet = &packets[1];
         if (first_depth < 0)
         {
             FIELD_LINK_PACKET(&ordering_table[0], packets, address_mask, length_mask);
             packets = next_packet;
         }
-        else if (first_depth >= FIELD_EFFECT_OT_SIZE)
+        else if (first_depth >= FIELD_WORLD_OT_SIZE)
         {
-            FIELD_LINK_PACKET(&ordering_table[FIELD_EFFECT_OT_SIZE - 1], packets, address_mask, length_mask);
+            FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packets, address_mask, length_mask);
             packets = next_packet;
         }
         else
         {
-            FIELD_LINK_PACKET(&ordering_table[effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT], packets, address_mask, length_mask);
+            FIELD_LINK_PACKET(&ordering_table[effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT], packets, address_mask, length_mask);
             packets = next_packet;
         }
-        second_depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+        second_depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
         if (second_depth < 0)
         {
             FIELD_LINK_PACKET(&ordering_table[0], packets, address_mask, length_mask);
             packets++;
         }
-        else if (second_depth >= FIELD_EFFECT_OT_SIZE)
+        else if (second_depth >= FIELD_WORLD_OT_SIZE)
         {
-            FIELD_LINK_PACKET(&ordering_table[FIELD_EFFECT_OT_SIZE - 1], packets, address_mask, length_mask);
+            FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packets, address_mask, length_mask);
             packets++;
         }
         else
         {
-            FIELD_LINK_PACKET(&ordering_table[effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT], packets, address_mask, length_mask);
+            FIELD_LINK_PACKET(&ordering_table[effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT], packets, address_mask, length_mask);
             packets++;
         }
-        third_depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+        third_depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
         if (third_depth < 0)
         {
             FIELD_LINK_PACKET(&ordering_table[0], packets, address_mask, length_mask);
             packets++;
         }
-        else if (third_depth >= FIELD_EFFECT_OT_SIZE)
+        else if (third_depth >= FIELD_WORLD_OT_SIZE)
         {
-            FIELD_LINK_PACKET(&ordering_table[FIELD_EFFECT_OT_SIZE - 1], packets, address_mask, length_mask);
+            FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packets, address_mask, length_mask);
             packets++;
         }
         else
         {
-            FIELD_LINK_PACKET(&ordering_table[effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT], packets, address_mask, length_mask);
+            FIELD_LINK_PACKET(&ordering_table[effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT], packets, address_mask, length_mask);
             packets++;
         }
         angle += FIELD_RING_ANGLE_STEP;
@@ -5910,7 +5908,7 @@ next_segment:
         middle_cosine = rcos(0);
         direction.vx = (s16)(middle_cosine >> 7);
         direction.vy = 0;
-        direction.vz = (s16)(rsin(0) >> FIELD_EFFECT_OT_DEPTH_SHIFT);
+        direction.vz = (s16)(rsin(0) >> FIELD_WORLD_OT_DEPTH_SHIFT);
     }
     else
     {
@@ -5974,82 +5972,82 @@ next_segment:
     packets[4].tag = packet_tag;
     packets[4].color0.signed_word = next_color;
     packets[3].xy2.signed_pair.y = (s16)(center_y + offset_y);
-    depth_or_y = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+    depth_or_y = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
     next_packet = &packets[1];
     if (depth_or_y < 0)
     {
         FIELD_LINK_PACKET(&ordering_table[0], packets, mask_low, mask_high);
         packets = next_packet;
     }
-    else if (depth_or_y >= FIELD_EFFECT_OT_SIZE)
+    else if (depth_or_y >= FIELD_WORLD_OT_SIZE)
     {
-        FIELD_LINK_PACKET(&ordering_table[FIELD_EFFECT_OT_SIZE - 1], packets, mask_low, mask_high);
+        FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packets, mask_low, mask_high);
         packets = next_packet;
     }
     else
     {
         packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[depth_or_y] & mask_low);
-        first_entry = FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT);
+        first_entry = FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT);
         ot_word = *first_entry;
         *first_entry = (ot_word & mask_high) | ((uintptr_t)packets & mask_low);
         packets = next_packet;
     }
 
-    second_depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+    second_depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
     if (second_depth < 0)
     {
         FIELD_LINK_PACKET(&ordering_table[0], packets, mask_low, mask_high);
         packets++;
     }
-    else if (second_depth >= FIELD_EFFECT_OT_SIZE)
+    else if (second_depth >= FIELD_WORLD_OT_SIZE)
     {
-        FIELD_LINK_PACKET(&ordering_table[FIELD_EFFECT_OT_SIZE - 1], packets, mask_low, mask_high);
+        FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packets, mask_low, mask_high);
         packets++;
     }
     else
     {
         packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[second_depth] & mask_low);
-        second_entry = FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT);
+        second_entry = FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT);
         ot_word = *second_entry;
         *second_entry = (ot_word & mask_high) | ((uintptr_t)packets & mask_low);
         packets++;
     }
 
-    third_depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+    third_depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
     if (third_depth < 0)
     {
         FIELD_LINK_PACKET(&ordering_table[0], packets, mask_low, mask_high);
         packets++;
     }
-    else if (third_depth >= FIELD_EFFECT_OT_SIZE)
+    else if (third_depth >= FIELD_WORLD_OT_SIZE)
     {
-        FIELD_LINK_PACKET(&ordering_table[FIELD_EFFECT_OT_SIZE - 1], packets, mask_low, mask_high);
+        FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packets, mask_low, mask_high);
         packets++;
     }
     else
     {
         packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[third_depth] & mask_low);
-        third_entry = FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT);
+        third_entry = FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT);
         ot_word = *third_entry;
         *third_entry = (ot_word & mask_high) | ((uintptr_t)packets & mask_low);
         packets++;
     }
 
-    fourth_depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+    fourth_depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
     if (fourth_depth < 0)
     {
         FIELD_LINK_PACKET(&ordering_table[0], packets, mask_low, mask_high);
         packets++;
     }
-    else if (fourth_depth >= FIELD_EFFECT_OT_SIZE)
+    else if (fourth_depth >= FIELD_WORLD_OT_SIZE)
     {
-        FIELD_LINK_PACKET(&ordering_table[FIELD_EFFECT_OT_SIZE - 1], packets, mask_low, mask_high);
+        FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packets, mask_low, mask_high);
         packets++;
     }
     else
     {
         packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[fourth_depth] & mask_low);
-        fourth_entry = FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT);
+        fourth_entry = FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT);
         ot_word = *fourth_entry;
         *fourth_entry = (ot_word & mask_high) | ((uintptr_t)packets & mask_low);
         packets++;
@@ -6129,21 +6127,21 @@ u8* field_render_effect_marker(FieldMotionRecord* effect, u8* packet_cursor, s32
         ((FieldGouraudLine*)packet_cursor)[0].xy0.word = *(s32*)&screen_origin;
     }
 
-    depth = effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+    depth = effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
     if (depth < 0)
     {
         addPrim(&ordering_table[0], packet_cursor);
         packet_cursor += sizeof(LINE_G2);
     }
-    else if (depth >= FIELD_EFFECT_OT_SIZE)
+    else if (depth >= FIELD_WORLD_OT_SIZE)
     {
-        addPrim(&ordering_table[(FIELD_EFFECT_OT_SIZE - 1)], packet_cursor);
+        addPrim(&ordering_table[(FIELD_WORLD_OT_SIZE - 1)], packet_cursor);
         packet_cursor += sizeof(LINE_G2);
     }
     else
     {
         setaddr(packet_cursor, getaddr(&ordering_table[depth]));
-        setaddr(&ordering_table[effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT], packet_cursor);
+        setaddr(&ordering_table[effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT], packet_cursor);
         packet_cursor += sizeof(LINE_G2);
     }
     return field_emit_effect_texture_page(effect, part, packet_cursor, ordering_table);
@@ -6206,20 +6204,20 @@ u8* field_render_effect_trail(FieldMotionRecord* effect, u8* packet_cursor, s32*
         setPolyF4((POLY_F4*)packet_cursor);
         setSemiTrans((POLY_F4*)packet_cursor, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
 
-        depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+        depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
         if (depth < 0)
         {
             addPrim(&ordering_table[0], (POLY_F4*)packet_cursor);
             packet_cursor += sizeof(POLY_F4);
         }
-        else if (depth >= FIELD_EFFECT_OT_SIZE)
+        else if (depth >= FIELD_WORLD_OT_SIZE)
         {
-            addPrim(&ordering_table[(FIELD_EFFECT_OT_SIZE - 1)], (POLY_F4*)packet_cursor);
+            addPrim(&ordering_table[(FIELD_WORLD_OT_SIZE - 1)], (POLY_F4*)packet_cursor);
             packet_cursor += sizeof(POLY_F4);
         }
         else
         {
-            addPrim(&ordering_table[(s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT], (POLY_F4*)packet_cursor);
+            addPrim(&ordering_table[(s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT], (POLY_F4*)packet_cursor);
             packet_cursor += sizeof(POLY_F4);
         }
 
@@ -6335,21 +6333,21 @@ u8* field_render_effect_radial_fan(FieldMotionRecord* effect, u8* packet_cursor,
         ((FieldFlatLine*)packet_cursor)[1].xy0.word = ((FieldFlatLine*)packet_cursor)[0].xy1.word;
         ((FieldFlatLine*)packet_cursor)[1].color0.signed_word = ((FieldFlatLine*)packet_cursor)[0].color0.signed_word;
 
-        depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+        depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
         if (depth < 0)
         {
             addPrim(&ordering_table[0], packet_cursor);
             packet_cursor += sizeof(LINE_F2);
         }
-        else if (depth >= FIELD_EFFECT_OT_SIZE)
+        else if (depth >= FIELD_WORLD_OT_SIZE)
         {
-            addPrim(&ordering_table[FIELD_EFFECT_OT_SIZE - 1], packet_cursor);
+            addPrim(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packet_cursor);
             packet_cursor += sizeof(LINE_F2);
         }
         else
         {
             setaddr(packet_cursor, getaddr(&ordering_table[depth]));
-            setaddr(FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT), packet_cursor);
+            setaddr(FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT), packet_cursor);
             packet_cursor += sizeof(LINE_F2);
         }
     }
@@ -6358,21 +6356,21 @@ u8* field_render_effect_radial_fan(FieldMotionRecord* effect, u8* packet_cursor,
     setSemiTrans(packet_cursor, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
     ((FieldFlatLine*)packet_cursor)[0].xy1.word = first_endpoint;
 
-    depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+    depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
     if (depth < 0)
     {
         addPrim(&ordering_table[0], packet_cursor);
         packet_cursor += sizeof(LINE_F2);
     }
-    else if (depth >= FIELD_EFFECT_OT_SIZE)
+    else if (depth >= FIELD_WORLD_OT_SIZE)
     {
-        addPrim(&ordering_table[FIELD_EFFECT_OT_SIZE - 1], packet_cursor);
+        addPrim(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packet_cursor);
         packet_cursor += sizeof(LINE_F2);
     }
     else
     {
         setaddr(packet_cursor, getaddr(&ordering_table[depth]));
-        setaddr(FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT), packet_cursor);
+        setaddr(FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT), packet_cursor);
         packet_cursor += sizeof(LINE_F2);
     }
 
@@ -6544,24 +6542,24 @@ u8* field_render_effect_radial_lines(FieldMotionRecord* effect, u8* packet_curso
             }
             next_line[0].xy0.word = next_line[-1].xy1.word;
 
-            depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+            depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
             if (depth < 0)
             {
                 next_line++;
                 addPrim(&ordering_table[0], packet_cursor);
                 packet_cursor += sizeof(LINE_F2);
             }
-            else if (depth >= FIELD_EFFECT_OT_SIZE)
+            else if (depth >= FIELD_WORLD_OT_SIZE)
             {
                 next_line++;
-                addPrim(&ordering_table[FIELD_EFFECT_OT_SIZE - 1], packet_cursor);
+                addPrim(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packet_cursor);
                 packet_cursor += sizeof(LINE_F2);
             }
             else
             {
                 next_line++;
                 setaddr(packet_cursor, getaddr(&ordering_table[depth]));
-                setaddr(FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT), packet_cursor);
+                setaddr(FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT), packet_cursor);
                 packet_cursor += sizeof(LINE_F2);
             }
 
@@ -6590,21 +6588,21 @@ u8* field_render_effect_radial_lines(FieldMotionRecord* effect, u8* packet_curso
         ((FieldFlatLine*)packet_cursor)[0].xy1.signed_pair.y = camera_y - g_field_view_offset_z / 512;
     }
 
-    depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+    depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
     if (depth < 0)
     {
         addPrim(&ordering_table[0], packet_cursor);
         packet_cursor += sizeof(LINE_F2);
     }
-    else if (depth >= FIELD_EFFECT_OT_SIZE)
+    else if (depth >= FIELD_WORLD_OT_SIZE)
     {
-        addPrim(&ordering_table[FIELD_EFFECT_OT_SIZE - 1], packet_cursor);
+        addPrim(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packet_cursor);
         packet_cursor += sizeof(LINE_F2);
     }
     else
     {
         setaddr(packet_cursor, getaddr(&ordering_table[depth]));
-        setaddr(FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT), packet_cursor);
+        setaddr(FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT), packet_cursor);
         packet_cursor += sizeof(LINE_F2);
     }
 
@@ -6977,7 +6975,7 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
             quad[1].gpu.tpage = quad->gpu.tpage;
             quad[1].gpu.clut = quad->gpu.clut;
 
-            depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+            depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
             if (depth < 0)
             {
                 s32 addr = (uintptr_t)quad & addr_mask;
@@ -6985,12 +6983,12 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
                 quad++;
                 ordering_table[0] = (ordering_table[0] & tag_mask) | addr;
             }
-            else if (depth >= FIELD_EFFECT_OT_SIZE)
+            else if (depth >= FIELD_WORLD_OT_SIZE)
             {
                 s32 addr = (uintptr_t)quad & addr_mask;
-                quad->packed.tag = (quad->packed.tag & tag_mask) | (ordering_table[FIELD_EFFECT_OT_SIZE - 1] & addr_mask);
+                quad->packed.tag = (quad->packed.tag & tag_mask) | (ordering_table[FIELD_WORLD_OT_SIZE - 1] & addr_mask);
                 quad++;
-                ordering_table[FIELD_EFFECT_OT_SIZE - 1] = (ordering_table[FIELD_EFFECT_OT_SIZE - 1] & tag_mask) | addr;
+                ordering_table[FIELD_WORLD_OT_SIZE - 1] = (ordering_table[FIELD_WORLD_OT_SIZE - 1] & tag_mask) | addr;
             }
             else
             {
@@ -6998,7 +6996,7 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
                 s32* entry;
                 addr = (uintptr_t)quad & addr_mask;
                 quad->packed.tag = (quad->packed.tag & tag_mask) | (ordering_table[depth] & addr_mask);
-                entry = (s32*)(((s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (uintptr_t)ordering_table);
+                entry = (s32*)(((s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (uintptr_t)ordering_table);
                 quad++;
                 *entry = (*entry & tag_mask) | addr;
             }
@@ -7027,7 +7025,7 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
     quad->gpu.y1 -= angle;
     quad->gpu.x1 -= edge_x;
 
-    depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+    depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
     if (depth < 0)
     {
         s32 addr = (uintptr_t)quad & FIELD_GPU_ADDRESS_MASK;
@@ -7035,12 +7033,12 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
         quad++;
         ordering_table[0] = (ordering_table[0] & FIELD_GPU_LENGTH_MASK) | addr;
     }
-    else if (depth >= FIELD_EFFECT_OT_SIZE)
+    else if (depth >= FIELD_WORLD_OT_SIZE)
     {
         s32 addr = (uintptr_t)quad & FIELD_GPU_ADDRESS_MASK;
-        setaddr(quad, getaddr(&ordering_table[FIELD_EFFECT_OT_SIZE - 1]));
+        setaddr(quad, getaddr(&ordering_table[FIELD_WORLD_OT_SIZE - 1]));
         quad++;
-        ordering_table[FIELD_EFFECT_OT_SIZE - 1] = (ordering_table[FIELD_EFFECT_OT_SIZE - 1] & FIELD_GPU_LENGTH_MASK) | addr;
+        ordering_table[FIELD_WORLD_OT_SIZE - 1] = (ordering_table[FIELD_WORLD_OT_SIZE - 1] & FIELD_GPU_LENGTH_MASK) | addr;
     }
     else
     {
@@ -7050,7 +7048,7 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
         addr = (uintptr_t)quad & FIELD_GPU_ADDRESS_MASK;
         srcval = ordering_table[depth];
         setaddr(quad, srcval);
-        entry = (s32*)(((s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (uintptr_t)ordering_table);
+        entry = (s32*)(((s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (uintptr_t)ordering_table);
         quad++;
         *entry = (*entry & FIELD_GPU_LENGTH_MASK) | addr;
     }
@@ -7373,21 +7371,21 @@ u8* field_emit_effect_texture_page(FieldMotionRecord* effect, FieldObjectPart* p
 
     setDrawTPage(packet_cursor, 0, 0, getTPage(GPU_TEXTURE_4BIT, (part->behavior_flags.word >> 22), 320, 0));
 
-    index = effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+    index = effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
     if (index < 0)
     {
         addPrim(&ordering_table[0], packet_cursor);
         packet_cursor += sizeof(DR_TPAGE);
     }
-    else if (index >= FIELD_EFFECT_OT_SIZE)
+    else if (index >= FIELD_WORLD_OT_SIZE)
     {
-        addPrim(&ordering_table[FIELD_EFFECT_OT_SIZE - 1], packet_cursor);
+        addPrim(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packet_cursor);
         packet_cursor += sizeof(DR_TPAGE);
     }
     else
     {
         setaddr(packet_cursor, getaddr(&ordering_table[index]));
-        setaddr(FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT), packet_cursor);
+        setaddr(FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT), packet_cursor);
         packet_cursor += sizeof(DR_TPAGE);
     }
     return packet_cursor;
@@ -7726,7 +7724,7 @@ s32 field_resolve_effect_extent(FieldActorSlot* actor, FieldObjectPart* part)
 
     if (part->palette_extent.word & FIELD_PART_SCALE_DISTANCE_BY_OWNER)
     {
-        extent = ((g_field_object_states[owner->owner_object_index].movement.half.flags & FIELD_OBJECT_EFFECT_SCALE_MASK) * extent) / 100;
+        extent = ((g_field_object_states[owner->owner_object_index].movement.half.flags & FIELD_MOVEMENT_SCALE_MASK) * extent) / 100;
     }
 
     flags = part->placement_flags.word;
