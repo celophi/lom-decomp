@@ -101,9 +101,6 @@
 #define FIELD_MAP_X_LIMIT(bounds) ((bounds)->width << FIELD_POSITION_SHIFT)
 #define FIELD_MAP_Z_LIMIT(bounds) ((s16)(bounds)->depth << (FIELD_POSITION_SHIFT + 1))
 
-/** @brief Address @p p rounded up to a word boundary, as an integer. */
-#define FIELD_ALIGN4(p) (((uintptr_t)(p) + 3) & ~3)
-
 /**
  * @brief Form a typed pointer from a byte offset plus a base address.
  */
@@ -457,19 +454,19 @@ void field_update_scene(void)
         {
             *data_output++ = *section_source++;
         }
-        g_field_event_scripts = (u16*)FIELD_ALIGN4(data_output);
+        g_field_event_scripts = (u16*)ALIGN4(data_output);
         section_source = event_scripts_section;
         while (section_source != strings_section)
         {
             *data_output++ = *section_source++;
         }
-        g_field_actor_scripts = (u16*)FIELD_ALIGN4(data_output);
+        g_field_actor_scripts = (u16*)ALIGN4(data_output);
         section_source = actor_scripts_section;
         while (section_source != records_section)
         {
             *data_output++ = *section_source++;
         }
-        g_field_scene_record_table = (u32*)FIELD_ALIGN4(data_output);
+        g_field_scene_record_table = (u32*)ALIGN4(data_output);
         section_source = records_section;
         while (section_source != actors_section)
         {
@@ -478,7 +475,7 @@ void field_update_scene(void)
         section_source = portraits_section + 4;
         i = 0;
         portrait_count = *(u32*)portraits_section;
-        g_field_scene_portraits = (u8*)FIELD_ALIGN4(data_output);
+        g_field_scene_portraits = (u8*)ALIGN4(data_output);
         g_field_scene_portrait_count = portrait_count;
         while ((u32)i < g_field_scene_portrait_count)
         {

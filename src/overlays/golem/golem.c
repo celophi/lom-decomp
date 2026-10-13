@@ -302,7 +302,7 @@ void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel)
     g_golem_render_buffers[0].buffer_index = 0;
     g_golem_render_buffers[1].buffer_index = 1;
 
-    g_golem_work_buffer = (u8*)(((uintptr_t)golem_initialize_state((u8*)render_buffers, restore_slot_on_cancel) + 3) & ~3);
+    g_golem_work_buffer = (u8*)ALIGN4(golem_initialize_state((u8*)render_buffers, restore_slot_on_cancel));
 
     next_buffer = g_golem_render_buffers;
     ClearOTagR(next_buffer->ordering_table, GOLEM_ORDERING_TABLE_SIZE);

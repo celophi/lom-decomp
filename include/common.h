@@ -55,6 +55,12 @@ typedef s32 intptr_t;
 /* Round x up to the nearest multiple of 64 (PSX texture page width alignment) */
 #define ALIGN64(x) (((x) + 0x3F) & 0xFFC0)
 
+/** @brief Address or byte count @p x rounded up to a multiple of 4, as an integer. */
+#define ALIGN4(x) (((uintptr_t)(x) + 3) & ~3)
+
+/** @brief Address or byte count @p x rounded up to a multiple of 2, as an integer. */
+#define ALIGN2(x) (((uintptr_t)(x) + 1) & ~1)
+
 /** @brief Byte offset of @p member within @p type, as a u32 (the PS1 toolchain has no stddef.h). */
 #define OFFSETOF(type, member) ((u32)((u8*)&((type*)0)->member - (u8*)0))
 

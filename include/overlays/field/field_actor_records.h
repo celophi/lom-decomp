@@ -524,6 +524,10 @@ typedef struct
     s16 start_value;
 } FieldParameterCurve;
 
+/** @brief FieldParameterCurve::head segment_count bits, and the random flag above them. */
+#define FIELD_CURVE_SEGMENT_COUNT_MASK 0x7F
+#define FIELD_CURVE_RANDOM 0x80
+
 /** @brief Status word of an animation actor slot. */
 typedef union
 {
@@ -541,6 +545,9 @@ typedef union
     } parts;
 } FieldActorSlotStatus;
 
+/** @brief Sound-effect buffers a FieldActorSlot can hold. */
+#define FIELD_ACTOR_SOUND_COUNT 2
+
 /**
  * @brief Animation actor slot (0x244 bytes): part definitions, per-track counters and object bindings.
  * @note slot_index identifies the slot in g_field_actor_slots; object indices refer to g_field_actors and g_field_object_states.
@@ -557,7 +564,7 @@ typedef struct FieldActorSlot
     u8* track_data;
     u8* mesh_data;
     /** @brief Sound-effect buffers of the resource, played by kind 2 sound commands. */
-    struct AkaoHeader* sound_data[2];
+    struct AkaoHeader* sound_data[FIELD_ACTOR_SOUND_COUNT];
     u8 active;
     /** @brief Number of entries in parts[]. */
     u8 part_count;

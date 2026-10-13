@@ -3642,7 +3642,7 @@ static void field_text_queue_uploads(FieldTextState* state, u8** cursor)
     else
     {
         dst = cur;
-        cur += ((w * h) + 1) & ~1;
+        cur += ALIGN2(w * h);
         req->data = (u_long*)dst;
         rows = h;
         while (--rows != -1)
@@ -3682,7 +3682,7 @@ static void field_text_queue_uploads(FieldTextState* state, u8** cursor)
             req->rect.h = h;
             src = FIELD_TEXT_CACHE + (state->dirty_end_v * FIELD_TEXT_CACHE_ROW_WORDS);
             dst = cur;
-            cur += (((state->dirty_end_u >> 2) * h) + 1) & ~1;
+            cur += ALIGN2((state->dirty_end_u >> 2) * h);
             rows = h;
             req->data = (u_long*)dst;
             while (--rows != -1)

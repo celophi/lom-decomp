@@ -231,7 +231,7 @@ u8* zukan_initialize_state(u8* work_buffer, s32 category)
     s32 unused[2];
 
     g_zukan_category = category;
-    g_zukan_work_buffer = (u8*)(((uintptr_t)work_buffer + 3) & ~3);
+    g_zukan_work_buffer = (u8*)ALIGN4(work_buffer);
     zukan_upload_ui_images((next_buffer = work_buffer + 0x8000, work_buffer));
     field_reset_input_repeat();
     zukan_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, ZUKAN_FADE_STEPS);

@@ -193,9 +193,7 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 #define FIELD_PAN_SCREEN_LEFT 0x10
 #define FIELD_PAN_SCREEN_RIGHT 0x131
 
-/** @brief Parameter curve word: segment count, random flag; segment word: length and value. */
-#define FIELD_CURVE_SEGMENT_COUNT_MASK 0x7F
-#define FIELD_CURVE_RANDOM 0x80
+/** @brief Segment word: length and value. */
 #define FIELD_SEGMENT_LENGTH_MASK 0x3FF
 #define FIELD_SEGMENT_VALUE_SHIFT 10
 
@@ -2878,7 +2876,7 @@ static void field_stream_resource_to_buffer(u16 resource_id, void* destination)
 
     size = cdrom_queue_read(resource_id, destination);
     cdrom_wait_queue_empty();
-    g_field_resource_cursor += (size + 3) & ~3;
+    g_field_resource_cursor += ALIGN4(size);
 }
 
 /**
@@ -3470,7 +3468,7 @@ static void field_append_resource_data(u32* src, s32 length, s32 slot_index)
     }
 
     g_field_resource_entries[slot_index].start = g_field_resource_cursor;
-    g_field_resource_cursor += (length + 3) & ~3;
+    g_field_resource_cursor += ALIGN4(length);
 }
 
 /**
