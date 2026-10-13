@@ -512,35 +512,36 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
                     row_input = resource + *(u16*)resource + FIELD_ACTOR_TIM_PIXELS;
                     row_input = row_input + texture->x * 2 + texture->y * FIELD_ACTOR_TEXTURE_ROW_BYTES;
 
+                    if (texture_height == 0)
+                    {
+                        j += 1;
+                        texture++;
+                        continue;
+                    }
+
                     do
                     {
-                        if (texture_height != 0)
+                        pixel_input = (u16*)row_input;
+                        column = 0;
+
+                        if (texture->width != 0)
                         {
                             do
                             {
-                                pixel_input = (u16*)row_input;
-                                column = 0;
-
-                                if (texture->width != 0)
-                                {
-                                    do
-                                    {
-                                        column += 1;
-                                        pixel = *pixel_input;
-                                        pixel_input++;
-                                        *pixel_output = pixel;
-                                        pixel_output++;
-                                    } while (column < (s32)texture->width);
-                                }
-
-                                row += 1;
-                                row_input += FIELD_ACTOR_TEXTURE_ROW_BYTES;
-                            } while (row < (s32)texture->height);
+                                column += 1;
+                                pixel = *pixel_input;
+                                pixel_input++;
+                                *pixel_output = pixel;
+                                pixel_output++;
+                            } while (column < (s32)texture->width);
                         }
 
-                        j += 1;
-                        texture++;
-                    } while (0);
+                        row += 1;
+                        row_input += FIELD_ACTOR_TEXTURE_ROW_BYTES;
+                    } while (row < (s32)texture->height);
+
+                    j += 1;
+                    texture++;
                 } while (j < (s32)mesh_fields->texture_part_count);
             }
 
