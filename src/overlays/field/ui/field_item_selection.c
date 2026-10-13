@@ -382,7 +382,7 @@ static inline void drop_selected_item(void)
             control |= FIELD_ITEM_ACTOR_CONTROL_MODE;
             actor->animation_frame = 0;
             actor->animation_active = 1;
-            actor->command = FIELD_ACTOR_COMMAND_BA;
+            actor->command = FIELD_ACTOR_COMMAND_HOLD;
             actor->removal_delay = FIELD_ITEM_ACTOR_REMOVAL_DELAY;
             actor->animation_state = 0xFE;
             actor->control.word = control;

@@ -23,7 +23,7 @@
 #define FIELD_CONTROL_MODE_MASK 0x1FF
 /** @brief FieldActor::control bit set while the actor moves. */
 #define FIELD_CONTROL_MOVING 0x200
-/** @brief FieldActor::control second movement bit (placeholder name; only ever cleared). */
+/** @brief FieldActor::control second movement bit (placeholder name: FIELD code only clears and tests it; nothing sets it). */
 #define FIELD_CONTROL_MOVEMENT_UNK400 0x400
 /** @brief FieldActor::control movement bits. */
 #define FIELD_CONTROL_MOVEMENT_MASK (FIELD_CONTROL_MOVING | FIELD_CONTROL_MOVEMENT_UNK400)
@@ -290,13 +290,18 @@ enum
     FIELD_ACTOR_COMMAND_DEFEAT_WAIT = 0x93,
     FIELD_ACTOR_COMMAND_DEFEAT_END = 0x94,
     FIELD_ACTOR_COMMAND_SEQUENCE_WAIT = 0x95,
-    FIELD_ACTOR_COMMAND_96 = 0x96,
+    /** Follow-up attack started from a jump ability while action button 3 is held; no further chaining. */
+    FIELD_ACTOR_COMMAND_AIR_FOLLOW_UP = 0x96,
+    /** Runs like FIELD_ACTOR_COMMAND_SECOND_JUMP and counts as an action for hits; nothing in the C code sets it. */
     FIELD_ACTOR_COMMAND_98 = 0x98,
     FIELD_ACTOR_COMMAND_IDLE_AFTER_ANIMATION = 0x99,
     FIELD_ACTOR_COMMAND_IDLE_AFTER_RELOAD = 0x9A,
-    FIELD_ACTOR_COMMAND_9B = 0x9B,
-    FIELD_ACTOR_COMMAND_9C = 0x9C,
-    FIELD_ACTOR_COMMAND_9D = 0x9D,
+    /** Second jump of a Double Jump, started while recovering from the first. */
+    FIELD_ACTOR_COMMAND_SECOND_JUMP = 0x9B,
+    /** Raise the actor by command_param each frame for unk26 frames. */
+    FIELD_ACTOR_COMMAND_TIMED_LIFT = 0x9C,
+    /** Lower the actor by command_param each frame until it reaches the ground (or unk26 runs out). */
+    FIELD_ACTOR_COMMAND_DESCEND_TO_GROUND = 0x9D,
     FIELD_ACTOR_COMMAND_APPROACH_TARGET = 0xA0,
     FIELD_ACTOR_COMMAND_ACTION_END = 0xA4,
     FIELD_ACTOR_COMMAND_TIMED_WALK = 0xA7,
@@ -313,7 +318,8 @@ enum
     FIELD_ACTOR_COMMAND_TIMED_SLIDE = 0xB6,
     FIELD_ACTOR_COMMAND_WAIT = 0xB7,
     FIELD_ACTOR_COMMAND_ATTACHED = 0xB8,
-    FIELD_ACTOR_COMMAND_BA = 0xBA,
+    /** Leave the actor and its command untouched (dropped items wait in it until removed). */
+    FIELD_ACTOR_COMMAND_HOLD = 0xBA,
     FIELD_ACTOR_COMMAND_RETIRE = 0xBB,
     FIELD_ACTOR_COMMAND_WAIT_BOUND_ACTOR = 0xBC,
     FIELD_ACTOR_COMMAND_INSTRUMENT_END = 0xBD

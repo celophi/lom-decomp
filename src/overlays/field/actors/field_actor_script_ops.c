@@ -114,8 +114,8 @@ enum
     FIELD_SCRIPT_OP_JUMP = FIELD_ACTOR_COMMAND_JUMP,
     FIELD_SCRIPT_OP_DEFEAT = 0x90,
     FIELD_SCRIPT_OP_MOVE_TEXTURE = 0x97,
-    FIELD_SCRIPT_OP_9C = FIELD_ACTOR_COMMAND_9C,
-    FIELD_SCRIPT_OP_9D = FIELD_ACTOR_COMMAND_9D,
+    FIELD_SCRIPT_OP_TIMED_LIFT = FIELD_ACTOR_COMMAND_TIMED_LIFT,
+    FIELD_SCRIPT_OP_DESCEND_TO_GROUND = FIELD_ACTOR_COMMAND_DESCEND_TO_GROUND,
     FIELD_SCRIPT_OP_LOAD_TECHNIQUE = 0x9E,
     FIELD_SCRIPT_OP_PLAY_BOUND_ACTION = 0x9F,
     FIELD_SCRIPT_OP_APPROACH_TARGET = FIELD_ACTOR_COMMAND_APPROACH_TARGET,
@@ -726,8 +726,8 @@ static void field_run_actor_script_command(FieldActor* actor)
         actor->animation_active = 1;
         field_restart_actor_animation(actor);
         return;
-    case FIELD_SCRIPT_OP_9C:
-    case FIELD_SCRIPT_OP_9D:
+    case FIELD_SCRIPT_OP_TIMED_LIFT:
+    case FIELD_SCRIPT_OP_DESCEND_TO_GROUND:
         actor->command = script[0];
         actor->animation_state = FIELD_WAIT_UNTIL_DONE;
         actor->animation = script[1] + (actor->animation & FIELD_ANIMATION_FACING);

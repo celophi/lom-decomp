@@ -251,7 +251,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                 actor->y -= FIELD_STEP_OFFSET(actor);
                 field_prepare_actor_action(actor);
                 field_command_history_clear(actor->object_index);
-                actor->command = FIELD_ACTOR_COMMAND_9B;
+                actor->command = FIELD_ACTOR_COMMAND_SECOND_JUMP;
                 return;
             }
 #if defined(VERSION_JP)
@@ -266,7 +266,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                 actor->y -= FIELD_STEP_OFFSET(actor);
                 field_prepare_actor_action(actor);
                 field_command_history_clear(actor->object_index);
-                actor->command = FIELD_ACTOR_COMMAND_9B;
+                actor->command = FIELD_ACTOR_COMMAND_SECOND_JUMP;
                 return;
             }
         }
@@ -321,7 +321,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
             actor->y -= FIELD_STEP_OFFSET(actor);
             field_restart_actor_animation(actor);
             field_command_history_clear(actor->object_index);
-            actor->command = FIELD_ACTOR_COMMAND_96;
+            actor->command = FIELD_ACTOR_COMMAND_AIR_FOLLOW_UP;
             actor->frame_timer = 1;
             actor->frame_ticks = 1;
             actor->frame_length = 1;

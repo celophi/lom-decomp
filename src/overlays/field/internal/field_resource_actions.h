@@ -72,4 +72,7 @@ typedef struct
 /** @brief Action rows indexed by the loaded actor resource. */
 extern FieldActionRow g_field_resource_actions[];
 
+/** @brief Default action animation and parameter of each ability, as byte pairs at ability * 2 (animation) and ability * 2 + 1 (parameter). */
+extern u8 g_field_action_animation_parameters[];
+
 #endif

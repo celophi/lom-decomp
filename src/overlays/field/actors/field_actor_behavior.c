@@ -1,10 +1,7 @@
-/** @file field_actor_behavior.c
+/**
+ * @file field_actor_behavior.c
  * @brief Party follower routes, controller movement, actor commands, and action
  *        animation dispatch.
- *
- * One translation unit: g_field_follower_animation_map (used only by the route
- * code) follows the behavior tables g_field_actor_turn_animations ..
- * g_field_action_sound_ids in .data, so route and behavior data share one object.
  */
 
 #include "common.h"
@@ -128,7 +125,6 @@ extern u8 g_field_follower_animation_map[];
 extern s32 g_field_actor_walk_animations[];
 extern s32 g_field_actor_diagonal_walk_animations[];
 extern u8 g_field_actor_turn_animations[];
-extern u8 g_field_action_animation_parameters[];
 extern u8 g_field_action_sound_ids[];
 extern u8 g_field_collision_disabled;
 extern s32 g_field_pad_buttons;
@@ -807,7 +803,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
     record_input = 0;
     if (command != FIELD_ACTOR_COMMAND_RECOVER)
     {
-        record_input = command != FIELD_ACTOR_COMMAND_96;
+        record_input = command != FIELD_ACTOR_COMMAND_AIR_FOLLOW_UP;
     }
     field_command_history_record(pad_index, record_input);
     if (g_field_battle_entry_state != 0)
@@ -1047,7 +1043,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
     {
         field_update_actor_command(movement_actor);
     }
-    return (movement_actor->control.word >> FIELD_CONTROL_MOVEMENT_SHIFT) & 3;
+    return (movement_actor->control.word >> FIELD_CONTROL_MOVEMENT_SHIFT) & (FIELD_CONTROL_MOVEMENT_MASK >> FIELD_CONTROL_MOVEMENT_SHIFT);
 }
 
 /**
@@ -1358,7 +1354,7 @@ s32 field_update_actor_command(FieldActor* actor)
     } FieldCommandWork;
 
     FieldCommandWork scratch;
-    s32 parameter_offset;
+    s32 pair_offset;
     s32 target_count_or_slot;
     s32 eligible_count;
     SceneState* scene;
@@ -1429,12 +1425,12 @@ s32 field_update_actor_command(FieldActor* actor)
                 {
                     combo_or_slot = field_find_combined_ability(g_field_resource_actions[actor->resource_index].slots[0].command,
                                                                 g_field_resource_actions[actor->resource_index].slots[1].command);
-                    parameter_offset = combo_or_slot * 2;
+                    pair_offset = combo_or_slot * 2;
                     if (combo_or_slot != FIELD_ABILITY_NONE)
                     {
                         scratch.combo_action.command = combo_or_slot;
-                        scratch.combo_action.animation = g_field_action_animation_parameters[parameter_offset];
-                        scratch.combo_action.parameter = g_field_action_animation_parameters[parameter_offset + 1];
+                        scratch.combo_action.animation = g_field_action_animation_parameters[pair_offset];
+                        scratch.combo_action.parameter = g_field_action_animation_parameters[pair_offset + 1];
                         switch (combo_or_slot)
                         {
                         case FIELD_ABILITY_SPIN:
@@ -1474,11 +1470,11 @@ s32 field_update_actor_command(FieldActor* actor)
         }
         field_update_actor_action(actor, 1);
         return;
-    case FIELD_ACTOR_COMMAND_96:
+    case FIELD_ACTOR_COMMAND_AIR_FOLLOW_UP:
         field_update_actor_action(actor, 0);
         return;
     case FIELD_ACTOR_COMMAND_98:
-    case FIELD_ACTOR_COMMAND_9B:
+    case FIELD_ACTOR_COMMAND_SECOND_JUMP:
         field_update_actor_action(actor, 1);
         return;
     case FIELD_ACTOR_COMMAND_INSTRUMENT:
@@ -1706,10 +1702,10 @@ s32 field_update_actor_command(FieldActor* actor)
     case FIELD_ACTOR_COMMAND_SINK:
         field_move_actor_step(actor, 0, FIELD_VERTICAL_STEP, 0);
         return;
-    case FIELD_ACTOR_COMMAND_9C:
+    case FIELD_ACTOR_COMMAND_TIMED_LIFT:
         field_update_actor_lift(actor, 1);
         return;
-    case FIELD_ACTOR_COMMAND_9D:
+    case FIELD_ACTOR_COMMAND_DESCEND_TO_GROUND:
         field_update_actor_lift(actor, 0);
         return;
     case FIELD_ACTOR_COMMAND_APPROACH_TARGET:
@@ -1942,7 +1938,7 @@ s32 field_update_actor_command(FieldActor* actor)
         }
         field_apply_action_animation(actor, state, action);
         return;
-    case FIELD_ACTOR_COMMAND_BA:
+    case FIELD_ACTOR_COMMAND_HOLD:
         break;
     default:
         scratch.displacement.vx = 0;

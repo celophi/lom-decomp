@@ -197,8 +197,6 @@ extern u8 g_field_command_names[];
 extern u8 g_field_technique_names[];
 /* Action slot bound to each hint button (index into FieldCharacterRecord::button_actions). */
 extern u8 g_field_hint_button_map[];
-/* Icon and texture parameters of the action animations, two bytes per action. */
-extern u8 g_field_action_animation_parameters[];
 /* Action icons of the instrument types. */
 extern u8 g_field_instrument_icons[];
 
