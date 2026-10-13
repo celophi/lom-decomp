@@ -534,28 +534,25 @@ void field_interpolate_palette_track(FieldActorSlot* slot, s32 palette_sequence,
 
     palette_selectors = palette_sequence;
 
-    if (segments_remaining != 0)
+    while (segments_remaining != 0)
     {
-        do
+        u16 segment_word = *segment;
+        s32 segment_end_frame = segment_start_frame + (segment_word & FIELD_SEGMENT_LENGTH_MASK);
+
+        if (slot->track_frames[g_field_track_index] < segment_end_frame)
         {
-            u16 segment_word = *segment;
-            s32 segment_end_frame = segment_start_frame + (segment_word & FIELD_SEGMENT_LENGTH_MASK);
+            break;
+        }
 
-            if (slot->track_frames[g_field_track_index] < segment_end_frame)
-            {
-                break;
-            }
+        segment_start_frame = segment_end_frame;
+        segment++;
+        selector_shift += FIELD_PALETTE_SELECTOR_BITS;
+        segments_remaining--;
 
-            segment_start_frame = segment_end_frame;
-            segment++;
-            selector_shift += FIELD_PALETTE_SELECTOR_BITS;
-            segments_remaining--;
-
-            if (selector_shift == FIELD_PALETTE_SELECTOR_END)
-            {
-                selector_shift = FIELD_PALETTE_SELECTOR_BITS;
-            }
-        } while (segments_remaining != 0);
+        if (selector_shift == FIELD_PALETTE_SELECTOR_END)
+        {
+            selector_shift = FIELD_PALETTE_SELECTOR_BITS;
+        }
     }
 
     if (segments_remaining != 0)
@@ -574,9 +571,8 @@ void field_interpolate_palette_track(FieldActorSlot* slot, s32 palette_sequence,
         }
 
         output_color = output;
-        color_index = 0;
 
-        do
+        for (color_index = 0; color_index < GPU_CLUT_4BIT_COLORS; color_index++, output_color++, start_palette++, end_palette++)
         {
             u16 start_color = *start_palette;
             u16 end_color = *end_palette;
@@ -596,11 +592,7 @@ void field_interpolate_palette_track(FieldActorSlot* slot, s32 palette_sequence,
             s32 blue_step = (blue_range * frame_offset) / segment_length;
 
             *output_color = (((start_color & 0x8000) | (start_red + red_step)) | ((start_green + green_step) << 5)) | ((start_blue + blue_step) << 10);
-            output_color++;
-            color_index++;
-            start_palette++;
-            end_palette++;
-        } while (color_index < GPU_CLUT_4BIT_COLORS);
+        }
     }
 }
 
@@ -633,7 +625,7 @@ s32 field_evaluate_parameter_track(FieldActorSlot* slot, s32 curve_index)
     {
         current_frame = slot->track_frames[g_field_track_index];
 
-        do
+        for (; segments_remaining != 0; segments_remaining--, segment++)
         {
             u16 segment_word = *segment;
             s32 segment_end_frame = segment_start_frame + (segment_word & FIELD_SEGMENT_LENGTH_MASK);
@@ -645,8 +637,7 @@ s32 field_evaluate_parameter_track(FieldActorSlot* slot, s32 curve_index)
 
             segment_start_frame = segment_end_frame;
             start_delta = segment_word >> FIELD_SEGMENT_VALUE_SHIFT;
-            segment++;
-        } while (--segments_remaining != 0);
+        }
     }
 
     value_range = curve->end_value - curve->start_value;
@@ -854,22 +845,18 @@ u32 field_evaluate_parameter_track_at_time(FieldActorSlot* slot, s32 curve_index
     segments_remaining = curve->head.bytes.segment_count & FIELD_CURVE_SEGMENT_COUNT_MASK;
     segment = &slot->curve_segments[curve->head.bytes.segment_offset];
 
-    if (segments_remaining != 0)
+    for (; segments_remaining != 0; segments_remaining--, segment++)
     {
-        do
+        u16 current = *segment;
+        s32 segment_end_frame = segment_start_frame + (current & FIELD_SEGMENT_LENGTH_MASK);
+
+        if (sample_frame < segment_end_frame)
         {
-            u16 current = *segment;
-            s32 segment_end_frame = segment_start_frame + (current & FIELD_SEGMENT_LENGTH_MASK);
+            break;
+        }
 
-            if (sample_frame < segment_end_frame)
-            {
-                break;
-            }
-
-            segment_start_frame = segment_end_frame;
-            start_delta = current >> FIELD_SEGMENT_VALUE_SHIFT;
-            segment++;
-        } while ((--segments_remaining) != 0);
+        segment_start_frame = segment_end_frame;
+        start_delta = current >> FIELD_SEGMENT_VALUE_SHIFT;
     }
 
     value_range = curve->end_value - curve->start_value;
@@ -1006,20 +993,18 @@ void field_initialize_actor_slots(void)
  */
 void field_clear_actor_slots(void)
 {
-    s32 slot_index = 0;
+    s32 slot_index;
     FieldActorSlot* slot = g_field_actor_slots;
 
-    do
+    for (slot_index = 0; slot_index < FIELD_ACTOR_SLOT_TOTAL; slot_index++, slot++)
     {
-        slot_index += 1;
         slot->active = 0;
         slot->target_count = 0;
         slot->track_mask = 0;
         slot->pending_track_mask = 0;
         slot->sound_flags[0] = 0;
         slot->sound_flags[1] = 0;
-        slot++;
-    } while (slot_index < FIELD_ACTOR_SLOT_TOTAL);
+    }
 }
 
 /**
@@ -1058,15 +1043,10 @@ void field_start_actor_animation(s32 slot_index, s32 target_count, u8* targets)
         j = 0;
         i = 0;
 
-        if (target_count > 0)
+        for (; i < target_count; i++)
         {
-            do
-            {
-                slot->targets[j] = *target_cursor;
-                j++;
-                target_cursor += FIELD_TARGET_STRIDE;
-                i++;
-            } while (i < target_count);
+            slot->targets[j++] = *target_cursor;
+            target_cursor += FIELD_TARGET_STRIDE;
         }
 
         if (j != 0)
@@ -1259,7 +1239,7 @@ void field_update_actor_animations(void)
     controller->ports[1].actuator_control.fields.large_motor_command = 0U;
     controller->ports[0].actuator_control.fields.large_motor_command = 0U;
 
-    do
+    for (; slot_index < FIELD_ACTOR_SLOT_TOTAL; slot_index++, slot++)
     {
         if (slot->duration != 0)
         {
@@ -1350,10 +1330,7 @@ void field_update_actor_animations(void)
             slot->sound_flags[0] &= ~FIELD_SOUND_PLAYED;
             slot->sound_flags[1] &= ~FIELD_SOUND_PLAYED;
         }
-
-        slot_index += 1;
-        slot += 1;
-    } while (slot_index < FIELD_ACTOR_SLOT_TOTAL);
+    }
 }
 
 /**
@@ -2009,11 +1986,9 @@ void field_release_actor_resource_slot(s32 slot_index_minus_one)
 
         g_field_player_records[slot_index].head.bits.active = 0;
 
-        while (src != g_field_resource_cursor)
+        for (; src != g_field_resource_cursor; src++, dst++)
         {
             *dst = *src;
-            src++;
-            dst++;
         }
 
         for (i = 0; i < FIELD_RESOURCE_MOVABLE_COUNT; i++)
@@ -2025,10 +2000,9 @@ void field_release_actor_resource_slot(s32 slot_index_minus_one)
             }
         }
 
-        i = 0;
         actor = g_field_actors;
 
-        do
+        for (i = 0; i < FIELD_ACTOR_COUNT; i++, actor++)
         {
             if ((actor->presence != FIELD_ACTOR_UNUSED) && (actor->resource_index != FIELD_RESOURCE_FIXED))
             {
@@ -2037,10 +2011,7 @@ void field_release_actor_resource_slot(s32 slot_index_minus_one)
                     actor->frame_data -= size;
                 }
             }
-
-            i++;
-            actor++;
-        } while (i < FIELD_ACTOR_COUNT);
+        }
 
         g_field_resource_cursor = ((u8*)g_field_resource_cursor) - size;
         g_field_resource_entries[slot_index].flags &= ~FIELD_RESOURCE_LOADED;
@@ -2289,11 +2260,9 @@ void field_release_resource_entry(s32 entry_index)
         size = src - g_field_resource_entries[entry_index].start;
         dst = g_field_resource_entries[entry_index].start;
 
-        while (src != g_field_resource_cursor)
+        for (; src != g_field_resource_cursor; src++, dst++)
         {
             *dst = *src;
-            src++;
-            dst++;
         }
 
         for (i = 0; i < FIELD_RESOURCE_MOVABLE_COUNT; i++)
@@ -2430,12 +2399,10 @@ void field_initialize_actor_part(s32 part_index, s32 timer_mode)
     words_remaining = sizeof(g_field_object_parts[part_index]) / sizeof(*word_cursor);
     word_cursor = (u32*)&g_field_object_parts[part_index];
 
-    do
+    for (; words_remaining != 0; words_remaining--, word_cursor++)
     {
         *word_cursor = 0;
-        words_remaining--;
-        word_cursor++;
-    } while (words_remaining != 0);
+    }
 
     g_field_object_parts[part_index].tint_blue = FIELD_TINT_NEUTRAL;
     g_field_object_parts[part_index].tint_green = FIELD_TINT_NEUTRAL;
@@ -3433,12 +3400,9 @@ static void field_append_resource_data(u32* src, s32 length, s32 slot_index)
     dst = g_field_resource_cursor;
     n = (u32)(length + 3) >> 2;
 
-    while (n != 0)
+    for (; n != 0; src++, n--, dst++)
     {
         *dst = *src;
-        src++;
-        n--;
-        dst++;
     }
 
     g_field_resource_entries[slot_index].start = g_field_resource_cursor;
@@ -3714,9 +3678,7 @@ static void field_update_actor_part_effects(FieldActorSlot* slot)
                 if (slot->active_counts[g_field_track_index][i] < target_count &&
                     field_get_track_counter_modulo(slot, (part->behavior_flags.bytes.high & FIELD_PART_PERIOD_MASK) + 1) == 0)
                 {
-                    spawn_count = (part->appearance.fields.color_track_flags & FIELD_PART_BURST_MASK) + 1;
-
-                    while (spawn_count != 0)
+                    for (spawn_count = (part->appearance.fields.color_track_flags & FIELD_PART_BURST_MASK) + 1; spawn_count != 0; spawn_count--)
                     {
                         if (slot->active_counts[g_field_track_index][i] >= target_count)
                         {
@@ -3729,8 +3691,6 @@ static void field_update_actor_part_effects(FieldActorSlot* slot)
                         {
                             break;
                         }
-
-                        spawn_count--;
                     }
                 }
             }
