@@ -41,9 +41,6 @@ extern FieldMotionRecord g_field_effect_records[];
 #define FIELD_PALETTE_ANIMATION_SUBPALETTE_OFFSET(word) (((word) >> 3) & 0x1E0)
 #define FIELD_PALETTE_ANIMATION_SUBPALETTE_X(word) (((word) >> 4) & 0xF0)
 
-/** @brief Screen-space centre added to every projected mesh vertex. */
-#define FIELD_MESH_SCREEN_CENTER_X (SCREEN_WIDTH / 2)
-#define FIELD_MESH_SCREEN_CENTER_Y (VRAM_DRAW_HEIGHT / 2)
 /** @brief Colour channel value that leaves a tinted colour unchanged. */
 #define FIELD_COLOR_NEUTRAL 0x80
 /** @brief Primitive kinds of a mesh (FIELD_MESH_FACE_KIND of its first face). */
@@ -334,8 +331,8 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
     screen_vertices = (s32 *)g_field_mesh_screen_vertices;
     depth_offsets = g_field_mesh_depth_offsets;
     face = FIELD_ACTOR_MESH(actor, mesh_index)->faces;
-    screen_origin->vx = FIELD_MESH_SCREEN_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256;
-    screen_origin->vy = FIELD_MESH_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512;
+    screen_origin->vx = FIELD_SCREEN_X(effect->x);
+    screen_origin->vy = FIELD_SCREEN_Y(effect->y, effect->z);
     primitive_kind = FIELD_MESH_FACE_KIND(face);
 
     switch (primitive_kind)
@@ -622,8 +619,8 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
     transformed_normals = g_field_mesh_transformed_normals;
     depth_offsets = g_field_mesh_depth_offsets;
     face = FIELD_ACTOR_MESH(actor, mesh_index)->faces;
-    screen_origin->vx = FIELD_MESH_SCREEN_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256;
-    screen_origin->vy = FIELD_MESH_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512;
+    screen_origin->vx = FIELD_SCREEN_X(effect->x);
+    screen_origin->vy = FIELD_SCREEN_Y(effect->y, effect->z);
     primitive_kind = FIELD_MESH_FACE_KIND(face);
 
     switch (primitive_kind)

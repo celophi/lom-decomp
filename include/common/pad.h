@@ -67,6 +67,9 @@ typedef struct
 /** @brief First byte of SCD_REGS (device_type), addressed as its own symbol by some overlays. */
 extern u8 g_controller_device_type;
 
+/** @brief Swap the two bytes of a controller button word (the SCD driver stores them reversed). */
+#define PAD_SWAP_BYTES(b) (((b) << 8) | ((b) >> 8))
+
 /**
  * Remaps the four face-button bits in a byte-swapped controller word from the
  * PSX hardware layout (Triangle/Circle/Cross/Square at bits 7/6/5/4) to the

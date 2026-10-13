@@ -45,8 +45,20 @@
 #define STRIP_COUNT 4
 #define STRIP_SEGMENT_COUNT 8
 
+/** @brief Angle of one strip or arch segment: a sixteenth of a turn. */
+#define EFFECT_SEGMENT_ANGLE (FIELD_ANGLE_TURN / 16)
+
+/** @brief Angle between the two edges of a dome arch. */
+#define DOME_ARCH_WIDTH 0x180
+
 /** @brief Width of a curved strip, in fixed-point units. */
 #define CURVE_STRIP_WIDTH 0x1400
+
+/** @brief Z offset of the curved strips from the effect position, in fixed-point units. */
+#define CURVE_Z_OFFSET 0x2000
+
+/** @brief Phases per curve scroll cycle; the strips move two strip widths per cycle. */
+#define CURVE_PHASE_PERIOD ((2 * CURVE_STRIP_WIDTH) >> 8)
 
 /** @brief Width of a spiral strip, in radius units. */
 #define SPIRAL_STRIP_WIDTH 20
@@ -94,55 +106,54 @@
 #define SET_EFFECT_RADIUS(actor, radius)                                                                                                                       \
     (OBJECT_STATE(actor).movement.word = (OBJECT_STATE(actor).movement.word & ~FIELD_MOVEMENT_SCALE_MASK) | ((radius) & FIELD_MOVEMENT_SCALE_MASK))
 
-/** @brief Project world point @p _tmp into vertex @p _vert of quad @p _poly. */
-#define PROJECT_POINT(_poly, _vert, _tmp)                                                                                                                      \
-    (_poly)->x##_vert = (s16)(FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + (_tmp).vx / 256);                                                                \
-    (_poly)->y##_vert = (s16)(FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + (_tmp).vy / 256 - (_tmp).vz / 512 - g_field_view_offset_z / 512)
+/** @brief Project the world point @p _point into vertex @p _vert of quad @p _poly. */
+#define PROJECT_POINT(_poly, _vert, _point)                                                                                                                    \
+    ((_poly)->x##_vert = (s16)FIELD_SCREEN_X((_point).vx), (_poly)->y##_vert = (s16)FIELD_SCREEN_Y((_point).vy, (_point).vz))
 
 /**
- * @brief Link the packet at the cursor into the ordering table by depth and advance the cursor.
- * @note @p _bucket is evaluated up to three times.
+ * @brief Link the packet at @p _cursor into ordering table @p _ot by depth and advance the cursor.
+ * @note Depths below zero or past the table go to its first or last bucket; @p _depth is evaluated up to three times.
  */
-#define ADD_PRIM_BY_DEPTH(_bucket, _type)                                                                                                                      \
-    if ((_bucket) < 0)                                                                                                                                         \
+#define ADD_PRIM_BY_DEPTH(_ot, _cursor, _depth, _type)                                                                                                         \
+    if ((_depth) < 0)                                                                                                                                          \
     {                                                                                                                                                          \
-        addPrim(&ordering_table[0], (_type*)cursor);                                                                                                           \
-        cursor += sizeof(_type);                                                                                                                               \
+        addPrim(&(_ot)[0], (_cursor));                                                                                                                         \
+        (_cursor) = (void*)((_type*)(_cursor) + 1);                                                                                                            \
     }                                                                                                                                                          \
-    else if ((_bucket) >= FIELD_WORLD_OT_SIZE)                                                                                                                    \
+    else if ((_depth) >= FIELD_WORLD_OT_SIZE)                                                                                                                  \
     {                                                                                                                                                          \
-        addPrim(&ordering_table[FIELD_WORLD_OT_SIZE - 1], (_type*)cursor);                                                                                        \
-        cursor += sizeof(_type);                                                                                                                               \
+        addPrim(&(_ot)[FIELD_WORLD_OT_SIZE - 1], (_cursor));                                                                                                   \
+        (_cursor) = (void*)((_type*)(_cursor) + 1);                                                                                                            \
     }                                                                                                                                                          \
     else                                                                                                                                                       \
     {                                                                                                                                                          \
-        addPrim(&ordering_table[(_bucket)], (_type*)cursor);                                                                                                   \
-        cursor += sizeof(_type);                                                                                                                               \
+        addPrim(&(_ot)[(_depth)], (_cursor));                                                                                                                  \
+        (_cursor) = (void*)((_type*)(_cursor) + 1);                                                                                                            \
     }
 
 /**
- * @brief Rotate (@p _radius, 0, 0) by @p matrix and store position +/- the result in work.world.
- * @note Uses the locals work, matrix, position and facing of field_build_effect_spiral.
+ * @brief Rotate (@p _radius, 0, 0) by @p matrix and store position +/- the result in world.
+ * @note Uses the locals input, rotated, world, matrix, position and facing of field_build_effect_spiral.
  */
 #define STRIP_POINT(_radius)                                                                                                                                   \
-    work.input.vx = (_radius);                                                                                                                                 \
-    work.input.vy = 0;                                                                                                                                         \
-    work.input.vz = 0;                                                                                                                                         \
+    input.vx = (_radius);                                                                                                                                      \
+    input.vy = 0;                                                                                                                                              \
+    input.vz = 0;                                                                                                                                              \
     gte_SetRotMatrix(matrix);                                                                                                                                  \
-    gte_ldv0(&work.input);                                                                                                                                     \
+    gte_ldv0(&input);                                                                                                                                          \
     gte_rtv0();                                                                                                                                                \
-    gte_stlvnl(&work.rotated);                                                                                                                                 \
+    gte_stlvnl(&rotated);                                                                                                                                      \
     if (facing != 0)                                                                                                                                           \
     {                                                                                                                                                          \
-        work.world.vx = position->vx + (work.rotated.vx << 8);                                                                                                 \
-        work.world.vy = position->vy + (work.rotated.vy << 8);                                                                                                 \
-        work.world.vz = position->vz + (work.rotated.vz << 8);                                                                                                 \
+        world.vx = position->vx + (rotated.vx << 8);                                                                                                           \
+        world.vy = position->vy + (rotated.vy << 8);                                                                                                           \
+        world.vz = position->vz + (rotated.vz << 8);                                                                                                           \
     }                                                                                                                                                          \
     else                                                                                                                                                       \
     {                                                                                                                                                          \
-        work.world.vx = position->vx - (work.rotated.vx << 8);                                                                                                 \
-        work.world.vy = position->vy + (work.rotated.vy << 8);                                                                                                 \
-        work.world.vz = position->vz + (work.rotated.vz << 8);                                                                                                 \
+        world.vx = position->vx - (rotated.vx << 8);                                                                                                           \
+        world.vy = position->vy + (rotated.vy << 8);                                                                                                           \
+        world.vz = position->vz + (rotated.vz << 8);                                                                                                           \
     }
 
 /** @brief Ground effect kinds; the kind also selects the radius range. */
@@ -156,25 +167,6 @@ typedef enum GroundEffectKind
     GROUND_EFFECT_DRIFTING_DOME = 5,   /**< Dome drifting in the facing direction. */
     GROUND_EFFECT_AIMED_DOME = 6       /**< Dome steered with the object's controller. */
 } GroundEffectKind;
-
-/** @brief Rotation matrix that is also cleared and set up word by word. */
-typedef union
-{
-    MATRIX matrix;
-    s32 words[sizeof(MATRIX) / sizeof(s32)];
-} MatrixWords;
-
-/** @brief Stack workspace of the strip builders (field_build_effect_curves uses only the world vector). */
-typedef struct
-{
-    VECTOR rotated;
-    VECTOR world;
-    VECTOR unused;
-    SVECTOR input;
-    MATRIX unused_matrices[2];
-    MatrixWords rotation;
-    MATRIX unused_matrices_after[2];
-} FieldStripWorkspace;
 
 void field_get_ground_effect_radius_limits(s32 kind, s32* min_radius, s32* max_radius);
 
@@ -317,12 +309,9 @@ inline void field_get_ground_effect_radius_limits(s32 kind, s32* min_radius, s32
  */
 void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
 {
-    struct
-    {
-        VECTOR point;
-        VECTOR direction;
-        VECTOR target;
-    } work;
+    VECTOR point;
+    VECTOR direction;
+    VECTOR target;
     DVECTOR screen;
     VECTOR* position;
     ControllerState* controller = CONTROLLER_STATE;
@@ -424,7 +413,8 @@ void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
 
         if (draw != 0)
         {
-            packet = field_build_effect_curves(ordering_table, field_build_effect_curves(ordering_table, packet, position, radius, 0), position, radius, 1);
+            packet = field_build_effect_curves(ordering_table, packet, position, radius, 0);
+            packet = field_build_effect_curves(ordering_table, packet, position, radius, 1);
         }
 
         OBJECT_STATE(actor).effect_angle += EFFECT_PHASE_STEP;
@@ -443,13 +433,13 @@ void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
     case GROUND_EFFECT_SCATTERED_DOMES:
         for (i = 0; i < SCATTER_POINT_COUNT; i++)
         {
-            work.point.vx = actor->x + (OBJECT_STATE(actor).ground_attachment_points[i].x << 8);
-            work.point.vy = actor->y;
-            work.point.vz = actor->z + (OBJECT_STATE(actor).ground_attachment_points[i].y << 8);
+            point.vx = actor->x + (OBJECT_STATE(actor).ground_attachment_points[i].x << 8);
+            point.vy = actor->y;
+            point.vz = actor->z + (OBJECT_STATE(actor).ground_attachment_points[i].y << 8);
 
             if (draw != 0)
             {
-                packet = field_build_effect_dome(ordering_table, packet, &work.point, radius);
+                packet = field_build_effect_dome(ordering_table, packet, &point, radius);
             }
         }
 
@@ -461,13 +451,13 @@ void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
         OBJECT_STATE(actor).effect_angle -= EFFECT_SPIN_STEP;
         break;
     case GROUND_EFFECT_DRIFTING_DOME:
-        work.point.vx = actor->x + (OBJECT_STATE(actor).ground_attachment_points[0].x << 8);
-        work.point.vy = actor->y;
-        work.point.vz = actor->z + (OBJECT_STATE(actor).ground_attachment_points[0].y << 8);
+        point.vx = actor->x + (OBJECT_STATE(actor).ground_attachment_points[0].x << 8);
+        point.vy = actor->y;
+        point.vz = actor->z + (OBJECT_STATE(actor).ground_attachment_points[0].y << 8);
 
         if (draw != 0)
         {
-            packet = field_build_effect_dome(ordering_table, packet, &work.point, radius);
+            packet = field_build_effect_dome(ordering_table, packet, &point, radius);
         }
 
         OBJECT_STATE(actor).effect_angle -= EFFECT_SPIN_STEP;
@@ -488,13 +478,13 @@ void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
 
         break;
     case GROUND_EFFECT_AIMED_DOME:
-        work.point.vx = actor->x + (OBJECT_STATE(actor).ground_attachment_points[0].x << 8);
-        work.point.vy = actor->y;
-        work.point.vz = actor->z + (OBJECT_STATE(actor).ground_attachment_points[0].y << 8);
+        point.vx = actor->x + (OBJECT_STATE(actor).ground_attachment_points[0].x << 8);
+        point.vy = actor->y;
+        point.vz = actor->z + (OBJECT_STATE(actor).ground_attachment_points[0].y << 8);
 
         if (draw != 0)
         {
-            packet = field_build_effect_dome(ordering_table, packet, &work.point, radius);
+            packet = field_build_effect_dome(ordering_table, packet, &point, radius);
         }
 
         OBJECT_STATE(actor).effect_angle -= EFFECT_SPIN_STEP;
@@ -512,60 +502,59 @@ void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
             }
             else
             {
-                /* The driver stores the two button bytes swapped. */
                 held = controller->ports[actor->source_object_index].published_sample.held_buttons;
-                raw_buttons = (held << 8) | (held >> 8);
+                raw_buttons = PAD_SWAP_BYTES(held);
             }
 #if defined(VERSION_JP)
             buttons = raw_buttons;
 #else
             buttons = PAD_REMAP_FACE_BITS_16(raw_buttons);
 #endif
-            work.point.vz = 0;
-            work.point.vy = 0;
-            work.point.vx = 0;
+            point.vz = 0;
+            point.vy = 0;
+            point.vx = 0;
 
             if (buttons & PAD_BTN_RIGHT)
             {
-                work.point.vx = ONE;
+                point.vx = ONE;
             }
 
             if (buttons & PAD_BTN_LEFT)
             {
-                work.point.vx -= ONE;
+                point.vx -= ONE;
             }
 
             if (buttons & PAD_BTN_DOWN)
             {
-                work.point.vy = -ONE;
+                point.vy = -ONE;
             }
 
             if (buttons & PAD_BTN_UP)
             {
-                work.point.vy += ONE;
+                point.vy += ONE;
             }
 
             if (controller->ports[actor->source_object_index].published_sample.device_type != CONTROLLER_DEVICE_DIGITAL)
             {
-                work.point.vx += controller->ports[actor->source_object_index].published_sample.left_stick_x * 16;
-                work.point.vy -= controller->ports[actor->source_object_index].published_sample.left_stick_y * 16;
+                point.vx += controller->ports[actor->source_object_index].published_sample.left_stick_x * 16;
+                point.vy -= controller->ports[actor->source_object_index].published_sample.left_stick_y * 16;
             }
 
-            if ((work.point.vx | work.point.vy) != 0)
+            if ((point.vx | point.vy) != 0)
             {
-                /* work.direction = unit direction; the dome moves one unit per 0x400 of it. */
-                VectorNormal(&work.point, &work.direction);
-                work.target.vx = actor->x + ((OBJECT_STATE(actor).ground_attachment_points[0].x + (work.direction.vx >> 10)) << 8);
-                work.target.vy = actor->y;
-                work.target.vz = actor->z + ((OBJECT_STATE(actor).ground_attachment_points[0].y + (work.direction.vy >> 10)) << 8);
-                screen.vx = FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + work.target.vx / 256;
-                screen.vy = FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + work.target.vy / 256 - work.target.vz / 512 - g_field_view_offset_z / 512;
+                /* direction = unit direction; the dome moves one unit per 0x400 of it. */
+                VectorNormal(&point, &direction);
+                target.vx = actor->x + ((OBJECT_STATE(actor).ground_attachment_points[0].x + (direction.vx >> 10)) << 8);
+                target.vy = actor->y;
+                target.vz = actor->z + ((OBJECT_STATE(actor).ground_attachment_points[0].y + (direction.vy >> 10)) << 8);
+                screen.vx = FIELD_SCREEN_X(target.vx);
+                screen.vy = FIELD_SCREEN_Y(target.vy, target.vz);
 
-                if ((screen.vx > 0 || work.direction.vx > 0) && (screen.vy > 0 || work.direction.vy < 0) &&
-                    (screen.vx < SCREEN_WIDTH || work.direction.vx < 0) && (screen.vy < VRAM_DRAW_HEIGHT || work.direction.vy > 0))
+                if ((screen.vx > 0 || direction.vx > 0) && (screen.vy > 0 || direction.vy < 0) && (screen.vx < SCREEN_WIDTH || direction.vx < 0) &&
+                    (screen.vy < VRAM_DRAW_HEIGHT || direction.vy > 0))
                 {
-                    OBJECT_STATE(actor).ground_attachment_points[0].x += work.direction.vx >> 10;
-                    OBJECT_STATE(actor).ground_attachment_points[0].y += work.direction.vy >> 10;
+                    OBJECT_STATE(actor).ground_attachment_points[0].x += direction.vx >> 10;
+                    OBJECT_STATE(actor).ground_attachment_points[0].y += direction.vy >> 10;
                 }
             }
         }
@@ -597,9 +586,9 @@ static u8* field_build_effect_dome(u_long* ordering_table, u8* packet, VECTOR* p
     s32 initial_x;
     s32 initial_y;
     u32 center;
-    u8* cursor;
+    POLY_G4* cursor;
 
-    cursor = packet;
+    cursor = (POLY_G4*)packet;
 
     rot.vx = 0;
     rot.vz = 0;
@@ -611,7 +600,7 @@ static u8* field_build_effect_dome(u_long* ordering_table, u8* packet, VECTOR* p
 
     rot.vx = 0;
     rot.vz = 0;
-    rot.vy = g_field_effect_angle + 0x180;
+    rot.vy = g_field_effect_angle + DOME_ARCH_WIDTH;
     RotMatrix_gte(&rot, &m1);
 
     v[0].vx = initial_x;
@@ -627,96 +616,96 @@ static u8* field_build_effect_dome(u_long* ordering_table, u8* packet, VECTOR* p
     v[0].vx = position->vx + v[1].vx;
     v[0].vy = position->vy + v[1].vy;
     v[0].vz = position->vz + v[1].vz;
-    PROJECT_POINT((POLY_G4*)cursor, 0, v[0]);
+    PROJECT_POINT(cursor, 0, v[0]);
 
     v[0].vx = position->vx - v[1].vx;
     v[0].vy = position->vy + v[1].vy;
     v[0].vz = position->vz - v[1].vz;
-    PROJECT_POINT((POLY_G4*)cursor + 1, 0, v[0]);
+    PROJECT_POINT(&cursor[1], 0, v[0]);
 
     v[0].vx = position->vx - v[1].vz;
     v[0].vy = position->vy + v[1].vy;
     v[0].vz = position->vz + v[1].vx;
-    PROJECT_POINT((POLY_G4*)cursor + 2, 0, v[0]);
+    PROJECT_POINT(&cursor[2], 0, v[0]);
 
     v[0].vx = position->vx + v[1].vz;
     v[0].vy = position->vy + v[1].vy;
     v[0].vz = position->vz - v[1].vx;
-    PROJECT_POINT((POLY_G4*)cursor + 3, 0, v[0]);
+    PROJECT_POINT(&cursor[3], 0, v[0]);
 
     v[0].vx = position->vx;
     v[0].vy = position->vy;
     v[0].vz = position->vz;
-    PROJECT_POINT((POLY_G4*)cursor, 1, v[0]);
-    center = *(s32*)&((POLY_G4*)cursor)->x1;
-    *(s32*)&((POLY_G4*)cursor)->x3 = center;
-    *(s32*)&((POLY_G4*)cursor + 3)->x1 = center;
-    *(s32*)&((POLY_G4*)cursor + 3)->x3 = center;
-    *(s32*)&((POLY_G4*)cursor + 2)->x1 = center;
-    *(s32*)&((POLY_G4*)cursor + 2)->x3 = center;
-    *(s32*)&((POLY_G4*)cursor + 1)->x1 = center;
-    *(s32*)&((POLY_G4*)cursor + 1)->x3 = center;
+    PROJECT_POINT(cursor, 1, v[0]);
+    center = *(s32*)&cursor->x1;
+    *(s32*)&cursor->x3 = center;
+    *(s32*)&cursor[3].x1 = center;
+    *(s32*)&cursor[3].x3 = center;
+    *(s32*)&cursor[2].x1 = center;
+    *(s32*)&cursor[2].x3 = center;
+    *(s32*)&cursor[1].x1 = center;
+    *(s32*)&cursor[1].x3 = center;
 
     v[0].vx = position->vx + v[4].vx;
     v[0].vy = position->vy + v[4].vy;
     v[0].vz = position->vz + v[4].vz;
-    PROJECT_POINT((POLY_G4*)cursor, 2, v[0]);
+    PROJECT_POINT(cursor, 2, v[0]);
 
     v[0].vx = position->vx - v[4].vx;
     v[0].vy = position->vy + v[4].vy;
     v[0].vz = position->vz - v[4].vz;
-    PROJECT_POINT((POLY_G4*)cursor + 1, 2, v[0]);
+    PROJECT_POINT(&cursor[1], 2, v[0]);
 
     v[0].vx = position->vx - v[4].vz;
     v[0].vy = position->vy + v[4].vy;
     v[0].vz = position->vz + v[4].vx;
-    PROJECT_POINT((POLY_G4*)cursor + 2, 2, v[0]);
+    PROJECT_POINT(&cursor[2], 2, v[0]);
 
     v[0].vx = position->vx + v[4].vz;
     v[0].vy = position->vy + v[4].vy;
     v[0].vz = position->vz - v[4].vx;
-    PROJECT_POINT((POLY_G4*)cursor + 3, 2, v[0]);
+    PROJECT_POINT(&cursor[3], 2, v[0]);
 
-    SET_BGR0_PACKED((POLY_G4*)cursor, EFFECT_BLUE(EFFECT_LEVEL - (v[1].vz >> 8)));
-    SET_BGR0_PACKED((POLY_G4*)cursor + 1, EFFECT_GREEN((v[1].vz >> 8) + EFFECT_LEVEL));
-    SET_BGR0_PACKED((POLY_G4*)cursor + 2, EFFECT_GREEN(EFFECT_LEVEL - (v[1].vx >> 8)));
-    SET_BGR0_PACKED((POLY_G4*)cursor + 3, EFFECT_GREEN((v[1].vx >> 8) + EFFECT_LEVEL));
+    SET_BGR0_PACKED(cursor, EFFECT_BLUE(EFFECT_LEVEL - (v[1].vz >> 8)));
+    SET_BGR0_PACKED(&cursor[1], EFFECT_GREEN((v[1].vz >> 8) + EFFECT_LEVEL));
+    SET_BGR0_PACKED(&cursor[2], EFFECT_GREEN(EFFECT_LEVEL - (v[1].vx >> 8)));
+    SET_BGR0_PACKED(&cursor[3], EFFECT_GREEN((v[1].vx >> 8) + EFFECT_LEVEL));
 
-    SET_POLY_G4_BGR1_PACKED((POLY_G4*)cursor + 3, EFFECT_GREEN(EFFECT_LEVEL));
-    SET_POLY_G4_BGR1_PACKED((POLY_G4*)cursor + 2, EFFECT_GREEN(EFFECT_LEVEL));
-    SET_POLY_G4_BGR1_PACKED((POLY_G4*)cursor + 1, EFFECT_GREEN(EFFECT_LEVEL));
-    SET_POLY_G4_BGR1_PACKED((POLY_G4*)cursor, EFFECT_GREEN(EFFECT_LEVEL));
-    SET_POLY_G4_BGR3_PACKED((POLY_G4*)cursor + 1, 0);
-    SET_POLY_G4_BGR2_PACKED((POLY_G4*)cursor + 1, 0);
-    SET_POLY_G4_BGR3_PACKED((POLY_G4*)cursor + 2, 0);
-    SET_POLY_G4_BGR2_PACKED((POLY_G4*)cursor + 2, 0);
-    SET_POLY_G4_BGR3_PACKED((POLY_G4*)cursor + 3, 0);
-    SET_POLY_G4_BGR2_PACKED((POLY_G4*)cursor + 3, 0);
-    SET_POLY_G4_BGR3_PACKED((POLY_G4*)cursor, 0);
-    SET_POLY_G4_BGR2_PACKED((POLY_G4*)cursor, 0);
+    SET_POLY_G4_BGR1_PACKED(&cursor[3], EFFECT_GREEN(EFFECT_LEVEL));
+    SET_POLY_G4_BGR1_PACKED(&cursor[2], EFFECT_GREEN(EFFECT_LEVEL));
+    SET_POLY_G4_BGR1_PACKED(&cursor[1], EFFECT_GREEN(EFFECT_LEVEL));
+    SET_POLY_G4_BGR1_PACKED(cursor, EFFECT_GREEN(EFFECT_LEVEL));
+    SET_POLY_G4_BGR3_PACKED(&cursor[1], 0);
+    SET_POLY_G4_BGR2_PACKED(&cursor[1], 0);
+    SET_POLY_G4_BGR3_PACKED(&cursor[2], 0);
+    SET_POLY_G4_BGR2_PACKED(&cursor[2], 0);
+    SET_POLY_G4_BGR3_PACKED(&cursor[3], 0);
+    SET_POLY_G4_BGR2_PACKED(&cursor[3], 0);
+    SET_POLY_G4_BGR3_PACKED(cursor, 0);
+    SET_POLY_G4_BGR2_PACKED(cursor, 0);
 
-    SetPolyG4((POLY_G4*)cursor);
-    SetPolyG4((POLY_G4*)cursor + 1);
-    SetPolyG4((POLY_G4*)cursor + 2);
-    SetPolyG4((POLY_G4*)cursor + 3);
-    setSemiTrans((POLY_G4*)cursor, 1);
-    setSemiTrans((POLY_G4*)cursor + 1, 1);
-    setSemiTrans((POLY_G4*)cursor + 2, 1);
-    setSemiTrans((POLY_G4*)cursor + 3, 1);
+    SetPolyG4(cursor);
+    SetPolyG4(&cursor[1]);
+    SetPolyG4(&cursor[2]);
+    SetPolyG4(&cursor[3]);
+    setSemiTrans(cursor, 1);
+    setSemiTrans(&cursor[1], 1);
+    setSemiTrans(&cursor[2], 1);
+    setSemiTrans(&cursor[3], 1);
 
-    ADD_PRIM_BY_DEPTH(position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
-    ADD_PRIM_BY_DEPTH(position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
-    ADD_PRIM_BY_DEPTH(position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
-    ADD_PRIM_BY_DEPTH(position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
+    ADD_PRIM_BY_DEPTH(ordering_table, cursor, position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
+    ADD_PRIM_BY_DEPTH(ordering_table, cursor, position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
+    ADD_PRIM_BY_DEPTH(ordering_table, cursor, position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
+    ADD_PRIM_BY_DEPTH(ordering_table, cursor, position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
 
     setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
-    ADD_PRIM_BY_DEPTH((position->vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);
+    ADD_PRIM_BY_DEPTH(ordering_table, cursor, (position->vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);
 
     /* Eight arch segments of 22.5 degrees, drawn for two opposite quarters. */
     for (i = 1; i <= STRIP_SEGMENT_COUNT; i++)
     {
-        x = (rcos(i << 8) >> 4) * radius;
-        y = -(rsin(i << 8) >> 4) * radius;
+        x = (rcos(i * EFFECT_SEGMENT_ANGLE) >> 4) * radius;
+        y = -(rsin(i * EFFECT_SEGMENT_ANGLE) >> 4) * radius;
         v[0].vx = x;
         v[0].vy = y;
         v[0].vz = 0;
@@ -729,58 +718,58 @@ static u8* field_build_effect_dome(u_long* ordering_table, u8* packet, VECTOR* p
         v[0].vx = position->vx + v[1].vx;
         v[0].vy = position->vy + v[1].vy;
         v[0].vz = position->vz + v[1].vz;
-        PROJECT_POINT((POLY_G4*)cursor, 0, v[0]);
+        PROJECT_POINT(cursor, 0, v[0]);
         v[0].vx = position->vx + v[2].vx;
         v[0].vy = position->vy + v[2].vy;
         v[0].vz = position->vz + v[2].vz;
-        PROJECT_POINT((POLY_G4*)cursor, 1, v[0]);
+        PROJECT_POINT(cursor, 1, v[0]);
         v[0].vx = position->vx + v[4].vx;
         v[0].vy = position->vy + v[4].vy;
         v[0].vz = position->vz + v[4].vz;
-        PROJECT_POINT((POLY_G4*)cursor, 2, v[0]);
+        PROJECT_POINT(cursor, 2, v[0]);
         v[0].vx = position->vx + v[5].vx;
         v[0].vy = position->vy + v[5].vy;
         v[0].vz = position->vz + v[5].vz;
-        PROJECT_POINT((POLY_G4*)cursor, 3, v[0]);
+        PROJECT_POINT(cursor, 3, v[0]);
 
-        SET_BGR0_PACKED((POLY_G4*)cursor, EFFECT_BLUE(EFFECT_LEVEL - (v[1].vz >> 8)));
-        SET_POLY_G4_BGR1_PACKED((POLY_G4*)cursor, EFFECT_BLUE(EFFECT_LEVEL - (v[2].vz >> 8)));
-        SET_POLY_G4_BGR2_PACKED((POLY_G4*)cursor, 0);
-        SET_POLY_G4_BGR3_PACKED((POLY_G4*)cursor, 0);
-        SetPolyG4((POLY_G4*)cursor);
-        setSemiTrans((POLY_G4*)cursor, 1);
-        ADD_PRIM_BY_DEPTH((position->vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
+        SET_BGR0_PACKED(cursor, EFFECT_BLUE(EFFECT_LEVEL - (v[1].vz >> 8)));
+        SET_POLY_G4_BGR1_PACKED(cursor, EFFECT_BLUE(EFFECT_LEVEL - (v[2].vz >> 8)));
+        SET_POLY_G4_BGR2_PACKED(cursor, 0);
+        SET_POLY_G4_BGR3_PACKED(cursor, 0);
+        SetPolyG4(cursor);
+        setSemiTrans(cursor, 1);
+        ADD_PRIM_BY_DEPTH(ordering_table, cursor, (position->vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
 
         setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
-        ADD_PRIM_BY_DEPTH((position->vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);
+        ADD_PRIM_BY_DEPTH(ordering_table, cursor, (position->vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);
 
         v[0].vx = position->vx - v[1].vz;
         v[0].vy = position->vy + v[1].vy;
         v[0].vz = position->vz + v[1].vx;
-        PROJECT_POINT((POLY_G4*)cursor, 0, v[0]);
+        PROJECT_POINT(cursor, 0, v[0]);
         v[0].vx = position->vx - v[2].vz;
         v[0].vy = position->vy + v[2].vy;
         v[0].vz = position->vz + v[2].vx;
-        PROJECT_POINT((POLY_G4*)cursor, 1, v[0]);
+        PROJECT_POINT(cursor, 1, v[0]);
         v[0].vx = position->vx - v[4].vz;
         v[0].vy = position->vy + v[4].vy;
         v[0].vz = position->vz + v[4].vx;
-        PROJECT_POINT((POLY_G4*)cursor, 2, v[0]);
+        PROJECT_POINT(cursor, 2, v[0]);
         v[0].vx = position->vx - v[5].vz;
         v[0].vy = position->vy + v[5].vy;
         v[0].vz = position->vz + v[5].vx;
-        PROJECT_POINT((POLY_G4*)cursor, 3, v[0]);
+        PROJECT_POINT(cursor, 3, v[0]);
 
-        SET_BGR0_PACKED((POLY_G4*)cursor, EFFECT_BLUE(EFFECT_LEVEL - (v[1].vz >> 8)));
-        SET_POLY_G4_BGR1_PACKED((POLY_G4*)cursor, EFFECT_BLUE(EFFECT_LEVEL - (v[2].vz >> 8)));
-        SET_POLY_G4_BGR2_PACKED((POLY_G4*)cursor, 0);
-        SET_POLY_G4_BGR3_PACKED((POLY_G4*)cursor, 0);
-        SetPolyG4((POLY_G4*)cursor);
-        setSemiTrans((POLY_G4*)cursor, 1);
-        ADD_PRIM_BY_DEPTH((position->vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
+        SET_BGR0_PACKED(cursor, EFFECT_BLUE(EFFECT_LEVEL - (v[1].vz >> 8)));
+        SET_POLY_G4_BGR1_PACKED(cursor, EFFECT_BLUE(EFFECT_LEVEL - (v[2].vz >> 8)));
+        SET_POLY_G4_BGR2_PACKED(cursor, 0);
+        SET_POLY_G4_BGR3_PACKED(cursor, 0);
+        SetPolyG4(cursor);
+        setSemiTrans(cursor, 1);
+        ADD_PRIM_BY_DEPTH(ordering_table, cursor, (position->vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
 
         setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
-        ADD_PRIM_BY_DEPTH((position->vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);
+        ADD_PRIM_BY_DEPTH(ordering_table, cursor, (position->vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);
 
         v[1].vx = v[2].vx;
         v[1].vy = v[2].vy;
@@ -790,7 +779,7 @@ static u8* field_build_effect_dome(u_long* ordering_table, u8* packet, VECTOR* p
         v[4].vz = v[5].vz;
     }
 
-    return cursor;
+    return (u8*)cursor;
 }
 
 /**
@@ -817,9 +806,9 @@ static u8* field_build_effect_strips(u_long* ordering_table, u8* packet, VECTOR*
     s32 inner_x;
     s32 inner_y;
     s32 angle;
-    u8* cursor;
+    POLY_G4* cursor;
 
-    cursor = packet;
+    cursor = (POLY_G4*)packet;
 
     for (i = 0; i < STRIP_COUNT; i++)
     {
@@ -831,13 +820,13 @@ static u8* field_build_effect_strips(u_long* ordering_table, u8* packet, VECTOR*
         p1.vx = position->vx;
         p1.vy = position->vy;
         p1.vz = position->vz;
-        angle = i << 10;
+        angle = i * FIELD_ANGLE_QUARTER_TURN;
         x = (rcos(angle - g_field_effect_angle) >> 4) * distance;
         y = (rsin(angle - g_field_effect_angle) >> 4) * distance;
         p0.vx += x;
         p0.vz += y;
-        x = (rcos(angle - g_field_effect_angle - 0x100) >> 4) * distance;
-        y = (rsin(angle - g_field_effect_angle - 0x100) >> 4) * distance;
+        x = (rcos(angle - g_field_effect_angle - EFFECT_SEGMENT_ANGLE) >> 4) * distance;
+        y = (rsin(angle - g_field_effect_angle - EFFECT_SEGMENT_ANGLE) >> 4) * distance;
         p1.vx += x;
         p1.vz += y;
         rot.vx = 0;
@@ -857,33 +846,33 @@ static u8* field_build_effect_strips(u_long* ordering_table, u8* packet, VECTOR*
         v[0].vx = p0.vx + v[1].vx;
         v[0].vy = p0.vy + v[1].vy;
         v[0].vz = p0.vz + v[1].vz;
-        PROJECT_POINT((POLY_G4*)cursor, 0, v[0]);
+        PROJECT_POINT(cursor, 0, v[0]);
         v[0].vx = p0.vx + v[2].vx;
         v[0].vy = p0.vy + v[2].vy;
         v[0].vz = p0.vz + v[2].vz;
-        PROJECT_POINT((POLY_G4*)cursor, 1, v[0]);
+        PROJECT_POINT(cursor, 1, v[0]);
         v[0].vx = p1.vx + v[1].vx;
         v[0].vy = p1.vy + v[1].vy;
         v[0].vz = p1.vz + v[1].vz;
-        PROJECT_POINT((POLY_G4*)cursor, 2, v[0]);
+        PROJECT_POINT(cursor, 2, v[0]);
         v[0].vx = p1.vx + v[2].vx;
         v[0].vy = p1.vy + v[2].vy;
         v[0].vz = p1.vz + v[2].vz;
-        PROJECT_POINT((POLY_G4*)cursor, 3, v[0]);
-        SET_BGR0_PACKED((POLY_G4*)cursor, EFFECT_GREEN(EFFECT_LEVEL - (v[1].vz >> 8)));
-        SET_POLY_G4_BGR1_PACKED((POLY_G4*)cursor, EFFECT_GREEN(EFFECT_LEVEL - (v[2].vz >> 8)));
-        SET_POLY_G4_BGR2_PACKED((POLY_G4*)cursor, 0);
-        SET_POLY_G4_BGR3_PACKED((POLY_G4*)cursor, 0);
-        SetPolyG4((POLY_G4*)cursor);
-        setSemiTrans((POLY_G4*)cursor, 1);
-        ADD_PRIM_BY_DEPTH((p0.vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
+        PROJECT_POINT(cursor, 3, v[0]);
+        SET_BGR0_PACKED(cursor, EFFECT_GREEN(EFFECT_LEVEL - (v[1].vz >> 8)));
+        SET_POLY_G4_BGR1_PACKED(cursor, EFFECT_GREEN(EFFECT_LEVEL - (v[2].vz >> 8)));
+        SET_POLY_G4_BGR2_PACKED(cursor, 0);
+        SET_POLY_G4_BGR3_PACKED(cursor, 0);
+        SetPolyG4(cursor);
+        setSemiTrans(cursor, 1);
+        ADD_PRIM_BY_DEPTH(ordering_table, cursor, (p0.vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
         setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
-        ADD_PRIM_BY_DEPTH((p0.vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);
+        ADD_PRIM_BY_DEPTH(ordering_table, cursor, (p0.vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);
 
         for (j = 1; j <= STRIP_SEGMENT_COUNT; j++)
         {
-            inner_x = ((rcos(j << 8) >> 4) * radius) >> 1;
-            inner_y = (-(rsin(j << 8) >> 4) * radius) >> 1;
+            inner_x = ((rcos(j * EFFECT_SEGMENT_ANGLE) >> 4) * radius) >> 1;
+            inner_y = (-(rsin(j * EFFECT_SEGMENT_ANGLE) >> 4) * radius) >> 1;
             v[0].vx = inner_x;
             v[0].vy = inner_y;
             v[0].vz = 0;
@@ -891,35 +880,35 @@ static u8* field_build_effect_strips(u_long* ordering_table, u8* packet, VECTOR*
             v[0].vx = p0.vx + v[1].vx;
             v[0].vy = p0.vy + v[1].vy;
             v[0].vz = p0.vz + v[1].vz;
-            PROJECT_POINT((POLY_G4*)cursor, 0, v[0]);
+            PROJECT_POINT(cursor, 0, v[0]);
             v[0].vx = p0.vx + v[2].vx;
             v[0].vy = p0.vy + v[2].vy;
             v[0].vz = p0.vz + v[2].vz;
-            PROJECT_POINT((POLY_G4*)cursor, 1, v[0]);
+            PROJECT_POINT(cursor, 1, v[0]);
             v[0].vx = p1.vx + v[1].vx;
             v[0].vy = p1.vy + v[1].vy;
             v[0].vz = p1.vz + v[1].vz;
-            PROJECT_POINT((POLY_G4*)cursor, 2, v[0]);
+            PROJECT_POINT(cursor, 2, v[0]);
             v[0].vx = p1.vx + v[2].vx;
             v[0].vy = p1.vy + v[2].vy;
             v[0].vz = p1.vz + v[2].vz;
-            PROJECT_POINT((POLY_G4*)cursor, 3, v[0]);
-            SET_BGR0_PACKED((POLY_G4*)cursor, EFFECT_BLUE(EFFECT_LEVEL - (v[1].vz >> 8)));
-            SET_POLY_G4_BGR1_PACKED((POLY_G4*)cursor, EFFECT_BLUE(EFFECT_LEVEL - (v[2].vz >> 8)));
-            SET_POLY_G4_BGR2_PACKED((POLY_G4*)cursor, 0);
-            SET_POLY_G4_BGR3_PACKED((POLY_G4*)cursor, 0);
-            SetPolyG4((POLY_G4*)cursor);
-            setSemiTrans((POLY_G4*)cursor, 1);
-            ADD_PRIM_BY_DEPTH((p0.vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
+            PROJECT_POINT(cursor, 3, v[0]);
+            SET_BGR0_PACKED(cursor, EFFECT_BLUE(EFFECT_LEVEL - (v[1].vz >> 8)));
+            SET_POLY_G4_BGR1_PACKED(cursor, EFFECT_BLUE(EFFECT_LEVEL - (v[2].vz >> 8)));
+            SET_POLY_G4_BGR2_PACKED(cursor, 0);
+            SET_POLY_G4_BGR3_PACKED(cursor, 0);
+            SetPolyG4(cursor);
+            setSemiTrans(cursor, 1);
+            ADD_PRIM_BY_DEPTH(ordering_table, cursor, (p0.vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
             setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
-            ADD_PRIM_BY_DEPTH((p0.vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);
+            ADD_PRIM_BY_DEPTH(ordering_table, cursor, (p0.vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);
             v[1].vx = v[2].vx;
             v[1].vy = v[2].vy;
             v[1].vz = v[2].vz;
         }
     }
 
-    return cursor;
+    return (u8*)cursor;
 }
 
 /**
@@ -934,110 +923,118 @@ static u8* field_build_effect_strips(u_long* ordering_table, u8* packet, VECTOR*
  */
 static u8* field_build_effect_curves(u_long* ordering_table, u8* packet, VECTOR* position, s32 extent, s32 forward)
 {
-    FieldStripWorkspace work;
+    VECTOR rotated;
+    VECTOR world;
+    VECTOR unused;
+    SVECTOR input;
+    MATRIX unused_matrices[2];
+    MATRIX rotation;
+    MATRIX unused_matrices_after[2];
     s32 step;
     s32 strip_index;
     s32 angle;
     s32 offset;
     s32 first_xy;
     s32 second_xy;
-    u8* cursor;
+    POLY_G4* cursor;
 
-    cursor = packet;
+    cursor = (POLY_G4*)packet;
     strip_index = 0;
     /* The strips scroll outward by the phase and repeat every two strip widths. */
-    offset = (g_field_effect_angle % 40) << 8;
+    offset = (g_field_effect_angle % CURVE_PHASE_PERIOD) << 8;
+
     do
     {
         if (forward != 0)
         {
-            work.world.vx = position->vx + offset;
-            work.world.vy = position->vy;
-            work.world.vz = position->vz + 0x2000;
+            world.vx = position->vx + offset;
+            world.vy = position->vy;
+            world.vz = position->vz + CURVE_Z_OFFSET;
         }
         else
         {
-            work.world.vx = position->vx - offset;
-            work.world.vy = position->vy;
-            work.world.vz = position->vz + 0x2000;
+            world.vx = position->vx - offset;
+            world.vy = position->vy;
+            world.vz = position->vz + CURVE_Z_OFFSET;
         }
 
-        PROJECT_POINT((POLY_G4*)cursor, 0, work.world);
+        PROJECT_POINT(cursor, 0, world);
         /* Keep both starting vertices to close the strip after eight steps. */
-        first_xy = *(s32*)&((POLY_G4*)cursor)->x0;
+        first_xy = *(s32*)&cursor->x0;
 
         if (forward != 0)
         {
-            work.world.vx = position->vx + offset + CURVE_STRIP_WIDTH;
-            work.world.vy = position->vy;
-            work.world.vz = position->vz + 0x2000;
+            world.vx = position->vx + offset + CURVE_STRIP_WIDTH;
+            world.vy = position->vy;
+            world.vz = position->vz + CURVE_Z_OFFSET;
         }
         else
         {
-            work.world.vx = position->vx - offset - CURVE_STRIP_WIDTH;
-            work.world.vy = position->vy;
-            work.world.vz = position->vz + 0x2000;
+            world.vx = position->vx - offset - CURVE_STRIP_WIDTH;
+            world.vy = position->vy;
+            world.vz = position->vz + CURVE_Z_OFFSET;
         }
 
-        PROJECT_POINT((POLY_G4*)cursor, 1, work.world);
-        second_xy = *(s32*)&((POLY_G4*)cursor)->x1;
+        PROJECT_POINT(cursor, 1, world);
+        second_xy = *(s32*)&cursor->x1;
 
-        for (step = 1, angle = 0x100; step <= STRIP_SEGMENT_COUNT; step++, angle += 0x100)
+        for (step = 1, angle = EFFECT_SEGMENT_ANGLE; step <= STRIP_SEGMENT_COUNT; step++, angle += EFFECT_SEGMENT_ANGLE)
         {
             if (forward != 0)
             {
-                work.world.vx = position->vx + offset + angle;
-                work.world.vy = position->vy - rsin(angle) * 2;
-                work.world.vz = position->vz + rcos(angle) * 2;
+                world.vx = position->vx + offset + angle;
+                world.vy = position->vy - rsin(angle) * 2;
+                world.vz = position->vz + rcos(angle) * 2;
             }
             else
             {
-                work.world.vx = position->vx - offset - angle;
-                work.world.vy = position->vy - rsin(angle) * 2;
-                work.world.vz = position->vz + rcos(angle) * 2;
+                world.vx = position->vx - offset - angle;
+                world.vy = position->vy - rsin(angle) * 2;
+                world.vz = position->vz + rcos(angle) * 2;
             }
 
-            PROJECT_POINT((POLY_G4*)cursor, 2, work.world);
-            *(s32*)&((POLY_G4*)cursor + 1)->x0 = *(s32*)&((POLY_G4*)cursor)->x2;
+            PROJECT_POINT(cursor, 2, world);
+            *(s32*)&cursor[1].x0 = *(s32*)&cursor->x2;
 
             if (forward != 0)
             {
-                work.world.vx = position->vx + offset + angle + CURVE_STRIP_WIDTH;
-                work.world.vy = position->vy - rsin(angle) * 2;
-                work.world.vz = position->vz + rcos(angle) * 2;
+                world.vx = position->vx + offset + angle + CURVE_STRIP_WIDTH;
+                world.vy = position->vy - rsin(angle) * 2;
+                world.vz = position->vz + rcos(angle) * 2;
             }
             else
             {
-                work.world.vx = position->vx - offset - angle - CURVE_STRIP_WIDTH;
-                work.world.vy = position->vy - rsin(angle) * 2;
-                work.world.vz = position->vz + rcos(angle) * 2;
+                world.vx = position->vx - offset - angle - CURVE_STRIP_WIDTH;
+                world.vy = position->vy - rsin(angle) * 2;
+                world.vz = position->vz + rcos(angle) * 2;
             }
 
-            PROJECT_POINT((POLY_G4*)cursor, 3, work.world);
-            SET_BGR0_PACKED((POLY_G4*)cursor, 0);
-            SET_POLY_G4_BGR1_PACKED((POLY_G4*)cursor, EFFECT_BLUE(EFFECT_LEVEL));
-            SET_POLY_G4_BGR2_PACKED((POLY_G4*)cursor, 0);
-            SET_POLY_G4_BGR3_PACKED((POLY_G4*)cursor, EFFECT_BLUE(EFFECT_LEVEL));
-            *(s32*)&((POLY_G4*)cursor + 1)->x1 = *(s32*)&((POLY_G4*)cursor)->x3;
-            SetPolyG4((POLY_G4*)cursor);
-            setSemiTrans((POLY_G4*)cursor, 1);
-            ADD_PRIM_BY_DEPTH(position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
+            PROJECT_POINT(cursor, 3, world);
+            SET_BGR0_PACKED(cursor, 0);
+            SET_POLY_G4_BGR1_PACKED(cursor, EFFECT_BLUE(EFFECT_LEVEL));
+            SET_POLY_G4_BGR2_PACKED(cursor, 0);
+            SET_POLY_G4_BGR3_PACKED(cursor, EFFECT_BLUE(EFFECT_LEVEL));
+            *(s32*)&cursor[1].x1 = *(s32*)&cursor->x3;
+            SetPolyG4(cursor);
+            setSemiTrans(cursor, 1);
+            ADD_PRIM_BY_DEPTH(ordering_table, cursor, position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
         }
 
-        *(s32*)&((POLY_G4*)cursor)->x2 = first_xy;
-        *(s32*)&((POLY_G4*)cursor)->x3 = second_xy;
-        SET_BGR0_PACKED((POLY_G4*)cursor, 0);
-        SET_POLY_G4_BGR1_PACKED((POLY_G4*)cursor, EFFECT_GREEN(EFFECT_LEVEL));
-        SET_POLY_G4_BGR2_PACKED((POLY_G4*)cursor, 0);
-        SET_POLY_G4_BGR3_PACKED((POLY_G4*)cursor, EFFECT_GREEN(EFFECT_LEVEL));
-        SetPolyG4((POLY_G4*)cursor);
-        setSemiTrans((POLY_G4*)cursor, 1);
-        ADD_PRIM_BY_DEPTH(position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
+        *(s32*)&cursor->x2 = first_xy;
+        *(s32*)&cursor->x3 = second_xy;
+        SET_BGR0_PACKED(cursor, 0);
+        SET_POLY_G4_BGR1_PACKED(cursor, EFFECT_GREEN(EFFECT_LEVEL));
+        SET_POLY_G4_BGR2_PACKED(cursor, 0);
+        SET_POLY_G4_BGR3_PACKED(cursor, EFFECT_GREEN(EFFECT_LEVEL));
+        SetPolyG4(cursor);
+        setSemiTrans(cursor, 1);
+        ADD_PRIM_BY_DEPTH(ordering_table, cursor, position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
         offset += 2 * CURVE_STRIP_WIDTH;
     } while (offset < (extent << 8) && ++strip_index < STRIP_COUNT);
+
     setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
-    ADD_PRIM_BY_DEPTH(position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);
-    return cursor;
+    ADD_PRIM_BY_DEPTH(ordering_table, cursor, position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);
+    return (u8*)cursor;
 }
 
 /**
@@ -1053,7 +1050,13 @@ static u8* field_build_effect_curves(u_long* ordering_table, u8* packet, VECTOR*
  */
 static u8* field_build_effect_spiral(u_long* ordering_table, u8* packet, VECTOR* position, s32 tilt, s32 facing)
 {
-    FieldStripWorkspace work;
+    VECTOR rotated;
+    VECTOR world;
+    VECTOR unused;
+    SVECTOR input;
+    MATRIX unused_matrices[2];
+    MATRIX rotation;
+    MATRIX unused_matrices_after[2];
     s32 strip_index;
     s32 angle;
     s32 first_xy;
@@ -1062,59 +1065,60 @@ static u8* field_build_effect_spiral(u_long* ordering_table, u8* packet, VECTOR*
     s32 segment_index;
     s32 radius;
     s32 radius_sum;
-    u8* cursor;
+    POLY_G4* cursor;
 
-    cursor = packet;
+    cursor = (POLY_G4*)packet;
     angle = ratan2(tilt, 100);
     strip_index = 0;
-    matrix = &work.rotation.matrix;
+    matrix = &rotation;
     radius = g_field_effect_angle;
+
     do
     {
-        /* Identity rotation with zero translation, written as words. */
-        work.rotation.words[4] = ONE;
-        work.rotation.words[2] = ONE;
-        work.rotation.words[0] = ONE;
-        work.rotation.words[7] = 0;
-        work.rotation.words[6] = 0;
-        work.rotation.words[5] = 0;
-        work.rotation.words[3] = 0;
-        work.rotation.words[1] = 0;
+        /* Identity rotation with zero translation; each word store sets two matrix elements. */
+        *(s32*)&rotation.m[2][2] = ONE;
+        *(s32*)&rotation.m[1][1] = ONE;
+        *(s32*)&rotation.m[0][0] = ONE;
+        rotation.t[2] = 0;
+        rotation.t[1] = 0;
+        rotation.t[0] = 0;
+        *(s32*)&rotation.m[2][0] = 0;
+        *(s32*)&rotation.m[0][2] = 0;
         RotMatrixY(angle, matrix);
         STRIP_POINT(radius);
-        PROJECT_POINT((POLY_G4*)cursor, 0, work.world);
-        first_xy = *(s32*)&((POLY_G4*)cursor)->x0;
+        PROJECT_POINT(cursor, 0, world);
+        first_xy = *(s32*)&cursor->x0;
         STRIP_POINT(radius + SPIRAL_STRIP_WIDTH);
-        PROJECT_POINT((POLY_G4*)cursor, 1, work.world);
-        second_xy = *(s32*)&((POLY_G4*)cursor)->x1;
+        PROJECT_POINT(cursor, 1, world);
+        second_xy = *(s32*)&cursor->x1;
 
         for (segment_index = 1, radius_sum = radius; segment_index <= STRIP_SEGMENT_COUNT; segment_index++, radius_sum += radius)
         {
-            RotMatrixX(-0x100, matrix);
+            RotMatrixX(-EFFECT_SEGMENT_ANGLE, matrix);
             STRIP_POINT(radius + (radius_sum >> 5));
-            PROJECT_POINT((POLY_G4*)cursor, 2, work.world);
-            *(s32*)&((POLY_G4*)cursor + 1)->x0 = *(s32*)&((POLY_G4*)cursor)->x2;
+            PROJECT_POINT(cursor, 2, world);
+            *(s32*)&cursor[1].x0 = *(s32*)&cursor->x2;
             STRIP_POINT(radius + (radius_sum >> 5) + SPIRAL_STRIP_WIDTH);
-            PROJECT_POINT((POLY_G4*)cursor, 3, work.world);
-            SET_BGR0_PACKED((POLY_G4*)cursor, 0);
-            SET_POLY_G4_BGR1_PACKED((POLY_G4*)cursor, EFFECT_BLUE(EFFECT_LEVEL));
-            SET_POLY_G4_BGR2_PACKED((POLY_G4*)cursor, 0);
-            SET_POLY_G4_BGR3_PACKED((POLY_G4*)cursor, EFFECT_BLUE(EFFECT_LEVEL));
-            *(s32*)&((POLY_G4*)cursor + 1)->x1 = *(s32*)&((POLY_G4*)cursor)->x3;
-            SetPolyG4((POLY_G4*)cursor);
-            setSemiTrans((POLY_G4*)cursor, 1);
-            ADD_PRIM_BY_DEPTH(position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
+            PROJECT_POINT(cursor, 3, world);
+            SET_BGR0_PACKED(cursor, 0);
+            SET_POLY_G4_BGR1_PACKED(cursor, EFFECT_BLUE(EFFECT_LEVEL));
+            SET_POLY_G4_BGR2_PACKED(cursor, 0);
+            SET_POLY_G4_BGR3_PACKED(cursor, EFFECT_BLUE(EFFECT_LEVEL));
+            *(s32*)&cursor[1].x1 = *(s32*)&cursor->x3;
+            SetPolyG4(cursor);
+            setSemiTrans(cursor, 1);
+            ADD_PRIM_BY_DEPTH(ordering_table, cursor, position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
         }
 
-        *(s32*)&((POLY_G4*)cursor)->x2 = first_xy;
-        *(s32*)&((POLY_G4*)cursor)->x3 = second_xy;
-        SET_BGR0_PACKED((POLY_G4*)cursor, 0);
-        SET_POLY_G4_BGR1_PACKED((POLY_G4*)cursor, EFFECT_GREEN(EFFECT_LEVEL));
-        SET_POLY_G4_BGR2_PACKED((POLY_G4*)cursor, 0);
-        SET_POLY_G4_BGR3_PACKED((POLY_G4*)cursor, EFFECT_GREEN(EFFECT_LEVEL));
-        SetPolyG4((POLY_G4*)cursor);
-        setSemiTrans((POLY_G4*)cursor, 1);
-        ADD_PRIM_BY_DEPTH(position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
+        *(s32*)&cursor->x2 = first_xy;
+        *(s32*)&cursor->x3 = second_xy;
+        SET_BGR0_PACKED(cursor, 0);
+        SET_POLY_G4_BGR1_PACKED(cursor, EFFECT_GREEN(EFFECT_LEVEL));
+        SET_POLY_G4_BGR2_PACKED(cursor, 0);
+        SET_POLY_G4_BGR3_PACKED(cursor, EFFECT_GREEN(EFFECT_LEVEL));
+        SetPolyG4(cursor);
+        setSemiTrans(cursor, 1);
+        ADD_PRIM_BY_DEPTH(ordering_table, cursor, position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
         radius += SPIRAL_RADIUS_STEP;
 
         if (radius >= SPIRAL_RADIUS_LIMIT)
@@ -1124,7 +1128,8 @@ static u8* field_build_effect_spiral(u_long* ordering_table, u8* packet, VECTOR*
 
         strip_index++;
     } while (strip_index < STRIP_COUNT);
+
     setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
-    ADD_PRIM_BY_DEPTH(position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);
-    return cursor;
+    ADD_PRIM_BY_DEPTH(ordering_table, cursor, position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);
+    return (u8*)cursor;
 }

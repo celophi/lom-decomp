@@ -26,6 +26,12 @@ extern s32 g_field_view_offset_z;
 #define FIELD_SCREEN_CENTER_X (SCREEN_WIDTH / 2)
 #define FIELD_SCREEN_CENTER_Y (VRAM_DRAW_HEIGHT / 2)
 
+/** @brief Screen X of the world X coordinate @p _x (eight fractional bits) under the current view. */
+#define FIELD_SCREEN_X(_x) (FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + (_x) / 256)
+
+/** @brief Screen Y of the world point (@p _y, @p _z): depth raises the point by half its distance. */
+#define FIELD_SCREEN_Y(_y, _z) (FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + (_y) / 256 - (_z) / 512 - g_field_view_offset_z / 512)
+
 /** @brief On-screen movement of the field view during the last camera update, in pixels. */
 extern Vec2s g_field_screen_scroll;
 

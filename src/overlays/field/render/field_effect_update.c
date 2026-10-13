@@ -1633,8 +1633,8 @@ void field_advance_actor_effects(FieldActorSlot *actor_state)
             }
             if (((part->behavior_flags.word >> 4) & 3) == 3)
             {
-                screen_position.x = FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256;
-                screen_position.y = FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512;
+                screen_position.x = FIELD_SCREEN_X(effect->x);
+                screen_position.y = FIELD_SCREEN_Y(effect->y, effect->z);
                 if (screen_position.x < -0x140 || screen_position.x > 0x280 || screen_position.y >= 0x1E1 || screen_position.y < -0xF0)
                 {
                     previous_state = effect->state;
@@ -3406,8 +3406,8 @@ static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *pa
     field_build_effect_part_matrix(effect, part, FIELD_EFFECT_SCRATCH_MATRIX, actor);
     gte_SetRotMatrix(FIELD_EFFECT_SCRATCH_MATRIX);
 
-    screen_origin->x = FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256;
-    screen_origin->y = FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512;
+    screen_origin->x = FIELD_SCREEN_X(effect->x);
+    screen_origin->y = FIELD_SCREEN_Y(effect->y, effect->z);
 
     frame_count = *frame_data++;
     field_resolve_effect_part_color(actor, effect, part, &packed_color);
@@ -3729,8 +3729,8 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
     field_build_effect_part_matrix(rec, part, mtx, actor);
     gte_SetRotMatrix(mtx);
 
-    sxy->x = FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + rec->x / 256;
-    screen_y = FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + rec->y / 256 - rec->z / 512 - g_field_view_offset_z / 512;
+    sxy->x = FIELD_SCREEN_X(rec->x);
+    screen_y = FIELD_SCREEN_Y(rec->y, rec->z);
     sxy->y = screen_y;
     lift_start = rec->vertical_offset;
     lift_end = rec->unknown_0x38;
@@ -4267,8 +4267,8 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                 {
                                     actor->track_mask |= 1 << actor->target_count;
                                     actor->targets[actor->target_count] = contact.index;
-                                    target_screen->x = FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + g_field_actors[contact.index].x / 256;
-                                    target_screen->y = FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + g_field_actors[contact.index].y / 256 - g_field_actors[contact.index].z / 512 - g_field_view_offset_z / 512;
+                                    target_screen->x = FIELD_SCREEN_X(g_field_actors[contact.index].x);
+                                    target_screen->y = FIELD_SCREEN_Y(g_field_actors[contact.index].y, g_field_actors[contact.index].z);
                                     if (g_field_actors[contact.index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                                     {
                                         actor->track_offsets[actor->target_count].x = target_screen->x - contact.x;
@@ -4726,8 +4726,8 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
     field_build_effect_part_matrix(rec, part, mtx, actor);
     gte_SetRotMatrix(mtx);
 
-    sxy->x = FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + rec->x / 256;
-    screen_y = FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + rec->y / 256 - rec->z / 512 - g_field_view_offset_z / 512;
+    sxy->x = FIELD_SCREEN_X(rec->x);
+    screen_y = FIELD_SCREEN_Y(rec->y, rec->z);
     sxy->y = screen_y;
     lift_start = rec->vertical_offset;
     lift_end = rec->unknown_0x38;
@@ -5076,8 +5076,8 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                                     {
                                         actor->track_mask = (u8) (actor->track_mask | (1 << actor->target_count));
                                         actor->targets[actor->target_count] = (u8) contact.index;
-                                        target_screen->x = FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + g_field_actors[contact.index].x / 256;
-                                        target_screen->y = FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + g_field_actors[contact.index].y / 256 - g_field_actors[contact.index].z / 512 - g_field_view_offset_z / 512;
+                                        target_screen->x = FIELD_SCREEN_X(g_field_actors[contact.index].x);
+                                        target_screen->y = FIELD_SCREEN_Y(g_field_actors[contact.index].y, g_field_actors[contact.index].z);
                                         if (g_field_actors[contact.index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                                         {
                                             actor->track_offsets[actor->target_count].x = target_screen->x - contact.x;
@@ -5560,7 +5560,7 @@ u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* 
 
     camera_x = g_field_view_offset_x / 256;
     screen_origin.x = (u16)(camera_x + (effect->x / 256 + FIELD_SCREEN_CENTER_X));
-    screen_origin.y = (u16)(FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512);
+    screen_origin.y = (u16)FIELD_SCREEN_Y(effect->y, effect->z);
     field_resolve_effect_part_color(actor, effect, part, &packets->color0);
     setPolyG3(packets);
     setSemiTrans(packets, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
@@ -6089,8 +6089,8 @@ u8* field_render_effect_marker(FieldMotionRecord* effect, u8* packet_cursor, s32
     field_build_effect_part_matrix(effect, part, &matrix, actor);
     gte_SetRotMatrix(&matrix);
 
-    screen_origin.vx = (s16)(FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256);
-    screen_origin.vy = (s16)(FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512);
+    screen_origin.vx = (s16)FIELD_SCREEN_X(effect->x);
+    screen_origin.vy = (s16)FIELD_SCREEN_Y(effect->y, effect->z);
 
     field_resolve_effect_part_color(actor, effect, part, (FieldPrimitiveColor*)&((P_TAG*)packet_cursor)->r0);
     setLineG2((LINE_G2*)packet_cursor);
@@ -6101,9 +6101,9 @@ u8* field_render_effect_marker(FieldMotionRecord* effect, u8* packet_cursor, s32
     {
         ((FieldGouraudLine*)packet_cursor)[0].xy0.word = *(s32*)&screen_origin;
         field_resolve_effect_position(effect, part, &target_position);
-        screen_origin.vx = (s16)(FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + target_position.vx / 256);
+        screen_origin.vx = (s16)FIELD_SCREEN_X(target_position.vx);
         screen_origin.vy =
-            (s16)(FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + target_position.vy / 256 - target_position.vz / 512 - g_field_view_offset_z / 512);
+            (s16)FIELD_SCREEN_Y(target_position.vy, target_position.vz);
         ((FieldGouraudLine*)packet_cursor)[0].xy1.word = *(s32*)&screen_origin;
     }
     else if ((part->behavior_flags.word >> FIELD_PART_ORIENTED_MARKER_SHIFT) & 1)
@@ -6260,13 +6260,13 @@ u8* field_render_effect_radial_fan(FieldMotionRecord* effect, u8* packet_cursor,
     part = &g_field_actor_slots[effect->actor_index].parts[effect->part_index];
     actor = &g_field_actor_slots[effect->actor_index];
 
-    screen_origin->x = (s16)(FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256);
-    screen_origin->y = (s16)(FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512);
+    screen_origin->x = (s16)FIELD_SCREEN_X(effect->x);
+    screen_origin->y = (s16)FIELD_SCREEN_Y(effect->y, effect->z);
 
     field_build_effect_part_matrix(effect, part, matrix, actor);
     gte_SetRotMatrix(matrix);
 
-    screen_x = FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256;
+    screen_x = FIELD_SCREEN_X(effect->x);
     camera_y = g_field_view_offset_y;
     ((FieldFlatLine*)packet_cursor)[0].xy0.signed_pair.x = (s16)screen_x;
     if (camera_y < 0)

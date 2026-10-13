@@ -3502,8 +3502,8 @@ s32 field_get_actor_sound_pan(s32 actor_index)
     Vec2s pos;
     s32 screen_x;
 
-    pos.x = FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + g_field_actors[actor_index].x / 256;
-    pos.y = FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + g_field_actors[actor_index].y / 256 - g_field_actors[actor_index].z / 512 - g_field_view_offset_z / 512;
+    pos.x = FIELD_SCREEN_X(g_field_actors[actor_index].x);
+    pos.y = FIELD_SCREEN_Y(g_field_actors[actor_index].y, g_field_actors[actor_index].z);
 
     screen_x = pos.x;
     if (screen_x >= FIELD_PAN_SCREEN_LEFT)

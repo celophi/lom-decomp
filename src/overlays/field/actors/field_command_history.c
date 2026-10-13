@@ -127,7 +127,7 @@ void field_command_history_record(s32 player, s32 age_sequence)
         else
         {
             raw_buttons = ports[player].published_sample.held_buttons;
-            buttons = (raw_buttons << 8) | (raw_buttons >> 8);
+            buttons = PAD_SWAP_BYTES(raw_buttons);
         }
 #if !defined(VERSION_JP)
         value = PAD_REMAP_FACE_BITS_16(buttons);
