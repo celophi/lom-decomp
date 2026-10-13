@@ -4,9 +4,6 @@
 #include "../internal/field_script.h"
 #include "../internal/field_records.h"
 
-extern FieldBattleContext *g_field_battle;
-extern FieldRuntimeContext *g_field_runtime;
-
 /** @brief Runtime actor flag bits holding the trigger group. */
 #define FIELD_TRIGGER_GROUP_MASK 0xF
 /** @brief FieldActorTemplate::flags bits. */
@@ -37,7 +34,7 @@ s32 field_build_group_monster_records(s32 group)
         }
 
         state = field_find_object_state(g_field_runtime->actors[i].id);
-        if (state == NULL || state == (FieldStatusState *)-1)
+        if (state == NULL || state == FIELD_STATUS_STATE_NONE)
         {
             record_game_diagnostic(DIAG_ERROR, DIAG_BAD_MONSTER_OBJECT, group, g_field_runtime->actors[i].id);
         }

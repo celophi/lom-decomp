@@ -7,8 +7,6 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
 
-extern FieldRuntimeContext* g_field_runtime;
-
 void field_script_run(FieldScriptState* state);
 u8* field_get_event_script(s32 script_id);
 FieldActorRecord* field_find_actor_record_or_default(s32 id);

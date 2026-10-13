@@ -102,10 +102,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 #define FIELD_SAVED_PLAYER_STRIDE 0x250
 #define FIELD_SAVED_PLAYER_CONTROL 0x608
 
-/** @brief Control modes (low bits of FieldActor::control). */
-#define FIELD_CONTROL_PAD 0
-#define FIELD_CONTROL_FOLLOW 1
-#define FIELD_CONTROL_SCRIPTED 2
 /** @brief FieldActor::control bit 23: the actor uses its own tint. */
 #define FIELD_CONTROL_TINTED_SHIFT 23
 #define FIELD_CONTROL_TINTED 0x800000
@@ -197,9 +193,7 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 #define FIELD_PAN_SCREEN_LEFT 0x10
 #define FIELD_PAN_SCREEN_RIGHT 0x131
 
-/** @brief Parameter curve word: segment count, random flag; segment word: length and value. */
-#define FIELD_CURVE_SEGMENT_COUNT_MASK 0x7F
-#define FIELD_CURVE_RANDOM 0x80
+/** @brief Segment word: length and value. */
 #define FIELD_SEGMENT_LENGTH_MASK 0x3FF
 #define FIELD_SEGMENT_VALUE_SHIFT 10
 
@@ -315,8 +309,6 @@ extern s32 D_80105770;
 extern s32 g_field_timed_panel_active;
 extern s32 g_field_modal_state;
 extern s32 D_80105760;
-extern s32 g_field_dialog_screen_mode;
-extern s32 g_field_duel_mode[];
 
 /*
  * Retail addresses of g_field_resource_entries[3].unk8, g_field_player_records[1]'s flag
@@ -359,7 +351,7 @@ void field_show_battle_results(void)
     g_field_fade_target.green = FIELD_FADE_NORMAL_LEVEL;
     g_field_fade_target.blue = FIELD_FADE_NORMAL_LEVEL;
     g_field_fade_target.duration = FIELD_FADE_FRAMES;
-    if (g_field_duel_mode[0] == 0)
+    if (g_field_duel_mode == 0)
     {
         field_merge_dialog_items();
         field_advance_ability_progression();
@@ -2736,7 +2728,7 @@ void field_update_actor_objects(void)
                     }
 
                     mode = actor->control.word & FIELD_CONTROL_MODE_MASK;
-                    if (mode == FIELD_CONTROL_PAD)
+                    if (mode == FIELD_CONTROL_PLAYER)
                     {
                         if (g_field_item_drop_menu_open == 0 && g_field_party_routes_stale == 0 && g_field_dialog_screen_mode == 0)
                         {
@@ -2750,7 +2742,7 @@ void field_update_actor_objects(void)
                             }
                         }
                     }
-                    else if (mode == FIELD_CONTROL_FOLLOW)
+                    else if (mode == FIELD_CONTROL_FOLLOWER)
                     {
                         if (g_field_dialog_screen_mode == 0 && g_field_return_to_title_prompt_state == 0)
                         {
@@ -2813,7 +2805,7 @@ static void field_settle_actor_vertical_offset(FieldActor* actor)
 {
     if (actor->y < 0)
     {
-        actor->y += 0x800;
+        actor->y += FIELD_ACTOR_FALL_STEP;
         if (actor->y > 0)
         {
             actor->y = 0;
@@ -2884,7 +2876,7 @@ static void field_stream_resource_to_buffer(u16 resource_id, void* destination)
 
     size = cdrom_queue_read(resource_id, destination);
     cdrom_wait_queue_empty();
-    g_field_resource_cursor += (size + 3) & ~3;
+    g_field_resource_cursor += ALIGN4(size);
 }
 
 /**
@@ -3476,7 +3468,7 @@ static void field_append_resource_data(u32* src, s32 length, s32 slot_index)
     }
 
     g_field_resource_entries[slot_index].start = g_field_resource_cursor;
-    g_field_resource_cursor += (length + 3) & ~3;
+    g_field_resource_cursor += ALIGN4(length);
 }
 
 /**

@@ -5,20 +5,7 @@
 
 #include "common.h"
 #include "../internal/field_calls.h"
-
-/** @brief One (value, key) pair of a FieldKeyedList; field_sort_keyed_list orders by @c key. */
-typedef struct FieldKeyedPair
-{
-    u32 value;
-    u32 key;
-} FieldKeyedPair;
-
-/** @brief Counted list of (value, key) pairs. */
-typedef struct FieldKeyedList
-{
-    u32 count;
-    FieldKeyedPair pairs[1];
-} FieldKeyedList;
+#include "../internal/field_records.h"
 
 /**
  * @brief Copy or clear a buffer in 32-bit words.
@@ -36,6 +23,7 @@ void* field_copy_words(const void* src, void* dest, s32 size)
     from = src;
     to = dest;
     count = size / 4;
+
     if (from != NULL)
     {
         while (count != 0)
@@ -52,35 +40,37 @@ void* field_copy_words(const void* src, void* dest, s32 size)
             count--;
         }
     }
+
     return to;
 }
 
 /**
- * @brief Reorder a (value, key) pair list by unsigned key: smallest first, the rest descending.
- * @param list Pair list to reorder.
+ * @brief Reorder an id/distance list by unsigned distance: nearest first, the rest descending.
+ * @param list List to reorder.
  * @note Every pass compares entry @c i with entries 1 to count - 1 (not i + 1 on), so after
- *       the first pass puts the smallest key in entry 0 the remaining passes leave entries
- *       1 on in descending key order.
+ *       the first pass puts the smallest distance in entry 0 the remaining passes leave entries
+ *       1 on in descending distance order.
  */
 void field_sort_keyed_list(FieldKeyedList* list)
 {
     u32 i;
     u32 j;
-    u32 key;
-    u32 value;
+    u32 distance;
+    u32 id;
 
     for (i = 0; i < list->count; i++)
     {
         for (j = 1; j < list->count; j++)
         {
-            key = list->pairs[i].key;
-            if (list->pairs[j].key < key)
+            distance = list->entries[i].distance;
+
+            if (list->entries[j].distance < distance)
             {
-                value = list->pairs[i].value;
-                list->pairs[i].value = list->pairs[j].value;
-                list->pairs[i].key = list->pairs[j].key;
-                list->pairs[j].value = value;
-                list->pairs[j].key = key;
+                id = list->entries[i].id;
+                list->entries[i].id = list->entries[j].id;
+                list->entries[i].distance = list->entries[j].distance;
+                list->entries[j].id = id;
+                list->entries[j].distance = distance;
             }
         }
     }

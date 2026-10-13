@@ -24,8 +24,6 @@
 /** @brief @p value limited to the range @p low to @p high. */
 #define CLAMP(value, low, high) ((value) < (low) ? (low) : ((value) > (high) ? (high) : (value)))
 
-s32 field_get_actor_position(s32 key, Vec3i* position);
-
 /**
  * @brief Pick a grid column from the distance between the companion and an actor.
  *

@@ -115,7 +115,7 @@ void carda_init(void* work, s32 mode)
     field_reset_input_repeat();
     carda_build_ui_elements();
 
-    g_carda_save_blob = (u8*)(((uintptr_t)work + 3) & ~3);
+    g_carda_save_blob = (u8*)ALIGN4(work);
 }
 
 #include "../../common/card_menu/card_menu_update_frame.inc.c"

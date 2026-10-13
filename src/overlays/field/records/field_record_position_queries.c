@@ -9,7 +9,6 @@
 #include "common/vector.h"
 
 FieldStatusState* field_find_object_state(s32 actor_id);
-s32 field_get_actor_position(s32 key, Vec3i* position);
 
 /**
  * @brief Manhattan distance between two positions on the X and Z axes.

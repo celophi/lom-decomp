@@ -95,11 +95,9 @@ typedef struct FieldBattleResource
     s32 rewards_offset;
 } FieldBattleResource;
 
-extern FieldBattleContext* g_field_battle;
 extern FieldBattleContext g_field_battle_context;
 extern FieldActionBank* g_field_action_bank;
 extern FieldActionBank g_field_default_action_bank;
-extern s32 g_field_duel_mode;
 
 /** @brief Per-effect immunity masks; also indexed by status slot id - FIELD_STATUS_SLOT_ID_BASE. */
 extern u8 g_field_status_immunity_masks[FIELD_STATUS_SLOT_ID_COUNT];
@@ -112,7 +110,6 @@ extern u8 g_field_stat_change_signals[];
 extern u8 g_field_monster_level_by_rank[FIELD_LEVEL_RANK_COUNT];
 
 s32 field_get_actor_facing(s32 actor_id);
-s32 field_get_actor_position(s32 actor_id, Vec3i* position);
 s32 field_revive_actor();
 FieldStatusState* field_find_object_state(s32 actor_id);
 s32 field_spawn_shared_animation_actor(s32 key, s32 resource_index);

@@ -150,8 +150,6 @@ void field_set_cd_error_fade_target(void);
 #define FIELD_DUEL_PANEL_START_OFFSET 500
 /** @brief The duel panel is gone once it has slid this far past the screen edge. */
 #define FIELD_DUEL_PANEL_END_OFFSET (-100)
-/** @brief Animation of the losing hero; decides the duel winner. */
-#define FIELD_ANIMATION_DUEL_LOST 0x1D
 
 /** @brief The duel panels' text is drawn only while they slide in or out. */
 #define FIELD_DUEL_PANEL_MOVING (g_field_duel_panel_phase == FIELD_DUEL_SLIDE_IN || g_field_duel_panel_phase == FIELD_DUEL_SLIDE_OUT)
@@ -232,15 +230,12 @@ extern s32 g_field_primary_held_buttons;
 extern s32 g_field_primary_repeat_delay;
 extern s32 g_field_secondary_held_buttons;
 extern s32 g_field_secondary_repeat_delay;
-extern s32 g_field_buffered_input;
 extern u8 g_field_menu_controller_types[CONTROLLER_PORT_COUNT];
 
 /* Field state that blocks the menu. */
-extern s32 g_field_interaction_active;
 extern s32 g_field_party_routes_stale;
 extern s32 g_field_item_drop_menu_open;
 extern s32 g_field_timed_panel_active;
-extern s32 g_field_dialog_screen_mode;
 extern s32 g_field_return_to_title_prompt_state;
 extern s32 D_8012291C;
 extern s32 g_field_item_drop_enabled;
@@ -1432,7 +1427,7 @@ void field_process_input(FieldRenderHalf* render)
                 return;
             }
         }
-        if (field_text_get_status(0) == -1 && g_field_timed_panel_active == 0 && g_field_dialog_screen_mode == 0 && g_field_return_to_title_prompt_state == 0 &&
+        if (field_text_get_status(0) == FIELD_TEXT_STATUS_CLOSED && g_field_timed_panel_active == 0 && g_field_dialog_screen_mode == 0 && g_field_return_to_title_prompt_state == 0 &&
             g_field_item_drop_menu_open == 0 && field_party_reload_pending() == 0)
         {
             if (g_field_menu_controller_types[0] != CONTROLLER_DEVICE_DISCONNECTED && ports[0].published_sample.device_type == CONTROLLER_DEVICE_DISCONNECTED)
@@ -2278,7 +2273,7 @@ void field_begin_duel_result(void)
     g_field_duel_panel_hold_frames = 0;
     g_field_duel_panel_offset = FIELD_DUEL_PANEL_START_OFFSET;
 
-    if ((g_field_actors[0].animation & FIELD_ANIMATION_INDEX_MASK) == FIELD_ANIMATION_DUEL_LOST)
+    if ((g_field_actors[0].animation & FIELD_ANIMATION_INDEX_MASK) == FIELD_ANIMATION_KNOCKED_DOWN)
     {
         g_field_duel_winner = 1;
         g_saved_game_ctx->characters[0].duel_losses = g_saved_game_ctx->characters[0].duel_losses + 1;

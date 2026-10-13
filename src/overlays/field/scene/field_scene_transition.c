@@ -25,8 +25,6 @@
 #include "overlays/field/field_actor_records.h"
 #include "main/field_entry.h"
 
-/** @brief World coordinates are 24.8 fixed point. */
-#define FIELD_POSITION_SHIFT 8
 /** @brief Scene resource selector bit kept in g_field_scene_mode_bit (the scene runs field_battle_setup). */
 #define FIELD_SCENE_MODE_FLAG 0x8000
 /** @brief Scene resource selector bits holding the scene id. */
@@ -102,9 +100,6 @@
 /** @brief Fixed-point X and Z limits of the map; Z is stored at half resolution. */
 #define FIELD_MAP_X_LIMIT(bounds) ((bounds)->width << FIELD_POSITION_SHIFT)
 #define FIELD_MAP_Z_LIMIT(bounds) ((s16)(bounds)->depth << (FIELD_POSITION_SHIFT + 1))
-
-/** @brief Address @p p rounded up to a word boundary, as an integer. */
-#define FIELD_ALIGN4(p) (((uintptr_t)(p) + 3) & ~3)
 
 /**
  * @brief Form a typed pointer from a byte offset plus a base address.
@@ -248,13 +243,10 @@ extern s32 g_field_pending_scene_id;
 extern s32 g_field_pending_object_id;
 extern s32 g_field_pending_sound_bank_id;
 extern s32 g_field_scene_data_size;
-extern u16* g_field_event_scripts;
 extern u16* g_field_actor_scripts;
 extern u32* g_field_scene_record_table;
 extern s32 g_field_hide_actor_panels;
 /* TODO: Script command 0x44 selects alternate party control and triple HP. */
-extern s32 g_field_duel_mode;
-extern s32 g_field_scene_contact_latched;
 extern u8 g_field_scene_data_buffer[];
 extern s32 g_field_song_volume;
 extern s32 g_field_preserve_entry_music;
@@ -462,19 +454,19 @@ void field_update_scene(void)
         {
             *data_output++ = *section_source++;
         }
-        g_field_event_scripts = (u16*)FIELD_ALIGN4(data_output);
+        g_field_event_scripts = (u16*)ALIGN4(data_output);
         section_source = event_scripts_section;
         while (section_source != strings_section)
         {
             *data_output++ = *section_source++;
         }
-        g_field_actor_scripts = (u16*)FIELD_ALIGN4(data_output);
+        g_field_actor_scripts = (u16*)ALIGN4(data_output);
         section_source = actor_scripts_section;
         while (section_source != records_section)
         {
             *data_output++ = *section_source++;
         }
-        g_field_scene_record_table = (u32*)FIELD_ALIGN4(data_output);
+        g_field_scene_record_table = (u32*)ALIGN4(data_output);
         section_source = records_section;
         while (section_source != actors_section)
         {
@@ -483,7 +475,7 @@ void field_update_scene(void)
         section_source = portraits_section + 4;
         i = 0;
         portrait_count = *(u32*)portraits_section;
-        g_field_scene_portraits = (u8*)FIELD_ALIGN4(data_output);
+        g_field_scene_portraits = (u8*)ALIGN4(data_output);
         g_field_scene_portrait_count = portrait_count;
         while ((u32)i < g_field_scene_portrait_count)
         {
@@ -898,15 +890,15 @@ void field_load_scene_actors(FieldSceneLayout* layout)
             actor->x = layout_record->position.bits.x << FIELD_POSITION_SHIFT;
             actor->z = layout_record->position.bits.z << FIELD_POSITION_SHIFT;
             actor->y = layout_record->position.bits.y << FIELD_POSITION_SHIFT;
-            state->contact.bits.flag6 = 0;
-            state->contact.bits.flag7 = 0;
+            state->contact.bits.action_pending = 0;
+            state->contact.bits.targeted = 0;
             state->movement.word &= ~FIELD_MOVEMENT_INVULNERABLE;
             state->tint_red = g_field_object_parts[actor->object_index].tint_red;
             state->tint_green = g_field_object_parts[actor->object_index].tint_green;
             state->tint_blue = g_field_object_parts[actor->object_index].tint_blue;
             state->tint_timer = 0;
             state->interaction_kind = 0;
-            state->contact.bits.flag5 = 0;
+            state->contact.bits.no_hit_test = 0;
             state->hp_display.bits.panel_timer = 0;
             state->hp_display.bits.value = state->maximum_hp;
             state->current_hp.word = state->maximum_hp & 0xFFFFFF;

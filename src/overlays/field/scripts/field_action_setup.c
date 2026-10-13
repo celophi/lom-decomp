@@ -11,10 +11,7 @@
 #include "../internal/field_records.h"
 #include <rand.h>
 
-/** @brief Event slot run on the attacker and the target when an action resolves. */
-#define FIELD_ACTION_EVENT 0xC
-
-/** @brief FIELD_ACTION_EVENT modes. */
+/** @brief FIELD_EVENT_ACTION modes. */
 enum
 {
     FIELD_ACTION_EVENT_MISS = 0,     /**< Target: the action missed or was ignored. */
@@ -109,8 +106,6 @@ enum
 /** @brief Record ids below this are the player characters. */
 #define FIELD_PLAYER_RECORD_COUNT 2
 
-extern FieldBattleContext* g_field_battle;
-
 FieldActionDescriptor* field_select_action_descriptor(void);
 s32 field_get_actor_animation(s32 key);
 s32 field_register_actor_hit(s32 key, s32 reaction);
@@ -153,7 +148,7 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
     {
         if (result == FIELD_GUARD_IGNORED)
         {
-            field_run_actor_event(action->target_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_MISS);
+            field_run_actor_event(action->target_id, FIELD_EVENT_ACTION, FIELD_ACTION_EVENT_MISS);
         }
         g_field_battle->attacker->unkC &= ~FIELD_RECORD_ACTION_MODIFIERS;
         return result;
@@ -182,9 +177,9 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
         {
             if (!g_field_battle->action_flags.bits.follow_up)
             {
-                field_run_actor_event(action->attacker_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_KILL);
+                field_run_actor_event(action->attacker_id, FIELD_EVENT_ACTION, FIELD_ACTION_EVENT_KILL);
             }
-            field_run_actor_event(action->target_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_DEFEATED);
+            field_run_actor_event(action->target_id, FIELD_EVENT_ACTION, FIELD_ACTION_EVENT_DEFEATED);
             if (field_count_status_slots(g_field_battle->attacker, FIELD_SLOT_MONEY_PLUS_2) != 0)
             {
                 g_field_battle->target->unkC |= FIELD_DEFEAT_MONEY_PLUS_2;
@@ -218,8 +213,8 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
         else
         {
             field_battle_run_down_counters(1);
-            field_run_actor_event(action->attacker_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_HIT);
-            field_run_actor_event(action->target_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_HURT);
+            field_run_actor_event(action->attacker_id, FIELD_EVENT_ACTION, FIELD_ACTION_EVENT_HIT);
+            field_run_actor_event(action->target_id, FIELD_EVENT_ACTION, FIELD_ACTION_EVENT_HURT);
             g_field_battle->target->unkC &= ~FIELD_RECORD_DEFEAT_FLAGS;
             field_register_actor_hit(action->target_id, 0);
         }
@@ -229,7 +224,7 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
     else
     {
         field_battle_run_down_counters(0);
-        field_run_actor_event(action->target_id, FIELD_ACTION_EVENT, FIELD_ACTION_EVENT_MISS);
+        field_run_actor_event(action->target_id, FIELD_EVENT_ACTION, FIELD_ACTION_EVENT_MISS);
         g_field_battle->target->unkC &= ~FIELD_RECORD_DEFEAT_FLAGS;
         g_field_battle->attacker->unkC &= ~FIELD_RECORD_ACTION_MODIFIERS;
         return 0;

@@ -3,6 +3,7 @@
 
 #include "common.h"
 
+struct FieldActor;
 struct FieldActorSlot;
 struct FieldRenderHalf;
 
@@ -38,6 +39,7 @@ void field_set_all_actor_render_state(s32 red, s32 green, s32 blue, s32 color_fl
 s32 field_set_actor_render_state(s32 red, s32 green, s32 blue, s32 color_flag, s32 render_mode, s32 actor_selector);
 void field_update_actor_objects(void);
 s32 field_get_actor_sound_pan(s32 actor_index);
+void field_restart_actor_animation_reverse(struct FieldActor* actor);
 void field_reset_effect_pool(void);
 
 #endif

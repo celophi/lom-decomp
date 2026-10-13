@@ -19,9 +19,6 @@
 #include "main/audio/akao.h"
 #include "overlays/field/field_actor_records.h"
 
-/** @brief Control mode of an actor driven by its script. */
-#define FIELD_CONTROL_SCRIPTED 2
-
 /** @brief Lowest actor record a script may spawn a child actor into. */
 #define FIELD_FIRST_SPAWN_ACTOR 3
 
@@ -43,17 +40,11 @@
 /** @brief Wait value that keeps a command running until it finishes by itself. */
 #define FIELD_WAIT_UNTIL_DONE 0xFF
 
-/** @brief FieldObjectState::movement bits. */
-#define FIELD_MOVEMENT_SEQUENCE_0800 0x0800
-#define FIELD_MOVEMENT_SEQUENCE_1000 0x1000
-
 /** @brief FieldObjectPart::spawn_flags bit toggled by script opcodes 0xA5 and 0xA6. */
 #define FIELD_PART_FLAG_800000 0x800000
 
 /** @brief FieldActionSlot flags bit of an instrument (charge) action. */
 #define FIELD_ACTION_INSTRUMENT 0x400
-/** @brief FieldObjectState::action_parameter value meaning "none". */
-#define FIELD_ACTION_PARAMETER_NONE 0xFFFF
 
 /** @brief FieldAnimationDef::flags bit of an animation played on every track. */
 #define FIELD_ANIMATION_DEF_LAYERED 0x800
@@ -82,9 +73,6 @@
 /** @brief Frame limits of the approach and timed move commands. */
 #define FIELD_APPROACH_TIMEOUT 250
 #define FIELD_TIMED_MOVE_TIMEOUT 240
-
-/** @brief Frames the boss HUD panel shakes after a hit. */
-#define FIELD_HUD_SHAKE_START 5
 
 /** @brief Saturated value of the saved hit counters. */
 #define FIELD_COUNTER_MAX (-1)
@@ -185,15 +173,12 @@ extern s32 g_field_direction_animation_modes[];
 extern s32 g_field_actor_walk_animations[];
 extern s32 g_field_binding_restart_pending[FIELD_ACTOR_BINDING_COUNT];
 extern u16* g_field_actor_scripts;
-extern s32 g_field_boss_hud_shake_frame;
 
 s32 field_collision_find_path(FieldCollisionQuery* start, FieldCollisionQuery* goal, FieldPathPoint* path, s32 mode);
 void field_collision_dilate_query(FieldCollisionQuery* query);
 void field_restart_actor_animation();
-void field_restart_actor_animation_reverse(FieldActor* actor);
 s32 field_get_next_animation_frame_count(FieldActor* actor);
 void field_start_actor_hit_reaction(FieldActor* actor, s32 guard);
-void field_knock_down_actor(FieldActor* actor, s32 clear_recovery);
 void field_start_actor_jump();
 void field_start_actor_defeat();
 void field_count_chain_hit(s32 object_index);
@@ -1262,7 +1247,7 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound)
     }
     field_count_revived_record(g_field_object_states[actor->object_index].key);
     g_field_object_states[actor->object_index].flags = 0;
-    g_field_object_states[actor->object_index].contact.bits.flag5 = 0;
+    g_field_object_states[actor->object_index].contact.bits.no_hit_test = 0;
     /* unk0 holds the maximum HP; unk4 and the low 24 bits of unk8 the current HP. */
     hp_state = &g_field_object_states[actor->object_index];
     hp_state->hp_display.word = (hp_state->hp_display.word & 0xFF000000) | (hp_state->maximum_hp & 0xFFFFFF);
@@ -1480,8 +1465,8 @@ void field_resolve_collected_hits(s32 object_index)
         do
         {
             current = FIELD_OBJECT_STATE_BY_INDEX8(loop_states, index8, object_index);
-            loop_states[current->targets[i]].contact.bits.flag7 = 0;
-            if (!loop_states[current->targets[i]].contact.bits.flag5 && loop_states[current->targets[i]].current_hp.word != 0)
+            loop_states[current->targets[i]].contact.bits.targeted = 0;
+            if (!loop_states[current->targets[i]].contact.bits.no_hit_test && loop_states[current->targets[i]].current_hp.word != 0)
             {
                 request.attacker_id = current->key;
                 if (current->action <= FIELD_ACTION_BATTLE_LAST)
@@ -1526,7 +1511,7 @@ s32 field_resolve_contact_hit(s32 source_index, s32 target_index)
     }
     states = g_field_object_states;
     target = &states[target_index];
-    target->contact.bits.flag7 = 0;
+    target->contact.bits.targeted = 0;
     if (target->current_hp.word == 0)
     {
         return 0;
@@ -1579,7 +1564,7 @@ s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action)
     {
         states = g_field_object_states;
         target = &states[target_index];
-        target->contact.bits.flag7 = 0;
+        target->contact.bits.targeted = 0;
         if (target->current_hp.word != 0)
         {
             request.attacker_id = states[source_index].key;
@@ -1664,7 +1649,7 @@ s32 field_register_actor_hit(s32 key, s32 guard)
     }
     if (command >= FIELD_ACTOR_COMMAND_ACTION)
     {
-        /* Actions 0-3 and 8-10 are always interrupted; the others only with contact flag6. */
+        /* Actions 0-3 and 8-10 are always interrupted; the others only while the target's action is pending. */
         switch (g_field_object_states[actor->object_index].action)
         {
         case 0:
@@ -1676,7 +1661,7 @@ s32 field_register_actor_hit(s32 key, s32 guard)
         case 10:
             break;
         default:
-            if (!g_field_object_states[actor->object_index].contact.bits.flag6)
+            if (!g_field_object_states[actor->object_index].contact.bits.action_pending)
             {
                 return 0;
             }
@@ -1898,7 +1883,7 @@ s32 field_face_actor(s32 source_key, s32 target_key)
     source->animation_state = 1;
     source->animation_frame = 0;
     source->animation_active = 1;
-    g_field_object_states[source->object_index].movement.word &= ~(FIELD_MOVEMENT_SEQUENCE_0800 | FIELD_MOVEMENT_SEQUENCE_1000);
+    g_field_object_states[source->object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
     field_restart_actor_animation(source);
     return 0;
 }
@@ -1922,7 +1907,7 @@ s32 field_set_actor_animation(s32 key, u8 animation)
     actor->animation_state = 1;
     actor->animation_frame = 0;
     actor->animation_active = 1;
-    g_field_object_states[actor->object_index].movement.word &= ~(FIELD_MOVEMENT_SEQUENCE_0800 | FIELD_MOVEMENT_SEQUENCE_1000);
+    g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
     field_restart_actor_animation(actor);
     return 0;
 }

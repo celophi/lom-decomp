@@ -11,24 +11,14 @@
 #include "../internal/field_records.h"
 #include "../internal/field_actor.h"
 
-
 /** @brief field_battle_side_defeated results. */
 #define FIELD_BATTLE_ONGOING 0
 #define FIELD_BATTLE_PARTY_DEFEATED 1
 #define FIELD_BATTLE_ENEMIES_DEFEATED 2
 
-/** @brief FieldBattleContext::state flag: the battle is over. */
-#define FIELD_BATTLE_FINISHED 0x80000000
-
 /** @brief Record id whose script variables hold the companion values. */
 #define FIELD_COMPANION_RECORD_ID 2
 
-/** @brief Owner id of the first event record. */
-#define FIELD_EVENT_OWNER 0x80
-
-/** @brief Actor event run for an action, and the one run when the battle ends. */
-#define FIELD_ACTION_EVENT 12
-#define FIELD_BATTLE_END_EVENT 13
 
 /** @brief FieldStatusRecordMeta::packed bit of bits.ally. */
 #define FIELD_STATUS_META_ALLY 0x200
@@ -85,7 +75,6 @@
 /** @brief First and one-past-last status slot id passed on to the target by a hit. */
 #define FIELD_STATUS_ID_ON_HIT_FIRST 0x50
 #define FIELD_STATUS_ID_ON_HIT_END 0x60
-
 
 /** @brief Number of party records; higher record ids are monsters. */
 #define FIELD_PARTY_RECORD_COUNT 3
@@ -150,8 +139,6 @@ typedef struct FieldOnHitStatus
     u8 duration;
 } FieldOnHitStatus;
 
-extern FieldBattleContext* g_field_battle;
-
 /** @brief Nonzero while a guest is in the party; selects the coordinate panel icon. */
 extern s32 g_field_party_has_guest;
 
@@ -200,7 +187,7 @@ void field_battle_run_party_event(void)
 
     for (i = 0; i < FIELD_PARTY_RECORD_COUNT; i++)
     {
-        field_run_actor_event(i, FIELD_ACTION_EVENT, 3);
+        field_run_actor_event(i, FIELD_EVENT_ACTION, 3);
     }
 }
 
@@ -355,7 +342,7 @@ void field_battle_finish(s32 result)
 {
     field_set_script_var(0, FIELD_VAR_BATTLE_RESULT, result);
     g_field_battle->state.flags |= FIELD_BATTLE_FINISHED;
-    field_run_actor_event(FIELD_EVENT_OWNER, FIELD_BATTLE_END_EVENT, 1);
+    field_run_actor_event(FIELD_EVENT_ACTOR_ID_BASE, FIELD_EVENT_NOTIFY, FIELD_BATTLE_PHASE_END);
 }
 
 /**

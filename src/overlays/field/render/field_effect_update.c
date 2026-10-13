@@ -123,13 +123,6 @@ extern FieldObjectPart g_field_object_parts[];
 extern FieldMotionRecord g_field_actors[];
 extern FieldMotionRecord g_field_effect_records[FIELD_EFFECT_ACTIVE_RECORD_COUNT];
 extern VECTOR D_80105778;
-/**
- * @brief Packed action context: action in low bits, source at bit 8, recipient at bit 16.
- * @note Also written on pool exhaustion and advanced during collision attempts;
- * the broader protocol of those writes is still unresolved.
- */
-extern s32 g_field_action_context;
-
 extern s32 D_80105760;
 extern s32 D_80105770;
 extern u8 *g_field_builtin_track_data;
@@ -497,7 +490,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
             actor->track_counters[g_field_track_index][part_index]--;
             return -1;
         }
-        if ((!((g_field_object_states[actor->targets[g_field_track_index]].contact.word >> 6) & 1) &&
+        if ((!((g_field_object_states[actor->targets[g_field_track_index]].contact.word >> FIELD_CONTACT_ACTION_PENDING_BIT) & 1) &&
              (binding_index = field_object_binding(actor->targets[g_field_track_index])->owner) == actor->targets[g_field_track_index] &&
              field_object_binding(binding_index)->state != 0) ||
             ((g_field_object_states[actor->targets[g_field_track_index]].contact.bytes.flags & 1) &&
@@ -601,7 +594,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
                 owner_placement_guard = &table_base[actor->owner_object_index];
             }
             if ((owner_placement_guard->contact.bytes.flags & 1) && actor->slot_index >= 0x40U &&
-                !((owner_placement_guard->contact.word >> 5) & 1) && owner_placement_guard->contact.bytes.controller_index != actor->slot_index)
+                !((owner_placement_guard->contact.word >> FIELD_CONTACT_NO_HIT_TEST_BIT) & 1) && owner_placement_guard->contact.bytes.controller_index != actor->slot_index)
             {
                 effect->state = 0xFF;
                 actor->active_counts[g_field_track_index][part_index]--;
@@ -905,7 +898,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
             owner_placement_state = &table_base[actor->owner_object_index];
         }
         if ((owner_placement_state->contact.bytes.flags & 1) && owner_placement_state->contact.bytes.controller_index != actor->slot_index &&
-            actor->slot_index >= 0x40U && !((owner_placement_state->contact.word >> 5) & 1))
+            actor->slot_index >= 0x40U && !((owner_placement_state->contact.word >> FIELD_CONTACT_NO_HIT_TEST_BIT) & 1))
         {
             effect->state = 0xFF;
             actor->active_counts[g_field_track_index][part_index]--;
@@ -2095,7 +2088,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldObjectPar
                 flags_byte = owner->contact.bytes.flags;
                 if ((flags_byte & 1) && ((u8) actor->slot_index >= 0x40U))
                 {
-                    if (!(((u32) owner->contact.word >> 5) & 1))
+                    if (!(((u32) owner->contact.word >> FIELD_CONTACT_NO_HIT_TEST_BIT) & 1))
                     {
                         offset_y = 0x800000;
                         offset_or_angle = offset_y;
@@ -3579,15 +3572,15 @@ static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *pa
             }
             else if (((flags & 0xF) == 2) && (part->effect_flags.word & FIELD_PART_EFFECT_FOOTPRINT))
             {
-                shadow_footprint[0] = ((s8) frame_data[0] * part->appearance.fields.scale_xz) >> 6;
-                shadow_footprint[1] = ((s8) frame_data[1] * part->scale_y) >> 6;
-                shadow_footprint[2] = ((s8) frame_data[2] * part->appearance.fields.scale_xz) >> 6;
-                shadow_footprint[3] = ((s8) frame_data[3] * part->scale_y) >> 6;
-                shadow_footprint[4] = ((s8) frame_data[4] * part->appearance.fields.scale_xz) >> 6;
-                shadow_footprint[5] = ((s8) frame_data[5] * part->scale_y) >> 6;
-                shadow_footprint[6] = ((s8) frame_data[6] * part->appearance.fields.scale_xz) >> 6;
+                shadow_footprint[0] = ((s8) frame_data[0] * part->appearance.fields.scale_xz) >> FIELD_PART_SCALE_SHIFT;
+                shadow_footprint[1] = ((s8) frame_data[1] * part->scale_y) >> FIELD_PART_SCALE_SHIFT;
+                shadow_footprint[2] = ((s8) frame_data[2] * part->appearance.fields.scale_xz) >> FIELD_PART_SCALE_SHIFT;
+                shadow_footprint[3] = ((s8) frame_data[3] * part->scale_y) >> FIELD_PART_SCALE_SHIFT;
+                shadow_footprint[4] = ((s8) frame_data[4] * part->appearance.fields.scale_xz) >> FIELD_PART_SCALE_SHIFT;
+                shadow_footprint[5] = ((s8) frame_data[5] * part->scale_y) >> FIELD_PART_SCALE_SHIFT;
+                shadow_footprint[6] = ((s8) frame_data[6] * part->appearance.fields.scale_xz) >> FIELD_PART_SCALE_SHIFT;
                 shadow_count += 1;
-                shadow_footprint[7] = ((s8) frame_data[8] * part->scale_y) >> 6;
+                shadow_footprint[7] = ((s8) frame_data[8] * part->scale_y) >> FIELD_PART_SCALE_SHIFT;
             }
             frame_data += 9;
             frame_count -= 1;
@@ -4096,7 +4089,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                         field_transform_effect_quad_vertices8(rec, slot, item, 4, sxy, dir, gte_out);
                         break;
                     case 6:
-                        if (!(slot->action_parameter & 0x8000) && !(slot->movement.word & 0x1800) && (slot->action_parameter != 0xFFFF) &&
+                        if (!(slot->action_parameter & FIELD_ACTION_PARAMETER_TRANSIENT_ACTOR) && !(slot->movement.word & FIELD_MOVEMENT_SEQUENCE_MASK) && (slot->action_parameter != FIELD_ACTION_PARAMETER_NONE) &&
                             (((rec->motion_parameter == 0x91) && ((rec->facing_or_reward_kind & 0x7F) == 0x2E)) || (rec->motion_parameter == 0x85) || (rec->motion_parameter == 0x98)) &&
                             !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
                         {
@@ -4177,8 +4170,8 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                     slot->attachment_points[3].y = gte_out->vy;
                                 }
                             }
-                            slot->action_parameter = 0xFFFF;
-                            slot->movement.word = (slot->movement.word & ~0x1800) | 0x1000;
+                            slot->action_parameter = FIELD_ACTION_PARAMETER_NONE;
+                            slot->movement.word = (slot->movement.word & ~FIELD_MOVEMENT_SEQUENCE_MASK) | 0x1000;
                         }
                         break;
                     case 1:
@@ -4313,7 +4306,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                     {
                                         if ((slot->action_parameter == 0x59) || (slot->action_parameter == 0x66) || (slot->action_parameter == 0x2B))
                                         {
-                                            if ((!((g_field_object_states[contact.index].contact.word >> 6) & 1) &&
+                                            if ((!((g_field_object_states[contact.index].contact.word >> FIELD_CONTACT_ACTION_PENDING_BIT) & 1) &&
                                                  (bound_index = field_get_object_binding(contact.index)->owner) == contact.index &&
                                                  field_get_object_binding(bound_index)->state != 0) ||
                                                 (g_field_object_states[contact.index].contact.bytes.flags & 1))
@@ -4614,8 +4607,8 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
         /* Pointer walk: an indexed loop loses 4 instructions. */
         for (corner = quad_bounds; corner != quad_bounds + 8; corner += 2)
         {
-            corner[0] = ((corner[0] * part->appearance.fields.scale_xz >> 6) * g_field_effect_track_scale.x) >> 12;
-            corner[1] = ((corner[1] * part->scale_y >> 6) * g_field_effect_track_scale.z) >> 12;
+            corner[0] = ((corner[0] * part->appearance.fields.scale_xz >> FIELD_PART_SCALE_SHIFT) * g_field_effect_track_scale.x) >> 12;
+            corner[1] = ((corner[1] * part->scale_y >> FIELD_PART_SCALE_SHIFT) * g_field_effect_track_scale.z) >> 12;
         }
         slot->collision.signed_half.center_offset = (quad_bounds[2] + quad_bounds[0]) >> 1;
         slot->collision.signed_half.extent = abs(quad_bounds[2] - quad_bounds[0]);
@@ -5184,7 +5177,7 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                         }
                         break;
                     case 6:
-                        if (!(slot->action_parameter & 0x8000) && (slot->action_parameter != 0xFFFF) && ((rec->motion_parameter == 0x91) || (rec->motion_parameter == 0x85) || (rec->motion_parameter == 0x86) || (rec->motion_parameter == 0x98)) && !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
+                        if (!(slot->action_parameter & FIELD_ACTION_PARAMETER_TRANSIENT_ACTOR) && (slot->action_parameter != 0xFFFF) && ((rec->motion_parameter == 0x91) || (rec->motion_parameter == 0x85) || (rec->motion_parameter == 0x86) || (rec->motion_parameter == 0x98)) && !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
                         {
                             offset_x = field_find_free_actor_slot(rec->source_object_index, 0);
                             if ((offset_x != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(rec->source_object_index, offset_x, slot->action_parameter) != 0))
@@ -5382,8 +5375,8 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
                                     }
                                 }
                             }
-                            slot->action_parameter = 0xFFFF;
-                            slot->movement.word = (slot->movement.word & ~0x1800) | 0x1000;
+                            slot->action_parameter = FIELD_ACTION_PARAMETER_NONE;
+                            slot->movement.word = (slot->movement.word & ~FIELD_MOVEMENT_SEQUENCE_MASK) | 0x1000;
                         }
                         break;
                     }
@@ -5398,8 +5391,8 @@ s32 *field_render_effect_frame16(FieldMotionRecord *rec, s32 *cursor, s32 *base,
         s16 *p = corners;
         while (p != corners + 8)
         {
-            p[0] = ((p[0] * part->appearance.fields.scale_xz >> 6) * g_field_effect_track_scale.x) >> 12;
-            p[1] = ((p[1] * part->scale_y >> 6) * g_field_effect_track_scale.z) >> 12;
+            p[0] = ((p[0] * part->appearance.fields.scale_xz >> FIELD_PART_SCALE_SHIFT) * g_field_effect_track_scale.x) >> 12;
+            p[1] = ((p[1] * part->scale_y >> FIELD_PART_SCALE_SHIFT) * g_field_effect_track_scale.z) >> 12;
             p += 2;
         }
         corner_span = abs(corners[2] - corners[0]);

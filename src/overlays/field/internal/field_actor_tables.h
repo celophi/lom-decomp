@@ -23,6 +23,10 @@
 
 /** @brief Resting value of the HUD shake counters (FieldPlayerRecord::hit_state). */
 #define FIELD_HUD_SHAKE_IDLE 0xFF
+/** @brief First frame of the HUD panel shake started by a hit (counts down to 0). */
+#define FIELD_HUD_SHAKE_START 5
+/** @brief HUD shake counter of the boss panel (FIELD_HUD_SHAKE_IDLE when still). */
+extern s32 g_field_boss_hud_shake_frame;
 
 /** @brief Number of general-purpose animation actor slots. */
 #define FIELD_ACTOR_SLOT_COUNT 48

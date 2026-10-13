@@ -18,20 +18,8 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_actor_tables.h"
 
-/** @brief Control modes (FieldActor::control & FIELD_CONTROL_MODE_MASK). */
-#define FIELD_CONTROL_PLAYER 0
-#define FIELD_CONTROL_FOLLOWER 1
-#define FIELD_CONTROL_SCRIPTED 2
-
-/** @brief Two-bit FieldActor::control field at bit 16 (meaning unknown) kept across a reset. */
-#define FIELD_CONTROL_UNK16_SHIFT 16
-#define FIELD_CONTROL_UNK16_BITS 3
-
 /** @brief Coordinate value that, in all three axes, keeps the actor's old position. */
 #define FIELD_KEEP_POSITION (-1)
-
-/** @brief Positions are stored with eight fractional bits. */
-#define FIELD_POSITION_SHIFT 8
 
 /** @brief Actors face one of eight directions. */
 #define FIELD_FACING_COUNT 8
@@ -42,11 +30,13 @@
 /** @brief Facing steps between the ratan2 zero angle and facing 0. */
 #define FIELD_FACING_ANGLE_OFFSET 2
 
-/** @brief Menu option bit 0 (the menu's vibration switch); here it lets object 1 lead. */
-#define FIELD_OPTION_VIBRATION 0x01
-
 /** @brief Object 1, the second party member. */
 #define FIELD_SECOND_MEMBER 1
+
+/** @brief Commands during which a newly started script would be lost (defeat and knock-down). */
+#define FIELD_COMMAND_BLOCKS_SCRIPT(command)                                                                                                                   \
+    ((command) == FIELD_ACTOR_COMMAND_DEFEAT_WAIT || (command) == FIELD_ACTOR_COMMAND_DEFEAT_END || (command) == FIELD_ACTOR_COMMAND_DEFEATED ||               \
+     (command) == FIELD_ACTOR_COMMAND_DEFEAT_DELAY || (command) == FIELD_ACTOR_COMMAND_KNOCKED_DOWN)
 
 /** @brief Result of field_get_actor_binding_state. */
 enum
@@ -57,9 +47,6 @@ enum
     FIELD_BINDING_QUERY_PLAYING = 3,
     FIELD_BINDING_QUERY_READY = 4
 };
-
-/** @brief Event script table: u16 offsets from the table start, then the scripts. */
-extern u16* g_field_event_scripts;
 
 void field_restart_actor_animation(FieldActor* actor);
 
@@ -83,6 +70,7 @@ void field_set_actor_group(s32 key, s32 group)
     FieldActor* actor;
 
     actor = field_lookup_actor(key);
+
     if (actor != FIELD_ACTOR_NONE)
     {
         field_set_object_group(actor->object_index, group);
@@ -97,20 +85,22 @@ void field_set_actor_group(s32 key, s32 group)
  * @param x New X position in whole units.
  * @param y New Y position in whole units.
  * @param z New Z position in whole units.
+ * @note The control group (FieldActorControl bits.group) survives the re-initialization.
  */
 void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s32 y, s32 z)
 {
     FieldActor* actor;
-    s32 kept_bits;
+    s32 control_group;
 
     actor = field_lookup_actor(key);
+
     if (actor != FIELD_ACTOR_NONE)
     {
-        kept_bits = actor->control.half[1] & FIELD_CONTROL_UNK16_BITS;
+        control_group = actor->control.bits.group;
         field_initialize_actor_record(actor->object_index, resource_entry_index);
+        actor->control.bits.group = control_group;
         actor->presence = 0;
         actor->x = x << FIELD_POSITION_SHIFT;
-        actor->control.word = (actor->control.word & ~(FIELD_CONTROL_UNK16_BITS << FIELD_CONTROL_UNK16_SHIFT)) | (kept_bits << FIELD_CONTROL_UNK16_SHIFT);
         actor->y = y << FIELD_POSITION_SHIFT;
         actor->z = z << FIELD_POSITION_SHIFT;
         field_set_object_group(actor->object_index, group);
@@ -133,33 +123,42 @@ s32 field_actor_faces_actor(s32 looker_key, s32 target_key)
     s32 animation;
 
     looker = field_lookup_actor(looker_key);
+
     if (looker == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     target = field_lookup_actor(target_key);
+
     if (target == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     animation = looker->animation;
     facing = (animation & FIELD_ANIMATION_INDEX_MASK) % FIELD_ANIMATION_DIRECTIONS;
+
     if (animation & FIELD_ANIMATION_FACING)
     {
         facing = FIELD_FACING_COUNT - facing;
     }
+
     direction = ratan2(looker->z - target->z, target->x - looker->x);
     direction = (direction + ONE / 2) / FIELD_FACING_ANGLE;
     direction += FIELD_FACING_ANGLE_OFFSET;
     direction %= FIELD_FACING_COUNT;
+
     if (abs(facing - direction) <= 1)
     {
         return 1;
     }
+
     if (abs(facing - direction + FIELD_FACING_COUNT) <= 1)
     {
         return 1;
     }
+
     return abs(direction - facing + FIELD_FACING_COUNT) <= 1;
 }
 
@@ -174,27 +173,34 @@ s32 field_get_actor_binding_state(s32 key)
     FieldActorBinding* binding;
 
     actor = field_lookup_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     if (field_actor_binding(actor)->state == FIELD_BINDING_IDLE)
     {
         return FIELD_BINDING_QUERY_NONE;
     }
+
     binding = field_actor_binding(actor);
+
     if (binding->owner != actor->object_index)
     {
         return FIELD_BINDING_QUERY_OTHER_OWNER;
     }
+
     if (field_object_binding(binding->owner)->state == FIELD_BINDING_LOADING)
     {
         return FIELD_BINDING_QUERY_LOADING;
     }
+
     if (g_field_actor_slots[field_actor_binding(actor)->slot].track_mask != 0 || g_field_actor_slots[field_actor_binding(actor)->slot].pending_track_mask != 0)
     {
         return FIELD_BINDING_QUERY_PLAYING;
     }
+
     return FIELD_BINDING_QUERY_READY;
 }
 
@@ -218,14 +224,14 @@ s32 field_reload_actor(s32 key, s32 resource_entry_index, s32 resource_slot_id, 
     Vec3i old_position;
     s32 control_mode;
     FieldActor* actor;
-    FieldResourceEntry* resource;
-    FieldResourceEntry* resources;
 
     actor = field_lookup_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     old_position.x = actor->x;
     old_position.y = actor->y;
     old_position.z = actor->z;
@@ -233,11 +239,11 @@ s32 field_reload_actor(s32 key, s32 resource_entry_index, s32 resource_slot_id, 
     field_load_resource_entry(resource_slot_id, package, resource_entry_index);
     field_initialize_actor_record(actor->object_index, resource_entry_index);
     field_initialize_actor_part(actor->object_index, 0);
-    resources = g_field_resource_entries;
-    resource = &resources[resource_entry_index];
-    resource->flags = (resource->flags & ~FIELD_RESOURCE_HAS_ACTIONS) | (has_actions & FIELD_RESOURCE_HAS_ACTIONS);
+    g_field_resource_entries[resource_entry_index].flags =
+        (g_field_resource_entries[resource_entry_index].flags & ~FIELD_RESOURCE_HAS_ACTIONS) | (has_actions & FIELD_RESOURCE_HAS_ACTIONS);
     g_field_object_states[actor->object_index].key = key;
     actor->presence = 0;
+
     if (x == FIELD_KEEP_POSITION && y == FIELD_KEEP_POSITION && z == FIELD_KEEP_POSITION)
     {
         actor->x = old_position.x;
@@ -250,6 +256,7 @@ s32 field_reload_actor(s32 key, s32 resource_entry_index, s32 resource_slot_id, 
         actor->y = y << FIELD_POSITION_SHIFT;
         actor->z = z << FIELD_POSITION_SHIFT;
     }
+
     field_set_object_group(actor->object_index, group);
     actor->animation = animation;
     actor->control.word = (actor->control.word & ~FIELD_CONTROL_MODE_MASK) | control_mode;
@@ -278,19 +285,19 @@ s32 field_start_actor_script(s32 key, s32 script_index)
     s16 command;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     command = actor->command;
-    if (command == FIELD_ACTOR_COMMAND_DEFEAT_WAIT || command == FIELD_ACTOR_COMMAND_DEFEAT_END)
+
+    if (FIELD_COMMAND_BLOCKS_SCRIPT(command))
     {
         return -1;
     }
-    if (command == FIELD_ACTOR_COMMAND_DEFEATED || command == FIELD_ACTOR_COMMAND_DEFEAT_DELAY || command == FIELD_ACTOR_COMMAND_KNOCKED_DOWN)
-    {
-        return -1;
-    }
+
     actor->script_index = script_index;
     actor->script_offset = 0;
     actor->command = FIELD_ACTOR_COMMAND_NONE;
@@ -310,10 +317,12 @@ s32 field_set_actor_position(s32 key, s32 x, s32 y, s32 z)
     FieldActor* actor;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     actor->x = x << FIELD_POSITION_SHIFT;
     actor->y = y << FIELD_POSITION_SHIFT;
     actor->z = z << FIELD_POSITION_SHIFT;
@@ -332,26 +341,28 @@ s32 field_start_actor_private_script(s32 key, u8* script)
     s16 command;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     command = actor->command;
-    if (command == FIELD_ACTOR_COMMAND_DEFEAT_WAIT || command == FIELD_ACTOR_COMMAND_DEFEAT_END)
+
+    if (FIELD_COMMAND_BLOCKS_SCRIPT(command))
     {
         return -1;
     }
-    if (command == FIELD_ACTOR_COMMAND_DEFEATED || command == FIELD_ACTOR_COMMAND_DEFEAT_DELAY || command == FIELD_ACTOR_COMMAND_KNOCKED_DOWN)
-    {
-        return -1;
-    }
+
     actor->script_index = FIELD_SCRIPT_OBJECT;
     g_field_object_states[actor->object_index].script = script;
     actor->script_offset = 0;
+
     if (actor->command != FIELD_ACTOR_COMMAND_WALK_TO_TARGET && actor->command != FIELD_ACTOR_COMMAND_IDLE_AFTER_ANIMATION)
     {
         actor->command = FIELD_ACTOR_COMMAND_NONE;
     }
+
     return 0;
 }
 
@@ -376,6 +387,7 @@ FieldObjectState* field_find_object_state(s32 key)
     s32 i;
 
     state = g_field_object_states;
+
     for (i = 0; i < FIELD_ACTOR_COUNT; i++, state++)
     {
         if (state->key == key)
@@ -383,6 +395,7 @@ FieldObjectState* field_find_object_state(s32 key)
             return state;
         }
     }
+
     return FIELD_OBJECT_STATE_NONE;
 }
 
@@ -397,10 +410,12 @@ s32 field_get_actor_position(s32 key, Vec3i* position)
     FieldActor* actor;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     position->x = actor->x;
     position->y = actor->y;
     position->z = actor->z;
@@ -417,45 +432,51 @@ s32 field_set_actor_control_mode(s32 key, s32 mode)
 {
     FieldActor* actor;
     s32 control_mode;
-    u8 object_index;
     ControllerState* controller = CONTROLLER_STATE;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     actor->control.word = (actor->control.word & ~FIELD_CONTROL_MODE_MASK) | (mode & FIELD_CONTROL_MODE_MASK);
     control_mode = actor->control.half[0] & FIELD_CONTROL_MODE_MASK;
+
     switch (control_mode)
     {
     case FIELD_CONTROL_PLAYER:
-        object_index = actor->object_index;
         actor->script_index = FIELD_SCRIPT_NONE;
         actor->script_busy = 0;
-        if (object_index == FIELD_SECOND_MEMBER)
+
+        if (actor->object_index == FIELD_SECOND_MEMBER)
         {
-            if (!(g_saved_game_ctx->options.word & FIELD_OPTION_VIBRATION))
+            if (!g_saved_game_ctx->options.bits.vibration)
             {
                 controller->ports[1].actuators_enabled = 0;
             }
             else
             {
-                controller->ports[1].actuators_enabled = object_index;
+                controller->ports[1].actuators_enabled = 1;
             }
         }
+
         break;
     case FIELD_CONTROL_FOLLOWER:
         actor->script_index = FIELD_SCRIPT_NONE;
         actor->script_busy = 0;
         field_refresh_party_routes();
+
         if (actor->object_index == FIELD_SECOND_MEMBER)
         {
             controller->ports[1].actuators_enabled = 0;
         }
+
         break;
     case FIELD_CONTROL_SCRIPTED:
         break;
     }
+
     return 0;
 }

@@ -29,7 +29,7 @@ typedef struct FieldMeshFace
 /** @brief Primitive kind of a mesh face (FieldMeshFace kind). */
 #define FIELD_MESH_FACE_KIND(face) (((face)->kind >> 1) & 0xF)
 
-/** @brief 0x18-byte mesh record in an actor's mesh table (FieldActorSlot.mesh_data). */
+/** @brief 0x18-byte mesh record in an actor's mesh table (FieldActorSlot.meshes). */
 typedef struct FieldMeshResource
 {
     u16 face_count;
@@ -43,7 +43,7 @@ typedef struct FieldMeshResource
 } FieldMeshResource;
 
 /** @brief Mesh record @p index of @p actor's mesh table. */
-#define FIELD_ACTOR_MESH(actor, index) (&((FieldMeshResource *)(actor)->mesh_data)[index])
+#define FIELD_ACTOR_MESH(actor, index) (&(actor)->meshes[index])
 
 /** @brief Vertices a mesh can transform at once (size of the shared mesh work buffers). */
 #define FIELD_MESH_VERTEX_MAX 768

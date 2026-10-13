@@ -41,7 +41,6 @@ typedef struct
 extern s32 g_field_text_session_active;
 extern s32 g_field_restore_group;
 extern s32 g_field_battle_idle_checks;
-extern s32 g_field_duel_mode;
 extern s32 g_field_money_snapshot;
 extern s32 D_8012291C;
 extern u32 g_field_experience_snapshot[];
@@ -93,9 +92,9 @@ void field_set_battle_group(s32 mode, void* actor_data)
             state = &g_field_object_states[index];
             state->tint_timer = 0;
             state->flags = state->flags & FIELD_OBJECT_FLAG_KNOCKED_OUT;
-            state->contact.bits.flag5 = 0;
+            state->contact.bits.no_hit_test = 0;
             state->movement.bits.flag15 = 0;
-            state->contact.bits.flag7 = 0;
+            state->contact.bits.targeted = 0;
             g_field_actor_slots[FIELD_OBJECT_EFFECT_SLOT_BASE + index].status.parts.hiding_objects = 0;
             field_stop_actor_slot(&g_field_actors[index], &g_field_actor_slots[FIELD_OBJECT_EFFECT_SLOT_BASE + index], 1);
             state->retry_count = 0;
@@ -334,7 +333,7 @@ void field_update_battle_end(void)
                     g_field_object_states[i].contact.word &= ~FIELD_CONTACT_LINKED;
                     g_field_object_states[i].contact.word &= ~FIELD_CONTACT_NO_HIT_TEST;
                     g_field_object_states[i].contact.bytes.target_count = 0;
-                    g_field_object_states[i].action_parameter = 0xFFFF;
+                    g_field_object_states[i].action_parameter = FIELD_ACTION_PARAMETER_NONE;
                     g_field_actors[i].y = 0;
                     if ((g_field_duel_mode != 0) && (g_field_actors[i].command == FIELD_ACTOR_COMMAND_KNOCKED_DOWN))
                     {

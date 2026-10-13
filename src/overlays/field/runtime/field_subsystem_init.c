@@ -23,10 +23,7 @@
 /** @brief g_music_track_table entry of a track index that has no music. */
 #define FIELD_MUSIC_TRACK_NONE 0xFF
 
-extern s32 g_field_dialog_screen_mode;
 extern FieldRenderHalf* g_field_render_context;
-extern s32 g_field_interaction_active;
-extern u8* g_field_actor_heap;
 extern s32 g_field_preserve_entry_music;
 /**
  * @brief Scene word between the pending sound bank and the portrait count.

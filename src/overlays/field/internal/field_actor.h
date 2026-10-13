@@ -18,6 +18,10 @@
 
 /** @brief Low nine bits of FieldActor::control holding the control mode. */
 #define FIELD_CONTROL_MODE_MASK 0x1FF
+/** @brief Control modes (FieldActor::control & FIELD_CONTROL_MODE_MASK): pad input, following the leader, or the actor's script. */
+#define FIELD_CONTROL_PLAYER 0
+#define FIELD_CONTROL_FOLLOWER 1
+#define FIELD_CONTROL_SCRIPTED 2
 /** @brief FieldActor::control bit set while the actor moves. */
 #define FIELD_CONTROL_MOVING 0x200
 /** @brief FieldActor::control second movement bit (placeholder name: FIELD code only clears and tests it; nothing sets it). */
@@ -32,6 +36,8 @@
 #define FIELD_ANIMATION_INDEX_MASK 0x7F
 /** @brief FieldActor::animation bit that mirrors the animation. */
 #define FIELD_ANIMATION_FACING 0x80
+/** @brief Shift of FIELD_ANIMATION_FACING. */
+#define FIELD_ANIMATION_FACING_SHIFT 7
 /* FieldActor::direction headings. */
 /** @brief FieldActor::direction headings are 256 steps per turn (ratan2/rcos use 4096). */
 #define FIELD_HEADING_STEPS 256
@@ -49,6 +55,12 @@
 #define FIELD_ANIMATION_WALK 5
 /** @brief First running animation. */
 #define FIELD_ANIMATION_RUN 10
+/** @brief Distance a raised actor (negative FieldActor::y) drops each frame on its way back to the ground. */
+#define FIELD_ACTOR_FALL_STEP 0x800
+/** @brief World coordinates are 24.8 fixed point. */
+#define FIELD_POSITION_SHIFT 8
+/** @brief Scratchpad vector that receives an actor displacement. */
+#define FIELD_SCRATCH_DISPLACEMENT ((Vec3i*)SCRATCHPAD_ADDRESS)
 
 /**
  * @brief Abilities a player assigns to the action buttons (FieldActionSlot::command).
@@ -105,11 +117,14 @@ typedef enum FieldAbility
 /* Shared actor animations (FieldActor::animation without the facing bit). */
 /** @brief Defend pose played when a guarded hit lands. */
 #define FIELD_ANIMATION_DEFEND_HIT 11
+/** @brief Pose held while an action chain winds down, and by the party after a battle reset (placeholder name). */
 #define FIELD_ANIMATION_13 0x13
 /** @brief First combo attack animation; later combo steps follow it. */
 #define FIELD_ANIMATION_COMBO 0x1F
 /** @brief First of the two hit animations; one is picked at random. */
 #define FIELD_ANIMATION_HIT 20
+/** @brief Knocked-down pose (also the leader's pose when a duel is lost). */
+#define FIELD_ANIMATION_KNOCKED_DOWN 29
 
 /** @brief Object-state movement bit: the charge animation was started. */
 #define FIELD_MOVEMENT_CHARGED 0x400
@@ -165,13 +180,6 @@ typedef enum FieldAbility
 /** @brief Object-state flags bit set for one frame when the object is hit; tints the actor red. */
 #define FIELD_OBJECT_FLAG_HIT_FLASH 0x10000000
 
-/** @brief Object-state contact bits (the contact word of g_field_object_states). */
-#define FIELD_CONTACT_ANIMATION_HIDDEN 0x01 /**< An animation actor hides the object; it cannot be targeted. */
-#define FIELD_CONTACT_LINKED 0x02           /**< The object is linked to another object. */
-#define FIELD_CONTACT_ACTION_BITS 0x1C      /**< Cleared before an action is prepared. */
-#define FIELD_CONTACT_NO_HIT_TEST 0x20      /**< The object takes no hits and is never an action target. */
-#define FIELD_CONTACT_ACTION_PENDING 0x40   /**< The object charges or waits for an action; hits land even while its own bound animation runs. */
-#define FIELD_CONTACT_TARGETED 0x80         /**< The object is being targeted. */
 /** @brief Object-state flag bits that make an object an invalid target. */
 #define FIELD_OBJECT_UNTARGETABLE_FLAGS (FIELD_OBJECT_FLAG_PETRIFIED | FIELD_OBJECT_FLAG_KNOCKED_OUT | FIELD_OBJECT_FLAG_LINK_TARGET)
 /**
