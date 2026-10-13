@@ -29,6 +29,8 @@
 #include "overlays/field/field_sound.h"
 #include "../internal/field_actor_behavior.h"
 #include "common/gpu_packet.h"
+void field_restart_actor_animation();
+u8* field_begin_actor_animation_forward();
 
 void field_play_set_sfx(s32 sfx_index, s32 pan, s32 unused, s32 channel_group);
 s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action);
@@ -44,8 +46,6 @@ void field_grant_reward(s32 recipient, s32 owner, u32 kind);
 s32 field_collision_hit_markers(FieldCollisionQuery* query);
 void field_interpolate_palette_track(FieldActorSlot* slot, s32 palette_sequence, u8* palette_table, s16* output);
 void field_dispatch_actor_audio_event();
-void field_restart_actor_animation();
-u8* field_begin_actor_animation_forward();
 
 #define FIELD_EFFECT_ORIGIN_ADDRESS SCRATCHPAD_ADDRESS
 #define FIELD_EFFECT_VECTOR_ADDRESS SCRATCHPAD_AT(0x10)
@@ -126,9 +126,7 @@ extern VECTOR D_80105778;
 extern s32 g_field_spawn_ground_point;
 extern s32 g_field_next_path_group;
 extern u8 *g_field_builtin_track_data;
-extern s32 g_field_track_index;
 
-s32 field_evaluate_parameter_track(FieldActorSlot* actor, s32 track);
 u32 field_evaluate_parameter_track_at_time(FieldActorSlot* actor, s32 track, s32 time);
 
 static s32 field_roll_effect_rotation(FieldActorSlot *actor, FieldObjectPart *part, FieldMotionRecord *effect);
@@ -458,7 +456,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         {
             record_base = &g_field_actors[actor->owner_object_index];
             if (!((part->behavior_flags.word >> 11) & 1) && !((part->placement_flags.word >> 25) & 1) && (part->appearance.fields.color_track_flags >> 5) == 0 &&
-                (*(u32*)&part->unkC & 0xFFFF0000) == 0x80800000 && part->tint_blue == 0x80)
+                (*(u32*)&part->unkC & 0xFFFF0000) == FIELD_PART_NEUTRAL_RED_GREEN && part->tint_blue == FIELD_TINT_NEUTRAL)
             {
                 FIELD_EFFECT_FLAGS(effect).bits.unknown_15 = 1;
                 FIELD_EFFECT_FLAGS(effect).bits.unknown_28 = 1;
@@ -502,7 +500,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         {
             record_base = &g_field_actors[actor->targets[g_field_track_index]];
             if (!((part->behavior_flags.word >> 11) & 1) && !((part->placement_flags.word >> 25) & 1) && (part->appearance.fields.color_track_flags >> 5) == 0 &&
-                (*(u32*)&part->unkC & 0xFFFF0000) == 0x80800000 && part->tint_blue == 0x80)
+                (*(u32*)&part->unkC & 0xFFFF0000) == FIELD_PART_NEUTRAL_RED_GREEN && part->tint_blue == FIELD_TINT_NEUTRAL)
             {
                 FIELD_EFFECT_FLAGS(effect).bits.unknown_15 = 1;
                 FIELD_EFFECT_FLAGS(effect).bits.unknown_28 = 1;
@@ -680,7 +678,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
                 FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(source_record).bits.kind;
                 FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(source_record).half[1];
                 if (!((part->behavior_flags.word >> 11) & 1) && !((part->placement_flags.word >> 25) & 1) && (part->appearance.fields.color_track_flags >> 5) == 0 &&
-                    (*(u32*)&part->unkC & 0xFFFF0000) == 0x80800000 && part->tint_blue == 0x80)
+                    (*(u32*)&part->unkC & 0xFFFF0000) == FIELD_PART_NEUTRAL_RED_GREEN && part->tint_blue == FIELD_TINT_NEUTRAL)
                 {
                     FIELD_EFFECT_FLAGS(effect).bits.unknown_15 = 1;
                     FIELD_EFFECT_FLAGS(effect).bits.unknown_28 = 1;
@@ -1374,8 +1372,8 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
             }
         }
     }
-    field_dispatch_actor_audio_event(actor, 2, part_index);
-    field_dispatch_actor_audio_event(actor, 5, part_index);
+    field_dispatch_actor_audio_event(actor, FIELD_SOUND_EVENT_PART_SPAWN, part_index);
+    field_dispatch_actor_audio_event(actor, FIELD_SOUND_EVENT_PART_SPAWN_ONCE, part_index);
     return effect_index;
 }
 
@@ -1738,7 +1736,7 @@ void field_retire_effect(FieldMotionRecord* effect, FieldObjectPart* part)
     g_field_actor_slots[effect->actor_index].active_counts[effect->track_index][part->unk32]--;
 
     actor = &g_field_actor_slots[effect->actor_index];
-    field_dispatch_actor_audio_event(actor, 3, effect->part_index);
+    field_dispatch_actor_audio_event(actor, FIELD_SOUND_EVENT_EFFECT_RETIRED, effect->part_index);
 
     if (part->appearance.word & 0xF0000000)
     {
@@ -2860,7 +2858,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldObjectPar
             old_motion = record->motion_parameter;
             record->pitch = FIELD_ANGLE_HALF_TURN - old_pitch;
             record->motion_parameter = old_motion / 2;
-            field_dispatch_actor_audio_event(actor, 4, record->part_index, old_pitch);
+            field_dispatch_actor_audio_event(actor, FIELD_SOUND_EVENT_EFFECT_BOUNCE, record->part_index, old_pitch);
         }
     }
     record->motion_parameter = (record->motion_parameter * record->motion_scale) >> 8;

@@ -20,6 +20,7 @@
 #include "../internal/field_menu_element.h"
 #include "common/gpu_packet.h"
 #include "main/audio/akao.h"
+#include "../internal/field_modal_runtime.h"
 
 /** @brief First item id that can be dropped on the field; its actor animation is 0. */
 #define FIELD_DROP_ITEM_FIRST 0x60
@@ -96,7 +97,7 @@
  * @param table Facing offset table.
  * @param facing Facing index, 0 to 7.
  */
-#define FIELD_FACING_OFFSET(table, facing) ((FieldFacingOffset *)((facing) * sizeof(FieldFacingOffset) + (uintptr_t)(table)))
+#define FIELD_FACING_OFFSET(table, facing) ((FieldDirectionOffset *)((facing) * sizeof(FieldDirectionOffset) + (uintptr_t)(table)))
 
 /** @brief One row of the item-drop list. */
 typedef struct FieldItemListEntry
@@ -104,13 +105,6 @@ typedef struct FieldItemListEntry
     u8 item_id;
     u8 count;
 } FieldItemListEntry;
-
-/** @brief Entry of g_field_direction_offsets: the (dx, dz) offset of one of the eight facings. */
-typedef struct FieldFacingOffset
-{
-    s16 dx;
-    s16 dz;
-} FieldFacingOffset;
 
 /** @brief TILE whose color and code bytes are written as one word. */
 typedef struct FieldPackedTile
@@ -120,12 +114,10 @@ typedef struct FieldPackedTile
     s16 x, y, w, h;
 } FieldPackedTile;
 
-extern FieldFacingOffset g_field_direction_offsets[];
 extern u16 g_field_item_names[];
 extern FieldItemListEntry g_field_item_list[];
 extern s32 g_field_item_list_count;
 extern s32 g_field_item_list_cursor;
-extern s32 g_field_item_drop_menu_open;
 extern s32 g_field_primary_held_buttons, g_field_primary_repeat_delay;
 extern s32 g_field_secondary_held_buttons, g_field_secondary_repeat_delay;
 void field_restart_actor_animation(FieldActor *actor);
@@ -348,8 +340,8 @@ static inline void drop_selected_item(void)
 {
     FieldActor *actor;
     FieldObjectState *state;
-    FieldFacingOffset *offsets;
-    FieldFacingOffset *facing;
+    FieldDirectionOffset *offsets;
+    FieldDirectionOffset *facing;
     s32 offset[3];
     s32 actor_index;
     s32 control;

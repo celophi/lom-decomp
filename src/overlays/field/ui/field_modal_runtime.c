@@ -105,7 +105,6 @@ void field_set_cd_error_fade_target(void);
 /** @brief Golem companions use character ids from this value on. */
 #define FIELD_COMPANION_GOLEM_ID_BASE 0x41
 /** @brief Resource id base of the companion action packages (field_load_party_script_page). */
-#define FIELD_RES_COMPANION_ACTIONS 0xA9B
 /** @brief Action slots of a party member's row: two commands, then four skills from slot 4. */
 #define FIELD_COMMAND_SLOT_COUNT 2
 /** @brief Button action of the first command: button actions 2 and 3 run resource action slots 0 and 1. */
@@ -221,7 +220,6 @@ extern u8 g_field_label_actor_count;
 /* Saved FieldObjectPart scale_z and scale_x of each labelled actor. */
 extern u8 g_field_label_saved_scale_x[];
 extern u8 g_field_label_saved_scale_y[];
-extern s32 g_field_text_session_active;
 extern s32 g_field_text_session_cd_error;
 extern s32 g_field_draw_count;
 
@@ -233,14 +231,9 @@ extern s32 g_field_secondary_repeat_delay;
 extern u8 g_field_menu_controller_types[CONTROLLER_PORT_COUNT];
 
 /* Field state that blocks the menu. */
-extern s32 g_field_party_routes_stale;
-extern s32 g_field_item_drop_menu_open;
-extern s32 g_field_timed_panel_active;
-extern s32 g_field_return_to_title_prompt_state;
 extern s32 g_field_item_drop_enabled;
 
 /* Modal overlays. */
-extern s32 g_field_modal_state;
 extern s32 g_field_gosub_phase;
 extern s32 g_field_shop_active;
 extern s32 g_field_shop_notice_hidden;

@@ -308,6 +308,9 @@ typedef union
     } bytes;
 } FieldPartFlags;
 
+/** @brief Neutral value of an actor or part tint channel (no change to the colour). */
+#define FIELD_TINT_NEUTRAL 0x80
+
 /**
  * @brief Part definition of a field object or animation actor (0x48 bytes).
  * @note Controls tracks, placement and effect motion; packed selector words have byte and halfword views.

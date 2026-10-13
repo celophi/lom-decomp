@@ -11,6 +11,7 @@
 #include "main/field_runtime.h"
 #include "common/gpu_packet.h"
 #include <libgpu.h>
+#include "../internal/field_modal_runtime.h"
 
 /** @brief Two party members closer than this (whole units) form a pair. */
 #define FIELD_PAIR_RANGE 32
@@ -93,7 +94,6 @@ extern s32 g_field_pair_indicator_count;
 extern s32 g_field_pair_indicators_disabled;
 /** @brief Actor index pairs of the close pairs (two bytes per pair), ended by FIELD_PAIR_LIST_END. */
 extern u8 g_field_pair_indicator_list[];
-extern s32 g_field_text_session_active;
 
 /**
  * @brief Find the close party pairs of this frame and draw their indicators.

@@ -1051,7 +1051,7 @@ static void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
         else
         {
             channel_mask = 0;
-            sfx_id = keyframe->sfx_id & FIELD_SFX_ID_MASK;
+            sfx_id = keyframe->sfx_id & AKAO_SFX_ID_MASK;
         }
         if (keyframe->control.word & FIELD_SFX_PLAY)
         {

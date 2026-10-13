@@ -14,6 +14,7 @@
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_modal_runtime.h"
+#include "../internal/field_actor_runtime.h"
 
 /** @brief Idle checks in a row after which the pending reset completes. */
 #define FIELD_RESET_IDLE_CHECKS 15
@@ -38,7 +39,6 @@ typedef struct
 /** @brief Fixed address of the data page that holds g_field_object_states. */
 #define FIELD_STATE_PAGE ((FieldStatePage*)PRIMARY_OVERLAY_UPPER_ADDRESS)
 
-extern s32 g_field_text_session_active;
 extern s32 g_field_restore_group;
 extern s32 g_field_battle_idle_checks;
 extern s32 g_field_money_snapshot;

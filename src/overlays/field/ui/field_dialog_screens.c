@@ -95,7 +95,6 @@ extern FieldPortraitPalette g_field_portrait_palettes[];
 extern FieldTransitionQuad g_field_timed_panel_quads[][4];
 extern u8 g_field_timed_panel_modes[];
 /** @brief Nonzero while a timed panel is shown. */
-extern s32 g_field_timed_panel_active;
 extern u16 g_field_timed_panel_width;
 extern u16 g_field_timed_panel_height;
 extern s32 g_field_timed_panel_index;
@@ -672,7 +671,6 @@ extern FieldActorText g_field_actor_texts[FIELD_ACTOR_TEXT_COUNT];
 /** @brief Technique name bank: u16 offsets from the bank start, then the strings. */
 extern u8 g_field_technique_names[];
 
-extern s32 g_field_text_session_active;
 extern s32 g_field_actor_text_count;
 
 static void field_draw_actor_text(FieldRenderHalf* render, FieldActorText* text);
@@ -1222,12 +1220,9 @@ extern PackedOffset D_800EC3CC;
 extern PackedOffset D_800EC3CE;
 extern FieldQuadAnimationTable g_field_small_icon_frames, g_field_marker_x_offsets, g_field_marker_u_offsets, g_field_marker_widths;
 extern s32 g_field_results_wait_frames;
-extern s32 g_field_text_session_active;
 extern s32 g_field_dialog_item_count;
 extern s32 g_field_money_snapshot;
 extern s32 g_pad_input;
-extern s32 g_field_return_to_title_prompt_state;
-extern s32 g_field_return_to_title_prompt_delay;
 extern s32 g_frame_counter;
 extern s32 g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_secondary_music_id, g_field_pending_scene_id, g_field_pending_object_id, g_field_pending_sound_bank_id;
 

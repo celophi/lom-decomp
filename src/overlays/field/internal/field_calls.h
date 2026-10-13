@@ -542,6 +542,9 @@ void field_open_ring_menu(s32 position_mode, s32 menu_id, u16 excluded_mask, s32
 s32 field_get_ring_result(void);
 s32 field_get_ring_cursor_entry(void);
 s32 field_update_ring_menu(struct FieldRenderHalf *render_half);
+/** @brief CD resource id bases of the partner and companion action packages (action table and script page). */
+#define FIELD_RES_PARTNER_ACTIONS 0xA37
+#define FIELD_RES_COMPANION_ACTIONS 0xA9B
 void field_load_party_script_page(s32 party_slot, s32 resource_id);
 void field_upload_golem_palettes(void);
 
@@ -651,5 +654,8 @@ void field_set_text_window_string(s32 window_slot, s32 string_index, s32 options
 void field_open_text_window_with_string(s32 string_index, s32 window_slot, s32 layout_index, s32 unused, s32 portrait_selector);
 void field_close_text_window(s32 window_slot);
 void field_show_timed_text(s32 string_index);
+
+/** @brief Volume the field song is faded to. */
+extern s32 g_field_song_volume;
 
 #endif

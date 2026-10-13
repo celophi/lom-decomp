@@ -198,14 +198,6 @@ extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_
 /** @brief FieldObjectState.movement bits cleared whenever an actor animation restarts. */
 #define FIELD_MOVEMENT_ANIMATION_BITS 0x1800
 
-/** @brief Low seven bits of FieldActor.animation select the animation, bit 7 mirrors it. */
-#define FIELD_ANIMATION_SEQUENCE_MASK 0x7F
-#define FIELD_ANIMATION_MIRROR_FLAG 0x80
-
-/** @brief FieldActor.control bits set by the flag handlers. */
-#define FIELD_ANIMATION_HOLD_LAST_FRAME 0x800
-#define FIELD_ACTOR_CONTROL_40000 0x40000
-
 /** @brief Animation held while the object is petrified. */
 #define FIELD_ANIMATION_PETRIFIED_POSE 0x14
 
@@ -460,7 +452,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
                         {
                             if (!(g_field_object_states[i].flags & FIELD_OBJECT_FLAG_FROZEN) &&
                                 (g_field_object_states[i].contact.bytes.flags & FIELD_CONTACT_ANIMATION_HIDDEN) &&
-                                (g_field_effect_records[g_field_object_states[i].linked_effect_index].animation & FIELD_ANIMATION_SEQUENCE_MASK) !=
+                                (g_field_effect_records[g_field_object_states[i].linked_effect_index].animation & FIELD_ANIMATION_INDEX_MASK) !=
                                     FIELD_HUD_ANCHOR_IGNORED_ANIMATION)
                             {
                                 anchor = &g_field_effect_records[g_field_object_states[i].linked_effect_index];
@@ -1503,7 +1495,7 @@ void field_handle_object_paralysis(FieldActor* actor, s32 is_set)
     {
         actor->animation_state = 1;
         actor->animation_frame = 0;
-        actor->animation &= FIELD_ANIMATION_MIRROR_FLAG;
+        actor->animation &= FIELD_ANIMATION_FACING;
         actor->animation_active = 1;
         g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
         field_restart_actor_animation(actor);
@@ -1525,7 +1517,7 @@ void field_handle_object_hypnosis(FieldActor* actor, s32 is_set)
     {
         actor->animation_state = 1;
         actor->animation_frame = 0;
-        actor->animation &= FIELD_ANIMATION_MIRROR_FLAG;
+        actor->animation &= FIELD_ANIMATION_FACING;
         actor->animation_active = 1;
         g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
         field_restart_actor_animation(actor);
@@ -1567,15 +1559,15 @@ void field_handle_object_sleep(FieldActor* actor, s32 is_set)
         START_OBJECT_EFFECT(actor, FIELD_STATUS_ANIMATION_SLEEP);
         animation = actor->animation;
 
-        if ((animation & FIELD_ANIMATION_SEQUENCE_MASK) != FIELD_ANIMATION_SLEEP_POSE)
+        if ((animation & FIELD_ANIMATION_INDEX_MASK) != FIELD_ANIMATION_SLEEP_POSE)
         {
-            actor->animation = (animation & FIELD_ANIMATION_MIRROR_FLAG) + FIELD_ANIMATION_SLEEP_POSE;
+            actor->animation = (animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_SLEEP_POSE;
             actor->animation_state = 1;
             actor->animation_frame = 0;
             actor->animation_active = 1;
             g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
             field_restart_actor_animation(actor);
-            actor->control.word |= FIELD_ANIMATION_HOLD_LAST_FRAME;
+            actor->control.word |= FIELD_CONTROL_PLAY_ONCE;
         }
 #if !defined(VERSION_JP)
         field_clear_link_target_flag(actor->object_index);
@@ -1596,10 +1588,10 @@ void field_handle_object_petrification(FieldActor* actor, s32 is_set)
         actor->animation_state = 1;
         actor->animation_active = 1;
         actor->animation_frame = 0;
-        actor->animation = (actor->animation & FIELD_ANIMATION_MIRROR_FLAG) + FIELD_ANIMATION_PETRIFIED_POSE;
+        actor->animation = (actor->animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_PETRIFIED_POSE;
         g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
         field_restart_actor_animation(actor);
-        actor->control.word |= FIELD_ACTOR_CONTROL_40000 | FIELD_ANIMATION_HOLD_LAST_FRAME;
+        actor->control.word |= FIELD_CONTROL_UNK40000 | FIELD_CONTROL_PLAY_ONCE;
 #if !defined(VERSION_JP)
         field_clear_link_target_flag(actor->object_index);
 #endif
@@ -1609,11 +1601,11 @@ void field_handle_object_petrification(FieldActor* actor, s32 is_set)
         actor->animation_frame = 0;
         actor->animation_state = 1;
         actor->animation_active = 1;
-        actor->animation &= FIELD_ANIMATION_MIRROR_FLAG;
+        actor->animation &= FIELD_ANIMATION_FACING;
         g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
         field_restart_actor_animation(actor);
         START_OBJECT_EFFECT(actor, 0x91);
-        actor->control.word &= ~FIELD_ACTOR_CONTROL_40000;
+        actor->control.word &= ~FIELD_CONTROL_UNK40000;
     }
 }
 

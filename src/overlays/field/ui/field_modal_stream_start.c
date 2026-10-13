@@ -16,7 +16,6 @@
 /** @brief Work buffer handed to the CARDA, NIKI and ADDHERO entry points. */
 #define FIELD_MODAL_WORK_BUFFER ((void*)SECONDARY_OVERLAY_AT(0x30000))
 
-extern s32 g_field_modal_state;
 
 void carda_init(void* work, s32 mode);
 void golem_run(void* render_buffers, s32 restore_slot_on_cancel);

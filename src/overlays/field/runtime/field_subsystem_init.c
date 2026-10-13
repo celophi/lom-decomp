@@ -15,6 +15,7 @@
 #include "main/field_runtime.h"
 #include "overlays/menu/menu.h"
 #include "overlays/field/field_overlay_handoff.h"
+#include "../internal/field_actor_routes.h"
 
 /** @brief Fixed work areas of the field overlay: CD read buffer and actor resource heap. */
 #define FIELD_CD_BUFFER_AREA ((u8*)SECONDARY_OVERLAY_ADDRESS)
@@ -37,16 +38,10 @@ extern s32 D_801178C8;
  */
 extern s32 g_field_niki_state;
 /** @brief Set while an interaction runs; pad input waits until the follower routes are rebuilt. */
-extern s32 g_field_party_routes_stale;
 extern s32 g_field_actor_text_count;
 extern s32 g_field_ring_menu_state;
-extern s32 g_field_gover_load_countdown;
-extern s32 g_field_return_to_title_prompt_delay;
-extern s32 g_field_return_to_title_prompt_state;
 /** @brief Nonzero while a timed panel image is shown; pauses the field runtime, actor animation and the field menu. */
-extern s32 g_field_timed_panel_active;
 extern s32 g_field_hide_actor_panels;
-extern s32 g_field_modal_state;
 
 /**
  * @brief Reset every field subsystem for a freshly entered scene.

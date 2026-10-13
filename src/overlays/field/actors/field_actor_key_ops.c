@@ -17,6 +17,7 @@
 #include "../internal/field_actor_routes.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_actor_tables.h"
+#include "../internal/field_actor_runtime.h"
 
 /** @brief Coordinate value that, in all three axes, keeps the actor's old position. */
 #define FIELD_KEEP_POSITION (-1)
@@ -47,8 +48,8 @@ enum
     FIELD_BINDING_QUERY_PLAYING = 3,
     FIELD_BINDING_QUERY_READY = 4
 };
-
 void field_restart_actor_animation(FieldActor* actor);
+
 
 /**
  * @brief Replace the group bits of object @p object_index.

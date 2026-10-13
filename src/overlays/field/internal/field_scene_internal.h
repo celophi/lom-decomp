@@ -692,7 +692,6 @@ enum
 #define FIELD_SFX_CHANNEL_MASK 0x1F00 /* channel slot, 1-31 */
 #define FIELD_SFX_FIXED_PAN 0x4000
 #define FIELD_SFX_PLAY 0x8000
-#define FIELD_SFX_ID_MASK 0x3FF
 #define FIELD_SFX_ONE_SHOT 0x8000
 #define FIELD_SFX_VOLUME(key) (((key)->sound.word >> 8) & 0x7F)
 

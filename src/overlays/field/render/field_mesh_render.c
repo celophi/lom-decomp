@@ -41,8 +41,6 @@ extern FieldMotionRecord g_field_effect_records[];
 #define FIELD_PALETTE_ANIMATION_SUBPALETTE_OFFSET(word) (((word) >> 3) & 0x1E0)
 #define FIELD_PALETTE_ANIMATION_SUBPALETTE_X(word) (((word) >> 4) & 0xF0)
 
-/** @brief Colour channel value that leaves a tinted colour unchanged. */
-#define FIELD_COLOR_NEUTRAL 0x80
 /** @brief Primitive kinds of a mesh (FIELD_MESH_FACE_KIND of its first face). */
 #define FIELD_MESH_KIND_TEXTURED 0
 #define FIELD_MESH_KIND_FLAT 1
@@ -195,12 +193,12 @@ static void field_rotate_palette_row(u16 *row, s32 count, s32 rotate_right)
 /**
  * @brief Tint a face colour channel by the part colour and clamp it to 0..255.
  * @param color Face colour channel.
- * @param tint Part colour channel; FIELD_COLOR_NEUTRAL leaves @p color unchanged.
+ * @param tint Part colour channel; FIELD_TINT_NEUTRAL leaves @p color unchanged.
  * @return Tinted channel, limited to 0..255.
  */
 static inline s32 tint_color_channel(s32 color, s32 tint)
 {
-    s32 value = color + tint - FIELD_COLOR_NEUTRAL;
+    s32 value = color + tint - FIELD_TINT_NEUTRAL;
     s32 clamped;
 
     if (value >= 0)
@@ -401,9 +399,9 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
                 gte_stopz(&triangle_area);
                 if (triangle_area > 0)
                 {
-                    ((POLY_F3 *)packet)->r0 = face->texture.color[0] + base_color.r - FIELD_COLOR_NEUTRAL;
-                    ((POLY_F3 *)packet)->g0 = face->texture.color[1] + base_color.g - FIELD_COLOR_NEUTRAL;
-                    ((POLY_F3 *)packet)->b0 = face->texture.color[2] + base_color.b - FIELD_COLOR_NEUTRAL;
+                    ((POLY_F3 *)packet)->r0 = face->texture.color[0] + base_color.r - FIELD_TINT_NEUTRAL;
+                    ((POLY_F3 *)packet)->g0 = face->texture.color[1] + base_color.g - FIELD_TINT_NEUTRAL;
+                    ((POLY_F3 *)packet)->b0 = face->texture.color[2] + base_color.b - FIELD_TINT_NEUTRAL;
                     *(s32 *)&((POLY_F3 *)packet)->x0 = screen_vertices[0];
                     *(s32 *)&((POLY_F3 *)packet)->x1 = screen_vertices[1];
                     *(s32 *)&((POLY_F3 *)packet)->x2 = screen_vertices[2];
@@ -754,8 +752,8 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
                 gte_stopz(&triangle_area);
                 if (triangle_area > 0)
                 {
-                    gte_SetBackColor(face->texture.color[0] + base_color.r - FIELD_COLOR_NEUTRAL, face->texture.color[1] + base_color.g - FIELD_COLOR_NEUTRAL,
-                                     face->texture.color[2] + base_color.b - FIELD_COLOR_NEUTRAL);
+                    gte_SetBackColor(face->texture.color[0] + base_color.r - FIELD_TINT_NEUTRAL, face->texture.color[1] + base_color.g - FIELD_TINT_NEUTRAL,
+                                     face->texture.color[2] + base_color.b - FIELD_TINT_NEUTRAL);
                     gte_ldv0(transformed_normals);
                     gte_ncs();
                     gte_strgb(&((POLY_F3 *)packet)->r0);

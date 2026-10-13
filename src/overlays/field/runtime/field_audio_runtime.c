@@ -137,7 +137,6 @@ typedef struct
     s32 bank_offset;
 } FieldMusicStreamHeader;
 
-extern s32 g_field_song_volume;
 
 /** @brief Second song area (FIELD-resident), played through AKAO command 0x19. */
 extern u8 g_field_second_song[];

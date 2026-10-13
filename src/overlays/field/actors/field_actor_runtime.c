@@ -12,6 +12,7 @@
 #include "main/cd_resources.h"
 #include "main/display.h"
 #include "main/audio/game_audio.h"
+#include "main/audio/akao.h"
 #include <libgpu.h>
 #include "../internal/field_calls.h"
 #include "overlays/field/field_types.h"
@@ -32,17 +33,15 @@
 #include "common/gpu_packet.h"
 #include "overlays/field/field_actor_records.h"
 #include "overlays/field/field_input.h"
+#include "../internal/field_actor_routes.h"
+#include "../internal/field_actor_sequence_runtime.h"
+#include "main/audio/akao_cmd.h"
 
 s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start);
 void field_retire_effect(FieldMotionRecord* effect, FieldObjectPart* part);
-void field_record_actor_position(FieldActor* record);
-s32 field_update_actor_command(FieldActor* actor);
 void field_update_spawned_actor(FieldActor* actor);
-void field_follow_leader_route();
 void field_step_actor_script(FieldActor* actor);
-void field_update_object_tints(void);
 void field_check_marker_contact(Vec3i* position);
-void field_refresh_party_routes(void);
 void field_set_color_scale();
 void field_advance_actor_effects(FieldActorSlot* actor_state);
 void field_handle_return_to_title_prompt(void);
@@ -86,28 +85,14 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 #define FIELD_RES_HERO_ALT_WEAPON_SPRITES 0xA17
 #define FIELD_RES_PARTNER_WEAPON_SPRITES 0xA23
 #define FIELD_RES_COMPANION_WEAPON_SPRITES 0xA4B
-/** @brief CD resource id bases of the partner and companion voice banks. */
-#define FIELD_RES_PARTNER_VOICES 0xA37
-#define FIELD_RES_COMPANION_VOICES 0xA9B
 #define FIELD_RES_ENTRY_PACKAGES 0xB52
 
 /** @brief First portrait of the companions in the portrait archive (partners start at 2). */
 #define FIELD_PORTRAIT_PARTNER_BASE 2
 #define FIELD_PORTRAIT_COMPANION_BASE 0xE
 
-/** @brief Per-player block of the saved game and its control byte (bit 7: controller in use). */
-#define FIELD_SAVED_PLAYER_STRIDE 0x250
-#define FIELD_SAVED_PLAYER_CONTROL 0x608
-
-/** @brief FieldActor::control bit 23: the actor uses its own tint. */
-#define FIELD_CONTROL_TINTED_SHIFT 23
-#define FIELD_CONTROL_TINTED 0x800000
-/** @brief FieldActor::control bits 15 and 28, set together on an effect that takes its owner's part colour. */
-#define FIELD_CONTROL_UNK8000 0x8000
-#define FIELD_CONTROL_UNK10000000 0x10000000
-#define FIELD_CONTROL_OWNER_TINT (FIELD_CONTROL_UNK10000000 | FIELD_CONTROL_UNK8000)
-/** @brief FieldActor::control bit 18, cleared when an actor is initialized. */
-#define FIELD_CONTROL_UNK40000 0x40000
+/** @brief Byte offset in the saved game of character 0's info byte (bit 7: controller in use). */
+#define FIELD_SAVED_PLAYER_CONTROL OFFSETOF(SavedGameLayout, characters[0].info)
 
 /** @brief Frame-status word bit (FIELD_ACTOR_FRAME_WORD): the displayed frame did not change this tick. */
 #define FIELD_FRAME_UNCHANGED 0x1000000
@@ -115,13 +100,10 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 /** @brief Initial X of an actor record that is not placed yet. */
 #define FIELD_ACTOR_UNPLACED_X 0xFFFB0000
 
-/** @brief Neutral tint of actors and parts. */
-#define FIELD_TINT_NEUTRAL 0x80
-
-/** @brief Object state flag bits used here (FieldObjectState::flags). */
-#define FIELD_OBJECT_ANIMATION_FROZEN 0x2000
 /** @brief Object state flags that suspend an object's input, following and commands. */
-#define FIELD_OBJECT_CONTROL_BLOCKED 0x21E4
+#define FIELD_OBJECT_CONTROL_BLOCKED                                                                                                                           \
+    (FIELD_OBJECT_FLAG_LINK_TARGET | FIELD_OBJECT_FLAG_FROZEN | FIELD_OBJECT_FLAG_PETRIFIED | FIELD_OBJECT_FLAG_SLEEP | FIELD_OBJECT_FLAG_HYPNOSIS |           \
+     FIELD_OBJECT_FLAG_PARALYSIS)
 
 /** @brief FieldActor::presence value of an object hidden by an animation actor. */
 #define FIELD_ANIMATION_HIDDEN FIELD_ACTOR_HIDDEN
@@ -141,8 +123,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 /** @brief Full-screen tint primitive: semi-transparent monochrome tile. */
 #define FIELD_TINT_TILE_CODE 0x62
 
-/** @brief Number of field effect records. */
-#define FIELD_EFFECT_RECORD_COUNT 0x103
 /** @brief FieldActor::presence of a free effect record. */
 #define FIELD_EFFECT_FREE FIELD_ACTOR_UNUSED
 
@@ -175,11 +155,8 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 /** @brief Z/X scale of a part initialized with and without the timer mode. */
 #define FIELD_PART_SCALE_SMALL 0x30
 
-/** @brief Sound event types and command kinds of an animation (FieldAnimationDef bytes 2..9). */
-#define FIELD_SOUND_EVENT_START 1
-#define FIELD_SOUND_EVENT_ONCE 5
+/** @brief Sound event slots and command kinds of an animation (FieldAnimationDef bytes 2..9). */
 #define FIELD_SOUND_EVENT_COUNT 2
-#define FIELD_SOUND_ID_MASK 0x3FF
 #define FIELD_SOUND_KIND_SHIFT 10
 #define FIELD_SOUND_PLAYED 0x01
 #define FIELD_SOUND_ONCE_PLAYED 0x80
@@ -202,6 +179,12 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 
 /** @brief Frame data an animation frame offset entry points at (a little-endian halfword). */
 #define FIELD_ANIMATION_FRAME_DATA(resource_base, offset) ((resource_base) + (offset)[0] + ((offset)[1] << 8))
+
+/** @brief Frame list of an animation: a 15-bit offset from the resource, stored as a little-endian halfword. */
+#define FIELD_ANIMATION_FRAMES(resource_base, offset_low, offset_high) ((resource_base) + (offset_low) + (((offset_high) & 0x7F) << 8))
+
+/** @brief Log2 of an animation's frame entry size: bit 15 of its offset selects four-byte entries over two-byte ones. */
+#define FIELD_ANIMATION_FRAME_SHIFT(offset_high) (((offset_high) >> 7) + 1)
 
 /** @brief Animation resource flags byte: bit 0 marks 16-bit frame data, bits 1-7 the default motion (minus FIELD_ANIMATION_MODE_OFFSET when above it). */
 #define FIELD_ANIMATION_16BIT_FRAMES 0x1
@@ -228,13 +211,6 @@ typedef union
     u32 w;
 } FieldColorScale;
 
-/** @brief Direction offset used to place a copied actor next to the leader. */
-typedef struct
-{
-    s16 distance;
-    s16 unk2;
-} FieldDirectionOffset;
-
 /** @brief Staged actor resource package: section offsets, then section data. */
 typedef struct FieldCdBuffer
 {
@@ -250,29 +226,19 @@ typedef struct FieldCdBuffer
 void func_80140004(s32 work_address, s32 image_resource_index, s32 music_resource_index, s32 audio_clip_index);
 void field_draw_dialog_windows(FieldRenderHalf* render_half);
 void field_merge_dialog_items(void);
-void akao_fade_song_volume(s32, s32, s32);
-void akao_fade_all_sfx_volume(s32, s32);
 
 static void field_relocate_resource_buffer(s32 resource_index);
-s32 field_get_actor_resource_id(s32 unused_slot_index, FieldPlayerRecord* player, s32 weapon_set);
 void field_load_actor_resource_slot(s32 resource_index, s32 slot_index, s32 resource_id, s32 alternate_layout);
-void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index);
-void field_initialize_actor_part(s32 part_index, s32 timer_mode);
 static void field_build_actor_render_commands(FieldRenderContext* render_ctx, s32 unused);
-s32 field_evaluate_parameter_track(FieldActorSlot* slot, s32 curve_index);
 static void field_update_actor_effects(FieldActorSlot* slot);
 static void field_update_actor_part_effects(FieldActorSlot* slot);
 void field_dispatch_actor_audio_event(FieldActorSlot* slot, s32 event_type, s32 event_subtype);
 static void field_reset_actor_track_mask(FieldActorSlot* slot);
-void field_set_global_color_scale(s16 red, s16 green, s16 blue);
 static void field_apply_global_color_scale(void);
 u8* field_advance_actor_animation_frame(FieldActor* actor);
 u8* field_begin_actor_animation_forward(FieldActor* actor, u8* resource_base);
 static u8* field_begin_actor_animation_reverse(FieldActor* actor, u8* resource_base);
 static void field_settle_actor_vertical_offset(FieldActor* actor);
-void field_load_resource_entry(s32 resource_slot_id, s32 package, s32 entry_index);
-void field_release_resource_entry(s32 entry_index);
-void field_unpack_resource_package(FieldCdBuffer* buf, s32 size, s32 slot_index, s32 palette_row);
 static void field_upload_resource_texture(FieldCdBuffer* buf, s32 slot_index, s32 texture_index, s32 palette_row);
 static void field_append_resource_data(u32* src, s32 length, s32 slot_index);
 static void field_refresh_actor_portraits();
@@ -281,27 +247,14 @@ s32* field_render_effect_frame8(FieldActor* actor, s32* packet, u32* ordering_ta
 
 extern FieldColorScale g_field_color_scale;
 extern u8 g_field_color_scale_active;
-extern s32 g_field_text_session_active;
 extern s32 g_field_gover_image_resource_id;
 extern s32 g_field_gover_music_resource_id;
-extern s32 g_field_gover_load_countdown;
 extern s32 g_field_gover_audio_clip_id;
-extern s32 g_field_return_to_title_prompt_delay;
-extern s32 g_field_return_to_title_prompt_state;
-extern s32 g_field_audio_timer;
-extern s32 g_field_track_index;
-extern s32 g_field_song_volume;
 extern u8 g_field_resource_buffer[];
 extern FieldAnimationDef g_field_object_default_animation;
 extern s32 g_field_loaded_actor_count;
-extern void* g_field_resource_cursor;
-extern FieldDirectionOffset g_field_direction_offsets[];
-extern s32 g_field_party_routes_stale;
-extern s32 g_field_item_drop_menu_open;
 extern FieldActor g_field_effect_records[];
 extern s32 g_field_next_path_group;
-extern s32 g_field_timed_panel_active;
-extern s32 g_field_modal_state;
 extern s32 g_field_spawn_ground_point;
 
 /*
@@ -1183,13 +1136,13 @@ void field_dispatch_actor_audio_event(FieldActorSlot* slot, s32 event_type, s32 
                 switch (sound_command >> FIELD_SOUND_KIND_SHIFT)
                 {
                 case 0:
-                    field_play_sound(sound_command & FIELD_SOUND_ID_MASK, pan);
+                    field_play_sound(sound_command & AKAO_SFX_ID_MASK, pan);
                     break;
 
                 case 1:
                     if (slot->owner_object_index < FIELD_PLAYER_COUNT)
                     {
-                        field_play_weapon_sfx(sound_command & FIELD_SOUND_ID_MASK, pan, slot->owner_object_index);
+                        field_play_weapon_sfx(sound_command & AKAO_SFX_ID_MASK, pan, slot->owner_object_index);
                     }
                     else
                     {
@@ -1201,11 +1154,11 @@ void field_dispatch_actor_audio_event(FieldActorSlot* slot, s32 event_type, s32 
                         {
                             if (D_800FF59C != 0)
                             {
-                                field_play_set_sfx(sound_command & FIELD_SOUND_ID_MASK, pan, 0, slot->owner_object_index);
+                                field_play_set_sfx(sound_command & AKAO_SFX_ID_MASK, pan, 0, slot->owner_object_index);
                             }
                             else
                             {
-                                field_play_set_sfx(sound_command & FIELD_SOUND_ID_MASK, pan, owner->resource_index - FIELD_RESOURCE_VOICE_FIRST,
+                                field_play_set_sfx(sound_command & AKAO_SFX_ID_MASK, pan, owner->resource_index - FIELD_RESOURCE_VOICE_FIRST,
                                                    slot->owner_object_index);
                             }
                         }
@@ -1214,15 +1167,15 @@ void field_dispatch_actor_audio_event(FieldActorSlot* slot, s32 event_type, s32 
                     break;
 
                 case 2:
-                    if ((sound_command & FIELD_SOUND_ID_MASK) < 2)
+                    if ((sound_command & AKAO_SFX_ID_MASK) < 2)
                     {
-                        field_play_sfx_buffer(slot->sound_data[sound_command & FIELD_SOUND_ID_MASK], pan, slot->owner_object_index);
+                        field_play_sfx_buffer(slot->sound_data[sound_command & AKAO_SFX_ID_MASK], pan, slot->owner_object_index);
                     }
 
                     break;
                 }
 
-                if (event_type == FIELD_SOUND_EVENT_ONCE)
+                if (event_type == FIELD_SOUND_EVENT_PART_SPAWN_ONCE)
                 {
                     slot->sound_flags[i] |= FIELD_SOUND_ONCE_PLAYED;
                 }
@@ -2002,7 +1955,7 @@ void field_finish_party_slot_reload(s32 actor_slot)
                 {
                     work_value = ~FIELD_CONTROL_MODE_MASK;
                     control_flags = g_field_actors[i].control.word & work_value;
-                    work_value = i * FIELD_SAVED_PLAYER_STRIDE;
+                    work_value = i * SAVED_CHARACTER_SIZE;
                     player_block = pad_base + work_value;
                     g_field_actors[i].control.word = control_flags | ((player_block[FIELD_SAVED_PLAYER_CONTROL] >> 7) ^ 1);
                 }
@@ -2163,7 +2116,7 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
 
     control_flags = g_field_actors[slot].control.word;
     pad_context = (u8*)g_saved_game_ctx;
-    player_block = pad_context + slot * FIELD_SAVED_PLAYER_STRIDE;
+    player_block = pad_context + slot * SAVED_CHARACTER_SIZE;
     g_field_actors[slot].control.word = (control_flags & ~FIELD_CONTROL_MODE_MASK) | ((player_block[FIELD_SAVED_PLAYER_CONTROL] >> 7) ^ 1);
 
     if ((slot == FIELD_PARTY_COMPANION) && (resource_variant >= FIELD_COMPANION_COLOR_ID_MIN))
@@ -2200,9 +2153,9 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
         member->z = hero->z;
         offsets = g_field_direction_offsets;
         offset = &offsets[hero->direction >> FIELD_HEADING_SECTOR_SHIFT];
-        motion[0] = offset->distance;
+        motion[0] = offset->dx;
         motion[1] = 0;
-        motion[2] = offset->distance;
+        motion[2] = offset->dx;
         field_move_actor_position(member, motion);
         member->animation = 0;
     }
@@ -2235,12 +2188,12 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
     switch (g_field_player_records[slot].character_kind)
     {
     case FIELD_PLAYER_KIND_PARTNER:
-        field_load_party_script_page(1, g_field_player_records[slot].character_id + FIELD_RES_PARTNER_VOICES);
+        field_load_party_script_page(1, g_field_player_records[slot].character_id + FIELD_RES_PARTNER_ACTIONS);
         field_apply_weapon_action_params(1);
         break;
 
     case FIELD_PLAYER_KIND_COMPANION:
-        field_load_party_script_page(2, g_field_player_records[slot].character_id + FIELD_RES_COMPANION_VOICES);
+        field_load_party_script_page(2, g_field_player_records[slot].character_id + FIELD_RES_COMPANION_ACTIONS);
         break;
     }
 
@@ -2692,7 +2645,7 @@ void field_update_actor_objects(void)
                 count++;
             }
 
-            if (!(state->flags & FIELD_OBJECT_ANIMATION_FROZEN))
+            if (!(state->flags & FIELD_OBJECT_FLAG_LINK_TARGET))
             {
                 actor->frame_data = (uintptr_t)field_advance_actor_animation_frame(actor);
             }
@@ -2914,8 +2867,8 @@ u8* field_advance_actor_animation_frame(FieldActor* actor)
 
     offset_low = entry[0];
     offset_high = entry[1];
-    entry = resource_base + offset_low + ((offset_high & 0x7F) << 8);
-    entry_shift = (offset_high >> 7) + 1;
+    entry = FIELD_ANIMATION_FRAMES(resource_base, offset_low, offset_high);
+    entry_shift = FIELD_ANIMATION_FRAME_SHIFT(offset_high);
     FIELD_ACTOR_FRAME_WORD(actor) |= FIELD_FRAME_UNCHANGED;
 
     if (actor->animation_active != 0)
@@ -3053,8 +3006,8 @@ u8* field_begin_actor_animation_forward(FieldActor* actor, u8* resource_base)
 
     offset_low = entry[0];
     offset_high = entry[1];
-    entry = resource_base + offset_low + ((offset_high & 0x7F) << 8);
-    entry_shift = (offset_high >> 7) + 1;
+    entry = FIELD_ANIMATION_FRAMES(resource_base, offset_low, offset_high);
+    entry_shift = FIELD_ANIMATION_FRAME_SHIFT(offset_high);
 
     at_end = (actor->animation_frame + 1) >= entry[0];
     entry = entry + 1;
@@ -3161,8 +3114,8 @@ static u8* field_begin_actor_animation_reverse(FieldActor* actor, u8* resource_b
 
     offset_low = entry[0];
     offset_high = entry[1];
-    entry = resource_base + offset_low + ((offset_high & 0x7F) << 8);
-    entry_shift = (offset_high >> 7) + 1;
+    entry = FIELD_ANIMATION_FRAMES(resource_base, offset_low, offset_high);
+    entry_shift = FIELD_ANIMATION_FRAME_SHIFT(offset_high);
 
     actor->animation_frame = entry[0] - 1;
     entry = entry + ((actor->animation_frame << entry_shift) + 1);
@@ -3227,7 +3180,7 @@ u8 field_get_next_animation_frame_count(FieldActor* actor)
     }
 
     entry = entry + (animation_index * 2 + 2);
-    entry = resource_base + entry[0] + ((entry[1] & 0x7F) << 8);
+    entry = FIELD_ANIMATION_FRAMES(resource_base, entry[0], entry[1]);
     actor = (FieldActor*)(u32)entry[0];
     return (u32)actor;
 }
@@ -3276,9 +3229,9 @@ u8* field_advance_actor_part_animation_frame(FieldActor* actor, u8* resource_bas
 
     offset_low = entry[0];
     offset_high = entry[1];
-    entry = resource_base + offset_low + ((offset_high & 0x7F) << 8);
+    entry = FIELD_ANIMATION_FRAMES(resource_base, offset_low, offset_high);
     FIELD_ACTOR_FRAME_WORD(actor) |= FIELD_FRAME_UNCHANGED;
-    entry_shift = (offset_high >> 7) + 1;
+    entry_shift = FIELD_ANIMATION_FRAME_SHIFT(offset_high);
 
     if (g_field_timed_panel_active == 0 && g_field_modal_state == 0 && g_field_text_session_active == 0 && actor->animation_active != 0)
     {
@@ -3548,17 +3501,17 @@ static void field_refresh_actor_portraits(void)
         {
             if (g_field_player_records[1].character_kind != FIELD_PLAYER_KIND_HERO)
             {
-                field_load_party_script_page(1, g_field_player_records[1].character_id + FIELD_RES_PARTNER_VOICES);
+                field_load_party_script_page(1, g_field_player_records[1].character_id + FIELD_RES_PARTNER_ACTIONS);
             }
             else
             {
-                field_load_party_script_page(1, FIELD_RES_PARTNER_VOICES);
+                field_load_party_script_page(1, FIELD_RES_PARTNER_ACTIONS);
             }
         }
 
         if (g_field_player_records[2].portrait_index != g_field_player_records[2].character_id + FIELD_PORTRAIT_COMPANION_BASE)
         {
-            field_load_party_script_page(2, g_field_player_records[2].character_id + FIELD_RES_COMPANION_VOICES);
+            field_load_party_script_page(2, g_field_player_records[2].character_id + FIELD_RES_COMPANION_ACTIONS);
         }
 
         cdrom_stream(CD_RES_FIELD_PORTRAITS, g_field_cd_buffer);
@@ -3608,7 +3561,7 @@ void field_reset_effect_pool(void)
 
     free_presence = FIELD_EFFECT_FREE;
 
-    for (i = FIELD_EFFECT_RECORD_COUNT - 1; i >= 0; i--)
+    for (i = FIELD_EFFECT_POOL_COUNT - 1; i >= 0; i--)
     {
         g_field_effect_records[i].presence = free_presence;
     }
@@ -3629,7 +3582,7 @@ void field_clear_actor_effects(FieldActorSlot* slot)
     owner_slot = slot->slot_index;
     effects = g_field_effect_records;
 
-    for (i = 0; i < FIELD_EFFECT_RECORD_COUNT; i++, effects++)
+    for (i = 0; i < FIELD_EFFECT_POOL_COUNT; i++, effects++)
     {
         if (effects->presence != FIELD_EFFECT_FREE && effects->owner_slot == owner_slot)
         {
@@ -3794,7 +3747,7 @@ static void field_update_actor_part_effects(FieldActorSlot* slot)
 static void field_apply_actor_part_color(FieldActor* effect, FieldObjectPart* part, FieldActor* owner)
 {
     if (!((part->behavior_flags.word >> FIELD_PART_OWN_COLOR_SHIFT) & 1) && !((part->placement_flags.word >> FIELD_PART_UNK25_SHIFT) & 1) &&
-        (part->appearance.fields.color_track_flags >> FIELD_PART_BURST_SHIFT) == 0 && (*(u32*)&part->unkC & 0xFFFF0000) == 0x80800000 &&
+        (part->appearance.fields.color_track_flags >> FIELD_PART_BURST_SHIFT) == 0 && (*(u32*)&part->unkC & 0xFFFF0000) == FIELD_PART_NEUTRAL_RED_GREEN &&
         part->tint_blue == FIELD_TINT_NEUTRAL)
     {
         effect->control.word |= FIELD_CONTROL_OWNER_TINT;

@@ -514,8 +514,9 @@ static inline void field_stop_follower_animation(FieldActor* actor)
  *
  * @param actor Follower to move.
  * @param follower_index Place of the follower behind the leader (0 or 1).
+ * @param follow_distance Distance the caller asks to keep; unused (the route index sets the gap).
  */
-void field_follow_leader_route(FieldActor* actor, s32 follower_index)
+void field_follow_leader_route(FieldActor* actor, s32 follower_index, s32 follow_distance)
 {
     VECTOR square;
     VECTOR delta;

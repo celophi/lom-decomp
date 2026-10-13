@@ -76,7 +76,6 @@ extern s32 g_field_battle_entry_change_count;
 extern s32 g_field_party_reload_sizes[FIELD_PLAYER_COUNT];
 extern FieldBattleEntryChange g_field_battle_entry_changes[FIELD_BATTLE_ENTRY_CHANGE_COUNT];
 extern s32 g_field_party_reload_resource_ids[FIELD_PLAYER_COUNT];
-extern void* g_field_resource_cursor;
 
 /** @brief Cancel the battle entry: drop the queued changes and the pending party reloads. */
 void field_reset_battle_entry(void)

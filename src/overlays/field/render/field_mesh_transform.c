@@ -11,8 +11,8 @@
 #include <libetc.h>
 #include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
+#include "../internal/field_actor_runtime.h"
 
-extern s32 g_field_track_index;
 
 /* Local view: the definition in field_actor_runtime.c takes the animation data it reads. */
 u32 field_evaluate_parameter_track_at_time(FieldActorSlot *actor, s32 track, s32 time);

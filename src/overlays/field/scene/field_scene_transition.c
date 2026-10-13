@@ -25,6 +25,7 @@
 #include <libgte.h>
 #include "overlays/field/field_actor_records.h"
 #include "main/field_entry.h"
+#include "main/main.h"
 
 /** @brief Scene resource selector bit kept in g_field_scene_mode_bit (the scene runs field_battle_setup). */
 #define FIELD_SCENE_MODE_FLAG 0x8000
@@ -188,13 +189,6 @@ typedef union
     } bits;
 } FieldSceneSpawn;
 
-/** @brief Entry of g_field_direction_offsets: the (dx, dz) offset of one of the sixteen facings. */
-typedef struct
-{
-    s16 dx;
-    s16 dz;
-} FieldDirectionOffset;
-
 /** @brief Scene layout: a count followed by actor and action records. */
 typedef struct
 {
@@ -209,7 +203,6 @@ void field_store_entry_settings();
 
 extern FieldRenderHalf* g_field_render_context;
 extern s32 g_field_direction_animation_modes[];
-extern FieldDirectionOffset g_field_direction_offsets[];
 /** @brief Built-in geometry for the closed and open chest sprites. */
 extern u8 g_field_chest_geometry[0x3C];
 /** @brief CLUT row of the hero per party palette index. */
@@ -223,7 +216,6 @@ extern s32 g_field_transition_tile_bank;
 extern s32 g_field_loaded_actor_count;
 /* TODO: Multiple-image resource flag also raises ability growth from 1 to 4. */
 extern s32 D_80115890;
-extern void* g_field_resource_cursor;
 
 extern s32 g_field_pending_spawn_id;
 extern s32 g_field_pending_music_id;
@@ -237,7 +229,6 @@ extern u32* g_field_scene_record_table;
 extern s32 g_field_hide_actor_panels;
 /* TODO: Script command 0x44 selects alternate party control and triple HP. */
 extern u8 g_field_scene_data_buffer[];
-extern s32 g_field_song_volume;
 extern s32 g_field_preserve_entry_music;
 extern s32 g_field_previous_song_volume;
 extern s32 g_field_party_palette_index;
@@ -245,7 +236,6 @@ extern u32 g_field_scene_portrait_count;
 extern u8* g_field_scene_portraits;
 extern u8* g_field_scene_strings;
 extern s32 g_field_dialog_item_count;
-extern s32 g_field_audio_timer;
 
 static void field_setup_chest_resource(void);
 void field_upload_actor_image(FieldTimData* image, s32 image_slot, s32 actor_index, s32 upload_palette);

@@ -12,6 +12,8 @@
 #define FIELD_EFFECT_ACTIVE_RECORD_COUNT 256
 #define FIELD_EFFECT_DISABLED 0xFE
 #define FIELD_EFFECT_RETIRED 0xFF
+/** @brief FieldObjectPart word at unkC with neutral red and green tints (bytes 0xE and 0xF), as one masked compare. */
+#define FIELD_PART_NEUTRAL_RED_GREEN 0x80800000
 #define FIELD_EFFECT_SCREEN_SPACE 0x00001000U
 #define FIELD_EFFECT_SEMITRANSPARENT 0x00800000U
 #define FIELD_EFFECT_FACING_FLIPPED 0x80

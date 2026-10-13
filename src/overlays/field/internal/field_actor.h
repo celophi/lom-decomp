@@ -32,6 +32,15 @@
 #define FIELD_CONTROL_MOVEMENT_SHIFT 9
 /** @brief FieldActor::control bit: the animation stops on its last frame instead of looping. */
 #define FIELD_CONTROL_PLAY_ONCE 0x800
+/** @brief FieldActor::control bits 15 and 28, set together on an effect that takes its owner's part colour. */
+#define FIELD_CONTROL_UNK8000 0x8000
+#define FIELD_CONTROL_UNK10000000 0x10000000
+#define FIELD_CONTROL_OWNER_TINT (FIELD_CONTROL_UNK10000000 | FIELD_CONTROL_UNK8000)
+/** @brief FieldActor::control bit 18, cleared when an actor is initialized. */
+#define FIELD_CONTROL_UNK40000 0x40000
+/** @brief FieldActor::control bit 23: the actor uses its own tint. */
+#define FIELD_CONTROL_TINTED_SHIFT 23
+#define FIELD_CONTROL_TINTED 0x800000
 /** @brief Low seven bits of FieldActor::animation select the animation. */
 #define FIELD_ANIMATION_INDEX_MASK 0x7F
 /** @brief FieldActor::animation bit that mirrors the animation. */
