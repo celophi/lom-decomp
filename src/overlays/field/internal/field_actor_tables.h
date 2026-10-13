@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "field_actor.h"
+#include "field_actor_binding.h"
 #include "field_player_records.h"
 #include "field_resource_actions.h"
 #include "overlays/field/field_actor_records.h"
@@ -37,9 +38,6 @@
 /** @brief Target entry of an animation track without a target object. */
 #define FIELD_TARGET_NONE 0xFF
 
-/** @brief Number of animation actor bindings (party members 0, 1 and everyone else). */
-#define FIELD_ACTOR_BINDING_COUNT 3
-
 /** @brief FieldObjectState::interaction_kind of a dropped item the player can pick up. */
 #define FIELD_INTERACTION_ITEM 1
 
@@ -55,12 +53,6 @@
 /** @brief First resource read id of the streamed animation resources. */
 #define FIELD_ANIMATION_RESOURCE_BASE 0x2DC
 
-/** @brief FieldActorBinding::state values. */
-#define FIELD_BINDING_IDLE 0
-#define FIELD_BINDING_LOADING 1
-#define FIELD_BINDING_READY 2
-
-
 /** @brief Map size words of the fixed field map header block at 0x801ED400. */
 typedef struct
 {
@@ -72,8 +64,6 @@ typedef struct
 
 /** @brief Fixed address of the field map header block. */
 #define FIELD_MAP_BOUNDS ((FieldMapBounds*)MAP_BOUNDS_ADDRESS)
-
-
 
 /** @brief FieldObjectState::hud flag (FieldStatusState::level byte) showing the technique gauge. */
 #define FIELD_HUD_SHOW_TECHNIQUE_GAUGE 0x01
@@ -117,26 +107,11 @@ typedef struct
 #define FIELD_ANIM_OWNER_CURVE_SHIFT 8
 #define FIELD_ANIM_TARGET_CURVE_SHIFT 12
 
-
 /** @brief FieldActorSlot::status bit 0: the slot plays a streamed animation bound to its owner. */
 #define FIELD_SLOT_OWNER_LINKED 0x1
 /** @brief FieldActorSlot::status bits holding the action element (stored shifted by one); all set means none. */
 #define FIELD_SLOT_ELEMENT_BITS 0x1E
-
-/** @brief Animation actor bound to a party object (0x1C bytes). */
-typedef struct
-{
-    /** @brief FIELD_BINDING_IDLE, FIELD_BINDING_LOADING or FIELD_BINDING_READY. */
-    s32 state;
-    /** @brief Resource read queued for the animation, 0 once it has been unpacked. */
-    s32 load_id;
-    /** @brief Animation resource number (load_id - FIELD_ANIMATION_RESOURCE_BASE). */
-    s32 resource_id;
-    s32 owner;
-    s32 unk10;
-    s32 unk14;
-    s32 slot;
-} FieldActorBinding;
+#define FIELD_SLOT_ELEMENT_SHIFT 1
 
 /** @brief FieldResourceEntry::flags bit: the resource has an action table and eight-direction animations. */
 #define FIELD_RESOURCE_HAS_ACTIONS 1
@@ -144,7 +119,6 @@ typedef struct
 #define FIELD_RESOURCE_LOADED 2
 
 extern FieldObjectState g_field_scene_object_states[];
-extern FieldActorBinding g_field_actor_bindings[];
 extern FieldObjectPart g_field_object_parts[];
 
 /**
@@ -168,50 +142,6 @@ static inline FieldActor* field_find_actor(s32 key)
         }
     }
     return FIELD_ACTOR_NONE;
-}
-
-/**
- * @brief Binding used by @p actor (objects 2 and up share the last binding).
- * @param actor Actor whose object index selects the binding.
- * @return The object's animation actor binding.
- */
-static inline FieldActorBinding* field_actor_binding(FieldActor* actor)
-{
-    FieldActorBinding* bindings;
-    s32 offset;
-
-    bindings = g_field_actor_bindings;
-    if (actor->object_index < 2)
-    {
-        offset = actor->object_index * sizeof(FieldActorBinding);
-    }
-    else
-    {
-        offset = 2 * sizeof(FieldActorBinding);
-    }
-    return (FieldActorBinding*)((u8*)bindings + offset);
-}
-
-/**
- * @brief Binding used by object @p object_index (objects 2 and up share the last binding).
- * @param object_index Object index; only its low byte selects the binding.
- * @return The object's animation actor binding.
- */
-static inline FieldActorBinding* field_object_binding(s32 object_index)
-{
-    FieldActorBinding* bindings;
-    s32 offset;
-
-    bindings = g_field_actor_bindings;
-    if ((u8)object_index < 2)
-    {
-        offset = object_index * sizeof(FieldActorBinding);
-    }
-    else
-    {
-        offset = 2 * sizeof(FieldActorBinding);
-    }
-    return (FieldActorBinding*)((u8*)bindings + offset);
 }
 
 #endif

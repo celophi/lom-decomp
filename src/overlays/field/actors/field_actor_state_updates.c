@@ -5,6 +5,7 @@
  *        and tint flashing.
  */
 #include "common.h"
+#include "common/saved_game.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_held_action_buttons.h"
 #include "common/vector.h"
@@ -34,45 +35,36 @@ typedef struct
 extern FieldObjectPart g_field_object_parts[];
 extern FieldSequenceTemplate g_field_actor_templates[];
 extern FieldActorSlot g_field_shared_actor_template;
-extern s32 g_field_active_group;
 extern s32 g_frame_counter;
-
 void field_restart_actor_animation(FieldActor* actor);
+
 s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action);
 s32 field_roll_object_evasion(s32 source_index, s32 target_index);
-void field_release_object_link(FieldActor* actor);
 void field_prepare_actor_action(FieldActor* actor);
 void field_resolve_collected_hits();
-void field_stop_actor_animations_for_object(FieldActor* actor, s32 force);
 void field_restart_actor_animation_reverse(FieldActor* actor);
 s32 field_get_next_animation_frame_count(FieldActor* actor);
 void field_update_actor_movement_animation(FieldActor* actor, s32 delta_x, s32 delta_z);
-
-/** @brief Action slot that action chains program (FIELD_ACTION_COMMAND(FIELD_CHAIN_ACTION_SLOT) performs it). */
-#define FIELD_CHAIN_ACTION_SLOT 11
 
 /**
  * @brief Program the chain action slot of @p actor's resource action row.
  */
 #define FIELD_SET_CHAIN_ACTION(actor, action_command, action_animation, action_parameter)                                          \
-    g_field_resource_actions[(actor)->object_index].slots[FIELD_CHAIN_ACTION_SLOT].flags.instrument = 0;                           \
-    g_field_resource_actions[(actor)->object_index].slots[FIELD_CHAIN_ACTION_SLOT].command = action_command;                       \
-    g_field_resource_actions[(actor)->object_index].slots[FIELD_CHAIN_ACTION_SLOT].flags.target_filter = FIELD_ACTION_TARGET_NONE; \
-    g_field_resource_actions[(actor)->object_index].slots[FIELD_CHAIN_ACTION_SLOT].animation = action_animation;                   \
-    g_field_resource_actions[(actor)->object_index].slots[FIELD_CHAIN_ACTION_SLOT].parameter = action_parameter;                   \
-    g_field_resource_actions[(actor)->object_index].slots[FIELD_CHAIN_ACTION_SLOT].flags.target_group = 0;
+    g_field_resource_actions[(actor)->object_index].slots[FIELD_RESOURCE_ACTION_CHAIN].flags.instrument = 0;                           \
+    g_field_resource_actions[(actor)->object_index].slots[FIELD_RESOURCE_ACTION_CHAIN].command = action_command;                       \
+    g_field_resource_actions[(actor)->object_index].slots[FIELD_RESOURCE_ACTION_CHAIN].flags.target_filter = FIELD_ACTION_TARGET_NONE; \
+    g_field_resource_actions[(actor)->object_index].slots[FIELD_RESOURCE_ACTION_CHAIN].animation = action_animation;                   \
+    g_field_resource_actions[(actor)->object_index].slots[FIELD_RESOURCE_ACTION_CHAIN].parameter = action_parameter;                   \
+    g_field_resource_actions[(actor)->object_index].slots[FIELD_RESOURCE_ACTION_CHAIN].flags.target_group = 0;
 
 /** @brief Height interpolated from height to next_height across the current animation frame, in 1/256 units. */
 #define FIELD_STEP_OFFSET(actor)                                                                                                                              \
     (((actor)->height + ((s8)(actor)->next_height - (actor)->height) * (actor)->frame_ticks / (actor)->frame_length) << 8)
 
 #define FIELD_SEQUENCE_DISPLACEMENT_SCRATCH SCRATCHPAD_ADDRESS
-#define FIELD_SEQUENCE_BINDING_COUNT 3
-#define FIELD_SEQUENCE_SHARED_BINDING (FIELD_SEQUENCE_BINDING_COUNT - 1)
 #define FIELD_SEQUENCE_ACTOR_LIMIT 80
 #define FIELD_SEQUENCE_TARGET_LIMIT 14
 #define FIELD_SEQUENCE_FRAME_WAIT 1
-#define FIELD_SEQUENCE_NO_ACTOR 0xFF
 #define FIELD_SEQUENCE_RESTORE_TEMPLATE 2
 #define FIELD_SEQUENCE_MOTION_SCALE_SHIFT 6
 #define FIELD_SEQUENCE_COMMAND_NONE 0xFFFF
@@ -114,7 +106,6 @@ typedef enum
     FIELD_SEQUENCE_ALLOCATE_CURRENT = 0xFE,
     FIELD_SEQUENCE_END = 0xFF
 } FieldSequenceOpcode;
-
 
 /**
  * @brief Settle a landing actor to the ground and play the landing effect (animation 0x1A).
@@ -209,7 +200,7 @@ void field_play_object_animation(FieldActor* actor, s32 animation_id)
 {
     s32 actor_index = field_find_free_actor_slot(actor->object_index, 0);
 
-    if (actor_index != -1)
+    if (actor_index != FIELD_ACTOR_SLOT_NONE)
     {
         if (field_start_builtin_animation(actor->object_index, actor_index, animation_id))
         {
@@ -260,7 +251,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                 actor->y -= FIELD_STEP_OFFSET(actor);
                 field_prepare_actor_action(actor);
                 field_command_history_clear(actor->object_index);
-                actor->command = FIELD_ACTOR_COMMAND_9B;
+                actor->command = FIELD_ACTOR_COMMAND_SECOND_JUMP;
                 return;
             }
 #if defined(VERSION_JP)
@@ -275,7 +266,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                 actor->y -= FIELD_STEP_OFFSET(actor);
                 field_prepare_actor_action(actor);
                 field_command_history_clear(actor->object_index);
-                actor->command = FIELD_ACTOR_COMMAND_9B;
+                actor->command = FIELD_ACTOR_COMMAND_SECOND_JUMP;
                 return;
             }
         }
@@ -302,19 +293,19 @@ s32 field_update_actor_action_chain(FieldActor* actor)
             break;
         case FIELD_ABILITY_BACK_FLIP:
             FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FLIP_KICK, 0x25, 0);
-            actor->command = FIELD_ACTION_COMMAND(FIELD_CHAIN_ACTION_SLOT);
+            actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_CHAIN);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);
             break;
         case FIELD_ABILITY_BACK_ROLL:
             FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FLIP_KICK, 0x25, 0);
-            actor->command = FIELD_ACTION_COMMAND(FIELD_CHAIN_ACTION_SLOT);
+            actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_CHAIN);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);
             break;
         case FIELD_ABILITY_SPIN:
             FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FOLLOW_UP_51, 0x27, 0);
-            actor->command = FIELD_ACTION_COMMAND(FIELD_CHAIN_ACTION_SLOT);
+            actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_CHAIN);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);
             break;
@@ -330,7 +321,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
             actor->y -= FIELD_STEP_OFFSET(actor);
             field_restart_actor_animation(actor);
             field_command_history_clear(actor->object_index);
-            actor->command = FIELD_ACTOR_COMMAND_96;
+            actor->command = FIELD_ACTOR_COMMAND_AIR_FOLLOW_UP;
             actor->frame_timer = 1;
             actor->frame_ticks = 1;
             actor->frame_length = 1;
@@ -342,11 +333,11 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                 actor->command = 0;
                 field_restart_sequence_animation(actor);
                 tmp = field_find_free_actor_slot(actor->object_index, 0);
-                if (tmp != -1)
+                if (tmp != FIELD_ACTOR_SLOT_NONE)
                 {
                     if (field_roll_object_evasion(actor->object_index, g_field_object_states[actor->object_index].linked_object_index) != 0)
                     {
-                        if (g_field_player_records[actor->object_index].head.bytes.weapon_type == 8)
+                        if (g_field_player_records[actor->object_index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
                         {
                             field_resolve_object_hit(actor->object_index, g_field_object_states[actor->object_index].linked_object_index, 0xD);
                         }
@@ -356,14 +347,14 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                         }
                         index = actor->object_index;
                         anim_id = 0x64;
-                        if (g_field_player_records[index].head.bytes.weapon_type == 8)
+                        if (g_field_player_records[index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
                         {
                             anim_id = 0x61;
                         }
                     }
                     else
                     {
-                        if (g_field_player_records[actor->object_index].head.bytes.weapon_type == 8)
+                        if (g_field_player_records[actor->object_index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
                         {
                             field_resolve_object_hit(g_field_object_states[actor->object_index].linked_object_index, actor->object_index, 0x18);
                         }
@@ -373,7 +364,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                         }
                         index = actor->object_index;
                         anim_id = 0x65;
-                        if (g_field_player_records[index].head.bytes.weapon_type == 8)
+                        if (g_field_player_records[index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
                         {
                             anim_id = 0x63;
                         }
@@ -410,7 +401,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
             if (g_field_resource_actions[actor->object_index].slots[tmp].command == FIELD_ABILITY_JUMP)
             {
                 FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_HIGH_JUMP, 0, 1);
-                actor->command = FIELD_ACTION_COMMAND(FIELD_CHAIN_ACTION_SLOT);
+                actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_CHAIN);
                 field_prepare_actor_action(actor);
                 field_command_history_clear(actor->object_index);
             }
@@ -422,7 +413,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
         if ((actor->animation & ~0x80) == FIELD_ABILITY_SPIN)
         {
             FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FOLLOW_UP_50, 0x26, 0);
-            actor->command = FIELD_ACTION_COMMAND(FIELD_CHAIN_ACTION_SLOT);
+            actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_CHAIN);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);
         }
@@ -434,11 +425,11 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                 actor->command = 0;
                 field_restart_sequence_animation(actor);
                 tmp = field_find_free_actor_slot(actor->object_index, 0);
-                if (tmp != -1)
+                if (tmp != FIELD_ACTOR_SLOT_NONE)
                 {
                     if (field_roll_object_evasion(actor->object_index, g_field_object_states[actor->object_index].linked_object_index) != 0)
                     {
-                        if (g_field_player_records[actor->object_index].head.bytes.weapon_type == 8)
+                        if (g_field_player_records[actor->object_index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
                         {
                             field_resolve_object_hit(actor->object_index, g_field_object_states[actor->object_index].linked_object_index, 0xD);
                         }
@@ -448,14 +439,14 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                         }
                         index = actor->object_index;
                         anim_id = 0x64;
-                        if (g_field_player_records[index].head.bytes.weapon_type == 8)
+                        if (g_field_player_records[index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
                         {
                             anim_id = 0x61;
                         }
                     }
                     else
                     {
-                        if (g_field_player_records[actor->object_index].head.bytes.weapon_type == 8)
+                        if (g_field_player_records[actor->object_index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
                         {
                             field_resolve_object_hit(g_field_object_states[actor->object_index].linked_object_index, actor->object_index, 0x18);
                         }
@@ -465,7 +456,7 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                         }
                         index = actor->object_index;
                         anim_id = 0x65;
-                        if (g_field_player_records[index].head.bytes.weapon_type == 8)
+                        if (g_field_player_records[index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
                         {
                             anim_id = 0x63;
                         }
@@ -486,7 +477,6 @@ s32 field_update_actor_action_chain(FieldActor* actor)
 
 /** @brief Object mode that cancels a pending action unless an action selection holds it. */
 #define FIELD_PENDING_MODE_CANCEL 3
-
 
 /**
  * @brief Update pending actor actions and clear stale action state.
@@ -538,7 +528,7 @@ s32 field_update_pending_action(FieldActor* actor)
                     actor->variant = count + 1;
                 }
                 if (field_get_next_animation_frame_count(actor) == 0 || actor->variant >= 5U ||
-                    (actor->object_index < 2U && g_field_player_records[actor->object_index].head.bytes.weapon_type == 0xA &&
+                    (actor->object_index < 2U && g_field_player_records[actor->object_index].head.bytes.weapon_type == FIELD_WEAPON_BOW &&
                      actor->variant >= 3U))
                 {
                     field_command_history_clear(actor->object_index);
@@ -611,7 +601,7 @@ void field_update_instrument_command(FieldActor* actor)
     object_index = actor->object_index;
     state = &states[object_index];
     actor_index = state->contact.bytes.animation_actor_index;
-    if (actor_index == FIELD_SEQUENCE_NO_ACTOR)
+    if (actor_index == FIELD_ANIMATION_ACTOR_NONE)
     {
         if (actor->animation_state != 0)
         {
@@ -968,56 +958,27 @@ void field_follow_leader(FieldActor* actor)
  */
 void field_update_actor_jump(FieldActor* actor, s32 x, s32 y, s32 z)
 {
-    s32 offset;
     s32 owner;
     s32 object_index;
-    u8* owner_bindings;
-    u8* actor_bindings;
-    u8* track_bindings;
-    FieldActorSlot* anim_slots;
     FieldActorSlot* anim_slot;
     s32* scratch;
+    FieldActorSlot* anim_slots;
+    FieldActorBinding* binding;
 
     scratch = (s32*)FIELD_SEQUENCE_DISPLACEMENT_SCRATCH;
     if (actor->animation_state == 0)
     {
-        owner_bindings = (u8*)g_field_actor_bindings;
-        if (actor->object_index < 2U)
-        {
-            offset = actor->object_index * sizeof(FieldSequenceBinding);
-        }
-        else
-        {
-            offset = FIELD_SEQUENCE_SHARED_BINDING * sizeof(FieldSequenceBinding);
-        }
+        binding = field_actor_binding(actor);
         object_index = actor->object_index;
-        owner = ((FieldSequenceBinding*)(owner_bindings + offset))->owner_object_index;
+        owner = binding->owner;
         if (owner == object_index)
         {
             anim_slots = g_field_actor_slots;
-            actor_bindings = (u8*)g_field_actor_bindings;
-            if ((u8)owner < 2U)
-            {
-                offset = owner * sizeof(FieldSequenceBinding);
-            }
-            else
-            {
-                offset = FIELD_SEQUENCE_SHARED_BINDING * sizeof(FieldSequenceBinding);
-            }
-            anim_slot = anim_slots + ((FieldSequenceBinding*)(actor_bindings + offset))->actor_index;
+            anim_slot = anim_slots + field_object_binding(owner)->slot;
             if (anim_slot->active != 0)
             {
                 anim_slots = g_field_actor_slots;
-                track_bindings = (u8*)g_field_actor_bindings;
-                if (actor->object_index < 2U)
-                {
-                    offset = actor->object_index * sizeof(FieldSequenceBinding);
-                }
-                else
-                {
-                    offset = FIELD_SEQUENCE_SHARED_BINDING * sizeof(FieldSequenceBinding);
-                }
-                anim_slot = anim_slots + ((FieldSequenceBinding*)(track_bindings + offset))->actor_index;
+                anim_slot = anim_slots + field_actor_binding(actor)->slot;
                 if (anim_slot->track_mask == 0)
                 {
                     actor->command = 0;
@@ -1089,23 +1050,6 @@ void field_slide_actor(FieldActor* actor, s32 dx, s32 dz)
     actor->z = actor->z + (dz * speed);
 }
 
-/** @brief Scratchpad collision request and resolver output. */
-typedef struct
-{
-    s32 x, y, z, dx, dy, dz, height, contact, surface;
-    s16 radius, depth;
-    union
-    {
-        s32 flags;
-        struct
-        {
-            unsigned step : 16;
-            unsigned bit16 : 1;
-            unsigned bit17 : 1;
-            unsigned high : 14;
-        } bits;
-    } mode;
-} FieldActorCollisionMover;
 /** @brief Map dimensions used to validate fixed-point actor coordinates. */
 typedef struct
 {
@@ -1123,7 +1067,7 @@ typedef struct
 void field_update_timed_walk(FieldActor* actor, s32 dx, s32 dz)
 {
     FieldActorCollisionBounds* bounds = (FieldActorCollisionBounds*)MAP_BOUNDS_ADDRESS;
-    FieldActorCollisionMover* mover = (FieldActorCollisionMover*)SCRATCHPAD_ADDRESS;
+    FieldCollisionMover* mover = FIELD_COLLISION_MOVER;
     s32 x, z;
     u8 speed;
 
@@ -1135,34 +1079,34 @@ void field_update_timed_walk(FieldActor* actor, s32 dx, s32 dz)
     if (x >= 0 && x < (bounds->width << 8) && z >= 0 && z < ((s32)(bounds->height << 16) >> 7))
     {
         mover->x = x;
-        mover->y = actor->y;
+        mover->height = actor->y;
         mover->z = actor->z;
-        mover->dx = 0;
-        mover->dy = 0;
-        mover->dz = 0;
+        mover->move_x = 0;
+        mover->move_height = 0;
+        mover->move_z = 0;
         if (g_field_object_parts[actor->object_index].appearance.fields.scale_xz == 0x40)
         {
-            mover->radius = 12;
-            mover->mode.bits.step = 8;
+            mover->footprint_width = FIELD_FOOTPRINT_LARGE_WIDTH;
+            mover->mode.bits.footprint_depth = FIELD_FOOTPRINT_LARGE_DEPTH;
         }
         else
         {
-            mover->radius = 9;
-            mover->mode.bits.step = 6;
+            mover->footprint_width = FIELD_FOOTPRINT_WIDTH;
+            mover->mode.bits.footprint_depth = FIELD_FOOTPRINT_DEPTH;
         }
-        mover->depth = 16;
-        mover->mode.bits.bit17 = 0;
-        mover->mode.bits.bit16 = 0;
-        mover->contact = g_field_object_states[actor->object_index].collision_node;
-        mover->surface = g_field_object_states[actor->object_index].collision_flags;
-        field_collision_resolve_move((struct FieldCollisionMover*)mover);
-        g_field_object_states[actor->object_index].collision_node = mover->contact;
-        g_field_object_states[actor->object_index].collision_flags = mover->surface;
-        g_field_object_states[actor->object_index].movement.half.height = mover->height / 256;
+        mover->height_bias = FIELD_FOOTPRINT_STEP;
+        mover->mode.bits.airborne_high = 0;
+        mover->mode.bits.airborne_low = 0;
+        mover->collision_node = g_field_object_states[actor->object_index].collision_node;
+        mover->flags = g_field_object_states[actor->object_index].collision_flags;
+        field_collision_resolve_move(mover);
+        g_field_object_states[actor->object_index].collision_node = mover->collision_node;
+        g_field_object_states[actor->object_index].collision_flags = mover->flags;
+        g_field_object_states[actor->object_index].movement.half.height = mover->resolved_height / 256;
     }
     else
     {
-        g_field_object_states[actor->object_index].collision_node = -1;
+        g_field_object_states[actor->object_index].collision_node = FIELD_COLLISION_NODE_SEARCH;
         g_field_object_states[actor->object_index].collision_flags = 0;
         g_field_object_states[actor->object_index].movement.half.height = 0;
     }
@@ -1224,23 +1168,10 @@ s32 field_start_defeat_wait_animation(FieldActor* actor)
 s32 field_update_defeat_end(FieldActor* actor)
 {
     FieldActorSlot* anim_slots;
-    u8* bindings;
-    s32 offset;
-    s32 actor_index;
     FieldActorSlot* anim_slot;
 
     anim_slots = g_field_actor_slots;
-    bindings = (u8*)g_field_actor_bindings;
-    if (actor->object_index < 2)
-    {
-        offset = actor->object_index * sizeof(FieldSequenceBinding);
-    }
-    else
-    {
-        offset = FIELD_SEQUENCE_SHARED_BINDING * sizeof(FieldSequenceBinding);
-    }
-    actor_index = ((FieldSequenceBinding*)(bindings + offset))->actor_index;
-    anim_slot = anim_slots + actor_index;
+    anim_slot = anim_slots + field_actor_binding(actor)->slot;
     if (anim_slot->active == 0)
     {
         actor->command = 0;
@@ -1271,7 +1202,7 @@ void field_restart_idle_animation(FieldActor* actor)
             {
                 animation_id = g_field_object_states[actor->object_index].idle_animation;
                 actor_index = field_find_free_actor_slot(actor->object_index, 0);
-                if (actor_index != -1)
+                if (actor_index != FIELD_ACTOR_SLOT_NONE)
                 {
                     if (field_start_builtin_animation(actor->object_index, actor_index, animation_id))
                     {
@@ -1285,7 +1216,7 @@ void field_restart_idle_animation(FieldActor* actor)
     }
     animation_id = g_field_object_states[actor->object_index].idle_animation;
     actor_index = field_find_free_actor_slot(actor->object_index, 0);
-    if (actor_index != -1)
+    if (actor_index != FIELD_ACTOR_SLOT_NONE)
     {
         if (field_start_builtin_animation(actor->object_index, actor_index, animation_id))
         {
@@ -1346,7 +1277,7 @@ void field_apply_sequence_displacement(FieldActor* actor, s32 direction_x, s32 v
  */
 void field_update_sequence_actor_binding(FieldActor* actor, s32 release_actor)
 {
-    FieldSequenceBinding* base;
+    FieldActorBinding* base;
     s32 object_index;
     s32 active_owner;
     s32 finished_owner;
@@ -1364,9 +1295,9 @@ void field_update_sequence_actor_binding(FieldActor* actor, s32 release_actor)
     }
     else
     {
-        binding_offset = (FIELD_SEQUENCE_SHARED_BINDING) * sizeof(*base);
+        binding_offset = (FIELD_SHARED_BINDING) * sizeof(*base);
     }
-    if (((FieldSequenceBinding*)((u8*)base + binding_offset))->state != 0)
+    if (((FieldActorBinding*)((u8*)base + binding_offset))->state != 0)
     {
         base = g_field_actor_bindings;
         if (actor->object_index < 2U)
@@ -1375,9 +1306,9 @@ void field_update_sequence_actor_binding(FieldActor* actor, s32 release_actor)
         }
         else
         {
-            animation_binding_offset = (FIELD_SEQUENCE_SHARED_BINDING) * sizeof(*base);
+            animation_binding_offset = (FIELD_SHARED_BINDING) * sizeof(*base);
         }
-        if (field_is_actor_animation_active(((FieldSequenceBinding*)((u8*)base + animation_binding_offset))->actor_index) != 0)
+        if (field_is_actor_animation_active(((FieldActorBinding*)((u8*)base + animation_binding_offset))->slot) != 0)
         {
             base = g_field_actor_bindings;
             if (actor->object_index < 2U)
@@ -1386,14 +1317,14 @@ void field_update_sequence_actor_binding(FieldActor* actor, s32 release_actor)
             }
             else
             {
-                owner_binding_offset = (FIELD_SEQUENCE_SHARED_BINDING) * sizeof(*base);
+                owner_binding_offset = (FIELD_SHARED_BINDING) * sizeof(*base);
             }
-            if (((FieldSequenceBinding*)((u8*)base + owner_binding_offset))->owner_object_index == actor->object_index)
+            if (((FieldActorBinding*)((u8*)base + owner_binding_offset))->owner == actor->object_index)
             {
                 FieldActorSlot* anim_slots;
-                FieldSequenceBinding* lookup;
+                FieldActorBinding* lookup;
 
-                active_owner = ((FieldSequenceBinding*)((u8*)base + owner_binding_offset))->owner_object_index;
+                active_owner = ((FieldActorBinding*)((u8*)base + owner_binding_offset))->owner;
                 anim_slots = g_field_actor_slots;
                 lookup = g_field_actor_bindings;
                 if ((u32)(active_owner & 0xFF) < 2U)
@@ -1402,11 +1333,11 @@ void field_update_sequence_actor_binding(FieldActor* actor, s32 release_actor)
                 }
                 else
                 {
-                    active_binding_offset = (FIELD_SEQUENCE_SHARED_BINDING) * sizeof(*base);
+                    active_binding_offset = (FIELD_SHARED_BINDING) * sizeof(*base);
                 }
                 {
                     u8* actor_address = (u8*)anim_slots;
-                    actor_address += ((FieldSequenceBinding*)((u8*)lookup + active_binding_offset))->actor_index * sizeof(*anim_slots);
+                    actor_address += ((FieldActorBinding*)((u8*)lookup + active_binding_offset))->slot * sizeof(*anim_slots);
                     ((FieldActorSlot*)actor_address)->sequence_active = 1;
                 }
             }
@@ -1420,16 +1351,16 @@ void field_update_sequence_actor_binding(FieldActor* actor, s32 release_actor)
             }
             else
             {
-                finished_binding_offset = (FIELD_SEQUENCE_SHARED_BINDING) * sizeof(*base);
+                finished_binding_offset = (FIELD_SHARED_BINDING) * sizeof(*base);
             }
             object_index = actor->object_index;
-            finished_owner = ((FieldSequenceBinding*)((u8*)base + finished_binding_offset))->owner_object_index;
+            finished_owner = ((FieldActorBinding*)((u8*)base + finished_binding_offset))->owner;
             if (finished_owner == object_index)
             {
                 if (release_actor != 0)
                 {
                     FieldActorSlot* anim_slots;
-                    FieldSequenceBinding* lookup;
+                    FieldActorBinding* lookup;
 
                     anim_slots = g_field_actor_slots;
                     lookup = g_field_actor_bindings;
@@ -1439,11 +1370,11 @@ void field_update_sequence_actor_binding(FieldActor* actor, s32 release_actor)
                     }
                     else
                     {
-                        release_binding_offset = (FIELD_SEQUENCE_SHARED_BINDING) * sizeof(*base);
+                        release_binding_offset = (FIELD_SHARED_BINDING) * sizeof(*base);
                     }
                     {
                         u8* actor_address = (u8*)anim_slots;
-                        actor_address += ((FieldSequenceBinding*)((u8*)lookup + release_binding_offset))->actor_index * sizeof(*anim_slots);
+                        actor_address += ((FieldActorBinding*)((u8*)lookup + release_binding_offset))->slot * sizeof(*anim_slots);
                         ((FieldActorSlot*)actor_address)->active = 0;
                     }
                 }
@@ -1468,8 +1399,8 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
     u8* programs;
     u8* initial_program;
     u8* initial_program_base;
-    FieldSequenceBinding* bindings;
-    FieldSequenceBinding* binding_test;
+    FieldActorBinding* bindings;
+    FieldActorBinding* binding;
     FieldActorSlot* anim_slots;
     s32 parameters[FIELD_SEQUENCE_TARGET_LIMIT];
     FieldActorSlot* copy_source;
@@ -1488,8 +1419,6 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
     s32 movement_mask;
     s32 cursor;
     s32 result;
-    s32 initial_binding_offset;
-    s32 restore_binding_offset;
     s32 release_binding_offset;
     s32 updated_flags;
     u8* opcode_ptr;
@@ -1547,36 +1476,18 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
     }
     if (cursor == 1)
     {
-        binding_test = g_field_actor_bindings;
-        if (initial_owner < 2U)
-        {
-            initial_binding_offset = (initial_owner) * sizeof(*bindings);
-        }
-        else
-        {
-            initial_binding_offset = (FIELD_SEQUENCE_SHARED_BINDING) * sizeof(*bindings);
-        }
+        binding = field_object_binding(initial_owner);
         result = 0;
-        if (((FieldSequenceBinding*)((u8*)binding_test + initial_binding_offset))->state != FIELD_SEQUENCE_RESTORE_TEMPLATE)
+        if (binding->state != FIELD_SEQUENCE_RESTORE_TEMPLATE)
         {
             return 0;
         }
         {
             FieldActorSlot* restore_actors;
-            FieldSequenceBinding* restore_bindings;
             restore_actors = g_field_actor_slots;
-            restore_actors[g_field_actor_bindings[actor->object_index].actor_index].sequence_active = 0;
-            restore_actors[g_field_actor_bindings[actor->object_index].actor_index].target_count = 0;
-            restore_bindings = g_field_actor_bindings;
-            if (actor->object_index < 2U)
-            {
-                restore_binding_offset = (actor->object_index) * sizeof(*restore_bindings);
-            }
-            else
-            {
-                restore_binding_offset = (FIELD_SEQUENCE_SHARED_BINDING) * sizeof(*restore_bindings);
-            }
-            copy_source = &g_field_actor_slots[((FieldSequenceBinding*)((u8*)restore_bindings + restore_binding_offset))->actor_index];
+            restore_actors[g_field_actor_bindings[actor->object_index].slot].sequence_active = 0;
+            restore_actors[g_field_actor_bindings[actor->object_index].slot].target_count = 0;
+            copy_source = &g_field_actor_slots[field_actor_binding(actor)->slot];
             if (actor->object_index < 2U)
             {
                 template_actor = &g_field_actor_templates[actor->object_index].actor;
@@ -1595,11 +1506,11 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
             }
             else
             {
-                release_binding_offset = FIELD_SEQUENCE_SHARED_BINDING * sizeof(*bindings);
+                release_binding_offset = FIELD_SHARED_BINDING * sizeof(*bindings);
             }
         }
         {
-            s32 actor_offset = ((FieldSequenceBinding*)((u8*)bindings + release_binding_offset))->actor_index * sizeof(*anim_slots);
+            s32 actor_offset = ((FieldActorBinding*)((u8*)bindings + release_binding_offset))->slot * sizeof(*anim_slots);
             ((FieldActorSlot*)((u8*)anim_slots + actor_offset))->active = 0;
         }
     }
@@ -1729,7 +1640,7 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
                 continue;
             case FIELD_SEQUENCE_START_RESOURCE:
                 actor_index = field_find_free_actor_slot(actor->object_index, 0);
-                if (actor_index != -1)
+                if (actor_index != FIELD_ACTOR_SLOT_NONE)
                 {
                     resource_owner = actor->object_index;
                     resource_operand = script_offset + players[resource_owner].head.bytes.weapon_type * FIELD_SEQUENCE_BANK_SIZE;
@@ -1883,9 +1794,9 @@ s32 field_allocate_sequence_actor(s32 index, s32 flags)
 {
     s32 slot, binding;
     FieldActorSlot *actor, *updated, *slots;
-    FieldSequenceBinding* bindings;
+    FieldActorBinding* bindings;
     slot = field_find_free_actor_slot(index, 0);
-    if (slot != -1)
+    if (slot != FIELD_ACTOR_SLOT_NONE)
     {
         actor = &g_field_actor_slots[slot];
         bcopy((const u8*)&g_field_actor_templates[index], (u8*)actor, sizeof(*actor));
@@ -1908,15 +1819,15 @@ s32 field_allocate_sequence_actor(s32 index, s32 flags)
         updated->animation = &updated->animations[updated->animation_index];
         g_field_object_states[binding].contact.bytes.animation_actor_index = slot;
         bindings = g_field_actor_bindings;
-        if (binding >= FIELD_SEQUENCE_BINDING_COUNT)
+        if (binding >= FIELD_ACTOR_BINDING_COUNT)
         {
-            binding = FIELD_SEQUENCE_SHARED_BINDING;
+            binding = FIELD_SHARED_BINDING;
         }
-        bindings[binding].actor_index = slot;
+        bindings[binding].slot = slot;
     }
     else
     {
-        g_field_object_states[index].contact.bytes.animation_actor_index = FIELD_SEQUENCE_NO_ACTOR;
+        g_field_object_states[index].contact.bytes.animation_actor_index = FIELD_ANIMATION_ACTOR_NONE;
     }
     return slot;
 }
@@ -1974,7 +1885,7 @@ void field_update_object_tints(void)
                 slot->tint_timer = timer;
                 if (timer == 0)
                 {
-                    slot->movement.word &= ~FIELD_MOVEMENT_TINT_FLASH;
+                    slot->movement.word &= ~FIELD_MOVEMENT_INVULNERABLE;
                 }
             }
             else
@@ -1984,10 +1895,10 @@ void field_update_object_tints(void)
                     flags = slot->contact.word;
                     if (!((flags >> 5) & 1) && !((flags >> 7) & 1))
                     {
-                        if (((flags >> 6) & 1) || g_field_actor_bindings[FIELD_BINDING_INDEX(i)].owner_object_index != i ||
+                        if (((flags >> 6) & 1) || g_field_actor_bindings[FIELD_BINDING_INDEX(i)].owner != i ||
                             g_field_actor_bindings[FIELD_BINDING_INDEX(i)].state == 0)
                         {
-                            slot->movement.word &= ~FIELD_MOVEMENT_TINT_FLASH;
+                            slot->movement.word &= ~FIELD_MOVEMENT_INVULNERABLE;
                             visual->tint_red = slot->tint_red;
                             visual->tint_green = slot->tint_green;
                             visual->tint_blue = slot->tint_blue;
@@ -1995,14 +1906,14 @@ void field_update_object_tints(void)
                         }
                     }
                 }
-                options = slot->movement.word & ~FIELD_MOVEMENT_TINT_FLASH;
+                options = slot->movement.word & ~FIELD_MOVEMENT_INVULNERABLE;
                 slot->movement.word = options;
                 if (g_field_actors[i].presence != FIELD_ACTOR_UNUSED && slot->current_hp.word != 0 && !(slot->contact.bytes.flags & 1))
                 {
                     flags = slot->contact.word;
                     if (!((flags >> 5) & 1) && !((flags >> 7) & 1) && g_field_active_group != 0)
                     {
-                        slot->movement.word = options | FIELD_MOVEMENT_TINT_FLASH;
+                        slot->movement.word = options | FIELD_MOVEMENT_INVULNERABLE;
                         if (g_frame_counter & FIELD_TINT_BLINK_BIT)
                         {
                             g_field_object_parts[i].tint_red = (slot->tint_red * FIELD_TINT_DIM_NUMERATOR) / FIELD_TINT_DIM_DENOMINATOR;

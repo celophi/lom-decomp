@@ -741,6 +741,7 @@ g_field_resource_actions = 0x8010A038;
 g_field_hide_actor_panels = 0x8010AE48;
 g_field_camera_target_x = 0x8010AE4C;
 g_field_camera_target_z = 0x8010AE50;
+g_field_scroll_ease_timer = 0x8010AE58;
 g_field_camera_follow_x = 0x8010D010;
 g_field_camera_follow_z = 0x8010D014;
 field_camera_track_party = 0x80091BC8;

@@ -80,9 +80,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 /** @brief Animation targets are passed as the low byte of one word each. */
 #define FIELD_TARGET_STRIDE 4
 
-/** @brief Party record used for the companion. */
-#define FIELD_COMPANION_INDEX 2
-
 /** @brief Character ids of companions from this value on are drawn in a selectable colour. */
 #define FIELD_COMPANION_COLOR_ID_MIN 0x41
 
@@ -141,9 +138,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 #define FIELD_OBJECT_ANIMATION_FROZEN 0x2000
 /** @brief Object state flags that suspend an object's input, following and commands. */
 #define FIELD_OBJECT_CONTROL_BLOCKED 0x21E4
-
-/** @brief FieldObjectState::contact bits 6 and 7 cleared when an actor is initialized. */
-#define FIELD_CONTACT_UNK40 0x40
 
 /** @brief FieldActor::presence value of an object hidden by an animation actor. */
 #define FIELD_ANIMATION_HIDDEN FIELD_ACTOR_HIDDEN
@@ -212,10 +206,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 #define FIELD_PAN_SCREEN_LEFT 0x10
 #define FIELD_PAN_SCREEN_RIGHT 0x131
 
-/** @brief Screen centre that actor positions are projected around. */
-#define FIELD_SCREEN_CENTER_X 0xA0
-#define FIELD_SCREEN_CENTER_Y 0x70
-
 /** @brief Parameter curve word: segment count, random flag; segment word: length and value. */
 #define FIELD_CURVE_SEGMENT_COUNT_MASK 0x7F
 #define FIELD_CURVE_RANDOM 0x80
@@ -275,16 +265,6 @@ typedef struct FieldCdBuffer
     u16 data;
 } FieldCdBuffer;
 
-/** @brief Action command map of one controller: command words and disable flags. */
-typedef struct
-{
-    u16 commands[11];
-    u8 disabled[11];
-    u8 pad;
-} FieldActionCommandMap;
-
-/** @brief Action 1 and 5 commands restored by field_restore_default_action_animation_mappings(). */
-
 void func_80140004(s32 work_address, s32 image_resource_index, s32 music_resource_index, s32 audio_clip_index);
 void field_draw_dialog_windows(FieldRenderHalf* render_half);
 void field_merge_dialog_items(void);
@@ -333,20 +313,14 @@ extern s32 g_field_track_index;
 extern s32 g_field_song_volume;
 extern FieldFade g_field_fade_target;
 extern FieldFade g_field_fade_restore_color;
-extern s32 g_field_camera_offset_x;
-extern s32 g_field_camera_offset_y;
-extern s32 g_field_camera_offset_z;
 extern u8 g_field_resource_buffer[];
 extern FieldAnimationDef g_field_object_default_animation;
 extern s32 g_field_loaded_actor_count;
 extern void* g_field_resource_cursor;
 extern s32 g_field_scene_mode_bit;
 extern FieldDirectionOffset g_field_direction_offsets[];
-extern s32 g_field_active_group;
 extern s32 g_field_party_routes_stale;
 extern s32 g_field_item_drop_menu_open;
-/** @brief Battle entry sequence state (FIELD_BATTLE_ENTRY_*); nonzero locks player input and enemy HUD while a battle starts. */
-extern s32 g_field_battle_entry_state;
 extern FieldActor g_field_effect_records[];
 extern s32 D_80105770;
 extern s32 g_field_timed_panel_active;
@@ -355,7 +329,6 @@ extern s32 D_80105760;
 extern FieldCdBuffer* g_field_cd_buffer;
 extern s32 g_field_dialog_screen_mode;
 extern s32 g_field_duel_mode[];
-extern FieldActionCommandMap g_field_action_command_maps[];
 
 /*
  * Retail addresses of g_field_resource_entries[3].unk8, g_field_player_records[1]'s flag
@@ -1790,9 +1763,9 @@ void field_initialize_actor_system(void)
             if (g_field_player_records[j].head.bytes.flags & FIELD_PLAYER_ACTIVE)
             {
                 g_field_loaded_actor_count++;
-                if (j == FIELD_COMPANION_INDEX)
+                if (j == FIELD_PARTY_COMPANION)
                 {
-                    work_value = field_get_actor_resource_id(FIELD_COMPANION_INDEX, &g_field_player_records[FIELD_COMPANION_INDEX], 1);
+                    work_value = field_get_actor_resource_id(FIELD_PARTY_COMPANION, &g_field_player_records[FIELD_PARTY_COMPANION], 1);
                     i = work_value;
                 }
                 else
@@ -1802,9 +1775,9 @@ void field_initialize_actor_system(void)
                 if (i != g_field_player_records[j].resource_id)
                 {
                     g_field_player_records[j].resource_id = i;
-                    if (j == FIELD_COMPANION_INDEX)
+                    if (j == FIELD_PARTY_COMPANION)
                     {
-                        field_load_actor_resource_slot(FIELD_COMPANION_INDEX, FIELD_COMPANION_INDEX, i, 1);
+                        field_load_actor_resource_slot(FIELD_PARTY_COMPANION, FIELD_PARTY_COMPANION, i, 1);
                     }
                     else
                     {
@@ -1814,7 +1787,7 @@ void field_initialize_actor_system(void)
                 else
                 {
                     field_relocate_resource_buffer(j);
-                    companion_index = FIELD_COMPANION_INDEX;
+                    companion_index = FIELD_PARTY_COMPANION;
                     if (j == companion_index)
                     {
                         g_field_resource_entries[companion_index].flags = g_field_resource_entries[companion_index].flags | FIELD_RESOURCE_HAS_ACTIONS;
@@ -2235,9 +2208,9 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
     player_block = pad_context + slot * FIELD_SAVED_PLAYER_STRIDE;
     g_field_actors[slot].control.word = (control_flags & ~FIELD_CONTROL_MODE_MASK) | ((player_block[FIELD_SAVED_PLAYER_CONTROL] >> 7) ^ 1);
 
-    if ((slot == FIELD_COMPANION_INDEX) && (resource_variant >= FIELD_COMPANION_COLOR_ID_MIN))
+    if ((slot == FIELD_PARTY_COMPANION) && (resource_variant >= FIELD_COMPANION_COLOR_ID_MIN))
     {
-        FieldActor* companion = &g_field_actors[FIELD_COMPANION_INDEX];
+        FieldActor* companion = &g_field_actors[FIELD_PARTY_COMPANION];
 
         companion->control.word = (companion->control.word & ~FIELD_CONTROL_VARIANT_MASK) |
                                   ((((u8)((SavedGameLayout*)pad_context)->joined_golem + 1) & 3) << FIELD_CONTROL_VARIANT_SHIFT);
@@ -2268,7 +2241,7 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
         member->y = hero->y;
         member->z = hero->z;
         offsets = g_field_direction_offsets;
-        offset = &offsets[hero->direction >> 5];
+        offset = &offsets[hero->direction >> FIELD_HEADING_SECTOR_SHIFT];
         motion[0] = offset->distance;
         motion[1] = 0;
         motion[2] = offset->distance;
@@ -2460,11 +2433,11 @@ void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index)
         bytes++;
     } while (i < sizeof(FieldActor));
 
-    g_field_object_states[actor_index].collision_node = -1;
+    g_field_object_states[actor_index].collision_node = FIELD_COLLISION_NODE_SEARCH;
     g_field_object_states[actor_index].collision_flags = 0;
     g_field_object_states[actor_index].interaction_kind = 0;
     g_field_object_states[actor_index].contact.word &= ~FIELD_CONTACT_TARGETED;
-    g_field_object_states[actor_index].contact.word &= ~FIELD_CONTACT_UNK40;
+    g_field_object_states[actor_index].contact.word &= ~FIELD_CONTACT_ACTION_PENDING;
 
     g_field_actors[actor_index].owner_slot = (s8)(actor_index + FIELD_OBJECT_SLOT_BASE);
     g_field_actors[actor_index].script_index = FIELD_SCRIPT_NONE;
@@ -2520,9 +2493,9 @@ void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index)
     g_field_actors[actor_index].tint_green = FIELD_TINT_NEUTRAL;
     g_field_actors[actor_index].tint_red = FIELD_TINT_NEUTRAL;
 
-    if (actor_index == FIELD_COMPANION_INDEX && D_800FDCEA >= FIELD_COMPANION_COLOR_ID_MIN)
+    if (actor_index == FIELD_PARTY_COMPANION && D_800FDCEA >= FIELD_COMPANION_COLOR_ID_MIN)
     {
-        FieldActor* companion = &g_field_actors[FIELD_COMPANION_INDEX];
+        FieldActor* companion = &g_field_actors[FIELD_PARTY_COMPANION];
 
         companion->control.word =
             (companion->control.word & ~FIELD_CONTROL_VARIANT_MASK) | ((((u8)g_saved_game_ctx->joined_golem + 1) & 3) << FIELD_CONTROL_VARIANT_SHIFT);
@@ -3529,8 +3502,8 @@ s32 field_get_actor_sound_pan(s32 actor_index)
     Vec2s pos;
     s32 screen_x;
 
-    pos.x = FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + g_field_actors[actor_index].x / 256;
-    pos.y = FIELD_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + g_field_actors[actor_index].y / 256 - g_field_actors[actor_index].z / 512 - g_field_view_offset_z / 512;
+    pos.x = FIELD_SCREEN_X(g_field_actors[actor_index].x);
+    pos.y = FIELD_SCREEN_Y(g_field_actors[actor_index].y, g_field_actors[actor_index].z);
 
     screen_x = pos.x;
     if (screen_x >= FIELD_PAN_SCREEN_LEFT)

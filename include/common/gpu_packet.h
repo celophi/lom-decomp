@@ -9,8 +9,9 @@
  *
  * The game often fills two or three neighbouring primitive fields with one
  * word or halfword store instead of a store per field. The *_PACKED and
- * *_WORD setters below do that. The SPRT and POLY_G4 ones address the packet
- * by byte offset, so they also work on a void* or u8* cursor.
+ * *_WORD setters below do that. SET_BGR0_PACKED and the SPRT ones address the
+ * packet by byte offset, so they also work on a void* or u8* cursor; the POLY_G4
+ * ones need a POLY_G4 pointer.
  */
 
 /** @brief Set y0, then x0 (libgpu's setXY0 writes x0 first). */
@@ -38,11 +39,11 @@
 
 /** @brief Write vertex 1, 2 or 3's colour word of a POLY_G4 at once. Vertex 0 uses SET_BGR0_PACKED. */
 #define SET_POLY_G4_BGR1_PACKED(p, _word) \
-    (*(u32*)((u8*)(p) + 0x0C) = (u32)(_word))
+    (*(u32*)&(p)->r1 = (u32)(_word))
 #define SET_POLY_G4_BGR2_PACKED(p, _word) \
-    (*(u32*)((u8*)(p) + 0x14) = (u32)(_word))
+    (*(u32*)&(p)->r2 = (u32)(_word))
 #define SET_POLY_G4_BGR3_PACKED(p, _word) \
-    (*(u32*)((u8*)(p) + 0x1C) = (u32)(_word))
+    (*(u32*)&(p)->r3 = (u32)(_word))
 
 /** @brief Write an SPRT's x0 and y0 from one packed word (y0 in the high half). */
 #define SET_SPRT_XY0_WORD(p, _xy) \

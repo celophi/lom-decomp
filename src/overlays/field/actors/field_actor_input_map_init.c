@@ -4,21 +4,12 @@
  */
 
 #include "common.h"
+#include "common/saved_game.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_actor_tables.h"
 
 /** @brief Number of player actions whose parameter depends on the weapon type. */
 #define FIELD_WEAPON_ACTION_COUNT 5
-
-/**
- * @brief Weapon types (FieldPlayerRecord::weapon_type) with their own action parameters.
- * @note Names assume the in-game weapon order (knife, sword, axe, ...).
- */
-#define FIELD_WEAPON_HAMMER 5
-#define FIELD_WEAPON_STAFF 7
-#define FIELD_WEAPON_GLOVE 8
-#define FIELD_WEAPON_FLAIL 9
-#define FIELD_WEAPON_BOW 10
 
 /** @brief Action slots (2, 3, 8, 9, 10) whose parameter the weapon type selects. */
 extern u8 g_field_weapon_action_slots[FIELD_WEAPON_ACTION_COUNT];

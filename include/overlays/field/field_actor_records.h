@@ -10,6 +10,7 @@
 #include "common/vector.h"
 
 struct AkaoHeader;
+struct FieldCollisionNode;
 
 /** @brief Resource table entry selected by an actor's resource index (0x14 bytes). */
 typedef struct
@@ -36,6 +37,10 @@ extern FieldResourceEntry g_field_resource_entries[];
 
 /** @brief Number of field object states (g_field_object_states). */
 #define FIELD_OBJECT_COUNT 13
+/** @brief Objects 0 and 1 are the two player-controlled party members; each has its own binding. */
+#define FIELD_PLAYER_COUNT 2
+/** @brief Objects 0 to 2 are the party: the two players and the companion. */
+#define FIELD_PARTY_COUNT 3
 
 /** @brief Number of recorded positions in an object's route history. */
 #define FIELD_ROUTE_HISTORY_LENGTH 48
@@ -77,6 +82,14 @@ typedef union
         s16 height;
     } half;
 } FieldMovementWord;
+
+/** @brief FieldMovementWord low bits holding the effect scale (ground effect radius). */
+#define FIELD_MOVEMENT_SCALE_MASK 0x3FF
+/** @brief FieldMovementWord bits holding the running action sequence (0, 0x800 or 0x1000). */
+#define FIELD_MOVEMENT_SEQUENCE_MASK 0x1800
+
+/** @brief Full FieldObjectState::action_charge; below it an action still charges. */
+#define FIELD_ACTION_CHARGE_FULL 0xFF
 
 /** @brief Packed contact word: flag bits, the bound animation actor and the collected target count. */
 typedef union
@@ -223,8 +236,8 @@ typedef struct FieldObjectState
     u8 interaction_kind;
     u8 unk18F;
     Vec2s ground_attachment_points[3];
-    /** @brief Floor node cached between collision passes (-1 asks for a fresh search). */
-    s32 collision_node;
+    /** @brief Floor node cached between collision passes (FIELD_COLLISION_NODE_SEARCH asks for a fresh search). */
+    struct FieldCollisionNode* collision_node;
     s32 collision_flags;
     u16 path_length;
     u16 path_index;
@@ -236,6 +249,9 @@ typedef struct FieldObjectState
 } FieldObjectState;
 
 extern FieldObjectState g_field_object_states[FIELD_OBJECT_COUNT];
+
+/** @brief FieldObjectState::contact.bytes.animation_actor_index value without an animation actor. */
+#define FIELD_ANIMATION_ACTOR_NONE 0xFF
 
 /** @brief Tracks an animation actor runs (one per target it follows). */
 #define FIELD_ACTOR_TRACK_COUNT 9

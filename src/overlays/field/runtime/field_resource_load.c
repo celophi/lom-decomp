@@ -75,11 +75,8 @@ void field_restore_default_action_animation_mappings(s32 unused);
 
 extern s32 g_field_battle_entry_change_count;
 extern s32 g_field_party_reload_sizes[FIELD_PLAYER_COUNT];
-/** @brief Battle entry sequence state (FIELD_BATTLE_ENTRY_*); nonzero locks player input and enemy HUD while a battle starts. */
-extern s32 g_field_battle_entry_state;
 extern FieldBattleEntryChange g_field_battle_entry_changes[FIELD_BATTLE_ENTRY_CHANGE_COUNT];
 extern s32 g_field_party_reload_resource_ids[FIELD_PLAYER_COUNT];
-extern s32 g_field_active_group;
 extern u8* g_field_cd_buffer;
 extern void* g_field_resource_cursor;
 
@@ -163,7 +160,7 @@ void field_update_battle_entry(void)
             if (g_field_battle_entry_changes[i].builtin_animation != FIELD_BATTLE_ENTRY_KEEP)
             {
                 actor_slot = field_find_free_actor_slot(actor->object_index, 0);
-                if ((actor_slot != -1) &&
+                if ((actor_slot != FIELD_ACTOR_SLOT_NONE) &&
                     (field_start_builtin_animation(actor->object_index, actor_slot, g_field_battle_entry_changes[i].builtin_animation) != 0))
                 {
                     field_start_actor_animation(actor_slot, 0, NULL);
@@ -243,7 +240,7 @@ void field_update_battle_entry(void)
                             if (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE)
                             {
                                 g_field_object_states[i].tint_timer = FIELD_BATTLE_ENTRY_TINT_FRAMES;
-                                g_field_object_states[i].movement.word |= FIELD_MOVEMENT_TINT_FLASH;
+                                g_field_object_states[i].movement.word |= FIELD_MOVEMENT_INVULNERABLE;
                             }
                         }
                         DrawSync(0);

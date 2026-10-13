@@ -8,6 +8,7 @@
 #include "main/display.h"
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_calls.h"
+#include "../internal/field_actor_sequence_runtime.h"
 #include "../internal/field_held_action_buttons.h"
 #include "../internal/field_effect_render_state.h"
 #include "overlays/field/field_types.h"
@@ -22,18 +23,12 @@
 #define FIELD_ANIMATION_TURN_37 0x37
 #define FIELD_ANIMATION_TURN_3B 0x3B
 
-/** @brief Number of per-object actions that can be bound to buttons. */
-#define FIELD_BOUND_ACTION_COUNT 12
 /** @brief FieldObjectState::action_parameter value of an object without an action. */
 #define FIELD_ACTION_PARAMETER_NONE 0xFFFF
 
-/** @brief FieldObjectState::flags bit set on an object while another object is linked to it. */
-#define FIELD_OBJECT_FLAG_LINK_TARGET 0x2000
 /** @brief FieldObjectState::movement sequence bits cleared when an action ends. */
 #define FIELD_MOVEMENT_SEQUENCE_0800 0x0800
 #define FIELD_MOVEMENT_SEQUENCE_1000 0x1000
-/** @brief FieldObjectState::movement bit: the object overlaps another one. */
-#define FIELD_MOVEMENT_OVERLAPPING 0x4000
 
 /** @brief The slide displacement is scaled by FieldObjectPart::appearance scale_xz / 64 (0x40 = full size). */
 #define FIELD_PART_SCALE_SHIFT 6
@@ -51,16 +46,9 @@ typedef struct
     Vec2s screen;
 } FieldScreenProbe;
 
-/* The owner header src/overlays/field/internal/field_actor_sequence_runtime.h declares its own
- * g_field_actor_bindings type, which conflicts with field_actor_tables.h. */
-void field_update_sequence_actor_binding(FieldActor* actor, s32 release_actor);
-void field_restart_sequence_animation(FieldActor* actor);
-
 /* src/overlays/field/internal/field_contact_geometry.h pulls in the FieldMotionRecord view of the
  * actor tables, which conflicts with field_actor_tables.h. */
 s32 field_resolve_actor_movement(FieldActor* actor, Vec3i* delta, s32 mode);
-
-void field_release_object_link(FieldActor* actor);
 
 /**
  * @brief Run one frame of an actor's action command.
@@ -89,7 +77,7 @@ s32 field_update_actor_action(FieldActor* actor, s32 update_action)
         animation = actor->animation & FIELD_ANIMATION_INDEX_MASK;
         if (animation == FIELD_ABILITY_DEFEND || animation == FIELD_ABILITY_CROUCH)
         {
-            if (g_field_object_states[actor->object_index].action < FIELD_BOUND_ACTION_COUNT)
+            if (g_field_object_states[actor->object_index].action < FIELD_RESOURCE_ACTION_BUTTON_COUNT)
             {
                 if (field_get_held_action_buttons(actor->object_index, g_field_object_states[actor->object_index].action, actor) != 0)
                 {

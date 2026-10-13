@@ -5,6 +5,12 @@
 #include <libgpu.h>
 
 #define FIELD_ORDERING_TABLE_SIZE 4112
+/** @brief First ordering-table entry of the world; the entries in front of it belong to the text windows. */
+#define FIELD_WORLD_OT_OFFSET 16
+/** @brief Number of depth-sorted world entries after FIELD_WORLD_OT_OFFSET. */
+#define FIELD_WORLD_OT_SIZE (FIELD_ORDERING_TABLE_SIZE - FIELD_WORLD_OT_OFFSET)
+/** @brief Shift from a world z position to its world ordering-table entry. */
+#define FIELD_WORLD_OT_DEPTH_SHIFT 7
 #define FIELD_PRIMITIVE_ARENA_SIZE 15360
 
 /** @brief Ordering table, display setup, and primitive storage for one field frame. */

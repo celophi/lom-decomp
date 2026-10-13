@@ -18,8 +18,6 @@
 #define FIELD_MAP_QUEUED_READ_LIMIT 15
 /** @brief Where a field map resource is read to. */
 #define FIELD_MAP_LOAD_ADDRESS ((u8*)LOAD_BUFFER_ADDRESS)
-/** @brief First ordering-table entry the scene draws into; the entries in front of it belong to the text windows. */
-#define FIELD_SCENE_OT_OFFSET 16
 /** @brief Bytes reserved for the text configuration save area. */
 #define FIELD_TEXT_SAVED_CONFIG_SIZE 96
 /** @brief VRAM position of the map texture area. */
@@ -142,15 +140,15 @@ void field_draw_frame(s32 alternate_half, FieldRenderHalf* buffer, s32 update_mo
     FieldCdSystem* cd_system;
 
 #if defined(VERSION_JP)
-    field_draw_scene_objects(&buffer->primitive_cursor, &buffer->ordering_table[FIELD_SCENE_OT_OFFSET], update_mode);
+    field_draw_scene_objects(&buffer->primitive_cursor, &buffer->ordering_table[FIELD_WORLD_OT_OFFSET], update_mode);
 #else
     if (force_unscaled != 0)
     {
-        field_draw_scene_objects(&buffer->primitive_cursor, &buffer->ordering_table[FIELD_SCENE_OT_OFFSET], 2);
+        field_draw_scene_objects(&buffer->primitive_cursor, &buffer->ordering_table[FIELD_WORLD_OT_OFFSET], 2);
     }
     else
     {
-        field_draw_scene_objects(&buffer->primitive_cursor, &buffer->ordering_table[FIELD_SCENE_OT_OFFSET], update_mode);
+        field_draw_scene_objects(&buffer->primitive_cursor, &buffer->ordering_table[FIELD_WORLD_OT_OFFSET], update_mode);
     }
 #endif
     cd_system = FIELD_CD_SYSTEM;

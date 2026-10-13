@@ -10,6 +10,7 @@
  */
 
 #include "common.h"
+#include <abs.h>
 #include "main/cdrom.h"
 #include "main/display.h"
 #include "../internal/field_actor_tables.h"
@@ -24,10 +25,6 @@
 #include <rand.h>
 #include "../internal/field_actor_runtime.h"
 #include "overlays/field/field_actor_records.h"
-
-/** @brief Screen center, added to camera-relative positions. */
-#define FIELD_SCREEN_CENTER_X (SCREEN_WIDTH / 2)
-#define FIELD_SCREEN_CENTER_Y (VRAM_DRAW_HEIGHT / 2)
 
 /* ---- HUD ------------------------------------------------------------------ */
 
@@ -160,11 +157,8 @@ extern s32 g_field_hud_bar_height;
 extern s32 g_field_hud_bar_width;
 extern s32 g_field_hud_bar_offset_x;
 extern s32 g_field_hud_bar_offset_y;
-extern s32 g_field_active_group;
 extern s32 g_field_scene_mode_bit;
 extern s32 g_frame_counter;
-/** @brief Battle entry sequence state (FIELD_BATTLE_ENTRY_*); nonzero locks player input and enemy HUD while a battle starts. */
-extern s32 g_field_battle_entry_state;
 extern u8 g_field_pair_indicator_list[];
 extern u8 D_800FDCEA;
 extern u16 D_800FE01E;
@@ -197,22 +191,11 @@ typedef union
 
 extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_COUNT];
 
-/** @brief FieldObjectState.flags bits with a handler in g_field_object_flag_handlers; meanings mostly unknown. */
-#define FIELD_OBJECT_FLAG_0004 0x0004
-#define FIELD_OBJECT_FLAG_0020 0x0020
-#define FIELD_OBJECT_FLAG_0040 0x0040
-#define FIELD_OBJECT_FLAG_0080 0x0080
-#define FIELD_OBJECT_FLAG_0100 0x0100
-#define FIELD_OBJECT_FLAG_2000 0x2000
+/** @brief FieldObjectState.flags bit with a handler in g_field_object_flag_handlers; meaning unknown. */
 #define FIELD_OBJECT_FLAG_8000 0x8000
 
 /** @brief Set for one frame when the object is hit; tints the actor red. */
 #define FIELD_OBJECT_FLAG_HIT_FLASH 0x10000000
-
-/** @brief Flags that stop the looping 0x4000/0x8000 effects (also skip knockback and camera tracking). */
-#define FIELD_OBJECT_IMMOBILE_FLAGS                                                                                                                            \
-    (FIELD_OBJECT_FLAG_0004 | FIELD_OBJECT_FLAG_0020 | FIELD_OBJECT_FLAG_0040 | FIELD_OBJECT_FLAG_0080 | FIELD_OBJECT_FLAG_0100 |                              \
-     FIELD_OBJECT_FLAG_KNOCKED_OUT | FIELD_OBJECT_FLAG_2000)
 
 /** @brief FieldObjectState.contact bit: the object is linked to linked_object_index. */
 #define FIELD_CONTACT_LINKED_SHIFT 1
@@ -273,20 +256,10 @@ typedef struct
 
 #define SHADOW_SCREEN_POSITION ((ShadowScreenPosition*)SCRATCHPAD_AT(0xC0))
 #define SHADOW_WORLD_POSITION ((ShadowWorldPosition*)SCRATCHPAD_AT(0xC4))
-#define SHADOW_OT_SIZE 4096
-#define SHADOW_DEPTH_SHIFT 7
 
 /** @brief How far @p actor stands above ground height @p height; grows the shadow and pulls its edges in. */
 #define SHADOW_ELEVATION(actor, height) (((actor)->y - ((height) << 8)) >> 11)
 
-/** @brief Screen translation applied to the fading primitives. */
-typedef struct
-{
-    u16 x;
-    u16 y;
-} FieldScreenMotion;
-
-extern FieldScreenMotion g_field_screen_scroll;
 extern POLY_FT4 g_field_fade_prims[FIELD_FADE_PRIM_COUNT];
 extern u16 g_field_fade_prim_depths[FIELD_FADE_PRIM_COUNT];
 extern FieldActor* g_field_updating_actor;
@@ -300,7 +273,6 @@ static POLY_F4* field_emit_hud_damage_quad(POLY_F4* prim, s32 y, u_long* ot);
 static POLY_F4* field_emit_hud_healing_quad(POLY_F4* prim, s32 y, u_long* ot);
 void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* position);
 s32 field_upload_image_resource(RECT* rect, Tim* resource, s32 mode);
-int abs(int value);
 void bcopy(const void* src, void* dst, int size);
 void field_restart_actor_animation(FieldActor* actor);
 static inline void field_clear_link_target_flag(s32 object_index);
@@ -1634,7 +1606,7 @@ static inline void field_clear_link_target_flag(s32 object_index)
     if ((state->contact.word >> FIELD_CONTACT_LINKED_SHIFT) & 1)
     {
         FieldObjectState* target = &states[state->linked_object_index];
-        target->flags &= ~FIELD_OBJECT_FLAG_2000;
+        target->flags &= ~FIELD_OBJECT_FLAG_LINK_TARGET;
     }
 }
 
@@ -1870,20 +1842,20 @@ POLY_FT4* field_render_actor_ground_shadow(FieldActor* actor, POLY_FT4* prim, s3
         prim->u0 = 0;
         setClut(prim, 256, 481);
 
-        depth = actor->z >> SHADOW_DEPTH_SHIFT;
+        depth = actor->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
         if (depth < 0)
         {
             addPrim(&ordering_table[0], prim);
             prim++;
         }
-        else if (depth >= SHADOW_OT_SIZE)
+        else if (depth >= FIELD_WORLD_OT_SIZE)
         {
-            addPrim(&ordering_table[SHADOW_OT_SIZE - 1], prim);
+            addPrim(&ordering_table[FIELD_WORLD_OT_SIZE - 1], prim);
             prim++;
         }
         else
         {
-            addPrim(&ordering_table[actor->z >> SHADOW_DEPTH_SHIFT], prim);
+            addPrim(&ordering_table[actor->z >> FIELD_WORLD_OT_DEPTH_SHIFT], prim);
             prim++;
         }
     }

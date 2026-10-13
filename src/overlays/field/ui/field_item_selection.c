@@ -11,6 +11,7 @@
 #include "main/main.h"
 #include "common.h"
 #include "overlays/field/field_text.h"
+#include "overlays/field/field_sound.h"
 #include "overlays/field/field_scene_transition.h"
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_calls.h"
@@ -62,7 +63,6 @@
 #define FIELD_ITEM_HIGHLIGHT_HEIGHT 14
 
 /** @brief Sounds of the item-drop menu. */
-#define FIELD_SOUND_ACTION_REFUSED 0x78
 #define FIELD_SOUND_CURSOR 0x7D
 #define FIELD_SOUND_SELECT 0x7E
 #define FIELD_SOUND_CANCEL 0x7F
@@ -128,8 +128,8 @@ extern s32 g_field_item_list_cursor;
 extern s32 g_field_item_drop_menu_open;
 extern s32 g_field_primary_held_buttons, g_field_primary_repeat_delay;
 extern s32 g_field_secondary_held_buttons, g_field_secondary_repeat_delay, g_field_buffered_input;
-
 void field_restart_actor_animation(FieldActor *actor);
+
 s32 field_read_controller_buttons(s32 controller);
 
 static void field_play_action_refused_sound(void);
@@ -368,7 +368,7 @@ static inline void drop_selected_item(void)
             actor->x = g_field_actors[0].x;
             actor->y = g_field_actors[0].y;
             actor->z = g_field_actors[0].z;
-            facing = FIELD_FACING_OFFSET(offsets, g_field_actors[0].direction >> 5);
+            facing = FIELD_FACING_OFFSET(offsets, g_field_actors[0].direction >> FIELD_HEADING_SECTOR_SHIFT);
             offset[0] = -facing->dx;
             offset[1] = 0;
             offset[2] = -facing->dz;
@@ -382,7 +382,7 @@ static inline void drop_selected_item(void)
             control |= FIELD_ITEM_ACTOR_CONTROL_MODE;
             actor->animation_frame = 0;
             actor->animation_active = 1;
-            actor->command = FIELD_ACTOR_COMMAND_BA;
+            actor->command = FIELD_ACTOR_COMMAND_HOLD;
             actor->removal_delay = FIELD_ITEM_ACTOR_REMOVAL_DELAY;
             actor->animation_state = 0xFE;
             actor->control.word = control;
@@ -395,7 +395,7 @@ static inline void drop_selected_item(void)
             field_restart_actor_animation(actor);
             field_spawn_item_record(state->key, g_field_item_list[g_field_item_list_cursor].item_id);
             animation_slot = field_find_free_actor_slot(actor_index, 0);
-            if ((animation_slot != -1) && (field_start_builtin_animation(actor_index, animation_slot, FIELD_ITEM_DROP_ANIMATION) != 0))
+            if ((animation_slot != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor_index, animation_slot, FIELD_ITEM_DROP_ANIMATION) != 0))
             {
                 field_start_actor_animation(animation_slot, 0, NULL);
             }

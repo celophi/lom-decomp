@@ -3,14 +3,11 @@
  */
 
 #include "common.h"
+#include "../internal/field_effect_render_state.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_actor_runtime.h"
 #include "main/field_runtime.h"
 #include <libgpu.h>
-
-extern s32 g_field_camera_offset_x;
-extern s32 g_field_camera_offset_y;
-extern s32 g_field_camera_offset_z;
 
 /** @brief LINE_F2 with its color word addressable as one value. */
 typedef struct

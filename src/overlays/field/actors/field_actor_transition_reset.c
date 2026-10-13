@@ -8,6 +8,7 @@
  */
 
 #include "common.h"
+#include "../internal/field_effect_render_state.h"
 #include "common/saved_game.h"
 #include "main/controller_internal.h"
 #include "../internal/field_actor_tables.h"
@@ -37,12 +38,7 @@ typedef struct
 /** @brief Fixed address of the data page that holds g_field_object_states. */
 #define FIELD_STATE_PAGE ((FieldStatePage*)PRIMARY_OVERLAY_UPPER_ADDRESS)
 
-extern s32 g_field_active_group;
 extern s32 g_field_text_session_active;
-extern s32 g_field_camera_offset_x;
-extern s32 g_field_camera_offset_y;
-extern s32 g_field_camera_offset_z;
-extern s32 g_field_actions_limited;
 extern s32 g_field_restore_group;
 extern s32 g_field_battle_idle_checks;
 extern s32 g_field_duel_mode;
@@ -61,7 +57,6 @@ s32 field_is_scene_fading(void);
 void field_reset_draw_state(void);
 void field_show_battle_results(void);
 void field_update_object_effects(s32 object_index);
-void field_route_actor_to_object(FieldActor* actor, s32 arg1, s32 arg2);
 void field_camera_select_scroll_limits(void);
 void field_command_history_clear(s32 object_index);
 void field_play_sound(s32 arg0, s32 arg1);

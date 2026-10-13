@@ -2,6 +2,7 @@
  * @brief Resolve field actor contacts, movement, interactions, and attack hits.
  */
 #include "common.h"
+#include "../internal/field_effect_render_state.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_actor.h"
 #include "../internal/field_actor_behavior.h"
@@ -28,23 +29,11 @@
 #define FIELD_SEQUENCE_RESOURCE_ID 1501
 
 #define FIELD_QUAD_VERTEX_COUNT 4
-/** @brief Most targets one object can collect (FieldObjectState::targets). */
-#define FIELD_MAX_CONTACT_TARGETS 9
 /** @brief field_intersect_screen_segments result when the segments do not meet. */
 #define FIELD_NO_SEGMENT_INTERSECTION 0x80008000
 
-/** @brief field_find_actor_overlap result bit set with the overlapped object index in the low bits. */
-#define FIELD_CONTACT_RESULT_PRESENT 0x8000
-#define FIELD_CONTACT_RESULT_ACTOR_MASK 0x7FFF
-
 /** @brief FieldMoveObject::flags bit 23: the object moves without map collision. */
 #define FIELD_PART_IGNORE_MAP_COLLISION_BIT 23
-/** @brief Collision footprint of a moving actor (map units), normal and large. */
-#define FIELD_MOVE_WIDTH 9
-#define FIELD_MOVE_STEP 6
-#define FIELD_MOVE_LARGE_WIDTH 12
-#define FIELD_MOVE_LARGE_STEP 8
-#define FIELD_MOVE_HEIGHT_TOLERANCE 16
 
 /** @brief FieldAnimationDef::sync_flags bit: the animation hits its own group, not the opposing one. */
 #define FIELD_ANIMATION_SAME_GROUP 0x01
@@ -59,8 +48,8 @@
 #define FIELD_HIT_REACTION_DIRECT_COUNT 12
 /** @brief Actors this high (FieldActor::height) or higher overlap nothing. */
 #define FIELD_OVERLAP_MAX_HEIGHT 9
-/** @brief Bit number of FIELD_CONTACT_IGNORE_BINDING. */
-#define FIELD_CONTACT_IGNORE_BINDING_BIT 6
+/** @brief Bit number of FIELD_CONTACT_ACTION_PENDING. */
+#define FIELD_CONTACT_ACTION_PENDING_BIT 6
 /** @brief Builtin animation a touched object plays towards the toucher. */
 #define FIELD_TOUCH_ANIMATION 0x2A
 /** @brief Frames an actor waits in FIELD_ACTOR_COMMAND_SEQUENCE_WAIT before its contact interaction runs. */
@@ -72,23 +61,10 @@
 #define FIELD_CONTACT_QUAD_ANSWER_MASK 0x1C
 #define FIELD_CONTACT_QUAD_ANSWER_2 0x08
 #define FIELD_CONTACT_QUAD_ANSWER_3 0x10
-/** @brief Object-state flag bits of unknown meaning tested by the contact scans. */
-#define FIELD_OBJECT_FLAG_0004 0x0004
-#define FIELD_OBJECT_FLAG_0020 0x0020
-#define FIELD_OBJECT_FLAG_0040 0x0040
-#define FIELD_OBJECT_FLAG_0080 0x0080
-#define FIELD_OBJECT_FLAG_0100 0x0100
-/** @brief Object-state flag bit cleared when an object becomes a target. */
-#define FIELD_OBJECT_FLAG_CLEAR_ON_HIT 0x0400
-/** @brief Object-state flag bits that keep an object out of overlap tests. */
-#define FIELD_OBJECT_NO_OVERLAP_FLAGS \
-    (FIELD_OBJECT_FLAG_0004 | FIELD_OBJECT_FLAG_0020 | FIELD_OBJECT_FLAG_0040 | FIELD_OBJECT_FLAG_0100 | FIELD_OBJECT_UNTARGETABLE_FLAGS)
 
 /** @brief Object-state movement bits: the object stands outside its group bounds / overlaps another actor. */
 #define FIELD_MOVEMENT_OUTSIDE_BOUNDS_BIT 13
-#define FIELD_MOVEMENT_OVERLAPPING_BIT 14
 #define FIELD_MOVEMENT_OUTSIDE_BOUNDS 0x2000
-#define FIELD_MOVEMENT_OVERLAPPING 0x4000
 
 /** @brief Object-state enabled_events bits. */
 #define FIELD_INTERACTION_FLAG_ENABLED 0x01   /**< Touching the object starts its interaction. */
@@ -117,54 +93,12 @@ typedef struct
     u8 pad_0x38[0x10];
 } FieldMoveObject;
 
-/**
- * @brief Mover handed to field_collision_resolve_move (same layout as in field_collision.c).
- * @note height and resolved_height are negated heights; collision_node and flags persist in the object state.
- */
-struct FieldCollisionMover
-{
-    s32 x;
-    s32 height;
-    s32 z;
-    s32 move_x;
-    s32 move_height;
-    s32 move_z;
-    s32 resolved_height;
-    s32 collision_node;
-    s32 flags;
-    s16 footprint_width;
-    s16 height_bias;
-    union
-    {
-        s32 mode_flags;
-        struct
-        {
-            s16 footprint_depth;
-            u16 flags;
-        } h;
-        struct
-        {
-            unsigned footprint_depth : 16;
-            unsigned airborne_low : 1;
-            unsigned airborne_high : 1;
-            unsigned unused : 14;
-        } bits;
-    } mode;
-};
-
 /** @brief Map size words of the field map header (FieldMapBounds in field_actor_tables.h). */
 typedef struct
 {
     s16 width;
     u16 depth;
 } FieldMoveBounds;
-
-/** @brief Horizontal range of an actor group, in whole map units (same layout as in field_actor_camera.c). */
-typedef struct
-{
-    u16 left;
-    u16 width;
-} FieldGroupBounds;
 
 /** @brief Animation targets and GTE vectors used by a contact scan. */
 typedef struct
@@ -180,8 +114,6 @@ typedef struct
 
 extern u8* g_field_cd_buffer;
 extern FieldMoveObject g_field_object_parts[];
-extern s32 g_field_active_group;
-extern FieldGroupBounds g_field_group_bounds[];
 extern s32 g_field_duel_mode;
 /** @brief Last field_find_actor_overlap result: zero, or the object index plus FIELD_CONTACT_RESULT_PRESENT. */
 extern s32 g_field_last_actor_contact;
@@ -189,7 +121,6 @@ extern s32 g_field_last_actor_contact;
 void field_start_interaction(s32 value, u16 entry, FieldObjectState* states);
 s32 field_resolve_contact_hit(s32 source_index, s32 target_index);
 s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action);
-void field_release_object_link(FieldActor* actor);
 void field_restart_actor_animation();
 
 static s32 field_intersect_screen_segments(Vec2s* first_start, Vec2s* first_end, Vec2s* second_start, Vec2s* second_end);
@@ -270,8 +201,8 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
     FieldContactPoint* target_quad;
     FieldObjectState* list_state;
     FieldObjectState* object_states;
-    FieldSequenceBinding* bindings;
-    FieldSequenceBinding* binding;
+    FieldActorBinding* bindings;
+    FieldActorBinding* binding;
     FieldActorSlot* slots;
     FieldContactPoint* input_vertex;
     FieldObjectState* target_list;
@@ -328,7 +259,7 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
         {
             eligible = 1;
         }
-        if ((eligible == 0) || (target_state->movement.word & FIELD_MOVEMENT_TINT_FLASH))
+        if ((eligible == 0) || (target_state->movement.word & FIELD_MOVEMENT_INVULNERABLE))
         {
             continue;
         }
@@ -340,29 +271,29 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
         {
             continue;
         }
-        if (!(flags_or_extent & FIELD_CONTACT_IGNORE_BINDING))
+        if (!(flags_or_extent & FIELD_CONTACT_ACTION_PENDING))
         {
             /* Skip an object whose own bound animation is running. */
             if (target->object_index < FIELD_PLAYER_COUNT)
             {
-                binding_offset = target->object_index * sizeof(FieldSequenceBinding);
+                binding_offset = target->object_index * sizeof(FieldActorBinding);
             }
             else
             {
-                binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldSequenceBinding);
+                binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
             }
-            binding = (FieldSequenceBinding*)((u8*)bindings + binding_offset);
-            if (binding->owner_object_index == target->object_index)
+            binding = (FieldActorBinding*)((u8*)bindings + binding_offset);
+            if (binding->owner == target->object_index)
             {
-                if ((u32)(binding->owner_object_index & 0xFF) < FIELD_PLAYER_COUNT)
+                if ((u32)(binding->owner & 0xFF) < FIELD_PLAYER_COUNT)
                 {
-                    owner_binding_offset = binding->owner_object_index * sizeof(FieldSequenceBinding);
+                    owner_binding_offset = binding->owner * sizeof(FieldActorBinding);
                 }
                 else
                 {
-                    owner_binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldSequenceBinding);
+                    owner_binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
                 }
-                if (((FieldSequenceBinding*)((u8*)bindings + owner_binding_offset))->state != 0)
+                if (((FieldActorBinding*)((u8*)bindings + owner_binding_offset))->state != 0)
                 {
                     continue;
                 }
@@ -770,7 +701,7 @@ s32 field_resolve_actor_movement(FieldActor* actor, s32* position, s32 mode)
     Vec3i delta;
     s32 hit;
     FieldMoveBounds* bounds = (FieldMoveBounds*)MAP_BOUNDS_ADDRESS;
-    struct FieldCollisionMover* mover = (struct FieldCollisionMover*)FIELD_MOVE_REQUEST_ADDRESS;
+    FieldCollisionMover* mover = (FieldCollisionMover*)FIELD_MOVE_REQUEST_ADDRESS;
     FieldCollisionQuery* query = (FieldCollisionQuery*)FIELD_MOVE_QUERY_ADDRESS;
     s32 requested_x;
     s32 actor_x;
@@ -807,23 +738,23 @@ s32 field_resolve_actor_movement(FieldActor* actor, s32* position, s32 mode)
         mover->move_height = position[1];
         mover->move_z = position[2];
         requested_z = mover->move_z;
-        mover->height_bias = FIELD_MOVE_HEIGHT_TOLERANCE;
-        query->height_tolerance = FIELD_MOVE_HEIGHT_TOLERANCE;
+        mover->height_bias = FIELD_FOOTPRINT_STEP;
+        query->height_tolerance = FIELD_FOOTPRINT_STEP;
         if (g_field_object_parts[actor->object_index].scale_z == FIELD_PART_FULL_SCALE)
         {
-            mover->footprint_width = FIELD_MOVE_LARGE_WIDTH;
-            query->width = FIELD_MOVE_LARGE_WIDTH;
-            mover->mode.h.footprint_depth = FIELD_MOVE_LARGE_STEP;
-            query->depth = FIELD_MOVE_LARGE_STEP;
+            mover->footprint_width = FIELD_FOOTPRINT_LARGE_WIDTH;
+            query->width = FIELD_FOOTPRINT_LARGE_WIDTH;
+            mover->mode.footprint_depth = FIELD_FOOTPRINT_LARGE_DEPTH;
+            query->depth = FIELD_FOOTPRINT_LARGE_DEPTH;
         }
         else
         {
-            mover->footprint_width = FIELD_MOVE_WIDTH;
-            query->width = FIELD_MOVE_WIDTH;
-            mover->mode.h.footprint_depth = FIELD_MOVE_STEP;
-            query->depth = FIELD_MOVE_STEP;
+            mover->footprint_width = FIELD_FOOTPRINT_WIDTH;
+            query->width = FIELD_FOOTPRINT_WIDTH;
+            mover->mode.footprint_depth = FIELD_FOOTPRINT_DEPTH;
+            query->depth = FIELD_FOOTPRINT_DEPTH;
         }
-        mover->height_bias = FIELD_MOVE_HEIGHT_TOLERANCE;
+        mover->height_bias = FIELD_FOOTPRINT_STEP;
         mover->mode.bits.airborne_high = 0;
         mover->mode.bits.airborne_low = 0;
         mover->collision_node = g_field_object_states[actor->object_index].collision_node;
@@ -849,7 +780,7 @@ s32 field_resolve_actor_movement(FieldActor* actor, s32* position, s32 mode)
         query->y = position[1] + actor->y;
         query->z = mover->z;
         if (((g_field_active_group == 0) || (actor->control.word & FIELD_CONTROL_MODE_MASK) ||
-             (field_collision_hit_markers(query) == -1)) &&
+             (field_collision_hit_markers(query) == FIELD_COLLISION_MARKER_NONE)) &&
             ((((u16)actor->command >= FIELD_ACTOR_COMMAND_WALK_PATH) && ((u16)actor->command <= FIELD_ACTOR_COMMAND_RUN_PATH)) ||
              (actor->command == FIELD_ACTOR_COMMAND_LEAVE_PATH) || (g_field_active_group == 0) || (field_move_leaves_screen(actor, &delta) == 0)))
         {
@@ -875,7 +806,7 @@ s32 field_resolve_actor_movement(FieldActor* actor, s32* position, s32 mode)
     else
     {
         g_field_object_states[actor->object_index].movement.half.height = 0;
-        g_field_object_states[actor->object_index].collision_node = -1;
+        g_field_object_states[actor->object_index].collision_node = FIELD_COLLISION_NODE_SEARCH;
         g_field_object_states[actor->object_index].collision_flags = 0;
         position[0] = actor->x;
         position[1] = actor->y;
@@ -985,7 +916,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
     s32 target_end;
     s32 binding_offset;
     s32 owner_binding_offset;
-    FieldSequenceBinding* binding;
+    FieldActorBinding* binding;
     s8 actor_height;
     s8 target_height;
     FieldObjectState* actor_state;
@@ -1024,7 +955,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
     for (; target_index < target_end; target_index++, target++, target_state++)
     {
         if ((target->presence == FIELD_ACTOR_UNUSED) ||
-            (target_state->flags & FIELD_OBJECT_NO_OVERLAP_FLAGS) ||
+            (target_state->flags & FIELD_OBJECT_IMMOBILE_FLAGS) ||
             (target == actor) ||
             (contact_flags = target_state->contact.word, ((contact_flags & FIELD_CONTACT_NO_HIT_TEST) != 0)) ||
             (contact_flags & FIELD_CONTACT_ANIMATION_HIDDEN) || (target_state->collision.word == 0))
@@ -1069,34 +1000,34 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
                     if (!(target_state->contact.word & FIELD_CONTACT_ANIMATION_HIDDEN))
                     {
                         index = target->object_index;
-                        if (!(((u32)g_field_object_states[index].contact.word >> FIELD_CONTACT_IGNORE_BINDING_BIT) & 1))
+                        if (!(((u32)g_field_object_states[index].contact.word >> FIELD_CONTACT_ACTION_PENDING_BIT) & 1))
                         {
                             /* One local holds the binding table address and then the object index. */
                             base_or_index = (uintptr_t)g_field_actor_bindings;
                             if ((u32)index < FIELD_PLAYER_COUNT)
                             {
-                                binding_offset = index * sizeof(FieldSequenceBinding);
+                                binding_offset = index * sizeof(FieldActorBinding);
                             }
                             else
                             {
-                                binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldSequenceBinding);
+                                binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
                             }
-                            binding = (FieldSequenceBinding*)(base_or_index + binding_offset);
+                            binding = (FieldActorBinding*)(base_or_index + binding_offset);
                             base_or_index = target->object_index;
-                            index = binding->owner_object_index;
+                            index = binding->owner;
                             if (index == base_or_index)
                             {
                                 bindings = (u8*)g_field_actor_bindings;
                                 if ((u32)(index & 0xFF) < FIELD_PLAYER_COUNT)
                                 {
-                                    owner_binding_offset = index * sizeof(FieldSequenceBinding);
+                                    owner_binding_offset = index * sizeof(FieldActorBinding);
                                 }
                                 else
                                 {
-                                    owner_binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldSequenceBinding);
+                                    owner_binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
                                 }
 
-                                if (((FieldSequenceBinding*)(bindings + owner_binding_offset))->state != 0)
+                                if (((FieldActorBinding*)(bindings + owner_binding_offset))->state != 0)
                                 {
                                     goto no_contact;
                                 }
@@ -1106,7 +1037,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
                         if (target->command == FIELD_ACTOR_COMMAND_NONE)
                         {
                             animation_slot = field_find_free_actor_slot(target->object_index, 0);
-                            if (animation_slot != -1)
+                            if (animation_slot != FIELD_ACTOR_SLOT_NONE)
                             {
                                 scratch.targets.words[0] = (s32)actor->object_index;
 
@@ -1200,8 +1131,8 @@ void field_probe_actor_interaction(FieldActor* actor)
     position[0] = actor->x;
     position[1] = actor->y;
     position[2] = actor->z;
-    position[0] += rcos(actor->direction * 16);
-    position[2] -= rsin(actor->direction * 16);
+    position[0] += rcos(actor->direction << FIELD_HEADING_ANGLE_SHIFT);
+    position[2] -= rsin(actor->direction << FIELD_HEADING_ANGLE_SHIFT);
     result_or_state = field_find_actor_overlap(actor, position, 1);
     object_index = result_or_state & FIELD_CONTACT_RESULT_ACTOR_MASK;
     if (result_or_state != 0)
@@ -1259,8 +1190,8 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
 {
     FieldActor* actors;
     FieldObjectState* states;
-    FieldSequenceBinding* bindings;
-    FieldSequenceBinding* binding;
+    FieldActorBinding* bindings;
+    FieldActorBinding* binding;
     s32 bound_x_a;
     s32 bound_y_a;
     s16 command;
@@ -1377,37 +1308,37 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
             if ((contact_flags & FIELD_CONTACT_ANIMATION_HIDDEN) ||
                 ((candidate_index >= FIELD_PARTY_COUNT) && ((candidate_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)) ||
                 (contact_flags & FIELD_CONTACT_NO_HIT_TEST) || (eligible == 0) ||
-                (candidate_state->movement.word & FIELD_MOVEMENT_TINT_FLASH))
+                (candidate_state->movement.word & FIELD_MOVEMENT_INVULNERABLE))
             {
                 continue;
             }
-            if (!(contact_flags & FIELD_CONTACT_IGNORE_BINDING))
+            if (!(contact_flags & FIELD_CONTACT_ACTION_PENDING))
             {
                 s32 binding_owner;
                 s32 object_index;
                 if (candidate->object_index < FIELD_PLAYER_COUNT)
                 {
-                    binding_offset = candidate->object_index * sizeof(FieldSequenceBinding);
+                    binding_offset = candidate->object_index * sizeof(FieldActorBinding);
                 }
                 else
                 {
-                    binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldSequenceBinding);
+                    binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
                 }
 
-                binding = (FieldSequenceBinding*)((u8*)bindings + binding_offset);
+                binding = (FieldActorBinding*)((u8*)bindings + binding_offset);
                 object_index = candidate->object_index;
-                binding_owner = binding->owner_object_index;
+                binding_owner = binding->owner;
                 if (binding_owner == object_index)
                 {
                     if ((u32)(binding_owner & 0xFF) < FIELD_PLAYER_COUNT)
                     {
-                        owner_binding_offset = binding_owner * sizeof(FieldSequenceBinding);
+                        owner_binding_offset = binding_owner * sizeof(FieldActorBinding);
                     }
                     else
                     {
-                        owner_binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldSequenceBinding);
+                        owner_binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
                     }
-                    if (((FieldSequenceBinding*)((u8*)bindings + owner_binding_offset))->state != 0)
+                    if (((FieldActorBinding*)((u8*)bindings + owner_binding_offset))->state != 0)
                     {
                         continue;
                     }
@@ -1484,12 +1415,12 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
             candidate_position = candidate->y;
             origin_position = effect->y;
             if (((candidate_position + (min_y << 8)) >= origin_position) || (origin_position >= (candidate_position + (max_y << 8))) ||
-                (states[actor->owner_object_index].contact.bytes.target_count >= FIELD_MAX_CONTACT_TARGETS))
+                (states[actor->owner_object_index].contact.bytes.target_count >= FIELD_ACTOR_TRACK_COUNT))
             {
                 continue;
             }
             candidate_state->contact.word |= FIELD_CONTACT_TARGETED;
-            candidate_state->flags &= ~FIELD_OBJECT_FLAG_CLEAR_ON_HIT;
+            candidate_state->flags &= ~FIELD_OBJECT_ACTIONS_RESTRICTED;
             states[actor->owner_object_index].targets[states[actor->owner_object_index].contact.bytes.target_count] = candidate_index;
             states[actor->owner_object_index].contact.bytes.target_count++;
             actor->track_mask |= 1 << actor->target_count;
@@ -1751,33 +1682,33 @@ void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* pa
             if ((contact_flags & FIELD_CONTACT_ANIMATION_HIDDEN) ||
                 ((target_index >= FIELD_PARTY_COUNT) && ((target_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)) ||
                 (contact_flags & FIELD_CONTACT_NO_HIT_TEST) || (eligible == 0) ||
-                (target_state->movement.word & FIELD_MOVEMENT_TINT_FLASH))
+                (target_state->movement.word & FIELD_MOVEMENT_INVULNERABLE))
             {
                 continue;
             }
-            if (!(contact_flags & FIELD_CONTACT_IGNORE_BINDING))
+            if (!(contact_flags & FIELD_CONTACT_ACTION_PENDING))
             {
                 if (target->object_index < FIELD_PLAYER_COUNT)
                 {
-                    binding_offset = target->object_index * sizeof(FieldSequenceBinding);
+                    binding_offset = target->object_index * sizeof(FieldActorBinding);
                 }
                 else
                 {
-                    binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldSequenceBinding);
+                    binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
                 }
                 object_index = target->object_index;
-                binding_owner = ((FieldSequenceBinding*)((u8*)bindings + binding_offset))->owner_object_index;
+                binding_owner = ((FieldActorBinding*)((u8*)bindings + binding_offset))->owner;
                 if (binding_owner == object_index)
                 {
                     if ((u32)(binding_owner & 0xFF) < FIELD_PLAYER_COUNT)
                     {
-                        binding_offset = binding_owner * sizeof(FieldSequenceBinding);
+                        binding_offset = binding_owner * sizeof(FieldActorBinding);
                     }
                     else
                     {
-                        binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldSequenceBinding);
+                        binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
                     }
-                    if (((FieldSequenceBinding*)((u8*)bindings + binding_offset))->state != 0)
+                    if (((FieldActorBinding*)((u8*)bindings + binding_offset))->state != 0)
                     {
                         continue;
                     }
@@ -1809,10 +1740,10 @@ void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* pa
                 gte_stlvnl(squares);
                 if ((SquareRoot0(squares->vx + squares->vy + squares->vz) <
                      (attack_radius + ((s16)target_state->collision.half.extent >> 1))) &&
-                    ((u8)g_field_object_states[actor->owner_object_index].contact.bytes.target_count < FIELD_MAX_CONTACT_TARGETS))
+                    ((u8)g_field_object_states[actor->owner_object_index].contact.bytes.target_count < FIELD_ACTOR_TRACK_COUNT))
                 {
                     target_state->contact.word |= FIELD_CONTACT_TARGETED;
-                    target_state->flags &= ~FIELD_OBJECT_FLAG_CLEAR_ON_HIT;
+                    target_state->flags &= ~FIELD_OBJECT_ACTIONS_RESTRICTED;
                     g_field_object_states[actor->owner_object_index].targets[g_field_object_states[actor->owner_object_index].contact.bytes.target_count] = target_index;
                     g_field_object_states[actor->owner_object_index].contact.bytes.target_count++;
                     actor->track_mask |= 1 << actor->target_count;

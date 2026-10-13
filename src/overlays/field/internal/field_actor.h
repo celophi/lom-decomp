@@ -2,6 +2,8 @@
 #define FIELD_ACTOR_H
 
 #include "common.h"
+#include "overlays/field/field_actor_records.h"
+#include "field_actor_binding.h"
 
 /**
  * @file field_actor.h
@@ -11,23 +13,42 @@
 
 /** @brief Number of objects in the parallel field object tables. */
 #define FIELD_ACTOR_COUNT 13
-/** @brief Objects 0 and 1 are the two player-controlled party members; each has its own binding. */
-#define FIELD_PLAYER_COUNT 2
-/** @brief Objects 0 to 2 are the party: the two players and the companion. */
-#define FIELD_PARTY_COUNT 3
 /** @brief Animation binding of an object: party members own bindings 0-2, all others share the last. */
 #define FIELD_BINDING_INDEX(object_index) ((object_index) < FIELD_PARTY_COUNT ? (object_index) : FIELD_PARTY_COUNT - 1)
 
 /** @brief Low nine bits of FieldActor::control holding the control mode. */
 #define FIELD_CONTROL_MODE_MASK 0x1FF
+/** @brief FieldActor::control bit set while the actor moves. */
+#define FIELD_CONTROL_MOVING 0x200
+/** @brief FieldActor::control second movement bit (placeholder name: FIELD code only clears and tests it; nothing sets it). */
+#define FIELD_CONTROL_MOVEMENT_UNK400 0x400
+/** @brief FieldActor::control movement bits. */
+#define FIELD_CONTROL_MOVEMENT_MASK (FIELD_CONTROL_MOVING | FIELD_CONTROL_MOVEMENT_UNK400)
+/** @brief Shift of the two FieldActor::control movement bits. */
+#define FIELD_CONTROL_MOVEMENT_SHIFT 9
 /** @brief FieldActor::control bit: the animation stops on its last frame instead of looping. */
 #define FIELD_CONTROL_PLAY_ONCE 0x800
 /** @brief Low seven bits of FieldActor::animation select the animation. */
 #define FIELD_ANIMATION_INDEX_MASK 0x7F
 /** @brief FieldActor::animation bit that mirrors the animation. */
 #define FIELD_ANIMATION_FACING 0x80
+/* FieldActor::direction headings. */
+/** @brief FieldActor::direction headings are 256 steps per turn (ratan2/rcos use 4096). */
+#define FIELD_HEADING_STEPS 256
+/** @brief Shift from a 4096-step angle to a heading. */
+#define FIELD_HEADING_ANGLE_SHIFT 4
+/** @brief Half of one eighth of a turn, added before a heading is split into eight sectors. */
+#define FIELD_HEADING_HALF_SECTOR 16
+/** @brief Shift from a heading to one of eight sectors. */
+#define FIELD_HEADING_SECTOR_SHIFT 5
+/** @brief Heading bits of a sector (the heading snapped to an eighth of a turn). */
+#define FIELD_HEADING_SECTOR_MASK 0xE0
 /** @brief Directional animations come in groups of five (stand, then walk, then run). */
 #define FIELD_ANIMATION_DIRECTIONS 5
+/** @brief First walking animation. */
+#define FIELD_ANIMATION_WALK 5
+/** @brief First running animation. */
+#define FIELD_ANIMATION_RUN 10
 
 /**
  * @brief Abilities a player assigns to the action buttons (FieldActionSlot::command).
@@ -85,28 +106,63 @@ typedef enum FieldAbility
 /** @brief Defend pose played when a guarded hit lands. */
 #define FIELD_ANIMATION_DEFEND_HIT 11
 #define FIELD_ANIMATION_13 0x13
+/** @brief First combo attack animation; later combo steps follow it. */
+#define FIELD_ANIMATION_COMBO 0x1F
 /** @brief First of the two hit animations; one is picked at random. */
 #define FIELD_ANIMATION_HIT 20
 
-/** @brief Object-state movement bits holding the running action sequence. */
-#define FIELD_MOVEMENT_SEQUENCE_MASK 0x1800
+/** @brief Object-state movement bit: the charge animation was started. */
+#define FIELD_MOVEMENT_CHARGED 0x400
+/** @brief Object-state movement bit: the object overlaps another one. */
+#define FIELD_MOVEMENT_OVERLAPPING_BIT 14
+#define FIELD_MOVEMENT_OVERLAPPING (1 << FIELD_MOVEMENT_OVERLAPPING_BIT)
+/**
+ * @brief Object-state movement bit: the object can be neither hit nor targeted.
+ * @note Set when a technique sequence starts and during the battle-entry tint flash;
+ *       the tint update clears it when the flash ends or the object's bound animation stops.
+ */
+#define FIELD_MOVEMENT_INVULNERABLE 0x8000
+/** @brief Object-state technique_gauge value of a full gauge. */
+#define FIELD_TECHNIQUE_GAUGE_FULL 0xFF
 /** @brief Object-state group_flags bits holding the object's group. */
 #define FIELD_OBJECT_GROUP_MASK 0x0F
+/** @brief Object-state flags bits of unknown meaning (each has a handler in g_field_object_flag_handlers). */
+#define FIELD_OBJECT_FLAG_0004 0x0004
+#define FIELD_OBJECT_FLAG_0020 0x0020
+#define FIELD_OBJECT_FLAG_0040 0x0040
+#define FIELD_OBJECT_FLAG_0080 0x0080
+#define FIELD_OBJECT_FLAG_0100 0x0100
 /** @brief Object-state flags bit set while the object is knocked out. */
 #define FIELD_OBJECT_FLAG_KNOCKED_OUT 0x0200
+/** @brief Object-state flags bit set while another object is linked to this one. */
+#define FIELD_OBJECT_FLAG_LINK_TARGET 0x2000
+/**
+ * @brief Object-state flags bit: the object's actions are restricted.
+ * @note Pad input may then only start actions 2 and 3; scripted actions and techniques
+ *       do not start at all. The bit is cleared when the object is hit.
+ */
+#define FIELD_OBJECT_ACTIONS_RESTRICTED 0x0400
 /** @brief Object-state flags bit set while a dash ability (Lunge, Retreat, Defensive Lunge, Slide) plays. */
 #define FIELD_OBJECT_FLAG_DASH 0x4000
+/** @brief Object-state flags bit: an action chain is running (cleared with the retry count). */
+#define FIELD_OBJECT_CHAINING 0x8000
 
 /** @brief Object-state contact bits (the contact word of g_field_object_states). */
 #define FIELD_CONTACT_ANIMATION_HIDDEN 0x01 /**< An animation actor hides the object; it cannot be targeted. */
 #define FIELD_CONTACT_LINKED 0x02           /**< The object is linked to another object. */
-#define FIELD_CONTACT_NO_HIT_TEST 0x20      /**< The object takes no hits. */
-#define FIELD_CONTACT_IGNORE_BINDING 0x40   /**< Hits land even while the object's own bound animation runs. */
+#define FIELD_CONTACT_ACTION_BITS 0x1C      /**< Cleared before an action is prepared. */
+#define FIELD_CONTACT_NO_HIT_TEST 0x20      /**< The object takes no hits and is never an action target. */
+#define FIELD_CONTACT_ACTION_PENDING 0x40   /**< The object charges or waits for an action; hits land even while its own bound animation runs. */
 #define FIELD_CONTACT_TARGETED 0x80         /**< The object is being targeted. */
-/** @brief Object-state movement bit: the object's tint is flashing. */
-#define FIELD_MOVEMENT_TINT_FLASH 0x8000
 /** @brief Object-state flag bits that make an object an invalid target. */
-#define FIELD_OBJECT_UNTARGETABLE_FLAGS 0x2280
+#define FIELD_OBJECT_UNTARGETABLE_FLAGS (FIELD_OBJECT_FLAG_0080 | FIELD_OBJECT_FLAG_KNOCKED_OUT | FIELD_OBJECT_FLAG_LINK_TARGET)
+/**
+ * @brief Object-state flag bits that hold an object in place.
+ * @note Such an object takes no knockback, is skipped by overlap tests, stops its looping
+ *       effects, and is left out of the camera's party average.
+ */
+#define FIELD_OBJECT_IMMOBILE_FLAGS                                                                                                   \
+    (FIELD_OBJECT_FLAG_0004 | FIELD_OBJECT_FLAG_0020 | FIELD_OBJECT_FLAG_0040 | FIELD_OBJECT_FLAG_0100 | FIELD_OBJECT_UNTARGETABLE_FLAGS)
 
 /** @brief Word, halfword and bit views of an actor's control-mode word. */
 typedef union
@@ -190,6 +246,28 @@ typedef struct FieldActor
     u8 unk50[4];
 } FieldActor;
 
+/**
+ * @brief Binding used by @p actor (objects 2 and up share the last binding).
+ * @param actor Actor whose object index selects the binding.
+ * @return The object's animation actor binding.
+ */
+static inline FieldActorBinding* field_actor_binding(FieldActor* actor)
+{
+    FieldActorBinding* bindings;
+    s32 offset;
+
+    bindings = g_field_actor_bindings;
+    if (actor->object_index < FIELD_SHARED_BINDING)
+    {
+        offset = actor->object_index * sizeof(FieldActorBinding);
+    }
+    else
+    {
+        offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
+    }
+    return (FieldActorBinding*)((u8*)bindings + offset);
+}
+
 /** @brief Presence value of an unused actor record. */
 #define FIELD_ACTOR_UNUSED 0xFF
 
@@ -220,13 +298,18 @@ enum
     FIELD_ACTOR_COMMAND_DEFEAT_WAIT = 0x93,
     FIELD_ACTOR_COMMAND_DEFEAT_END = 0x94,
     FIELD_ACTOR_COMMAND_SEQUENCE_WAIT = 0x95,
-    FIELD_ACTOR_COMMAND_96 = 0x96,
+    /** Follow-up attack started from a jump ability while action button 3 is held; no further chaining. */
+    FIELD_ACTOR_COMMAND_AIR_FOLLOW_UP = 0x96,
+    /** Runs like FIELD_ACTOR_COMMAND_SECOND_JUMP and counts as an action for hits; nothing in the C code sets it. */
     FIELD_ACTOR_COMMAND_98 = 0x98,
     FIELD_ACTOR_COMMAND_IDLE_AFTER_ANIMATION = 0x99,
     FIELD_ACTOR_COMMAND_IDLE_AFTER_RELOAD = 0x9A,
-    FIELD_ACTOR_COMMAND_9B = 0x9B,
-    FIELD_ACTOR_COMMAND_9C = 0x9C,
-    FIELD_ACTOR_COMMAND_9D = 0x9D,
+    /** Second jump of a Double Jump, started while recovering from the first. */
+    FIELD_ACTOR_COMMAND_SECOND_JUMP = 0x9B,
+    /** Raise the actor by command_param each frame for unk26 frames. */
+    FIELD_ACTOR_COMMAND_TIMED_LIFT = 0x9C,
+    /** Lower the actor by command_param each frame until it reaches the ground (or unk26 runs out). */
+    FIELD_ACTOR_COMMAND_DESCEND_TO_GROUND = 0x9D,
     FIELD_ACTOR_COMMAND_APPROACH_TARGET = 0xA0,
     FIELD_ACTOR_COMMAND_ACTION_END = 0xA4,
     FIELD_ACTOR_COMMAND_TIMED_WALK = 0xA7,
@@ -243,7 +326,8 @@ enum
     FIELD_ACTOR_COMMAND_TIMED_SLIDE = 0xB6,
     FIELD_ACTOR_COMMAND_WAIT = 0xB7,
     FIELD_ACTOR_COMMAND_ATTACHED = 0xB8,
-    FIELD_ACTOR_COMMAND_BA = 0xBA,
+    /** Leave the actor and its command untouched (dropped items wait in it until removed). */
+    FIELD_ACTOR_COMMAND_HOLD = 0xBA,
     FIELD_ACTOR_COMMAND_RETIRE = 0xBB,
     FIELD_ACTOR_COMMAND_WAIT_BOUND_ACTOR = 0xBC,
     FIELD_ACTOR_COMMAND_INSTRUMENT_END = 0xBD
@@ -252,7 +336,30 @@ enum
 /** @brief Actor command word that performs action slot @p action. */
 #define FIELD_ACTION_COMMAND(action) (((action) << 8) | FIELD_ACTOR_COMMAND_ACTION)
 
+/** @brief Number of actions with an entry in an action command map. */
+#define FIELD_ACTION_MAP_ENTRY_COUNT 11
+
+/** @brief Action command map of one player: command words and disable flags. */
+typedef struct
+{
+    u16 commands[FIELD_ACTION_MAP_ENTRY_COUNT];
+    u8 disabled[FIELD_ACTION_MAP_ENTRY_COUNT];
+    u8 pad;
+} FieldActionCommandMap;
+
+/** @brief Action command maps, one per player. */
+extern FieldActionCommandMap g_field_action_command_maps[FIELD_PLAYER_COUNT];
+
 extern FieldActor g_field_actors[];
 extern FieldActor g_field_scene_actors[];
+
+/** @brief Group (1-based) of the area the party is in, 0 for none; non-party objects of other groups are not hit or targeted. */
+extern s32 g_field_active_group;
+/** @brief Non-zero while actions from 4 up and techniques are blocked. */
+extern s32 g_field_actions_limited;
+/** @brief Battle entry sequence state (FIELD_BATTLE_ENTRY_*); nonzero locks player input and enemy HUD while a battle starts. */
+extern s32 g_field_battle_entry_state;
+/** @brief Frames left while the camera scroll limits ease towards their targets. */
+extern s32 g_field_scroll_ease_timer;
 
 #endif

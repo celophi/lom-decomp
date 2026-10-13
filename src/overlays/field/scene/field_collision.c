@@ -144,36 +144,11 @@
 /** field_collision_slide_angle slide angle: no wall seen yet. */
 #define FIELD_COLLISION_SLIDE_NONE -2
 
-/** FieldCollisionMover::collision_node value asking for a fresh floor search. */
-#define FIELD_COLLISION_NODE_SEARCH ((FieldCollisionNode*)(uintptr_t)(u32)-1)
-/** FieldCollisionMover::collision_node value for a mover not tied to any floor node. */
-#define FIELD_COLLISION_NODE_DETACHED ((FieldCollisionNode*)(uintptr_t)(u32)-2)
-
-/** FieldCollisionMover::flags bit: the mover stands on the node its footprint centre is over. */
-#define FIELD_COLLISION_MOVER_SETTLED 0x1
-/** FieldCollisionMover::mode_flags bits: the mover moves vertically on its own (jump or fall). */
-#define FIELD_COLLISION_MOVER_AIRBORNE 0x30000
-
 /** Floors this much higher than the current best win the floor search. */
 #define FIELD_COLLISION_FLOOR_MARGIN 0x14
 
 /** Push-out accumulator value meaning pushes in both directions cancelled out. */
 #define FIELD_COLLISION_PUSH_BLOCKED 0x8000
-
-/** field_collision_resolve_move result: the horizontal move was blocked. */
-#define FIELD_COLLISION_RESULT_BLOCKED 0x1
-/** field_collision_resolve_move result: the mover slid along a wall or was pushed out of it. */
-#define FIELD_COLLISION_RESULT_SLID 0x2
-/** field_collision_resolve_move result: the floor surface scaled the move (slope or slow surface). */
-#define FIELD_COLLISION_RESULT_SLOWED 0x4
-/** field_collision_resolve_move result: the floor surface moved or carried the mover. */
-#define FIELD_COLLISION_RESULT_CARRIED 0x10
-/** field_collision_resolve_move result: the mover's height was changed by its floor. */
-#define FIELD_COLLISION_RESULT_HEIGHT 0x20
-/** field_collision_resolve_move result: an airborne mover hit a ceiling. */
-#define FIELD_COLLISION_RESULT_CEILING 0x40
-/** field_collision_resolve_move result: an airborne mover landed on a floor. */
-#define FIELD_COLLISION_RESULT_LANDED 0x80
 
 /** field_collision_classify_nodes class bit: the footprint overlaps the node and may stand on it. */
 #define FIELD_COLLISION_CLASS_TOUCH 0x1
@@ -490,40 +465,6 @@ typedef struct FieldCollisionNodeEntry
     FieldCollisionNode* node;
 } FieldCollisionNodeEntry;
 
-/**
- * @brief Actor/mover state resolved by field_collision_resolve_move.
- * @note Positions are 24.8 fixed point; heights grow downwards (a floor at
- *       height h puts the mover at -(h << 8)). Callers see this record as
- *       FieldMoveRequest (field_contact_geometry.c).
- */
-typedef struct FieldCollisionMover
-{
-    /** 0x00 world x. */
-    s32 x;
-    /** 0x04 world height, negated (see the note). */
-    s32 height;
-    /** 0x08 world z. */
-    s32 z;
-    /** 0x0C requested x movement this frame. */
-    s32 move_x;
-    /** 0x10 requested height movement this frame. */
-    s32 move_height;
-    /** 0x14 requested z movement this frame. */
-    s32 move_z;
-    /** 0x18 height of the highest floor under the footprint centre, negated. */
-    s32 resolved_height;
-    /** 0x1C floor node, or FIELD_COLLISION_NODE_SEARCH / FIELD_COLLISION_NODE_DETACHED. */
-    FieldCollisionNode* collision_node;
-    /** 0x20 FIELD_COLLISION_MOVER_SETTLED plus caller bits. */
-    s32 flags;
-    /** 0x24 footprint width along x, in cells. */
-    u16 footprint_width;
-    /** 0x26 extra height a floor may rise above the feet and still be stepped onto. */
-    s16 height_bias;
-    /** 0x28 low half: footprint depth along z in cells; FIELD_COLLISION_MOVER_AIRBORNE bits above. */
-    s32 mode_flags;
-} FieldCollisionMover;
-
 /** @brief Footprint probe handed to field_collision_classify_nodes (cell position plus height window). */
 typedef struct FieldCollisionMoveProbe
 {
@@ -703,7 +644,6 @@ typedef struct
     s32 mode;
     u8 stamp;
 } FieldCollisionTraceRequest;
-
 
 static void field_collision_classify_nodes(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32* out_hit, s32* out_touch);
 static s16 field_collision_slope_height(FieldCollisionNode* node, s32* position);
@@ -1226,7 +1166,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                 {
                     result |= FIELD_COLLISION_RESULT_CARRIED;
                 }
-                if (!(mover->mode_flags & FIELD_COLLISION_MOVER_AIRBORNE) &&
+                if (!(mover->mode.mode_flags & FIELD_COLLISION_MOVER_AIRBORNE) &&
                     ((node->motion_x != 0) || (node->motion_height0 != 0) || (node->motion_height1 != 0) || (node->motion_z != 0)))
                 {
                     mover->move_x += node->motion_x;
@@ -1356,7 +1296,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
         step_count = 1;
     }
     move_z_abs = mover->move_z;
-    footprint_d = (s16)mover->mode_flags;
+    footprint_d = (s16)mover->mode.mode_flags;
     if (move_z_abs < 0)
     {
         move_z_abs = -move_z_abs;
@@ -1410,7 +1350,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
         if ((bound_header->flags & FIELD_SCENE_HEADER_BOUNDED) != 0)
         {
             bound_width = (u16)mover->footprint_width;
-            bound_depth = (u16)mover->mode_flags;
+            bound_depth = (u16)mover->mode.mode_flags;
             bound_x_start = (u16)probe.x - (s16)bound_width / 2;
             bound_z_start = (u16)probe.z - (s16)bound_depth / 2;
             bound_z_end = bound_z_start + bound_depth;
@@ -1458,9 +1398,9 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
             x_start = FIELD_COLLISION_CELL(mover->x + mover->move_x * (step_count - step) / step_count) - (s16)mover->footprint_width / 2;
             width = (u16)mover->footprint_width;
             x_end = x_start + width;
-            z_start = FIELD_COLLISION_CELL(mover->z + mover->move_z * (step_count - step) / step_count) - (s16)mover->mode_flags / 2;
+            z_start = FIELD_COLLISION_CELL(mover->z + mover->move_z * (step_count - step) / step_count) - (s16)mover->mode.mode_flags / 2;
             header = scene->header;
-            z_end_raw = z_start + (u16)mover->mode_flags;
+            z_end_raw = z_start + (u16)mover->mode.mode_flags;
             z_end = z_end_raw;
             if (header->flags & FIELD_SCENE_HEADER_BOUNDED)
             {
@@ -1673,12 +1613,12 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                 }
                 width = (u16)mover->footprint_width;
                 x_end = (s16)x_start + width;
-                z_start = FIELD_COLLISION_CELL(mover->z + delta_z) - (s16)mover->mode_flags / 2;
+                z_start = FIELD_COLLISION_CELL(mover->z + delta_z) - (s16)mover->mode.mode_flags / 2;
                 touch_iter = FIELD_COLLISION_TOUCH_LIST;
                 hit = 0;
                 push_x = 0;
                 step_count = touch_count;
-                depth = (u16)mover->mode_flags;
+                depth = (u16)mover->mode.mode_flags;
                 push_z = 0;
                 header = scene->header;
                 z_end_raw = z_start + (u16)depth;
@@ -1932,7 +1872,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                 if (retry_header->flags & FIELD_SCENE_HEADER_BOUNDED)
                 {
                     footprint_width = (u16)mover->footprint_width;
-                    retry_depth = (u16)mover->mode_flags;
+                    retry_depth = (u16)mover->mode.mode_flags;
                     retry_x_start = (u16)probe.x - (s16)footprint_width / 2;
                     retry_z_start = (u16)probe.z - (s16)retry_depth / 2;
                     retry_z_end = retry_z_start + retry_depth;
@@ -2156,7 +2096,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
         }
     }
     /* Airborne movers hit the ceiling or land; grounded movers follow the floor. */
-    if (mover->mode_flags & FIELD_COLLISION_MOVER_AIRBORNE)
+    if (mover->mode.mode_flags & FIELD_COLLISION_MOVER_AIRBORNE)
     {
         bias = mover->height_bias;
         if (limit < ((s16)next_height + bias))
@@ -2247,7 +2187,7 @@ static void field_collision_classify_nodes(FieldCollisionMoveProbe* probe, Field
         step_limit = probe->h;
         mover = probe->mover;
         feet = probe->w;
-        depth = mover->mode_flags;
+        depth = mover->mode.mode_flags;
         z_start = probe->z - (s16)depth / 2;
         z_end = z_start + depth;
         width = mover->footprint_width;
@@ -2365,7 +2305,7 @@ static void field_collision_classify_nodes(FieldCollisionMoveProbe* probe, Field
                                             }
                                             else
                                             {
-                                                if (mover->mode_flags & FIELD_COLLISION_MOVER_AIRBORNE)
+                                                if (mover->mode.mode_flags & FIELD_COLLISION_MOVER_AIRBORNE)
                                                 {
                                                     if (feet < (surface->height0 + shift_height))
                                                     {
@@ -2398,7 +2338,7 @@ static void field_collision_classify_nodes(FieldCollisionMoveProbe* probe, Field
                                         if ((surface->top + shift_height) < step_limit)
                                         {
                                             ground = field_collision_slope_height(node, &probe->x);
-                                            if (mover->mode_flags & FIELD_COLLISION_MOVER_AIRBORNE)
+                                            if (mover->mode.mode_flags & FIELD_COLLISION_MOVER_AIRBORNE)
                                             {
                                                 if (feet < ground)
                                                 {
