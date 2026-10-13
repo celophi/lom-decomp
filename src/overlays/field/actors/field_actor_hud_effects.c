@@ -297,7 +297,7 @@ extern u16 g_field_fade_prim_depths[FIELD_FADE_PRIM_COUNT];
 extern FieldActor* g_field_updating_actor;
 extern u32* g_field_scene_record_table;
 
-static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* render_half, u32 hp_per_bar);
+static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* render_half, s32 hp_per_bar);
 static u8* field_emit_hud_status_line(LINE_G2* line, FieldRenderHalf* render_half, CVECTOR* colors, s32 intensity, s32 x, s32 y);
 static void* field_emit_hud_percentage(void* packet, FieldRenderHalf* render_half, s32 value, Vec2s* position);
 static void* field_emit_hud_glyph(SPRT* sprite, FieldRenderHalf* render_half, s32 value, Vec2s* position);
@@ -315,14 +315,14 @@ static inline void field_clear_link_target_flag(s32 object_index);
  */
 static inline void field_hud_set_bar_geometry(POLY_G4* bar, s32 x, s32 y, s32 width)
 {
-    bar->x0 = (u16)g_field_hud_bar_offset_x + x;
-    bar->y1 = ((u16)g_field_hud_bar_offset_y + y);
-    bar->x1 = ((u16)g_field_hud_bar_offset_x + x) + width;
-    bar->x2 = ((u16)g_field_hud_bar_offset_x + x) - FIELD_HUD_BAR_SLANT;
-    bar->y0 = ((u16)g_field_hud_bar_offset_y + y);
-    bar->y3 = bar->y1 + (u16)g_field_hud_bar_height;
+    bar->x0 = g_field_hud_bar_offset_x + x;
+    bar->y1 = g_field_hud_bar_offset_y + y;
+    bar->x1 = (g_field_hud_bar_offset_x + x) + width;
+    bar->x2 = (g_field_hud_bar_offset_x + x) - FIELD_HUD_BAR_SLANT;
+    bar->y0 = g_field_hud_bar_offset_y + y;
+    bar->y3 = bar->y1 + g_field_hud_bar_height;
     bar->y2 = bar->y3;
-    bar->x3 = ((u16)g_field_hud_bar_offset_x + x) + width - FIELD_HUD_BAR_SLANT;
+    bar->x3 = (g_field_hud_bar_offset_x + x) + width - FIELD_HUD_BAR_SLANT;
 }
 
 /**
@@ -335,10 +335,10 @@ static inline void field_hud_set_bar_geometry(POLY_G4* bar, s32 x, s32 y, s32 wi
 static inline POLY_F4* field_hud_link_change_quad(POLY_F4* prim, s32 y, u_long* ot)
 {
     prim->x3 = prim->x1 - FIELD_HUD_BAR_SLANT;
-    prim->y1 = ((u16)g_field_hud_bar_offset_y) + y;
+    prim->y1 = g_field_hud_bar_offset_y + y;
     prim->x2 = prim->x0 - FIELD_HUD_BAR_SLANT;
-    prim->y0 = ((u16)g_field_hud_bar_offset_y) + y;
-    prim->y3 = prim->y1 + ((u16)g_field_hud_bar_height);
+    prim->y0 = g_field_hud_bar_offset_y + y;
+    prim->y3 = prim->y1 + g_field_hud_bar_height;
     prim->y2 = prim->y3;
     addPrim(ot, prim);
     return prim + 1;
@@ -357,10 +357,6 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
     Vec2s position;
     s32 i;
     s32 panel_count;
-    FieldActor* single_actor;
-    FieldPlayerRecord* single_player;
-    FieldActor* paired_actor;
-    FieldPlayerRecord* paired_player;
     s16 panel_y;
     s32 boss_drawn;
     FieldActor* anchor;
@@ -390,10 +386,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
     case 1:
         for (i = 0; i < FIELD_PARTY_COUNT; i++)
         {
-            single_actor = &g_field_actors[i];
-            single_player = &g_field_player_records[i];
-
-            if (single_actor->presence != FIELD_ACTOR_UNUSED && (single_player->head.bytes.flags & FIELD_PLAYER_ACTIVE))
+            if (g_field_actors[i].presence != FIELD_ACTOR_UNUSED && (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE))
             {
                 field_draw_actor_hud_panel(FIELD_HUD_SINGLE_X, FIELD_HUD_PARTY_Y, i, render_half, FIELD_HUD_HP_PER_BAR);
             }
@@ -404,10 +397,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
 
         for (i = 0; i < FIELD_PARTY_COUNT; i++)
         {
-            paired_actor = &g_field_actors[i];
-            paired_player = &g_field_player_records[i];
-
-            if (paired_actor->presence != FIELD_ACTOR_UNUSED && (paired_player->head.bytes.flags & FIELD_PLAYER_ACTIVE))
+            if (g_field_actors[i].presence != FIELD_ACTOR_UNUSED && (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE))
             {
                 field_draw_actor_hud_panel(FIELD_HUD_PAIR_X + panel_count * FIELD_HUD_PAIR_STEP, FIELD_HUD_PARTY_Y, i, render_half, FIELD_HUD_HP_PER_BAR);
                 panel_count++;
@@ -591,11 +581,11 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
  * @param render_half Render half whose primitive cursor is advanced.
  * @param hp_per_bar HP of one gauge bar; each full bar is drawn in the next color.
  */
-static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* render_half, u32 hp_per_bar)
+static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* render_half, s32 hp_per_bar)
 {
     Vec2s* scratch = FIELD_HUD_SCRATCH_POSITION;
     FieldRenderHalf* ctx;
-    u32 recovery_width;
+    s32 recovery_width;
     s32 scan_slot;
     u32 boss_panel;
     s16 full_x;
@@ -607,8 +597,8 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
     s16 rising_right;
     s16 falling_right;
     s16 blink_uv;
-    s32 rising_x;
-    s32 falling_x;
+    u16 rising_x;
+    u16 falling_x;
     s32 full_color;
     s32 partial_color;
     s32 palette_index;
@@ -631,12 +621,11 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
     s32 background_type;
     u8 gauge_type;
     FieldObjectState* state;
-    u8* label_cursor;
-    POLY_F4* rising_cursor;
-    u8* status_cursor;
-    POLY_F4* falling_cursor;
-    u8* sprite_cursor;
-    u8* gauge_cursor;
+    void* label_cursor;
+    void* status_cursor;
+    POLY_F4* change_quad;
+    SPRT* sprite_cursor;
+    POLY_G4* gauge_cursor;
     POLY_G4* bar;
 
     if (slot < FIELD_PARTY_COUNT)
@@ -682,7 +671,7 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
         g_field_hud_bar_offset_y = FIELD_HUD_PARTY_BAR_Y;
         scratch->x = x;
         scratch->y = y;
-        label_cursor = field_emit_actor_portrait((SPRT*)label_cursor, &ctx->ordering_table[FIELD_HUD_OT_INDEX], state->hud.bytes.object_index, scratch);
+        label_cursor = field_emit_actor_portrait(label_cursor, &ctx->ordering_table[FIELD_HUD_OT_INDEX], state->hud.bytes.object_index, scratch);
         g_field_hud_bar_width = FIELD_HUD_BAR_WIDTH;
         g_field_hud_bar_height = FIELD_HUD_BAR_HEIGHT;
     }
@@ -728,9 +717,9 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
         }
 
         SET_BGR0_PACKED(sprite_cursor, GPU_TINT_NEUTRAL);
-        setSprt((SPRT*)sprite_cursor);
-        ((SPRT*)sprite_cursor)->x0 = (s16)(x + FIELD_HUD_BLINK_X);
-        ((SPRT*)sprite_cursor)->y0 = (s16)(y + FIELD_HUD_BLINK_Y);
+        setSprt(sprite_cursor);
+        sprite_cursor->x0 = (x + FIELD_HUD_BLINK_X);
+        sprite_cursor->y0 = (y + FIELD_HUD_BLINK_Y);
 
         if (g_field_hud_blink_frames[slot] < FIELD_HUD_BLINK_FRAMES)
         {
@@ -743,9 +732,9 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
 
         SET_SPRT_WH_PACKED(sprite_cursor, FIELD_HUD_BLINK_SIZE, FIELD_HUD_BLINK_SIZE);
         SET_SPRT_UV0_PACKED(sprite_cursor, blink_uv);
-        ((SPRT*)sprite_cursor)->clut = FIELD_HUD_BLINK_CLUT;
+        sprite_cursor->clut = FIELD_HUD_BLINK_CLUT;
         addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], sprite_cursor);
-        sprite_cursor += sizeof(SPRT);
+        sprite_cursor++;
         scratch->x = x + FIELD_HUD_PERCENT_X;
         scratch->y = y;
         current_hp = state->current_hp.word;
@@ -789,19 +778,19 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
             }
 
             intensity = state->technique_gauge;
-            status_cursor = field_emit_hud_status_line((LINE_G2*)status_cursor, ctx, colors, intensity, x, y);
+            status_cursor = field_emit_hud_status_line(status_cursor, ctx, colors, intensity, x, y);
         }
         else
         {
             colors = g_field_hud_effect_colors;
             intensity = state->action_charge;
-            status_cursor = field_emit_hud_status_line((LINE_G2*)status_cursor, ctx, colors, intensity, x, y);
+            status_cursor = field_emit_hud_status_line(status_cursor, ctx, colors, intensity, x, y);
         }
     }
     else if ((gauge_type == FIELD_PARTY_COMPANION) && (D_800FDCEA >= FIELD_COMPANION_COLOR_ID_MIN))
     {
         colors = g_field_hud_companion_status_colors;
-        status_cursor = field_emit_hud_status_line((LINE_G2*)status_cursor, ctx, colors, state->technique_gauge, x, y);
+        status_cursor = field_emit_hud_status_line(status_cursor, ctx, colors, state->technique_gauge, x, y);
     }
 
     /* A knocked-down member shows the recovery gauge instead of the HP bars. */
@@ -809,17 +798,16 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
 
     if (slot < FIELD_PARTY_COUNT && g_field_player_records[slot].revive_delay != 0 && g_field_actors[slot].command == FIELD_ACTOR_COMMAND_KNOCKED_DOWN)
     {
-        bar = (POLY_G4*)gauge_cursor;
+        bar = gauge_cursor;
         SET_BGR0_PACKED(bar, FIELD_HUD_RECOVERY_DARK);
         SET_POLY_G4_BGR2_PACKED(bar, FIELD_HUD_RECOVERY_DARK);
         setPolyG4(bar);
         SET_POLY_G4_BGR1_PACKED(bar, GPU_COLOR_WHITE);
         SET_POLY_G4_BGR3_PACKED(bar, GPU_COLOR_WHITE);
-        recovery_width = (s16)g_field_player_records[slot].revive_delay;
-        recovery_width = (s32)(g_field_hud_bar_width * g_field_player_records[slot].revive_time) / (s32)recovery_width;
+        recovery_width = (g_field_hud_bar_width * g_field_player_records[slot].revive_time) / g_field_player_records[slot].revive_delay;
         field_hud_set_bar_geometry(bar, x, y, recovery_width);
         addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], bar);
-        gauge_cursor += sizeof(POLY_G4);
+        gauge_cursor++;
     }
     else
     {
@@ -835,19 +823,19 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
                 palette_index |= 2;
             }
 
-            if ((s32)(state->hp_display.bits.value - current_value) < (s32)hp_per_bar)
+            if ((s32)(state->hp_display.bits.value - current_value) < hp_per_bar)
             {
-                bar = (POLY_G4*)gauge_cursor;
-                SET_BGR0_PACKED(bar, (s32)(g_field_hud_hp_colors[palette_index] & FIELD_HUD_COLOR_DIM));
-                SET_POLY_G4_BGR1_PACKED(bar, (s32)(g_field_hud_hp_colors[palette_index] & FIELD_HUD_COLOR_MID));
+                bar = gauge_cursor;
+                SET_BGR0_PACKED(bar, g_field_hud_hp_colors[palette_index] & FIELD_HUD_COLOR_DIM);
+                SET_POLY_G4_BGR1_PACKED(bar, g_field_hud_hp_colors[palette_index] & FIELD_HUD_COLOR_MID);
                 partial_color = g_field_hud_hp_colors[palette_index];
                 setPolyG4(bar);
                 SET_POLY_G4_BGR3_PACKED(bar, partial_color);
                 SET_POLY_G4_BGR2_PACKED(bar, partial_color);
-                partial_width = (s32)(g_field_hud_bar_width * (current_value % hp_per_bar)) / (s32)hp_per_bar;
+                partial_width = (s32)(g_field_hud_bar_width * (current_value % hp_per_bar)) / hp_per_bar;
                 field_hud_set_bar_geometry(bar, x, y, partial_width);
                 addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], bar);
-                gauge_cursor += sizeof(POLY_G4);
+                gauge_cursor++;
             }
 
             hp_or_bar_count = (u32)state->current_hp.word / hp_per_bar;
@@ -862,16 +850,16 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
                     palette_index |= 2;
                 }
 
-                bar = (POLY_G4*)gauge_cursor;
-                SET_BGR0_PACKED(bar, (s32)(g_field_hud_hp_colors[palette_index] & FIELD_HUD_COLOR_DIM));
-                SET_POLY_G4_BGR2_PACKED(bar, (s32)(g_field_hud_hp_colors[palette_index] & FIELD_HUD_COLOR_MID));
+                bar = gauge_cursor;
+                SET_BGR0_PACKED(bar, g_field_hud_hp_colors[palette_index] & FIELD_HUD_COLOR_DIM);
+                SET_POLY_G4_BGR2_PACKED(bar, g_field_hud_hp_colors[palette_index] & FIELD_HUD_COLOR_MID);
                 setPolyG4(bar);
                 full_color = g_field_hud_hp_colors[palette_index];
                 SET_POLY_G4_BGR3_PACKED(bar, full_color);
                 SET_POLY_G4_BGR1_PACKED(bar, full_color);
-                full_x = (u16)g_field_hud_bar_offset_x;
-                full_right = (u16)g_field_hud_bar_width;
-                full_y = (u16)g_field_hud_bar_offset_y;
+                full_x = g_field_hud_bar_offset_x;
+                full_right = g_field_hud_bar_width;
+                full_y = g_field_hud_bar_offset_y;
                 full_x += x;
                 full_right += full_x;
                 bar->x1 = full_right;
@@ -883,10 +871,10 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
                 full_x -= FIELD_HUD_BAR_SLANT;
                 bar->x2 = full_x;
                 bar->y0 = full_y;
-                bar->y3 = bar->y1 + (u16)g_field_hud_bar_height;
+                bar->y3 = bar->y1 + g_field_hud_bar_height;
                 bar->y2 = bar->y3;
                 addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], bar);
-                gauge_cursor += sizeof(POLY_G4);
+                gauge_cursor++;
             }
         }
     }
@@ -908,39 +896,39 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
 
         rising_current = state->current_hp.word;
 
-        if ((rising_current / hp_per_bar) == ((s32)state->hp_display.bits.value / (s32)hp_per_bar))
+        if ((rising_current / hp_per_bar) == (state->hp_display.bits.value / hp_per_bar))
         {
-            rising_x = (u16)g_field_hud_bar_offset_x;
+            rising_x = g_field_hud_bar_offset_x;
+            change_quad = (POLY_F4*)gauge_cursor;
             rising_x += x;
-            ((POLY_F4*)gauge_cursor)->x1 = (s16)(rising_x + ((u32)(g_field_hud_bar_width * (rising_current % hp_per_bar)) / hp_per_bar));
-            rising_cursor = (POLY_F4*)gauge_cursor;
-            rising_x += ((s32)(g_field_hud_bar_width * ((s32)state->hp_display.bits.value % (s32)hp_per_bar)) / (s32)hp_per_bar);
-            rising_cursor->x0 = rising_x;
-            status_cursor = (u8*)field_emit_hud_healing_quad(rising_cursor, y, &ctx->ordering_table[FIELD_HUD_DELTA_OT_INDEX]);
+            change_quad->x1 = (rising_x + ((g_field_hud_bar_width * (rising_current % hp_per_bar)) / hp_per_bar));
+            rising_x += ((g_field_hud_bar_width * (state->hp_display.bits.value % hp_per_bar)) / hp_per_bar);
+            change_quad->x0 = rising_x;
+            status_cursor = field_emit_hud_healing_quad(change_quad, y, &ctx->ordering_table[FIELD_HUD_DELTA_OT_INDEX]);
         }
         else
         {
-            rising_base_x = (u16)g_field_hud_bar_offset_x + x;
-            ((POLY_F4*)gauge_cursor)->x1 = rising_base_x;
-            ((POLY_F4*)gauge_cursor)->x0 =
-                (s16)(rising_base_x + ((s32)(g_field_hud_bar_width * ((s32)state->hp_display.bits.value % (s32)hp_per_bar)) / (s32)hp_per_bar));
-            rising_cursor = field_emit_hud_healing_quad((POLY_F4*)gauge_cursor, y, &ctx->ordering_table[FIELD_HUD_DELTA_OT_INDEX]);
+            change_quad = (POLY_F4*)gauge_cursor;
+            rising_base_x = g_field_hud_bar_offset_x + x;
+            change_quad->x1 = rising_base_x;
+            change_quad->x0 = (rising_base_x + ((g_field_hud_bar_width * (state->hp_display.bits.value % hp_per_bar)) / hp_per_bar));
+            change_quad = field_emit_hud_healing_quad(change_quad, y, &ctx->ordering_table[FIELD_HUD_DELTA_OT_INDEX]);
             rising_displayed = state->hp_display.bits.value;
             rising_wrapped_current = state->current_hp.word;
 
             if (rising_displayed - rising_wrapped_current < hp_per_bar)
             {
-                rising_right = (u16)g_field_hud_bar_offset_x + x + ((u32)(g_field_hud_bar_width * (rising_wrapped_current % hp_per_bar)) / hp_per_bar);
-                rising_cursor->x1 = rising_right;
+                rising_right = g_field_hud_bar_offset_x + x + ((g_field_hud_bar_width * (rising_wrapped_current % hp_per_bar)) / hp_per_bar);
+                change_quad->x1 = rising_right;
             }
             else
             {
-                rising_right = (u16)g_field_hud_bar_offset_x + x;
-                rising_cursor->x1 = rising_right;
+                rising_right = g_field_hud_bar_offset_x + x;
+                change_quad->x1 = rising_right;
             }
 
-            rising_cursor->x0 = (s16)(((u16)g_field_hud_bar_offset_x + x) + (u16)g_field_hud_bar_width);
-            status_cursor = (u8*)field_emit_hud_healing_quad(rising_cursor, y, &ctx->ordering_table[FIELD_HUD_DELTA_OT_INDEX]);
+            change_quad->x0 = ((g_field_hud_bar_offset_x + x) + g_field_hud_bar_width);
+            status_cursor = field_emit_hud_healing_quad(change_quad, y, &ctx->ordering_table[FIELD_HUD_DELTA_OT_INDEX]);
         }
 
         gauge_cursor = status_cursor;
@@ -958,39 +946,39 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
 
         falling_current = state->current_hp.word;
 
-        if ((falling_current / hp_per_bar) == ((s32)state->hp_display.bits.value / (s32)hp_per_bar))
+        if ((falling_current / hp_per_bar) == (state->hp_display.bits.value / hp_per_bar))
         {
-            falling_x = (u16)g_field_hud_bar_offset_x;
+            falling_x = g_field_hud_bar_offset_x;
+            change_quad = (POLY_F4*)gauge_cursor;
             falling_x += x;
-            ((POLY_F4*)gauge_cursor)->x1 = (s16)(falling_x + ((u32)(g_field_hud_bar_width * (falling_current % hp_per_bar)) / hp_per_bar));
-            falling_cursor = (POLY_F4*)gauge_cursor;
-            falling_x += ((s32)(g_field_hud_bar_width * ((s32)state->hp_display.bits.value % (s32)hp_per_bar)) / (s32)hp_per_bar);
-            falling_cursor->x0 = falling_x;
-            status_cursor = (u8*)field_emit_hud_damage_quad(falling_cursor, y, &ctx->ordering_table[FIELD_HUD_DELTA_OT_INDEX]);
+            change_quad->x1 = (falling_x + ((g_field_hud_bar_width * (falling_current % hp_per_bar)) / hp_per_bar));
+            falling_x += ((g_field_hud_bar_width * (state->hp_display.bits.value % hp_per_bar)) / hp_per_bar);
+            change_quad->x0 = falling_x;
+            status_cursor = field_emit_hud_damage_quad(change_quad, y, &ctx->ordering_table[FIELD_HUD_DELTA_OT_INDEX]);
         }
         else
         {
-            falling_base_x = (u16)g_field_hud_bar_offset_x + x;
-            ((POLY_F4*)gauge_cursor)->x1 = falling_base_x;
-            ((POLY_F4*)gauge_cursor)->x0 =
-                (s16)(falling_base_x + ((s32)(g_field_hud_bar_width * ((s32)state->hp_display.bits.value % (s32)hp_per_bar)) / (s32)hp_per_bar));
-            falling_cursor = field_emit_hud_damage_quad((POLY_F4*)gauge_cursor, y, &ctx->ordering_table[FIELD_HUD_DELTA_OT_INDEX]);
+            change_quad = (POLY_F4*)gauge_cursor;
+            falling_base_x = g_field_hud_bar_offset_x + x;
+            change_quad->x1 = falling_base_x;
+            change_quad->x0 = (falling_base_x + ((g_field_hud_bar_width * (state->hp_display.bits.value % hp_per_bar)) / hp_per_bar));
+            change_quad = field_emit_hud_damage_quad(change_quad, y, &ctx->ordering_table[FIELD_HUD_DELTA_OT_INDEX]);
             falling_displayed = state->hp_display.bits.value;
             falling_wrapped_current = state->current_hp.word;
 
             if (falling_displayed - falling_wrapped_current < hp_per_bar)
             {
-                falling_right = (u16)g_field_hud_bar_offset_x + x + ((u32)(g_field_hud_bar_width * (falling_wrapped_current % hp_per_bar)) / hp_per_bar);
-                falling_cursor->x1 = falling_right;
+                falling_right = g_field_hud_bar_offset_x + x + ((g_field_hud_bar_width * (falling_wrapped_current % hp_per_bar)) / hp_per_bar);
+                change_quad->x1 = falling_right;
             }
             else
             {
-                falling_right = (u16)g_field_hud_bar_offset_x + x;
-                falling_cursor->x1 = falling_right;
+                falling_right = g_field_hud_bar_offset_x + x;
+                change_quad->x1 = falling_right;
             }
 
-            falling_cursor->x0 = (s16)(((u16)g_field_hud_bar_offset_x + x) + (u16)g_field_hud_bar_width);
-            status_cursor = (u8*)field_emit_hud_damage_quad(falling_cursor, y, &ctx->ordering_table[FIELD_HUD_DELTA_OT_INDEX]);
+            change_quad->x0 = ((g_field_hud_bar_offset_x + x) + g_field_hud_bar_width);
+            status_cursor = field_emit_hud_damage_quad(change_quad, y, &ctx->ordering_table[FIELD_HUD_DELTA_OT_INDEX]);
         }
 
         gauge_cursor = status_cursor;
@@ -998,9 +986,9 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
 
     sprite_cursor = gauge_cursor;
     SET_BGR0_PACKED(sprite_cursor, GPU_TINT_NEUTRAL);
-    setSprt((SPRT*)sprite_cursor);
-    setSemiTrans((SPRT*)sprite_cursor, 1);
-    SET_SPRT_XY0_WORD(sprite_cursor, (s32)((y << 16) + x));
+    setSprt(sprite_cursor);
+    setSemiTrans(sprite_cursor, 1);
+    SET_SPRT_XY0_WORD(sprite_cursor, (y << 16) + x);
     background_type = state->hud.bytes.object_index;
 
     switch (background_type)
@@ -1036,12 +1024,12 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
         break;
     }
 
-    ((SPRT*)sprite_cursor)->clut = FIELD_HUD_CLUT;
+    sprite_cursor->clut = FIELD_HUD_CLUT;
     addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], sprite_cursor);
-    sprite_cursor += sizeof(SPRT);
+    sprite_cursor++;
     setDrawTPage((DR_TPAGE*)sprite_cursor, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, FIELD_HUD_TEXTURE_X, FIELD_HUD_TEXTURE_Y));
     addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], sprite_cursor);
-    render_half->primitive_cursor = sprite_cursor + sizeof(DR_TPAGE);
+    render_half->primitive_cursor = (u8*)sprite_cursor + sizeof(DR_TPAGE);
 }
 
 /**
@@ -1165,7 +1153,7 @@ static void* field_emit_hud_glyph(SPRT* sprite, FieldRenderHalf* render_half, s3
     SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
     setSprt(sprite);
     packed_xy = *(s32*)position;
-    SET_SPRT_UV0_PACKED(sprite, (s16)((value * FIELD_HUD_GLYPH_WIDTH) + FIELD_HUD_GLYPH_UV));
+    SET_SPRT_UV0_PACKED(sprite, (value * FIELD_HUD_GLYPH_WIDTH) + FIELD_HUD_GLYPH_UV);
     SET_SPRT_WH_PACKED(sprite, FIELD_HUD_GLYPH_WIDTH, FIELD_HUD_GLYPH_HEIGHT);
     sprite->clut = FIELD_HUD_CLUT;
     SET_SPRT_XY0_WORD(sprite, packed_xy);
@@ -1388,7 +1376,7 @@ void field_update_object_effects(s32 index)
                     }
 
                     clear_mask = ~bit_mask;
-                    state->previous_flags = (s32)((state->previous_flags & clear_mask) | (state->flags & bit_mask));
+                    state->previous_flags = (state->previous_flags & clear_mask) | (state->flags & bit_mask);
                 }
                 else
                 {
@@ -1427,7 +1415,7 @@ void field_update_object_effects(s32 index)
 
                 if (changed_flags != 0)
                 {
-                    scan_flags = (s32)changed_flags;
+                    scan_flags = changed_flags;
                     cleared_bit = FIELD_OBJECT_HANDLER_COUNT - 1;
 
                     while (1)
@@ -1484,7 +1472,7 @@ void field_update_object_effects(s32 index)
                             (state->contact.bytes.controller_index == (actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE)))
                         {
                             actor->presence = 0;
-                            state->contact.word = (s32)(state->contact.word & ~FIELD_CONTACT_ANIMATION_HIDDEN);
+                            state->contact.word &= ~FIELD_CONTACT_ANIMATION_HIDDEN;
                         }
                     }
                 }
@@ -1496,7 +1484,7 @@ void field_update_object_effects(s32 index)
     {
         g_field_actors[index].tint_blue = FIELD_HIT_FLASH_TINT;
         g_field_actors[index].tint_green = FIELD_HIT_FLASH_TINT;
-        state->flags = (s32)(state->flags & ~FIELD_OBJECT_FLAG_HIT_FLASH);
+        state->flags &= ~FIELD_OBJECT_FLAG_HIT_FLASH;
     }
     else
     {
