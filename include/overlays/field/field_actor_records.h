@@ -238,6 +238,9 @@ typedef struct FieldObjectState
 
 extern FieldObjectState g_field_object_states[FIELD_OBJECT_COUNT];
 
+/** @brief FieldObjectState::contact.bytes.animation_actor_index value without an animation actor. */
+#define FIELD_ANIMATION_ACTOR_NONE 0xFF
+
 /** @brief Tracks an animation actor runs (one per target it follows). */
 #define FIELD_ACTOR_TRACK_COUNT 9
 

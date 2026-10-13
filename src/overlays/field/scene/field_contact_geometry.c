@@ -28,14 +28,8 @@
 #define FIELD_SEQUENCE_RESOURCE_ID 1501
 
 #define FIELD_QUAD_VERTEX_COUNT 4
-/** @brief Most targets one object can collect (FieldObjectState::targets). */
-#define FIELD_MAX_CONTACT_TARGETS 9
 /** @brief field_intersect_screen_segments result when the segments do not meet. */
 #define FIELD_NO_SEGMENT_INTERSECTION 0x80008000
-
-/** @brief field_find_actor_overlap result bit set with the overlapped object index in the low bits. */
-#define FIELD_CONTACT_RESULT_PRESENT 0x8000
-#define FIELD_CONTACT_RESULT_ACTOR_MASK 0x7FFF
 
 /** @brief FieldMoveObject::flags bit 23: the object moves without map collision. */
 #define FIELD_PART_IGNORE_MAP_COLLISION_BIT 23
@@ -802,7 +796,7 @@ s32 field_resolve_actor_movement(FieldActor* actor, s32* position, s32 mode)
         query->y = position[1] + actor->y;
         query->z = mover->z;
         if (((g_field_active_group == 0) || (actor->control.word & FIELD_CONTROL_MODE_MASK) ||
-             (field_collision_hit_markers(query) == -1)) &&
+             (field_collision_hit_markers(query) == FIELD_COLLISION_MARKER_NONE)) &&
             ((((u16)actor->command >= FIELD_ACTOR_COMMAND_WALK_PATH) && ((u16)actor->command <= FIELD_ACTOR_COMMAND_RUN_PATH)) ||
              (actor->command == FIELD_ACTOR_COMMAND_LEAVE_PATH) || (g_field_active_group == 0) || (field_move_leaves_screen(actor, &delta) == 0)))
         {
@@ -1153,8 +1147,8 @@ void field_probe_actor_interaction(FieldActor* actor)
     position[0] = actor->x;
     position[1] = actor->y;
     position[2] = actor->z;
-    position[0] += rcos(actor->direction * 16);
-    position[2] -= rsin(actor->direction * 16);
+    position[0] += rcos(actor->direction << FIELD_HEADING_ANGLE_SHIFT);
+    position[2] -= rsin(actor->direction << FIELD_HEADING_ANGLE_SHIFT);
     result_or_state = field_find_actor_overlap(actor, position, 1);
     object_index = result_or_state & FIELD_CONTACT_RESULT_ACTOR_MASK;
     if (result_or_state != 0)
@@ -1437,7 +1431,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
             candidate_position = candidate->y;
             origin_position = effect->y;
             if (((candidate_position + (min_y << 8)) >= origin_position) || (origin_position >= (candidate_position + (max_y << 8))) ||
-                (states[actor->owner_object_index].contact.bytes.target_count >= FIELD_MAX_CONTACT_TARGETS))
+                (states[actor->owner_object_index].contact.bytes.target_count >= FIELD_ACTOR_TRACK_COUNT))
             {
                 continue;
             }
@@ -1762,7 +1756,7 @@ void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* pa
                 gte_stlvnl(squares);
                 if ((SquareRoot0(squares->vx + squares->vy + squares->vz) <
                      (attack_radius + ((s16)target_state->collision.half.extent >> 1))) &&
-                    ((u8)g_field_object_states[actor->owner_object_index].contact.bytes.target_count < FIELD_MAX_CONTACT_TARGETS))
+                    ((u8)g_field_object_states[actor->owner_object_index].contact.bytes.target_count < FIELD_ACTOR_TRACK_COUNT))
                 {
                     target_state->contact.word |= FIELD_CONTACT_TARGETED;
                     target_state->flags &= ~FIELD_OBJECT_ACTIONS_RESTRICTED;

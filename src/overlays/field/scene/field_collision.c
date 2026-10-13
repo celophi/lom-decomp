@@ -150,21 +150,6 @@
 /** Push-out accumulator value meaning pushes in both directions cancelled out. */
 #define FIELD_COLLISION_PUSH_BLOCKED 0x8000
 
-/** field_collision_resolve_move result: the horizontal move was blocked. */
-#define FIELD_COLLISION_RESULT_BLOCKED 0x1
-/** field_collision_resolve_move result: the mover slid along a wall or was pushed out of it. */
-#define FIELD_COLLISION_RESULT_SLID 0x2
-/** field_collision_resolve_move result: the floor surface scaled the move (slope or slow surface). */
-#define FIELD_COLLISION_RESULT_SLOWED 0x4
-/** field_collision_resolve_move result: the floor surface moved or carried the mover. */
-#define FIELD_COLLISION_RESULT_CARRIED 0x10
-/** field_collision_resolve_move result: the mover's height was changed by its floor. */
-#define FIELD_COLLISION_RESULT_HEIGHT 0x20
-/** field_collision_resolve_move result: an airborne mover hit a ceiling. */
-#define FIELD_COLLISION_RESULT_CEILING 0x40
-/** field_collision_resolve_move result: an airborne mover landed on a floor. */
-#define FIELD_COLLISION_RESULT_LANDED 0x80
-
 /** field_collision_classify_nodes class bit: the footprint overlaps the node and may stand on it. */
 #define FIELD_COLLISION_CLASS_TOUCH 0x1
 /** field_collision_classify_nodes class bit: the node blocks the footprint (wall or too-high floor). */

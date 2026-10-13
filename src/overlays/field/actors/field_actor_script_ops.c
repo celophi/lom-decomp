@@ -31,9 +31,6 @@
 /** @brief Directional animations: 5 facings each for standing, walking and running. */
 #define FIELD_DIRECTIONAL_ANIMATION_COUNT 15
 
-/** @brief Shift from a direction byte to its 45 degree sector. */
-#define FIELD_DIRECTION_SECTOR_SHIFT 5
-
 /** @brief Entries of the turn animation table per 45 degree facing sector. */
 #define FIELD_TURN_SECTOR_ENTRIES 6
 
@@ -84,9 +81,6 @@
 
 /** @brief Highest action forwarded to the battle code; higher ones are clamped. */
 #define FIELD_ACTION_BATTLE_LAST 10
-
-/** @brief Free animation actor slots an action needs. */
-#define FIELD_ACTION_MIN_FREE_SLOTS 3
 
 /** @brief Frame limits of the approach and timed move commands. */
 #define FIELD_APPROACH_TIMEOUT 250
@@ -605,11 +599,11 @@ static void field_run_actor_script_command(FieldActor* actor)
         actor->direction = direction;
         if (g_field_resource_entries[actor->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS)
         {
-            actor->animation = g_field_actor_walk_animations[direction >> FIELD_DIRECTION_SECTOR_SHIFT];
+            actor->animation = g_field_actor_walk_animations[direction >> FIELD_HEADING_SECTOR_SHIFT];
         }
         else
         {
-            actor->animation = g_field_direction_animation_modes[direction >> FIELD_DIRECTION_SECTOR_SHIFT] + ((actor->running & 1) * FIELD_ANIMATION_DIRECTIONS) + FIELD_ANIMATION_WALK;
+            actor->animation = g_field_direction_animation_modes[direction >> FIELD_HEADING_SECTOR_SHIFT] + ((actor->running & 1) * FIELD_ANIMATION_DIRECTIONS) + FIELD_ANIMATION_WALK;
         }
         byte_arg = script[2];
         actor->animation_active = 1;

@@ -2477,7 +2477,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldObjectPar
                 mover->flags = 0;
                 mover->mode.bits.airborne_high = 0;
                 mover->mode.bits.airborne_low = 0;
-                if (field_collision_resolve_move(mover) & 3)
+                if (field_collision_resolve_move(mover) & (FIELD_COLLISION_RESULT_BLOCKED | FIELD_COLLISION_RESULT_SLID))
                 {
                     rotated_vector->z = 0;
                     rotated_vector->x = 0;
@@ -2502,7 +2502,7 @@ static void field_update_effect_record(FieldMotionRecord *record, FieldObjectPar
                         query->z = position_z;
                         query->y = query_y;
                     }
-                    if ((g_field_active_group != 0) && (field_collision_hit_markers(query) != -1))
+                    if ((g_field_active_group != 0) && (field_collision_hit_markers(query) != FIELD_COLLISION_MARKER_NONE))
                     {
                         rotated_vector->z = 0;
                         rotated_vector->x = 0;
@@ -4380,7 +4380,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                         scratch.target_index = contact.index;
                                         if (rec->motion_parameter == 0x91)
                                         {
-                                            if (slot->contact.bytes.animation_actor_index != 0xFF)
+                                            if (slot->contact.bytes.animation_actor_index != FIELD_ANIMATION_ACTOR_NONE)
                                             {
                                                 g_field_object_states[contact.index].contact.word |= 0x80;
                                                 field_start_actor_animation(slot->contact.bytes.animation_actor_index, 1, &scratch.target_index);

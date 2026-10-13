@@ -2247,7 +2247,7 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
         member->y = hero->y;
         member->z = hero->z;
         offsets = g_field_direction_offsets;
-        offset = &offsets[hero->direction >> 5];
+        offset = &offsets[hero->direction >> FIELD_HEADING_SECTOR_SHIFT];
         motion[0] = offset->distance;
         motion[1] = 0;
         motion[2] = offset->distance;

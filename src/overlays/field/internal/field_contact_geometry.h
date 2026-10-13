@@ -23,6 +23,9 @@ typedef struct
 void field_load_actor_sequence_data(void);
 s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* effect, FieldContactResult* contact);
 s32 field_resolve_actor_movement(struct FieldActor* actor, s32* position, s32 mode);
+/** @brief field_find_actor_overlap result bit set with the overlapped object index in the low bits. */
+#define FIELD_CONTACT_RESULT_PRESENT 0x8000
+#define FIELD_CONTACT_RESULT_ACTOR_MASK 0x7FFF
 s32 field_find_actor_overlap(struct FieldActor* actor, s32* position, s32 filter_group);
 void field_start_actor_contact_interaction(struct FieldActor* actor, s32 object_index);
 void field_probe_actor_interaction(struct FieldActor* actor);

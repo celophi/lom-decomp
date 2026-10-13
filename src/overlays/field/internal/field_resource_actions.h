@@ -12,6 +12,10 @@
 #define FIELD_RESOURCE_ACTION_COUNT 50
 /** @brief Action slot of the combo attack; slots 0 and 1 below it hold the player-assigned abilities. */
 #define FIELD_RESOURCE_ACTION_COMBO 2
+/** @brief Action slot that action chains program; a slot-11 action runs the command stored there. */
+#define FIELD_RESOURCE_ACTION_CHAIN 11
+/** @brief Number of action slots that can be bound to buttons (the slots below it). */
+#define FIELD_RESOURCE_ACTION_BUTTON_COUNT 12
 /** @brief Target filter of an action without a target predicate or action handler. */
 #define FIELD_ACTION_TARGET_NONE 0xFF
 

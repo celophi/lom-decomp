@@ -116,6 +116,21 @@ typedef struct FieldCollisionMover
 #define FIELD_COLLISION_MOVER_AIRBORNE_HIGH 0x20000
 #define FIELD_COLLISION_MOVER_AIRBORNE (FIELD_COLLISION_MOVER_AIRBORNE_LOW | FIELD_COLLISION_MOVER_AIRBORNE_HIGH)
 
+/** @brief field_collision_resolve_move result: the horizontal move was blocked. */
+#define FIELD_COLLISION_RESULT_BLOCKED 0x1
+/** @brief field_collision_resolve_move result: the mover slid along a wall or was pushed out of it. */
+#define FIELD_COLLISION_RESULT_SLID 0x2
+/** @brief field_collision_resolve_move result: the floor surface scaled the move (slope or slow surface). */
+#define FIELD_COLLISION_RESULT_SLOWED 0x4
+/** @brief field_collision_resolve_move result: the floor surface moved or carried the mover. */
+#define FIELD_COLLISION_RESULT_CARRIED 0x10
+/** @brief field_collision_resolve_move result: the mover's height was changed by its floor. */
+#define FIELD_COLLISION_RESULT_HEIGHT 0x20
+/** @brief field_collision_resolve_move result: an airborne mover hit a ceiling. */
+#define FIELD_COLLISION_RESULT_CEILING 0x40
+/** @brief field_collision_resolve_move result: an airborne mover landed on a floor. */
+#define FIELD_COLLISION_RESULT_LANDED 0x80
+
 /** @brief Collision mover at the start of the scratchpad. */
 #define FIELD_COLLISION_MOVER ((FieldCollisionMover*)SCRATCHPAD_ADDRESS)
 
@@ -233,6 +248,8 @@ void field_finish_party_slot_reload(s32 actor_slot);
 void field_route_actor_to_object(struct FieldActor* actor, s32 target_index, s32 restart);
 
 /* field_actor_slot_resources.c */
+/** @brief Free animation actor slots an action needs before it may start. */
+#define FIELD_ACTION_MIN_FREE_SLOTS 3
 s32 field_count_free_actor_slots(s32 object_index);
 s32 field_object_has_active_actor_tracks(s32 object_index);
 void field_bind_builtin_animations(void);
@@ -326,6 +343,8 @@ extern s32 g_field_return_to_title_choice;
 void field_draw_return_to_title_choices(u_long* ot, void *prim, s32 scroll_x, s32 scroll_y);
 
 /* field_collision.c */
+/** @brief field_collision_hit_markers result when no marker blocks the probe. */
+#define FIELD_COLLISION_MARKER_NONE (-1)
 s32 field_collision_hit_markers(struct FieldCollisionQuery *query);
 s32 field_collision_resolve_move(struct FieldCollisionMover *mover);
 void field_collision_rasterize_groups(u8** allocator_cursor, struct FieldNode *clip);

@@ -368,7 +368,7 @@ static inline void drop_selected_item(void)
             actor->x = g_field_actors[0].x;
             actor->y = g_field_actors[0].y;
             actor->z = g_field_actors[0].z;
-            facing = FIELD_FACING_OFFSET(offsets, g_field_actors[0].direction >> 5);
+            facing = FIELD_FACING_OFFSET(offsets, g_field_actors[0].direction >> FIELD_HEADING_SECTOR_SHIFT);
             offset[0] = -facing->dx;
             offset[1] = 0;
             offset[2] = -facing->dz;

@@ -143,6 +143,22 @@ enum
     FIELD_ITEM_CATEGORY_INSTRUMENT = 2
 };
 
+/** @brief Weapon types: FIELD_ITEM_TYPE of a weapon, FieldPlayerRecord::weapon_type (names from the shop's equipment type text). */
+enum
+{
+    FIELD_WEAPON_KNIFE = 0,
+    FIELD_WEAPON_SWORD = 1,
+    FIELD_WEAPON_AXE = 2,
+    FIELD_WEAPON_TWO_HANDED_SWORD = 3,
+    FIELD_WEAPON_TWO_HANDED_AXE = 4,
+    FIELD_WEAPON_HAMMER = 5,
+    FIELD_WEAPON_SPEAR = 6,
+    FIELD_WEAPON_STAFF = 7,
+    FIELD_WEAPON_GLOVE = 8,
+    FIELD_WEAPON_FLAIL = 9,
+    FIELD_WEAPON_BOW = 10
+};
+
 /** @brief Shift of FieldStat's effective value (bits 9-15). */
 #define FIELD_STAT_EFFECTIVE_SHIFT 9
 

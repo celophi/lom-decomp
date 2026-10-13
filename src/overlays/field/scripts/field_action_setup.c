@@ -6,6 +6,7 @@
 
 #include "main/audio/game_audio.h"
 #include "common.h"
+#include "common/saved_game.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
 #include <rand.h>
@@ -83,13 +84,6 @@ enum
 #define FIELD_ANIM_IMMUNE 0x3B       /**< Kind 1 always fails. */
 #define FIELD_ANIM_REPEL_A 10        /**< Kind 4 is repelled with FIELD_RECORD_STATUS_10. */
 #define FIELD_ANIM_REPEL_B 11
-
-/**
- * @brief Weapon types (FIELD_ITEM_TYPE) that guard in FIELD_ANIM_WEAPON_GUARD.
- * @note Names assume the in-game weapon order (knife, sword, axe, ...).
- */
-#define FIELD_WEAPON_SPEAR 6
-#define FIELD_WEAPON_STAFF 7
 
 /** @brief Effect animation (field_spawn_shared_animation_actor) of a target that repels an action. */
 #define FIELD_EFFECT_ANIM_REPEL 0x90

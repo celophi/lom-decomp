@@ -35,6 +35,17 @@
 #define FIELD_ANIMATION_INDEX_MASK 0x7F
 /** @brief FieldActor::animation bit that mirrors the animation. */
 #define FIELD_ANIMATION_FACING 0x80
+/* FieldActor::direction headings. */
+/** @brief FieldActor::direction headings are 256 steps per turn (ratan2/rcos use 4096). */
+#define FIELD_HEADING_STEPS 256
+/** @brief Shift from a 4096-step angle to a heading. */
+#define FIELD_HEADING_ANGLE_SHIFT 4
+/** @brief Half of one eighth of a turn, added before a heading is split into eight sectors. */
+#define FIELD_HEADING_HALF_SECTOR 16
+/** @brief Shift from a heading to one of eight sectors. */
+#define FIELD_HEADING_SECTOR_SHIFT 5
+/** @brief Heading bits of a sector (the heading snapped to an eighth of a turn). */
+#define FIELD_HEADING_SECTOR_MASK 0xE0
 /** @brief Directional animations come in groups of five (stand, then walk, then run). */
 #define FIELD_ANIMATION_DIRECTIONS 5
 /** @brief First walking animation. */

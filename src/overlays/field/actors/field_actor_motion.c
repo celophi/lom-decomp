@@ -23,8 +23,6 @@
 #define FIELD_ANIMATION_TURN_37 0x37
 #define FIELD_ANIMATION_TURN_3B 0x3B
 
-/** @brief Number of per-object actions that can be bound to buttons. */
-#define FIELD_BOUND_ACTION_COUNT 12
 /** @brief FieldObjectState::action_parameter value of an object without an action. */
 #define FIELD_ACTION_PARAMETER_NONE 0xFFFF
 
@@ -81,7 +79,7 @@ s32 field_update_actor_action(FieldActor* actor, s32 update_action)
         animation = actor->animation & FIELD_ANIMATION_INDEX_MASK;
         if (animation == FIELD_ABILITY_DEFEND || animation == FIELD_ABILITY_CROUCH)
         {
-            if (g_field_object_states[actor->object_index].action < FIELD_BOUND_ACTION_COUNT)
+            if (g_field_object_states[actor->object_index].action < FIELD_RESOURCE_ACTION_BUTTON_COUNT)
             {
                 if (field_get_held_action_buttons(actor->object_index, g_field_object_states[actor->object_index].action, actor) != 0)
                 {

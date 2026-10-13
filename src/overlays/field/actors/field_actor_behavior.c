@@ -8,6 +8,7 @@
  */
 
 #include "common.h"
+#include "common/saved_game.h"
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_actor_routes.h"
 #include "../internal/field_actor_behavior.h"
@@ -38,23 +39,11 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound);
 #define FIELD_ROUTE_FOLLOWER_SAMPLES (FIELD_ROUTE_HISTORY_LENGTH / 2)
 /** @brief Minimum route distance between two samples. */
 #define FIELD_ROUTE_MIN_SPACING 3
-/** @brief Normalized directions carry twelve fractional bits. */
-#define FIELD_DIRECTION_SHIFT 12
 /** @brief Squared distance from the next route sample at which a follower runs. */
 #define FIELD_ROUTE_RUN_DISTANCE_SQUARED 385
 /** @brief Squared distance per follower slot at which a follower closes up on the leader. */
 #define FIELD_ROUTE_FOLLOW_DISTANCE_SQUARED 3000
 
-/** @brief Headings are 256 steps per turn (ratan2/rcos use 4096). */
-#define FIELD_HEADING_STEPS 256
-/** @brief Shift from a 4096-step angle to a heading. */
-#define FIELD_HEADING_ANGLE_SHIFT 4
-/** @brief Half of one eighth of a turn, added before a heading is split into eight sectors. */
-#define FIELD_HEADING_HALF_SECTOR 16
-/** @brief Shift from a heading to one of eight sectors. */
-#define FIELD_HEADING_SECTOR_SHIFT 5
-/** @brief Heading bits of a sector (the heading snapped to an eighth of a turn). */
-#define FIELD_HEADING_SECTOR_MASK 0xE0
 /** @brief Step along x and z (12 fractional bits scaled down by 16) towards the actor's heading. */
 #define FIELD_HEADING_STEP_X(actor) (rcos((actor)->direction << FIELD_HEADING_ANGLE_SHIFT) >> FIELD_HEADING_ANGLE_SHIFT)
 #define FIELD_HEADING_STEP_Z(actor) (-rsin((actor)->direction << FIELD_HEADING_ANGLE_SHIFT) >> FIELD_HEADING_ANGLE_SHIFT)
@@ -71,8 +60,6 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound);
 /** @brief FieldObjectState::flags bit that mirrors the controller directions. */
 #define FIELD_OBJECT_FLAG_REVERSED 0x08
 
-/** @brief Value of FieldObjectState::contact.bytes.animation_actor_index without an actor. */
-#define FIELD_ANIMATION_ACTOR_NONE 0xFF
 /** @brief Gauge added by the gauge-up animation. */
 #define FIELD_TECHNIQUE_GAUGE_STEP 0x20
 /** @brief FieldObjectState::action_charge below which an action still charges. */
@@ -80,24 +67,13 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound);
 /** @brief FieldObjectState::action_charge from which the charge animation starts. */
 #define FIELD_ACTION_CHARGE_ANIMATION 0x41
 
-/** @brief First resource action slot that is not a pad button action. */
-#define FIELD_RESOURCE_ACTION_BUTTONS 12
-/** @brief Action slot a mode-11 action redirects through. */
-#define FIELD_RESOURCE_ACTION_REDIRECT 11
-
 /** @brief Action element bits of FieldActionFlags::target_filter. */
 #define FIELD_ACTION_ELEMENT_MASK 0x0F
 
-/** @brief Maximum number of targets handed to an action animation. */
-#define FIELD_ACTION_MAX_TARGETS 9
-/** @brief Free actor slots an action needs before it may start. */
-#define FIELD_ACTION_MIN_FREE_SLOTS 3
 /** @brief First action whose name is stored in the saved character (the name record is action - this). */
 #define FIELD_ACTION_SAVED_NAME_FIRST 4
 /** @brief Frames the combo timer runs after a combo action. */
 #define FIELD_COMBO_WINDOW 10
-/** @brief Weapon type without a variant animation for the combo command (FIELD_ANIMATION_COMBO). */
-#define FIELD_WEAPON_TYPE_NO_VARIANT 10
 /** @brief Sequence id bit marking a technique sequence. */
 #define FIELD_SEQUENCE_TECHNIQUE 0x8000
 
@@ -117,14 +93,6 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound);
 
 /** @brief Stick deflection of a digital direction button. */
 #define FIELD_PAD_FULL_DEFLECTION 0x1000
-/** @brief Collision result bits of a fully blocked move. */
-#define FIELD_COLLISION_BLOCKED 3
-/** @brief field_find_actor_overlap result bits holding the overlapped object (0x8000 marks a hit). */
-#define FIELD_OVERLAP_INDEX_MASK 0x7FFF
-/** @brief field_collision_hit_markers result without a blocking marker. */
-#define FIELD_MARKER_NONE -1
-/** @brief field_find_combined_ability result without a combo. */
-#define FIELD_COMBO_NONE 0xFF
 /** @brief rand() results above this pick the second idle animation. */
 #define FIELD_IDLE_ALTERNATE_THRESHOLD 0x6000
 /** @brief Idle animation below which an idle actor is already settled. */
@@ -418,7 +386,7 @@ static void field_sample_actor_route(FieldRoutePoint* points, s32 remaining, Fie
                 {
                     sample_origin_x = work.position.vx / 256;
                     step_x = work.direction.vx * spacing;
-                    sample_x = sample_origin_x + (step_x / (1 << FIELD_DIRECTION_SHIFT));
+                    sample_x = sample_origin_x + (step_x / ONE);
                     points->x = sample_x;
                     sample_origin_z = work.position.vz;
                     work.position.vx = (s32)(sample_x << 16) >> 8;
@@ -428,7 +396,7 @@ static void field_sample_actor_route(FieldRoutePoint* points, s32 remaining, Fie
                     }
                     sample_origin_z >>= 8;
                     step_z = work.direction.vz * spacing;
-                    sample_z = sample_origin_z + (step_z / (1 << FIELD_DIRECTION_SHIFT));
+                    sample_z = sample_origin_z + (step_z / ONE);
                     points->z = sample_z;
                     points++;
                     work.position.vz = (s32)(sample_z << 16) >> 8;
@@ -989,7 +957,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
                 mover->mode.mode_flags &= ~FIELD_COLLISION_MOVER_AIRBORNE_LOW;
                 mover->collision_node = g_field_object_states[movement_actor->object_index].collision_node;
                 mover->flags = g_field_object_states[movement_actor->object_index].collision_flags;
-                if ((field_collision_resolve_move(mover) & FIELD_COLLISION_BLOCKED) == FIELD_COLLISION_BLOCKED)
+                if ((field_collision_resolve_move(mover) & (FIELD_COLLISION_RESULT_BLOCKED | FIELD_COLLISION_RESULT_SLID)) == (FIELD_COLLISION_RESULT_BLOCKED | FIELD_COLLISION_RESULT_SLID))
                 {
                     movement_actor->control.word = movement_actor->control.word & ~FIELD_CONTROL_MOVEMENT_MASK;
                 }
@@ -1020,7 +988,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
             probe->x = mover->x;
             probe->y = movement_actor->y;
             probe->z = mover->z;
-            if ((g_field_active_group != 0) && (field_collision_hit_markers(probe) != FIELD_MARKER_NONE))
+            if ((g_field_active_group != 0) && (field_collision_hit_markers(probe) != FIELD_COLLISION_MARKER_NONE))
             {
                 work.motion.vx = movement_actor->x;
                 work.motion.vz = movement_actor->z;
@@ -1064,7 +1032,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
         }
         else
         {
-            status_or_contact = field_find_actor_overlap(movement_actor, &work.motion.vx, 0) & FIELD_OVERLAP_INDEX_MASK;
+            status_or_contact = field_find_actor_overlap(movement_actor, &work.motion.vx, 0) & FIELD_CONTACT_RESULT_ACTOR_MASK;
             if (status_or_contact < FIELD_PARTY_COUNT)
             {
                 movement_actor->x = work.motion.vx;
@@ -1131,7 +1099,7 @@ void field_prepare_actor_action(FieldActor* actor)
         uintptr_t action_address = (uintptr_t)&g_field_resource_actions[0].slots[action_slot];
         action = (FieldActionSlot*)(row_offset + action_address);
     }
-    if (action_slot == FIELD_RESOURCE_ACTION_REDIRECT)
+    if (action_slot == FIELD_RESOURCE_ACTION_CHAIN)
     {
         state->action = (u8)action->command;
     }
@@ -1469,7 +1437,7 @@ s32 field_update_actor_command(FieldActor* actor)
                     combo_or_slot = field_find_combined_ability(g_field_resource_actions[actor->resource_index].slots[0].command,
                                                                 g_field_resource_actions[actor->resource_index].slots[1].command);
                     parameter_offset = combo_or_slot * 2;
-                    if (combo_or_slot != FIELD_COMBO_NONE)
+                    if (combo_or_slot != FIELD_ABILITY_NONE)
                     {
                         scratch.combo_action.command = combo_or_slot;
                         scratch.combo_action.animation = g_field_action_animation_parameters[parameter_offset];
@@ -1829,13 +1797,13 @@ s32 field_update_actor_command(FieldActor* actor)
         {
             action = FIELD_RESOURCE_ACTION(actor->resource_index, g_field_object_states[actor->object_index].action);
         }
-        else if (g_field_object_states[actor->object_index].action < FIELD_RESOURCE_ACTION_BUTTONS)
+        else if (g_field_object_states[actor->object_index].action < FIELD_RESOURCE_ACTION_BUTTON_COUNT)
         {
             action = FIELD_RESOURCE_ACTION(actor->resource_index, g_field_object_states[actor->object_index].action);
         }
         else
         {
-            action = FIELD_RESOURCE_ACTION(actor->resource_index, FIELD_RESOURCE_ACTION_REDIRECT);
+            action = FIELD_RESOURCE_ACTION(actor->resource_index, FIELD_RESOURCE_ACTION_CHAIN);
         }
         if (action->flags.target_filter != FIELD_ACTION_TARGET_NONE)
         {
@@ -1846,7 +1814,7 @@ s32 field_update_actor_command(FieldActor* actor)
             {
                 if (!(actor->control.word & FIELD_CONTROL_MODE_MASK))
                 {
-                    if (g_field_object_states[actor->object_index].action < FIELD_RESOURCE_ACTION_BUTTONS)
+                    if (g_field_object_states[actor->object_index].action < FIELD_RESOURCE_ACTION_BUTTON_COUNT)
                     {
                         pending = field_get_held_action_buttons(actor->object_index, g_field_object_states[actor->object_index].action, actor);
                     }
@@ -1914,9 +1882,9 @@ s32 field_update_actor_command(FieldActor* actor)
             }
             else if (eligible_count != 0)
             {
-                if (eligible_count > FIELD_ACTION_MAX_TARGETS)
+                if (eligible_count > FIELD_ACTOR_TRACK_COUNT)
                 {
-                    eligible_count = FIELD_ACTION_MAX_TARGETS;
+                    eligible_count = FIELD_ACTOR_TRACK_COUNT;
                 }
                 if (field_start_action_animation(actor->object_index, eligible_count, scratch.targets, action->parameter) != 0)
                 {
@@ -2132,7 +2100,7 @@ static s32 field_apply_action_animation(FieldActor* actor, FieldObjectState* sta
         state->flags |= FIELD_OBJECT_FLAG_DASH;
     }
     if ((action->command == FIELD_ANIMATION_COMBO) && (actor->variant != 0) &&
-        ((actor->object_index >= FIELD_PLAYER_COUNT) || (g_field_player_records[actor->object_index].head.bytes.weapon_type != FIELD_WEAPON_TYPE_NO_VARIANT)))
+        ((actor->object_index >= FIELD_PLAYER_COUNT) || (g_field_player_records[actor->object_index].head.bytes.weapon_type != FIELD_WEAPON_BOW)))
     {
         actor->animation = actor->variant + (action->command + (actor->animation & FIELD_ANIMATION_FACING));
     }
