@@ -233,6 +233,23 @@ extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_
 /** @brief Bit position of FIELD_CONTACT_LINKED in FieldObjectState.contact. */
 #define FIELD_CONTACT_LINKED_SHIFT 1
 
+/**
+ * @brief Built-in looping animation of each status flag bit 0-7, as g_field_object_flag_handlers
+ *        assigns them (bits 0, 1, 3 and 4 directly, the others through their handler functions).
+ * @note The 0x0080 animation is also the one the 0x0100 handler starts.
+ */
+#define FIELD_STATUS_ANIMATION_0001 5
+#define FIELD_STATUS_ANIMATION_0002 6
+#define FIELD_STATUS_ANIMATION_0004 7
+#define FIELD_STATUS_ANIMATION_0008 8
+#define FIELD_STATUS_ANIMATION_0010 11
+#define FIELD_STATUS_ANIMATION_0020 10
+#define FIELD_STATUS_ANIMATION_0040 9
+#define FIELD_STATUS_ANIMATION_0080 12
+
+/** @brief Status bit number that matches no flag bit (above the 16 handler bits). */
+#define FIELD_STATUS_BIT_NONE 0x20
+
 /** @brief Play built-in effect resource @p resource on the effect slot of @p actor's object. */
 #define START_OBJECT_EFFECT(actor, resource)                                                                                                                   \
     (field_start_builtin_animation((actor)->object_index, (actor)->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, (resource)),                                  \
@@ -1315,10 +1332,11 @@ void field_update_object_effects(s32 index)
     s32 scan_flags;
     s32 bit_index;
     s32 clear_mask;
-    s32 animation_bit;
-    s32 highest_bit;
+    s32 status_bit;
+    s32 cleared_bit;
     s32 bit_mask;
-    u16 animation_kind;
+    s32 cleared_mask;
+    u16 animation_id;
     FieldObjectFlagHandler* handler;
     FieldObjectFlagHandler* handlers;
     FieldObjectFlagHandler handler_value;
@@ -1410,52 +1428,53 @@ void field_update_object_effects(s32 index)
                 if (changed_flags != 0)
                 {
                     scan_flags = (s32)changed_flags;
-                    highest_bit = FIELD_OBJECT_HANDLER_COUNT - 1;
-                    animation_bit = 1;
+                    cleared_bit = FIELD_OBJECT_HANDLER_COUNT - 1;
 
                     while (1)
                     {
-                        if (scan_flags & (animation_bit << highest_bit))
+                        cleared_mask = 1 << cleared_bit;
+
+                        if (scan_flags & cleared_mask)
                         {
                             break;
                         }
 
-                        highest_bit--;
+                        cleared_bit--;
                     }
 
-                    /* Flag bit whose handler plays the slot's current animation resource. */
-                    animation_kind = slot->status.parts.animation_id;
-                    animation_bit = 0x20;
+                    /* Status flag bit that owns the animation the effect slot is playing. */
+                    animation_id = slot->status.parts.animation_id;
+                    status_bit = FIELD_STATUS_BIT_NONE;
 
-                    switch (animation_kind)
+                    switch (animation_id)
                     {
-                    case 5:
-                        animation_bit = 0;
+                    case FIELD_STATUS_ANIMATION_0001:
+                        status_bit = 0;
                         break;
-                    case 6:
-                        animation_bit = 1;
+                    case FIELD_STATUS_ANIMATION_0002:
+                        status_bit = 1;
                         break;
-                    case 7:
-                        animation_bit = 2;
+                    case FIELD_STATUS_ANIMATION_0004:
+                        status_bit = 2;
                         break;
-                    case 8:
-                        animation_bit = 3;
+                    case FIELD_STATUS_ANIMATION_0008:
+                        status_bit = 3;
                         break;
-                    case 11:
-                        animation_bit = 4;
+                    case FIELD_STATUS_ANIMATION_0010:
+                        status_bit = 4;
                         break;
-                    case 10:
-                        animation_bit = 5;
+                    case FIELD_STATUS_ANIMATION_0020:
+                        status_bit = 5;
                         break;
-                    case 9:
-                        animation_bit = 6;
+                    case FIELD_STATUS_ANIMATION_0040:
+                        status_bit = 6;
                         break;
-                    case 12:
-                        animation_bit = 7;
+                    case FIELD_STATUS_ANIMATION_0080:
+                        status_bit = 7;
                         break;
                     }
 
-                    if (highest_bit == animation_bit)
+                    if (cleared_bit == status_bit)
                     {
                         slot->active = 0;
                         slot->track_mask = 0;
@@ -1488,7 +1507,7 @@ void field_update_object_effects(s32 index)
 }
 
 /**
- * @brief Flag 0x0004 handler: restart the actor's animation and play effect resource 7.
+ * @brief Flag 0x0004 handler: restart the actor's animation and play the 0x0004 status animation.
  * @param actor Actor of the object.
  * @param is_set Nonzero when the flag became set; zero does nothing.
  * @note JP does not clear the linked object's flag 0x2000.
@@ -1503,7 +1522,7 @@ void field_handle_object_flag_0004(FieldActor* actor, s32 is_set)
         actor->animation_active = 1;
         g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
         field_restart_actor_animation(actor);
-        START_OBJECT_EFFECT(actor, 7);
+        START_OBJECT_EFFECT(actor, FIELD_STATUS_ANIMATION_0004);
 #if !defined(VERSION_JP)
         field_clear_link_target_flag(actor->object_index);
 #endif
@@ -1511,7 +1530,7 @@ void field_handle_object_flag_0004(FieldActor* actor, s32 is_set)
 }
 
 /**
- * @brief Flag 0x0020 handler: restart the actor's animation and play effect resource 10.
+ * @brief Flag 0x0020 handler: restart the actor's animation and play the 0x0020 status animation.
  * @param actor Actor of the object.
  * @param is_set Nonzero when the flag became set; zero does nothing.
  */
@@ -1525,7 +1544,7 @@ void field_handle_object_flag_0020(FieldActor* actor, s32 is_set)
         actor->animation_active = 1;
         g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
         field_restart_actor_animation(actor);
-        START_OBJECT_EFFECT(actor, 10);
+        START_OBJECT_EFFECT(actor, FIELD_STATUS_ANIMATION_0020);
     }
 }
 
@@ -1549,7 +1568,7 @@ void field_set_actor_horizontal_scale(FieldActor* actor, s32 half_scale)
 }
 
 /**
- * @brief Flag 0x0040 handler: play effect resource 9 and hold the actor in animation 0x1B.
+ * @brief Flag 0x0040 handler: play the 0x0040 status animation and hold the actor in animation 0x1B.
  * @param actor Actor of the object.
  * @param is_set Nonzero when the flag became set; zero does nothing.
  * @note JP does not clear the linked object's flag 0x2000.
@@ -1560,7 +1579,7 @@ void field_handle_object_flag_0040(FieldActor* actor, s32 is_set)
 
     if (is_set != 0)
     {
-        START_OBJECT_EFFECT(actor, 9);
+        START_OBJECT_EFFECT(actor, FIELD_STATUS_ANIMATION_0040);
         animation = actor->animation;
 
         if ((animation & FIELD_ANIMATION_SEQUENCE_MASK) != FIELD_ANIMATION_FLAG_0040_POSE)
@@ -1630,7 +1649,7 @@ static inline void field_clear_link_target_flag(s32 object_index)
 }
 
 /**
- * @brief Flag 0x0100 handler: play effect resource 12 and hide the actor, or play 13 and show it.
+ * @brief Flag 0x0100 handler: play the 0x0080 status animation and hide the actor, or play effect resource 13 and show it.
  * @param actor Actor of the object.
  * @param is_set Nonzero when the flag became set, zero when it was cleared.
  * @note JP does not clear the linked object's flag 0x2000.
@@ -1639,7 +1658,7 @@ void field_handle_object_flag_0100(FieldActor* actor, s32 is_set)
 {
     if (is_set != 0)
     {
-        START_OBJECT_EFFECT(actor, 12);
+        START_OBJECT_EFFECT(actor, FIELD_STATUS_ANIMATION_0080);
         actor->presence = FIELD_ACTOR_HIDDEN;
 #if !defined(VERSION_JP)
         field_clear_link_target_flag(actor->object_index);
