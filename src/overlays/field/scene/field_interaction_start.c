@@ -877,9 +877,8 @@ static void field_update_event_records(void)
 /**
  * @brief Update a spawned actor: deliver its pending event, its on-screen event and its script.
  * @param actor_id Actor id.
- * @param unused Unused.
  */
-void field_update_actor_record(s32 actor_id, void* unused)
+void field_update_actor_record(s32 actor_id)
 {
     FieldActorRecord* actor;
     Vec3i position;

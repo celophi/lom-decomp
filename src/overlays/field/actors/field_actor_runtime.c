@@ -109,9 +109,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 /** @brief FieldActor::control bits 16-17: colour variant of a companion. */
 #define FIELD_CONTROL_VARIANT_SHIFT 16
 #define FIELD_CONTROL_VARIANT_MASK 0x30000
-/** @brief FieldActor::control bits 19-22 and the value given to the partner's record when the partner is the hero. */
-#define FIELD_CONTROL_UNK19_MASK 0x780000
-#define FIELD_CONTROL_UNK19_PARTNER 0x500000
 /** @brief FieldActor::control bit 23: the actor uses its own tint. */
 #define FIELD_CONTROL_TINTED_SHIFT 23
 #define FIELD_CONTROL_TINTED 0x800000
@@ -2464,11 +2461,11 @@ void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index)
     {
         FieldActor* partner = &g_field_actors[1];
 
-        partner->control.word = (partner->control.word & ~FIELD_CONTROL_UNK19_MASK) | FIELD_CONTROL_UNK19_PARTNER;
+        partner->control.word = (partner->control.word & ~FIELD_CONTROL_PALETTE_MASK) | FIELD_CONTROL_PALETTE_PARTNER;
     }
     else
     {
-        g_field_actors[actor_index].control.word &= ~FIELD_CONTROL_UNK19_MASK;
+        g_field_actors[actor_index].control.word &= ~FIELD_CONTROL_PALETTE_MASK;
     }
 
     g_field_actors[actor_index].control.word &= ~FIELD_CONTROL_PLAY_ONCE;
