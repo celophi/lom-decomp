@@ -387,7 +387,7 @@ static inline void drop_selected_item(void)
             actor->animation_state = 0xFE;
             actor->control.word = control;
             actor->script_index = 0;
-            actor->unk10 = 1;
+            actor->script_busy = 1;
             actor->animation = (item_id - FIELD_DROP_ITEM_FIRST) | (leader_animation & FIELD_ANIMATION_FACING);
             state->key = actor_index + FIELD_ITEM_ACTOR_KEY_BASE;
             state->interaction_kind = FIELD_INTERACTION_ITEM;

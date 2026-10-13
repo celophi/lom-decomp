@@ -106,9 +106,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 #define FIELD_CONTROL_PAD 0
 #define FIELD_CONTROL_FOLLOW 1
 #define FIELD_CONTROL_SCRIPTED 2
-/** @brief FieldActor::control bits 16-17: colour variant of a companion. */
-#define FIELD_CONTROL_VARIANT_SHIFT 16
-#define FIELD_CONTROL_VARIANT_MASK 0x30000
 /** @brief FieldActor::control bit 23: the actor uses its own tint. */
 #define FIELD_CONTROL_TINTED_SHIFT 23
 #define FIELD_CONTROL_TINTED 0x800000
@@ -2250,7 +2247,7 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
 
     g_field_actors[slot].presence = 0;
     g_field_actors[slot].command = FIELD_ACTOR_COMMAND_NONE;
-    g_field_actors[slot].unk10 = 0;
+    g_field_actors[slot].script_busy = 0;
     g_field_actors[slot].script_index = FIELD_SCRIPT_NONE;
     field_restart_actor_animation(&g_field_actors[slot]);
     field_rebuild_party_actions(0);
@@ -2411,7 +2408,7 @@ void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index)
     u8* bytes;
     s32 control_flags;
     s32 initial_flags;
-    s16* velocity;
+    s16* script_state;
     u32* unk44;
 
     bytes = (u8*)&g_field_actors[actor_index];
@@ -2469,10 +2466,10 @@ void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index)
     g_field_actors[actor_index].unkC = g_field_resource_entries[resource_entry_index].slot_index;
     g_field_actors[actor_index].resource_index = resource_entry_index;
     g_field_actors[actor_index].animation = 0;
-    velocity = &g_field_actors[actor_index].unk10;
-    velocity[0] = 0;
-    velocity[1] = 0;
-    velocity[2] = 0;
+    script_state = &g_field_actors[actor_index].script_busy;
+    script_state[0] = 0;
+    script_state[1] = 0;
+    script_state[2] = 0;
     g_field_actors[actor_index].frame_timer = 1;
     g_field_actors[actor_index].frame_ticks = 0;
     unk44 = &g_field_actors[actor_index].unk44;
@@ -2483,7 +2480,7 @@ void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index)
     g_field_actors[actor_index].tint_green = FIELD_TINT_NEUTRAL;
     g_field_actors[actor_index].tint_red = FIELD_TINT_NEUTRAL;
 
-    if (actor_index == FIELD_PARTY_COMPANION && D_800FDCEA >= FIELD_COMPANION_COLOR_ID_MIN)
+    if (actor_index == FIELD_PARTY_COMPANION && g_field_player_records[FIELD_PARTY_COMPANION].character_id >= FIELD_COMPANION_COLOR_ID_MIN)
     {
         FieldActor* companion = &g_field_actors[FIELD_PARTY_COMPANION];
 

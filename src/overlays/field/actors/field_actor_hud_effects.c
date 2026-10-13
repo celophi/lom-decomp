@@ -171,7 +171,6 @@ extern s32 g_field_hud_bar_offset_x;
 extern s32 g_field_hud_bar_offset_y;
 extern s32 g_frame_counter;
 extern u8 g_field_pair_indicator_list[];
-extern u16 D_800FE01E;
 
 /* ---- Object flag handlers and fading primitives ---------------------------- */
 
@@ -212,11 +211,11 @@ extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_
 #define FIELD_ANIMATION_HOLD_LAST_FRAME 0x800
 #define FIELD_ACTOR_CONTROL_40000 0x40000
 
-/** @brief Animation held while flag 0x80 is set. */
-#define FIELD_ANIMATION_FLAG_0080_POSE 0x14
+/** @brief Animation held while the object is petrified. */
+#define FIELD_ANIMATION_PETRIFIED_POSE 0x14
 
-/** @brief Animation held while flag 0x40 is set. */
-#define FIELD_ANIMATION_FLAG_0040_POSE 0x1B
+/** @brief Animation held while the object sleeps. */
+#define FIELD_ANIMATION_SLEEP_POSE 0x1B
 
 /** @brief Tint component kept by the hit flash (full intensity is 0x80). */
 #define FIELD_HIT_FLASH_TINT 0x20
@@ -234,18 +233,18 @@ extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_
 #define FIELD_CONTACT_LINKED_SHIFT 1
 
 /**
- * @brief Built-in looping animation of each status flag bit 0-7, as g_field_object_flag_handlers
+ * @brief Built-in looping animation of each status ailment (flag bits 0-7), as g_field_object_flag_handlers
  *        assigns them (bits 0, 1, 3 and 4 directly, the others through their handler functions).
- * @note The 0x0080 animation is also the one the 0x0100 handler starts.
+ * @note The freeze handler starts the petrification animation too.
  */
-#define FIELD_STATUS_ANIMATION_0001 5
-#define FIELD_STATUS_ANIMATION_0002 6
-#define FIELD_STATUS_ANIMATION_0004 7
-#define FIELD_STATUS_ANIMATION_0008 8
-#define FIELD_STATUS_ANIMATION_0010 11
-#define FIELD_STATUS_ANIMATION_0020 10
-#define FIELD_STATUS_ANIMATION_0040 9
-#define FIELD_STATUS_ANIMATION_0080 12
+#define FIELD_STATUS_ANIMATION_POISON 5
+#define FIELD_STATUS_ANIMATION_DARKNESS 6
+#define FIELD_STATUS_ANIMATION_PARALYSIS 7
+#define FIELD_STATUS_ANIMATION_CONFUSION 8
+#define FIELD_STATUS_ANIMATION_FLAME_BURST 11
+#define FIELD_STATUS_ANIMATION_HYPNOSIS 10
+#define FIELD_STATUS_ANIMATION_SLEEP 9
+#define FIELD_STATUS_ANIMATION_PETRIFIED 12
 
 /** @brief Status bit number that matches no flag bit (above the 16 handler bits). */
 #define FIELD_STATUS_BIT_NONE 0x20
@@ -464,7 +463,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
 
                         if (g_field_object_states[i].hp_display.bits.panel_timer != 0)
                         {
-                            if (!(g_field_object_states[i].flags & FIELD_OBJECT_FLAG_0100) &&
+                            if (!(g_field_object_states[i].flags & FIELD_OBJECT_FLAG_FROZEN) &&
                                 (g_field_object_states[i].contact.bytes.flags & FIELD_CONTACT_ANIMATION_HIDDEN) &&
                                 (g_field_effect_records[g_field_object_states[i].linked_effect_index].animation & FIELD_ANIMATION_SEQUENCE_MASK) !=
                                     FIELD_HUD_ANCHOR_IGNORED_ANIMATION)
@@ -787,7 +786,7 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
             status_cursor = field_emit_hud_status_line(status_cursor, ctx, colors, intensity, x, y);
         }
     }
-    else if ((gauge_type == FIELD_PARTY_COMPANION) && (D_800FDCEA >= FIELD_COMPANION_COLOR_ID_MIN))
+    else if ((gauge_type == FIELD_PARTY_COMPANION) && (g_field_player_records[FIELD_PARTY_COMPANION].character_id >= FIELD_COMPANION_COLOR_ID_MIN))
     {
         colors = g_field_hud_companion_status_colors;
         status_cursor = field_emit_hud_status_line(status_cursor, ctx, colors, state->technique_gauge, x, y);
@@ -999,7 +998,7 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
         SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_PANEL_UV);
         break;
     case 2:
-        if (D_800FDCEA >= FIELD_COMPANION_COLOR_ID_MIN)
+        if (g_field_player_records[FIELD_PARTY_COMPANION].character_id >= FIELD_COMPANION_COLOR_ID_MIN)
         {
             SET_SPRT_WH_PACKED(sprite_cursor, FIELD_HUD_PANEL_WIDTH, FIELD_HUD_PANEL_HEIGHT);
             SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_PANEL_UV);
@@ -1212,9 +1211,11 @@ void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* positi
     SET_SPRT_UV0_PACKED(sprt, FIELD_HUD_PORTRAIT_UV);
     SET_SPRT_WH_PACKED(sprt, FIELD_HUD_PORTRAIT_SIZE, FIELD_HUD_PORTRAIT_SIZE);
 
-    if (index == FIELD_PARTY_COMPANION && D_800FDCEA >= FIELD_COMPANION_COLOR_ID_MIN)
+    if (index == FIELD_PARTY_COMPANION && g_field_player_records[FIELD_PARTY_COMPANION].character_id >= FIELD_COMPANION_COLOR_ID_MIN)
     {
-        sprt->clut = getClut(FIELD_HUD_CLUT_X, (D_800FE01E & 3) + FIELD_HUD_COMPANION_CLUT_Y);
+        sprt->clut =
+            getClut(FIELD_HUD_CLUT_X, (g_field_actors[FIELD_PARTY_COMPANION].control.half[1] & (FIELD_CONTROL_VARIANT_MASK >> FIELD_CONTROL_VARIANT_SHIFT)) +
+                                          FIELD_HUD_COMPANION_CLUT_Y);
     }
     else
     {
@@ -1437,28 +1438,28 @@ void field_update_object_effects(s32 index)
 
                     switch (animation_id)
                     {
-                    case FIELD_STATUS_ANIMATION_0001:
+                    case FIELD_STATUS_ANIMATION_POISON:
                         status_bit = 0;
                         break;
-                    case FIELD_STATUS_ANIMATION_0002:
+                    case FIELD_STATUS_ANIMATION_DARKNESS:
                         status_bit = 1;
                         break;
-                    case FIELD_STATUS_ANIMATION_0004:
+                    case FIELD_STATUS_ANIMATION_PARALYSIS:
                         status_bit = 2;
                         break;
-                    case FIELD_STATUS_ANIMATION_0008:
+                    case FIELD_STATUS_ANIMATION_CONFUSION:
                         status_bit = 3;
                         break;
-                    case FIELD_STATUS_ANIMATION_0010:
+                    case FIELD_STATUS_ANIMATION_FLAME_BURST:
                         status_bit = 4;
                         break;
-                    case FIELD_STATUS_ANIMATION_0020:
+                    case FIELD_STATUS_ANIMATION_HYPNOSIS:
                         status_bit = 5;
                         break;
-                    case FIELD_STATUS_ANIMATION_0040:
+                    case FIELD_STATUS_ANIMATION_SLEEP:
                         status_bit = 6;
                         break;
-                    case FIELD_STATUS_ANIMATION_0080:
+                    case FIELD_STATUS_ANIMATION_PETRIFIED:
                         status_bit = 7;
                         break;
                     }
@@ -1496,12 +1497,12 @@ void field_update_object_effects(s32 index)
 }
 
 /**
- * @brief Flag 0x0004 handler: restart the actor's animation and play the 0x0004 status animation.
+ * @brief Paralysis flag handler: restart the actor's animation and play the paralysis animation.
  * @param actor Actor of the object.
  * @param is_set Nonzero when the flag became set; zero does nothing.
- * @note JP does not clear the linked object's flag 0x2000.
+ * @note JP does not clear the linked object's FIELD_OBJECT_FLAG_LINK_TARGET.
  */
-void field_handle_object_flag_0004(FieldActor* actor, s32 is_set)
+void field_handle_object_paralysis(FieldActor* actor, s32 is_set)
 {
     if (is_set != 0)
     {
@@ -1511,7 +1512,7 @@ void field_handle_object_flag_0004(FieldActor* actor, s32 is_set)
         actor->animation_active = 1;
         g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
         field_restart_actor_animation(actor);
-        START_OBJECT_EFFECT(actor, FIELD_STATUS_ANIMATION_0004);
+        START_OBJECT_EFFECT(actor, FIELD_STATUS_ANIMATION_PARALYSIS);
 #if !defined(VERSION_JP)
         field_clear_link_target_flag(actor->object_index);
 #endif
@@ -1519,11 +1520,11 @@ void field_handle_object_flag_0004(FieldActor* actor, s32 is_set)
 }
 
 /**
- * @brief Flag 0x0020 handler: restart the actor's animation and play the 0x0020 status animation.
+ * @brief Hypnosis flag handler: restart the actor's animation and play the hypnosis animation.
  * @param actor Actor of the object.
  * @param is_set Nonzero when the flag became set; zero does nothing.
  */
-void field_handle_object_flag_0020(FieldActor* actor, s32 is_set)
+void field_handle_object_hypnosis(FieldActor* actor, s32 is_set)
 {
     if (is_set != 0)
     {
@@ -1533,18 +1534,18 @@ void field_handle_object_flag_0020(FieldActor* actor, s32 is_set)
         actor->animation_active = 1;
         g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
         field_restart_actor_animation(actor);
-        START_OBJECT_EFFECT(actor, FIELD_STATUS_ANIMATION_0020);
+        START_OBJECT_EFFECT(actor, FIELD_STATUS_ANIMATION_HYPNOSIS);
     }
 }
 
 /**
- * @brief Flag 0x0400 handler: set the actor's horizontal model scale to half or full size.
+ * @brief Mini flag handler: shrink the actor's model to half size, or restore it.
  * @param actor Actor whose object part is updated.
- * @param half_scale Nonzero for half-size X/Z scale, zero for full size.
+ * @param is_set Nonzero when Mini became set (half size), zero when it was cleared (full size).
  */
-void field_set_actor_horizontal_scale(FieldActor* actor, s32 half_scale)
+void field_handle_object_mini(FieldActor* actor, s32 is_set)
 {
-    if (half_scale != 0)
+    if (is_set != 0)
     {
         g_field_object_parts[actor->object_index].appearance.fields.scale_xz = FIELD_PART_SCALE_HALF;
         g_field_object_parts[actor->object_index].scale_y = FIELD_PART_SCALE_HALF;
@@ -1557,23 +1558,23 @@ void field_set_actor_horizontal_scale(FieldActor* actor, s32 half_scale)
 }
 
 /**
- * @brief Flag 0x0040 handler: play the 0x0040 status animation and hold the actor in animation 0x1B.
+ * @brief Sleep flag handler: play the sleep animation and hold the actor in FIELD_ANIMATION_SLEEP_POSE.
  * @param actor Actor of the object.
  * @param is_set Nonzero when the flag became set; zero does nothing.
- * @note JP does not clear the linked object's flag 0x2000.
+ * @note JP does not clear the linked object's FIELD_OBJECT_FLAG_LINK_TARGET.
  */
-void field_handle_object_flag_0040(FieldActor* actor, s32 is_set)
+void field_handle_object_sleep(FieldActor* actor, s32 is_set)
 {
     u8 animation;
 
     if (is_set != 0)
     {
-        START_OBJECT_EFFECT(actor, FIELD_STATUS_ANIMATION_0040);
+        START_OBJECT_EFFECT(actor, FIELD_STATUS_ANIMATION_SLEEP);
         animation = actor->animation;
 
-        if ((animation & FIELD_ANIMATION_SEQUENCE_MASK) != FIELD_ANIMATION_FLAG_0040_POSE)
+        if ((animation & FIELD_ANIMATION_SEQUENCE_MASK) != FIELD_ANIMATION_SLEEP_POSE)
         {
-            actor->animation = (animation & FIELD_ANIMATION_MIRROR_FLAG) + FIELD_ANIMATION_FLAG_0040_POSE;
+            actor->animation = (animation & FIELD_ANIMATION_MIRROR_FLAG) + FIELD_ANIMATION_SLEEP_POSE;
             actor->animation_state = 1;
             actor->animation_frame = 0;
             actor->animation_active = 1;
@@ -1588,19 +1589,19 @@ void field_handle_object_flag_0040(FieldActor* actor, s32 is_set)
 }
 
 /**
- * @brief Flag 0x0080 handler: hold the actor in animation 0x14, or release it and play effect resource 0x91.
+ * @brief Petrification flag handler: hold the actor in FIELD_ANIMATION_PETRIFIED_POSE, or release it and play effect resource 0x91.
  * @param actor Actor of the object.
  * @param is_set Nonzero when the flag became set, zero when it was cleared.
- * @note JP does not clear the linked object's flag 0x2000.
+ * @note JP does not clear the linked object's FIELD_OBJECT_FLAG_LINK_TARGET.
  */
-void field_handle_object_flag_0080(FieldActor* actor, s32 is_set)
+void field_handle_object_petrification(FieldActor* actor, s32 is_set)
 {
     if (is_set != 0)
     {
         actor->animation_state = 1;
         actor->animation_active = 1;
         actor->animation_frame = 0;
-        actor->animation = (actor->animation & FIELD_ANIMATION_MIRROR_FLAG) + FIELD_ANIMATION_FLAG_0080_POSE;
+        actor->animation = (actor->animation & FIELD_ANIMATION_MIRROR_FLAG) + FIELD_ANIMATION_PETRIFIED_POSE;
         g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
         field_restart_actor_animation(actor);
         actor->control.word |= FIELD_ACTOR_CONTROL_40000 | FIELD_ANIMATION_HOLD_LAST_FRAME;
@@ -1622,7 +1623,7 @@ void field_handle_object_flag_0080(FieldActor* actor, s32 is_set)
 }
 
 /**
- * @brief Clear flag 0x2000 of the object that @p object_index is linked to, if it is linked.
+ * @brief Clear FIELD_OBJECT_FLAG_LINK_TARGET of the object that @p object_index is linked to, if it is linked.
  * @param object_index Object index.
  */
 static inline void field_clear_link_target_flag(s32 object_index)
@@ -1638,16 +1639,16 @@ static inline void field_clear_link_target_flag(s32 object_index)
 }
 
 /**
- * @brief Flag 0x0100 handler: play the 0x0080 status animation and hide the actor, or play effect resource 13 and show it.
+ * @brief Freeze flag handler: play the petrification animation and hide the actor, or play effect resource 13 and show it.
  * @param actor Actor of the object.
  * @param is_set Nonzero when the flag became set, zero when it was cleared.
- * @note JP does not clear the linked object's flag 0x2000.
+ * @note JP does not clear the linked object's FIELD_OBJECT_FLAG_LINK_TARGET.
  */
-void field_handle_object_flag_0100(FieldActor* actor, s32 is_set)
+void field_handle_object_freeze(FieldActor* actor, s32 is_set)
 {
     if (is_set != 0)
     {
-        START_OBJECT_EFFECT(actor, FIELD_STATUS_ANIMATION_0080);
+        START_OBJECT_EFFECT(actor, FIELD_STATUS_ANIMATION_PETRIFIED);
         actor->presence = FIELD_ACTOR_HIDDEN;
 #if !defined(VERSION_JP)
         field_clear_link_target_flag(actor->object_index);
@@ -1661,7 +1662,7 @@ void field_handle_object_flag_0100(FieldActor* actor, s32 is_set)
 }
 
 /**
- * @brief Knocked-out flag handler: clear flag 0x2000 of the object the actor is linked to.
+ * @brief Knocked-out flag handler: clear FIELD_OBJECT_FLAG_LINK_TARGET of the object the actor is linked to.
  * @param actor Actor of the object.
  * @note JP's handler is empty.
  */
@@ -1909,7 +1910,7 @@ u32* field_get_scene_record_table(void)
 }
 
 /**
- * @brief Report whether the actor with @p key is idle (no script wait and no command).
+ * @brief Report whether the actor with @p key is idle (no blocking actor script and no command).
  * @param key Object key to look up.
  * @return 1 when idle, 0 when busy, -1 when no actor has @p key.
  */
@@ -1925,7 +1926,7 @@ s32 field_is_actor_idle(s32 key)
 
     result = 0;
 
-    if (actor->unk10 == 0)
+    if (actor->script_busy == 0)
     {
         result = actor->command == 0;
     }

@@ -130,26 +130,34 @@ typedef enum FieldAbility
 #define FIELD_CONTROL_PALETTE_SHIFT 19
 #define FIELD_CONTROL_PALETTE_PARTNER 10
 #define FIELD_CONTROL_PALETTE(word) (((word) >> FIELD_CONTROL_PALETTE_SHIFT) & 0xF)
-/** @brief Character id of the current companion, compared against FIELD_COMPANION_COLOR_ID_MIN. TODO: name the containing record. */
-extern u8 D_800FDCEA;
+/** @brief FieldActor::control bits 16-17: colour variant of the companion (the same bits hold a layout actor's group). */
+#define FIELD_CONTROL_VARIANT_SHIFT 16
+#define FIELD_CONTROL_VARIANT_MASK 0x30000
 /** @brief Object-state group_flags bits holding the object's group. */
 #define FIELD_OBJECT_GROUP_MASK 0x0F
-/** @brief Object-state flags bits of unknown meaning (each has a handler in g_field_object_flag_handlers). */
-#define FIELD_OBJECT_FLAG_0004 0x0004
-#define FIELD_OBJECT_FLAG_0020 0x0020
-#define FIELD_OBJECT_FLAG_0040 0x0040
-#define FIELD_OBJECT_FLAG_0080 0x0080
-#define FIELD_OBJECT_FLAG_0100 0x0100
+/**
+ * @brief Object-state flags bits 0-8: status ailments, in the order of the status text and immunity tables.
+ * @note Bit n is status effect n (field_apply_status_effect); g_field_object_flag_handlers starts each one's looping animation.
+ */
+#define FIELD_OBJECT_FLAG_POISON 0x0001
+#define FIELD_OBJECT_FLAG_DARKNESS 0x0002
+#define FIELD_OBJECT_FLAG_PARALYSIS 0x0004
+#define FIELD_OBJECT_FLAG_CONFUSION 0x0008
+#define FIELD_OBJECT_FLAG_FLAME_BURST 0x0010
+#define FIELD_OBJECT_FLAG_HYPNOSIS 0x0020
+#define FIELD_OBJECT_FLAG_SLEEP 0x0040
+#define FIELD_OBJECT_FLAG_PETRIFIED 0x0080
+#define FIELD_OBJECT_FLAG_FROZEN 0x0100
 /** @brief Object-state flags bit set while the object is knocked out. */
 #define FIELD_OBJECT_FLAG_KNOCKED_OUT 0x0200
 /** @brief Object-state flags bit set while another object is linked to this one. */
 #define FIELD_OBJECT_FLAG_LINK_TARGET 0x2000
 /**
- * @brief Object-state flags bit: the object's actions are restricted.
+ * @brief Object-state flags bit: the Mini status (effect 10) - the object is shrunk to half size and its actions are restricted.
  * @note Pad input may then only start actions 2 and 3; scripted actions and techniques
  *       do not start at all. The bit is cleared when the object is hit.
  */
-#define FIELD_OBJECT_ACTIONS_RESTRICTED 0x0400
+#define FIELD_OBJECT_FLAG_MINI 0x0400
 /** @brief Object-state flags bit set while a dash ability (Lunge, Retreat, Defensive Lunge, Slide) plays. */
 #define FIELD_OBJECT_FLAG_DASH 0x4000
 /** @brief Object-state flags bit: an action chain is running (cleared with the retry count). */
@@ -165,14 +173,14 @@ extern u8 D_800FDCEA;
 #define FIELD_CONTACT_ACTION_PENDING 0x40   /**< The object charges or waits for an action; hits land even while its own bound animation runs. */
 #define FIELD_CONTACT_TARGETED 0x80         /**< The object is being targeted. */
 /** @brief Object-state flag bits that make an object an invalid target. */
-#define FIELD_OBJECT_UNTARGETABLE_FLAGS (FIELD_OBJECT_FLAG_0080 | FIELD_OBJECT_FLAG_KNOCKED_OUT | FIELD_OBJECT_FLAG_LINK_TARGET)
+#define FIELD_OBJECT_UNTARGETABLE_FLAGS (FIELD_OBJECT_FLAG_PETRIFIED | FIELD_OBJECT_FLAG_KNOCKED_OUT | FIELD_OBJECT_FLAG_LINK_TARGET)
 /**
  * @brief Object-state flag bits that hold an object in place.
  * @note Such an object takes no knockback, is skipped by overlap tests, stops its looping
  *       effects, and is left out of the camera's party average.
  */
 #define FIELD_OBJECT_IMMOBILE_FLAGS                                                                                                   \
-    (FIELD_OBJECT_FLAG_0004 | FIELD_OBJECT_FLAG_0020 | FIELD_OBJECT_FLAG_0040 | FIELD_OBJECT_FLAG_0100 | FIELD_OBJECT_UNTARGETABLE_FLAGS)
+    (FIELD_OBJECT_FLAG_PARALYSIS | FIELD_OBJECT_FLAG_HYPNOSIS | FIELD_OBJECT_FLAG_SLEEP | FIELD_OBJECT_FLAG_FROZEN | FIELD_OBJECT_UNTARGETABLE_FLAGS)
 
 /** @brief Word, halfword and bit views of an actor's control-mode word. */
 typedef union
@@ -182,7 +190,7 @@ typedef union
     struct
     {
         u32 unk0 : 16;
-        /** @brief Actor group of a layout actor (FieldLayoutRecord group bits). */
+        /** @brief Actor group of a layout actor (FieldLayoutRecord group bits); on the companion the colour variant (FIELD_CONTROL_VARIANT_MASK). */
         u32 group : 2;
         u32 unk18 : 1;
         /** @brief CLUT column of the actor's sprite palette. */
@@ -198,7 +206,8 @@ typedef struct FieldActor
     s32 y;
     s32 z;
     u32 unkC;
-    s16 unk10;
+    /** @brief Non-zero while an actor script blocks scene scripts that wait for this actor (scene opcode 0x16). */
+    s16 script_busy;
     s16 unk12;
     s16 unk14;
     /** @brief Ticks left on the current animation frame; speed_accumulator is spread over them. */

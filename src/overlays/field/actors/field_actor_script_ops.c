@@ -117,8 +117,8 @@ enum
     FIELD_SCRIPT_OP_PLAY_BOUND_ACTION = 0x9F,
     FIELD_SCRIPT_OP_APPROACH_TARGET = FIELD_ACTOR_COMMAND_APPROACH_TARGET,
     FIELD_SCRIPT_OP_LOAD_BOUND_ANIMATION = 0xA1,
-    FIELD_SCRIPT_OP_CLEAR_UNK10 = 0xA2,
-    FIELD_SCRIPT_OP_SET_UNK10 = 0xA3,
+    FIELD_SCRIPT_OP_CLEAR_SCRIPT_BUSY = 0xA2,
+    FIELD_SCRIPT_OP_SET_SCRIPT_BUSY = 0xA3,
     FIELD_SCRIPT_OP_ACTION_END = FIELD_ACTOR_COMMAND_ACTION_END,
     FIELD_SCRIPT_OP_SET_PART_FLAG = 0xA5,
     FIELD_SCRIPT_OP_CLEAR_PART_FLAG = 0xA6,
@@ -352,15 +352,15 @@ static void field_run_actor_script_command(FieldActor* actor)
     {
     case FIELD_SCRIPT_OP_END:
         actor->script_index = FIELD_SCRIPT_NONE;
-        actor->unk10 = 0;
+        actor->script_busy = 0;
         actor->script_offset += 1;
         return;
-    case FIELD_SCRIPT_OP_CLEAR_UNK10:
-        actor->unk10 = 0;
+    case FIELD_SCRIPT_OP_CLEAR_SCRIPT_BUSY:
+        actor->script_busy = 0;
         actor->script_offset++;
         return;
-    case FIELD_SCRIPT_OP_SET_UNK10:
-        actor->unk10 = 1;
+    case FIELD_SCRIPT_OP_SET_SCRIPT_BUSY:
+        actor->script_busy = 1;
         actor->script_offset++;
         return;
     case FIELD_SCRIPT_OP_PLAY_SOUND:
@@ -410,7 +410,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                     spawn_actor->removal_delay = 3;
                     spawn_actor->control.word = spawn_control;
                     spawn_actor->script_index = 0;
-                    spawn_actor->unk10 = one;
+                    spawn_actor->script_busy = one;
                     spawn_actor->command_param = parent_index;
                     spawn_state->group_flags = 0;
                     spawn_state->flags = 0;
@@ -503,7 +503,7 @@ static void field_run_actor_script_command(FieldActor* actor)
         }
         precheck_states = g_field_object_states;
         precheck_state = &precheck_states[actor->object_index];
-        if (precheck_state->flags & FIELD_OBJECT_ACTIONS_RESTRICTED)
+        if (precheck_state->flags & FIELD_OBJECT_FLAG_MINI)
         {
             actor->command = FIELD_ACTOR_COMMAND_NONE;
             return;
@@ -741,22 +741,22 @@ static void field_run_actor_script_command(FieldActor* actor)
             technique_object = actor->object_index;
             actor->script_offset += 3;
             technique_states = g_field_object_states;
-            if (technique_states[technique_object].flags & FIELD_OBJECT_ACTIONS_RESTRICTED)
+            if (technique_states[technique_object].flags & FIELD_OBJECT_FLAG_MINI)
             {
                 actor->script_index = FIELD_SCRIPT_NONE;
-                actor->unk10 = 0;
+                actor->script_busy = 0;
                 return;
             }
             if (g_field_actions_limited != 0)
             {
                 actor->script_index = FIELD_SCRIPT_NONE;
-                actor->unk10 = 0;
+                actor->script_busy = 0;
                 return;
             }
             if (field_start_streamed_animation(technique_object, key_or_index) == 0)
             {
                 actor->script_index = FIELD_SCRIPT_NONE;
-                actor->unk10 = 0;
+                actor->script_busy = 0;
                 return;
             }
             g_field_object_states[actor->object_index].movement.word |= FIELD_MOVEMENT_INVULNERABLE;
@@ -783,13 +783,13 @@ static void field_run_actor_script_command(FieldActor* actor)
             if (g_field_actions_limited != 0)
             {
                 actor->script_index = FIELD_SCRIPT_NONE;
-                actor->unk10 = 0;
+                actor->script_busy = 0;
                 return;
             }
             if (field_start_streamed_animation(actor->object_index, key_or_index) == 0)
             {
                 actor->script_index = FIELD_SCRIPT_NONE;
-                actor->unk10 = 0;
+                actor->script_busy = 0;
                 return;
             }
             load_object = actor->object_index;
@@ -967,7 +967,7 @@ static void field_run_actor_script_command(FieldActor* actor)
             return;
         }
         actor->script_index = FIELD_SCRIPT_NONE;
-        actor->unk10 = 0;
+        actor->script_busy = 0;
         return;
     case FIELD_SCRIPT_OP_ACTION_END:
         if (actor->object_index < (u32)FIELD_PLAYER_COUNT)
@@ -1177,7 +1177,7 @@ s32 field_retire_actor(s32 key, s32 resource_index)
 
     actor->command = FIELD_ACTOR_COMMAND_RETIRE;
     actor->removal_delay = 2;
-    actor->unk10 = 1;
+    actor->script_busy = 1;
     actor->script_index = 0;
     actor->control.word = (actor->control.word & ~FIELD_CONTROL_MODE_MASK) | FIELD_CONTROL_SCRIPTED;
     return 0;
@@ -1237,7 +1237,7 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound)
     }
     actor->presence = FIELD_ACTOR_VISIBLE;
     actor->command = FIELD_ACTOR_COMMAND_NONE;
-    actor->unk10 = 0;
+    actor->script_busy = 0;
     actor->animation_state = 1;
     if (animation == -1)
     {
