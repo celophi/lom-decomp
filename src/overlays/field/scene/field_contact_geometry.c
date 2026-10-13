@@ -302,7 +302,7 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
             }
             else
             {
-                binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
+                binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
             }
             binding = (FieldActorBinding*)((u8*)bindings + binding_offset);
             if (binding->owner == target->object_index)
@@ -313,7 +313,7 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
                 }
                 else
                 {
-                    owner_binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
+                    owner_binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
                 }
                 if (((FieldActorBinding*)((u8*)bindings + owner_binding_offset))->state != 0)
                 {
@@ -1032,7 +1032,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
                             }
                             else
                             {
-                                binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
+                                binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
                             }
                             binding = (FieldActorBinding*)(base_or_index + binding_offset);
                             base_or_index = target->object_index;
@@ -1046,7 +1046,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
                                 }
                                 else
                                 {
-                                    owner_binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
+                                    owner_binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
                                 }
 
                                 if (((FieldActorBinding*)(bindings + owner_binding_offset))->state != 0)
@@ -1344,7 +1344,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
                 }
                 else
                 {
-                    binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
+                    binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
                 }
 
                 binding = (FieldActorBinding*)((u8*)bindings + binding_offset);
@@ -1358,7 +1358,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
                     }
                     else
                     {
-                        owner_binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
+                        owner_binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
                     }
                     if (((FieldActorBinding*)((u8*)bindings + owner_binding_offset))->state != 0)
                     {
@@ -1716,7 +1716,7 @@ void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* pa
                 }
                 else
                 {
-                    binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
+                    binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
                 }
                 object_index = target->object_index;
                 binding_owner = ((FieldActorBinding*)((u8*)bindings + binding_offset))->owner;
@@ -1728,7 +1728,7 @@ void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* pa
                     }
                     else
                     {
-                        binding_offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
+                        binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
                     }
                     if (((FieldActorBinding*)((u8*)bindings + binding_offset))->state != 0)
                     {

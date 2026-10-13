@@ -2,6 +2,7 @@
 #define FIELD_ACTOR_H
 
 #include "common.h"
+#include "field_actor_binding.h"
 
 /**
  * @file field_actor.h
@@ -141,8 +142,6 @@ typedef enum FieldAbility
 #define FIELD_CONTACT_NO_HIT_TEST 0x20      /**< The object takes no hits and is never an action target. */
 #define FIELD_CONTACT_ACTION_PENDING 0x40   /**< The object charges or waits for an action; hits land even while its own bound animation runs. */
 #define FIELD_CONTACT_TARGETED 0x80         /**< The object is being targeted. */
-/** @brief Object-state hud flags bit: the HUD shows the object's special attack gauge. */
-#define FIELD_HUD_SPECIAL_GAUGE 0x01
 /** @brief Object-state flag bits that make an object an invalid target. */
 #define FIELD_OBJECT_UNTARGETABLE_FLAGS 0x2280
 
@@ -227,6 +226,28 @@ typedef struct FieldActor
     u32 unk4C;
     u8 unk50[4];
 } FieldActor;
+
+/**
+ * @brief Binding used by @p actor (objects 2 and up share the last binding).
+ * @param actor Actor whose object index selects the binding.
+ * @return The object's animation actor binding.
+ */
+static inline FieldActorBinding* field_actor_binding(FieldActor* actor)
+{
+    FieldActorBinding* bindings;
+    s32 offset;
+
+    bindings = g_field_actor_bindings;
+    if (actor->object_index < FIELD_SHARED_BINDING)
+    {
+        offset = actor->object_index * sizeof(FieldActorBinding);
+    }
+    else
+    {
+        offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
+    }
+    return (FieldActorBinding*)((u8*)bindings + offset);
+}
 
 /** @brief Presence value of an unused actor record. */
 #define FIELD_ACTOR_UNUSED 0xFF

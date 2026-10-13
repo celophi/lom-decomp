@@ -961,56 +961,27 @@ void field_follow_leader(FieldActor* actor)
  */
 void field_update_actor_jump(FieldActor* actor, s32 x, s32 y, s32 z)
 {
-    s32 offset;
     s32 owner;
     s32 object_index;
-    u8* owner_bindings;
-    u8* actor_bindings;
-    u8* track_bindings;
-    FieldActorSlot* anim_slots;
     FieldActorSlot* anim_slot;
     s32* scratch;
+    FieldActorSlot* anim_slots;
+    FieldActorBinding* binding;
 
     scratch = (s32*)FIELD_SEQUENCE_DISPLACEMENT_SCRATCH;
     if (actor->animation_state == 0)
     {
-        owner_bindings = (u8*)g_field_actor_bindings;
-        if (actor->object_index < 2U)
-        {
-            offset = actor->object_index * sizeof(FieldActorBinding);
-        }
-        else
-        {
-            offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
-        }
+        binding = field_actor_binding(actor);
         object_index = actor->object_index;
-        owner = ((FieldActorBinding*)(owner_bindings + offset))->owner;
+        owner = binding->owner;
         if (owner == object_index)
         {
             anim_slots = g_field_actor_slots;
-            actor_bindings = (u8*)g_field_actor_bindings;
-            if ((u8)owner < 2U)
-            {
-                offset = owner * sizeof(FieldActorBinding);
-            }
-            else
-            {
-                offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
-            }
-            anim_slot = anim_slots + ((FieldActorBinding*)(actor_bindings + offset))->slot;
+            anim_slot = anim_slots + field_object_binding(owner)->slot;
             if (anim_slot->active != 0)
             {
                 anim_slots = g_field_actor_slots;
-                track_bindings = (u8*)g_field_actor_bindings;
-                if (actor->object_index < 2U)
-                {
-                    offset = actor->object_index * sizeof(FieldActorBinding);
-                }
-                else
-                {
-                    offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
-                }
-                anim_slot = anim_slots + ((FieldActorBinding*)(track_bindings + offset))->slot;
+                anim_slot = anim_slots + field_actor_binding(actor)->slot;
                 if (anim_slot->track_mask == 0)
                 {
                     actor->command = 0;
@@ -1200,23 +1171,10 @@ s32 field_start_defeat_wait_animation(FieldActor* actor)
 s32 field_update_defeat_end(FieldActor* actor)
 {
     FieldActorSlot* anim_slots;
-    u8* bindings;
-    s32 offset;
-    s32 actor_index;
     FieldActorSlot* anim_slot;
 
     anim_slots = g_field_actor_slots;
-    bindings = (u8*)g_field_actor_bindings;
-    if (actor->object_index < 2)
-    {
-        offset = actor->object_index * sizeof(FieldActorBinding);
-    }
-    else
-    {
-        offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
-    }
-    actor_index = ((FieldActorBinding*)(bindings + offset))->slot;
-    anim_slot = anim_slots + actor_index;
+    anim_slot = anim_slots + field_actor_binding(actor)->slot;
     if (anim_slot->active == 0)
     {
         actor->command = 0;
@@ -1445,7 +1403,7 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
     u8* initial_program;
     u8* initial_program_base;
     FieldActorBinding* bindings;
-    FieldActorBinding* binding_test;
+    FieldActorBinding* binding;
     FieldActorSlot* anim_slots;
     s32 parameters[FIELD_SEQUENCE_TARGET_LIMIT];
     FieldActorSlot* copy_source;
@@ -1464,8 +1422,6 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
     s32 movement_mask;
     s32 cursor;
     s32 result;
-    s32 initial_binding_offset;
-    s32 restore_binding_offset;
     s32 release_binding_offset;
     s32 updated_flags;
     u8* opcode_ptr;
@@ -1523,36 +1479,18 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
     }
     if (cursor == 1)
     {
-        binding_test = g_field_actor_bindings;
-        if (initial_owner < 2U)
-        {
-            initial_binding_offset = (initial_owner) * sizeof(*bindings);
-        }
-        else
-        {
-            initial_binding_offset = (FIELD_SHARED_BINDING) * sizeof(*bindings);
-        }
+        binding = field_object_binding(initial_owner);
         result = 0;
-        if (((FieldActorBinding*)((u8*)binding_test + initial_binding_offset))->state != FIELD_SEQUENCE_RESTORE_TEMPLATE)
+        if (binding->state != FIELD_SEQUENCE_RESTORE_TEMPLATE)
         {
             return 0;
         }
         {
             FieldActorSlot* restore_actors;
-            FieldActorBinding* restore_bindings;
             restore_actors = g_field_actor_slots;
             restore_actors[g_field_actor_bindings[actor->object_index].slot].sequence_active = 0;
             restore_actors[g_field_actor_bindings[actor->object_index].slot].target_count = 0;
-            restore_bindings = g_field_actor_bindings;
-            if (actor->object_index < 2U)
-            {
-                restore_binding_offset = (actor->object_index) * sizeof(*restore_bindings);
-            }
-            else
-            {
-                restore_binding_offset = (FIELD_SHARED_BINDING) * sizeof(*restore_bindings);
-            }
-            copy_source = &g_field_actor_slots[((FieldActorBinding*)((u8*)restore_bindings + restore_binding_offset))->slot];
+            copy_source = &g_field_actor_slots[field_actor_binding(actor)->slot];
             if (actor->object_index < 2U)
             {
                 template_actor = &g_field_actor_templates[actor->object_index].actor;

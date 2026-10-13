@@ -271,7 +271,6 @@ static void field_run_actor_script_command(FieldActor* actor)
     FieldActor* spawn_actors;
     FieldObjectState* action_states;
     FieldObjectState* technique_states;
-    u8* technique_bindings;
     FieldObjectState* load_states;
     FieldObjectState* load_state;
     FieldActorSlot* load_slots;
@@ -303,8 +302,6 @@ static void field_run_actor_script_command(FieldActor* actor)
     s32 contact_or_z; /* contact word in 0xB9, actor z in 0xB0/0xB1 */
     s32 index_or_count; /* spawn slot (0xB9), track count (0x9F), path length (0xB0/0xB1) */
     s32 one;
-    s32 animation_binding_offset;
-    s32 technique_binding_offset;
     s32 load_check_offset;
     s32 load_binding_offset;
     u16 request;
@@ -327,7 +324,6 @@ static void field_run_actor_script_command(FieldActor* actor)
     void* bound_binding;
     u8* script;
     FieldActorSlot* animation_slots;
-    u8* animation_bindings;
     u8* bound_bindings;
     s32 spawn_animation;
     s32 parent_index;
@@ -555,16 +551,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                 return;
             }
             animation_slots = g_field_actor_slots;
-            animation_bindings = (u8*)g_field_actor_bindings;
-            if (actor->object_index < (u32)FIELD_PLAYER_COUNT)
-            {
-                animation_binding_offset = actor->object_index * sizeof(FieldActorBinding);
-            }
-            else
-            {
-                animation_binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
-            }
-            animation_slots[((FieldActorBinding*)&animation_bindings[animation_binding_offset])->slot].hit_reaction = g_field_object_states[actor->object_index].action;
+            animation_slots[field_actor_binding(actor)->slot].hit_reaction = g_field_object_states[actor->object_index].action;
         }
         else
         {
@@ -577,16 +564,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                     return;
                 }
                 animation_slots = g_field_actor_slots;
-                animation_bindings = (u8*)g_field_actor_bindings;
-                if (actor->object_index < (u32)FIELD_PLAYER_COUNT)
-                {
-                    animation_binding_offset = actor->object_index * sizeof(FieldActorBinding);
-                }
-                else
-                {
-                    animation_binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
-                }
-                animation_slot_offset = ((FieldActorBinding*)&animation_bindings[animation_binding_offset])->slot * sizeof(FieldActorSlot);
+                animation_slot_offset = field_actor_binding(actor)->slot * sizeof(FieldActorSlot);
                 ((FieldActorSlot*)((u8*)animation_slots + animation_slot_offset))->hit_reaction = g_field_object_states[actor->object_index].action;
             }
         }
@@ -766,16 +744,7 @@ static void field_run_actor_script_command(FieldActor* actor)
         field_restart_actor_animation(actor);
         return;
     case FIELD_SCRIPT_OP_LOAD_TECHNIQUE:
-        technique_bindings = (u8*)g_field_actor_bindings;
-        if (actor->object_index < (u32)FIELD_PLAYER_COUNT)
-        {
-            technique_binding_offset = actor->object_index * sizeof(FieldActorBinding);
-        }
-        else
-        {
-            technique_binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
-        }
-        if (((FieldActorBinding*)(technique_bindings + technique_binding_offset))->state == FIELD_BINDING_IDLE)
+        if (field_actor_binding(actor)->state == FIELD_BINDING_IDLE)
         {
             key_or_index = script[1] + (script[2] << 8);
             technique_object = actor->object_index;

@@ -144,26 +144,4 @@ static inline FieldActor* field_find_actor(s32 key)
     return FIELD_ACTOR_NONE;
 }
 
-/**
- * @brief Binding used by @p actor (objects 2 and up share the last binding).
- * @param actor Actor whose object index selects the binding.
- * @return The object's animation actor binding.
- */
-static inline FieldActorBinding* field_actor_binding(FieldActor* actor)
-{
-    FieldActorBinding* bindings;
-    s32 offset;
-
-    bindings = g_field_actor_bindings;
-    if (actor->object_index < FIELD_SHARED_BINDING)
-    {
-        offset = actor->object_index * sizeof(FieldActorBinding);
-    }
-    else
-    {
-        offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
-    }
-    return (FieldActorBinding*)((u8*)bindings + offset);
-}
-
 #endif

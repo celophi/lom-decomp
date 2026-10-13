@@ -1184,7 +1184,7 @@ void field_prepare_actor_action(FieldActor* actor)
     }
     if (action->flags.instrument)
     {
-        g_field_object_states[actor->object_index].hud.word = g_field_object_states[actor->object_index].hud.word & ~FIELD_HUD_SPECIAL_GAUGE;
+        g_field_object_states[actor->object_index].hud.word = g_field_object_states[actor->object_index].hud.word & ~FIELD_HUD_SHOW_TECHNIQUE_GAUGE;
         g_field_object_states[actor->object_index].contact.word = g_field_object_states[actor->object_index].contact.word | FIELD_CONTACT_ACTION_PENDING;
         actor->animation_state = 1;
         actor->animation_active = 1;
@@ -2066,7 +2066,7 @@ static s32 field_filter_action_targets(s32 count, s32* indices, s32 unused_slot)
                 }
                 else
                 {
-                    offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
+                    offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
                 }
                 binding = (FieldActorBinding*)(bindings + offset);
                 object_index = actor->object_index;
@@ -2079,7 +2079,7 @@ static s32 field_filter_action_targets(s32 count, s32* indices, s32 unused_slot)
                     }
                     else
                     {
-                        offset = FIELD_PLAYER_COUNT * sizeof(FieldActorBinding);
+                        offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
                     }
                     owner_binding = (FieldActorBinding*)(bindings + offset);
                     if (owner_binding->state != FIELD_BINDING_IDLE)

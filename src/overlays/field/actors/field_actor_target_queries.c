@@ -29,17 +29,7 @@
 /** @brief Predicate for a source actor, candidate actor and caller argument. */
 typedef s32 (*FieldTargetFilter)(FieldActor* source, FieldActor* candidate, s32 argument);
 
-/** @brief Binding state and its owning actor in a 0x1C-byte record. */
-typedef struct
-{
-    s32 state;
-    u8 pad4[8];
-    s32 owner;
-    u8 pad10[12];
-} FieldTargetBinding;
-
 extern FieldTargetFilter g_field_target_filters[];
-extern FieldTargetBinding g_field_actor_bindings[];
 extern s32 g_field_duel_mode;
 
 /**
