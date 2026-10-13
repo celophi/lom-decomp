@@ -1224,7 +1224,6 @@ extern FieldQuadAnimationTable g_field_small_icon_frames, g_field_marker_x_offse
 extern s32 g_field_results_wait_frames;
 extern s32 g_field_text_session_active;
 extern s32 g_field_dialog_item_count;
-extern s32 g_field_dialog_screen_mode;
 extern s32 g_field_money_snapshot;
 extern s32 g_pad_input;
 extern s32 g_field_return_to_title_prompt_state;

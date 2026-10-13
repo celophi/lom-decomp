@@ -25,8 +25,6 @@
 #include "overlays/field/field_actor_records.h"
 #include "main/field_entry.h"
 
-/** @brief World coordinates are 24.8 fixed point. */
-#define FIELD_POSITION_SHIFT 8
 /** @brief Scene resource selector bit kept in g_field_scene_mode_bit (the scene runs field_battle_setup). */
 #define FIELD_SCENE_MODE_FLAG 0x8000
 /** @brief Scene resource selector bits holding the scene id. */
@@ -248,12 +246,10 @@ extern s32 g_field_pending_scene_id;
 extern s32 g_field_pending_object_id;
 extern s32 g_field_pending_sound_bank_id;
 extern s32 g_field_scene_data_size;
-extern u16* g_field_event_scripts;
 extern u16* g_field_actor_scripts;
 extern u32* g_field_scene_record_table;
 extern s32 g_field_hide_actor_panels;
 /* TODO: Script command 0x44 selects alternate party control and triple HP. */
-extern s32 g_field_duel_mode;
 extern s32 g_field_scene_contact_latched;
 extern u8 g_field_scene_data_buffer[];
 extern s32 g_field_song_volume;

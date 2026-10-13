@@ -113,7 +113,6 @@ typedef struct
 } FieldContactScanWorkspace;
 
 extern FieldMoveObject g_field_object_parts[];
-extern s32 g_field_duel_mode;
 /** @brief Last field_find_actor_overlap result: zero, or the object index plus FIELD_CONTACT_RESULT_PRESENT. */
 extern s32 g_field_last_actor_contact;
 

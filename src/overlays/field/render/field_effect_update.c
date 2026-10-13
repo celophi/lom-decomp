@@ -123,13 +123,6 @@ extern FieldObjectPart g_field_object_parts[];
 extern FieldMotionRecord g_field_actors[];
 extern FieldMotionRecord g_field_effect_records[FIELD_EFFECT_ACTIVE_RECORD_COUNT];
 extern VECTOR D_80105778;
-/**
- * @brief Packed action context: action in low bits, source at bit 8, recipient at bit 16.
- * @note Also written on pool exhaustion and advanced during collision attempts;
- * the broader protocol of those writes is still unresolved.
- */
-extern s32 g_field_action_context;
-
 extern s32 D_80105760;
 extern s32 D_80105770;
 extern u8 *g_field_builtin_track_data;

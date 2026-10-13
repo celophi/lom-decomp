@@ -41,9 +41,6 @@
 /** @brief Bytes per pattern string, including the terminator and padding. */
 #define FIELD_COMMAND_PATTERN_SIZE 8
 
-/** @brief Returned by field_command_history_match() when no command was found. */
-#define FIELD_COMMAND_NONE 0xFF
-
 /** @brief Shift from a pad direction bit to its history nibble. */
 #define FIELD_PAD_DIRECTION_SHIFT 12
 
@@ -265,7 +262,7 @@ static void field_command_history_consume(s32 player, s32 count)
  * @param unused Not read (callers pass the facing direction).
  * @param peek Nonzero to look at the history without consuming the command.
  * @return Command for a button code, g_field_command_pattern_ids entry for a direction
- *         pattern ended by the finish button, or FIELD_COMMAND_NONE.
+ *         pattern ended by the finish button, or FIELD_HISTORY_COMMAND_NONE.
  * @note Entries scanned past without a match stay in the history.
  */
 s32 field_command_history_match(s32 player, s32 unused, s32 peek)
@@ -281,7 +278,7 @@ s32 field_command_history_match(s32 player, s32 unused, s32 peek)
     s32 dst;
     u8 *history;
 
-    command = FIELD_COMMAND_NONE;
+    command = FIELD_HISTORY_COMMAND_NONE;
     scan_index = 0;
     if ((player < FIELD_PLAYER_COUNT) && (g_field_command_history_count[player] != 0))
     {

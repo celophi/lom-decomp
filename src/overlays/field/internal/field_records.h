@@ -25,7 +25,7 @@ extern SavedGameLayout* g_field_game_state;
 
 #define FIELD_ACTOR_RECORD_COUNT 16
 #define FIELD_EVENT_RECORD_COUNT 2
-/** @brief Actor ids from this one up name the event records (FieldRuntimeContext::events). */
+/** @brief Actor ids from this one up name the event records (FieldRuntimeContext::events): event record n is this plus n; record 0 runs the field's own event scripts. */
 #define FIELD_EVENT_ACTOR_ID_BASE 0x80
 #define FIELD_ACTOR_SCRIPT_COUNT 16
 #define FIELD_SCRIPT_FRAME_COUNT 8
@@ -34,6 +34,9 @@ extern SavedGameLayout* g_field_game_state;
 
 /** @brief Value written to an actor's pending-event byte when no event is queued. */
 #define FIELD_NO_EVENT 0xFF
+
+/** @brief FieldActorRecord::enabled_events with every event enabled. */
+#define FIELD_ALL_EVENTS 0xFFFF
 
 /** @brief Script id stored in an actor's event table for an unused event. */
 #define FIELD_NO_SCRIPT 0xFFFF
@@ -389,11 +392,14 @@ typedef struct FieldTriggerTable
 #define FIELD_EVENT_ON_SCREEN 2
 #define FIELD_EVENT_OFF_SCREEN 3
 #define FIELD_EVENT_IDLE 8
-#define FIELD_EVENT_INTERACTION 0xD
+/** @brief Run on the attacker and the target when an action resolves. */
+#define FIELD_EVENT_ACTION 12
+/** @brief Interaction (FIELD_INTERACTION_*) and battle phase (FIELD_BATTLE_PHASE_*) notices; the argument says which. */
+#define FIELD_EVENT_NOTIFY 13
 #define FIELD_EVENT_FRAME 0xE
 #define FIELD_EVENT_START 15
 
-/** @brief Arguments of FIELD_EVENT_INTERACTION. */
+/** @brief FIELD_EVENT_NOTIFY arguments for interactions. */
 #define FIELD_INTERACTION_SCRIPT_TARGET 0x80
 #define FIELD_INTERACTION_SCRIPT_OTHER 0x81
 #define FIELD_INTERACTION_END 0x82
@@ -504,6 +510,13 @@ typedef struct FieldRuntimeContext
 
 /** @brief The context itself, which g_field_runtime points at. */
 extern FieldRuntimeContext D_80122C00;
+/** @brief Runtime context of the running field scene. */
+extern FieldRuntimeContext* g_field_runtime;
+
+/** @brief FIELD_EVENT_NOTIFY arguments for the battle phases. */
+#define FIELD_BATTLE_PHASE_START 0
+#define FIELD_BATTLE_PHASE_END 1
+#define FIELD_BATTLE_PHASE_SUSPEND 3
 
 /* ------------------------------------------------------------------------ */
 /* Field battle context (g_field_battle)                                        */
@@ -674,10 +687,17 @@ typedef struct FieldBattleContext
     u8 pad4A3;
 } FieldBattleContext;
 
+/** @brief Running battle, or NULL outside a battle. */
+extern FieldBattleContext* g_field_battle;
+
+/** @brief FieldBattleContext::state flag: the battle is over or suspended. */
+#define FIELD_BATTLE_FINISHED 0x80000000
+
 /** @brief FIELD diagnostic codes passed to record_game_diagnostic. */
 #define DIAG_SCRIPT_FRAME_OVERFLOW 2 /**< A script pushed past its last frame. */
 #define DIAG_BAD_MONSTER_OBJECT 0x64 /**< A monster group member has no object state. */
 #define DIAG_BAD_COMMAND 0x66        /**< Unknown command in a character's command slot. */
+#define DIAG_NO_MONSTER_TEMPLATE 0x67 /**< No monster template has the requested id. */
 #define DIAG_BAD_MONSTER_ACTION 0x69 /**< Monster action id past the end of its template's list. */
 #define DIAG_BAD_GUEST 0x6D          /**< No guest template for the requested guest. */
 #define DIAG_BAD_COMPANION 0x6E      /**< The requested stored companion does not exist. */

@@ -500,7 +500,7 @@ s32 field_update_pending_action(FieldActor* actor)
         actor->variant = actor->variant + 1;
         return 0;
     }
-    selection = field_command_history_match(actor->object_index, (actor->animation >> 7) ^ 1, 1);
+    selection = field_command_history_match(actor->object_index, (actor->animation >> FIELD_ANIMATION_FACING_SHIFT) ^ 1, 1);
     states = g_field_object_states;
     state = &states[actor->object_index];
     if ((state->action == 2 || actor->variant != 0) && actor->y == 0)

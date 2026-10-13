@@ -9,6 +9,7 @@
 #include "common.h"
 #include "../internal/field_actor_key_ops.h"
 #include "../internal/field_calls.h"
+#include "../internal/field_actor.h"
 #include "../internal/field_script.h"
 #include "overlays/field/field_interaction_start.h"
 #include "../internal/field_records.h"
@@ -47,9 +48,6 @@
 #define FIELD_LOCAL_BASE_PARTY_1 0x31
 #define FIELD_LOCAL_BASE_PARTY_2 0x38
 #define FIELD_LOCAL_BASE_FIRST_FREE 0x40
-
-/** @brief Owner id of event record 0; event record n is this plus n. */
-#define FIELD_EVENT_OWNER 0x80
 
 /** @brief Selector of a party actor: its party slot plus this value. */
 #define FIELD_PARTY_SELECTOR_BASE 0x80
@@ -95,11 +93,6 @@
 
 /** @brief Runtime state flag: a talk window is open. */
 #define FIELD_STATE_TALKING 0x80000
-
-/** @brief Actor control modes of field_set_actor_control_mode. */
-#define FIELD_CONTROL_PLAYER 0
-#define FIELD_CONTROL_FOLLOWER 1
-#define FIELD_CONTROL_SCRIPTED 2
 
 /** @brief Script id bit that runs the script as the field script instead of a talk message. */
 #define FIELD_INTERACTION_SCRIPT 0x8000
@@ -167,23 +160,19 @@ typedef struct
     u16 z;
 } FieldMapPoint;
 
-extern FieldRuntimeContext* g_field_runtime;
 extern SceneState* g_field_scene_state;
 extern u8 g_field_weekday_names[];
 extern u8 g_field_element_level_by_land_level[];
 extern u8 g_field_talk_plane_masks[];
-extern s32 g_field_interaction_active;
 extern FieldMapPoint g_field_player_map_position;
 
 /* Functions of other FIELD files without a shared prototype. */
 s32 field_read_script_var(s32 owner_id, s32 variable);
 u8* field_get_event_script(s32 script_id);
 s32 field_get_actor_position(s32 key, Vec3i* position);
-void field_set_actor_control_mode(s32 party_index, s32 mode);
 s32 field_get_actor_facing(s32 actor_id);
 FieldActorRecord* field_find_actor_record();
 FieldActorRecord* field_find_actor_record_or_default(u32 actor_id, FieldRuntimeContext* context);
-void field_stop_actor_script(s32 actor_id, s32 flags);
 void field_script_run(FieldScriptState* state);
 s32 akao_fade_song_volume(s32 arg0, s32 arg1, s32 arg2);
 
@@ -330,7 +319,7 @@ static void field_init_event_records(void)
 
     for (i = 0; i < FIELD_EVENT_RECORD_COUNT; i++)
     {
-        g_field_runtime->events[i].id = i - FIELD_EVENT_OWNER;
+        g_field_runtime->events[i].id = i - FIELD_EVENT_ACTOR_ID_BASE;
         g_field_runtime->events[i].selector = FIELD_NO_SELECTOR;
         /* The original clears the pending event of actor record i, not of the event record. */
         g_field_runtime->actors[i].event = FIELD_NO_EVENT;
@@ -495,7 +484,7 @@ void field_install_actor_action(FieldLayoutRecord* layout_record, s32 record_ind
             g_field_runtime->state.flags |= FIELD_STATE_PARTY_MODE_MASK;
             action_index = 0;
             entry = event;
-            field_start_interaction(FIELD_EVENT_OWNER, layout_record->scripts[FIELD_EVENT_START]);
+            field_start_interaction(FIELD_EVENT_ACTOR_ID_BASE, layout_record->scripts[FIELD_EVENT_START]);
             layout_record->scripts[FIELD_EVENT_START] = FIELD_NO_SCRIPT;
             field_begin_party_script_control(FIELD_PARTY_MODE_EVENT);
             break;
@@ -839,18 +828,18 @@ static void field_update_main_script(void)
     {
         for (i = 0; i < g_field_runtime->state.actor_count; i++)
         {
-            field_queue_actor_event(g_field_runtime->actors[i].id, FIELD_EVENT_INTERACTION, FIELD_INTERACTION_END);
+            field_queue_actor_event(g_field_runtime->actors[i].id, FIELD_EVENT_NOTIFY, FIELD_INTERACTION_END);
         }
         if (!g_field_runtime->transition.bits.requested && (field_get_script_var(0, FIELD_VAR_KEEP_PARTY_SCRIPTED) == 0))
         {
             field_end_party_script_control();
         }
     }
-    else if ((g_field_runtime->state.flags & FIELD_STATE_TALKING) && (field_text_get_status(0) == -1))
+    else if ((g_field_runtime->state.flags & FIELD_STATE_TALKING) && (field_text_get_status(0) == FIELD_TEXT_STATUS_CLOSED))
     {
         for (i = 0; i < g_field_runtime->state.actor_count; i++)
         {
-            field_queue_actor_event(g_field_runtime->actors[i].id, FIELD_EVENT_INTERACTION, FIELD_INTERACTION_TALK_END);
+            field_queue_actor_event(g_field_runtime->actors[i].id, FIELD_EVENT_NOTIFY, FIELD_INTERACTION_TALK_END);
         }
         g_field_runtime->state.flags &= ~FIELD_STATE_TALKING;
     }
@@ -867,9 +856,9 @@ static void field_update_event_records(void)
         {
             field_script_run(&g_field_runtime->events[i].script);
         }
-        field_run_actor_event(i + FIELD_EVENT_OWNER, g_field_runtime->events[i].event, g_field_runtime->events[i].event_argument);
+        field_run_actor_event(i + FIELD_EVENT_ACTOR_ID_BASE, g_field_runtime->events[i].event, g_field_runtime->events[i].event_argument);
         g_field_runtime->events[i].event = FIELD_NO_EVENT;
-        field_run_actor_event(FIELD_EVENT_OWNER, FIELD_EVENT_FRAME, 0);
+        field_run_actor_event(FIELD_EVENT_ACTOR_ID_BASE, FIELD_EVENT_FRAME, 0);
         g_field_runtime->events[i].event = FIELD_NO_EVENT;
     }
 }
@@ -988,11 +977,11 @@ s32 field_start_interaction(s32 actor_id, s32 script)
                 other_id = g_field_runtime->actors[i].id;
                 if (other_id == actor_id)
                 {
-                    field_queue_actor_event(actor_id, FIELD_EVENT_INTERACTION, FIELD_INTERACTION_SCRIPT_TARGET);
+                    field_queue_actor_event(actor_id, FIELD_EVENT_NOTIFY, FIELD_INTERACTION_SCRIPT_TARGET);
                 }
                 else
                 {
-                    field_queue_actor_event(other_id, FIELD_EVENT_INTERACTION, FIELD_INTERACTION_SCRIPT_OTHER);
+                    field_queue_actor_event(other_id, FIELD_EVENT_NOTIFY, FIELD_INTERACTION_SCRIPT_OTHER);
                 }
             }
         }
@@ -1017,11 +1006,11 @@ s32 field_start_interaction(s32 actor_id, s32 script)
             other_id = g_field_runtime->actors[i].id;
             if (other_id == actor_id)
             {
-                field_queue_actor_event(actor_id, FIELD_EVENT_INTERACTION, FIELD_INTERACTION_TALK_TARGET);
+                field_queue_actor_event(actor_id, FIELD_EVENT_NOTIFY, FIELD_INTERACTION_TALK_TARGET);
             }
             else
             {
-                field_queue_actor_event(other_id, FIELD_EVENT_INTERACTION, FIELD_INTERACTION_TALK_OTHER);
+                field_queue_actor_event(other_id, FIELD_EVENT_NOTIFY, FIELD_INTERACTION_TALK_OTHER);
             }
         }
     }

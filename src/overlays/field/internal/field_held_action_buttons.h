@@ -42,8 +42,10 @@ extern inline s32 field_get_held_action_buttons(s32 player, s32 action, FieldAct
     no_buttons:
         return 0;
     }
+
     mask = 0;
     code = g_field_action_binding_codes[action];
+
     for (i = 0; i < FIELD_BUTTON_BINDING_COUNT; i++)
     {
         if (code == g_saved_game_ctx->characters[player].button_actions[i])
@@ -51,12 +53,15 @@ extern inline s32 field_get_held_action_buttons(s32 player, s32 action, FieldAct
             mask |= g_field_binding_buttons[i];
         }
     }
+
     sample = &ports[player].published_sample;
+
     if (sample->device_type >= CONTROLLER_DEVICE_CONFIGURING)
     {
         goto no_buttons;
     }
-    return ((u32)sample->held_buttons >> 8) & mask;
+
+    return (sample->held_buttons >> 8) & mask;
 }
 #endif
 

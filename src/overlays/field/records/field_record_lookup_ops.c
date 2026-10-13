@@ -46,9 +46,6 @@ void field_append_dialog_item(u8* text, u8 quantity);
 FieldActorRecord* field_find_actor_record_or_default(s32 id);
 FieldActorRecord* field_find_actor_record(s32 id);
 
-extern FieldRuntimeContext* g_field_runtime;
-extern FieldBattleContext* g_field_battle;
-
 /**
  * @brief Hand an actor's pickup to the party: an item from the reward table or a counter.
  * @param recipient Unused (the reward recipient the caller passes through).
@@ -255,7 +252,7 @@ FieldActorRecord* field_alloc_actor_record(s32 id)
         {
             g_field_runtime->actors[i].id = id;
             g_field_runtime->actors[i].event = FIELD_NO_EVENT;
-            g_field_runtime->actors[i].enabled_events = 0xFFFF;
+            g_field_runtime->actors[i].enabled_events = FIELD_ALL_EVENTS;
             g_field_runtime->actors[i].flags.bits.trigger_group = 0;
             g_field_runtime->actors[i].flags.bits.spawned = 0;
             g_field_runtime->actors[i].flags.bits.script_only = 0;

@@ -16,7 +16,6 @@
 void field_restart_pending_bindings(void);
 void field_update_timed_panel(FieldRenderHalf* render);
 void field_update_actor_texts(FieldRenderHalf* render);
-extern s32 g_field_action_context;
 /** @brief Nonzero while a picture screen is shown (set by func_800A5670). */
 extern s32 g_field_timed_panel_active;
 extern s32 g_field_gover_load_countdown;
@@ -42,7 +41,7 @@ void field_build_frame_commands(FieldRenderHalf* render_half, s32 alternate)
 {
     g_field_render_half = render_half;
     g_field_pickup_sound_played = 0;
-    g_field_action_context &= 0xFF;
+    g_field_action_context &= FIELD_ACTION_CONTEXT_ACTION_MASK;
     field_update_input_repeat();
     field_process_input(render_half);
     field_update_and_render_fade(render_half);

@@ -49,13 +49,10 @@ typedef struct
 FieldActorRecord* field_alloc_actor_record(s32 id);
 FieldActorRecord* field_find_actor_record(s32 id);
 FieldActorRecord* field_find_actor_record_or_default(s32 id);
-void field_stop_actor_script(s32 actor_id, s32 flags);
 void field_sort_keyed_list(FieldItemCandidateList* list);
 s32 field_distance_xz(Vec3i* first, Vec3i* second);
 s32 field_get_actor_position(s32 key, Vec3i* position);
 s32 field_set_actor_position(s32 key, s32 x, s32 y, s32 z);
-
-extern FieldRuntimeContext* g_field_runtime;
 
 /**
  * @brief Spawn the actor record of a dropped item and run its spawn event, or release it.

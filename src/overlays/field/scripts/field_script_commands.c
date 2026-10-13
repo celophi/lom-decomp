@@ -306,10 +306,7 @@ typedef void (*FieldRecordQuery)(FieldRecordDistanceList* list, FieldStatusRecor
 extern FieldCommandHandler g_field_script_commands[FIELD_SCRIPT_COMMAND_COUNT];
 extern FieldRecordQuery g_field_record_queries[];
 
-extern FieldRuntimeContext* g_field_runtime;
-extern FieldBattleContext* g_field_battle;
 extern SceneState* g_field_scene_state;
-extern s32 g_field_interaction_active;
 FieldStatusState* field_find_object_state(s32 key);
 FieldActorRecord* field_find_actor_record_or_default(s32 id);
 s32 field_get_actor_position(s32 key, Vec3i* position);
@@ -442,7 +439,7 @@ void field_command_end_interaction(void)
     field_end_party_script_control();
     for (i = 0; i < g_field_runtime->state.actor_count; i++)
     {
-        field_queue_actor_event(g_field_runtime->actors[i].id, FIELD_EVENT_INTERACTION, FIELD_INTERACTION_END);
+        field_queue_actor_event(g_field_runtime->actors[i].id, FIELD_EVENT_NOTIFY, FIELD_INTERACTION_END);
     }
     g_field_runtime->state.flags &= ~FIELD_STATE_PARTY_MODE_MASK;
     g_field_interaction_active = 0;

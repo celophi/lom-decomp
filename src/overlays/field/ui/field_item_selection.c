@@ -127,7 +127,7 @@ extern s32 g_field_item_list_count;
 extern s32 g_field_item_list_cursor;
 extern s32 g_field_item_drop_menu_open;
 extern s32 g_field_primary_held_buttons, g_field_primary_repeat_delay;
-extern s32 g_field_secondary_held_buttons, g_field_secondary_repeat_delay, g_field_buffered_input;
+extern s32 g_field_secondary_held_buttons, g_field_secondary_repeat_delay;
 void field_restart_actor_animation(FieldActor *actor);
 
 s32 field_read_controller_buttons(s32 controller);

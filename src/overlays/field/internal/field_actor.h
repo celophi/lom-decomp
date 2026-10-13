@@ -18,6 +18,10 @@
 
 /** @brief Low nine bits of FieldActor::control holding the control mode. */
 #define FIELD_CONTROL_MODE_MASK 0x1FF
+/** @brief Control modes (FieldActor::control & FIELD_CONTROL_MODE_MASK): pad input, following the leader, or the actor's script. */
+#define FIELD_CONTROL_PLAYER 0
+#define FIELD_CONTROL_FOLLOWER 1
+#define FIELD_CONTROL_SCRIPTED 2
 /** @brief FieldActor::control bit set while the actor moves. */
 #define FIELD_CONTROL_MOVING 0x200
 /** @brief FieldActor::control second movement bit (placeholder name: FIELD code only clears and tests it; nothing sets it). */
@@ -32,6 +36,8 @@
 #define FIELD_ANIMATION_INDEX_MASK 0x7F
 /** @brief FieldActor::animation bit that mirrors the animation. */
 #define FIELD_ANIMATION_FACING 0x80
+/** @brief Shift of FIELD_ANIMATION_FACING. */
+#define FIELD_ANIMATION_FACING_SHIFT 7
 /* FieldActor::direction headings. */
 /** @brief FieldActor::direction headings are 256 steps per turn (ratan2/rcos use 4096). */
 #define FIELD_HEADING_STEPS 256
@@ -51,6 +57,8 @@
 #define FIELD_ANIMATION_RUN 10
 /** @brief Distance a raised actor (negative FieldActor::y) drops each frame on its way back to the ground. */
 #define FIELD_ACTOR_FALL_STEP 0x800
+/** @brief World coordinates are 24.8 fixed point. */
+#define FIELD_POSITION_SHIFT 8
 
 /**
  * @brief Abilities a player assigns to the action buttons (FieldActionSlot::command).

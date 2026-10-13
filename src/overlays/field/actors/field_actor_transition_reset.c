@@ -41,7 +41,6 @@ typedef struct
 extern s32 g_field_text_session_active;
 extern s32 g_field_restore_group;
 extern s32 g_field_battle_idle_checks;
-extern s32 g_field_duel_mode;
 extern s32 g_field_money_snapshot;
 extern s32 D_8012291C;
 extern u32 g_field_experience_snapshot[];

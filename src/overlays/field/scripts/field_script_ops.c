@@ -265,11 +265,8 @@ extern void (*g_field_script_op_table[])();
 /* Opcodes 0x40 to 0x5F dispatch through this table, indexed by opcode - 0x40. */
 extern FieldDispatchFn g_field_script_pair_op_table[];
 
-extern FieldRuntimeContext* g_field_runtime;
-extern FieldBattleContext* g_field_battle;
 extern s32 g_field_niki_state;
-extern s32 g_field_interaction_active;
-extern s32 g_field_hide_actor_panels, g_field_duel_mode, g_field_pair_indicators_disabled, g_field_item_drop_enabled;
+extern s32 g_field_hide_actor_panels, g_field_pair_indicators_disabled, g_field_item_drop_enabled;
 
 void field_script_op_00(void);
 static void field_script_dispatch_pair_op(void);
@@ -282,7 +279,6 @@ FieldObjectState* field_find_object_state(s32 key);
 u8* field_get_event_script(s32 index);
 s32 field_read_actor_binding_state(s32 key);
 s32 field_is_actor_idle(s32 key);
-s32 field_set_actor_control_mode(s32 key, s32 mode);
 s32 field_get_actor_position(s32 key, Vec3i* position);
 s32 field_face_actor(s32 source_key, s32 target_key);
 s32 field_set_actor_position(s32 key, s32 x, s32 y, s32 z);
@@ -291,7 +287,6 @@ s32 field_start_actor_turn(s32 key);
 s32 field_toggle_actor_hidden(s32 key);
 /* Local: field_contact_geometry.c calls it with a third argument, so it stays out of field_calls.h. */
 s32 field_start_interaction(s32 actor_id, s32 script);
-void field_stop_actor_script(s32 actor_id, s32 flags);
 void field_stop_non_script_actors(void);
 void field_actor_loop_stub(void);
 s32 field_load_bound_animation(s32 key, s32 resource_id);

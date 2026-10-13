@@ -7,6 +7,7 @@
 #include "overlays/field/field_types.h"
 #include "../internal/field_effect_types.h"
 #include "../internal/field_actor.h"
+#include "../internal/field_calls.h"
 #include "../internal/field_resource_actions.h"
 #include <libgte.h>
 #include <inline_c.h>
@@ -30,7 +31,6 @@
 typedef s32 (*FieldTargetFilter)(FieldActor* source, FieldActor* candidate, s32 argument);
 
 extern FieldTargetFilter g_field_target_filters[];
-extern s32 g_field_duel_mode;
 
 /**
  * @brief Test whether a candidate actor is within a distance of the source actor.

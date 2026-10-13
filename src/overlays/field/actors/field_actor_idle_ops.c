@@ -34,6 +34,7 @@ void field_update_hit_reaction(FieldActor* actor)
     if (actor->y < 0)
     {
         actor->y += FIELD_ACTOR_FALL_STEP;
+
         if (actor->y > 0)
         {
             actor->y = 0;
@@ -45,6 +46,7 @@ void field_update_hit_reaction(FieldActor* actor)
         actor->y = 0;
         field_end_actor_command(actor);
         field_restart_sequence_animation(actor);
+
         if (actor->object_index < FIELD_PLAYER_COUNT)
         {
             field_command_history_clear(actor->object_index);

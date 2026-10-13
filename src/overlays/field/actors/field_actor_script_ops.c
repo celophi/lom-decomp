@@ -19,9 +19,6 @@
 #include "main/audio/akao.h"
 #include "overlays/field/field_actor_records.h"
 
-/** @brief Control mode of an actor driven by its script. */
-#define FIELD_CONTROL_SCRIPTED 2
-
 /** @brief Lowest actor record a script may spawn a child actor into. */
 #define FIELD_FIRST_SPAWN_ACTOR 3
 

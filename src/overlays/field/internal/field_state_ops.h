@@ -173,6 +173,9 @@ typedef struct FieldStatusState
     u16 effect_footprint_strength;
 } FieldStatusState;
 
+/** @brief Sentinel returned through the FieldStatusState view when field_find_object_state finds no object. */
+#define FIELD_STATUS_STATE_NONE ((FieldStatusState*)-1)
+
 /** @brief FieldStatusRecord::unk0 bits: record on the monsters' side (also the duel leader), or on the party's side. */
 #define FIELD_RECORD_MONSTER_SIDE 0x40
 #define FIELD_RECORD_PARTY_SIDE 0x80

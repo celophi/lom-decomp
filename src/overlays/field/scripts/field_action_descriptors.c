@@ -73,7 +73,6 @@ typedef struct ItemActionRow
     FieldActionDescriptor actions[ITEM_ROW_ACTION_COUNT];
 } ItemActionRow;
 
-extern FieldBattleContext *g_field_battle;
 extern FieldActionBank* g_field_action_bank;
 
 static FieldActionDescriptor *field_command_action_descriptor(s32 command);

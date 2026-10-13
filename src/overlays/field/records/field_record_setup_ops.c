@@ -48,8 +48,6 @@
 /** @brief Largest row or column of the instrument grid. */
 #define FIELD_GRID_MAX 7
 
-extern FieldRuntimeContext* g_field_runtime;
-
 FieldItemRecord* field_find_free_inventory_record(void);
 
 static void field_create_instrument_item(FieldItemRecord* record, s32 category, s32 item_type, s32 material, s32 secondary_item);

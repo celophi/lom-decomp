@@ -27,7 +27,6 @@
 /** @brief Number of hits an action chain may land, indexed by weapon type. */
 extern u8 g_field_weapon_chain_limits[];
 extern s32 g_field_boss_hud_shake_frame;
-extern s32 g_field_duel_mode;
 
 static void field_release_links_to_actor(FieldActor* actor);
 static void field_end_actor_chain(FieldActor* actor);

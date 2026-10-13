@@ -12,11 +12,9 @@
 #include "overlays/field/field_text.h"
 #include "overlays/field/field_sound.h"
 #include "main/audio/akao.h"
+#include "../internal/field_contact_geometry.h"
 #define FIELD_HELD_ACTION_BUTTONS_OUT_OF_LINE
 #include "../internal/field_held_action_buttons.h"
-
-/** @brief Action returned by the command history when no action is queued. */
-#define FIELD_ACTION_NONE 0xFF
 
 /** @brief Actions 2 and 3 stay available while FIELD_OBJECT_FLAG_MINI is set. */
 #define FIELD_ACTION_RESTRICTED_FIRST 2
@@ -24,9 +22,6 @@
 
 /** @brief First action blocked while g_field_actions_limited is set. */
 #define FIELD_ACTION_BLOCKABLE_FIRST 4
-
-/** @brief Shift of the mirror bit in an actor's animation byte. */
-#define FIELD_ANIMATION_FACING_SHIFT 7
 
 /** @brief Buttons that confirm (start an interaction). */
 #define FIELD_CONFIRM_BUTTONS (PAD_BTN_CROSS | PAD_BTN_L3)
@@ -36,36 +31,6 @@
 
 /** @brief Buttons that make the actor run while held. */
 #define FIELD_RUN_BUTTONS (PAD_BTN_CIRCLE | PAD_BTN_L1)
-
-/** @brief Status returned by field_text_get_status for a closed text window. */
-#define FIELD_TEXT_CLOSED (-1)
-
-/** @brief Saved character record of the pad context (SAVED_CHARACTER_SIZE bytes). */
-typedef struct
-{
-    u8 unk0[0x48];
-    /** @brief Action binding code assigned to each bindable button. */
-    u8 button_actions[FIELD_BUTTON_BINDING_COUNT];
-    u8 unk50[SAVED_CHARACTER_SIZE - 0x50];
-} FieldSavedCharacter;
-
-/** @brief Pad context view holding the three saved characters. */
-typedef struct
-{
-    u8 unk0[0x5F0];
-    FieldSavedCharacter characters[FIELD_PARTY_COUNT];
-} FieldSavedParty;
-
-/** @brief The live saved game, viewed through FieldSavedParty. */
-#define FIELD_SAVED_PARTY ((FieldSavedParty*)g_saved_game_ctx)
-
-extern s32 g_field_dialog_screen_mode;
-extern s32 g_field_interaction_active;
-extern s32 g_field_buffered_input;
-extern s32 g_field_action_context;
-
-/* field_contact_geometry.h cannot be included next to field_actor_tables.h (two g_field_object_states types). */
-void field_probe_actor_interaction(FieldActor* actor);
 
 /**
  * @brief Collect the held buttons that are bound to an action.
@@ -87,31 +52,38 @@ s32 field_get_held_action_buttons(s32 player, s32 action, FieldActor* actor)
 #endif
 
     ports = CONTROLLER_STATE->ports;
+
     if (actor->object_index < FIELD_PARTY_COUNT)
     {
         if ((actor->control.word & FIELD_CONTROL_MODE_MASK) == 0)
         {
             mask = 0;
             code = g_field_action_binding_codes[action];
+
             for (i = 0; i < FIELD_BUTTON_BINDING_COUNT; i++)
             {
-                if (code == FIELD_SAVED_PARTY->characters[player].button_actions[i])
+                if (code == g_saved_game_ctx->characters[player].button_actions[i])
                 {
                     mask |= g_field_binding_buttons[i];
                 }
             }
+
             sample = &ports[player].published_sample;
+
             if (sample->device_type < CONTROLLER_DEVICE_CONFIGURING)
             {
 #if defined(VERSION_JP)
-                return ((u32)sample->held_buttons >> 8) & mask;
+                return (sample->held_buttons >> 8) & mask;
 #else
-                buttons = (u32)sample->held_buttons >> 8;
-                return (((buttons >> 1) & PAD_BTN_CROSS) | ((buttons & PAD_BTN_CROSS) << 1) | ((buttons >> 3) & PAD_BTN_SQUARE) | ((buttons & PAD_BTN_SQUARE) << 3) | (buttons & FIELD_SHOULDER_BUTTONS)) & mask;
+                buttons = sample->held_buttons >> 8;
+                return (((buttons >> 1) & PAD_BTN_CROSS) | ((buttons & PAD_BTN_CROSS) << 1) | ((buttons >> 3) & PAD_BTN_SQUARE) |
+                        ((buttons & PAD_BTN_SQUARE) << 3) | (buttons & FIELD_SHOULDER_BUTTONS)) &
+                       mask;
 #endif
             }
         }
     }
+
     return 0;
 }
 
@@ -127,12 +99,14 @@ void field_poll_leader_interaction(void)
 #if defined(VERSION_JP)
     if ((g_field_interaction_active == 0) && (g_field_buffered_input & FIELD_CONFIRM_BUTTONS))
 #else
-    if ((g_field_active_group == 0) && (g_field_actors[0].command == 0) && (g_field_dialog_screen_mode == 0) && (g_field_interaction_active == 0) && (g_field_buffered_input & FIELD_CONFIRM_BUTTONS))
+    if ((g_field_active_group == 0) && (g_field_actors[0].command == FIELD_ACTOR_COMMAND_NONE) && (g_field_dialog_screen_mode == 0) &&
+        (g_field_interaction_active == 0) && (g_field_buffered_input & FIELD_CONFIRM_BUTTONS))
 #endif
     {
         first_status = field_text_get_status(0);
         second_status = field_text_get_status(1);
-        if ((g_field_active_group == 0) && (first_status == FIELD_TEXT_CLOSED) && (second_status == first_status))
+
+        if ((g_field_active_group == 0) && (first_status == FIELD_TEXT_STATUS_CLOSED) && (second_status == first_status))
         {
             field_probe_actor_interaction(g_field_actors);
         }
@@ -150,9 +124,10 @@ u16 field_resolve_action_command(FieldActor* actor, s32 player)
     s32 action;
 
     action = field_command_history_match(player, (actor->animation >> FIELD_ANIMATION_FACING_SHIFT) ^ 1, 0);
-    if (action != FIELD_ACTION_NONE)
+
+    if (action != FIELD_HISTORY_COMMAND_NONE)
     {
-        g_field_action_context = (g_field_action_context & ~0xFF) | action;
+        g_field_action_context = (g_field_action_context & ~FIELD_ACTION_CONTEXT_ACTION_MASK) | action;
     }
     else if ((actor->animation & FIELD_ANIMATION_INDEX_MASK) != FIELD_ABILITY_DOUBLE_JUMP)
     {
@@ -160,17 +135,20 @@ u16 field_resolve_action_command(FieldActor* actor, s32 player)
         g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_CHAINING;
         g_field_object_states[actor->object_index].retry_count = 0;
     }
+
     if (g_field_object_states[actor->object_index].flags & FIELD_OBJECT_FLAG_MINI)
     {
         if (action != FIELD_ACTION_RESTRICTED_FIRST && action != FIELD_ACTION_RESTRICTED_LAST)
         {
-            if (action != FIELD_ACTION_NONE)
+            if (action != FIELD_HISTORY_COMMAND_NONE)
             {
                 field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
             }
+
             return 0;
         }
     }
+
     if (action < FIELD_ACTION_MAP_ENTRY_COUNT)
     {
         if (g_field_actions_limited == 0 || action < FIELD_ACTION_BLOCKABLE_FIRST)
@@ -181,6 +159,7 @@ u16 field_resolve_action_command(FieldActor* actor, s32 player)
             }
         }
     }
+
     return 0;
 }
 
@@ -197,6 +176,7 @@ void field_update_actor_run_button(FieldActor* actor, s32 player)
     ControllerPortState* ports;
 
     ports = CONTROLLER_STATE->ports;
+
     if (!(g_field_resource_entries[actor->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS))
     {
 #if defined(VERSION_JP)
@@ -211,6 +191,7 @@ void field_update_actor_run_button(FieldActor* actor, s32 player)
         }
 #else
         buttons = 0;
+
         if (ports[player].published_sample.device_type < CONTROLLER_DEVICE_CONFIGURING)
         {
             raw = ports[player].published_sample.held_buttons;
@@ -219,6 +200,7 @@ void field_update_actor_run_button(FieldActor* actor, s32 player)
 
         buttons = PAD_REMAP_FACE_BITS(buttons);
 #endif
+
         if (buttons & FIELD_RUN_BUTTONS)
         {
             if (actor->running == 0)
