@@ -48,8 +48,6 @@
 #define FIELD_HIT_REACTION_DIRECT_COUNT 12
 /** @brief Actors this high (FieldActor::height) or higher overlap nothing. */
 #define FIELD_OVERLAP_MAX_HEIGHT 9
-/** @brief Bit number of FIELD_CONTACT_ACTION_PENDING. */
-#define FIELD_CONTACT_ACTION_PENDING_BIT 6
 /** @brief Builtin animation a touched object plays towards the toucher. */
 #define FIELD_TOUCH_ANIMATION 0x2A
 /** @brief Frames an actor waits in FIELD_ACTOR_COMMAND_SEQUENCE_WAIT before its contact interaction runs. */

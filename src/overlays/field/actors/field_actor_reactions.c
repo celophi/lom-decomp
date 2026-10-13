@@ -8,12 +8,8 @@
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_calls.h"
+#include "../internal/field_actor_sequence_runtime.h"
 #include <rand.h>
-
-/** @brief First frame of the HUD panel shake started by a hit (counts down to 0). */
-#define FIELD_HUD_SHAKE_START 5
-
-#define FIELD_ANIMATION_KNOCKED_DOWN 29
 
 /** @brief Effect resource played when an action chain reaches the weapon's limit. */
 #define FIELD_CHAIN_LIMIT_EFFECT 0x21
@@ -26,14 +22,10 @@
 
 /** @brief Number of hits an action chain may land, indexed by weapon type. */
 extern u8 g_field_weapon_chain_limits[];
-extern s32 g_field_boss_hud_shake_frame;
 
 static void field_release_links_to_actor(FieldActor* actor);
 static void field_end_actor_chain(FieldActor* actor);
 void field_restart_actor_animation(FieldActor* actor);
-
-void field_restart_actor_animation_reverse(FieldActor* actor);
-void field_update_sequence_actor_binding(FieldActor* actor, s32 release_actor);
 
 /**
  * @brief Put an actor into its hit reaction and reset its motion and animation flags.
@@ -55,7 +47,8 @@ void field_start_actor_hit_reaction(FieldActor* actor, s32 guard)
     {
         g_field_boss_hud_shake_frame = FIELD_HUD_SHAKE_START;
     }
-    if (!g_field_object_states[actor->object_index].contact.bits.flag6)
+
+    if (!g_field_object_states[actor->object_index].contact.bits.action_pending)
     {
         if (field_actor_binding(actor)->state != FIELD_BINDING_IDLE)
         {
@@ -65,12 +58,15 @@ void field_start_actor_hit_reaction(FieldActor* actor, s32 guard)
             }
         }
     }
+
     command = actor->command;
+
     if (command != FIELD_ACTOR_COMMAND_DEFEAT_WAIT && command != FIELD_ACTOR_COMMAND_DEFEAT_END && command != FIELD_ACTOR_COMMAND_DEFEATED)
     {
         states = g_field_object_states;
         state = &states[actor->object_index];
         flags = state->flags;
+
         if (!(flags & FIELD_OBJECT_FLAG_KNOCKED_OUT))
         {
             if ((state->contact.bytes.flags & FIELD_CONTACT_ANIMATION_HIDDEN) || (flags & FIELD_OBJECT_IMMOBILE_FLAGS))
@@ -83,14 +79,16 @@ void field_start_actor_hit_reaction(FieldActor* actor, s32 guard)
                 actor->command = FIELD_ACTOR_COMMAND_HIT;
                 return;
             }
+
             if ((actor->animation & FIELD_ANIMATION_INDEX_MASK) != FIELD_ABILITY_DEFENSIVE_LUNGE)
             {
                 state->contact.word &= ~FIELD_CONTACT_ACTION_PENDING;
                 field_update_sequence_actor_binding(actor, 0);
                 actor->command = FIELD_ACTOR_COMMAND_HIT;
-                actor->y -= actor->height << 8;
+                actor->y -= actor->height << FIELD_POSITION_SHIFT;
                 g_field_object_states[actor->object_index].retry_count = 0;
                 actor->variant = 0;
+
                 if (guard != 0)
                 {
                     actor->animation = (actor->animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_DEFEND_HIT;
@@ -100,20 +98,24 @@ void field_start_actor_hit_reaction(FieldActor* actor, s32 guard)
                     actor->animation = (actor->animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_HIT;
                     actor->animation += rand() & 1;
                 }
+
                 field_release_object_link(actor);
                 actor->animation_state = 1;
                 actor->animation_active = 1;
                 actor->animation_frame = 0;
                 g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
                 field_restart_actor_animation(actor);
-                actor->y += actor->height << 8;
+                actor->y += actor->height << FIELD_POSITION_SHIFT;
+
                 if (actor->y > 0)
                 {
                     actor->y = 0;
                 }
+
                 g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_FLAG_DASH;
                 g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_CHAINING;
                 field_stop_actor_animations_for_object(actor, 0);
+
                 if (actor->object_index < FIELD_PLAYER_COUNT)
                 {
                     field_command_history_clear(actor->object_index);
@@ -136,6 +138,7 @@ void field_release_object_link(FieldActor* actor)
     FieldObjectState* linked;
 
     state = &states[actor->object_index];
+
     if (state->contact.bits.linked)
     {
         state->contact.bits.linked = 0;
@@ -175,10 +178,12 @@ s32 field_stop_actor(s32 key)
     FieldActor* actor;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     actor->script_index = FIELD_SCRIPT_NONE;
     actor->script_busy = 0;
     actor->script_offset++;
@@ -193,7 +198,7 @@ s32 field_stop_actor(s32 key)
  * @param actor Actor to knock down.
  * @param clear_recovery Nonzero clears a party member's recovery time limit.
  */
-void field_knock_down_actor(FieldActor* actor, s32 clear_recovery)
+inline void field_knock_down_actor(FieldActor* actor, s32 clear_recovery)
 {
     FieldObjectState* states;
     FieldObjectState* state;
@@ -201,6 +206,7 @@ void field_knock_down_actor(FieldActor* actor, s32 clear_recovery)
     field_release_object_link(actor);
     field_release_links_to_actor(actor);
     actor->command = FIELD_ACTOR_COMMAND_KNOCKED_DOWN;
+
     if (clear_recovery != 0 && actor->object_index < FIELD_PARTY_COUNT)
     {
         g_field_player_records[actor->object_index].revive_delay = 0;
@@ -275,35 +281,18 @@ void field_start_actor_defeat(FieldActor* actor, s8 value)
  */
 s32 field_collapse_defeated_actor(FieldActor* actor)
 {
-    FieldObjectState* states;
-    FieldObjectState* state;
     FieldResourceEntry* resource;
     FieldResourceEntry* resources;
     s32 object_index;
 
-    field_release_object_link(actor);
-    field_release_links_to_actor(actor);
-    actor->command = FIELD_ACTOR_COMMAND_KNOCKED_DOWN;
-    actor->script_index = FIELD_SCRIPT_NONE;
-    actor->animation_state = 1;
-    actor->animation_active = 1;
-    actor->y = 0;
-    actor->animation_frame = 0;
-    actor->animation = (actor->animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_KNOCKED_DOWN;
-    states = g_field_object_states;
-    state = &states[actor->object_index];
-    state->movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
-    field_restart_actor_animation(actor);
-    field_stop_actor_animations_for_object(actor, 1);
-    field_stop_actor_slot(actor, &g_field_actor_slots[FIELD_OBJECT_EFFECT_SLOT_BASE + actor->object_index], 1);
-    actor->control.word |= FIELD_CONTROL_PLAY_ONCE;
-    field_update_sequence_actor_binding(actor, 0);
-    field_release_actor_binding(actor->object_index);
+    field_knock_down_actor(actor, 0);
     object_index = actor->object_index;
-    if (!(states[object_index].contact.bytes.flags & FIELD_CONTACT_ANIMATION_HIDDEN))
+
+    if (!(g_field_object_states[object_index].contact.bytes.flags & FIELD_CONTACT_ANIMATION_HIDDEN))
     {
         resources = g_field_resource_entries;
         resource = &resources[actor->resource_index];
+
         if (resource->bound_animation_flags & FIELD_REQUEST_BOUND)
         {
             actor->command = FIELD_ACTOR_COMMAND_DEFEAT_BOUND;
@@ -314,6 +303,7 @@ s32 field_collapse_defeated_actor(FieldActor* actor)
             field_start_actor_animation(actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0);
         }
     }
+
     if (!(g_field_object_states[actor->object_index].flags & FIELD_OBJECT_FLAG_KNOCKED_OUT))
     {
         if (actor->command == FIELD_ACTOR_COMMAND_DEFEAT_BOUND)
@@ -347,35 +337,45 @@ s32 field_test_actor_depth_overlap(s32 first_key, s32 second_key)
     u8 second_index;
 
     first = field_find_actor(first_key);
+
     if (first == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     second = field_find_actor(second_key);
+
     if (second == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     second_object = second->object_index;
     second_state = &g_field_object_states[second_object];
+
     if (second->presence == FIELD_ACTOR_UNUSED)
     {
         return -1;
     }
+
     if (second_object >= FIELD_PARTY_COUNT && (second_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)
     {
         return 0;
     }
+
     if (second_state->current_hp.word == 0)
     {
         return 0;
     }
+
     second_index = second->object_index;
     first_index = first->object_index;
+
     if (second_index == first_index)
     {
         return 0;
     }
+
     if (g_field_duel_mode == 0)
     {
         /* Outside a duel, party members never overlap each other, nor enemies each other. */
@@ -391,15 +391,18 @@ s32 field_test_actor_depth_overlap(s32 first_key, s32 second_key)
             return 0;
         }
     }
+
     /* The extents are whole units; half of each, in 24.8 fixed point, is added to the range. */
     first_z = first->z;
     second_z = second->z;
     first_extent = ((s16)g_field_object_states[first->object_index].collision.half.extent >> 1) << 8;
     second_extent = (s16)second_state->collision.half.extent;
+
     if (second_z < first_z - first_extent - (second_extent << 7))
     {
         return 0;
     }
+
     return first_z + first_extent + (second_extent << 7) >= second_z;
 }
 
@@ -417,21 +420,26 @@ void field_count_chain_hit(s32 object_index)
 
     states = g_field_object_states;
     state = &states[object_index];
+
     if (state->flags & FIELD_OBJECT_CHAINING)
     {
         hit_count = state->retry_count + 1;
         state->retry_count = hit_count;
+
         if ((object_index < FIELD_PLAYER_COUNT) && ((u8)hit_count >= g_field_weapon_chain_limits[g_field_player_records[object_index].head.bytes.weapon_type]))
         {
             actor = field_find_actor(state->key);
+
             if (actor != FIELD_ACTOR_NONE)
             {
                 effect_slot = field_find_free_actor_slot(0, 0);
+
                 if ((effect_slot != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor->object_index, effect_slot, FIELD_CHAIN_LIMIT_EFFECT) != 0))
                 {
                     field_start_actor_animation(effect_slot, 0, 0);
                 }
             }
+
             field_end_actor_chain(&g_field_actors[object_index]);
         }
     }

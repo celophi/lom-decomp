@@ -164,7 +164,6 @@ extern CVECTOR g_field_hud_companion_status_colors[2];
 extern s32 g_field_party_hud_order[FIELD_PARTY_COUNT];
 extern s16 g_field_hud_shake_offsets[];
 extern s32 g_field_hud_blink_frames[FIELD_PARTY_COUNT];
-extern s32 g_field_boss_hud_shake_frame;
 extern s32 g_field_hud_bar_height;
 extern s32 g_field_hud_bar_width;
 extern s32 g_field_hud_bar_offset_x;

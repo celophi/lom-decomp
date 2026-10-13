@@ -119,7 +119,7 @@ void field_poll_leader_interaction(void)
  * @param player Player index: command history and action command map.
  * @return Command word from the player's action command map, or zero when none is available.
  */
-u16 field_resolve_action_command(FieldActor* actor, s32 player)
+s32 field_resolve_action_command(FieldActor* actor, s32 player)
 {
     s32 action;
 

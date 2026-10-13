@@ -94,9 +94,6 @@ enum
 /** @brief field_command_query_records result when the query matched nothing. */
 #define FIELD_RECORD_QUERY_NONE 0xFFFF
 
-/** @brief Entries a record query list has room for. */
-#define FIELD_RECORD_QUERY_CAPACITY 16
-
 /** @brief field_command_scroll_camera modes. */
 enum
 {
@@ -231,20 +228,6 @@ typedef struct FieldRecordQueryParams
     s32 side_mask;
 } FieldRecordQueryParams;
 
-/** @brief One collected record: its actor id and its distance from the querying actor. */
-typedef struct FieldRecordDistance
-{
-    s32 actor;
-    s32 distance;
-} FieldRecordDistance;
-
-/** @brief Records collected by a query; field_sort_keyed_list moves the nearest one to the front. */
-typedef struct FieldRecordDistanceList
-{
-    s32 count;
-    FieldRecordDistance entries[FIELD_RECORD_QUERY_CAPACITY];
-} FieldRecordDistanceList;
-
 /** @brief Parameters of field_command_scroll_camera. */
 typedef struct FieldScrollParams
 {
@@ -301,7 +284,7 @@ typedef struct FieldSpawnParams
 } FieldSpawnParams;
 
 typedef void (*FieldCommandHandler)(s32 command, void* params);
-typedef void (*FieldRecordQuery)(FieldRecordDistanceList* list, FieldStatusRecord* source, FieldRecordQueryParams* params);
+typedef void (*FieldRecordQuery)(FieldKeyedList* list, FieldStatusRecord* source, FieldRecordQueryParams* params);
 
 extern FieldCommandHandler g_field_script_commands[FIELD_SCRIPT_COMMAND_COUNT];
 extern FieldRecordQuery g_field_record_queries[];
@@ -309,12 +292,8 @@ extern FieldRecordQuery g_field_record_queries[];
 extern SceneState* g_field_scene_state;
 FieldStatusState* field_find_object_state(s32 key);
 FieldActorRecord* field_find_actor_record_or_default(s32 id);
-s32 field_get_actor_position(s32 key, Vec3i* position);
-s32 field_set_actor_position(s32 key, s32 x, s32 y, s32 z);
 s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound);
 FieldItemRecord* field_find_free_inventory_record(void);
-void field_sort_keyed_list(FieldRecordDistanceList* list);
-s32 field_distance_xz(Vec3i* first, Vec3i* second);
 s32 field_place_lands(s32 first_land, s32 second_land, s32* placed);
 void field_begin_party_script_control(s32 mode);
 
@@ -637,7 +616,7 @@ void field_command_items(s32 command, FieldItemCommandParams* params)
  */
 void field_command_query_records(s32 command, FieldRecordQueryParams* params)
 {
-    FieldRecordDistanceList list;
+    FieldKeyedList list;
     FieldStatusRecord* source;
 
     if (params->actor != FIELD_SCRIPT_OWNER)
@@ -655,11 +634,11 @@ void field_command_query_records(s32 command, FieldRecordQueryParams* params)
         field_sort_keyed_list(&list);
         if (params->query & FIELD_RECORD_QUERY_LAST)
         {
-            params->actor = list.entries[list.count - 1].actor;
+            params->actor = list.entries[list.count - 1].id;
         }
         else
         {
-            params->actor = list.entries[0].actor;
+            params->actor = list.entries[0].id;
         }
     }
     else
@@ -674,7 +653,7 @@ void field_command_query_records(s32 command, FieldRecordQueryParams* params)
  * @param source Status record of the querying actor.
  * @param params Query parameters; side_mask selects the sides.
  */
-void field_query_records_by_side(FieldRecordDistanceList* list, FieldStatusRecord* source, FieldRecordQueryParams* params)
+void field_query_records_by_side(FieldKeyedList* list, FieldStatusRecord* source, FieldRecordQueryParams* params)
 {
     Vec3i source_position;
     Vec3i record_position;
@@ -687,7 +666,7 @@ void field_query_records_by_side(FieldRecordDistanceList* list, FieldStatusRecor
         if ((g_field_battle->records[i].unk0 & params->side_mask) && g_field_battle->records[i].state->current != 0)
         {
             field_get_actor_position(g_field_battle->records[i].meta.bytes.id, &record_position);
-            list->entries[list->count].actor = g_field_battle->records[i].meta.bytes.id;
+            list->entries[list->count].id = g_field_battle->records[i].meta.bytes.id;
             list->entries[list->count].distance = field_distance_xz(&record_position, &source_position);
             list->count += 1;
         }

@@ -279,9 +279,7 @@ FieldObjectState* field_find_object_state(s32 key);
 u8* field_get_event_script(s32 index);
 s32 field_read_actor_binding_state(s32 key);
 s32 field_is_actor_idle(s32 key);
-s32 field_get_actor_position(s32 key, Vec3i* position);
 s32 field_face_actor(s32 source_key, s32 target_key);
-s32 field_set_actor_position(s32 key, s32 x, s32 y, s32 z);
 s32 field_spawn_targeted_animation_actor(s32 key, s32 resource_index, s32 target_keys, s32* targets);
 s32 field_start_actor_turn(s32 key);
 s32 field_toggle_actor_hidden(s32 key);
@@ -2742,7 +2740,6 @@ void field_script_op_84(s32 actor_id, s32 animation, s32 builtin_animation, s32 
     field_queue_battle_entry_change(actor, (animation == 0xFF) ? -1 : animation, (builtin_animation == 0xFF) ? -1 : builtin_animation,
                                     (sound == 0xFF) ? -1 : sound);
 }
-
 
 /**
  * @brief Opcode 0x85: request a scene change and end the script.

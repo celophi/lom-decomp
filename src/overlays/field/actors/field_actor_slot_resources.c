@@ -78,8 +78,6 @@ extern u8* g_field_builtin_track_data;
 /** @brief Built-in animation resource in use. */
 extern FieldBuiltinResource* g_field_builtin_animations;
 extern s32 D_8010CFD4;
-extern u8* g_field_actor_heap;
-extern s32 g_field_boss_hud_shake_frame;
 
 s32 field_load_vram_resource(s32 id, RECT* rect, s32 mode);
 void field_clear_pending_binding_restarts(void);
@@ -559,10 +557,10 @@ void field_reset_object_states(void)
         g_field_object_states[i].hud.word |= FIELD_HUD_SHOW_TECHNIQUE_GAUGE;
         g_field_object_states[i].movement.bits.scale = 50;
         g_field_object_states[i].movement.half.height = 0;
-        g_field_object_states[i].contact.bits.flag0 = 0;
+        g_field_object_states[i].contact.bits.animation_hidden = 0;
         g_field_object_states[i].hud.bytes.object_index = i;
-        g_field_object_states[i].contact.bits.flag5 = 0;
-        g_field_object_states[i].contact.bits.flag6 = 0;
+        g_field_object_states[i].contact.bits.no_hit_test = 0;
+        g_field_object_states[i].contact.bits.action_pending = 0;
     }
 
     rect.x = FIELD_OBJECT_IMAGE_VRAM_X;
@@ -596,11 +594,11 @@ void field_reset_object_tints(void)
         g_field_object_states[i].action = 0;
         g_field_object_states[i].interaction_kind = 0;
         g_field_object_states[i].movement.bits.flag15 = 0;
-        g_field_object_states[i].contact.bits.flag7 = 0;
-        g_field_object_states[i].contact.bits.flag0 = 0;
+        g_field_object_states[i].contact.bits.targeted = 0;
+        g_field_object_states[i].contact.bits.animation_hidden = 0;
         g_field_object_states[i].tint_blue = tint_blue;
-        g_field_object_states[i].contact.bits.flag5 = 0;
-        g_field_object_states[i].contact.bits.flag6 = 0;
+        g_field_object_states[i].contact.bits.no_hit_test = 0;
+        g_field_object_states[i].contact.bits.action_pending = 0;
     }
     hit_state = FIELD_HUD_SHAKE_IDLE;
     for (i = FIELD_PARTY_COUNT - 1; i >= 0; i--)

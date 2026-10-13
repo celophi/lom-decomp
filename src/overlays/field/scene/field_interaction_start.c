@@ -169,7 +169,6 @@ extern FieldMapPoint g_field_player_map_position;
 /* Functions of other FIELD files without a shared prototype. */
 s32 field_read_script_var(s32 owner_id, s32 variable);
 u8* field_get_event_script(s32 script_id);
-s32 field_get_actor_position(s32 key, Vec3i* position);
 s32 field_get_actor_facing(s32 actor_id);
 FieldActorRecord* field_find_actor_record();
 FieldActorRecord* field_find_actor_record_or_default(u32 actor_id, FieldRuntimeContext* context);

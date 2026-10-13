@@ -24,7 +24,6 @@
 #define FIELD_MUSIC_TRACK_NONE 0xFF
 
 extern FieldRenderHalf* g_field_render_context;
-extern u8* g_field_actor_heap;
 extern s32 g_field_preserve_entry_music;
 /**
  * @brief Scene word between the pending sound bank and the portrait count.

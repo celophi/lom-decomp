@@ -408,14 +408,6 @@ typedef struct
     FieldMenuItemRecord pending[4];
 } FieldMenuItemData;
 
-/** @brief Actor position as field_get_actor_position returns it. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 z;
-} FieldPosition;
-
 /** @brief Element table (D_80051ED8) indexed by the game-state byte at 0x2E6 (low 7 bits). */
 typedef struct
 {
@@ -454,8 +446,6 @@ typedef struct
 } FieldTextResource;
 
 u8* field_find_free_inventory_record();
-void field_get_actor_position();
-s32 field_set_actor_position();
 extern u8 D_80122C01;
 extern u8 D_80122C02;
 extern u8 D_80122C03;
@@ -1012,14 +1002,14 @@ void field_menu_reset_object(void)
  */
 void field_menu_lower_object(void)
 {
-    s32 position[3];
+    Vec3i position;
 
-    field_get_actor_position(FIELD_MENU_OBJECT->object_id, position);
-    position[0] /= 256;
-    position[1] /= 256;
-    position[2] /= 256;
-    position[1] -= FIELD_MENU_OBJECT->height_offset;
-    field_set_actor_position(FIELD_MENU_OBJECT->object_id, position[0], position[1], position[2]);
+    field_get_actor_position(FIELD_MENU_OBJECT->object_id, &position);
+    position.x /= 256;
+    position.y /= 256;
+    position.z /= 256;
+    position.y -= FIELD_MENU_OBJECT->height_offset;
+    field_set_actor_position(FIELD_MENU_OBJECT->object_id, position.x, position.y, position.z);
 }
 
 /**
@@ -1032,7 +1022,7 @@ void field_menu_lower_object(void)
  */
 void field_menu_ease_object(void)
 {
-    s32 position[3];
+    Vec3i position;
     s32 target_y;
     s32 target_x;
     s32 target_z;
@@ -1041,12 +1031,12 @@ void field_menu_ease_object(void)
     s32 distance;
     s32 x;
 
-    field_get_actor_position(FIELD_MENU_OBJECT->object_id, position);
-    x = position[0] / 256;
-    position[0] = x;
-    y = position[1] / 256;
-    position[1] = y;
-    position[2] /= 256;
+    field_get_actor_position(FIELD_MENU_OBJECT->object_id, &position);
+    x = position.x / 256;
+    position.x = x;
+    y = position.y / 256;
+    position.y = y;
+    position.z /= 256;
 
     target_y = -FIELD_MENU_OBJECT->target_height;
     target_x = FIELD_MENU_OBJECT->target_x;
@@ -1058,55 +1048,55 @@ void field_menu_ease_object(void)
         distance = abs(delta);
         if (distance * 2 >= 4)
         {
-            position[0] = target_x + delta * 2 / 3;
+            position.x = target_x + delta * 2 / 3;
         }
         else if (distance > 0)
         {
-            position[0] = x - delta / distance;
+            position.x = x - delta / distance;
         }
         else
         {
-            position[0] = target_x;
+            position.x = target_x;
         }
     }
 
-    if (position[1] == target_y || position[1] < target_y)
+    if (position.y == target_y || position.y < target_y)
     {
-        delta = position[2] - target_z;
+        delta = position.z - target_z;
         distance = abs(delta);
         if (distance * 2 >= 4)
         {
-            position[2] = target_z + delta * 2 / 3;
+            position.z = target_z + delta * 2 / 3;
         }
         else if (distance > 0)
         {
-            position[2] -= delta / distance;
+            position.z -= delta / distance;
         }
         else
         {
-            position[2] = target_z;
+            position.z = target_z;
         }
     }
 
-    if ((position[0] == target_x && position[2] == target_z) || position[1] >= target_y)
+    if ((position.x == target_x && position.z == target_z) || position.y >= target_y)
     {
-        delta = position[1] - target_y;
+        delta = position.y - target_y;
         distance = abs(delta);
         if (distance * 2 >= 4)
         {
-            position[1] = target_y + delta * 2 / 3;
+            position.y = target_y + delta * 2 / 3;
         }
         else if (distance > 0)
         {
-            position[1] -= delta / distance;
+            position.y -= delta / distance;
         }
         else
         {
-            position[1] = target_y;
+            position.y = target_y;
         }
     }
 
-    field_set_actor_position(FIELD_MENU_OBJECT->object_id, position[0], position[1], position[2]);
+    field_set_actor_position(FIELD_MENU_OBJECT->object_id, position.x, position.y, position.z);
 }
 
 /**
@@ -2116,55 +2106,55 @@ void field_menu_publish_chosen_action_item(void)
  */
 void field_place_actor_beside_actor0(void)
 {
-    s32 pos[3];
+    Vec3i pos;
     s32 heading;
     s32 actor;
 
     actor = D_80122C0D;
-    field_get_actor_position(0, pos);
-    pos[0] /= 256;
-    pos[1] /= 256;
-    pos[2] /= 256;
+    field_get_actor_position(0, &pos);
+    pos.x /= 256;
+    pos.y /= 256;
+    pos.z /= 256;
 
     heading = field_get_actor_facing(0);
     if (heading == 0)
     {
-        pos[0] += 0x14;
+        pos.x += 0x14;
     }
     else if (heading >= 0x01 && heading < 0x40)
     {
-        pos[0] += 0xA;
-        pos[2] -= 0xA;
+        pos.x += 0xA;
+        pos.z -= 0xA;
     }
     else if (heading == 0x40)
     {
-        pos[2] -= 0xC;
+        pos.z -= 0xC;
     }
     else if (heading >= 0x41 && heading < 0x80)
     {
-        pos[0] -= 0xA;
-        pos[2] -= 0xA;
+        pos.x -= 0xA;
+        pos.z -= 0xA;
     }
     else if (heading == 0x80)
     {
-        pos[0] -= 0x14;
+        pos.x -= 0x14;
     }
     else if (heading >= 0x81 && heading < 0xC0)
     {
-        pos[0] -= 0xA;
-        pos[2] += 0xA;
+        pos.x -= 0xA;
+        pos.z += 0xA;
     }
     else if (heading == 0xC0)
     {
-        pos[2] += 0xC;
+        pos.z += 0xC;
     }
     else if (heading >= 0xC1 && heading < 0x100)
     {
-        pos[0] += 0xA;
-        pos[2] += 0xA;
+        pos.x += 0xA;
+        pos.z += 0xA;
     }
 
-    field_set_actor_position(actor, pos[0], pos[1] - 0xC, pos[2]);
+    field_set_actor_position(actor, pos.x, pos.y - 0xC, pos.z);
 }
 
 /**
@@ -2305,10 +2295,10 @@ void field_menu_choose_pending_equipment(void)
  */
 void field_place_actor_0c_beside_actor0(void)
 {
-    FieldPosition pos;
+    Vec3i pos;
     s32 heading;
 
-    field_get_actor_position(0, (s32*)&pos);
+    field_get_actor_position(0, &pos);
     pos.x /= 256;
     pos.y /= 256;
     pos.z /= 256;

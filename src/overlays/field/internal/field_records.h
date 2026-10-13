@@ -339,6 +339,21 @@ typedef struct FieldActorRecord
     } flags;
 } FieldActorRecord;
 
+/** @brief Object or record id paired with its distance from a reference point. */
+typedef struct FieldKeyedPair
+{
+    s32 id;
+    /** @brief Sort key of field_sort_keyed_list. */
+    s32 distance;
+} FieldKeyedPair;
+
+/** @brief Counted FieldKeyedPair list with room for one entry per actor record; field_sort_keyed_list moves the nearest to the front. */
+typedef struct FieldKeyedList
+{
+    s32 count;
+    FieldKeyedPair entries[FIELD_ACTOR_RECORD_COUNT];
+} FieldKeyedList;
+
 /** @brief FieldActorRecord::selector of a record without one. */
 #define FIELD_NO_SELECTOR 0xFF
 

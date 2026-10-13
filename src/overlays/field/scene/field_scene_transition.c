@@ -250,7 +250,6 @@ extern u16* g_field_actor_scripts;
 extern u32* g_field_scene_record_table;
 extern s32 g_field_hide_actor_panels;
 /* TODO: Script command 0x44 selects alternate party control and triple HP. */
-extern s32 g_field_scene_contact_latched;
 extern u8 g_field_scene_data_buffer[];
 extern s32 g_field_song_volume;
 extern s32 g_field_preserve_entry_music;
@@ -894,15 +893,15 @@ void field_load_scene_actors(FieldSceneLayout* layout)
             actor->x = layout_record->position.bits.x << FIELD_POSITION_SHIFT;
             actor->z = layout_record->position.bits.z << FIELD_POSITION_SHIFT;
             actor->y = layout_record->position.bits.y << FIELD_POSITION_SHIFT;
-            state->contact.bits.flag6 = 0;
-            state->contact.bits.flag7 = 0;
+            state->contact.bits.action_pending = 0;
+            state->contact.bits.targeted = 0;
             state->movement.word &= ~FIELD_MOVEMENT_INVULNERABLE;
             state->tint_red = g_field_object_parts[actor->object_index].tint_red;
             state->tint_green = g_field_object_parts[actor->object_index].tint_green;
             state->tint_blue = g_field_object_parts[actor->object_index].tint_blue;
             state->tint_timer = 0;
             state->interaction_kind = 0;
-            state->contact.bits.flag5 = 0;
+            state->contact.bits.no_hit_test = 0;
             state->hp_display.bits.panel_timer = 0;
             state->hp_display.bits.value = state->maximum_hp;
             state->current_hp.word = state->maximum_hp & 0xFFFFFF;

@@ -28,12 +28,14 @@ struct AkaoHeader;
 struct FieldActionDescriptor;
 struct FieldActor;
 struct FieldActionSlot;
+struct FieldActorRecord;
 struct FieldActorSlot;
 struct FieldPlayerRecord;
 struct FieldActorSlot;
 struct FieldCardClock;
 struct FieldCdBuffer;
 struct FieldCharacterRecord;
+struct FieldKeyedList;
 struct FieldCollisionNode;
 struct FieldItemKey;
 struct FieldItemRecord;
@@ -189,7 +191,7 @@ void field_idle_actor_after_reload(struct FieldActor* actor);
 /* field_actor_input_actions.c */
 s32 field_get_held_action_buttons(s32 player, s32 action, struct FieldActor *actor);
 void field_poll_leader_interaction(void);
-u16 field_resolve_action_command(struct FieldActor *actor, s32 player);
+s32 field_resolve_action_command(struct FieldActor *actor, s32 player);
 void field_update_actor_run_button(struct FieldActor *actor, s32 player);
 
 /* field_actor_input_map_init.c */
@@ -197,6 +199,8 @@ void field_reset_action_command_maps(void);
 void field_apply_weapon_action_params(s32 player_index);
 
 /* field_actor_key_ops.c */
+s32 field_get_actor_position(s32 key, Vec3i* position);
+s32 field_set_actor_position(s32 key, s32 x, s32 y, s32 z);
 s32 field_set_actor_control_mode(s32 key, s32 mode);
 struct FieldActor *field_lookup_actor(s32 key);
 void field_set_actor_group(s32 key, s32 group);
@@ -222,6 +226,7 @@ s32 field_stop_actor(s32 key);
 s32 field_test_actor_depth_overlap(s32 first_key, s32 second_key);
 void field_release_object_link(struct FieldActor* actor);
 s32 field_collapse_defeated_actor(struct FieldActor* actor);
+void field_knock_down_actor(struct FieldActor* actor, s32 clear_recovery);
 
 /* field_actor_record_ops.c */
 void field_spawn_item_record(s32 key, s32 item);
@@ -475,12 +480,17 @@ void field_apply_region_level_ups(s32 slot);
 s32 field_try_character_level_up(s32 index, s32 notify);
 s32 field_add_stat_increase(s32 value, s32 increase, s32 flags);
 
+/* field_record_buffer_ops.c */
+void field_sort_keyed_list(struct FieldKeyedList* list);
+
 /* field_record_lookup_ops.c */
+struct FieldActorRecord* field_alloc_actor_record(s32 id);
 void field_stop_actor_script(s32 actor_id, s32 flags);
 void field_restore_actor_capacity_fraction(s32 record_id, s32 fraction_256);
 void field_grant_actor_pickup(s32 recipient, s32 owner_id);
 
 /* field_record_position_queries.c */
+s32 field_distance_xz(Vec3i* first, Vec3i* second);
 s32 field_is_actor_near_stored_position(s32 actor_id, s32 half_width, s32 half_depth);
 
 /* field_record_lookup_ops.c / field_record_buffer_ops.c */
@@ -544,6 +554,8 @@ void field_rename_stored_companion(s32 index);
 /* field_subsystem_init.c */
 /** @brief Buffer CD resources are read into before they are unpacked (set up by field_subsystem_init). */
 extern u8 *g_field_cd_buffer;
+/** @brief Block pool actor resources are unpacked into, tagged by owner (set up by field_subsystem_init). */
+extern u8* g_field_actor_heap;
 /** @brief Bit 0x8000 of the current scene id; non-zero shows the enemy and boss HUD panels. */
 extern s32 g_field_scene_mode_bit;
 
@@ -552,6 +564,8 @@ extern s32 g_field_scene_mode_bit;
 extern s32 g_field_duel_mode;
 
 /* field_scene_transition.c */
+/** @brief Set while the player stands on the marker whose interaction already started; cleared when the player leaves it. */
+extern s32 g_field_scene_contact_latched;
 /** @brief Event script table of the scene: u16 offsets from the table start, then the scripts. */
 extern u16* g_field_event_scripts;
 

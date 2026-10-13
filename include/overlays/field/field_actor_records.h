@@ -85,8 +85,32 @@ typedef union
 
 /** @brief FieldMovementWord low bits holding the effect scale (ground effect radius). */
 #define FIELD_MOVEMENT_SCALE_MASK 0x3FF
+/** @brief Object-state contact bits (the contact word of g_field_object_states). */
+#define FIELD_CONTACT_ANIMATION_HIDDEN 0x01 /**< An animation actor hides the object; it cannot be targeted. */
+#define FIELD_CONTACT_LINKED 0x02           /**< The object is linked to another object. */
+#define FIELD_CONTACT_ACTION_BITS 0x1C      /**< Cleared before an action is prepared. */
+#define FIELD_CONTACT_NO_HIT_TEST 0x20      /**< The object takes no hits and is never an action target. */
+#define FIELD_CONTACT_ACTION_PENDING 0x40   /**< The object charges or waits for an action; hits land even while its own bound animation runs. */
+#define FIELD_CONTACT_TARGETED 0x80         /**< The object is being targeted. */
+/** @brief Bit positions of the contact bits that are tested one at a time. */
+#define FIELD_CONTACT_LINKED_BIT 1
+#define FIELD_CONTACT_NO_HIT_TEST_BIT 5
+#define FIELD_CONTACT_ACTION_PENDING_BIT 6
+#define FIELD_CONTACT_TARGETED_BIT 7
+
 /** @brief FieldMovementWord bits holding the running action sequence (0, 0x800 or 0x1000). */
 #define FIELD_MOVEMENT_SEQUENCE_MASK 0x1800
+/** @brief FieldObjectState::action_parameter value of an object without a pending action. */
+#define FIELD_ACTION_PARAMETER_NONE 0xFFFF
+/** @brief FieldObjectState::action_parameter bits 0-9: sequence id of the action's animation. */
+#define FIELD_ACTION_PARAMETER_SEQUENCE_MASK 0x3FF
+/** @brief FieldObjectState::action_parameter bits 12-13: animation index of the allocated actor. */
+#define FIELD_ACTION_PARAMETER_ANIMATION_SHIFT 12
+#define FIELD_ACTION_PARAMETER_ANIMATION_MASK 3
+/** @brief FieldObjectState::action_parameter bit: the animation index field is valid. */
+#define FIELD_ACTION_PARAMETER_SELECT_ANIMATION 0x4000
+/** @brief FieldObjectState::action_parameter bit: the action allocated its own animation actor (released when the next sequence starts). */
+#define FIELD_ACTION_PARAMETER_TRANSIENT_ACTOR 0x8000
 
 /** @brief Full FieldObjectState::action_charge; below it an action still charges. */
 #define FIELD_ACTION_CHARGE_FULL 0xFF
@@ -97,14 +121,18 @@ typedef union
     u32 word;
     struct
     {
-        u32 flag0 : 1;
+        /** @brief FIELD_CONTACT_ANIMATION_HIDDEN. */
+        u32 animation_hidden : 1;
         /** @brief The object is linked to linked_object_index, which carries a link flag meanwhile. */
         u32 linked : 1;
         /** @brief Damage scale of the object's hits (0 counts as 1); cleared when an action starts. */
         u32 damage_scale : 3;
-        u32 flag5 : 1;
-        u32 flag6 : 1;
-        u32 flag7 : 1;
+        /** @brief FIELD_CONTACT_NO_HIT_TEST. */
+        u32 no_hit_test : 1;
+        /** @brief FIELD_CONTACT_ACTION_PENDING. */
+        u32 action_pending : 1;
+        /** @brief FIELD_CONTACT_TARGETED. */
+        u32 targeted : 1;
         u32 unk8 : 24;
     } bits;
     struct
@@ -441,6 +469,8 @@ typedef struct FieldObjectPart
 
 /** @brief FieldObjectPart::appearance scale_xz of a full-size object; smaller objects use the small collision footprint. */
 #define FIELD_PART_FULL_SCALE 0x40
+/** @brief Shift that applies a FieldObjectPart scale (FIELD_PART_FULL_SCALE = 1.0) to a length. */
+#define FIELD_PART_SCALE_SHIFT 6
 
 /**
  * @brief Animation definition played by an animation actor slot (0x1C bytes).

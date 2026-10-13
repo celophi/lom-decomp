@@ -110,7 +110,6 @@ extern u8 g_field_stat_change_signals[];
 extern u8 g_field_monster_level_by_rank[FIELD_LEVEL_RANK_COUNT];
 
 s32 field_get_actor_facing(s32 actor_id);
-s32 field_get_actor_position(s32 actor_id, Vec3i* position);
 s32 field_revive_actor();
 FieldStatusState* field_find_object_state(s32 actor_id);
 s32 field_spawn_shared_animation_actor(s32 key, s32 resource_index);
