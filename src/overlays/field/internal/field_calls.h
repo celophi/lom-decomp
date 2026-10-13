@@ -182,9 +182,9 @@ void *field_emit_actor_portrait(SPRT *sprt, u_long *ot, s32 index, Vec2s *positi
 void field_draw_fade_prims(struct FieldRenderHalf *render_half);
 
 /* field_actor_idle_ops.c */
-void field_update_hit_reaction(struct FieldMotionRecord* actor);
-void field_idle_actor_after_animation(struct FieldMotionRecord* actor);
-void field_idle_actor_after_reload(struct FieldMotionRecord* actor);
+void field_update_hit_reaction(struct FieldActor* actor);
+void field_idle_actor_after_animation(struct FieldActor* actor);
+void field_idle_actor_after_reload(struct FieldActor* actor);
 
 /* field_actor_input_actions.c */
 s32 field_get_held_action_buttons(s32 player, s32 action, struct FieldActor *actor);

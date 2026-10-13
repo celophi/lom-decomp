@@ -2813,7 +2813,7 @@ static void field_settle_actor_vertical_offset(FieldActor* actor)
 {
     if (actor->y < 0)
     {
-        actor->y += 0x800;
+        actor->y += FIELD_ACTOR_FALL_STEP;
         if (actor->y > 0)
         {
             actor->y = 0;

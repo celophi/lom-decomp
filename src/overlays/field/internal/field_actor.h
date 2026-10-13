@@ -49,6 +49,8 @@
 #define FIELD_ANIMATION_WALK 5
 /** @brief First running animation. */
 #define FIELD_ANIMATION_RUN 10
+/** @brief Distance a raised actor (negative FieldActor::y) drops each frame on its way back to the ground. */
+#define FIELD_ACTOR_FALL_STEP 0x800
 
 /**
  * @brief Abilities a player assigns to the action buttons (FieldActionSlot::command).
