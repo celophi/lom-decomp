@@ -1386,6 +1386,7 @@ void field_update_object_effects(s32 index)
 
                     if (bit_index >= 0)
                     {
+                        // TODO: Analyze more to see if this and the do/while (0) can be simplified to a while loop.
                         goto find_handler;
                     }
                 }
