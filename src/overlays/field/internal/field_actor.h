@@ -124,6 +124,10 @@ typedef enum FieldAbility
 #define FIELD_MOVEMENT_INVULNERABLE 0x8000
 /** @brief Object-state technique_gauge value of a full gauge. */
 #define FIELD_TECHNIQUE_GAUGE_FULL 0xFF
+/** @brief Companion character ids from this value on are drawn in a selectable colour and get the companion HUD panel. */
+#define FIELD_COMPANION_COLOR_ID_MIN 0x41
+/** @brief Character id of the current companion, compared against FIELD_COMPANION_COLOR_ID_MIN. TODO: name the containing record. */
+extern u8 D_800FDCEA;
 /** @brief Object-state group_flags bits holding the object's group. */
 #define FIELD_OBJECT_GROUP_MASK 0x0F
 /** @brief Object-state flags bits of unknown meaning (each has a handler in g_field_object_flag_handlers). */

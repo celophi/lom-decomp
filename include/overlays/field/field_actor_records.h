@@ -48,15 +48,15 @@ extern FieldResourceEntry g_field_resource_entries[];
 /** @brief Number of waypoints the path finder can store for an object. */
 #define FIELD_PATH_MAX_POINTS 18
 
-/** @brief A 24-bit value word whose top byte holds flags. */
+/** @brief A 24-bit value word whose top byte holds flags (only FieldObjectState::hp_display uses them). */
 typedef union
 {
     s32 word;
     struct
     {
-        u32 value : 24;
-        u32 unk24 : 7;
-        u32 flag31 : 1;
+        u32 value : 24;      /**< HP, or the HP the HUD gauge currently shows. */
+        u32 panel_timer : 7; /**< Frames an enemy HUD panel stays up after an HP change. */
+        u32 boss : 1;        /**< The object uses the boss HUD panel. */
     } bits;
     u8 bytes[4];
 } FieldValueWord;

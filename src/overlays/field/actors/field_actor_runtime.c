@@ -80,9 +80,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 /** @brief Animation targets are passed as the low byte of one word each. */
 #define FIELD_TARGET_STRIDE 4
 
-/** @brief Character ids of companions from this value on are drawn in a selectable colour. */
-#define FIELD_COMPANION_COLOR_ID_MIN 0x41
-
 /** @brief CD resource id bases of the party sprite packages. */
 #define FIELD_RES_HERO_SPRITES 0xAEB
 #define FIELD_RES_PARTNER_SPRITES 0xAEE
@@ -338,7 +335,6 @@ extern u8 D_800FF59C;
 extern u16 D_800FDA80;
 extern u8 D_800FDA81;
 extern u8 D_800FDA83;
-extern u8 D_800FDCEA;
 
 /**
  * @brief Advance the active field dialog runtime and finish any pending text work.

@@ -908,7 +908,7 @@ void field_load_scene_actors(FieldSceneLayout* layout)
             state->tint_timer = 0;
             state->interaction_kind = 0;
             state->contact.bits.flag5 = 0;
-            state->hp_display.bits.unk24 = 0;
+            state->hp_display.bits.panel_timer = 0;
             state->hp_display.bits.value = state->maximum_hp;
             state->current_hp.word = state->maximum_hp & 0xFFFFFF;
             state->key = index + FIELD_PARTY_COUNT;
