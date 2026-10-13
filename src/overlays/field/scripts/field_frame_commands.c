@@ -71,7 +71,7 @@ void field_build_frame_commands(FieldRenderHalf* render_half, s32 alternate)
     {
         field_update_actor_animations();
     }
-    field_prepare_actor_render_commands((u8*)render_half, alternate);
+    field_prepare_actor_render_commands((FieldRenderContext*)render_half, alternate);
     field_render_actor_objects((FieldRenderContext*)render_half);
     field_draw_fade_prims(render_half);
     field_update_pair_indicators(render_half);

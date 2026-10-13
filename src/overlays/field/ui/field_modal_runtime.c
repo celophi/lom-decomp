@@ -237,7 +237,6 @@ extern s32 g_field_party_routes_stale;
 extern s32 g_field_item_drop_menu_open;
 extern s32 g_field_timed_panel_active;
 extern s32 g_field_return_to_title_prompt_state;
-extern s32 D_8012291C;
 extern s32 g_field_item_drop_enabled;
 
 /* Modal overlays. */
@@ -1450,7 +1449,7 @@ void field_process_input(FieldRenderHalf* render)
             }
             g_field_menu_controller_types[0] = ports[0].published_sample.device_type;
             g_field_menu_controller_types[1] = ports[1].published_sample.device_type;
-            if (D_8012291C != 0)
+            if (g_field_menu_locked != 0)
             {
                 if (field_is_scene_fading() == 0)
                 {
@@ -1524,7 +1523,7 @@ static s32 field_play_low_hp_warning(void)
  * @brief Run the MENU overlay and the GOLEM or GNAME screens it asks for, until the menu closes.
  * @param render_buffers Render buffers handed to MENU.
  * @param controller Controller that opened the menu; unused.
- * @note While D_8012291C is set, or an animation binding is busy, the actor-label session opens instead.
+ * @note While g_field_menu_locked is set, or an animation binding is busy, the actor-label session opens instead.
  */
 static void field_run_menu(void* render_buffers, s32 controller)
 {
@@ -1533,7 +1532,7 @@ static void field_run_menu(void* render_buffers, s32 controller)
     s32 screen_id;
 
     controllers = CONTROLLER_STATE;
-    menu_locked = D_8012291C;
+    menu_locked = g_field_menu_locked;
     g_field_text_session_cd_error = 0;
     controllers->ports[0].small_motor_command = 0;
     controllers->ports[0].actuator_control.fields.large_motor_command = 0;
@@ -1620,7 +1619,7 @@ void field_reset_text_session(void)
     ControllerState* controllers = CONTROLLER_STATE;
 
     g_field_text_session_active = 0;
-    D_8012291C = 0;
+    g_field_menu_locked = 0;
     g_field_menu_controller_types[0] = controllers->ports[0].published_sample.device_type;
     g_field_menu_controller_types[1] = controllers->ports[1].published_sample.device_type;
 }

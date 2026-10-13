@@ -13,6 +13,42 @@
 /** @brief Ordering-table entry the fade packets are linked into. */
 #define FIELD_FADE_OT_INDEX 16
 
+/** @brief Frames the standard fades take. */
+#define FIELD_FADE_DEFAULT_FRAMES 5
+
+/** @brief Channel level of the dimmed scene behind modal windows and result screens. */
+#define FIELD_FADE_MODAL_LEVEL 0xC0
+
+/**
+ * @brief Fade color triple plus its remaining step count.
+ * @note @c duration is the transition length in frames when set as a target,
+ *       and the number of remaining interpolation steps while the fade runs.
+ */
+typedef struct
+{
+    s16 red;
+    s16 green;
+    s16 blue;
+    s16 duration;
+} FieldFade;
+
+/** @brief Saved fade color with no step/duration field. */
+typedef struct
+{
+    s16 red;
+    s16 green;
+    s16 blue;
+} FieldFadeColor;
+
+/** @brief Fade color shown this frame. */
+extern FieldFade g_field_fade_current;
+
+/** @brief Fade color being approached and the frames left to reach it. */
+extern FieldFade g_field_fade_target;
+
+/** @brief Fade color restored when a modal window closes. */
+extern FieldFadeColor g_field_fade_restore_color;
+
 /**
  * @brief Set both the target and saved restore color for the field fade.
  * @param red Target red intensity.

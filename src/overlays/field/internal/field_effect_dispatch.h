@@ -5,7 +5,7 @@
 #include "main/field_runtime.h"
 
 /** @brief Rendering state shared by field actor and effect packet builders. */
-typedef struct
+typedef struct FieldRenderContext
 {
     u8 pad0[0x40];
     u32 ordering_table;

@@ -22,6 +22,7 @@
 #include <memory.h>
 #include <rand.h>
 #include "../internal/field_actor_runtime.h"
+#include "../internal/field_actor_palette.h"
 #include "overlays/field/field_actor_records.h"
 
 /* ---- HUD ------------------------------------------------------------------ */
@@ -107,14 +108,9 @@
 #define FIELD_HUD_ENEMY_PANEL_HEIGHT 16
 #define FIELD_HUD_ENEMY_PANEL_UV FIELD_HUD_UV(0, 0x40)
 
-/** @brief Portrait: size, texture position, VRAM pages (party member and companion) and CLUT rows. */
+/** @brief Portrait: size, texture position and companion CLUT row (VRAM pages and party CLUT rows are in field_actor_palette.h). */
 #define FIELD_HUD_PORTRAIT_SIZE 24
 #define FIELD_HUD_PORTRAIT_UV FIELD_HUD_UV(0, 0xE8)
-#define FIELD_HUD_PORTRAIT_TEXTURE_X 0x380
-#define FIELD_HUD_PORTRAIT_TEXTURE_STEP 0x80
-#define FIELD_HUD_COMPANION_TEXTURE_X 0x340
-#define FIELD_HUD_COMPANION_TEXTURE_STEP 0x40
-#define FIELD_HUD_PORTRAIT_CLUT_Y 0x1F4
 #define FIELD_HUD_COMPANION_CLUT_Y 0x1EF
 
 /** @brief Blinking eyes sprite: offset from the panel, size (one animation frame) and first frame. */
@@ -1218,7 +1214,7 @@ void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* positi
     }
     else
     {
-        sprt->clut = ((index + FIELD_HUD_PORTRAIT_CLUT_Y) << 6) | FIELD_CONTROL_PALETTE(g_field_actors[index].control.word);
+        sprt->clut = ((index + FIELD_RESOURCE_CLUT_VRAM_Y) << 6) | FIELD_CONTROL_PALETTE(g_field_actors[index].control.word);
     }
 
     addPrim(ot, sprt);
@@ -1227,11 +1223,11 @@ void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* positi
 
     if (index >= FIELD_PARTY_COMPANION)
     {
-        setDrawTPage(mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, FIELD_HUD_COMPANION_TEXTURE_X - index * FIELD_HUD_COMPANION_TEXTURE_STEP, 0));
+        setDrawTPage(mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, FIELD_COMPANION_TEXTURE_VRAM_X - index * FIELD_TEXTURE_COLUMN_WIDTH, 0));
     }
     else
     {
-        setDrawTPage(mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, FIELD_HUD_PORTRAIT_TEXTURE_X - index * FIELD_HUD_PORTRAIT_TEXTURE_STEP, 0));
+        setDrawTPage(mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, FIELD_PARTY_TEXTURE_VRAM_X - index * FIELD_PARTY_TEXTURE_VRAM_STEP, 0));
     }
 
     addPrim(ot, mode);

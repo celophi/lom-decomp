@@ -19,6 +19,7 @@
 #include "../internal/field_calls.h"
 #include "overlays/field/field_interaction_start.h"
 #include "../internal/field_state_ops.h"
+#include "../internal/field_actor_palette.h"
 #include <libgpu.h>
 #include <libetc.h>
 #include <libgte.h>
@@ -66,8 +67,6 @@
 #define FIELD_IMAGE_ROW0_X 832
 #define FIELD_IMAGE_ROW1_X 960
 #define FIELD_IMAGE_ROW1_Y 256
-/** @brief First VRAM row of the actor CLUTs (one row per actor). */
-#define FIELD_ACTOR_CLUT_VRAM_Y 500
 /** @brief Scene that ignores the actor groups of its layout. */
 #define FIELD_SCENE_NO_LAYOUT_GROUPS 0x13D
 /** @brief Default spawn point when the scene has no spawn record. */
@@ -203,15 +202,6 @@ typedef struct
     FieldLayoutRecord records[1];
 } FieldSceneLayout;
 
-/** @brief Transition fade target color and duration. */
-typedef struct
-{
-    s16 red;
-    s16 green;
-    s16 blue;
-    s16 duration;
-} FieldTransitionFade;
-
 s32 akao_fade_song_volume(s32 song_handle, s32 frames, s32 volume);
 void* field_header_record_at(s32 index);
 void field_restart_actor_animation(FieldActor* actor);
@@ -220,7 +210,6 @@ void field_store_entry_settings();
 extern FieldRenderHalf* g_field_render_context;
 extern s32 g_field_direction_animation_modes[];
 extern FieldDirectionOffset g_field_direction_offsets[];
-extern FieldTransitionFade g_field_fade_target;
 /** @brief Built-in geometry for the closed and open chest sprites. */
 extern u8 g_field_chest_geometry[0x3C];
 /** @brief CLUT row of the hero per party palette index. */
@@ -586,11 +575,11 @@ void field_update_scene(void)
                 else
                 {
                     /* No images of its own: reuse the previous actor's CLUT and texture slot. */
-                    rect.y = i + FIELD_ACTOR_CLUT_VRAM_Y + FIELD_PARTY_COUNT - 1;
+                    rect.y = i + FIELD_RESOURCE_CLUT_VRAM_Y + FIELD_PARTY_COUNT - 1;
                     rect.w = GPU_CLUT_8BIT_COLORS;
                     rect.x = 0;
                     rect.h = 1;
-                    MoveImage(&rect, 0, i + FIELD_ACTOR_CLUT_VRAM_Y + FIELD_PARTY_COUNT);
+                    MoveImage(&rect, 0, i + FIELD_RESOURCE_CLUT_VRAM_Y + FIELD_PARTY_COUNT);
                     previous_resource = (FieldResourceEntry*)((u8*)g_field_resource_entries + (i + FIELD_PARTY_COUNT - 1) * sizeof(FieldResourceEntry));
                     resource_base = (u8*)g_field_resource_entries;
                     inherited_resource = OFFSET_FIRST_PTR(FieldResourceEntry, resource_offset, resource_base);
@@ -806,7 +795,7 @@ void field_upload_actor_image(FieldTimData* image, s32 image_slot, s32 actor_ind
     size = image->file.palette.size;
     if (upload_palette != 0)
     {
-        setRECT(&rect, 0, actor_index + FIELD_ACTOR_CLUT_VRAM_Y, width * height, 1);
+        setRECT(&rect, 0, actor_index + FIELD_RESOURCE_CLUT_VRAM_Y, width * height, 1);
         LoadImage(&rect, image->file.palette.pixels);
     }
     image = (FieldTimData*)((u8*)image + size + FIELD_TIM_HEADER_SIZE);

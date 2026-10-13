@@ -20,6 +20,20 @@
 #define FIELD_SHARED_TEXTURE_VRAM_X 0x140
 #define FIELD_SHARED_TEXTURE_VRAM_Y 0
 
+/** @brief VRAM row of resource entry 0's sprite CLUT; entry n uses the row n below. */
+#define FIELD_RESOURCE_CLUT_VRAM_Y 0x1F4
+/** @brief VRAM X of the narrow (64-entry) sprite CLUT within its row. */
+#define FIELD_NARROW_CLUT_VRAM_X 0xC0
+/** @brief Entries of a narrow sprite CLUT. */
+#define FIELD_NARROW_CLUT_ENTRIES 0x40
+/** @brief Width of one sprite texture column in VRAM. */
+#define FIELD_TEXTURE_COLUMN_WIDTH 0x40
+/** @brief VRAM X of party member 0's sprite textures; member n's columns start FIELD_PARTY_TEXTURE_VRAM_STEP * n to the left. */
+#define FIELD_PARTY_TEXTURE_VRAM_X 0x380
+#define FIELD_PARTY_TEXTURE_VRAM_STEP 0x80
+/** @brief VRAM X of the sprite texture column of the other resource slots; slot n starts FIELD_TEXTURE_COLUMN_WIDTH * n to the left. */
+#define FIELD_COMPANION_TEXTURE_VRAM_X 0x340
+
 /** @brief VRAM row of the first of the effect CLUT rows loaded with the common texture. */
 #define FIELD_EFFECT_CLUT_VRAM_Y 0x1EA
 /** @brief Number of 256-entry effect CLUT rows. */

@@ -26,4 +26,7 @@ void field_update_modal(struct FieldRenderHalf* render);
 void field_begin_duel_intro(void);
 void field_begin_duel_result(void);
 
+/** @brief Set from battle entry until the dialog or text session closes; while set, the menu button opens the text session. */
+extern s32 g_field_menu_locked;
+
 #endif

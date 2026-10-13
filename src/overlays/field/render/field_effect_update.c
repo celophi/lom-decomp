@@ -123,8 +123,8 @@ extern FieldObjectPart g_field_object_parts[];
 extern FieldMotionRecord g_field_actors[];
 extern FieldMotionRecord g_field_effect_records[FIELD_EFFECT_ACTIVE_RECORD_COUNT];
 extern VECTOR D_80105778;
-extern s32 D_80105760;
-extern s32 D_80105770;
+extern s32 g_field_spawn_ground_point;
+extern s32 g_field_next_path_group;
 extern u8 *g_field_builtin_track_data;
 extern s32 g_field_track_index;
 
@@ -1084,10 +1084,10 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     case 0x33:
         placement_object = &g_field_object_states[actor->owner_object_index];
         source_record = &g_field_actors[actor->owner_object_index];
-        effect->x += source_record->x + (placement_object->ground_attachment_points[D_80105760].x << 8);
+        effect->x += source_record->x + (placement_object->ground_attachment_points[g_field_spawn_ground_point].x << 8);
         effect->y += source_record->y;
-        effect->z += source_record->z + (placement_object->ground_attachment_points[D_80105760].y << 8);
-        FIELD_EFFECT_FLAGS(effect).bits.ground_point = *(u16*)&D_80105760;
+        effect->z += source_record->z + (placement_object->ground_attachment_points[g_field_spawn_ground_point].y << 8);
+        FIELD_EFFECT_FLAGS(effect).bits.ground_point = *(u16*)&g_field_spawn_ground_point;
         break;
 
     case 0x34:
@@ -1248,14 +1248,14 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     }
     if ((effect->flags & 0x07000000) == 0x05000000)
     {
-        field_init_path(effect, field_resolve_effect_extent(actor, part), (part->placement_flags.word >> 15) & 1, D_80105770);
+        field_init_path(effect, field_resolve_effect_extent(actor, part), (part->placement_flags.word >> 15) & 1, g_field_next_path_group);
         effect->position_data.path_time = 0;
-        effect->path_group = D_80105770;
-        field_update_path_position(&effect->position_data.path_time, effect, D_80105770);
-        D_80105770 = D_80105770 + 1;
-        if (D_80105770 == FIELD_PATH_GROUP_COUNT)
+        effect->path_group = g_field_next_path_group;
+        field_update_path_position(&effect->position_data.path_time, effect, g_field_next_path_group);
+        g_field_next_path_group = g_field_next_path_group + 1;
+        if (g_field_next_path_group == FIELD_PATH_GROUP_COUNT)
         {
-            D_80105770 = 0;
+            g_field_next_path_group = 0;
         }
     }
     if (part->palette_extent.word & 0x10000000)
@@ -1340,8 +1340,8 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     }
     if ((actor->status.word & 0x1E) == 8 && FIELD_PART_PLACEMENT_KIND(part) == 0x33)
     {
-        D_80105760 = D_80105760 + 1;
-        if (D_80105760 < 3)
+        g_field_spawn_ground_point = g_field_spawn_ground_point + 1;
+        if (g_field_spawn_ground_point < 3)
         {
             actor->active_counts[g_field_track_index][part_index]--;
             actor->track_counters[g_field_track_index][part_index]--;
@@ -1758,7 +1758,7 @@ void field_retire_effect(FieldMotionRecord* effect, FieldObjectPart* part)
             {
                 D_80105778.vx = effect->x;
                 D_80105778.vy = effect->y;
-                D_80105760 = 0;
+                g_field_spawn_ground_point = 0;
                 D_80105778.vz = effect->z;
 
                 spawn_part = &g_field_actor_slots[effect->actor_index]
@@ -3905,7 +3905,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                         {
                             if (!((part->placement_flags.word >> 0xC) & 3))
                             {
-                                poly->clut = getClut(0x90, rec->resource_index + 0x1F4);
+                                poly->clut = getClut(0x90, rec->resource_index + FIELD_RESOURCE_CLUT_VRAM_Y);
                             }
                             else
                             {
@@ -3924,7 +3924,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                     poly->clut = getClut((part->appearance.fields.palette_selector & 0xF) << 4, y_offset);
                                     break;
                                 case 2:
-                                    poly->clut = getClut(0x90, rec->resource_index + 0x1F4);
+                                    poly->clut = getClut(0x90, rec->resource_index + FIELD_RESOURCE_CLUT_VRAM_Y);
                                     break;
                                 }
                             }
@@ -3933,7 +3933,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                         {
                             if (!((part->placement_flags.word >> 0xC) & 3))
                             {
-                                poly->clut = getClut(((effect_flags >> 0x13) & 0xF) << 4, rec->resource_index + 0x1F4);
+                                poly->clut = getClut(((effect_flags >> 0x13) & 0xF) << 4, rec->resource_index + FIELD_RESOURCE_CLUT_VRAM_Y);
                             }
                             else
                             {
@@ -3952,7 +3952,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                     poly->clut = getClut((part->appearance.fields.palette_selector & 0xF) << 4, y_offset);
                                     break;
                                 case 2:
-                                    poly->clut = getClut((((u32) rec->flags >> 0x13) & 0xF) << 4, rec->resource_index + 0x1F4);
+                                    poly->clut = getClut((((u32) rec->flags >> 0x13) & 0xF) << 4, rec->resource_index + FIELD_RESOURCE_CLUT_VRAM_Y);
                                     break;
                                 }
                             }
@@ -3996,7 +3996,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                             }
                             else
                             {
-                                poly->clut = getClut(item[6] << 4, rec->resource_index + 0x1F4);
+                                poly->clut = getClut(item[6] << 4, rec->resource_index + FIELD_RESOURCE_CLUT_VRAM_Y);
                             }
                             if (item[6] == 0xB)
                             {
@@ -4009,7 +4009,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                             {
                                 setSemiTrans(poly, 1);
                             }
-                            poly->clut = getClut((item[6] * 0x10) + 0xC0, rec->resource_index + 0x1F4);
+                            poly->clut = getClut((item[6] * 0x10) + 0xC0, rec->resource_index + FIELD_RESOURCE_CLUT_VRAM_Y);
                         }
                     }
                     else
@@ -4040,7 +4040,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                             }
                             if ((item[7] & 3) != 2)
                             {
-                                poly->clut = getClut(item[6] << 4, rec->resource_index + 0x1F4);
+                                poly->clut = getClut(item[6] << 4, rec->resource_index + FIELD_RESOURCE_CLUT_VRAM_Y);
                             }
                             else
                             {
@@ -4048,7 +4048,7 @@ s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, 
                                 {
                                     setSemiTrans(poly, 1);
                                 }
-                                poly->clut = getClut((item[6] * 0x10) + 0xC0, rec->resource_index + 0x1F4);
+                                poly->clut = getClut((item[6] * 0x10) + 0xC0, rec->resource_index + FIELD_RESOURCE_CLUT_VRAM_Y);
                                 break;
                             }
                             break;

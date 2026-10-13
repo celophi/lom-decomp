@@ -42,7 +42,6 @@ extern s32 g_field_text_session_active;
 extern s32 g_field_restore_group;
 extern s32 g_field_battle_idle_checks;
 extern s32 g_field_money_snapshot;
-extern s32 D_8012291C;
 extern u32 g_field_experience_snapshot[];
 
 void akao_release_all_sfx(void);
@@ -124,7 +123,7 @@ void field_set_battle_group(s32 mode, void* actor_data)
     }
 
     saved_game = g_saved_game_ctx;
-    D_8012291C = 1;
+    g_field_menu_locked = 1;
     g_field_money_snapshot = saved_game->money;
     field_begin_battle_entry();
 
