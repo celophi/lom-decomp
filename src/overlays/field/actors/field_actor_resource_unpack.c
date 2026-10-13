@@ -456,15 +456,10 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
                     do
                     {
                         pixel_input = (u16*)row_input;
-                        column = 0;
 
-                        if (texture->width != 0)
+                        for (column = 0; column < texture->width; column++, pixel_output++, pixel_input++)
                         {
-                            do
-                            {
-                                column += 1;
-                                *pixel_output++ = *pixel_input++;
-                            } while (column < texture->width);
+                            *pixel_output = *pixel_input;
                         }
 
                         row += 1;
