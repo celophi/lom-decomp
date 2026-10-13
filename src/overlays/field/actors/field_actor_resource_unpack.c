@@ -49,8 +49,8 @@
 /** @brief Orientation mode of the first part from which a resource stores its curves in the current layout. */
 #define FIELD_CURVE_FORMAT_CURRENT 2U
 
-/** @brief Width in bytes of an actor texture (64 VRAM columns of 16 bits). */
-#define FIELD_ACTOR_TEXTURE_ROW_BYTES 128
+/** @brief Width in pixels of an actor texture page (64 VRAM columns of 16 bits). */
+#define FIELD_ACTOR_TEXTURE_ROW_PIXELS 64
 /** @brief Pixel data of an actor TIM: 8bpp with a 256-entry CLUT, then the image block header. */
 #define FIELD_ACTOR_TIM_PIXELS (sizeof(Tim) + sizeof(TimBlock))
 /** @brief Header bytes in front of a TIM block's payload (signed, so size arithmetic stays signed). */
@@ -319,7 +319,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
     FieldParameterCurve* curves;
     u8* output;
     u16* pixel_input;
-    u8* row_input;
+    u16* row_input;
     u16* pixel_output;
     u8* block;
     FieldMeshResource* mesh;
@@ -373,7 +373,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
     if (mesh_count != 0)
     {
         mesh = field_block_alloc(g_field_actor_heap, FIELD_ACTOR_MAX_MESHES * sizeof(FieldMeshResource), FIELD_OWNER_TAG(owner));
-        actor->mesh_data = (u8*)mesh;
+        actor->meshes = mesh;
     }
 
     i = 0;
@@ -443,8 +443,8 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
                     row = 0;
                     texture->pixels = pixel_output;
                     texture_height = texture->height;
-                    row_input = resource + *(u16*)resource + FIELD_ACTOR_TIM_PIXELS;
-                    row_input = row_input + texture->x * 2 + texture->y * FIELD_ACTOR_TEXTURE_ROW_BYTES;
+                    row_input = (u16*)(resource + *(u16*)resource + FIELD_ACTOR_TIM_PIXELS);
+                    row_input = row_input + texture->x + texture->y * FIELD_ACTOR_TEXTURE_ROW_PIXELS;
 
                     if (texture_height == 0)
                     {
@@ -455,7 +455,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
 
                     do
                     {
-                        pixel_input = (u16*)row_input;
+                        pixel_input = row_input;
 
                         for (column = 0; column < texture->width; column++, pixel_output++, pixel_input++)
                         {
@@ -463,7 +463,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
                         }
 
                         row += 1;
-                        row_input += FIELD_ACTOR_TEXTURE_ROW_BYTES;
+                        row_input += FIELD_ACTOR_TEXTURE_ROW_PIXELS;
                     } while (row < texture->height);
 
                     j += 1;
@@ -514,7 +514,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
     actor->animation = animation;
     animation->duration = duration;
     block = (u8*)actor->animation;
-    actor->animations = (FieldAnimationDef*)block;
+    actor->animations = actor->animation;
     *(FieldAnimationBaseBytes*)block = *(FieldAnimationBaseBytes*)cursor;
     block += sizeof(FieldAnimationBaseBytes);
     cursor += sizeof(FieldAnimationBaseBytes);

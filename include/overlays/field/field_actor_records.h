@@ -562,7 +562,8 @@ typedef struct FieldActorSlot
     /** @brief The actor's animation definitions; animation_index selects the one playing. */
     FieldAnimationDef* animations;
     u8* track_data;
-    u8* mesh_data;
+    /** @brief Mesh table of the resource (see FieldMeshResource in field_mesh.h). */
+    struct FieldMeshResource* meshes;
     /** @brief Sound-effect buffers of the resource, played by kind 2 sound commands. */
     struct AkaoHeader* sound_data[FIELD_ACTOR_SOUND_COUNT];
     u8 active;
