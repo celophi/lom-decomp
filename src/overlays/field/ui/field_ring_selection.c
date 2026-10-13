@@ -120,7 +120,6 @@ typedef struct
     u_short pad2;
 } FieldThumbnailQuad;
 
-extern u8* g_field_cd_buffer;
 /** @brief Golem sprite CLUTs, two banks of 16. */
 extern u16 g_field_golem_palettes[2][FIELD_GOLEM_BANK_PALETTES * GPU_CLUT_4BIT_COLORS];
 /** @brief Golem portrait palettes, two banks of 16. */

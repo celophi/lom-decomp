@@ -264,7 +264,6 @@ void field_draw_dialog_windows(FieldRenderHalf* render_half);
 void field_merge_dialog_items(void);
 void akao_fade_song_volume(s32, s32, s32);
 void akao_fade_all_sfx_volume(s32, s32);
-FieldActor* field_lookup_actor(s32 key);
 
 static void field_relocate_resource_buffer(s32 resource_index);
 s32 field_get_actor_resource_id(s32 unused_slot_index, FieldPlayerRecord* player, s32 weapon_set);
@@ -311,7 +310,6 @@ extern u8 g_field_resource_buffer[];
 extern FieldAnimationDef g_field_object_default_animation;
 extern s32 g_field_loaded_actor_count;
 extern void* g_field_resource_cursor;
-extern s32 g_field_scene_mode_bit;
 extern FieldDirectionOffset g_field_direction_offsets[];
 extern s32 g_field_party_routes_stale;
 extern s32 g_field_item_drop_menu_open;
@@ -320,7 +318,6 @@ extern s32 D_80105770;
 extern s32 g_field_timed_panel_active;
 extern s32 g_field_modal_state;
 extern s32 D_80105760;
-extern FieldCdBuffer* g_field_cd_buffer;
 extern s32 g_field_dialog_screen_mode;
 extern s32 g_field_duel_mode[];
 
@@ -2461,11 +2458,11 @@ void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index)
     {
         FieldActor* partner = &g_field_actors[1];
 
-        partner->control.word = (partner->control.word & ~FIELD_CONTROL_PALETTE_MASK) | FIELD_CONTROL_PALETTE_PARTNER;
+        partner->control.bits.palette = FIELD_CONTROL_PALETTE_PARTNER;
     }
     else
     {
-        g_field_actors[actor_index].control.word &= ~FIELD_CONTROL_PALETTE_MASK;
+        g_field_actors[actor_index].control.bits.palette = 0;
     }
 
     g_field_actors[actor_index].control.word &= ~FIELD_CONTROL_PLAY_ONCE;
@@ -2629,7 +2626,7 @@ static void field_load_actor_texture_set(s32 resource_id, s32 slot_index, s32 te
     s32 image_offset;
     s32 full_width;
 
-    buf = g_field_cd_buffer;
+    buf = (FieldCdBuffer*)g_field_cd_buffer;
     full_width = 0x100;
     cdrom_queue_read(resource_id & 0xFFFF, buf);
     cdrom_wait_queue_empty();
@@ -3355,7 +3352,7 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
     FieldCdBuffer* buf;
     s32 size;
 
-    buf = g_field_cd_buffer;
+    buf = (FieldCdBuffer*)g_field_cd_buffer;
     size = cdrom_queue_read((u16)resource_id, buf);
     cdrom_wait_queue_empty();
     field_unpack_resource_package(buf, size, slot_index, resource_entry_index);
@@ -3554,15 +3551,15 @@ static void field_refresh_actor_portraits(void)
         cdrom_wait_queue_empty();
 
         g_field_player_records[0].portrait_index = g_field_player_records[0].head.bits.alt_appearance;
-        bcopy((u8*)g_field_cd_buffer + g_field_cd_buffer->offsets[g_field_player_records[0].portrait_index + 1], g_field_party_portraits, FIELD_PORTRAIT_BYTES);
+        bcopy(g_field_cd_buffer + ((FieldCdBuffer*)g_field_cd_buffer)->offsets[g_field_player_records[0].portrait_index + 1], g_field_party_portraits, FIELD_PORTRAIT_BYTES);
 
         partner_portrait = g_field_party_portraits + FIELD_PORTRAIT_BYTES;
         g_field_player_records[1].portrait_index = partner_portrait_index;
-        bcopy((u8*)g_field_cd_buffer + g_field_cd_buffer->offsets[g_field_player_records[1].portrait_index + 1], partner_portrait, FIELD_PORTRAIT_BYTES);
+        bcopy(g_field_cd_buffer + ((FieldCdBuffer*)g_field_cd_buffer)->offsets[g_field_player_records[1].portrait_index + 1], partner_portrait, FIELD_PORTRAIT_BYTES);
 
         companion_portrait = g_field_party_portraits + FIELD_PORTRAIT_BYTES * 2;
         g_field_player_records[2].portrait_index = g_field_player_records[2].character_id + FIELD_PORTRAIT_COMPANION_BASE;
-        bcopy((u8*)g_field_cd_buffer + g_field_cd_buffer->offsets[g_field_player_records[2].portrait_index + 1], companion_portrait, FIELD_PORTRAIT_BYTES);
+        bcopy(g_field_cd_buffer + ((FieldCdBuffer*)g_field_cd_buffer)->offsets[g_field_player_records[2].portrait_index + 1], companion_portrait, FIELD_PORTRAIT_BYTES);
 
         if (g_field_player_records[1].character_kind == FIELD_PLAYER_KIND_HERO)
         {

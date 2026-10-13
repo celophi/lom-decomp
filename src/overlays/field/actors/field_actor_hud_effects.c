@@ -19,6 +19,7 @@
 #include "common/vector.h"
 #include <libgte.h>
 #include <libgpu.h>
+#include <memory.h>
 #include <rand.h>
 #include "../internal/field_actor_runtime.h"
 #include "overlays/field/field_actor_records.h"
@@ -168,11 +169,9 @@ extern s32 g_field_hud_bar_height;
 extern s32 g_field_hud_bar_width;
 extern s32 g_field_hud_bar_offset_x;
 extern s32 g_field_hud_bar_offset_y;
-extern s32 g_field_scene_mode_bit;
 extern s32 g_frame_counter;
 extern u8 g_field_pair_indicator_list[];
 extern u16 D_800FE01E;
-extern u8* g_field_cd_buffer;
 
 /* ---- Object flag handlers and fading primitives ---------------------------- */
 
@@ -202,15 +201,6 @@ typedef union
 
 extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_COUNT];
 
-/** @brief FieldObjectState.flags bit with a handler in g_field_object_flag_handlers; meaning unknown. */
-#define FIELD_OBJECT_FLAG_8000 0x8000
-
-/** @brief Set for one frame when the object is hit; tints the actor red. */
-#define FIELD_OBJECT_FLAG_HIT_FLASH 0x10000000
-
-/** @brief FieldObjectState.contact bit: the object is linked to linked_object_index. */
-#define FIELD_CONTACT_LINKED_SHIFT 1
-
 /** @brief FieldObjectState.movement bits cleared whenever an actor animation restarts. */
 #define FIELD_MOVEMENT_ANIMATION_BITS 0x1800
 
@@ -239,6 +229,9 @@ extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_
 
 /** @brief Brightness lost by a fading primitive per frame. */
 #define FIELD_FADE_PRIM_STEP 0x10
+
+/** @brief Bit position of FIELD_CONTACT_LINKED in FieldObjectState.contact. */
+#define FIELD_CONTACT_LINKED_SHIFT 1
 
 /** @brief Play built-in effect resource @p resource on the effect slot of @p actor's object. */
 #define START_OBJECT_EFFECT(actor, resource)                                                                                                                   \
@@ -293,13 +286,8 @@ static void* field_emit_hud_percentage(void* packet, FieldRenderHalf* render_hal
 static void* field_emit_hud_glyph(SPRT* sprite, FieldRenderHalf* render_half, s32 value, Vec2s* position);
 static POLY_F4* field_emit_hud_damage_quad(POLY_F4* prim, s32 y, u_long* ot);
 static POLY_F4* field_emit_hud_healing_quad(POLY_F4* prim, s32 y, u_long* ot);
-void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* position);
-s32 field_upload_image_resource(RECT* rect, Tim* resource, s32 mode);
-void bcopy(const void* src, void* dst, int size);
 void field_restart_actor_animation(FieldActor* actor);
 static inline void field_clear_link_target_flag(s32 object_index);
-FieldActor* field_lookup_actor(s32 key);
-void field_update_actor_record(s32 actor_id);
 
 /**
  * @brief Set the corners of a slanted gauge bar.
@@ -469,7 +457,8 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
 
                         if (g_field_object_states[i].hp_display.bits.panel_timer != 0)
                         {
-                            if (!(g_field_object_states[i].flags & FIELD_OBJECT_FLAG_0100) && (g_field_object_states[i].contact.bytes.flags & 1) &&
+                            if (!(g_field_object_states[i].flags & FIELD_OBJECT_FLAG_0100) &&
+                                (g_field_object_states[i].contact.bytes.flags & FIELD_CONTACT_ANIMATION_HIDDEN) &&
                                 (g_field_effect_records[g_field_object_states[i].linked_effect_index].animation & FIELD_ANIMATION_SEQUENCE_MASK) !=
                                     FIELD_HUD_ANCHOR_IGNORED_ANIMATION)
                             {
@@ -1346,7 +1335,7 @@ void field_update_object_effects(s32 index)
     if (flags_before & FIELD_OBJECT_IMMOBILE_FLAGS)
     {
         state->flags &= ~FIELD_OBJECT_FLAG_DASH;
-        state->flags &= ~FIELD_OBJECT_FLAG_8000;
+        state->flags &= ~FIELD_OBJECT_CHAINING;
     }
 
     flags_current = state->flags;
@@ -1398,12 +1387,12 @@ void field_update_object_effects(s32 index)
         }
         else
         {
-            if (!(flags_current & FIELD_OBJECT_FLAG_8000) && (previous_flags & FIELD_OBJECT_FLAG_8000))
+            if (!(flags_current & FIELD_OBJECT_CHAINING) && (previous_flags & FIELD_OBJECT_CHAINING))
             {
                 slot->active = 0;
                 slot->track_mask = 0;
                 field_clear_actor_effects(slot);
-                state->previous_flags &= ~FIELD_OBJECT_FLAG_8000;
+                state->previous_flags &= ~FIELD_OBJECT_CHAINING;
             }
             else if (!(state->flags & FIELD_OBJECT_FLAG_DASH) && (state->previous_flags & FIELD_OBJECT_FLAG_DASH))
             {
@@ -1472,10 +1461,11 @@ void field_update_object_effects(s32 index)
                         slot->track_mask = 0;
                         field_clear_actor_effects(slot);
 
-                        if ((state->contact.word & 1) && (state->contact.bytes.controller_index == (actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE)))
+                        if ((state->contact.word & FIELD_CONTACT_ANIMATION_HIDDEN) &&
+                            (state->contact.bytes.controller_index == (actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE)))
                         {
                             actor->presence = 0;
-                            state->contact.word = (s32)(state->contact.word & ~1);
+                            state->contact.word = (s32)(state->contact.word & ~FIELD_CONTACT_ANIMATION_HIDDEN);
                         }
                     }
                 }
@@ -1675,11 +1665,11 @@ void field_handle_object_knocked_out(FieldActor* actor)
 }
 
 /**
- * @brief Flag 0x8000 handler: play effect resource 14, or stop the object's effect slot.
+ * @brief Action-chain flag handler (FIELD_OBJECT_CHAINING): play effect resource 14, or stop the object's effect slot.
  * @param actor Actor of the object.
  * @param is_set Nonzero when the flag became set, zero when it was cleared.
  */
-void field_handle_object_flag_8000(FieldActor* actor, s32 is_set)
+void field_handle_object_chaining(FieldActor* actor, s32 is_set)
 {
     if (is_set != 0)
     {
@@ -1693,11 +1683,11 @@ void field_handle_object_flag_8000(FieldActor* actor, s32 is_set)
 }
 
 /**
- * @brief Flag 0x4000 handler: play effect resource 25, or stop the object's effect slot.
+ * @brief Dash flag handler (FIELD_OBJECT_FLAG_DASH): play effect resource 25, or stop the object's effect slot.
  * @param actor Actor of the object.
  * @param is_set Nonzero when the flag became set, zero when it was cleared.
  */
-void field_handle_object_flag_4000(FieldActor* actor, s32 is_set)
+void field_handle_object_dash(FieldActor* actor, s32 is_set)
 {
     if (is_set != 0)
     {
@@ -1736,7 +1726,7 @@ void field_add_fade_prim(const void* prim, s16 depth)
     {
         if (g_field_fade_prims[i].r0 == 0)
         {
-            bcopy(prim, &g_field_fade_prims[i], sizeof(POLY_FT4));
+            bcopy((const u8*)prim, (u8*)&g_field_fade_prims[i], sizeof(POLY_FT4));
             g_field_fade_prim_depths[i] = depth;
             return;
         }
@@ -1787,7 +1777,7 @@ void field_draw_fade_prims(FieldRenderHalf* render_half)
             source->y2 += g_field_screen_scroll.y;
             source->y3 += g_field_screen_scroll.y;
 
-            bcopy(source, output, sizeof(POLY_FT4));
+            bcopy((u8*)source, (u8*)output, sizeof(POLY_FT4));
             addPrim(&ordering_table[g_field_fade_prim_depths[i]], output);
             output++;
         }

@@ -27,9 +27,7 @@ extern s32 g_field_dialog_screen_mode;
 extern FieldRenderHalf* g_field_render_context;
 extern s32 g_field_interaction_active;
 extern u8* g_field_actor_heap;
-extern u8* g_field_cd_buffer;
 extern s32 g_field_preserve_entry_music;
-extern s32 g_field_scene_mode_bit;
 /**
  * @brief Scene word between the pending sound bank and the portrait count.
  * @note TODO: purpose unknown; it is only ever cleared here, and no code in the

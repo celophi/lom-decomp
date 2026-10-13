@@ -87,7 +87,6 @@ extern s32 g_field_party_hud_order[];
 extern u32 g_field_pair_indicator_corners[];
 /** @brief Animation frame of each pair indicator (0 and 1 share the first). */
 extern s32 g_field_pair_indicator_counters[];
-extern s32 g_field_scene_mode_bit;
 /** @brief Number of pairs in g_field_pair_indicator_list. */
 extern s32 g_field_pair_indicator_count;
 /** @brief Nonzero while a script has turned the pair indicators off. */

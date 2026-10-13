@@ -34,8 +34,6 @@
 #include "overlays/field/field_input.h"
 #include "overlays/field/field_portrait.h"
 
-extern u8* g_field_cd_buffer;
-
 /* ---- Timed panels (0x800A5638 .. 0x800A6204) ---- */
 
 /** @brief Image resources of the timed panels (index 0 first). */
@@ -1237,8 +1235,6 @@ extern s32 g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_s
 extern void akao_release_all_sfx(void);
 /* Defined in field_resource_load.c. */
 extern s32 field_party_reload_reading(void);
-/* Defined in field_modal_runtime.c and field_actor_hud_effects.c. */
-void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* position);
 
 void field_close_battle_results(void);
 static void field_open_unlock_list(void);

@@ -21,6 +21,7 @@
 #include "overlays/field/field_fade.h"
 #include "overlays/field/field_portrait.h"
 #include "common/card_directory.h"
+#include "common/tim.h"
 
 struct AkaoHeader;
 
@@ -176,6 +177,8 @@ void field_update_object_effects(s32 index);
 void field_clear_fade_prims(void);
 void field_add_fade_prim(const void *prim, s16 depth);
 s32 field_load_vram_resource(s32 id, RECT *rect, s32 mode);
+s32 field_upload_image_resource(RECT *rect, Tim *resource, s32 mode);
+void *field_emit_actor_portrait(SPRT *sprt, u_long *ot, s32 index, Vec2s *position);
 void field_draw_fade_prims(struct FieldRenderHalf *render_half);
 
 /* field_actor_idle_ops.c */
@@ -194,6 +197,7 @@ void field_reset_action_command_maps(void);
 void field_apply_weapon_action_params(s32 player_index);
 
 /* field_actor_key_ops.c */
+struct FieldActor *field_lookup_actor(s32 key);
 void field_set_actor_group(s32 key, s32 group);
 s32 field_actor_faces_actor(s32 first_key, s32 second_key);
 s32 field_get_actor_binding_state(s32 key);
@@ -402,6 +406,7 @@ void field_golem_rebuild_current_grid(void);
 void field_golem_build_companion(s32 group, struct FieldCharacterRecord *record);
 
 /* field_interaction_start.c */
+void field_update_actor_record(s32 actor_id);
 void field_end_party_script_control(void);
 void field_runtime_update(void);
 void field_resolve_talk_window(s32 *actor_id, s32 *plane, s32 *effect, s32 *selector);
@@ -515,6 +520,12 @@ s32 field_add_stored_companion(s32 template_index);
 s32 field_release_stored_companion(void);
 s32 field_get_stored_companion_status(s32 index);
 void field_rename_stored_companion(s32 index);
+
+/* field_subsystem_init.c */
+/** @brief Buffer CD resources are read into before they are unpacked (set up by field_subsystem_init). */
+extern u8 *g_field_cd_buffer;
+/** @brief Bit 0x8000 of the current scene id; non-zero shows the enemy and boss HUD panels. */
+extern s32 g_field_scene_mode_bit;
 
 /* field_scene_build.c */
 void field_draw_scene_objects(u8* *cursor, u_long *ot, s32 update_mode);

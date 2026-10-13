@@ -43,9 +43,6 @@
 /** @brief Wait value that keeps a command running until it finishes by itself. */
 #define FIELD_WAIT_UNTIL_DONE 0xFF
 
-/** @brief FieldObjectState::flags bits. */
-#define FIELD_OBJECT_FLAG_HIT 0x10000000
-
 /** @brief FieldObjectState::movement bits. */
 #define FIELD_MOVEMENT_SEQUENCE_0800 0x0800
 #define FIELD_MOVEMENT_SEQUENCE_1000 0x1000
@@ -1642,7 +1639,7 @@ s32 field_register_actor_hit(s32 key, s32 guard)
         }
     }
     states = g_field_object_states;
-    states[actor->object_index].flags |= FIELD_OBJECT_FLAG_HIT;
+    states[actor->object_index].flags |= FIELD_OBJECT_FLAG_HIT_FLASH;
     if (actor->object_index < FIELD_PARTY_COUNT)
     {
         g_field_player_records[actor->object_index].hit_state = FIELD_HUD_SHAKE_START;

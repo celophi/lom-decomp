@@ -126,10 +126,9 @@ typedef enum FieldAbility
 #define FIELD_TECHNIQUE_GAUGE_FULL 0xFF
 /** @brief Companion character ids from this value on are drawn in a selectable colour and get the companion HUD panel. */
 #define FIELD_COMPANION_COLOR_ID_MIN 0x41
-/** @brief FieldActor::control bits 19-22: CLUT column (16-colour units) of the actor's HUD portrait, and the column the partner gets when the partner is the hero. */
+/** @brief FieldActor::control bits 19-22 (FieldActorControl::bits.palette) read as a word, and the CLUT column the partner gets when the partner is the hero. */
 #define FIELD_CONTROL_PALETTE_SHIFT 19
-#define FIELD_CONTROL_PALETTE_MASK 0x780000
-#define FIELD_CONTROL_PALETTE_PARTNER (10 << FIELD_CONTROL_PALETTE_SHIFT)
+#define FIELD_CONTROL_PALETTE_PARTNER 10
 #define FIELD_CONTROL_PALETTE(word) (((word) >> FIELD_CONTROL_PALETTE_SHIFT) & 0xF)
 /** @brief Character id of the current companion, compared against FIELD_COMPANION_COLOR_ID_MIN. TODO: name the containing record. */
 extern u8 D_800FDCEA;
@@ -155,6 +154,8 @@ extern u8 D_800FDCEA;
 #define FIELD_OBJECT_FLAG_DASH 0x4000
 /** @brief Object-state flags bit: an action chain is running (cleared with the retry count). */
 #define FIELD_OBJECT_CHAINING 0x8000
+/** @brief Object-state flags bit set for one frame when the object is hit; tints the actor red. */
+#define FIELD_OBJECT_FLAG_HIT_FLASH 0x10000000
 
 /** @brief Object-state contact bits (the contact word of g_field_object_states). */
 #define FIELD_CONTACT_ANIMATION_HIDDEN 0x01 /**< An animation actor hides the object; it cannot be targeted. */

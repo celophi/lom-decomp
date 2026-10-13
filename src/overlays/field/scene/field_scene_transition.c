@@ -258,7 +258,6 @@ extern s32 g_field_scene_contact_latched;
 extern u8 g_field_scene_data_buffer[];
 extern s32 g_field_song_volume;
 extern s32 g_field_preserve_entry_music;
-extern s32 g_field_scene_mode_bit;
 extern s32 g_field_previous_song_volume;
 extern s32 g_field_party_palette_index;
 extern u32 g_field_scene_portrait_count;

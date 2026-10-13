@@ -128,7 +128,6 @@ void* memcpy(void* dst, const void* src, s32 size);
 extern s16 g_field_player_command;
 extern s32 g_field_scene_contact_latched;
 extern u8* g_field_actor_heap;
-extern u8* g_field_cd_buffer;
 extern s32 g_field_resource_queue_count;
 extern s32 g_field_resource_queue[FIELD_RESOURCE_QUEUE_CAPACITY];
 extern s32 g_field_loading_resource;
