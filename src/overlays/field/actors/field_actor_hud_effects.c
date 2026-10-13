@@ -25,10 +25,6 @@
 #include "../internal/field_actor_runtime.h"
 #include "overlays/field/field_actor_records.h"
 
-/** @brief Screen center, added to camera-relative positions. */
-#define FIELD_SCREEN_CENTER_X (SCREEN_WIDTH / 2)
-#define FIELD_SCREEN_CENTER_Y (VRAM_DRAW_HEIGHT / 2)
-
 /* ---- HUD ------------------------------------------------------------------ */
 
 /** @brief FieldObjectState.unk8 layout: displayed HP, panel timer and boss flag. */
@@ -160,11 +156,8 @@ extern s32 g_field_hud_bar_height;
 extern s32 g_field_hud_bar_width;
 extern s32 g_field_hud_bar_offset_x;
 extern s32 g_field_hud_bar_offset_y;
-extern s32 g_field_active_group;
 extern s32 g_field_scene_mode_bit;
 extern s32 g_frame_counter;
-/** @brief Battle entry sequence state (FIELD_BATTLE_ENTRY_*); nonzero locks player input and enemy HUD while a battle starts. */
-extern s32 g_field_battle_entry_state;
 extern u8 g_field_pair_indicator_list[];
 extern u8 D_800FDCEA;
 extern u16 D_800FE01E;

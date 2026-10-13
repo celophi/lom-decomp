@@ -26,13 +26,14 @@ struct AkaoHeader;
 
 struct FieldActionDescriptor;
 struct FieldActor;
+struct FieldActionSlot;
 struct FieldActorSlot;
 struct FieldPlayerRecord;
 struct FieldActorSlot;
 struct FieldCardClock;
 struct FieldCdBuffer;
 struct FieldCharacterRecord;
-struct FieldCollisionMover;
+struct FieldCollisionNode;
 struct FieldItemKey;
 struct FieldItemRecord;
 struct ShopEntry;
@@ -60,6 +61,63 @@ typedef struct FieldCollisionQuery
     /** Footprint depth along z, in cells. */
     u16 depth;
 } FieldCollisionQuery;
+
+/** @brief Collision footprint (cells) of a normal actor and of a large one. */
+#define FIELD_FOOTPRINT_WIDTH 9
+#define FIELD_FOOTPRINT_DEPTH 6
+#define FIELD_FOOTPRINT_LARGE_WIDTH 12
+#define FIELD_FOOTPRINT_LARGE_DEPTH 8
+/** @brief Height an actor's footprint may step up (mover height_bias, probe height_tolerance). */
+#define FIELD_FOOTPRINT_STEP 16
+
+/**
+ * @brief Actor or effect position resolved by field_collision_resolve_move.
+ * @note Positions are 24.8 fixed point; heights grow downwards (a floor at
+ *       height h puts the mover at -(h << 8)). Callers build it in the scratchpad.
+ */
+typedef struct FieldCollisionMover
+{
+    s32 x;               /**< World x. */
+    s32 height;          /**< World height, negated (see the note). */
+    s32 z;               /**< World z. */
+    s32 move_x;          /**< Requested x movement this frame. */
+    s32 move_height;     /**< Requested height movement this frame. */
+    s32 move_z;          /**< Requested z movement this frame. */
+    s32 resolved_height; /**< Height of the highest floor under the footprint centre, negated. */
+    /** Floor node, or FIELD_COLLISION_NODE_SEARCH / FIELD_COLLISION_NODE_DETACHED. */
+    struct FieldCollisionNode* collision_node;
+    s32 flags;            /**< FIELD_COLLISION_MOVER_SETTLED plus caller bits. */
+    u16 footprint_width;  /**< Footprint width along x, in cells. */
+    s16 height_bias;      /**< Extra height a floor may rise above the feet and still be stepped onto. */
+    /** Footprint depth along z in cells (low half) and the FIELD_COLLISION_MOVER_AIRBORNE bits. */
+    union
+    {
+        s32 mode_flags;
+        s16 footprint_depth;
+        struct
+        {
+            unsigned footprint_depth : 16;
+            unsigned airborne_low : 1;
+            unsigned airborne_high : 1;
+            unsigned unused : 14;
+        } bits;
+    } mode;
+} FieldCollisionMover;
+
+/** @brief FieldCollisionMover::collision_node value asking for a fresh floor search. */
+#define FIELD_COLLISION_NODE_SEARCH ((struct FieldCollisionNode*)(uintptr_t)(u32)-1)
+/** @brief FieldCollisionMover::collision_node value for a mover not tied to any floor node. */
+#define FIELD_COLLISION_NODE_DETACHED ((struct FieldCollisionNode*)(uintptr_t)(u32)-2)
+
+/** @brief FieldCollisionMover::flags bit: the mover stands on the node its footprint centre is over. */
+#define FIELD_COLLISION_MOVER_SETTLED 0x1
+/** @brief FieldCollisionMover::mode bits: the mover moves vertically on its own (jump or fall). */
+#define FIELD_COLLISION_MOVER_AIRBORNE_LOW 0x10000
+#define FIELD_COLLISION_MOVER_AIRBORNE_HIGH 0x20000
+#define FIELD_COLLISION_MOVER_AIRBORNE (FIELD_COLLISION_MOVER_AIRBORNE_LOW | FIELD_COLLISION_MOVER_AIRBORNE_HIGH)
+
+/** @brief Collision mover at the start of the scratchpad. */
+#define FIELD_COLLISION_MOVER ((FieldCollisionMover*)SCRATCHPAD_ADDRESS)
 
 /** @brief Position of a scene object or part in whole pixels (field_get_object_position). */
 typedef struct FieldPos
@@ -95,6 +153,7 @@ void field_camera_reset(void);
 
 /* field_actor_effects.c */
 void field_start_object_ground_effect(struct FieldMotionRecord *actor, u32 kind);
+void field_draw_object_ground_effect(struct FieldMotionRecord* actor, u32 kind);
 
 /* field_actor_hud_effects.c */
 void field_draw_actor_hud(struct FieldRenderHalf *render_half);
@@ -103,6 +162,11 @@ void field_clear_fade_prims(void);
 void field_add_fade_prim(const void *prim, s16 depth);
 s32 field_load_vram_resource(s32 id, RECT *rect, s32 mode);
 void field_draw_fade_prims(struct FieldRenderHalf *render_half);
+
+/* field_actor_idle_ops.c */
+void field_update_hit_reaction(struct FieldMotionRecord* actor);
+void field_idle_actor_after_animation(struct FieldMotionRecord* actor);
+void field_idle_actor_after_reload(struct FieldMotionRecord* actor);
 
 /* field_actor_input_actions.c */
 s32 field_get_held_action_buttons(s32 player, s32 action, struct FieldActor *actor);
@@ -136,6 +200,8 @@ s32 field_move_leaves_screen(struct FieldActor *actor, Vec3i *delta);
 /* field_actor_reactions.c */
 s32 field_stop_actor(s32 key);
 s32 field_test_actor_depth_overlap(s32 first_key, s32 second_key);
+void field_release_object_link(struct FieldActor* actor);
+s32 field_collapse_defeated_actor(struct FieldActor* actor);
 
 /* field_actor_record_ops.c */
 void field_spawn_item_record(s32 key, s32 item);
@@ -163,6 +229,9 @@ void field_set_global_color_scale(s16 red, s16 green, s16 blue);
 void field_unpack_resource_package(struct FieldCdBuffer *buf, s32 size, s32 slot_index, s32 palette_row);
 void field_finish_party_slot_reload(s32 actor_slot);
 
+/* field_actor_script_ops.c */
+void field_route_actor_to_object(struct FieldActor* actor, s32 target_index, s32 restart);
+
 /* field_actor_slot_resources.c */
 s32 field_count_free_actor_slots(s32 object_index);
 s32 field_object_has_active_actor_tracks(s32 object_index);
@@ -177,6 +246,7 @@ void field_poll_streamed_animations(void);
 void field_release_actor_binding(s32 owner);
 void field_reset_object_states(void);
 void field_reset_object_tints(void);
+void field_stop_actor_animations_for_object(struct FieldActor* actor, s32 force);
 
 /* field_actor_state_updates.c */
 s32 field_update_actor_landing(struct FieldActor* actor);
@@ -197,6 +267,9 @@ s32 field_start_defeat_wait_animation(struct FieldActor* actor);
 s32 field_update_defeat_end(struct FieldActor* actor);
 void field_restart_idle_animation(struct FieldActor* actor);
 s32 field_update_defeated(struct FieldActor* actor);
+
+/* field_actor_target_queries.c */
+s32 field_collect_action_targets(s32 source_index, struct FieldActionSlot* action, s32 group_mode, s32 filter_arg, s32* output);
 
 /* field_actor_templates.c */
 s32 field_build_group_monster_records(s32 group);
@@ -277,6 +350,7 @@ void field_close_battle_results(void);
 void field_open_battle_results(void);
 void field_open_duel_results(void);
 void field_setup_return_to_title_prompt(void);
+void field_start_actor_text(s32 index, s32 text_id);
 
 /* field_draw_state.c */
 void field_reset_draw_state(void);

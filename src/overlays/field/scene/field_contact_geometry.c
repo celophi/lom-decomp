@@ -39,12 +39,6 @@
 
 /** @brief FieldMoveObject::flags bit 23: the object moves without map collision. */
 #define FIELD_PART_IGNORE_MAP_COLLISION_BIT 23
-/** @brief Collision footprint of a moving actor (map units), normal and large. */
-#define FIELD_MOVE_WIDTH 9
-#define FIELD_MOVE_STEP 6
-#define FIELD_MOVE_LARGE_WIDTH 12
-#define FIELD_MOVE_LARGE_STEP 8
-#define FIELD_MOVE_HEIGHT_TOLERANCE 16
 
 /** @brief FieldAnimationDef::sync_flags bit: the animation hits its own group, not the opposing one. */
 #define FIELD_ANIMATION_SAME_GROUP 0x01
@@ -59,8 +53,8 @@
 #define FIELD_HIT_REACTION_DIRECT_COUNT 12
 /** @brief Actors this high (FieldActor::height) or higher overlap nothing. */
 #define FIELD_OVERLAP_MAX_HEIGHT 9
-/** @brief Bit number of FIELD_CONTACT_IGNORE_BINDING. */
-#define FIELD_CONTACT_IGNORE_BINDING_BIT 6
+/** @brief Bit number of FIELD_CONTACT_ACTION_PENDING. */
+#define FIELD_CONTACT_ACTION_PENDING_BIT 6
 /** @brief Builtin animation a touched object plays towards the toucher. */
 #define FIELD_TOUCH_ANIMATION 0x2A
 /** @brief Frames an actor waits in FIELD_ACTOR_COMMAND_SEQUENCE_WAIT before its contact interaction runs. */
@@ -78,17 +72,13 @@
 #define FIELD_OBJECT_FLAG_0040 0x0040
 #define FIELD_OBJECT_FLAG_0080 0x0080
 #define FIELD_OBJECT_FLAG_0100 0x0100
-/** @brief Object-state flag bit cleared when an object becomes a target. */
-#define FIELD_OBJECT_FLAG_CLEAR_ON_HIT 0x0400
 /** @brief Object-state flag bits that keep an object out of overlap tests. */
 #define FIELD_OBJECT_NO_OVERLAP_FLAGS \
     (FIELD_OBJECT_FLAG_0004 | FIELD_OBJECT_FLAG_0020 | FIELD_OBJECT_FLAG_0040 | FIELD_OBJECT_FLAG_0100 | FIELD_OBJECT_UNTARGETABLE_FLAGS)
 
 /** @brief Object-state movement bits: the object stands outside its group bounds / overlaps another actor. */
 #define FIELD_MOVEMENT_OUTSIDE_BOUNDS_BIT 13
-#define FIELD_MOVEMENT_OVERLAPPING_BIT 14
 #define FIELD_MOVEMENT_OUTSIDE_BOUNDS 0x2000
-#define FIELD_MOVEMENT_OVERLAPPING 0x4000
 
 /** @brief Object-state enabled_events bits. */
 #define FIELD_INTERACTION_FLAG_ENABLED 0x01   /**< Touching the object starts its interaction. */
@@ -116,41 +106,6 @@ typedef struct
     u32 flags;
     u8 pad_0x38[0x10];
 } FieldMoveObject;
-
-/**
- * @brief Mover handed to field_collision_resolve_move (same layout as in field_collision.c).
- * @note height and resolved_height are negated heights; collision_node and flags persist in the object state.
- */
-struct FieldCollisionMover
-{
-    s32 x;
-    s32 height;
-    s32 z;
-    s32 move_x;
-    s32 move_height;
-    s32 move_z;
-    s32 resolved_height;
-    s32 collision_node;
-    s32 flags;
-    s16 footprint_width;
-    s16 height_bias;
-    union
-    {
-        s32 mode_flags;
-        struct
-        {
-            s16 footprint_depth;
-            u16 flags;
-        } h;
-        struct
-        {
-            unsigned footprint_depth : 16;
-            unsigned airborne_low : 1;
-            unsigned airborne_high : 1;
-            unsigned unused : 14;
-        } bits;
-    } mode;
-};
 
 /** @brief Map size words of the field map header (FieldMapBounds in field_actor_tables.h). */
 typedef struct
@@ -180,7 +135,6 @@ typedef struct
 
 extern u8* g_field_cd_buffer;
 extern FieldMoveObject g_field_object_parts[];
-extern s32 g_field_active_group;
 extern FieldGroupBounds g_field_group_bounds[];
 extern s32 g_field_duel_mode;
 /** @brief Last field_find_actor_overlap result: zero, or the object index plus FIELD_CONTACT_RESULT_PRESENT. */
@@ -189,7 +143,6 @@ extern s32 g_field_last_actor_contact;
 void field_start_interaction(s32 value, u16 entry, FieldObjectState* states);
 s32 field_resolve_contact_hit(s32 source_index, s32 target_index);
 s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action);
-void field_release_object_link(FieldActor* actor);
 void field_restart_actor_animation();
 
 static s32 field_intersect_screen_segments(Vec2s* first_start, Vec2s* first_end, Vec2s* second_start, Vec2s* second_end);
@@ -328,7 +281,7 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
         {
             eligible = 1;
         }
-        if ((eligible == 0) || (target_state->movement.word & FIELD_MOVEMENT_TINT_FLASH))
+        if ((eligible == 0) || (target_state->movement.word & FIELD_MOVEMENT_INVULNERABLE))
         {
             continue;
         }
@@ -340,7 +293,7 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
         {
             continue;
         }
-        if (!(flags_or_extent & FIELD_CONTACT_IGNORE_BINDING))
+        if (!(flags_or_extent & FIELD_CONTACT_ACTION_PENDING))
         {
             /* Skip an object whose own bound animation is running. */
             if (target->object_index < FIELD_PLAYER_COUNT)
@@ -770,7 +723,7 @@ s32 field_resolve_actor_movement(FieldActor* actor, s32* position, s32 mode)
     Vec3i delta;
     s32 hit;
     FieldMoveBounds* bounds = (FieldMoveBounds*)MAP_BOUNDS_ADDRESS;
-    struct FieldCollisionMover* mover = (struct FieldCollisionMover*)FIELD_MOVE_REQUEST_ADDRESS;
+    FieldCollisionMover* mover = (FieldCollisionMover*)FIELD_MOVE_REQUEST_ADDRESS;
     FieldCollisionQuery* query = (FieldCollisionQuery*)FIELD_MOVE_QUERY_ADDRESS;
     s32 requested_x;
     s32 actor_x;
@@ -807,23 +760,23 @@ s32 field_resolve_actor_movement(FieldActor* actor, s32* position, s32 mode)
         mover->move_height = position[1];
         mover->move_z = position[2];
         requested_z = mover->move_z;
-        mover->height_bias = FIELD_MOVE_HEIGHT_TOLERANCE;
-        query->height_tolerance = FIELD_MOVE_HEIGHT_TOLERANCE;
+        mover->height_bias = FIELD_FOOTPRINT_STEP;
+        query->height_tolerance = FIELD_FOOTPRINT_STEP;
         if (g_field_object_parts[actor->object_index].scale_z == FIELD_PART_FULL_SCALE)
         {
-            mover->footprint_width = FIELD_MOVE_LARGE_WIDTH;
-            query->width = FIELD_MOVE_LARGE_WIDTH;
-            mover->mode.h.footprint_depth = FIELD_MOVE_LARGE_STEP;
-            query->depth = FIELD_MOVE_LARGE_STEP;
+            mover->footprint_width = FIELD_FOOTPRINT_LARGE_WIDTH;
+            query->width = FIELD_FOOTPRINT_LARGE_WIDTH;
+            mover->mode.footprint_depth = FIELD_FOOTPRINT_LARGE_DEPTH;
+            query->depth = FIELD_FOOTPRINT_LARGE_DEPTH;
         }
         else
         {
-            mover->footprint_width = FIELD_MOVE_WIDTH;
-            query->width = FIELD_MOVE_WIDTH;
-            mover->mode.h.footprint_depth = FIELD_MOVE_STEP;
-            query->depth = FIELD_MOVE_STEP;
+            mover->footprint_width = FIELD_FOOTPRINT_WIDTH;
+            query->width = FIELD_FOOTPRINT_WIDTH;
+            mover->mode.footprint_depth = FIELD_FOOTPRINT_DEPTH;
+            query->depth = FIELD_FOOTPRINT_DEPTH;
         }
-        mover->height_bias = FIELD_MOVE_HEIGHT_TOLERANCE;
+        mover->height_bias = FIELD_FOOTPRINT_STEP;
         mover->mode.bits.airborne_high = 0;
         mover->mode.bits.airborne_low = 0;
         mover->collision_node = g_field_object_states[actor->object_index].collision_node;
@@ -875,7 +828,7 @@ s32 field_resolve_actor_movement(FieldActor* actor, s32* position, s32 mode)
     else
     {
         g_field_object_states[actor->object_index].movement.half.height = 0;
-        g_field_object_states[actor->object_index].collision_node = -1;
+        g_field_object_states[actor->object_index].collision_node = FIELD_COLLISION_NODE_SEARCH;
         g_field_object_states[actor->object_index].collision_flags = 0;
         position[0] = actor->x;
         position[1] = actor->y;
@@ -1069,7 +1022,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
                     if (!(target_state->contact.word & FIELD_CONTACT_ANIMATION_HIDDEN))
                     {
                         index = target->object_index;
-                        if (!(((u32)g_field_object_states[index].contact.word >> FIELD_CONTACT_IGNORE_BINDING_BIT) & 1))
+                        if (!(((u32)g_field_object_states[index].contact.word >> FIELD_CONTACT_ACTION_PENDING_BIT) & 1))
                         {
                             /* One local holds the binding table address and then the object index. */
                             base_or_index = (uintptr_t)g_field_actor_bindings;
@@ -1377,11 +1330,11 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
             if ((contact_flags & FIELD_CONTACT_ANIMATION_HIDDEN) ||
                 ((candidate_index >= FIELD_PARTY_COUNT) && ((candidate_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)) ||
                 (contact_flags & FIELD_CONTACT_NO_HIT_TEST) || (eligible == 0) ||
-                (candidate_state->movement.word & FIELD_MOVEMENT_TINT_FLASH))
+                (candidate_state->movement.word & FIELD_MOVEMENT_INVULNERABLE))
             {
                 continue;
             }
-            if (!(contact_flags & FIELD_CONTACT_IGNORE_BINDING))
+            if (!(contact_flags & FIELD_CONTACT_ACTION_PENDING))
             {
                 s32 binding_owner;
                 s32 object_index;
@@ -1489,7 +1442,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
                 continue;
             }
             candidate_state->contact.word |= FIELD_CONTACT_TARGETED;
-            candidate_state->flags &= ~FIELD_OBJECT_FLAG_CLEAR_ON_HIT;
+            candidate_state->flags &= ~FIELD_OBJECT_ACTIONS_RESTRICTED;
             states[actor->owner_object_index].targets[states[actor->owner_object_index].contact.bytes.target_count] = candidate_index;
             states[actor->owner_object_index].contact.bytes.target_count++;
             actor->track_mask |= 1 << actor->target_count;
@@ -1751,11 +1704,11 @@ void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* pa
             if ((contact_flags & FIELD_CONTACT_ANIMATION_HIDDEN) ||
                 ((target_index >= FIELD_PARTY_COUNT) && ((target_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)) ||
                 (contact_flags & FIELD_CONTACT_NO_HIT_TEST) || (eligible == 0) ||
-                (target_state->movement.word & FIELD_MOVEMENT_TINT_FLASH))
+                (target_state->movement.word & FIELD_MOVEMENT_INVULNERABLE))
             {
                 continue;
             }
-            if (!(contact_flags & FIELD_CONTACT_IGNORE_BINDING))
+            if (!(contact_flags & FIELD_CONTACT_ACTION_PENDING))
             {
                 if (target->object_index < FIELD_PLAYER_COUNT)
                 {
@@ -1812,7 +1765,7 @@ void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* pa
                     ((u8)g_field_object_states[actor->owner_object_index].contact.bytes.target_count < FIELD_MAX_CONTACT_TARGETS))
                 {
                     target_state->contact.word |= FIELD_CONTACT_TARGETED;
-                    target_state->flags &= ~FIELD_OBJECT_FLAG_CLEAR_ON_HIT;
+                    target_state->flags &= ~FIELD_OBJECT_ACTIONS_RESTRICTED;
                     g_field_object_states[actor->owner_object_index].targets[g_field_object_states[actor->owner_object_index].contact.bytes.target_count] = target_index;
                     g_field_object_states[actor->owner_object_index].contact.bytes.target_count++;
                     actor->track_mask |= 1 << actor->target_count;

@@ -8,6 +8,7 @@
  */
 
 #include "overlays/field/field_text.h"
+#include "overlays/field/field_sound.h"
 #include "common/encoded_text.h"
 #include "main/audio/akao_cmd.h"
 #include "common.h"
@@ -81,8 +82,6 @@ void field_set_cd_error_fade_target(void);
 /** @brief field_draw_sprite_glyph / field_draw_sprite_number flags of the label glyphs: outline plus palette 1 or 2. */
 #define FIELD_LABEL_SELECTED_DIGITS (FIELD_TEXT_SHADOW | 1)
 #define FIELD_LABEL_NORMAL_DIGITS (FIELD_TEXT_SHADOW | 2)
-/** @brief Screen row of the field origin (actors are drawn relative to it). */
-#define FIELD_SCREEN_CENTER_Y 112
 /** @brief Held-button hints: eight hint buttons, portrait and text position (32 pixels per player). */
 #define FIELD_HINT_BUTTON_COUNT 8
 #define FIELD_HINT_PORTRAIT_X 96
@@ -90,7 +89,6 @@ void field_set_cd_error_fade_target(void);
 #define FIELD_HINT_TEXT_X 128
 #define FIELD_HINT_TEXT_Y 64
 
-#define FIELD_SOUND_ACTION_REFUSED 0x78
 #define FIELD_SOUND_CURSOR 0x7D
 #define FIELD_SOUND_SELECT 0x7E
 #define FIELD_SOUND_MENU_OPEN 0x80
@@ -119,11 +117,6 @@ void field_set_cd_error_fade_target(void);
 /** @brief Saved skill values: none, or an instrument (plus its item record index). */
 #define FIELD_SKILL_NONE 0xFF
 #define FIELD_SKILL_INSTRUMENT 0x80
-/** @brief Technique actions: command flag and sequence ids (FIELD_TECHNIQUE_SEQUENCE_BASE + weapon type * 24 + technique). */
-#define FIELD_ACTION_TECHNIQUE 0x8000
-#define FIELD_ACTION_TECHNIQUE_MASK 0x7FFF
-#define FIELD_TECHNIQUES_PER_WEAPON 24
-#define FIELD_TECHNIQUE_SEQUENCE_BASE 0x88
 /** @brief Action animation of a technique. */
 #define FIELD_TECHNIQUE_ANIMATION 2
 
@@ -247,7 +240,6 @@ extern s32 g_field_buffered_input;
 extern u8 g_field_menu_controller_types[CONTROLLER_PORT_COUNT];
 
 /* Field state that blocks the menu. */
-extern s32 g_field_active_group;
 extern s32 g_field_interaction_active;
 extern s32 g_field_party_routes_stale;
 extern s32 g_field_item_drop_menu_open;

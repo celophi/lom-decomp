@@ -3,6 +3,7 @@
  */
 
 #include "common.h"
+#include "../internal/field_actor.h"
 #include "../internal/field_contact_geometry.h"
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_calls.h"
@@ -24,7 +25,6 @@
 
 extern s32 g_field_dialog_screen_mode;
 extern FieldRenderHalf* g_field_render_context;
-extern s32 g_field_actions_limited;
 extern s32 g_field_interaction_active;
 extern u8* g_field_actor_heap;
 extern u8* g_field_cd_buffer;

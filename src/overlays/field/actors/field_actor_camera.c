@@ -89,7 +89,6 @@ static void field_camera_step_scripted_scroll(void);
 extern FieldScreenDelta g_field_screen_scroll;
 extern FieldGroupBounds g_field_group_bounds[];
 extern s32 g_field_group_bounds_count;
-extern s32 g_field_active_group;
 
 extern s32 g_field_camera_offset_x;
 extern s32 g_field_camera_offset_y;
@@ -100,7 +99,6 @@ extern s32 g_field_camera_target_z;
 extern s32 g_field_camera_follow_x;
 extern s32 g_field_camera_follow_z;
 
-extern s32 D_8010AE58;
 extern s32 g_field_scroll_limit_left;
 extern s32 g_field_scroll_limit_right;
 extern s32 g_field_scroll_limit_left_target;
@@ -146,7 +144,7 @@ static inline void field_camera_lock_scroll(SceneState* camera)
 {
     s32 left;
 
-    D_8010AE58 = FIELD_SCROLL_LOCK_FRAMES;
+    g_field_scroll_ease_timer = FIELD_SCROLL_LOCK_FRAMES;
     left = g_field_scroll_limit_left_target = -(camera->camera_x >> 8);
     g_field_scroll_limit_right_target = left + FIELD_VIEW_WIDTH;
 }
@@ -335,7 +333,7 @@ void field_camera_update(void)
 inline void field_camera_release_scroll_limits(void)
 {
     g_field_scroll_limit_left_target = 0;
-    D_8010AE58 = FIELD_SCROLL_EASE_FRAMES;
+    g_field_scroll_ease_timer = FIELD_SCROLL_EASE_FRAMES;
     g_field_scroll_limit_right_target = FIELD_MAP_BOUNDS->width;
 }
 
@@ -374,7 +372,7 @@ void field_camera_select_scroll_limits(void)
         return;
     }
 
-    D_8010AE58 = FIELD_SCROLL_EASE_FRAMES;
+    g_field_scroll_ease_timer = FIELD_SCROLL_EASE_FRAMES;
     g_field_scroll_limit_left_target = entry->left;
     g_field_scroll_limit_right_target = entry->left + entry->width;
 }
@@ -384,11 +382,11 @@ void field_camera_select_scroll_limits(void)
  */
 static void field_camera_step_scroll_limits(void)
 {
-    if (D_8010AE58 != 0)
+    if (g_field_scroll_ease_timer != 0)
     {
-        g_field_scroll_limit_left += (g_field_scroll_limit_left_target - g_field_scroll_limit_left) / D_8010AE58;
-        g_field_scroll_limit_right += (g_field_scroll_limit_right_target - g_field_scroll_limit_right) / D_8010AE58;
-        D_8010AE58 -= 1;
+        g_field_scroll_limit_left += (g_field_scroll_limit_left_target - g_field_scroll_limit_left) / g_field_scroll_ease_timer;
+        g_field_scroll_limit_right += (g_field_scroll_limit_right_target - g_field_scroll_limit_right) / g_field_scroll_ease_timer;
+        g_field_scroll_ease_timer -= 1;
     }
 }
 
@@ -421,7 +419,7 @@ void field_camera_reset(void)
 
     g_field_scroll_limit_left_target = 0;
     g_field_scroll_limit_left = 0;
-    D_8010AE58 = 0;
+    g_field_scroll_ease_timer = 0;
     g_field_scripted_scroll_z = 0;
     g_field_scripted_scroll_x = 0;
     g_field_scripted_scroll_target_z = 0;

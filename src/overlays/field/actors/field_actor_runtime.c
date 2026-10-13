@@ -142,9 +142,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 /** @brief Object state flags that suspend an object's input, following and commands. */
 #define FIELD_OBJECT_CONTROL_BLOCKED 0x21E4
 
-/** @brief FieldObjectState::contact bits 6 and 7 cleared when an actor is initialized. */
-#define FIELD_CONTACT_UNK40 0x40
-
 /** @brief FieldActor::presence value of an object hidden by an animation actor. */
 #define FIELD_ANIMATION_HIDDEN FIELD_ACTOR_HIDDEN
 
@@ -211,10 +208,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 #define FIELD_PAN_RIGHT 0x9F
 #define FIELD_PAN_SCREEN_LEFT 0x10
 #define FIELD_PAN_SCREEN_RIGHT 0x131
-
-/** @brief Screen centre that actor positions are projected around. */
-#define FIELD_SCREEN_CENTER_X 0xA0
-#define FIELD_SCREEN_CENTER_Y 0x70
 
 /** @brief Parameter curve word: segment count, random flag; segment word: length and value. */
 #define FIELD_CURVE_SEGMENT_COUNT_MASK 0x7F
@@ -332,11 +325,8 @@ extern s32 g_field_loaded_actor_count;
 extern void* g_field_resource_cursor;
 extern s32 g_field_scene_mode_bit;
 extern FieldDirectionOffset g_field_direction_offsets[];
-extern s32 g_field_active_group;
 extern s32 g_field_party_routes_stale;
 extern s32 g_field_item_drop_menu_open;
-/** @brief Battle entry sequence state (FIELD_BATTLE_ENTRY_*); nonzero locks player input and enemy HUD while a battle starts. */
-extern s32 g_field_battle_entry_state;
 extern FieldActor g_field_effect_records[];
 extern s32 D_80105770;
 extern s32 g_field_timed_panel_active;
@@ -2449,11 +2439,11 @@ void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index)
         bytes++;
     } while (i < sizeof(FieldActor));
 
-    g_field_object_states[actor_index].collision_node = -1;
+    g_field_object_states[actor_index].collision_node = FIELD_COLLISION_NODE_SEARCH;
     g_field_object_states[actor_index].collision_flags = 0;
     g_field_object_states[actor_index].interaction_kind = 0;
     g_field_object_states[actor_index].contact.word &= ~FIELD_CONTACT_TARGETED;
-    g_field_object_states[actor_index].contact.word &= ~FIELD_CONTACT_UNK40;
+    g_field_object_states[actor_index].contact.word &= ~FIELD_CONTACT_ACTION_PENDING;
 
     g_field_actors[actor_index].owner_slot = (s8)(actor_index + FIELD_OBJECT_SLOT_BASE);
     g_field_actors[actor_index].script_index = FIELD_SCRIPT_NONE;

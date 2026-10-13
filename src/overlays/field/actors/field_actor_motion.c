@@ -32,8 +32,6 @@
 /** @brief FieldObjectState::movement sequence bits cleared when an action ends. */
 #define FIELD_MOVEMENT_SEQUENCE_0800 0x0800
 #define FIELD_MOVEMENT_SEQUENCE_1000 0x1000
-/** @brief FieldObjectState::movement bit: the object overlaps another one. */
-#define FIELD_MOVEMENT_OVERLAPPING 0x4000
 
 /** @brief The slide displacement is scaled by FieldObjectPart::appearance scale_xz / 64 (0x40 = full size). */
 #define FIELD_PART_SCALE_SHIFT 6
@@ -60,7 +58,6 @@ void field_restart_sequence_animation(FieldActor* actor);
  * actor tables, which conflicts with field_actor_tables.h. */
 s32 field_resolve_actor_movement(FieldActor* actor, Vec3i* delta, s32 mode);
 
-void field_release_object_link(FieldActor* actor);
 
 /**
  * @brief Run one frame of an actor's action command.

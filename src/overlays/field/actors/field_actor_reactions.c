@@ -10,7 +10,6 @@
 #include "../internal/field_calls.h"
 #include <rand.h>
 
-
 /** @brief First frame of the HUD panel shake started by a hit (counts down to 0). */
 #define FIELD_HUD_SHAKE_START 5
 
@@ -22,17 +21,11 @@
 #define FIELD_OBJECT_FLAG_0100 0x0100
 /** @brief Another object holds a link to this object (FieldContactWord linked bit). */
 #define FIELD_OBJECT_FLAG_LINK_TARGET 0x2000
-/** @brief An action chain is running; its hits are counted in retry_count. */
-#define FIELD_OBJECT_CHAINING 0x8000
 
 /** @brief Flags that keep an object in place: it takes no knockback from a hit. */
 #define FIELD_OBJECT_IMMOBILE_FLAGS                                                                                                                            \
     (FIELD_OBJECT_FLAG_0004 | FIELD_OBJECT_FLAG_0020 | FIELD_OBJECT_FLAG_0040 | FIELD_OBJECT_FLAG_0080 | FIELD_OBJECT_FLAG_0100 |                              \
      FIELD_OBJECT_FLAG_KNOCKED_OUT | FIELD_OBJECT_FLAG_LINK_TARGET)
-
-
-/** @brief FieldResourceEntry.unkE flag: the defeat animation plays on the bound animation actor. */
-#define FIELD_REQUEST_BOUND 0x8000
 
 #define FIELD_ANIMATION_KNOCKED_DOWN 29
 
@@ -48,17 +41,14 @@
 /** @brief Number of hits an action chain may land, indexed by weapon type. */
 extern u8 g_field_weapon_chain_limits[];
 extern s32 g_field_boss_hud_shake_frame;
-extern s32 g_field_active_group;
 extern s32 g_field_duel_mode;
 
-void field_release_object_link(FieldActor* actor);
 static void field_release_links_to_actor(FieldActor* actor);
 static void field_end_actor_chain(FieldActor* actor);
-
 void field_restart_actor_animation(FieldActor* actor);
+
 void field_restart_actor_animation_reverse(FieldActor* actor);
 void field_update_sequence_actor_binding(FieldActor* actor, s32 release_actor);
-void field_stop_actor_animations_for_object(FieldActor* actor, s32 force);
 
 /**
  * @brief Put an actor into its hit reaction and reset its motion and animation flags.
@@ -110,7 +100,7 @@ void field_start_actor_hit_reaction(FieldActor* actor, s32 guard)
             }
             if ((actor->animation & FIELD_ANIMATION_INDEX_MASK) != FIELD_ABILITY_DEFENSIVE_LUNGE)
             {
-                state->contact.word &= ~FIELD_CONTACT_IGNORE_BINDING;
+                state->contact.word &= ~FIELD_CONTACT_ACTION_PENDING;
                 field_update_sequence_actor_binding(actor, 0);
                 actor->command = FIELD_ACTOR_COMMAND_HIT;
                 actor->y -= actor->height << 8;

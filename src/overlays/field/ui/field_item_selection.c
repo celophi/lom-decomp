@@ -11,6 +11,7 @@
 #include "main/main.h"
 #include "common.h"
 #include "overlays/field/field_text.h"
+#include "overlays/field/field_sound.h"
 #include "overlays/field/field_scene_transition.h"
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_calls.h"
@@ -62,7 +63,6 @@
 #define FIELD_ITEM_HIGHLIGHT_HEIGHT 14
 
 /** @brief Sounds of the item-drop menu. */
-#define FIELD_SOUND_ACTION_REFUSED 0x78
 #define FIELD_SOUND_CURSOR 0x7D
 #define FIELD_SOUND_SELECT 0x7E
 #define FIELD_SOUND_CANCEL 0x7F
@@ -128,8 +128,8 @@ extern s32 g_field_item_list_cursor;
 extern s32 g_field_item_drop_menu_open;
 extern s32 g_field_primary_held_buttons, g_field_primary_repeat_delay;
 extern s32 g_field_secondary_held_buttons, g_field_secondary_repeat_delay, g_field_buffered_input;
-
 void field_restart_actor_animation(FieldActor *actor);
+
 s32 field_read_controller_buttons(s32 controller);
 
 static void field_play_action_refused_sound(void);

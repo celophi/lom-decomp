@@ -11,6 +11,7 @@
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
+#include "../internal/field_effect_render_state.h"
 #include "main/main.h"
 #include "main/scene_state.h"
 #include <libgpu.h>
@@ -31,8 +32,6 @@
 #define FIELD_ACTOR_VISIBLE 0
 
 /** @brief Directional animations: 5 facings each for standing, walking and running. */
-#define FIELD_ANIMATION_WALK 5
-#define FIELD_ANIMATION_RUN 10
 #define FIELD_DIRECTIONAL_ANIMATION_COUNT 15
 
 /** @brief Shift from a direction byte to its 45 degree sector. */
@@ -44,18 +43,6 @@
 /** @brief Half of a 45 degree facing sector in ratan2 units. */
 #define FIELD_FACING_HALF_SECTOR (ONE / 16)
 
-/** @brief Collision footprints of full-size and small objects. */
-#define FIELD_FOOTPRINT_LARGE_WIDTH 12
-#define FIELD_FOOTPRINT_LARGE_DEPTH 8
-#define FIELD_FOOTPRINT_SMALL_WIDTH 9
-#define FIELD_FOOTPRINT_SMALL_DEPTH 6
-#define FIELD_FOOTPRINT_HEIGHT 16
-
-/** @brief Camera-relative bounds a revived party member must be inside to stay where it is. */
-#define FIELD_VIEW_MARGIN_LEFT 0xA00
-#define FIELD_VIEW_MARGIN_RIGHT 0x13600
-#define FIELD_VIEW_MARGIN_BOTTOM 0x1B600
-
 /** @brief Tint timer started by a revive. */
 #define FIELD_REVIVE_TINT_FRAMES 60
 
@@ -63,47 +50,25 @@
 #define FIELD_WAIT_UNTIL_DONE 0xFF
 
 /** @brief FieldObjectState::flags bits. */
-#define FIELD_OBJECT_FLAG_KNOCKED_OUT 0x0400
-#define FIELD_OBJECT_CHAINING 0x8000
 #define FIELD_OBJECT_FLAG_HIT 0x10000000
 
-#define FIELD_CONTACT_ACTION_BITS 0x1C
-#define FIELD_CONTACT_ACTION_PENDING 0x40
-#define FIELD_CONTACT_TARGETED 0x80
-
 /** @brief FieldObjectState::movement bits. */
-#define FIELD_MOVEMENT_CHARGED 0x0400
 #define FIELD_MOVEMENT_SEQUENCE_0800 0x0800
 #define FIELD_MOVEMENT_SEQUENCE_1000 0x1000
-#define FIELD_MOVEMENT_TECHNIQUE 0x8000
-
-/** @brief FieldActor::control bits above the control mode. */
-#define FIELD_CONTROL_MOVING 0x200
-#define FIELD_CONTROL_MOVEMENT_UNK400 0x400
 
 /** @brief FieldObjectPart::spawn_flags bit toggled by script opcodes 0xA5 and 0xA6. */
 #define FIELD_PART_FLAG_800000 0x800000
 
-/** @brief FieldActionSlot command bit marking a technique; the low bits index the weapon's techniques. */
-#define FIELD_ACTION_TECHNIQUE 0x8000
-#define FIELD_ACTION_TECHNIQUE_MASK 0x7FFF
 /** @brief FieldActionSlot flags bit of an instrument (charge) action. */
 #define FIELD_ACTION_INSTRUMENT 0x400
 /** @brief FieldObjectState::action_parameter value meaning "none". */
 #define FIELD_ACTION_PARAMETER_NONE 0xFFFF
-/** @brief FieldActionSlot animation value meaning "none". */
-#define FIELD_ACTION_NO_ANIMATION 0xFFFF
-
-/** @brief Request bit of an animation that stays bound to its owner, and its resource mask. */
-#define FIELD_REQUEST_BOUND 0x8000
-#define FIELD_REQUEST_ANIMATION_MASK 0x3FF
-/** @brief Bound action animation request flags used by opcode 0x9F. */
-#define FIELD_REQUEST_LAYERED 0x4000
-#define FIELD_REQUEST_ALL_LAYERS 0x0400
-#define FIELD_REQUEST_LAYER_SHIFT 12
 
 /** @brief FieldAnimationDef::flags bit of an animation played on every track. */
 #define FIELD_ANIMATION_DEF_LAYERED 0x800
+
+/** @brief Animations of a layered bound action whose part masks count as layers. */
+#define FIELD_LAYERED_ACTION_MAX_LAYERS 3
 
 /** @brief Actions blocked while g_field_actions_limited is set (4 to 7). */
 #define FIELD_ACTION_LIMITED_FIRST 4
@@ -125,16 +90,6 @@
 
 /** @brief Free animation actor slots an action needs. */
 #define FIELD_ACTION_MIN_FREE_SLOTS 3
-
-/** @brief Technique gauge value of a full gauge. */
-#define FIELD_TECHNIQUE_GAUGE_FULL 0xFF
-
-/** @brief Techniques per weapon and the first technique sequence (see field_actor_behavior.c). */
-#define FIELD_TECHNIQUES_PER_WEAPON 24
-#define FIELD_TECHNIQUE_SEQUENCE_BASE 0x88
-
-/** @brief Tracks of an animation actor slot. */
-#define FIELD_ACTOR_TRACK_COUNT 3
 
 /** @brief Frame limits of the approach and timed move commands. */
 #define FIELD_APPROACH_TIMEOUT 250
@@ -242,8 +197,6 @@ extern s32 g_field_direction_animation_modes[];
 extern s32 g_field_actor_walk_animations[];
 extern s32 g_field_binding_restart_pending[FIELD_ACTOR_BINDING_COUNT];
 extern u16* g_field_actor_scripts;
-extern s32 g_field_actions_limited;
-extern s32 D_8010AE58;
 extern s32 g_field_boss_hud_shake_frame;
 
 s32 field_collision_find_path(FieldCollisionQuery* start, FieldCollisionQuery* goal, FieldPathPoint* path, s32 mode);
@@ -261,7 +214,6 @@ s32 field_battle_resolve_action(FieldBattleAction* action);
 s32 field_battle_roll_evasion(FieldBattleAction* action);
 
 static void field_run_actor_script_command(FieldActor* actor);
-void field_route_actor_to_object(FieldActor* actor, s32 target_index, s32 restart);
 static void field_move_actor_texture_rect(FieldActor* actor, RECT* rect, s32 x, s32 y);
 
 /**
@@ -567,7 +519,7 @@ static void field_run_actor_script_command(FieldActor* actor)
         }
         precheck_states = g_field_object_states;
         precheck_state = &precheck_states[actor->object_index];
-        if (precheck_state->flags & FIELD_OBJECT_FLAG_KNOCKED_OUT)
+        if (precheck_state->flags & FIELD_OBJECT_ACTIONS_RESTRICTED)
         {
             actor->command = FIELD_ACTOR_COMMAND_NONE;
             return;
@@ -591,7 +543,7 @@ static void field_run_actor_script_command(FieldActor* actor)
         }
         if ((action_slot->command & FIELD_ACTION_TECHNIQUE) && !(action_slot->flags.instrument))
         {
-            if (!((actor->object_index < (u32)FIELD_PARTY_COUNT) && (field_object_has_active_actor_tracks(actor->object_index) == 0) && (D_8010AE58 == 0) &&
+            if (!((actor->object_index < (u32)FIELD_PARTY_COUNT) && (field_object_has_active_actor_tracks(actor->object_index) == 0) && (g_field_scroll_ease_timer == 0) &&
                   (field_count_free_actor_slots(actor->object_index) >= FIELD_ACTION_MIN_FREE_SLOTS)))
             {
                 actor->command = FIELD_ACTOR_COMMAND_NONE;
@@ -751,13 +703,13 @@ static void field_run_actor_script_command(FieldActor* actor)
             }
             else
             {
-                query_start.width = FIELD_FOOTPRINT_SMALL_WIDTH;
-                query_start.depth = FIELD_FOOTPRINT_SMALL_DEPTH;
-                query_goal.width = FIELD_FOOTPRINT_SMALL_WIDTH;
-                query_goal.depth = FIELD_FOOTPRINT_SMALL_DEPTH;
+                query_start.width = FIELD_FOOTPRINT_WIDTH;
+                query_start.depth = FIELD_FOOTPRINT_DEPTH;
+                query_goal.width = FIELD_FOOTPRINT_WIDTH;
+                query_goal.depth = FIELD_FOOTPRINT_DEPTH;
             }
-            query_start.height_tolerance = FIELD_FOOTPRINT_HEIGHT;
-            query_goal.height_tolerance = FIELD_FOOTPRINT_HEIGHT;
+            query_start.height_tolerance = FIELD_FOOTPRINT_STEP;
+            query_goal.height_tolerance = FIELD_FOOTPRINT_STEP;
             field_collision_dilate_query(&query_start);
             query_goal.x = g_field_object_states[actor->object_index].target_x;
             query_goal.y = g_field_object_states[actor->object_index].target_y;
@@ -832,7 +784,7 @@ static void field_run_actor_script_command(FieldActor* actor)
             technique_object = actor->object_index;
             actor->script_offset += 3;
             technique_states = g_field_object_states;
-            if (technique_states[technique_object].flags & FIELD_OBJECT_FLAG_KNOCKED_OUT)
+            if (technique_states[technique_object].flags & FIELD_OBJECT_ACTIONS_RESTRICTED)
             {
                 actor->script_index = FIELD_SCRIPT_NONE;
                 actor->unk10 = 0;
@@ -850,7 +802,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                 actor->unk10 = 0;
                 return;
             }
-            g_field_object_states[actor->object_index].movement.word |= FIELD_MOVEMENT_TECHNIQUE;
+            g_field_object_states[actor->object_index].movement.word |= FIELD_MOVEMENT_INVULNERABLE;
             return;
         }
         break;
@@ -898,7 +850,7 @@ static void field_run_actor_script_command(FieldActor* actor)
             load_slot_offset = ((FieldActorBinding*)&load_bindings[load_binding_offset])->slot * sizeof(FieldActorSlot);
             ((FieldActorSlot*)((u8*)load_slots + load_slot_offset))->hit_reaction = action_or_index;
             load_state->action = action_or_index;
-            g_field_object_states[actor->object_index].movement.word |= FIELD_MOVEMENT_TECHNIQUE;
+            g_field_object_states[actor->object_index].movement.word |= FIELD_MOVEMENT_INVULNERABLE;
             return;
         }
         break;
@@ -959,7 +911,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                 index_or_count = 0;
                 if (slot->animations->flags & FIELD_ANIMATION_DEF_LAYERED)
                 {
-                    for (action_or_index = 0; action_or_index < FIELD_ACTOR_TRACK_COUNT; action_or_index++)
+                    for (action_or_index = 0; action_or_index < FIELD_LAYERED_ACTION_MAX_LAYERS; action_or_index++)
                     {
                         if (slot->part_masks[action_or_index] != 0)
                         {
@@ -1427,13 +1379,13 @@ void field_route_actor_to_object(FieldActor* actor, s32 target_index, s32 restar
         }
         else
         {
-            start.width = FIELD_FOOTPRINT_SMALL_WIDTH;
-            start.depth = FIELD_FOOTPRINT_SMALL_DEPTH;
-            goal.width = FIELD_FOOTPRINT_SMALL_WIDTH;
-            goal.depth = FIELD_FOOTPRINT_SMALL_DEPTH;
+            start.width = FIELD_FOOTPRINT_WIDTH;
+            start.depth = FIELD_FOOTPRINT_DEPTH;
+            goal.width = FIELD_FOOTPRINT_WIDTH;
+            goal.depth = FIELD_FOOTPRINT_DEPTH;
         }
-        start.height_tolerance = FIELD_FOOTPRINT_HEIGHT;
-        goal.height_tolerance = FIELD_FOOTPRINT_HEIGHT;
+        start.height_tolerance = FIELD_FOOTPRINT_STEP;
+        goal.height_tolerance = FIELD_FOOTPRINT_STEP;
         field_collision_dilate_query(&start);
         FIELD_OBJECT_TARGETS[actor->object_index].target_x = g_field_actors[target_index].x;
         target = &g_field_actors[target_index];

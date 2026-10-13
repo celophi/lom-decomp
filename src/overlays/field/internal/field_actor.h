@@ -20,6 +20,14 @@
 
 /** @brief Low nine bits of FieldActor::control holding the control mode. */
 #define FIELD_CONTROL_MODE_MASK 0x1FF
+/** @brief FieldActor::control bit set while the actor moves. */
+#define FIELD_CONTROL_MOVING 0x200
+/** @brief FieldActor::control second movement bit (placeholder name; only ever cleared). */
+#define FIELD_CONTROL_MOVEMENT_UNK400 0x400
+/** @brief FieldActor::control movement bits. */
+#define FIELD_CONTROL_MOVEMENT_MASK (FIELD_CONTROL_MOVING | FIELD_CONTROL_MOVEMENT_UNK400)
+/** @brief Shift of the two FieldActor::control movement bits. */
+#define FIELD_CONTROL_MOVEMENT_SHIFT 9
 /** @brief FieldActor::control bit: the animation stops on its last frame instead of looping. */
 #define FIELD_CONTROL_PLAY_ONCE 0x800
 /** @brief Low seven bits of FieldActor::animation select the animation. */
@@ -28,6 +36,10 @@
 #define FIELD_ANIMATION_FACING 0x80
 /** @brief Directional animations come in groups of five (stand, then walk, then run). */
 #define FIELD_ANIMATION_DIRECTIONS 5
+/** @brief First walking animation. */
+#define FIELD_ANIMATION_WALK 5
+/** @brief First running animation. */
+#define FIELD_ANIMATION_RUN 10
 
 /**
  * @brief Abilities a player assigns to the action buttons (FieldActionSlot::command).
@@ -90,23 +102,45 @@ typedef enum FieldAbility
 /** @brief First of the two hit animations; one is picked at random. */
 #define FIELD_ANIMATION_HIT 20
 
+/** @brief Object-state movement low bits holding the effect scale. */
+#define FIELD_MOVEMENT_SCALE_MASK 0x3FF
+/** @brief Object-state movement bit: the charge animation was started. */
+#define FIELD_MOVEMENT_CHARGED 0x400
 /** @brief Object-state movement bits holding the running action sequence. */
 #define FIELD_MOVEMENT_SEQUENCE_MASK 0x1800
+/** @brief Object-state movement bit: the object overlaps another one. */
+#define FIELD_MOVEMENT_OVERLAPPING_BIT 14
+#define FIELD_MOVEMENT_OVERLAPPING (1 << FIELD_MOVEMENT_OVERLAPPING_BIT)
+/**
+ * @brief Object-state movement bit: the object can be neither hit nor targeted.
+ * @note Set when a technique sequence starts and during the battle-entry tint flash;
+ *       the tint update clears it when the flash ends or the object's bound animation stops.
+ */
+#define FIELD_MOVEMENT_INVULNERABLE 0x8000
+/** @brief Object-state technique_gauge value of a full gauge. */
+#define FIELD_TECHNIQUE_GAUGE_FULL 0xFF
 /** @brief Object-state group_flags bits holding the object's group. */
 #define FIELD_OBJECT_GROUP_MASK 0x0F
 /** @brief Object-state flags bit set while the object is knocked out. */
 #define FIELD_OBJECT_FLAG_KNOCKED_OUT 0x0200
+/**
+ * @brief Object-state flags bit: the object's actions are restricted.
+ * @note Pad input may then only start actions 2 and 3; scripted actions and techniques
+ *       do not start at all. The bit is cleared when the object is hit.
+ */
+#define FIELD_OBJECT_ACTIONS_RESTRICTED 0x0400
 /** @brief Object-state flags bit set while a dash ability (Lunge, Retreat, Defensive Lunge, Slide) plays. */
 #define FIELD_OBJECT_FLAG_DASH 0x4000
+/** @brief Object-state flags bit: an action chain is running (cleared with the retry count). */
+#define FIELD_OBJECT_CHAINING 0x8000
 
 /** @brief Object-state contact bits (the contact word of g_field_object_states). */
 #define FIELD_CONTACT_ANIMATION_HIDDEN 0x01 /**< An animation actor hides the object; it cannot be targeted. */
 #define FIELD_CONTACT_LINKED 0x02           /**< The object is linked to another object. */
-#define FIELD_CONTACT_NO_HIT_TEST 0x20      /**< The object takes no hits. */
-#define FIELD_CONTACT_IGNORE_BINDING 0x40   /**< Hits land even while the object's own bound animation runs. */
+#define FIELD_CONTACT_ACTION_BITS 0x1C      /**< Cleared before an action is prepared. */
+#define FIELD_CONTACT_NO_HIT_TEST 0x20      /**< The object takes no hits and is never an action target. */
+#define FIELD_CONTACT_ACTION_PENDING 0x40   /**< The object charges or waits for an action; hits land even while its own bound animation runs. */
 #define FIELD_CONTACT_TARGETED 0x80         /**< The object is being targeted. */
-/** @brief Object-state movement bit: the object's tint is flashing. */
-#define FIELD_MOVEMENT_TINT_FLASH 0x8000
 /** @brief Object-state flag bits that make an object an invalid target. */
 #define FIELD_OBJECT_UNTARGETABLE_FLAGS 0x2280
 
@@ -270,5 +304,14 @@ extern FieldActionCommandMap g_field_action_command_maps[FIELD_PLAYER_COUNT];
 
 extern FieldActor g_field_actors[];
 extern FieldActor g_field_scene_actors[];
+
+/** @brief Group (1-based) of the area the party is in, 0 for none; non-party objects of other groups are not hit or targeted. */
+extern s32 g_field_active_group;
+/** @brief Non-zero while actions from 4 up and techniques are blocked. */
+extern s32 g_field_actions_limited;
+/** @brief Battle entry sequence state (FIELD_BATTLE_ENTRY_*); nonzero locks player input and enemy HUD while a battle starts. */
+extern s32 g_field_battle_entry_state;
+/** @brief Frames left while the camera scroll limits ease towards their targets. */
+extern s32 g_field_scroll_ease_timer;
 
 #endif

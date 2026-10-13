@@ -7,6 +7,7 @@
 #include "overlays/field/field_types.h"
 #include "../internal/field_effect_types.h"
 #include "../internal/field_actor.h"
+#include "../internal/field_resource_actions.h"
 #include <libgte.h>
 #include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
@@ -25,14 +26,6 @@
 /** @brief Ground attachment points of an object. */
 #define FIELD_GROUND_POINT_COUNT 3
 
-/** @brief Action descriptor fields read by the collector. */
-typedef struct
-{
-    u8 pad[2];
-    /** @brief Entry of g_field_target_filters to apply. */
-    u8 filter;
-} FieldTargetSpec;
-
 /** @brief Predicate for a source actor, candidate actor and caller argument. */
 typedef s32 (*FieldTargetFilter)(FieldActor* source, FieldActor* candidate, s32 argument);
 
@@ -46,7 +39,6 @@ typedef struct
 } FieldTargetBinding;
 
 extern FieldTargetFilter g_field_target_filters[];
-extern s32 g_field_active_group;
 extern FieldTargetBinding g_field_actor_bindings[];
 extern s32 g_field_duel_mode;
 
@@ -274,13 +266,13 @@ s32 field_actor_near_first_ground_point(FieldActor* source, FieldActor* candidat
  * as untargetable.
  *
  * @param source_index Acting object, never a candidate itself.
- * @param spec Action descriptor selecting a predicate from g_field_target_filters.
+ * @param action Action whose target filter selects a predicate from g_field_target_filters.
  * @param group_mode 0 targets the other side (party or enemies), 1 the same side.
  * @param filter_arg Argument passed to the predicate.
  * @param output Receives the accepted object indices.
  * @return Number of indices written to @p output.
  */
-s32 field_collect_action_targets(s32 source_index, FieldTargetSpec* spec, s32 group_mode, s32 filter_arg, s32* output)
+s32 field_collect_action_targets(s32 source_index, FieldActionSlot* action, s32 group_mode, s32 filter_arg, s32* output)
 {
     s32 index;
     s32 count;
@@ -355,19 +347,19 @@ s32 field_collect_action_targets(s32 source_index, FieldTargetSpec* spec, s32 gr
         {
             continue;
         }
-        if (!(flags & FIELD_CONTACT_IGNORE_BINDING))
+        if (!(flags & FIELD_CONTACT_ACTION_PENDING))
         {
             if (g_field_actor_bindings[FIELD_BINDING_INDEX(index)].owner == index && g_field_actor_bindings[FIELD_BINDING_INDEX(index)].state != 0)
             {
                 continue;
             }
         }
-        if ((state->flags & FIELD_OBJECT_UNTARGETABLE_FLAGS) || state->collision.word == 0 || (state->movement.word & FIELD_MOVEMENT_TINT_FLASH) ||
+        if ((state->flags & FIELD_OBJECT_UNTARGETABLE_FLAGS) || state->collision.word == 0 || (state->movement.word & FIELD_MOVEMENT_INVULNERABLE) ||
             (state->contact.word & FIELD_CONTACT_TARGETED))
         {
             continue;
         }
-        if (g_field_target_filters[spec->filter](&g_field_actors[source_index], &g_field_actors[index], filter_arg) != 0)
+        if (g_field_target_filters[action->flags.target_filter](&g_field_actors[source_index], &g_field_actors[index], filter_arg) != 0)
         {
             for (prior = 0; prior < count; prior++)
             {

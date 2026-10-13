@@ -10,6 +10,7 @@
 #include "common/vector.h"
 
 struct AkaoHeader;
+struct FieldCollisionNode;
 
 /** @brief Resource table entry selected by an actor's resource index (0x14 bytes). */
 typedef struct
@@ -223,8 +224,8 @@ typedef struct FieldObjectState
     u8 interaction_kind;
     u8 unk18F;
     Vec2s ground_attachment_points[3];
-    /** @brief Floor node cached between collision passes (-1 asks for a fresh search). */
-    s32 collision_node;
+    /** @brief Floor node cached between collision passes (FIELD_COLLISION_NODE_SEARCH asks for a fresh search). */
+    struct FieldCollisionNode* collision_node;
     s32 collision_flags;
     u16 path_length;
     u16 path_index;

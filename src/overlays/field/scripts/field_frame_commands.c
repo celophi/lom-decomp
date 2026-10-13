@@ -3,6 +3,7 @@
  */
 
 #include "common.h"
+#include "../internal/field_actor.h"
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_modal_runtime.h"
@@ -19,7 +20,6 @@ extern s32 g_field_action_context;
 /** @brief Nonzero while a picture screen is shown (set by func_800A5670). */
 extern s32 g_field_timed_panel_active;
 extern s32 g_field_gover_load_countdown;
-extern s32 g_field_active_group;
 extern s32 g_field_pickup_sound_played;
 extern s32 g_field_hide_actor_panels;
 /** @brief Ring menu state; nonzero while the ring menu is open. */

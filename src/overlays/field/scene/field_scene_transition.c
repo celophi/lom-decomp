@@ -78,12 +78,6 @@
 #define FIELD_PARTY_START_SPACING 40
 /** @brief Actor animations per direction group (stand, walk, run, ...). */
 #define FIELD_DIRECTION_ANIMATION_COUNT 5
-/** @brief Mover footprints of a full-size and a small actor, and the step height they climb. */
-#define FIELD_FOOTPRINT_LARGE_WIDTH 12
-#define FIELD_FOOTPRINT_LARGE_DEPTH 8
-#define FIELD_FOOTPRINT_WIDTH 9
-#define FIELD_FOOTPRINT_DEPTH 6
-#define FIELD_FOOTPRINT_STEP 16
 /** @brief Transition tile image size and VRAM positions. */
 #define FIELD_TRANSITION_TILE_SIZE 32
 #define FIELD_TRANSITION_TILE_X 288
@@ -107,9 +101,6 @@
 /** @brief Fixed-point X and Z limits of the map; Z is stored at half resolution. */
 #define FIELD_MAP_X_LIMIT(bounds) ((bounds)->width << FIELD_POSITION_SHIFT)
 #define FIELD_MAP_Z_LIMIT(bounds) ((s16)(bounds)->depth << (FIELD_POSITION_SHIFT + 1))
-
-/** @brief Scratchpad copy of the mover used by the collision code. */
-#define FIELD_COLLISION_MOVER ((struct FieldCollisionMover*)SCRATCHPAD_ADDRESS)
 
 /** @brief Address @p p rounded up to a word boundary, as an integer. */
 #define FIELD_ALIGN4(p) (((uintptr_t)(p) + 3) & ~3)
@@ -216,33 +207,6 @@ typedef struct
     FieldLayoutRecord records[1];
 } FieldSceneLayout;
 
-/** @brief Mover handed to field_collision_resolve_move (same layout as in field_collision.c). */
-struct FieldCollisionMover
-{
-    s32 x;
-    s32 height;
-    s32 z;
-    s32 move_x;
-    s32 move_height;
-    s32 move_z;
-    s32 resolved_height;
-    s32 collision_node;
-    s32 flags;
-    s16 footprint_width;
-    s16 height_bias;
-    union
-    {
-        s32 mode_flags;
-        struct
-        {
-            unsigned footprint_depth : 16;
-            unsigned airborne_low : 1;
-            unsigned airborne_high : 1;
-            unsigned unused : 14;
-        } bits;
-    } mode;
-};
-
 /** @brief Transition fade target color and duration. */
 typedef struct
 {
@@ -283,7 +247,6 @@ extern s32 g_field_pending_scene_id;
 extern s32 g_field_pending_object_id;
 extern s32 g_field_pending_sound_bank_id;
 extern s32 g_field_scene_data_size;
-extern s32 g_field_active_group;
 extern u32 g_field_group_bounds[];
 extern s32 g_field_group_bounds_count;
 extern u16* g_field_event_scripts;
@@ -942,7 +905,7 @@ void field_load_scene_actors(FieldSceneLayout* layout)
             actor->y = layout_record->position.bits.y << FIELD_POSITION_SHIFT;
             state->contact.bits.flag6 = 0;
             state->contact.bits.flag7 = 0;
-            state->movement.word &= ~FIELD_MOVEMENT_TINT_FLASH;
+            state->movement.word &= ~FIELD_MOVEMENT_INVULNERABLE;
             state->tint_red = g_field_object_parts[actor->object_index].tint_red;
             state->tint_green = g_field_object_parts[actor->object_index].tint_green;
             state->tint_blue = g_field_object_parts[actor->object_index].tint_blue;
@@ -977,7 +940,7 @@ static void field_refresh_actor_collisions(void)
     FieldActor* actor;
     FieldObjectState* state;
     FieldMapBounds* bounds = FIELD_MAP_BOUNDS;
-    struct FieldCollisionMover* mover = FIELD_COLLISION_MOVER;
+    FieldCollisionMover* mover = FIELD_COLLISION_MOVER;
     s32 i;
 
     actor = g_field_actors;
@@ -997,7 +960,7 @@ static void field_refresh_actor_collisions(void)
                 mover->move_height = 0;
                 mover->move_z = 0;
                 mover->height_bias = FIELD_FOOTPRINT_STEP;
-                mover->collision_node = -1;
+                mover->collision_node = FIELD_COLLISION_NODE_SEARCH;
                 mover->flags = 0;
                 mover->mode.bits.airborne_high = 0;
                 mover->mode.bits.airborne_low = 0;
@@ -1012,7 +975,7 @@ static void field_refresh_actor_collisions(void)
             else
             {
                 state->movement.half.height = 0;
-                state->collision_node = -1;
+                state->collision_node = FIELD_COLLISION_NODE_SEARCH;
                 state->collision_flags = 0;
             }
         }
@@ -1027,7 +990,7 @@ static void field_refresh_actor_collisions(void)
 void field_move_actor_position(FieldActor* actor, s32* motion)
 {
     FieldMapBounds* bounds = FIELD_MAP_BOUNDS;
-    struct FieldCollisionMover* mover = FIELD_COLLISION_MOVER;
+    FieldCollisionMover* mover = FIELD_COLLISION_MOVER;
     s32 position_z;
     s32 position_x;
 
@@ -1070,7 +1033,7 @@ void field_move_actor_position(FieldActor* actor, s32* motion)
     }
 
     mover->height_bias = FIELD_FOOTPRINT_STEP;
-    mover->collision_node = -1;
+    mover->collision_node = FIELD_COLLISION_NODE_SEARCH;
     mover->flags = 0;
     mover->mode.bits.airborne_high = 0;
     mover->mode.bits.airborne_low = 0;

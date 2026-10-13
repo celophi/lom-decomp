@@ -10,6 +10,7 @@
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_calls.h"
 #include "overlays/field/field_text.h"
+#include "overlays/field/field_sound.h"
 #include "main/audio/akao.h"
 #define FIELD_HELD_ACTION_BUTTONS_OUT_OF_LINE
 #include "../internal/field_held_action_buttons.h"
@@ -26,15 +27,6 @@
 
 /** @brief Shift of the mirror bit in an actor's animation byte. */
 #define FIELD_ANIMATION_FACING_SHIFT 7
-
-/** @brief Object flag: only the restricted actions are accepted. */
-#define FIELD_OBJECT_ACTIONS_RESTRICTED 0x400
-
-/** @brief Object flag: an action chain is running (cleared with the retry count). */
-#define FIELD_OBJECT_CHAINING 0x8000
-
-/** @brief Sound played when a restricted object tries another action, and its pan. */
-#define FIELD_SOUND_ACTION_REFUSED 0x78
 
 /** @brief Buttons that confirm (start an interaction). */
 #define FIELD_CONFIRM_BUTTONS (PAD_BTN_CROSS | PAD_BTN_L3)
@@ -67,12 +59,10 @@ typedef struct
 /** @brief The live saved game, viewed through FieldSavedParty. */
 #define FIELD_SAVED_PARTY ((FieldSavedParty*)g_saved_game_ctx)
 
-extern s32 g_field_active_group;
 extern s32 g_field_dialog_screen_mode;
 extern s32 g_field_interaction_active;
 extern s32 g_field_buffered_input;
 extern s32 g_field_action_context;
-extern s32 g_field_actions_limited;
 
 /* field_contact_geometry.h cannot be included next to field_actor_tables.h (two g_field_object_states types). */
 void field_probe_actor_interaction(FieldActor* actor);

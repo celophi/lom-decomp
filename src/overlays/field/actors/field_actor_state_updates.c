@@ -34,16 +34,13 @@ typedef struct
 extern FieldObjectPart g_field_object_parts[];
 extern FieldSequenceTemplate g_field_actor_templates[];
 extern FieldActorSlot g_field_shared_actor_template;
-extern s32 g_field_active_group;
 extern s32 g_frame_counter;
-
 void field_restart_actor_animation(FieldActor* actor);
+
 s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action);
 s32 field_roll_object_evasion(s32 source_index, s32 target_index);
-void field_release_object_link(FieldActor* actor);
 void field_prepare_actor_action(FieldActor* actor);
 void field_resolve_collected_hits();
-void field_stop_actor_animations_for_object(FieldActor* actor, s32 force);
 void field_restart_actor_animation_reverse(FieldActor* actor);
 s32 field_get_next_animation_frame_count(FieldActor* actor);
 void field_update_actor_movement_animation(FieldActor* actor, s32 delta_x, s32 delta_z);
@@ -114,7 +111,6 @@ typedef enum
     FIELD_SEQUENCE_ALLOCATE_CURRENT = 0xFE,
     FIELD_SEQUENCE_END = 0xFF
 } FieldSequenceOpcode;
-
 
 /**
  * @brief Settle a landing actor to the ground and play the landing effect (animation 0x1A).
@@ -486,7 +482,6 @@ s32 field_update_actor_action_chain(FieldActor* actor)
 
 /** @brief Object mode that cancels a pending action unless an action selection holds it. */
 #define FIELD_PENDING_MODE_CANCEL 3
-
 
 /**
  * @brief Update pending actor actions and clear stale action state.
@@ -1089,23 +1084,6 @@ void field_slide_actor(FieldActor* actor, s32 dx, s32 dz)
     actor->z = actor->z + (dz * speed);
 }
 
-/** @brief Scratchpad collision request and resolver output. */
-typedef struct
-{
-    s32 x, y, z, dx, dy, dz, height, contact, surface;
-    s16 radius, depth;
-    union
-    {
-        s32 flags;
-        struct
-        {
-            unsigned step : 16;
-            unsigned bit16 : 1;
-            unsigned bit17 : 1;
-            unsigned high : 14;
-        } bits;
-    } mode;
-} FieldActorCollisionMover;
 /** @brief Map dimensions used to validate fixed-point actor coordinates. */
 typedef struct
 {
@@ -1123,7 +1101,7 @@ typedef struct
 void field_update_timed_walk(FieldActor* actor, s32 dx, s32 dz)
 {
     FieldActorCollisionBounds* bounds = (FieldActorCollisionBounds*)MAP_BOUNDS_ADDRESS;
-    FieldActorCollisionMover* mover = (FieldActorCollisionMover*)SCRATCHPAD_ADDRESS;
+    FieldCollisionMover* mover = FIELD_COLLISION_MOVER;
     s32 x, z;
     u8 speed;
 
@@ -1135,34 +1113,34 @@ void field_update_timed_walk(FieldActor* actor, s32 dx, s32 dz)
     if (x >= 0 && x < (bounds->width << 8) && z >= 0 && z < ((s32)(bounds->height << 16) >> 7))
     {
         mover->x = x;
-        mover->y = actor->y;
+        mover->height = actor->y;
         mover->z = actor->z;
-        mover->dx = 0;
-        mover->dy = 0;
-        mover->dz = 0;
+        mover->move_x = 0;
+        mover->move_height = 0;
+        mover->move_z = 0;
         if (g_field_object_parts[actor->object_index].appearance.fields.scale_xz == 0x40)
         {
-            mover->radius = 12;
-            mover->mode.bits.step = 8;
+            mover->footprint_width = FIELD_FOOTPRINT_LARGE_WIDTH;
+            mover->mode.bits.footprint_depth = FIELD_FOOTPRINT_LARGE_DEPTH;
         }
         else
         {
-            mover->radius = 9;
-            mover->mode.bits.step = 6;
+            mover->footprint_width = FIELD_FOOTPRINT_WIDTH;
+            mover->mode.bits.footprint_depth = FIELD_FOOTPRINT_DEPTH;
         }
-        mover->depth = 16;
-        mover->mode.bits.bit17 = 0;
-        mover->mode.bits.bit16 = 0;
-        mover->contact = g_field_object_states[actor->object_index].collision_node;
-        mover->surface = g_field_object_states[actor->object_index].collision_flags;
-        field_collision_resolve_move((struct FieldCollisionMover*)mover);
-        g_field_object_states[actor->object_index].collision_node = mover->contact;
-        g_field_object_states[actor->object_index].collision_flags = mover->surface;
-        g_field_object_states[actor->object_index].movement.half.height = mover->height / 256;
+        mover->height_bias = FIELD_FOOTPRINT_STEP;
+        mover->mode.bits.airborne_high = 0;
+        mover->mode.bits.airborne_low = 0;
+        mover->collision_node = g_field_object_states[actor->object_index].collision_node;
+        mover->flags = g_field_object_states[actor->object_index].collision_flags;
+        field_collision_resolve_move(mover);
+        g_field_object_states[actor->object_index].collision_node = mover->collision_node;
+        g_field_object_states[actor->object_index].collision_flags = mover->flags;
+        g_field_object_states[actor->object_index].movement.half.height = mover->resolved_height / 256;
     }
     else
     {
-        g_field_object_states[actor->object_index].collision_node = -1;
+        g_field_object_states[actor->object_index].collision_node = FIELD_COLLISION_NODE_SEARCH;
         g_field_object_states[actor->object_index].collision_flags = 0;
         g_field_object_states[actor->object_index].movement.half.height = 0;
     }
@@ -1974,7 +1952,7 @@ void field_update_object_tints(void)
                 slot->tint_timer = timer;
                 if (timer == 0)
                 {
-                    slot->movement.word &= ~FIELD_MOVEMENT_TINT_FLASH;
+                    slot->movement.word &= ~FIELD_MOVEMENT_INVULNERABLE;
                 }
             }
             else
@@ -1987,7 +1965,7 @@ void field_update_object_tints(void)
                         if (((flags >> 6) & 1) || g_field_actor_bindings[FIELD_BINDING_INDEX(i)].owner_object_index != i ||
                             g_field_actor_bindings[FIELD_BINDING_INDEX(i)].state == 0)
                         {
-                            slot->movement.word &= ~FIELD_MOVEMENT_TINT_FLASH;
+                            slot->movement.word &= ~FIELD_MOVEMENT_INVULNERABLE;
                             visual->tint_red = slot->tint_red;
                             visual->tint_green = slot->tint_green;
                             visual->tint_blue = slot->tint_blue;
@@ -1995,14 +1973,14 @@ void field_update_object_tints(void)
                         }
                     }
                 }
-                options = slot->movement.word & ~FIELD_MOVEMENT_TINT_FLASH;
+                options = slot->movement.word & ~FIELD_MOVEMENT_INVULNERABLE;
                 slot->movement.word = options;
                 if (g_field_actors[i].presence != FIELD_ACTOR_UNUSED && slot->current_hp.word != 0 && !(slot->contact.bytes.flags & 1))
                 {
                     flags = slot->contact.word;
                     if (!((flags >> 5) & 1) && !((flags >> 7) & 1) && g_field_active_group != 0)
                     {
-                        slot->movement.word = options | FIELD_MOVEMENT_TINT_FLASH;
+                        slot->movement.word = options | FIELD_MOVEMENT_INVULNERABLE;
                         if (g_frame_counter & FIELD_TINT_BLINK_BIT)
                         {
                             g_field_object_parts[i].tint_red = (slot->tint_red * FIELD_TINT_DIM_NUMERATOR) / FIELD_TINT_DIM_DENOMINATOR;
