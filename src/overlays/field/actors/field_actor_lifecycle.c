@@ -11,8 +11,29 @@
 #include "../internal/field_records.h"
 #include "main/main.h"
 
-/** @brief Music fade-out length (ticks) when a battle ends on a battle-music layout. */
+/** @brief Music fade-out length (ticks) when a battle ends to boss music. */
 #define FIELD_BATTLE_MUSIC_FADE_TICKS 64
+
+/*
+ * Boss music (g_field_music_id, the MUSICnnn.SET resource number). Scene changes
+ * into the boss arenas (the *_BS* scenes) select these tracks.
+ */
+/** @brief Boss music of most arenas, and of the BTL_SMP battle test scenes. */
+#define FIELD_MUSIC_BOSS_BATTLE 3
+/** @brief Boss music of the JUL_BS*, BON_BS00, CV1_BS00, MNT_BS30 and TWR_I10* arenas, among others. */
+#define FIELD_MUSIC_BOSS_BATTLE_2 34
+/** @brief Boss music of the WST_BS10, WD1_BS02, JGL_BS10, WAL_B071 and HTW_PMP* arenas. */
+#define FIELD_MUSIC_BOSS_BATTLE_3 35
+/** @brief Boss music of "Another Dimension" (DRL_BS30). */
+#define FIELD_MUSIC_ANOTHER_DIMENSION 37
+/** @brief Boss music of "The Sparkling Vortex" (JUL_BSS4). */
+#define FIELD_MUSIC_SPARKLING_VORTEX 43
+/** @brief Boss music of the TWR_BS*, LAK_BS01, GRB_BS00, HEL_BS00, SHP_BS10 and WAL_BS01 arenas; the WAL rooms also play it. */
+#define FIELD_MUSIC_BOSS_BATTLE_4 45
+/** @brief Music of the "Leaving Sorrow Behind" arena (ESL_BS00, ESL_BS01). */
+#define FIELD_MUSIC_LEAVING_SORROW_BEHIND 46
+/** @brief Boss music of the "Sanctuary of Mana" (SEI_BSS0). */
+#define FIELD_MUSIC_SANCTUARY_OF_MANA 47
 
 FieldStatusState* field_find_object_state(s32 actor_id);
 
@@ -103,7 +124,7 @@ void field_battle_suspend(void)
 
 /**
  * @brief End the battle: return the party to field control, run the end event and fade the battle music.
- * @note The music fades only on the listed layouts, and not after a duel (g_field_duel_mode).
+ * @note Only boss music fades, and not after a duel (g_field_duel_mode).
  */
 void field_battle_end(void)
 {
@@ -147,14 +168,14 @@ void field_battle_end(void)
     {
         switch (g_field_music_id)
         {
-        case 3:
-        case 34:
-        case 35:
-        case 37:
-        case 43:
-        case 45:
-        case 46:
-        case 47:
+        case FIELD_MUSIC_BOSS_BATTLE:
+        case FIELD_MUSIC_BOSS_BATTLE_2:
+        case FIELD_MUSIC_BOSS_BATTLE_3:
+        case FIELD_MUSIC_ANOTHER_DIMENSION:
+        case FIELD_MUSIC_SPARKLING_VORTEX:
+        case FIELD_MUSIC_BOSS_BATTLE_4:
+        case FIELD_MUSIC_LEAVING_SORROW_BEHIND:
+        case FIELD_MUSIC_SANCTUARY_OF_MANA:
             akao_fade_song_volume(0, FIELD_BATTLE_MUSIC_FADE_TICKS, 0);
             break;
         }
