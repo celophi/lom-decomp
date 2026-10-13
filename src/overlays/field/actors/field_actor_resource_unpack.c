@@ -31,6 +31,8 @@
 #define FIELD_OWNER_COUNT 3
 /** @brief Texture parts reserved per owner in g_field_mesh_texture_parts. */
 #define FIELD_OWNER_TEXTURE_PARTS 9
+/** @brief Heap tag and table index of an owner: owners past FIELD_SHARED_OWNER share its tag. */
+#define FIELD_OWNER_TAG(owner) ((owner) < FIELD_OWNER_COUNT ? (owner) : FIELD_SHARED_OWNER)
 /** @brief Most meshes an actor resource can hold. */
 #define FIELD_ACTOR_MAX_MESHES 3
 
@@ -138,21 +140,6 @@ s32 field_start_interaction(s32 actor_id, s32 script);
 
 static s32 field_enqueue_resource_read(s32 resource_id);
 static void field_upload_actor_texture(u8* tim, s32 owner);
-
-/**
- * @brief Heap tag and table index of an owner.
- * @param owner Owner object index.
- * @return @p owner, with every owner past FIELD_SHARED_OWNER folded onto it.
- */
-static inline s32 field_owner_tag(s32 owner)
-{
-    if (owner > FIELD_SHARED_OWNER)
-    {
-        owner = FIELD_SHARED_OWNER;
-    }
-
-    return owner;
-}
 
 /**
  * @brief Start the interaction of a marker the player walks into.
@@ -320,14 +307,10 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
     s32 part_bytes;
     s32 sound_bytes;
     s32 track_tag;
-    s32 animation_tag;
     s32 mesh_tag;
     s32 vector_tag;
     s32 face_tag;
     s32 pixel_tag;
-    s32 record_tag;
-    s32 index_tag;
-    s32 part_tag;
     s32 row;
     s32 texture_height;
     s32 item;
@@ -363,9 +346,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
     u8 face_byte;
     u8 texture_count;
     u8* track_source;
-    u8** heap;
-    u8** sound_heap;
-    u8* sound_tables;
+    s32* sound_table;
 
     block = g_field_cd_buffer;
     cursor = block;
@@ -407,7 +388,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
 
     if (mesh_count != 0)
     {
-        mesh_tag = field_owner_tag(owner);
+        mesh_tag = FIELD_OWNER_TAG(owner);
         mesh = field_block_alloc(g_field_actor_heap, FIELD_ACTOR_MAX_MESHES * sizeof(FieldMeshResource), mesh_tag);
         actor->mesh_data = (u8*)mesh;
     }
@@ -427,7 +408,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
             mesh_fields->texture_part_count = *block;
             block += 4;
             allocation_size = mesh->face_count * (FIELD_MESH_VECTORS_PER_FACE * sizeof(SVECTOR));
-            vector_tag = field_owner_tag(owner);
+            vector_tag = FIELD_OWNER_TAG(owner);
             item = 0;
             output.half = field_block_alloc(g_field_actor_heap, allocation_size, vector_tag);
             mesh_fields->vertices = (SVECTOR*)output.half;
@@ -487,7 +468,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
             }
 
             allocation_size = mesh->face_count * FIELD_MESH_FACE_SIZE;
-            face_tag = field_owner_tag(owner);
+            face_tag = FIELD_OWNER_TAG(owner);
             item = 0;
             output.byte = field_block_alloc(g_field_actor_heap, allocation_size, face_tag);
             mesh_fields->faces = (FieldMeshFace*)output.byte;
@@ -510,7 +491,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
                 } while (item < (s32)mesh->face_count);
             }
 
-            texture_owner = field_owner_tag(owner);
+            texture_owner = FIELD_OWNER_TAG(owner);
             texture = mesh_fields->texture_parts = &g_field_mesh_texture_parts[texture_owner][texture_total];
             j = 0;
 
@@ -523,7 +504,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
                     texture->width = *block++;
                     texture->height = *block++;
                     allocation_size = texture->width * texture->height * 2;
-                    pixel_tag = field_owner_tag(owner);
+                    pixel_tag = FIELD_OWNER_TAG(owner);
                     pixel_output = field_block_alloc(g_field_actor_heap, allocation_size, pixel_tag);
                     row = 0;
                     texture->pixels = pixel_output;
@@ -572,20 +553,17 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
         } while (i < mesh_count);
     }
 
-    heap = &g_field_actor_heap;
     fallback_value = *(u16*)cursor; /* duration unless the extension overrides it */
     cursor += 2;
     record_count = *cursor++;
     record_bytes = record_count * sizeof(FieldActorLinkRecord);
-    record_tag = field_owner_tag(owner);
-    records = field_block_alloc(*heap, record_bytes, record_tag);
+    records = field_block_alloc(g_field_actor_heap, record_bytes, FIELD_OWNER_TAG(owner));
     actor->curves = (FieldParameterCurve*)records;
     memcpy(records, cursor, record_bytes);
     cursor += record_bytes;
     j = *cursor++;
     index_bytes = j * sizeof(u16);
-    index_tag = field_owner_tag(owner);
-    indices = field_block_alloc(*heap, index_bytes, index_tag);
+    indices = field_block_alloc(g_field_actor_heap, index_bytes, FIELD_OWNER_TAG(owner));
     actor->curve_segments = (u16*)indices;
     memcpy(indices, cursor, index_bytes);
     cursor += index_bytes;
@@ -601,14 +579,12 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
     cursor++;
     actor->part_count = j;
     part_bytes = j * sizeof(FieldObjectPart);
-    part_tag = field_owner_tag(owner);
-    parts = field_block_alloc(*heap, part_bytes, part_tag);
+    parts = field_block_alloc(g_field_actor_heap, part_bytes, FIELD_OWNER_TAG(owner));
     actor->parts = (FieldObjectPart*)parts;
     memcpy(parts, cursor, part_bytes);
     cursor += part_bytes;
     actor->animation_index = 0;
-    animation_tag = field_owner_tag(owner);
-    animation = field_block_alloc(*heap, FIELD_ANIMATION_BLOCK_SIZE, animation_tag);
+    animation = field_block_alloc(g_field_actor_heap, FIELD_ANIMATION_BLOCK_SIZE, FIELD_OWNER_TAG(owner));
     actor->animation = animation;
     animation->duration = fallback_value;
     block = (u8*)actor->animation;
@@ -668,18 +644,17 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
         for (i = 0; i < sound_count; i++)
         {
             cursor = (u8*)((uintptr_t)(cursor + 3) & ~3);
-            sound_heap = &g_field_actor_heap;
-            sound_tables = g_field_sound_tables;
             sound_bytes = *(s32*)cursor;
 
             if (sound_bytes < FIELD_SOUND_SHARED_SIZE)
             {
-                actor->sound_data[i] = field_block_alloc(*sound_heap, sound_bytes, field_owner_tag(owner));
+                actor->sound_data[i] = field_block_alloc(g_field_actor_heap, sound_bytes, FIELD_OWNER_TAG(owner));
             }
             else
             {
                 /* The first sound of shared table 0. */
-                actor->sound_data[i] = (struct AkaoHeader*)(sound_tables + ((s32*)sound_tables)[1]);
+                sound_table = (s32*)g_field_sound_tables;
+                actor->sound_data[i] = (struct AkaoHeader*)((u8*)sound_table + sound_table[1]);
             }
 
             cursor += 4;
@@ -711,10 +686,10 @@ static void field_upload_actor_texture(u8* tim, s32 owner)
 
     tim += sizeof(u32); /* skip the TIM id word */
     cursor = tim;
-    g_field_texture_slot_flags[field_owner_tag(owner)] = *cursor;
+    g_field_texture_slot_flags[FIELD_OWNER_TAG(owner)] = *cursor;
     cursor += sizeof(u32);
 
-    if (g_field_texture_slot_flags[field_owner_tag(owner)] & TIM_FLAG_HAS_CLUT)
+    if (g_field_texture_slot_flags[FIELD_OWNER_TAG(owner)] & TIM_FLAG_HAS_CLUT)
     {
         clut_block_size = ((TimBlock*)cursor)->bnum;
         cursor += FIELD_TIM_BLOCK_HEADER;
