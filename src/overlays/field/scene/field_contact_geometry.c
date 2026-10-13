@@ -112,7 +112,6 @@ typedef struct
     VECTOR squared;
 } FieldContactScanWorkspace;
 
-extern u8* g_field_cd_buffer;
 extern FieldMoveObject g_field_object_parts[];
 extern s32 g_field_duel_mode;
 /** @brief Last field_find_actor_overlap result: zero, or the object index plus FIELD_CONTACT_RESULT_PRESENT. */
@@ -995,7 +994,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
         {
             if (target_state->current_hp.word != 0)
             {
-                if (!(target_state->flags & (FIELD_OBJECT_FLAG_0080 | FIELD_OBJECT_FLAG_KNOCKED_OUT)))
+                if (!(target_state->flags & (FIELD_OBJECT_FLAG_PETRIFIED | FIELD_OBJECT_FLAG_KNOCKED_OUT)))
                 {
                     if (!(target_state->contact.word & FIELD_CONTACT_ANIMATION_HIDDEN))
                     {
@@ -1420,7 +1419,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
                 continue;
             }
             candidate_state->contact.word |= FIELD_CONTACT_TARGETED;
-            candidate_state->flags &= ~FIELD_OBJECT_ACTIONS_RESTRICTED;
+            candidate_state->flags &= ~FIELD_OBJECT_FLAG_MINI;
             states[actor->owner_object_index].targets[states[actor->owner_object_index].contact.bytes.target_count] = candidate_index;
             states[actor->owner_object_index].contact.bytes.target_count++;
             actor->track_mask |= 1 << actor->target_count;
@@ -1743,7 +1742,7 @@ void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* pa
                     ((u8)g_field_object_states[actor->owner_object_index].contact.bytes.target_count < FIELD_ACTOR_TRACK_COUNT))
                 {
                     target_state->contact.word |= FIELD_CONTACT_TARGETED;
-                    target_state->flags &= ~FIELD_OBJECT_ACTIONS_RESTRICTED;
+                    target_state->flags &= ~FIELD_OBJECT_FLAG_MINI;
                     g_field_object_states[actor->owner_object_index].targets[g_field_object_states[actor->owner_object_index].contact.bytes.target_count] = target_index;
                     g_field_object_states[actor->owner_object_index].contact.bytes.target_count++;
                     actor->track_mask |= 1 << actor->target_count;

@@ -18,7 +18,7 @@
 /** @brief Action returned by the command history when no action is queued. */
 #define FIELD_ACTION_NONE 0xFF
 
-/** @brief Actions 2 and 3 stay available while FIELD_OBJECT_ACTIONS_RESTRICTED is set. */
+/** @brief Actions 2 and 3 stay available while FIELD_OBJECT_FLAG_MINI is set. */
 #define FIELD_ACTION_RESTRICTED_FIRST 2
 #define FIELD_ACTION_RESTRICTED_LAST 3
 
@@ -160,7 +160,7 @@ u16 field_resolve_action_command(FieldActor* actor, s32 player)
         g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_CHAINING;
         g_field_object_states[actor->object_index].retry_count = 0;
     }
-    if (g_field_object_states[actor->object_index].flags & FIELD_OBJECT_ACTIONS_RESTRICTED)
+    if (g_field_object_states[actor->object_index].flags & FIELD_OBJECT_FLAG_MINI)
     {
         if (action != FIELD_ACTION_RESTRICTED_FIRST && action != FIELD_ACTION_RESTRICTED_LAST)
         {

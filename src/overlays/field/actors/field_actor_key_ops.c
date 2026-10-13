@@ -61,7 +61,6 @@ enum
 /** @brief Event script table: u16 offsets from the table start, then the scripts. */
 extern u16* g_field_event_scripts;
 
-FieldActor* field_lookup_actor(s32 key);
 void field_restart_actor_animation(FieldActor* actor);
 
 /**
@@ -433,7 +432,7 @@ s32 field_set_actor_control_mode(s32 key, s32 mode)
     case FIELD_CONTROL_PLAYER:
         object_index = actor->object_index;
         actor->script_index = FIELD_SCRIPT_NONE;
-        actor->unk10 = 0;
+        actor->script_busy = 0;
         if (object_index == FIELD_SECOND_MEMBER)
         {
             if (!(g_saved_game_ctx->options.word & FIELD_OPTION_VIBRATION))
@@ -448,7 +447,7 @@ s32 field_set_actor_control_mode(s32 key, s32 mode)
         break;
     case FIELD_CONTROL_FOLLOWER:
         actor->script_index = FIELD_SCRIPT_NONE;
-        actor->unk10 = 0;
+        actor->script_busy = 0;
         field_refresh_party_routes();
         if (actor->object_index == FIELD_SECOND_MEMBER)
         {

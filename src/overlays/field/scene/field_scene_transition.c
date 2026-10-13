@@ -258,7 +258,6 @@ extern s32 g_field_scene_contact_latched;
 extern u8 g_field_scene_data_buffer[];
 extern s32 g_field_song_volume;
 extern s32 g_field_preserve_entry_music;
-extern s32 g_field_scene_mode_bit;
 extern s32 g_field_previous_song_volume;
 extern s32 g_field_party_palette_index;
 extern u32 g_field_scene_portrait_count;
@@ -908,7 +907,7 @@ void field_load_scene_actors(FieldSceneLayout* layout)
             state->tint_timer = 0;
             state->interaction_kind = 0;
             state->contact.bits.flag5 = 0;
-            state->hp_display.bits.unk24 = 0;
+            state->hp_display.bits.panel_timer = 0;
             state->hp_display.bits.value = state->maximum_hp;
             state->current_hp.word = state->maximum_hp & 0xFFFFFF;
             state->key = index + FIELD_PARTY_COUNT;

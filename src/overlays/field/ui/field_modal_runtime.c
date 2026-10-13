@@ -244,7 +244,6 @@ extern s32 g_field_dialog_screen_mode;
 extern s32 g_field_return_to_title_prompt_state;
 extern s32 D_8012291C;
 extern s32 g_field_item_drop_enabled;
-extern s32 g_field_scene_mode_bit;
 
 /* Modal overlays. */
 extern s32 g_field_modal_state;
@@ -280,7 +279,6 @@ void gosub_open_screen_sequence(void* work, void* screen_sequence);
 void zukan_run(void* work, s32 context);
 
 s32 field_party_reload_reading(void);
-void* field_emit_actor_portrait(SPRT* cursor, u32* ot, s32 index, u32* position);
 void* field_draw_sprite_number(s32* ot, void* cursor, s32 value, s32 digits, u16* position, s32 flags);
 void* field_draw_sprite_glyph(u8* cursor, s32* ot, s32 glyph, s32* position, s32 flags);
 SPRT* field_add_sprite_outline(u_long* ot, SPRT* sprite_cursor, s32 count);
@@ -1048,7 +1046,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                     point.vx = FIELD_HINT_PORTRAIT_X;
                     label_y <<= 5;
                     point.vy = label_y + FIELD_HINT_PORTRAIT_Y;
-                    cursor = (u8*)field_emit_actor_portrait((SPRT*)cursor, (u32*)ot, index, (u32*)&point);
+                    cursor = (u8*)field_emit_actor_portrait((SPRT*)cursor, ot, index, (Vec2s*)&point);
                     cursor = (u8*)field_draw_text((SPRT*)cursor, ot, (u8*)text_or_state, FIELD_TEXT_COLOR_NORMAL, FIELD_HINT_TEXT_X,
                                                   label_y + FIELD_HINT_TEXT_Y, FIELD_TEXT_SHADOW);
                     break;

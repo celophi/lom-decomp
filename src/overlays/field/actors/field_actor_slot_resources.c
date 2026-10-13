@@ -554,8 +554,8 @@ void field_reset_object_states(void)
         g_field_object_states[i].flags = 0;
         g_field_object_states[i].interaction_kind = 0;
         g_field_object_states[i].hp_display.bits.value = g_field_object_states[i].current_hp.bits.value;
-        g_field_object_states[i].hp_display.bits.unk24 = 0;
-        g_field_object_states[i].hp_display.bits.flag31 = 0;
+        g_field_object_states[i].hp_display.bits.panel_timer = 0;
+        g_field_object_states[i].hp_display.bits.boss = 0;
         g_field_object_states[i].hud.word |= FIELD_HUD_SHOW_TECHNIQUE_GAUGE;
         g_field_object_states[i].movement.bits.scale = 50;
         g_field_object_states[i].movement.half.height = 0;

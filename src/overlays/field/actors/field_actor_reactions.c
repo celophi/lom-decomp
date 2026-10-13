@@ -181,7 +181,7 @@ s32 field_stop_actor(s32 key)
         return -1;
     }
     actor->script_index = FIELD_SCRIPT_NONE;
-    actor->unk10 = 0;
+    actor->script_busy = 0;
     actor->script_offset++;
     field_update_sequence_actor_binding(actor, 0);
     field_stop_actor_animations_for_object(actor, 1);

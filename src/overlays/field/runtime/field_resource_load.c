@@ -69,7 +69,6 @@ typedef struct
 
 /* Not in field_calls.h: field_dialog_screens.c calls it with an argument. */
 s32 field_party_reload_reading(void);
-FieldActor* field_lookup_actor(s32 key);
 void field_restart_actor_animation(FieldActor* actor);
 void field_restore_default_action_animation_mappings(s32 unused);
 
@@ -77,7 +76,6 @@ extern s32 g_field_battle_entry_change_count;
 extern s32 g_field_party_reload_sizes[FIELD_PLAYER_COUNT];
 extern FieldBattleEntryChange g_field_battle_entry_changes[FIELD_BATTLE_ENTRY_CHANGE_COUNT];
 extern s32 g_field_party_reload_resource_ids[FIELD_PLAYER_COUNT];
-extern u8* g_field_cd_buffer;
 extern void* g_field_resource_cursor;
 
 /** @brief Cancel the battle entry: drop the queued changes and the pending party reloads. */
