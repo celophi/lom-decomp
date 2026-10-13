@@ -3653,7 +3653,6 @@ static inline FieldActorBinding *field_get_object_binding(s32 object_index)
  */
 s32 *field_render_effect_frame8(FieldMotionRecord *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldObjectPart *part)
 {
-    extern int abs(int);
     MATRIX *mtx = (MATRIX *) SCRATCHPAD_ADDRESS;
     Vec2s *sxy = (Vec2s *) SCRATCHPAD_AT(0x40);
     s32 item_count;

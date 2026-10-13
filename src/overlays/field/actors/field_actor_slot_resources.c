@@ -1,5 +1,6 @@
 #include "main/cdrom.h"
 #include "common.h"
+#include "../internal/field_effect_render_state.h"
 #include "main/controller_internal.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_actor_palette.h"
@@ -76,9 +77,6 @@ extern u8 g_field_resource_buffer[];
 extern u8* g_field_builtin_track_data;
 /** @brief Built-in animation resource in use. */
 extern FieldBuiltinResource* g_field_builtin_animations;
-extern s32 g_field_camera_offset_x;
-extern s32 g_field_camera_offset_y;
-extern s32 g_field_camera_offset_z;
 extern s32 D_8010CFD4;
 extern u8* g_field_actor_heap;
 extern s32 g_field_boss_hud_shake_frame;

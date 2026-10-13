@@ -98,7 +98,6 @@ extern FieldTransitionQuad g_field_timed_panel_quads[][4];
 extern u8 g_field_timed_panel_modes[];
 /** @brief Nonzero while a timed panel is shown. */
 extern s32 g_field_timed_panel_active;
-extern Vec2s g_field_screen_scroll;
 extern u16 g_field_timed_panel_width;
 extern u16 g_field_timed_panel_height;
 extern s32 g_field_timed_panel_index;

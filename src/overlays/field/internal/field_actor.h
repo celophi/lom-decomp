@@ -133,8 +133,16 @@ typedef enum FieldAbility
 #define FIELD_TECHNIQUE_GAUGE_FULL 0xFF
 /** @brief Object-state group_flags bits holding the object's group. */
 #define FIELD_OBJECT_GROUP_MASK 0x0F
+/** @brief Object-state flags bits of unknown meaning (each has a handler in g_field_object_flag_handlers). */
+#define FIELD_OBJECT_FLAG_0004 0x0004
+#define FIELD_OBJECT_FLAG_0020 0x0020
+#define FIELD_OBJECT_FLAG_0040 0x0040
+#define FIELD_OBJECT_FLAG_0080 0x0080
+#define FIELD_OBJECT_FLAG_0100 0x0100
 /** @brief Object-state flags bit set while the object is knocked out. */
 #define FIELD_OBJECT_FLAG_KNOCKED_OUT 0x0200
+/** @brief Object-state flags bit set while another object is linked to this one. */
+#define FIELD_OBJECT_FLAG_LINK_TARGET 0x2000
 /**
  * @brief Object-state flags bit: the object's actions are restricted.
  * @note Pad input may then only start actions 2 and 3; scripted actions and techniques
@@ -154,7 +162,14 @@ typedef enum FieldAbility
 #define FIELD_CONTACT_ACTION_PENDING 0x40   /**< The object charges or waits for an action; hits land even while its own bound animation runs. */
 #define FIELD_CONTACT_TARGETED 0x80         /**< The object is being targeted. */
 /** @brief Object-state flag bits that make an object an invalid target. */
-#define FIELD_OBJECT_UNTARGETABLE_FLAGS 0x2280
+#define FIELD_OBJECT_UNTARGETABLE_FLAGS (FIELD_OBJECT_FLAG_0080 | FIELD_OBJECT_FLAG_KNOCKED_OUT | FIELD_OBJECT_FLAG_LINK_TARGET)
+/**
+ * @brief Object-state flag bits that hold an object in place.
+ * @note Such an object takes no knockback, is skipped by overlap tests, stops its looping
+ *       effects, and is left out of the camera's party average.
+ */
+#define FIELD_OBJECT_IMMOBILE_FLAGS                                                                                                   \
+    (FIELD_OBJECT_FLAG_0004 | FIELD_OBJECT_FLAG_0020 | FIELD_OBJECT_FLAG_0040 | FIELD_OBJECT_FLAG_0100 | FIELD_OBJECT_UNTARGETABLE_FLAGS)
 
 /** @brief Word, halfword and bit views of an actor's control-mode word. */
 typedef union

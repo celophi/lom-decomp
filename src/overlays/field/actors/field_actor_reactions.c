@@ -13,20 +13,6 @@
 /** @brief First frame of the HUD panel shake started by a hit (counts down to 0). */
 #define FIELD_HUD_SHAKE_START 5
 
-/** @brief FieldObjectState.flags bits; the numbered ones have unknown meanings. */
-#define FIELD_OBJECT_FLAG_0004 0x0004
-#define FIELD_OBJECT_FLAG_0020 0x0020
-#define FIELD_OBJECT_FLAG_0040 0x0040
-#define FIELD_OBJECT_FLAG_0080 0x0080
-#define FIELD_OBJECT_FLAG_0100 0x0100
-/** @brief Another object holds a link to this object (FieldContactWord linked bit). */
-#define FIELD_OBJECT_FLAG_LINK_TARGET 0x2000
-
-/** @brief Flags that keep an object in place: it takes no knockback from a hit. */
-#define FIELD_OBJECT_IMMOBILE_FLAGS                                                                                                                            \
-    (FIELD_OBJECT_FLAG_0004 | FIELD_OBJECT_FLAG_0020 | FIELD_OBJECT_FLAG_0040 | FIELD_OBJECT_FLAG_0080 | FIELD_OBJECT_FLAG_0100 |                              \
-     FIELD_OBJECT_FLAG_KNOCKED_OUT | FIELD_OBJECT_FLAG_LINK_TARGET)
-
 #define FIELD_ANIMATION_KNOCKED_DOWN 29
 
 /** @brief Effect resource played when an action chain reaches the weapon's limit. */

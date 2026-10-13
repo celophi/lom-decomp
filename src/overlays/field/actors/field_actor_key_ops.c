@@ -8,6 +8,7 @@
  */
 
 #include "common.h"
+#include <abs.h>
 #include "../internal/field_actor_key_ops.h"
 #include "main/controller_internal.h"
 #include "main/main.h"
@@ -61,7 +62,6 @@ enum
 extern u16* g_field_event_scripts;
 
 FieldActor* field_lookup_actor(s32 key);
-int abs(int value);
 void field_restart_actor_animation(FieldActor* actor);
 
 /**

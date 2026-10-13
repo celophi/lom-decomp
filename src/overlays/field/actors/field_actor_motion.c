@@ -26,8 +26,6 @@
 /** @brief FieldObjectState::action_parameter value of an object without an action. */
 #define FIELD_ACTION_PARAMETER_NONE 0xFFFF
 
-/** @brief FieldObjectState::flags bit set on an object while another object is linked to it. */
-#define FIELD_OBJECT_FLAG_LINK_TARGET 0x2000
 /** @brief FieldObjectState::movement sequence bits cleared when an action ends. */
 #define FIELD_MOVEMENT_SEQUENCE_0800 0x0800
 #define FIELD_MOVEMENT_SEQUENCE_1000 0x1000

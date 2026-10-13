@@ -1,5 +1,6 @@
 #include "main/audio/game_audio.h"
 #include "common.h"
+#include "../internal/field_effect_render_state.h"
 #include "main/display.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_actor_runtime.h"
@@ -309,10 +310,6 @@ extern FieldRuntimeContext* g_field_runtime;
 extern FieldBattleContext* g_field_battle;
 extern SceneState* g_field_scene_state;
 extern s32 g_field_interaction_active;
-extern s32 g_field_scripted_scroll_frames;
-extern s32 g_field_scripted_scroll_target_x;
-extern s32 g_field_scripted_scroll_target_z;
-
 FieldStatusState* field_find_object_state(s32 key);
 FieldActorRecord* field_find_actor_record_or_default(s32 id);
 s32 field_get_actor_position(s32 key, Vec3i* position);

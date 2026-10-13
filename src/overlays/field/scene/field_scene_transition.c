@@ -10,6 +10,7 @@
 #include "main/audio/game_audio.h"
 #include "main/audio/akao_cmd.h"
 #include "common.h"
+#include "../internal/field_effect_render_state.h"
 #include "main/controller_internal.h"
 #include "main/scene_state.h"
 #include "../internal/field_actor_routes.h"
@@ -247,16 +248,10 @@ extern s32 g_field_pending_scene_id;
 extern s32 g_field_pending_object_id;
 extern s32 g_field_pending_sound_bank_id;
 extern s32 g_field_scene_data_size;
-extern u32 g_field_group_bounds[];
-extern s32 g_field_group_bounds_count;
 extern u16* g_field_event_scripts;
 extern u16* g_field_actor_scripts;
 extern u32* g_field_scene_record_table;
 extern s32 g_field_hide_actor_panels;
-extern s32 g_field_camera_target_x;
-extern s32 g_field_camera_target_z;
-extern s32 g_field_camera_follow_x;
-extern s32 g_field_camera_follow_z;
 /* TODO: Script command 0x44 selects alternate party control and triple HP. */
 extern s32 g_field_duel_mode;
 extern s32 g_field_scene_contact_latched;
@@ -438,7 +433,8 @@ void field_update_scene(void)
             field_load_instrument_bank(g_field_scene_mode_bit == 0);
         }
         field_upload_transition_tiles();
-        group_bounds_output = g_field_group_bounds;
+        /* Each FieldGroupBounds entry is copied as one word. */
+        group_bounds_output = (u32*)g_field_group_bounds;
         g_field_dialog_item_count = 0;
         scene_cursor = FIELD_SCENE_SECTION(scene_file, FIELD_SCENE_ACTORS);
         group_bounds_list = (s32*)(FIELD_SCENE_SECTION(scene_file, FIELD_SCENE_GROUP_BOUNDS));

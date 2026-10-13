@@ -1,6 +1,7 @@
 #include "../internal/wmap_land_layout.h"
 #include "../internal/wmap_pathfinding.h"
 #include "main/field_entry.h"
+#include <abs.h>
 
 /**
  * @file wmap_pathfinding.c
@@ -37,8 +38,6 @@ typedef union {
 
 typedef struct { u8 unk0; u8 unk1; u8 unk2; u8 unk3; } WmapQuad;
 typedef struct { u8 unk0; u8 unk1; } WmapPair;
-
-extern int abs(int value);
 
 extern s32 D_800432BC;
 extern u32 D_800432C0[];

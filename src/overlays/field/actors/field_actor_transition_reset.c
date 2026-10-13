@@ -8,6 +8,7 @@
  */
 
 #include "common.h"
+#include "../internal/field_effect_render_state.h"
 #include "common/saved_game.h"
 #include "main/controller_internal.h"
 #include "../internal/field_actor_tables.h"
@@ -38,9 +39,6 @@ typedef struct
 #define FIELD_STATE_PAGE ((FieldStatePage*)PRIMARY_OVERLAY_UPPER_ADDRESS)
 
 extern s32 g_field_text_session_active;
-extern s32 g_field_camera_offset_x;
-extern s32 g_field_camera_offset_y;
-extern s32 g_field_camera_offset_z;
 extern s32 g_field_restore_group;
 extern s32 g_field_battle_idle_checks;
 extern s32 g_field_duel_mode;

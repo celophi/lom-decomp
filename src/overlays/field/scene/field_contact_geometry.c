@@ -2,6 +2,7 @@
  * @brief Resolve field actor contacts, movement, interactions, and attack hits.
  */
 #include "common.h"
+#include "../internal/field_effect_render_state.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_actor.h"
 #include "../internal/field_actor_behavior.h"
@@ -60,15 +61,6 @@
 #define FIELD_CONTACT_QUAD_ANSWER_MASK 0x1C
 #define FIELD_CONTACT_QUAD_ANSWER_2 0x08
 #define FIELD_CONTACT_QUAD_ANSWER_3 0x10
-/** @brief Object-state flag bits of unknown meaning tested by the contact scans. */
-#define FIELD_OBJECT_FLAG_0004 0x0004
-#define FIELD_OBJECT_FLAG_0020 0x0020
-#define FIELD_OBJECT_FLAG_0040 0x0040
-#define FIELD_OBJECT_FLAG_0080 0x0080
-#define FIELD_OBJECT_FLAG_0100 0x0100
-/** @brief Object-state flag bits that keep an object out of overlap tests. */
-#define FIELD_OBJECT_NO_OVERLAP_FLAGS \
-    (FIELD_OBJECT_FLAG_0004 | FIELD_OBJECT_FLAG_0020 | FIELD_OBJECT_FLAG_0040 | FIELD_OBJECT_FLAG_0100 | FIELD_OBJECT_UNTARGETABLE_FLAGS)
 
 /** @brief Object-state movement bits: the object stands outside its group bounds / overlaps another actor. */
 #define FIELD_MOVEMENT_OUTSIDE_BOUNDS_BIT 13
@@ -108,13 +100,6 @@ typedef struct
     u16 depth;
 } FieldMoveBounds;
 
-/** @brief Horizontal range of an actor group, in whole map units (same layout as in field_actor_camera.c). */
-typedef struct
-{
-    u16 left;
-    u16 width;
-} FieldGroupBounds;
-
 /** @brief Animation targets and GTE vectors used by a contact scan. */
 typedef struct
 {
@@ -129,7 +114,6 @@ typedef struct
 
 extern u8* g_field_cd_buffer;
 extern FieldMoveObject g_field_object_parts[];
-extern FieldGroupBounds g_field_group_bounds[];
 extern s32 g_field_duel_mode;
 /** @brief Last field_find_actor_overlap result: zero, or the object index plus FIELD_CONTACT_RESULT_PRESENT. */
 extern s32 g_field_last_actor_contact;
@@ -971,7 +955,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
     for (; target_index < target_end; target_index++, target++, target_state++)
     {
         if ((target->presence == FIELD_ACTOR_UNUSED) ||
-            (target_state->flags & FIELD_OBJECT_NO_OVERLAP_FLAGS) ||
+            (target_state->flags & FIELD_OBJECT_IMMOBILE_FLAGS) ||
             (target == actor) ||
             (contact_flags = target_state->contact.word, ((contact_flags & FIELD_CONTACT_NO_HIT_TEST) != 0)) ||
             (contact_flags & FIELD_CONTACT_ANIMATION_HIDDEN) || (target_state->collision.word == 0))

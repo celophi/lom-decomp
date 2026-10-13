@@ -10,6 +10,7 @@
  */
 
 #include "common.h"
+#include <abs.h>
 #include "main/cdrom.h"
 #include "main/display.h"
 #include "../internal/field_actor_tables.h"
@@ -190,22 +191,11 @@ typedef union
 
 extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_COUNT];
 
-/** @brief FieldObjectState.flags bits with a handler in g_field_object_flag_handlers; meanings mostly unknown. */
-#define FIELD_OBJECT_FLAG_0004 0x0004
-#define FIELD_OBJECT_FLAG_0020 0x0020
-#define FIELD_OBJECT_FLAG_0040 0x0040
-#define FIELD_OBJECT_FLAG_0080 0x0080
-#define FIELD_OBJECT_FLAG_0100 0x0100
-#define FIELD_OBJECT_FLAG_2000 0x2000
+/** @brief FieldObjectState.flags bit with a handler in g_field_object_flag_handlers; meaning unknown. */
 #define FIELD_OBJECT_FLAG_8000 0x8000
 
 /** @brief Set for one frame when the object is hit; tints the actor red. */
 #define FIELD_OBJECT_FLAG_HIT_FLASH 0x10000000
-
-/** @brief Flags that stop the looping 0x4000/0x8000 effects (also skip knockback and camera tracking). */
-#define FIELD_OBJECT_IMMOBILE_FLAGS                                                                                                                            \
-    (FIELD_OBJECT_FLAG_0004 | FIELD_OBJECT_FLAG_0020 | FIELD_OBJECT_FLAG_0040 | FIELD_OBJECT_FLAG_0080 | FIELD_OBJECT_FLAG_0100 |                              \
-     FIELD_OBJECT_FLAG_KNOCKED_OUT | FIELD_OBJECT_FLAG_2000)
 
 /** @brief FieldObjectState.contact bit: the object is linked to linked_object_index. */
 #define FIELD_CONTACT_LINKED_SHIFT 1
@@ -272,14 +262,6 @@ typedef struct
 /** @brief How far @p actor stands above ground height @p height; grows the shadow and pulls its edges in. */
 #define SHADOW_ELEVATION(actor, height) (((actor)->y - ((height) << 8)) >> 11)
 
-/** @brief Screen translation applied to the fading primitives. */
-typedef struct
-{
-    u16 x;
-    u16 y;
-} FieldScreenMotion;
-
-extern FieldScreenMotion g_field_screen_scroll;
 extern POLY_FT4 g_field_fade_prims[FIELD_FADE_PRIM_COUNT];
 extern u16 g_field_fade_prim_depths[FIELD_FADE_PRIM_COUNT];
 extern FieldActor* g_field_updating_actor;
@@ -293,7 +275,6 @@ static POLY_F4* field_emit_hud_damage_quad(POLY_F4* prim, s32 y, u_long* ot);
 static POLY_F4* field_emit_hud_healing_quad(POLY_F4* prim, s32 y, u_long* ot);
 void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* position);
 s32 field_upload_image_resource(RECT* rect, Tim* resource, s32 mode);
-int abs(int value);
 void bcopy(const void* src, void* dst, int size);
 void field_restart_actor_animation(FieldActor* actor);
 static inline void field_clear_link_target_flag(s32 object_index);
@@ -1627,7 +1608,7 @@ static inline void field_clear_link_target_flag(s32 object_index)
     if ((state->contact.word >> FIELD_CONTACT_LINKED_SHIFT) & 1)
     {
         FieldObjectState* target = &states[state->linked_object_index];
-        target->flags &= ~FIELD_OBJECT_FLAG_2000;
+        target->flags &= ~FIELD_OBJECT_FLAG_LINK_TARGET;
     }
 }
 
