@@ -12,6 +12,7 @@
 
 #include "common.h"
 #include "../internal/field_calls.h"
+#include "../internal/field_actor.h"
 #include "main/controller_internal.h"
 #include "main/display.h"
 #include "../internal/field_effect_dispatch.h"
@@ -97,7 +98,7 @@
 #define DISTANCE_SQUARES ((VECTOR*)SCRATCHPAD_AT(0x10))
 
 /** @brief Runtime state of @p actor's object. */
-#define OBJECT_STATE(actor) g_field_object_states[(actor)->source_object_index]
+#define OBJECT_STATE(actor) g_field_object_states[(actor)->object_index]
 
 /** @brief Current effect radius of @p actor's object (low ten movement bits). */
 #define EFFECT_RADIUS(actor) (OBJECT_STATE(actor).movement.half.flags & FIELD_MOVEMENT_SCALE_MASK)
@@ -182,7 +183,7 @@ extern s32 g_field_effect_angle;
  * @param kind Effect kind (GroundEffectKind).
  * @note The radius starts at the kind's minimum (see field_get_ground_effect_radius_limits).
  */
-void field_start_object_ground_effect(FieldMotionRecord* actor, u32 kind)
+void field_start_object_ground_effect(FieldActor* actor, u32 kind)
 {
     VECTOR* delta = DISTANCE_DELTA;
     VECTOR* squares = DISTANCE_SQUARES;
@@ -307,7 +308,7 @@ inline void field_get_ground_effect_radius_limits(s32 kind, s32* min_radius, s32
  * @note The aimed dome moves with the d-pad or left stick of the object's
  *       controller, but not past the screen edge.
  */
-void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
+void field_draw_object_ground_effect(FieldActor* actor, u32 kind)
 {
     VECTOR point;
     VECTOR direction;
@@ -333,7 +334,7 @@ void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
     field_get_ground_effect_radius_limits(kind, &min_radius, &max_radius);
     radius = EFFECT_RADIUS(actor);
     intensity = ((radius - min_radius) << 8) / (max_radius - min_radius);
-    facing = actor->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED;
+    facing = actor->animation & FIELD_ANIMATION_FACING;
     OBJECT_STATE(actor).action_charge = intensity;
     /* x, y, z and the following word read as one VECTOR. */
     position = (VECTOR*)&actor->x;
@@ -345,7 +346,7 @@ void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
 
     draw = 1;
 
-    if (actor->source_object_index == FIELD_PARTY_COMPANION)
+    if (actor->object_index == FIELD_PARTY_COMPANION)
     {
         if ((g_saved_game_ctx->characters[FIELD_PARTY_COMPANION].info.word & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GOLEM)
         {
@@ -466,7 +467,7 @@ void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
         {
             SET_EFFECT_RADIUS(actor, EFFECT_RADIUS(actor) + 2);
 
-            if (actor->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
+            if (actor->animation & FIELD_ANIMATION_FACING)
             {
                 OBJECT_STATE(actor).ground_attachment_points[0].x += 2;
             }
@@ -494,15 +495,15 @@ void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
             SET_EFFECT_RADIUS(actor, EFFECT_RADIUS(actor) + 1);
         }
 
-        if (actor->source_object_index < FIELD_PLAYER_COUNT)
+        if (actor->object_index < FIELD_PLAYER_COUNT)
         {
-            if (controller->ports[actor->source_object_index].published_sample.device_type >= CONTROLLER_DEVICE_CONFIGURING)
+            if (controller->ports[actor->object_index].published_sample.device_type >= CONTROLLER_DEVICE_CONFIGURING)
             {
                 raw_buttons = 0;
             }
             else
             {
-                held = controller->ports[actor->source_object_index].published_sample.held_buttons;
+                held = controller->ports[actor->object_index].published_sample.held_buttons;
                 raw_buttons = PAD_SWAP_BYTES(held);
             }
 #if defined(VERSION_JP)
@@ -534,10 +535,10 @@ void field_draw_object_ground_effect(FieldMotionRecord* actor, u32 kind)
                 point.vy += ONE;
             }
 
-            if (controller->ports[actor->source_object_index].published_sample.device_type != CONTROLLER_DEVICE_DIGITAL)
+            if (controller->ports[actor->object_index].published_sample.device_type != CONTROLLER_DEVICE_DIGITAL)
             {
-                point.vx += controller->ports[actor->source_object_index].published_sample.left_stick_x * 16;
-                point.vy -= controller->ports[actor->source_object_index].published_sample.left_stick_y * 16;
+                point.vx += controller->ports[actor->object_index].published_sample.left_stick_x * 16;
+                point.vy -= controller->ports[actor->object_index].published_sample.left_stick_y * 16;
             }
 
             if ((point.vx | point.vy) != 0)

@@ -35,6 +35,7 @@ struct FieldActorSlot;
 struct FieldCardClock;
 struct FieldCdBuffer;
 struct FieldCharacterRecord;
+struct FieldActor;
 struct FieldKeyedList;
 struct FieldCollisionNode;
 struct FieldItemKey;
@@ -177,8 +178,8 @@ void field_camera_select_scroll_limits(void);
 void field_camera_reset(void);
 
 /* field_actor_effects.c */
-void field_start_object_ground_effect(struct FieldMotionRecord *actor, u32 kind);
-void field_draw_object_ground_effect(struct FieldMotionRecord* actor, u32 kind);
+void field_start_object_ground_effect(struct FieldActor* actor, u32 kind);
+void field_draw_object_ground_effect(struct FieldActor* actor, u32 kind);
 
 /* field_actor_hud_effects.c */
 void field_update_spawned_actor(struct FieldActor* actor);
