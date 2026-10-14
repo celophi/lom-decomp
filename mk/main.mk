@@ -118,10 +118,12 @@ $(TARGET): $(COPY_SENTINEL) $(OBJECTS) $(MAIN_LINKER_SCRIPTS)
 
 .PHONY: all bin
 
-# Copy the completed build back out of staging.
+# Copy the completed build back out of staging. Each overlay rule copies its own
+# overlays/<name> directory, so skip overlays/ here: copying it too races with those
+# rules under parallel make ("cp: cannot create directory ...: File exists").
 all: $(TARGET)
 	@mkdir -p $(BUILD_DIR)
-	@cp -r $(STAGING)/$(BUILD_DIR)/* $(BUILD_DIR)/
+	@cp -r $(filter-out $(STAGING)/$(BUILD_DIR)/overlays,$(wildcard $(STAGING)/$(BUILD_DIR)/*)) $(BUILD_DIR)/
 	@echo "Build complete: $(BUILD_DIR)/$(GAME).elf"
 
 # Convert the ELF to the raw executable image.

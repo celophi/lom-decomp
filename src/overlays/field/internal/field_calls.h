@@ -41,6 +41,7 @@ struct FieldItemKey;
 struct FieldItemRecord;
 struct ShopEntry;
 struct FieldMotionRecord;
+struct FieldObjectPart;
 struct FieldNode;
 struct FieldRenderHalf;
 struct FieldStatusRecord;
@@ -174,6 +175,7 @@ void field_start_object_ground_effect(struct FieldMotionRecord *actor, u32 kind)
 void field_draw_object_ground_effect(struct FieldMotionRecord* actor, u32 kind);
 
 /* field_actor_hud_effects.c */
+void field_update_spawned_actor(struct FieldActor* actor);
 void field_draw_actor_hud(struct FieldRenderHalf *render_half);
 void field_update_object_effects(s32 index);
 void field_clear_fade_prims(void);
@@ -235,6 +237,7 @@ void field_set_actor_record_script_only(s32 key, s32 flags);
 void field_clear_actor_record_script_only(s32 key);
 
 /* field_actor_resource_unpack.c */
+void field_check_marker_contact(struct FieldActor* player);
 s32 field_request_resource_read(s32 resource_id);
 void field_clear_resource_queue(void);
 s32 field_get_loading_resource(void);
@@ -243,6 +246,7 @@ void field_free_owner_resources(s32 tag);
 void field_unpack_actor_resource(s32 owner, struct FieldActorSlot *actor);
 
 /* field_actor_runtime.c */
+void field_restore_default_action_animation_mappings(s32 unused);
 void field_clear_actor_effects(struct FieldActorSlot* slot);
 s32 field_get_actor_resource_id(s32 unused_slot_index, struct FieldPlayerRecord* player, s32 weapon_set);
 void field_initialize_actor_part(s32 part_index, s32 timer_mode);
@@ -255,6 +259,7 @@ void field_unpack_resource_package(struct FieldCdBuffer *buf, s32 size, s32 slot
 void field_finish_party_slot_reload(s32 actor_slot);
 
 /* field_actor_script_ops.c */
+void field_step_actor_script(struct FieldActor* actor);
 void field_route_actor_to_object(struct FieldActor* actor, s32 target_index, s32 restart);
 
 /* field_actor_slot_resources.c */
@@ -374,6 +379,7 @@ void* field_draw_coordinate_panel(u_long* ot, u8* prim, s32 x_offset, s32 y_offs
 void field_upload_player_icons(void);
 
 /* field_dialog_screens.c */
+void field_handle_return_to_title_prompt(void);
 /** @brief Results screen shown by the dialog screens (0 = none). */
 extern s32 g_field_dialog_screen_mode;
 void field_start_timed_panel(s32 index);
@@ -393,6 +399,9 @@ void field_start_actor_text(s32 index, s32 text_id);
 void field_reset_draw_state(void);
 
 /* field_effect_update.c */
+s32 field_spawn_actor_effect(struct FieldActorSlot* actor, s32 part_index, s32 start);
+void field_retire_effect(struct FieldMotionRecord* effect, struct FieldObjectPart* part);
+void field_advance_actor_effects(struct FieldActorSlot* actor_state);
 /**
  * @brief Packed action context: action in the low byte, source at bit 8, recipient at bit 16.
  * @note Also written on pool exhaustion and advanced during collision attempts;
@@ -579,6 +588,7 @@ void field_draw_scene_objects(u8* *cursor, u_long *ot, s32 update_mode);
 void field_size_work_buffer(void);
 
 /* field_scene_control.c */
+void field_set_color_scale(s32 object_index, s32 red, s32 green, s32 blue);
 
 /** Scene lists selected by field_control_animation and field_get_animation_state (FieldSeqDef::list_kind). */
 enum

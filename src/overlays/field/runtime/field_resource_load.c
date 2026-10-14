@@ -39,17 +39,12 @@ enum
     FIELD_BATTLE_ENTRY_WAIT_SETTLED = 4
 };
 
-/** @brief field_get_actor_resource_id weapon_set value: the weapon-specific (battle) packages. */
-#define FIELD_WEAPON_SET_BATTLE 1
-
 /** @brief Offset of the first player's staging buffer in g_field_cd_buffer, and the size of each. */
 #define FIELD_PARTY_RELOAD_BUFFER_OFFSET 0x8000
 #define FIELD_PARTY_RELOAD_BUFFER_SIZE 0x18000
 /** @brief Staging buffer that player @p slot's reloaded resource is read into. */
 #define FIELD_PARTY_RELOAD_BUFFER(slot) (g_field_cd_buffer + FIELD_PARTY_RELOAD_BUFFER_OFFSET + (slot) * FIELD_PARTY_RELOAD_BUFFER_SIZE)
 
-/** @brief Animation both players start once their battle resources are installed. */
-#define FIELD_ANIMATION_BATTLE_ENTRY 0x11
 /** @brief Tint flash length of the party members when a battle starts, in frames. */
 #define FIELD_BATTLE_ENTRY_TINT_FRAMES 60
 
@@ -70,7 +65,6 @@ typedef struct
 /* Not in field_calls.h: field_dialog_screens.c calls it with an argument. */
 s32 field_party_reload_reading(void);
 void field_restart_actor_animation(FieldActor* actor);
-void field_restore_default_action_animation_mappings(s32 unused);
 
 extern s32 g_field_battle_entry_change_count;
 extern s32 g_field_party_reload_sizes[FIELD_PLAYER_COUNT];
@@ -400,9 +394,9 @@ void field_install_party_reload(s32 alternate_layout, s32 slot)
         entries = g_field_resource_entries;
         entry = &entries[slot];
         entry->slot_index = slot;
-        entry->unk8 = 0;
+        entry->multi_image = 0;
         field_set_party_palettes();
-        entry->bound_animation_flags = 0x2F;
+        entry->bound_animation_flags = FIELD_PARTY_DEFEAT_ANIMATION;
         flags = entry->flags;
         flags &= ~FIELD_RESOURCE_HAS_ACTIONS;
         flags |= alternate_layout & 1;

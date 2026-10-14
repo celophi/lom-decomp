@@ -49,6 +49,17 @@ extern FieldFade g_field_fade_target;
 /** @brief Fade color restored when a modal window closes. */
 extern FieldFadeColor g_field_fade_restore_color;
 
+/** @brief Set the fade target and the restore color to one color, channel by channel, then the duration. */
+#define FIELD_SET_FADE_TARGET(red_level, green_level, blue_level, frames)                                                                                      \
+    (g_field_fade_target.red = (red_level), g_field_fade_restore_color.red = (red_level), g_field_fade_target.green = (green_level),                           \
+     g_field_fade_restore_color.green = (green_level), g_field_fade_target.blue = (blue_level), g_field_fade_restore_color.blue = (blue_level),                \
+     g_field_fade_target.duration = (frames))
+
+/** @brief Set the fade target without touching the restore color. */
+#define FIELD_SET_FADE_TARGET_ONLY(red_level, green_level, blue_level, frames)                                                                                 \
+    (g_field_fade_target.red = (red_level), g_field_fade_target.green = (green_level), g_field_fade_target.blue = (blue_level),                                \
+     g_field_fade_target.duration = (frames))
+
 /**
  * @brief Set both the target and saved restore color for the field fade.
  * @param red Target red intensity.

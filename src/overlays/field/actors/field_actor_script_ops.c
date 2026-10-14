@@ -1458,7 +1458,7 @@ void field_route_actor_to_object(FieldActor* actor, s32 target_index, s32 restar
 
 /**
  * @brief Copy a rectangle inside the actor's texture page area of VRAM.
- * @param actor Actor whose unkC (its resource's texture slot) selects the VRAM area.
+ * @param actor Actor whose texture_slot selects the VRAM area.
  * @param rect Source rectangle in 4-bit texels relative to the area; converted in place to VRAM.
  * @param x Destination X in 4-bit texels relative to the area.
  * @param y Destination Y relative to the area.
@@ -1469,7 +1469,7 @@ static void field_move_actor_texture_rect(FieldActor* actor, RECT* rect, s32 x, 
     s32 y_offset;
     s32 page;
 
-    page = actor->unkC;
+    page = actor->texture_slot;
 
     if (page >= 2)
     {

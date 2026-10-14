@@ -416,9 +416,9 @@ void field_install_actor_action(FieldLayoutRecord* layout_record, s32 record_ind
             layout_record->control.flags &= ~FIELD_ACTION_TRIGGER_GROUP_MASK;
             action_index = 0;
 
-            if (layout_record->control.bits.group == 0)
+            if (layout_record->control.bits.golem_color == 0)
             {
-                layout_record->control.bits.group = (g_field_game_state->golem_count >> 4) + 1;
+                layout_record->control.bits.golem_color = FIELD_GOLEM_COLOR(g_field_game_state->golem_count >> 4);
             }
 
             layout_record->source.actor &= FIELD_ACTION_SOURCE_ACTOR_MASK;

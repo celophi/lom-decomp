@@ -93,14 +93,14 @@ typedef union
         unsigned unknown_11 : 1;
         unsigned screen_space : 1; /* FIELD_EFFECT_SCREEN_SPACE */
         unsigned ground_point : 2; /* ground attachment point for placement 0x33 */
-        unsigned unknown_15 : 1;   /* set with unknown_28 when the owner's part color is inherited */
+        unsigned effect_color : 1; /* FIELD_CONTROL_EFFECT_COLOR */
         unsigned group : 2;
         unsigned unknown_18 : 1;
         unsigned kind : 4;            /* copied from the source record */
         unsigned semitransparent : 1; /* FIELD_EFFECT_SEMITRANSPARENT */
         unsigned motion_kind : 3;     /* FIELD_EFFECT_MOTION_KIND_MASK */
         unsigned unknown_27 : 1;
-        unsigned unknown_28 : 1;     /* placement bit 25: color from parameter tracks */
+        unsigned literal_color : 1;  /* FIELD_CONTROL_LITERAL_COLOR */
         unsigned parameter_mode : 2; /* motion_parameter source: fixed, track, timed track, distance */
         unsigned unknown_31 : 1;
     } bits;
@@ -228,8 +228,6 @@ enum
 
 /* Ribbon renderer and the shared part transform, color, texture-page, sprite, and extent helpers. */
 #define FIELD_RIBBON_MAX_SEGMENTS 20
-#define FIELD_EFFECT_TRACK_COLOR 0x00008000
-#define FIELD_EFFECT_LITERAL_COLOR 0x10000000
 #define FIELD_PART_REVERSE_ROTATION_WITH_FACING 0x00020000
 #define FIELD_PART_SCALE_DISTANCE_BY_TARGET 0x01000000
 #define FIELD_PART_SCALE_DISTANCE_BY_OWNER 0x01000000
@@ -364,9 +362,9 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
     FIELD_EFFECT_FLAGS(effect).bits.motion_kind = part->behavior_flags.word >> 13;
     FIELD_EFFECT_FLAGS(effect).bits.distance_mode = part->rotation_extent.fields.extent_value_mode >> 6;
-    effect->lifetime = part->unkD;
+    effect->lifetime = part->active_frames;
     effect->motion_parameter = part->orientation_flags.halves.high;
-    effect->motion_scale = part->unk18;
+    effect->motion_scale = part->motion_scale;
     effect->track_index = g_field_track_index;
     FIELD_EFFECT_FLAGS(effect).bits.parameter_mode = part->orientation_flags.bytes.low;
     FIELD_EFFECT_FLAGS(effect).bits.screen_space = 0;
@@ -548,9 +546,9 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         }
     }
 
-    FIELD_EFFECT_FLAGS(effect).bits.unknown_15 = part->behavior_flags.word >> 11;
+    FIELD_EFFECT_FLAGS(effect).bits.effect_color = part->behavior_flags.word >> FIELD_PART_OWN_COLOR_SHIFT;
 
-    FIELD_EFFECT_FLAGS(effect).bits.unknown_28 = part->placement_flags.word >> FIELD_PART_TRACK_COLOR_BIT;
+    FIELD_EFFECT_FLAGS(effect).bits.literal_color = part->placement_flags.word >> FIELD_PART_TRACK_COLOR_BIT;
     field_roll_effect_rotation(actor, part, effect);
     RotMatrix_gte((SVECTOR*)&effect->rotation_x, rotation_matrix);
     RotMatrixZ(effect->rotation_z_16 * 16, rotation_matrix);
@@ -584,7 +582,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     effect->x = (work_index * direction_vector->vx) >> 4;
     effect->y = (work_index * direction_vector->vy) >> 4;
     effect->z = (work_index * direction_vector->vz) >> 4;
-    effect->animation_active = part->unk8;
+    effect->animation_active = part->effect_animation_active;
     effect->source_object_index = actor->owner_object_index;
 
     if (effect->state == 0)
@@ -611,12 +609,10 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         {
             record_base = &g_field_actors[actor->owner_object_index];
 
-            if (!((part->behavior_flags.word >> 11) & 1) && !((part->placement_flags.word >> FIELD_PART_TRACK_COLOR_BIT) & 1) &&
-                (part->appearance.fields.color_track_flags >> 5) == 0 && (*(u32*)&part->unkC & 0xFFFF0000) == FIELD_PART_NEUTRAL_RED_GREEN &&
-                part->tint_blue == FIELD_TINT_NEUTRAL)
+            if (FIELD_PART_PASSES_OWNER_TINT(part))
             {
-                FIELD_EFFECT_FLAGS(effect).bits.unknown_15 = 1;
-                FIELD_EFFECT_FLAGS(effect).bits.unknown_28 = 1;
+                FIELD_EFFECT_FLAGS(effect).bits.effect_color = 1;
+                FIELD_EFFECT_FLAGS(effect).bits.literal_color = 1;
 
                 effect->color_position.fields.red = g_field_object_parts[record_base->source_object_index].tint_red;
                 effect->color_position.fields.green = g_field_object_parts[record_base->source_object_index].tint_green;
@@ -625,7 +621,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
             effect->source_object_index = g_field_actors[actor->owner_object_index].source_object_index;
             effect->resource_index = g_field_actors[actor->owner_object_index].resource_index;
-            effect->unknown_0xc = g_field_actors[actor->owner_object_index].unknown_0xc;
+            effect->texture_slot = g_field_actors[actor->owner_object_index].texture_slot;
             effect->facing_or_reward_kind |= g_field_actors[actor->owner_object_index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED;
             FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(&g_field_actors[actor->owner_object_index]).half[1];
             FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(&g_field_actors[actor->owner_object_index]).bits.kind;
@@ -661,12 +657,10 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         {
             record_base = &g_field_actors[actor->targets[g_field_track_index]];
 
-            if (!((part->behavior_flags.word >> 11) & 1) && !((part->placement_flags.word >> FIELD_PART_TRACK_COLOR_BIT) & 1) &&
-                (part->appearance.fields.color_track_flags >> 5) == 0 && (*(u32*)&part->unkC & 0xFFFF0000) == FIELD_PART_NEUTRAL_RED_GREEN &&
-                part->tint_blue == FIELD_TINT_NEUTRAL)
+            if (FIELD_PART_PASSES_OWNER_TINT(part))
             {
-                FIELD_EFFECT_FLAGS(effect).bits.unknown_15 = 1;
-                FIELD_EFFECT_FLAGS(effect).bits.unknown_28 = 1;
+                FIELD_EFFECT_FLAGS(effect).bits.effect_color = 1;
+                FIELD_EFFECT_FLAGS(effect).bits.literal_color = 1;
 
                 effect->color_position.fields.red = g_field_object_parts[record_base->source_object_index].tint_red;
                 effect->color_position.fields.green = g_field_object_parts[record_base->source_object_index].tint_green;
@@ -675,7 +669,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
             effect->source_object_index = g_field_actors[actor->targets[g_field_track_index]].source_object_index;
             effect->resource_index = g_field_actors[actor->targets[g_field_track_index]].resource_index;
-            effect->unknown_0xc = g_field_actors[actor->targets[g_field_track_index]].unknown_0xc;
+            effect->texture_slot = g_field_actors[actor->targets[g_field_track_index]].texture_slot;
             effect->facing_or_reward_kind |= g_field_actors[actor->targets[g_field_track_index]].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED;
             FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(&g_field_actors[actor->targets[g_field_track_index]]).half[1];
             FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(&g_field_actors[actor->targets[g_field_track_index]]).bits.kind;
@@ -690,7 +684,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
     if ((part->track_flags.word >> 13) & 1)
     {
-        effect->motion_scale = field_evaluate_parameter_track(actor, part->unk18 & FIELD_TRACK_INDEX_MASK);
+        effect->motion_scale = field_evaluate_parameter_track(actor, part->motion_scale & FIELD_TRACK_INDEX_MASK);
     }
 
     if ((((part->placement_flags.word >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) || (part->spawn_flags.word & FIELD_PART_MIRROR_X_WITH_OWNER)) &&
@@ -853,17 +847,15 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
             if (!(attached_source_object->contact.bytes.flags & 1) || attached_source_object->contact.bytes.controller_index == actor->slot_index)
             {
-                effect->unknown_0xc = source_record->unknown_0xc;
+                effect->texture_slot = source_record->texture_slot;
                 effect->resource_index = source_record->resource_index;
                 FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(source_record).bits.kind;
                 FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(source_record).half[1];
 
-                if (!((part->behavior_flags.word >> 11) & 1) && !((part->placement_flags.word >> FIELD_PART_TRACK_COLOR_BIT) & 1) &&
-                    (part->appearance.fields.color_track_flags >> 5) == 0 && (*(u32*)&part->unkC & 0xFFFF0000) == FIELD_PART_NEUTRAL_RED_GREEN &&
-                    part->tint_blue == FIELD_TINT_NEUTRAL)
+                if (FIELD_PART_PASSES_OWNER_TINT(part))
                 {
-                    FIELD_EFFECT_FLAGS(effect).bits.unknown_15 = 1;
-                    FIELD_EFFECT_FLAGS(effect).bits.unknown_28 = 1;
+                    FIELD_EFFECT_FLAGS(effect).bits.effect_color = 1;
+                    FIELD_EFFECT_FLAGS(effect).bits.literal_color = 1;
 
                     effect->color_position.fields.red = g_field_object_parts[source_record->source_object_index].tint_red;
                     effect->color_position.fields.green = g_field_object_parts[source_record->source_object_index].tint_green;
@@ -951,7 +943,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
                 if (effect->state == FIELD_EFFECT_RENDER_LINKED_SPRITE)
                 {
                     effect->resource_index = g_field_effect_records[work_a].resource_index;
-                    effect->unknown_0xc = g_field_effect_records[work_a].unknown_0xc;
+                    effect->texture_slot = g_field_effect_records[work_a].texture_slot;
                     effect->state = g_field_effect_records[work_a].state;
                     effect->source_object_index = g_field_effect_records[work_a].source_object_index;
                     FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(&g_field_effect_records[work_a]).bits.kind;
@@ -1134,7 +1126,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
             }
 
             effect->resource_index = source_record->resource_index;
-            effect->unknown_0xc = source_record->unknown_0xc;
+            effect->texture_slot = source_record->texture_slot;
             effect->facing_or_reward_kind = source_record->facing_or_reward_kind;
             effect->saved_state = source_record->saved_state;
             FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(source_record).bits.kind;
@@ -1198,7 +1190,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
             }
 
             effect->resource_index = source_record->resource_index;
-            effect->unknown_0xc = source_record->unknown_0xc;
+            effect->texture_slot = source_record->texture_slot;
             effect->facing_or_reward_kind = source_record->facing_or_reward_kind;
             effect->saved_state = source_record->saved_state;
             FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(source_record).bits.kind;
@@ -1239,7 +1231,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
                 if (effect->facing_or_reward_kind == FIELD_EFFECT_ANIMATION_FROM_SOURCE)
                 {
                     effect->resource_index = source_record->resource_index;
-                    effect->unknown_0xc = source_record->unknown_0xc;
+                    effect->texture_slot = source_record->texture_slot;
                     effect->facing_or_reward_kind = source_record->facing_or_reward_kind;
                     effect->saved_state = source_record->saved_state;
                 }
@@ -1294,7 +1286,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
                 if (effect->facing_or_reward_kind == FIELD_EFFECT_ANIMATION_FROM_SOURCE)
                 {
                     effect->resource_index = source_record->resource_index;
-                    effect->unknown_0xc = source_record->unknown_0xc;
+                    effect->texture_slot = source_record->texture_slot;
                     effect->facing_or_reward_kind = source_record->facing_or_reward_kind;
                     effect->saved_state = source_record->saved_state;
                 }
@@ -1417,7 +1409,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
                 if (effect->state == FIELD_EFFECT_RENDER_LINKED_SPRITE)
                 {
                     effect->resource_index = g_field_effect_records[sibling_index].resource_index;
-                    effect->unknown_0xc = g_field_effect_records[sibling_index].unknown_0xc;
+                    effect->texture_slot = g_field_effect_records[sibling_index].texture_slot;
                     effect->state = g_field_effect_records[sibling_index].state;
                     effect->source_object_index = g_field_effect_records[sibling_index].source_object_index;
                     FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(&g_field_effect_records[sibling_index]).bits.kind;
@@ -1594,7 +1586,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
             effect->facing_or_reward_kind ^= 0x80;
         }
 
-        if (part->unk9 == 0)
+        if (part->pitch_spread == 0)
         {
             effect->facing_or_reward_kind =
                 (effect->facing_or_reward_kind & 0x7F) | (g_field_actors[actor->owner_object_index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED);
@@ -1729,7 +1721,7 @@ static s32 field_roll_effect_rotation(FieldActorSlot* actor, FieldObjectPart* pa
 
     if (part->palette_extent.fields.angular_divisions != 0)
     {
-        angle = ((0x1000 / part->palette_extent.fields.angular_divisions) * actor->track_counters[g_field_track_index][part->unk32] + 0x400) & 0xFFF;
+        angle = ((0x1000 / part->palette_extent.fields.angular_divisions) * actor->track_counters[g_field_track_index][part->part_index] + 0x400) & 0xFFF;
         effect->heading = angle;
     }
     else
@@ -1738,27 +1730,27 @@ static s32 field_roll_effect_rotation(FieldActorSlot* actor, FieldObjectPart* pa
         effect->heading = angle;
     }
 
-    actor->track_counters[g_field_track_index][part->unk32]++;
+    actor->track_counters[g_field_track_index][part->part_index]++;
 
     if ((part->track_flags.word >> 0xB) & 1)
     {
-        track_scale = field_evaluate_parameter_track(actor, part->unk9 & FIELD_TRACK_INDEX_MASK);
+        track_scale = field_evaluate_parameter_track(actor, part->pitch_spread & FIELD_TRACK_INDEX_MASK);
         random_product = track_scale * (rand() << 3);
     }
     else
     {
-        random_product = part->unk9 * (rand() << 3);
+        random_product = part->pitch_spread * (rand() << 3);
     }
 
     effect->pitch = random_product >> 0xF;
 
     if ((part->track_flags.word >> 0xC) & 1)
     {
-        track_value = field_evaluate_parameter_track(actor, part->unkA & FIELD_TRACK_INDEX_MASK);
+        track_value = field_evaluate_parameter_track(actor, part->pitch_offset & FIELD_TRACK_INDEX_MASK);
     }
     else
     {
-        track_value = part->unkA;
+        track_value = part->pitch_offset;
     }
 
     track_value *= 8;
@@ -1869,14 +1861,14 @@ void field_advance_actor_effects(FieldActorSlot* actor_state)
             field_update_effect_record(effect, part, actor);
             effect->age++;
 
-            if (((part->behavior_flags.word >> 4) & 3) == 1 && (u16)effect->age == effect->lifetime)
+            if (FIELD_PART_END_MODE(part) == FIELD_PART_END_LIFETIME && (u16)effect->age == effect->lifetime)
             {
                 previous_state = effect->state;
                 effect->state = FIELD_EFFECT_RETIRED;
                 effect->height_or_retired_state = previous_state;
             }
 
-            if (((part->behavior_flags.word >> 4) & 3) == 3)
+            if (FIELD_PART_END_MODE(part) == FIELD_PART_END_OFFSCREEN)
             {
                 screen_position.x = FIELD_SCREEN_X(effect->x);
                 screen_position.y = FIELD_SCREEN_Y(effect->y, effect->z);
@@ -1896,7 +1888,7 @@ void field_advance_actor_effects(FieldActorSlot* actor_state)
 
             if (part->effect_flags.word < 0 && effect->state != FIELD_EFFECT_RETIRED)
             {
-                new_effect_index = field_spawn_actor_effect(actor, part->rotation_extent.fields.unk23 & 0xF, 0);
+                new_effect_index = field_spawn_actor_effect(actor, part->rotation_extent.fields.linked_part & 0xF, 0);
 
                 if (new_effect_index != -1)
                 {
@@ -1997,7 +1989,7 @@ void field_retire_effect(FieldMotionRecord* effect, FieldObjectPart* part)
     s16 animation_state;
     u8 next_effect_index;
 
-    g_field_actor_slots[effect->actor_index].active_counts[effect->track_index][part->unk32]--;
+    g_field_actor_slots[effect->actor_index].active_counts[effect->track_index][part->part_index]--;
 
     actor = &g_field_actor_slots[effect->actor_index];
     field_dispatch_actor_audio_event(actor, FIELD_SOUND_EVENT_EFFECT_RETIRED, effect->part_index);
@@ -2030,9 +2022,9 @@ void field_retire_effect(FieldMotionRecord* effect, FieldObjectPart* part)
 
                 if (FIELD_PART_PLACEMENT_KIND(spawn_part) == placement_kind)
                 {
-                    if (spawn_part->unkC != 0)
+                    if (spawn_part->effect_count != 0)
                     {
-                        spawn_count = spawn_part->unkC;
+                        spawn_count = spawn_part->effect_count;
                     }
                 }
 
@@ -2971,7 +2963,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
 
                 if ((target_dy >= -0xF) && (work_vector->vy < 0x10))
                 {
-                    if (((part->behavior_flags.word >> 4) & 3) == 2)
+                    if (FIELD_PART_END_MODE(part) == FIELD_PART_END_AT_TARGET)
                     {
                         retired_state = record->state;
                         record->state = FIELD_EFFECT_RETIRED;
@@ -3648,7 +3640,7 @@ void field_render_effects(FieldRenderContext* render_context)
                 case FIELD_EFFECT_RENDER_MESH_2:
                 case FIELD_EFFECT_RENDER_MESH_1:
                 case FIELD_EFFECT_RENDER_MESH_0:
-                    if (g_field_actor_slots[effect->actor_index].parts[effect->part_index].rotation_extent.fields.unk23 < 8)
+                    if (g_field_actor_slots[effect->actor_index].parts[effect->part_index].rotation_extent.fields.linked_part < 8)
                     {
                         packet_cursor = field_render_lit_effect_mesh(effect, FIELD_EFFECT_RENDER_MESH_0 - effect->state, packet_cursor, ordering_table);
                     }
@@ -4343,7 +4335,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                         poly->v3 |= 0x80;
                     }
 
-                    layer = rec->unknown_0xc;
+                    layer = rec->texture_slot;
                     tpage_x = layer << 7;
 
                     if (layer >= 2)
@@ -4506,7 +4498,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                     {
                         if ((item[7] & 3) != 2)
                         {
-                            if (rec->resource_index == 8)
+                            if (rec->resource_index == FIELD_RESOURCE_FIXED)
                             {
                                 poly->clut = getClut(item[6] << 4, FIELD_EFFECT_CLUT_VRAM_Y);
                             }
@@ -5058,7 +5050,8 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                             {
 
                                 field_play_set_sfx(g_field_resource_entries[rec->resource_index].attribute.sound_cue & FIELD_SOUND_CUE_ID_MASK,
-                                                   field_get_actor_sound_pan(rec->source_object_index), rec->resource_index - 3, rec->source_object_index);
+                                                   field_get_actor_sound_pan(rec->source_object_index), rec->resource_index - FIELD_RESOURCE_VOICE_FIRST,
+                                                   rec->source_object_index);
                             }
                         }
 
@@ -5441,7 +5434,7 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                     poly->v2 = v_end;
                 }
 
-                layer = rec->unknown_0xc;
+                layer = rec->texture_slot;
                 tpage_x = layer << 7;
 
                 if (layer >= 2)
@@ -5953,7 +5946,8 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                             else
                             {
                                 field_play_set_sfx(resources[rec->resource_index].attribute.sound_cue & FIELD_SOUND_CUE_ID_MASK,
-                                                   field_get_actor_sound_pan(rec->source_object_index), rec->resource_index - 3, rec->source_object_index);
+                                                   field_get_actor_sound_pan(rec->source_object_index), rec->resource_index - FIELD_RESOURCE_VOICE_FIRST,
+                                                   rec->source_object_index);
                             }
                         }
 
@@ -6492,9 +6486,9 @@ u8* field_render_effect_fan(FieldMotionRecord* effect, u8* packet_cursor, s32* o
     segment_count = 2;
 
     /* This part byte selects the fan segment count; other uses are unresolved. */
-    if ((part->unk8 >= 2) && (part->unk8 <= FIELD_RING_SEGMENTS))
+    if ((part->effect_animation_active >= 2) && (part->effect_animation_active <= FIELD_RING_SEGMENTS))
     {
-        segment_count = part->unk8;
+        segment_count = part->effect_animation_active;
     }
 
     angle_quotient = ONE / segment_count;
@@ -6992,7 +6986,7 @@ u8* field_render_effect_radial_fan(FieldMotionRecord* effect, u8* packet_cursor,
     }
 
     /* This mode interprets the shared selector byte as an outer-radius scale. */
-    radius = (u32)((part->rotation_extent.fields.unk23 + 1) * 5) >> 4;
+    radius = (u32)((part->rotation_extent.fields.linked_part + 1) * 5) >> 4;
 
     direction->vx = (s16)((u32)(rsin(0) * 5) >> 8);
     direction->vy = 0;
@@ -8023,7 +8017,7 @@ void field_resolve_effect_part_color(FieldActorSlot* actor, FieldMotionRecord* e
 
     flags = effect->flags;
 
-    if (!(flags & FIELD_EFFECT_TRACK_COLOR))
+    if (!(flags & FIELD_CONTROL_EFFECT_COLOR))
     {
         out->channels.r = ((part->appearance.word >> FIELD_PART_COLOR_TRACK_SHIFT) & FIELD_PART_RED_TRACK)
                               ? field_evaluate_parameter_track_at_time(actor, part->tint_red & FIELD_TRACK_INDEX_MASK, (u16)effect->age)
@@ -8037,7 +8031,7 @@ void field_resolve_effect_part_color(FieldActorSlot* actor, FieldMotionRecord* e
         return;
     }
 
-    if (flags & FIELD_EFFECT_LITERAL_COLOR)
+    if (flags & FIELD_CONTROL_LITERAL_COLOR)
     {
         /* The fourth byte travels with RGB and is overwritten by the packet builder. */
         out->word = effect->color_position.word;

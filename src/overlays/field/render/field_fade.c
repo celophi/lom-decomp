@@ -132,13 +132,7 @@ void field_update_and_render_fade(FieldRenderHalf* render_half)
  */
 void field_set_fade_target(s16 red, s16 green, s16 blue, s16 duration)
 {
-    g_field_fade_target.red = red;
-    g_field_fade_restore_color.red = red;
-    g_field_fade_target.green = green;
-    g_field_fade_restore_color.green = green;
-    g_field_fade_target.blue = blue;
-    g_field_fade_restore_color.blue = blue;
-    g_field_fade_target.duration = duration;
+    FIELD_SET_FADE_TARGET(red, green, blue, duration);
 }
 
 /**
@@ -146,10 +140,7 @@ void field_set_fade_target(s16 red, s16 green, s16 blue, s16 duration)
  */
 void field_set_cd_error_fade_target(void)
 {
-    g_field_fade_target.red = FIELD_FADE_CD_ERROR_RED;
-    g_field_fade_target.green = FADE_NEUTRAL;
-    g_field_fade_target.blue = FADE_NEUTRAL;
-    g_field_fade_target.duration = FIELD_FADE_DEFAULT_FRAMES;
+    FIELD_SET_FADE_TARGET_ONLY(FIELD_FADE_CD_ERROR_RED, FADE_NEUTRAL, FADE_NEUTRAL, FIELD_FADE_DEFAULT_FRAMES);
 }
 
 /**
@@ -161,10 +152,7 @@ void field_set_cd_error_fade_target(void)
  */
 void field_set_fade_target_only(s16 red, s16 green, s16 blue, s16 duration)
 {
-    g_field_fade_target.red = red;
-    g_field_fade_target.green = green;
-    g_field_fade_target.blue = blue;
-    g_field_fade_target.duration = duration;
+    FIELD_SET_FADE_TARGET_ONLY(red, green, blue, duration);
 }
 
 /**
@@ -195,8 +183,5 @@ void field_restore_fade_target_with_duration(s16 duration)
  */
 void field_set_default_fade_target(void)
 {
-    g_field_fade_target.red = FIELD_FADE_MODAL_LEVEL;
-    g_field_fade_target.green = FIELD_FADE_MODAL_LEVEL;
-    g_field_fade_target.blue = FIELD_FADE_MODAL_LEVEL;
-    g_field_fade_target.duration = FIELD_FADE_DEFAULT_FRAMES;
+    FIELD_SET_FADE_TARGET_ONLY(FIELD_FADE_MODAL_LEVEL, FIELD_FADE_MODAL_LEVEL, FIELD_FADE_MODAL_LEVEL, FIELD_FADE_DEFAULT_FRAMES);
 }

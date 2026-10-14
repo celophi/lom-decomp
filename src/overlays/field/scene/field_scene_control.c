@@ -68,7 +68,6 @@ typedef struct
 extern u16 g_field_pixel_lookup_tables[][32];
 
 static void field_start_animation(FieldSeq* seq);
-void field_set_color_scale(s32 index_value, s32 red_value, s32 green_value, s32 blue_value);
 static void field_tint_part_cells(FieldPart* part);
 static void field_tint_animation_frames(FieldPart* cel, FieldAnim* anim);
 

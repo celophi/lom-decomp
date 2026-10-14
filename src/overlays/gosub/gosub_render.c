@@ -2,6 +2,7 @@
 #include "overlays/field/field_text.h"
 #include "overlays/field/field_equipment_combination_rules.h"
 #include "main/display.h"
+#include "common/gpu_packet.h"
 
 /**
  * @brief Width of an element: the low eight bits live in the top byte of
@@ -638,7 +639,7 @@ u8* gosub_draw_item_list(u_long* ot, u8* initial_prim, s32 x_off, s32 y_off)
     y = (status_pad - y_top2) - *scroll_p;
     setlen(tile, 3);
     tile->color = cursor_color;
-    setcode(tile, 0x62);
+    setcode(tile, GPU_CODE_TILE | GPU_CODE_SEMI_TRANS);
     row = 0;
     tile->w = g_gosub_window_width;
     tile->y = y - 2;
@@ -651,7 +652,7 @@ u8* gosub_draw_item_list(u_long* ot, u8* initial_prim, s32 x_off, s32 y_off)
         mark->x = (row | 1) & 1;
         mark->color = 0x808080;
         setlen(mark, 3);
-        setcode(mark, 0x62);
+        setcode(mark, GPU_CODE_TILE | GPU_CODE_SEMI_TRANS);
         sel_mul = g_gosub_selected_rows[row] * g_gosub_row_height;
         y_top3 = y_off - 2;
         y = (sel_mul - y_top3) - g_gosub_scroll_y;

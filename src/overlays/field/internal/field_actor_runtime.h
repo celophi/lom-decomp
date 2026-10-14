@@ -21,6 +21,17 @@ struct FieldRenderContext;
 /** @brief Parameter track index bits; an animation has 16 parameter tracks. */
 #define FIELD_TRACK_INDEX_MASK 0xF
 
+/** @brief field_get_actor_resource_id weapon_set values: the field sprite packages, or the weapon-specific (battle) ones. */
+#define FIELD_WEAPON_SET_FIELD 0
+#define FIELD_WEAPON_SET_BATTLE 1
+
+/** @brief Animation both players start once their battle resources are installed. */
+#define FIELD_ANIMATION_BATTLE_ENTRY 0x11
+/** @brief Animation both players start when the results screen closes and their field resources are back. */
+#define FIELD_ANIMATION_BATTLE_EXIT 0x12
+/** @brief Built-in animation a party member plays when defeated (FieldResourceEntry::bound_animation_flags of a party package). */
+#define FIELD_PARTY_DEFEAT_ANIMATION 0x2F
+
 void field_update_dialog_runtime(struct FieldRenderHalf* render_half);
 void field_show_battle_results(void);
 void field_close_dialog_screen(void);
@@ -46,8 +57,8 @@ void field_initialize_actor_parts(s32 timer_mode);
 void field_release_actor_resource_slot(s32 slot_index_minus_one);
 s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant, s32 slot_index_minus_one);
 void field_find_or_load_resource_entry(s32 resource_slot_id, s32 package);
-void field_set_all_actor_render_state(s32 red, s32 green, s32 blue, s32 color_flag, s32 render_mode);
-s32 field_set_actor_render_state(s32 red, s32 green, s32 blue, s32 color_flag, s32 render_mode, s32 actor_selector);
+void field_set_all_actor_render_state(s32 red, s32 green, s32 blue, s32 color_flag, s32 blend_mode);
+s32 field_set_actor_render_state(s32 red, s32 green, s32 blue, s32 color_flag, s32 blend_mode, s32 actor_selector);
 void field_update_actor_objects(void);
 s32 field_get_actor_sound_pan(s32 actor_index);
 void field_restart_actor_animation_reverse(struct FieldActor* actor);
@@ -74,7 +85,7 @@ extern s32 g_field_return_to_title_prompt_delay;
 extern s32 g_field_track_index;
 
 /** @brief Next free byte of the actor resource arena. */
-extern void* g_field_resource_cursor;
+extern u8* g_field_resource_cursor;
 
 /** @brief (dx, dz) step of each facing. */
 extern FieldDirectionOffset g_field_direction_offsets[];

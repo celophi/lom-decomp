@@ -54,8 +54,37 @@ typedef enum
     FIELD_EFFECT_RENDER_LINKED_SPRITE = 0xFD
 } FieldEffectRenderState;
 
-/** @brief FieldObjectPart word at unkC with neutral red and green tints (bytes 0xE and 0xF), as one masked compare. */
+/**
+ * @brief FieldActor::control colour bits of an effect record (field_resolve_effect_part_color).
+ * @note FIELD_CONTROL_EFFECT_COLOR (bit 15): the effect supplies its own colour instead of the part tint;
+ *       with FIELD_CONTROL_LITERAL_COLOR (bit 28) that colour is the stored one, otherwise colour tracks.
+ *       An effect that takes its owner's part colour sets both (FIELD_CONTROL_OWNER_TINT).
+ */
+#define FIELD_CONTROL_EFFECT_COLOR 0x8000
+#define FIELD_CONTROL_LITERAL_COLOR 0x10000000
+#define FIELD_CONTROL_OWNER_TINT (FIELD_CONTROL_LITERAL_COLOR | FIELD_CONTROL_EFFECT_COLOR)
+
+/** @brief FieldObjectPart word at effect_count with neutral red and green tints (bytes 0xE and 0xF), as one masked compare. */
 #define FIELD_PART_NEUTRAL_RED_GREEN 0x80800000
+/** @brief FieldObjectPart::behavior_flags bit 11: the part keeps its own colour. */
+#define FIELD_PART_OWN_COLOR_SHIFT 11
+/** @brief FieldObjectPart::behavior_flags bits 4-5: when a spawned effect retires (FIELD_PART_END_*). */
+#define FIELD_PART_END_MODE(part) (((part)->behavior_flags.word >> 4) & 3)
+/** @brief Effect end modes: when its animation ends (otherwise the animation loops), at its lifetime, on reaching its target, or off screen. */
+#define FIELD_PART_END_ANIMATION 0
+#define FIELD_PART_END_LIFETIME 1
+#define FIELD_PART_END_AT_TARGET 2
+#define FIELD_PART_END_OFFSCREEN 3
+/** @brief FieldObjectPart::appearance color_track_flags bits 5-7: must be clear for a part to pass on its owner's tint. */
+#define FIELD_PART_BURST_SHIFT 5
+/**
+ * @brief Non-zero when @p part shows the plain neutral colour, so the effects it spawns take their owner's tint.
+ * @note Tests the own-colour, track-colour and burst bits, then the tint (red and green as one masked word).
+ */
+#define FIELD_PART_PASSES_OWNER_TINT(part)                                                                                                                     \
+    (!(((part)->behavior_flags.word >> FIELD_PART_OWN_COLOR_SHIFT) & 1) && !(((part)->placement_flags.word >> FIELD_PART_TRACK_COLOR_BIT) & 1) &&              \
+     ((part)->appearance.fields.color_track_flags >> FIELD_PART_BURST_SHIFT) == 0 &&                                                                           \
+     (*(u32*)&(part)->effect_count & 0xFFFF0000) == FIELD_PART_NEUTRAL_RED_GREEN && (part)->tint_blue == FIELD_TINT_NEUTRAL)
 #define FIELD_EFFECT_SCREEN_SPACE 0x00001000U
 #define FIELD_EFFECT_SEMITRANSPARENT 0x00800000U
 #define FIELD_EFFECT_FACING_FLIPPED 0x80
@@ -116,7 +145,8 @@ typedef struct FieldMotionRecord
     s32 x;
     s32 y;
     s32 z;
-    u32 unknown_0xc;
+    /** @brief FieldActor::texture_slot. */
+    u32 texture_slot;
     s16 rotation_x;
     s16 heading;
     s16 pitch;

@@ -61,9 +61,8 @@ extern FieldMotionRecord g_field_effect_records[];
 #define FIELD_MESH_FT3_CODE 0x24
 #define FIELD_MESH_GT3_CODE 0x34
 #define FIELD_MESH_SEMI_TRANSPARENT 0x02
-/** @brief Texture mode (0 4-bit, 1 8-bit) and blend mode of a part's mesh texture. */
+/** @brief Texture mode (0 4-bit, 1 8-bit) of a part's mesh texture; its blend mode is FIELD_PART_BLEND_MODE. */
 #define FIELD_PART_TEXTURE_MODE(part) (((part)->spawn_flags.word >> 22) & 1)
-#define FIELD_PART_BLEND_MODE(part) (((part)->behavior_flags.word >> 22) & 3)
 /** @brief Last ordering-table slot; deeper faces are clamped to it. */
 #define FIELD_MESH_OT_MAX_DEPTH 0xFFF
 
@@ -75,7 +74,7 @@ extern FieldMotionRecord g_field_effect_records[];
  * @brief Part index of light source @p i (0..2) of an actor part.
  * @note The three selector bytes start at rotation_extent's last byte and run into effect_flags.
  */
-#define FIELD_PART_LIGHT_SOURCE(part, i) ((&(part)->rotation_extent.fields.unk23)[i])
+#define FIELD_PART_LIGHT_SOURCE(part, i) ((&(part)->rotation_extent.fields.linked_part)[i])
 
 /**
  * @brief CLUT buffer of actor palette owner @p owner (0 or 1).

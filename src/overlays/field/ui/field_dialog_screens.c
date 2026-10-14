@@ -1571,7 +1571,7 @@ void field_open_battle_results(void)
         field_open_party_summary();
     }
 
-    field_request_party_reload(0);
+    field_request_party_reload(FIELD_WEAPON_SET_FIELD);
 }
 
 /**
@@ -1580,7 +1580,7 @@ void field_open_battle_results(void)
 void field_open_duel_results(void)
 {
     field_reset_input_repeat();
-    field_request_party_reload(0);
+    field_request_party_reload(FIELD_WEAPON_SET_FIELD);
     field_begin_duel_result();
 }
 

@@ -870,7 +870,7 @@ void field_update_technique_command(FieldActor* actor, s32 sequence_index)
     scratch->y = 0;
     field_resolve_actor_movement(actor, scratch, 1);
 
-    if (g_field_resource_entries[actor->resource_index].unk8 == 0)
+    if (g_field_resource_entries[actor->resource_index].multi_image == 0)
     {
         final_states = g_field_object_states;
         final_states[actor->object_index].movement.word &= ~0x4000;

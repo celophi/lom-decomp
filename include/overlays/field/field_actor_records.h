@@ -17,7 +17,13 @@ typedef struct
 {
     u8* start;
     u8* end;
-    u8 unk8;
+    /**
+     * @brief Non-zero when the package spans more than one texture image (a large actor).
+     * @note Scene loading sets it as image_count != 1, but never for two such actors in a row.
+     *       Large actors keep FIELD_MOVEMENT_OVERLAPPING, get a wider shadow and their own contact rule,
+     *       and voice entry FIELD_RESOURCE_VOICE_FIRST then plays its set sounds as set 0.
+     */
+    u8 multi_image;
     u8 slot_index;
     /** @brief Depends on the resource: a character's palette or an effect's sound cue. */
     union
@@ -43,8 +49,21 @@ typedef struct
 
 /** @brief FieldResourceEntry::flags bit: the resource has an action table and eight-direction animations. */
 #define FIELD_RESOURCE_HAS_ACTIONS 1
+/** @brief Number of resource entries in g_field_resource_entries. */
+#define FIELD_RESOURCE_ENTRY_COUNT 9
+/** @brief Resource entries that can hold relocatable data (the last one is fixed). */
+#define FIELD_RESOURCE_MOVABLE_COUNT 8
+/** @brief Resource index (FieldActor::resource_index) of actors whose data is not in the arena. */
+#define FIELD_RESOURCE_FIXED 8
+/** @brief Resource entries 3..5 carry the voice bank of their actors. */
+#define FIELD_RESOURCE_VOICE_FIRST 3
+#define FIELD_RESOURCE_VOICE_COUNT 3
+
 /** @brief FieldResourceEntry::flags bit: the entry holds loaded data. */
 #define FIELD_RESOURCE_LOADED 2
+#define FIELD_RESOURCE_LOADED_SHIFT 1
+/** @brief Non-zero when resource entry @p entry holds loaded data (FIELD_RESOURCE_LOADED). */
+#define FIELD_RESOURCE_IS_LOADED(entry) (((entry).flags >> FIELD_RESOURCE_LOADED_SHIFT) & 1)
 
 extern FieldResourceEntry g_field_resource_entries[];
 
@@ -190,6 +209,9 @@ typedef union
         s16 extent;
     } signed_half;
 } FieldCollisionWord;
+
+/** @brief FieldCollisionWord::word with the given centre offset and extent. */
+#define FIELD_COLLISION_WORD(center_offset, extent) (((u32)(extent) << 16) | (u16)(center_offset))
 
 /**
  * @brief Runtime state of one field object (0x23C bytes).
@@ -376,16 +398,22 @@ typedef struct FieldObjectPart
             u32 unk0 : 11;
             u32 flag11 : 1;
             u32 unk12 : 10;
-            u32 render_mode : 2;
+            /** @brief FIELD_PART_BLEND_MODE. */
+            u32 blend_mode : 2;
             u32 unk24 : 8;
         } bits;
     } behavior_flags;
-    u8 unk8;
-    u8 unk9;
-    u8 unkA;
+    /** @brief FieldActor::animation_active given to each spawned effect; fan effects use it as their segment count. */
+    u8 effect_animation_active;
+    /** @brief Random pitch range of spawned effects (a track index with track_flags bit 11); zero also copies the owner's facing. */
+    u8 pitch_spread;
+    /** @brief Pitch added to spawned effects, times 8 (a track index with track_flags bit 12). */
+    u8 pitch_offset;
     u8 effect_kind;
-    u8 unkC;
-    u8 unkD;
+    /** @brief Effects kept alive per track: a count, or a parameter track index when placement_flags bit 24 is clear. */
+    u8 effect_count;
+    /** @brief Frames the part stays active from start_frame; also the lifetime of the effects it spawns. */
+    u8 active_frames;
     /** @brief Tint of the part; effect parts may use these bytes to select tracks instead. */
     u8 tint_red;
     u8 tint_green;
@@ -417,7 +445,8 @@ typedef struct FieldObjectPart
             u32 unk8 : 24;
         } bits;
     } orientation_flags;
-    s16 unk18;
+    /** @brief Motion scale given to spawned effects, 0x100 for 1.0 (a track index with effect parameter mode 1). */
+    s16 motion_scale;
     u8 unk1A;
     u8 unk1B;
     /** @brief Palette track, angular divisions, footprint flags, and extent low bits. */
@@ -440,7 +469,11 @@ typedef struct FieldObjectPart
             u8 extent_value_mode;
             u8 rotation_z_track;
             u8 rotation_y_track;
-            u8 unk23;
+            /**
+             * @brief Linked part: the part spawned when effect_flags bit 31 is set (low nibble), or a lit
+             *        mesh's first light source (FIELD_PART_LIGHT_NONE for none); ring effects read it as a radius scale.
+             */
+            u8 linked_part;
         } fields;
     } rotation_extent;
     union
@@ -464,8 +497,10 @@ typedef struct FieldObjectPart
         } fields;
     } appearance;
     u8 pitch_acceleration;
-    u8 unk31;
-    u8 unk32;
+    /** @brief Track frame the part becomes active on; FIELD_PART_ALWAYS from the first frame, FIELD_PART_DISABLED never. */
+    u8 start_frame;
+    /** @brief Index of the part in its slot's parts[]; selects its track_counters[] column. */
+    u8 part_index;
     /** @brief Vertical model scale, 0x40 for full size. */
     u8 scale_y;
     /** @brief Halfword selectors and packed word flags. */
@@ -495,6 +530,11 @@ typedef struct FieldObjectPart
 /** @brief FieldObjectPart::effect_flags bit 20: the part is a solid body; it collides with the map, casts a footprint and its sprite hit quads act. */
 #define FIELD_PART_SOLID 0x00100000
 
+/** @brief FieldObjectPart::behavior_flags bits 22-23 (bits.blend_mode): GPU blend mode of the part's sprites and mesh (getTPage abr). */
+#define FIELD_PART_BLEND_MODE_SHIFT 22
+#define FIELD_PART_BLEND_MODE_MASK 0xC00000
+#define FIELD_PART_BLEND_MODE(part) (((part)->behavior_flags.word >> FIELD_PART_BLEND_MODE_SHIFT) & 3)
+
 /** @brief FieldObjectPart::placement_flags bit 25: a new effect takes its colour from parameter tracks instead of the part tint. */
 #define FIELD_PART_TRACK_COLOR_BIT 25
 #define FIELD_PART_TRACK_COLOR (1 << FIELD_PART_TRACK_COLOR_BIT)
@@ -520,10 +560,10 @@ typedef struct FieldAnimationDef
 {
     /** @brief Parameter curves driving the small and large vibration motors, FIELD_CURVE_NONE for none. */
     u8 vibration_curves[FIELD_VIBRATION_TRACK_COUNT];
-    /** @brief Two sound events: value compared by non-start events, event type, sound command. */
+    /** @brief Two sound events: the value non-start events compare, then the event types and their sound commands. */
     u8 sound_subtypes[2];
-    u16 sound_events[2];
-    u16 sound_commands[2];
+    /** @brief Entries 0-1: event type of each sound event; entries 2-3: its sound command (FIELD_SOUND_COMMAND). */
+    u16 sound_events[4];
     /** @brief FIELD_ANIM_* and FIELD_ANIMATION_HAS_* bits. */
     u16 flags;
     /** @brief Bit 15 plays sound bits 8-14 when track 0 reaches the frame in the low byte. */
@@ -556,10 +596,18 @@ typedef struct FieldAnimationDef
 #define FIELD_ANIM_KEEP_ALIVE 0x800
 #define FIELD_ANIM_CAMERA_OFFSET 0x1000
 #define FIELD_ANIM_CAMERA_MODE_SHIFT 13
+/** @brief Camera offset modes (FieldAnimationDef::flags bits 13-14): the curve moves X, Y, both, or X with the next curve moving Y. */
+#define FIELD_ANIM_CAMERA_MODE_MASK 3
+#define FIELD_ANIM_CAMERA_X 0
+#define FIELD_ANIM_CAMERA_Y 1
+#define FIELD_ANIM_CAMERA_XY 2
+#define FIELD_ANIM_CAMERA_X_THEN_Y 3
 /** @brief FieldAnimationDef::flags bit 15: the definition carries its own duration. */
 #define FIELD_ANIM_OWN_DURATION 0x8000
 /** @brief FieldAnimationDef::frame_sound: bit 15 fires a sound at a frame; bits 8-14 are the sound, the low byte the frame. */
 #define FIELD_ANIM_FRAME_SOUND 0x8000
+/** @brief Sound (bits 8-14) of a FieldAnimationDef::frame_sound word. */
+#define FIELD_ANIM_FRAME_SOUND_ID(word) (((word) >> 8) & 0x7F)
 /** @brief FieldAnimationDef::palette_animation bits 12-15: curve of the camera offset track. */
 #define FIELD_ANIM_CAMERA_CURVE_SHIFT 12
 /** @brief FieldAnimationDef::hit_test_mode values and bits. */
@@ -667,7 +715,11 @@ typedef struct FieldActorSlot
     /** @brief Entries of targets[], including tracks started by new hit contacts. */
     u8 target_count;
     u8 slot_index;
-    u16 unk234;
+    /**
+     * @brief Cleared with frame_counter whenever the tracks reset (field_reset_actor_track_state); never read.
+     * @note Write-only in US and JP: no load of slot offset 0x234 exists, so its purpose is unknown.
+     */
+    u16 unused234;
     /** @brief Frames since the animation started. */
     u16 frame_counter;
     /** @brief Frames between the starts of consecutive tracks, 0 to start them all at once. */

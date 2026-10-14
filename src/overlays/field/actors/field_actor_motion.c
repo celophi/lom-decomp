@@ -122,7 +122,7 @@ s32 field_update_actor_action(FieldActor* actor, s32 update_action)
         displacement->z = 0;
         field_resolve_actor_movement(actor, &displacement->x, 1);
 
-        if (g_field_resource_entries[actor->resource_index].unk8 == 0)
+        if (g_field_resource_entries[actor->resource_index].multi_image == 0)
         {
             g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_OVERLAPPING;
         }

@@ -13,6 +13,7 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_actor_palette.h"
 #include "../internal/field_effect_types.h"
+#include "../internal/field_actor.h"
 #include "../internal/field_mesh.h"
 #include <memory.h>
 #include <libgpu.h>
@@ -170,20 +171,20 @@ static void field_upload_actor_texture(u8* tim, s32 owner);
 
 /**
  * @brief Start the interaction of a marker the player walks into.
- * @param position Player position to probe around.
+ * @param player Leading player, whose position is probed.
  * @note The interaction starts once per contact; the latch clears when the
  *       player leaves the marker or a scene request is pending.
  */
-void field_check_marker_contact(Vec3i* position)
+void field_check_marker_contact(FieldActor* player)
 {
     struct FieldCollisionQuery probe;
     s32 label;
 
     if (g_field_player_command == 0)
     {
-        probe.x = position->x;
-        probe.y = position->y;
-        probe.z = position->z;
+        probe.x = player->x;
+        probe.y = player->y;
+        probe.z = player->z;
         probe.width = FIELD_CONTACT_PROBE_WIDTH;
         probe.height_tolerance = FIELD_CONTACT_PROBE_HEIGHT;
         probe.depth = FIELD_CONTACT_PROBE_DEPTH;
