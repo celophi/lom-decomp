@@ -657,10 +657,14 @@ void field_script_test_range(void)
     }
 }
 
+/** @brief Case entries of script opcode 0x09: a key byte and a branch halfword; key FIELD_SCRIPT_CASE_DEFAULT ends the list. */
+#define FIELD_SCRIPT_CASE_ENTRY_SIZE 3
+#define FIELD_SCRIPT_CASE_DEFAULT 0xFF
+
 /**
  * @brief Opcode 0x09: skip to the case entry that matches an operand, then take its branch.
  * @note The entries that follow are three bytes each (a key byte and a branch halfword); the scan
- *       stops at the key equal to the operand or at the 0xFF default entry.
+ *       stops at the key equal to the operand or at the FIELD_SCRIPT_CASE_DEFAULT entry.
  */
 void field_script_switch(void)
 {
@@ -678,12 +682,12 @@ void field_script_switch(void)
         pc = *pc_slot;
         op = *pc;
 
-        if (op == 0xFF || op == value)
+        if (op == FIELD_SCRIPT_CASE_DEFAULT || op == value)
         {
             break;
         }
 
-        *pc_slot = pc + 3;
+        *pc_slot = pc + FIELD_SCRIPT_CASE_ENTRY_SIZE;
     }
 
     field_script_branch(1);
@@ -834,7 +838,7 @@ void field_script_op_10(void)
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->wait.bits.frames = 0;
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record - 1)->pc =
         field_script_read_u16(FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc + 1, &script_ref.value);
-    FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc = field_get_event_script(field_read_script_var(g_field_script->status.owner_id, script_ref) & 0x7FFF);
+    FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc = field_get_event_script(field_read_script_var(g_field_script->status.owner_id, script_ref) & FIELD_SCRIPT_ID_MASK);
 }
 
 /**
@@ -1270,18 +1274,18 @@ void field_script_op_1d(void)
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_u16(FIELD_SCRIPT_ACTIVE_RECORD()->pc, &operands.x_ref.value);
 
     kind = location = operands.x_ref.value;
-    relative = kind >> 15;
-    kind &= 0x7000;
-    y_ref = relative << 15;
-    z_ref = (relative & 1) << 15;
+    relative = kind >> FIELD_SCRIPT_VAR_OWNER_RELATIVE_SHIFT;
+    kind &= FIELD_SCRIPT_VAR_KIND_MASK;
+    y_ref = relative << FIELD_SCRIPT_VAR_OWNER_RELATIVE_SHIFT;
+    z_ref = (relative & 1) << FIELD_SCRIPT_VAR_OWNER_RELATIVE_SHIFT;
 
-    location &= 0xFFF;
-    y_location = location + 0x20;
-    y_location &= 0xFFF;
+    location &= FIELD_SCRIPT_VAR_LOCATION_MASK;
+    y_location = location + FIELD_SCRIPT_VAR_WORD_STEP;
+    y_location &= FIELD_SCRIPT_VAR_LOCATION_MASK;
     y_ref |= kind;
     y_ref |= y_location;
-    z_location = location + 0x40;
-    z_location &= 0xFFF;
+    z_location = location + FIELD_SCRIPT_VAR_WORD_STEP * 2;
+    z_location &= FIELD_SCRIPT_VAR_LOCATION_MASK;
     z_ref |= kind;
     z_ref |= z_location;
 
@@ -1432,7 +1436,7 @@ void field_script_op_28(void)
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_1(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &excluded_mask);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_2(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &cancel_index);
 
-    if (cancel_index == 0xFF)
+    if (cancel_index == FIELD_SCRIPT_BYTE_NONE)
     {
         cancel_index = -1;
     }
@@ -1484,7 +1488,7 @@ void field_script_op_2a(void)
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_2(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &operand2);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_3(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &operand3);
 
-    if (operand3 == 0xFF)
+    if (operand3 == FIELD_SCRIPT_BYTE_NONE)
     {
         operand3 = -1;
     }
@@ -1534,7 +1538,7 @@ void field_script_op_2c(void)
     operands = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(operands[1] & 3, operands + 2, &window);
 
-    if (window & 0x80)
+    if (window & FIELD_SCRIPT_BYTE_FLAG)
     {
         for (window = 0; (u32)window < FIELD_TEXT_WINDOW_SLOTS; window++)
         {
@@ -2427,11 +2431,11 @@ void field_script_start_actor_script(s32 actor_id, s32 entry)
 /**
  * @brief Opcode 0x4B: show an object or one of its parts.
  * @param obj_index Object index.
- * @param part_index Part index, or 0xFF for the whole object.
+ * @param part_index Part index, or FIELD_SCRIPT_BYTE_NONE for the whole object.
  */
 void field_script_op_4b(s32 obj_index, s32 part_index)
 {
-    if (part_index == 0xFF)
+    if (part_index == FIELD_SCRIPT_BYTE_NONE)
     {
         part_index = FIELD_WHOLE_OBJECT;
     }
@@ -2442,11 +2446,11 @@ void field_script_op_4b(s32 obj_index, s32 part_index)
 /**
  * @brief Opcode 0x4C: hide an object or one of its parts.
  * @param obj_index Object index.
- * @param part_index Part index, or 0xFF for the whole object.
+ * @param part_index Part index, or FIELD_SCRIPT_BYTE_NONE for the whole object.
  */
 void field_script_op_4c(s32 obj_index, s32 part_index)
 {
-    if (part_index == 0xFF)
+    if (part_index == FIELD_SCRIPT_BYTE_NONE)
     {
         part_index = FIELD_WHOLE_OBJECT;
     }
@@ -2774,10 +2778,10 @@ void field_script_op_81(s32 mode, s32 red, s32 green, s32 blue)
 {
     s32 color_flag;
 
-    if (mode & 0x80)
+    if (mode & FIELD_SCRIPT_BYTE_FLAG)
     {
         color_flag = 1;
-        mode &= 0x7F;
+        mode &= FIELD_SCRIPT_BYTE_VALUE_MASK;
     }
     else
     {
@@ -2799,10 +2803,10 @@ void field_script_op_82(s32 key, s32 resource_entry_index, s32 resource_slot_id,
     s32 actor;
     s32 resource_flag;
 
-    if (key & 0x80)
+    if (key & FIELD_SCRIPT_BYTE_FLAG)
     {
         resource_flag = 1;
-        actor = key & 0x7F;
+        actor = key & FIELD_SCRIPT_BYTE_VALUE_MASK;
     }
     else
     {
@@ -2841,8 +2845,8 @@ void field_script_op_84(s32 actor_id, s32 animation, s32 builtin_animation, s32 
         actor = actor_id;
     }
 
-    field_queue_battle_entry_change(actor, (animation == 0xFF) ? -1 : animation, (builtin_animation == 0xFF) ? -1 : builtin_animation,
-                                    (sound == 0xFF) ? -1 : sound);
+    field_queue_battle_entry_change(actor, FIELD_SCRIPT_OPTIONAL(animation), FIELD_SCRIPT_OPTIONAL(builtin_animation),
+                                    FIELD_SCRIPT_OPTIONAL(sound));
 }
 
 /**
@@ -2985,8 +2989,8 @@ void field_script_op_87(s32 selector, s32 actor_id, s32 event_id, s32 argument)
  */
 void field_script_op_88(s32 image_resource_index, s32 music_resource_index, s32 audio_clip_index)
 {
-    music_resource_index = (music_resource_index == 0xFF) ? -1 : music_resource_index;
-    audio_clip_index = (audio_clip_index == 0xFF) ? -1 : audio_clip_index;
+    music_resource_index = FIELD_SCRIPT_OPTIONAL(music_resource_index);
+    audio_clip_index = FIELD_SCRIPT_OPTIONAL(audio_clip_index);
     g_field_sound_bank_id = -1;
     g_field_secondary_music_id = -1;
     field_begin_gover_transition(image_resource_index, music_resource_index, audio_clip_index);
@@ -3078,7 +3082,7 @@ void field_script_op_8c(s32 actor_id, s32 animation, s32 effect, s32 sound)
         actor = actor_id;
     }
 
-    field_revive_actor(actor, (animation == 0xFF) ? -1 : animation, (effect == 0xFF) ? -1 : effect, (sound == 0xFF) ? -1 : sound);
+    field_revive_actor(actor, FIELD_SCRIPT_OPTIONAL(animation), FIELD_SCRIPT_OPTIONAL(effect), FIELD_SCRIPT_OPTIONAL(sound));
 }
 
 /**

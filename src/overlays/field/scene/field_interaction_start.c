@@ -91,9 +91,6 @@
 /** @brief Runtime state flag: a talk window is open. */
 #define FIELD_STATE_TALKING 0x80000
 
-/** @brief Script id bits of an interaction script. */
-#define FIELD_INTERACTION_SCRIPT_ID_MASK 0x7FFF
-
 /** @brief Actor view extent used for the on-screen event. */
 #define FIELD_VIEW_WIDTH 320
 #define FIELD_VIEW_DEPTH 448
@@ -1037,7 +1034,7 @@ s32 field_start_interaction(s32 actor_id, s32 script)
         g_field_interaction_active = 1;
         g_field_runtime->script.status.owner_id = actor_id;
         g_field_runtime->script.status.bits.local_base = actor->script.status.bits.local_base;
-        g_field_runtime->script.frames[g_field_runtime->script.depth].pc = field_get_event_script(script_id & FIELD_INTERACTION_SCRIPT_ID_MASK);
+        g_field_runtime->script.frames[g_field_runtime->script.depth].pc = field_get_event_script(script_id & FIELD_SCRIPT_ID_MASK);
         g_field_runtime->script.frames[g_field_runtime->script.depth].wait.bits.resume = 0;
         g_field_runtime->script.frames[g_field_runtime->script.depth].wait.bits.frames = 0;
         return -1;

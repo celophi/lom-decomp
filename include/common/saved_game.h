@@ -159,6 +159,9 @@ enum
     FIELD_WEAPON_BOW = 10
 };
 
+/** @brief Number of weapon types (FIELD_WEAPON_*). */
+#define FIELD_WEAPON_TYPE_COUNT 11
+
 /** @brief Shift of FieldStat's effective value (bits 9-15). */
 #define FIELD_STAT_EFFECTIVE_SHIFT 9
 
@@ -435,15 +438,6 @@ typedef union FieldLandWords
 {
     FieldLandRecord record;
     u32 word;
-    /** @brief The first four bytes as word bitfields. */
-    struct
-    {
-        u32 flags : 8;
-        u32 x : 4;
-        u32 z : 4;
-        u32 unk2 : 8;
-        u32 count : 8;
-    } bits;
 } FieldLandWords;
 
 /** @brief Menu slot entry index of an empty slot. */

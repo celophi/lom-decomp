@@ -389,7 +389,7 @@ void field_update_scene_animations(void)
                 }
                 else
                 {
-                    source_pixels = header->pixel_data + strip_definition->u.clut.clut_slot * FIELD_CLUT_8BIT_COLORS + strip_definition->u.clut.clut_offset + wrap_count;
+                    source_pixels = header->pixel_data + strip_definition->u.clut.clut_slot * GPU_CLUT_8BIT_COLORS + strip_definition->u.clut.clut_offset + wrap_count;
                 }
                 copy_count--;
                 while (copy_count != -1)
@@ -405,7 +405,7 @@ void field_update_scene_animations(void)
                     }
                     else
                     {
-                        source_pixels = header->pixel_data + strip_definition->u.clut.clut_slot * FIELD_CLUT_8BIT_COLORS + strip_definition->u.clut.clut_offset;
+                        source_pixels = header->pixel_data + strip_definition->u.clut.clut_slot * GPU_CLUT_8BIT_COLORS + strip_definition->u.clut.clut_offset;
                     }
                     copy_count = wrap_count - 1;
                     while (copy_count != -1)
@@ -454,7 +454,7 @@ void field_update_scene_animations(void)
                     upload->rect.h = 1;
                     if (anim->flags.b.state == 0)
                     {
-                        upload->data = (u_long*)(header->pixel_data + definition->u.clut.clut_slot * FIELD_CLUT_8BIT_COLORS + definition->u.clut.clut_offset);
+                        upload->data = (u_long*)(header->pixel_data + definition->u.clut.clut_slot * GPU_CLUT_8BIT_COLORS + definition->u.clut.clut_offset);
                     }
                     else
                     {
@@ -490,16 +490,16 @@ void field_update_scene_animations(void)
                 {
                     upload->rect.x = 0;
                     upload->rect.y = definition->u.clut.clut_slot + FIELD_TILE_CLUT_VRAM_Y;
-                    upload->rect.w = 0x100;
+                    upload->rect.w = GPU_CLUT_8BIT_COLORS;
                     upload->rect.h = definition->u.clut.length;
                     if (anim->flags.b.state == 0)
                     {
-                        upload->data = (u_long*)(header->pixel_data + definition->u.clut.clut_slot * FIELD_CLUT_8BIT_COLORS);
+                        upload->data = (u_long*)(header->pixel_data + definition->u.clut.clut_slot * GPU_CLUT_8BIT_COLORS);
                     }
                     else
                     {
                         upload->data =
-                            (u_long*)(header->pixel_data + header->pixel_stride + definition->u.clut.pixel_offset + (anim->flags.b.state - 1) * definition->u.clut.length * FIELD_CLUT_8BIT_COLORS);
+                            (u_long*)(header->pixel_data + header->pixel_stride + definition->u.clut.pixel_offset + (anim->flags.b.state - 1) * definition->u.clut.length * GPU_CLUT_8BIT_COLORS);
                     }
                 }
                 field_queue_vram_upload(upload);
@@ -1435,10 +1435,10 @@ static u_long* field_blend_animation_frames(FieldAnimDef* def, FieldAnim* anim)
     }
     else
     {
-        pixel_count = definition_copy->u.clut.length * FIELD_CLUT_8BIT_COLORS;
+        pixel_count = definition_copy->u.clut.length * GPU_CLUT_8BIT_COLORS;
         if (anim->flags.b.state == 0)
         {
-            current_pixels = header->pixel_data + definition_copy->u.clut.clut_slot * FIELD_CLUT_8BIT_COLORS;
+            current_pixels = header->pixel_data + definition_copy->u.clut.clut_slot * GPU_CLUT_8BIT_COLORS;
         }
         else
         {
@@ -1446,7 +1446,7 @@ static u_long* field_blend_animation_frames(FieldAnimDef* def, FieldAnim* anim)
         }
         if (other_frame == 0)
         {
-            other_pixels = header->pixel_data + definition_copy->u.clut.clut_slot * FIELD_CLUT_8BIT_COLORS;
+            other_pixels = header->pixel_data + definition_copy->u.clut.clut_slot * GPU_CLUT_8BIT_COLORS;
         }
         else
         {

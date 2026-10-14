@@ -13,6 +13,13 @@
 #include "overlays/field/field_sound.h"
 
 #define FIELD_TEXT_STATE_MASK 7
+
+/** @brief Window frames are drawn from FIELD_TEXT_FRAME_EDGE-pixel borders around tiles of up to 64 x 32 pixels. */
+#define FIELD_TEXT_FRAME_EDGE 8
+#define FIELD_TEXT_FRAME_TILE_WIDTH 0x40
+#define FIELD_TEXT_FRAME_TILE_HEIGHT 0x20
+/** @brief SPRT width/height word for a @p w x @p h sprite. */
+#define FIELD_TEXT_SPRITE_SIZE(w, h) (((h) << 16) | (w))
 #define FIELD_TEXT_PORTRAIT_SLOT 0x08
 #define FIELD_TEXT_PORTRAIT_RIGHT 0x10
 #define FIELD_TEXT_PORTRAIT_OUTSIDE 0x20
@@ -2800,7 +2807,7 @@ static void field_text_build_window_packets(FieldTextState* state, u8** cursor, 
             uv += 8;
             prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, SPRT);
             prim->sprite_words.rgbc = sprite_color;
-            prim->sprite_words.wh = 0x80008;
+            prim->sprite_words.wh = FIELD_TEXT_SPRITE_SIZE(FIELD_TEXT_FRAME_EDGE, FIELD_TEXT_FRAME_EDGE);
             prim->sprite_words.xy = xy;
             xy += 8;
 
@@ -2822,15 +2829,15 @@ static void field_text_build_window_packets(FieldTextState* state, u8** cursor, 
                 prim->sprite_words.xy = xy;
                 prim->sprite_words.uv = uv;
 
-                if (pixels_remaining >= 0x41)
+                if (pixels_remaining > FIELD_TEXT_FRAME_TILE_WIDTH)
                 {
-                    prim->sprite_words.wh = 0x80040;
-                    xy += 0x40;
-                    pixels_remaining -= 0x40;
+                    prim->sprite_words.wh = FIELD_TEXT_SPRITE_SIZE(FIELD_TEXT_FRAME_TILE_WIDTH, FIELD_TEXT_FRAME_EDGE);
+                    xy += FIELD_TEXT_FRAME_TILE_WIDTH;
+                    pixels_remaining -= FIELD_TEXT_FRAME_TILE_WIDTH;
                 }
                 else
                 {
-                    prim->sprite_words.wh = pixels_remaining | 0x80000;
+                    prim->sprite_words.wh = pixels_remaining | FIELD_TEXT_SPRITE_SIZE(0, FIELD_TEXT_FRAME_EDGE);
                     xy += pixels_remaining;
                     pixels_remaining = 0;
                 }
@@ -2844,7 +2851,7 @@ static void field_text_build_window_packets(FieldTextState* state, u8** cursor, 
             prim->sprite_words.rgbc = sprite_color;
             prim->sprite_words.xy = xy;
             prim->sprite_words.uv = uv;
-            prim->sprite_words.wh = 0x80008;
+            prim->sprite_words.wh = FIELD_TEXT_SPRITE_SIZE(FIELD_TEXT_FRAME_EDGE, FIELD_TEXT_FRAME_EDGE);
             y += state->height + 8;
         }
 
@@ -2855,9 +2862,9 @@ static void field_text_build_window_packets(FieldTextState* state, u8** cursor, 
         {
             uv = (text_system->window_clut << 16) | (uv_base << 8) | (texture_u_origin + 0xE0);
             xy = state->x | (y << 16);
-            row_height = 0x200000;
+            row_height = FIELD_TEXT_SPRITE_SIZE(0, FIELD_TEXT_FRAME_TILE_HEIGHT);
 
-            if (rows < 0x21)
+            if (rows <= FIELD_TEXT_FRAME_TILE_HEIGHT)
             {
                 row_height = rows << 16;
             }
@@ -2881,37 +2888,34 @@ static void field_text_build_window_packets(FieldTextState* state, u8** cursor, 
                 pixels_remaining = state->width;
             }
 
-            if (pixels_remaining > 0)
+            while (pixels_remaining > 0)
             {
-                do
-                {
-                    prim = (FieldTextPacket*)packet_cursor;
-                    packet_cursor += sizeof(SPRT);
-                    prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, SPRT);
-                    prim->sprite_words.rgbc = sprite_color;
-                    prim->sprite_words.xy = xy;
-                    prim->sprite_words.uv = uv;
+                prim = (FieldTextPacket*)packet_cursor;
+                packet_cursor += sizeof(SPRT);
+                prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, SPRT);
+                prim->sprite_words.rgbc = sprite_color;
+                prim->sprite_words.xy = xy;
+                prim->sprite_words.uv = uv;
 
-                    if (pixels_remaining >= 0x41)
-                    {
-                        prim->sprite_words.wh = row_height | 0x40;
-                        xy += 0x40;
-                        pixels_remaining -= 0x40;
-                    }
-                    else
-                    {
-                        prim->sprite_words.wh = pixels_remaining | row_height;
-                        xy += pixels_remaining;
-                        pixels_remaining = 0;
-                    }
-                } while (pixels_remaining > 0);
+                if (pixels_remaining > FIELD_TEXT_FRAME_TILE_WIDTH)
+                {
+                    prim->sprite_words.wh = row_height | FIELD_TEXT_FRAME_TILE_WIDTH;
+                    xy += FIELD_TEXT_FRAME_TILE_WIDTH;
+                    pixels_remaining -= FIELD_TEXT_FRAME_TILE_WIDTH;
+                }
+                else
+                {
+                    prim->sprite_words.wh = pixels_remaining | row_height;
+                    xy += pixels_remaining;
+                    pixels_remaining = 0;
+                }
             }
 
             uv += 0x48;
             prim = (FieldTextPacket*)packet_cursor;
             packet_cursor += sizeof(SPRT);
-            y += 0x20;
-            rows -= 0x20;
+            y += FIELD_TEXT_FRAME_TILE_HEIGHT;
+            rows -= FIELD_TEXT_FRAME_TILE_HEIGHT;
             prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, SPRT);
             prim->sprite_words.rgbc = sprite_color;
             prim->sprite_words.xy = xy;
@@ -2944,66 +2948,63 @@ static void field_text_build_window_packets(FieldTextState* state, u8** cursor, 
 
         pixels_remaining = state->line_advance;
 
-        if (pixels_remaining > 0)
+        while (pixels_remaining > 0)
         {
-            do
+            if ((scroll_pixels != 0) && ((FIELD_TEXT_LINE_SPACING - scroll_pixels) >= row_height))
             {
-                if ((scroll_pixels != 0) && ((FIELD_TEXT_LINE_SPACING - scroll_pixels) >= row_height))
-                {
-                    available_pixels = FIELD_TEXT_CACHE_WIDTH - cache_u;
-                    cache_u += pixels_remaining;
+                available_pixels = FIELD_TEXT_CACHE_WIDTH - cache_u;
+                cache_u += pixels_remaining;
 
-                    if ((u32)pixels_remaining >= (u32)available_pixels)
-                    {
-                        xy += available_pixels;
-                        pixels_remaining -= available_pixels;
-                        cache_v += row_height;
-                        cache_u = 0;
-                    }
-                    else
-                    {
-                        pixels_remaining = 0;
-                    }
+                if ((u32)pixels_remaining >= (u32)available_pixels)
+                {
+                    xy += available_pixels;
+                    pixels_remaining -= available_pixels;
+                    cache_v += row_height;
+                    cache_u = 0;
                 }
                 else
                 {
-                    prim = (FieldTextPacket*)packet_cursor;
-                    packet_cursor += sizeof(SPRT);
-                    prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, SPRT);
-                    prim->sprite_words.rgbc = sprite_color;
-                    prim->sprite_words.xy = xy;
-                    prim->sprite.u0 = texture_u_origin + cache_u;
-                    prim->sprite.clut = text_system->text_clut;
-
-                    if (scroll_pixels != 0)
-                    {
-                        prim->sprite.v0 = (uv_base + cache_v + FIELD_TEXT_LINE_SPACING) - scroll_pixels;
-                        prim->sprite.h = row_height + (scroll_pixels - FIELD_TEXT_LINE_SPACING);
-                    }
-                    else
-                    {
-                        prim->sprite.v0 = uv_base + cache_v;
-                        prim->sprite.h = row_height;
-                    }
-
-                    available_pixels = FIELD_TEXT_CACHE_WIDTH - cache_u;
-                    cache_u += pixels_remaining;
-
-                    if ((u32)pixels_remaining >= (u32)available_pixels)
-                    {
-                        prim->sprite.w = available_pixels;
-                        xy += available_pixels;
-                        pixels_remaining -= available_pixels;
-                        cache_v += row_height;
-                        cache_u = 0;
-                    }
-                    else
-                    {
-                        prim->sprite.w = pixels_remaining;
-                        pixels_remaining = 0;
-                    }
+                    pixels_remaining = 0;
                 }
-            } while (pixels_remaining > 0);
+            }
+            else
+            {
+                prim = (FieldTextPacket*)packet_cursor;
+                packet_cursor += sizeof(SPRT);
+                prim->sprite_words.tag = FIELD_TEXT_TAG(packet_cursor, SPRT);
+                prim->sprite_words.rgbc = sprite_color;
+                prim->sprite_words.xy = xy;
+                prim->sprite.u0 = texture_u_origin + cache_u;
+                prim->sprite.clut = text_system->text_clut;
+
+                if (scroll_pixels != 0)
+                {
+                    prim->sprite.v0 = (uv_base + cache_v + FIELD_TEXT_LINE_SPACING) - scroll_pixels;
+                    prim->sprite.h = row_height + (scroll_pixels - FIELD_TEXT_LINE_SPACING);
+                }
+                else
+                {
+                    prim->sprite.v0 = uv_base + cache_v;
+                    prim->sprite.h = row_height;
+                }
+
+                available_pixels = FIELD_TEXT_CACHE_WIDTH - cache_u;
+                cache_u += pixels_remaining;
+
+                if ((u32)pixels_remaining >= (u32)available_pixels)
+                {
+                    prim->sprite.w = available_pixels;
+                    xy += available_pixels;
+                    pixels_remaining -= available_pixels;
+                    cache_v += row_height;
+                    cache_u = 0;
+                }
+                else
+                {
+                    prim->sprite.w = pixels_remaining;
+                    pixels_remaining = 0;
+                }
+            }
         }
 
         if (scroll_pixels != 0)
@@ -3208,10 +3209,10 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
         vertex->pos.vy = mesh_y;
         vertex += 1;
 
-        if (pixels_remaining >= 0x41)
+        if (pixels_remaining > FIELD_TEXT_FRAME_TILE_WIDTH)
         {
-            mesh_x += 0x40;
-            pixels_remaining -= 0x40;
+            mesh_x += FIELD_TEXT_FRAME_TILE_WIDTH;
+            pixels_remaining -= FIELD_TEXT_FRAME_TILE_WIDTH;
         }
         else
         {
@@ -3238,25 +3239,22 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
         mesh_x = 8;
         pixels_remaining = content_width;
 
-        if (content_width > 0)
+        while (pixels_remaining > 0)
         {
-            do
-            {
-                vertex->pos.vx = mesh_x;
-                vertex->pos.vy = mesh_y;
-                vertex += 1;
+            vertex->pos.vx = mesh_x;
+            vertex->pos.vy = mesh_y;
+            vertex += 1;
 
-                if (pixels_remaining >= 0x41)
-                {
-                    mesh_x += 0x40;
-                    pixels_remaining -= 0x40;
-                }
-                else
-                {
-                    mesh_x += pixels_remaining;
-                    pixels_remaining = 0;
-                }
-            } while (pixels_remaining > 0);
+            if (pixels_remaining > FIELD_TEXT_FRAME_TILE_WIDTH)
+            {
+                mesh_x += FIELD_TEXT_FRAME_TILE_WIDTH;
+                pixels_remaining -= FIELD_TEXT_FRAME_TILE_WIDTH;
+            }
+            else
+            {
+                mesh_x += pixels_remaining;
+                pixels_remaining = 0;
+            }
         }
 
         vertex->pos.vx = mesh_x;
@@ -3265,10 +3263,10 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
         vertex[1].pos.vy = mesh_y;
         vertex += 2;
 
-        if (remaining >= 0x21)
+        if (remaining > FIELD_TEXT_FRAME_TILE_HEIGHT)
         {
-            mesh_y += 0x20;
-            remaining -= 0x20;
+            mesh_y += FIELD_TEXT_FRAME_TILE_HEIGHT;
+            remaining -= FIELD_TEXT_FRAME_TILE_HEIGHT;
         }
         else
         {
@@ -3285,25 +3283,22 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
         mesh_x = 8;
         pixels_remaining = content_width;
 
-        if (content_width > 0)
+        while (pixels_remaining > 0)
         {
-            do
-            {
-                vertex->pos.vx = mesh_x;
-                vertex->pos.vy = mesh_y;
-                vertex += 1;
+            vertex->pos.vx = mesh_x;
+            vertex->pos.vy = mesh_y;
+            vertex += 1;
 
-                if (pixels_remaining >= 0x41)
-                {
-                    mesh_x += 0x40;
-                    pixels_remaining -= 0x40;
-                }
-                else
-                {
-                    mesh_x += pixels_remaining;
-                    pixels_remaining = 0;
-                }
-            } while (pixels_remaining > 0);
+            if (pixels_remaining > FIELD_TEXT_FRAME_TILE_WIDTH)
+            {
+                mesh_x += FIELD_TEXT_FRAME_TILE_WIDTH;
+                pixels_remaining -= FIELD_TEXT_FRAME_TILE_WIDTH;
+            }
+            else
+            {
+                mesh_x += pixels_remaining;
+                pixels_remaining = 0;
+            }
         }
 
         vertex->pos.vx = mesh_x;
@@ -3318,61 +3313,58 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
     remaining -= 1;
     text_vertex_count = 0;
 
-    if (remaining != -1)
+    while (remaining != -1)
     {
-        do
+        mesh_x = 8;
+
+        if ((state->portrait != NULL) && ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) == 0))
         {
-            mesh_x = 8;
+            mesh_x = 0x40;
+        }
 
-            if ((state->portrait != NULL) && ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) == 0))
+        pixels_remaining = state->line_advance;
+
+        if (pixels_remaining > 0)
+        {
+            do
             {
-                mesh_x = 0x40;
-            }
+                vertex->pos.vx = mesh_x;
+                vertex->pos.vy = mesh_y;
+                vertex[1].pos.vx = mesh_x;
+                vertex[1].pos.vy = state->line_height + mesh_y;
+                vertex += 2;
+                text_vertex_count += 2;
+                avail = FIELD_TEXT_CACHE_WIDTH - u;
 
-            pixels_remaining = state->line_advance;
-
-            if (pixels_remaining > 0)
-            {
-                do
+                if (pixels_remaining >= avail)
                 {
-                    vertex->pos.vx = mesh_x;
-                    vertex->pos.vy = mesh_y;
-                    vertex[1].pos.vx = mesh_x;
-                    vertex[1].pos.vy = state->line_height + mesh_y;
-                    vertex += 2;
-                    text_vertex_count += 2;
-                    avail = FIELD_TEXT_CACHE_WIDTH - u;
+                    mesh_x += avail;
+                    pixels_remaining -= avail;
+                    u = 0;
+                }
+                else
+                {
+                    mesh_x += pixels_remaining;
+                    u += pixels_remaining;
+                    pixels_remaining = 0;
+                }
+            } while (pixels_remaining > 0);
+        }
 
-                    if (pixels_remaining >= avail)
-                    {
-                        mesh_x += avail;
-                        pixels_remaining -= avail;
-                        u = 0;
-                    }
-                    else
-                    {
-                        mesh_x += pixels_remaining;
-                        u += pixels_remaining;
-                        pixels_remaining = 0;
-                    }
-                } while (pixels_remaining > 0);
-            }
-
-            vertex->pos.vx = mesh_x;
-            vertex->pos.vy = mesh_y;
-            vertex[1].pos.vx = mesh_x;
-            vertex[1].pos.vy = state->line_height + mesh_y;
-            vertex += 2;
-            text_vertex_count += 2;
-            remaining -= 1;
-            mesh_y += 0x10;
-        } while (remaining != -1);
+        vertex->pos.vx = mesh_x;
+        vertex->pos.vy = mesh_y;
+        vertex[1].pos.vx = mesh_x;
+        vertex[1].pos.vy = state->line_height + mesh_y;
+        vertex += 2;
+        text_vertex_count += 2;
+        remaining -= 1;
+        mesh_y += 0x10;
     }
 
     remaining = 1;
-    mesh_y = ((state->height - 0x30) >> 1) + 0xA;
+    mesh_y = ((state->height - FIELD_PORTRAIT_SIZE) >> 1) + 0xA;
 
-    for (; remaining != -1; remaining--, mesh_y += 0x30)
+    for (; remaining != -1; remaining--, mesh_y += FIELD_PORTRAIT_SIZE)
     {
         if ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) == 0)
         {
@@ -3388,12 +3380,12 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
             vertex->pos.vx = mesh_x;
             vertex->pos.vy = mesh_y;
             vertex += 1;
-            mesh_x += 0x30;
+            mesh_x += FIELD_PORTRAIT_SIZE;
         }
     }
 
     remaining = 1;
-    mesh_y = ((state->height - 0x30) >> 1) + 8;
+    mesh_y = ((state->height - FIELD_PORTRAIT_SIZE) >> 1) + 8;
 
     do
     {
@@ -3411,11 +3403,11 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
             vertex->pos.vx = mesh_x;
             vertex->pos.vy = mesh_y;
             vertex += 1;
-            mesh_x += 0x30;
+            mesh_x += FIELD_PORTRAIT_SIZE;
         }
 
         remaining -= 1;
-        mesh_y += 0x30;
+        mesh_y += FIELD_PORTRAIT_SIZE;
     } while (remaining != -1);
 
     /* Interpolate the two side edges once per row, then interpolate across each row. */
@@ -3482,37 +3474,34 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
         pixels_remaining = content_width;
         vertex += 1;
 
-        if (content_width > 0)
+        while (pixels_remaining > 0)
         {
-            do
+            poly = (FieldTextPacket*)packet_cursor;
+            packet_cursor += sizeof(POLY_FT4);
+            poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
+            poly->quad_words.rgbc = texture_command;
+
+            if (pixels_remaining > FIELD_TEXT_FRAME_TILE_WIDTH)
             {
-                poly = (FieldTextPacket*)packet_cursor;
-                packet_cursor += sizeof(POLY_FT4);
-                poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
-                poly->quad_words.rgbc = texture_command;
+                chunk = 0x3F;
+                pixels_remaining -= FIELD_TEXT_FRAME_TILE_WIDTH;
+            }
+            else
+            {
+                chunk = pixels_remaining - 1;
+                pixels_remaining = 0;
+            }
 
-                if (pixels_remaining >= 0x41)
-                {
-                    chunk = 0x3F;
-                    pixels_remaining -= 0x40;
-                }
-                else
-                {
-                    chunk = pixels_remaining - 1;
-                    pixels_remaining = 0;
-                }
-
-                poly->quad_words.uv1 = tpage | (texture_uv + chunk);
-                poly->quad_words.uv0 = clut | texture_uv;
-                poly->quad_words.uv2 = texture_uv + (packet_height << 8);
-                poly->quad_words.uv3 = texture_uv + ((packet_height << 8) | chunk);
-                poly->quad_words.xy0 = vertex[0].word;
-                poly->quad_words.xy1 = vertex[1].word;
-                vertex += 1;
-                poly->quad_words.xy2 = bottom_vertices[0].word;
-                poly->quad_words.xy3 = bottom_vertices[1].word;
-                bottom_vertices += 1;
-            } while (pixels_remaining > 0);
+            poly->quad_words.uv1 = tpage | (texture_uv + chunk);
+            poly->quad_words.uv0 = clut | texture_uv;
+            poly->quad_words.uv2 = texture_uv + (packet_height << 8);
+            poly->quad_words.uv3 = texture_uv + ((packet_height << 8) | chunk);
+            poly->quad_words.xy0 = vertex[0].word;
+            poly->quad_words.xy1 = vertex[1].word;
+            vertex += 1;
+            poly->quad_words.xy2 = bottom_vertices[0].word;
+            poly->quad_words.xy3 = bottom_vertices[1].word;
+            bottom_vertices += 1;
         }
 
         texture_uv += 0x40;
@@ -3545,7 +3534,7 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
             texture_uv = (texture_v_origin << 8) | (texture_u_origin + 0xE0);
             packet_height = 0x1F00;
 
-            if (remaining < 0x20)
+            if (remaining < FIELD_TEXT_FRAME_TILE_HEIGHT)
             {
                 packet_height = remaining << 8;
             }
@@ -3567,37 +3556,34 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
             vertex += 1;
             bottom_vertices += 1;
 
-            if (content_width > 0)
+            while (pixels_remaining > 0)
             {
-                do
+                poly = (FieldTextPacket*)packet_cursor;
+                packet_cursor += sizeof(POLY_FT4);
+                poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
+                poly->quad_words.rgbc = texture_command;
+
+                if (pixels_remaining > FIELD_TEXT_FRAME_TILE_WIDTH)
                 {
-                    poly = (FieldTextPacket*)packet_cursor;
-                    packet_cursor += sizeof(POLY_FT4);
-                    poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
-                    poly->quad_words.rgbc = texture_command;
+                    chunk = FIELD_TEXT_FRAME_TILE_WIDTH;
+                    pixels_remaining -= FIELD_TEXT_FRAME_TILE_WIDTH;
+                }
+                else
+                {
+                    chunk = pixels_remaining;
+                    pixels_remaining = 0;
+                }
 
-                    if (pixels_remaining >= 0x41)
-                    {
-                        chunk = 0x40;
-                        pixels_remaining -= 0x40;
-                    }
-                    else
-                    {
-                        chunk = pixels_remaining;
-                        pixels_remaining = 0;
-                    }
-
-                    poly->quad_words.uv1 = tpage | (texture_uv + chunk);
-                    poly->quad_words.uv0 = clut | texture_uv;
-                    poly->quad_words.uv2 = texture_uv + packet_height;
-                    poly->quad_words.uv3 = texture_uv + (packet_height | chunk);
-                    poly->quad_words.xy0 = vertex[0].word;
-                    poly->quad_words.xy1 = vertex[1].word;
-                    poly->quad_words.xy2 = bottom_vertices[0].word;
-                    poly->quad_words.xy3 = bottom_vertices[1].word;
-                    vertex += 1;
-                    bottom_vertices += 1;
-                } while (pixels_remaining > 0);
+                poly->quad_words.uv1 = tpage | (texture_uv + chunk);
+                poly->quad_words.uv0 = clut | texture_uv;
+                poly->quad_words.uv2 = texture_uv + packet_height;
+                poly->quad_words.uv3 = texture_uv + (packet_height | chunk);
+                poly->quad_words.xy0 = vertex[0].word;
+                poly->quad_words.xy1 = vertex[1].word;
+                poly->quad_words.xy2 = bottom_vertices[0].word;
+                poly->quad_words.xy3 = bottom_vertices[1].word;
+                vertex += 1;
+                bottom_vertices += 1;
             }
 
             texture_uv += 0x48;
@@ -3610,7 +3596,7 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
             poly->quad_words.rgbc = texture_command;
             poly->quad_words.uv3 = texture_uv + (packet_height | 8);
             poly->quad_words.xy0 = vertex[0].word;
-            remaining -= 0x20;
+            remaining -= FIELD_TEXT_FRAME_TILE_HEIGHT;
             poly->quad_words.xy1 = vertex[1].word;
             poly->quad_words.xy2 = bottom_vertices[0].word;
             poly->quad_words.xy3 = bottom_vertices[1].word;
@@ -3627,58 +3613,55 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
     remaining -= 1;
     vertex = FIELD_TEXT_MESH + ((FIELD_TEXT_MESH_ROWS(text_area_height) + 3) * (FIELD_TEXT_MESH_COLUMNS(content_width) + 3));
 
-    if (remaining != -1)
+    while (remaining != -1)
     {
-        do
+        pixels_remaining = state->line_advance;
+
+        if (pixels_remaining > 0)
         {
-            pixels_remaining = state->line_advance;
-
-            if (pixels_remaining > 0)
+            do
             {
-                do
+                glyph_v = texture_v_origin + row_v;
+                glyph_u = texture_u_origin + u;
+                glyph_v <<= 8;
+                texture_uv = glyph_v | glyph_u;
+                poly = (FieldTextPacket*)packet_cursor;
+                packet_cursor += sizeof(POLY_FT4);
+                poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
+                poly->quad_words.rgbc = texture_command;
+                poly->quad_words.uv0 = (text_system->text_clut << 16) | texture_uv;
+                poly->quad_words.uv1 = tpage | texture_uv;
+                poly->quad_words.uv2 = texture_uv + (state->line_height << 8);
+                poly->quad_words.uv3 = texture_uv + (state->line_height << 8);
+                poly->quad_words.xy0 = vertex[0].word;
+                avail = FIELD_TEXT_CACHE_WIDTH - u;
+                poly->quad_words.xy1 = vertex[2].word;
+                poly->quad_words.xy2 = vertex[1].word;
+                poly->quad_words.xy3 = vertex[3].word;
+                vertex += 2;
+
+                if (pixels_remaining >= avail)
                 {
-                    glyph_v = texture_v_origin + row_v;
-                    glyph_u = texture_u_origin + u;
-                    glyph_v <<= 8;
-                    texture_uv = glyph_v | glyph_u;
-                    poly = (FieldTextPacket*)packet_cursor;
-                    packet_cursor += sizeof(POLY_FT4);
-                    poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
-                    poly->quad_words.rgbc = texture_command;
-                    poly->quad_words.uv0 = (text_system->text_clut << 16) | texture_uv;
-                    poly->quad_words.uv1 = tpage | texture_uv;
-                    poly->quad_words.uv2 = texture_uv + (state->line_height << 8);
-                    poly->quad_words.uv3 = texture_uv + (state->line_height << 8);
-                    poly->quad_words.xy0 = vertex[0].word;
-                    avail = FIELD_TEXT_CACHE_WIDTH - u;
-                    poly->quad_words.xy1 = vertex[2].word;
-                    poly->quad_words.xy2 = vertex[1].word;
-                    poly->quad_words.xy3 = vertex[3].word;
-                    vertex += 2;
+                    pixels_remaining -= avail;
+                    edge = (glyph_u + avail) - 1;
+                    poly->quad.u3 = edge;
+                    poly->quad.u1 = edge;
+                    u = 0;
+                    row_v += state->line_height;
+                }
+                else
+                {
+                    u += pixels_remaining;
+                    edge = glyph_u + pixels_remaining;
+                    pixels_remaining = 0;
+                    poly->quad.u3 = edge;
+                    poly->quad.u1 = edge;
+                }
+            } while (pixels_remaining > 0);
+        }
 
-                    if (pixels_remaining >= avail)
-                    {
-                        pixels_remaining -= avail;
-                        edge = (glyph_u + avail) - 1;
-                        poly->quad.u3 = edge;
-                        poly->quad.u1 = edge;
-                        u = 0;
-                        row_v += state->line_height;
-                    }
-                    else
-                    {
-                        u += pixels_remaining;
-                        edge = glyph_u + pixels_remaining;
-                        pixels_remaining = 0;
-                        poly->quad.u3 = edge;
-                        poly->quad.u1 = edge;
-                    }
-                } while (pixels_remaining > 0);
-            }
-
-            remaining -= 1;
-            vertex += 2;
-        } while (remaining != -1);
+        remaining -= 1;
+        vertex += 2;
     }
 
     /* The final eight mesh vertices hold the portrait shadow and image quads. */

@@ -740,8 +740,6 @@ enum
 /** The node starts active (FIELD_ANIM_FLAG_ACTIVE) when its first span has keyframes. */
 #define FIELD_ANIM_DEF_ACTIVE 0x80
 
-#define FIELD_CLUT_8BIT_COLORS 256
-
 typedef union
 {
     s32 word;

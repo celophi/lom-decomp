@@ -141,9 +141,6 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
 #define FIELD_PART_PITCH_ACCELERATION_BIT 2
 #define FIELD_PART_GROUND_BOUNCE_BIT 6
 
-/** @brief Masks in the part's effect flags. */
-#define FIELD_PART_MAP_COLLISION 0x00100000
-
 /** @brief Bit positions in the part's placement flags. */
 #define FIELD_PART_HEIGHT_TRACK_BIT 3
 
@@ -210,7 +207,6 @@ enum
 #define FIELD_SPRITE_FRAME_FLIP_X 0x40
 #define FIELD_SPRITE_FRAME_FLIP_Y 0x80
 #define FIELD_SPRITE_TEXTURE_MODE_MASK 3
-#define FIELD_PART_EFFECT_FOOTPRINT 0x00100000
 
 /** @brief Word view of FieldMotionRecord bytes 0x3C-0x3F; bit 24 is a flag in the 0x3F byte. */
 #define FIELD_MOTION_WORD_3C(rec) (*(u32*)&(rec)->sprite_height_minus_one)
@@ -535,7 +531,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     effect->part_index = part_index;
     effect->actor_index = actor->slot_index;
 
-    if ((part->placement_flags.word >> 25) & 1)
+    if ((part->placement_flags.word >> FIELD_PART_TRACK_COLOR_BIT) & 1)
     {
         if ((part->behavior_flags.word >> 12) & 1)
         {
@@ -554,7 +550,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
     FIELD_EFFECT_FLAGS(effect).bits.unknown_15 = part->behavior_flags.word >> 11;
 
-    FIELD_EFFECT_FLAGS(effect).bits.unknown_28 = part->placement_flags.word >> 25;
+    FIELD_EFFECT_FLAGS(effect).bits.unknown_28 = part->placement_flags.word >> FIELD_PART_TRACK_COLOR_BIT;
     field_roll_effect_rotation(actor, part, effect);
     RotMatrix_gte((SVECTOR*)&effect->rotation_x, rotation_matrix);
     RotMatrixZ(effect->rotation_z_16 * 16, rotation_matrix);
@@ -615,7 +611,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         {
             record_base = &g_field_actors[actor->owner_object_index];
 
-            if (!((part->behavior_flags.word >> 11) & 1) && !((part->placement_flags.word >> 25) & 1) &&
+            if (!((part->behavior_flags.word >> 11) & 1) && !((part->placement_flags.word >> FIELD_PART_TRACK_COLOR_BIT) & 1) &&
                 (part->appearance.fields.color_track_flags >> 5) == 0 && (*(u32*)&part->unkC & 0xFFFF0000) == FIELD_PART_NEUTRAL_RED_GREEN &&
                 part->tint_blue == FIELD_TINT_NEUTRAL)
             {
@@ -665,7 +661,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         {
             record_base = &g_field_actors[actor->targets[g_field_track_index]];
 
-            if (!((part->behavior_flags.word >> 11) & 1) && !((part->placement_flags.word >> 25) & 1) &&
+            if (!((part->behavior_flags.word >> 11) & 1) && !((part->placement_flags.word >> FIELD_PART_TRACK_COLOR_BIT) & 1) &&
                 (part->appearance.fields.color_track_flags >> 5) == 0 && (*(u32*)&part->unkC & 0xFFFF0000) == FIELD_PART_NEUTRAL_RED_GREEN &&
                 part->tint_blue == FIELD_TINT_NEUTRAL)
             {
@@ -862,7 +858,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
                 FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(source_record).bits.kind;
                 FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(source_record).half[1];
 
-                if (!((part->behavior_flags.word >> 11) & 1) && !((part->placement_flags.word >> 25) & 1) &&
+                if (!((part->behavior_flags.word >> 11) & 1) && !((part->placement_flags.word >> FIELD_PART_TRACK_COLOR_BIT) & 1) &&
                     (part->appearance.fields.color_track_flags >> 5) == 0 && (*(u32*)&part->unkC & 0xFFFF0000) == FIELD_PART_NEUTRAL_RED_GREEN &&
                     part->tint_blue == FIELD_TINT_NEUTRAL)
                 {
@@ -2831,7 +2827,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
             }
         }
 
-        if ((part->effect_flags.word & FIELD_PART_MAP_COLLISION) && !(part->spawn_flags.word & FIELD_PART_IGNORE_MAP_COLLISION))
+        if ((part->effect_flags.word & FIELD_PART_SOLID) && !(part->spawn_flags.word & FIELD_PART_IGNORE_MAP_COLLISION))
         {
             if (record->x < 0 || record->x >= (map_bounds->width << 8) || record->z < 0 || record->z >= (map_bounds->height << 9))
             {
@@ -4055,7 +4051,7 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
                     packet_cursor = (s32*)((u8*)packet_cursor + sizeof(POLY_FT4));
                 }
             }
-            else if (((flags & 0xF) == 2) && (part->effect_flags.word & FIELD_PART_EFFECT_FOOTPRINT))
+            else if (((flags & 0xF) == 2) && (part->effect_flags.word & FIELD_PART_SOLID))
             {
                 shadow_footprint[0] = ((s8)frame_data[0] * part->appearance.fields.scale_xz) >> FIELD_PART_SCALE_SHIFT;
                 shadow_footprint[1] = ((s8)frame_data[1] * part->scale_y) >> FIELD_PART_SCALE_SHIFT;
@@ -4720,7 +4716,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
 
                         break;
                     case 1:
-                        if ((part->effect_flags.word & 0x100000) && !(slot->movement.word & FIELD_MOVEMENT_SEQUENCE_MASK) &&
+                        if ((part->effect_flags.word & FIELD_PART_SOLID) && !(slot->movement.word & FIELD_MOVEMENT_SEQUENCE_MASK) &&
                             ((slot->contact.bytes.target_count == 0) || (rec->motion_parameter == FIELD_ACTOR_COMMAND_TECHNIQUE)) &&
                             (((slot->action_parameter != FIELD_ACTION_PARAMETER_NONE) && (slot->action_parameter != 0)) ||
                              (actor->animation->hit_test_mode == 3)))
@@ -5068,7 +5064,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
 
                         break;
                     case 2:
-                        if (part->effect_flags.word & 0x100000)
+                        if (part->effect_flags.word & FIELD_PART_SOLID)
                         {
                             field_unpack_effect_quad_corners8(quad_bounds, rec->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED, (s8*)item);
                             shadow_count += 1;
@@ -5619,7 +5615,7 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                         field_transform_effect_quad_vertices16(rec, slot, item, 4, sxy, dir, gte_out);
                         break;
                     case 1:
-                        if (part->effect_flags.word & 0x100000)
+                        if (part->effect_flags.word & FIELD_PART_SOLID)
                         {
                             if (rec->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                             {
@@ -5963,7 +5959,7 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
 
                         break;
                     case 2:
-                        if (part->effect_flags.word & 0x100000)
+                        if (part->effect_flags.word & FIELD_PART_SOLID)
                         {
                             field_unpack_effect_quad_corners16(corners, rec->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED, item);
                             shadow_count += 1;

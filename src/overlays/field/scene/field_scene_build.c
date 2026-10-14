@@ -1672,7 +1672,7 @@ static void field_build_animation_list(FieldAnimDef* def, u8** arena, FieldAnim*
                 }
                 else
                 {
-                    *arena += sizeof(FieldImageReq) + FIELD_ANIM_SCRATCH_BYTES(FIELD_CLUT_8BIT_COLORS);
+                    *arena += sizeof(FieldImageReq) + FIELD_ANIM_SCRATCH_BYTES(GPU_CLUT_8BIT_COLORS);
                 }
             }
             else if ((def->flags.word & FIELD_ANIM_GROUP_KIND_MASK) == FIELD_ANIM_PALETTE_BLEND_WORD)
@@ -1683,7 +1683,7 @@ static void field_build_animation_list(FieldAnimDef* def, u8** arena, FieldAnim*
                 }
                 else
                 {
-                    *arena += def->u.clut.length * FIELD_ANIM_SCRATCH_BYTES(FIELD_CLUT_8BIT_COLORS) + sizeof(FieldImageReq);
+                    *arena += def->u.clut.length * FIELD_ANIM_SCRATCH_BYTES(GPU_CLUT_8BIT_COLORS) + sizeof(FieldImageReq);
                 }
             }
             else

@@ -42,8 +42,6 @@
 #define FIELD_CONTROL_TINTED_SHIFT 23
 #define FIELD_CONTROL_TINTED 0x800000
 /* FieldActor::direction headings. */
-/** @brief FieldActor::direction headings are 256 steps per turn (ratan2/rcos use 4096). */
-#define FIELD_HEADING_STEPS 256
 /** @brief Shift from a 4096-step angle to a heading. */
 #define FIELD_HEADING_ANGLE_SHIFT 4
 /** @brief Half of one eighth of a turn, added before a heading is split into eight sectors. */

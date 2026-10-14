@@ -221,7 +221,11 @@ typedef struct FieldCdBuffer
 } FieldCdBuffer;
 
 /** @brief Section @p index of a staged resource package (offsets are from the package start). */
-#define FIELD_PACKAGE_SECTION(package, index) ((FieldCdBuffer*)((u8*)(package) + (package)->offsets[index]))
+/** @brief The CD staging buffer viewed as a resource package. */
+#define FIELD_CD_PACKAGE ((FieldCdBuffer*)g_field_cd_buffer)
+/** @brief Start of section @p index of a staged resource package, as bytes and as a nested package. */
+#define FIELD_PACKAGE_SECTION_BYTES(package, index) ((u8*)(package) + (package)->offsets[index])
+#define FIELD_PACKAGE_SECTION(package, index) ((FieldCdBuffer*)FIELD_PACKAGE_SECTION_BYTES(package, index))
 
 void func_80140004(s32 work_address, s32 image_resource_index, s32 music_resource_index, s32 audio_clip_index);
 void field_draw_dialog_windows(FieldRenderHalf* render_half);
@@ -240,7 +244,7 @@ u8* field_begin_actor_animation_forward(FieldActor* actor, u8* resource_base);
 static u8* field_begin_actor_animation_reverse(FieldActor* actor, u8* resource_base);
 static void field_settle_actor_vertical_offset(FieldActor* actor);
 static void field_upload_resource_texture(FieldCdBuffer* buf, s32 slot_index, s32 texture_index, s32 palette_row);
-static void field_append_resource_data(u32* src, s32 length, s32 slot_index);
+static void field_append_resource_data(void* data, s32 length, s32 slot_index);
 static void field_refresh_actor_portraits();
 s32* field_render_effect_frame16(FieldActor* actor, s32* packet, u32* ordering_table, u8* frame_data, s32 unused, FieldObjectPart* part);
 s32* field_render_effect_frame8(FieldActor* actor, s32* packet, u32* ordering_table, u8* frame_data, s32 unused, FieldObjectPart* part);
@@ -576,22 +580,23 @@ void field_interpolate_palette_track(FieldActorSlot* slot, s32 palette_sequence,
         {
             u16 start_color = *start_palette;
             u16 end_color = *end_palette;
-            s32 start_red = start_color & 0x1F;
-            s32 end_red = end_color & 0x1F;
+            s32 start_red = start_color & GPU_COLOR15_CHANNEL_MASK;
+            s32 end_red = end_color & GPU_COLOR15_CHANNEL_MASK;
             s32 red_range = end_red - start_red;
             s32 frame_offset = slot->track_frames[g_field_track_index] - segment_start_frame;
             s32 segment_length = (*segment) & FIELD_SEGMENT_LENGTH_MASK;
             s32 red_step = (red_range * frame_offset) / segment_length;
-            s32 start_green = (start_color >> 5) & 0x1F;
-            s32 end_green = (end_color >> 5) & 0x1F;
+            s32 start_green = (start_color >> GPU_COLOR15_GREEN_SHIFT) & GPU_COLOR15_CHANNEL_MASK;
+            s32 end_green = (end_color >> GPU_COLOR15_GREEN_SHIFT) & GPU_COLOR15_CHANNEL_MASK;
             s32 green_range = end_green - start_green;
             s32 green_step = (green_range * frame_offset) / segment_length;
-            s32 start_blue = (start_color >> 10) & 0x1F;
-            s32 end_blue = (end_color >> 10) & 0x1F;
+            s32 start_blue = (start_color >> GPU_COLOR15_BLUE_SHIFT) & GPU_COLOR15_CHANNEL_MASK;
+            s32 end_blue = (end_color >> GPU_COLOR15_BLUE_SHIFT) & GPU_COLOR15_CHANNEL_MASK;
             s32 blue_range = end_blue - start_blue;
             s32 blue_step = (blue_range * frame_offset) / segment_length;
 
-            *output_color = (((start_color & 0x8000) | (start_red + red_step)) | ((start_green + green_step) << 5)) | ((start_blue + blue_step) << 10);
+            *output_color = (((start_color & GPU_STP_BIT) | (start_red + red_step)) | ((start_green + green_step) << GPU_COLOR15_GREEN_SHIFT)) |
+                            ((start_blue + blue_step) << GPU_COLOR15_BLUE_SHIFT);
         }
     }
 }
@@ -1640,9 +1645,9 @@ void field_reset_actor_resource_slots(void)
     g_field_player_records[1].resource_id = 0;
     g_field_player_records[2].resource_id = 0;
 
-    g_field_player_records[0].portrait_index = 0xFF;
-    g_field_player_records[1].portrait_index = 0xFF;
-    g_field_player_records[2].portrait_index = 0xFF;
+    g_field_player_records[0].portrait_index = FIELD_PORTRAIT_NONE;
+    g_field_player_records[1].portrait_index = FIELD_PORTRAIT_NONE;
+    g_field_player_records[2].portrait_index = FIELD_PORTRAIT_NONE;
 
     g_field_player_records[0].head.bits.alt_appearance = 0;
     g_field_player_records[1].head.bits.active = 0;
@@ -1982,7 +1987,7 @@ void field_release_actor_resource_slot(s32 slot_index_minus_one)
         dst = entry->start;
         member->presence = FIELD_ACTOR_UNUSED;
 
-        g_field_player_records[slot_index].portrait_index = 0xFF;
+        g_field_player_records[slot_index].portrait_index = FIELD_PORTRAIT_NONE;
 
         g_field_player_records[slot_index].head.bits.active = 0;
 
@@ -2431,9 +2436,9 @@ void field_initialize_actor_part(s32 part_index, s32 timer_mode)
     }
 
     g_field_object_parts[part_index].turn_end_age = 0xFF;
-    g_field_object_parts[part_index].placement_flags.word |= 0x2000000;
+    g_field_object_parts[part_index].placement_flags.word |= FIELD_PART_TRACK_COLOR;
     g_field_object_parts[part_index].orientation_flags.bits.mode = 2;
-    g_field_object_parts[part_index].effect_flags.word |= 0x100000;
+    g_field_object_parts[part_index].effect_flags.word |= FIELD_PART_SOLID;
 }
 
 /**
@@ -2518,8 +2523,8 @@ static void field_load_actor_texture_set(s32 resource_id, s32 slot_index, s32 te
     s32 image_offset;
     s32 full_width;
 
-    buf = (FieldCdBuffer*)g_field_cd_buffer;
-    full_width = 0x100;
+    buf = FIELD_CD_PACKAGE;
+    full_width = GPU_CLUT_8BIT_COLORS;
     cdrom_queue_read(resource_id & 0xFFFF, buf);
     cdrom_wait_queue_empty();
     image_offset = buf->offsets[2];
@@ -2550,13 +2555,13 @@ static void field_load_actor_texture_set(s32 resource_id, s32 slot_index, s32 te
         rect.x = base - offset;
         rect.w = FIELD_TEXTURE_COLUMN_WIDTH;
         rect.y = 0;
-        rect.h = 0x100;
+        rect.h = FIELD_TEXTURE_COLUMN_HEIGHT;
     }
     else if (narrow_layout != 0)
     {
         s32 base = texture_column * FIELD_TEXTURE_COLUMN_WIDTH + FIELD_PARTY_TEXTURE_VRAM_X;
 
-        setRECT(&rect, base - slot_index * FIELD_PARTY_TEXTURE_VRAM_STEP, 0x80, FIELD_TEXTURE_COLUMN_WIDTH, 0x80);
+        setRECT(&rect, base - slot_index * FIELD_PARTY_TEXTURE_VRAM_STEP, FIELD_NARROW_TEXTURE_VRAM_Y, FIELD_TEXTURE_COLUMN_WIDTH, FIELD_NARROW_TEXTURE_HEIGHT);
     }
     else
     {
@@ -2566,10 +2571,10 @@ static void field_load_actor_texture_set(s32 resource_id, s32 slot_index, s32 te
         rect.x = base - offset;
         rect.w = FIELD_TEXTURE_COLUMN_WIDTH;
         rect.y = 0;
-        rect.h = 0x100;
+        rect.h = FIELD_TEXTURE_COLUMN_HEIGHT;
     }
 
-    LoadImage(&rect, (u_long*)(image_offset + (uintptr_t)buf + 0x14));
+    LoadImage(&rect, (u_long*)(image_offset + (uintptr_t)buf + OFFSETOF(FieldCdBuffer, data)));
     DrawSync(0);
 }
 
@@ -3280,7 +3285,7 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
     FieldCdBuffer* buf;
     s32 size;
 
-    buf = (FieldCdBuffer*)g_field_cd_buffer;
+    buf = FIELD_CD_PACKAGE;
     size = cdrom_queue_read((u16)resource_id, buf);
     cdrom_wait_queue_empty();
     field_unpack_resource_package(buf, size, slot_index, resource_entry_index);
@@ -3298,16 +3303,16 @@ void field_unpack_resource_package(FieldCdBuffer* buf, s32 size, s32 slot_index,
     switch (buf->offsets[0] >> 2)
     {
     case 2:
-        field_append_resource_data((u32*)FIELD_PACKAGE_SECTION(buf, 1), size - buf->offsets[1], slot_index);
+        field_append_resource_data(FIELD_PACKAGE_SECTION_BYTES(buf, 1), size - buf->offsets[1], slot_index);
         field_upload_resource_texture(FIELD_PACKAGE_SECTION(buf, 0), slot_index, 0, palette_row);
         break;
     case 3:
-        field_append_resource_data((u32*)FIELD_PACKAGE_SECTION(buf, 2), size - buf->offsets[2], slot_index);
+        field_append_resource_data(FIELD_PACKAGE_SECTION_BYTES(buf, 2), size - buf->offsets[2], slot_index);
         field_upload_resource_texture(FIELD_PACKAGE_SECTION(buf, 0), slot_index, 0, palette_row);
         field_upload_resource_texture(FIELD_PACKAGE_SECTION(buf, 1), slot_index, 1, palette_row);
         break;
     case 4:
-        field_append_resource_data((u32*)FIELD_PACKAGE_SECTION(buf, 3), size - buf->offsets[3], slot_index);
+        field_append_resource_data(FIELD_PACKAGE_SECTION_BYTES(buf, 3), size - buf->offsets[3], slot_index);
         field_upload_resource_texture(FIELD_PACKAGE_SECTION(buf, 0), slot_index, 0, palette_row);
         field_upload_resource_texture(FIELD_PACKAGE_SECTION(buf, 1), slot_index, 1, palette_row);
         field_upload_resource_texture(FIELD_PACKAGE_SECTION(buf, 2), slot_index, 2, palette_row);
@@ -3336,7 +3341,7 @@ static void field_upload_resource_texture(FieldCdBuffer* buf, s32 slot_index, s3
     else
     {
         rect.y = palette_row + FIELD_RESOURCE_CLUT_VRAM_Y;
-        rect.w = 0x100;
+        rect.w = GPU_CLUT_8BIT_COLORS;
         rect.x = 0;
         rect.h = 1;
     }
@@ -3354,7 +3359,7 @@ static void field_upload_resource_texture(FieldCdBuffer* buf, s32 slot_index, s3
         rect.x = base - offset;
         rect.w = FIELD_TEXTURE_COLUMN_WIDTH;
         rect.y = 0;
-        rect.h = 0x100;
+        rect.h = FIELD_TEXTURE_COLUMN_HEIGHT;
     }
     else
     {
@@ -3364,8 +3369,8 @@ static void field_upload_resource_texture(FieldCdBuffer* buf, s32 slot_index, s3
 
         if (texture_index == 2)
         {
-            setRECT(&rect, FIELD_PARTY_TEXTURE_VRAM_X + FIELD_TEXTURE_COLUMN_WIDTH - slot_index * FIELD_PARTY_TEXTURE_VRAM_STEP, 0x80,
-                    FIELD_TEXTURE_COLUMN_WIDTH, 0x80);
+            setRECT(&rect, FIELD_PARTY_TEXTURE_VRAM_X + FIELD_TEXTURE_COLUMN_WIDTH - slot_index * FIELD_PARTY_TEXTURE_VRAM_STEP, FIELD_NARROW_TEXTURE_VRAM_Y,
+                    FIELD_TEXTURE_COLUMN_WIDTH, FIELD_NARROW_TEXTURE_HEIGHT);
         }
         else if (texture_index == 1)
         {
@@ -3379,24 +3384,26 @@ static void field_upload_resource_texture(FieldCdBuffer* buf, s32 slot_index, s3
             rect.x = base - offset;
             rect.w = FIELD_TEXTURE_COLUMN_WIDTH;
             rect.y = 0;
-            rect.h = 0x100;
+            rect.h = FIELD_TEXTURE_COLUMN_HEIGHT;
         }
     }
 
-    LoadImage(&rect, (u_long*)(image_offset + (uintptr_t)buf + 0x14));
+    LoadImage(&rect, (u_long*)(image_offset + (uintptr_t)buf + OFFSETOF(FieldCdBuffer, data)));
 }
 
 /**
  * @brief Copy animation data to the resource arena cursor and point a resource entry at it.
- * @param src Source words.
+ * @param data Source data, word aligned.
  * @param length Number of source bytes.
  * @param slot_index Resource entry that receives the data.
  */
-static void field_append_resource_data(u32* src, s32 length, s32 slot_index)
+static void field_append_resource_data(void* data, s32 length, s32 slot_index)
 {
+    u32* src;
     u32* dst;
     u32 n;
 
+    src = data;
     dst = g_field_resource_cursor;
     n = (u32)(length + 3) >> 2;
 
@@ -3482,17 +3489,17 @@ static void field_refresh_actor_portraits(void)
         cdrom_wait_queue_empty();
 
         g_field_player_records[0].portrait_index = g_field_player_records[0].head.bits.alt_appearance;
-        bcopy((u8*)FIELD_PACKAGE_SECTION((FieldCdBuffer*)g_field_cd_buffer, g_field_player_records[0].portrait_index + 1), g_field_party_portraits,
+        bcopy(FIELD_PACKAGE_SECTION_BYTES(FIELD_CD_PACKAGE, g_field_player_records[0].portrait_index + 1), g_field_party_portraits,
               FIELD_PORTRAIT_BYTES);
 
         partner_portrait = g_field_party_portraits + FIELD_PORTRAIT_BYTES;
         g_field_player_records[1].portrait_index = partner_portrait_index;
-        bcopy((u8*)FIELD_PACKAGE_SECTION((FieldCdBuffer*)g_field_cd_buffer, g_field_player_records[1].portrait_index + 1), partner_portrait,
+        bcopy(FIELD_PACKAGE_SECTION_BYTES(FIELD_CD_PACKAGE, g_field_player_records[1].portrait_index + 1), partner_portrait,
               FIELD_PORTRAIT_BYTES);
 
         companion_portrait = g_field_party_portraits + FIELD_PORTRAIT_BYTES * 2;
         g_field_player_records[2].portrait_index = g_field_player_records[2].character_id + FIELD_PORTRAIT_COMPANION_BASE;
-        bcopy((u8*)FIELD_PACKAGE_SECTION((FieldCdBuffer*)g_field_cd_buffer, g_field_player_records[2].portrait_index + 1), companion_portrait,
+        bcopy(FIELD_PACKAGE_SECTION_BYTES(FIELD_CD_PACKAGE, g_field_player_records[2].portrait_index + 1), companion_portrait,
               FIELD_PORTRAIT_BYTES);
 
         if (g_field_player_records[1].character_kind == FIELD_PLAYER_KIND_HERO)

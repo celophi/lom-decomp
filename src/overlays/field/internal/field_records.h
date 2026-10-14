@@ -41,6 +41,9 @@ extern SavedGameLayout* g_field_game_state;
 /** @brief Script id stored in an actor's event table for an unused event. */
 #define FIELD_NO_SCRIPT 0xFFFF
 
+/** @brief Script id bits of an event table entry or script variable (bit 15 is not part of the id). */
+#define FIELD_SCRIPT_ID_MASK 0x7FFF
+
 /** @brief Value of an empty pending-effect slot in PetRecord::status. */
 #define FIELD_NO_EFFECT 0xFF
 

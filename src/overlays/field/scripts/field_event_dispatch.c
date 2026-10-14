@@ -83,7 +83,7 @@ s32 field_run_actor_event(s32 owner_id, s32 event_id, s32 mode)
                 {
                     return -1;
                 }
-                actor->script.frames[actor->script.depth].pc = field_get_event_script(script_id & 0x7FFF);
+                actor->script.frames[actor->script.depth].pc = field_get_event_script(script_id & FIELD_SCRIPT_ID_MASK);
             }
             actor->script.frames[actor->script.depth].wait.bits.resume = 0;
             actor->script.frames[actor->script.depth].wait.bits.frames = 0;

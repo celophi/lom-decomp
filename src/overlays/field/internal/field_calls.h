@@ -432,6 +432,8 @@ void field_update_actor_record(s32 actor_id);
 void field_end_party_script_control(void);
 void field_runtime_update(void);
 void field_resolve_talk_window(s32 *actor_id, s32 *plane, s32 *effect, s32 *selector);
+/** @brief Largest field_set_text_macro character limit (255 characters); used for texts that are never cut. */
+#define FIELD_TEXT_MACRO_UNLIMITED 0xFF
 void field_set_text_macro(s32 slot, u8 *text, u8 character_limit);
 
 /* field_item_selection.c */

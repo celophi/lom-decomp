@@ -8,6 +8,7 @@
 #include "main/main.h"
 #include <abs.h>
 #include "overlays/field/field_overlay_handoff.h"
+#include "overlays/field/field_actor_records.h"
 
 void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s32 y, s32 z);
 
@@ -271,16 +272,21 @@ typedef struct
     s32 words[3];
 } FieldGosubSequence;
 
+/** @brief Extra slots of a pet record, and the ids that mark one unused (never set, or cleared). */
+#define FIELD_PET_EXTRA_SLOT_COUNT 3
+#define FIELD_PET_SLOT_EMPTY 0xFF
+#define FIELD_PET_SLOT_CLEARED 0xFE
+
 /**
  * @brief Pet record (main.h PetRecord) with its 0x44 status word split into bytes.
- * @note The low three bytes of the status word hold extra slot ids (0xFE/0xFF are empty).
+ * @note The low three bytes of the status word hold extra slot ids (FIELD_PET_SLOT_CLEARED/FIELD_PET_SLOT_EMPTY are unused).
  */
 typedef struct
 {
     u8 name[0x15];
     u8 species; /**< 0x15: monster species. */
     u8 unknown_0x16[0x44 - 0x16];
-    u8 extra_slots[3]; /**< 0x44: extra slot ids; 0xFE and 0xFF mark an unused slot. */
+    u8 extra_slots[FIELD_PET_EXTRA_SLOT_COUNT]; /**< 0x44: extra slot ids; FIELD_PET_SLOT_CLEARED and FIELD_PET_SLOT_EMPTY mark an unused slot. */
     u8 status_bits;    /**< 0x47: bits 30-31 of the status word (grazing, egg). */
     u8 unknown_0x48[0x5A - 0x48];
     u16 unknown_0x5A;
@@ -294,6 +300,9 @@ typedef struct
     FieldPetRecord pet_records[PET_RECORD_COUNT];
 } FieldMenuPetData;
 
+/** @brief Item id of a free action slot or empty group item entry. */
+#define FIELD_MENU_ITEM_NONE 0xFF
+
 /** @brief One 0x10-byte action slot of a menu action group. */
 typedef struct
 {
@@ -301,10 +310,16 @@ typedef struct
     union
     {
         u32 word;
-        u8 item_index; /**< Action item (index into item_counts); 0xFF when the slot is free. */
+        u8 item_index; /**< Action item (index into item_counts); FIELD_MENU_ITEM_NONE when the slot is free. */
     } entry;
     u8 counters[8]; /**< Per-slot counters advanced by field_menu_advance_action_counters. */
 } FieldMenuActionSlot;
+
+/** @brief FieldMenuActionGroup::flags fields: four-bit slot capacity (bits 0-3), item slot count (8-11) and item slots in use (12-15). */
+#define FIELD_MENU_GROUP_FIELD_MASK 0xF
+#define FIELD_MENU_GROUP_ITEM_SLOTS_SHIFT 8
+#define FIELD_MENU_GROUP_USED_SHIFT 12
+#define FIELD_MENU_GROUP_USED_MASK (FIELD_MENU_GROUP_FIELD_MASK << FIELD_MENU_GROUP_USED_SHIFT)
 
 /**
  * @brief One 0x8C-byte menu action group of the pad context, starting at 0x26E4.
@@ -315,7 +330,7 @@ typedef struct
 {
     u32 flags;
     u32 unknown_0x04;
-    u8 item_slots[4]; /**< 0x08: item ids of the group; 0xFF marks an empty entry. */
+    u8 item_slots[4]; /**< 0x08: item ids of the group; FIELD_MENU_ITEM_NONE marks an empty entry. */
     FieldMenuActionSlot slots[8];
 } FieldMenuActionGroup;
 
@@ -777,7 +792,7 @@ void field_menu_publish_golem_name(void)
 {
     u8 record_index = g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot];
 
-    field_set_text_macro(0, g_saved_game.layout.golem_records[record_index].name, 0xFF);
+    field_set_text_macro(0, g_saved_game.layout.golem_records[record_index].name, FIELD_TEXT_MACRO_UNLIMITED);
 }
 
 /**
@@ -997,7 +1012,7 @@ void field_menu_publish_golem_items(void)
     {
         if (g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name[0] != 0)
         {
-            field_set_text_macro(count, g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name, 0xFF);
+            field_set_text_macro(count, g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name, FIELD_TEXT_MACRO_UNLIMITED);
             count += 1;
         }
     }
@@ -1313,7 +1328,7 @@ void field_menu_swap_golem_order(void)
  */
 void field_menu_publish_inventory_item(void)
 {
-    field_set_text_macro(0, g_saved_game.layout.items[D_80122C10].name, 0xFF);
+    field_set_text_macro(0, g_saved_game.layout.items[D_80122C10].name, FIELD_TEXT_MACRO_UNLIMITED);
 }
 
 /**
@@ -1462,12 +1477,16 @@ void field_menu_open_save_screen(void)
     field_open_carda(0);
 }
 
+/** @brief First item-name rows of the armor and instrument types (the weapon types use rows 0 to FIELD_WEAPON_TYPE_COUNT - 1). */
+#define FIELD_ITEM_ROW_ARMOR FIELD_WEAPON_TYPE_COUNT
+#define FIELD_ITEM_ROW_INSTRUMENT 0x17
+
 /**
  * @brief Replace the inventory record index in the result variable with its name-table row.
  *
- * The row is the record's category (bits 10-15 of its attribute word) offset by
- * its kind: +0 for kind 0, +0xB for kind 1 and +0x17 otherwise. A row of 0xFF
- * records a diagnostic and yields 0.
+ * The row is the record's item type offset by its category: weapon types come
+ * first, then armor types from FIELD_ITEM_ROW_ARMOR, then instrument types from
+ * FIELD_ITEM_ROW_INSTRUMENT. A row of 0xFF records a diagnostic and yields 0.
  */
 void field_menu_item_name_row(void)
 {
@@ -1478,19 +1497,19 @@ void field_menu_item_name_row(void)
 
     index = D_80122C10;
     attributes = g_saved_game.layout.items[index].info.word;
-    kind = (attributes >> 8) & 3;
+    kind = FIELD_ITEM_CATEGORY(attributes);
 
-    if (kind == 0)
+    if (kind == FIELD_ITEM_CATEGORY_WEAPON)
     {
-        row = (attributes >> 10) & 0x3F;
+        row = FIELD_ITEM_TYPE(attributes);
     }
-    else if (kind == 1)
+    else if (kind == FIELD_ITEM_CATEGORY_ARMOR)
     {
-        row = ((attributes >> 10) & 0x3F) + 0xB;
+        row = FIELD_ITEM_TYPE(attributes) + FIELD_ITEM_ROW_ARMOR;
     }
     else
     {
-        row = ((attributes >> 10) & 0x3F) + 0x17;
+        row = FIELD_ITEM_TYPE(attributes) + FIELD_ITEM_ROW_INSTRUMENT;
     }
 
     if (row == 0xFF)
@@ -1614,7 +1633,7 @@ void field_menu_publish_object_text(void)
 
     object_id = FIELD_MENU_OBJECT->object_id;
     offset = FIELD_TEXT_OFFSET(FIELD_OBJECT_TEXT_RESOURCE, object_id);
-    field_set_text_macro(0, FIELD_TEXT_RESOURCE(FIELD_OBJECT_TEXT_RESOURCE)->texts + offset, 0xFF);
+    field_set_text_macro(0, FIELD_TEXT_RESOURCE(FIELD_OBJECT_TEXT_RESOURCE)->texts + offset, FIELD_TEXT_MACRO_UNLIMITED);
 }
 
 /**
@@ -1753,7 +1772,7 @@ void field_menu_publish_selected_pet_name(void)
 
     FIELD_MENU_NAMED->index = index = g_gosub_result_values[0];
     FIELD_MENU_NAMED->count = g_gosub_result_count;
-    field_set_text_macro(FIELD_MENU_NAMED->macro_index, g_saved_game.layout.pets[index].name, 0xFF);
+    field_set_text_macro(FIELD_MENU_NAMED->macro_index, g_saved_game.layout.pets[index].name, FIELD_TEXT_MACRO_UNLIMITED);
 }
 
 /**
@@ -1774,21 +1793,21 @@ void field_menu_publish_pet_slots(void)
     {
         count = 0;
 
-        for (slot = 0; slot < 3; slot++)
+        for (slot = 0; slot < FIELD_PET_EXTRA_SLOT_COUNT; slot++)
         {
             entry = FIELD_MENU_PETS->pet_records[selection].extra_slots[slot];
 
-            if (entry != 0xFF)
+            if (entry != FIELD_PET_SLOT_EMPTY)
             {
-                if (entry != 0xFE)
+                if (entry != FIELD_PET_SLOT_CLEARED)
                 {
-                    field_set_text_macro(count, FIELD_MENU_TEXT(entry), 0xFF);
+                    field_set_text_macro(count, FIELD_MENU_TEXT(entry), FIELD_TEXT_MACRO_UNLIMITED);
                     count++;
                 }
             }
         }
 
-        field_set_text_macro(3, g_saved_game.layout.pets[selection].name, 0xFF);
+        field_set_text_macro(3, g_saved_game.layout.pets[selection].name, FIELD_TEXT_MACRO_UNLIMITED);
         D_80122C16 = count;
         return;
     }
@@ -1827,11 +1846,11 @@ void field_menu_add_pet_slot(void)
 
     if (selection < PET_RECORD_COUNT)
     {
-        for (slot = 0; slot < 3; slot++)
+        for (slot = 0; slot < FIELD_PET_EXTRA_SLOT_COUNT; slot++)
         {
             entry = FIELD_MENU_PETS->pet_records[selection].extra_slots[slot];
 
-            if (entry == 0xFE || entry == 0xFF)
+            if (entry == FIELD_PET_SLOT_CLEARED || entry == FIELD_PET_SLOT_EMPTY)
             {
                 FIELD_MENU_PETS->pet_records[selection].extra_slots[slot] = value;
                 return;
@@ -1959,13 +1978,13 @@ void field_menu_prepare_action_items(void)
     FIELD_MENU_CHOICES->mask = mask;
     FIELD_MENU_CHOICES->count = capacity;
     flags = FIELD_MENU_ACTIONS.groups[group].flags;
-    item_slot_count = flags >> 8;
-    item_slot_count &= 0xF;
-    capacity = flags & 0xF;
+    item_slot_count = flags >> FIELD_MENU_GROUP_ITEM_SLOTS_SHIFT;
+    item_slot_count &= FIELD_MENU_GROUP_FIELD_MASK;
+    capacity = flags & FIELD_MENU_GROUP_FIELD_MASK;
 
     for (i = 0; i < 8; i++)
     {
-        if (FIELD_MENU_ACTIONS.groups[group].slots[i].entry.item_index < 0xFF)
+        if (FIELD_MENU_ACTIONS.groups[group].slots[i].entry.item_index < FIELD_MENU_ITEM_NONE)
         {
             count++;
         }
@@ -1989,7 +2008,7 @@ void field_menu_prepare_action_items(void)
     }
 
     item = FIELD_ACTION_ITEM_BASE + i;
-    field_set_text_macro(4, FIELD_MENU_TEXT(item), 0xFF);
+    field_set_text_macro(4, FIELD_MENU_TEXT(item), FIELD_TEXT_MACRO_UNLIMITED);
     field_menu_clear_item_slots();
 }
 
@@ -2018,13 +2037,13 @@ void field_menu_add_action_item(void)
     count = 0;
     group = D_80122C1F;
     flags = FIELD_MENU_ACTIONS.groups[group].flags;
-    item_slot_count = flags >> 8;
-    item_slot_count &= 0xF;
-    capacity = flags & 0xF;
+    item_slot_count = flags >> FIELD_MENU_GROUP_ITEM_SLOTS_SHIFT;
+    item_slot_count &= FIELD_MENU_GROUP_FIELD_MASK;
+    capacity = flags & FIELD_MENU_GROUP_FIELD_MASK;
 
     for (slot = 0; slot < 8; slot++)
     {
-        if (FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.item_index != 0xFF)
+        if (FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.item_index != FIELD_MENU_ITEM_NONE)
         {
             count++;
         }
@@ -2034,7 +2053,7 @@ void field_menu_add_action_item(void)
 
     for (slot = 0; slot < item_slot_count; slot++)
     {
-        if (FIELD_MENU_ACTIONS.groups[group].item_slots[slot] == 0xFF)
+        if (FIELD_MENU_ACTIONS.groups[group].item_slots[slot] == FIELD_MENU_ITEM_NONE)
         {
             break;
         }
@@ -2042,7 +2061,7 @@ void field_menu_add_action_item(void)
 
     used = slot + 1;
     FIELD_LOCAL_BYTE(FIELD_ACTION_USED_SLOTS) = used;
-    FIELD_MENU_ACTIONS.groups[group].flags = (FIELD_MENU_ACTIONS.groups[group].flags & 0xFFFF0FFF) | ((used & 0xF) << 12);
+    FIELD_MENU_ACTIONS.groups[group].flags = (FIELD_MENU_ACTIONS.groups[group].flags & ~FIELD_MENU_GROUP_USED_MASK) | ((used & FIELD_MENU_GROUP_FIELD_MASK) << FIELD_MENU_GROUP_USED_SHIFT);
 
     if (capacity < slot + 3)
     {
@@ -2053,7 +2072,7 @@ void field_menu_add_action_item(void)
     FIELD_LOCAL_BYTE(FIELD_ACTION_ITEM_COUNTS + selected)--;
     item = selected + FIELD_ACTION_ITEM_BASE;
     FIELD_MENU_ACTIONS.groups[group].item_slots[slot] = item;
-    field_set_text_macro(0, FIELD_MENU_TEXT(item), 0xFF);
+    field_set_text_macro(0, FIELD_MENU_TEXT(item), FIELD_TEXT_MACRO_UNLIMITED);
 
     mask = 0x1FFF;
     owned = 0;
@@ -2095,16 +2114,16 @@ void field_menu_fill_action_slots(void)
     i = j = 0;
     group = D_80122C1F;
     flags = FIELD_MENU_ACTIONS.groups[group].flags;
-    free_slots = flags & 0xF;
-    item_slot_count = flags >> 8;
-    item_slot_count &= 0xF;
-    fill = flags >> 12;
-    fill &= 0xF;
+    free_slots = flags & FIELD_MENU_GROUP_FIELD_MASK;
+    item_slot_count = flags >> FIELD_MENU_GROUP_ITEM_SLOTS_SHIFT;
+    item_slot_count &= FIELD_MENU_GROUP_FIELD_MASK;
+    fill = flags >> FIELD_MENU_GROUP_USED_SHIFT;
+    fill &= FIELD_MENU_GROUP_FIELD_MASK;
     fill += 2;
 
     for (; i < 8; i++)
     {
-        if (FIELD_MENU_ACTIONS.groups[group].slots[i].entry.item_index != 0xFF)
+        if (FIELD_MENU_ACTIONS.groups[group].slots[i].entry.item_index != FIELD_MENU_ITEM_NONE)
         {
             j++;
         }
@@ -2134,13 +2153,13 @@ void field_menu_fill_action_slots(void)
         {
             pick = rand() / 4096;
 
-            if (FIELD_MENU_ACTIONS.groups[group].slots[pick].entry.item_index == 0xFF)
+            if (FIELD_MENU_ACTIONS.groups[group].slots[pick].entry.item_index == FIELD_MENU_ITEM_NONE)
             {
                 break;
             }
         }
 
-        if (FIELD_MENU_ACTIONS.groups[group].slots[pick].entry.item_index == 0xFF)
+        if (FIELD_MENU_ACTIONS.groups[group].slots[pick].entry.item_index == FIELD_MENU_ITEM_NONE)
         {
             field_roll_menu_slot_effect(group, pick);
         }
@@ -2148,7 +2167,7 @@ void field_menu_fill_action_slots(void)
         {
             for (j = 0; j < 8; j++)
             {
-                if (FIELD_MENU_ACTIONS.groups[group].slots[j].entry.item_index == 0xFF)
+                if (FIELD_MENU_ACTIONS.groups[group].slots[j].entry.item_index == FIELD_MENU_ITEM_NONE)
                 {
                     field_roll_menu_slot_effect(group, j);
                     break;
@@ -2161,7 +2180,7 @@ void field_menu_fill_action_slots(void)
     {
         item = FIELD_MENU_ACTIONS.groups[group].item_slots[i];
 
-        if (item < 0xFF)
+        if (item < FIELD_MENU_ITEM_NONE)
         {
             g_saved_game.layout.item_counts[item]--;
         }
@@ -2177,11 +2196,11 @@ void field_menu_clear_item_slots(void)
     s32 i;
 
     group = D_80122C1F;
-    FIELD_MENU_ACTIONS.groups[group].flags &= 0xFFFF0FFF;
+    FIELD_MENU_ACTIONS.groups[group].flags &= ~FIELD_MENU_GROUP_USED_MASK;
 
     for (i = 0; i < 4; i++)
     {
-        FIELD_MENU_ACTIONS.groups[group].item_slots[i] = 0xFF;
+        FIELD_MENU_ACTIONS.groups[group].item_slots[i] = FIELD_MENU_ITEM_NONE;
     }
 }
 
@@ -2194,22 +2213,22 @@ void field_menu_reset_group0_slots(void)
     data = &FIELD_MENU_ACTIONS;
     flags = data->groups[0].flags;
     data->groups[0].slots[0].handle = 0;
-    data->groups[0].slots[0].entry.item_index = 0xFF;
+    data->groups[0].slots[0].entry.item_index = FIELD_MENU_ITEM_NONE;
     data->groups[0].slots[1].handle = 0;
-    data->groups[0].slots[1].entry.item_index = 0xFF;
+    data->groups[0].slots[1].entry.item_index = FIELD_MENU_ITEM_NONE;
     data->groups[0].slots[2].handle = 0;
-    data->groups[0].slots[2].entry.item_index = 0xFF;
+    data->groups[0].slots[2].entry.item_index = FIELD_MENU_ITEM_NONE;
     data->groups[0].slots[3].handle = 0;
-    data->groups[0].slots[3].entry.item_index = 0xFF;
+    data->groups[0].slots[3].entry.item_index = FIELD_MENU_ITEM_NONE;
     data->groups[0].slots[4].handle = 0;
-    data->groups[0].slots[4].entry.item_index = 0xFF;
+    data->groups[0].slots[4].entry.item_index = FIELD_MENU_ITEM_NONE;
     data->groups[0].slots[5].handle = 0;
-    data->groups[0].slots[5].entry.item_index = 0xFF;
+    data->groups[0].slots[5].entry.item_index = FIELD_MENU_ITEM_NONE;
     data->groups[0].slots[6].handle = 0;
-    data->groups[0].slots[6].entry.item_index = 0xFF;
+    data->groups[0].slots[6].entry.item_index = FIELD_MENU_ITEM_NONE;
     data->groups[0].slots[7].handle = 0;
-    data->groups[0].slots[7].entry.item_index = 0xFF;
-    data->groups[0].flags = flags & 0xFFFF0FFF;
+    data->groups[0].slots[7].entry.item_index = FIELD_MENU_ITEM_NONE;
+    data->groups[0].flags = flags & ~FIELD_MENU_GROUP_USED_MASK;
 }
 
 /** @brief Publish the text of the chosen action item (D_80122C14) to macro 4. */
@@ -2218,15 +2237,15 @@ void field_menu_publish_chosen_action_item(void)
     s32 item;
 
     item = D_80122C14 + FIELD_ACTION_ITEM_BASE;
-    field_set_text_macro(4, FIELD_MENU_TEXT(item), 0xFF);
+    field_set_text_macro(4, FIELD_MENU_TEXT(item), FIELD_TEXT_MACRO_UNLIMITED);
 }
 
 /**
  * @brief Place actor D_80122C0D next to actor 0, on the side it faces.
  *
- * Takes actor 0's position (8.8 fixed point) and heading (0x00-0xFF), steps
- * 0x14 along x or 0xC along z for the four main headings and 0xA along both
- * axes in between, and moves the actor there, 0xC higher.
+ * Takes actor 0's position (8.8 fixed point) and heading, steps 20 along x or
+ * 12 along z for the four main headings and 10 along both axes in between, and
+ * moves the actor there, 12 higher.
  */
 void field_place_actor_beside_actor0(void)
 {
@@ -2244,42 +2263,42 @@ void field_place_actor_beside_actor0(void)
 
     if (heading == 0)
     {
-        pos.x += 0x14;
+        pos.x += 20;
     }
-    else if (heading >= 0x01 && heading < 0x40)
+    else if (heading > 0 && heading < FIELD_HEADING_QUARTER_TURN)
     {
-        pos.x += 0xA;
-        pos.z -= 0xA;
+        pos.x += 10;
+        pos.z -= 10;
     }
-    else if (heading == 0x40)
+    else if (heading == FIELD_HEADING_QUARTER_TURN)
     {
-        pos.z -= 0xC;
+        pos.z -= 12;
     }
-    else if (heading >= 0x41 && heading < 0x80)
+    else if (heading > FIELD_HEADING_QUARTER_TURN && heading < FIELD_HEADING_HALF_TURN)
     {
-        pos.x -= 0xA;
-        pos.z -= 0xA;
+        pos.x -= 10;
+        pos.z -= 10;
     }
-    else if (heading == 0x80)
+    else if (heading == FIELD_HEADING_HALF_TURN)
     {
-        pos.x -= 0x14;
+        pos.x -= 20;
     }
-    else if (heading >= 0x81 && heading < 0xC0)
+    else if (heading > FIELD_HEADING_HALF_TURN && heading < FIELD_HEADING_THREE_QUARTER_TURN)
     {
-        pos.x -= 0xA;
-        pos.z += 0xA;
+        pos.x -= 10;
+        pos.z += 10;
     }
-    else if (heading == 0xC0)
+    else if (heading == FIELD_HEADING_THREE_QUARTER_TURN)
     {
-        pos.z += 0xC;
+        pos.z += 12;
     }
-    else if (heading >= 0xC1 && heading < 0x100)
+    else if (heading > FIELD_HEADING_THREE_QUARTER_TURN && heading < FIELD_HEADING_STEPS)
     {
-        pos.x += 0xA;
-        pos.z += 0xA;
+        pos.x += 10;
+        pos.z += 10;
     }
 
-    field_set_actor_position(actor, pos.x, pos.y - 0xC, pos.z);
+    field_set_actor_position(actor, pos.x, pos.y - 12, pos.z);
 }
 
 /**
@@ -2317,7 +2336,7 @@ void field_menu_release_action_slot(void)
 
     g_saved_game.layout.item_counts[item] = clamped;
     FIELD_MENU_ACTIONS.groups[group].slots[slot].handle = 0;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.item_index = 0xFF;
+    FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.item_index = FIELD_MENU_ITEM_NONE;
     FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[0] = 0;
     FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[1] = 0;
     FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[2] = 0;
@@ -2344,7 +2363,7 @@ void field_menu_load_action_slot(void)
     handle = FIELD_MENU_ACTIONS.groups[group].slots[slot].handle;
     FIELD_MENU_ACTION_SLOT->handle = handle;
     item = FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.item_index;
-    field_set_text_macro(0, FIELD_MENU_TEXT(item), 0xFF);
+    field_set_text_macro(0, FIELD_MENU_TEXT(item), FIELD_TEXT_MACRO_UNLIMITED);
     FIELD_MENU_ACTION_SLOT->item_index = item;
 }
 
@@ -2421,7 +2440,7 @@ void field_menu_choose_pending_equipment(void)
 /**
  * @brief Place actor 0xC next to actor 0, on the side it faces.
  *
- * Like field_place_actor_beside_actor0, with steps of 0xA along one axis for the four main
+ * Like field_place_actor_beside_actor0, with steps of 10 along one axis for the four main
  * headings and 8 along both axes in between, at the same height.
  */
 void field_place_actor_0c_beside_actor0(void)
@@ -2438,36 +2457,36 @@ void field_place_actor_0c_beside_actor0(void)
 
     if (heading == 0)
     {
-        pos.x += 0xA;
+        pos.x += 10;
     }
-    else if (heading >= 0x01 && heading < 0x40)
+    else if (heading > 0 && heading < FIELD_HEADING_QUARTER_TURN)
     {
         pos.x += 8;
         pos.z -= 8;
     }
-    else if (heading == 0x40)
+    else if (heading == FIELD_HEADING_QUARTER_TURN)
     {
-        pos.z -= 0xA;
+        pos.z -= 10;
     }
-    else if (heading >= 0x41 && heading < 0x80)
+    else if (heading > FIELD_HEADING_QUARTER_TURN && heading < FIELD_HEADING_HALF_TURN)
     {
         pos.x -= 8;
         pos.z -= 8;
     }
-    else if (heading == 0x80)
+    else if (heading == FIELD_HEADING_HALF_TURN)
     {
-        pos.x -= 0xA;
+        pos.x -= 10;
     }
-    else if (heading >= 0x81 && heading < 0xC0)
+    else if (heading > FIELD_HEADING_HALF_TURN && heading < FIELD_HEADING_THREE_QUARTER_TURN)
     {
         pos.x -= 8;
         pos.z += 8;
     }
-    else if (heading == 0xC0)
+    else if (heading == FIELD_HEADING_THREE_QUARTER_TURN)
     {
-        pos.z += 0xA;
+        pos.z += 10;
     }
-    else if (heading >= 0xC1 && heading < 0x100)
+    else if (heading > FIELD_HEADING_THREE_QUARTER_TURN && heading < FIELD_HEADING_STEPS)
     {
         pos.x += 8;
         pos.z += 8;
@@ -2491,7 +2510,7 @@ void field_menu_advance_action_counters(void)
     {
         for (slot = 0; slot < 8; slot++)
         {
-            if (FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.item_index != 0xFF)
+            if (FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.item_index != FIELD_MENU_ITEM_NONE)
             {
                 counter = FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[0];
 
@@ -2524,7 +2543,7 @@ void field_reset_menu_action_slot(void)
 
     slot = FIELD_MENU_ACTION_SLOT->action_slot - 4;
     group = FIELD_MENU_ACTION_SLOT->group;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.item_index = 0xFF;
+    FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.item_index = FIELD_MENU_ITEM_NONE;
     FIELD_MENU_ACTIONS.groups[group].slots[slot].handle = 0;
     FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[0] = 0;
     FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[1] = 0;
@@ -2598,7 +2617,7 @@ void field_menu_list_grazing_pets(void)
         {
             FIELD_LOCAL_BYTE(count) = g_saved_game.layout.pets[i].species;
             FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT_TABLE + count) = i;
-            field_set_text_macro(count, g_saved_game.layout.pets[i].name, 0xFF);
+            field_set_text_macro(count, g_saved_game.layout.pets[i].name, FIELD_TEXT_MACRO_UNLIMITED);
             count++;
         }
     }
@@ -2678,7 +2697,7 @@ void field_menu_describe_shared_item(void)
     {
         attributes = g_field_shared_items[selected].attributes.packed;
         kind = (attributes >> 8) & 3;
-        category = (attributes >> 10) & 0x3F;
+        category = FIELD_ITEM_TYPE(attributes);
 
         if (kind == 1)
         {
@@ -2689,7 +2708,7 @@ void field_menu_describe_shared_item(void)
             category += 0x17;
         }
 
-        name_index = g_field_shared_items[selected].attributes.halves.high & 0x3F;
+        name_index = g_field_shared_items[selected].attributes.halves.high & FIELD_ITEM_MATERIAL_MASK;
 
         if (kind == 0)
         {
@@ -2721,11 +2740,11 @@ void field_menu_describe_shared_item(void)
         }
 
         amount = g_field_shared_items[selected].unknown_0x34;
-        field_set_text_macro(0, &g_field_shared_items[selected].active, 0xFF);
+        field_set_text_macro(0, &g_field_shared_items[selected].active, FIELD_TEXT_MACRO_UNLIMITED);
         info = FIELD_MENU_ITEM_INFO;
         info->kind = kind;
         info->category = category;
-        field_set_text_macro(1, FIELD_MENU_TEXT(name_index), 0xFF);
+        field_set_text_macro(1, FIELD_MENU_TEXT(name_index), FIELD_TEXT_MACRO_UNLIMITED);
         info->value = value;
 #if defined(VERSION_JP)
         info->special = special;
@@ -2748,7 +2767,7 @@ void field_menu_describe_shared_item(void)
     }
 
     D_80122C03 = 2;
-    field_set_text_macro(0, &g_field_shared_items[selected].active, 0xFF);
+    field_set_text_macro(0, &g_field_shared_items[selected].active, FIELD_TEXT_MACRO_UNLIMITED);
 }
 
 /**
@@ -2823,7 +2842,7 @@ void field_menu_restore_pending_item(void)
         if (FIELD_MENU_ITEMS->pending[i].active == 0 && FIELD_MENU_ITEMS->pending[i].unknown_0x34 != 0)
         {
             FIELD_MENU_ITEMS->pending[i].active = FIELD_MENU_ITEMS->pending[i].saved_active;
-            field_set_text_macro(0, &FIELD_MENU_ITEMS->pending[i].active, 0xFF);
+            field_set_text_macro(0, &FIELD_MENU_ITEMS->pending[i].active, FIELD_TEXT_MACRO_UNLIMITED);
             result = FIELD_MENU_ITEMS->pending[i].unknown_0x34;
             FIELD_MENU_ITEMS->pending[i].unknown_0x34 = 0;
             D_80122C02 = i;
@@ -2905,7 +2924,7 @@ void field_menu_describe_pending_item(void)
     {
         attributes = FIELD_MENU_ITEMS->pending[selected].attributes.packed;
         kind = (attributes >> 8) & 3;
-        category = (attributes >> 10) & 0x3F;
+        category = FIELD_ITEM_TYPE(attributes);
 
         if (kind == 1)
         {
@@ -2916,16 +2935,16 @@ void field_menu_describe_pending_item(void)
             category += 0x17;
         }
 
-        name_index = FIELD_MENU_ITEMS->pending[selected].attributes.halves.high & 0x3F;
-        field_set_text_macro(0, &FIELD_MENU_ITEMS->pending[selected].active, 0xFF);
+        name_index = FIELD_MENU_ITEMS->pending[selected].attributes.halves.high & FIELD_ITEM_MATERIAL_MASK;
+        field_set_text_macro(0, &FIELD_MENU_ITEMS->pending[selected].active, FIELD_TEXT_MACRO_UNLIMITED);
         info = FIELD_MENU_ITEM_INFO;
         info->kind = kind;
         info->category = category;
-        field_set_text_macro(1, FIELD_MENU_TEXT(name_index), 0xFF);
+        field_set_text_macro(1, FIELD_MENU_TEXT(name_index), FIELD_TEXT_MACRO_UNLIMITED);
         return;
     }
 
-    field_set_text_macro(0, &FIELD_MENU_ITEMS->pending[selected].active, 0xFF);
+    field_set_text_macro(0, &FIELD_MENU_ITEMS->pending[selected].active, FIELD_TEXT_MACRO_UNLIMITED);
     FIELD_LOCAL_BYTE(FIELD_RECORD_STATUS) = 2;
 }
 
@@ -3015,7 +3034,7 @@ void field_menu_publish_guest_name(void)
 
     if (D_80122C00.locals.bytes[0] != 0)
     {
-        field_set_text_macro(0, g_saved_game.layout.characters[FIELD_PARTY_GUEST].name, 0xFF);
+        field_set_text_macro(0, g_saved_game.layout.characters[FIELD_PARTY_GUEST].name, FIELD_TEXT_MACRO_UNLIMITED);
     }
 }
 
@@ -3317,7 +3336,7 @@ void field_menu_describe_selected_item(void)
     {
         items = FIELD_MENU_ITEMS;
         index = g_gosub_result_values[0];
-        category = (items->inventory[index].attributes.packed >> 10) & 0x3F;
+        category = FIELD_ITEM_TYPE(items->inventory[index].attributes.packed);
         inventory = items->inventory;
         record = &inventory[index];
         stat_byte0 = record->stats.bytes[0];
@@ -3465,7 +3484,7 @@ void field_menu_copy_resource_item(void)
     {
         free_record = field_find_free_inventory_record();
         field_copy_inventory_record(free_record, field_find_resource(FIELD_ITEM_RECORD_RESOURCE) + (offset = FIELD_RESOURCE_RECORD_OFFSET(index)));
-        field_set_text_macro(0, field_find_resource(FIELD_ITEM_RECORD_RESOURCE) + offset, 0xFF);
+        field_set_text_macro(0, field_find_resource(FIELD_ITEM_RECORD_RESOURCE) + offset, FIELD_TEXT_MACRO_UNLIMITED);
     }
 }
 
@@ -3497,7 +3516,7 @@ void field_menu_swap_joined_pet(void)
         *entry = index;
         FIELD_LOCAL_HALF(FIELD_CURSOR_SPECIES) = FIELD_MENU_PETS->pet_records[index].species;
         g_saved_game.layout.pets[index].status.bits.grazing = 1;
-        field_set_text_macro(slot, g_saved_game.layout.pets[index].name, 0xFF);
+        field_set_text_macro(slot, g_saved_game.layout.pets[index].name, FIELD_TEXT_MACRO_UNLIMITED);
     }
 }
 
@@ -3511,7 +3530,7 @@ void field_menu_publish_cursor_pet(void)
 
     index = FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT_TABLE + FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT));
     FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT) = FIELD_MENU_PETS->pet_records[index].unknown_0x48[0];
-    field_set_text_macro(3, g_saved_game.layout.pets[index].name, 0xFF);
+    field_set_text_macro(3, g_saved_game.layout.pets[index].name, FIELD_TEXT_MACRO_UNLIMITED);
 }
 
 /** @brief Count the pets (occupied pet records) into D_80122C16. */
@@ -3573,9 +3592,9 @@ void field_menu_publish_item_texts(void)
     row = record->stats.bytes[0];
     column = record->stats.bytes[1];
     entry = row * 14 + column;
-    field_set_text_macro(0, &record->active, 0xFF);
+    field_set_text_macro(0, &record->active, FIELD_TEXT_MACRO_UNLIMITED);
     offset = FIELD_TEXT_OFFSET(FIELD_ITEM_ENTRY_TEXT_RESOURCE, entry);
-    field_set_text_macro(1, FIELD_TEXT_RESOURCE(FIELD_ITEM_ENTRY_TEXT_RESOURCE)->texts + offset, 0xFF);
+    field_set_text_macro(1, FIELD_TEXT_RESOURCE(FIELD_ITEM_ENTRY_TEXT_RESOURCE)->texts + offset, FIELD_TEXT_MACRO_UNLIMITED);
     offset = FIELD_TEXT_OFFSET(FIELD_ITEM_COLUMN_TEXT_RESOURCE, column);
-    field_set_text_macro(2, FIELD_TEXT_RESOURCE(FIELD_ITEM_COLUMN_TEXT_RESOURCE)->texts + offset, 0xFF);
+    field_set_text_macro(2, FIELD_TEXT_RESOURCE(FIELD_ITEM_COLUMN_TEXT_RESOURCE)->texts + offset, FIELD_TEXT_MACRO_UNLIMITED);
 }

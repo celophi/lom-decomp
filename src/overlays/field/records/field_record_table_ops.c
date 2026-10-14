@@ -232,28 +232,54 @@ s32 field_get_land_state(s32 land_index)
  */
 s32 field_get_land_distance(s32 land_index)
 {
-    FieldLandRecord* land;
-    FieldLandWords* home;
     s32 dx;
     s32 dz;
+    u8 extra;
+    u8* base;
+    u8* land;
+    u8* land_address;
+    SavedGameLayout** state_ptr;
 
-    land = &g_field_game_state->lands[land_index];
-    home = (FieldLandWords*)g_field_game_state->lands;
-    dx = land->x - home->bits.x;
-
+    do
+    {
+        state_ptr = &g_field_game_state;
+    } while (0);
+    land = (u8*)(land_index << 1);
+    land = (u8*)((s32)land + land_index);
+    base = (u8*)*state_ptr;
+    land = (u8*)((s32)land << 2);
+    land_address = base + (s32)land;
+    land = land_address;
+    dz = land[0x2F1];
+    do
+    {
+        land_index = *(u32*)(base + 0x2F0);
+    } while (0);
+    dx = dz & 0xF;
+    dx -= ((u32)land_index >> 8) & 0xF;
     if (dx < 0)
     {
         dx = -dx;
     }
-
-    dz = land->z - home->bits.z;
-
-    if (dz < 0)
+    dz = (u32)dz >> 4;
+    land_index = (u32)land_index >> 12;
+    land_index &= 0xF;
+    dz -= land_index;
+    do
     {
-        dz = -dz;
-    }
-
-    return land->unk2 + dx + dz;
+        extra = land[0x2F2];
+    } while (0);
+    do
+    {
+        do
+        {
+            if (dz < 0)
+            {
+                dz = -dz;
+            }
+        } while (0);
+    } while (0);
+    return extra + dx + dz;
 }
 
 /**

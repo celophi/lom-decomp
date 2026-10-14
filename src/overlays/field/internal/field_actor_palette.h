@@ -30,6 +30,11 @@
 #define FIELD_NARROW_CLUT_ENTRIES 0x40
 /** @brief Width of one sprite texture column in VRAM. */
 #define FIELD_TEXTURE_COLUMN_WIDTH 0x40
+/** @brief Height of a full sprite texture column in VRAM. */
+#define FIELD_TEXTURE_COLUMN_HEIGHT 0x100
+/** @brief VRAM row and height of the narrow-layout party texture (the lower half of its column). */
+#define FIELD_NARROW_TEXTURE_VRAM_Y 0x80
+#define FIELD_NARROW_TEXTURE_HEIGHT 0x80
 /** @brief VRAM X of party member 0's sprite textures; member n's columns start FIELD_PARTY_TEXTURE_VRAM_STEP * n to the left. */
 #define FIELD_PARTY_TEXTURE_VRAM_X 0x380
 #define FIELD_PARTY_TEXTURE_VRAM_STEP 0x80

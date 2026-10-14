@@ -492,6 +492,13 @@ typedef struct FieldObjectPart
 #define FIELD_PART_IGNORE_MAP_COLLISION_BIT 23
 #define FIELD_PART_IGNORE_MAP_COLLISION (1 << FIELD_PART_IGNORE_MAP_COLLISION_BIT)
 
+/** @brief FieldObjectPart::effect_flags bit 20: the part is a solid body; it collides with the map, casts a footprint and its sprite hit quads act. */
+#define FIELD_PART_SOLID 0x00100000
+
+/** @brief FieldObjectPart::placement_flags bit 25: a new effect takes its colour from parameter tracks instead of the part tint. */
+#define FIELD_PART_TRACK_COLOR_BIT 25
+#define FIELD_PART_TRACK_COLOR (1 << FIELD_PART_TRACK_COLOR_BIT)
+
 /** @brief FieldObjectPart::palette_extent bits: the owner's footprint strength scales the part's horizontal (scale_xz) and vertical (scale_y) size. */
 #define FIELD_PART_FOOTPRINT_SCALES_XZ 0x02000000
 #define FIELD_PART_FOOTPRINT_SCALES_Y 0x04000000
@@ -790,6 +797,12 @@ typedef enum FieldAbility
 #define FIELD_PALETTE_SELECTOR_ROW_SHIFT 4
 /** @brief Palette selectors from this value up use the shared CLUT row. */
 #define FIELD_PALETTE_SELECTOR_SHARED 0x40
+
+/** @brief FieldActor::direction headings are 256 steps per turn (ratan2/rcos use 4096); heading 0 faces +x. */
+#define FIELD_HEADING_STEPS 256
+#define FIELD_HEADING_QUARTER_TURN (FIELD_HEADING_STEPS / 4)
+#define FIELD_HEADING_HALF_TURN (FIELD_HEADING_STEPS / 2)
+#define FIELD_HEADING_THREE_QUARTER_TURN (FIELD_HEADING_QUARTER_TURN * 3)
 
 /** @brief Actor commands (FieldActor::command). */
 enum
