@@ -1202,9 +1202,9 @@ void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* positi
 
     if (index == FIELD_PARTY_COMPANION && g_field_player_records[FIELD_PARTY_COMPANION].character_id >= FIELD_COMPANION_COLOR_ID_MIN)
     {
-        sprt->clut =
-            getClut(FIELD_HUD_CLUT_X, (g_field_actors[FIELD_PARTY_COMPANION].control.half[1] & (FIELD_CONTROL_VARIANT_MASK >> FIELD_CONTROL_VARIANT_SHIFT)) +
-                                          FIELD_HUD_COMPANION_CLUT_Y);
+        sprt->clut = getClut(FIELD_HUD_CLUT_X,
+                             (g_field_actors[FIELD_PARTY_COMPANION].control.half[1] & (FIELD_CONTROL_GOLEM_COLOR_MASK >> FIELD_CONTROL_GOLEM_COLOR_SHIFT)) +
+                                 FIELD_HUD_COMPANION_CLUT_Y);
     }
     else
     {
@@ -1593,7 +1593,7 @@ void field_handle_object_petrification(FieldActor* actor, s32 is_set)
         actor->animation = (actor->animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_PETRIFIED_POSE;
         g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
         field_restart_actor_animation(actor);
-        actor->control.word |= FIELD_CONTROL_UNK40000 | FIELD_CONTROL_PLAY_ONCE;
+        actor->control.word |= FIELD_CONTROL_PETRIFIED | FIELD_CONTROL_PLAY_ONCE;
 #if !defined(VERSION_JP)
         field_clear_link_target_flag(actor->object_index);
 #endif
@@ -1607,7 +1607,7 @@ void field_handle_object_petrification(FieldActor* actor, s32 is_set)
         g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
         field_restart_actor_animation(actor);
         START_OBJECT_EFFECT(actor, 0x91);
-        actor->control.word &= ~FIELD_CONTROL_UNK40000;
+        actor->control.word &= ~FIELD_CONTROL_PETRIFIED;
     }
 }
 
@@ -1815,7 +1815,7 @@ POLY_FT4* field_render_actor_ground_shadow(FieldActor* actor, POLY_FT4* prim, s3
     size = actor->height;
     height = g_field_object_states[actor->object_index].movement.half.height;
 
-    if (g_field_resource_entries[actor->object_index].unk8 != 0)
+    if (g_field_resource_entries[actor->object_index].multi_image != 0)
     {
         /* The resource profile widens the height-dependent inset by 5/4. */
         prim->x2 = prim->x0 = screen->x + footprint->left_x - (SHADOW_ELEVATION(actor, height) + (size >> 2)) * 5 / 4;

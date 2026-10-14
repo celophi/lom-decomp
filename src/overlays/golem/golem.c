@@ -1312,7 +1312,7 @@ u8* golem_emit_glyph(u8* packet_cursor, u_long* ordering_table, s32 glyph_id, s3
             break;
         }
         setlen(tile, 3);
-        setcode(tile, 0x62);
+        setcode(tile, GPU_CODE_TILE | GPU_CODE_SEMI_TRANS);
         tile_metrics = g_golem_glyph_metrics;
         tile_metric = &tile_metrics[glyph_id];
         setXY0(tile, x, y);

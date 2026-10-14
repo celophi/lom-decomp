@@ -66,8 +66,8 @@
 #define FIELD_IMAGE_ROW0_X 832
 #define FIELD_IMAGE_ROW1_X 960
 #define FIELD_IMAGE_ROW1_Y 256
-/** @brief Scene that ignores the actor groups of its layout. */
-#define FIELD_SCENE_NO_LAYOUT_GROUPS 0x13D
+/** @brief Scene that ignores the golem colours of its layout actors. */
+#define FIELD_SCENE_NO_LAYOUT_GOLEM_COLORS 0x13D
 /** @brief Default spawn point when the scene has no spawn record. */
 #define FIELD_DEFAULT_SPAWN_X 160
 #define FIELD_DEFAULT_SPAWN_Z 224
@@ -556,11 +556,11 @@ void field_update_scene(void)
 
                     if (D_80115890 != 0)
                     {
-                        resource_fields->unk8 = 0;
+                        resource_fields->multi_image = 0;
                     }
                     else
                     {
-                        resource_fields->unk8 = image_count != 1;
+                        resource_fields->multi_image = image_count != 1;
                     }
 
                     D_80115890 = image_count != 1;
@@ -611,7 +611,7 @@ void field_update_scene(void)
                     inherited_resource = OFFSET_FIRST_PTR(FieldResourceEntry, resource_offset, resource_base);
                     inherited_resource->attribute.palette = previous_resource->attribute.palette;
                     inherited_resource->slot_index = previous_resource->slot_index;
-                    inherited_resource->unk8 = 0;
+                    inherited_resource->multi_image = 0;
                     inherited_resource->start = g_field_resource_cursor;
                     inherited_resource->flags = (inherited_resource->flags & ~FIELD_RESOURCE_HAS_ACTIONS) | (description->flags >> 7);
                     field_copy_scene_geometry((s32*)(geometry_base + geometry_offsets[0]), (s32*)(geometry_base + geometry_offsets[1]));
@@ -823,7 +823,7 @@ static void field_setup_chest_resource(void)
     g_field_resource_entries[FIELD_CHEST_RESOURCE].end = g_field_chest_geometry + sizeof(g_field_chest_geometry);
     g_field_resource_entries[FIELD_CHEST_RESOURCE].flags &= ~FIELD_RESOURCE_HAS_ACTIONS;
     g_field_resource_entries[FIELD_CHEST_RESOURCE].attribute.palette = 0;
-    g_field_resource_entries[FIELD_CHEST_RESOURCE].unk8 = 0;
+    g_field_resource_entries[FIELD_CHEST_RESOURCE].multi_image = 0;
     g_field_resource_entries[FIELD_CHEST_RESOURCE].bound_animation_flags = 0;
     g_field_resource_entries[FIELD_CHEST_RESOURCE].flags |= FIELD_RESOURCE_LOADED;
 }
@@ -882,8 +882,8 @@ void field_copy_scene_geometry(s32* src, s32* end)
 
     size = (u8*)end - (u8*)src + 3;
     words = size >> 2;
-    dst = g_field_resource_cursor;
-    g_field_resource_cursor = (u8*)dst + (size & ~3);
+    dst = (s32*)g_field_resource_cursor;
+    g_field_resource_cursor += size & ~3;
 
     while (words != 0)
     {
@@ -929,11 +929,11 @@ void field_load_scene_actors(FieldSceneLayout* layout)
                 actor->presence = FIELD_ACTOR_VISIBLE;
             }
 
-            actor->control.bits.group = layout_record->control.bits.group;
+            actor->control.bits.golem_color = layout_record->control.bits.golem_color;
 #if !defined(VERSION_JP)
-            if ((g_field_pending_scene_id & FIELD_SCENE_ID_MASK) == FIELD_SCENE_NO_LAYOUT_GROUPS)
+            if ((g_field_pending_scene_id & FIELD_SCENE_ID_MASK) == FIELD_SCENE_NO_LAYOUT_GOLEM_COLORS)
             {
-                actor->control.bits.group = 0;
+                actor->control.bits.golem_color = 0;
             }
 #endif
             actor->control.bits.palette = layout_record->control.bits.palette;

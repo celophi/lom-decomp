@@ -29,8 +29,8 @@ typedef struct
             u32 local_variable_count : 8;
             /** @brief CLUT column of the actor's palette (FieldActorControl::palette). */
             u32 palette : 4;
-            /** @brief Group actors: actor group plus one; zero takes the layout default. */
-            u32 group : 2;
+            /** @brief Golem colour (FIELD_GOLEM_COLOR) of a FIELD_ACTION_GROUP_ACTOR; zero takes the golem that last left the party. */
+            u32 golem_color : 2;
             /** @brief The actor starts hidden (FIELD_ACTOR_HIDDEN). */
             u32 hidden : 1;
             /** @brief Set while the action is installed and active. */

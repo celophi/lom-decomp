@@ -1085,7 +1085,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
         return 0;
     }
 
-    if (g_field_resource_entries[actor->resource_index].unk8 != 0)
+    if (g_field_resource_entries[actor->resource_index].multi_image != 0)
     {
         if (g_field_resource_entries[target->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS)
         {

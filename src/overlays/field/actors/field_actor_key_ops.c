@@ -86,20 +86,20 @@ void field_set_actor_group(s32 key, s32 group)
  * @param x New X position in whole units.
  * @param y New Y position in whole units.
  * @param z New Z position in whole units.
- * @note The control group (FieldActorControl bits.group) survives the re-initialization.
+ * @note The golem colour (FieldActorControl::bits.golem_color) survives the re-initialization.
  */
 void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s32 y, s32 z)
 {
     FieldActor* actor;
-    s32 control_group;
+    s32 golem_color;
 
     actor = field_lookup_actor(key);
 
     if (actor != FIELD_ACTOR_NONE)
     {
-        control_group = actor->control.bits.group;
+        golem_color = actor->control.bits.golem_color;
         field_initialize_actor_record(actor->object_index, resource_entry_index);
-        actor->control.bits.group = control_group;
+        actor->control.bits.golem_color = golem_color;
         actor->presence = FIELD_ACTOR_VISIBLE;
         actor->x = x << FIELD_POSITION_SHIFT;
         actor->y = y << FIELD_POSITION_SHIFT;

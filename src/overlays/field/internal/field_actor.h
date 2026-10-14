@@ -22,6 +22,11 @@
 #define FIELD_CONTROL_PLAYER 0
 #define FIELD_CONTROL_FOLLOWER 1
 #define FIELD_CONTROL_SCRIPTED 2
+/**
+ * @brief Control mode of a party member from its saved character record.
+ * @note FIELD_CONTROL_PLAYER for a pad-controlled character, FIELD_CONTROL_FOLLOWER otherwise.
+ */
+#define FIELD_CHARACTER_CONTROL_MODE(character) ((character).info.bits.pad_controlled ^ 1)
 /** @brief FieldActor::control bit set while the actor moves. */
 #define FIELD_CONTROL_MOVING 0x200
 /** @brief FieldActor::control second movement bit (placeholder name: FIELD code only clears and tests it; nothing sets it). */
@@ -32,12 +37,10 @@
 #define FIELD_CONTROL_MOVEMENT_SHIFT 9
 /** @brief FieldActor::control bit: the animation stops on its last frame instead of looping. */
 #define FIELD_CONTROL_PLAY_ONCE 0x800
-/** @brief FieldActor::control bits 15 and 28, set together on an effect that takes its owner's part colour. */
-#define FIELD_CONTROL_UNK8000 0x8000
-#define FIELD_CONTROL_UNK10000000 0x10000000
-#define FIELD_CONTROL_OWNER_TINT (FIELD_CONTROL_UNK10000000 | FIELD_CONTROL_UNK8000)
-/** @brief FieldActor::control bit 18, cleared when an actor is initialized. */
-#define FIELD_CONTROL_UNK40000 0x40000
+/* FieldActor::control colour bits of effect records (FIELD_CONTROL_EFFECT_COLOR, FIELD_CONTROL_LITERAL_COLOR, FIELD_CONTROL_OWNER_TINT) are in
+ * field_effect_types.h. */
+/** @brief FieldActor::control bit 18: set while the actor holds the petrified pose (field_handle_object_petrification). */
+#define FIELD_CONTROL_PETRIFIED 0x40000
 /** @brief FieldActor::control bit 23: the actor uses its own tint. */
 #define FIELD_CONTROL_TINTED_SHIFT 23
 #define FIELD_CONTROL_TINTED 0x800000
@@ -94,9 +97,14 @@
 #define FIELD_CONTROL_PALETTE_SHIFT 19
 #define FIELD_CONTROL_PALETTE_PARTNER 10
 #define FIELD_CONTROL_PALETTE(word) (((word) >> FIELD_CONTROL_PALETTE_SHIFT) & 0xF)
-/** @brief FieldActor::control bits 16-17: colour variant of the companion (the same bits hold a layout actor's group). */
-#define FIELD_CONTROL_VARIANT_SHIFT 16
-#define FIELD_CONTROL_VARIANT_MASK 0x30000
+/** @brief FieldActor::control bits 16-17 (FieldActorControl::bits.golem_color): the actor's golem colour (FIELD_GOLEM_COLOR). */
+#define FIELD_CONTROL_GOLEM_COLOR_SHIFT 16
+#define FIELD_CONTROL_GOLEM_COLOR_MASK 0x30000
+/**
+ * @brief Golem colour of golem record @p record: the record plus one, so 0 keeps the default colours.
+ * @note The colour picks the golem's CLUT row; the no-golem record (3) wraps to 0 in the 2-bit field.
+ */
+#define FIELD_GOLEM_COLOR(record) ((u8)((record) + 1))
 /** @brief Object-state group_flags bits holding the object's group. */
 #define FIELD_OBJECT_GROUP_MASK 0x0F
 /**
@@ -114,10 +122,13 @@ typedef union
     u16 half[2];
     struct
     {
-        u32 unk0 : 16;
-        /** @brief Actor group of a layout actor (FieldLayoutRecord group bits); on the companion the colour variant (FIELD_CONTROL_VARIANT_MASK). */
-        u32 group : 2;
-        u32 unk18 : 1;
+        /** @brief Control mode (FIELD_CONTROL_PLAYER, FIELD_CONTROL_FOLLOWER or FIELD_CONTROL_SCRIPTED). */
+        u32 mode : 9;
+        u32 unk9 : 7;
+        /** @brief Golem colour (FIELD_GOLEM_COLOR): the joined golem on the companion, copied from FieldLayoutRecord on a layout actor. */
+        u32 golem_color : 2;
+        /** @brief FIELD_CONTROL_PETRIFIED. */
+        u32 petrified : 1;
         /** @brief CLUT column of the actor's sprite palette. */
         u32 palette : 4;
         u32 unk23 : 9;
@@ -130,7 +141,8 @@ typedef struct FieldActor
     s32 x;
     s32 y;
     s32 z;
-    u32 unkC;
+    /** @brief VRAM texture slot of the record's sprites (FieldResourceEntry::slot_index); selects the texture page. */
+    u32 texture_slot;
     /** @brief Non-zero while an actor script blocks scene scripts that wait for this actor (scene opcode 0x16). */
     s16 script_busy;
     s16 unk12;
@@ -163,7 +175,8 @@ typedef struct FieldActor
     /** @brief Non-zero while the current animation is still playing. */
     u16 animation_state;
     u16 variant;
-    u8 unk32;
+    /** @brief Z rotation in 1/256 turns (shifted left 4 by the renderer); effects set it, actor records keep 0. */
+    u8 rotation_z_16;
     /** @brief Bit 0 selects the running animations. */
     u8 running;
     /** @brief Ticks spent on the current animation frame and the frame's length in ticks. */
@@ -177,16 +190,22 @@ typedef struct FieldActor
     u8 stop_delay;
     u8 object_index;
     u8 resource_index;
-    u8 unk3C;
+    /**
+     * @brief Height in pixels minus one of the sprite frame last drawn (FieldMotionRecord::sprite_height_minus_one).
+     * @note Effect records only: field_render_effect_sprite_frames writes it and stretch-to-target parts
+     *       divide by it. Actor records never write it, so it stays 0.
+     */
+    u8 sprite_height_minus_one;
     /** @brief Frames left before a retiring actor is removed. */
     u8 removal_delay;
     u8 unk3E;
     u8 unk3F;
     /** @brief Address of the displayed frame's data; bit 31 set selects the alternate (8-bit) renderer. */
     u32 frame_data;
-    u32 unk44;
-    u32 unk48;
-    u32 unk4C;
+    /** @brief Working position of an effect record (FieldMotionRecord::work_x..work_z); cleared on actor records. */
+    u32 work_x;
+    u32 work_y;
+    u32 work_z;
     u8 unk50[4];
 } FieldActor;
 

@@ -51,7 +51,6 @@ s32 field_find_active_special_attack_actor(void);
 void field_initialize_actor_slots(void);
 void field_reset_global_color_scale(void);
 void field_restart_actor_animation(FieldActor* actor);
-void field_set_color_scale(s32 object_index, s32 red, s32 green, s32 blue);
 s32 field_is_scene_fading(void);
 void field_reset_draw_state(void);
 void field_show_battle_results(void);

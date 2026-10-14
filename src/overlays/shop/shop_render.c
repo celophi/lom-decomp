@@ -2,6 +2,7 @@
 #include "overlays/field/field_text.h"
 #include "common/encoded_text.h"
 #include <libgpu.h>
+#include "common/gpu_packet.h"
 
 /**
  * @brief Low byte of a window's 9-bit width, read from the whole frame word.
@@ -345,7 +346,7 @@ u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
     tile = (TILE*)prim;
     *(u32*)&tile->r0 = 0xF080F0;
     setlen(tile, 3);
-    setcode(tile, 0x62);
+    setcode(tile, GPU_CODE_TILE | GPU_CODE_SEMI_TRANS);
     setXY0(tile, 0, y - 1);
     setWH(tile, 294, 14);
     addPrim(ot, tile);
