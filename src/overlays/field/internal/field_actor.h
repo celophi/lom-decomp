@@ -73,6 +73,12 @@
 #define FIELD_ANIMATION_13 0x13
 /** @brief First combo attack animation; later combo steps follow it. */
 #define FIELD_ANIMATION_COMBO 0x1F
+/** @brief Combo steps; a chain at the last step ends. */
+#define FIELD_COMBO_VARIANTS 5
+/** @brief Combo steps of a bow wielder. */
+#define FIELD_BOW_COMBO_VARIANTS 3
+/** @brief Frames the sequence wait lasts after a combo chain ends. */
+#define FIELD_COMBO_END_WAIT 20
 /** @brief First of the two hit animations; one is picked at random. */
 #define FIELD_ANIMATION_HIT 20
 /** @brief Knocked-down pose (also the leader's pose when a duel is lost). */

@@ -272,6 +272,9 @@ void field_finish_party_slot_reload(s32 actor_slot);
 /* field_actor_script_ops.c */
 void field_step_actor_script(struct FieldActor* actor);
 void field_route_actor_to_object(struct FieldActor* actor, s32 target_index, s32 restart);
+s32 field_resolve_contact_hit(s32 source_index, s32 target_index);
+s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action);
+s32 field_roll_object_evasion(s32 source_index, s32 target_index);
 
 /* field_actor_slot_resources.c */
 /** @brief Free animation actor slots an action needs before it may start. */

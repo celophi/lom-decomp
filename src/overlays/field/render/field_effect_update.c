@@ -33,9 +33,7 @@ void field_restart_actor_animation();
 u8* field_begin_actor_animation_forward();
 
 void field_play_set_sfx(s32 sfx_index, s32 pan, s32 unused, s32 channel_group);
-s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action);
 void field_command_history_clear(s32 player);
-s32 field_resolve_contact_hit(s32 source_index, s32 target_index);
 s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* effect, FieldContactResult* contact);
 void field_start_actor_animation(s32 slot_index, s32 target_count, u8* targets);
 s32 field_start_builtin_animation(s32 object_index, s32 slot_index, s32 animation_id);

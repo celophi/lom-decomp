@@ -52,11 +52,6 @@
 #define FIELD_ACTION_LIMITED_FIRST 4
 #define FIELD_ACTION_LIMITED_LAST 7
 
-/** @brief Combo steps; a chain at the last step ends. */
-#define FIELD_COMBO_VARIANTS 5
-/** @brief Frames the sequence wait lasts after a combo chain ends. */
-#define FIELD_COMBO_END_WAIT 20
-
 /** @brief Resource entry an actor spawned by script opcode 0xB9 is initialized from. */
 #define FIELD_SPAWN_RESOURCE_ENTRY 3
 

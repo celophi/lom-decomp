@@ -110,8 +110,6 @@ extern FieldMoveObject g_field_object_parts[];
 extern s32 g_field_last_actor_contact;
 
 void field_start_interaction(s32 value, u16 entry, FieldObjectState* states);
-s32 field_resolve_contact_hit(s32 source_index, s32 target_index);
-s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action);
 void field_restart_actor_animation();
 
 static s32 field_intersect_screen_segments(Vec2s* first_start, Vec2s* first_end, Vec2s* second_start, Vec2s* second_end);
