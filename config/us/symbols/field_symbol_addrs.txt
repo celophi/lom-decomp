@@ -358,6 +358,7 @@ field_menu_count_pets         = 0x800C9D44;
 field_menu_load_golem_saved_group        = 0x800C9DB4;
 field_menu_publish_item_texts            = 0x800C9DCC;
 g_field_menu_ops                         = 0x800F19D8;
+g_field_menu_locked                      = 0x8012291C;
 g_field_shared_items                     = 0x80122A08;
 
 golem_equipment_pair_has_classes      = 0x800CA364;
@@ -610,6 +611,8 @@ g_field_resource_entries              = 0x800FF558;
 g_field_resource_cursor               = 0x800FF60C;
 g_field_color_scale                   = 0x800FD808;
 g_field_color_scale_active            = 0x800FD810;
+g_field_spawn_ground_point            = 0x80105760;
+g_field_next_path_group               = 0x80105770;
 g_field_track_index                   = 0x80105788;
 g_field_action_command_maps         = 0x8010AE88;
 

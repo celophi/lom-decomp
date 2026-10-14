@@ -10,10 +10,6 @@
 #include <libgte.h>
 #include <libgpu.h>
 
-/** @brief Frames the preset and restore fades take. */
-#define FIELD_FADE_DEFAULT_FRAMES 5
-/** @brief Channel level of the dimmed modal-overlay fade. */
-#define FIELD_FADE_MODAL_LEVEL 0xC0
 /** @brief Red level of the CD error tint (green and blue stay neutral). */
 #define FIELD_FADE_CD_ERROR_RED 0xD0
 
@@ -27,30 +23,6 @@ typedef union
 /** @brief Advance a fade packet cursor by the concrete packet just emitted. */
 #define FIELD_NEXT_FADE_PRIMITIVE(primitive, type) ((FieldFadePrimitive*)((u8*)(primitive) + sizeof(type)))
 
-/**
- * @brief Fade color triple plus its remaining step count.
- * @note @c duration is the transition length in frames when set as a target,
- *       and the number of remaining interpolation steps while the fade runs.
- */
-typedef struct
-{
-    s16 red;
-    s16 green;
-    s16 blue;
-    s16 duration;
-} FieldFade;
-
-/** @brief Saved fade color with no step/duration field. */
-typedef struct
-{
-    s16 red;
-    s16 green;
-    s16 blue;
-} FieldFadeColor;
-
-extern FieldFade g_field_fade_current;
-extern FieldFade g_field_fade_target;
-extern FieldFadeColor g_field_fade_restore_color;
 
 /**
  * @brief Reset the current and target field fade colors.

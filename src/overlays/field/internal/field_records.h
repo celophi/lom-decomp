@@ -41,6 +41,9 @@ extern SavedGameLayout* g_field_game_state;
 /** @brief Script id stored in an actor's event table for an unused event. */
 #define FIELD_NO_SCRIPT 0xFFFF
 
+/** @brief Script id bits of an event table entry or script variable (bit 15 is not part of the id). */
+#define FIELD_SCRIPT_ID_MASK 0x7FFF
+
 /** @brief Value of an empty pending-effect slot in PetRecord::status. */
 #define FIELD_NO_EFFECT 0xFF
 
@@ -771,5 +774,32 @@ extern FieldBattleContext* g_field_battle;
 
 /** @brief Owner-relative script variable: event argument of the script owner, set when its script runs. */
 #define FIELD_VAR_EVENT_ARGUMENT 0xD000
+
+/** @brief Number of equipment_totals values in a character or stored companion record. */
+#define FIELD_EQUIPMENT_TOTAL_COUNT 4
+
+/** @brief Largest experience value of a character's progress word. */
+#define FIELD_EXPERIENCE_MAX 9999999
+
+/** @brief Money saturates at this amount. */
+#define FIELD_MONEY_MAX 10000000
+
+/** @brief Pending effect slots of a stored companion record. */
+#define FIELD_REGION_PENDING_EFFECT_COUNT 3
+
+/** @brief PetRecord::status bits 24-26: pending effects already applied. */
+#define FIELD_REGION_APPLIED_SHIFT 24
+#define FIELD_REGION_APPLIED_BITS 7
+#define FIELD_REGION_APPLIED_MASK (FIELD_REGION_APPLIED_BITS << FIELD_REGION_APPLIED_SHIFT)
+
+/** @brief Battle command and skill slots of FieldCharacterRecord::info. */
+#define FIELD_COMMAND_SLOT_COUNT 2
+#define FIELD_SKILL_SLOT_COUNT 4
+
+/** @brief Item argument of field_spawn_item_record that releases the item actor's record instead of spawning it. */
+#define FIELD_ITEM_RELEASE 0xFF
+
+/** @brief field_find_resource id of the item template table. */
+#define FIELD_RESOURCE_ITEM_TEMPLATES 5
 
 #endif

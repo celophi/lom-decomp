@@ -85,6 +85,13 @@
 #define GPU_CLUT_4BIT_COLORS 16
 #define GPU_CLUT_8BIT_COLORS 256
 
+/** @brief Fields of a 15-bit VRAM colour (a CLUT entry or 16-bit pixel): five bits each of red, green and blue. */
+#define GPU_COLOR15_CHANNEL_MASK 0x1F
+#define GPU_COLOR15_GREEN_SHIFT 5
+#define GPU_COLOR15_BLUE_SHIFT 10
+/** @brief Mask bit of a 15-bit colour: set on a CLUT entry to enable semi-transparency. */
+#define GPU_STP_BIT 0x8000
+
 /** @brief Semi-transparency modes (the abr argument of getTPage). */
 #define GPU_BLEND_HALF 0        /**< Half the background plus half the primitive. */
 #define GPU_BLEND_ADD 1         /**< Background plus primitive. */

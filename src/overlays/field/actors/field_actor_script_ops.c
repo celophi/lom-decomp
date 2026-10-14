@@ -22,8 +22,6 @@
 /** @brief Lowest actor record a script may spawn a child actor into. */
 #define FIELD_FIRST_SPAWN_ACTOR 3
 
-/** @brief Presence value of a visible actor record. */
-#define FIELD_ACTOR_VISIBLE 0
 
 /** @brief Directional animations: 5 facings each for standing, walking and running. */
 #define FIELD_DIRECTIONAL_ANIMATION_COUNT 15
@@ -39,9 +37,6 @@
 
 /** @brief Wait value that keeps a command running until it finishes by itself. */
 #define FIELD_WAIT_UNTIL_DONE 0xFF
-
-/** @brief FieldObjectPart::spawn_flags bit toggled by script opcodes 0xA5 and 0xA6. */
-#define FIELD_PART_FLAG_800000 0x800000
 
 /** @brief FieldActionSlot flags bit of an instrument (charge) action. */
 #define FIELD_ACTION_INSTRUMENT 0x400
@@ -75,7 +70,7 @@
 #define FIELD_TIMED_MOVE_TIMEOUT 240
 
 /** @brief Saturated value of the saved hit counters. */
-#define FIELD_COUNTER_MAX (-1)
+#define FIELD_HIT_COUNTER_MAX (-1)
 
 /** @brief Capacity of the target list built for a targeted animation actor. */
 #define FIELD_ACTOR_TARGET_CAPACITY 16
@@ -222,6 +217,7 @@ u8* field_get_object_script_command(FieldActor* actor)
     {
         script_base = (u8*)g_field_actor_scripts + g_field_actor_scripts[actor->script_index];
     }
+
     return script_base + actor->script_offset;
 }
 
@@ -329,6 +325,7 @@ static void field_run_actor_script_command(FieldActor* actor)
     {
         script = (u8*)g_field_actor_scripts + g_field_actor_scripts[actor->script_index];
     }
+
     script += actor->script_offset;
 
     opcode = script[0];
@@ -361,6 +358,7 @@ static void field_run_actor_script_command(FieldActor* actor)
         {
             field_play_set_sfx(script[1], AKAO_PAN_CENTER, actor->object_index - FIELD_PARTY_COUNT, actor->object_index);
         }
+
         actor->script_offset += 2;
         return;
     case FIELD_SCRIPT_OP_SPAWN_ATTACHED:
@@ -377,6 +375,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                 spawn_actor = spawn_actors + (FIELD_ACTOR_COUNT - 1);
             find_free_record:
                 old_presence = spawn_actor->presence;
+
                 if (old_presence == FIELD_ACTOR_UNUSED)
                 {
                     field_initialize_actor_record(index_or_count, FIELD_SPAWN_RESOURCE_ENTRY);
@@ -407,6 +406,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                     spawn_state->contact.word = contact_or_z;
                     field_restart_actor_animation(spawn_actor, spawn_control);
                     spawn_slot = field_find_free_actor_slot(index_or_count, 0);
+
                     if (spawn_slot != FIELD_ACTOR_SLOT_NONE)
                     {
                         if (field_start_builtin_animation(index_or_count, spawn_slot, FIELD_SPAWN_EFFECT_RESOURCE) != 0)
@@ -424,6 +424,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                     spawn_state -= 1;
                     index_or_count -= 1;
                     spawn_actor -= 1;
+
                     if (index_or_count >= FIELD_FIRST_SPAWN_ACTOR)
                     {
                         goto find_free_record;
@@ -438,10 +439,12 @@ static void field_run_actor_script_command(FieldActor* actor)
         actor->command = script[0];
         wait_frames = script[1];
         actor->animation_state = wait_frames;
+
         if (wait_frames == 0)
         {
             actor->animation_state = 1;
         }
+
         actor->animation_active = 1;
         actor->script_offset += 2;
         field_restart_actor_animation(actor);
@@ -452,6 +455,7 @@ static void field_run_actor_script_command(FieldActor* actor)
         action_states = g_field_object_states;
         action_states[actor->object_index].contact.word &= ~FIELD_CONTACT_ACTION_BITS;
         actor->command = script[0];
+
         if ((opcode == FIELD_SCRIPT_OP_ACTION_0) || (opcode == FIELD_SCRIPT_OP_ACTION_1))
         {
             actor->command = FIELD_ACTOR_COMMAND_ACTION;
@@ -463,10 +467,13 @@ static void field_run_actor_script_command(FieldActor* actor)
             action_states[actor->object_index].action = script[1];
             actor->script_offset += 2;
         }
+
         chain_object = actor->object_index;
+
         if ((g_field_object_states[chain_object].action == FIELD_RESOURCE_ACTION_COMBO) && (actor->variant != 0) && (chain_object < (u32)FIELD_PLAYER_COUNT))
         {
             actor->animation = (actor->animation & FIELD_ANIMATION_FACING) + (u16)((u8)actor->variant + FIELD_ANIMATION_COMBO);
+
             if ((field_get_next_animation_frame_count(actor) == 0) || (actor->variant >= (u32)FIELD_COMBO_VARIANTS))
             {
                 g_field_object_states[actor->object_index].retry_count = 0;
@@ -478,6 +485,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                 actor->command_param = FIELD_COMBO_END_WAIT;
                 return;
             }
+
             actor->animation = (actor->animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_COMBO;
             g_field_object_states[actor->object_index].flags |= FIELD_OBJECT_CHAINING;
         }
@@ -486,30 +494,37 @@ static void field_run_actor_script_command(FieldActor* actor)
             g_field_object_states[actor->object_index].retry_count = 0;
             actor->variant = 0;
         }
+
         precheck_states = g_field_object_states;
         precheck_state = &precheck_states[actor->object_index];
+
         if (precheck_state->flags & FIELD_OBJECT_FLAG_MINI)
         {
             actor->command = FIELD_ACTOR_COMMAND_NONE;
             return;
         }
+
         if (g_field_actions_limited != 0 && (u32)(precheck_state->action - FIELD_ACTION_LIMITED_FIRST) < FIELD_ACTION_LIMITED_COUNT)
         {
             actor->command = FIELD_ACTOR_COMMAND_NONE;
             return;
         }
+
         action_slot = &g_field_resource_actions[actor->resource_index].slots[g_field_object_states[actor->object_index].action];
+
         if (!(action_slot->flags.instrument) && (action_slot->command == 0) && (action_slot->animation == 0))
         {
             actor->command = FIELD_ACTOR_COMMAND_NONE;
             return;
         }
+
         if ((action_slot->flags.instrument) &&
             ((field_object_has_active_actor_tracks(actor->object_index) != 0) || (field_count_free_actor_slots(actor->object_index) < FIELD_ACTION_MIN_FREE_SLOTS)))
         {
             actor->command = FIELD_ACTOR_COMMAND_NONE;
             return;
         }
+
         if ((action_slot->command & FIELD_ACTION_TECHNIQUE) && !(action_slot->flags.instrument))
         {
             if (!((actor->object_index < (u32)FIELD_PARTY_COUNT) && (field_object_has_active_actor_tracks(actor->object_index) == 0) && (g_field_scroll_ease_timer == 0) &&
@@ -518,7 +533,9 @@ static void field_run_actor_script_command(FieldActor* actor)
                 actor->command = FIELD_ACTOR_COMMAND_NONE;
                 return;
             }
+
             technique_owner = actor->object_index;
+
             if (!((g_field_object_states[technique_owner].technique_gauge == FIELD_TECHNIQUE_GAUGE_FULL) &&
                   (field_start_streamed_animation(technique_owner, (action_slot->command & FIELD_ACTION_TECHNIQUE_MASK) +
                                                       (u16)((g_field_player_records[technique_owner].head.bytes.weapon_type * FIELD_TECHNIQUES_PER_WEAPON) + FIELD_TECHNIQUE_SEQUENCE_BASE)) != 0)))
@@ -526,12 +543,14 @@ static void field_run_actor_script_command(FieldActor* actor)
                 actor->command = FIELD_ACTOR_COMMAND_NONE;
                 return;
             }
+
             animation_slots = g_field_actor_slots;
             animation_slots[field_actor_binding(actor)->slot].hit_reaction = g_field_object_states[actor->object_index].action;
         }
         else
         {
             request = action_slot->parameter;
+
             if (request & FIELD_REQUEST_BOUND)
             {
                 if (field_start_streamed_animation(actor->object_index, request & FIELD_REQUEST_ANIMATION_MASK) == 0)
@@ -539,11 +558,13 @@ static void field_run_actor_script_command(FieldActor* actor)
                     actor->command = FIELD_ACTOR_COMMAND_NONE;
                     return;
                 }
+
                 animation_slots = g_field_actor_slots;
                 animation_slot_offset = field_actor_binding(actor)->slot * sizeof(FieldActorSlot);
                 ((FieldActorSlot*)((u8*)animation_slots + animation_slot_offset))->hit_reaction = g_field_object_states[actor->object_index].action;
             }
         }
+
         if (action_slot->flags.instrument)
         {
             g_field_object_states[actor->object_index].contact.word |= FIELD_CONTACT_ACTION_PENDING;
@@ -551,6 +572,7 @@ static void field_run_actor_script_command(FieldActor* actor)
             g_field_object_states[actor->object_index].action_charge = 0;
             g_field_object_states[actor->object_index].hud.word &= ~FIELD_HUD_SHOW_TECHNIQUE_GAUGE;
             charged_parameter = action_slot->animation;
+
             if ((charged_parameter != FIELD_ACTION_NO_ANIMATION) && (charged_parameter != 0))
             {
                 g_field_object_states[actor->object_index].action_parameter = action_slot->animation;
@@ -559,9 +581,11 @@ static void field_run_actor_script_command(FieldActor* actor)
         else if (!(action_slot->command & FIELD_ACTION_TECHNIQUE))
         {
             slot_animation = action_slot->animation;
+
             if ((slot_animation != FIELD_ACTION_NO_ANIMATION) && (slot_animation != 0))
             {
                 key_or_index = field_find_free_actor_slot(actor->object_index, 0);
+
                 if ((key_or_index != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor->object_index, key_or_index, action_slot->animation) != 0))
                 {
                     slot_owner = actor->object_index;
@@ -570,6 +594,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                 }
             }
         }
+
         field_start_object_ground_effect((struct FieldMotionRecord*)actor, action_slot->flags.target_filter);
         return;
     case FIELD_SCRIPT_OP_RUN:
@@ -579,6 +604,7 @@ static void field_run_actor_script_command(FieldActor* actor)
         actor->command = script[0];
         direction = script[1];
         actor->direction = direction;
+
         if (g_field_resource_entries[actor->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS)
         {
             actor->animation = g_field_actor_walk_animations[direction >> FIELD_HEADING_SECTOR_SHIFT];
@@ -587,6 +613,7 @@ static void field_run_actor_script_command(FieldActor* actor)
         {
             actor->animation = g_field_direction_animation_modes[direction >> FIELD_HEADING_SECTOR_SHIFT] + ((actor->running & 1) * FIELD_ANIMATION_DIRECTIONS) + FIELD_ANIMATION_WALK;
         }
+
         byte_arg = script[2];
         actor->animation_active = 1;
         walk_offset = actor->script_offset;
@@ -599,6 +626,7 @@ static void field_run_actor_script_command(FieldActor* actor)
         actor->command = script[0];
         sequence_animation = script[1] | (actor->animation & FIELD_ANIMATION_FACING);
         actor->animation = sequence_animation;
+
         if (sequence_animation & FIELD_ANIMATION_FACING)
         {
             actor->direction = 0;
@@ -607,6 +635,7 @@ static void field_run_actor_script_command(FieldActor* actor)
         {
             actor->direction = 0x80;
         }
+
         byte_arg = script[2];
         actor->animation_active = 1;
         sequence_offset = actor->script_offset;
@@ -622,6 +651,7 @@ static void field_run_actor_script_command(FieldActor* actor)
     case FIELD_SCRIPT_OP_WALK_PATH:
     case FIELD_SCRIPT_OP_RUN_PATH:
         actor_x = actor->x;
+
         if (actor_x < 0 || actor_x >= (map_width = bounds->width << 8) || (contact_or_z = actor->z) < 0 ||
             contact_or_z >= (map_depth = (s16)bounds->depth << 9) ||
             (goal_x = g_field_object_states[actor->object_index].target_x) < 0 || goal_x >= map_width ||
@@ -645,6 +675,7 @@ static void field_run_actor_script_command(FieldActor* actor)
             query_start.x = actor_x;
             query_start.y = actor->y;
             query_start.z = actor->z;
+
             if (g_field_object_parts[actor->object_index].appearance.fields.scale_xz == FIELD_PART_FULL_SCALE)
             {
                 query_start.width = FIELD_FOOTPRINT_LARGE_WIDTH;
@@ -659,6 +690,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                 query_goal.width = FIELD_FOOTPRINT_WIDTH;
                 query_goal.depth = FIELD_FOOTPRINT_DEPTH;
             }
+
             query_start.height_tolerance = FIELD_FOOTPRINT_STEP;
             query_goal.height_tolerance = FIELD_FOOTPRINT_STEP;
             field_collision_dilate_query(&query_start);
@@ -666,6 +698,7 @@ static void field_run_actor_script_command(FieldActor* actor)
             query_goal.y = g_field_object_states[actor->object_index].target_y;
             query_goal.z = g_field_object_states[actor->object_index].target_z;
             index_or_count = field_collision_find_path(&query_start, &query_goal, g_field_object_states[actor->object_index].path, 0);
+
             if (index_or_count <= 0)
             {
                 g_field_object_states[actor->object_index].path_index = 0;
@@ -726,30 +759,36 @@ static void field_run_actor_script_command(FieldActor* actor)
             technique_object = actor->object_index;
             actor->script_offset += 3;
             technique_states = g_field_object_states;
+
             if (technique_states[technique_object].flags & FIELD_OBJECT_FLAG_MINI)
             {
                 actor->script_index = FIELD_SCRIPT_NONE;
                 actor->script_busy = 0;
                 return;
             }
+
             if (g_field_actions_limited != 0)
             {
                 actor->script_index = FIELD_SCRIPT_NONE;
                 actor->script_busy = 0;
                 return;
             }
+
             if (field_start_streamed_animation(technique_object, key_or_index) == 0)
             {
                 actor->script_index = FIELD_SCRIPT_NONE;
                 actor->script_busy = 0;
                 return;
             }
+
             g_field_object_states[actor->object_index].movement.word |= FIELD_MOVEMENT_INVULNERABLE;
             return;
         }
+
         break;
     case FIELD_SCRIPT_OP_LOAD_ACTION:
         load_check_bindings = (u8*)g_field_actor_bindings;
+
         if (actor->object_index < (u32)FIELD_PLAYER_COUNT)
         {
             load_check_offset = actor->object_index * sizeof(FieldActorBinding);
@@ -758,6 +797,7 @@ static void field_run_actor_script_command(FieldActor* actor)
         {
             load_check_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
         }
+
         if (((FieldActorBinding*)(load_check_bindings + load_check_offset))->state == FIELD_BINDING_IDLE)
         {
             action_or_index = script[3];
@@ -765,22 +805,26 @@ static void field_run_actor_script_command(FieldActor* actor)
             actor->script_offset += 4;
             load_states = g_field_object_states;
             load_states[actor->object_index].action_parameter = FIELD_ACTION_PARAMETER_NONE;
+
             if (g_field_actions_limited != 0)
             {
                 actor->script_index = FIELD_SCRIPT_NONE;
                 actor->script_busy = 0;
                 return;
             }
+
             if (field_start_streamed_animation(actor->object_index, key_or_index) == 0)
             {
                 actor->script_index = FIELD_SCRIPT_NONE;
                 actor->script_busy = 0;
                 return;
             }
+
             load_object = actor->object_index;
             load_state = &load_states[load_object];
             load_slots = g_field_actor_slots;
             load_bindings = (u8*)g_field_actor_bindings;
+
             if (load_object < (u32)FIELD_PLAYER_COUNT)
             {
                 load_binding_offset = load_object * sizeof(FieldActorBinding);
@@ -789,29 +833,36 @@ static void field_run_actor_script_command(FieldActor* actor)
             {
                 load_binding_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
             }
+
             load_slot_offset = ((FieldActorBinding*)&load_bindings[load_binding_offset])->slot * sizeof(FieldActorSlot);
             ((FieldActorSlot*)((u8*)load_slots + load_slot_offset))->hit_reaction = action_or_index;
             load_state->action = action_or_index;
             g_field_object_states[actor->object_index].movement.word |= FIELD_MOVEMENT_INVULNERABLE;
             return;
         }
+
         break;
     case FIELD_SCRIPT_OP_START_BOUND_ANIMATION:
         key_or_index = FIELD_SHARED_BINDING;
+
         if (actor->object_index < (u32)FIELD_PLAYER_COUNT)
         {
             key_or_index = actor->object_index;
         }
+
         bound_bindings = (u8*)g_field_actor_bindings;
         bound_binding = (key_or_index * sizeof(FieldActorBinding)) + bound_bindings;
         bound_state = ((FieldActorBinding*)bound_binding)->state;
+
         if (((bound_state >= FIELD_BINDING_LOADING) && (bound_state <= FIELD_BINDING_READY)) && (((FieldActorBinding*)bound_binding)->owner == actor->object_index))
         {
             one = 1;
+
             if (bound_state != one)
             {
                 bound_slots = g_field_actor_slots;
                 bound_slot = &bound_slots[((FieldActorBinding*)bound_binding)->slot];
+
                 if (bound_slot->track_mask == 0)
                 {
                     bound_slot->animation = bound_slot->animations;
@@ -821,6 +872,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                     g_field_actor_slots[((FieldActorBinding*)bound_binding)->slot].sequence_active = 1;
                     actor->command = FIELD_ACTOR_COMMAND_WAIT_BOUND_ACTOR;
                 }
+
                 actor->script_offset++;
                 return;
             }
@@ -830,27 +882,34 @@ static void field_run_actor_script_command(FieldActor* actor)
             actor->script_offset++;
             return;
         }
+
         break;
     case FIELD_SCRIPT_OP_PLAY_BOUND_ACTION:
         key_or_index = FIELD_SHARED_BINDING;
+
         if (actor->object_index < (u32)FIELD_PLAYER_COUNT)
         {
             key_or_index = actor->object_index;
         }
+
         bindings = g_field_actor_bindings;
         binding = &bindings[key_or_index];
         binding_state = binding->state;
+
         if (((binding_state >= FIELD_BINDING_LOADING) && (binding_state <= FIELD_BINDING_READY)) && (track_owner = actor->object_index, binding_owner = binding->owner, (binding_owner == track_owner)))
         {
             if (binding_state == FIELD_BINDING_LOADING)
             {
                 return;
             }
+
             slots = g_field_actor_slots;
             slot = &slots[binding->slot];
+
             if (slot->track_mask == 0)
             {
                 index_or_count = 0;
+
                 if (slot->animations->flags & FIELD_ANIMATION_DEF_LAYERED)
                 {
                     for (action_or_index = 0; action_or_index < FIELD_LAYERED_ACTION_MAX_LAYERS; action_or_index++)
@@ -860,12 +919,14 @@ static void field_run_actor_script_command(FieldActor* actor)
                             index_or_count += 1;
                         }
                     }
+
                     bound_started = field_start_bound_action_animation(actor->object_index, 0, 0, ((index_or_count - 1) << FIELD_REQUEST_LAYER_SHIFT) | FIELD_REQUEST_LAYERED | FIELD_REQUEST_ALL_LAYERS);
                 }
                 else
                 {
                     bound_started = field_start_bound_action_animation(binding_owner, 0, 0, 0);
                 }
+
                 if (bound_started != 0)
                 {
                     actor->command = FIELD_ACTOR_COMMAND_WAIT_BOUND_ACTOR;
@@ -873,6 +934,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                 }
             }
         }
+
         actor->script_offset += 2;
         return;
     case FIELD_SCRIPT_OP_APPROACH_TARGET:
@@ -937,9 +999,11 @@ static void field_run_actor_script_command(FieldActor* actor)
     case FIELD_SCRIPT_OP_LOAD_BOUND_ANIMATION:
         key_or_index = script[1] + (script[2] << 8);
         actor->script_offset += 3;
+
         if (g_field_actions_limited == 0 && field_start_streamed_animation(actor->object_index, key_or_index) != 0)
         {
             pending_flag = g_field_binding_restart_pending;
+
             if (actor->object_index < (u32)FIELD_PLAYER_COUNT)
             {
                 pending_flag += actor->object_index;
@@ -948,9 +1012,11 @@ static void field_run_actor_script_command(FieldActor* actor)
             {
                 pending_flag += FIELD_SHARED_BINDING;
             }
+
             *pending_flag = 1;
             return;
         }
+
         actor->script_index = FIELD_SCRIPT_NONE;
         actor->script_busy = 0;
         return;
@@ -966,14 +1032,15 @@ static void field_run_actor_script_command(FieldActor* actor)
             actor->animation = end_animation | (old_animation & FIELD_ANIMATION_FACING);
             field_restart_actor_animation(actor);
         }
+
         actor->script_offset += 2;
         return;
     case FIELD_SCRIPT_OP_SET_PART_FLAG:
-        g_field_object_parts[actor->object_index].spawn_flags.word |= FIELD_PART_FLAG_800000;
+        g_field_object_parts[actor->object_index].spawn_flags.word |= FIELD_PART_IGNORE_MAP_COLLISION;
         actor->script_offset++;
         return;
     case FIELD_SCRIPT_OP_CLEAR_PART_FLAG:
-        g_field_object_parts[actor->object_index].spawn_flags.word &= ~FIELD_PART_FLAG_800000;
+        g_field_object_parts[actor->object_index].spawn_flags.word &= ~FIELD_PART_IGNORE_MAP_COLLISION;
         actor->script_offset++;
         return;
     case FIELD_SCRIPT_OP_WAIT_ANIMATION:
@@ -1027,6 +1094,7 @@ static void field_run_actor_script_command(FieldActor* actor)
         {
             actor->presence = FIELD_ACTOR_HIDDEN;
         }
+
         actor->script_offset++;
         return;
     case FIELD_SCRIPT_OP_NOP:
@@ -1048,12 +1116,15 @@ s32 field_start_actor_turn(s32 key)
     u8 animation;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     actor->command = FIELD_ACTOR_COMMAND_TURN;
     animation = actor->animation;
+
     if (animation < (FIELD_ANIMATION_FACING | FIELD_DIRECTIONAL_ANIMATION_COUNT))
     {
         /* The turn table position is the facing sector counted from facing 0. */
@@ -1107,6 +1178,7 @@ s32 field_start_actor_turn(s32 key)
     {
         actor->command_param = 0;
     }
+
     return 0;
 }
 
@@ -1120,10 +1192,12 @@ s32 field_toggle_actor_hidden(s32 key)
     FieldActor* actor;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     if (actor->presence == FIELD_ACTOR_HIDDEN)
     {
         actor->presence = FIELD_ACTOR_VISIBLE;
@@ -1132,6 +1206,7 @@ s32 field_toggle_actor_hidden(s32 key)
     {
         actor->presence = FIELD_ACTOR_HIDDEN;
     }
+
     return 0;
 }
 
@@ -1147,13 +1222,16 @@ s32 field_retire_actor(s32 key, s32 resource_index)
     s32 slot_index;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     if (resource_index != -1)
     {
         slot_index = field_find_free_actor_slot(actor->object_index, 0);
+
         if ((slot_index != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor->object_index, slot_index, resource_index) != 0))
         {
             field_start_actor_animation(slot_index, 0, 0);
@@ -1182,14 +1260,17 @@ s32 field_schedule_actor_revive(s32 key, s32 animation, s32 effect, s32 sound, s
     FieldActor* actor;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     if (actor->object_index >= FIELD_PARTY_COUNT)
     {
         return -1;
     }
+
     g_field_player_records[actor->object_index].revive_delay = delay;
     g_field_player_records[actor->object_index].revive_time = 0;
     g_field_player_records[actor->object_index].revive_animation = animation;
@@ -1216,35 +1297,43 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound)
 
     scene = SCENE_STATE;
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     actor->presence = FIELD_ACTOR_VISIBLE;
     actor->command = FIELD_ACTOR_COMMAND_NONE;
     actor->script_busy = 0;
     actor->animation_state = 1;
+
     if (animation == -1)
     {
         animation = 0;
     }
+
     actor->animation_frame = 0;
     actor->animation_active = 1;
     actor->animation = (actor->animation & FIELD_ANIMATION_FACING) | animation;
     field_restart_actor_animation(actor);
+
     if (effect != -1)
     {
         slot_index = field_find_free_actor_slot(actor->object_index, 0);
+
         if ((slot_index != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor->object_index, slot_index, effect) != 0))
         {
             field_start_actor_animation(slot_index, 0, 0);
             g_field_object_states[actor->object_index].contact.bytes.animation_actor_index = slot_index;
         }
     }
+
     if (sound != -1)
     {
         field_play_sound(sound, AKAO_PAN_CENTER);
     }
+
     field_count_revived_record(g_field_object_states[actor->object_index].key);
     g_field_object_states[actor->object_index].flags = 0;
     g_field_object_states[actor->object_index].contact.bits.no_hit_test = 0;
@@ -1254,6 +1343,7 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound)
     hp_state->current_hp.word = hp_state->maximum_hp & 0xFFFFFF;
     g_field_object_states[actor->object_index].tint_timer = FIELD_REVIVE_TINT_FRAMES;
     g_field_object_states[actor->object_index].movement.bits.flag15 = 1;
+
     if (actor->object_index < (u32)FIELD_PARTY_COUNT &&
         (actor->x <= -scene->camera_x + FIELD_VIEW_MARGIN_LEFT || actor->x >= -scene->camera_x + FIELD_VIEW_MARGIN_RIGHT ||
          actor->z <= -scene->camera_z + FIELD_VIEW_MARGIN_LEFT || actor->z >= -scene->camera_z + FIELD_VIEW_MARGIN_BOTTOM))
@@ -1267,11 +1357,13 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound)
                 break;
             }
         }
+
         if (companion_index != FIELD_PARTY_COUNT)
         {
             field_route_actor_to_object(actor, companion_index, 1);
         }
     }
+
     return 0;
 }
 
@@ -1297,6 +1389,7 @@ void field_route_actor_to_object(FieldActor* actor, s32 target_index, s32 restar
 
     bounds = FIELD_MAP_BOUNDS;
     x = actor->x;
+
     if (x < 0 || x >= (map_width = bounds->width << 8) || (z = actor->z) < 0 ||
         z >= (map_depth = (s16)bounds->depth << 9) ||
         (state_x = g_field_object_states[actor->object_index].target_x) < 0 || state_x >= map_width ||
@@ -1312,6 +1405,7 @@ void field_route_actor_to_object(FieldActor* actor, s32 target_index, s32 restar
         start.x = x;
         start.y = actor->y;
         start.z = actor->z;
+
         if (g_field_object_parts[actor->object_index].appearance.fields.scale_xz == FIELD_PART_FULL_SCALE)
         {
             start.width = FIELD_FOOTPRINT_LARGE_WIDTH;
@@ -1326,6 +1420,7 @@ void field_route_actor_to_object(FieldActor* actor, s32 target_index, s32 restar
             goal.width = FIELD_FOOTPRINT_WIDTH;
             goal.depth = FIELD_FOOTPRINT_DEPTH;
         }
+
         start.height_tolerance = FIELD_FOOTPRINT_STEP;
         goal.height_tolerance = FIELD_FOOTPRINT_STEP;
         field_collision_dilate_query(&start);
@@ -1337,6 +1432,7 @@ void field_route_actor_to_object(FieldActor* actor, s32 target_index, s32 restar
         goal.y = target->y;
         goal.z = target->z;
         path_length = field_collision_find_path(&start, &goal, g_field_object_states[actor->object_index].path, 0);
+
         if (path_length <= 0)
         {
             g_field_object_states[actor->object_index].path_index = 0;
@@ -1350,6 +1446,7 @@ void field_route_actor_to_object(FieldActor* actor, s32 target_index, s32 restar
             g_field_object_states[actor->object_index].path_index = 0;
         }
     }
+
     if (restart != 0)
     {
         actor->command = FIELD_ACTOR_COMMAND_LEAVE_PATH;
@@ -1373,9 +1470,11 @@ static void field_move_actor_texture_rect(FieldActor* actor, RECT* rect, s32 x, 
     s32 page;
 
     page = actor->unkC;
+
     if (page >= 2)
     {
         y_offset = 0;
+
         if (page >= 9)
         {
             y_offset = 0x100;
@@ -1413,13 +1512,16 @@ s32 field_load_bound_animation(s32 key, s32 resource_id)
     s32* pending_flags;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     if (field_start_streamed_animation(actor->object_index, resource_id) != 0)
     {
         pending_flags = g_field_binding_restart_pending;
+
         if (actor->object_index < FIELD_PLAYER_COUNT)
         {
             pending = &pending_flags[actor->object_index];
@@ -1428,6 +1530,7 @@ s32 field_load_bound_animation(s32 key, s32 resource_id)
         {
             pending = &pending_flags[FIELD_SHARED_BINDING];
         }
+
         *pending = 1;
         g_field_object_states[actor->object_index].action_parameter = FIELD_ACTION_PARAMETER_NONE;
     }
@@ -1435,6 +1538,7 @@ s32 field_load_bound_animation(s32 key, s32 resource_id)
     {
         return 1;
     }
+
     return 0;
 }
 
@@ -1457,18 +1561,22 @@ void field_resolve_collected_hits(s32 object_index)
     index8 = object_index * 8;
     source = FIELD_OBJECT_STATE_BY_INDEX8(states, index8, object_index);
     i = 0;
+
     if (source->contact.bytes.target_count != 0)
     {
         loop_states = states;
         saved_source = source;
         index8 = object_index * 8;
+
         do
         {
             current = FIELD_OBJECT_STATE_BY_INDEX8(loop_states, index8, object_index);
             loop_states[current->targets[i]].contact.bits.targeted = 0;
+
             if (!loop_states[current->targets[i]].contact.bits.no_hit_test && loop_states[current->targets[i]].current_hp.word != 0)
             {
                 request.attacker_id = current->key;
+
                 if (current->action <= FIELD_ACTION_BATTLE_LAST)
                 {
                     request.action_id = current->action;
@@ -1477,6 +1585,7 @@ void field_resolve_collected_hits(s32 object_index)
                 {
                     request.action_id = FIELD_ACTION_BATTLE_LAST;
                 }
+
                 request.target_id = loop_states[saved_source->targets[i]].key;
                 request.param = 0;
                 request.unk10 = 0;
@@ -1484,10 +1593,12 @@ void field_resolve_collected_hits(s32 object_index)
                 request.damage_scale = 1;
                 field_battle_resolve_action(&request);
             }
+
             index8 = object_index * 8;
             i++;
         } while (i < FIELD_OBJECT_STATE_BY_INDEX8(loop_states, index8, object_index)->contact.bytes.target_count);
     }
+
     g_field_object_states[object_index].contact.bytes.target_count = 0;
 }
 
@@ -1509,15 +1620,19 @@ s32 field_resolve_contact_hit(s32 source_index, s32 target_index)
     {
         return 0;
     }
+
     states = g_field_object_states;
     target = &states[target_index];
     target->contact.bits.targeted = 0;
+
     if (target->current_hp.word == 0)
     {
         return 0;
     }
+
     source = &states[source_index];
     request.attacker_id = source->key;
+
     if (source->action <= FIELD_ACTION_BATTLE_LAST)
     {
         request.action_id = source->action;
@@ -1526,7 +1641,9 @@ s32 field_resolve_contact_hit(s32 source_index, s32 target_index)
     {
         request.action_id = 0;
     }
+
     request.target_id = g_field_object_states[target_index].key;
+
     if (source_index < FIELD_PLAYER_COUNT)
     {
         request.param = g_field_actors[source_index].variant;
@@ -1535,13 +1652,16 @@ s32 field_resolve_contact_hit(s32 source_index, s32 target_index)
     {
         request.param = 0;
     }
+
     request.unk10 = 0;
     request.unk14 = 0;
     damage_scale = g_field_object_states[source_index].contact.bits.damage_scale;
+
     if (damage_scale == 0)
     {
         damage_scale = 1;
     }
+
     request.damage_scale = damage_scale;
     field_count_chain_hit(source_index);
     return field_battle_resolve_action(&request);
@@ -1565,6 +1685,7 @@ s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action)
         states = g_field_object_states;
         target = &states[target_index];
         target->contact.bits.targeted = 0;
+
         if (target->current_hp.word != 0)
         {
             request.attacker_id = states[source_index].key;
@@ -1578,6 +1699,7 @@ s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action)
             return field_battle_resolve_action(&request);
         }
     }
+
     return 0;
 }
 
@@ -1611,20 +1733,25 @@ s32 field_register_actor_hit(s32 key, s32 guard)
     FieldObjectState* states;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     if (actor->object_index == 0)
     {
         hit_count = ((FieldSaveCounters*)g_saved_game_ctx)->player_hits;
-        if (hit_count != FIELD_COUNTER_MAX)
+
+        if (hit_count != FIELD_HIT_COUNTER_MAX)
         {
             ((FieldSaveCounters*)g_saved_game_ctx)->player_hits = hit_count + 1;
         }
     }
+
     states = g_field_object_states;
     states[actor->object_index].flags |= FIELD_OBJECT_FLAG_HIT_FLASH;
+
     if (actor->object_index < FIELD_PARTY_COUNT)
     {
         g_field_player_records[actor->object_index].hit_state = FIELD_HUD_SHAKE_START;
@@ -1634,19 +1761,24 @@ s32 field_register_actor_hit(s32 key, s32 guard)
         /* Bit 31 of unk8 marks a boss. */
         g_field_boss_hud_shake_frame = FIELD_HUD_SHAKE_START;
     }
+
     command = actor->command;
+
     if (command == FIELD_ACTOR_COMMAND_INSTRUMENT)
     {
         return 0;
     }
+
     if (command >= FIELD_ACTOR_COMMAND_WALK)
     {
         if (command != FIELD_ACTOR_COMMAND_TECHNIQUE)
         {
             field_start_actor_hit_reaction(actor, guard);
         }
+
         return 0;
     }
+
     if (command >= FIELD_ACTOR_COMMAND_ACTION)
     {
         /* Actions 0-3 and 8-10 are always interrupted; the others only while the target's action is pending. */
@@ -1665,9 +1797,11 @@ s32 field_register_actor_hit(s32 key, s32 guard)
             {
                 return 0;
             }
+
             break;
         }
     }
+
     field_start_actor_hit_reaction(actor, guard);
     return 0;
 }
@@ -1682,10 +1816,12 @@ s32 field_knock_down_actor_by_key(s32 key)
     FieldActor* actor;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     field_knock_down_actor(actor, 1);
     return 0;
 }
@@ -1700,10 +1836,12 @@ s32 field_get_actor_animation(s32 key)
     FieldActor* actor;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     return actor->animation & FIELD_ANIMATION_INDEX_MASK;
 }
 
@@ -1719,18 +1857,22 @@ s32 field_start_actor_defeat_by_key(s32 key, s32 value)
     s32 defeat_count;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     if (actor->object_index >= FIELD_PARTY_COUNT)
     {
         defeat_count = ((FieldSaveCounters*)g_saved_game_ctx)->enemies_defeated;
-        if (defeat_count != FIELD_COUNTER_MAX)
+
+        if (defeat_count != FIELD_HIT_COUNTER_MAX)
         {
             ((FieldSaveCounters*)g_saved_game_ctx)->enemies_defeated = defeat_count + 1;
         }
     }
+
     field_start_actor_defeat(actor, value);
     return 0;
 }
@@ -1747,13 +1889,16 @@ s32 field_is_actor_motion_idle(s32 key)
     FieldActor* actor;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     if ((actor->control.half[0] & FIELD_CONTROL_MODE_MASK) < FIELD_CONTROL_SCRIPTED)
     {
         result = 0;
+
         if (actor->command == FIELD_ACTOR_COMMAND_NONE)
         {
             movement = actor->control.word & (FIELD_CONTROL_MOVING | FIELD_CONTROL_MOVEMENT_UNK400);
@@ -1763,11 +1908,13 @@ s32 field_is_actor_motion_idle(s32 key)
     else
     {
         result = 0;
+
         if ((actor->command == FIELD_ACTOR_COMMAND_STEP) || (actor->command == FIELD_ACTOR_COMMAND_NONE))
         {
             result = 1;
         }
     }
+
     return result;
 }
 
@@ -1784,10 +1931,12 @@ s32 field_start_actor_jump_by_key(s32 key, s32 heading, s32 animation, s32 wait)
     FieldActor* actor;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     field_start_actor_jump(actor, heading, animation, wait);
     return 0;
 }
@@ -1805,17 +1954,21 @@ s32 field_face_actor(s32 source_key, s32 target_key)
     s32 angle;
 
     source = field_find_actor(source_key);
+
     if (source == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     target = field_find_actor(target_key);
+
     if (target == FIELD_ACTOR_NONE)
     {
         return -1;
     }
 
     angle = ratan2(source->z - target->z, target->x - source->x);
+
     if (!(g_field_resource_entries[source->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS))
     {
         /* Eight facings; mirrored animations cover the right-hand side. */
@@ -1899,10 +2052,12 @@ s32 field_set_actor_animation(s32 key, u8 animation)
     FieldActor* actor;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     actor->animation = animation;
     actor->animation_state = 1;
     actor->animation_frame = 0;
@@ -1924,13 +2079,16 @@ s32 field_get_actor_facing(s32 key)
     s32 animation;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     if (!(g_field_resource_entries[actor->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS))
     {
         animation = actor->animation;
+
         if ((animation & FIELD_ANIMATION_INDEX_MASK) < FIELD_DIRECTIONAL_ANIMATION_COUNT)
         {
             switch (animation)
@@ -1993,6 +2151,7 @@ s32 field_get_actor_facing(s32 key)
     {
         result = actor->animation & FIELD_ANIMATION_FACING;
     }
+
     return result;
 }
 
@@ -2006,10 +2165,12 @@ s32 field_read_actor_binding_state(s32 key)
     FieldActor* actor;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     return field_actor_binding(actor)->state;
 }
 
@@ -2025,16 +2186,20 @@ s32 field_spawn_animation_actor(s32 key, s32 resource_index)
     s32 slot_index;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     slot_index = field_find_free_actor_slot(actor->object_index, 0);
+
     if ((slot_index != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor->object_index, slot_index, resource_index) != 0))
     {
         field_start_actor_animation(slot_index, 0, 0);
         return 0;
     }
+
     return 1;
 }
 
@@ -2050,16 +2215,20 @@ s32 field_spawn_shared_animation_actor(s32 key, s32 resource_index)
     s32 slot_index;
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     slot_index = field_find_free_actor_slot(0, 0);
+
     if ((slot_index != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor->object_index, slot_index, resource_index) != 0))
     {
         field_start_actor_animation(slot_index, 0, 0);
         return 0;
     }
+
     return 1;
 }
 
@@ -2080,9 +2249,11 @@ s32 field_spawn_targeted_animation_actor(s32 key, s32 resource_index, s32 target
     s32 targets[FIELD_ACTOR_TARGET_CAPACITY];
 
     target_count = 0;
+
     for (i = 0; i < target_keys; i++)
     {
         actor = field_find_actor(key);
+
         if (actor != FIELD_ACTOR_NONE)
         {
             targets[target_count] = actor->object_index;
@@ -2091,16 +2262,20 @@ s32 field_spawn_targeted_animation_actor(s32 key, s32 resource_index, s32 target
     }
 
     actor = field_find_actor(key);
+
     if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
+
     slot_index = field_find_free_actor_slot(actor->object_index, 0);
+
     if ((slot_index != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor->object_index, slot_index, resource_index) != 0))
     {
         field_start_actor_animation(slot_index, target_count, (u8*)targets);
         return 0;
     }
+
     return 1;
 }
 
@@ -2129,10 +2304,12 @@ void field_restart_pending_bindings(void)
             g_field_actor_slots[g_field_actor_bindings[i].slot].animation = g_field_actor_slots[g_field_actor_bindings[i].slot].animations;
             field_start_actor_animation(g_field_actor_bindings[i].slot, 0, 0);
             owner = g_field_actor_bindings[i].owner;
+
             if (owner >= FIELD_PARTY_COUNT)
             {
                 owner = FIELD_PARTY_COUNT - 1;
             }
+
             g_field_object_states[owner].contact.bytes.animation_actor_index = g_field_actor_bindings[i].slot;
             g_field_binding_restart_pending[i] = 0;
             g_field_actor_slots[g_field_actor_bindings[i].slot].sequence_active = 1;

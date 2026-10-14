@@ -26,6 +26,7 @@ s32 field_build_group_monster_records(s32 group)
     FieldStatusState *state;
 
     count = 0;
+
     for (i = FIELD_PARTY_SIZE; i < (s32)g_field_runtime->state.actor_count; i++)
     {
         if ((g_field_runtime->actors[i].flags.word & FIELD_TRIGGER_GROUP_MASK) != group)
@@ -34,13 +35,16 @@ s32 field_build_group_monster_records(s32 group)
         }
 
         state = field_find_object_state(g_field_runtime->actors[i].id);
+
         if (state == NULL || state == FIELD_STATUS_STATE_NONE)
         {
             record_game_diagnostic(DIAG_ERROR, DIAG_BAD_MONSTER_OBJECT, group, g_field_runtime->actors[i].id);
         }
+
         field_init_monster_record(g_field_runtime->actors[i].id, &g_field_battle->records[FIELD_PARTY_SIZE + count], state);
         count++;
     }
+
     return count;
 }
 
@@ -80,23 +84,29 @@ void field_init_monster_record(s32 actor_id, FieldStatusRecord *record, FieldSta
     record->unkC = 0;
     level = field_compute_monster_level(template);
     clamped = FIELD_LEVEL_MAX;
+
     if ((u32)level < FIELD_LEVEL_MAX + 1U)
     {
         clamped = level;
     }
+
     level = clamped;
     work = field_get_script_var(0, FIELD_VAR_MONSTER_LEVEL);
+
     if (work != 0)
     {
         level = work;
     }
+
     record->unk18 = (u32)((template->unk20_base * 0x10) + (template->unk20_growth * level)) >> 4;
     record->unk1A = template->unk19;
+
     for (work = 0; work < 4; work++)
     {
         record->equipment_stats[work] = (u32)((template->equipment_stats[work].base * 0x10) + (template->equipment_stats[work].growth * level)) >> 4;
         record->equipment_attributes[work] = 0;
     }
+
     for (work = 0; work < FIELD_STATUS_STAT_COUNT; work++)
     {
         stat = (u32)((template->stats[work].base * 4) + (template->stats[work].growth * level)) >> 2;
@@ -105,10 +115,12 @@ void field_init_monster_record(s32 actor_id, FieldStatusRecord *record, FieldSta
         record->base_stats[work] = stat;
         record->stats[work] = stat;
     }
+
     record->immunity_flags = template->immunity_flags;
     record->weak_elements = template->weak_elements;
     record->resist_elements = template->resist_elements;
     state->level.word = (state->level.word & ~0xFE) | ((level & 0x7F) * 2);
+
     if (template->flags & FIELD_TEMPLATE_UNLINKED)
     {
         state->template = NULL;
@@ -117,6 +129,7 @@ void field_init_monster_record(s32 actor_id, FieldStatusRecord *record, FieldSta
     {
         state->template = template;
     }
+
     if (template->hp_growth != 0xFFFF)
     {
         state->maximum = template->hp_base + (template->hp_growth * level);
@@ -125,15 +138,13 @@ void field_init_monster_record(s32 actor_id, FieldStatusRecord *record, FieldSta
     {
         work = 1;
         state->maximum = template->hp_base;
-        if (level != 0)
+
+        for (; (u32)level >= work; work++)
         {
-            do
-            {
-                state->maximum = field_add_stat_increase(state->maximum, (u32)((template->stats[4].base * 4) + (template->stats[4].growth * work)) >> 2, 1);
-                work++;
-            } while ((u32)level >= work);
+            state->maximum = field_add_stat_increase(state->maximum, (u32)((template->stats[4].base * 4) + (template->stats[4].growth * work)) >> 2, 1);
         }
     }
+
     switch (field_get_script_var(0, FIELD_VAR_DIFFICULTY))
     {
     case FIELD_DIFFICULTY_HARD:
@@ -143,20 +154,24 @@ void field_init_monster_record(s32 actor_id, FieldStatusRecord *record, FieldSta
         state->maximum *= 3;
         break;
     }
+
     if ((field_get_script_var(0, FIELD_VAR_DEBUG_ONE_HP_MONSTERS) != 0) || (state->maximum == 0))
     {
         state->maximum = 1;
     }
+
     state->current = state->maximum;
     state->gauge.bits.value = state->maximum;
     state->gauge.bits.hud_bits = 0;
     state->gauge.bits.hud_flag = template->flags >> 7;
     work = record->base_stats[3] * 2;
+
     if (work < 0x100U)
     {
         state->effect_footprint_strength = work;
         return;
     }
+
     state->effect_footprint_strength = 0xFF;
 }
 
@@ -185,10 +200,12 @@ s32 field_compute_monster_level(FieldActorTemplate *template)
         {
             value += g_field_battle->element_levels[count];
         }
+
         if (sub_mask & 1)
         {
             value -= g_field_battle->element_levels[count];
         }
+
         add_mask >>= 1;
         sub_mask >>= 1;
     }
@@ -200,11 +217,13 @@ s32 field_compute_monster_level(FieldActorTemplate *template)
     else
     {
         clamped = value;
+
         if (clamped >= 0xB)
         {
             clamped = 0xA;
         }
     }
+
     value = clamped;
 
     scaled = (u32)(field_compute_base_monster_level(template->flags & FIELD_TEMPLATE_HERO_LEVEL) * value) >> 3;

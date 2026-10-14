@@ -29,6 +29,14 @@
 /* Actor id operand value that stands for the script's owner. */
 #define FIELD_SCRIPT_OWNER 0xFF
 
+/** @brief Operand byte value meaning "none" for optional script operands (animation, sound, part, list entry). */
+#define FIELD_SCRIPT_BYTE_NONE 0xFF
+/** @brief An optional script operand: -1 for FIELD_SCRIPT_BYTE_NONE, otherwise the value itself. */
+#define FIELD_SCRIPT_OPTIONAL(value) (((value) == FIELD_SCRIPT_BYTE_NONE) ? -1 : (value))
+/** @brief Operand byte whose bit 7 is a flag on the value in its low seven bits. */
+#define FIELD_SCRIPT_BYTE_FLAG 0x80
+#define FIELD_SCRIPT_BYTE_VALUE_MASK 0x7F
+
 /* Bit 0 of a record's flags word is the result of the last comparison. */
 #define FIELD_SCRIPT_COND 0x1
 
@@ -83,6 +91,26 @@ typedef struct
     s32 active_record;
     u8* pc;
 } FieldScriptContext;
+
+/** @brief Bits 0-11 of a variable reference: word index and bit position. */
+#define FIELD_SCRIPT_VAR_LOCATION_MASK 0xFFF
+
+/** @brief Bits 0-4 of a variable reference: bit position inside the word. */
+#define FIELD_SCRIPT_VAR_SHIFT_MASK 0x1F
+
+/** @brief Variable kind, bits 12-14 of a variable reference. */
+#define FIELD_SCRIPT_VAR_KIND(ref) (((ref) >> 12) & 7)
+#define FIELD_SCRIPT_VAR_KIND_MASK 0x7000
+
+/** @brief First variable kind that lives in the field runtime context. */
+#define FIELD_SCRIPT_VAR_LOCAL_KIND 3
+
+/** @brief Variable reference bit: offset the word index by the owner's local variable base. */
+#define FIELD_SCRIPT_VAR_OWNER_RELATIVE 0x8000
+#define FIELD_SCRIPT_VAR_OWNER_RELATIVE_SHIFT 15
+
+/** @brief Location step from one 32-bit variable word to the next (the low five bits are the bit position). */
+#define FIELD_SCRIPT_VAR_WORD_STEP 0x20
 
 /** @brief Packed 16-bit reference used by field-script variable helpers. */
 typedef struct

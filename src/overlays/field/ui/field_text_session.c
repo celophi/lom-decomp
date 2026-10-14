@@ -6,8 +6,8 @@
 #include "common.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_menu_element.h"
+#include "../internal/field_modal_runtime.h"
 
-extern s32 g_field_item_drop_menu_open;
 extern s32 g_field_item_list_count;
 extern s32 g_field_item_drop_enabled;
 extern s32 g_field_item_list_cursor;

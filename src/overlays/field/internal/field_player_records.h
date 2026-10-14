@@ -37,6 +37,9 @@ typedef union FieldPlayerHead
     } bits;
 } FieldPlayerHead;
 
+/** @brief FieldPlayerRecord::portrait_index of a member with no portrait cached. */
+#define FIELD_PORTRAIT_NONE 0xFF
+
 /** @brief Per-party-member record (0x268 bytes). */
 typedef struct FieldPlayerRecord
 {
@@ -48,7 +51,7 @@ typedef struct FieldPlayerRecord
     u8 unk4[0x254 - 4];
     /** @brief CD resource id of the loaded sprite package. */
     u16 resource_id;
-    /** @brief Portrait currently cached for this member, 0xFF for none. */
+    /** @brief Portrait currently cached for this member, FIELD_PORTRAIT_NONE for none. */
     u8 portrait_index;
     /** @brief Frames left to chain a combo action. */
     u8 combo_timer;

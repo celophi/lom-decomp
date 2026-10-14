@@ -13,10 +13,6 @@
 #define GOLEM_COMPANION_LEVEL 99
 /** @brief Equipment slot that receives the golem's armor values and flags. */
 #define GOLEM_ARMOR_SLOT 1
-/** @brief Number of battle command slots in FieldCharacterRecord.info. */
-#define FIELD_COMMAND_SLOT_COUNT 2
-/** @brief Number of battle skill slots in FieldCharacterRecord.info. */
-#define FIELD_SKILL_SLOT_COUNT 4
 
 /**
  * @brief Fill a party character record from one saved golem group.
@@ -31,35 +27,43 @@ void field_golem_build_companion(s32 group, FieldCharacterRecord* record)
     record->equipment[GOLEM_ARMOR_SLOT].name[0] = 1;
     record->equipment[2].name[0] = 0;
     record->equipment[3].name[0] = 0;
+
     for (i = 0; i < GOLEM_NAME_LENGTH; i++)
     {
         record->name[i] = GOLEM.group_records[group].name[i];
     }
+
     record->info.word = ((record->info.word & ~FIELD_CHARACTER_TYPE_MASK) | FIELD_CHARACTER_GOLEM) & ~FIELD_CHARACTER_PAD_CONTROLLED;
     record->info.actions.unk19 = GOLEM.group_records[group].logic_class;
+
     for (i = 0; i < FIELD_COMMAND_SLOT_COUNT; i++)
     {
         record->info.actions.commands[i] = 0;
     }
+
     for (i = 0; i < FIELD_SKILL_SLOT_COUNT; i++)
     {
         record->info.actions.skills[i] = 0;
     }
+
     record->progress.bits.level = GOLEM_COMPANION_LEVEL;
     record->progress.bits.experience = 0;
     record->hp = GOLEM.group_records[group].hp;
     record->equipment[FIELD_WEAPON_SLOT].derived.weapon.power = record->unk26 = GOLEM.group_records[group].power;
+
     for (i = 0; i < COMPANION_STAT_COUNT; i++)
     {
         record->equipment_totals[i] = GOLEM.group_records[group].equipment_totals[i];
         (&record->equipment[GOLEM_ARMOR_SLOT])->derived.values[i] = record->equipment_totals[i];
     }
+
     for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
     {
         /* FieldCharacterRecord.stats is a plain u16 array; the copy stores the two FieldStat bit-fields. */
         ((FieldStat*)record->stats)[i].bits.base = GOLEM.group_records[group].stats[i].bits.base;
         ((FieldStat*)record->stats)[i].bits.effective = GOLEM.group_records[group].stats[i].bits.effective;
     }
+
     record->equipment[GOLEM_ARMOR_SLOT].status_flags = record->unk40 = GOLEM.group_records[group].armor_flags;
     record->equipment[FIELD_WEAPON_SLOT].status_flags = record->unk41 = GOLEM.group_records[group].weapon_flags;
     record->equipment[GOLEM_ARMOR_SLOT].element_flags = record->unk42 = GOLEM.group_records[group].armor_flags2;

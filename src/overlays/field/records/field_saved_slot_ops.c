@@ -69,6 +69,7 @@ s32 field_add_stored_companion(s32 template_index)
     s32 random_high;
 
     table = field_find_resource(FIELD_RESOURCE_COMPANION_TEMPLATES);
+
     if (table == NULL)
     {
         record_game_diagnostic(DIAG_ERROR, DIAG_NO_COMPANION_TEMPLATES, template_index, g_field_entry_scene.id);
@@ -84,7 +85,8 @@ s32 field_add_stored_companion(s32 template_index)
         {
             field_copy_words(companion_template, &g_field_game_state->pets[slot], sizeof(PetRecord));
             retry = -1;
-            do
+
+            while (retry != 0)
             {
                 random_high = rand();
                 unique_id = (((random_high << 16) + rand()) & FIELD_RANDOM_VALUE_MASK) |
@@ -93,6 +95,7 @@ s32 field_add_stored_companion(s32 template_index)
                 {
                     retry = 0;
                 }
+
                 for (scan = 0; scan < PET_RECORD_COUNT; scan++)
                 {
                     if (g_field_game_state->pets[scan].name[0] != 0 && g_field_game_state->pets[scan].unique_id == unique_id)
@@ -100,11 +103,13 @@ s32 field_add_stored_companion(s32 template_index)
                         retry = -1;
                     }
                 }
-            } while (retry != 0);
+            }
+
             g_field_game_state->pets[slot].unique_id = unique_id;
             return slot;
         }
     }
+
     return slot;
 }
 
@@ -117,22 +122,28 @@ s32 field_release_stored_companion(void)
     s32 index;
 
     g_field_gosub_state = 0;
+
     if (g_gosub_result_count != 0)
     {
         index = g_gosub_result_values[0];
+
         if (index < PET_RECORD_COUNT)
         {
             field_set_text_macro(0, g_field_game_state->pets[index].name, PET_NAME_LENGTH);
             index = g_gosub_result_values[0];
+
             if (index != g_field_game_state->joined_pet)
             {
                 g_field_game_state->pets[index].name[0] = 0;
                 return g_gosub_result_values[0];
             }
+
             return PET_RECORD_COUNT;
         }
+
         record_game_diagnostic(DIAG_ERROR, DIAG_BAD_COMPANION, index, 0);
     }
+
     return FIELD_COMPANION_NONE;
 }
 
@@ -155,21 +166,26 @@ s32 field_get_stored_companion_status(s32 index)
         {
             field_set_text_macro(0, g_field_game_state->pets[index].name, PET_NAME_LENGTH);
             status = g_field_game_state->pets[index].status.word;
+
             if (status < 0)
             {
                 if (g_field_game_state->pets[index].hatch_counter != 0)
                 {
                     return FIELD_COMPANION_STATUS_NEW_HELD;
                 }
+
                 g_field_game_state->pets[index].status.word = status & ~PET_STATUS_EGG;
                 return FIELD_COMPANION_STATUS_NEW;
             }
+
             if (((u32)status >> FIELD_COMPANION_GAINS_EXPERIENCE_BIT) & 1)
             {
                 return FIELD_COMPANION_STATUS_GAINS_EXPERIENCE;
             }
+
             return FIELD_COMPANION_STATUS_IDLE;
         }
+
         return FIELD_COMPANION_STATUS_EMPTY;
     }
 }
@@ -187,6 +203,7 @@ void field_rename_stored_companion(s32 index)
         record_game_diagnostic(DIAG_ERROR, DIAG_BAD_COMPANION_RENAME, index, 0);
         return;
     }
+
     field_set_text_macro(0, g_field_game_state->pets[index].name, PET_NAME_LENGTH);
     companion = &g_field_game_state->pets[index];
     field_run_name_entry(companion->name, companion->name, FIELD_NAME_SOURCE_COMPANION, g_field_game_state->pets[index].species, 0);

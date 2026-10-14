@@ -15,20 +15,6 @@
  * relative to the owner actor's local variable base.
  */
 
-/** @brief Bits 0-11 of a variable reference: word index and bit position. */
-#define FIELD_SCRIPT_VAR_LOCATION_MASK 0xFFF
-
-/** @brief Bits 0-4 of a variable reference: bit position inside the word. */
-#define FIELD_SCRIPT_VAR_SHIFT_MASK 0x1F
-
-/** @brief Variable kind, bits 12-14 of a variable reference. */
-#define FIELD_SCRIPT_VAR_KIND(ref) (((ref) >> 12) & 7)
-
-/** @brief First variable kind that lives in the field runtime context. */
-#define FIELD_SCRIPT_VAR_LOCAL_KIND 3
-
-/** @brief Variable reference bit: offset the word index by the owner's local variable base. */
-#define FIELD_SCRIPT_VAR_OWNER_RELATIVE 0x8000
 
 /** @brief Element widths of field_read_bits and field_write_bits. */
 enum

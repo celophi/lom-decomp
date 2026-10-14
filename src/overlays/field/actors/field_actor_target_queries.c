@@ -54,11 +54,13 @@ s32 field_actor_within_distance(FieldActor* source, FieldActor* candidate, s32 m
         gte_sqr0();
         gte_stlvnl(square);
         distance = SquareRoot0(square->vx + square->vy + square->vz);
+
         if (distance < max_distance)
         {
             return 1;
         }
     }
+
     return 0;
 }
 
@@ -84,6 +86,7 @@ s32 field_actor_within_ring(FieldActor* source, FieldActor* candidate, s32 max_d
         gte_sqr0();
         gte_stlvnl(square);
         distance = SquareRoot0(square->vx + square->vy + square->vz);
+
         if (distance < max_distance + FIELD_TARGET_RING_INNER)
         {
             if (distance > FIELD_TARGET_RING_INNER)
@@ -92,6 +95,7 @@ s32 field_actor_within_ring(FieldActor* source, FieldActor* candidate, s32 max_d
             }
         }
     }
+
     return 0;
 }
 
@@ -108,13 +112,16 @@ s32 field_actor_faces_target(FieldActor* source, FieldActor* candidate, s32 dist
     s32 angle;
 
     limit = ratan2(distance, FIELD_TARGET_FACING_RANGE);
+
     if (!(source->animation & FIELD_ANIMATION_FACING))
     {
         angle = ratan2((source->z - candidate->z) >> 8, (source->x - candidate->x) >> 8);
+
         if (angle > FIELD_ANGLE_HALF_TURN)
         {
             angle = FIELD_ANGLE_TURN - angle;
         }
+
         if (angle < limit && -limit < angle)
         {
             return 1;
@@ -123,15 +130,18 @@ s32 field_actor_faces_target(FieldActor* source, FieldActor* candidate, s32 dist
     else
     {
         angle = ratan2((candidate->z - source->z) >> 8, (candidate->x - source->x) >> 8);
+
         if (angle > FIELD_ANGLE_HALF_TURN)
         {
             angle = FIELD_ANGLE_TURN - angle;
         }
+
         if (angle < limit && -limit < angle)
         {
             return 1;
         }
     }
+
     return 0;
 }
 
@@ -151,23 +161,29 @@ s32 field_actor_within_box(FieldActor* source, FieldActor* candidate, s32 half_w
     {
         return 0;
     }
+
     dz = candidate->z - source->z;
+
     if (dz > FIELD_TARGET_BOX_HALF_DEPTH)
     {
         return 0;
     }
+
     if (dz < -FIELD_TARGET_BOX_HALF_DEPTH)
     {
         return 0;
     }
+
     dx = candidate->x;
     dx = dx - source->x;
     half_width <<= 8;
     dz = dx;
+
     if (half_width < dz)
     {
         return 0;
     }
+
     return dz >= -half_width;
 }
 
@@ -194,9 +210,10 @@ s32 field_actor_near_ground_points(FieldActor* source, FieldActor* candidate, s3
     {
         return 0;
     }
+
     point = g_field_object_states[source->object_index].ground_attachment_points;
-    i = 0;
-    do
+
+    for (i = 0; i < FIELD_GROUND_POINT_COUNT; i++, point++)
     {
         delta->vx = ((candidate->x - source->x) - (point->x << 8)) >> 8;
         delta->vy = (candidate->y - source->y) >> 8;
@@ -205,14 +222,14 @@ s32 field_actor_near_ground_points(FieldActor* source, FieldActor* candidate, s3
         gte_sqr0();
         gte_stlvnl(square);
         distance = SquareRoot0(square->vx + square->vy + square->vz);
+
         if (distance < max_distance)
         {
         found:
             return 1;
         }
-        i++;
-        point++;
-    } while (i < FIELD_GROUND_POINT_COUNT);
+    }
+
     return 0;
 }
 
@@ -231,6 +248,7 @@ s32 field_actor_near_first_ground_point(FieldActor* source, FieldActor* candidat
     s32 distance;
 
     point = g_field_object_states[source->object_index].ground_attachment_points;
+
     if (candidate->presence != FIELD_ACTOR_UNUSED)
     {
         delta->vx = ((candidate->x - source->x) - (point->x << 8)) >> 8;
@@ -240,11 +258,13 @@ s32 field_actor_near_first_ground_point(FieldActor* source, FieldActor* candidat
         gte_sqr0();
         gte_stlvnl(square);
         distance = SquareRoot0(square->vx + square->vy + square->vz);
+
         if (distance < max_distance)
         {
             return 1;
         }
     }
+
     return 0;
 }
 
@@ -294,6 +314,7 @@ s32 field_collect_action_targets(s32 source_index, FieldActionSlot* action, s32 
                 start = 0;
                 end = FIELD_PARTY_COUNT;
             }
+
             break;
         case 1:
             if (source_index < FIELD_PARTY_COUNT)
@@ -306,37 +327,47 @@ s32 field_collect_action_targets(s32 source_index, FieldActionSlot* action, s32 
                 start = FIELD_PARTY_COUNT;
                 end = FIELD_ACTOR_COUNT;
             }
+
             break;
         }
     }
+
     count = 0;
     index = start;
     actor = &g_field_actors[index];
     state = &g_field_object_states[index];
+
     for (; index < end; index++, actor++, state++)
     {
         if (index == source_index || actor->presence == FIELD_ACTOR_UNUSED || state->current_hp.word == 0)
         {
             continue;
         }
+
         flags = state->contact.word;
+
         if (flags & FIELD_CONTACT_ANIMATION_HIDDEN)
         {
             continue;
         }
+
         if (g_field_active_group != (state->group_flags & FIELD_OBJECT_GROUP_MASK) && index >= FIELD_PARTY_COUNT)
         {
             continue;
         }
+
         if (flags & FIELD_CONTACT_NO_HIT_TEST)
         {
             continue;
         }
+
         command = actor->command;
+
         if (command == FIELD_ACTOR_COMMAND_TECHNIQUE || command == FIELD_ACTOR_COMMAND_DEFEAT_DELAY || command == FIELD_ACTOR_COMMAND_INSTRUMENT)
         {
             continue;
         }
+
         if (!(flags & FIELD_CONTACT_ACTION_PENDING))
         {
             if (g_field_actor_bindings[FIELD_BINDING_INDEX(index)].owner == index && g_field_actor_bindings[FIELD_BINDING_INDEX(index)].state != 0)
@@ -344,20 +375,24 @@ s32 field_collect_action_targets(s32 source_index, FieldActionSlot* action, s32 
                 continue;
             }
         }
+
         if ((state->flags & FIELD_OBJECT_UNTARGETABLE_FLAGS) || state->collision.word == 0 || (state->movement.word & FIELD_MOVEMENT_INVULNERABLE) ||
             (state->contact.word & FIELD_CONTACT_TARGETED))
         {
             continue;
         }
+
         if (g_field_target_filters[action->flags.target_filter](&g_field_actors[source_index], &g_field_actors[index], filter_arg) != 0)
         {
             for (prior = 0; prior < count; prior++)
             {
                 /* The original walks the accepted indices without testing them. */
             }
+
             output[count] = index;
             count += 1;
         }
     }
+
     return count;
 }

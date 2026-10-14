@@ -46,25 +46,28 @@ void field_golem_commit_group_edit(s32 command)
     s32 group;
 
     i = 0;
+
     if (command == GOLEM_COMMAND_REORDER)
     {
         target = D_80122C00.locals.golem.slot;
+
         if ((u32)target < GOLEM_RECORD_COUNT)
         {
             layout = GOLEM_LAYOUT;
             joined = layout->header.fields.joined_group;
-            do
+
+            for (; i < GOLEM_RECORD_COUNT; i++)
             {
                 /* Written index first: the address sum adds i before the base. */
                 if (*(i + layout->group_order) == joined)
                 {
                     found = i;
                 }
-                i++;
-            } while (i < GOLEM_RECORD_COUNT);
+            }
 
             GOLEM.group_order[found] = GOLEM.group_order[target];
             GOLEM.group_order[target] = GOLEM.header.fields.joined_group;
+
             if (GOLEM.group_order[found] == GOLEM.header.fields.joined_group)
             {
                 D_80122C06 = GOLEM_SLOT_STATUS_UNCHANGED;
@@ -73,6 +76,7 @@ void field_golem_commit_group_edit(s32 command)
             {
                 D_80122C06 = GOLEM.group_order[found];
             }
+
             D_80122C1A = D_800459AF;
         }
     }
@@ -82,11 +86,14 @@ void field_golem_commit_group_edit(s32 command)
         {
             GOLEM.group_records[GOLEM.header.fields.joined_group].name[i] = GOLEM.companion.name[i];
         }
+
         group = GOLEM.header.fields.joined_group;
+
         if (group != GOLEM_NO_GROUP)
         {
             GOLEM.header.word = (GOLEM.header.word & ~GOLEM_SAVED_GROUP_MASK) | ((group & 0xF) << GOLEM_SAVED_GROUP_SHIFT);
         }
+
         GOLEM.header.fields.joined_group = GOLEM_NO_GROUP;
     }
 }
@@ -136,11 +143,13 @@ static void field_golem_rebuild_grid(s32 type)
         for (i = 0; i < GOLEM.header.fields.block_count; i++)
         {
             block = GOLEM.logic_blocks[i];
+
             if ((block.f.placed == 1) && (block.f.logic_type == type))
             {
                 field_golem_stamp_block_shape(i, block.f.rotation, block.f.grid_x, block.f.grid_y);
             }
         }
+
         field_golem_mark_grid_edges();
     }
 }
@@ -155,6 +164,7 @@ static void field_golem_mark_grid_edges(void)
 
     /* A local, not the constant: loading it before i is set is what the code does. */
     empty = GOLEM_GRID_EMPTY;
+
     for (i = GOLEM_GRID_CELL_COUNT - 1; i >= 0; i--)
     {
         GOLEM.grid[i].edge = empty;
@@ -163,9 +173,11 @@ static void field_golem_mark_grid_edges(void)
     for (i = 0; i < GOLEM_GRID_UPPER_CELL_COUNT; i++)
     {
         owner = GOLEM.grid[i].owner;
+
         if (owner != GOLEM_GRID_EMPTY)
         {
             below = GOLEM.grid[i + GOLEM_GRID_WIDTH].owner;
+
             if ((below != GOLEM_GRID_EMPTY) && (owner != below))
             {
                 GOLEM.grid[i].edge = i + GOLEM_GRID_WIDTH;
@@ -188,6 +200,7 @@ static void field_golem_stamp_block_shape(s32 index, s32 rotation, s32 x, s32 y)
     s32 cell;
 
     table = D_80051888;
+
     for (i = 0; i < table.shapes[GOLEM.logic_blocks[index].f.shape].count; i++)
     {
         cell = x + table.shapes[GOLEM.logic_blocks[index].f.shape].rotations[rotation].parts[i].x +

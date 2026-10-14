@@ -22,6 +22,7 @@
 #include <memory.h>
 #include <rand.h>
 #include "../internal/field_actor_runtime.h"
+#include "../internal/field_actor_palette.h"
 #include "overlays/field/field_actor_records.h"
 
 /* ---- HUD ------------------------------------------------------------------ */
@@ -107,14 +108,9 @@
 #define FIELD_HUD_ENEMY_PANEL_HEIGHT 16
 #define FIELD_HUD_ENEMY_PANEL_UV FIELD_HUD_UV(0, 0x40)
 
-/** @brief Portrait: size, texture position, VRAM pages (party member and companion) and CLUT rows. */
+/** @brief Portrait: size, texture position and companion CLUT row (VRAM pages and party CLUT rows are in field_actor_palette.h). */
 #define FIELD_HUD_PORTRAIT_SIZE 24
 #define FIELD_HUD_PORTRAIT_UV FIELD_HUD_UV(0, 0xE8)
-#define FIELD_HUD_PORTRAIT_TEXTURE_X 0x380
-#define FIELD_HUD_PORTRAIT_TEXTURE_STEP 0x80
-#define FIELD_HUD_COMPANION_TEXTURE_X 0x340
-#define FIELD_HUD_COMPANION_TEXTURE_STEP 0x40
-#define FIELD_HUD_PORTRAIT_CLUT_Y 0x1F4
 #define FIELD_HUD_COMPANION_CLUT_Y 0x1EF
 
 /** @brief Blinking eyes sprite: offset from the panel, size (one animation frame) and first frame. */
@@ -198,17 +194,6 @@ typedef union
 } FieldObjectFlagHandler;
 
 extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_COUNT];
-
-/** @brief FieldObjectState.movement bits cleared whenever an actor animation restarts. */
-#define FIELD_MOVEMENT_ANIMATION_BITS 0x1800
-
-/** @brief Low seven bits of FieldActor.animation select the animation, bit 7 mirrors it. */
-#define FIELD_ANIMATION_SEQUENCE_MASK 0x7F
-#define FIELD_ANIMATION_MIRROR_FLAG 0x80
-
-/** @brief FieldActor.control bits set by the flag handlers. */
-#define FIELD_ANIMATION_HOLD_LAST_FRAME 0x800
-#define FIELD_ACTOR_CONTROL_40000 0x40000
 
 /** @brief Animation held while the object is petrified. */
 #define FIELD_ANIMATION_PETRIFIED_POSE 0x14
@@ -389,6 +374,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
                 field_draw_actor_hud_panel(FIELD_HUD_SINGLE_X, FIELD_HUD_PARTY_Y, i, render_half, FIELD_HUD_HP_PER_BAR);
             }
         }
+
         break;
     case 2:
         panel_count = 0;
@@ -401,6 +387,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
                 panel_count++;
             }
         }
+
         break;
     case 3:
         panel_count = 0;
@@ -422,6 +409,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
                 panel_count++;
             }
         }
+
         break;
     }
 
@@ -464,7 +452,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
                         {
                             if (!(g_field_object_states[i].flags & FIELD_OBJECT_FLAG_FROZEN) &&
                                 (g_field_object_states[i].contact.bytes.flags & FIELD_CONTACT_ANIMATION_HIDDEN) &&
-                                (g_field_effect_records[g_field_object_states[i].linked_effect_index].animation & FIELD_ANIMATION_SEQUENCE_MASK) !=
+                                (g_field_effect_records[g_field_object_states[i].linked_effect_index].animation & FIELD_ANIMATION_INDEX_MASK) !=
                                     FIELD_HUD_ANCHOR_IGNORED_ANIMATION)
                             {
                                 anchor = &g_field_effect_records[g_field_object_states[i].linked_effect_index];
@@ -1007,6 +995,7 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
             SET_SPRT_WH_PACKED(sprite_cursor, FIELD_HUD_PANEL_WIDTH, FIELD_HUD_PANEL_HEIGHT);
             SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_COMPANION_PANEL_UV);
         }
+
         break;
     default:
         if (boss_panel != 0)
@@ -1019,6 +1008,7 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
             SET_SPRT_WH_PACKED(sprite_cursor, FIELD_HUD_ENEMY_PANEL_WIDTH, FIELD_HUD_ENEMY_PANEL_HEIGHT);
             SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_ENEMY_PANEL_UV);
         }
+
         break;
     }
 
@@ -1218,7 +1208,7 @@ void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* positi
     }
     else
     {
-        sprt->clut = ((index + FIELD_HUD_PORTRAIT_CLUT_Y) << 6) | FIELD_CONTROL_PALETTE(g_field_actors[index].control.word);
+        sprt->clut = ((index + FIELD_RESOURCE_CLUT_VRAM_Y) << 6) | FIELD_CONTROL_PALETTE(g_field_actors[index].control.word);
     }
 
     addPrim(ot, sprt);
@@ -1227,11 +1217,11 @@ void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* positi
 
     if (index >= FIELD_PARTY_COMPANION)
     {
-        setDrawTPage(mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, FIELD_HUD_COMPANION_TEXTURE_X - index * FIELD_HUD_COMPANION_TEXTURE_STEP, 0));
+        setDrawTPage(mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, FIELD_COMPANION_TEXTURE_VRAM_X - index * FIELD_TEXTURE_COLUMN_WIDTH, 0));
     }
     else
     {
-        setDrawTPage(mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, FIELD_HUD_PORTRAIT_TEXTURE_X - index * FIELD_HUD_PORTRAIT_TEXTURE_STEP, 0));
+        setDrawTPage(mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, FIELD_PARTY_TEXTURE_VRAM_X - index * FIELD_PARTY_TEXTURE_VRAM_STEP, 0));
     }
 
     addPrim(ot, mode);
@@ -1472,7 +1462,7 @@ void field_update_object_effects(s32 index)
                         if ((state->contact.word & FIELD_CONTACT_ANIMATION_HIDDEN) &&
                             (state->contact.bytes.controller_index == (actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE)))
                         {
-                            actor->presence = 0;
+                            actor->presence = FIELD_ACTOR_VISIBLE;
                             state->contact.word &= ~FIELD_CONTACT_ANIMATION_HIDDEN;
                         }
                     }
@@ -1507,9 +1497,9 @@ void field_handle_object_paralysis(FieldActor* actor, s32 is_set)
     {
         actor->animation_state = 1;
         actor->animation_frame = 0;
-        actor->animation &= FIELD_ANIMATION_MIRROR_FLAG;
+        actor->animation &= FIELD_ANIMATION_FACING;
         actor->animation_active = 1;
-        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
+        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
         field_restart_actor_animation(actor);
         START_OBJECT_EFFECT(actor, FIELD_STATUS_ANIMATION_PARALYSIS);
 #if !defined(VERSION_JP)
@@ -1529,9 +1519,9 @@ void field_handle_object_hypnosis(FieldActor* actor, s32 is_set)
     {
         actor->animation_state = 1;
         actor->animation_frame = 0;
-        actor->animation &= FIELD_ANIMATION_MIRROR_FLAG;
+        actor->animation &= FIELD_ANIMATION_FACING;
         actor->animation_active = 1;
-        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
+        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
         field_restart_actor_animation(actor);
         START_OBJECT_EFFECT(actor, FIELD_STATUS_ANIMATION_HYPNOSIS);
     }
@@ -1571,15 +1561,15 @@ void field_handle_object_sleep(FieldActor* actor, s32 is_set)
         START_OBJECT_EFFECT(actor, FIELD_STATUS_ANIMATION_SLEEP);
         animation = actor->animation;
 
-        if ((animation & FIELD_ANIMATION_SEQUENCE_MASK) != FIELD_ANIMATION_SLEEP_POSE)
+        if ((animation & FIELD_ANIMATION_INDEX_MASK) != FIELD_ANIMATION_SLEEP_POSE)
         {
-            actor->animation = (animation & FIELD_ANIMATION_MIRROR_FLAG) + FIELD_ANIMATION_SLEEP_POSE;
+            actor->animation = (animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_SLEEP_POSE;
             actor->animation_state = 1;
             actor->animation_frame = 0;
             actor->animation_active = 1;
-            g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
+            g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
             field_restart_actor_animation(actor);
-            actor->control.word |= FIELD_ANIMATION_HOLD_LAST_FRAME;
+            actor->control.word |= FIELD_CONTROL_PLAY_ONCE;
         }
 #if !defined(VERSION_JP)
         field_clear_link_target_flag(actor->object_index);
@@ -1600,10 +1590,10 @@ void field_handle_object_petrification(FieldActor* actor, s32 is_set)
         actor->animation_state = 1;
         actor->animation_active = 1;
         actor->animation_frame = 0;
-        actor->animation = (actor->animation & FIELD_ANIMATION_MIRROR_FLAG) + FIELD_ANIMATION_PETRIFIED_POSE;
-        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
+        actor->animation = (actor->animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_PETRIFIED_POSE;
+        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
         field_restart_actor_animation(actor);
-        actor->control.word |= FIELD_ACTOR_CONTROL_40000 | FIELD_ANIMATION_HOLD_LAST_FRAME;
+        actor->control.word |= FIELD_CONTROL_UNK40000 | FIELD_CONTROL_PLAY_ONCE;
 #if !defined(VERSION_JP)
         field_clear_link_target_flag(actor->object_index);
 #endif
@@ -1613,11 +1603,11 @@ void field_handle_object_petrification(FieldActor* actor, s32 is_set)
         actor->animation_frame = 0;
         actor->animation_state = 1;
         actor->animation_active = 1;
-        actor->animation &= FIELD_ANIMATION_MIRROR_FLAG;
-        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
+        actor->animation &= FIELD_ANIMATION_FACING;
+        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
         field_restart_actor_animation(actor);
         START_OBJECT_EFFECT(actor, 0x91);
-        actor->control.word &= ~FIELD_ACTOR_CONTROL_40000;
+        actor->control.word &= ~FIELD_CONTROL_UNK40000;
     }
 }
 
@@ -1656,7 +1646,7 @@ void field_handle_object_freeze(FieldActor* actor, s32 is_set)
     else
     {
         START_OBJECT_EFFECT(actor, 13);
-        actor->presence = 0;
+        actor->presence = FIELD_ACTOR_VISIBLE;
     }
 }
 
@@ -1886,6 +1876,7 @@ POLY_FT4* field_render_actor_ground_shadow(FieldActor* actor, POLY_FT4* prim, s3
             prim++;
         }
     }
+
     return prim;
 }
 

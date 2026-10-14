@@ -10,6 +10,7 @@
 #include "../internal/field_script.h"
 #include "../internal/field_records.h"
 #include "../internal/field_actor.h"
+#include "../internal/field_state_ops.h"
 
 /** @brief field_battle_side_defeated results. */
 #define FIELD_BATTLE_ONGOING 0
@@ -19,13 +20,6 @@
 /** @brief Record id whose script variables hold the companion values. */
 #define FIELD_COMPANION_RECORD_ID 2
 
-
-/** @brief FieldStatusRecordMeta::packed bit of bits.ally. */
-#define FIELD_STATUS_META_ALLY 0x200
-
-/** @brief FieldStatusRecordMeta::packed bits of bits.kind. */
-#define FIELD_STATUS_META_KIND_MASK 0xFC00
-#define FIELD_STATUS_META_KIND_SHIFT 10
 
 /** @brief FieldStatusRecordMeta::bytes.unk2 bit: actions never apply to the record. */
 #define FIELD_STATUS_META_UNTARGETABLE 0x4000
@@ -204,9 +198,11 @@ s32 field_action_target_applies(void)
     {
         return 0;
     }
+
     /* The u8 truncation happens before the switch in the target. */
     opposed = (u8)(g_field_battle->attacker->meta.bits.ally ^ g_field_battle->target->meta.bits.ally);
     side_rule = FIELD_DESCRIPTOR_SIDE_RULE(g_field_battle->descriptor);
+
     switch (side_rule)
     {
     case 0:
@@ -214,12 +210,14 @@ s32 field_action_target_applies(void)
         {
             return -1;
         }
+
         return 0;
     case 1:
         if (opposed != 0)
         {
             return -1;
         }
+
         return 0;
     case 2:
     case 3:
@@ -270,6 +268,7 @@ s32 field_battle_handle_defeat(FieldStatusRecord* record)
         {
             field_set_script_var(0, FIELD_VAR_WATCHED_RECORD, -1);
         }
+
         if (record->meta.packed & FIELD_STATUS_META_ALLY)
         {
             remaining = field_get_script_var(0, FIELD_VAR_ALLY_COUNT);
@@ -278,7 +277,9 @@ s32 field_battle_handle_defeat(FieldStatusRecord* record)
         {
             remaining = field_get_script_var(0, FIELD_VAR_ENEMY_COUNT);
         }
+
         remaining--;
+
         if (remaining == 0 && (record->status_flags & FIELD_RECORD_FLAG_AUTO_REVIVE))
         {
             field_spawn_shared_animation_actor(record->meta.bytes.id, FIELD_REVIVE_EFFECT);
@@ -292,23 +293,28 @@ s32 field_battle_handle_defeat(FieldStatusRecord* record)
             record->state->effect_flags |= FIELD_EFFECT_KNOCKED_OUT;
             field_start_actor_defeat_by_key(record->meta.bytes.id, -1);
             duration = FIELD_DEFEAT_TIMER_NORMAL;
+
             if (record->status_flags & FIELD_RECORD_FLAG_SHORT_DEFEAT_TIMER)
             {
                 duration = FIELD_DEFEAT_TIMER_SHORT;
             }
+
             if (field_count_status_slots(record, FIELD_STATUS_ID_QUICK_RECOVERY) != 0)
             {
                 descriptor = g_field_battle->descriptor;
+
                 if (descriptor != NULL && FIELD_DESCRIPTOR_KIND(descriptor) < FIELD_ACTION_KIND_ELEMENTAL)
                 {
                     duration = FIELD_DEFEAT_TIMER_QUICK;
                 }
             }
+
             if (!(record->status_flags & FIELD_RECORD_FLAG_NO_DEFEAT_TIMER))
             {
                 field_schedule_actor_revive(g_field_battle->action->target_id, 0x1E, FIELD_REVIVE_EFFECT, -1, duration);
             }
         }
+
         if (record->meta.packed & FIELD_STATUS_META_ALLY)
         {
             field_set_script_var(0, FIELD_VAR_ALLY_COUNT, remaining);
@@ -321,16 +327,19 @@ s32 field_battle_handle_defeat(FieldStatusRecord* record)
     else
     {
         record->state->effect_flags &= ~FIELD_EFFECT_DEFEAT_CLEAR_MASK;
+
         if ((record->meta.bytes.unk2 & FIELD_STATUS_META_UNK16) || (record->template->flags & FIELD_TEMPLATE_FLAG_UNK0))
         {
             record->state->effect_flags |= FIELD_EFFECT_KNOCKED_OUT;
         }
+
         field_set_actor_record_script_only(record->meta.bytes.id, 0);
         record->meta.bits.active = 0;
         field_start_actor_defeat_by_key(record->meta.bytes.id, field_roll_defeat_drop(record));
         remaining = field_get_script_var(0, FIELD_VAR_ENEMY_COUNT) - 1;
         field_set_script_var(0, FIELD_VAR_ENEMY_COUNT, remaining);
     }
+
     return field_battle_side_defeated(record);
 }
 
@@ -360,6 +369,7 @@ void field_select_coordinate_labels(void)
 
     g_field_party_has_guest = 0;
     first = 0;
+
     if (g_field_game_state->characters[1].name[0] != 0 && (g_field_game_state->characters[1].info.word & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST)
     {
         g_field_party_has_guest = 1;
@@ -368,10 +378,12 @@ void field_select_coordinate_labels(void)
 
     resource = field_find_resource(FIELD_RESOURCE_COORDINATE_LABELS);
     i = 0;
+
     if (resource != NULL)
     {
         /* Integer sum: the target adds the index before the pointer. */
         offsets = (u16*)((first * 2) + (uintptr_t)resource);
+
         for (; i < FIELD_COORDINATE_LABEL_COUNT; i++)
         {
             g_field_coordinate_labels[i] = resource + (offsets[i + 2] + 4);
@@ -399,9 +411,11 @@ void field_battle_defeat_record(s32 record_id)
     g_field_battle->attacker = record;
     g_field_battle->target = record;
     g_field_battle->descriptor = NULL;
+
     if (record != NULL)
     {
         result = field_battle_handle_defeat(record);
+
         if (result != FIELD_BATTLE_ONGOING)
         {
             field_battle_finish(result);
@@ -422,6 +436,7 @@ void field_consume_revive_item(FieldStatusRecord* record)
     for (i = 0; i < FIELD_EQUIPMENT_SLOT_COUNT; i++)
     {
         item = &g_field_game_state->characters[record->meta.bytes.id].equipment[i];
+
         if (item->name[0] != 0 && (item->effect_index & FIELD_ITEM_EFFECT_REVIVE))
         {
             for (j = 0; j < FIELD_ITEM_SPECIAL_COUNT; j++)
@@ -447,15 +462,18 @@ s32 field_run_action_handler(void)
     FieldActionDescriptor* descriptor;
 
     descriptor = g_field_battle->descriptor;
+
     if (descriptor != NULL)
     {
         if (descriptor->info.bytes.handler < FIELD_ACTION_HANDLER_COUNT)
         {
             return g_field_action_handlers[descriptor->info.bytes.handler]();
         }
+
         record_game_diagnostic(0x8001, 0x65, descriptor->info.bytes.handler, g_field_battle->action->action_id);
         return 0;
     }
+
     return 0;
 }
 
@@ -480,10 +498,12 @@ s32 field_action_damage_status(void)
     element_mask = (params.word >> 8) & 0xFF;
     field_apply_element_modifiers(0, element_mask, &attack, &defense);
     damage = field_apply_damage(attack, defense);
+
     if ((g_field_battle->target->weak_elements & element_mask) || (FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor) != FIELD_ACTION_KIND_ELEMENTAL))
     {
         field_apply_status_effect(g_field_battle->attacker, g_field_battle->target, 0, status.status.effect, (status.status.chance + 1) * 16, status.status.duration * 16);
     }
+
     field_apply_on_hit_statuses();
     return damage;
 }
@@ -516,6 +536,7 @@ s32 field_action_damage_drain(void)
         {
             params.roll.spread = 1;
         }
+
         field_heal_status(g_field_battle->attacker->state, (u32)(damage * (params.roll.base + rand() % params.roll.spread)) >> 7);
     }
 
@@ -544,11 +565,13 @@ s32 field_action_damage_stat_change(void)
     element_mask = (params.word >> 8) & 0xFF;
     field_apply_element_modifiers(0, element_mask, &attack, &defense);
     damage = field_apply_damage(attack, defense);
+
     if ((g_field_battle->target->weak_elements & element_mask) || (FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor) != FIELD_ACTION_KIND_ELEMENTAL))
     {
         field_scale_status_stat(g_field_battle->attacker, changes.stat_change.attacker_stat, changes.stat_change.attacker_scale, -1);
         field_scale_status_stat(g_field_battle->target, changes.stat_change.target_stat, changes.stat_change.target_scale, -1);
     }
+
     field_apply_on_hit_statuses();
     return damage;
 }
@@ -567,6 +590,7 @@ s32 field_action_damage_from_hp(void)
     s32 damage;
 
     params = g_field_battle->descriptor->params;
+
     if (params.roll.spread == 0)
     {
         params.roll.spread = 1;
@@ -606,10 +630,12 @@ s32 field_action_damage_conditional(void)
         record_game_diagnostic(0x8003, race, race, 1);
 
         field_compute_attack(params.conditional.attack_stat, &attack);
+
         if (params.conditional.doubled == 1)
         {
             attack <<= 1;
         }
+
         field_compute_defense(params.conditional.defense_stat, &defense);
         field_apply_element_modifiers(0, 0, &attack, &defense);
         damage = field_apply_damage(attack, defense);
@@ -649,6 +675,7 @@ s32 field_action_damage_modify(void)
     field_apply_element_modifiers(0, 0, &attack, &defense);
     damage = field_apply_damage(attack, defense);
     field_apply_on_hit_statuses();
+
     switch (params.modify.operation)
     {
     case 0:
@@ -664,6 +691,7 @@ s32 field_action_damage_modify(void)
         g_field_battle->target->weak_elements |= params.modify.value;
         break;
     }
+
     return damage;
 }
 
@@ -678,18 +706,22 @@ void field_action_scale_target_hp(void)
     u32 hp;
 
     params = g_field_battle->descriptor->params;
+
     if (params.roll.spread == 0)
     {
         params.roll.spread = 1;
     }
+
     roll = rand() % params.roll.spread;
     state = g_field_battle->target->state;
     hp = params.roll.base + roll;
     hp = (u32)(state->current * hp) >> 4;
+
     if (hp == 0)
     {
         hp = 1;
     }
+
     state->current = hp;
 }
 
@@ -731,6 +763,7 @@ void field_compute_defense(s32 stat_index, s32* defense)
     animation = field_get_actor_animation(g_field_battle->target->meta.bytes.id);
     stat = field_get_status_stat(g_field_battle->target, stat_index);
     target = g_field_battle->target;
+
     if ((target->state->effect_flags & FIELD_EFFECT_DEFENSELESS) || animation == FIELD_ABILITY_CROUCH)
     {
         *defense = 0;
@@ -747,6 +780,7 @@ void field_compute_defense(s32 stat_index, s32* defense)
         slot = FIELD_DESCRIPTOR_DEFENSE_SLOT(g_field_battle->descriptor);
         *defense = target->equipment_stats[slot];
     }
+
     *defense = (u32)(*defense * (stat + FIELD_STAT_SCALE)) / FIELD_STAT_SCALE;
 }
 
@@ -771,14 +805,17 @@ void field_apply_element_modifiers(s32 unused, s32 element_mask, s32* attack, s3
     {
         i = 0;
         sum = 0;
+
         for (; i < FIELD_ELEMENT_COUNT; i++)
         {
             if (mask & 1)
             {
                 sum += g_field_battle->attacker->element_attack[i];
             }
+
             mask >>= 1;
         }
+
         *attack = (u32)(*attack * (sum + FIELD_WEAKNESS_BIAS)) >> 2;
     }
 
@@ -792,15 +829,18 @@ void field_apply_element_modifiers(s32 unused, s32 element_mask, s32* attack, s3
     }
 
     i = 0;
+
     if (mask != 0)
     {
         sum = 0;
+
         for (; i < FIELD_ELEMENT_COUNT; i++)
         {
             if (mask & 1)
             {
                 sum += g_field_battle->target->element_defense[g_field_element_resist_slots[i]];
             }
+
             mask >>= 1;
         }
 
@@ -839,6 +879,7 @@ s32 field_apply_damage(u32 attack, u32 defense)
     {
         return 0;
     }
+
     if (g_field_battle->descriptor->info.bytes.power == 0)
     {
         return 0;
@@ -848,24 +889,29 @@ s32 field_apply_damage(u32 attack, u32 defense)
     {
         attack -= defense >> 1;
         clamped = attack;
+
         if ((s32)attack < 0)
         {
             clamped = 0;
         }
+
         attack = clamped;
     }
     else
     {
         value = defense >> 1;
+
         if (value == 0)
         {
             value = 1;
         }
+
         half_attack = (attack >> 1) & 0xFFFF;
         attack = (half_attack * half_attack) / value;
     }
 
     bonus = 0;
+
     /* Attacker of character type 4. */
     if ((g_field_battle->attacker->meta.packed & FIELD_STATUS_META_KIND_MASK) == (4 << FIELD_STATUS_META_KIND_SHIFT))
     {
@@ -878,6 +924,7 @@ s32 field_apply_damage(u32 attack, u32 defense)
     if ((field_count_status_slots(g_field_battle->attacker, FIELD_STATUS_ID_DRAIN) != 0) && (FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor) < FIELD_ACTION_KIND_ELEMENTAL))
     {
         attacker = g_field_battle->attacker;
+
         if ((s32)attack < 0)
         {
             quarter = attack + 3;
@@ -888,10 +935,12 @@ s32 field_apply_damage(u32 attack, u32 defense)
             quarter = attack;
             value = (uintptr_t)attacker->state;
         }
+
         field_heal_status((FieldStatusState*)value, quarter >> 2);
     }
 
     attack = field_apply_attacker_double(attack);
+
     if (!(g_field_battle->action_flags.bits.guarded) && ((s32)attack <= 0))
     {
         attack = 1;
@@ -923,6 +972,7 @@ s32 field_apply_status_multipliers(s32 damage)
     s32 kind;
 
     count = field_count_status_slots(g_field_battle->attacker, FIELD_DESCRIPTOR_DEFENSE_SLOT(g_field_battle->descriptor) | FIELD_STATUS_ID_SLOT_BOOST);
+
     for (; count != 0; count--)
     {
         damage = (damage * 3) / 2;
@@ -930,6 +980,7 @@ s32 field_apply_status_multipliers(s32 damage)
 
     kind = FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor);
     count = field_count_status_slots(g_field_battle->attacker, kind + FIELD_STATUS_ID_KIND_BOOST);
+
     for (; count != 0; count--)
     {
         damage = (damage * 3) / 2;
@@ -937,18 +988,21 @@ s32 field_apply_status_multipliers(s32 damage)
 
     kind = FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor);
     count = field_count_status_slots(g_field_battle->target, kind + FIELD_STATUS_ID_KIND_GUARD);
+
     for (; count != 0; count--)
     {
         damage = damage / 2;
     }
 
     count = field_count_status_slots(g_field_battle->attacker, g_field_battle->target->race + FIELD_STATUS_ID_RACE_SLAYER);
+
     for (; count != 0; count--)
     {
         damage = (damage * 3) / 2;
     }
 
     count = field_count_status_slots(g_field_battle->target, g_field_battle->attacker->race + FIELD_STATUS_ID_RACE_GUARD);
+
     for (; count != 0; count--)
     {
         damage = damage / 2;
@@ -967,10 +1021,12 @@ s32 field_apply_attacker_double(s32 damage)
     s32 result;
 
     result = damage;
+
     if (g_field_battle->attacker->unkC & 1)
     {
         result *= 2;
     }
+
     return result;
 }
 

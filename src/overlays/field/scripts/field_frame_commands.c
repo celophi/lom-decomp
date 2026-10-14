@@ -17,14 +17,10 @@ void field_restart_pending_bindings(void);
 void field_update_timed_panel(FieldRenderHalf* render);
 void field_update_actor_texts(FieldRenderHalf* render);
 /** @brief Nonzero while a picture screen is shown (set by func_800A5670). */
-extern s32 g_field_timed_panel_active;
-extern s32 g_field_gover_load_countdown;
 extern s32 g_field_pickup_sound_played;
 extern s32 g_field_hide_actor_panels;
 /** @brief Ring menu state; nonzero while the ring menu is open. */
 extern s32 g_field_ring_menu_state;
-extern s32 g_field_modal_state;
-extern s32 g_field_text_session_active;
 
 /**
  * @brief Run one frame of field logic and build its draw commands.
@@ -71,7 +67,7 @@ void field_build_frame_commands(FieldRenderHalf* render_half, s32 alternate)
     {
         field_update_actor_animations();
     }
-    field_prepare_actor_render_commands((u8*)render_half, alternate);
+    field_prepare_actor_render_commands((FieldRenderContext*)render_half, alternate);
     field_render_actor_objects((FieldRenderContext*)render_half);
     field_draw_fade_prims(render_half);
     field_update_pair_indicators(render_half);

@@ -25,6 +25,9 @@ extern s32 g_field_view_offset_z;
 /** @brief Screen position of the camera origin when a world position is projected. */
 #define FIELD_SCREEN_CENTER_X (SCREEN_WIDTH / 2)
 #define FIELD_SCREEN_CENTER_Y (VRAM_DRAW_HEIGHT / 2)
+/** @brief Half the screen width and height in field units (eight fractional bits). */
+#define FIELD_SCREEN_HALF_WIDTH_FIXED (FIELD_SCREEN_CENTER_X * 256)
+#define FIELD_SCREEN_HALF_HEIGHT_FIXED (FIELD_SCREEN_CENTER_Y * 256)
 
 /** @brief Screen X of the world X coordinate @p _x (eight fractional bits) under the current view. */
 #define FIELD_SCREEN_X(_x) (FIELD_SCREEN_CENTER_X + g_field_view_offset_x / 256 + (_x) / 256)
@@ -73,5 +76,11 @@ extern s32 g_field_scripted_scroll_target_z;
 #define FIELD_VIEW_MARGIN_LEFT 0xA00
 #define FIELD_VIEW_MARGIN_RIGHT 0x13600
 #define FIELD_VIEW_MARGIN_BOTTOM 0x1B600
+
+/** @brief Ribbon animation frames (g_field_ribbon_frame_flags) and their flag bits: UV variant, vertical and horizontal flip. */
+#define FIELD_RIBBON_FRAME_COUNT 12
+#define FIELD_RIBBON_UV_VARIANT 0x01
+#define FIELD_RIBBON_FLIP_V 0x40
+#define FIELD_RIBBON_FLIP_U 0x80
 
 #endif

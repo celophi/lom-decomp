@@ -27,6 +27,9 @@
 /** @brief Cancelling a selection. */
 #define FIELD_SOUND_CANCEL 0x7F
 
+/** @brief Sound of a window opening. */
+#define FIELD_SOUND_WINDOW_OPEN 0xB9
+
 /**
  * @brief Play a sound effect at full volume.
  * @param sound_id Sound effect id, such as FIELD_SOUND_CURSOR.

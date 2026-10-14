@@ -159,6 +159,9 @@ enum
     FIELD_WEAPON_BOW = 10
 };
 
+/** @brief Number of weapon types (FIELD_WEAPON_*). */
+#define FIELD_WEAPON_TYPE_COUNT 11
+
 /** @brief Shift of FieldStat's effective value (bits 9-15). */
 #define FIELD_STAT_EFFECTIVE_SHIFT 9
 

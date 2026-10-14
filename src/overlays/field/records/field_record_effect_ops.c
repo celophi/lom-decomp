@@ -36,13 +36,6 @@
 /** @brief Four-bit growth accumulators are clamped to 0 to this value. */
 #define FIELD_GROWTH_ACCUMULATOR_MAX 15
 
-/** @brief Pending effect slots of a stored companion record. */
-#define FIELD_REGION_PENDING_EFFECT_COUNT 3
-
-/** @brief PetRecord::status bits 24-26: pending effects already applied. */
-#define FIELD_REGION_APPLIED_SHIFT 24
-#define FIELD_REGION_APPLIED_MASK 7
-
 /** @brief Resource ids of the effect tables. */
 #define FIELD_RESOURCE_EFFECT_PICKS 0xB
 #define FIELD_RESOURCE_EFFECT_THRESHOLDS 0x10
@@ -110,6 +103,7 @@ void field_roll_menu_slot_effect(s32 group_index, s32 slot_index)
     s32 selection;
 
     table = field_find_resource(FIELD_RESOURCE_EFFECT_PICKS);
+
     if (g_field_game_state->menu_slots[group_index].flags.bits.item_count == 1)
     {
         index = 0;
@@ -124,16 +118,20 @@ void field_roll_menu_slot_effect(s32 group_index, s32 slot_index)
         index = 1;
         random_value = rand();
         effect_index = table->picks[g_field_game_state->menu_slots[group_index].items[0] - FIELD_EFFECT_ITEM_BASE][random_value & 0xF];
+
         for (; index < (s32)g_field_game_state->menu_slots[group_index].flags.bits.item_count; index++)
         {
             random_value = rand();
             selection = table->picks[g_field_game_state->menu_slots[group_index].items[index] - FIELD_EFFECT_ITEM_BASE][random_value & 0xF];
             effect_index |= selection;
         }
+
         index = 0;
     }
+
     g_field_game_state->menu_slots[group_index].slots[slot_index].entry.index = (table->codes[effect_index] & FIELD_EFFECT_CODE_ID_MASK) + FIELD_EFFECT_ID_BASE;
     g_field_game_state->menu_slots[group_index].slots[slot_index].entry.bits.result_type = table->codes[effect_index] >> FIELD_EFFECT_CODE_TYPE_SHIFT;
+
     /* Both paths leave index at 0. */
     do
     {
@@ -152,11 +150,13 @@ void field_classify_menu_slots(s32 group_index)
     s32 slot_index;
 
     table = field_find_resource(FIELD_RESOURCE_EFFECT_THRESHOLDS);
+
     if (table == NULL)
     {
         record_game_diagnostic(DIAG_ERROR, DIAG_MISSING_EFFECT_THRESHOLDS, 0, 0);
         return;
     }
+
     for (slot_index = 0; slot_index < FIELD_MENU_GROUP_SLOT_COUNT; slot_index++)
     {
         if (g_field_game_state->menu_slots[group_index].slots[slot_index].entry.index != FIELD_MENU_ENTRY_EMPTY)
@@ -182,6 +182,7 @@ static s32 field_classify_menu_slot(s32 group_index, s32 slot_index, FieldEffect
 
     i = 0;
     flag = -1;
+
     for (; i < FIELD_MENU_SLOT_COUNTER_COUNT; i++)
     {
         s32 effect = g_field_game_state->menu_slots[group_index].slots[slot_index].entry.index - FIELD_EFFECT_ID_BASE;
@@ -192,6 +193,7 @@ static s32 field_classify_menu_slot(s32 group_index, s32 slot_index, FieldEffect
             break;
         }
     }
+
     if (flag != 0)
     {
         return FIELD_MENU_SLOT_INDEXED;
@@ -199,6 +201,7 @@ static s32 field_classify_menu_slot(s32 group_index, s32 slot_index, FieldEffect
 
     i = 0;
     flag = -1;
+
     for (; i < FIELD_MENU_SLOT_COUNTER_COUNT; i++)
     {
         s32 effect = g_field_game_state->menu_slots[group_index].slots[slot_index].entry.index - FIELD_EFFECT_ID_BASE;
@@ -209,6 +212,7 @@ static s32 field_classify_menu_slot(s32 group_index, s32 slot_index, FieldEffect
             break;
         }
     }
+
     if (flag != 0)
     {
         return FIELD_MENU_SLOT_ITEM;
@@ -221,6 +225,7 @@ static s32 field_classify_menu_slot(s32 group_index, s32 slot_index, FieldEffect
             flag = -1;
         }
     }
+
     return -flag;
 }
 
@@ -238,6 +243,7 @@ void field_apply_pending_region_effects(void)
     PetRecord* record;
 
     table = field_find_resource(FIELD_RESOURCE_REGION_EFFECTS);
+
     for (record_index = 0; record_index < PET_RECORD_COUNT; record_index++)
     {
         if (g_field_game_state->pets[record_index].name[0] != 0)
@@ -245,15 +251,17 @@ void field_apply_pending_region_effects(void)
             for (effect_index = 0; effect_index < FIELD_REGION_PENDING_EFFECT_COUNT; effect_index++)
             {
                 value = g_field_game_state->pets[record_index].status.effects[effect_index];
+
                 if (value != FIELD_NO_EFFECT)
                 {
                     status = g_field_game_state->pets[record_index].status.word;
-                    applied = (status >> FIELD_REGION_APPLIED_SHIFT) & FIELD_REGION_APPLIED_MASK;
+                    applied = (status >> FIELD_REGION_APPLIED_SHIFT) & FIELD_REGION_APPLIED_BITS;
+
                     if (!((applied >> effect_index) & 1))
                     {
                         record = &g_field_game_state->pets[record_index];
-                        value = (status & ~(FIELD_REGION_APPLIED_MASK << FIELD_REGION_APPLIED_SHIFT)) |
-                                (((applied | (1 << effect_index)) & FIELD_REGION_APPLIED_MASK) << FIELD_REGION_APPLIED_SHIFT);
+                        value = (status & ~FIELD_REGION_APPLIED_MASK) |
+                                (((applied | (1 << effect_index)) & FIELD_REGION_APPLIED_BITS) << FIELD_REGION_APPLIED_SHIFT);
                         g_field_game_state->pets[record_index].status.word = value;
                         field_apply_region_effect(record, g_field_game_state->pets[record_index].status.effects[effect_index], table);
                     }
@@ -284,15 +292,18 @@ static void field_apply_region_effect(PetRecord* record, s32 effect, FieldRegion
     if ((u32)(effect - FIELD_EFFECT_ID_BASE) < FIELD_EFFECT_COUNT)
     {
         effect -= FIELD_EFFECT_ID_BASE;
+
         for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
         {
             view = FIELD_PET_AT(record, i);
             value = view->stat_growth[0].byte;
             stat_delta = table->rows[effect].stat_deltas[i];
             value = ((u32)value >> 4) + (stat_delta & 0xF) - (stat_delta >> 4);
+
             if (value >= 0)
             {
                 clamped = FIELD_GROWTH_ACCUMULATOR_MAX;
+
                 if (value <= FIELD_GROWTH_ACCUMULATOR_MAX)
                 {
                     clamped = value;
@@ -302,8 +313,10 @@ static void field_apply_region_effect(PetRecord* record, s32 effect, FieldRegion
             {
                 clamped = 0;
             }
+
             view->stat_growth[0].byte = (view->stat_growth[0].byte & 0xF) | (clamped << 4);
         }
+
         for (i = 0; i < 4; i++)
         {
             view = FIELD_PET_AT(record, i);
@@ -317,6 +330,7 @@ static void field_apply_region_effect(PetRecord* record, s32 effect, FieldRegion
             if (value >= 0)
             {
                 clamped = FIELD_GROWTH_ACCUMULATOR_MAX;
+
                 if (value <= FIELD_GROWTH_ACCUMULATOR_MAX)
                 {
                     clamped = value;
@@ -326,15 +340,19 @@ static void field_apply_region_effect(PetRecord* record, s32 effect, FieldRegion
             {
                 clamped = 0;
             }
+
             view->total_growth[0].byte = (view->total_growth[0].byte & 0xF) | (clamped << 4);
         }
+
         for (i = 0; i < 4; i++)
         {
             kind = table->rows[effect].effects[i][0];
             amount = table->rows[effect].effects[i][1];
+
             if (effect < FIELD_EFFECT_SET_END)
             {
                 value = rand() & 0xFF;
+
                 if (value < amount)
                 {
                     record->unk48.flags |= 1 << kind;
@@ -343,6 +361,7 @@ static void field_apply_region_effect(PetRecord* record, s32 effect, FieldRegion
             else if (effect < FIELD_EFFECT_CLEAR_END)
             {
                 value = rand() & 0xFF;
+
                 if (value < amount)
                 {
                     record->unk48.flags &= ~(1 << (kind - FIELD_EFFECT_SET_END));

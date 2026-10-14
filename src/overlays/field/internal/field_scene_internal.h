@@ -692,7 +692,6 @@ enum
 #define FIELD_SFX_CHANNEL_MASK 0x1F00 /* channel slot, 1-31 */
 #define FIELD_SFX_FIXED_PAN 0x4000
 #define FIELD_SFX_PLAY 0x8000
-#define FIELD_SFX_ID_MASK 0x3FF
 #define FIELD_SFX_ONE_SHOT 0x8000
 #define FIELD_SFX_VOLUME(key) (((key)->sound.word >> 8) & 0x7F)
 
@@ -740,8 +739,6 @@ enum
 #define FIELD_ANIM_DEF_SPAN_INDEXED 0x40
 /** The node starts active (FIELD_ANIM_FLAG_ACTIVE) when its first span has keyframes. */
 #define FIELD_ANIM_DEF_ACTIVE 0x80
-
-#define FIELD_CLUT_8BIT_COLORS 256
 
 typedef union
 {

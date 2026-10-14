@@ -39,8 +39,6 @@ extern s32 g_field_boss_hud_shake_frame;
 /** @brief Total number of animation actor slots (general, per-object and per-object effect slots). */
 #define FIELD_ACTOR_SLOT_TOTAL 80
 
-/** @brief Target entry of an animation track without a target object. */
-#define FIELD_TARGET_NONE 0xFF
 
 /** @brief FieldObjectState::interaction_kind of a dropped item the player can pick up. */
 #define FIELD_INTERACTION_ITEM 1
@@ -75,8 +73,6 @@ typedef struct
 /** @brief Sentinel returned by field_find_object_state when no object matches. */
 #define FIELD_OBJECT_STATE_NONE ((FieldObjectState*)-1)
 
-/** @brief FieldObjectPart::spawn_flags bit 23: the object ignores map collision. */
-#define FIELD_PART_IGNORE_MAP_COLLISION 0x800000
 
 /** @brief Parameter curve count of an animation (curve selectors are four bits). */
 #define FIELD_CURVE_COUNT 16
@@ -85,31 +81,6 @@ typedef struct
 /** @brief Neutral global colour scale. */
 #define FIELD_COLOR_SCALE_NEUTRAL 0x100
 
-/** @brief FieldAnimationDef::flags bits. */
-#define FIELD_ANIM_COLOR_CURVE_MASK 0xFF
-#define FIELD_ANIM_COLOR_RGB 0x100
-#define FIELD_ANIM_BLEND_SHIFT 9
-#define FIELD_ANIM_GLOBAL_COLOR 0x400
-#define FIELD_ANIM_KEEP_ALIVE 0x800
-#define FIELD_ANIM_CAMERA_OFFSET 0x1000
-#define FIELD_ANIM_CAMERA_MODE_SHIFT 13
-/** @brief FieldAnimationDef::flags bit 15: the definition carries its own duration. */
-#define FIELD_ANIM_OWN_DURATION 0x8000
-/** @brief FieldAnimationDef::frame_sound: bit 15 fires a sound at a frame; bits 8-14 are the sound, the low byte the frame. */
-#define FIELD_ANIM_FRAME_SOUND 0x8000
-/** @brief FieldAnimationDef::palette_animation bits 12-15: curve of the camera offset track. */
-#define FIELD_ANIM_CAMERA_CURVE_SHIFT 12
-/** @brief FieldAnimationDef::hit_test_mode values and bits. */
-#define FIELD_ANIM_ATTACK 2
-#define FIELD_ANIM_STARTED 0x80
-/** @brief FieldAnimationDef::sync_flags bits. */
-#define FIELD_ANIM_OWNER_VISIBILITY 0x2
-#define FIELD_ANIM_TARGET_VISIBILITY 0x4
-#define FIELD_ANIM_OWNER_TRACK_OFF 0x8
-#define FIELD_ANIM_TARGET_TRACK_OFF 0x10
-#define FIELD_ANIM_RESTART_AT_END 0x20
-#define FIELD_ANIM_OWNER_CURVE_SHIFT 8
-#define FIELD_ANIM_TARGET_CURVE_SHIFT 12
 
 /** @brief FieldActorSlot::status bit 0: the slot plays a streamed animation bound to its owner. */
 #define FIELD_SLOT_OWNER_LINKED 0x1
@@ -117,10 +88,6 @@ typedef struct
 #define FIELD_SLOT_ELEMENT_BITS 0x1E
 #define FIELD_SLOT_ELEMENT_SHIFT 1
 
-/** @brief FieldResourceEntry::flags bit: the resource has an action table and eight-direction animations. */
-#define FIELD_RESOURCE_HAS_ACTIONS 1
-/** @brief FieldResourceEntry::flags bit: the entry holds loaded data. */
-#define FIELD_RESOURCE_LOADED 2
 
 extern FieldObjectState g_field_scene_object_states[];
 extern FieldObjectPart g_field_object_parts[];

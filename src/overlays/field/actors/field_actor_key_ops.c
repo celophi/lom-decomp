@@ -17,6 +17,7 @@
 #include "../internal/field_actor_routes.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_actor_tables.h"
+#include "../internal/field_actor_runtime.h"
 
 /** @brief Coordinate value that, in all three axes, keeps the actor's old position. */
 #define FIELD_KEEP_POSITION (-1)
@@ -47,8 +48,8 @@ enum
     FIELD_BINDING_QUERY_PLAYING = 3,
     FIELD_BINDING_QUERY_READY = 4
 };
-
 void field_restart_actor_animation(FieldActor* actor);
+
 
 /**
  * @brief Replace the group bits of object @p object_index.
@@ -99,7 +100,7 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
         control_group = actor->control.bits.group;
         field_initialize_actor_record(actor->object_index, resource_entry_index);
         actor->control.bits.group = control_group;
-        actor->presence = 0;
+        actor->presence = FIELD_ACTOR_VISIBLE;
         actor->x = x << FIELD_POSITION_SHIFT;
         actor->y = y << FIELD_POSITION_SHIFT;
         actor->z = z << FIELD_POSITION_SHIFT;
@@ -242,7 +243,7 @@ s32 field_reload_actor(s32 key, s32 resource_entry_index, s32 resource_slot_id, 
     g_field_resource_entries[resource_entry_index].flags =
         (g_field_resource_entries[resource_entry_index].flags & ~FIELD_RESOURCE_HAS_ACTIONS) | (has_actions & FIELD_RESOURCE_HAS_ACTIONS);
     g_field_object_states[actor->object_index].key = key;
-    actor->presence = 0;
+    actor->presence = FIELD_ACTOR_VISIBLE;
 
     if (x == FIELD_KEEP_POSITION && y == FIELD_KEEP_POSITION && z == FIELD_KEEP_POSITION)
     {

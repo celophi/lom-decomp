@@ -11,11 +11,10 @@
 #include <libetc.h>
 #include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
-
-extern s32 g_field_track_index;
+#include "../internal/field_actor_runtime.h"
 
 /* Local view: the definition in field_actor_runtime.c takes the animation data it reads. */
-u32 field_evaluate_parameter_track_at_time(FieldActorSlot *actor, s32 track, s32 time);
+u32 field_evaluate_parameter_track_at_time(FieldActorSlot* actor, s32 track, s32 time);
 
 /** @brief FieldObjectPart track_flags fields of mesh morphing. */
 #define FIELD_PART_MESH_MORPH(flags) (((flags) >> 18) & 1)
@@ -23,10 +22,6 @@ u32 field_evaluate_parameter_track_at_time(FieldActorSlot *actor, s32 track, s32
 #define FIELD_PART_MESH_MORPH_TARGET(flags) (((flags) >> 19) & 3)
 /** @brief Morph target value that selects per-face offsets instead of another mesh. */
 #define FIELD_MESH_MORPH_OFFSETS 3
-/** @brief FieldObjectPart palette_extent bits: scale the part by the owner's footprint strength. */
-#define FIELD_PART_FOOTPRINT_SCALES_XZ 0x02000000
-#define FIELD_PART_FOOTPRINT_SCALES_Y 0x04000000
-
 /**
  * @brief Transform an actor part's triangle vertices into screen-coordinate buffers.
  *
@@ -39,16 +34,15 @@ u32 field_evaluate_parameter_track_at_time(FieldActorSlot *actor, s32 track, s32
  * @param part Flags selecting the interpolation or offset mode.
  * @param index Mesh entry to transform.
  */
-void field_transform_mesh_vertices(FieldActorSlot *actor, FieldMotionRecord *record, FieldObjectPart *part,
-                   s32 index)
+void field_transform_mesh_vertices(FieldActorSlot* actor, FieldMotionRecord* record, FieldObjectPart* part, s32 index)
 {
     s32 flags; /* GTE FLAG register, stored after every transform and never read */
-    VECTOR *transformed = (VECTOR *)getScratchAddr(16);
-    SVECTOR *work = (SVECTOR *)getScratchAddr(0);
-    s16 *out = g_field_mesh_screen_vertices;
-    s32 *depth = g_field_mesh_depth_offsets;
-    SVECTOR *src = FIELD_ACTOR_MESH(actor, index)->vertices;
-    SVECTOR *other;
+    VECTOR* transformed = (VECTOR*)getScratchAddr(16);
+    SVECTOR* work = (SVECTOR*)getScratchAddr(0);
+    s16* out = g_field_mesh_screen_vertices;
+    s32* depth = g_field_mesh_depth_offsets;
+    SVECTOR* src = FIELD_ACTOR_MESH(actor, index)->vertices;
+    SVECTOR* other;
     s32 count;
     s32 amount;
     s32 mode;
@@ -178,7 +172,6 @@ void field_transform_mesh_vertices(FieldActorSlot *actor, FieldMotionRecord *rec
     }
 }
 
-
 /**
  * @brief Rotate mesh normals, optionally blending toward another normal set.
  * @param actor Actor supplying the normal sets and animation tracks.
@@ -188,11 +181,11 @@ void field_transform_mesh_vertices(FieldActorSlot *actor, FieldMotionRecord *rec
  * @param matrix Rotation matrix applied through the GTE.
  * @note The interpolation branch writes output slots from count down through one.
  */
-void field_transform_mesh_normals(FieldActorSlot *actor, FieldMotionRecord *record, FieldObjectPart *part, s32 index, MATRIX *matrix)
+void field_transform_mesh_normals(FieldActorSlot* actor, FieldMotionRecord* record, FieldObjectPart* part, s32 index, MATRIX* matrix)
 {
-    SVECTOR *output;
-    SVECTOR *source;
-    SVECTOR *scratch = (SVECTOR *)getScratchAddr(0);
+    SVECTOR* output;
+    SVECTOR* source;
+    SVECTOR* scratch = (SVECTOR*)getScratchAddr(0);
     s32 factor;
     s32 selected;
     s32 count;
@@ -253,7 +246,6 @@ void field_transform_mesh_normals(FieldActorSlot *actor, FieldMotionRecord *reco
     }
 }
 
-
 /**
  * @brief Build the transformed and scaled matrix for an actor part.
  *
@@ -268,12 +260,11 @@ void field_transform_mesh_normals(FieldActorSlot *actor, FieldMotionRecord *reco
  * @param base_matrix Matrix passed to the base-transform composition helper.
  * @return Nothing meaningful; callers ignore it.
  */
-s32 field_build_part_matrix(FieldActorSlot *actor, FieldMotionRecord *record, FieldObjectPart *part,
-                   MATRIX *matrix, MATRIX *base_matrix)
+s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, FieldObjectPart* part, MATRIX* matrix, MATRIX* base_matrix)
 {
-    VECTOR *scale;
-    VECTOR *delta = (VECTOR *)getScratchAddr(4);
-    VECTOR *square = (VECTOR *)getScratchAddr(8);
+    VECTOR* scale;
+    VECTOR* delta = (VECTOR*)getScratchAddr(4);
+    VECTOR* square = (VECTOR*)getScratchAddr(8);
     s32 axis;
     s32 facing_angle;
     s32 rotation;
@@ -293,18 +284,18 @@ s32 field_build_part_matrix(FieldActorSlot *actor, FieldMotionRecord *record, Fi
     u8 scale_y;
 
     /* Identity rotation and zero translation, written as words. */
-    ((s32 *)matrix)[4] = ONE;
-    ((s32 *)matrix)[2] = ONE;
+    ((s32*)matrix)[4] = ONE;
+    ((s32*)matrix)[2] = ONE;
     do
     {
-        ((s32 *)matrix)[0] = ONE;
+        ((s32*)matrix)[0] = ONE;
     } while (0);
-    scale = (VECTOR *)getScratchAddr(0);
-    ((s32 *)matrix)[7] = 0;
-    ((s32 *)matrix)[6] = 0;
-    ((s32 *)matrix)[5] = 0;
-    ((s32 *)matrix)[3] = 0;
-    ((s32 *)matrix)[1] = 0;
+    scale = (VECTOR*)getScratchAddr(0);
+    ((s32*)matrix)[7] = 0;
+    ((s32*)matrix)[6] = 0;
+    ((s32*)matrix)[5] = 0;
+    ((s32*)matrix)[3] = 0;
+    ((s32*)matrix)[1] = 0;
     rotation_flags = part->track_flags.word;
     component = (rotation_flags >> 6) & 3;
     if (component != 0)
@@ -312,9 +303,7 @@ s32 field_build_part_matrix(FieldActorSlot *actor, FieldMotionRecord *record, Fi
         switch (component)
         {
         case 1:
-            rotation =
-                field_evaluate_parameter_track_at_time(actor, rotation_flags >> 26, (u16)record->age)
-                << 4;
+            rotation = field_evaluate_parameter_track_at_time(actor, rotation_flags >> 26, (u16)record->age) << 4;
             axis = part->track_flags.bytes.high;
             axis &= 3;
             break;
@@ -408,9 +397,7 @@ s32 field_build_part_matrix(FieldActorSlot *actor, FieldMotionRecord *record, Fi
     if (part->palette_extent.word & FIELD_PART_FOOTPRINT_SCALES_XZ)
     {
         scale_xz = part->appearance.fields.scale_xz;
-        horizontal_scale =
-            (scale_xz - ((scale_xz * ((s32)(FIELD_OBJECT_FOOTPRINT_STRENGTH_RANGE - g_field_object_states[actor->owner_object_index].effect_footprint_strength) >> 6)) / 10))
-            << 6;
+        horizontal_scale = FIELD_FOOTPRINT_SCALED_SIZE(scale_xz, actor->owner_object_index) << 6;
         scale->vz = horizontal_scale;
         scale->vx = horizontal_scale;
     }
@@ -423,9 +410,7 @@ s32 field_build_part_matrix(FieldActorSlot *actor, FieldMotionRecord *record, Fi
     if (part->palette_extent.word & FIELD_PART_FOOTPRINT_SCALES_Y)
     {
         scale_y = part->scale_y;
-        scale->vy =
-            (scale_y - ((scale_y * ((s32)(FIELD_OBJECT_FOOTPRINT_STRENGTH_RANGE - g_field_object_states[actor->owner_object_index].effect_footprint_strength) >> 6)) / 10))
-            << 6;
+        scale->vy = FIELD_FOOTPRINT_SCALED_SIZE(scale_y, actor->owner_object_index) << 6;
     }
     else
     {
@@ -442,34 +427,26 @@ s32 field_build_part_matrix(FieldActorSlot *actor, FieldMotionRecord *record, Fi
         switch (scale_mode)
         {
         case 0:
-            track_scale_xz =
-                field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, (u16)record->age) *
-                16;
+            track_scale_xz = field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, (u16)record->age) * 16;
             scale->vz = track_scale_xz;
             scale->vx = track_scale_xz;
             break;
         case 1:
             track_index = scale_flags >> 0x1C;
-            scale->vy =
-                field_evaluate_parameter_track_at_time(actor, track_index, (u16)record->age) * 16;
+            scale->vy = field_evaluate_parameter_track_at_time(actor, track_index, (u16)record->age) * 16;
             break;
         case 2:
-            track_scale_xyz =
-                field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, (u16)record->age) *
-                16;
+            track_scale_xyz = field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, (u16)record->age) * 16;
             scale->vz = track_scale_xyz;
             scale->vy = track_scale_xyz;
             scale->vx = track_scale_xyz;
             break;
         case 3:
-            track_scale_pair =
-                field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, (u16)record->age) *
-                16;
+            track_scale_pair = field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, (u16)record->age) * 16;
             scale->vz = track_scale_pair;
             scale->vx = track_scale_pair;
             track_index = (part->behavior_flags.word >> 0x1C) + 1;
-            scale->vy =
-                field_evaluate_parameter_track_at_time(actor, track_index, (u16)record->age) * 16;
+            scale->vy = field_evaluate_parameter_track_at_time(actor, track_index, (u16)record->age) * 16;
             break;
         }
         ScaleMatrix(matrix, scale);

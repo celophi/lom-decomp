@@ -138,6 +138,7 @@ inline s32 field_find_free_actor_slot(s32 binding_index, s32 require_idle)
     if (require_idle != 0)
     {
         bindings = g_field_actor_bindings;
+
         if (bindings[FIELD_BINDING_INDEX(binding_index)].state != FIELD_BINDING_IDLE)
         {
             return FIELD_ACTOR_SLOT_NONE;
@@ -155,12 +156,14 @@ inline s32 field_find_free_actor_slot(s32 binding_index, s32 require_idle)
                     break;
                 }
             }
+
             if (j == FIELD_ACTOR_BINDING_COUNT)
             {
                 return i;
             }
         }
     }
+
     return FIELD_ACTOR_SLOT_NONE;
 }
 
@@ -180,6 +183,7 @@ s32 field_object_has_active_actor_tracks(s32 object_index)
             return 1;
         }
     }
+
     return 0;
 }
 
@@ -194,6 +198,7 @@ s32 field_count_free_actor_slots(s32 object_index)
     s32 slot_index;
 
     free_count = 0;
+
     for (slot_index = 0; slot_index < FIELD_ACTOR_SLOT_COUNT; slot_index++)
     {
         if (g_field_actor_slots[slot_index].active == 0)
@@ -216,6 +221,7 @@ void field_stop_actor_animations_for_object(FieldActor* actor, s32 force)
     s32 slot_index;
 
     slot = g_field_actor_slots;
+
     for (slot_index = 0; slot_index < FIELD_ACTOR_SLOT_COUNT; slot_index++, slot++)
     {
         if (slot->owner_object_index == actor->object_index)
@@ -223,6 +229,7 @@ void field_stop_actor_animations_for_object(FieldActor* actor, s32 force)
             field_stop_actor_slot(actor, slot, force);
         }
     }
+
     field_release_sfx_group(actor->object_index);
 }
 
@@ -248,6 +255,7 @@ void field_stop_actor_slot(FieldActor* actor, FieldActorSlot* slot, s32 force)
         {
             return;
         }
+
         if (!(slot->status.word & FIELD_SLOT_OWNER_LINKED))
         {
             if (slot->status.parts.animation_id == FIELD_PERSISTENT_ANIMATION)
@@ -260,58 +268,70 @@ void field_stop_actor_slot(FieldActor* actor, FieldActorSlot* slot, s32 force)
     slot->track_mask = 0;
     slot->pending_track_mask = 0;
     field_clear_actor_effects(slot);
+
     if (slot->active == 0)
     {
         return;
     }
+
     if (slot->animation->flags & FIELD_ANIM_CAMERA_OFFSET)
     {
         g_field_camera_offset_z = 0;
         g_field_camera_offset_y = 0;
         g_field_camera_offset_x = 0;
     }
+
     if (slot->animation->sync_flags & FIELD_ANIM_OWNER_VISIBILITY)
     {
         owner_index = slot->owner_object_index;
         command = g_field_actors[owner_index].command;
+
         if ((command != FIELD_ACTOR_COMMAND_DEFEATED && command != FIELD_ACTOR_COMMAND_DEFEAT_END) ||
             (g_field_object_states[owner_index].flags & FIELD_OBJECT_FLAG_KNOCKED_OUT))
         {
-            g_field_actors[slot->owner_object_index].presence = 0;
+            g_field_actors[slot->owner_object_index].presence = FIELD_ACTOR_VISIBLE;
         }
+
         g_field_object_states[slot->owner_object_index].contact.word &= ~FIELD_CONTACT_ANIMATION_HIDDEN;
     }
+
     if (slot->animation->sync_flags & FIELD_ANIM_TARGET_VISIBILITY)
     {
         for (target_index = 0; target_index < slot->target_count; target_index++)
         {
             if (slot->targets[target_index] != FIELD_TARGET_NONE)
             {
-                g_field_actors[slot->targets[target_index]].presence = 0;
+                g_field_actors[slot->targets[target_index]].presence = FIELD_ACTOR_VISIBLE;
                 target_state = &g_field_object_states[slot->targets[target_index]];
                 target_state->contact.word &= ~FIELD_CONTACT_ANIMATION_HIDDEN;
             }
         }
     }
+
     animation = slot->animation;
+
     /* The colour curve is the low byte of flags, read as a byte. */
     if (*(u8*)&animation->flags < FIELD_CURVE_COUNT && ((animation->flags >> 8) & (FIELD_ANIM_GLOBAL_COLOR >> 8)))
     {
         field_set_global_color_scale(FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL);
     }
+
     if (slot->animation->vibration_curves[1] != FIELD_CURVE_NONE)
     {
         controller->ports[1].actuator_control.fields.large_motor_command = 0;
         controller->ports[0].actuator_control.fields.large_motor_command = 0;
     }
+
     if (slot->animation->vibration_curves[0] != FIELD_CURVE_NONE)
     {
         controller->ports[1].small_motor_command = 0;
         controller->ports[0].small_motor_command = 0;
     }
+
     if (!(slot->animation->flags & FIELD_ANIM_KEEP_ALIVE))
     {
         slot->active = 0;
+
         if (slot->status.word & FIELD_SLOT_OWNER_LINKED)
         {
             field_release_actor_binding(slot->owner_object_index);
@@ -344,6 +364,7 @@ s32 field_start_builtin_animation(s32 object_index, s32 slot_index, s32 animatio
     u8 part_count;
 
     slot = &g_field_actor_slots[slot_index];
+
     if (animation_id == 0)
     {
         slot->part_count = 0;
@@ -355,6 +376,7 @@ s32 field_start_builtin_animation(s32 object_index, s32 slot_index, s32 animatio
     table = (FieldBuiltinAnimationTable*)((u8*)header_base + header_base->header.animation_table_offset);
     part_count = entry->part_count;
     slot->part_count = part_count;
+
     if (part_count == 0)
     {
         return 0;
@@ -373,6 +395,7 @@ s32 field_start_builtin_animation(s32 object_index, s32 slot_index, s32 animatio
     definition_index = table->definition_index[animation_id - FIELD_BUILTIN_FIRST_ANIMATION];
     animation = (FieldAnimationDef*)((u8*)table + definition_index * sizeof(FieldAnimationDef) + sizeof(table->definition_index));
     slot->animation = animation;
+
     if (animation->flags & FIELD_ANIM_OWN_DURATION)
     {
         slot->duration = animation->duration;
@@ -410,23 +433,30 @@ s32 field_start_streamed_animation(s32 owner, s32 resource_id)
     {
         return 0;
     }
+
     bindings = g_field_actor_bindings;
+
     if (bindings[FIELD_BINDING_INDEX(owner)].state != FIELD_BINDING_IDLE)
     {
         return 0;
     }
+
     free_slot = field_find_free_actor_slot(owner, 1);
+
     if (free_slot == FIELD_ACTOR_SLOT_NONE)
     {
         return 0;
     }
+
     binding = &g_field_actor_bindings[FIELD_BINDING_INDEX(owner)];
     load_id = resource_id + FIELD_ANIMATION_RESOURCE_BASE;
     binding->load_id = load_id;
+
     if (field_request_resource_read(load_id) != 0)
     {
         return 0;
     }
+
     slots = g_field_actor_slots;
     slot = &slots[free_slot];
     slot->active = 1;
@@ -477,6 +507,7 @@ void field_poll_streamed_animations(void)
     binding = g_field_actor_bindings;
     i = 0;
     idle_count = 0;
+
     for (; i < FIELD_ACTOR_BINDING_COUNT; i++, binding++)
     {
         if (binding->state == FIELD_BINDING_LOADING && binding->load_id == field_get_loading_resource())
@@ -486,6 +517,7 @@ void field_poll_streamed_animations(void)
                 binding->load_id = 0;
                 slot = &g_field_actor_slots[binding->slot];
                 field_unpack_actor_resource(binding->owner, slot);
+
                 if (slot->part_count != 0)
                 {
                     slot->owner_object_index = binding->owner;
@@ -497,6 +529,7 @@ void field_poll_streamed_animations(void)
                     slot->active = 0;
                     field_release_actor_binding(g_field_actor_bindings[0].owner);
                 }
+
                 break;
             }
         }
@@ -505,6 +538,7 @@ void field_poll_streamed_animations(void)
             idle_count++;
         }
     }
+
     if (idle_count == FIELD_ACTOR_BINDING_COUNT)
     {
         field_issue_next_resource_read();
@@ -521,9 +555,11 @@ void field_release_actor_binding(s32 owner)
     FieldActorSlot* slots;
 
     bindings = g_field_actor_bindings;
+
     if (bindings[FIELD_BINDING_INDEX(owner)].owner == owner)
     {
         slots = g_field_actor_slots;
+
         if (slots[bindings[FIELD_BINDING_INDEX(owner)].slot].active == 0)
         {
             field_release_sfx_group(owner);
@@ -600,10 +636,13 @@ void field_reset_object_tints(void)
         g_field_object_states[i].contact.bits.no_hit_test = 0;
         g_field_object_states[i].contact.bits.action_pending = 0;
     }
+
     hit_state = FIELD_HUD_SHAKE_IDLE;
+
     for (i = FIELD_PARTY_COUNT - 1; i >= 0; i--)
     {
         g_field_player_records[i].hit_state = hit_state;
     }
+
     g_field_boss_hud_shake_frame = FIELD_HUD_SHAKE_IDLE;
 }

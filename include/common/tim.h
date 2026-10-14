@@ -2,6 +2,7 @@
 #define _TIM_H
 
 #include "common.h"
+#include "common/gpu_packet.h"
 
 /**
  * @file tim.h
@@ -28,9 +29,6 @@
 
 /** Number of color entries in a 256-entry palette block. */
 #define CLUT_ENTRY_COUNT 0x100
-
-/** PSX 16bpp mask bit: set on a CLUT entry to enable semi-transparency. */
-#define GPU_STP_BIT 0x8000
 
 /** @brief Width and height stored in a TIM block header. */
 typedef struct
