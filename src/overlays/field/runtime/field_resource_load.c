@@ -145,7 +145,7 @@ void field_update_battle_entry(void)
                 }
                 else
                 {
-                    actor->direction = 0x80;
+                    actor->direction = FIELD_HEADING_HALF_TURN;
                 }
 
                 actor->animation_state = 1;

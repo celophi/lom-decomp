@@ -33,9 +33,7 @@ void field_restart_actor_animation();
 u8* field_begin_actor_animation_forward();
 
 void field_play_set_sfx(s32 sfx_index, s32 pan, s32 unused, s32 channel_group);
-s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action);
 void field_command_history_clear(s32 player);
-s32 field_resolve_contact_hit(s32 source_index, s32 target_index);
 s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* effect, FieldContactResult* contact);
 void field_start_actor_animation(s32 slot_index, s32 target_count, u8* targets);
 s32 field_start_builtin_animation(s32 object_index, s32 slot_index, s32 animation_id);
@@ -125,7 +123,6 @@ extern FieldMotionRecord g_field_effect_records[FIELD_EFFECT_ACTIVE_RECORD_COUNT
 extern VECTOR D_80105778;
 extern s32 g_field_spawn_ground_point;
 extern s32 g_field_next_path_group;
-extern u8* g_field_builtin_track_data;
 
 u32 field_evaluate_parameter_track_at_time(FieldActorSlot* actor, s32 track, s32 time);
 
@@ -4885,10 +4882,10 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                                             {
                                                 switch (rec->facing_or_reward_kind & FIELD_ANIMATION_INDEX_MASK)
                                                 {
-                                                case 0x48:
+                                                case FIELD_ANIMATION_AIR_ATTACK:
                                                     y_offset = field_resolve_object_hit(rec->source_object_index, contact.index, 0x10);
                                                     break;
-                                                case 0x49:
+                                                case FIELD_ANIMATION_AIR_POWER_ATTACK:
                                                     y_offset = field_resolve_object_hit(rec->source_object_index, contact.index, 0x11);
                                                     break;
                                                 case FIELD_ABILITY_TACKLE:

@@ -50,41 +50,41 @@ void field_reset_action_command_map(s32 map_index)
         row->slots[FIELD_RESOURCE_ACTION_COMBO].parameter = 1;
         row->slots[FIELD_RESOURCE_ACTION_COMBO].flags.target_group = 0;
 
-        row->slots[3].command = 0x25;
-        row->slots[3].flags.instrument = 0;
-        row->slots[3].flags.target_filter = FIELD_ACTION_TARGET_NONE;
-        row->slots[3].animation = 0;
-        row->slots[3].parameter = 1;
-        row->slots[3].flags.target_group = 0;
+        row->slots[FIELD_RESOURCE_ACTION_POWER_ATTACK].command = FIELD_ANIMATION_POWER_ATTACK;
+        row->slots[FIELD_RESOURCE_ACTION_POWER_ATTACK].flags.instrument = 0;
+        row->slots[FIELD_RESOURCE_ACTION_POWER_ATTACK].flags.target_filter = FIELD_ACTION_TARGET_NONE;
+        row->slots[FIELD_RESOURCE_ACTION_POWER_ATTACK].animation = 0;
+        row->slots[FIELD_RESOURCE_ACTION_POWER_ATTACK].parameter = 1;
+        row->slots[FIELD_RESOURCE_ACTION_POWER_ATTACK].flags.target_group = 0;
 
-        row->slots[1].flags.instrument = 0;
-        row->slots[1].flags.target_filter = FIELD_ACTION_TARGET_NONE;
-        row->slots[1].flags.target_group = 0;
+        row->slots[FIELD_RESOURCE_ACTION_ABILITY_1].flags.instrument = 0;
+        row->slots[FIELD_RESOURCE_ACTION_ABILITY_1].flags.target_filter = FIELD_ACTION_TARGET_NONE;
+        row->slots[FIELD_RESOURCE_ACTION_ABILITY_1].flags.target_group = 0;
 
-        row->slots[0].flags.instrument = 0;
-        row->slots[0].flags.target_filter = FIELD_ACTION_TARGET_NONE;
-        row->slots[0].flags.target_group = 0;
+        row->slots[FIELD_RESOURCE_ACTION_ABILITY_0].flags.instrument = 0;
+        row->slots[FIELD_RESOURCE_ACTION_ABILITY_0].flags.target_filter = FIELD_ACTION_TARGET_NONE;
+        row->slots[FIELD_RESOURCE_ACTION_ABILITY_0].flags.target_group = 0;
 
-        row->slots[8].command = 0x27;
-        row->slots[8].flags.instrument = 0;
-        row->slots[8].flags.target_filter = FIELD_ACTION_TARGET_NONE;
-        row->slots[8].animation = 0;
-        row->slots[8].parameter = 16;
-        row->slots[8].flags.target_group = 0;
+        row->slots[FIELD_RESOURCE_ACTION_DASH_POWER_ATTACK].command = 0x27;
+        row->slots[FIELD_RESOURCE_ACTION_DASH_POWER_ATTACK].flags.instrument = 0;
+        row->slots[FIELD_RESOURCE_ACTION_DASH_POWER_ATTACK].flags.target_filter = FIELD_ACTION_TARGET_NONE;
+        row->slots[FIELD_RESOURCE_ACTION_DASH_POWER_ATTACK].animation = 0;
+        row->slots[FIELD_RESOURCE_ACTION_DASH_POWER_ATTACK].parameter = 16;
+        row->slots[FIELD_RESOURCE_ACTION_DASH_POWER_ATTACK].flags.target_group = 0;
 
-        row->slots[9].command = 0x28;
-        row->slots[9].flags.instrument = 0;
-        row->slots[9].flags.target_filter = FIELD_ACTION_TARGET_NONE;
-        row->slots[9].animation = 0;
-        row->slots[9].parameter = 16;
-        row->slots[9].flags.target_group = 0;
+        row->slots[FIELD_RESOURCE_ACTION_JUMP_POWER_ATTACK].command = 0x28;
+        row->slots[FIELD_RESOURCE_ACTION_JUMP_POWER_ATTACK].flags.instrument = 0;
+        row->slots[FIELD_RESOURCE_ACTION_JUMP_POWER_ATTACK].flags.target_filter = FIELD_ACTION_TARGET_NONE;
+        row->slots[FIELD_RESOURCE_ACTION_JUMP_POWER_ATTACK].animation = 0;
+        row->slots[FIELD_RESOURCE_ACTION_JUMP_POWER_ATTACK].parameter = 16;
+        row->slots[FIELD_RESOURCE_ACTION_JUMP_POWER_ATTACK].flags.target_group = 0;
 
-        row->slots[10].command = 0x29;
-        row->slots[10].flags.instrument = 0;
-        row->slots[10].flags.target_filter = FIELD_ACTION_TARGET_NONE;
-        row->slots[10].animation = 0;
-        row->slots[10].parameter = 16;
-        row->slots[10].flags.target_group = 0;
+        row->slots[FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK].command = 0x29;
+        row->slots[FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK].flags.instrument = 0;
+        row->slots[FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK].flags.target_filter = FIELD_ACTION_TARGET_NONE;
+        row->slots[FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK].animation = 0;
+        row->slots[FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK].parameter = 16;
+        row->slots[FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK].flags.target_group = 0;
     }
 
     for (i = 0; i < FIELD_PLAYER_COUNT; i++)

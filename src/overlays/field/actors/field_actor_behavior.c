@@ -1284,7 +1284,7 @@ void field_prepare_actor_action(FieldActor* actor)
         }
     }
 
-    field_start_object_ground_effect((struct FieldMotionRecord*)actor, action->flags.target_filter);
+    field_start_object_ground_effect(actor, action->flags.target_filter);
 }
 
 /**

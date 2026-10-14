@@ -117,9 +117,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 /** @brief Z/X scale of a part initialized with and without the timer mode. */
 #define FIELD_PART_SCALE_SMALL 0x30
 
-/** @brief Test a FieldAnimationDef::flags bit from bit 8 up through the flags' high byte. */
-#define FIELD_ANIM_HIGH_FLAG(flags, flag) (((flags) >> 8) & ((flag) >> 8))
-
 /** @brief Sound event slots and command kinds of an animation (FieldAnimationDef bytes 2..9). */
 #define FIELD_SOUND_EVENT_COUNT 2
 #define FIELD_SOUND_KIND_SHIFT 10
@@ -242,7 +239,6 @@ extern u8 g_field_color_scale_active;
 extern s32 g_field_gover_image_resource_id;
 extern s32 g_field_gover_music_resource_id;
 extern s32 g_field_gover_audio_clip_id;
-extern u8 g_field_resource_buffer[];
 extern FieldAnimationDef g_field_object_default_animation;
 extern s32 g_field_loaded_actor_count;
 extern FieldActor g_field_effect_records[];

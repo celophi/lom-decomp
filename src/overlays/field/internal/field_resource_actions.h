@@ -10,8 +10,17 @@
 
 /** @brief Number of action slots in one resource's action row. */
 #define FIELD_RESOURCE_ACTION_COUNT 50
-/** @brief Action slot of the combo attack; slots 0 and 1 below it hold the player-assigned abilities. */
+/** @brief Action slots of the two abilities a player assigns to buttons. */
+#define FIELD_RESOURCE_ACTION_ABILITY_0 0
+#define FIELD_RESOURCE_ACTION_ABILITY_1 1
+/** @brief Action slot of the Quick Attack combo (the "Quick Attacks" button action). */
 #define FIELD_RESOURCE_ACTION_COMBO 2
+/** @brief Action slot of the Power Attack (the "Pow Attacks" button action). */
+#define FIELD_RESOURCE_ACTION_POWER_ATTACK 3
+/** @brief Power Attack follow-ups: after a Lunge or Defensive Lunge, after a Power Attack chained into a jump, and after a Tackle or Somersault. */
+#define FIELD_RESOURCE_ACTION_DASH_POWER_ATTACK 8
+#define FIELD_RESOURCE_ACTION_JUMP_POWER_ATTACK 9
+#define FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK 10
 /** @brief Action slot that action chains program; a slot-11 action runs the command stored there. */
 #define FIELD_RESOURCE_ACTION_CHAIN 11
 /** @brief Number of action slots that can be bound to buttons (the slots below it). */

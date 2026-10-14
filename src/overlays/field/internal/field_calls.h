@@ -35,6 +35,7 @@ struct FieldActorSlot;
 struct FieldCardClock;
 struct FieldCdBuffer;
 struct FieldCharacterRecord;
+struct FieldActor;
 struct FieldKeyedList;
 struct FieldCollisionNode;
 struct FieldItemKey;
@@ -177,8 +178,8 @@ void field_camera_select_scroll_limits(void);
 void field_camera_reset(void);
 
 /* field_actor_effects.c */
-void field_start_object_ground_effect(struct FieldMotionRecord *actor, u32 kind);
-void field_draw_object_ground_effect(struct FieldMotionRecord* actor, u32 kind);
+void field_start_object_ground_effect(struct FieldActor* actor, u32 kind);
+void field_draw_object_ground_effect(struct FieldActor* actor, u32 kind);
 
 /* field_actor_hud_effects.c */
 void field_update_spawned_actor(struct FieldActor* actor);
@@ -271,6 +272,9 @@ void field_finish_party_slot_reload(s32 actor_slot);
 /* field_actor_script_ops.c */
 void field_step_actor_script(struct FieldActor* actor);
 void field_route_actor_to_object(struct FieldActor* actor, s32 target_index, s32 restart);
+s32 field_resolve_contact_hit(s32 source_index, s32 target_index);
+s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action);
+s32 field_roll_object_evasion(s32 source_index, s32 target_index);
 
 /* field_actor_slot_resources.c */
 /** @brief Free animation actor slots an action needs before it may start. */
