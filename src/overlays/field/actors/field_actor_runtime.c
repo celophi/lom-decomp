@@ -3042,7 +3042,7 @@ static u8* field_begin_actor_animation_reverse(FieldActor* actor, u8* resource_b
  * @param actor Actor whose animation is looked up.
  * @return Frame count of the next animation, or zero when there is none.
  */
-u8 field_get_next_animation_frame_count(FieldActor* actor)
+s32 field_get_next_animation_frame_count(FieldActor* actor)
 {
     u8* resource_base;
     u8* entry;

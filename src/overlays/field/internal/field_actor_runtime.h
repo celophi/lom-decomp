@@ -62,6 +62,7 @@ s32 field_set_actor_render_state(s32 red, s32 green, s32 blue, s32 color_flag, s
 void field_update_actor_objects(void);
 s32 field_get_actor_sound_pan(s32 actor_index);
 void field_restart_actor_animation_reverse(struct FieldActor* actor);
+s32 field_get_next_animation_frame_count(struct FieldActor* actor);
 void field_reset_effect_pool(void);
 s32 field_evaluate_parameter_track(struct FieldActorSlot* slot, s32 curve_index);
 

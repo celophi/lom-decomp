@@ -4342,18 +4342,18 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                     {
                         tpage_x = layer << 6;
 
-                        if (layer >= 9)
+                        if (layer >= FIELD_LOWER_TEXTURE_FIRST_SLOT)
                         {
                             s32 page_offset;
                             s32 page_x;
                             s32 page_bits;
 
-                            page_offset = layer - 9;
+                            page_offset = layer - FIELD_LOWER_TEXTURE_FIRST_SLOT;
                             page_offset <<= 6;
                             page_x = item[7];
                             page_x &= 3;
                             page_x <<= 6;
-                            page_x += 0x3C0;
+                            page_x += FIELD_LOWER_TEXTURE_VRAM_X;
                             page_x -= page_offset;
                             page_x &= 0x3FF;
                             page_bits = part->behavior_flags.word;
@@ -5441,18 +5441,18 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                 {
                     tpage_x = layer << 6;
 
-                    if (layer >= 9)
+                    if (layer >= FIELD_LOWER_TEXTURE_FIRST_SLOT)
                     {
                         s32 page_offset;
                         s32 page_x;
                         s32 page_bits;
 
-                        page_offset = layer - 9;
+                        page_offset = layer - FIELD_LOWER_TEXTURE_FIRST_SLOT;
                         page_offset <<= 6;
                         page_x = item[7];
                         page_x &= 3;
                         page_x <<= 6;
-                        page_x += 0x3C0;
+                        page_x += FIELD_LOWER_TEXTURE_VRAM_X;
                         page_x -= page_offset;
                         page_x &= 0x3FF;
                         page_bits = part->behavior_flags.word;

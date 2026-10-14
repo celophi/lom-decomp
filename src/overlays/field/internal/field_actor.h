@@ -166,7 +166,8 @@ typedef struct FieldActor
     u8 owner_part;
     u8 animation_active;
     u8 presence;
-    u8 unk26;
+    /** @brief Frames left of a timed lift or descent (script operand 3 of FIELD_ACTOR_COMMAND_TIMED_LIFT/DESCEND_TO_GROUND). */
+    u8 lift_timer;
     u8 animation_frame;
     u8 script_index;
     u8 unk29;

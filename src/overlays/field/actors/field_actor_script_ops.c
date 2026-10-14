@@ -18,6 +18,8 @@
 #include <libgte.h>
 #include "main/audio/akao.h"
 #include "overlays/field/field_actor_records.h"
+#include "overlays/field/field_types.h"
+#include "../internal/field_actor_palette.h"
 
 /** @brief Lowest actor record a script may spawn a child actor into. */
 #define FIELD_FIRST_SPAWN_ACTOR 3
@@ -69,8 +71,8 @@
 #define FIELD_APPROACH_TIMEOUT 250
 #define FIELD_TIMED_MOVE_TIMEOUT 240
 
-/** @brief Saturated value of the saved hit counters. */
-#define FIELD_HIT_COUNTER_MAX (-1)
+/** @brief Saturated value of the saved field counters (SavedGameLayout::hero_hits_taken, enemies_defeated). */
+#define FIELD_SAVED_COUNTER_MAX (-1)
 
 /** @brief Capacity of the target list built for a targeted animation actor. */
 #define FIELD_ACTOR_TARGET_CAPACITY 16
@@ -123,23 +125,6 @@ enum
     FIELD_SCRIPT_OP_END = 0xFF
 };
 
-/** @brief Evasion request: a battle action block with one more word. */
-typedef struct
-{
-    FieldBattleAction action;
-    s32 unk1C;
-} FieldEvasionRequest;
-
-/** @brief Saved-game counters kept past the mapped part of SavedGameLayout. */
-typedef struct
-{
-    u8 unk0[0x3154];
-    /** @brief Hits taken by the first player. */
-    s32 player_hits;
-    /** @brief Enemies defeated. */
-    s32 enemies_defeated;
-} FieldSaveCounters;
-
 /**
  * @brief Object state viewed from its target position onwards (0x23C stride).
  */
@@ -148,38 +133,22 @@ typedef struct
     s32 target_x;
     s32 target_y;
     s32 target_z;
-    u8 unk5C[0x23C - 0x5C];
-    u8 unk23C[0x50];
+    /** @brief The rest of this state after target_z (offsets 0x5C to 0x23B). */
+    u8 after_target[0x23C - 0x5C];
+    /** @brief The next state's fields before its target_x (offsets 0x00 to 0x4F). */
+    u8 next_state_head[0x50];
 } FieldObjectTarget;
 
 /** @brief g_field_object_states addressed from element 0's target_x. */
 #define FIELD_OBJECT_TARGETS ((FieldObjectTarget*)&g_field_object_states[0].target_x)
-
-/**
- * @brief &states[index] with index * 8 passed in precomputed (the 0x23C multiply spelled out).
- * @param states Object state table.
- * @param index8 @p index multiplied by 8.
- * @param index Object index.
- */
-#define FIELD_OBJECT_STATE_BY_INDEX8(states, index8, index) \
-    ((FieldObjectState*)((((index8) + (index)) * 16 - (index)) * 4 + (uintptr_t)(states)))
 
 extern s32 g_field_direction_animation_modes[];
 extern s32 g_field_actor_walk_animations[];
 extern s32 g_field_binding_restart_pending[FIELD_ACTOR_BINDING_COUNT];
 extern u16* g_field_actor_scripts;
 
-s32 field_collision_find_path(FieldCollisionQuery* start, FieldCollisionQuery* goal, FieldPathPoint* path, s32 mode);
-void field_collision_dilate_query(FieldCollisionQuery* query);
+/* Unprototyped: defined with one parameter, but the spawn call passes a second argument (as in the effect code). */
 void field_restart_actor_animation();
-s32 field_get_next_animation_frame_count(FieldActor* actor);
-void field_start_actor_hit_reaction(FieldActor* actor, s32 guard);
-void field_start_actor_jump();
-void field_start_actor_defeat();
-void field_count_chain_hit(s32 object_index);
-/* Defined (void); the call passes the object key. */
-s32 field_battle_resolve_action(FieldBattleAction* action);
-s32 field_battle_roll_evasion(FieldBattleAction* action);
 
 static void field_run_actor_script_command(FieldActor* actor);
 static void field_move_actor_texture_rect(FieldActor* actor, RECT* rect, s32 x, s32 y);
@@ -240,6 +209,7 @@ static void field_run_actor_script_command(FieldActor* actor)
     FieldCollisionQuery query_goal;
     FieldActorSlot* bound_slot;
     FieldActor* spawn_actor;
+    FieldObjectState* spawn_states;
     FieldActor* spawn_actors;
     FieldObjectState* action_states;
     FieldObjectState* technique_states;
@@ -247,18 +217,9 @@ static void field_run_actor_script_command(FieldActor* actor)
     FieldObjectState* load_state;
     FieldActorSlot* load_slots;
     u8* load_bindings;
-    u8* load_check_bindings;
     s32 key_or_index; /* resource id (0x9E/0xA1/0xA9), binding index (0x9F/0xBC), animation slot (0x83) */
-    FieldObjectState* spawn_states;
     FieldObjectState* precheck_state;
     FieldObjectState* spawn_state;
-    s16 next_offset;
-    s32 sequence_offset;
-    s32 direct_path_offset;
-    s32 fallback_path_offset;
-    s32 path_offset;
-    s16 timed_offset;
-    u16 walk_offset;
     s32* pending_flag;
     s32 bound_state;
     s32 spawn_control;
@@ -273,8 +234,6 @@ static void field_run_actor_script_command(FieldActor* actor)
     s32 goal_z;
     s32 contact_or_z; /* contact word in 0xB9, actor z in 0xB0/0xB1 */
     s32 index_or_count; /* spawn slot (0xB9), track count (0x9F), path length (0xB0/0xB1) */
-    s32 one;
-    s32 load_check_offset;
     s32 load_binding_offset;
     u16 request;
     u16 charged_parameter;
@@ -363,75 +322,62 @@ static void field_run_actor_script_command(FieldActor* actor)
         return;
     case FIELD_SCRIPT_OP_SPAWN_ATTACHED:
         /* Spawn into the highest free actor record. */
-        do
+        index_or_count = FIELD_ACTOR_COUNT - 1;
+        spawn_states = g_field_object_states;
+        spawn_actors = g_field_actors;
+
+        for (; index_or_count >= FIELD_FIRST_SPAWN_ACTOR; index_or_count--)
         {
-            do
+            spawn_actor = &spawn_actors[index_or_count];
+            old_presence = spawn_actor->presence;
+
+            if (old_presence == FIELD_ACTOR_UNUSED)
             {
-                index_or_count = FIELD_ACTOR_COUNT - 1;
-                one = 1;
-                spawn_states = g_field_object_states;
-                spawn_state = spawn_states + (FIELD_ACTOR_COUNT - 1);
-                spawn_actors = g_field_actors;
-                spawn_actor = spawn_actors + (FIELD_ACTOR_COUNT - 1);
-            find_free_record:
-                old_presence = spawn_actor->presence;
+                field_initialize_actor_record(index_or_count, FIELD_SPAWN_RESOURCE_ENTRY);
+                spawn_control = spawn_actor->control.word & ~FIELD_CONTROL_MODE_MASK;
+                spawn_actor->x = actor->x;
+                spawn_actor->y = actor->y;
+                spawn_control |= FIELD_CONTROL_SCRIPTED;
+                spawn_actor->z = actor->z;
+                spawn_actor->presence = FIELD_ACTOR_HIDDEN;
+                spawn_animation = script[1];
+                spawn_actor->animation_frame = 0;
+                spawn_actor->animation_active = 1;
+                spawn_actor->command = FIELD_ACTOR_COMMAND_ATTACHED;
+                spawn_actor->animation = spawn_animation;
+                parent_index = actor->object_index;
+                spawn_actor->removal_delay = 3;
+                spawn_actor->control.word = spawn_control;
+                spawn_actor->script_index = 0;
+                spawn_actor->script_busy = 1;
+                spawn_actor->command_param = parent_index;
+                spawn_state = &spawn_states[index_or_count];
+                spawn_state->group_flags = 0;
+                spawn_state->flags = 0;
+                spawn_state->key = index_or_count;
+                spawn_state->enabled_events = 0;
+                contact_or_z = spawn_state->contact.word;
+                contact_or_z &= ~FIELD_CONTACT_TARGETED;
+                contact_or_z &= ~FIELD_CONTACT_ANIMATION_HIDDEN;
+                spawn_state->contact.word = contact_or_z;
+                field_restart_actor_animation(spawn_actor, spawn_control);
+                spawn_slot = field_find_free_actor_slot(index_or_count, 0);
 
-                if (old_presence == FIELD_ACTOR_UNUSED)
+                if (spawn_slot != FIELD_ACTOR_SLOT_NONE)
                 {
-                    field_initialize_actor_record(index_or_count, FIELD_SPAWN_RESOURCE_ENTRY);
-                    spawn_control = spawn_actor->control.word & ~FIELD_CONTROL_MODE_MASK;
-                    spawn_actor->x = actor->x;
-                    spawn_actor->y = actor->y;
-                    spawn_control |= FIELD_CONTROL_SCRIPTED;
-                    spawn_actor->z = actor->z;
-                    spawn_actor->presence = FIELD_ACTOR_HIDDEN;
-                    spawn_animation = script[1];
-                    spawn_actor->animation_frame = 0;
-                    spawn_actor->animation_active = one;
-                    spawn_actor->command = FIELD_ACTOR_COMMAND_ATTACHED;
-                    spawn_actor->animation = spawn_animation;
-                    parent_index = actor->object_index;
-                    spawn_actor->removal_delay = 3;
-                    spawn_actor->control.word = spawn_control;
-                    spawn_actor->script_index = 0;
-                    spawn_actor->script_busy = one;
-                    spawn_actor->command_param = parent_index;
-                    spawn_state->group_flags = 0;
-                    spawn_state->flags = 0;
-                    spawn_state->key = index_or_count;
-                    spawn_state->enabled_events = 0;
-                    contact_or_z = spawn_state->contact.word;
-                    contact_or_z &= ~FIELD_CONTACT_TARGETED;
-                    contact_or_z &= ~FIELD_CONTACT_ANIMATION_HIDDEN;
-                    spawn_state->contact.word = contact_or_z;
-                    field_restart_actor_animation(spawn_actor, spawn_control);
-                    spawn_slot = field_find_free_actor_slot(index_or_count, 0);
-
-                    if (spawn_slot != FIELD_ACTOR_SLOT_NONE)
+                    if (field_start_builtin_animation(index_or_count, spawn_slot, FIELD_SPAWN_EFFECT_RESOURCE) != 0)
                     {
-                        if (field_start_builtin_animation(index_or_count, spawn_slot, FIELD_SPAWN_EFFECT_RESOURCE) != 0)
-                        {
-                            field_start_actor_animation(spawn_slot, 0, 0);
-                        }
-                    }
-                    else
-                    {
-                        spawn_actor->presence = old_presence;
+                        field_start_actor_animation(spawn_slot, 0, 0);
                     }
                 }
                 else
                 {
-                    spawn_state -= 1;
-                    index_or_count -= 1;
-                    spawn_actor -= 1;
-
-                    if (index_or_count >= FIELD_FIRST_SPAWN_ACTOR)
-                    {
-                        goto find_free_record;
-                    }
+                    spawn_actor->presence = old_presence;
                 }
-            } while (0);
-        } while (0);
+
+                break;
+            }
+        }
 
         actor->script_offset += 2;
         return;
@@ -616,10 +562,8 @@ static void field_run_actor_script_command(FieldActor* actor)
 
         byte_arg = script[2];
         actor->animation_active = 1;
-        walk_offset = actor->script_offset;
-        walk_offset += 3;
         actor->animation_state = byte_arg;
-        actor->script_offset = walk_offset;
+        actor->script_offset += 3;
         field_restart_actor_animation(actor);
         return;
     case FIELD_SCRIPT_OP_SEQUENCE_STEP:
@@ -638,10 +582,8 @@ static void field_run_actor_script_command(FieldActor* actor)
 
         byte_arg = script[2];
         actor->animation_active = 1;
-        sequence_offset = actor->script_offset;
-        sequence_offset += 3;
         actor->animation_state = byte_arg;
-        actor->script_offset = sequence_offset;
+        actor->script_offset += 3;
         field_restart_actor_animation(actor);
         return;
     case FIELD_SCRIPT_OP_JUMP:
@@ -664,9 +606,8 @@ static void field_run_actor_script_command(FieldActor* actor)
             path_command = script[0];
             actor->animation_state = FIELD_WAIT_UNTIL_DONE;
             actor->animation_active = 1;
-            direct_path_offset = actor->script_offset + 1;
             actor->command = path_command;
-            actor->script_offset = direct_path_offset;
+            actor->script_offset += 1;
             field_restart_actor_animation(actor);
             return;
         }
@@ -708,10 +649,8 @@ static void field_run_actor_script_command(FieldActor* actor)
                 path_command = script[0];
                 actor->animation_state = FIELD_WAIT_UNTIL_DONE;
                 actor->animation_active = 1;
-                fallback_path_offset = actor->script_offset;
-                fallback_path_offset += 1;
                 actor->command = path_command;
-                actor->script_offset = fallback_path_offset;
+                actor->script_offset += 1;
                 field_restart_actor_animation(actor);
                 return;
             }
@@ -722,9 +661,8 @@ static void field_run_actor_script_command(FieldActor* actor)
                 byte_arg = script[0];
                 actor->animation_state = FIELD_WAIT_UNTIL_DONE;
                 actor->animation_active = 1;
-                path_offset = actor->script_offset + 1;
                 actor->command = byte_arg;
-                actor->script_offset = path_offset;
+                actor->script_offset += 1;
                 field_restart_actor_animation(actor);
                 return;
             }
@@ -747,7 +685,7 @@ static void field_run_actor_script_command(FieldActor* actor)
         actor->animation_state = FIELD_WAIT_UNTIL_DONE;
         actor->animation = script[1] + (actor->animation & FIELD_ANIMATION_FACING);
         actor->command_param = script[2];
-        actor->unk26 = script[3];
+        actor->lift_timer = script[3];
         actor->script_offset += 4;
         actor->animation_active = 1;
         field_restart_actor_animation(actor);
@@ -787,18 +725,7 @@ static void field_run_actor_script_command(FieldActor* actor)
 
         break;
     case FIELD_SCRIPT_OP_LOAD_ACTION:
-        load_check_bindings = (u8*)g_field_actor_bindings;
-
-        if (actor->object_index < (u32)FIELD_PLAYER_COUNT)
-        {
-            load_check_offset = actor->object_index * sizeof(FieldActorBinding);
-        }
-        else
-        {
-            load_check_offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
-        }
-
-        if (((FieldActorBinding*)(load_check_bindings + load_check_offset))->state == FIELD_BINDING_IDLE)
+        if (field_actor_binding(actor)->state == FIELD_BINDING_IDLE)
         {
             action_or_index = script[3];
             key_or_index = script[1] + (script[2] << 8);
@@ -856,9 +783,7 @@ static void field_run_actor_script_command(FieldActor* actor)
 
         if (((bound_state >= FIELD_BINDING_LOADING) && (bound_state <= FIELD_BINDING_READY)) && (((FieldActorBinding*)bound_binding)->owner == actor->object_index))
         {
-            one = 1;
-
-            if (bound_state != one)
+            if (bound_state != FIELD_BINDING_LOADING)
             {
                 bound_slots = g_field_actor_slots;
                 bound_slot = &bound_slots[((FieldActorBinding*)bound_binding)->slot];
@@ -939,15 +864,12 @@ static void field_run_actor_script_command(FieldActor* actor)
         return;
     case FIELD_SCRIPT_OP_APPROACH_TARGET:
     {
-        u16 off;
         u8 value;
         value = script[0];
         actor->animation_state = FIELD_APPROACH_TIMEOUT;
-        off = actor->script_offset;
         actor->command = value;
         value = script[1];
-        off += 2;
-        actor->script_offset = off;
+        actor->script_offset += 2;
         actor->animation_active = 1;
         actor->command_param = value;
         field_restart_actor_animation(actor);
@@ -966,12 +888,10 @@ static void field_run_actor_script_command(FieldActor* actor)
         actor->command_param = script[2];
         states[actor->object_index].command_timer = script[3];
         byte_arg = script[4];
-        timed_offset = actor->script_offset;
         actor->animation_state = FIELD_TIMED_MOVE_TIMEOUT;
         actor->animation_active = 1;
-        timed_offset += 5;
         actor->animation = byte_arg;
-        actor->script_offset = timed_offset;
+        actor->script_offset += 5;
         field_restart_actor_animation(actor);
         return;
     }
@@ -1045,15 +965,12 @@ static void field_run_actor_script_command(FieldActor* actor)
         return;
     case FIELD_SCRIPT_OP_WAIT_ANIMATION:
     {
-        u16 off;
         u8 value;
         actor->command = script[0];
         value = script[2];
         actor->animation_state = value;
-        off = actor->script_offset;
         value = script[1];
-        off += 3;
-        actor->script_offset = off;
+        actor->script_offset += 3;
         actor->animation_frame = 0;
         actor->animation_active = 1;
         actor->animation = value;
@@ -1062,16 +979,13 @@ static void field_run_actor_script_command(FieldActor* actor)
     }
     case FIELD_SCRIPT_OP_WAIT:
     {
-        u16 off;
         u8 value;
         actor->command = script[0];
         value = script[2];
         actor->animation_state = value;
         actor->animation = script[1];
-        off = actor->script_offset;
         value = script[3];
-        off += 4;
-        actor->script_offset = off;
+        actor->script_offset += 4;
         actor->animation_frame = 0;
         actor->animation_active = 1;
         actor->command_param = value;
@@ -1081,9 +995,8 @@ static void field_run_actor_script_command(FieldActor* actor)
     case FIELD_SCRIPT_OP_TURN:
         turn_command = script[0];
         actor->command_param = 0;
-        next_offset = actor->script_offset + 1;
         actor->command = turn_command;
-        actor->script_offset = next_offset;
+        actor->script_offset += 1;
         return;
     case FIELD_SCRIPT_OP_TOGGLE_HIDDEN:
         if (actor->presence == FIELD_ACTOR_HIDDEN)
@@ -1337,10 +1250,9 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound)
     field_count_revived_record(g_field_object_states[actor->object_index].key);
     g_field_object_states[actor->object_index].flags = 0;
     g_field_object_states[actor->object_index].contact.bits.no_hit_test = 0;
-    /* unk0 holds the maximum HP; unk4 and the low 24 bits of unk8 the current HP. */
     hp_state = &g_field_object_states[actor->object_index];
-    hp_state->hp_display.word = (hp_state->hp_display.word & 0xFF000000) | (hp_state->maximum_hp & 0xFFFFFF);
-    hp_state->current_hp.word = hp_state->maximum_hp & 0xFFFFFF;
+    hp_state->hp_display.word = (hp_state->hp_display.word & FIELD_HP_FLAGS_MASK) | (hp_state->maximum_hp & FIELD_HP_VALUE_MASK);
+    hp_state->current_hp.word = hp_state->maximum_hp & FIELD_HP_VALUE_MASK;
     g_field_object_states[actor->object_index].tint_timer = FIELD_REVIVE_TINT_FRAMES;
     g_field_object_states[actor->object_index].movement.bits.flag15 = 1;
 
@@ -1471,24 +1383,24 @@ static void field_move_actor_texture_rect(FieldActor* actor, RECT* rect, s32 x, 
 
     page = actor->texture_slot;
 
-    if (page >= 2)
+    if (page >= FIELD_PARTY_COMPANION)
     {
         y_offset = 0;
 
-        if (page >= 9)
+        if (page >= FIELD_LOWER_TEXTURE_FIRST_SLOT)
         {
-            y_offset = 0x100;
-            x_offset = 0x3C0 - ((page - 9) << 6);
+            y_offset = FIELD_LOWER_TEXTURE_VRAM_Y;
+            x_offset = FIELD_LOWER_TEXTURE_VRAM_X - (page - FIELD_LOWER_TEXTURE_FIRST_SLOT) * FIELD_TEXTURE_COLUMN_WIDTH;
         }
         else
         {
-            x_offset = 0x340 - (page << 6);
+            x_offset = FIELD_COMPANION_TEXTURE_VRAM_X - page * FIELD_TEXTURE_COLUMN_WIDTH;
         }
     }
     else
     {
         y_offset = 0;
-        x_offset = 0x380 - (page << 7);
+        x_offset = FIELD_PARTY_TEXTURE_VRAM_X - page * FIELD_PARTY_TEXTURE_VRAM_STEP;
     }
 
     /* Four 4-bit texels per VRAM pixel. */
@@ -1549,54 +1461,33 @@ s32 field_load_bound_animation(s32 key, s32 resource_id)
 void field_resolve_collected_hits(s32 object_index)
 {
     FieldBattleAction request;
-    FieldObjectState* states;
-    FieldObjectState* loop_states;
-    FieldObjectState* source;
-    FieldObjectState* saved_source;
-    FieldObjectState* current;
     s32 i;
-    s32 index8;
 
-    states = g_field_object_states;
-    index8 = object_index * 8;
-    source = FIELD_OBJECT_STATE_BY_INDEX8(states, index8, object_index);
-    i = 0;
-
-    if (source->contact.bytes.target_count != 0)
+    for (i = 0; i < g_field_object_states[object_index].contact.bytes.target_count; i++)
     {
-        loop_states = states;
-        saved_source = source;
-        index8 = object_index * 8;
+        g_field_object_states[g_field_object_states[object_index].targets[i]].contact.bits.targeted = 0;
 
-        do
+        if (!g_field_object_states[g_field_object_states[object_index].targets[i]].contact.bits.no_hit_test &&
+            g_field_object_states[g_field_object_states[object_index].targets[i]].current_hp.word != 0)
         {
-            current = FIELD_OBJECT_STATE_BY_INDEX8(loop_states, index8, object_index);
-            loop_states[current->targets[i]].contact.bits.targeted = 0;
+            request.attacker_id = g_field_object_states[object_index].key;
 
-            if (!loop_states[current->targets[i]].contact.bits.no_hit_test && loop_states[current->targets[i]].current_hp.word != 0)
+            if (g_field_object_states[object_index].action <= FIELD_ACTION_BATTLE_LAST)
             {
-                request.attacker_id = current->key;
-
-                if (current->action <= FIELD_ACTION_BATTLE_LAST)
-                {
-                    request.action_id = current->action;
-                }
-                else
-                {
-                    request.action_id = FIELD_ACTION_BATTLE_LAST;
-                }
-
-                request.target_id = loop_states[saved_source->targets[i]].key;
-                request.param = 0;
-                request.unk10 = 0;
-                request.unk14 = 0;
-                request.damage_scale = 1;
-                field_battle_resolve_action(&request);
+                request.action_id = g_field_object_states[object_index].action;
+            }
+            else
+            {
+                request.action_id = FIELD_ACTION_BATTLE_LAST;
             }
 
-            index8 = object_index * 8;
-            i++;
-        } while (i < FIELD_OBJECT_STATE_BY_INDEX8(loop_states, index8, object_index)->contact.bytes.target_count);
+            request.target_id = g_field_object_states[g_field_object_states[object_index].targets[i]].key;
+            request.param = 0;
+            request.unused10 = 0;
+            request.unused14 = 0;
+            request.damage_scale = 1;
+            field_battle_resolve_action(&request);
+        }
     }
 
     g_field_object_states[object_index].contact.bytes.target_count = 0;
@@ -1653,8 +1544,8 @@ s32 field_resolve_contact_hit(s32 source_index, s32 target_index)
         request.param = 0;
     }
 
-    request.unk10 = 0;
-    request.unk14 = 0;
+    request.unused10 = 0;
+    request.unused14 = 0;
     damage_scale = g_field_object_states[source_index].contact.bits.damage_scale;
 
     if (damage_scale == 0)
@@ -1692,8 +1583,8 @@ s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action)
             request.action_id = action;
             request.target_id = target->key;
             request.param = 0;
-            request.unk10 = 0;
-            request.unk14 = 0;
+            request.unused10 = 0;
+            request.unused14 = 0;
             request.damage_scale = 1;
             field_count_chain_hit(source_index);
             return field_battle_resolve_action(&request);
@@ -1711,12 +1602,12 @@ s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action)
  */
 s32 field_roll_object_evasion(s32 source_index, s32 target_index)
 {
-    FieldEvasionRequest request;
+    FieldBattleAction request;
 
-    request.action.attacker_id = g_field_object_states[source_index].key;
-    request.action.target_id = g_field_object_states[target_index].key;
-    request.action.damage_scale = 1;
-    return field_battle_roll_evasion(&request.action);
+    request.attacker_id = g_field_object_states[source_index].key;
+    request.target_id = g_field_object_states[target_index].key;
+    request.damage_scale = 1;
+    return field_battle_roll_evasion(&request);
 }
 
 /**
@@ -1741,11 +1632,11 @@ s32 field_register_actor_hit(s32 key, s32 guard)
 
     if (actor->object_index == 0)
     {
-        hit_count = ((FieldSaveCounters*)g_saved_game_ctx)->player_hits;
+        hit_count = g_saved_game_ctx->hero_hits_taken;
 
-        if (hit_count != FIELD_HIT_COUNTER_MAX)
+        if (hit_count != FIELD_SAVED_COUNTER_MAX)
         {
-            ((FieldSaveCounters*)g_saved_game_ctx)->player_hits = hit_count + 1;
+            g_saved_game_ctx->hero_hits_taken = hit_count + 1;
         }
     }
 
@@ -1758,7 +1649,7 @@ s32 field_register_actor_hit(s32 key, s32 guard)
     }
     else if (g_field_object_states[actor->object_index].hp_display.word < 0)
     {
-        /* Bit 31 of unk8 marks a boss. */
+        /* Bit 31 of hp_display (a HUD flag bit) marks a boss. */
         g_field_boss_hud_shake_frame = FIELD_HUD_SHAKE_START;
     }
 
@@ -1865,11 +1756,11 @@ s32 field_start_actor_defeat_by_key(s32 key, s32 value)
 
     if (actor->object_index >= FIELD_PARTY_COUNT)
     {
-        defeat_count = ((FieldSaveCounters*)g_saved_game_ctx)->enemies_defeated;
+        defeat_count = g_saved_game_ctx->enemies_defeated;
 
-        if (defeat_count != FIELD_HIT_COUNTER_MAX)
+        if (defeat_count != FIELD_SAVED_COUNTER_MAX)
         {
-            ((FieldSaveCounters*)g_saved_game_ctx)->enemies_defeated = defeat_count + 1;
+            g_saved_game_ctx->enemies_defeated = defeat_count + 1;
         }
     }
 
@@ -1901,7 +1792,7 @@ s32 field_is_actor_motion_idle(s32 key)
 
         if (actor->command == FIELD_ACTOR_COMMAND_NONE)
         {
-            movement = actor->control.word & (FIELD_CONTROL_MOVING | FIELD_CONTROL_MOVEMENT_UNK400);
+            movement = actor->control.word & FIELD_CONTROL_MOVEMENT_MASK;
             result = movement == 0;
         }
     }
@@ -2012,13 +1903,13 @@ s32 field_face_actor(s32 source_key, s32 target_key)
     else
     {
         /* Two facings: plain faces left, mirrored faces right. */
-        if (angle > ONE / 4 && angle < ONE * 3 / 4)
+        if (angle > FIELD_ANGLE_QUARTER_TURN && angle < FIELD_ANGLE_QUARTER_TURN * 3)
         {
             source->animation = 0;
         }
-        else if (angle < -(ONE / 4))
+        else if (angle < -FIELD_ANGLE_QUARTER_TURN)
         {
-            if (angle <= -(ONE * 3 / 4))
+            if (angle <= -(FIELD_ANGLE_QUARTER_TURN * 3))
             {
                 source->animation = FIELD_ANIMATION_FACING;
             }
@@ -2070,7 +1961,7 @@ s32 field_set_actor_animation(s32 key, u8 animation)
 /**
  * @brief Convert the facing of the actor with @p key to a direction byte.
  * @param key Object key to look up.
- * @return The direction (0x00-0xE0 in steps of 0x20), the mirror bit for two-facing actors, or -1 when absent.
+ * @return The heading (FIELD_HEADING_SECTOR 0-7), the mirror bit for two-facing actors, or -1 when absent.
  */
 s32 field_get_actor_facing(s32 key)
 {
@@ -2096,17 +1987,17 @@ s32 field_get_actor_facing(s32 key)
             case 1:
             case FIELD_ANIMATION_WALK + 1:
             case FIELD_ANIMATION_RUN + 1:
-                result = 0x60;
+                result = FIELD_HEADING_SECTOR(3);
                 break;
             case 2:
             case FIELD_ANIMATION_WALK + 2:
             case FIELD_ANIMATION_RUN + 2:
-                result = 0x80;
+                result = FIELD_HEADING_SECTOR(4);
                 break;
             case 3:
             case FIELD_ANIMATION_WALK + 3:
             case FIELD_ANIMATION_RUN + 3:
-                result = 0xA0;
+                result = FIELD_HEADING_SECTOR(5);
                 break;
             case 4:
             case FIELD_ANIMATION_WALK + 4:
@@ -2114,22 +2005,22 @@ s32 field_get_actor_facing(s32 key)
             case FIELD_ANIMATION_FACING | 4:
             case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + 4):
             case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + 4):
-                result = 0xC0;
+                result = FIELD_HEADING_SECTOR(6);
                 break;
             case FIELD_ANIMATION_FACING | 1:
             case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + 1):
             case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + 1):
-                result = 0x20;
+                result = FIELD_HEADING_SECTOR(1);
                 break;
             case FIELD_ANIMATION_FACING | 2:
             case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + 2):
             case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + 2):
-                result = 0;
+                result = FIELD_HEADING_SECTOR(0);
                 break;
             case FIELD_ANIMATION_FACING | 3:
             case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + 3):
             case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + 3):
-                result = 0xE0;
+                result = FIELD_HEADING_SECTOR(7);
                 break;
             case 0:
             case FIELD_ANIMATION_WALK:
@@ -2138,13 +2029,13 @@ s32 field_get_actor_facing(s32 key)
             case FIELD_ANIMATION_FACING | FIELD_ANIMATION_WALK:
             case FIELD_ANIMATION_FACING | FIELD_ANIMATION_RUN:
             default:
-                result = 0x40;
+                result = FIELD_HEADING_SECTOR(2);
                 break;
             }
         }
         else
         {
-            result = 0x40;
+            result = FIELD_HEADING_SECTOR(2);
         }
     }
     else

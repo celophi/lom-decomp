@@ -40,6 +40,10 @@
 #define FIELD_PARTY_TEXTURE_VRAM_STEP 0x80
 /** @brief VRAM X of the sprite texture column of the other resource slots; slot n starts FIELD_TEXTURE_COLUMN_WIDTH * n to the left. */
 #define FIELD_COMPANION_TEXTURE_VRAM_X 0x340
+/** @brief Texture slots from this one up use columns in the lower VRAM half, starting at FIELD_LOWER_TEXTURE_VRAM_X and going left. */
+#define FIELD_LOWER_TEXTURE_FIRST_SLOT 9
+#define FIELD_LOWER_TEXTURE_VRAM_X 0x3C0
+#define FIELD_LOWER_TEXTURE_VRAM_Y 0x100
 
 /** @brief VRAM row of the first of the effect CLUT rows loaded with the common texture. */
 #define FIELD_EFFECT_CLUT_VRAM_Y 0x1EA

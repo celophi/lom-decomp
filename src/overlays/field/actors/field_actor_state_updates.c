@@ -40,7 +40,6 @@ s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action);
 s32 field_roll_object_evasion(s32 source_index, s32 target_index);
 void field_prepare_actor_action(FieldActor* actor);
 void field_resolve_collected_hits();
-s32 field_get_next_animation_frame_count(FieldActor* actor);
 void field_update_actor_movement_animation(FieldActor* actor, s32 delta_x, s32 delta_z);
 
 /**
@@ -1085,8 +1084,8 @@ void field_update_actor_lift(FieldActor* actor, s32 rising)
 {
     s8 timer;
 
-    timer = actor->unk26 - 1;
-    actor->unk26 = timer;
+    timer = actor->lift_timer - 1;
+    actor->lift_timer = timer;
 
     if (timer == 0)
     {
