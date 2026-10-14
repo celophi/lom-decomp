@@ -551,8 +551,9 @@ typedef struct FieldBattleAction
     /** @brief Nonzero when the target's counter also runs down. */
     s32 param;
     s32 target_id;
-    s32 unk10;
-    s32 unk14;
+    /** @brief Cleared by every hit request (field_actor_script_ops.c); nothing reads them. */
+    s32 unused10;
+    s32 unused14;
     /** @brief Multiplier applied to the damage by field_apply_damage. */
     s32 damage_scale;
 } FieldBattleAction;

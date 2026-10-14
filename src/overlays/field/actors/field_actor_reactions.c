@@ -238,7 +238,7 @@ inline void field_knock_down_actor(FieldActor* actor, s32 clear_recovery)
  * @param animation Animation to play, added to the actor's mirror bit.
  * @param command_param Parameter of the jump command.
  */
-void field_start_actor_jump(FieldActor* actor, s8 direction, s32 animation, s8 command_param)
+void field_start_actor_jump(FieldActor* actor, s32 direction, s32 animation, s32 command_param)
 {
     FieldObjectState* states = g_field_object_states;
     FieldObjectState* state;
@@ -260,7 +260,7 @@ void field_start_actor_jump(FieldActor* actor, s8 direction, s32 animation, s8 c
  * @param actor Actor that was defeated.
  * @param value Idle animation to keep for the object (FieldObjectState::idle_animation).
  */
-void field_start_actor_defeat(FieldActor* actor, s8 value)
+void field_start_actor_defeat(FieldActor* actor, s32 value)
 {
     if (actor->object_index < FIELD_PARTY_COUNT)
     {

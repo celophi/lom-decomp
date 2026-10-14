@@ -1857,7 +1857,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                 {
                     health = &g_field_object_states[player_index];
                     hp = ((SavedGameLayout*)((u8*)g_saved_game_ctx + character_offset))->characters[0].hp;
-                    health->hp_display.word = (health->hp_display.word & 0xFF000000) | hp;
+                    health->hp_display.word = (health->hp_display.word & FIELD_HP_FLAGS_MASK) | hp;
                     health->maximum_hp = hp;
                     health->current_hp.word = hp;
                 }

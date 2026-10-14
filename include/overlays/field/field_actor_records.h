@@ -188,7 +188,7 @@ typedef struct FieldRoutePoint
 } FieldRoutePoint;
 
 /** @brief One fixed-point X/Z waypoint written by the path finder. */
-typedef struct
+typedef struct FieldPathPoint
 {
     s32 x;
     s32 z;
@@ -314,6 +314,10 @@ typedef struct FieldObjectState
     u8 tint_timer;
     FieldPathPoint path[FIELD_PATH_MAX_POINTS];
 } FieldObjectState;
+
+/** @brief FieldObjectState HP words: the HP value in the low 24 bits, HUD flags in the high byte of hp_display. */
+#define FIELD_HP_VALUE_MASK 0xFFFFFF
+#define FIELD_HP_FLAGS_MASK 0xFF000000
 
 extern FieldObjectState g_field_object_states[FIELD_OBJECT_COUNT];
 
@@ -855,6 +859,8 @@ typedef enum FieldAbility
 #define FIELD_HEADING_QUARTER_TURN (FIELD_HEADING_STEPS / 4)
 #define FIELD_HEADING_HALF_TURN (FIELD_HEADING_STEPS / 2)
 #define FIELD_HEADING_THREE_QUARTER_TURN (FIELD_HEADING_QUARTER_TURN * 3)
+/** @brief Heading of facing sector @p sector (0-7), one eighth of a turn each. */
+#define FIELD_HEADING_SECTOR(sector) ((sector) * (FIELD_HEADING_STEPS / 8))
 
 /** @brief Actor commands (FieldActor::command). */
 enum

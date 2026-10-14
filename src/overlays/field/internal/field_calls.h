@@ -41,6 +41,8 @@ struct FieldItemKey;
 struct FieldItemRecord;
 struct ShopEntry;
 struct FieldMotionRecord;
+struct FieldPathPoint;
+struct FieldBattleAction;
 struct FieldObjectPart;
 struct FieldNode;
 struct FieldRenderHalf;
@@ -154,6 +156,10 @@ void field_battle_defeat_record(s32 record_id);
 s32 field_run_action_handler(void);
 void field_select_coordinate_labels(void);
 
+/* field_action_setup.c */
+s32 field_battle_resolve_action(struct FieldBattleAction* action);
+s32 field_battle_roll_evasion(struct FieldBattleAction* action);
+
 /* field_active_record_ops.c */
 s32 field_join_companion(void);
 s32 field_join_golem(s32 logic_type);
@@ -229,6 +235,10 @@ s32 field_test_actor_depth_overlap(s32 first_key, s32 second_key);
 void field_release_object_link(struct FieldActor* actor);
 s32 field_collapse_defeated_actor(struct FieldActor* actor);
 void field_knock_down_actor(struct FieldActor* actor, s32 clear_recovery);
+void field_start_actor_hit_reaction(struct FieldActor* actor, s32 guard);
+void field_count_chain_hit(s32 object_index);
+void field_start_actor_jump(struct FieldActor* actor, s32 direction, s32 animation, s32 command_param);
+void field_start_actor_defeat(struct FieldActor* actor, s32 value);
 
 /* field_actor_record_ops.c */
 void field_spawn_item_record(s32 key, s32 item);
@@ -361,6 +371,8 @@ void field_draw_return_to_title_choices(u_long* ot, void *prim, s32 scroll_x, s3
 /** @brief field_collision_hit_markers result when no marker blocks the probe. */
 #define FIELD_COLLISION_MARKER_NONE (-1)
 s32 field_collision_hit_markers(struct FieldCollisionQuery *query);
+s32 field_collision_find_path(struct FieldCollisionQuery* start_query, struct FieldCollisionQuery* goal_query, struct FieldPathPoint* output_path, s32 mode);
+void field_collision_dilate_query(struct FieldCollisionQuery* query);
 s32 field_collision_resolve_move(struct FieldCollisionMover *mover);
 void field_collision_rasterize_groups(u8** allocator_cursor, struct FieldNode *clip);
 

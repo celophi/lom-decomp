@@ -837,7 +837,10 @@ typedef struct SavedGameLayout
     PetRecord pets[PET_RECORD_COUNT];
     /** @brief Unlocked encyclopedia (ZUKAN) entries, one bit each. */
     u32 encyclopedia_bits[FIELD_ENCYCLOPEDIA_BIT_WORDS];
-    u8 pad3154[0x315C - 0x3154];
+    /** @brief Hits the hero (object 0) has taken in the field, saturating at -1. */
+    s32 hero_hits_taken;
+    /** @brief Enemies defeated in the field, saturating at -1. */
+    s32 enemies_defeated;
     /** @brief Times the battle was retried from g_field_retry_snapshot; -1 stops counting. */
     s32 retry_count;
     /** @brief Records whose first byte is nonzero while in use; the save summary counts them. */

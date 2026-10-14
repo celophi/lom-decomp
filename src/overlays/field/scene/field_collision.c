@@ -1,5 +1,6 @@
 #include "../internal/field_scene_internal.h"
 #include "../internal/field_calls.h"
+#include "overlays/field/field_actor_records.h"
 #include <abs.h>
 
 /** field_collision_trace_line mode: stop with success when the stamped tile is goal_tile. */
@@ -619,13 +620,6 @@ typedef union
     FieldCollisionPathEntry* entry;
     s32 coordinate;
 } FieldCollisionPathCursor;
-
-/** One route point in world units, written by field_collision_find_path. */
-typedef struct
-{
-    s32 x;
-    s32 z;
-} FieldCollisionPathPoint;
 
 /** Outgoing parameter block for field_collision_trace_line, built at sp+0x4020. */
 typedef struct
@@ -5479,7 +5473,7 @@ static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCol
  * @param mode Collision trace mode used to test the direct route.
  * @return Point count, or a FIELD_COLLISION_PATH_ERROR_* code when the search fails.
  */
-s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_query, FieldCollisionPathPoint* output_path, s32 mode)
+s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQuery* goal_query, FieldPathPoint* output_path, s32 mode)
 {
     FieldCollisionPathEntry* route_tiles;
     s32 bend_x;
@@ -5596,7 +5590,7 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
     s32 back_mid2_x;
     s32 back_mid2_z;
     s32 back_quarter_dz;
-    FieldCollisionPathPoint* output;
+    FieldPathPoint* output;
     s32 point_x;
     s32 point_z;
     s32 remaining;
