@@ -66,6 +66,8 @@ typedef struct
 #define FIELD_RESOURCE_IS_LOADED(entry) (((entry).flags >> FIELD_RESOURCE_LOADED_SHIFT) & 1)
 
 extern FieldResourceEntry g_field_resource_entries[];
+/** @brief Buffer the loaded resources (FieldResourceEntry::start) are unpacked into. */
+extern u8 g_field_resource_buffer[];
 
 /** @brief Number of field object states (g_field_object_states). */
 #define FIELD_OBJECT_COUNT 13
@@ -608,6 +610,8 @@ typedef struct FieldAnimationDef
 #define FIELD_ANIM_CAMERA_X_THEN_Y 3
 /** @brief FieldAnimationDef::flags bit 15: the definition carries its own duration. */
 #define FIELD_ANIM_OWN_DURATION 0x8000
+/** @brief Test a FieldAnimationDef::flags bit from bit 8 up through the flags' high byte. */
+#define FIELD_ANIM_HIGH_FLAG(flags, flag) (((flags) >> 8) & ((flag) >> 8))
 /** @brief FieldAnimationDef::frame_sound: bit 15 fires a sound at a frame; bits 8-14 are the sound, the low byte the frame. */
 #define FIELD_ANIM_FRAME_SOUND 0x8000
 /** @brief Sound (bits 8-14) of a FieldAnimationDef::frame_sound word. */
@@ -736,6 +740,8 @@ typedef struct FieldActorSlot
 } FieldActorSlot;
 
 extern FieldActorSlot g_field_actor_slots[];
+/** @brief Frame data of the built-in animations. */
+extern u8* g_field_builtin_track_data;
 
 /**
  * @brief Object-state flags bits 0-8: status ailments, in the order of the status text and immunity tables.

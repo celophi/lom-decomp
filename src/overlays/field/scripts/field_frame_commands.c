@@ -13,7 +13,6 @@
 #include "main/field_entry.h"
 #include "overlays/field/field_input.h"
 
-void field_restart_pending_bindings(void);
 void field_update_timed_panel(FieldRenderHalf* render);
 void field_update_actor_texts(FieldRenderHalf* render);
 /** @brief Nonzero while a picture screen is shown (set by func_800A5670). */

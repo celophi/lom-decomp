@@ -37,6 +37,9 @@ typedef struct
 
 extern FieldActorBinding g_field_actor_bindings[];
 
+void field_clear_pending_binding_restarts(void);
+void field_restart_pending_bindings(void);
+
 /**
  * @brief Binding used by object @p object_index (objects 2 and up share the last binding).
  * @param object_index Object index; only its low byte selects the binding.

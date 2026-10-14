@@ -125,7 +125,6 @@ extern FieldMotionRecord g_field_effect_records[FIELD_EFFECT_ACTIVE_RECORD_COUNT
 extern VECTOR D_80105778;
 extern s32 g_field_spawn_ground_point;
 extern s32 g_field_next_path_group;
-extern u8* g_field_builtin_track_data;
 
 u32 field_evaluate_parameter_track_at_time(FieldActorSlot* actor, s32 track, s32 time);
 
