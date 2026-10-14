@@ -109,4 +109,14 @@ void* field_draw_number_wide(u_long* ot, struct SPRT* sprite_cursor, s32 value, 
  */
 void field_format_number(u8* text, s32 number, s32 wide_request);
 
+/** @brief Pending text-window configuration block (fixed RAM) consumed by field_text_apply_config. */
+#define FIELD_TEXT_PENDING_CONFIG ((FieldTextConfig*)TEXT_CONFIG_ADDRESS)
+
+/** @brief The text cache sits at VRAM x 960 inside the 4bpp texture page whose top row is 256. */
+#define FIELD_TEXT_CACHE_VRAM_X 960
+#define FIELD_TEXT_TPAGE_VRAM_Y 256
+
+/** @brief 4bpp texels per 16-bit VRAM word. */
+#define FIELD_TEXT_PIXELS_PER_WORD 4
+
 #endif

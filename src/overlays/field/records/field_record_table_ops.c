@@ -17,9 +17,6 @@
 /** @brief Largest land distance used to index g_field_land_distance_items. */
 #define FIELD_LAND_DISTANCE_MAX 31
 
-/** @brief Money saturates at this amount. */
-#define FIELD_MONEY_MAX 10000000
-
 /** @brief Resource id of the item value tables. */
 #define FIELD_RESOURCE_ITEM_VALUES 0x11
 
@@ -88,9 +85,11 @@ s32 field_place_lands(s32 first_land, s32 second_land, s32* placed)
 
     cursor = placed;
     active_count = 0;
+
     for (i = 0; i < FIELD_LAND_COUNT; i++)
     {
         flags = g_field_game_state->lands[i].flags;
+
         if ((flags & FIELD_LAND_PLACED) && !((flags >> 1) & 1))
         {
             active_count += 1;
@@ -98,6 +97,7 @@ s32 field_place_lands(s32 first_land, s32 second_land, s32* placed)
     }
 
     placed_count = 0;
+
     if (active_count < FIELD_ACTIVE_LAND_LIMIT)
     {
         if (field_try_place_land(first_land) >= 0)
@@ -106,6 +106,7 @@ s32 field_place_lands(s32 first_land, s32 second_land, s32* placed)
             *cursor = first_land;
             cursor++;
         }
+
         if (field_try_place_land(second_land) >= 0)
         {
             placed_count += 1;
@@ -128,13 +129,16 @@ s32 field_place_lands(s32 first_land, s32 second_land, s32* placed)
 #else
         i = field_get_land_distance(g_music_track_index);
         table_index = FIELD_LAND_DISTANCE_MAX;
+
         if (i <= FIELD_LAND_DISTANCE_MAX)
         {
             table_index = i;
         }
+
         field_receive_item(g_field_land_distance_items[table_index]);
 #endif
     }
+
     *cursor = FIELD_LAND_LIST_END;
     return placed_count;
 }
@@ -151,15 +155,18 @@ static s32 field_try_place_land(s32 land_index)
     if (land_index < FIELD_LAND_COUNT)
     {
         flags = g_field_game_state->lands[land_index].flags;
+
         if ((flags & FIELD_LAND_PLACED) != 0 || !((flags >> 3) & 1))
         {
             return -1;
         }
+
         g_field_game_state->control.fields.placed_land_count += 1;
         g_field_game_state->lands[land_index].flags |= FIELD_LAND_PLACED;
         g_field_game_state->lands[land_index].count = g_field_game_state->control.fields.placed_land_count;
         return land_index;
     }
+
     return -1;
 }
 
@@ -189,20 +196,24 @@ s32 field_get_land_state(s32 land_index)
     {
         flags = g_field_game_state->lands[land_index].flags;
         bits = flags;
+
         if ((bits >> 3) & 1)
         {
             if (!(flags & FIELD_LAND_PLACED))
             {
                 return FIELD_LAND_STATE_AVAILABLE;
             }
+
             if (!((bits >> 1) & 1))
             {
                 return FIELD_LAND_STATE_PLACED;
             }
+
             if (((bits >> 2) & 1) == 0)
             {
                 return FIELD_LAND_STATE_FLAG_02;
             }
+
             return FIELD_LAND_STATE_FLAG_04;
         }
     }
@@ -210,6 +221,7 @@ s32 field_get_land_state(s32 land_index)
     {
         record_game_diagnostic(DIAG_ERROR, DIAG_BAD_LAND, land_index, 0);
     }
+
     return FIELD_LAND_STATE_UNAVAILABLE;
 }
 
@@ -220,54 +232,28 @@ s32 field_get_land_state(s32 land_index)
  */
 s32 field_get_land_distance(s32 land_index)
 {
+    FieldLandRecord* land;
+    FieldLandWords* home;
     s32 dx;
     s32 dz;
-    u8 extra;
-    u8* base;
-    u8* land;
-    u8* land_address;
-    SavedGameLayout** state_ptr;
 
-    do
-    {
-        state_ptr = &g_field_game_state;
-    } while (0);
-    land = (u8*)(land_index << 1);
-    land = (u8*)((s32)land + land_index);
-    base = (u8*)*state_ptr;
-    land = (u8*)((s32)land << 2);
-    land_address = base + (s32)land;
-    land = land_address;
-    dz = land[0x2F1];
-    do
-    {
-        land_index = *(u32*)(base + 0x2F0);
-    } while (0);
-    dx = dz & 0xF;
-    dx -= ((u32)land_index >> 8) & 0xF;
+    land = &g_field_game_state->lands[land_index];
+    home = (FieldLandWords*)g_field_game_state->lands;
+    dx = land->x - home->bits.x;
+
     if (dx < 0)
     {
         dx = -dx;
     }
-    dz = (u32)dz >> 4;
-    land_index = (u32)land_index >> 12;
-    land_index &= 0xF;
-    dz -= land_index;
-    do
+
+    dz = land->z - home->bits.z;
+
+    if (dz < 0)
     {
-        extra = land[0x2F2];
-    } while (0);
-    do
-    {
-        do
-        {
-            if (dz < 0)
-            {
-                dz = -dz;
-            }
-        } while (0);
-    } while (0);
-    return extra + dx + dz;
+        dz = -dz;
+    }
+
+    return land->unk2 + dx + dz;
 }
 
 /**
@@ -348,10 +334,12 @@ s32 field_receive_money(s32 amount)
 
     money = g_field_game_state->money + amount;
     g_field_game_state->money = money;
+
     if (money > FIELD_MONEY_MAX)
     {
         g_field_game_state->money = FIELD_MONEY_MAX;
     }
+
     return 1;
 }
 
@@ -365,11 +353,13 @@ s32 field_spend_money(u32 amount)
     u32 money;
 
     money = g_field_game_state->money;
+
     if (amount < money)
     {
         g_field_game_state->money = money - amount;
         return 1;
     }
+
     return 0;
 }
 
@@ -397,6 +387,7 @@ s32 field_get_item_value(FieldItemRecord* item)
             value += tables->special_values[item->special_ids[i]];
         }
     }
+
     return value;
 }
 

@@ -28,13 +28,6 @@
 #define FIELD_TEXT_QUAD_ROW_SHIFT 4
 #define FIELD_TEXT_QUAD_ROW_HEIGHT (1 << FIELD_TEXT_QUAD_ROW_SHIFT)
 
-/** @brief VRAM origin of the text cache that field_text_build_sprites typesets into. */
-#define FIELD_TEXT_CACHE_VRAM_X 960
-#define FIELD_TEXT_CACHE_VRAM_Y 256
-
-/** @brief 4bpp texels per 16-bit VRAM unit. */
-#define FIELD_TEXT_TEXELS_PER_VRAM_UNIT 4
-
 /** @brief Number of one-pixel-offset copies that form the outline. */
 #define FIELD_TEXT_QUAD_OUTLINE_COPIES 4
 
@@ -76,6 +69,7 @@ POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* output, u_long* ot, u8* text, s3
     field_text_reset_scratch();
     sprite_count = field_text_build_sprites(sprites, text, style);
     field_text_upload_immediate_cache();
+
     if (sprite_count < 2)
     {
         scratch_y = scratch_row << FIELD_TEXT_QUAD_ROW_SHIFT;
@@ -83,14 +77,15 @@ POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* output, u_long* ot, u8* text, s3
         ClearImage(&rect, 0, 0, 0);
         DrawSync(0);
         rect.x = (sprites[0].u0 >> 2) + FIELD_TEXT_CACHE_VRAM_X;
-        rect.y = sprites[0].v0 + FIELD_TEXT_CACHE_VRAM_Y;
-        rect.w = sprites[0].w / FIELD_TEXT_TEXELS_PER_VRAM_UNIT;
+        rect.y = sprites[0].v0 + FIELD_TEXT_TPAGE_VRAM_Y;
+        rect.w = sprites[0].w / FIELD_TEXT_PIXELS_PER_WORD;
 #if defined(VERSION_JP)
         rect.h = sprites[0].w;
 #else
         rect.h = sprites[0].h;
 #endif
         MoveImage(&rect, FIELD_TEXT_QUAD_SCRATCH_X, scratch_y);
+
         switch (flags & FIELD_TEXT_QUAD_ALIGN_MASK)
         {
         case FIELD_TEXT_QUAD_ALIGN_CENTER:
@@ -100,6 +95,7 @@ POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* output, u_long* ot, u8* text, s3
             x -= sprites[0].w * x_scale / FIELD_TEXT_QUAD_SCALE_ONE;
             break;
         }
+
         SET_BGR0_PACKED(output, GPU_TINT_NEUTRAL);
         setPolyFT4(output);
         output->x0 = x;
@@ -119,16 +115,20 @@ POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* output, u_long* ot, u8* text, s3
         output->clut = sprites[0].clut;
         output->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, FIELD_TEXT_QUAD_SCRATCH_X, 0);
         addPrim(ot, output);
+
         if (add_fade_copy != 0)
         {
             field_add_fade_prim(output, 0);
         }
+
         output++;
+
         if (flags & FIELD_TEXT_QUAD_OUTLINE)
         {
             output = field_text_add_quad_outline(ot, output);
         }
     }
+
     return output;
 }
 
@@ -144,10 +144,12 @@ static POLY_FT4* field_text_add_quad_outline(u_long* ot, POLY_FT4* output)
     s32 i;
 
     poly = output;
+
     for (i = 0; i < FIELD_TEXT_QUAD_OUTLINE_COPIES; i++)
     {
         bcopy((u8*)(output - 1), (u8*)poly, sizeof(POLY_FT4));
         SET_BGR0(poly, 0, 0, 0);
+
         switch (i)
         {
         case 0:
@@ -175,8 +177,10 @@ static POLY_FT4* field_text_add_quad_outline(u_long* ot, POLY_FT4* output)
             poly->y3--;
             break;
         }
+
         addPrim(ot, poly);
         poly++;
     }
+
     return poly;
 }

@@ -23,9 +23,6 @@
 /** @brief Text color of the other choice. */
 #define FIELD_CHOICE_COLOR_INACTIVE 5
 
-/** @brief field_draw_text() flag that centers the text on x. */
-#define FIELD_TEXT_ALIGN_CENTER 2
-
 /** @brief Horizontal center of the choices inside the prompt window. */
 #define FIELD_CHOICE_CENTER_X 80
 

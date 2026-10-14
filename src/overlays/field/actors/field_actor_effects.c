@@ -214,7 +214,7 @@ void field_start_object_ground_effect(FieldMotionRecord* actor, u32 kind)
         {
             needs_retry = 1;
 
-            do
+            while (needs_retry != 0)
             {
                 OBJECT_STATE(actor).ground_attachment_points[point_index].x = (rand() >> 7) - 128;
                 OBJECT_STATE(actor).ground_attachment_points[point_index].y = (rand() >> 7) - 128;
@@ -241,7 +241,7 @@ void field_start_object_ground_effect(FieldMotionRecord* actor, u32 kind)
                 {
                     needs_retry = 0;
                 }
-            } while (needs_retry != 0);
+            }
         }
 
         return;
@@ -1073,7 +1073,7 @@ static u8* field_build_effect_spiral(u_long* ordering_table, u8* packet, VECTOR*
     matrix = &rotation;
     radius = g_field_effect_angle;
 
-    do
+    for (; strip_index < STRIP_COUNT; strip_index++)
     {
         /* Identity rotation with zero translation; each word store sets two matrix elements. */
         *(s32*)&rotation.m[2][2] = ONE;
@@ -1125,9 +1125,7 @@ static u8* field_build_effect_spiral(u_long* ordering_table, u8* packet, VECTOR*
         {
             radius -= SPIRAL_RADIUS_LIMIT;
         }
-
-        strip_index++;
-    } while (strip_index < STRIP_COUNT);
+    }
 
     setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
     ADD_PRIM_BY_DEPTH(ordering_table, cursor, position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);

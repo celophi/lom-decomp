@@ -131,9 +131,11 @@ void field_command_history_record(s32 player, s32 age_sequence)
         buttons = value;
 #endif
         stick_x_port = ports + player;
+
         if (stick_x_port->published_sample.device_type != CONTROLLER_DEVICE_DIGITAL)
         {
             axis = stick_x_port->published_sample.left_stick_x;
+
             if (axis < 0)
             {
                 buttons |= PADLleft;
@@ -142,8 +144,10 @@ void field_command_history_record(s32 player, s32 age_sequence)
             {
                 buttons |= PADLright;
             }
+
             stick_y_port = ports + player;
             axis = stick_y_port->published_sample.left_stick_y;
+
             if (axis < 0)
             {
                 buttons |= PADLup;
@@ -153,10 +157,13 @@ void field_command_history_record(s32 player, s32 age_sequence)
                 buttons |= PADLdown;
             }
         }
+
         previous_direction = g_field_command_prev_buttons[player] & PAD_BTN_DPAD;
+
         if ((previous_direction != (buttons & PAD_BTN_DPAD)) && (previous_direction != 0))
         {
             g_field_command_history[player][g_field_command_history_count[player]] = previous_direction >> FIELD_PAD_DIRECTION_SHIFT;
+
             if (g_field_command_history_count[player] < FIELD_HISTORY_LENGTH - 1)
             {
                 g_field_command_history_count[player]++;
@@ -165,16 +172,20 @@ void field_command_history_record(s32 player, s32 age_sequence)
             {
                 field_command_history_shift(player);
             }
+
             g_field_command_idle_frames[player] = 0;
         }
+
         for (button_index = 0, button_mask = 1; button_index < FIELD_PAD_ACTION_BUTTON_COUNT; button_index++, button_mask <<= 1)
         {
             pressed_bit = (u16)buttons & button_mask;
+
             if ((pressed_bit != 0) && ((g_field_command_prev_buttons[player] & button_mask) != pressed_bit))
             {
                 if (buttons & PAD_BTN_DPAD)
                 {
                     g_field_command_history[player][g_field_command_history_count[player]] = (u16)buttons >> FIELD_PAD_DIRECTION_SHIFT;
+
                     if (g_field_command_history_count[player] < FIELD_HISTORY_LENGTH - 1)
                     {
                         g_field_command_history_count[player]++;
@@ -184,10 +195,12 @@ void field_command_history_record(s32 player, s32 age_sequence)
                         field_command_history_shift(player);
                     }
                 }
+
                 count = &g_field_command_history_count[player];
                 /* g_saved_game_ctx points at the saved game, the block SavedGameLayout describes. */
                 slot = ((SavedGameLayout*)g_saved_game_ctx)->characters[player].button_actions[g_field_hint_button_map[button_index]];
                 g_field_command_history[player][*count] = g_field_action_command_codes[slot];
+
                 if (*count < FIELD_HISTORY_LENGTH - 1)
                 {
                     (*count)++;
@@ -196,17 +209,22 @@ void field_command_history_record(s32 player, s32 age_sequence)
                 {
                     field_command_history_shift(player);
                 }
+
                 g_field_command_idle_frames[player] = 0;
             }
         }
+
         g_field_command_prev_buttons[player] = buttons;
+
         if (age_sequence != 0)
         {
             if (g_field_command_idle_frames[player] < FIELD_HISTORY_IDLE_MAX)
             {
                 g_field_command_idle_frames[player]++;
             }
+
             value = g_field_command_idle_frames[player];
+
             if (value == FIELD_HISTORY_IDLE_EXPIRE)
             {
                 field_command_history_clear(player);
@@ -242,15 +260,17 @@ static void field_command_history_consume(s32 player, s32 count)
     s32 dst;
 
     dst = 0;
+
     if (count < FIELD_HISTORY_LENGTH)
     {
         history = g_field_command_history;
         row = history[player];
         src = count;
-        do
+
+        while (src < FIELD_HISTORY_LENGTH)
         {
             row[dst++] = row[src++];
-        } while (src < FIELD_HISTORY_LENGTH);
+        }
     }
 
     g_field_command_history_count[player] -= count;
@@ -280,11 +300,13 @@ s32 field_command_history_match(s32 player, s32 unused, s32 peek)
 
     command = FIELD_HISTORY_COMMAND_NONE;
     scan_index = 0;
+
     if ((player < FIELD_PLAYER_COUNT) && (g_field_command_history_count[player] != 0))
     {
         do
         {
             history = g_field_command_history[player];
+
             switch (history[scan_index])
             {
                 /* Direction nibbles: 1 up, 2 right, 4 down, 8 left, and the diagonals. */
@@ -297,19 +319,23 @@ s32 field_command_history_match(s32 player, s32 unused, s32 peek)
                 case 0x9:
                 case 0xC:
                     direction_end = scan_index;
+
                     while (g_field_command_history[player][direction_end] < FIELD_HISTORY_BUTTON_CODE_MIN)
                     {
                         direction_end++;
+
                         if (direction_end == g_field_command_history_count[player])
                         {
                             return command;
                         }
                     }
+
                     if (history[direction_end] == FIELD_HISTORY_PATTERN_FINISH)
                     {
                         for (pattern_index = 0; pattern_index < FIELD_COMMAND_PATTERN_COUNT; pattern_index++)
                         {
                             pattern_length = strlen(g_field_command_patterns[pattern_index]);
+
                             if ((direction_end - scan_index) >= pattern_length)
                             {
                                 /* Try the pattern against every tail of the run, longest first. */
@@ -322,22 +348,27 @@ s32 field_command_history_match(s32 player, s32 unused, s32 peek)
                                             direction_end++;
                                             dst = 0;
                                             consume_count = direction_end;
+
                                             if (consume_count < FIELD_HISTORY_LENGTH)
                                             {
                                                 src = consume_count;
-                                                do
+
+                                                while (src < FIELD_HISTORY_LENGTH)
                                                 {
                                                     history[dst++] = history[src++];
-                                                } while (src < FIELD_HISTORY_LENGTH);
+                                                }
                                             }
+
                                             g_field_command_history_count[player] -= consume_count;
                                         }
+
                                         return g_field_command_pattern_ids[pattern_index];
                                     }
                                 }
                             }
                         }
                     }
+
                     scan_index = direction_end - 1;
                     break;
                 /* Button codes, see g_field_action_command_codes. */
@@ -346,75 +377,91 @@ s32 field_command_history_match(s32 player, s32 unused, s32 peek)
                     {
                         consume_count = scan_index + 1;
                         dst = 0;
+
                         if (consume_count < FIELD_HISTORY_LENGTH)
                         {
                             src = consume_count;
+
                             do
                             {
                                 history[dst++] = history[src++];
                             } while (src < FIELD_HISTORY_LENGTH);
                         }
+
                         g_field_command_history_count[player] -= consume_count;
                     }
+
                     return 3;
                 case 0x60:
                     if (peek == 0)
                     {
                         consume_count = scan_index + 1;
                         dst = 0;
+
                         if (consume_count < FIELD_HISTORY_LENGTH)
                         {
                             src = consume_count;
+
                             do
                             {
                                 history[dst++] = history[src++];
                             } while (src < FIELD_HISTORY_LENGTH);
                         }
+
                         g_field_command_history_count[player] -= consume_count;
                     }
+
                     return 2;
                 case 0x70:
                     if (peek == 0)
                     {
                         field_command_history_clear(player);
                     }
+
                     return 1;
                 case 0x80:
                     if (peek == 0)
                     {
                         field_command_history_clear(player);
                     }
+
                     return 0;
                 case 0x40:
                     if (peek == 0)
                     {
                         field_command_history_clear(player);
                     }
+
                     return 4;
                 case 0x20:
                     if (peek == 0)
                     {
                         field_command_history_clear(player);
                     }
+
                     return 6;
                 case 0x30:
                     if (peek == 0)
                     {
                         field_command_history_clear(player);
                     }
+
                     return 5;
                 case 0x10:
                     if (peek == 0)
                     {
                         field_command_history_clear(player);
                     }
+
                     return 7;
                 default:
                     break;
             }
+
             scan_index++;
         } while (scan_index != g_field_command_history_count[player]);
     }
+
     return command;
 }
 

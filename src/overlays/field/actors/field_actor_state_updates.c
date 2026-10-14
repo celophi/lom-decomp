@@ -99,6 +99,17 @@ typedef enum
     FIELD_SEQUENCE_END = 0xFF
 } FieldSequenceOpcode;
 
+/** @brief Object mode that cancels a pending action unless an action selection holds it. */
+#define FIELD_PENDING_MODE_CANCEL 3
+
+/**
+ * @brief History point @p point of object @p object_index, indexed through one flat point array.
+ * @note The object and point indices are folded into one four-byte stride, as the original does.
+ */
+#define FIELD_HISTORY_POINT(states, object_index, point)                                                                                                       \
+    (*(FieldRoutePoint*)((u8*)(states) + ((object_index) * (sizeof(FieldObjectState) / sizeof(FieldRoutePoint)) + (point)) * sizeof(FieldRoutePoint) +         \
+                         0x6C /* position_history */))
+
 /**
  * @brief Settle a landing actor to the ground and play the landing effect (animation 0x1A).
  * @param actor Landing actor.
@@ -498,9 +509,6 @@ s32 field_update_actor_action_chain(FieldActor* actor)
 }
 
 /* field_actor_action_runtime: Validate pending actions, clear completed state, and advance actor sequences. */
-
-/** @brief Object mode that cancels a pending action unless an action selection holds it. */
-#define FIELD_PENDING_MODE_CANCEL 3
 
 /**
  * @brief Update pending actor actions and clear stale action state.
@@ -937,14 +945,6 @@ void field_update_timed_slide(FieldActor* actor, s32 x, s32 z)
         actor->command = 0;
     }
 }
-
-/**
- * @brief History point @p point of object @p object_index, indexed through one flat point array.
- * @note The object and point indices are folded into one four-byte stride, as the original does.
- */
-#define FIELD_HISTORY_POINT(states, object_index, point)                                                                                                       \
-    (*(FieldRoutePoint*)((u8*)(states) + ((object_index) * (sizeof(FieldObjectState) / sizeof(FieldRoutePoint)) + (point)) * sizeof(FieldRoutePoint) +         \
-                         0x6C /* position_history */))
 
 /**
  * @brief Follow the leader's stored positions or restore the actor's idle behavior.

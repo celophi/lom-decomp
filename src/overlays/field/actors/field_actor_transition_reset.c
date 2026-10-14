@@ -15,6 +15,7 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_modal_runtime.h"
 #include "../internal/field_actor_runtime.h"
+#include "main/audio/akao.h"
 
 /** @brief Idle checks in a row after which the pending reset completes. */
 #define FIELD_RESET_IDLE_CHECKS 15
@@ -80,12 +81,14 @@ void field_set_battle_group(s32 mode, void* actor_data)
     SavedGameLayout* saved_game;
 
     field_clear_actor_texts();
+
     if (mode == 0)
     {
         field_cancel_animation_bindings();
         g_field_restore_group = 0;
         field_battle_setup(0);
         g_field_actions_limited = 1;
+
         for (index = 0; index < FIELD_PARTY_COUNT; index++)
         {
             state = &g_field_object_states[index];
@@ -101,6 +104,7 @@ void field_set_battle_group(s32 mode, void* actor_data)
             field_command_history_clear(index);
             field_update_object_effects(index);
         }
+
         g_field_battle_idle_checks = 0;
         return;
     }
@@ -109,6 +113,7 @@ void field_set_battle_group(s32 mode, void* actor_data)
     {
         field_begin_duel_intro();
     }
+
     g_field_active_group = mode;
     field_camera_select_scroll_limits();
 
@@ -154,6 +159,7 @@ void field_set_battle_group(s32 mode, void* actor_data)
                 {
                     field_route_actor_to_object(&g_field_actors[index], 0, 1);
                     g_field_object_parts[index].spawn_flags.word = g_field_object_parts[index].spawn_flags.word | FIELD_PART_IGNORE_MAP_COLLISION;
+
                     if (g_field_actors[index].command == FIELD_ACTOR_COMMAND_LEAVE_PATH)
                     {
                         g_field_actors[index].command = FIELD_ACTOR_COMMAND_RUN_PATH;
@@ -184,6 +190,7 @@ s32 field_find_defeating_actor(void)
             }
         }
     }
+
     return 0;
 }
 
@@ -216,6 +223,7 @@ s32 field_defeat_animation_playing(void)
             }
         }
     }
+
     return 0;
 }
 
@@ -236,18 +244,21 @@ void field_cancel_animation_bindings(void)
     if (field_is_scene_fading() != 0)
     {
         page = FIELD_STATE_PAGE;
+
         for (i = 0; i < FIELD_ACTOR_BINDING_COUNT; i++)
         {
             if (g_field_actor_bindings[i].state != 0)
             {
                 g_field_actor_bindings[i].state = 0;
-                g_field_actors[g_field_actor_bindings[i].owner].presence = 0;
+                g_field_actors[g_field_actor_bindings[i].owner].presence = FIELD_ACTOR_VISIBLE;
                 g_field_actors[g_field_actor_bindings[i].owner].command = 0;
+
                 for (j = 0; j < FIELD_ACTOR_SLOT_TOTAL; j++)
                 {
                     if (g_field_actor_slots[j].active != 0)
                     {
                         index = g_field_actor_slots[j].owner_object_index;
+
                         if (index == g_field_actor_bindings[i].owner)
                         {
                             g_field_actor_slots[j].duration = 0;
@@ -258,22 +269,26 @@ void field_cancel_animation_bindings(void)
                             g_field_actor_slots[j].active = 0;
                             g_field_actor_slots[j].track_mask = 0;
                             index = g_field_actors[owner].command;
+
                             if ((index != FIELD_ACTOR_COMMAND_DEFEATED && index != FIELD_ACTOR_COMMAND_DEFEAT_END) || (g_field_object_states[owner].flags & FIELD_OBJECT_FLAG_KNOCKED_OUT))
                             {
-                                g_field_actors[g_field_actor_slots[j].owner_object_index].presence = 0;
+                                g_field_actors[g_field_actor_slots[j].owner_object_index].presence = FIELD_ACTOR_VISIBLE;
                             }
+
                             g_field_object_states[g_field_actor_slots[j].owner_object_index].contact.word &= ~FIELD_CONTACT_ANIMATION_HIDDEN;
+
                             for (k = 0; k < g_field_actor_slots[j].target_count; k++)
                             {
                                 if (g_field_actor_slots[j].targets[k] != FIELD_TARGET_NONE)
                                 {
-                                    g_field_actors[g_field_actor_slots[j].targets[k]].presence = 0;
+                                    g_field_actors[g_field_actor_slots[j].targets[k]].presence = FIELD_ACTOR_VISIBLE;
                                     g_field_object_states[g_field_actor_slots[j].targets[k]].contact.word &= ~FIELD_CONTACT_ANIMATION_HIDDEN;
                                 }
                             }
                         }
                     }
                 }
+
                 g_field_camera_offset_z = 0;
                 g_field_camera_offset_y = 0;
                 g_field_camera_offset_x = 0;
@@ -307,6 +322,7 @@ void field_update_battle_end(void)
         {
             g_field_battle_idle_checks = 0;
         }
+
         if (g_field_battle_idle_checks == FIELD_RESET_IDLE_CHECKS)
         {
             field_initialize_actor_slots();
@@ -322,7 +338,8 @@ void field_update_battle_end(void)
             field_reset_global_color_scale();
             field_set_color_scale(-1, FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL);
             field_clear_actor_texts();
-            field_play_sound(0x24, 0x80);
+            field_play_sound(0x24, AKAO_PAN_CENTER);
+
             for (i = 0; i < FIELD_PARTY_COUNT; i++)
             {
                 if (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE)
@@ -334,6 +351,7 @@ void field_update_battle_end(void)
                     g_field_object_states[i].contact.bytes.target_count = 0;
                     g_field_object_states[i].action_parameter = FIELD_ACTION_PARAMETER_NONE;
                     g_field_actors[i].y = 0;
+
                     if ((g_field_duel_mode != 0) && (g_field_actors[i].command == FIELD_ACTOR_COMMAND_KNOCKED_DOWN))
                     {
                         g_field_actors[i].animation = (g_field_actors[i].animation & FIELD_ANIMATION_FACING) + FIELD_ABILITY_CROUCH;
@@ -342,16 +360,18 @@ void field_update_battle_end(void)
                     {
                         g_field_actors[i].animation = (g_field_actors[i].animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_13;
                     }
+
                     g_field_actors[i].animation_state = 1;
                     g_field_actors[i].animation_active = 1;
                     g_field_actors[i].command = 0;
-                    g_field_actors[i].presence = 0;
+                    g_field_actors[i].presence = FIELD_ACTOR_VISIBLE;
                     g_field_actors[i].animation_frame = 0;
                     g_field_actors[i].control.word = g_field_actors[i].control.word & ~FIELD_CONTROL_PLAY_ONCE;
                     g_field_object_states[i].movement.word = g_field_object_states[i].movement.word & ~FIELD_MOVEMENT_SEQUENCE_MASK;
                     field_restart_actor_animation(&g_field_actors[i]);
                 }
             }
+
             g_field_actions_limited = 0;
         }
     }

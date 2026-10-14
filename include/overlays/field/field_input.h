@@ -20,4 +20,7 @@ void field_update_input_repeat(void);
  */
 void field_reset_input_repeat(void);
 
+/** @brief Frames a newly pressed button waits before it repeats. */
+#define FIELD_PAD_REPEAT_DELAY 15
+
 #endif

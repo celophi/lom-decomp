@@ -18,6 +18,9 @@ struct FieldRenderContext;
 #define FIELD_SOUND_EVENT_EFFECT_BOUNCE 4
 #define FIELD_SOUND_EVENT_PART_SPAWN_ONCE 5
 
+/** @brief Parameter track index bits; an animation has 16 parameter tracks. */
+#define FIELD_TRACK_INDEX_MASK 0xF
+
 void field_update_dialog_runtime(struct FieldRenderHalf* render_half);
 void field_show_battle_results(void);
 void field_close_dialog_screen(void);

@@ -8,9 +8,6 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
 
-/** @brief Resource id of the item template table. */
-#define FIELD_RESOURCE_ITEM_TEMPLATES 5
-
 /** @brief Diagnostic for a missing or out-of-range item template (detail 0 or 1). */
 #define DIAG_BAD_ITEM_TEMPLATE 0x6C
 
@@ -79,10 +76,12 @@ FieldActionDescriptor* field_get_party_action(s32 page, u16 index)
 
     base = &g_field_party_script_pages[page];
     table = (FieldPartyActionTable*)(base->bytes + base->table_offsets[2]);
+
     if (index < table->count)
     {
         return &table->actions[index];
     }
+
     return NULL;
 }
 
@@ -107,11 +106,13 @@ s32 field_add_template_item(s32 index)
     FieldItemRecord* record;
 
     table = field_find_resource(FIELD_RESOURCE_ITEM_TEMPLATES);
+
     if (table == NULL)
     {
         record_game_diagnostic(DIAG_ERROR, DIAG_BAD_ITEM_TEMPLATE, index, 0);
         return -1;
     }
+
     if (index >= table->count)
     {
         record_game_diagnostic(DIAG_ERROR, DIAG_BAD_ITEM_TEMPLATE, index, 1);
@@ -121,11 +122,13 @@ s32 field_add_template_item(s32 index)
     record = field_find_free_inventory_record();
     item_template = &table->templates[index];
     field_set_text_macro(0, (u8*)item_template, FIELD_TEMPLATE_ITEM_MACRO_LIMIT);
+
     if (record != NULL)
     {
         field_copy_inventory_record((u8*)record, (u8*)item_template);
         return 0;
     }
+
     return -1;
 }
 
@@ -158,6 +161,7 @@ static s32 field_discard_all_items(void)
     {
         g_field_game_state->items[i].name[0] = 0;
     }
+
     field_compact_inventory();
     return -1;
 }

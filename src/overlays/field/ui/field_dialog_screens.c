@@ -33,6 +33,8 @@
 #include "main/display.h"
 #include "overlays/field/field_input.h"
 #include "overlays/field/field_portrait.h"
+#include "overlays/field/field_sound.h"
+#include "main/audio/akao.h"
 
 /* ---- Timed panels (0x800A5638 .. 0x800A6204) ---- */
 
@@ -64,8 +66,6 @@
 #define FIELD_SOUND_PANEL_EFFECT0_END 0x11D
 #define FIELD_SOUND_PANEL_EFFECT2_START 0x11E
 #define FIELD_SOUND_PANEL_EFFECT2_END 0x11F
-/** @brief Centered pan for field_play_sound(). */
-#define FIELD_SOUND_CENTER 0x80
 
 /** @brief Confirm buttons of the result and panel screens. */
 #define FIELD_PAD_CONFIRM (PAD_BTN_CROSS | PAD_BTN_L3)
@@ -109,6 +109,71 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_t
 static POLY_FT4* field_draw_timed_panel_image(POLY_FT4* prim, u_long* ordering_table);
 
 /**
+ * @brief Recover a transition descriptor from a pointer to its flags field.
+ * @param flags_ptr Address of the descriptor's flags member.
+ */
+#define QUAD_OF_FLAGS(flags_ptr) ((FieldTransitionQuad *)((u8 *)(flags_ptr) - 10))
+
+/** @brief Number of actor text slots (the first two follow the players). */
+#define FIELD_ACTOR_TEXT_COUNT 3
+/** @brief Frames an actor text stays up; it fades out over the last 32. */
+#define FIELD_ACTOR_TEXT_FRAMES 63
+#define FIELD_ACTOR_TEXT_FADE_FRAMES 32
+/** @brief field_draw_tinted_text() color that selects the neutral tint. */
+#define FIELD_TEXT_TINT_NEUTRAL 0x100
+/** @brief Primitive-buffer depth of the text layer in the render half's ordering table. */
+#define FIELD_TEXT_OT_DEPTH 16
+
+#define FIELD_TECHNIQUE_UNLOCK_RULE_COUNT 227
+#define FIELD_PROFICIENCY_MAX 100U
+#define FIELD_PROFICIENCY_BONUS 4
+#define FIELD_EQUIPPED_ABILITY_COUNT 2
+#define FIELD_WEAPON_CATEGORY_SHIFT 10
+#define FIELD_WEAPON_CATEGORY_MASK 0x3F
+#define FIELD_TECHNIQUE_GROUP_SHIFT 4
+#define FIELD_TECHNIQUE_WEAPON_MASK 0x0F
+#define FIELD_TECHNIQUE_INDEX_MASK 0x7F
+#define FIELD_TECHNIQUE_SILENT_FLAG 0x80
+#define FIELD_TECHNIQUES_PER_GROUP 24
+#define FIELD_TECHNIQUE_UNLOCK_FLAG 0x8000
+#define FIELD_UNLOCK_BITS_PER_WORD 32
+
+/** @brief g_field_dialog_screen_mode values of the battle result screens. */
+#define FIELD_RESULTS_PARTY_SUMMARY 1
+#define FIELD_RESULTS_ITEM_LIST 2
+#define FIELD_RESULTS_UNLOCK_LIST 3
+
+/** @brief Result window layout: left edge, row height, vertical center and largest visible height. */
+#define FIELD_RESULTS_WINDOW_X 0x20
+#define FIELD_RESULTS_ROW_HEIGHT 16
+#define FIELD_RESULTS_CENTER_Y 112
+#define FIELD_RESULTS_MAX_HEIGHT 160
+/** @brief Unlock list columns: group header and centered name. */
+#define FIELD_RESULTS_HEADER_X 0x20
+#define FIELD_RESULTS_NAME_X 0x80
+/** @brief Palette and texture page of the animated result icons. */
+#define FIELD_RESULTS_ICON_CLUT getClut(112, 490)
+#define FIELD_RESULTS_ICON_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 384, 0)
+
+/** @brief Resource with the ability and technique name tables. */
+#define FIELD_RES_UNLOCK_NAMES 0x5DF
+#define FIELD_SOUND_UNLOCK_LIST 0xA1
+
+/** @brief Frames the party summary waits before it accepts confirm. */
+#define FIELD_RESULTS_WAIT_FRAMES 4
+
+/** @brief g_field_progression_unlocks entry: technique (low bits: group * 24 + index) rather than ability. */
+#define FIELD_UNLOCK_TECHNIQUE FIELD_TECHNIQUE_UNLOCK_FLAG
+
+/**
+ * @brief Address of a string in a text bank that starts with little-endian u16 offsets.
+ */
+#define FIELD_TEXT_AT(bank, low, high) ((u8 *)((low) + (((high) << 8) + (uintptr_t)(bank))))
+
+/** @brief Experience a party member gained since g_field_experience_snapshot was sampled. */
+#define FIELD_EXPERIENCE_GAIN(index) ((s32)((g_saved_game_ctx->characters[index].progress.word >> 8) - g_field_experience_snapshot[index]))
+
+/**
  * @brief Copy one of the portrait palettes into a portrait image.
  * @param dest Palette strip at the start of the portrait image.
  * @param index Palette index.
@@ -146,6 +211,7 @@ void field_start_timed_panel(s32 index)
     g_field_timed_panel_active = 1;
 
     mode = g_field_timed_panel_modes[g_field_timed_panel_index];
+
     if (mode & FIELD_TIMED_PANEL_EFFECT)
     {
         switch (mode & FIELD_TIMED_PANEL_EFFECT_MASK)
@@ -168,7 +234,7 @@ void field_start_timed_panel(s32 index)
         sound_id = FIELD_SOUND_PANEL_IMAGE_START;
     }
 
-    field_play_sound(sound_id, FIELD_SOUND_CENTER);
+    field_play_sound(sound_id, AKAO_PAN_CENTER);
 }
 
 /**
@@ -189,37 +255,42 @@ void field_update_timed_panel(FieldRenderHalf* render)
         {
             field_restore_fade_target_with_duration(FIELD_TIMED_PANEL_FADE_FRAMES);
         }
+
         timer = g_field_timed_panel_timer;
+
         if (timer == 0)
         {
             g_field_timed_panel_active = 0;
             return;
         }
+
         if (timer < FIELD_TIMED_PANEL_FADE_OUT_START)
         {
             if (timer == FIELD_TIMED_PANEL_FADE_OUT_START - 1)
             {
                 event_selector = g_field_timed_panel_modes[g_field_timed_panel_index];
+
                 if (event_selector & FIELD_TIMED_PANEL_EFFECT)
                 {
                     switch (event_selector & FIELD_TIMED_PANEL_EFFECT_MASK)
                     {
                     case 0:
-                        field_play_sound(FIELD_SOUND_PANEL_EFFECT0_END, FIELD_SOUND_CENTER);
+                        field_play_sound(FIELD_SOUND_PANEL_EFFECT0_END, AKAO_PAN_CENTER);
                         break;
                     case 1:
-                        field_play_sound(FIELD_SOUND_PANEL_EFFECT1_END, FIELD_SOUND_CENTER);
+                        field_play_sound(FIELD_SOUND_PANEL_EFFECT1_END, AKAO_PAN_CENTER);
                         break;
                     case 2:
-                        field_play_sound(FIELD_SOUND_PANEL_EFFECT2_END, FIELD_SOUND_CENTER);
+                        field_play_sound(FIELD_SOUND_PANEL_EFFECT2_END, AKAO_PAN_CENTER);
                         break;
                     }
                 }
                 else
                 {
-                    field_play_sound(FIELD_SOUND_PANEL_IMAGE_END, FIELD_SOUND_CENTER);
+                    field_play_sound(FIELD_SOUND_PANEL_IMAGE_END, AKAO_PAN_CENTER);
                 }
             }
+
             g_field_timed_panel_brightness = g_field_timed_panel_timer * 4;
         }
         else if (timer >= FIELD_TIMED_PANEL_FRAMES - FIELD_TIMED_PANEL_FADE_IN_FRAMES)
@@ -230,10 +301,12 @@ void field_update_timed_panel(FieldRenderHalf* render)
         {
             g_field_timed_panel_timer = FIELD_TIMED_PANEL_FADE_OUT_START;
         }
+
         g_field_screen_scroll.y = 0;
         g_field_screen_scroll.x = 0;
         render_selector = g_field_timed_panel_modes[g_field_timed_panel_index];
         prim = (POLY_FT4*)render->primitive_cursor;
+
         if (render_selector != 0)
         {
             prim = field_draw_timed_panel_quads(prim, render->ordering_table, render_selector & FIELD_TIMED_PANEL_EFFECT_MASK);
@@ -242,15 +315,10 @@ void field_update_timed_panel(FieldRenderHalf* render)
         {
             prim = field_draw_timed_panel_image(prim, render->ordering_table);
         }
+
         render->primitive_cursor = (u8*)prim;
     }
 }
-
-/**
- * @brief Recover a transition descriptor from a pointer to its flags field.
- * @param flags_ptr Address of the descriptor's flags member.
- */
-#define QUAD_OF_FLAGS(flags_ptr) ((FieldTransitionQuad *)((u8 *)(flags_ptr) - 10))
 
 /**
  * @brief Draw the up to four quads of a timed panel effect group.
@@ -304,43 +372,54 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
 
     quad = g_field_timed_panel_quads[index];
     flags_base = (u8 *)&quad->flags;
+
     for (quad_index = 0; quad_index < 4; quad_index++, quad++)
     {
         quad_flags = flags_base + quad_index * 12;
+
         if (quad->x != FIELD_TRANSITION_QUAD_UNUSED)
         {
             raw_width = QUAD_OF_FLAGS(quad_flags)->width;
+
             if (QUAD_OF_FLAGS(quad_flags)->flags & FIELD_TRANSITION_QUAD_HALF_WIDTH)
             {
                 raw_width = (u16)(raw_width >> 1);
             }
+
             setPolyFT4(prim);
             width = raw_width & 0xFFFF;
             prim->r0 = prim->g0 = prim->b0 = g_field_timed_panel_brightness;
+
             if ((g_field_timed_panel_brightness != FIELD_TIMED_PANEL_FULL_BRIGHTNESS) || (QUAD_OF_FLAGS(quad_flags)->flags & FIELD_TRANSITION_QUAD_SEMI_TRANSPARENT))
             {
                 setSemiTrans(prim, 1);
             }
+
             expansion = FIELD_TIMED_PANEL_FULL_BRIGHTNESS - g_field_timed_panel_brightness;
+
             switch (FIELD_TRANSITION_QUAD_EFFECT(QUAD_OF_FLAGS(quad_flags)->flags))
             {
             case 0:
                 term = width * expansion;
                 scaled = term;
+
                 if (term < 0)
                 {
                     scaled = term + 0x7F;
                 }
+
                 scaled = scaled >> 7;
                 prim->x0 = prim->x2 = quad->x - scaled;
                 prim->x1 = prim->x3 = quad->x + width + scaled - 1;
                 prim->y0 = prim->y1 = QUAD_OF_FLAGS(quad_flags)->y - QUAD_OF_FLAGS(quad_flags)->height * expansion / 128;
                 bottom_1 = QUAD_OF_FLAGS(quad_flags)->y + QUAD_OF_FLAGS(quad_flags)->height;
                 scaled = QUAD_OF_FLAGS(quad_flags)->height * expansion;
+
                 if (scaled < 0)
                 {
                     scaled += 0x7F;
                 }
+
                 prim->y2 = prim->y3 = bottom_1 + (scaled >> 7) - 1;
                 break;
             case 1:
@@ -348,10 +427,12 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
                 {
                     scaled = width * expansion;
                     adjusted = scaled;
+
                     if (scaled < 0)
                     {
                         adjusted = scaled + 0x7F;
                     }
+
                     offset_1 = adjusted >> 7;
                     prim->x0 = prim->x2 = quad->x - offset_1;
                     right_1 = (quad->x + width) - offset_1;
@@ -360,14 +441,17 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
                 {
                     scaled = width * expansion;
                     adjusted = scaled;
+
                     if (scaled < 0)
                     {
                         adjusted = scaled + 0x7F;
                     }
+
                     offset_1 = adjusted >> 7;
                     prim->x0 = prim->x2 = quad->x + offset_1;
                     right_1 = quad->x + width + offset_1;
                 }
+
                 prim->x1 = prim->x3 = right_1 - 1;
                 prim->y0 = prim->y1 = QUAD_OF_FLAGS(quad_flags)->y;
                 prim->y2 = prim->y3 = QUAD_OF_FLAGS(quad_flags)->y + QUAD_OF_FLAGS(quad_flags)->height - 1;
@@ -376,49 +460,63 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
                 angle = expansion * 50;
                 x_cosine = rcos(angle);
                 x_sine = rsin(angle);
+
                 do
                 {
                     width_term = width * x_cosine;
                 } while (0);
+
                 if (width_term < 0)
                 {
                     width_term += 0x1FFF;
                 }
+
                 width_term >>= 13;
                 height_term = QUAD_OF_FLAGS(quad_flags)->height * x_sine;
+
                 if (height_term < 0)
                 {
                     height_term += 0x1FFF;
                 }
+
                 rotated_x = width_term + (height_term >> 13);
                 y_sine = rsin(angle);
                 y_cosine = rcos(angle);
+
                 do
                 {
                     width_term_y = width * y_sine;
                 } while (0);
+
                 if (width_term_y < 0)
                 {
                     width_term_y += 0x1FFF;
                 }
+
                 width_term_y >>= 13;
                 height_term_y = QUAD_OF_FLAGS(quad_flags)->height * y_cosine;
+
                 if (height_term_y < 0)
                 {
                     height_term_y += 0x1FFF;
                 }
+
                 scaled = expansion * rotated_x;
                 rotated_y = width_term_y - (height_term_y >> 13);
+
                 if (scaled < 0)
                 {
                     scaled += 0x7F;
                 }
+
                 scaled_y = expansion * rotated_y;
                 rotated_x = rotated_x + (scaled >> 7);
+
                 if (scaled_y < 0)
                 {
                     scaled_y += 0x7F;
                 }
+
                 rotated_y = rotated_y + (scaled_y >> 7);
                 half = width >> 1;
                 half_width = half;
@@ -430,42 +528,54 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
                 x_sine_2 = rsin(angle);
                 negative_width = -(s32)width;
                 width_term_2 = negative_width * x_cosine_2;
+
                 if (width_term_2 < 0)
                 {
                     width_term_2 += 0x1FFF;
                 }
+
                 width_term_2 >>= 13;
                 height_term_2 = QUAD_OF_FLAGS(quad_flags)->height * x_sine_2;
+
                 if (height_term_2 < 0)
                 {
                     height_term_2 += 0x1FFF;
                 }
+
                 rotated_x = width_term_2 + (height_term_2 >> 13);
                 y_sine_2 = rsin(angle);
                 y_cosine_2 = rcos(angle);
                 width_term_y_2 = negative_width * y_sine_2;
+
                 if (width_term_y_2 < 0)
                 {
                     width_term_y_2 += 0x1FFF;
                 }
+
                 width_term_y_2 >>= 13;
                 height_term_y_2 = QUAD_OF_FLAGS(quad_flags)->height * y_cosine_2;
+
                 if (height_term_y_2 < 0)
                 {
                     height_term_y_2 += 0x1FFF;
                 }
+
                 scaled_x_2 = expansion * rotated_x;
                 rotated_y = width_term_y_2 - (height_term_y_2 >> 13);
+
                 if (scaled_x_2 < 0)
                 {
                     scaled_x_2 += 0x7F;
                 }
+
                 scaled_y_2 = expansion * rotated_y;
                 rotated_x = rotated_x + (scaled_x_2 >> 7);
+
                 if (scaled_y_2 < 0)
                 {
                     scaled_y_2 += 0x7F;
                 }
+
                 prim->x1 = (s16)((quad->x + half_width) - rotated_x);
                 rotated_y = rotated_y + (scaled_y_2 >> 7);
                 prim->x2 = (u16)(quad->x + half_width + rotated_x);
@@ -484,6 +594,7 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
                 {
                     brightness = ~((g_field_timed_panel_brightness - 0x40) * 2);
                 }
+
                 prim->r0 = prim->g0 = prim->b0 = brightness;
                 prim->x0 = prim->x2 = quad->x;
                 prim->x1 = prim->x3 = quad->x + width - 1;
@@ -493,23 +604,28 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
             case 4:
                 term = width * expansion;
                 scaled = term;
+
                 if (term < 0)
                 {
                     scaled = term + 0x3F;
                 }
+
                 scaled = scaled >> 6;
                 prim->x0 = prim->x2 = quad->x - scaled;
                 prim->x1 = prim->x3 = quad->x + width + scaled - 1;
                 prim->y0 = prim->y1 = QUAD_OF_FLAGS(quad_flags)->y - QUAD_OF_FLAGS(quad_flags)->height * expansion / 128;
                 bottom_1 = QUAD_OF_FLAGS(quad_flags)->y + QUAD_OF_FLAGS(quad_flags)->height;
                 scaled = QUAD_OF_FLAGS(quad_flags)->height * expansion;
+
                 if (scaled < 0)
                 {
                     scaled += 0x7F;
                 }
+
                 prim->y2 = prim->y3 = bottom_1 + (scaled >> 7) - 1;
                 break;
             }
+
             prim->u0 = prim->u2 = QUAD_OF_FLAGS(quad_flags)->u;
             prim->u1 = prim->u3 = QUAD_OF_FLAGS(quad_flags)->u + width - 1;
             prim->v0 = prim->v1 = QUAD_OF_FLAGS(quad_flags)->v;
@@ -518,9 +634,11 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
             prim->clut = getClut(QUAD_OF_FLAGS(quad_flags)->flags & palette_mask, VRAM_CLUT_Y);
             prim->tpage = getTPage(QUAD_OF_FLAGS(quad_flags)->flags & 3, (QUAD_OF_FLAGS(quad_flags)->flags >> 9) & 3, FIELD_TIMED_PANEL_VRAM_X, 0);
             addPrim(ordering_table, prim);
+
             if (g_field_timed_panel_brightness < FIELD_TIMED_PANEL_FADE_LIMIT)
             {
                 term = FIELD_TRANSITION_QUAD_EFFECT(QUAD_OF_FLAGS(quad_flags)->flags);
+
                 switch (term)
                 {
                 case 0:
@@ -533,9 +651,11 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
                     break;
                 }
             }
+
             prim++;
         }
     }
+
     return prim;
 }
 
@@ -580,6 +700,7 @@ static POLY_FT4* field_draw_timed_panel_image(POLY_FT4 *prim, u_long *ordering_t
     prim->x0 = value0;
     value0 = value4 * 4;
     value0 += 0xA0;
+
     do
     {
         value0 -= value1;
@@ -594,10 +715,12 @@ static POLY_FT4* field_draw_timed_panel_image(POLY_FT4 *prim, u_long *ordering_t
     value2 = (u32)value3 >> 1;
     value0 -= value2;
     value4 = value1;
+
     if (value1 < 0)
     {
         value4 = value1 + 0x7F;
     }
+
     value5 = value4 >> 7;
     value0 -= value5;
     prim->y1 = value0;
@@ -628,24 +751,16 @@ static POLY_FT4* field_draw_timed_panel_image(POLY_FT4 *prim, u_long *ordering_t
     prim->v2 = value0;
     setaddr(prim, *ordering_table & address_mask);
     setaddr(ordering_table, prim);
+
     if ((u16)g_field_timed_panel_brightness < FIELD_TIMED_PANEL_FADE_LIMIT)
     {
         field_add_fade_prim(prim, 0);
     }
+
     return prim + 1;
 }
 
 /* ---- Actor text queue (0x800A6204 .. 0x800A68B4) ---- */
-
-/** @brief Number of actor text slots (the first two follow the players). */
-#define FIELD_ACTOR_TEXT_COUNT 3
-/** @brief Frames an actor text stays up; it fades out over the last 32. */
-#define FIELD_ACTOR_TEXT_FRAMES 63
-#define FIELD_ACTOR_TEXT_FADE_FRAMES 32
-/** @brief field_draw_tinted_text() color that selects the neutral tint. */
-#define FIELD_TEXT_TINT_NEUTRAL 0x100
-/** @brief Primitive-buffer depth of the text layer in the render half's ordering table. */
-#define FIELD_TEXT_OT_DEPTH 16
 
 /** @brief Packed screen position and countdown of an actor text. */
 typedef union
@@ -711,26 +826,32 @@ void field_start_actor_text(s32 index, s32 text_id)
             {
                 g_field_actor_texts[index].text = (u8 *)(((u16 *)g_field_technique_names)[text_id] + (uintptr_t)g_field_technique_names);
             }
+
             g_field_actor_texts[index].state.bits.countdown = FIELD_ACTOR_TEXT_FRAMES;
             point[0] = g_field_view_offset_x / 256 + (s16)(g_field_actors[index].x / 256 + FIELD_SCREEN_CENTER_X);
             point[1] = g_field_view_offset_y / 256 + (s16)(g_field_actors[index].y / 256 + FIELD_SCREEN_CENTER_Y) - g_field_actors[index].z / 512 - g_field_view_offset_z / 512;
             width = field_count_text_glyphs(g_field_actor_texts[index].text) * 6;
+
             if (point[0] + width >= 321)
             {
                 point[0] = 320 - width;
             }
+
             if (point[0] - width - 8 < 0)
             {
                 point[0] = width + 8;
             }
+
             if (point[1] >= 177)
             {
                 point[1] = 176;
             }
+
             if (point[1] < 50)
             {
                 point[1] = 50;
             }
+
             g_field_actor_texts[index].state.bits.x = point[0];
             g_field_actor_texts[index].state.bits.y = point[1] + 4;
         }
@@ -752,6 +873,7 @@ s32 field_actor_text_pending(void)
             return 1;
         }
     }
+
     return 0;
 }
 
@@ -766,13 +888,16 @@ void field_update_actor_texts(FieldRenderHalf* render)
     s32 active_count;
 
     active_count = 0;
+
     if (g_field_text_session_active != 0)
     {
         i = 0;
+
         for (; i < FIELD_ACTOR_TEXT_COUNT; i++)
         {
             g_field_actor_texts[i].state.bits.countdown = 0;
         }
+
         g_field_actor_text_count = 0;
         return;
     }
@@ -788,6 +913,7 @@ void field_update_actor_texts(FieldRenderHalf* render)
     if (active_count != 0)
     {
         field_text_reset_scratch();
+
         for (i = 0; i < FIELD_ACTOR_TEXT_COUNT; i++)
         {
             if (g_field_actor_texts[i].state.bits.countdown)
@@ -796,12 +922,14 @@ void field_update_actor_texts(FieldRenderHalf* render)
                 g_field_actor_texts[i].state.bits.countdown--;
             }
         }
+
         field_text_upload_immediate_cache();
     }
     else if (g_field_actor_text_count != 0)
     {
         field_text_reset_windows();
     }
+
     g_field_actor_text_count = active_count;
 }
 
@@ -823,10 +951,12 @@ static void field_draw_actor_text(FieldRenderHalf* render, FieldActorText* text)
     state = text->state;
     countdown = (state.word >> 17) & 0x3F;
     ot = &render->ordering_table[FIELD_TEXT_OT_DEPTH];
+
     if (countdown < FIELD_ACTOR_TEXT_FADE_FRAMES)
     {
         tint = countdown * 4;
     }
+
     render->primitive_cursor = field_draw_tinted_text((SPRT*)cursor, ot, text->text, 4, state.bits.x, text->state.bits.y, 2, tint);
 }
 
@@ -861,6 +991,7 @@ static void* field_draw_tinted_text(SPRT* sprite_cursor, u_long* ordering_table,
         if (alignment == 2)
         {
             sprite = sprite_cursor;
+
             for (i = 0; i < count; i++)
             {
                 x -= sprite[i].w >> 1;
@@ -870,6 +1001,7 @@ static void* field_draw_tinted_text(SPRT* sprite_cursor, u_long* ordering_table,
     else
     {
         sprite = sprite_cursor;
+
         for (i = 0; i < count; i++)
         {
             x -= sprite[i].w;
@@ -878,27 +1010,24 @@ static void* field_draw_tinted_text(SPRT* sprite_cursor, u_long* ordering_table,
 
     acc = 0;
 
-    if (count != 0)
+    for (; count != 0; sprite_cursor++, count--)
     {
-        do
-        {
-            setSprt(sprite_cursor);
-            if (color != 0x100)
-            {
-                setRGB0(sprite_cursor, color, color, color);
-                setSemiTrans(sprite_cursor, 1);
-            }
-            else
-            {
-                setRGB0(sprite_cursor, 0x80, 0x80, 0x80);
-            }
-            setXY0(sprite_cursor, x + acc, y);
-            acc += sprite_cursor->w;
+        setSprt(sprite_cursor);
 
-            addPrim(ordering_table, sprite_cursor);
-            sprite_cursor++;
-            count--;
-        } while (count != 0);
+        if (color != 0x100)
+        {
+            setRGB0(sprite_cursor, color, color, color);
+            setSemiTrans(sprite_cursor, 1);
+        }
+        else
+        {
+            setRGB0(sprite_cursor, 0x80, 0x80, 0x80);
+        }
+
+        setXY0(sprite_cursor, x + acc, y);
+        acc += sprite_cursor->w;
+
+        addPrim(ordering_table, sprite_cursor);
     }
 
     sprite_cursor = field_add_sprite_outline(ordering_table, sprite_cursor, n);
@@ -911,20 +1040,6 @@ static void* field_draw_tinted_text(SPRT* sprite_cursor, u_long* ordering_table,
 }
 
 /* ---- Party proficiency and ability/technique unlock progression ---- */
-
-#define FIELD_TECHNIQUE_UNLOCK_RULE_COUNT 227
-#define FIELD_PROFICIENCY_MAX 100U
-#define FIELD_PROFICIENCY_BONUS 4
-#define FIELD_EQUIPPED_ABILITY_COUNT 2
-#define FIELD_WEAPON_CATEGORY_SHIFT 10
-#define FIELD_WEAPON_CATEGORY_MASK 0x3F
-#define FIELD_TECHNIQUE_GROUP_SHIFT 4
-#define FIELD_TECHNIQUE_WEAPON_MASK 0x0F
-#define FIELD_TECHNIQUE_INDEX_MASK 0x7F
-#define FIELD_TECHNIQUE_SILENT_FLAG 0x80
-#define FIELD_TECHNIQUES_PER_GROUP 24
-#define FIELD_TECHNIQUE_UNLOCK_FLAG 0x8000
-#define FIELD_UNLOCK_BITS_PER_WORD 32
 
 /** @brief Four ability prerequisites and a packed technique/weapon selection. */
 typedef struct
@@ -968,8 +1083,7 @@ void field_advance_ability_progression(void)
     u8 weapon_proficiency;
 
     /* Advance the equipped weapon and both abilities for each active player. */
-    party_index = 0;
-    do
+    for (party_index = 0; party_index < FIELD_PARTY_SIZE; party_index++)
     {
         if (g_field_player_records[party_index].head.bytes.flags & FIELD_PLAYER_ACTIVE)
         {
@@ -980,6 +1094,7 @@ void field_advance_ability_progression(void)
                 if (weapon_category < FIELD_WEAPON_CATEGORY_COUNT)
                 {
                     weapon_proficiency = g_saved_game_ctx->weapon_proficiency[weapon_category];
+
                     if (weapon_proficiency < FIELD_PROFICIENCY_MAX)
                     {
                         if (D_80115890 != 0)
@@ -1001,9 +1116,11 @@ void field_advance_ability_progression(void)
                         }
                     }
                 }
+
                 for (ability = 0; ability < FIELD_EQUIPPED_ABILITY_COUNT; ability++)
                 {
                     ability_proficiency = g_saved_game_ctx->ability_proficiency[g_saved_game_ctx->characters[party_index].info.actions.commands[ability]];
+
                     if (ability_proficiency < FIELD_PROFICIENCY_MAX)
                     {
                         if (D_80115890 != 0)
@@ -1027,26 +1144,30 @@ void field_advance_ability_progression(void)
                 }
             }
         }
-        party_index++;
-    } while (party_index < FIELD_PARTY_SIZE);
+    }
+
     context = g_saved_game_ctx;
     /* Ability rules require each nonempty prerequisite to be learned and trained. */
     ability_index = 0;
     ability_base = g_field_ability_unlock_rules;
     g_field_progression_unlock_count = 0;
+
     do
     {
         ability_rule = &ability_base[ability_index];
         ability = ability_rule->result;
         ability_word = ability / FIELD_UNLOCK_BITS_PER_WORD;
+
         if (!(context->ability_bits[ability_word] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))))
         {
             ability = ability_rule->prerequisites[0].ability;
+
             if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
                 ((context->ability_bits[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
                  (context->ability_proficiency[ability] >= ability_rule->prerequisites[0].proficiency)))
             {
                 ability = ability_rule->prerequisites[1].ability;
+
                 if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
                     ((context->ability_bits[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
                      (context->ability_proficiency[ability] >= ability_rule->prerequisites[1].proficiency)))
@@ -1060,35 +1181,42 @@ void field_advance_ability_progression(void)
                 }
             }
         }
+
         ability_index++;
     } while ((intptr_t)&ability_base[ability_index] < (intptr_t)&ability_base[FIELD_ABILITY_UNLOCK_RULE_COUNT]);
     context = g_saved_game_ctx;
     /* Techniques additionally require an active player with the matching weapon. */
     technique_index = 0;
     technique_base = g_field_technique_unlock_rules;
+
     do
     {
         technique_rule = &technique_base[technique_index];
         technique_group = technique_rule->weapon >> FIELD_TECHNIQUE_GROUP_SHIFT;
         ability = technique_rule->result & FIELD_TECHNIQUE_INDEX_MASK;
+
         if (!(context->technique_bits[technique_group] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))))
         {
             ability = technique_rule->prerequisites[0].ability;
+
             if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
                 ((context->ability_bits[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
                  (context->ability_proficiency[ability] >= technique_rule->prerequisites[0].proficiency)))
             {
                 ability = technique_rule->prerequisites[1].ability;
+
                 if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
                     ((context->ability_bits[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
                      (context->ability_proficiency[ability] >= technique_rule->prerequisites[1].proficiency)))
                 {
                     ability = technique_rule->prerequisites[2].ability;
+
                     if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
                         ((context->ability_bits[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
                          (context->ability_proficiency[ability] >= technique_rule->prerequisites[2].proficiency)))
                     {
                         ability = technique_rule->prerequisites[3].ability;
+
                         if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
                             ((context->ability_bits[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
                              (context->ability_proficiency[ability] >= technique_rule->prerequisites[3].proficiency)))
@@ -1096,7 +1224,8 @@ void field_advance_ability_progression(void)
                             technique_party_index = 0;
                             active_rule = technique_rule;
                             ability = technique_rule->result & FIELD_TECHNIQUE_INDEX_MASK;
-                            do
+
+                            for (; technique_party_index < FIELD_PARTY_SIZE; technique_party_index++)
                             {
                                 if ((g_field_player_records[technique_party_index].head.bytes.flags & FIELD_PLAYER_ACTIVE) &&
                                     ((u32)(context->characters[technique_party_index].info.actions.type & FIELD_CHARACTER_TYPE_MASK) <
@@ -1113,6 +1242,7 @@ void field_advance_ability_progression(void)
                                             {
                                                 technique_group = weapon_requirement >> FIELD_TECHNIQUE_GROUP_SHIFT;
                                                 context->technique_bits[technique_group] = (s32)(context->technique_bits[technique_group] | technique_mask);
+
                                                 if (!(active_rule->result & FIELD_TECHNIQUE_SILENT_FLAG))
                                                 {
                                                     g_field_progression_unlocks[g_field_progression_unlock_count] =
@@ -1123,48 +1253,18 @@ void field_advance_ability_progression(void)
                                         }
                                     }
                                 }
-                                technique_party_index += 1;
-                            } while (technique_party_index < FIELD_PARTY_SIZE);
+                            }
                         }
                     }
                 }
             }
         }
+
         technique_index++;
     } while ((intptr_t)&technique_base[technique_index] < (intptr_t)&technique_base[FIELD_TECHNIQUE_UNLOCK_RULE_COUNT]);
 }
 
 /* ---- Dialog screens (0x800A6EEC .. 0x800A88A0) ---- */
-
-/** @brief g_field_dialog_screen_mode values of the battle result screens. */
-#define FIELD_RESULTS_PARTY_SUMMARY 1
-#define FIELD_RESULTS_ITEM_LIST 2
-#define FIELD_RESULTS_UNLOCK_LIST 3
-
-/** @brief Result window layout: left edge, row height, vertical center and largest visible height. */
-#define FIELD_RESULTS_WINDOW_X 0x20
-#define FIELD_RESULTS_ROW_HEIGHT 16
-#define FIELD_RESULTS_CENTER_Y 112
-#define FIELD_RESULTS_MAX_HEIGHT 160
-/** @brief Unlock list columns: group header and centered name. */
-#define FIELD_RESULTS_HEADER_X 0x20
-#define FIELD_RESULTS_NAME_X 0x80
-/** @brief Palette and texture page of the animated result icons. */
-#define FIELD_RESULTS_ICON_CLUT getClut(112, 490)
-#define FIELD_RESULTS_ICON_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 384, 0)
-
-/** @brief Resource with the ability and technique name tables. */
-#define FIELD_RES_UNLOCK_NAMES 0x5DF
-#define FIELD_SOUND_UNLOCK_LIST 0xA1
-#define FIELD_SOUND_WINDOW_OPEN 0xB9
-#define FIELD_SOUND_CURSOR 0x7D
-#define FIELD_SOUND_SELECT 0x7E
-
-/** @brief Frames the party summary waits before it accepts confirm. */
-#define FIELD_RESULTS_WAIT_FRAMES 4
-
-/** @brief g_field_progression_unlocks entry: technique (low bits: group * 24 + index) rather than ability. */
-#define FIELD_UNLOCK_TECHNIQUE FIELD_TECHNIQUE_UNLOCK_FLAG
 
 /** @brief Drawing position and three sorted actor indices sharing the local work area. */
 typedef struct
@@ -1173,14 +1273,6 @@ typedef struct
     s32 unused;
     s32 order[3];
 } FieldRankWork;
-
-/**
- * @brief Address of a string in a text bank that starts with little-endian u16 offsets.
- */
-#define FIELD_TEXT_AT(bank, low, high) ((u8 *)((low) + (((high) << 8) + (uintptr_t)(bank))))
-
-/** @brief Experience a party member gained since g_field_experience_snapshot was sampled. */
-#define FIELD_EXPERIENCE_GAIN(index) ((s32)((g_saved_game_ctx->characters[index].progress.word >> 8) - g_field_experience_snapshot[index]))
 
 /** @brief One entry of the dialog text bank's offset table (little-endian, read bytewise). */
 typedef struct PackedOffset
@@ -1276,11 +1368,14 @@ void field_handle_return_to_title_prompt(void)
                 g_pending_game_state = GAME_STATE_TITLE;
                 return;
             }
+
             bcopy(g_field_retry_snapshot, (u8*)g_saved_game_ctx, SAVED_GAME_DATA_SIZE);
+
             if (g_saved_game_ctx->retry_count != -1)
             {
                 g_saved_game_ctx->retry_count++;
             }
+
             controller->ports[1].small_motor_command = 0;
             controller->ports[0].small_motor_command = 0;
             controller->ports[1].actuator_control.fields.large_motor_command = 0;
@@ -1292,12 +1387,14 @@ void field_handle_return_to_title_prompt(void)
             hp_mask = 0xFFFFFF;
             status_mask = 0xFF000000;
             full_gauge = 0xFF;
+
             for (; actor_index < FIELD_PARTY_COUNT; actor_index++)
             {
                 actor = &g_field_object_states[actor_index];
                 player = &g_field_player_records[actor_index];
                 actor->hp_display.word = (actor->hp_display.word & status_mask) | (actor->maximum_hp & hp_mask);
                 actor->current_hp.word = actor->maximum_hp & hp_mask;
+
                 if (player->head.bytes.flags & FIELD_PLAYER_ACTIVE)
                 {
                     actor->technique_gauge = full_gauge;
@@ -1309,14 +1406,15 @@ void field_handle_return_to_title_prompt(void)
     {
         if (g_pad_input & (FIELD_PAD_CONFIRM | PAD_BTN_START))
         {
-            field_play_sound(FIELD_SOUND_SELECT, FIELD_SOUND_CENTER);
+            field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
             field_close_menu_elements();
             field_begin_return_to_title_prompt_close();
             return;
         }
+
         if (g_pad_input & (PAD_BTN_DPAD | PAD_BTN_SELECT))
         {
-            field_play_sound(FIELD_SOUND_CURSOR, FIELD_SOUND_CENTER);
+            field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
             g_field_return_to_title_choice ^= 1;
         }
     }
@@ -1337,6 +1435,7 @@ void field_update_battle_results_input(void)
                 field_close_battle_results();
                 return;
             }
+
             break;
         case FIELD_RESULTS_UNLOCK_LIST:
             if (g_field_dialog_item_count != 0)
@@ -1344,6 +1443,7 @@ void field_update_battle_results_input(void)
                 field_open_item_list();
                 return;
             }
+
             /* fallthrough */
         case FIELD_RESULTS_ITEM_LIST:
             field_open_party_summary();
@@ -1367,7 +1467,7 @@ static void field_open_unlock_list(void)
 
     cdrom_queue_read(FIELD_RES_UNLOCK_NAMES, g_field_cd_buffer);
     cdrom_wait_queue_empty();
-    field_play_sound(FIELD_SOUND_UNLOCK_LIST, FIELD_SOUND_CENTER);
+    field_play_sound(FIELD_SOUND_UNLOCK_LIST, AKAO_PAN_CENTER);
     g_field_dialog_screen_mode = FIELD_RESULTS_UNLOCK_LIST;
     field_close_menu_elements();
     record = field_claim_menu_element();
@@ -1377,6 +1477,7 @@ static void field_open_unlock_list(void)
     saw_ability = 0;
     saw_technique = 0;
     padding = 0;
+
     for (index = 0; index < g_field_progression_unlock_count; index++)
     {
         if (g_field_progression_unlocks[index] & FIELD_UNLOCK_TECHNIQUE)
@@ -1403,6 +1504,7 @@ static void field_open_unlock_list(void)
     height = g_field_progression_unlock_count * FIELD_RESULTS_ROW_HEIGHT + padding;
     record->size.word = size | FIELD_MENU_SIZE_BLINK;
     record->size.fields.content_height = height;
+
     if (height <= FIELD_RESULTS_MAX_HEIGHT)
     {
         record->size.bits.height = height;
@@ -1427,6 +1529,7 @@ void field_close_battle_results(void)
     s32 i;
 
     g_field_text_session_active = 0;
+
     for (i = 0; i < FIELD_PARTY_COUNT; i++)
     {
         if ((g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE) && g_field_actors[i].command == FIELD_ACTOR_COMMAND_KNOCKED_DOWN)
@@ -1442,6 +1545,7 @@ void field_close_battle_results(void)
         g_field_object_states[i].flags = 0;
         g_field_object_states[i].contact.word &= ~FIELD_CONTACT_NO_HIT_TEST;
     }
+
     g_field_dialog_item_count = 0;
 }
 
@@ -1453,6 +1557,7 @@ void field_open_battle_results(void)
     field_reset_menu_elements();
     g_field_results_wait_frames = FIELD_RESULTS_WAIT_FRAMES;
     field_reset_input_repeat();
+
     if (g_field_progression_unlock_count != 0)
     {
         field_open_unlock_list();
@@ -1465,6 +1570,7 @@ void field_open_battle_results(void)
     {
         field_open_party_summary();
     }
+
     field_request_party_reload(0);
 }
 
@@ -1487,7 +1593,7 @@ void field_setup_return_to_title_prompt(void)
     s32 i;
 
     field_reset_menu_elements();
-    field_play_sound(FIELD_SOUND_WINDOW_OPEN, FIELD_SOUND_CENTER);
+    field_play_sound(FIELD_SOUND_WINDOW_OPEN, AKAO_PAN_CENTER);
 
     rec = field_claim_menu_element();
     /* The callback has its own prototype; cast to the element draw type. */
@@ -1532,7 +1638,7 @@ static void field_open_item_list(void)
     u32 state;
 
     g_field_dialog_screen_mode = FIELD_RESULTS_ITEM_LIST;
-    field_play_sound(FIELD_SOUND_WINDOW_OPEN, FIELD_SOUND_CENTER);
+    field_play_sound(FIELD_SOUND_WINDOW_OPEN, AKAO_PAN_CENTER);
     field_close_menu_elements();
 
     rec = field_claim_menu_element();
@@ -1561,7 +1667,7 @@ static void field_open_party_summary(void)
 
     field_close_menu_elements();
     g_field_dialog_screen_mode = FIELD_RESULTS_PARTY_SUMMARY;
-    field_play_sound(FIELD_SOUND_WINDOW_OPEN, FIELD_SOUND_CENTER);
+    field_play_sound(FIELD_SOUND_WINDOW_OPEN, AKAO_PAN_CENTER);
 
     active_count = 0;
     record = field_claim_menu_element();
@@ -1617,6 +1723,7 @@ static void* field_draw_party_totals(u_long* ot, void* cursor, s32 x_offset, s32
         if ((x_offset | y_offset) == 0)
         {
             g_field_results_wait_frames--;
+
             if (g_field_results_wait_frames == 0)
             {
                 if (field_party_reload_reading() != 0)
@@ -1631,6 +1738,7 @@ static void* field_draw_party_totals(u_long* ot, void* cursor, s32 x_offset, s32
     i = 0;
     total_x = i;
     total_y = i;
+
     for (; i < 3; i++)
     {
         if (g_saved_game_ctx->characters[i].name[0] != 0)
@@ -1693,11 +1801,13 @@ static void* field_draw_experience_ranking(u_long* ordering_table, void* cursor,
 
     result = field_draw_text(cursor, ordering_table, (D_800EC3C6[1] << 8) + ((D_800EC3C6 - 2) + D_800EC3C6[0]), 4, 0x10 - x_offset, -y_offset, 0);
     count = 0;
+
     for (i = 0; i < 3; i++)
     {
         if (g_saved_game_ctx->characters[i].name[0] != 0)
         {
             pos = 0;
+
             for (; pos < count; pos++)
             {
                 if (FIELD_EXPERIENCE_GAIN(i) > FIELD_EXPERIENCE_GAIN(work.order[pos]))
@@ -1705,6 +1815,7 @@ static void* field_draw_experience_ranking(u_long* ordering_table, void* cursor,
                     break;
                 }
             }
+
             if (pos == count)
             {
                 work.order[count] = i;
@@ -1715,16 +1826,21 @@ static void* field_draw_experience_ranking(u_long* ordering_table, void* cursor,
                 {
                     work.order[j + 1] = work.order[j];
                 }
+
                 work.order[pos] = i;
             }
+
             count++;
         }
     }
+
     i = 0;
+
     if (i < count)
     {
         text_base = D_800EC3DA;
         text = text_base - 0x16;
+
         for (row = 0; i < count; i++)
         {
             if (g_saved_game_ctx->characters[work.order[i]].name[0] != 0)
@@ -1749,9 +1865,11 @@ static void* field_draw_experience_ranking(u_long* ordering_table, void* cursor,
                 work.position.y = y;
                 result = field_draw_number(ordering_table, result, FIELD_EXPERIENCE_GAIN(work.order[i]), 4, &work.position, 1);
             }
+
             row += 0x1C;
         }
     }
+
     return result;
 }
 
@@ -1777,6 +1895,7 @@ static void* field_draw_item_list(u_long* ot, void* prim, s32 x_offset, s32 y_of
     offset = (D_800EC3D8.high << 8) + (uintptr_t)((u8*)&D_800EC3D8 - 0x14);
     tex = (u8*)(low + offset);
     prim = field_draw_text(prim, ot, tex, 4, 0x20 - x_offset, -y_offset, 0);
+
     for (i = 0; i < g_field_dialog_item_count; i++)
     {
         row = i * FIELD_RESULTS_ROW_HEIGHT;
@@ -1784,11 +1903,13 @@ static void* field_draw_item_list(u_long* ot, void* prim, s32 x_offset, s32 y_of
         pos.x = 0xB0 - x_offset;
         /* The original subtracts the horizontal offset here too. */
         pos.y = (row + FIELD_RESULTS_ROW_HEIGHT) - x_offset;
+
         if (g_field_dialog_item_quantities[i] != 0)
         {
             prim = field_draw_number(ot, prim, g_field_dialog_item_quantities[i], 4, &pos, 1);
         }
     }
+
     return prim;
 }
 
@@ -1828,19 +1949,23 @@ static void* field_draw_unlock_list(u_long* ordering_table, void* cursor, s32 sc
     index = 0;
     ability_names = g_field_cd_buffer + ((TextResource*)g_field_cd_buffer)->ability_names;
     technique_names = g_field_cd_buffer + ((TextResource*)g_field_cd_buffer)->technique_names;
+
     if (index < g_field_progression_unlock_count)
     {
         header_x = FIELD_RESULTS_HEADER_X - scroll_x;
         item_x = FIELD_RESULTS_NAME_X - scroll_x;
         entry = g_field_progression_unlocks;
+
         for (; index < g_field_progression_unlock_count; index++)
         {
             if (*entry & FIELD_UNLOCK_TECHNIQUE)
             {
                 technique_row_y = row * FIELD_RESULTS_ROW_HEIGHT;
+
                 if (technique_header_drawn == 0)
                 {
                     technique_header_y = technique_row_y - scroll_y;
+
                     if ((technique_header_y > -FIELD_RESULTS_ROW_HEIGHT) && (technique_header_y < viewport_height))
                     {
                         s32 low;
@@ -1852,11 +1977,14 @@ static void* field_draw_unlock_list(u_long* ordering_table, void* cursor, s32 sc
                         offset = (D_800EC3CE.high << 8) + (uintptr_t)base;
                         next_cursor = field_draw_text(next_cursor, ordering_table, (void *)(low + offset), 4, header_x, technique_header_y, 0);
                     }
+
                     technique_header_drawn = 1;
                     row += 1;
                     technique_row_y = row * FIELD_RESULTS_ROW_HEIGHT;
                 }
+
                 item_y = technique_row_y - scroll_y;
+
                 if (item_y > -FIELD_RESULTS_ROW_HEIGHT)
                 {
                     if (item_y < viewport_height)
@@ -1872,9 +2000,11 @@ static void* field_draw_unlock_list(u_long* ordering_table, void* cursor, s32 sc
             else
             {
                 ability_row_y = row * FIELD_RESULTS_ROW_HEIGHT;
+
                 if (ability_header_drawn == 0)
                 {
                     ability_header_y = ability_row_y - scroll_y;
+
                     if ((ability_header_y > -FIELD_RESULTS_ROW_HEIGHT) && (ability_header_y < viewport_height))
                     {
                         next_cursor =
@@ -1882,11 +2012,14 @@ static void* field_draw_unlock_list(u_long* ordering_table, void* cursor, s32 sc
                                           D_800EC3C4 + D_800EC3CC.low + (D_800EC3CC.high << 8),
                                           4, header_x, ability_header_y, 0);
                     }
+
                     ability_header_drawn = 1;
                     row += 1;
                     ability_row_y = row * FIELD_RESULTS_ROW_HEIGHT;
                 }
+
                 item_y = ability_row_y - scroll_y;
+
                 if (item_y > -FIELD_RESULTS_ROW_HEIGHT)
                 {
                     if (item_y < viewport_height)
@@ -1899,10 +2032,12 @@ static void* field_draw_unlock_list(u_long* ordering_table, void* cursor, s32 sc
                     }
                 }
             }
+
             row += 1;
             entry += 1;
         }
     }
+
     return next_cursor;
 }
 

@@ -15,9 +15,6 @@
 #define FIELD_FIRST_ARMOR_SLOT 1
 #define FIELD_LAST_ARMOR_SLOT 3
 
-/** @brief Number of FieldCharacterRecord::equipment_totals entries. */
-#define FIELD_EQUIPMENT_TOTAL_COUNT 4
-
 /**
  * @brief Two character stats viewed as one word.
  * @note The base value is stored in quarter units; the effective value is the
@@ -65,6 +62,7 @@ static s32 field_can_equip_item(FieldCharacterRecord* character, s32 slot_index,
     s32 category;
 
     category = FIELD_ITEM_CATEGORY(item->info.word);
+
     switch (category)
     {
     case FIELD_ITEM_CATEGORY_WEAPON:
@@ -72,28 +70,35 @@ static s32 field_can_equip_item(FieldCharacterRecord* character, s32 slot_index,
         {
             return 0;
         }
+
         field_collect_equipment_conflicts(character, FIELD_WEAPON_SLOT, &conflicts);
+
         if (g_field_weapon_type_conflicts[FIELD_ITEM_TYPE(item->info.word)] & conflicts)
         {
             return 0;
         }
+
         return -1;
     case FIELD_ITEM_CATEGORY_ARMOR:
         if (slot_index < FIELD_FIRST_ARMOR_SLOT || slot_index > FIELD_LAST_ARMOR_SLOT)
         {
             return 0;
         }
+
         field_collect_equipment_conflicts(character, slot_index, &conflicts);
+
         if (g_field_armor_type_conflicts[FIELD_ITEM_TYPE(item->info.word)] & conflicts)
         {
             return 0;
         }
+
         return -1;
     case FIELD_ITEM_CATEGORY_INSTRUMENT:
         if (slot_index < FIELD_EQUIPMENT_SLOT_COUNT)
         {
             return 0;
         }
+
         return -1;
     default:
         return 0;
@@ -112,12 +117,14 @@ static void field_collect_equipment_conflicts(FieldCharacterRecord* character, s
     u32 info;
 
     i = 0;
+
     *conflicts = 0;
     for (; i < FIELD_EQUIPMENT_SLOT_COUNT; i++)
     {
         if (i != skip_slot)
         {
             info = character->equipment[i].info.word;
+
             switch (FIELD_ITEM_CATEGORY(info))
             {
             case FIELD_ITEM_CATEGORY_WEAPON:
@@ -152,6 +159,7 @@ s32 field_equip_item(FieldCharacterRecord* character, s32 slot_index, FieldItemR
         field_refresh_equipment_stats(character);
         return -1;
     }
+
     return 0;
 }
 
@@ -173,12 +181,15 @@ static void field_refresh_equipment_stats(FieldCharacterRecord* character)
     {
         character->equipment_totals[i] = 0;
     }
+
     for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
     {
         base = character->stats[i] & FIELD_STAT_BASE_MASK;
         character->stats[i] = base | ((base >> 2) << FIELD_STAT_EFFECTIVE_SHIFT);
     }
+
     character->unk26 = character->equipment[FIELD_WEAPON_SLOT].derived.values[0];
+
     for (i = FIELD_FIRST_ARMOR_SLOT; i < FIELD_EQUIPMENT_SLOT_COUNT; i++)
     {
         FieldItemRecord* armor = &character->equipment[i];
@@ -193,12 +204,14 @@ static void field_refresh_equipment_stats(FieldCharacterRecord* character)
     }
 #else
     character->unk26 = character->equipment[FIELD_WEAPON_SLOT].derived.values[0];
+
     if ((character->info.word & FIELD_CHARACTER_TYPE_MASK) != FIELD_CHARACTER_COMPANION)
     {
         for (i = FIELD_EQUIPMENT_TOTAL_COUNT - 1; i >= 0; i--)
         {
             character->equipment_totals[i] = 0;
         }
+
         for (i = FIELD_FIRST_ARMOR_SLOT; i < FIELD_EQUIPMENT_SLOT_COUNT; i++)
         {
             FieldItemRecord* armor = &character->equipment[i];
@@ -212,6 +225,7 @@ static void field_refresh_equipment_stats(FieldCharacterRecord* character)
             }
         }
     }
+
     for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
     {
         base = character->stats[i] & FIELD_STAT_BASE_MASK;
@@ -231,10 +245,12 @@ void field_refresh_party_member(s32 index)
     field_refresh_equipment_stats(&g_field_game_state->characters[index]);
     state = field_find_object_state(index);
     state->maximum = g_field_game_state->characters[index].hp;
+
     if (state->maximum == 0)
     {
         state->maximum = 1;
     }
+
     state->current = g_field_game_state->characters[index].hp;
     state->gauge.bits.value = g_field_game_state->characters[index].hp;
     state->effect_flags = 0;
@@ -280,6 +296,7 @@ s32 field_get_equipped_stat(FieldCharacterRecord* character, u32 stat_index)
     s32 result;
 
     value = (character->stats[stat_index] & FIELD_STAT_BASE_MASK) >> 2;
+
     for (i = 0; i < FIELD_EQUIPMENT_SLOT_COUNT; i++)
     {
         if (character->equipment[i].name[0] != 0)
@@ -317,6 +334,7 @@ s32 field_get_equipped_stat(FieldCharacterRecord* character, u32 stat_index)
     if (value > 0)
     {
         result = value;
+
         if (result > FIELD_STAT_MAX)
         {
             result = FIELD_STAT_MAX;
@@ -326,5 +344,6 @@ s32 field_get_equipped_stat(FieldCharacterRecord* character, u32 stat_index)
     {
         result = FIELD_STAT_MIN;
     }
+
     return result;
 }

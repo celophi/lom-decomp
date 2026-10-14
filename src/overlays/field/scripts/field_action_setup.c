@@ -10,6 +10,7 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
 #include <rand.h>
+#include "../internal/field_state_ops.h"
 
 /** @brief FIELD_EVENT_ACTION modes. */
 enum
@@ -47,10 +48,6 @@ enum
 
 /** @brief Both defense slot bits of an action descriptor (bits 6-7). */
 #define FIELD_DESCRIPTOR_DEFENSE_SLOT_MASK 0xC0
-
-/** @brief FieldStatusRecordMeta::bits.kind as a mask of the packed word. */
-#define FIELD_STATUS_META_KIND_MASK 0xFC00
-#define FIELD_STATUS_META_KIND_SHIFT 10
 
 /** @brief Guard flags in FieldStatusRecordMeta::bytes.unk2. */
 #define FIELD_GUARD_FLAG_DEFLECT 0x1000 /**< Deflects descriptor kinds 2 and 3. */
@@ -132,29 +129,34 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
     {
         return 1;
     }
+
     if (g_field_battle->state.flags < 0)
     {
         return 1;
     }
 
     field_battle_bind_action(action, -1);
+
     if (g_field_battle->descriptor == NULL)
     {
         return 1;
     }
 
     result = field_battle_check_target_guard();
+
     if (result != FIELD_GUARD_NONE)
     {
         if (result == FIELD_GUARD_IGNORED)
         {
             field_run_actor_event(action->target_id, FIELD_EVENT_ACTION, FIELD_ACTION_EVENT_MISS);
         }
+
         g_field_battle->attacker->unkC &= ~FIELD_RECORD_ACTION_MODIFIERS;
         return result;
     }
 
     result = field_battle_check_target_stance();
+
     if (result != FIELD_STANCE_NONE)
     {
         if (result == FIELD_STANCE_REPEL)
@@ -162,6 +164,7 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
             field_spawn_shared_animation_actor(action->target_id, FIELD_EFFECT_ANIM_REPEL);
             return 1;
         }
+
         g_field_battle->attacker->unkC &= ~FIELD_RECORD_ACTION_MODIFIERS;
         return result;
     }
@@ -170,41 +173,52 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
     {
         g_field_battle->attacker->unkC &= ~FIELD_RECORD_HELD_MODIFIERS;
     }
+
     if (field_run_action_handler() != 0)
     {
         field_battle_raise_attacker_intensity();
+
         if (g_field_battle->target->state->current == 0)
         {
             if (!g_field_battle->action_flags.bits.follow_up)
             {
                 field_run_actor_event(action->attacker_id, FIELD_EVENT_ACTION, FIELD_ACTION_EVENT_KILL);
             }
+
             field_run_actor_event(action->target_id, FIELD_EVENT_ACTION, FIELD_ACTION_EVENT_DEFEATED);
+
             if (field_count_status_slots(g_field_battle->attacker, FIELD_SLOT_MONEY_PLUS_2) != 0)
             {
                 g_field_battle->target->unkC |= FIELD_DEFEAT_MONEY_PLUS_2;
             }
+
             if (field_count_status_slots(g_field_battle->attacker, FIELD_SLOT_EXPERIENCE_PLUS_2) != 0)
             {
                 g_field_battle->target->unkC |= FIELD_DEFEAT_EXPERIENCE_PLUS_2;
             }
+
             if (field_count_status_slots(g_field_battle->attacker, FIELD_SLOT_RARE_DROPS) != 0)
             {
                 g_field_battle->target->unkC |= FIELD_DEFEAT_EXTRA_DROP_SLOTS | FIELD_DEFEAT_NO_COMMON_DROPS;
             }
+
             if (field_roll_last_stat(g_field_battle->attacker) != 0)
             {
                 g_field_battle->target->unkC |= FIELD_DEFEAT_NO_COMMON_DROPS;
             }
+
             if (g_field_battle->attacker->status_flags & FIELD_RECORD_STATUS_100)
             {
                 g_field_battle->target->unkC |= FIELD_DEFEAT_MONEY_PLUS_1;
             }
+
             if (g_field_battle->attacker->status_flags & FIELD_RECORD_STATUS_80)
             {
                 g_field_battle->target->unkC |= FIELD_DEFEAT_EXPERIENCE_PLUS_1;
             }
+
             effect = field_battle_handle_defeat(g_field_battle->target);
+
             if (effect != 0)
             {
                 field_battle_finish(effect);
@@ -218,6 +232,7 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
             g_field_battle->target->unkC &= ~FIELD_RECORD_DEFEAT_FLAGS;
             field_register_actor_hit(action->target_id, 0);
         }
+
         g_field_battle->attacker->unkC &= ~FIELD_RECORD_ACTION_MODIFIERS;
         return 0;
     }
@@ -242,22 +257,27 @@ static void field_battle_bind_action(FieldBattleAction* action, s32 resolve_desc
     u32 info;
 
     g_field_battle->action = action;
+
     if (action == NULL)
     {
         record_game_diagnostic(0x8001, (uintptr_t)field_battle_bind_action, 0, 0);
         return;
     }
+
     g_field_battle->attacker = field_find_status_record(action->attacker_id);
     g_field_battle->target = field_find_status_record(action->target_id);
     g_field_battle->action_flags.word = 0;
     g_field_battle->action_flags.bits.side = field_is_actor_in_front(action->attacker_id, action->target_id);
+
     if (resolve_descriptor != 0)
     {
         g_field_battle->descriptor = field_select_action_descriptor();
+
         if (field_count_status_slots(g_field_battle->attacker, FIELD_SLOT_POWER_BOOST) != 0)
         {
             descriptor = g_field_battle->descriptor;
             info = descriptor->info.word;
+
             if ((info & FIELD_DESCRIPTOR_KIND_MASK) < 2)
             {
                 descriptor->info.word = info | FIELD_DESCRIPTOR_DEFENSE_SLOT_MASK;
@@ -282,6 +302,7 @@ static s32 field_battle_check_target_stance(void)
     FieldStatusRecord* target;
 
     animation = field_get_actor_animation(g_field_battle->target->meta.bytes.id);
+
     switch (FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor))
     {
     case 1:
@@ -289,10 +310,12 @@ static s32 field_battle_check_target_stance(void)
         {
             return FIELD_STANCE_IMMUNE;
         }
+
         if (animation == FIELD_ANIM_WEAPON_GUARD)
         {
             target = g_field_battle->target;
             kind = target->meta.packed & FIELD_STATUS_META_KIND_MASK;
+
             if (kind == (0 << FIELD_STATUS_META_KIND_SHIFT) || kind == (1 << FIELD_STATUS_META_KIND_SHIFT))
             {
                 u32 weapon_type =
@@ -304,23 +327,27 @@ static s32 field_battle_check_target_stance(void)
                 }
             }
         }
+
         break;
     case 4:
         if (g_field_battle->action_flags.bits.side)
         {
             return FIELD_STANCE_IMMUNE;
         }
+
         if ((g_field_battle->target->status_flags & FIELD_RECORD_STATUS_10) &&
             (animation == FIELD_ANIM_REPEL_A || animation == FIELD_ANIM_REPEL_B))
         {
             g_field_battle->action_flags.bits.follow_up = 1;
             return FIELD_STANCE_REPEL;
         }
+
         if (field_count_status_slots(g_field_battle->target, FIELD_SLOT_REPEL_KIND_4))
         {
             g_field_battle->action_flags.bits.follow_up = 1;
             return FIELD_STANCE_REPEL;
         }
+
         break;
     case 5:
         if (field_count_status_slots(g_field_battle->target, FIELD_SLOT_REPEL_KIND_5))
@@ -328,6 +355,7 @@ static s32 field_battle_check_target_stance(void)
             g_field_battle->action_flags.bits.follow_up = 1;
             return FIELD_STANCE_REPEL;
         }
+
         break;
     case 2:
     case 3:
@@ -335,6 +363,7 @@ static s32 field_battle_check_target_stance(void)
     default:
         break;
     }
+
     return FIELD_STANCE_NONE;
 }
 
@@ -347,14 +376,17 @@ static s32 field_battle_check_target_guard(void)
     u16 flags;
 
     flags = g_field_battle->target->meta.bytes.unk2;
+
     if (flags & FIELD_GUARD_FLAG_IGNORE)
     {
         return FIELD_GUARD_IGNORED;
     }
+
     if (flags & FIELD_GUARD_FLAG_BLOCK)
     {
         return FIELD_GUARD_BLOCKED;
     }
+
     if (flags & FIELD_GUARD_FLAG_COUNTER)
     {
         if (FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor) == 0)
@@ -366,6 +398,7 @@ static s32 field_battle_check_target_guard(void)
             return FIELD_GUARD_BLOCKED;
         }
     }
+
     if (g_field_battle->target->meta.bytes.unk2 & FIELD_GUARD_FLAG_DEFLECT)
     {
         u32 kind = FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor);
@@ -376,6 +409,7 @@ static s32 field_battle_check_target_guard(void)
             return FIELD_GUARD_BLOCKED;
         }
     }
+
     return FIELD_GUARD_NONE;
 }
 
@@ -389,6 +423,7 @@ static void field_battle_run_down_counters(s32 amount)
     FieldStatusRecord* target;
 
     attacker = g_field_battle->attacker;
+
     if (attacker->counter <= 0)
     {
         attacker->counter = attacker->counter_reset;
@@ -396,10 +431,12 @@ static void field_battle_run_down_counters(s32 amount)
                       FIELD_STATUS_APPLY_IGNORE_IMMUNITY | FIELD_STATUS_APPLY_ALLOW_ACTIVE, FIELD_EXHAUSTED_EFFECT,
                       FIELD_CHANCE_ALWAYS, 60);
     }
+
     if (g_field_battle->action->param != 0)
     {
         g_field_battle->target->counter -= amount;
         target = g_field_battle->target;
+
         if (target->counter <= 0)
         {
             target->counter = target->counter_reset;
@@ -419,6 +456,7 @@ static void field_battle_raise_attacker_intensity(void)
     FieldStatusState* state;
 
     attacker = g_field_battle->attacker;
+
     if (attacker->meta.bytes.id < FIELD_PLAYER_RECORD_COUNT && !(attacker->state->effect_flags & FIELD_EFFECT_NO_INTENSITY))
     {
         if (field_count_status_slots(attacker, FIELD_SLOT_QUICK_INTENSITY) != 0)
@@ -429,7 +467,9 @@ static void field_battle_raise_attacker_intensity(void)
         {
             g_field_battle->attacker->state->status_intensity += 4 << FIELD_DESCRIPTOR_SHIFT(g_field_battle->descriptor);
         }
+
         state = g_field_battle->attacker->state;
+
         if (state->status_intensity > FIELD_INTENSITY_MAX)
         {
             state->status_intensity = FIELD_INTENSITY_MAX;
@@ -450,6 +490,7 @@ s32 field_battle_roll_evasion(FieldBattleAction* action)
     s32 evasion;
 
     evasion = g_field_battle->target->unk1A;
+
     if (evasion >= FIELD_EVASION_ALWAYS)
     {
         return -1;
@@ -459,6 +500,7 @@ s32 field_battle_roll_evasion(FieldBattleAction* action)
     percent = roll % 100;
     field_battle_bind_action(action, 0);
     chance = field_get_status_stat(g_field_battle->attacker, 0);
+
     if (percent < (evasion * chance) / field_get_status_stat(g_field_battle->target, 4))
     {
         return -1;

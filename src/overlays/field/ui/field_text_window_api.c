@@ -8,9 +8,6 @@
 #include "overlays/field/field_text.h"
 #include "main/main.h"
 
-/** @brief Pending text-window configuration block (fixed RAM) consumed by field_text_apply_config. */
-#define FIELD_TEXT_PENDING_CONFIG ((FieldTextConfig*)TEXT_CONFIG_ADDRESS)
-
 /** @brief Window layouts in g_field_text_window_layouts. */
 #define FIELD_TEXT_LAYOUT_NO_PORTRAIT 2 /**< First layout that never shows a portrait. */
 #define FIELD_TEXT_LAYOUT_TIMED 4       /**< One-shot timed window. */
@@ -114,6 +111,7 @@ void field_open_text_window(s32 window_slot, s32 layout_index, s32 unused, s32 p
     cfg = FIELD_TEXT_PENDING_CONFIG;
     cfg->anchor.pos.x = 0;
     cfg->anchor.pos.y = 0;
+
     if ((portrait_selector == -1) || (layout_index >= FIELD_TEXT_LAYOUT_NO_PORTRAIT && layout_index < FIELD_TEXT_LAYOUT_FIRST_PACKED))
     {
         cfg->portrait = NULL;
@@ -128,6 +126,7 @@ void field_open_text_window(s32 window_slot, s32 layout_index, s32 unused, s32 p
     }
 
     cfg->flags.b.low = 0;
+
     if (layout_index == FIELD_TEXT_LAYOUT_BOLD)
     {
         cfg->flags.word = (cfg->flags.word & ~FIELD_TEXT_CONFIG_STYLE_MASK) | FIELD_TEXT_CONFIG_STYLE_BOLD;
@@ -136,6 +135,7 @@ void field_open_text_window(s32 window_slot, s32 layout_index, s32 unused, s32 p
     {
         cfg->flags.word &= ~FIELD_TEXT_CONFIG_STYLE_MASK;
     }
+
     cfg->flags.word = ((cfg->flags.word & ~FIELD_TEXT_CONFIG_PORTRAIT_MASK) | ((portrait_selector << FIELD_TEXT_PORTRAIT_SELECT_SHIFT) & FIELD_TEXT_CONFIG_PORTRAIT_RIGHT)) &
                       ~FIELD_TEXT_CONFIG_MODE_MASK;
 
@@ -182,6 +182,7 @@ void field_open_text_window_with_string(s32 string_index, s32 window_slot, s32 l
     cfg = FIELD_TEXT_PENDING_CONFIG;
     cfg->anchor.pos.x = 0;
     cfg->anchor.pos.y = 0;
+
     if ((portrait_selector == -1) || (layout_index >= FIELD_TEXT_LAYOUT_NO_PORTRAIT && layout_index < FIELD_TEXT_LAYOUT_FIRST_PACKED))
     {
         cfg->portrait = NULL;
@@ -196,6 +197,7 @@ void field_open_text_window_with_string(s32 string_index, s32 window_slot, s32 l
     }
 
     cfg->flags.b.low = 0;
+
     if (layout_index == FIELD_TEXT_LAYOUT_BOLD)
     {
         cfg->flags.word = (cfg->flags.word & ~FIELD_TEXT_CONFIG_STYLE_MASK) | FIELD_TEXT_CONFIG_STYLE_BOLD;
@@ -204,6 +206,7 @@ void field_open_text_window_with_string(s32 string_index, s32 window_slot, s32 l
     {
         cfg->flags.word &= ~FIELD_TEXT_CONFIG_STYLE_MASK;
     }
+
     cfg->flags.word = ((cfg->flags.word & ~FIELD_TEXT_CONFIG_PORTRAIT_MASK) | ((portrait_selector << FIELD_TEXT_PORTRAIT_SELECT_SHIFT) & FIELD_TEXT_CONFIG_PORTRAIT_RIGHT)) &
                       ~FIELD_TEXT_CONFIG_MODE_MASK;
 
@@ -220,6 +223,7 @@ void field_open_text_window_with_string(s32 string_index, s32 window_slot, s32 l
     {
         field_text_open_fixed_window(window_slot);
     }
+
     field_text_set_string(window_slot, FIELD_SCENE_STRING(string_index), 1);
 }
 

@@ -658,4 +658,7 @@ void field_show_timed_text(s32 string_index);
 /** @brief Volume the field song is faded to. */
 extern s32 g_field_song_volume;
 
+/** @brief Interaction id bit: run the id as a field script instead of a talk message. */
+#define FIELD_INTERACTION_SCRIPT 0x8000
+
 #endif

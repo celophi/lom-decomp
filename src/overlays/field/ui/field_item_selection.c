@@ -21,6 +21,8 @@
 #include "common/gpu_packet.h"
 #include "main/audio/akao.h"
 #include "../internal/field_modal_runtime.h"
+#include "../internal/field_records.h"
+#include "overlays/field/field_input.h"
 
 /** @brief First item id that can be dropped on the field; its actor animation is 0. */
 #define FIELD_DROP_ITEM_FIRST 0x60
@@ -63,15 +65,6 @@
 /** @brief Height of the cursor-row highlight, in pixels. */
 #define FIELD_ITEM_HIGHLIGHT_HEIGHT 14
 
-/** @brief Sounds of the item-drop menu. */
-#define FIELD_SOUND_CURSOR 0x7D
-#define FIELD_SOUND_SELECT 0x7E
-#define FIELD_SOUND_CANCEL 0x7F
-#define FIELD_SOUND_WINDOW_OPEN 0xB9
-
-/** @brief Initial held-button delay set when the menu flushes the pads. */
-#define FIELD_PAD_REPEAT_DELAY 15
-
 /** @brief Resource entry an item actor is initialized from. */
 #define FIELD_ITEM_ACTOR_RESOURCE 4
 /** @brief Object keys of item actors start here (key = actor index + base). */
@@ -82,8 +75,6 @@
 #define FIELD_ITEM_ACTOR_CONTROL_MODE 2
 /** @brief Built-in animation played when an item is dropped. */
 #define FIELD_ITEM_DROP_ANIMATION 0xAF
-/** @brief Item value that makes field_spawn_item_record release the record. */
-#define FIELD_ITEM_RELEASE 0xFF
 
 /**
  * @brief Text of an item name in g_field_item_names.
@@ -154,6 +145,7 @@ static inline void reset_menu_elements(void)
 
     g_field_menu_frame_style = FIELD_MENU_FRAME_STYLE_FIELD;
     element = g_field_menu_elements;
+
     for (i = 0; i < FIELD_MENU_ELEMENT_COUNT; i++)
     {
         element->attr.word &= ~FIELD_MENU_STATE_MASK;
@@ -172,6 +164,7 @@ static inline FieldMenuElement *claim_menu_element(void)
     s32 i;
 
     element = g_field_menu_elements;
+
     for (i = 0; i < FIELD_MENU_ELEMENT_COUNT; i++, element++)
     {
         if ((element->attr.word & FIELD_MENU_STATE_MASK) == FIELD_MENU_STATE_IDLE)
@@ -186,6 +179,7 @@ static inline FieldMenuElement *claim_menu_element(void)
             return element;
         }
     }
+
     return g_field_menu_elements;
 }
 
@@ -219,6 +213,7 @@ void field_open_item_drop_menu(void)
 
     reset_menu_elements();
     item_count = 0;
+
     for (item_id = FIELD_DROP_ITEM_FIRST; item_id < FIELD_DROP_ITEM_LIMIT; item_id++)
     {
         if (g_saved_game_ctx->item_counts[item_id] != 0)
@@ -228,7 +223,9 @@ void field_open_item_drop_menu(void)
             item_count++;
         }
     }
+
     g_field_item_list_count = item_count;
+
     if (item_count == 0)
     {
         field_play_action_refused_sound();
@@ -251,12 +248,15 @@ void field_open_item_drop_menu(void)
     window->attr.word = attr;
     window->size.bits.scroll_mode = FIELD_MENU_SCROLL_BY_OWNER;
     window->size.fields.content_height = g_field_item_list_count * FIELD_ITEM_ROW_HEIGHT;
+
     if (g_field_item_list_cursor >= g_field_item_list_count)
     {
         g_field_item_list_cursor = g_field_item_list_count - 1;
     }
+
     cursor_y = FIELD_ITEM_ROW_Y(g_field_item_list_cursor);
     window->scroll_target = 0;
+
     if (cursor_y < 0)
     {
         window->scroll_target = cursor_y;
@@ -265,6 +265,7 @@ void field_open_item_drop_menu(void)
     {
         window->scroll_target = cursor_y - (window->size.bits.height - FIELD_ITEM_ROW_HEIGHT);
     }
+
     window->scroll_ticks = 0;
     flush_input();
 }
@@ -299,6 +300,7 @@ static u8 *field_draw_item_drop_list(u_long* ot, u8 *cursor, s32 scroll_x, s32 s
 
     window = element;
     field_update_item_drop_menu(window);
+
     if (g_field_item_drop_menu_open == 0)
     {
         return cursor;
@@ -310,6 +312,7 @@ static u8 *field_draw_item_drop_list(u_long* ot, u8 *cursor, s32 scroll_x, s32 s
         count_x = FIELD_ITEM_COUNT_X - scroll_x;
         entry = &g_field_item_list[i];
         y = FIELD_ITEM_ROW_Y(i) - scroll_y;
+
         if (y > -FIELD_ITEM_ROW_HEIGHT && y < (s32)window->size.bits.height)
         {
             cursor = field_draw_text((SPRT*)cursor, ot, FIELD_ITEM_NAME(names, entry->item_id), FIELD_ITEM_TEXT_COLOR, -scroll_x, y, 0);
@@ -318,6 +321,7 @@ static u8 *field_draw_item_drop_list(u_long* ot, u8 *cursor, s32 scroll_x, s32 s
             cursor = draw_number(cursor, ot, entry->count, position, FIELD_ITEM_TEXT_COLOR, FIELD_ITEM_COUNT_ALIGN);
         }
     }
+
     tile = (FieldPackedTile *)cursor;
     tile->color = FIELD_ITEM_HIGHLIGHT_COLOR;
     setTile(tile);
@@ -351,9 +355,11 @@ static inline void drop_selected_item(void)
 
     actor_index = FIELD_ACTOR_COUNT - 1;
     offsets = g_field_direction_offsets;
+
     for (; actor_index >= FIELD_PARTY_COUNT; actor_index--)
     {
         actor = &g_field_actors[actor_index];
+
         if (actor->presence == FIELD_ACTOR_UNUSED)
         {
             field_initialize_actor_record(actor_index, FIELD_ITEM_ACTOR_RESOURCE);
@@ -387,10 +393,12 @@ static inline void drop_selected_item(void)
             field_restart_actor_animation(actor);
             field_spawn_item_record(state->key, g_field_item_list[g_field_item_list_cursor].item_id);
             animation_slot = field_find_free_actor_slot(actor_index, 0);
+
             if ((animation_slot != FIELD_ACTOR_SLOT_NONE) && (field_start_builtin_animation(actor_index, animation_slot, FIELD_ITEM_DROP_ANIMATION) != 0))
             {
                 field_start_actor_animation(animation_slot, 0, NULL);
             }
+
             break;
         }
     }
@@ -422,6 +430,7 @@ static s32 field_update_item_drop_menu(FieldMenuElement *window)
         drop_selected_item();
         return;
     }
+
     if (g_field_buffered_input & FIELD_ITEM_MENU_CANCEL)
     {
         flush_input();
@@ -430,6 +439,7 @@ static s32 field_update_item_drop_menu(FieldMenuElement *window)
         g_field_item_drop_menu_open = 0;
         return;
     }
+
     if (!(g_field_buffered_input & FIELD_ITEM_MENU_MOVE))
     {
         return;
@@ -437,50 +447,61 @@ static s32 field_update_item_drop_menu(FieldMenuElement *window)
 
     field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
     steps = 1;
+
     if (g_field_buffered_input & PADR1)
     {
         steps = FIELD_ITEM_MENU_PAGE_ROWS;
         g_field_buffered_input = PADLdown;
     }
+
     if (g_field_buffered_input & PADL1)
     {
         steps = FIELD_ITEM_MENU_PAGE_ROWS;
         g_field_buffered_input = PADLup;
     }
+
     while (steps != 0)
     {
         if (g_field_buffered_input & FIELD_ITEM_MENU_NEXT)
         {
             g_field_item_list_cursor++;
+
             if (g_field_item_list_cursor >= g_field_item_list_count)
             {
                 g_field_item_list_cursor = 0;
             }
         }
+
         if (g_field_buffered_input & FIELD_ITEM_MENU_PREVIOUS)
         {
             g_field_item_list_cursor--;
+
             if (g_field_item_list_cursor < 0)
             {
                 g_field_item_list_cursor = g_field_item_list_count - 1;
             }
         }
+
         /* A page step stops at either end of the list. */
         if ((g_field_item_list_cursor == g_field_item_list_count - 1) || (g_field_item_list_cursor == 0))
         {
             steps = 1;
         }
+
         steps--;
     }
 
     scroll_target = window->scroll_target;
+
     if (FIELD_ITEM_ROW_Y(g_field_item_list_cursor) < scroll_target)
     {
         window->scroll_target = FIELD_ITEM_ROW_Y(g_field_item_list_cursor);
         window->scroll_ticks = FIELD_ITEM_SCROLL_TICKS;
         return;
     }
+
     window_height = window->size.bits.height;
+
     if ((window_height - FIELD_ITEM_ROW_HEIGHT) < (FIELD_ITEM_ROW_Y(g_field_item_list_cursor) - scroll_target))
     {
         window->scroll_target = FIELD_ITEM_ROW_Y(g_field_item_list_cursor) - (window_height - FIELD_ITEM_ROW_HEIGHT);

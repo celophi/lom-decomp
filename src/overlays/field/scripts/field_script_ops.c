@@ -25,7 +25,6 @@ s32 field_set_actor_animation();
 #define FIELD_LAND_WORDS ((FieldLandWords*)g_field_game_state->lands)
 
 /** @brief field_find_resource resources read by the opcodes. */
-#define FIELD_RESOURCE_ITEM_TEMPLATES 5
 #define FIELD_RESOURCE_TRIGGERS 6
 #define FIELD_RESOURCE_SHOP_LISTS 0xA
 
@@ -337,6 +336,7 @@ void field_script_run(FieldScriptContext* context)
     g_field_script = context;
     field_set_script_var(g_field_script->status.owner_id, FIELD_VAR_EVENT_ARGUMENT, field_find_actor_record_or_default(context->status.owner_id)->event_argument);
     waiting_record = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
+
     if (waiting_record->wait.bits.frames != 0)
     {
         waiting_record->wait.bits.frames--;
@@ -346,6 +346,7 @@ void field_script_run(FieldScriptContext* context)
         status = g_field_script->status.word;
         status |= FIELD_SCRIPT_RUNNING;
         g_field_script->status.word = status;
+
         if (status < 0)
         {
             do
@@ -354,6 +355,7 @@ void field_script_run(FieldScriptContext* context)
                 record = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
                 pc = record->pc;
                 opcode = *pc;
+
                 if (opcode < FIELD_SCRIPT_PAIR_OP_BASE)
                 {
                     g_field_script_op_table[*pc]();
@@ -365,6 +367,7 @@ void field_script_run(FieldScriptContext* context)
                         field_script_reject_opcode(current_context, record, pc);
                         break;
                     }
+
                     field_script_dispatch_pair_op();
                 }
                 else if (opcode >= FIELD_SCRIPT_EXT_OP_BASE && opcode < FIELD_SCRIPT_EXT_OP_RANGE_END)
@@ -374,6 +377,7 @@ void field_script_run(FieldScriptContext* context)
                         field_script_reject_opcode(current_context, record, pc);
                         break;
                     }
+
                     field_script_dispatch_ext_op();
                 }
                 else if (opcode >= FIELD_SCRIPT_EXT_OP_RANGE_END)
@@ -383,6 +387,7 @@ void field_script_run(FieldScriptContext* context)
             } while (g_field_script->status.word & FIELD_SCRIPT_RUNNING);
         }
     }
+
     if (previous_context != NULL)
     {
         g_field_script = previous_context;
@@ -455,6 +460,7 @@ static u8* field_script_decode_operand(s32 type, u8* data, s32* value)
     u8* cursor;
 
     cursor = data;
+
     switch (type)
     {
     case FIELD_SCRIPT_OPERAND_BYTE:
@@ -486,6 +492,7 @@ static u8* field_script_decode_operand(s32 type, u8* data, s32* value)
         *value = FIELD_SCRIPT_OWNER;
         break;
     }
+
     return cursor;
 }
 
@@ -498,15 +505,18 @@ void field_script_op_00(void)
     s32 depth;
 
     depth = g_field_script->active_record;
+
     if (depth > 0)
     {
         if (!FIELD_SCRIPT_RECORD_STATE(depth)->wait.bits.resume)
         {
             g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
         }
+
         g_field_script->active_record--;
         return;
     }
+
     g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = NULL;
 }
@@ -531,6 +541,7 @@ void field_script_op_02(void)
     depth = g_field_script->active_record;
     next_depth = depth + 1;
     g_field_script->active_record = next_depth;
+
     if (next_depth >= FIELD_SCRIPT_FRAME_COUNT)
     {
         FieldScriptRecord* rec;
@@ -567,11 +578,13 @@ void field_script_op_04(void)
     FieldScriptRecordState* rec;
 
     rec = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
+
     if (rec->flags & FIELD_SCRIPT_COND)
     {
         field_script_branch(1);
         return;
     }
+
     rec->pc += 3;
 }
 
@@ -583,6 +596,7 @@ void field_script_op_05(void)
     FieldScriptRecordState* rec;
 
     rec = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
+
     if (rec->flags & FIELD_SCRIPT_COND)
     {
         rec->pc += 3;
@@ -632,6 +646,7 @@ void field_script_test_range(void)
     value = field_read_script_var(g_field_script->status.owner_id, var_ref);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(descriptor, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &low);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(descriptor >> 2, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &high);
+
     if ((u32)value >= (u32)low && (u32)value <= (u32)high)
     {
         FIELD_SCRIPT_ACTIVE_RECORD_STATE()->flags |= FIELD_SCRIPT_COND;
@@ -656,17 +671,21 @@ void field_script_switch(void)
 
     pc = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(pc[1] & 3, pc + 2, &value);
+
     while (1)
     {
         pc_slot = &FIELD_SCRIPT_ACTIVE_RECORD()->pc;
         pc = *pc_slot;
         op = *pc;
+
         if (op == 0xFF || op == value)
         {
             break;
         }
+
         *pc_slot = pc + 3;
     }
+
     field_script_branch(1);
 }
 
@@ -733,6 +752,7 @@ void field_script_record_bits(void)
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand_or_owner(operand_type, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &target_index);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(3, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &field.value);
     operand_type >>= 2;
+
     switch (base_selector)
     {
     case FIELD_SCRIPT_RECORD_OBJECT:
@@ -762,6 +782,7 @@ void field_script_record_bits(void)
         base = g_field_game_state;
         break;
     }
+
     if (opcode == FIELD_SCRIPT_READ_RECORD)
     {
         value = field_read_bits(field.bits.width, base, field.bits.index, field.bits.shift, field.bits.bit_count);
@@ -769,6 +790,7 @@ void field_script_record_bits(void)
         field_write_script_var(g_field_script->status.owner_id, destination_ref, value);
         return;
     }
+
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(operand_type, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &value);
     field_write_bits(field.bits.width, base, field.bits.index, field.bits.shift, field.bits.bit_count, value);
 }
@@ -799,11 +821,13 @@ void field_script_op_10(void)
 
     depth = g_field_script->active_record + 1;
     g_field_script->active_record = depth;
+
     if (depth >= FIELD_SCRIPT_FRAME_COUNT)
     {
         g_field_script->active_record = FIELD_SCRIPT_FRAME_COUNT - 1;
         record_game_diagnostic(DIAG_ERROR, DIAG_SCRIPT_FRAME_OVERFLOW, g_field_script->status.owner_id, 0x4B);
     }
+
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc = FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record - 1)->pc;
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->flags = FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record - 1)->flags;
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->wait.bits.resume = 1;
@@ -850,10 +874,12 @@ void field_script_op_11(void)
     case FIELD_TALK_SPEAKER_PORTRAIT:
         record = field_find_actor_record_or_default(speaker);
         portrait = -1;
+
         if (record->selector != FIELD_NO_SELECTOR)
         {
             portrait = record->selector;
         }
+
         break;
     default:
         portrait = FIELD_SCRIPT_ACTIVE_RECORD()->pc[4];
@@ -862,10 +888,12 @@ void field_script_op_11(void)
 
     layout = FIELD_SCRIPT_ACTIVE_RECORD()->pc[6];
     window_flags = FIELD_SCRIPT_ACTIVE_RECORD()->pc[5];
+
     if (layout == FIELD_TALK_LAYOUT_NO_PORTRAIT)
     {
         portrait = -1;
     }
+
     if (!(window_flags & FIELD_TALK_PLANE_NO_FACING))
     {
         if (window_flags & FIELD_TALK_PLANE_FACING)
@@ -897,6 +925,7 @@ void field_script_op_12(void)
 
     selector = FIELD_SCRIPT_ACTIVE_RECORD()->pc[1];
     operand = FIELD_SCRIPT_ACTIVE_RECORD()->pc[2];
+
     switch (selector)
     {
     case 0:
@@ -907,26 +936,32 @@ void field_script_op_12(void)
         break;
     case 2:
         actor = operand;
+
         if (actor == FIELD_SCRIPT_OWNER)
         {
             actor = g_field_script->status.owner_id;
         }
+
         wait = field_read_actor_binding_state(actor) < FIELD_BINDING_READY;
         break;
     case 3:
         actor = operand;
+
         if (actor == FIELD_SCRIPT_OWNER)
         {
             actor = g_field_script->status.owner_id;
         }
+
         wait = field_read_actor_binding_state(actor) != FIELD_BINDING_LOADING;
         break;
     case 4:
         actor = operand;
+
         if (actor == FIELD_SCRIPT_OWNER)
         {
             actor = g_field_script->status.owner_id;
         }
+
         wait = field_read_actor_binding_state(actor) != FIELD_BINDING_IDLE;
         break;
     case 5:
@@ -962,6 +997,7 @@ void field_script_op_13(void)
     pc = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
     selector = pc[1];
     actor = field_get_script_var(0, pc[2] | (pc[3] << 8));
+
     switch (selector)
     {
     case 0:
@@ -990,6 +1026,7 @@ void field_script_op_14(void)
     s32 wait;
 
     selector = FIELD_SCRIPT_ACTIVE_RECORD()->pc[1];
+
     switch (selector)
     {
     case 1:
@@ -1005,12 +1042,15 @@ void field_script_op_14(void)
         wait = g_field_niki_state == 0;
         break;
     }
+
     if (wait != 0)
     {
         g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
         return;
     }
+
     FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
+
     if (selector == 3 || selector == 4)
     {
         field_set_script_var(0, FIELD_VAR_RESULT, g_field_niki_state);
@@ -1033,6 +1073,7 @@ void field_script_wait_text_window(void)
     window = (window != FIELD_TALK_AUTO) ? window : g_field_runtime->talk_window.bits.plane;
     slot = window & FIELD_TALK_PLANE_MASK;
     status = field_text_get_status(slot);
+
     if (!(window & FIELD_TALK_PLANE_NO_FACING))
     {
         if (status == FIELD_TEXT_STATUS_CLOSED)
@@ -1047,6 +1088,7 @@ void field_script_wait_text_window(void)
         FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
         return;
     }
+
     g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
@@ -1066,6 +1108,7 @@ void field_script_wait_actor_idle(void)
     rec = FIELD_SCRIPT_ACTIVE_RECORD();
     pc = rec->pc;
     operand = pc[1];
+
     if (operand == FIELD_SCRIPT_OWNER)
     {
         actor = g_field_script->status.owner_id;
@@ -1074,7 +1117,9 @@ void field_script_wait_actor_idle(void)
     {
         actor = operand;
     }
+
     party_index = actor;
+
     if (party_index < FIELD_PARTY_SIZE)
     {
         if (g_field_game_state->characters[party_index].name[0] == 0)
@@ -1082,6 +1127,7 @@ void field_script_wait_actor_idle(void)
             rec->pc = pc + 2;
             return;
         }
+
         if (g_field_game_state->characters[party_index].info.bits.pad_controlled)
         {
             if (g_field_interaction_active == 0)
@@ -1091,11 +1137,13 @@ void field_script_wait_actor_idle(void)
             }
         }
     }
+
     if (field_is_actor_idle(actor) != 0)
     {
         FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
         return;
     }
+
     g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
@@ -1141,6 +1189,7 @@ void field_script_op_1a(void)
 
     pc = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
     operand = pc[1];
+
     if (operand == FIELD_SCRIPT_OWNER)
     {
         actor = g_field_script->status.owner_id;
@@ -1149,6 +1198,7 @@ void field_script_op_1a(void)
     {
         actor = operand;
     }
+
     field_set_actor_control_mode(actor, pc[2]);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc += 3;
 }
@@ -1243,6 +1293,7 @@ void field_script_op_1d(void)
         reference.value = y_ref;
         field_write_script_var(g_field_script->status.owner_id, reference, -position.y);
     }
+
     {
         FieldScriptVariableRef reference;
 
@@ -1343,6 +1394,7 @@ void field_script_op_27(void)
     s32 member;
 
     member = FIELD_SCRIPT_ACTIVE_RECORD()->pc[1];
+
     if (member == 0)
     {
         g_field_game_state->characters[FIELD_PARTY_GUEST].name[0] = 0;
@@ -1356,6 +1408,7 @@ void field_script_op_27(void)
         g_field_game_state->characters[FIELD_PARTY_COMPANION].info.word |= FIELD_CHARACTER_TYPE_MASK;
         field_set_script_var(0, FIELD_VARIABLE_COMPANION_VARIANT, FIELD_NO_VARIANT);
     }
+
     field_release_actor_resource_slot(member);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
 }
@@ -1378,10 +1431,12 @@ void field_script_op_28(void)
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_0(descriptor), operands + 2, &menu_id);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_1(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &excluded_mask);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_2(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &cancel_index);
+
     if (cancel_index == 0xFF)
     {
         cancel_index = -1;
     }
+
     field_open_ring_menu(descriptor & 3, menu_id, excluded_mask, cancel_index);
     field_queue_actor_event(FIELD_EVENT_ACTOR_ID_BASE, 0, 0xF);
 }
@@ -1396,12 +1451,14 @@ void field_script_op_29(void)
     s32 result;
 
     result = field_get_ring_result();
+
     if (result < 0)
     {
         field_queue_actor_event(FIELD_EVENT_ACTOR_ID_BASE, 0, field_get_ring_cursor_entry() & 0xFF);
         g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
         return;
     }
+
     field_set_script_var(0, FIELD_VAR_RESULT, result);
     field_queue_actor_event(FIELD_EVENT_ACTOR_ID_BASE, 0, 0x10);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc += 1;
@@ -1426,6 +1483,7 @@ void field_script_op_2a(void)
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_1(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &operand1);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_2(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &operand2);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_3(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &operand3);
+
     if (operand3 == 0xFF)
     {
         operand3 = -1;
@@ -1451,14 +1509,17 @@ void field_script_op_2b(void)
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_0(descriptor), operands + 2, &window);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_1(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &value);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_2(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &digits);
+
     if (digits == 0)
     {
         digits = 1;
+
         for (remaining = (u32)value / 10; remaining != 0; remaining /= 10)
         {
             digits++;
         }
     }
+
     field_text_format_number((u16)window, value, digits);
 }
 
@@ -1472,6 +1533,7 @@ void field_script_op_2c(void)
 
     operands = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(operands[1] & 3, operands + 2, &window);
+
     if (window & 0x80)
     {
         for (window = 0; (u32)window < FIELD_TEXT_WINDOW_SLOTS; window++)
@@ -1686,6 +1748,7 @@ void field_script_op_37(void)
     list = (FieldShopList*)((u8*)offsets + offsets[list_index + 1]);
 
     items = field_find_resource(FIELD_RESOURCE_ITEM_TEMPLATES);
+
     for (index = 0; index < list->count; index++)
     {
         item = list->entries[index].bits.item;
@@ -1786,10 +1849,12 @@ void field_script_op_0f(void)
     {
     case 0:
         all_techniques = 0xFFFFFF;
+
         for (i = FIELD_WEAPON_CATEGORY_COUNT - 1; i >= 0; i--)
         {
             g_field_game_state->technique_bits[i] = all_techniques;
         }
+
         g_field_game_state->ability_bits[0] = 0x500;
         g_field_game_state->ability_bits[1] = 0xFFFF8000;
         g_field_game_state->ability_bits[2] = 0x803F;
@@ -1819,14 +1884,17 @@ void field_script_op_0f(void)
             g_field_game_state->pets[i].hatch_counter = 0;
             g_field_game_state->pets[i].status.word &= ~PET_STATUS_EGG;
         }
+
         break;
     case 7:
         for (i = 0; i < FIELD_DEBUG_ITEM_KIND_COUNT; i++)
         {
             g_field_game_state->item_counts[i] = ITEM_COUNT_MAX;
         }
+
         break;
     }
+
     FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
 }
 
@@ -1881,6 +1949,7 @@ void field_script_op_43(s32 mode, s32 actor)
         {
             target = actor;
         }
+
         result = field_is_actor_near_stored_position(target, FIELD_STORED_POSITION_RANGE, FIELD_STORED_POSITION_RANGE);
         rec = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
         rec->flags = (rec->flags & ~FIELD_SCRIPT_COND) | (result & FIELD_SCRIPT_COND);
@@ -1905,6 +1974,7 @@ void field_script_misc_command(u32 command, s32 operand)
     {
         index = operand;
     }
+
     switch (command)
     {
     case FIELD_SCRIPT_CMD_RETURN_TO_TITLE:
@@ -2083,6 +2153,7 @@ void field_script_misc_command(u32 command, s32 operand)
             record_game_diagnostic(DIAG_ERROR, 1, 0x2C, operand);
             return;
         }
+
         g_music_track_index = operand;
         return;
     case FIELD_SCRIPT_CMD_ADVANCE_WEEKDAY:
@@ -2155,11 +2226,13 @@ void field_script_misc_command(u32 command, s32 operand)
                          sizeof(g_field_game_state->control) + sizeof(g_field_game_state->flag_bits) + sizeof(g_field_game_state->lands));
         g_field_game_state->control.fields.placed_land_count = 1;
         g_field_game_state->flag_bits[0] |= 0x10000000;
+
         for (index = 0; index < FIELD_LAND_COUNT; index++)
         {
             g_field_game_state->lands[index].x = FIELD_LAND_CELL_NONE;
             g_field_game_state->lands[index].z = FIELD_LAND_CELL_NONE;
         }
+
         FIELD_LAND_WORDS[0].word |= FIELD_LAND_PLACED;
         g_field_game_state->lands[0].count = 1;
         FIELD_LAND_WORDS[0].word |= FIELD_LAND_FLAG_04;
@@ -2183,10 +2256,12 @@ void field_script_op_45(s32 actor_id)
     s32 actor;
 
     actor = actor_id;
+
     if (actor == FIELD_SCRIPT_OWNER)
     {
         actor = g_field_script->status.owner_id;
     }
+
     field_set_actor_animation(actor);
 }
 
@@ -2210,6 +2285,7 @@ void field_script_op_46(s32 first_id, s32 second_id)
     {
         first = first_id;
     }
+
     if (second_id == FIELD_SCRIPT_OWNER)
     {
         second = g_field_script->status.owner_id;
@@ -2218,6 +2294,7 @@ void field_script_op_46(s32 first_id, s32 second_id)
     {
         second = second_id;
     }
+
     result = field_test_actor_depth_overlap(first, second);
     rec = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
     rec->flags = (rec->flags & ~FIELD_SCRIPT_COND) | (result & FIELD_SCRIPT_COND);
@@ -2234,6 +2311,7 @@ void field_script_op_47(s32 actor_id, s32 guest_id)
     s32 actor;
 
     field_join_guest(guest_id);
+
     if (actor_id == FIELD_SCRIPT_OWNER)
     {
         actor = g_field_script->status.owner_id;
@@ -2242,12 +2320,15 @@ void field_script_op_47(s32 actor_id, s32 guest_id)
     {
         actor = actor_id;
     }
+
     field_activate_actor_resource_slot(actor, guest_id, 0);
+
     if (g_field_interaction_active != 0)
     {
         field_set_actor_control_mode(1, 2);
         g_field_runtime->state.bits.party_mode = FIELD_PARTY_MODE_ALL;
     }
+
     field_set_script_var(0, FIELD_VARIABLE_GUEST_VARIANT, guest_id);
 }
 
@@ -2269,6 +2350,7 @@ void field_script_op_48(s32 actor_id, s32 source)
     {
         actor = actor_id;
     }
+
     if (source == 1)
     {
         variant = field_rejoin_companion();
@@ -2277,10 +2359,12 @@ void field_script_op_48(s32 actor_id, s32 source)
     {
         variant = field_join_companion();
     }
+
     if (variant != FIELD_NO_VARIANT)
     {
         field_activate_actor_resource_slot(actor, variant, 1);
     }
+
     field_set_script_var(0, FIELD_VARIABLE_COMPANION_VARIANT, variant);
 }
 
@@ -2294,6 +2378,7 @@ void field_script_op_49(s32 actor_id, s32 logic_type)
     s32 variant;
 
     variant = field_join_golem(logic_type);
+
     if (actor_id == FIELD_SCRIPT_OWNER)
     {
         actor_id = g_field_script->status.owner_id;
@@ -2303,6 +2388,7 @@ void field_script_op_49(s32 actor_id, s32 logic_type)
     {
         field_activate_actor_resource_slot(actor_id, variant, 1);
     }
+
     field_set_script_var(0, FIELD_VARIABLE_COMPANION_VARIANT, variant);
 }
 
@@ -2318,11 +2404,14 @@ void field_script_start_actor_script(s32 actor_id, s32 entry)
     u32 party_index;
 
     actor = actor_id;
+
     if (actor_id == FIELD_SCRIPT_OWNER)
     {
         actor = g_field_script->status.owner_id;
     }
+
     party_index = actor & 0xFF;
+
     if ((g_field_runtime->state.flags & FIELD_STATE_PARTY_PAGE_SCRIPTS) && party_index < FIELD_PARTY_SIZE)
     {
         field_start_actor_private_script(party_index, field_get_party_private_script(party_index, entry));
@@ -2331,6 +2420,7 @@ void field_script_start_actor_script(s32 actor_id, s32 entry)
     {
         field_start_actor_script(actor & 0xFF, entry);
     }
+
     g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
@@ -2345,6 +2435,7 @@ void field_script_op_4b(s32 obj_index, s32 part_index)
     {
         part_index = FIELD_WHOLE_OBJECT;
     }
+
     field_set_object_visible(obj_index, part_index, 1);
 }
 
@@ -2359,6 +2450,7 @@ void field_script_op_4c(s32 obj_index, s32 part_index)
     {
         part_index = FIELD_WHOLE_OBJECT;
     }
+
     field_set_object_visible(obj_index, part_index, 0);
 }
 
@@ -2380,6 +2472,7 @@ void field_script_op_4d(s32 actor_id, s32 height)
     {
         actor = actor_id;
     }
+
     field_get_actor_position(actor, &position);
     position.y = -height;
     field_set_actor_position(actor, position.x >> 8, position.y, position.z >> 8);
@@ -2428,6 +2521,7 @@ void field_script_op_4f(s32 list_index, s32 price_scale)
     offsets = field_find_resource(FIELD_RESOURCE_SHOP_LISTS);
     list = (FieldShopList*)((u8*)offsets + offsets[list_index + 1]);
     items = field_find_resource(FIELD_RESOURCE_ITEM_TEMPLATES);
+
     for (index = 0; index < list->count; index++)
     {
         if (list->entries[index].bits.generated)
@@ -2471,6 +2565,7 @@ void field_script_op_50(s32 actor_id, s32 resource_index)
     {
         actor = actor_id;
     }
+
     record = field_find_actor_record_or_default(actor);
     record->flags.bits.active = 0;
     record->flags.bits.spawned = 0;
@@ -2508,10 +2603,12 @@ void field_script_op_52(s32 dest_variable, s32 source_variable)
 void field_script_op_53(s32 volume, s32 frames)
 {
     frames = (frames != 0) ? frames : 1;
+
     if (volume > FIELD_SONG_VOLUME_MAX)
     {
         volume = FIELD_SONG_VOLUME_MAX;
     }
+
     field_fade_song(1, frames, volume);
 }
 
@@ -2531,10 +2628,12 @@ void field_script_op_54(void)
 void field_script_op_55(s32 volume, s32 frames)
 {
     frames = (frames != 0) ? frames : 1;
+
     if (volume > FIELD_SONG_VOLUME_MAX)
     {
         volume = FIELD_SONG_VOLUME_MAX;
     }
+
     field_fade_song(0, frames, volume);
 }
 
@@ -2569,6 +2668,7 @@ void field_script_op_57(s32 actor_id, s32 resource_entry_index)
     {
         actor = actor_id;
     }
+
     field_get_actor_position(actor, &position);
     x = position.x >> 8;
     y = position.y >> 8;
@@ -2612,6 +2712,7 @@ void field_script_op_5a(s32 variable_id, s32 actor_id)
     {
         actor = actor_id;
     }
+
     field_set_script_var(actor, variable_id, field_get_actor_binding_state(actor));
 }
 
@@ -2682,6 +2783,7 @@ void field_script_op_81(s32 mode, s32 red, s32 green, s32 blue)
     {
         color_flag = 0;
     }
+
     field_set_all_actor_render_state(red, green, blue, color_flag, mode);
 }
 
@@ -2707,6 +2809,7 @@ void field_script_op_82(s32 key, s32 resource_entry_index, s32 resource_slot_id,
         resource_flag = 0;
         actor = key;
     }
+
     field_clear_actor_record_script_only(actor);
     field_reload_actor(actor, resource_entry_index, resource_slot_id, package, 0, -1, -1, -1, 0, resource_flag);
 }
@@ -2737,6 +2840,7 @@ void field_script_op_84(s32 actor_id, s32 animation, s32 builtin_animation, s32 
     {
         actor = actor_id;
     }
+
     field_queue_battle_entry_change(actor, (animation == 0xFF) ? -1 : animation, (builtin_animation == 0xFF) ? -1 : builtin_animation,
                                     (sound == 0xFF) ? -1 : sound);
 }
@@ -2764,6 +2868,7 @@ void field_script_op_85(s32 scene_id, s32 object_id, s32 audio, s32 spawn_id)
     music = (audio >> 8) & 0xFF;
     secondary_music = (audio >> 16) & 0xFF;
     runtime->transition.fields.scene_id = scene_id;
+
     switch (sound_bank)
     {
     case 0xFE:
@@ -2782,8 +2887,10 @@ void field_script_op_85(s32 scene_id, s32 object_id, s32 audio, s32 spawn_id)
         {
             g_field_runtime->scene_argument1 = sound_bank;
         }
+
         break;
     }
+
     switch (music)
     {
     case 0xFE:
@@ -2801,8 +2908,10 @@ void field_script_op_85(s32 scene_id, s32 object_id, s32 audio, s32 spawn_id)
         {
             g_field_runtime->scene_entry = music;
         }
+
         break;
     }
+
     switch (secondary_music)
     {
     case 0xFE:
@@ -2815,6 +2924,7 @@ void field_script_op_85(s32 scene_id, s32 object_id, s32 audio, s32 spawn_id)
         g_field_runtime->scene_argument2 = secondary_music;
         break;
     }
+
     g_field_runtime->transition.bits.spawn_id = spawn_id;
     g_field_script->active_record = 0;
     g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
@@ -2834,6 +2944,7 @@ void field_script_op_86(s32 slot, s32 resource_id, s32 entry_index, s32 characte
     u16 offset;
 
     resource = field_find_resource(resource_id);
+
     if (resource != NULL)
     {
         offset = resource->texts.offsets[entry_index];
@@ -2854,6 +2965,7 @@ void field_script_op_87(s32 selector, s32 actor_id, s32 event_id, s32 argument)
     {
         actor_id = g_field_script->status.owner_id;
     }
+
     switch (selector)
     {
     case 0:
@@ -2893,6 +3005,7 @@ void field_script_op_89(s32 unused0, s32 unused1, s32 value, s32 value2)
     {
         value = 1;
     }
+
     akao_fade_all_sfx_volume(value, value2);
 }
 
@@ -2909,6 +3022,7 @@ void field_script_op_8a(s32 actor_id, s32 resource_index, s32 target_id, s32 unu
     s32 actor;
 
     actor = actor_id;
+
     if (target_id == FIELD_SCRIPT_OWNER)
     {
         target = g_field_script->status.owner_id;
@@ -2917,10 +3031,12 @@ void field_script_op_8a(s32 actor_id, s32 resource_index, s32 target_id, s32 unu
     {
         target = target_id;
     }
+
     if (actor == FIELD_SCRIPT_OWNER)
     {
         actor = g_field_script->status.owner_id;
     }
+
     field_spawn_targeted_animation_actor(actor, resource_index, 1, &target);
 }
 
@@ -2961,6 +3077,7 @@ void field_script_op_8c(s32 actor_id, s32 animation, s32 effect, s32 sound)
     {
         actor = actor_id;
     }
+
     field_revive_actor(actor, (animation == 0xFF) ? -1 : animation, (effect == 0xFF) ? -1 : effect, (sound == 0xFF) ? -1 : sound);
 }
 

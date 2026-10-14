@@ -53,8 +53,6 @@ void field_set_cd_error_fade_target(void);
 /** @brief Largest number of entries in the dialog item list. */
 #define FIELD_DIALOG_ITEM_LIMIT 10
 
-/** @brief Frames a newly pressed button waits before it repeats. */
-#define FIELD_PAD_REPEAT_DELAY 15
 /** @brief Frames between two repeats of a held button (it fires every third frame). */
 #define FIELD_PAD_REPEAT_INTERVAL 2
 #define PAD_BTN_DPAD (PADLup | PADLdown | PADLleft | PADLright)
@@ -89,8 +87,6 @@ void field_set_cd_error_fade_target(void);
 #define FIELD_HINT_TEXT_X 128
 #define FIELD_HINT_TEXT_Y 64
 
-#define FIELD_SOUND_CURSOR 0x7D
-#define FIELD_SOUND_SELECT 0x7E
 #define FIELD_SOUND_MENU_OPEN 0x80
 #define FIELD_SOUND_LOW_HP 0xA6
 #define FIELD_SOUND_EMPTY_SHOP 0xC7
@@ -105,11 +101,8 @@ void field_set_cd_error_fade_target(void);
 /** @brief Golem companions use character ids from this value on. */
 #define FIELD_COMPANION_GOLEM_ID_BASE 0x41
 /** @brief Resource id base of the companion action packages (field_load_party_script_page). */
-/** @brief Action slots of a party member's row: two commands, then four skills from slot 4. */
-#define FIELD_COMMAND_SLOT_COUNT 2
 /** @brief Button action of the first command: button actions 2 and 3 run resource action slots 0 and 1. */
 #define FIELD_COMMAND_BUTTON_ACTION 2
-#define FIELD_SKILL_SLOT_COUNT 4
 #define FIELD_SKILL_ACTION_BASE 4
 /** @brief Saved skill values: none, or an instrument (plus its item record index). */
 #define FIELD_SKILL_NONE 0xFF
@@ -335,6 +328,7 @@ void* field_draw_text(SPRT* sprite_cursor, u_long* ot, u8* text, s32 text_color,
         if ((flags & FIELD_TEXT_ALIGN_MASK) == FIELD_TEXT_ALIGN_CENTER)
         {
             sprite = sprite_cursor;
+
             for (i = 0; i < remaining; i++)
             {
                 x -= sprite[i].w >> 1;
@@ -344,6 +338,7 @@ void* field_draw_text(SPRT* sprite_cursor, u_long* ot, u8* text, s32 text_color,
     else
     {
         sprite = sprite_cursor;
+
         for (i = 0; i < remaining; i++)
         {
             x -= sprite[i].w;
@@ -352,20 +347,15 @@ void* field_draw_text(SPRT* sprite_cursor, u_long* ot, u8* text, s32 text_color,
 
     advance = 0;
 
-    if (remaining != 0)
+    for (; remaining != 0; sprite_cursor++, remaining--)
     {
-        do
-        {
-            sprite = sprite_cursor;
-            SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
-            setSprt(sprite);
-            setXY0(sprite, x + advance, y);
-            advance += sprite->w;
+        sprite = sprite_cursor;
+        SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+        setSprt(sprite);
+        setXY0(sprite, x + advance, y);
+        advance += sprite->w;
 
-            addPrim(ot, sprite);
-            sprite_cursor++;
-            remaining--;
-        } while (remaining != 0);
+        addPrim(ot, sprite);
     }
 
     if (flags & FIELD_TEXT_SHADOW)
@@ -440,15 +430,19 @@ inline void field_format_number(u8* text, s32 number, s32 wide_request)
         field_copy_name(text, minus);
         text += field_name_byte_length(minus);
     }
+
     divisor = 10000000;
     started = 0;
-    do
+
+    while (divisor != 0)
     {
         digit = number / divisor;
+
         if (digit != 0)
         {
             started = 1;
         }
+
         if (started || divisor == 1)
         {
             if (wide_request)
@@ -460,11 +454,14 @@ inline void field_format_number(u8* text, s32 number, s32 wide_request)
             {
                 *text = digit + '0';
             }
+
             text++;
             number -= (number / divisor) * divisor;
         }
+
         divisor /= 10;
-    } while (divisor != 0);
+    }
+
     *text = 0;
 }
 #else
@@ -481,6 +478,7 @@ inline void field_format_number(u8* text, s32 number, s32 wide_request)
     cursor = text;
     value = number;
     double_byte = 0;
+
     if (value < 0)
     {
         value = -value;
@@ -488,15 +486,19 @@ inline void field_format_number(u8* text, s32 number, s32 wide_request)
         field_copy_name(cursor, minus);
         cursor += field_name_byte_length(minus);
     }
+
     divisor = 10000000;
     started = 0;
-    do
+
+    while (divisor != 0)
     {
         digit = value / divisor;
+
         if (digit != 0)
         {
             started = 1;
         }
+
         if (started || divisor == 1)
         {
             if (double_byte)
@@ -508,11 +510,14 @@ inline void field_format_number(u8* text, s32 number, s32 wide_request)
             {
                 *cursor = digit + '0';
             }
+
             cursor++;
             value -= (value / divisor) * divisor;
         }
+
         divisor /= 10;
-    } while (divisor != 0);
+    }
+
     *cursor = 0;
 }
 #endif
@@ -575,23 +580,23 @@ s32 field_name_byte_length(u8* name)
 
     count = 0;
     character = *name;
-    if (character != 0)
+
+    while (character != 0)
     {
-        do
+        if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(character))
         {
-            if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(character))
-            {
-                name += NAME_GLYPH_SIZE_DOUBLE;
-                count += NAME_GLYPH_SIZE_DOUBLE;
-            }
-            else
-            {
-                name += NAME_GLYPH_SIZE_SINGLE;
-                count += NAME_GLYPH_SIZE_SINGLE;
-            }
-            character = *name;
-        } while (character != 0);
+            name += NAME_GLYPH_SIZE_DOUBLE;
+            count += NAME_GLYPH_SIZE_DOUBLE;
+        }
+        else
+        {
+            name += NAME_GLYPH_SIZE_SINGLE;
+            count += NAME_GLYPH_SIZE_SINGLE;
+        }
+
+        character = *name;
     }
+
     return count;
 }
 
@@ -608,6 +613,7 @@ void field_copy_name(u8* destination, u8* source)
 
     cursor = source;
     byte_count = 0;
+
     while (*cursor != 0)
     {
         if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(*cursor))
@@ -621,10 +627,12 @@ void field_copy_name(u8* destination, u8* source)
             byte_count += NAME_GLYPH_SIZE_SINGLE;
         }
     }
+
     for (byte_index = 0; byte_index < byte_count; byte_index++)
     {
         destination[byte_index] = source[byte_index];
     }
+
     destination[byte_index] = 0;
 }
 
@@ -644,6 +652,7 @@ inline void field_append_name(u8* destination, const u8* source)
 
     destination_cursor = destination;
     destination_byte_count = 0;
+
     while (*destination_cursor)
     {
         if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(*destination_cursor))
@@ -661,6 +670,7 @@ inline void field_append_name(u8* destination, const u8* source)
     source_cursor = source;
     source_byte_count = 0;
     append_offset = destination_byte_count;
+
     while (*source_cursor)
     {
         if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(*source_cursor))
@@ -679,6 +689,7 @@ inline void field_append_name(u8* destination, const u8* source)
     {
         destination[byte_index + append_offset] = source[byte_index];
     }
+
     destination[byte_index + append_offset] = 0;
 }
 
@@ -707,11 +718,12 @@ void field_copy_inventory_record(u8* destination, u8* source)
     u32 byte_index;
 
     byte_index = 0;
-    do
+
+    while (byte_index < sizeof(FieldItemRecord))
     {
         byte_index++;
         *destination++ = *source++;
-    } while (byte_index < sizeof(FieldItemRecord));
+    }
 }
 
 /**
@@ -727,7 +739,8 @@ void field_compact_inventory(void)
     record_index = 0;
     write_record = g_saved_game_ctx->items;
     read_record = write_record;
-    do
+
+    for (; record_index < FIELD_ITEM_COUNT; record_index++, read_record++)
     {
         if (read_record->name[0] != 0)
         {
@@ -736,11 +749,11 @@ void field_compact_inventory(void)
                 bcopy(read_record, write_record, sizeof(*read_record));
                 read_record->name[0] = 0;
             }
+
             write_record++;
         }
-        record_index += 1;
-        read_record++;
-    } while (record_index < FIELD_ITEM_COUNT);
+    }
+
     while (write_record < &g_saved_game_ctx->items[FIELD_ITEM_COUNT])
     {
         write_record->name[0] = 0;
@@ -758,14 +771,17 @@ FieldItemRecord* field_find_free_inventory_record(void)
     FieldItemRecord* record;
 
     record = g_saved_game_ctx->items;
+
     for (record_index = 0; record_index < FIELD_ITEM_COUNT; record_index++)
     {
         if (record->name[0] == 0)
         {
             return record;
         }
+
         record++;
     }
+
     return NULL;
 }
 
@@ -798,6 +814,7 @@ inline void field_restore_label_actor_parts(void)
     FieldObjectPart* part;
 
     akao_play_sound(FIELD_SOUND_SELECT);
+
     for (index = 0; index < g_field_label_actor_count; index++)
     {
         part = &g_field_object_parts[g_field_label_actor_indices[index]];
@@ -824,7 +841,8 @@ static void field_init_actor_labels(void)
     state = &g_field_object_states[FIELD_PARTY_COUNT];
     g_field_label_actor_count = 0;
     g_field_selected_actor_label = 0;
-    do
+
+    for (; actor_index < FIELD_ACTOR_COUNT; actor_index++, state++, actor++)
     {
         if (actor->presence != FIELD_ACTOR_UNUSED && state->current_hp.word != 0 && g_field_active_group == (state->group_flags & FIELD_OBJECT_GROUP_MASK) &&
             state->name != NULL)
@@ -834,10 +852,7 @@ static void field_init_actor_labels(void)
             g_field_label_saved_scale_y[g_field_label_actor_count] = g_field_object_parts[actor_index].scale_y;
             g_field_label_actor_count += 1;
         }
-        actor_index += 1;
-        state++;
-        actor++;
-    } while (actor_index < FIELD_ACTOR_COUNT);
+    }
 }
 
 /**
@@ -852,6 +867,7 @@ static void field_draw_cd_error_text(FieldRenderHalf* render)
 
     primitive = (SPRT*)render->primitive_cursor;
     ordering_table = &render->ordering_table[FIELD_TEXT_OT_INDEX];
+
     /* 2 is CdErrorStatus CD_ERROR_STATUS_DISC_CHECK_PENDING (private to cdrom.c). */
     if (cdrom_get_error_status() == 2)
     {
@@ -863,6 +879,7 @@ static void field_draw_cd_error_text(FieldRenderHalf* render)
         primitive = field_draw_text(primitive, ordering_table, field_dialog_text(&D_800EC3D4, 8), FIELD_TEXT_COLOR_NORMAL, SCREEN_WIDTH / 2, 100,
                                     FIELD_TEXT_SHADOW | FIELD_TEXT_ALIGN_CENTER);
     }
+
     render->primitive_cursor = (u8*)primitive;
 }
 
@@ -917,9 +934,11 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
     ot = &render->ordering_table[FIELD_TEXT_OT_INDEX];
     index = 0;
     ports = CONTROLLER_STATE->ports;
-    do
+
+    for (; index < FIELD_PLAYER_COUNT; index++)
     {
         action_offset = index * sizeof(FieldActionRow);
+
         if ((g_field_player_records[index].head.bytes.flags & FIELD_PLAYER_ACTIVE) &&
             ((port = &ports[index])->published_sample.device_type < CONTROLLER_DEVICE_CONFIGURING))
         {
@@ -934,12 +953,13 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             held_buttons = (((u32)(held_buttons & 0x40) >> 1) | ((held_buttons & 0x20) * 2) | ((u32)(held_buttons & 0x80) >> 3) | ((held_buttons & 0x10) * 8) |
                             (held_buttons & 0xFF0F));
 #endif
-            do
+            while (button_or_x < FIELD_HINT_BUTTON_COUNT)
             {
                 if (held_buttons & bit_or_actor)
                 {
                     save = (SavedGameLayout*)((u8*)g_saved_game_ctx + record_offset);
                     action = save->characters[0].button_actions[g_field_hint_button_map[button_or_x]];
+
                     switch (action)
                     {
                     case FIELD_COMMAND_BUTTON_ACTION: /* The two commands: resource action slots 0 and 1. */
@@ -955,6 +975,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                     case 0: /* Guests 5 and 8 have no attack or guard. */
 #if defined(VERSION_JP)
                         work = save->characters[0].info.bytes[0];
+
                         if (((work & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST) &&
 #else
                         if (((save->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST) &&
@@ -995,10 +1016,12 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                             text_value = D_800EC3E8.low;
                             text_or_state = text_part + text_value;
                         }
+
                         break;
                     default:
                         text_value = (uintptr_t)g_field_technique_names;
                         work = ((SavedGameLayout*)((u8*)g_saved_game_ctx + record_offset))->characters[0].info.bytes[action];
+
                         if (work == FIELD_SKILL_NONE)
                         {
                             text_offset = D_800EC3E0.high << 8;
@@ -1029,6 +1052,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
 
                         break;
                     }
+
                     label_y = index;
                     point.vx = FIELD_HINT_PORTRAIT_X;
                     label_y <<= 5;
@@ -1043,94 +1067,105 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                     button_or_x += 1;
                     bit_or_actor *= 2;
                 }
-            } while (button_or_x < FIELD_HINT_BUTTON_COUNT);
+            }
         }
-        index += 1;
-    } while (index < FIELD_PLAYER_COUNT);
-    index = 0;
-    if (g_field_label_actor_count != 0)
-    {
-        do
-        {
-            bit_or_actor = g_field_label_actor_indices[index];
-            camera_x = g_field_view_offset_x;
-            text_or_state = (uintptr_t)&g_field_object_states[bit_or_actor];
-            actor = &g_field_actors[bit_or_actor];
-            button_or_x = camera_x / 256;
-            screen_x = actor->x / 256 + SCREEN_WIDTH / 2;
-            point.vx = button_or_x + screen_x;
-            camera_y = g_field_view_offset_y / 256;
-            screen_y = actor->y / 256 + FIELD_SCREEN_CENTER_Y;
-            point.vy = ((camera_y + screen_y) - actor->z / 512) - g_field_view_offset_z / 512;
-            label_half_width = field_count_text_glyphs(((FieldObjectState*)text_or_state)->name) * FIELD_LABEL_GLYPH_HALF_WIDTH;
-            if ((point.vx + label_half_width) > SCREEN_WIDTH)
-            {
-                point.vx = SCREEN_WIDTH - label_half_width;
-            }
-            if (((point.vx - label_half_width) - FIELD_LABEL_MARGIN) < 0)
-            {
-                point.vx = label_half_width + FIELD_LABEL_MARGIN;
-            }
-            if (point.vy > FIELD_LABEL_MAX_Y)
-            {
-                point.vy = FIELD_LABEL_MAX_Y;
-            }
-            if (point.vy < FIELD_LABEL_MIN_Y)
-            {
-                point.vy = FIELD_LABEL_MIN_Y;
-            }
-            button_or_x = point.vx;
-            text_ot = ot;
-            if (g_field_selected_actor_label == index)
-            {
-                text_ot = ot - 1;
-            }
-            text_color = FIELD_TEXT_COLOR_DIM;
-            if (g_field_selected_actor_label == index)
-            {
-                text_color = FIELD_TEXT_COLOR_NORMAL;
-            }
-            cursor = (u8*)field_draw_text((SPRT*)cursor, text_ot, ((FieldObjectState*)text_or_state)->name, text_color, button_or_x, (s32)point.vy,
-                                          FIELD_TEXT_SHADOW | FIELD_TEXT_ALIGN_CENTER);
-            left_glyph_ot = ot;
-            point.vy = (u16)point.vy - 8;
-            if (g_field_selected_actor_label == index)
-            {
-                left_glyph_ot = ot - 1;
-            }
-            cursor = (u8*)field_draw_sprite_glyph((u8*)cursor, (s32*)left_glyph_ot, FIELD_LABEL_LEFT_BRACKET, (s32*)&point,
-                                        g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
-            right_glyph_ot = ot;
-            point.vx = (u16)point.vx + 8;
-            if (g_field_selected_actor_label == index)
-            {
-                right_glyph_ot = ot - 1;
-            }
-            cursor = (u8*)field_draw_sprite_glyph((u8*)cursor, (s32*)right_glyph_ot, FIELD_LABEL_RIGHT_BRACKET, (s32*)&point,
-                                        g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
-            number_ot = ot;
-            point.vx = (u16)point.vx + 8;
-            if (g_field_selected_actor_label == index)
-            {
-                number_ot -= 1;
-            }
-            cursor = (u8*)field_draw_sprite_number((s32*)number_ot, (void*)cursor, ((FieldObjectState*)text_or_state)->hud.bytes.flags >> 1, 2, (u16*)&point,
-                                        g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
-            if ((g_field_selected_actor_label == index) && (((FieldObjectState*)text_or_state)->hp_display.word >= 0))
-            {
-                highlight_part = &g_field_object_parts[bit_or_actor];
-                highlight_part->appearance.fields.scale_xz = FIELD_LABEL_SELECTED_SCALE;
-                highlight_part->scale_y = FIELD_LABEL_SELECTED_SCALE;
-            }
-            else
-            {
-                normal_part = &g_field_object_parts[bit_or_actor];
-                normal_part->appearance.fields.scale_xz = (u8)g_field_label_saved_scale_x[index];
-                normal_part->scale_y = (u8)g_field_label_saved_scale_y[index];
-            }
-            index += 1;
-        } while (index < (s32)g_field_label_actor_count);
     }
+
+    for (index = 0; index < (s32)g_field_label_actor_count; index++)
+    {
+        bit_or_actor = g_field_label_actor_indices[index];
+        camera_x = g_field_view_offset_x;
+        text_or_state = (uintptr_t)&g_field_object_states[bit_or_actor];
+        actor = &g_field_actors[bit_or_actor];
+        button_or_x = camera_x / 256;
+        screen_x = actor->x / 256 + SCREEN_WIDTH / 2;
+        point.vx = button_or_x + screen_x;
+        camera_y = g_field_view_offset_y / 256;
+        screen_y = actor->y / 256 + FIELD_SCREEN_CENTER_Y;
+        point.vy = ((camera_y + screen_y) - actor->z / 512) - g_field_view_offset_z / 512;
+        label_half_width = field_count_text_glyphs(((FieldObjectState*)text_or_state)->name) * FIELD_LABEL_GLYPH_HALF_WIDTH;
+
+        if ((point.vx + label_half_width) > SCREEN_WIDTH)
+        {
+            point.vx = SCREEN_WIDTH - label_half_width;
+        }
+
+        if (((point.vx - label_half_width) - FIELD_LABEL_MARGIN) < 0)
+        {
+            point.vx = label_half_width + FIELD_LABEL_MARGIN;
+        }
+
+        if (point.vy > FIELD_LABEL_MAX_Y)
+        {
+            point.vy = FIELD_LABEL_MAX_Y;
+        }
+
+        if (point.vy < FIELD_LABEL_MIN_Y)
+        {
+            point.vy = FIELD_LABEL_MIN_Y;
+        }
+
+        button_or_x = point.vx;
+        text_ot = ot;
+
+        if (g_field_selected_actor_label == index)
+        {
+            text_ot = ot - 1;
+        }
+
+        text_color = FIELD_TEXT_COLOR_DIM;
+
+        if (g_field_selected_actor_label == index)
+        {
+            text_color = FIELD_TEXT_COLOR_NORMAL;
+        }
+
+        cursor = (u8*)field_draw_text((SPRT*)cursor, text_ot, ((FieldObjectState*)text_or_state)->name, text_color, button_or_x, (s32)point.vy,
+                                      FIELD_TEXT_SHADOW | FIELD_TEXT_ALIGN_CENTER);
+        left_glyph_ot = ot;
+        point.vy = (u16)point.vy - 8;
+
+        if (g_field_selected_actor_label == index)
+        {
+            left_glyph_ot = ot - 1;
+        }
+
+        cursor = (u8*)field_draw_sprite_glyph((u8*)cursor, (s32*)left_glyph_ot, FIELD_LABEL_LEFT_BRACKET, (s32*)&point,
+                                    g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
+        right_glyph_ot = ot;
+        point.vx = (u16)point.vx + 8;
+
+        if (g_field_selected_actor_label == index)
+        {
+            right_glyph_ot = ot - 1;
+        }
+
+        cursor = (u8*)field_draw_sprite_glyph((u8*)cursor, (s32*)right_glyph_ot, FIELD_LABEL_RIGHT_BRACKET, (s32*)&point,
+                                    g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
+        number_ot = ot;
+        point.vx = (u16)point.vx + 8;
+
+        if (g_field_selected_actor_label == index)
+        {
+            number_ot -= 1;
+        }
+
+        cursor = (u8*)field_draw_sprite_number((s32*)number_ot, (void*)cursor, ((FieldObjectState*)text_or_state)->hud.bytes.flags >> 1, 2, (u16*)&point,
+                                    g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
+        if ((g_field_selected_actor_label == index) && (((FieldObjectState*)text_or_state)->hp_display.word >= 0))
+        {
+            highlight_part = &g_field_object_parts[bit_or_actor];
+            highlight_part->appearance.fields.scale_xz = FIELD_LABEL_SELECTED_SCALE;
+            highlight_part->scale_y = FIELD_LABEL_SELECTED_SCALE;
+        }
+        else
+        {
+            normal_part = &g_field_object_parts[bit_or_actor];
+            normal_part->appearance.fields.scale_xz = (u8)g_field_label_saved_scale_x[index];
+            normal_part->scale_y = (u8)g_field_label_saved_scale_y[index];
+        }
+    }
+
     render->primitive_cursor = (u8*)cursor;
 }
 
@@ -1144,34 +1179,32 @@ void field_merge_dialog_items(void)
     u8 amount;
     s32 shift_index;
 
-    index = 0;
-    if (g_field_dialog_item_count > 0)
+    for (index = 0; index < g_field_dialog_item_count; index++)
     {
-        do
+        if (g_field_dialog_item_quantities[index] != 0)
         {
-            if (g_field_dialog_item_quantities[index] != 0)
+            for (previous = 0; previous < index; previous++)
             {
-                for (previous = 0; previous < index; previous++)
+                amount = g_field_dialog_item_quantities[previous];
+
+                if ((amount != 0) && (g_field_dialog_item_texts[index] == g_field_dialog_item_texts[previous]))
                 {
-                    amount = g_field_dialog_item_quantities[previous];
-                    if ((amount != 0) && (g_field_dialog_item_texts[index] == g_field_dialog_item_texts[previous]))
+                    shift_index = index;
+                    g_field_dialog_item_quantities[previous] = amount + g_field_dialog_item_quantities[index];
+
+                    while (shift_index < (g_field_dialog_item_count - 1))
                     {
-                        shift_index = index;
-                        g_field_dialog_item_quantities[previous] = amount + g_field_dialog_item_quantities[index];
-                        while (shift_index < (g_field_dialog_item_count - 1))
-                        {
-                            g_field_dialog_item_quantities[shift_index] = g_field_dialog_item_quantities[shift_index + 1];
-                            g_field_dialog_item_texts[shift_index] = g_field_dialog_item_texts[shift_index + 1];
-                            shift_index += 1;
-                        }
-                        index -= 1;
-                        g_field_dialog_item_count -= 1;
-                        break;
+                        g_field_dialog_item_quantities[shift_index] = g_field_dialog_item_quantities[shift_index + 1];
+                        g_field_dialog_item_texts[shift_index] = g_field_dialog_item_texts[shift_index + 1];
+                        shift_index += 1;
                     }
+
+                    index -= 1;
+                    g_field_dialog_item_count -= 1;
+                    break;
                 }
             }
-            index += 1;
-        } while (index < g_field_dialog_item_count);
+        }
     }
 }
 
@@ -1193,9 +1226,11 @@ static void field_update_text_session(void)
     else
     {
         g_field_draw_count = 1;
+
         if (g_field_label_actor_count >= 2U)
         {
             g_pad_input |= g_pad_input_inject;
+
             if (g_pad_input & (PADLup | PADLleft))
             {
                 g_field_selected_actor_label = g_field_selected_actor_label ? g_field_selected_actor_label - 1 : g_field_label_actor_count - 1;
@@ -1228,6 +1263,7 @@ s32 field_read_controller_buttons(s32 index)
 
     ports = CONTROLLER_STATE->ports;
     port = &ports[index];
+
     if (port->published_sample.device_type >= CONTROLLER_DEVICE_CONFIGURING)
     {
         return 0;
@@ -1242,6 +1278,7 @@ s32 field_read_controller_buttons(s32 index)
     if (port->published_sample.device_type != CONTROLLER_DEVICE_DIGITAL)
     {
         stick = port->current_sample.left_stick_x;
+
         if (stick < -FIELD_PAD_STICK_THRESHOLD)
         {
             buttons |= PADLleft;
@@ -1253,6 +1290,7 @@ s32 field_read_controller_buttons(s32 index)
 
         port_offset = index * sizeof(*ports);
         stick = ((ControllerPortState*)((u8*)ports + port_offset))->current_sample.left_stick_y;
+
         if (stick < -FIELD_PAD_STICK_THRESHOLD)
         {
             buttons |= PADLup;
@@ -1279,6 +1317,7 @@ void field_update_input_repeat(void)
     buttons = field_read_controller_buttons(0);
     g_pad_input = 0;
     g_field_buffered_input = 0;
+
     if (((buttons == g_field_primary_held_buttons) ||
          ((g_field_primary_held_buttons != 0) && (buttons & (g_field_primary_held_buttons | FIELD_PAD_HOLD_BUTTONS)))) &&
         buttons != 0)
@@ -1289,6 +1328,7 @@ void field_update_input_repeat(void)
         {
             buttons = directions;
         }
+
         if (g_field_primary_repeat_delay == 0)
         {
             g_pad_input = buttons;
@@ -1311,8 +1351,10 @@ void field_update_input_repeat(void)
         g_field_primary_held_buttons = buttons;
         g_field_primary_repeat_delay = FIELD_PAD_REPEAT_DELAY;
     }
+
     buttons = field_read_controller_buttons(1);
     g_pad_input_inject = 0;
+
     if (((buttons == g_field_secondary_held_buttons) ||
          ((g_field_secondary_held_buttons != 0) && (buttons & (g_field_secondary_held_buttons | FIELD_PAD_HOLD_BUTTONS)))) &&
         buttons != 0)
@@ -1323,6 +1365,7 @@ void field_update_input_repeat(void)
         {
             buttons = directions;
         }
+
         if (g_field_secondary_repeat_delay == 0)
         {
             g_pad_input_inject = buttons;
@@ -1345,6 +1388,7 @@ void field_update_input_repeat(void)
         g_field_secondary_held_buttons = buttons;
         g_field_secondary_repeat_delay = FIELD_PAD_REPEAT_DELAY;
     }
+
     g_field_buffered_input = g_pad_input;
 }
 
@@ -1384,6 +1428,7 @@ void field_process_input(FieldRenderHalf* render)
     {
         return;
     }
+
     if (buttons == FIELD_INPUT_RESET_COMBINATION)
     {
         g_pending_game_state = GAME_STATE_RETURN_TO_TITLE;
@@ -1395,21 +1440,25 @@ void field_process_input(FieldRenderHalf* render)
         field_fade_song(0, 60, 127);
         return;
     }
+
     if (g_field_interaction_active != 0)
     {
         g_field_party_routes_stale = 1;
         return;
     }
+
     if (g_field_party_routes_stale != 0)
     {
         g_field_party_routes_stale = 0;
         field_refresh_party_routes();
     }
+
     if (g_field_text_session_active != 0)
     {
         field_update_modal_text_session(render);
         return;
     }
+
     if (!(g_field_actors[0].control.word & FIELD_CONTROL_MODE_MASK))
     {
         for (actor_count = 0; actor_count < FIELD_PARTY_COUNT; actor_count++)
@@ -1419,6 +1468,7 @@ void field_process_input(FieldRenderHalf* render)
                 return;
             }
         }
+
         if (field_text_get_status(0) == FIELD_TEXT_STATUS_CLOSED && g_field_timed_panel_active == 0 && g_field_dialog_screen_mode == 0 && g_field_return_to_title_prompt_state == 0 &&
             g_field_item_drop_menu_open == 0 && field_party_reload_pending() == 0)
         {
@@ -1426,10 +1476,12 @@ void field_process_input(FieldRenderHalf* render)
             {
                 field_run_menu(FIELD_MENU_RENDER_BUFFERS, 0);
             }
+
             if (g_field_menu_controller_types[1] != CONTROLLER_DEVICE_DISCONNECTED && ports[1].published_sample.device_type == CONTROLLER_DEVICE_DISCONNECTED)
             {
                 field_run_menu(FIELD_MENU_RENDER_BUFFERS, 1);
             }
+
             if (cdrom_get_error_status() != 0)
             {
                 g_field_text_session_cd_error = 1;
@@ -1440,8 +1492,10 @@ void field_process_input(FieldRenderHalf* render)
                 field_begin_text_session();
                 return;
             }
+
             g_field_menu_controller_types[0] = ports[0].published_sample.device_type;
             g_field_menu_controller_types[1] = ports[1].published_sample.device_type;
+
             if (g_field_menu_locked != 0)
             {
                 if (field_is_scene_fading() == 0)
@@ -1462,10 +1516,13 @@ void field_process_input(FieldRenderHalf* render)
                     field_run_menu(FIELD_MENU_RENDER_BUFFERS, 0);
                 }
             }
+
             field_play_low_hp_warning();
+
             if (g_pad_input & PADRleft)
             {
                 actor_count = 0;
+
                 if (g_field_item_drop_enabled != 0)
                 {
                     for (actor_index = 0; actor_index < FIELD_ACTOR_COUNT; actor_index++)
@@ -1475,11 +1532,13 @@ void field_process_input(FieldRenderHalf* render)
                             actor_count++;
                         }
                     }
+
                     if (actor_count < 5)
                     {
                         field_open_item_drop_menu();
                         return;
                     }
+
                     field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
                 }
             }
@@ -1531,12 +1590,14 @@ static void field_run_menu(void* render_buffers, s32 controller)
     controllers->ports[0].actuator_control.fields.large_motor_command = 0;
     controllers->ports[1].small_motor_command = 0;
     controllers->ports[1].actuator_control.fields.large_motor_command = 0;
+
     if (menu_locked != 0 || g_field_actor_bindings[0].state != FIELD_BINDING_IDLE || g_field_actor_bindings[1].state != FIELD_BINDING_IDLE ||
         g_field_actor_bindings[2].state != FIELD_BINDING_IDLE)
     {
         field_begin_text_session();
         return;
     }
+
     field_play_sound(FIELD_SOUND_MENU_OPEN, AKAO_PAN_CENTER);
     field_reset_actor_resources();
 
@@ -1547,11 +1608,13 @@ static void field_run_menu(void* render_buffers, s32 controller)
         cdrom_stream(CD_RES_MENU_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
         cdrom_wait_queue_empty();
         screen_id = func_801405B0(render_buffers);
+
         if (screen_id == FIELD_MENU_CLOSED)
         {
             field_rebuild_party_actions(1);
             break;
         }
+
         if (screen_id == FIELD_MENU_GOLEM)
         {
             field_rebuild_party_actions(1);
@@ -1569,6 +1632,7 @@ static void field_run_menu(void* render_buffers, s32 controller)
             field_rebuild_party_actions(1);
             cdrom_stream(CD_RES_GNAME_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
             cdrom_wait_queue_empty();
+
             if ((screen_id == FIELD_MENU_NAME_ENTRY_B) || (screen_id == FIELD_MENU_NAME_ENTRY_C))
             {
                 func_80140004(GNAME_RENDER_BUFFERS, g_field_rename_initial_name, g_field_rename_target, 1, g_field_rename_source, g_field_rename_custom_name, 0);
@@ -1577,8 +1641,10 @@ static void field_run_menu(void* render_buffers, s32 controller)
             {
                 func_80140004(GNAME_RENDER_BUFFERS, g_field_rename_initial_name, g_field_rename_target, screen_id, g_field_rename_source, g_field_rename_custom_name, 0);
             }
+
             field_text_reset_windows();
             g_script_repeat_count = g_field_rename_source;
+
             if ((screen_id == FIELD_MENU_NAME_ENTRY_B) || (screen_id == FIELD_MENU_NAME_ENTRY_C))
             {
                 g_script_repeat_count = 0;
@@ -1590,6 +1656,7 @@ static void field_run_menu(void* render_buffers, s32 controller)
             }
         }
     }
+
     field_reset_actor_resources();
 }
 
@@ -1626,11 +1693,13 @@ static void field_update_modal_text_session(FieldRenderHalf* render)
     if (g_field_text_session_active != 0)
     {
         field_update_text_session();
+
         if (g_field_text_session_active != 0)
         {
             field_draw_text_session(render);
             return;
         }
+
         field_text_reset_windows();
         akao_resume_audio(2);
         field_fade_song(0, 60, 127);
@@ -1698,6 +1767,7 @@ void field_rebuild_party_actions(s32 refresh_only)
     cdrom_set_audio_volume(0x7F, g_saved_game_ctx->options.bits.mono_sound);
     controllers_or_is_player = (uintptr_t)CONTROLLER_STATE;
     ((ControllerState*)controllers_or_is_player)->ports[0].actuators_enabled = g_saved_game_ctx->options.bits.vibration;
+
     if ((g_saved_game_ctx->characters[1].info.word & FIELD_CHARACTER_PAD_CONTROLLED) && (g_saved_game_ctx->characters[1].name[0] != 0))
     {
         ((ControllerState*)controllers_or_is_player)->ports[1].actuators_enabled = g_saved_game_ctx->options.bits.vibration;
@@ -1706,10 +1776,10 @@ void field_rebuild_party_actions(s32 refresh_only)
     {
         ((ControllerState*)controllers_or_is_player)->ports[1].actuators_enabled = 0;
     }
+
     if (refresh_only == 0)
     {
-        player_index = 0;
-        do
+        for (player_index = 0; player_index < FIELD_PARTY_COUNT; player_index++)
         {
             member_offset = player_index * sizeof(FieldCharacterRecord);
             member = &g_field_player_records[player_index];
@@ -1721,6 +1791,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                 member->head.bits.active = 1;
                 slot_or_type = member_save->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK;
                 character_kind = slot_or_type;
+
                 if (character_kind < FIELD_CHARACTER_GUEST)
                 {
                     member->head.bits.alt_appearance = character_kind;
@@ -1751,13 +1822,12 @@ void field_rebuild_party_actions(s32 refresh_only)
                 member->character_id = 0;
                 member->head.bits.active = 0;
             }
-            player_index += 1;
+        }
 
-        } while (player_index < FIELD_PARTY_COUNT);
         field_upload_golem_palettes();
     }
-    player_index = 0;
-    do
+
+    for (player_index = 0; player_index < FIELD_PARTY_COUNT; player_index++)
     {
         player = (FieldPlayerRecord*)((u8*)g_field_player_records + (player_index << 9) + player_index * 0x68);
         state_offset = player_index * sizeof(FieldObjectState);
@@ -1773,13 +1843,16 @@ void field_rebuild_party_actions(s32 refresh_only)
             actor->control.word = ((actor->control.word & ~FIELD_CONTROL_MODE_MASK) | ((player_save->characters[0].info.bytes[0] >> 7) ^ 1));
             weapon_type = FIELD_ITEM_TYPE(player_save->characters[0].equipment[FIELD_WEAPON_SLOT].info.word);
             controllers_or_is_player = player_index < FIELD_PLAYER_COUNT;
+
             if (player->head.bytes.weapon_type != weapon_type)
             {
                 player->head.bytes.weapon_type = weapon_type;
+
                 if (controllers_or_is_player != 0)
                 {
                     field_apply_weapon_action_params(player_index);
                 }
+
                 if (refresh_only == 0)
                 {
                     health = &g_field_object_states[player_index];
@@ -1788,33 +1861,38 @@ void field_rebuild_party_actions(s32 refresh_only)
                     health->maximum_hp = hp;
                     health->current_hp.word = hp;
                 }
+
                 if ((g_field_scene_mode_bit != 0) && (refresh_only != 0) && (controllers_or_is_player != 0))
                 {
                     field_load_weapon_sfx_table(player_index, player->head.bytes.weapon_type);
                 }
             }
+
             player->unk258 = 0;
+
             if ((u32)(player->head.bytes.weapon_type - 1) < 2U)
             {
                 player->unk258 = 1;
                 equipment_index = 1;
                 equipment_player = player;
                 equipment_offset = character_offset + sizeof(FieldItemRecord);
-                do
+
+                for (; equipment_index < FIELD_EQUIPMENT_SLOT_COUNT; equipment_index++, equipment_offset += sizeof(FieldItemRecord))
                 {
                     equipment = (SavedGameLayout*)((u8*)g_saved_game_ctx + equipment_offset);
+
                     if (equipment->characters[0].equipment[0].name[0] != 0)
                     {
                         equipment_info = equipment->characters[0].equipment[0].info.word;
+
                         if ((FIELD_ITEM_CATEGORY(equipment_info) == FIELD_ITEM_CATEGORY_ARMOR) && !FIELD_ITEM_TYPE(equipment_info))
                         {
                             equipment_player->unk258 = 0;
                         }
                     }
-                    equipment_index += 1;
-                    equipment_offset += sizeof(FieldItemRecord);
-                } while (equipment_index < FIELD_EQUIPMENT_SLOT_COUNT);
+                }
             }
+
             if (player_index == FIELD_PARTY_COMPANION && g_field_player_records[FIELD_PARTY_COMPANION].character_kind == player_index)
             {
                 field_load_party_script_page(2, g_field_player_records[FIELD_PARTY_COMPANION].character_id + FIELD_RES_COMPANION_ACTIONS);
@@ -1826,16 +1904,16 @@ void field_rebuild_party_actions(s32 refresh_only)
                 parameter_params = g_field_action_animation_parameters + 1;
                 command_save = (SavedGameLayout*)((u8*)g_saved_game_ctx + character_offset);
                 command_action_offset = row_offset;
-                do
+
+                for (; slot_or_type < FIELD_COMMAND_SLOT_COUNT; command_action_offset += sizeof(FieldActionSlot), slot_or_type++)
                 {
                     command_view = (SavedGameLayout*)((u8*)command_save + slot_or_type);
                     command_action = (FieldActionSlot*)(command_action_offset + (uintptr_t)g_field_resource_actions);
                     command_action->command = command_view->characters[0].info.actions.commands[0];
                     command_action->animation = animation_params[command_view->characters[0].info.actions.commands[0] * 2];
                     command_action->parameter = parameter_params[command_view->characters[0].info.actions.commands[0] * 2];
-                    command_action_offset += sizeof(FieldActionSlot);
-                    slot_or_type += 1;
-                } while (slot_or_type < FIELD_COMMAND_SLOT_COUNT);
+                }
+
                 skill_character_offset = character_offset;
                 skill_none = FIELD_SKILL_NONE;
                 skill_row_offset = row_offset;
@@ -1843,6 +1921,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                 skills_start = (SavedGameLayout*)(save_base + skill_character_offset);
                 skill_action_offset = FIELD_SKILL_ACTION_BASE * sizeof(FieldActionSlot);
                 skill_cursor = skills_start;
+
                 do
                 {
                     skill_character_offset = ~skill_character_offset;
@@ -1860,6 +1939,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                     skill_cursor = (SavedGameLayout*)(~(uintptr_t)skill_cursor);
                     skill_cursor = (SavedGameLayout*)(~(uintptr_t)skill_cursor);
                     skill_empty = skill_cursor->characters[0].info.actions.skills[0] == skill_none;
+
                     if (skill_empty)
                     {
                         empty_action = (FieldActionSlot*)(skill_action_offset + skill_row_offset + (uintptr_t)g_field_resource_actions);
@@ -1873,6 +1953,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                     else
                     {
                         skill = skill_cursor->characters[0].info.actions.skills[0];
+
                         if (skill & FIELD_SKILL_INSTRUMENT)
                         {
                             instrument_action = (FieldActionSlot*)(skill_action_offset + skill_row_offset + (uintptr_t)g_field_resource_actions);
@@ -1888,10 +1969,12 @@ void field_rebuild_party_actions(s32 refresh_only)
                             parameter = 0x8018;
                             parameter += spell;
                             parameter += instrument->derived.bytes[0] * 14;
+
                             if (!(spell & 1))
                             {
                                 parameter += 0x800;
                             }
+
                             instrument_action->parameter = parameter;
                             instrument_action->flags.target_group = 0;
                         }
@@ -1911,14 +1994,14 @@ void field_rebuild_party_actions(s32 refresh_only)
                                 (((skill + FIELD_TECHNIQUE_SEQUENCE_BASE) | ~FIELD_ACTION_TECHNIQUE_MASK) + (weapon_type * FIELD_TECHNIQUES_PER_WEAPON));
                         }
                     }
+
                     skill_cursor = (SavedGameLayout*)((u8*)skill_cursor + 1);
                     skill_action_offset += sizeof(FieldActionSlot);
                 } while ((intptr_t)skill_cursor < (intptr_t)((u8*)skills_start + FIELD_SKILL_SLOT_COUNT));
             }
         }
-        player_index += 1;
+    }
 
-    } while (player_index < FIELD_PARTY_COUNT);
     field_refresh_party_routes();
 }
 
@@ -1992,6 +2075,7 @@ void field_open_shop_mode_0(s32 shop_options)
     if (g_field_modal_state == FIELD_MODAL_NONE)
     {
         count = 0;
+
         for (i = 0; i < FIELD_ITEM_COUNT; i++)
         {
             if (g_saved_game_ctx->items[0].name[0] != 0)
@@ -2000,6 +2084,7 @@ void field_open_shop_mode_0(s32 shop_options)
                 break;
             }
         }
+
         for (i = 0; i < FIELD_ITEM_KIND_COUNT; i++)
         {
             if (g_saved_game_ctx->item_counts[i] != 0)
@@ -2008,6 +2093,7 @@ void field_open_shop_mode_0(s32 shop_options)
                 break;
             }
         }
+
         if (count == 0)
         {
             field_begin_empty_shop_notice(0);
@@ -2088,20 +2174,24 @@ void field_update_modal(FieldRenderHalf* render)
                 return;
             }
         }
+
         return;
     case FIELD_MODAL_CARDA:
         if ((g_field_card_overlay_mode != 0) && (carda_update_frame(render) != 0))
         {
             field_reset_actor_resources();
+
             switch (g_field_card_overlay_mode)
             {
             case 2:
                 field_rebuild_party_actions(0);
+
                 for (index = 0; index < FIELD_PARTY_COUNT; index++)
                 {
                     g_field_player_records[index].resource_id = 0;
                     g_field_player_records[index].portrait_index = FIELD_PORTRAIT_NONE;
                 }
+
                 g_music_track_index = g_saved_game_ctx->track.bits.music_track;
                 field_set_scene_parameters(g_saved_game_ctx->scene_id, g_saved_game_ctx->object_id, g_saved_game_ctx->spawn.bits.id, g_saved_game_ctx->music_id,
                                            g_saved_game_ctx->sound_bank_id, g_saved_game_ctx->secondary_music_id);
@@ -2117,12 +2207,14 @@ void field_update_modal(FieldRenderHalf* render)
             case 5:
                 break;
             }
+
             g_gosub_result_count = 1;
             g_field_gosub_state = 2;
             g_field_card_overlay_mode = 0;
             g_field_modal_state = FIELD_MODAL_NONE;
             return;
         }
+
         return;
     case FIELD_MODAL_NIKI:
         if ((g_field_niki_addhero_state != 0) && (niki_update_frame(render) != 0))
@@ -2132,11 +2224,13 @@ void field_update_modal(FieldRenderHalf* render)
             g_field_modal_state = FIELD_MODAL_NONE;
             return;
         }
+
         return;
     case FIELD_MODAL_ADDHERO:
         if (g_field_niki_addhero_state != 0)
         {
             result = addhero_state_step(render);
+
             switch (result)
             {
             case 1:
@@ -2161,6 +2255,7 @@ void field_update_modal(FieldRenderHalf* render)
                 return;
             }
         }
+
         return;
     case FIELD_MODAL_EMPTY_SHOP:
         if (g_pad_input & (PADRright | PADi))
@@ -2171,6 +2266,7 @@ void field_update_modal(FieldRenderHalf* render)
             g_pad_input = 0;
             break;
         }
+
         field_text_reset_scratch();
         field_draw_empty_shop_notice(render);
         field_text_upload_immediate_cache();
@@ -2180,6 +2276,7 @@ void field_update_modal(FieldRenderHalf* render)
         {
             return;
         }
+
         field_play_set_sfx(0, AKAO_PAN_CENTER, 0, 3);
         field_text_reset_windows();
         index = 0;
@@ -2191,6 +2288,7 @@ void field_update_modal(FieldRenderHalf* render)
         {
             return;
         }
+
         field_close_battle_results();
         field_text_reset_windows();
         index = 0;
@@ -2200,6 +2298,7 @@ void field_update_modal(FieldRenderHalf* render)
     default:
         return;
     }
+
     g_field_primary_held_buttons = field_read_controller_buttons(index);
     g_field_primary_repeat_delay = FIELD_PAD_REPEAT_DELAY;
     g_pad_input_inject = 0;
@@ -2230,11 +2329,13 @@ static void field_draw_empty_shop_notice(FieldRenderHalf* render)
     SPRT* packet_cursor;
 
     packet_cursor = (SPRT*)render->primitive_cursor;
+
     if (g_field_shop_notice_hidden == 0)
     {
         packet_cursor = field_draw_text(packet_cursor, render->ordering_table, field_dialog_text(&D_800EC400, 30), FIELD_TEXT_COLOR_NORMAL,
                                         SCREEN_WIDTH / 2, 104, FIELD_TEXT_ALIGN_CENTER);
     }
+
     render->primitive_cursor = (u8*)packet_cursor;
 }
 
@@ -2269,6 +2370,7 @@ void field_begin_duel_result(void)
     {
         g_field_duel_winner = 1;
         g_saved_game_ctx->characters[0].duel_losses = g_saved_game_ctx->characters[0].duel_losses + 1;
+
         if ((u32)(g_saved_game_ctx->characters[1].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
         {
             g_saved_game_ctx->characters[1].duel_wins = g_saved_game_ctx->characters[1].duel_wins + 1;
@@ -2278,6 +2380,7 @@ void field_begin_duel_result(void)
     {
         g_field_duel_winner = 0;
         g_saved_game_ctx->characters[0].duel_wins = g_saved_game_ctx->characters[0].duel_wins + 1;
+
         if ((u32)(g_saved_game_ctx->characters[1].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
         {
             g_saved_game_ctx->characters[1].duel_losses = g_saved_game_ctx->characters[1].duel_losses + 1;
@@ -2299,31 +2402,38 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render)
 
     packet_cursor = render->primitive_cursor;
     ot = render->ordering_table;
+
     switch (g_field_duel_panel_phase)
     {
     case FIELD_DUEL_SLIDE_IN:
         g_field_duel_panel_offset /= 2;
+
         if (g_field_duel_panel_offset == 0)
         {
             g_field_duel_panel_phase = FIELD_DUEL_HOLD;
             g_field_duel_panel_hold_frames = FIELD_DUEL_PANEL_HOLD_FRAMES;
         }
+
         break;
     case FIELD_DUEL_HOLD:
         g_field_duel_panel_hold_frames--;
+
         if (g_field_duel_panel_hold_frames == 0)
         {
             field_play_sound(FIELD_SOUND_DUEL_PANEL_OUT, AKAO_PAN_CENTER);
             g_field_duel_panel_phase = FIELD_DUEL_SLIDE_OUT;
             g_field_duel_panel_offset = -1;
         }
+
         break;
     case FIELD_DUEL_SLIDE_OUT:
         g_field_duel_panel_offset *= 2;
+
         if (g_field_duel_panel_offset < FIELD_DUEL_PANEL_END_OFFSET)
         {
             g_field_duel_panel_phase = FIELD_DUEL_FINISHED;
         }
+
         break;
     case FIELD_DUEL_FINISHED:
         return 1;
@@ -2377,31 +2487,38 @@ static s32 field_draw_duel_result(FieldRenderHalf* render)
 
     packet_cursor = render->primitive_cursor;
     ot = render->ordering_table;
+
     switch (g_field_duel_panel_phase)
     {
     case FIELD_DUEL_SLIDE_IN:
         g_field_duel_panel_offset /= 2;
+
         if (g_field_duel_panel_offset == 0)
         {
             g_field_duel_panel_phase = FIELD_DUEL_HOLD;
             g_field_duel_panel_hold_frames = FIELD_DUEL_PANEL_HOLD_FRAMES;
         }
+
         break;
     case FIELD_DUEL_HOLD:
         g_field_duel_panel_hold_frames--;
+
         if (g_field_duel_panel_hold_frames == 0)
         {
             field_play_sound(FIELD_SOUND_DUEL_PANEL_OUT, AKAO_PAN_CENTER);
             g_field_duel_panel_phase = FIELD_DUEL_SLIDE_OUT;
             g_field_duel_panel_offset = -1;
         }
+
         break;
     case FIELD_DUEL_SLIDE_OUT:
         g_field_duel_panel_offset *= 2;
+
         if (g_field_duel_panel_offset < FIELD_DUEL_PANEL_END_OFFSET)
         {
             g_field_duel_panel_phase = FIELD_DUEL_FINISHED;
         }
+
         break;
     case FIELD_DUEL_FINISHED:
         return 1;

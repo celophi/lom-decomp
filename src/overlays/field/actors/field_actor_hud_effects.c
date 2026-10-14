@@ -195,9 +195,6 @@ typedef union
 
 extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_COUNT];
 
-/** @brief FieldObjectState.movement bits cleared whenever an actor animation restarts. */
-#define FIELD_MOVEMENT_ANIMATION_BITS 0x1800
-
 /** @brief Animation held while the object is petrified. */
 #define FIELD_ANIMATION_PETRIFIED_POSE 0x14
 
@@ -377,6 +374,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
                 field_draw_actor_hud_panel(FIELD_HUD_SINGLE_X, FIELD_HUD_PARTY_Y, i, render_half, FIELD_HUD_HP_PER_BAR);
             }
         }
+
         break;
     case 2:
         panel_count = 0;
@@ -389,6 +387,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
                 panel_count++;
             }
         }
+
         break;
     case 3:
         panel_count = 0;
@@ -410,6 +409,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
                 panel_count++;
             }
         }
+
         break;
     }
 
@@ -995,6 +995,7 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
             SET_SPRT_WH_PACKED(sprite_cursor, FIELD_HUD_PANEL_WIDTH, FIELD_HUD_PANEL_HEIGHT);
             SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_COMPANION_PANEL_UV);
         }
+
         break;
     default:
         if (boss_panel != 0)
@@ -1007,6 +1008,7 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
             SET_SPRT_WH_PACKED(sprite_cursor, FIELD_HUD_ENEMY_PANEL_WIDTH, FIELD_HUD_ENEMY_PANEL_HEIGHT);
             SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_ENEMY_PANEL_UV);
         }
+
         break;
     }
 
@@ -1460,7 +1462,7 @@ void field_update_object_effects(s32 index)
                         if ((state->contact.word & FIELD_CONTACT_ANIMATION_HIDDEN) &&
                             (state->contact.bytes.controller_index == (actor->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE)))
                         {
-                            actor->presence = 0;
+                            actor->presence = FIELD_ACTOR_VISIBLE;
                             state->contact.word &= ~FIELD_CONTACT_ANIMATION_HIDDEN;
                         }
                     }
@@ -1497,7 +1499,7 @@ void field_handle_object_paralysis(FieldActor* actor, s32 is_set)
         actor->animation_frame = 0;
         actor->animation &= FIELD_ANIMATION_FACING;
         actor->animation_active = 1;
-        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
+        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
         field_restart_actor_animation(actor);
         START_OBJECT_EFFECT(actor, FIELD_STATUS_ANIMATION_PARALYSIS);
 #if !defined(VERSION_JP)
@@ -1519,7 +1521,7 @@ void field_handle_object_hypnosis(FieldActor* actor, s32 is_set)
         actor->animation_frame = 0;
         actor->animation &= FIELD_ANIMATION_FACING;
         actor->animation_active = 1;
-        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
+        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
         field_restart_actor_animation(actor);
         START_OBJECT_EFFECT(actor, FIELD_STATUS_ANIMATION_HYPNOSIS);
     }
@@ -1565,7 +1567,7 @@ void field_handle_object_sleep(FieldActor* actor, s32 is_set)
             actor->animation_state = 1;
             actor->animation_frame = 0;
             actor->animation_active = 1;
-            g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
+            g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
             field_restart_actor_animation(actor);
             actor->control.word |= FIELD_CONTROL_PLAY_ONCE;
         }
@@ -1589,7 +1591,7 @@ void field_handle_object_petrification(FieldActor* actor, s32 is_set)
         actor->animation_active = 1;
         actor->animation_frame = 0;
         actor->animation = (actor->animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_PETRIFIED_POSE;
-        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
+        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
         field_restart_actor_animation(actor);
         actor->control.word |= FIELD_CONTROL_UNK40000 | FIELD_CONTROL_PLAY_ONCE;
 #if !defined(VERSION_JP)
@@ -1602,7 +1604,7 @@ void field_handle_object_petrification(FieldActor* actor, s32 is_set)
         actor->animation_state = 1;
         actor->animation_active = 1;
         actor->animation &= FIELD_ANIMATION_FACING;
-        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_ANIMATION_BITS;
+        g_field_object_states[actor->object_index].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
         field_restart_actor_animation(actor);
         START_OBJECT_EFFECT(actor, 0x91);
         actor->control.word &= ~FIELD_CONTROL_UNK40000;
@@ -1644,7 +1646,7 @@ void field_handle_object_freeze(FieldActor* actor, s32 is_set)
     else
     {
         START_OBJECT_EFFECT(actor, 13);
-        actor->presence = 0;
+        actor->presence = FIELD_ACTOR_VISIBLE;
     }
 }
 
@@ -1874,6 +1876,7 @@ POLY_FT4* field_render_actor_ground_shadow(FieldActor* actor, POLY_FT4* prim, s3
             prim++;
         }
     }
+
     return prim;
 }
 

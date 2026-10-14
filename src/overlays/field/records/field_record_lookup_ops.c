@@ -8,9 +8,6 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
 
-/** @brief FieldActorRecord::pickup bit 15: the pickup is a counter, not a reward key. */
-#define FIELD_PICKUP_COUNTER 0x8000
-
 /** @brief FieldActorRecord::pickup bits 0-7: counter index of a counter pickup. */
 #define FIELD_PICKUP_INDEX_MASK 0xFF
 
@@ -67,9 +64,11 @@ void field_grant_actor_pickup(s32 recipient, s32 owner_id)
     actor = field_find_actor_record_or_default(owner_id);
     code = actor->pickup;
     index = code & FIELD_PICKUP_INDEX_MASK;
+
     if (!(code & FIELD_PICKUP_COUNTER))
     {
         table = (FieldRewardEntry*)g_field_battle->resources;
+
         for (index = 0; index < ((FieldRewardEntry*)g_field_battle->resources)->count; index++, table++)
         {
             if (table->key == code)
@@ -77,17 +76,21 @@ void field_grant_actor_pickup(s32 recipient, s32 owner_id)
                 break;
             }
         }
+
         battle = g_field_battle;
         found = ((FieldRewardEntry*)(index * sizeof(FieldRewardEntry) + (uintptr_t)battle->resources))->item;
         handle = field_find_free_inventory_record();
+
         if (handle == NULL)
         {
             return;
         }
+
         field_copy_inventory_record(handle, found);
         field_append_dialog_item((u8*)handle, 0);
         return;
     }
+
     ((void (*)(s32, FieldActorRecord*))field_receive_item)(index, actor);
     field_append_dialog_item(g_field_item_name_table.bytes + g_field_item_name_table.offsets[index], 1);
 }
@@ -108,19 +111,23 @@ void field_grant_actor_pickup(s32 recipient, s32 owner_id)
     actor = field_find_actor_record_or_default(owner_id);
     code = actor->pickup;
     index = code & FIELD_PICKUP_INDEX_MASK;
+
     if (!(code & FIELD_PICKUP_COUNTER))
     {
         s32 key;
 
         table = (FieldRewardEntry*)g_field_battle->resources;
+
         do
         {
             found = NULL;
         } while (0);
         count = table->count;
+
         do
         {
             index = 0;
+
             if (count != 0)
             {
                 s32 n;
@@ -131,6 +138,7 @@ void field_grant_actor_pickup(s32 recipient, s32 owner_id)
                 n = count;
                 cursor = base;
                 offset = 0;
+
                 do
                 {
                     do
@@ -140,11 +148,13 @@ void field_grant_actor_pickup(s32 recipient, s32 owner_id)
                             old_offset = offset;
                         } while (0);
                     } while (0);
+
                     if (cursor->key == key)
                     {
                         found = (u8*)(old_offset + (uintptr_t)base + 8);
                         break;
                     }
+
                     do
                     {
                         cursor++;
@@ -154,19 +164,24 @@ void field_grant_actor_pickup(s32 recipient, s32 owner_id)
                 } while (index < n);
             }
         } while (0);
+
         if (found == NULL)
         {
             return;
         }
+
         handle = field_find_free_inventory_record();
+
         if (handle == NULL)
         {
             return;
         }
+
         field_copy_inventory_record(handle, found);
         field_append_dialog_item((u8*)handle, 0);
         return;
     }
+
     ((void (*)(s32, FieldActorRecord*))field_receive_item)(index, actor);
     field_append_dialog_item(g_field_item_name_table.bytes + g_field_item_name_table.offsets[index], 1);
 }
@@ -198,10 +213,12 @@ FieldActorRecord* field_find_actor_record_or_default(s32 id)
     FieldActorRecord* actor;
 
     actor = field_find_actor_record(id);
+
     if (actor == NULL)
     {
         actor = &g_field_runtime->events[FIELD_DEFAULT_EVENT_RECORD];
     }
+
     return actor;
 }
 
@@ -233,6 +250,7 @@ FieldActorRecord* field_find_actor_record(s32 id)
     {
         return &g_field_runtime->events[id - FIELD_EVENT_ACTOR_ID_BASE];
     }
+
     return NULL;
 }
 
@@ -257,13 +275,16 @@ FieldActorRecord* field_alloc_actor_record(s32 id)
             g_field_runtime->actors[i].flags.bits.spawned = 0;
             g_field_runtime->actors[i].flags.bits.script_only = 0;
             g_field_runtime->actors[i].flags.bits.active = 1;
+
             for (j = 0; j < FIELD_ACTOR_SCRIPT_COUNT; j++)
             {
                 g_field_runtime->actors[i].scripts[j] = FIELD_NO_SCRIPT;
             }
+
             return &g_field_runtime->actors[i];
         }
     }
+
     return NULL;
 }
 
@@ -280,6 +301,7 @@ void field_stop_actor_script(s32 actor_id, s32 flags)
     {
         field_stop_actor(actor_id);
     }
+
     actor = field_find_actor_record_or_default(actor_id);
     actor->script.depth = 0;
     actor->script.frames[0].pc = NULL;
@@ -329,14 +351,17 @@ void* field_find_resource(s32 resource_id)
 
     base = field_get_scene_record_table();
     count = base[0] >> 2;
+
     for (i = 0; i < (s32)count; i++)
     {
         record = (u16*)((u8*)base + base[i]);
+
         if (*record == resource_id)
         {
             return record;
         }
     }
+
     record_game_diagnostic(DIAG_ERROR, DIAG_MISSING_RESOURCE, resource_id, 0);
     return NULL;
 }

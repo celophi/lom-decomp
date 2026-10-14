@@ -8,9 +8,6 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
 
-/** @brief Item argument that releases the item actor's record instead of spawning it. */
-#define FIELD_ITEM_RELEASE 0xFF
-
 /** @brief Actor record whose event table every spawned item record copies. */
 #define FIELD_ITEM_TEMPLATE_RECORD 4
 

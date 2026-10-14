@@ -708,7 +708,7 @@ static s32 field_finalize_actor_animation(FieldActorSlot* slot)
                 if (((owner_command != FIELD_ACTOR_COMMAND_DEFEATED) && (owner_command != FIELD_ACTOR_COMMAND_DEFEAT_END)) ||
                     (g_field_object_states[slot->owner_object_index].flags & FIELD_OBJECT_FLAG_KNOCKED_OUT))
                 {
-                    g_field_actors[slot->owner_object_index].presence = 0;
+                    g_field_actors[slot->owner_object_index].presence = FIELD_ACTOR_VISIBLE;
                 }
 
                 g_field_object_states[slot->owner_object_index].contact.word &= ~FIELD_CONTACT_ANIMATION_HIDDEN;
@@ -726,7 +726,7 @@ static s32 field_finalize_actor_animation(FieldActorSlot* slot)
                     if ((state_value & FIELD_CONTACT_ANIMATION_HIDDEN) &&
                         (g_field_object_states[slot->targets[found]].contact.bytes.controller_index == slot->slot_index))
                     {
-                        g_field_actors[slot->targets[found]].presence = 0;
+                        g_field_actors[slot->targets[found]].presence = FIELD_ACTOR_VISIBLE;
                         g_field_object_states[slot->targets[found]].contact.word &= ~FIELD_CONTACT_ANIMATION_HIDDEN;
                     }
                 }
@@ -1312,14 +1312,14 @@ void field_update_actor_animations(void)
                         if (track_index != 0)
                         {
                             u8 combined_value =
-                                field_evaluate_parameter_track(slot, curve_selector & 0xF) | controller->ports[0].actuator_control.fields.large_motor_command;
+                                field_evaluate_parameter_track(slot, curve_selector & FIELD_TRACK_INDEX_MASK) | controller->ports[0].actuator_control.fields.large_motor_command;
 
                             controller->ports[0].actuator_control.fields.large_motor_command = combined_value;
                             controller->ports[1].actuator_control.fields.large_motor_command = combined_value;
                         }
                         else
                         {
-                            u8 base_value = field_evaluate_parameter_track(slot, vibration_curves[0] & 0xF);
+                            u8 base_value = field_evaluate_parameter_track(slot, vibration_curves[0] & FIELD_TRACK_INDEX_MASK);
 
                             controller->ports[0].small_motor_command = (controller->ports[1].small_motor_command = base_value);
                         }
@@ -1408,7 +1408,7 @@ static void field_build_actor_render_commands(FieldRenderContext* render_ctx, s3
                 s32 track_value;
 
                 g_field_track_index = 0;
-                track_value = field_evaluate_parameter_track(slot, (slot->animation->sync_flags >> FIELD_ANIM_OWNER_CURVE_SHIFT) & 0xF);
+                track_value = field_evaluate_parameter_track(slot, (slot->animation->sync_flags >> FIELD_ANIM_OWNER_CURVE_SHIFT) & FIELD_TRACK_INDEX_MASK);
                 visibility = 0;
 
                 if (track_value != 0)
@@ -1466,7 +1466,7 @@ static void field_build_actor_render_commands(FieldRenderContext* render_ctx, s3
                         }
                         else
                         {
-                            g_field_actors[slot->targets[target_index]].presence = 0;
+                            g_field_actors[slot->targets[target_index]].presence = FIELD_ACTOR_VISIBLE;
                         }
                     }
                 }
@@ -1506,7 +1506,7 @@ static void field_build_actor_render_commands(FieldRenderContext* render_ctx, s3
                 case 3:
                     g_field_camera_offset_x = field_evaluate_parameter_track(slot, animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT);
                     g_field_camera_offset_y =
-                        field_evaluate_parameter_track(slot, ((slot->animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT) + 1) & 0xF);
+                        field_evaluate_parameter_track(slot, ((slot->animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT) + 1) & FIELD_TRACK_INDEX_MASK);
                     break;
                 }
             }
@@ -1528,12 +1528,12 @@ static void field_build_actor_render_commands(FieldRenderContext* render_ctx, s3
                 if (((animation->flags >> 8) & (FIELD_ANIM_COLOR_RGB >> 8)) != 0)
                 {
                     color.r = field_evaluate_parameter_track(slot, (u8)animation->flags);
-                    color.g = field_evaluate_parameter_track(slot, ((u8)slot->animation->flags + 1) & 0xF);
-                    color.b = field_evaluate_parameter_track(slot, ((u8)slot->animation->flags + 2) & 0xF);
+                    color.g = field_evaluate_parameter_track(slot, ((u8)slot->animation->flags + 1) & FIELD_TRACK_INDEX_MASK);
+                    color.b = field_evaluate_parameter_track(slot, ((u8)slot->animation->flags + 2) & FIELD_TRACK_INDEX_MASK);
                 }
                 else
                 {
-                    color.r = color.g = color.b = field_evaluate_parameter_track(slot, curve_selector & 0xF);
+                    color.r = color.g = color.b = field_evaluate_parameter_track(slot, curve_selector & FIELD_TRACK_INDEX_MASK);
                 }
 
                 if ((slot->animation->flags >> 8) & (FIELD_ANIM_GLOBAL_COLOR >> 8))
@@ -2140,7 +2140,7 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
         g_field_loaded_actor_count--;
     }
 
-    g_field_actors[slot].presence = 0;
+    g_field_actors[slot].presence = FIELD_ACTOR_VISIBLE;
     g_field_actors[slot].command = FIELD_ACTOR_COMMAND_NONE;
     g_field_actors[slot].script_busy = 0;
     g_field_actors[slot].script_index = FIELD_SCRIPT_NONE;
@@ -2325,7 +2325,7 @@ void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index)
 
     g_field_actors[actor_index].object_index = actor_index;
     g_field_actors[actor_index].animation_active = 0;
-    g_field_actors[actor_index].presence = 0;
+    g_field_actors[actor_index].presence = FIELD_ACTOR_VISIBLE;
     g_field_actors[actor_index].animation_frame = 0;
     g_field_actors[actor_index].command = FIELD_ACTOR_COMMAND_NONE;
     g_field_actors[actor_index].script_offset = 0;
@@ -3657,7 +3657,7 @@ static void field_update_actor_part_effects(FieldActorSlot* slot)
                     continue;
                 }
 
-                do
+                while (slot->active_counts[g_field_track_index][i] < target_count)
                 {
                     previous_count = slot->active_counts[g_field_track_index][i];
                     g_field_spawn_ground_point = 0;
@@ -3671,7 +3671,7 @@ static void field_update_actor_part_effects(FieldActorSlot* slot)
                     {
                         break;
                     }
-                } while (slot->active_counts[g_field_track_index][i] < target_count);
+                }
             }
             else
             {

@@ -9,12 +9,6 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
 
-/** @brief Money saturates at this amount. */
-#define FIELD_MONEY_MAX 10000000
-
-/** @brief Largest experience value of a progress word. */
-#define FIELD_EXPERIENCE_MAX 9999999
-
 /** @brief Progress word with the maximum experience and a zero level byte. */
 #define FIELD_EXPERIENCE_MAX_WORD ((u32)FIELD_EXPERIENCE_MAX << 8)
 
@@ -25,7 +19,7 @@
 #define FIELD_CHARACTER_COUNTER_BASE 0x68
 
 /** @brief Largest base stat value (FIELD_STAT_BASE_MASK bits of a stat halfword). */
-#define FIELD_STAT_MAX 0x18C
+#define FIELD_STAT_BASE_MAX 0x18C
 
 /** @brief Reward recipients below this one are party members. */
 #define FIELD_REWARD_PARTY_LIMIT 3
@@ -35,12 +29,6 @@
 
 /** @brief PetRecord::status bit 30: the stored companion gains experience. */
 #define FIELD_REGION_GAINS_EXPERIENCE_SHIFT 30
-
-/** @brief PetRecord::status bits 24-26: pending effects already applied. */
-#define FIELD_REGION_APPLIED_MASK 0x07000000
-
-/** @brief Pending effect slots of a stored companion record. */
-#define FIELD_REGION_PENDING_EFFECT_COUNT 3
 
 /** @brief Stored companions get an eighth of the experience awarded to the party. */
 #define FIELD_REGION_EXPERIENCE_SHIFT 3
@@ -90,6 +78,7 @@ void field_add_money(s32 recipient, s32 amount)
     if (recipient < FIELD_REWARD_PARTY_LIMIT)
     {
         g_field_game_state->money += amount;
+
         if (g_field_game_state->money > FIELD_MONEY_MAX)
         {
             g_field_game_state->money = FIELD_MONEY_MAX;
@@ -126,10 +115,13 @@ void field_award_experience(s32 record_index, s32 amount)
             field_add_guest_counter(amount);
             break;
         }
+
         index = 0;
+
         if (entry->status_flags & FIELD_RECORD_FLAG_SHARE_EXPERIENCE)
         {
             eligible_count = 0;
+
             for (; index < FIELD_PARTY_SIZE; index++)
             {
                 if ((g_field_game_state->characters[index].name[0] != 0) && (field_find_object_state(index)->current != 0))
@@ -137,12 +129,15 @@ void field_award_experience(s32 record_index, s32 amount)
                     eligible_count += 1;
                 }
             }
+
             if (eligible_count <= 0)
             {
                 eligible_count = 1;
             }
+
             amount /= eligible_count;
             amount = amount == 0 ? 1 : amount;
+
             for (index = 0; index < FIELD_PARTY_SIZE; index++)
             {
                 if ((g_field_game_state->characters[index].name[0] != 0) && (field_find_object_state(index)->current != 0))
@@ -151,28 +146,35 @@ void field_award_experience(s32 record_index, s32 amount)
                     {
                         field_add_guest_counter(amount);
                     }
+
                     packed_value = g_field_game_state->characters[index].progress.word;
                     distributed_value = (packed_value & 0xFF) | (((packed_value >> 8) + amount) << 8);
                     g_field_game_state->characters[index].progress.word = distributed_value;
+
                     if ((s32)(distributed_value >> 8) > FIELD_EXPERIENCE_MAX)
                     {
                         g_field_game_state->characters[record_index].progress.word =
                             g_field_game_state->characters[record_index].progress.level | FIELD_EXPERIENCE_MAX_WORD;
                     }
+
                     field_apply_character_level_ups(index, 1);
                 }
             }
+
             return;
         }
+
         packed_value = g_field_game_state->characters[record_index].progress.word;
         updated_value = (packed_value & 0xFF) | (((packed_value >> 8) + amount) << 8);
         g_field_game_state->characters[record_index].progress.word = updated_value;
+
         if ((s32)(updated_value >> 8) > FIELD_EXPERIENCE_MAX)
         {
             clamped_value = updated_value & 0xFF;
             clamped_value |= FIELD_EXPERIENCE_MAX_WORD;
             g_field_game_state->characters[record_index].progress.word = clamped_value;
         }
+
         field_apply_character_level_ups(record_index, 1);
     }
 }
@@ -188,6 +190,7 @@ static void field_add_guest_counter(s32 amount)
 
     state = g_field_game_state;
     state->words[state->characters[FIELD_PARTY_GUEST].info.bytes[1] + FIELD_CHARACTER_COUNTER_BASE] += amount;
+
     if ((u32)state->words[state->characters[FIELD_PARTY_GUEST].info.bytes[1] + FIELD_CHARACTER_COUNTER_BASE] > FIELD_COUNTER_MAX)
     {
         state->words[state->characters[FIELD_PARTY_GUEST].info.bytes[1] + FIELD_CHARACTER_COUNTER_BASE] = FIELD_COUNTER_MAX;
@@ -207,6 +210,7 @@ static void field_award_region_experience(u32 amount)
 
     amount >>= FIELD_REGION_EXPERIENCE_SHIFT;
     state = g_field_game_state;
+
     for (region_index = 0; region_index < PET_RECORD_COUNT; region_index++)
     {
         if ((state->pets[region_index].name[0] != 0) && ((state->pets[region_index].status.word >> FIELD_REGION_GAINS_EXPERIENCE_SHIFT) & 1))
@@ -214,6 +218,7 @@ static void field_award_region_experience(u32 amount)
             packed_value = state->pets[region_index].progress.word;
             updated_value = (packed_value & 0xFF) | (((packed_value >> 8) + amount) << 8);
             state->pets[region_index].progress.word = updated_value;
+
             if ((s32)(updated_value >> 8) > FIELD_EXPERIENCE_MAX)
             {
                 state->pets[region_index].progress.word = (updated_value & 0xFF) | FIELD_EXPERIENCE_MAX_WORD;
@@ -260,8 +265,10 @@ void field_apply_region_level_ups(s32 slot)
         record_game_diagnostic(DIAG_ERROR, DIAG_BAD_REGION_SLOT, slot, 0);
         return;
     }
+
     record = &g_field_game_state->pets[slot];
     pending = -1;
+
     if (record->name[0] != 0)
     {
         do
@@ -269,16 +276,19 @@ void field_apply_region_level_ups(s32 slot)
             level = record->progress.level;
             threshold = field_level_threshold(level);
             experience = record->progress.word >> 8;
+
             if ((experience != 0) && (experience >= threshold))
             {
                 next_level = level + 1;
                 record->progress.level = next_level;
+
                 if ((next_level & 0xFF) > FIELD_LEVEL_MAX)
                 {
                     record->progress.level = FIELD_LEVEL_MAX;
                     pending = 0;
                     continue;
                 }
+
                 for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
                 {
                     stat = record->stats[i];
@@ -286,20 +296,24 @@ void field_apply_region_level_ups(s32 slot)
                     low &= FIELD_STAT_BASE_MASK;
                     stat = (stat & FIELD_STAT_EFFECTIVE_MASK) | low;
                     record->stats[i] = stat;
-                    if ((stat & FIELD_STAT_BASE_MASK) > FIELD_STAT_MAX)
+
+                    if ((stat & FIELD_STAT_BASE_MASK) > FIELD_STAT_BASE_MAX)
                     {
-                        record->stats[i] = (stat & FIELD_STAT_EFFECTIVE_MASK) | FIELD_STAT_MAX;
+                        record->stats[i] = (stat & FIELD_STAT_EFFECTIVE_MASK) | FIELD_STAT_BASE_MAX;
                     }
+
                     base_stat = record->stats[i] & FIELD_STAT_BASE_MASK;
                     record->stats[i] = base_stat | ((base_stat >> 2) << FIELD_STAT_EFFECTIVE_SHIFT);
                     record->stat_growth[i].bits.accumulator = record->stat_growth[i].bits.rate;
                 }
+
                 for (i = 0; i < 4; i++)
                 {
                     record->equipment_totals[i] += record->total_growth[i].byte >> FIELD_GROWTH_CARRY_SHIFT;
                     record->total_growth[i].bits.accumulator &= FIELD_GROWTH_ACCUMULATOR_KEEP;
                     record->total_growth[i].bits.accumulator += record->total_growth[i].bits.rate;
                 }
+
                 record->power += record->extra_growth.bytes[0] >> FIELD_GROWTH_CARRY_SHIFT;
                 record->extra_growth.growth.accumulator &= FIELD_GROWTH_ACCUMULATOR_KEEP;
                 record->extra_growth.growth.accumulator += record->extra_growth.growth.rate;
@@ -307,6 +321,7 @@ void field_apply_region_level_ups(s32 slot)
                                                      FIELD_INCREASE_DAMPED | FIELD_INCREASE_CAPPED);
                 record->extra_growth.halves[1] += record->extra_growth.bytes[1];
                 record->status.word &= ~FIELD_REGION_APPLIED_MASK;
+
                 for (i = 0; i < FIELD_REGION_PENDING_EFFECT_COUNT; i++)
                 {
                     record->status.effects[i] = FIELD_NO_EFFECT;
@@ -334,14 +349,17 @@ s32 field_try_character_level_up(s32 index, s32 notify)
     s32 level;
 
     level = g_field_game_state->characters[index].progress.level;
+
     if (field_level_threshold(level) <= (s32)(g_field_game_state->characters[index].progress.word >> 8))
     {
         g_field_game_state->characters[index].progress.level = level + 1;
+
         if (g_field_game_state->characters[index].progress.level > FIELD_LEVEL_MAX)
         {
             g_field_game_state->characters[index].progress.level = FIELD_LEVEL_MAX;
             return 0;
         }
+
         if ((g_field_game_state->characters[index].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_COMPANION)
         {
             field_grow_companion_stats(&g_field_game_state->characters[index]);
@@ -350,13 +368,17 @@ s32 field_try_character_level_up(s32 index, s32 notify)
         {
             field_grow_character_stats(&g_field_game_state->characters[index]);
         }
+
         field_refresh_party_member(index);
+
         if (notify != 0)
         {
             field_spawn_shared_animation_actor(index, FIELD_SIGNAL_LEVEL_UP);
         }
+
         return -1;
     }
+
     return 0;
 }
 
@@ -364,7 +386,7 @@ s32 field_try_character_level_up(s32 index, s32 notify)
  * @brief Level-up growth of a party member that is not a stored companion.
  * @param character Party member record.
  * @note Adds the eight four-bit increases of the weapon's item type to the base stats,
- *       clamped to FIELD_STAT_MAX, then recomputes hp.
+ *       clamped to FIELD_STAT_BASE_MAX, then recomputes hp.
  */
 static void field_grow_character_stats(FieldCharacterRecord* character)
 {
@@ -374,6 +396,7 @@ static void field_grow_character_stats(FieldCharacterRecord* character)
     u32 low;
 
     deltas = g_field_item_type_stat_growth[character->equipment[FIELD_WEAPON_SLOT].info.bits.item_type];
+
     for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
     {
         stat = character->stats[i];
@@ -381,12 +404,15 @@ static void field_grow_character_stats(FieldCharacterRecord* character)
         low &= FIELD_STAT_BASE_MASK;
         stat = (stat & FIELD_STAT_EFFECTIVE_MASK) | low;
         character->stats[i] = stat;
-        if ((stat & FIELD_STAT_BASE_MASK) > FIELD_STAT_MAX)
+
+        if ((stat & FIELD_STAT_BASE_MASK) > FIELD_STAT_BASE_MAX)
         {
-            character->stats[i] = (stat & FIELD_STAT_EFFECTIVE_MASK) | FIELD_STAT_MAX;
+            character->stats[i] = (stat & FIELD_STAT_EFFECTIVE_MASK) | FIELD_STAT_BASE_MAX;
         }
+
         deltas >>= 4;
     }
+
     character->hp = field_add_stat_increase(character->hp, (u32)(character->stats[FIELD_STAT_HP_GROWTH] & FIELD_STAT_BASE_MASK) >> 2,
                                             FIELD_INCREASE_DAMPED | FIELD_INCREASE_CAPPED);
 }
@@ -406,10 +432,12 @@ static void field_grow_companion_stats(FieldCharacterRecord* character)
     u32 slot;
 
     slot = g_field_game_state->joined_pet;
+
     if (slot >= PET_RECORD_COUNT)
     {
         record_game_diagnostic(DIAG_ERROR, DIAG_BAD_COMPANION_SLOT, slot, 0);
     }
+
     for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
     {
         stat = character->stats[i];
@@ -418,13 +446,16 @@ static void field_grow_companion_stats(FieldCharacterRecord* character)
         stat &= FIELD_STAT_EFFECTIVE_MASK;
         stat |= low;
         character->stats[i] = stat;
-        if ((stat & FIELD_STAT_BASE_MASK) > FIELD_STAT_MAX)
+
+        if ((stat & FIELD_STAT_BASE_MASK) > FIELD_STAT_BASE_MAX)
         {
-            character->stats[i] = (stat & FIELD_STAT_EFFECTIVE_MASK) | FIELD_STAT_MAX;
+            character->stats[i] = (stat & FIELD_STAT_EFFECTIVE_MASK) | FIELD_STAT_BASE_MAX;
         }
+
         g_field_game_state->pets[g_field_game_state->joined_pet].stat_growth[i].bits.accumulator =
             g_field_game_state->pets[g_field_game_state->joined_pet].stat_growth[i].bits.rate;
     }
+
     total = character->unk26 + (g_field_game_state->pets[g_field_game_state->joined_pet].extra_growth.bytes[0] >> FIELD_GROWTH_CARRY_SHIFT);
     character->unk26 = total;
     g_field_game_state->pets[g_field_game_state->joined_pet].power = total;
@@ -442,11 +473,13 @@ static void field_grow_companion_stats(FieldCharacterRecord* character)
         g_field_game_state->pets[g_field_game_state->joined_pet].total_growth[i].bits.accumulator +=
             g_field_game_state->pets[g_field_game_state->joined_pet].total_growth[i].bits.rate;
     }
+
     character->hp = field_add_stat_increase(character->hp, (u32)(character->stats[FIELD_STAT_HP_GROWTH] & FIELD_STAT_BASE_MASK) >> 2,
                                             FIELD_INCREASE_DAMPED | FIELD_INCREASE_CAPPED);
     g_field_game_state->pets[g_field_game_state->joined_pet].progress.level = character->progress.level;
     g_field_game_state->pets[g_field_game_state->joined_pet].hp = character->hp;
     g_field_game_state->pets[g_field_game_state->joined_pet].status.word &= ~FIELD_REGION_APPLIED_MASK;
+
     for (i = 0; i < FIELD_REGION_PENDING_EFFECT_COUNT; i++)
     {
         g_field_game_state->pets[g_field_game_state->joined_pet].status.effects[i] = FIELD_NO_EFFECT;
@@ -473,9 +506,11 @@ s32 field_add_stat_increase(s32 value, s32 increase, s32 flags)
     {
         result = value + increase;
     }
+
     if ((flags & FIELD_INCREASE_CAPPED) && (u32)result > FIELD_INCREASE_CAP)
     {
         result = FIELD_INCREASE_CAP;
     }
+
     return result;
 }

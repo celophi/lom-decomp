@@ -33,6 +33,19 @@ typedef struct
     u32 flags;
 } FieldResourceEntry;
 
+/** @brief Shift of the cue kind in FieldResourceEntry::attribute.sound_cue. */
+#define FIELD_SOUND_CUE_KIND_SHIFT 12
+/** @brief Sound id bits of FieldResourceEntry::attribute.sound_cue. */
+#define FIELD_SOUND_CUE_ID_MASK 0xFFF
+/** @brief Sound cue kinds: play the sound once, or play it as a set effect bound to the resource. */
+#define FIELD_SOUND_CUE_PLAY 0
+#define FIELD_SOUND_CUE_SET_SFX 1
+
+/** @brief FieldResourceEntry::flags bit: the resource has an action table and eight-direction animations. */
+#define FIELD_RESOURCE_HAS_ACTIONS 1
+/** @brief FieldResourceEntry::flags bit: the entry holds loaded data. */
+#define FIELD_RESOURCE_LOADED 2
+
 extern FieldResourceEntry g_field_resource_entries[];
 
 /** @brief Number of field object states (g_field_object_states). */
@@ -100,6 +113,10 @@ typedef union
 
 /** @brief FieldMovementWord bits holding the running action sequence (0, 0x800 or 0x1000). */
 #define FIELD_MOVEMENT_SEQUENCE_MASK 0x1800
+/** @brief FIELD_MOVEMENT_SEQUENCE_MASK value: an effect started the object's action animation without a contact. */
+#define FIELD_MOVEMENT_SEQUENCE_LAUNCHED 0x800
+/** @brief FIELD_MOVEMENT_SEQUENCE_MASK value: an effect contact resolved the object's pending action. */
+#define FIELD_MOVEMENT_SEQUENCE_CONTACT 0x1000
 /** @brief FieldObjectState::action_parameter value of an object without a pending action. */
 #define FIELD_ACTION_PARAMETER_NONE 0xFFFF
 /** @brief FieldObjectState::action_parameter bits 0-9: sequence id of the action's animation. */
@@ -439,6 +456,7 @@ typedef struct FieldObjectPart
         struct
         {
             u8 color_track_flags;
+            /** @brief Low nibble: CLUT column; high bits: effect CLUT row, FIELD_PALETTE_SELECTOR_SHARED and up for the shared CLUT. */
             u8 palette_selector;
             /** @brief Horizontal (X and Z) model scale, 0x40 for full size. */
             u8 scale_xz;
@@ -469,6 +487,18 @@ typedef struct FieldObjectPart
     s16 unk44;
     s16 unk46;
 } FieldObjectPart;
+
+/** @brief FieldObjectPart::spawn_flags bit 23: the object moves without map collision (script opcodes 0xA5/0xA6 toggle it). */
+#define FIELD_PART_IGNORE_MAP_COLLISION_BIT 23
+#define FIELD_PART_IGNORE_MAP_COLLISION (1 << FIELD_PART_IGNORE_MAP_COLLISION_BIT)
+
+/** @brief FieldObjectPart::palette_extent bits: the owner's footprint strength scales the part's horizontal (scale_xz) and vertical (scale_y) size. */
+#define FIELD_PART_FOOTPRINT_SCALES_XZ 0x02000000
+#define FIELD_PART_FOOTPRINT_SCALES_Y 0x04000000
+
+/** @brief A part size reduced in ten-percent steps by the footprint strength of object @p owner_index. */
+#define FIELD_FOOTPRINT_SCALED_SIZE(size, owner_index)                                                                                                       \
+    ((size) - (((size) * ((s32)(FIELD_OBJECT_FOOTPRINT_STRENGTH_RANGE - g_field_object_states[owner_index].effect_footprint_strength) >> 6)) / 10))
 
 /** @brief FieldObjectPart::appearance scale_xz of a full-size object; smaller objects use the small collision footprint. */
 #define FIELD_PART_FULL_SCALE 0x40
@@ -510,6 +540,38 @@ typedef struct FieldAnimationDef
     u16 sync_flags;
     u16 sync_parts;
 } FieldAnimationDef;
+
+/** @brief FieldAnimationDef::flags bits. */
+#define FIELD_ANIM_COLOR_CURVE_MASK 0xFF
+#define FIELD_ANIM_COLOR_RGB 0x100
+#define FIELD_ANIM_BLEND_SHIFT 9
+#define FIELD_ANIM_GLOBAL_COLOR 0x400
+#define FIELD_ANIM_KEEP_ALIVE 0x800
+#define FIELD_ANIM_CAMERA_OFFSET 0x1000
+#define FIELD_ANIM_CAMERA_MODE_SHIFT 13
+/** @brief FieldAnimationDef::flags bit 15: the definition carries its own duration. */
+#define FIELD_ANIM_OWN_DURATION 0x8000
+/** @brief FieldAnimationDef::frame_sound: bit 15 fires a sound at a frame; bits 8-14 are the sound, the low byte the frame. */
+#define FIELD_ANIM_FRAME_SOUND 0x8000
+/** @brief FieldAnimationDef::palette_animation bits 12-15: curve of the camera offset track. */
+#define FIELD_ANIM_CAMERA_CURVE_SHIFT 12
+/** @brief FieldAnimationDef::hit_test_mode values and bits. */
+#define FIELD_ANIM_ATTACK 2
+#define FIELD_ANIM_STARTED 0x80
+/** @brief FieldAnimationDef::sync_flags bits. */
+#define FIELD_ANIM_OWNER_VISIBILITY 0x2
+#define FIELD_ANIM_TARGET_VISIBILITY 0x4
+#define FIELD_ANIM_OWNER_TRACK_OFF 0x8
+#define FIELD_ANIM_TARGET_TRACK_OFF 0x10
+#define FIELD_ANIM_RESTART_AT_END 0x20
+#define FIELD_ANIM_OWNER_CURVE_SHIFT 8
+#define FIELD_ANIM_TARGET_CURVE_SHIFT 12
+/** @brief Visibility without a curve: the part named in the curve bits hides the owner or the targets while its effects live. */
+#define FIELD_ANIM_OWNER_PART_HIDES (FIELD_ANIM_OWNER_VISIBILITY | FIELD_ANIM_OWNER_TRACK_OFF)
+#define FIELD_ANIM_TARGET_PART_HIDES (FIELD_ANIM_TARGET_VISIBILITY | FIELD_ANIM_TARGET_TRACK_OFF)
+
+/** @brief Target entry of an animation track without a target object. */
+#define FIELD_TARGET_NONE 0xFF
 
 /** @brief Parameter curve of an animation: segment count, random flag and first segment, then the value range. */
 typedef struct
@@ -611,5 +673,181 @@ typedef struct FieldActorSlot
 } FieldActorSlot;
 
 extern FieldActorSlot g_field_actor_slots[];
+
+/**
+ * @brief Object-state flags bits 0-8: status ailments, in the order of the status text and immunity tables.
+ * @note Bit n is status effect n (field_apply_status_effect); g_field_object_flag_handlers starts each one's looping animation.
+ */
+#define FIELD_OBJECT_FLAG_POISON 0x0001
+#define FIELD_OBJECT_FLAG_DARKNESS 0x0002
+#define FIELD_OBJECT_FLAG_PARALYSIS 0x0004
+#define FIELD_OBJECT_FLAG_CONFUSION 0x0008
+#define FIELD_OBJECT_FLAG_FLAME_BURST 0x0010
+#define FIELD_OBJECT_FLAG_HYPNOSIS 0x0020
+#define FIELD_OBJECT_FLAG_SLEEP 0x0040
+#define FIELD_OBJECT_FLAG_PETRIFIED 0x0080
+#define FIELD_OBJECT_FLAG_FROZEN 0x0100
+/** @brief Object-state flags bit set while the object is knocked out. */
+#define FIELD_OBJECT_FLAG_KNOCKED_OUT 0x0200
+/** @brief Object-state flags bit set while another object is linked to this one. */
+#define FIELD_OBJECT_FLAG_LINK_TARGET 0x2000
+/**
+ * @brief Object-state flags bit: the Mini status (effect 10) - the object is shrunk to half size and its actions are restricted.
+ * @note Pad input may then only start actions 2 and 3; scripted actions and techniques
+ *       do not start at all. The bit is cleared when the object is hit.
+ */
+#define FIELD_OBJECT_FLAG_MINI 0x0400
+/** @brief Object-state flags bit set while a dash ability (Lunge, Retreat, Defensive Lunge, Slide) plays. */
+#define FIELD_OBJECT_FLAG_DASH 0x4000
+/** @brief Object-state flags bit: an action chain is running (cleared with the retry count). */
+#define FIELD_OBJECT_CHAINING 0x8000
+/** @brief Object-state flags bit set for one frame when the object is hit; tints the actor red. */
+#define FIELD_OBJECT_FLAG_HIT_FLASH 0x10000000
+
+/** @brief Object-state flag bits that make an object an invalid target. */
+#define FIELD_OBJECT_UNTARGETABLE_FLAGS (FIELD_OBJECT_FLAG_PETRIFIED | FIELD_OBJECT_FLAG_KNOCKED_OUT | FIELD_OBJECT_FLAG_LINK_TARGET)
+
+/** @brief Presence value of a visible actor record. */
+#define FIELD_ACTOR_VISIBLE 0
+
+/** @brief Presence value of an unused actor record. */
+#define FIELD_ACTOR_UNUSED 0xFF
+
+/** @brief Presence value of a hidden actor record. */
+#define FIELD_ACTOR_HIDDEN 0xFE
+
+/** @brief Low seven bits of FieldActor::animation select the animation. */
+#define FIELD_ANIMATION_INDEX_MASK 0x7F
+/** @brief FieldActor::animation bit that mirrors the animation. */
+#define FIELD_ANIMATION_FACING 0x80
+/** @brief Shift of FIELD_ANIMATION_FACING. */
+#define FIELD_ANIMATION_FACING_SHIFT 7
+
+/**
+ * @brief Abilities a player assigns to the action buttons (FieldActionSlot::command).
+ * @note An ability's code is also the animation the actor plays while using it
+ *       (FieldActor::animation without the facing bit). The names follow the
+ *       game's command name table (g_field_command_names), which gives each
+ *       unused code below an ability the same name as that ability.
+ */
+typedef enum FieldAbility
+{
+    FIELD_ABILITY_JUMP = 0x08,
+    /** Guards; held with the button. */
+    FIELD_ABILITY_DEFEND = 0x0A,
+    FIELD_ABILITY_LUNGE = 0x2F,
+    FIELD_ABILITY_RETREAT = 0x30,
+    /** Held with the button. Defense counts as 0 while it plays; also the pose after an instrument or a duel knock-down. */
+    FIELD_ABILITY_CROUCH = 0x31,
+    FIELD_ABILITY_PUSH = 0x32,
+    FIELD_ABILITY_CHEER = 0x33,
+    FIELD_ABILITY_SPIN = 0x34,
+    FIELD_ABILITY_GRAPPLE = 0x35,
+    FIELD_ABILITY_WHIRL = 0x36,
+    FIELD_ABILITY_BASH = 0x37,
+    /** Never touched by effect quads. */
+    FIELD_ABILITY_SOMERSAULT = 0x38,
+    /** Never touched by effect quads. */
+    FIELD_ABILITY_BACK_ROLL = 0x39,
+    FIELD_ABILITY_BACK_FLIP = 0x3A,
+    FIELD_ABILITY_MOONSAULT = 0x3B,
+    /** A player using it is not hit by attack spheres. */
+    FIELD_ABILITY_HIGH_JUMP = 0x3C,
+    /** A player using it keeps its height while moving. */
+    FIELD_ABILITY_DOUBLE_JUMP = 0x3D,
+    FIELD_ABILITY_TACKLE = 0x3E,
+    /** Answers an effect quad with action 2. */
+    FIELD_ABILITY_COUNTERATTACK = 0x3F,
+    /** Answers an effect quad with action 3. */
+    FIELD_ABILITY_COUNTERSTRIKE = 0x40,
+    FIELD_ABILITY_TAUNT = 0x41,
+    FIELD_ABILITY_EVADE = 0x42,
+    FIELD_ABILITY_TOSS = 0x43,
+    /** Ignores hits. */
+    FIELD_ABILITY_DEFENSIVE_LUNGE = 0x44,
+    FIELD_ABILITY_SLIDE = 0x45,
+    /** Follow-up attack with no name of its own; nothing in the field code starts it. */
+    FIELD_ABILITY_FOLLOW_UP_4E = 0x4E,
+    FIELD_ABILITY_FLIP_KICK = 0x4F,
+    /** Follow-up attack Spin chains into while button 2 is held. */
+    FIELD_ABILITY_FOLLOW_UP_50 = 0x50,
+    /** Follow-up attack Spin chains into while button 3 is held. */
+    FIELD_ABILITY_FOLLOW_UP_51 = 0x51
+} FieldAbility;
+
+/** @brief FieldObjectPart::placement_flags bits 12-13: where a sprite effect takes its CLUT (FIELD_PART_PALETTE_*). */
+#define FIELD_PART_PALETTE_SOURCE_SHIFT 12
+#define FIELD_PART_PALETTE_SOURCE_MASK 3
+#define FIELD_PART_PALETTE_SOURCE(part) (((part)->placement_flags.word >> FIELD_PART_PALETTE_SOURCE_SHIFT) & FIELD_PART_PALETTE_SOURCE_MASK)
+/** @brief Palette sources: the resource's CLUT row, the part's palette selector, or the sprite frame's own entry. */
+#define FIELD_PART_PALETTE_RESOURCE 0
+#define FIELD_PART_PALETTE_SELECTOR 1
+#define FIELD_PART_PALETTE_FRAME 2
+
+/** @brief Palette selector bits of the CLUT column (in 16-entry steps). */
+#define FIELD_PALETTE_SELECTOR_COLUMN_MASK 0xF
+/** @brief Shift of the effect CLUT row in a palette selector. */
+#define FIELD_PALETTE_SELECTOR_ROW_SHIFT 4
+/** @brief Palette selectors from this value up use the shared CLUT row. */
+#define FIELD_PALETTE_SELECTOR_SHARED 0x40
+
+/** @brief Actor commands (FieldActor::command). */
+enum
+{
+    FIELD_ACTOR_COMMAND_NONE = 0,
+    FIELD_ACTOR_COMMAND_BASE = 0x81,
+    FIELD_ACTOR_COMMAND_STEP = 0x81,
+    FIELD_ACTOR_COMMAND_HIT = 0x82,
+    FIELD_ACTOR_COMMAND_ACTION = 0x85,
+    FIELD_ACTOR_COMMAND_RECOVER = 0x86,
+    FIELD_ACTOR_COMMAND_INSTRUMENT = 0x87,
+    FIELD_ACTOR_COMMAND_WALK = 0x88,
+    FIELD_ACTOR_COMMAND_RISE = 0x89,
+    FIELD_ACTOR_COMMAND_SINK = 0x8A,
+    FIELD_ACTOR_COMMAND_WALK_TO_TARGET = 0x8B,
+    FIELD_ACTOR_COMMAND_WALK_FROM_TARGET = 0x8C,
+    FIELD_ACTOR_COMMAND_SEQUENCE_STEP = 0x8D,
+    FIELD_ACTOR_COMMAND_KNOCKED_DOWN = 0x8E,
+    FIELD_ACTOR_COMMAND_JUMP = 0x8F,
+    FIELD_ACTOR_COMMAND_DEFEATED = 0x90,
+    FIELD_ACTOR_COMMAND_TECHNIQUE = 0x91,
+    FIELD_ACTOR_COMMAND_DEFEAT_BOUND = 0x92,
+    FIELD_ACTOR_COMMAND_DEFEAT_WAIT = 0x93,
+    FIELD_ACTOR_COMMAND_DEFEAT_END = 0x94,
+    FIELD_ACTOR_COMMAND_SEQUENCE_WAIT = 0x95,
+    /** Follow-up attack started from a jump ability while action button 3 is held; no further chaining. */
+    FIELD_ACTOR_COMMAND_AIR_FOLLOW_UP = 0x96,
+    /** Runs like FIELD_ACTOR_COMMAND_SECOND_JUMP and counts as an action for hits; nothing in the C code sets it. */
+    FIELD_ACTOR_COMMAND_98 = 0x98,
+    FIELD_ACTOR_COMMAND_IDLE_AFTER_ANIMATION = 0x99,
+    FIELD_ACTOR_COMMAND_IDLE_AFTER_RELOAD = 0x9A,
+    /** Second jump of a Double Jump, started while recovering from the first. */
+    FIELD_ACTOR_COMMAND_SECOND_JUMP = 0x9B,
+    /** Raise the actor by command_param each frame for unk26 frames. */
+    FIELD_ACTOR_COMMAND_TIMED_LIFT = 0x9C,
+    /** Lower the actor by command_param each frame until it reaches the ground (or unk26 runs out). */
+    FIELD_ACTOR_COMMAND_DESCEND_TO_GROUND = 0x9D,
+    FIELD_ACTOR_COMMAND_APPROACH_TARGET = 0xA0,
+    FIELD_ACTOR_COMMAND_ACTION_END = 0xA4,
+    FIELD_ACTOR_COMMAND_TIMED_WALK = 0xA7,
+    FIELD_ACTOR_COMMAND_WAIT_ANIMATION = 0xA8,
+    FIELD_ACTOR_COMMAND_RUN_TO_TARGET = 0xAC,
+    FIELD_ACTOR_COMMAND_RUN = 0xAD,
+    FIELD_ACTOR_COMMAND_DEFEAT_DELAY = 0xAE,
+    FIELD_ACTOR_COMMAND_FOLLOW_LEADER = 0xAF,
+    FIELD_ACTOR_COMMAND_WALK_PATH = 0xB0,
+    FIELD_ACTOR_COMMAND_RUN_PATH = 0xB1,
+    FIELD_ACTOR_COMMAND_TURN = 0xB2,
+    FIELD_ACTOR_COMMAND_STOP = 0xB3,
+    FIELD_ACTOR_COMMAND_LEAVE_PATH = 0xB5,
+    FIELD_ACTOR_COMMAND_TIMED_SLIDE = 0xB6,
+    FIELD_ACTOR_COMMAND_WAIT = 0xB7,
+    FIELD_ACTOR_COMMAND_ATTACHED = 0xB8,
+    /** Leave the actor and its command untouched (dropped items wait in it until removed). */
+    FIELD_ACTOR_COMMAND_HOLD = 0xBA,
+    FIELD_ACTOR_COMMAND_RETIRE = 0xBB,
+    FIELD_ACTOR_COMMAND_WAIT_BOUND_ACTOR = 0xBC,
+    FIELD_ACTOR_COMMAND_INSTRUMENT_END = 0xBD
+};
 
 #endif

@@ -34,12 +34,6 @@
 /** @brief Frame after which the indicator fades out. */
 #define FIELD_INDICATOR_FADE_START 256
 
-/** @brief Ribbon animation table shared with the effect ribbons. */
-#define FIELD_RIBBON_FRAME_COUNT 12
-#define FIELD_RIBBON_UV_VARIANT 0x01
-#define FIELD_RIBBON_FLIP_V 0x40
-#define FIELD_RIBBON_FLIP_U 0x80
-
 /** @brief Ordering-table entry the indicators are drawn into. */
 #define FIELD_INDICATOR_OT_INDEX 3
 
@@ -114,6 +108,7 @@ void field_update_pair_indicators(FieldRenderHalf* render_half)
 
     g_field_pair_indicator_count = 0;
     g_field_pair_indicator_list[0] = FIELD_PAIR_LIST_END;
+
     if ((g_field_pair_indicators_disabled == 0) && (g_field_scene_mode_bit != 0) && (g_field_active_group != 0))
     {
         for (index = 0, active_count = 0; index < FIELD_PARTY_COUNT; index++)
@@ -123,14 +118,17 @@ void field_update_pair_indicators(FieldRenderHalf* render_half)
                 active[active_count++] = index;
             }
         }
+
         if (active_count >= 2)
         {
             if (active_count == 2)
             {
                 distance = FIELD_PAIR_RANGE;
+
                 if (!(g_field_object_states[active[0]].flags & FIELD_PAIR_EXCLUDED_FLAGS))
                 {
                     distance = active[1];
+
                     if (g_field_object_states[distance].flags & FIELD_PAIR_EXCLUDED_FLAGS)
                     {
                         distance = FIELD_PAIR_RANGE;
@@ -140,12 +138,14 @@ void field_update_pair_indicators(FieldRenderHalf* render_half)
                         distance = field_get_position_distance((VECTOR*)&g_field_actors[active[0]], (VECTOR*)&g_field_actors[distance]);
                     }
                 }
+
                 if (distance < FIELD_PAIR_RANGE)
                 {
                     if (g_field_pair_indicator_counters[0] == FIELD_INDICATOR_IDLE)
                     {
                         g_field_pair_indicator_counters[0] = 0;
                     }
+
                     if (g_field_pair_indicator_counters[0] != FIELD_INDICATOR_DONE)
                     {
                         /* The count is set to 2 here, not 1; readers stop at the terminator. */
@@ -159,6 +159,7 @@ void field_update_pair_indicators(FieldRenderHalf* render_half)
                 {
                     g_field_pair_indicator_counters[0] = FIELD_INDICATOR_IDLE;
                 }
+
                 field_draw_pair_indicator(0, render_half);
             }
             else
@@ -166,9 +167,11 @@ void field_update_pair_indicators(FieldRenderHalf* render_half)
                 for (pair = 0; pair < FIELD_PARTY_COUNT; pair++)
                 {
                     distance = FIELD_PAIR_RANGE;
+
                     if (!(g_field_object_states[g_field_party_hud_order[pair]].flags & FIELD_PAIR_EXCLUDED_FLAGS))
                     {
                         distance = g_field_party_hud_order[(pair + 1) % FIELD_PARTY_COUNT];
+
                         if (g_field_object_states[distance].flags & FIELD_PAIR_EXCLUDED_FLAGS)
                         {
                             distance = FIELD_PAIR_RANGE;
@@ -178,6 +181,7 @@ void field_update_pair_indicators(FieldRenderHalf* render_half)
                             distance = field_get_position_distance((VECTOR*)&g_field_actors[g_field_party_hud_order[pair]], (VECTOR*)&g_field_actors[distance]);
                         }
                     }
+
                     if ((distance < FIELD_PAIR_RANGE) && (g_field_actors[g_field_party_hud_order[pair]].presence != FIELD_ACTOR_UNUSED) &&
                         (g_field_actors[g_field_party_hud_order[(pair + 1) % FIELD_PARTY_COUNT]].presence != FIELD_ACTOR_UNUSED))
                     {
@@ -185,6 +189,7 @@ void field_update_pair_indicators(FieldRenderHalf* render_half)
                         {
                             g_field_pair_indicator_counters[pair] = 0;
                         }
+
                         if (g_field_pair_indicator_counters[pair] != FIELD_INDICATOR_DONE)
                         {
                             g_field_pair_indicator_list[g_field_pair_indicator_count << 1] = g_field_party_hud_order[pair];
@@ -196,9 +201,11 @@ void field_update_pair_indicators(FieldRenderHalf* render_half)
                     {
                         g_field_pair_indicator_counters[pair] = FIELD_INDICATOR_IDLE;
                     }
+
                     field_draw_pair_indicator(pair + 1, render_half);
                 }
             }
+
             g_field_pair_indicator_list[g_field_pair_indicator_count << 1] = FIELD_PAIR_LIST_END;
         }
     }
@@ -215,10 +222,12 @@ static inline s32* field_get_pair_indicator_counter(s32* counters, s32 slot)
     s32* counter;
 
     counter = counters;
+
     if (slot != 0)
     {
         counter = FIELD_ELEMENT_AT(counters, slot - 1);
     }
+
     return counter;
 }
 
@@ -242,6 +251,7 @@ static void field_draw_pair_indicator(s32 slot, FieldRenderHalf* render_half)
     ordering_table = render_half->ordering_table;
     counters = g_field_pair_indicator_counters;
     frame = *field_get_pair_indicator_counter(counters, slot);
+
     if (frame != FIELD_INDICATOR_IDLE && frame != FIELD_INDICATOR_DONE)
     {
         if (frame >= FIELD_INDICATOR_FRAMES)
@@ -249,10 +259,12 @@ static void field_draw_pair_indicator(s32 slot, FieldRenderHalf* render_half)
             *field_get_pair_indicator_counter(counters, slot) = FIELD_INDICATOR_DONE;
             return;
         }
+
         if (g_field_text_session_active == 0)
         {
             *field_get_pair_indicator_counter(counters, slot) = *field_get_pair_indicator_counter(counters, slot) + 1;
         }
+
         if (frame > FIELD_INDICATOR_FADE_START)
         {
             brightness = 255 - ((frame - FIELD_INDICATOR_FADE_START) * 2);
@@ -261,14 +273,17 @@ static void field_draw_pair_indicator(s32 slot, FieldRenderHalf* render_half)
         {
             brightness = 255;
         }
+
         if (brightness < 0)
         {
             brightness = 0;
         }
+
         if (brightness > 255)
         {
             brightness = 256;
         }
+
         setlen(quad, 9);
         SET_BGR0(quad, brightness, brightness, brightness);
         setcode(quad, 0x2E);
@@ -282,6 +297,7 @@ static void field_draw_pair_indicator(s32 slot, FieldRenderHalf* render_half)
         quad->uv1.word = g_field_ribbon_uv_corners[uv_offset + 1];
         quad->uv2.word = g_field_ribbon_uv_corners[uv_offset + 2];
         quad->uv3.word = g_field_ribbon_uv_corners[uv_offset + 3];
+
         if (uv_flags & FIELD_RIBBON_FLIP_U)
         {
             swap = quad->uv0.c.u;
@@ -291,6 +307,7 @@ static void field_draw_pair_indicator(s32 slot, FieldRenderHalf* render_half)
             quad->uv2.c.u = quad->uv3.c.u;
             quad->uv3.c.u = swap;
         }
+
         if (uv_flags & FIELD_RIBBON_FLIP_V)
         {
             swap = quad->uv0.c.v;
@@ -300,6 +317,7 @@ static void field_draw_pair_indicator(s32 slot, FieldRenderHalf* render_half)
             quad->uv1.c.v = quad->uv3.c.v;
             quad->uv3.c.v = swap;
         }
+
         quad->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 448, 0);
         quad->clut = getClut(80, 492);
         addPrim(&ordering_table[FIELD_INDICATOR_OT_INDEX], quad);

@@ -29,8 +29,6 @@
 
 /** @brief Scene resource selector bit kept in g_field_scene_mode_bit (the scene runs field_battle_setup). */
 #define FIELD_SCENE_MODE_FLAG 0x8000
-/** @brief Scene resource selector bits holding the scene id. */
-#define FIELD_SCENE_ID_MASK 0x7FFF
 /** @brief Where a scene file is read to. */
 #define FIELD_SCENE_FILE ((u8*)LOAD_BUFFER_AT(0x10000))
 /** @brief Map word of a scene: map id, and in bit 15 the timer mode for field_initialize_actor_parts. */
@@ -345,22 +343,27 @@ void field_update_scene(void)
 
     scene_state = SCENE_STATE;
     controller = CONTROLLER_STATE;
+
     if (g_field_scene_request_pending != 0)
     {
         controller->ports[1].small_motor_command = 0;
         controller->ports[0].small_motor_command = 0;
         controller->ports[1].actuator_control.fields.large_motor_command = 0;
         controller->ports[0].actuator_control.fields.large_motor_command = 0;
+
         if (g_field_audio_timer != 0)
         {
             fade_out_current_song();
+
             if (g_field_pending_music_id == FIELD_MUSIC_KEEP)
             {
                 field_play_song();
                 akao_fade_song_volume(0, 1, g_field_song_volume);
             }
+
             g_field_audio_timer = 0;
         }
+
         field_prepare_transition_tiles();
         field_upload_transition_tiles();
         scene_id = g_field_pending_scene_id;
@@ -372,6 +375,7 @@ void field_update_scene(void)
         previous_mode = g_field_scene_mode_bit;
         g_field_scene_mode_bit = scene_id & FIELD_SCENE_MODE_FLAG;
         scene_id = scene_id & FIELD_SCENE_ID_MASK;
+
         if (g_field_pending_music_id != FIELD_MUSIC_KEEP)
         {
             if (g_field_preserve_entry_music == 0)
@@ -379,6 +383,7 @@ void field_update_scene(void)
                 akao_fade_song_volume(0, FIELD_MUSIC_FADE_FRAMES, 0);
             }
         }
+
         scene_file = FIELD_SCENE_FILE;
         cdrom_queue_read((u16)(scene_id + CD_RES_FIELD_SCENE_BASE), scene_file);
         i = 0;
@@ -392,16 +397,19 @@ void field_update_scene(void)
         akao_release_all_sfx();
         field_initialize_actor_system();
         field_upload_transition_tiles();
+
         for (; i < FIELD_PARTY_COUNT; i++)
         {
             g_field_actors[i].x = (FIELD_DEFAULT_SPAWN_X + i * FIELD_PARTY_START_SPACING) << FIELD_POSITION_SHIFT;
             g_field_actors[i].y = 0;
             g_field_actors[i].z = FIELD_DEFAULT_SPAWN_Z << FIELD_POSITION_SHIFT;
         }
+
         if (previous_mode != g_field_scene_mode_bit)
         {
             field_load_instrument_bank(g_field_scene_mode_bit == 0);
         }
+
         field_upload_transition_tiles();
         /* Each FieldGroupBounds entry is copied as one word. */
         group_bounds_output = (u32*)g_field_group_bounds;
@@ -421,52 +429,66 @@ void field_update_scene(void)
         actor_scripts_section = FIELD_SCENE_SECTION(scene_file, FIELD_SCENE_ACTOR_SCRIPTS);
         records_section = FIELD_SCENE_SECTION(scene_file, FIELD_SCENE_RECORDS);
         portraits_section = FIELD_SCENE_SECTION(scene_file, FIELD_SCENE_PORTRAITS);
+
         while (i != 0)
         {
             *group_bounds_output++ = *group_bounds_source++;
             i--;
         }
+
         data_output = g_field_scene_data_buffer;
         g_field_scene_strings = g_field_scene_data_buffer;
         section_source = strings_section;
+
         while (section_source != actor_scripts_section)
         {
             *data_output++ = *section_source++;
         }
+
         g_field_event_scripts = (u16*)ALIGN4(data_output);
         section_source = event_scripts_section;
+
         while (section_source != strings_section)
         {
             *data_output++ = *section_source++;
         }
+
         g_field_actor_scripts = (u16*)ALIGN4(data_output);
         section_source = actor_scripts_section;
+
         while (section_source != records_section)
         {
             *data_output++ = *section_source++;
         }
+
         g_field_scene_record_table = (u32*)ALIGN4(data_output);
         section_source = records_section;
+
         while (section_source != actors_section)
         {
             *data_output++ = *section_source++;
         }
+
         section_source = portraits_section + 4;
         i = 0;
         portrait_count = *(u32*)portraits_section;
         g_field_scene_portraits = (u8*)ALIGN4(data_output);
         g_field_scene_portrait_count = portrait_count;
+
         while ((u32)i < g_field_scene_portrait_count)
         {
             /* image_count doubles as the byte counter of one portrait. */
             image_count = 0;
-            do
+
+            while (image_count < FIELD_PORTRAIT_BYTES)
             {
                 image_count++;
                 *data_output++ = *section_source++;
-            } while (image_count < FIELD_PORTRAIT_BYTES);
+            }
+
             i++;
         }
+
         g_field_scene_data_size = data_output - g_field_scene_data_buffer;
         g_field_previous_song_volume = g_field_song_volume;
         g_field_song_volume = *(u16*)scene_cursor;
@@ -482,46 +504,56 @@ void field_update_scene(void)
         actor = &g_field_actors[FIELD_PARTY_COUNT];
         actor_end = *(u16*)scene_cursor + FIELD_PARTY_COUNT;
         scene_cursor += 2;
+
         for (; i < FIELD_ACTOR_COUNT; i++, actor++)
         {
             actor->presence = FIELD_ACTOR_UNUSED;
         }
+
         top_image_slot = FIELD_FIRST_IMAGE_SLOT;
         D_80115890 = 0;
         action_base = (u8*)g_field_resource_actions;
         field_setup_chest_resource();
         i = 0;
+
         if ((actor_end - FIELD_PARTY_COUNT) > 0)
         {
             action_offset = FIELD_PARTY_COUNT * sizeof(FieldActionRow);
             geometry_offsets = (s32*)geometry_base;
             resource_offset = FIELD_PARTY_COUNT * sizeof(FieldResourceEntry);
+
             do
             {
                 image_count = 0;
                 description = (FieldSceneActorDescription*)(actor_description_base + *(s32*)scene_cursor);
                 image_cursor = description->images;
                 resource_table = (u8*)g_field_resource_entries;
+
                 while (*image_cursor != FIELD_ACTOR_IMAGE_END)
                 {
                     image_count++;
                     image_cursor++;
+
                     if (image_count == FIELD_ACTOR_IMAGE_COUNT)
                     {
                         break;
                     }
                 }
+
                 top_image_slot += image_count;
+
                 if (top_image_slot >= FIELD_IMAGE_SLOT_SKIP_FIRST && top_image_slot < FIELD_IMAGE_SLOT_SKIP_FIRST + FIELD_IMAGE_SLOT_SKIP_COUNT)
                 {
                     top_image_slot += FIELD_IMAGE_SLOT_SKIP_COUNT;
                 }
+
                 if (image_count != 0)
                 {
                     resource_base = resource_table;
                     resource_fields = OFFSET_FIRST_PTR(FieldResourceEntry, resource_offset, resource_base);
                     resource_fields->attribute.palette = description->palette;
                     resource_fields->slot_index = top_image_slot;
+
                     if (D_80115890 != 0)
                     {
                         resource_fields->unk8 = 0;
@@ -530,6 +562,7 @@ void field_update_scene(void)
                     {
                         resource_fields->unk8 = image_count != 1;
                     }
+
                     D_80115890 = image_count != 1;
                     resource_base = resource_table;
                     resource = OFFSET_FIRST_PTR(FieldResourceEntry, resource_offset, resource_base);
@@ -543,9 +576,11 @@ void field_update_scene(void)
                     /* image_index holds the action count until the image upload below. */
                     image_index = description->action_count;
                     action_index = 0;
+
                     if (image_index > 0)
                     {
                         action_fields = description->actions;
+
                         do
                         {
                             action = OFFSET_FIRST_PTR(FieldActionSlot, action_offset + action_index * sizeof(FieldActionSlot), action_base);
@@ -560,6 +595,7 @@ void field_update_scene(void)
                             action_fields++;
                         } while (action_index < image_index);
                     }
+
                     image_index = 0;
                 }
                 else
@@ -585,9 +621,11 @@ void field_update_scene(void)
                     inherited_resource->bound_animation_flags = description->unkA;
                     image_index = description->action_count;
                     action_index = 0;
+
                     if (image_count < image_index)
                     {
                         action_fields = description->actions;
+
                         do
                         {
                             action = OFFSET_FIRST_PTR(FieldActionSlot, action_offset + action_index * sizeof(FieldActionSlot), action_base);
@@ -602,10 +640,13 @@ void field_update_scene(void)
                             action_fields++;
                         } while (action_index < image_index);
                     }
+
                     DrawSync(0);
                     image_index = 0;
                 }
+
                 image_cursor = description->images;
+
                 while (image_count != 0)
                 {
                     field_upload_actor_image((FieldTimData*)(image_base + *(s32*)(image_base + (*image_cursor << 2))), top_image_slot - image_index,
@@ -614,6 +655,7 @@ void field_update_scene(void)
                     image_count--;
                     image_index++;
                 }
+
                 next_i = i + 1;
                 geometry_offsets++;
                 resource_offset += sizeof(FieldResourceEntry);
@@ -622,19 +664,24 @@ void field_update_scene(void)
                 scene_cursor += 4;
             } while (i < (actor_end - FIELD_PARTY_COUNT));
         }
+
         field_upload_transition_tiles();
         field_reset_object_tints();
         field_load_scene_actors(layout);
+
         if (g_field_pending_music_id != FIELD_MUSIC_KEEP)
         {
             field_capture_card_clock();
+
             if (g_field_preserve_entry_music == 0)
             {
                 field_stop_song();
             }
+
             if (g_field_pending_music_id != FIELD_MUSIC_FIXED)
             {
                 field_load_song(g_field_pending_music_id, 0);
+
                 if ((g_field_preserve_entry_music == 0) && (g_field_pending_music_id != FIELD_MUSIC_FIXED))
                 {
                     field_play_song();
@@ -644,18 +691,22 @@ void field_update_scene(void)
             {
                 field_load_fixed_song();
             }
+
             g_field_music_id = g_field_pending_music_id;
         }
         else
         {
             akao_fade_song_volume(0, FIELD_MUSIC_FADE_FRAMES, g_field_song_volume);
         }
+
         if (g_field_pending_secondary_music_id != FIELD_MUSIC_KEEP)
         {
             field_load_song(g_field_pending_secondary_music_id, 1);
             g_field_secondary_music_id = g_field_pending_secondary_music_id;
         }
+
         field_upload_transition_tiles();
+
         if (g_field_preserve_entry_music != 0)
         {
             g_field_audio_timer = FIELD_ENTRY_MUSIC_TIMER;
@@ -664,11 +715,14 @@ void field_update_scene(void)
         {
             g_field_audio_timer = 0;
         }
+
         g_field_preserve_entry_music = 0;
+
         if (g_field_scene_mode_bit != 0)
         {
             field_upload_resource_22_bank();
         }
+
         field_upload_transition_tiles();
         DrawSync(0);
         VSync(0);
@@ -679,11 +733,14 @@ void field_update_scene(void)
         field_upload_transition_tiles();
         field_text_reset_windows();
         field_camera_reset();
+
         if (g_field_scene_mode_bit != 0)
         {
             field_battle_setup(0);
         }
+
         spawn = field_header_record_at((u16)spawn_id);
+
         if (spawn == NULL)
         {
             default_spawn.h.z = FIELD_DEFAULT_SPAWN_Z;
@@ -692,10 +749,12 @@ void field_update_scene(void)
             default_spawn.bits.facing = 0;
             spawn = &default_spawn;
         }
+
         actor = g_field_actors;
         i = 0;
         direction_offsets = g_field_direction_offsets;
         direction_modes = g_field_direction_animation_modes;
+
         for (; i < FIELD_PARTY_COUNT; i++, actor++)
         {
             if (actor->presence != FIELD_ACTOR_UNUSED)
@@ -718,6 +777,7 @@ void field_update_scene(void)
                 field_restart_actor_animation(actor);
             }
         }
+
         field_refresh_actor_collisions();
         field_reset_leader_position_history();
         field_camera_track_party();
@@ -734,10 +794,12 @@ void field_update_scene(void)
         field_command_history_reset();
         field_clear_fade_prims();
         saved_scene_id = g_field_entry_scene.word;
+
         if (g_field_scene_mode_bit != 0)
         {
             saved_scene_id += FIELD_SCENE_MODE_FLAG;
         }
+
         field_store_entry_settings(saved_scene_id, object_id, g_field_music_id, spawn_id, g_field_sound_bank_id, g_field_secondary_music_id);
         field_upload_golem_palettes();
         field_refresh_party_routes();
@@ -783,14 +845,17 @@ void field_upload_actor_image(FieldTimData* image, s32 image_slot, s32 actor_ind
     width = image->file.palette.rect.w;
     height = image->file.palette.rect.h;
     size = image->file.palette.size;
+
     if (upload_palette != 0)
     {
         setRECT(&rect, 0, actor_index + FIELD_RESOURCE_CLUT_VRAM_Y, width * height, 1);
         LoadImage(&rect, image->file.palette.pixels);
     }
+
     image = (FieldTimData*)((u8*)image + size + FIELD_TIM_HEADER_SIZE);
     width = image->block.rect.w;
     height = image->block.rect.h;
+
     if (image_slot >= FIELD_IMAGE_SLOT_SECOND_ROW)
     {
         setRECT(&rect, FIELD_IMAGE_ROW1_X - ((image_slot - (FIELD_IMAGE_SLOT_SECOND_ROW - 1)) << 6), FIELD_IMAGE_ROW1_Y, width, height);
@@ -799,6 +864,7 @@ void field_upload_actor_image(FieldTimData* image, s32 image_slot, s32 actor_ind
     {
         setRECT(&rect, FIELD_IMAGE_ROW0_X - (image_slot << 6), 0, width, height);
     }
+
     LoadImage(&rect, image->block.pixels);
     DrawSync(0);
 }
@@ -818,6 +884,7 @@ void field_copy_scene_geometry(s32* src, s32* end)
     words = size >> 2;
     dst = g_field_resource_cursor;
     g_field_resource_cursor = (u8*)dst + (size & ~3);
+
     while (words != 0)
     {
         *dst = *src;
@@ -843,21 +910,25 @@ void field_load_scene_actors(FieldSceneLayout* layout)
     s32 i;
 
     g_field_loaded_actor_count = FIELD_PARTY_COUNT;
+
     for (; index < count; index++, layout_record++)
     {
         state->hp_display.word &= 0x7FFFFFFF;
         field_install_actor_action(layout_record, index);
+
         if (layout_record->control.bits.active)
         {
             field_initialize_actor_record(loaded_count + FIELD_PARTY_COUNT, layout_record->source.actor + FIELD_PARTY_COUNT);
+
             if (layout_record->control.bits.hidden)
             {
                 actor->presence = FIELD_ACTOR_HIDDEN;
             }
             else
             {
-                actor->presence = 0;
+                actor->presence = FIELD_ACTOR_VISIBLE;
             }
+
             actor->control.bits.group = layout_record->control.bits.group;
 #if !defined(VERSION_JP)
             if ((g_field_pending_scene_id & FIELD_SCENE_ID_MASK) == FIELD_SCENE_NO_LAYOUT_GROUPS)
@@ -884,10 +955,12 @@ void field_load_scene_actors(FieldSceneLayout* layout)
             state->key = index + FIELD_PARTY_COUNT;
             state->enabled_events = layout_record->enabled_events;
             state->group_flags = layout_record->control.flags;
+
             for (i = 0; i < FIELD_ACTION_SCRIPT_COUNT; i++)
             {
                 state->scripts[i] = layout_record->scripts[i];
             }
+
             field_restart_actor_animation(actor);
             state++;
             actor++;
@@ -911,6 +984,7 @@ static void field_refresh_actor_collisions(void)
 
     actor = g_field_actors;
     state = g_field_object_states;
+
     for (i = 0; i < FIELD_ACTOR_COUNT; i++, state++, actor++)
     {
         if (actor->presence != FIELD_ACTOR_UNUSED)
@@ -961,20 +1035,24 @@ void field_move_actor_position(FieldActor* actor, s32* motion)
     s32 position_x;
 
     position_x = actor->x;
+
     if (position_x < 0)
     {
         return;
     }
+
     if (position_x >= FIELD_MAP_X_LIMIT(bounds))
     {
         return;
     }
 
     position_z = actor->z;
+
     if (position_z < 0)
     {
         return;
     }
+
     if (position_z >= FIELD_MAP_Z_LIMIT(bounds))
     {
         return;
@@ -1022,6 +1100,7 @@ void field_set_party_palettes(void)
     {
         g_field_party_palette_index = FIELD_PARTY_PALETTE_COUNT - 1;
     }
+
     for (i = 0; i < FIELD_PLAYER_COUNT; i++)
     {
         if (g_field_player_records[i].character_kind == FIELD_PLAYER_KIND_HERO)
@@ -1044,6 +1123,7 @@ static void field_upload_transition_tiles(void)
     u16* src;
 
     setRECT(&rect, FIELD_TRANSITION_TILE_X, FIELD_TRANSITION_TILE_Y0, FIELD_TRANSITION_TILE_SIZE, FIELD_TRANSITION_TILE_SIZE);
+
     if (g_field_transition_tile_bank != 0)
     {
         src = g_field_transition_tiles_alt;
@@ -1052,9 +1132,11 @@ static void field_upload_transition_tiles(void)
     {
         src = g_field_transition_tiles;
     }
+
     LoadImage(&rect, (u_long*)src);
 
     setRECT(&rect, FIELD_TRANSITION_TILE_X, FIELD_TRANSITION_TILE_Y1, FIELD_TRANSITION_TILE_SIZE, FIELD_TRANSITION_TILE_SIZE);
+
     if (g_field_transition_tile_bank != 0)
     {
         src = g_field_transition_tiles_alt;
@@ -1063,6 +1145,7 @@ static void field_upload_transition_tiles(void)
     {
         src = g_field_transition_tiles;
     }
+
     LoadImage(&rect, (u_long*)src);
 
     DrawSync(0);
@@ -1078,10 +1161,12 @@ static void field_prepare_transition_tiles(void)
     u16* p;
 
     g_field_transition_tile_bank = 0;
+
     if (g_field_fade_target.red == FIELD_FADE_WHITE && g_field_fade_target.green == g_field_fade_target.red &&
         g_field_fade_target.blue == g_field_fade_target.green)
     {
         p = g_field_transition_tiles;
+
         for (i = 0; i < FIELD_TRANSITION_TILE_PIXELS; i++, p++)
         {
             if ((*p & FIELD_PIXEL_COLOR_MASK) == FIELD_PIXEL_TRANSPARENT)
@@ -1093,6 +1178,7 @@ static void field_prepare_transition_tiles(void)
     else
     {
         p = g_field_transition_tiles;
+
         for (i = 0; i < FIELD_TRANSITION_TILE_PIXELS; i++, p++)
         {
             if (*p == FIELD_PIXEL_WHITE)

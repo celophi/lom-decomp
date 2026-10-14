@@ -196,6 +196,7 @@ void field_open_ring_menu(s32 position_mode, s32 menu_id, u16 excluded_mask, s32
         g_field_ring_icon_count = (sheet_info >> 10) & 0x1F;
         g_field_ring_entry_count = 0;
         bit = 1;
+
         for (icon = 0; icon < g_field_ring_icon_count; icon++, bit <<= 1)
         {
             if (!(excluded_mask & bit))
@@ -204,11 +205,13 @@ void field_open_ring_menu(s32 position_mode, s32 menu_id, u16 excluded_mask, s32
                 g_field_ring_entry_count++;
             }
         }
+
         g_field_ring_radius = FIELD_RING_START_RADIUS;
         g_field_ring_target_radius = (sheet_info >> 13) & 0xF8;
         g_field_ring_radius_steps = FIELD_RING_RADIUS_EASE_STEPS;
         saved_selection = &g_field_ring_saved_selections[menu_id];
         selection = *saved_selection;
+
         if (selection >= g_field_ring_entry_count)
         {
             *saved_selection = 0;
@@ -218,11 +221,13 @@ void field_open_ring_menu(s32 position_mode, s32 menu_id, u16 excluded_mask, s32
         {
             g_field_ring_cursor = selection % g_field_ring_entry_count;
         }
+
         angle = -(ONE / g_field_ring_entry_count) * g_field_ring_cursor;
         g_field_ring_menu_id = menu_id;
         g_field_ring_unused = 0;
         g_field_ring_angle = angle;
         g_field_ring_target_angle = angle;
+
         switch (position_mode)
         {
         case FIELD_RING_AT_SCREEN_CENTER:
@@ -241,6 +246,7 @@ void field_open_ring_menu(s32 position_mode, s32 menu_id, u16 excluded_mask, s32
             g_field_ring_center_y = center.vy;
             break;
         }
+
         g_field_ring_menu_state = FIELD_RING_OPENING;
         g_field_ring_brightness = 0;
         g_field_ring_semi_trans = 1;
@@ -260,6 +266,7 @@ s32 field_get_ring_result(void)
     {
         return -1;
     }
+
     return g_field_ring_entries[g_field_ring_cursor];
 }
 
@@ -282,6 +289,7 @@ s32 field_update_ring_menu(FieldRenderHalf* render_half)
     s32 state;
 
     state = g_field_ring_menu_state;
+
     if (state == FIELD_RING_CLOSED)
     {
         return 0;
@@ -341,6 +349,7 @@ static void field_ring_menu_open_step(void)
         g_field_ring_brightness = FIELD_RING_FULL_BRIGHTNESS;
         return;
     }
+
     g_field_ring_brightness += FIELD_RING_OPEN_FADE_STEP;
     g_field_ring_step++;
 }
@@ -351,6 +360,7 @@ static void field_ring_menu_open_step(void)
 static void field_ring_menu_close_step(void)
 {
     g_field_ring_semi_trans = 1;
+
     if (g_field_ring_step < FIELD_RING_CLOSE_STEPS)
     {
         g_field_ring_radius -= g_field_ring_radius / (FIELD_RING_CLOSE_STEPS - g_field_ring_step);
@@ -361,6 +371,7 @@ static void field_ring_menu_close_step(void)
         g_field_ring_menu_state = FIELD_RING_CLOSED;
         return;
     }
+
     g_field_ring_brightness -= FIELD_RING_CLOSE_FADE_STEP;
     g_field_ring_step++;
 }
@@ -376,18 +387,22 @@ static void field_ring_menu_select_step(void)
     if (g_field_ring_step != 0)
     {
         g_field_ring_angle = g_field_ring_start_angle + (g_field_ring_target_angle - g_field_ring_start_angle) * g_field_ring_step / FIELD_RING_ROTATE_STEPS;
+
         if (g_field_ring_step == FIELD_RING_ROTATE_STEPS)
         {
             g_field_ring_step = 0;
             g_field_ring_angle = -g_field_ring_cursor * ONE / g_field_ring_entry_count;
             return;
         }
+
         g_field_ring_step++;
         return;
     }
+
     if (g_pad_input & FIELD_RING_CONFIRM_BUTTONS)
     {
         g_field_ring_menu_state = FIELD_RING_CLOSING;
+
         if (g_field_ring_cancel_index != FIELD_RING_NO_CANCEL && g_field_ring_cursor == g_field_ring_cancel_index)
         {
             g_field_ring_saved_selections[g_field_ring_menu_id] = 0;
@@ -397,6 +412,7 @@ static void field_ring_menu_select_step(void)
             g_field_ring_saved_selections[g_field_ring_menu_id] = g_field_ring_cursor;
         }
     }
+
     if ((g_pad_input & FIELD_RING_CANCEL_BUTTONS) && g_field_ring_cancel_index != FIELD_RING_NO_CANCEL)
     {
         g_field_ring_cursor = g_field_ring_cancel_index;
@@ -404,6 +420,7 @@ static void field_ring_menu_select_step(void)
         g_field_ring_start_angle = g_field_ring_angle;
         g_field_ring_target_angle = -g_field_ring_cancel_index * ONE / g_field_ring_entry_count;
     }
+
     if (g_pad_input & FIELD_RING_PREVIOUS_BUTTONS)
     {
         g_field_ring_step = 1;
@@ -411,11 +428,13 @@ static void field_ring_menu_select_step(void)
         cursor = g_field_ring_cursor - 1;
         g_field_ring_cursor = cursor;
         g_field_ring_target_angle = g_field_ring_angle + ONE / g_field_ring_entry_count;
+
         if (cursor < 0)
         {
             g_field_ring_cursor = g_field_ring_entry_count - 1;
         }
     }
+
     if (g_pad_input & FIELD_RING_NEXT_BUTTONS)
     {
         g_field_ring_step = 1;
@@ -444,6 +463,7 @@ static void field_draw_ring_menu(FieldRenderHalf* render_half)
 
     ot = &render_half->ordering_table[FIELD_RING_OT_FRONT];
     prim = (POLY_FT4*)render_half->primitive_cursor;
+
     for (index = 0; index < g_field_ring_entry_count; index++)
     {
         setPolyFT4(prim);
@@ -461,11 +481,13 @@ static void field_draw_ring_menu(FieldRenderHalf* render_half)
         prim->r0 = prim->g0 = prim->b0 = FIELD_RING_DEPTH_SCALE(g_field_ring_brightness, u_or_angle);
         v_or_width = FIELD_RING_DEPTH_SCALE(g_field_ring_icon_width, u_or_angle);
         height = FIELD_RING_DEPTH_SCALE(g_field_ring_icon_height, u_or_angle);
+
         if (index == g_field_ring_cursor && !(g_frame_counter & 7))
         {
             v_or_width = v_or_width * 9 / 8;
             height = height * 9 / 8;
         }
+
         /* The ellipse is a quarter as tall as it is wide. */
         prim->x0 = prim->x2 = g_field_ring_center_x + ((g_field_ring_radius * rsin(u_or_angle)) >> 12) - (v_or_width >> 1);
         prim->y1 = prim->y0 = g_field_ring_center_y + ((g_field_ring_radius * rcos(u_or_angle)) >> 14) - (height >> 1);
@@ -473,6 +495,7 @@ static void field_draw_ring_menu(FieldRenderHalf* render_half)
         prim->y2 = prim->y3 = prim->y0 + height;
         prim->x1 = prim->x3 = prim->x0 + v_or_width;
         prim->clut = getClut(g_field_ring_entries[index] * GPU_CLUT_4BIT_COLORS, VRAM_CLUT_Y);
+
         if (FIELD_RING_DEPTH(u_or_angle) <= 0)
         {
             addPrim(ot - FIELD_RING_DEPTH(u_or_angle), prim);
@@ -480,6 +503,7 @@ static void field_draw_ring_menu(FieldRenderHalf* render_half)
             prim++;
         }
     }
+
     render_half->primitive_cursor = (u8*)prim;
 }
 
@@ -504,11 +528,13 @@ void field_load_party_script_page(s32 party_slot, s32 resource_id)
     action_table = (s32*)(g_field_cd_buffer + section[0]);
     actions = (FieldActionSlot*)(action_table + 1);
     action_count = action_table[0];
+
     if (party_slot == 2)
     {
         action_rows = g_field_resource_actions;
         bcopy((u8*)actions, (u8*)&action_rows[2], action_count * sizeof(FieldActionSlot));
     }
+
     section++;
     bcopy(g_field_cd_buffer + section[0], g_field_party_script_pages[party_slot].bytes, section[1] - section[0]);
 }
@@ -530,6 +556,7 @@ static void field_draw_frame_thumbnail(FieldRenderHalf* render_half, s32 frame)
     {
         quad = (FieldThumbnailQuad*)render_half->primitive_cursor;
         ot = render_half->ordering_table;
+
         if (frame == 0)
         {
             s16 left;
@@ -537,7 +564,8 @@ static void field_draw_frame_thumbnail(FieldRenderHalf* render_half, s32 frame)
 
             /* Rows 240-255 of the top page, then rows 0-207 of the bottom page. */
             strip = 0;
-            do
+
+            for (; strip < FIELD_THUMBNAIL_STRIPS; quad += 2)
             {
                 left = strip * FIELD_THUMBNAIL_STRIP_WIDTH;
                 page = strip & 0xF;
@@ -559,11 +587,12 @@ static void field_draw_frame_thumbnail(FieldRenderHalf* render_half, s32 frame)
                 quad->clut = 0;
                 quad->tpage = FIELD_THUMBNAIL_TPAGE_BOTTOM | page;
                 addPrim(ot, quad);
-                quad += 2;
-            } while (strip < FIELD_THUMBNAIL_STRIPS);
+            }
+
             render_half->primitive_cursor = (u8*)quad;
             return;
         }
+
         /* Rows 8-231 of the top page. */
         {
             u32 address_mask;
@@ -589,7 +618,8 @@ static void field_draw_frame_thumbnail(FieldRenderHalf* render_half, s32 frame)
             address_mask = 0xFFFFFF;
             tag_mask = 0xFF000000;
             right = FIELD_THUMBNAIL_STRIP_WIDTH;
-            do
+
+            for (; strip < FIELD_THUMBNAIL_STRIPS; quad += 2)
             {
                 quad->x3 = quad->x1 = right;
                 right += FIELD_THUMBNAIL_STRIP_WIDTH;
@@ -612,9 +642,9 @@ static void field_draw_frame_thumbnail(FieldRenderHalf* render_half, s32 frame)
                 quad->tpage = FIELD_THUMBNAIL_TPAGE_TOP | page;
                 quad->tag = (quad->tag & tag_mask) | (*ot & address_mask);
                 *ot = (*ot & tag_mask) | ((u_long)quad & address_mask);
-                quad += 2;
-            } while (strip < FIELD_THUMBNAIL_STRIPS);
+            }
         }
+
         render_half->primitive_cursor = (u8*)quad;
     }
 }

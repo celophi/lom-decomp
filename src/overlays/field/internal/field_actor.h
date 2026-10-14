@@ -41,12 +41,6 @@
 /** @brief FieldActor::control bit 23: the actor uses its own tint. */
 #define FIELD_CONTROL_TINTED_SHIFT 23
 #define FIELD_CONTROL_TINTED 0x800000
-/** @brief Low seven bits of FieldActor::animation select the animation. */
-#define FIELD_ANIMATION_INDEX_MASK 0x7F
-/** @brief FieldActor::animation bit that mirrors the animation. */
-#define FIELD_ANIMATION_FACING 0x80
-/** @brief Shift of FIELD_ANIMATION_FACING. */
-#define FIELD_ANIMATION_FACING_SHIFT 7
 /* FieldActor::direction headings. */
 /** @brief FieldActor::direction headings are 256 steps per turn (ratan2/rcos use 4096). */
 #define FIELD_HEADING_STEPS 256
@@ -70,58 +64,6 @@
 #define FIELD_POSITION_SHIFT 8
 /** @brief Scratchpad vector that receives an actor displacement. */
 #define FIELD_SCRATCH_DISPLACEMENT ((Vec3i*)SCRATCHPAD_ADDRESS)
-
-/**
- * @brief Abilities a player assigns to the action buttons (FieldActionSlot::command).
- * @note An ability's code is also the animation the actor plays while using it
- *       (FieldActor::animation without the facing bit). The names follow the
- *       game's command name table (g_field_command_names), which gives each
- *       unused code below an ability the same name as that ability.
- */
-typedef enum FieldAbility
-{
-    FIELD_ABILITY_JUMP = 0x08,
-    /** Guards; held with the button. */
-    FIELD_ABILITY_DEFEND = 0x0A,
-    FIELD_ABILITY_LUNGE = 0x2F,
-    FIELD_ABILITY_RETREAT = 0x30,
-    /** Held with the button. Defense counts as 0 while it plays; also the pose after an instrument or a duel knock-down. */
-    FIELD_ABILITY_CROUCH = 0x31,
-    FIELD_ABILITY_PUSH = 0x32,
-    FIELD_ABILITY_CHEER = 0x33,
-    FIELD_ABILITY_SPIN = 0x34,
-    FIELD_ABILITY_GRAPPLE = 0x35,
-    FIELD_ABILITY_WHIRL = 0x36,
-    FIELD_ABILITY_BASH = 0x37,
-    /** Never touched by effect quads. */
-    FIELD_ABILITY_SOMERSAULT = 0x38,
-    /** Never touched by effect quads. */
-    FIELD_ABILITY_BACK_ROLL = 0x39,
-    FIELD_ABILITY_BACK_FLIP = 0x3A,
-    FIELD_ABILITY_MOONSAULT = 0x3B,
-    /** A player using it is not hit by attack spheres. */
-    FIELD_ABILITY_HIGH_JUMP = 0x3C,
-    /** A player using it keeps its height while moving. */
-    FIELD_ABILITY_DOUBLE_JUMP = 0x3D,
-    FIELD_ABILITY_TACKLE = 0x3E,
-    /** Answers an effect quad with action 2. */
-    FIELD_ABILITY_COUNTERATTACK = 0x3F,
-    /** Answers an effect quad with action 3. */
-    FIELD_ABILITY_COUNTERSTRIKE = 0x40,
-    FIELD_ABILITY_TAUNT = 0x41,
-    FIELD_ABILITY_EVADE = 0x42,
-    FIELD_ABILITY_TOSS = 0x43,
-    /** Ignores hits. */
-    FIELD_ABILITY_DEFENSIVE_LUNGE = 0x44,
-    FIELD_ABILITY_SLIDE = 0x45,
-    /** Follow-up attack with no name of its own; nothing in the field code starts it. */
-    FIELD_ABILITY_FOLLOW_UP_4E = 0x4E,
-    FIELD_ABILITY_FLIP_KICK = 0x4F,
-    /** Follow-up attack Spin chains into while button 2 is held. */
-    FIELD_ABILITY_FOLLOW_UP_50 = 0x50,
-    /** Follow-up attack Spin chains into while button 3 is held. */
-    FIELD_ABILITY_FOLLOW_UP_51 = 0x51
-} FieldAbility;
 
 /* Shared actor animations (FieldActor::animation without the facing bit). */
 /** @brief Defend pose played when a guarded hit lands. */
@@ -159,38 +101,6 @@ typedef enum FieldAbility
 #define FIELD_CONTROL_VARIANT_MASK 0x30000
 /** @brief Object-state group_flags bits holding the object's group. */
 #define FIELD_OBJECT_GROUP_MASK 0x0F
-/**
- * @brief Object-state flags bits 0-8: status ailments, in the order of the status text and immunity tables.
- * @note Bit n is status effect n (field_apply_status_effect); g_field_object_flag_handlers starts each one's looping animation.
- */
-#define FIELD_OBJECT_FLAG_POISON 0x0001
-#define FIELD_OBJECT_FLAG_DARKNESS 0x0002
-#define FIELD_OBJECT_FLAG_PARALYSIS 0x0004
-#define FIELD_OBJECT_FLAG_CONFUSION 0x0008
-#define FIELD_OBJECT_FLAG_FLAME_BURST 0x0010
-#define FIELD_OBJECT_FLAG_HYPNOSIS 0x0020
-#define FIELD_OBJECT_FLAG_SLEEP 0x0040
-#define FIELD_OBJECT_FLAG_PETRIFIED 0x0080
-#define FIELD_OBJECT_FLAG_FROZEN 0x0100
-/** @brief Object-state flags bit set while the object is knocked out. */
-#define FIELD_OBJECT_FLAG_KNOCKED_OUT 0x0200
-/** @brief Object-state flags bit set while another object is linked to this one. */
-#define FIELD_OBJECT_FLAG_LINK_TARGET 0x2000
-/**
- * @brief Object-state flags bit: the Mini status (effect 10) - the object is shrunk to half size and its actions are restricted.
- * @note Pad input may then only start actions 2 and 3; scripted actions and techniques
- *       do not start at all. The bit is cleared when the object is hit.
- */
-#define FIELD_OBJECT_FLAG_MINI 0x0400
-/** @brief Object-state flags bit set while a dash ability (Lunge, Retreat, Defensive Lunge, Slide) plays. */
-#define FIELD_OBJECT_FLAG_DASH 0x4000
-/** @brief Object-state flags bit: an action chain is running (cleared with the retry count). */
-#define FIELD_OBJECT_CHAINING 0x8000
-/** @brief Object-state flags bit set for one frame when the object is hit; tints the actor red. */
-#define FIELD_OBJECT_FLAG_HIT_FLASH 0x10000000
-
-/** @brief Object-state flag bits that make an object an invalid target. */
-#define FIELD_OBJECT_UNTARGETABLE_FLAGS (FIELD_OBJECT_FLAG_PETRIFIED | FIELD_OBJECT_FLAG_KNOCKED_OUT | FIELD_OBJECT_FLAG_LINK_TARGET)
 /**
  * @brief Object-state flag bits that hold an object in place.
  * @note Such an object takes no knockback, is skipped by overlap tests, stops its looping
@@ -303,71 +213,6 @@ static inline FieldActorBinding* field_actor_binding(FieldActor* actor)
     }
     return (FieldActorBinding*)((u8*)bindings + offset);
 }
-
-/** @brief Presence value of an unused actor record. */
-#define FIELD_ACTOR_UNUSED 0xFF
-
-/** @brief Presence value of a hidden actor record. */
-#define FIELD_ACTOR_HIDDEN 0xFE
-
-/** @brief Actor commands (FieldActor::command). */
-enum
-{
-    FIELD_ACTOR_COMMAND_NONE = 0,
-    FIELD_ACTOR_COMMAND_BASE = 0x81,
-    FIELD_ACTOR_COMMAND_STEP = 0x81,
-    FIELD_ACTOR_COMMAND_HIT = 0x82,
-    FIELD_ACTOR_COMMAND_ACTION = 0x85,
-    FIELD_ACTOR_COMMAND_RECOVER = 0x86,
-    FIELD_ACTOR_COMMAND_INSTRUMENT = 0x87,
-    FIELD_ACTOR_COMMAND_WALK = 0x88,
-    FIELD_ACTOR_COMMAND_RISE = 0x89,
-    FIELD_ACTOR_COMMAND_SINK = 0x8A,
-    FIELD_ACTOR_COMMAND_WALK_TO_TARGET = 0x8B,
-    FIELD_ACTOR_COMMAND_WALK_FROM_TARGET = 0x8C,
-    FIELD_ACTOR_COMMAND_SEQUENCE_STEP = 0x8D,
-    FIELD_ACTOR_COMMAND_KNOCKED_DOWN = 0x8E,
-    FIELD_ACTOR_COMMAND_JUMP = 0x8F,
-    FIELD_ACTOR_COMMAND_DEFEATED = 0x90,
-    FIELD_ACTOR_COMMAND_TECHNIQUE = 0x91,
-    FIELD_ACTOR_COMMAND_DEFEAT_BOUND = 0x92,
-    FIELD_ACTOR_COMMAND_DEFEAT_WAIT = 0x93,
-    FIELD_ACTOR_COMMAND_DEFEAT_END = 0x94,
-    FIELD_ACTOR_COMMAND_SEQUENCE_WAIT = 0x95,
-    /** Follow-up attack started from a jump ability while action button 3 is held; no further chaining. */
-    FIELD_ACTOR_COMMAND_AIR_FOLLOW_UP = 0x96,
-    /** Runs like FIELD_ACTOR_COMMAND_SECOND_JUMP and counts as an action for hits; nothing in the C code sets it. */
-    FIELD_ACTOR_COMMAND_98 = 0x98,
-    FIELD_ACTOR_COMMAND_IDLE_AFTER_ANIMATION = 0x99,
-    FIELD_ACTOR_COMMAND_IDLE_AFTER_RELOAD = 0x9A,
-    /** Second jump of a Double Jump, started while recovering from the first. */
-    FIELD_ACTOR_COMMAND_SECOND_JUMP = 0x9B,
-    /** Raise the actor by command_param each frame for unk26 frames. */
-    FIELD_ACTOR_COMMAND_TIMED_LIFT = 0x9C,
-    /** Lower the actor by command_param each frame until it reaches the ground (or unk26 runs out). */
-    FIELD_ACTOR_COMMAND_DESCEND_TO_GROUND = 0x9D,
-    FIELD_ACTOR_COMMAND_APPROACH_TARGET = 0xA0,
-    FIELD_ACTOR_COMMAND_ACTION_END = 0xA4,
-    FIELD_ACTOR_COMMAND_TIMED_WALK = 0xA7,
-    FIELD_ACTOR_COMMAND_WAIT_ANIMATION = 0xA8,
-    FIELD_ACTOR_COMMAND_RUN_TO_TARGET = 0xAC,
-    FIELD_ACTOR_COMMAND_RUN = 0xAD,
-    FIELD_ACTOR_COMMAND_DEFEAT_DELAY = 0xAE,
-    FIELD_ACTOR_COMMAND_FOLLOW_LEADER = 0xAF,
-    FIELD_ACTOR_COMMAND_WALK_PATH = 0xB0,
-    FIELD_ACTOR_COMMAND_RUN_PATH = 0xB1,
-    FIELD_ACTOR_COMMAND_TURN = 0xB2,
-    FIELD_ACTOR_COMMAND_STOP = 0xB3,
-    FIELD_ACTOR_COMMAND_LEAVE_PATH = 0xB5,
-    FIELD_ACTOR_COMMAND_TIMED_SLIDE = 0xB6,
-    FIELD_ACTOR_COMMAND_WAIT = 0xB7,
-    FIELD_ACTOR_COMMAND_ATTACHED = 0xB8,
-    /** Leave the actor and its command untouched (dropped items wait in it until removed). */
-    FIELD_ACTOR_COMMAND_HOLD = 0xBA,
-    FIELD_ACTOR_COMMAND_RETIRE = 0xBB,
-    FIELD_ACTOR_COMMAND_WAIT_BOUND_ACTOR = 0xBC,
-    FIELD_ACTOR_COMMAND_INSTRUMENT_END = 0xBD
-};
 
 /** @brief Actor command word that performs action slot @p action. */
 #define FIELD_ACTION_COMMAND(action) (((action) << 8) | FIELD_ACTOR_COMMAND_ACTION)

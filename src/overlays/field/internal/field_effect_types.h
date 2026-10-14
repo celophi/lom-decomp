@@ -10,8 +10,50 @@
 
 #define FIELD_EFFECT_POOL_COUNT 0x103
 #define FIELD_EFFECT_ACTIVE_RECORD_COUNT 256
+/** @brief FieldMotionRecord::state of a hidden effect that is skipped when rendering. */
 #define FIELD_EFFECT_DISABLED 0xFE
+/** @brief FieldMotionRecord::state of a free (retired) effect record. */
 #define FIELD_EFFECT_RETIRED 0xFF
+
+/** @brief Placement kinds of a part's effects (FieldObjectPart::placement_flags bits 18-23) that are understood. */
+typedef enum
+{
+    /** @brief At the centre of the screen and the screen edges and corners (screen space). */
+    FIELD_PLACEMENT_SCREEN_CENTER = 0x1C,
+    FIELD_PLACEMENT_SCREEN_TOP = 0x1D,
+    FIELD_PLACEMENT_SCREEN_BOTTOM = 0x1E,
+    FIELD_PLACEMENT_SCREEN_LEFT = 0x1F,
+    FIELD_PLACEMENT_SCREEN_RIGHT = 0x20,
+    FIELD_PLACEMENT_SCREEN_TOP_LEFT = 0x21,
+    FIELD_PLACEMENT_SCREEN_TOP_RIGHT = 0x22,
+    FIELD_PLACEMENT_SCREEN_BOTTOM_LEFT = 0x23,
+    FIELD_PLACEMENT_SCREEN_BOTTOM_RIGHT = 0x24,
+    /** @brief At the part's offset in field coordinates. */
+    FIELD_PLACEMENT_FIELD_POSITION = 0x25,
+    /** @brief Not placed. */
+    FIELD_PLACEMENT_NONE = 0x26
+} FieldEffectPlacement;
+
+/** @brief FieldMotionRecord::state: how an active effect is rendered. */
+typedef enum
+{
+    FIELD_EFFECT_RENDER_SPRITE = 0,
+    FIELD_EFFECT_RENDER_ACTOR_SPRITE = 1,
+    FIELD_EFFECT_RENDER_OWNER_SPRITE = 2,
+    FIELD_EFFECT_RENDER_TRACK_SPRITE = 3,
+    FIELD_EFFECT_RENDER_RADIAL_FAN = 4,
+    FIELD_EFFECT_RENDER_TRAIL = 5,
+    FIELD_EFFECT_RENDER_RIBBON = 6,
+    FIELD_EFFECT_RENDER_RADIAL_LINES = 0xF6,
+    FIELD_EFFECT_RENDER_MESH_2 = 0xF7,
+    FIELD_EFFECT_RENDER_MESH_1 = 0xF8,
+    FIELD_EFFECT_RENDER_MESH_0 = 0xF9,
+    FIELD_EFFECT_RENDER_RING = 0xFA,
+    FIELD_EFFECT_RENDER_FAN = 0xFB,
+    FIELD_EFFECT_RENDER_MARKER = 0xFC,
+    FIELD_EFFECT_RENDER_LINKED_SPRITE = 0xFD
+} FieldEffectRenderState;
+
 /** @brief FieldObjectPart word at unkC with neutral red and green tints (bytes 0xE and 0xF), as one masked compare. */
 #define FIELD_PART_NEUTRAL_RED_GREEN 0x80800000
 #define FIELD_EFFECT_SCREEN_SPACE 0x00001000U

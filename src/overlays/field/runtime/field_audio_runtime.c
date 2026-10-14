@@ -171,6 +171,9 @@ extern s32 g_field_stream_bytes_done;
 static void field_stream_copy_bytes(u8 *dst, u8 *src, s32 count);
 static u8 *field_stream_sector_callback(s32 bytes_transferred, u32 bytes_remaining);
 
+/** @brief The stream header in the current sector. */
+#define FIELD_MUSIC_STREAM_HEADER ((FieldMusicStreamHeader *)g_field_stream_sector)
+
 /**
  * @brief Reload the instrument bank from EFFECT.SET unless the previous state kept it resident.
  */
@@ -333,6 +336,7 @@ void field_play_song_section(s32 section_index, s32 param1)
                                               g_resident_song_section_offsets[section_index],
                                           param1, 0);
     g_field_song_handles[FIELD_SONG_MAIN] = song_handle;
+
     if (song_handle == -1)
     {
         g_field_song_handles[FIELD_SONG_MAIN] = 0;
@@ -346,6 +350,7 @@ void field_play_song_section(s32 section_index, s32 param1)
         akao_set_song_volume(0, g_field_song_volume);
         akao_set_master_volume(0);
     }
+
     akao_set_master_pan(0);
 }
 
@@ -420,16 +425,20 @@ void field_play_set_sfx(s32 sfx_index, s32 pan, s32 unused, s32 channel_group)
         {
             channel_group = FIELD_SFX_GROUP_COUNT - 1;
         }
+
         table = (s32 *)((u8 *)&g_field_sfx_tables + g_field_sfx_tables.active_table_offset);
+
         if ((u32)sfx_index < (u32)(table[0] - 1))
         {
             buf = (u8 *)table;
             i = 0;
             base = channel_group * FIELD_SFX_GROUP_VOICES;
             buf += table[sfx_index + 1];
+
             for (; i < FIELD_SFX_GROUP_VOICES; i++)
             {
                 mask = 1 << (base + i);
+
                 if (!akao_is_sfx_playing(mask))
                 {
                     akao_play_sfx_from_buffer((AkaoHeader *)buf, mask, pan, AKAO_VOLUME_MAX);
@@ -459,6 +468,7 @@ void field_play_weapon_sfx(s32 sfx_index, s32 pan, s32 table_index)
     {
         p = g_field_sound_tables;
         table = (s32 *)(p + table_index * FIELD_WEAPON_SFX_TABLE_SIZE);
+
         if (table[0] != 0)
         {
             if ((u32)sfx_index < (u32)table[0])
@@ -466,9 +476,11 @@ void field_play_weapon_sfx(s32 sfx_index, s32 pan, s32 table_index)
                 i = 0;
                 base = table_index * FIELD_SFX_GROUP_VOICES;
                 buf = (u8 *)table + table[sfx_index + 1];
+
                 for (; i < FIELD_SFX_GROUP_VOICES; i++)
                 {
                     mask = 1 << (base + i);
+
                     if (!akao_is_sfx_playing(mask))
                     {
                         akao_play_sfx_from_buffer((AkaoHeader *)buf, mask, pan, AKAO_VOLUME_MAX);
@@ -492,6 +504,7 @@ void field_release_sfx_group(s32 channel_group)
     {
         channel_group = FIELD_SFX_GROUP_COUNT - 1;
     }
+
     bit = channel_group * FIELD_SFX_GROUP_VOICES;
     akao_stop_sfx(0, 1 << bit);
     akao_stop_sfx(0, 1 << (bit + 1));
@@ -523,13 +536,16 @@ void field_load_sfx_tables(s32 set_id)
     {
         return;
     }
+
     g_field_sfx_tables.reserved_1 = 0;
     g_field_sfx_tables.reserved_0 = 0;
     g_field_sfx_tables.active_table_offset = 0;
+
     if (set_id == FIELD_SFX_SET_NONE)
     {
         return;
     }
+
     buffer = g_field_cd_buffer;
     cdrom_queue_read((u16)(set_id + FIELD_SFX_SET_RESOURCE_BASE), buffer);
     cdrom_wait_queue_empty();
@@ -539,6 +555,7 @@ void field_load_sfx_tables(s32 set_id)
     cursor = tables->table_data;
     entry = blob + 1;
     count = blob[0];
+
     for (i = 0; i < count; i++)
     {
         /* Word-aligned offset of the table about to be copied. */
@@ -552,13 +569,16 @@ void field_load_sfx_tables(s32 set_id)
             {
                 *dst++ = *table++;
             }
+
             cursor = dst;
         }
+
         if (g_field_sfx_set_uses_slots[set_index] == 0)
         {
             akao_upload_bank_blocking((AkaoBankHeader *)table_end, 1);
             return;
         }
+
         akao_load_upper_bank_slot(table_end, i, 1);
         entry++;
     }
@@ -582,6 +602,7 @@ void field_load_weapon_sfx_table(s32 slot, s32 weapon_type)
     {
         base = g_field_sound_tables;
         dst = base + slot * FIELD_WEAPON_SFX_TABLE_SIZE;
+
         *(s32 *)dst = 0;
         if (weapon_type != FIELD_SFX_SET_NONE)
         {
@@ -591,10 +612,12 @@ void field_load_weapon_sfx_table(s32 slot, s32 weapon_type)
             cdrom_wait_queue_empty();
             end = src + ((s32 *)src)[*(s32 *)src];
             dst_cursor = dst;
+
             while (src != end)
             {
                 *dst_cursor++ = *src++;
             }
+
             akao_load_bank_slot(end, slot, 1);
         }
     }
@@ -617,9 +640,11 @@ s32 field_play_sfx_buffer(AkaoHeader* buffer, s32 pan, s32 channel_group)
     {
         i = 0;
         base = channel_group * FIELD_SFX_GROUP_VOICES;
+
         for (; i < FIELD_SFX_GROUP_VOICES; i++)
         {
             mask = 1 << (base + i);
+
             if (!akao_is_sfx_playing(mask))
             {
                 akao_play_sfx_from_buffer(buffer, mask, pan, AKAO_VOLUME_MAX);
@@ -662,9 +687,6 @@ void field_start_music_stream(s32 music_index)
     }
 }
 
-/** @brief The stream header in the current sector. */
-#define FIELD_MUSIC_STREAM_HEADER ((FieldMusicStreamHeader *)g_field_stream_sector)
-
 /**
  * @brief Process the last streamed sector: copy song data, stage and upload bank data, then play.
  * @note The song is assembled in g_resident_song_buffer and the bank data is staged at
@@ -698,15 +720,18 @@ void field_update_music_stream(void)
                     bcopy(g_field_stream_sector, g_field_stream_song_bytes + g_resident_song_buffer, CD_DATA_SECTOR_SIZE);
                     g_field_stream_song_bytes += CD_DATA_SECTOR_SIZE;
                     g_field_stream_song_remaining -= CD_DATA_SECTOR_SIZE;
+
                     if (g_field_stream_song_remaining == 0)
                     {
                         g_field_stream_bank_bytes = 0;
                         g_field_stream_bank_pending = 1;
                     }
                 }
+
                 g_field_stream_sector_ready = 0;
                 break;
             }
+
             if (g_field_stream_bank_pending != 0)
             {
                 /* First bank sector: restart the upload. */
@@ -742,6 +767,7 @@ void field_update_music_stream(void)
                                             g_field_stream_bank_bytes);
                 }
             }
+
             g_field_stream_bank_pending = 0;
             return;
         case FIELD_STREAM_FIRST_SECTOR:
@@ -757,6 +783,7 @@ void field_update_music_stream(void)
             {
                 g_field_stream_sector_ready = 0;
             }
+
             break;
         case FIELD_STREAM_WAIT_LAST_UPLOAD:
             if (akao_get_xfer_state() == 0)
@@ -765,6 +792,7 @@ void field_update_music_stream(void)
                 field_play_song();
                 g_field_stream_resource = 0;
             }
+
             break;
         case FIELD_STREAM_IDLE:
         default:
@@ -810,6 +838,7 @@ static u8 *field_stream_sector_callback(s32 bytes_transferred, u32 bytes_remaini
         {
             g_field_stream_sector = buffer = (u8 *)FIELD_STREAM_SECTOR_BUFFER;
         }
+
         if (bytes_transferred == 0)
         {
             g_field_stream_state = FIELD_STREAM_FIRST_SECTOR;
@@ -818,11 +847,13 @@ static u8 *field_stream_sector_callback(s32 bytes_transferred, u32 bytes_remaini
         {
             g_field_stream_state = FIELD_STREAM_SECTOR;
         }
+
         g_field_stream_bytes_done = bytes_transferred;
         g_field_stream_bytes_left = bytes_remaining;
         g_field_stream_sector_ready = 1;
         return buffer;
     }
+
     return NULL;
 }
 

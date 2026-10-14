@@ -11,4 +11,7 @@ struct FieldActor;
 void field_move_actor_position(struct FieldActor* actor, s32* motion);
 void field_set_party_palettes(void);
 
+/** @brief Scene id bits of a scene selector (bit 15 carries a flag). */
+#define FIELD_SCENE_ID_MASK 0x7FFF
+
 #endif

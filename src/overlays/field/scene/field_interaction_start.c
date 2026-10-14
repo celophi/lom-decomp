@@ -85,17 +85,11 @@
 #define FIELD_SCENE_TITLE 0xFFFE
 #define FIELD_SCENE_WORLD_MAP 0xFFFF
 
-/** @brief Scene id bits of a transition's scene_id. */
-#define FIELD_SCENE_ID_MASK 0x7FFF
-
 /** @brief Spawn id bits of a transition's spawn byte. */
 #define FIELD_SPAWN_ID_MASK 0x1F
 
 /** @brief Runtime state flag: a talk window is open. */
 #define FIELD_STATE_TALKING 0x80000
-
-/** @brief Script id bit that runs the script as the field script instead of a talk message. */
-#define FIELD_INTERACTION_SCRIPT 0x8000
 
 /** @brief Script id bits of an interaction script. */
 #define FIELD_INTERACTION_SCRIPT_ID_MASK 0x7FFF
@@ -291,10 +285,12 @@ static void field_init_party_actors(void)
         g_field_runtime->actors[i].id = i;
         g_field_runtime->actors[i].selector = i - FIELD_PARTY_SELECTOR_BASE;
         g_field_runtime->actors[i].event = FIELD_NO_EVENT;
+
         for (j = 0; j < FIELD_ACTOR_SCRIPT_COUNT; j++)
         {
             g_field_runtime->actors[i].scripts[j] = FIELD_NO_SCRIPT;
         }
+
         g_field_runtime->state.actor_count++;
     }
 
@@ -307,6 +303,7 @@ static void field_init_party_actors(void)
     {
         g_field_runtime->actors[i].script.status.bits.local_base = j;
     }
+
     g_field_runtime->locals.local_variable_base = FIELD_LOCAL_BASE_FIRST_FREE;
 }
 
@@ -322,6 +319,7 @@ static void field_init_event_records(void)
         g_field_runtime->events[i].selector = FIELD_NO_SELECTOR;
         /* The original clears the pending event of actor record i, not of the event record. */
         g_field_runtime->actors[i].event = FIELD_NO_EVENT;
+
         for (j = 0; j < FIELD_ACTOR_SCRIPT_COUNT; j++)
         {
             g_field_runtime->events[i].scripts[j] = FIELD_NO_SCRIPT;
@@ -335,6 +333,7 @@ static void field_init_script_variables(void)
     s32 flags;
 
     flags = g_field_game_state->control.word;
+
     if (flags & FIELD_CONTROL_RESET_WORDS)
     {
         g_field_game_state->control.word = flags & ~FIELD_CONTROL_RESET_WORDS;
@@ -379,7 +378,9 @@ void field_install_actor_action(FieldLayoutRecord* layout_record, s32 record_ind
     {
         field_runtime_init();
     }
+
     value = field_read_script_var(0, layout_record->condition.variable_ref << 16);
+
     if ((value >= layout_record->condition.minimum) && (value <= layout_record->condition.maximum))
     {
         switch (layout_record->control.bits.kind)
@@ -417,10 +418,12 @@ void field_install_actor_action(FieldLayoutRecord* layout_record, s32 record_ind
             entry->flags.bits.source = layout_record->source.actor >> FIELD_ACTION_SOURCE_SHIFT;
             layout_record->control.flags &= ~FIELD_ACTION_TRIGGER_GROUP_MASK;
             action_index = 0;
+
             if (layout_record->control.bits.group == 0)
             {
                 layout_record->control.bits.group = (g_field_game_state->golem_count >> 4) + 1;
             }
+
             layout_record->source.actor &= FIELD_ACTION_SOURCE_ACTOR_MASK;
             break;
         }
@@ -439,6 +442,7 @@ void field_install_actor_action(FieldLayoutRecord* layout_record, s32 record_ind
             action_index = 0;
             record->flags.bits.active = 1;
             flags_to_set = (entry->flags.word & ~FIELD_ACTION_TRIGGER_GROUP_MASK) | (layout_record->control.flags & FIELD_ACTION_TRIGGER_GROUP_MASK);
+
             do
             {
                 entry->flags.word = flags_to_set;
@@ -474,10 +478,12 @@ void field_install_actor_action(FieldLayoutRecord* layout_record, s32 record_ind
             FieldActorRecord* event;
 
             layout_record->control.bits.active = 0;
+
             if (layout_record->control.bits.selector < FIELD_MENU_GROUP_COUNT)
             {
                 field_classify_menu_slots(layout_record->control.bits.selector);
             }
+
             event = &g_field_runtime->events[0];
             event->flags.bits.active = 1;
             g_field_runtime->state.flags |= FIELD_STATE_PARTY_MODE_MASK;
@@ -492,15 +498,18 @@ void field_install_actor_action(FieldLayoutRecord* layout_record, s32 record_ind
             layout_record->control.bits.active = field_install_menu_action(layout_record, &entry, record_index, &action_index);
             break;
         }
+
         if (entry != NULL)
         {
             entry->selector = layout_record->control.bits.selector;
             entry->event = FIELD_NO_EVENT;
             entry->enabled_events = layout_record->enabled_events;
+
             for (script_index = 0; script_index < FIELD_ACTION_SCRIPT_COUNT; script_index++)
             {
                 entry->scripts[script_index] = layout_record->scripts[script_index];
             }
+
             entry->script.status.bits.local_base = g_field_runtime->locals.local_variable_base;
             g_field_runtime->locals.local_variable_base += layout_record->control.bits.local_variable_count;
             field_queue_actor_event(entry->id, FIELD_EVENT_START, (u8)action_index);
@@ -536,6 +545,7 @@ void field_begin_party_script_control(s32 mode)
                 {
                     field_set_actor_control_mode(i, FIELD_CONTROL_SCRIPTED);
                 }
+
                 break;
             }
         }
@@ -566,6 +576,7 @@ void field_end_party_script_control(void)
                 field_set_actor_control_mode(i, FIELD_CONTROL_FOLLOWER);
                 field_stop_actor_script(i, 0);
             }
+
             break;
         case FIELD_PARTY_MODE_PAD_CONTROLLED:
             if (g_field_game_state->characters[i].info.bits.pad_controlled)
@@ -573,6 +584,7 @@ void field_end_party_script_control(void)
                 field_set_actor_control_mode(i, FIELD_CONTROL_PLAYER);
                 field_stop_actor_script(i, 0);
             }
+
             break;
         }
     }
@@ -604,6 +616,7 @@ static s32 field_install_menu_action(FieldLayoutRecord* layout_record, FieldActo
     if (g_field_game_state->menu_slots[group].slots[slot].entry.index < FIELD_MENU_ENTRY_EMPTY)
     {
         handle = g_field_game_state->menu_slots[group].slots[slot].handle;
+
         switch (handle)
         {
         case FIELD_MENU_SLOT_UNUSED:
@@ -651,17 +664,21 @@ void field_runtime_update(void)
         field_leave_scene();
         return;
     }
+
     if (g_field_runtime->transition.bits.requested)
     {
         field_update_scene_transition();
     }
+
     field_update_triggers();
     field_update_main_script();
     field_update_event_records();
+
     if (g_field_runtime->state.flags & FIELD_STATE_PARTY_PAGE_SCRIPTS)
     {
         field_tick_battle_status();
     }
+
     g_field_runtime->frame_count++;
 }
 
@@ -672,6 +689,7 @@ static void field_leave_scene(void)
 
     field_set_script_var(0, FIELD_VAR_KEEP_PARTY_SCRIPTED, 0);
     scene_id = g_field_runtime->transition.fields.scene_id;
+
     switch (scene_id)
     {
     case FIELD_SCENE_TITLE:
@@ -685,12 +703,14 @@ static void field_leave_scene(void)
         g_pending_game_state = GAME_STATE_WORLD_MAP;
         g_field_secondary_music_id = -1;
         g_field_sound_bank_id = -1;
+
         if (field_get_script_var(0, FIELD_VAR_WORLD_MAP_REDIRECT) != 0)
         {
             g_pending_game_state = GAME_STATE_FIELD;
             g_field_runtime->transition.fields.scene_id = 1;
             g_field_runtime->scene_entry = 0;
         }
+
         return;
     default:
         field_set_scene_parameters(g_field_runtime->transition.fields.scene_id, g_field_runtime->transition.fields.object_id, g_field_runtime->transition.fields.spawn & FIELD_SPAWN_ID_MASK,
@@ -707,6 +727,7 @@ static void field_update_scene_transition(void)
     u16 scene_id;
 
     context = g_field_runtime;
+
     if (!context->transition.bits.fade_started)
     {
         for (i = 0; i < FIELD_PARTY_SIZE; i++)
@@ -715,9 +736,11 @@ static void field_update_scene_transition(void)
         }
 
         g_field_runtime->transition.bits.fade_started = 1;
+
         if (g_field_runtime->fade_timer != FIELD_FADE_SKIP)
         {
             scene_id = g_field_runtime->transition.fields.scene_id;
+
             if ((scene_id != FIELD_SCENE_TITLE) && (scene_id != FIELD_SCENE_WORLD_MAP))
             {
                 field_seek_scene_resource(scene_id & FIELD_SCENE_ID_MASK);
@@ -734,6 +757,7 @@ static void field_update_scene_transition(void)
             g_field_runtime->fade_timer++;
             return;
         }
+
         g_field_runtime->transition.bits.finished = 1;
         return;
     }
@@ -742,6 +766,7 @@ static void field_update_scene_transition(void)
     {
         context->transition.bits.finished = 1;
     }
+
     g_field_runtime->fade_timer--;
 }
 
@@ -769,9 +794,11 @@ static void field_update_triggers(void)
     g_field_runtime->view_x = -g_field_scene_state->camera_x;
     packed_position = g_field_runtime->actor_positions;
     g_field_runtime->view_z = -(g_field_scene_state->camera_y + g_field_scene_state->camera_z);
+
     for (index = 0; index < FIELD_PARTY_SIZE; index++, packed_position++)
     {
         result = field_get_actor_position(index, (Vec3i*)&positions[index]);
+
         if (result != -1)
         {
             *packed_position = field_pack_map_position(&positions[index]);
@@ -781,13 +808,16 @@ static void field_update_triggers(void)
             *packed_position = result;
         }
     }
+
     context = g_field_runtime;
     g_field_player_map_position.x = positions[0].vx >> 8;
     g_field_player_map_position.z = positions[0].vz >> 8;
+
     if (context->trigger_table != NULL)
     {
         region_bit = 1;
         triggered = context->triggered_regions;
+
         for (index = 0; index < g_field_runtime->trigger_table->count; index++)
         {
             if (!(triggered & region_bit))
@@ -798,15 +828,18 @@ static void field_update_triggers(void)
                     (g_field_runtime->trigger_table->regions[index].max_z >= g_field_player_map_position.z))
                 {
                     g_field_runtime->triggered_regions |= region_bit;
+
                     if (g_field_runtime->trigger_table->regions[index].command & FIELD_TRIGGER_SCRIPT)
                     {
                         field_start_interaction(0, g_field_runtime->trigger_table->regions[index].command);
                         return;
                     }
+
                     field_battle_start(g_field_runtime->trigger_table->regions[index].command);
                     return;
                 }
             }
+
             region_bit *= 2;
         }
     }
@@ -829,6 +862,7 @@ static void field_update_main_script(void)
         {
             field_queue_actor_event(g_field_runtime->actors[i].id, FIELD_EVENT_NOTIFY, FIELD_INTERACTION_END);
         }
+
         if (!g_field_runtime->transition.bits.requested && (field_get_script_var(0, FIELD_VAR_KEEP_PARTY_SCRIPTED) == 0))
         {
             field_end_party_script_control();
@@ -840,6 +874,7 @@ static void field_update_main_script(void)
         {
             field_queue_actor_event(g_field_runtime->actors[i].id, FIELD_EVENT_NOTIFY, FIELD_INTERACTION_TALK_END);
         }
+
         g_field_runtime->state.flags &= ~FIELD_STATE_TALKING;
     }
 }
@@ -855,6 +890,7 @@ static void field_update_event_records(void)
         {
             field_script_run(&g_field_runtime->events[i].script);
         }
+
         field_run_actor_event(i + FIELD_EVENT_ACTOR_ID_BASE, g_field_runtime->events[i].event, g_field_runtime->events[i].event_argument);
         g_field_runtime->events[i].event = FIELD_NO_EVENT;
         field_run_actor_event(FIELD_EVENT_ACTOR_ID_BASE, FIELD_EVENT_FRAME, 0);
@@ -872,6 +908,7 @@ void field_update_actor_record(s32 actor_id)
     Vec3i position;
 
     actor = field_find_actor_record();
+
     if ((actor != NULL) && actor->flags.bits.active)
     {
         if (actor->event != FIELD_NO_EVENT)
@@ -879,9 +916,11 @@ void field_update_actor_record(s32 actor_id)
             field_run_actor_event(actor->id, actor->event, actor->event_argument);
             actor->event = FIELD_NO_EVENT;
         }
+
         if (!actor->flags.bits.script_only)
         {
             field_get_actor_position(actor_id, &position);
+
             if (((u32)position.x > (u32)g_field_runtime->view_x) && ((u32)position.z > (u32)g_field_runtime->view_z) &&
                 ((u32)position.x < (u32)g_field_runtime->view_x + FIELD_VIEW_WIDTH) && ((u32)position.z < (u32)g_field_runtime->view_z + FIELD_VIEW_DEPTH))
             {
@@ -891,12 +930,15 @@ void field_update_actor_record(s32 actor_id)
             {
                 field_run_actor_event(actor->id, FIELD_EVENT_OFF_SCREEN, 0);
             }
+
             field_run_actor_event(actor->id, FIELD_EVENT_FRAME, 0);
+
             if (actor->script.frames[actor->script.depth].pc == NULL)
             {
                 field_run_actor_event(actor->id, FIELD_EVENT_IDLE, 0);
                 return;
             }
+
             field_script_run(&actor->script);
         }
     }
@@ -922,6 +964,7 @@ s32 field_start_interaction(s32 actor_id, s32 script)
     FieldActorRecord* actor;
 
     script_id = script;
+
     if (script_id == FIELD_NO_SCRIPT)
     {
         return 0;
@@ -931,28 +974,33 @@ s32 field_start_interaction(s32 actor_id, s32 script)
     {
         return 0;
     }
+
     if (field_get_script_var(0, FIELD_VAR_INTERACTIONS_BLOCKED) != 0)
     {
         return 0;
     }
 
     actor = field_find_actor_record(actor_id);
+
     if (actor == NULL)
     {
         return 0;
     }
 
     flags = actor->flags.word;
+
     if (actor->flags.bits.script_only)
     {
         return 0;
     }
+
     if (actor->flags.bits.spawned)
     {
         return 0;
     }
 
     source = (flags >> FIELD_ACTOR_SOURCE_SHIFT) & FIELD_ACTOR_SOURCE_MASK;
+
     if (source != 0)
     {
         field_unlock_encyclopedia_entry(source);
@@ -974,6 +1022,7 @@ s32 field_start_interaction(s32 actor_id, s32 script)
             else
             {
                 other_id = g_field_runtime->actors[i].id;
+
                 if (other_id == actor_id)
                 {
                     field_queue_actor_event(actor_id, FIELD_EVENT_NOTIFY, FIELD_INTERACTION_SCRIPT_TARGET);
@@ -1003,6 +1052,7 @@ s32 field_start_interaction(s32 actor_id, s32 script)
         else
         {
             other_id = g_field_runtime->actors[i].id;
+
             if (other_id == actor_id)
             {
                 field_queue_actor_event(actor_id, FIELD_EVENT_NOTIFY, FIELD_INTERACTION_TALK_TARGET);
@@ -1038,6 +1088,7 @@ static inline s32 field_get_actor_selector(FieldActorRecord* actor)
     {
         value = actor->selector;
     }
+
     return value;
 }
 
@@ -1060,6 +1111,7 @@ void field_resolve_talk_window(s32* actor_id, s32* plane, s32* effect, s32* sele
     u32 original_actor_id;
 
     original_actor_id = *actor_id;
+
     if (original_actor_id < FIELD_ACTOR_ID_LIMIT)
     {
         field_get_actor_position(original_actor_id, &position);
@@ -1068,7 +1120,9 @@ void field_resolve_talk_window(s32* actor_id, s32* plane, s32* effect, s32* sele
     {
         *actor_id = 0;
     }
+
     plane_value = *plane;
+
     if (plane_value != FIELD_TALK_AUTO)
     {
         if (plane_value & FIELD_TALK_PLANE_NO_FACING)
@@ -1084,6 +1138,7 @@ void field_resolve_talk_window(s32* actor_id, s32* plane, s32* effect, s32* sele
             facing_angle = field_get_actor_facing(*actor_id);
             facing_flag = ((facing_angle >= FIELD_FACING_FLIP_MIN) && (facing_angle < FIELD_FACING_FLIP_END)) ? FIELD_TALK_FACING_FLAG : 0;
         }
+
         *plane &= FIELD_TALK_PLANE_MASK;
     }
     else
@@ -1096,11 +1151,14 @@ void field_resolve_talk_window(s32* actor_id, s32* plane, s32* effect, s32* sele
         {
             *plane = 1;
         }
+
         facing_angle = field_get_actor_facing(*actor_id);
         facing_flag = ((facing_angle >= FIELD_FACING_FLIP_MIN) && (facing_angle < FIELD_FACING_FLIP_END)) ? FIELD_TALK_FACING_FLAG : 0;
     }
+
     g_field_runtime->talk_window.bits.plane = *plane;
     effect_value = *effect;
+
     switch (effect_value)
     {
     case FIELD_TALK_EFFECT_SELECTOR:
@@ -1110,12 +1168,15 @@ void field_resolve_talk_window(s32* actor_id, s32* plane, s32* effect, s32* sele
         *effect = -1;
         break;
     }
+
     *effect |= facing_flag;
     selector_value = *selector;
+
     if (selector_value == FIELD_TALK_AUTO)
     {
         selector_value = g_field_runtime->talk_window.bits.selector;
     }
+
     *selector = selector_value;
     if (!((g_field_talk_plane_masks[selector_value] >> *plane) & 1))
     {

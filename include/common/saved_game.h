@@ -435,6 +435,15 @@ typedef union FieldLandWords
 {
     FieldLandRecord record;
     u32 word;
+    /** @brief The first four bytes as word bitfields. */
+    struct
+    {
+        u32 flags : 8;
+        u32 x : 4;
+        u32 z : 4;
+        u32 unk2 : 8;
+        u32 count : 8;
+    } bits;
 } FieldLandWords;
 
 /** @brief Menu slot entry index of an empty slot. */

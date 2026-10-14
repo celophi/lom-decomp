@@ -67,8 +67,6 @@
 #define FIELD_CONTACT_PROBE_WIDTH 8
 #define FIELD_CONTACT_PROBE_HEIGHT 16
 #define FIELD_CONTACT_PROBE_DEPTH 5
-/** @brief Interaction id flag: run the id as a field script instead of a talk message. */
-#define FIELD_INTERACTION_SCRIPT 0x8000
 
 /*
  * Byte-aligned images of the animation sections. The resource stream is not

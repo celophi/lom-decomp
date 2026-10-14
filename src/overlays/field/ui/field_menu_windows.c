@@ -20,6 +20,7 @@
 #include <libetc.h>
 #include "../internal/field_menu_element.h"
 #include "main/audio/akao.h"
+#include "overlays/field/field_sound.h"
 
 /** @brief VRAM position of the texture page, palettes and artwork of the frames. */
 #define MENU_TPAGE_X 256
@@ -75,8 +76,6 @@
 /** @brief Pixels the blinking border grows by on each side. */
 #define MENU_BLINK_GROW 2
 
-#define FIELD_SOUND_CURSOR 0x7D
-
 /** @brief The frame palettes followed by the frame artwork. */
 typedef struct
 {
@@ -110,6 +109,7 @@ void* field_draw_menu_frame(void* packet, u_long* ot, s32 x, s32 y, s32 width, s
     DR_TPAGE* mode;
 
     clip = packet;
+
     if (display_y != 0)
     {
         SetDefDrawEnv(&draw_env, x + MENU_FRAME_CLIP_INSET, y + SCREEN_HEIGHT + MENU_FRAME_CLIP_INSET, width - MENU_FRAME_CLIP_INSET * 2,
@@ -120,6 +120,7 @@ void* field_draw_menu_frame(void* packet, u_long* ot, s32 x, s32 y, s32 width, s
         SetDefDrawEnv(&draw_env, x + MENU_FRAME_CLIP_INSET, y + VRAM_BACK_DRAW_Y + MENU_FRAME_CLIP_INSET, width - MENU_FRAME_CLIP_INSET * 2,
                       height - MENU_FRAME_CLIP_INSET * 2);
     }
+
     SetDrawEnv(clip, &draw_env);
     addPrim(ot, clip);
     packet = clip + 1;
@@ -154,6 +155,7 @@ void* field_draw_menu_frame(void* packet, u_long* ot, s32 x, s32 y, s32 width, s
     packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
 
     fill = packet;
+
     if (bright != 0)
     {
         SET_BGR0_PACKED(fill, MENU_FILL_COLOR_BRIGHT);
@@ -162,6 +164,7 @@ void* field_draw_menu_frame(void* packet, u_long* ot, s32 x, s32 y, s32 width, s
     {
         SET_BGR0_PACKED(fill, MENU_FILL_COLOR);
     }
+
     setTile(fill);
     setSemiTrans(fill, 1);
     setXY0(fill, x, y);
@@ -194,22 +197,27 @@ static void* field_draw_menu_sprite_tiles(void* packet, u_long* ot, RECT* destin
     s32 tile_width;
 
     sprite = packet;
+
     if (destination->w > 0 && destination->h > 0)
     {
         y_offset = 0;
-        remaining_height = destination->h;
-        do
+
+        for (remaining_height = destination->h; remaining_height != 0; remaining_height -= tile_height, y_offset += tile_height)
         {
             x_offset = 0;
             tile_height = remaining_height;
+
             if (texture->h < remaining_height)
             {
                 tile_height = texture->h;
             }
+
             remaining_width = destination->w;
+
             do
             {
                 tile_width = remaining_width;
+
                 if (texture->w < remaining_width)
                 {
                     tile_width = texture->w;
@@ -227,11 +235,9 @@ static void* field_draw_menu_sprite_tiles(void* packet, u_long* ot, RECT* destin
                 x_offset += tile_width;
                 remaining_width -= tile_width;
             } while (remaining_width != 0);
-
-            remaining_height -= tile_height;
-            y_offset += tile_height;
-        } while (remaining_height != 0);
+        }
     }
+
     return sprite;
 }
 
@@ -258,6 +264,7 @@ void field_reset_menu_elements(void)
 
     g_field_menu_frame_style = FIELD_MENU_FRAME_STYLE_FIELD;
     element = g_field_menu_elements;
+
     for (i = 0; i < FIELD_MENU_ELEMENT_COUNT; i++)
     {
         element->attr.bits.state = FIELD_MENU_STATE_IDLE;
@@ -276,9 +283,11 @@ s32 field_menu_elements_animating(void)
     s32 state;
 
     element = g_field_menu_elements;
+
     for (i = 0; i < FIELD_MENU_ELEMENT_COUNT; i++, element++)
     {
         state = element->attr.bits.state;
+
         if (state != FIELD_MENU_STATE_IDLE)
         {
             if (state != FIELD_MENU_STATE_OPEN)
@@ -287,6 +296,7 @@ s32 field_menu_elements_animating(void)
             }
         }
     }
+
     return 0;
 }
 
@@ -299,6 +309,7 @@ void field_close_menu_elements(void)
     s32 i;
 
     element = g_field_menu_elements;
+
     for (i = 0; i < FIELD_MENU_ELEMENT_COUNT; i++, element++)
     {
         if (element->attr.bits.state != FIELD_MENU_STATE_IDLE)
@@ -319,6 +330,7 @@ FieldMenuElement* field_claim_menu_element(void)
     s32 i;
 
     element = g_field_menu_elements;
+
     for (i = 0; i < FIELD_MENU_ELEMENT_COUNT; i++, element++)
     {
         if (element->attr.bits.state == FIELD_MENU_STATE_IDLE)
@@ -333,6 +345,7 @@ FieldMenuElement* field_claim_menu_element(void)
             return element;
         }
     }
+
     return g_field_menu_elements;
 }
 
@@ -359,6 +372,7 @@ void field_draw_menu_elements(FieldRenderHalf* render_half)
 
     packet = render_half->primitive_cursor;
     ot = render_half->ordering_table;
+
     if (render_half->display_rect.y != 0)
     {
         SetDefDrawEnv(&draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
@@ -367,7 +381,9 @@ void field_draw_menu_elements(FieldRenderHalf* render_half)
     {
         SetDefDrawEnv(&draw_env, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
     }
+
     element = g_field_menu_elements;
+
     for (i = 0; i < FIELD_MENU_ELEMENT_COUNT; i++, element++)
     {
         if (element->attr.bits.state != FIELD_MENU_STATE_IDLE)
@@ -382,12 +398,15 @@ void field_draw_menu_elements(FieldRenderHalf* render_half)
                     packet = field_draw_menu_scroll_arrow(packet, ot, arrow_x + FIELD_MENU_JOIN_WIDTH(element, arrow_width_low) - MENU_ARROW_RIGHT_INSET,
                                                           element->attr.bytes.y + MENU_ARROW_EDGE_INSET, 1);
                 }
+
                 view_height = FIELD_MENU_SIZE_HEIGHT(element->size.word);
+
                 if (element->scroll + view_height < element->size.fields.content_height)
                 {
                     packet = field_draw_menu_scroll_arrow(packet, ot, FIELD_MENU_X(element) + FIELD_MENU_WIDTH(element) - MENU_ARROW_RIGHT_INSET,
                                                           element->attr.bytes.y + view_height - MENU_ARROW_EDGE_INSET, 0);
                 }
+
                 if (element->scroll_ticks != 0)
                 {
                     element->scroll += (element->scroll_target - element->scroll) / element->scroll_ticks;
@@ -396,34 +415,41 @@ void field_draw_menu_elements(FieldRenderHalf* render_half)
                 else
                 {
                     element->scroll = element->scroll_target;
+
                     if (element->size.bits.scroll_mode == FIELD_MENU_SCROLL_BY_PAD)
                     {
                         if ((g_pad_input & PADLdown) && element->scroll + element->size.bits.height < element->size.fields.content_height)
                         {
                             field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
                             element->scroll_target += MENU_SCROLL_STEP;
+
                             if (element->scroll_target > element->size.fields.content_height - element->size.bits.height)
                             {
                                 element->scroll_target = element->size.fields.content_height - element->size.bits.height;
                             }
+
                             element->scroll_ticks = MENU_SCROLL_TICKS;
                         }
                         else if ((g_pad_input & PADLup) && element->scroll > 0)
                         {
                             field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
                             element->scroll_target -= MENU_SCROLL_STEP;
+
                             if (element->scroll_target < 0)
                             {
                                 element->scroll_target = 0;
                             }
+
                             element->scroll_ticks = MENU_SCROLL_TICKS;
                         }
                     }
                 }
             }
+
             SetDrawEnv((DR_ENV*)packet, &draw_env);
             addPrim(ot, packet);
             packet += sizeof(DR_ENV);
+
             switch (element->attr.bits.state)
             {
             case FIELD_MENU_STATE_OPENING:
@@ -444,11 +470,14 @@ void field_draw_menu_elements(FieldRenderHalf* render_half)
                                                    element->attr.bytes.y + (element->size.bits.height - frame_height) / 2, frame_width, frame_height,
                                                    render_half->display_rect.y, 0);
                 }
+
                 element->attr.bits.step++;
+
                 if (element->attr.bits.step == MENU_ANIMATION_STEPS)
                 {
                     element->attr.bits.state = FIELD_MENU_STATE_OPEN;
                 }
+
                 break;
             case FIELD_MENU_STATE_OPEN:
                 if (element->size.bits.blink)
@@ -456,10 +485,12 @@ void field_draw_menu_elements(FieldRenderHalf* render_half)
                     s32 width_low;
 
                     frame_width = 0;
+
                     if (!(g_frame_counter & MENU_BLINK_FRAME_BIT))
                     {
                         frame_width = -MENU_BLINK_GROW;
                     }
+
                     packet = element->draw(ot, packet, frame_width, frame_width + element->scroll, element->size.bits.height, element);
                     width_low = FIELD_MENU_WIDTH_LOW(element);
                     packet = field_draw_menu_frame(packet, ot, FIELD_MENU_X(element) + frame_width, element->attr.bytes.y + frame_width,
@@ -475,6 +506,7 @@ void field_draw_menu_elements(FieldRenderHalf* render_half)
                     packet = field_draw_menu_frame(packet, ot, FIELD_MENU_X(element), element->attr.bytes.y, FIELD_MENU_JOIN_WIDTH(element, width_low),
                                                    element->size.bits.height, render_half->display_rect.y, 0);
                 }
+
                 break;
             case FIELD_MENU_STATE_CLOSING:
                 {
@@ -494,15 +526,19 @@ void field_draw_menu_elements(FieldRenderHalf* render_half)
                                                    element->attr.bytes.y + (element->size.bits.height - frame_height) / 2, frame_width, frame_height,
                                                    render_half->display_rect.y, 0);
                 }
+
                 element->attr.bits.step--;
+
                 if (element->attr.bits.step == 0)
                 {
                     element->attr.bits.state = FIELD_MENU_STATE_IDLE;
                 }
+
                 break;
             }
         }
     }
+
     render_half->primitive_cursor = packet;
 }
 
@@ -523,6 +559,7 @@ void* field_draw_menu_scroll_arrow(void* buffer, u_long* ot, s32 x, s32 y, s32 u
 
     packet = buffer;
     setRECT(&destination, x - MENU_ARROW_WIDTH / 2, y - MENU_ARROW_HEIGHT / 2, MENU_ARROW_WIDTH, MENU_ARROW_HEIGHT);
+
     if (up != 0)
     {
         setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U + MENU_FRAME_BORDER, MENU_FRAME_TEX_V + MENU_FRAME_BORDER, MENU_ARROW_WIDTH,
@@ -533,6 +570,7 @@ void* field_draw_menu_scroll_arrow(void* buffer, u_long* ot, s32 x, s32 y, s32 u
         setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U + MENU_FRAME_BORDER + MENU_ARROW_WIDTH, MENU_FRAME_TEX_V + MENU_FRAME_BORDER,
                 MENU_ARROW_WIDTH, MENU_ARROW_HEIGHT);
     }
+
     packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
     setDrawTPage(packet, 0, 0, MENU_FRAME_TPAGE);
     addPrim(ot, packet);
@@ -559,5 +597,6 @@ s32 field_count_text_glyphs(u8* text)
             text++;
         }
     }
+
     return count;
 }
