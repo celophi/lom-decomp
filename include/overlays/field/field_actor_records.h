@@ -215,6 +215,12 @@ typedef union
 /** @brief FieldCollisionWord::word with the given centre offset and extent. */
 #define FIELD_COLLISION_WORD(center_offset, extent) (((u32)(extent) << 16) | (u16)(center_offset))
 
+/** @brief Reward kinds counted in FieldObjectState::reward_counters. */
+#define FIELD_REWARD_KIND_COUNT 4
+/** @brief FieldObjectState::idle_animation: no idle animation, and the idle animation that plays only while a reward is left. */
+#define FIELD_IDLE_ANIMATION_NONE 0xFF
+#define FIELD_IDLE_ANIMATION_REWARD 0x1F
+
 /**
  * @brief Runtime state of one field object (0x23C bytes).
  * @note Indices correspond to g_field_actors, not the animation-slot pool.
@@ -255,8 +261,8 @@ typedef struct FieldObjectState
     s32 target_y;
     s32 target_z;
     s32 effect_angle;
-    /** @brief Drops left per reward kind; each drop effect takes one, idle animation 0x1F plays only while any is left. */
-    u8 reward_counters[4];
+    /** @brief Drops left per reward kind; each drop effect takes one, FIELD_IDLE_ANIMATION_REWARD plays only while any is left. */
+    u8 reward_counters[FIELD_REWARD_KIND_COUNT];
     /** @brief Display name of the object, NULL when it has no label. */
     u8* name;
     /** @brief Stat-derived footprint strength, saturated to 255 during setup. */
@@ -284,7 +290,7 @@ typedef struct FieldObjectState
         s32 words[8];
     } effect_vertices;
     u8* script;
-    /** @brief Built-in animation restarted when the actor goes idle; 0xFF for none. */
+    /** @brief Built-in animation restarted when the actor goes idle; FIELD_IDLE_ANIMATION_NONE for none. */
     u8 idle_animation;
     /** @brief Effect record the object's HUD panel follows while it is bound to an animation actor. */
     u8 linked_effect_index;
@@ -843,6 +849,19 @@ typedef enum FieldAbility
     /** Follow-up attack Spin chains into while button 3 is held. */
     FIELD_ABILITY_FOLLOW_UP_51 = 0x51
 } FieldAbility;
+
+/** @brief Player animations outside FieldAbility (the command name table has no distinct names for them). */
+/** @brief Landing pose after a Jump or Double Jump; the landing effect plays once it is reached. */
+#define FIELD_ANIMATION_JUMP_LANDING 0x09
+/** @brief Power Attack (the default command of FIELD_RESOURCE_ACTION_POWER_ATTACK). */
+#define FIELD_ANIMATION_POWER_ATTACK 0x25
+/** @brief Aerial moves that end with the landing effect, like Back Flip and Moonsault. */
+#define FIELD_ANIMATION_AERIAL_46 0x46
+#define FIELD_ANIMATION_AERIAL_47 0x47
+/** @brief Air attack that drifts forward while it falls; its hits resolve as battle action 0x10. */
+#define FIELD_ANIMATION_AIR_ATTACK 0x48
+/** @brief Power Attack started in the air from a jump; drifts forward while it falls, hits resolve as battle action 0x11. */
+#define FIELD_ANIMATION_AIR_POWER_ATTACK 0x49
 
 /** @brief FieldObjectPart::placement_flags bits 12-13: where a sprite effect takes its CLUT (FIELD_PART_PALETTE_*). */
 #define FIELD_PART_PALETTE_SOURCE_SHIFT 12

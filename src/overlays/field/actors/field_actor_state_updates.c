@@ -92,19 +92,45 @@ typedef enum
     FIELD_SEQUENCE_END = 0xFF
 } FieldSequenceOpcode;
 
-/** @brief Object mode that cancels a pending action unless an action selection holds it. */
-#define FIELD_PENDING_MODE_CANCEL 3
+/** @brief Built-in animation of the dust a landing actor kicks up. */
+#define FIELD_LANDING_EFFECT 0x1A
+/** @brief Height an actor falls per frame while landing from a Double Jump or an air attack. */
+#define FIELD_LANDING_FALL_STEP 0xC00
+/** @brief Forward drift per frame of a falling air attack. */
+#define FIELD_AIR_ATTACK_DRIFT 0x200
+/** @brief Height above ground at which a falling air attack plays the landing effect and settles. */
+#define FIELD_LANDING_SETTLE_HEIGHT 0xA
+/** @brief First jump frame from which the Power Attack button starts an air Power Attack. */
+#define FIELD_AIR_POWER_ATTACK_FIRST_FRAME 3
+/** @brief Built-in animations started with a chained follow-up: Flip-Kick, and the two Spin follow-ups. */
+#define FIELD_FLIP_KICK_EFFECT 0x25
+#define FIELD_SPIN_FOLLOW_UP_50_EFFECT 0x26
+#define FIELD_SPIN_FOLLOW_UP_51_EFFECT 0x27
+/** @brief Battle actions of a grapple throw, and of the reversal when the grabbed object resists; gloves have their own. */
+#define FIELD_GRAPPLE_THROW_ACTION 0xC
+#define FIELD_GRAPPLE_GLOVE_THROW_ACTION 0xD
+#define FIELD_GRAPPLE_REVERSAL_ACTION 0x17
+#define FIELD_GRAPPLE_GLOVE_REVERSAL_ACTION 0x18
+/** @brief Built-in animations of a grapple throw and of its reversal. */
+#define FIELD_GRAPPLE_THROW_ANIMATION 0x64
+#define FIELD_GRAPPLE_GLOVE_THROW_ANIMATION 0x61
+#define FIELD_GRAPPLE_REVERSAL_ANIMATION 0x65
+#define FIELD_GRAPPLE_GLOVE_REVERSAL_ANIMATION 0x63
+/** @brief Squared distance to the leader per follower index beyond which a follower walks after it. */
+#define FIELD_FOLLOW_START_DISTANCE 2000
+/** @brief Squared distance to the next route point beyond which a follower runs. */
+#define FIELD_FOLLOW_RUN_DISTANCE 384
 
 /**
  * @brief History point @p point of object @p object_index, indexed through one flat point array.
- * @note The object and point indices are folded into one four-byte stride, as the original does.
+ * @note The object and point indices are folded into one four-byte stride.
  */
 #define FIELD_HISTORY_POINT(states, object_index, point)                                                                                                       \
     (*(FieldRoutePoint*)((u8*)(states) + ((object_index) * (sizeof(FieldObjectState) / sizeof(FieldRoutePoint)) + (point)) * sizeof(FieldRoutePoint) +         \
                          OFFSETOF(FieldObjectState, route_history)))
 
 /**
- * @brief Settle a landing actor to the ground and play the landing effect (animation 0x1A).
+ * @brief Settle a landing actor to the ground and play the landing effect.
  * @param actor Landing actor.
  * @return Zero while the state is being advanced, or one when it is complete.
  * @note The high state bit selects horizontal displacement direction.
@@ -119,45 +145,45 @@ s32 field_update_actor_landing(FieldActor* actor)
 
     switch (actor->animation & FIELD_ANIMATION_INDEX_MASK)
     {
-    case 8:
-        actor->animation = (actor->animation & FIELD_ANIMATION_FACING) | 9;
+    case FIELD_ABILITY_JUMP:
+        actor->animation = (actor->animation & FIELD_ANIMATION_FACING) | FIELD_ANIMATION_JUMP_LANDING;
         field_restart_actor_animation(actor);
         return 0;
-    case 61:
+    case FIELD_ABILITY_DOUBLE_JUMP:
         height = actor->y;
 
-        if (height < -0xC00)
+        if (height < -FIELD_LANDING_FALL_STEP)
         {
-            actor->y = height + 0xC00;
+            actor->y = height + FIELD_LANDING_FALL_STEP;
             return 0;
         }
         else
         {
             actor->y = 0;
-            actor->animation = (actor->animation & FIELD_ANIMATION_FACING) | 9;
+            actor->animation = (actor->animation & FIELD_ANIMATION_FACING) | FIELD_ANIMATION_JUMP_LANDING;
             field_restart_actor_animation(actor);
             return 0;
         }
-    case 72:
-    case 73:
+    case FIELD_ANIMATION_AIR_ATTACK:
+    case FIELD_ANIMATION_AIR_POWER_ATTACK:
         height = actor->y;
 
-        if (height < -0xC00)
+        if (height < -FIELD_LANDING_FALL_STEP)
         {
             if (actor->animation & FIELD_ANIMATION_FACING)
             {
-                displacement->x = 0x200;
+                displacement->x = FIELD_AIR_ATTACK_DRIFT;
             }
             else
             {
-                displacement->x = -0x200;
+                displacement->x = -FIELD_AIR_ATTACK_DRIFT;
             }
 
             displacement->z = 0;
             displacement->y = 0;
             rising_height = actor->y;
             field_resolve_actor_movement(actor, &displacement->x, 1);
-            rising_height += 0xC00;
+            rising_height += FIELD_LANDING_FALL_STEP;
             actor->y = rising_height;
             return 0;
         }
@@ -165,10 +191,10 @@ s32 field_update_actor_landing(FieldActor* actor)
         {
             break;
         }
-        else if (height < -0xA)
+        else if (height < -FIELD_LANDING_SETTLE_HEIGHT)
         {
-            actor->y = -0xA;
-            field_play_object_animation(actor, 0x1A);
+            actor->y = -FIELD_LANDING_SETTLE_HEIGHT;
+            field_play_object_animation(actor, FIELD_LANDING_EFFECT);
         }
         else
         {
@@ -176,15 +202,15 @@ s32 field_update_actor_landing(FieldActor* actor)
         }
 
         return 0;
-    case 9:
-    case 58:
-    case 59:
-    case 60:
-    case 70:
-    case 71:
-    case 78:
-    case 79:
-        field_play_object_animation(actor, 0x1A);
+    case FIELD_ANIMATION_JUMP_LANDING:
+    case FIELD_ABILITY_BACK_FLIP:
+    case FIELD_ABILITY_MOONSAULT:
+    case FIELD_ABILITY_HIGH_JUMP:
+    case FIELD_ANIMATION_AERIAL_46:
+    case FIELD_ANIMATION_AERIAL_47:
+    case FIELD_ABILITY_FOLLOW_UP_4E:
+    case FIELD_ABILITY_FLIP_KICK:
+        field_play_object_animation(actor, FIELD_LANDING_EFFECT);
         return 1;
     default:
         break;
@@ -241,8 +267,8 @@ s32 field_update_actor_action_chain(FieldActor* actor)
 
         if (animation_index == FIELD_ABILITY_DOUBLE_JUMP)
         {
-            if (g_field_resource_actions[actor->object_index].slots[1].command == animation_index &&
-                (anim = field_resolve_action_command(actor, actor->object_index)) == FIELD_ACTION_COMMAND(1))
+            if (g_field_resource_actions[actor->object_index].slots[FIELD_RESOURCE_ACTION_ABILITY_1].command == animation_index &&
+                (anim = field_resolve_action_command(actor, actor->object_index)) == FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_ABILITY_1))
 #else
         tmp = actor->animation & FIELD_ANIMATION_INDEX_MASK;
 
@@ -250,7 +276,8 @@ s32 field_update_actor_action_chain(FieldActor* actor)
         {
             anim = field_resolve_action_command(actor, actor->object_index);
 
-            if (g_field_resource_actions[actor->object_index].slots[1].command == tmp && anim == FIELD_ACTION_COMMAND(1))
+            if (g_field_resource_actions[actor->object_index].slots[FIELD_RESOURCE_ACTION_ABILITY_1].command == tmp &&
+                anim == FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_ABILITY_1))
 #endif
             {
                 actor->command = anim;
@@ -262,10 +289,11 @@ s32 field_update_actor_action_chain(FieldActor* actor)
             }
 #if defined(VERSION_JP)
             else if ((animation_index = actor->animation & FIELD_ANIMATION_INDEX_MASK) == FIELD_ABILITY_DOUBLE_JUMP &&
-                     g_field_resource_actions[actor->object_index].slots[0].command == animation_index &&
-                     (anim = field_resolve_action_command(actor, actor->object_index)) == FIELD_ACTION_COMMAND(0))
+                     g_field_resource_actions[actor->object_index].slots[FIELD_RESOURCE_ACTION_ABILITY_0].command == animation_index &&
+                     (anim = field_resolve_action_command(actor, actor->object_index)) == FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_ABILITY_0))
 #else
-            else if (g_field_resource_actions[actor->object_index].slots[0].command == FIELD_ABILITY_DOUBLE_JUMP && anim == FIELD_ACTION_COMMAND(0))
+            else if (g_field_resource_actions[actor->object_index].slots[FIELD_RESOURCE_ACTION_ABILITY_0].command == FIELD_ABILITY_DOUBLE_JUMP &&
+                     anim == FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_ABILITY_0))
 #endif
             {
                 actor->command = anim;
@@ -278,40 +306,40 @@ s32 field_update_actor_action_chain(FieldActor* actor)
         }
     }
 
-    if (field_get_held_action_buttons(actor->object_index, 3, actor) != 0)
+    if (field_get_held_action_buttons(actor->object_index, FIELD_RESOURCE_ACTION_POWER_ATTACK, actor) != 0)
     {
         switch (actor->animation & FIELD_ANIMATION_INDEX_MASK)
         {
         case FIELD_ABILITY_LUNGE:
         case FIELD_ABILITY_DEFENSIVE_LUNGE:
-            actor->command = FIELD_ACTION_COMMAND(8);
+            actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_DASH_POWER_ATTACK);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);
             break;
         case FIELD_ABILITY_TACKLE:
-            actor->command = FIELD_ACTION_COMMAND(10);
+            actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);
             break;
         case FIELD_ABILITY_SOMERSAULT:
-            actor->command = FIELD_ACTION_COMMAND(10);
+            actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);
             break;
         case FIELD_ABILITY_BACK_FLIP:
-            FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FLIP_KICK, 0x25, 0);
+            FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FLIP_KICK, FIELD_FLIP_KICK_EFFECT, 0);
             actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_CHAIN);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);
             break;
         case FIELD_ABILITY_BACK_ROLL:
-            FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FLIP_KICK, 0x25, 0);
+            FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FLIP_KICK, FIELD_FLIP_KICK_EFFECT, 0);
             actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_CHAIN);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);
             break;
         case FIELD_ABILITY_SPIN:
-            FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FOLLOW_UP_51, 0x27, 0);
+            FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FOLLOW_UP_51, FIELD_SPIN_FOLLOW_UP_51_EFFECT, 0);
             actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_CHAIN);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);
@@ -320,12 +348,12 @@ s32 field_update_actor_action_chain(FieldActor* actor)
         case FIELD_ABILITY_MOONSAULT:
         case FIELD_ABILITY_HIGH_JUMP:
         case FIELD_ABILITY_DOUBLE_JUMP:
-            if (actor->animation_frame < 3)
+            if (actor->animation_frame < FIELD_AIR_POWER_ATTACK_FIRST_FRAME)
             {
                 return;
             }
 
-            actor->animation = (actor->animation & FIELD_ANIMATION_FACING) | 0x49;
+            actor->animation = (actor->animation & FIELD_ANIMATION_FACING) | FIELD_ANIMATION_AIR_POWER_ATTACK;
             actor->y -= FIELD_STEP_OFFSET(actor);
             field_restart_actor_animation(actor);
             field_command_history_clear(actor->object_index);
@@ -348,38 +376,42 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                     {
                         if (g_field_player_records[actor->object_index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
                         {
-                            field_resolve_object_hit(actor->object_index, g_field_object_states[actor->object_index].linked_object_index, 0xD);
+                            field_resolve_object_hit(actor->object_index, g_field_object_states[actor->object_index].linked_object_index,
+                                                     FIELD_GRAPPLE_GLOVE_THROW_ACTION);
                         }
                         else
                         {
-                            field_resolve_object_hit(actor->object_index, g_field_object_states[actor->object_index].linked_object_index, 0xC);
+                            field_resolve_object_hit(actor->object_index, g_field_object_states[actor->object_index].linked_object_index,
+                                                     FIELD_GRAPPLE_THROW_ACTION);
                         }
 
                         index = actor->object_index;
-                        anim_id = 0x64;
+                        anim_id = FIELD_GRAPPLE_THROW_ANIMATION;
 
                         if (g_field_player_records[index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
                         {
-                            anim_id = 0x61;
+                            anim_id = FIELD_GRAPPLE_GLOVE_THROW_ANIMATION;
                         }
                     }
                     else
                     {
                         if (g_field_player_records[actor->object_index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
                         {
-                            field_resolve_object_hit(g_field_object_states[actor->object_index].linked_object_index, actor->object_index, 0x18);
+                            field_resolve_object_hit(g_field_object_states[actor->object_index].linked_object_index, actor->object_index,
+                                                     FIELD_GRAPPLE_GLOVE_REVERSAL_ACTION);
                         }
                         else
                         {
-                            field_resolve_object_hit(g_field_object_states[actor->object_index].linked_object_index, actor->object_index, 0x17);
+                            field_resolve_object_hit(g_field_object_states[actor->object_index].linked_object_index, actor->object_index,
+                                                     FIELD_GRAPPLE_REVERSAL_ACTION);
                         }
 
                         index = actor->object_index;
-                        anim_id = 0x65;
+                        anim_id = FIELD_GRAPPLE_REVERSAL_ANIMATION;
 
                         if (g_field_player_records[index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
                         {
-                            anim_id = 0x63;
+                            anim_id = FIELD_GRAPPLE_GLOVE_REVERSAL_ANIMATION;
                         }
                     }
 
@@ -400,17 +432,18 @@ s32 field_update_actor_action_chain(FieldActor* actor)
             return;
         }
     }
-    else if (field_get_held_action_buttons(actor->object_index, 1, actor) != 0 || field_get_held_action_buttons(actor->object_index, 0, actor) != 0)
+    else if (field_get_held_action_buttons(actor->object_index, FIELD_RESOURCE_ACTION_ABILITY_1, actor) != 0 ||
+             field_get_held_action_buttons(actor->object_index, FIELD_RESOURCE_ACTION_ABILITY_0, actor) != 0)
     {
-        tmp = field_get_held_action_buttons(actor->object_index, 1, actor) != 0;
+        tmp = field_get_held_action_buttons(actor->object_index, FIELD_RESOURCE_ACTION_ABILITY_1, actor) != 0;
 
         switch (actor->animation & FIELD_ANIMATION_INDEX_MASK)
         {
-        case 0x25:
+        case FIELD_ANIMATION_POWER_ATTACK:
             if (g_field_resource_actions[actor->object_index].slots[tmp].command == FIELD_ABILITY_JUMP ||
                 g_field_resource_actions[actor->object_index].slots[tmp].command == FIELD_ABILITY_HIGH_JUMP)
             {
-                actor->command = FIELD_ACTION_COMMAND(9);
+                actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_JUMP_POWER_ATTACK);
                 field_prepare_actor_action(actor);
                 field_command_history_clear(actor->object_index);
             }
@@ -428,11 +461,11 @@ s32 field_update_actor_action_chain(FieldActor* actor)
             break;
         }
     }
-    else if (field_get_held_action_buttons(actor->object_index, 2, actor) != 0)
+    else if (field_get_held_action_buttons(actor->object_index, FIELD_RESOURCE_ACTION_COMBO, actor) != 0)
     {
         if ((actor->animation & ~FIELD_ANIMATION_FACING) == FIELD_ABILITY_SPIN)
         {
-            FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FOLLOW_UP_50, 0x26, 0);
+            FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FOLLOW_UP_50, FIELD_SPIN_FOLLOW_UP_50_EFFECT, 0);
             actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_CHAIN);
             field_prepare_actor_action(actor);
             field_command_history_clear(actor->object_index);
@@ -453,38 +486,42 @@ s32 field_update_actor_action_chain(FieldActor* actor)
                     {
                         if (g_field_player_records[actor->object_index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
                         {
-                            field_resolve_object_hit(actor->object_index, g_field_object_states[actor->object_index].linked_object_index, 0xD);
+                            field_resolve_object_hit(actor->object_index, g_field_object_states[actor->object_index].linked_object_index,
+                                                     FIELD_GRAPPLE_GLOVE_THROW_ACTION);
                         }
                         else
                         {
-                            field_resolve_object_hit(actor->object_index, g_field_object_states[actor->object_index].linked_object_index, 0xC);
+                            field_resolve_object_hit(actor->object_index, g_field_object_states[actor->object_index].linked_object_index,
+                                                     FIELD_GRAPPLE_THROW_ACTION);
                         }
 
                         index = actor->object_index;
-                        anim_id = 0x64;
+                        anim_id = FIELD_GRAPPLE_THROW_ANIMATION;
 
                         if (g_field_player_records[index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
                         {
-                            anim_id = 0x61;
+                            anim_id = FIELD_GRAPPLE_GLOVE_THROW_ANIMATION;
                         }
                     }
                     else
                     {
                         if (g_field_player_records[actor->object_index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
                         {
-                            field_resolve_object_hit(g_field_object_states[actor->object_index].linked_object_index, actor->object_index, 0x18);
+                            field_resolve_object_hit(g_field_object_states[actor->object_index].linked_object_index, actor->object_index,
+                                                     FIELD_GRAPPLE_GLOVE_REVERSAL_ACTION);
                         }
                         else
                         {
-                            field_resolve_object_hit(g_field_object_states[actor->object_index].linked_object_index, actor->object_index, 0x17);
+                            field_resolve_object_hit(g_field_object_states[actor->object_index].linked_object_index, actor->object_index,
+                                                     FIELD_GRAPPLE_REVERSAL_ACTION);
                         }
 
                         index = actor->object_index;
-                        anim_id = 0x65;
+                        anim_id = FIELD_GRAPPLE_REVERSAL_ANIMATION;
 
                         if (g_field_player_records[index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
                         {
-                            anim_id = 0x63;
+                            anim_id = FIELD_GRAPPLE_GLOVE_REVERSAL_ANIMATION;
                         }
                     }
 
@@ -528,7 +565,7 @@ s32 field_update_pending_action(FieldActor* actor)
     states = g_field_object_states;
     state = &states[actor->object_index];
 
-    if ((state->action == 2 || actor->variant != 0) && actor->y == 0)
+    if ((state->action == FIELD_RESOURCE_ACTION_COMBO || actor->variant != 0) && actor->y == 0)
     {
         if (!(actor->control.word & FIELD_CONTROL_MODE_MASK))
         {
@@ -540,14 +577,14 @@ s32 field_update_pending_action(FieldActor* actor)
             }
         }
 
-        if (selection == 3)
+        if (selection == FIELD_RESOURCE_ACTION_POWER_ATTACK)
         {
             g_field_object_states[actor->object_index].retry_count = 0;
             actor->variant = 0;
         }
-        else if (selection < 4)
+        else if (selection <= FIELD_RESOURCE_ACTION_POWER_ATTACK)
         {
-            if (selection == 2)
+            if (selection == FIELD_RESOURCE_ACTION_COMBO)
             {
                 count = actor->variant;
 
@@ -588,8 +625,9 @@ s32 field_update_pending_action(FieldActor* actor)
 
     switch (mode)
     {
-    case FIELD_PENDING_MODE_CANCEL:
-        if (selection != 4 && selection != 6 && selection != 5 && selection != 7 && selection != 8 && selection != 9 && selection != 10)
+    case FIELD_RESOURCE_ACTION_POWER_ATTACK:
+        if (selection != 4 && selection != 6 && selection != 5 && selection != 7 && selection != FIELD_RESOURCE_ACTION_DASH_POWER_ATTACK &&
+            selection != FIELD_RESOURCE_ACTION_JUMP_POWER_ATTACK && selection != FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK)
         {
             field_command_history_clear(object_index);
             g_field_object_states[actor->object_index].retry_count = 0;
@@ -602,9 +640,9 @@ s32 field_update_pending_action(FieldActor* actor)
         }
 
         break;
-    case 8:
-    case 9:
-    case 10:
+    case FIELD_RESOURCE_ACTION_DASH_POWER_ATTACK:
+    case FIELD_RESOURCE_ACTION_JUMP_POWER_ATTACK:
+    case FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK:
         if (selection != 4 && selection != 6 && selection != 5 && selection != 7)
         {
             field_command_history_clear(object_index);
@@ -759,7 +797,7 @@ void field_update_technique_command(FieldActor* actor, s32 sequence_index)
                 do
                 {
                     bank = players[object_index].head.bytes.weapon_type;
-                    row_offset = sequence_index << 5;
+                    row_offset = sequence_index * FIELD_SEQUENCE_ROW_SIZE;
                     row_address = bank << 1;
                     row_address += bank;
                     row_address <<= 8;
@@ -953,7 +991,7 @@ void field_follow_leader(FieldActor* actor)
     index = actor->object_index;
     distance = squares->vx + squares->vz;
 
-    if (((index + 1) * 2000 < distance) &&
+    if (((index + 1) * FIELD_FOLLOW_START_DISTANCE < distance) &&
         (states = g_field_object_states, state = &states[index], next = state->route_index, next < FIELD_ROUTE_HISTORY_LENGTH - 1))
     {
         state->route_index = next + 1;
@@ -963,7 +1001,7 @@ void field_follow_leader(FieldActor* actor)
         gte_sqr12();
         gte_stlvnl(squares);
 
-        if (squares->vx + squares->vz > 384 && !(g_field_resource_entries[actor->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS))
+        if (squares->vx + squares->vz > FIELD_FOLLOW_RUN_DISTANCE && !(g_field_resource_entries[actor->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS))
         {
             actor->running = 1;
         }
@@ -1079,7 +1117,7 @@ void field_update_actor_lift(FieldActor* actor, s32 rising)
 
     if (rising != 0)
     {
-        actor->y -= actor->command_param << 8;
+        actor->y -= actor->command_param << FIELD_POSITION_SHIFT;
     }
     else
     {
@@ -1248,14 +1286,14 @@ void field_restart_idle_animation(FieldActor* actor)
     s32 actor_index;
     s32 animation_id;
 
-    if (g_field_object_states[actor->object_index].idle_animation == 0xFF)
+    if (g_field_object_states[actor->object_index].idle_animation == FIELD_IDLE_ANIMATION_NONE)
     {
         return;
     }
 
-    if (g_field_object_states[actor->object_index].idle_animation == 0x1F)
+    if (g_field_object_states[actor->object_index].idle_animation == FIELD_IDLE_ANIMATION_REWARD)
     {
-        for (i = 0; i < 4; i++)
+        for (i = 0; i < FIELD_REWARD_KIND_COUNT; i++)
         {
             if (g_field_object_states[actor->object_index].reward_counters[i] != 0)
             {
@@ -1522,8 +1560,6 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
     s32 target_kind_flags;
     s32 target_command;
     s32 actor_offset;
-    s32 copy_owner;
-    s32* target_output;
     s32 current_copy_owner;
     s32* current_target_output;
     s32 kind_flags;
@@ -1651,20 +1687,10 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
                 target_state->action_parameter = target_command;
                 target_owner = actor->object_index;
                 actor_index = field_allocate_sequence_actor(target_owner, slots[target_owner].action_parameter);
-                copy_owner = actor->object_index;
-                target_index = 0;
 
-                if (slots[copy_owner].contact.bytes.target_count != 0)
+                for (target_index = 0; target_index < slots[actor->object_index].contact.bytes.target_count; target_index++)
                 {
-                    target_output = parameters;
-
-                    do
-                    {
-                        *target_output = slots[copy_owner].targets[target_index];
-                        target_index++;
-                        target_output++;
-                        copy_owner = actor->object_index;
-                    } while (target_index < slots[copy_owner].contact.bytes.target_count);
+                    parameters[target_index] = slots[actor->object_index].targets[target_index];
                 }
 
                 field_start_actor_animation(actor_index, slots[actor->object_index].contact.bytes.target_count, (u8*)parameters);

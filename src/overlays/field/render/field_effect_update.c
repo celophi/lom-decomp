@@ -4882,10 +4882,10 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                                             {
                                                 switch (rec->facing_or_reward_kind & FIELD_ANIMATION_INDEX_MASK)
                                                 {
-                                                case 0x48:
+                                                case FIELD_ANIMATION_AIR_ATTACK:
                                                     y_offset = field_resolve_object_hit(rec->source_object_index, contact.index, 0x10);
                                                     break;
-                                                case 0x49:
+                                                case FIELD_ANIMATION_AIR_POWER_ATTACK:
                                                     y_offset = field_resolve_object_hit(rec->source_object_index, contact.index, 0x11);
                                                     break;
                                                 case FIELD_ABILITY_TACKLE:
