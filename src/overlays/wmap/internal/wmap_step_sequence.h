@@ -524,7 +524,6 @@
  * @param amount Amount added before drawing the next frame.
  * @param maximum Highest shade allowed.
  * @param result s32 scratch variable receiving the shade before clamping.
- * @note A do/while wrapper changes how the old compiler schedules the fade.
  */
 #define WMAP_MODEL_FADE_IN(shade, amount, maximum, result)                               \
     {                                                                                    \

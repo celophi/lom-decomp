@@ -44,14 +44,13 @@
 #define SHOP_OTHER_VALUE_X 66
 #endif
 
-/** @brief Inventory record named by record entry id @p id, summed as integers, index first. */
+/** @brief Inventory record named by record entry id @p id. */
 #define SHOP_ENTRY_RECORD(id) ((FieldItemRecord*)(((id) & SHOP_ENTRY_RECORD_INDEX_MASK) * sizeof(FieldItemRecord) + (uintptr_t)g_shop_item_records))
 /** @brief Inventory record of the list entry under the cursor. */
 #define SHOP_SELECTED_RECORD() SHOP_ENTRY_RECORD(SHOP_SELECTED_ENTRY()->id)
 
 /**
  * @brief Address of the string whose offset sits @p index bytes into the archive section @p offset bytes into @p archive.
- * @note Summed as integers, index first.
  */
 #define SHOP_ARCHIVE_TEXT(archive, offset, index) ((u8*)((offset) + (*(u16*)((index) + (offset) + (uintptr_t)(archive)) + (uintptr_t)(archive))))
 
@@ -220,6 +219,14 @@ u8* shop_draw_money_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
     return prim;
 }
 
+/**
+ * @brief Draw the visible shop entries and the selected row's highlight.
+ * @param ot Ordering-table entry for the list's text and highlight packets.
+ * @param prim First free primitive packet.
+ * @param x_inset Horizontal window transition inset.
+ * @param y_inset Vertical window transition inset.
+ * @return Primitive cursor after the list packets.
+ */
 u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
 {
     Vec2s position;

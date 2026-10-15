@@ -381,7 +381,6 @@ void field_select_coordinate_labels(void)
 
     if (resource != NULL)
     {
-        /* Integer sum: the target adds the index before the pointer. */
         offsets = (u16*)((first * 2) + (uintptr_t)resource);
 
         for (; i < FIELD_COORDINATE_LABEL_COUNT; i++)

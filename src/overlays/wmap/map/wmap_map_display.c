@@ -268,6 +268,8 @@ void wmap_draw_land(s32 map_x, s32 map_y, s32 resource_index);
 void wmap_set_cell_effect_mode(s32 x, s32 y, s32 mode);
 s32 wmap_classify_map_point(s32 x, s32 y);
 
+static inline s32 wmap_find_land_image(s16 resource_id);
+
 /**
  * @brief Run the map game and draw its nine lands, score, and round counter.
  */
@@ -723,124 +725,112 @@ void wmap_update_map_game_spawns(void)
 }
 
 /**
+ * @brief Find a land image or an unused slot in the image cache.
+ * @param resource_id Land image id, or -1 for an unused slot.
+ * @return Matching cache slot index, or -1 when no slot matches.
+ */
+static inline s32 wmap_find_land_image(s16 resource_id)
+{
+    s32 cache_index;
+
+    for (cache_index = 0; cache_index < WMAP_CACHE_SLOTS; cache_index++)
+    {
+        if (g_wmap_land_image_cache[cache_index].resource_id == resource_id)
+        {
+            return cache_index;
+        }
+    }
+
+    return -1;
+}
+
+/**
  * @brief Resolve or load the cache slot used by a world-map resource.
  * @param resource Land whose image is needed; resets animation history when no sequence is active.
  * @return Cache slot index, or -1 when the resource cannot be loaded.
  */
 s32 wmap_resolve_land_image(WmapLandDisplay* resource)
 {
-    s32 i;
+    s32 resource_id;
     s32 slot;
     s32 oldest_slot;
     u32 oldest_frame;
     WmapCacheEntry* cache;
-    WmapCacheEntry* search_cache;
-    static void* const keep[] __attribute__((section(".discard"))) = {&&count_fail};
 
+    resource_id = resource->resource_id;
+
+    if (resource_id == 0x1F)
     {
-        s32 resource_id;
-
-        resource_id = resource->resource_id;
-        if (resource_id == 0x1F)
-        {
-            return 0x10;
-        }
-        if (D_800500DC[resource_id] == -1)
-        {
-            return -1;
-        }
-
-        i = 0;
-        search_cache = g_wmap_land_image_cache;
-        while (1)
-        {
-            slot = i;
-            if (search_cache->resource_id == resource_id)
-            {
-                break;
-            }
-            i++;
-            if (i >= WMAP_CACHE_SLOTS)
-            {
-                slot = -1;
-                break;
-            }
-            search_cache++;
-        }
+        return 0x10;
     }
+
+    if (D_800500DC[resource_id] == -1)
+    {
+        return -1;
+    }
+
+    slot = wmap_find_land_image(resource_id);
 
     if (slot < 0)
     {
         g_wmap_land_image_cache_missed = 1;
-        if (g_wmap_land_image_load_locked != 0)
-        {
-            goto fail;
-        }
 
-        i = 0;
-        if (D_800DBE74 >= 10)
+        if (g_wmap_land_image_load_locked == 0)
         {
-        count_fail:
-            return -1;
-        }
-
-        {
-            s32 empty_id;
-
-            empty_id = -1;
-            search_cache = g_wmap_land_image_cache;
-            while (1)
+            if (D_800DBE74 >= 10)
             {
-                slot = i;
-                if (search_cache->resource_id == empty_id)
+                return -1;
+            }
+
+            slot = wmap_find_land_image(-1);
+
+            if (slot >= 0)
+            {
+                WmapCacheEntry* free_entry;
+                WmapCacheEntry* cache_base;
+                u8* image;
+                s16 resource_id;
+
+                cache_base = g_wmap_land_image_cache;
+                free_entry = &cache_base[slot];
+                resource_id = resource->resource_id;
+                free_entry->resource_id = resource_id;
+                image = (u8*)g_wmap_land_image_pack + g_wmap_land_image_pack[resource_id];
+                LoadImage(&D_800CBBE8[slot].upload.rect, (u_long*)image);
+                free_entry->animation_data = image + 0x2004;
+                free_entry->loaded_frame = g_wmap_frame_count;
+
+                if (resource->animation_cursor == 0)
                 {
-                    break;
+                    resource->previous_animation_index = -1;
                 }
-                i++;
-                if (i >= WMAP_CACHE_SLOTS)
-                {
-                    slot = -1;
-                    break;
-                }
-                search_cache++;
+
+                return slot;
             }
         }
-
-        if (slot < 0)
+        else
         {
-            goto replace_oldest;
-        }
-
-        {
-            WmapCacheEntry* free_entry;
-            WmapCacheEntry* cache_base;
-            u8* image;
-            s16 resource_id;
-
-            cache_base = g_wmap_land_image_cache;
-            free_entry = &cache_base[slot];
-            resource_id = resource->resource_id;
-            free_entry->resource_id = resource_id;
-            image = (u8*)g_wmap_land_image_pack + g_wmap_land_image_pack[resource_id];
-            LoadImage(&D_800CBBE8[slot].upload.rect, (u_long*)image);
-            free_entry->animation_data = image + 0x2004;
-            free_entry->loaded_frame = g_wmap_frame_count;
+            return -1;
         }
     }
 
-    if (resource->animation_cursor == 0)
+    if (slot >= 0)
     {
-        resource->previous_animation_index = -1;
-    }
-    return slot;
+        if (resource->animation_cursor == 0)
+        {
+            resource->previous_animation_index = -1;
+        }
 
-replace_oldest:
+        return slot;
+    }
+
     oldest_slot = -1;
     oldest_frame = 0x7FFFFFFF;
-    slot = 0;
-    do
+
+    for (slot = 0; slot < WMAP_CACHE_SLOTS; slot++)
     {
         cache = &g_wmap_land_image_cache[slot];
+
         if (g_wmap_land_display[cache->resource_id].transition == 0)
         {
             if (cache->loaded_frame < oldest_frame)
@@ -849,8 +839,7 @@ replace_oldest:
                 oldest_slot = slot;
             }
         }
-        slot++;
-    } while (slot < WMAP_CACHE_SLOTS);
+    }
 
     {
         WmapCacheEntry* oldest_entry;
@@ -861,13 +850,13 @@ replace_oldest:
         cache_base = g_wmap_land_image_cache;
         /* The cache must contain an inactive land before replacement is requested. */
         oldest_entry = &cache_base[oldest_slot];
+
         if (oldest_entry->busy != 0)
         {
             return -1;
         }
 
-        i = -1;
-        oldest_entry->resource_id = i;
+        oldest_entry->resource_id = -1;
         resource_id = resource->resource_id;
         oldest_entry->resource_id = resource_id;
         image = (u8*)g_wmap_land_image_pack + g_wmap_land_image_pack[resource_id];
@@ -876,12 +865,9 @@ replace_oldest:
         oldest_entry->animation_data = image;
         oldest_entry->loaded_frame = g_wmap_frame_count;
         resource->animation_cursor = 0;
-        resource->previous_animation_index = i;
+        resource->previous_animation_index = -1;
         return oldest_slot;
     }
-
-fail:
-    return -1;
 }
 
 /**

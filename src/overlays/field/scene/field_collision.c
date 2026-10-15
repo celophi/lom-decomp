@@ -2806,7 +2806,6 @@ static s32 field_collision_slide_angle(FieldCollisionSurfaceDef* surface, s32 ed
                 {
                     if (edge_index == 0)
                     {
-                        /* Leaves both loops past the closing-edge default; a flag and break adds a test. */
                         goto found;
                     }
 

@@ -288,6 +288,7 @@ static POLY_F4* field_emit_hud_damage_quad(POLY_F4* prim, s32 y, u_long* ot);
 static POLY_F4* field_emit_hud_healing_quad(POLY_F4* prim, s32 y, u_long* ot);
 void field_restart_actor_animation(FieldActor* actor);
 static inline void field_clear_link_target_flag(s32 object_index);
+static inline void field_dispatch_object_flag(s32 index, FieldObjectState* state, s32 pending_flags);
 
 /**
  * @brief Set the corners of a slanted gauge bar.
@@ -1293,7 +1294,52 @@ s32 field_upload_image_resource(RECT* rect, Tim* resource, s32 mode)
 }
 
 /**
- * @brief Run the handlers of an object's changed flags and refresh its actor tint.
+ * @brief Run the highest-priority available handler and acknowledge its object flag.
+ * @param index Object index.
+ * @param state Object flags and last acknowledged flag state.
+ * @param pending_flags Flags that are active or have changed.
+ */
+static inline void field_dispatch_object_flag(s32 index, FieldObjectState* state, s32 pending_flags)
+{
+    s32 bit_mask;
+    s32 bit_index;
+    FieldObjectFlagHandler handler;
+
+    bit_mask = 1 << (FIELD_OBJECT_HANDLER_COUNT - 1);
+
+    for (bit_index = FIELD_OBJECT_HANDLER_COUNT - 1; bit_index >= 0; bit_index--, bit_mask >>= 1)
+    {
+        if (pending_flags & bit_mask)
+        {
+            handler = g_field_object_flag_handlers[bit_index];
+
+            if (handler.animation != FIELD_OBJECT_HANDLER_NONE)
+            {
+                if (handler.animation < FIELD_OBJECT_HANDLER_FUNCTION_MIN)
+                {
+                    if (state->flags & bit_mask)
+                    {
+                        s32 animation_slot;
+
+                        animation_slot = index + FIELD_OBJECT_EFFECT_SLOT_BASE;
+                        field_start_builtin_animation(index, animation_slot, handler.animation);
+                        field_start_actor_animation(animation_slot, 0, 0);
+                    }
+                }
+                else
+                {
+                    handler.function(&g_field_actors[index], state->flags & bit_mask);
+                }
+
+                state->previous_flags = (state->previous_flags & ~bit_mask) | (state->flags & bit_mask);
+                return;
+            }
+        }
+    }
+}
+
+/**
+ * @brief Dispatch object flag effects, stop cleared effects, and refresh actor tint.
  * @param index Object index.
  * @note A handler entry below 0x100 is an animation resource played on the object's effect slot.
  */
@@ -1302,28 +1348,19 @@ void field_update_object_effects(s32 index)
     s32 flags_before;
     s32 changed_or_current;
     s32 previous_flags;
-    s32 record_offset;
-    s32 animation_slot;
     u32 changed_flags;
     s32 flags_current;
     s32 old_flags;
     s32 scan_flags;
-    s32 bit_index;
-    s32 clear_mask;
     s32 status_bit;
     s32 cleared_bit;
-    s32 bit_mask;
     s32 cleared_mask;
     u16 animation_id;
-    FieldObjectFlagHandler* handler;
-    FieldObjectFlagHandler* handlers;
-    FieldObjectFlagHandler handler_value;
     FieldActorSlot* slot;
     FieldActor* actor;
     FieldObjectState* state;
 
-    record_offset = index * sizeof(FieldActor);
-    actor = (FieldActor*)(record_offset + (u8*)g_field_actors);
+    actor = &g_field_actors[index];
     state = &g_field_object_states[index];
     flags_before = state->flags;
     slot = &g_field_actor_slots[FIELD_OBJECT_EFFECT_SLOT_BASE + index];
@@ -1342,45 +1379,7 @@ void field_update_object_effects(s32 index)
     {
         if (slot->active == 0)
         {
-            do
-            {
-                bit_mask = 0x8000;
-                bit_index = FIELD_OBJECT_HANDLER_COUNT - 1;
-                animation_slot = index + FIELD_OBJECT_EFFECT_SLOT_BASE;
-                handlers = g_field_object_flag_handlers;
-                handler = handlers + bit_index;
-            find_handler:
-                if ((changed_or_current & bit_mask) && (handler_value = *handler, (handler_value.animation != FIELD_OBJECT_HANDLER_NONE)))
-                {
-                    if (handler_value.animation < FIELD_OBJECT_HANDLER_FUNCTION_MIN)
-                    {
-                        if (state->flags & bit_mask)
-                        {
-                            field_start_builtin_animation(index, animation_slot, handler_value.animation);
-                            field_start_actor_animation(animation_slot, 0, 0);
-                        }
-                    }
-                    else
-                    {
-                        handler_value.function((FieldActor*)(record_offset + (u8*)g_field_actors), state->flags & bit_mask);
-                    }
-
-                    clear_mask = ~bit_mask;
-                    state->previous_flags = (state->previous_flags & clear_mask) | (state->flags & bit_mask);
-                }
-                else
-                {
-                    handler--;
-                    bit_index--;
-                    bit_mask >>= 1;
-
-                    if (bit_index >= 0)
-                    {
-                        // TODO: Analyze more to see if this and the do/while (0) can be simplified to a while loop.
-                        goto find_handler;
-                    }
-                }
-            } while (0);
+            field_dispatch_object_flag(index, state, changed_or_current);
         }
         else
         {

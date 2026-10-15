@@ -749,8 +749,6 @@ void field_update_technique_command(FieldActor* actor, s32 sequence_index)
     Vec3i* scratch = FIELD_SCRATCH_DISPLACEMENT;
     FieldObjectState* states;
     FieldObjectState* state;
-    FieldObjectState* delay_state;
-    FieldObjectState* reset_state;
     s32 active_cursor;
     s32 first_cursor;
     s32 bank;

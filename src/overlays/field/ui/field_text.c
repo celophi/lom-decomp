@@ -1895,45 +1895,47 @@ void field_text_reset_windows(void)
  */
 void field_text_reset_scratch(void)
 {
-    if ((g_field_text_window0_flags & FIELD_TEXT_STATE_MASK) == FIELD_TEXT_TIMED)
+    FieldTextState* state = FIELD_TEXT_WINDOWS;
+
+    if ((state->flags.word & FIELD_TEXT_STATE_MASK) == FIELD_TEXT_TIMED)
     {
-        field_text_close(FIELD_TEXT_WINDOWS, 0);
+        field_text_close(state, 0);
     }
 
-    do
-    {
-        FieldTextState* state = FIELD_TEXT_IMMEDIATE_STATE;
-        state->dirty_end_u = FIELD_TEXT_CACHE_WIDTH;
-        state->region_end_u = FIELD_TEXT_CACHE_WIDTH;
-        state->dirty_end_v = FIELD_TEXT_CACHE_HEIGHT;
-        state->region_end_v = FIELD_TEXT_CACHE_HEIGHT;
-        state->line_advance = FIELD_TEXT_IMMEDIATE_WIDTH;
-        state->width = FIELD_TEXT_IMMEDIATE_WIDTH;
-        state->remaining_width = FIELD_TEXT_IMMEDIATE_WIDTH;
-        state->line_height = FIELD_TEXT_LINE_HEIGHT;
-        state->dirty_start_u = 0;
-        state->cursor_u = 0;
-        state->region_start_u = 0;
-        state->dirty_start_v = 0;
-        state->cursor_v = 0;
-        state->region_start_v = 0;
-        state->line_count = 0;
-        state->portrait = NULL;
-        state->text_cursor = NULL;
-        state->macro_cursor = NULL;
+    state = FIELD_TEXT_IMMEDIATE_STATE;
+    state->dirty_end_u = FIELD_TEXT_CACHE_WIDTH;
+    state->region_end_u = FIELD_TEXT_CACHE_WIDTH;
+    state->dirty_end_v = FIELD_TEXT_CACHE_HEIGHT;
+    state->region_end_v = FIELD_TEXT_CACHE_HEIGHT;
+    state->line_advance = FIELD_TEXT_IMMEDIATE_WIDTH;
+    state->width = FIELD_TEXT_IMMEDIATE_WIDTH;
+    state->remaining_width = FIELD_TEXT_IMMEDIATE_WIDTH;
+    state->line_height = FIELD_TEXT_LINE_HEIGHT;
+    state->dirty_start_u = 0;
+    state->cursor_u = 0;
+    state->region_start_u = 0;
+    state->dirty_start_v = 0;
+    state->cursor_v = 0;
+    state->region_start_v = 0;
+    state->line_count = 0;
+    state->portrait = NULL;
+    state->text_cursor = NULL;
+    state->macro_cursor = NULL;
 #if !defined(VERSION_JP)
-        state->glyph_cursor = NULL;
+    state->glyph_cursor = NULL;
 #endif
-        state->flow_code = FIELD_TEXT_FLOW_NONE;
-        state->pending_spaces = 0;
-        state->choice_count = 0;
-        state->text_color = 0;
-        state->scroll_timer = 0;
-        state->needs_init = 0;
+    state->flow_code = FIELD_TEXT_FLOW_NONE;
+    state->pending_spaces = 0;
+    state->choice_count = 0;
+    state->text_color = 0;
+    state->scroll_timer = 0;
+    state->needs_init = 0;
 
-        state->flags.word = ((((state->flags.word & ~FIELD_TEXT_STATE_MASK) | FIELD_TEXT_IMMEDIATE) & ~FIELD_TEXT_STYLE_MASK) | FIELD_TEXT_INSTANT) &
-                            ~FIELD_TEXT_AUTO_CLOSE;
-    } while (0);
+    state->flags.word &= ~FIELD_TEXT_STATE_MASK;
+    state->flags.word |= FIELD_TEXT_IMMEDIATE;
+    state->flags.word &= ~FIELD_TEXT_STYLE_MASK;
+    state->flags.word |= FIELD_TEXT_INSTANT;
+    state->flags.word &= ~FIELD_TEXT_AUTO_CLOSE;
 }
 
 /**

@@ -98,7 +98,6 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound);
 
 /**
  * @brief Object state placed so that its path[0] is the waypoint at byte @p offset of @p object_index's path.
- * @note The target adds the waypoint offset before the state base; indexing path[] adds it last.
  */
 #define FIELD_WAYPOINT_STATE(states, object_index, offset) \
     ((FieldObjectState*)((offset) + (((object_index) * (s32)(sizeof(FieldObjectState) / sizeof(s32))) << 2) + (uintptr_t)(states)))

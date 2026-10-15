@@ -14,13 +14,6 @@
 #define SPU_MAX_CD_VOLUME 0x7FFF
 
 /**
- * @brief Recover a channel from the address of its age counter.
- * @param age Address of the channel's sfx_age field.
- * @return Channel containing the age counter.
- */
-#define AKAO_CHANNEL_FROM_AGE(age) ((AkaoChannelState*)((u8*)(age) - OFFSETOF(AkaoChannelState, sfx_age)))
-
-/**
  * @brief Initializes song, sequence-channel, SFX and SPU mixer state.
  *
  * Resets 32 sequence slots to the unassigned SPU voice and assigns the 12 SFX
@@ -34,16 +27,14 @@ void akao_driver_init_state(void)
     u16* spu_control = (u16*)SPU_CONTROL_ADDRESS;
     u32 unassigned_voice = AKAO_VOICE_COUNT;
     AkaoSongState* song;
-    u8* sequence_age;
+    AkaoChannelState* sequence_channel;
     AkaoChannelState* sfx_channel;
     u32 value;
-    u32 channel_index;
 
-    song = (AkaoSongState*)&g_akao_seq_master_state;
-    song = (AkaoSongState*)((uintptr_t)song ^ 1);
-    song = (AkaoSongState*)((uintptr_t)song ^ 1);
-
-    sequence_age = (u8*)g_akao_seq_channels;
+    g_akao_seq_channel0 = &g_akao_seq_master_state;
+    song = g_akao_seq_channel0;
+    sequence_channel = g_akao_seq_channels;
+    g_akao_seq_channels_base = (u8*)sequence_channel;
 
     D_8003EC30[1] = 0;
     D_8003EC30[0] = 0;
@@ -66,9 +57,6 @@ void akao_driver_init_state(void)
     g_akao_suspended_song.masks.active_mask = 0;
     song->volume = (AKAO_VOLUME_MAX << AKAO_Q16_SHIFT);
 
-    g_akao_seq_channels_base = sequence_age;
-    sequence_age = (u8*)&((AkaoChannelState*)sequence_age)->sfx_age;
-    g_akao_seq_channel0 = song;
     g_akao_seq_channel1 = NULL;
     g_akao_pending_channels = NULL;
     g_akao_cdvol_tick = 0;
@@ -108,20 +96,17 @@ void akao_driver_init_state(void)
     g_akao_effect_voice_masks[1] = 0;
     g_akao_effect_voice_masks[0] = 0;
     *spu_control = (value & SPU_INITIAL_CONTROL_MASK) | SPU_CONTROL_CD_ENABLE;
-    value = 0;
-    channel_index = 0;
-    do
-    {
-        u8* age = sequence_age + channel_index * sizeof(AkaoChannelState);
-        value++;
-        AKAO_CHANNEL_FROM_AGE(age)->flags = 0;
-        AKAO_CHANNEL_FROM_AGE(age)->voice = unassigned_voice;
-        AKAO_CHANNEL_FROM_AGE(age)->is_sfx_channel = 0;
-        AKAO_CHANNEL_FROM_AGE(age)->sfx_age = 0;
-        channel_index++;
-    } while ((u16)value < AKAO_CHANNEL_COUNT);
 
-    sfx_channel = (AkaoChannelState*)g_sfx_channels;
+    for (value = 0; (u16)value < AKAO_CHANNEL_COUNT; value++, sequence_channel++)
+    {
+        sequence_channel->flags = 0;
+        sequence_channel->voice = unassigned_voice;
+        sequence_channel->is_sfx_channel = 0;
+        sequence_channel->sfx_age = 0;
+    }
+
+    sfx_channel = g_sfx_channels;
+
     for (value = AKAO_SFX_FIRST_VOICE; (u16)value < AKAO_VOICE_COUNT; value++, sfx_channel++)
     {
         sfx_channel->flags = 0;

@@ -1188,7 +1188,6 @@ void field_start_actor_contact_interaction(FieldActor* actor, s32 object_index)
     }
 
     states = g_field_object_states;
-    /* object_index * sizeof(FieldObjectState), spelled as shifts: the target starts it before the command test. */
     state = (FieldObjectState*)((u8*)states + ((((object_index_x8 + object_index) << 4) - object_index) << 2));
 
     if ((state->enabled_events & FIELD_INTERACTION_FLAG_ENABLED) == 0)
