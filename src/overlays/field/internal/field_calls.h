@@ -317,7 +317,7 @@ void field_restart_idle_animation(struct FieldActor* actor);
 s32 field_update_defeated(struct FieldActor* actor);
 
 /* field_actor_target_queries.c */
-s32 field_collect_action_targets(s32 source_index, struct FieldActionSlot* action, s32 group_mode, s32 filter_arg, s32* output);
+s32 field_collect_action_targets(s32 source_index, struct FieldActionSlot* action, s32 group_mode, s32 effect_radius, s32* output);
 
 /* field_actor_templates.c */
 s32 field_build_group_monster_records(s32 group);

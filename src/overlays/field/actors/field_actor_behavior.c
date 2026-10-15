@@ -60,8 +60,8 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound);
 /** @brief FieldObjectState::action_charge from which the charge animation starts. */
 #define FIELD_ACTION_CHARGE_ANIMATION 0x41
 
-/** @brief Action element bits of FieldActionFlags::target_filter. */
-#define FIELD_ACTION_ELEMENT_MASK 0x0F
+/** @brief Bits of FieldActionFlags::target_filter kept in the bound slot; FIELD_ACTION_TARGET_NONE keeps all of them set. */
+#define FIELD_ACTION_GROUND_EFFECT_MASK 0x0F
 
 /** @brief First action whose name is stored in the saved character (the name record is action - this). */
 #define FIELD_ACTION_SAVED_NAME_FIRST 4
@@ -2063,7 +2063,7 @@ s32 field_update_actor_command(FieldActor* actor)
                 field_filter_action_targets(target_count_or_slot, scratch.targets, g_field_actor_bindings[FIELD_OBJECT_BINDING(actor->object_index)].slot);
             slots = g_field_actor_slots;
             bound_slot = &slots[g_field_actor_bindings[FIELD_OBJECT_BINDING(actor->object_index)].slot];
-            bound_slot->status.word = (bound_slot->status.word & ~FIELD_SLOT_ELEMENT_BITS) | ((action->flags.target_filter & FIELD_ACTION_ELEMENT_MASK) << FIELD_SLOT_ELEMENT_SHIFT);
+            bound_slot->status.word = (bound_slot->status.word & ~FIELD_SLOT_GROUND_EFFECT_BITS) | ((action->flags.target_filter & FIELD_ACTION_GROUND_EFFECT_MASK) << FIELD_SLOT_GROUND_EFFECT_SHIFT);
 
             if (!(action->parameter & FIELD_REQUEST_TARGETED))
             {

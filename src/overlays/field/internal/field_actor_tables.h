@@ -85,12 +85,6 @@ typedef struct
 #define FIELD_COLOR_SCALE_NEUTRAL 0x100
 
 
-/** @brief FieldActorSlot::status bit 0: the slot plays a streamed animation bound to its owner. */
-#define FIELD_SLOT_OWNER_LINKED 0x1
-/** @brief FieldActorSlot::status bits holding the action element (stored shifted by one); all set means none. */
-#define FIELD_SLOT_ELEMENT_BITS 0x1E
-#define FIELD_SLOT_ELEMENT_SHIFT 1
-
 
 extern FieldObjectState g_field_scene_object_states[];
 extern FieldObjectPart g_field_object_parts[];

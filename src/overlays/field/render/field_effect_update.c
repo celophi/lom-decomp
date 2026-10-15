@@ -1305,9 +1305,9 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     case 0x33:
         placement_object = &g_field_object_states[actor->owner_object_index];
         source_record = &g_field_actors[actor->owner_object_index];
-        effect->x += source_record->x + (placement_object->ground_attachment_points[g_field_spawn_ground_point].x << 8);
+        effect->x += source_record->x + (placement_object->ground_effect_points[g_field_spawn_ground_point].x << 8);
         effect->y += source_record->y;
-        effect->z += source_record->z + (placement_object->ground_attachment_points[g_field_spawn_ground_point].y << 8);
+        effect->z += source_record->z + (placement_object->ground_effect_points[g_field_spawn_ground_point].y << 8);
         FIELD_EFFECT_FLAGS(effect).bits.ground_point = *(u16*)&g_field_spawn_ground_point;
         break;
 
@@ -1593,11 +1593,12 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         effect->facing_or_reward_kind ^= 0x80;
     }
 
-    if ((actor->status.word & 0x1E) == 8 && FIELD_PART_PLACEMENT_KIND(part) == 0x33)
+    if ((actor->status.word & FIELD_SLOT_GROUND_EFFECT_BITS) == (GROUND_EFFECT_SCATTERED_DOMES << FIELD_SLOT_GROUND_EFFECT_SHIFT) &&
+        FIELD_PART_PLACEMENT_KIND(part) == 0x33)
     {
         g_field_spawn_ground_point = g_field_spawn_ground_point + 1;
 
-        if (g_field_spawn_ground_point < 3)
+        if (g_field_spawn_ground_point < FIELD_GROUND_EFFECT_POINT_COUNT)
         {
             actor->active_counts[g_field_track_index][part_index]--;
             actor->track_counters[g_field_track_index][part_index]--;
@@ -2628,9 +2629,9 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
         case 0x33:
             reference_record = &g_field_actors[actor->owner_object_index];
             reference_object = &g_field_object_states[actor->owner_object_index];
-            placement_origin->vx = reference_record->x + (reference_object->ground_attachment_points[((u32)record->flags >> 0xD) & 3].x << 8);
+            placement_origin->vx = reference_record->x + (reference_object->ground_effect_points[((u32)record->flags >> 0xD) & 3].x << 8);
             placement_origin->vy = reference_record->y;
-            placement_origin->vz = reference_record->z + (reference_object->ground_attachment_points[((u32)record->flags >> 0xD) & 3].y << 8);
+            placement_origin->vz = reference_record->z + (reference_object->ground_effect_points[((u32)record->flags >> 0xD) & 3].y << 8);
             break;
         case 0x34:
             reference_record = &g_field_actors[actor->targets[g_field_track_index]];
@@ -8847,9 +8848,9 @@ void field_resolve_actor_part_anchor(FieldActorSlot* actor, FieldObjectPart* par
         object_index = actor->owner_object_index;
         object_record = &g_field_actors[object_index];
         object = &g_field_object_states[object_index];
-        out->x = object_record->x + (object->ground_attachment_points[attachment_index].x << 8);
+        out->x = object_record->x + (object->ground_effect_points[attachment_index].x << 8);
         out->y = object_record->y;
-        out->z = object_record->z + (object->ground_attachment_points[attachment_index].y << 8);
+        out->z = object_record->z + (object->ground_effect_points[attachment_index].y << 8);
         return;
 
     case 0x36:

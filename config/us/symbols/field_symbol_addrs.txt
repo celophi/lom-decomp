@@ -1149,8 +1149,8 @@ field_actor_within_distance           = 0x8009CC60;
 field_actor_within_ring               = 0x8009CD30;
 field_actor_faces_target              = 0x8009CE10;
 field_actor_within_box                = 0x8009CF1C;
-field_actor_near_ground_points        = 0x8009CF84;
-field_actor_near_first_ground_point   = 0x8009D0D8;
+field_actor_near_ground_effect_points = 0x8009CF84;
+field_actor_near_first_ground_effect_point = 0x8009D0D8;
 field_collect_action_targets          = 0x8009D1E4;
 g_field_target_filters                = 0x800EC2D8;
 

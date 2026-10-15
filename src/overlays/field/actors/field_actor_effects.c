@@ -27,9 +27,6 @@
 #include <rand.h>
 #include "common/gpu_packet.h"
 
-/** @brief Number of scattered-dome points (FieldObjectState::ground_attachment_points). */
-#define SCATTER_POINT_COUNT 3
-
 /** @brief Minimum distance between two scattered-dome points, in whole units. */
 #define SCATTER_MIN_DISTANCE 64
 
@@ -54,9 +51,6 @@
 
 /** @brief Width of a curved strip, in fixed-point units. */
 #define CURVE_STRIP_WIDTH 0x1400
-
-/** @brief Z offset of the curved strips from the effect position, in fixed-point units. */
-#define CURVE_Z_OFFSET 0x2000
 
 /** @brief Phases per curve scroll cycle; the strips move two strip widths per cycle. */
 #define CURVE_PHASE_PERIOD ((2 * CURVE_STRIP_WIDTH) >> 8)
@@ -90,12 +84,6 @@
 /** @brief Phase step per frame of the strip effects, and the number of phases (the phase runs 0..79). */
 #define EFFECT_PHASE_STEP 4
 #define EFFECT_PHASE_COUNT 80
-
-/** @brief Scratchpad word pair holding the GTE distance input vector. */
-#define DISTANCE_DELTA ((VECTOR*)SCRATCHPAD_ADDRESS)
-
-/** @brief Scratchpad words receiving the squared distance components. */
-#define DISTANCE_SQUARES ((VECTOR*)SCRATCHPAD_AT(0x10))
 
 /** @brief Runtime state of @p actor's object. */
 #define OBJECT_STATE(actor) g_field_object_states[(actor)->object_index]
@@ -157,18 +145,6 @@
         world.vz = position->vz + (rotated.vz << 8);                                                                                                           \
     }
 
-/** @brief Ground effect kinds; the kind also selects the radius range. */
-typedef enum GroundEffectKind
-{
-    GROUND_EFFECT_DOME = 0,            /**< Rotating dome of arches. */
-    GROUND_EFFECT_STRIPS = 1,          /**< Four rotating arched strips. */
-    GROUND_EFFECT_SPIRAL = 2,          /**< Four strips wound around a tilted axis. */
-    GROUND_EFFECT_CURVES = 3,          /**< Curved strips running out to both sides. */
-    GROUND_EFFECT_SCATTERED_DOMES = 4, /**< Domes at three random ground points. */
-    GROUND_EFFECT_DRIFTING_DOME = 5,   /**< Dome drifting in the facing direction. */
-    GROUND_EFFECT_AIMED_DOME = 6       /**< Dome steered with the object's controller. */
-} GroundEffectKind;
-
 void field_get_ground_effect_radius_limits(s32 kind, s32* min_radius, s32* max_radius);
 
 static u8* field_build_effect_dome(u_long* ordering_table, u8* packet, VECTOR* position, s32 radius);
@@ -185,8 +161,8 @@ extern s32 g_field_effect_angle;
  */
 void field_start_object_ground_effect(FieldActor* actor, u32 kind)
 {
-    VECTOR* delta = DISTANCE_DELTA;
-    VECTOR* squares = DISTANCE_SQUARES;
+    VECTOR* delta = FIELD_DISTANCE_DELTA;
+    VECTOR* squares = FIELD_DISTANCE_SQUARES;
     s32 point_index;
     s32 compare_index;
     s32 needs_retry;
@@ -211,22 +187,22 @@ void field_start_object_ground_effect(FieldActor* actor, u32 kind)
         SET_EFFECT_RADIUS(actor, GROUND_EFFECT_SCATTERED_DOMES_MIN_RADIUS);
 
         /* Pick each point in -128..127 around the view until it is far enough from the earlier ones. */
-        for (point_index = 0; point_index < SCATTER_POINT_COUNT; point_index++)
+        for (point_index = 0; point_index < FIELD_GROUND_EFFECT_POINT_COUNT; point_index++)
         {
             needs_retry = 1;
 
             while (needs_retry != 0)
             {
-                OBJECT_STATE(actor).ground_attachment_points[point_index].x = (rand() >> 7) - 128;
-                OBJECT_STATE(actor).ground_attachment_points[point_index].y = (rand() >> 7) - 128;
-                OBJECT_STATE(actor).ground_attachment_points[point_index].x =
-                    OBJECT_STATE(actor).ground_attachment_points[point_index].x - g_field_view_offset_x / 256 - actor->x / 256;
-                OBJECT_STATE(actor).ground_attachment_points[point_index].y =
-                    OBJECT_STATE(actor).ground_attachment_points[point_index].y - g_field_view_offset_z / 256 - actor->z / 256;
+                OBJECT_STATE(actor).ground_effect_points[point_index].x = (rand() >> 7) - 128;
+                OBJECT_STATE(actor).ground_effect_points[point_index].y = (rand() >> 7) - 128;
+                OBJECT_STATE(actor).ground_effect_points[point_index].x =
+                    OBJECT_STATE(actor).ground_effect_points[point_index].x - g_field_view_offset_x / 256 - actor->x / 256;
+                OBJECT_STATE(actor).ground_effect_points[point_index].y =
+                    OBJECT_STATE(actor).ground_effect_points[point_index].y - g_field_view_offset_z / 256 - actor->z / 256;
                 for (compare_index = 0; compare_index < point_index; compare_index++)
                 {
-                    delta->vx = OBJECT_STATE(actor).ground_attachment_points[compare_index].x - OBJECT_STATE(actor).ground_attachment_points[point_index].x;
-                    delta->vy = OBJECT_STATE(actor).ground_attachment_points[compare_index].y - OBJECT_STATE(actor).ground_attachment_points[point_index].y;
+                    delta->vx = OBJECT_STATE(actor).ground_effect_points[compare_index].x - OBJECT_STATE(actor).ground_effect_points[point_index].x;
+                    delta->vy = OBJECT_STATE(actor).ground_effect_points[compare_index].y - OBJECT_STATE(actor).ground_effect_points[point_index].y;
                     delta->vz = 0;
                     gte_ldlvl(delta);
                     gte_sqr0();
@@ -248,13 +224,13 @@ void field_start_object_ground_effect(FieldActor* actor, u32 kind)
         return;
     case GROUND_EFFECT_DRIFTING_DOME:
         SET_EFFECT_RADIUS(actor, GROUND_EFFECT_DRIFTING_DOME_MIN_RADIUS);
-        OBJECT_STATE(actor).ground_attachment_points[0].x = 0;
-        OBJECT_STATE(actor).ground_attachment_points[0].y = 0;
+        OBJECT_STATE(actor).ground_effect_points[0].x = 0;
+        OBJECT_STATE(actor).ground_effect_points[0].y = 0;
         return;
     case GROUND_EFFECT_AIMED_DOME:
         SET_EFFECT_RADIUS(actor, GROUND_EFFECT_AIMED_DOME_MIN_RADIUS);
-        OBJECT_STATE(actor).ground_attachment_points[0].x = 0;
-        OBJECT_STATE(actor).ground_attachment_points[0].y = 0;
+        OBJECT_STATE(actor).ground_effect_points[0].x = 0;
+        OBJECT_STATE(actor).ground_effect_points[0].y = 0;
         return;
     }
 }
@@ -432,11 +408,11 @@ void field_draw_object_ground_effect(FieldActor* actor, u32 kind)
 
         break;
     case GROUND_EFFECT_SCATTERED_DOMES:
-        for (i = 0; i < SCATTER_POINT_COUNT; i++)
+        for (i = 0; i < FIELD_GROUND_EFFECT_POINT_COUNT; i++)
         {
-            point.vx = actor->x + (OBJECT_STATE(actor).ground_attachment_points[i].x << 8);
+            point.vx = actor->x + (OBJECT_STATE(actor).ground_effect_points[i].x << 8);
             point.vy = actor->y;
-            point.vz = actor->z + (OBJECT_STATE(actor).ground_attachment_points[i].y << 8);
+            point.vz = actor->z + (OBJECT_STATE(actor).ground_effect_points[i].y << 8);
 
             if (draw != 0)
             {
@@ -452,9 +428,9 @@ void field_draw_object_ground_effect(FieldActor* actor, u32 kind)
         OBJECT_STATE(actor).effect_angle -= EFFECT_SPIN_STEP;
         break;
     case GROUND_EFFECT_DRIFTING_DOME:
-        point.vx = actor->x + (OBJECT_STATE(actor).ground_attachment_points[0].x << 8);
+        point.vx = actor->x + (OBJECT_STATE(actor).ground_effect_points[0].x << 8);
         point.vy = actor->y;
-        point.vz = actor->z + (OBJECT_STATE(actor).ground_attachment_points[0].y << 8);
+        point.vz = actor->z + (OBJECT_STATE(actor).ground_effect_points[0].y << 8);
 
         if (draw != 0)
         {
@@ -469,19 +445,19 @@ void field_draw_object_ground_effect(FieldActor* actor, u32 kind)
 
             if (actor->animation & FIELD_ANIMATION_FACING)
             {
-                OBJECT_STATE(actor).ground_attachment_points[0].x += 2;
+                OBJECT_STATE(actor).ground_effect_points[0].x += 2;
             }
             else
             {
-                OBJECT_STATE(actor).ground_attachment_points[0].x -= 2;
+                OBJECT_STATE(actor).ground_effect_points[0].x -= 2;
             }
         }
 
         break;
     case GROUND_EFFECT_AIMED_DOME:
-        point.vx = actor->x + (OBJECT_STATE(actor).ground_attachment_points[0].x << 8);
+        point.vx = actor->x + (OBJECT_STATE(actor).ground_effect_points[0].x << 8);
         point.vy = actor->y;
-        point.vz = actor->z + (OBJECT_STATE(actor).ground_attachment_points[0].y << 8);
+        point.vz = actor->z + (OBJECT_STATE(actor).ground_effect_points[0].y << 8);
 
         if (draw != 0)
         {
@@ -545,17 +521,17 @@ void field_draw_object_ground_effect(FieldActor* actor, u32 kind)
             {
                 /* direction = unit direction; the dome moves one unit per 0x400 of it. */
                 VectorNormal(&point, &direction);
-                target.vx = actor->x + ((OBJECT_STATE(actor).ground_attachment_points[0].x + (direction.vx >> 10)) << 8);
+                target.vx = actor->x + ((OBJECT_STATE(actor).ground_effect_points[0].x + (direction.vx >> 10)) << 8);
                 target.vy = actor->y;
-                target.vz = actor->z + ((OBJECT_STATE(actor).ground_attachment_points[0].y + (direction.vy >> 10)) << 8);
+                target.vz = actor->z + ((OBJECT_STATE(actor).ground_effect_points[0].y + (direction.vy >> 10)) << 8);
                 screen.vx = FIELD_SCREEN_X(target.vx);
                 screen.vy = FIELD_SCREEN_Y(target.vy, target.vz);
 
                 if ((screen.vx > 0 || direction.vx > 0) && (screen.vy > 0 || direction.vy < 0) && (screen.vx < SCREEN_WIDTH || direction.vx < 0) &&
                     (screen.vy < VRAM_DRAW_HEIGHT || direction.vy > 0))
                 {
-                    OBJECT_STATE(actor).ground_attachment_points[0].x += direction.vx >> 10;
-                    OBJECT_STATE(actor).ground_attachment_points[0].y += direction.vy >> 10;
+                    OBJECT_STATE(actor).ground_effect_points[0].x += direction.vx >> 10;
+                    OBJECT_STATE(actor).ground_effect_points[0].y += direction.vy >> 10;
                 }
             }
         }
@@ -814,7 +790,7 @@ static u8* field_build_effect_strips(u_long* ordering_table, u8* packet, VECTOR*
     for (i = 0; i < STRIP_COUNT; i++)
     {
         /* Each strip stands between two points of a circle, a sixteenth of a turn apart. */
-        distance = (radius >> 1) + 64;
+        distance = (radius >> 1) + GROUND_EFFECT_STRIPS_INNER_RADIUS;
         p0.vx = position->vx;
         p0.vy = position->vy;
         p0.vz = position->vz;
@@ -950,13 +926,13 @@ static u8* field_build_effect_curves(u_long* ordering_table, u8* packet, VECTOR*
         {
             world.vx = position->vx + offset;
             world.vy = position->vy;
-            world.vz = position->vz + CURVE_Z_OFFSET;
+            world.vz = position->vz + GROUND_EFFECT_CURVE_RADIUS;
         }
         else
         {
             world.vx = position->vx - offset;
             world.vy = position->vy;
-            world.vz = position->vz + CURVE_Z_OFFSET;
+            world.vz = position->vz + GROUND_EFFECT_CURVE_RADIUS;
         }
 
         PROJECT_POINT(cursor, 0, world);
@@ -967,13 +943,13 @@ static u8* field_build_effect_curves(u_long* ordering_table, u8* packet, VECTOR*
         {
             world.vx = position->vx + offset + CURVE_STRIP_WIDTH;
             world.vy = position->vy;
-            world.vz = position->vz + CURVE_Z_OFFSET;
+            world.vz = position->vz + GROUND_EFFECT_CURVE_RADIUS;
         }
         else
         {
             world.vx = position->vx - offset - CURVE_STRIP_WIDTH;
             world.vy = position->vy;
-            world.vz = position->vz + CURVE_Z_OFFSET;
+            world.vz = position->vz + GROUND_EFFECT_CURVE_RADIUS;
         }
 
         PROJECT_POINT(cursor, 1, world);
@@ -1043,7 +1019,7 @@ static u8* field_build_effect_curves(u_long* ordering_table, u8* packet, VECTOR*
  * @param ordering_table Ordering table with FIELD_WORLD_OT_SIZE depth buckets.
  * @param packet First free primitive packet.
  * @param position Fixed-point world-space origin of the effect.
- * @param tilt Effect radius; the axis leans by ratan2(tilt, 100).
+ * @param tilt Effect radius; the axis turns by GROUND_EFFECT_SPIRAL_ANGLE(tilt).
  * @param facing Selects addition or subtraction of the rotated X offset.
  * @return First free packet following all quads and the draw-page command.
  * @note Each strip turns a half circle around X in eight steps while its
@@ -1069,7 +1045,7 @@ static u8* field_build_effect_spiral(u_long* ordering_table, u8* packet, VECTOR*
     POLY_G4* cursor;
 
     cursor = (POLY_G4*)packet;
-    angle = ratan2(tilt, 100);
+    angle = GROUND_EFFECT_SPIRAL_ANGLE(tilt);
     strip_index = 0;
     matrix = &rotation;
     radius = g_field_effect_angle;

@@ -1,6 +1,11 @@
 /**
  * @file field_actor_target_queries.c
- * @brief Distance, facing and box predicates for field actors, and the target collector that applies them.
+ * @brief Target selection inside an action's ground effect.
+ *
+ * Each ground effect kind (GroundEffectKind) has a predicate in
+ * g_field_target_filters that tests whether a candidate stands inside the
+ * effect's area at its current radius; field_collect_action_targets applies
+ * the predicate of an action to every eligible object.
  */
 
 #include "common.h"
@@ -13,49 +18,42 @@
 #include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 
-/** @brief Scratchpad vector holding the scaled actor delta. */
-#define FIELD_TARGET_DELTA ((VECTOR*)SCRATCHPAD_ADDRESS)
-/** @brief Scratchpad vector receiving the squared delta components. */
-#define FIELD_TARGET_SQUARE ((VECTOR*)SCRATCHPAD_AT(0x10))
+/**
+ * @brief Test whether a candidate stands inside a ground effect.
+ * @param source Object that owns the effect.
+ * @param candidate Candidate actor.
+ * @param radius Current effect radius (FIELD_MOVEMENT_SCALE_MASK bits of the source's movement word).
+ * @return Non-zero when the candidate is inside the effect.
+ */
+typedef s32 (*FieldTargetFilter)(FieldActor* source, FieldActor* candidate, s32 radius);
 
-/** @brief Inner radius of the ring predicate, in whole units. */
-#define FIELD_TARGET_RING_INNER 64
-/** @brief Half depth of the box predicate (32 whole units). */
-#define FIELD_TARGET_BOX_HALF_DEPTH 0x2000
-/** @brief The facing limit is the angle of @p distance over this many units. */
-#define FIELD_TARGET_FACING_RANGE 100
-/** @brief Ground attachment points of an object. */
-#define FIELD_GROUND_POINT_COUNT 3
-
-/** @brief Predicate for a source actor, candidate actor and caller argument. */
-typedef s32 (*FieldTargetFilter)(FieldActor* source, FieldActor* candidate, s32 argument);
-
+/** @brief Target predicate of each ground effect kind, indexed by GroundEffectKind. */
 extern FieldTargetFilter g_field_target_filters[];
 
 /**
- * @brief Test whether a candidate actor is within a distance of the source actor.
- * @param source Source actor.
+ * @brief Dome predicate: test whether a candidate is within the dome around the source.
+ * @param source Object at the dome centre.
  * @param candidate Candidate actor; unused records never pass.
- * @param max_distance Exclusive distance limit in whole units.
- * @return 1 when the candidate is closer than @p max_distance, otherwise 0.
+ * @param radius Dome radius in whole units (exclusive).
+ * @return 1 when the candidate is inside the dome, otherwise 0.
  */
-s32 field_actor_within_distance(FieldActor* source, FieldActor* candidate, s32 max_distance)
+s32 field_actor_within_distance(FieldActor* source, FieldActor* candidate, s32 radius)
 {
-    VECTOR* delta = FIELD_TARGET_DELTA;
-    VECTOR* square = FIELD_TARGET_SQUARE;
+    VECTOR* delta = FIELD_DISTANCE_DELTA;
+    VECTOR* squares = FIELD_DISTANCE_SQUARES;
     s32 distance;
 
     if (candidate->presence != FIELD_ACTOR_UNUSED)
     {
-        delta->vx = (candidate->x - source->x) >> 8;
-        delta->vy = (candidate->y - source->y) >> 8;
-        delta->vz = (candidate->z - source->z) >> 8;
+        delta->vx = (candidate->x - source->x) >> FIELD_POSITION_SHIFT;
+        delta->vy = (candidate->y - source->y) >> FIELD_POSITION_SHIFT;
+        delta->vz = (candidate->z - source->z) >> FIELD_POSITION_SHIFT;
         gte_ldlvl(delta);
         gte_sqr0();
-        gte_stlvnl(square);
-        distance = SquareRoot0(square->vx + square->vy + square->vz);
+        gte_stlvnl(squares);
+        distance = SquareRoot0(squares->vx + squares->vy + squares->vz);
 
-        if (distance < max_distance)
+        if (distance < radius)
         {
             return 1;
         }
@@ -65,34 +63,31 @@ s32 field_actor_within_distance(FieldActor* source, FieldActor* candidate, s32 m
 }
 
 /**
- * @brief Test whether a candidate actor lies in the ring around the source actor.
- * @param source Source actor.
+ * @brief Strips predicate: test whether a candidate is under the strip arches around the source.
+ * @param source Object at the centre of the strips.
  * @param candidate Candidate actor; unused records never pass.
- * @param max_distance Ring width beyond FIELD_TARGET_RING_INNER.
- * @return 1 when the candidate is inside the ring, otherwise 0.
+ * @param radius Effect radius; the arches span GROUND_EFFECT_STRIPS_INNER_RADIUS to that plus @p radius.
+ * @return 1 when the candidate is inside the ring the arches cover, otherwise 0.
  */
-s32 field_actor_within_ring(FieldActor* source, FieldActor* candidate, s32 max_distance)
+s32 field_actor_within_ring(FieldActor* source, FieldActor* candidate, s32 radius)
 {
-    VECTOR* delta = FIELD_TARGET_DELTA;
-    VECTOR* square = FIELD_TARGET_SQUARE;
+    VECTOR* delta = FIELD_DISTANCE_DELTA;
+    VECTOR* squares = FIELD_DISTANCE_SQUARES;
     s32 distance;
 
     if (candidate->presence != FIELD_ACTOR_UNUSED)
     {
-        delta->vx = (candidate->x - source->x) >> 8;
-        delta->vy = (candidate->y - source->y) >> 8;
-        delta->vz = (candidate->z - source->z) >> 8;
+        delta->vx = (candidate->x - source->x) >> FIELD_POSITION_SHIFT;
+        delta->vy = (candidate->y - source->y) >> FIELD_POSITION_SHIFT;
+        delta->vz = (candidate->z - source->z) >> FIELD_POSITION_SHIFT;
         gte_ldlvl(delta);
         gte_sqr0();
-        gte_stlvnl(square);
-        distance = SquareRoot0(square->vx + square->vy + square->vz);
+        gte_stlvnl(squares);
+        distance = SquareRoot0(squares->vx + squares->vy + squares->vz);
 
-        if (distance < max_distance + FIELD_TARGET_RING_INNER)
+        if (distance < radius + GROUND_EFFECT_STRIPS_INNER_RADIUS && distance > GROUND_EFFECT_STRIPS_INNER_RADIUS)
         {
-            if (distance > FIELD_TARGET_RING_INNER)
-            {
-                return 1;
-            }
+            return 1;
         }
     }
 
@@ -100,22 +95,22 @@ s32 field_actor_within_ring(FieldActor* source, FieldActor* candidate, s32 max_d
 }
 
 /**
- * @brief Test whether the source actor faces the candidate within an angular limit.
- * @param source Source actor; its facing bit selects the direction it looks in.
+ * @brief Spiral predicate: test whether a candidate lies within the spiral's angle of the source's facing direction.
+ * @param source Object that owns the spiral; its facing bit selects +X (set) or -X (clear).
  * @param candidate Candidate actor.
- * @param distance The limit is the angle of @p distance over FIELD_TARGET_FACING_RANGE.
- * @return 1 when the candidate is within the angular limit, otherwise 0.
+ * @param radius Effect radius; the limit is GROUND_EFFECT_SPIRAL_ANGLE(@p radius) on either side.
+ * @return 1 when the candidate is within the angle, otherwise 0.
  */
-s32 field_actor_faces_target(FieldActor* source, FieldActor* candidate, s32 distance)
+s32 field_actor_faces_target(FieldActor* source, FieldActor* candidate, s32 radius)
 {
     s32 limit;
     s32 angle;
 
-    limit = ratan2(distance, FIELD_TARGET_FACING_RANGE);
+    limit = GROUND_EFFECT_SPIRAL_ANGLE(radius);
 
     if (!(source->animation & FIELD_ANIMATION_FACING))
     {
-        angle = ratan2((source->z - candidate->z) >> 8, (source->x - candidate->x) >> 8);
+        angle = ratan2((source->z - candidate->z) >> FIELD_POSITION_SHIFT, (source->x - candidate->x) >> FIELD_POSITION_SHIFT);
 
         if (angle > FIELD_ANGLE_HALF_TURN)
         {
@@ -129,7 +124,7 @@ s32 field_actor_faces_target(FieldActor* source, FieldActor* candidate, s32 dist
     }
     else
     {
-        angle = ratan2((candidate->z - source->z) >> 8, (candidate->x - source->x) >> 8);
+        angle = ratan2((candidate->z - source->z) >> FIELD_POSITION_SHIFT, (candidate->x - source->x) >> FIELD_POSITION_SHIFT);
 
         if (angle > FIELD_ANGLE_HALF_TURN)
         {
@@ -146,13 +141,14 @@ s32 field_actor_faces_target(FieldActor* source, FieldActor* candidate, s32 dist
 }
 
 /**
- * @brief Test whether a candidate actor lies in a box around the source actor.
- * @param source Source actor at the box center.
+ * @brief Curves predicate: test whether a candidate is inside the box the curve strips cover.
+ * @param source Object at the centre of the curves.
  * @param candidate Candidate actor; unused records never pass.
- * @param half_width Half-width of the box along X in whole units; the depth is fixed.
+ * @param radius Effect radius: how far the curves run out along X on each side, in whole units.
  * @return 1 when the candidate is inside the box, otherwise 0.
+ * @note The box reaches GROUND_EFFECT_CURVE_RADIUS along Z on either side.
  */
-s32 field_actor_within_box(FieldActor* source, FieldActor* candidate, s32 half_width)
+s32 field_actor_within_box(FieldActor* source, FieldActor* candidate, s32 radius)
 {
     s32 dz;
     s32 dx;
@@ -164,59 +160,56 @@ s32 field_actor_within_box(FieldActor* source, FieldActor* candidate, s32 half_w
 
     dz = candidate->z - source->z;
 
-    if (dz > FIELD_TARGET_BOX_HALF_DEPTH)
+    if (dz > GROUND_EFFECT_CURVE_RADIUS)
     {
         return 0;
     }
 
-    if (dz < -FIELD_TARGET_BOX_HALF_DEPTH)
+    if (dz < -GROUND_EFFECT_CURVE_RADIUS)
     {
         return 0;
     }
 
-    dx = candidate->x;
-    dx = dx - source->x;
-    half_width <<= 8;
-    dz = dx;
+    dx = candidate->x - source->x;
 
-    if (half_width < dz)
+    if (dx > (radius << FIELD_POSITION_SHIFT))
     {
         return 0;
     }
 
-    return dz >= -half_width;
+    return dx >= -(radius << FIELD_POSITION_SHIFT);
 }
 
 /**
- * @brief Test the candidate against the source actor's ground attachment points.
- * @param source Source actor; its object index selects the points.
+ * @brief Scattered-domes predicate: test the candidate against the dome on each ground effect point.
+ * @param source Object that owns the domes; its object state holds the points.
  * @param candidate Candidate actor; unused records never pass.
- * @param max_distance Exclusive distance limit in whole units.
- * @return 1 when any point is closer than @p max_distance, otherwise 0.
+ * @param radius Dome radius in whole units (exclusive).
+ * @return 1 when the candidate is inside any dome, otherwise 0.
  */
-s32 field_actor_near_ground_points(FieldActor* source, FieldActor* candidate, s32 max_distance)
+s32 field_actor_near_ground_effect_points(FieldActor* source, FieldActor* candidate, s32 radius)
 {
-    VECTOR* delta = FIELD_TARGET_DELTA;
-    VECTOR* square = FIELD_TARGET_SQUARE;
+    VECTOR* delta = FIELD_DISTANCE_DELTA;
+    VECTOR* squares = FIELD_DISTANCE_SQUARES;
     Vec2s* point;
     s32 point_index;
     s32 distance;
 
     if (candidate->presence != FIELD_ACTOR_UNUSED)
     {
-        point = g_field_object_states[source->object_index].ground_attachment_points;
+        point = g_field_object_states[source->object_index].ground_effect_points;
 
-        for (point_index = 0; point_index < FIELD_GROUND_POINT_COUNT; point_index++, point++)
+        for (point_index = 0; point_index < FIELD_GROUND_EFFECT_POINT_COUNT; point_index++, point++)
         {
-            delta->vx = ((candidate->x - source->x) - (point->x << 8)) >> 8;
-            delta->vy = (candidate->y - source->y) >> 8;
-            delta->vz = ((candidate->z - source->z) - (point->y << 8)) >> 8;
+            delta->vx = ((candidate->x - source->x) - (point->x << FIELD_POSITION_SHIFT)) >> FIELD_POSITION_SHIFT;
+            delta->vy = (candidate->y - source->y) >> FIELD_POSITION_SHIFT;
+            delta->vz = ((candidate->z - source->z) - (point->y << FIELD_POSITION_SHIFT)) >> FIELD_POSITION_SHIFT;
             gte_ldlvl(delta);
             gte_sqr0();
-            gte_stlvnl(square);
-            distance = SquareRoot0(square->vx + square->vy + square->vz);
+            gte_stlvnl(squares);
+            distance = SquareRoot0(squares->vx + squares->vy + squares->vz);
 
-            if (distance < max_distance)
+            if (distance < radius)
             {
                 return 1;
             }
@@ -227,32 +220,32 @@ s32 field_actor_near_ground_points(FieldActor* source, FieldActor* candidate, s3
 }
 
 /**
- * @brief Test the candidate against the source actor's first ground attachment point.
- * @param source Source actor; its object index selects the point.
+ * @brief Drifting and aimed dome predicate: test the candidate against the dome on the first ground effect point.
+ * @param source Object that owns the dome; its object state holds the point.
  * @param candidate Candidate actor; unused records never pass.
- * @param max_distance Exclusive distance limit in whole units.
- * @return 1 when the point is closer than @p max_distance, otherwise 0.
+ * @param radius Dome radius in whole units (exclusive).
+ * @return 1 when the candidate is inside the dome, otherwise 0.
  */
-s32 field_actor_near_first_ground_point(FieldActor* source, FieldActor* candidate, s32 max_distance)
+s32 field_actor_near_first_ground_effect_point(FieldActor* source, FieldActor* candidate, s32 radius)
 {
-    VECTOR* delta = FIELD_TARGET_DELTA;
-    VECTOR* square = FIELD_TARGET_SQUARE;
+    VECTOR* delta = FIELD_DISTANCE_DELTA;
+    VECTOR* squares = FIELD_DISTANCE_SQUARES;
     Vec2s* point;
     s32 distance;
 
-    point = g_field_object_states[source->object_index].ground_attachment_points;
+    point = g_field_object_states[source->object_index].ground_effect_points;
 
     if (candidate->presence != FIELD_ACTOR_UNUSED)
     {
-        delta->vx = ((candidate->x - source->x) - (point->x << 8)) >> 8;
-        delta->vy = (candidate->y - source->y) >> 8;
-        delta->vz = ((candidate->z - source->z) - (point->y << 8)) >> 8;
+        delta->vx = ((candidate->x - source->x) - (point->x << FIELD_POSITION_SHIFT)) >> FIELD_POSITION_SHIFT;
+        delta->vy = (candidate->y - source->y) >> FIELD_POSITION_SHIFT;
+        delta->vz = ((candidate->z - source->z) - (point->y << FIELD_POSITION_SHIFT)) >> FIELD_POSITION_SHIFT;
         gte_ldlvl(delta);
         gte_sqr0();
-        gte_stlvnl(square);
-        distance = SquareRoot0(square->vx + square->vy + square->vz);
+        gte_stlvnl(squares);
+        distance = SquareRoot0(squares->vx + squares->vy + squares->vz);
 
-        if (distance < max_distance)
+        if (distance < radius)
         {
             return 1;
         }
@@ -262,20 +255,20 @@ s32 field_actor_near_first_ground_point(FieldActor* source, FieldActor* candidat
 }
 
 /**
- * @brief Collect the actors an action can target, using the action's predicate.
+ * @brief Collect the objects inside an action's ground effect.
  *
  * Candidates must be alive, present, in the active group (party members
  * always are), not bound to a running animation, collidable and not flagged
  * as untargetable.
  *
  * @param source_index Acting object, never a candidate itself.
- * @param action Action whose target filter selects a predicate from g_field_target_filters.
+ * @param action Action whose ground effect (FieldActionFlags::target_filter) selects the predicate in g_field_target_filters.
  * @param group_mode 0 targets the other side (party or enemies), 1 the same side.
- * @param filter_arg Argument passed to the predicate.
+ * @param effect_radius Current radius of the source object's ground effect, passed to the predicate.
  * @param output Receives the accepted object indices.
  * @return Number of indices written to @p output.
  */
-s32 field_collect_action_targets(s32 source_index, FieldActionSlot* action, s32 group_mode, s32 filter_arg, s32* output)
+s32 field_collect_action_targets(s32 source_index, FieldActionSlot* action, s32 group_mode, s32 effect_radius, s32* output)
 {
     s32 index;
     s32 count;
@@ -283,7 +276,6 @@ s32 field_collect_action_targets(s32 source_index, FieldActionSlot* action, s32 
     s32 start;
     s32 flags;
     s32 prior;
-    s16 command;
     FieldActor* actor;
     FieldObjectState* state;
 
@@ -326,11 +318,10 @@ s32 field_collect_action_targets(s32 source_index, FieldActionSlot* action, s32 
     }
 
     count = 0;
-    index = start;
-    actor = &g_field_actors[index];
-    state = &g_field_object_states[index];
+    actor = &g_field_actors[start];
+    state = &g_field_object_states[start];
 
-    for (; index < end; index++, actor++, state++)
+    for (index = start; index < end; index++, actor++, state++)
     {
         if (index == source_index || actor->presence == FIELD_ACTOR_UNUSED || state->current_hp.word == 0)
         {
@@ -354,9 +345,8 @@ s32 field_collect_action_targets(s32 source_index, FieldActionSlot* action, s32 
             continue;
         }
 
-        command = actor->command;
-
-        if (command == FIELD_ACTOR_COMMAND_TECHNIQUE || command == FIELD_ACTOR_COMMAND_DEFEAT_DELAY || command == FIELD_ACTOR_COMMAND_INSTRUMENT)
+        if (actor->command == FIELD_ACTOR_COMMAND_TECHNIQUE || actor->command == FIELD_ACTOR_COMMAND_DEFEAT_DELAY ||
+            actor->command == FIELD_ACTOR_COMMAND_INSTRUMENT)
         {
             continue;
         }
@@ -375,15 +365,14 @@ s32 field_collect_action_targets(s32 source_index, FieldActionSlot* action, s32 
             continue;
         }
 
-        if (g_field_target_filters[action->flags.target_filter](&g_field_actors[source_index], &g_field_actors[index], filter_arg) != 0)
+        if (g_field_target_filters[action->flags.target_filter](&g_field_actors[source_index], &g_field_actors[index], effect_radius) != 0)
         {
             for (prior = 0; prior < count; prior++)
             {
-                /* The original walks the accepted indices without testing them. */
             }
 
             output[count] = index;
-            count += 1;
+            count++;
         }
     }
 

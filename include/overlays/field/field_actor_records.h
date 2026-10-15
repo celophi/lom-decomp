@@ -221,6 +221,24 @@ typedef union
 /** @brief FieldObjectState::idle_animation: no idle animation, and the idle animation that plays only while a reward is left. */
 #define FIELD_IDLE_ANIMATION_NONE 0xFF
 #define FIELD_IDLE_ANIMATION_REWARD 0x1F
+/** @brief Ground effect points of an object (FieldObjectState::ground_effect_points). */
+#define FIELD_GROUND_EFFECT_POINT_COUNT 3
+
+/**
+ * @brief Ground effects an action draws under its object (FieldActionFlags::target_filter).
+ * @note The kind also selects the predicate in g_field_target_filters that picks the
+ *       action's targets inside the effect, sized by the effect radius.
+ */
+typedef enum GroundEffectKind
+{
+    GROUND_EFFECT_DOME = 0,            /**< Rotating dome of arches. */
+    GROUND_EFFECT_STRIPS = 1,          /**< Four rotating arched strips. */
+    GROUND_EFFECT_SPIRAL = 2,          /**< Four strips wound around a tilted axis. */
+    GROUND_EFFECT_CURVES = 3,          /**< Curved strips running out to both sides. */
+    GROUND_EFFECT_SCATTERED_DOMES = 4, /**< Domes at three random ground points. */
+    GROUND_EFFECT_DRIFTING_DOME = 5,   /**< Dome drifting in the facing direction. */
+    GROUND_EFFECT_AIMED_DOME = 6       /**< Dome steered with the object's controller. */
+} GroundEffectKind;
 
 /**
  * @brief Runtime state of one field object (0x23C bytes).
@@ -311,7 +329,11 @@ typedef struct FieldObjectState
     /** @brief Non-zero when the player can interact with the object; FIELD_INTERACTION_ITEM for an item to pick up. */
     u8 interaction_kind;
     u8 unk18F;
-    Vec2s ground_attachment_points[3];
+    /**
+     * @brief Ground effect centres as X/Z offsets from the object, in whole units.
+     * @note The scattered domes use all of them, the drifting and aimed domes the first; spawned effects can be placed on them.
+     */
+    Vec2s ground_effect_points[FIELD_GROUND_EFFECT_POINT_COUNT];
     /** @brief Floor node cached between collision passes (FIELD_COLLISION_NODE_SEARCH asks for a fresh search). */
     struct FieldCollisionNode* collision_node;
     s32 collision_flags;
@@ -664,6 +686,12 @@ typedef struct
 #define FIELD_CURVE_SEGMENT_COUNT_MASK 0x7F
 #define FIELD_CURVE_RANDOM 0x80
 
+/** @brief FieldActorSlot::status bit 0: the slot plays a streamed animation bound to its owner. */
+#define FIELD_SLOT_OWNER_LINKED 0x1
+/** @brief FieldActorSlot::status bits holding the starting action's ground effect (GroundEffectKind), shifted by one; all set means none. */
+#define FIELD_SLOT_GROUND_EFFECT_BITS 0x1E
+#define FIELD_SLOT_GROUND_EFFECT_SHIFT 1
+
 /** @brief Status word of an animation actor slot. */
 typedef union
 {
@@ -672,7 +700,7 @@ typedef union
     u8 bytes[4];
     struct
     {
-        /** @brief Bit 0: FIELD_SLOT_OWNER_LINKED; bits 1-4: the action element (FIELD_SLOT_ELEMENT_BITS). */
+        /** @brief Bit 0: FIELD_SLOT_OWNER_LINKED; bits 1-4: the action's ground effect (FIELD_SLOT_GROUND_EFFECT_BITS). */
         u8 flags;
         /** @brief Non-zero while the animation hides its owner or targets. */
         u8 hiding_objects;

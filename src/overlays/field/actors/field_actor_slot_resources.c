@@ -380,7 +380,7 @@ s32 field_start_builtin_animation(s32 object_index, s32 slot_index, s32 animatio
 
     slot->status.parts.hiding_objects = 0;
     slot->active = 1;
-    slot->status.word |= FIELD_SLOT_ELEMENT_BITS;
+    slot->status.word |= FIELD_SLOT_GROUND_EFFECT_BITS;
     slot->parts = field_builtin_data(entry->parts_offset);
     slot->curves = field_builtin_data(entry->curves_offset);
     slot->curve_segments = field_builtin_data(entry->segments_offset);
@@ -456,7 +456,7 @@ s32 field_start_streamed_animation(s32 owner, s32 resource_id)
     slot->target_count = 0;
     slot->track_mask = 0;
     slot->pending_track_mask = 0;
-    slot->status.word |= FIELD_SLOT_ELEMENT_BITS;
+    slot->status.word |= FIELD_SLOT_GROUND_EFFECT_BITS;
     slot->hit_reaction = g_field_object_states[owner].action;
     binding->slot = free_slot;
     binding->state = FIELD_BINDING_LOADING;

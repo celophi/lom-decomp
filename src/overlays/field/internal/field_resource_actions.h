@@ -27,7 +27,7 @@
 #define FIELD_RESOURCE_ACTION_BUTTON_COUNT 12
 /** @brief First action blocked while g_field_actions_limited is set. */
 #define FIELD_ACTION_BLOCKABLE_FIRST 4
-/** @brief Target filter of an action without a target predicate or action handler. */
+/** @brief Target filter of an action with no ground effect, which collects no targets. */
 #define FIELD_ACTION_TARGET_NONE 0xFF
 
 /** @brief FieldActionSlot::command bit: the action runs a technique sequence. */
@@ -59,7 +59,7 @@
 /** @brief Flag halfword of an action slot. */
 typedef struct
 {
-    u16 target_filter : 8; /**< Target predicate index, FIELD_ACTION_TARGET_NONE for none. */
+    u16 target_filter : 8; /**< Ground effect (GroundEffectKind) whose area selects the targets, FIELD_ACTION_TARGET_NONE for none. */
     u16 target_group : 2;  /**< Target group mode (opposite / same group). */
     u16 instrument : 1;    /**< Action plays an instrument (charge) animation. */
     u16 unknown_0xb : 5;

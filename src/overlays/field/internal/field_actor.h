@@ -75,6 +75,17 @@ enum
 #define FIELD_POSITION_SHIFT 8
 /** @brief Scratchpad vector that receives an actor displacement. */
 #define FIELD_SCRATCH_DISPLACEMENT ((Vec3i*)SCRATCHPAD_ADDRESS)
+/** @brief Scratchpad vector loaded into the GTE to square a whole-unit distance. */
+#define FIELD_DISTANCE_DELTA ((VECTOR*)SCRATCHPAD_ADDRESS)
+/** @brief Scratchpad vector receiving the squared components of FIELD_DISTANCE_DELTA. */
+#define FIELD_DISTANCE_SQUARES ((VECTOR*)SCRATCHPAD_AT(0x10))
+
+/** @brief Distance from the object at which the strip arches start; each arch spans this distance plus the effect radius. */
+#define GROUND_EFFECT_STRIPS_INNER_RADIUS 64
+/** @brief Radius of the half loop each curve strip turns through, in fixed-point units (the curves cover this much Z on either side). */
+#define GROUND_EFFECT_CURVE_RADIUS 0x2000
+/** @brief Angle the spiral turns away from the facing direction, for effect radius @p radius. */
+#define GROUND_EFFECT_SPIRAL_ANGLE(radius) ratan2((radius), 100)
 
 /* Shared actor animations (FieldActor::animation without the facing bit). */
 /** @brief Defend pose played when a guarded hit lands. */
