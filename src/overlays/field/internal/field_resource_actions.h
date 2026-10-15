@@ -25,6 +25,8 @@
 #define FIELD_RESOURCE_ACTION_CHAIN 11
 /** @brief Number of action slots that can be bound to buttons (the slots below it). */
 #define FIELD_RESOURCE_ACTION_BUTTON_COUNT 12
+/** @brief First action blocked while g_field_actions_limited is set. */
+#define FIELD_ACTION_BLOCKABLE_FIRST 4
 /** @brief Target filter of an action without a target predicate or action handler. */
 #define FIELD_ACTION_TARGET_NONE 0xFF
 

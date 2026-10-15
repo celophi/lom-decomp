@@ -55,7 +55,10 @@ extern s32 g_field_boss_hud_shake_frame;
 /** @brief First resource read id of the streamed animation resources. */
 #define FIELD_ANIMATION_RESOURCE_BASE 0x2DC
 
-/** @brief Map size words of the fixed field map header block at 0x801ED400. */
+/**
+ * @brief Map size words of the fixed field map header block at 0x801ED400.
+ * @note Width and depth are screen pixels; world positions have FIELD_POSITION_SHIFT fractional bits, with z projected at half scale.
+ */
 typedef struct
 {
     s16 width;

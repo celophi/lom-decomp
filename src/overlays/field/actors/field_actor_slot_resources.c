@@ -327,7 +327,7 @@ void field_stop_actor_slot(FieldActor* actor, FieldActorSlot* slot, s32 force)
         controller->ports[0].small_motor_command = 0;
     }
 
-    if (!(slot->animation->flags & FIELD_ANIM_KEEP_ALIVE))
+    if (!(slot->animation->flags & FIELD_ANIMATION_HAS_ALTERNATES))
     {
         slot->active = 0;
 
@@ -401,7 +401,7 @@ s32 field_start_builtin_animation(s32 object_index, s32 slot_index, s32 animatio
     }
 
     slot->track_interval = 0;
-    slot->animation->flags &= ~FIELD_ANIM_KEEP_ALIVE;
+    slot->animation->flags &= ~FIELD_ANIMATION_HAS_ALTERNATES;
     slot->animation_index = 0;
     slot->sequence_active = 0;
     slot->owner_object_index = object_index;
@@ -608,7 +608,7 @@ void field_reset_object_tints(void)
         g_field_object_states[i].name = NULL;
         g_field_object_states[i].action = 0;
         g_field_object_states[i].interaction_kind = 0;
-        g_field_object_states[i].movement.bits.flag15 = 0;
+        g_field_object_states[i].movement.bits.invulnerable = 0;
         g_field_object_states[i].contact.bits.targeted = 0;
         g_field_object_states[i].contact.bits.animation_hidden = 0;
         g_field_object_states[i].tint_blue = tint_blue;

@@ -95,7 +95,7 @@ typedef union
     u8 bytes[4];
 } FieldValueWord;
 
-/** @brief Packed movement word: low ten bits are the effect scale, bit 15 a flag, the top half the resolved height. */
+/** @brief Packed movement word: effect scale and action flags, with the resolved height in the top half. */
 typedef union
 {
     u32 word;
@@ -105,7 +105,8 @@ typedef union
         /** @brief The action's charge animation has started (FIELD_MOVEMENT_CHARGED). */
         u32 charged : 1;
         u32 unk11 : 4;
-        u32 flag15 : 1;
+        /** @brief The object cannot be hit or targeted (FIELD_MOVEMENT_INVULNERABLE). */
+        u32 invulnerable : 1;
         u32 unk16 : 16;
     } bits;
     struct
@@ -576,7 +577,7 @@ typedef struct FieldAnimationDef
     u8 sound_subtypes[2];
     /** @brief Entries 0-1: event type of each sound event; entries 2-3: its sound command (FIELD_SOUND_COMMAND). */
     u16 sound_events[4];
-    /** @brief FIELD_ANIM_* and FIELD_ANIMATION_HAS_* bits. */
+    /** @brief FIELD_ANIM_* and FIELD_ANIMATION_HAS_ALTERNATES bits. */
     u16 flags;
     /** @brief Bit 15 plays sound bits 8-14 when track 0 reaches the frame in the low byte. */
     union
@@ -605,7 +606,8 @@ typedef struct FieldAnimationDef
 #define FIELD_ANIM_COLOR_RGB 0x100
 #define FIELD_ANIM_BLEND_SHIFT 9
 #define FIELD_ANIM_GLOBAL_COLOR 0x400
-#define FIELD_ANIM_KEEP_ALIVE 0x800
+/** @brief Two alternate definitions and per-definition part masks follow; the slot stays active between definitions. */
+#define FIELD_ANIMATION_HAS_ALTERNATES 0x800
 #define FIELD_ANIM_CAMERA_OFFSET 0x1000
 #define FIELD_ANIM_CAMERA_MODE_SHIFT 13
 /** @brief Camera offset modes (FieldAnimationDef::flags bits 13-14): the curve moves X, Y, both, or X with the next curve moving Y. */

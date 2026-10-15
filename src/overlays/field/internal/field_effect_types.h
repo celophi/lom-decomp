@@ -127,11 +127,6 @@ typedef enum
     FIELD_POSITION_EXTEND_LINK_XZ = 15
 } FieldPositionSource;
 
-/** @brief FieldAnimationDef::flags: the definition carries its extension fields (duration onward). */
-#define FIELD_ANIMATION_HAS_EXTENSION 0x8000
-/** @brief FieldAnimationDef::flags: two alternate definitions and a three-halfword tail follow. */
-#define FIELD_ANIMATION_HAS_ALTERNATES 0x800
-
 /**
  * @brief Shared 0x54-byte position/state record used by world objects and effects.
  * @note Positions have eight fractional bits; angles use 0x1000 units per turn.

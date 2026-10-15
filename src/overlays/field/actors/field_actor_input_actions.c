@@ -20,9 +20,6 @@
 #define FIELD_ACTION_RESTRICTED_FIRST 2
 #define FIELD_ACTION_RESTRICTED_LAST 3
 
-/** @brief First action blocked while g_field_actions_limited is set. */
-#define FIELD_ACTION_BLOCKABLE_FIRST 4
-
 /** @brief Buttons that confirm (start an interaction). */
 #define FIELD_CONFIRM_BUTTONS (PAD_BTN_CROSS | PAD_BTN_L3)
 

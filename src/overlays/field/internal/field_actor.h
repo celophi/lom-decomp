@@ -53,6 +53,16 @@
 #define FIELD_HEADING_SECTOR_SHIFT 5
 /** @brief Heading bits of a sector (the heading snapped to an eighth of a turn). */
 #define FIELD_HEADING_SECTOR_MASK 0xE0
+/** @brief Unmirrored facing offsets within the standing, walking and running animation groups. */
+enum
+{
+    FIELD_ANIMATION_FACE_UP = 0,
+    FIELD_ANIMATION_FACE_UP_LEFT = 1,
+    FIELD_ANIMATION_FACE_LEFT = 2,
+    FIELD_ANIMATION_FACE_DOWN_LEFT = 3,
+    FIELD_ANIMATION_FACE_DOWN = 4
+};
+
 /** @brief Directional animations come in groups of five (stand, then walk, then run). */
 #define FIELD_ANIMATION_DIRECTIONS 5
 /** @brief First walking animation. */
