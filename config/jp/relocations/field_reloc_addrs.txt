@@ -152,6 +152,11 @@ rom:0x4D255 reloc:MIPS_LO16 symbol:g_field_object_states addend:0x190
 rom:0x17215 reloc:MIPS_NONE symbol:g_field_timed_text
 rom:0x17219 reloc:MIPS_NONE symbol:g_field_timed_text
 
+// field_text_reset_scratch reads windows[0].flags from the fixed text
+// workspace at 0x801ED040. Keep the literal address for this member access.
+rom:0x14319 reloc:MIPS_NONE symbol:g_field_text_window0_flags
+rom:0x1431D reloc:MIPS_NONE symbol:g_field_text_window0_flags
+
 // JP-only entries from config/jp/reloc_extra/field_reloc_addrs.txt.
 // field_draw_frame (JP): both audio checks read FIELD_CD_SYSTEM->audio_enabled,
 // a literal address; splat names the first one after g_cd_audio_enabled, which

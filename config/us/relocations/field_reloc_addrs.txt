@@ -151,3 +151,8 @@ rom:0x4D4A5 reloc:MIPS_LO16 symbol:g_field_object_states addend:0x190
 // of Splat's inferred standalone g_field_timed_text relocation.
 rom:0x176D5 reloc:MIPS_NONE symbol:g_field_timed_text
 rom:0x176D9 reloc:MIPS_NONE symbol:g_field_timed_text
+
+// field_text_reset_scratch reads windows[0].flags from the fixed text
+// workspace at 0x801ED044. Keep the literal address for this member access.
+rom:0x147B1 reloc:MIPS_NONE symbol:g_field_text_window0_flags
+rom:0x147B5 reloc:MIPS_NONE symbol:g_field_text_window0_flags
