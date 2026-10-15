@@ -535,7 +535,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
     block.base++;
     cursor.base++;
 
-    if (actor->animation->flags & FIELD_ANIMATION_HAS_EXTENSION)
+    if (actor->animation->flags & FIELD_ANIM_OWN_DURATION)
     {
         *block.extension = *cursor.extension;
         block.extension++;

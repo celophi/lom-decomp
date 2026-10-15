@@ -729,7 +729,7 @@ static s32 field_finalize_actor_animation(FieldActorSlot* slot)
             field_clear_actor_effects(slot);
         }
 
-        if (!(slot->animation->flags & FIELD_ANIM_KEEP_ALIVE))
+        if (!(slot->animation->flags & FIELD_ANIMATION_HAS_ALTERNATES))
         {
             slot->duration = 0;
             slot->active = 0;
@@ -3501,7 +3501,8 @@ static void field_update_actor_part_effects(FieldActorSlot* slot)
     {
         start_frame = part->start_frame;
 
-        if (start_frame != FIELD_PART_DISABLED && (!(slot->animation->flags & FIELD_ANIM_KEEP_ALIVE) || ((slot->part_masks[slot->animation_index] >> i) & 1)) &&
+        if (start_frame != FIELD_PART_DISABLED &&
+            (!(slot->animation->flags & FIELD_ANIMATION_HAS_ALTERNATES) || ((slot->part_masks[slot->animation_index] >> i) & 1)) &&
             part->effect_kind != FIELD_PART_NO_EFFECT && (!(part->orientation_flags.word & FIELD_PART_FIRST_TRACK_ONLY) || g_field_track_index == 0))
         {
             if (slot->targets[g_field_track_index] == FIELD_TARGET_NONE)

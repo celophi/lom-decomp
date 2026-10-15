@@ -55,7 +55,10 @@ extern s32 g_field_boss_hud_shake_frame;
 /** @brief First resource read id of the streamed animation resources. */
 #define FIELD_ANIMATION_RESOURCE_BASE 0x2DC
 
-/** @brief Map size words of the fixed field map header block at 0x801ED400. */
+/**
+ * @brief Map size words of the fixed field map header block at 0x801ED400.
+ * @note Width and depth are screen pixels; world positions have FIELD_POSITION_SHIFT fractional bits, with z projected at half scale.
+ */
 typedef struct
 {
     s16 width;
@@ -81,12 +84,6 @@ typedef struct
 /** @brief Neutral global colour scale. */
 #define FIELD_COLOR_SCALE_NEUTRAL 0x100
 
-
-/** @brief FieldActorSlot::status bit 0: the slot plays a streamed animation bound to its owner. */
-#define FIELD_SLOT_OWNER_LINKED 0x1
-/** @brief FieldActorSlot::status bits holding the action element (stored shifted by one); all set means none. */
-#define FIELD_SLOT_ELEMENT_BITS 0x1E
-#define FIELD_SLOT_ELEMENT_SHIFT 1
 
 
 extern FieldObjectState g_field_scene_object_states[];

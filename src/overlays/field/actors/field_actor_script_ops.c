@@ -21,9 +21,6 @@
 #include "overlays/field/field_types.h"
 #include "../internal/field_actor_palette.h"
 
-/** @brief Lowest actor record a script may spawn a child actor into. */
-#define FIELD_FIRST_SPAWN_ACTOR 3
-
 /** @brief Directional animations: 5 facings each for standing, walking and running. */
 #define FIELD_DIRECTIONAL_ANIMATION_COUNT 15
 
@@ -39,17 +36,10 @@
 /** @brief Wait value that keeps a command running until it finishes by itself. */
 #define FIELD_WAIT_UNTIL_DONE 0xFF
 
-/** @brief FieldActionSlot flags bit of an instrument (charge) action. */
-#define FIELD_ACTION_INSTRUMENT 0x400
-
-/** @brief FieldAnimationDef::flags bit of an animation played on every track. */
-#define FIELD_ANIMATION_DEF_LAYERED 0x800
-
 /** @brief Animations of a layered bound action whose part masks count as layers. */
 #define FIELD_LAYERED_ACTION_MAX_LAYERS 3
 
-/** @brief Actions blocked while g_field_actions_limited is set. */
-#define FIELD_ACTION_LIMITED_FIRST 4
+/** @brief Last script action blocked while g_field_actions_limited is set. */
 #define FIELD_ACTION_LIMITED_LAST 7
 
 /** @brief Resource entry an actor spawned by script opcode 0xB9 is initialized from. */
@@ -76,7 +66,7 @@ enum
 {
     FIELD_SCRIPT_OP_NOP = 0x00,
     FIELD_SCRIPT_OP_STEP = FIELD_ACTOR_COMMAND_STEP,
-    FIELD_SCRIPT_OP_HIT = 0x82,
+    FIELD_SCRIPT_OP_HIT = FIELD_ACTOR_COMMAND_HIT,
     FIELD_SCRIPT_OP_ACTION_0 = 0x83,
     FIELD_SCRIPT_OP_ACTION_1 = 0x84,
     FIELD_SCRIPT_OP_ACTION = FIELD_ACTOR_COMMAND_ACTION,
@@ -86,9 +76,9 @@ enum
     FIELD_SCRIPT_OP_WALK_TO_TARGET = FIELD_ACTOR_COMMAND_WALK_TO_TARGET,
     FIELD_SCRIPT_OP_WALK_FROM_TARGET = FIELD_ACTOR_COMMAND_WALK_FROM_TARGET,
     FIELD_SCRIPT_OP_SEQUENCE_STEP = FIELD_ACTOR_COMMAND_SEQUENCE_STEP,
-    FIELD_SCRIPT_OP_KNOCK_DOWN = 0x8E,
+    FIELD_SCRIPT_OP_KNOCK_DOWN = FIELD_ACTOR_COMMAND_KNOCKED_DOWN,
     FIELD_SCRIPT_OP_JUMP = FIELD_ACTOR_COMMAND_JUMP,
-    FIELD_SCRIPT_OP_DEFEAT = 0x90,
+    FIELD_SCRIPT_OP_DEFEAT = FIELD_ACTOR_COMMAND_DEFEATED,
     FIELD_SCRIPT_OP_MOVE_TEXTURE = 0x97,
     FIELD_SCRIPT_OP_TIMED_LIFT = FIELD_ACTOR_COMMAND_TIMED_LIFT,
     FIELD_SCRIPT_OP_DESCEND_TO_GROUND = FIELD_ACTOR_COMMAND_DESCEND_TO_GROUND,
@@ -279,7 +269,7 @@ static void field_run_actor_script_command(FieldActor* actor)
         spawn_states = g_field_object_states;
         spawn_actors = g_field_actors;
 
-        for (; index_or_count >= FIELD_FIRST_SPAWN_ACTOR; index_or_count--)
+        for (; index_or_count >= FIELD_PARTY_COUNT; index_or_count--)
         {
             spawn_actor = &spawn_actors[index_or_count];
             old_presence = spawn_actor->presence;
@@ -405,7 +395,7 @@ static void field_run_actor_script_command(FieldActor* actor)
             return;
         }
 
-        if ((g_field_actions_limited != 0) && ((g_field_object_states[actor->object_index].action >= FIELD_ACTION_LIMITED_FIRST) &&
+        if ((g_field_actions_limited != 0) && ((g_field_object_states[actor->object_index].action >= FIELD_ACTION_BLOCKABLE_FIRST) &&
                                                (g_field_object_states[actor->object_index].action <= FIELD_ACTION_LIMITED_LAST)))
         {
             actor->command = FIELD_ACTOR_COMMAND_NONE;
@@ -566,9 +556,9 @@ static void field_run_actor_script_command(FieldActor* actor)
 
         actor_x = actor->x;
 
-        if (actor_x < 0 || actor_x >= (map_width = bounds->width << 8) || (actor_z = actor->z) < 0 || actor_z >= (map_depth = (s16)bounds->depth << 9) ||
-            (goal_x = g_field_object_states[actor->object_index].target_x) < 0 || goal_x >= map_width ||
-            (goal_z = g_field_object_states[actor->object_index].target_z) < 0 || goal_z >= map_depth)
+        if (actor_x < 0 || actor_x >= (map_width = bounds->width << FIELD_POSITION_SHIFT) || (actor_z = actor->z) < 0 ||
+            actor_z >= (map_depth = (s16)bounds->depth << (FIELD_POSITION_SHIFT + 1)) || (goal_x = g_field_object_states[actor->object_index].target_x) < 0 ||
+            goal_x >= map_width || (goal_z = g_field_object_states[actor->object_index].target_z) < 0 || goal_z >= map_depth)
         {
             g_field_object_states[actor->object_index].path_index = 0;
             g_field_object_states[actor->object_index].path[0].x = g_field_object_states[actor->object_index].target_x;
@@ -807,7 +797,7 @@ static void field_run_actor_script_command(FieldActor* actor)
             {
                 index_or_count = 0;
 
-                if (slot->animations->flags & FIELD_ANIMATION_DEF_LAYERED)
+                if (slot->animations->flags & FIELD_ANIMATION_HAS_ALTERNATES)
                 {
                     for (action_or_layer = 0; action_or_layer < FIELD_LAYERED_ACTION_MAX_LAYERS; action_or_layer++)
                     {
@@ -995,45 +985,45 @@ s32 field_start_actor_turn(s32 key)
         /* The turn table position is the facing sector counted from facing 0. */
         switch (animation)
         {
-        case 1:
-        case FIELD_ANIMATION_WALK + 1:
-        case FIELD_ANIMATION_RUN + 1:
+        case FIELD_ANIMATION_FACE_UP_LEFT:
+        case FIELD_ANIMATION_WALK + FIELD_ANIMATION_FACE_UP_LEFT:
+        case FIELD_ANIMATION_RUN + FIELD_ANIMATION_FACE_UP_LEFT:
             actor->command_param = FIELD_TURN_SECTOR_ENTRIES;
             break;
-        case 2:
-        case FIELD_ANIMATION_WALK + 2:
-        case FIELD_ANIMATION_RUN + 2:
+        case FIELD_ANIMATION_FACE_LEFT:
+        case FIELD_ANIMATION_WALK + FIELD_ANIMATION_FACE_LEFT:
+        case FIELD_ANIMATION_RUN + FIELD_ANIMATION_FACE_LEFT:
             actor->command_param = FIELD_TURN_SECTOR_ENTRIES * 2;
             break;
-        case 3:
-        case FIELD_ANIMATION_WALK + 3:
-        case FIELD_ANIMATION_RUN + 3:
+        case FIELD_ANIMATION_FACE_DOWN_LEFT:
+        case FIELD_ANIMATION_WALK + FIELD_ANIMATION_FACE_DOWN_LEFT:
+        case FIELD_ANIMATION_RUN + FIELD_ANIMATION_FACE_DOWN_LEFT:
             actor->command_param = FIELD_TURN_SECTOR_ENTRIES * 3;
             break;
-        case 4:
-        case FIELD_ANIMATION_WALK + 4:
-        case FIELD_ANIMATION_RUN + 4:
-        case FIELD_ANIMATION_FACING | 4:
-        case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + 4):
-        case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + 4):
+        case FIELD_ANIMATION_FACE_DOWN:
+        case FIELD_ANIMATION_WALK + FIELD_ANIMATION_FACE_DOWN:
+        case FIELD_ANIMATION_RUN + FIELD_ANIMATION_FACE_DOWN:
+        case FIELD_ANIMATION_FACING | FIELD_ANIMATION_FACE_DOWN:
+        case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + FIELD_ANIMATION_FACE_DOWN):
+        case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + FIELD_ANIMATION_FACE_DOWN):
             actor->command_param = FIELD_TURN_SECTOR_ENTRIES * 4;
             break;
-        case FIELD_ANIMATION_FACING | 3:
-        case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + 3):
-        case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + 3):
+        case FIELD_ANIMATION_FACING | FIELD_ANIMATION_FACE_DOWN_LEFT:
+        case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + FIELD_ANIMATION_FACE_DOWN_LEFT):
+        case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + FIELD_ANIMATION_FACE_DOWN_LEFT):
             actor->command_param = FIELD_TURN_SECTOR_ENTRIES * 5;
             break;
-        case FIELD_ANIMATION_FACING | 2:
-        case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + 2):
-        case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + 2):
+        case FIELD_ANIMATION_FACING | FIELD_ANIMATION_FACE_LEFT:
+        case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + FIELD_ANIMATION_FACE_LEFT):
+        case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + FIELD_ANIMATION_FACE_LEFT):
             actor->command_param = FIELD_TURN_SECTOR_ENTRIES * 6;
             break;
-        case FIELD_ANIMATION_FACING | 1:
-        case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + 1):
-        case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + 1):
+        case FIELD_ANIMATION_FACING | FIELD_ANIMATION_FACE_UP_LEFT:
+        case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + FIELD_ANIMATION_FACE_UP_LEFT):
+        case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + FIELD_ANIMATION_FACE_UP_LEFT):
             actor->command_param = FIELD_TURN_SECTOR_ENTRIES * 7;
             break;
-        case 0:
+        case FIELD_ANIMATION_FACE_UP:
         default:
             actor->command_param = 0;
             break;
@@ -1206,7 +1196,7 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound)
     hp_state->hp_display.word = (hp_state->hp_display.word & FIELD_HP_FLAGS_MASK) | (hp_state->maximum_hp & FIELD_HP_VALUE_MASK);
     hp_state->current_hp.word = hp_state->maximum_hp & FIELD_HP_VALUE_MASK;
     g_field_object_states[actor->object_index].tint_timer = FIELD_REVIVE_TINT_FRAMES;
-    g_field_object_states[actor->object_index].movement.bits.flag15 = 1;
+    g_field_object_states[actor->object_index].movement.bits.invulnerable = 1;
 
     if (actor->object_index < FIELD_PARTY_COUNT &&
         (actor->x <= -scene->camera_x + FIELD_VIEW_MARGIN_LEFT || actor->x >= -scene->camera_x + FIELD_VIEW_MARGIN_RIGHT ||
@@ -1254,9 +1244,9 @@ void field_route_actor_to_object(FieldActor* actor, s32 target_index, s32 restar
     bounds = FIELD_MAP_BOUNDS;
     x = actor->x;
 
-    if (x < 0 || x >= (map_width = bounds->width << 8) || (z = actor->z) < 0 || z >= (map_depth = (s16)bounds->depth << 9) ||
-        (state_x = g_field_object_states[actor->object_index].target_x) < 0 || state_x >= map_width ||
-        (state_z = g_field_object_states[actor->object_index].target_z) < 0 || state_z >= map_depth)
+    if (x < 0 || x >= (map_width = bounds->width << FIELD_POSITION_SHIFT) || (z = actor->z) < 0 ||
+        z >= (map_depth = (s16)bounds->depth << (FIELD_POSITION_SHIFT + 1)) || (state_x = g_field_object_states[actor->object_index].target_x) < 0 ||
+        state_x >= map_width || (state_z = g_field_object_states[actor->object_index].target_z) < 0 || state_z >= map_depth)
     {
         g_field_object_states[actor->object_index].path_index = 0;
         g_field_object_states[actor->object_index].path[0].x = g_field_actors[target_index].x;
@@ -1598,9 +1588,8 @@ s32 field_register_actor_hit(s32 key, s32 guard)
     {
         g_field_player_records[actor->object_index].hit_state = FIELD_HUD_SHAKE_START;
     }
-    else if (g_field_object_states[actor->object_index].hp_display.word < 0)
+    else if (g_field_object_states[actor->object_index].hp_display.bits.boss)
     {
-        /* Bit 31 of hp_display (a HUD flag bit) marks a boss. */
         g_field_boss_hud_shake_frame = FIELD_HUD_SHAKE_START;
     }
 
@@ -1623,16 +1612,16 @@ s32 field_register_actor_hit(s32 key, s32 guard)
 
     if (command >= FIELD_ACTOR_COMMAND_ACTION)
     {
-        /* Actions 0-3 and 8-10 are always interrupted; the others only while the target's action is pending. */
+        /* Abilities and weapon attacks are always interrupted; other actions only while pending. */
         switch (g_field_object_states[actor->object_index].action)
         {
-        case 0:
-        case 1:
-        case 2:
-        case 3:
-        case 8:
-        case 9:
-        case 10:
+        case FIELD_RESOURCE_ACTION_ABILITY_0:
+        case FIELD_RESOURCE_ACTION_ABILITY_1:
+        case FIELD_RESOURCE_ACTION_COMBO:
+        case FIELD_RESOURCE_ACTION_POWER_ATTACK:
+        case FIELD_RESOURCE_ACTION_DASH_POWER_ATTACK:
+        case FIELD_RESOURCE_ACTION_JUMP_POWER_ATTACK:
+        case FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK:
             break;
         default:
             if (!g_field_object_states[actor->object_index].contact.bits.action_pending)
@@ -1816,39 +1805,39 @@ s32 field_face_actor(s32 source_key, s32 target_key)
         /* Eight facings; mirrored animations cover the right-hand side. */
         if (angle < -7 * FIELD_FACING_HALF_SECTOR)
         {
-            source->animation = 2;
+            source->animation = FIELD_ANIMATION_FACE_LEFT;
         }
         else if (angle < -5 * FIELD_FACING_HALF_SECTOR)
         {
-            source->animation = 3;
+            source->animation = FIELD_ANIMATION_FACE_DOWN_LEFT;
         }
         else if (angle < -3 * FIELD_FACING_HALF_SECTOR)
         {
-            source->animation = 4;
+            source->animation = FIELD_ANIMATION_FACE_DOWN;
         }
         else if (angle < -FIELD_FACING_HALF_SECTOR)
         {
-            source->animation = FIELD_ANIMATION_FACING | 3;
+            source->animation = FIELD_ANIMATION_FACING | FIELD_ANIMATION_FACE_DOWN_LEFT;
         }
         else if (angle < FIELD_FACING_HALF_SECTOR)
         {
-            source->animation = FIELD_ANIMATION_FACING | 2;
+            source->animation = FIELD_ANIMATION_FACING | FIELD_ANIMATION_FACE_LEFT;
         }
         else if (angle < 3 * FIELD_FACING_HALF_SECTOR)
         {
-            source->animation = FIELD_ANIMATION_FACING | 1;
+            source->animation = FIELD_ANIMATION_FACING | FIELD_ANIMATION_FACE_UP_LEFT;
         }
         else if (angle < 5 * FIELD_FACING_HALF_SECTOR)
         {
-            source->animation = 0;
+            source->animation = FIELD_ANIMATION_FACE_UP;
         }
         else if (angle < 7 * FIELD_FACING_HALF_SECTOR)
         {
-            source->animation = 1;
+            source->animation = FIELD_ANIMATION_FACE_UP_LEFT;
         }
         else
         {
-            source->animation = 2;
+            source->animation = FIELD_ANIMATION_FACE_LEFT;
         }
     }
     else
@@ -1935,45 +1924,45 @@ s32 field_get_actor_facing(s32 key)
         {
             switch (animation)
             {
-            case 1:
-            case FIELD_ANIMATION_WALK + 1:
-            case FIELD_ANIMATION_RUN + 1:
+            case FIELD_ANIMATION_FACE_UP_LEFT:
+            case FIELD_ANIMATION_WALK + FIELD_ANIMATION_FACE_UP_LEFT:
+            case FIELD_ANIMATION_RUN + FIELD_ANIMATION_FACE_UP_LEFT:
                 result = FIELD_HEADING_SECTOR(3);
                 break;
-            case 2:
-            case FIELD_ANIMATION_WALK + 2:
-            case FIELD_ANIMATION_RUN + 2:
+            case FIELD_ANIMATION_FACE_LEFT:
+            case FIELD_ANIMATION_WALK + FIELD_ANIMATION_FACE_LEFT:
+            case FIELD_ANIMATION_RUN + FIELD_ANIMATION_FACE_LEFT:
                 result = FIELD_HEADING_SECTOR(4);
                 break;
-            case 3:
-            case FIELD_ANIMATION_WALK + 3:
-            case FIELD_ANIMATION_RUN + 3:
+            case FIELD_ANIMATION_FACE_DOWN_LEFT:
+            case FIELD_ANIMATION_WALK + FIELD_ANIMATION_FACE_DOWN_LEFT:
+            case FIELD_ANIMATION_RUN + FIELD_ANIMATION_FACE_DOWN_LEFT:
                 result = FIELD_HEADING_SECTOR(5);
                 break;
-            case 4:
-            case FIELD_ANIMATION_WALK + 4:
-            case FIELD_ANIMATION_RUN + 4:
-            case FIELD_ANIMATION_FACING | 4:
-            case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + 4):
-            case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + 4):
+            case FIELD_ANIMATION_FACE_DOWN:
+            case FIELD_ANIMATION_WALK + FIELD_ANIMATION_FACE_DOWN:
+            case FIELD_ANIMATION_RUN + FIELD_ANIMATION_FACE_DOWN:
+            case FIELD_ANIMATION_FACING | FIELD_ANIMATION_FACE_DOWN:
+            case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + FIELD_ANIMATION_FACE_DOWN):
+            case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + FIELD_ANIMATION_FACE_DOWN):
                 result = FIELD_HEADING_SECTOR(6);
                 break;
-            case FIELD_ANIMATION_FACING | 1:
-            case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + 1):
-            case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + 1):
+            case FIELD_ANIMATION_FACING | FIELD_ANIMATION_FACE_UP_LEFT:
+            case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + FIELD_ANIMATION_FACE_UP_LEFT):
+            case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + FIELD_ANIMATION_FACE_UP_LEFT):
                 result = FIELD_HEADING_SECTOR(1);
                 break;
-            case FIELD_ANIMATION_FACING | 2:
-            case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + 2):
-            case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + 2):
+            case FIELD_ANIMATION_FACING | FIELD_ANIMATION_FACE_LEFT:
+            case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + FIELD_ANIMATION_FACE_LEFT):
+            case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + FIELD_ANIMATION_FACE_LEFT):
                 result = FIELD_HEADING_SECTOR(0);
                 break;
-            case FIELD_ANIMATION_FACING | 3:
-            case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + 3):
-            case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + 3):
+            case FIELD_ANIMATION_FACING | FIELD_ANIMATION_FACE_DOWN_LEFT:
+            case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_WALK + FIELD_ANIMATION_FACE_DOWN_LEFT):
+            case FIELD_ANIMATION_FACING | (FIELD_ANIMATION_RUN + FIELD_ANIMATION_FACE_DOWN_LEFT):
                 result = FIELD_HEADING_SECTOR(7);
                 break;
-            case 0:
+            case FIELD_ANIMATION_FACE_UP:
             case FIELD_ANIMATION_WALK:
             case FIELD_ANIMATION_RUN:
             case FIELD_ANIMATION_FACING:

@@ -94,7 +94,7 @@ void field_set_battle_group(s32 mode, void* actor_data)
             state->tint_timer = 0;
             state->flags = state->flags & FIELD_OBJECT_FLAG_KNOCKED_OUT;
             state->contact.bits.no_hit_test = 0;
-            state->movement.bits.flag15 = 0;
+            state->movement.bits.invulnerable = 0;
             state->contact.bits.targeted = 0;
             g_field_actor_slots[FIELD_OBJECT_EFFECT_SLOT_BASE + index].status.parts.hiding_objects = 0;
             field_stop_actor_slot(&g_field_actors[index], &g_field_actor_slots[FIELD_OBJECT_EFFECT_SLOT_BASE + index], 1);
