@@ -60,8 +60,7 @@ typedef struct
     PadAxisSample axis_y; // 0x2E - vertical axis sample
 } SCDRegs;
 
-/* Merged-controller register block lives at a fixed RAM address.
- * Token-equivalent to the cast so codegen is unchanged. */
+/** @brief Merged-controller register block at its fixed RAM address. */
 #define SCD_REGS ((SCDRegs*)CONTROLLER_STATE_ADDRESS)
 
 /** @brief First byte of SCD_REGS (device_type), addressed as its own symbol by some overlays. */

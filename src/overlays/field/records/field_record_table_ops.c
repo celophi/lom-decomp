@@ -7,6 +7,7 @@
 #include "common.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
+#include <abs.h>
 
 /** @brief Most lands that can be active before only the first requested land is placed. */
 #define FIELD_ACTIVE_LAND_LIMIT 3
@@ -235,50 +236,14 @@ s32 field_get_land_distance(s32 land_index)
     s32 dx;
     s32 dz;
     u8 extra;
-    u8* base;
-    u8* land;
-    u8* land_address;
-    SavedGameLayout** state_ptr;
 
-    do
-    {
-        state_ptr = &g_field_game_state;
-    } while (0);
-    land = (u8*)(land_index << 1);
-    land = (u8*)((s32)land + land_index);
-    base = (u8*)*state_ptr;
-    land = (u8*)((s32)land << 2);
-    land_address = base + (s32)land;
-    land = land_address;
-    dz = land[0x2F1];
-    do
-    {
-        land_index = *(u32*)(base + 0x2F0);
-    } while (0);
-    dx = dz & 0xF;
-    dx -= ((u32)land_index >> 8) & 0xF;
-    if (dx < 0)
-    {
-        dx = -dx;
-    }
-    dz = (u32)dz >> 4;
-    land_index = (u32)land_index >> 12;
-    land_index &= 0xF;
-    dz -= land_index;
-    do
-    {
-        extra = land[0x2F2];
-    } while (0);
-    do
-    {
-        do
-        {
-            if (dz < 0)
-            {
-                dz = -dz;
-            }
-        } while (0);
-    } while (0);
+    dx = g_field_game_state->lands[land_index].x - g_field_game_state->lands[0].x;
+    dx = abs(dx);
+
+    dz = g_field_game_state->lands[land_index].z - g_field_game_state->lands[0].z;
+    extra = g_field_game_state->lands[land_index].unk2;
+    dz = abs(dz);
+
     return extra + dx + dz;
 }
 

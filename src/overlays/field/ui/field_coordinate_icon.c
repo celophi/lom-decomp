@@ -13,7 +13,6 @@
 
 /**
  * @brief Word-aligned upload source at byte @p offset of @p base.
- * @note Summed as integers: the target adds the scaled offset before the base.
  */
 #define FIELD_PORTRAIT_UPLOAD_SOURCE(base, offset) ((u_long*)((((offset) >> 2) << 2) + (uintptr_t)(base)))
 

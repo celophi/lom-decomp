@@ -272,7 +272,6 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     SVECTOR* local_direction = (SVECTOR*)FIELD_EFFECT_LOCAL_VECTOR_ADDRESS;
     MATRIX* rotation_matrix = (MATRIX*)FIELD_EFFECT_MATRIX_ADDRESS;
     FieldMotionRecord* effect;
-    FieldMotionRecord* sibling_effect;
     FieldMotionRecord* free_effect;
     FieldObjectState* placement_object;
     FieldObjectState* owner_object;
@@ -287,7 +286,6 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     FieldMotionRecord* source_record;
     FieldMotionRecord* record_base;
     FieldObjectState* owner_object_state;
-    FieldObjectState* track_object_state;
     FieldObjectPart* part;
     s32 rotated_x;
     s32 work_value;
@@ -5502,7 +5500,6 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                         setSemiTrans(poly, 1);
                     }
 
-                    /* Stepwise: a one-expression clut loses the shared tails. */
                     clut_row = rec->resource_index;
                     clut_column = item[6];
                     clut_row += FIELD_RESOURCE_CLUT_VRAM_Y;

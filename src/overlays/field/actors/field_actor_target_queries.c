@@ -199,34 +199,27 @@ s32 field_actor_near_ground_points(FieldActor* source, FieldActor* candidate, s3
     VECTOR* delta = FIELD_TARGET_DELTA;
     VECTOR* square = FIELD_TARGET_SQUARE;
     Vec2s* point;
-    s32 i;
+    s32 point_index;
     s32 distance;
-    /* Taking the label's address keeps the found path a block of its own. */
-    static void* const keep[] __attribute__((section(".discard"))) = {
-        &&found,
-    };
 
-    if (candidate->presence == FIELD_ACTOR_UNUSED)
+    if (candidate->presence != FIELD_ACTOR_UNUSED)
     {
-        return 0;
-    }
+        point = g_field_object_states[source->object_index].ground_attachment_points;
 
-    point = g_field_object_states[source->object_index].ground_attachment_points;
-
-    for (i = 0; i < FIELD_GROUND_POINT_COUNT; i++, point++)
-    {
-        delta->vx = ((candidate->x - source->x) - (point->x << 8)) >> 8;
-        delta->vy = (candidate->y - source->y) >> 8;
-        delta->vz = ((candidate->z - source->z) - (point->y << 8)) >> 8;
-        gte_ldlvl(delta);
-        gte_sqr0();
-        gte_stlvnl(square);
-        distance = SquareRoot0(square->vx + square->vy + square->vz);
-
-        if (distance < max_distance)
+        for (point_index = 0; point_index < FIELD_GROUND_POINT_COUNT; point_index++, point++)
         {
-        found:
-            return 1;
+            delta->vx = ((candidate->x - source->x) - (point->x << 8)) >> 8;
+            delta->vy = (candidate->y - source->y) >> 8;
+            delta->vz = ((candidate->z - source->z) - (point->y << 8)) >> 8;
+            gte_ldlvl(delta);
+            gte_sqr0();
+            gte_stlvnl(square);
+            distance = SquareRoot0(square->vx + square->vy + square->vz);
+
+            if (distance < max_distance)
+            {
+                return 1;
+            }
         }
     }
 

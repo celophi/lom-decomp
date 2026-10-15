@@ -15,15 +15,10 @@
 /** The TIM file contains a CLUT block before its pixel block. */
 #define TIM_FLAG_HAS_CLUT 8
 
-/** Advance to the next TIM block by skipping @p block->bnum bytes.
- * Re-reads bnum at the call site; use TIM_PIXEL_BLOCK when bnum is
- * already cached in a local variable and codegen order matters. */
+/** @brief Advance to the next TIM block by skipping @p block->bnum bytes. */
 #define TIM_NEXT_BLOCK(block) ((TimBlock*)((u8*)(block) + (block)->bnum))
 
-/** Locate the pixel block given the TIM base and a pre-loaded CLUT bnum.
- * The parenthesisation (bnum + TIM_HEADER_SIZE) is required for the match: it
- * forces addiu (bnum+8) before addu (+base), matching the compiler's register
- * allocation when bnum is held in a saved register. */
+/** @brief Locate the pixel block given the TIM base and a pre-loaded CLUT bnum. */
 #define TIM_PIXEL_BLOCK(tim, bnum) \
     ((TimBlock*)((u8*)(tim) + ((bnum) + TIM_HEADER_SIZE)))
 

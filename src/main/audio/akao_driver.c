@@ -128,9 +128,7 @@ void akao_spu_read(void* destination, s32 byte_count)
  */
 void akao_spu_wait(void)
 {
-    while (*(volatile s32*)&g_akao_spu_xfer_pending == 1)
-    {
-    }
+    while (g_akao_spu_xfer_pending == 1);
 }
 
 /**
