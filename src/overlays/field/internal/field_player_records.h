@@ -55,7 +55,7 @@ typedef struct FieldPlayerRecord
     u8 portrait_index;
     /** @brief Frames left to chain a combo action. */
     u8 combo_timer;
-    u8 unk258;
+    u8 hide_shield_sprite;
     u8 hit_state;
     u8 unk25A;
     u8 unk25B;

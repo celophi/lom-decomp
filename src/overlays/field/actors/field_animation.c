@@ -1547,7 +1547,7 @@ void field_tint_animation_cel(FieldAnimDef* def, FieldPart* cel, FieldTintSrc* s
     mask_bit = 1;
     mask_cursor = cel->bits;
     first_slot = def->u.tint.first_slot;
-    last_slot = first_slot + def->u.tint.slot_count;
+    last_slot = first_slot + def->u.tint.last_slot_offset;
     mask_word = *mask_cursor++;
     for (row = 0; row != grid->u.b.rows; row++)
     {
@@ -1563,12 +1563,10 @@ void field_tint_animation_cel(FieldAnimDef* def, FieldPart* cel, FieldTintSrc* s
                         color_entry = &palette[color_slot] + shade;
                         if (shared_code != 0)
                         {
-                            ((FieldTintColor*)&cel->code_word)->rg = color_entry->rg;
-                            ((FieldTintColor*)&cel->code_word)->b = color_entry->b;
+                            FIELD_COPY_TINT_COLOR(((FieldTintColor*)&cel->code_word), color_entry);
                             return;
                         }
-                        ((FieldCellTint*)record_cursor)->rg = color_entry->rg;
-                        ((FieldCellTint*)record_cursor)->b = color_entry->b;
+                        FIELD_COPY_TINT_COLOR(((FieldCellTint*)record_cursor), color_entry);
                     }
                     else
                     {
@@ -1626,7 +1624,7 @@ static void field_tint_animation_cel_list(FieldAnimDef* def, FieldTintSrc* src, 
     palette_data = src->palette->data;
     field_build_tint_colors((u8*)(palette_data + 2), palette_data[0], rgb);
     first_slot = def->u.tint.first_slot;
-    last_slot = first_slot + def->u.tint.slot_count;
+    last_slot = first_slot + def->u.tint.last_slot_offset;
     for (cel = src->cels; cel != NULL; cel = cel->next)
     {
         record_cursor = cel->records;
@@ -1672,12 +1670,10 @@ static void field_tint_animation_cel_list(FieldAnimDef* def, FieldTintSrc* src, 
                             if (shared_code != 0)
                             {
                                 /* A cel with a shared colour word takes the first animated tile's colour. */
-                                ((FieldTintColor*)&cel->code_word)->rg = color_entry->rg;
-                                ((FieldTintColor*)&cel->code_word)->b = color_entry->b;
+                                FIELD_COPY_TINT_COLOR(((FieldTintColor*)&cel->code_word), color_entry);
                                 goto next_cel;
                             }
-                            ((FieldCellTint*)record_cursor)->rg = color_entry->rg;
-                            ((FieldCellTint*)record_cursor)->b = color_entry->b;
+                            FIELD_COPY_TINT_COLOR(((FieldCellTint*)record_cursor), color_entry);
                         }
                         else
                         {

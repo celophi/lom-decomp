@@ -1560,7 +1560,7 @@ s32 wmap_run_loop(void)
     if (g_wmap_entry_music_enabled != 0)
     {
         akao_play_song(&g_wmap_music_buffer);
-        akao_set_master_pan(0);
+        akao_set_master_tempo_modifier(0);
         akao_fade_song_volume_from(0, 30, 1, AKAO_VOLUME_MAX);
     }
     {
@@ -2003,7 +2003,7 @@ s32 wmap_run_loop(void)
                     func_800641DC();
                     break;
                 case WMAP_EXIT_SCREEN_PANELS:
-                    func_8006454C();
+                    wmap_update_exit_panels();
                     break;
                 case WMAP_EXIT_DIRECT:
                     return 0;

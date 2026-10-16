@@ -12,7 +12,6 @@
 #define WMAP_MODEL_BLEND_TPAGE 0x0C
 #define WMAP_MODEL_SEMI_TRANS 0x02
 #define WMAP_MODEL_BACK_OT_OFFSET 4
-#define WMAP_MODEL_TPAGE_XY 400 /* Packed (400, 0), outside the visible display. */
 
 #define LOAD_MODEL_VERTEX(dst, source, index)                                                                                                                  \
     {                                                                                                                                                          \
@@ -831,9 +830,9 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
         poly = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
         setlen(poly, 7);
         setcode(poly, WMAP_MODEL_FT3);
-        *(s32*)&poly->x2 = WMAP_MODEL_TPAGE_XY;
-        *(s32*)&poly->x1 = WMAP_MODEL_TPAGE_XY;
-        *(s32*)&poly->x0 = WMAP_MODEL_TPAGE_XY;
+        *(s32*)&poly->x2 = WMAP_TPAGE_SELECT_XY;
+        *(s32*)&poly->x1 = WMAP_TPAGE_SELECT_XY;
+        *(s32*)&poly->x0 = WMAP_TPAGE_SELECT_XY;
         final_tpage = ((blend_mode & WMAP_MODEL_BLEND_MASK) << WMAP_MODEL_BLEND_SHIFT) | WMAP_MODEL_BLEND_TPAGE;
         poly->tpage = final_tpage;
         addPrim(&g_wmap_current_frame->ordering_table[ot_index], poly);
@@ -846,9 +845,9 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
         poly = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
         setlen(poly, 7);
         setcode(poly, WMAP_MODEL_FT3);
-        *(s32*)&poly->x2 = WMAP_MODEL_TPAGE_XY;
-        *(s32*)&poly->x1 = WMAP_MODEL_TPAGE_XY;
-        *(s32*)&poly->x0 = WMAP_MODEL_TPAGE_XY;
+        *(s32*)&poly->x2 = WMAP_TPAGE_SELECT_XY;
+        *(s32*)&poly->x1 = WMAP_TPAGE_SELECT_XY;
+        *(s32*)&poly->x0 = WMAP_TPAGE_SELECT_XY;
         poly->tpage = final_tpage;
         addPrim(&g_wmap_current_frame->ordering_table[ot_index + WMAP_MODEL_BACK_OT_OFFSET], poly);
         if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)

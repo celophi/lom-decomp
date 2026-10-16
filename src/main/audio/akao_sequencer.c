@@ -49,7 +49,7 @@
 #define AKAO_TEMPO_CARRY_MASK 0xFFFF0000
 
 /** @brief Tempo scales below this threshold add a Q7 boost; others multiply in Q8. */
-#define AKAO_TEMPO_SCALE_THRESHOLD 0x80
+#define AKAO_TEMPO_MODIFIER_NEGATIVE_MIN 0x80
 #define AKAO_TEMPO_BOOST_SHIFT 7
 
 /** @brief A zero byte encodes a 256-tick fade. */
@@ -359,10 +359,10 @@ void akao_tick_fades(void)
         g_akao_xa_tracker.volume = next_level & AKAO_LOW_HALF_MASK;
     }
 
-    if (g_akao_masterpan_fade_ticks != 0)
+    if (g_akao_master_tempo_modifier_fade_ticks != 0)
     {
-        g_akao_masterpan_fade_ticks--;
-        g_akao_masterpan_acc += g_akao_masterpan_step;
+        g_akao_master_tempo_modifier_fade_ticks--;
+        g_akao_master_tempo_modifier_acc += g_akao_master_tempo_modifier_step;
     }
 
     if (g_akao_mastervol_fade_ticks != 0)
@@ -461,24 +461,24 @@ void akao_tick_fades(void)
 s32 akao_seq_tick_channels(AkaoChannelState* channels, s32 is_secondary)
 {
     u32 tempo_step;
-    u32 tempo_scale;
+    u32 tempo_modifier;
     s32 channel_bit;
     AkaoChannelState* channel;
     s32 remaining_channels;
     AkaoDriverFlags* driver_flags;
 
     tempo_step = g_akao_seq_channel0->tempo >> AKAO_Q16_SHIFT;
-    tempo_scale = g_akao_master_vol_scalar;
+    tempo_modifier = g_akao_master_tempo_modifier;
 
-    if (tempo_scale != 0)
+    if (tempo_modifier != 0)
     {
-        if (tempo_scale < AKAO_TEMPO_SCALE_THRESHOLD)
+        if (tempo_modifier < AKAO_TEMPO_MODIFIER_NEGATIVE_MIN)
         {
-            tempo_step += (tempo_step * tempo_scale) >> AKAO_TEMPO_BOOST_SHIFT;
+            tempo_step += (tempo_step * tempo_modifier) >> AKAO_TEMPO_BOOST_SHIFT;
         }
         else
         {
-            tempo_step = (tempo_step * tempo_scale) >> AKAO_Q8_SHIFT;
+            tempo_step = (tempo_step * tempo_modifier) >> AKAO_Q8_SHIFT;
         }
     }
 

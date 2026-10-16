@@ -421,7 +421,7 @@ void wmap_set_model_transform(VECTOR* translation, SVECTOR* rotation)
 {
     if (D_800D923C != 0)
     {
-        func_8006ADD0(translation, rotation);
+        wmap_set_effect_model_transform(translation, rotation);
         return;
     }
     wmap_set_camera_model_transform(translation, rotation);

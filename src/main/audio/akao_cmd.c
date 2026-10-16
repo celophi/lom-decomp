@@ -705,45 +705,45 @@ s32 akao_fade_cd_volume_from(s32 ticks, s32 start_volume, s32 volume)
 }
 
 /**
- * @brief Queue command 0xD0: set the driver master pan.
- * @param pan Signed master pan; only the low 8 bits are used.
+ * @brief Queue command 0xD0: set the driver master tempo modifier.
+ * @param modifier Signed master tempo modifier; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  * @see decomp.me (100%) https://decomp.me/scratch/klUxi
  */
-s32 akao_set_master_pan(s32 pan)
+s32 akao_set_master_tempo_modifier(s32 modifier)
 {
-    g_akao_cmd_params[0].value = pan & AKAO_PAN_MASK;
-    return akao_send_command(AKAO_CMD_SET_MASTER_PAN);
+    g_akao_cmd_params[0].value = modifier & AKAO_MASTER_TEMPO_MODIFIER_MASK;
+    return akao_send_command(AKAO_CMD_SET_MASTER_TEMPO_MODIFIER);
 }
 
 /**
- * @brief Queue command 0xD1: fade the driver master pan.
+ * @brief Queue command 0xD1: fade the driver master tempo modifier.
  * @param ticks Fade length in driver ticks; 0 is treated as 1.
- * @param pan Signed target pan; only the low 8 bits are used.
+ * @param modifier Signed target modifier; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  * @see decomp.me (100%) https://decomp.me/scratch/XXHwt
  */
-s32 akao_fade_master_pan(s32 ticks, s32 pan)
+s32 akao_fade_master_tempo_modifier(s32 ticks, s32 modifier)
 {
     g_akao_cmd_params[0].value = ticks;
-    g_akao_cmd_params[1].value = (pan & AKAO_PAN_MASK);
-    return akao_send_command(AKAO_CMD_FADE_MASTER_PAN);
+    g_akao_cmd_params[1].value = (modifier & AKAO_MASTER_TEMPO_MODIFIER_MASK);
+    return akao_send_command(AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER);
 }
 
 /**
- * @brief Queue command 0xD2: fade the driver master pan from an explicit start level.
+ * @brief Queue command 0xD2: fade the driver master tempo modifier from an explicit start level.
  * @param ticks Fade length in driver ticks; 0 is treated as 1.
- * @param start_pan Signed start pan; only the low 8 bits are used.
- * @param pan Signed target pan; only the low 8 bits are used.
+ * @param start_modifier Signed start modifier; only the low 8 bits are used.
+ * @param modifier Signed target modifier; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  * @see decomp.me (100%) https://decomp.me/scratch/074UT
  */
-s32 akao_fade_master_pan_from(s32 ticks, s32 start_pan, s32 pan)
+s32 akao_fade_master_tempo_modifier_from(s32 ticks, s32 start_modifier, s32 modifier)
 {
     g_akao_cmd_params[0].value = ticks;
-    g_akao_cmd_params[1].value = (start_pan & AKAO_PAN_MASK);
-    g_akao_cmd_params[2].value = (pan & AKAO_PAN_MASK);
-    return akao_send_command(AKAO_CMD_FADE_MASTER_PAN_FROM);
+    g_akao_cmd_params[1].value = (start_modifier & AKAO_MASTER_TEMPO_MODIFIER_MASK);
+    g_akao_cmd_params[2].value = (modifier & AKAO_MASTER_TEMPO_MODIFIER_MASK);
+    return akao_send_command(AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_FROM);
 }
 
 /**
@@ -788,45 +788,45 @@ void akao_fade_master_volume_from(s32 ticks, s32 start_volume, s32 volume)
 }
 
 /**
- * @brief Queue command 0xD8: set the driver master pan and master volume to one value (0xD0 then 0xD4).
+ * @brief Queue command 0xD8: set the driver master tempo modifier and master volume to one value (0xD0 then 0xD4).
  * @param value Pan and volume; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  * @see decomp.me (100%) https://decomp.me/scratch/JS2nD
  */
-s32 akao_set_master_pan_and_volume(s32 value)
+s32 akao_set_master_tempo_modifier_and_volume(s32 value)
 {
-    g_akao_cmd_params[0].value = value & AKAO_MASTER_PAN_VOLUME_MASK;
-    return akao_send_command(AKAO_CMD_SET_MASTER_PAN_AND_VOLUME);
+    g_akao_cmd_params[0].value = value & AKAO_MASTER_TEMPO_VOLUME_MASK;
+    return akao_send_command(AKAO_CMD_SET_MASTER_TEMPO_MODIFIER_AND_VOLUME);
 }
 
 /**
- * @brief Queue command 0xD9: fade the driver master pan and master volume (0xD1 then 0xD5).
+ * @brief Queue command 0xD9: fade the driver master tempo modifier and master volume (0xD1 then 0xD5).
  * @param ticks Fade length in driver ticks; 0 is treated as 1.
- * @param value Target pan and volume; only the low 8 bits are used.
+ * @param value Target modifier and volume; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  * @see decomp.me (100%) https://decomp.me/scratch/YD6rZ
  */
-s32 akao_fade_master_pan_and_volume(s32 ticks, s32 value)
+s32 akao_fade_master_tempo_modifier_and_volume(s32 ticks, s32 value)
 {
     g_akao_cmd_params[0].value = ticks;
-    g_akao_cmd_params[1].value = (value & AKAO_MASTER_PAN_VOLUME_MASK);
-    return akao_send_command(AKAO_CMD_FADE_MASTER_PAN_AND_VOLUME);
+    g_akao_cmd_params[1].value = (value & AKAO_MASTER_TEMPO_VOLUME_MASK);
+    return akao_send_command(AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_AND_VOLUME);
 }
 
 /**
- * @brief Queue command 0xDA: fade the driver master pan and master volume from a start level (0xD2 then 0xD6).
+ * @brief Queue command 0xDA: fade the driver master tempo modifier and master volume from a start level (0xD2 then 0xD6).
  * @param ticks Fade length in driver ticks; 0 is treated as 1.
- * @param start_value Start pan and volume; only the low 8 bits are used.
- * @param value Target pan and volume; only the low 8 bits are used.
+ * @param start_value Start modifier and volume; only the low 8 bits are used.
+ * @param value Target modifier and volume; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  * @see decomp.me (100%) https://decomp.me/scratch/jzW0l
  */
-s32 akao_fade_master_pan_and_volume_from(s32 ticks, s32 start_value, s32 value)
+s32 akao_fade_master_tempo_modifier_and_volume_from(s32 ticks, s32 start_value, s32 value)
 {
     g_akao_cmd_params[0].value = ticks;
-    g_akao_cmd_params[1].value = (start_value & AKAO_MASTER_PAN_VOLUME_MASK);
-    g_akao_cmd_params[2].value = (value & AKAO_MASTER_PAN_VOLUME_MASK);
-    return akao_send_command(AKAO_CMD_FADE_MASTER_PAN_AND_VOLUME_FROM);
+    g_akao_cmd_params[1].value = (start_value & AKAO_MASTER_TEMPO_VOLUME_MASK);
+    g_akao_cmd_params[2].value = (value & AKAO_MASTER_TEMPO_VOLUME_MASK);
+    return akao_send_command(AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_AND_VOLUME_FROM);
 }
 
 /**

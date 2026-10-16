@@ -3,6 +3,7 @@ g_wmap_overlay_id = 0x8004FC70;
 // World-map entry initializers and preview travel-frame boundaries.
 wmap_init_preview_lines = 0x8005B548; // type:func size:0x44
 wmap_init_label_sprites = 0x800605B4; // type:func size:0x16C
+wmap_update_exit_panels = 0x8006454C; // type:func size:0x5AC
 wmap_init_actor_display_states = 0x800653EC; // type:func size:0x3C
 g_wmap_preview_travel_frame_bounds = 0x8005135C; // size:0x28
 
@@ -5695,3 +5696,6 @@ wmap_queue_effect_resources = 0x800A89DC; // type:func size:0xCC
 wmap_queue_effect_texture_0 = 0x800A8AA8; // type:func size:0x48
 wmap_queue_effect_texture_1 = 0x800A8AF0; // type:func size:0x48
 wmap_queue_effect_texture_2 = 0x800A8B38; // type:func size:0x48
+
+wmap_set_effect_model_transform = 0x8006ADD0; // type:func size:0x110
+wmap_set_effect_camera_transform = 0x8006AEE0; // type:func size:0xCC

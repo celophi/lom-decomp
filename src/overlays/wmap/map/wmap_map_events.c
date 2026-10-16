@@ -795,7 +795,7 @@ WMAP_STEP_WAIT_SCROLL(func_800A76F8,
 
 /** @brief World-map step: run the two sub-steps, then advance after the timer. */
 WMAP_STEP_UPDATE_TWO_AND_WAIT(func_800A7738, D_801B2E40, D_801B2E44,
-                          func_8006AEE0(),
+                          wmap_set_effect_camera_transform(),
                           func_800A66C0())
 
 /**
@@ -815,7 +815,7 @@ void func_800A77CC(void)
     s32 i;
     u8* p;
 
-    func_8006AEE0();
+    wmap_set_effect_camera_transform();
     func_800A66C0();
     func_800A6800();
     for (i = 0; i < 4; i++)
@@ -851,7 +851,7 @@ void func_800A78B0(void)
     s32 i;
     u8* p;
 
-    func_8006AEE0();
+    wmap_set_effect_camera_transform();
     func_800A66C0();
     func_800A6800();
     for (i = 0; i < 4; i++)
@@ -889,7 +889,7 @@ void func_800A79E4(void)
 {
     s32 remaining_ticks;
 
-    func_8006AEE0();
+    wmap_set_effect_camera_transform();
     func_800A66C0();
     func_800A6800();
     remaining_ticks = D_801B2E44 - 1;
@@ -915,7 +915,7 @@ void func_800A7A40(void)
 
 /** @brief World-map step: run the two sub-steps, then advance after the timer. */
 WMAP_STEP_UPDATE_TWO_AND_WAIT(func_800A7AA0, D_801B2E40, D_801B2E44,
-                          func_8006AEE0(),
+                          wmap_set_effect_camera_transform(),
                           func_800A66C0())
 
 /** @brief Start audio, compute the coordinate delta, and advance the sequence. */

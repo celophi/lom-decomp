@@ -338,7 +338,6 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
         FieldMarker* marker;
     } item;
     u32 page_slot;
-    s32 clut;
     s32 stride;
     s32 words;
     FieldSeq* seq;

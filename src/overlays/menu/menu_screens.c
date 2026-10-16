@@ -750,31 +750,33 @@ void menu_snap_view_to_cursor(void)
  */
 s32 menu_item_has_action(void)
 {
-    uintptr_t items;
+    MenuContentItem* items;
     MenuContentItem* item;
     u16 item_type;
     s16 item_subtype;
     s32 action_code;
 
-    items = (uintptr_t)g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
+    items = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
+
     if ((g_menu_scene_type == 0x1F) || (g_menu_scene_type == 0x2B))
     {
-        if (((int)g_menu_hit_item_idx) >= 0x11)
+        if (g_menu_hit_item_idx >= 0x11)
         {
-            if (((int)g_menu_hit_item_idx) < 0x19)
+            if (g_menu_hit_item_idx < 0x19)
             {
                 return 1;
             }
         }
     }
 
-    item = (MenuContentItem*)((g_menu_hit_item_idx * sizeof(MenuContentItem)) + items);
+    item = (MenuContentItem*)(g_menu_hit_item_idx * sizeof(*items) + (uintptr_t)items);
     item_type = item->packed_x & MENU_CONTENT_ITEM_TYPE_MASK;
 
     if (item_type == MENU_CONTENT_ITEM_TYPE_SUBMENU)
     {
         g_menu_active_subtype = item->action_type;
         item_subtype = item->action_type;
+
         if (item_subtype != 0)
         {
             if (item_subtype >= 11)
@@ -783,6 +785,7 @@ s32 menu_item_has_action(void)
                 {
                     goto success;
                 }
+
                 return 0;
             }
             else
@@ -794,19 +797,21 @@ s32 menu_item_has_action(void)
     else if (item_type == MENU_CONTENT_ITEM_TYPE_ACTION)
     {
         action_code = g_menu_content_action_codes[g_menu_content_group_ids[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx]][(item->packed_x >> 9) & 7];
-        if (action_code == 0)
+
+        if (action_code != 0)
         {
-        }
-        else if (action_code == 1)
-        {
-            return 1;
-        }
-        else if ((action_code != 0) && (action_code < 12) && (action_code >= 6))
-        {
-        success:
-            return 1;
+            if (action_code == 1)
+            {
+                return 1;
+            }
+            else if ((action_code != 0) && (action_code < 12) && (action_code >= 6))
+            {
+            success:
+                return 1;
+            }
         }
     }
+
     return 0;
 }
 

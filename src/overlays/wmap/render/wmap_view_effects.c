@@ -353,7 +353,7 @@ s32 wmap_update_map_view(s32 initialize)
 
     if (g_wmap_view_mode == WMAP_VIEW_MODE_HIDDEN)
     {
-        func_8006AEE0();
+        wmap_set_effect_camera_transform();
         return 1;
     }
     if ((g_wmap_view_mode == WMAP_VIEW_MODE_MAP) && (g_wmap_view_scroll_mode == 0) && (g_wmap_selection_phase == 0))
@@ -570,7 +570,7 @@ void wmap_project_map_grid(void)
     POLY_FT4* bottom_left;
     POLY_FT4* bottom_right;
 
-    func_8006AEE0();
+    wmap_set_effect_camera_transform();
     for (row = 0; row < WMAP_MAP_VERTICES; row++)
     {
         top_left = g_wmap_current_frame->tiles.rows[row];

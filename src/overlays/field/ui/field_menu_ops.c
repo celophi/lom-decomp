@@ -100,16 +100,16 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 #define FIELD_ACTION_SELECTED_ITEM 0xA /**< Halfword index: chosen action item, 0-7. */
 
 /** @brief Size of a land record (field_records.h FieldLandRecord). */
-#define FIELD_LAND_RECORD_SIZE 12
+#define FIELD_LAND_RECORD_SIZE sizeof(FieldLandRecord)
 
 /** @brief Game-state offset of land 0's element levels (SavedGameLayout lands[0].levels). */
-#define FIELD_LAND_LEVELS_OFFSET 0x2F4
+#define FIELD_LAND_LEVELS_OFFSET OFFSETOF(SavedGameLayout, lands[0].levels)
 
 /** @brief Weight of each element in field_menu_draw_land_element's uniform mode (3^4). */
 #define FIELD_ELEMENT_UNIFORM_WEIGHT 81
 
 /** @brief Total weight of the eight elements in uniform mode. */
-#define FIELD_ELEMENT_UNIFORM_TOTAL (8 * FIELD_ELEMENT_UNIFORM_WEIGHT)
+#define FIELD_ELEMENT_UNIFORM_TOTAL (FIELD_LAND_SPIRIT_COUNT * FIELD_ELEMENT_UNIFORM_WEIGHT)
 
 /** @brief Element value for no element. */
 #define FIELD_NO_ELEMENT 0xFF
@@ -423,23 +423,16 @@ typedef struct
     FieldMenuItemRecord pending[4];
 } FieldMenuItemData;
 
-/** @brief Element table (D_80051ED8) indexed by the game-state byte at 0x2E6 (low 7 bits). */
+/** @brief Favored element for each saved-game weekday. */
 typedef struct
 {
     s32 elements[8];
 } FieldFavoredElementTable;
 
-/** @brief Game-state view read by field_menu_draw_land_element. */
-typedef struct
-{
-    u8 unk000[0x2E6];
-    u16 favored_index; /**< Low 7 bits index FieldFavoredElementTable. */
-} FieldElementLevelView;
-
 /** @brief One local that holds the game-state view, then the chosen element. */
 typedef union
 {
-    FieldElementLevelView* view;
+    SavedGameLayout* view;
     s32 element;
 } FieldViewOrElement;
 
@@ -499,7 +492,7 @@ extern s32 rand(void);
 s32 field_get_actor_facing(s32 arg0);
 extern s32 g_field_niki_state;
 extern void field_menu_compact_pending_items(void);
-extern FieldFavoredElementTable D_80051ED8;
+extern FieldFavoredElementTable g_field_weekday_favored_elements;
 extern u16 g_music_track_index;
 extern FieldGosubSequence D_80051EF8;
 extern FieldElementTable D_80051F04;
@@ -3196,93 +3189,94 @@ void field_menu_set_aside_shared_item(void)
  */
 void field_menu_draw_land_element(void)
 {
-    s32 weights[8];
+    s32 weights[FIELD_LAND_SPIRIT_COUNT];
     FieldFavoredElementTable favored;
-    s32 total, i, row, level, weight, draw;
+    s32 total_weight, element_index, land_offset, element_level, weight, random_weight;
     FieldViewOrElement work;
-    s32 *cursor, *base;
-    s32 land, byte_offset, product;
+    s32* weight_cursor;
+    s32* weight_base;
+    s32 land_index, weight_offset, product;
     s32 mode;
 
-    total = 0;
-    i = total;
-    work.view = (FieldElementLevelView*)g_saved_game.bytes;
+    total_weight = 0;
+    element_index = total_weight;
+    work.view = &g_saved_game.layout;
     mode = D_80122C00.locals.bytes[0];
-    land = g_music_track_index;
-    favored = D_80051ED8;
-    row = land * FIELD_LAND_RECORD_SIZE;
+    land_index = g_music_track_index;
+    favored = g_field_weekday_favored_elements;
+    land_offset = land_index * FIELD_LAND_RECORD_SIZE;
 next_weight:
-    level = ((u8*)work.view)[i + row + FIELD_LAND_LEVELS_OFFSET];
-    weight = level - 3;
+    element_level = ((u8*)work.view)[element_index + land_offset + FIELD_LAND_LEVELS_OFFSET];
+    weight = element_level - 3;
 
-    if (i == favored.elements[work.view->favored_index & 0x7F])
+    if (element_index == favored.elements[work.view->control.fields.weekday & FIELD_WEEKDAY_MASK])
     {
-        weight = level - 2;
+        weight = element_level - 2;
     }
 
     if (weight >= 0)
     {
-        level = 3;
+        element_level = 3;
 
         if (weight < 4)
         {
-            level = weight;
+            element_level = weight;
         }
     }
     else
     {
-        level = 0;
+        element_level = 0;
     }
 
-    weight = level * level;
+    weight = element_level * element_level;
     weight = weight * weight;
-    byte_offset = i * 4;
-    i++;
-    base = weights;
-    *(s32*)((u8*)base + byte_offset) = weight;
-    total += weight;
+    weight_offset = element_index * 4;
+    element_index++;
+    weight_base = weights;
+    *(s32*)((u8*)weight_base + weight_offset) = weight;
+    total_weight += weight;
 
-    if (i < 8)
+    if (element_index < FIELD_LAND_SPIRIT_COUNT)
     {
         goto next_weight;
     }
 
     if (mode == 1)
     {
-        total = FIELD_ELEMENT_UNIFORM_TOTAL;
+        total_weight = FIELD_ELEMENT_UNIFORM_TOTAL;
     }
 
-    product = rand() * total;
-    draw = product >> 15;
+    product = rand() * total_weight;
+    random_weight = product >> 15;
 
     if (product < 0)
     {
-        draw = (product + 0x7FFF) >> 15;
+        random_weight = (product + 0x7FFF) >> 15;
     }
 
-    total = 0;
+    total_weight = 0;
     work.element = FIELD_NO_ELEMENT;
-    i = total;
-    cursor = base;
+    element_index = total_weight;
+    weight_cursor = weight_base;
 next_draw:
-    if (draw >= total && draw < total + *cursor)
+    if (random_weight >= total_weight && random_weight < total_weight + *weight_cursor)
     {
         goto found;
     }
 
     if (mode == 0)
     {
-        total += *cursor;
+        total_weight += *weight_cursor;
     }
     else
     {
-        total += FIELD_ELEMENT_UNIFORM_WEIGHT;
+        total_weight += FIELD_ELEMENT_UNIFORM_WEIGHT;
     }
 
-    i++;
-    cursor++;
+    element_index++;
+    weight_cursor++;
 
-    if (i < 8)
+    if (element_index < FIELD_LAND_SPIRIT_COUNT)
     {
         goto next_draw;
     }
@@ -3295,7 +3289,7 @@ store:
     FIELD_LOCAL_BYTE(FIELD_DRAWN_ELEMENT) = work.element;
     return;
 found:
-    work.element = i;
+    work.element = element_index;
     goto store;
 store_uniform:
     FIELD_LOCAL_BYTE(FIELD_UNIFORM_ELEMENT) = work.element;

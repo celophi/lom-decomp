@@ -579,7 +579,7 @@ WMAP_STEP_RESET(wmap_land_effect_33_sequence_6_step_00, g_wmap_land_effect_33_se
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_land_effect_33_sequence_6_step_02,
     g_wmap_land_effect_33_sequence_6_step, g_wmap_land_effect_33_sequence_6_timer,
-    func_8006AEE0(),
+    wmap_set_effect_camera_transform(),
     func_8006A2FC(&g_wmap_sprite_actors[20], &g_wmap_actor_animations[20], 0x32, 0xFF, 1, 8, 0, (WmapState*)g_wmap_effect_params))
 
 /**
@@ -592,7 +592,7 @@ WMAP_STEP_STOP_EMITTER(wmap_land_effect_33_sequence_6_step_03,
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_land_effect_33_sequence_6_step_04,
     g_wmap_land_effect_33_sequence_6_step, g_wmap_land_effect_33_sequence_6_timer,
-    func_8006AEE0(),
+    wmap_set_effect_camera_transform(),
     func_8006A2FC(&g_wmap_sprite_actors[20], &g_wmap_actor_animations[20], 0x32, 0xFF, 1, 8, 0, (WmapState*)g_wmap_effect_params))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_33_sequence_6_step_05, g_wmap_land_effect_33_sequence_6_step)
@@ -604,7 +604,7 @@ WMAP_STEP_RESET(wmap_land_effect_33_sequence_7_step_00, g_wmap_land_effect_33_se
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_land_effect_33_sequence_7_step_02,
     g_wmap_land_effect_33_sequence_7_step, g_wmap_land_effect_33_sequence_7_timer,
-    func_8006AEE0(),
+    wmap_set_effect_camera_transform(),
     func_8006A2FC(&g_wmap_sprite_actors[80], &g_wmap_actor_animations[80], 0x28, 0xFF, 1, 2, 0, &g_wmap_effect_params[10]))
 
 /**
@@ -617,7 +617,7 @@ WMAP_STEP_STOP_EMITTER(wmap_land_effect_33_sequence_7_step_03,
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_land_effect_33_sequence_7_step_04,
     g_wmap_land_effect_33_sequence_7_step, g_wmap_land_effect_33_sequence_7_timer,
-    func_8006AEE0(),
+    wmap_set_effect_camera_transform(),
     func_8006A2FC(&g_wmap_sprite_actors[80], &g_wmap_actor_animations[80], 0x28, 0xFF, 1, 2, 0, &g_wmap_effect_params[10]))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_33_sequence_7_step_05, g_wmap_land_effect_33_sequence_7_step)
@@ -629,7 +629,7 @@ WMAP_STEP_RESET(wmap_land_effect_33_sequence_8_step_00, g_wmap_land_effect_33_se
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_land_effect_33_sequence_8_step_02,
     g_wmap_land_effect_33_sequence_8_step, g_wmap_land_effect_33_sequence_8_timer,
-    func_8006AEE0(),
+    wmap_set_effect_camera_transform(),
     func_8006A2FC(&g_wmap_sprite_actors[140], &g_wmap_actor_animations[140], 0x22, 0xFF, 1, 2, 0, (WmapState*)g_wmap_effect_params + 1))
 
 /**
@@ -642,7 +642,7 @@ WMAP_STEP_STOP_EMITTER(wmap_land_effect_33_sequence_8_step_03,
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_land_effect_33_sequence_8_step_04,
     g_wmap_land_effect_33_sequence_8_step, g_wmap_land_effect_33_sequence_8_timer,
-    func_8006AEE0(),
+    wmap_set_effect_camera_transform(),
     func_8006A2FC(&g_wmap_sprite_actors[140], &g_wmap_actor_animations[140], 0x22, 0xFF, 1, 2, 0, (WmapState*)g_wmap_effect_params + 1))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_33_sequence_8_step_05, g_wmap_land_effect_33_sequence_8_step)
@@ -654,7 +654,7 @@ WMAP_STEP_RESET(wmap_land_effect_33_sequence_9_step_00, g_wmap_land_effect_33_se
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_land_effect_33_sequence_9_step_02,
     g_wmap_land_effect_33_sequence_9_step, g_wmap_land_effect_33_sequence_9_timer,
-    func_8006AEE0(),
+    wmap_set_effect_camera_transform(),
     func_8006A2FC(&g_wmap_sprite_actors[190], &g_wmap_actor_animations[190], 0x28, 0xFF, 1, 4, 0, (WmapState*)g_wmap_effect_params + 2))
 
 /**
@@ -667,7 +667,7 @@ WMAP_STEP_STOP_EMITTER(wmap_land_effect_33_sequence_9_step_03,
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_land_effect_33_sequence_9_step_04,
     g_wmap_land_effect_33_sequence_9_step, g_wmap_land_effect_33_sequence_9_timer,
-    func_8006AEE0(),
+    wmap_set_effect_camera_transform(),
     func_8006A2FC(&g_wmap_sprite_actors[190], &g_wmap_actor_animations[190], 0x28, 0xFF, 1, 4, 0, (WmapState*)g_wmap_effect_params + 2))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_33_sequence_9_step_05, g_wmap_land_effect_33_sequence_9_step)

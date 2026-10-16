@@ -262,6 +262,7 @@ void field_transform_mesh_normals(FieldActorSlot* actor, FieldMotionRecord* reco
  */
 s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, FieldObjectPart* part, MATRIX* matrix, MATRIX* base_matrix)
 {
+    FieldMatrixStorage* storage = (FieldMatrixStorage*)matrix;
     VECTOR* scale;
     VECTOR* delta = (VECTOR*)getScratchAddr(4);
     VECTOR* square = (VECTOR*)getScratchAddr(8);
@@ -284,20 +285,23 @@ s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, Fi
     u8 scale_y;
 
     /* Identity rotation and zero translation, written as words. */
-    ((s32*)matrix)[4] = ONE;
-    ((s32*)matrix)[2] = ONE;
+    storage->packed.rotation[4] = ONE;
+    storage->packed.rotation[2] = ONE;
+
     do
     {
-        ((s32*)matrix)[0] = ONE;
+        storage->packed.rotation[0] = ONE;
     } while (0);
+
     scale = (VECTOR*)getScratchAddr(0);
-    ((s32*)matrix)[7] = 0;
-    ((s32*)matrix)[6] = 0;
-    ((s32*)matrix)[5] = 0;
-    ((s32*)matrix)[3] = 0;
-    ((s32*)matrix)[1] = 0;
+    matrix->t[2] = 0;
+    matrix->t[1] = 0;
+    matrix->t[0] = 0;
+    storage->packed.rotation[3] = 0;
+    storage->packed.rotation[1] = 0;
     rotation_flags = part->track_flags.word;
     component = (rotation_flags >> 6) & 3;
+
     if (component != 0)
     {
         switch (component)
@@ -309,10 +313,12 @@ s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, Fi
             break;
         case 2:
             RotMatrixX(ONE / 4, matrix);
+
             do
             {
                 rotation = record->heading;
             } while (0);
+
             axis = 2;
             break;
         case 3:
@@ -321,6 +327,7 @@ s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, Fi
             axis &= 3;
             break;
         }
+
         switch (axis)
         {
         case 1:
@@ -339,10 +346,12 @@ s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, Fi
             break;
         }
     }
+
     if (part->rotation_y_16 != 0)
     {
         RotMatrixZ(part->rotation_y_16 << 4, matrix);
     }
+
     if ((part->behavior_flags.word >> 3) & 1)
     {
         if ((part->placement_flags.word >> 0xB) & 1)
@@ -370,7 +379,9 @@ s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, Fi
             RotMatrixY(-(s32)record->rotation_y_16 << 4, matrix);
         }
     }
+
     field_copy_matrix_rotation(base_matrix, matrix);
+
     if ((part->placement_flags.word >> 2) & 1)
     {
         g_field_track_index = (s32)record->track_index;
@@ -385,15 +396,18 @@ s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, Fi
         gte_sqr0();
         gte_stlvnl(delta);
         distance = SquareRoot0(delta->vx + delta->vy + delta->vz);
+
         if (distance == 0)
         {
             distance = 1;
         }
+
         scale->vz = ONE;
         scale->vx = ONE;
         scale->vy = distance << 6;
         ScaleMatrix(matrix, scale);
     }
+
     if (part->palette_extent.word & FIELD_PART_FOOTPRINT_SCALES_XZ)
     {
         scale_xz = part->appearance.fields.scale_xz;
@@ -407,6 +421,7 @@ s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, Fi
         scale->vz = base_scale;
         scale->vx = base_scale;
     }
+
     if (part->palette_extent.word & FIELD_PART_FOOTPRINT_SCALES_Y)
     {
         scale_y = part->scale_y;
@@ -416,7 +431,9 @@ s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, Fi
     {
         scale->vy = part->scale_y << 6;
     }
+
     ScaleMatrix(matrix, scale);
+
     if ((part->behavior_flags.bytes.low >> 7) != 0)
     {
         scale->vz = ONE;
@@ -424,6 +441,7 @@ s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, Fi
         scale->vx = ONE;
         scale_flags = part->behavior_flags.word;
         scale_mode = (scale_flags >> 0x14) & 3;
+
         switch (scale_mode)
         {
         case 0:
@@ -449,6 +467,7 @@ s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, Fi
             scale->vy = field_evaluate_parameter_track_at_time(actor, track_index, (u16)record->age) * 16;
             break;
         }
+
         ScaleMatrix(matrix, scale);
     }
 }

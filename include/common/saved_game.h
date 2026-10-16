@@ -17,6 +17,8 @@
 #define SAVED_OPTION_FLAG_2 0x04
 #define SAVED_OPTION_FLAG_3 0x08
 
+#define FIELD_WEEKDAY_MASK 0x7F
+
 /** @brief SavedGameLayout::words index of the known-save flags: one bit per product code of a game save found on a memory card. */
 #define SAVED_GAME_WORD_KNOWN_SAVES 0x48
 

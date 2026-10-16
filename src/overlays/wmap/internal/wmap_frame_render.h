@@ -7,6 +7,7 @@
 
 #define WMAP_OT_COUNT 179
 #define WMAP_PACKET_LIMIT 32000
+#define WMAP_TPAGE_SELECT_XY 400
 /** @brief Map tiles per grid row and column. */
 #define WMAP_MAP_TILES 26
 /** @brief Drop-shadow polygons under the map edges. */
@@ -37,7 +38,7 @@ extern WmapFrame* g_wmap_current_frame;
 extern s32 g_wmap_packet_bytes;
 
 void func_800641DC(void);
-void func_8006454C(void);
+void wmap_update_exit_panels(void);
 void func_80064AF8(void);
 void func_80064BF8(void);
 s32 func_80064D64(s32 initialize);

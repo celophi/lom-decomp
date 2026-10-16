@@ -1417,11 +1417,9 @@ static void* carda_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 
     s32 unused[2];
     SaveFile* blob;
     CardMenuElement* element;
-    CardMenuElement* cursor;
     void* result;
     u16* text_table;
     s32 x;
-    s32 i;
     s32 valid;
     s32 checksum;
 
@@ -2715,9 +2713,7 @@ static void carda_restore_active_record(void)
  */
 static void* carda_draw_slot_prompt(void* prim, u_long* ot, s32 x, s32 y)
 {
-    CardMenuElement* element;
     void* result;
-    s32 i;
 
     result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_carda_text_select_slot, CARD_MENU_TEXT_SELECT_SLOT), FIELD_TEXT_COLOR_NORMAL, x, y,
                              FIELD_TEXT_ALIGN_CENTER);

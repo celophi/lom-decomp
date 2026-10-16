@@ -37,12 +37,6 @@ enum
     FIELD_MESH_TEXTURE_SCROLL_RIGHT = 3
 };
 
-/** @brief Rotation part of a MATRIX (the 3x3 terms and padding) as five words. */
-typedef struct
-{
-    s32 words[5];
-} MatrixRotationWords;
-
 static s32 field_scroll_mesh_texture(s32 mesh_index, s32 direction, FieldActorSlot* actor, s32 shift);
 static void field_show_mesh_texture_frame(s32 mesh_index, s32 frame, FieldActorSlot* actor);
 
@@ -53,14 +47,14 @@ static void field_show_mesh_texture_frame(s32 mesh_index, s32 frame, FieldActorS
  */
 void field_copy_matrix_rotation(MATRIX* dst, MATRIX* src)
 {
-    MatrixRotationWords* to = (MatrixRotationWords*)dst->m;
-    MatrixRotationWords* from = (MatrixRotationWords*)src->m;
+    FieldMatrixStorage* to = (FieldMatrixStorage*)dst;
+    FieldMatrixStorage* from = (FieldMatrixStorage*)src;
 
-    to->words[0] = from->words[0];
-    to->words[1] = from->words[1];
-    to->words[2] = from->words[2];
-    to->words[3] = from->words[3];
-    to->words[4] = from->words[4];
+    to->packed.rotation[0] = from->packed.rotation[0];
+    to->packed.rotation[1] = from->packed.rotation[1];
+    to->packed.rotation[2] = from->packed.rotation[2];
+    to->packed.rotation[3] = from->packed.rotation[3];
+    to->packed.rotation[4] = from->packed.rotation[4];
 }
 
 /**
@@ -114,7 +108,6 @@ static s32 field_scroll_mesh_texture(s32 mesh_index, s32 direction, FieldActorSl
     u16* scratch;
     u16* src;
     u16* dst;
-    u16* row;
     s32 count;
     s32 row_count;
     u8 width;

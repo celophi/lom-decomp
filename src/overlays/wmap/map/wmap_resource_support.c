@@ -241,9 +241,9 @@ void wmap_queue_texture_page(s32 texture_page, s32 depth)
     ((u8*)&primitive->tag)[3] = 7;
     primitive->code = 0x24;
     primitive->tpage = texture_page;
-    *(s32*)&primitive->x2 = 400;
-    *(s32*)&primitive->x1 = 400;
-    *(s32*)&primitive->x0 = 400;
+    *(s32*)&primitive->x2 = WMAP_TPAGE_SELECT_XY;
+    *(s32*)&primitive->x1 = WMAP_TPAGE_SELECT_XY;
+    *(s32*)&primitive->x0 = WMAP_TPAGE_SELECT_XY;
     table_base = (WmapFrame*)(depth * sizeof(u_long) + (uintptr_t)g_wmap_current_frame);
     primitive->tag = (primitive->tag & 0xFF000000) | (table_base->ordering_table[0] & 0xFFFFFF);
     table_base->ordering_table[0] = (table_base->ordering_table[0] & 0xFF000000) | ((uintptr_t)primitive & 0xFFFFFF);

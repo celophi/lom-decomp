@@ -512,7 +512,7 @@ void wmap_land_effect_24_sequence_13_step_02(void)
     s32 value;
     s32 timer;
 
-    func_8006AEE0();
+    wmap_set_effect_camera_transform();
     wmap_draw_model(g_wmap_effect_model_pack_3, (D_80139240 >> 4) & 7, 0xA, 0x35, 0x7800, 1, g_wmap_effect_fade_d, 0, 0, -1);
     WMAP_MODEL_FADE_IN(g_wmap_effect_fade_d, 8, 0x81, value);
     D_80139240 += 0x10;
@@ -532,7 +532,7 @@ void wmap_land_effect_24_sequence_13_step_04(void)
     s32 value;
     s32 timer;
 
-    func_8006AEE0();
+    wmap_set_effect_camera_transform();
     wmap_draw_model(g_wmap_effect_model_pack_3, (D_80139240 >> 4) & 7, 0xA, 0x35, 0x7800, 1, g_wmap_effect_fade_d, 0, 0, -1);
     WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_d, 4, value);
     D_80139240 += 0x10;
@@ -973,7 +973,7 @@ WMAP_STEP_RESET(wmap_land_effect_24_sequence_10_step_00, g_wmap_land_effect_24_s
  * @brief Run the effect update until the timer expires.
  */
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_land_effect_24_sequence_10_step_02, g_wmap_land_effect_24_sequence_10_step, g_wmap_land_effect_24_sequence_10_timer,
-                          func_8006AEE0(),
+                          wmap_set_effect_camera_transform(),
                           func_8006A2FC(&g_wmap_sprite_actors[20], &g_wmap_actor_animations[20], 0x3C, 0xFF, 1, 2, 0, (WmapState*)g_wmap_effect_params))
 
 /**
@@ -987,7 +987,7 @@ WMAP_STEP_STOP_EMITTER(wmap_land_effect_24_sequence_10_step_03,
  * @brief Run the effect update until the timer expires.
  */
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_land_effect_24_sequence_10_step_04, g_wmap_land_effect_24_sequence_10_step, g_wmap_land_effect_24_sequence_10_timer,
-                          func_8006AEE0(),
+                          wmap_set_effect_camera_transform(),
                           func_8006A2FC(&g_wmap_sprite_actors[20], &g_wmap_actor_animations[20], 0x3C, 0xFF, 1, 2, 0, (WmapState*)g_wmap_effect_params))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_24_sequence_10_step_05, g_wmap_land_effect_24_sequence_10_step)
@@ -1000,7 +1000,7 @@ WMAP_STEP_RESET(wmap_land_effect_24_sequence_11_step_00, g_wmap_land_effect_24_s
  * @brief Run the effect update until the timer expires.
  */
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_land_effect_24_sequence_11_step_02, g_wmap_land_effect_24_sequence_11_step, g_wmap_land_effect_24_sequence_11_timer,
-                          func_8006AEE0(),
+                          wmap_set_effect_camera_transform(),
                           func_8006A2FC(&g_wmap_sprite_actors[80], &g_wmap_actor_animations[80], 0x1E, 0xFF, 1, 4, 0, (u8*)g_wmap_effect_params + 0x28))
 
 /**
@@ -1014,7 +1014,7 @@ WMAP_STEP_STOP_EMITTER(wmap_land_effect_24_sequence_11_step_03,
  * @brief Run the effect update until the timer expires.
  */
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_land_effect_24_sequence_11_step_04, g_wmap_land_effect_24_sequence_11_step, g_wmap_land_effect_24_sequence_11_timer,
-                          func_8006AEE0(),
+                          wmap_set_effect_camera_transform(),
                           func_8006A2FC(&g_wmap_sprite_actors[80], &g_wmap_actor_animations[80], 0x1E, 0xFF, 1, 4, 0, (u8*)g_wmap_effect_params + 0x28))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_24_sequence_11_step_05, g_wmap_land_effect_24_sequence_11_step)

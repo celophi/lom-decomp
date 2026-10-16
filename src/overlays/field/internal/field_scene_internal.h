@@ -9,6 +9,9 @@
 #include <libgte.h>
 #include <libgpu.h>
 
+#define FIELD_COPY_TINT_COLOR(destination, source) \
+    ((destination)->rg = (source)->rg, (destination)->b = (source)->b)
+
 /**
  * @brief Halve a signed value, rounding toward zero.
  *
@@ -555,7 +558,7 @@ struct FieldAnimDef
         struct
         {
             u8 first_slot; /* 0x0C first scratchpad colour slot rewritten */
-            u8 slot_count; /* 0x0D number of colour slots rewritten */
+            u8 last_slot_offset; /* Inclusive offset from first_slot to the last colour slot rewritten. */
             u8 _pad1[2];
             /** 0x10 tile grid whose runtime cel list is tinted (kind 0). */
             FieldPartDef* grid;

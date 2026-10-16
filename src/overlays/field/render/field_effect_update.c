@@ -1650,7 +1650,7 @@ typedef struct
     s16 pad;
 } FieldSVector;
 
-/** @brief Party-member record view: reward counters from 0x244 and the hit state at 0x258. */
+/** @brief Party-member record view: reward counters from 0x244 and shield visibility at 0x258. */
 typedef struct
 {
     u8 pad0[0x244];
@@ -1660,7 +1660,7 @@ typedef struct
         struct
         {
             u8 pad0[0x258 - 0x244];
-            u8 hit_state;
+            u8 hide_shield_sprite;
         } fields;
     } status;
 } FieldPlayerRecordView;
@@ -4234,7 +4234,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
             if (!(frame_flags & 0x20))
             {
                 if (rec->source_object_index >= 3 || (frame_flags & 3) != 2 || item[6] != 2 ||
-                    g_field_player_records[rec->source_object_index].status.fields.hit_state == 0)
+                    g_field_player_records[rec->source_object_index].status.fields.hide_shield_sprite == 0)
                 {
                     field_resolve_effect_part_color(actor, rec, part, (FieldPrimitiveColor*)&((P_TAG*)cursor)->r0);
                     setPolyFT4(poly);
@@ -6401,6 +6401,13 @@ u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* 
     return field_emit_effect_texture_page(effect, part, (u8*)packets, ordering_table);
 }
 
+static inline void field_set_fan_direction(SVECTOR* destination, s32 phase, s32 shift)
+{
+    destination->vx = (s16)(rcos(phase) >> shift);
+    destination->vy = 0;
+    destination->vz = (s16)(rsin(phase) >> shift);
+}
+
 /**
  * @brief Emit a shaded circular fan with two to 32 segments and four triangles per segment.
  * @param effect Effect position, rendering flags, and part selection.
@@ -6444,12 +6451,8 @@ u8* field_render_effect_fan(FieldMotionRecord* effect, u8* packet_cursor, s32* o
     s32 fourth_depth;
     s32 packet_tag;
     s32 depth_or_y;
-    s32 outer_angle;
     s32 angle_step;
     s32 segment;
-    s32 inner_cosine;
-    s32 middle_cosine;
-    s32 outer_cosine;
     u16 center_y;
     u16 offset_y;
     s32 inner_last_segment;
@@ -6510,9 +6513,7 @@ next_segment:
 {
     /* Copy the two screen coordinates as one GPU word. */
     packets[0].xy1.word = *(s32*)&screen_origin;
-    direction.vx = (s16)(rcos(angle) >> 8);
-    direction.vy = 0;
-    direction.vz = (s16)(rsin(angle) >> 8);
+    field_set_fan_direction(&direction, angle, 8);
     gte_ldv0(direction_ptr);
     gte_rtv0();
     gte_stlvnl(transformed_ptr);
@@ -6534,17 +6535,11 @@ next_segment:
 
     if (segment == inner_last_segment)
     {
-        inner_cosine = rcos(0);
-        direction.vx = (s16)(inner_cosine >> 8);
-        direction.vy = 0;
-        direction.vz = (s16)(rsin(0) >> 8);
+        field_set_fan_direction(&direction, 0, 8);
     }
     else
     {
-        inner_cosine = rcos(next_angle);
-        direction.vx = (s16)(inner_cosine >> 8);
-        direction.vy = 0;
-        direction.vz = (s16)(rsin(next_angle) >> 8);
+        field_set_fan_direction(&direction, next_angle, 8);
     }
 
     gte_ldv0(direction_ptr);
@@ -6562,9 +6557,7 @@ next_segment:
     second_triangle[0].xy2.signed_pair.y = inner_end_y;
     fourth_triangle[0].xy0.signed_pair.y = inner_end_y;
     packets[2].xy0.signed_pair.y = inner_end_y;
-    direction.vx = (s16)(rcos(half_angle) >> 6);
-    direction.vy = 0;
-    direction.vz = (s16)(rsin(half_angle) >> 6);
+    field_set_fan_direction(&direction, half_angle, 6);
     gte_ldv0(direction_ptr);
     gte_rtv0();
     gte_stlvnl(transformed_ptr);
@@ -6586,18 +6579,12 @@ next_segment:
 
     if (segment == middle_last_segment)
     {
-        middle_cosine = rcos(0);
-        direction.vx = (s16)(middle_cosine >> 7);
-        direction.vy = 0;
-        direction.vz = (s16)(rsin(0) >> FIELD_WORLD_OT_DEPTH_SHIFT);
+        field_set_fan_direction(&direction, 0, 7);
     }
     else
     {
         middle_angle = angle + angle_step;
-        middle_cosine = rcos(middle_angle);
-        direction.vx = (s16)(middle_cosine >> 7);
-        direction.vy = 0;
-        direction.vz = (s16)(rsin(middle_angle) >> 7);
+        field_set_fan_direction(&direction, middle_angle, 7);
     }
 
     gte_ldv0(direction_ptr);
@@ -6614,20 +6601,12 @@ next_segment:
 
     if (segment == outer_last_segment)
     {
-        outer_cosine = rcos(first_half_angle);
-        outer_angle = first_half_angle;
-        direction.vx = (s16)(outer_cosine >> 6);
-        direction.vy = 0;
-        direction.vz = (s16)(rsin(outer_angle) >> 6);
+        field_set_fan_direction(&direction, first_half_angle, 6);
     }
     else
     {
         outer_next_angle = half_angle + angle_step;
-        outer_cosine = rcos(outer_next_angle);
-        outer_angle = outer_next_angle;
-        direction.vx = (s16)(outer_cosine >> 6);
-        direction.vy = 0;
-        direction.vz = (s16)(rsin(outer_angle) >> 6);
+        field_set_fan_direction(&direction, outer_next_angle, 6);
     }
 
     gte_ldv0(direction_ptr);
@@ -7329,17 +7308,6 @@ typedef enum
     FIELD_ATTACHMENT_POINT_SECOND = 42,
     FIELD_ATTACHMENT_UNRESOLVED_FIRST = 55
 } FieldEffectAttachmentCategory;
-
-/** @brief SDK matrix with word access to its rotation coefficients and padding. */
-typedef union
-{
-    MATRIX matrix;
-    struct
-    {
-        u32 rotation[5];
-        s32 translation[3];
-    } packed;
-} FieldMatrixStorage;
 
 /** @brief SDK angle vector with word access to paired halfwords. */
 typedef union

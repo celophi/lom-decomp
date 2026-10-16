@@ -759,4 +759,14 @@
         step += 1;                                                                                                                                             \
     }
 
+static inline s32 wmap_tick_model_motion(SVECTOR* rotation, s32 rotation_step, s32* timer)
+{
+    s32 remaining;
+
+    rotation->vz += rotation_step;
+    remaining = *timer - 1;
+    *timer = remaining;
+    return remaining;
+}
+
 #endif
