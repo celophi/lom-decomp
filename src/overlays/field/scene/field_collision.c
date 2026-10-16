@@ -222,6 +222,7 @@
 #define FIELD_COLLISION_FILL_BLOCKED(out, count, remaining)                                                                                                    \
     {                                                                                                                                                          \
         (count) = (BYTES_PER_WORD - (uintptr_t)(out)) & BYTES_PER_WORD_MASK;                                                                                   \
+                                                                                                                                                               \
         while (((count) != 0) && ((remaining) != 0))                                                                                                           \
         {                                                                                                                                                      \
             *(out) = FIELD_COLLISION_TILE_BLOCKED;                                                                                                             \
@@ -229,28 +230,21 @@
             (count)--;                                                                                                                                         \
             (remaining)--;                                                                                                                                     \
         }                                                                                                                                                      \
-        (count) = ((remaining) >> BYTES_PER_WORD_SHIFT);                                                                                                       \
-        (count)--;                                                                                                                                             \
-        if ((count) != -1)                                                                                                                                     \
+                                                                                                                                                               \
+        (count) = (remaining) >> BYTES_PER_WORD_SHIFT;                                                                                                         \
+                                                                                                                                                               \
+        for ((count)--; (count) != -1; (count)--)                                                                                                              \
         {                                                                                                                                                      \
-            do                                                                                                                                                 \
-            {                                                                                                                                                  \
-                *(s32*)(out) = (s32)(FIELD_COLLISION_TILE_BLOCKED * 0x01010101U);                                                                              \
-                (count)--;                                                                                                                                     \
-                (out) += BYTES_PER_WORD;                                                                                                                       \
-            } while ((count) != -1);                                                                                                                           \
+            *(s32*)(out) = (s32)(FIELD_COLLISION_TILE_BLOCKED * 0x01010101U);                                                                                  \
+            (out) += BYTES_PER_WORD;                                                                                                                           \
         }                                                                                                                                                      \
-        (count) = ((remaining) & BYTES_PER_WORD_MASK);                                                                                                         \
-        (count)--;                                                                                                                                             \
-        if ((count) != -1)                                                                                                                                     \
+                                                                                                                                                               \
+        (count) = (remaining) & BYTES_PER_WORD_MASK;                                                                                                           \
+                                                                                                                                                               \
+        for ((count)--; (count) != -1; (count)--)                                                                                                              \
         {                                                                                                                                                      \
-            s32 end = -1;                                                                                                                                      \
-            do                                                                                                                                                 \
-            {                                                                                                                                                  \
-                *(out) = FIELD_COLLISION_TILE_BLOCKED;                                                                                                         \
-                (count)--;                                                                                                                                     \
-                (out)++;                                                                                                                                       \
-            } while ((count) != end);                                                                                                                          \
+            *(out) = FIELD_COLLISION_TILE_BLOCKED;                                                                                                             \
+            (out)++;                                                                                                                                           \
         }                                                                                                                                                      \
     }
 
