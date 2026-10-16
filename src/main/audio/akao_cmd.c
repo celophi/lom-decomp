@@ -295,7 +295,7 @@ s32 akao_get_active_sfx_tags(void)
     channel = g_sfx_channels;
     active_tags = 0;
     channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
-    do
+    while (channel_bit & AKAO_VOICE_MASK)
     {
         if (active_mask & channel_bit)
         {
@@ -303,7 +303,7 @@ s32 akao_get_active_sfx_tags(void)
         }
         channel_bit <<= 1;
         channel++;
-    } while (channel_bit & AKAO_VOICE_MASK);
+    }
     active_tags &= AKAO_SFX_TAG_MASK;
     return active_tags;
 }
@@ -334,7 +334,7 @@ s32 akao_is_sfx_playing(s32 sfx_tag)
     }
     channel = g_sfx_channels;
     channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
-    do
+    while (channel_bit & AKAO_VOICE_MASK)
     {
         if ((active_mask & channel_bit) && sfx_tag == channel->sfx_tag)
         {
@@ -342,7 +342,7 @@ s32 akao_is_sfx_playing(s32 sfx_tag)
         }
         channel_bit <<= 1;
         channel++;
-    } while (channel_bit & AKAO_VOICE_MASK);
+    }
     return 0;
 }
 

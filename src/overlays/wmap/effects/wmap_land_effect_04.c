@@ -220,8 +220,7 @@ void wmap_land_effect_04_sequence_9_step_01(void)
     WmapSpriteActor *actor;
     WmapMotion *motion;
 
-    i = 100;
-    do
+    for (i = 100; i < 130; i++)
     {
         actor = &g_wmap_sprite_actors[i];
         g_wmap_actor_animations[i].data = g_wmap_animation_bank_2;
@@ -237,8 +236,7 @@ void wmap_land_effect_04_sequence_9_step_01(void)
         motion->field_0E = ((i - 100) * 140) / 30;
         motion->z = ccos(2048 - (((i - 100) * 1024) / 30)) * 140;
         motion->x = ((rand() * 100) >> 15) + 40;
-        i++;
-    } while (i < 130);
+    }
     g_wmap_land_effect_04_sequence_9_timer = 64;
     g_wmap_land_effect_04_sequence_9_step++;
     wmap_land_effect_04_sequence_9_step_02();

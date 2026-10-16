@@ -79,10 +79,7 @@ s32 niki_advance_load_sequence(void)
         break;
 
     case CARD_MENU_STEP_POLL_HARDWARE_EVENTS:
-        do
-        {
-            poll_result = poll_hardware_card_events();
-        } while (poll_result == CARD_EVENT_NONE);
+        while ((poll_result = poll_hardware_card_events()) == CARD_EVENT_NONE);
         if (poll_result == 0)
         {
             g_card_step = g_card_step + 1;
@@ -117,9 +114,8 @@ s32 niki_advance_load_sequence(void)
             g_card_menu_entry_scan_active = 0;
             break;
         }
-        wait_attempts = 0;
         g_card_step = g_card_step + 1;
-        do
+        for (wait_attempts = 0; wait_attempts < CARD_MENU_FILE_OP_ATTEMPTS; wait_attempts++)
         {
             if (niki_scan_next_entry(g_card_slot) == 0)
             {
@@ -139,8 +135,7 @@ s32 niki_advance_load_sequence(void)
                 card_menu_commit_selected_entry();
                 break;
             }
-            wait_attempts = wait_attempts + 1;
-        } while (wait_attempts < CARD_MENU_FILE_OP_ATTEMPTS);
+        }
         break;
 
     case CARD_MENU_STEP_CLEAR_CARD:
@@ -168,7 +163,7 @@ s32 niki_advance_load_sequence(void)
         strcat(path.text, g_card_entries[g_card_slot][g_card_menu_selected_row].name);
         wait_attempts = 0;
         _card_wait(g_card_slot);
-        do
+        while (wait_attempts < CARD_MENU_FILE_OP_ATTEMPTS)
         {
             poll_result = erase(path.text);
             wait_attempts = wait_attempts + 1;
@@ -176,7 +171,7 @@ s32 niki_advance_load_sequence(void)
             {
                 break;
             }
-        } while (wait_attempts < CARD_MENU_FILE_OP_ATTEMPTS);
+        }
         g_card_step = g_card_step + 1;
         break;
 
@@ -220,10 +215,7 @@ s32 niki_advance_load_sequence(void)
         break;
 
     case CARD_MENU_STEP_WAIT_HARDWARE_EVENTS:
-        do
-        {
-            poll_result = poll_hardware_card_events();
-        } while (poll_result == CARD_EVENT_NONE);
+        while ((poll_result = poll_hardware_card_events()) == CARD_EVENT_NONE);
         g_card_step = g_card_step + 1;
         break;
 
@@ -315,16 +307,14 @@ s32 niki_advance_load_sequence(void)
         break;
 
     case CARD_MENU_STEP_CHECK_POCKETSTATION:
-        wait_attempts = 0;
-        do
+        for (wait_attempts = 0; wait_attempts < CARD_MENU_FILE_OP_ATTEMPTS; wait_attempts++)
         {
             if (McxCardType(CARD_CHANNEL(g_card_slot)) == MCX_COMMAND_ISSUED)
             {
                 break;
             }
             VSync(0);
-            wait_attempts = wait_attempts + 1;
-        } while (wait_attempts < CARD_MENU_FILE_OP_ATTEMPTS);
+        }
         if (wait_attempts != CARD_MENU_FILE_OP_ATTEMPTS)
         {
             McxSync(MCX_SYNC_WAIT, &card_command, &card_result);
@@ -450,15 +440,13 @@ s32 niki_advance_load_sequence(void)
                 CARD_ERASE_WITH_RETRIES(wait_attempts, g_card_selected_save_path);
             }
             _card_wait(g_card_slot);
-            wait_attempts = 0;
-            do
+            for (wait_attempts = 0; wait_attempts < CARD_MENU_FILE_OP_ATTEMPTS; wait_attempts++)
             {
                 if (rename(g_card_temp_save_path, g_card_selected_save_path) != 0)
                 {
                     break;
                 }
-                wait_attempts = wait_attempts + 1;
-            } while (wait_attempts < CARD_MENU_FILE_OP_ATTEMPTS);
+            }
             g_card_menu_write_in_progress = 0;
             g_card_step = g_card_step + 1;
             close(g_card_menu_file_handle);

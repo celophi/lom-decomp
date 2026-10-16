@@ -141,38 +141,35 @@ s32 gosub_handle_input(void)
         g_pad_input = PAD_BTN_UP;
     }
 
-    if (steps_remaining != 0)
+    while (steps_remaining != 0)
     {
-        do
+        if (g_pad_input & PAD_BTN_UP)
         {
-            if (g_pad_input & PAD_BTN_UP)
+            g_gosub_cursor_row -= 1;
+            if (g_gosub_cursor_row == 0)
             {
-                g_gosub_cursor_row -= 1;
-                if (g_gosub_cursor_row == 0)
-                {
-                    steps_remaining = 1;
-                }
-                if (g_gosub_cursor_row < 0)
-                {
-                    g_gosub_cursor_row = g_gosub_row_count - 1;
-                    steps_remaining = 1;
-                }
+                steps_remaining = 1;
             }
-            if (g_pad_input & PAD_BTN_DOWN)
+            if (g_gosub_cursor_row < 0)
             {
-                g_gosub_cursor_row += 1;
-                if (g_gosub_cursor_row == g_gosub_row_count - 1)
-                {
-                    steps_remaining = 1;
-                }
-                if (g_gosub_cursor_row >= g_gosub_row_count)
-                {
-                    g_gosub_cursor_row = 0;
-                    steps_remaining = 1;
-                }
+                g_gosub_cursor_row = g_gosub_row_count - 1;
+                steps_remaining = 1;
             }
-            steps_remaining -= 1;
-        } while (steps_remaining != 0);
+        }
+        if (g_pad_input & PAD_BTN_DOWN)
+        {
+            g_gosub_cursor_row += 1;
+            if (g_gosub_cursor_row == g_gosub_row_count - 1)
+            {
+                steps_remaining = 1;
+            }
+            if (g_gosub_cursor_row >= g_gosub_row_count)
+            {
+                g_gosub_cursor_row = 0;
+                steps_remaining = 1;
+            }
+        }
+        steps_remaining -= 1;
     }
 
     if (g_pad_input & (PAD_BTN_UP | PAD_BTN_DOWN))

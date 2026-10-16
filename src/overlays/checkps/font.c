@@ -219,7 +219,7 @@ void* draw_cached_text(void* primitive, u_long* ot_tag, const u8* text, s32 x, s
     if (*cursor >= CHECKPS_TEXT_FIRST_PRINTABLE)
     {
         scan = cursor;
-        do
+        while (*scan >= CHECKPS_TEXT_FIRST_PRINTABLE)
         {
             if (*scan >= CHECKPS_SJIS_LEAD_BYTE_THRESHOLD)
             {
@@ -227,7 +227,7 @@ void* draw_cached_text(void* primitive, u_long* ot_tag, const u8* text, s32 x, s
             }
             scan++;
             glyph_count++;
-        } while (*scan >= CHECKPS_TEXT_FIRST_PRINTABLE);
+        }
     }
 
     switch (alignment)

@@ -278,7 +278,7 @@ void akao_seq_start_song(u8* sequence_data, s32 start_mask)
 
     table_owner->note_table = resolved_table;
     table_owner->voice_alloc_base = 0;
-    do
+    while (channel_index < AKAO_CHANNEL_COUNT)
     {
         if ((remaining_channels & bit_mask) & start_mask)
         {
@@ -338,7 +338,7 @@ void akao_seq_start_song(u8* sequence_data, s32 start_mask)
         channel++;
         channel_index++;
         bit_mask <<= 1;
-    } while (channel_index < AKAO_CHANNEL_COUNT);
+    }
 
     g_akao_seq_channel0->tempo = AKAO_SONG_INITIAL_TEMPO;
     g_akao_seq_channel0->tempo_acc = 1;
@@ -815,7 +815,7 @@ void akao_seq_flag_volume_update(AkaoSongState* song, AkaoChannelState* channels
     {
         remaining_channels = active_channels;
         channel_bit = 1U;
-        do
+        while (remaining_channels != 0)
         {
             if (remaining_channels & channel_bit)
             {
@@ -824,7 +824,7 @@ void akao_seq_flag_volume_update(AkaoSongState* song, AkaoChannelState* channels
             }
             channels++;
             channel_bit <<= 1;
-        } while (remaining_channels != 0);
+        }
     }
 }
 
@@ -844,7 +844,7 @@ void akao_sfx_flag_volume_update(void)
     {
         remaining_channels = active_channels;
         channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
-        do
+        while (remaining_channels != 0)
         {
             if (remaining_channels & channel_bit)
             {
@@ -853,7 +853,7 @@ void akao_sfx_flag_volume_update(void)
             }
             channel++;
             channel_bit <<= 1;
-        } while (remaining_channels != 0);
+        }
     }
 }
 
@@ -1219,7 +1219,7 @@ void akao_sfx_play_list(AkaoCommandParam* params)
     if (entries_remaining != 0)
     {
         entry_offset++;
-        do
+        while (entries_remaining != 0)
         {
             sequence_offset = (u16*)(entry_data + *entry_offset);
             if (*sequence_offset != no_sequence)
@@ -1242,7 +1242,7 @@ void akao_sfx_play_list(AkaoCommandParam* params)
             akao_sfx_play(params, first_sequence, second_sequence, 1);
             entries_remaining--;
             entry_offset++;
-        } while (entries_remaining != 0);
+        }
     }
 }
 
@@ -2303,7 +2303,7 @@ void akao_seq_silence_unused_voices_and_pause(void)
         {
             voice_bit = 1;
             voice_index = 0;
-            do
+            while (voices_to_silence != 0)
             {
                 if (voices_to_silence & voice_bit)
                 {
@@ -2315,7 +2315,7 @@ void akao_seq_silence_unused_voices_and_pause(void)
                 }
                 voice_bit <<= 1;
                 voice_index++;
-            } while (voices_to_silence != 0);
+            }
         }
         active_channels = g_akao_seq_channel0->masks.active_mask;
         g_akao_seq_channel0->masks.active_mask = 0;
@@ -2344,7 +2344,7 @@ void akao_seq_resume_and_apply_pending_voices(void)
         remaining_channels = parked_channels;
         channel_bit = 1;
         channel = g_akao_seq_channels;
-        do
+        while (remaining_channels != 0)
         {
             if (remaining_channels & channel_bit)
             {
@@ -2353,7 +2353,7 @@ void akao_seq_resume_and_apply_pending_voices(void)
             }
             channel_bit <<= 1;
             channel++;
-        } while (remaining_channels != 0);
+        }
 
         restored_channels = g_akao_seq_channel0->parked_mask;
         g_akao_seq_channel0->parked_mask = 0;
@@ -2396,7 +2396,7 @@ void akao_sfx_silence_unused_voices_and_pause(void)
         g_akao_sfx_control.active_mask &= ~channels_to_pause;
         if (channels_to_pause != 0)
         {
-            do
+            while (channels_to_pause != 0)
             {
                 if (channels_to_pause & channel_bit)
                 {
@@ -2408,7 +2408,7 @@ void akao_sfx_silence_unused_voices_and_pause(void)
                 }
                 channel_bit <<= 1;
                 voice_index++;
-            } while (channels_to_pause != 0);
+            }
         }
     }
     g_akao_driver_mode_flags |= AKAO_MODE_SFX_PAUSED;
@@ -2434,7 +2434,7 @@ void akao_sfx_resume_and_apply_pending_voices(void)
         remaining_channels = parked_channels;
         channel = g_sfx_channels;
         channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
-        do
+        while (remaining_channels != 0)
         {
             if (remaining_channels & channel_bit)
             {
@@ -2443,7 +2443,7 @@ void akao_sfx_resume_and_apply_pending_voices(void)
             }
             channel_bit <<= 1;
             channel++;
-        } while (remaining_channels != 0);
+        }
 
         restored_channels = g_akao_sfx_control.paused_mask;
         g_akao_sfx_control.paused_mask = 0;

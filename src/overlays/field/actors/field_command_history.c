@@ -301,9 +301,9 @@ s32 field_command_history_match(s32 player, s32 unused, s32 peek)
     command = FIELD_HISTORY_COMMAND_NONE;
     scan_index = 0;
 
-    if ((player < FIELD_PLAYER_COUNT) && (g_field_command_history_count[player] != 0))
+    if (player < FIELD_PLAYER_COUNT)
     {
-        do
+        while (scan_index != g_field_command_history_count[player])
         {
             history = g_field_command_history[player];
 
@@ -382,10 +382,10 @@ s32 field_command_history_match(s32 player, s32 unused, s32 peek)
                         {
                             src = consume_count;
 
-                            do
-                            {
+                            while (src < FIELD_HISTORY_LENGTH)
+{
                                 history[dst++] = history[src++];
-                            } while (src < FIELD_HISTORY_LENGTH);
+                            }
                         }
 
                         g_field_command_history_count[player] -= consume_count;
@@ -402,10 +402,10 @@ s32 field_command_history_match(s32 player, s32 unused, s32 peek)
                         {
                             src = consume_count;
 
-                            do
-                            {
+                            while (src < FIELD_HISTORY_LENGTH)
+{
                                 history[dst++] = history[src++];
-                            } while (src < FIELD_HISTORY_LENGTH);
+                            }
                         }
 
                         g_field_command_history_count[player] -= consume_count;
@@ -459,7 +459,7 @@ s32 field_command_history_match(s32 player, s32 unused, s32 peek)
             }
 
             scan_index++;
-        } while (scan_index != g_field_command_history_count[player]);
+        }
     }
 
     return command;

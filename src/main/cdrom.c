@@ -1463,7 +1463,7 @@ static void cdrom_complete_command(u8 intr, u8* result)
             {
                 queue_system = &CD_SYSTEM;
                 write_index = queue_system->queue_write_index;
-                do
+                while (next_command == CdlNop)
                 {
                     read_index = queue_system->queue_read_index;
                     if (read_index == write_index)
@@ -1480,7 +1480,7 @@ static void cdrom_complete_command(u8 intr, u8* result)
                     read_index = (read_index + 1) & CD_COMMAND_QUEUE_MASK;
                     queue_system->queue_read_index = read_index;
                     next_command = (queue_system->command_queue.items + read_index)->command;
-                } while (next_command == CdlNop);
+                }
             }
             break;
 

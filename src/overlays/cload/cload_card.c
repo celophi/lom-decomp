@@ -82,10 +82,7 @@ s32 cload_advance_load_sequence(void)
             break;
 
         case CARD_MENU_STEP_POLL_HARDWARE_EVENTS:
-            do
-            {
-                poll_result = poll_hardware_card_events();
-            } while (poll_result == CARD_EVENT_NONE);
+            while ((poll_result = poll_hardware_card_events()) == CARD_EVENT_NONE);
             if (poll_result == CARD_EVENT_COMPLETE)
             {
                 g_card_step++;
@@ -120,9 +117,8 @@ s32 cload_advance_load_sequence(void)
                 g_card_menu_entry_scan_active = 0;
                 break;
             }
-            scan_attempts = 0;
             g_card_step++;
-            do
+            for (scan_attempts = 0; scan_attempts < CARD_MENU_FILE_OP_ATTEMPTS; scan_attempts++)
             {
                 if (cload_scan_next_entry(g_card_slot) == 0)
                 {
@@ -138,8 +134,7 @@ s32 cload_advance_load_sequence(void)
                     cload_commit_selected_entry();
                     break;
                 }
-                scan_attempts++;
-            } while (scan_attempts < CARD_MENU_FILE_OP_ATTEMPTS);
+            }
             break;
 
         case CARD_MENU_STEP_CLEAR_CARD:
@@ -206,10 +201,7 @@ s32 cload_advance_load_sequence(void)
             break;
 
         case CARD_MENU_STEP_WAIT_HARDWARE_EVENTS:
-            do
-            {
-                poll_result = poll_hardware_card_events();
-            } while (poll_result == CARD_EVENT_NONE);
+            while ((poll_result = poll_hardware_card_events()) == CARD_EVENT_NONE);
             g_card_step++;
             break;
 

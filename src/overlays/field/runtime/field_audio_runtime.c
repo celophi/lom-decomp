@@ -167,7 +167,7 @@ extern s32 g_field_stream_bank_bytes;
 extern u32 g_field_stream_bytes_left;
 extern s32 g_field_stream_bytes_done;
 
-static void field_stream_copy_bytes(u8 *dst, u8 *src, s32 count);
+static void field_stream_copy_bytes(u8* destination, u8* source, s32 count);
 static u8 *field_stream_sector_callback(s32 bytes_transferred, u32 bytes_remaining);
 
 /** @brief The stream header in the current sector. */
@@ -802,18 +802,19 @@ void field_update_music_stream(void)
 
 /**
  * @brief Copy bytes forward.
- * @param dst Destination.
- * @param src Source.
+ * @param destination Destination.
+ * @param source Source.
  * @param count Number of bytes; nothing is copied when it is not positive.
  */
-static void field_stream_copy_bytes(u8 *dst, u8 *src, s32 count)
+static void field_stream_copy_bytes(u8* destination, u8* source, s32 count)
 {
-    if (count > 0)
+    if (count <= 0)
     {
-        do
-        {
-            *dst++ = *src++;
-        } while (--count != 0);
+        return;
+    }
+    for (; count != 0; count--)
+    {
+        *destination++ = *source++;
     }
 }
 

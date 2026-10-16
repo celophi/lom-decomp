@@ -355,16 +355,14 @@ void wmap_land_event_17_sequence_13_step_01(void)
 {
     s32 i;
 
-    i = 80;
     D_801B25D8 = 1;
     D_800DCEAC = 1;
 
-    do
+    for (i = 80; i < 124; i++)
     {
         g_wmap_actor_motions[i].unk0 = 0;
         WMAP_INIT_PARTICLE_ACTOR(i, g_wmap_animation_bank_0, 1);
-        i++;
-    } while (i < 124);
+    }
 
     D_800D9154 = 2;
     g_wmap_land_event_17_sequence_13_timer = 0x10;

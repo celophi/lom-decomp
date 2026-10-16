@@ -232,7 +232,6 @@ void wmap_land_effect_21_sequence_8_step_01(void)
     s32 i;
     WmapSpriteActor* actors = &g_wmap_sprite_actors[20];
 
-    i = 0;
     g_wmap_particle_intensity = 12;
     g_wmap_effect_params[0x15] = 128;
     g_wmap_effect_params[0x16] = 1;
@@ -244,7 +243,7 @@ void wmap_land_effect_21_sequence_8_step_01(void)
     g_wmap_effect_params[0x1C] = 8;
     g_wmap_effect_params[0x1D] = 1;
     g_wmap_effect_params[0x1E] = 10;
-    do
+    for (i = 0; i < 12; i++)
     {
         D_801AFD60[i].state = 1;
         D_801AFD60[i].angle = i * 341;
@@ -260,8 +259,7 @@ void wmap_land_effect_21_sequence_8_step_01(void)
         actors[i].sequence = 1;
         actors[i].target_shade = 0;
         actors[i].shade = 127;
-        i++;
-    } while (i < 12);
+    }
     g_wmap_land_effect_21_sequence_8_timer = 32;
     g_wmap_land_effect_21_sequence_8_step++;
     wmap_land_effect_21_sequence_8_step_02();

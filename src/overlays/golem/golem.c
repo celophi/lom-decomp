@@ -909,14 +909,12 @@ void golem_render(GolemRenderContext* render_context)
 
     panel_ordering_table = &render_context->ordering_table[GOLEM_LAYER_PANELS];
     packet_cursor = render_context->packet_cursor;
-    panel_index = 0;
-    do
+    for (panel_index = 0; panel_index < GOLEM_PANEL_COUNT; panel_index++)
     {
         panel_record = &g_golem_panel_records[panel_index];
         packet_cursor = golem_draw_panel(packet_cursor, panel_ordering_table, panel_index, panel_record->dimensions.fields.x, panel_record->y,
                                          panel_record->width, panel_record->height);
-        panel_index++;
-    } while (panel_index < GOLEM_PANEL_COUNT);
+    }
 
     packet_cursor = golem_draw_block_list(packet_cursor, render_context);
     packet_cursor = golem_draw_logic_grid(packet_cursor, render_context);

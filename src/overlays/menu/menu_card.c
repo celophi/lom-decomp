@@ -234,17 +234,15 @@ s32 memory_card_scan_files(char* path, struct DIRENTRY* entry)
 {
     char pattern[0x80];
     s32 count;
+    struct DIRENTRY* found;
 
     strcpy(pattern, path);
     strcat(pattern, g_card_wildcard);
     count = 0;
-    if (firstfile(pattern, entry) == entry)
+    for (found = firstfile(pattern, entry); found == entry; found = nextfile(entry))
     {
-        do
-        {
-            count += 1;
-            entry += 1;
-        } while (nextfile(entry) == entry);
+        count++;
+        entry++;
     }
     return count;
 }

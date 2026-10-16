@@ -162,14 +162,13 @@ void wmap_land_event_00_a_sequence_4_step_01(void)
     resource = &g_wmap_animation_bank_2;
     resource_cursor = (u8 *)&g_wmap_actor_animations + index * 8;
     slot = (s16 *)((u8 *)&g_wmap_actor_motions + index * 20);
-    do
+    for (; index < 0x78; index += 1)
     {
         *slot = 0;
         ((WmapAnimationSlot*)resource_cursor)->data = resource;
         resource_cursor += 8;
-        index += 1;
         slot += 0xA;
-    } while (index < 0x78);
+    }
     g_wmap_land_event_00_a_sequence_4_timer = 0xE1;
     actor = (u8*)g_wmap_effect_params;
     *(s32 *)(actor + 0x7C) = setting = 5;

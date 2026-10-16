@@ -180,10 +180,7 @@ s32 card_menu_update_card_sequence(void)
         g_card_step = g_card_steps_initial_scan;
     }
 
-    do
-    {
-        result = addhero_advance_load_sequence();
-    } while (result == CARD_MENU_SEQUENCE_RUN_AGAIN);
+    while ((result = addhero_advance_load_sequence()) == CARD_MENU_SEQUENCE_RUN_AGAIN);
 
     if ((g_addhero_load_flow_active != 0) && (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK))
     {

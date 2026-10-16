@@ -250,8 +250,8 @@ void field_apply_character_level_ups(s32 index, s32 notify)
 void field_apply_region_level_ups(s32 slot)
 {
     s32 level;
-    s32 i;
-    s32 pending;
+    s32 growth_index;
+    s32 levels_pending;
     u16 stat;
     u32 low;
     u32 base_stat;
@@ -267,11 +267,11 @@ void field_apply_region_level_ups(s32 slot)
     }
 
     record = &g_field_game_state->pets[slot];
-    pending = -1;
+    levels_pending = -1;
 
     if (record->name[0] != 0)
     {
-        do
+        while (levels_pending != 0)
         {
             level = record->progress.level;
             threshold = field_level_threshold(level);
@@ -285,33 +285,33 @@ void field_apply_region_level_ups(s32 slot)
                 if ((next_level & 0xFF) > FIELD_LEVEL_MAX)
                 {
                     record->progress.level = FIELD_LEVEL_MAX;
-                    pending = 0;
+                    levels_pending = 0;
                     continue;
                 }
 
-                for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
+                for (growth_index = 0; growth_index < FIELD_CHARACTER_STAT_COUNT; growth_index++)
                 {
-                    stat = record->stats[i];
-                    low = record->stat_growth[i].bits.accumulator + (stat & FIELD_STAT_BASE_MASK);
+                    stat = record->stats[growth_index];
+                    low = record->stat_growth[growth_index].bits.accumulator + (stat & FIELD_STAT_BASE_MASK);
                     low &= FIELD_STAT_BASE_MASK;
                     stat = (stat & FIELD_STAT_EFFECTIVE_MASK) | low;
-                    record->stats[i] = stat;
+                    record->stats[growth_index] = stat;
 
                     if ((stat & FIELD_STAT_BASE_MASK) > FIELD_STAT_BASE_MAX)
                     {
-                        record->stats[i] = (stat & FIELD_STAT_EFFECTIVE_MASK) | FIELD_STAT_BASE_MAX;
+                        record->stats[growth_index] = (stat & FIELD_STAT_EFFECTIVE_MASK) | FIELD_STAT_BASE_MAX;
                     }
 
-                    base_stat = record->stats[i] & FIELD_STAT_BASE_MASK;
-                    record->stats[i] = base_stat | ((base_stat >> 2) << FIELD_STAT_EFFECTIVE_SHIFT);
-                    record->stat_growth[i].bits.accumulator = record->stat_growth[i].bits.rate;
+                    base_stat = record->stats[growth_index] & FIELD_STAT_BASE_MASK;
+                    record->stats[growth_index] = base_stat | ((base_stat >> 2) << FIELD_STAT_EFFECTIVE_SHIFT);
+                    record->stat_growth[growth_index].bits.accumulator = record->stat_growth[growth_index].bits.rate;
                 }
 
-                for (i = 0; i < 4; i++)
+                for (growth_index = 0; growth_index < 4; growth_index++)
                 {
-                    record->equipment_totals[i] += record->total_growth[i].byte >> FIELD_GROWTH_CARRY_SHIFT;
-                    record->total_growth[i].bits.accumulator &= FIELD_GROWTH_ACCUMULATOR_KEEP;
-                    record->total_growth[i].bits.accumulator += record->total_growth[i].bits.rate;
+                    record->equipment_totals[growth_index] += record->total_growth[growth_index].byte >> FIELD_GROWTH_CARRY_SHIFT;
+                    record->total_growth[growth_index].bits.accumulator &= FIELD_GROWTH_ACCUMULATOR_KEEP;
+                    record->total_growth[growth_index].bits.accumulator += record->total_growth[growth_index].bits.rate;
                 }
 
                 record->power += record->extra_growth.bytes[0] >> FIELD_GROWTH_CARRY_SHIFT;
@@ -322,16 +322,16 @@ void field_apply_region_level_ups(s32 slot)
                 record->extra_growth.halves[1] += record->extra_growth.bytes[1];
                 record->status.word &= ~FIELD_REGION_APPLIED_MASK;
 
-                for (i = 0; i < FIELD_REGION_PENDING_EFFECT_COUNT; i++)
+                for (growth_index = 0; growth_index < FIELD_REGION_PENDING_EFFECT_COUNT; growth_index++)
                 {
-                    record->status.effects[i] = FIELD_NO_EFFECT;
+                    record->status.effects[growth_index] = FIELD_NO_EFFECT;
                 }
             }
             else
             {
-                pending = 0;
+                levels_pending = 0;
             }
-        } while (pending != 0);
+        }
     }
 }
 

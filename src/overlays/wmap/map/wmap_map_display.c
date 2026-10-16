@@ -374,9 +374,9 @@ void wmap_update_map_game(void)
             g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
         }
     }
-    else if (render_y != 0)
+    else
     {
-        do
+        while (render_y != 0)
         {
             sprite = g_wmap_current_frame->packet_cursor;
             *sprite = g_wmap_game_score_digit;
@@ -390,7 +390,7 @@ void wmap_update_map_game(void)
                 g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
             }
             render_x -= 16;
-        } while (render_y != 0);
+        }
     }
 
     sprite = g_wmap_current_frame->packet_cursor;
@@ -1575,8 +1575,7 @@ void wmap_draw_spirit_levels(void)
         wmap_get_cell_spirit_sprites(x, y, sprite_indices);
     }
 
-    i = 0;
-    do
+    for (i = 0; i < FIELD_LAND_SPIRIT_COUNT; i++)
     {
         SPRT* primary_sprite;
         SPRT* secondary_sprite;
@@ -1612,8 +1611,7 @@ void wmap_draw_spirit_levels(void)
             g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
         }
 
-        i++;
-    } while (i < FIELD_LAND_SPIRIT_COUNT);
+    }
 
     wmap_queue_texture_page(0x3D, 1);
 }
@@ -1641,13 +1639,11 @@ void wmap_draw_spirit_grid(s32 spirit_index)
     target_x = g_wmap_saved_view.x / WMAP_CELL_SPACING + g_wmap_cursor_column;
     target_y = g_wmap_saved_view.y / WMAP_CELL_SPACING + g_wmap_cursor_row;
 
-    cur_y = 0;
-    do
+    for (cur_y = 0; cur_y < WMAP_GRID_SIZE; cur_y++)
     {
         base_index = cur_y * WMAP_GRID_SIZE;
-        cur_x = 0;
         spirits = &cell_spirits;
-        do
+        for (cur_x = 0; cur_x < WMAP_GRID_SIZE; cur_x++)
         {
             if (g_wmap_artifact_placement_active == 1 && g_wmap_cells[target_x][target_y].placement_allowed != 0)
             {
@@ -1695,11 +1691,9 @@ void wmap_draw_spirit_grid(s32 spirit_index)
                 g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
             }
 
-            cur_x++;
-        } while (cur_x < WMAP_GRID_SIZE);
+        }
 
-        cur_y++;
-    } while (cur_y < WMAP_GRID_SIZE);
+    }
 
     wmap_queue_texture_page(0x3D, 1);
 }

@@ -73,10 +73,7 @@ s32 addhero_advance_load_sequence(void)
             break;
 
         case CARD_MENU_STEP_POLL_HARDWARE_EVENTS:
-            do
-            {
-                poll_status = poll_hardware_card_events();
-            } while (poll_status == CARD_EVENT_NONE);
+            while ((poll_status = poll_hardware_card_events()) == CARD_EVENT_NONE);
             switch (poll_status)
             {
             case CARD_EVENT_COMPLETE:
@@ -197,10 +194,7 @@ s32 addhero_advance_load_sequence(void)
             break;
 
         case CARD_MENU_STEP_WAIT_HARDWARE_EVENTS:
-            do
-            {
-                poll_status = poll_hardware_card_events();
-            } while (poll_status == CARD_EVENT_NONE);
+            while ((poll_status = poll_hardware_card_events()) == CARD_EVENT_NONE);
             g_card_step++;
             break;
 

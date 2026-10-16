@@ -622,23 +622,20 @@ void field_update_scene(void)
                     image_index = description->action_count;
                     action_index = 0;
 
-                    if (image_count < image_index)
-                    {
-                        action_fields = description->actions;
+                    action_fields = description->actions;
 
-                        do
-                        {
-                            action = OFFSET_FIRST_PTR(FieldActionSlot, action_offset + action_index * sizeof(FieldActionSlot), action_base);
-                            action->flags.instrument = action_fields->flags.instrument;
-                            action->command = action_ids->command;
-                            action->flags.target_filter = action_fields->flags.target_filter;
-                            action_index += 1;
-                            action->animation = action_fields->animation;
-                            action_ids++;
-                            action->parameter = action_fields->parameter;
-                            action->flags.target_group = action_fields->flags.target_group;
-                            action_fields++;
-                        } while (action_index < image_index);
+                    while (action_index < image_index)
+                    {
+                        action = OFFSET_FIRST_PTR(FieldActionSlot, action_offset + action_index * sizeof(FieldActionSlot), action_base);
+                        action->flags.instrument = action_fields->flags.instrument;
+                        action->command = action_ids->command;
+                        action->flags.target_filter = action_fields->flags.target_filter;
+                        action_index += 1;
+                        action->animation = action_fields->animation;
+                        action_ids++;
+                        action->parameter = action_fields->parameter;
+                        action->flags.target_group = action_fields->flags.target_group;
+                        action_fields++;
                     }
 
                     DrawSync(0);

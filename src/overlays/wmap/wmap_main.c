@@ -1320,14 +1320,7 @@ s32 wmap_run_loop(void)
             g_wmap_buttons_held = 0;
             g_wmap_buttons_repeat = 0;
             g_wmap_pending_event_count = 1;
-            {
-                s32 drain_event;
-
-                do
-                {
-                    drain_event = wmap_next_land_event();
-                } while (drain_event != -1);
-            }
+            while (wmap_next_land_event() != -1);
             wmap_install_callback(&wmap_special_effect_34_run);
             break;
         }

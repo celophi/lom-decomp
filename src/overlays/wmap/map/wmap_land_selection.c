@@ -8,17 +8,15 @@ extern s32 D_80139838[];
 /** @brief Rebuild the artifact carousel and advance to an available selection. */
 void wmap_reset_artifact_carousel(void)
 {
-    s32 i;
+    s32 selection_index;
 
     D_80139270 = wmap_build_artifact_list(g_wmap_carousel_frame / 4);
-    i = 0;
-    do
+    for (selection_index = 0; (u32)selection_index < 12U; selection_index++)
     {
-        D_80139838[i] = -1;
-        i++;
-    } while ((u32)i < 12U);
-    i = 12;
-    do
+        D_80139838[selection_index] = -1;
+    }
+    selection_index = 12;
+    while (selection_index != -1)
     {
         if (wmap_get_selected_artifact() != -1)
         {
@@ -34,7 +32,7 @@ void wmap_reset_artifact_carousel(void)
         {
             g_wmap_carousel_frame = 0;
         }
-        i--;
+        selection_index--;
         g_wmap_carousel_rotation.vy = g_wmap_carousel_angles[g_wmap_carousel_frame].angle;
-    } while (i != -1);
+    }
 }

@@ -152,16 +152,14 @@ void wmap_land_effect_09_sequence_6_step_01(void)
 {
     s32 i;
 
-    i = 150;
     g_wmap_effect_fade_c = 1;
     D_800DCEA8 = 1;
 
-    do
+    for (i = 150; i < 158; i++)
     {
         g_wmap_actor_motions[i].field_00 = 0;
         WMAP_INIT_PARTICLE_ACTOR(i, g_wmap_animation_bank_2, 1);
-        i++;
-    } while (i < 158);
+    }
 
     D_800D9150 = 3;
     g_wmap_land_effect_09_sequence_6_timer = 0x10;

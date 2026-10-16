@@ -443,7 +443,7 @@ s32* field_render_effect_mesh(FieldMotionRecord* effect, s32 mesh_index, s32* pa
         {
             code = FIELD_MESH_F3_CODE;
 
-            do
+            while (face_count != 0)
             {
                 gte_ldsxy3(screen_vertices[0], screen_vertices[1], screen_vertices[2]);
                 gte_nclip();
@@ -476,7 +476,7 @@ s32* field_render_effect_mesh(FieldMotionRecord* effect, s32 mesh_index, s32* pa
                 face_count--;
                 screen_vertices += 3;
                 depth_offsets++;
-            } while (face_count != 0);
+            }
         }
 
         packet_cursor = (s32*)packet;
@@ -744,7 +744,7 @@ s32* field_render_lit_effect_mesh(FieldMotionRecord* effect, s32 mesh_index, s32
         {
             code = FIELD_MESH_F3_CODE;
 
-            do
+            while (count != 0)
             {
                 gte_ldsxy3(screen_vertices[0], screen_vertices[1], screen_vertices[2]);
                 gte_nclip();
@@ -784,7 +784,7 @@ s32* field_render_lit_effect_mesh(FieldMotionRecord* effect, s32 mesh_index, s32
                 screen_vertices += 3;
                 transformed_normals++;
                 depth_offsets++;
-            } while (count != 0);
+            }
         }
 
         write_cursor = (s32*)packet;

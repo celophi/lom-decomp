@@ -66,12 +66,10 @@ void wmap_copy_words(s32* source, s32* destination, s32 byte_count)
     byte_count = copy_limit >> WMAP_COPY_WORD_SHIFT;
     if (--byte_count != WMAP_COPY_END)
     {
-        do
+        for (copy_limit = WMAP_COPY_END; byte_count != copy_limit; byte_count--)
         {
-            copy_limit = WMAP_COPY_END;
             *destination++ = *source++;
-            byte_count--;
-        } while (byte_count != copy_limit);
+        }
     }
 }
 

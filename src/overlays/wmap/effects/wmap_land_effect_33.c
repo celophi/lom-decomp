@@ -243,7 +243,7 @@ void wmap_land_effect_33_sequence_8_step_01(void)
     g_wmap_effect_params[29] = 0;
     g_wmap_effect_params[30] = 0x32C8;
 
-    do
+    while (index < 34)
     {
         screen_entry = (u8*)(screen_offset + screen_base);
         screen_offset += 8;
@@ -252,7 +252,7 @@ void wmap_land_effect_33_sequence_8_step_01(void)
         index++;
         *config_entry = 0;
         ((WmapAnimationSlot*)screen_entry)->data = resource;
-    } while (index < 34);
+    }
 
     g_wmap_land_effect_33_sequence_8_timer = 102;
     g_wmap_land_effect_33_sequence_8_step++;
@@ -290,7 +290,7 @@ void wmap_land_effect_33_sequence_9_step_01(void)
     g_wmap_effect_params[49] = 5;
     g_wmap_effect_params[50] = 0x6D60;
 
-    do
+    while (index < 40)
     {
         screen_entry = (u8*)(screen_offset + screen_base);
         screen_offset += 8;
@@ -299,7 +299,7 @@ void wmap_land_effect_33_sequence_9_step_01(void)
         index++;
         *config_entry = 0;
         ((WmapAnimationSlot*)screen_entry)->data = resource;
-    } while (index < 40);
+    }
 
     g_wmap_land_effect_33_sequence_9_timer = 120;
     g_wmap_land_effect_33_sequence_9_step++;

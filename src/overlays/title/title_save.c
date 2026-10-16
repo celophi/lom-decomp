@@ -519,12 +519,12 @@ static inline u32 get_save_layout_base_tpage(SaveLayoutTex* tex, u32 flags)
 void* render_save_layout_prims(u8* ptr, u_long* ot)
 {
     SaveLayoutEntry* entry = g_save_layout_table;
-    s32 i = 0;
+    s32 entry_index = 0;
     s32 idx;
     u32 tint;
     SlotUvRect* uv;
 
-    do
+    while (entry_index < SAVE_LAYOUT_ENTRIES)
     {
         s32 type = entry->type;
 
@@ -750,9 +750,9 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
             }
         }
 
-        i++;
+        entry_index++;
         entry++;
-    } while (i < SAVE_LAYOUT_ENTRIES);
+    }
 
     return ptr;
 }

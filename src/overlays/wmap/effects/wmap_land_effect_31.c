@@ -791,7 +791,7 @@ void wmap_land_effect_31_sequence_20_step_01(void)
     g_wmap_effect_params[52] = 0xF;
     g_wmap_effect_params[53] = 0;
 
-    do
+    while (index < 0x28)
     {
         screen_entry = (u8*)(screen_offset + screen_base);
         screen_offset += 8;
@@ -800,7 +800,7 @@ void wmap_land_effect_31_sequence_20_step_01(void)
         index++;
         *config_entry = 0;
         ((WmapAnimationSlot*)screen_entry)->data = resource;
-    } while (index < 0x28);
+    }
 
     g_wmap_land_effect_31_sequence_20_timer = 0x64;
     g_wmap_land_effect_31_sequence_20_step++;

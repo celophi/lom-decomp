@@ -993,13 +993,13 @@ s32 menu_build_special_technique_nav_entries(void)
     group_index = 0;
     none_index = selected_index;
     group_flags_ptr = (s32*)((u8*)g_saved_game_ctx + MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET);
-    do
+    while (group_index < MENU_SPECIAL_TECHNIQUE_GROUP_COUNT)
     {
         bit_mask = 1;
         group_flags = *group_flags_ptr;
         index = MENU_SPECIAL_TECHNIQUES_PER_GROUP - 1;
 
-        do
+        while (index >= 0)
         {
             if ((group_flags & bit_mask) != 0)
             {
@@ -1013,10 +1013,10 @@ s32 menu_build_special_technique_nav_entries(void)
             }
             index -= 1;
             bit_mask <<= 1;
-        } while (index >= 0);
+        }
         group_index += 1;
         group_flags_ptr += 1;
-    } while (group_index < MENU_SPECIAL_TECHNIQUE_GROUP_COUNT);
+    }
 
     if (selected_index == MENU_NONE)
     {
@@ -1219,1463 +1219,1460 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                 g_menu_category2_item = second_equipped_item;
             }
 
-            if (remaining_count != 0)
+            while (remaining_count != 0)
             {
-                do
+                pos.x = (s16)(content_item->packed_x & MENU_CONTENT_X_MASK);
+                pos.y = (s16)(content_item->y - MENU_CONTENT_VIEW_Y_OFFSET);
                 {
-                    pos.x = (s16)(content_item->packed_x & MENU_CONTENT_X_MASK);
-                    pos.y = (s16)(content_item->y - MENU_CONTENT_VIEW_Y_OFFSET);
+                    s32 t0 = 0xFF;
+                    u16 item_word = content_item->packed_x;
+                    s32 item_type = item_word >> MENU_CONTENT_TYPE_SHIFT;
+                    switch (item_type)
                     {
-                        s32 t0 = 0xFF;
-                        u16 item_word = content_item->packed_x;
-                        s32 item_type = item_word >> MENU_CONTENT_TYPE_SHIFT;
-                        switch (item_type)
+                    case 1:
+                        draw_packet_cursor = packet_cursor;
+                        base_a2_0 = (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES]);
                         {
-                        case 1:
-                            draw_packet_cursor = packet_cursor;
-                            base_a2_0 = (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES]);
-                            {
-                                s32 a3 = 1;
-                                void* a2_2 = (void*)((u8*)base_a2_0 + *(u16*)((u8*)base_a2_0 + (content_item->action_type * 2)));
-                                packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                              content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                              (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                            }
-                            break;
+                            s32 a3 = 1;
+                            void* a2_2 = (void*)((u8*)base_a2_0 + *(u16*)((u8*)base_a2_0 + (content_item->action_type * 2)));
+                            packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                          content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                          (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                        }
+                        break;
 
-                        case 2:
+                    case 2:
+                    {
+                        s32 sub;
+                        if (content_item->action_type < 2)
                         {
-                            s32 sub;
-                            if (content_item->action_type < 2)
+                            t0 = 0xFF;
                             {
-                                t0 = 0xFF;
+                                s32 y = two_outer;
+                                if (y == 2)
                                 {
-                                    s32 y = two_outer;
-                                    if (y == 2)
-                                    {
-                                        t0 = 0x1E;
-                                    }
+                                    t0 = 0x1E;
                                 }
                             }
+                        }
+                        {
+                            u8 sub_byte = content_item->action_type;
+                            sub = sub_byte;
+                        }
+                        if ((u32)(sub - 2) < 8)
+                        {
+                            s32 s;
+                            val = 0;
+                            if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
                             {
-                                u8 sub_byte = content_item->action_type;
-                                sub = sub_byte;
+                                val = g_menu_category1_item->effect_flags[0];
                             }
-                            if ((u32)(sub - 2) < 8)
+                            s = content_item->action_type;
+                            if (((val >> (s - 2)) & 1) != 0)
                             {
-                                s32 s;
-                                val = 0;
-                                if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
-                                {
-                                    val = g_menu_category1_item->effect_flags[0];
-                                }
-                                s = content_item->action_type;
-                                if (((val >> (s - 2)) & 1) != 0)
-                                {
-                                    t0 = s + 0x3B;
-                                }
-                                else
-                                {
-                                    t0 = 0x21;
-                                }
+                                t0 = s + 0x3B;
                             }
-                            else if ((u32)(sub - 0xA) < 8)
+                            else
                             {
-                                s32 s;
-                                val = 0;
-                                if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
-                                {
-                                    val = g_menu_category1_item->effect_flags[1];
-                                }
                                 t0 = 0x21;
-                                s = content_item->action_type;
-                                if (((val >> (s - 0xA)) & 1) != 0)
-                                {
-                                    t0 = s + 0x2B;
-                                }
                             }
-                            else if ((u32)(sub - 0x12) < 8)
+                        }
+                        else if ((u32)(sub - 0xA) < 8)
+                        {
+                            s32 s;
+                            val = 0;
+                            if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
                             {
-                                s32 s;
-                                val = 0;
-                                if (D_80168C20[1].active != 0)
-                                {
-                                    val = D_80168C20[1].effect_flags[0];
-                                }
-                                if (D_80168C20[2].active != 0)
-                                {
-                                    val |= D_80168C20[2].effect_flags[0];
-                                }
-                                if (D_80168C20[3].active != 0)
-                                {
-                                    val |= D_80168C20[3].effect_flags[0];
-                                }
+                                val = g_menu_category1_item->effect_flags[1];
+                            }
+                            t0 = 0x21;
+                            s = content_item->action_type;
+                            if (((val >> (s - 0xA)) & 1) != 0)
+                            {
+                                t0 = s + 0x2B;
+                            }
+                        }
+                        else if ((u32)(sub - 0x12) < 8)
+                        {
+                            s32 s;
+                            val = 0;
+                            if (D_80168C20[1].active != 0)
+                            {
+                                val = D_80168C20[1].effect_flags[0];
+                            }
+                            if (D_80168C20[2].active != 0)
+                            {
+                                val |= D_80168C20[2].effect_flags[0];
+                            }
+                            if (D_80168C20[3].active != 0)
+                            {
+                                val |= D_80168C20[3].effect_flags[0];
+                            }
+                            t0 = 0x21;
+                            s = content_item->action_type;
+                            if (((val >> (s - 0x12)) & 1) != 0)
+                            {
+                                t0 = s + 0x2B;
+                            }
+                        }
+                        else if ((u32)(sub - 0x1A) < 8)
+                        {
+                            s32 s;
+                            val = 0;
+                            if (D_80168C20[1].active != 0)
+                            {
+                                val = D_80168C20[1].effect_flags[1];
+                            }
+                            if (D_80168C20[2].active != 0)
+                            {
+                                val |= D_80168C20[2].effect_flags[1];
+                            }
+                            if (D_80168C20[3].active != 0)
+                            {
+                                val |= D_80168C20[3].effect_flags[1];
+                            }
+                            s = content_item->action_type;
+                            if (((val >> (s - 0x1A)) & 1) != 0)
+                            {
+                                t0 = D_80168696[s];
+                            }
+                            else
+                            {
                                 t0 = 0x21;
-                                s = content_item->action_type;
-                                if (((val >> (s - 0x12)) & 1) != 0)
-                                {
-                                    t0 = s + 0x2B;
-                                }
                             }
-                            else if ((u32)(sub - 0x1A) < 8)
-                            {
-                                s32 s;
-                                val = 0;
-                                if (D_80168C20[1].active != 0)
-                                {
-                                    val = D_80168C20[1].effect_flags[1];
-                                }
-                                if (D_80168C20[2].active != 0)
-                                {
-                                    val |= D_80168C20[2].effect_flags[1];
-                                }
-                                if (D_80168C20[3].active != 0)
-                                {
-                                    val |= D_80168C20[3].effect_flags[1];
-                                }
-                                s = content_item->action_type;
-                                if (((val >> (s - 0x1A)) & 1) != 0)
-                                {
-                                    t0 = D_80168696[s];
-                                }
-                                else
-                                {
-                                    t0 = 0x21;
-                                }
-                            }
-                            else if ((u32)(sub - 0x22) < 8)
-                            {
+                        }
+                        else if ((u32)(sub - 0x22) < 8)
+                        {
 #if defined(VERSION_JP)
+                            s32 s;
+                            s = content_item->action_type;
+                            if (((g_menu_category0_item->effect_flags[0] >> (s - 0x22)) & 1) != 0)
+                            {
+                                t0 = s + 0x13;
+                            }
+                            else
+                            {
+                                t0 = 0x21;
+                            }
+#else
+                            t0 = 0x21;
+                            if (g_menu_category0_item != 0)
+                            {
                                 s32 s;
                                 s = content_item->action_type;
                                 if (((g_menu_category0_item->effect_flags[0] >> (s - 0x22)) & 1) != 0)
                                 {
                                     t0 = s + 0x13;
                                 }
-                                else
-                                {
-                                    t0 = 0x21;
-                                }
-#else
-                                t0 = 0x21;
-                                if (g_menu_category0_item != 0)
-                                {
-                                    s32 s;
-                                    s = content_item->action_type;
-                                    if (((g_menu_category0_item->effect_flags[0] >> (s - 0x22)) & 1) != 0)
-                                    {
-                                        t0 = s + 0x13;
-                                    }
-                                }
-#endif
                             }
-                            else if ((u32)(sub - 0x2A) < 8)
+#endif
+                        }
+                        else if ((u32)(sub - 0x2A) < 8)
+                        {
+                            s32 idx;
+                            s32 s;
+                            s = content_item->action_type;
+                            for (idx = 0; idx < 8; idx++)
                             {
-                                s32 idx;
-                                s32 s;
-                                s = content_item->action_type;
-                                for (idx = 0; idx < 8; idx++)
+                                u8* pad = (u8*)g_saved_game_ctx;
+                                s32 character_offset = g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
+                                if (*(u8*)(pad + character_offset + idx + 0x638) == s - 0x2A)
                                 {
-                                    u8* pad = (u8*)g_saved_game_ctx;
-                                    s32 character_offset = g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
-                                    if (*(u8*)(pad + character_offset + idx + 0x638) == s - 0x2A)
+                                    break;
+                                }
+                            }
+                            t0 = D_801686B8[idx];
+                        }
+                        else if ((u32)(sub - 0x32) < 4)
+                        {
+                            if (g_menu_char_slot != 2)
+                            {
+                                MenuItemEntry* equipment = (MenuItemEntry*)((content_item->action_type * sizeof(MenuItemEntry)) + (uintptr_t)g_menu_equipment_base - 0x32 * sizeof(MenuItemEntry));
+                                t0 = 0x21;
+                                if (equipment->active != 0)
+                                {
+                                    u32 attributes = equipment->attributes.packed;
+                                    s32 item_kind = (attributes >> MENU_ITEM_KIND_SHIFT) & 3;
+                                    switch (item_kind)
                                     {
+                                    case 1:
+                                        t0 = ((attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + 0x50;
+                                        break;
+                                    case 2:
+                                        t0 = ((attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + 0x5C;
+                                        break;
+                                    case 0:
+                                        t0 = ((attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + 0x45;
                                         break;
                                     }
                                 }
-                                t0 = D_801686B8[idx];
                             }
-                            else if ((u32)(sub - 0x32) < 4)
+                        }
+                        else if ((u8)sub == 0x36)
+                        {
+                            t0 = 0xFF;
+                            if (g_menu_item_ptr != 0)
                             {
-                                if (g_menu_char_slot != 2)
+                                if (g_menu_item_ptr->active != 0)
                                 {
-                                    MenuItemEntry* equipment = (MenuItemEntry*)((content_item->action_type * sizeof(MenuItemEntry)) + (uintptr_t)g_menu_equipment_base - 0x32 * sizeof(MenuItemEntry));
-                                    t0 = 0x21;
-                                    if (equipment->active != 0)
+                                    u32 attributes = g_menu_item_ptr->attributes.packed;
+                                    s32 item_kind = (attributes >> MENU_ITEM_KIND_SHIFT) & 3;
+                                    switch (item_kind)
                                     {
-                                        u32 attributes = equipment->attributes.packed;
-                                        s32 item_kind = (attributes >> MENU_ITEM_KIND_SHIFT) & 3;
-                                        switch (item_kind)
-                                        {
-                                        case 1:
-                                            t0 = ((attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + 0x50;
-                                            break;
-                                        case 2:
-                                            t0 = ((attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + 0x5C;
-                                            break;
-                                        case 0:
-                                            t0 = ((attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + 0x45;
-                                            break;
-                                        }
+                                    case 0:
+                                        t0 = ((attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + 0x45;
+                                        break;
+                                    case 1:
+                                        t0 = ((attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + 0x50;
+                                        break;
+                                    case 2:
+                                        t0 = ((attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + 0x5C;
+                                        break;
                                     }
                                 }
                             }
-                            else if ((u8)sub == 0x36)
+                        }
+                        else if ((u32)(sub - 0x37) < 0x1E)
+                        {
+                            t0 = D_80168659[content_item->action_type];
+                        }
+                        else if ((u8)sub == 0x55)
+                        {
+                            t0 = 0xFF;
+                            if (((g_saved_game_ctx->options.word >> 1) & 1) != 0)
                             {
-                                t0 = 0xFF;
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    if (g_menu_item_ptr->active != 0)
-                                    {
-                                        u32 attributes = g_menu_item_ptr->attributes.packed;
-                                        s32 item_kind = (attributes >> MENU_ITEM_KIND_SHIFT) & 3;
-                                        switch (item_kind)
-                                        {
-                                        case 0:
-                                            t0 = ((attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + 0x45;
-                                            break;
-                                        case 1:
-                                            t0 = ((attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + 0x50;
-                                            break;
-                                        case 2:
-                                            t0 = ((attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + 0x5C;
-                                            break;
-                                        }
-                                    }
-                                }
+                                t0 = 0x6A;
                             }
-                            else if ((u32)(sub - 0x37) < 0x1E)
+                        }
+                        else
+                        {
+                            sub = content_item->action_type;
+                            if (sub == 0x56)
                             {
-                                t0 = D_80168659[content_item->action_type];
-                            }
-                            else if ((u8)sub == 0x55)
-                            {
-                                t0 = 0xFF;
+                                t0 = 0x6A;
                                 if (((g_saved_game_ctx->options.word >> 1) & 1) != 0)
                                 {
+                                    t0 = 0xFF;
+                                }
+                            }
+                            else if (sub == 0x57)
+                            {
+                                t0 = 0xFF;
+                                if ((g_saved_game_ctx->options.word & 1) != 0)
+                                {
                                     t0 = 0x6A;
+                                }
+                            }
+                            else if (sub == 0x58)
+                            {
+                                t0 = 0x6A;
+                                if ((g_saved_game_ctx->options.word & 1) != 0)
+                                {
+                                    t0 = 0xFF;
+                                }
+                            }
+                            else if (sub == 0x59)
+                            {
+                                t0 = 0xFF;
+                                if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & 0x80) != 0)
+                                {
+                                    t0 = 0x6A;
+                                }
+                            }
+                            else if (sub == 0x5A)
+                            {
+                                t0 = 0x6A;
+                                if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & 0x80) != 0)
+                                {
+                                    t0 = 0xFF;
                                 }
                             }
                             else
                             {
-                                sub = content_item->action_type;
-                                if (sub == 0x56)
-                                {
-                                    t0 = 0x6A;
-                                    if (((g_saved_game_ctx->options.word >> 1) & 1) != 0)
-                                    {
-                                        t0 = 0xFF;
-                                    }
-                                }
-                                else if (sub == 0x57)
-                                {
-                                    t0 = 0xFF;
-                                    if ((g_saved_game_ctx->options.word & 1) != 0)
-                                    {
-                                        t0 = 0x6A;
-                                    }
-                                }
-                                else if (sub == 0x58)
-                                {
-                                    t0 = 0x6A;
-                                    if ((g_saved_game_ctx->options.word & 1) != 0)
-                                    {
-                                        t0 = 0xFF;
-                                    }
-                                }
-                                else if (sub == 0x59)
-                                {
-                                    t0 = 0xFF;
-                                    if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & 0x80) != 0)
-                                    {
-                                        t0 = 0x6A;
-                                    }
-                                }
-                                else if (sub == 0x5A)
-                                {
-                                    t0 = 0x6A;
-                                    if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & 0x80) != 0)
-                                    {
-                                        t0 = 0xFF;
-                                    }
-                                }
-                                else
-                                {
-                                    t0 = 0xFF;
-                                }
-                            }
-                            if (t0 != 0xFF)
-                            {
-                                packet_cursor = menu_emit_draw_mode_primitive(menu_emit_icon_sprite(packet_cursor, ot_entry, t0,
-                                                                                                    content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                                                    content_item->y - MENU_CONTENT_VIEW_Y_OFFSET, 0, 0, 0, 0),
-                                                                              ot_entry);
+                                t0 = 0xFF;
                             }
                         }
-                        break;
-
-                        case 3:
+                        if (t0 != 0xFF)
                         {
-                            content_index = content_item->action_type;
-                            switch (content_index)
-                            {
-                            case 0x1:
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    draw_packet_cursor = packet_cursor;
-                                    draw_source = (void*)g_menu_item_ptr;
-                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, draw_source, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                }
-                                break;
-                            case 0x2:
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    u32 v;
-                                    u32 v1;
-
-                                    if (menu_item_is_nondefault(g_menu_item_ptr) != 0)
-                                    {
-                                        void* a3 =
-                                            (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_KEY_ITEM_NAMES]);
-                                        menu_concat_encoded_text(
-                                            &prefix_buffer,
-                                            (void*)((u8*)a3 + *(u16*)((u8*)a3 + (g_menu_item_ptr->attributes.halves.high & 0x3F) * 2)),
-                                            (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] +
-                                                    *(u16*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] +
-                                                            0xB4)));
-                                    }
-                                    else
-                                    {
-                                        prefix_buffer[0] = 0;
-                                    }
-                                    v = g_menu_item_ptr->attributes.packed;
-                                    v1 = (v >> 8) & 3;
-                                    switch (v1)
-                                    {
-                                    case 0:
-                                    {
-                                        uintptr_t base0 = ((uintptr_t)g_menu_state_ptr +
-                                                              ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP]);
-                                        menu_concat_encoded_text(&text_buffer, &prefix_buffer,
-                                                                 (void*)(base0 + *(u16*)(((v >> 9) & 0x7E) + base0)));
-                                        break;
-                                    }
-                                    case 1:
-                                    {
-                                        uintptr_t base1 = ((uintptr_t)g_menu_state_ptr +
-                                                              ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP]);
-                                        menu_concat_encoded_text(&text_buffer, &prefix_buffer,
-                                                                 (void*)(base1 + *(u16*)(((v >> 9) & 0x7E) + base1 + 11 * sizeof(u16))));
-                                        break;
-                                    }
-                                    default:
-                                    {
-                                        uintptr_t base2 = ((uintptr_t)g_menu_state_ptr +
-                                                              ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP]);
-                                        menu_concat_encoded_text(
-                                            &text_buffer, &prefix_buffer,
-                                            (void*)(base2 +
-                                                    *(u16*)(((g_menu_item_ptr->attributes.packed >> 9) & 0x7E) + base2 + 23 * sizeof(u16))));
-                                        break;
-                                    }
-                                    }
-                                    packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&text_buffer), 1, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                }
-                                break;
-                            case 0x3:
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    packet_cursor =
-                                        menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_item_ptr->display_nibbles.packed & 0xF, 1,
-                                                                 &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                                break;
-                            case 0x4:
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
-                                                                             (g_menu_item_ptr->display_nibbles.packed >> 4) & 0xF, 1, &pos,
-                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                                break;
-                            case 0x5:
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
-                                                                             (g_menu_item_ptr->display_nibbles.packed >> 8) & 0xF, 1, &pos,
-                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                                break;
-                            case 0x6:
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
-                                                                             (g_menu_item_ptr->display_nibbles.packed >> 12) & 0xF, 1, &pos,
-                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                                break;
-                            case 0x7:
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    packet_cursor =
-                                        menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_item_ptr->display_nibbles.halfwords[1] & 0xF,
-                                                                 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                                break;
-                            case 0x8:
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
-                                                                             (g_menu_item_ptr->display_nibbles.packed >> 20) & 0xF, 1, &pos,
-                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                                break;
-                            case 0x9:
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    packet_cursor =
-                                        menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_item_ptr->display_nibbles.bytes[3] & 0xF, 1,
-                                                                 &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                                break;
-                            case 0xA:
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
-                                                                             (g_menu_item_ptr->display_nibbles.packed >> 28) & 0xF, 1, &pos,
-                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                                break;
-                            case 0xB:
-                            case 0xC:
-                            case 0xD:
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    draw_packet_cursor = packet_cursor;
-                                    base_a2_1 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x5C));
-                                    {
-                                        s32 a3 = 1;
-                                        void* a2_2 = (void*)((u8*)base_a2_1 + *(u16*)((u8*)base_a2_1 + (*((u8*)g_menu_item_ptr + content_index + 0x15) * 2)));
-                                        packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                      (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                    }
-                                }
-                                break;
-                            case 0xE:
-                            case 0xF:
-                            case 0x10:
-                                if (g_menu_category0_item != 0)
-                                {
-                                    draw_packet_cursor = packet_cursor;
-                                    base_a2_2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
-                                    {
-                                        s32 a3 = 1;
-                                        void* a2_2 =
-                                            (void*)((u8*)base_a2_2 + *(u16*)((u8*)base_a2_2 + (*((u8*)g_menu_category0_item + content_index + 0x1A) * 2)));
-                                        packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                      (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                    }
-                                }
-                                break;
-                            case 0x11:
-                                if (g_menu_category0_item != 0)
-                                {
-                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, g_menu_category0_item->stat_values[0], 1, &pos,
-                                                                  ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                                break;
-                            case 0x12:
-                                if (g_menu_category1_item != 0)
-                                {
-                                    packet_cursor =
-                                        menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_category1_item->stat_values[0], 1, &pos,
-                                                                 ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                                break;
-                            case 0x13:
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    uintptr_t a2;
-                                    u8* a3ptr;
-                                    s32 idx;
-                                    void* a2_2;
-                                    draw_packet_cursor = packet_cursor;
-                                    a2 = (uintptr_t)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x44);
-                                    a3ptr = (u8*)g_menu_category2_item;
-                                    idx = (a3ptr[0x24] * 0xE + a3ptr[0x25]) * 2;
-                                    a2_2 = (void*)(a2 + *(u16*)(idx + a2));
-                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                }
-                                break;
-                            case 0x14:
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    draw_packet_cursor = packet_cursor;
-                                    base_a2_3 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x28));
-                                    {
-                                        void* a2_2 = (void*)((u8*)base_a2_3 + *(u16*)((u8*)base_a2_3 + (*((u8*)g_menu_category2_item + 0x24) * 2)));
-                                        packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                      (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                    }
-                                }
-                                break;
-                            case 0x15:
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    draw_packet_cursor = packet_cursor;
-                                    base_a2_4 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x38));
-                                    {
-                                        void* a2_2 = (void*)((u8*)base_a2_4 + *(u16*)((u8*)base_a2_4 + (*((u8*)g_menu_category2_item + 0x25) * 2)));
-                                        packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                      (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                    }
-                                }
-                                break;
-                            case 0x16:
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, *((u8*)g_menu_category2_item + 0x26), 1, &pos,
-                                                                  ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                                break;
-                            case 0x17:
-                            case 0x18:
-                            case 0x19:
-                            case 0x1A:
-                            {
-                                val = 0;
-                                if (g_item_slot_flags[content_index - 0x17] != 0)
-                                {
-                                    MenuItemEntry* equipment = (MenuItemEntry*)((content_index * sizeof(MenuItemEntry)) + (uintptr_t)D_80168C30 - 0x17 * sizeof(MenuItemEntry));
-                                    MenuItemEntry* comparison_item;
-                                    if (equipment->active != 0)
-                                    {
-                                        val = equipment->stat_values[0];
-                                    }
-                                    comparison_item = g_item_slot_data[content_index - 0x17];
-                                    if (comparison_item != 0 && comparison_item->active != 0)
-                                    {
-                                        val -= comparison_item->stat_values[0];
-                                    }
-                                    else
-                                    {
-                                        val -= D_800F0C1C;
-                                    }
-                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, abs(val), 1, &pos,
-                                                                  ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                            }
-                            /* fallthrough */
-                            case 0x1B:
-                            case 0x1C:
-                            case 0x1D:
-                            case 0x1E:
-                            {
-                                val = 0;
-                                if (g_item_slot_flags[content_index - 0x1B] != 0)
-                                {
-                                    MenuItemEntry* equipment = (MenuItemEntry*)((content_index * sizeof(MenuItemEntry)) + (uintptr_t)D_80168C30 - 0x1B * sizeof(MenuItemEntry));
-                                    MenuItemEntry* comparison_item;
-                                    if (equipment->active != 0)
-                                    {
-                                        val = equipment->stat_values[0];
-                                    }
-                                    comparison_item = g_item_slot_data[content_index - 0x1B];
-                                    if (comparison_item != 0 && comparison_item->active != 0)
-                                    {
-                                        val -= comparison_item->stat_values[0];
-                                    }
-                                    else
-                                    {
-                                        val -= D_800F0C1C;
-                                    }
-                                    menu_copy_sign_label(label_buffer, val);
-                                    packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, 0);
-                                }
-                            }
-                            break;
-                            case 0x1F:
-                            case 0x20:
-                            case 0x21:
-                            case 0x22:
-                            case 0x23:
-                            case 0x24:
-                            case 0x25:
-                            case 0x26:
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    s32 res = menu_lookup_item_nibble(g_menu_item_ptr, content_index - 0x1F);
-                                    menu_copy_sign_label(label_buffer, res);
-                                    packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, 0);
-                                }
-                                break;
-                            case 0x27:
-                            case 0x28:
-                            case 0x29:
-                            case 0x2A:
-                            case 0x2B:
-                            case 0x2C:
-                            case 0x2D:
-                            case 0x2E:
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    s32 diff = menu_lookup_item_nibble(g_menu_item_ptr, content_index - 0x27);
-                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (u32)abs(diff), 1, &pos,
-                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                                break;
-                            case 0x2F:
-                            case 0x30:
-                            case 0x31:
-                            case 0x32:
-                            case 0x33:
-                            case 0x34:
-                            case 0x35:
-                            case 0x36:
-                            {
-                                s32 idx2 = content_index - 0x2F;
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    s32 v1 = menu_lookup_item_nibble(g_menu_item_ptr, idx2);
-                                    s32 v2 = menu_lookup_item_nibble((void*)g_menu_active_equipped_item, idx2);
-                                    s32 diff = v1 - v2;
-                                    menu_copy_sign_label(label_buffer, diff);
-                                    packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, 0);
-                                }
-                            }
-                            break;
-                            case 0x37:
-                            case 0x38:
-                            case 0x39:
-                            case 0x3A:
-                            case 0x3B:
-                            case 0x3C:
-                            case 0x3D:
-                            case 0x3E:
-                            {
-                                s32 idx2 = content_index - 0x2F;
-                                if (g_menu_item_ptr != 0)
-                                {
-                                    s32 v1 = menu_lookup_item_nibble(g_menu_item_ptr, idx2);
-                                    s32 v2 = menu_lookup_item_nibble((void*)g_menu_active_equipped_item, idx2);
-                                    s32 diff = v1 - v2;
-                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, abs(diff), 1, &pos,
-                                                                  ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                            }
-                            break;
-                            case 0x3F:
-                            case 0x40:
-                            case 0x41:
-                            case 0x42:
-                                if (g_menu_category1_item != 0)
-                                {
-                                    packet_cursor = menu_draw_clamped_number(
-                                        ot_entry, packet_cursor, g_menu_category1_item->stat_values[content_index - 0x3F], 1, &pos,
-                                        ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                                break;
-                            case 0x43:
-                            case 0x44:
-                            case 0x45:
-                            case 0x46:
-                            {
-                                uintptr_t has = 0;
-
-                                val = has;
-                                for (k = 1; k < 4; k++)
-                                {
-                                    MenuItemEntry* slot = &D_80168C20[k];
-                                    if (g_item_slot_flags[k] != 0)
-                                    {
-                                        if (slot->active != 0)
-                                        {
-                                            val += slot->stat_values[content_index - 0x43];
-                                        }
-                                        has = (uintptr_t)g_item_slot_data[k];
-                                        if (has != 0 && ((MenuItemEntry*)has)->active != 0)
-                                        {
-                                            val -= ((MenuItemEntry*)has)->stat_values[content_index - 0x43];
-                                        }
-                                        has = 1;
-                                    }
-                                }
-                                if (has)
-                                {
-                                    menu_copy_sign_label(label_buffer, val);
-                                    packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, 0);
-                                }
-                            }
-                            break;
-                            case 0x47:
-                            case 0x48:
-                            case 0x49:
-                            case 0x4A:
-                            {
-                                uintptr_t has = 0;
-                                s32 total = has;
-
-                                for (k = 1; k < 4; k++)
-                                {
-                                    MenuItemEntry* slot = &D_80168C20[k];
-                                    if (g_item_slot_flags[k] != 0)
-                                    {
-                                        if (slot->active != 0)
-                                        {
-                                            total += slot->stat_values[content_index - 0x47];
-                                        }
-                                        has = (uintptr_t)g_item_slot_data[k];
-                                        if (has != 0 && ((MenuItemEntry*)has)->active != 0)
-                                        {
-                                            total -= ((MenuItemEntry*)has)->stat_values[content_index - 0x47];
-                                        }
-                                        has = 1;
-                                    }
-                                }
-                                if (has)
-                                {
-                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, abs(total), 1, &pos,
-                                                                  ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                            }
-                            break;
-                            default:
-                                break;
-                            }
+                            packet_cursor = menu_emit_draw_mode_primitive(menu_emit_icon_sprite(packet_cursor, ot_entry, t0,
+                                                                                                content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                                                content_item->y - MENU_CONTENT_VIEW_Y_OFFSET, 0, 0, 0, 0),
+                                                                          ot_entry);
                         }
-                        break;
+                    }
+                    break;
 
-                        case 4:
+                    case 3:
+                    {
+                        content_index = content_item->action_type;
+                        switch (content_index)
                         {
-                            content_index = content_item->action_type;
-                            switch (content_index)
+                        case 0x1:
+                            if (g_menu_item_ptr != 0)
                             {
-                            case 0x1:
-                            {
-                                u8 u_val;
-                                u8 v_val;
-                                SET_BGR0_PACKED(packet_cursor, GPU_TINT_NEUTRAL);
-                                setSprt(packet_cursor);
-                                setXY0((SPRT*)packet_cursor, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET);
-                                u_val = 0xD0;
-                                if (g_menu_char_slot == 2)
-                                {
-                                    u_val = 0xA0;
-                                }
-                                ((SPRT*)packet_cursor)->u0 = u_val;
-                                v_val = 0x50;
-                                if (g_menu_char_slot == 0)
-                                {
-                                    v_val = 0x20;
-                                }
-                                ((SPRT*)packet_cursor)->v0 = v_val;
-                                SET_SPRT_WH_PACKED(packet_cursor, 0x30, 0x30);
-                                SET_SPRT_CLUT(packet_cursor, (((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
-                                addPrim(ot_entry, packet_cursor);
-                                packet_cursor = (SPRT*)packet_cursor + 1;
-                                SET_BGR0_PACKED(packet_cursor, 0);
-                                setSprt(packet_cursor);
-                                setSemiTrans(packet_cursor, 1);
-                                setXY0((SPRT*)packet_cursor, (content_item->packed_x & MENU_CONTENT_X_MASK) + 2, content_item->y - 6);
-                                u_val = 0xD0;
-                                if (g_menu_char_slot == 2)
-                                {
-                                    u_val = 0xA0;
-                                }
-                                ((SPRT*)packet_cursor)->u0 = u_val;
-                                v_val = 0x50;
-                                if (g_menu_char_slot == 0)
-                                {
-                                    v_val = 0x20;
-                                }
-                                ((SPRT*)packet_cursor)->v0 = v_val;
-                                SET_SPRT_WH_PACKED(packet_cursor, 0x30, 0x30);
-                                SET_SPRT_CLUT(packet_cursor, (((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
-                                addPrim(ot_entry, packet_cursor);
-                                packet_cursor = (SPRT*)packet_cursor + 1;
-                                setDrawTPage(packet_cursor, 0, 0, 0x1F);
-                                addPrim(ot_entry, packet_cursor);
-                                packet_cursor = (DR_TPAGE*)packet_cursor + 1;
-                            }
-                            break;
-                            case 0x2:
-                            {
-                                u8* call_base = (u8*)g_saved_game_ctx;
-                                s32 off = g_menu_char_slot * 0x250 + 0x5F0;
-                                packet_cursor = field_draw_text(packet_cursor, ot_entry, call_base + off, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                draw_packet_cursor = packet_cursor;
+                                draw_source = (void*)g_menu_item_ptr;
+                                packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, draw_source, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
                                                               content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                               (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                             }
                             break;
-                            case 0x3:
+                        case 0x2:
+                            if (g_menu_item_ptr != 0)
                             {
-                                SavedGameLayout* context = g_saved_game_ctx;
-                                u8 v = menu_active_character(context)->progression.fields.level;
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, v, 1, &pos,
+                                u32 v;
+                                u32 v1;
+
+                                if (menu_item_is_nondefault(g_menu_item_ptr) != 0)
+                                {
+                                    void* a3 =
+                                        (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_KEY_ITEM_NAMES]);
+                                    menu_concat_encoded_text(
+                                        &prefix_buffer,
+                                        (void*)((u8*)a3 + *(u16*)((u8*)a3 + (g_menu_item_ptr->attributes.halves.high & 0x3F) * 2)),
+                                        (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] +
+                                                *(u16*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] +
+                                                        0xB4)));
+                                }
+                                else
+                                {
+                                    prefix_buffer[0] = 0;
+                                }
+                                v = g_menu_item_ptr->attributes.packed;
+                                v1 = (v >> 8) & 3;
+                                switch (v1)
+                                {
+                                case 0:
+                                {
+                                    uintptr_t base0 = ((uintptr_t)g_menu_state_ptr +
+                                                          ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP]);
+                                    menu_concat_encoded_text(&text_buffer, &prefix_buffer,
+                                                             (void*)(base0 + *(u16*)(((v >> 9) & 0x7E) + base0)));
+                                    break;
+                                }
+                                case 1:
+                                {
+                                    uintptr_t base1 = ((uintptr_t)g_menu_state_ptr +
+                                                          ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP]);
+                                    menu_concat_encoded_text(&text_buffer, &prefix_buffer,
+                                                             (void*)(base1 + *(u16*)(((v >> 9) & 0x7E) + base1 + 11 * sizeof(u16))));
+                                    break;
+                                }
+                                default:
+                                {
+                                    uintptr_t base2 = ((uintptr_t)g_menu_state_ptr +
+                                                          ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP]);
+                                    menu_concat_encoded_text(
+                                        &text_buffer, &prefix_buffer,
+                                        (void*)(base2 +
+                                                *(u16*)(((g_menu_item_ptr->attributes.packed >> 9) & 0x7E) + base2 + 23 * sizeof(u16))));
+                                    break;
+                                }
+                                }
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&text_buffer), 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                              content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                              (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                            }
+                            break;
+                        case 0x3:
+                            if (g_menu_item_ptr != 0)
+                            {
+                                packet_cursor =
+                                    menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_item_ptr->display_nibbles.packed & 0xF, 1,
+                                                             &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                            }
+                            break;
+                        case 0x4:
+                            if (g_menu_item_ptr != 0)
+                            {
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
+                                                                         (g_menu_item_ptr->display_nibbles.packed >> 4) & 0xF, 1, &pos,
                                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
-                            case 0x4:
+                        case 0x5:
+                            if (g_menu_item_ptr != 0)
                             {
-                                packet_cursor = field_draw_number(ot_entry, packet_cursor, g_field_object_states[g_menu_char_slot].current_hp.word, 1, &pos,
-                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
+                                                                         (g_menu_item_ptr->display_nibbles.packed >> 8) & 0xF, 1, &pos,
+                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
-                            case 0x5:
+                        case 0x6:
+                            if (g_menu_item_ptr != 0)
                             {
-                                SavedGameLayout* context = g_saved_game_ctx;
-                                u16 v = menu_active_character(context)->unknown_0x24;
-                                packet_cursor = field_draw_number(ot_entry, packet_cursor, v, 1, &pos,
-                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
+                                                                         (g_menu_item_ptr->display_nibbles.packed >> 12) & 0xF, 1, &pos,
+                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
-                            case 0x6:
+                        case 0x7:
+                            if (g_menu_item_ptr != 0)
                             {
-                                SavedGameLayout* context = g_saved_game_ctx;
-                                u32 v = menu_active_character(context)->progression.packed;
-                                packet_cursor = field_draw_number(ot_entry, packet_cursor, (v >> 8), 1, &pos,
-                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                            case 0x7:
-                            case 0x8:
-                            case 0x9:
-                            case 0xA:
-                            case 0xB:
-                            case 0xC:
-                            case 0xD:
-                            case 0xE:
-                            {
-                                void* base = (void*)g_saved_game_ctx;
-                                s32 idx = content_index - 7;
                                 packet_cursor =
-                                    menu_draw_clamped_number(ot_entry, packet_cursor, menu_active_character_value((SavedGameLayout*)base, idx) >> 9, 1, &pos,
+                                    menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_item_ptr->display_nibbles.halfwords[1] & 0xF,
+                                                             1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                            }
+                            break;
+                        case 0x8:
+                            if (g_menu_item_ptr != 0)
+                            {
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
+                                                                         (g_menu_item_ptr->display_nibbles.packed >> 20) & 0xF, 1, &pos,
+                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                            }
+                            break;
+                        case 0x9:
+                            if (g_menu_item_ptr != 0)
+                            {
+                                packet_cursor =
+                                    menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_item_ptr->display_nibbles.bytes[3] & 0xF, 1,
+                                                             &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                            }
+                            break;
+                        case 0xA:
+                            if (g_menu_item_ptr != 0)
+                            {
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
+                                                                         (g_menu_item_ptr->display_nibbles.packed >> 28) & 0xF, 1, &pos,
+                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                            }
+                            break;
+                        case 0xB:
+                        case 0xC:
+                        case 0xD:
+                            if (g_menu_item_ptr != 0)
+                            {
+                                draw_packet_cursor = packet_cursor;
+                                base_a2_1 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x5C));
+                                {
+                                    s32 a3 = 1;
+                                    void* a2_2 = (void*)((u8*)base_a2_1 + *(u16*)((u8*)base_a2_1 + (*((u8*)g_menu_item_ptr + content_index + 0x15) * 2)));
+                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                }
+                            }
+                            break;
+                        case 0xE:
+                        case 0xF:
+                        case 0x10:
+                            if (g_menu_category0_item != 0)
+                            {
+                                draw_packet_cursor = packet_cursor;
+                                base_a2_2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
+                                {
+                                    s32 a3 = 1;
+                                    void* a2_2 =
+                                        (void*)((u8*)base_a2_2 + *(u16*)((u8*)base_a2_2 + (*((u8*)g_menu_category0_item + content_index + 0x1A) * 2)));
+                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                }
+                            }
+                            break;
+                        case 0x11:
+                            if (g_menu_category0_item != 0)
+                            {
+                                packet_cursor = field_draw_number(ot_entry, packet_cursor, g_menu_category0_item->stat_values[0], 1, &pos,
+                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                            }
+                            break;
+                        case 0x12:
+                            if (g_menu_category1_item != 0)
+                            {
+                                packet_cursor =
+                                    menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_category1_item->stat_values[0], 1, &pos,
                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
-                            case 0xF:
+                        case 0x13:
+                            if (g_menu_item_ptr != 0)
                             {
-                                void* a2_2 = g_menu_equipment_base;
-                                if (*(u8*)a2_2 != 0)
+                                uintptr_t a2;
+                                u8* a3ptr;
+                                s32 idx;
+                                void* a2_2;
+                                draw_packet_cursor = packet_cursor;
+                                a2 = (uintptr_t)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x44);
+                                a3ptr = (u8*)g_menu_category2_item;
+                                idx = (a3ptr[0x24] * 0xE + a3ptr[0x25]) * 2;
+                                a2_2 = (void*)(a2 + *(u16*)(idx + a2));
+                                packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                              content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                              (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                            }
+                            break;
+                        case 0x14:
+                            if (g_menu_item_ptr != 0)
+                            {
+                                draw_packet_cursor = packet_cursor;
+                                base_a2_3 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x28));
                                 {
-                                    s32 a3 = 1;
-                                    if (g_item_slot_flags[0] != 0)
-                                    {
-                                        a3 = 2;
-                                    }
-                                    packet_cursor = field_draw_text(packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                    void* a2_2 = (void*)((u8*)base_a2_3 + *(u16*)((u8*)base_a2_3 + (*((u8*)g_menu_category2_item + 0x24) * 2)));
+                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
                                                                   content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                   (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                 }
                             }
                             break;
-                            case 0x10:
-                            case 0x11:
-                            case 0x12:
-                                if (D_80168C30->active != 0)
-                                {
-                                    draw_packet_cursor = packet_cursor;
-                                    base_a2_5 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
-                                    {
-                                        void* a2_2 = (void*)((u8*)base_a2_5 + *(u16*)((u8*)base_a2_5 + (*((u8*)D_80168C30 + content_index + 0x18) * 2)));
-                                        packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                      (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                    }
-                                }
-                                break;
-                            case 0x13:
+                        case 0x15:
+                            if (g_menu_item_ptr != 0)
                             {
-                                s32 displayed_stat = zero;
-                                if (g_item_slot_flags[0] != 0)
+                                draw_packet_cursor = packet_cursor;
+                                base_a2_4 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x38));
                                 {
-                                    MenuItemEntry* comparison_item = g_item_slot_data[0];
-                                    if (comparison_item == 0 || comparison_item->active == 0)
-                                    {
-                                        displayed_stat += D_800F0C1C;
-                                    }
-                                    else
-                                    {
-                                        displayed_stat = comparison_item->stat_values[0];
-                                    }
+                                    void* a2_2 = (void*)((u8*)base_a2_4 + *(u16*)((u8*)base_a2_4 + (*((u8*)g_menu_category2_item + 0x25) * 2)));
+                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                 }
-                                else
-                                {
-                                    if (D_80168C30->active != 0)
-                                    {
-                                        displayed_stat = D_80168C30->stat_values[0];
-                                    }
-                                }
-                                packet_cursor = field_draw_number(ot_entry, packet_cursor, displayed_stat, 1, &pos,
+                            }
+                            break;
+                        case 0x16:
+                            if (g_menu_item_ptr != 0)
+                            {
+                                packet_cursor = field_draw_number(ot_entry, packet_cursor, *((u8*)g_menu_category2_item + 0x26), 1, &pos,
                                                               ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
-                            case 0x14:
-                            case 0x15:
-                            case 0x16:
-                            {
-                                uintptr_t base = (uintptr_t)g_menu_equipment_base;
-                                s32 shl = content_index << 6;
-                                if (*(u8*)(shl + base - 0x4C0) != 0)
-                                {
-                                    s32 a3 = 1;
-                                    s32 off = shl - 0x4C0;
-                                    void* a2_2 = (void*)(base + off);
-                                    if (g_item_slot_flags[content_index - 0x13] != 0)
-                                    {
-                                        a3 = 2;
-                                    }
-                                    packet_cursor = field_draw_text(packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                }
-                            }
-                            break;
-                            case 0x17:
-                            case 0x18:
-                            {
-                                void* base;
-                                u8 idx;
-                                draw_packet_cursor = packet_cursor;
-                                base_a2_6 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x10));
-                                base = (void*)g_saved_game_ctx;
-                                {
-                                    u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + content_index + 0x5F3;
-                                    idx = *idxp;
-                                }
-                                {
-                                    void* a2_2 = (void*)((u8*)base_a2_6 + *(u16*)((u8*)base_a2_6 + (idx * 2)));
-                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                }
-                            }
-                            break;
-                            case 0x19:
-                            {
-                                s32 v = func_800B607C(g_menu_char_slot);
-                                SavedGameLayout* context = g_saved_game_ctx;
-                                u32 shift = menu_active_character(context)->progression.packed >> 8;
-                                packet_cursor = field_draw_number(ot_entry, packet_cursor, v - shift, 1, &pos,
-                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                            case 0x1B:
-                            case 0x1C:
-                            case 0x1D:
-                            case 0x1E:
-                            {
-                                void* base = (void*)g_saved_game_ctx;
-                                u8* ptr;
-                                u8 val;
-                                ptr = (u8*)base + g_menu_char_slot * 0x250;
-                                ptr += content_index;
-                                content_index = (u32)ptr;
-                                val = ((MenuNameSelection*)(ptr + 0x5F1))->packed;
-                                if (val != 0xFF)
-                                {
-                                    draw_packet_cursor = packet_cursor;
-                                    if (val & 0x80)
-                                    {
-                                        u16* lvar_v1_2 = (u16*)g_saved_game_ctx;
-                                        void* lvar_a2 = (void*)((u8*)lvar_v1_2 + (g_menu_char_slot * 0x250 + 0x5F0));
-                                        void* a2_2 = (void*)((u8*)lvar_a2 + ((((MenuNameSelection*)(ptr + 0x5F1))->fields.index << 6) + 0x150));
-                                        packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                      (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                    }
-                                    else
-                                    {
-                                        u32 tmpv;
-                                        u8 idx;
-                                        u16 off2;
-                                        base_a2_7 = (uintptr_t)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x20);
-                                        tmpv = ((g_menu_equipment_base->attributes.packed >> 10) & 0x3F);
-
-                                        idx = ((MenuNameSelection*)(ptr + 0x5F1))->fields.index;
-                                        off2 = idx * 2;
-                                        {
-                                            void* a2_2 = (void*)(base_a2_7 + *(u16*)(off2 + (tmpv * 0x30 + base_a2_7)));
-                                            packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                          content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                          (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                        }
-                                    }
-                                }
-                            }
-                            break;
-                            case 0x1F:
-                            {
-                                void* base;
-                                u8 idx;
-                                draw_packet_cursor = packet_cursor;
-                                base_a2_8 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x4C));
-                                base = (void*)g_saved_game_ctx;
-                                {
-                                    u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + 0x609;
-                                    idx = *idxp;
-                                }
-                                {
-                                    void* a2_2 = (void*)((u8*)base_a2_8 + *(u16*)((u8*)base_a2_8 + (idx * 2)));
-                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                }
-                            }
-                            break;
-                            case 0x20:
-                            {
-                                u32 total = 0;
-                                for (k = 1; k < 4; k++)
-                                {
-                                    if (g_item_slot_flags[k] != 0)
-                                    {
-                                        MenuItemEntry* ptr = g_item_slot_data[k];
-                                        if (ptr != 0 && ptr->active != 0)
-                                        {
-                                            total += ptr->stat_values[0];
-                                        }
-                                    }
-                                    else
-                                    {
-                                        MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
-                                        if (v->active != 0)
-                                        {
-                                            total += v->stat_values[0];
-                                        }
-                                    }
-                                }
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
-                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                            case 0x21:
-                            {
-                                u32 total = 0;
-                                for (k = 1; k < 4; k++)
-                                {
-                                    if (g_item_slot_flags[k] != 0)
-                                    {
-                                        MenuItemEntry* ptr = g_item_slot_data[k];
-                                        if (ptr != 0 && ptr->active != 0)
-                                        {
-                                            total += ptr->stat_values[1];
-                                        }
-                                    }
-                                    else
-                                    {
-                                        MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
-                                        if (v->active != 0)
-                                        {
-                                            total += v->stat_values[1];
-                                        }
-                                    }
-                                }
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
-                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                            case 0x22:
-                            {
-                                u32 total = 0;
-                                for (k = 1; k < 4; k++)
-                                {
-                                    if (g_item_slot_flags[k] != 0)
-                                    {
-                                        MenuItemEntry* ptr = g_item_slot_data[k];
-                                        if (ptr != 0 && ptr->active != 0)
-                                        {
-                                            total += ptr->stat_values[2];
-                                        }
-                                    }
-                                    else
-                                    {
-                                        MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
-                                        if (v->active != 0)
-                                        {
-                                            total += v->stat_values[2];
-                                        }
-                                    }
-                                }
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
-                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                            case 0x23:
-                            {
-                                u32 total = 0;
-                                for (k = 1; k < 4; k++)
-                                {
-                                    if (g_item_slot_flags[k] != 0)
-                                    {
-                                        MenuItemEntry* ptr = g_item_slot_data[k];
-                                        if (ptr != 0 && ptr->active != 0)
-                                        {
-                                            total += ptr->stat_values[3];
-                                        }
-                                    }
-                                    else
-                                    {
-                                        MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
-                                        if (v->active != 0)
-                                        {
-                                            total += v->stat_values[3];
-                                        }
-                                    }
-                                }
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
-                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                            case 0x3F:
-                            {
-                                val = 0;
-                                if (g_item_slot_flags[0] != 0)
-                                {
-                                    if (D_80168C20->active != 0)
-                                    {
-                                        val = D_80168C30->stat_values[0];
-                                    }
-                                    if (g_item_slot_data[0] != 0 && g_item_slot_data[0]->active != 0)
-                                    {
-                                        val = val - (g_item_slot_data[0])->stat_values[0];
-                                    }
-                                    else
-                                    {
-                                        val = val - D_800F0C1C;
-                                    }
-                                    menu_copy_sign_label(label_buffer, val);
-                                    packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, 0);
-                                }
-                            }
-                            break;
-                            case 0x40:
-                            case 0x41:
-                            case 0x42:
-                            case 0x43:
-                            {
-                                uintptr_t has = 0;
-
-                                val = has;
-                                for (k = 1; k < 4; k++)
-                                {
-                                    MenuItemEntry* slot = &D_80168C20[k];
-                                    if (g_item_slot_flags[k] != 0)
-                                    {
-                                        if (slot->active != 0)
-                                        {
-                                            val += slot->stat_values[content_index - 0x40];
-                                        }
-                                        has = (uintptr_t)g_item_slot_data[k];
-                                        if (has != 0 && ((MenuItemEntry*)has)->active != 0)
-                                        {
-                                            val -= ((MenuItemEntry*)has)->stat_values[content_index - 0x40];
-                                        }
-                                        has = 1;
-                                    }
-                                }
-                                if (has)
-                                {
-                                    menu_copy_sign_label(label_buffer, val);
-                                    packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, 0);
-                                }
-                            }
-                            break;
-                            case 0x44:
-                            {
-                                u16 a2_23 = 0;
-                                if (g_item_slot_flags[0] != 0)
-                                {
-                                    s32 diff;
-                                    if (D_80168C20->active != 0)
-                                    {
-                                        a2_23 = D_80168C30->stat_values[0];
-                                    }
-                                    if (g_item_slot_data[0] != 0 && g_item_slot_data[0]->active != 0)
-                                    {
-                                        diff = a2_23 - (g_item_slot_data[0])->stat_values[0];
-                                    }
-                                    else
-                                    {
-                                        diff = a2_23 - D_800F0C1C;
-                                    }
-                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, abs(diff), 1, &pos,
-                                                                  ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                            }
-                            break;
-                            case 0x45:
-                            case 0x46:
-                            case 0x47:
-                            case 0x48:
-                            {
-                                uintptr_t has = 0;
-                                s32 total = has;
-
-                                for (k = 1; k < 4; k++)
-                                {
-                                    MenuItemEntry* slot = &D_80168C20[k];
-                                    if (g_item_slot_flags[k] != 0)
-                                    {
-                                        if (slot->active != 0)
-                                        {
-                                            total += slot->stat_values[content_index - 0x45];
-                                        }
-                                        has = (uintptr_t)g_item_slot_data[k];
-                                        if (has != 0 && ((MenuItemEntry*)has)->active != 0)
-                                        {
-                                            total -= ((MenuItemEntry*)has)->stat_values[content_index - 0x45];
-                                        }
-                                        has = 1;
-                                    }
-                                }
-                                if (has)
-                                {
-                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (u32)abs(total), 1, &pos,
-                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                            }
-                            break;
-                            case 0x49:
-                            {
-                                void* base;
-                                u8 idx;
-                                draw_packet_cursor = packet_cursor;
-                                base_a2_9 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x74));
-                                base = (void*)g_saved_game_ctx;
-                                {
-                                    u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + 0x633;
-                                    idx = *idxp;
-                                }
-                                {
-                                    void* a2_2 = (void*)((u8*)base_a2_9 + *(u16*)((u8*)base_a2_9 + (idx * 2)));
-                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                }
-                            }
-                            break;
-                            case 0x4A:
-                            {
-                                s8 golem_index = g_saved_game_ctx->joined_golem;
-                                if (golem_index >= 0)
-                                {
-                                    SavedGameLayout* context = g_saved_game_ctx;
-                                    u8 v = menu_golem_record(context, golem_index)->logic_layout & GOLEM_LOGIC_CLASS_MASK;
-                                    void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x80));
-                                    packet_cursor = field_draw_text(packet_cursor, ot_entry, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), 1,
-                                                                  content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                }
-                            }
-                            break;
-                            case 0x4B:
-                            {
-                                s8 golem_index = g_saved_game_ctx->joined_golem;
-                                if (golem_index >= 0)
-                                {
-                                    SavedGameLayout* context = g_saved_game_ctx;
-                                    u8 v = menu_golem_record(context, golem_index)->logic_layout >> GOLEM_GRID_BOUND_SHIFT;
-                                    void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x7C));
-                                    packet_cursor = field_draw_text(packet_cursor, ot_entry, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), 1,
-                                                                  content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                }
-                            }
-                            break;
-                            case 0x4C:
-                            {
-                                s8 golem_index = g_saved_game_ctx->joined_golem;
-                                if (golem_index >= 0)
-                                {
-                                    SavedGameLayout* context = g_saved_game_ctx;
-                                    u8 v = menu_golem_record(context, golem_index)->unknown_0x46;
-                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, v, 1, &pos,
-                                                                  ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                                }
-                            }
-                            break;
-                            case 0x4D:
-                            {
-                                s8 golem_index = g_saved_game_ctx->joined_golem;
-                                if (golem_index >= 0)
-                                {
-                                    SavedGameLayout* context;
-                                    s32 idx;
-                                    draw_packet_cursor = packet_cursor;
-                                    base_a2_10 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x70));
-                                    context = g_saved_game_ctx;
-                                    idx = menu_golem_record(context, golem_index)->palette;
-                                    {
-                                        void* a2_2 = (void*)((u8*)base_a2_10 + *(u16*)((u8*)base_a2_10 + (idx * 2)));
-                                        packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                      (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                    }
-                                }
-                            }
-                            break;
-                            case 0x4E:
-                            case 0x4F:
-                            case 0x50:
-                            case 0x51:
-                            case 0x52:
-                            case 0x53:
-                            case 0x54:
-                            case 0x55:
-                            {
-                                u32 display_value = 0;
-                                switch (content_index)
-                                {
-                                case 0x4E:
-                                    display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed & 0xF;
-                                    break;
-                                case 0x4F:
-                                    display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.bytes[0];
-                                    display_value >>= 4;
-                                    break;
-                                case 0x50:
-                                    display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 8;
-                                    display_value &= 0xF;
-                                    break;
-                                case 0x51:
-                                    display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 12;
-                                    display_value &= 0xF;
-                                    break;
-                                case 0x52:
-                                    display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.halfwords[1];
-                                    display_value &= 0xF;
-                                    break;
-                                case 0x53:
-                                    display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 20;
-                                    display_value &= 0xF;
-                                    break;
-                                case 0x54:
-                                    display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.bytes[3];
-                                    display_value &= 0xF;
-                                    break;
-                                case 0x55:
-                                    display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 28;
-                                    break;
-                                }
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, display_value, 1, &pos,
-                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                            default:
-                                break;
-                            }
-                        }
-                        break;
-
-                        case 6:
+                        case 0x17:
+                        case 0x18:
+                        case 0x19:
+                        case 0x1A:
                         {
-                            shared_s0 = content_item->action_type;
-                            switch (shared_s0)
+                            val = 0;
+                            if (g_item_slot_flags[content_index - 0x17] != 0)
                             {
-                            case 1:
-                                if (*(u32*)((void*)g_saved_game_ctx + 0x2C) > 0x989680U)
+                                MenuItemEntry* equipment = (MenuItemEntry*)((content_index * sizeof(MenuItemEntry)) + (uintptr_t)D_80168C30 - 0x17 * sizeof(MenuItemEntry));
+                                MenuItemEntry* comparison_item;
+                                if (equipment->active != 0)
                                 {
-                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, 0x989680U, 1, &pos,
-                                                                  ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    val = equipment->stat_values[0];
+                                }
+                                comparison_item = g_item_slot_data[content_index - 0x17];
+                                if (comparison_item != 0 && comparison_item->active != 0)
+                                {
+                                    val -= comparison_item->stat_values[0];
                                 }
                                 else
                                 {
-                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, *(u32*)((void*)g_saved_game_ctx + 0x2C), 1, &pos,
-                                                                  ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    val -= D_800F0C1C;
                                 }
-                                break;
-                            case 2:
-                            {
-                                u32 ltemp_v0_6;
-                                s32 v1;
-                                s32 s2;
-                                s32 split_tmp;
-                                s32 one;
-                                ltemp_v0_6 = (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK;
-                                switch (ltemp_v0_6)
-                                {
-                                case 1:
-                                    pos.x -= 0x32;
-                                    break;
-                                case 2:
-                                    pos.x -= 0x19;
-                                    break;
-                                }
-                                v1 = *(s32*)((void*)g_saved_game_ctx + 0x30) + VSync(-1);
-                                shared_s0 = v1 - g_playtime_vsync_origin;
-                                pos.x += 0x14;
-                                s2 = shared_s0 / 216000;
-                                one = 1;
-                                packet_cursor = field_draw_number(ot_entry, packet_cursor, s2, one, &pos, one);
-                                if ((g_frame_counter / 15) & 1)
-                                {
-                                    packet_cursor = field_draw_text(packet_cursor, ot_entry, MENU_PLAYTIME_SEPARATOR, one, pos.x, pos.y, 0);
-                                }
-                                pos.x += MENU_PLAYTIME_SEPARATOR_ADVANCE;
-                                split_tmp = s2 * 0x3C;
-                                shared_s0 = (shared_s0 / 3600) - split_tmp;
-                                if (shared_s0 < 0xA)
-                                {
-                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, 0U, 1, &pos, 0);
-                                }
-                                pos.x += MENU_PLAYTIME_MINUTES_ADVANCE;
-                                packet_cursor = field_draw_number(ot_entry, packet_cursor, shared_s0, 1, &pos, one);
-                            }
-                            break;
+                                packet_cursor = field_draw_number(ot_entry, packet_cursor, abs(val), 1, &pos,
+                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                         }
-                        break;
-
-                        case 7:
+                        /* fallthrough */
+                        case 0x1B:
+                        case 0x1C:
+                        case 0x1D:
+                        case 0x1E:
                         {
-                            shared_s0 = content_item->action_type;
-                            switch (shared_s0)
+                            val = 0;
+                            if (g_item_slot_flags[content_index - 0x1B] != 0)
                             {
-                            case 1:
-                            {
-                                void* base = (void*)g_saved_game_ctx + g_menu_char_slot * 0x250;
-                                if ((*(u8*)((u8*)base + 0x608) & 0x7F) != two_outer || ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
+                                MenuItemEntry* equipment = (MenuItemEntry*)((content_index * sizeof(MenuItemEntry)) + (uintptr_t)D_80168C30 - 0x1B * sizeof(MenuItemEntry));
+                                MenuItemEntry* comparison_item;
+                                if (equipment->active != 0)
                                 {
-                                    draw_packet_cursor = packet_cursor;
-                                    base_a2_11 = (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES]);
-                                    {
-                                        void* a2_2 = (void*)((u8*)base_a2_11 + *(u16*)((u8*)base_a2_11 + 0x74));
-                                        packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                      (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                    }
+                                    val = equipment->stat_values[0];
                                 }
-                            }
-                            break;
-                            case 2:
-                            {
-                                void* base = (void*)g_saved_game_ctx + g_menu_char_slot * 0x250;
-                                if ((*(u8*)((u8*)base + 0x608) & 0x7F) != 2 || ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
+                                comparison_item = g_item_slot_data[content_index - 0x1B];
+                                if (comparison_item != 0 && comparison_item->active != 0)
                                 {
-                                    draw_packet_cursor = packet_cursor;
-                                    base_a2_12 = (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES]);
-                                    {
-                                        void* a2_2 = (void*)((u8*)base_a2_12 + *(u16*)((u8*)base_a2_12 + 0x76));
-                                        packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                      (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                    }
+                                    val -= comparison_item->stat_values[0];
                                 }
-                            }
-                            break;
+                                else
+                                {
+                                    val -= D_800F0C1C;
+                                }
+                                menu_copy_sign_label(label_buffer, val);
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, 0);
                             }
                         }
                         break;
+                        case 0x1F:
+                        case 0x20:
+                        case 0x21:
+                        case 0x22:
+                        case 0x23:
+                        case 0x24:
+                        case 0x25:
+                        case 0x26:
+                            if (g_menu_item_ptr != 0)
+                            {
+                                s32 res = menu_lookup_item_nibble(g_menu_item_ptr, content_index - 0x1F);
+                                menu_copy_sign_label(label_buffer, res);
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, 0);
+                            }
+                            break;
+                        case 0x27:
+                        case 0x28:
+                        case 0x29:
+                        case 0x2A:
+                        case 0x2B:
+                        case 0x2C:
+                        case 0x2D:
+                        case 0x2E:
+                            if (g_menu_item_ptr != 0)
+                            {
+                                s32 diff = menu_lookup_item_nibble(g_menu_item_ptr, content_index - 0x27);
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (u32)abs(diff), 1, &pos,
+                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                            }
+                            break;
+                        case 0x2F:
+                        case 0x30:
+                        case 0x31:
+                        case 0x32:
+                        case 0x33:
+                        case 0x34:
+                        case 0x35:
+                        case 0x36:
+                        {
+                            s32 idx2 = content_index - 0x2F;
+                            if (g_menu_item_ptr != 0)
+                            {
+                                s32 v1 = menu_lookup_item_nibble(g_menu_item_ptr, idx2);
+                                s32 v2 = menu_lookup_item_nibble((void*)g_menu_active_equipped_item, idx2);
+                                s32 diff = v1 - v2;
+                                menu_copy_sign_label(label_buffer, diff);
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, 0);
+                            }
+                        }
+                        break;
+                        case 0x37:
+                        case 0x38:
+                        case 0x39:
+                        case 0x3A:
+                        case 0x3B:
+                        case 0x3C:
+                        case 0x3D:
+                        case 0x3E:
+                        {
+                            s32 idx2 = content_index - 0x2F;
+                            if (g_menu_item_ptr != 0)
+                            {
+                                s32 v1 = menu_lookup_item_nibble(g_menu_item_ptr, idx2);
+                                s32 v2 = menu_lookup_item_nibble((void*)g_menu_active_equipped_item, idx2);
+                                s32 diff = v1 - v2;
+                                packet_cursor = field_draw_number(ot_entry, packet_cursor, abs(diff), 1, &pos,
+                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                            }
+                        }
+                        break;
+                        case 0x3F:
+                        case 0x40:
+                        case 0x41:
+                        case 0x42:
+                            if (g_menu_category1_item != 0)
+                            {
+                                packet_cursor = menu_draw_clamped_number(
+                                    ot_entry, packet_cursor, g_menu_category1_item->stat_values[content_index - 0x3F], 1, &pos,
+                                    ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                            }
+                            break;
+                        case 0x43:
+                        case 0x44:
+                        case 0x45:
+                        case 0x46:
+                        {
+                            uintptr_t has = 0;
 
+                            val = has;
+                            for (k = 1; k < 4; k++)
+                            {
+                                MenuItemEntry* slot = &D_80168C20[k];
+                                if (g_item_slot_flags[k] != 0)
+                                {
+                                    if (slot->active != 0)
+                                    {
+                                        val += slot->stat_values[content_index - 0x43];
+                                    }
+                                    has = (uintptr_t)g_item_slot_data[k];
+                                    if (has != 0 && ((MenuItemEntry*)has)->active != 0)
+                                    {
+                                        val -= ((MenuItemEntry*)has)->stat_values[content_index - 0x43];
+                                    }
+                                    has = 1;
+                                }
+                            }
+                            if (has)
+                            {
+                                menu_copy_sign_label(label_buffer, val);
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, 0);
+                            }
+                        }
+                        break;
+                        case 0x47:
+                        case 0x48:
+                        case 0x49:
+                        case 0x4A:
+                        {
+                            uintptr_t has = 0;
+                            s32 total = has;
+
+                            for (k = 1; k < 4; k++)
+                            {
+                                MenuItemEntry* slot = &D_80168C20[k];
+                                if (g_item_slot_flags[k] != 0)
+                                {
+                                    if (slot->active != 0)
+                                    {
+                                        total += slot->stat_values[content_index - 0x47];
+                                    }
+                                    has = (uintptr_t)g_item_slot_data[k];
+                                    if (has != 0 && ((MenuItemEntry*)has)->active != 0)
+                                    {
+                                        total -= ((MenuItemEntry*)has)->stat_values[content_index - 0x47];
+                                    }
+                                    has = 1;
+                                }
+                            }
+                            if (has)
+                            {
+                                packet_cursor = field_draw_number(ot_entry, packet_cursor, abs(total), 1, &pos,
+                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                            }
+                        }
+                        break;
                         default:
                             break;
                         }
                     }
+                    break;
 
-                    content_item++;
-                    remaining_count--;
-                } while (remaining_count != 0);
+                    case 4:
+                    {
+                        content_index = content_item->action_type;
+                        switch (content_index)
+                        {
+                        case 0x1:
+                        {
+                            u8 u_val;
+                            u8 v_val;
+                            SET_BGR0_PACKED(packet_cursor, GPU_TINT_NEUTRAL);
+                            setSprt(packet_cursor);
+                            setXY0((SPRT*)packet_cursor, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET);
+                            u_val = 0xD0;
+                            if (g_menu_char_slot == 2)
+                            {
+                                u_val = 0xA0;
+                            }
+                            ((SPRT*)packet_cursor)->u0 = u_val;
+                            v_val = 0x50;
+                            if (g_menu_char_slot == 0)
+                            {
+                                v_val = 0x20;
+                            }
+                            ((SPRT*)packet_cursor)->v0 = v_val;
+                            SET_SPRT_WH_PACKED(packet_cursor, 0x30, 0x30);
+                            SET_SPRT_CLUT(packet_cursor, (((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
+                            addPrim(ot_entry, packet_cursor);
+                            packet_cursor = (SPRT*)packet_cursor + 1;
+                            SET_BGR0_PACKED(packet_cursor, 0);
+                            setSprt(packet_cursor);
+                            setSemiTrans(packet_cursor, 1);
+                            setXY0((SPRT*)packet_cursor, (content_item->packed_x & MENU_CONTENT_X_MASK) + 2, content_item->y - 6);
+                            u_val = 0xD0;
+                            if (g_menu_char_slot == 2)
+                            {
+                                u_val = 0xA0;
+                            }
+                            ((SPRT*)packet_cursor)->u0 = u_val;
+                            v_val = 0x50;
+                            if (g_menu_char_slot == 0)
+                            {
+                                v_val = 0x20;
+                            }
+                            ((SPRT*)packet_cursor)->v0 = v_val;
+                            SET_SPRT_WH_PACKED(packet_cursor, 0x30, 0x30);
+                            SET_SPRT_CLUT(packet_cursor, (((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
+                            addPrim(ot_entry, packet_cursor);
+                            packet_cursor = (SPRT*)packet_cursor + 1;
+                            setDrawTPage(packet_cursor, 0, 0, 0x1F);
+                            addPrim(ot_entry, packet_cursor);
+                            packet_cursor = (DR_TPAGE*)packet_cursor + 1;
+                        }
+                        break;
+                        case 0x2:
+                        {
+                            u8* call_base = (u8*)g_saved_game_ctx;
+                            s32 off = g_menu_char_slot * 0x250 + 0x5F0;
+                            packet_cursor = field_draw_text(packet_cursor, ot_entry, call_base + off, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                          content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                          (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                        }
+                        break;
+                        case 0x3:
+                        {
+                            SavedGameLayout* context = g_saved_game_ctx;
+                            u8 v = menu_active_character(context)->progression.fields.level;
+                            packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, v, 1, &pos,
+                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                        }
+                        break;
+                        case 0x4:
+                        {
+                            packet_cursor = field_draw_number(ot_entry, packet_cursor, g_field_object_states[g_menu_char_slot].current_hp.word, 1, &pos,
+                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                        }
+                        break;
+                        case 0x5:
+                        {
+                            SavedGameLayout* context = g_saved_game_ctx;
+                            u16 v = menu_active_character(context)->unknown_0x24;
+                            packet_cursor = field_draw_number(ot_entry, packet_cursor, v, 1, &pos,
+                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                        }
+                        break;
+                        case 0x6:
+                        {
+                            SavedGameLayout* context = g_saved_game_ctx;
+                            u32 v = menu_active_character(context)->progression.packed;
+                            packet_cursor = field_draw_number(ot_entry, packet_cursor, (v >> 8), 1, &pos,
+                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                        }
+                        break;
+                        case 0x7:
+                        case 0x8:
+                        case 0x9:
+                        case 0xA:
+                        case 0xB:
+                        case 0xC:
+                        case 0xD:
+                        case 0xE:
+                        {
+                            void* base = (void*)g_saved_game_ctx;
+                            s32 idx = content_index - 7;
+                            packet_cursor =
+                                menu_draw_clamped_number(ot_entry, packet_cursor, menu_active_character_value((SavedGameLayout*)base, idx) >> 9, 1, &pos,
+                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                        }
+                        break;
+                        case 0xF:
+                        {
+                            void* a2_2 = g_menu_equipment_base;
+                            if (*(u8*)a2_2 != 0)
+                            {
+                                s32 a3 = 1;
+                                if (g_item_slot_flags[0] != 0)
+                                {
+                                    a3 = 2;
+                                }
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                              content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                              (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                            }
+                        }
+                        break;
+                        case 0x10:
+                        case 0x11:
+                        case 0x12:
+                            if (D_80168C30->active != 0)
+                            {
+                                draw_packet_cursor = packet_cursor;
+                                base_a2_5 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
+                                {
+                                    void* a2_2 = (void*)((u8*)base_a2_5 + *(u16*)((u8*)base_a2_5 + (*((u8*)D_80168C30 + content_index + 0x18) * 2)));
+                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                }
+                            }
+                            break;
+                        case 0x13:
+                        {
+                            s32 displayed_stat = zero;
+                            if (g_item_slot_flags[0] != 0)
+                            {
+                                MenuItemEntry* comparison_item = g_item_slot_data[0];
+                                if (comparison_item == 0 || comparison_item->active == 0)
+                                {
+                                    displayed_stat += D_800F0C1C;
+                                }
+                                else
+                                {
+                                    displayed_stat = comparison_item->stat_values[0];
+                                }
+                            }
+                            else
+                            {
+                                if (D_80168C30->active != 0)
+                                {
+                                    displayed_stat = D_80168C30->stat_values[0];
+                                }
+                            }
+                            packet_cursor = field_draw_number(ot_entry, packet_cursor, displayed_stat, 1, &pos,
+                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                        }
+                        break;
+                        case 0x14:
+                        case 0x15:
+                        case 0x16:
+                        {
+                            uintptr_t base = (uintptr_t)g_menu_equipment_base;
+                            s32 shl = content_index << 6;
+                            if (*(u8*)(shl + base - 0x4C0) != 0)
+                            {
+                                s32 a3 = 1;
+                                s32 off = shl - 0x4C0;
+                                void* a2_2 = (void*)(base + off);
+                                if (g_item_slot_flags[content_index - 0x13] != 0)
+                                {
+                                    a3 = 2;
+                                }
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                              content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                              (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                            }
+                        }
+                        break;
+                        case 0x17:
+                        case 0x18:
+                        {
+                            void* base;
+                            u8 idx;
+                            draw_packet_cursor = packet_cursor;
+                            base_a2_6 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x10));
+                            base = (void*)g_saved_game_ctx;
+                            {
+                                u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + content_index + 0x5F3;
+                                idx = *idxp;
+                            }
+                            {
+                                void* a2_2 = (void*)((u8*)base_a2_6 + *(u16*)((u8*)base_a2_6 + (idx * 2)));
+                                packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                              content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                              (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                            }
+                        }
+                        break;
+                        case 0x19:
+                        {
+                            s32 v = func_800B607C(g_menu_char_slot);
+                            SavedGameLayout* context = g_saved_game_ctx;
+                            u32 shift = menu_active_character(context)->progression.packed >> 8;
+                            packet_cursor = field_draw_number(ot_entry, packet_cursor, v - shift, 1, &pos,
+                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                        }
+                        break;
+                        case 0x1B:
+                        case 0x1C:
+                        case 0x1D:
+                        case 0x1E:
+                        {
+                            void* base = (void*)g_saved_game_ctx;
+                            u8* ptr;
+                            u8 val;
+                            ptr = (u8*)base + g_menu_char_slot * 0x250;
+                            ptr += content_index;
+                            content_index = (u32)ptr;
+                            val = ((MenuNameSelection*)(ptr + 0x5F1))->packed;
+                            if (val != 0xFF)
+                            {
+                                draw_packet_cursor = packet_cursor;
+                                if (val & 0x80)
+                                {
+                                    u16* lvar_v1_2 = (u16*)g_saved_game_ctx;
+                                    void* lvar_a2 = (void*)((u8*)lvar_v1_2 + (g_menu_char_slot * 0x250 + 0x5F0));
+                                    void* a2_2 = (void*)((u8*)lvar_a2 + ((((MenuNameSelection*)(ptr + 0x5F1))->fields.index << 6) + 0x150));
+                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                }
+                                else
+                                {
+                                    u32 tmpv;
+                                    u8 idx;
+                                    u16 off2;
+                                    base_a2_7 = (uintptr_t)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x20);
+                                    tmpv = ((g_menu_equipment_base->attributes.packed >> 10) & 0x3F);
+
+                                    idx = ((MenuNameSelection*)(ptr + 0x5F1))->fields.index;
+                                    off2 = idx * 2;
+                                    {
+                                        void* a2_2 = (void*)(base_a2_7 + *(u16*)(off2 + (tmpv * 0x30 + base_a2_7)));
+                                        packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                      (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                        case 0x1F:
+                        {
+                            void* base;
+                            u8 idx;
+                            draw_packet_cursor = packet_cursor;
+                            base_a2_8 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x4C));
+                            base = (void*)g_saved_game_ctx;
+                            {
+                                u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + 0x609;
+                                idx = *idxp;
+                            }
+                            {
+                                void* a2_2 = (void*)((u8*)base_a2_8 + *(u16*)((u8*)base_a2_8 + (idx * 2)));
+                                packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                              content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                              (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                            }
+                        }
+                        break;
+                        case 0x20:
+                        {
+                            u32 total = 0;
+                            for (k = 1; k < 4; k++)
+                            {
+                                if (g_item_slot_flags[k] != 0)
+                                {
+                                    MenuItemEntry* ptr = g_item_slot_data[k];
+                                    if (ptr != 0 && ptr->active != 0)
+                                    {
+                                        total += ptr->stat_values[0];
+                                    }
+                                }
+                                else
+                                {
+                                    MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
+                                    if (v->active != 0)
+                                    {
+                                        total += v->stat_values[0];
+                                    }
+                                }
+                            }
+                            packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
+                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                        }
+                        break;
+                        case 0x21:
+                        {
+                            u32 total = 0;
+                            for (k = 1; k < 4; k++)
+                            {
+                                if (g_item_slot_flags[k] != 0)
+                                {
+                                    MenuItemEntry* ptr = g_item_slot_data[k];
+                                    if (ptr != 0 && ptr->active != 0)
+                                    {
+                                        total += ptr->stat_values[1];
+                                    }
+                                }
+                                else
+                                {
+                                    MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
+                                    if (v->active != 0)
+                                    {
+                                        total += v->stat_values[1];
+                                    }
+                                }
+                            }
+                            packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
+                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                        }
+                        break;
+                        case 0x22:
+                        {
+                            u32 total = 0;
+                            for (k = 1; k < 4; k++)
+                            {
+                                if (g_item_slot_flags[k] != 0)
+                                {
+                                    MenuItemEntry* ptr = g_item_slot_data[k];
+                                    if (ptr != 0 && ptr->active != 0)
+                                    {
+                                        total += ptr->stat_values[2];
+                                    }
+                                }
+                                else
+                                {
+                                    MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
+                                    if (v->active != 0)
+                                    {
+                                        total += v->stat_values[2];
+                                    }
+                                }
+                            }
+                            packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
+                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                        }
+                        break;
+                        case 0x23:
+                        {
+                            u32 total = 0;
+                            for (k = 1; k < 4; k++)
+                            {
+                                if (g_item_slot_flags[k] != 0)
+                                {
+                                    MenuItemEntry* ptr = g_item_slot_data[k];
+                                    if (ptr != 0 && ptr->active != 0)
+                                    {
+                                        total += ptr->stat_values[3];
+                                    }
+                                }
+                                else
+                                {
+                                    MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
+                                    if (v->active != 0)
+                                    {
+                                        total += v->stat_values[3];
+                                    }
+                                }
+                            }
+                            packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
+                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                        }
+                        break;
+                        case 0x3F:
+                        {
+                            val = 0;
+                            if (g_item_slot_flags[0] != 0)
+                            {
+                                if (D_80168C20->active != 0)
+                                {
+                                    val = D_80168C30->stat_values[0];
+                                }
+                                if (g_item_slot_data[0] != 0 && g_item_slot_data[0]->active != 0)
+                                {
+                                    val = val - (g_item_slot_data[0])->stat_values[0];
+                                }
+                                else
+                                {
+                                    val = val - D_800F0C1C;
+                                }
+                                menu_copy_sign_label(label_buffer, val);
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, 0);
+                            }
+                        }
+                        break;
+                        case 0x40:
+                        case 0x41:
+                        case 0x42:
+                        case 0x43:
+                        {
+                            uintptr_t has = 0;
+
+                            val = has;
+                            for (k = 1; k < 4; k++)
+                            {
+                                MenuItemEntry* slot = &D_80168C20[k];
+                                if (g_item_slot_flags[k] != 0)
+                                {
+                                    if (slot->active != 0)
+                                    {
+                                        val += slot->stat_values[content_index - 0x40];
+                                    }
+                                    has = (uintptr_t)g_item_slot_data[k];
+                                    if (has != 0 && ((MenuItemEntry*)has)->active != 0)
+                                    {
+                                        val -= ((MenuItemEntry*)has)->stat_values[content_index - 0x40];
+                                    }
+                                    has = 1;
+                                }
+                            }
+                            if (has)
+                            {
+                                menu_copy_sign_label(label_buffer, val);
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, 0);
+                            }
+                        }
+                        break;
+                        case 0x44:
+                        {
+                            u16 a2_23 = 0;
+                            if (g_item_slot_flags[0] != 0)
+                            {
+                                s32 diff;
+                                if (D_80168C20->active != 0)
+                                {
+                                    a2_23 = D_80168C30->stat_values[0];
+                                }
+                                if (g_item_slot_data[0] != 0 && g_item_slot_data[0]->active != 0)
+                                {
+                                    diff = a2_23 - (g_item_slot_data[0])->stat_values[0];
+                                }
+                                else
+                                {
+                                    diff = a2_23 - D_800F0C1C;
+                                }
+                                packet_cursor = field_draw_number(ot_entry, packet_cursor, abs(diff), 1, &pos,
+                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                            }
+                        }
+                        break;
+                        case 0x45:
+                        case 0x46:
+                        case 0x47:
+                        case 0x48:
+                        {
+                            uintptr_t has = 0;
+                            s32 total = has;
+
+                            for (k = 1; k < 4; k++)
+                            {
+                                MenuItemEntry* slot = &D_80168C20[k];
+                                if (g_item_slot_flags[k] != 0)
+                                {
+                                    if (slot->active != 0)
+                                    {
+                                        total += slot->stat_values[content_index - 0x45];
+                                    }
+                                    has = (uintptr_t)g_item_slot_data[k];
+                                    if (has != 0 && ((MenuItemEntry*)has)->active != 0)
+                                    {
+                                        total -= ((MenuItemEntry*)has)->stat_values[content_index - 0x45];
+                                    }
+                                    has = 1;
+                                }
+                            }
+                            if (has)
+                            {
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (u32)abs(total), 1, &pos,
+                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                            }
+                        }
+                        break;
+                        case 0x49:
+                        {
+                            void* base;
+                            u8 idx;
+                            draw_packet_cursor = packet_cursor;
+                            base_a2_9 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x74));
+                            base = (void*)g_saved_game_ctx;
+                            {
+                                u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + 0x633;
+                                idx = *idxp;
+                            }
+                            {
+                                void* a2_2 = (void*)((u8*)base_a2_9 + *(u16*)((u8*)base_a2_9 + (idx * 2)));
+                                packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                              content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                              (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                            }
+                        }
+                        break;
+                        case 0x4A:
+                        {
+                            s8 golem_index = g_saved_game_ctx->joined_golem;
+                            if (golem_index >= 0)
+                            {
+                                SavedGameLayout* context = g_saved_game_ctx;
+                                u8 v = menu_golem_record(context, golem_index)->logic_layout & GOLEM_LOGIC_CLASS_MASK;
+                                void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x80));
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), 1,
+                                                              content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                              (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                            }
+                        }
+                        break;
+                        case 0x4B:
+                        {
+                            s8 golem_index = g_saved_game_ctx->joined_golem;
+                            if (golem_index >= 0)
+                            {
+                                SavedGameLayout* context = g_saved_game_ctx;
+                                u8 v = menu_golem_record(context, golem_index)->logic_layout >> GOLEM_GRID_BOUND_SHIFT;
+                                void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x7C));
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), 1,
+                                                              content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                              (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                            }
+                        }
+                        break;
+                        case 0x4C:
+                        {
+                            s8 golem_index = g_saved_game_ctx->joined_golem;
+                            if (golem_index >= 0)
+                            {
+                                SavedGameLayout* context = g_saved_game_ctx;
+                                u8 v = menu_golem_record(context, golem_index)->unknown_0x46;
+                                packet_cursor = field_draw_number(ot_entry, packet_cursor, v, 1, &pos,
+                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                            }
+                        }
+                        break;
+                        case 0x4D:
+                        {
+                            s8 golem_index = g_saved_game_ctx->joined_golem;
+                            if (golem_index >= 0)
+                            {
+                                SavedGameLayout* context;
+                                s32 idx;
+                                draw_packet_cursor = packet_cursor;
+                                base_a2_10 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x70));
+                                context = g_saved_game_ctx;
+                                idx = menu_golem_record(context, golem_index)->palette;
+                                {
+                                    void* a2_2 = (void*)((u8*)base_a2_10 + *(u16*)((u8*)base_a2_10 + (idx * 2)));
+                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                }
+                            }
+                        }
+                        break;
+                        case 0x4E:
+                        case 0x4F:
+                        case 0x50:
+                        case 0x51:
+                        case 0x52:
+                        case 0x53:
+                        case 0x54:
+                        case 0x55:
+                        {
+                            u32 display_value = 0;
+                            switch (content_index)
+                            {
+                            case 0x4E:
+                                display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed & 0xF;
+                                break;
+                            case 0x4F:
+                                display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.bytes[0];
+                                display_value >>= 4;
+                                break;
+                            case 0x50:
+                                display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 8;
+                                display_value &= 0xF;
+                                break;
+                            case 0x51:
+                                display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 12;
+                                display_value &= 0xF;
+                                break;
+                            case 0x52:
+                                display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.halfwords[1];
+                                display_value &= 0xF;
+                                break;
+                            case 0x53:
+                                display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 20;
+                                display_value &= 0xF;
+                                break;
+                            case 0x54:
+                                display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.bytes[3];
+                                display_value &= 0xF;
+                                break;
+                            case 0x55:
+                                display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 28;
+                                break;
+                            }
+                            packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, display_value, 1, &pos,
+                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                        }
+                        break;
+                        default:
+                            break;
+                        }
+                    }
+                    break;
+
+                    case 6:
+                    {
+                        shared_s0 = content_item->action_type;
+                        switch (shared_s0)
+                        {
+                        case 1:
+                            if (*(u32*)((void*)g_saved_game_ctx + 0x2C) > 0x989680U)
+                            {
+                                packet_cursor = field_draw_number(ot_entry, packet_cursor, 0x989680U, 1, &pos,
+                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                            }
+                            else
+                            {
+                                packet_cursor = field_draw_number(ot_entry, packet_cursor, *(u32*)((void*)g_saved_game_ctx + 0x2C), 1, &pos,
+                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                            }
+                            break;
+                        case 2:
+                        {
+                            u32 ltemp_v0_6;
+                            s32 v1;
+                            s32 s2;
+                            s32 split_tmp;
+                            s32 one;
+                            ltemp_v0_6 = (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK;
+                            switch (ltemp_v0_6)
+                            {
+                            case 1:
+                                pos.x -= 0x32;
+                                break;
+                            case 2:
+                                pos.x -= 0x19;
+                                break;
+                            }
+                            v1 = *(s32*)((void*)g_saved_game_ctx + 0x30) + VSync(-1);
+                            shared_s0 = v1 - g_playtime_vsync_origin;
+                            pos.x += 0x14;
+                            s2 = shared_s0 / 216000;
+                            one = 1;
+                            packet_cursor = field_draw_number(ot_entry, packet_cursor, s2, one, &pos, one);
+                            if ((g_frame_counter / 15) & 1)
+                            {
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, MENU_PLAYTIME_SEPARATOR, one, pos.x, pos.y, 0);
+                            }
+                            pos.x += MENU_PLAYTIME_SEPARATOR_ADVANCE;
+                            split_tmp = s2 * 0x3C;
+                            shared_s0 = (shared_s0 / 3600) - split_tmp;
+                            if (shared_s0 < 0xA)
+                            {
+                                packet_cursor = field_draw_number(ot_entry, packet_cursor, 0U, 1, &pos, 0);
+                            }
+                            pos.x += MENU_PLAYTIME_MINUTES_ADVANCE;
+                            packet_cursor = field_draw_number(ot_entry, packet_cursor, shared_s0, 1, &pos, one);
+                        }
+                        break;
+                        }
+                    }
+                    break;
+
+                    case 7:
+                    {
+                        shared_s0 = content_item->action_type;
+                        switch (shared_s0)
+                        {
+                        case 1:
+                        {
+                            void* base = (void*)g_saved_game_ctx + g_menu_char_slot * 0x250;
+                            if ((*(u8*)((u8*)base + 0x608) & 0x7F) != two_outer || ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
+                            {
+                                draw_packet_cursor = packet_cursor;
+                                base_a2_11 = (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES]);
+                                {
+                                    void* a2_2 = (void*)((u8*)base_a2_11 + *(u16*)((u8*)base_a2_11 + 0x74));
+                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                }
+                            }
+                        }
+                        break;
+                        case 2:
+                        {
+                            void* base = (void*)g_saved_game_ctx + g_menu_char_slot * 0x250;
+                            if ((*(u8*)((u8*)base + 0x608) & 0x7F) != 2 || ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
+                            {
+                                draw_packet_cursor = packet_cursor;
+                                base_a2_12 = (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES]);
+                                {
+                                    void* a2_2 = (void*)((u8*)base_a2_12 + *(u16*)((u8*)base_a2_12 + 0x76));
+                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                }
+                            }
+                        }
+                        break;
+                        }
+                    }
+                    break;
+
+                    default:
+                        break;
+                    }
+                }
+
+                content_item++;
+                remaining_count--;
             }
 
             {
@@ -2756,8 +2753,7 @@ inline s32 menu_get_equipment_ability_mask(s32 excluded_slot)
 
     category_mask = 0;
     equipment = g_menu_equipment_base;
-    equipment_index = 0;
-    do
+    for (equipment_index = 0; equipment_index < MENU_EQUIPMENT_SLOT_COUNT; equipment_index += 1)
     {
         if ((equipment_index != excluded_slot) && (equipment->active != 0))
         {
@@ -2771,9 +2767,8 @@ inline s32 menu_get_equipment_ability_mask(s32 excluded_slot)
                 category_mask |= D_800F0BE0[(item_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK];
             }
         }
-        equipment_index += 1;
         equipment += 1;
-    } while (equipment_index < MENU_EQUIPMENT_SLOT_COUNT);
+    }
     return category_mask;
 }
 
