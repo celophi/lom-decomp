@@ -397,31 +397,27 @@ static void wmap_effect35_update_emitter(WmapEffectEmitter* emitter)
     if (emitter->spawning != 0)
     {
         index = emitter->first;
-        if (index < emitter->end)
+        for (; index < emitter->end; index++)
         {
-            do
+            if (g_wmap_actor_motions[index].active == 0)
             {
-                if (g_wmap_actor_motions[index].active == 0)
-                {
-                    g_wmap_actor_motions[index].active = 1;
-                    g_wmap_sprite_actors[index].scale_index = 0xF;
-                    g_wmap_sprite_actors[index].sequence = 2;
-                    g_wmap_sprite_actors[index].resource_index = 0;
-                    g_wmap_sprite_actors[index].previous_sequence = -1;
-                    g_wmap_sprite_actors[index].shade_step = emitter->shade_step;
-                    g_wmap_sprite_actors[index].target_shade = emitter->target_shade;
-                    g_wmap_sprite_actors[index].shade = emitter->shade;
-                    g_wmap_actor_motions[index].radius = emitter->radius;
-                    g_wmap_actor_motions[index].angle = rand() & 0xFFF;
-                    speed = rand() * emitter->speed_range;
-                    speed_min = emitter->speed_min;
-                    g_wmap_actor_motions[index].height = 0;
-                    g_wmap_actor_motions[index].speed = (speed >> 0xF) + speed_min;
-                    g_wmap_actor_motions[index].delay = emitter->delay;
-                    return;
-                }
-                index++;
-            } while (index < emitter->end);
+                g_wmap_actor_motions[index].active = 1;
+                g_wmap_sprite_actors[index].scale_index = 0xF;
+                g_wmap_sprite_actors[index].sequence = 2;
+                g_wmap_sprite_actors[index].resource_index = 0;
+                g_wmap_sprite_actors[index].previous_sequence = -1;
+                g_wmap_sprite_actors[index].shade_step = emitter->shade_step;
+                g_wmap_sprite_actors[index].target_shade = emitter->target_shade;
+                g_wmap_sprite_actors[index].shade = emitter->shade;
+                g_wmap_actor_motions[index].radius = emitter->radius;
+                g_wmap_actor_motions[index].angle = rand() & 0xFFF;
+                speed = rand() * emitter->speed_range;
+                speed_min = emitter->speed_min;
+                g_wmap_actor_motions[index].height = 0;
+                g_wmap_actor_motions[index].speed = (speed >> 0xF) + speed_min;
+                g_wmap_actor_motions[index].delay = emitter->delay;
+                return;
+            }
         }
     }
 }

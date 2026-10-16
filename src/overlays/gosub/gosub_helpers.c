@@ -169,7 +169,7 @@ void gosub_delete_list_row(s32 row)
 }
 
 /**
- * @brief Copy one 4-byte record.
+ * @brief Copy one logic block.
  *
  * @param dst Destination record.
  * @param src Source record.
@@ -178,20 +178,20 @@ inline void gosub_copy_logic_block(void* dst, void* src)
 {
     u8* dst_bytes;
     u8* src_bytes;
-    u32 i;
+    u32 byte_count;
 
     dst_bytes = (u8*)dst;
     src_bytes = (u8*)src;
-    i = 0;
-    do
+    byte_count = 0;
+    while (byte_count < sizeof(LogicBlock))
     {
-        i++;
+        byte_count++;
         *dst_bytes++ = *src_bytes++;
-    } while (i < sizeof(LogicBlock));
+    }
 }
 
 /**
- * @brief Copy one 0x20-byte GosubListRow.
+ * @brief Copy one logic-block list row.
  *
  * @param dst Destination row.
  * @param src Source row.
@@ -200,16 +200,16 @@ inline void gosub_copy_list_row(void* dst, void* src)
 {
     u8* dst_bytes;
     u8* src_bytes;
-    u32 i;
+    u32 byte_count;
 
     dst_bytes = (u8*)dst;
     src_bytes = (u8*)src;
-    i = 0;
-    do
+    byte_count = 0;
+    while (byte_count < sizeof(GosubListRow))
     {
-        i++;
+        byte_count++;
         *dst_bytes++ = *src_bytes++;
-    } while (i < sizeof(GosubListRow));
+    }
 }
 
 /**

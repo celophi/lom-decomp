@@ -256,10 +256,7 @@ void card_menu_update_card_sequence(void)
             g_card_step = g_card_steps_initial_scan;
         }
     }
-    do
-    {
-        phase = cload_advance_load_sequence();
-    } while (phase == CARD_MENU_SEQUENCE_RUN_AGAIN);
+    while ((phase = cload_advance_load_sequence()) == CARD_MENU_SEQUENCE_RUN_AGAIN);
     if (phase == CARD_MENU_SEQUENCE_FINISHED)
     {
         g_card_step = g_card_steps_card_info;

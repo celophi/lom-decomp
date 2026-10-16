@@ -418,139 +418,136 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
     marker_def = map->edge_defs;
     tail = (FieldLink*)&scene->markers;
 
-    if (marker_def != NULL)
+    while (marker_def != NULL)
     {
-        do
+        item.marker = (FieldMarker*)arena.cur;
+        arena.cur = (u8*)(item.marker + 1);
+        tail->next = (FieldLink*)item.marker;
+        tail = (FieldLink*)item.marker;
+        item.marker->def = marker_def;
+        item.marker->x2 = marker_def->x0 + marker_def->offset_x;
+        item.marker->y2 = marker_def->y0 + marker_def->offset_y;
+        item.marker->x3 = marker_def->x1 + marker_def->offset_x;
+        item.marker->y3 = marker_def->y1 + marker_def->offset_y;
+        high = low = marker_def->x0;
+
+        if (high < (s16)marker_def->x1)
         {
-            item.marker = (FieldMarker*)arena.cur;
-            arena.cur = (u8*)(item.marker + 1);
-            tail->next = (FieldLink*)item.marker;
-            tail = (FieldLink*)item.marker;
-            item.marker->def = marker_def;
-            item.marker->x2 = marker_def->x0 + marker_def->offset_x;
-            item.marker->y2 = marker_def->y0 + marker_def->offset_y;
-            item.marker->x3 = marker_def->x1 + marker_def->offset_x;
-            item.marker->y3 = marker_def->y1 + marker_def->offset_y;
-            high = low = marker_def->x0;
+            high = marker_def->x1;
+        }
 
-            if (high < (s16)marker_def->x1)
-            {
-                high = marker_def->x1;
-            }
+        if ((s16)marker_def->x1 < low)
+        {
+            low = marker_def->x1;
+        }
 
-            if ((s16)marker_def->x1 < low)
-            {
-                low = marker_def->x1;
-            }
+        if (high < (s16)item.marker->x2)
+        {
+            high = item.marker->x2;
+        }
 
-            if (high < (s16)item.marker->x2)
-            {
-                high = item.marker->x2;
-            }
+        if ((s16)item.marker->x2 < low)
+        {
+            low = item.marker->x2;
+        }
 
-            if ((s16)item.marker->x2 < low)
-            {
-                low = item.marker->x2;
-            }
+        if (high < (s16)item.marker->x3)
+        {
+            high = item.marker->x3;
+        }
 
-            if (high < (s16)item.marker->x3)
-            {
-                high = item.marker->x3;
-            }
+        if ((s16)item.marker->x3 < low)
+        {
+            low = item.marker->x3;
+        }
 
-            if ((s16)item.marker->x3 < low)
-            {
-                low = item.marker->x3;
-            }
+        item.marker->x_max = high;
+        item.marker->x_min = low;
+        high = low = marker_def->y0;
 
-            item.marker->x_max = high;
-            item.marker->x_min = low;
-            high = low = marker_def->y0;
+        if (high < (s16)marker_def->y1)
+        {
+            high = marker_def->y1;
+        }
 
-            if (high < (s16)marker_def->y1)
-            {
-                high = marker_def->y1;
-            }
+        if ((s16)marker_def->y1 < low)
+        {
+            low = marker_def->y1;
+        }
 
-            if ((s16)marker_def->y1 < low)
-            {
-                low = marker_def->y1;
-            }
+        if (high < (s16)item.marker->y2)
+        {
+            high = item.marker->y2;
+        }
 
-            if (high < (s16)item.marker->y2)
-            {
-                high = item.marker->y2;
-            }
+        if ((s16)item.marker->y2 < low)
+        {
+            low = item.marker->y2;
+        }
 
-            if ((s16)item.marker->y2 < low)
-            {
-                low = item.marker->y2;
-            }
+        if (high < (s16)item.marker->y3)
+        {
+            high = item.marker->y3;
+        }
 
-            if (high < (s16)item.marker->y3)
-            {
-                high = item.marker->y3;
-            }
+        if ((s16)item.marker->y3 < low)
+        {
+            low = item.marker->y3;
+        }
 
-            if ((s16)item.marker->y3 < low)
-            {
-                low = item.marker->y3;
-            }
+        item.marker->y_max = high;
+        item.marker->y_min = low;
+        item.marker->side_dx = (s16)item.marker->x2 - (s16)marker_def->x0;
+        item.marker->side_dy = (s16)item.marker->y2 - (s16)marker_def->y0;
 
-            item.marker->y_max = high;
-            item.marker->y_min = low;
-            item.marker->side_dx = (s16)item.marker->x2 - (s16)marker_def->x0;
-            item.marker->side_dy = (s16)item.marker->y2 - (s16)marker_def->y0;
+        if (item.marker->side_dx != 0)
+        {
+            intercept_a = (s16)marker_def->y0 - item.marker->side_dy * (s16)marker_def->x0 / item.marker->side_dx;
+            intercept_b = (s16)marker_def->y1 - item.marker->side_dy * (s16)marker_def->x1 / item.marker->side_dx;
+        }
+        else
+        {
+            intercept_a = (s16)marker_def->x0;
+            intercept_b = (s16)marker_def->x1;
+        }
 
-            if (item.marker->side_dx != 0)
-            {
-                intercept_a = (s16)marker_def->y0 - item.marker->side_dy * (s16)marker_def->x0 / item.marker->side_dx;
-                intercept_b = (s16)marker_def->y1 - item.marker->side_dy * (s16)marker_def->x1 / item.marker->side_dx;
-            }
-            else
-            {
-                intercept_a = (s16)marker_def->x0;
-                intercept_b = (s16)marker_def->x1;
-            }
+        if (intercept_b < intercept_a)
+        {
+            item.marker->side_hi = intercept_a;
+            item.marker->side_lo = intercept_b;
+        }
+        else
+        {
+            item.marker->side_lo = intercept_a;
+            item.marker->side_hi = intercept_b;
+        }
 
-            if (intercept_b < intercept_a)
-            {
-                item.marker->side_hi = intercept_a;
-                item.marker->side_lo = intercept_b;
-            }
-            else
-            {
-                item.marker->side_lo = intercept_a;
-                item.marker->side_hi = intercept_b;
-            }
+        item.marker->edge_dx = (s16)marker_def->x1 - (s16)marker_def->x0;
+        item.marker->edge_dy = (s16)marker_def->y1 - (s16)marker_def->y0;
 
-            item.marker->edge_dx = (s16)marker_def->x1 - (s16)marker_def->x0;
-            item.marker->edge_dy = (s16)marker_def->y1 - (s16)marker_def->y0;
+        if (item.marker->edge_dx != 0)
+        {
+            intercept_a = (s16)marker_def->y0 - item.marker->edge_dy * (s16)marker_def->x0 / item.marker->edge_dx;
+            intercept_b = (s16)item.marker->y2 - item.marker->edge_dy * (s16)item.marker->x2 / item.marker->edge_dx;
+        }
+        else
+        {
+            intercept_a = (s16)marker_def->x0;
+            intercept_b = (s16)item.marker->x2;
+        }
 
-            if (item.marker->edge_dx != 0)
-            {
-                intercept_a = (s16)marker_def->y0 - item.marker->edge_dy * (s16)marker_def->x0 / item.marker->edge_dx;
-                intercept_b = (s16)item.marker->y2 - item.marker->edge_dy * (s16)item.marker->x2 / item.marker->edge_dx;
-            }
-            else
-            {
-                intercept_a = (s16)marker_def->x0;
-                intercept_b = (s16)item.marker->x2;
-            }
+        if (intercept_b < intercept_a)
+        {
+            item.marker->edge_hi = intercept_a;
+            item.marker->edge_lo = intercept_b;
+        }
+        else
+        {
+            item.marker->edge_lo = intercept_a;
+            item.marker->edge_hi = intercept_b;
+        }
 
-            if (intercept_b < intercept_a)
-            {
-                item.marker->edge_hi = intercept_a;
-                item.marker->edge_lo = intercept_b;
-            }
-            else
-            {
-                item.marker->edge_lo = intercept_a;
-                item.marker->edge_hi = intercept_b;
-            }
-
-            marker_def = marker_def->next;
-        } while (marker_def != NULL);
+        marker_def = marker_def->next;
     }
 
     tail->next = NULL;

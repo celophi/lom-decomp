@@ -2423,13 +2423,12 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
 {
     FieldInputState* input = FIELD_TEXT_INPUT;
     FieldTextState* state = FIELD_TEXT_WINDOWS;
-    s32 i;
+    s32 window_index;
     s32 keys;
     s32 choice;
 
-    i = 3;
 
-    do
+    for (window_index = 3; window_index != -1; window_index--)
     {
         switch ((u8)state->flags.word & FIELD_TEXT_STATE_MASK)
         {
@@ -2616,7 +2615,7 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
 
             if (((state->flags.word & FIELD_TEXT_STATE_MASK) == FIELD_TEXT_CLOSED) && ((state->flags.word & FIELD_TEXT_REOPEN_MASK) != 0))
             {
-                field_text_reopen_window(3 - i, FIELD_TEXT_REOPEN_MODE(state->flags.word));
+                field_text_reopen_window(3 - window_index, FIELD_TEXT_REOPEN_MODE(state->flags.word));
             }
 
             break;
@@ -2658,7 +2657,7 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
         }
 
         state += 1;
-    } while (--i != -1);
+    }
 }
 
 /**
@@ -3326,31 +3325,28 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
 
         pixels_remaining = state->line_advance;
 
-        if (pixels_remaining > 0)
+        while (pixels_remaining > 0)
         {
-            do
-            {
-                vertex->pos.vx = mesh_x;
-                vertex->pos.vy = mesh_y;
-                vertex[1].pos.vx = mesh_x;
-                vertex[1].pos.vy = state->line_height + mesh_y;
-                vertex += 2;
-                text_vertex_count += 2;
-                avail = FIELD_TEXT_CACHE_WIDTH - u;
+            vertex->pos.vx = mesh_x;
+            vertex->pos.vy = mesh_y;
+            vertex[1].pos.vx = mesh_x;
+            vertex[1].pos.vy = state->line_height + mesh_y;
+            vertex += 2;
+            text_vertex_count += 2;
+            avail = FIELD_TEXT_CACHE_WIDTH - u;
 
-                if (pixels_remaining >= avail)
-                {
-                    mesh_x += avail;
-                    pixels_remaining -= avail;
-                    u = 0;
-                }
-                else
-                {
-                    mesh_x += pixels_remaining;
-                    u += pixels_remaining;
-                    pixels_remaining = 0;
-                }
-            } while (pixels_remaining > 0);
+            if (pixels_remaining >= avail)
+            {
+                mesh_x += avail;
+                pixels_remaining -= avail;
+                u = 0;
+            }
+            else
+            {
+                mesh_x += pixels_remaining;
+                u += pixels_remaining;
+                pixels_remaining = 0;
+            }
         }
 
         vertex->pos.vx = mesh_x;
@@ -3389,7 +3385,7 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
     remaining = 1;
     mesh_y = ((state->height - FIELD_PORTRAIT_SIZE) >> 1) + 8;
 
-    do
+    while (remaining != -1)
     {
         if ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) == 0)
         {
@@ -3410,7 +3406,7 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
 
         remaining -= 1;
         mesh_y += FIELD_PORTRAIT_SIZE;
-    } while (remaining != -1);
+    }
 
     /* Interpolate the two side edges once per row, then interpolate across each row. */
     vertex = FIELD_TEXT_MESH;
@@ -3619,47 +3615,44 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
     {
         pixels_remaining = state->line_advance;
 
-        if (pixels_remaining > 0)
+        while (pixels_remaining > 0)
         {
-            do
-            {
-                glyph_v = texture_v_origin + row_v;
-                glyph_u = texture_u_origin + u;
-                glyph_v <<= 8;
-                texture_uv = glyph_v | glyph_u;
-                poly = (FieldTextPacket*)packet_cursor;
-                packet_cursor += sizeof(POLY_FT4);
-                poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
-                poly->quad_words.rgbc = texture_command;
-                poly->quad_words.uv0 = (text_system->text_clut << 16) | texture_uv;
-                poly->quad_words.uv1 = tpage | texture_uv;
-                poly->quad_words.uv2 = texture_uv + (state->line_height << 8);
-                poly->quad_words.uv3 = texture_uv + (state->line_height << 8);
-                poly->quad_words.xy0 = vertex[0].word;
-                avail = FIELD_TEXT_CACHE_WIDTH - u;
-                poly->quad_words.xy1 = vertex[2].word;
-                poly->quad_words.xy2 = vertex[1].word;
-                poly->quad_words.xy3 = vertex[3].word;
-                vertex += 2;
+            glyph_v = texture_v_origin + row_v;
+            glyph_u = texture_u_origin + u;
+            glyph_v <<= 8;
+            texture_uv = glyph_v | glyph_u;
+            poly = (FieldTextPacket*)packet_cursor;
+            packet_cursor += sizeof(POLY_FT4);
+            poly->quad_words.tag = FIELD_TEXT_TAG(packet_cursor, POLY_FT4);
+            poly->quad_words.rgbc = texture_command;
+            poly->quad_words.uv0 = (text_system->text_clut << 16) | texture_uv;
+            poly->quad_words.uv1 = tpage | texture_uv;
+            poly->quad_words.uv2 = texture_uv + (state->line_height << 8);
+            poly->quad_words.uv3 = texture_uv + (state->line_height << 8);
+            poly->quad_words.xy0 = vertex[0].word;
+            avail = FIELD_TEXT_CACHE_WIDTH - u;
+            poly->quad_words.xy1 = vertex[2].word;
+            poly->quad_words.xy2 = vertex[1].word;
+            poly->quad_words.xy3 = vertex[3].word;
+            vertex += 2;
 
-                if (pixels_remaining >= avail)
-                {
-                    pixels_remaining -= avail;
-                    edge = (glyph_u + avail) - 1;
-                    poly->quad.u3 = edge;
-                    poly->quad.u1 = edge;
-                    u = 0;
-                    row_v += state->line_height;
-                }
-                else
-                {
-                    u += pixels_remaining;
-                    edge = glyph_u + pixels_remaining;
-                    pixels_remaining = 0;
-                    poly->quad.u3 = edge;
-                    poly->quad.u1 = edge;
-                }
-            } while (pixels_remaining > 0);
+            if (pixels_remaining >= avail)
+            {
+                pixels_remaining -= avail;
+                edge = (glyph_u + avail) - 1;
+                poly->quad.u3 = edge;
+                poly->quad.u1 = edge;
+                u = 0;
+                row_v += state->line_height;
+            }
+            else
+            {
+                u += pixels_remaining;
+                edge = glyph_u + pixels_remaining;
+                pixels_remaining = 0;
+                poly->quad.u3 = edge;
+                poly->quad.u1 = edge;
+            }
         }
 
         remaining -= 1;

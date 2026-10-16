@@ -366,10 +366,7 @@ s32 carda_advance_card_sequence(void)
             break;
 
         case CARD_MENU_STEP_POLL_HARDWARE_EVENTS:
-            do
-            {
-                poll_result = poll_hardware_card_events();
-            } while (poll_result == CARD_EVENT_NONE);
+            while ((poll_result = poll_hardware_card_events()) == CARD_EVENT_NONE);
             switch (poll_result)
             {
             case CARD_EVENT_COMPLETE:

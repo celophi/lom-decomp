@@ -22,8 +22,6 @@
  */
 void akao_driver_init(void)
 {
-    s32 event_handle;
-
     SpuStart();
     SpuInitMalloc(AKAO_SPU_MALLOC_BLOCKS, g_akao_spu_malloc_table);
     SpuSetTransferMode(SPU_TRANSFER_BY_DMA);
@@ -38,11 +36,7 @@ void akao_driver_init(void)
 
     while (StartRCnt(RCntCNT2) == 0);
 
-    do
-    {
-        event_handle = OpenEvent(RCntCNT2, EvSpINT, EvMdINTR, akao_irq_handler);
-        g_akao_rcnt2_event = event_handle;
-    } while (event_handle == -1);
+    while ((g_akao_rcnt2_event = OpenEvent(RCntCNT2, EvSpINT, EvMdINTR, akao_irq_handler)) == -1);
 
     while (EnableEvent(g_akao_rcnt2_event) == 0);
 }

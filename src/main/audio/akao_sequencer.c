@@ -409,7 +409,7 @@ void akao_tick_fades(void)
         remaining_channels = g_akao_sfx_control.active_mask;
         channel = g_sfx_channels;
         channel_cursor = AKAO_SFX_FIRST_CHANNEL_BIT;
-        do
+        while (remaining_channels != 0)
         {
             if (remaining_channels & channel_cursor)
             {
@@ -447,7 +447,7 @@ void akao_tick_fades(void)
             }
             channel_cursor <<= 1;
             channel++;
-        } while (remaining_channels != 0);
+        }
     }
 }
 
@@ -651,7 +651,7 @@ long akao_irq_handler(void)
             channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
             channel = g_sfx_channels;
 
-            do
+            while (remaining_channels != 0)
             {
                 if (remaining_channels & channel_bit)
                 {
@@ -677,7 +677,7 @@ long akao_irq_handler(void)
                 }
                 channel++;
                 channel_bit <<= 1;
-            } while (remaining_channels != 0);
+            }
         }
     }
 
@@ -989,12 +989,12 @@ s32 akao_compute_pitch(AkaoArticulation* articulation, s32 note, s32 detune, s32
     /* Shift pitch and detune together to the requested octave. */
     if (note < articulation->adsr.half.hi)
     {
-        do
+        while (note < articulation->adsr.half.hi)
         {
             *detune_pitch_delta >>= 1;
             pitch = (s32)pitch >> 1;
             note += AKAO_SEMITONES_PER_OCTAVE;
-        } while (note < articulation->adsr.half.hi);
+        }
     }
     else
     {

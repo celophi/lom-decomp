@@ -64,7 +64,8 @@ void initialize_controllers(s8 enable_actuators)
     controller_state->sample_unavailable = 0;
 
     PadStartCom();
-    do
+    all_ports_ready = 0;
+    while (all_ports_ready == 0)
     {
         VSync(0);
         controller_poll();
@@ -78,7 +79,7 @@ void initialize_controllers(s8 enable_actuators)
                 all_ports_ready = 0;
             }
         }
-    } while (all_ports_ready == 0);
+    }
 
     controller_state->vsync_accumulation_count = 0;
     controller_state->vsync_accumulation_interval = 0;

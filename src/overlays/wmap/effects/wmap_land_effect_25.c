@@ -399,8 +399,7 @@ void wmap_land_effect_25_sequence_12_step_01(void)
     g_wmap_effect_params[18] = 8;
     g_wmap_effect_params[19] = 0;
     g_wmap_effect_params[20] = 102000;
-    i = 0;
-    do
+    for (i = 0; i < 10; i++)
     {
         g_wmap_actor_animations[i + 20].data = g_wmap_animation_bank_3;
         actor = &g_wmap_sprite_actors[20 + i];
@@ -418,8 +417,7 @@ void wmap_land_effect_25_sequence_12_step_01(void)
         motion->z = 102000;
         motion->x = (-(rand() * 2) >> 15);
         motion->field_0E = ((rand() * 50) >> 15) + 220;
-        i++;
-    } while (i < 10);
+    }
     g_wmap_land_effect_25_sequence_12_timer = 32;
     g_wmap_land_effect_25_sequence_12_step++;
     wmap_land_effect_25_sequence_12_step_02();
@@ -443,8 +441,7 @@ void wmap_land_effect_25_sequence_13_step_01(void)
     g_wmap_effect_params[28] = 8;
     g_wmap_effect_params[29] = 1;
     g_wmap_effect_params[30] = 102000;
-    i = 0;
-    do
+    for (i = 0; i < 30; i++)
     {
         g_wmap_actor_animations[i + 50].data = g_wmap_animation_bank_3;
         actor = &g_wmap_sprite_actors[50 + i];
@@ -462,8 +459,7 @@ void wmap_land_effect_25_sequence_13_step_01(void)
         motion->z = 102000;
         motion->x = (-(rand() * 2) >> 15) - 1;
         motion->field_0E = ((rand() * 100) >> 15) + 180;
-        i++;
-    } while (i < 30);
+    }
     g_wmap_land_effect_25_sequence_13_timer = 32;
     g_wmap_land_effect_25_sequence_13_step++;
     wmap_land_effect_25_sequence_13_step_02();
@@ -526,16 +522,14 @@ void wmap_land_effect_25_sequence_17_step_01(void)
 {
     s32 i;
 
-    i = 110;
     g_wmap_aux_effect_fade_b = 1;
     D_800DCEAC = 1;
 
-    do
+    for (i = 110; i < 155; i++)
     {
         g_wmap_actor_motions[i].state = 0;
         WMAP_INIT_PARTICLE_ACTOR(i, g_wmap_animation_bank_3, 1);
-        i++;
-    } while (i < 155);
+    }
 
     D_800D9154 = 2;
     g_wmap_land_effect_25_sequence_17_timer = 0x10;

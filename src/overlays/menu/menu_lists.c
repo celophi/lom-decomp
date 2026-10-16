@@ -326,7 +326,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
     g_menu_category2_item = 0;
     item_record = (MenuItemEntry*)((u8*)g_saved_game_ctx + MENU_ITEM_TABLE_OFFSET);
 
-    do
+    while (item_index < MENU_ITEM_TABLE_COUNT)
     {
         u32 item_attributes;
         s32 item_kind;
@@ -430,7 +430,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
 
         item_index += 1;
         item_record += 1;
-    } while (item_index < MENU_ITEM_TABLE_COUNT);
+    }
 
     if ((y - scroll_y) <= 0 && list->lerp_steps == 0)
     {
@@ -777,11 +777,11 @@ void* menu_spell_list_callback(u_long* ot, ScrollListState* state, void* prim_bu
     presence_row = (u8*)g_saved_game_ctx + MENU_SPELL_GRID_OFFSET;
     scroll_y = list->scroll_y;
 
-    do
+    while (row < MENU_SPELL_GRID_ROW_COUNT)
     {
         col = 0;
         bit_mask = 1;
-        do
+        while (col < MENU_SPELL_GRID_COLUMN_COUNT)
         {
             if (*presence_row & bit_mask)
             {
@@ -800,10 +800,10 @@ void* menu_spell_list_callback(u_long* ot, ScrollListState* state, void* prim_bu
             }
             col += 1;
             bit_mask <<= 1;
-        } while (col < MENU_SPELL_GRID_COLUMN_COUNT);
+        }
         row += 1;
         presence_row += 1;
-    } while (row < MENU_SPELL_GRID_ROW_COUNT);
+    }
 
     if ((g_pad_input & 0x220) && (active != 0))
     {
@@ -859,13 +859,11 @@ void* menu_equipment_grid_callback(u_long* ot, ScrollListState* state, void* pri
     y = 0;
     scroll_y = list->scroll_y;
     selected_index = -1;
-    row = 0;
 
-    do
+    for (row = 0; row < MENU_EQUIPMENT_GRID_ROW_COUNT; row += 1)
     {
-        col = 0;
         row_entries = *(u32*)((u8*)g_saved_game_ctx + (row << 2) + MENU_EQUIPMENT_GRID_OFFSET);
-        do
+        for (col = 0; col < MENU_EQUIPMENT_GRID_COLUMN_COUNT; col += 1)
         {
             entry_kind = row_entries & MENU_EQUIPMENT_GRID_ENTRY_MASK;
             if (entry_kind >= MENU_EQUIPMENT_GRID_FIRST_VALID)
@@ -899,11 +897,9 @@ void* menu_equipment_grid_callback(u_long* ot, ScrollListState* state, void* pri
                 }
                 y += 0x10;
             }
-            col += 1;
             row_entries >>= 4;
-        } while (col < MENU_EQUIPMENT_GRID_COLUMN_COUNT);
-        row += 1;
-    } while (row < MENU_EQUIPMENT_GRID_ROW_COUNT);
+        }
+    }
 
     if ((active != 0) && (selected_index != -1))
     {
@@ -949,11 +945,10 @@ void* menu_key_item_list_callback(u_long* ot, ScrollListState* state, void* prim
 
     y = 0;
     selected_index = -1;
-    item_index = 0;
     quantity = (u8*)g_saved_game_ctx + MENU_KEY_ITEM_TABLE_OFFSET;
     scroll_y = list->scroll_y;
 
-    do
+    for (item_index = 0; item_index < MENU_KEY_ITEM_TABLE_COUNT; item_index += 1)
     {
         if (*quantity != 0)
         {
@@ -974,9 +969,8 @@ void* menu_key_item_list_callback(u_long* ot, ScrollListState* state, void* prim
             }
             y += 0x10;
         }
-        item_index += 1;
         quantity += 1;
-    } while (item_index < MENU_KEY_ITEM_TABLE_COUNT);
+    }
 
     if (selected_index != -1)
     {
@@ -1025,11 +1019,10 @@ void* menu_ability_list_callback(u_long* ot, ScrollListState* state, void* prim_
 
     list_y = 0;
     selected_index = -1;
-    ability_index = 0;
     ability = (MenuAbilityEntry*)((u8*)g_saved_game_ctx + MENU_ABILITY_TABLE_OFFSET);
     scroll_y = list->scroll_y;
 
-    do
+    for (ability_index = 0; ability_index < MENU_ABILITY_COUNT; ability_index += 1)
     {
         if (ability->flags & MENU_ABILITY_FLAG_LEARNED)
         {
@@ -1055,9 +1048,8 @@ void* menu_ability_list_callback(u_long* ot, ScrollListState* state, void* prim_
             }
             list_y += 0x10;
         }
-        ability_index += 1;
         ability += 1;
-    } while (ability_index < MENU_ABILITY_COUNT);
+    }
 
     if (selected_index != -1)
     {

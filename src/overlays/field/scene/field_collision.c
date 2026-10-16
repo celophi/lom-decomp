@@ -4278,331 +4278,319 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
                 {
                     i = tile2 - 1;
 
-                    if (i != countdown_end)
+                    while (i != countdown_end)
                     {
-                        do
+                        k = run_count;
+                        k--;
+                        cur_count = 0;
+
+                        while (k != countdown_end)
                         {
-                            k = run_count;
-                            k--;
-                            cur_count = 0;
-
-                            if (k != countdown_end)
+                            if (runs_base[k].skip == 0)
                             {
                                 do
                                 {
-                                    if (runs_base[k].skip == 0)
-                                    {
-                                        do
-                                        {
-                                            src = runs_base[k].src;
-                                            n = runs_base[k].step;
-                                            runs_base[k].count = runs_base[k].count - 1;
-                                            n--;
-                                        } while (0);
+                                    src = runs_base[k].src;
+                                    n = runs_base[k].step;
+                                    runs_base[k].count = runs_base[k].count - 1;
+                                    n--;
+                                } while (0);
 
-                                        for (; n != countdown_end; n--)
-                                        {
-                                            x0 = src[0];
-                                            x1 = src[1];
-                                            src += 2;
-
-                                            if (x0 <= x1)
-                                            {
-                                                span = cur;
-                                                work = cur_count;
-                                                work--;
-                                                fresh = 1;
-
-                                                if (work != countdown_end)
-                                                {
-                                                    s32 collect_end = -1;
-
-                                                    do
-                                                    {
-                                                        if (((x1 + 1) >= span->x.x0) && ((span->x.x1 + 1) >= x0))
-                                                        {
-                                                            if (x0 < span->x.x0)
-                                                            {
-                                                                span->x.x0 = x0;
-                                                            }
-
-                                                            if (span->x.x1 < x1)
-                                                            {
-                                                                span->x.x1 = x1;
-                                                            }
-
-                                                            fresh = 0;
-                                                            break;
-                                                        }
-
-                                                        span++;
-                                                        work--;
-                                                    } while (work != collect_end);
-                                                }
-
-                                                if (fresh != 0)
-                                                {
-                                                    if (cur_count >= FIELD_COLLISION_RASTER_SPAN_MAX)
-                                                    {
-                                                        scene->group_work = 0;
-                                                        scene->group_count = FIELD_COLLISION_GROUP_ERROR_COLLECT;
-                                                        return;
-                                                    }
-
-                                                    cur_count++;
-                                                    span->x.x0 = x0;
-                                                    span->x.x1 = x1;
-                                                }
-                                            }
-                                        }
-
-                                        if (runs_base[k].count == 0)
-                                        {
-                                            run_count--;
-
-                                            if (k != run_count)
-                                            {
-                                                runs_base[k].src = runs_base[run_count].src;
-                                                runs_base[k].count = runs_base[run_count].count;
-                                                runs_base[k].step = runs_base[run_count].step;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            runs_base[k].src = src;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        runs_base[k].skip = runs_base[k].skip - 1;
-                                    }
-
-                                    k--;
-                                } while (k != countdown_end);
-                            }
-
-                            k = cur_count - 1;
-                            span = cur;
-
-                            if (k != countdown_end)
-                            {
-                                do
+                                for (; n != countdown_end; n--)
                                 {
-                                    n = k - 1;
+                                    x0 = src[0];
+                                    x1 = src[1];
+                                    src += 2;
 
-                                    do
+                                    if (x0 <= x1)
                                     {
-                                        x0 = span->x.x0;
-                                    } while (0);
-                                    x1 = span->x.x1;
-                                    other = span + 1;
-
-                                    if (n != countdown_end)
-                                    {
-                                        s32 compact_end = -1;
-
-                                        do
-                                        {
-                                            if (((x1 + 1) >= other->x.x0) && (x0 <= (other->x.x1 + 1)))
-                                            {
-                                                cur_count--;
-                                                k--;
-
-                                                if (other->x.x0 < x0 || x1 < other->x.x1)
-                                                {
-                                                    if (other->x.x0 < x0)
-                                                    {
-                                                        x0 = other->x.x0;
-                                                    }
-
-                                                    if (x1 < other->x.x1)
-                                                    {
-                                                        x1 = other->x.x1;
-                                                    }
-
-                                                    span->x.x0 = x0;
-                                                    span->x.x1 = x1;
-
-                                                    if (n != 0)
-                                                    {
-                                                        other->word = other[n].word;
-                                                    }
-
-                                                    n = k;
-                                                    other = span + 1;
-                                                }
-                                                else if (n != 0)
-                                                {
-                                                    other->word = other[n].word;
-                                                }
-                                            }
-                                            else
-                                            {
-                                                other++;
-                                            }
-
-                                            n--;
-                                        } while (n != compact_end);
-                                    }
-
-                                    span++;
-                                    k--;
-                                } while (k != countdown_end);
-                            }
-
-                            if (i == (tile2 - 1))
-                            {
-                                span = cur;
-                                other = acc;
-                                prev = (FieldCollisionRasterSpan*)FIELD_COLLISION_SCRATCH;
-                                acc_count = cur_count;
-                                prev_count = acc_count;
-                                k = acc_count - 1;
-
-                                if (k != countdown_end)
-                                {
-                                    s32 copy_end = -1;
-
-                                    do
-                                    {
-                                        word = span->word;
-                                        span++;
-                                        k--;
-                                        other->word = word;
-                                        other++;
-                                        prev->word = word;
-                                        prev++;
-                                    } while (k != copy_end);
-                                }
-                            }
-                            else
-                            {
-                                span = cur;
-
-                                if (!(i & 1))
-                                {
-                                    prev = (FieldCollisionRasterSpan*)FIELD_COLLISION_SCRATCH;
-                                    dst = (FieldCollisionRasterSpan*)(FIELD_COLLISION_SCRATCH + FIELD_COLLISION_RASTER_ROW_BYTES);
-                                }
-                                else
-                                {
-                                    prev = (FieldCollisionRasterSpan*)(FIELD_COLLISION_SCRATCH + FIELD_COLLISION_RASTER_ROW_BYTES);
-                                    dst = (FieldCollisionRasterSpan*)FIELD_COLLISION_SCRATCH;
-                                }
-
-                                k = cur_count - 1;
-                                work = 0;
-
-                                if (k != countdown_end)
-                                {
-                                    do
-                                    {
-                                        x0 = span->x.x0;
-                                        x1 = span->x.x1;
-                                        n = prev_count;
-                                        n = n - 1;
-                                        prev_span = prev;
-
-                                        if (n != countdown_end)
-                                        {
-                                            s32 intersect_end;
-
-                                            do
-                                            {
-                                                if ((x1 >= prev_span->x.x0) && (prev_span->x.x1 >= x0))
-                                                {
-                                                    if (work >= FIELD_COLLISION_RASTER_SPAN_MAX)
-                                                    {
-                                                        scene->group_work = 0;
-                                                        scene->group_count = FIELD_COLLISION_GROUP_ERROR_INTERSECT;
-                                                        return;
-                                                    }
-
-                                                    if (x0 < prev_span->x.x0)
-                                                    {
-                                                        dst->x.x0 = prev_span->x.x0;
-                                                    }
-                                                    else
-                                                    {
-                                                        dst->x.x0 = x0;
-                                                    }
-
-                                                    if (prev_span->x.x1 < x1)
-                                                    {
-                                                        dst->x.x1 = prev_span->x.x1;
-                                                    }
-                                                    else
-                                                    {
-                                                        dst->x.x1 = x1;
-                                                    }
-
-                                                    do
-                                                    {
-                                                        work++;
-                                                        dst++;
-                                                    } while (0);
-                                                }
-
-                                                intersect_end = -1;
-                                                prev_span++;
-                                                n--;
-                                            } while (n != intersect_end);
-                                        }
-
-                                        other = acc;
-                                        n = acc_count - 1;
+                                        span = cur;
+                                        work = cur_count;
+                                        work--;
                                         fresh = 1;
 
-                                        if (n != countdown_end)
+                                        if (work != countdown_end)
                                         {
+                                            s32 collect_end = -1;
+
                                             do
                                             {
-                                                if (((x1 + 1) >= other->x.x0) && ((other->x.x1 + 1) >= x0))
+                                                if (((x1 + 1) >= span->x.x0) && ((span->x.x1 + 1) >= x0))
                                                 {
-                                                    if (x0 < other->x.x0)
+                                                    if (x0 < span->x.x0)
                                                     {
-                                                        other->x.x0 = x0;
+                                                        span->x.x0 = x0;
                                                     }
 
-                                                    if (other->x.x1 < x1)
+                                                    if (span->x.x1 < x1)
                                                     {
-                                                        other->x.x1 = x1;
+                                                        span->x.x1 = x1;
                                                     }
 
                                                     fresh = 0;
                                                     break;
                                                 }
 
-                                                union_end = -1;
-                                                other++;
-                                                n--;
-                                            } while (n != union_end);
+                                                span++;
+                                                work--;
+                                            } while (work != collect_end);
                                         }
 
                                         if (fresh != 0)
                                         {
-                                            if (acc_count >= FIELD_COLLISION_RASTER_SPAN_MAX)
+                                            if (cur_count >= FIELD_COLLISION_RASTER_SPAN_MAX)
                                             {
                                                 scene->group_work = 0;
-                                                scene->group_count = FIELD_COLLISION_GROUP_ERROR_UNION;
+                                                scene->group_count = FIELD_COLLISION_GROUP_ERROR_COLLECT;
                                                 return;
                                             }
 
-                                            acc_count++;
-                                            other->x.x0 = x0;
-                                            other->x.x1 = x1;
+                                            cur_count++;
+                                            span->x.x0 = x0;
+                                            span->x.x1 = x1;
                                         }
-
-                                        k--;
-                                        span++;
-                                    } while (k != countdown_end);
+                                    }
                                 }
 
-                                prev_count = work;
+                                if (runs_base[k].count == 0)
+                                {
+                                    run_count--;
+
+                                    if (k != run_count)
+                                    {
+                                        runs_base[k].src = runs_base[run_count].src;
+                                        runs_base[k].count = runs_base[run_count].count;
+                                        runs_base[k].step = runs_base[run_count].step;
+                                    }
+                                }
+                                else
+                                {
+                                    runs_base[k].src = src;
+                                }
+                            }
+                            else
+                            {
+                                runs_base[k].skip = runs_base[k].skip - 1;
                             }
 
-                            i--;
-                        } while (i != countdown_end);
+                            k--;
+                        }
+
+                        k = cur_count - 1;
+                        span = cur;
+
+                        while (k != countdown_end)
+                        {
+                            n = k - 1;
+
+                            do
+                            {
+                                x0 = span->x.x0;
+                            } while (0);
+                            x1 = span->x.x1;
+                            other = span + 1;
+
+                            if (n != countdown_end)
+                            {
+                                s32 compact_end = -1;
+
+                                do
+                                {
+                                    if (((x1 + 1) >= other->x.x0) && (x0 <= (other->x.x1 + 1)))
+                                    {
+                                        cur_count--;
+                                        k--;
+
+                                        if (other->x.x0 < x0 || x1 < other->x.x1)
+                                        {
+                                            if (other->x.x0 < x0)
+                                            {
+                                                x0 = other->x.x0;
+                                            }
+
+                                            if (x1 < other->x.x1)
+                                            {
+                                                x1 = other->x.x1;
+                                            }
+
+                                            span->x.x0 = x0;
+                                            span->x.x1 = x1;
+
+                                            if (n != 0)
+                                            {
+                                                other->word = other[n].word;
+                                            }
+
+                                            n = k;
+                                            other = span + 1;
+                                        }
+                                        else if (n != 0)
+                                        {
+                                            other->word = other[n].word;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        other++;
+                                    }
+
+                                    n--;
+                                } while (n != compact_end);
+                            }
+
+                            span++;
+                            k--;
+                        }
+
+                        if (i == (tile2 - 1))
+                        {
+                            span = cur;
+                            other = acc;
+                            prev = (FieldCollisionRasterSpan*)FIELD_COLLISION_SCRATCH;
+                            acc_count = cur_count;
+                            prev_count = acc_count;
+                            k = acc_count - 1;
+
+                            if (k != countdown_end)
+                            {
+                                s32 copy_end = -1;
+
+                                do
+                                {
+                                    word = span->word;
+                                    span++;
+                                    k--;
+                                    other->word = word;
+                                    other++;
+                                    prev->word = word;
+                                    prev++;
+                                } while (k != copy_end);
+                            }
+                        }
+                        else
+                        {
+                            span = cur;
+
+                            if (!(i & 1))
+                            {
+                                prev = (FieldCollisionRasterSpan*)FIELD_COLLISION_SCRATCH;
+                                dst = (FieldCollisionRasterSpan*)(FIELD_COLLISION_SCRATCH + FIELD_COLLISION_RASTER_ROW_BYTES);
+                            }
+                            else
+                            {
+                                prev = (FieldCollisionRasterSpan*)(FIELD_COLLISION_SCRATCH + FIELD_COLLISION_RASTER_ROW_BYTES);
+                                dst = (FieldCollisionRasterSpan*)FIELD_COLLISION_SCRATCH;
+                            }
+
+                            k = cur_count - 1;
+                            work = 0;
+
+                            while (k != countdown_end)
+                            {
+                                x0 = span->x.x0;
+                                x1 = span->x.x1;
+                                n = prev_count;
+                                n = n - 1;
+                                prev_span = prev;
+
+                                if (n != countdown_end)
+                                {
+                                    s32 intersect_end;
+
+                                    do
+                                    {
+                                        if ((x1 >= prev_span->x.x0) && (prev_span->x.x1 >= x0))
+                                        {
+                                            if (work >= FIELD_COLLISION_RASTER_SPAN_MAX)
+                                            {
+                                                scene->group_work = 0;
+                                                scene->group_count = FIELD_COLLISION_GROUP_ERROR_INTERSECT;
+                                                return;
+                                            }
+
+                                            if (x0 < prev_span->x.x0)
+                                            {
+                                                dst->x.x0 = prev_span->x.x0;
+                                            }
+                                            else
+                                            {
+                                                dst->x.x0 = x0;
+                                            }
+
+                                            if (prev_span->x.x1 < x1)
+                                            {
+                                                dst->x.x1 = prev_span->x.x1;
+                                            }
+                                            else
+                                            {
+                                                dst->x.x1 = x1;
+                                            }
+
+                                            do
+                                            {
+                                                work++;
+                                                dst++;
+                                            } while (0);
+                                        }
+
+                                        intersect_end = -1;
+                                        prev_span++;
+                                        n--;
+                                    } while (n != intersect_end);
+                                }
+
+                                other = acc;
+                                n = acc_count - 1;
+                                fresh = 1;
+
+                                if (n != countdown_end)
+                                {
+                                    do
+                                    {
+                                        if (((x1 + 1) >= other->x.x0) && ((other->x.x1 + 1) >= x0))
+                                        {
+                                            if (x0 < other->x.x0)
+                                            {
+                                                other->x.x0 = x0;
+                                            }
+
+                                            if (other->x.x1 < x1)
+                                            {
+                                                other->x.x1 = x1;
+                                            }
+
+                                            fresh = 0;
+                                            break;
+                                        }
+
+                                        union_end = -1;
+                                        other++;
+                                        n--;
+                                    } while (n != union_end);
+                                }
+
+                                if (fresh != 0)
+                                {
+                                    if (acc_count >= FIELD_COLLISION_RASTER_SPAN_MAX)
+                                    {
+                                        scene->group_work = 0;
+                                        scene->group_count = FIELD_COLLISION_GROUP_ERROR_UNION;
+                                        return;
+                                    }
+
+                                    acc_count++;
+                                    other->x.x0 = x0;
+                                    other->x.x1 = x1;
+                                }
+
+                                k--;
+                                span++;
+                            }
+
+                            prev_count = work;
+                        }
+
+                        i--;
                     }
 
                     prev = (FieldCollisionRasterSpan*)(FIELD_COLLISION_SCRATCH + FIELD_COLLISION_RASTER_ROW_BYTES);
@@ -4646,46 +4634,40 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
                     i = acc_count - 1;
                     other = acc;
 
-                    if (i != countdown_end)
+                    while (i != countdown_end)
                     {
-                        do
+                        lead = (other->x.x0 >> shift0) + 2;
+                        tail = other->x.x1 >> shift0;
+                        tail = tail + 2;
+                        n = lead >> 5;
+                        k = tail >> 5;
+                        work = lead;
+                        work = countdown_end << (work & 0x1F);
+                        tail_mask = (u32)countdown_end >> (0x1F - (tail & 0x1F));
+                        wq = out + (n * 2);
+
+                        if (n != k)
                         {
-                            lead = (other->x.x0 >> shift0) + 2;
-                            tail = other->x.x1 >> shift0;
-                            tail = tail + 2;
-                            n = lead >> 5;
-                            k = tail >> 5;
-                            work = lead;
-                            work = countdown_end << (work & 0x1F);
-                            tail_mask = (u32)countdown_end >> (0x1F - (tail & 0x1F));
-                            wq = out + (n * 2);
+                            wp = wq + 3;
+                            k = (k - n) - 2;
+                            wq[1] |= work;
 
-                            if (n != k)
+                            while (k != countdown_end)
                             {
-                                wp = wq + 3;
-                                k = (k - n) - 2;
-                                wq[1] |= work;
-
-                                if (k != countdown_end)
-                                {
-                                    do
-                                    {
-                                        wp[0] = countdown_end;
-                                        k--;
-                                        wp += 2;
-                                    } while (k != countdown_end);
-                                }
-
-                                wp[0] |= tail_mask;
-                            }
-                            else
-                            {
-                                wq[1] |= work & tail_mask;
+                                wp[0] = countdown_end;
+                                k--;
+                                wp += 2;
                             }
 
-                            i--;
-                            other++;
-                        } while (i != countdown_end);
+                            wp[0] |= tail_mask;
+                        }
+                        else
+                        {
+                            wq[1] |= work & tail_mask;
+                        }
+
+                        i--;
+                        other++;
                     }
                 }
             }

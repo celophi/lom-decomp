@@ -371,13 +371,13 @@ void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, u_long* ot, s32 x,
     setaddr(source_bytes, getaddr(ot) & addr_mask);
     i = 0;
     setaddr(ot, (uintptr_t)source_bytes & addr_mask);
-    do
+    while (i < sizeof(GosubScrollFillPacket))
     {
         i += 1;
         *(u8*)prim = *source_bytes;
         source_bytes += 1;
         prim = (GosubScrollMarkerPacket*)((u8*)prim + 1);
-    } while (i < sizeof(GosubScrollFillPacket));
+    }
 
     setlen(fill_packet, 4);
     SET_BGR0_PACKED(fill_packet, 0);

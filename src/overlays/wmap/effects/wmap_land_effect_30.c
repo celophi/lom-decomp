@@ -312,16 +312,14 @@ void wmap_land_effect_30_sequence_13_step_01(void)
 {
     s32 i;
 
-    i = 200;
     D_801B25D8 = 1;
     D_800DCEA8 = 1;
 
-    do
+    for (i = 200; i < 240; i++)
     {
         g_wmap_actor_motions[i].state = 0;
         WMAP_INIT_PARTICLE_ACTOR(i, g_wmap_animation_bank_3, 3);
-        i++;
-    } while (i < 240);
+    }
 
     D_800D9150 = 2;
     g_wmap_land_effect_30_sequence_13_timer = 0x10;

@@ -106,7 +106,6 @@ void field_roll_menu_slot_effect(s32 group_index, s32 slot_index)
 
     if (g_field_game_state->menu_slots[group_index].flags.bits.item_count == 1)
     {
-        index = 0;
         random_value = rand();
         effect_index = table->picks[g_field_game_state->menu_slots[group_index].items[0] - FIELD_EFFECT_ITEM_BASE][random_value & 0xF];
         random_value = rand();
@@ -125,19 +124,15 @@ void field_roll_menu_slot_effect(s32 group_index, s32 slot_index)
             selection = table->picks[g_field_game_state->menu_slots[group_index].items[index] - FIELD_EFFECT_ITEM_BASE][random_value & 0xF];
             effect_index |= selection;
         }
-
-        index = 0;
     }
 
     g_field_game_state->menu_slots[group_index].slots[slot_index].entry.index = (table->codes[effect_index] & FIELD_EFFECT_CODE_ID_MASK) + FIELD_EFFECT_ID_BASE;
     g_field_game_state->menu_slots[group_index].slots[slot_index].entry.bits.result_type = table->codes[effect_index] >> FIELD_EFFECT_CODE_TYPE_SHIFT;
 
-    /* Both paths leave index at 0. */
-    do
+    for (index = 0; index < FIELD_MENU_SLOT_COUNTER_COUNT; index++)
     {
         g_field_game_state->menu_slots[group_index].slots[slot_index].counters[index] = 0;
-        index++;
-    } while (index < FIELD_MENU_SLOT_COUNTER_COUNT);
+    }
 }
 
 /**

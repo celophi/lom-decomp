@@ -303,21 +303,18 @@ void* menu_build_text_run(SPRT* sprite_cursor, u_long* ot, u8* src, s32 text_col
     /* Finish and link the prebuilt sprites using a running x offset. */
     acc = 0;
 
-    if (count != 0)
+    while (count != 0)
     {
-        do
-        {
-            sprite = sprite_cursor;
-            SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
-            setSprt(sprite);
+        sprite = sprite_cursor;
+        SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+        setSprt(sprite);
 
-            SET_SPRT_XY0_WORD(sprite, PACK_U16_PAIR(x, y) + acc);
-            acc += sprite->w;
+        SET_SPRT_XY0_WORD(sprite, PACK_U16_PAIR(x, y) + acc);
+        acc += sprite->w;
 
-            addPrim(ot, sprite);
-            sprite_cursor++;
-            count--;
-        } while (count != 0);
+        addPrim(ot, sprite);
+        sprite_cursor++;
+        count--;
     }
 
     /* addPrim prepends, so link the texture-page packet after the sprites. */
@@ -887,40 +884,37 @@ SPRT* menu_fill_window_interior(SPRT* sprite, u_long* ot_entry, const MenuRectU1
     {
         s32 x_offset = 0;
 
-        if (rect->w > 0)
+        while (x_offset < rect->w)
         {
-            do
+            SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+            setSprt(sprite);
+            SET_SPRT_UV0_PACKED(sprite, uv);
+
+            /* Clamp the final tile in each row and column to the region. */
+            if (x_offset + MENU_WINDOW_FILL_TILE_SIZE > rect->w)
             {
-                SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
-                setSprt(sprite);
-                SET_SPRT_UV0_PACKED(sprite, uv);
+                sprite->w = rect->w - x_offset;
+            }
+            else
+            {
+                sprite->w = MENU_WINDOW_FILL_TILE_SIZE;
+            }
 
-                /* Clamp the final tile in each row and column to the region. */
-                if (x_offset + MENU_WINDOW_FILL_TILE_SIZE > rect->w)
-                {
-                    sprite->w = rect->w - x_offset;
-                }
-                else
-                {
-                    sprite->w = MENU_WINDOW_FILL_TILE_SIZE;
-                }
+            if (y_offset + MENU_WINDOW_FILL_TILE_SIZE > rect->h)
+            {
+                sprite->h = rect->h - y_offset;
+            }
+            else
+            {
+                sprite->h = MENU_WINDOW_FILL_TILE_SIZE;
+            }
 
-                if (y_offset + MENU_WINDOW_FILL_TILE_SIZE > rect->h)
-                {
-                    sprite->h = rect->h - y_offset;
-                }
-                else
-                {
-                    sprite->h = MENU_WINDOW_FILL_TILE_SIZE;
-                }
-
-                sprite->x0 = rect->x + x_offset;
-                x_offset += MENU_WINDOW_FILL_TILE_SIZE;
-                sprite->y0 = rect->y + y_offset;
-                SET_SPRT_CLUT(sprite, MENU_CLUT_GRID_ALT);
-                addPrim(ot_entry, sprite);
-                sprite++;
-            } while (x_offset < rect->w);
+            sprite->x0 = rect->x + x_offset;
+            x_offset += MENU_WINDOW_FILL_TILE_SIZE;
+            sprite->y0 = rect->y + y_offset;
+            SET_SPRT_CLUT(sprite, MENU_CLUT_GRID_ALT);
+            addPrim(ot_entry, sprite);
+            sprite++;
         }
     }
 
@@ -1425,7 +1419,7 @@ void menu_update_layout(void)
     s32 layout_end = has_visible_children;
     s32 node_index = layout_end;
 
-    do
+    for (; node_index < MENU_NODE_COUNT; node_index += 1)
     {
         if (g_menu_nodes[node_index].u2.s.parent_idx == MENU_NONE)
         {
@@ -1446,8 +1440,7 @@ void menu_update_layout(void)
                 }
             }
         }
-        node_index += 1;
-    } while (node_index < MENU_NODE_COUNT);
+    }
 
     g_menu_layout_end = layout_end;
     if (has_visible_children == 0)

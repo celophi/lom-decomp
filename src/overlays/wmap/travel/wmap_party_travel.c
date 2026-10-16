@@ -248,8 +248,7 @@ void wmap_update_party_travel(void)
 
     if (g_wmap_party_visible != 0)
     {
-        i = 0;
-        do
+        for (i = 0; i < WMAP_TRAVELER_COUNT; i++)
         {
             sprite = &g_wmap_sprite_actors[i];
             if (sprite->resource_index != -1)
@@ -294,8 +293,7 @@ void wmap_update_party_travel(void)
                     wmap_draw_actor_sprite(sprite, (u16)packed_position | ((flat_y + 28) << 16), i, WMAP_TRAVEL_OT_FALLBACK, WMAP_TRAVEL_TEXTURE_ROW + i * WMAP_TRAVEL_TEXTURE_ROW);
                 }
             }
-            i++;
-        } while (i < WMAP_TRAVELER_COUNT);
+        }
     }
     if ((g_wmap_buttons_repeat & WMAP_PAD_CONFIRM) && g_wmap_party_moving == 0 && g_wmap_artifact_placement_active == 0)
     {

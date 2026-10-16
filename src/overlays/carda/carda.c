@@ -281,10 +281,7 @@ static s32 card_menu_update_card_sequence(void)
         g_card_step = g_card_steps_initial_scan;
     }
 
-    do
-    {
-        result = carda_advance_card_sequence();
-    } while (result == CARD_MENU_SEQUENCE_RUN_AGAIN);
+    while ((result = carda_advance_card_sequence()) == CARD_MENU_SEQUENCE_RUN_AGAIN);
 
     if (g_carda_format_declined != 0 && (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK))
     {

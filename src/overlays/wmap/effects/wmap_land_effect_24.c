@@ -315,9 +315,7 @@ void func_800BA408(void)
     WmapSpriteActor* config;
     void* entry;
 
-    index = 0xAA;
-
-    do
+    for (index = 0xAA; index < 0xB9; index++)
     {
         config_offset = index * 0x2C + 0xB0;
         config_base = (uintptr_t)g_wmap_sprite_actors;
@@ -333,8 +331,7 @@ void func_800BA408(void)
                 *(s16*)(entry + 2) = (value = -1);
             }
         }
-        index++;
-    } while (index < 0xB9);
+    }
 
     index = 0xAA;
     if ((g_wmap_frame_count & 1) == 0)
@@ -351,7 +348,7 @@ void func_800BA408(void)
         screen_base = g_wmap_actor_animations;
         config_offset = 0x1DE8;
         screen_offset = 0x570;
-        do
+        while (index < 0xB9)
         {
             entry = (void*)(config_offset + (uintptr_t)scan_base);
             if (((WmapSpriteActor*)entry)->resource_index != 0)
@@ -380,7 +377,7 @@ void func_800BA408(void)
             config_offset += 0x2C;
             index++;
             screen_offset += 8;
-        } while (index < 0xB9);
+        }
     }
 }
 
@@ -467,7 +464,7 @@ void wmap_land_effect_24_sequence_11_step_01(void)
     g_wmap_effect_params[14] = 0;
     g_wmap_effect_params[20] = 0x61A8;
 
-    do
+    while (index < 0x1E)
     {
         screen_entry = (u8*)(screen_offset + screen_base);
         screen_offset += 8;
@@ -476,7 +473,7 @@ void wmap_land_effect_24_sequence_11_step_01(void)
         index++;
         *config_entry = 0;
         ((WmapAnimationSlot*)screen_entry)->data = resource;
-    } while (index < 0x1E);
+    }
 
     g_wmap_land_effect_24_sequence_11_timer = 0x5A;
     g_wmap_land_effect_24_sequence_11_step++;
