@@ -47,17 +47,19 @@
                 {                                                                                                                                              \
                     tile_ptr = tile_base + x_span;                                                                                                             \
                 }                                                                                                                                              \
-                n = row_span;                                                                                                                                  \
-                while (1)                                                                                                                                       \
+                                                                                                                                                               \
+                for (n = row_span;; n -= stride)                                                                                                               \
                 {                                                                                                                                              \
                     FIELD_COLLISION_TRACE_TILE(tile_ptr);                                                                                                      \
+                                                                                                                                                               \
                     if (n == 0)                                                                                                                                \
                     {                                                                                                                                          \
                         break;                                                                                                                                 \
                     }                                                                                                                                          \
+                                                                                                                                                               \
                     tile_ptr += stride;                                                                                                                        \
-                    n -= stride;                                                                                                                               \
                 }                                                                                                                                              \
+                                                                                                                                                               \
                 break;                                                                                                                                         \
             case 2:                                                                                                                                            \
                 tile_ptr = tile_base;                                                                                                                          \
@@ -74,8 +76,8 @@
                 break;                                                                                                                                         \
             case 3:                                                                                                                                            \
                 tile_ptr = tile_base;                                                                                                                          \
-                n = row_span;                                                                                                                                  \
-                while (1)                                                                                                                                       \
+                                                                                                                                                               \
+                for (n = row_span;; n -= stride)                                                                                                               \
                 {                                                                                                                                              \
                     scan_ptr = tile_ptr;                                                                                                                       \
                     m = x_span;                                                                                                                                \
@@ -84,13 +86,15 @@
                         FIELD_COLLISION_TRACE_TILE(scan_ptr);                                                                                                  \
                         scan_ptr++;                                                                                                                            \
                     } while (--m != -1);                                                                                                                       \
+                                                                                                                                                               \
                     if (n == 0)                                                                                                                                \
                     {                                                                                                                                          \
                         break;                                                                                                                                 \
                     }                                                                                                                                          \
+                                                                                                                                                               \
                     tile_ptr += stride;                                                                                                                        \
-                    n -= stride;                                                                                                                               \
                 }                                                                                                                                              \
+                                                                                                                                                               \
                 break;                                                                                                                                         \
             }                                                                                                                                                  \
             if (stamp != 0 && stamp != FIELD_COLLISION_TILE_GOAL)                                                                                              \
