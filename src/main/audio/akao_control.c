@@ -2022,77 +2022,81 @@ void akao_sfx_fade_pitch_bend_unsuppressed(AkaoCommandParam* params)
 }
 
 /**
- * @brief Set the driver master pan and cancel its fade.
- * @param params Signed pan in the low 8 bits of params[0].value.
+ * @brief Set the driver master tempo modifier and cancel its fade.
+ * @param params Signed modifier in the low 8 bits of params[0].value.
  */
-void akao_master_set_pan(AkaoCommandParam* params)
+void akao_master_set_tempo_modifier(AkaoCommandParam* params)
 {
-    s32 pan;
+    s32 modifier;
 
-    pan = (s8)params[0].value;
-    g_akao_masterpan_fade_ticks = 0;
-    pan = (u32)pan << AKAO_Q16_SHIFT;
-    g_akao_masterpan_acc = pan;
+    modifier = (s8)params[0].value;
+    g_akao_master_tempo_modifier_fade_ticks = 0;
+    modifier = (u32)modifier << AKAO_Q16_SHIFT;
+    g_akao_master_tempo_modifier_acc = modifier;
 }
 
 /**
- * @brief Fade the driver master pan from its current position to a target.
- * @param params Tick count in params[0].value (zero becomes one) and signed target pan
+ * @brief Fade the driver master tempo modifier from its current value to a target.
+ * @param params Tick count in params[0].value (zero becomes one) and signed target modifier
  *        in the low 8 bits of params[1].value.
  */
-void akao_master_fade_pan(AkaoCommandParam* params)
+void akao_master_fade_tempo_modifier(AkaoCommandParam* params)
 {
     s32 requested_ticks;
     s32 fade_ticks;
-    s32 target_pan;
-    s32 pan_step;
+    s32 target_modifier;
+    s32 modifier_step;
 
     requested_ticks = params[0].value;
     fade_ticks = 1;
+
     if (requested_ticks != 0)
     {
         fade_ticks = requested_ticks;
     }
-    target_pan = (s8)params[1].value;
-    target_pan = (u32)target_pan << AKAO_Q16_SHIFT;
-    target_pan -= g_akao_masterpan_acc;
-    pan_step = target_pan / fade_ticks;
-    g_akao_masterpan_fade_ticks = fade_ticks;
-    g_akao_masterpan_step = pan_step;
+
+    target_modifier = (s8)params[1].value;
+    target_modifier = (u32)target_modifier << AKAO_Q16_SHIFT;
+    target_modifier -= g_akao_master_tempo_modifier_acc;
+    modifier_step = target_modifier / fade_ticks;
+    g_akao_master_tempo_modifier_fade_ticks = fade_ticks;
+    g_akao_master_tempo_modifier_step = modifier_step;
 }
 
 /**
- * @brief Fade the driver master pan between explicit start and target positions.
+ * @brief Fade the driver master tempo modifier between explicit start and target values.
  *
- * A zero start-pan parameter selects a one-tick fade. Otherwise the tick count
+ * A zero start-modifier parameter selects a one-tick fade. Otherwise the tick count
  * comes directly from params[0].value, including when that count is zero.
  *
- * @param params Tick count in params[0].value, signed start pan in params[1].value
- *        and signed target pan in params[2].value; pan values use their low 8 bits.
+ * @param params Tick count in params[0].value, signed start modifier in params[1].value
+ *        and signed target modifier in params[2].value; modifier values use their low 8 bits.
  */
-void akao_master_fade_pan_from(AkaoCommandParam* params)
+void akao_master_fade_tempo_modifier_from(AkaoCommandParam* params)
 {
-    s32 start_pan_param;
+    s32 start_modifier_param;
     s32 fade_ticks;
-    s32 target_pan;
-    s32 start_pan;
-    s32 pan_step;
+    s32 target_modifier;
+    s32 start_modifier;
+    s32 modifier_step;
 
-    start_pan_param = params[1].value;
+    start_modifier_param = params[1].value;
     fade_ticks = 1;
-    if (start_pan_param != 0)
+
+    if (start_modifier_param != 0)
     {
         fade_ticks = params[0].value;
     }
-    start_pan = (s8)params[1].value;
-    start_pan = (u32)start_pan << AKAO_Q16_SHIFT;
-    g_akao_masterpan_acc = start_pan;
-    target_pan = (s8)params[2].value;
-    target_pan = (u32)target_pan << AKAO_Q16_SHIFT;
-    target_pan -= start_pan;
-    pan_step = target_pan / fade_ticks;
-    g_akao_masterpan_fade_ticks = fade_ticks;
-    g_akao_masterpan_step = pan_step;
+
+    start_modifier = (s8)params[1].value;
+    start_modifier = (u32)start_modifier << AKAO_Q16_SHIFT;
+    g_akao_master_tempo_modifier_acc = start_modifier;
+    target_modifier = (s8)params[2].value;
+    target_modifier = (u32)target_modifier << AKAO_Q16_SHIFT;
+    target_modifier -= start_modifier;
+    modifier_step = target_modifier / fade_ticks;
+    g_akao_master_tempo_modifier_fade_ticks = fade_ticks;
+    g_akao_master_tempo_modifier_step = modifier_step;
 }
 
 /**
@@ -2505,7 +2509,7 @@ void akao_apply_reverb_type(s32 reverb_type)
  * mask and pending advance count for their handler. A matching primary song is skipped
  * unless a loaded secondary song has a different id.
  *
- * Combined master pan/volume commands call the pan handler before the volume
+ * Combined master tempo modifier/volume commands call the tempo modifier handler before the volume
  * handler. Pause/resume-all commands call the song, SFX and XA handlers in order.
  * Other commands copy all six input slots before calling their table handler.
  *
@@ -2572,24 +2576,24 @@ s32 akao_send_command(u32 opcode)
         }
         break;
 
-    case AKAO_CMD_SET_MASTER_PAN_AND_VOLUME:
+    case AKAO_CMD_SET_MASTER_TEMPO_MODIFIER_AND_VOLUME:
         dispatch_params[0].value = g_akao_cmd_params[0].value;
-        g_akao_command_handlers[AKAO_CMD_SET_MASTER_PAN](dispatch_params);
+        g_akao_command_handlers[AKAO_CMD_SET_MASTER_TEMPO_MODIFIER](dispatch_params);
         opcode = AKAO_CMD_SET_MASTER_VOLUME;
         break;
 
-    case AKAO_CMD_FADE_MASTER_PAN_AND_VOLUME:
+    case AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_AND_VOLUME:
         dispatch_params[0].value = g_akao_cmd_params[0].value;
         dispatch_params[1].value = g_akao_cmd_params[1].value;
-        g_akao_command_handlers[AKAO_CMD_FADE_MASTER_PAN](dispatch_params);
+        g_akao_command_handlers[AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER](dispatch_params);
         opcode = AKAO_CMD_FADE_MASTER_VOLUME;
         break;
 
-    case AKAO_CMD_FADE_MASTER_PAN_AND_VOLUME_FROM:
+    case AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_AND_VOLUME_FROM:
         dispatch_params[0].value = g_akao_cmd_params[0].value;
         dispatch_params[1].value = g_akao_cmd_params[1].value;
         dispatch_params[2].value = g_akao_cmd_params[2].value;
-        g_akao_command_handlers[AKAO_CMD_FADE_MASTER_PAN_FROM](dispatch_params);
+        g_akao_command_handlers[AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_FROM](dispatch_params);
         opcode = AKAO_CMD_FADE_MASTER_VOLUME_FROM;
         break;
 

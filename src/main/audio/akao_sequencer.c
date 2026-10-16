@@ -359,10 +359,10 @@ void akao_tick_fades(void)
         g_akao_xa_tracker.volume = next_level & AKAO_LOW_HALF_MASK;
     }
 
-    if (g_akao_masterpan_fade_ticks != 0)
+    if (g_akao_master_tempo_modifier_fade_ticks != 0)
     {
-        g_akao_masterpan_fade_ticks--;
-        g_akao_masterpan_acc += g_akao_masterpan_step;
+        g_akao_master_tempo_modifier_fade_ticks--;
+        g_akao_master_tempo_modifier_acc += g_akao_master_tempo_modifier_step;
     }
 
     if (g_akao_mastervol_fade_ticks != 0)
@@ -468,7 +468,7 @@ s32 akao_seq_tick_channels(AkaoChannelState* channels, s32 is_secondary)
     AkaoDriverFlags* driver_flags;
 
     tempo_step = g_akao_seq_channel0->tempo >> AKAO_Q16_SHIFT;
-    tempo_scale = g_akao_master_vol_scalar;
+    tempo_scale = g_akao_master_tempo_modifier;
 
     if (tempo_scale != 0)
     {

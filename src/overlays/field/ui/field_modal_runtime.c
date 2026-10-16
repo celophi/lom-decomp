@@ -1868,11 +1868,11 @@ void field_rebuild_party_actions(s32 refresh_only)
                 }
             }
 
-            player->unk258 = 0;
+            player->hide_shield_sprite = 0;
 
             if ((u32)(player->head.bytes.weapon_type - 1) < 2U)
             {
-                player->unk258 = 1;
+                player->hide_shield_sprite = 1;
                 equipment_index = 1;
                 equipment_player = player;
                 equipment_offset = character_offset + sizeof(FieldItemRecord);
@@ -1887,7 +1887,7 @@ void field_rebuild_party_actions(s32 refresh_only)
 
                         if ((FIELD_ITEM_CATEGORY(equipment_info) == FIELD_ITEM_CATEGORY_ARMOR) && !FIELD_ITEM_TYPE(equipment_info))
                         {
-                            equipment_player->unk258 = 0;
+                            equipment_player->hide_shield_sprite = 0;
                         }
                     }
                 }

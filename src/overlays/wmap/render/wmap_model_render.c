@@ -12,7 +12,6 @@
 #define WMAP_MODEL_BLEND_TPAGE 0x0C
 #define WMAP_MODEL_SEMI_TRANS 0x02
 #define WMAP_MODEL_BACK_OT_OFFSET 4
-#define WMAP_MODEL_TPAGE_XY 400 /* Packed (400, 0), outside the visible display. */
 
 #define LOAD_MODEL_VERTEX(dst, source, index)                                                                                                                  \
     {                                                                                                                                                          \

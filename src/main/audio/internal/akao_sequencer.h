@@ -14,7 +14,7 @@ void akao_channel_set_articulation(AkaoChannelState* channel, s32 articulation_i
 /* Externs not covered by akao_driver.h */
 extern s16 g_akao_cdvol_current;
 extern s32 g_akao_cdvol_step;
-extern s32 g_akao_masterpan_step;
+extern s32 g_akao_master_tempo_modifier_step;
 extern s32 g_akao_mastervol_step;
 
 /** @brief Root-counter ticks taken by the last four driver ticks, oldest first. */
@@ -25,6 +25,7 @@ typedef struct
 
 /** @brief Driver tick timing history kept by akao_irq_handler. */
 extern TimingRing g_akao_irq_timing;
-extern u8 g_akao_master_vol_scalar;
+/** @brief Low byte of the master tempo modifier accumulator's high half. */
+extern u8 g_akao_master_tempo_modifier;
 
 #endif

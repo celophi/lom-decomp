@@ -68,8 +68,11 @@ extern AkaoCommandParam g_akao_cmd_params[];
 /** @brief Mask retaining the low 8 bits of a master-volume command parameter. */
 #define AKAO_MASTER_VOLUME_MASK 0xFF
 
-/** @brief Mask retaining the low 8 bits of a combined master pan/volume parameter. */
-#define AKAO_MASTER_PAN_VOLUME_MASK 0xFF
+/** @brief Mask retaining the low 8 bits of a master tempo modifier. */
+#define AKAO_MASTER_TEMPO_MODIFIER_MASK 0xFF
+
+/** @brief Mask retaining the low 8 bits of a combined master tempo modifier/volume parameter. */
+#define AKAO_MASTER_TEMPO_VOLUME_MASK 0xFF
 
 /**
  * @brief Commands queued by akao_send_command.
@@ -122,15 +125,15 @@ typedef enum AkaoCmd
     AKAO_CMD_SET_CD_VOLUME                   = 0xC8, /**< Set the CD audio volume. */
     AKAO_CMD_FADE_CD_VOLUME                  = 0xC9, /**< Fade the CD audio volume. */
     AKAO_CMD_FADE_CD_VOLUME_FROM             = 0xCA, /**< Fade the CD audio volume from a start level. */
-    AKAO_CMD_SET_MASTER_PAN                  = 0xD0, /**< Set the master pan. */
-    AKAO_CMD_FADE_MASTER_PAN                 = 0xD1, /**< Fade the master pan. */
-    AKAO_CMD_FADE_MASTER_PAN_FROM            = 0xD2, /**< Fade the master pan from a start level. */
+    AKAO_CMD_SET_MASTER_TEMPO_MODIFIER                  = 0xD0, /**< Set the master tempo modifier. */
+    AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER                 = 0xD1, /**< Fade the master tempo modifier. */
+    AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_FROM            = 0xD2, /**< Fade the master tempo modifier from a start level. */
     AKAO_CMD_SET_MASTER_VOLUME               = 0xD4, /**< Set the master volume. */
     AKAO_CMD_FADE_MASTER_VOLUME              = 0xD5, /**< Fade the master volume. */
     AKAO_CMD_FADE_MASTER_VOLUME_FROM         = 0xD6, /**< Fade the master volume from a start level. */
-    AKAO_CMD_SET_MASTER_PAN_AND_VOLUME       = 0xD8, /**< 0xD0 and 0xD4 with one value. */
-    AKAO_CMD_FADE_MASTER_PAN_AND_VOLUME      = 0xD9, /**< 0xD1 and 0xD5 with one value. */
-    AKAO_CMD_FADE_MASTER_PAN_AND_VOLUME_FROM = 0xDA, /**< 0xD2 and 0xD6 with one value. */
+    AKAO_CMD_SET_MASTER_TEMPO_MODIFIER_AND_VOLUME       = 0xD8, /**< 0xD0 and 0xD4 with one value. */
+    AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_AND_VOLUME      = 0xD9, /**< 0xD1 and 0xD5 with one value. */
+    AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_AND_VOLUME_FROM = 0xDA, /**< 0xD2 and 0xD6 with one value. */
     AKAO_CMD_PLAY_XA_BUFFER                  = 0xE0, /**< Stream an XA program from a RAM buffer. */
     AKAO_CMD_STOP_XA                         = 0xE2, /**< Stop the streamed voice pair. */
     AKAO_CMD_SET_XA_VOLUME                   = 0xE4, /**< Set the streamed voice volume. */

@@ -75,9 +75,6 @@
 /** @brief Game control word bit: the game state words must be cleared and a new seed drawn. */
 #define FIELD_CONTROL_RESET_WORDS 0x800000
 
-/** @brief Day-of-week bits of the game control word's weekday half. */
-#define FIELD_WEEKDAY_MASK 0x7F
-
 /** @brief Diagnostic: a guest or companion is present but its variant variable is unset. */
 #define DIAG_MISSING_PARTY_VARIANT 0x320
 

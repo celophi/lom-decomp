@@ -143,7 +143,6 @@ extern s32 g_cd_irq_code_sum;
 extern u8 g_cd_response_byte2;
 extern u8 g_cd_response_payload[CHECKPS_CD_RESPONSE_PAYLOAD_SIZE];
 extern volatile u8* g_cd_status_register;
-extern volatile u8* g_cd_response_register;
 extern volatile u8* g_cd_data_register;
 extern volatile u8* g_cd_irq_register;
 
@@ -878,13 +877,13 @@ s32 run_cd_integrity_check(s32 single_step)
                     step_result = CHECKPS_CD_POLL_DISK_ERROR;
                     break;
                 }
-                if (step_result == CHECKPS_CD_POLL_PENDING)
+                if (step_result != CHECKPS_CD_POLL_PENDING)
                 {
-                }
-                else if (step_result != CHECKPS_CD_POLL_COMPLETE)
-                {
-                    step_result = CHECKPS_STATE_WAIT_PAUSE;
-                    break;
+                    if (step_result != CHECKPS_CD_POLL_COMPLETE)
+                    {
+                        step_result = CHECKPS_STATE_WAIT_PAUSE;
+                        break;
+                    }
                 }
                 if (step_result < 0)
                 {
@@ -932,6 +931,12 @@ s32 run_cd_integrity_check(s32 single_step)
     }
 }
 
+static inline u8* checkps_append_response_byte(u8* destination)
+{
+    CHECKPS_READ_RESPONSE_BYTE(*destination);
+    return destination + 1;
+}
+
 /**
  * @brief Poll and consume the response for a CHECKPS CD command.
  * @param command Command whose response is expected.
@@ -967,12 +972,10 @@ static CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command)
                 g_cd_irq_code_sum = 0;
                 if (irq_code == CdlDiskError)
                 {
-                    while (1)
-                    {
-                        g_cd_response.fields.status = *g_cd_response_register;
-                        break;
-                    }
-                    g_cd_response.fields.detail = *g_cd_response_register;
+                    u8* response_cursor = g_cd_response.bytes;
+
+                    response_cursor = checkps_append_response_byte(response_cursor);
+                    checkps_append_response_byte(response_cursor);
                     *g_cd_status_register = 1;
                     *g_cd_data_register = CHECKPS_CD_IRQ_ACK_MASK;
                     if (!(g_cd_response.fields.status & CdlStatShellOpen))
@@ -987,7 +990,7 @@ static CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command)
                 {
                     do
                     {
-                        g_cd_response.bytes[response_index] = *g_cd_response_register;
+                        CHECKPS_READ_RESPONSE_BYTE(g_cd_response.bytes[response_index]);
                         response_index++;
                     } while (response_index < g_cd_command_table[command].response_count);
                 }

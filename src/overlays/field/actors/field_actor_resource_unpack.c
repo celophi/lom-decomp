@@ -98,12 +98,19 @@ typedef struct
     s8 bytes[6];
 } FieldAnimationTailBytes;
 
+typedef struct
+{
+    u16 texture_offset;
+    u16 has_tracks;
+} FieldActorResourceHeader;
+
 /**
  * @brief Pointer into the actor resource stream or an unpacked block, with one view per element type read.
  */
 typedef union
 {
     u8* bytes;
+    FieldActorResourceHeader* resource_header;
     u16* halves;
     s32* words;
     uintptr_t address;
@@ -308,14 +315,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
     FieldStreamPointer resource;
     s32 texture_total;
     /** @brief Curve rewritten to the current layout (FieldParameterCurve with the random flag in the first byte). */
-    struct
-    {
-        u32 segment_count : 7;
-        u32 random : 1;
-        u8 segment_offset;
-        u16 end_value;
-        u16 start_value;
-    } converted;
+    FieldParameterCurve converted;
     s32 allocation_size;
     s32 has_tracks;
     s32 track_size;
@@ -354,12 +354,12 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
     cursor = block;
     resource = cursor;
 
-    if (*cursor.halves != 0)
+    if (cursor.resource_header->texture_offset != 0)
     {
-        field_upload_actor_texture(cursor.bytes + *cursor.halves, owner);
+        field_upload_actor_texture(cursor.bytes + cursor.resource_header->texture_offset, owner);
     }
 
-    cursor.bytes = block.bytes + 2;
+    cursor.halves = &block.resource_header->has_tracks;
     has_tracks = *cursor.halves;
     cursor.address = ALIGN4(cursor.address + sizeof(u16));
 
@@ -547,12 +547,12 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
     {
         for (i = 0; i < curve_count; i++)
         {
-            converted.segment_count = FIELD_LEGACY_CURVE(actor, i)->fields.segment_count & FIELD_CURVE_SEGMENT_COUNT_MASK;
-            converted.random = FIELD_LEGACY_CURVE(actor, i)->head >> 15;
-            converted.segment_offset = (FIELD_LEGACY_CURVE(actor, i)->head >> 8) & FIELD_CURVE_SEGMENT_COUNT_MASK;
+            converted.head.bits.segment_count = FIELD_LEGACY_CURVE(actor, i)->fields.segment_count & FIELD_CURVE_SEGMENT_COUNT_MASK;
+            converted.head.bits.random = FIELD_LEGACY_CURVE(actor, i)->head >> 15;
+            converted.head.bytes.segment_offset = (FIELD_LEGACY_CURVE(actor, i)->head >> 8) & FIELD_CURVE_SEGMENT_COUNT_MASK;
             converted.start_value = FIELD_LEGACY_CURVE(actor, i)->fields.start_value;
             converted.end_value = FIELD_LEGACY_CURVE(actor, i)->fields.end_value;
-            bcopy((u8*)&converted, (u8*)&actor->curves[i], sizeof(FieldLegacyCurve));
+            bcopy((u8*)&converted, (u8*)&actor->curves[i], sizeof(converted));
         }
     }
 

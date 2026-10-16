@@ -63,15 +63,15 @@ void akao_resume_audio(u32 target);
 s32 akao_set_cd_volume(s32 volume);
 s32 akao_fade_cd_volume(s32 ticks, s32 volume);
 s32 akao_fade_cd_volume_from(s32 ticks, s32 start_volume, s32 volume);
-s32 akao_set_master_pan(s32 pan);
-s32 akao_fade_master_pan(s32 ticks, s32 pan);
-s32 akao_fade_master_pan_from(s32 ticks, s32 start_pan, s32 pan);
+s32 akao_set_master_tempo_modifier(s32 modifier);
+s32 akao_fade_master_tempo_modifier(s32 ticks, s32 modifier);
+s32 akao_fade_master_tempo_modifier_from(s32 ticks, s32 start_modifier, s32 modifier);
 s32 akao_set_master_volume(s32 volume);
 s32 akao_fade_master_volume(s32 ticks, s32 volume);
 void akao_fade_master_volume_from(s32 ticks, s32 start_volume, s32 volume);
-s32 akao_set_master_pan_and_volume(s32 value);
-s32 akao_fade_master_pan_and_volume(s32 ticks, s32 value);
-s32 akao_fade_master_pan_and_volume_from(s32 ticks, s32 start_value, s32 value);
+s32 akao_set_master_tempo_modifier_and_volume(s32 value);
+s32 akao_fade_master_tempo_modifier_and_volume(s32 ticks, s32 value);
+s32 akao_fade_master_tempo_modifier_and_volume_from(s32 ticks, s32 start_value, s32 value);
 s32 akao_set_cd_mix(s32 volume);
 
 /* Instrument banks */

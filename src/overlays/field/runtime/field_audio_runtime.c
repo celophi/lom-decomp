@@ -29,7 +29,6 @@
 s32 akao_switch_song(void* sequence, s32 volume);
 void akao_stop_sfx(s32 value0, s32 value1);
 s32 akao_fade_song_volume(s32 song_handle, s32 frames, s32 volume);
-s32 akao_set_master_pan(s32 value0);
 s32 akao_set_master_volume(s32 value0);
 s32 akao_is_sfx_playing(s32 sfx_tag);
 s32 akao_get_xfer_state(void);
@@ -319,7 +318,7 @@ inline void field_play_song(void)
     g_field_song_handles[FIELD_SONG_MAIN] = song_handle;
     akao_set_song_volume(song_handle, g_field_song_volume);
     akao_set_master_volume(0);
-    akao_set_master_pan(0);
+    akao_set_master_tempo_modifier(0);
 }
 
 /**
@@ -351,7 +350,7 @@ void field_play_song_section(s32 section_index, s32 param1)
         akao_set_master_volume(0);
     }
 
-    akao_set_master_pan(0);
+    akao_set_master_tempo_modifier(0);
 }
 
 /**

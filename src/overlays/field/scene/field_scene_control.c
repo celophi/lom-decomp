@@ -847,16 +847,14 @@ static void field_tint_part_cells(FieldPart* part)
                 if ((word & bit) && (tile->clut_slot & FIELD_TILE_ANIMATED))
                 {
                     entry = &pal[tile->color_index];
-                    ((FieldTintColor*)&part->code_word)->rg = entry->rg;
-                    ((FieldTintColor*)&part->code_word)->b = entry->b;
+                    FIELD_COPY_TINT_COLOR(((FieldTintColor*)&part->code_word), entry);
                     return;
                 }
             }
             else if (word & bit)
             {
                 entry = &pal[tile->color_index];
-                ((FieldCellTint*)dst)->rg = entry->rg;
-                ((FieldCellTint*)dst)->b = entry->b;
+                FIELD_COPY_TINT_COLOR(((FieldCellTint*)dst), entry);
                 dst += stride;
             }
             bit <<= 1;
@@ -894,16 +892,14 @@ static void field_tint_part_cells(FieldPart* part)
                 if ((word & bit) && (tile->clut_slot & FIELD_TILE_ANIMATED))
                 {
                     entry = &pal[tile->color_index];
-                    ((FieldTintColor*)&part->code_word)->rg = entry->rg;
-                    ((FieldTintColor*)&part->code_word)->b = entry->b;
+                    FIELD_COPY_TINT_COLOR(((FieldTintColor*)&part->code_word), entry);
                     return;
                 }
             }
             else if (word & bit)
             {
                 entry = &pal[tile->color_index];
-                ((FieldCellTint*)dst)->rg = entry->rg;
-                ((FieldCellTint*)dst)->b = entry->b;
+                FIELD_COPY_TINT_COLOR(((FieldCellTint*)dst), entry);
                 dst += stride;
             }
             bit <<= 1;
@@ -1349,9 +1345,8 @@ static void field_tint_animation_frames(FieldPart* cel, FieldAnim* anim)
         while (--count != -1)
         {
             entry = &pal[tile->color_index];
-            ((FieldCellTint*)dst)->rg = entry->rg;
+            FIELD_COPY_TINT_COLOR(((FieldCellTint*)dst), entry);
             tile++;
-            ((FieldCellTint*)dst)->b = entry->b;
             dst += stride;
         }
         break;
@@ -1376,9 +1371,8 @@ static void field_tint_animation_frames(FieldPart* cel, FieldAnim* anim)
         while (--count != -1)
         {
             entry = &pal[tile->color_index];
-            ((FieldCellTint*)dst)->rg = entry->rg;
+            FIELD_COPY_TINT_COLOR(((FieldCellTint*)dst), entry);
             tile++;
-            ((FieldCellTint*)dst)->b = entry->b;
             dst += stride;
         }
         break;

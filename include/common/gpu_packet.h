@@ -70,6 +70,7 @@
     (*(u16*)((u8*)(p) + 0x0E) = (u16)(_clut))
 
 /** @brief GPU command codes of a POLY_G4, a LINE_G2, a TILE and an SPRT, and the bit that makes a primitive semi-transparent. */
+#define GPU_CODE_POLY_F4 0x28
 #define GPU_CODE_POLY_G4 0x38
 #define GPU_CODE_LINE_G2 0x50
 #define GPU_CODE_TILE 0x60

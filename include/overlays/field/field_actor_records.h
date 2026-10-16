@@ -677,6 +677,11 @@ typedef struct
             u8 segment_count;
             u8 segment_offset;
         } bytes;
+        struct
+        {
+            u8 segment_count : 7;
+            u8 random : 1;
+        } bits;
     } head;
     s16 end_value;
     s16 start_value;

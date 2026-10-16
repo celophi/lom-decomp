@@ -443,7 +443,7 @@ void func_8006A9C4(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 f
  * @param translation Local translation applied to the base matrix.
  * @param rotation Local rotation composed with the base matrix.
  */
-void func_8006ADD0(VECTOR* translation, SVECTOR* rotation)
+void wmap_set_effect_model_transform(VECTOR* translation, SVECTOR* rotation)
 {
     MATRIX base;
     MATRIX effect;
@@ -468,7 +468,7 @@ void func_8006ADD0(VECTOR* translation, SVECTOR* rotation)
 }
 
 /** @brief Combine the base and effect transforms and install the resulting matrix. */
-void func_8006AEE0(void)
+void wmap_set_effect_camera_transform(void)
 {
     SVECTOR rotation;
     VECTOR translation;
@@ -1050,7 +1050,7 @@ s32 func_8006C0EC(void)
 {
     SVECTOR position;
 
-    func_8006AEE0();
+    wmap_set_effect_camera_transform();
     position.vz = 0;
     position.vx =
         (s16)((s32)((((g_wmap_focus_cell_x - 1) * 0xA0) - ((s32)(M2C_FIELD(&g_wmap_view, s32*, 0) * 0x14000) / (s32)M2C_FIELD(&g_wmap_view, s32*, 8))) * 0x6000) /

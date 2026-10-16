@@ -64,8 +64,8 @@ void akao_driver_init_state(void)
     g_akao_cdvol_acc = (SPU_MAX_CD_VOLUME << AKAO_Q16_SHIFT);
     g_akao_mastervol_fade_ticks = 0;
     g_akao_mastervol_acc = 0;
-    g_akao_masterpan_fade_ticks = 0;
-    g_akao_masterpan_acc = 0;
+    g_akao_master_tempo_modifier_fade_ticks = 0;
+    g_akao_master_tempo_modifier_acc = 0;
     g_akao_cdvol_fade_ticks = 0;
     g_akao_sfx_control.noise_mask = 0;
     song->noise_mask = 0;

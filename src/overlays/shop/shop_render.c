@@ -297,14 +297,10 @@ u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
                         {
                             /* Header word 2 is section_offsets[SHOP_TEXT_ITEM_NAMES]. */
                             s32 section = ((u32*)&g_shop_text_archive)[2];
-                            s32 name_index = *(u16*)entry;
-                            u16 name_offset;
-                            u8* text;
+                            s32 name_index = entry->id;
 
-                            name_index *= 2;
-                            name_offset = *(u16*)((name_index + section) + text_base);
-                            text = (u8*)(section + (name_offset + text_base));
-                            prim = field_draw_text((SPRT*)prim, ot, text, FIELD_TEXT_COLOR_NORMAL, name_x, y, 2);
+                            name_index *= sizeof(u16);
+                            prim = field_draw_text((SPRT*)prim, ot, SHOP_ARCHIVE_TEXT(text_base, section, name_index), FIELD_TEXT_COLOR_NORMAL, name_x, y, 2);
                         } while (0);
                     }
                     position.x = 208 - x;

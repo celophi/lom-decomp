@@ -544,7 +544,7 @@ WMAP_STEP_RESET(wmap_land_event_00_a_sequence_4_reset, g_wmap_land_event_00_a_se
 /** @brief World-map step handler: draw a framed panel and expire the step counter. */
 void wmap_land_event_00_a_sequence_4_step_02(void)
 {
-    func_8006AEE0();
+    wmap_set_effect_camera_transform();
     func_8008ECF8(0x14, 0x78, g_wmap_effect_model_pack_4, &g_wmap_effect_params[30]);
     wmap_queue_texture_page(0x25, 5);
     if (--g_wmap_land_event_00_a_sequence_4_timer == 0)
@@ -567,7 +567,7 @@ void wmap_land_event_00_a_sequence_4_step_03(void)
 /** @brief World-map step handler: draw a framed panel and expire the step counter. */
 void wmap_land_event_00_a_sequence_4_step_04(void)
 {
-    func_8006AEE0();
+    wmap_set_effect_camera_transform();
     func_8008ECF8(0x14, 0x78, g_wmap_effect_model_pack_4, &g_wmap_effect_params[30]);
     wmap_queue_texture_page(0x25, 5);
     if (--g_wmap_land_event_00_a_sequence_4_timer == 0)

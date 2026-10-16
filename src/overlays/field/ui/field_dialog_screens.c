@@ -108,12 +108,6 @@ s32 rsin(s32);
 static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_table, s32 index);
 static POLY_FT4* field_draw_timed_panel_image(POLY_FT4* prim, u_long* ordering_table);
 
-/**
- * @brief Recover a transition descriptor from a pointer to its flags field.
- * @param flags_ptr Address of the descriptor's flags member.
- */
-#define QUAD_OF_FLAGS(flags_ptr) ((FieldTransitionQuad *)((u8 *)(flags_ptr) - 10))
-
 /** @brief Number of actor text slots (the first two follow the players). */
 #define FIELD_ACTOR_TEXT_COUNT 3
 /** @brief Frames an actor text stays up; it fades out over the last 32. */
@@ -329,7 +323,7 @@ void field_update_timed_panel(FieldRenderHalf* render)
  * @note The effect bits select a zoom (0, 4), a slide (1), a spin (2) or a flash (3),
  *       all driven by the panel brightness.
  */
-static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_table, s32 index)
+static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_table, s32 index)
 {
     s32 quad_index;
     u32 half_width;
@@ -363,25 +357,21 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
     s32 width_term_2;
     s32 width_term_y_2;
     s32 scaled_y_2;
-    FieldTransitionQuad *quad;
-    u8 *flags_base;
-    u8 *quad_flags;
+    FieldTransitionQuad* quad;
     s32 raw_width;
     u32 half;
     u32 width;
 
     quad = g_field_timed_panel_quads[index];
-    flags_base = (u8 *)&quad->flags;
 
     for (quad_index = 0; quad_index < 4; quad_index++, quad++)
     {
-        quad_flags = flags_base + quad_index * 12;
 
         if (quad->x != FIELD_TRANSITION_QUAD_UNUSED)
         {
-            raw_width = QUAD_OF_FLAGS(quad_flags)->width;
+            raw_width = quad->width;
 
-            if (QUAD_OF_FLAGS(quad_flags)->flags & FIELD_TRANSITION_QUAD_HALF_WIDTH)
+            if (quad->flags & FIELD_TRANSITION_QUAD_HALF_WIDTH)
             {
                 raw_width = (u16)(raw_width >> 1);
             }
@@ -390,14 +380,14 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
             width = raw_width & 0xFFFF;
             prim->r0 = prim->g0 = prim->b0 = g_field_timed_panel_brightness;
 
-            if ((g_field_timed_panel_brightness != FIELD_TIMED_PANEL_FULL_BRIGHTNESS) || (QUAD_OF_FLAGS(quad_flags)->flags & FIELD_TRANSITION_QUAD_SEMI_TRANSPARENT))
+            if ((g_field_timed_panel_brightness != FIELD_TIMED_PANEL_FULL_BRIGHTNESS) || (quad->flags & FIELD_TRANSITION_QUAD_SEMI_TRANSPARENT))
             {
                 setSemiTrans(prim, 1);
             }
 
             expansion = FIELD_TIMED_PANEL_FULL_BRIGHTNESS - g_field_timed_panel_brightness;
 
-            switch (FIELD_TRANSITION_QUAD_EFFECT(QUAD_OF_FLAGS(quad_flags)->flags))
+            switch (FIELD_TRANSITION_QUAD_EFFECT(quad->flags))
             {
             case 0:
                 term = width * expansion;
@@ -411,9 +401,9 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
                 scaled = scaled >> 7;
                 prim->x0 = prim->x2 = quad->x - scaled;
                 prim->x1 = prim->x3 = quad->x + width + scaled - 1;
-                prim->y0 = prim->y1 = QUAD_OF_FLAGS(quad_flags)->y - QUAD_OF_FLAGS(quad_flags)->height * expansion / 128;
-                bottom_1 = QUAD_OF_FLAGS(quad_flags)->y + QUAD_OF_FLAGS(quad_flags)->height;
-                scaled = QUAD_OF_FLAGS(quad_flags)->height * expansion;
+                prim->y0 = prim->y1 = quad->y - quad->height * expansion / 128;
+                bottom_1 = quad->y + quad->height;
+                scaled = quad->height * expansion;
 
                 if (scaled < 0)
                 {
@@ -453,8 +443,8 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
                 }
 
                 prim->x1 = prim->x3 = right_1 - 1;
-                prim->y0 = prim->y1 = QUAD_OF_FLAGS(quad_flags)->y;
-                prim->y2 = prim->y3 = QUAD_OF_FLAGS(quad_flags)->y + QUAD_OF_FLAGS(quad_flags)->height - 1;
+                prim->y0 = prim->y1 = quad->y;
+                prim->y2 = prim->y3 = quad->y + quad->height - 1;
                 break;
             case 2:
                 angle = expansion * 50;
@@ -472,7 +462,7 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
                 }
 
                 width_term >>= 13;
-                height_term = QUAD_OF_FLAGS(quad_flags)->height * x_sine;
+                height_term = quad->height * x_sine;
 
                 if (height_term < 0)
                 {
@@ -494,7 +484,7 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
                 }
 
                 width_term_y >>= 13;
-                height_term_y = QUAD_OF_FLAGS(quad_flags)->height * y_cosine;
+                height_term_y = quad->height * y_cosine;
 
                 if (height_term_y < 0)
                 {
@@ -522,8 +512,8 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
                 half_width = half;
                 prim->x0 = (u16)((quad->x + half) - rotated_x);
                 prim->x3 = (s16)(quad->x + half + rotated_x);
-                prim->y0 = (u16)(QUAD_OF_FLAGS(quad_flags)->y + (QUAD_OF_FLAGS(quad_flags)->height >> 1) + rotated_y);
-                prim->y3 = (s16)((QUAD_OF_FLAGS(quad_flags)->y + (QUAD_OF_FLAGS(quad_flags)->height >> 1)) - rotated_y);
+                prim->y0 = (u16)(quad->y + (quad->height >> 1) + rotated_y);
+                prim->y3 = (s16)((quad->y + (quad->height >> 1)) - rotated_y);
                 x_cosine_2 = rcos(angle);
                 x_sine_2 = rsin(angle);
                 negative_width = -(s32)width;
@@ -535,7 +525,7 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
                 }
 
                 width_term_2 >>= 13;
-                height_term_2 = QUAD_OF_FLAGS(quad_flags)->height * x_sine_2;
+                height_term_2 = quad->height * x_sine_2;
 
                 if (height_term_2 < 0)
                 {
@@ -553,7 +543,7 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
                 }
 
                 width_term_y_2 >>= 13;
-                height_term_y_2 = QUAD_OF_FLAGS(quad_flags)->height * y_cosine_2;
+                height_term_y_2 = quad->height * y_cosine_2;
 
                 if (height_term_y_2 < 0)
                 {
@@ -579,10 +569,10 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
                 prim->x1 = (s16)((quad->x + half_width) - rotated_x);
                 rotated_y = rotated_y + (scaled_y_2 >> 7);
                 prim->x2 = (u16)(quad->x + half_width + rotated_x);
-                prim->y1 = (u16)(QUAD_OF_FLAGS(quad_flags)->y + (QUAD_OF_FLAGS(quad_flags)->height >> 1) + rotated_y);
-                adjusted = QUAD_OF_FLAGS(quad_flags)->height;
+                prim->y1 = (u16)(quad->y + (quad->height >> 1) + rotated_y);
+                adjusted = quad->height;
                 adjusted = (u32)adjusted >> 1;
-                bottom_2 = QUAD_OF_FLAGS(quad_flags)->y + adjusted - rotated_y;
+                bottom_2 = quad->y + adjusted - rotated_y;
                 prim->y2 = bottom_2;
                 break;
             case 3:
@@ -598,8 +588,8 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
                 prim->r0 = prim->g0 = prim->b0 = brightness;
                 prim->x0 = prim->x2 = quad->x;
                 prim->x1 = prim->x3 = quad->x + width - 1;
-                prim->y0 = prim->y1 = QUAD_OF_FLAGS(quad_flags)->y;
-                prim->y2 = prim->y3 = QUAD_OF_FLAGS(quad_flags)->y + QUAD_OF_FLAGS(quad_flags)->height - 1;
+                prim->y0 = prim->y1 = quad->y;
+                prim->y2 = prim->y3 = quad->y + quad->height - 1;
                 break;
             case 4:
                 term = width * expansion;
@@ -613,9 +603,9 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
                 scaled = scaled >> 6;
                 prim->x0 = prim->x2 = quad->x - scaled;
                 prim->x1 = prim->x3 = quad->x + width + scaled - 1;
-                prim->y0 = prim->y1 = QUAD_OF_FLAGS(quad_flags)->y - QUAD_OF_FLAGS(quad_flags)->height * expansion / 128;
-                bottom_1 = QUAD_OF_FLAGS(quad_flags)->y + QUAD_OF_FLAGS(quad_flags)->height;
-                scaled = QUAD_OF_FLAGS(quad_flags)->height * expansion;
+                prim->y0 = prim->y1 = quad->y - quad->height * expansion / 128;
+                bottom_1 = quad->y + quad->height;
+                scaled = quad->height * expansion;
 
                 if (scaled < 0)
                 {
@@ -626,18 +616,18 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4 *prim, u_long *ordering_t
                 break;
             }
 
-            prim->u0 = prim->u2 = QUAD_OF_FLAGS(quad_flags)->u;
-            prim->u1 = prim->u3 = QUAD_OF_FLAGS(quad_flags)->u + width - 1;
-            prim->v0 = prim->v1 = QUAD_OF_FLAGS(quad_flags)->v;
+            prim->u0 = prim->u2 = quad->u;
+            prim->u1 = prim->u3 = quad->u + width - 1;
+            prim->v0 = prim->v1 = quad->v;
             palette_mask = 0xF0;
-            prim->v2 = prim->v3 = QUAD_OF_FLAGS(quad_flags)->v + QUAD_OF_FLAGS(quad_flags)->height - 1;
-            prim->clut = getClut(QUAD_OF_FLAGS(quad_flags)->flags & palette_mask, VRAM_CLUT_Y);
-            prim->tpage = getTPage(QUAD_OF_FLAGS(quad_flags)->flags & 3, (QUAD_OF_FLAGS(quad_flags)->flags >> 9) & 3, FIELD_TIMED_PANEL_VRAM_X, 0);
+            prim->v2 = prim->v3 = quad->v + quad->height - 1;
+            prim->clut = getClut(quad->flags & palette_mask, VRAM_CLUT_Y);
+            prim->tpage = getTPage(quad->flags & 3, (quad->flags >> 9) & 3, FIELD_TIMED_PANEL_VRAM_X, 0);
             addPrim(ordering_table, prim);
 
             if (g_field_timed_panel_brightness < FIELD_TIMED_PANEL_FADE_LIMIT)
             {
-                term = FIELD_TRANSITION_QUAD_EFFECT(QUAD_OF_FLAGS(quad_flags)->flags);
+                term = FIELD_TRANSITION_QUAD_EFFECT(quad->flags);
 
                 switch (term)
                 {
