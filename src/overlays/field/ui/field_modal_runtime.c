@@ -939,8 +939,9 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
     {
         action_offset = index * sizeof(FieldActionRow);
 
+        port = &ports[index];
         if ((g_field_player_records[index].head.bytes.flags & FIELD_PLAYER_ACTIVE) &&
-            ((port = &ports[index])->published_sample.device_type < CONTROLLER_DEVICE_CONFIGURING))
+            (port->published_sample.device_type < CONTROLLER_DEVICE_CONFIGURING))
         {
             bit_or_actor = 1;
             button_or_x = 0;
@@ -975,46 +976,56 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                     case 0: /* Guests 5 and 8 have no attack or guard. */
 #if defined(VERSION_JP)
                         work = save->characters[0].info.bytes[0];
-
-                        if (((work & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST) &&
+                        switch (work & FIELD_CHARACTER_TYPE_MASK)
 #else
-                        if (((save->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST) &&
+                        switch (save->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK)
 #endif
-                            ((secondary_action = save->characters[0].info.bytes[1], (secondary_action == 5)) || (secondary_action == 8)))
                         {
-                            text_offset = D_800EC3E0.high << 8;
-                            text_part = text_offset + bank;
-                            text_value = D_800EC3E0.low;
-                            text_or_state = text_part + text_value;
-                        }
-                        else
-                        {
+                        case FIELD_CHARACTER_GUEST:
+                            secondary_action = save->characters[0].info.bytes[1];
+                            if ((secondary_action == 5) || (secondary_action == 8))
+                            {
+                                text_offset = D_800EC3E0.high << 8;
+                                text_part = text_offset + bank;
+                                text_value = D_800EC3E0.low;
+                                text_or_state = text_part + text_value;
+                                break;
+                            }
+                            /* Other guests use the normal action label. */
+                            /* fallthrough */
+                        default:
                             bank_entry = &D_800EC3E6;
                             text_part = bank_entry->high;
                             text_value = D_800EC3E6.low;
                             text_part <<= 8;
                             text_part += bank;
                             text_or_state = text_part + text_value;
+                            break;
                         }
 
                         break;
                     case 1:
-                        if (((save->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST) &&
-                            ((secondary_action_alt = save->characters[0].info.bytes[1], (secondary_action_alt == 5)) ||
-                             (secondary_action_alt == 8)))
+                        switch (save->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK)
                         {
-                            text_offset = D_800EC3E0.high << 8;
-                            text_part = text_offset + bank;
-                            text_value = D_800EC3E0.low;
-                            text_or_state = text_part + text_value;
-                        }
-                        else
-                        {
+                        case FIELD_CHARACTER_GUEST:
+                            secondary_action_alt = save->characters[0].info.bytes[1];
+                            if ((secondary_action_alt == 5) || (secondary_action_alt == 8))
+                            {
+                                text_offset = D_800EC3E0.high << 8;
+                                text_part = text_offset + bank;
+                                text_value = D_800EC3E0.low;
+                                text_or_state = text_part + text_value;
+                                break;
+                            }
+                            /* Other guests use the normal action label. */
+                            /* fallthrough */
+                        default:
                             text_part = D_800EC3E8.high;
                             text_part <<= 8;
                             text_part += bank;
                             text_value = D_800EC3E8.low;
                             text_or_state = text_part + text_value;
+                            break;
                         }
 
                         break;

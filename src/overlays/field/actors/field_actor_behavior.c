@@ -538,6 +538,17 @@ static inline void field_stop_follower_animation(FieldActor* actor)
 }
 
 /**
+ * @brief Clear an actor's collision cache before the next node search.
+ * @param actor Actor whose cached collision node and height are cleared.
+ */
+static inline void field_reset_actor_collision_search(FieldActor* actor)
+{
+    g_field_object_states[actor->object_index].collision_node = FIELD_COLLISION_NODE_SEARCH;
+    g_field_object_states[actor->object_index].collision_flags = 0;
+    g_field_object_states[actor->object_index].movement.half.height = 0;
+}
+
+/**
  * @brief Walk a follower along the leader's route history.
  *
  * The follower moves towards the leader's history entry at its route_index,
@@ -550,6 +561,7 @@ static inline void field_stop_follower_animation(FieldActor* actor)
  */
 void field_follow_leader_route(FieldActor* actor, s32 follower_index, s32 follow_distance)
 {
+    s32 advance_route;
     VECTOR square;
     VECTOR delta;
     FieldMapBounds* bounds = FIELD_MAP_BOUNDS;
@@ -684,8 +696,14 @@ void field_follow_leader_route(FieldActor* actor, s32 follower_index, s32 follow
         gte_stlvnl(&square);
         dx = 0;
 
-        if (((square.vx + square.vz) > ((follower_index + 1) * FIELD_ROUTE_FOLLOW_DISTANCE_SQUARED)) &&
-            ((advance_state = &g_field_object_states[actor->object_index], route_index = advance_state->route_index) < (FIELD_ROUTE_HISTORY_LENGTH - 1U)))
+        advance_route = (square.vx + square.vz) > ((follower_index + 1) * FIELD_ROUTE_FOLLOW_DISTANCE_SQUARED);
+        if (advance_route)
+        {
+            advance_state = &g_field_object_states[actor->object_index];
+            route_index = advance_state->route_index;
+            advance_route = route_index < (FIELD_ROUTE_HISTORY_LENGTH - 1U);
+        }
+        if (advance_route)
         {
             advance_state->route_index = route_index + 1;
             advance_dx = (g_field_object_states[leader->object_index].route_history[g_field_object_states[actor->object_index].route_index].x << 8) - actor->x;
@@ -720,42 +738,48 @@ void field_follow_leader_route(FieldActor* actor, s32 follower_index, s32 follow
     {
         position_x = actor->x;
 
-        if ((position_x >= 0) && (position_x < (bounds->width << 8)) && ((position_z = actor->z) >= 0) && (position_z < ((s32)(bounds->depth << 16) >> 7)))
+        if ((position_x >= 0) && (position_x < (bounds->width << 8)))
         {
-            mover->x = position_x;
-            mover->height = actor->y;
-            mover->z = actor->z;
-            mover->move_x = dx;
-            mover->move_height = 0;
-            mover->move_z = dz;
-
-            if (g_field_object_parts[actor->object_index].appearance.fields.scale_xz == FIELD_PART_FULL_SCALE)
+            position_z = actor->z;
+            if ((position_z >= 0) && (position_z < ((s32)(bounds->depth << 16) >> 7)))
             {
-                mover->footprint_width = FIELD_FOOTPRINT_LARGE_WIDTH;
-                mover->mode.footprint_depth = FIELD_FOOTPRINT_LARGE_DEPTH;
+                mover->x = position_x;
+                mover->height = actor->y;
+                mover->z = actor->z;
+                mover->move_x = dx;
+                mover->move_height = 0;
+                mover->move_z = dz;
+
+                if (g_field_object_parts[actor->object_index].appearance.fields.scale_xz == FIELD_PART_FULL_SCALE)
+                {
+                    mover->footprint_width = FIELD_FOOTPRINT_LARGE_WIDTH;
+                    mover->mode.footprint_depth = FIELD_FOOTPRINT_LARGE_DEPTH;
+                }
+                else
+                {
+                    mover->footprint_width = FIELD_FOOTPRINT_WIDTH;
+                    mover->mode.footprint_depth = FIELD_FOOTPRINT_DEPTH;
+                }
+
+                mover->height_bias = FIELD_FOOTPRINT_STEP;
+                mover->mode.mode_flags &= ~FIELD_COLLISION_MOVER_AIRBORNE_HIGH;
+                mover->mode.mode_flags &= ~FIELD_COLLISION_MOVER_AIRBORNE_LOW;
+                mover->collision_node = g_field_object_states[actor->object_index].collision_node;
+                mover->flags = g_field_object_states[actor->object_index].collision_flags;
+                field_collision_resolve_move(mover);
+                g_field_object_states[actor->object_index].collision_node = mover->collision_node;
+                g_field_object_states[actor->object_index].collision_flags = mover->flags;
+                actor->y = mover->height;
+                g_field_object_states[actor->object_index].movement.half.height = mover->resolved_height / 256;
             }
             else
             {
-                mover->footprint_width = FIELD_FOOTPRINT_WIDTH;
-                mover->mode.footprint_depth = FIELD_FOOTPRINT_DEPTH;
+                field_reset_actor_collision_search(actor);
             }
-
-            mover->height_bias = FIELD_FOOTPRINT_STEP;
-            mover->mode.mode_flags &= ~FIELD_COLLISION_MOVER_AIRBORNE_HIGH;
-            mover->mode.mode_flags &= ~FIELD_COLLISION_MOVER_AIRBORNE_LOW;
-            mover->collision_node = g_field_object_states[actor->object_index].collision_node;
-            mover->flags = g_field_object_states[actor->object_index].collision_flags;
-            field_collision_resolve_move(mover);
-            g_field_object_states[actor->object_index].collision_node = mover->collision_node;
-            g_field_object_states[actor->object_index].collision_flags = mover->flags;
-            actor->y = mover->height;
-            g_field_object_states[actor->object_index].movement.half.height = mover->resolved_height / 256;
         }
         else
         {
-            g_field_object_states[actor->object_index].collision_node = FIELD_COLLISION_NODE_SEARCH;
-            g_field_object_states[actor->object_index].collision_flags = 0;
-            g_field_object_states[actor->object_index].movement.half.height = 0;
+            field_reset_actor_collision_search(actor);
         }
     }
 
@@ -998,49 +1022,55 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
             mover->z = movement_actor->z;
             actor_x = movement_actor->x;
 
-            if ((actor_x >= 0) && (actor_x < (bounds->width << 8)) && (actor_z = movement_actor->z, (actor_z >= 0)) && (actor_z < ((s32)(bounds->depth << 16) >> 7)))
+            if ((actor_x >= 0) && (actor_x < (bounds->width << 8)))
             {
-                mover->move_height = 0;
-                mover->height_bias = FIELD_FOOTPRINT_STEP;
-                probe->height_tolerance = FIELD_FOOTPRINT_STEP;
-                mover->move_x = work.motion.vx;
-                mover->move_z = work.motion.vz;
-
-                if (g_field_object_parts[movement_actor->object_index].appearance.fields.scale_xz == FIELD_PART_FULL_SCALE)
+                actor_z = movement_actor->z;
+                if ((actor_z >= 0) && (actor_z < ((s32)(bounds->depth << 16) >> 7)))
                 {
-                    mover->footprint_width = FIELD_FOOTPRINT_LARGE_WIDTH;
-                    probe->width = FIELD_FOOTPRINT_LARGE_WIDTH;
-                    mover->mode.footprint_depth = FIELD_FOOTPRINT_LARGE_DEPTH;
-                    probe->depth = FIELD_FOOTPRINT_LARGE_DEPTH;
+                    mover->move_height = 0;
+                    mover->height_bias = FIELD_FOOTPRINT_STEP;
+                    probe->height_tolerance = FIELD_FOOTPRINT_STEP;
+                    mover->move_x = work.motion.vx;
+                    mover->move_z = work.motion.vz;
+
+                    if (g_field_object_parts[movement_actor->object_index].appearance.fields.scale_xz == FIELD_PART_FULL_SCALE)
+                    {
+                        mover->footprint_width = FIELD_FOOTPRINT_LARGE_WIDTH;
+                        probe->width = FIELD_FOOTPRINT_LARGE_WIDTH;
+                        mover->mode.footprint_depth = FIELD_FOOTPRINT_LARGE_DEPTH;
+                        probe->depth = FIELD_FOOTPRINT_LARGE_DEPTH;
+                    }
+                    else
+                    {
+                        mover->footprint_width = FIELD_FOOTPRINT_WIDTH;
+                        probe->width = FIELD_FOOTPRINT_WIDTH;
+                        mover->mode.footprint_depth = FIELD_FOOTPRINT_DEPTH;
+                        probe->depth = FIELD_FOOTPRINT_DEPTH;
+                    }
+
+                    mover->mode.mode_flags &= ~FIELD_COLLISION_MOVER_AIRBORNE_HIGH;
+                    mover->mode.mode_flags &= ~FIELD_COLLISION_MOVER_AIRBORNE_LOW;
+                    mover->collision_node = g_field_object_states[movement_actor->object_index].collision_node;
+                    mover->flags = g_field_object_states[movement_actor->object_index].collision_flags;
+
+                    if ((field_collision_resolve_move(mover) & (FIELD_COLLISION_RESULT_BLOCKED | FIELD_COLLISION_RESULT_SLID)) == (FIELD_COLLISION_RESULT_BLOCKED | FIELD_COLLISION_RESULT_SLID))
+                    {
+                        movement_actor->control.word = movement_actor->control.word & ~FIELD_CONTROL_MOVEMENT_MASK;
+                    }
+
+                    g_field_object_states[movement_actor->object_index].collision_node = mover->collision_node;
+                    g_field_object_states[movement_actor->object_index].collision_flags = mover->flags;
+                    movement_actor->y = mover->height;
+                    g_field_object_states[movement_actor->object_index].movement.half.height = mover->resolved_height / 256;
                 }
                 else
                 {
-                    mover->footprint_width = FIELD_FOOTPRINT_WIDTH;
-                    probe->width = FIELD_FOOTPRINT_WIDTH;
-                    mover->mode.footprint_depth = FIELD_FOOTPRINT_DEPTH;
-                    probe->depth = FIELD_FOOTPRINT_DEPTH;
+                    field_reset_actor_collision_search(movement_actor);
                 }
-
-                mover->mode.mode_flags &= ~FIELD_COLLISION_MOVER_AIRBORNE_HIGH;
-                mover->mode.mode_flags &= ~FIELD_COLLISION_MOVER_AIRBORNE_LOW;
-                mover->collision_node = g_field_object_states[movement_actor->object_index].collision_node;
-                mover->flags = g_field_object_states[movement_actor->object_index].collision_flags;
-
-                if ((field_collision_resolve_move(mover) & (FIELD_COLLISION_RESULT_BLOCKED | FIELD_COLLISION_RESULT_SLID)) == (FIELD_COLLISION_RESULT_BLOCKED | FIELD_COLLISION_RESULT_SLID))
-                {
-                    movement_actor->control.word = movement_actor->control.word & ~FIELD_CONTROL_MOVEMENT_MASK;
-                }
-
-                g_field_object_states[movement_actor->object_index].collision_node = mover->collision_node;
-                g_field_object_states[movement_actor->object_index].collision_flags = mover->flags;
-                movement_actor->y = mover->height;
-                g_field_object_states[movement_actor->object_index].movement.half.height = mover->resolved_height / 256;
             }
             else
             {
-                g_field_object_states[movement_actor->object_index].collision_node = FIELD_COLLISION_NODE_SEARCH;
-                g_field_object_states[movement_actor->object_index].collision_flags = 0;
-                g_field_object_states[movement_actor->object_index].movement.half.height = 0;
+                field_reset_actor_collision_search(movement_actor);
             }
 
             mover_x = mover->x;

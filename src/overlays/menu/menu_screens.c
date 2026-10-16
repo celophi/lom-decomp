@@ -636,24 +636,35 @@ s32 menu_handle_input(s32 process_actions)
         else if (g_pad_input & PAD_BTN_CIRCLE)
         {
             menu_play_se(MENU_SE_CLOSE, AKAO_SFX_DEFAULT_VOLUME);
-            if ((u32)g_menu_scene_type >= 0x11U || (u8)(node_self_index = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx) < 0x14 ||
-                (u8)node_self_index >= 0x1C)
+            if ((u32)g_menu_scene_type >= 0x11U)
             {
                 menu_reset_content_view();
             }
             else
             {
-                if ((u32)(node_self_index - 0x14) < 5)
+                node_self_index = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
+                if ((u8)node_self_index < 0x14)
                 {
-                    g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx = 1;
-                    g_menu_nodes[(g_menu_char_slot * 3) + 1].label_id = (g_menu_char_slot * 3) + 3;
-                    menu_focus_active_content_item();
+                    menu_reset_content_view();
                 }
-                else if ((u32)(node_self_index - 0x1A) < 2)
+                else if ((u8)node_self_index >= 0x1C)
                 {
-                    g_menu_nodes[(g_menu_char_slot * 3) + 2].idx_nav.s.self_idx = 2;
-                    g_menu_nodes[(g_menu_char_slot * 3) + 2].label_id = (g_menu_char_slot * 3) + 3;
-                    menu_focus_active_content_item();
+                    menu_reset_content_view();
+                }
+                else
+                {
+                    if ((u32)(node_self_index - 0x14) < 5)
+                    {
+                        g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx = 1;
+                        g_menu_nodes[(g_menu_char_slot * 3) + 1].label_id = (g_menu_char_slot * 3) + 3;
+                        menu_focus_active_content_item();
+                    }
+                    else if ((u32)(node_self_index - 0x1A) < 2)
+                    {
+                        g_menu_nodes[(g_menu_char_slot * 3) + 2].idx_nav.s.self_idx = 2;
+                        g_menu_nodes[(g_menu_char_slot * 3) + 2].label_id = (g_menu_char_slot * 3) + 3;
+                        menu_focus_active_content_item();
+                    }
                 }
             }
         }

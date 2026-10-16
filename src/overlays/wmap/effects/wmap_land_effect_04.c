@@ -444,7 +444,7 @@ WMAP_STEP_RESET(wmap_land_effect_04_sequence_5_reset, g_wmap_land_effect_04_sequ
 
 /** @brief Draw the sequence effect and advance when its countdown expires. */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_04_sequence_5_step_02, g_wmap_land_effect_04_sequence_5_step, g_wmap_land_effect_04_sequence_5_timer,
-                          func_8006BC44(0x14, 0x3C, g_wmap_effect_params, 0))
+                          func_8006BC44(0x14, 0x3C, (WmapTrailConfig*)g_wmap_effect_params, 0))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_04_sequence_5_end, g_wmap_land_effect_04_sequence_5_step)
 

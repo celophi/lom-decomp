@@ -441,7 +441,7 @@ WMAP_STEP_RESET(wmap_land_effect_16_sequence_6_reset, g_wmap_land_effect_16_sequ
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_16_sequence_6_step_02,
     g_wmap_land_effect_16_sequence_6_step, g_wmap_land_effect_16_sequence_6_timer,
-    func_8006BC44(0x14, 0x3C, g_wmap_effect_params, 1))
+    func_8006BC44(0x14, 0x3C, (WmapTrailConfig*)g_wmap_effect_params, 1))
 
 /** @brief Reset four actor configurations and begin a 16-tick sequence step. */
 void wmap_land_effect_16_sequence_6_step_03(void)
@@ -464,7 +464,7 @@ void wmap_land_effect_16_sequence_6_step_03(void)
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_16_sequence_6_step_04,
     g_wmap_land_effect_16_sequence_6_step, g_wmap_land_effect_16_sequence_6_timer,
-    func_8006BC44(0x14, 0x3C, g_wmap_effect_params, 1))
+    func_8006BC44(0x14, 0x3C, (WmapTrailConfig*)g_wmap_effect_params, 1))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_16_sequence_6_end, g_wmap_land_effect_16_sequence_6_step)
 

@@ -104,79 +104,86 @@ void field_award_experience(s32 record_index, s32 amount)
     u32 distributed_value;
     u32 clamped_value;
 
-    if ((record_index < FIELD_REWARD_PARTY_LIMIT) && (entry = field_find_status_record(record_index), (entry != NULL)))
+    if (record_index >= FIELD_REWARD_PARTY_LIMIT)
     {
-        switch (entry->meta.bytes.id)
-        {
-        case FIELD_PARTY_HERO:
-            field_award_region_experience(amount);
-            break;
-        case FIELD_PARTY_GUEST:
-            field_add_guest_counter(amount);
-            break;
-        }
-
-        index = 0;
-
-        if (entry->status_flags & FIELD_RECORD_FLAG_SHARE_EXPERIENCE)
-        {
-            eligible_count = 0;
-
-            for (; index < FIELD_PARTY_SIZE; index++)
-            {
-                if ((g_field_game_state->characters[index].name[0] != 0) && (field_find_object_state(index)->current != 0))
-                {
-                    eligible_count += 1;
-                }
-            }
-
-            if (eligible_count <= 0)
-            {
-                eligible_count = 1;
-            }
-
-            amount /= eligible_count;
-            amount = amount == 0 ? 1 : amount;
-
-            for (index = 0; index < FIELD_PARTY_SIZE; index++)
-            {
-                if ((g_field_game_state->characters[index].name[0] != 0) && (field_find_object_state(index)->current != 0))
-                {
-                    if (index == FIELD_PARTY_GUEST)
-                    {
-                        field_add_guest_counter(amount);
-                    }
-
-                    packed_value = g_field_game_state->characters[index].progress.word;
-                    distributed_value = (packed_value & 0xFF) | (((packed_value >> 8) + amount) << 8);
-                    g_field_game_state->characters[index].progress.word = distributed_value;
-
-                    if ((s32)(distributed_value >> 8) > FIELD_EXPERIENCE_MAX)
-                    {
-                        g_field_game_state->characters[record_index].progress.word =
-                            g_field_game_state->characters[record_index].progress.level | FIELD_EXPERIENCE_MAX_WORD;
-                    }
-
-                    field_apply_character_level_ups(index, 1);
-                }
-            }
-
-            return;
-        }
-
-        packed_value = g_field_game_state->characters[record_index].progress.word;
-        updated_value = (packed_value & 0xFF) | (((packed_value >> 8) + amount) << 8);
-        g_field_game_state->characters[record_index].progress.word = updated_value;
-
-        if ((s32)(updated_value >> 8) > FIELD_EXPERIENCE_MAX)
-        {
-            clamped_value = updated_value & 0xFF;
-            clamped_value |= FIELD_EXPERIENCE_MAX_WORD;
-            g_field_game_state->characters[record_index].progress.word = clamped_value;
-        }
-
-        field_apply_character_level_ups(record_index, 1);
+        return;
     }
+    entry = field_find_status_record(record_index);
+    if (entry == NULL)
+    {
+        return;
+    }
+
+    switch (entry->meta.bytes.id)
+    {
+    case FIELD_PARTY_HERO:
+        field_award_region_experience(amount);
+        break;
+    case FIELD_PARTY_GUEST:
+        field_add_guest_counter(amount);
+        break;
+    }
+
+    index = 0;
+
+    if (entry->status_flags & FIELD_RECORD_FLAG_SHARE_EXPERIENCE)
+    {
+        eligible_count = 0;
+
+        for (; index < FIELD_PARTY_SIZE; index++)
+        {
+            if ((g_field_game_state->characters[index].name[0] != 0) && (field_find_object_state(index)->current != 0))
+            {
+                eligible_count += 1;
+            }
+        }
+
+        if (eligible_count <= 0)
+        {
+            eligible_count = 1;
+        }
+
+        amount /= eligible_count;
+        amount = amount == 0 ? 1 : amount;
+
+        for (index = 0; index < FIELD_PARTY_SIZE; index++)
+        {
+            if ((g_field_game_state->characters[index].name[0] != 0) && (field_find_object_state(index)->current != 0))
+            {
+                if (index == FIELD_PARTY_GUEST)
+                {
+                    field_add_guest_counter(amount);
+                }
+
+                packed_value = g_field_game_state->characters[index].progress.word;
+                distributed_value = (packed_value & 0xFF) | (((packed_value >> 8) + amount) << 8);
+                g_field_game_state->characters[index].progress.word = distributed_value;
+
+                if ((s32)(distributed_value >> 8) > FIELD_EXPERIENCE_MAX)
+                {
+                    g_field_game_state->characters[record_index].progress.word =
+                        g_field_game_state->characters[record_index].progress.level | FIELD_EXPERIENCE_MAX_WORD;
+                }
+
+                field_apply_character_level_ups(index, 1);
+            }
+        }
+
+        return;
+    }
+
+    packed_value = g_field_game_state->characters[record_index].progress.word;
+    updated_value = (packed_value & 0xFF) | (((packed_value >> 8) + amount) << 8);
+    g_field_game_state->characters[record_index].progress.word = updated_value;
+
+    if ((s32)(updated_value >> 8) > FIELD_EXPERIENCE_MAX)
+    {
+        clamped_value = updated_value & 0xFF;
+        clamped_value |= FIELD_EXPERIENCE_MAX_WORD;
+        g_field_game_state->characters[record_index].progress.word = clamped_value;
+    }
+
+    field_apply_character_level_ups(record_index, 1);
 }
 
 /**

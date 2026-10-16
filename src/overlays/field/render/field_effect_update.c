@@ -4010,27 +4010,30 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
                     }
                 }
 
-                /* The screen-space and negative-depth arms are separate identical bodies (jump2
-                 * merges them); the extra references set packet_cursor/ordering_table priority. */
+                /* Screen-space and negative-depth sprites use the front entry. */
                 if (effect->flags & FIELD_EFFECT_SCREEN_SPACE)
                 {
                     addPrim(&ordering_table[0], packet_cursor);
                     packet_cursor = (s32*)((u8*)packet_cursor + sizeof(POLY_FT4));
                 }
-                else if ((value1 = effect->z >> 7) < 0)
-                {
-                    addPrim(&ordering_table[0], packet_cursor);
-                    packet_cursor = (s32*)((u8*)packet_cursor + sizeof(POLY_FT4));
-                }
-                else if (value1 > FIELD_EFFECT_OT_MAX_DEPTH)
-                {
-                    addPrim(&ordering_table[FIELD_EFFECT_OT_MAX_DEPTH], packet_cursor);
-                    packet_cursor = (s32*)((u8*)packet_cursor + sizeof(POLY_FT4));
-                }
                 else
                 {
-                    addPrim(&ordering_table[effect->z >> 7], packet_cursor);
-                    packet_cursor = (s32*)((u8*)packet_cursor + sizeof(POLY_FT4));
+                    value1 = effect->z >> 7;
+                    if (value1 < 0)
+                    {
+                        addPrim(&ordering_table[0], packet_cursor);
+                        packet_cursor = (s32*)((u8*)packet_cursor + sizeof(POLY_FT4));
+                    }
+                    else if (value1 > FIELD_EFFECT_OT_MAX_DEPTH)
+                    {
+                        addPrim(&ordering_table[FIELD_EFFECT_OT_MAX_DEPTH], packet_cursor);
+                        packet_cursor = (s32*)((u8*)packet_cursor + sizeof(POLY_FT4));
+                    }
+                    else
+                    {
+                        addPrim(&ordering_table[effect->z >> 7], packet_cursor);
+                        packet_cursor = (s32*)((u8*)packet_cursor + sizeof(POLY_FT4));
+                    }
                 }
             }
             else if (((flags & 0xF) == 2) && (part->effect_flags.word & FIELD_PART_SOLID))

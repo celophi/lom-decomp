@@ -429,20 +429,10 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
                 /* No edge crossed: test whether the centre of the effect quad lies inside the object quad. */
                 center_x = quad[0].coord.x + quad[1].coord.x + quad[2].coord.x + quad[3].coord.x;
 
-                if (center_x < 0)
-                {
-                    center_x += 3;
-                }
-
-                scratch.center.coord.x = (u16)(center_x >> 2);
+                scratch.center.coord.x = (u16)(center_x / FIELD_QUAD_VERTEX_COUNT);
                 center_y = quad[0].coord.y + quad[1].coord.y + quad[2].coord.y + quad[3].coord.y;
 
-                if (center_y < 0)
-                {
-                    center_y += 3;
-                }
-
-                scratch.center.coord.y = (s16)(center_y >> 2);
+                scratch.center.coord.y = (s16)(center_y / FIELD_QUAD_VERTEX_COUNT);
 
                 if (NormalClip(scratch.center.packed, target_quad[0].packed, target_quad[1].packed) < 0)
                 {
@@ -544,20 +534,41 @@ static s32 field_intersect_screen_segments(Vec2s* a0, Vec2s* a1, Vec2s* b0, Vec2
 
         if (b_dy == 0)
         {
-            if ((y == b0_y_value) &&
-                ((b0_x_a = b0->x, a0_x_a = a0->x, ((b0_x_a < a0_x_a) == 0)) ||
-                 (b1_x_a = b1->x, ((b1_x_a < a0_x_a) == 0)) ||
-                 (a1_x_a = a1->x, ((b0_x_a < a1_x_a) == 0)) || (b1_x_a >= a1_x_a)) &&
-                ((b0_x_b = b0->x, a0_x_b = a0->x, ((a0_x_b < b0_x_b) == 0)) ||
-                 (b1_x_b = b1->x, ((a0_x_b < b1_x_b) == 0)) ||
-                 (a1_x_b = a1->x, ((a1_x_b < b0_x_b) == 0)) || (a1_x_b >= b1_x_b)))
+            if (y != b0_y_value)
             {
-                packed_x_or_total = (u16)a0->x;
-                work = y << 0x10;
-                return packed_x_or_total | work;
+                return FIELD_NO_SEGMENT_INTERSECTION;
             }
-
-            return FIELD_NO_SEGMENT_INTERSECTION;
+            b0_x_a = b0->x;
+            a0_x_a = a0->x;
+            if (b0_x_a < a0_x_a)
+            {
+                b1_x_a = b1->x;
+                if (b1_x_a < a0_x_a)
+                {
+                    a1_x_a = a1->x;
+                    if ((b0_x_a < a1_x_a) && (b1_x_a < a1_x_a))
+                    {
+                        return FIELD_NO_SEGMENT_INTERSECTION;
+                    }
+                }
+            }
+            b0_x_b = b0->x;
+            a0_x_b = a0->x;
+            if (a0_x_b < b0_x_b)
+            {
+                b1_x_b = b1->x;
+                if (a0_x_b < b1_x_b)
+                {
+                    a1_x_b = a1->x;
+                    if ((a1_x_b < b0_x_b) && (a1_x_b < b1_x_b))
+                    {
+                        return FIELD_NO_SEGMENT_INTERSECTION;
+                    }
+                }
+            }
+            packed_x_or_total = (u16)a0->x;
+            work = y << 0x10;
+            return packed_x_or_total | work;
         }
 
         b1_coordinate = b1->x;
@@ -589,25 +600,36 @@ static s32 field_intersect_screen_segments(Vec2s* a0, Vec2s* a1, Vec2s* b0, Vec2
 
             if (b_dx_vertical == 0)
             {
-                if ((x == b0_x_value_vertical) && ((b0_y_a = b0->y, ((b0_y_a < a0_y) == 0)) ||
-                                                                          (b1_y_a = b1->y, ((b1_y_a < a0_y) == 0)) ||
-                                                                          (b0_y_a >= a1_y) || (b1_y_a >= a1_y)))
+                if (x != b0_x_value_vertical)
                 {
-                    b0_y_b = b0->y;
-                    a0_y_b = a0->y;
-
-                    if ((a0_y_b >= b0_y_b) || (b1_y_b = b1->y, ((a0_y_b < b1_y_b) == 0)) ||
-                        (a1_y_b = a1->y, ((a1_y_b < b0_y_b) == 0)) || (a1_y_b >= b1_y_b))
-                    {
-                        packed_x_or_total = x & 0xFFFF;
-                        work = a0->y << y_shift;
-                        return packed_x_or_total | work;
-                    }
-
                     return FIELD_NO_SEGMENT_INTERSECTION;
                 }
-
-                return FIELD_NO_SEGMENT_INTERSECTION;
+                b0_y_a = b0->y;
+                if (b0_y_a < a0_y)
+                {
+                    b1_y_a = b1->y;
+                    if ((b1_y_a < a0_y) && (b0_y_a < a1_y) && (b1_y_a < a1_y))
+                    {
+                        return FIELD_NO_SEGMENT_INTERSECTION;
+                    }
+                }
+                b0_y_b = b0->y;
+                a0_y_b = a0->y;
+                if (a0_y_b < b0_y_b)
+                {
+                    b1_y_b = b1->y;
+                    if (a0_y_b < b1_y_b)
+                    {
+                        a1_y_b = a1->y;
+                        if ((a1_y_b < b0_y_b) && (a1_y_b < b1_y_b))
+                        {
+                            return FIELD_NO_SEGMENT_INTERSECTION;
+                        }
+                    }
+                }
+                packed_x_or_total = x & 0xFFFF;
+                work = a0->y << y_shift;
+                return packed_x_or_total | work;
             }
 
             b1_coordinate = b1->y;
@@ -659,17 +681,21 @@ static s32 field_intersect_screen_segments(Vec2s* a0, Vec2s* a1, Vec2s* b0, Vec2
                             b0_x_collinear = b0->x;
                             a0_x_collinear = a0->x;
 
-                            if ((a0_x_collinear >= b0_x_collinear) ||
-                                (b1_x_collinear = b1->x, ((a0_x_collinear < b1_x_collinear) == 0)) ||
-                                (a1_x_collinear = a1->x, ((a1_x_collinear < b0_x_collinear) == 0)) ||
-                                (a1_x_collinear >= b1_x_collinear))
+                            if (a0_x_collinear < b0_x_collinear)
                             {
-                                packed_x_or_total = (u16)a0->x;
-                                work = a0->y << 0x10;
-                                return packed_x_or_total | work;
+                                b1_x_collinear = b1->x;
+                                if (a0_x_collinear < b1_x_collinear)
+                                {
+                                    a1_x_collinear = a1->x;
+                                    if ((a1_x_collinear < b0_x_collinear) && (a1_x_collinear < b1_x_collinear))
+                                    {
+                                        return FIELD_NO_SEGMENT_INTERSECTION;
+                                    }
+                                }
                             }
-
-                            return FIELD_NO_SEGMENT_INTERSECTION;
+                            packed_x_or_total = (u16)a0->x;
+                            work = a0->y << 0x10;
+                            return packed_x_or_total | work;
                         }
 
                         return FIELD_NO_SEGMENT_INTERSECTION;
@@ -1060,10 +1086,16 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
     for (; target_index < target_end; target_index++, target++, target_state++)
     {
         if ((target->presence == FIELD_ACTOR_UNUSED) ||
-            (target_state->flags & FIELD_OBJECT_IMMOBILE_FLAGS) ||
-            (target == actor) ||
-            (contact_flags = target_state->contact.word, ((contact_flags & FIELD_CONTACT_NO_HIT_TEST) != 0)) ||
-            (contact_flags & FIELD_CONTACT_ANIMATION_HIDDEN) || (target_state->collision.word == 0))
+            (target_state->flags & FIELD_OBJECT_IMMOBILE_FLAGS) || (target == actor))
+        {
+            continue;
+        }
+        contact_flags = target_state->contact.word;
+        if (contact_flags & FIELD_CONTACT_NO_HIT_TEST)
+        {
+            continue;
+        }
+        if ((contact_flags & FIELD_CONTACT_ANIMATION_HIDDEN) || (target_state->collision.word == 0))
         {
             continue;
         }

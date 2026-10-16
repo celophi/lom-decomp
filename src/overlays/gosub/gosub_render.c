@@ -4,6 +4,9 @@
 #include "main/display.h"
 #include "common/gpu_packet.h"
 
+/** @brief Transition step at which an element reaches its full size. */
+#define GOSUB_ELEMENT_FULL_STEP 8
+
 /**
  * @brief Width of an element: the low eight bits live in the top byte of
  *        GosubElement::attr, bit 8 in GosubElement::geometry.
@@ -226,11 +229,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                 entering_full_height = (geometry >> 1) & 0xFF;
                 entering_scaled_height = entering_full_height * entering_step;
                 animated_width = entering_scaled_width >> 3;
-                if (entering_scaled_height < 0)
-                {
-                    entering_scaled_height += 7;
-                }
-                animated_height = entering_scaled_height >> 3;
+                animated_height = entering_scaled_height / GOSUB_ELEMENT_FULL_STEP;
                 entering_remaining_height = (s32)(entering_full_height - animated_height);
 
                 packet_cursor = (GosubTilePacket*)((GosubElementDrawHandler)element->draw_handler)(ordering_table, (u8*)packet_cursor, (s32)(element_width - animated_width) / 2,
@@ -244,7 +243,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                                                      animated_height, render_context->display_buffer_index);
                 }
                 element->attr.f.transition_step++;
-                if (element->attr.f.transition_step == 8)
+                if (element->attr.f.transition_step == GOSUB_ELEMENT_FULL_STEP)
                 {
                     element->attr.f.state = GOSUB_ELEMENT_STATE_ACTIVE;
                 }
@@ -268,11 +267,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                 exiting_full_height = (geometry >> 1) & 0xFF;
                 exiting_scaled_height = exiting_full_height * exiting_step;
                 animated_width = exiting_scaled_width >> 3;
-                if (exiting_scaled_height < 0)
-                {
-                    exiting_scaled_height += 7;
-                }
-                animated_height = exiting_scaled_height >> 3;
+                animated_height = exiting_scaled_height / GOSUB_ELEMENT_FULL_STEP;
                 exiting_remaining_height = (s32)(exiting_full_height - animated_height);
 
                 packet_cursor = (GosubTilePacket*)((GosubElementDrawHandler)element->draw_handler)(ordering_table, (u8*)packet_cursor, (s32)(element_width - animated_width) / 2,

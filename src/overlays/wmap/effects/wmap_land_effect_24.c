@@ -12,6 +12,9 @@
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_cells.h"
 
+/** @brief Fixed-point height units per screen pixel during the sprite descent. */
+#define WMAP_EFFECT24_HEIGHT_SCALE 16
+
 void wmap_land_effect_24_step_02(void);
 void wmap_land_effect_24_step_03(void);
 void wmap_land_effect_24_step_04(void);
@@ -1113,30 +1116,28 @@ void wmap_land_effect_24_sequence_15_step_01(void)
     wmap_land_effect_24_sequence_15_step_02();
 }
 
+/**
+ * @brief Draw the descending sprite and advance when its timer expires.
+ * @note D_80139250 stores height in sixteenths of a pixel.
+ */
 void wmap_land_effect_24_sequence_15_step_02(void)
 {
-    s32 value;
-    s32 adjusted;
-    s32 timer;
+    s32 height;
+    s32 remaining_frames;
 
     wmap_step_actor_animation(&g_wmap_sprite_actors[10], &g_wmap_actor_animations[10]);
     wmap_draw_actor_sprite(&g_wmap_sprite_actors[10], D_80182D58.packed, 8, 0x14, 0);
 
-    value = D_80139250;
-    adjusted = value;
-    if (value < 0)
+    height = D_80139250;
+    D_80182D58.point.y = height / WMAP_EFFECT24_HEIGHT_SCALE;
+    if (height >= 0x321)
     {
-        adjusted = value + 0xF;
-    }
-    D_80182D58.point.y = adjusted >> 4;
-    if (value >= 0x321)
-    {
-        D_80139250 = value - 0x10;
+        D_80139250 = height - WMAP_EFFECT24_HEIGHT_SCALE;
     }
 
-    timer = g_wmap_land_effect_24_sequence_15_timer - 1;
-    g_wmap_land_effect_24_sequence_15_timer = timer;
-    if (timer == 0)
+    remaining_frames = g_wmap_land_effect_24_sequence_15_timer - 1;
+    g_wmap_land_effect_24_sequence_15_timer = remaining_frames;
+    if (remaining_frames == 0)
     {
         g_wmap_land_effect_24_sequence_15_step++;
     }
@@ -1147,30 +1148,28 @@ WMAP_STEP_FADE_ACTOR(wmap_land_effect_24_sequence_15_step_03,
     g_wmap_land_effect_24_sequence_15_step, g_wmap_land_effect_24_sequence_15_timer,
     g_wmap_sprite_actors[10], 8, 0x10, wmap_land_effect_24_sequence_15_step_04)
 
+/**
+ * @brief Draw the descending sprite and advance when its timer expires.
+ * @note D_80139250 stores height in sixteenths of a pixel.
+ */
 void wmap_land_effect_24_sequence_15_step_04(void)
 {
-    s32 value;
-    s32 adjusted;
-    s32 timer;
+    s32 height;
+    s32 remaining_frames;
 
     wmap_step_actor_animation(&g_wmap_sprite_actors[10], &g_wmap_actor_animations[10]);
     wmap_draw_actor_sprite(&g_wmap_sprite_actors[10], D_80182D58.packed, 8, 0x14, 0);
 
-    value = D_80139250;
-    adjusted = value;
-    if (value < 0)
+    height = D_80139250;
+    D_80182D58.point.y = height / WMAP_EFFECT24_HEIGHT_SCALE;
+    if (height >= 0x321)
     {
-        adjusted = value + 0xF;
-    }
-    D_80182D58.point.y = adjusted >> 4;
-    if (value >= 0x321)
-    {
-        D_80139250 = value - 0x10;
+        D_80139250 = height - WMAP_EFFECT24_HEIGHT_SCALE;
     }
 
-    timer = g_wmap_land_effect_24_sequence_15_timer - 1;
-    g_wmap_land_effect_24_sequence_15_timer = timer;
-    if (timer == 0)
+    remaining_frames = g_wmap_land_effect_24_sequence_15_timer - 1;
+    g_wmap_land_effect_24_sequence_15_timer = remaining_frames;
+    if (remaining_frames == 0)
     {
         g_wmap_land_effect_24_sequence_15_step++;
     }

@@ -971,6 +971,7 @@ void field_follow_leader(FieldActor* actor)
     u8 index;
     u8 next;
     s32 facing;
+    s32 advance_route;
 
     delta->vy = 0;
     delta->vx = (g_field_actors[0].x - actor->x) / 256;
@@ -981,8 +982,15 @@ void field_follow_leader(FieldActor* actor)
     index = actor->object_index;
     distance = squares->vx + squares->vz;
 
-    if (((index + 1) * FIELD_FOLLOW_START_DISTANCE < distance) &&
-        (states = g_field_object_states, state = &states[index], next = state->route_index, next < FIELD_ROUTE_HISTORY_LENGTH - 1))
+    advance_route = (index + 1) * FIELD_FOLLOW_START_DISTANCE < distance;
+    if (advance_route)
+    {
+        states = g_field_object_states;
+        state = &states[index];
+        next = state->route_index;
+        advance_route = next < FIELD_ROUTE_HISTORY_LENGTH - 1;
+    }
+    if (advance_route)
     {
         state->route_index = next + 1;
         delta->vx = (FIELD_HISTORY_POINT(states, g_field_actors[0].object_index, states[actor->object_index].route_index).x << FIELD_POSITION_SHIFT) - actor->x;

@@ -111,6 +111,9 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 /** @brief Total weight of the eight elements in uniform mode. */
 #define FIELD_ELEMENT_UNIFORM_TOTAL (FIELD_LAND_SPIRIT_COUNT * FIELD_ELEMENT_UNIFORM_WEIGHT)
 
+/** @brief Scaling denominator for the 15-bit random element draw. */
+#define FIELD_ELEMENT_RANDOM_RANGE 0x8000
+
 /** @brief Element value for no element. */
 #define FIELD_NO_ELEMENT 0xFF
 
@@ -3195,7 +3198,8 @@ void field_menu_draw_land_element(void)
     FieldViewOrElement work;
     s32* cursor;
     s32* base;
-    s32 land, byte_offset, product;
+    s32* weight_slot;
+    s32 land, product;
     s32 mode;
 
     total = 0;
@@ -3230,10 +3234,10 @@ next_weight:
 
     weight = level * level;
     weight = weight * weight;
-    byte_offset = i * 4;
+    weight_slot = &weights[i];
     i++;
     base = weights;
-    *(s32*)((u8*)base + byte_offset) = weight;
+    *weight_slot = weight;
     total += weight;
 
     if (i < FIELD_LAND_SPIRIT_COUNT)
@@ -3247,12 +3251,7 @@ next_weight:
     }
 
     product = rand() * total;
-    draw = product >> 15;
-
-    if (product < 0)
-    {
-        draw = (product + 0x7FFF) >> 15;
-    }
+    draw = product / FIELD_ELEMENT_RANDOM_RANGE;
 
     total = 0;
     work.element = FIELD_NO_ELEMENT;

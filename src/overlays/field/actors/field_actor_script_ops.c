@@ -546,6 +546,7 @@ static void field_run_actor_script_command(FieldActor* actor)
     case FIELD_SCRIPT_OP_RUN_PATH:
     {
         s32 actor_x;
+        s32 endpoints_in_bounds;
         s32 map_width;
         s32 actor_z;
         s32 map_depth;
@@ -556,9 +557,41 @@ static void field_run_actor_script_command(FieldActor* actor)
 
         actor_x = actor->x;
 
-        if (actor_x < 0 || actor_x >= (map_width = bounds->width << FIELD_POSITION_SHIFT) || (actor_z = actor->z) < 0 ||
-            actor_z >= (map_depth = (s16)bounds->depth << (FIELD_POSITION_SHIFT + 1)) || (goal_x = g_field_object_states[actor->object_index].target_x) < 0 ||
-            goal_x >= map_width || (goal_z = g_field_object_states[actor->object_index].target_z) < 0 || goal_z >= map_depth)
+        endpoints_in_bounds = actor_x >= 0;
+        if (endpoints_in_bounds)
+        {
+            map_width = bounds->width << FIELD_POSITION_SHIFT;
+            endpoints_in_bounds = actor_x < map_width;
+        }
+        if (endpoints_in_bounds)
+        {
+            actor_z = actor->z;
+            endpoints_in_bounds = actor_z >= 0;
+        }
+        if (endpoints_in_bounds)
+        {
+            map_depth = (s16)bounds->depth << (FIELD_POSITION_SHIFT + 1);
+            endpoints_in_bounds = actor_z < map_depth;
+        }
+        if (endpoints_in_bounds)
+        {
+            goal_x = g_field_object_states[actor->object_index].target_x;
+            endpoints_in_bounds = goal_x >= 0;
+        }
+        if (endpoints_in_bounds)
+        {
+            endpoints_in_bounds = goal_x < map_width;
+        }
+        if (endpoints_in_bounds)
+        {
+            goal_z = g_field_object_states[actor->object_index].target_z;
+            endpoints_in_bounds = goal_z >= 0;
+        }
+        if (endpoints_in_bounds)
+        {
+            endpoints_in_bounds = goal_z < map_depth;
+        }
+        if (!endpoints_in_bounds)
         {
             g_field_object_states[actor->object_index].path_index = 0;
             g_field_object_states[actor->object_index].path[0].x = g_field_object_states[actor->object_index].target_x;
@@ -1234,6 +1267,7 @@ void field_route_actor_to_object(FieldActor* actor, s32 target_index, s32 restar
     s32 path_length;
     FieldMapBounds* bounds;
     s32 x;
+    s32 endpoints_in_bounds;
     s32 map_depth;
     s32 map_width;
     s32 state_x;
@@ -1244,9 +1278,41 @@ void field_route_actor_to_object(FieldActor* actor, s32 target_index, s32 restar
     bounds = FIELD_MAP_BOUNDS;
     x = actor->x;
 
-    if (x < 0 || x >= (map_width = bounds->width << FIELD_POSITION_SHIFT) || (z = actor->z) < 0 ||
-        z >= (map_depth = (s16)bounds->depth << (FIELD_POSITION_SHIFT + 1)) || (state_x = g_field_object_states[actor->object_index].target_x) < 0 ||
-        state_x >= map_width || (state_z = g_field_object_states[actor->object_index].target_z) < 0 || state_z >= map_depth)
+    endpoints_in_bounds = x >= 0;
+    if (endpoints_in_bounds)
+    {
+        map_width = bounds->width << FIELD_POSITION_SHIFT;
+        endpoints_in_bounds = x < map_width;
+    }
+    if (endpoints_in_bounds)
+    {
+        z = actor->z;
+        endpoints_in_bounds = z >= 0;
+    }
+    if (endpoints_in_bounds)
+    {
+        map_depth = (s16)bounds->depth << (FIELD_POSITION_SHIFT + 1);
+        endpoints_in_bounds = z < map_depth;
+    }
+    if (endpoints_in_bounds)
+    {
+        state_x = g_field_object_states[actor->object_index].target_x;
+        endpoints_in_bounds = state_x >= 0;
+    }
+    if (endpoints_in_bounds)
+    {
+        endpoints_in_bounds = state_x < map_width;
+    }
+    if (endpoints_in_bounds)
+    {
+        state_z = g_field_object_states[actor->object_index].target_z;
+        endpoints_in_bounds = state_z >= 0;
+    }
+    if (endpoints_in_bounds)
+    {
+        endpoints_in_bounds = state_z < map_depth;
+    }
+    if (!endpoints_in_bounds)
     {
         g_field_object_states[actor->object_index].path_index = 0;
         g_field_object_states[actor->object_index].path[0].x = g_field_actors[target_index].x;

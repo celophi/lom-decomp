@@ -4,14 +4,8 @@
 #include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 
-#define M2C_FIELD(expr, type_ptr, offset) (*(type_ptr)((s8*)(expr) + (offset)))
-#define M2C_UNALIGNED32(expr) (expr)
-#define M2C_BITWISE(type, expr) ((type)(expr))
-
-typedef s32 M2C_UNK;
-typedef s8 M2C_UNK8;
-typedef s16 M2C_UNK16;
-typedef s32 M2C_UNK32;
+/** @brief Halfword index of the animation resource's frame-offset table. */
+#define WMAP_ANIMATION_FRAME_TABLE_INDEX 32
 
 /** @brief Radial particle motion and lifetime. */
 typedef struct
@@ -22,12 +16,81 @@ typedef struct
     s32 angular_velocity;
 } WmapMotion;
 
+/** @brief Falling velocity stored as a word and stepped by its low halfword. */
+typedef union
+{
+    s32 value;
+    struct
+    {
+        u16 step;
+        u16 unknown_02;
+    } parts;
+} WmapFallingVelocity;
+
+/**
+ * @brief Falling-particle view of a motion slot, with packed coordinate halfwords.
+ * @note The coordinates are interpreted as signed values for drawing and fading.
+ */
+typedef struct
+{
+    s16 state;
+    u8 unknown_02[2];
+    WmapFallingVelocity velocity;
+    u8 unknown_08[6];
+    u16 z;
+    u16 x;
+    u16 y;
+} WmapFallingMotion;
+
+/** @brief Actor slots in one radial particle trail, including its head. */
+#define WMAP_PARTICLE_TRAIL_LENGTH 15
+
+/** @brief Inclusive shade range of a live trail slot. */
+#define WMAP_PARTICLE_TRAIL_MIN_SHADE 4
+#define WMAP_PARTICLE_TRAIL_MAX_SHADE 252
+
+/** @brief Radial trail motion with a cached projected screen position. */
+typedef struct
+{
+    s16 state;
+    s16 angle;
+    s32 velocity;
+    s32 radius;
+    s16 lifetime;
+    s16 z;
+    WmapScreenPosition screen_position;
+} WmapTrailMotion;
+
+/** @brief Particle motion slot with packed Y, X, Z coordinate halfwords. */
+typedef struct
+{
+    s16 state;
+    u8 unknown_02[12];
+    u16 y;
+    u16 x;
+    u16 z;
+} WmapBoxParticleMotion;
+
 /** @brief Position and velocity records, also used for particle bounds. */
 typedef struct
 {
     SVECTOR position;
     SVECTOR velocity;
 } WmapMovingPoint;
+
+/** @brief Map scroll position and projection scale. */
+typedef struct
+{
+    s32 x;
+    s32 y;
+    s32 projection_scale;
+    s32 unknown_0c;
+} WmapEffectProjection;
+
+/** @brief Map cell size and projection scales used by effect positions. */
+#define WMAP_EFFECT_CELL_SIZE 160
+#define WMAP_EFFECT_MAP_SCALE 0x14000
+#define WMAP_EFFECT_PROJECTION_SCALE 0x6000
 
 extern s32 g_wmap_frame_count;
 extern s32 D_8013B264;
@@ -42,22 +105,16 @@ extern VECTOR g_wmap_camera_translation;
 extern MATRIX D_8011D0E8;
 extern u16 D_80139980;
 extern WmapAnimationSlot g_wmap_actor_animations[];
-extern u8 D_800D9150;
-extern u8 D_800DCEA8;
-extern u8 D_800DCEB8;
-extern s16 D_800DCEBA;
-extern s16 D_800DCEBC;
-extern u8 g_wmap_focus_screen_position;
+extern s32 D_800D9150[];
+extern s32 D_800DCEA8[];
+extern SVECTOR D_800DCEB8;
+extern WmapScreenPosition g_wmap_focus_screen_position;
 extern s32 g_wmap_focus_cell_x;
 extern s32 g_wmap_focus_cell_y;
-extern u8 D_80139200;
-extern s32 D_80139204;
-extern u16 D_80139210;
-extern u16 D_80139212;
-extern u16 D_80139214;
-extern u8 g_wmap_view;
-extern s32 D_80139968;
-extern s32 D_8013996C;
+extern VECTOR D_80139200;
+extern SVECTOR D_80139210;
+extern WmapEffectProjection g_wmap_view;
+extern VECTOR D_80139968;
 extern s32 D_8013B29C;
 
 s32 rand(void);
@@ -116,7 +173,6 @@ void func_8006A2FC(void* arg0, WmapAnimationSlot* animations, s32 arg2, s32 arg3
     s32 phase;
     s32 spawn_interval;
     s32 i;
-    s32 resource_offset;
     u16 new_z;
     s32 frame;
     WmapMotion* motion;
@@ -124,147 +180,141 @@ void func_8006A2FC(void* arg0, WmapAnimationSlot* animations, s32 arg2, s32 arg3
     WmapParticleConfig* config = arg7;
 
     ot_index = 4;
-    i = 0;
-    if (arg2 > 0)
+    for (i = 0; i < arg2; i++)
     {
-        do
+        actor = &((WmapParticleActor*)arg0)[i];
+        motion = &g_wmap_actor_motions[i + config->first_motion];
+        if (motion->state != 0)
         {
-            actor = &((WmapParticleActor*)arg0)[i];
-            motion = &g_wmap_actor_motions[i + config->first_motion];
-            if (motion->state != 0)
+            position.vx = ((motion->radius >> 3) * (ccos(motion->angle) >> 6)) >> 12;
+            position.vy = ((motion->radius >> 3) * (csin(motion->angle) >> 6)) >> 12;
+            position.vz = (u16)motion->z;
+            gte_ldv0(&position);
+            gte_rtps();
+            switch (arg6)
             {
-                position.vx = ((motion->radius >> 3) * (ccos(motion->angle) >> 6)) >> 12;
-                position.vy = ((motion->radius >> 3) * (csin(motion->angle) >> 6)) >> 12;
-                position.vz = (u16)motion->z;
-                gte_ldv0(&position);
-                gte_rtps();
-                switch (arg6)
+            case 5:
+                if (actor->shade >= arg3)
                 {
-                case 5:
-                    if (actor->shade >= arg3)
-                    {
-                        actor->target_shade = 0;
-                    }
-                    if ((actor->target_shade == 0) && (actor->shade < 4))
-                    {
-                        motion->state = 0;
-                    }
-                    /* fallthrough */
-                case 0:
-                    motion->z = (u16)((u16)motion->z + (u16)motion->velocity);
+                    actor->target_shade = 0;
+                }
+                if ((actor->target_shade == 0) && (actor->shade < 4))
+                {
+                    motion->state = 0;
+                }
+                /* fallthrough */
+            case 0:
+                motion->z = (u16)((u16)motion->z + (u16)motion->velocity);
+                motion->radius += config->radial_step;
+                if (--motion->lifetime == 0)
+                {
+                    motion->state = 0;
+                }
+            default:
+                break;
+            case 1:
+                if (D_8013B264 < motion->lifetime)
+                {
+                    motion->z = (u16)((u16)motion->z + (D_8013B270 + ((s32)(rand() * D_8013B278) >> 0xF)));
                     motion->radius += config->radial_step;
-                    if (--motion->lifetime == 0)
+                }
+                else
+                {
+                    falling_velocity = (rand() * D_8013B284) >> 15;
+                    new_z = (u16)motion->z - (D_8013B280 + falling_velocity);
+                    motion->z = new_z;
+                    if ((s16)new_z < 0)
                     {
-                        motion->state = 0;
-                    }
-                default:
-                    break;
-                case 1:
-                    if (D_8013B264 < motion->lifetime)
-                    {
-                        motion->z = (u16)((u16)motion->z + (D_8013B270 + ((s32)(rand() * D_8013B278) >> 0xF)));
-                        motion->radius += config->radial_step;
-                    }
-                    else
-                    {
-                        falling_velocity = (rand() * D_8013B284) >> 15;
-                        new_z = (u16)motion->z - (D_8013B280 + falling_velocity);
-                        motion->z = new_z;
-                        if ((s16)new_z < 0)
+                        motion->z = 0U;
+                        actor->target_shade = 0;
+                        actor->shade_step = 8;
+                        if (actor->shade < 4)
                         {
-                            motion->z = 0U;
-                            actor->target_shade = 0;
-                            actor->shade_step = 8;
-                            if (actor->shade < 4)
-                            {
-                                motion->state = 0;
-                            }
+                            motion->state = 0;
                         }
                     }
-                    ot_index = 0xC;
-                    if ((u32)((u16)motion->angle - 1) < 0x7FFU)
-                    {
-                        ot_index = 0xA;
-                    }
-                    motion->lifetime = (u16)((u16)motion->lifetime - 1);
-                    break;
-                case 2:
-                    parabola_height = motion->lifetime - D_8013B264;
-                    parabola_height = (parabola_height * parabola_height) / D_8013B278;
-                    motion->z = D_8013B280 + (D_8013B270 - parabola_height);
-                    if (motion->lifetime != 0)
-                    {
-                        motion->lifetime--;
-                        motion->radius += config->radial_step;
-                    }
-                    break;
-                case 3:
-                    phase = D_8013B264 - motion->lifetime;
-                    motion->z = (u16)((s32)(phase * phase) / (s32)D_8013B270);
-                    break;
-                case 4:
-                    motion->z = (u16)((u16)motion->z + (u16)motion->velocity);
+                }
+                ot_index = 0xC;
+                if ((u32)((u16)motion->angle - 1) < 0x7FFU)
+                {
+                    ot_index = 0xA;
+                }
+                motion->lifetime = (u16)((u16)motion->lifetime - 1);
+                break;
+            case 2:
+                parabola_height = motion->lifetime - D_8013B264;
+                parabola_height = (parabola_height * parabola_height) / D_8013B278;
+                motion->z = D_8013B280 + (D_8013B270 - parabola_height);
+                if (motion->lifetime != 0)
+                {
+                    motion->lifetime--;
                     motion->radius += config->radial_step;
-                    if (--motion->lifetime == 0)
-                    {
-                        motion->state = 0;
-                    }
+                }
+                break;
+            case 3:
+                phase = D_8013B264 - motion->lifetime;
+                motion->z = (u16)((s32)(phase * phase) / (s32)D_8013B270);
+                break;
+            case 4:
+                motion->z = (u16)((u16)motion->z + (u16)motion->velocity);
+                motion->radius += config->radial_step;
+                if (--motion->lifetime == 0)
+                {
+                    motion->state = 0;
+                }
+                break;
+            case 7:
+                motion->z = (u16)((u16)motion->z + (u16)motion->velocity);
+                motion->angle = (s16)((u16)motion->angle + (u16)config->lifetime_range);
+                motion->radius += config->radial_step;
+                /* fallthrough */
+            case 6:
+                if (motion->z < 0)
+                {
+                    motion->state = 0;
                     break;
-                case 7:
-                    motion->z = (u16)((u16)motion->z + (u16)motion->velocity);
-                    motion->angle = (s16)((u16)motion->angle + (u16)config->lifetime_range);
-                    motion->radius += config->radial_step;
-                    /* fallthrough */
-                case 6:
-                    if (motion->z < 0)
-                    {
-                        motion->state = 0;
-                        break;
-                    }
-                    break;
                 }
-                resource_offset = i * 8;
-                offsets = (s16*)((WmapAnimationSlot*)(resource_offset + (uintptr_t)animations))->data;
-                data = (u8*)offsets;
-                if (actor->previous_sequence != actor->sequence)
+                break;
+            }
+            offsets = (s16*)animations[i].data;
+            data = (u8*)offsets;
+            if (actor->previous_sequence != actor->sequence)
+            {
+                u8* sequence_cursor;
+                actor->previous_sequence = (u16)actor->sequence;
+                offset = offsets[actor->sequence];
+                actor->remaining = 1;
+                sequence_cursor = (u8*)offsets + offset;
+                actor->sequence_start = sequence_cursor;
+                actor->cursor = sequence_cursor;
+            }
+            if (actor->remaining != 255)
+            {
+                actor->remaining--;
+            }
+            if (actor->remaining == 0)
+            {
+                cursor = actor->cursor;
+                frame = cursor[0];
+                actor->remaining = cursor[1];
+                if (frame == 255)
                 {
-                    u8* sequence_cursor;
-                    actor->previous_sequence = (u16)actor->sequence;
-                    offset = offsets[actor->sequence];
-                    actor->remaining = 1;
-                    sequence_cursor = (u8*)offsets + offset;
-                    actor->sequence_start = sequence_cursor;
-                    actor->cursor = sequence_cursor;
-                }
-                if (actor->remaining != 255)
-                {
-                    actor->remaining--;
-                }
-                if (actor->remaining == 0)
-                {
-                    cursor = actor->cursor;
+                    cursor = actor->sequence_start;
+                    actor->cursor = cursor;
                     frame = cursor[0];
                     actor->remaining = cursor[1];
-                    if (frame == 255)
-                    {
-                        cursor = actor->sequence_start;
-                        actor->cursor = cursor;
-                        frame = cursor[0];
-                        actor->remaining = cursor[1];
-                    }
-                    actor->cursor += 4;
-                    actor->frame_data = data + ((s16*)(frame * 2 + data))[32];
                 }
-                gte_stsxy(&screen_position);
-                wmap_draw_actor_sprite(actor, screen_position, config->texture_index, ot_index, 0);
+                actor->cursor += 4;
+                actor->frame_data = data + offsets[frame + WMAP_ANIMATION_FRAME_TABLE_INDEX];
             }
-            i += 1;
-        } while (i < arg2);
+            gte_stsxy(&screen_position);
+            wmap_draw_actor_sprite(actor, screen_position, config->texture_index, ot_index, 0);
+        }
     }
     spawn_interval = config->spawn_interval;
-    if ((spawn_interval != -1) && (((s32)g_wmap_frame_count % spawn_interval) == 0) && (i = 0, (arg2 > 0)))
+    if ((spawn_interval != -1) && (((s32)g_wmap_frame_count % spawn_interval) == 0))
     {
-        do
+        for (i = 0; i < arg2; i++)
         {
             motion = &g_wmap_actor_motions[i + config->first_motion];
             if (motion->state == 0)
@@ -297,8 +347,7 @@ void func_8006A2FC(void* arg0, WmapAnimationSlot* animations, s32 arg2, s32 arg3
                 motion->z = 0;
                 return;
             }
-            i++;
-        } while (i < arg2);
+        }
     }
 }
 
@@ -308,13 +357,13 @@ void func_8006A2FC(void* arg0, WmapAnimationSlot* animations, s32 arg2, s32 arg3
  * @param animations Animation resource slots, one per actor record.
  * @param first First particle index.
  * @param end Exclusive last particle index.
- * @param scale Size used for the projected actor.
+ * @param scale Scale used to set the actor's shade.
  * @param velocity_min Minimum radial velocity.
  * @param velocity_range Range of randomized radial velocity.
  * @param lifetime_min Minimum particle lifetime.
  * @param lifetime_range Range of randomized lifetime.
  * @param initial_z Initial depth divisor.
- * @param frame Sprite frame passed to the renderer.
+ * @param frame Sprite texture index passed to the renderer.
  * @param spawn_interval Number of updates between spawn attempts.
  */
 void func_8006A9C4(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 first, s32 end, s32 scale,
@@ -332,15 +381,15 @@ void func_8006A9C4(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 f
     s32 sequence_end;
     u16 remaining_lifetime;
     s32 animation_frame;
-    void *cursor;
-    void *sequence_start;
-    void *sequence_cursor;
-    void *spawn_actor;
-    void *actor;
-    void *spawn_motion;
-    void *motion;
-    void *resource;
-    WmapMotion *motion_base;
+    u8* cursor;
+    u8* sequence_start;
+    u8* sequence_cursor;
+    WmapSpriteActor* spawn_actor;
+    WmapSpriteActor* actor;
+    WmapMotion* spawn_motion;
+    WmapMotion* motion;
+    WmapAnimationSlot* resource;
+    WmapMotion* motion_base;
 
     active = 0;
     i = first;
@@ -349,62 +398,62 @@ void func_8006A9C4(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 f
         sequence_end = 255;
         for (; i < end; i++)
         {
-            resource = (void *)((i * 8) + (uintptr_t)animations);
-            actor = (void *)((i * 0x2C) + (uintptr_t)actors);
+            resource = &animations[i];
+            actor = &actors[i];
             motion_base = g_wmap_actor_motions;
             motion = &motion_base[i];
-            if (M2C_FIELD(motion, s16 *, 0) != 0)
+            if (motion->state != 0)
             {
-                position.vx = (s16) ((s32) (((s32) M2C_FIELD(motion, s32 *, 8) >> 6) * (ccos(M2C_FIELD(motion, s16 *, 2)) >> 6)) >> 0xC);
-                position.vy = (s16) ((s32) (((s32) M2C_FIELD(motion, s32 *, 8) >> 6) * (csin(M2C_FIELD(motion, s16 *, 2)) >> 6)) >> 0xC);
-                position.vz = (s16) (0xC8 / (s16) M2C_FIELD(motion, s16 *, 0xE));
+                position.vx = ((motion->radius >> 6) * (ccos(motion->angle) >> 6)) >> 12;
+                position.vy = ((motion->radius >> 6) * (csin(motion->angle) >> 6)) >> 12;
+                position.vz = 200 / motion->z;
                 gte_ldv0(&position);
                 gte_rtps();
                 scaled_size = scale * 0x81;
-                M2C_FIELD(motion, s16 *, 0xE) = (s16) ((u16) M2C_FIELD(motion, s16 *, 0xE) + 1);
-                M2C_FIELD(motion, s32 *, 8) = (s32) (M2C_FIELD(motion, s32 *, 8) + M2C_FIELD(motion, s32 *, 4));
-                M2C_FIELD(actor, s16 *, 0x22) = 0;
+                motion->z++;
+                motion->radius += motion->velocity;
+                actor->target_shade = 0;
                 if (scaled_size < 0)
                 {
                     scaled_size += 0xFF;
                 }
-                M2C_FIELD(actor, s16 *, 0x24) = (s16) (scaled_size >> 8);
+                actor->shade = (s16) (scaled_size >> 8);
                 gte_stsxy(&screen_position);
-                animation_address = M2C_FIELD(resource, u8 **, 4);
-                if (M2C_FIELD(actor, s16 *, 0x10) != M2C_FIELD(actor, s16 *, 0xE))
+                animation_address = resource->data;
+                if (actor->previous_sequence != actor->sequence)
                 {
-                    M2C_FIELD(actor, s16 *, 0x10) = (s16) (u16) M2C_FIELD(actor, s16 *, 0xE);
-                    sequence_offset = *(s16 *)((M2C_FIELD(actor, s16 *, 0xE) * 2) + animation_address);
-                    M2C_FIELD(actor, s16 *, 0x20) = 1;
+                    actor->previous_sequence = actor->sequence;
+                    sequence_offset = ((s16*)animation_address)[actor->sequence];
+                    actor->remaining = 1;
                     sequence_cursor = animation_address + sequence_offset;
-                    M2C_FIELD(actor, void **, 0x18) = sequence_cursor;
-                    M2C_FIELD(actor, void **, 0x14) = sequence_cursor;
+                    actor->sequence_start = sequence_cursor;
+                    actor->cursor = sequence_cursor;
                 }
-                if (M2C_FIELD(actor, s16 *, 0x20) != sequence_end)
+                if (actor->remaining != sequence_end)
                 {
-                    M2C_FIELD(actor, s16 *, 0x20) = (s16) ((u16) M2C_FIELD(actor, s16 *, 0x20) - 1);
+                    actor->remaining--;
                 }
-                if (M2C_FIELD(actor, s16 *, 0x20) == 0)
+                if (actor->remaining == 0)
                 {
-                    cursor = M2C_FIELD(actor, void **, 0x14);
-                    animation_frame = M2C_FIELD(cursor, u8 *, 0);
-                    M2C_FIELD(actor, s16 *, 0x20) = (s16) M2C_FIELD(cursor, u8 *, 1);
+                    cursor = actor->cursor;
+                    animation_frame = cursor[0];
+                    actor->remaining = cursor[1];
                     if (animation_frame == sequence_end)
                     {
-                        sequence_start = M2C_FIELD(actor, void **, 0x18);
-                        M2C_FIELD(actor, void **, 0x14) = sequence_start;
-                        animation_frame = M2C_FIELD(sequence_start, u8 *, 0);
-                        M2C_FIELD(actor, s16 *, 0x20) = (s16) M2C_FIELD(sequence_start, u8 *, 1);
+                        sequence_start = actor->sequence_start;
+                        actor->cursor = sequence_start;
+                        animation_frame = sequence_start[0];
+                        actor->remaining = sequence_start[1];
                     }
-                    M2C_FIELD(actor, void **, 0x14) = (void *) (M2C_FIELD(actor, void **, 0x14) + 4);
-                    M2C_FIELD(actor, u8 **, 0x1C) = (animation_address + M2C_FIELD(((animation_frame * 2) + animation_address), s16 *, 0x40));
+                    actor->cursor += 4;
+                    actor->frame_data = animation_address + ((s16*)animation_address)[animation_frame + WMAP_ANIMATION_FRAME_TABLE_INDEX];
                 }
                 wmap_draw_actor_sprite(actor, screen_position, frame, 0xA, 0);
-                remaining_lifetime = M2C_FIELD(motion, u16 *, 0xC) - 1;
-                M2C_FIELD(motion, u16 *, 0xC) = remaining_lifetime;
+                remaining_lifetime = (u16)motion->lifetime - 1;
+                motion->lifetime = remaining_lifetime;
                 if ((remaining_lifetime << 0x10) == 0)
                 {
-                    M2C_FIELD(motion, s16 *, 0) = 0;
+                    motion->state = 0;
                 }
                 active += 1;
             }
@@ -414,23 +463,23 @@ void func_8006A9C4(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 f
     {
         for (i = first; i < end; i++)
         {
-            spawn_actor = (void *)((i * 0x2C) + (uintptr_t)actors);
-            spawn_motion = (i * 0x14) + (u8 *)&g_wmap_actor_motions;
-            if (M2C_FIELD(spawn_motion, s16 *, 0) == 0)
+            spawn_actor = &actors[i];
+            spawn_motion = &g_wmap_actor_motions[i];
+            if (spawn_motion->state == 0)
             {
                 if (g_wmap_particle_intensity >= active)
                 {
-                    M2C_FIELD(spawn_actor, s8 *, 6) = 0xF;
-                    M2C_FIELD(spawn_actor, s16 *, 2) = 0;
-                    M2C_FIELD(spawn_actor, s16 *, 0xE) = 1;
-                    M2C_FIELD(spawn_actor, s16 *, 0x10) = -1;
-                    M2C_FIELD(spawn_motion, s16 *, 0) = 1;
-                    M2C_FIELD(spawn_motion, s16 *, 2) = (s16) ((u32) rand() >> 3);
-                    M2C_FIELD(spawn_motion, s32 *, 8) = 0;
-                    M2C_FIELD(spawn_motion, s32 *, 4) = (s32) (((s32) (rand() * velocity_range) >> 0xF) + velocity_min);
+                    spawn_actor->scale_index = 0xF;
+                    spawn_actor->resource_index = 0;
+                    spawn_actor->sequence = 1;
+                    spawn_actor->previous_sequence = -1;
+                    spawn_motion->state = 1;
+                    spawn_motion->angle = (u32)rand() >> 3;
+                    spawn_motion->radius = 0;
+                    spawn_motion->velocity = ((rand() * velocity_range) >> 15) + velocity_min;
                     lifetime_product = rand() * lifetime_range;
-                    M2C_FIELD(spawn_motion, u16 *, 0xE) = initial_z;
-                    M2C_FIELD(spawn_motion, s16 *, 0xC) = (s16) ((lifetime_product >> 0xF) + lifetime_min);
+                    spawn_motion->z = initial_z;
+                    spawn_motion->lifetime = (lifetime_product >> 15) + lifetime_min;
                 }
                 break;
             }
@@ -486,70 +535,65 @@ void wmap_set_effect_camera_transform(void)
 }
 
 /**
- * @brief Update radial particles and replenish inactive entries.
- * @param arg0 Effect parameter; semantics remain unresolved.
- * @param arg1 Effect parameter; semantics remain unresolved.
- * @param arg2 Effect parameter; semantics remain unresolved.
- * @param arg3 Effect parameter; semantics remain unresolved.
- * @param arg4 Effect parameter; semantics remain unresolved.
- * @param arg5 Effect parameter; semantics remain unresolved.
- * @param arg6 Effect parameter; semantics remain unresolved.
- * @param arg7 Effect parameter; semantics remain unresolved.
- */
-/**
  * @brief Advance radial particles, then refill inactive slots up to the active limit.
- * The spawn limit is tested before counting the next candidate slot.
+ * @param first First particle index.
+ * @param end Exclusive last particle index.
+ * @param frame Sprite texture index passed to the renderer.
+ * @param depth Ordering-table depth of the particles.
+ * @param velocity_base Minimum radial velocity of a new particle.
+ * @param velocity_divisor Divisor of the random radial-velocity contribution.
+ * @param lifetime_base Minimum lifetime of a new particle.
+ * @param sequence Animation sequence of a new particle.
+ * @note The spawn limit is tested before counting the next candidate slot.
  */
 void func_8006AFAC(s32 first, s32 end, s32 frame, s32 depth,
                    s32 velocity_base, s32 velocity_divisor, s32 lifetime_base, s32 sequence)
 {
     SVECTOR position;
     s32 screen_position;
-    s32 resource_offset;
+    WmapAnimationSlot* animation_slot;
     s32 offset;
     s32 animation_frame;
-    s16 *offsets;
-    u8 *data;
-    u8 *cursor;
+    s16* offsets;
+    u8* data;
+    u8* cursor;
     s32 y_product;
     s32 i;
     s32 active;
-    s32 actor_offset;
-    WmapSpriteActor *actor;
-    WmapMotion *spawn_motion;
-    WmapMotion *motion;
-    WmapMotion *motion_base;
-    WmapSpriteActor *spawn_actor;
+    WmapSpriteActor* actor;
+    WmapMotion* spawn_motion;
+    WmapMotion* motion;
+    WmapMotion* motion_base;
+    WmapSpriteActor* spawn_actor;
 
     active = 0;
     for (i = first; i < end; i++)
     {
-        actor_offset = i * 44;
         motion_base = g_wmap_actor_motions;
         motion = &motion_base[i];
         if (motion->state != 0)
         {
-            actor = (WmapSpriteActor *)((u8 *)g_wmap_sprite_actors + actor_offset);
-            position.vx = (s16) ((s32) (((s32) motion->radius >> 6) * (ccos(motion->angle) >> 6)) >> 0xC);
-            y_product = ((s32) motion->radius >> 6) * (csin(motion->angle) >> 6);
+            actor = &g_wmap_sprite_actors[i];
+            position.vx = ((motion->radius >> 6) * (ccos(motion->angle) >> 6)) >> 12;
+            y_product = (motion->radius >> 6) * (csin(motion->angle) >> 6);
             position.vz = 0;
-            position.vy = (s16) (y_product >> 0xC);
+            position.vy = y_product >> 12;
             gte_ldv0(&position);
             gte_rtps();
-            motion->radius = (s32) (motion->radius + motion->velocity);
-            M2C_FIELD(actor, u16 *, 0x22) = (u16) D_80139980;
-            M2C_FIELD(actor, u16 *, 0x24) = (u16) D_80139980;
+            motion->radius += motion->velocity;
+            actor->target_shade = D_80139980;
+            actor->shade = D_80139980;
             gte_stsxy(&screen_position);
-            resource_offset = i * 8;
-            offsets = (s16 *)((WmapAnimationSlot *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
-            data = (u8 *)offsets;
+            animation_slot = &g_wmap_actor_animations[i];
+            offsets = (s16*)animation_slot->data;
+            data = (u8* )offsets;
             if (actor->previous_sequence != actor->sequence)
             {
-                u8 *sequence_cursor;
-                actor->previous_sequence = (u16)actor->sequence;
+                u8* sequence_cursor;
+                actor->previous_sequence = actor->sequence;
                 offset = offsets[actor->sequence];
                 actor->remaining = 1;
-                sequence_cursor = (u8 *)offsets + offset;
+                sequence_cursor = (u8* )offsets + offset;
                 actor->sequence_start = sequence_cursor;
                 actor->cursor = sequence_cursor;
             }
@@ -570,7 +614,7 @@ void func_8006AFAC(s32 first, s32 end, s32 frame, s32 depth,
                     actor->remaining = cursor[1];
                 }
                 actor->cursor += 4;
-                actor->frame_data = data + ((s16 *)(animation_frame * 2 + data))[32];
+                actor->frame_data = data + offsets[animation_frame + WMAP_ANIMATION_FRAME_TABLE_INDEX];
             }
             wmap_draw_actor_sprite(actor, screen_position, frame, depth, 0);
             motion->lifetime--;
@@ -591,15 +635,15 @@ void func_8006AFAC(s32 first, s32 end, s32 frame, s32 depth,
             {
                 break;
             }
-            M2C_FIELD(spawn_actor, s16 *, 2) = 0;
-            M2C_FIELD(spawn_actor, s8 *, 6) = 0xF;
+            spawn_actor->resource_index = 0;
+            spawn_actor->scale_index = 0xF;
             spawn_actor->sequence = sequence;
             spawn_actor->previous_sequence = -1;
             spawn_motion->state = 1;
-            spawn_motion->angle = (s16) ((u32)rand() >> 3);
+            spawn_motion->angle = (u32)rand() >> 3;
             spawn_motion->radius = 0;
-            spawn_motion->velocity = (s32) (velocity_base + (rand() / velocity_divisor));
-            spawn_motion->lifetime = (s16) (lifetime_base + (rand() & 0x3C));
+            spawn_motion->velocity = velocity_base + rand() / velocity_divisor;
+            spawn_motion->lifetime = lifetime_base + (rand() & 0x3C);
         }
     }
 }
@@ -607,6 +651,23 @@ void func_8006AFAC(s32 first, s32 end, s32 frame, s32 depth,
 /**
  * @brief Update falling particles and refill inactive slots at a timed spawn rate.
  * Incoming values occupy 32-bit argument slots, including values stored in halfwords.
+ * @param first First particle slot to update.
+ * @param end Exclusive last particle slot.
+ * @param spawn_interval Frames between timed spawn attempts.
+ * @param scale_override Override for target and current shade, or -1 to preserve them.
+ * @param velocity_min Minimum depth step of a new particle.
+ * @param velocity_range Range added to the randomized depth step.
+ * @param initial_z Initial particle depth.
+ * @param frame Sprite texture index passed to the renderer.
+ * @param x_min Minimum initial horizontal position.
+ * @param x_range Range added to the randomized horizontal position.
+ * @param y_min Minimum initial vertical position.
+ * @param y_range Range added to the randomized vertical position.
+ * @param fade_z Depth below which the target shade becomes zero.
+ * @param initial_scale_target Initial target shade of a new particle.
+ * @param initial_scale Initial current shade of a new particle.
+ * @param scale_step Shade step of a new particle.
+ * @param group Index in the spawn timer and remaining-count tables.
  */
 void func_8006B328(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s32 velocity_min, s32 velocity_range, 
                    s32 initial_z, s32 frame, s32 x_min, s32 x_range, s32 y_min, s32 y_range, s32 fade_z, 
@@ -615,106 +676,102 @@ void func_8006B328(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s
     SVECTOR position;
     s32 screen_position;
     s32 sequence_offset;
-    s32 resource_offset;
-    s32 *spawn_count;
-    s32 *spawn_timer;
-    s32 *initial_timer;
-    s32 *final_timer;
-    u8 *timer_base;
+    WmapAnimationSlot* animation_slot;
+    s32* spawn_count;
+    s32* spawn_timer;
+    s32* initial_timer;
+    s32* final_timer;
     s32 timer_offset;
+    u8* timer_base;
     uintptr_t address;
     s32 remaining_spawns;
     s32 i;
-    s32 motion_offset;
-    s32 actor_offset;
     u16 next_z;
     s32 animation_frame;
     s32 sequence_end;
-    void *actor;
-    void *motion;
-    void *cursor;
-    void *sequence_start;
-    void *sequence_cursor;
+    WmapSpriteActor* actor;
+    WmapFallingMotion* motion;
+    u8* cursor;
+    u8* sequence_start;
+    u8* sequence_cursor;
 
     address = group * 4;
-    initial_timer = address + (u8 *)&D_800D9150;
+    initial_timer = (s32*)(address + (u8*)D_800D9150);
     i = first;
     *initial_timer -= 1;
     if (i < end)
     {
         sequence_end = 255;
         timer_offset = address;
-        actor_offset = i * 0x2C;
-        motion_offset = i * 0x14;
-        do
+        for (; i < end; i++)
         {
-            motion = motion_offset + (u8 *)&g_wmap_actor_motions;
-            actor = actor_offset + (u8 *)&g_wmap_sprite_actors;
-            if (M2C_FIELD(motion, s16 *, 0) != 0)
+            motion = (WmapFallingMotion*)&g_wmap_actor_motions[i];
+            actor = &g_wmap_sprite_actors[i];
+            if (motion->state != 0)
             {
                 if (scale_override != -1)
                 {
-                    M2C_FIELD(actor, s16 *, 0x24) = scale_override;
-                    M2C_FIELD(actor, s16 *, 0x22) = scale_override;
+                    actor->shade = scale_override;
+                    actor->target_shade = scale_override;
                 }
-                position.vx = M2C_FIELD(motion, u16 *, 0x10);
-                position.vy = M2C_FIELD(motion, u16 *, 0x12);
-                position.vz = M2C_FIELD(motion, u16 *, 0xE);
+                position.vx = motion->x;
+                position.vy = motion->y;
+                position.vz = motion->z;
                 gte_ldv0(&position);
                 gte_rtps();
-                resource_offset = i * sizeof(WmapAnimationSlot);
-                address = (uintptr_t)((WmapAnimationSlot *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
-                if (M2C_FIELD(actor, s16 *, 0x10) != M2C_FIELD(actor, s16 *, 0xE))
+                animation_slot = &g_wmap_actor_animations[i];
+                address = (uintptr_t)animation_slot->data;
+                if (actor->previous_sequence != actor->sequence)
                 {
-                    M2C_FIELD(actor, s16 *, 0x10) = (s16) (u16) M2C_FIELD(actor, s16 *, 0xE);
-                    sequence_offset = *(s16 *)((M2C_FIELD(actor, s16 *, 0xE) * 2) + address);
-                    M2C_FIELD(actor, s16 *, 0x20) = 1;
-                    sequence_cursor = (void *)(address + sequence_offset);
-                    M2C_FIELD(actor, void **, 0x18) = sequence_cursor;
-                    M2C_FIELD(actor, void **, 0x14) = sequence_cursor;
+                    actor->previous_sequence = actor->sequence;
+                    sequence_offset = ((s16*)address)[actor->sequence];
+                    actor->remaining = 1;
+                    sequence_cursor = (u8*)address + sequence_offset;
+                    actor->sequence_start = sequence_cursor;
+                    actor->cursor = sequence_cursor;
                 }
-                if (M2C_FIELD(actor, s16 *, 0x20) != sequence_end)
+                if (actor->remaining != sequence_end)
                 {
-                    M2C_FIELD(actor, s16 *, 0x20) = (s16) ((u16) M2C_FIELD(actor, s16 *, 0x20) - 1);
+                    actor->remaining--;
                 }
-                if (M2C_FIELD(actor, s16 *, 0x20) == 0)
+                if (actor->remaining == 0)
                 {
-                    cursor = M2C_FIELD(actor, void **, 0x14);
-                    animation_frame = M2C_FIELD(cursor, u8 *, 0);
-                    M2C_FIELD(actor, s16 *, 0x20) = (s16) M2C_FIELD(cursor, u8 *, 1);
+                    cursor = actor->cursor;
+                    animation_frame = cursor[0];
+                    actor->remaining = cursor[1];
                     if (animation_frame == sequence_end)
                     {
-                        sequence_start = M2C_FIELD(actor, void **, 0x18);
-                        M2C_FIELD(actor, void **, 0x14) = sequence_start;
-                        animation_frame = M2C_FIELD(sequence_start, u8 *, 0);
-                        M2C_FIELD(actor, s16 *, 0x20) = (s16) M2C_FIELD(sequence_start, u8 *, 1);
+                        sequence_start = actor->sequence_start;
+                        actor->cursor = sequence_start;
+                        animation_frame = sequence_start[0];
+                        actor->remaining = sequence_start[1];
                     }
-                    M2C_FIELD(actor, void **, 0x14) = (void *) (M2C_FIELD(actor, void **, 0x14) + 4);
-                    M2C_FIELD(actor, u8 **, 0x1C) = (u8 *) (address + M2C_FIELD(((animation_frame * 2) + address), s16 *, 0x40));
+                    actor->cursor += 4;
+                    actor->frame_data = (u8*)address + ((s16*)address)[animation_frame + WMAP_ANIMATION_FRAME_TABLE_INDEX];
                 }
                 gte_stsxy(&screen_position);
                 wmap_draw_actor_sprite(actor, screen_position, frame, 4, 0);
-                next_z = M2C_FIELD(motion, u16 *, 0xE) - M2C_FIELD(motion, u16 *, 4);
-                M2C_FIELD(motion, u16 *, 0xE) = next_z;
+                next_z = motion->z - motion->velocity.parts.step;
+                motion->z = next_z;
                 if ((s16) next_z < fade_z)
                 {
-                    M2C_FIELD(actor, s16 *, 0x22) = 0;
+                    actor->target_shade = 0;
                 }
-                if ((s16) M2C_FIELD(motion, u16 *, 0xE) < 0)
+                if ((s16) motion->z < 0)
                 {
-                    M2C_FIELD(motion, u16 *, 0xE) = 0U;
+                    motion->z = 0;
                 }
-                if ((M2C_FIELD(actor, s16 *, 0x22) == 0) && (M2C_FIELD(actor, s16 *, 0x24) < 5))
+                if ((actor->target_shade == 0) && (actor->shade < 5))
                 {
-                    M2C_FIELD(motion, s16 *, 0) = 0;
+                    motion->state = 0;
                 }
             }
             else
             {
-                spawn_timer = timer_offset + (u8 *)&D_800D9150;
+                spawn_timer = (s32*)(timer_offset + (u8*)D_800D9150);
                 if (*spawn_timer == 0)
                 {
-                    spawn_count = timer_offset + (u8 *)&D_800DCEA8;
+                    spawn_count = (s32*)(timer_offset + (u8*)D_800DCEA8);
                     remaining_spawns = *spawn_count;
                     if (remaining_spawns != 0)
                     {
@@ -726,24 +783,21 @@ void func_8006B328(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s
                         {
                             *spawn_count = remaining_spawns - 1;
                         }
-                        M2C_FIELD(motion, s16 *, 0) = 1;
-                        M2C_FIELD(motion, u16 *, 0xE) = initial_z;
-                        M2C_FIELD(motion, u16 *, 0x10) = (u16) (((s32) (rand() * x_range) >> 0xF) + x_min);
-                        M2C_FIELD(motion, u16 *, 0x12) = (u16) (((s32) (rand() * y_range) >> 0xF) + y_min);
-                        M2C_FIELD(motion, s32 *, 4) = (s32) (((s32) (rand() * velocity_range) >> 0xF) + velocity_min);
-                        M2C_FIELD(actor, s16 *, 0x22) = (s16) initial_scale_target;
-                        M2C_FIELD(actor, s16 *, 0x24) = (s16) initial_scale;
-                        M2C_FIELD(actor, u16 *, 0x26) = scale_step;
+                        motion->state = 1;
+                        motion->z = initial_z;
+                        motion->x = ((rand() * x_range) >> 15) + x_min;
+                        motion->y = ((rand() * y_range) >> 15) + y_min;
+                        motion->velocity.value = ((rand() * velocity_range) >> 15) + velocity_min;
+                        actor->target_shade = initial_scale_target;
+                        actor->shade = initial_scale;
+                        actor->shade_step = scale_step;
                     }
                 }
             }
-            actor_offset += 0x2C;
-            i += 1;
-            motion_offset += 0x14;
-        } while (i < end);
+        }
     }
-    timer_base = &D_800D9150;
-    final_timer = (group * 4) + timer_base;
+    timer_base = (u8*)D_800D9150;
+    final_timer = (s32*)((group * 4) + timer_base);
     if (*final_timer == 0)
     {
         *final_timer = spawn_interval;
@@ -754,7 +808,7 @@ void func_8006B328(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s
  * @brief Project moving particles, advance their animation, and draw by depth.
  * @param first First actor index.
  * @param end Exclusive last actor index.
- * @param frame Sprite frame passed to the renderer.
+ * @param frame Sprite texture index passed to the renderer.
  * @param z_step Per-update change in particle Z.
  * @param depth Base ordering-table depth.
  */
@@ -762,14 +816,15 @@ void func_8006B6EC(s32 first, s32 end, s32 frame, s32 z_step, s32 depth)
 {
     SVECTOR position;
     s32 screen_position;
+    WmapAnimationSlot* animation_slot;
     s32 i;
-    WmapMotion *motion;
-    WmapSpriteActor *actor, *actor_base;
-    u8 *data;
-    u8 *cursor;
-    s16 *offsets;
+    WmapMotion* motion;
+    WmapSpriteActor* actor, *actor_base;
+    u8* data;
+    u8* cursor;
+    s16* offsets;
     s32 animation_frame;
-    s32 offset, resource_offset;
+    s32 offset;
 
     for (i = first; i < end; i++)
     {
@@ -787,16 +842,16 @@ void func_8006B6EC(s32 first, s32 end, s32 frame, s32 z_step, s32 depth)
             motion->radius += motion->velocity;
             motion->angle = (motion->angle + motion->angular_velocity) & 4095;
             gte_stsxy(&screen_position);
-            resource_offset = i * 8;
-            offsets = (s16 *)((WmapAnimationSlot *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
-            data = (u8 *)offsets;
+            animation_slot = &g_wmap_actor_animations[i];
+            offsets = (s16*)animation_slot->data;
+            data = (u8* )offsets;
             if (actor->previous_sequence != actor->sequence)
             {
-                u8 *sequence_cursor;
-                actor->previous_sequence = (u16)actor->sequence;
+                u8* sequence_cursor;
+                actor->previous_sequence = actor->sequence;
                 offset = offsets[actor->sequence];
                 actor->remaining = 1;
-                sequence_cursor = (u8 *)offsets + offset;
+                sequence_cursor = (u8* )offsets + offset;
                 actor->sequence_start = sequence_cursor;
                 actor->cursor = sequence_cursor;
             }
@@ -817,7 +872,7 @@ void func_8006B6EC(s32 first, s32 end, s32 frame, s32 z_step, s32 depth)
                     actor->remaining = cursor[1];
                 }
                 actor->cursor += 4;
-                actor->frame_data = data + ((s16 *)(animation_frame * 2 + data))[32];
+                actor->frame_data = data + offsets[animation_frame + WMAP_ANIMATION_FRAME_TABLE_INDEX];
             }
             if ((u32)((u16)motion->angle - 1025) < 2047U)
             {
@@ -841,23 +896,23 @@ void func_8006B6EC(s32 first, s32 end, s32 frame, s32 z_step, s32 depth)
  * @param first First actor index.
  * @param end Exclusive last actor index; this point contains the bounds.
  * @param point_data Packed position/velocity records.
- * @param frame Sprite frame passed to the renderer.
+ * @param frame Sprite texture index passed to the renderer.
  * @param depth Ordering-table depth.
  */
 void func_8006B998(s32 first, s32 end, void *point_data, s32 frame, s32 depth)
 {
-    WmapMovingPoint *points = point_data;
+    WmapMovingPoint* points = point_data;
     s32 screen_position;
     s32 i;
-    WmapMovingPoint *point;
-    WmapMovingPoint *bounds;
-    WmapSpriteActor *actor;
-    WmapSpriteActor *actor_base;
-    u8 *data;
-    s16 *offsets;
-    u8 *cursor;
+    WmapMovingPoint* point;
+    WmapMovingPoint* bounds;
+    WmapSpriteActor* actor;
+    WmapSpriteActor* actor_base;
+    u8* data;
+    s16* offsets;
+    u8* cursor;
     s32 offset;
-    s32 resource_offset;
+    WmapAnimationSlot* animation_slot;
     s32 animation_frame;
 
     point = &points[first];
@@ -868,16 +923,16 @@ void func_8006B998(s32 first, s32 end, void *point_data, s32 frame, s32 depth)
         actor = &actor_base[i];
         gte_ldv0(&point->position);
         gte_rtps();
-        resource_offset = i * sizeof(WmapAnimationSlot);
-        offsets = (s16 *)((WmapAnimationSlot *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
-        data = (u8 *)offsets;
+        animation_slot = &g_wmap_actor_animations[i];
+        offsets = (s16*)animation_slot->data;
+        data = (u8* )offsets;
         if (actor->previous_sequence != actor->sequence)
         {
-            u8 *sequence_cursor;
-            actor->previous_sequence = (u16)actor->sequence;
+            u8* sequence_cursor;
+            actor->previous_sequence = actor->sequence;
             offset = offsets[actor->sequence];
             actor->remaining = 1;
-            sequence_cursor = (u8 *)offsets + offset;
+            sequence_cursor = (u8* )offsets + offset;
             actor->sequence_start = sequence_cursor;
             actor->cursor = sequence_cursor;
         }
@@ -898,7 +953,7 @@ void func_8006B998(s32 first, s32 end, void *point_data, s32 frame, s32 depth)
                 actor->remaining = cursor[1];
             }
             actor->cursor += 4;
-            actor->frame_data = data + ((s16 *)(animation_frame * 2 + data))[32];
+            actor->frame_data = data + offsets[animation_frame + WMAP_ANIMATION_FRAME_TABLE_INDEX];
         }
         gte_stsxy(&screen_position);
         wmap_draw_actor_sprite(actor, screen_position, frame, depth, 0);
@@ -924,93 +979,93 @@ void func_8006B998(s32 first, s32 end, void *point_data, s32 frame, s32 depth)
  * @brief Advance radial trail heads, copy trail records, and draw active slots.
  * @param first First actor index.
  * @param count Number of actor slots, grouped into trails of 15.
- * @param config Trail timing, motion, size, and rendering parameters.
- * @param expire_by_size Clear active slots when their size leaves [4, 252].
+ * @param config Trail timing, motion, shade, and rendering parameters.
+ * @param expire_by_shade Clear active slots when their shade leaves [4, 252].
  */
-void func_8006BC44(s32 first, s32 count, void *config, s32 expire_by_size)
+void func_8006BC44(s32 first, s32 count, WmapTrailConfig* config, s32 expire_by_shade)
 {
     SVECTOR position;
-    u32 screen_position;
-    s16 size;
+    WmapScreenPosition screen_position;
+    s16 shade;
     s32 next_slot;
     s32 i;
-    void *copy_actor;
-    void *motion;
-    void *copy_motion;
-    void *copy_resource;
-    void *actor;
-    WmapSpriteActor *draw_actor;
-    s32 resource_offset;
+    WmapSpriteActor* copy_actor;
+    WmapTrailMotion* motion;
+    WmapTrailMotion* copy_motion;
+    WmapAnimationSlot* copy_resource;
+    WmapSpriteActor* actor;
+    WmapSpriteActor* draw_actor;
+    WmapAnimationSlot* animation_slot;
     s32 animation_frame;
     s32 offset;
-    s16 *offsets;
-    u8 *data;
-    u8 *cursor;
-    void *source_motion;
-    void *resource;
+    s16* offsets;
+    u8* data;
+    u8* cursor;
+    WmapTrailMotion* source_motion;
+    WmapAnimationSlot* resource;
 
-    M2C_FIELD(config, s32 *, 8) = (s32) (M2C_FIELD(config, s32 *, 8) - 1);
-    for (i = first; i < first + count; i += 15)
+    config->spawn_timer--;
+    for (i = first; i < first + count; i += WMAP_PARTICLE_TRAIL_LENGTH)
     {
         actor = &g_wmap_sprite_actors[i];
-        source_motion = &g_wmap_actor_motions[i];
+        source_motion = (WmapTrailMotion*)&g_wmap_actor_motions[i];
         resource = &g_wmap_actor_animations[i];
         motion = source_motion;
-        position.vx = (s16) ((s32) (((s32) M2C_FIELD(motion, s32 *, 8) >> 3) * (ccos(M2C_FIELD(motion, s16 *, 2)) >> 6)) >> 0xC);
-        position.vy = (s16) ((s32) (((s32) M2C_FIELD(motion, s32 *, 8) >> 3) * (csin(M2C_FIELD(motion, s16 *, 2)) >> 6)) >> 0xC);
-        position.vz = M2C_FIELD(motion, u16 *, 0xE);
+        position.vx = ((motion->radius >> 3) * (ccos(motion->angle) >> 6)) >> 12;
+        position.vy = ((motion->radius >> 3) * (csin(motion->angle) >> 6)) >> 12;
+        position.vz = motion->z;
         gte_ldv0(&position);
         gte_rtps();
-        M2C_FIELD(motion, s32 *, 8) = (s32) (M2C_FIELD(motion, s32 *, 8) - M2C_FIELD(config, s32 *, 0x10));
-        M2C_FIELD(motion, s16 *, 2) = (s16) ((u16) M2C_FIELD(motion, s16 *, 2) + M2C_FIELD(config, u16 *, 0x14));
-        gte_stsxy(&screen_position);
-        M2C_FIELD(motion, u16 *, 0x10) = M2C_FIELD(&screen_position, u16 *, 0);
-        M2C_FIELD(motion, u16 *, 0x12) = (u16) M2C_FIELD(&screen_position, u16 *, 2);
-        if (M2C_FIELD(config, s32 *, 8) == 0)
+        motion->radius -= config->radial_step;
+        motion->angle += config->angle_step;
+        gte_stsxy(&screen_position.packed);
+        motion->screen_position.point.x = screen_position.point.x;
+        motion->screen_position.point.y = screen_position.point.y;
+        if (config->spawn_timer == 0)
         {
-            if (M2C_FIELD(config, s32 *, 0) != -1)
+            if (config->spawn_interval != -1)
             {
-                copy_actor = ((i + M2C_FIELD(config, s32 *, 4)) * 0x2C) + (u8 *)&g_wmap_sprite_actors;
-                *(WmapSpriteActor *)copy_actor = *(WmapSpriteActor *)actor;
-                copy_motion = ((i + M2C_FIELD(config, s32 *, 4)) * 0x14) + (u8 *)&g_wmap_actor_motions;
-                *(WmapMotion *)copy_motion = *(WmapMotion *)source_motion;
-                copy_resource = ((i + M2C_FIELD(config, s32 *, 4)) * 8) + (u8 *)&g_wmap_actor_animations;
-                *(WmapAnimationSlot *)copy_resource = *(WmapAnimationSlot *)resource;
-                M2C_FIELD(copy_actor, u16 *, 0x26) = (u16) M2C_FIELD(config, u16 *, 0x18);
-                M2C_FIELD(copy_actor, u16 *, 0x22) = (u16) M2C_FIELD(config, u16 *, 0x1C);
-                if (expire_by_size == 0)
+                copy_actor = &g_wmap_sprite_actors[i + config->next_slot];
+                *copy_actor = *actor;
+                copy_motion = (WmapTrailMotion*)&g_wmap_actor_motions[i + config->next_slot];
+                *copy_motion = *source_motion;
+                copy_resource = &g_wmap_actor_animations[i + config->next_slot];
+                *copy_resource = *resource;
+                copy_actor->shade_step = config->shade_step;
+                copy_actor->target_shade = config->target_shade;
+                if (expire_by_shade == 0)
                 {
-                    M2C_FIELD(copy_actor, s16 *, 0xE) = 1;
+                    copy_actor->sequence = 1;
                 }
             }
         }
     }
-    if (M2C_FIELD(config, s32 *, 8) == 0)
+    if (config->spawn_timer == 0)
     {
-        next_slot = M2C_FIELD(config, s32 *, 4) + 1;
-        M2C_FIELD(config, s32 *, 4) = next_slot;
-        M2C_FIELD(config, s32 *, 8) = (s32) M2C_FIELD(config, s32 *, 0);
-        if (next_slot >= 0xF)
+        next_slot = config->next_slot + 1;
+        config->next_slot = next_slot;
+        config->spawn_timer = config->spawn_interval;
+        if (next_slot >= WMAP_PARTICLE_TRAIL_LENGTH)
         {
-            M2C_FIELD(config, s32 *, 4) = 1;
+            config->next_slot = 1;
         }
     }
     for (i = first; i < first + count; i++)
     {
         draw_actor = &g_wmap_sprite_actors[i];
-        motion = (i * 0x14) + (u8 *)&g_wmap_actor_motions;
-        if (M2C_FIELD(motion, s16 *, 0) != 0)
+        motion = (WmapTrailMotion*)&g_wmap_actor_motions[i];
+        if (motion->state != 0)
         {
-            resource_offset = i * 8;
-            offsets = (s16 *)((WmapAnimationSlot *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
-            data = (u8 *)offsets;
+            animation_slot = &g_wmap_actor_animations[i];
+            offsets = (s16*)animation_slot->data;
+            data = (u8*)offsets;
             if (draw_actor->previous_sequence != draw_actor->sequence)
             {
-                u8 *sequence_cursor;
-                draw_actor->previous_sequence = (u16)draw_actor->sequence;
+                u8* sequence_cursor;
+                draw_actor->previous_sequence = draw_actor->sequence;
                 offset = offsets[draw_actor->sequence];
                 draw_actor->remaining = 1;
-                sequence_cursor = (u8 *)offsets + offset;
+                sequence_cursor = (u8*)offsets + offset;
                 draw_actor->sequence_start = sequence_cursor;
                 draw_actor->cursor = sequence_cursor;
             }
@@ -1031,12 +1086,20 @@ void func_8006BC44(s32 first, s32 count, void *config, s32 expire_by_size)
                     draw_actor->remaining = cursor[1];
                 }
                 draw_actor->cursor += 4;
-                draw_actor->frame_data = data + ((s16 *)(animation_frame * 2 + data))[32];
+                draw_actor->frame_data = data + offsets[animation_frame + WMAP_ANIMATION_FRAME_TABLE_INDEX];
             }
-            wmap_draw_actor_sprite(draw_actor, M2C_FIELD(motion, s32 *, 0x10), M2C_FIELD(config, s32 *, 0x24), M2C_FIELD(config, s32 *, 0x20), 0);
-            if ((expire_by_size != 0) && ((size = M2C_FIELD(draw_actor, s16 *, 0x24), ((size < 0xFD) == 0)) || (size < 4)))
+            wmap_draw_actor_sprite(draw_actor, motion->screen_position.packed, config->texture_index, config->depth, 0);
+            if (expire_by_shade != 0)
             {
-                M2C_FIELD(motion, s16 *, 0) = 0;
+                shade = draw_actor->shade;
+                if (shade > WMAP_PARTICLE_TRAIL_MAX_SHADE)
+                {
+                    motion->state = 0;
+                }
+                else if (shade < WMAP_PARTICLE_TRAIL_MIN_SHADE)
+                {
+                    motion->state = 0;
+                }
             }
         }
     }
@@ -1052,67 +1115,67 @@ s32 func_8006C0EC(void)
 
     wmap_set_effect_camera_transform();
     position.vz = 0;
-    position.vx =
-        (s16)((s32)((((g_wmap_focus_cell_x - 1) * 0xA0) - ((s32)(M2C_FIELD(&g_wmap_view, s32*, 0) * 0x14000) / (s32)M2C_FIELD(&g_wmap_view, s32*, 8))) * 0x6000) /
-              (s32)M2C_FIELD(&g_wmap_view, s32*, 8));
-    position.vy =
-        (s16)((s32)((((g_wmap_focus_cell_y - 1) * 0xA0) - ((s32)(M2C_FIELD(&g_wmap_view, s32*, 4) * 0x14000) / (s32)M2C_FIELD(&g_wmap_view, s32*, 8))) * 0x6000) /
-              (s32)M2C_FIELD(&g_wmap_view, s32*, 8));
+    position.vx = ((((g_wmap_focus_cell_x - 1) * WMAP_EFFECT_CELL_SIZE -
+                     (g_wmap_view.x * WMAP_EFFECT_MAP_SCALE) / g_wmap_view.projection_scale) *
+                    WMAP_EFFECT_PROJECTION_SCALE) / g_wmap_view.projection_scale);
+    position.vy = ((((g_wmap_focus_cell_y - 1) * WMAP_EFFECT_CELL_SIZE -
+                     (g_wmap_view.y * WMAP_EFFECT_MAP_SCALE) / g_wmap_view.projection_scale) *
+                    WMAP_EFFECT_PROJECTION_SCALE) / g_wmap_view.projection_scale);
     gte_ldv0(&position);
     gte_rtps();
-    if (M2C_FIELD(&D_800DCEB8, s16*, 0) != g_wmap_effect_camera_rotation_offset.vx)
+    if (D_800DCEB8.vx != g_wmap_effect_camera_rotation_offset.vx)
     {
-        if (M2C_FIELD(&D_800DCEB8, s16*, 0) < g_wmap_effect_camera_rotation_offset.vx)
+        if (D_800DCEB8.vx < g_wmap_effect_camera_rotation_offset.vx)
         {
-            g_wmap_effect_camera_rotation_offset.vx = (u16)g_wmap_effect_camera_rotation_offset.vx - D_80139210;
+            g_wmap_effect_camera_rotation_offset.vx = (u16)g_wmap_effect_camera_rotation_offset.vx - (u16)D_80139210.vx;
         }
         else
         {
-            g_wmap_effect_camera_rotation_offset.vx = (u16)g_wmap_effect_camera_rotation_offset.vx + D_80139210;
+            g_wmap_effect_camera_rotation_offset.vx = (u16)g_wmap_effect_camera_rotation_offset.vx + (u16)D_80139210.vx;
         }
     }
-    if (D_800DCEBA != g_wmap_effect_camera_rotation_offset.vy)
+    if (D_800DCEB8.vy != g_wmap_effect_camera_rotation_offset.vy)
     {
-        if (D_800DCEBA < g_wmap_effect_camera_rotation_offset.vy)
+        if (D_800DCEB8.vy < g_wmap_effect_camera_rotation_offset.vy)
         {
-            g_wmap_effect_camera_rotation_offset.vy = (u16)g_wmap_effect_camera_rotation_offset.vy - D_80139212;
+            g_wmap_effect_camera_rotation_offset.vy = (u16)g_wmap_effect_camera_rotation_offset.vy - (u16)D_80139210.vy;
         }
         else
         {
-            g_wmap_effect_camera_rotation_offset.vy = (u16)g_wmap_effect_camera_rotation_offset.vy + D_80139212;
+            g_wmap_effect_camera_rotation_offset.vy = (u16)g_wmap_effect_camera_rotation_offset.vy + (u16)D_80139210.vy;
         }
     }
-    if (D_800DCEBC != g_wmap_effect_camera_rotation_offset.vz)
+    if (D_800DCEB8.vz != g_wmap_effect_camera_rotation_offset.vz)
     {
-        if (D_800DCEBC < g_wmap_effect_camera_rotation_offset.vz)
+        if (D_800DCEB8.vz < g_wmap_effect_camera_rotation_offset.vz)
         {
-            g_wmap_effect_camera_rotation_offset.vz = (u16)g_wmap_effect_camera_rotation_offset.vz - D_80139214;
+            g_wmap_effect_camera_rotation_offset.vz = (u16)g_wmap_effect_camera_rotation_offset.vz - (u16)D_80139210.vz;
         }
         else
         {
-            g_wmap_effect_camera_rotation_offset.vz = (u16)g_wmap_effect_camera_rotation_offset.vz + D_80139214;
+            g_wmap_effect_camera_rotation_offset.vz = (u16)g_wmap_effect_camera_rotation_offset.vz + (u16)D_80139210.vz;
         }
     }
-    if (M2C_FIELD(&D_80139200, s32*, 0) != g_wmap_effect_camera_translation_offset.vx)
+    if (D_80139200.vx != g_wmap_effect_camera_translation_offset.vx)
     {
-        if (M2C_FIELD(&D_80139200, s32*, 0) < g_wmap_effect_camera_translation_offset.vx)
+        if (D_80139200.vx < g_wmap_effect_camera_translation_offset.vx)
         {
-            g_wmap_effect_camera_translation_offset.vx = g_wmap_effect_camera_translation_offset.vx - D_80139968;
+            g_wmap_effect_camera_translation_offset.vx = g_wmap_effect_camera_translation_offset.vx - D_80139968.vx;
         }
         else
         {
-            g_wmap_effect_camera_translation_offset.vx = g_wmap_effect_camera_translation_offset.vx + D_80139968;
+            g_wmap_effect_camera_translation_offset.vx = g_wmap_effect_camera_translation_offset.vx + D_80139968.vx;
         }
     }
-    if (D_80139204 != g_wmap_effect_camera_translation_offset.vy)
+    if (D_80139200.vy != g_wmap_effect_camera_translation_offset.vy)
     {
-        if (D_80139204 < g_wmap_effect_camera_translation_offset.vy)
+        if (D_80139200.vy < g_wmap_effect_camera_translation_offset.vy)
         {
-            g_wmap_effect_camera_translation_offset.vy = g_wmap_effect_camera_translation_offset.vy - D_8013996C;
+            g_wmap_effect_camera_translation_offset.vy = g_wmap_effect_camera_translation_offset.vy - D_80139968.vy;
         }
         else
         {
-            g_wmap_effect_camera_translation_offset.vy = g_wmap_effect_camera_translation_offset.vy + D_8013996C;
+            g_wmap_effect_camera_translation_offset.vy = g_wmap_effect_camera_translation_offset.vy + D_80139968.vy;
         }
     }
     if (D_8013B29C == 0)
@@ -1123,17 +1186,17 @@ s32 func_8006C0EC(void)
         g_wmap_effect_camera_translation_offset.vx = 0;
         g_wmap_effect_camera_translation_offset.vy = 0;
         g_wmap_effect_camera_translation_offset.vz = 0;
-        M2C_FIELD(&D_80139200, s32*, 0) = 0;
-        M2C_FIELD(&D_80139200, s32*, 4) = 0;
-        M2C_FIELD(&D_80139200, s32*, 8) = 0;
-        M2C_FIELD(&D_800DCEB8, s16*, 0) = 0;
-        M2C_FIELD(&D_800DCEB8, s16*, 2) = 0;
-        M2C_FIELD(&D_800DCEB8, s16*, 4) = 0;
-        M2C_FIELD(&g_wmap_focus_screen_position, s16*, 0) = 0xA4;
-        M2C_FIELD(&g_wmap_focus_screen_position, s16*, 2) = 0x69;
+        D_80139200.vx = 0;
+        D_80139200.vy = 0;
+        D_80139200.vz = 0;
+        D_800DCEB8.vx = 0;
+        D_800DCEB8.vy = 0;
+        D_800DCEB8.vz = 0;
+        g_wmap_focus_screen_position.point.x = 0xA4;
+        g_wmap_focus_screen_position.point.y = 0x69;
         return 0;
     }
-    gte_stsxy(&g_wmap_focus_screen_position);
+    gte_stsxy(&g_wmap_focus_screen_position.packed);
     return D_8013B29C;
 }
 
@@ -1141,67 +1204,67 @@ s32 func_8006C0EC(void)
  * @brief Spawn one free particle, then animate and draw all active particles.
  * @param config Particle range, spawn bounds, animation, and drawing settings.
  */
-void func_8006C448(void *config)
+void func_8006C448(WmapBoxParticleConfig* config)
 {
     SVECTOR position;
     s32 screen_position;
     s32 draw_index;
     s32 spawn_index;
     s32 i;
-    WmapSpriteActor *actor;
-    s32 resource_offset;
+    WmapSpriteActor* actor;
+    WmapAnimationSlot* animation_slot;
     s32 animation_frame;
     s32 offset;
-    s16 *offsets;
-    u8 *data;
-    u8 *cursor;
-    void *spawn_actor;
-    void *spawn_motion;
-    void *motion;
+    s16* offsets;
+    u8* data;
+    u8* cursor;
+    WmapSpriteActor* spawn_actor;
+    WmapBoxParticleMotion* spawn_motion;
+    WmapBoxParticleMotion* motion;
 
-    for (i = 0; i < M2C_FIELD(config, s32 *, 0); i++)
+    for (i = 0; i < config->count; i++)
     {
-        spawn_index = M2C_FIELD(config, s32 *, 4) + i;
+        spawn_index = config->first + i;
         spawn_actor = &g_wmap_sprite_actors[spawn_index];
-        spawn_motion = (spawn_index * 0x14) + (u8 *)&g_wmap_actor_motions;
-        if (M2C_FIELD(spawn_motion, s16 *, 0) == 0)
+        spawn_motion = (WmapBoxParticleMotion*)&g_wmap_actor_motions[spawn_index];
+        if (spawn_motion->state == 0)
         {
-            M2C_FIELD(spawn_motion, s16 *, 0) = 1;
-            M2C_FIELD(spawn_motion, s16 *, 0x10) = (s16) (M2C_FIELD(config, u16 *, 8) + ((s32) (rand() * M2C_FIELD(config, s32 *, 0xC)) >> 0xF));
-            M2C_FIELD(spawn_motion, s16 *, 0xE) = (s16) (M2C_FIELD(config, u16 *, 0x10) + ((s32) (rand() * M2C_FIELD(config, s32 *, 0x14)) >> 0xF));
-            M2C_FIELD(spawn_motion, s16 *, 0x12) = (s16) (M2C_FIELD(config, u16 *, 0x18) + ((s32) (rand() * M2C_FIELD(config, s32 *, 0x1C)) >> 0xF));
-            M2C_FIELD(spawn_actor, s16 *, 2) = 0;
-            M2C_FIELD(spawn_actor, s8 *, 6) = 0xF;
-            M2C_FIELD(spawn_actor, u16 *, 0xE) = (u16) M2C_FIELD(config, u16 *, 0x34);
-            M2C_FIELD(spawn_actor, s16 *, 0x10) = -1;
-            M2C_FIELD(spawn_actor, u16 *, 0x22) = (u16) M2C_FIELD(config, u16 *, 0x20);
-            M2C_FIELD(spawn_actor, u16 *, 0x24) = (u16) M2C_FIELD(config, u16 *, 0x24);
-            M2C_FIELD(spawn_actor, u16 *, 0x26) = (u16) M2C_FIELD(config, u16 *, 0x28);
+            spawn_motion->state = 1;
+            spawn_motion->x = config->x_min + ((rand() * config->x_range) >> 15);
+            spawn_motion->y = config->y_min + ((rand() * config->y_range) >> 15);
+            spawn_motion->z = config->z_min + ((rand() * config->z_range) >> 15);
+            spawn_actor->resource_index = 0;
+            spawn_actor->scale_index = 0xF;
+            spawn_actor->sequence = config->sequence;
+            spawn_actor->previous_sequence = -1;
+            spawn_actor->target_shade = config->target_shade;
+            spawn_actor->shade = config->shade;
+            spawn_actor->shade_step = config->shade_step;
             break;
         }
     }
-    for (i = 0; i < M2C_FIELD(config, s32 *, 0); i++)
+    for (i = 0; i < config->count; i++)
     {
-        draw_index = M2C_FIELD(config, s32 *, 4) + i;
+        draw_index = config->first + i;
         actor = &g_wmap_sprite_actors[draw_index];
-        motion = (draw_index * 0x14) + (u8 *)&g_wmap_actor_motions;
-        if (M2C_FIELD(motion, s16 *, 0) != 0)
+        motion = (WmapBoxParticleMotion*)&g_wmap_actor_motions[draw_index];
+        if (motion->state != 0)
         {
-            position.vx = M2C_FIELD(motion, u16 *, 0x10);
-            position.vy = M2C_FIELD(motion, u16 *, 0xE);
-            position.vz = M2C_FIELD(motion, u16 *, 0x12);
+            position.vx = motion->x;
+            position.vy = motion->y;
+            position.vz = motion->z;
             gte_ldv0(&position);
             gte_rtps();
-            resource_offset = (i + M2C_FIELD(config, s32 *, 4)) * 8;
-            offsets = (s16 *)((WmapAnimationSlot *)((u8 *)g_wmap_actor_animations + resource_offset))->data;
-            data = (u8 *)offsets;
+            animation_slot = &g_wmap_actor_animations[i + config->first];
+            offsets = (s16*)animation_slot->data;
+            data = (u8*)offsets;
             if (actor->previous_sequence != actor->sequence)
             {
-                u8 *sequence_cursor;
-                actor->previous_sequence = (u16)actor->sequence;
+                u8* sequence_cursor;
+                actor->previous_sequence = actor->sequence;
                 offset = offsets[actor->sequence];
                 actor->remaining = 1;
-                sequence_cursor = (u8 *)offsets + offset;
+                sequence_cursor = (u8*)offsets + offset;
                 actor->sequence_start = sequence_cursor;
                 actor->cursor = sequence_cursor;
             }
@@ -1222,10 +1285,10 @@ void func_8006C448(void *config)
                     actor->remaining = cursor[1];
                 }
                 actor->cursor += 4;
-                actor->frame_data = data + ((s16 *)(animation_frame * 2 + data))[32];
+                actor->frame_data = data + offsets[animation_frame + WMAP_ANIMATION_FRAME_TABLE_INDEX];
             }
             gte_stsxy(&screen_position);
-            wmap_draw_actor_sprite(actor, screen_position, M2C_FIELD(config, s32 *, 0x30), M2C_FIELD(config, s32 *, 0x2C), 0);
+            wmap_draw_actor_sprite(actor, screen_position, config->texture_index, config->depth, 0);
         }
     }
 

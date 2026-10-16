@@ -636,7 +636,7 @@ s32 field_evaluate_parameter_track(FieldActorSlot* slot, s32 curve_index)
 static s32 field_finalize_actor_animation(FieldActorSlot* slot)
 {
     s32 found;
-    u8 state_value;
+    u8 contact_flags;
     s32 i;
     FieldActorSlot* other_slot;
     s16 owner_command;
@@ -682,9 +682,9 @@ static s32 field_finalize_actor_animation(FieldActorSlot* slot)
             {
                 if (slot->targets[found] != FIELD_TARGET_NONE)
                 {
-                    state_value = g_field_object_states[slot->targets[found]].contact.word;
+                    contact_flags = g_field_object_states[slot->targets[found]].contact.bytes.flags;
 
-                    if ((state_value & FIELD_CONTACT_ANIMATION_HIDDEN) &&
+                    if ((contact_flags & FIELD_CONTACT_ANIMATION_HIDDEN) &&
                         (g_field_object_states[slot->targets[found]].contact.bytes.controller_index == slot->slot_index))
                     {
                         g_field_actors[slot->targets[found]].presence = FIELD_ACTOR_VISIBLE;
@@ -742,9 +742,7 @@ static s32 field_finalize_actor_animation(FieldActorSlot* slot)
             return 1;
         }
 
-        state_value = slot->sequence_active;
-
-        if (state_value != 0)
+        if (slot->sequence_active != 0)
         {
             slot->duration = 0;
             slot->active = 0;
@@ -753,7 +751,7 @@ static s32 field_finalize_actor_animation(FieldActorSlot* slot)
             for (i = 0; i < FIELD_ACTOR_SLOT_TOTAL; i++)
             {
                 if (((g_field_actor_slots[i].active != 0) && (g_field_actor_slots[i].owner_object_index == slot->owner_object_index)) &&
-                    ((state_value = g_field_actor_slots[i].status.word) & FIELD_SLOT_OWNER_LINKED))
+                    (g_field_actor_slots[i].status.parts.flags & FIELD_SLOT_OWNER_LINKED))
                 {
                     g_field_actor_slots[i].track_mask = 0;
                     field_finalize_actor_animation(&g_field_actor_slots[i]);

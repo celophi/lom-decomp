@@ -196,7 +196,8 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
     uintptr_t header_address;
 
     akao_spu_wait();
-    if ((header_address = akao_check_magic(bank)) == 0)
+    header_address = akao_check_magic(bank);
+    if (header_address == 0)
     {
         header_address = (uintptr_t)bank;
         header = (AkaoBankHeader*)header_address;
