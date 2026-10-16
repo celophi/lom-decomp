@@ -143,6 +143,9 @@ typedef struct
 #define ZUKAN_ENTRY_IMAGE_Y 0x100
 #define ZUKAN_ENTRY_CLUT_Y 0x1EE
 
+/** @brief Bytes reserved in the caller's work buffer for encyclopedia resources. */
+#define ZUKAN_WORK_BUFFER_SIZE 0x8000
+
 #define ZUKAN_LIST_CAPACITY 0x200
 #define ZUKAN_LIST_ROW_HEIGHT 16
 #define ZUKAN_LIST_VISIBLE_ROWS 8
@@ -232,7 +235,8 @@ u8* zukan_initialize_state(u8* work_buffer, s32 category)
 
     g_zukan_category = category;
     g_zukan_work_buffer = (u8*)ALIGN4(work_buffer);
-    zukan_upload_ui_images((next_buffer = work_buffer + 0x8000, work_buffer));
+    next_buffer = work_buffer + ZUKAN_WORK_BUFFER_SIZE;
+    zukan_upload_ui_images(work_buffer);
     field_reset_input_repeat();
     zukan_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, ZUKAN_FADE_STEPS);
     g_zukan_transition_state = ZUKAN_TRANSITION_IDLE;

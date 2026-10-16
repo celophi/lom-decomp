@@ -166,6 +166,9 @@ overlay_field_gcc_280_g4_noexpand_srcs := \
 	src/overlays/field/scene/field_collision.c \
 	src/overlays/field/ui/field_text.c
 
+# Preserve scene-list reloads within each dispatch path.
+overlay_field_gcc_280_g4_extra_cc_flags_scene/field_scene_control := -fno-cse-follow-jumps
+
 OVERLAYS += gname
 overlay_gname_gcc_272_cdk_g0_srcs := src/overlays/gname/overlay_header.c src/overlays/gname/gname.c
 

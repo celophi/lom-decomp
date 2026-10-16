@@ -739,6 +739,32 @@ static inline u8 field_sequence_byte(s32 sequence_index, s32 object_index, s32 c
 }
 
 /**
+ * @brief Locate the current byte of an actor's technique sequence.
+ * @param scripts Sequence resource containing the weapon banks.
+ * @param players Player records whose weapons select the sequence banks.
+ * @param states Object states containing the sequence cursors.
+ * @param object_index Actor object whose weapon and cursor select the byte.
+ * @param sequence_index Row within the selected weapon bank.
+ * @return Address of the current sequence byte.
+ */
+static inline u8* field_current_actor_sequence_cursor(u8* scripts, FieldPlayerRecord* players, FieldObjectState* states,
+                                                      s32 object_index, s32 sequence_index)
+{
+    s32 bank;
+    s32 row_offset;
+    u32 bank_offset;
+    u32 offset;
+    FieldObjectState* state;
+
+    bank = players[object_index].head.bytes.weapon_type;
+    row_offset = sequence_index * FIELD_SEQUENCE_ROW_SIZE;
+    bank_offset = bank * FIELD_SEQUENCE_BANK_SIZE;
+    offset = row_offset + bank_offset;
+    state = &states[object_index];
+    return scripts + offset + state->sequence_position;
+}
+
+/**
  * @brief Advance an actor sequence and apply its pending horizontal motion.
  * @param actor Actor whose sequence cursor and motion remainder are advanced.
  * @param sequence_index Script row within the actor's selected bank.
@@ -748,18 +774,11 @@ void field_update_technique_command(FieldActor* actor, s32 sequence_index)
 {
     Vec3i* scratch = FIELD_SCRATCH_DISPLACEMENT;
     FieldObjectState* states;
-    FieldObjectState* state;
     s32 active_cursor;
-    s32 first_cursor;
-    s32 bank;
-    FieldPlayerRecord* players;
     FieldObjectPart* part;
     u8* scripts;
+    FieldPlayerRecord* players;
     s32 object_index;
-    s32 cursor;
-    s32 row_offset;
-    uintptr_t row_address;
-    s32 row_sum;
     s32 amount;
     u8 delay;
     u8 command;
@@ -792,45 +811,18 @@ void field_update_technique_command(FieldActor* actor, s32 sequence_index)
                 players = g_field_player_records;
                 object_index = actor->object_index;
 
-                do
+                if (*field_current_actor_sequence_cursor(scripts, players, states, object_index, sequence_index) ==
+                    FIELD_SEQUENCE_WAIT_ANIMATION)
                 {
-                    bank = players[object_index].head.bytes.weapon_type;
-                    row_offset = sequence_index * FIELD_SEQUENCE_ROW_SIZE;
-                    row_address = bank << 1;
-                    row_address += bank;
-                    row_address <<= 8;
-                    row_sum = row_offset + row_address;
-                    row_address = row_sum;
-                } while (0);
-                state = &states[object_index];
-                first_cursor = state->sequence_position;
-                row_address += (uintptr_t)scripts;
-                row_address += first_cursor;
-
-                if (*(u8*)row_address == FIELD_SEQUENCE_WAIT_ANIMATION)
-                {
-                    state->sequence_position = first_cursor + 1;
+                    states[object_index].sequence_position++;
                 }
 
                 object_index = actor->object_index;
 
-                do
+                if (*field_current_actor_sequence_cursor(scripts, players, states, object_index, sequence_index) ==
+                    FIELD_SEQUENCE_WAIT_REPEAT)
                 {
-                    bank = players[object_index].head.bytes.weapon_type;
-                    row_address = bank << 1;
-                    row_address += bank;
-                    row_address <<= 8;
-                    row_sum = row_offset + row_address;
-                    row_address = row_sum;
-                } while (0);
-                state = &states[object_index];
-                cursor = state->sequence_position;
-                row_address += (uintptr_t)scripts;
-                row_address += cursor;
-
-                if (*(u8*)row_address == FIELD_SEQUENCE_WAIT_REPEAT)
-                {
-                    if (state->contact.bytes.target_count == 0)
+                    if (states[object_index].contact.bytes.target_count == 0)
                     {
                         field_resolve_collected_hits(object_index);
                         field_stop_actor_animations_for_object(actor, 1);
@@ -848,7 +840,7 @@ void field_update_technique_command(FieldActor* actor, s32 sequence_index)
                         return;
                     }
 
-                    state->sequence_position = cursor + 1;
+                    states[object_index].sequence_position++;
                     return;
                 }
 

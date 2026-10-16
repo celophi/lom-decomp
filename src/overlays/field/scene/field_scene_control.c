@@ -283,6 +283,7 @@ static void field_start_animation(FieldSeq* seq)
     FieldAnim* anim;
     FieldScene* scene;
     s32 i;
+    u8 stop_keyframe;
 
     cmd = seq->def;
     scene = g_field_scene.scene;
@@ -306,13 +307,14 @@ static void field_start_animation(FieldSeq* seq)
     def = anim->def;
     field_rewind_animation(def, anim);
     anim->repeat_count = cmd->repeat_count;
-    if (cmd->stop_keyframe == FIELD_SEQ_NO_STOP)
+    stop_keyframe = cmd->stop_keyframe;
+    if (stop_keyframe == FIELD_SEQ_NO_STOP)
     {
         anim->flags.word &= ~FIELD_ANIM_FLAG_STOP_AT_KEYFRAME;
     }
     else
     {
-        anim->flags.b.stop_keyframe = cmd->stop_keyframe;
+        anim->flags.b.stop_keyframe = stop_keyframe;
         anim->flags.word |= FIELD_ANIM_FLAG_STOP_AT_KEYFRAME;
     }
     anim->flags.word = (anim->flags.word & ~FIELD_ANIM_FLAG_PING_PONG) | ((def->flags.word >> 3) & FIELD_ANIM_FLAG_PING_PONG) | FIELD_ANIM_FLAG_ACTIVE;
@@ -422,9 +424,6 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
     case FIELD_LIST_PALETTE_ANIMS:
         anim = scene->strips;
         break;
-        do
-        {
-        } while (0);
     case FIELD_LIST_SEQUENCES:
         field_start_or_stop_sequence(index, op != FIELD_ANIM_OP_STOP);
         return;
@@ -516,14 +515,15 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
     default:
         if (anim->flags.b.keyframe != keyframe)
         {
-            anim->flags.word |= FIELD_ANIM_FLAG_PING_PONG;
+            flags = anim->flags.word | FIELD_ANIM_FLAG_PING_PONG;
+            anim->flags.word = flags;
             if (anim->flags.b.keyframe < keyframe)
             {
-                anim->flags.word &= ~FIELD_ANIM_FLAG_REVERSE;
+                anim->flags.word = flags & ~FIELD_ANIM_FLAG_REVERSE;
             }
             else
             {
-                anim->flags.word |= FIELD_ANIM_FLAG_REVERSE;
+                anim->flags.word = flags | FIELD_ANIM_FLAG_REVERSE;
             }
             anim->repeat_count = 0;
             anim->timer = 1;
@@ -999,9 +999,6 @@ s32 field_get_animation_state(s32 list_kind, s32 index)
     case FIELD_LIST_PALETTE_ANIMS:
         anim = scene->strips;
         break;
-        do
-        {
-        } while (0);
     case FIELD_LIST_SEQUENCES:
         return field_scan_sequence_chain(index) * FIELD_ANIM_STATE_FINISHED;
     default:
