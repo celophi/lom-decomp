@@ -3191,92 +3191,92 @@ void field_menu_draw_land_element(void)
 {
     s32 weights[FIELD_LAND_SPIRIT_COUNT];
     FieldFavoredElementTable favored;
-    s32 total_weight, element_index, land_offset, element_level, weight, random_weight;
+    s32 total, i, land_offset, level, weight, draw;
     FieldViewOrElement work;
-    s32* weight_cursor;
-    s32* weight_base;
-    s32 land_index, weight_offset, product;
+    s32* cursor;
+    s32* base;
+    s32 land, byte_offset, product;
     s32 mode;
 
-    total_weight = 0;
-    element_index = total_weight;
+    total = 0;
+    i = total;
     work.view = &g_saved_game.layout;
     mode = D_80122C00.locals.bytes[0];
-    land_index = g_music_track_index;
+    land = g_music_track_index;
     favored = g_field_weekday_favored_elements;
-    land_offset = land_index * FIELD_LAND_RECORD_SIZE;
+    land_offset = land * FIELD_LAND_RECORD_SIZE;
 next_weight:
-    element_level = ((u8*)work.view)[element_index + land_offset + FIELD_LAND_LEVELS_OFFSET];
-    weight = element_level - 3;
+    level = ((u8*)work.view)[i + land_offset + FIELD_LAND_LEVELS_OFFSET];
+    weight = level - 3;
 
-    if (element_index == favored.elements[work.view->control.fields.weekday & FIELD_WEEKDAY_MASK])
+    if (i == favored.elements[work.view->control.fields.weekday & FIELD_WEEKDAY_MASK])
     {
-        weight = element_level - 2;
+        weight = level - 2;
     }
 
     if (weight >= 0)
     {
-        element_level = 3;
+        level = 3;
 
         if (weight < 4)
         {
-            element_level = weight;
+            level = weight;
         }
     }
     else
     {
-        element_level = 0;
+        level = 0;
     }
 
-    weight = element_level * element_level;
+    weight = level * level;
     weight = weight * weight;
-    weight_offset = element_index * 4;
-    element_index++;
-    weight_base = weights;
-    *(s32*)((u8*)weight_base + weight_offset) = weight;
-    total_weight += weight;
+    byte_offset = i * 4;
+    i++;
+    base = weights;
+    *(s32*)((u8*)base + byte_offset) = weight;
+    total += weight;
 
-    if (element_index < FIELD_LAND_SPIRIT_COUNT)
+    if (i < FIELD_LAND_SPIRIT_COUNT)
     {
         goto next_weight;
     }
 
     if (mode == 1)
     {
-        total_weight = FIELD_ELEMENT_UNIFORM_TOTAL;
+        total = FIELD_ELEMENT_UNIFORM_TOTAL;
     }
 
-    product = rand() * total_weight;
-    random_weight = product >> 15;
+    product = rand() * total;
+    draw = product >> 15;
 
     if (product < 0)
     {
-        random_weight = (product + 0x7FFF) >> 15;
+        draw = (product + 0x7FFF) >> 15;
     }
 
-    total_weight = 0;
+    total = 0;
     work.element = FIELD_NO_ELEMENT;
-    element_index = total_weight;
-    weight_cursor = weight_base;
+    i = total;
+    cursor = base;
 next_draw:
-    if (random_weight >= total_weight && random_weight < total_weight + *weight_cursor)
+    if (draw >= total && draw < total + *cursor)
     {
         goto found;
     }
 
     if (mode == 0)
     {
-        total_weight += *weight_cursor;
+        total += *cursor;
     }
     else
     {
-        total_weight += FIELD_ELEMENT_UNIFORM_WEIGHT;
+        total += FIELD_ELEMENT_UNIFORM_WEIGHT;
     }
 
-    element_index++;
-    weight_cursor++;
+    i++;
+    cursor++;
 
-    if (element_index < FIELD_LAND_SPIRIT_COUNT)
+    if (i < FIELD_LAND_SPIRIT_COUNT)
     {
         goto next_draw;
     }
@@ -3289,7 +3289,7 @@ store:
     FIELD_LOCAL_BYTE(FIELD_DRAWN_ELEMENT) = work.element;
     return;
 found:
-    work.element = element_index;
+    work.element = i;
     goto store;
 store_uniform:
     FIELD_LOCAL_BYTE(FIELD_UNIFORM_ELEMENT) = work.element;

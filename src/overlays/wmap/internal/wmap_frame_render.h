@@ -7,7 +7,7 @@
 
 #define WMAP_OT_COUNT 179
 #define WMAP_PACKET_LIMIT 32000
-#define WMAP_TPAGE_SELECT_XY 400
+#define WMAP_MODEL_TPAGE_XY 400
 /** @brief Map tiles per grid row and column. */
 #define WMAP_MAP_TILES 26
 /** @brief Drop-shadow polygons under the map edges. */

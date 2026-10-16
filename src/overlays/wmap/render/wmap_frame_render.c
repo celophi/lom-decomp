@@ -81,9 +81,9 @@ void func_800641DC(void)
     triangle = (WmapTexturedTriangle*)g_wmap_current_frame->packet_cursor;
     triangle->header.packet.length = 7;
     triangle->code = 0x24;
-    *(s32*)&triangle->x2 = WMAP_TPAGE_SELECT_XY;
-    *(s32*)&triangle->x1 = WMAP_TPAGE_SELECT_XY;
-    *(s32*)&triangle->x0 = WMAP_TPAGE_SELECT_XY;
+    *(s32*)&triangle->x2 = WMAP_MODEL_TPAGE_XY;
+    *(s32*)&triangle->x1 = WMAP_MODEL_TPAGE_XY;
+    *(s32*)&triangle->x0 = WMAP_MODEL_TPAGE_XY;
     triangle->tpage = 0x40;
     triangle->header.tag = ((triangle->header.tag & 0xFF000000) | (g_wmap_current_frame->ordering_table[1] & 0xFFFFFF));
     g_wmap_current_frame->ordering_table[1] = ((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((uintptr_t)triangle & 0xFFFFFF));
@@ -266,9 +266,9 @@ void wmap_update_exit_panels(void)
 
     triangle = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
     setPolyFT3(triangle);
-    *(s32*)&triangle->x2 = WMAP_TPAGE_SELECT_XY;
-    *(s32*)&triangle->x1 = WMAP_TPAGE_SELECT_XY;
-    *(s32*)&triangle->x0 = WMAP_TPAGE_SELECT_XY;
+    *(s32*)&triangle->x2 = WMAP_MODEL_TPAGE_XY;
+    *(s32*)&triangle->x1 = WMAP_MODEL_TPAGE_XY;
+    *(s32*)&triangle->x0 = WMAP_MODEL_TPAGE_XY;
     setTPage(triangle, GPU_TEXTURE_16BIT, GPU_BLEND_SUBTRACT, 0, 0);
     addPrim(&g_wmap_current_frame->ordering_table[1], triangle);
 
@@ -331,9 +331,9 @@ void func_80064BF8(void)
         triangle = (WmapTexturedTriangle*)g_wmap_current_frame->packet_cursor;
         triangle->header.packet.length = 7;
         triangle->code = 0x24;
-        *(s32*)&triangle->x2 = WMAP_TPAGE_SELECT_XY;
-        *(s32*)&triangle->x1 = WMAP_TPAGE_SELECT_XY;
-        *(s32*)&triangle->x0 = WMAP_TPAGE_SELECT_XY;
+        *(s32*)&triangle->x2 = WMAP_MODEL_TPAGE_XY;
+        *(s32*)&triangle->x1 = WMAP_MODEL_TPAGE_XY;
+        *(s32*)&triangle->x0 = WMAP_MODEL_TPAGE_XY;
         triangle->tpage = 0x40;
         triangle->header.tag = ((triangle->header.tag & 0xFF000000) | (g_wmap_current_frame->ordering_table[1] & 0xFFFFFF));
         g_wmap_current_frame->ordering_table[1] = ((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((uintptr_t)triangle & 0xFFFFFF));
@@ -385,9 +385,9 @@ s32 func_80064D64(s32 initialize)
     depth = g_wmap_overlay_fade_depth;
     triangle->header.packet.length = 7;
     triangle->code = 0x24;
-    *(s32*)&triangle->x2 = WMAP_TPAGE_SELECT_XY;
-    *(s32*)&triangle->x1 = WMAP_TPAGE_SELECT_XY;
-    *(s32*)&triangle->x0 = WMAP_TPAGE_SELECT_XY;
+    *(s32*)&triangle->x2 = WMAP_MODEL_TPAGE_XY;
+    *(s32*)&triangle->x1 = WMAP_MODEL_TPAGE_XY;
+    *(s32*)&triangle->x0 = WMAP_MODEL_TPAGE_XY;
     triangle->tpage = 0x40;
     addPrim(&depth[g_wmap_current_frame->ordering_table], triangle);
     if (g_wmap_packet_bytes < 0x7D00)
