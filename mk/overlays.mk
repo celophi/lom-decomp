@@ -30,7 +30,7 @@ $$($(1)_GCC_280_G0_O0_OBJS): $(STAGING)/$$($(1)_C_OBJ_DIR)/%.o: $$($(1)_SRC_DIR)
 # GCC 2.8.0 G4 + maspsx.
 $$($(1)_GCC_280_G4_OBJS): $(STAGING)/$$($(1)_C_OBJ_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
-	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(VERSION_CPP_FLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
+	cd $(STAGING) && $(CC) $(CFLAGS_G4) $$(overlay_$(1)_gcc_280_g4_extra_cc_flags_$$*) $(VERSION_CPP_FLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $$(MASPSX_FLAGS_G4) -o $$($(1)_C_OBJ_DIR)/$$*.o
 
 # GCC 2.7.2 GNU G0 + its own assembler.

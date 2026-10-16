@@ -247,58 +247,38 @@ void field_transform_mesh_normals(FieldActorSlot* actor, FieldMotionRecord* reco
 }
 
 /**
- * @brief Build the transformed and scaled matrix for an actor part.
- *
- * Applies track-driven rotation, optional facing and distance transforms,
- * the supplied base matrix, and the part's fixed and animated scale factors.
- * The three work vectors occupy the original GTE scratchpad addresses.
- *
- * @param actor Owner whose parameter tracks and slot state are consulted.
- * @param record Actor position, orientation, and current track time.
- * @param part Part descriptor specifying rotation and scale behavior.
- * @param matrix Destination matrix initialized and updated by this function.
- * @param base_matrix Matrix passed to the base-transform composition helper.
- * @return Nothing meaningful; callers ignore it.
+ * @brief Initialize a diagonal rotation matrix with zero translation.
+ * @param matrix Destination matrix.
+ * @param diagonal Diagonal coefficient in the matrix's fixed-point format.
  */
-s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, FieldObjectPart* part, MATRIX* matrix, MATRIX* base_matrix)
+static inline void field_init_diagonal_matrix(MATRIX* matrix, u16 diagonal)
 {
     FieldMatrixStorage* storage = (FieldMatrixStorage*)matrix;
-    VECTOR* scale;
-    VECTOR* delta = (VECTOR*)getScratchAddr(4);
-    VECTOR* square = (VECTOR*)getScratchAddr(8);
-    s32 axis;
-    s32 facing_angle;
-    s32 rotation;
-    s32 horizontal_scale;
-    s32 base_scale;
-    s32 track_scale_xz;
-    s32 track_scale_xyz;
-    s32 track_scale_pair;
-    s32 component;
-    s32 distance_xz;
-    s32 scale_mode;
-    s32 distance;
-    u32 rotation_flags;
-    u32 scale_flags;
-    u32 track_index;
-    u8 scale_xz;
-    u8 scale_y;
 
-    /* Identity rotation and zero translation, written as words. */
-    storage->packed.rotation[4] = ONE;
-    storage->packed.rotation[2] = ONE;
-
-    do
-    {
-        storage->packed.rotation[0] = ONE;
-    } while (0);
-
-    scale = (VECTOR*)getScratchAddr(0);
+    storage->packed.rotation[4] = diagonal;
+    storage->packed.rotation[2] = diagonal;
+    storage->packed.rotation[0] = diagonal;
     matrix->t[2] = 0;
     matrix->t[1] = 0;
     matrix->t[0] = 0;
     storage->packed.rotation[3] = 0;
     storage->packed.rotation[1] = 0;
+}
+
+/**
+ * @brief Apply the rotation selected by a part's track flags.
+ * @param actor Owner of the parameter tracks.
+ * @param record Current track age and actor heading.
+ * @param part Part selecting the rotation mode and axes.
+ * @param matrix Matrix receiving the rotations.
+ */
+static inline void field_apply_part_rotation(FieldActorSlot* actor, FieldMotionRecord* record, FieldObjectPart* part, MATRIX* matrix)
+{
+    u32 rotation_flags;
+    s32 component;
+    s32 rotation;
+    s32 axis;
+
     rotation_flags = part->track_flags.word;
     component = (rotation_flags >> 6) & 3;
 
@@ -313,12 +293,7 @@ s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, Fi
             break;
         case 2:
             RotMatrixX(ONE / 4, matrix);
-
-            do
-            {
-                rotation = record->heading;
-            } while (0);
-
+            rotation = record->heading;
             axis = 2;
             break;
         case 3:
@@ -346,6 +321,45 @@ s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, Fi
             break;
         }
     }
+}
+
+/**
+ * @brief Build the transformed and scaled matrix for an actor part.
+ *
+ * Applies track-driven rotation, optional facing and distance transforms,
+ * the supplied base matrix, and the part's fixed and animated scale factors.
+ * The three work vectors occupy the original GTE scratchpad addresses.
+ *
+ * @param actor Owner whose parameter tracks and slot state are consulted.
+ * @param record Actor position, orientation, and current track time.
+ * @param part Part descriptor specifying rotation and scale behavior.
+ * @param matrix Destination matrix initialized and updated by this function.
+ * @param base_matrix Matrix passed to the base-transform composition helper.
+ * @return Nothing meaningful; callers ignore it.
+ */
+s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, FieldObjectPart* part, MATRIX* matrix, MATRIX* base_matrix)
+{
+    VECTOR* scale;
+    VECTOR* delta = (VECTOR*)getScratchAddr(4);
+    VECTOR* square = (VECTOR*)getScratchAddr(8);
+    s32 facing_angle;
+    s32 horizontal_scale;
+    s32 base_scale;
+    s32 track_scale_xz;
+    s32 track_scale_xyz;
+    s32 track_scale_pair;
+    s32 component;
+    s32 distance_xz;
+    s32 scale_mode;
+    s32 distance;
+    u32 scale_flags;
+    u32 track_index;
+    u8 scale_xz;
+    u8 scale_y;
+
+    field_init_diagonal_matrix(matrix, ONE);
+    scale = (VECTOR*)getScratchAddr(0);
+    field_apply_part_rotation(actor, record, part, matrix);
 
     if (part->rotation_y_16 != 0)
     {
