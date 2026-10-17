@@ -7,6 +7,8 @@
 /* WMAP interprets its portion of the resident save buffer through this view. */
 #define WMAP_SAVED_GAME (*(WmapSave*)&g_saved_game)
 #define WMAP_LAND_COUNT 64
+/** @brief Event bits stored in each saved-game flag word. */
+#define WMAP_EVENT_WORD_BITS 32
 #define WMAP_GRID_SIZE 6
 #define WMAP_NO_LAND 0xFF
 #define WMAP_LAND_AVAILABLE 0x01
@@ -351,7 +353,6 @@ void wmap_update_travel_growth(void)
     s32 day_bonus;
     s32 growth_slot;
     s32 growth_group;
-    s32 event_dividend;
     s32 total;
     s32 clamped;
     u16 age;
@@ -363,12 +364,7 @@ void wmap_update_travel_growth(void)
     blocked = 0;
     for (event = 0; event < WMAP_LAND_COUNT; event += 1)
     {
-        event_dividend = event;
-        if (event < 0)
-        {
-            event_dividend = event + 0x1F;
-        }
-        flag_word = event_dividend >> 5;
+        flag_word = event / WMAP_EVENT_WORD_BITS;
         if ((((WmapSave*)((flag_word * 4) + (u8*)&g_saved_game))->events[0] & (1 << (event - (flag_word << 5)))) &&
             (((u32)(event - 9) < (u32)WMAP_GRID_SIZE) || (event == 0x18) || (event == 0) || (event == 0x1B) || (event == 0x1C)))
         {

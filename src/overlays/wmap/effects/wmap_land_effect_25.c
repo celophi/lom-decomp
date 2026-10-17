@@ -1001,7 +1001,7 @@ WMAP_STEP_RESET(wmap_land_effect_25_sequence_14_reset, g_wmap_land_effect_25_seq
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_25_sequence_14_step_02,
     g_wmap_land_effect_25_sequence_14_step, g_wmap_land_effect_25_sequence_14_timer,
-    func_8006C448(&g_wmap_effect_params[40]))
+    func_8006C448((WmapBoxParticleConfig*)&g_wmap_effect_params[40]))
 
 /** @brief World-map step handler: clear a small entry table, set the timer, advance the step. */
 void wmap_land_effect_25_sequence_14_step_03(void)
@@ -1024,7 +1024,7 @@ void wmap_land_effect_25_sequence_14_step_03(void)
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_25_sequence_14_step_04,
     g_wmap_land_effect_25_sequence_14_step, g_wmap_land_effect_25_sequence_14_timer,
-    func_8006C448(&g_wmap_effect_params[40]))
+    func_8006C448((WmapBoxParticleConfig*)&g_wmap_effect_params[40]))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_25_sequence_14_end, g_wmap_land_effect_25_sequence_14_step)
 

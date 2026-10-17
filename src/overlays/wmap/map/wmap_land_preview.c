@@ -16,7 +16,6 @@
 #define WMAP_PREVIEW_BOB_MASK 0xFF
 #define WMAP_PREVIEW_BOB_PHASE 32
 #define WMAP_PREVIEW_BOB_SCALE 32
-#define WMAP_PREVIEW_BOB_SHIFT 5
 #define WMAP_CAROUSEL_FRAME_SHIFT 2
 #define WMAP_PREVIEW_OT_SHIFT 7
 #define WMAP_PREVIEW_FRONT_OT 5
@@ -172,13 +171,7 @@ void wmap_update_land_preview(void)
         if (g_wmap_artifact_placement_frame == 0)
         {
             bob_sample = D_80051B4C[(next_frame & WMAP_PREVIEW_BOB_MASK) + WMAP_PREVIEW_BOB_PHASE];
-            /* Bias negative samples so the signed shift rounds toward zero. */
-            if (bob_sample < 0)
-            {
-                bob_sample += WMAP_PREVIEW_BOB_SCALE - 1;
-            }
-            bob_sample >>= WMAP_PREVIEW_BOB_SHIFT;
-            g_wmap_preview_bob_y = bob_sample;
+            g_wmap_preview_bob_y = bob_sample / WMAP_PREVIEW_BOB_SCALE;
         }
         else
         {
@@ -339,11 +332,7 @@ void wmap_update_land_preview(void)
                     s32* artifact_slots;
                     carousel_frame = g_wmap_carousel_frame;
                     artifact_slots = D_80139838;
-                    if (carousel_frame < 0)
-                    {
-                        carousel_frame += WMAP_CAROUSEL_STEP_FRAMES - 1;
-                    }
-                    artifact_slots[((carousel_frame >> WMAP_CAROUSEL_FRAME_SHIFT) + WMAP_PREVIEW_SLOT_OFFSET) % WMAP_ARTIFACT_SLOTS] = -1;
+                    artifact_slots[((carousel_frame / WMAP_CAROUSEL_STEP_FRAMES) + WMAP_PREVIEW_SLOT_OFFSET) % WMAP_ARTIFACT_SLOTS] = -1;
                 }
             }
             else

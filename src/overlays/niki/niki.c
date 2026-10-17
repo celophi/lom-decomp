@@ -403,7 +403,6 @@ void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32
                     s32 phase_start;
                     s32 icon_x;
                     s32 hours;
-                    s32 wrapped_phase;
 
                     {
                         SavedGameLayout* record = &g_niki_entry_file.saved_game;
@@ -428,17 +427,12 @@ void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32
                     case 2:
                         base_icon_width = 0x20;
                         phase_span = 0x10;
-                        wrapped_phase = g_card_menu_icon_phase;
-                        if (g_card_menu_icon_phase < 0)
-                        {
-                            wrapped_phase = g_card_menu_icon_phase + 0x1F;
-                        }
-                        g_card_menu_icon_phase -= (wrapped_phase >> 5) << 5;
+                        g_card_menu_icon_phase %= CARD_MENU_ICON_PHASE_CYCLE(2);
                         break;
                     case 3:
                         base_icon_width = 0x10;
                         phase_span = 0x20;
-                        g_card_menu_icon_phase %= 0x60;
+                        g_card_menu_icon_phase %= CARD_MENU_ICON_PHASE_CYCLE(3);
                         break;
                     default:
                         base_icon_width = 0x10;
@@ -468,10 +462,14 @@ void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32
                             else
                             {
                                 wrapped_start = phase_end % (phase_span * icon_count);
-                                if (g_card_menu_icon_phase >= wrapped_start && g_card_menu_icon_phase < (wrapped_end = wrapped_start + phase_span))
+                                if (g_card_menu_icon_phase >= wrapped_start)
                                 {
-                                    delta = wrapped_end - g_card_menu_icon_phase;
-                                    icon_width += delta;
+                                    wrapped_end = wrapped_start + phase_span;
+                                    if (g_card_menu_icon_phase < wrapped_end)
+                                    {
+                                        delta = wrapped_end - g_card_menu_icon_phase;
+                                        icon_width += delta;
+                                    }
                                 }
                             }
                             result = card_menu_draw_icon_highlight(result, ot, icon_x - x_offset, -y_offset, icon_width, icons[slot_index], visible_icon_index,

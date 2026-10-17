@@ -1143,7 +1143,7 @@ void wmap_land_effect_31_sequence_5_step_02(void)
     s32 timer;
 
     wmap_set_effect_model_transform(&g_wmap_camera_translation, &D_801B3120);
-    func_8006C448((WmapState*)g_wmap_effect_params);
+    func_8006C448((WmapBoxParticleConfig*)g_wmap_effect_params);
     D_801B3120.vz += 0x18;
     timer = g_wmap_land_effect_31_sequence_5_timer - 1;
     g_wmap_land_effect_31_sequence_5_timer = timer;
@@ -1174,7 +1174,7 @@ void wmap_land_effect_31_sequence_5_step_04(void)
     s32 timer;
 
     wmap_set_effect_model_transform(&g_wmap_camera_translation, &D_801B3120);
-    func_8006C448((WmapState*)g_wmap_effect_params);
+    func_8006C448((WmapBoxParticleConfig*)g_wmap_effect_params);
     D_801B3120.vz += 0x18;
     timer = g_wmap_land_effect_31_sequence_5_timer - 1;
     g_wmap_land_effect_31_sequence_5_timer = timer;
@@ -1532,7 +1532,7 @@ WMAP_STEP_RESET(wmap_land_effect_31_sequence_20_reset, g_wmap_land_effect_31_seq
  * @brief Run the effect update until the timer expires.
  */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_31_sequence_20_step_02, g_wmap_land_effect_31_sequence_20_step, g_wmap_land_effect_31_sequence_20_timer,
-                          func_8006C448(&g_wmap_effect_params[40]))
+                          func_8006C448((WmapBoxParticleConfig*)&g_wmap_effect_params[40]))
 
 void wmap_land_effect_31_sequence_20_step_03(void)
 {
@@ -1553,6 +1553,6 @@ void wmap_land_effect_31_sequence_20_step_03(void)
  * @brief Run the effect update until the timer expires.
  */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_31_sequence_20_step_04, g_wmap_land_effect_31_sequence_20_step, g_wmap_land_effect_31_sequence_20_timer,
-                          func_8006C448(&g_wmap_effect_params[40]))
+                          func_8006C448((WmapBoxParticleConfig*)&g_wmap_effect_params[40]))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_31_sequence_20_end, g_wmap_land_effect_31_sequence_20_step)

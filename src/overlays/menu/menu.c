@@ -1842,7 +1842,8 @@ void menu_set_active_node(void)
         {
             child_index_value = loop_active->layout.s.children[child_slot];
             wide_child_index = child_index_value;
-            if (child_index_value == (packed_value = MENU_NONE))
+            packed_value = MENU_NONE;
+            if (child_index_value == packed_value)
             {
                 break;
             }

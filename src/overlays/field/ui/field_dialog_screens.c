@@ -391,17 +391,10 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_t
             {
             case 0:
                 term = width * expansion;
-                scaled = term;
-
-                if (term < 0)
-                {
-                    scaled = term + 0x7F;
-                }
-
-                scaled = scaled >> 7;
+                scaled = term / FIELD_TIMED_PANEL_FULL_BRIGHTNESS;
                 prim->x0 = prim->x2 = quad->x - scaled;
                 prim->x1 = prim->x3 = quad->x + width + scaled - 1;
-                prim->y0 = prim->y1 = quad->y - quad->height * expansion / 128;
+                prim->y0 = prim->y1 = quad->y - quad->height * expansion / FIELD_TIMED_PANEL_FULL_BRIGHTNESS;
                 bottom_1 = quad->y + quad->height;
                 scaled = quad->height * expansion;
 
@@ -416,28 +409,14 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_t
                 if (g_field_timed_panel_timer < 0x25)
                 {
                     scaled = width * expansion;
-                    adjusted = scaled;
-
-                    if (scaled < 0)
-                    {
-                        adjusted = scaled + 0x7F;
-                    }
-
-                    offset_1 = adjusted >> 7;
+                    offset_1 = scaled / FIELD_TIMED_PANEL_FULL_BRIGHTNESS;
                     prim->x0 = prim->x2 = quad->x - offset_1;
                     right_1 = (quad->x + width) - offset_1;
                 }
                 else
                 {
                     scaled = width * expansion;
-                    adjusted = scaled;
-
-                    if (scaled < 0)
-                    {
-                        adjusted = scaled + 0x7F;
-                    }
-
-                    offset_1 = adjusted >> 7;
+                    offset_1 = scaled / FIELD_TIMED_PANEL_FULL_BRIGHTNESS;
                     prim->x0 = prim->x2 = quad->x + offset_1;
                     right_1 = quad->x + width + offset_1;
                 }
@@ -593,17 +572,10 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_t
                 break;
             case 4:
                 term = width * expansion;
-                scaled = term;
-
-                if (term < 0)
-                {
-                    scaled = term + 0x3F;
-                }
-
-                scaled = scaled >> 6;
+                scaled = term / (FIELD_TIMED_PANEL_FULL_BRIGHTNESS / 2);
                 prim->x0 = prim->x2 = quad->x - scaled;
                 prim->x1 = prim->x3 = quad->x + width + scaled - 1;
-                prim->y0 = prim->y1 = quad->y - quad->height * expansion / 128;
+                prim->y0 = prim->y1 = quad->y - quad->height * expansion / FIELD_TIMED_PANEL_FULL_BRIGHTNESS;
                 bottom_1 = quad->y + quad->height;
                 scaled = quad->height * expansion;
 
@@ -704,14 +676,7 @@ static POLY_FT4* field_draw_timed_panel_image(POLY_FT4 *prim, u_long *ordering_t
     value0 = 0x70;
     value2 = (u32)value3 >> 1;
     value0 -= value2;
-    value4 = value1;
-
-    if (value1 < 0)
-    {
-        value4 = value1 + 0x7F;
-    }
-
-    value5 = value4 >> 7;
+    value5 = value1 / FIELD_TIMED_PANEL_FULL_BRIGHTNESS;
     value0 -= value5;
     prim->y1 = value0;
     prim->y0 = value0;

@@ -2395,226 +2395,231 @@ static void field_collision_classify_nodes(FieldCollisionMoveProbe* probe, Field
         x_start = probe->x - (s16)width / 2;
         x_end = x_start + width;
 
-        while (node != NULL)
+        for (; node != NULL; node = node->next)
         {
             surface = node->surface;
 
-            if (node->active != 0)
+            if (node->active == 0)
             {
-                shift_height = node->height0_offset >> 8;
+                continue;
+            }
 
-                if (surface->top + shift_height == 0 || (value = surface->top + shift_height) < feet + mover->height_bias || value < step_limit)
+            shift_height = node->height0_offset >> 8;
+            if (surface->top + shift_height != 0)
+            {
+                value = surface->top + shift_height;
+                if (value >= feet + mover->height_bias && value >= step_limit)
                 {
-                    shift_z = node->offset_z >> 8;
-                    shift_x = (s32)(node->offset_x << 8) >> 16;
+                    continue;
+                }
+            }
 
-                    if (((node->min_x + shift_x) < x_end) && ((node->max_x + shift_x) >= x_start))
+            shift_z = node->offset_z >> 8;
+            shift_x = (s32)(node->offset_x << 8) >> 16;
+
+            if (((node->min_x + shift_x) < x_end) && ((node->max_x + shift_x) >= x_start))
+            {
+                z_limit = z_end;
+                row_first = node->min_z + (s16)shift_z;
+
+                if (row_first < z_limit)
+                {
+                    z_from = z_start;
+                    row_last = node->max_z + (s16)shift_z;
+
+                    if (row_last >= z_from)
                     {
-                        z_limit = z_end;
-                        row_first = node->min_z + (s16)shift_z;
+                        count = row_last;
 
-                        if (row_first < z_limit)
+                        if ((z_limit - 1) < count)
                         {
-                            z_from = z_start;
-                            row_last = node->max_z + (s16)shift_z;
+                            count = z_limit - 1;
+                        }
 
-                            if (row_last >= z_from)
+                        if (row_first < z_from)
+                        {
+                            row_from = z_from;
+                        }
+                        else
+                        {
+                            row_from = row_first;
+                        }
+
+                        spans_per_row = field_collision_surface_spans(surface);
+                        offset = (row_from - row_first) * spans_per_row;
+                        count = ((count - row_from) + 1) * spans_per_row;
+                        result = 0;
+                        span = (FieldCollisionSpan*)node->spans + offset;
+
+                        if (surface->flags & FIELD_COLLISION_SURFACE_EDGE_FLAGS)
+                        {
+                            edge_flags = (u8*)node->span_flags + offset * 2;
+
+                            while (--count != -1)
                             {
-                                count = row_last;
-
-                                if ((z_limit - 1) < count)
+                                if ((span->min_x < x_end) && (span->max_x >= x_start))
                                 {
-                                    count = z_limit - 1;
-                                }
+                                    left_edge = (s8)edge_flags[0];
 
-                                if (row_first < z_from)
-                                {
-                                    row_from = z_from;
-                                }
-                                else
-                                {
-                                    row_from = row_first;
-                                }
-
-                                spans_per_row = field_collision_surface_spans(surface);
-                                offset = (row_from - row_first) * spans_per_row;
-                                count = ((count - row_from) + 1) * spans_per_row;
-                                result = 0;
-                                span = (FieldCollisionSpan*)node->spans + offset;
-
-                                if (surface->flags & FIELD_COLLISION_SURFACE_EDGE_FLAGS)
-                                {
-                                    edge_flags = (u8*)node->span_flags + offset * 2;
-
-                                    while (--count != -1)
+                                    if ((left_edge >= 0) && (x_start < span->min_x))
                                     {
-                                        if ((span->min_x < x_end) && (span->max_x >= x_start))
-                                        {
-                                            left_edge = (s8)edge_flags[0];
-
-                                            if ((left_edge >= 0) && (x_start < span->min_x))
-                                            {
-                                                result = FIELD_COLLISION_CLASS_BLOCK;
-                                                break;
-                                            }
-
-                                            if (((s8)edge_flags[1] >= 0) && (span->max_x < x_end - 1))
-                                            {
-                                                result = FIELD_COLLISION_CLASS_BLOCK;
-                                                break;
-                                            }
-
-                                            if ((left_edge >= 0) && ((s8)edge_flags[1] >= 0))
-                                            {
-                                                result = FIELD_COLLISION_CLASS_BLOCK;
-
-                                                if (edge_flags[0] == FIELD_COLLISION_EDGE_WALL_X)
-                                                {
-                                                    break;
-                                                }
-
-                                                if (edge_flags[1] == FIELD_COLLISION_EDGE_WALL_X)
-                                                {
-                                                    break;
-                                                }
-                                            }
-
-                                            result = FIELD_COLLISION_CLASS_TOUCH;
-                                        }
-
-                                        span++;
-                                        edge_flags += 2;
+                                        result = FIELD_COLLISION_CLASS_BLOCK;
+                                        break;
                                     }
-                                }
-                                else if (shift_x != 0)
-                                {
-                                    while (--count != -1)
-                                    {
-                                        value = shift_x;
 
-                                        if (((span->min_x + value) < x_end) && ((span->max_x + value) >= x_start))
+                                    if (((s8)edge_flags[1] >= 0) && (span->max_x < x_end - 1))
+                                    {
+                                        result = FIELD_COLLISION_CLASS_BLOCK;
+                                        break;
+                                    }
+
+                                    if ((left_edge >= 0) && ((s8)edge_flags[1] >= 0))
+                                    {
+                                        result = FIELD_COLLISION_CLASS_BLOCK;
+
+                                        if (edge_flags[0] == FIELD_COLLISION_EDGE_WALL_X)
                                         {
-                                            result = FIELD_COLLISION_CLASS_TOUCH;
                                             break;
                                         }
 
-                                        span++;
-                                    }
-                                }
-                                else
-                                {
-                                    while (--count != -1)
-                                    {
-                                        if ((span->min_x < x_end) && (span->max_x >= x_start))
+                                        if (edge_flags[1] == FIELD_COLLISION_EDGE_WALL_X)
                                         {
-                                            result = FIELD_COLLISION_CLASS_TOUCH;
                                             break;
                                         }
-
-                                        span++;
                                     }
+
+                                    result = FIELD_COLLISION_CLASS_TOUCH;
                                 }
 
-                                if (result != 0)
+                                span++;
+                                edge_flags += 2;
+                            }
+                        }
+                        else if (shift_x != 0)
+                        {
+                            while (--count != -1)
+                            {
+                                value = shift_x;
+
+                                if (((span->min_x + value) < x_end) && ((span->max_x + value) >= x_start))
                                 {
-                                    switch (field_collision_surface_kind(surface))
+                                    result = FIELD_COLLISION_CLASS_TOUCH;
+                                    break;
+                                }
+
+                                span++;
+                            }
+                        }
+                        else
+                        {
+                            while (--count != -1)
+                            {
+                                if ((span->min_x < x_end) && (span->max_x >= x_start))
+                                {
+                                    result = FIELD_COLLISION_CLASS_TOUCH;
+                                    break;
+                                }
+
+                                span++;
+                            }
+                        }
+
+                        if (result != 0)
+                        {
+                            switch (field_collision_surface_kind(surface))
+                            {
+                            case FIELD_COLLISION_KIND_FLAT:
+                                if ((surface->top + shift_height) < step_limit)
+                                {
+                                    if (surface->flags & FIELD_COLLISION_SURFACE_SOLID)
                                     {
-                                    case FIELD_COLLISION_KIND_FLAT:
-                                        if ((surface->top + shift_height) < step_limit)
+                                        result = FIELD_COLLISION_CLASS_BLOCK;
+                                    }
+                                    else
+                                    {
+                                        if (mover->mode.mode_flags & FIELD_COLLISION_MOVER_AIRBORNE)
                                         {
-                                            if (surface->flags & FIELD_COLLISION_SURFACE_SOLID)
+                                            if (feet < (surface->height0 + shift_height))
                                             {
                                                 result = FIELD_COLLISION_CLASS_BLOCK;
                                             }
                                             else
                                             {
-                                                if (mover->mode.mode_flags & FIELD_COLLISION_MOVER_AIRBORNE)
-                                                {
-                                                    if (feet < (surface->height0 + shift_height))
-                                                    {
-                                                        result = FIELD_COLLISION_CLASS_BLOCK;
-                                                    }
-                                                    else
-                                                    {
-                                                        result |= FIELD_COLLISION_CLASS_TOUCH;
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    if ((feet + FIELD_COLLISION_STEP_UP) < (surface->height0 + shift_height))
-                                                    {
-                                                        result = FIELD_COLLISION_CLASS_BLOCK;
-                                                    }
-                                                    else
-                                                    {
-                                                        result |= FIELD_COLLISION_CLASS_TOUCH;
-                                                    }
-                                                }
+                                                result |= FIELD_COLLISION_CLASS_TOUCH;
                                             }
                                         }
                                         else
                                         {
-                                            result = FIELD_COLLISION_CLASS_TOUCH;
-                                        }
-
-                                        break;
-                                    case FIELD_COLLISION_KIND_SLOPE:
-                                        if ((surface->top + shift_height) < step_limit)
-                                        {
-                                            ground = field_collision_slope_height(node, &probe->x);
-
-                                            if (mover->mode.mode_flags & FIELD_COLLISION_MOVER_AIRBORNE)
+                                            if ((feet + FIELD_COLLISION_STEP_UP) < (surface->height0 + shift_height))
                                             {
-                                                if (feet < ground)
-                                                {
-                                                    result = FIELD_COLLISION_CLASS_BLOCK;
-                                                }
-                                                else
-                                                {
-                                                    result |= FIELD_COLLISION_CLASS_TOUCH;
-                                                }
+                                                result = FIELD_COLLISION_CLASS_BLOCK;
                                             }
                                             else
                                             {
-                                                if ((feet + FIELD_COLLISION_STEP_UP) < ground)
-                                                {
-                                                    result = FIELD_COLLISION_CLASS_BLOCK;
-                                                }
-                                                else
-                                                {
-                                                    result |= FIELD_COLLISION_CLASS_TOUCH;
-                                                }
+                                                result |= FIELD_COLLISION_CLASS_TOUCH;
                                             }
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    result = FIELD_COLLISION_CLASS_TOUCH;
+                                }
+
+                                break;
+                            case FIELD_COLLISION_KIND_SLOPE:
+                                if ((surface->top + shift_height) < step_limit)
+                                {
+                                    ground = field_collision_slope_height(node, &probe->x);
+
+                                    if (mover->mode.mode_flags & FIELD_COLLISION_MOVER_AIRBORNE)
+                                    {
+                                        if (feet < ground)
+                                        {
+                                            result = FIELD_COLLISION_CLASS_BLOCK;
                                         }
                                         else
                                         {
-                                            result = FIELD_COLLISION_CLASS_TOUCH;
+                                            result |= FIELD_COLLISION_CLASS_TOUCH;
                                         }
-
-                                        break;
                                     }
-
-                                    if (result & FIELD_COLLISION_CLASS_BLOCK)
+                                    else
                                     {
-                                        hit_list->node = node;
-                                        hit_list++;
-                                        *out_hit += 1;
-                                    }
-
-                                    if (result & FIELD_COLLISION_CLASS_TOUCH)
-                                    {
-                                        touch_list->node = node;
-                                        touch_list++;
-                                        *out_touch += 1;
+                                        if ((feet + FIELD_COLLISION_STEP_UP) < ground)
+                                        {
+                                            result = FIELD_COLLISION_CLASS_BLOCK;
+                                        }
+                                        else
+                                        {
+                                            result |= FIELD_COLLISION_CLASS_TOUCH;
+                                        }
                                     }
                                 }
+                                else
+                                {
+                                    result = FIELD_COLLISION_CLASS_TOUCH;
+                                }
+
+                                break;
+                            }
+
+                            if (result & FIELD_COLLISION_CLASS_BLOCK)
+                            {
+                                hit_list->node = node;
+                                hit_list++;
+                                *out_hit += 1;
+                            }
+
+                            if (result & FIELD_COLLISION_CLASS_TOUCH)
+                            {
+                                touch_list->node = node;
+                                touch_list++;
+                                *out_touch += 1;
                             }
                         }
                     }
                 }
             }
-
-            node = node->next;
         }
     }
 }
