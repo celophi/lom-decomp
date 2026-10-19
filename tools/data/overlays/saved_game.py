@@ -54,7 +54,7 @@ ITEM_OFFSETS = {
 
 # FieldCharacterRecord members.
 CHARACTER_OFFSETS = {
-    "name": 0x00, "info": 0x18, "progress": 0x20, "hp": 0x24, "unk26": 0x26, "equipment_totals": 0x28,
+    "name": 0x00, "info": 0x18, "progress": 0x20, "hp": 0x24, "power": 0x26, "equipment_totals": 0x28,
     "stats": 0x30, "unk40": 0x40, "duel_wins": 0x44, "duel_losses": 0x46, "button_actions": 0x48,
     "equipment": 0x50, "unk150": 0x150,
 }
@@ -153,7 +153,7 @@ def character_record(raw: bytes, read_text: TextReader, two_byte_codes: frozense
     if len(raw) != CHARACTER_SIZE:
         raise ValueError(f"character record is 0x{len(raw):X} bytes, not 0x{CHARACTER_SIZE:X}")
     info = raw[0x18:0x20]
-    progress, hp, unk26 = struct.unpack_from("<IHH", raw, CHARACTER_OFFSETS["progress"])
+    progress, hp, power = struct.unpack_from("<IHH", raw, CHARACTER_OFFSETS["progress"])
     stats = struct.unpack_from(f"<{STAT_COUNT}H", raw, CHARACTER_OFFSETS["stats"])
     wins, losses = struct.unpack_from("<HH", raw, CHARACTER_OFFSETS["duel_wins"])
     equipment = raw[CHARACTER_OFFSETS["equipment"] : CHARACTER_OFFSETS["unk150"]]
@@ -168,7 +168,7 @@ def character_record(raw: bytes, read_text: TextReader, two_byte_codes: frozense
         "level": progress & 0xFF,
         "experience": progress >> 8,
         "hp": hp,
-        "unk26": unk26,
+        "power": power,
         "equipment_totals": list(struct.unpack_from("<4H", raw, CHARACTER_OFFSETS["equipment_totals"])),
         "stats": [{"base": value & STAT_BASE_MASK, "effective": value >> STAT_EFFECTIVE_SHIFT} for value in stats],
         "unk40": list(raw[0x40:0x44]),

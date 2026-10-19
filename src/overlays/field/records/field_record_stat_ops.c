@@ -188,7 +188,7 @@ static void field_refresh_equipment_stats(FieldCharacterRecord* character)
         character->stats[i] = base | ((base >> 2) << FIELD_STAT_EFFECTIVE_SHIFT);
     }
 
-    character->unk26 = character->equipment[FIELD_WEAPON_SLOT].derived.values[0];
+    character->power = character->equipment[FIELD_WEAPON_SLOT].derived.values[0];
 
     for (i = FIELD_FIRST_ARMOR_SLOT; i < FIELD_EQUIPMENT_SLOT_COUNT; i++)
     {
@@ -203,7 +203,7 @@ static void field_refresh_equipment_stats(FieldCharacterRecord* character)
         }
     }
 #else
-    character->unk26 = character->equipment[FIELD_WEAPON_SLOT].derived.values[0];
+    character->power = character->equipment[FIELD_WEAPON_SLOT].derived.values[0];
 
     if ((character->info.word & FIELD_CHARACTER_TYPE_MASK) != FIELD_CHARACTER_COMPANION)
     {

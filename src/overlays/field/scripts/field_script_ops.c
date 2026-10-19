@@ -1876,11 +1876,11 @@ void field_script_op_0f(void)
         FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
         return;
     case 5:
-        field_apply_region_level_ups(0);
-        field_apply_region_level_ups(1);
-        field_apply_region_level_ups(2);
-        field_apply_region_level_ups(3);
-        field_apply_region_level_ups(4);
+        field_apply_pet_level_ups(0);
+        field_apply_pet_level_ups(1);
+        field_apply_pet_level_ups(2);
+        field_apply_pet_level_ups(3);
+        field_apply_pet_level_ups(4);
         break;
     case 6:
         for (i = 0; i < PET_RECORD_COUNT; i++)
@@ -2200,7 +2200,7 @@ void field_script_misc_command(u32 command, s32 operand)
         field_reset_party_to_level(operand);
         return;
     case FIELD_SCRIPT_CMD_APPLY_REGION_LEVEL_UPS:
-        field_apply_region_level_ups(operand);
+        field_apply_pet_level_ups(operand);
         return;
     case FIELD_SCRIPT_CMD_UNKNOWN_49:
         g_script_pair_value_49 = operand;

@@ -11,8 +11,6 @@
 
 /** @brief Level of every golem companion. */
 #define GOLEM_COMPANION_LEVEL 99
-/** @brief Equipment slot that receives the golem's armor values and flags. */
-#define GOLEM_ARMOR_SLOT 1
 
 /**
  * @brief Fill a party character record from one saved golem group.
@@ -24,7 +22,7 @@ void field_golem_build_companion(s32 group, FieldCharacterRecord* record)
     s32 i;
 
     record->equipment[FIELD_WEAPON_SLOT].name[0] = 1;
-    record->equipment[GOLEM_ARMOR_SLOT].name[0] = 1;
+    record->equipment[FIELD_ARMOR_SLOT].name[0] = 1;
     record->equipment[2].name[0] = 0;
     record->equipment[3].name[0] = 0;
 
@@ -49,12 +47,12 @@ void field_golem_build_companion(s32 group, FieldCharacterRecord* record)
     record->progress.bits.level = GOLEM_COMPANION_LEVEL;
     record->progress.bits.experience = 0;
     record->hp = GOLEM.group_records[group].hp;
-    record->equipment[FIELD_WEAPON_SLOT].derived.weapon.power = record->unk26 = GOLEM.group_records[group].power;
+    record->equipment[FIELD_WEAPON_SLOT].derived.weapon.power = record->power = GOLEM.group_records[group].power;
 
     for (i = 0; i < COMPANION_STAT_COUNT; i++)
     {
         record->equipment_totals[i] = GOLEM.group_records[group].equipment_totals[i];
-        (&record->equipment[GOLEM_ARMOR_SLOT])->derived.values[i] = record->equipment_totals[i];
+        (&record->equipment[FIELD_ARMOR_SLOT])->derived.values[i] = record->equipment_totals[i];
     }
 
     for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
@@ -64,9 +62,9 @@ void field_golem_build_companion(s32 group, FieldCharacterRecord* record)
         ((FieldStat*)record->stats)[i].bits.effective = GOLEM.group_records[group].stats[i].bits.effective;
     }
 
-    record->equipment[GOLEM_ARMOR_SLOT].status_flags = record->unk40 = GOLEM.group_records[group].armor_flags;
+    record->equipment[FIELD_ARMOR_SLOT].status_flags = record->unk40 = GOLEM.group_records[group].armor_flags;
     record->equipment[FIELD_WEAPON_SLOT].status_flags = record->unk41 = GOLEM.group_records[group].weapon_flags;
-    record->equipment[GOLEM_ARMOR_SLOT].element_flags = record->unk42 = GOLEM.group_records[group].armor_flags2;
+    record->equipment[FIELD_ARMOR_SLOT].element_flags = record->unk42 = GOLEM.group_records[group].armor_flags2;
     record->unk43 = GOLEM.group_records[group].unknown_0x3F;
     record->button_actions[0] = 0;
     record->button_actions[1] = 0;
@@ -84,14 +82,14 @@ void field_golem_build_companion(s32 group, FieldCharacterRecord* record)
     record->equipment[FIELD_WEAPON_SLOT].bonus_nibbles.bits.n5 = GOLEM.group_records[group].weapon_bonus.n5;
     record->equipment[FIELD_WEAPON_SLOT].bonus_nibbles.bits.n6 = GOLEM.group_records[group].weapon_bonus.n6;
     record->equipment[FIELD_WEAPON_SLOT].bonus_nibbles.bits.n7 = GOLEM.group_records[group].weapon_bonus.n7;
-    record->equipment[GOLEM_ARMOR_SLOT].bonus_nibbles.bits.n0 = GOLEM.group_records[group].armor_bonus.n0;
-    record->equipment[GOLEM_ARMOR_SLOT].bonus_nibbles.bits.n1 = GOLEM.group_records[group].armor_bonus.n1;
-    record->equipment[GOLEM_ARMOR_SLOT].bonus_nibbles.bits.n2 = GOLEM.group_records[group].armor_bonus.n2;
-    record->equipment[GOLEM_ARMOR_SLOT].bonus_nibbles.bits.n3 = GOLEM.group_records[group].armor_bonus.n3;
-    record->equipment[GOLEM_ARMOR_SLOT].bonus_nibbles.bits.n4 = GOLEM.group_records[group].armor_bonus.n4;
-    record->equipment[GOLEM_ARMOR_SLOT].bonus_nibbles.bits.n5 = GOLEM.group_records[group].armor_bonus.n5;
-    record->equipment[GOLEM_ARMOR_SLOT].bonus_nibbles.bits.n6 = GOLEM.group_records[group].armor_bonus.n6;
-    record->equipment[GOLEM_ARMOR_SLOT].bonus_nibbles.bits.n7 = GOLEM.group_records[group].armor_bonus.n7;
+    record->equipment[FIELD_ARMOR_SLOT].bonus_nibbles.bits.n0 = GOLEM.group_records[group].armor_bonus.n0;
+    record->equipment[FIELD_ARMOR_SLOT].bonus_nibbles.bits.n1 = GOLEM.group_records[group].armor_bonus.n1;
+    record->equipment[FIELD_ARMOR_SLOT].bonus_nibbles.bits.n2 = GOLEM.group_records[group].armor_bonus.n2;
+    record->equipment[FIELD_ARMOR_SLOT].bonus_nibbles.bits.n3 = GOLEM.group_records[group].armor_bonus.n3;
+    record->equipment[FIELD_ARMOR_SLOT].bonus_nibbles.bits.n4 = GOLEM.group_records[group].armor_bonus.n4;
+    record->equipment[FIELD_ARMOR_SLOT].bonus_nibbles.bits.n5 = GOLEM.group_records[group].armor_bonus.n5;
+    record->equipment[FIELD_ARMOR_SLOT].bonus_nibbles.bits.n6 = GOLEM.group_records[group].armor_bonus.n6;
+    record->equipment[FIELD_ARMOR_SLOT].bonus_nibbles.bits.n7 = GOLEM.group_records[group].armor_bonus.n7;
     record->unk150[0].derived.golem.logic_class = GOLEM.group_records[group].logic_class;
     record->unk150[0].derived.golem.grid_bound = GOLEM.group_records[group].grid_bound;
     record->unk150[0].derived.bytes[1] = GOLEM.group_records[group].unknown_0x45;

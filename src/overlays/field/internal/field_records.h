@@ -782,6 +782,13 @@ extern FieldBattleContext* g_field_battle;
 /** @brief Largest experience value of a character's progress word. */
 #define FIELD_EXPERIENCE_MAX 9999999
 
+/** @brief First SavedGameLayout::words entry of the per-guest banked experience, indexed by guest id. */
+#define FIELD_GUEST_EXPERIENCE_WORD 0x68
+
+/** @brief field_add_stat_increase flags: damp increases above 5, cap the result at 999. */
+#define FIELD_INCREASE_DAMPED 0x1
+#define FIELD_INCREASE_CAPPED 0x2
+
 /** @brief Money saturates at this amount. */
 #define FIELD_MONEY_MAX 10000000
 

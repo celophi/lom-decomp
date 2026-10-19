@@ -22,9 +22,6 @@
 #define FIELD_RESOURCE_WEAPON_TEMPLATES 0xD
 #define FIELD_RESOURCE_ARMOR_TEMPLATES 0xE
 
-/** @brief First game-state word of the per-guest experience bonuses. */
-#define FIELD_GUEST_EXPERIENCE_WORD 0x68
-
 /** @brief Number of entries in g_field_level_experience. */
 #define FIELD_LEVEL_EXPERIENCE_COUNT 32
 
@@ -45,9 +42,6 @@
 
 /** @brief Number of entries in FieldCharacterRecord.button_actions. */
 #define FIELD_CHARACTER_ORDER_COUNT 8
-
-/** @brief First armor slot; the armor slots follow the weapon slot. */
-#define FIELD_ARMOR_SLOT (FIELD_WEAPON_SLOT + 1)
 
 /** @brief Number of armor slots. */
 #define FIELD_ARMOR_SLOT_COUNT (FIELD_EQUIPMENT_SLOT_COUNT - 1)
@@ -246,7 +240,7 @@ static void field_load_companion(s32 companion_index)
     g_field_game_state->characters[FIELD_PARTY_COMPANION].progress.bits.level = g_field_game_state->pets[companion_index].progress.bits.level;
     g_field_game_state->characters[FIELD_PARTY_COMPANION].progress.bits.experience = g_field_game_state->pets[companion_index].progress.bits.experience;
     g_field_game_state->characters[FIELD_PARTY_COMPANION].hp = g_field_game_state->pets[companion_index].hp;
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk26 = g_field_game_state->pets[companion_index].power;
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].power = g_field_game_state->pets[companion_index].power;
 
     for (i = 0; i < FIELD_EQUIPMENT_TOTAL_COUNT; i++)
     {

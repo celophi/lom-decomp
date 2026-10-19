@@ -244,6 +244,6 @@ extern FieldItemRecord* g_carda_items;
 extern SaveFile g_carda_selected_file;
 
 /* FIELD entry points used by CARDA. */
-void field_apply_region_level_ups(s32 slot);
+void field_apply_pet_level_ups(s32 slot);
 
 #endif /* CARDA_INTERNAL_H */
