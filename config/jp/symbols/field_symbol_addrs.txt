@@ -1200,13 +1200,13 @@ field_reset_party_to_level            = 0x800B5CE0;
 // field_record_growth_ops.c
 field_add_money                       = 0x800C09EC;
 field_award_experience                = 0x800C0A28;
-field_add_guest_counter               = 0x800C0CC4;
-field_award_region_experience         = 0x800C0D28;
+field_add_guest_experience            = 0x800C0CC4;
+field_award_grazing_pet_experience    = 0x800C0D28;
 field_apply_character_level_ups       = 0x800C0DC4;
-field_apply_region_level_ups          = 0x800C0E04;
+field_apply_pet_level_ups             = 0x800C0E04;
 field_try_character_level_up          = 0x800C1080;
 field_grow_character_stats            = 0x800C1198;
-field_grow_companion_stats            = 0x800C1244;
+field_grow_joined_pet_stats           = 0x800C1244;
 field_add_stat_increase               = 0x800C15BC;
 g_field_item_type_stat_growth         = 0x800F1370;
 

@@ -68,6 +68,8 @@
 #define FIELD_EQUIPMENT_SLOT_COUNT 4
 /** @brief Equipment slot holding the character's weapon. */
 #define FIELD_WEAPON_SLOT 0
+/** @brief First armor slot; the armor slots follow the weapon slot. */
+#define FIELD_ARMOR_SLOT (FIELD_WEAPON_SLOT + 1)
 #define FIELD_ITEM_SPECIAL_COUNT 4
 #define FIELD_CHARACTER_STAT_COUNT 8
 /** @brief Number of pet records. */
@@ -337,8 +339,8 @@ typedef struct FieldCharacterRecord
         } bits;
     } progress;
     u16 hp;
-    /** @brief Copy of unk24.values[0] of the weapon slot. */
-    u16 unk26;
+    /** @brief Weapon power: copy of the weapon slot's derived.weapon.power. */
+    u16 power;
     /** @brief Sums of unk24.values[] over the equipped armor slots. */
     u16 equipment_totals[4];
     /** @brief Bits 0-8: base value in quarter units, bits 9-15: effective value with equipment. */

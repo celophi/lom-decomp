@@ -141,7 +141,7 @@ void field_init_monster_record(s32 actor_id, FieldStatusRecord *record, FieldSta
 
         for (; (u32)level >= work; work++)
         {
-            state->maximum = field_add_stat_increase(state->maximum, (u32)((template->stats[4].base * 4) + (template->stats[4].growth * work)) >> 2, 1);
+            state->maximum = field_add_stat_increase(state->maximum, (u32)((template->stats[4].base * 4) + (template->stats[4].growth * work)) >> 2, FIELD_INCREASE_DAMPED);
         }
     }
 

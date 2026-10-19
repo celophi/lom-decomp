@@ -503,9 +503,9 @@ void field_apply_pending_region_effects(void);
 void field_add_money(s32 recipient, s32 amount);
 void field_award_experience(s32 record_index, s32 amount);
 void field_apply_character_level_ups(s32 index, s32 notify);
-void field_apply_region_level_ups(s32 slot);
+void field_apply_pet_level_ups(s32 slot);
 s32 field_try_character_level_up(s32 index, s32 notify);
-s32 field_add_stat_increase(s32 value, s32 increase, s32 flags);
+s32 field_add_stat_increase(s32 value, u32 increase, s32 flags);
 
 /* field_record_buffer_ops.c */
 void field_sort_keyed_list(struct FieldKeyedList* list);

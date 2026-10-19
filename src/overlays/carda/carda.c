@@ -2697,7 +2697,7 @@ static void carda_restore_active_record(void)
 {
     bcopy(g_carda_saved_record_copy, (u8*)&g_saved_game_ctx->pets[g_field_card_pet_slot], sizeof(PetRecord));
     g_saved_game_ctx->pets[g_field_card_pet_slot].progress.bits.experience += g_carda_growth_delta;
-    field_apply_region_level_ups(g_field_card_pet_slot);
+    field_apply_pet_level_ups(g_field_card_pet_slot);
 }
 
 /**

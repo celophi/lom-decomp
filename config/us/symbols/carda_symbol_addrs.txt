@@ -314,4 +314,4 @@ field_draw_menu_scroll_arrow = 0x800AE76C;
 field_copy_golem_portrait_palette = 0x800A55E4;
 field_copy_portrait_palette = 0x800A5638;
 field_flag_known_save = 0x800B0170;
-field_apply_region_level_ups = 0x800C1230;
+field_apply_pet_level_ups = 0x800C1230;
