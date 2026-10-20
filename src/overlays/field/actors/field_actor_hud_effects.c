@@ -1866,7 +1866,7 @@ POLY_FT4* field_render_actor_ground_shadow(FieldActor* actor, POLY_FT4* prim, s3
         }
         else if (depth >= FIELD_WORLD_OT_SIZE)
         {
-            addPrim(&ordering_table[FIELD_WORLD_OT_SIZE - 1], prim);
+            addPrim(&ordering_table[FIELD_WORLD_OT_LAST], prim);
             prim++;
         }
         else

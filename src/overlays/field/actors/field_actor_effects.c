@@ -111,7 +111,7 @@
     }                                                                                                                                                          \
     else if ((_depth) >= FIELD_WORLD_OT_SIZE)                                                                                                                  \
     {                                                                                                                                                          \
-        addPrim(&(_ot)[FIELD_WORLD_OT_SIZE - 1], (_cursor));                                                                                                   \
+        addPrim(&(_ot)[FIELD_WORLD_OT_LAST], (_cursor));                                                                                                       \
         (_cursor) = (void*)((_type*)(_cursor) + 1);                                                                                                            \
     }                                                                                                                                                          \
     else                                                                                                                                                       \

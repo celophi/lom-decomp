@@ -10,6 +10,7 @@
 
 #include "common.h"
 #include "main/display.h"
+#include "main/field_runtime.h"
 #include "../internal/field_effect_transform.h"
 #include "../internal/field_effect_render_state.h"
 #include "../internal/field_actor_palette.h"
@@ -64,7 +65,6 @@ extern FieldMotionRecord g_field_effect_records[];
 /** @brief Texture mode (0 4-bit, 1 8-bit) of a part's mesh texture; its blend mode is FIELD_PART_BLEND_MODE. */
 #define FIELD_PART_TEXTURE_MODE(part) (((part)->spawn_flags.word >> 22) & 1)
 /** @brief Last ordering-table slot; deeper faces are clamped to it. */
-#define FIELD_MESH_OT_MAX_DEPTH 0xFFF
 
 /** @brief Light sources of a lit mesh part, and the selector value for an unused one (8 and up). */
 #define FIELD_PART_LIGHT_COUNT 3
@@ -279,7 +279,7 @@ static inline s32 tint_color_channel(s32 color, s32 tint)
  * @param prim Primitive to link.
  * @param size Size of @p prim in bytes.
  * @return The packet address after @p prim.
- * @note Depths below 0 go to slot 0 and depths past FIELD_MESH_OT_MAX_DEPTH to the last slot.
+ * @note Depths below 0 go to slot 0 and depths past FIELD_WORLD_OT_LAST to the last slot.
  */
 static inline void* add_mesh_prim(s32* ot, FieldMotionRecord* effect, s32* depth_offsets, void* prim, s32 size)
 {
@@ -292,9 +292,9 @@ static inline void* add_mesh_prim(s32* ot, FieldMotionRecord* effect, s32* depth
         addPrim(ot, prim);
         return (u8*)prim + size;
     }
-    else if (depth_index > FIELD_MESH_OT_MAX_DEPTH)
+    else if (depth_index > FIELD_WORLD_OT_LAST)
     {
-        addPrim(&ot[FIELD_MESH_OT_MAX_DEPTH], prim);
+        addPrim(&ot[FIELD_WORLD_OT_LAST], prim);
         return (u8*)prim + size;
     }
     else
@@ -324,10 +324,10 @@ static inline u_long* add_mesh_tpage(s32* ot, FieldMotionRecord* effect, s32* de
         next_packet = (u_long*)((DR_TPAGE*)packet + 1);
         addPrim(ot, packet);
     }
-    else if (depth_index > FIELD_MESH_OT_MAX_DEPTH)
+    else if (depth_index > FIELD_WORLD_OT_LAST)
     {
         next_packet = (u_long*)((DR_TPAGE*)packet + 1);
-        addPrim(&ot[FIELD_MESH_OT_MAX_DEPTH], packet);
+        addPrim(&ot[FIELD_WORLD_OT_LAST], packet);
     }
     else
     {

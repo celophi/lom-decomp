@@ -52,7 +52,7 @@
  * a decoded shared page word (blend mode in bits 4-5).
  */
 #define FIELD_TPAGE_DEPTH_BITS(part_word) (((part_word) * 8) & 0x180)
-#define FIELD_TPAGE_ABR_BITS(page_word) (((page_word) * 2) & 0x60)
+#define FIELD_TPAGE_ABR_BITS(page_word) (((page_word) * 2) & GPU_TPAGE_BLEND_MASK)
 
 /*
  * FieldPart::tpage_word / code_word while the scene builds: zero for "not

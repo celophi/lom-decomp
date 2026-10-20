@@ -570,6 +570,11 @@ typedef struct FieldObjectPart
 #define FIELD_PART_BLEND_MODE_MASK 0xC00000
 #define FIELD_PART_BLEND_MODE(part) (((part)->behavior_flags.word >> FIELD_PART_BLEND_MODE_SHIFT) & 3)
 
+/** @brief FieldObjectPart::behavior_flags bit 3 and placement_flags bits 2 and 11: how the part's matrix is oriented. */
+#define FIELD_PART_ORIENTED_SHIFT 3
+#define FIELD_PART_STRETCH_TO_TARGET_SHIFT 2
+#define FIELD_PART_AIM_AT_TARGET_SHIFT 11
+
 /** @brief FieldObjectPart::placement_flags bit 25: a new effect takes its colour from parameter tracks instead of the part tint. */
 #define FIELD_PART_TRACK_COLOR_BIT 25
 #define FIELD_PART_TRACK_COLOR (1 << FIELD_PART_TRACK_COLOR_BIT)

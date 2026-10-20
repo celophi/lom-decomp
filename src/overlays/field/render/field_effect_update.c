@@ -4,46 +4,32 @@
  */
 
 #include "common.h"
-#include "overlays/field/field_types.h"
-#include "../internal/field_effect_transform.h"
-#include "../internal/field_effect_render_state.h"
-#include "../internal/field_effect_geometry.h"
-#include "../internal/field_effect_dispatch.h"
-#include "../internal/field_actor_palette.h"
-#include "../internal/field_mesh_transform.h"
-#include <libgte.h>
-#include <libgpu.h>
-#include <rand.h>
-#include <inline_c.h>
-#include "sdk/gte_dmpsx_compat.h"
-#include "../internal/field_effect_types.h"
-#include "../internal/field_effect_primitives.h"
-#include "../internal/field_mesh_render.h"
-#include "../internal/field_actor_sequence_runtime.h"
-#include "../internal/field_path_interpolation.h"
-#include "overlays/field/field_actor_records.h"
 #include <abs.h>
+#include <inline_c.h>
+#include <libgpu.h>
+#include <libgte.h>
+#include <rand.h>
+
+#include "../internal/field_actor_behavior.h"
+#include "../internal/field_actor_palette.h"
+#include "../internal/field_actor_runtime.h"
+#include "../internal/field_actor_sequence_runtime.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_contact_geometry.h"
-#include "../internal/field_actor_runtime.h"
-#include "overlays/field/field_sound.h"
-#include "../internal/field_actor_behavior.h"
+#include "../internal/field_effect_dispatch.h"
+#include "../internal/field_effect_geometry.h"
+#include "../internal/field_effect_primitives.h"
+#include "../internal/field_effect_render_state.h"
+#include "../internal/field_effect_transform.h"
+#include "../internal/field_effect_types.h"
+#include "../internal/field_mesh_render.h"
+#include "../internal/field_mesh_transform.h"
+#include "../internal/field_path_interpolation.h"
 #include "common/gpu_packet.h"
-void field_restart_actor_animation();
-u8* field_begin_actor_animation_forward();
-
-void field_play_set_sfx(s32 sfx_index, s32 pan, s32 unused, s32 channel_group);
-void field_command_history_clear(s32 player);
-s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* effect, FieldContactResult* contact);
-void field_start_actor_animation(s32 slot_index, s32 target_count, u8* targets);
-s32 field_start_builtin_animation(s32 object_index, s32 slot_index, s32 animation_id);
-POLY_FT4* field_render_actor_ground_shadow();
-u8* field_advance_actor_part_animation_frame();
-void field_play_object_animation();
-void field_grant_reward(s32 recipient, s32 owner, u32 kind);
-s32 field_collision_hit_markers(FieldCollisionQuery* query);
-void field_interpolate_palette_track(FieldActorSlot* slot, s32 palette_sequence, u8* palette_table, s16* output);
-void field_dispatch_actor_audio_event();
+#include "overlays/field/field_actor_records.h"
+#include "overlays/field/field_sound.h"
+#include "overlays/field/field_types.h"
+#include "sdk/gte_dmpsx_compat.h"
 
 #define FIELD_EFFECT_ORIGIN_ADDRESS SCRATCHPAD_ADDRESS
 #define FIELD_EFFECT_VECTOR_ADDRESS SCRATCHPAD_AT(0x10)
@@ -59,12 +45,9 @@ void field_dispatch_actor_audio_event();
  */
 #define FIELD_ELEMENT_AT(type, base, index) ((type*)((index) * sizeof(type) + (uintptr_t)(base)))
 
-/** @brief Placement selector (bits 18-23) of a part definition's placement flags. */
-#define FIELD_PART_PLACEMENT_KIND(part) (((part)->placement_flags.word >> FIELD_PART_ANCHOR_MODE_SHIFT) & FIELD_PART_ANCHOR_MODE_MASK)
-
-/* Placement flags. */
-#define FIELD_PART_ANCHOR_MODE_SHIFT 18
-#define FIELD_PART_ANCHOR_MODE_MASK 0x3F
+#define FIELD_PART_PLACEMENT_KIND_SHIFT 18
+#define FIELD_PART_PLACEMENT_KIND_MASK 0x3F
+#define FIELD_PART_PLACEMENT_KIND(part) (((part)->placement_flags.word >> FIELD_PART_PLACEMENT_KIND_SHIFT) & FIELD_PART_PLACEMENT_KIND_MASK)
 #define FIELD_PART_SCALE_X_FROM_BOUNDS_SHIFT 9
 #define FIELD_PART_SCALE_Y_FROM_BOUNDS_SHIFT 1
 #define FIELD_PART_MIRROR_X_WITH_FACING_SHIFT 10
@@ -76,63 +59,7 @@ void field_dispatch_actor_audio_event();
 #define FIELD_PLACEMENT_TRACK_FIRST 10
 #define FIELD_PLACEMENT_TRACK_END 0x26
 
-/**
- * @brief Bit layout of FieldMotionRecord.flags, with a halfword view.
- * @note FieldMotionRecord declares flags as a plain s32; this is read through FIELD_EFFECT_FLAGS.
- */
-typedef union
-{
-    s32 word;
-    u16 half[2];
-    struct
-    {
-        unsigned distance : 9;      /* spawn distance along the rotated direction */
-        unsigned distance_mode : 2; /* 2: distance comes from a parameter track */
-        unsigned unknown_11 : 1;
-        unsigned screen_space : 1; /* FIELD_EFFECT_SCREEN_SPACE */
-        unsigned ground_point : 2; /* ground attachment point for placement 0x33 */
-        unsigned effect_color : 1; /* FIELD_CONTROL_EFFECT_COLOR */
-        unsigned group : 2;
-        unsigned unknown_18 : 1;
-        unsigned kind : 4;            /* copied from the source record */
-        unsigned semitransparent : 1; /* FIELD_EFFECT_SEMITRANSPARENT */
-        unsigned motion_kind : 3;     /* FIELD_EFFECT_MOTION_KIND_MASK */
-        unsigned unknown_27 : 1;
-        unsigned literal_color : 1;  /* FIELD_CONTROL_LITERAL_COLOR */
-        unsigned parameter_mode : 2; /* motion_parameter source: fixed, track, timed track, distance */
-        unsigned unknown_31 : 1;
-    } bits;
-} FieldEffectFlags;
-
-/** @brief FieldMotionRecord prefix up to its flags word, typed as FieldEffectFlags. */
-typedef struct
-{
-    u8 pad0[0x1C];
-    FieldEffectFlags flags;
-} FieldEffectFlagsView;
-
-/**
- * @brief Packed flags of the FieldMotionRecord at @p record, as a FieldEffectFlags.
- * @note Casts the record pointer, not &flags: the flags must be addressed as record + 0x1C.
- */
 #define FIELD_EFFECT_FLAGS(record) (((FieldEffectFlagsView*)(record))->flags)
-
-extern FieldObjectPart g_field_object_parts[];
-extern FieldMotionRecord g_field_actors[];
-extern FieldMotionRecord g_field_effect_records[FIELD_EFFECT_ACTIVE_RECORD_COUNT];
-extern VECTOR D_80105778;
-extern s32 g_field_spawn_ground_point;
-extern s32 g_field_next_path_group;
-
-u32 field_evaluate_parameter_track_at_time(FieldActorSlot* actor, s32 track, s32 time);
-
-static s32 field_roll_effect_rotation(FieldActorSlot* actor, FieldObjectPart* part, FieldMotionRecord* effect);
-static void field_face_effect_target(FieldMotionRecord* effect, FieldObjectPart* part);
-static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPart* part, FieldActorSlot* actor);
-static void field_set_action_context(s32 recipient_id, s32 source_id, s32 action);
-void field_retire_effect(FieldMotionRecord* effect, FieldObjectPart* part);
-s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, u8* item, s32 flag, FieldObjectPart* part);
-s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base, u8* item, s32 flag, FieldObjectPart* part);
 
 /** @brief Bit positions in the part's behavior flags. */
 #define FIELD_PART_PITCH_ACCELERATION_BIT 2
@@ -150,14 +77,10 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
 #define FIELD_PICKUP_DELAY 0x10U
 #define FIELD_PICKUP_DISTANCE 5
 #define FIELD_PICKUP_SOUND 0x1F
-/** @brief Shift that moves FieldObjectPart::behavior_flags bits 22-23 (blend mode) onto the tpage blend bits. */
-#define FIELD_PART_BLEND_TPAGE_SHIFT 17
-/** @brief Tpage bits holding the blend mode (getTPage abr). */
-#define GPU_TPAGE_BLEND_MASK 0x60
+#define FIELD_PART_BLEND_TPAGE_SHIFT (FIELD_PART_BLEND_MODE_SHIFT - GPU_TPAGE_BLEND_SHIFT)
 
 /** @brief FieldObjectPart::effect_flags bits 25-28: track that switches semitransparency when FIELD_EFFECT_SEMITRANSPARENT is set. */
 #define FIELD_PART_SEMITRANSPARENT_TRACK_SHIFT 25
-/** @brief Bit position of FIELD_EFFECT_SEMITRANSPARENT. */
 #define FIELD_EFFECT_SEMITRANSPARENT_SHIFT 23
 /** @brief facing_or_reward_kind value of a new effect that takes the animation of the record it is attached to. */
 #define FIELD_EFFECT_ANIMATION_FROM_SOURCE 0xFF
@@ -168,16 +91,6 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
 #define FIELD_PART_ORIGIN_OWNER 1
 #define FIELD_PART_ORIGIN_TARGET 2
 
-/** @brief FieldEffectFlags::parameter_mode values: how an effect sets its motion_parameter. */
-enum
-{
-    FIELD_EFFECT_PARAMETER_FIXED = 0,
-    FIELD_EFFECT_PARAMETER_TRACK = 1,
-    FIELD_EFFECT_PARAMETER_TIMED_TRACK = 2,
-    FIELD_EFFECT_PARAMETER_DISTANCE = 3
-};
-
-/** @brief Effect flags word bits of FieldEffectFlags::parameter_mode. */
 #define FIELD_EFFECT_PARAMETER_MODE_SHIFT 29
 #define FIELD_EFFECT_PARAMETER_MODE_MASK 0x60000000
 #define FIELD_EFFECT_PARAMETER_MODE_TIMED_TRACK (FIELD_EFFECT_PARAMETER_TIMED_TRACK << FIELD_EFFECT_PARAMETER_MODE_SHIFT)
@@ -198,7 +111,6 @@ enum
 #define FIELD_EFFECT_SCRATCH_MATRIX ((void*)SCRATCHPAD_ADDRESS)
 #define FIELD_EFFECT_SCRATCH_SCREEN_ORIGIN ((Vec2s*)SCRATCHPAD_AT(0x40))
 #define FIELD_EFFECT_SCRATCH_FOOTPRINT ((s16*)SCRATCHPAD_AT(0x64))
-#define FIELD_EFFECT_OT_MAX_DEPTH 0xFFF
 
 #define FIELD_SPRITE_FRAME_FOOTPRINT 0x20
 #define FIELD_SPRITE_FRAME_FLIP_X 0x40
@@ -216,9 +128,6 @@ enum
 #define FIELD_GPU_LENGTH_MASK 0xFF000000
 #define FIELD_RADIAL_SCRATCH ((FieldRadialScratch*)SCRATCHPAD_ADDRESS)
 
-/**
- * @brief addPrim with the GPU address and length masks passed in, so callers can keep them in locals.
- */
 #define FIELD_LINK_PACKET(entry, packet, address_mask, length_mask)                                                                                            \
     ((packet)->tag = ((packet)->tag & (length_mask)) | (*(entry) & (address_mask)),                                                                            \
      *(entry) = (*(entry) & (length_mask)) | ((uintptr_t)(packet) & (address_mask)))
@@ -238,24 +147,334 @@ enum
 #define FIELD_PART_SCALE_TRACK_SHIFT 7
 #define FIELD_PART_ROTATION_MODE_SHIFT 6
 #define FIELD_PART_ROTATION_TRACK_SHIFT 26
+#define FIELD_PART_ARC_MODE_SHIFT 6
+#define FIELD_PART_ARC_HEIGHT_SHIFT 26
 #define FIELD_PART_ROTATE_QUARTER_X_SHIFT 17
 #define FIELD_PART_PROJECT_SCALE_SHIFT 23
-#define FIELD_PART_ORIENTED_SHIFT 3
-#define FIELD_PART_AIM_AT_TARGET_SHIFT 11
-#define FIELD_PART_STRETCH_TO_TARGET_SHIFT 2
 #define FIELD_PART_RGB_TRACKS_SHIFT 12
 #define FIELD_PART_RANDOM_EXTENT_SHIFT 15
 #define FIELD_PART_ADD_HALF_WIDTH_SHIFT 16
 #define FIELD_PART_ADD_HALF_HEIGHT_SHIFT 17
-#define FIELD_PART_ATTACHMENT_SHIFT 18
 #define FIELD_PART_COLOR_TRACK_SHIFT 5
 #define FIELD_PART_RED_TRACK 0x4
 #define FIELD_PART_GREEN_TRACK 0x2
 #define FIELD_PART_BLUE_TRACK 0x1
-#define FIELD_ATTACHMENT_MASK 0x3F
 #define FIELD_ATTACHMENT_GROUP_COUNT 8
 #define FIELD_ATTACHMENT_LINKED_BOUNDS_COUNT 28
 #define FIELD_PART_OWNER_BOUNDS 2
+
+/**
+ * @brief Bit layout of FieldMotionRecord.flags, with a halfword view.
+ * @note FieldMotionRecord declares flags as a plain s32; this is read through FIELD_EFFECT_FLAGS.
+ */
+typedef union
+{
+    s32 word;
+    u16 half[2];
+    struct
+    {
+        unsigned distance : 9;      /* spawn distance along the rotated direction */
+        unsigned distance_mode : 2; /* 2: distance comes from a parameter track */
+        unsigned unknown_11 : 1;
+        unsigned screen_space : 1;
+        unsigned ground_point : 2; /* ground attachment point for placement 0x33 */
+        unsigned effect_color : 1;
+        unsigned group : 2;
+        unsigned unknown_18 : 1;
+        unsigned kind : 4; /* copied from the source record */
+        unsigned semitransparent : 1;
+        unsigned motion_kind : 3;
+        unsigned unknown_27 : 1;
+        unsigned literal_color : 1;
+        unsigned parameter_mode : 2;
+        unsigned unknown_31 : 1;
+    } bits;
+} FieldEffectFlags;
+
+/** @brief FieldMotionRecord prefix up to its flags word, typed as FieldEffectFlags. */
+typedef struct
+{
+    u8 pad0[0x1C];
+    FieldEffectFlags flags;
+} FieldEffectFlagsView;
+
+/** @brief FieldEffectFlags::parameter_mode values: how an effect sets its motion_parameter. */
+enum
+{
+    FIELD_EFFECT_PARAMETER_FIXED = 0,
+    FIELD_EFFECT_PARAMETER_TRACK = 1,
+    FIELD_EFFECT_PARAMETER_TIMED_TRACK = 2,
+    FIELD_EFFECT_PARAMETER_DISTANCE = 3
+};
+
+/** @brief Four-halfword GTE vector; the fourth halfword is padding. */
+typedef struct
+{
+    s16 x;
+    s16 y;
+    s16 z;
+    s16 pad;
+} FieldSVector;
+
+/** @brief Party-member record view: reward counters from 0x244 and shield visibility at 0x258. */
+typedef struct
+{
+    u8 pad0[0x244];
+    union
+    {
+        u8 counters[0x24]; /* indexed by reward kind */
+        struct
+        {
+            u8 pad0[0x258 - 0x244];
+            u8 hide_shield_sprite;
+        } fields;
+    } status;
+} FieldPlayerRecordView;
+
+/** @brief Selected map dimensions used for effect movement bounds. */
+typedef struct
+{
+    s16 width;
+    s16 height;
+} FieldEffectMapBounds;
+
+/** @brief Camera translation used while updating effect movement. */
+typedef struct
+{
+    u8 pad0[4];
+    s32 x;
+    s32 y;
+    s32 z;
+} FieldEffectCamera;
+
+/**
+ * @brief Placement selector within the part flags word.
+ */
+typedef struct
+{
+    unsigned int lower : 18;
+    unsigned int opcode : 6;
+    unsigned int upper : 8;
+} FieldPlacementBits;
+
+/** @brief Output of field_test_quad_actor_contacts: the resolved track or actor index and its screen x/y. */
+typedef struct
+{
+    s32 index;
+    s16 x;
+    s16 y;
+} TrackPlacement;
+
+/** @brief GPU coordinates accessed individually or as a packed XY word. */
+typedef union
+{
+    s32 word;
+    struct
+    {
+        s16 x;
+        s16 y;
+    } signed_pair;
+    struct
+    {
+        u16 x;
+        u16 y;
+    } unsigned_pair;
+} FieldScreenPoint;
+
+/** @brief Unsigned projected origin used by ring geometry. */
+typedef struct
+{
+    u16 x;
+    u16 y;
+} FieldScreenPair;
+
+/** @brief Gouraud triangle packet with packed color and coordinate access. */
+typedef struct
+{
+    s32 tag;
+    FieldPrimitiveColor color0;
+    FieldScreenPoint xy0;
+    FieldPrimitiveColor color1;
+    FieldScreenPoint xy1;
+    FieldPrimitiveColor color2;
+    FieldScreenPoint xy2;
+} FieldGouraudTriangle;
+
+/** @brief Gouraud line packet with packed color and coordinate access. */
+typedef struct
+{
+    s32 tag;
+    FieldPrimitiveColor color0;
+    FieldScreenPoint xy0;
+    FieldPrimitiveColor color1;
+    FieldScreenPoint xy1;
+} FieldGouraudLine;
+
+/** @brief Flat quad packet with paired signed and unsigned coordinate views. */
+typedef struct
+{
+    s32 tag;
+    FieldPrimitiveColor color0;
+    FieldScreenPoint xy0;
+    FieldScreenPoint xy1;
+    FieldScreenPoint xy2;
+    FieldScreenPoint xy3;
+} FieldFlatQuad;
+
+/** @brief Flat line packet with packed color and coordinate access. */
+typedef struct
+{
+    s32 tag;
+    FieldPrimitiveColor color0;
+    FieldScreenPoint xy0;
+    FieldScreenPoint xy1;
+} FieldFlatLine;
+
+/** @brief Shared scratchpad workspace for radial projection and random rotations. */
+typedef struct
+{
+    VECTOR origin;
+    VECTOR transformed;
+    union
+    {
+        VECTOR vector;
+        Vec2s screen;
+    } center;
+    VECTOR delta;
+    VECTOR jitter;
+    SVECTOR direction;
+    MATRIX matrices[FIELD_RADIAL_MAX_SEGMENTS];
+} FieldRadialScratch;
+
+/** @brief Attachment category boundaries encoded in part placement flags. */
+typedef enum
+{
+    FIELD_ATTACHMENT_LINKED_BOUNDS_FIRST = 10,
+    FIELD_ATTACHMENT_POINT_FIRST = 20,
+    FIELD_ATTACHMENT_POINT_SECOND_BIAS = 34,
+    FIELD_ATTACHMENT_POINT_SECOND = 42,
+    FIELD_ATTACHMENT_UNRESOLVED_FIRST = 55
+} FieldEffectAttachmentCategory;
+
+/** @brief SDK angle vector with word access to paired halfwords. */
+typedef union
+{
+    SVECTOR vector;
+    struct
+    {
+        s32 xy;
+        s32 z_pad;
+    } packed;
+} FieldRotationAngles;
+
+/** @brief A packed XY pair, UV pair, and texture-page or palette halfword. */
+typedef struct
+{
+    s32 xy;
+    u16 uv;
+    u16 page;
+} FieldPackedQuadVertex;
+
+/** @brief SDK quad with packed views for copying ribbon edges and color. */
+typedef union
+{
+    POLY_FT4 gpu;
+    struct
+    {
+        s32 tag;
+        FieldPrimitiveColor color;
+        FieldPackedQuadVertex vertices[4];
+    } packed;
+} FieldRibbonQuad;
+
+/** @brief Ribbon path vectors followed by one rotation matrix per segment. */
+typedef struct
+{
+    VECTOR endpoint;
+    VECTOR position;
+    VECTOR midpoint;
+    VECTOR half_delta;
+    VECTOR delta;
+    FieldRotationAngles direction;
+    MATRIX rotations[FIELD_RIBBON_MAX_SEGMENTS];
+} FieldRibbonScratch;
+
+/** @brief Temporary rotation and distance calculations for a part matrix. */
+typedef struct
+{
+    SVECTOR direction;
+    VECTOR scale;
+    VECTOR delta;
+    VECTOR squared_delta;
+} FieldMatrixScratch;
+
+/** @brief GTE output with unsigned low halfwords for GPU vertex additions. */
+typedef union
+{
+    VECTOR vector;
+    struct
+    {
+        u16 x;
+        u16 x_high;
+        u16 y;
+        u16 y_high;
+        u16 z;
+        u16 z_high;
+        u16 pad[2];
+    } low;
+} FieldSpriteProjection;
+
+/** @brief Scratchpad vectors and local tilt matrix for sprite projection. */
+typedef struct
+{
+    SVECTOR rotated_vertex;
+    SVECTOR vertex;
+    FieldSpriteProjection projected;
+    FieldMatrixStorage rotation;
+} FieldSpriteScratch;
+
+extern FieldObjectPart g_field_object_parts[];
+extern FieldMotionRecord g_field_actors[];
+extern FieldMotionRecord g_field_effect_records[FIELD_EFFECT_ACTIVE_RECORD_COUNT];
+extern VECTOR D_80105778;
+extern s32 g_field_spawn_ground_point;
+extern s32 g_field_next_path_group;
+
+extern s32 g_field_active_group;
+
+/** @brief Suppress repeated pickup audio until the next frame-command build. */
+extern s32 g_field_pickup_sound_played;
+extern FieldPlayerRecordView g_field_player_records[];
+
+extern u16 g_field_texture_slot_flags[];
+
+void field_restart_actor_animation();
+u8* field_begin_actor_animation_forward();
+
+void field_play_set_sfx(s32 sfx_index, s32 pan, s32 unused, s32 channel_group);
+void field_command_history_clear(s32 player);
+s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* effect, FieldContactResult* contact);
+void field_start_actor_animation(s32 slot_index, s32 target_count, u8* targets);
+s32 field_start_builtin_animation(s32 object_index, s32 slot_index, s32 animation_id);
+POLY_FT4* field_render_actor_ground_shadow();
+u8* field_advance_actor_part_animation_frame();
+void field_play_object_animation();
+void field_grant_reward(s32 recipient, s32 owner, u32 kind);
+s32 field_collision_hit_markers(FieldCollisionQuery* query);
+void field_interpolate_palette_track(FieldActorSlot* slot, s32 palette_sequence, u8* palette_table, s16* output);
+void field_dispatch_actor_audio_event();
+
+u32 field_evaluate_parameter_track_at_time(FieldActorSlot* actor, s32 track, s32 time);
+
+static s32 field_roll_effect_rotation(FieldActorSlot* actor, FieldObjectPart* part, FieldMotionRecord* effect);
+static void field_face_effect_target(FieldMotionRecord* effect, FieldObjectPart* part);
+static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPart* part, FieldActorSlot* actor);
+static void field_set_action_context(s32 recipient_id, s32 source_id, s32 action);
+void field_retire_effect(FieldMotionRecord* effect, FieldObjectPart* part);
+s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, u8* item, s32 flag, FieldObjectPart* part);
+s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base, u8* item, s32 flag, FieldObjectPart* part);
+
+static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* packet_cursor, s32* ordering_table, u8* frame_data);
 
 /**
  * @brief Spawn an effect record for one actor part and resolve its initial placement.
@@ -308,7 +527,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     record_base = g_field_effect_records;
     free_effect = record_base;
 
-    for (; effect_index < 0x100; effect_index++, free_effect++)
+    for (; effect_index < FIELD_EFFECT_ACTIVE_RECORD_COUNT; effect_index++, free_effect++)
     {
         if (free_effect->state == work_value)
         {
@@ -316,7 +535,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         }
     }
 
-    if (effect_index == 0x100)
+    if (effect_index == FIELD_EFFECT_ACTIVE_RECORD_COUNT)
     {
         g_field_action_context = 0x10101010;
         return -1;
@@ -385,18 +604,18 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
     if (effect->color_position.fields.position_source == 8)
     {
-        s32 scan_ff;
+        s32 found;
+
         work_index = 0;
-        work_limit = work_index;
-        scan_ff = 0xFF;
+        found = 0;
         work_value = actor->active_counts[g_field_track_index][part_index];
 
-        for (; work_index < 0x100; work_index++)
+        for (; work_index < FIELD_EFFECT_ACTIVE_RECORD_COUNT; work_index++)
         {
-            if (g_field_effect_records[work_index].state != scan_ff && g_field_effect_records[work_index].part_index == part->unk46 &&
+            if (g_field_effect_records[work_index].state != FIELD_EFFECT_RETIRED && g_field_effect_records[work_index].part_index == part->unk46 &&
                 g_field_effect_records[work_index].actor_index == actor->slot_index)
             {
-                work_limit = 1;
+                found = 1;
 
                 if (work_value == 0)
                 {
@@ -409,7 +628,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
             }
         }
 
-        if (work_limit == 0)
+        if (found == 0)
         {
             effect->state = FIELD_EFFECT_RETIRED;
             return -1;
@@ -449,7 +668,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
                     }
                     else
                     {
-                        owner_object->reward_counters[work_index] = owner_object->reward_counters[work_index] - 1;
+                        owner_object->reward_counters[work_index]--;
                         effect->facing_or_reward_kind = part->unk1A + work_index;
                         break;
                     }
@@ -556,7 +775,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     gte_rtv0();
     gte_stlvnl(direction_vector);
 
-    if (((part->behavior_flags.word >> 2) & 1) || effect->color_position.fields.position_source != 0)
+    if (((part->behavior_flags.word >> FIELD_PART_PITCH_ACCELERATION_BIT) & 1) || effect->color_position.fields.position_source != 0)
     {
         effect->heading = ratan2(-direction_vector->vz, direction_vector->vx);
         gte_ldlvl(direction_vector);
@@ -703,8 +922,8 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         effect->z = 0;
     }
 
-    placement_kind = part->placement_flags.word >> 18;
-    placement_kind &= 0x3F;
+    placement_kind = part->placement_flags.word >> FIELD_PART_PLACEMENT_KIND_SHIFT;
+    placement_kind &= FIELD_PART_PLACEMENT_KIND_MASK;
 
     switch (placement_kind)
     {
@@ -767,13 +986,13 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
             placement_object = &g_field_object_states[object_index];
         }
 
-        if ((part->placement_flags.word >> 9) & 1)
+        if ((part->placement_flags.word >> FIELD_PART_SCALE_X_FROM_BOUNDS_SHIFT) & 1)
         {
             extent = abs(placement_object->bounds.half.right - placement_object->bounds.half.left);
             part->appearance.fields.scale_xz = extent * 2;
         }
 
-        if ((part->placement_flags.word >> 1) & 1)
+        if ((part->placement_flags.word >> FIELD_PART_SCALE_Y_FROM_BOUNDS_SHIFT) & 1)
         {
             work_a = 0;
             extent = abs(placement_object->bounds.half.bottom - placement_object->bounds.half.top);
@@ -915,9 +1134,9 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
             sibling_part_index = placement_kind - 0x22;
         }
 
-        for (work_a = start; work_a < 0x100; work_a++)
+        for (work_a = start; work_a < FIELD_EFFECT_ACTIVE_RECORD_COUNT; work_a++)
         {
-            if (g_field_effect_records[work_a].state != 0xFF && g_field_effect_records[work_a].part_index == sibling_part_index &&
+            if (g_field_effect_records[work_a].state != FIELD_EFFECT_RETIRED && g_field_effect_records[work_a].part_index == sibling_part_index &&
                 g_field_effect_records[work_a].actor_index == actor->slot_index &&
                 ((actor->parts[sibling_part_index].orientation_flags.word & 4) || g_field_effect_records[work_a].track_index == g_field_track_index))
             {
@@ -1205,8 +1424,8 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     case 0x29:
         placement_object = &g_field_object_states[actor->owner_object_index];
         source_record = &g_field_actors[actor->owner_object_index];
-        effect->x += source_record->x + (placement_object->attachment_points[((u32)part->effect_flags.word >> 21) & 3].x << 8);
-        effect->y += source_record->y + (placement_object->attachment_points[((u32)part->effect_flags.word >> 21) & 3].y << 8);
+        effect->x += source_record->x + (placement_object->attachment_points[((u32)part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
+        effect->y += source_record->y + (placement_object->attachment_points[((u32)part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].y << 8);
         effect->z += source_record->z;
 
         if (effect->state == FIELD_EFFECT_RENDER_LINKED_SPRITE)
@@ -1250,7 +1469,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     case 0x32:
         placement_object = &g_field_object_states[actor->owner_object_index];
         source_record = &g_field_actors[actor->owner_object_index];
-        effect->x += source_record->x + (placement_object->attachment_points[((u32)part->effect_flags.word >> 21) & 3].x << 8);
+        effect->x += source_record->x + (placement_object->attachment_points[((u32)part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
         effect->y += source_record->y;
         effect->z += source_record->z + (part->offset_z << 8);
 
@@ -1363,9 +1582,9 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     case 0x3E:
         work_value = placement_kind - 0x37;
 
-        for (sibling_index = start; sibling_index < 0x100; sibling_index++)
+        for (sibling_index = start; sibling_index < FIELD_EFFECT_ACTIVE_RECORD_COUNT; sibling_index++)
         {
-            if (g_field_effect_records[sibling_index].state != 0xFF && g_field_effect_records[sibling_index].part_index == work_value &&
+            if (g_field_effect_records[sibling_index].state != FIELD_EFFECT_RETIRED && g_field_effect_records[sibling_index].part_index == work_value &&
                 g_field_effect_records[sibling_index].actor_index == actor->slot_index &&
                 ((actor->parts[work_value].orientation_flags.word & 4) || g_field_effect_records[sibling_index].track_index == g_field_track_index))
             {
@@ -1488,7 +1707,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
     if ((effect->flags & FIELD_EFFECT_MOTION_KIND_MASK) == FIELD_EFFECT_MOTION_PATH)
     {
-        field_init_path(effect, field_resolve_effect_extent(actor, part), (part->placement_flags.word >> 15) & 1, g_field_next_path_group);
+        field_init_path(effect, field_resolve_effect_extent(actor, part), (part->placement_flags.word >> FIELD_PART_RANDOM_EXTENT_SHIFT) & 1, g_field_next_path_group);
         effect->position_data.path_time = 0;
         effect->path_group = g_field_next_path_group;
         field_update_path_position(&effect->position_data.path_time, effect, g_field_next_path_group);
@@ -1510,9 +1729,9 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         field_face_effect_target(effect, part);
     }
 
-    if ((part->placement_flags.word >> 3) & 1)
+    if ((part->placement_flags.word >> FIELD_PART_HEIGHT_TRACK_BIT) & 1)
     {
-        if (part->spawn_flags.word & 0x80000)
+        if (part->spawn_flags.word & FIELD_PART_HEIGHT_FROM_BASE)
         {
             effect->height_or_retired_state = effect->y >> 8;
             effect->y -= field_evaluate_parameter_track_at_time(actor, part->placement_flags.bytes.low >> 4, 0) << 8;
@@ -1641,62 +1860,6 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     return effect_index;
 }
 
-/** @brief Four-halfword GTE vector; the fourth halfword is padding. */
-typedef struct
-{
-    s16 x;
-    s16 y;
-    s16 z;
-    s16 pad;
-} FieldSVector;
-
-/** @brief Party-member record view: reward counters from 0x244 and shield visibility at 0x258. */
-typedef struct
-{
-    u8 pad0[0x244];
-    union
-    {
-        u8 counters[0x24]; /* indexed by reward kind */
-        struct
-        {
-            u8 pad0[0x258 - 0x244];
-            u8 hide_shield_sprite;
-        } fields;
-    } status;
-} FieldPlayerRecordView;
-
-/** @brief Selected map dimensions used for effect movement bounds. */
-typedef struct
-{
-    s16 width;
-    s16 height;
-} FieldEffectMapBounds;
-
-/** @brief Camera translation used while updating effect movement. */
-typedef struct
-{
-    u8 pad0[4];
-    s32 x;
-    s32 y;
-    s32 z;
-} FieldEffectCamera;
-
-/**
- * @brief Placement selector within the part flags word.
- */
-typedef struct
-{
-    unsigned int lower : 18;
-    unsigned int opcode : 6;
-    unsigned int upper : 8;
-} FieldPlacementBits;
-
-extern s32 g_field_active_group;
-
-/** @brief Suppress repeated pickup audio until the next frame-command build. */
-extern s32 g_field_pickup_sound_played;
-extern FieldPlayerRecordView g_field_player_records[];
-
 /**
  * @brief Roll one particle spawn record's scale and rotation fields from a
  *        part's parameter tracks, falling back to fixed part values or a
@@ -1717,7 +1880,9 @@ static s32 field_roll_effect_rotation(FieldActorSlot* actor, FieldObjectPart* pa
 
     if (part->palette_extent.fields.angular_divisions != 0)
     {
-        angle = ((0x1000 / part->palette_extent.fields.angular_divisions) * actor->track_counters[g_field_track_index][part->part_index] + 0x400) & 0xFFF;
+        angle = ((FIELD_ANGLE_TURN / part->palette_extent.fields.angular_divisions) * actor->track_counters[g_field_track_index][part->part_index] +
+                 FIELD_ANGLE_QUARTER_TURN) &
+                FIELD_ANGLE_MASK;
         effect->heading = angle;
     }
     else
@@ -1803,7 +1968,7 @@ static void field_face_effect_target(FieldMotionRecord* effect, FieldObjectPart*
 
     if (effect->heading < 0)
     {
-        effect->heading += 0x1000;
+        effect->heading += FIELD_ANGLE_TURN;
     }
 
     if (direction.vy != 0)
@@ -1812,12 +1977,12 @@ static void field_face_effect_target(FieldMotionRecord* effect, FieldObjectPart*
     }
     else
     {
-        effect->pitch = 0x400;
+        effect->pitch = FIELD_ANGLE_QUARTER_TURN;
     }
 
     if (effect->pitch < 0)
     {
-        effect->pitch += 0x1000;
+        effect->pitch += FIELD_ANGLE_TURN;
     }
 
     effect->rotation_x = 0;
@@ -2048,7 +2213,7 @@ void field_retire_effect(FieldMotionRecord* effect, FieldObjectPart* part)
 
                             if (new_effect->heading < 0)
                             {
-                                new_effect->heading += 0x1000;
+                                new_effect->heading += FIELD_ANGLE_TURN;
                             }
 
                             if (direction.vy != 0)
@@ -2057,12 +2222,12 @@ void field_retire_effect(FieldMotionRecord* effect, FieldObjectPart* part)
                             }
                             else
                             {
-                                new_effect->pitch = 0x400;
+                                new_effect->pitch = FIELD_ANGLE_QUARTER_TURN;
                             }
 
                             if (new_effect->pitch < 0)
                             {
-                                new_effect->pitch += 0x1000;
+                                new_effect->pitch += FIELD_ANGLE_TURN;
                             }
 
                             new_effect->rotation_x = 0;
@@ -2317,8 +2482,8 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                 {
                     s32 previous_distance = local_vector->y;
 
-                    if (((bounds_flags >> FIELD_PART_ANCHOR_MODE_SHIFT) & FIELD_PART_ANCHOR_MODE_MASK) < FIELD_PLACEMENT_TRACK_FIRST ||
-                        ((bounds_flags >> FIELD_PART_ANCHOR_MODE_SHIFT) & FIELD_PART_ANCHOR_MODE_MASK) >= FIELD_PLACEMENT_TRACK_END)
+                    if (((bounds_flags >> FIELD_PART_PLACEMENT_KIND_SHIFT) & FIELD_PART_PLACEMENT_KIND_MASK) < FIELD_PLACEMENT_TRACK_FIRST ||
+                        ((bounds_flags >> FIELD_PART_PLACEMENT_KIND_SHIFT) & FIELD_PART_PLACEMENT_KIND_MASK) >= FIELD_PLACEMENT_TRACK_END)
                     {
                         dy = (g_field_object_states[actor->owner_object_index].bounds.half.bottom -
                               g_field_object_states[actor->owner_object_index].bounds.half.top) >>
@@ -2758,7 +2923,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
             break;
         }
 
-        if (((part->behavior_flags.word >> FIELD_PART_PITCH_ACCELERATION_BIT) & 1) && ((record->pitch + part->pitch_acceleration) < 0x800))
+        if (((part->behavior_flags.word >> FIELD_PART_PITCH_ACCELERATION_BIT) & 1) && ((record->pitch + part->pitch_acceleration) < FIELD_ANGLE_HALF_TURN))
         {
             record->pitch = (u16)record->pitch + part->pitch_acceleration;
         }
@@ -2799,7 +2964,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
             adjusted_pitch = ratan2(rsin(record->pitch), pitch_cosine);
             record->pitch = adjusted_pitch;
 
-            if (adjusted_pitch < 0x400)
+            if (adjusted_pitch < FIELD_ANGLE_QUARTER_TURN)
             {
                 record->motion_parameter = (((s16)record->motion_parameter * 0xF) >> 4) - 1;
             }
@@ -2808,9 +2973,9 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                 record->motion_parameter = (((s16)record->motion_parameter << 5) / 30) + 1;
             }
 
-            if (((s16)record->motion_parameter < 0x14) && (record->pitch < 0x400))
+            if (((s16)record->motion_parameter < 0x14) && (record->pitch < FIELD_ANGLE_QUARTER_TURN))
             {
-                record->pitch = 0x800 - (u16)record->pitch;
+                record->pitch = FIELD_ANGLE_HALF_TURN - (u16)record->pitch;
                 record->motion_parameter = 0x14;
             }
         }
@@ -3588,10 +3753,6 @@ void field_resolve_effect_position(FieldMotionRecord* effect, FieldObjectPart* p
     }
 }
 
-extern u16 g_field_texture_slot_flags[];
-
-static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* packet_cursor, s32* ordering_table, u8* frame_data);
-
 /**
  * @brief Render each active field effect according to its render state.
  * @param render_context Ordering table and primitive packet cursor.
@@ -4018,15 +4179,15 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
                 }
                 else
                 {
-                    value1 = effect->z >> 7;
+                    value1 = effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
                     if (value1 < 0)
                     {
                         addPrim(&ordering_table[0], packet_cursor);
                         packet_cursor = (s32*)((u8*)packet_cursor + sizeof(POLY_FT4));
                     }
-                    else if (value1 > FIELD_EFFECT_OT_MAX_DEPTH)
+                    else if (value1 > FIELD_WORLD_OT_LAST)
                     {
-                        addPrim(&ordering_table[FIELD_EFFECT_OT_MAX_DEPTH], packet_cursor);
+                        addPrim(&ordering_table[FIELD_WORLD_OT_LAST], packet_cursor);
                         packet_cursor = (s32*)((u8*)packet_cursor + sizeof(POLY_FT4));
                     }
                     else
@@ -4065,15 +4226,6 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
 }
 
 /* Frame-record processors: field_render_effect_frame8 (8-bit frame coordinates) and field_render_effect_frame16 (16-bit). */
-
-/* Output of field_test_quad_actor_contacts: resolved track/actor index plus the screen-space
- * x/y it computed for it. */
-typedef struct
-{
-    s32 index;
-    s16 x;
-    s16 y;
-} TrackPlacement;
 
 /**
  * @brief Look up the actor binding that serves an object slot.
@@ -4233,7 +4385,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
             {
                 field_resolve_effect_part_color(actor, rec, part, (FieldPrimitiveColor*)&((P_TAG*)cursor)->r0);
                 setPolyFT4(poly);
-                setSemiTrans(poly, rec->flags & 0x800000);
+                setSemiTrans(poly, rec->flags & FIELD_EFFECT_SEMITRANSPARENT);
                 u_extent = item[4];
                 y_offset = (s8)item[1];
                 v_extent = item[5] - 1;
@@ -4570,9 +4722,9 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                     poly++;
                     cursor += sizeof(POLY_FT4) / sizeof(s32);
                 }
-                else if (depth >= 0x1000)
+                else if (depth >= FIELD_WORLD_OT_SIZE)
                 {
-                    addPrim(&base[0xFFF], cursor);
+                    addPrim(&base[FIELD_WORLD_OT_LAST], cursor);
                     poly++;
                     cursor += sizeof(POLY_FT4) / sizeof(s32);
                 }
@@ -5343,7 +5495,7 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
             {
                 field_resolve_effect_part_color(actor, rec, part, (FieldPrimitiveColor*)&((P_TAG*)cursor)->r0);
                 setPolyFT4(poly);
-                setSemiTrans(poly, rec->flags & 0x800000);
+                setSemiTrans(poly, rec->flags & FIELD_EFFECT_SEMITRANSPARENT);
                 width = item[4];
                 height = item[5] - 1;
                 offset_y = (s16)(item[1] + (item[10] << 8));
@@ -5564,9 +5716,9 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                     poly++;
                     cursor += sizeof(POLY_FT4) / sizeof(s32);
                 }
-                else if (depth >= 0x1000)
+                else if (depth >= FIELD_WORLD_OT_SIZE)
                 {
-                    addPrim(&base[0xFFF], cursor);
+                    addPrim(&base[FIELD_WORLD_OT_LAST], cursor);
                     poly++;
                     cursor += sizeof(POLY_FT4) / sizeof(s32);
                 }
@@ -6081,87 +6233,6 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
     return cursor;
 }
 
-/** @brief GPU coordinates accessed individually or as a packed XY word. */
-typedef union
-{
-    s32 word;
-    struct
-    {
-        s16 x;
-        s16 y;
-    } signed_pair;
-    struct
-    {
-        u16 x;
-        u16 y;
-    } unsigned_pair;
-} FieldScreenPoint;
-
-/** @brief Unsigned projected origin used by ring geometry. */
-typedef struct
-{
-    u16 x;
-    u16 y;
-} FieldScreenPair;
-
-/** @brief Gouraud triangle packet with packed color and coordinate access. */
-typedef struct
-{
-    s32 tag;
-    FieldPrimitiveColor color0;
-    FieldScreenPoint xy0;
-    FieldPrimitiveColor color1;
-    FieldScreenPoint xy1;
-    FieldPrimitiveColor color2;
-    FieldScreenPoint xy2;
-} FieldGouraudTriangle;
-
-/** @brief Gouraud line packet with packed color and coordinate access. */
-typedef struct
-{
-    s32 tag;
-    FieldPrimitiveColor color0;
-    FieldScreenPoint xy0;
-    FieldPrimitiveColor color1;
-    FieldScreenPoint xy1;
-} FieldGouraudLine;
-
-/** @brief Flat quad packet with paired signed and unsigned coordinate views. */
-typedef struct
-{
-    s32 tag;
-    FieldPrimitiveColor color0;
-    FieldScreenPoint xy0;
-    FieldScreenPoint xy1;
-    FieldScreenPoint xy2;
-    FieldScreenPoint xy3;
-} FieldFlatQuad;
-
-/** @brief Flat line packet with packed color and coordinate access. */
-typedef struct
-{
-    s32 tag;
-    FieldPrimitiveColor color0;
-    FieldScreenPoint xy0;
-    FieldScreenPoint xy1;
-} FieldFlatLine;
-
-/** @brief Shared scratchpad workspace for radial projection and random rotations. */
-typedef struct
-{
-    VECTOR origin;
-    VECTOR transformed;
-    union
-    {
-        VECTOR vector;
-        Vec2s screen;
-    } center;
-    VECTOR delta;
-    VECTOR jitter;
-    SVECTOR direction;
-    MATRIX matrices[FIELD_RADIAL_MAX_SEGMENTS];
-} FieldRadialScratch;
-
 /**
  * @brief Emit a 32-segment shaded ring, using three Gouraud triangles per segment.
  * @param effect Effect position, rendering flags, and part selection.
@@ -6338,7 +6409,7 @@ u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* 
         }
         else if (first_depth >= FIELD_WORLD_OT_SIZE)
         {
-            FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packets, address_mask, length_mask);
+            FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_LAST], packets, address_mask, length_mask);
             packets = next_packet;
         }
         else
@@ -6356,7 +6427,7 @@ u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* 
         }
         else if (second_depth >= FIELD_WORLD_OT_SIZE)
         {
-            FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packets, address_mask, length_mask);
+            FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_LAST], packets, address_mask, length_mask);
             packets++;
         }
         else
@@ -6374,7 +6445,7 @@ u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* 
         }
         else if (third_depth >= FIELD_WORLD_OT_SIZE)
         {
-            FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packets, address_mask, length_mask);
+            FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_LAST], packets, address_mask, length_mask);
             packets++;
         }
         else
@@ -6638,7 +6709,7 @@ next_segment:
     }
     else if (depth_or_y >= FIELD_WORLD_OT_SIZE)
     {
-        FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packets, mask_low, mask_high);
+        FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_LAST], packets, mask_low, mask_high);
         packets = next_packet;
     }
     else
@@ -6659,7 +6730,7 @@ next_segment:
     }
     else if (second_depth >= FIELD_WORLD_OT_SIZE)
     {
-        FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packets, mask_low, mask_high);
+        FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_LAST], packets, mask_low, mask_high);
         packets++;
     }
     else
@@ -6680,7 +6751,7 @@ next_segment:
     }
     else if (third_depth >= FIELD_WORLD_OT_SIZE)
     {
-        FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packets, mask_low, mask_high);
+        FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_LAST], packets, mask_low, mask_high);
         packets++;
     }
     else
@@ -6701,7 +6772,7 @@ next_segment:
     }
     else if (fourth_depth >= FIELD_WORLD_OT_SIZE)
     {
-        FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packets, mask_low, mask_high);
+        FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_LAST], packets, mask_low, mask_high);
         packets++;
     }
     else
@@ -7010,7 +7081,7 @@ u8* field_render_effect_radial_fan(FieldMotionRecord* effect, u8* packet_cursor,
         }
         else if (depth >= FIELD_WORLD_OT_SIZE)
         {
-            addPrim(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packet_cursor);
+            addPrim(&ordering_table[FIELD_WORLD_OT_LAST], packet_cursor);
             packet_cursor += sizeof(LINE_F2);
         }
         else
@@ -7034,7 +7105,7 @@ u8* field_render_effect_radial_fan(FieldMotionRecord* effect, u8* packet_cursor,
     }
     else if (depth >= FIELD_WORLD_OT_SIZE)
     {
-        addPrim(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packet_cursor);
+        addPrim(&ordering_table[FIELD_WORLD_OT_LAST], packet_cursor);
         packet_cursor += sizeof(LINE_F2);
     }
     else
@@ -7163,9 +7234,9 @@ u8* field_render_effect_radial_lines(FieldMotionRecord* effect, u8* packet_curso
         *(s32*)&direction->vx = 0;
     }
 
-    if (((part->track_flags.word >> 6) & 3) != 0)
+    if (((part->track_flags.word >> FIELD_PART_ARC_MODE_SHIFT) & 3) != 0)
     {
-        arc_height = (part->track_flags.word >> 26) << 9;
+        arc_height = (part->track_flags.word >> FIELD_PART_ARC_HEIGHT_SHIFT) << 9;
     }
     else
     {
@@ -7192,7 +7263,7 @@ u8* field_render_effect_radial_lines(FieldMotionRecord* effect, u8* packet_curso
             if (arc_height != 0)
             {
                 position->vy = center->vy + (delta->vy * segment) / segment_count -
-                               ((s32)(((part->track_flags.word >> 26) << 9) * rsin(segment * angle_step)) >> 12) + jitter->vy;
+                               ((s32)(((part->track_flags.word >> FIELD_PART_ARC_HEIGHT_SHIFT) << 9) * rsin(segment * angle_step)) >> 12) + jitter->vy;
             }
             else
             {
@@ -7233,7 +7304,7 @@ u8* field_render_effect_radial_lines(FieldMotionRecord* effect, u8* packet_curso
             else if (depth >= FIELD_WORLD_OT_SIZE)
             {
                 next_line++;
-                addPrim(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packet_cursor);
+                addPrim(&ordering_table[FIELD_WORLD_OT_LAST], packet_cursor);
                 packet_cursor += sizeof(LINE_F2);
             }
             else
@@ -7277,7 +7348,7 @@ u8* field_render_effect_radial_lines(FieldMotionRecord* effect, u8* packet_curso
     }
     else if (depth >= FIELD_WORLD_OT_SIZE)
     {
-        addPrim(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packet_cursor);
+        addPrim(&ordering_table[FIELD_WORLD_OT_LAST], packet_cursor);
         packet_cursor += sizeof(LINE_F2);
     }
     else
@@ -7291,93 +7362,6 @@ u8* field_render_effect_radial_lines(FieldMotionRecord* effect, u8* packet_curso
 
     return packet_cursor;
 }
-
-/** @brief Attachment category boundaries encoded in part placement flags. */
-typedef enum
-{
-    FIELD_ATTACHMENT_LINKED_BOUNDS_FIRST = 10,
-    FIELD_ATTACHMENT_POINT_FIRST = 20,
-    FIELD_ATTACHMENT_POINT_SECOND_BIAS = 34,
-    FIELD_ATTACHMENT_POINT_SECOND = 42,
-    FIELD_ATTACHMENT_UNRESOLVED_FIRST = 55
-} FieldEffectAttachmentCategory;
-
-/** @brief SDK angle vector with word access to paired halfwords. */
-typedef union
-{
-    SVECTOR vector;
-    struct
-    {
-        s32 xy;
-        s32 z_pad;
-    } packed;
-} FieldRotationAngles;
-
-/** @brief A packed XY pair, UV pair, and texture-page or palette halfword. */
-typedef struct
-{
-    s32 xy;
-    u16 uv;
-    u16 page;
-} FieldPackedQuadVertex;
-
-/** @brief SDK quad with packed views for copying ribbon edges and color. */
-typedef union
-{
-    POLY_FT4 gpu;
-    struct
-    {
-        s32 tag;
-        FieldPrimitiveColor color;
-        FieldPackedQuadVertex vertices[4];
-    } packed;
-} FieldRibbonQuad;
-
-/** @brief Ribbon path vectors followed by one rotation matrix per segment. */
-typedef struct
-{
-    VECTOR endpoint;
-    VECTOR position;
-    VECTOR midpoint;
-    VECTOR half_delta;
-    VECTOR delta;
-    FieldRotationAngles direction;
-    MATRIX rotations[FIELD_RIBBON_MAX_SEGMENTS];
-} FieldRibbonScratch;
-
-/** @brief Temporary rotation and distance calculations for a part matrix. */
-typedef struct
-{
-    SVECTOR direction;
-    VECTOR scale;
-    VECTOR delta;
-    VECTOR squared_delta;
-} FieldMatrixScratch;
-
-/** @brief GTE output with unsigned low halfwords for GPU vertex additions. */
-typedef union
-{
-    VECTOR vector;
-    struct
-    {
-        u16 x;
-        u16 x_high;
-        u16 y;
-        u16 y_high;
-        u16 z;
-        u16 z_high;
-        u16 pad[2];
-    } low;
-} FieldSpriteProjection;
-
-/** @brief Scratchpad vectors and local tilt matrix for sprite projection. */
-typedef struct
-{
-    SVECTOR rotated_vertex;
-    SVECTOR vertex;
-    FieldSpriteProjection projected;
-    FieldMatrixStorage rotation;
-} FieldSpriteScratch;
 
 /**
  * @brief Render a textured ribbon from an effect to its resolved target.
@@ -7523,9 +7507,9 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
         direction->packed.xy = 0;
     }
 
-    if (((part->track_flags.word >> FIELD_PART_ROTATION_MODE_SHIFT) & 3) != 0)
+    if (((part->track_flags.word >> FIELD_PART_ARC_MODE_SHIFT) & 3) != 0)
     {
-        arc_height = (part->track_flags.word >> FIELD_PART_ROTATION_TRACK_SHIFT) << 10;
+        arc_height = (part->track_flags.word >> FIELD_PART_ARC_HEIGHT_SHIFT) << 10;
     }
     else
     {
@@ -7628,9 +7612,9 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
             else if (depth >= FIELD_WORLD_OT_SIZE)
             {
                 s32 addr = (uintptr_t)quad & addr_mask;
-                quad->packed.tag = (quad->packed.tag & tag_mask) | (ordering_table[FIELD_WORLD_OT_SIZE - 1] & addr_mask);
+                quad->packed.tag = (quad->packed.tag & tag_mask) | (ordering_table[FIELD_WORLD_OT_LAST] & addr_mask);
                 quad++;
-                ordering_table[FIELD_WORLD_OT_SIZE - 1] = (ordering_table[FIELD_WORLD_OT_SIZE - 1] & tag_mask) | addr;
+                ordering_table[FIELD_WORLD_OT_LAST] = (ordering_table[FIELD_WORLD_OT_LAST] & tag_mask) | addr;
             }
             else
             {
@@ -7682,9 +7666,9 @@ u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32
     else if (depth >= FIELD_WORLD_OT_SIZE)
     {
         s32 addr = (uintptr_t)quad & FIELD_GPU_ADDRESS_MASK;
-        setaddr(quad, getaddr(&ordering_table[FIELD_WORLD_OT_SIZE - 1]));
+        setaddr(quad, getaddr(&ordering_table[FIELD_WORLD_OT_LAST]));
         quad++;
-        ordering_table[FIELD_WORLD_OT_SIZE - 1] = (ordering_table[FIELD_WORLD_OT_SIZE - 1] & FIELD_GPU_LENGTH_MASK) | addr;
+        ordering_table[FIELD_WORLD_OT_LAST] = (ordering_table[FIELD_WORLD_OT_LAST] & FIELD_GPU_LENGTH_MASK) | addr;
     }
     else
     {
@@ -8034,7 +8018,7 @@ u8* field_emit_effect_texture_page(FieldMotionRecord* effect, FieldObjectPart* p
     }
     else if (index >= FIELD_WORLD_OT_SIZE)
     {
-        addPrim(&ordering_table[FIELD_WORLD_OT_SIZE - 1], packet_cursor);
+        addPrim(&ordering_table[FIELD_WORLD_OT_LAST], packet_cursor);
         packet_cursor += sizeof(DR_TPAGE);
     }
     else
@@ -8386,7 +8370,7 @@ s32 field_resolve_effect_extent(FieldActorSlot* actor, FieldObjectPart* part)
 
     flags = part->placement_flags.word;
     {
-        s32 category = (flags >> FIELD_PART_ATTACHMENT_SHIFT) & FIELD_ATTACHMENT_MASK;
+        s32 category = (flags >> FIELD_PART_PLACEMENT_KIND_SHIFT) & FIELD_PART_PLACEMENT_KIND_MASK;
 
         if (category < FIELD_ATTACHMENT_POINT_FIRST)
         {
@@ -8415,8 +8399,7 @@ s32 field_resolve_effect_extent(FieldActorSlot* actor, FieldObjectPart* part)
 
             if ((part->placement_flags.word >> FIELD_PART_ADD_HALF_HEIGHT_SHIFT) & 1)
             {
-                if ((u32)(((part->placement_flags.word >> FIELD_PART_ATTACHMENT_SHIFT) & FIELD_ATTACHMENT_MASK) - FIELD_ATTACHMENT_LINKED_BOUNDS_FIRST) >=
-                    FIELD_ATTACHMENT_LINKED_BOUNDS_COUNT)
+                if ((u32)(FIELD_PART_PLACEMENT_KIND(part) - FIELD_ATTACHMENT_LINKED_BOUNDS_FIRST) >= FIELD_ATTACHMENT_LINKED_BOUNDS_COUNT)
                 {
                     half_extent = (g_field_object_states[owner->owner_object_index].bounds.half.bottom -
                                    g_field_object_states[owner->owner_object_index].bounds.half.top) >>
@@ -8440,13 +8423,13 @@ s32 field_resolve_effect_extent(FieldActorSlot* actor, FieldObjectPart* part)
     }
 
     {
-        s32 category = (part->placement_flags.word >> FIELD_PART_ATTACHMENT_SHIFT) & FIELD_ATTACHMENT_MASK;
+        s32 category = FIELD_PART_PLACEMENT_KIND(part);
 
         if ((u32)(category - FIELD_ATTACHMENT_POINT_SECOND) < FIELD_ATTACHMENT_GROUP_COUNT ||
             (u32)(category - FIELD_ATTACHMENT_POINT_FIRST) < FIELD_ATTACHMENT_GROUP_COUNT ||
             (u32)(category - FIELD_ATTACHMENT_UNRESOLVED_FIRST) < FIELD_ATTACHMENT_GROUP_COUNT)
         {
-            s32 attachment_category = (part->placement_flags.word >> FIELD_PART_ATTACHMENT_SHIFT) & FIELD_ATTACHMENT_MASK;
+            s32 attachment_category = FIELD_PART_PLACEMENT_KIND(part);
 
             if (attachment_category < FIELD_ATTACHMENT_UNRESOLVED_FIRST)
             {
@@ -8527,8 +8510,8 @@ void field_resolve_actor_part_anchor(FieldActorSlot* actor, FieldObjectPart* par
     s32 value;
     s32 index;
 
-    anchor_mode = part->placement_flags.word >> FIELD_PART_ANCHOR_MODE_SHIFT;
-    anchor_mode &= FIELD_PART_ANCHOR_MODE_MASK;
+    anchor_mode = part->placement_flags.word >> FIELD_PART_PLACEMENT_KIND_SHIFT;
+    anchor_mode &= FIELD_PART_PLACEMENT_KIND_MASK;
 
     switch (anchor_mode)
     {

@@ -5,4 +5,16 @@ ColumnLimit: 160
 PointerAlignment: Left
 AllowShortFunctionsOnASingleLine: None
 AllowShortLoopsOnASingleLine: true
-SortIncludes: false
+SortIncludes: CaseSensitive
+IncludeBlocks: Regroup
+IncludeIsMainRegex: '$a'
+IncludeCategories:
+  - Regex: '^"common\.h"$'
+    Priority: 1
+    SortPriority: 1
+  - Regex: '^<'
+    Priority: 1
+    SortPriority: 2
+  - Regex: '^"'
+    Priority: 3
+    SortPriority: 3
