@@ -58,6 +58,7 @@
 #define FIELD_PART_FACE_TRAVEL_BIT 14
 #define FIELD_PART_ROTATION_Z_SOURCE_SHIFT 26
 #define FIELD_PART_ROTATION_Y_SOURCE_SHIFT 28
+#define FIELD_PART_ROTATION_SOURCE_MASK 3
 #define FIELD_PART_KIND_FROM_REWARD_COUNTERS 0x00010000
 #define FIELD_PART_FLIP_FACING 0x00200000
 #define FIELD_PART_KIND_RANGE_COUNT_SHIFT 24
@@ -518,6 +519,8 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     FieldMotionRecord* record_base;
     FieldObjectState* owner_object_state;
     FieldObjectPart* part;
+    s32 rotation_z_source;
+    s32 rotation_y_source;
     s32 rotated_x;
     s32 work_value;
     s32 extent;
@@ -697,7 +700,9 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         effect->facing_or_reward_kind = part->unk1A;
     }
 
-    switch ((s32)((part->placement_flags.word >> FIELD_PART_ROTATION_Z_SOURCE_SHIFT) & 3))
+    rotation_z_source = (part->placement_flags.word >> FIELD_PART_ROTATION_Z_SOURCE_SHIFT) & FIELD_PART_ROTATION_SOURCE_MASK;
+
+    switch (rotation_z_source)
     {
         case FIELD_PART_VALUE_FIXED:
             effect->rotation_z_16 = part->rotation_extent.fields.rotation_z_track;
@@ -710,7 +715,9 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
             break;
     }
 
-    switch ((s32)((part->placement_flags.word >> FIELD_PART_ROTATION_Y_SOURCE_SHIFT) & 3))
+    rotation_y_source = (part->placement_flags.word >> FIELD_PART_ROTATION_Y_SOURCE_SHIFT) & FIELD_PART_ROTATION_SOURCE_MASK;
+
+    switch (rotation_y_source)
     {
         case FIELD_PART_VALUE_FIXED:
             effect->rotation_y_16 = part->rotation_extent.fields.rotation_y_track;
