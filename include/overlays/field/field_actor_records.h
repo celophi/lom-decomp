@@ -497,7 +497,9 @@ typedef struct FieldObjectPart
     } orientation_flags;
     /** @brief Motion scale given to spawned effects, 0x100 for 1.0 (a track index with effect parameter mode 1). */
     s16 motion_scale;
-    u8 unk1A;
+    /** @brief FieldMotionRecord::facing_or_reward_kind of spawned effects (their animation or reward kind); the first of a range with
+     * FIELD_PART_KIND_RANGE_BIT. */
+    u8 facing_or_reward_kind;
     u8 unk1B;
     /** @brief Palette track, angular divisions, footprint flags, and extent low bits. */
     union
@@ -567,10 +569,12 @@ typedef struct FieldObjectPart
     s16 offset_y;
     s16 offset_z;
     s16 unk3E;
-    s16 unk40;
-    s16 unk42;
-    s16 unk44;
-    s16 unk46;
+    /** @brief Initial work_x/work_y/work_z of spawned effects in whole units: the target point offset of the offset position sources. */
+    s16 target_offset_x;
+    s16 target_offset_y;
+    s16 target_offset_z;
+    /** @brief Part whose live effect a FIELD_POSITION_LINKED_EFFECT effect follows. */
+    s16 linked_effect_part;
 } FieldObjectPart;
 
 /** @brief FieldObjectPart::spawn_flags bit 23: the object moves without map collision (script opcodes 0xA5/0xA6 toggle it). */

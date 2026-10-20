@@ -61,6 +61,7 @@
 #define FIELD_PART_ROTATION_SOURCE_MASK 3
 #define FIELD_PART_KIND_FROM_REWARD_COUNTERS 0x00010000
 #define FIELD_PART_FLIP_FACING 0x00200000
+#define FIELD_PART_RETIRE_ON_HIT_BIT 18
 #define FIELD_PART_KIND_RANGE_COUNT_SHIFT 24
 #define FIELD_PART_KIND_RANGE_COUNT_MASK 0xF
 #define FIELD_PART_ORIENTATION_MODE_MASK 0xF0
@@ -198,7 +199,7 @@ typedef union
         unsigned kind : 4; /* copied from the source record */
         unsigned semitransparent : 1;
         unsigned motion_kind : 3;
-        unsigned unknown_27 : 1;
+        unsigned retire_on_hit : 1;
         unsigned literal_color : 1;
         unsigned parameter_mode : 2;
         unsigned unknown_31 : 1;
@@ -518,7 +519,6 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     s32 effect_index;
     s32 work_index;
     s32 object_index;
-    s32 work_limit;
     s32 direction_z;
     s32 placement_kind;
     s32 work_a;
@@ -594,7 +594,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     FIELD_EFFECT_FLAGS(effect).bits.parameter_mode = part->orientation_flags.bytes.low;
     FIELD_EFFECT_FLAGS(effect).bits.screen_space = 0;
 
-    FIELD_EFFECT_FLAGS(effect).bits.unknown_27 = part->spawn_flags.word >> 18;
+    FIELD_EFFECT_FLAGS(effect).bits.retire_on_hit = part->spawn_flags.word >> FIELD_PART_RETIRE_ON_HIT_BIT;
     FIELD_EFFECT_FLAGS(effect).bits.ground_point = 0;
     FIELD_EFFECT_FLAGS(effect).bits.unknown_18 = 0;
 
@@ -624,7 +624,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
         for (; work_index < FIELD_EFFECT_ACTIVE_RECORD_COUNT; work_index++)
         {
-            if (g_field_effect_records[work_index].state != FIELD_EFFECT_RETIRED && g_field_effect_records[work_index].part_index == part->unk46 &&
+            if (g_field_effect_records[work_index].state != FIELD_EFFECT_RETIRED && g_field_effect_records[work_index].part_index == part->linked_effect_part &&
                 g_field_effect_records[work_index].actor_index == actor->slot_index)
             {
                 found = 1;
@@ -649,11 +649,11 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
     effect->state = part->effect_kind;
     effect->saved_state = 0;
-    effect->unknown_0x34 = 0;
+    effect->frame_ticks = 0;
 
-    effect->work_x = part->unk40 << 8;
-    effect->work_y = part->unk42 << 8;
-    effect->work_z = part->unk44 << 8;
+    effect->work_x = part->target_offset_x << 8;
+    effect->work_y = part->target_offset_y << 8;
+    effect->work_z = part->target_offset_z << 8;
 
     if (((part->placement_flags.word >> FIELD_PART_KIND_RANGE_BIT) & 1) &&
         (part->appearance.word & (FIELD_PART_KIND_RANGE_COUNT_MASK << FIELD_PART_KIND_RANGE_COUNT_SHIFT)))
@@ -670,7 +670,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
                 if (owner_object->reward_counters[work_index] != 0)
                 {
                     owner_object->reward_counters[work_index]--;
-                    effect->facing_or_reward_kind = part->unk1A + work_index;
+                    effect->facing_or_reward_kind = part->facing_or_reward_kind + work_index;
                     break;
                 }
             }
@@ -683,12 +683,13 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         }
         else
         {
-            effect->facing_or_reward_kind = part->unk1A + (((part->appearance.fields.spawn_flags & FIELD_PART_KIND_RANGE_COUNT_MASK) * rand()) >> 15);
+            effect->facing_or_reward_kind =
+                part->facing_or_reward_kind + (((part->appearance.fields.spawn_flags & FIELD_PART_KIND_RANGE_COUNT_MASK) * rand()) >> 15);
         }
     }
     else
     {
-        effect->facing_or_reward_kind = part->unk1A;
+        effect->facing_or_reward_kind = part->facing_or_reward_kind;
     }
 
     rotation_z_source = (part->placement_flags.word >> FIELD_PART_ROTATION_Z_SOURCE_SHIFT) & FIELD_PART_ROTATION_SOURCE_MASK;
@@ -1077,12 +1078,12 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
                         effect->saved_state = source_record->saved_state;
                         part->appearance.fields.scale_xz = g_field_object_parts[source_record->source_object_index].appearance.fields.scale_xz;
                         part->scale_y = g_field_object_parts[source_record->source_object_index].scale_y;
-                        effect->unknown_0x34 = source_record->unknown_0x34;
-                        effect->unknown_0x35 = source_record->unknown_0x35;
+                        effect->frame_ticks = source_record->frame_ticks;
+                        effect->frame_length = source_record->frame_length;
                         effect->track_index = source_record->track_index;
                         effect->motion_remainder = source_record->motion_remainder;
                         effect->vertical_offset = source_record->vertical_offset;
-                        effect->unknown_0x38 = source_record->unknown_0x38;
+                        effect->next_height = source_record->next_height;
                         effect->motion_divisor = source_record->motion_divisor;
                     }
                     else
@@ -1163,12 +1164,12 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
                         {
                             effect->facing_or_reward_kind = g_field_effect_records[work_a].facing_or_reward_kind;
                             effect->saved_state = g_field_effect_records[work_a].saved_state;
-                            effect->unknown_0x34 = g_field_effect_records[work_a].unknown_0x34;
-                            effect->unknown_0x35 = g_field_effect_records[work_a].unknown_0x35;
+                            effect->frame_ticks = g_field_effect_records[work_a].frame_ticks;
+                            effect->frame_length = g_field_effect_records[work_a].frame_length;
                             effect->track_index = g_field_effect_records[work_a].track_index;
                             effect->motion_remainder = g_field_effect_records[work_a].motion_remainder;
                             effect->vertical_offset = g_field_effect_records[work_a].vertical_offset;
-                            effect->unknown_0x38 = g_field_effect_records[work_a].unknown_0x38;
+                            effect->next_height = g_field_effect_records[work_a].next_height;
                             break;
                         }
 
@@ -1621,12 +1622,12 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
                         {
                             effect->facing_or_reward_kind = g_field_effect_records[sibling_index].facing_or_reward_kind;
                             effect->saved_state = g_field_effect_records[sibling_index].saved_state;
-                            effect->unknown_0x34 = g_field_effect_records[sibling_index].unknown_0x34;
-                            effect->unknown_0x35 = g_field_effect_records[sibling_index].unknown_0x35;
+                            effect->frame_ticks = g_field_effect_records[sibling_index].frame_ticks;
+                            effect->frame_length = g_field_effect_records[sibling_index].frame_length;
                             effect->track_index = g_field_effect_records[sibling_index].track_index;
                             effect->motion_remainder = g_field_effect_records[sibling_index].motion_remainder;
                             effect->vertical_offset = g_field_effect_records[sibling_index].vertical_offset;
-                            effect->unknown_0x38 = g_field_effect_records[sibling_index].unknown_0x38;
+                            effect->next_height = g_field_effect_records[sibling_index].next_height;
                             break;
                         }
 
@@ -4337,11 +4338,11 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
     screen_y = FIELD_SCREEN_Y(rec->y, rec->z);
     sxy->y = screen_y;
     lift_start = rec->vertical_offset;
-    lift_end = rec->unknown_0x38;
+    lift_end = rec->next_height;
 
     if ((lift_start | lift_end) != 0)
     {
-        vertical_lift = (s8)lift_start + (((s8)lift_end - (s8)lift_start) * rec->unknown_0x34) / rec->unknown_0x35;
+        vertical_lift = (s8)lift_start + (((s8)lift_end - (s8)lift_start) * rec->frame_ticks) / rec->frame_length;
         sxy->y = screen_y - vertical_lift;
     }
     else
@@ -5164,7 +5165,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
 
                         break;
                     case 5:
-                        if ((rec->unknown_0x34 == 0) && !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
+                        if ((rec->frame_ticks == 0) && !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
                         {
                             sound_kind = g_field_resource_entries[rec->resource_index].attribute.sound_cue >> FIELD_SOUND_CUE_KIND_SHIFT;
 
@@ -5447,11 +5448,11 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
     screen_y = FIELD_SCREEN_Y(rec->y, rec->z);
     sxy->y = screen_y;
     lift_start = rec->vertical_offset;
-    lift_end = rec->unknown_0x38;
+    lift_end = rec->next_height;
 
     if ((lift_start | lift_end) != 0)
     {
-        vertical_lift = (s8)lift_start + (((s8)lift_end - (s8)lift_start) * rec->unknown_0x34) / rec->unknown_0x35;
+        vertical_lift = (s8)lift_start + (((s8)lift_end - (s8)lift_start) * rec->frame_ticks) / rec->frame_length;
         sxy->y = screen_y - vertical_lift;
     }
     else
@@ -6058,7 +6059,7 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
 
                             break;
                         case 5:
-                            if ((rec->unknown_0x34 == 0) && !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
+                            if ((rec->frame_ticks == 0) && !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
                             {
                                 FieldResourceEntry* resources = g_field_resource_entries;
                                 u8 idx = rec->resource_index;

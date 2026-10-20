@@ -210,11 +210,13 @@ typedef struct FieldMotionRecord
     s16 reference_index;
     u8 rotation_z_16;
     u8 rotation_y_16;
-    u8 unknown_0x34;
-    u8 unknown_0x35;
+    /** @brief Ticks spent on the current animation frame, and the frame's length in ticks (FieldActor::frame_ticks/frame_length). */
+    u8 frame_ticks;
+    u8 frame_length;
     u8 motion_remainder;
     u8 vertical_offset;
-    u8 unknown_0x38;
+    /** @brief Height of the next animation frame; the sprite lift interpolates vertical_offset towards it over the frame. */
+    u8 next_height;
     u8 path_group;
     u8 source_object_index;
     u8 resource_index;
