@@ -7,6 +7,7 @@
  */
 
 #include "common.h"
+
 #include "common/vector.h"
 
 struct AkaoHeader;
@@ -352,6 +353,19 @@ typedef struct FieldObjectState
 
 extern FieldObjectState g_field_object_states[FIELD_OBJECT_COUNT];
 
+/**
+ * @brief State record of field object @p object_index.
+ * @param object_index Index into g_field_object_states.
+ * @return The object's state record.
+ */
+static inline FieldObjectState* field_object_state(s32 object_index)
+{
+    FieldObjectState* states;
+
+    states = g_field_object_states;
+    return &states[object_index];
+}
+
 /** @brief FieldObjectState::contact.bytes.animation_actor_index value without an animation actor. */
 #define FIELD_ANIMATION_ACTOR_NONE 0xFF
 
@@ -575,6 +589,9 @@ typedef struct FieldObjectPart
 #define FIELD_PART_STRETCH_TO_TARGET_SHIFT 2
 #define FIELD_PART_AIM_AT_TARGET_SHIFT 11
 
+/** @brief FieldObjectPart::orientation_flags bit 2: the part only runs on track 0, and its effects serve every track. */
+#define FIELD_PART_FIRST_TRACK_ONLY 0x4
+
 /** @brief FieldObjectPart::placement_flags bit 25: a new effect takes its colour from parameter tracks instead of the part tint. */
 #define FIELD_PART_TRACK_COLOR_BIT 25
 #define FIELD_PART_TRACK_COLOR (1 << FIELD_PART_TRACK_COLOR_BIT)
@@ -584,7 +601,7 @@ typedef struct FieldObjectPart
 #define FIELD_PART_FOOTPRINT_SCALES_Y 0x04000000
 
 /** @brief A part size reduced in ten-percent steps by the footprint strength of object @p owner_index. */
-#define FIELD_FOOTPRINT_SCALED_SIZE(size, owner_index)                                                                                                       \
+#define FIELD_FOOTPRINT_SCALED_SIZE(size, owner_index)                                                                                                         \
     ((size) - (((size) * ((s32)(FIELD_OBJECT_FOOTPRINT_STRENGTH_RANGE - g_field_object_states[owner_index].effect_footprint_strength) >> 6)) / 10))
 
 /** @brief FieldObjectPart::appearance scale_xz of a full-size object; smaller objects use the small collision footprint. */

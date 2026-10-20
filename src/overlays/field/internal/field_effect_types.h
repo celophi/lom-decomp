@@ -5,8 +5,8 @@
 #ifndef FIELD_EFFECT_TYPES_H
 #define FIELD_EFFECT_TYPES_H
 
-#include "overlays/field/field_types.h"
 #include "overlays/field/field_object_state.h"
+#include "overlays/field/field_types.h"
 
 #define FIELD_EFFECT_POOL_COUNT 0x103
 #define FIELD_EFFECT_ACTIVE_RECORD_COUNT 256
@@ -15,9 +15,18 @@
 /** @brief FieldMotionRecord::state of a free (retired) effect record. */
 #define FIELD_EFFECT_RETIRED 0xFF
 
-/** @brief Placement kinds of a part's effects (FieldObjectPart::placement_flags bits 18-23) that are understood. */
+/**
+ * @brief Placement kinds of a part's effects (FieldObjectPart::placement_flags bits 18-23).
+ * @note The bounds and sibling kinds are ranges: the kind's offset from the first value selects a bounds point or a part.
+ */
 typedef enum
 {
+    /** @brief On one of FIELD_PLACEMENT_BOUNDS_POINT_COUNT points of the owner's bounds. */
+    FIELD_PLACEMENT_OWNER_BOUNDS = 0x00,
+    /** @brief On the same points of the tracked target's bounds. */
+    FIELD_PLACEMENT_TRACK_BOUNDS = 0x0A,
+    /** @brief On the live effect of part 0 to 7 of the same actor. */
+    FIELD_PLACEMENT_SIBLING = 0x14,
     /** @brief At the centre of the screen and the screen edges and corners (screen space). */
     FIELD_PLACEMENT_SCREEN_CENTER = 0x1C,
     FIELD_PLACEMENT_SCREEN_TOP = 0x1D,
@@ -31,8 +40,30 @@ typedef enum
     /** @brief At the part's offset in field coordinates. */
     FIELD_PLACEMENT_FIELD_POSITION = 0x25,
     /** @brief Not placed. */
-    FIELD_PLACEMENT_NONE = 0x26
+    FIELD_PLACEMENT_NONE = 0x26,
+    /** @brief At the owner or the tracked target, moved by the part's offset. */
+    FIELD_PLACEMENT_OWNER_OFFSET = 0x27,
+    FIELD_PLACEMENT_TRACK_OFFSET = 0x28,
+    /** @brief At one of the owner's attachment points; the second kind takes only its x and adds the part's x/z offset. */
+    FIELD_PLACEMENT_OWNER_ATTACHMENT = 0x29,
+    /** @brief On the live effect of part 8 to 15 of the same actor. */
+    FIELD_PLACEMENT_SIBLING_HIGH = 0x2A,
+    FIELD_PLACEMENT_OWNER_ATTACHMENT_X = 0x32,
+    /** @brief On the owner's current ground-effect point (g_field_spawn_ground_point). */
+    FIELD_PLACEMENT_GROUND_POINT = 0x33,
+    /** @brief At the tracked target, moved by the actor's per-track offset. */
+    FIELD_PLACEMENT_TRACK_ACTION_OFFSET = 0x34,
+    /** @brief At the shared point D_80105778. */
+    FIELD_PLACEMENT_GLOBAL_POINT = 0x35,
+    /** @brief At the part's offset, without the view offset. */
+    FIELD_PLACEMENT_PART_OFFSET = 0x36,
+    /** @brief On the live effect of part 0 to 7, moved by the part's offset. */
+    FIELD_PLACEMENT_SIBLING_OFFSET = 0x37
 } FieldEffectPlacement;
+
+/** @brief Bounds points per bounds placement range, and parts per sibling placement range. */
+#define FIELD_PLACEMENT_BOUNDS_POINT_COUNT 10
+#define FIELD_PLACEMENT_SIBLING_COUNT 8
 
 /** @brief FieldMotionRecord::state: how an active effect is rendered. */
 typedef enum
