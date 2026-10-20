@@ -689,6 +689,7 @@ typedef struct FieldAnimationDef
 #define FIELD_ANIM_RESTART_AT_END 0x20
 #define FIELD_ANIM_OWNER_CURVE_SHIFT 8
 #define FIELD_ANIM_TARGET_CURVE_SHIFT 12
+#define FIELD_ANIM_CURVE_MASK 0xF
 /** @brief Visibility without a curve: the part named in the curve bits hides the owner or the targets while its effects live. */
 #define FIELD_ANIM_OWNER_PART_HIDES (FIELD_ANIM_OWNER_VISIBILITY | FIELD_ANIM_OWNER_TRACK_OFF)
 #define FIELD_ANIM_TARGET_PART_HIDES (FIELD_ANIM_TARGET_VISIBILITY | FIELD_ANIM_TARGET_TRACK_OFF)

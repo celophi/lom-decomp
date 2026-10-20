@@ -12,6 +12,8 @@
 #define FIELD_WORLD_OT_LAST (FIELD_WORLD_OT_SIZE - 1)
 /** @brief Shift from a world z position to its world ordering-table entry. */
 #define FIELD_WORLD_OT_DEPTH_SHIFT 7
+/** @brief World z distance between two neighbouring ordering-table entries. */
+#define FIELD_WORLD_OT_DEPTH_STEP (1 << FIELD_WORLD_OT_DEPTH_SHIFT)
 #define FIELD_PRIMITIVE_ARENA_SIZE 15360
 
 /** @brief Ordering table, display setup, and primitive storage for one field frame. */

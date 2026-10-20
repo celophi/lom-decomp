@@ -61,6 +61,22 @@ typedef enum
     FIELD_PLACEMENT_SIBLING_OFFSET = 0x37
 } FieldEffectPlacement;
 
+/** @brief Point on an object's bounds selected by a bounds placement (the offset from FIELD_PLACEMENT_OWNER_BOUNDS or FIELD_PLACEMENT_TRACK_BOUNDS). */
+typedef enum
+{
+    FIELD_BOUNDS_POINT_ORIGIN = 0,
+    FIELD_BOUNDS_POINT_CENTER = 1,
+    /** @brief Horizontal centre at the object's origin height. */
+    FIELD_BOUNDS_POINT_CENTER_X = 2,
+    FIELD_BOUNDS_POINT_TOP_CENTER = 3,
+    FIELD_BOUNDS_POINT_LEFT_CENTER = 4,
+    FIELD_BOUNDS_POINT_RIGHT_CENTER = 5,
+    FIELD_BOUNDS_POINT_TOP_LEFT = 6,
+    FIELD_BOUNDS_POINT_TOP_RIGHT = 7,
+    FIELD_BOUNDS_POINT_BOTTOM_LEFT = 8,
+    FIELD_BOUNDS_POINT_BOTTOM_RIGHT = 9
+} FieldBoundsPoint;
+
 /** @brief Bounds points per bounds placement range, and parts per sibling placement range. */
 #define FIELD_PLACEMENT_BOUNDS_POINT_COUNT 10
 #define FIELD_PLACEMENT_SIBLING_COUNT 8

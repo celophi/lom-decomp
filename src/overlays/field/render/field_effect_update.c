@@ -54,6 +54,12 @@
 #define FIELD_PART_ATTACHMENT_INDEX_SHIFT 21
 #define FIELD_PART_ATTACHMENT_INDEX_MASK 3
 #define FIELD_PART_MIRROR_X_WITH_OWNER 0x08000000
+/** @brief Placement flags bit 0: the new effect sorts one ordering-table step further (FIELD_WORLD_OT_DEPTH_STEP). */
+#define FIELD_PART_DEPTH_STEP 0x00000001
+/** @brief Effect flags bits 16-19: the position source used instead of behavior bits 8-10 when orientation_flags has a mode. */
+#define FIELD_PART_ORIENTED_POSITION_SOURCE_SHIFT 16
+#define FIELD_PART_ORIENTED_POSITION_SOURCE_MASK 0xF
+#define FIELD_PART_DISTANCE_MODE_SHIFT 6
 #define FIELD_PART_KIND_RANGE_BIT 8
 #define FIELD_PART_FACE_TRAVEL_BIT 14
 #define FIELD_PART_ROTATION_Z_SOURCE_SHIFT 26
@@ -578,7 +584,8 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
     if (part->orientation_flags.word & FIELD_PART_ORIENTATION_MODE_MASK)
     {
-        effect->color_position.fields.position_source = (part->effect_flags.word >> 16) & 0xF;
+        effect->color_position.fields.position_source =
+            (part->effect_flags.word >> FIELD_PART_ORIENTED_POSITION_SOURCE_SHIFT) & FIELD_PART_ORIENTED_POSITION_SOURCE_MASK;
     }
     else
     {
@@ -586,7 +593,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     }
 
     FIELD_EFFECT_FLAGS(effect).bits.motion_kind = part->behavior_flags.word >> FIELD_PART_MOTION_KIND_SHIFT;
-    FIELD_EFFECT_FLAGS(effect).bits.distance_mode = part->rotation_extent.fields.extent_value_mode >> 6;
+    FIELD_EFFECT_FLAGS(effect).bits.distance_mode = part->rotation_extent.fields.extent_value_mode >> FIELD_PART_DISTANCE_MODE_SHIFT;
     effect->lifetime = part->active_frames;
     effect->motion_parameter = part->orientation_flags.halves.high;
     effect->motion_scale = part->motion_scale;
@@ -598,7 +605,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     FIELD_EFFECT_FLAGS(effect).bits.ground_point = 0;
     FIELD_EFFECT_FLAGS(effect).bits.unknown_18 = 0;
 
-    half_turn_8bit = 128;
+    half_turn_8bit = FIELD_HEADING_HALF_TURN;
     FIELD_EFFECT_FLAGS(effect).bits.kind = 0;
 
     if (part->effect_flags.word & FIELD_EFFECT_SEMITRANSPARENT)
@@ -732,9 +739,9 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         original_angle = effect->rotation_y_16;
         angle = original_angle;
 
-        if (angle >= 64 && original_angle < 128)
+        if (angle >= FIELD_HEADING_QUARTER_TURN && original_angle < FIELD_HEADING_HALF_TURN)
         {
-            effect->rotation_y_16 = 128 - original_angle;
+            effect->rotation_y_16 = FIELD_HEADING_HALF_TURN - original_angle;
         }
         else
         {
@@ -1004,39 +1011,39 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
             switch (placement_kind)
             {
-                case 1:
+                case FIELD_BOUNDS_POINT_CENTER:
                     work_value = (placement_object->bounds.half.right + placement_object->bounds.half.left) >> 1;
                     work_a = (placement_object->bounds.half.bottom + placement_object->bounds.half.top) >> 1;
                     break;
-                case 2:
+                case FIELD_BOUNDS_POINT_CENTER_X:
                     work_value = (placement_object->bounds.half.right + placement_object->bounds.half.left) >> 1;
                     work_a = 0;
                     break;
-                case 3:
+                case FIELD_BOUNDS_POINT_TOP_CENTER:
                     work_value = (placement_object->bounds.half.right + placement_object->bounds.half.left) >> 1;
                     work_a = placement_object->bounds.half.top;
                     break;
-                case 4:
+                case FIELD_BOUNDS_POINT_LEFT_CENTER:
                     work_value = placement_object->bounds.half.left;
                     work_a = (placement_object->bounds.half.bottom + placement_object->bounds.half.top) >> 1;
                     break;
-                case 5:
+                case FIELD_BOUNDS_POINT_RIGHT_CENTER:
                     work_value = placement_object->bounds.half.right;
                     work_a = (placement_object->bounds.half.bottom + placement_object->bounds.half.top) >> 1;
                     break;
-                case 6:
+                case FIELD_BOUNDS_POINT_TOP_LEFT:
                     work_value = placement_object->bounds.half.left;
                     work_a = placement_object->bounds.half.top;
                     break;
-                case 7:
+                case FIELD_BOUNDS_POINT_TOP_RIGHT:
                     work_value = placement_object->bounds.half.right;
                     work_a = placement_object->bounds.half.top;
                     break;
-                case 8:
+                case FIELD_BOUNDS_POINT_BOTTOM_LEFT:
                     work_value = placement_object->bounds.half.left;
                     work_a = placement_object->bounds.half.bottom;
                     break;
-                case 9:
+                case FIELD_BOUNDS_POINT_BOTTOM_RIGHT:
                     work_value = placement_object->bounds.half.right;
                     work_a = placement_object->bounds.half.bottom;
                     break;
@@ -1732,9 +1739,9 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         }
     }
 
-    if (part->placement_flags.word & 1)
+    if (part->placement_flags.word & FIELD_PART_DEPTH_STEP)
     {
-        effect->z += 0x80;
+        effect->z += FIELD_WORLD_OT_DEPTH_STEP;
     }
 
     switch (FIELD_EFFECT_FLAGS(effect).bits.parameter_mode)
@@ -1836,7 +1843,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
         if ((actor->animation->sync_flags & FIELD_ANIM_OWNER_PART_HIDES) == FIELD_ANIM_OWNER_PART_HIDES)
         {
-            if (((actor->animation->sync_flags >> FIELD_ANIM_OWNER_CURVE_SHIFT) & 0xF) == part_index)
+            if (((actor->animation->sync_flags >> FIELD_ANIM_OWNER_CURVE_SHIFT) & FIELD_ANIM_CURVE_MASK) == part_index)
             {
                 g_field_actors[actor->owner_object_index].state = FIELD_ACTOR_HIDDEN;
                 g_field_object_states[actor->owner_object_index].contact.word |= FIELD_CONTACT_ANIMATION_HIDDEN;
@@ -2574,39 +2581,39 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
 
                 switch (selector)
                 {
-                    case 1:
+                    case FIELD_BOUNDS_POINT_CENTER:
                         offset_or_angle = (reference_object->bounds.half.right + reference_object->bounds.half.left) >> 1;
                         offset_y = (reference_object->bounds.half.bottom + reference_object->bounds.half.top) >> 1;
                         break;
-                    case 2:
+                    case FIELD_BOUNDS_POINT_CENTER_X:
                         offset_y = 0;
                         offset_or_angle = (reference_object->bounds.half.right + reference_object->bounds.half.left) >> 1;
                         break;
-                    case 3:
+                    case FIELD_BOUNDS_POINT_TOP_CENTER:
                         offset_y = reference_object->bounds.half.top;
                         offset_or_angle = (reference_object->bounds.half.right + reference_object->bounds.half.left) >> 1;
                         break;
-                    case 4:
+                    case FIELD_BOUNDS_POINT_LEFT_CENTER:
                         offset_or_angle = reference_object->bounds.half.left;
                         offset_y = (reference_object->bounds.half.bottom + reference_object->bounds.half.top) >> 1;
                         break;
-                    case 5:
+                    case FIELD_BOUNDS_POINT_RIGHT_CENTER:
                         offset_or_angle = reference_object->bounds.half.right;
                         offset_y = (reference_object->bounds.half.bottom + reference_object->bounds.half.top) >> 1;
                         break;
-                    case 6:
+                    case FIELD_BOUNDS_POINT_TOP_LEFT:
                         offset_or_angle = reference_object->bounds.half.left;
                         offset_y = reference_object->bounds.half.top;
                         break;
-                    case 7:
+                    case FIELD_BOUNDS_POINT_TOP_RIGHT:
                         offset_or_angle = reference_object->bounds.half.right;
                         offset_y = reference_object->bounds.half.top;
                         break;
-                    case 8:
+                    case FIELD_BOUNDS_POINT_BOTTOM_LEFT:
                         offset_or_angle = reference_object->bounds.half.left;
                         offset_y = reference_object->bounds.half.bottom;
                         break;
-                    case 9:
+                    case FIELD_BOUNDS_POINT_BOTTOM_RIGHT:
                         offset_or_angle = reference_object->bounds.half.right;
                         offset_y = reference_object->bounds.half.bottom;
                         break;
@@ -2881,9 +2888,9 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
         z = (((s32)(rotated_vector->vz << 0x10)) >> 8) + placement_origin->vz;
         record->z = z;
 
-        if (part->placement_flags.word & 1)
+        if (part->placement_flags.word & FIELD_PART_DEPTH_STEP)
         {
-            record->z = z + 0x80;
+            record->z = z + FIELD_WORLD_OT_DEPTH_STEP;
         }
 
         flags = part->placement_flags.word;
@@ -8562,39 +8569,39 @@ void field_resolve_actor_part_anchor(FieldActorSlot* actor, FieldObjectPart* par
 
             switch (anchor_mode)
             {
-                case 1:
+                case FIELD_BOUNDS_POINT_CENTER:
                     value = (object->bounds.half.right + object->bounds.half.left) >> 1;
                     index = (object->bounds.half.bottom + object->bounds.half.top) >> 1;
                     break;
-                case 2:
+                case FIELD_BOUNDS_POINT_CENTER_X:
                     value = (object->bounds.half.right + object->bounds.half.left) >> 1;
                     index = 0;
                     break;
-                case 3:
+                case FIELD_BOUNDS_POINT_TOP_CENTER:
                     value = (object->bounds.half.right + object->bounds.half.left) >> 1;
                     index = object->bounds.half.top;
                     break;
-                case 4:
+                case FIELD_BOUNDS_POINT_LEFT_CENTER:
                     value = object->bounds.half.left;
                     index = (object->bounds.half.bottom + object->bounds.half.top) >> 1;
                     break;
-                case 5:
+                case FIELD_BOUNDS_POINT_RIGHT_CENTER:
                     value = object->bounds.half.right;
                     index = (object->bounds.half.bottom + object->bounds.half.top) >> 1;
                     break;
-                case 6:
+                case FIELD_BOUNDS_POINT_TOP_LEFT:
                     value = object->bounds.half.left;
                     index = object->bounds.half.top;
                     break;
-                case 7:
+                case FIELD_BOUNDS_POINT_TOP_RIGHT:
                     value = object->bounds.half.right;
                     index = object->bounds.half.top;
                     break;
-                case 8:
+                case FIELD_BOUNDS_POINT_BOTTOM_LEFT:
                     value = object->bounds.half.left;
                     index = object->bounds.half.bottom;
                     break;
-                case 9:
+                case FIELD_BOUNDS_POINT_BOTTOM_RIGHT:
                     value = object->bounds.half.right;
                     index = object->bounds.half.bottom;
                     break;
