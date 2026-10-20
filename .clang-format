@@ -5,6 +5,7 @@ ColumnLimit: 160
 PointerAlignment: Left
 AllowShortFunctionsOnASingleLine: None
 AllowShortLoopsOnASingleLine: true
+IndentCaseLabels: true
 SortIncludes: CaseSensitive
 IncludeBlocks: Regroup
 IncludeIsMainRegex: '$a'
