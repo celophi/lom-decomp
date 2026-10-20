@@ -52,7 +52,6 @@ void field_initialize_actor_slots(void);
 void field_reset_global_color_scale(void);
 void field_restart_actor_animation(FieldActor* actor);
 s32 field_is_scene_fading(void);
-void field_reset_draw_state(void);
 void field_show_battle_results(void);
 void field_update_object_effects(s32 object_index);
 void field_camera_select_scroll_limits(void);

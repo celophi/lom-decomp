@@ -3,15 +3,17 @@
  */
 
 #include "common.h"
+#include <inline_c.h>
+#include <libetc.h>
+#include <libgte.h>
+
+#include "../internal/field_actor_runtime.h"
 #include "../internal/field_effect_types.h"
-#include "overlays/field/field_object_state.h"
 #include "../internal/field_mesh.h"
 #include "../internal/field_mesh_transform.h"
-#include <libgte.h>
-#include <libetc.h>
-#include <inline_c.h>
+#include "overlays/field/field_actor_records.h"
+#include "overlays/field/field_object_state.h"
 #include "sdk/gte_dmpsx_compat.h"
-#include "../internal/field_actor_runtime.h"
 
 /* Local view: the definition in field_actor_runtime.c takes the animation data it reads. */
 u32 field_evaluate_parameter_track_at_time(FieldActorSlot* actor, s32 track, s32 time);
@@ -366,9 +368,9 @@ s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, Fi
         RotMatrixZ(part->rotation_y_16 << 4, matrix);
     }
 
-    if ((part->behavior_flags.word >> 3) & 1)
+    if ((part->behavior_flags.word >> FIELD_PART_ORIENTED_SHIFT) & 1)
     {
-        if ((part->placement_flags.word >> 0xB) & 1)
+        if ((part->placement_flags.word >> FIELD_PART_AIM_AT_TARGET_SHIFT) & 1)
         {
             field_resolve_effect_position(record, part, scale);
             component = scale->vz;
@@ -396,7 +398,7 @@ s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, Fi
 
     field_copy_matrix_rotation(base_matrix, matrix);
 
-    if ((part->placement_flags.word >> 2) & 1)
+    if ((part->placement_flags.word >> FIELD_PART_STRETCH_TO_TARGET_SHIFT) & 1)
     {
         g_field_track_index = (s32)record->track_index;
         field_resolve_effect_position(record, part, scale);

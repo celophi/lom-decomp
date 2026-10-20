@@ -2,8 +2,9 @@
 #define FIELD_ACTOR_H
 
 #include "common.h"
-#include "overlays/field/field_actor_records.h"
+
 #include "field_actor_binding.h"
+#include "overlays/field/field_actor_records.h"
 
 /**
  * @file field_actor.h
@@ -71,8 +72,6 @@ enum
 #define FIELD_ANIMATION_RUN 10
 /** @brief Distance a raised actor (negative FieldActor::y) drops each frame on its way back to the ground. */
 #define FIELD_ACTOR_FALL_STEP 0x800
-/** @brief World coordinates are 24.8 fixed point. */
-#define FIELD_POSITION_SHIFT 8
 /** @brief Scratchpad vector that receives an actor displacement. */
 #define FIELD_SCRATCH_DISPLACEMENT ((Vec3i*)SCRATCHPAD_ADDRESS)
 /** @brief Scratchpad vector loaded into the GTE to square a whole-unit distance. */
@@ -120,7 +119,8 @@ enum
 #define FIELD_TECHNIQUE_GAUGE_FULL 0xFF
 /** @brief Companion character ids from this value on are drawn in a selectable colour and get the companion HUD panel. */
 #define FIELD_COMPANION_COLOR_ID_MIN 0x41
-/** @brief FieldActor::control bits 19-22 (FieldActorControl::bits.palette) read as a word, and the CLUT column the partner gets when the partner is the hero. */
+/** @brief FieldActor::control bits 19-22 (FieldActorControl::bits.palette) read as a word, and the CLUT column the partner gets when the partner is the hero.
+ */
 #define FIELD_CONTROL_PALETTE_SHIFT 19
 #define FIELD_CONTROL_PALETTE_PARTNER 10
 #define FIELD_CONTROL_PALETTE(word) (((word) >> FIELD_CONTROL_PALETTE_SHIFT) & 0xF)
@@ -139,7 +139,7 @@ enum
  * @note Such an object takes no knockback, is skipped by overlap tests, stops its looping
  *       effects, and is left out of the camera's party average.
  */
-#define FIELD_OBJECT_IMMOBILE_FLAGS                                                                                                   \
+#define FIELD_OBJECT_IMMOBILE_FLAGS                                                                                                                            \
     (FIELD_OBJECT_FLAG_PARALYSIS | FIELD_OBJECT_FLAG_HYPNOSIS | FIELD_OBJECT_FLAG_SLEEP | FIELD_OBJECT_FLAG_FROZEN | FIELD_OBJECT_UNTARGETABLE_FLAGS)
 
 /** @brief Word, halfword and bit views of an actor's control-mode word. */

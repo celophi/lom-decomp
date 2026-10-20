@@ -7,6 +7,7 @@
  */
 
 #include "common.h"
+
 #include "common/vector.h"
 
 struct AkaoHeader;
@@ -71,6 +72,11 @@ extern u8 g_field_resource_buffer[];
 
 /** @brief Number of field object states (g_field_object_states). */
 #define FIELD_OBJECT_COUNT 13
+
+/** @brief World coordinates are 24.8 fixed point. */
+#define FIELD_POSITION_SHIFT 8
+/** @brief Shift from a GTE unit-vector component (12 fraction bits) times a length to world position units. */
+#define FIELD_GTE_TO_POSITION_SHIFT (12 - FIELD_POSITION_SHIFT)
 /** @brief Objects 0 and 1 are the two player-controlled party members; each has its own binding. */
 #define FIELD_PLAYER_COUNT 2
 /** @brief Objects 0 to 2 are the party: the two players and the companion. */
@@ -352,6 +358,19 @@ typedef struct FieldObjectState
 
 extern FieldObjectState g_field_object_states[FIELD_OBJECT_COUNT];
 
+/**
+ * @brief State record of field object @p object_index.
+ * @param object_index Index into g_field_object_states.
+ * @return The object's state record.
+ */
+static inline FieldObjectState* field_object_state(s32 object_index)
+{
+    FieldObjectState* states;
+
+    states = g_field_object_states;
+    return &states[object_index];
+}
+
 /** @brief FieldObjectState::contact.bytes.animation_actor_index value without an animation actor. */
 #define FIELD_ANIMATION_ACTOR_NONE 0xFF
 
@@ -464,7 +483,8 @@ typedef struct FieldObjectPart
         struct
         {
             u16 low;
-            u16 high;
+            /** @brief Default motion parameter of spawned effects, or its track index or distance divisor (FieldEffectFlags::parameter_mode). */
+            s16 high;
         } halves;
         struct
         {
@@ -482,7 +502,9 @@ typedef struct FieldObjectPart
     } orientation_flags;
     /** @brief Motion scale given to spawned effects, 0x100 for 1.0 (a track index with effect parameter mode 1). */
     s16 motion_scale;
-    u8 unk1A;
+    /** @brief FieldMotionRecord::facing_or_reward_kind of spawned effects (their animation or reward kind); the first of a range with
+     * FIELD_PART_KIND_RANGE_BIT. */
+    u8 facing_or_reward_kind;
     u8 unk1B;
     /** @brief Palette track, angular divisions, footprint flags, and extent low bits. */
     union
@@ -513,7 +535,7 @@ typedef struct FieldObjectPart
     } rotation_extent;
     union
     {
-        s32 word;
+        u32 word;
         u8 bytes[4];
     } effect_flags;
     FieldPartFlags placement_flags;
@@ -552,10 +574,12 @@ typedef struct FieldObjectPart
     s16 offset_y;
     s16 offset_z;
     s16 unk3E;
-    s16 unk40;
-    s16 unk42;
-    s16 unk44;
-    s16 unk46;
+    /** @brief Initial work_x/work_y/work_z of spawned effects in whole units: the target point offset of the offset position sources. */
+    s16 target_offset_x;
+    s16 target_offset_y;
+    s16 target_offset_z;
+    /** @brief Part whose live effect a FIELD_POSITION_LINKED_EFFECT effect follows. */
+    s16 linked_effect_part;
 } FieldObjectPart;
 
 /** @brief FieldObjectPart::spawn_flags bit 23: the object moves without map collision (script opcodes 0xA5/0xA6 toggle it). */
@@ -565,10 +589,21 @@ typedef struct FieldObjectPart
 /** @brief FieldObjectPart::effect_flags bit 20: the part is a solid body; it collides with the map, casts a footprint and its sprite hit quads act. */
 #define FIELD_PART_SOLID 0x00100000
 
+/** @brief FieldObjectPart::effect_flags bit 31: spawning the part also spawns its linked part (rotation_extent.fields.linked_part). */
+#define FIELD_PART_SPAWN_LINKED 0x80000000
+
 /** @brief FieldObjectPart::behavior_flags bits 22-23 (bits.blend_mode): GPU blend mode of the part's sprites and mesh (getTPage abr). */
 #define FIELD_PART_BLEND_MODE_SHIFT 22
 #define FIELD_PART_BLEND_MODE_MASK 0xC00000
 #define FIELD_PART_BLEND_MODE(part) (((part)->behavior_flags.word >> FIELD_PART_BLEND_MODE_SHIFT) & 3)
+
+/** @brief FieldObjectPart::behavior_flags bit 3 and placement_flags bits 2 and 11: how the part's matrix is oriented. */
+#define FIELD_PART_ORIENTED_SHIFT 3
+#define FIELD_PART_STRETCH_TO_TARGET_SHIFT 2
+#define FIELD_PART_AIM_AT_TARGET_SHIFT 11
+
+/** @brief FieldObjectPart::orientation_flags bit 2: the part only runs on track 0, and its effects serve every track. */
+#define FIELD_PART_FIRST_TRACK_ONLY 0x4
 
 /** @brief FieldObjectPart::placement_flags bit 25: a new effect takes its colour from parameter tracks instead of the part tint. */
 #define FIELD_PART_TRACK_COLOR_BIT 25
@@ -579,7 +614,7 @@ typedef struct FieldObjectPart
 #define FIELD_PART_FOOTPRINT_SCALES_Y 0x04000000
 
 /** @brief A part size reduced in ten-percent steps by the footprint strength of object @p owner_index. */
-#define FIELD_FOOTPRINT_SCALED_SIZE(size, owner_index)                                                                                                       \
+#define FIELD_FOOTPRINT_SCALED_SIZE(size, owner_index)                                                                                                         \
     ((size) - (((size) * ((s32)(FIELD_OBJECT_FOOTPRINT_STRENGTH_RANGE - g_field_object_states[owner_index].effect_footprint_strength) >> 6)) / 10))
 
 /** @brief FieldObjectPart::appearance scale_xz of a full-size object; smaller objects use the small collision footprint. */
@@ -659,6 +694,7 @@ typedef struct FieldAnimationDef
 #define FIELD_ANIM_RESTART_AT_END 0x20
 #define FIELD_ANIM_OWNER_CURVE_SHIFT 8
 #define FIELD_ANIM_TARGET_CURVE_SHIFT 12
+#define FIELD_ANIM_CURVE_MASK 0xF
 /** @brief Visibility without a curve: the part named in the curve bits hides the owner or the targets while its effects live. */
 #define FIELD_ANIM_OWNER_PART_HIDES (FIELD_ANIM_OWNER_VISIBILITY | FIELD_ANIM_OWNER_TRACK_OFF)
 #define FIELD_ANIM_TARGET_PART_HIDES (FIELD_ANIM_TARGET_VISIBILITY | FIELD_ANIM_TARGET_TRACK_OFF)

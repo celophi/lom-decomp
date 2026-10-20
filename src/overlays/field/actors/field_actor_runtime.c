@@ -5,37 +5,38 @@
  */
 
 #include "common.h"
-#include "overlays/field/field_portrait.h"
-#include "main/controller_internal.h"
-#include "main/main.h"
-#include "main/cdrom.h"
-#include "main/cd_resources.h"
-#include "main/display.h"
-#include "main/audio/game_audio.h"
-#include "main/audio/akao.h"
 #include <libgpu.h>
-#include "../internal/field_calls.h"
-#include "overlays/field/field_types.h"
-#include "../internal/field_actor_tables.h"
-#include "../internal/field_actor_runtime.h"
-#include "../internal/field_actor_palette.h"
+#include <memory.h>
+#include <rand.h>
+
 #include "../internal/field_ability_progression.h"
+#include "../internal/field_actor_behavior.h"
+#include "../internal/field_actor_palette.h"
+#include "../internal/field_actor_routes.h"
+#include "../internal/field_actor_runtime.h"
+#include "../internal/field_actor_sequence_runtime.h"
+#include "../internal/field_actor_tables.h"
+#include "../internal/field_calls.h"
+#include "../internal/field_contact_geometry.h"
 #include "../internal/field_effect_dispatch.h"
 #include "../internal/field_effect_render_state.h"
 #include "../internal/field_modal_runtime.h"
-#include "overlays/field/field_scene_transition.h"
-#include "overlays/field/field_text.h"
-#include <rand.h>
-#include "../internal/field_contact_geometry.h"
-#include <memory.h>
-#include "../internal/field_actor_behavior.h"
-#include "main/overlay_memory.h"
 #include "common/gpu_packet.h"
+#include "main/audio/akao.h"
+#include "main/audio/akao_cmd.h"
+#include "main/audio/game_audio.h"
+#include "main/cd_resources.h"
+#include "main/cdrom.h"
+#include "main/controller_internal.h"
+#include "main/display.h"
+#include "main/main.h"
+#include "main/overlay_memory.h"
 #include "overlays/field/field_actor_records.h"
 #include "overlays/field/field_input.h"
-#include "../internal/field_actor_routes.h"
-#include "../internal/field_actor_sequence_runtime.h"
-#include "main/audio/akao_cmd.h"
+#include "overlays/field/field_portrait.h"
+#include "overlays/field/field_scene_transition.h"
+#include "overlays/field/field_text.h"
+#include "overlays/field/field_types.h"
 
 void field_restart_actor_animation(FieldActor* actor);
 void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_entry_index);
@@ -103,8 +104,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 #define FIELD_PART_NO_EFFECT 0xFF
 /** @brief FieldObjectPart::spawn_flags bit: the part is an attack sphere. */
 #define FIELD_PART_ATTACK_SPHERE 0x04000000
-/** @brief FieldObjectPart::orientation_flags bit: the part only runs on track 0. */
-#define FIELD_PART_FIRST_TRACK_ONLY 0x4
 /** @brief FieldObjectPart::placement_flags bits: fixed effect count, spawn only when none is live, owner colour off, spawn cap. */
 #define FIELD_PART_FIXED_COUNT_SHIFT 24
 #define FIELD_PART_SPAWN_CAP_SHIFT 30
@@ -1256,8 +1255,8 @@ void field_update_actor_animations(void)
                     {
                         if (track_index != 0)
                         {
-                            u8 combined_value =
-                                field_evaluate_parameter_track(slot, curve_selector & FIELD_TRACK_INDEX_MASK) | controller->ports[0].actuator_control.fields.large_motor_command;
+                            u8 combined_value = field_evaluate_parameter_track(slot, curve_selector & FIELD_TRACK_INDEX_MASK) |
+                                                controller->ports[0].actuator_control.fields.large_motor_command;
 
                             controller->ports[0].actuator_control.fields.large_motor_command = combined_value;
                             controller->ports[1].actuator_control.fields.large_motor_command = combined_value;
@@ -1450,8 +1449,8 @@ static void field_build_actor_render_commands(FieldRenderContext* render_ctx, s3
 
                 case FIELD_ANIM_CAMERA_X_THEN_Y:
                     g_field_camera_offset_x = field_evaluate_parameter_track(slot, animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT);
-                    g_field_camera_offset_y =
-                        field_evaluate_parameter_track(slot, ((slot->animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT) + 1) & FIELD_TRACK_INDEX_MASK);
+                    g_field_camera_offset_y = field_evaluate_parameter_track(slot, ((slot->animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT) + 1) &
+                                                                                       FIELD_TRACK_INDEX_MASK);
                     break;
                 }
             }
@@ -3380,18 +3379,15 @@ static void field_refresh_actor_portraits(void)
         cdrom_wait_queue_empty();
 
         g_field_player_records[0].portrait_index = g_field_player_records[0].head.bits.alt_appearance;
-        bcopy(FIELD_PACKAGE_SECTION_BYTES(FIELD_CD_PACKAGE, g_field_player_records[0].portrait_index + 1), g_field_party_portraits,
-              FIELD_PORTRAIT_BYTES);
+        bcopy(FIELD_PACKAGE_SECTION_BYTES(FIELD_CD_PACKAGE, g_field_player_records[0].portrait_index + 1), g_field_party_portraits, FIELD_PORTRAIT_BYTES);
 
         partner_portrait = g_field_party_portraits + FIELD_PORTRAIT_BYTES;
         g_field_player_records[1].portrait_index = partner_portrait_index;
-        bcopy(FIELD_PACKAGE_SECTION_BYTES(FIELD_CD_PACKAGE, g_field_player_records[1].portrait_index + 1), partner_portrait,
-              FIELD_PORTRAIT_BYTES);
+        bcopy(FIELD_PACKAGE_SECTION_BYTES(FIELD_CD_PACKAGE, g_field_player_records[1].portrait_index + 1), partner_portrait, FIELD_PORTRAIT_BYTES);
 
         companion_portrait = g_field_party_portraits + FIELD_PORTRAIT_BYTES * 2;
         g_field_player_records[2].portrait_index = g_field_player_records[2].character_id + FIELD_PORTRAIT_COMPANION_BASE;
-        bcopy(FIELD_PACKAGE_SECTION_BYTES(FIELD_CD_PACKAGE, g_field_player_records[2].portrait_index + 1), companion_portrait,
-              FIELD_PORTRAIT_BYTES);
+        bcopy(FIELD_PACKAGE_SECTION_BYTES(FIELD_CD_PACKAGE, g_field_player_records[2].portrait_index + 1), companion_portrait, FIELD_PORTRAIT_BYTES);
 
         if (g_field_player_records[1].character_kind == FIELD_PLAYER_KIND_HERO)
         {

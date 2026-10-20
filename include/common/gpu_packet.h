@@ -99,6 +99,10 @@
 #define GPU_BLEND_SUBTRACT 2    /**< Background minus primitive. */
 #define GPU_BLEND_ADD_QUARTER 3 /**< Background plus a quarter of the primitive. */
 
+/** @brief Position of the blend mode (getTPage abr) in a tpage value. */
+#define GPU_TPAGE_BLEND_SHIFT 5
+#define GPU_TPAGE_BLEND_MASK (3 << GPU_TPAGE_BLEND_SHIFT)
+
 /** @brief Size of packet type T in words, for stepping a u_long* cursor: `prim += PRIM_WORDS(SPRT);`. */
 #define PRIM_WORDS(T) (sizeof(T) / sizeof(u_long))
 
