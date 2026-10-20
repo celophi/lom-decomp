@@ -508,7 +508,6 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     FieldMotionRecord* free_effect;
     FieldObjectState* placement_object;
     FieldObjectState* owner_object;
-    FieldObjectState* object_table_init;
     FieldObjectState* owner_source_object;
     FieldObjectState* owner_placement_state;
     FieldObjectState* track_source_object;
@@ -667,29 +666,19 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     {
         if (part->spawn_flags.word & FIELD_PART_KIND_FROM_REWARD_COUNTERS)
         {
-            s32 limit = (part->appearance.word >> FIELD_PART_KIND_RANGE_COUNT_SHIFT) & FIELD_PART_KIND_RANGE_COUNT_MASK;
-            work_index = 0;
-
-            if (limit != 0)
+            for (work_index = 0; work_index < (s32)((part->appearance.word >> FIELD_PART_KIND_RANGE_COUNT_SHIFT) & FIELD_PART_KIND_RANGE_COUNT_MASK);
+                 work_index++)
             {
-                work_limit = limit;
-                object_table_init = g_field_object_states;
+                FieldObjectState* states = g_field_object_states;
 
-                do
+                owner_object = &states[actor->owner_object_index];
+
+                if (owner_object->reward_counters[work_index] != 0)
                 {
-                    owner_object = &object_table_init[actor->owner_object_index];
-
-                    if (owner_object->reward_counters[work_index] == 0)
-                    {
-                        work_index++;
-                    }
-                    else
-                    {
-                        owner_object->reward_counters[work_index]--;
-                        effect->facing_or_reward_kind = part->unk1A + work_index;
-                        break;
-                    }
-                } while (work_index < work_limit);
+                    owner_object->reward_counters[work_index]--;
+                    effect->facing_or_reward_kind = part->unk1A + work_index;
+                    break;
+                }
             }
 
             if (work_index == (part->appearance.fields.spawn_flags & FIELD_PART_KIND_RANGE_COUNT_MASK))
