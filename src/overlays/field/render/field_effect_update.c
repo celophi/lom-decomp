@@ -498,7 +498,6 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
  */
 s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 {
-    s32 half_turn_8bit;
     VECTOR* direction_vector = FIELD_EFFECT_SCRATCH_ORIGIN;
     VECTOR* squared_vector = FIELD_EFFECT_SCRATCH_VECTOR;
     SVECTOR* local_direction = FIELD_EFFECT_SCRATCH_LOCAL_VECTOR;
@@ -535,7 +534,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     u8* resource;
 
     effect_index = 0;
-    work_value = 0xFF;
+    work_value = FIELD_EFFECT_RETIRED;
     record_base = g_field_effect_records;
     free_effect = record_base;
 
@@ -605,7 +604,6 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     FIELD_EFFECT_FLAGS(effect).bits.ground_point = 0;
     FIELD_EFFECT_FLAGS(effect).bits.unknown_18 = 0;
 
-    half_turn_8bit = FIELD_HEADING_HALF_TURN;
     FIELD_EFFECT_FLAGS(effect).bits.kind = 0;
 
     if (part->effect_flags.word & FIELD_EFFECT_SEMITRANSPARENT)
@@ -745,8 +743,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         }
         else
         {
-            original_angle -= half_turn_8bit;
-            effect->rotation_y_16 = -original_angle;
+            effect->rotation_y_16 = -(original_angle - FIELD_HEADING_HALF_TURN);
         }
     }
 
@@ -1151,9 +1148,11 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
                     if (part->palette_extent.word & FIELD_PART_COPY_SIBLING_ROTATION)
                     {
-                        effect->rotation_x = ((SVECTOR*)&g_field_effect_records[work_a].rotation_x)->vx;
-                        effect->heading = ((SVECTOR*)&g_field_effect_records[work_a].rotation_x)->vy;
-                        effect->pitch = ((SVECTOR*)&g_field_effect_records[work_a].rotation_x)->vz;
+                        s16* rotation = &g_field_effect_records[work_a].rotation_x;
+
+                        effect->rotation_x = rotation[0];
+                        effect->heading = rotation[1];
+                        effect->pitch = rotation[2];
                     }
 
                     effect->reference_index = work_a;
@@ -1609,9 +1608,11 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
                     if (part->palette_extent.word & FIELD_PART_COPY_SIBLING_ROTATION)
                     {
-                        effect->rotation_x = ((SVECTOR*)&g_field_effect_records[sibling_index].rotation_x)->vx;
-                        effect->heading = ((SVECTOR*)&g_field_effect_records[sibling_index].rotation_x)->vy;
-                        effect->pitch = ((SVECTOR*)&g_field_effect_records[sibling_index].rotation_x)->vz;
+                        s16* rotation = &g_field_effect_records[sibling_index].rotation_x;
+
+                        effect->rotation_x = rotation[0];
+                        effect->heading = rotation[1];
+                        effect->pitch = rotation[2];
                     }
 
                     effect->reference_index = sibling_index;
