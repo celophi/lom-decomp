@@ -72,6 +72,11 @@ extern u8 g_field_resource_buffer[];
 
 /** @brief Number of field object states (g_field_object_states). */
 #define FIELD_OBJECT_COUNT 13
+
+/** @brief World coordinates are 24.8 fixed point. */
+#define FIELD_POSITION_SHIFT 8
+/** @brief Shift from a GTE unit-vector component (12 fraction bits) times a length to world position units. */
+#define FIELD_GTE_TO_POSITION_SHIFT (12 - FIELD_POSITION_SHIFT)
 /** @brief Objects 0 and 1 are the two player-controlled party members; each has its own binding. */
 #define FIELD_PLAYER_COUNT 2
 /** @brief Objects 0 to 2 are the party: the two players and the companion. */

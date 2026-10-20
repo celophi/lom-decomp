@@ -87,6 +87,7 @@
 
 /** @brief Bit positions in the part's placement flags. */
 #define FIELD_PART_HEIGHT_TRACK_BIT 3
+#define FIELD_PART_HEIGHT_TRACK_INDEX_SHIFT 4
 
 /** @brief Masks in the part's spawn flags. */
 #define FIELD_PART_HEIGHT_FROM_BASE 0x00080000
@@ -628,6 +629,8 @@ static inline void field_attach_owner_sprite(FieldMotionRecord* effect, FieldMot
  * @param part_index Part definition to instantiate.
  * @param start First effect slot to inspect when searching for a related effect.
  * @return Spawned effect index, or -1 when the effect cannot be created.
+ * @note Calls itself to place one more effect on the next matching sibling (searching from the slot after the one
+ *       found) and on the next ground point of a scattered-domes action.
  */
 s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 {
@@ -934,9 +937,9 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     rotated_x = direction_vector->vx;
     work_index = field_resolve_effect_extent(actor, part);
     FIELD_EFFECT_FLAGS(effect).bits.distance = work_index;
-    effect->x = (work_index * direction_vector->vx) >> 4;
-    effect->y = (work_index * direction_vector->vy) >> 4;
-    effect->z = (work_index * direction_vector->vz) >> 4;
+    effect->x = (work_index * direction_vector->vx) >> FIELD_GTE_TO_POSITION_SHIFT;
+    effect->y = (work_index * direction_vector->vy) >> FIELD_GTE_TO_POSITION_SHIFT;
+    effect->z = (work_index * direction_vector->vz) >> FIELD_GTE_TO_POSITION_SHIFT;
     effect->animation_active = part->effect_animation_active;
     effect->source_object_index = actor->owner_object_index;
 
@@ -1678,11 +1681,13 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         if (part->spawn_flags.word & FIELD_PART_HEIGHT_FROM_BASE)
         {
             effect->height_or_retired_state = effect->y >> 8;
-            effect->y -= field_evaluate_parameter_track_at_time(actor, part->placement_flags.bytes.low >> 4, 0) << 8;
+            effect->y -= field_evaluate_parameter_track_at_time(actor, part->placement_flags.bytes.low >> FIELD_PART_HEIGHT_TRACK_INDEX_SHIFT, 0) << 8;
         }
         else
         {
-            effect->y = (-field_evaluate_parameter_track_at_time(actor, (part->placement_flags.word >> 4) & FIELD_TRACK_INDEX_MASK, 0)) << 8;
+            effect->y = (-field_evaluate_parameter_track_at_time(
+                            actor, (part->placement_flags.word >> FIELD_PART_HEIGHT_TRACK_INDEX_SHIFT) & FIELD_TRACK_INDEX_MASK, 0))
+                        << 8;
         }
     }
 
