@@ -490,6 +490,139 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
 static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* packet_cursor, s32* ordering_table, u8* frame_data);
 
 /**
+ * @brief Free a just-claimed effect record and undo the spawn counts of its part.
+ * @param actor Actor whose part was spawning.
+ * @param effect Claimed effect record.
+ * @param part_index Part whose active and track counters are rolled back.
+ * @return -1, the spawn failure result.
+ */
+static inline s32 field_cancel_effect_spawn(FieldActorSlot* actor, FieldMotionRecord* effect, s32 part_index)
+{
+    effect->state = FIELD_EFFECT_RETIRED;
+    actor->active_counts[g_field_track_index][part_index]--;
+    actor->track_counters[g_field_track_index][part_index]--;
+    return -1;
+}
+
+/**
+ * @brief Give a linked sprite effect the sprite and animation of the object record it is placed on.
+ * @param effect New linked sprite effect.
+ * @param source_record Object record the effect is placed on.
+ * @param actor Actor spawning the effect; the effect is disabled while another slot controls the object.
+ */
+static inline void field_adopt_source_sprite(FieldMotionRecord* effect, FieldMotionRecord* source_record, FieldActorSlot* actor)
+{
+    FieldObjectState* source_object;
+    u8* resource;
+
+    effect->source_object_index = source_record->source_object_index;
+    source_object = field_object_state(source_record->source_object_index);
+
+    if (source_object->contact.bytes.flags & 1)
+    {
+        if (source_object->contact.bytes.controller_index != actor->slot_index)
+        {
+            effect->state = FIELD_EFFECT_DISABLED;
+            return;
+        }
+    }
+
+    effect->resource_index = source_record->resource_index;
+    effect->texture_slot = source_record->texture_slot;
+    effect->facing_or_reward_kind = source_record->facing_or_reward_kind;
+    effect->saved_state = source_record->saved_state;
+    FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(source_record).bits.kind;
+    FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(source_record).half[1];
+    resource = g_field_resource_entries[source_record->resource_index].start;
+
+    if (resource != 0)
+    {
+        field_restart_actor_animation(effect, resource);
+    }
+}
+
+/**
+ * @brief Give a linked sprite effect the sprite, state and animation of the sibling effect it is placed on.
+ * @param effect New linked sprite effect.
+ * @param sibling Index of the sibling effect record.
+ */
+static inline void field_adopt_sibling_sprite(FieldMotionRecord* effect, s32 sibling)
+{
+    u8* resource;
+
+    effect->resource_index = g_field_effect_records[sibling].resource_index;
+    effect->texture_slot = g_field_effect_records[sibling].texture_slot;
+    effect->state = g_field_effect_records[sibling].state;
+    effect->source_object_index = g_field_effect_records[sibling].source_object_index;
+    FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(&g_field_effect_records[sibling]).bits.kind;
+    FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(&g_field_effect_records[sibling]).bits.group;
+
+    if (effect->facing_or_reward_kind == FIELD_EFFECT_ANIMATION_FROM_SOURCE)
+    {
+        effect->facing_or_reward_kind = g_field_effect_records[sibling].facing_or_reward_kind;
+        effect->saved_state = g_field_effect_records[sibling].saved_state;
+        effect->frame_ticks = g_field_effect_records[sibling].frame_ticks;
+        effect->frame_length = g_field_effect_records[sibling].frame_length;
+        effect->track_index = g_field_effect_records[sibling].track_index;
+        effect->motion_remainder = g_field_effect_records[sibling].motion_remainder;
+        effect->vertical_offset = g_field_effect_records[sibling].vertical_offset;
+        effect->next_height = g_field_effect_records[sibling].next_height;
+        return;
+    }
+
+    effect->source_object_index = g_field_effect_records[sibling].source_object_index;
+    effect->state = g_field_effect_records[sibling].state;
+    FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(&g_field_effect_records[sibling]).bits.kind;
+    FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(&g_field_effect_records[sibling]).bits.group;
+    effect->saved_state = g_field_effect_records[sibling].saved_state;
+    effect->facing_or_reward_kind = g_field_effect_records[sibling].facing_or_reward_kind;
+    resource = g_field_resource_entries[g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].resource_index].start;
+
+    if (resource != 0)
+    {
+        field_begin_actor_animation_forward(effect, resource);
+    }
+}
+
+/**
+ * @brief Make a linked sprite effect placed on an owner attachment point draw its owner's sprite.
+ * @param effect New linked sprite effect.
+ * @param source_record Owner record the effect is attached to.
+ * @param actor Actor spawning the effect; the effect is disabled while another slot controls the owner.
+ */
+static inline void field_attach_owner_sprite(FieldMotionRecord* effect, FieldMotionRecord* source_record, FieldActorSlot* actor)
+{
+    FieldObjectState* source_object;
+    u8* resource;
+
+    source_object = field_object_state(source_record->source_object_index);
+
+    if (!(source_object->contact.bytes.flags & 1) || source_object->contact.bytes.controller_index == actor->slot_index)
+    {
+        effect->state = FIELD_EFFECT_RENDER_OWNER_SPRITE;
+
+        if (effect->facing_or_reward_kind == FIELD_EFFECT_ANIMATION_FROM_SOURCE)
+        {
+            effect->resource_index = source_record->resource_index;
+            effect->texture_slot = source_record->texture_slot;
+            effect->facing_or_reward_kind = source_record->facing_or_reward_kind;
+            effect->saved_state = source_record->saved_state;
+        }
+
+        resource = g_field_resource_entries[source_record->resource_index].start;
+
+        if (resource != 0)
+        {
+            field_restart_actor_animation(effect, resource);
+        }
+
+        return;
+    }
+
+    effect->state = FIELD_EFFECT_DISABLED;
+}
+
+/**
  * @brief Spawn an effect record for one actor part and resolve its initial placement.
  * @param actor Actor spawning the effect.
  * @param part_index Part definition to instantiate.
@@ -506,12 +639,9 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     FieldMotionRecord* free_effect;
     FieldObjectState* placement_object;
     FieldObjectState* owner_object;
-    FieldObjectState* owner_source_object;
     FieldObjectState* owner_placement_state;
-    FieldObjectState* track_source_object;
     FieldObjectState* owner_placement_guard;
     FieldObjectState* attached_source_object;
-    FieldObjectState* source_owner_object;
     FieldMotionRecord* source_record;
     FieldMotionRecord* record_base;
     FieldObjectState* owner_object_state;
@@ -860,10 +990,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
         if (track_object_index == FIELD_TARGET_NONE)
         {
-            effect->state = FIELD_EFFECT_RETIRED;
-            actor->active_counts[g_field_track_index][part_index]--;
-            actor->track_counters[g_field_track_index][part_index]--;
-            return -1;
+            return field_cancel_effect_spawn(actor, effect, part_index);
         }
 
         if ((!((g_field_object_states[actor->targets[g_field_track_index]].contact.word >> FIELD_CONTACT_ACTION_PENDING_BIT) & 1) &&
@@ -961,10 +1088,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
                 if (track_object_index == FIELD_TARGET_NONE)
                 {
-                    effect->state = FIELD_EFFECT_RETIRED;
-                    actor->active_counts[g_field_track_index][part_index]--;
-                    actor->track_counters[g_field_track_index][part_index]--;
-                    return -1;
+                    return field_cancel_effect_spawn(actor, effect, part_index);
                 }
 
                 object_index = actor->targets[g_field_track_index];
@@ -980,10 +1104,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
                     !((owner_placement_guard->contact.word >> FIELD_CONTACT_NO_HIT_TEST_BIT) & 1) &&
                     owner_placement_guard->contact.bytes.controller_index != actor->slot_index)
                 {
-                    effect->state = FIELD_EFFECT_RETIRED;
-                    actor->active_counts[g_field_track_index][part_index]--;
-                    actor->track_counters[g_field_track_index][part_index]--;
-                    return -1;
+                    return field_cancel_effect_spawn(actor, effect, part_index);
                 }
 
                 object_index = actor->owner_object_index;
@@ -1159,38 +1280,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
                     if (effect->state == FIELD_EFFECT_RENDER_LINKED_SPRITE)
                     {
-                        effect->resource_index = g_field_effect_records[work_a].resource_index;
-                        effect->texture_slot = g_field_effect_records[work_a].texture_slot;
-                        effect->state = g_field_effect_records[work_a].state;
-                        effect->source_object_index = g_field_effect_records[work_a].source_object_index;
-                        FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(&g_field_effect_records[work_a]).bits.kind;
-                        FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(&g_field_effect_records[work_a]).bits.group;
-
-                        if (effect->facing_or_reward_kind == FIELD_EFFECT_ANIMATION_FROM_SOURCE)
-                        {
-                            effect->facing_or_reward_kind = g_field_effect_records[work_a].facing_or_reward_kind;
-                            effect->saved_state = g_field_effect_records[work_a].saved_state;
-                            effect->frame_ticks = g_field_effect_records[work_a].frame_ticks;
-                            effect->frame_length = g_field_effect_records[work_a].frame_length;
-                            effect->track_index = g_field_effect_records[work_a].track_index;
-                            effect->motion_remainder = g_field_effect_records[work_a].motion_remainder;
-                            effect->vertical_offset = g_field_effect_records[work_a].vertical_offset;
-                            effect->next_height = g_field_effect_records[work_a].next_height;
-                            break;
-                        }
-
-                        effect->source_object_index = g_field_effect_records[work_a].source_object_index;
-                        effect->state = g_field_effect_records[work_a].state;
-                        FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(&g_field_effect_records[work_a]).bits.kind;
-                        FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(&g_field_effect_records[work_a]).bits.group;
-                        effect->saved_state = g_field_effect_records[work_a].saved_state;
-                        effect->facing_or_reward_kind = g_field_effect_records[work_a].facing_or_reward_kind;
-                        resource = g_field_resource_entries[g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].resource_index].start;
-
-                        if (resource != 0)
-                        {
-                            field_begin_actor_animation_forward(effect, resource);
-                        }
+                        field_adopt_sibling_sprite(effect, work_a);
                     }
 
                     break;
@@ -1199,10 +1289,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
             if (work_a == FIELD_EFFECT_ACTIVE_RECORD_COUNT)
             {
-                effect->state = FIELD_EFFECT_RETIRED;
-                actor->active_counts[g_field_track_index][part_index]--;
-                actor->track_counters[g_field_track_index][part_index]--;
-                return -1;
+                return field_cancel_effect_spawn(actor, effect, part_index);
             }
 
             field_spawn_actor_effect(actor, part_index, work_a + 1);
@@ -1301,10 +1388,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
             if ((owner_placement_state->contact.bytes.flags & 1) && owner_placement_state->contact.bytes.controller_index != actor->slot_index &&
                 actor->slot_index >= 0x40U && !((owner_placement_state->contact.word >> FIELD_CONTACT_NO_HIT_TEST_BIT) & 1))
             {
-                effect->state = FIELD_EFFECT_RETIRED;
-                actor->active_counts[g_field_track_index][part_index]--;
-                actor->track_counters[g_field_track_index][part_index]--;
-                return -1;
+                return field_cancel_effect_spawn(actor, effect, part_index);
             }
 
             source_record = &g_field_actors[actor->owner_object_index];
@@ -1324,32 +1408,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
             if (effect->state == FIELD_EFFECT_RENDER_LINKED_SPRITE && effect->facing_or_reward_kind == FIELD_EFFECT_ANIMATION_FROM_SOURCE)
             {
-                effect->source_object_index = source_record->source_object_index;
-                owner_source_object = field_object_state(source_record->source_object_index);
-
-                if (owner_source_object->contact.bytes.flags & 1)
-                {
-                    if (owner_source_object->contact.bytes.controller_index != actor->slot_index)
-                    {
-                        effect->state = FIELD_EFFECT_DISABLED;
-                        break;
-                    }
-                }
-
-                effect->resource_index = source_record->resource_index;
-                effect->texture_slot = source_record->texture_slot;
-                effect->facing_or_reward_kind = source_record->facing_or_reward_kind;
-                effect->saved_state = source_record->saved_state;
-                FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(source_record).bits.kind;
-                FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(source_record).half[1];
-                resource = g_field_resource_entries[source_record->resource_index].start;
-
-                if (resource != 0)
-                {
-                    field_restart_actor_animation(effect, resource);
-                }
-
-                break;
+                field_adopt_source_sprite(effect, source_record, actor);
             }
 
             break;
@@ -1357,10 +1416,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         case FIELD_PLACEMENT_TRACK_OFFSET:
             if (actor->targets[g_field_track_index] == FIELD_TARGET_NONE)
             {
-                effect->state = FIELD_EFFECT_RETIRED;
-                actor->active_counts[g_field_track_index][part_index]--;
-                actor->track_counters[g_field_track_index][part_index]--;
-                return -1;
+                return field_cancel_effect_spawn(actor, effect, part_index);
             }
 
             source_record = &g_field_actors[actor->targets[g_field_track_index]];
@@ -1385,32 +1441,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
             if (effect->state == FIELD_EFFECT_RENDER_LINKED_SPRITE && effect->facing_or_reward_kind == FIELD_EFFECT_ANIMATION_FROM_SOURCE)
             {
-                effect->source_object_index = source_record->source_object_index;
-                track_source_object = field_object_state(source_record->source_object_index);
-
-                if (track_source_object->contact.bytes.flags & 1)
-                {
-                    if (track_source_object->contact.bytes.controller_index != actor->slot_index)
-                    {
-                        effect->state = FIELD_EFFECT_DISABLED;
-                        break;
-                    }
-                }
-
-                effect->resource_index = source_record->resource_index;
-                effect->texture_slot = source_record->texture_slot;
-                effect->facing_or_reward_kind = source_record->facing_or_reward_kind;
-                effect->saved_state = source_record->saved_state;
-                FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(source_record).bits.kind;
-                FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(source_record).half[1];
-                resource = g_field_resource_entries[source_record->resource_index].start;
-
-                if (resource != 0)
-                {
-                    field_restart_actor_animation(effect, resource);
-                }
-
-                break;
+                field_adopt_source_sprite(effect, source_record, actor);
             }
 
             break;
@@ -1431,31 +1462,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
                 effect->source_object_index = source_record->source_object_index;
                 FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(source_record).bits.kind;
                 FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(source_record).half[1];
-                source_owner_object = field_object_state(source_record->source_object_index);
-
-                if (!(source_owner_object->contact.bytes.flags & 1) || source_owner_object->contact.bytes.controller_index == actor->slot_index)
-                {
-                    effect->state = FIELD_EFFECT_RENDER_OWNER_SPRITE;
-
-                    if (effect->facing_or_reward_kind == FIELD_EFFECT_ANIMATION_FROM_SOURCE)
-                    {
-                        effect->resource_index = source_record->resource_index;
-                        effect->texture_slot = source_record->texture_slot;
-                        effect->facing_or_reward_kind = source_record->facing_or_reward_kind;
-                        effect->saved_state = source_record->saved_state;
-                    }
-
-                    resource = g_field_resource_entries[source_record->resource_index].start;
-
-                    if (resource != 0)
-                    {
-                        field_restart_actor_animation(effect, resource);
-                    }
-
-                    break;
-                }
-
-                effect->state = FIELD_EFFECT_DISABLED;
+                field_attach_owner_sprite(effect, source_record, actor);
                 break;
             }
 
@@ -1485,31 +1492,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
                 FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(source_record).bits.kind;
                 FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(source_record).half[1];
                 effect->source_object_index = source_record->source_object_index;
-                source_owner_object = field_object_state(source_record->source_object_index);
-
-                if (!(source_owner_object->contact.bytes.flags & 1) || source_owner_object->contact.bytes.controller_index == actor->slot_index)
-                {
-                    effect->state = FIELD_EFFECT_RENDER_OWNER_SPRITE;
-
-                    if (effect->facing_or_reward_kind == FIELD_EFFECT_ANIMATION_FROM_SOURCE)
-                    {
-                        effect->resource_index = source_record->resource_index;
-                        effect->texture_slot = source_record->texture_slot;
-                        effect->facing_or_reward_kind = source_record->facing_or_reward_kind;
-                        effect->saved_state = source_record->saved_state;
-                    }
-
-                    resource = g_field_resource_entries[source_record->resource_index].start;
-
-                    if (resource != 0)
-                    {
-                        field_restart_actor_animation(effect, resource);
-                    }
-
-                    break;
-                }
-
-                effect->state = FIELD_EFFECT_DISABLED;
+                field_attach_owner_sprite(effect, source_record, actor);
                 break;
             }
 
@@ -1527,10 +1510,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
         case FIELD_PLACEMENT_TRACK_ACTION_OFFSET:
             if (actor->targets[g_field_track_index] == FIELD_TARGET_NONE)
             {
-                effect->state = FIELD_EFFECT_RETIRED;
-                actor->active_counts[g_field_track_index][part_index]--;
-                actor->track_counters[g_field_track_index][part_index]--;
-                return -1;
+                return field_cancel_effect_spawn(actor, effect, part_index);
             }
 
             source_record = &g_field_actors[actor->targets[g_field_track_index]];
@@ -1619,38 +1599,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
                     if (effect->state == FIELD_EFFECT_RENDER_LINKED_SPRITE)
                     {
-                        effect->resource_index = g_field_effect_records[sibling_index].resource_index;
-                        effect->texture_slot = g_field_effect_records[sibling_index].texture_slot;
-                        effect->state = g_field_effect_records[sibling_index].state;
-                        effect->source_object_index = g_field_effect_records[sibling_index].source_object_index;
-                        FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(&g_field_effect_records[sibling_index]).bits.kind;
-                        FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(&g_field_effect_records[sibling_index]).bits.group;
-
-                        if (effect->facing_or_reward_kind == FIELD_EFFECT_ANIMATION_FROM_SOURCE)
-                        {
-                            effect->facing_or_reward_kind = g_field_effect_records[sibling_index].facing_or_reward_kind;
-                            effect->saved_state = g_field_effect_records[sibling_index].saved_state;
-                            effect->frame_ticks = g_field_effect_records[sibling_index].frame_ticks;
-                            effect->frame_length = g_field_effect_records[sibling_index].frame_length;
-                            effect->track_index = g_field_effect_records[sibling_index].track_index;
-                            effect->motion_remainder = g_field_effect_records[sibling_index].motion_remainder;
-                            effect->vertical_offset = g_field_effect_records[sibling_index].vertical_offset;
-                            effect->next_height = g_field_effect_records[sibling_index].next_height;
-                            break;
-                        }
-
-                        effect->source_object_index = g_field_effect_records[sibling_index].source_object_index;
-                        effect->state = g_field_effect_records[sibling_index].state;
-                        FIELD_EFFECT_FLAGS(effect).bits.kind = FIELD_EFFECT_FLAGS(&g_field_effect_records[sibling_index]).bits.kind;
-                        FIELD_EFFECT_FLAGS(effect).bits.group = FIELD_EFFECT_FLAGS(&g_field_effect_records[sibling_index]).bits.group;
-                        effect->saved_state = g_field_effect_records[sibling_index].saved_state;
-                        effect->facing_or_reward_kind = g_field_effect_records[sibling_index].facing_or_reward_kind;
-                        resource = g_field_resource_entries[g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].resource_index].start;
-
-                        if (resource != 0)
-                        {
-                            field_begin_actor_animation_forward(effect, resource);
-                        }
+                        field_adopt_sibling_sprite(effect, sibling_index);
                     }
 
                     break;
@@ -1659,10 +1608,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
             if (sibling_index == FIELD_EFFECT_ACTIVE_RECORD_COUNT)
             {
-                effect->state = FIELD_EFFECT_RETIRED;
-                actor->active_counts[g_field_track_index][part_index]--;
-                actor->track_counters[g_field_track_index][part_index]--;
-                return -1;
+                return field_cancel_effect_spawn(actor, effect, part_index);
             }
 
             field_spawn_actor_effect(actor, part_index, sibling_index + 1);
