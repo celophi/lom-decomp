@@ -478,7 +478,8 @@ typedef struct FieldObjectPart
         struct
         {
             u16 low;
-            u16 high;
+            /** @brief Default motion parameter of spawned effects, or its track index or distance divisor (FieldEffectFlags::parameter_mode). */
+            s16 high;
         } halves;
         struct
         {
@@ -527,7 +528,7 @@ typedef struct FieldObjectPart
     } rotation_extent;
     union
     {
-        s32 word;
+        u32 word;
         u8 bytes[4];
     } effect_flags;
     FieldPartFlags placement_flags;
@@ -578,6 +579,9 @@ typedef struct FieldObjectPart
 
 /** @brief FieldObjectPart::effect_flags bit 20: the part is a solid body; it collides with the map, casts a footprint and its sprite hit quads act. */
 #define FIELD_PART_SOLID 0x00100000
+
+/** @brief FieldObjectPart::effect_flags bit 31: spawning the part also spawns its linked part (rotation_extent.fields.linked_part). */
+#define FIELD_PART_SPAWN_LINKED 0x80000000
 
 /** @brief FieldObjectPart::behavior_flags bits 22-23 (bits.blend_mode): GPU blend mode of the part's sprites and mesh (getTPage abr). */
 #define FIELD_PART_BLEND_MODE_SHIFT 22

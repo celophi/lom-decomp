@@ -31,14 +31,14 @@
 #include "overlays/field/field_types.h"
 #include "sdk/gte_dmpsx_compat.h"
 
-#define FIELD_EFFECT_ORIGIN_ADDRESS SCRATCHPAD_ADDRESS
-#define FIELD_EFFECT_VECTOR_ADDRESS SCRATCHPAD_AT(0x10)
-#define FIELD_EFFECT_TARGET_ADDRESS SCRATCHPAD_AT(0x20)
-#define FIELD_EFFECT_LOCAL_VECTOR_ADDRESS SCRATCHPAD_AT(0x30)
-#define FIELD_EFFECT_ROTATED_VECTOR_ADDRESS SCRATCHPAD_AT(0x38)
-#define FIELD_EFFECT_MATRIX_ADDRESS SCRATCHPAD_AT(0x40)
-#define FIELD_EFFECT_MOVER_ADDRESS SCRATCHPAD_AT(0x80)
-#define FIELD_EFFECT_QUERY_ADDRESS SCRATCHPAD_AT(0xC0)
+#define FIELD_EFFECT_SCRATCH_ORIGIN ((VECTOR*)SCRATCHPAD_ADDRESS)
+#define FIELD_EFFECT_SCRATCH_VECTOR ((VECTOR*)SCRATCHPAD_AT(0x10))
+#define FIELD_EFFECT_SCRATCH_TARGET ((VECTOR*)SCRATCHPAD_AT(0x20))
+#define FIELD_EFFECT_SCRATCH_LOCAL_VECTOR ((SVECTOR*)SCRATCHPAD_AT(0x30))
+#define FIELD_EFFECT_SCRATCH_ROTATED_VECTOR ((SVECTOR*)SCRATCHPAD_AT(0x38))
+#define FIELD_EFFECT_SCRATCH_ROTATION ((MATRIX*)SCRATCHPAD_AT(0x40))
+#define FIELD_EFFECT_SCRATCH_MOVER ((FieldCollisionMover*)SCRATCHPAD_AT(0x80))
+#define FIELD_EFFECT_SCRATCH_QUERY ((FieldCollisionQuery*)SCRATCHPAD_AT(0xC0))
 
 /**
  * @brief Address of element @p index in an array of @p type starting at @p base.
@@ -221,15 +221,6 @@ enum
     FIELD_PART_VALUE_TIMED_TRACK = 2,
     FIELD_PART_VALUE_DISTANCE = 3
 };
-
-/** @brief Four-halfword GTE vector; the fourth halfword is padding. */
-typedef struct
-{
-    s16 x;
-    s16 y;
-    s16 z;
-    s16 pad;
-} FieldSVector;
 
 /** @brief Party-member record view: reward counters from 0x244 and shield visibility at 0x258. */
 typedef struct
@@ -501,10 +492,10 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
 s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 {
     s32 half_turn_8bit;
-    VECTOR* direction_vector = (VECTOR*)FIELD_EFFECT_ORIGIN_ADDRESS;
-    VECTOR* squared_vector = (VECTOR*)FIELD_EFFECT_VECTOR_ADDRESS;
-    SVECTOR* local_direction = (SVECTOR*)FIELD_EFFECT_LOCAL_VECTOR_ADDRESS;
-    MATRIX* rotation_matrix = (MATRIX*)FIELD_EFFECT_MATRIX_ADDRESS;
+    VECTOR* direction_vector = FIELD_EFFECT_SCRATCH_ORIGIN;
+    VECTOR* squared_vector = FIELD_EFFECT_SCRATCH_VECTOR;
+    SVECTOR* local_direction = FIELD_EFFECT_SCRATCH_LOCAL_VECTOR;
+    MATRIX* rotation_matrix = FIELD_EFFECT_SCRATCH_ROTATION;
     FieldMotionRecord* effect;
     FieldMotionRecord* free_effect;
     FieldObjectState* placement_object;
@@ -559,7 +550,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
     effect = FIELD_ELEMENT_AT(FieldMotionRecord, record_base, effect_index);
     part = &actor->parts[part_index];
 
-    if (part->effect_flags.word < 0)
+    if (part->effect_flags.word & FIELD_PART_SPAWN_LINKED)
     {
         effect->previous_effect_index = work_value;
     }
@@ -587,7 +578,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
     if (part->orientation_flags.word & FIELD_PART_ORIENTATION_MODE_MASK)
     {
-        effect->color_position.fields.position_source = ((u32)part->effect_flags.word >> 16) & 0xF;
+        effect->color_position.fields.position_source = (part->effect_flags.word >> 16) & 0xF;
     }
     else
     {
@@ -612,8 +603,8 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
     if (part->effect_flags.word & FIELD_EFFECT_SEMITRANSPARENT)
     {
-        s32 eval = field_evaluate_parameter_track_at_time(
-                       actor, ((u32)part->effect_flags.word >> FIELD_PART_SEMITRANSPARENT_TRACK_SHIFT) & FIELD_TRACK_INDEX_MASK, 0) != 0;
+        s32 eval =
+            field_evaluate_parameter_track_at_time(actor, (part->effect_flags.word >> FIELD_PART_SEMITRANSPARENT_TRACK_SHIFT) & FIELD_TRACK_INDEX_MASK, 0) != 0;
         FIELD_EFFECT_FLAGS(effect).bits.semitransparent = eval;
     }
     else
@@ -1422,12 +1413,10 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
             source_record = &g_field_actors[actor->owner_object_index];
             effect->x +=
                 source_record->x +
-                (placement_object->attachment_points[((u32)part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x
-                 << 8);
+                (placement_object->attachment_points[(part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
             effect->y +=
                 source_record->y +
-                (placement_object->attachment_points[((u32)part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].y
-                 << 8);
+                (placement_object->attachment_points[(part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].y << 8);
             effect->z += source_record->z;
 
             if (effect->state == FIELD_EFFECT_RENDER_LINKED_SPRITE)
@@ -1470,8 +1459,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
             source_record = &g_field_actors[actor->owner_object_index];
             effect->x +=
                 source_record->x +
-                (placement_object->attachment_points[((u32)part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x
-                 << 8);
+                (placement_object->attachment_points[(part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
             effect->y += source_record->y;
             effect->z += source_record->z + (part->offset_z << 8);
 
@@ -1526,7 +1514,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
             effect->x += source_record->x + (placement_object->ground_effect_points[g_field_spawn_ground_point].x << 8);
             effect->y += source_record->y;
             effect->z += source_record->z + (placement_object->ground_effect_points[g_field_spawn_ground_point].y << 8);
-            FIELD_EFFECT_FLAGS(effect).bits.ground_point = *(u16*)&g_field_spawn_ground_point;
+            FIELD_EFFECT_FLAGS(effect).bits.ground_point = (u16)g_field_spawn_ground_point;
             break;
 
         case FIELD_PLACEMENT_TRACK_ACTION_OFFSET:
@@ -1672,7 +1660,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
             break;
     }
 
-    switch (((u32)part->effect_flags.word >> FIELD_PART_ORIGIN_SHIFT) & 3)
+    switch ((part->effect_flags.word >> FIELD_PART_ORIGIN_SHIFT) & 3)
     {
         case FIELD_PART_ORIGIN_OWNER:
             direction_vector->vx = (g_field_actors[actor->owner_object_index].x - effect->x) >> 8;
@@ -1770,9 +1758,9 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
             {
                 s32 distance = SquareRoot0(squared_vector->vx + squared_vector->vy + squared_vector->vz) << 8;
 
-                if ((s16)part->orientation_flags.halves.high != 0)
+                if (part->orientation_flags.halves.high != 0)
                 {
-                    effect->motion_parameter = (u32)(distance / (s16)part->orientation_flags.halves.high) >> 2;
+                    effect->motion_parameter = (u32)(distance / part->orientation_flags.halves.high) >> 2;
                 }
                 else
                 {
@@ -1841,7 +1829,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
                 g_field_actors[actor->targets[g_field_track_index]].state = FIELD_ACTOR_HIDDEN;
                 g_field_object_states[actor->targets[g_field_track_index]].contact.word |= FIELD_CONTACT_ANIMATION_HIDDEN;
                 g_field_object_states[actor->targets[g_field_track_index]].contact.bytes.controller_index = actor->slot_index;
-                ((u8*)&actor->status.word)[1] = 1;
+                actor->status.parts.hiding_objects = 1;
             }
         }
 
@@ -2008,7 +1996,7 @@ void field_advance_actor_effects(FieldActorSlot* actor_state)
     FieldMotionRecord* new_effect;
     u8 previous_state;
     RECT palette_rect;
-    FieldSVector screen_position;
+    SVECTOR screen_position;
     VECTOR segment_delta;
     VECTOR segment_angles;
 
@@ -2032,10 +2020,10 @@ void field_advance_actor_effects(FieldActorSlot* actor_state)
 
             if (FIELD_PART_END_MODE(part) == FIELD_PART_END_OFFSCREEN)
             {
-                screen_position.x = FIELD_SCREEN_X(effect->x);
-                screen_position.y = FIELD_SCREEN_Y(effect->y, effect->z);
+                screen_position.vx = FIELD_SCREEN_X(effect->x);
+                screen_position.vy = FIELD_SCREEN_Y(effect->y, effect->z);
 
-                if (screen_position.x < -0x140 || screen_position.x > 0x280 || screen_position.y >= 0x1E1 || screen_position.y < -0xF0)
+                if (screen_position.vx < -0x140 || screen_position.vx > 0x280 || screen_position.vy >= 0x1E1 || screen_position.vy < -0xF0)
                 {
                     previous_state = effect->state;
                     effect->state = FIELD_EFFECT_RETIRED;
@@ -2048,7 +2036,7 @@ void field_advance_actor_effects(FieldActorSlot* actor_state)
                 field_retire_effect(effect, part);
             }
 
-            if (part->effect_flags.word < 0 && effect->state != FIELD_EFFECT_RETIRED)
+            if ((part->effect_flags.word & FIELD_PART_SPAWN_LINKED) && effect->state != FIELD_EFFECT_RETIRED)
             {
                 new_effect_index = field_spawn_actor_effect(actor, part->rotation_extent.fields.linked_part & 0xF, 0);
 
@@ -2062,11 +2050,11 @@ void field_advance_actor_effects(FieldActorSlot* actor_state)
                     segment_delta.vy = effect->y - g_field_effect_records[effect->previous_effect_index].y;
                     segment_delta.vz = effect->z - g_field_effect_records[effect->previous_effect_index].z;
                     g_field_effect_records[effect->previous_effect_index].next_effect_index = new_effect_index;
-                    screen_position.x = segment_delta.vx >> 8;
-                    screen_position.y = (segment_delta.vy >> 8) - (segment_delta.vz >> 9);
+                    screen_position.vx = segment_delta.vx >> 8;
+                    screen_position.vy = (segment_delta.vy >> 8) - (segment_delta.vz >> 9);
                     segment_delta.vz = 0;
-                    segment_delta.vx = screen_position.y;
-                    segment_delta.vy = -screen_position.x;
+                    segment_delta.vx = screen_position.vy;
+                    segment_delta.vy = -screen_position.vx;
                     VectorNormal(&segment_delta, &segment_angles);
                     new_effect->rotation_x = segment_angles.vx >> 6;
                     new_effect->heading = segment_angles.vy >> 6;
@@ -2341,8 +2329,8 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
     FieldCollisionMover* mover;
     FieldCollisionQuery* query;
     VECTOR* work_vector;
-    FieldSVector* local_vector;
-    FieldSVector* rotated_vector;
+    SVECTOR* local_vector;
+    SVECTOR* rotated_vector;
     MATRIX* rotation;
     VECTOR* placement_origin;
     FieldMotionRecord* reference_record;
@@ -2364,14 +2352,14 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
 
     camera = (FieldEffectCamera*)SCENE_STATE_ADDRESS;
     map_bounds = (FieldEffectMapBounds*)MAP_BOUNDS_ADDRESS;
-    mover = (FieldCollisionMover*)FIELD_EFFECT_MOVER_ADDRESS;
-    query = (FieldCollisionQuery*)FIELD_EFFECT_QUERY_ADDRESS;
-    work_vector = (VECTOR*)FIELD_EFFECT_VECTOR_ADDRESS;
-    target_position = (VECTOR*)FIELD_EFFECT_TARGET_ADDRESS;
-    local_vector = (FieldSVector*)FIELD_EFFECT_LOCAL_VECTOR_ADDRESS;
-    rotated_vector = (FieldSVector*)FIELD_EFFECT_ROTATED_VECTOR_ADDRESS;
-    rotation = (MATRIX*)FIELD_EFFECT_MATRIX_ADDRESS;
-    placement_origin = (VECTOR*)FIELD_EFFECT_ORIGIN_ADDRESS;
+    mover = FIELD_EFFECT_SCRATCH_MOVER;
+    query = FIELD_EFFECT_SCRATCH_QUERY;
+    work_vector = FIELD_EFFECT_SCRATCH_VECTOR;
+    target_position = FIELD_EFFECT_SCRATCH_TARGET;
+    local_vector = FIELD_EFFECT_SCRATCH_LOCAL_VECTOR;
+    rotated_vector = FIELD_EFFECT_SCRATCH_ROTATED_VECTOR;
+    rotation = FIELD_EFFECT_SCRATCH_ROTATION;
+    placement_origin = FIELD_EFFECT_SCRATCH_ORIGIN;
 
     /* Sample transparency and motion tracks; the caller advances age afterward. */
     flags = part->effect_flags.word;
@@ -2396,11 +2384,11 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
         gte_SetRotMatrix(rotation);
         {
             u16 segment_x = record->heading;
-            local_vector->y = 0;
-            local_vector->x = segment_x;
+            local_vector->vy = 0;
+            local_vector->vx = segment_x;
         }
 
-        local_vector->z = record->rotation_x;
+        local_vector->vz = record->rotation_x;
         gte_ldv0(local_vector);
         gte_rtv0();
         gte_stlvnl(work_vector);
@@ -2436,18 +2424,18 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
         if ((record->flags & 0x600) == 0x400)
         {
             u32 selector_high = part->palette_extent.word >> 29;
-            local_vector->y = -field_evaluate_parameter_track_at_time(
+            local_vector->vy = -field_evaluate_parameter_track_at_time(
                 actor, ((((part->rotation_extent.word) & 0x3F) * 8) | selector_high) & FIELD_TRACK_INDEX_MASK, (u16)record->age);
         }
         else
         {
-            local_vector->y = -((u16)record->flags & FIELD_EFFECT_DISTANCE_MASK);
+            local_vector->vy = -((u16)record->flags & FIELD_EFFECT_DISTANCE_MASK);
         }
 
         if ((part->palette_extent.word) & 0x01000000)
         {
-            local_vector->y =
-                (s16)((g_field_object_states[actor->owner_object_index].movement.half.flags & FIELD_MOVEMENT_SCALE_MASK) * (s16)(u16)local_vector->y / 100);
+            local_vector->vy =
+                (s16)((g_field_object_states[actor->owner_object_index].movement.half.flags & FIELD_MOVEMENT_SCALE_MASK) * (s16)(u16)local_vector->vy / 100);
         }
 
         {
@@ -2460,7 +2448,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
             {
                 if ((bounds_flags >> 0x10) & 1)
                 {
-                    s32 previous_distance = local_vector->y;
+                    s32 previous_distance = local_vector->vy;
 
                     if (placement_kind < FIELD_PLACEMENT_TRACK_BOUNDS || placement_kind >= FIELD_PLACEMENT_NONE)
                     {
@@ -2476,13 +2464,13 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                     }
 
                     dy = abs(dy);
-                    local_vector->y = previous_distance - dy;
+                    local_vector->vy = previous_distance - dy;
                     bounds_flags = part->placement_flags.word;
                 }
 
                 if ((bounds_flags >> 0x11) & 1)
                 {
-                    s32 previous_distance = local_vector->y;
+                    s32 previous_distance = local_vector->vy;
 
                     if (((bounds_flags >> FIELD_PART_PLACEMENT_KIND_SHIFT) & FIELD_PART_PLACEMENT_KIND_MASK) < FIELD_PLACEMENT_TRACK_BOUNDS ||
                         ((bounds_flags >> FIELD_PART_PLACEMENT_KIND_SHIFT) & FIELD_PART_PLACEMENT_KIND_MASK) >= FIELD_PLACEMENT_NONE)
@@ -2499,15 +2487,15 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                     }
 
                     dy = abs(dy);
-                    local_vector->y = previous_distance - dy;
+                    local_vector->vy = previous_distance - dy;
                 }
             }
         }
 
-        local_vector->x = 0;
-        local_vector->z = 0;
+        local_vector->vx = 0;
+        local_vector->vz = 0;
         record->heading = record->heading + record->motion_parameter;
-        RotMatrix_gte((FieldSVector*)&record->rotation_x, rotation);
+        RotMatrix_gte((SVECTOR*)&record->rotation_x, rotation);
         RotMatrixZ(record->rotation_z_16 * 0x10, rotation);
         RotMatrixY(record->rotation_y_16 * 0x10, rotation);
         gte_SetRotMatrix(rotation);
@@ -2661,14 +2649,14 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
 
                     if (!(part->orientation_flags.word & FIELD_EFFECT_ORIENTATION_LOCK))
                     {
-                        RotMatrix_gte((FieldSVector*)&g_field_effect_records[((u16)record->reference_index)].rotation_x, rotation);
+                        RotMatrix_gte((SVECTOR*)&g_field_effect_records[((u16)record->reference_index)].rotation_x, rotation);
                         gte_SetRotMatrix(rotation);
                         gte_ldv0(rotated_vector);
                         gte_rtv0();
                         gte_stsv(local_vector);
-                        rotated_vector->x = local_vector->x;
-                        rotated_vector->y = local_vector->y;
-                        rotated_vector->z = local_vector->z;
+                        rotated_vector->vx = local_vector->vx;
+                        rotated_vector->vy = local_vector->vy;
+                        rotated_vector->vz = local_vector->vz;
                     }
 
                     break;
@@ -2765,13 +2753,11 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                 placement_origin->vx = reference_record->x;
                 placement_origin->vy =
                     reference_record->y +
-                    (reference_object->attachment_points[((u32)part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK]
-                         .y
+                    (reference_object->attachment_points[(part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].y
                      << 8);
                 placement_origin->vz = reference_record->z;
                 placement_origin->vx +=
-                    reference_object->attachment_points[((u32)part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK]
-                        .x
+                    reference_object->attachment_points[(part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x
                     << 8;
                 break;
             case 0x32:
@@ -2779,8 +2765,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                 reference_object = &g_field_object_states[actor->owner_object_index];
                 placement_origin->vx =
                     reference_record->x +
-                    (reference_object->attachment_points[((u32)part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK]
-                         .x
+                    (reference_object->attachment_points[(part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x
                      << 8);
                 placement_origin->vy = reference_record->y;
                 placement_origin->vz = reference_record->z + (part->offset_z << 8);
@@ -2868,14 +2853,14 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
 
                 if (!(part->orientation_flags.word & FIELD_EFFECT_ORIENTATION_LOCK))
                 {
-                    RotMatrix_gte((FieldSVector*)&g_field_effect_records[(u16)record->reference_index].rotation_x, rotation);
+                    RotMatrix_gte((SVECTOR*)&g_field_effect_records[(u16)record->reference_index].rotation_x, rotation);
                     gte_SetRotMatrix(rotation);
                     gte_ldv0(rotated_vector);
                     gte_rtv0();
                     gte_stsv(local_vector);
-                    rotated_vector->x = local_vector->x;
-                    rotated_vector->y = local_vector->y;
-                    rotated_vector->z = local_vector->z;
+                    rotated_vector->vx = local_vector->vx;
+                    rotated_vector->vy = local_vector->vy;
+                    rotated_vector->vz = local_vector->vz;
                 }
 
                 break;
@@ -2890,9 +2875,9 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                 break;
         }
 
-        record->x = ((s16)rotated_vector->x << 8) + placement_origin->vx;
-        record->y = (((s32)(rotated_vector->y << 0x10)) >> 8) + placement_origin->vy;
-        z = (((s32)(rotated_vector->z << 0x10)) >> 8) + placement_origin->vz;
+        record->x = ((s16)rotated_vector->vx << 8) + placement_origin->vx;
+        record->y = (((s32)(rotated_vector->vy << 0x10)) >> 8) + placement_origin->vy;
+        z = (((s32)(rotated_vector->vz << 0x10)) >> 8) + placement_origin->vz;
         record->z = z;
 
         if (part->placement_flags.word & 1)
@@ -2937,12 +2922,12 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
     {
         {
             u16 speed = record->motion_parameter;
-            local_vector->z = 0;
-            local_vector->x = 0;
-            local_vector->y = -speed << 2;
+            local_vector->vz = 0;
+            local_vector->vx = 0;
+            local_vector->vy = -speed << 2;
         }
 
-        RotMatrix_gte((FieldSVector*)&record->rotation_x, rotation);
+        RotMatrix_gte((SVECTOR*)&record->rotation_x, rotation);
 
         if (!((part->behavior_flags.word >> FIELD_PART_PITCH_ACCELERATION_BIT) & 1) && (record->color_position.fields.position_source == FIELD_POSITION_NONE))
         {
@@ -2991,8 +2976,8 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
             {
                 if (!(part->spawn_flags.word & FIELD_PART_RETIRE_ON_COLLISION))
                 {
-                    rotated_vector->x = 0;
-                    rotated_vector->z = 0;
+                    rotated_vector->vx = 0;
+                    rotated_vector->vz = 0;
                 }
                 else
                 {
@@ -3008,9 +2993,9 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                 mover->x = record->x;
                 mover->height = 0;
                 mover->z = record->z;
-                mover->move_x = rotated_vector->x;
+                mover->move_x = rotated_vector->vx;
                 mover->move_height = 0;
-                mover->move_z = rotated_vector->z;
+                mover->move_z = rotated_vector->vz;
                 mover->footprint_width = FIELD_FOOTPRINT_LARGE_WIDTH;
                 mover->mode.bits.footprint_depth = FIELD_FOOTPRINT_LARGE_DEPTH;
                 mover->height_bias = FIELD_FOOTPRINT_STEP;
@@ -3021,8 +3006,8 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
 
                 if (field_collision_resolve_move(mover) & (FIELD_COLLISION_RESULT_BLOCKED | FIELD_COLLISION_RESULT_SLID))
                 {
-                    rotated_vector->z = 0;
-                    rotated_vector->x = 0;
+                    rotated_vector->vz = 0;
+                    rotated_vector->vx = 0;
 
                     if (part->spawn_flags.word & FIELD_PART_RETIRE_ON_COLLISION)
                     {
@@ -3049,13 +3034,13 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
 
                     if ((g_field_active_group != 0) && (field_collision_hit_markers(query) != FIELD_COLLISION_MARKER_NONE))
                     {
-                        rotated_vector->z = 0;
-                        rotated_vector->x = 0;
+                        rotated_vector->vz = 0;
+                        rotated_vector->vx = 0;
                     }
                     else
                     {
-                        rotated_vector->x = (u16)mover->x - (u16)record->x;
-                        rotated_vector->z = (u16)mover->z - (u16)record->z;
+                        rotated_vector->vx = (u16)mover->x - (u16)record->x;
+                        rotated_vector->vz = (u16)mover->z - (u16)record->z;
                     }
                 }
             }
@@ -3065,28 +3050,28 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
         {
             s32 camera_x;
             s32 next_z;
-            dx = record->x + (s16)rotated_vector->x;
+            dx = record->x + (s16)rotated_vector->vx;
             camera_x = -camera->x;
 
             if (((camera_x + FIELD_EFFECT_CAMERA_X_MIN) < dx) && (dx < (camera_x + FIELD_EFFECT_CAMERA_X_MAX)))
             {
-                next_z = record->z + (s16)rotated_vector->z;
+                next_z = record->z + (s16)rotated_vector->vz;
                 x = -camera->z;
 
                 if ((x < next_z) && (next_z < (x + FIELD_EFFECT_CAMERA_Z_SPAN)))
                 {
                     record->x = dx;
-                    record->z = record->z + (s16)rotated_vector->z;
+                    record->z = record->z + (s16)rotated_vector->vz;
                 }
             }
         }
         else
         {
-            record->x = record->x + (s16)rotated_vector->x;
-            record->z = record->z + (s16)rotated_vector->z;
+            record->x = record->x + (s16)rotated_vector->vx;
+            record->z = record->z + (s16)rotated_vector->vz;
         }
 
-        y = record->y + (s16)rotated_vector->y;
+        y = record->y + (s16)rotated_vector->vy;
         record->y = y;
 
         if ((part->spawn_flags.word & FIELD_PART_GROUND_STOP) && y >= 0 &&
@@ -3311,7 +3296,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
     /* After the pickup delay, find a nearby recipient and consume the reward effect. */
     if (!(actor->status.word & 1))
     {
-        state_or_delta = ((u16*)&actor->status.word)[1];
+        state_or_delta = actor->status.parts.animation_id;
 
         switch (state_or_delta)
         {
@@ -3609,12 +3594,10 @@ void field_resolve_effect_position(FieldMotionRecord* effect, FieldObjectPart* p
             source_object = &g_field_object_states[g_field_actor_slots[effect->actor_index].owner_object_index];
             position->vx =
                 source_record->x +
-                (source_object->attachment_points[((u32)part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x
-                 << 8);
+                (source_object->attachment_points[(part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
             position->vy =
                 source_record->y +
-                (source_object->attachment_points[((u32)part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].y
-                 << 8);
+                (source_object->attachment_points[(part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].y << 8);
             position->vz = source_record->z;
             return;
         case FIELD_POSITION_FACING_OFFSET:
@@ -8770,9 +8753,9 @@ void field_resolve_actor_part_anchor(FieldActorSlot* actor, FieldObjectPart* par
             object_record = &g_field_actors[object_index];
             object = &g_field_object_states[object_index];
             out->x = object_record->x +
-                     (object->attachment_points[((u32)part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
+                     (object->attachment_points[(part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
             out->y = object_record->y +
-                     (object->attachment_points[((u32)part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].y << 8);
+                     (object->attachment_points[(part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].y << 8);
             out->z = object_record->z;
             return;
 
@@ -8781,7 +8764,7 @@ void field_resolve_actor_part_anchor(FieldActorSlot* actor, FieldObjectPart* par
             object_record = &g_field_actors[object_index];
             object = &g_field_object_states[object_index];
             out->x = object_record->x +
-                     (object->attachment_points[((u32)part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
+                     (object->attachment_points[(part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
             out->y = object_record->y;
             out->z = object_record->z + (part->offset_z << 8);
 
