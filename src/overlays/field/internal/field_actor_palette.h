@@ -3,15 +3,23 @@
 
 #include "common.h"
 
+#include "common/tim.h"
+
 /** @brief Owner slots below this (the two players) have their own CLUT rows and texture pages. */
 #define FIELD_ACTOR_PALETTE_OWNERS 2
 /** @brief Bytes of CLUT data owned by each of the two actor palette owners. */
 #define FIELD_ACTOR_CLUT_BUFFER_SIZE 0x400
+/** @brief Bytes of a 256-entry CLUT row. A palette buffer holds the base row, then the animated row. */
+#define FIELD_CLUT_BYTES (CLUT_ENTRY_COUNT * 2)
+/** @brief CLUT buffer of actor palette owner @p owner (0 or 1). */
+#define FIELD_ACTOR_CLUT_BUFFER(owner) (((u8(*)[FIELD_ACTOR_CLUT_BUFFER_SIZE])g_field_actor_clut_buffers)[owner])
 
 /** @brief VRAM row of player 0's actor CLUT; player 1 uses the row two below. */
 #define FIELD_ACTOR_CLUT_VRAM_Y 0x1EE
 /** @brief VRAM row of the CLUT used with the shared actor texture. */
 #define FIELD_SHARED_CLUT_VRAM_Y 0x1F2
+/** @brief Rows from an owner's base CLUT row down to its animated row, which palette tracks fill. */
+#define FIELD_ANIMATED_CLUT_ROW 1
 
 /** @brief VRAM position of player 0's actor texture; player 1's follows it. */
 #define FIELD_ACTOR_TEXTURE_VRAM_X 0x340

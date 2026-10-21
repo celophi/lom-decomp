@@ -54,8 +54,6 @@
 #define FIELD_ACTOR_TIM_PIXELS (sizeof(Tim) + sizeof(TimBlock))
 /** @brief Header bytes in front of a TIM block's payload (signed, so size arithmetic stays signed). */
 #define FIELD_TIM_BLOCK_HEADER ((s32)sizeof(TimBlock))
-/** @brief Bytes of a 256-entry CLUT. */
-#define FIELD_CLUT_BYTES (CLUT_ENTRY_COUNT * 2)
 
 /** @brief Section sizes from this value on mean "use the shared sound table" instead of inline data. */
 #define FIELD_SOUND_SHARED_SIZE 0x1000

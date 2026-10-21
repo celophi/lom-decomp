@@ -417,7 +417,7 @@ void field_reset_draw_state(void);
 /* field_effect_update.c */
 s32 field_spawn_actor_effect(struct FieldActorSlot* actor, s32 part_index, s32 start);
 void field_retire_effect(struct FieldMotionRecord* effect, struct FieldObjectPart* part);
-void field_advance_actor_effects(struct FieldActorSlot* actor_state);
+void field_advance_actor_effects(struct FieldActorSlot* actor);
 /**
  * @brief Packed action context: action in the low byte, source at bit 8, recipient at bit 16.
  * @note Also written on pool exhaustion and advanced during collision attempts;

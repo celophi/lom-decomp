@@ -1341,7 +1341,6 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
     u8 prior_count;
     u8 owner_index;
     u8 track_count;
-    u8 previous_state;
     FieldObjectState* source_state;
     FieldObjectState* candidate_state;
     FieldObjectState* prior_list;
@@ -1575,9 +1574,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
 
             if (effect->flags & FIELD_EFFECT_RETIRE_ON_HIT)
             {
-                previous_state = effect->state;
-                effect->state = FIELD_EFFECT_RETIRED;
-                effect->height_or_retired_state = previous_state;
+                FIELD_EFFECT_RETIRE(effect);
             }
 
             actor->target_count++;

@@ -592,6 +592,10 @@ typedef struct FieldObjectPart
 /** @brief FieldObjectPart::effect_flags bit 31: spawning the part also spawns its linked part (rotation_extent.fields.linked_part). */
 #define FIELD_PART_SPAWN_LINKED 0x80000000
 
+/** @brief FieldObjectPart::track_flags bit 21: the part draws with its owner's animated CLUT row, which its palette track fills. */
+#define FIELD_PART_ANIMATED_PALETTE_BIT 21
+#define FIELD_PART_HAS_ANIMATED_PALETTE(part) (((part)->track_flags.word >> FIELD_PART_ANIMATED_PALETTE_BIT) & 1)
+
 /** @brief FieldObjectPart::behavior_flags bits 22-23 (bits.blend_mode): GPU blend mode of the part's sprites and mesh (getTPage abr). */
 #define FIELD_PART_BLEND_MODE_SHIFT 22
 #define FIELD_PART_BLEND_MODE_MASK 0xC00000
