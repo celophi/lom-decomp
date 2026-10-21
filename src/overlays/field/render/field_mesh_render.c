@@ -76,13 +76,6 @@ extern FieldMotionRecord g_field_effect_records[];
  */
 #define FIELD_PART_LIGHT_SOURCE(part, i) ((&(part)->rotation_extent.fields.linked_part)[i])
 
-/**
- * @brief CLUT buffer of actor palette owner @p owner (0 or 1).
- * @note g_field_actor_clut_buffers is declared as a flat byte array; the
- *       original indexes it as a [2][0x400] array.
- */
-#define FIELD_ACTOR_CLUT_BUFFER(owner) (((u8(*)[FIELD_ACTOR_CLUT_BUFFER_SIZE])g_field_actor_clut_buffers)[owner])
-
 static void field_rotate_palette_row(u16* row, s32 count, s32 rotate_right);
 
 /**
@@ -112,9 +105,9 @@ static void field_rotate_palette_row(u16* row, s32 count, s32 rotate_right);
             (clut) = getClut((part)->appearance.fields.palette_selector * 16, VRAM_CLUT_Y);                                                                    \
             (tpage) = getTPage(FIELD_PART_TEXTURE_MODE(part), FIELD_PART_BLEND_MODE(part), FIELD_SHARED_TEXTURE_VRAM_X, FIELD_SHARED_TEXTURE_VRAM_Y);          \
         }                                                                                                                                                      \
-        if (((part)->track_flags.word >> 21) & 1)                                                                                                              \
+        if (FIELD_PART_HAS_ANIMATED_PALETTE(part))                                                                                                             \
         {                                                                                                                                                      \
-            (clut) = ((clut) & 0xFFC0) + getClut(0, 1);                                                                                                        \
+            (clut) = ((clut) & 0xFFC0) + getClut(0, FIELD_ANIMATED_CLUT_ROW);                                                                                  \
         }                                                                                                                                                      \
     }
 

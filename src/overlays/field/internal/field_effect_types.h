@@ -14,6 +14,16 @@
 #define FIELD_EFFECT_DISABLED 0xFE
 /** @brief FieldMotionRecord::state of a free (retired) effect record. */
 #define FIELD_EFFECT_RETIRED 0xFF
+/** @brief FieldMotionRecord::previous_effect_index/next_effect_index value for no linked record. */
+#define FIELD_EFFECT_NO_LINK 0xFF
+
+/** @brief Retire an effect record, keeping its last state in height_or_retired_state. */
+#define FIELD_EFFECT_RETIRE(effect)                                                                                                                            \
+    do                                                                                                                                                         \
+    {                                                                                                                                                          \
+        (effect)->height_or_retired_state = (effect)->state;                                                                                                   \
+        (effect)->state = FIELD_EFFECT_RETIRED;                                                                                                                \
+    } while (0)
 
 /**
  * @brief Placement kinds of a part's effects (FieldObjectPart::placement_flags bits 18-23).

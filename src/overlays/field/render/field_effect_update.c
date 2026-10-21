@@ -1939,28 +1939,23 @@ static void field_face_effect_target(FieldMotionRecord* effect, FieldObjectPart*
 
 /**
  * @brief Per-frame actor tick: advances every active effect record owned by
- *        this actor (culling off-screen ones, spawning chained effects on
- *        expiry), then refreshes the actor's palette-track texture pages.
- * @param actor_state Actor being ticked.
+ *        this actor (retiring expired and off-screen ones, spawning linked
+ *        effects), then fills the animated CLUT row from the parts' palette
+ *        tracks and advances palette and mesh texture animation.
+ * @param actor Actor being ticked.
  */
-void field_advance_actor_effects(FieldActorSlot* actor_state)
+void field_advance_actor_effects(FieldActorSlot* actor)
 {
-    FieldActorSlot* actor;
     FieldMotionRecord* effect;
     FieldObjectPart* part;
     FieldObjectPart* palette_part;
-    void* palette_buffer;
+    u8* palette_buffer;
     s32 part_index;
     s32 new_effect_index;
-    s32 palette_changed;
+    s32 animated_part_count;
     FieldMotionRecord* new_effect;
-    u8 previous_state;
     RECT palette_rect;
-    SVECTOR screen_position;
-    VECTOR segment_delta;
-    VECTOR segment_angles;
-
-    actor = actor_state;
+    SVECTOR screen;
 
     for (effect = g_field_effect_records; effect != &g_field_effect_records[FIELD_EFFECT_ACTIVE_RECORD_COUNT]; effect++)
     {
@@ -1973,21 +1968,18 @@ void field_advance_actor_effects(FieldActorSlot* actor_state)
 
             if (FIELD_PART_END_MODE(part) == FIELD_PART_END_LIFETIME && (u16)effect->age == effect->lifetime)
             {
-                previous_state = effect->state;
-                effect->state = FIELD_EFFECT_RETIRED;
-                effect->height_or_retired_state = previous_state;
+                FIELD_EFFECT_RETIRE(effect);
             }
 
             if (FIELD_PART_END_MODE(part) == FIELD_PART_END_OFFSCREEN)
             {
-                screen_position.vx = FIELD_SCREEN_X(effect->x);
-                screen_position.vy = FIELD_SCREEN_Y(effect->y, effect->z);
+                screen.vx = FIELD_SCREEN_X(effect->x);
+                screen.vy = FIELD_SCREEN_Y(effect->y, effect->z);
 
-                if (screen_position.vx < -0x140 || screen_position.vx > 0x280 || screen_position.vy >= 0x1E1 || screen_position.vy < -0xF0)
+                /* Cull once the effect is more than a screen beyond any edge. */
+                if (screen.vx < -SCREEN_WIDTH || screen.vx > SCREEN_WIDTH * 2 || screen.vy > SCREEN_HEIGHT * 2 || screen.vy < -SCREEN_HEIGHT)
                 {
-                    previous_state = effect->state;
-                    effect->state = FIELD_EFFECT_RETIRED;
-                    effect->height_or_retired_state = previous_state;
+                    FIELD_EFFECT_RETIRE(effect);
                 }
             }
 
@@ -2002,73 +1994,79 @@ void field_advance_actor_effects(FieldActorSlot* actor_state)
 
                 if (new_effect_index != -1)
                 {
+                    VECTOR segment;
+                    VECTOR segment_normal;
+
                     new_effect = &g_field_effect_records[new_effect_index];
                     new_effect->x = effect->x;
                     new_effect->y = effect->y;
                     new_effect->z = effect->z;
-                    segment_delta.vx = effect->x - g_field_effect_records[effect->previous_effect_index].x;
-                    segment_delta.vy = effect->y - g_field_effect_records[effect->previous_effect_index].y;
-                    segment_delta.vz = effect->z - g_field_effect_records[effect->previous_effect_index].z;
+                    segment.vx = effect->x - g_field_effect_records[effect->previous_effect_index].x;
+                    segment.vy = effect->y - g_field_effect_records[effect->previous_effect_index].y;
+                    segment.vz = effect->z - g_field_effect_records[effect->previous_effect_index].z;
                     g_field_effect_records[effect->previous_effect_index].next_effect_index = new_effect_index;
-                    screen_position.vx = segment_delta.vx >> 8;
-                    screen_position.vy = (segment_delta.vy >> 8) - (segment_delta.vz >> 9);
-                    segment_delta.vz = 0;
-                    segment_delta.vx = screen_position.vy;
-                    segment_delta.vy = -screen_position.vx;
-                    VectorNormal(&segment_delta, &segment_angles);
-                    new_effect->rotation_x = segment_angles.vx >> 6;
-                    new_effect->heading = segment_angles.vy >> 6;
-                    new_effect->pitch = segment_angles.vz >> 6;
+
+                    /* Orient the new link along the screen-space normal of the segment from the previous link. */
+                    screen.vx = segment.vx >> 8;
+                    screen.vy = (segment.vy >> 8) - (segment.vz >> 9);
+                    segment.vz = 0;
+                    segment.vx = screen.vy;
+                    segment.vy = -screen.vx;
+                    VectorNormal(&segment, &segment_normal);
+                    new_effect->rotation_x = segment_normal.vx >> 6;
+                    new_effect->heading = segment_normal.vy >> 6;
+                    new_effect->pitch = segment_normal.vz >> 6;
                     new_effect->work_x = 0;
                     new_effect->work_y = 0;
                     new_effect->previous_effect_index = effect->previous_effect_index;
-                    new_effect->next_effect_index = 0xFF;
+                    new_effect->next_effect_index = FIELD_EFFECT_NO_LINK;
                     effect->previous_effect_index = new_effect_index;
                 }
             }
         }
     }
 
-    if (actor->owner_object_index < 2)
+    if (actor->owner_object_index < FIELD_ACTOR_PALETTE_OWNERS)
     {
-        palette_buffer = &g_field_actor_clut_buffers[actor->owner_object_index << 0xA];
+        palette_buffer = FIELD_ACTOR_CLUT_BUFFER(actor->owner_object_index);
     }
     else
     {
         palette_buffer = g_field_shared_clut_buffer;
     }
 
-    palette_changed = 0;
+    animated_part_count = 0;
 
     for (part_index = 0; part_index < actor->part_count; part_index++)
     {
         palette_part = FIELD_ELEMENT_AT(FieldObjectPart, actor->parts, part_index);
 
-        if ((palette_part->track_flags.word >> 0x15) & 1)
+        if (FIELD_PART_HAS_ANIMATED_PALETTE(palette_part))
         {
-            field_interpolate_palette_track(actor, palette_part->palette_extent.fields.palette_track, palette_buffer, (u8*)palette_buffer + 0x200);
-            palette_changed++;
+            field_interpolate_palette_track(actor, palette_part->palette_extent.fields.palette_track, palette_buffer,
+                                            (s16*)(palette_buffer + FIELD_CLUT_BYTES));
+            animated_part_count++;
         }
     }
 
-    if (palette_changed != 0)
+    if (animated_part_count != 0)
     {
-        if (actor->owner_object_index < 2)
+        if (actor->owner_object_index < FIELD_ACTOR_PALETTE_OWNERS)
         {
             palette_rect.x = 0;
-            palette_rect.y = (actor->owner_object_index * 2) + 0x1EF;
-            palette_rect.w = 0x10;
+            palette_rect.y = (actor->owner_object_index * 2) + FIELD_ACTOR_CLUT_VRAM_Y + FIELD_ANIMATED_CLUT_ROW;
+            palette_rect.w = GPU_CLUT_4BIT_COLORS;
             palette_rect.h = 1;
         }
         else
         {
-            palette_rect.y = 0x1F3;
-            palette_rect.w = 0x10;
             palette_rect.x = 0;
+            palette_rect.y = FIELD_SHARED_CLUT_VRAM_Y + FIELD_ANIMATED_CLUT_ROW;
+            palette_rect.w = GPU_CLUT_4BIT_COLORS;
             palette_rect.h = 1;
         }
 
-        LoadImage(&palette_rect, (u8*)palette_buffer + 0x200);
+        LoadImage(&palette_rect, (u_long*)(palette_buffer + FIELD_CLUT_BYTES));
     }
 
     field_update_actor_palette_animation(actor);
@@ -2267,9 +2265,9 @@ void field_retire_effect(FieldMotionRecord* effect, FieldObjectPart* part)
     {
         next_effect_index = effect->next_effect_index;
 
-        if (next_effect_index != 0xFF)
+        if (next_effect_index != FIELD_EFFECT_NO_LINK)
         {
-            g_field_effect_records[effect->next_effect_index].previous_effect_index = 0xFF;
+            g_field_effect_records[effect->next_effect_index].previous_effect_index = FIELD_EFFECT_NO_LINK;
         }
     }
 }
@@ -2308,7 +2306,6 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
     s32 slot;
     s32 recipient_index;
     u8 reference_state;
-    u8 retired_state;
 
     camera = (FieldEffectCamera*)SCENE_STATE_ADDRESS;
     map_bounds = (FieldEffectMapBounds*)MAP_BOUNDS_ADDRESS;
@@ -3078,9 +3075,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                 {
                     if (FIELD_PART_END_MODE(part) == FIELD_PART_END_AT_TARGET)
                     {
-                        retired_state = record->state;
-                        record->state = FIELD_EFFECT_RETIRED;
-                        record->height_or_retired_state = (s8)retired_state;
+                        FIELD_EFFECT_RETIRE(record);
                         return;
                     }
 
@@ -4074,9 +4069,9 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
                     ((POLY_FT4*)packet_cursor)->tpage = value1;
                 }
 
-                if ((part->track_flags.word >> 0x15) & 1)
+                if (FIELD_PART_HAS_ANIMATED_PALETTE(part))
                 {
-                    ((POLY_FT4*)packet_cursor)->clut = (frame_y_or_clut + 1) << 6;
+                    ((POLY_FT4*)packet_cursor)->clut = (frame_y_or_clut + FIELD_ANIMATED_CLUT_ROW) << 6;
                 }
                 else
                 {
