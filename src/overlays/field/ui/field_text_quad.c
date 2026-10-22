@@ -10,14 +10,6 @@
 #include <libgpu.h>
 #include <memory.h>
 
-/** @brief Alignment values in the low bits of the draw flags; 0 left-aligns on x. */
-#define FIELD_TEXT_QUAD_ALIGN_RIGHT 1
-#define FIELD_TEXT_QUAD_ALIGN_CENTER 2
-#define FIELD_TEXT_QUAD_ALIGN_MASK 0x7F
-
-/** @brief Draw flag that adds a black outline around the quad. */
-#define FIELD_TEXT_QUAD_OUTLINE 0x80
-
 /** @brief VRAM x of the scratch texture area, right of the display buffers (16-bit units). */
 #define FIELD_TEXT_QUAD_SCRATCH_X SCREEN_WIDTH
 
@@ -44,7 +36,7 @@ static POLY_FT4* field_text_add_quad_outline(u_long* ot, POLY_FT4* output);
  * @param style Text style passed to field_text_build_sprites.
  * @param x Horizontal position of the aligned edge.
  * @param y Top edge.
- * @param flags Alignment in the low seven bits, plus FIELD_TEXT_QUAD_OUTLINE.
+ * @param flags Alignment in the low seven bits, plus FIELD_TEXT_SHADOW for a black outline.
  * @param scratch_row Scratch texture row the text is staged in.
  * @param x_scale Horizontal scale in units of 1/256.
  * @param y_scale Vertical scale in units of 1/256.
@@ -76,7 +68,7 @@ POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* output, u_long* ot, u8* text, s3
         setRECT(&rect, FIELD_TEXT_QUAD_SCRATCH_X, scratch_y, FIELD_TEXT_QUAD_SCRATCH_WIDTH, FIELD_TEXT_QUAD_ROW_HEIGHT);
         ClearImage(&rect, 0, 0, 0);
         DrawSync(0);
-        rect.x = (sprites[0].u0 >> 2) + FIELD_TEXT_CACHE_VRAM_X;
+        rect.x = sprites[0].u0 / FIELD_TEXT_PIXELS_PER_WORD + FIELD_TEXT_CACHE_VRAM_X;
         rect.y = sprites[0].v0 + FIELD_TEXT_TPAGE_VRAM_Y;
         rect.w = sprites[0].w / FIELD_TEXT_PIXELS_PER_WORD;
 #if defined(VERSION_JP)
@@ -86,14 +78,14 @@ POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* output, u_long* ot, u8* text, s3
 #endif
         MoveImage(&rect, FIELD_TEXT_QUAD_SCRATCH_X, scratch_y);
 
-        switch (flags & FIELD_TEXT_QUAD_ALIGN_MASK)
+        switch (flags & FIELD_TEXT_ALIGN_MASK)
         {
-        case FIELD_TEXT_QUAD_ALIGN_CENTER:
-            x -= (sprites[0].w >> 1) * x_scale / FIELD_TEXT_QUAD_SCALE_ONE;
-            break;
-        case FIELD_TEXT_QUAD_ALIGN_RIGHT:
-            x -= sprites[0].w * x_scale / FIELD_TEXT_QUAD_SCALE_ONE;
-            break;
+            case FIELD_TEXT_ALIGN_CENTER:
+                x -= (sprites[0].w >> 1) * x_scale / FIELD_TEXT_QUAD_SCALE_ONE;
+                break;
+            case FIELD_TEXT_ALIGN_RIGHT:
+                x -= sprites[0].w * x_scale / FIELD_TEXT_QUAD_SCALE_ONE;
+                break;
         }
 
         SET_BGR0_PACKED(output, GPU_TINT_NEUTRAL);
@@ -123,7 +115,7 @@ POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* output, u_long* ot, u8* text, s3
 
         output++;
 
-        if (flags & FIELD_TEXT_QUAD_OUTLINE)
+        if (flags & FIELD_TEXT_SHADOW)
         {
             output = field_text_add_quad_outline(ot, output);
         }

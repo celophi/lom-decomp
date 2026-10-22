@@ -2,12 +2,14 @@
 #define FIELD_SCENE_INTERNAL_H
 
 #include "common.h"
-#include "common/gpu_packet.h"
-#include "overlays/field/field_scene.h"
-#include "overlays/movie/movie.h"
-#include "field_animation.h"
-#include <libgte.h>
 #include <libgpu.h>
+#include <libgte.h>
+
+#include "common/gpu_packet.h"
+#include "field_animation.h"
+#include "overlays/field/field_scene.h"
+#include "overlays/field/field_workspace.h"
+#include "overlays/movie/movie.h"
 
 #define FIELD_COPY_TINT_COLOR(destination, source) \
     ((destination)->rg = (source)->rg, (destination)->b = (source)->b)
@@ -1061,48 +1063,16 @@ typedef struct
 /** The scene resource block; the scene's runtime records follow it. */
 #define FIELD_RESOURCE ((FieldResource*)LOAD_BUFFER_ADDRESS)
 
-/** Field allocator state block. */
-#define FIELD_MEM_STATE ((FieldMemState*)FIELD_WORKSPACE_ADDRESS)
-
-/**
- * @brief Field memory-allocator state block at 0x801ED000.
- *
- * The scene-transition fade shares the block: field_begin_scene_fade_out arms it by setting
- * @c fade_mode to 1 and @c fade_level to 0x100, and field_update_scene_fade
- * ticks it from there.
- */
-typedef struct
-{
-    /** 0x00 top of the allocated region. */
-    u8* top;
-    /** 0x04 text configuration save area (g_field_text_saved_configs). */
-    u8* text_configs;
-    u8 _pad0[0xC - 8];
-    /** 0x0C base of the allocated region. */
-    u8* base;
-    /** 0x10 end of the first half of the region. */
-    u8* midpoint;
-    u8 _pad1[0x2C - 0x14];
-    /**
-     * 0x2C fade state: 1 fading out, 2 held out, 3 fading in, 0 idle. Also
-     * reachable as the global g_field_scene_fade_mode, and the two spellings
-     * are not interchangeable - see field_update_scene_fade.
-     */
-    s32 fade_mode;
-    /** 0x30 fade level, 0x100 is fully lit; stepped by 8 per frame. */
-    s32 fade_level;
-} FieldMemState;
-
 /*
  * Words of the allocator block that the code also reaches as plain globals.
  */
-/** @brief Top of the allocated region (FieldMemState.top). */
+/** @brief Top of the allocated region (FieldWorkspace.top). */
 extern u8* g_field_mem_top;
-/** @brief Base of the allocated region (FieldMemState.base). */
+/** @brief Base of the allocated region (FieldWorkspace.primitive_buffers[0]). */
 extern u8* g_field_mem_base;
-/** @brief End of the first half of the region (FieldMemState.midpoint). */
+/** @brief End of the first half of the region (FieldWorkspace.primitive_buffers[1]). */
 extern u8* g_field_mem_midpoint;
-/** @brief Scene fade state (FieldMemState.fade_mode). */
+/** @brief Scene fade state (FieldWorkspace.fade_mode). */
 extern s32 g_field_scene_fade_mode;
 
 extern s32 g_field_marker_overlay_enabled[2];

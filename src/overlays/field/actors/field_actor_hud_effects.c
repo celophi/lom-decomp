@@ -7,25 +7,25 @@
 
 #include "common.h"
 #include <abs.h>
-#include "main/cdrom.h"
-#include "main/display.h"
+#include <libgpu.h>
+#include <libgte.h>
+#include <memory.h>
+#include <rand.h>
+
+#include "../internal/field_actor_palette.h"
+#include "../internal/field_actor_runtime.h"
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_effect_render_state.h"
-#include "main/field_runtime.h"
 #include "common/gpu_packet.h"
 #include "common/saved_game.h"
 #include "common/tim.h"
 #include "common/vector.h"
-#include <libgte.h>
-#include <libgpu.h>
-#include <memory.h>
-#include <rand.h>
-#include "../internal/field_actor_runtime.h"
-#include "../internal/field_actor_palette.h"
+#include "main/cdrom.h"
+#include "main/display.h"
+#include "main/field_runtime.h"
 #include "overlays/field/field_actor_records.h"
-
-/* ---- HUD ------------------------------------------------------------------ */
+#include "overlays/field/field_vram.h"
 
 /** @brief Frames an enemy panel stays up after its HP changes. */
 #define FIELD_HUD_PANEL_FRAMES 20
@@ -78,15 +78,9 @@
 /** @brief Texture page coordinates packed as a u0/v0 halfword. */
 #define FIELD_HUD_UV(u, v) (((v) << 8) | (u))
 
-/** @brief HUD texture page in VRAM (the ground shadow uses it too) and the first of its two CLUT rows. */
-#define FIELD_HUD_TEXTURE_X 960
-#define FIELD_HUD_TEXTURE_Y 256
-#define FIELD_HUD_CLUT_X 256
-#define FIELD_HUD_CLUT_Y 480
-
 /** @brief CLUTs of the panels and of the blinking portrait (the shadow uses the second one). */
-#define FIELD_HUD_CLUT getClut(FIELD_HUD_CLUT_X, FIELD_HUD_CLUT_Y)
-#define FIELD_HUD_BLINK_CLUT getClut(FIELD_HUD_CLUT_X, FIELD_HUD_CLUT_Y + 1)
+#define FIELD_HUD_CLUT getClut(FIELD_UI_CLUT_X, FIELD_UI_CLUT_Y)
+#define FIELD_HUD_BLINK_CLUT getClut(FIELD_UI_CLUT_X, FIELD_UI_CLUT_Y + 1)
 
 /** @brief Gauge position inside the party, boss and enemy panels. */
 #define FIELD_HUD_PARTY_BAR_X 29
@@ -167,8 +161,6 @@ extern s32 g_field_hud_bar_offset_y;
 extern s32 g_frame_counter;
 extern u8 g_field_pair_indicator_list[];
 
-/* ---- Object flag handlers and fading primitives ---------------------------- */
-
 /** @brief Number of bits in FieldObjectState.flags that have a handler entry. */
 #define FIELD_OBJECT_HANDLER_COUNT 16
 
@@ -237,8 +229,6 @@ extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_
 #define START_OBJECT_EFFECT(actor, resource)                                                                                                                   \
     (field_start_builtin_animation((actor)->object_index, (actor)->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, (resource)),                                  \
      field_start_actor_animation((actor)->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0))
-
-/* ---- Ground shadow ---------------------------------------------------------- */
 
 /** @brief First two footprint corners; only their horizontal coordinates are used. */
 typedef struct
@@ -1016,7 +1006,7 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
     sprite_cursor->clut = FIELD_HUD_CLUT;
     addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], sprite_cursor);
     sprite_cursor++;
-    setDrawTPage((DR_TPAGE*)sprite_cursor, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, FIELD_HUD_TEXTURE_X, FIELD_HUD_TEXTURE_Y));
+    setDrawTPage((DR_TPAGE*)sprite_cursor, 0, 0, FIELD_UI_TPAGE(GPU_BLEND_HALF));
     addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], sprite_cursor);
     render_half->primitive_cursor = (u8*)sprite_cursor + sizeof(DR_TPAGE);
 }
@@ -1203,7 +1193,7 @@ void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* positi
 
     if (index == FIELD_PARTY_COMPANION && g_field_player_records[FIELD_PARTY_COMPANION].character_id >= FIELD_COMPANION_COLOR_ID_MIN)
     {
-        sprt->clut = getClut(FIELD_HUD_CLUT_X,
+        sprt->clut = getClut(FIELD_UI_CLUT_X,
                              (g_field_actors[FIELD_PARTY_COMPANION].control.half[1] & (FIELD_CONTROL_GOLEM_COLOR_MASK >> FIELD_CONTROL_GOLEM_COLOR_SHIFT)) +
                                  FIELD_HUD_COMPANION_CLUT_Y);
     }
@@ -1852,10 +1842,10 @@ POLY_FT4* field_render_actor_ground_shadow(FieldActor* actor, POLY_FT4* prim, s3
         prim->v0 = FIELD_SHADOW_V0;
         prim->v3 = FIELD_SHADOW_V1;
         prim->v2 = FIELD_SHADOW_V1;
-        setTPage(prim, GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, FIELD_HUD_TEXTURE_X, FIELD_HUD_TEXTURE_Y);
+        setTPage(prim, GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, FIELD_UI_PAGE_X, FIELD_UI_PAGE_Y);
         prim->u2 = FIELD_SHADOW_U0;
         prim->u0 = FIELD_SHADOW_U0;
-        setClut(prim, FIELD_HUD_CLUT_X, FIELD_HUD_CLUT_Y + 1);
+        setClut(prim, FIELD_UI_CLUT_X, FIELD_UI_CLUT_Y + 1);
 
         depth = actor->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
 

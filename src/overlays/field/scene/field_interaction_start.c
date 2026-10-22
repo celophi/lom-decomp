@@ -15,9 +15,6 @@
 #include "../internal/field_records.h"
 #include "../internal/field_scene_internal.h"
 
-/** @brief Number of field text macro slots. */
-#define FIELD_TEXT_MACRO_COUNT 16
-
 /** @brief Text macro holding the name of the current day of the week. */
 #define FIELD_TEXT_MACRO_WEEKDAY 12
 
@@ -27,14 +24,11 @@
 /** @brief Character budget of a party member name macro. */
 #define FIELD_NAME_CHARACTER_LIMIT 21
 
-/** @brief Character budget of a macro with no practical limit. */
-#define FIELD_TEXT_NO_LIMIT 0xFF
-
 /** @brief Character limit of the weekday text macro: none in US, 10 in JP. */
 #if defined(VERSION_JP)
 #define FIELD_WEEKDAY_CHARACTER_LIMIT 10
 #else
-#define FIELD_WEEKDAY_CHARACTER_LIMIT FIELD_TEXT_NO_LIMIT
+#define FIELD_WEEKDAY_CHARACTER_LIMIT FIELD_TEXT_MACRO_UNLIMITED
 #endif
 
 /** @brief Fade length set up for a new scene, in frames. */

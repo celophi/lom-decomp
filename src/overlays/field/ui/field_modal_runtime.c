@@ -45,8 +45,6 @@ void field_set_cd_error_fade_target(void);
 
 #define NAME_GLYPH_SIZE_SINGLE 1
 #define NAME_GLYPH_SIZE_DOUBLE 2
-/** @brief Lead byte of the double-byte digit glyphs (followed by the digit value). */
-#define FIELD_TEXT_DIGIT_LEAD 0x1D
 /** @brief Minus sign entry in the dialog text bank. */
 #define FIELD_TEXT_MINUS_ENTRY 16
 
@@ -364,7 +362,7 @@ void* field_draw_text(SPRT* sprite_cursor, u_long* ot, u8* text, s32 text_color,
     }
 
     tpage = (DR_TPAGE*)sprite_cursor;
-    setDrawTPage(tpage, 0, 0, 0x1F);
+    setDrawTPage(tpage, 0, 0, FIELD_UI_TPAGE(GPU_BLEND_HALF));
     addPrim(ot, tpage);
 
     return tpage + 1;
@@ -2452,7 +2450,7 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render)
 
     packet_cursor = field_draw_player_icon(packet_cursor, ot, 0, g_field_duel_panel_offset + 50, 34, 1);
     packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, g_saved_game_ctx->characters[0].name, FIELD_TEXT_COLOR_NORMAL,
-                                                g_field_duel_panel_offset + 108, 50, 0, 5, 384, 384, -4, FIELD_DUEL_PANEL_MOVING);
+                                                g_field_duel_panel_offset + 108, 50, FIELD_TEXT_ALIGN_LEFT, 5, 384, 384, -4, FIELD_DUEL_PANEL_MOVING);
 
     field_format_number(record_text, g_saved_game_ctx->characters[0].duel_wins, FIELD_DUEL_WIDE_NUMBERS);
     field_append_dialog_text(record_text, &g_field_duel_wins_text_offset, 34);
@@ -2460,14 +2458,16 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render)
     field_append_name(record_text, loss_text);
     field_append_dialog_text(record_text, &g_field_duel_losses_text_offset, 35);
 
-    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 108, 66, 0, 6,
-                                                FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
-    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, field_dialog_text(&g_field_duel_versus_text_offset, 33), FIELD_TEXT_COLOR_NORMAL, 160, 100,
-                                                2, 7, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
+    packet_cursor =
+        field_text_draw_scaled_quad(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 108, 66, FIELD_TEXT_ALIGN_LEFT, 6,
+                                    FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
+    packet_cursor =
+        field_text_draw_scaled_quad(packet_cursor, ot, field_dialog_text(&g_field_duel_versus_text_offset, 33), FIELD_TEXT_COLOR_NORMAL, 160, 100,
+                                    FIELD_TEXT_ALIGN_CENTER, 7, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     packet_cursor = field_draw_player_icon(packet_cursor, ot, 1, 222 - g_field_duel_panel_offset, 134, 0);
     packet_cursor =
-        field_text_draw_scaled_quad(packet_cursor, ot, g_saved_game_ctx->characters[1].name, FIELD_TEXT_COLOR_NORMAL, 212 - g_field_duel_panel_offset, 150, 1,
-                                    8, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
+        field_text_draw_scaled_quad(packet_cursor, ot, g_saved_game_ctx->characters[1].name, FIELD_TEXT_COLOR_NORMAL, 212 - g_field_duel_panel_offset, 150,
+                                    FIELD_TEXT_ALIGN_RIGHT, 8, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
 
     if ((u32)(g_saved_game_ctx->characters[1].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
     {
@@ -2476,8 +2476,9 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render)
         field_format_number(loss_text, g_saved_game_ctx->characters[1].duel_losses, FIELD_DUEL_WIDE_NUMBERS);
         field_append_name(record_text, loss_text);
         field_append_dialog_text(record_text, &g_field_duel_losses_text_offset, 35);
-        packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, 212 - g_field_duel_panel_offset, 166, 1, 9,
-                                                    FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
+        packet_cursor =
+            field_text_draw_scaled_quad(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, 212 - g_field_duel_panel_offset, 166, FIELD_TEXT_ALIGN_RIGHT,
+                                        9, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     }
 
     render->primitive_cursor = packet_cursor;
@@ -2535,12 +2536,13 @@ static s32 field_draw_duel_result(FieldRenderHalf* render)
         return 1;
     }
 
-    packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, field_dialog_text(&g_field_duel_winner_text_offset, 36), FIELD_TEXT_COLOR_NORMAL, 160, 52, 2,
-                                                5, FIELD_DUEL_TITLE_SCALE, FIELD_DUEL_TITLE_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
+    packet_cursor =
+        field_text_draw_scaled_quad(packet_cursor, ot, field_dialog_text(&g_field_duel_winner_text_offset, 36), FIELD_TEXT_COLOR_NORMAL, 160, 52,
+                                    FIELD_TEXT_ALIGN_CENTER, 5, FIELD_DUEL_TITLE_SCALE, FIELD_DUEL_TITLE_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     packet_cursor = field_draw_player_icon(packet_cursor, ot, g_field_duel_winner, g_field_duel_panel_offset + 50, 84, 1);
     packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, g_saved_game_ctx->characters[g_field_duel_winner].name, FIELD_TEXT_COLOR_NORMAL,
-                                                g_field_duel_panel_offset + 108, 100, 0, 6, FIELD_DUEL_WINNER_SCALE, FIELD_DUEL_WINNER_SCALE,
-                                                FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
+                                                g_field_duel_panel_offset + 108, 100, FIELD_TEXT_ALIGN_LEFT, 6, FIELD_DUEL_WINNER_SCALE,
+                                                FIELD_DUEL_WINNER_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
 
     if ((u32)(g_saved_game_ctx->characters[g_field_duel_winner].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
     {
@@ -2549,8 +2551,9 @@ static s32 field_draw_duel_result(FieldRenderHalf* render)
         field_format_number(loss_text, g_saved_game_ctx->characters[g_field_duel_winner].duel_losses, FIELD_DUEL_WIDE_NUMBERS);
         field_append_name(record_text, loss_text);
         field_append_dialog_text(record_text, &g_field_duel_losses_text_offset, 35);
-        packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 140, 132, 0, 7,
-                                                    FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
+        packet_cursor =
+            field_text_draw_scaled_quad(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 140, 132, FIELD_TEXT_ALIGN_LEFT, 7,
+                                        FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     }
 
     render->primitive_cursor = packet_cursor;

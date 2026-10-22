@@ -142,7 +142,7 @@ s32 gosub_select_golem_part(void)
 
     for (i = 0; i < g_gosub_row_count; i++)
     {
-        g_gosub_rows[i].text_color = GOSUB_TEXT_COLOR_NORMAL;
+        g_gosub_rows[i].text_color = FIELD_TEXT_COLOR_NORMAL;
     }
     weapon_count = 0;
     armor_count = 0;
@@ -163,7 +163,7 @@ s32 gosub_select_golem_part(void)
         {
             if (g_gosub_rows[i].equipment_kind == GOSUB_EQUIPMENT_KIND_WEAPON && gosub_is_row_unselected(i) != 0)
             {
-                g_gosub_rows[i].text_color = GOSUB_TEXT_COLOR_DISABLED;
+                g_gosub_rows[i].text_color = FIELD_TEXT_COLOR_DIM;
             }
         }
     }
@@ -173,7 +173,7 @@ s32 gosub_select_golem_part(void)
         {
             if (g_gosub_rows[i].equipment_kind != GOSUB_EQUIPMENT_KIND_WEAPON && gosub_is_row_unselected(i) != 0)
             {
-                g_gosub_rows[i].text_color = GOSUB_TEXT_COLOR_DISABLED;
+                g_gosub_rows[i].text_color = FIELD_TEXT_COLOR_DIM;
             }
         }
     }
@@ -415,7 +415,7 @@ void gosub_build_equipment_list(u32 item_kind)
                 g_gosub_rows[row_count].desc = g_gosub_text_buffers[row_count];
                 g_gosub_rows[row_count].value = GOSUB_ROW_NO_COUNT;
                 g_gosub_rows[row_count].index = item_index;
-                g_gosub_rows[row_count].text_color = GOSUB_TEXT_COLOR_NORMAL;
+                g_gosub_rows[row_count].text_color = FIELD_TEXT_COLOR_NORMAL;
                 row_count++;
             }
         }
@@ -471,7 +471,7 @@ void gosub_build_equipment_type_list(s32 group)
         row->index = option_index;
         row->equipment_kind = 0;
         row->desc = text;
-        row->text_color = GOSUB_TEXT_COLOR_NORMAL;
+        row->text_color = FIELD_TEXT_COLOR_NORMAL;
     }
 
     g_gosub_row_count = counts.values[group];

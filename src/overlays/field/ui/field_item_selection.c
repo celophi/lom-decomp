@@ -56,10 +56,6 @@
 /** @brief Frames the window takes to scroll to a new cursor row. */
 #define FIELD_ITEM_SCROLL_TICKS 4
 
-/** @brief Text color of the list rows. */
-#define FIELD_ITEM_TEXT_COLOR 4
-/** @brief Text alignment of the owned-count column. */
-#define FIELD_ITEM_COUNT_ALIGN 1
 /** @brief Color of the translucent cursor-row highlight. */
 #define FIELD_ITEM_HIGHLIGHT_COLOR 0xF080F0
 /** @brief Height of the cursor-row highlight, in pixels. */
@@ -315,10 +311,10 @@ static u8 *field_draw_item_drop_list(u_long* ot, u8 *cursor, s32 scroll_x, s32 s
 
         if (y > -FIELD_ITEM_ROW_HEIGHT && y < (s32)window->size.bits.height)
         {
-            cursor = field_draw_text((SPRT*)cursor, ot, FIELD_ITEM_NAME(names, entry->item_id), FIELD_ITEM_TEXT_COLOR, -scroll_x, y, 0);
+            cursor = field_draw_text((SPRT*)cursor, ot, FIELD_ITEM_NAME(names, entry->item_id), FIELD_TEXT_COLOR_NORMAL, -scroll_x, y, FIELD_TEXT_ALIGN_LEFT);
             position[1] = y;
             position[0] = count_x;
-            cursor = draw_number(cursor, ot, entry->count, position, FIELD_ITEM_TEXT_COLOR, FIELD_ITEM_COUNT_ALIGN);
+            cursor = draw_number(cursor, ot, entry->count, position, FIELD_TEXT_COLOR_NORMAL, FIELD_TEXT_ALIGN_RIGHT);
         }
     }
 

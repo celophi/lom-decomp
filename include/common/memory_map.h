@@ -17,8 +17,6 @@
  * Values are plain integers, so each view casts to its own type.
  */
 
-/* ---- Scratchpad ---------------------------------------------------------- */
-
 /** @brief The 1 KiB on-chip scratchpad RAM; routines lay out their own work data in it. */
 #define SCRATCHPAD_ADDRESS 0x1F800000
 /** @brief Size of the scratchpad in bytes. */
@@ -28,8 +26,6 @@
  * @param offset Byte offset, below SCRATCHPAD_SIZE.
  */
 #define SCRATCHPAD_AT(offset) (SCRATCHPAD_ADDRESS + (offset))
-
-/* ---- Main RAM, from low to high ------------------------------------------ */
 
 /** @brief Pointer to the song on the primary sequencer channel (the word g_akao_seq_channel0 names). */
 #if defined(VERSION_JP)
@@ -101,8 +97,6 @@
  * @param offset Byte offset.
  */
 #define FONT_AT(offset) (FONT_ADDRESS + (offset))
-
-/* ---- Resident state page (0x801ED000) ------------------------------------ */
 
 /** @brief Page of fixed state blocks shared by the main executable and the overlays. */
 #define RESIDENT_STATE_ADDRESS 0x801ED000

@@ -88,15 +88,11 @@ typedef struct
 
 extern AkaoSongState* g_akao_voice_owners[];
 
-/* ---- Common (non-voice) SPU register writers ---- */
-
 void spu_set_key_on(u32 voice_mask);
 void spu_set_key_off(u32 voice_mask);
 void spu_set_reverb_enable(u32 voice_mask);
 void spu_set_noise_enable(u32 voice_mask);
 void spu_set_pitch_modulation_enable(u32 voice_mask);
-
-/* ---- Per-voice SPU register writers ---- */
 
 void spu_set_voice_volume(s32 voice, u32 vol_l, u32 vol_r, s32 scale);
 void spu_set_voice_pitch(s32 voice, s32 pitch);

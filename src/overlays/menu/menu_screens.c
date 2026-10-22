@@ -58,8 +58,6 @@ static inline MenuPartyOrder* menu_sort_order_record(void)
     return (MenuPartyOrder*)(base + off);
 }
 
-/* ----- Content Navigation and Input ----- */
-
 /**
  * @brief Per-frame menu navigation, confirm/cancel and cursor-move input handler.
  * @param process_actions Non-zero to also process confirm/cancel and the four cursor-move buttons; 0 runs only node switching.
@@ -1162,8 +1160,6 @@ static inline MenuCharacterRecord* menu_active_character(SavedGameLayout* contex
     return (MenuCharacterRecord*)((u8*)context + offset + MENU_CHARACTER_RECORD_OFFSET);
 }
 
-/* ----- Scene Content Rendering ----- */
-
 /**
  * @brief Draw the active scene's content entries.
  * @param packet_cursor GPU packet cursor advanced as primitives are emitted.
@@ -1799,7 +1795,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                     val -= D_800F0C1C;
                                 }
                                 menu_copy_sign_label(label_buffer, val);
-                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, 0);
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, FIELD_TEXT_ALIGN_LEFT);
                             }
                         }
                         break;
@@ -1815,7 +1811,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             {
                                 s32 res = menu_lookup_item_nibble(g_menu_item_ptr, content_index - 0x1F);
                                 menu_copy_sign_label(label_buffer, res);
-                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, 0);
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, FIELD_TEXT_ALIGN_LEFT);
                             }
                             break;
                         case 0x27:
@@ -1849,7 +1845,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 s32 v2 = menu_lookup_item_nibble((void*)g_menu_active_equipped_item, idx2);
                                 s32 diff = v1 - v2;
                                 menu_copy_sign_label(label_buffer, diff);
-                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, 0);
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, FIELD_TEXT_ALIGN_LEFT);
                             }
                         }
                         break;
@@ -1912,7 +1908,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             if (has)
                             {
                                 menu_copy_sign_label(label_buffer, val);
-                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, 0);
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, FIELD_TEXT_ALIGN_LEFT);
                             }
                         }
                         break;
@@ -2002,7 +1998,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             SET_SPRT_CLUT(packet_cursor, (((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
                             addPrim(ot_entry, packet_cursor);
                             packet_cursor = (SPRT*)packet_cursor + 1;
-                            setDrawTPage(packet_cursor, 0, 0, 0x1F);
+                            setDrawTPage(packet_cursor, 0, 0, FIELD_UI_TPAGE(GPU_BLEND_HALF));
                             addPrim(ot_entry, packet_cursor);
                             packet_cursor = (DR_TPAGE*)packet_cursor + 1;
                         }
@@ -2354,7 +2350,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                     val = val - D_800F0C1C;
                                 }
                                 menu_copy_sign_label(label_buffer, val);
-                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, 0);
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, FIELD_TEXT_ALIGN_LEFT);
                             }
                         }
                         break;
@@ -2386,7 +2382,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             if (has)
                             {
                                 menu_copy_sign_label(label_buffer, val);
-                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, 0);
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), 1, pos.x, pos.y, FIELD_TEXT_ALIGN_LEFT);
                             }
                         }
                         break;
@@ -2619,14 +2615,14 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             packet_cursor = field_draw_number(ot_entry, packet_cursor, s2, one, &pos, one);
                             if ((g_frame_counter / 15) & 1)
                             {
-                                packet_cursor = field_draw_text(packet_cursor, ot_entry, MENU_PLAYTIME_SEPARATOR, one, pos.x, pos.y, 0);
+                                packet_cursor = field_draw_text(packet_cursor, ot_entry, MENU_PLAYTIME_SEPARATOR, one, pos.x, pos.y, FIELD_TEXT_ALIGN_LEFT);
                             }
                             pos.x += MENU_PLAYTIME_SEPARATOR_ADVANCE;
                             split_tmp = s2 * 0x3C;
                             shared_s0 = (shared_s0 / 3600) - split_tmp;
                             if (shared_s0 < 0xA)
                             {
-                                packet_cursor = field_draw_number(ot_entry, packet_cursor, 0U, 1, &pos, 0);
+                                packet_cursor = field_draw_number(ot_entry, packet_cursor, 0U, 1, &pos, FIELD_TEXT_ALIGN_LEFT);
                             }
                             pos.x += MENU_PLAYTIME_MINUTES_ADVANCE;
                             packet_cursor = field_draw_number(ot_entry, packet_cursor, shared_s0, 1, &pos, one);
@@ -2694,7 +2690,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                     u8* a2_27 = (u8*)g_menu_item_ptr;
                     if (*a2_27 != 0)
                     {
-                        packet_cursor = field_draw_text(packet_cursor, ot_entry, a2_27, 1, 0xAC, 0xC, 2);
+                        packet_cursor = field_draw_text(packet_cursor, ot_entry, a2_27, 1, 0xAC, 0xC, FIELD_TEXT_ALIGN_CENTER);
                     }
                 }
                 else if (g_menu_scene_type == 0x1D)
@@ -2702,14 +2698,14 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                     void* a2_28 = (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES]);
                     u16 v1 = *(u16*)((u8*)a2_28 + 0x78);
                     void* a2_27 = (void*)((u8*)a2_28 + v1);
-                    packet_cursor = field_draw_text(packet_cursor, ot_entry, a2_27, 1, 0xAC, 0xC, 2);
+                    packet_cursor = field_draw_text(packet_cursor, ot_entry, a2_27, 1, 0xAC, 0xC, FIELD_TEXT_ALIGN_CENTER);
                 }
                 else if (g_menu_scene_type != -1)
                 {
                     void* a2_28 = (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES]);
                     u16 v1 = *(u16*)((u8*)a2_28 + node->label_id * 2);
                     void* a2_27 = (void*)((u8*)a2_28 + v1);
-                    packet_cursor = field_draw_text(packet_cursor, ot_entry, a2_27, 1, 0xAC, 0xC, 2);
+                    packet_cursor = field_draw_text(packet_cursor, ot_entry, a2_27, 1, 0xAC, 0xC, FIELD_TEXT_ALIGN_CENTER);
                 }
             }
 
@@ -3062,7 +3058,8 @@ void* menu_draw_active_node_cursor(void* packet_cursor, u_long* ot_entry, s32 dr
     if (draw_label != 0)
     {
         label_table = menu_text_table_base(MENU_TEXT_GENERAL);
-        packet_cursor = field_draw_text(packet_cursor, ot_entry, menu_text_entry(label_table, g_menu_nodes[g_menu_active_node].label_id), 1, 0xA0, 0xCA, 2);
+        packet_cursor = field_draw_text(packet_cursor, ot_entry, menu_text_entry(label_table, g_menu_nodes[g_menu_active_node].label_id), 1, 0xA0, 0xCA,
+                                        FIELD_TEXT_ALIGN_CENTER);
     }
 
     return packet_cursor;
@@ -3411,8 +3408,6 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
 
     return prim_buf;
 }
-
-/* ----- Node Tree Rendering and Cursors ----- */
 
 /**
  * @brief Render the root nodes and advance the tree's scroll animation.

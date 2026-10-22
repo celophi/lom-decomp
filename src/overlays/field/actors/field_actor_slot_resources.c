@@ -4,17 +4,19 @@
  *        animation start, teardown and the per-object state resets.
  */
 
-#include "main/cdrom.h"
 #include "common.h"
-#include "../internal/field_effect_render_state.h"
-#include "main/controller_internal.h"
-#include "../internal/field_calls.h"
+#include <libgpu.h>
+#include <libgte.h>
+
 #include "../internal/field_actor_palette.h"
 #include "../internal/field_actor_tables.h"
+#include "../internal/field_calls.h"
+#include "../internal/field_effect_render_state.h"
 #include "../internal/field_mesh.h"
-#include <libgte.h>
-#include <libgpu.h>
 #include "common/tim.h"
+#include "main/cdrom.h"
+#include "main/controller_internal.h"
+#include "overlays/field/field_vram.h"
 
 /** @brief First animation number with an entry in the built-in animation table. */
 #define FIELD_BUILTIN_FIRST_ANIMATION 2
@@ -31,12 +33,8 @@
 /** @brief Heap owner tag of the shared mesh work buffers. */
 #define FIELD_MESH_HEAP_TAG 4
 
-/** @brief Image resource reloaded by field_reset_object_states, and where it goes in VRAM. */
+/** @brief HUD and icon image reloaded into the UI texture page by field_reset_object_states. */
 #define FIELD_OBJECT_IMAGE_RESOURCE 0x5DA
-#define FIELD_OBJECT_IMAGE_VRAM_X 0x3C0
-#define FIELD_OBJECT_IMAGE_VRAM_Y 0x100
-#define FIELD_OBJECT_IMAGE_CLUT_X 0x100
-#define FIELD_OBJECT_IMAGE_CLUT_Y 0x1E0
 
 /** @brief Header of the built-in animation resource; it overlays entry 0. */
 typedef struct
@@ -582,7 +580,7 @@ void field_reset_object_states(void)
         g_field_object_states[i].contact.bits.action_pending = 0;
     }
 
-    setRECT(&rect, FIELD_OBJECT_IMAGE_VRAM_X, FIELD_OBJECT_IMAGE_VRAM_Y, FIELD_OBJECT_IMAGE_CLUT_X, FIELD_OBJECT_IMAGE_CLUT_Y);
+    setRECT(&rect, FIELD_UI_PAGE_X, FIELD_UI_PAGE_Y, FIELD_UI_CLUT_X, FIELD_UI_CLUT_Y);
     field_load_vram_resource(FIELD_OBJECT_IMAGE_RESOURCE, &rect, 0);
     DrawSync(0);
 }

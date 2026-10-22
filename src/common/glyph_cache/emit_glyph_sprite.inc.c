@@ -23,7 +23,7 @@ void* emit_glyph_sprite(GlyphSprite* sprite, u_long* ot, s32 cache_slot, s32 pal
     sprite->packet.r0 = 0x80;
     setXY0(&sprite->packet, g_glyph_cursor_x, g_glyph_cursor_y);
     setUV0(&sprite->packet, (cache_slot % GLYPH_CACHE_COLUMNS) * GLYPH_SIZE, cache_slot & GLYPH_CACHE_ROW_MASK);
-    sprite->packet.clut = getClut(GLYPH_CLUT_X, GLYPH_CLUT_Y);
+    sprite->packet.clut = getClut(FIELD_TEXT_CLUT_X, FIELD_TEXT_ALT_CLUT_Y);
     addPrim(ot, &sprite->packet);
     sprite++;
 

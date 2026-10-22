@@ -2,22 +2,24 @@
 #define GOSUB_INTERNAL_H
 
 #include "common.h"
-#include "overlays/field/field_portrait.h"
-#include "common/vector.h"
-#include "common/gpu_packet.h"
-#include <libgte.h>
 #include <libgpu.h>
+#include <libgte.h>
 #include <memory.h>
-#include "common/tim.h"
-#include "main/main.h"
-#include "overlays/field/field_ui_text.h"
+
 #include "common/encoded_text.h"
-#include "main/display.h"
-#include "common/pad.h"
 #include "common/golem_shape.h"
+#include "common/gpu_packet.h"
+#include "common/pad.h"
+#include "common/tim.h"
+#include "common/vector.h"
+#include "main/display.h"
+#include "main/main.h"
 #include "overlays/field/field_fade.h"
 #include "overlays/field/field_input.h"
 #include "overlays/field/field_overlay_handoff.h"
+#include "overlays/field/field_portrait.h"
+#include "overlays/field/field_text.h"
+#include "overlays/field/field_ui_text.h"
 
 typedef struct GosubTilePacket GosubTilePacket;
 
@@ -376,21 +378,6 @@ typedef enum
     GOSUB_SCREEN_PET = 18,
     GOSUB_SCREEN_PRODUCE = 19
 } GosubScreen;
-
-/** @brief Text palette values used by the gosub UI. */
-typedef enum
-{
-    GOSUB_TEXT_COLOR_NORMAL = 4,
-    GOSUB_TEXT_COLOR_DISABLED = 5
-} GosubTextColor;
-
-/** @brief Horizontal alignment modes accepted by the text renderer. */
-typedef enum
-{
-    GOSUB_TEXT_ALIGN_LEFT = 0,
-    GOSUB_TEXT_ALIGN_RIGHT = 1,
-    GOSUB_TEXT_ALIGN_CENTER = 2
-} GosubTextAlignment;
 
 /** @brief Sort keys offered for the packed logic-block list. */
 typedef enum

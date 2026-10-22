@@ -14,8 +14,6 @@
 void field_copy_name(u8* destination, u8* source);
 s32 field_name_byte_length(u8* name);
 
-/* ----- Macros ----- */
-
 /* Menu chrome CLUT ids produced by getClut for the rows uploaded in menu_upload_tim. */
 #define MENU_CLUT_GRID_BASE 0x7C80
 #define MENU_CLUT_GRID_ALT 0x7C81
@@ -228,8 +226,6 @@ s32 field_name_byte_length(u8* name);
 
 /* Type-view and fixed-address helpers. */
 #define MENU_CONTROLLER_ACTUATORS ((MenuControllerActuatorState*)CONTROLLER_STATE_ADDRESS)
-
-/* ----- Types ----- */
 
 /* Rendering and window types. */
 
@@ -462,13 +458,6 @@ typedef enum
 
 /* Text, list, and equipment types. */
 
-typedef enum
-{
-    MENU_TEXT_ALIGN_LEFT = 0,
-    MENU_TEXT_ALIGN_RIGHT = 1,
-    MENU_TEXT_ALIGN_CENTER = 2,
-} MenuTextAlignment;
-
 /**
  * @brief Marker shown while selecting two party slots to swap.
  */
@@ -589,8 +578,6 @@ typedef union
     } __attribute__((packed)) fields;
 } MenuNameSelection;
 
-/* ----- Forward Declarations ----- */
-
 void menu_init(void);
 void menu_tick(RenderContext* render_ctx);
 void menu_build_grid(RenderContext* render_ctx);
@@ -667,8 +654,6 @@ s32 menu_build_equipment_nav_entries(void);
 s32 menu_build_key_item_nav_entries(void);
 s32 menu_build_ability_nav_entries(void);
 extern s32 menu_stage_stack_shape(s32, s32, s32, s32, s32, s32) __attribute__((const));
-
-/* ----- External Data ----- */
 
 /* Core menu state and shared assets. */
 
@@ -910,7 +895,7 @@ static inline MenuCharacterRecord* menu_character_record(SavedGameLayout* contex
  */
 static inline void* menu_emit_content_label(void* packet_cursor, u_long* ot, u8* text)
 {
-    return field_draw_text(packet_cursor, ot, text, 1, 0xA0, 0xCA, 2);
+    return field_draw_text(packet_cursor, ot, text, 1, 0xA0, 0xCA, FIELD_TEXT_ALIGN_CENTER);
 }
 
 /**

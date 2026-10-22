@@ -209,22 +209,22 @@ u8* gosub_draw_block_action_dialog(u_long* ordering_table, u8* initial_packet, s
 
     packet_cursor = initial_packet;
     sort_text = GOSUB_MESSAGE(GOSUB_MSG_SORT);
-    sort_color = GOSUB_TEXT_COLOR_DISABLED;
+    sort_color = FIELD_TEXT_COLOR_DIM;
     if ((g_gosub_dialog_choice & GOSUB_ROW_ACTION_CHOICE_MASK) == 0)
     {
-        sort_color = GOSUB_TEXT_COLOR_NORMAL;
+        sort_color = FIELD_TEXT_COLOR_NORMAL;
     }
     packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, sort_text, sort_color, GOSUB_ROW_ACTION_DIALOG_X - x_offset,
-                                    GOSUB_ROW_ACTION_SORT_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
+                                    GOSUB_ROW_ACTION_SORT_Y - y_offset, FIELD_TEXT_ALIGN_CENTER);
 
     delete_text = GOSUB_MESSAGE(GOSUB_MSG_DISCARD);
-    delete_color = GOSUB_TEXT_COLOR_DISABLED;
+    delete_color = FIELD_TEXT_COLOR_DIM;
     if ((g_gosub_dialog_choice & GOSUB_ROW_ACTION_CHOICE_MASK) != 0)
     {
-        delete_color = GOSUB_TEXT_COLOR_NORMAL;
+        delete_color = FIELD_TEXT_COLOR_NORMAL;
     }
     packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, delete_text, delete_color, GOSUB_ROW_ACTION_DIALOG_X - x_offset,
-                                    GOSUB_ROW_ACTION_DELETE_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
+                                    GOSUB_ROW_ACTION_DELETE_Y - y_offset, FIELD_TEXT_ALIGN_CENTER);
 
     return packet_cursor;
 }
@@ -252,31 +252,31 @@ u8* gosub_draw_sort_dialog(u_long* ordering_table, u8* initial_packet, s32 x_off
     type_text = GOSUB_MESSAGE(GOSUB_MSG_SORT_BY_TYPE);
     selected_sort_key = g_gosub_dialog_choice;
     selected_sort_key %= GOSUB_SORT_KEY_COUNT;
-    type_color = GOSUB_TEXT_COLOR_DISABLED;
+    type_color = FIELD_TEXT_COLOR_DIM;
     if (selected_sort_key == GOSUB_SORT_BY_TYPE)
     {
-        type_color = GOSUB_TEXT_COLOR_NORMAL;
+        type_color = FIELD_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, type_text, type_color, GOSUB_SORT_DIALOG_X - x_offset, GOSUB_SORT_DIALOG_TYPE_Y - y_offset,
-                                    GOSUB_TEXT_ALIGN_CENTER);
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, type_text, type_color, GOSUB_SORT_DIALOG_X - x_offset,
+                                    GOSUB_SORT_DIALOG_TYPE_Y - y_offset, FIELD_TEXT_ALIGN_CENTER);
 
     power_text = GOSUB_MESSAGE(GOSUB_MSG_SORT_BY_POWER);
-    text_color = GOSUB_TEXT_COLOR_DISABLED;
+    text_color = FIELD_TEXT_COLOR_DIM;
     if (g_gosub_dialog_choice % GOSUB_SORT_KEY_COUNT == GOSUB_SORT_BY_POWER)
     {
-        text_color = GOSUB_TEXT_COLOR_NORMAL;
+        text_color = FIELD_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, power_text, text_color, GOSUB_SORT_DIALOG_X - x_offset, GOSUB_SORT_DIALOG_POWER_Y - y_offset,
-                                    GOSUB_TEXT_ALIGN_CENTER);
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, power_text, text_color, GOSUB_SORT_DIALOG_X - x_offset,
+                                    GOSUB_SORT_DIALOG_POWER_Y - y_offset, FIELD_TEXT_ALIGN_CENTER);
 
     shape_text = GOSUB_MESSAGE(GOSUB_MSG_SORT_BY_SHAPE);
-    text_color = GOSUB_TEXT_COLOR_DISABLED;
+    text_color = FIELD_TEXT_COLOR_DIM;
     if (g_gosub_dialog_choice % GOSUB_SORT_KEY_COUNT == GOSUB_SORT_BY_SHAPE)
     {
-        text_color = GOSUB_TEXT_COLOR_NORMAL;
+        text_color = FIELD_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, shape_text, text_color, GOSUB_SORT_DIALOG_X - x_offset, GOSUB_SORT_DIALOG_SHAPE_Y - y_offset,
-                                    GOSUB_TEXT_ALIGN_CENTER);
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, shape_text, text_color, GOSUB_SORT_DIALOG_X - x_offset,
+                                    GOSUB_SORT_DIALOG_SHAPE_Y - y_offset, FIELD_TEXT_ALIGN_CENTER);
 
     return packet_cursor;
 }
@@ -318,8 +318,8 @@ u8* gosub_draw_message_dialog(u_long* ordering_table, u8* packet_cursor, s32 x_o
 {
     s32 unused[14];
 
-    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, g_gosub_dialog_text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_MESSAGE_DIALOG_TEXT_X - x_offset,
-                                    GOSUB_MESSAGE_DIALOG_TEXT_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, g_gosub_dialog_text, FIELD_TEXT_COLOR_NORMAL, GOSUB_MESSAGE_DIALOG_TEXT_X - x_offset,
+                                    GOSUB_MESSAGE_DIALOG_TEXT_Y - y_offset, FIELD_TEXT_ALIGN_CENTER);
     return packet_cursor;
 }
 
@@ -337,8 +337,8 @@ u8* gosub_draw_block_components_header(u_long* ordering_table, u8* packet_cursor
     s32 unused[14];
 
     text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_BLOCK_COMPONENTS);
-    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_DETAIL_HEADER_X - x_offset,
-                                    GOSUB_DETAIL_HEADER_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, FIELD_TEXT_COLOR_NORMAL, GOSUB_DETAIL_HEADER_X - x_offset,
+                                    GOSUB_DETAIL_HEADER_Y - y_offset, FIELD_TEXT_ALIGN_CENTER);
     if (g_gosub_show_row_details != 0)
     {
         packet_cursor = gosub_draw_equipment_details(packet_cursor, ordering_table, x_offset, y_offset);
@@ -360,12 +360,12 @@ u8* gosub_draw_golem_parts_header(u_long* ordering_table, u8* packet_cursor, s32
     s32 unused[14];
 
     text = GOSUB_MESSAGE(GOSUB_MSG_SELECT_GOLEM_PARTS);
-    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_TWO_LINE_HEADER_X - x_offset,
-                                    GOSUB_TWO_LINE_HEADER_FIRST_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, FIELD_TEXT_COLOR_NORMAL, GOSUB_TWO_LINE_HEADER_X - x_offset,
+                                    GOSUB_TWO_LINE_HEADER_FIRST_Y - y_offset, FIELD_TEXT_ALIGN_CENTER);
 
     text = GOSUB_MESSAGE(GOSUB_MSG_PRESS_START_TO_SELECT);
-    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_TWO_LINE_HEADER_X - x_offset,
-                                    GOSUB_TWO_LINE_HEADER_SECOND_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, FIELD_TEXT_COLOR_NORMAL, GOSUB_TWO_LINE_HEADER_X - x_offset,
+                                    GOSUB_TWO_LINE_HEADER_SECOND_Y - y_offset, FIELD_TEXT_ALIGN_CENTER);
 
     return packet_cursor;
 }
@@ -385,26 +385,26 @@ u8* gosub_draw_confirmation_prompt(u_long* ordering_table, u8* packet_cursor, s3
     s32 unused[14];
 
     text = GOSUB_MESSAGE(GOSUB_MSG_IS_THIS_OKAY);
-    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_CONFIRMATION_TITLE_X - x_offset,
-                                    GOSUB_CONFIRMATION_TITLE_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, FIELD_TEXT_COLOR_NORMAL, GOSUB_CONFIRMATION_TITLE_X - x_offset,
+                                    GOSUB_CONFIRMATION_TITLE_Y - y_offset, FIELD_TEXT_ALIGN_CENTER);
 
     text = GOSUB_MESSAGE(GOSUB_MSG_YES);
-    text_color = GOSUB_TEXT_COLOR_DISABLED;
+    text_color = FIELD_TEXT_COLOR_DIM;
     if ((g_gosub_dialog_choice & GOSUB_CONFIRMATION_CHOICE_MASK) == 0)
     {
-        text_color = GOSUB_TEXT_COLOR_NORMAL;
+        text_color = FIELD_TEXT_COLOR_NORMAL;
     }
     packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, text_color, GOSUB_CONFIRMATION_FIRST_CHOICE_X - x_offset,
-                                    GOSUB_CONFIRMATION_CHOICE_Y - y_offset, GOSUB_TEXT_ALIGN_RIGHT);
+                                    GOSUB_CONFIRMATION_CHOICE_Y - y_offset, FIELD_TEXT_ALIGN_RIGHT);
 
     text = GOSUB_MESSAGE(GOSUB_MSG_NO);
-    text_color = GOSUB_TEXT_COLOR_NORMAL;
+    text_color = FIELD_TEXT_COLOR_NORMAL;
     if ((g_gosub_dialog_choice & GOSUB_CONFIRMATION_CHOICE_MASK) == 0)
     {
-        text_color = GOSUB_TEXT_COLOR_DISABLED;
+        text_color = FIELD_TEXT_COLOR_DIM;
     }
     packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, text_color, GOSUB_CONFIRMATION_SECOND_CHOICE_X - x_offset,
-                                    GOSUB_CONFIRMATION_CHOICE_Y - y_offset, GOSUB_TEXT_ALIGN_LEFT);
+                                    GOSUB_CONFIRMATION_CHOICE_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
 
     return packet_cursor;
 }
@@ -421,8 +421,8 @@ u8* gosub_draw_row_description(u_long* ordering_table, u8* packet_cursor, s32 x_
 {
     s32 unused[12];
 
-    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, g_gosub_rows[g_gosub_cursor_row].desc, GOSUB_TEXT_COLOR_NORMAL,
-                                    GOSUB_ROW_DESCRIPTION_X - x_offset, GOSUB_ROW_DESCRIPTION_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, g_gosub_rows[g_gosub_cursor_row].desc, FIELD_TEXT_COLOR_NORMAL,
+                                    GOSUB_ROW_DESCRIPTION_X - x_offset, GOSUB_ROW_DESCRIPTION_Y - y_offset, FIELD_TEXT_ALIGN_CENTER);
     if (g_gosub_show_row_details != 0)
     {
         packet_cursor = gosub_draw_equipment_details(packet_cursor, ordering_table, x_offset, y_offset);
@@ -448,36 +448,37 @@ u8* gosub_draw_equipment_details(u8* packet_cursor, u_long* ordering_table, s32 
     switch (equipment_kind)
     {
     case GOSUB_EQUIPMENT_KIND_WEAPON:
-        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3EE, FIELD_UI_TEXT_ATTACK_POWER), GOSUB_TEXT_COLOR_NORMAL,
-                                        GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
+        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3EE, FIELD_UI_TEXT_ATTACK_POWER), FIELD_TEXT_COLOR_NORMAL,
+                                        GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
         number_position.x = GOSUB_WEAPON_POWER_X - x_offset;
         number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
-        packet_cursor = field_draw_number(ordering_table, (SPRT*)packet_cursor, g_gosub_rows[g_gosub_cursor_row].primary_value, GOSUB_TEXT_COLOR_NORMAL,
-                                          &number_position, GOSUB_TEXT_ALIGN_LEFT);
+        packet_cursor = field_draw_number(ordering_table, (SPRT*)packet_cursor, g_gosub_rows[g_gosub_cursor_row].primary_value, FIELD_TEXT_COLOR_NORMAL,
+                                          &number_position, FIELD_TEXT_ALIGN_LEFT);
         break;
 
     case GOSUB_EQUIPMENT_KIND_ARMOR:
-        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3F0, FIELD_UI_TEXT_TOTAL_DEFENSE), GOSUB_TEXT_COLOR_NORMAL,
-                                        GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
+        packet_cursor =
+            field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3F0, FIELD_UI_TEXT_TOTAL_DEFENSE), FIELD_TEXT_COLOR_NORMAL,
+                            GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
         number_position.x = GOSUB_ARMOR_DEFENSE_X - x_offset;
         number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
         packet_cursor = field_draw_number(ordering_table, (SPRT*)packet_cursor,
                                           g_gosub_rows[g_gosub_cursor_row].stats[0] + g_gosub_rows[g_gosub_cursor_row].stats[1] +
                                               g_gosub_rows[g_gosub_cursor_row].stats[2] + g_gosub_rows[g_gosub_cursor_row].stats[3],
-                                          GOSUB_TEXT_COLOR_NORMAL, &number_position, GOSUB_TEXT_ALIGN_LEFT);
+                                          FIELD_TEXT_COLOR_NORMAL, &number_position, FIELD_TEXT_ALIGN_LEFT);
         break;
 
     /* Instruments and the reserved fourth kind use the same detail layout. */
     default:
-        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3F2, FIELD_UI_TEXT_POWER), GOSUB_TEXT_COLOR_NORMAL,
-                                        GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
+        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3F2, FIELD_UI_TEXT_POWER), FIELD_TEXT_COLOR_NORMAL,
+                                        GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
         number_position.x = GOSUB_INSTRUMENT_POWER_X - x_offset;
         number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
-        packet_cursor = field_draw_number(ordering_table, (SPRT*)packet_cursor, g_gosub_rows[g_gosub_cursor_row].primary_value, GOSUB_TEXT_COLOR_NORMAL,
-                                          &number_position, GOSUB_TEXT_ALIGN_LEFT);
+        packet_cursor = field_draw_number(ordering_table, (SPRT*)packet_cursor, g_gosub_rows[g_gosub_cursor_row].primary_value, FIELD_TEXT_COLOR_NORMAL,
+                                          &number_position, FIELD_TEXT_ALIGN_LEFT);
         packet_cursor =
             field_draw_text((SPRT*)packet_cursor, ordering_table, GOSUB_TEXT(GOSUB_TEXT_INSTRUMENT_SPELLS, g_gosub_rows[g_gosub_cursor_row].stats[0]),
-                            GOSUB_TEXT_COLOR_NORMAL, GOSUB_INSTRUMENT_EFFECT_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, GOSUB_TEXT_ALIGN_LEFT);
+                            FIELD_TEXT_COLOR_NORMAL, GOSUB_INSTRUMENT_EFFECT_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
         break;
     }
     return packet_cursor;
@@ -495,8 +496,8 @@ u8* gosub_draw_title(u_long* ordering_table, u8* packet_cursor, s32 x_offset, s3
 {
     s32 unused[14];
 
-    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, g_gosub_title_text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_TEXT_PANEL_WIDTH / 2 - x_offset,
-                                    2 - y_offset, GOSUB_TEXT_ALIGN_CENTER);
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, g_gosub_title_text, FIELD_TEXT_COLOR_NORMAL, GOSUB_TEXT_PANEL_WIDTH / 2 - x_offset,
+                                    2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
     return packet_cursor;
 }
 

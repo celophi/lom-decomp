@@ -831,7 +831,7 @@ void zukan_render_content(RenderContext* render_ctx)
 
             pos.x = 0;
             pos.y = row_y;
-            packet_cursor = field_draw_number_wide(ordering_table, (SPRT*)packet_cursor, entry_index + 1, 0, &pos, 0);
+            packet_cursor = field_draw_number_wide(ordering_table, (SPRT*)packet_cursor, entry_index + 1, 0, &pos, FIELD_TEXT_ALIGN_LEFT);
             if (g_zukan_list_entries[entry_index].resource_id_and_available >> 15)
             {
                 packet_cursor =

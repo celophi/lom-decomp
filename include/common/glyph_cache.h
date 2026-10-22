@@ -63,10 +63,6 @@
 /** @brief VRAM x of the glyph cache (4-bit texels, so a glyph is GLYPH_SIZE / 4 halfwords wide). */
 #define GLYPH_VRAM_X 320
 
-/** @brief CLUT the cached glyphs are drawn with: FIELD's text CLUT. */
-#define GLYPH_CLUT_X 304
-#define GLYPH_CLUT_Y 511
-
 /** @brief Pen x at which cached text wraps to the next line. */
 #define GLYPH_TEXT_WRAP_X 640
 

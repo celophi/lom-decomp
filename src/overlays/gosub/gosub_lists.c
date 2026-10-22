@@ -18,7 +18,7 @@ void gosub_build_color_material_list(void)
             row->name = GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, i);
             row->desc = GOSUB_TEXT(GOSUB_TEXT_COLOR_NAMES, g_gosub_item_colors[i]);
             row->value = g_saved_game_ctx->item_counts[i];
-            row->text_color = GOSUB_TEXT_COLOR_NORMAL;
+            row->text_color = FIELD_TEXT_COLOR_NORMAL;
             row->index = i;
             count++;
         }
@@ -48,7 +48,7 @@ void gosub_build_produce_list(void)
             row->name = GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, i);
             row->desc = GOSUB_TEXT(GOSUB_TEXT_ITEM_DESCRIPTIONS, i);
             row->value = g_saved_game_ctx->item_counts[i];
-            row->text_color = GOSUB_TEXT_COLOR_NORMAL;
+            row->text_color = FIELD_TEXT_COLOR_NORMAL;
             row->index = i;
             count++;
         }
@@ -77,7 +77,7 @@ void gosub_build_elemental_coin_list(void)
             GosubListRow* row = &g_gosub_rows[count];
             row->name = GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, i);
             row->value = g_saved_game_ctx->item_counts[i];
-            row->text_color = GOSUB_TEXT_COLOR_NORMAL;
+            row->text_color = FIELD_TEXT_COLOR_NORMAL;
             row->index = i;
             count++;
         }
@@ -107,7 +107,7 @@ void gosub_build_secondary_material_list(void)
             row->name = GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, i);
             row->desc = GOSUB_TEXT(GOSUB_TEXT_ITEM_DESCRIPTIONS, i);
             row->value = g_saved_game_ctx->item_counts[i];
-            row->text_color = GOSUB_TEXT_COLOR_NORMAL;
+            row->text_color = FIELD_TEXT_COLOR_NORMAL;
             row->index = i;
             count++;
         }
@@ -137,7 +137,7 @@ void gosub_build_primary_material_list(void)
             row->name = GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, i);
             row->desc = GOSUB_TEXT(GOSUB_TEXT_ITEM_DESCRIPTIONS, i);
             row->value = g_saved_game_ctx->item_counts[i];
-            row->text_color = GOSUB_TEXT_COLOR_NORMAL;
+            row->text_color = FIELD_TEXT_COLOR_NORMAL;
             row->index = i;
             count++;
         }
@@ -185,7 +185,7 @@ void gosub_build_logic_block_list(void)
             g_gosub_rows[i].flags.block.in_use = 0;
         }
         g_gosub_rows[i].index = i;
-        g_gosub_rows[i].text_color = GOSUB_TEXT_COLOR_NORMAL;
+        g_gosub_rows[i].text_color = FIELD_TEXT_COLOR_NORMAL;
     }
     g_gosub_row_count = g_saved_game_ctx->logic_block_count;
     g_gosub_visible_row_count = 4;
@@ -238,7 +238,7 @@ void gosub_build_companion_list(s32 mode)
                 }
                 g_gosub_rows[row_count].flags.companion.egg = 0;
                 g_gosub_rows[row_count].flags.companion.grazing = 0;
-                g_gosub_rows[row_count].text_color = GOSUB_TEXT_COLOR_NORMAL;
+                g_gosub_rows[row_count].text_color = FIELD_TEXT_COLOR_NORMAL;
                 g_gosub_rows[row_count].name = g_saved_game_ctx->golem_records[record_index].name;
                 /* The golem's type and palette. */
                 g_gosub_rows[row_count].detail_id = g_saved_game_ctx->golem_records[record_index].logic_layout & GOLEM_LOGIC_CLASS_MASK;
@@ -270,7 +270,7 @@ void gosub_build_companion_list(s32 mode)
                 {
                     g_gosub_rows[row_count].detail_group = 0;
                 }
-                g_gosub_rows[row_count].text_color = GOSUB_TEXT_COLOR_NORMAL;
+                g_gosub_rows[row_count].text_color = FIELD_TEXT_COLOR_NORMAL;
                 g_gosub_rows[row_count].name = g_saved_game_ctx->pets[slot].name;
                 /* The pet's species and level. */
                 g_gosub_rows[row_count].detail_id = g_saved_game_ctx->pets[slot].species;

@@ -534,53 +534,56 @@ u8* gosub_draw_item_list(u_long* ot, u8* initial_prim, s32 x_off, s32 y_off)
                 y = ((row * 0x30) - y_off) - g_gosub_scroll_y;
                 if (y >= -0x2F && y < g_gosub_window_height)
                 {
-                    prim = field_draw_text((SPRT*)(gosub_draw_portrait(prim, ot, row, -x_off, y, drawn_count)), ot, g_gosub_rows[row].name, g_gosub_rows[row].text_color,
-                                           label_x, y, 0);
+                    prim = field_draw_text((SPRT*)(gosub_draw_portrait(prim, ot, row, -x_off, y, drawn_count)), ot, g_gosub_rows[row].name,
+                                           g_gosub_rows[row].text_color, label_x, y, FIELD_TEXT_ALIGN_LEFT);
                     if (g_gosub_rows[row].flags.companion.pet)
                     {
                         if ((g_gosub_rows[row].flags.half & 1) == 0)
                         {
-                            prim = field_draw_text((SPRT*)prim, ot, GOSUB_MESSAGE(GOSUB_MSG_LEVEL), g_gosub_rows[row].text_color, label_x, y + 0x10, 0);
+                            prim = field_draw_text((SPRT*)prim, ot, GOSUB_MESSAGE(GOSUB_MSG_LEVEL), g_gosub_rows[row].text_color, label_x, y + 0x10,
+                                                   FIELD_TEXT_ALIGN_LEFT);
                             pos.x = 0x54 - x_off;
                             pos.y = y + 0x10;
-                            prim = field_draw_number(ot, (SPRT*)prim, g_gosub_rows[row].detail_variant, g_gosub_rows[row].text_color, pos_p, 0);
-                            prim = field_draw_text((SPRT*)prim, ot, GOSUB_TEXT(GOSUB_TEXT_PET_SPECIES, g_gosub_rows[row].detail_id), g_gosub_rows[row].text_color,
-                                                   0x84 - x_off, y + 0x10, 0);
+                            prim = field_draw_number(ot, (SPRT*)prim, g_gosub_rows[row].detail_variant, g_gosub_rows[row].text_color, pos_p,
+                                                     FIELD_TEXT_ALIGN_LEFT);
+                            prim = field_draw_text((SPRT*)prim, ot, GOSUB_TEXT(GOSUB_TEXT_PET_SPECIES, g_gosub_rows[row].detail_id),
+                                                   g_gosub_rows[row].text_color, 0x84 - x_off, y + 0x10, FIELD_TEXT_ALIGN_LEFT);
                         }
                         else
                         {
                             prim = field_draw_text((SPRT*)prim, ot, GOSUB_MESSAGE(GOSUB_MSG_HATCH_ANY_TIME + g_gosub_rows[row].detail_variant),
-                                                   g_gosub_rows[row].text_color, label_x, y + 0x10, 0);
+                                                   g_gosub_rows[row].text_color, label_x, y + 0x10, FIELD_TEXT_ALIGN_LEFT);
                         }
                     }
                     else
                     {
-                        prim = field_draw_text((SPRT*)prim, ot, GOSUB_TEXT(GOSUB_TEXT_GOLEM_TYPES, g_gosub_rows[row].detail_id), g_gosub_rows[row].text_color, label_x,
-                                               y + 0x10, 0);
+                        prim = field_draw_text((SPRT*)prim, ot, GOSUB_TEXT(GOSUB_TEXT_GOLEM_TYPES, g_gosub_rows[row].detail_id), g_gosub_rows[row].text_color,
+                                               label_x, y + 0x10, FIELD_TEXT_ALIGN_LEFT);
                     }
-                    prim = field_draw_text((SPRT*)prim, ot, GOSUB_MESSAGE(GOSUB_MSG_HP), g_gosub_rows[row].text_color, label_x, y + 0x20, 0);
+                    prim =
+                        field_draw_text((SPRT*)prim, ot, GOSUB_MESSAGE(GOSUB_MSG_HP), g_gosub_rows[row].text_color, label_x, y + 0x20, FIELD_TEXT_ALIGN_LEFT);
                     pos.x = GOSUB_CARD_SECONDARY_VALUE_X - x_off;
                     pos.y = y + 0x20;
-                    prim = field_draw_number(ot, (SPRT*)prim, g_gosub_rows[row].secondary_value, g_gosub_rows[row].text_color, pos_p, 0);
-                    prim = field_draw_text((SPRT*)prim, ot, GOSUB_MESSAGE(GOSUB_MSG_ATTACK_POWER), g_gosub_rows[row].text_color, GOSUB_CARD_VALUE_LABEL_X - x_off,
-                                           y + 0x20, 0);
+                    prim = field_draw_number(ot, (SPRT*)prim, g_gosub_rows[row].secondary_value, g_gosub_rows[row].text_color, pos_p, FIELD_TEXT_ALIGN_LEFT);
+                    prim = field_draw_text((SPRT*)prim, ot, GOSUB_MESSAGE(GOSUB_MSG_ATTACK_POWER), g_gosub_rows[row].text_color,
+                                           GOSUB_CARD_VALUE_LABEL_X - x_off, y + 0x20, FIELD_TEXT_ALIGN_LEFT);
                     pos.x = GOSUB_CARD_PRIMARY_VALUE_X - x_off;
                     pos.y = y + 0x20;
-                    prim = field_draw_number(ot, (SPRT*)prim, g_gosub_rows[row].primary_value, g_gosub_rows[row].text_color, pos_p, 0);
+                    prim = field_draw_number(ot, (SPRT*)prim, g_gosub_rows[row].primary_value, g_gosub_rows[row].text_color, pos_p, FIELD_TEXT_ALIGN_LEFT);
                     if (g_gosub_rows[row].detail_group != 0)
                     {
-                        prim = field_draw_text((SPRT*)prim, ot, GOSUB_MESSAGE(GOSUB_MSG_ON_FIELD), g_gosub_rows[row].text_color, g_gosub_window_width - 0xC - x_off,
-                                               y + 0x20, 1);
+                        prim = field_draw_text((SPRT*)prim, ot, GOSUB_MESSAGE(GOSUB_MSG_ON_FIELD), g_gosub_rows[row].text_color,
+                                               g_gosub_window_width - 0xC - x_off, y + 0x20, FIELD_TEXT_ALIGN_RIGHT);
                     }
                     else if (g_gosub_rows[row].flags.half & 1)
                     {
-                        prim = field_draw_text((SPRT*)prim, ot, GOSUB_MESSAGE(GOSUB_MSG_MONSTER_EGG), g_gosub_rows[row].text_color, g_gosub_window_width - 0xC - x_off,
-                                               y + 0x20, 1);
+                        prim = field_draw_text((SPRT*)prim, ot, GOSUB_MESSAGE(GOSUB_MSG_MONSTER_EGG), g_gosub_rows[row].text_color,
+                                               g_gosub_window_width - 0xC - x_off, y + 0x20, FIELD_TEXT_ALIGN_RIGHT);
                     }
                     else if (g_gosub_rows[row].flags.companion.grazing)
                     {
-                        prim = field_draw_text((SPRT*)prim, ot, GOSUB_MESSAGE(GOSUB_MSG_GRAZING), g_gosub_rows[row].text_color, g_gosub_window_width - 0xC - x_off,
-                                               y + 0x20, 1);
+                        prim = field_draw_text((SPRT*)prim, ot, GOSUB_MESSAGE(GOSUB_MSG_GRAZING), g_gosub_rows[row].text_color,
+                                               g_gosub_window_width - 0xC - x_off, y + 0x20, FIELD_TEXT_ALIGN_RIGHT);
                     }
                     drawn_count += 1;
                 }
@@ -591,10 +594,11 @@ u8* gosub_draw_item_list(u_long* ot, u8* initial_prim, s32 x_off, s32 y_off)
                 if (y >= -0x1F && y < g_gosub_window_height)
                 {
                     prim = gosub_draw_composite_icon(prim, ot, 0xC - x_off, y, g_gosub_rows[row].detail_group, g_gosub_rows[row].detail_variant);
-                    prim = field_draw_text((SPRT*)prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].text_color, 0x4C - x_off, y + 8, 0);
+                    prim = field_draw_text((SPRT*)prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].text_color, 0x4C - x_off, y + 8, FIELD_TEXT_ALIGN_LEFT);
                     if (g_gosub_rows[row].flags.block.in_use)
                     {
-                        prim = field_draw_text((SPRT*)prim, ot, GOSUB_MESSAGE(GOSUB_MSG_IN_USE), g_gosub_rows[row].text_color, 0x110 - x_off, y + 8, 1);
+                        prim = field_draw_text((SPRT*)prim, ot, GOSUB_MESSAGE(GOSUB_MSG_IN_USE), g_gosub_rows[row].text_color, 0x110 - x_off, y + 8,
+                                               FIELD_TEXT_ALIGN_RIGHT);
                     }
                 }
             }
@@ -605,12 +609,12 @@ u8* gosub_draw_item_list(u_long* ot, u8* initial_prim, s32 x_off, s32 y_off)
                 y = (status_pad - y_top) - g_gosub_scroll_y;
                 if (-g_gosub_row_height < y && y < g_gosub_window_height)
                 {
-                    prim = field_draw_text((SPRT*)prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].text_color, 0xC - x_off, y, 0);
+                    prim = field_draw_text((SPRT*)prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].text_color, 0xC - x_off, y, FIELD_TEXT_ALIGN_LEFT);
                     pos.y = y;
                     pos.x = g_gosub_window_width - 0xC - x_off;
                     if (g_gosub_rows[row].value >= 0)
                     {
-                        prim = field_draw_number(ot, (SPRT*)prim, g_gosub_rows[row].value, g_gosub_rows[row].text_color, pos_p, 1);
+                        prim = field_draw_number(ot, (SPRT*)prim, g_gosub_rows[row].value, g_gosub_rows[row].text_color, pos_p, FIELD_TEXT_ALIGN_RIGHT);
                     }
                 }
             }
@@ -765,7 +769,7 @@ u8* gosub_draw_block_preview(u_long* ot, u8* initial_prim, s32 x_off, s32 y_off)
             field_format_number(number_text, g_gosub_block_level, 1);
             encoded_text_append(name_cursor, number_text);
         }
-        prim = field_draw_text((SPRT*)prim, ot, name_cursor, 4, 0x4C - x_off, 0xA - y_off, 0);
+        prim = field_draw_text((SPRT*)prim, ot, name_cursor, 4, 0x4C - x_off, 0xA - y_off, FIELD_TEXT_ALIGN_LEFT);
     }
     return prim;
 }

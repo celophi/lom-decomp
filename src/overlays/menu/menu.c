@@ -10,8 +10,6 @@ s32 menu_find_nav_node_index(s32 node_id);
 s32 menu_find_active_content_item(void);
 s32 menu_count_inventory_items(void);
 
-/* ----- Initialization and Core Frame Processing ----- */
-
 /**
  * @brief Run the menu overlay until an exit or follow-up screen is requested.
  * @param render_buffers Pair of render buffers used for alternating frames.
@@ -265,7 +263,7 @@ void menu_tick(RenderContext* render_ctx)
  *
  * @see field_text_build_sprites
  */
-void* menu_build_text_run(SPRT* sprite_cursor, u_long* ot, u8* src, s32 text_color, s32 x, s32 y, s32 len, MenuTextAlignment alignment)
+void* menu_build_text_run(SPRT* sprite_cursor, u_long* ot, u8* src, s32 text_color, s32 x, s32 y, s32 len, s32 alignment)
 {
     char buf[0x80];
     s32 count, i, acc;
@@ -280,9 +278,9 @@ void* menu_build_text_run(SPRT* sprite_cursor, u_long* ot, u8* src, s32 text_col
     count = field_text_build_sprites(sprite_cursor, buf, text_color);
 
     /* Convert the requested anchor into the run's left edge. */
-    if (alignment != MENU_TEXT_ALIGN_RIGHT)
+    if (alignment != FIELD_TEXT_ALIGN_RIGHT)
     {
-        if (alignment == MENU_TEXT_ALIGN_CENTER)
+        if (alignment == FIELD_TEXT_ALIGN_CENTER)
         {
             sprite = sprite_cursor;
             for (i = 0; i < count; i++)
@@ -319,7 +317,7 @@ void* menu_build_text_run(SPRT* sprite_cursor, u_long* ot, u8* src, s32 text_col
 
     /* addPrim prepends, so link the texture-page packet after the sprites. */
     tpage = (DR_TPAGE*)sprite_cursor;
-    setDrawTPage(tpage, 0, 0, 0x1F);
+    setDrawTPage(tpage, 0, 0, FIELD_UI_TPAGE(GPU_BLEND_HALF));
     addPrim(ot, tpage);
 
     return tpage + 1;
@@ -472,8 +470,6 @@ void menu_upload_tim(const MenuTimVramLayout* layout)
     }
     LoadImage(&vram_rect, (u_long*)asset->second_clut);
 }
-
-/* ----- Window Slots and Rendering ----- */
 
 /**
  * @brief Allocate and initialize the first available menu window slot.
@@ -651,7 +647,8 @@ void menu_update_slots(RenderContext* render_ctx)
         render_ctx->prim_cursor = menu_draw_frame(render_ctx->prim_cursor, frame_ot, render_ctx->frame_parity, allow_input);
         if (g_menu_help_text != 0)
         {
-            render_ctx->prim_cursor = field_draw_text(render_ctx->prim_cursor, &render_ctx->ot[MENU_FRAME_OT_INDEX], g_menu_help_text, 1, 0xA0, 0xCA, 2);
+            render_ctx->prim_cursor =
+                field_draw_text(render_ctx->prim_cursor, &render_ctx->ot[MENU_FRAME_OT_INDEX], g_menu_help_text, 1, 0xA0, 0xCA, FIELD_TEXT_ALIGN_CENTER);
         }
     }
 }
@@ -1019,12 +1016,10 @@ u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos
 
     menu_copy_sign_label(label_buffer, value);
 
-    packet_cursor = field_draw_text((SPRT*)packet_cursor, ot_entry, label_buffer, 1, position->x, position->y, 0);
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ot_entry, label_buffer, 1, position->x, position->y, FIELD_TEXT_ALIGN_LEFT);
 
     return packet_cursor;
 }
-
-/* ----- Node Tree and Navigation ----- */
 
 /**
  * @brief Initialize the full menu node tree and global menu state.

@@ -19,7 +19,7 @@
 /** @brief Where a field map resource is read to. */
 #define FIELD_MAP_LOAD_ADDRESS ((u8*)LOAD_BUFFER_ADDRESS)
 /** @brief Bytes reserved for the text configuration save area. */
-#define FIELD_TEXT_SAVED_CONFIG_SIZE 96
+#define FIELD_TEXT_SAVED_CONFIG_SIZE (FIELD_TEXT_WINDOW_SLOTS * sizeof(FieldTextConfig))
 /** @brief VRAM position of the map texture area. */
 #define FIELD_MAP_TEXTURE_VRAM_X 320
 #define FIELD_MAP_TEXTURE_VRAM_Y 256
@@ -87,18 +87,18 @@ static void field_select_object(u16 object_index, FieldRenderHalf* buffers);
  */
 void field_init_ctx(FieldRenderHalf* buffers, u16 object_index)
 {
-    FieldMemState* mem;
+    FieldWorkspace* mem;
 
     DrawSync(0);
     ClearOTagR(buffers[0].ordering_table, FIELD_ORDERING_TABLE_SIZE);
     ClearOTagR(buffers[1].ordering_table, FIELD_ORDERING_TABLE_SIZE);
     field_select_object(object_index, buffers);
-    mem = FIELD_MEM_STATE;
-    mem->text_configs = mem->top;
+    mem = FIELD_WORKSPACE;
+    mem->text_configs = (FieldTextConfig*)mem->top;
     mem->top = mem->top + FIELD_TEXT_SAVED_CONFIG_SIZE;
     field_size_work_buffer();
-    buffers[0].primitive_cursor = mem->base;
-    buffers[1].primitive_cursor = mem->midpoint;
+    buffers[0].primitive_cursor = mem->primitive_buffers[0];
+    buffers[1].primitive_cursor = mem->primitive_buffers[1];
 }
 
 /**

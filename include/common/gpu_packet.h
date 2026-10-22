@@ -69,13 +69,16 @@
 #define SET_SPRT_CLUT(p, _clut) \
     (*(u16*)((u8*)(p) + 0x0E) = (u16)(_clut))
 
-/** @brief GPU command codes of a POLY_G4, a LINE_G2, a TILE and an SPRT, and the bit that makes a primitive semi-transparent. */
+/** @brief GPU command codes, the bit that makes a primitive semi-transparent and the bit that draws a texture unshaded. */
 #define GPU_CODE_POLY_F4 0x28
+#define GPU_CODE_POLY_FT4 0x2C
 #define GPU_CODE_POLY_G4 0x38
 #define GPU_CODE_LINE_G2 0x50
 #define GPU_CODE_TILE 0x60
 #define GPU_CODE_SPRT 0x64
+#define GPU_CODE_SPRT_16 0x7C
 #define GPU_CODE_SEMI_TRANS 0x02
+#define GPU_CODE_RAW_TEXTURE 0x01
 
 /** @brief Texture colour depths (the tp argument of getTPage). */
 #define GPU_TEXTURE_4BIT 0
