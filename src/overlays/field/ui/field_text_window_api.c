@@ -43,33 +43,14 @@ extern u8* g_field_scene_strings;
 extern FieldTextWindowRect g_field_text_window_layouts[][FIELD_TEXT_WINDOW_SLOTS];
 
 /**
- * @brief Configure and open a field text window.
+ * @brief Set the style, portrait side and rectangle of the pending configuration and open the window.
+ * @param cfg Pending configuration, with its portrait already chosen.
  * @param window_slot Window slot index.
  * @param layout_index Window layout.
- * @param unused Unused.
  * @param portrait_selector Portrait selector: -1 for none, otherwise FIELD_TEXT_PORTRAIT_* bits and an index.
  */
-void field_open_text_window(s32 window_slot, s32 layout_index, s32 unused, s32 portrait_selector)
+static inline void field_text_open_layout_window(FieldTextConfig* cfg, s32 window_slot, s32 layout_index, s32 portrait_selector)
 {
-    FieldTextConfig* cfg;
-
-    cfg = FIELD_TEXT_PENDING_CONFIG;
-    cfg->anchor.pos.x = 0;
-    cfg->anchor.pos.y = 0;
-
-    if ((portrait_selector == -1) || (layout_index >= FIELD_TEXT_LAYOUT_NO_PORTRAIT && layout_index < FIELD_TEXT_LAYOUT_FIRST_PACKED))
-    {
-        cfg->portrait = NULL;
-    }
-    else if (portrait_selector & FIELD_TEXT_PORTRAIT_SELECT_SHARED)
-    {
-        cfg->portrait = (FieldPortrait*)(g_field_party_portraits + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_PORTRAIT_BYTES);
-    }
-    else
-    {
-        cfg->portrait = (FieldPortrait*)(g_field_scene_portraits + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_PORTRAIT_BYTES);
-    }
-
     cfg->flags.b.low = 0;
 
     if (layout_index == FIELD_TEXT_LAYOUT_BOLD)
@@ -98,6 +79,37 @@ void field_open_text_window(s32 window_slot, s32 layout_index, s32 unused, s32 p
     {
         field_text_open_fixed_window(window_slot);
     }
+}
+
+/**
+ * @brief Configure and open a field text window.
+ * @param window_slot Window slot index.
+ * @param layout_index Window layout.
+ * @param unused Unused.
+ * @param portrait_selector Portrait selector: -1 for none, otherwise FIELD_TEXT_PORTRAIT_* bits and an index.
+ */
+void field_open_text_window(s32 window_slot, s32 layout_index, s32 unused, s32 portrait_selector)
+{
+    FieldTextConfig* cfg;
+
+    cfg = FIELD_TEXT_PENDING_CONFIG;
+    cfg->anchor.pos.x = 0;
+    cfg->anchor.pos.y = 0;
+
+    if ((portrait_selector == -1) || (layout_index >= FIELD_TEXT_LAYOUT_NO_PORTRAIT && layout_index < FIELD_TEXT_LAYOUT_FIRST_PACKED))
+    {
+        cfg->portrait = NULL;
+    }
+    else if (portrait_selector & FIELD_TEXT_PORTRAIT_SELECT_SHARED)
+    {
+        cfg->portrait = (FieldPortrait*)(g_field_party_portraits + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_PORTRAIT_BYTES);
+    }
+    else
+    {
+        cfg->portrait = (FieldPortrait*)(g_field_scene_portraits + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_PORTRAIT_BYTES);
+    }
+
+    field_text_open_layout_window(cfg, window_slot, layout_index, portrait_selector);
 }
 
 /**
@@ -142,35 +154,7 @@ void field_open_text_window_with_string(s32 string_index, s32 window_slot, s32 l
         cfg->portrait = (FieldPortrait*)(g_field_scene_portraits + portrait_selector * FIELD_TEXT_SCENE_BLOCK_PORTRAITS * FIELD_PORTRAIT_BYTES);
     }
 
-    cfg->flags.b.low = 0;
-
-    if (layout_index == FIELD_TEXT_LAYOUT_BOLD)
-    {
-        cfg->flags.word = (cfg->flags.word & ~FIELD_TEXT_CONFIG_STYLE_MASK) | FIELD_TEXT_CONFIG_STYLE_BOLD;
-    }
-    else
-    {
-        cfg->flags.word &= ~FIELD_TEXT_CONFIG_STYLE_MASK;
-    }
-
-    cfg->flags.word =
-        ((cfg->flags.word & ~FIELD_TEXT_CONFIG_PORTRAIT_MASK) | ((portrait_selector << FIELD_TEXT_PORTRAIT_SELECT_SHIFT) & FIELD_TEXT_CONFIG_PORTRAIT_RIGHT)) &
-        ~FIELD_TEXT_CONFIG_MODE_MASK;
-
-    cfg->x = g_field_text_window_layouts[layout_index][window_slot].x;
-    cfg->y = g_field_text_window_layouts[layout_index][window_slot].y;
-    cfg->width = g_field_text_window_layouts[layout_index][window_slot].width;
-    cfg->height = g_field_text_window_layouts[layout_index][window_slot].height;
-
-    if (layout_index >= FIELD_TEXT_LAYOUT_FIRST_PACKED)
-    {
-        field_text_open_packed_window(window_slot);
-    }
-    else
-    {
-        field_text_open_fixed_window(window_slot);
-    }
-
+    field_text_open_layout_window(cfg, window_slot, layout_index, portrait_selector);
     field_text_set_string(window_slot, FIELD_SCENE_STRING(string_index), FIELD_TEXT_OPTION_AUTO_CLOSE);
 }
 

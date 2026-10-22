@@ -297,7 +297,7 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
     {
         u8* cur;
     } arena = {NULL};
-    FieldMemState* mem;
+    FieldWorkspace* mem;
     FieldScene* scene;
     FieldObj* prev_obj;
     s32 bit_word;
@@ -355,7 +355,7 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
     u8* cursor;
     FieldObjDef** obj_defs;
 
-    mem = FIELD_MEM_STATE;
+    mem = FIELD_WORKSPACE;
     tpage = 0;
     color = 0;
     semi = 0;
@@ -1901,7 +1901,7 @@ static void field_build_quad_tile_record(FieldTileDesc* desc, FieldTileRec* reco
  */
 void field_size_work_buffer(void)
 {
-    FieldMemState* state = FIELD_MEM_STATE;
+    FieldWorkspace* state = FIELD_WORKSPACE;
     FieldObj* obj;
     FieldPart* part;
     s32 copies;
@@ -1982,8 +1982,8 @@ void field_size_work_buffer(void)
         total = min_size;
     }
 
-    state->midpoint = base + total;
-    state->base = base;
+    state->primitive_buffers[1] = base + total;
+    state->primitive_buffers[0] = base;
     state->top = base + total * 2;
 }
 

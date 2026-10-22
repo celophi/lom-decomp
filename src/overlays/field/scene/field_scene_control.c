@@ -16,7 +16,7 @@
 /** Largest CLUT id a part corner may be rebiased to. */
 #define FIELD_CLUT_ID_MAX 0x7FF
 
-/** FieldMemState::fade_mode values. */
+/** FieldWorkspace.fade_mode values. */
 #define FIELD_FADE_IDLE 0
 #define FIELD_FADE_OUT 1
 #define FIELD_FADE_HELD 2
@@ -545,14 +545,14 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
  */
 void field_update_scene_fade(void)
 {
-    FieldMemState* state;
+    FieldWorkspace* state;
     FieldScene* scene;
     FieldObj* obj;
     FieldPart* part;
     FieldAnim* anim;
     FieldSeq* seq;
 
-    state = FIELD_MEM_STATE;
+    state = FIELD_WORKSPACE;
     scene = g_field_scene.scene;
     switch (state->fade_mode)
     {
@@ -1517,10 +1517,10 @@ void field_play_effect_animation(s32 index, s32 forward)
  */
 void field_begin_scene_fade_out(void)
 {
-    if (FIELD_MEM_STATE->fade_mode == FIELD_FADE_IDLE)
+    if (FIELD_WORKSPACE->fade_mode == FIELD_FADE_IDLE)
     {
-        FIELD_MEM_STATE->fade_mode = FIELD_FADE_OUT;
-        FIELD_MEM_STATE->fade_level = FIELD_FADE_LEVEL_FULL;
+        FIELD_WORKSPACE->fade_mode = FIELD_FADE_OUT;
+        FIELD_WORKSPACE->fade_level = FIELD_FADE_LEVEL_FULL;
     }
 }
 

@@ -174,6 +174,77 @@ struct FieldTextConfig
     u8* text;
 };
 
+/**
+ * @brief Window flags: FIELD_TEXT_* bits, also accessed by byte.
+ * @note anchored is non-zero when the window grows from and shrinks to its transition anchor;
+ *       config_low is the low byte of the configuration flags it was opened with.
+ */
+typedef union
+{
+    u32 word;
+    struct
+    {
+        u8 low;
+        u8 control;
+        u8 anchored;
+        u8 config_low;
+    } b;
+} FieldTextFlags;
+
+/**
+ * @brief Runtime state for one dialogue window.
+ * @note Cache U coordinates count 4bpp pixels; each 256-pixel span wraps by line_height rows.
+ *       Screen text lines are spaced 16 pixels apart. Inline macros use a budget of -1.
+ */
+typedef struct
+{
+    u8* text_cursor;
+    u8* macro_cursor;
+#if !defined(VERSION_JP)
+    /* JP has no glyph cursor, so every later field sits 4 bytes lower. */
+    u8* glyph_cursor;
+#endif
+    FieldPortrait* portrait;
+    FieldTextFlags flags;
+    u8 flow_code;
+    u8 line_count;
+    u8 choice_start_line;
+    u8 choice_index;
+    u8 choice_count;
+    u8 pending_spaces;
+    u8 char_delay;
+    u8 text_color;
+    u8 scroll_timer;
+    u8 needs_init;
+    u8 prompt_frame;
+    u8 prompt_timer;
+    u8 inline_text[41];
+    u8 last_was_break;
+    u16 transition_frame;
+    s16 macro_remaining;
+    u16 x;
+    u16 y;
+    u16 width;
+    u16 height;
+    u16 line_advance;
+    u16 line_height;
+    u16 remaining_width;
+    u16 cursor_u;
+    u16 cursor_v;
+    u16 region_start_u;
+    u16 region_start_v;
+    u16 region_end_u;
+    u16 region_end_v;
+    u16 dirty_start_u;
+    u16 dirty_start_v;
+    u16 dirty_end_u;
+    u16 dirty_end_v;
+    u16 row_carry[14];
+    s32 transition_anchor_x;
+    u32 unknown_0x90;
+    s32 transition_anchor_y;
+} FieldTextState;
+
 /** @brief Pending text-window configuration block (fixed RAM) consumed by field_text_apply_config. */
 #define FIELD_TEXT_PENDING_CONFIG ((FieldTextConfig*)TEXT_CONFIG_ADDRESS)
 

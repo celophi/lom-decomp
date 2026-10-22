@@ -1,38 +1,31 @@
-#include "overlays/field/field_scene_transition.h"
-#include "main/field_runtime.h"
+#include "common.h"
+
+#include <libetc.h>
+#include <libgpu.h>
+#include <libgte.h>
+
+#include "common/gpu_packet.h"
+#include "main/audio/akao_cmd.h"
 #include "main/cdrom.h"
 #include "main/controller.h"
-#include "main/overlay_memory.h"
-#include <libgte.h>
-#include <libgpu.h>
-#include "main/scene_state.h"
-#include "main/display.h"
-#include "main/audio/akao_cmd.h"
 #include "main/controller_internal.h"
-#include "main/game_state.h"
-#include <libetc.h>
-#include "common/gpu_packet.h"
+#include "main/display.h"
 #include "main/field_entry.h"
+#include "main/field_runtime.h"
+#include "main/game_state.h"
+#include "main/overlay_memory.h"
+#include "main/scene_state.h"
 #include "overlays/field/field_fade.h"
+#include "overlays/field/field_scene_transition.h"
+#include "overlays/field/field_workspace.h"
 
 #define FIELD_ENTRY_FADE_FRAMES 30
-#define FIELD_TEXT_IMAGE_RESOURCE 1500
-#define FIELD_TEXT_IMAGE_X 288
-#define FIELD_TEXT_IMAGE_Y 480
-#define FIELD_TEXT_CLUT_X 256
-#define FIELD_TEXT_CLUT_Y 511
-#define FIELD_TEXT_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 256, 256)
-
-/** @brief Field allocation cursor, text state, and primitive-buffer bases. */
-typedef struct
-{
-    u8* allocation_cursor;
-    void* text_window_configs;
-    u8* timed_text;
-    u8* primitive_buffers[DISPLAY_BUFFER_COUNT];
-} FieldWorkspace;
-
-#define FIELD_WORKSPACE ((FieldWorkspace*)FIELD_WORKSPACE_ADDRESS)
+#define FIELD_GLYPH_IMAGE_RESOURCE 1500
+#define FIELD_GLYPH_IMAGE_X 288
+#define FIELD_GLYPH_IMAGE_Y 480
+#define FIELD_GLYPH_CLUT_X 256
+#define FIELD_GLYPH_CLUT_Y 511
+#define FIELD_GLYPH_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 256, 256)
 
 /*
  * FIELD defines this as field_load_vram_resource(id, rect, mode). The main
@@ -213,10 +206,10 @@ void field_init_text_renderer(FieldRenderHalf* render_buffers)
 
     g_text_cursor_y = 0;
     g_text_cursor_x = 0;
-    setRECT(&font_rect, FIELD_TEXT_IMAGE_X, FIELD_TEXT_IMAGE_Y, FIELD_TEXT_CLUT_X, FIELD_TEXT_CLUT_Y);
-    field_load_vram_resource(FIELD_TEXT_IMAGE_RESOURCE, &font_rect);
+    setRECT(&font_rect, FIELD_GLYPH_IMAGE_X, FIELD_GLYPH_IMAGE_Y, FIELD_GLYPH_CLUT_X, FIELD_GLYPH_CLUT_Y);
+    field_load_vram_resource(FIELD_GLYPH_IMAGE_RESOURCE, &font_rect);
     cdrom_wait_queue_empty();
-    g_text_clut_base = getClut(FIELD_TEXT_CLUT_X, FIELD_TEXT_CLUT_Y);
-    setDrawTPage(&render_buffers[0].draw_mode, 0, 1, FIELD_TEXT_TPAGE);
-    setDrawTPage(&render_buffers[1].draw_mode, 0, 1, FIELD_TEXT_TPAGE);
+    g_text_clut_base = getClut(FIELD_GLYPH_CLUT_X, FIELD_GLYPH_CLUT_Y);
+    setDrawTPage(&render_buffers[0].draw_mode, 0, 1, FIELD_GLYPH_TPAGE);
+    setDrawTPage(&render_buffers[1].draw_mode, 0, 1, FIELD_GLYPH_TPAGE);
 }

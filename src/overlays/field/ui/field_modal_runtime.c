@@ -362,7 +362,7 @@ void* field_draw_text(SPRT* sprite_cursor, u_long* ot, u8* text, s32 text_color,
     }
 
     tpage = (DR_TPAGE*)sprite_cursor;
-    setDrawTPage(tpage, 0, 0, 0x1F);
+    setDrawTPage(tpage, 0, 0, FIELD_UI_TPAGE(GPU_BLEND_HALF));
     addPrim(ot, tpage);
 
     return tpage + 1;

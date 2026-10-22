@@ -1012,7 +1012,7 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
     sprite_cursor->clut = FIELD_HUD_CLUT;
     addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], sprite_cursor);
     sprite_cursor++;
-    setDrawTPage((DR_TPAGE*)sprite_cursor, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, FIELD_UI_PAGE_X, FIELD_UI_PAGE_Y));
+    setDrawTPage((DR_TPAGE*)sprite_cursor, 0, 0, FIELD_UI_TPAGE(GPU_BLEND_HALF));
     addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], sprite_cursor);
     render_half->primitive_cursor = (u8*)sprite_cursor + sizeof(DR_TPAGE);
 }

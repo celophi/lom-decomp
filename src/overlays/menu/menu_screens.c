@@ -2002,7 +2002,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             SET_SPRT_CLUT(packet_cursor, (((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
                             addPrim(ot_entry, packet_cursor);
                             packet_cursor = (SPRT*)packet_cursor + 1;
-                            setDrawTPage(packet_cursor, 0, 0, 0x1F);
+                            setDrawTPage(packet_cursor, 0, 0, FIELD_UI_TPAGE(GPU_BLEND_HALF));
                             addPrim(ot_entry, packet_cursor);
                             packet_cursor = (DR_TPAGE*)packet_cursor + 1;
                         }

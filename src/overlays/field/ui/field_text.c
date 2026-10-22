@@ -12,6 +12,7 @@
 #include "overlays/field/field_portrait.h"
 #include "overlays/field/field_sound.h"
 #include "overlays/field/field_text.h"
+#include "overlays/field/field_workspace.h"
 
 #define FIELD_TEXT_STATE_MASK 7
 /** @brief Mode (FieldTextMode) of a flags word. */
@@ -20,7 +21,7 @@
 #define FIELD_TEXT_SET_MODE(flags, mode) ((flags) = ((flags) & ~FIELD_TEXT_STATE_MASK) | (mode))
 
 #define FIELD_TEXT_PORTRAIT_SLOT 0x08
-/** @brief Bit of portrait VRAM slot @p slot in FieldTextSystem.portrait_slots. */
+/** @brief Bit of portrait VRAM slot @p slot in FieldWorkspace.portrait_slots. */
 #define FIELD_TEXT_PORTRAIT_SLOT_BIT(slot) (1 << (slot))
 #define FIELD_TEXT_PORTRAIT_RIGHT 0x10
 #define FIELD_TEXT_PORTRAIT_OUTSIDE 0x20
@@ -128,9 +129,8 @@
 #define FIELD_TEXT_QUAD_SHADOW FIELD_TEXT_CODE_WORD(GPU_CODE_POLY_FT4 | GPU_CODE_SEMI_TRANS, GPU_COLOR_BLACK)
 
 /* Fixed RAM blocks shared with the main executable and the field resource loader. */
-#define FIELD_TEXT_SYSTEM ((FieldTextSystem*)FIELD_WORKSPACE_ADDRESS)
-#define FIELD_TEXT_WINDOWS (FIELD_TEXT_SYSTEM->windows)
-#define FIELD_TEXT_IMMEDIATE_STATE (&FIELD_TEXT_SYSTEM->windows[1])
+#define FIELD_TEXT_WINDOWS (FIELD_WORKSPACE->windows)
+#define FIELD_TEXT_IMMEDIATE_STATE (&FIELD_WORKSPACE->windows[1])
 #define FIELD_TEXT_INPUT ((FieldInputState*)CONTROLLER_STATE_ADDRESS)
 #define FIELD_TEXT_SCRATCH ((u16*)SCRATCHPAD_ADDRESS)
 /** Transition mesh vertices, built in the same scratchpad area. */
@@ -206,96 +206,6 @@ typedef enum
     FIELD_TEXT_CMD_WIDE_CHARACTER = 25,
     FIELD_TEXT_CMD_EXTENDED_GLYPH_RUN = 31,
 } FieldTextCommand;
-
-/**
- * @brief Window flags: FIELD_TEXT_* bits, also accessed by byte.
- * @note anchored is non-zero when the window grows from and shrinks to its transition anchor;
- *       config_low is the low byte of the configuration flags it was opened with.
- */
-typedef union
-{
-    u32 word;
-    struct
-    {
-        u8 low;
-        u8 control;
-        u8 anchored;
-        u8 config_low;
-    } b;
-} FieldTextFlags;
-
-/**
- * @brief Runtime state for one dialogue window.
- * @note Cache U coordinates count 4bpp pixels; each 256-pixel span wraps by line_height rows.
- *       Screen text lines are spaced 16 pixels apart. Inline macros use a budget of -1.
- */
-typedef struct
-{
-    u8* text_cursor;
-    u8* macro_cursor;
-#if !defined(VERSION_JP)
-    /* JP has no glyph cursor, so every later field sits 4 bytes lower. */
-    u8* glyph_cursor;
-#endif
-    FieldPortrait* portrait;
-    FieldTextFlags flags;
-    u8 flow_code;
-    u8 line_count;
-    u8 choice_start_line;
-    u8 choice_index;
-    u8 choice_count;
-    u8 pending_spaces;
-    u8 char_delay;
-    u8 text_color;
-    u8 scroll_timer;
-    u8 needs_init;
-    u8 prompt_frame;
-    u8 prompt_timer;
-    u8 inline_text[41];
-    u8 last_was_break;
-    u16 transition_frame;
-    s16 macro_remaining;
-    u16 x;
-    u16 y;
-    u16 width;
-    u16 height;
-    u16 line_advance;
-    u16 line_height;
-    u16 remaining_width;
-    u16 cursor_u;
-    u16 cursor_v;
-    u16 region_start_u;
-    u16 region_start_v;
-    u16 region_end_u;
-    u16 region_end_v;
-    u16 dirty_start_u;
-    u16 dirty_start_v;
-    u16 dirty_end_u;
-    u16 dirty_end_v;
-    u16 row_carry[14];
-    s32 transition_anchor_x;
-    u32 unknown_0x90;
-    s32 transition_anchor_y;
-} FieldTextState;
-
-/** @brief Field text renderer globals and four runtime window slots. */
-typedef struct
-{
-    u8 _pad00[4];
-    FieldTextConfig* configs;
-    u8* timed_text;
-    u8 _pad0C[0x14 - 0xC];
-    u32 draw_mode0;
-    u32 draw_mode1;
-    u16 text_clut;
-    u16 text_alt_clut;
-    u16 window_clut;
-    u16 prompt_clut;
-    u16 portrait_clut[2];
-    u16 portrait_slots;
-    u16 _pad2A[(0x34 - 0x2A) / 2];
-    FieldTextState windows[FIELD_TEXT_WINDOW_SLOTS];
-} FieldTextSystem;
 
 /** @brief Four screen-space corners of a quad, in POLY vertex order. */
 typedef struct
@@ -386,9 +296,9 @@ static void field_text_render_window(FieldTextState* state, u8** cursor, FieldOr
 static void field_text_queue_portrait_upload(FieldPortrait* image, u8** cursor, s32 slot, s32 mirror);
 static void field_text_restore_window(u16 slot, s32 placement_mode);
 
-/** @brief FieldTextSystem.portrait_slots, addressed as its own symbol. */
+/** @brief FieldWorkspace.portrait_slots, addressed as its own symbol. */
 extern s16 g_field_text_portrait_slots;
-/** @brief Flags word of FieldTextSystem.windows[0], addressed as its own symbol. */
+/** @brief Flags word of FieldWorkspace.windows[0], addressed as its own symbol. */
 extern s32 g_field_text_window0_flags;
 
 /**
@@ -1825,7 +1735,7 @@ void field_text_init(void)
     FieldTextState* state;
     s32 count;
     u32 draw_mode;
-    FieldTextSystem* text_sys = FIELD_TEXT_SYSTEM;
+    FieldWorkspace* text_sys = FIELD_WORKSPACE;
 
     cdrom_stream(CD_RES_FIELD_WINDOW_TEXTURES, FIELD_TEXT_CACHE);
 
@@ -1836,7 +1746,7 @@ void field_text_init(void)
     setRECT(&rect, FIELD_TEXT_CACHE_VRAM_X, FIELD_TEXT_FRAME_VRAM_Y, FIELD_TEXT_FRAME_TILE_WIDTH, FIELD_TEXT_FRAME_TILE_HEIGHT);
     LoadImage(&rect, (u_long*)(FIELD_TEXT_CACHE + 16 * 4));
 
-    draw_mode = _get_mode(1, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, FIELD_TEXT_CACHE_VRAM_X, FIELD_TEXT_TPAGE_VRAM_Y));
+    draw_mode = _get_mode(1, 0, FIELD_UI_TPAGE(GPU_BLEND_HALF));
     text_sys->draw_mode0 = draw_mode;
     text_sys->draw_mode1 = draw_mode;
     text_sys->text_clut = getClut(FIELD_TEXT_CLUT_X, FIELD_TEXT_TEXT_CLUT_Y);
@@ -2019,7 +1929,7 @@ s32 field_text_build_sprites(SPRT* prim, u8* text, s32 text_style)
  */
 void field_text_open_packed_window(slot) u16 slot;
 {
-    FieldTextSystem* system = FIELD_TEXT_SYSTEM;
+    FieldWorkspace* system = FIELD_WORKSPACE;
     FieldTextState* state;
     FieldTextState* prev;
     u32 flags;
@@ -2126,7 +2036,7 @@ void field_text_open_packed_window(slot) u16 slot;
  */
 void field_text_open_fixed_window(slot) u16 slot;
 {
-    FieldTextSystem* system = FIELD_TEXT_SYSTEM;
+    FieldWorkspace* system = FIELD_WORKSPACE;
     FieldTextState* state;
     u32 flags;
     s32 h;
@@ -2740,7 +2650,7 @@ static inline s32 field_text_portrait_y_word(s32 y, s32 h)
  */
 static void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOrderingTags* ot)
 {
-    FieldTextSystem* text_system = FIELD_TEXT_SYSTEM;
+    FieldWorkspace* text_system = FIELD_WORKSPACE;
     FieldTextPacket* prim;
     u8* first;
     u8* packet_cursor;
@@ -3121,7 +3031,7 @@ static void field_text_build_window_packets(FieldTextState* state, u8** cursor, 
  */
 static void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* quad, u8** cursor, FieldOrderingTags* ot)
 {
-    FieldTextSystem* text_system = FIELD_TEXT_SYSTEM;
+    FieldWorkspace* text_system = FIELD_WORKSPACE;
     FieldTextVertex* vertex;
     FieldTextVertex* lower_row;
     FieldTextVertex* bottom_vertices;
@@ -3411,7 +3321,7 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
     texture_command = FIELD_TEXT_QUAD_COLOR;
     texture_u_origin = 0;
     texture_v_origin = FIELD_TEXT_FRAME_V;
-    tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, FIELD_TEXT_CACHE_VRAM_X, FIELD_TEXT_TPAGE_VRAM_Y) << 16;
+    tpage = FIELD_UI_TPAGE(GPU_BLEND_HALF) << 16;
     vertex = FIELD_TEXT_MESH;
     packet_height = FIELD_TEXT_FRAME_EDGE;
     remaining = 1;
@@ -3630,7 +3540,7 @@ static void field_text_build_transition_packets(FieldTextState* state, FieldText
     /* The final eight mesh vertices hold the portrait shadow and image quads. */
     if (state->portrait != NULL)
     {
-        tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, FIELD_TEXT_CACHE_VRAM_X, FIELD_TEXT_TPAGE_VRAM_Y) << 16;
+        tpage = FIELD_UI_TPAGE(GPU_BLEND_HALF) << 16;
         poly = (FieldTextPacket*)packet_cursor;
         packet_cursor += sizeof(POLY_FT4);
         frame_rows = FIELD_TEXT_MESH_ROWS(state->height) + 3;
@@ -3961,13 +3871,13 @@ void field_text_set_string(s32 window_index, u8* text, s32 text_options)
 {
     u16 slot = window_index;
     u8 options = text_options;
-    FieldTextSystem* text_system = FIELD_TEXT_SYSTEM;
+    FieldWorkspace* text_system = FIELD_WORKSPACE;
     FieldTextState* state = &text_system->windows[slot];
     FieldTextConfig* config;
 
     if ((state->flags.word & FIELD_TEXT_REOPEN_MASK) != 0)
     {
-        config = &text_system->configs[slot];
+        config = &text_system->text_configs[slot];
         config->text = text;
         config->flags.b.text_options = options;
         return;
@@ -4009,11 +3919,11 @@ static void field_text_close(FieldTextState* state, s32 animate)
     {
         if ((state->flags.word & FIELD_TEXT_PORTRAIT_SLOT) == 0)
         {
-            FIELD_TEXT_SYSTEM->portrait_slots &= ~FIELD_TEXT_PORTRAIT_SLOT_BIT(0);
+            FIELD_WORKSPACE->portrait_slots &= ~FIELD_TEXT_PORTRAIT_SLOT_BIT(0);
         }
         else
         {
-            FIELD_TEXT_SYSTEM->portrait_slots &= ~FIELD_TEXT_PORTRAIT_SLOT_BIT(1);
+            FIELD_WORKSPACE->portrait_slots &= ~FIELD_TEXT_PORTRAIT_SLOT_BIT(1);
         }
     }
 
@@ -4150,7 +4060,7 @@ void field_text_start_timed_window(u8* text)
     v = 0;
     rows = state->height;
     state->text_cursor = text;
-    FIELD_TEXT_SYSTEM->timed_text = text;
+    FIELD_WORKSPACE->timed_text = text;
     state->dirty_start_u = 0;
     state->cursor_u = 0;
     state->region_start_u = 0;
@@ -4207,7 +4117,7 @@ static void field_text_restore_window(u16 slot, s32 placement_mode)
  */
 void field_text_set_position(s32 slot, s16 x, s16 y)
 {
-    FieldTextState* state = &FIELD_TEXT_SYSTEM->windows[slot & 0xFFFF];
+    FieldTextState* state = &FIELD_WORKSPACE->windows[slot & 0xFFFF];
     state->x = x;
     state->y = y;
 }
@@ -4218,7 +4128,7 @@ void field_text_set_position(s32 slot, s16 x, s16 y)
  */
 void field_text_close_window(s32 slot)
 {
-    FieldTextState* state = &FIELD_TEXT_SYSTEM->windows[slot & 0xFFFF];
+    FieldTextState* state = &FIELD_WORKSPACE->windows[slot & 0xFFFF];
     field_text_close(state, 1);
 }
 
@@ -4229,7 +4139,7 @@ void field_text_close_window(s32 slot)
  */
 s32 field_text_get_status(s32 slot)
 {
-    FieldTextState* state = &FIELD_TEXT_SYSTEM->windows[slot & 0xFFFF];
+    FieldTextState* state = &FIELD_WORKSPACE->windows[slot & 0xFFFF];
 
     if ((FIELD_TEXT_MODE(state->flags.word) != FIELD_TEXT_CLOSED) && ((state->flags.b.low & FIELD_TEXT_STATE_MASK) < FIELD_TEXT_TIMED))
     {
@@ -4251,7 +4161,7 @@ s32 field_text_get_status(s32 slot)
  */
 s32 field_text_get_choice(s32 slot)
 {
-    return FIELD_TEXT_SYSTEM->windows[slot & 0xFFFF].choice_index;
+    return FIELD_WORKSPACE->windows[slot & 0xFFFF].choice_index;
 }
 
 /**
@@ -4271,9 +4181,9 @@ void field_text_format_number(s32 window_index, u32 value, u8 digits)
     leading_zero = 1;
 #if defined(VERSION_JP)
     place_value = 1;
-    text = FIELD_TEXT_SYSTEM->windows[window_index & 0xFFFF].inline_text;
+    text = FIELD_WORKSPACE->windows[window_index & 0xFFFF].inline_text;
 #else
-    text = FIELD_TEXT_SYSTEM->windows[window_index & 0xFFFF].inline_text;
+    text = FIELD_WORKSPACE->windows[window_index & 0xFFFF].inline_text;
     place_value = 1;
 #endif
     while (--digits != 0)

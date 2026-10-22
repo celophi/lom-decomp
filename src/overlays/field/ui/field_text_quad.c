@@ -68,7 +68,7 @@ POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* output, u_long* ot, u8* text, s3
         setRECT(&rect, FIELD_TEXT_QUAD_SCRATCH_X, scratch_y, FIELD_TEXT_QUAD_SCRATCH_WIDTH, FIELD_TEXT_QUAD_ROW_HEIGHT);
         ClearImage(&rect, 0, 0, 0);
         DrawSync(0);
-        rect.x = (sprites[0].u0 >> 2) + FIELD_TEXT_CACHE_VRAM_X;
+        rect.x = sprites[0].u0 / FIELD_TEXT_PIXELS_PER_WORD + FIELD_TEXT_CACHE_VRAM_X;
         rect.y = sprites[0].v0 + FIELD_TEXT_TPAGE_VRAM_Y;
         rect.w = sprites[0].w / FIELD_TEXT_PIXELS_PER_WORD;
 #if defined(VERSION_JP)

@@ -942,9 +942,9 @@ static void* field_draw_tinted_text(SPRT* sprite_cursor, u_long* ordering_table,
     n = field_text_build_sprites(sprite_cursor, text, text_color);
     count = n;
 
-    if (alignment != 1)
+    if (alignment != FIELD_TEXT_ALIGN_RIGHT)
     {
-        if (alignment == 2)
+        if (alignment == FIELD_TEXT_ALIGN_CENTER)
         {
             sprite = sprite_cursor;
 
@@ -970,7 +970,7 @@ static void* field_draw_tinted_text(SPRT* sprite_cursor, u_long* ordering_table,
     {
         setSprt(sprite_cursor);
 
-        if (color != 0x100)
+        if (color != FIELD_TEXT_TINT_NEUTRAL)
         {
             setRGB0(sprite_cursor, color, color, color);
             setSemiTrans(sprite_cursor, 1);
@@ -989,7 +989,7 @@ static void* field_draw_tinted_text(SPRT* sprite_cursor, u_long* ordering_table,
     sprite_cursor = field_add_sprite_outline(ordering_table, sprite_cursor, n);
 
     tpage = (DR_TPAGE*)sprite_cursor;
-    setDrawTPage(tpage, 0, 0, 0x3F);
+    setDrawTPage(tpage, 0, 0, FIELD_UI_TPAGE(GPU_BLEND_ADD));
     addPrim(ordering_table, tpage);
 
     return tpage + 1;

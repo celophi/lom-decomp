@@ -33,7 +33,7 @@
 #define FIELD_PLAYER_ICON_V 0x50
 
 /** @brief Texture page holding the player icons. */
-#define FIELD_PLAYER_ICON_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, FIELD_UI_PAGE_X, FIELD_UI_PAGE_Y)
+#define FIELD_PLAYER_ICON_TPAGE FIELD_UI_TPAGE(GPU_BLEND_HALF)
 
 /** @brief Offset of an icon's drop shadow, in pixels. */
 #define FIELD_PLAYER_ICON_SHADOW_OFFSET 2

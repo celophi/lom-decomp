@@ -319,7 +319,7 @@ void* menu_build_text_run(SPRT* sprite_cursor, u_long* ot, u8* src, s32 text_col
 
     /* addPrim prepends, so link the texture-page packet after the sprites. */
     tpage = (DR_TPAGE*)sprite_cursor;
-    setDrawTPage(tpage, 0, 0, 0x1F);
+    setDrawTPage(tpage, 0, 0, FIELD_UI_TPAGE(GPU_BLEND_HALF));
     addPrim(ot, tpage);
 
     return tpage + 1;
