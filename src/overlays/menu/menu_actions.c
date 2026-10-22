@@ -39,8 +39,6 @@ extern inline s32 menu_get_equipment_ability_mask(s32 excluded_slot)
     return category_mask;
 }
 
-/* ----- Equipment and Item Actions ----- */
-
 /**
  * @brief Draw the character's equip/ability page and dispatch its confirm action.
  * @param ot Ordering-table pointer, forwarded to the glyph renderer.
@@ -491,7 +489,6 @@ void menu_update_active_slot(void)
     }
 }
 
-
 /**
  * @brief Draw the learned Special Technique list and handle technique assignment.
  * @param ot Ordering-table pointer, forwarded to the glyph renderer.
@@ -663,8 +660,6 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
     }
     return prim;
 }
-
-/* ----- Content Page Setup and Navigation Tables ----- */
 
 /**
  * @brief Build circular navigation links for an item list.
@@ -1032,8 +1027,6 @@ s32 menu_build_ability_nav_entries(void)
     return item_count;
 }
 
-/* ----- Equipment Selection Helpers ----- */
-
 /**
  * @brief Stage the best slot-0 equipment candidate for comparison.
  * @return 1 when a candidate was staged, otherwise 0.
@@ -1215,8 +1208,6 @@ MenuItemEntry* menu_find_best_equipment_for_active_slot(void)
     }
     return best_item;
 }
-
-/* ----- Menu Utilities ----- */
 
 /**
  * @brief Play a menu sound effect, unless a menu script is currently driving input.

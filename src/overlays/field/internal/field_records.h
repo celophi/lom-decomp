@@ -69,10 +69,6 @@ static inline s32 field_level_threshold(s32 level)
 #endif
 }
 
-/* ------------------------------------------------------------------------ */
-/* Item record staging (g_field_item_staging) and its generation tables (g_field_item_tables) */
-/* ------------------------------------------------------------------------ */
-
 #define FIELD_STAGING_LEVEL_COUNT 8
 #define FIELD_STAGING_STAT_COUNT 8
 #define FIELD_STAGING_SLOT_COUNT 6
@@ -264,10 +260,6 @@ extern FieldItemStaging* g_field_item_staging;
 
 /** @brief Generation table currently loaded by field_find_resource. */
 extern FieldItemTables* g_field_item_tables;
-
-/* ------------------------------------------------------------------------ */
-/* Field runtime context (g_field_runtime)                                       */
-/* ------------------------------------------------------------------------ */
 
 /** @brief One nested script frame (0xC bytes). */
 typedef struct FieldScriptFrame
@@ -535,10 +527,6 @@ extern FieldRuntimeContext* g_field_runtime;
 #define FIELD_BATTLE_PHASE_START 0
 #define FIELD_BATTLE_PHASE_END 1
 #define FIELD_BATTLE_PHASE_SUSPEND 3
-
-/* ------------------------------------------------------------------------ */
-/* Field battle context (g_field_battle)                                        */
-/* ------------------------------------------------------------------------ */
 
 /**
  * @brief Action request resolved by the field battle code.

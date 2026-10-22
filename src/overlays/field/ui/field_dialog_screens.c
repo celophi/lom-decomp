@@ -36,8 +36,6 @@
 #include "overlays/field/field_sound.h"
 #include "main/audio/akao.h"
 
-/* ---- Timed panels (0x800A5638 .. 0x800A6204) ---- */
-
 /** @brief Image resources of the timed panels (index 0 first). */
 #define FIELD_TIMED_PANEL_RESOURCE_BASE 0x1060
 /** @brief VRAM position of the panel image and its palette row. */
@@ -366,7 +364,6 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_t
 
     for (quad_index = 0; quad_index < 4; quad_index++, quad++)
     {
-
         if (quad->x != FIELD_TRANSITION_QUAD_UNUSED)
         {
             raw_width = quad->width;
@@ -715,8 +712,6 @@ static POLY_FT4* field_draw_timed_panel_image(POLY_FT4 *prim, u_long *ordering_t
     return prim + 1;
 }
 
-/* ---- Actor text queue (0x800A6204 .. 0x800A68B4) ---- */
-
 /** @brief Packed screen position and countdown of an actor text. */
 typedef union
 {
@@ -995,8 +990,6 @@ static void* field_draw_tinted_text(SPRT* sprite_cursor, u_long* ordering_table,
     return tpage + 1;
 }
 
-/* ---- Party proficiency and ability/technique unlock progression ---- */
-
 /** @brief Four ability prerequisites and a packed technique/weapon selection. */
 typedef struct
 {
@@ -1219,8 +1212,6 @@ void field_advance_ability_progression(void)
         technique_index++;
     } while ((intptr_t)&technique_base[technique_index] < (intptr_t)&technique_base[FIELD_TECHNIQUE_UNLOCK_RULE_COUNT]);
 }
-
-/* ---- Dialog screens (0x800A6EEC .. 0x800A88A0) ---- */
 
 /** @brief Drawing position and three sorted actor indices sharing the local work area. */
 typedef struct

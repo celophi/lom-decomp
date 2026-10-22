@@ -123,10 +123,6 @@ typedef union
     } ids;
 } SaveIdentity;
 
-/* ------------------------------------------------------------------------ */
-/* Saved game records                                                       */
-/* ------------------------------------------------------------------------ */
-
 /** @brief Length of the encoded name at the start of a FieldItemRecord. */
 #define FIELD_ITEM_NAME_LENGTH 0x14
 

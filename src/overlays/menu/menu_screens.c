@@ -58,8 +58,6 @@ static inline MenuPartyOrder* menu_sort_order_record(void)
     return (MenuPartyOrder*)(base + off);
 }
 
-/* ----- Content Navigation and Input ----- */
-
 /**
  * @brief Per-frame menu navigation, confirm/cancel and cursor-move input handler.
  * @param process_actions Non-zero to also process confirm/cancel and the four cursor-move buttons; 0 runs only node switching.
@@ -1161,8 +1159,6 @@ static inline MenuCharacterRecord* menu_active_character(SavedGameLayout* contex
     s32 offset = g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
     return (MenuCharacterRecord*)((u8*)context + offset + MENU_CHARACTER_RECORD_OFFSET);
 }
-
-/* ----- Scene Content Rendering ----- */
 
 /**
  * @brief Draw the active scene's content entries.
@@ -3412,8 +3408,6 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
 
     return prim_buf;
 }
-
-/* ----- Node Tree Rendering and Cursors ----- */
 
 /**
  * @brief Render the root nodes and advance the tree's scroll animation.

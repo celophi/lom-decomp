@@ -27,8 +27,6 @@
 #include "overlays/field/field_actor_records.h"
 #include "overlays/field/field_vram.h"
 
-/* ---- HUD ------------------------------------------------------------------ */
-
 /** @brief Frames an enemy panel stays up after its HP changes. */
 #define FIELD_HUD_PANEL_FRAMES 20
 
@@ -163,8 +161,6 @@ extern s32 g_field_hud_bar_offset_y;
 extern s32 g_frame_counter;
 extern u8 g_field_pair_indicator_list[];
 
-/* ---- Object flag handlers and fading primitives ---------------------------- */
-
 /** @brief Number of bits in FieldObjectState.flags that have a handler entry. */
 #define FIELD_OBJECT_HANDLER_COUNT 16
 
@@ -233,8 +229,6 @@ extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_
 #define START_OBJECT_EFFECT(actor, resource)                                                                                                                   \
     (field_start_builtin_animation((actor)->object_index, (actor)->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, (resource)),                                  \
      field_start_actor_animation((actor)->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0))
-
-/* ---- Ground shadow ---------------------------------------------------------- */
 
 /** @brief First two footprint corners; only their horizontal coordinates are used. */
 typedef struct

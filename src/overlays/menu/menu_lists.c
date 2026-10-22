@@ -6,8 +6,6 @@
 s32 menu_find_active_content_item(void);
 s32 menu_build_special_technique_nav_entries(void);
 
-/* ----- Scroll List Rendering ----- */
-
 /**
  * @brief Handle list navigation and draw its cursor.
  * @param prim_buf Primitive-buffer cursor.
@@ -186,8 +184,6 @@ void* menu_emit_cursor(void* prim_buf, u_long* ot, s32 x, s32 y, s32 active)
     return draw_mode + 1;
 }
 
-/* ----- Content List Callbacks ----- */
-
 /**
  * @brief Draw the current inventory category and handle item selection.
  * @param ot Ordering table the primitives are linked into.
@@ -197,7 +193,6 @@ void* menu_emit_cursor(void* prim_buf, u_long* ot, s32 x, s32 y, s32 active)
  * @param active Non-zero when this window owns input this frame.
  * @return The advanced primitive write cursor.
  */
-
 
 void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, s32 active)
 {
@@ -673,7 +668,6 @@ s32 menu_clear_pending_status(void)
     return changed;
 }
 
-
 /**
  * @brief Scan the item table for the next entry whose kind matches g_menu_active_item_category.
  * @param step Direction/stride to walk the table (1 = forward, -1 = backward).
@@ -736,7 +730,6 @@ u32 menu_step_item_selection(s32 step)
     }
     return result;
 }
-
 
 /**
  * @brief Draw the character's spell/ability grid and handle its selection input.

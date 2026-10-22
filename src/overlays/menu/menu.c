@@ -10,8 +10,6 @@ s32 menu_find_nav_node_index(s32 node_id);
 s32 menu_find_active_content_item(void);
 s32 menu_count_inventory_items(void);
 
-/* ----- Initialization and Core Frame Processing ----- */
-
 /**
  * @brief Run the menu overlay until an exit or follow-up screen is requested.
  * @param render_buffers Pair of render buffers used for alternating frames.
@@ -472,8 +470,6 @@ void menu_upload_tim(const MenuTimVramLayout* layout)
     }
     LoadImage(&vram_rect, (u_long*)asset->second_clut);
 }
-
-/* ----- Window Slots and Rendering ----- */
 
 /**
  * @brief Allocate and initialize the first available menu window slot.
@@ -1024,8 +1020,6 @@ u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos
 
     return packet_cursor;
 }
-
-/* ----- Node Tree and Navigation ----- */
 
 /**
  * @brief Initialize the full menu node tree and global menu state.

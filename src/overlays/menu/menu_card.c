@@ -51,8 +51,6 @@ extern u8 g_card_header_block_count;
 
 extern u8 g_card_test_payload[];
 
-/* ----- Memory Card ----- */
-
 /**
  * @brief Open and enable the eight memory-card events used by the save/load menu.
  */
@@ -96,7 +94,6 @@ void memory_card_close_events(void)
     CloseEvent(g_card_hw_new_event);
     ExitCriticalSection();
 }
-
 
 /**
  * @brief Scan memory card slot 1 and record how many save files it holds.
