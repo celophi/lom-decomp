@@ -2,7 +2,9 @@
 #define FIELD_TEXT_H
 
 #include "common.h"
+
 #include "common/vector.h"
+#include "overlays/field/field_portrait.h"
 struct SPRT;
 
 typedef struct FieldOrderingTags FieldOrderingTags;
@@ -22,7 +24,7 @@ extern FieldTextConfig* g_field_text_saved_configs;
 /** @brief field_draw_text / field_draw_number text colours (palette pairs of the text CLUT). */
 #define FIELD_TEXT_COLOR_MENU 1     /**< Body text of the main menu and of the title screen's load menu. */
 #define FIELD_TEXT_COLOR_MENU_DIM 3 /**< Dimmed FIELD_TEXT_COLOR_MENU text, such as the inactive card slot label. */
-#define FIELD_TEXT_COLOR_NORMAL 4 /**< Body text of field windows and the field-launched card menus. */
+#define FIELD_TEXT_COLOR_NORMAL 4   /**< Body text of field windows and the field-launched card menus. */
 #define FIELD_TEXT_COLOR_DIM 5
 
 /** @brief Glyph height of the field font, and the line advance of text drawn with it. */
@@ -108,6 +110,62 @@ void* field_draw_number_wide(u_long* ot, struct SPRT* sprite_cursor, s32 value, 
  * @param wide_request Non-zero requests double-byte digits in JP; ignored in US.
  */
 void field_format_number(u8* text, s32 number, s32 wide_request);
+
+/** @brief Pending-config flag bits (field_text_apply_config moves them into the window flags). */
+#define FIELD_TEXT_CONFIG_LOW_MASK 0xFF
+#define FIELD_TEXT_CONFIG_STYLE_BOLD 0x100
+#define FIELD_TEXT_CONFIG_STYLE_PLAIN 0x200
+#define FIELD_TEXT_CONFIG_STYLE_MASK (FIELD_TEXT_CONFIG_STYLE_BOLD | FIELD_TEXT_CONFIG_STYLE_PLAIN)
+#define FIELD_TEXT_CONFIG_PORTRAIT_RIGHT 0x400
+#define FIELD_TEXT_CONFIG_PORTRAIT_OUTSIDE 0x800
+#define FIELD_TEXT_CONFIG_PORTRAIT_MASK (FIELD_TEXT_CONFIG_PORTRAIT_RIGHT | FIELD_TEXT_CONFIG_PORTRAIT_OUTSIDE)
+#define FIELD_TEXT_CONFIG_FLAG_1000 0x1000
+#define FIELD_TEXT_CONFIG_FLAG_2000 0x2000
+#define FIELD_TEXT_CONFIG_FLAG_4000 0x4000
+#define FIELD_TEXT_CONFIG_MODE_MASK (FIELD_TEXT_CONFIG_FLAG_1000 | FIELD_TEXT_CONFIG_FLAG_2000 | FIELD_TEXT_CONFIG_FLAG_4000)
+
+/** @brief field_text_set_string option that closes the window when its text ends. */
+#define FIELD_TEXT_OPTION_AUTO_CLOSE 1
+
+/** @brief Screen point that an opening or closing window grows from or shrinks to. */
+typedef struct
+{
+    u16 x;
+    u16 y;
+} FieldTextAnchor;
+
+/** @brief Transition anchor accessed as a word (zero means none) or as coordinates. */
+typedef union
+{
+    u32 word;
+    FieldTextAnchor pos;
+} FieldTextAnchorWord;
+
+/** @brief Pending-config flags: FIELD_TEXT_CONFIG_* bits, also accessed by byte. */
+typedef union
+{
+    u32 word;
+    struct
+    {
+        u8 low;
+        u8 layout;
+        u8 text_options;
+        u8 unused;
+    } b;
+} FieldTextConfigFlags;
+
+/** @brief Configuration of a text window, copied into its state when the window opens. */
+struct FieldTextConfig
+{
+    FieldPortrait* portrait;
+    u16 x;
+    u16 y;
+    u16 width;
+    u16 height;
+    FieldTextAnchorWord anchor;
+    FieldTextConfigFlags flags;
+    u8* text;
+};
 
 /** @brief Pending text-window configuration block (fixed RAM) consumed by field_text_apply_config. */
 #define FIELD_TEXT_PENDING_CONFIG ((FieldTextConfig*)TEXT_CONFIG_ADDRESS)

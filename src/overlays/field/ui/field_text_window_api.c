@@ -3,37 +3,25 @@
  */
 
 #include "common.h"
-#include "overlays/field/field_portrait.h"
+
 #include "../internal/field_calls.h"
-#include "overlays/field/field_text.h"
 #include "main/main.h"
+#include "overlays/field/field_portrait.h"
+#include "overlays/field/field_text.h"
 
 /** @brief Window layouts in g_field_text_window_layouts. */
-#define FIELD_TEXT_LAYOUT_NO_PORTRAIT 2 /**< First layout that never shows a portrait. */
-#define FIELD_TEXT_LAYOUT_TIMED 4       /**< One-shot timed window. */
+#define FIELD_TEXT_LAYOUT_NO_PORTRAIT 2  /**< First layout that never shows a portrait. */
+#define FIELD_TEXT_LAYOUT_TIMED 4        /**< One-shot timed window. */
 #define FIELD_TEXT_LAYOUT_FIRST_PACKED 5 /**< First packed-window layout; lower layouts are fixed windows. */
-#define FIELD_TEXT_LAYOUT_BOLD 6        /**< Layout drawn in the bold text style. */
-
+#define FIELD_TEXT_LAYOUT_BOLD 6         /**< Layout drawn in the bold text style. */
 
 /** @brief Portraits in one scene portrait block. */
 #define FIELD_TEXT_SCENE_BLOCK_PORTRAITS 63
 
 /** @brief Portrait selector bits (-1 selects no portrait). */
-#define FIELD_TEXT_PORTRAIT_INDEX_MASK 0x3F /**< Portrait index. */
-#define FIELD_TEXT_PORTRAIT_SELECT_RIGHT 0x40 /**< Show the portrait on the right. */
+#define FIELD_TEXT_PORTRAIT_INDEX_MASK 0x3F    /**< Portrait index. */
+#define FIELD_TEXT_PORTRAIT_SELECT_RIGHT 0x40  /**< Show the portrait on the right. */
 #define FIELD_TEXT_PORTRAIT_SELECT_SHARED 0x80 /**< Take the portrait from the shared bank in g_field_party_portraits. */
-
-/** @brief Pending-config flag bits (field_text_apply_config moves them into the window flags). */
-#define FIELD_TEXT_CONFIG_STYLE_BOLD 0x100
-#define FIELD_TEXT_CONFIG_STYLE_PLAIN 0x200
-#define FIELD_TEXT_CONFIG_STYLE_MASK (FIELD_TEXT_CONFIG_STYLE_BOLD | FIELD_TEXT_CONFIG_STYLE_PLAIN)
-#define FIELD_TEXT_CONFIG_PORTRAIT_RIGHT 0x400
-#define FIELD_TEXT_CONFIG_PORTRAIT_OUTSIDE 0x800
-#define FIELD_TEXT_CONFIG_PORTRAIT_MASK (FIELD_TEXT_CONFIG_PORTRAIT_RIGHT | FIELD_TEXT_CONFIG_PORTRAIT_OUTSIDE)
-#define FIELD_TEXT_CONFIG_FLAG_1000 0x1000
-#define FIELD_TEXT_CONFIG_FLAG_2000 0x2000
-#define FIELD_TEXT_CONFIG_FLAG_4000 0x4000
-#define FIELD_TEXT_CONFIG_MODE_MASK (FIELD_TEXT_CONFIG_FLAG_1000 | FIELD_TEXT_CONFIG_FLAG_2000 | FIELD_TEXT_CONFIG_FLAG_4000)
 
 /** @brief Selector bit FIELD_TEXT_PORTRAIT_SELECT_RIGHT shifted to FIELD_TEXT_CONFIG_PORTRAIT_RIGHT. */
 #define FIELD_TEXT_PORTRAIT_SELECT_SHIFT 4
@@ -49,49 +37,6 @@ typedef struct
     u16 width;
     u16 height;
 } FieldTextWindowRect;
-
-/** @brief Byte view of a field text flags word. */
-typedef struct
-{
-    u8 low;
-    u8 byte1;
-    u8 byte2;
-    u8 byte3;
-} FieldTextFlagBytes;
-
-/** @brief Field text flags word, addressable whole or by byte. */
-typedef union
-{
-    u32 word;
-    FieldTextFlagBytes b;
-} FieldTextFlags;
-
-/** @brief Transition anchor of a text window. */
-typedef struct
-{
-    u16 x;
-    u16 y;
-} FieldTextAnchor;
-
-/** @brief Transition anchor, addressable whole or by coordinate. */
-typedef union
-{
-    u32 word;
-    FieldTextAnchor pos;
-} FieldTextAnchorWord;
-
-/** @brief Pending configuration copied into a field text-window state. */
-struct FieldTextConfig
-{
-    u8* portrait;
-    u16 x;
-    u16 y;
-    u16 width;
-    u16 height;
-    FieldTextAnchorWord anchor;
-    FieldTextFlags flags;
-    u8* text;
-};
 
 extern u8* g_field_scene_portraits;
 extern u8* g_field_scene_strings;
@@ -118,11 +63,11 @@ void field_open_text_window(s32 window_slot, s32 layout_index, s32 unused, s32 p
     }
     else if (portrait_selector & FIELD_TEXT_PORTRAIT_SELECT_SHARED)
     {
-        cfg->portrait = g_field_party_portraits + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_PORTRAIT_BYTES;
+        cfg->portrait = (FieldPortrait*)(g_field_party_portraits + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_PORTRAIT_BYTES);
     }
     else
     {
-        cfg->portrait = g_field_scene_portraits + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_PORTRAIT_BYTES;
+        cfg->portrait = (FieldPortrait*)(g_field_scene_portraits + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_PORTRAIT_BYTES);
     }
 
     cfg->flags.b.low = 0;
@@ -136,8 +81,9 @@ void field_open_text_window(s32 window_slot, s32 layout_index, s32 unused, s32 p
         cfg->flags.word &= ~FIELD_TEXT_CONFIG_STYLE_MASK;
     }
 
-    cfg->flags.word = ((cfg->flags.word & ~FIELD_TEXT_CONFIG_PORTRAIT_MASK) | ((portrait_selector << FIELD_TEXT_PORTRAIT_SELECT_SHIFT) & FIELD_TEXT_CONFIG_PORTRAIT_RIGHT)) &
-                      ~FIELD_TEXT_CONFIG_MODE_MASK;
+    cfg->flags.word =
+        ((cfg->flags.word & ~FIELD_TEXT_CONFIG_PORTRAIT_MASK) | ((portrait_selector << FIELD_TEXT_PORTRAIT_SELECT_SHIFT) & FIELD_TEXT_CONFIG_PORTRAIT_RIGHT)) &
+        ~FIELD_TEXT_CONFIG_MODE_MASK;
 
     cfg->x = g_field_text_window_layouts[layout_index][window_slot].x;
     cfg->y = g_field_text_window_layouts[layout_index][window_slot].y;
@@ -189,11 +135,11 @@ void field_open_text_window_with_string(s32 string_index, s32 window_slot, s32 l
     }
     else if (portrait_selector & FIELD_TEXT_PORTRAIT_SELECT_SHARED)
     {
-        cfg->portrait = g_field_party_portraits + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_PORTRAIT_BYTES;
+        cfg->portrait = (FieldPortrait*)(g_field_party_portraits + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_PORTRAIT_BYTES);
     }
     else
     {
-        cfg->portrait = g_field_scene_portraits + portrait_selector * FIELD_TEXT_SCENE_BLOCK_PORTRAITS * FIELD_PORTRAIT_BYTES;
+        cfg->portrait = (FieldPortrait*)(g_field_scene_portraits + portrait_selector * FIELD_TEXT_SCENE_BLOCK_PORTRAITS * FIELD_PORTRAIT_BYTES);
     }
 
     cfg->flags.b.low = 0;
@@ -207,8 +153,9 @@ void field_open_text_window_with_string(s32 string_index, s32 window_slot, s32 l
         cfg->flags.word &= ~FIELD_TEXT_CONFIG_STYLE_MASK;
     }
 
-    cfg->flags.word = ((cfg->flags.word & ~FIELD_TEXT_CONFIG_PORTRAIT_MASK) | ((portrait_selector << FIELD_TEXT_PORTRAIT_SELECT_SHIFT) & FIELD_TEXT_CONFIG_PORTRAIT_RIGHT)) &
-                      ~FIELD_TEXT_CONFIG_MODE_MASK;
+    cfg->flags.word =
+        ((cfg->flags.word & ~FIELD_TEXT_CONFIG_PORTRAIT_MASK) | ((portrait_selector << FIELD_TEXT_PORTRAIT_SELECT_SHIFT) & FIELD_TEXT_CONFIG_PORTRAIT_RIGHT)) &
+        ~FIELD_TEXT_CONFIG_MODE_MASK;
 
     cfg->x = g_field_text_window_layouts[layout_index][window_slot].x;
     cfg->y = g_field_text_window_layouts[layout_index][window_slot].y;
@@ -224,7 +171,7 @@ void field_open_text_window_with_string(s32 string_index, s32 window_slot, s32 l
         field_text_open_fixed_window(window_slot);
     }
 
-    field_text_set_string(window_slot, FIELD_SCENE_STRING(string_index), 1);
+    field_text_set_string(window_slot, FIELD_SCENE_STRING(string_index), FIELD_TEXT_OPTION_AUTO_CLOSE);
 }
 
 /**
