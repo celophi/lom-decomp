@@ -5,6 +5,7 @@
 
 #include "common/vector.h"
 #include "overlays/field/field_portrait.h"
+#include "overlays/field/field_vram.h"
 struct SPRT;
 
 typedef struct FieldOrderingTags FieldOrderingTags;
@@ -42,7 +43,13 @@ typedef struct
     u8* text;
 } FieldTextMacro;
 
-extern FieldTextMacro g_field_text_macros[];
+/** @brief Number of text macro slots (FIELD_TEXT_CMD_MACRO operands). */
+#define FIELD_TEXT_MACRO_COUNT 16
+
+extern FieldTextMacro g_field_text_macros[FIELD_TEXT_MACRO_COUNT];
+
+/** @brief Lead byte of the two-byte digit glyphs; the digit value (0-9) follows it. */
+#define FIELD_TEXT_DIGIT_LEAD 0x1D
 
 void field_text_upload_immediate_cache(void);
 void field_text_init(void);
@@ -170,9 +177,21 @@ struct FieldTextConfig
 /** @brief Pending text-window configuration block (fixed RAM) consumed by field_text_apply_config. */
 #define FIELD_TEXT_PENDING_CONFIG ((FieldTextConfig*)TEXT_CONFIG_ADDRESS)
 
-/** @brief The text cache sits at VRAM x 960 inside the 4bpp texture page whose top row is 256. */
-#define FIELD_TEXT_CACHE_VRAM_X 960
-#define FIELD_TEXT_TPAGE_VRAM_Y 256
+/** @brief The text cache sits at the left edge of the UI texture page. */
+#define FIELD_TEXT_CACHE_VRAM_X FIELD_UI_PAGE_X
+#define FIELD_TEXT_TPAGE_VRAM_Y FIELD_UI_PAGE_Y
+
+/** @brief Rows of the text cache, frame textures and dialogue portraits in that page, and the text CLUT rows. */
+#define FIELD_TEXT_CACHE_VRAM_Y 384
+#define FIELD_TEXT_FRAME_VRAM_Y 480
+#define FIELD_TEXT_PORTRAIT_VRAM_X 1012
+#define FIELD_TEXT_PORTRAIT_VRAM_Y 272
+#define FIELD_TEXT_CLUT_X 304
+#define FIELD_TEXT_PORTRAIT_CLUT_Y 506
+#define FIELD_TEXT_TEXT_CLUT_Y 508
+#define FIELD_TEXT_WINDOW_CLUT_Y 509
+#define FIELD_TEXT_PROMPT_CLUT_Y 510
+#define FIELD_TEXT_ALT_CLUT_Y 511
 
 /** @brief 4bpp texels per 16-bit VRAM word. */
 #define FIELD_TEXT_PIXELS_PER_WORD 4

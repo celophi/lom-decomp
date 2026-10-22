@@ -325,11 +325,16 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
 
     buf = scroll_list_draw(buf, ot, list, g_menu_item_nav_entries, view_origin, active);
 
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 63), 1, 0x30 - view_origin->x, -view_origin->y, 2);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 65), 1, 0x30 - view_origin->x, 0x10 - view_origin->y, 2);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 66), 1, 0x30 - view_origin->x, 0x20 - view_origin->y, 2);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 64), 1, 0x30 - view_origin->x, 0x30 - view_origin->y, 2);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 67), 1, 0x30 - view_origin->x, 0x40 - view_origin->y, 2);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 63), 1, 0x30 - view_origin->x, -view_origin->y,
+                          FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 65), 1, 0x30 - view_origin->x, 0x10 - view_origin->y,
+                          FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 66), 1, 0x30 - view_origin->x, 0x20 - view_origin->y,
+                          FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 64), 1, 0x30 - view_origin->x, 0x30 - view_origin->y,
+                          FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 67), 1, 0x30 - view_origin->x, 0x40 - view_origin->y,
+                          FIELD_TEXT_ALIGN_CENTER);
     return buf;
 }
 
@@ -423,8 +428,10 @@ void* menu_equipment_compare_callback(u_long* ot, ScrollListState* state, void* 
     }
 
     buf = scroll_list_draw(buf, ot, list, g_menu_item_nav_entries, view_origin, active);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 72), 1, 0x30 - view_origin->x, -view_origin->y, 2);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 73), 1, 0x30 - view_origin->x, 0x10 - view_origin->y, 2);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 72), 1, 0x30 - view_origin->x, -view_origin->y,
+                          FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 73), 1, 0x30 - view_origin->x, 0x10 - view_origin->y,
+                          FIELD_TEXT_ALIGN_CENTER);
     g_pad_input = 0;
     return buf;
 }
@@ -632,7 +639,7 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
                         {
                             glyph_color = 1;
                         }
-                        prim = field_draw_text(prim, ot, glyph, glyph_color, 0x10 - view_origin->x, relative_y - view_origin->y, 0);
+                        prim = field_draw_text(prim, ot, glyph, glyph_color, 0x10 - view_origin->x, relative_y - view_origin->y, FIELD_TEXT_ALIGN_LEFT);
                     }
                 }
                 if (state->navigation.fields.selected_index == (list_y >> 4))

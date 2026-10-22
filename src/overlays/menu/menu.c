@@ -265,7 +265,7 @@ void menu_tick(RenderContext* render_ctx)
  *
  * @see field_text_build_sprites
  */
-void* menu_build_text_run(SPRT* sprite_cursor, u_long* ot, u8* src, s32 text_color, s32 x, s32 y, s32 len, MenuTextAlignment alignment)
+void* menu_build_text_run(SPRT* sprite_cursor, u_long* ot, u8* src, s32 text_color, s32 x, s32 y, s32 len, s32 alignment)
 {
     char buf[0x80];
     s32 count, i, acc;
@@ -280,9 +280,9 @@ void* menu_build_text_run(SPRT* sprite_cursor, u_long* ot, u8* src, s32 text_col
     count = field_text_build_sprites(sprite_cursor, buf, text_color);
 
     /* Convert the requested anchor into the run's left edge. */
-    if (alignment != MENU_TEXT_ALIGN_RIGHT)
+    if (alignment != FIELD_TEXT_ALIGN_RIGHT)
     {
-        if (alignment == MENU_TEXT_ALIGN_CENTER)
+        if (alignment == FIELD_TEXT_ALIGN_CENTER)
         {
             sprite = sprite_cursor;
             for (i = 0; i < count; i++)
@@ -651,7 +651,8 @@ void menu_update_slots(RenderContext* render_ctx)
         render_ctx->prim_cursor = menu_draw_frame(render_ctx->prim_cursor, frame_ot, render_ctx->frame_parity, allow_input);
         if (g_menu_help_text != 0)
         {
-            render_ctx->prim_cursor = field_draw_text(render_ctx->prim_cursor, &render_ctx->ot[MENU_FRAME_OT_INDEX], g_menu_help_text, 1, 0xA0, 0xCA, 2);
+            render_ctx->prim_cursor =
+                field_draw_text(render_ctx->prim_cursor, &render_ctx->ot[MENU_FRAME_OT_INDEX], g_menu_help_text, 1, 0xA0, 0xCA, FIELD_TEXT_ALIGN_CENTER);
         }
     }
 }
@@ -1019,7 +1020,7 @@ u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos
 
     menu_copy_sign_label(label_buffer, value);
 
-    packet_cursor = field_draw_text((SPRT*)packet_cursor, ot_entry, label_buffer, 1, position->x, position->y, 0);
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ot_entry, label_buffer, 1, position->x, position->y, FIELD_TEXT_ALIGN_LEFT);
 
     return packet_cursor;
 }

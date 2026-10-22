@@ -380,7 +380,8 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                 {
                     text_palette = 3;
                 }
-                packet_cursor = field_draw_text(packet_cursor, ot, (u8*)item_record, text_palette, 0x22 - view_origin->x, (y - scroll_y) - view_origin->y, 0);
+                packet_cursor = field_draw_text(packet_cursor, ot, (u8*)item_record, text_palette, 0x22 - view_origin->x, (y - scroll_y) - view_origin->y,
+                                                FIELD_TEXT_ALIGN_LEFT);
 
                 if (g_menu_pending_item_row != MENU_NONE)
                 {
@@ -790,7 +791,7 @@ void* menu_spell_list_callback(u_long* ot, ScrollListState* state, void* prim_bu
                 {
                     name_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_SPELL_NAMES]);
                     prim_buf = field_draw_text(prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (col * 2) + (row * 0x10))), 1,
-                                             0x10 - view_origin->x, relative_y - view_origin->y, 0);
+                                               0x10 - view_origin->x, relative_y - view_origin->y, FIELD_TEXT_ALIGN_LEFT);
                 }
                 if (list->navigation.fields.selected_index == (y >> 4))
                 {
@@ -873,7 +874,7 @@ void* menu_equipment_grid_callback(u_long* ot, ScrollListState* state, void* pri
                 {
                     name_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_EQUIPMENT_NAMES]);
                     prim_buf = field_draw_text(prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (col * 2) + (row * 0x10))), 1,
-                                             0x20 - view_origin->x, relative_y - view_origin->y, 0);
+                                               0x20 - view_origin->x, relative_y - view_origin->y, FIELD_TEXT_ALIGN_LEFT);
                     if (entry_kind >= 8)
                     {
                         if (entry_kind >= 0xF)
@@ -959,9 +960,9 @@ void* menu_key_item_list_callback(u_long* ot, ScrollListState* state, void* prim
                 pos.y = relative_y - (u16)view_origin->y;
 
                 name_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_KEY_ITEM_NAMES]);
-                prim_buf =
-                    field_draw_text(prim_buf, ot, ((u8*)name_table + ((u16*)name_table)[item_index]), 1, 0x10 - view_origin->x, relative_y - view_origin->y, 0);
-                prim_buf = menu_draw_clamped_number(ot, prim_buf, *quantity, 1, &pos, 1);
+                prim_buf = field_draw_text(prim_buf, ot, ((u8*)name_table + ((u16*)name_table)[item_index]), 1, 0x10 - view_origin->x,
+                                           relative_y - view_origin->y, FIELD_TEXT_ALIGN_LEFT);
+                prim_buf = menu_draw_clamped_number(ot, prim_buf, *quantity, 1, &pos, FIELD_TEXT_ALIGN_RIGHT);
             }
             if (list->navigation.fields.selected_index == (y >> 4))
             {
@@ -1031,7 +1032,7 @@ void* menu_ability_list_callback(u_long* ot, ScrollListState* state, void* prim_
             {
                 name_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ABILITY_NAMES]);
                 prim_buf = field_draw_text(prim_buf, ot, (void*)((u8*)name_table + ((u16*)name_table)[ability_index]), 1, 0x20 - view_origin->x,
-                                         relative_y - view_origin->y, 0);
+                                           relative_y - view_origin->y, FIELD_TEXT_ALIGN_LEFT);
                 if (ability->flags & MENU_ABILITY_FLAG_SHOW_ICON)
                 {
                     prim_buf = menu_emit_icon_sprite(prim_buf, ot, 0x2C, 0x10 - view_origin->x, relative_y - view_origin->y, 0, 0, 0, 0);
@@ -1209,10 +1210,14 @@ void* menu_subtype_action_callback(u_long* ot, ScrollListState* state, void* pri
 
     buf = scroll_list_draw(buf, ot, list, g_menu_item_nav_entries, view_origin, active);
 
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 61), 1, 0x30 - view_origin->x, -view_origin->y, 2);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 62), 1, 0x30 - view_origin->x, 0x10 - view_origin->y, 2);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 67), 1, 0x30 - view_origin->x, 0x20 - view_origin->y, 2);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 64), 1, 0x30 - view_origin->x, 0x30 - view_origin->y, 2);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 61), 1, 0x30 - view_origin->x, -view_origin->y,
+                          FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 62), 1, 0x30 - view_origin->x, 0x10 - view_origin->y,
+                          FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 67), 1, 0x30 - view_origin->x, 0x20 - view_origin->y,
+                          FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 64), 1, 0x30 - view_origin->x, 0x30 - view_origin->y,
+                          FIELD_TEXT_ALIGN_CENTER);
     return buf;
 }
 
@@ -1239,7 +1244,7 @@ void* menu_message_callback(u_long* ot, ScrollListState* state, void* prim_buf, 
         menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
     }
 
-    buf = field_draw_text(buf, ot, g_menu_message_line1, 1, 0x88 - view_origin->x, -view_origin->y, 2);
+    buf = field_draw_text(buf, ot, g_menu_message_line1, 1, 0x88 - view_origin->x, -view_origin->y, FIELD_TEXT_ALIGN_CENTER);
     return buf;
 }
 
@@ -1266,8 +1271,8 @@ void* menu_two_line_message_callback(u_long* ot, ScrollListState* state, void* p
         menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
     }
 
-    buf = field_draw_text(buf, ot, g_menu_message_line1, 1, 0x88 - view_origin->x, -view_origin->y, 2);
-    buf = field_draw_text(buf, ot, g_menu_message_line2, 1, 0x88 - view_origin->x, 0x10 - view_origin->y, 2);
+    buf = field_draw_text(buf, ot, g_menu_message_line1, 1, 0x88 - view_origin->x, -view_origin->y, FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, g_menu_message_line2, 1, 0x88 - view_origin->x, 0x10 - view_origin->y, FIELD_TEXT_ALIGN_CENTER);
     return buf;
 }
 
@@ -1333,8 +1338,10 @@ void* menu_item_followup_callback(u_long* ot, ScrollListState* state, void* prim
 
     buf = scroll_list_draw(buf, ot, list, g_menu_item_nav_entries, view_origin, active);
 
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 68), 1, 0x30 - view_origin->x, -view_origin->y, 2);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 69), 1, 0x30 - view_origin->x, 0x10 - view_origin->y, 2);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 68), 1, 0x30 - view_origin->x, -view_origin->y,
+                          FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 69), 1, 0x30 - view_origin->x, 0x10 - view_origin->y,
+                          FIELD_TEXT_ALIGN_CENTER);
     return buf;
 }
 

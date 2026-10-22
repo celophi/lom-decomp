@@ -3,13 +3,15 @@
  */
 
 #include "common.h"
-#include "overlays/field/field_portrait.h"
-#include "overlays/field/field_text.h"
+#include <libgpu.h>
+#include <memory.h>
+
 #include "../internal/field_calls.h"
 #include "common/gpu_packet.h"
 #include "main/main.h"
-#include <libgpu.h>
-#include <memory.h>
+#include "overlays/field/field_portrait.h"
+#include "overlays/field/field_text.h"
+#include "overlays/field/field_vram.h"
 
 /**
  * @brief Word-aligned upload source at byte @p offset of @p base.
@@ -31,7 +33,7 @@
 #define FIELD_PLAYER_ICON_V 0x50
 
 /** @brief Texture page holding the player icons. */
-#define FIELD_PLAYER_ICON_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, 960, 256)
+#define FIELD_PLAYER_ICON_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, FIELD_UI_PAGE_X, FIELD_UI_PAGE_Y)
 
 /** @brief Offset of an icon's drop shadow, in pixels. */
 #define FIELD_PLAYER_ICON_SHADOW_OFFSET 2
@@ -65,17 +67,17 @@ void* field_draw_coordinate_panel(u_long* ot, u8* prim, s32 x_offset, s32 y_offs
     if (g_field_coordinate_labels[0] != NULL)
     {
         cursor = field_draw_text(cursor, ot, g_field_coordinate_labels[0], FIELD_COORDINATE_LABEL_COLOR, FIELD_COORDINATE_LABEL_X - x_offset,
-                               FIELD_COORDINATE_LABEL_Y - y_offset, 0);
+                                 FIELD_COORDINATE_LABEL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
     }
     if (g_field_coordinate_labels[1] != NULL)
     {
         cursor = field_draw_text(cursor, ot, g_field_coordinate_labels[1], FIELD_COORDINATE_LABEL_COLOR, FIELD_COORDINATE_LABEL_X - x_offset,
-                               FIELD_COORDINATE_LABEL_Y + FIELD_COORDINATE_LABEL_ROW_HEIGHT - y_offset, 0);
+                                 FIELD_COORDINATE_LABEL_Y + FIELD_COORDINATE_LABEL_ROW_HEIGHT - y_offset, FIELD_TEXT_ALIGN_LEFT);
     }
     if (g_field_coordinate_labels[2] != NULL)
     {
         cursor = field_draw_text(cursor, ot, g_field_coordinate_labels[2], FIELD_COORDINATE_LABEL_COLOR, FIELD_COORDINATE_LABEL_X - x_offset,
-                               FIELD_COORDINATE_LABEL_Y + 2 * FIELD_COORDINATE_LABEL_ROW_HEIGHT - y_offset, 0);
+                                 FIELD_COORDINATE_LABEL_Y + 2 * FIELD_COORDINATE_LABEL_ROW_HEIGHT - y_offset, FIELD_TEXT_ALIGN_LEFT);
     }
     return cursor;
 }

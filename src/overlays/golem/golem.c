@@ -936,11 +936,11 @@ void golem_render(GolemRenderContext* render_context)
             field_format_number(number_text, GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.level, 1);
             encoded_text_append(name_text, number_text);
         }
-        packet_cursor = field_draw_text((SPRT*)packet_cursor, panel_ordering_table, name_text, 0, 0xA0, 0xA0, 2);
+        packet_cursor = field_draw_text((SPRT*)packet_cursor, panel_ordering_table, name_text, 0, 0xA0, 0xA0, FIELD_TEXT_ALIGN_CENTER);
         descriptions_offset = archive->sections.descriptions_offset;
         description_index = (u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2;
-        packet_cursor =
-            field_draw_text((SPRT*)packet_cursor, panel_ordering_table, GOLEM_ARCHIVE_TEXT(archive, descriptions_offset, description_index), 0, 0xA0, 0xB0, 2);
+        packet_cursor = field_draw_text((SPRT*)packet_cursor, panel_ordering_table, GOLEM_ARCHIVE_TEXT(archive, descriptions_offset, description_index), 0,
+                                        0xA0, 0xB0, FIELD_TEXT_ALIGN_CENTER);
     }
 
     render_context->packet_cursor = golem_render_fade(packet_cursor, &render_context->ordering_table[GOLEM_LAYER_FADE]);

@@ -462,13 +462,6 @@ typedef enum
 
 /* Text, list, and equipment types. */
 
-typedef enum
-{
-    MENU_TEXT_ALIGN_LEFT = 0,
-    MENU_TEXT_ALIGN_RIGHT = 1,
-    MENU_TEXT_ALIGN_CENTER = 2,
-} MenuTextAlignment;
-
 /**
  * @brief Marker shown while selecting two party slots to swap.
  */
@@ -910,7 +903,7 @@ static inline MenuCharacterRecord* menu_character_record(SavedGameLayout* contex
  */
 static inline void* menu_emit_content_label(void* packet_cursor, u_long* ot, u8* text)
 {
-    return field_draw_text(packet_cursor, ot, text, 1, 0xA0, 0xCA, 2);
+    return field_draw_text(packet_cursor, ot, text, 1, 0xA0, 0xCA, FIELD_TEXT_ALIGN_CENTER);
 }
 
 /**

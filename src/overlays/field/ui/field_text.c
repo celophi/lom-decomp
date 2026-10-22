@@ -75,8 +75,6 @@
 #define FIELD_TEXT_JP_NARROW_SPACE 0x200
 /** Added in 16 bits: commands 0x19-0x1F select the high byte (1-7) of a two-byte code. */
 #define FIELD_TEXT_DOUBLE_BYTE_BIAS 0xFFE8
-/* Lead byte of the JP two-byte digit glyphs; the digit value (0-9) follows it. */
-#define FIELD_TEXT_JP_DIGIT_LEAD 0x1D
 #define FIELD_TEXT_SHORT_DELAY 4
 #define FIELD_TEXT_CHOICE_BLINK_FRAMES 4
 #define FIELD_TEXT_PROMPT_BLINK_FRAMES 8
@@ -100,17 +98,6 @@
 #define FIELD_TEXT_PAD_CONFIRM FIELD_TEXT_PAD_CROSS
 #endif
 
-/* VRAM layout: the text cache and the window frame textures below it share the 4bpp page at (960, 256). */
-#define FIELD_TEXT_CACHE_VRAM_Y 384
-#define FIELD_TEXT_FRAME_VRAM_Y 480
-#define FIELD_TEXT_PORTRAIT_VRAM_X 1012
-#define FIELD_TEXT_PORTRAIT_VRAM_Y 272
-#define FIELD_TEXT_CLUT_X 304
-#define FIELD_TEXT_PORTRAIT_CLUT_Y 506
-#define FIELD_TEXT_TEXT_CLUT_Y 508
-#define FIELD_TEXT_WINDOW_CLUT_Y 509
-#define FIELD_TEXT_PROMPT_CLUT_Y 510
-#define FIELD_TEXT_ALT_CLUT_Y 511
 /* Texture coordinates of the cache, frame and portrait images inside that page. */
 #define FIELD_TEXT_CACHE_V (FIELD_TEXT_CACHE_VRAM_Y - FIELD_TEXT_TPAGE_VRAM_Y)
 #define FIELD_TEXT_FRAME_V (FIELD_TEXT_FRAME_VRAM_Y - FIELD_TEXT_TPAGE_VRAM_Y)
@@ -4272,7 +4259,7 @@ s32 field_text_get_choice(s32 slot)
  * @param window_index Window slot; only the low 16 bits are used.
  * @param value Value to format as decimal text.
  * @param digits Number of columns; leading zeroes become spaces. Must be positive.
- * @note JP writes each digit as a two-byte glyph: FIELD_TEXT_JP_DIGIT_LEAD, then the digit.
+ * @note JP writes each digit as a two-byte glyph: FIELD_TEXT_DIGIT_LEAD, then the digit.
  */
 void field_text_format_number(s32 window_index, u32 value, u8 digits)
 {
@@ -4309,7 +4296,7 @@ void field_text_format_number(s32 window_index, u32 value, u8 digits)
                 digit = 9;
             }
 #if defined(VERSION_JP)
-            *text++ = FIELD_TEXT_JP_DIGIT_LEAD;
+            *text++ = FIELD_TEXT_DIGIT_LEAD;
             *text++ = digit;
 #else
             *text++ = digit + '0';
@@ -4321,7 +4308,7 @@ void field_text_format_number(s32 window_index, u32 value, u8 digits)
         place_value = place_value / 10;
     }
 #if defined(VERSION_JP)
-    *text++ = FIELD_TEXT_JP_DIGIT_LEAD;
+    *text++ = FIELD_TEXT_DIGIT_LEAD;
     *text = value;
 #else
     *text = value + '0';

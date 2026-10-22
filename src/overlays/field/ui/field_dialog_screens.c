@@ -912,7 +912,8 @@ static void field_draw_actor_text(FieldRenderHalf* render, FieldActorText* text)
         tint = countdown * 4;
     }
 
-    render->primitive_cursor = field_draw_tinted_text((SPRT*)cursor, ot, text->text, 4, state.bits.x, text->state.bits.y, 2, tint);
+    render->primitive_cursor =
+        field_draw_tinted_text((SPRT*)cursor, ot, text->text, FIELD_TEXT_COLOR_NORMAL, state.bits.x, text->state.bits.y, FIELD_TEXT_ALIGN_CENTER, tint);
 }
 
 /**
@@ -1703,9 +1704,7 @@ static void* field_draw_party_totals(u_long* ot, void* cursor, s32 x_offset, s32
         }
     }
 
-    handle = field_draw_text(handle, ot,
-        D_800EC3D6[0] + (D_800EC3D6 - 0x12) + (D_800EC3D6[1] << 8),
-        4, 0x10 - x_offset, -y_offset, 0);
+    handle = field_draw_text(handle, ot, D_800EC3D6[0] + (D_800EC3D6 - 0x12) + (D_800EC3D6[1] << 8), 4, 0x10 - x_offset, -y_offset, FIELD_TEXT_ALIGN_LEFT);
     text_base = D_800EC3D6 - 0x12;
 
     y = 0x10 - y_offset;
@@ -1713,23 +1712,17 @@ static void* field_draw_party_totals(u_long* ot, void* cursor, s32 x_offset, s32
     handle = field_draw_animated_marker(ot, handle, 0x18 - x_offset, y - 3);
 
     position.x = 0x28 - x_offset;
-    handle = field_draw_number(ot, handle, total_x, 4, &position, 0);
-    handle = field_draw_text(handle, ot,
-        FIELD_TEXT_AT(text_base, text_base[0x16], text_base[0x17]),
-        4, 0x40 - x_offset, position.y, 0);
+    handle = field_draw_number(ot, handle, total_x, 4, &position, FIELD_TEXT_ALIGN_LEFT);
+    handle = field_draw_text(handle, ot, FIELD_TEXT_AT(text_base, text_base[0x16], text_base[0x17]), 4, 0x40 - x_offset, position.y, FIELD_TEXT_ALIGN_LEFT);
     handle = field_draw_animated_small_icon(ot, handle, 0x50 - x_offset, position.y + 2);
 
     position.x = 0x60 - x_offset;
-    handle = field_draw_number(ot, handle, total_y, 4, &position, 0);
-    handle = field_draw_text(handle, ot,
-        FIELD_TEXT_AT(text_base, text_base[0x1A], text_base[0x1B]),
-        4, 0x80 - x_offset, position.y, 0);
+    handle = field_draw_number(ot, handle, total_y, 4, &position, FIELD_TEXT_ALIGN_LEFT);
+    handle = field_draw_text(handle, ot, FIELD_TEXT_AT(text_base, text_base[0x1A], text_base[0x1B]), 4, 0x80 - x_offset, position.y, FIELD_TEXT_ALIGN_LEFT);
 
     position.x = 0xD0 - x_offset;
-    handle = field_draw_number(ot, handle, g_saved_game_ctx->money - g_field_money_snapshot, 4, &position, 1);
-    return field_draw_text(handle, ot,
-        FIELD_TEXT_AT(text_base, text_base[0], text_base[1]),
-        4, 0xF0 - x_offset, position.y, 1);
+    handle = field_draw_number(ot, handle, g_saved_game_ctx->money - g_field_money_snapshot, 4, &position, FIELD_TEXT_ALIGN_RIGHT);
+    return field_draw_text(handle, ot, FIELD_TEXT_AT(text_base, text_base[0], text_base[1]), 4, 0xF0 - x_offset, position.y, FIELD_TEXT_ALIGN_RIGHT);
 }
 
 /**
@@ -1754,7 +1747,8 @@ static void* field_draw_experience_ranking(u_long* ordering_table, void* cursor,
     u8 *text;
     u8 *text_base;
 
-    result = field_draw_text(cursor, ordering_table, (D_800EC3C6[1] << 8) + ((D_800EC3C6 - 2) + D_800EC3C6[0]), 4, 0x10 - x_offset, -y_offset, 0);
+    result = field_draw_text(cursor, ordering_table, (D_800EC3C6[1] << 8) + ((D_800EC3C6 - 2) + D_800EC3C6[0]), 4, 0x10 - x_offset, -y_offset,
+                             FIELD_TEXT_ALIGN_LEFT);
     count = 0;
 
     for (i = 0; i < 3; i++)
@@ -1809,16 +1803,18 @@ static void* field_draw_experience_ranking(u_long* ordering_table, void* cursor,
                 work.position.y = y;
                 result = field_draw_animated_icon(ordering_table, result, 0x38 - x_offset, y - 8, 1);
                 work.position.x = 0x48 - x_offset;
-                result = field_draw_number(ordering_table, result, g_field_player_records[work.order[i]].unk25A, 4, &work.position, 0);
-                result = field_draw_text(result, ordering_table, FIELD_TEXT_AT(text, D_800EC3DA[0], text_base[1]), 4, 0x68 - x_offset, work.position.y, 0);
+                result = field_draw_number(ordering_table, result, g_field_player_records[work.order[i]].unk25A, 4, &work.position, FIELD_TEXT_ALIGN_LEFT);
+                result = field_draw_text(result, ordering_table, FIELD_TEXT_AT(text, D_800EC3DA[0], text_base[1]), 4, 0x68 - x_offset, work.position.y,
+                                         FIELD_TEXT_ALIGN_LEFT);
                 result = field_draw_animated_icon(ordering_table, result, 0x78 - x_offset, work.position.y, 0);
                 work.position.x = 0x88 - x_offset;
                 work.position.y = y;
-                result = field_draw_number(ordering_table, result, g_field_player_records[work.order[i]].unk25B, 4, &work.position, 0);
-                result = field_draw_text(result, ordering_table, FIELD_TEXT_AT(text, text[0x1A], text[0x1B]), 4, 0xA8 - x_offset, work.position.y, 0);
+                result = field_draw_number(ordering_table, result, g_field_player_records[work.order[i]].unk25B, 4, &work.position, FIELD_TEXT_ALIGN_LEFT);
+                result = field_draw_text(result, ordering_table, FIELD_TEXT_AT(text, text[0x1A], text[0x1B]), 4, 0xA8 - x_offset, work.position.y,
+                                         FIELD_TEXT_ALIGN_LEFT);
                 work.position.x = 0xE0 - x_offset;
                 work.position.y = y;
-                result = field_draw_number(ordering_table, result, FIELD_EXPERIENCE_GAIN(work.order[i]), 4, &work.position, 1);
+                result = field_draw_number(ordering_table, result, FIELD_EXPERIENCE_GAIN(work.order[i]), 4, &work.position, FIELD_TEXT_ALIGN_RIGHT);
             }
 
             row += 0x1C;
@@ -1849,19 +1845,19 @@ static void* field_draw_item_list(u_long* ot, void* prim, s32 x_offset, s32 y_of
     low = D_800EC3D8.low;
     offset = (D_800EC3D8.high << 8) + (uintptr_t)((u8*)&D_800EC3D8 - 0x14);
     tex = (u8*)(low + offset);
-    prim = field_draw_text(prim, ot, tex, 4, 0x20 - x_offset, -y_offset, 0);
+    prim = field_draw_text(prim, ot, tex, 4, 0x20 - x_offset, -y_offset, FIELD_TEXT_ALIGN_LEFT);
 
     for (i = 0; i < g_field_dialog_item_count; i++)
     {
         row = i * FIELD_RESULTS_ROW_HEIGHT;
-        prim = field_draw_text(prim, ot, g_field_dialog_item_texts[i], 4, 0x10 - x_offset, (row + FIELD_RESULTS_ROW_HEIGHT) - y_offset, 0);
+        prim = field_draw_text(prim, ot, g_field_dialog_item_texts[i], 4, 0x10 - x_offset, (row + FIELD_RESULTS_ROW_HEIGHT) - y_offset, FIELD_TEXT_ALIGN_LEFT);
         pos.x = 0xB0 - x_offset;
         /* The original subtracts the horizontal offset here too. */
         pos.y = (row + FIELD_RESULTS_ROW_HEIGHT) - x_offset;
 
         if (g_field_dialog_item_quantities[i] != 0)
         {
-            prim = field_draw_number(ot, prim, g_field_dialog_item_quantities[i], 4, &pos, 1);
+            prim = field_draw_number(ot, prim, g_field_dialog_item_quantities[i], 4, &pos, FIELD_TEXT_ALIGN_RIGHT);
         }
     }
 
@@ -1930,7 +1926,8 @@ static void* field_draw_unlock_list(u_long* ordering_table, void* cursor, s32 sc
                         low = D_800EC3CE.low;
                         base = D_800EC3C4;
                         offset = (D_800EC3CE.high << 8) + (uintptr_t)base;
-                        next_cursor = field_draw_text(next_cursor, ordering_table, (void *)(low + offset), 4, header_x, technique_header_y, 0);
+                        next_cursor =
+                            field_draw_text(next_cursor, ordering_table, (void*)(low + offset), 4, header_x, technique_header_y, FIELD_TEXT_ALIGN_LEFT);
                     }
 
                     technique_header_drawn = 1;
@@ -1945,10 +1942,8 @@ static void* field_draw_unlock_list(u_long* ordering_table, void* cursor, s32 sc
                     if (item_y < viewport_height)
                     {
                         name_index = *entry & ~FIELD_UNLOCK_TECHNIQUE;
-                        next_cursor = field_draw_text(next_cursor, ordering_table,
-                                                    technique_names +
-                                                        ((u16 *)technique_names)[name_index],
-                                                    4, item_x, item_y, 2);
+                        next_cursor = field_draw_text(next_cursor, ordering_table, technique_names + ((u16*)technique_names)[name_index], 4, item_x, item_y,
+                                                      FIELD_TEXT_ALIGN_CENTER);
                     }
                 }
             }
@@ -1962,10 +1957,8 @@ static void* field_draw_unlock_list(u_long* ordering_table, void* cursor, s32 sc
 
                     if ((ability_header_y > -FIELD_RESULTS_ROW_HEIGHT) && (ability_header_y < viewport_height))
                     {
-                        next_cursor =
-                            field_draw_text(next_cursor, ordering_table,
-                                          D_800EC3C4 + D_800EC3CC.low + (D_800EC3CC.high << 8),
-                                          4, header_x, ability_header_y, 0);
+                        next_cursor = field_draw_text(next_cursor, ordering_table, D_800EC3C4 + D_800EC3CC.low + (D_800EC3CC.high << 8), 4, header_x,
+                                                      ability_header_y, FIELD_TEXT_ALIGN_LEFT);
                     }
 
                     ability_header_drawn = 1;
@@ -1980,10 +1973,8 @@ static void* field_draw_unlock_list(u_long* ordering_table, void* cursor, s32 sc
                     if (item_y < viewport_height)
                     {
                         name_index = *entry;
-                        next_cursor = field_draw_text(next_cursor, ordering_table,
-                                                    ability_names +
-                                                        ((u16 *)ability_names)[name_index],
-                                                    4, item_x, item_y, 2);
+                        next_cursor = field_draw_text(next_cursor, ordering_table, ability_names + ((u16*)ability_names)[name_index], 4, item_x, item_y,
+                                                      FIELD_TEXT_ALIGN_CENTER);
                     }
                 }
             }

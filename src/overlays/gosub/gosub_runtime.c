@@ -182,7 +182,7 @@ s32 gosub_handle_input(void)
     if (g_pad_input & GOSUB_BUTTONS_CONFIRM)
     {
         play_menu_sfx(GOSUB_SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
-        if (g_gosub_rows[g_gosub_cursor_row].text_color != GOSUB_TEXT_COLOR_NORMAL)
+        if (g_gosub_rows[g_gosub_cursor_row].text_color != FIELD_TEXT_COLOR_NORMAL)
         {
             return;
         }
