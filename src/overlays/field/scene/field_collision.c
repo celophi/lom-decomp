@@ -121,7 +121,7 @@
  * @param v Coordinate in 24.8 fixed point.
  * @note Rounds toward zero.
  */
-#define FIELD_COLLISION_CELL(v) (((v) < 0) ? (((v) + 0xFF) >> 8) : ((v) >> 8))
+#define FIELD_COLLISION_CELL(v) (((v) >= 0) ? ((v) >> 8) : (((v) + 0xFF) >> 8))
 
 /** Mask of the surface-kind bits in FieldCollisionSurfaceDef::flags. */
 #define FIELD_COLLISION_KIND_MASK 0x3
@@ -572,8 +572,6 @@ typedef struct
 
 /** Fractional bits in the world-space coordinates returned by the route search. */
 #define FIELD_COLLISION_PATH_WORLD_SHIFT 8
-/** Mask used when truncating a negative world coordinate towards zero. */
-#define FIELD_COLLISION_PATH_WORLD_MASK 0xFF
 /** Padding between a group's tile-map origin and its playable cells. */
 #define FIELD_COLLISION_PATH_TILE_MARGIN 2
 
@@ -759,37 +757,16 @@ s32 field_collision_hit_markers(FieldCollisionQuery* query)
     scene = g_field_scene.scene;
     half_x = (s16)query->width / 2;
 
-    if (query->x >= 0)
-    {
-        start_x = (query->x >> 8) - half_x;
-    }
-    else
-    {
-        start_x = ((query->x + 0xFF) >> 8) - half_x;
-    }
+    start_x = FIELD_COLLISION_CELL(query->x) - half_x;
 
     end_x = start_x + (s16)query->width;
     half_z = (s16)query->depth / 2;
 
-    if (query->z >= 0)
-    {
-        start_z = (query->z >> 8) - half_z;
-    }
-    else
-    {
-        start_z = ((query->z + 0xFF) >> 8) - half_z;
-    }
+    start_z = FIELD_COLLISION_CELL(query->z) - half_z;
 
     end_z = start_z + (s16)query->depth;
 
-    if (query->y >= 0)
-    {
-        probe_y = query->y >> 8;
-    }
-    else
-    {
-        probe_y = (query->y + 0xFF) >> 8;
-    }
+    probe_y = FIELD_COLLISION_CELL(query->y);
 
     for (node = scene->markers; node != NULL; node = node->next)
     {
@@ -953,14 +930,12 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
     s32 first_floor_b;
     s32 footprint_w;
     s32 move_x;
-    s32 origin_x;
     s32 z_start;
     s32 node_height;
     u8 left_flag;
     u8 right_flag;
     s32 push_x_last;
     s32 width;
-    s32 slid_x;
     s32 footprint_d;
     s16 z_end;
     s32 span_push_z;
@@ -1019,13 +994,10 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
     s32 hit;
     s32 step_count;
     s32 move_x_abs;
-    s32 sweep_cell_x;
     s32 move_z_abs;
     s32 cell;
     s32 push_z_abs;
-    s32 ground_x;
     s32 higher;
-    s32 coord;
     s32 first_cell_x;
     s32 abs_move_z;
     s32 push_x_abs;
@@ -1069,29 +1041,11 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
         if (mover->collision_node == FIELD_COLLISION_NODE_SEARCH)
         {
             floor_height = 0;
-            coord = mover->x;
             on_slope = 0;
             mover->collision_node = NULL;
-
-            if (coord < 0)
-            {
-                coord = (coord + 0xFF) >> 8;
-            }
-            else
-            {
-                coord >>= 8;
-            }
-
-            probe.x = coord;
-            coord = mover->z;
-
-            if (coord < 0)
-            {
-                coord += 0xFF;
-            }
-
+            probe.x = FIELD_COLLISION_CELL(mover->x);
+            cell = FIELD_COLLISION_CELL(mover->z);
             node = nodes;
-            cell = coord >> 8;
             probe.z = cell;
             /* The x cell is parked in span until the span walk needs it. */
             span = (FieldCollisionSpan*)(uintptr_t)(u16)probe.x;
@@ -1269,19 +1223,9 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                     {
                         old_move_height = mover->move_height;
                         mover->move_x += sweep->motion_x;
-                        origin_x = mover->x;
                         mover->move_z += sweep->motion_z;
 
-                        if (origin_x >= 0)
-                        {
-                            sweep_cell_x = origin_x >> 8;
-                        }
-                        else
-                        {
-                            sweep_cell_x = (origin_x + 0xFF) >> 8;
-                        }
-
-                        probe.x = sweep_cell_x;
+                        probe.x = FIELD_COLLISION_CELL(mover->x);
                         probe.z = FIELD_COLLISION_CELL(mover->z);
                         sample = field_collision_slope_height(sweep, &probe.x) - sweep->surface->height0;
 
@@ -1403,7 +1347,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
     if (step_count == 1)
     {
         probe.x = FIELD_COLLISION_CELL(mover->x + mover->move_x);
-        probe.z = (mover->z + mover->move_z) / 256;
+        probe.z = FIELD_COLLISION_CELL(mover->z + mover->move_z);
         field_collision_classify_nodes(&probe, nodes, &hit_count, &touch_count);
     }
     else
@@ -1413,19 +1357,8 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
         do
         {
             step++;
-            cell = mover->x + (mover->move_x * step / step_count);
-
-            if (cell < 0)
-            {
-                cell = (cell + 0xFF) >> 8;
-            }
-            else
-            {
-                cell >>= 8;
-            }
-
-            probe.x = cell;
-            probe.z = (mover->z + (mover->move_z * step / step_count)) / 256;
+            probe.x = FIELD_COLLISION_CELL(mover->x + (mover->move_x * step / step_count));
+            probe.z = FIELD_COLLISION_CELL(mover->z + (mover->move_z * step / step_count));
             field_collision_classify_nodes(&probe, nodes, &hit_count, &touch_count);
         } while ((step_count != step) && (hit_count == 0));
     }
@@ -1755,16 +1688,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
 
             do
             {
-                slid_x = mover->x + delta_x;
-
-                if (slid_x >= 0)
-                {
-                    x_start = (slid_x >> 8) - half_width;
-                }
-                else
-                {
-                    x_start = ((slid_x + 0xFF) >> 8) - half_width;
-                }
+                x_start = FIELD_COLLISION_CELL(mover->x + delta_x) - half_width;
 
                 width = (u16)mover->footprint_width;
                 x_end = (s16)x_start + width;
@@ -2119,20 +2043,10 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
     floor_height = 0;
     floor_fixed = 0;
     on_slope = 0;
-    ground_x = mover->x;
     node = NULL;
     mover->collision_node = NULL;
 
-    if (ground_x < 0)
-    {
-        ground_x = (ground_x + 0xFF) >> 8;
-    }
-    else
-    {
-        ground_x >>= 8;
-    }
-
-    probe.x = ground_x;
+    probe.x = FIELD_COLLISION_CELL(mover->x);
     probe.z = FIELD_COLLISION_CELL(mover->z);
     /* The x cell is parked in span until the span walk needs it. */
     span = (FieldCollisionSpan*)(uintptr_t)(u16)probe.x;
@@ -4939,7 +4853,7 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
                 if (remaining != 0)
                 {
                     ring_inner = (u8*)ring_write + OFFSETOF(FieldCollisionDilationMasks, interior_touch_bits);
-                loop_38:
+                next_word:
                     if (bits_left < remaining)
                     {
                         remaining -= bits_left;
@@ -5279,7 +5193,7 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
 
                         if (remaining != 0)
                         {
-                            goto loop_38;
+                            goto next_word;
                         }
                     }
                 }
@@ -5316,7 +5230,7 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
 static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCollisionQuery* query)
 {
     FieldScene* scene;
-    s32 count;
+    u8 count;
     s32 group;
     s32 i;
     s32 cell;
@@ -5358,32 +5272,25 @@ static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCol
 
     count = scene->group_count;
     group = count - 1;
-    i = 0;
 
-    if (count != 0)
+    for (i = 0; i != count; i++)
     {
-        s32 group_count;
-        group_count = count;
+        s32 group_floor = scene->group_ids[i];
 
-        for (; i != group_count; i++)
+        if (floor_cell < group_floor)
         {
-            s32 group_floor = scene->group_ids[i];
-
-            if (floor_cell < group_floor)
+            if (i != 0)
             {
-                if (i != 0)
-                {
-                    i--;
-                }
+                i--;
+            }
 
-                group = i;
-                break;
-            }
-            else if (group_floor == floor_cell)
-            {
-                group = i;
-                break;
-            }
+            group = i;
+            break;
+        }
+        else if (group_floor == floor_cell)
+        {
+            group = i;
+            break;
         }
     }
 
@@ -5398,26 +5305,12 @@ static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCol
     half = ((s16)query->width) >> 1;
     margin = (s16)margins->width - 1;
 
-    if (query->x >= 0)
-    {
-        left = ((query->x >> 8) - half) - margin;
-    }
-    else
-    {
-        left = (((query->x + 0xFF) >> 8) - half) - margin;
-    }
+    left = (FIELD_COLLISION_CELL(query->x) - half) - margin;
 
     half = ((s16)query->depth) >> 1;
     margin = (s16)margins->depth - 1;
 
-    if (query->z >= 0)
-    {
-        cell = query->z >> 8;
-    }
-    else
-    {
-        cell = (query->z + 0xFF) >> 8;
-    }
+    cell = FIELD_COLLISION_CELL(query->z);
 
     top = (cell - half) - margin;
 
@@ -5514,7 +5407,6 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
     FieldCollisionPathEntry* route_tiles;
     s32 bend_x;
     s32 raw_depth;
-    s32 end_index;
     FieldCollisionPathWork work;
     u32 queue_counts[4];
     FieldCollisionTraceRequest trace;
@@ -5535,13 +5427,9 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
     FieldScene* scene;
     u8 goal_stamp;
     s32 goal_half_w;
-    s32 goal_x_raw;
     s32 goal_half_d;
-    s32 goal_z_raw;
     s32 start_half_w;
-    s32 start_x_raw;
     s32 start_half_d;
-    s32 start_z_raw;
     s32 row_shift;
     u32 columns;
     s32 rows;
@@ -5625,7 +5513,6 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
     s32 back_mid_z;
     s32 back_mid2_x;
     s32 back_mid2_z;
-    FieldPathPoint* output;
     s32 point_x;
     s32 point_z;
     s32 remaining;
@@ -5651,25 +5538,13 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
 
         /* Route cells refer to the footprint corner, rather than its centre. */
         goal_half_w = (s16)start_query->width >> 1;
-        goal_x_raw = goal_query->x;
-        goal_x = (goal_x_raw >= 0 ? goal_x_raw >> FIELD_COLLISION_PATH_WORLD_SHIFT
-                                  : (goal_x_raw + FIELD_COLLISION_PATH_WORLD_MASK) >> FIELD_COLLISION_PATH_WORLD_SHIFT) -
-                 goal_half_w;
+        goal_x = FIELD_COLLISION_CELL(goal_query->x) - goal_half_w;
         goal_half_d = (s16)start_query->depth >> 1;
-        goal_z_raw = goal_query->z;
-        goal_z = (goal_z_raw >= 0 ? goal_z_raw >> FIELD_COLLISION_PATH_WORLD_SHIFT
-                                  : (goal_z_raw + FIELD_COLLISION_PATH_WORLD_MASK) >> FIELD_COLLISION_PATH_WORLD_SHIFT) -
-                 goal_half_d;
+        goal_z = FIELD_COLLISION_CELL(goal_query->z) - goal_half_d;
         start_half_w = (s16)start_query->width >> 1;
-        start_x_raw = start_query->x;
-        start_x = (start_x_raw >= 0 ? start_x_raw >> FIELD_COLLISION_PATH_WORLD_SHIFT
-                                    : (start_x_raw + FIELD_COLLISION_PATH_WORLD_MASK) >> FIELD_COLLISION_PATH_WORLD_SHIFT) -
-                  start_half_w;
+        start_x = FIELD_COLLISION_CELL(start_query->x) - start_half_w;
         start_half_d = (s16)start_query->depth >> 1;
-        start_z_raw = start_query->z;
-        start_z = (start_z_raw >= 0 ? start_z_raw >> FIELD_COLLISION_PATH_WORLD_SHIFT
-                                    : (start_z_raw + FIELD_COLLISION_PATH_WORLD_MASK) >> FIELD_COLLISION_PATH_WORLD_SHIFT) -
-                  start_half_d;
+        start_z = FIELD_COLLISION_CELL(start_query->z) - start_half_d;
 
         /* Tiles are twice as deep as they are wide. */
         row_shift = col_shift + 1;
@@ -6773,24 +6648,17 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
                 remaining--;
                 skip_count = 0;
 
-                if (remaining != -1)
+                for (; remaining != -1; remaining--)
                 {
-                    end_index = -1;
-                    output = output_path;
-
-                    for (; remaining != end_index; output++)
-                    {
-                        point_x = next.entry->coordinate;
-                        next.entry--;
-                        skip_count++;
-                        remaining--;
-                        output->x = (point_x + ((s16)start_query->width >> 1)) << FIELD_COLLISION_PATH_WORLD_SHIFT;
-                        goal_value.coordinate = FIELD_COLLISION_PATH_WORLD_SHIFT;
-                        raw_depth = start_query->depth;
-                        point_z = deferred.entry->coordinate;
-                        deferred.entry--;
-                        output->z = (point_z + ((s16)raw_depth >> 1)) << goal_value.coordinate;
-                    }
+                    point_x = next.entry->coordinate;
+                    next.entry--;
+                    output_path[skip_count].x = (point_x + ((s16)start_query->width >> 1)) << FIELD_COLLISION_PATH_WORLD_SHIFT;
+                    goal_value.coordinate = FIELD_COLLISION_PATH_WORLD_SHIFT;
+                    raw_depth = start_query->depth;
+                    point_z = deferred.entry->coordinate;
+                    deferred.entry--;
+                    output_path[skip_count].z = (point_z + ((s16)raw_depth >> 1)) << goal_value.coordinate;
+                    skip_count++;
                 }
 
                 return skip_count;
