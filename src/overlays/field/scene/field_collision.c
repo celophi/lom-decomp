@@ -438,9 +438,9 @@ typedef struct FieldCollisionNode
     void* owner_object;
     void* owner_part;
     /** Per-row span table: (min_x, max_x) pairs, field_collision_surface_spans per row. */
-    void* spans;
+    FieldCollisionSpan* spans;
     /** Per-row edge attribute bytes, two per span (left end, right end). */
-    void* span_flags;
+    u8* span_flags;
     /** Zero when the node takes no part in collision. */
     u8 active;
     u8 pad19[3];
@@ -1074,7 +1074,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                         if (((s16)cell_z >= first_row_start) && ((node->max_z + node_offset_z) >= (s16)cell_z))
                         {
                             first_spans = field_collision_surface_spans(surface);
-                            span = (FieldCollisionSpan*)node->spans + (((s16)cell_z - first_row_start) * first_spans);
+                            span = node->spans + (((s16)cell_z - first_row_start) * first_spans);
 
                             if (node_offset_x != 0)
                             {
@@ -1508,7 +1508,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                                 row_skip = (row - hit_row_start) * hit_spans;
                                 scratch = ((scratch - row) + 1) * hit_spans;
                                 hit = 0;
-                                span = (FieldCollisionSpan*)node->spans + (row_skip);
+                                span = node->spans + (row_skip);
                                 left_flags = node->span_flags + (row_skip * 2);
 
                                 if (surface->flags & FIELD_COLLISION_SURFACE_EDGE_FLAGS)
@@ -1782,8 +1782,8 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                                     }
 
                                     push_row_skip = (row - row_start) * field_collision_surface_spans(surface);
-                                    scratch = scratch - row;
-                                    span = (FieldCollisionSpan*)node->spans + (push_row_skip);
+                                    scratch -= row;
+                                    span = node->spans + (push_row_skip);
                                     left_flags = node->span_flags + (push_row_skip * 2);
 
                                     if (scratch != -1)
@@ -2077,7 +2077,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
             if ((ground_cell_z >= touch_row_start) && (((touch_node->max_z + touch_offset_z) >= ground_cell_z)))
             {
                 touch_spans = field_collision_surface_spans(surface);
-                span = (FieldCollisionSpan*)touch_node->spans + ((ground_cell_z - touch_row_start) * touch_spans);
+                span = touch_node->spans + ((ground_cell_z - touch_row_start) * touch_spans);
 
                 if (touch_offset_x != 0)
                 {
@@ -2401,11 +2401,11 @@ static void field_collision_classify_nodes(FieldCollisionMoveProbe* probe, Field
                         offset = (row_from - row_first) * spans_per_row;
                         count = ((count - row_from) + 1) * spans_per_row;
                         result = 0;
-                        span = (FieldCollisionSpan*)node->spans + offset;
+                        span = node->spans + offset;
 
                         if (surface->flags & FIELD_COLLISION_SURFACE_EDGE_FLAGS)
                         {
-                            edge_flags = (u8*)node->span_flags + offset * 2;
+                            edge_flags = node->span_flags + offset * 2;
 
                             while (--count != -1)
                             {
@@ -2425,19 +2425,11 @@ static void field_collision_classify_nodes(FieldCollisionMoveProbe* probe, Field
                                         break;
                                     }
 
-                                    if ((left_edge >= 0) && ((s8)edge_flags[1] >= 0))
+                                    if ((left_edge >= 0) && ((s8)edge_flags[1] >= 0) &&
+                                        ((edge_flags[0] == FIELD_COLLISION_EDGE_WALL_X) || (edge_flags[1] == FIELD_COLLISION_EDGE_WALL_X)))
                                     {
                                         result = FIELD_COLLISION_CLASS_BLOCK;
-
-                                        if (edge_flags[0] == FIELD_COLLISION_EDGE_WALL_X)
-                                        {
-                                            break;
-                                        }
-
-                                        if (edge_flags[1] == FIELD_COLLISION_EDGE_WALL_X)
-                                        {
-                                            break;
-                                        }
+                                        break;
                                     }
 
                                     result = FIELD_COLLISION_CLASS_TOUCH;
@@ -2981,11 +2973,10 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
     def = node->surface;
     rows = node->max_z - node->min_z;
 
-    capacity = field_collision_surface_spans(def);
-    capacity *= 2;
+    capacity = field_collision_surface_spans(def) * 2;
     counts = (u8*)FIELD_COLLISION_SCRATCH;
     spans = (FieldCollisionRasterSpan*)*alloc;
-    node->spans = *alloc;
+    node->spans = (FieldCollisionSpan*)*alloc;
     count = rows + 1;
     span_bytes = count * (capacity << 1);
     node->span_flags = *alloc + span_bytes;
@@ -3799,7 +3790,7 @@ void field_collision_collect_groups(u8** allocator_cursor)
     work_count = map_columns;
     work_count *= map_rows;
     scene->group_tile_count = work_count;
-    work_count = work_count * group_count;
+    work_count *= group_count;
     scene->tile_size = tile_size;
     scene->group_count = group_count;
     scene->tile_cols = map_columns;
@@ -4043,8 +4034,7 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
             }
             else
             {
-                scratch = def->height0;
-                scratch = (s16)id < scratch;
+                scratch = (s16)id < def->height0;
 
                 if (scratch != 0)
                 {
@@ -4086,7 +4076,7 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
                     }
                 }
 
-                out = out + ((words * 2) * ((s16)base >> shift1));
+                out += ((words * 2) * ((s16)base >> shift1));
             }
             else
             {
@@ -4218,8 +4208,7 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
                 }
                 else
                 {
-                    work = node_start;
-                    work = 1 << work;
+                    work = 1 << node_start;
                     scratch = wp[0] | work | ((u32)work >> 1);
                     wp[1] = scratch;
                     wp[0] = scratch;
@@ -4231,8 +4220,7 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
 
                     while (i != countdown_end)
                     {
-                        k = run_count;
-                        k--;
+                        k = run_count - 1;
                         cur_count = 0;
 
                         while (k != countdown_end)
@@ -4589,8 +4577,7 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
                     while (i != countdown_end)
                     {
                         lead = (other->x.x0 >> shift0) + 2;
-                        tail = other->x.x1 >> shift0;
-                        tail = tail + 2;
+                        tail = (other->x.x1 >> shift0) + 2;
                         n = lead >> FIELD_COLLISION_GROUP_WORD_SHIFT;
                         k = tail >> FIELD_COLLISION_GROUP_WORD_SHIFT;
                         work = lead;
@@ -4687,7 +4674,7 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
     u32 carry_touch;
     u32 carry_solid;
     s32 bits_left;
-    u8* ring_inner;
+    u32* ring_inner;
     u32 entry_touch;
     u32 entry_solid;
     u32 entry_inner;
@@ -4763,9 +4750,9 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
 
                         do
                         {
-                            shift_touch = shift_touch >> 2;
+                            shift_touch >>= 2;
                             inner_touch |= shift_touch;
-                            shift_solid = shift_solid >> 2;
+                            shift_solid >>= 2;
                             count--;
                             acc_solid |= shift_solid;
                         } while (count != -1);
@@ -4828,11 +4815,11 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
                         if (!(row & 1))
                         {
                             ring_write = (FieldCollisionDilationMasks*)FIELD_COLLISION_SCRATCH;
-                            ring_read = (FieldCollisionDilationMasks*)(ring_row_bytes + FIELD_COLLISION_SCRATCH);
+                            ring_read = (FieldCollisionDilationMasks*)(FIELD_COLLISION_SCRATCH + ring_row_bytes);
                         }
                         else
                         {
-                            ring_write = (FieldCollisionDilationMasks*)(FIELD_COLLISION_SCRATCH + ring_row_bytes);
+                            ring_write = (FieldCollisionDilationMasks*)(ring_row_bytes + FIELD_COLLISION_SCRATCH);
                             ring_read = (FieldCollisionDilationMasks*)FIELD_COLLISION_SCRATCH;
                         }
                     }
@@ -4852,7 +4839,7 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
 
                 if (remaining != 0)
                 {
-                    ring_inner = (u8*)ring_write + OFFSETOF(FieldCollisionDilationMasks, interior_touch_bits);
+                    ring_inner = &ring_write->interior_touch_bits;
                 next_word:
                     if (bits_left < remaining)
                     {
@@ -4864,7 +4851,7 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
                         remaining = 0;
                     }
 
-                    acc_touch = acc_touch | inner_touch;
+                    acc_touch |= inner_touch;
 
                     switch (footprint_depth)
                     {
@@ -4887,16 +4874,16 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
 
                                 *out = cell1;
                                 out++;
-                                acc_touch = acc_touch >> 1;
+                                acc_touch >>= 1;
                                 bits_left--;
-                                acc_solid = acc_solid >> 1;
+                                acc_solid >>= 1;
                             } while (bits_left != 0);
 
                             break;
                         case 2:
                             ring_write->solid_bits = acc_solid;
-                            *(u32*)(ring_inner - sizeof(u32)) = acc_touch;
-                            ring_inner += sizeof(FieldCollisionDilationMasks);
+                            ring_inner[-1] = acc_touch;
+                            ring_inner += sizeof(FieldCollisionDilationMasks) / sizeof(u32);
                             ring_write++;
 
                             if (row != 0)
@@ -4904,8 +4891,8 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
                                 prev_touch = ring_read->touch_bits;
                                 prev_solid = ring_read->solid_bits;
                                 ring_read++;
-                                acc_touch = acc_touch | prev_touch;
-                                acc_solid = acc_solid | prev_solid;
+                                acc_touch |= prev_touch;
+                                acc_solid |= prev_solid;
 
                                 do
                                 {
@@ -4925,18 +4912,18 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
 
                                     *out = cell2;
                                     out++;
-                                    acc_touch = acc_touch >> 1;
+                                    acc_touch >>= 1;
                                     bits_left--;
-                                    acc_solid = acc_solid >> 1;
+                                    acc_solid >>= 1;
                                 } while (bits_left != 0);
                             }
 
                             break;
                         default:
                             ring_write->solid_bits = acc_solid;
-                            *(u32*)(ring_inner - sizeof(u32)) = acc_touch;
-                            *(u32*)ring_inner = inner_touch;
-                            ring_inner += sizeof(FieldCollisionDilationMasks);
+                            ring_inner[-1] = acc_touch;
+                            *ring_inner = inner_touch;
+                            ring_inner += sizeof(FieldCollisionDilationMasks) / sizeof(u32);
                             ring_write++;
 
                             if (row >= (footprint_depth - 1))
@@ -4944,7 +4931,7 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
                                 do
                                 {
                                     ring_scan = (FieldCollisionDilationMasks*)((u8*)ring_read + ring_row_bytes);
-                                    acc_touch = acc_touch | ring_read->touch_bits;
+                                    acc_touch |= ring_read->touch_bits;
                                     acc_solid |= ring_read->solid_bits;
 
                                     if (ring_scan >= ring_end)
@@ -4992,9 +4979,9 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
 
                                     *out = cell;
                                     out++;
-                                    acc_touch = acc_touch >> 1;
+                                    acc_touch >>= 1;
                                     bits_left--;
-                                    acc_solid = acc_solid >> 1;
+                                    acc_solid >>= 1;
                                 } while (bits_left != 0);
                             }
 
@@ -5021,7 +5008,7 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
 
                                 do
                                 {
-                                    shift_touch = shift_touch >> 2;
+                                    shift_touch >>= 2;
                                     count--;
                                     inner_touch |= shift_touch;
                                 } while (count != -1);
@@ -5037,7 +5024,7 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
 
                                 do
                                 {
-                                    shift_solid = shift_solid >> 2;
+                                    shift_solid >>= 2;
                                     count--;
                                     acc_solid |= shift_solid;
                                 } while (count != -1);
@@ -5089,8 +5076,7 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
                                 break;
                             case 4:
                                 inner_touch = (carry_touch >> 29) | (carry_touch >> 30) | (carry_touch >> 31);
-                                acc_touch = carry_touch;
-                                acc_touch >>= 28;
+                                acc_touch = carry_touch >> 28;
                                 shift_solid = (carry_solid >> 28) | (carry_solid >> 29);
                                 acc_solid = shift_solid | (shift_solid >> 2);
 
@@ -6734,7 +6720,7 @@ static s32 field_collision_trace_line(FieldCollisionTraceRequest* request)
     u32 tile_value;
     u8 stamp;
 
-    tile_base = (u8*)request->tile_base;
+    tile_base = request->tile_base;
     x_cell = request->start_x;
     delta_x = request->end_x - x_cell;
     z_cell = request->start_z;
@@ -7065,7 +7051,7 @@ static void field_collision_slope_scale_move(FieldCollisionSurfaceDef* surface, 
     dy = vertex_b[1] - vertex_c[1];
     dz = surface->height1 - surface->height0;
     dx = dx * dx + dy * dy;
-    dz = dz * dz;
+    dz *= dz;
     horizontal_length = SquareRoot0(dx);
     surface_length = SquareRoot0(dx + dz);
     horizontal_length -= horizontal_length >> 4;
