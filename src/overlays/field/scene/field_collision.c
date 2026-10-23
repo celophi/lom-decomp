@@ -3615,6 +3615,7 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
     u32 j;
     s32 prev_count;
     FieldCollisionSpanRun* runs_base;
+    FieldCollisionSpanRun* run;
     u32* out;
     u32 cur_count;
     u32 acc_count;
@@ -3974,13 +3975,15 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
 
                         for (k = run_count - 1; k != countdown_end; k--)
                         {
-                            if (runs_base[k].skip == 0)
+                            run = &runs_base[k];
+
+                            if (run->skip == 0)
                             {
                                 do
                                 {
-                                    src = runs_base[k].src;
-                                    n = runs_base[k].step;
-                                    runs_base[k].count--;
+                                    src = run->src;
+                                    n = run->step;
+                                    run->count--;
                                     n--;
                                 } while (0);
 
@@ -4040,25 +4043,25 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
                                     }
                                 }
 
-                                if (runs_base[k].count == 0)
+                                if (run->count == 0)
                                 {
                                     run_count--;
 
                                     if (k != run_count)
                                     {
-                                        runs_base[k].src = runs_base[run_count].src;
-                                        runs_base[k].count = runs_base[run_count].count;
-                                        runs_base[k].step = runs_base[run_count].step;
+                                        run->src = runs_base[run_count].src;
+                                        run->count = runs_base[run_count].count;
+                                        run->step = runs_base[run_count].step;
                                     }
                                 }
                                 else
                                 {
-                                    runs_base[k].src = src;
+                                    run->src = src;
                                 }
                             }
                             else
                             {
-                                runs_base[k].skip--;
+                                run->skip--;
                             }
                         }
 
