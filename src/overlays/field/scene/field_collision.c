@@ -824,7 +824,6 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
     s16 x_start;
     s16 x_end;
     s32 floor_candidate;
-    s32 z_end_raw;
     s16 push_min_x;
     s16 push_max_x;
     s32 surface_floor;
@@ -866,7 +865,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
     s32 old_move_height;
     s16 node_height16;
     s32 touch_cell_x;
-    s32 floor_fixed_candidate;
+    s32 depth;
     s32 sweep_rise;
     s32 steps_taken;
     s32 offset_min_x;
@@ -1313,8 +1312,8 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
             x_end = x_start + width;
             z_start = FIELD_COLLISION_CELL(mover->z + mover->move_z * (step_count - step) / step_count) - (s16)mover->mode.mode_flags / 2;
             header = scene->header;
-            z_end_raw = z_start + (u16)mover->mode.mode_flags;
-            z_end = z_end_raw;
+            depth = (u16)mover->mode.mode_flags;
+            z_end = z_start + depth;
 
             if (header->flags & FIELD_SCENE_HEADER_BOUNDED)
             {
@@ -1567,8 +1566,8 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                 step_count = touch_count;
                 push_z = 0;
                 header = scene->header;
-                z_end_raw = z_start + (u16)mover->mode.mode_flags;
-                z_end = z_end_raw;
+                depth = (u16)mover->mode.mode_flags;
+                z_end = z_start + depth;
 
                 if (header->flags & FIELD_SCENE_HEADER_BOUNDED)
                 {
@@ -1962,11 +1961,11 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                     {
                         if (hit != 0)
                         {
-                            floor_fixed_candidate = -(touch_height_raw + (surface->height0 << 8));
+                            depth = -(touch_height_raw + (surface->height0 << 8));
 
-                            if (floor_fixed_candidate < mover->resolved_height)
+                            if (depth < mover->resolved_height)
                             {
-                                mover->resolved_height = floor_fixed_candidate;
+                                mover->resolved_height = depth;
                                 node = nodes;
                             }
                         }
@@ -3654,7 +3653,6 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
     s16 base;
     u16 id;
     s32 signed_id;
-    u16 swap_key;
     s16 x0;
     s16 x1;
 
@@ -3707,10 +3705,10 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
             {
                 if ((s16)base < list[k].key)
                 {
-                    swap_key = list[k].key;
+                    x0 = list[k].key;
                     list[k].key = base;
-                    base = swap_key;
-                    list[i].key = swap_key;
+                    base = x0;
+                    list[i].key = x0;
                     node = list[k].node;
                     list[k].node = list[i].node;
                     list[i].node = node;
@@ -4071,10 +4069,7 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
                         {
                             n = k - 1;
 
-                            do
-                            {
-                                x0 = span->x.x0;
-                            } while (0);
+                            x0 = span->x.x0;
 
                             x1 = span->x.x1;
                             other = span + 1;
