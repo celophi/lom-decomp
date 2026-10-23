@@ -960,8 +960,8 @@ struct FieldNode
     u16* spans;
     /** 0x14 per-row edge attribute bytes, two per span (FieldCollisionNode::span_flags). */
     u8* span_flags;
-    /** 0x18 when zero the node is skipped by the group scan in field_collision_collect_groups. */
-    u8 unk18;
+    /** 0x18 zero when the node takes no part in collision or the group scan. */
+    u8 active;
     u8 _pad2[0x1C - 0x19];
     /** 0x1C smallest point x of the definition's runs. */
     s16 x_min;

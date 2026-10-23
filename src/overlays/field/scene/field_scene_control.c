@@ -1549,7 +1549,7 @@ void field_set_node_enabled(s32 index, s32 enabled)
     {
         node = node->next;
     }
-    node->unk18 = enabled;
+    node->active = enabled;
     if (scene->group_work != 0)
     {
         field_collision_rasterize_groups(0, node);
