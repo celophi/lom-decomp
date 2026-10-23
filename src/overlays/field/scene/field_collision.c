@@ -821,15 +821,14 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
     s32 row_start;
     s16 bias;
     s16 span_max_x;
-    s32 x_start;
+    s16 x_start;
     s16 x_end;
     s32 floor_candidate;
     s32 z_end_raw;
     s16 push_min_x;
     s16 push_max_x;
-    s32 floor_candidate_b;
+    s32 surface_floor;
     s32 first_floor;
-    s32 first_floor_b;
     s32 footprint_w;
     s32 move_x;
     s32 z_start;
@@ -995,11 +994,11 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                                             }
                                             else
                                             {
-                                                first_floor_b = surface->height0 + node_height16;
+                                                surface_floor = surface->height0 + node_height16;
 
-                                                if (first_floor_b >= floor_height)
+                                                if (surface_floor >= floor_height)
                                                 {
-                                                    floor_height = first_floor_b;
+                                                    floor_height = surface_floor;
                                                     mover->collision_node = node;
                                                 }
                                             }
@@ -1324,7 +1323,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                     slide_angle = field_collision_slide_angle(NULL, FIELD_COLLISION_EDGE_WALL_X, move_angle, slide_angle);
                 }
 
-                if (((s16)x_start < 0) || (x_end >= scene->header->map_width))
+                if ((x_start < 0) || (x_end >= scene->header->map_width))
                 {
                     slide_angle = field_collision_slide_angle(NULL, FIELD_COLLISION_EDGE_WALL_Z, move_angle, slide_angle);
                 }
@@ -1338,7 +1337,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
 
             if (remaining != -1)
             {
-                box_x_start = (s16)x_start;
+                box_x_start = x_start;
                 box_z_start = (s16)z_start;
                 box_z_end = z_end;
                 box_z_last = z_end - 1;
@@ -1560,7 +1559,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                 x_start = FIELD_COLLISION_CELL(mover->x + delta_x) - half_width;
 
                 width = (u16)mover->footprint_width;
-                x_end = (s16)x_start + width;
+                x_end = x_start + width;
                 z_start = FIELD_COLLISION_CELL(mover->z + delta_z) - (s16)mover->mode.mode_flags / 2;
                 touch_iter = FIELD_COLLISION_TOUCH_LIST;
                 hit = 0;
@@ -1587,9 +1586,9 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                         }
                     }
 
-                    if ((s16)x_start < 0)
+                    if (x_start < 0)
                     {
-                        push_x = -(s16)x_start;
+                        push_x = -x_start;
                         hit = 1;
                     }
                     else
@@ -1607,7 +1606,7 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                 if (step_count != -1)
                 {
                     push_x_end = x_end;
-                    push_x_start = (s16)x_start;
+                    push_x_start = x_start;
                     push_z_start = (s16)z_start;
                     push_z_end = z_end;
                     push_z_last = push_z_end - 1;
@@ -1990,11 +1989,11 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
                         }
                         else
                         {
-                            floor_candidate_b = surface->height0 + touch_height;
+                            surface_floor = surface->height0 + touch_height;
 
-                            if (floor_candidate_b >= floor_height)
+                            if (surface_floor >= floor_height)
                             {
-                                floor_height = floor_candidate_b;
+                                floor_height = surface_floor;
                                 floor_fixed = nodes->height0_offset + (surface->height0 << 8);
 
                                 if (hit != 0)
@@ -2742,7 +2741,6 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
     s32 open;
     s32 closing_open;
     u32 prev_open;
-    u16 w;
     u16 y0;
     u16 ybase;
     s16 dx;
@@ -2767,7 +2765,6 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
     flags = (FieldCollisionRasterSpanFlags*)(*alloc + (count * (capacity << 2)));
     *alloc = *alloc + (((count * ((capacity << 1) + capacity)) + 2) & ~3);
 
-    w = capacity;
     cp = counts;
 
     for (count = rows; count != -1; count--)
@@ -2826,8 +2823,8 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                 }
 
                 cp = &counts[row];
-                sp_row = &spans[row * w];
-                fl_row = &flags[row * w];
+                sp_row = &spans[row * capacity];
+                fl_row = &flags[row * capacity];
 
                 if ((s16)dy != 0)
                 {
@@ -2903,8 +2900,8 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                             cp += ystep;
                             row += ystep;
                             err -= dx * 2;
-                            sp_row += ystep * w;
-                            fl_row += ystep * w;
+                            sp_row += ystep * capacity;
+                            fl_row += ystep * capacity;
                         }
                     }
                     else
@@ -2938,8 +2935,8 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                                 *cp = n + 1;
                             }
 
-                            sp_row += ystep * w;
-                            fl_row += ystep * w;
+                            sp_row += ystep * capacity;
+                            fl_row += ystep * capacity;
                             cp += ystep;
                             row += ystep;
                             err += dx * 2;
@@ -3035,8 +3032,8 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
     }
 
     cp = &counts[row];
-    sp_row = &spans[row * w];
-    fl_row = &flags[row * w];
+    sp_row = &spans[row * capacity];
+    fl_row = &flags[row * capacity];
 
     if ((s16)dy != 0)
     {
@@ -3129,9 +3126,9 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
 
                 cp += ystep;
                 err -= dx * 2;
-                sp_row += ystep * w;
+                sp_row += ystep * capacity;
                 row += ystep;
-                fl_row += ystep * w;
+                fl_row += ystep * capacity;
             }
         }
         else
@@ -3194,8 +3191,8 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                     *cp = n + 1;
                 }
 
-                sp_row += ystep * w;
-                fl_row += ystep * w;
+                sp_row += ystep * capacity;
+                fl_row += ystep * capacity;
                 cp += ystep;
                 row += ystep;
                 err += dx * 2;
@@ -3237,7 +3234,6 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
     }
 
     /* Phase 2: sp_row / fl_row become the output cursors. */
-    capacity = w;
     sp_row = spans;
     fl_row = flags;
     save_flags = flags;
@@ -3322,7 +3318,7 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
         counts++;
     }
 
-    count = w * (((node->max_z - node->min_z) + 2) / 2);
+    count = capacity * (((node->max_z - node->min_z) + 2) / 2);
     fl_row = save_flags;
     flags = (FieldCollisionRasterSpanFlags*)node->span_flags;
 
@@ -4960,7 +4956,7 @@ static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCol
     s32 row_start;
     s32 ncol;
     s32 nrow;
-    s32 cols;
+    s32 size;
     s32 rows;
     s32 col;
     s32 n;
@@ -5030,15 +5026,13 @@ static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCol
     row_shift = col_shift + 1;
     row_start = (top >> row_shift) + FIELD_COLLISION_PATH_TILE_MARGIN;
     col_mask = tile - 1;
-    ncol = (((left & col_mask) + (s16)margins->width + ((s16)query->width) + col_mask) - 1) >> col_shift;
+    size = margins->width;
+    ncol = (((left & col_mask) + (s16)size + ((s16)query->width) + col_mask) - 1) >> col_shift;
     row_mask = (tile * 2) - 1;
-    nrow = (((top & row_mask) + (s16)margins->depth + ((s16)query->depth) + row_mask) - 1) >> row_shift;
+    size = margins->depth;
+    nrow = (((top & row_mask) + (s16)size + ((s16)query->depth) + row_mask) - 1) >> row_shift;
 
-    do
-    {
-        cols = scene->tile_cols;
-    } while (0);
-
+    size = scene->tile_cols;
     rows = scene->tile_rows;
 
     if (col_start <= 0)
@@ -5065,13 +5059,13 @@ static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCol
         col_start = 1;
     }
 
-    if ((col_start >= cols - 1) || (row_start >= rows - 1))
+    if ((col_start >= size - 1) || (row_start >= rows - 1))
     {
         return -2;
     }
 
     top = scene->group_tile_count * group;
-    row_base = scene->group_tiles + top + (cols * row_start) + col_start;
+    row_base = scene->group_tiles + top + (size * row_start) + col_start;
 
     for (nrow--; nrow != -1; nrow--)
     {
@@ -5086,7 +5080,7 @@ static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCol
 
         for (n = ncol - 1; n != -1; n--)
         {
-            if (col >= cols - 1)
+            if (col >= size - 1)
             {
                 break;
             }
