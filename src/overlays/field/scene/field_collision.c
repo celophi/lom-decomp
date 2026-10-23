@@ -4152,14 +4152,11 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
 
                 if (run_count != 0)
                 {
-                    i = tile2 - 1;
-
-                    while (i != countdown_end)
+                    for (i = tile2 - 1; i != countdown_end; i--)
                     {
-                        k = run_count - 1;
                         cur_count = 0;
 
-                        while (k != countdown_end)
+                        for (k = run_count - 1; k != countdown_end; k--)
                         {
                             if (runs_base[k].skip == 0)
                             {
@@ -4247,14 +4244,11 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
                             {
                                 runs_base[k].skip--;
                             }
-
-                            k--;
                         }
 
-                        k = cur_count - 1;
                         span = cur;
 
-                        while (k != countdown_end)
+                        for (k = cur_count - 1; k != countdown_end; k--)
                         {
                             n = k - 1;
 
@@ -4315,7 +4309,6 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
                             }
 
                             span++;
-                            k--;
                         }
 
                         if (i == (tile2 - 1))
@@ -4465,8 +4458,6 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
 
                             prev_count = work;
                         }
-
-                        i--;
                     }
 
                     prev = (FieldCollisionRasterSpan*)(FIELD_COLLISION_SCRATCH + FIELD_COLLISION_RASTER_ROW_BYTES);
@@ -4507,10 +4498,9 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
                         }
                     }
 
-                    i = acc_count - 1;
                     other = acc;
 
-                    while (i != countdown_end)
+                    for (i = acc_count - 1; i != countdown_end; i--, other++)
                     {
                         lead = (other->x.x0 >> shift0) + 2;
                         tail = (other->x.x1 >> shift0) + 2;
@@ -4540,9 +4530,6 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
                         {
                             wq[1] |= work & tail_mask;
                         }
-
-                        i--;
-                        other++;
                     }
                 }
             }
