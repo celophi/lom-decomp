@@ -107,10 +107,9 @@
         }                                                                                                                                                      \
     }
 
-/** PSX scratchpad RAM, used as row work buffers by the rasterisers. */
 #define FIELD_COLLISION_SCRATCH SCRATCHPAD_ADDRESS
 
-/** @brief Fixed RAM list of the nodes that block a probe, filled by field_collision_classify_nodes. */
+/** @brief Fixed RAM list of the nodes that block a probe. */
 #define FIELD_COLLISION_HIT_LIST ((FieldCollisionNodeEntry*)COLLISION_LISTS_ADDRESS)
 
 /** @brief Fixed RAM list of the nodes a probe touches without being blocked. */
@@ -123,11 +122,8 @@
  */
 #define FIELD_COLLISION_CELL(v) (((v) >= 0) ? ((v) >> 8) : (((v) + 0xFF) >> 8))
 
-/** Mask of the surface-kind bits in FieldCollisionSurfaceDef::flags. */
 #define FIELD_COLLISION_KIND_MASK 0x3
-/** Surface kind: flat floor at FieldCollisionSurfaceDef::height0. */
 #define FIELD_COLLISION_KIND_FLAT 0
-/** Surface kind: slope sampled with field_collision_slope_height. */
 #define FIELD_COLLISION_KIND_SLOPE 1
 /** Surface flag: the per-span edge bytes carry FIELD_COLLISION_EDGE_OPEN bits. */
 #define FIELD_COLLISION_SURFACE_EDGE_FLAGS 0x8
@@ -136,36 +132,27 @@
 /** Surface flag: standing on the surface reports FIELD_COLLISION_RESULT_CARRIED. */
 #define FIELD_COLLISION_SURFACE_CARRY 0x40
 
-/** Span edge byte: the edge is open (no wall) on this side. */
 #define FIELD_COLLISION_EDGE_OPEN 0x80
-/** Span edge byte: mask of the node edge index passed to field_collision_slide_angle. */
 #define FIELD_COLLISION_EDGE_INDEX 0x7F
-/** field_collision_slide_angle edge index for a wall running along the x axis. */
 #define FIELD_COLLISION_EDGE_WALL_X 0x7F
-/** field_collision_slide_angle edge index for a wall running along the z axis. */
 #define FIELD_COLLISION_EDGE_WALL_Z 0x7E
 
-/** field_collision_slide_angle slide angle: no wall seen yet. */
 #define FIELD_COLLISION_SLIDE_NONE (-2)
 
 /** Floors this much higher than the current best win the floor search. */
 #define FIELD_COLLISION_FLOOR_MARGIN 20
 
-/** Starting value of the lowest-ceiling search: above every node top. */
 #define FIELD_COLLISION_NO_CEILING 0xFFFFFF
 
 /** Push-out accumulator value meaning pushes in both directions cancelled out. */
 #define FIELD_COLLISION_PUSH_BLOCKED 0x8000
 
-/** field_collision_classify_nodes class bit: the footprint overlaps the node and may stand on it. */
 #define FIELD_COLLISION_CLASS_TOUCH 0x1
-/** field_collision_classify_nodes class bit: the node blocks the footprint (wall or too-high floor). */
 #define FIELD_COLLISION_CLASS_BLOCK 0x2
 
 /** Surface flag: the node blocks any mover whose step limit is below its top. */
 #define FIELD_COLLISION_SURFACE_SOLID 0x4
 
-/** A grounded mover can step onto floors up to this much above its feet. */
 #define FIELD_COLLISION_STEP_UP 16
 
 /** field_collision_slide_angle: a slide turning this far (about 100 degrees) from the move is blocked. */
@@ -175,7 +162,6 @@
 #define FIELD_COLLISION_RUN_OPEN 0x8000
 /** Padding raster span (x0 0x7F00 > x1 -0x8000, so it covers nothing). */
 #define FIELD_COLLISION_RASTER_EMPTY_SPAN 0x80007F00
-/** Padding value for both edge bytes of an unused raster span. */
 #define FIELD_COLLISION_RASTER_EMPTY_FLAGS 0xFFFF
 
 /** Most distinct group ids field_collision_collect_groups collects while scanning. */
@@ -185,18 +171,14 @@
 /** Estimated 4-pixel tile total above which 8-pixel tiles are used. */
 #define FIELD_COLLISION_GROUP_TILE_BUDGET 16384
 
-/** Surface kinds contributing to a collected floor height. */
 #define FIELD_COLLISION_GROUP_SEEN_FLAT 0x1
 #define FIELD_COLLISION_GROUP_SEEN_SLOPE 0x2
 /** Fine collision tiles are 4 pixels wide and twice as deep. */
 #define FIELD_COLLISION_GROUP_FINE_TILE_SIZE 4
 #define FIELD_COLLISION_GROUP_FINE_TILE_SHIFT 2
-/** Coarse collision tiles halve the map dimensions. */
 #define FIELD_COLLISION_GROUP_COARSE_TILE_SIZE 8
 #define FIELD_COLLISION_GROUP_COARSE_TILE_SHIFT 3
-/** Extra tile columns and rows surrounding a collision map. */
 #define FIELD_COLLISION_GROUP_TILE_PADDING 4
-/** Tile columns represented by one bitmask word. */
 #define FIELD_COLLISION_GROUP_WORD_BITS 32
 #define FIELD_COLLISION_GROUP_WORD_SHIFT 5
 #define FIELD_COLLISION_GROUP_WORD_MASK (FIELD_COLLISION_GROUP_WORD_BITS - 1)
@@ -213,19 +195,16 @@
 /** Span list overflow while building the union. */
 #define FIELD_COLLISION_GROUP_ERROR_UNION 5
 
-/** Most active nodes field_collision_rasterize_groups can rasterise. */
 #define FIELD_COLLISION_RASTER_NODE_MAX 50
-/** Capacity of each field_collision_rasterize_groups span list. */
 #define FIELD_COLLISION_RASTER_SPAN_MAX 128
 /** Bytes of one scratchpad span list; the two halves ping-pong between sub-rows. */
 #define FIELD_COLLISION_RASTER_ROW_BYTES 512
 
 /**
- * @brief Fill @p remaining bytes at @p out with 0xFF (blocked), word-aligned in the middle.
+ * @brief Fill @p remaining bytes at @p out with FIELD_COLLISION_TILE_BLOCKED.
  * @param out Byte cursor; advanced past the filled run.
  * @param count Scratch counter.
  * @param remaining Byte count; consumed.
- * @note An open-coded memset: byte head up to word alignment, word body, byte tail.
  */
 #define FIELD_COLLISION_FILL_BLOCKED(out, count, remaining)                                                                                                    \
     {                                                                                                                                                          \
@@ -257,9 +236,7 @@
     }
 
 /*
- * Group tile-map byte values seen by the path search (field_collision_find_path). 0 and 1
- * come from field_collision_dilate_tiles (free / near a wall), 0xFE from field_collision_mark_footprint and
- * 0xFF from the dilation. The search writes wave stamps counting down from
+ * Group tile-map byte values. The path search writes wave stamps counting down from
  * FIELD_COLLISION_TILE_STAMP_FIRST, so a larger stamp is closer to the start.
  */
 #define FIELD_COLLISION_TILE_FREE 0
@@ -269,13 +246,11 @@
 #define FIELD_COLLISION_TILE_TOUCHED 1
 /** Lowest wave stamp; values below it are unvisited floor. */
 #define FIELD_COLLISION_TILE_STAMP_MIN 4
-/** Stamp of the first wave around the start tile. */
 #define FIELD_COLLISION_TILE_STAMP_FIRST 0xFA
 #define FIELD_COLLISION_TILE_START 0xFB
 #define FIELD_COLLISION_TILE_GOAL 0xFC
 /** Touched tile already queued in the deferred ring. */
 #define FIELD_COLLISION_TILE_DEFERRED 0xFD
-/** Footprint tile marked by field_collision_mark_footprint. */
 #define FIELD_COLLISION_TILE_MARKED 0xFE
 
 /*
@@ -285,31 +260,20 @@
  */
 /** Mask that turns a queue entry back into its tile address. */
 #define FIELD_COLLISION_PATH_TILE_MASK 0x801FFFFF
-/** Bit position of the direction mask in a queue entry. */
 #define FIELD_COLLISION_PATH_DIR_SHIFT 21
-/** Direction mask bits placed in a queue entry. */
 #define FIELD_COLLISION_PATH_DIRS(dirs) ((dirs) << FIELD_COLLISION_PATH_DIR_SHIFT)
-/** Up-left neighbour (tile - columns - 1). */
 #define FIELD_COLLISION_DIR_UL 0x01
-/** Up neighbour (tile - columns). */
 #define FIELD_COLLISION_DIR_UP 0x02
-/** Up-right neighbour (tile - columns + 1). */
 #define FIELD_COLLISION_DIR_UR 0x04
-/** Left neighbour (tile - 1). */
 #define FIELD_COLLISION_DIR_LEFT 0x08
-/** Right neighbour (tile + 1). */
 #define FIELD_COLLISION_DIR_RIGHT 0x10
-/** Down-left neighbour (tile + columns - 1). */
 #define FIELD_COLLISION_DIR_DL 0x20
-/** Down neighbour (tile + columns). */
 #define FIELD_COLLISION_DIR_DOWN 0x40
-/** Down-right neighbour (tile + columns + 1). */
 #define FIELD_COLLISION_DIR_DR 0x80
 #define FIELD_COLLISION_DIRS_TOP (FIELD_COLLISION_DIR_UL | FIELD_COLLISION_DIR_UP | FIELD_COLLISION_DIR_UR)
 #define FIELD_COLLISION_DIRS_BOTTOM (FIELD_COLLISION_DIR_DL | FIELD_COLLISION_DIR_DOWN | FIELD_COLLISION_DIR_DR)
 #define FIELD_COLLISION_DIRS_LEFT (FIELD_COLLISION_DIR_UL | FIELD_COLLISION_DIR_LEFT | FIELD_COLLISION_DIR_DL)
 #define FIELD_COLLISION_DIRS_RIGHT (FIELD_COLLISION_DIR_UR | FIELD_COLLISION_DIR_RIGHT | FIELD_COLLISION_DIR_DR)
-/** All eight neighbours (the start entry). */
 #define FIELD_COLLISION_DIRS_ALL 0xFF
 /** Entry sits on a touched tile: it only expands into unvisited floor. */
 #define FIELD_COLLISION_DIR_SLOW 0x100
@@ -317,8 +281,8 @@
 #define FIELD_COLLISION_DIR_DEFERRED 0x200
 /** A direction taken into a touched tile, kept in the high byte of the used-direction mask. */
 #define FIELD_COLLISION_DIR_TOUCHED(dir) ((dir) << 8)
-/** Entries per path bucket (and per path output column). */
 #define FIELD_COLLISION_PATH_BUCKET_LEN 1024
+
 /**
  * @brief Test whether the current wave may claim a neighbour tile.
  * @param val Neighbour tile value.
@@ -330,7 +294,7 @@
 
 /**
  * @brief Test whether a diagonal step may cut the corner between two side tiles.
- * @param ok Set to 1 when both side tiles are open and of the same kind (both touched or deferred, or both plain floor), else 0.
+ * @param ok Set to 1 when both side tiles are open and of the same kind, else 0.
  * @param side Scratch for the side tile values.
  * @param first First side tile value.
  * @param second Second side tile value.
@@ -362,16 +326,12 @@
 
 /** Push limit checked per pop: one pop pushes at most eight entries. */
 #define FIELD_COLLISION_PATH_PUSH_LIMIT (FIELD_COLLISION_PATH_BUCKET_LEN - 7)
-/** Most path points written to the caller. */
 #define FIELD_COLLISION_PATH_OUT_MAX 16
 
-/** field_collision_find_path failure: the group tile maps failed to build. */
 #define FIELD_COLLISION_PATH_ERROR_GROUPS (-1)
-/** field_collision_find_path failure: start or goal lies outside the tile map. */
 #define FIELD_COLLISION_PATH_ERROR_BOUNDS (-2)
 /** field_collision_find_path failure: the search ran out of waves or queue entries. */
 #define FIELD_COLLISION_PATH_ERROR_NO_ROUTE (-3)
-/** field_collision_find_path failure: a queue or the path buffer overflowed. */
 #define FIELD_COLLISION_PATH_ERROR_OVERFLOW (-4)
 /** field_collision_find_path failure: the walk back from the goal found no higher stamp. */
 #define FIELD_COLLISION_PATH_ERROR_DEAD_END (-5)
@@ -385,17 +345,12 @@ typedef struct FieldCollisionSpan
 
 /**
  * @brief One run of consecutive boundary points in a node's edge list.
- *
- * The list is FieldCollisionSurfaceDef::runs and is terminated by a record whose
- * count is zero. A run's points are consecutive entries of
- * g_field_node_angle_table starting at @c index, so only the first index is
- * stored.
+ * @note The list ends with a zero-count run; a run's points are consecutive g_field_node_angle_table entries.
  */
 typedef struct FieldCollisionEdgeRun
 {
-    /** Number of points in this run; only the low 15 bits are the count. */
+    /** Only the low 15 bits are the count. */
     u16 count;
-    /** Angle-table index of the run's first point. */
     u16 index;
 } FieldCollisionEdgeRun;
 
@@ -409,17 +364,13 @@ typedef struct FieldCollisionSurfaceDef
     /** Low byte: surface kind in bits 0-1 plus attribute bits; byte 2: spans per row. */
     s32 flags;
     u8 pad8[2];
-    /** Index of the node's third boundary point (C) in g_field_node_angle_table. */
+    /** Indices of the boundary points C, B and A in g_field_node_angle_table. */
     u16 vertex_c;
-    /** Index of the node's second boundary point (B). */
     u16 vertex_b;
-    /** Index of the node's first boundary point (A). */
     u16 vertex_a;
-    /** Surface height at C, before the node's height offset. */
+    /** Surface heights at C and B, before the node's height offsets. */
     s16 height0;
-    /** Surface height at B. */
     s16 height1;
-    /** Height of the top of the node's solid volume. */
     s16 top;
     u8 pad16[2];
     /** Edge-run list; @c runs[0].index doubles as the closing point. */
@@ -434,27 +385,24 @@ typedef struct FieldCollisionNode
 {
     struct FieldCollisionNode* next;
     FieldCollisionSurfaceDef* surface;
-    /** Owning object and part (FieldNode::obj, FieldNode::part); unused by collision. */
+    /** Unused by collision. */
     void* owner_object;
     void* owner_part;
-    /** Per-row span table: (min_x, max_x) pairs, field_collision_surface_spans per row. */
     FieldCollisionSpan* spans;
-    /** Per-row edge attribute bytes, two per span (left end, right end). */
+    /** Two edge bytes per span: left end, then right end. */
     u8* span_flags;
-    /** Zero when the node takes no part in collision. */
     u8 active;
     u8 pad19[3];
     s16 min_x;
     s16 max_x;
     s16 max_z;
     s16 min_z;
-    /** Movement this frame (24.8), carried onto a mover standing on the node: x, the
-        height of each end, and z. The two heights differ while a sweep tilts the node. */
+    /** Movement this frame, 24.8; the two heights differ while a sweep tilts the node. */
     s32 motion_x;
     s32 motion_height0;
     s32 motion_height1;
     s32 motion_z;
-    /** World placement (24.8): x, the height added to each end of the surface, and z. */
+    /** World placement, 24.8. */
     s32 offset_x;
     s32 height0_offset;
     s32 height1_offset;
@@ -467,37 +415,25 @@ typedef struct FieldCollisionNodeEntry
     FieldCollisionNode* node;
 } FieldCollisionNodeEntry;
 
-/** @brief Footprint probe handed to field_collision_classify_nodes (cell position plus height window). */
+/** @brief Footprint probe for field_collision_classify_nodes, at a cell position. */
 typedef struct FieldCollisionMoveProbe
 {
-    /** Mover whose footprint and height bias are tested. */
     FieldCollisionMover* mover;
-    /** Footprint centre x, in cells. */
     s32 x;
-    /** Footprint centre z, in cells. */
     s32 z;
-    /** Feet height after the move (whole units). */
-    s16 w;
-    /** Step-up limit: feet height before the move plus the height bias. */
-    s16 h;
+    s16 feet;
+    /** Feet height before the move plus the height bias. */
+    s16 step_limit;
 } FieldCollisionMoveProbe;
 
-/**
- * @brief One boundary point of a collision node, as stored in
- *        g_field_node_angle_table.
- * @note Both fields are read unsigned by field_collision_rasterize_node, unlike the signed
- *       FieldCollisionSpan pairs at FieldCollisionNode::spans.
- */
+/** @brief One boundary point of a collision node in g_field_node_angle_table. */
 typedef struct FieldCollisionEdgePoint
 {
     u16 x;
-    /** Z coordinate (row before FieldCollisionNode::min_z is subtracted). */
     u16 z;
 } FieldCollisionEdgePoint;
 
-/**
- * @brief One horizontal span on a scanline: the inclusive x range it covers.
- */
+/** @brief One horizontal span on a scanline: the inclusive x range it covers. */
 typedef union FieldCollisionRasterSpan
 {
     struct
@@ -516,10 +452,8 @@ typedef union FieldCollisionRasterSpanFlags
 {
     struct
     {
-        /** Attribute of the span's left (x0) end. */
-        u8 f0;
-        /** Attribute of the span's right (x1) end. */
-        u8 f1;
+        u8 left;
+        u8 right;
     } f;
     u16 half;
 } FieldCollisionRasterSpanFlags;
@@ -534,19 +468,16 @@ typedef struct
     s16 kinds;
 } FieldGroupEntry;
 
-/**
- * @brief One entry of field_collision_rasterize_groups's scratch list of active nodes.
- */
+/** @brief One entry of field_collision_rasterize_groups's scratch list of active nodes. */
 typedef struct
 {
     FieldNode* node;
-    /** Sort key: the node's @c row_start, ascending. */
     s16 key;
     s16 pad;
 } FieldCollisionRasterNode;
 
 /**
- * @brief One ring entry of field_collision_dilate_tiles: 32 tile columns of one row after the horizontal spread.
+ * @brief One ring entry of field_collision_dilate_tiles: 32 tile columns of one row.
  * @note @c interior_touch_bits are touch bits away from the footprint edge; they count as blocked in the middle rows.
  */
 typedef struct
@@ -558,7 +489,6 @@ typedef struct
 
 /**
  * @brief One node's in-progress walk over its span table.
- *
  * @note @c skip counts sub-rows before the node starts contributing.
  */
 typedef struct
@@ -570,7 +500,6 @@ typedef struct
     s16 pad;
 } FieldCollisionSpanRun;
 
-/** Fractional bits in the world-space coordinates returned by the route search. */
 #define FIELD_COLLISION_PATH_WORLD_SHIFT 8
 /** Padding between a group's tile-map origin and its playable cells. */
 #define FIELD_COLLISION_PATH_TILE_MARGIN 2
@@ -632,7 +561,7 @@ typedef struct
     s32 footprint_width;
     s32 footprint_depth;
     s32 tile_size;
-    /** Tile column shift (log2 of the tile size); field_collision_trace_line does not read it. */
+    /** log2 of the tile size; field_collision_trace_line does not read it. */
     s32 col_shift;
     s32 mode;
     u8 stamp;
@@ -730,14 +659,9 @@ static inline s32 field_collision_tile_is_step(u32 v)
 }
 
 /**
- * @brief Hit-test a probe footprint against the scene's marker volumes.
- *
- * Each FieldMarker is a quadrilateral (two pairs of parallel edges) with a
- * vertical band taken from its definition. The probe box must overlap the
- * band, the marker's bounding box, and the strip between each edge pair.
- *
- * @param query Probe position, footprint dimensions, and vertical tolerance.
- * @return The first overlapping marker's value, or -1 when none overlaps.
+ * @brief Find the first marker volume a probe footprint overlaps.
+ * @param query Probe position, footprint and vertical tolerance.
+ * @return The overlapping marker's label, or -1 when none overlaps.
  */
 s32 field_collision_hit_markers(FieldCollisionQuery* query)
 {
@@ -856,23 +780,11 @@ s32 field_collision_hit_markers(FieldCollisionQuery* query)
 }
 
 /**
- * @brief Move a mover one frame through the field collision nodes.
- *
- * Finds the floor node under the mover (when asked to), applies the floor's
- * slope, slow and carry effects to the requested move, then sweeps the
- * footprint along the move. A blocked move is turned into a slide along the
- * nearest wall and pushed back out of any node it still overlaps; a move that
- * stays blocked is cancelled. Finally the floor under the new position sets
- * the mover's height, or for an airborne mover the ceiling and landing checks.
- *
+ * @brief Move a mover for one frame, sliding along walls and settling on the floor.
  * @param mover Mover state; position, height, floor node and flags are updated in place.
  * @return FIELD_COLLISION_RESULT_* bits, or 0 when the mover did not move.
- * @note The floor search, the blocked-move retrace and the push-out read every
- *       node's x, z and height offsets from the first node in the scene's list;
- *       node classification and the final floor pass use each node's own offsets.
- * @note In the floor search, once one node's spans contain the footprint centre,
- *       every later node whose rows cover the centre counts as under the mover too.
- *
+ * @note The floor search, the retrace and the push-out apply the first node's offsets to every node.
+ * @note The floor search does not reset its span hit between nodes.
  * @see decomp.me (100%) https://decomp.me/scratch/N2GNJ
  */
 s32 field_collision_resolve_move(FieldCollisionMover* mover)
@@ -1281,8 +1193,8 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
 
     /* Sweep the footprint along the move in steps no longer than the footprint, stopping at the first hit. */
     probe.mover = mover;
-    probe.w = next_height;
-    probe.h = step_height;
+    probe.feet = next_height;
+    probe.step_limit = step_height;
     footprint_w = (s16)mover->footprint_width;
     step = abs(mover->move_x) >> 8;
 
@@ -2226,19 +2138,11 @@ s32 field_collision_resolve_move(FieldCollisionMover* mover)
 }
 
 /**
- * @brief Classify collision nodes against a mover probe and collect blocking and touching nodes.
- *
- * A node takes part when it is active, its top lies above the probe's height
- * window, and its bounds overlap the footprint. Its span rows under the
- * footprint are then scanned: any overlap touches the node, and with
- * per-span edge bytes a closed edge inside the footprint blocks it. A touched
- * node whose floor rises more than the mover can step (nothing for an
- * airborne mover, FIELD_COLLISION_STEP_UP otherwise) blocks instead.
- *
- * @param probe Probe position, vertical extents, and owning mover.
- * @param node Head of the collision node chain.
- * @param out_hit Receives the number of blocking nodes written to FIELD_COLLISION_HIT_LIST.
- * @param out_touch Receives the number of touching nodes written to FIELD_COLLISION_TOUCH_LIST.
+ * @brief Collect the nodes a probe footprint touches or is blocked by.
+ * @param probe Probe position, height window and mover.
+ * @param node Head of the collision node list.
+ * @param out_hit Receives the number of nodes written to FIELD_COLLISION_HIT_LIST.
+ * @param out_touch Receives the number of nodes written to FIELD_COLLISION_TOUCH_LIST.
  */
 static void field_collision_classify_nodes(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32* out_hit, s32* out_touch)
 {
@@ -2279,9 +2183,9 @@ static void field_collision_classify_nodes(FieldCollisionMoveProbe* probe, Field
     {
         hit_list = FIELD_COLLISION_HIT_LIST;
         touch_list = FIELD_COLLISION_TOUCH_LIST;
-        step_limit = probe->h;
+        step_limit = probe->step_limit;
         mover = probe->mover;
-        feet = probe->w;
+        feet = probe->feet;
         depth = mover->mode.mode_flags;
         z_start = probe->z - (s16)depth / 2;
         z_end = z_start + depth;
@@ -2511,32 +2415,11 @@ static void field_collision_classify_nodes(FieldCollisionMoveProbe* probe, Field
 }
 
 /**
- * @brief Sample a collision node's surface height at a probe position.
- *
- * The node's definition names three boundary points by index into
- * g_field_node_angle_table (vertex_a, vertex_b and vertex_c, called A, B and C
- * here); each table entry is an x/y pair. The node's offset_x and offset_z,
- * both divided by 256, translate B and C into world space.
- *
- * The height is found by intersecting the C->B edge with the line that runs
- * through @p position parallel to A->B: hit_x is that intersection's x
- * coordinate, edge_offset its distance from C along the edge, and
- * edge_offset / dx_bc the fraction used to blend height0 (at C) and height1
- * (at B).
- *
- * The fraction is normally taken from the x axis. When the intersection lands
- * exactly on B's x coordinate that axis carries no usable span, so the z axis
- * is used instead; if the intersection is B itself the answer is height1 directly.
- * The blend is finally clamped back between the two endpoint heights, which is
- * spelled twice because which endpoint is the upper bound depends on their
- * order.
- *
- * @param node Collision node whose surface is being sampled.
- * @param position Probe position in grid cells: position[0] is x and position[1] is z.
- * @return Interpolated surface height, clamped between the node's endpoints.
- *
- * @note Both endpoints are clamped up to zero before use, so a node whose
- *       endpoint resolves below the origin behaves as if it sat on it.
+ * @brief Sample a slope node's surface height at a cell position.
+ * @param node Slope node to sample.
+ * @param position Cell position: position[0] is x, position[1] is z.
+ * @return Height interpolated along the node's C->B edge, clamped to the edge's end heights.
+ * @note Negative end heights are raised to zero first.
  */
 static s16 field_collision_slope_height(FieldCollisionNode* node, s32* position)
 {
@@ -2646,28 +2529,13 @@ static s16 field_collision_slope_height(FieldCollisionNode* node, s32* position)
 }
 
 /**
- * @brief Resolve the slide direction along one collision edge.
- *
- * Locates boundary edge number @p edge_index in the node's edge-run list, takes the
- * two angle-table points bounding it, and turns them into a wall angle with
- * ratan2. FIELD_COLLISION_EDGE_WALL_Z and FIELD_COLLISION_EDGE_WALL_X skip the walk
- * entirely and stand for the two screen-aligned world edges, giving a fixed angle of
- * FIELD_ANGLE_QUARTER_TURN and 0 respectively.
- *
- * The wall can be slid along in either direction, so the side whose angle sits
- * nearer @p move_angle is chosen; a tie means the movement runs straight into the wall
- * and nothing can be resolved. The chosen angle is then merged with the running
- * best @p best_angle: when both deviate from @p move_angle the same way the larger deviation
- * wins, and a deviation of FIELD_COLLISION_SLIDE_MAX_TURN or more counts as
- * blocked.
- *
- * @param surface Surface definition owning the edge list, or NULL for a world edge.
- * @param edge_index Edge index within the node, or FIELD_COLLISION_EDGE_WALL_X / FIELD_COLLISION_EDGE_WALL_Z for a world edge.
- * @param move_angle Desired movement direction, in FIELD_ANGLE_TURN units per revolution.
- * @param best_angle Slide direction resolved so far: FIELD_COLLISION_SLIDE_NONE means none
- *             yet and -1 means an earlier edge already blocked the movement.
- * @return The resolved slide direction, @p best_angle when the earlier one still
- *         wins, or -1 when the movement is blocked.
+ * @brief Pick the slide direction along a wall edge and merge it with the best so far.
+ * @param surface Surface owning the edge list, or NULL for a map-edge wall.
+ * @param edge_index Edge number in the surface, or FIELD_COLLISION_EDGE_WALL_X/_Z for a map edge.
+ * @param move_angle Movement direction, FIELD_ANGLE_TURN per revolution.
+ * @param best_angle Slide angle so far: FIELD_COLLISION_SLIDE_NONE for none, -1 when already blocked.
+ * @return The resulting slide angle, or -1 when the move is blocked.
+ * @note A slide turning FIELD_COLLISION_SLIDE_MAX_TURN or more away from the move counts as blocked.
  */
 static s32 field_collision_slide_angle(FieldCollisionSurfaceDef* surface, s32 edge_index, s32 move_angle, s32 best_angle)
 {
@@ -2837,35 +2705,9 @@ static s32 field_collision_slide_angle(FieldCollisionSurfaceDef* surface, s32 ed
 }
 
 /**
- * @brief Rasterise a collision node's outline into per-row span lists.
- *
- * Phase 1 walks the surface's edge-run list and draws every polygon edge with
- * a Bresenham line, appending one FieldCollisionRasterSpan per row touched.
- * Consecutive edges that continue in the same vertical direction are merged
- * into the span the previous edge left on that row rather than starting a new
- * one. The edge body then runs once more for the closing edge back to
- * @c runs[0].index; that copy also merges against the first span of a row, so
- * the outline joins up. Each span end records its edge index, plus
- * FIELD_COLLISION_EDGE_OPEN when the run is flagged FIELD_COLLISION_RUN_OPEN;
- * horizontal edges record FIELD_COLLISION_EDGE_WALL_X.
- *
- * Phase 2 bubble-sorts each row's spans by x0, merges them in pairs into the
- * final interior runs, pads the row out with FIELD_COLLISION_RASTER_EMPTY_SPAN /
- * FIELD_COLLISION_RASTER_EMPTY_FLAGS, and word-copies the flag array to
- * @c node->span_flags.
- *
- * @param node Collision node being prepared; rows run from @c min_z to
- *             @c max_z, and @c spans / @c span_flags receive the tables.
- * @param alloc In/out field allocator cursor (a byte pointer, the same cursor
- *              field_collision_collect_groups takes). On entry it points at the free block
- *              used for both tables; on exit it is advanced past them,
- *              rounded up to a multiple of 4.
- *
- * @note The scratchpad (FIELD_COLLISION_SCRATCH) holds one span-count byte per
- *       row. @c w is the raster capacity per row, twice
- *       field_collision_surface_spans.
- * @note @c last_dir / @c first_dir hold 0 (none yet), 2 (horizontal edge) or
- *       2 + ystep * sgn for a sloped edge.
+ * @brief Build a node's per-row span and edge-flag tables from its outline.
+ * @param node Node to rasterise; its spans and span_flags are set.
+ * @param alloc Field allocator cursor, advanced past both tables (rounded up to 4 bytes).
  */
 static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
 {
@@ -3027,14 +2869,14 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                                 if (sp_row[n - 1].x.x0 > x)
                                 {
                                     sp_row[n - 1].x.x0 = x;
-                                    fl_row[n - 1].f.f0 = attr;
+                                    fl_row[n - 1].f.left = attr;
                                 }
                             }
                             else
                             {
                                 sp_row[n].x.x0 = x;
-                                fl_row[n].f.f1 = attr;
-                                fl_row[n].f.f0 = attr;
+                                fl_row[n].f.right = attr;
+                                fl_row[n].f.left = attr;
                             }
 
                             do
@@ -3049,7 +2891,7 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                                 if (sp_row[n - 1].x.x1 < x)
                                 {
                                     sp_row[n - 1].x.x1 = x;
-                                    fl_row[n - 1].f.f1 = attr;
+                                    fl_row[n - 1].f.right = attr;
                                 }
                             }
                             else
@@ -3078,21 +2920,21 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                                 if (sp_row[n - 1].x.x0 > x)
                                 {
                                     sp_row[n - 1].x.x0 = x;
-                                    fl_row[n - 1].f.f0 = attr;
+                                    fl_row[n - 1].f.left = attr;
                                 }
 
                                 if (sp_row[n - 1].x.x1 < x)
                                 {
                                     sp_row[n - 1].x.x1 = x;
-                                    fl_row[n - 1].f.f1 = attr;
+                                    fl_row[n - 1].f.right = attr;
                                 }
                             }
                             else
                             {
                                 sp_row[n].x.x1 = x;
                                 sp_row[n].x.x0 = x;
-                                fl_row[n].f.f1 = attr;
-                                fl_row[n].f.f0 = attr;
+                                fl_row[n].f.right = attr;
+                                fl_row[n].f.left = attr;
                                 *cp = n + 1;
                             }
 
@@ -3119,13 +2961,13 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                         if (sp_row[n - 1].x.x0 >= x)
                         {
                             sp_row[n - 1].x.x0 = x;
-                            fl_row[n - 1].f.f0 = attr | FIELD_COLLISION_EDGE_WALL_X;
+                            fl_row[n - 1].f.left = attr | FIELD_COLLISION_EDGE_WALL_X;
                         }
 
                         if (sp_row[n - 1].x.x1 <= (s16)(x + dx))
                         {
                             sp_row[n - 1].x.x1 = x + dx;
-                            fl_row[n - 1].f.f1 = attr | FIELD_COLLISION_EDGE_WALL_X;
+                            fl_row[n - 1].f.right = attr | FIELD_COLLISION_EDGE_WALL_X;
                         }
                     }
                     else
@@ -3133,8 +2975,8 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                         last_dir = 2;
                         sp_row[0].x.x1 = x + dx;
                         sp_row[0].x.x0 = x;
-                        fl_row[0].f.f1 = attr | FIELD_COLLISION_EDGE_WALL_X;
-                        fl_row[0].f.f0 = attr | FIELD_COLLISION_EDGE_WALL_X;
+                        fl_row[0].f.right = attr | FIELD_COLLISION_EDGE_WALL_X;
+                        fl_row[0].f.left = attr | FIELD_COLLISION_EDGE_WALL_X;
                         *cp = 1;
                     }
 
@@ -3238,7 +3080,7 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                     if (sp_row[n - 1].x.x0 > x)
                     {
                         sp_row[n - 1].x.x0 = x;
-                        fl_row[n - 1].f.f0 = attr;
+                        fl_row[n - 1].f.left = attr;
                     }
                 }
                 else if (row == merge_row2)
@@ -3246,14 +3088,14 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                     if (sp_row[0].x.x0 > x)
                     {
                         sp_row[0].x.x0 = x;
-                        fl_row[0].f.f0 = attr;
+                        fl_row[0].f.left = attr;
                     }
                 }
                 else
                 {
                     sp_row[n].x.x0 = x;
-                    fl_row[n].f.f1 = attr;
-                    fl_row[n].f.f0 = attr;
+                    fl_row[n].f.right = attr;
+                    fl_row[n].f.left = attr;
                 }
 
                 do
@@ -3268,7 +3110,7 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                     if (sp_row[n - 1].x.x1 < x)
                     {
                         sp_row[n - 1].x.x1 = x;
-                        fl_row[n - 1].f.f1 = attr;
+                        fl_row[n - 1].f.right = attr;
                     }
                 }
                 else if (row == merge_row2)
@@ -3276,7 +3118,7 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                     if (sp_row[0].x.x1 < x)
                     {
                         sp_row[0].x.x1 = x;
-                        fl_row[0].f.f1 = attr;
+                        fl_row[0].f.right = attr;
                     }
                 }
                 else
@@ -3320,13 +3162,13 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                     if (sp_row[n - 1].x.x0 > x)
                     {
                         sp_row[n - 1].x.x0 = x;
-                        fl_row[n - 1].f.f0 = attr;
+                        fl_row[n - 1].f.left = attr;
                     }
 
                     if (sp_row[n - 1].x.x1 < x)
                     {
                         sp_row[n - 1].x.x1 = x;
-                        fl_row[n - 1].f.f1 = attr;
+                        fl_row[n - 1].f.right = attr;
                     }
                 }
                 else if (row == merge_row2)
@@ -3334,21 +3176,21 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                     if (sp_row[0].x.x0 > x)
                     {
                         sp_row[0].x.x0 = x;
-                        fl_row[0].f.f0 = attr;
+                        fl_row[0].f.left = attr;
                     }
 
                     if (sp_row[0].x.x1 < x)
                     {
                         sp_row[0].x.x1 = x;
-                        fl_row[0].f.f1 = attr;
+                        fl_row[0].f.right = attr;
                     }
                 }
                 else
                 {
                     sp_row[n].x.x0 = x;
                     sp_row[n].x.x1 = x;
-                    fl_row[n].f.f1 = attr;
-                    fl_row[n].f.f0 = attr;
+                    fl_row[n].f.right = attr;
+                    fl_row[n].f.left = attr;
                     *cp = n + 1;
                 }
 
@@ -3374,8 +3216,8 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
         {
             sp_row[n].x.x0 = x;
             sp_row[n].x.x1 = x;
-            fl_row[n].f.f1 = attr | FIELD_COLLISION_EDGE_WALL_X;
-            fl_row[n].f.f0 = attr | FIELD_COLLISION_EDGE_WALL_X;
+            fl_row[n].f.right = attr | FIELD_COLLISION_EDGE_WALL_X;
+            fl_row[n].f.left = attr | FIELD_COLLISION_EDGE_WALL_X;
             *cp = n + 1;
         }
         else
@@ -3383,13 +3225,13 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
             if (sp_row[n - 1].x.x0 >= x)
             {
                 sp_row[n - 1].x.x0 = x;
-                fl_row[n - 1].f.f0 = attr | FIELD_COLLISION_EDGE_WALL_X;
+                fl_row[n - 1].f.left = attr | FIELD_COLLISION_EDGE_WALL_X;
             }
 
             if (sp_row[n - 1].x.x1 <= (s16)(x + dx))
             {
                 sp_row[n - 1].x.x1 = x + dx;
-                fl_row[n - 1].f.f1 = attr | FIELD_COLLISION_EDGE_WALL_X;
+                fl_row[n - 1].f.right = attr | FIELD_COLLISION_EDGE_WALL_X;
             }
         }
     }
@@ -3442,8 +3284,8 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
             {
                 sp_row->x.x0 = p[0].x.x0;
                 sp_row->x.x1 = p[1].x.x1;
-                fl_row->f.f0 = q[0].f.f0;
-                fl_row->f.f1 = q[1].f.f1;
+                fl_row->f.left = q[0].f.left;
+                fl_row->f.right = q[1].f.right;
             }
             else
             {
@@ -3495,8 +3337,7 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
 /**
  * @brief Collect floor heights and allocate the scene's collision maps.
  * @param allocator_cursor Scene arena cursor, advanced past the tile and bitmask maps.
- * @note Collection failures clear group_work and report FIELD_COLLISION_GROUP_ERROR_GROUPS;
- *       a scene with no nodes reports zero groups. Rasterization may report other errors.
+ * @note Too many floor heights clear group_work and set group_count to FIELD_COLLISION_GROUP_ERROR_GROUPS.
  */
 void field_collision_collect_groups(u8** allocator_cursor)
 {
@@ -3754,31 +3595,10 @@ too_many_groups:
 }
 
 /**
- * @brief Rasterise the active nodes of every group into the scene work area.
- *
- * For each group id in @c scene->group_ids, walks the scene's attached-node list
- * (pre-sorted by @c row_start) and converts each node's span table into a
- * bitmask of covered tile columns, written as two interleaved planes of
- * @c words 32-bit words per tile row.
- *
- * Per tile row the active nodes are collected into @c runs, then each of the
- * @c tile2 sub-rows accumulates its spans into @c cur, merges overlapping
- * spans, and folds the result two ways: an intersection against the previous
- * sub-row (ping-ponged between the two FIELD_COLLISION_RASTER_ROW_BYTES
- * halves of FIELD_COLLISION_SCRATCH) and a union in @c acc. The intersection
- * drives plane 0 and the union drives plane 1 of the output words.
- *
- * A node takes part in group @c id when it is solid and @c id >= id_min, or
- * when @c id lies below its floor (@c height0, or the lower of @c height0 /
- * @c height1 for a slope) and at or above @c id_min.
- *
- * @param allocator_cursor Unused arena cursor; the maps are taken from the scene.
- * @param clip Optional clipping node. When NULL every tile row of the group is
- *             emitted; otherwise only the rows the node covers are, and its
- *             definition is tested against the group id first.
- *
- * @note Fails with @c group_work = NULL and a FIELD_COLLISION_GROUP_ERROR_* code in
- *       @c group_count when a node or span list overflows.
+ * @brief Rebuild the solid and touch bitmask planes of every floor group.
+ * @param allocator_cursor Unused.
+ * @param clip Node whose rows to rebuild, or NULL to rebuild every row.
+ * @note On overflow, clears group_work and stores a FIELD_COLLISION_GROUP_ERROR_* code in group_count.
  */
 void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
 {
@@ -4545,21 +4365,9 @@ void field_collision_rasterize_groups(u8** allocator_cursor, FieldNode* clip)
 }
 
 /**
- * @brief Dilate every group's tile bitmasks by a footprint into the byte tile maps.
- *
- * Reads the per-group bitmask rows written by field_collision_rasterize_groups (scene->group_work,
- * two words per 32 columns: solid bits, then touch bits) and writes one byte
- * per tile to scene->group_tiles: FIELD_COLLISION_TILE_FREE, FIELD_COLLISION_TILE_TOUCHED
- * or FIELD_COLLISION_TILE_BLOCKED. Each row is
- * spread right by the footprint width (the edge columns keep touch, the
- * interior columns become inner touch) and down by the footprint depth through
- * a ring of {solid, touch, inner} word triples in the scratchpad; inner touch
- * counts as blocked in the middle rows. The map is framed by blocked bytes:
- * two rows on top, footprint_depth + 1 rows at the bottom and a
- * footprint_width + 1 run after each emitted row.
- *
- * @param footprint_width Footprint width in collision-map columns.
- * @param footprint_depth Footprint depth in collision-map rows.
+ * @brief Expand every group's bitmask planes by a footprint into the byte tile maps.
+ * @param footprint_width Footprint width in tiles.
+ * @param footprint_depth Footprint depth in tiles.
  */
 static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_depth)
 {
@@ -5125,14 +4933,11 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
 }
 
 /**
- * @brief Mark the collision-map tiles covered by a query footprint and margins.
- * @param margins Query whose width/depth give the extra X/Z margin in tiles.
- * @param query World-space query position and footprint.
- * @return 0 on success, -1 when group data exists without a work map, or -2 when the footprint lies outside the usable map.
- * @note Tiles are marked FIELD_COLLISION_TILE_MARKED in the tile map of the group whose
- *       floor height matches the query; FIELD_COLLISION_TILE_BLOCKED tiles are left alone.
- * @note When the footprint starts above the map its rows are not clipped; the column
- *       run is extended left to column 1 instead.
+ * @brief Mark the tiles under a query footprint, plus margins, in its floor group's tile map.
+ * @param margins Query whose width and depth give the extra margin in tiles.
+ * @param query Query position and footprint.
+ * @return 0, -1 when the group maps were not built, or -2 when the footprint is off the map.
+ * @note A footprint starting above the map is not clipped by row; its column run is extended to column 1 instead.
  */
 static s32 field_collision_mark_footprint(FieldCollisionQuery* margins, FieldCollisionQuery* query)
 {
@@ -6564,30 +6369,10 @@ s32 field_collision_find_path(FieldCollisionQuery* start_query, FieldCollisionQu
 }
 
 /**
- * @brief Walk a rectangular tile footprint along a straight line and stamp it
- *        into the group tile map.
- *
- * Bresenham DDA over the field group tile grid. The footprint uses the request
- * width and depth, starts at (start_x, start_z), and is stepped one tile at a
- * time towards (end_x, end_z). The z axis uses double-height cells (mask
- * tile_size * 2 - 1). edge_state records which edge of the footprint moved on
- * the last step so only the newly covered tiles are re-tested: 1 = a new
- * column, 2 = a new row, 3 = the whole rectangle (the first iteration and both
- * edges crossing at once). A tile that is FIELD_COLLISION_TILE_TOUCHED or
- * FIELD_COLLISION_TILE_DEFERRED and above (deferred, marked, blocked) aborts
- * the walk.
- *
- * With a non-zero request->stamp, every tested tile except the start marker is
- * overwritten with the stamp, and the stamp is bumped after each step unless
- * it has reached FIELD_COLLISION_TILE_GOAL. Only in mode
- * FIELD_COLLISION_TRACE_STOP_AT_GOAL is the stamped tile compared against
- * goal_tile. A zero stamp only tests the line.
- *
- * @param request Walk request. tile_base is the starting tile, goal_tile the
- *                optional goal, tile_size sets the cell masks; col_shift
- *                is not read here.
- * @return 1 when the walk ran to completion or reached goal_tile, 0 when a
- *         blocked tile stopped it.
+ * @brief Test whether a footprint can travel in a straight line over a group tile map.
+ * @param request Start, end, footprint, tile map and stamping mode.
+ * @return 1 when the line is clear or reaches goal_tile, 0 when a blocked tile stops it.
+ * @note With a non-zero stamp, the tiles each step newly covers are stamped with a rising wave value.
  */
 static s32 field_collision_trace_line(FieldCollisionTraceRequest* request)
 {
@@ -6926,17 +6711,10 @@ static s32 field_collision_trace_line(FieldCollisionTraceRequest* request)
 }
 
 /**
- * @brief Scale a movement vector down to account for a node edge's slope.
- *
- * The node's C->B edge runs between the boundary points vertex_c and vertex_b
- * in g_field_node_angle_table and rises by height1 - height0 over that span.
- * Moving along the edge covers its full 3D length while only advancing by the
- * horizontal run, so @p movement is multiplied by run / slope to hold the ground
- * speed constant. The run is first shortened by a further 1/16, a flat penalty
- * for travelling on a slope at all.
- *
- * @param surface Collision surface definition supplying the edge and its heights.
- * @param movement Movement vector rescaled in place; movement[0] is x and movement[1] is z.
+ * @brief Slow a move on a slope by the ratio of the slope's run to its length.
+ * @param surface Slope surface whose C->B edge sets the gradient.
+ * @param movement Move to scale in place: movement[0] is x, movement[1] is z.
+ * @note The run is shortened by a further 1/16 before scaling.
  */
 static void field_collision_slope_scale_move(FieldCollisionSurfaceDef* surface, s32* movement)
 {
@@ -6965,19 +6743,9 @@ static void field_collision_slope_scale_move(FieldCollisionSurfaceDef* surface, 
 }
 
 /**
- * @brief Convert a probe's footprint to whole tiles and stencil it.
- *
- * scene->tile_size is the tile edge in pixels, either 4 or 8, and tile_shift is its
- * base-2 log. The footprint width is rounded up to a whole number of
- * tiles and the depth to a whole number of double-height tiles, since
- * the depth axis is stored at half the horizontal resolution. The rounding is
- * the usual `(v + n - 1) >> log2(n)` ceiling divide.
- *
- * Does nothing when no per-group work area is allocated.
- *
- * @param query Probe query supplying the footprint extents.
- *
- * @note The extents are read as signed even though FieldCollisionQuery declares them u16.
+ * @brief Rebuild the group tile maps for a query's footprint size.
+ * @param query Query supplying the footprint width and depth.
+ * @note Does nothing when the group bitmasks were not built.
  */
 void field_collision_dilate_query(FieldCollisionQuery* query)
 {
@@ -7002,16 +6770,9 @@ void field_collision_dilate_query(FieldCollisionQuery* query)
 }
 
 /**
- * @brief Fetch a record body from the scene header's linked list.
- *
- * Walks @p index links from the head, but stops advancing once it reaches the
- * tail, so an index past the end clamps to the last record rather than running
- * off the list. The counter is a u16, so an index of zero walks nothing and
- * returns the head's body.
- *
- * @param index Number of links to walk from the head of the list.
- * @return Pointer to the selected record's body, or NULL if the scene carries
- *         no records at all.
+ * @brief Fetch a record body from the scene header's record list.
+ * @param index Number of links to follow; the walk stops at the last record.
+ * @return The record's body, or NULL when the scene has no records.
  */
 void* field_header_record_at(s32 index)
 {
@@ -7039,12 +6800,8 @@ void* field_header_record_at(s32 index)
 }
 
 /**
- * @brief Rebuild every attached node's span table, then regroup the scene.
- *
- * The field allocator cursor is pulled into a local, handed to each node's
- * span builder in turn so the successive tables pack contiguously, and finally
- * to the group scan. Whatever the two callees leave in the local is written
- * back to the global cursor, so the scratch they allocated stays reserved.
+ * @brief Rebuild every node's span tables and the scene's group maps.
+ * @note Allocates from g_field_mem_top.
  */
 void field_collision_rebuild_spans(void)
 {
