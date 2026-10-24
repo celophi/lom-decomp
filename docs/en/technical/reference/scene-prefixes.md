@@ -12,7 +12,7 @@ A quick heads-up before the tables: which land each prefix belongs to comes
 straight from the game's own data, so that part is pretty solid. What the
 letters actually *stand for* is another story. Those are just my guesses for
 now, and I'll refine them later as we learn more. The same goes for everything
-under [What we don't know yet](#what-we-dont-know-yet).
+under [Unknowns](#unknowns).
 
 ## Reading a scene name
 
@@ -116,7 +116,7 @@ that we have, and it matches the land table above:
 | 24-31 | `esl`, `jul`, `snw`, `shp`, (empty), BattleArena, `rui`, `sei` |
 
 Two entries don't line up with the retail game, and both are listed under
-[What we don't know yet](#what-we-dont-know-yet): the menu puts `mgc` on
+[Unknowns](#unknowns): the menu puts `mgc` on
 slot 6 instead of 5, and it calls slot 29 "BattleArena".
 
 The same scene has more warp pages with specific scenes written as
@@ -125,25 +125,22 @@ maps as Pub0 to Pub3, BattleSample1, two maps named after staff (FujitaMap and
 ShindoMap), a 'Mana' entry, and pages of Boss0 to Boss7 and BATTLE0 to BATTLE2
 entries.
 
-## What we don't know yet
+## Unknowns
 
-- **What the letters stand for.** Every entry in the "might mean" column is a
-  guess, and some of them (`MON`, `WST`, `DRL`, `ESL`, `SEI`) are shaky. I'll
-  refine these later.
-- **Geo's land ID.** The location-name table puts Geo at ID 5, but the debug
-  warp menu has `mgc` at slot 6 and leaves 5 empty. The world map sends both
-  IDs to `MGC_GAT0`, so that doesn't settle it either.
-- **Land 29.** The debug warp menu calls it "BattleArena", but in the retail
-  game it points at the `WST_EVT0` default, and the location-name table has
-  nothing for it. It might be a cut land.
-- **Land 33, Lucemia's second form.** Its entry slot is the `WST_EVT0` default
-  too, so walking into Lucemia after it changes must go through something else.
-  We haven't found what.
-- **Underworld's variants.** We don't know yet what state of the land picks
-  `HEL_OS00`, `HEL_OS01` or `HEL_OS11`, or what each one means in the story.
-- **The `MID` scenes.** Eleven scenes and no clue yet.
-- **The debug room's own menus.** `DMY_DEB0` and most `DMY_MAP`/`DMY_PUB` text
-  is untranslated Japanese that neither of our text tables decodes cleanly, so
-  we haven't read those menus yet.
-- **The rest of the suffixes.** Only the common ones are known; things like
-  `OS00`, `EVT0` and `ALL0` on the entry scenes aren't explained yet.
+- [ ] Work out what each prefix stands for. Everything in the "might mean"
+  column is a guess, and `MON`, `WST`, `DRL`, `ESL` and `SEI` are the shakiest.
+- [ ] Find out whether Geo is land 5 or 6. The location-name table says 5, the
+  debug warp menu puts `mgc` on 6, and the world map sends both to `MGC_GAT0`.
+- [ ] Find out what land 29 was. The debug warp menu calls it "BattleArena",
+  but the retail game points it at the `WST_EVT0` default and gives it no
+  location name. It might be a cut land.
+- [ ] Find how the game enters land 33, Lucemia's second form. Its entry slot
+  is the `WST_EVT0` default, so it has to go through something else.
+- [ ] Find which state of the Underworld picks `HEL_OS00`, `HEL_OS01` or
+  `HEL_OS11`, and what each one means in the story.
+- [ ] Figure out what the eleven `MID` scenes are for.
+- [ ] Decode the Japanese text in `DMY_DEB0` and most of the `DMY_MAP` and
+  `DMY_PUB` scenes. Neither of our text tables reads it cleanly yet, so the
+  debug room's own menus are still unread.
+- [ ] Map the rest of the suffixes, starting with `OS00`, `EVT0` and `ALL0` on
+  the entry scenes.
