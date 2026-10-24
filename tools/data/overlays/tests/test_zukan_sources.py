@@ -75,7 +75,7 @@ class SourceTest(unittest.TestCase):
         self.assertIn("i < ZUKAN_UI_SPRITE_COUNT", source)
         self.assertIn(f"x + {zukan.SPRITE_SCREEN_X_OFFSET}, y", source)
         self.assertIn("setWH(sprite, sprite_record->width, sprite_record->height)", source)
-        self.assertIn("sprite_record->clut_column | getClut(0, VRAM_CLUT_Y)", source)
+        self.assertIn("setClut(sprite, sprite_record->clut_column * 16, VRAM_CLUT_Y)", source)
         self.assertEqual(zukan.CLUT_UPLOAD, (0, c_define(DISPLAY_HEADER, "VRAM_CLUT_Y")))
         category = zukan.CATEGORY_SOURCE.read_text(encoding="ascii")
         header = zukan.CATEGORY_SOURCE.parent / "internal/zukan_category.h"
