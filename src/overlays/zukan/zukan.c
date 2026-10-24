@@ -154,6 +154,13 @@ typedef struct
     s32 related_ids_offset;
 } ZukanEntryResourceHeader;
 
+/** @brief Image resource uploaded by zukan_load_ui_resource: a size word followed by the pixels. */
+typedef struct
+{
+    s32 packed_size; /**< Width in the low half, height in the high half. */
+    u_long pixels[1];
+} ZukanUiImageResource;
+
 /** @brief Resource ids of the entries linked from a detail page. */
 typedef struct
 {
@@ -1256,16 +1263,14 @@ void zukan_commit_loaded_entry(void)
 void zukan_load_ui_resource(void)
 {
     RECT rect;
-    s32 size;
+    s32 width;
+    s32 height;
+    ZukanUiImageResource* image = (ZukanUiImageResource*)g_zukan_resource_archive;
 
-    cdrom_queue_read(CD_RES_ZUKAN_UI, g_zukan_resource_archive);
-    size = *(s32*)g_zukan_resource_archive;
-    size++;
-    size--;
-    rect.x = ZUKAN_BORDER_IMAGE_X;
-    rect.y = ZUKAN_BORDER_IMAGE_Y;
-    rect.w = size;
-    size >>= 16;
-    rect.h = size;
-    LoadImage(&rect, (u_long*)(g_zukan_resource_archive + 4));
+    cdrom_queue_read(CD_RES_ZUKAN_UI, image);
+    width = image->packed_size;
+    height = width >> 16;
+    width &= 0xFFFF;
+    setRECT(&rect, ZUKAN_BORDER_IMAGE_X, ZUKAN_BORDER_IMAGE_Y, width, height);
+    LoadImage(&rect, image->pixels);
 }
