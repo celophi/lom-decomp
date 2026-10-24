@@ -24,6 +24,8 @@ ownership, timing, and known limitations. Source links accompany the details.
 
 - [Tools index](../../tools/README.md) - asset conversion, scene extraction and tests.
 - [Scene extractor](technical/reference/scene-extractor.md) - scene IMG assets and byte maps.
+- [Scene name prefixes](technical/reference/scene-prefixes.md) - which land each scene file
+  prefix belongs to, and the debug warp menu that lists them.
 - [ZUKAN resources](technical/reference/zukan-resources.md) - encyclopedia textures, UI sprites, entry names and category tables.
 - [WSEL resources](technical/reference/wsel-resources.md) - play-area screen images, sprite layers, hero poses and land-map grid tables.
 - [WMAP resources](technical/reference/wmap-resources.md) - world-map tables, sound effects, input scripts and step tables.

@@ -14,6 +14,7 @@
 ## 関連資料
 
 - [シーン抽出ツール](technical/reference/scene-extractor.md) - シーンIMGの抽出方法、YAMLの項目、元のバイト列の保持について。
+- [シーン名の接頭辞](technical/reference/scene-prefixes.md) - シーンファイルの接頭辞がどの土地のものかと、それを並べたデバッグ用のワープメニュー。
 - [ZUKANのリソース](technical/reference/zukan-resources.md) - 図鑑画面のテクスチャ、UIスプライト、項目名、分類テーブルの抽出。
 - [WSELのリソース](technical/reference/wsel-resources.md) - プレイエリア選択画面の画像、スプライトレイヤー、主人公のポーズ、土地マップのグリッド表の抽出。
 - [WMAPのリソース](technical/reference/wmap-resources.md) - ワールドマップのテーブル、効果音、自動入力スクリプト、ステップテーブルの抽出。

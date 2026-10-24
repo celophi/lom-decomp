@@ -141,9 +141,8 @@ Split into five bucket folders `MAP0`..`MAP4` plus `FDATA`. These are two on-dis
 
 **Map naming convention** `PREFIX_AREA`:
 
-- Prefix = location code, e.g. `DRL`, `SHP` (ship), `TWR` (tower), `JGL`
-  (jungle), `SEA`, `MNT` (mountain), `SNW` (snow), `RUI` (ruins), `MIN` (mine),
-  `LAK` (lake), `PRT` (port), `CV1` (cave). ~30 distinct prefixes.
+- Prefix = location code. Scene files under `ANA` use the same codes; see
+  [Scene name prefixes](scene-prefixes.md) for the list.
 - Area suffix = sub-area type, e.g. `FD` (field), `RM` (room), `DN` (dungeon),
   `BSS` (boss), `STR` (street), `DCK` (deck), `BCH` (beach), `ENT` (entrance),
   `1F`/`2F`/`3F` (floors), numbered variants (`FD00`, `FD01`, ...).
@@ -165,7 +164,8 @@ Extensions and roles:
 
 - `.IMG` - custom Square resources with several layouts. `ANA/INFO_*` files are
   scene containers with actors, scripts, text, geometry and textures; see the
-  [scene extractor](scene-extractor.md). Other families include sprite/animation
+  [scene extractor](scene-extractor.md). For which land a scene file belongs to,
+  see [Scene name prefixes](scene-prefixes.md). Other families include sprite/animation
   banks. Offset tables are common, not a universal magic signature.
 - `.DAT` - generic companion data blobs paired with the `.IMG` banks (`.IMG` graphics + `.DAT` control data is the common pairing).
 - `.STV` - **battle-effect animation scripts**, all under `EFFECT/*` sub-folders (`BAT_EF*`, `RENEF*`). 
