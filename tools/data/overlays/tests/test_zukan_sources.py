@@ -53,13 +53,29 @@ class SourceTest(unittest.TestCase):
         self.assertEqual(zukan.ENTRY_RESOURCE_BASE, c_define(zukan.SOURCE, "ZUKAN_ENTRY_RESOURCE_BASE"))
         source = zukan.SOURCE.read_text(encoding="ascii")
         record = re.search(r"typedef struct\s*\{([^}]+)\}\s*ZukanUiSpriteRecord;", source).group(1)
-        self.assertEqual(re.findall(r"\b(u32|u16)\s+\w+;", record), ["u32", "u32", "u16", "u16"])
+        fields = [(kind, name, int(bits) if bits else None)
+                  for kind, name, bits in re.findall(r"\b(u32|u16)\s+(\w+)(?:\s*:\s*(\d+))?;", record)]
+        self.assertEqual(fields, [
+            ("u32", "image", 8), ("u32", "u", 24), ("u32", "v", 8), ("u32", "clut_column", 6),
+            ("u32", "width", 9), ("u32", "height", 9), ("u16", "x", None), ("u16", "y", None)])
         self.assertEqual(zukan.SPRITE_RECORD.size, 12)
+        # Pack each C bitfield at its declared position and check the extractor decodes the same values.
+        words = [0, 0]
+        word, bit = 0, 0
+        values = {"image": 1, "u": 0xA8, "v": 0xE8, "clut_column": 0x2A, "width": 0x1A5, "height": 0x15A}
+        for _, name, bits in fields[:6]:
+            words[word] |= values[name] << bit
+            bit += bits
+            if bit == 32:
+                word, bit = word + 1, 0
+        sprite = zukan.Sprite(0, words[0], words[1], 0, 0)
+        self.assertEqual((sprite.draw_mode, sprite.u, sprite.v, sprite.palette, sprite.width, sprite.height),
+                         tuple(values[name] for name in ("image", "u", "v", "clut_column", "width", "height")))
         self.assertEqual(zukan.SPRITE_COUNT, c_define(zukan.SOURCE, "ZUKAN_UI_SPRITE_COUNT"))
         self.assertIn("i < ZUKAN_UI_SPRITE_COUNT", source)
         self.assertIn(f"x + {zukan.SPRITE_SCREEN_X_OFFSET}, y", source)
-        self.assertIn("(sprite_record->v_clut_and_size >> 14) & 0x1FF, sprite_record->v_clut_and_size >> 23", source)
-        self.assertIn("((sprite_record->v_clut_and_size >> 8) & 0x3F) | getClut(0, VRAM_CLUT_Y)", source)
+        self.assertIn("setWH(sprite, sprite_record->width, sprite_record->height)", source)
+        self.assertIn("setClut(sprite, sprite_record->clut_column * 16, VRAM_CLUT_Y)", source)
         self.assertEqual(zukan.CLUT_UPLOAD, (0, c_define(DISPLAY_HEADER, "VRAM_CLUT_Y")))
         category = zukan.CATEGORY_SOURCE.read_text(encoding="ascii")
         header = zukan.CATEGORY_SOURCE.parent / "internal/zukan_category.h"
