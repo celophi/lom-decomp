@@ -13,7 +13,7 @@ g_field_render_buffers              = 0x80123FD8;
 g_world_map_overlay_end             = 0x801B32D8;
 
 // CHECKPS.BIN
-poll_input_device                        = 0x800507B4;
+read_pad_buttons                        = 0x800507B4;
 process_controller_input                 = 0x8005088C;
 update_controller_input                  = 0x80050A0C;
 draw_hardware_check_pattern              = 0x80051A24;

@@ -14,13 +14,9 @@
 #include "main/audio/akao.h"
 
 void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y);
-void stop_title_music(void);
 void start_title_music(void);
-void set_fade_target(s32 red, s32 green, s32 blue, s32 steps);
-void reset_fade_state(void);
 void render_title_menu_items(TitleMenuContext* ctx);
 void render_title_backdrop(TitleMenuContext* ctx);
-void render_fade_overlay(TitleMenuContext* ctx);
 void menu_cursor_up(void);
 void menu_cursor_down(void);
 void load_title_seq(s32 seq_variant);
@@ -132,7 +128,7 @@ s32 run_title(TitleMenuContext* menu_context)
         }
         else if (selection == TITLE_SELECTION_SENTINEL)
         {
-            stop_title_music();
+            stop_song();
             return GAME_STATE_INTRO_MOVIE;
         }
         else
@@ -166,20 +162,20 @@ void render_menu(TitleMenuContext* context)
     ClearImage(&rect, 0, 0, 0);
 
     current = context;
-    ClearOTagR(current->otag_buffer, FRAME_ORDERING_TABLE_LENGTH);
+    ClearOTagR(current->screen.ot, FRAME_ORDERING_TABLE_LENGTH);
     ClearOTagR(current->otag_buffer2, FRAME_ORDERING_TABLE_LENGTH);
-    PutDispEnv(&current->disp_env);
+    PutDispEnv(&current->screen.disp_env);
     update_controllers();
     SetDispMask(1);
 
     while (1)
     {
-        ot_head = current->otag_buffer;
+        ot_head = current->screen.ot;
         ClearOTagR(ot_head, FRAME_ORDERING_TABLE_LENGTH);
-        current->next_prim_ptr = current->prim_buffer;
+        current->screen.prim_cursor = current->screen.packets;
         rand();
         VSync(1);
-        render_fade_overlay(current);
+        update_and_draw_fade(&current->screen);
         render_title_backdrop(current);
         render_title_menu_items(current);
         handle_title_menu_input();
@@ -196,8 +192,8 @@ void render_menu(TitleMenuContext* context)
                 next_context = current->second_buffer_header;
             }
             current = next_context;
-            PutDispEnv(&current->disp_env);
-            PutDrawEnv(&current->draw_env);
+            PutDispEnv(&current->screen.disp_env);
+            PutDrawEnv(&current->screen.draw_env);
             DrawOTag(ot_head + FRAME_ORDERING_TABLE_LENGTH - 1);
             update_controllers();
             cdrom_process_state();
@@ -245,19 +241,19 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
     setRECT(&rect, 0, 0, SCREEN_WIDTH, VRAM_BACK_DISP_Y + SCREEN_HEIGHT);
     ClearImage(&rect, 0, 0, 0);
     current = ctx_base;
-    ClearOTagR(current->otag_buffer, FRAME_ORDERING_TABLE_LENGTH);
+    ClearOTagR(current->screen.ot, FRAME_ORDERING_TABLE_LENGTH);
     ClearOTagR(current->otag_buffer2, FRAME_ORDERING_TABLE_LENGTH);
     VSync(0);
-    PutDispEnv(&current->disp_env);
+    PutDispEnv(&current->screen.disp_env);
     update_controllers();
     SetDispMask(1);
     do
     {
-        ot = current->otag_buffer;
+        ot = current->screen.ot;
         ClearOTagR(ot, FRAME_ORDERING_TABLE_LENGTH);
-        current->next_prim_ptr = current->prim_buffer;
+        current->screen.prim_cursor = current->screen.packets;
         VSync(1);
-        render_fade_overlay(current);
+        update_and_draw_fade(&current->screen);
         render_save_slot_menu(current);
         DrawSync(0);
         set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
@@ -268,8 +264,8 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
             next_context = current->second_buffer_header;
         }
         current = next_context;
-        PutDispEnv(&current->disp_env);
-        PutDrawEnv(&current->draw_env);
+        PutDispEnv(&current->screen.disp_env);
+        PutDrawEnv(&current->screen.draw_env);
         DrawOTag(ot + FRAME_ORDERING_TABLE_LENGTH - 1);
         update_controllers();
         cdrom_process_state();
@@ -285,7 +281,7 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
  * @details Counterpart of init_checkps_display in the CHECKPS overlay. Clears
  * the hardware display registers, configures the geometry screen/offset,
  * clears all of VRAM, and sets up the front and back DISPENV/DRAWENV pairs
- * (front at ctx_base->disp_env/draw_env, back at ctx_base->disp_env2/draw_env2).
+ * (front at ctx_base->screen.disp_env/draw_env, back at ctx_base->disp_env2/draw_env2).
  * Called once per title-menu iteration from run_title.
  *
  * @param ctx_base Base address of the double-buffered TitleMenuContext render
@@ -308,10 +304,10 @@ void init_title_display(TitleMenuContext* ctx_base)
     SetGeomScreen(SCREEN_PROJECTION_DISTANCE);
     SetGeomOffset(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 
-    ctx_base->front_screen.x = 0;
-    ctx_base->front_screen.y = 0;
-    ctx_base->front_screen.w = SCREEN_WIDTH;
-    ctx_base->front_screen.h = SCREEN_HEIGHT;
+    ctx_base->screen.clear_rect.x = 0;
+    ctx_base->screen.clear_rect.y = 0;
+    ctx_base->screen.clear_rect.w = SCREEN_WIDTH;
+    ctx_base->screen.clear_rect.h = SCREEN_HEIGHT;
 
     ctx_base->back_screen.x = 0;
     ctx_base->back_screen.y = VRAM_BACK_DISP_Y;
@@ -326,16 +322,16 @@ void init_title_display(TitleMenuContext* ctx_base)
     ClearImage(&rect, 0, 0, 0);
 
     /* Set display environments */
-    SetDefDispEnv(&ctx_base->disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&ctx_base->screen.disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     SetDefDispEnv(&ctx_base->disp_env2, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     /* Set drawing environments */
-    SetDefDrawEnv(&ctx_base->draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&ctx_base->screen.draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
     SetDefDrawEnv(&ctx_base->draw_env2, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
     /* Clear two more bytes */
     ctx_base->draw_env2.dtd = 0;
-    ctx_base->draw_env.dtd = 0;
+    ctx_base->screen.draw_env.dtd = 0;
 
     reset_fade_state();
     set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, SCREEN_FADE_FRAMES);
@@ -384,7 +380,7 @@ void load_title_audio_bank(void)
 /**
  * @brief Load a title-screen sequence and its instrument bank from CD-ROM.
  *
- * @details Counterpart of CHECKPS load_checkps_song_from_disc. Reads CD resource
+ * @details Counterpart of load_song_from_disc. Reads CD resource
  * @c CD_RES_MUSIC_FILE(seq_variant) into the 0x80180000 scratch
  * buffer, splits it via its self-referential offset table, copies the
  * sequence sub-block to g_resident_song_buffer, then uploads the trailing instrument bank.
@@ -408,22 +404,12 @@ void load_title_seq(s32 seq_variant)
     akao_upload_bank_blocking((AkaoBankHeader*)(base + off[AKAO_CONTAINER_BANK_SECTION]), 1);
 }
 
-/**
- * @brief Stop the title-screen background music.
- *
- * @details Counterpart of CHECKPS stop_checkps_song.
- *
- * @see decomp.me (100%) https://decomp.me/scratch/1cta3
- */
-void stop_title_music(void)
-{
-    akao_stop_song(0);
-}
+#include "../../common/overlay_audio/stop_song.inc.c"
 
 /**
  * @brief Start playback of the title-screen background music.
  *
- * @details Counterpart of CHECKPS play_loaded_checkps_song. Plays the SEQ loaded into
+ * @details Counterpart of play_loaded_song. Plays the SEQ loaded into
  * g_resident_song_buffer (by load_title_seq) and sets the song volume to maximum via
  * akao_set_song_volume.
  *
@@ -435,155 +421,13 @@ void start_title_music(void)
     akao_set_song_volume(0, AKAO_VOLUME_MAX);
 }
 
-/**
- * @brief Play a title-screen UI sound effect at maximum volume.
- *
- * @details Counterpart of CHECKPS play_checkps_sfx (with the first parameter
- * folded away to a constant 0). sound_id values observed: 0x3C (selection
- * chime), 0x7C..0x7F (cursor / cancel / confirm beeps).
- *
- * @param sound_id Sound id forwarded to akao_play_sfx's sound_id (lower 10 bits used).
- * @param pan Forwarded to akao_play_sfx's pan (8-bit, possibly pan); every
- *        call site in this file passes the constant 0x80.
- *
- * @see decomp.me (100%) https://decomp.me/scratch/ZuKeL
- */
-void play_title_sfx(s32 sound_id, s32 pan)
-{
-    akao_play_sfx(sound_id, 0, pan, 0x7F);
-}
+#include "../../common/overlay_audio/play_sfx.inc.c"
 
-/**
- * @brief Reset the title-screen fade state to opaque black with no fade in progress.
- *
- * @details Counterpart of CHECKPS reset_fade_state.
- *
- * @see decomp.me (100%) https://decomp.me/scratch/m80gj
- */
-void reset_fade_state(void)
-{
-    g_fade_current.red = 0;
-    g_fade_current.green = 0;
-    g_fade_current.blue = 0;
+#include "../../common/screen_fade_words/reset_fade_state.inc.c"
 
-    g_fade_target.red = 0;
-    g_fade_target.green = 0;
-    g_fade_target.blue = 0;
-    g_fade_target.steps_remaining = 0;
-}
+#include "../../common/screen_fade_words/update_and_draw_fade.inc.c"
 
-/**
- * @brief Interpolate the screen fade and emit its overlay primitive.
- *
- * @details Counterpart of CHECKPS update_and_draw_fade: interpolates g_fade_current
- * toward g_fade_target and emits the fade-overlay primitive into the active
- * prim buffer.
- *
- * @param ctx Active TitleMenuContext render buffer.
- *
- * @see decomp.me (100%) https://decomp.me/scratch/fBro2
- */
-void render_fade_overlay(TitleMenuContext* ctx)
-{
-    TitleMenuContext* base = ctx;
-    ScreenFadePrimitive* primitive = (ScreenFadePrimitive*)base->next_prim_ptr;
-    u_long* ordering_table_tag = base->otag_buffer;
-    s32 red_step;
-    s32 green_step;
-    s32 blue_step;
-    s32 draw_mode;
-
-    if (g_fade_target.steps_remaining != 0)
-    {
-        red_step = (g_fade_target.red - g_fade_current.red) / g_fade_target.steps_remaining;
-        green_step = (g_fade_target.green - g_fade_current.green) / g_fade_target.steps_remaining;
-        blue_step = (g_fade_target.blue - g_fade_current.blue) / g_fade_target.steps_remaining;
-        g_fade_target.steps_remaining = g_fade_target.steps_remaining - 1;
-        g_fade_current.red = g_fade_current.red + red_step;
-        g_fade_current.green = g_fade_current.green + green_step;
-        g_fade_current.blue = g_fade_current.blue + blue_step;
-    }
-    else
-    {
-        g_fade_current.red = g_fade_target.red;
-        g_fade_current.green = g_fade_target.green;
-        g_fade_current.blue = g_fade_target.blue;
-    }
-    if (!(((g_fade_current.red == FADE_NEUTRAL) && (g_fade_current.green == FADE_NEUTRAL)) && (g_fade_current.blue == FADE_NEUTRAL)))
-    {
-        if (g_fade_current.red >= FADE_ADDITIVE_THRESHOLD)
-        {
-            setRGB0(&primitive->tile, g_fade_current.red - FADE_ADDITIVE_BIAS, g_fade_current.green - FADE_ADDITIVE_BIAS,
-                    g_fade_current.blue - FADE_ADDITIVE_BIAS);
-        }
-        else
-        {
-            if (g_fade_current.red == FADE_NEUTRAL)
-            {
-                primitive->tile.r0 = 0;
-            }
-            else
-            {
-                primitive->tile.r0 = ~g_fade_current.red;
-            }
-            if (g_fade_current.green == FADE_NEUTRAL)
-            {
-                primitive->tile.g0 = 0;
-            }
-            else
-            {
-                primitive->tile.g0 = ~g_fade_current.green;
-            }
-            if (g_fade_current.blue == FADE_NEUTRAL)
-            {
-                primitive->tile.b0 = 0;
-            }
-            else
-            {
-                primitive->tile.b0 = ~g_fade_current.blue;
-            }
-        }
-
-        setTile(&primitive->tile);
-        setSemiTrans(&primitive->tile, 1);
-        SET_YX0(&primitive->tile, 0, 0);
-        setWH(&primitive->tile, SCREEN_WIDTH, SCREEN_HEIGHT);
-        addPrim(ordering_table_tag, &primitive->tile);
-
-        draw_mode = BLEND_ADD_TPAGE;
-        primitive = SCREEN_FADE_NEXT_PRIMITIVE(primitive, TILE);
-        if (g_fade_current.red < FADE_ADDITIVE_THRESHOLD)
-        {
-            draw_mode = BLEND_SUBTRACT_TPAGE;
-        }
-        setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
-        addPrim(ordering_table_tag, &primitive->draw_mode);
-
-        primitive = SCREEN_FADE_NEXT_PRIMITIVE(primitive, DR_TPAGE);
-    }
-    base->next_prim_ptr = (u_long*)primitive;
-}
-
-/**
- * @brief Set the target fade color and step count for the title-screen fade.
- *
- * @details Counterpart of CHECKPS set_fade_target. render_fade_overlay
- * interpolates g_fade_current toward this target over the given number of steps.
- *
- * @param red Target red channel value.
- * @param green Target green channel value.
- * @param blue Target blue channel value.
- * @param steps Number of frames over which to interpolate toward the target.
- *
- * @see decomp.me (100%) https://decomp.me/scratch/zxqdP
- */
-void set_fade_target(s32 red, s32 green, s32 blue, s32 steps)
-{
-    g_fade_target.red = red;
-    g_fade_target.green = green;
-    g_fade_target.blue = blue;
-    g_fade_target.steps_remaining = steps;
-}
+#include "../../common/screen_fade_words/set_fade_target.inc.c"
 
 /**
  * @brief Emit the title screen's tiled backdrop strip.
@@ -605,8 +449,8 @@ void render_title_backdrop(TitleMenuContext* ctx)
     s32 left_x;
     s32 page_x;
 
-    prim = (POLY_FT4*)ctx->next_prim_ptr;
-    ot = ctx->otag_buffer;
+    prim = (POLY_FT4*)ctx->screen.prim_cursor;
+    ot = ctx->screen.ot;
     strip_index = 0;
 
     while (strip_index < TITLE_BACKDROP_STRIPS)
@@ -632,7 +476,7 @@ void render_title_backdrop(TitleMenuContext* ctx)
         prim++;
     }
 
-    ctx->next_prim_ptr = (u_long*)prim;
+    ctx->screen.prim_cursor = (u_long*)prim;
 }
 
 /**
@@ -656,19 +500,19 @@ void handle_title_menu_input(void)
     g_title_idle_countdown -= 1;
     if (g_debounced_input & (PADh | PADi | PADRright))
     {
-        play_title_sfx(0x7C, AKAO_PAN_CENTER);
+        play_sfx(0x7C, AKAO_PAN_CENTER);
         g_title_menu_exit_state = 1;
         return;
     }
     if (g_debounced_input & (PADLup | PADLleft))
     {
         menu_cursor_up();
-        play_title_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
+        play_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
     }
     else if (g_debounced_input & (PADLdown | PADLright | PADselect))
     {
         menu_cursor_down();
-        play_title_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
+        play_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
     }
 }
 
@@ -761,7 +605,7 @@ void menu_cursor_up(void)
  * cursor quad last; the cursor's U coordinate cycles through
  * g_cursor_blink_u_offsets[(g_title_anim_frame >> 2) & 3] for a 4-frame blink, and
  * its Y tracks the selected rank. The advanced prim cursor is written back to
- * TitleMenuContext::next_prim_ptr.
+ * ScreenFrame::prim_cursor.
  *
  * @param ctx Active TitleMenuContext render buffer.
  *
@@ -780,8 +624,8 @@ void render_title_menu_items(TitleMenuContext* ctx)
     s32 item_visible;
     void* result;
 
-    ot_head = ctx->otag_buffer;
-    first_prim = ctx->next_prim_ptr;
+    ot_head = ctx->screen.ot;
+    first_prim = ctx->screen.prim_cursor;
     prim = emit_menu_item_quad(ot_head, first_prim, 0, TITLE_MENU_HEADER_X, 0xC8, 0, 0x80, 1);
     item_x = 0x88;
     item_y = 0xA0;
@@ -802,7 +646,7 @@ void render_title_menu_items(TitleMenuContext* ctx)
     result =
         emit_menu_item_quad(ot_head, prim, 7, 0x78, g_title_visible_item_rank * 12 + 0x9D, g_cursor_blink_u_offsets[(g_title_anim_frame >> 2) & 3], 0x10, 0);
 
-    ctx->next_prim_ptr = result;
+    ctx->screen.prim_cursor = result;
     g_title_anim_frame++;
 }
 
@@ -988,73 +832,14 @@ void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
     LoadImage(&rect, (u_long*)(p + 0xC));
 }
 
-/**
- * @brief Reads the SCD pad state and returns the remapped button bitmap.
- *
- * Same byte-swap and button-remap as @p read_pad_input, but returns the
- * computed bitmap directly instead of writing it into @p g_last_input_state
- * and resetting @p g_input_repeat_timer.
- *
- *
- * @return Remapped button bitmap, or 0 if the pad is not present
- *         (g_controller_device_type >= CONTROLLER_DEVICE_CONFIGURING).
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/Z5swg
- * @note JP reports the face buttons as read (no PAD_REMAP_FACE_BITS swap).
- */
-s32 read_pad_state(void)
-{
-    SCDRegs* regs = SCD_REGS;
-    u32 buttons;
-    s16 axis_x;
-    s16 axis_y;
-    u16 hi_read;
-    u16 lo_read;
-
-    if (regs->device_type >= CONTROLLER_DEVICE_CONFIGURING)
-    {
-        return 0;
-    }
-
-    /* Read twice because the controller register may change asynchronously. */
-    hi_read = regs->held_buttons;
-    lo_read = regs->held_buttons;
-    buttons = (hi_read >> 8) | (lo_read << 8);
-#if !defined(VERSION_JP)
-    buttons = PAD_REMAP_FACE_BITS(buttons);
-#endif
-    if (regs->device_type != CONTROLLER_DEVICE_DIGITAL)
-    {
-        /* Convert signed analog-axis thresholds to digital directions. */
-        axis_x = regs->axis_x.signed_value;
-        if (axis_x < -PAD_STICK_THRESHOLD)
-        {
-            buttons |= PAD_BTN_LEFT;
-        }
-        else if (axis_x > PAD_STICK_THRESHOLD)
-        {
-            buttons |= PAD_BTN_RIGHT;
-        }
-
-        axis_y = regs->axis_y.signed_value;
-        if (axis_y < -PAD_STICK_THRESHOLD)
-        {
-            buttons |= PAD_BTN_UP;
-        }
-        else if (axis_y > PAD_STICK_THRESHOLD)
-        {
-            buttons |= PAD_BTN_DOWN;
-        }
-    }
-    return buttons;
-}
+#include "../../common/pad_repeat/read_pad_buttons.inc.c"
 
 /**
  * @brief Read the SCD pad, debounce it, and publish the result in g_debounced_input.
  *
  * @details Counterpart of CHECKPS update_controller_input. Builds the remapped
  * button bitmap (byte-swap + face-bit remap + analog-stick to d-pad
- * thresholding) exactly like read_pad_input, then runs an auto-repeat state
+ * thresholding) exactly like init_pad_repeat, then runs an auto-repeat state
  * machine over g_last_input_state / g_input_repeat_timer:
  *  - If this frame matches the previous state (or shares any repeat-eligible
  *    bit with it), only the d-pad directions auto-repeat: g_debounced_input

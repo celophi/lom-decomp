@@ -10,6 +10,7 @@
 
 #include "internal/font.h"
 #include "main/audio/akao.h"
+#include "main/audio/game_audio.h"
 #include "main/cd_resources.h"
 #include "main/display.h"
 #include "main/game_state.h"
@@ -26,7 +27,6 @@
 #include "main/controller.h"
 #include "main/controller_internal.h"
 
-#define CHECKPS_SONG_BUFFER_SIZE 16384
 #define CHECKPS_RESERVED_BSS_WORDS 32769
 
 #define CHECKPS_IMAGE_TPAGE 5
@@ -70,25 +70,11 @@ typedef union
 } CheckPSImagePrimitive;
 
 /**
- * @brief GPU environments and clear rectangle for one display buffer.
- */
-typedef struct
-{
-    DISPENV disp;
-    DRAWENV draw;
-    RECT clear_rect;
-} CheckPSDisplayBuffer;
-
-/**
  * @brief Ordering table, display state, and primitive storage for one frame.
  */
 typedef struct
 {
-    u8 reserved_header[0x40];
-    u_long ordering_table[FRAME_ORDERING_TABLE_LENGTH];
-    CheckPSDisplayBuffer display;
-    u8 primitive_buffer[FRAME_PRIMITIVE_BUFFER_SIZE];
-    void* primitive_cursor;
+    ScreenFrame screen;
     u8 reserved_tail[0x3C10];
 } CheckPSFrame;
 
@@ -150,9 +136,6 @@ extern TimPrefix g_checkps_image_asset;
 static void run_checkps_display_loop(CheckPSRenderState* render_state);
 static void init_checkps_display(CheckPSRenderState* render_state);
 static void load_embedded_checkps_audio(void);
-static void reset_fade_state(void);
-static void update_and_draw_fade(CheckPSFrame* frame);
-static void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count);
 static void update_checkps_input_and_timeout(void);
 static void draw_checkps_image(CheckPSFrame* frame);
 static void load_checkps_image(void);
@@ -166,9 +149,6 @@ static void update_controller_input(void);
 
 #if defined(VERSION_JP)
 extern CheckPSExitReason g_checkps_exit_reason;
-extern ScreenFadeWords g_fade_target;
-extern ScreenFadeWords g_fade_current;
-extern u8 g_checkps_song_buffer[CHECKPS_SONG_BUFFER_SIZE];
 extern AkaoHeader* g_checkps_akao_bank;
 extern s32 g_checkps_startup_step;
 extern CheckPSImage g_checkps_images[CHECKPS_IMAGE_COUNT];
@@ -185,7 +165,7 @@ ScreenFadeWords g_fade_target;
 ScreenFadeWords g_fade_current;
 
 /* Sequence data copied from a CHECKPS disc asset before playback. */
-u8 g_checkps_song_buffer[CHECKPS_SONG_BUFFER_SIZE];
+u8 g_overlay_song_buffer[OVERLAY_SONG_BUFFER_SIZE];
 
 /* Destination address used when registering the embedded AKAO bank. */
 AkaoHeader* g_checkps_akao_bank;
@@ -216,6 +196,10 @@ s32 g_input_repeat_timer;
 s32 g_checkps_reserved_bss[CHECKPS_RESERVED_BSS_WORDS];
 
 #endif
+
+#include "common/overlay_audio.h"
+#include "common/pad_repeat.h"
+#include "common/screen_fade_words.h"
 
 /**
  * @brief Run the CHECKPS startup screen until it requests exit.
@@ -256,18 +240,18 @@ static void run_checkps_display_loop(CheckPSRenderState* render_state)
     rect.y = 0;
     rect.h = VRAM_BACK_DISP_Y + SCREEN_HEIGHT;
     ClearImage(&rect, 0, 0, 0);
-    ClearOTagR(frame->ordering_table, FRAME_ORDERING_TABLE_LENGTH);
-    ClearOTagR(render_state->frames[1].ordering_table, FRAME_ORDERING_TABLE_LENGTH);
-    PutDispEnv(&frame->display.disp);
+    ClearOTagR(frame->screen.ot, FRAME_ORDERING_TABLE_LENGTH);
+    ClearOTagR(render_state->frames[1].screen.ot, FRAME_ORDERING_TABLE_LENGTH);
+    PutDispEnv(&frame->screen.disp_env);
 #if !defined(VERSION_JP)
     update_controllers();
 #endif
     SetDispMask(1);
     do
     {
-        drawn_ordering_table = frame->ordering_table;
+        drawn_ordering_table = frame->screen.ot;
         ClearOTagR(drawn_ordering_table, FRAME_ORDERING_TABLE_LENGTH);
-        frame->primitive_cursor = frame->primitive_buffer;
+        frame->screen.prim_cursor = frame->screen.packets;
         begin_glyph_cache_frame();
         update_and_draw_fade(frame);
         draw_checkps_image(frame);
@@ -278,15 +262,15 @@ static void run_checkps_display_loop(CheckPSRenderState* render_state)
         set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
 #endif
         VSync(FRAME_VSYNC_INTERVAL);
-        ClearImage(&frame->display.clear_rect, 0, 0, 0);
+        ClearImage(&frame->screen.clear_rect, 0, 0, 0);
         next_frame = &render_state->frames[0];
         if (frame == next_frame)
         {
             next_frame = &render_state->frames[1];
         }
         frame = next_frame;
-        PutDispEnv(&frame->display.disp);
-        PutDrawEnv(&frame->display.draw);
+        PutDispEnv(&frame->screen.disp_env);
+        PutDrawEnv(&frame->screen.draw_env);
         DrawOTag(&drawn_ordering_table[FRAME_ORDERING_TABLE_LENGTH - 1]);
 
 #if !defined(VERSION_JP)
@@ -308,8 +292,8 @@ static void init_checkps_display(CheckPSRenderState* render_state)
     RECT rect;
     SetGeomScreen(SCREEN_PROJECTION_DISTANCE);
     SetGeomOffset(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
-    setRECT(&render_state->frames[0].display.clear_rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    setRECT(&render_state->frames[1].display.clear_rect, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    setRECT(&render_state->frames[0].screen.clear_rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    setRECT(&render_state->frames[1].screen.clear_rect, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
     DrawSync(0);
     VSync(0);
 
@@ -318,12 +302,12 @@ static void init_checkps_display(CheckPSRenderState* render_state)
     rect.y = 0;
     rect.h = VRAM_HEIGHT;
     ClearImage(&rect, 0, 0, 0);
-    SetDefDispEnv(&render_state->frames[0].display.disp, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDispEnv(&render_state->frames[1].display.disp, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDrawEnv(&render_state->frames[0].display.draw, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
-    SetDefDrawEnv(&render_state->frames[1].display.draw, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
-    render_state->frames[1].display.draw.dtd = 0;
-    render_state->frames[0].display.draw.dtd = 0;
+    SetDefDispEnv(&render_state->frames[0].screen.disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&render_state->frames[1].screen.disp_env, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDrawEnv(&render_state->frames[0].screen.draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&render_state->frames[1].screen.draw_env, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    render_state->frames[1].screen.draw_env.dtd = 0;
+    render_state->frames[0].screen.draw_env.dtd = 0;
 
     rect.x = CHECKPS_GLYPH_VRAM_X;
     rect.w = CHECKPS_GLYPH_VRAM_WIDTH;
@@ -374,48 +358,11 @@ static void load_embedded_checkps_audio(void)
     akao_upload_bank_blocking((AkaoBankHeader*)upload_bank_data, 1);
 }
 
-/**
- * @brief Load a CHECKPS song container from disc and prepare it for playback.
- * @details Copies the persistent song block into the CHECKPS song buffer, then
- *          uploads the trailing instrument bank to the audio driver.
- * @param song_index Music-file index; 0 selects MSC_DATA.DAT.
- */
-void load_checkps_song_from_disc(s32 song_index)
-{
-    u8* song_data;
-    u8* bank_data;
-    u32 song_size;
-    u32* section_offsets;
-    AkaoContainerHeader* song_container;
+#include "../../common/overlay_audio/load_song_from_disc.inc.c"
 
-    cdrom_queue_read(CD_RES_MUSIC_FILE(song_index), LOAD_BUFFER_AKAO_CONTAINER);
-    cdrom_wait_queue_empty();
+#include "../../common/overlay_audio/stop_song.inc.c"
 
-    song_container = LOAD_BUFFER_AKAO_CONTAINER;
-    section_offsets = song_container->section_offsets;
-    song_data = AKAO_CONTAINER_DATA_AT(song_container, section_offsets[AKAO_CONTAINER_RESIDENT_SECTION]);
-    song_size = section_offsets[AKAO_CONTAINER_BANK_SECTION] - section_offsets[AKAO_CONTAINER_RESIDENT_SECTION];
-    bcopy(song_data, g_checkps_song_buffer, song_size);
-    bank_data = AKAO_CONTAINER_DATA_AT(song_container, section_offsets[AKAO_CONTAINER_BANK_SECTION]);
-    akao_upload_bank_blocking((AkaoBankHeader*)bank_data, 1);
-}
-
-/**
- * @brief Stop the currently playing CHECKPS song.
- */
-void stop_checkps_song(void)
-{
-    akao_stop_song(0);
-}
-
-/**
- * @brief Start playback from the CHECKPS song buffer.
- */
-void play_loaded_checkps_song(void)
-{
-    akao_play_song((AkaoHeader*)g_checkps_song_buffer);
-    akao_set_song_volume(0, AKAO_VOLUME_MAX);
-}
+#include "../../common/overlay_audio/play_loaded_song.inc.c"
 
 /**
  * @brief Play a CHECKPS sound effect.
@@ -428,119 +375,11 @@ void play_checkps_sfx(u32 sound_id, u32 volume, u32 pan)
     akao_play_sfx(sound_id, 0, volume, pan);
 }
 
-/**
- * @brief Reset the current and target fade colors to black.
- */
-static void reset_fade_state(void)
-{
-    g_fade_current.red = 0;
-    g_fade_current.green = 0;
-    g_fade_current.blue = 0;
-    g_fade_target.red = 0;
-    g_fade_target.green = 0;
-    g_fade_target.blue = 0;
-    g_fade_target.steps_remaining = 0;
-}
+#include "../../common/screen_fade_words/reset_fade_state.inc.c"
 
-/**
- * @brief Advance the fade interpolation and emit its fullscreen GPU packets.
- * @param frame Frame receiving the fade primitives.
- */
-static void update_and_draw_fade(CheckPSFrame* frame)
-{
-    s32 red_step;
-    s32 green_step;
-    s32 blue_step;
-    s32 draw_mode;
-    ScreenFadePrimitive* primitive;
-    u_long* ordering_table_tag = frame->ordering_table;
+#include "../../common/screen_fade_words/update_and_draw_fade.inc.c"
 
-    primitive = frame->primitive_cursor;
-    if (g_fade_target.steps_remaining != 0)
-    {
-        red_step = (g_fade_target.red - g_fade_current.red) / g_fade_target.steps_remaining;
-        green_step = (g_fade_target.green - g_fade_current.green) / g_fade_target.steps_remaining;
-        blue_step = (g_fade_target.blue - g_fade_current.blue) / g_fade_target.steps_remaining;
-        g_fade_target.steps_remaining--;
-        g_fade_current.red += red_step;
-        g_fade_current.green += green_step;
-        g_fade_current.blue += blue_step;
-    }
-    else
-    {
-        g_fade_current.red = g_fade_target.red;
-        g_fade_current.green = g_fade_target.green;
-        g_fade_current.blue = g_fade_target.blue;
-    }
-    if (g_fade_current.red != FADE_NEUTRAL || g_fade_current.green != g_fade_current.red || g_fade_current.blue != g_fade_current.green)
-    {
-        if (g_fade_current.red >= FADE_ADDITIVE_THRESHOLD)
-        {
-            setRGB0(&primitive->tile, g_fade_current.red - FADE_ADDITIVE_BIAS, g_fade_current.green - FADE_ADDITIVE_BIAS,
-                    g_fade_current.blue - FADE_ADDITIVE_BIAS);
-        }
-        else
-        {
-            if (g_fade_current.red == FADE_NEUTRAL)
-            {
-                primitive->tile.r0 = 0;
-            }
-            else
-            {
-                primitive->tile.r0 = ~g_fade_current.red;
-            }
-            if (g_fade_current.green == FADE_NEUTRAL)
-            {
-                primitive->tile.g0 = 0;
-            }
-            else
-            {
-                primitive->tile.g0 = ~g_fade_current.green;
-            }
-            if (g_fade_current.blue == FADE_NEUTRAL)
-            {
-                primitive->tile.b0 = 0;
-            }
-            else
-            {
-                primitive->tile.b0 = ~g_fade_current.blue;
-            }
-        }
-        setTile(&primitive->tile);
-        setSemiTrans(&primitive->tile, 1);
-        SET_YX0(&primitive->tile, 0, 0);
-        setWH(&primitive->tile, SCREEN_WIDTH, SCREEN_HEIGHT);
-
-        addPrim(ordering_table_tag, &primitive->tile);
-        draw_mode = BLEND_ADD_TPAGE;
-        primitive = SCREEN_FADE_NEXT_PRIMITIVE(primitive, TILE);
-        if (g_fade_current.red < FADE_ADDITIVE_THRESHOLD)
-        {
-            draw_mode = BLEND_SUBTRACT_TPAGE;
-        }
-        setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
-
-        addPrim(ordering_table_tag, &primitive->draw_mode);
-
-        primitive = SCREEN_FADE_NEXT_PRIMITIVE(primitive, DR_TPAGE);
-    }
-    frame->primitive_cursor = primitive;
-}
-
-/**
- * @brief Set the RGB fade target and interpolation duration.
- * @param red Target red level.
- * @param green Target green level.
- * @param blue Target blue level.
- * @param step_count Number of interpolation steps.
- */
-static void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count)
-{
-    g_fade_target.red = red;
-    g_fade_target.green = green;
-    g_fade_target.blue = blue;
-    g_fade_target.steps_remaining = step_count;
-}
+#include "../../common/screen_fade_words/set_fade_target.inc.c"
 
 /**
  * @brief Advance the JP disc check or the US input and image timer.
@@ -605,8 +444,8 @@ static void draw_checkps_image(CheckPSFrame* frame)
     CheckPSImage* images;
     s32 timer;
 
-    primitive = frame->primitive_cursor;
-    ordering_table = frame->ordering_table;
+    primitive = frame->screen.prim_cursor;
+    ordering_table = frame->screen.ot;
     if (g_checkps_image_burst_active != 0 && g_checkps_images[CHECKPS_IMAGE_COUNT - 1].animation.bits.frame == CHECKPS_IMAGE_HIDDEN_FRAME)
     {
         for (i = 1; i < CHECKPS_IMAGE_COUNT; i++)
@@ -700,7 +539,7 @@ static void draw_checkps_image(CheckPSFrame* frame)
         }
         i++;
     } while ((intptr_t)&images[i] < (intptr_t)&images[CHECKPS_IMAGE_COUNT]);
-    frame->primitive_cursor = primitive;
+    frame->screen.prim_cursor = primitive;
 }
 #else
 static void draw_checkps_image(CheckPSFrame* frame)
@@ -711,8 +550,8 @@ static void draw_checkps_image(CheckPSFrame* frame)
     u_long* ordering_table;
     s32 unused[2];
 
-    primitive = frame->primitive_cursor;
-    ordering_table = frame->ordering_table;
+    primitive = frame->screen.prim_cursor;
+    ordering_table = frame->screen.ot;
 
     SET_BGR0_PACKED(&primitive->sprite, GPU_TINT_NEUTRAL);
     setSprt(&primitive->sprite);
@@ -729,7 +568,7 @@ static void draw_checkps_image(CheckPSFrame* frame)
     addPrim(ordering_table, &primitive->draw_mode);
 
     primitive = CHECKPS_NEXT_IMAGE_PRIMITIVE(primitive, DR_TPAGE);
-    frame->primitive_cursor = primitive;
+    frame->screen.prim_cursor = primitive;
 }
 #endif
 
@@ -827,54 +666,7 @@ static u32 checkps_upload_image_to_vram(TimPrefix* tim, CheckPSImageDestinations
 }
 #endif
 
-/**
- * @brief Read and normalize the current controller sample.
- * @return Logical CHECKPS button mask, or zero when no device is available.
- */
-s32 poll_input_device(void)
-{
-    SCDRegs* regs = SCD_REGS;
-    u32 input_mask;
-    s16 axis_x;
-    s16 axis_y;
-
-    if (regs->device_type >= CONTROLLER_DEVICE_CONFIGURING)
-    {
-        return 0;
-    }
-
-    /* Convert the controller protocol bits to the game's logical layout. */
-    input_mask = (regs->held_buttons >> 8) | (regs->held_buttons << 8);
-#if !defined(VERSION_JP)
-    input_mask = PAD_REMAP_FACE_BITS(input_mask);
-#endif
-    if (regs->device_type != CONTROLLER_DEVICE_DIGITAL)
-    {
-        /* Convert signed analog-axis thresholds to digital directions. */
-        axis_x = regs->axis_x.signed_value;
-
-        if (axis_x < -PAD_STICK_THRESHOLD)
-        {
-            input_mask |= PAD_BTN_LEFT;
-        }
-        else if (axis_x > PAD_STICK_THRESHOLD)
-        {
-            input_mask |= PAD_BTN_RIGHT;
-        }
-
-        axis_y = regs->axis_y.signed_value;
-        if (axis_y < -PAD_STICK_THRESHOLD)
-        {
-            input_mask |= PAD_BTN_UP;
-        }
-        else if (axis_y > PAD_STICK_THRESHOLD)
-        {
-            input_mask |= PAD_BTN_DOWN;
-        }
-    }
-
-    return input_mask;
-}
+#include "../../common/pad_repeat/read_pad_buttons.inc.c"
 
 #if !defined(VERSION_JP)
 /**
