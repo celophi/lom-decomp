@@ -80,8 +80,8 @@
 #define ZUKAN_ENTRY_IMAGE_Y 0x100
 #define ZUKAN_ENTRY_CLUT_Y 0x1EE
 
-/* The field's scene textures fill 256-line pixel columns, grouped into 64-pixel texture pages.
- * From this page count on they reach the border image position. */
+/* FIELD uploads the map texture in 256-line columns from (320, 256). From this many 64-column
+ * pages on it reaches the border image position. */
 #define ZUKAN_FIELD_TEXTURE_COLUMN_BYTES (256 * 2)
 #define ZUKAN_FIELD_TEXTURE_PAGE_WIDTH 64
 #define ZUKAN_FIELD_TEXTURE_PAGES_AT_BORDER 9
@@ -152,12 +152,12 @@ typedef struct
     s32 related_ids_offset;
 } ZukanEntryResourceHeader;
 
-/** @brief Image resource uploaded by zukan_load_ui_resource: a size word followed by the pixels. */
+/** @brief CD_RES_ZUKAN_MAP_TEXTURE: a size word followed by the pixels. */
 typedef struct
 {
     s32 packed_size; /**< Width in the low half, height in the high half. */
     u_long pixels[1];
-} ZukanUiImageResource;
+} ZukanMapTexture;
 
 /** @brief Resource ids of the entries linked from a detail page. */
 typedef struct
@@ -166,7 +166,7 @@ typedef struct
     u16 next;
 } ZukanRelatedEntries;
 
-extern u32 g_field_vram_byte_count;
+extern u32 g_field_map_texture_bytes;
 extern u8 g_zukan_resource_archive[];
 extern ZukanEntryResourceHeader* g_zukan_resource_buffer;
 extern RenderContext* g_zukan_render_buffers;
@@ -283,12 +283,12 @@ void zukan_run(RenderContext* render_buffers, s32 category)
         cdrom_process_state();
     }
 
-    texture_pages = g_field_vram_byte_count / ZUKAN_FIELD_TEXTURE_COLUMN_BYTES;
+    texture_pages = g_field_map_texture_bytes / ZUKAN_FIELD_TEXTURE_COLUMN_BYTES;
     texture_pages = (texture_pages + ZUKAN_FIELD_TEXTURE_PAGE_WIDTH - 1) / ZUKAN_FIELD_TEXTURE_PAGE_WIDTH;
 
     if (texture_pages >= ZUKAN_FIELD_TEXTURE_PAGES_AT_BORDER)
     {
-        zukan_load_ui_resource();
+        zukan_restore_map_texture();
     }
 
     field_reset_input_repeat();
@@ -1180,16 +1180,18 @@ void zukan_commit_loaded_entry(void)
 }
 
 /**
- * @brief Load the encyclopedia UI resource and upload its image to VRAM.
+ * @brief Reload the part of the field map texture that the encyclopedia images drew over.
+ * @note The reloaded columns are those of the Home map MHM_ALC2, the only map whose texture
+ *       CD_RES_ZUKAN_MAP_TEXTURE holds.
  */
-void zukan_load_ui_resource(void)
+void zukan_restore_map_texture(void)
 {
     RECT rect;
     s32 width;
     s32 height;
-    ZukanUiImageResource* image = (ZukanUiImageResource*)g_zukan_resource_archive;
+    ZukanMapTexture* image = (ZukanMapTexture*)g_zukan_resource_archive;
 
-    cdrom_queue_read(CD_RES_ZUKAN_UI, image);
+    cdrom_queue_read(CD_RES_ZUKAN_MAP_TEXTURE, image);
     width = image->packed_size;
     height = width >> 16;
     width &= 0xFFFF;
