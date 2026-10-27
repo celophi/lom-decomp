@@ -1,7 +1,3 @@
-/*
- * Shared memory-card event function; see include/common/card_events.h. Included by each
- * overlay that has it, at the point where it sits in that overlay's binary.
- */
 #include "common/card_events.h"
 
 /**

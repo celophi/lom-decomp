@@ -1,7 +1,3 @@
-/*
- * Shared TIM upload function; see include/common/tim.h. Included by each
- * overlay that has it, at the point where it sits in that overlay's binary.
- */
 #include "common/tim.h"
 
 /**

@@ -9,12 +9,6 @@
 /**
  * @file screen_fade.h
  * @brief Full-screen colour fade compiled into GOLEM and ZUKAN.
- *
- * The current fade level moves toward the target by an equal step each frame.
- * Levels above FADE_NEUTRAL brighten the screen additively and levels below it
- * darken it subtractively. Each overlay includes these functions from
- * src/common/screen_fade/<function>.inc.c at the point where they sit in its
- * binary, and defines the two globals in its own data.
  */
 
 /** @brief Steps of the fades in the golem editor and the encyclopedia. */

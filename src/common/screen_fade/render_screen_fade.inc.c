@@ -1,7 +1,3 @@
-/*
- * Shared screen-fade function; see include/common/screen_fade.h. Included by each
- * overlay that has it, at the point where it sits in that overlay's binary.
- */
 #include "common/gpu_packet.h"
 #include "common/screen_fade.h"
 

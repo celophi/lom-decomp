@@ -14,7 +14,7 @@
  * @param height Panel height.
  * @param color Packed line colour.
  * @return First packet after the four lines.
- * @note Compiled into GOLEM and ZUKAN from src/common/panel_outline/emit_panel_outline.inc.c; neither calls it.
+ * @note Neither GOLEM nor ZUKAN calls it.
  */
 LINE_F2* emit_panel_outline(LINE_F2* line, u_long* ordering_table, s32 x, s32 y, s32 width, s32 height, s32 color);
 
