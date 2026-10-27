@@ -159,8 +159,7 @@ extern s32 g_save_compatibility_tag;
 extern s32 g_playtime_vsync_origin;
 extern s32 g_pad_input;
 
-/* FIELD UI strings and memory-card file names. */
-extern u8 g_field_ui_text_cant_hold_more[];
+/* Memory-card file names. */
 extern char g_card_full_entry_name[];
 
 /** @brief Bytes of g_carda_save_title_template; the save number follows them on the first title line. */

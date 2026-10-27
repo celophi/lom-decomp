@@ -99,7 +99,7 @@ encoded_text_copy                = 0x80146504;
 
 // Image, glyph, row, and packet helpers
 gosub_upload_ui_image                    = 0x80146588;
-gosub_upload_image_archive               = 0x801465C8;
+upload_tim_to_vram                       = 0x801465C8;
 gosub_draw_composite_icon                = 0x80146680;
 gosub_finish_glyph_run                   = 0x801467D8;
 gosub_emit_glyph                         = 0x8014682C;

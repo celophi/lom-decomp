@@ -13,8 +13,6 @@
 #define ZUKAN_WORLD_HISTORY_END 576
 /** @brief Unlock bit of the first World History group; the other groups follow it. */
 #define ZUKAN_HISTORY_GROUP_UNLOCK_BIT 0x122
-/** @brief Techniques per weapon category in the saved technique bits. */
-#define ZUKAN_TECHNIQUES_PER_WEAPON 24
 #define ZUKAN_EXTRA_TECHNIQUE_COUNT 26
 
 /** @brief Start index of each category and the final end index. */
@@ -50,13 +48,12 @@ extern ZukanDisplayOrderTable g_zukan_display_order;
 extern u32 g_saved_technique_bits[FIELD_WEAPON_CATEGORY_COUNT];
 extern u32 g_saved_ability_bits[FIELD_ABILITY_WORD_COUNT];
 extern FieldLandWords g_saved_lands[FIELD_LAND_COUNT];
-extern u32 g_saved_encyclopedia_bits[FIELD_ENCYCLOPEDIA_BIT_WORDS];
 
 /** @brief Nonzero when encyclopedia entry bit @p bit is set in the saved game. */
-#define ZUKAN_ENTRY_UNLOCKED(bit) (g_saved_encyclopedia_bits[(bit) / 32] & (1 << ((bit) % 32)))
+#define ZUKAN_ENTRY_UNLOCKED(bit) SAVED_BIT_IS_SET(g_saved_encyclopedia_bits, bit)
 
 /** @brief Set encyclopedia entry bit @p bit in the saved game. */
-#define ZUKAN_UNLOCK_ENTRY(bit) (g_saved_encyclopedia_bits[(bit) / 32] = g_saved_encyclopedia_bits[(bit) / 32] | (1 << ((bit) % 32)))
+#define ZUKAN_UNLOCK_ENTRY(bit) SAVED_BIT_SET(g_saved_encyclopedia_bits, bit)
 
 /**
  * @brief Build and filter the ZUKAN entry list for the requested category.
@@ -264,9 +261,9 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
     }
     else if (category == ZUKAN_CATEGORY_TECHNIQUES)
     {
-        for (i = 0; i < FIELD_ABILITY_WORD_COUNT * 32; i++)
+        for (i = 0; i < FIELD_ABILITY_WORD_COUNT * SAVED_BITS_PER_WORD; i++)
         {
-            if ((g_saved_ability_bits[i / 32] >> (i % 32)) & 1)
+            if ((g_saved_ability_bits[i / SAVED_BITS_PER_WORD] >> (i % SAVED_BITS_PER_WORD)) & 1)
             {
                 if (i == 8)
                 {
@@ -287,13 +284,13 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
             }
         }
 
-        for (i = 0; i < FIELD_WEAPON_CATEGORY_COUNT * 32; i++)
+        for (i = 0; i < FIELD_WEAPON_CATEGORY_COUNT * SAVED_BITS_PER_WORD; i++)
         {
-            if ((i % 32) < ZUKAN_TECHNIQUES_PER_WEAPON)
+            if ((i % SAVED_BITS_PER_WORD) < FIELD_TECHNIQUES_PER_WEAPON)
             {
-                if ((g_saved_technique_bits[i / 32] >> (i % 32)) & 1)
+                if ((g_saved_technique_bits[i / SAVED_BITS_PER_WORD] >> (i % SAVED_BITS_PER_WORD)) & 1)
                 {
-                    j = i - ((i / 32) * 8);
+                    j = i - ((i / SAVED_BITS_PER_WORD) * (SAVED_BITS_PER_WORD - FIELD_TECHNIQUES_PER_WEAPON));
                     ZUKAN_UNLOCK_ENTRY(j + 0x2C0);
                 }
             }

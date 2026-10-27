@@ -15,15 +15,6 @@
 #include "main/game_state.h"
 #include "overlays/field/field_input.h"
 
-/** @brief VRAM destinations for a TIM's pixel and palette blocks. */
-typedef struct
-{
-    u16 pixel_x;
-    u16 pixel_y;
-    u16 clut_x;
-    u16 clut_y;
-} TimUploadDestinations;
-
 /**
  * @brief Stores the active SFX offset table for the AKAO driver.
  *
@@ -143,8 +134,8 @@ s32 g_fade_level;
 #define g_gover_frames ((GoverFrameHalf*)g_gover_frame_header)
 
 static void gover_load_sfx_bank(s32 sfx_bank_index);
-static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestinations* destinations);
-static void gover_load_image_from_cd(s32 resource_index, TimUploadDestinations* destinations, Tim* image_buffer);
+static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestination* destinations);
+static void gover_load_image_from_cd(s32 resource_index, TimUploadDestination* destinations, Tim* image_buffer);
 static void gover_build_otag(u8* frame_buffer);
 static void gover_run(void);
 
@@ -199,7 +190,7 @@ void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 
     vram_rect.w = 0;
     vram_rect.h = GOVER_CLUT_Y;
 
-    gover_load_image_from_cd(image_index + GOVER_IMAGE_RESOURCE_BASE, (TimUploadDestinations*)&vram_rect, image_buffer);
+    gover_load_image_from_cd(image_index + GOVER_IMAGE_RESOURCE_BASE, (TimUploadDestination*)&vram_rect, image_buffer);
 
     akao_stop_all_songs();
     akao_release_all_sfx();
@@ -378,7 +369,7 @@ static void gover_build_otag(u8* frame_buffer)
  * @param image_buffer Writable staging buffer for the TIM resource.
  * @see https://decomp.me/scratch/OafFK (100% match)
  */
-static void gover_load_image_from_cd(s32 resource_index, TimUploadDestinations* destinations, Tim* image_buffer)
+static void gover_load_image_from_cd(s32 resource_index, TimUploadDestination* destinations, Tim* image_buffer)
 {
     u8 padding[8];
     cdrom_queue_read((u16)resource_index, image_buffer);
@@ -395,7 +386,7 @@ static void gover_load_image_from_cd(s32 resource_index, TimUploadDestinations* 
  *         texture-page boundary.
  * @see https://decomp.me/scratch/BEM7D (100% match)
  */
-static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestinations* destinations)
+static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestination* destinations)
 {
     RECT upload_rect;
     TimBlock* pixel_block;

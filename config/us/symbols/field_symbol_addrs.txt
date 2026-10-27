@@ -1177,6 +1177,7 @@ field_flag_known_save                 = 0x800B0170;
 g_field_known_save_codes              = 0x800ECFDC;
 field_draw_return_to_title_choices    = 0x800AED20;
 g_field_return_to_title_choice        = 0x801226D8;
+g_field_ui_text_table                 = 0x800EC3C4;
 g_field_minus_sign_text_offset        = 0x800EC3E4;
 g_field_title_choice_text_entry       = 0x800EC3EA;
 field_collision_hit_markers           = 0x8005B368;

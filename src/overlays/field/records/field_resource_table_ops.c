@@ -91,7 +91,7 @@ FieldActionDescriptor* field_get_party_action(s32 page, u16 index)
  */
 void field_unlock_encyclopedia_entry(u32 entry)
 {
-    g_field_game_state->encyclopedia_bits[entry / 32] |= 1 << (entry % 32);
+    SAVED_BIT_SET(g_field_game_state->encyclopedia_bits, entry);
 }
 
 /**

@@ -525,18 +525,18 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
     list_y = 0;
     group_index = 0;
     group_flags_ptr = (s32*)((u8*)g_saved_game_ctx + MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET);
-    while (group_index < MENU_SPECIAL_TECHNIQUE_GROUP_COUNT)
+    while (group_index < FIELD_WEAPON_CATEGORY_COUNT)
     {
         technique_index = 0;
         bit_mask = 1;
         group_flags = *group_flags_ptr;
-        while (technique_index < MENU_SPECIAL_TECHNIQUES_PER_GROUP)
+        while (technique_index < FIELD_TECHNIQUES_PER_WEAPON)
         {
             if (group_flags & bit_mask)
             {
                 if (state->navigation.fields.selected_index == (list_y >> 4))
                 {
-                    selected_technique = technique_index + (group_index * MENU_SPECIAL_TECHNIQUES_PER_GROUP);
+                    selected_technique = technique_index + (group_index * FIELD_TECHNIQUES_PER_WEAPON);
                 }
                 list_y += 0x10;
             }
@@ -549,7 +549,7 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
 
     if ((g_pad_input & 0x220) && (active != 0))
     {
-        if ((selected_technique / MENU_SPECIAL_TECHNIQUES_PER_GROUP) ==
+        if ((selected_technique / FIELD_TECHNIQUES_PER_WEAPON) ==
             (s32)(((u32)(g_menu_equipment_base->attributes.packed) >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK))
         {
             u8* assignment_ptr = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
@@ -591,7 +591,7 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
             }
             character_ctx = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
             character_ctx += g_menu_active_subtype;
-            *(character_ctx + 0x609) = selected_technique % MENU_SPECIAL_TECHNIQUES_PER_GROUP;
+            *(character_ctx + 0x609) = selected_technique % FIELD_TECHNIQUES_PER_WEAPON;
             menu_play_se(MENU_SE_SELECT, AKAO_SFX_DEFAULT_VOLUME);
             state->active = MENU_SLOT_STATE_CLOSING;
         }
@@ -608,11 +608,11 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
     group_index = 0;
     group_flags_ptr = (s32*)((u8*)g_saved_game_ctx + MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET);
     scroll_y = state->scroll_y;
-    while (group_index < MENU_SPECIAL_TECHNIQUE_GROUP_COUNT)
+    while (group_index < FIELD_WEAPON_CATEGORY_COUNT)
     {
         technique_index = 0;
         bit_mask = 1;
-        while (technique_index < MENU_SPECIAL_TECHNIQUES_PER_GROUP)
+        while (technique_index < FIELD_TECHNIQUES_PER_WEAPON)
         {
             if (*group_flags_ptr & bit_mask)
             {
@@ -629,7 +629,7 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
                         glyph_color = 3;
                         name_table = g_menu_state_ptr;
                         name_table += ((MenuTextResources*)name_table)->table_offsets[MENU_TEXT_TECHNIQUE_NAMES];
-                        glyph_offset = *(u16*)((u8*)name_table + (technique_index * 2) + (group_index * (MENU_SPECIAL_TECHNIQUES_PER_GROUP * 2)));
+                        glyph_offset = *(u16*)((u8*)name_table + (technique_index * 2) + (group_index * (FIELD_TECHNIQUES_PER_WEAPON * 2)));
                         glyph = name_table + glyph_offset;
                         if (group_index ==
                             (s32)(((u32)(g_menu_equipment_base->attributes.packed) >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK))
@@ -641,7 +641,7 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
                 }
                 if (state->navigation.fields.selected_index == (list_y >> 4))
                 {
-                    selected_technique = technique_index + (group_index * MENU_SPECIAL_TECHNIQUES_PER_GROUP);
+                    selected_technique = technique_index + (group_index * FIELD_TECHNIQUES_PER_WEAPON);
                 }
                 list_y += 0x10;
             }

@@ -1,5 +1,6 @@
 #include "../internal/wmap_land_layout.h"
 #include "../internal/wmap_pathfinding.h"
+#include "common/saved_game.h"
 #include "main/field_entry.h"
 #include <abs.h>
 
@@ -10,7 +11,6 @@
  */
 
 #define WMAP_NODE_RECORD_SIZE 12
-#define WMAP_SET_BIT(index) D_800460AC[(index) / 32] = D_800460AC[(index) / 32] | (1 << ((index) % 32))
 
 #define WMAP_ROUTE_NODE_COUNT 64
 #define WMAP_ROUTE_UNVISITED_DISTANCE 100
@@ -54,7 +54,6 @@ extern u8 D_80043390;
 extern u8 D_80043391;
 extern s8 D_800433E4;
 extern u8 D_800433E5;
-extern u32 D_800460AC[];
 extern s32 D_800460EC;
 extern s32 D_800460FC;
 extern u8 D_800D01B0[];
@@ -72,7 +71,7 @@ void func_8005DBB8(void)
     {
         if ((D_800432C8[i * WMAP_NODE_RECORD_SIZE] >> 1) & 1)
         {
-            WMAP_SET_BIT(i + 0x200);
+            SAVED_BIT_SET(g_saved_encyclopedia_bits, i + 0x200);
         }
     }
     if (g_wmap_replacement_land_status & 4)
@@ -83,11 +82,11 @@ void func_8005DBB8(void)
     {
         if (D_800432C8[i * WMAP_NODE_RECORD_SIZE] & 1)
         {
-            WMAP_SET_BIT(i + 0x240);
+            SAVED_BIT_SET(g_saved_encyclopedia_bits, i + 0x240);
         }
         if ((D_800432C8[i * WMAP_NODE_RECORD_SIZE] >> 1) & 1)
         {
-            WMAP_SET_BIT(i + 0x280);
+            SAVED_BIT_SET(g_saved_encyclopedia_bits, i + 0x280);
         }
     }
     if (g_wmap_replacement_land_status & 4)
@@ -128,11 +127,11 @@ void func_8005DF50(s32 arg0, s32 arg1)
 
     for (sp10 = 0; sp10 < 0x40; sp10++)
     {
-        if (D_800432C0[sp10 / 32] & (1 << (sp10 % 32)))
+        if (SAVED_BIT_IS_SET(D_800432C0, sp10))
         {
             if (sp10 == 9 || sp10 == 0xA || sp10 == 0xB || sp10 == 0xC || sp10 == 0xD || sp10 == 0xE || sp10 == 0x18 || sp10 == 0 || sp10 == 0x1B || sp10 == 0x1C)
             {
-                D_800432C0[sp10 / 32] &= ~(1 << (sp10 % 32));
+                D_800432C0[sp10 / SAVED_BITS_PER_WORD] &= ~(1 << (sp10 % SAVED_BITS_PER_WORD));
                 g_music_track_index = D_800D01F0[sp10];
                 sp20 = D_800D01B0[sp10];
                 sp24 = (sp20 * 4) + ((D_800432C8[sp20 * WMAP_NODE_RECORD_SIZE] >> 4) & 3);

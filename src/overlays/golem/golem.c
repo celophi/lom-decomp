@@ -10,6 +10,7 @@
 #include "common/pad.h"
 #include "main/display.h"
 #include "common/gpu_packet.h"
+#include "common/render_context.h"
 #include "common/tim.h"
 #include <libetc.h>
 #include <libgte.h>
@@ -17,8 +18,6 @@
 #include "overlays/menu/menu.h"
 #include "overlays/field/field_input.h"
 
-#define GOLEM_ORDERING_TABLE_SIZE 16
-#define GOLEM_PACKET_BUFFER_SIZE 0x4000
 #define GOLEM_PANEL_COUNT 154
 #define GOLEM_BLOCK_LIST_ROW_HEIGHT 40
 #define GOLEM_SCROLL_FRAMES 4
@@ -81,8 +80,8 @@ typedef enum
 /** @brief One frame's ordering table, GPU packets, and VRAM environments. */
 typedef struct
 {
-    u_long ordering_table[GOLEM_ORDERING_TABLE_SIZE];
-    u8 packets[GOLEM_PACKET_BUFFER_SIZE];
+    u_long ordering_table[RENDER_CONTEXT_OT_ENTRY_COUNT];
+    u8 packets[FRAME_PRIMITIVE_BUFFER_SIZE];
     u8* packet_cursor;
     RECT clear_rect;
     s32 buffer_index;
@@ -116,15 +115,6 @@ typedef struct
     u16 height;
     u16 reserved;
 } GolemPanelRecord;
-
-/** @brief VRAM destinations for a TIM image and its CLUT. */
-typedef struct
-{
-    u16 x;
-    u16 y;
-    u16 clut_x;
-    u16 clut_y;
-} GolemImageClutPos;
 
 /** @brief Shared placement information for all rotations of a logic-block icon. */
 typedef struct
@@ -178,15 +168,6 @@ typedef struct
     u16 height;
 } GolemGlyphMetric;
 
-/** @brief Fade color and its remaining interpolation step count. */
-typedef struct
-{
-    s16 red;
-    s16 green;
-    s16 blue;
-    s16 steps_remaining;
-} GolemFadeState;
-
 /** @brief Byte offsets of the name and description sections from the archive header. */
 typedef struct
 {
@@ -212,7 +193,7 @@ extern GolemRenderContext* g_golem_render_buffers;
 extern s32 g_golem_exit_requested;
 /** @brief Word-aligned scratch memory after the render contexts. */
 extern u8* g_golem_work_buffer;
-extern GolemFadeState g_golem_fade_target;
+extern ScreenFade g_golem_fade_target;
 extern s32 g_golem_scroll_steps;
 extern s32 g_golem_logic_block_count;
 extern s32 g_golem_grid_size_class;
@@ -220,7 +201,7 @@ extern s32 g_golem_scroll_y;
 extern GolemLogicBlockStatus g_golem_block_status[];
 extern s32 g_golem_is_placing_block;
 extern s32 g_golem_scroll_target_y;
-extern GolemFadeState g_golem_fade_current;
+extern ScreenFade g_golem_fade_current;
 extern s32 g_golem_block_x;
 extern s32 g_golem_block_y;
 extern s32 g_golem_cursor_steps;
@@ -253,7 +234,6 @@ void func_800A3938(s32 sound_id, s32 pan);
 void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel);
 u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel);
 void golem_upload_ui_image(void);
-void golem_upload_image_archive(GolemImageClutPos* destinations, TimPrefix* tim);
 void golem_update_frame(GolemRenderContext* render_context);
 void golem_handle_input(void);
 void golem_reset_block_position(void);
@@ -305,8 +285,8 @@ void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel)
     g_golem_work_buffer = (u8*)ALIGN4(golem_initialize_state((u8*)render_buffers, restore_slot_on_cancel));
 
     next_buffer = g_golem_render_buffers;
-    ClearOTagR(next_buffer->ordering_table, GOLEM_ORDERING_TABLE_SIZE);
-    ClearOTagR(g_golem_render_buffers[1].ordering_table, GOLEM_ORDERING_TABLE_SIZE);
+    ClearOTagR(next_buffer->ordering_table, RENDER_CONTEXT_OT_ENTRY_COUNT);
+    ClearOTagR(g_golem_render_buffers[1].ordering_table, RENDER_CONTEXT_OT_ENTRY_COUNT);
     VSync(0);
     PutDispEnv(&next_buffer->display_env);
     update_controllers();
@@ -314,7 +294,7 @@ void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel)
     while (1)
     {
         draw_buffer = next_buffer;
-        ClearOTagR(draw_buffer->ordering_table, GOLEM_ORDERING_TABLE_SIZE);
+        ClearOTagR(draw_buffer->ordering_table, RENDER_CONTEXT_OT_ENTRY_COUNT);
         draw_buffer->packet_cursor = draw_buffer->packets;
         field_text_reset_scratch();
         field_update_input_repeat();
@@ -409,45 +389,16 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
  */
 void golem_upload_ui_image(void)
 {
-    GolemImageClutPos destinations;
+    TimUploadDestination destinations;
 
-    destinations.x = SCREEN_WIDTH;
-    destinations.y = 0;
+    destinations.pixel_x = SCREEN_WIDTH;
+    destinations.pixel_y = 0;
     destinations.clut_x = 0;
     destinations.clut_y = VRAM_CLUT_Y;
-    golem_upload_image_archive(&destinations, &g_golem_ui_image);
+    upload_tim_to_vram(&destinations, &g_golem_ui_image);
 }
 
-/**
- * @brief Upload the editor TIM image and flatten its palettes into one VRAM row.
- * @param destinations VRAM destinations for the image and CLUT blocks.
- * @param tim TIM resource containing 256 palette entries.
- * @note Requires a CLUT block; CLUT-less TIM files are not supported.
- */
-void golem_upload_image_archive(GolemImageClutPos* destinations, TimPrefix* tim)
-{
-    RECT upload_rect;
-    s32 flags;
-    s32 clut_block_size;
-    TimDimensions* pixel_dimensions;
-
-    flags = tim->flags;
-    clut_block_size = tim->clut_block.bnum;
-
-    if (flags & TIM_FLAG_HAS_CLUT)
-    {
-        setRECT(&upload_rect, destinations->clut_x, destinations->clut_y, CLUT_ENTRY_COUNT, 1);
-        LoadImage(&upload_rect, (u_long*)tim->clut_data);
-        pixel_dimensions = &TIM_PIXEL_BLOCK(tim, clut_block_size)->dimensions;
-    }
-    else
-    {
-        pixel_dimensions = &tim->clut_block.dimensions;
-    }
-
-    setRECT(&upload_rect, destinations->x, destinations->y, pixel_dimensions->width, pixel_dimensions->height);
-    LoadImage(&upload_rect, (u_long*)(TIM_PIXEL_BLOCK(tim, clut_block_size) + 1));
-}
+#include "../../common/tim/upload_tim_to_vram.inc.c"
 
 /**
  * @brief Render and update one editor frame.

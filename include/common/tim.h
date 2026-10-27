@@ -25,6 +25,15 @@
 /** Number of color entries in a 256-entry palette block. */
 #define CLUT_ENTRY_COUNT 0x100
 
+/** @brief VRAM destinations of a TIM's pixel block and CLUT block. */
+typedef struct
+{
+    s16 pixel_x;
+    s16 pixel_y;
+    s16 clut_x;
+    s16 clut_y;
+} TimUploadDestination;
+
 /** @brief Width and height stored in a TIM block header. */
 typedef struct
 {
@@ -62,6 +71,13 @@ typedef struct
     TimBlock clut_block;
     u16 clut_data[1];
 } TimPrefix;
+
+/**
+ * @brief Upload a TIM's optional CLUT and its pixel data to the given VRAM positions.
+ * @param destinations VRAM destinations for the pixel and CLUT blocks.
+ * @param tim TIM resource to upload.
+ */
+void upload_tim_to_vram(TimUploadDestination* destinations, TimPrefix* tim);
 
 /**
  * @brief PSX TIM file header for an 8bpp (256-color) image.

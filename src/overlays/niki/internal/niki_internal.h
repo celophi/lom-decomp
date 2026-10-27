@@ -75,7 +75,6 @@ extern u16 g_niki_text_wrong_version;
 extern u16 g_niki_text_no_load_file;
 extern u16 g_niki_text_found_load_file;
 extern u16 g_niki_text_trade_data_not_saved;
-extern u8 g_field_ui_text_cant_hold_more[];
 
 extern NikiSaveBuffer g_niki_save_blob;
 extern u8 D_8011F3D8[];

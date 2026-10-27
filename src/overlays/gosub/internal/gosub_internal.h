@@ -562,15 +562,6 @@ typedef struct
     s16 y2;
 } GosubScrollFillPacket;
 
-/** @brief VRAM upload position for an image and its CLUT. */
-typedef struct
-{
-    u16 pixel_x;
-    u16 pixel_y;
-    u16 clut_x;
-    u16 clut_y;
-} GosubImageVramLayout;
-
 /** @brief Glyph cell descriptor in the 8-byte g_gosub_glyph_metrics table. */
 typedef struct
 {
@@ -702,7 +693,6 @@ u8* gosub_draw_sort_dialog(u_long* ordering_table, u8* initial_packet, s32 x_off
 void gosub_open_block_action_dialog(void);
 void gosub_open_sort_dialog(void);
 void gosub_upload_ui_image(void);
-void gosub_upload_image_archive(GosubImageVramLayout* destinations, TimPrefix* tim);
 inline void gosub_copy_logic_block(void* dst, void* src);
 inline void gosub_copy_list_row(void* dst, void* src);
 u8* gosub_emit_glyph(u8* packet_cursor, u_long* ordering_table, s32 glyph_id, s32 x, s32 y, s32 clut_index);

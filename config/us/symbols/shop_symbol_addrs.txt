@@ -71,4 +71,5 @@ g_shop_cursor = 0x80145CDC;
 g_shop_scroll_frames = 0x80145CE0;
 
 // FIELD UI string entry used by this overlay.
+g_field_ui_text_table = 0x800EC3C4;
 g_field_ui_text_cant_hold_more = 0x800EC3D0;

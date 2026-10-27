@@ -3,6 +3,8 @@
 
 #include "common.h"
 
+#include "common/saved_game.h"
+
 /**
  * @file field_resource_actions.h
  * @brief Action slots supplied by each loaded actor resource.
@@ -34,8 +36,6 @@
 #define FIELD_ACTION_TECHNIQUE 0x8000
 /** @brief FieldActionSlot::command bits holding the technique index. */
 #define FIELD_ACTION_TECHNIQUE_MASK 0x7FFF
-/** @brief Techniques per weapon type in the technique sequence table. */
-#define FIELD_TECHNIQUES_PER_WEAPON 24
 /** @brief First technique sequence id. */
 #define FIELD_TECHNIQUE_SEQUENCE_BASE 0x88
 /** @brief FieldActionSlot::animation value that starts no animation. */

@@ -4,6 +4,7 @@
 
 #include "common.h"
 #include "common/gpu_packet.h"
+#include "overlays/field/field_numeric_sprites.h"
 #include <libgpu.h>
 #include <memory.h>
 
@@ -34,12 +35,6 @@
 /** @brief Style 2 digit palette. */
 #define FIELD_DIGIT_CLUT_STYLE2 getClut(144, 491)
 
-/** @brief Flag bits selecting the digit palette (0, 1 or 2). */
-#define FIELD_DIGIT_STYLE_MASK 0x7F
-
-/** @brief Flag bit that adds a black outline around the digits. */
-#define FIELD_DIGIT_OUTLINE 0x80
-
 /** @brief Outline copies: one pixel right, left, down and up. */
 enum
 {
@@ -50,8 +45,7 @@ enum
     FIELD_OUTLINE_DIRECTION_COUNT = 4
 };
 
-static SPRT* field_draw_digit(SPRT* sprite, u_long* ordering_table, s32 digit, u16* position, s32 flags);
-SPRT* field_add_sprite_outline(u_long* ordering_table, SPRT* sprite_cursor, s32 sprite_count);
+static SPRT* field_draw_digit(SPRT* sprite, u_long* ordering_table, s32 digit, Vec2s* position, s32 flags);
 
 /**
  * @brief Set the palette of a digit sprite from its style flags.
@@ -83,13 +77,13 @@ static inline void field_set_digit_clut(SPRT* sprite, s32 flags)
  * @param packet_cursor First free primitive-buffer address.
  * @param value Decimal value to draw.
  * @param digit_count Number of digit positions available for the value.
- * @param position Packed x/y screen position; the x coordinate advances as digits are emitted.
+ * @param position Screen position; the x coordinate advances as digits are emitted.
  * @param flags Digit style and FIELD_DIGIT_OUTLINE, passed to each digit.
  * @return First free primitive-buffer address after the emitted primitives.
  */
-void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 value, s32 digit_count, u16* position, s32 flags)
+void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 value, s32 digit_count, Vec2s* position, s32 flags)
 {
-    s32 base_x;
+    u16 base_x;
     s32 digit;
     s32 divisor;
     s32 digit_index;
@@ -109,23 +103,23 @@ void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 
     }
     if (digit_index != digit_count)
     {
-        *position += digit_index * FIELD_DIGIT_SIZE;
+        position->x += digit_index * FIELD_DIGIT_SIZE;
         for (; digit_index < digit_count; digit_index++)
         {
             digit = value / divisor;
             packet_cursor = field_draw_digit(packet_cursor, ordering_table, digit, position, flags);
             value -= digit * divisor;
-            *position += FIELD_DIGIT_SIZE;
+            position->x += FIELD_DIGIT_SIZE;
             divisor /= 10;
         }
     }
     else
     {
         /* A zero value draws a single 0 in the last position. */
-        base_x = *position - FIELD_DIGIT_SIZE;
-        *position = base_x + digit_count * FIELD_DIGIT_SIZE;
+        base_x = position->x - FIELD_DIGIT_SIZE;
+        position->x = base_x + digit_count * FIELD_DIGIT_SIZE;
         packet_cursor = field_draw_digit(packet_cursor, ordering_table, value, position, flags);
-        *position += FIELD_DIGIT_SIZE;
+        position->x += FIELD_DIGIT_SIZE;
     }
     /* Linked last, so the GPU draws it before the digits. */
     setDrawTPage((DR_TPAGE*)packet_cursor, 0, 0, FIELD_DIGIT_TPAGE);
@@ -138,11 +132,11 @@ void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 
  * @param sprite Sprite primitive to populate.
  * @param ordering_table Ordering-table entry to link the sprite into.
  * @param digit Digit 0-9 to draw.
- * @param position Packed x/y screen position, copied into the sprite as one word.
+ * @param position Screen position, copied into the sprite as one word.
  * @param flags Digit style in the low seven bits; FIELD_DIGIT_OUTLINE adds the outline sprites.
  * @return First free sprite after the emitted primitives.
  */
-static SPRT* field_draw_digit(SPRT* sprite, u_long* ordering_table, s32 digit, u16* position, s32 flags)
+static SPRT* field_draw_digit(SPRT* sprite, u_long* ordering_table, s32 digit, Vec2s* position, s32 flags)
 {
     u32 xy;
 
@@ -167,11 +161,11 @@ static SPRT* field_draw_digit(SPRT* sprite, u_long* ordering_table, s32 digit, u
  * @param sprite Sprite primitive to populate.
  * @param ordering_table Ordering-table entry to link the sprite into.
  * @param glyph Glyph 0-19: 0-9 are the digits, 10-19 the symbols in the next texture row.
- * @param position Packed x/y screen position, copied into the sprite as one word.
+ * @param position Screen position, copied into the sprite as one word.
  * @param flags Digit style in the low seven bits; FIELD_DIGIT_OUTLINE adds the outline sprites.
- * @return First free sprite after the emitted primitives.
+ * @return First free primitive-buffer address after the emitted primitives.
  */
-SPRT* field_draw_sprite_glyph(SPRT* sprite, u_long* ordering_table, s32 glyph, u16* position, s32 flags)
+void* field_draw_sprite_glyph(SPRT* sprite, u_long* ordering_table, s32 glyph, Vec2s* position, s32 flags)
 {
     s16 u;
 

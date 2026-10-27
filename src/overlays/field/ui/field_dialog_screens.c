@@ -15,6 +15,8 @@
 #include <libgte.h>
 #include <libgpu.h>
 #include "overlays/field/field_text.h"
+#include "overlays/field/field_numeric_sprites.h"
+#include "overlays/field/field_ui_text.h"
 #include "../internal/field_effect_render_state.h"
 #include "../internal/field_ability_progression.h"
 #include "common/saved_game.h"
@@ -126,9 +128,7 @@ static POLY_FT4* field_draw_timed_panel_image(POLY_FT4* prim, u_long* ordering_t
 #define FIELD_TECHNIQUE_WEAPON_MASK 0x0F
 #define FIELD_TECHNIQUE_INDEX_MASK 0x7F
 #define FIELD_TECHNIQUE_SILENT_FLAG 0x80
-#define FIELD_TECHNIQUES_PER_GROUP 24
 #define FIELD_TECHNIQUE_UNLOCK_FLAG 0x8000
-#define FIELD_UNLOCK_BITS_PER_WORD 32
 
 /** @brief g_field_dialog_screen_mode values of the battle result screens. */
 #define FIELD_RESULTS_PARTY_SUMMARY 1
@@ -740,7 +740,6 @@ extern s32 g_field_actor_text_count;
 
 static void field_draw_actor_text(FieldRenderHalf* render, FieldActorText* text);
 static void* field_draw_tinted_text(SPRT* sprite_cursor, u_long* ordering_table, u8* text, s32 text_color, s32 x, s32 y, s32 alignment, s32 color);
-SPRT* field_add_sprite_outline(u_long* ordering_table, SPRT* sprite_cursor, s32 count);
 
 /**
  * @brief Clear the countdown of every actor text.
@@ -1105,26 +1104,23 @@ void field_advance_ability_progression(void)
     {
         ability_rule = &ability_base[ability_index];
         ability = ability_rule->result;
-        ability_word = ability / FIELD_UNLOCK_BITS_PER_WORD;
+        ability_word = ability / SAVED_BITS_PER_WORD;
 
-        if (!(context->ability_bits[ability_word] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))))
+        if (!(context->ability_bits[ability_word] & (1 << (ability % SAVED_BITS_PER_WORD))))
         {
             ability = ability_rule->prerequisites[0].ability;
 
             if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
-                ((context->ability_bits[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
-                 (context->ability_proficiency[ability] >= ability_rule->prerequisites[0].proficiency)))
+                (SAVED_BIT_IS_SET(context->ability_bits, ability) && (context->ability_proficiency[ability] >= ability_rule->prerequisites[0].proficiency)))
             {
                 ability = ability_rule->prerequisites[1].ability;
 
                 if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
-                    ((context->ability_bits[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
-                     (context->ability_proficiency[ability] >= ability_rule->prerequisites[1].proficiency)))
+                    (SAVED_BIT_IS_SET(context->ability_bits, ability) && (context->ability_proficiency[ability] >= ability_rule->prerequisites[1].proficiency)))
                 {
                     ability = ability_rule->result;
-                    unlocked_ability_word = ability / FIELD_UNLOCK_BITS_PER_WORD;
-                    context->ability_bits[unlocked_ability_word] =
-                        (s32)(context->ability_bits[unlocked_ability_word] | (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD)));
+                    unlocked_ability_word = ability / SAVED_BITS_PER_WORD;
+                    context->ability_bits[unlocked_ability_word] = (s32)(context->ability_bits[unlocked_ability_word] | (1 << (ability % SAVED_BITS_PER_WORD)));
                     g_field_progression_unlocks[g_field_progression_unlock_count] = (s16)ability;
                     g_field_progression_unlock_count += 1;
                 }
@@ -1144,30 +1140,27 @@ void field_advance_ability_progression(void)
         technique_group = technique_rule->weapon >> FIELD_TECHNIQUE_GROUP_SHIFT;
         ability = technique_rule->result & FIELD_TECHNIQUE_INDEX_MASK;
 
-        if (!(context->technique_bits[technique_group] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))))
+        if (!(context->technique_bits[technique_group] & (1 << (ability % SAVED_BITS_PER_WORD))))
         {
             ability = technique_rule->prerequisites[0].ability;
 
             if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
-                ((context->ability_bits[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
-                 (context->ability_proficiency[ability] >= technique_rule->prerequisites[0].proficiency)))
+                (SAVED_BIT_IS_SET(context->ability_bits, ability) && (context->ability_proficiency[ability] >= technique_rule->prerequisites[0].proficiency)))
             {
                 ability = technique_rule->prerequisites[1].ability;
 
-                if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
-                    ((context->ability_bits[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
-                     (context->ability_proficiency[ability] >= technique_rule->prerequisites[1].proficiency)))
+                if (ability == FIELD_ABILITY_PREREQUISITE_NONE || (SAVED_BIT_IS_SET(context->ability_bits, ability) &&
+                                                                   (context->ability_proficiency[ability] >= technique_rule->prerequisites[1].proficiency)))
                 {
                     ability = technique_rule->prerequisites[2].ability;
 
-                    if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
-                        ((context->ability_bits[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
-                         (context->ability_proficiency[ability] >= technique_rule->prerequisites[2].proficiency)))
+                    if (ability == FIELD_ABILITY_PREREQUISITE_NONE || (SAVED_BIT_IS_SET(context->ability_bits, ability) &&
+                                                                       (context->ability_proficiency[ability] >= technique_rule->prerequisites[2].proficiency)))
                     {
                         ability = technique_rule->prerequisites[3].ability;
 
                         if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
-                            ((context->ability_bits[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
+                            (SAVED_BIT_IS_SET(context->ability_bits, ability) &&
                              (context->ability_proficiency[ability] >= technique_rule->prerequisites[3].proficiency)))
                         {
                             technique_party_index = 0;
@@ -1177,17 +1170,17 @@ void field_advance_ability_progression(void)
                             for (; technique_party_index < FIELD_PARTY_SIZE; technique_party_index++)
                             {
                                 if ((g_field_player_records[technique_party_index].head.bytes.flags & FIELD_PLAYER_ACTIVE) &&
-                                    ((u32)(context->characters[technique_party_index].info.actions.type & FIELD_CHARACTER_TYPE_MASK) <
-                                     FIELD_CHARACTER_GUEST))
+                                    ((u32)(context->characters[technique_party_index].info.actions.type & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST))
                                 {
                                     weapon_requirement = active_rule->weapon;
                                     equipped_weapon =
-                                        (context->characters[technique_party_index].equipment[FIELD_WEAPON_SLOT].info.word >> FIELD_WEAPON_CATEGORY_SHIFT) & FIELD_WEAPON_CATEGORY_MASK;
+                                        (context->characters[technique_party_index].equipment[FIELD_WEAPON_SLOT].info.word >> FIELD_WEAPON_CATEGORY_SHIFT) &
+                                        FIELD_WEAPON_CATEGORY_MASK;
                                     if (equipped_weapon == (weapon_requirement & FIELD_TECHNIQUE_WEAPON_MASK))
                                     {
                                         if (context->weapon_proficiency[equipped_weapon] >= active_rule->weapon_proficiency)
                                         {
-                                            if (!(context->technique_bits[technique_group] & (technique_mask = 1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))))
+                                            if (!(context->technique_bits[technique_group] & (technique_mask = 1 << (ability % SAVED_BITS_PER_WORD))))
                                             {
                                                 technique_group = weapon_requirement >> FIELD_TECHNIQUE_GROUP_SHIFT;
                                                 context->technique_bits[technique_group] = (s32)(context->technique_bits[technique_group] | technique_mask);
@@ -1195,7 +1188,7 @@ void field_advance_ability_progression(void)
                                                 if (!(active_rule->result & FIELD_TECHNIQUE_SILENT_FLAG))
                                                 {
                                                     g_field_progression_unlocks[g_field_progression_unlock_count] =
-                                                        ((technique_group * FIELD_TECHNIQUES_PER_GROUP) + ability) | FIELD_TECHNIQUE_UNLOCK_FLAG;
+                                                        ((technique_group * FIELD_TECHNIQUES_PER_WEAPON) + ability) | FIELD_TECHNIQUE_UNLOCK_FLAG;
                                                     g_field_progression_unlock_count += 1;
                                                 }
                                             }
@@ -1244,14 +1237,13 @@ typedef struct
 
 extern u8 g_field_retry_snapshot[];
 /*
- * The dialog text bank D_800EC3C4 starts with PackedOffset entries (offsets
+ * The dialog text bank g_field_ui_text_table starts with PackedOffset entries (offsets
  * from the bank start); the entries used here are referenced by their own
  * address symbols, which the code needs for its address arithmetic.
  */
 extern u8 D_800EC3D6[];
 extern u8 D_800EC3C6[], D_800EC3DA[];
 extern u8 g_field_dialog_item_quantities[];
-extern u8 D_800EC3C4[];
 extern u8* g_field_dialog_item_texts[];
 extern s32 g_field_experience_snapshot[];
 extern PackedOffset D_800EC3D8;
@@ -1915,7 +1907,7 @@ static void* field_draw_unlock_list(u_long* ordering_table, void* cursor, s32 sc
                         u8* base;
 
                         low = D_800EC3CE.low;
-                        base = D_800EC3C4;
+                        base = g_field_ui_text_table;
                         offset = (D_800EC3CE.high << 8) + (uintptr_t)base;
                         next_cursor =
                             field_draw_text(next_cursor, ordering_table, (void*)(low + offset), 4, header_x, technique_header_y, FIELD_TEXT_ALIGN_LEFT);
@@ -1948,7 +1940,7 @@ static void* field_draw_unlock_list(u_long* ordering_table, void* cursor, s32 sc
 
                     if ((ability_header_y > -FIELD_RESULTS_ROW_HEIGHT) && (ability_header_y < viewport_height))
                     {
-                        next_cursor = field_draw_text(next_cursor, ordering_table, D_800EC3C4 + D_800EC3CC.low + (D_800EC3CC.high << 8), 4, header_x,
+                        next_cursor = field_draw_text(next_cursor, ordering_table, g_field_ui_text_table + D_800EC3CC.low + (D_800EC3CC.high << 8), 4, header_x,
                                                       ability_header_y, FIELD_TEXT_ALIGN_LEFT);
                     }
 

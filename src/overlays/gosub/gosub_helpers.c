@@ -6,46 +6,16 @@
  */
 void gosub_upload_ui_image(void)
 {
-    GosubImageVramLayout destinations;
+    TimUploadDestination destinations;
 
     destinations.pixel_x = GOSUB_UI_IMAGE_X;
     destinations.pixel_y = 0;
     destinations.clut_x = 0;
     destinations.clut_y = VRAM_CLUT_Y;
-    gosub_upload_image_archive(&destinations, &g_gosub_image_archive);
+    upload_tim_to_vram(&destinations, &g_gosub_image_archive);
 }
 
-/**
- * @brief Upload a TIM's optional CLUT and pixel data to selected VRAM positions.
- * @param destinations VRAM destinations for the pixel and CLUT blocks.
- * @param tim TIM resource to upload.
- * @note The pixel data is always taken from after a CLUT block, so a TIM
- *       without one would upload the wrong bytes; every GOSUB image has one.
- */
-void gosub_upload_image_archive(GosubImageVramLayout* destinations, TimPrefix* tim)
-{
-    RECT upload_rect;
-    s32 flags;
-    s32 clut_block_size;
-    TimDimensions* pixel_dimensions;
-
-    flags = tim->flags;
-    clut_block_size = tim->clut_block.bnum;
-
-    if (flags & TIM_FLAG_HAS_CLUT)
-    {
-        setRECT(&upload_rect, destinations->clut_x, destinations->clut_y, CLUT_ENTRY_COUNT, 1);
-        LoadImage(&upload_rect, (u_long*)tim->clut_data);
-        pixel_dimensions = &TIM_PIXEL_BLOCK(tim, clut_block_size)->dimensions;
-    }
-    else
-    {
-        pixel_dimensions = &tim->clut_block.dimensions;
-    }
-
-    setRECT(&upload_rect, destinations->pixel_x, destinations->pixel_y, pixel_dimensions->width, pixel_dimensions->height);
-    LoadImage(&upload_rect, (u_long*)(TIM_PIXEL_BLOCK(tim, clut_block_size) + 1));
-}
+#include "../../common/tim/upload_tim_to_vram.inc.c"
 
 /**
  * @brief Draw a logic block's icon: its base glyph and one glyph per cell of the shape.

@@ -65,7 +65,7 @@
 /** Display buffers of a double-buffered screen: one is shown while the other is drawn. */
 #define DISPLAY_BUFFER_COUNT 2
 
-/** Bytes of one display buffer's GPU primitive buffer on the standalone screens. */
+/** Bytes of one display buffer's GPU primitive buffer. */
 #define FRAME_PRIMITIVE_BUFFER_SIZE 0x4000
 
 /** Vertical blanks per frame of the 30 fps game loop, passed to VSync and set_controller_vsync_interval. */
@@ -80,6 +80,19 @@
  */
 #define BLEND_ADD_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 320, 0)
 #define BLEND_SUBTRACT_TPAGE getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 320, 0)
+
+/**
+ * @brief Screen fade level of each channel, plus the steps left to reach it.
+ * @note In a fade target, @c steps_remaining starts as the fade length in frames
+ *       and counts down by one each frame until the fade arrives.
+ */
+typedef struct
+{
+    s16 red;
+    s16 green;
+    s16 blue;
+    s16 steps_remaining;
+} ScreenFade;
 
 /** Y coordinate of the CLUT storage row in VRAM.
  * Overlays store their 256-entry palettes in the lines starting here,

@@ -151,10 +151,8 @@ extern s32 g_shop_scroll_frames;
 /*
  * FIELD's UI string archive starts with a table of unaligned little-endian u16
  * offsets. Each entry SHOP reads is its own symbol; the string for entry N of
- * the table starting at D_800EC3C4 lies at D_800EC3C4 + offset.
+ * the table starting at g_field_ui_text_table lies at g_field_ui_text_table + offset.
  */
-extern u8 D_800EC3C4[];
-extern u8 g_field_ui_text_cant_hold_more[];
 extern u8 D_800EC3DC[];
 extern u8 D_800EC3E0[];
 extern u8 D_800EC3E2[];

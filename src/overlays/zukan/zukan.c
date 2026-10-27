@@ -14,6 +14,7 @@
 #include "main/display.h"
 #include "main/main.h"
 #include "overlays/field/field_input.h"
+#include "overlays/field/field_numeric_sprites.h"
 #include "overlays/field/field_sound.h"
 #include "overlays/field/field_text.h"
 #include "overlays/field/field_ui_text.h"
@@ -49,7 +50,6 @@
 
 #define ZUKAN_SCROLL_ARROW_COLOR GPU_COLOR_WORD(0x80, 0x80, 0xF0)
 #define ZUKAN_SELECTION_COLOR GPU_COLOR_WORD(0xF0, 0x80, 0xF0)
-#define ZUKAN_PAGE_COUNT_SEPARATOR_GLYPH 11
 #define ZUKAN_PAGE_NUMBER_Y 189
 
 /* Scrolling list viewport, relative to the active draw buffer. */
@@ -104,15 +104,6 @@
 /** @brief String @p index in the UI archive text section selected by @p field. */
 #define ZUKAN_ARCHIVE_TEXT(field, index) (ZUKAN_SECTION(ZUKAN_ARCHIVE, field) + ((u16*)ZUKAN_SECTION(ZUKAN_ARCHIVE, field))[index])
 
-/** @brief VRAM locations for a TIM image and its color lookup table. */
-typedef struct
-{
-    s16 x;
-    s16 y;
-    s16 clut_x;
-    s16 clut_y;
-} ZukanImageDestination;
-
 /** @brief Offsets of the images and text tables in the UI archive. */
 typedef struct
 {
@@ -144,15 +135,6 @@ typedef struct
     u16 y;
 } ZukanUiSpriteRecord;
 
-/** @brief Fade color and the number of interpolation steps left. */
-typedef struct
-{
-    s16 red;
-    s16 green;
-    s16 blue;
-    s16 steps_remaining;
-} ZukanFadeState;
-
 /**
  * @brief Header of an encyclopedia entry resource. Offsets are relative to the
  *        header; the bytes before @c image_offset are copied to the work buffer
@@ -181,7 +163,6 @@ typedef struct
     u16 next;
 } ZukanRelatedEntries;
 
-extern u8 g_field_ui_text_dashes[];
 extern u32 g_field_vram_byte_count;
 extern u8 g_zukan_resource_archive[];
 extern ZukanEntryResourceHeader* g_zukan_resource_buffer;
@@ -190,12 +171,12 @@ extern ZukanEntryResourceHeader* g_zukan_work_buffer;
 extern s32 g_zukan_exit_requested;
 extern ZukanUiSpriteRecord g_zukan_ui_sprites[ZUKAN_UI_SPRITE_COUNT];
 extern ZukanListEntry g_zukan_list_entries[ZUKAN_LIST_CAPACITY];
-extern ZukanFadeState g_zukan_fade_target;
+extern ScreenFade g_zukan_fade_target;
 extern s16 g_zukan_input_blocked;
 extern s32 g_zukan_category;
 extern s32 g_zukan_entry_count;
 extern s32 g_zukan_previous_resource_id;
-extern ZukanFadeState g_zukan_fade_current;
+extern ScreenFade g_zukan_fade_current;
 extern s32 g_zukan_displayed_entry;
 extern s32 g_zukan_transition_frame;
 extern s32 g_zukan_view_mode;
@@ -207,12 +188,8 @@ extern s32 g_zukan_scroll_y;
 extern s32 g_zukan_scroll_target_y;
 extern s32 g_zukan_next_resource_id;
 
-/* FIELD routines that stay resident while this overlay is loaded. */
-void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 value, s32 digit_count, Vec2s* position, s32 flags);
-void* field_draw_sprite_glyph(void* packet_cursor, u_long* ordering_table, s32 glyph, Vec2s* position, s32 flags);
-
 void zukan_upload_ui_images(u8* work_buffer);
-inline s32 zukan_upload_tim(ZukanImageDestination* destinations, TimPrefix* tim);
+inline s32 zukan_upload_tim(TimUploadDestination* destinations, TimPrefix* tim);
 s32 zukan_handle_input(void);
 void zukan_scroll_to_selection(void);
 inline DR_TPAGE* zukan_emit_page_image_tpage(DR_TPAGE* draw_mode, u_long* ordering_table);
@@ -360,17 +337,17 @@ u8* zukan_initialize_state(u8* work_buffer, s32 category)
  */
 void zukan_upload_ui_images(u8* work_buffer)
 {
-    ZukanImageDestination destinations;
+    TimUploadDestination destinations;
     ZukanArchiveHeader* archive = ZUKAN_ARCHIVE;
 
-    destinations.x = ZUKAN_BORDER_IMAGE_X;
-    destinations.y = ZUKAN_BORDER_IMAGE_Y;
+    destinations.pixel_x = ZUKAN_BORDER_IMAGE_X;
+    destinations.pixel_y = ZUKAN_BORDER_IMAGE_Y;
     destinations.clut_x = 0;
     destinations.clut_y = VRAM_CLUT_Y;
     zukan_upload_tim(&destinations, (TimPrefix*)ZUKAN_SECTION(archive, border_image_offset));
 
-    destinations.x = ZUKAN_PAGE_IMAGE_X;
-    destinations.y = ZUKAN_PAGE_IMAGE_Y;
+    destinations.pixel_x = ZUKAN_PAGE_IMAGE_X;
+    destinations.pixel_y = ZUKAN_PAGE_IMAGE_Y;
     destinations.clut_x = 0;
     destinations.clut_y = VRAM_CLUT_Y;
     zukan_upload_tim(&destinations, (TimPrefix*)ZUKAN_SECTION(archive, page_image_offset));
@@ -382,7 +359,7 @@ void zukan_upload_ui_images(u8* work_buffer)
  * @param tim TIM image data.
  * @return The TIM pixel-mode bits from the flags word.
  */
-inline s32 zukan_upload_tim(ZukanImageDestination* destinations, TimPrefix* tim)
+inline s32 zukan_upload_tim(TimUploadDestination* destinations, TimPrefix* tim)
 {
     RECT upload_rect;
     s32 flags;
@@ -405,7 +382,7 @@ inline s32 zukan_upload_tim(ZukanImageDestination* destinations, TimPrefix* tim)
         pixel_dimensions = &tim->clut_block.dimensions;
     }
 
-    setRECT(&upload_rect, destinations->x, destinations->y, pixel_dimensions->width, pixel_dimensions->height);
+    setRECT(&upload_rect, destinations->pixel_x, destinations->pixel_y, pixel_dimensions->width, pixel_dimensions->height);
     LoadImage(&upload_rect, (u_long*)(TIM_PIXEL_BLOCK(tim, clut_block_size) + 1));
     return mode;
 }
@@ -1018,7 +995,7 @@ void zukan_render_content(RenderContext* render_ctx)
 
         pos.x = 262;
         pos.y = ZUKAN_PAGE_NUMBER_Y;
-        packet_cursor = field_draw_sprite_glyph(packet_cursor, ordering_table, ZUKAN_PAGE_COUNT_SEPARATOR_GLYPH, &pos, 1);
+        packet_cursor = field_draw_sprite_glyph((SPRT*)packet_cursor, ordering_table, FIELD_DIGIT_GLYPH_SEPARATOR, &pos, 1);
 
         pos.x = 238;
         pos.y = ZUKAN_PAGE_NUMBER_Y;
@@ -1159,7 +1136,7 @@ TILE* zukan_render_fade(TILE* tile, u_long* ordering_table)
         setTile(tile);
         setSemiTrans(tile, 1);
         tile->w = SCREEN_WIDTH;
-        draw_mode = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, ZUKAN_PAGE_IMAGE_X, ZUKAN_PAGE_IMAGE_Y);
+        draw_mode = BLEND_ADD_TPAGE;
         SET_YX0(tile, 0, 0);
         tile->h = SCREEN_HEIGHT;
         addPrim(ordering_table, tile);
@@ -1169,7 +1146,7 @@ TILE* zukan_render_fade(TILE* tile, u_long* ordering_table)
 
         if (g_zukan_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
-            draw_mode = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, ZUKAN_PAGE_IMAGE_X, ZUKAN_PAGE_IMAGE_Y);
+            draw_mode = BLEND_SUBTRACT_TPAGE;
         }
 
         setDrawTPage(tpage, 0, 0, draw_mode);
@@ -1316,7 +1293,7 @@ void* zukan_render_detail_sprites(SPRT* sprite, u_long* ordering_table)
  */
 void zukan_commit_loaded_entry(void)
 {
-    ZukanImageDestination destinations;
+    TimUploadDestination destinations;
     ZukanEntryResourceHeader* resource;
     u8* src;
     u8* dst;
@@ -1333,8 +1310,8 @@ void zukan_commit_loaded_entry(void)
         *dst++ = *src;
     }
 
-    destinations.x = ZUKAN_ENTRY_IMAGE_X;
-    destinations.y = ZUKAN_ENTRY_IMAGE_Y;
+    destinations.pixel_x = ZUKAN_ENTRY_IMAGE_X;
+    destinations.pixel_y = ZUKAN_ENTRY_IMAGE_Y;
     destinations.clut_x = 0;
     destinations.clut_y = ZUKAN_ENTRY_CLUT_Y;
     g_zukan_image_mode = zukan_upload_tim(&destinations, (TimPrefix*)ZUKAN_SECTION(g_zukan_resource_buffer, image_offset));

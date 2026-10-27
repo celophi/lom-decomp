@@ -5,6 +5,11 @@
 #include <libgte.h>
 #include <libgpu.h>
 
+#include "main/display.h"
+
+/** @brief Ordering-table entries at the start of RenderContext::ot; packets follow them. */
+#define RENDER_CONTEXT_OT_ENTRY_COUNT 16
+
 /**
  * @brief Per-frame render context handed to the in-game overlay modules
  *        (MENU, GNAME, ...).
@@ -28,7 +33,7 @@
  */
 typedef struct
 {
-    u_long  ot[0x1010];   /* 0x0000 - 16 OT entries, then 0x4000 bytes of packets */
+    u_long ot[RENDER_CONTEXT_OT_ENTRY_COUNT + FRAME_PRIMITIVE_BUFFER_SIZE / sizeof(u_long)]; /* 0x0000 - 16 OT entries, then 0x4000 bytes of packets */
     void*   prim_cursor;  /* 0x4040 - next free byte in the primitive heap */
     RECT    clear_rect;   /* 0x4044 - ClearImage rect for this buffer's draw area */
     u32     frame_parity; /* 0x404C - active double-buffer index (0 or 1) */
@@ -43,9 +48,6 @@ typedef struct
  * the inactive buffer is at @c base + ((parity ^ 1) * DRAW_BUF_STRIDE).
  */
 #define DRAW_BUF_STRIDE 0x40C0
-
-/** @brief Ordering-table entries at the start of RenderContext::ot; packets follow them. */
-#define RENDER_CONTEXT_OT_ENTRY_COUNT 16
 
 /**
  * @brief Offset of the DRAWENV reserve slot within a draw buffer.
