@@ -1,6 +1,9 @@
 #ifndef _DISPLAY_H
 #define _DISPLAY_H
 
+#include "common.h"
+#include <libgpu.h>
+
 #include "common/gpu_packet.h"
 
 /**
@@ -68,11 +71,17 @@
 /** Bytes of one display buffer's GPU primitive buffer. */
 #define FRAME_PRIMITIVE_BUFFER_SIZE 0x4000
 
+/** Ordering-table entries of one display buffer of a standalone screen. */
+#define FRAME_ORDERING_TABLE_LENGTH 4096
+
 /** Vertical blanks per frame of the 30 fps game loop, passed to VSync and set_controller_vsync_interval. */
 #define FRAME_VSYNC_INTERVAL 2
 
 /** Lowest fade level drawn by adding light; levels below FADE_NEUTRAL subtract it. */
 #define FADE_ADDITIVE_THRESHOLD (FADE_NEUTRAL + 1)
+
+/** Amount subtracted from an additive fade level to get its tile colour. */
+#define FADE_ADDITIVE_BIAS (FADE_ADDITIVE_THRESHOLD - FADE_NEUTRAL)
 
 /**
  * Draw-mode texture pages that select additive or subtractive blending for the
@@ -93,6 +102,28 @@ typedef struct
     s16 blue;
     s16 steps_remaining;
 } ScreenFade;
+
+/**
+ * @brief ScreenFade with word-sized fields.
+ * @note A current fade level leaves @c steps_remaining unused.
+ */
+typedef struct
+{
+    s32 red;
+    s32 green;
+    s32 blue;
+    s32 steps_remaining;
+} ScreenFadeWords;
+
+/** @brief Packet view for a fade TILE or draw-mode command. */
+typedef union
+{
+    TILE tile;
+    DR_TPAGE draw_mode;
+} ScreenFadePrimitive;
+
+/** @brief Advance a fade packet cursor by the concrete packet just emitted. */
+#define SCREEN_FADE_NEXT_PRIMITIVE(primitive, type) ((ScreenFadePrimitive*)((u8*)(primitive) + sizeof(type)))
 
 /** Y coordinate of the CLUT storage row in VRAM.
  * Overlays store their 256-entry palettes in the lines starting here,

@@ -13,6 +13,15 @@ extern s16 g_game_diagnostic_status;
 
 void fade_out_current_song(void);
 void load_and_play_song(s32 song_index);
+/** @brief Refusal buzz for a choice or action that is not allowed. */
+#define SFX_ERROR 0x78
+/** @brief Cursor movement. */
+#define SFX_CURSOR 0x7D
+/** @brief Confirming a selection. */
+#define SFX_CONFIRM 0x7E
+/** @brief Cancelling a selection or closing a menu. */
+#define SFX_CANCEL 0x7F
+
 /** @brief record_game_diagnostic status of an error report. */
 #define DIAG_ERROR 0x8001
 

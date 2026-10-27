@@ -36,11 +36,6 @@ s32 akao_reset_xfer_state(void);
 s32 akao_load_bank_slot(void *bank, s32 slot, s32 wait_for_completion);
 s32 akao_load_upper_bank_slot(void *bank, s32 slot, s32 wait_for_completion);
 
-
-/** @brief Section offset table of the container in LOAD_BUFFER_ADDRESS. */
-#define FIELD_AUDIO_LOAD_OFFSETS LOAD_BUFFER_AT(0x4)
-
-
 /** @brief Largest music-file index field_load_song accepts. */
 #define FIELD_SONG_INDEX_MAX 256
 
@@ -237,13 +232,13 @@ void field_load_song(s32 music_index, s32 second_song)
 
     if (music_index < FIELD_SONG_INDEX_MAX + 1)
     {
-        cdrom_queue_read(CD_RES_MUSIC_FILE(music_index), (void *)LOAD_BUFFER_ADDRESS);
+        cdrom_queue_read(CD_RES_MUSIC_FILE(music_index), LOAD_BUFFER_AKAO_CONTAINER);
         cdrom_wait_queue_empty();
 
-        off = (u32 *)FIELD_AUDIO_LOAD_OFFSETS;
+        off = LOAD_BUFFER_AKAO_CONTAINER->section_offsets;
 
-        count = off[1] - off[0];
-        src = (u8 *)LOAD_BUFFER_ADDRESS + off[0];
+        count = off[AKAO_CONTAINER_BANK_SECTION] - off[AKAO_CONTAINER_RESIDENT_SECTION];
+        src = AKAO_CONTAINER_DATA_AT(LOAD_BUFFER_AKAO_CONTAINER, off[AKAO_CONTAINER_RESIDENT_SECTION]);
 
         if (second_song != 0)
         {
@@ -254,7 +249,7 @@ void field_load_song(s32 music_index, s32 second_song)
             bcopy(src, g_resident_song_buffer, count);
         }
 
-        akao_upload_bank_blocking((AkaoBankHeader *)((u8 *)LOAD_BUFFER_ADDRESS + off[1]), 1);
+        akao_upload_bank_blocking((AkaoBankHeader *)AKAO_CONTAINER_DATA_AT(LOAD_BUFFER_AKAO_CONTAINER, off[AKAO_CONTAINER_BANK_SECTION]), 1);
     }
 }
 
@@ -275,7 +270,7 @@ void field_load_fixed_song(void)
     dst = g_resident_song_buffer;
     count = LOAD_BUFFER_ADDRESS;
     count = *(u32 *)count;
-    off_end = (u32 *)FIELD_AUDIO_LOAD_OFFSETS + count;
+    off_end = LOAD_BUFFER_AKAO_CONTAINER->section_offsets + count;
 
     bcopy((u8 *)LOAD_BUFFER_ADDRESS, dst, off_end[-1]);
     akao_upload_bank_blocking((AkaoBankHeader *)((u8 *)LOAD_BUFFER_ADDRESS + off_end[-1]), 1);

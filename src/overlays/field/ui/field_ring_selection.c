@@ -59,8 +59,6 @@ enum
 #define FIELD_RING_CLOSE_STEPS 16
 /** @brief Frames a one-entry rotation takes. */
 #define FIELD_RING_ROTATE_STEPS 10
-/** @brief Icon brightness once the ring is open (0x80 = unmodulated texture). */
-#define FIELD_RING_FULL_BRIGHTNESS 0x80
 /** @brief Brightness change per frame while opening and closing. */
 #define FIELD_RING_OPEN_FADE_STEP 4
 #define FIELD_RING_CLOSE_FADE_STEP 8
@@ -346,7 +344,7 @@ static void field_ring_menu_open_step(void)
         g_field_ring_semi_trans = 0;
         g_field_ring_menu_state = FIELD_RING_SELECTING;
         g_field_ring_step = 0;
-        g_field_ring_brightness = FIELD_RING_FULL_BRIGHTNESS;
+        g_field_ring_brightness = GPU_TINT_NEUTRAL_LEVEL;
         return;
     }
 

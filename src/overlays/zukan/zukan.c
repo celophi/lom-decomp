@@ -466,7 +466,7 @@ s32 zukan_handle_input(void)
         {
             if (g_zukan_list_entries[g_zukan_selected_entry].available)
             {
-                field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
+                field_play_sound(SFX_CONFIRM, AKAO_PAN_CENTER);
                 set_screen_fade_target(FADE_BLACK, FADE_BLACK, FADE_BLACK, SCREEN_FADE_STEPS);
                 zukan_load_entry(g_zukan_selected_entry);
                 g_zukan_transition_state = ZUKAN_TRANSITION_OPEN_DETAIL;
@@ -474,7 +474,7 @@ s32 zukan_handle_input(void)
             }
             else
             {
-                field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+                field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
             }
 
             return;
@@ -526,7 +526,7 @@ s32 zukan_handle_input(void)
 
         if (selection_moved != 0)
         {
-            field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+            field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
             zukan_scroll_to_selection();
         }
 
@@ -535,7 +535,7 @@ s32 zukan_handle_input(void)
 
     if (g_pad_input & (PADRdown | PADRright | PADi))
     {
-        field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
+        field_play_sound(SFX_CONFIRM, AKAO_PAN_CENTER);
         set_screen_fade_target(FADE_BLACK, FADE_BLACK, FADE_BLACK, SCREEN_FADE_STEPS);
         g_zukan_transition_state = ZUKAN_TRANSITION_RETURN_TO_LIST;
         g_zukan_transition_frame = 0;
@@ -544,7 +544,7 @@ s32 zukan_handle_input(void)
 
     if (g_pad_input & (PADLright | PADR1))
     {
-        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+        field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
         zukan_start_next_entry_transition();
         related_resource_id = g_zukan_next_resource_id;
 
@@ -578,7 +578,7 @@ s32 zukan_handle_input(void)
 
     if (g_pad_input & (PADLleft | PADL1))
     {
-        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+        field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
         zukan_start_previous_entry_transition();
         related_resource_id = g_zukan_previous_resource_id;
 

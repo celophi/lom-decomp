@@ -24,8 +24,8 @@
 #include <libetc.h>
 #include "main/audio/akao_cmd.h"
 #include "main/controller.h"
+#include "main/controller_internal.h"
 
-#define CHECKPS_ORDERING_TABLE_LENGTH 4096
 #define CHECKPS_SONG_BUFFER_SIZE 16384
 #define CHECKPS_RESERVED_BSS_WORDS 32769
 
@@ -48,19 +48,7 @@
 #define CHECKPS_GLYPH_VRAM_HEIGHT 256
 
 #define CHECKPS_AUDIO_BANK_ADDRESS ((AkaoHeader*)SOUND_BANK_ADDRESS)
-#define CHECKPS_AUDIO_WORK_ADDRESS ((AkaoContainerHeader*)LOAD_BUFFER_ADDRESS)
 #define CHECKPS_AUDIO_BANK_RESIDENT_STATE 6
-#define CHECKPS_AKAO_COPIED_SECTION 0
-#define CHECKPS_AKAO_UPLOAD_BANK_SECTION 1
-
-#define CHECKPS_CONTROLLER_UNAVAILABLE 0xFE
-#define CHECKPS_INITIAL_REPEAT_DELAY 15
-#define CHECKPS_REPEAT_DELAY 2
-#define CHECKPS_NON_REPEAT_BUTTON_MASK                                                                                                                         \
-    (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1 | PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_SELECT | PAD_BTN_L3 | PAD_BTN_START)
-
-/** Advance a fade packet cursor by the concrete packet just emitted. */
-#define CHECKPS_NEXT_FADE_PRIMITIVE(primitive, type) ((CheckPSFadePrimitive*)((u8*)(primitive) + sizeof(type)))
 
 /** Advance an image packet cursor by the concrete packet just emitted. */
 #define CHECKPS_NEXT_IMAGE_PRIMITIVE(primitive, type) ((CheckPSImagePrimitive*)((u8*)(primitive) + sizeof(type)))
@@ -73,24 +61,6 @@ typedef enum
     CHECKPS_EXIT_NONE = 0,
     CHECKPS_EXIT_COMPLETE = 2,
 } CheckPSExitReason;
-
-/**
- * @brief RGB fade values with the remaining interpolation step count.
- */
-typedef struct
-{
-    s32 red;
-    s32 green;
-    s32 blue;
-    s32 steps_remaining;
-} CheckPSFadeState;
-
-/** @brief Packet view for a fade TILE or draw-mode command. */
-typedef union
-{
-    TILE tile;
-    DR_TPAGE draw_mode;
-} CheckPSFadePrimitive;
 
 /** @brief Packet view for a CHECKPS image sprite or draw-mode command. */
 typedef union
@@ -115,7 +85,7 @@ typedef struct
 typedef struct
 {
     u8 reserved_header[0x40];
-    u_long ordering_table[CHECKPS_ORDERING_TABLE_LENGTH];
+    u_long ordering_table[FRAME_ORDERING_TABLE_LENGTH];
     CheckPSDisplayBuffer display;
     u8 primitive_buffer[FRAME_PRIMITIVE_BUFFER_SIZE];
     void* primitive_cursor;
@@ -196,8 +166,8 @@ static void update_controller_input(void);
 
 #if defined(VERSION_JP)
 extern CheckPSExitReason g_checkps_exit_reason;
-extern CheckPSFadeState g_fade_target;
-extern CheckPSFadeState g_fade_current;
+extern ScreenFadeWords g_fade_target;
+extern ScreenFadeWords g_fade_current;
 extern u8 g_checkps_song_buffer[CHECKPS_SONG_BUFFER_SIZE];
 extern AkaoHeader* g_checkps_akao_bank;
 extern s32 g_checkps_startup_step;
@@ -210,9 +180,9 @@ CheckPSExitReason g_checkps_exit_reason;
 /* Reserved word with no recovered CHECKPS references. */
 s32 g_checkps_unused_word0;
 
-CheckPSFadeState g_fade_target;
+ScreenFadeWords g_fade_target;
 
-CheckPSFadeState g_fade_current;
+ScreenFadeWords g_fade_current;
 
 /* Sequence data copied from a CHECKPS disc asset before playback. */
 u8 g_checkps_song_buffer[CHECKPS_SONG_BUFFER_SIZE];
@@ -286,8 +256,8 @@ static void run_checkps_display_loop(CheckPSRenderState* render_state)
     rect.y = 0;
     rect.h = VRAM_BACK_DISP_Y + SCREEN_HEIGHT;
     ClearImage(&rect, 0, 0, 0);
-    ClearOTagR(frame->ordering_table, CHECKPS_ORDERING_TABLE_LENGTH);
-    ClearOTagR(render_state->frames[1].ordering_table, CHECKPS_ORDERING_TABLE_LENGTH);
+    ClearOTagR(frame->ordering_table, FRAME_ORDERING_TABLE_LENGTH);
+    ClearOTagR(render_state->frames[1].ordering_table, FRAME_ORDERING_TABLE_LENGTH);
     PutDispEnv(&frame->display.disp);
 #if !defined(VERSION_JP)
     update_controllers();
@@ -296,7 +266,7 @@ static void run_checkps_display_loop(CheckPSRenderState* render_state)
     do
     {
         drawn_ordering_table = frame->ordering_table;
-        ClearOTagR(drawn_ordering_table, CHECKPS_ORDERING_TABLE_LENGTH);
+        ClearOTagR(drawn_ordering_table, FRAME_ORDERING_TABLE_LENGTH);
         frame->primitive_cursor = frame->primitive_buffer;
         begin_glyph_cache_frame();
         update_and_draw_fade(frame);
@@ -317,7 +287,7 @@ static void run_checkps_display_loop(CheckPSRenderState* render_state)
         frame = next_frame;
         PutDispEnv(&frame->display.disp);
         PutDrawEnv(&frame->display.draw);
-        DrawOTag(&drawn_ordering_table[CHECKPS_ORDERING_TABLE_LENGTH - 1]);
+        DrawOTag(&drawn_ordering_table[FRAME_ORDERING_TABLE_LENGTH - 1]);
 
 #if !defined(VERSION_JP)
         update_controllers();
@@ -396,11 +366,11 @@ static void load_embedded_checkps_audio(void)
     section_offsets = &g_embedded_checkps_akao.section_count;
     section_offsets++;
 
-    bank_data = AKAO_CONTAINER_DATA_AT(&g_embedded_checkps_akao, section_offsets[CHECKPS_AKAO_COPIED_SECTION]);
-    bank_size = section_offsets[CHECKPS_AKAO_UPLOAD_BANK_SECTION] - section_offsets[CHECKPS_AKAO_COPIED_SECTION];
+    bank_data = AKAO_CONTAINER_DATA_AT(&g_embedded_checkps_akao, section_offsets[AKAO_CONTAINER_RESIDENT_SECTION]);
+    bank_size = section_offsets[AKAO_CONTAINER_BANK_SECTION] - section_offsets[AKAO_CONTAINER_RESIDENT_SECTION];
     bcopy(bank_data, (u8*)g_checkps_akao_bank, bank_size);
     akao_register_bank(g_checkps_akao_bank);
-    upload_bank_data = AKAO_CONTAINER_DATA_AT(&g_embedded_checkps_akao, section_offsets[CHECKPS_AKAO_UPLOAD_BANK_SECTION]);
+    upload_bank_data = AKAO_CONTAINER_DATA_AT(&g_embedded_checkps_akao, section_offsets[AKAO_CONTAINER_BANK_SECTION]);
     akao_upload_bank_blocking((AkaoBankHeader*)upload_bank_data, 1);
 }
 
@@ -418,15 +388,15 @@ void load_checkps_song_from_disc(s32 song_index)
     u32* section_offsets;
     AkaoContainerHeader* song_container;
 
-    cdrom_queue_read(CD_RES_MUSIC_FILE(song_index), CHECKPS_AUDIO_WORK_ADDRESS);
+    cdrom_queue_read(CD_RES_MUSIC_FILE(song_index), LOAD_BUFFER_AKAO_CONTAINER);
     cdrom_wait_queue_empty();
 
-    song_container = CHECKPS_AUDIO_WORK_ADDRESS;
+    song_container = LOAD_BUFFER_AKAO_CONTAINER;
     section_offsets = song_container->section_offsets;
-    song_data = AKAO_CONTAINER_DATA_AT(song_container, section_offsets[CHECKPS_AKAO_COPIED_SECTION]);
-    song_size = section_offsets[CHECKPS_AKAO_UPLOAD_BANK_SECTION] - section_offsets[CHECKPS_AKAO_COPIED_SECTION];
+    song_data = AKAO_CONTAINER_DATA_AT(song_container, section_offsets[AKAO_CONTAINER_RESIDENT_SECTION]);
+    song_size = section_offsets[AKAO_CONTAINER_BANK_SECTION] - section_offsets[AKAO_CONTAINER_RESIDENT_SECTION];
     bcopy(song_data, g_checkps_song_buffer, song_size);
-    bank_data = AKAO_CONTAINER_DATA_AT(song_container, section_offsets[CHECKPS_AKAO_UPLOAD_BANK_SECTION]);
+    bank_data = AKAO_CONTAINER_DATA_AT(song_container, section_offsets[AKAO_CONTAINER_BANK_SECTION]);
     akao_upload_bank_blocking((AkaoBankHeader*)bank_data, 1);
 }
 
@@ -482,7 +452,7 @@ static void update_and_draw_fade(CheckPSFrame* frame)
     s32 green_step;
     s32 blue_step;
     s32 draw_mode;
-    CheckPSFadePrimitive* primitive;
+    ScreenFadePrimitive* primitive;
     u_long* ordering_table_tag = frame->ordering_table;
 
     primitive = frame->primitive_cursor;
@@ -506,7 +476,8 @@ static void update_and_draw_fade(CheckPSFrame* frame)
     {
         if (g_fade_current.red >= FADE_ADDITIVE_THRESHOLD)
         {
-            setRGB0(&primitive->tile, g_fade_current.red - 1, g_fade_current.green - 1, g_fade_current.blue - 1);
+            setRGB0(&primitive->tile, g_fade_current.red - FADE_ADDITIVE_BIAS, g_fade_current.green - FADE_ADDITIVE_BIAS,
+                    g_fade_current.blue - FADE_ADDITIVE_BIAS);
         }
         else
         {
@@ -542,7 +513,7 @@ static void update_and_draw_fade(CheckPSFrame* frame)
 
         addPrim(ordering_table_tag, &primitive->tile);
         draw_mode = BLEND_ADD_TPAGE;
-        primitive = CHECKPS_NEXT_FADE_PRIMITIVE(primitive, TILE);
+        primitive = SCREEN_FADE_NEXT_PRIMITIVE(primitive, TILE);
         if (g_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
             draw_mode = BLEND_SUBTRACT_TPAGE;
@@ -551,7 +522,7 @@ static void update_and_draw_fade(CheckPSFrame* frame)
 
         addPrim(ordering_table_tag, &primitive->draw_mode);
 
-        primitive = CHECKPS_NEXT_FADE_PRIMITIVE(primitive, DR_TPAGE);
+        primitive = SCREEN_FADE_NEXT_PRIMITIVE(primitive, DR_TPAGE);
     }
     frame->primitive_cursor = primitive;
 }
@@ -724,7 +695,7 @@ static void draw_checkps_image(CheckPSFrame* frame)
             setClut(primitive, 0, CHECKPS_IMAGE_CLUT_Y);
             primitive->v1 = primitive->v0 = 0;
             primitive->tpage = CHECKPS_IMAGE_TPAGE;
-            addPrim(ordering_table - (image->y - CHECKPS_ORDERING_TABLE_LENGTH), primitive);
+            addPrim(ordering_table - (image->y - FRAME_ORDERING_TABLE_LENGTH), primitive);
             primitive++;
         }
         i++;
@@ -867,7 +838,7 @@ s32 poll_input_device(void)
     s16 axis_x;
     s16 axis_y;
 
-    if (regs->device_type >= CHECKPS_CONTROLLER_UNAVAILABLE)
+    if (regs->device_type >= CONTROLLER_DEVICE_CONFIGURING)
     {
         return 0;
     }
@@ -877,26 +848,26 @@ s32 poll_input_device(void)
 #if !defined(VERSION_JP)
     input_mask = PAD_REMAP_FACE_BITS(input_mask);
 #endif
-    if (regs->device_type != 0)
+    if (regs->device_type != CONTROLLER_DEVICE_DIGITAL)
     {
         /* Convert signed analog-axis thresholds to digital directions. */
         axis_x = regs->axis_x.signed_value;
 
-        if (axis_x < -1)
+        if (axis_x < -PAD_STICK_THRESHOLD)
         {
             input_mask |= PAD_BTN_LEFT;
         }
-        else if (axis_x >= 2)
+        else if (axis_x > PAD_STICK_THRESHOLD)
         {
             input_mask |= PAD_BTN_RIGHT;
         }
 
         axis_y = regs->axis_y.signed_value;
-        if (axis_y < -1)
+        if (axis_y < -PAD_STICK_THRESHOLD)
         {
             input_mask |= PAD_BTN_UP;
         }
-        else if (axis_y >= 2)
+        else if (axis_y > PAD_STICK_THRESHOLD)
         {
             input_mask |= PAD_BTN_DOWN;
         }
@@ -919,7 +890,7 @@ static void process_controller_input(void)
     controller_regs = SCD_REGS;
 
     /* Unavailable controller types produce no input. */
-    if (g_controller_device_type >= CHECKPS_CONTROLLER_UNAVAILABLE)
+    if (g_controller_device_type >= CONTROLLER_DEVICE_CONFIGURING)
     {
         input_state = 0;
     }
@@ -929,25 +900,25 @@ static void process_controller_input(void)
         buttons = (controller_regs->held_buttons >> 8) | (controller_regs->held_buttons << 8);
         buttons = PAD_REMAP_FACE_BITS(buttons);
 
-        if (controller_regs->device_type != 0)
+        if (controller_regs->device_type != CONTROLLER_DEVICE_DIGITAL)
         {
             axis_x = controller_regs->axis_x.signed_value;
 
-            if (axis_x < -1)
+            if (axis_x < -PAD_STICK_THRESHOLD)
             {
                 buttons |= PAD_BTN_LEFT;
             }
-            else if (axis_x >= 2)
+            else if (axis_x > PAD_STICK_THRESHOLD)
             {
                 buttons |= PAD_BTN_RIGHT;
             }
 
             axis_y = controller_regs->axis_y.signed_value;
-            if (axis_y < -1)
+            if (axis_y < -PAD_STICK_THRESHOLD)
             {
                 buttons |= PAD_BTN_UP;
             }
-            else if (axis_y >= 2)
+            else if (axis_y > PAD_STICK_THRESHOLD)
             {
                 buttons |= PAD_BTN_DOWN;
             }
@@ -957,7 +928,7 @@ static void process_controller_input(void)
 
     /* Publish input only when a new press or key-repeat event fires. */
     g_debounced_input = 0;
-    if (((input_state == g_last_input_state) || ((g_last_input_state != 0) && ((input_state & (g_last_input_state | CHECKPS_NON_REPEAT_BUTTON_MASK))))) &&
+    if (((input_state == g_last_input_state) || ((g_last_input_state != 0) && ((input_state & (g_last_input_state | PAD_REPEAT_HOLD_BUTTONS))))) &&
         (input_state != 0))
     {
         /* Held input repeats directional buttons only. */
@@ -968,7 +939,7 @@ static void process_controller_input(void)
         if (g_input_repeat_timer == 0)
         {
             g_debounced_input = input_state;
-            g_input_repeat_timer = CHECKPS_REPEAT_DELAY;
+            g_input_repeat_timer = PAD_REPEAT_INTERVAL;
         }
         else
         {
@@ -985,7 +956,7 @@ static void process_controller_input(void)
     {
         g_debounced_input = input_state;
         g_last_input_state = input_state;
-        g_input_repeat_timer = CHECKPS_INITIAL_REPEAT_DELAY;
+        g_input_repeat_timer = PAD_REPEAT_INITIAL_DELAY;
     }
 }
 
@@ -1004,7 +975,7 @@ static void update_controller_input(void)
     g_debounced_input = 0;
 
     /* Unavailable controller types produce no input. */
-    if (g_controller_device_type >= CHECKPS_CONTROLLER_UNAVAILABLE)
+    if (g_controller_device_type >= CONTROLLER_DEVICE_CONFIGURING)
     {
         input_state = 0;
     }
@@ -1013,25 +984,25 @@ static void update_controller_input(void)
         /* Convert the controller protocol bits to the game's logical layout. */
         buttons = (regs->held_buttons >> 8) | (regs->held_buttons << 8);
         buttons = PAD_REMAP_FACE_BITS(buttons);
-        if (regs->device_type != 0)
+        if (regs->device_type != CONTROLLER_DEVICE_DIGITAL)
         {
             axis_x = regs->axis_x.signed_value;
 
-            if (axis_x < -1)
+            if (axis_x < -PAD_STICK_THRESHOLD)
             {
                 buttons |= PAD_BTN_LEFT;
             }
-            else if (axis_x >= 2)
+            else if (axis_x > PAD_STICK_THRESHOLD)
             {
                 buttons |= PAD_BTN_RIGHT;
             }
 
             axis_y = regs->axis_y.signed_value;
-            if (axis_y < -1)
+            if (axis_y < -PAD_STICK_THRESHOLD)
             {
                 buttons |= PAD_BTN_UP;
             }
-            else if (axis_y >= 2)
+            else if (axis_y > PAD_STICK_THRESHOLD)
             {
                 buttons |= PAD_BTN_DOWN;
             }
@@ -1040,6 +1011,6 @@ static void update_controller_input(void)
     }
 
     g_last_input_state = input_state;
-    g_input_repeat_timer = CHECKPS_INITIAL_REPEAT_DELAY;
+    g_input_repeat_timer = PAD_REPEAT_INITIAL_DELAY;
 }
 #endif

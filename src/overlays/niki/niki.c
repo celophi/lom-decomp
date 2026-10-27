@@ -228,13 +228,13 @@ s32 card_menu_handle_input(void)
     if (status & NIKI_CANCEL_INPUT_MASK)
     {
         g_field_niki_addhero_state = 3;
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+        field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
         card_menu_close_all_elements();
         return;
     }
     if (status & CARD_MENU_CARD_SWITCH_BUTTON_MASK)
     {
-        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+        field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
         niki_switch_card_slot();
         return;
     }
@@ -279,7 +279,7 @@ s32 card_menu_handle_input(void)
     if (g_pad_input & (PAD_BTN_UP | PAD_BTN_DOWN))
     {
         card_menu_commit_selected_entry();
-        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+        field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
         card_menu_scroll_to_selection();
         return;
     }
@@ -306,11 +306,11 @@ s32 card_menu_handle_input(void)
                 card_menu_enable_choice_toggle();
                 element->draw = card_menu_draw_load_prompt;
                 restart_card_sequence();
-                field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
+                field_play_sound(SFX_CONFIRM, AKAO_PAN_CENTER);
                 return;
             }
         }
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+        field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
     }
 }
 
@@ -760,7 +760,7 @@ void niki_open_secondary_status_dialog(s32 dialog_state)
 {
     CardMenuElement* element;
 
-    field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+    field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
     element = &g_card_menu_element_pool[1];
     element->draw = card_menu_draw_save_status_dialog;
     element->attr.bits.transition_step = 1;
@@ -902,7 +902,7 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 
         if (g_pad_input & NIKI_CANCEL_INPUT_MASK)
         {
-            field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+            field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
             card_menu_enable_choice_toggle();
             g_card_entry_state = CARD_MENU_EXCHANGE_STATE_SAVE_CONFIRM;
             field_reset_input_repeat();
@@ -911,14 +911,14 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         {
             if (g_card_menu_choice_toggle != 0)
             {
-                field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+                field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
                 card_menu_enable_choice_toggle();
                 g_card_entry_state = CARD_MENU_EXCHANGE_STATE_SAVE_CONFIRM;
                 field_reset_input_repeat();
             }
             else
             {
-                field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+                field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
                 packet = g_card_menu_element_pool;
                 g_field_niki_state = 2;
                 card_menu_clear_elements();
@@ -953,12 +953,12 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         {
             card_menu_enable_choice_toggle();
             g_card_entry_state = CARD_MENU_EXCHANGE_STATE_CONFIRM_NO_SAVE;
-            field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+            field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
             field_reset_input_repeat();
         }
         else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
         {
-            field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
+            field_play_sound(SFX_CONFIRM, AKAO_PAN_CENTER);
             records = (u8(*)[64])g_field_shared_items;
             resource = &g_niki_save_blob;
             bcopy(g_field_shared_items, resource->loaded.trailing_data, sizeof(resource->loaded.trailing_data));
@@ -1088,14 +1088,14 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
     if (g_pad_input & NIKI_CANCEL_INPUT_MASK)
     {
         g_field_niki_addhero_state = 3;
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+        field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
         card_menu_close_all_elements();
         return prim;
     }
 
     if ((g_pad_input & CARD_MENU_CARD_SWITCH_BUTTON_MASK) && (g_card_entry_state != CARD_MENU_ENTRY_STATE_CHECKING_CARD))
     {
-        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+        field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
         D_80164B80 = 0;
         g_card_step = 0;
         g_card_menu_scroll_frames = 0;

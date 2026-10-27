@@ -74,12 +74,12 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(MENU_SE_CLOSE, AKAO_SFX_DEFAULT_VOLUME);
+        menu_play_se(SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
         list->active = MENU_SLOT_STATE_CLOSING;
     }
     else if ((g_pad_input & 0x220) && (active != 0))
     {
-        menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
+        menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
         switch (list->navigation.fields.selected_index)
         {
         case 0:
@@ -362,7 +362,7 @@ void* menu_equipment_compare_callback(u_long* ot, ScrollListState* state, void* 
 
         if ((list->navigation.fields.selected_index != 0) || (g_pad_input & 0x40))
         {
-            menu_play_se(MENU_SE_CLOSE, AKAO_SFX_DEFAULT_VOLUME);
+            menu_play_se(SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
             list->active = MENU_SLOT_STATE_CLOSING;
 
             for (equipment_index = 0; equipment_index < MENU_EQUIPMENT_SLOT_COUNT; equipment_index += 1)
@@ -392,7 +392,7 @@ void* menu_equipment_compare_callback(u_long* ot, ScrollListState* state, void* 
         }
         else
         {
-            menu_play_se(MENU_SE_SELECT, AKAO_SFX_DEFAULT_VOLUME);
+            menu_play_se(SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
             list->active = MENU_SLOT_STATE_CLOSING;
 
             if (g_item_slot_flags[0] != 0)
@@ -516,7 +516,7 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(MENU_SE_CLOSE, AKAO_SFX_DEFAULT_VOLUME);
+        menu_play_se(SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
         state->active = MENU_SLOT_STATE_CLOSING;
         return prim;
     }
@@ -592,12 +592,12 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
             character_ctx = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
             character_ctx += g_menu_active_subtype;
             *(character_ctx + 0x609) = selected_technique % FIELD_TECHNIQUES_PER_WEAPON;
-            menu_play_se(MENU_SE_SELECT, AKAO_SFX_DEFAULT_VOLUME);
+            menu_play_se(SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
             state->active = MENU_SLOT_STATE_CLOSING;
         }
         else
         {
-            menu_play_se(MENU_SE_ERROR, AKAO_SFX_DEFAULT_VOLUME);
+            menu_play_se(SFX_ERROR, AKAO_SFX_DEFAULT_VOLUME);
         }
     }
 
@@ -1211,8 +1211,8 @@ MenuItemEntry* menu_find_best_equipment_for_active_slot(void)
 
 /**
  * @brief Play a menu sound effect, unless a menu script is currently driving input.
- * @param sound_id Sound effect ID (see the MENU_SE_ constants in menu.c).
- * @param volume Playback volume (menu callers always pass 0x80).
+ * @param sound_id Sound effect ID, such as SFX_CURSOR.
+ * @param volume Playback volume (menu callers always pass AKAO_SFX_DEFAULT_VOLUME).
  */
 void menu_play_se(s32 sound_id, s32 volume)
 {

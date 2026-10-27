@@ -5,6 +5,7 @@
 #include "common/encoded_text.h"
 #include "common/saved_game.h"
 #include "common.h"
+#include "main/audio/game_audio.h"
 #include "main/cdrom.h"
 #include "main/controller.h"
 #include "common/pad.h"
@@ -27,9 +28,6 @@
 #define GOLEM_GRID_CELL_SIZE 16
 #define GOLEM_VERTICAL_MARKER 0x50
 #define GOLEM_HORIZONTAL_MARKER 0x4E
-#define GOLEM_SOUND_MOVE 0x7D
-#define GOLEM_SOUND_REJECT 0x78
-#define GOLEM_SOUND_PICK_UP 0x7E
 #define GOLEM_SOUND_PLACE 0x120
 /** @brief The saved game, addressed directly through g_saved_game rather than g_saved_game_ctx. */
 #define GOLEM_SAVED_GAME ((SavedGameLayout*)g_saved_game.bytes)
@@ -422,7 +420,7 @@ void golem_handle_input(void)
     s32 saved_x, saved_y, repeat_count, block_index, scroll_steps, input, cancel_pressed;
     if ((g_pad_input & PAD_BTN_START) && (g_golem_is_placing_block == 0))
     {
-        func_800A3938(GOLEM_SOUND_MOVE, 0x80);
+        func_800A3938(SFX_CURSOR, 0x80);
         g_golem_exit_requested = 1;
         if (g_golem_restore_slot_on_cancel != 0)
         {
@@ -477,11 +475,11 @@ void golem_handle_input(void)
             {
                 g_golem_block_x = saved_x;
                 g_golem_block_y = saved_y;
-                func_800A3938(GOLEM_SOUND_REJECT, 0x80);
+                func_800A3938(SFX_ERROR, 0x80);
             }
             else
             {
-                func_800A3938(GOLEM_SOUND_MOVE, 0x80);
+                func_800A3938(SFX_CURSOR, 0x80);
             }
             return;
         }
@@ -513,7 +511,7 @@ void golem_handle_input(void)
             {
                 golem_reset_block_position();
             }
-            func_800A3938(GOLEM_SOUND_MOVE, 0x80);
+            func_800A3938(SFX_CURSOR, 0x80);
             g_golem_panel_records[GOLEM_PANEL_ROTATE].attributes = GOLEM_ACTIVATE_PANEL(g_golem_panel_records[GOLEM_PANEL_ROTATE].attributes);
             return;
         }
@@ -528,7 +526,7 @@ void golem_handle_input(void)
             }
             else
             {
-                func_800A3938(GOLEM_SOUND_REJECT, 0x80);
+                func_800A3938(SFX_ERROR, 0x80);
             }
             return;
         }
@@ -536,7 +534,7 @@ void golem_handle_input(void)
         {
             g_golem_is_placing_block = 0;
             golem_reset_cursor_motion();
-            func_800A3938(GOLEM_SOUND_REJECT, 0x80);
+            func_800A3938(SFX_ERROR, 0x80);
             GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
         }
         return;
@@ -558,7 +556,7 @@ void golem_handle_input(void)
         input = g_pad_input;
         if (input & (PAD_BTN_UP | PAD_BTN_DOWN))
         {
-            func_800A3938(GOLEM_SOUND_MOVE, 0x80);
+            func_800A3938(SFX_CURSOR, 0x80);
             while (repeat_count != 0)
             {
                 if (g_pad_input & PAD_BTN_UP)
@@ -600,7 +598,7 @@ void golem_handle_input(void)
             g_golem_scroll_target_y = block_index * GOLEM_BLOCK_LIST_ROW_HEIGHT;
             g_golem_scroll_steps = GOLEM_SCROLL_FRAMES;
             g_golem_panel_records[GOLEM_PANEL_SCROLL_DOWN].attributes = GOLEM_ACTIVATE_PANEL(g_golem_panel_records[GOLEM_PANEL_SCROLL_DOWN].attributes);
-            func_800A3938(GOLEM_SOUND_MOVE, 0x80);
+            func_800A3938(SFX_CURSOR, 0x80);
             return;
         }
         if (input & PAD_BTN_L2)
@@ -623,7 +621,7 @@ void golem_handle_input(void)
             g_golem_scroll_target_y = block_index * GOLEM_BLOCK_LIST_ROW_HEIGHT;
             g_golem_scroll_steps = GOLEM_SCROLL_FRAMES;
             g_golem_panel_records[GOLEM_PANEL_SCROLL_UP].attributes = GOLEM_ACTIVATE_PANEL(g_golem_panel_records[GOLEM_PANEL_SCROLL_UP].attributes);
-            func_800A3938(GOLEM_SOUND_MOVE, 0x80);
+            func_800A3938(SFX_CURSOR, 0x80);
             return;
         }
         if (input & (PAD_BTN_L3 | PAD_BTN_CROSS))
@@ -643,7 +641,7 @@ void golem_handle_input(void)
                     g_golem_block_rotation = 0;
                 }
                 golem_remove_logic_block(g_golem_selected_block);
-                func_800A3938(GOLEM_SOUND_PICK_UP, 0x80);
+                func_800A3938(SFX_CONFIRM, 0x80);
             }
             return;
         }
@@ -655,7 +653,7 @@ void golem_handle_input(void)
     }
     if (cancel_pressed != 0)
     {
-        func_800A3938(GOLEM_SOUND_MOVE, 0x80);
+        func_800A3938(SFX_CURSOR, 0x80);
         g_golem_exit_requested = 1;
         if (g_golem_restore_slot_on_cancel != 0)
         {

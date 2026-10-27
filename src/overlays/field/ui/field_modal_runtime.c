@@ -54,15 +54,8 @@ void field_set_cd_error_fade_target(void);
 /** @brief Largest number of entries in the dialog item list. */
 #define FIELD_DIALOG_ITEM_LIMIT 10
 
-/** @brief Frames between two repeats of a held button (it fires every third frame). */
-#define FIELD_PAD_REPEAT_INTERVAL 2
-#define PAD_BTN_DPAD (PADLup | PADLdown | PADLleft | PADLright)
-/** @brief Buttons whose presses count as still holding the repeating buttons. */
-#define FIELD_PAD_HOLD_BUTTONS (PADh | PADi | PADselect | PADRdown | PADRright | PADL1 | PADL2 | PADR1 | PADR2)
 /** @brief Button combination that resets the game to the title screen. */
 #define FIELD_INPUT_RESET_COMBINATION (PADh | PADselect | PADL1 | PADL2 | PADR1 | PADR2)
-/** @brief Analog stick offsets beyond this count as a direction press. */
-#define FIELD_PAD_STICK_THRESHOLD 1
 
 /** @brief Ordering table entry of the field text; the selected label goes one entry in front. */
 #define FIELD_TEXT_OT_INDEX 15
@@ -808,7 +801,7 @@ inline void field_restore_label_actor_parts(void)
     s32 index;
     FieldObjectPart* part;
 
-    akao_play_sound(FIELD_SOUND_SELECT);
+    akao_play_sound(SFX_CONFIRM);
 
     for (index = 0; index < g_field_label_actor_count; index++)
     {
@@ -830,7 +823,7 @@ static void field_init_actor_labels(void)
     field_reset_input_repeat();
     akao_pause_audio(2);
     field_fade_song(0, 60, 0);
-    akao_play_sound(FIELD_SOUND_SELECT);
+    akao_play_sound(SFX_CONFIRM);
     actor = &g_field_actors[FIELD_PARTY_COUNT];
     actor_index = FIELD_PARTY_COUNT;
     state = &g_field_object_states[FIELD_PARTY_COUNT];
@@ -1240,12 +1233,12 @@ static void field_update_text_session(void)
             if (g_pad_input & (PADLup | PADLleft))
             {
                 g_field_selected_actor_label = g_field_selected_actor_label ? g_field_selected_actor_label - 1 : g_field_label_actor_count - 1;
-                akao_play_sound(FIELD_SOUND_CURSOR);
+                akao_play_sound(SFX_CURSOR);
             }
             else if (g_pad_input & (PADLdown | PADLright))
             {
                 g_field_selected_actor_label = g_field_selected_actor_label == g_field_label_actor_count - 1 ? 0 : g_field_selected_actor_label + 1;
-                akao_play_sound(FIELD_SOUND_CURSOR);
+                akao_play_sound(SFX_CURSOR);
             }
         }
     }
@@ -1285,11 +1278,11 @@ s32 field_read_controller_buttons(s32 index)
     {
         stick = port->current_sample.left_stick_x;
 
-        if (stick < -FIELD_PAD_STICK_THRESHOLD)
+        if (stick < -PAD_STICK_THRESHOLD)
         {
             buttons |= PADLleft;
         }
-        else if (stick > FIELD_PAD_STICK_THRESHOLD)
+        else if (stick > PAD_STICK_THRESHOLD)
         {
             buttons |= PADLright;
         }
@@ -1297,11 +1290,11 @@ s32 field_read_controller_buttons(s32 index)
         port_offset = index * sizeof(*ports);
         stick = ((ControllerPortState*)((u8*)ports + port_offset))->current_sample.left_stick_y;
 
-        if (stick < -FIELD_PAD_STICK_THRESHOLD)
+        if (stick < -PAD_STICK_THRESHOLD)
         {
             buttons |= PADLup;
         }
-        else if (stick > FIELD_PAD_STICK_THRESHOLD)
+        else if (stick > PAD_STICK_THRESHOLD)
         {
             buttons |= PADLdown;
         }
@@ -1312,7 +1305,7 @@ s32 field_read_controller_buttons(s32 index)
 
 /**
  * @brief Read both controllers and apply the initial delay and key repeat to their buttons.
- * @note A new button fires at once, waits FIELD_PAD_REPEAT_DELAY frames, then repeats every third frame.
+ * @note A new button fires at once, waits PAD_REPEAT_INITIAL_DELAY frames, then repeats every third frame.
  * @note While a modal screen is open, held directions repeat on their own without the other buttons.
  */
 void field_update_input_repeat(void)
@@ -1325,7 +1318,7 @@ void field_update_input_repeat(void)
     g_field_buffered_input = 0;
 
     if (((buttons == g_field_primary_held_buttons) ||
-         ((g_field_primary_held_buttons != 0) && (buttons & (g_field_primary_held_buttons | FIELD_PAD_HOLD_BUTTONS)))) &&
+         ((g_field_primary_held_buttons != 0) && (buttons & (g_field_primary_held_buttons | PAD_REPEAT_HOLD_BUTTONS)))) &&
         buttons != 0)
     {
         directions = buttons & PAD_BTN_DPAD;
@@ -1338,7 +1331,7 @@ void field_update_input_repeat(void)
         if (g_field_primary_repeat_delay == 0)
         {
             g_pad_input = buttons;
-            g_field_primary_repeat_delay = FIELD_PAD_REPEAT_INTERVAL;
+            g_field_primary_repeat_delay = PAD_REPEAT_INTERVAL;
         }
         else
         {
@@ -1355,14 +1348,14 @@ void field_update_input_repeat(void)
     {
         g_pad_input = buttons;
         g_field_primary_held_buttons = buttons;
-        g_field_primary_repeat_delay = FIELD_PAD_REPEAT_DELAY;
+        g_field_primary_repeat_delay = PAD_REPEAT_INITIAL_DELAY;
     }
 
     buttons = field_read_controller_buttons(1);
     g_pad_input_inject = 0;
 
     if (((buttons == g_field_secondary_held_buttons) ||
-         ((g_field_secondary_held_buttons != 0) && (buttons & (g_field_secondary_held_buttons | FIELD_PAD_HOLD_BUTTONS)))) &&
+         ((g_field_secondary_held_buttons != 0) && (buttons & (g_field_secondary_held_buttons | PAD_REPEAT_HOLD_BUTTONS)))) &&
         buttons != 0)
     {
         directions = buttons & PAD_BTN_DPAD;
@@ -1375,7 +1368,7 @@ void field_update_input_repeat(void)
         if (g_field_secondary_repeat_delay == 0)
         {
             g_pad_input_inject = buttons;
-            g_field_secondary_repeat_delay = FIELD_PAD_REPEAT_INTERVAL;
+            g_field_secondary_repeat_delay = PAD_REPEAT_INTERVAL;
         }
         else
         {
@@ -1392,7 +1385,7 @@ void field_update_input_repeat(void)
     {
         g_pad_input_inject = buttons;
         g_field_secondary_held_buttons = buttons;
-        g_field_secondary_repeat_delay = FIELD_PAD_REPEAT_DELAY;
+        g_field_secondary_repeat_delay = PAD_REPEAT_INITIAL_DELAY;
     }
 
     g_field_buffered_input = g_pad_input;
@@ -1405,10 +1398,10 @@ inline void field_reset_input_repeat(void)
 {
     g_pad_input = 0;
     g_field_primary_held_buttons = field_read_controller_buttons(0);
-    g_field_primary_repeat_delay = FIELD_PAD_REPEAT_DELAY;
+    g_field_primary_repeat_delay = PAD_REPEAT_INITIAL_DELAY;
     g_pad_input_inject = 0;
     g_field_secondary_held_buttons = field_read_controller_buttons(1);
-    g_field_secondary_repeat_delay = FIELD_PAD_REPEAT_DELAY;
+    g_field_secondary_repeat_delay = PAD_REPEAT_INITIAL_DELAY;
     g_field_buffered_input = 0;
 }
 
@@ -1545,7 +1538,7 @@ void field_process_input(FieldRenderHalf* render)
                         return;
                     }
 
-                    field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+                    field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
                 }
             }
         }
@@ -2306,10 +2299,10 @@ void field_update_modal(FieldRenderHalf* render)
     }
 
     g_field_primary_held_buttons = field_read_controller_buttons(index);
-    g_field_primary_repeat_delay = FIELD_PAD_REPEAT_DELAY;
+    g_field_primary_repeat_delay = PAD_REPEAT_INITIAL_DELAY;
     g_pad_input_inject = 0;
     g_field_secondary_held_buttons = field_read_controller_buttons(1);
-    g_field_secondary_repeat_delay = FIELD_PAD_REPEAT_DELAY;
+    g_field_secondary_repeat_delay = PAD_REPEAT_INITIAL_DELAY;
     g_field_buffered_input = 0;
     field_restore_fade_target();
 }

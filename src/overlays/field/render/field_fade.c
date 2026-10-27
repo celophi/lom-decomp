@@ -13,17 +13,6 @@
 /** @brief Red level of the CD error tint (green and blue stay neutral). */
 #define FIELD_FADE_CD_ERROR_RED 0xD0
 
-/** @brief Packet view for a fade TILE or draw-mode command. */
-typedef union
-{
-    TILE tile;
-    DR_TPAGE draw_mode;
-} FieldFadePrimitive;
-
-/** @brief Advance a fade packet cursor by the concrete packet just emitted. */
-#define FIELD_NEXT_FADE_PRIMITIVE(primitive, type) ((FieldFadePrimitive*)((u8*)(primitive) + sizeof(type)))
-
-
 /**
  * @brief Reset the current and target field fade colors.
  */
@@ -44,7 +33,7 @@ void field_reset_fade_state(void)
  */
 void field_update_and_render_fade(FieldRenderHalf* render_half)
 {
-    FieldFadePrimitive* primitive = (FieldFadePrimitive*)render_half->primitive_cursor;
+    ScreenFadePrimitive* primitive = (ScreenFadePrimitive*)render_half->primitive_cursor;
     u_long* ordering_table_tag = &render_half->ordering_table[FIELD_FADE_OT_INDEX];
     s32 dr;
     s32 dg;
@@ -72,7 +61,8 @@ void field_update_and_render_fade(FieldRenderHalf* render_half)
     {
         if (g_field_fade_current.red >= FADE_ADDITIVE_THRESHOLD)
         {
-            setRGB0(&primitive->tile, g_field_fade_current.red - 1, g_field_fade_current.green - 1, g_field_fade_current.blue - 1);
+            setRGB0(&primitive->tile, g_field_fade_current.red - FADE_ADDITIVE_BIAS, g_field_fade_current.green - FADE_ADDITIVE_BIAS,
+                    g_field_fade_current.blue - FADE_ADDITIVE_BIAS);
         }
         else
         {
@@ -110,7 +100,7 @@ void field_update_and_render_fade(FieldRenderHalf* render_half)
         primitive->tile.h = SCREEN_HEIGHT;
         addPrim(ordering_table_tag, &primitive->tile);
 
-        primitive = FIELD_NEXT_FADE_PRIMITIVE(primitive, TILE);
+        primitive = SCREEN_FADE_NEXT_PRIMITIVE(primitive, TILE);
         if (g_field_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
             draw_mode = BLEND_SUBTRACT_TPAGE;
@@ -118,7 +108,7 @@ void field_update_and_render_fade(FieldRenderHalf* render_half)
         setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
         addPrim(ordering_table_tag, &primitive->draw_mode);
 
-        primitive = FIELD_NEXT_FADE_PRIMITIVE(primitive, DR_TPAGE);
+        primitive = SCREEN_FADE_NEXT_PRIMITIVE(primitive, DR_TPAGE);
     }
     render_half->primitive_cursor = (u8*)primitive;
 }

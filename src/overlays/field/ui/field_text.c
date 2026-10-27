@@ -2384,7 +2384,7 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
                                     }
 
                                     state->choice_index = choice - 1;
-                                    akao_play_sfx(FIELD_SOUND_CURSOR, 0, AKAO_PAN_CENTER, AKAO_VOLUME_MAX);
+                                    akao_play_sfx(SFX_CURSOR, 0, AKAO_PAN_CENTER, AKAO_VOLUME_MAX);
                                 }
 
                                 if ((keys & FIELD_TEXT_PAD_DOWN) != 0)
@@ -2398,7 +2398,7 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
                                         state->choice_index = 0;
                                     }
 
-                                    akao_play_sfx(FIELD_SOUND_CURSOR, 0, AKAO_PAN_CENTER, AKAO_VOLUME_MAX);
+                                    akao_play_sfx(SFX_CURSOR, 0, AKAO_PAN_CENTER, AKAO_VOLUME_MAX);
                                 }
 
                                 if ((input->pressed_buttons & (FIELD_TEXT_PAD_CONFIRM | FIELD_TEXT_PAD_L3)) != 0)
@@ -2412,7 +2412,7 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
                                         field_text_start_closing(state);
                                     }
 
-                                    akao_play_sfx(FIELD_SOUND_SELECT, 0, AKAO_PAN_CENTER, AKAO_VOLUME_MAX);
+                                    akao_play_sfx(SFX_CONFIRM, 0, AKAO_PAN_CENTER, AKAO_VOLUME_MAX);
                                 }
                             }
                             else if (((input->pressed_buttons & (FIELD_TEXT_PAD_CONFIRM | FIELD_TEXT_PAD_L3)) != 0) && (state->prompt_frame != 2))

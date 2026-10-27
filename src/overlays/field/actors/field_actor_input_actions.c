@@ -139,7 +139,7 @@ s32 field_resolve_action_command(FieldActor* actor, s32 player)
         {
             if (action != FIELD_HISTORY_COMMAND_NONE)
             {
-                field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+                field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
             }
 
             return 0;

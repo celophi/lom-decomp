@@ -50,8 +50,6 @@
 #define FIELD_TIMED_PANEL_FADE_FRAMES 20
 /** @brief Confirm skips to the fade-out while the timer is below this. */
 #define FIELD_TIMED_PANEL_SKIP_END 103
-/** @brief Full brightness, and the level below which the fade primitive is added. */
-#define FIELD_TIMED_PANEL_FULL_BRIGHTNESS 0x80
 #define FIELD_TIMED_PANEL_FADE_LIMIT 0x7C
 /** @brief Mode byte: bit 7 selects a quad effect group (low bits), else the plain image. */
 #define FIELD_TIMED_PANEL_EFFECT 0x80
@@ -377,21 +375,21 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_t
             width = raw_width & 0xFFFF;
             prim->r0 = prim->g0 = prim->b0 = g_field_timed_panel_brightness;
 
-            if ((g_field_timed_panel_brightness != FIELD_TIMED_PANEL_FULL_BRIGHTNESS) || (quad->flags & FIELD_TRANSITION_QUAD_SEMI_TRANSPARENT))
+            if ((g_field_timed_panel_brightness != GPU_TINT_NEUTRAL_LEVEL) || (quad->flags & FIELD_TRANSITION_QUAD_SEMI_TRANSPARENT))
             {
                 setSemiTrans(prim, 1);
             }
 
-            expansion = FIELD_TIMED_PANEL_FULL_BRIGHTNESS - g_field_timed_panel_brightness;
+            expansion = GPU_TINT_NEUTRAL_LEVEL - g_field_timed_panel_brightness;
 
             switch (FIELD_TRANSITION_QUAD_EFFECT(quad->flags))
             {
             case 0:
                 term = width * expansion;
-                scaled = term / FIELD_TIMED_PANEL_FULL_BRIGHTNESS;
+                scaled = term / GPU_TINT_NEUTRAL_LEVEL;
                 prim->x0 = prim->x2 = quad->x - scaled;
                 prim->x1 = prim->x3 = quad->x + width + scaled - 1;
-                prim->y0 = prim->y1 = quad->y - quad->height * expansion / FIELD_TIMED_PANEL_FULL_BRIGHTNESS;
+                prim->y0 = prim->y1 = quad->y - quad->height * expansion / GPU_TINT_NEUTRAL_LEVEL;
                 bottom_1 = quad->y + quad->height;
                 scaled = quad->height * expansion;
 
@@ -406,14 +404,14 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_t
                 if (g_field_timed_panel_timer < 0x25)
                 {
                     scaled = width * expansion;
-                    offset_1 = scaled / FIELD_TIMED_PANEL_FULL_BRIGHTNESS;
+                    offset_1 = scaled / GPU_TINT_NEUTRAL_LEVEL;
                     prim->x0 = prim->x2 = quad->x - offset_1;
                     right_1 = (quad->x + width) - offset_1;
                 }
                 else
                 {
                     scaled = width * expansion;
-                    offset_1 = scaled / FIELD_TIMED_PANEL_FULL_BRIGHTNESS;
+                    offset_1 = scaled / GPU_TINT_NEUTRAL_LEVEL;
                     prim->x0 = prim->x2 = quad->x + offset_1;
                     right_1 = quad->x + width + offset_1;
                 }
@@ -569,10 +567,10 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_t
                 break;
             case 4:
                 term = width * expansion;
-                scaled = term / (FIELD_TIMED_PANEL_FULL_BRIGHTNESS / 2);
+                scaled = term / (GPU_TINT_NEUTRAL_LEVEL / 2);
                 prim->x0 = prim->x2 = quad->x - scaled;
                 prim->x1 = prim->x3 = quad->x + width + scaled - 1;
-                prim->y0 = prim->y1 = quad->y - quad->height * expansion / FIELD_TIMED_PANEL_FULL_BRIGHTNESS;
+                prim->y0 = prim->y1 = quad->y - quad->height * expansion / GPU_TINT_NEUTRAL_LEVEL;
                 bottom_1 = quad->y + quad->height;
                 scaled = quad->height * expansion;
 
@@ -645,7 +643,7 @@ static POLY_FT4* field_draw_timed_panel_image(POLY_FT4 *prim, u_long *ordering_t
     value1 = getcode(prim);
     value1 |= 2;
     setcode(prim, value1);
-    value1 = FIELD_TIMED_PANEL_FULL_BRIGHTNESS;
+    value1 = GPU_TINT_NEUTRAL_LEVEL;
     value0 = (u16)g_field_timed_panel_brightness;
     value4 = g_field_timed_panel_width;
     value5 = value1 - value0;
@@ -673,7 +671,7 @@ static POLY_FT4* field_draw_timed_panel_image(POLY_FT4 *prim, u_long *ordering_t
     value0 = 0x70;
     value2 = (u32)value3 >> 1;
     value0 -= value2;
-    value5 = value1 / FIELD_TIMED_PANEL_FULL_BRIGHTNESS;
+    value5 = value1 / GPU_TINT_NEUTRAL_LEVEL;
     value0 -= value5;
     prim->y1 = value0;
     prim->y0 = value0;
@@ -1345,7 +1343,7 @@ void field_handle_return_to_title_prompt(void)
     {
         if (g_pad_input & (FIELD_PAD_CONFIRM | PAD_BTN_START))
         {
-            field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
+            field_play_sound(SFX_CONFIRM, AKAO_PAN_CENTER);
             field_close_menu_elements();
             field_begin_return_to_title_prompt_close();
             return;
@@ -1353,7 +1351,7 @@ void field_handle_return_to_title_prompt(void)
 
         if (g_pad_input & (PAD_BTN_DPAD | PAD_BTN_SELECT))
         {
-            field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+            field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
             g_field_return_to_title_choice ^= 1;
         }
     }

@@ -36,7 +36,7 @@ inline void* card_menu_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y)
     if (g_pad_input & CARD_MENU_CHOICE_BUTTON_MASK)
     {
         g_card_menu_choice_toggle ^= 1;
-        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+        field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
         g_pad_input = 0;
     }
     return prim;

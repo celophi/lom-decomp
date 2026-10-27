@@ -30,8 +30,11 @@
 #define GPU_COLOR_WORD(_r, _g, _b) \
     (((u32)(_b) << 16) | ((u32)(_g) << 8) | (u32)(_r))
 
-/** @brief Draws a texture at its own brightness: 0x80 is the GPU's 1.0 for each channel. */
-#define GPU_TINT_NEUTRAL GPU_COLOR_WORD(0x80, 0x80, 0x80)
+/** @brief Colour channel level that draws a texture at its own brightness: the GPU's 1.0. */
+#define GPU_TINT_NEUTRAL_LEVEL 0x80
+
+/** @brief Draws a texture at its own brightness in every channel. */
+#define GPU_TINT_NEUTRAL GPU_COLOR_WORD(GPU_TINT_NEUTRAL_LEVEL, GPU_TINT_NEUTRAL_LEVEL, GPU_TINT_NEUTRAL_LEVEL)
 
 /** @brief Plain white and black primitive colours. */
 #define GPU_COLOR_WHITE GPU_COLOR_WORD(0xFF, 0xFF, 0xFF)

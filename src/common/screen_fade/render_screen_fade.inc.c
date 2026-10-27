@@ -38,7 +38,8 @@ void* render_screen_fade(TILE* tile, u_long* ordering_table)
     {
         if (g_screen_fade_current.red >= FADE_ADDITIVE_THRESHOLD)
         {
-            setRGB0(tile, g_screen_fade_current.red - 1, g_screen_fade_current.green - 1, g_screen_fade_current.blue - 1);
+            setRGB0(tile, g_screen_fade_current.red - FADE_ADDITIVE_BIAS, g_screen_fade_current.green - FADE_ADDITIVE_BIAS,
+                    g_screen_fade_current.blue - FADE_ADDITIVE_BIAS);
         }
         else
         {

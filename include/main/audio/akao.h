@@ -207,6 +207,15 @@ typedef struct
 #define AKAO_CONTAINER_DATA_AT(container, offset) \
     ((u8*)(container) + (offset))
 
+/** Section of a two-section container whose data stays resident (a song sequence or sound-effect set). */
+#define AKAO_CONTAINER_RESIDENT_SECTION 0
+
+/** Section of a two-section container that holds the instrument bank uploaded to the SPU. */
+#define AKAO_CONTAINER_BANK_SECTION 1
+
+/** AKAO container staged in the CD load buffer. */
+#define LOAD_BUFFER_AKAO_CONTAINER ((AkaoContainerHeader*)LOAD_BUFFER_ADDRESS)
+
 s32 akao_register_bank(AkaoHeader* bank);
 s32 akao_play_song(AkaoHeader* sequence);
 s32 akao_set_song_volume(s32 song_handle, s32 volume);
