@@ -10,12 +10,37 @@
 #define ZUKAN_ENTRY_VALUE_COUNT 1018
 #define ZUKAN_DISPLAY_ORDER_COUNT 719
 #define ZUKAN_DISPLAY_ORDER_END 0x400
+/* Entry indices. The Techniques list also shows the ability entries from ZUKAN_CHARACTER_END, and
+ * the artifacts' second pages follow the World History entries the list shows. */
+#define ZUKAN_FIRST_LAND_ENTRY 1
+#define ZUKAN_FIRST_ARTIFACT_ENTRY 65
+#define ZUKAN_FIRST_MONSTER_ENTRY 230
+#define ZUKAN_ALWAYS_SHOWN_MONSTER_ENTRY 309
+#define ZUKAN_FIRST_LATE_MONSTER_ENTRY 310
+#define ZUKAN_FIRST_CHARACTER_ENTRY 350
 #define ZUKAN_CHARACTER_END 454
 #define ZUKAN_WORLD_HISTORY_START 480
 #define ZUKAN_WORLD_HISTORY_END 576
-/** @brief Unlock bit of the first World History group; the other groups follow it. */
-#define ZUKAN_HISTORY_GROUP_UNLOCK_BIT 0x122
+#define ZUKAN_FIRST_ARTIFACT_ALT_ENTRY ZUKAN_WORLD_HISTORY_END
+#define ZUKAN_FIRST_CACTUS_DIARY_ENTRY 640
+#define ZUKAN_FIRST_TECHNIQUE_ENTRY 750
 #define ZUKAN_EXTRA_TECHNIQUE_COUNT 26
+
+/* Encyclopedia bits of the first entry of each unlock range; the lands and artifacts use the
+ * FIELD_ENCYCLOPEDIA_* ranges. */
+#define ZUKAN_MONSTER_BIT 0
+#define ZUKAN_CHARACTER_BIT 100
+#define ZUKAN_CACTUS_DIARY_BIT 200
+#define ZUKAN_HISTORY_GROUP_UNLOCK_BIT 290
+#define ZUKAN_LATE_MONSTER_BIT 300
+#define ZUKAN_TECHNIQUE_BIT 0x2C0
+#define ZUKAN_ABILITY_BIT 0x3C8
+
+/* Bits of the ability entries: Jump, Defend, then Lunge to Slide in ability order, then Flip Kick. */
+#define ZUKAN_JUMP_BIT ZUKAN_ABILITY_BIT
+#define ZUKAN_DEFEND_BIT (ZUKAN_ABILITY_BIT + 1)
+#define ZUKAN_LUNGE_BIT (ZUKAN_ABILITY_BIT + 2)
+#define ZUKAN_FLIP_KICK_BIT (ZUKAN_LUNGE_BIT + FIELD_ABILITY_SLIDE + 1 - FIELD_ABILITY_LUNGE)
 
 /** @brief Start index of each category and the final end index. */
 typedef struct
@@ -56,6 +81,9 @@ extern FieldLandWords g_saved_lands[FIELD_LAND_COUNT];
 
 /** @brief Set encyclopedia entry bit @p bit in the saved game. */
 #define ZUKAN_UNLOCK_ENTRY(bit) SAVED_BIT_SET(g_saved_encyclopedia_bits, bit)
+
+/** @brief Encyclopedia bit of @p index in a range whose index @p first_index has bit @p first_bit. */
+#define ZUKAN_RANGE_BIT(index, first_index, first_bit) ((index) + ((first_bit) - (first_index)))
 
 /**
  * @brief Build and filter the ZUKAN entry list for the requested category.
@@ -151,7 +179,7 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
 
         for (i = 0; i < count; i++)
         {
-            if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] + 0x1FF))
+            if (!ZUKAN_ENTRY_UNLOCKED(ZUKAN_RANGE_BIT(entry_indices[i], ZUKAN_FIRST_LAND_ENTRY, FIELD_ENCYCLOPEDIA_LAND_BIT)))
             {
                 entry_values[i] = 0;
                 entry_indices[i] = 0;
@@ -180,18 +208,18 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
 
         for (i = 0; i < count; i++)
         {
-            if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] + 0x1FF))
+            if (!ZUKAN_ENTRY_UNLOCKED(ZUKAN_RANGE_BIT(entry_indices[i], ZUKAN_FIRST_ARTIFACT_ENTRY, FIELD_ENCYCLOPEDIA_ARTIFACT_BIT)))
             {
-                if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] + 0x23F))
+                if (!ZUKAN_ENTRY_UNLOCKED(ZUKAN_RANGE_BIT(entry_indices[i], ZUKAN_FIRST_ARTIFACT_ENTRY, FIELD_ENCYCLOPEDIA_ARTIFACT_FLAG_02_BIT)))
                 {
                     entry_values[i] = 0;
                     entry_indices[i] = 0;
                 }
             }
 
-            if (ZUKAN_ENTRY_UNLOCKED(entry_indices[i] + 0x23F))
+            if (ZUKAN_ENTRY_UNLOCKED(ZUKAN_RANGE_BIT(entry_indices[i], ZUKAN_FIRST_ARTIFACT_ENTRY, FIELD_ENCYCLOPEDIA_ARTIFACT_FLAG_02_BIT)))
             {
-                entry_values[i] = resource_values[entry_indices[i] + 0x1FF];
+                entry_values[i] = resource_values[entry_indices[i] + (ZUKAN_FIRST_ARTIFACT_ALT_ENTRY - ZUKAN_FIRST_ARTIFACT_ENTRY)];
             }
         }
     }
@@ -208,11 +236,11 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
     {
         for (i = 0; i < count; i++)
         {
-            if (entry_indices[i] != 0x135)
+            if (entry_indices[i] != ZUKAN_ALWAYS_SHOWN_MONSTER_ENTRY)
             {
-                if (entry_indices[i] < 0x136)
+                if (entry_indices[i] < ZUKAN_FIRST_LATE_MONSTER_ENTRY)
                 {
-                    if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] - 0xE6))
+                    if (!ZUKAN_ENTRY_UNLOCKED(ZUKAN_RANGE_BIT(entry_indices[i], ZUKAN_FIRST_MONSTER_ENTRY, ZUKAN_MONSTER_BIT)))
                     {
                         entry_values[i] = 0;
                         entry_indices[i] = 0;
@@ -220,7 +248,7 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
                 }
                 else
                 {
-                    if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] - 0xA))
+                    if (!ZUKAN_ENTRY_UNLOCKED(ZUKAN_RANGE_BIT(entry_indices[i], ZUKAN_FIRST_LATE_MONSTER_ENTRY, ZUKAN_LATE_MONSTER_BIT)))
                     {
                         entry_values[i] = 0;
                         entry_indices[i] = 0;
@@ -233,7 +261,7 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
     {
         for (i = 0; i < count; i++)
         {
-            if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] - 0xFA))
+            if (!ZUKAN_ENTRY_UNLOCKED(ZUKAN_RANGE_BIT(entry_indices[i], ZUKAN_FIRST_CHARACTER_ENTRY, ZUKAN_CHARACTER_BIT)))
             {
                 entry_values[i] = 0;
                 entry_indices[i] = 0;
@@ -262,7 +290,7 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
     {
         for (i = 0; i < count; i++)
         {
-            if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] - 0x1B8))
+            if (!ZUKAN_ENTRY_UNLOCKED(ZUKAN_RANGE_BIT(entry_indices[i], ZUKAN_FIRST_CACTUS_DIARY_ENTRY, ZUKAN_CACTUS_DIARY_BIT)))
             {
                 entry_values[i] = 0;
                 entry_indices[i] = 0;
@@ -280,22 +308,22 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
             {
                 if (i == FIELD_ABILITY_JUMP)
                 {
-                    ZUKAN_UNLOCK_ENTRY(0x3C8);
+                    ZUKAN_UNLOCK_ENTRY(ZUKAN_JUMP_BIT);
                 }
 
                 if (i == FIELD_ABILITY_DEFEND)
                 {
-                    ZUKAN_UNLOCK_ENTRY(0x3C9);
+                    ZUKAN_UNLOCK_ENTRY(ZUKAN_DEFEND_BIT);
                 }
 
                 if ((i >= FIELD_ABILITY_LUNGE) && (i <= FIELD_ABILITY_SLIDE))
                 {
-                    ZUKAN_UNLOCK_ENTRY(i + 0x39B);
+                    ZUKAN_UNLOCK_ENTRY(ZUKAN_RANGE_BIT(i, FIELD_ABILITY_LUNGE, ZUKAN_LUNGE_BIT));
                 }
 
                 if (i == FIELD_ABILITY_FLIP_KICK)
                 {
-                    ZUKAN_UNLOCK_ENTRY(0x3E1);
+                    ZUKAN_UNLOCK_ENTRY(ZUKAN_FLIP_KICK_BIT);
                 }
             }
         }
@@ -307,16 +335,16 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
                 if ((g_saved_technique_bits[i / SAVED_BITS_PER_WORD] >> (i % SAVED_BITS_PER_WORD)) & 1)
                 {
                     j = i - ((i / SAVED_BITS_PER_WORD) * (SAVED_BITS_PER_WORD - FIELD_TECHNIQUES_PER_WEAPON));
-                    ZUKAN_UNLOCK_ENTRY(j + 0x2C0);
+                    ZUKAN_UNLOCK_ENTRY(j + ZUKAN_TECHNIQUE_BIT);
                 }
             }
         }
 
         for (i = 0; i < count; i++)
         {
-            if ((entry_indices[i] >= ZUKAN_CHARACTER_END) && (entry_indices[i] < 0x2EE))
+            if ((entry_indices[i] >= ZUKAN_CHARACTER_END) && (entry_indices[i] < ZUKAN_FIRST_TECHNIQUE_ENTRY))
             {
-                if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] + 0x202))
+                if (!ZUKAN_ENTRY_UNLOCKED(ZUKAN_RANGE_BIT(entry_indices[i], ZUKAN_CHARACTER_END, ZUKAN_ABILITY_BIT)))
                 {
                     entry_values[i] = 0;
                     entry_indices[i] = 0;
@@ -324,7 +352,7 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
             }
             else
             {
-                if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] - 0x2E))
+                if (!ZUKAN_ENTRY_UNLOCKED(ZUKAN_RANGE_BIT(entry_indices[i], ZUKAN_FIRST_TECHNIQUE_ENTRY, ZUKAN_TECHNIQUE_BIT)))
                 {
                     entry_values[i] = 0;
                     entry_indices[i] = 0;

@@ -15,6 +15,9 @@
 /** The TIM file contains a CLUT block before its pixel block. */
 #define TIM_FLAG_HAS_CLUT 8
 
+/** Flag bits holding the pixel mode, which is also the GPU_TEXTURE_* texture mode. */
+#define TIM_FLAG_PIXEL_MODE_MASK 7
+
 /** @brief Advance to the next TIM block by skipping @p block->bnum bytes. */
 #define TIM_NEXT_BLOCK(block) ((TimBlock*)((u8*)(block) + (block)->bnum))
 
