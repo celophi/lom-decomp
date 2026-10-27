@@ -10,7 +10,7 @@
 #   docker build -t lom-toolchain -f dockerfiles/toolchain.dockerfile .
 #   docker build -t lom-dev -f dockerfiles/dev.dockerfile .
 #
-# See the README "Build the Development Environment" section for full usage.
+# See the README "Getting started" section for full usage.
 
 FROM lom-toolchain:latest
 
