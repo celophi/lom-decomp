@@ -1,5 +1,8 @@
-#include "internal/zukan_category.h"
+#include "common.h"
+
 #include "common/saved_game.h"
+#include "internal/zukan_category.h"
+#include "overlays/field/field_actor_records.h"
 
 #define ZUKAN_CATEGORY_RANGE_COUNT 13
 #define ZUKAN_HISTORY_GROUP_COUNT 6
@@ -7,7 +10,6 @@
 #define ZUKAN_ENTRY_VALUE_COUNT 1018
 #define ZUKAN_DISPLAY_ORDER_COUNT 719
 #define ZUKAN_DISPLAY_ORDER_END 0x400
-#define ZUKAN_LAND_UNLOCK_COUNT 33
 #define ZUKAN_CHARACTER_END 454
 #define ZUKAN_WORLD_HISTORY_START 480
 #define ZUKAN_WORLD_HISTORY_END 576
@@ -90,12 +92,14 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
     {
         category_ranges[category + 1] = ZUKAN_WORLD_HISTORY_END;
     }
+
     if (category == ZUKAN_CATEGORY_CHARACTERS)
     {
         category_ranges[category + 1] = ZUKAN_CHARACTER_END;
     }
 
     count = category_ranges[category + 1] - category_ranges[category];
+
     for (i = 0; i < count; i++)
     {
         entry_indices[i] = i + category_ranges[category];
@@ -107,10 +111,12 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
         {
             entry_indices[i] = i + ZUKAN_CHARACTER_END - count;
         }
+
         count += ZUKAN_EXTRA_TECHNIQUE_COUNT;
     }
 
     visible_count = 0;
+
     for (i = 0; display_order[i] != ZUKAN_DISPLAY_ORDER_END; i++)
     {
         for (j = visible_count; j < count; j++)
@@ -125,21 +131,24 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
             }
         }
     }
+
     count = visible_count;
 
     if (category == ZUKAN_CATEGORY_LANDS)
     {
-        for (i = 0; i < ZUKAN_LAND_UNLOCK_COUNT; i++)
+        for (i = 0; i < FIELD_ENCYCLOPEDIA_LAND_COUNT; i++)
         {
             if ((g_saved_lands[i].record.flags >> 1) & 1)
             {
-                ZUKAN_UNLOCK_ENTRY(i + 0x200);
+                ZUKAN_UNLOCK_ENTRY(i + FIELD_ENCYCLOPEDIA_LAND_BIT);
             }
         }
-        if (g_saved_lands[33].word & FIELD_LAND_FLAG_04)
+
+        if (g_saved_lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_FLAG_04)
         {
-            ZUKAN_UNLOCK_ENTRY(0x218);
+            ZUKAN_UNLOCK_ENTRY(FIELD_ENCYCLOPEDIA_LAND_BIT + FIELD_LAND_LUCEMIA);
         }
+
         for (i = 0; i < count; i++)
         {
             if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] + 0x1FF))
@@ -151,21 +160,24 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
     }
     else if (category == ZUKAN_CATEGORY_ARTIFACTS)
     {
-        for (i = 0; i < ZUKAN_LAND_UNLOCK_COUNT; i++)
+        for (i = 0; i < FIELD_ENCYCLOPEDIA_LAND_COUNT; i++)
         {
-            if (g_saved_lands[i].record.flags & 1)
+            if (g_saved_lands[i].record.flags & FIELD_LAND_PLACED)
             {
-                ZUKAN_UNLOCK_ENTRY(i + 0x240);
+                ZUKAN_UNLOCK_ENTRY(i + FIELD_ENCYCLOPEDIA_ARTIFACT_BIT);
             }
+
             if ((g_saved_lands[i].record.flags >> 1) & 1)
             {
-                ZUKAN_UNLOCK_ENTRY(i + 0x280);
+                ZUKAN_UNLOCK_ENTRY(i + FIELD_ENCYCLOPEDIA_ARTIFACT_FLAG_02_BIT);
             }
         }
-        if (g_saved_lands[33].word & FIELD_LAND_FLAG_04)
+
+        if (g_saved_lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_FLAG_04)
         {
-            ZUKAN_UNLOCK_ENTRY(0x298);
+            ZUKAN_UNLOCK_ENTRY(FIELD_ENCYCLOPEDIA_ARTIFACT_FLAG_02_BIT + FIELD_LAND_LUCEMIA);
         }
+
         for (i = 0; i < count; i++)
         {
             if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] + 0x1FF))
@@ -176,6 +188,7 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
                     entry_indices[i] = 0;
                 }
             }
+
             if (ZUKAN_ENTRY_UNLOCKED(entry_indices[i] + 0x23F))
             {
                 entry_values[i] = resource_values[entry_indices[i] + 0x1FF];
@@ -265,19 +278,22 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
         {
             if ((g_saved_ability_bits[i / SAVED_BITS_PER_WORD] >> (i % SAVED_BITS_PER_WORD)) & 1)
             {
-                if (i == 8)
+                if (i == FIELD_ABILITY_JUMP)
                 {
                     ZUKAN_UNLOCK_ENTRY(0x3C8);
                 }
-                if (i == 0xA)
+
+                if (i == FIELD_ABILITY_DEFEND)
                 {
                     ZUKAN_UNLOCK_ENTRY(0x3C9);
                 }
-                if ((i >= 0x2F) && (i < 0x46))
+
+                if ((i >= FIELD_ABILITY_LUNGE) && (i <= FIELD_ABILITY_SLIDE))
                 {
                     ZUKAN_UNLOCK_ENTRY(i + 0x39B);
                 }
-                if (i == 0x4F)
+
+                if (i == FIELD_ABILITY_FLIP_KICK)
                 {
                     ZUKAN_UNLOCK_ENTRY(0x3E1);
                 }
@@ -298,7 +314,7 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
 
         for (i = 0; i < count; i++)
         {
-            if ((entry_indices[i] >= 0x1C6) && (entry_indices[i] < 0x2EE))
+            if ((entry_indices[i] >= ZUKAN_CHARACTER_END) && (entry_indices[i] < 0x2EE))
             {
                 if (!ZUKAN_ENTRY_UNLOCKED(entry_indices[i] + 0x202))
                 {

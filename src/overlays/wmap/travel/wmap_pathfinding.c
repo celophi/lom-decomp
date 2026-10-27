@@ -61,32 +61,32 @@ extern u8 D_800D01F0[];
 extern s16 g_music_track_index;
 
 /**
- * @brief Rebuild the world-map reachability bitmaps from the per-node flag bytes.
+ * @brief Unlock the encyclopedia entries of the lands and their artifacts from the land records.
  */
 void func_8005DBB8(void)
 {
     s32 i;
 
-    for (i = 0; i < 0x21; i++)
+    for (i = 0; i < FIELD_ENCYCLOPEDIA_LAND_COUNT; i++)
     {
         if ((D_800432C8[i * WMAP_NODE_RECORD_SIZE] >> 1) & 1)
         {
-            SAVED_BIT_SET(g_saved_encyclopedia_bits, i + 0x200);
+            SAVED_BIT_SET(g_saved_encyclopedia_bits, i + FIELD_ENCYCLOPEDIA_LAND_BIT);
         }
     }
     if (g_wmap_replacement_land_status & 4)
     {
         D_800460EC |= 0x01000000;
     }
-    for (i = 0; i < 0x21; i++)
+    for (i = 0; i < FIELD_ENCYCLOPEDIA_LAND_COUNT; i++)
     {
-        if (D_800432C8[i * WMAP_NODE_RECORD_SIZE] & 1)
+        if (D_800432C8[i * WMAP_NODE_RECORD_SIZE] & FIELD_LAND_PLACED)
         {
-            SAVED_BIT_SET(g_saved_encyclopedia_bits, i + 0x240);
+            SAVED_BIT_SET(g_saved_encyclopedia_bits, i + FIELD_ENCYCLOPEDIA_ARTIFACT_BIT);
         }
         if ((D_800432C8[i * WMAP_NODE_RECORD_SIZE] >> 1) & 1)
         {
-            SAVED_BIT_SET(g_saved_encyclopedia_bits, i + 0x280);
+            SAVED_BIT_SET(g_saved_encyclopedia_bits, i + FIELD_ENCYCLOPEDIA_ARTIFACT_FLAG_02_BIT);
         }
     }
     if (g_wmap_replacement_land_status & 4)
