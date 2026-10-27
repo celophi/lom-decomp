@@ -13,27 +13,26 @@
 [JP Progress]: https://decomp.dev/celophi/lom-decomp/SLPS_021.70.svg?mode=shield&measure=code&label=%E6%97%A5%E6%9C%AC%E7%89%88
 [jp progress site]: https://decomp.dev/celophi/lom-decomp/SLPS_021.70
 
-PlayStation用ソフト **『聖剣伝説 LEGEND OF MANA』** を、オリジナルと一致する形で復元する**デコンパイル（逆コンパイル）プロジェクト**です。北米版と日本版のどちらも **100%一致**しています。
+PlayStation用ソフト **『聖剣伝説 LEGEND OF MANA』** を、オリジナルと一致する形で復元する**デコンパイル（逆コンパイル）プロジェクト**です。復元した読みやすいCソースコードは、オリジナルのゲームと同じ機械語にコンパイルされます。北米版と日本版のどちらも、同じCソースから**完全リンク**されています。
 
-本プロジェクトでは、ディスク上のオリジナルのMIPS機械語とバイト単位で一致するように、読みやすいCソースコードを復元しています。対象としているリージョンは次の2つです。
+このプロジェクトはデコンパイルです。リコンパイルでは**ありません**。ソースポートでも**ありません**。このリポジトリには、ゲームの実行ファイル、オーバーレイバイナリ、アートワーク、音声、その他の著作権で保護されたゲームデータは含まれていません。必要なファイルは、正規に入手した各自のゲームから用意してください。
 
-- **北米版** - `SLUS_010.13`（ディスクシリアル **SLUS-01013**）。完了済みで、18個すべてのバイナリが完全にリンクされています。
-- **日本版** - `SLPS_021.70`（ディスクシリアル **SLPS-02170**）。完了しています。18個すべてのバイナリが、北米版と同じCソースから完全リンクされます。
+このプロジェクトの目的は、研究とMod制作のために、オリジナルゲームのロジックと挙動を保存することです。
 
-特に記載がない限り、以下のビルド手順、ターゲット、ファイル名は北米版を対象としています。
+## 現在の状況
 
-これはデコンパイルプロジェクトであり、**PC移植版ではありません**。このリポジトリには、ゲームの実行ファイル、オーバーレイバイナリ、アートワーク、音声、その他の著作権で保護されたゲームデータは含まれていません。必要なファイルは、各自が所有するゲームから用意してください。
-
-このプロジェクトの主な目的は、教育・研究や将来的なMod制作の可能性に向けて、オリジナルゲームのロジックと挙動を保存することです。
-
-## 完全リンク
-
-北米版と日本版のどちらも、メイン実行ファイルと17個すべてのオーバーレイを含む全モジュールが**完全リンク済み**です。本プロジェクトでは、次の2つの条件を満たしたモジュールを完全リンク済みとしています。
+北米版と日本版のどちらも、メイン実行ファイルと17個すべてのオーバーレイを含む全モジュールが**完全リンク済み**です。意味は他のデコンパイルプロジェクトと同じですが、本プロジェクトでは条件を1つ追加しています。コンプレッサーの出力が、ディスク上の `.BIN` ファイルとバイト単位で一致しなければなりません。この追加の確認は、進捗を把握するのに役立ちました。本プロジェクトでは、次の2つの条件を満たしたモジュールを完全リンク済みとしています。
 
 1. ビルドによって生成された**ELFのバイト列が、オリジナルを展開したファイルと一致する**こと。
 2. そのELFをrawバイナリに変換し、本プロジェクトのコンプレッサーで圧縮すると、**ディスク上の元の `.BIN` ファイルと完全に同一のファイルを再生成できる**こと。
 
-つまり、`original .BIN -> decompress -> C source -> compile -> ELF -> compress -> .BIN` という一連の往復処理がビット単位で完全一致します。
+つまり、往復処理はビット単位で完全一致します。
+
+1. ディスク上のオリジナルの `.BIN` から始めます。
+2. それを展開します。
+3. CソースをコンパイルしてELFを作ります。
+4. ELFを圧縮します。
+5. 結果は元と同じ `.BIN` になります。
 
 メイン実行ファイルは圧縮されていないため、`SLUS_010.13` と `SLPS_021.70` では1つ目の条件だけが確認対象です。リンク済みELFをrawバイナリへ変換したものが、ディスク上のファイルと一致します。
 
@@ -41,40 +40,36 @@ PlayStation用ソフト **『聖剣伝説 LEGEND OF MANA』** を、オリジナ
 
 すべてのモジュールを確認するには `make verify-bins` を、日本版では `make verify-bins VERSION=jp` を実行してください。
 
-## ロードマップ
-
-1. ✅ **100%一致** - **完了。** メイン実行ファイル（`SLUS_010.13`）と17個すべてのオーバーレイが完全リンク済みです（上記参照）。Psy-Q SDKライブラリについては、引き続きオリジナルのアセンブリをリンクしています。
-
-2. 🚧 **クリーンアップとドキュメント整備** - **進行中。** デコンパイル作業中に生じた不自然なコードを整理し、機能をドキュメント化します。
-
-3. ✅ **NTSC-J版** - **完了。** 日本版（`SLPS-02170`）は北米版と同じソースツリーからビルドされ、18個すべてのバイナリが完全リンク済みです。
-
-4. 💤 **Mod制作とソースポート** - 復元したソースコードを基盤として、実用的なMod制作や他プラットフォームへの移植を可能にします。
-
-## 対応ゲームバージョン
+## 対応バージョン
 
 | 項目 | 北米版 | 日本版 |
 |---|---|---|
-| 状態 | ✅ 完全リンク済み | ✅ 完全リンク済み |
 | ディスクシリアル | `SLUS-01013` | `SLPS-02170` |
-| メイン実行ファイル | `SLUS_010.13` | `SLPS_021.70` |
 | メイン実行ファイル SHA-1 | `d11dfdd50d412ac3fa3e2eb80fbde138da118f27` | `b067188a92e4de9a4db7bb7e5343c757e9884bfa` |
 | ディスクイメージ（`.bin`）SHA-1 | `c1b536c99f0d390584eb30462a7e37f2bbef3902` | `7a314615be8a482cf3f81b4101cc19aaa738f36d` |
-| アーキテクチャ | 32-bit little-endian MIPS / PlayStation | 32-bit little-endian MIPS / PlayStation |
 
-以下の導入手順は北米版を例にしています。日本版も同じ手順で、ファイルを `disc/jp/` に置き、`make` に `VERSION=jp` を付けてビルドします。その他のリージョンには現在対応していません。
+その他のリージョンには現在対応していません。
+
+## ドキュメント
+
+[日本語ドキュメント一覧](docs/jp/README.md)に、ゲームの仕組みの解説と関連資料をまとめています。
+
+- [`tools/compression/README.md`](tools/compression/README.md)
 
 ## 必要なもの
 
-通常のビルドには次のものが必要です。
+次のものが必要です。
 
-- **Git** - サブモジュールを利用できること。
+- **Git**
 - **Docker** - Windows/macOSではDocker Desktop、LinuxではDocker Engine。
-- **正規に入手した『Legend of Mana』**（北米版または日本版。[対応ゲームバージョン](#対応ゲームバージョン)を参照）。
+- **正規に入手した『Legend of Mana』**（北米版または日本版）。
+- PlayStationのディスクイメージからファイルを取り出せるツール。
 
-当時のPSXコンパイラ、Psy-Qツール、Pythonパッケージ、MIPSクロスコンパイラなどをホスト環境へ直接インストールする必要はありません。開発用コンテナに必要なものが含まれています。
+その他に必要なものは、すべて開発用コンテナに含まれています。
 
 ## はじめに
+
+以下の手順は日本版を例にしています。北米版では、ファイルを `disc/us/` に置き、`make` コマンドから `VERSION=jp` を外してください。
 
 ### 1. リポジトリをクローンする
 
@@ -91,7 +86,7 @@ git submodule update --init --recursive
 
 ### 2. オリジナルのゲームファイルを配置する
 
-ゲームファイルはバージョンごとのフォルダに配置します。北米版は `disc/us/`、日本版は `disc/jp/` です。ディスクまたはディスクイメージから、メイン実行ファイルとゲームの `BIN` ディレクトリを抽出し、リポジトリ内を次の構成にしてください（例は日本版です。北米版では `disc/us/SLUS_010.13` になります）。
+ディスクイメージから、メイン実行ファイルと `BIN` ディレクトリを `disc/jp/` に抽出してください。
 
 ```text
 disc/
@@ -100,65 +95,27 @@ disc/
     `-- BIN/
         |-- ADDHERO.BIN
         |-- CARDA.BIN
-        |-- CHECKPS.BIN
-        |-- CLOAD.BIN
-        |-- FIELD.BIN
-        |-- GNAME.BIN
-        |-- GOLEM.BIN
-        |-- GOSUB.BIN
-        |-- GOVER.BIN
-        |-- MENU.BIN
-        |-- MOVIE.BIN
-        |-- NIKI.BIN
-        |-- SHOP.BIN
-        |-- TITLE.BIN
-        |-- WMAP.BIN
-        |-- WSEL.BIN
-        `-- ZUKAN.BIN
+        `-- ...
 ```
 
-ディスクの残りのファイルをリポジトリへコピーする必要はありません。
-
-メイン実行ファイルが想定しているバージョンか確認するには、次を実行します。
-
-```bash
-sha1sum disc/jp/SLPS_021.70
-```
-
-期待される結果:
-
-```text
-b067188a92e4de9a4db7bb7e5343c757e9884bfa  disc/jp/SLPS_021.70
-```
-
-splatの設定ファイルには、各オーバーレイファイルの期待されるSHA-1ハッシュも記載されています。
+ビルドに必要なのはこれらのファイルだけです。シーン抽出ツールはディスクの `ANA/` ディレクトリも読み込みますが、保存場所はどこでも構いません。パスを指定して実行できます。
 
 > `disc/` はgitignoreの対象です。オリジナルのゲームファイルは絶対にコミットしないでください。
 
-### 3. 当時のコンパイラ用イメージをビルドする
+### 3. Dockerイメージをビルドする
 
-本プロジェクトでは、複数の古いGCCを使い分けています。`old-gcc` サブモジュールを使って、次の4つのローカルコンパイライメージをビルドしてください。
+リポジトリのルートディレクトリから実行してください。この作業は最初の1回だけで済みます。
 
 ```bash
 docker build -t old-gcc/gcc-2.8.0-psx -f tools/external/old-gcc/gcc-2.8.0-psx.Dockerfile tools/external/old-gcc
 docker build -t old-gcc/gcc-2.7.2-cdk -f tools/external/old-gcc/gcc-2.7.2-cdk.Dockerfile tools/external/old-gcc
 docker build -t old-gcc/gcc-2.6.0-psx -f tools/external/old-gcc/gcc-2.6.0-psx.Dockerfile tools/external/old-gcc
 docker build -t old-gcc/gcc-2.7.2-psx-gnu -f dockerfiles/gnu-as.dockerfile tools/external/old-gcc
-```
-
-通常、この作業が必要なのは最初の1回だけです。開発用Dockerfileはこれらのローカルイメージを利用するため、非公開のコンパイライメージへアクセスする必要はありません。
-
-### 4. 開発用コンテナをビルドする
-
-リポジトリのルートディレクトリから、[`dockerfiles/dev.dockerfile`](dockerfiles/dev.dockerfile) を指定して実行してください。
-
-```bash
+docker build -t lom-toolchain -f dockerfiles/toolchain.dockerfile .
 docker build -t lom-dev -f dockerfiles/dev.dockerfile .
 ```
 
-このイメージには、本プロジェクトで使用するコンパイラ、Psy-Qツール、MIPS binutils、splat、maspsx、バージョンを固定したobjdiff CLI、Python依存パッケージが含まれています。
-
-### 5. コンテナを起動する
+### 4. コンテナを起動する
 
 リポジトリのルートディレクトリから実行してください。
 
@@ -174,147 +131,92 @@ Windows Command Prompt（`cmd.exe`）の場合:
 docker run --rm -it -v "%cd%:/lom" lom-dev
 ```
 
-これ以降のセットアップコマンドは、**コンテナ内で実行します**。
+これ以降のコマンドは、**コンテナ内で実行します**。
 
-### 6. オリジナルのバイナリを分割する
-
-```bash
-make splat
-```
-
-これにより、`asm/<version>/`、`linker/<version>/`、`assets/<version>/` 以下の抽出アセットなど、ローカルで使用するビルド入力が生成されます。これらのファイルは意図的にすべてをGitへ保存しているわけではありません。
-
-splat設定、セグメント境界、シンボルマップ、relocation overrideを変更した場合は、`make splat` を再実行してください。
-
-### 7. ビルドする
-
-メイン実行ファイルをビルドします。
+### 5. オリジナルのバイナリを分割する
 
 ```bash
-make
+make splat VERSION=jp
 ```
 
-出力:
+ファイルを期待されるSHA-1ハッシュと照合したうえで、ビルドに必要なアセンブリ、リンカースクリプト、アセットを生成します。
 
-```text
-build/jp/SLPS_021.70.elf
-```
-
-フラットバイナリも生成する場合:
+### 6. ビルドして検証する
 
 ```bash
-make bin
+make everything VERSION=jp
+make verify-bins VERSION=jp
 ```
 
-登録済みのオーバーレイを1つビルドする場合:
+`make everything` は、メイン実行ファイルと17個すべてのオーバーレイを `build/jp/` にビルドします。`make verify-bins` は、それらすべてが完全リンク済みであることを確認します。
 
-```bash
-make field
-make menu
-make checkps
-```
+## トラブルシューティング
 
-`mk/overlay-registry.mk` に現在登録されているすべてのオーバーレイをビルドする場合:
+**`make splat` でファイル不足またはSHA-1不一致が報告される**
 
-```bash
-make overlays
-```
+北米版は `disc/us/SLUS_010.13` と `disc/us/BIN/*.BIN`、日本版は `disc/jp/SLPS_021.70` と `disc/jp/BIN/*.BIN` に、名前を変更せずに配置していることを確認してください。配置が正しいのにSHA-1が一致しない場合は、別のリリースのファイルか、吸い出しに失敗している可能性があります。[対応バージョン](#対応バージョン)と比較してください。
 
-メイン実行ファイルと登録済みの全オーバーレイをビルドする場合:
+**Dockerが `old-gcc/...` イメージを見つけられない**
 
-```bash
-make everything
-```
+Gitサブモジュールを初期化し、[はじめに](#はじめに)の手順3に記載された順番でDockerイメージをビルドしてください。
 
-`mk/overlay-registry.mk` が、現在リンク可能なビルドへ組み込まれているオーバーレイの正式な一覧です。
+**GCCで `Value too large for defined data type` と表示される**
 
-## 通常の開発フロー
+古い32-bitコンパイラはWindows上のDockerマウント内のファイルを読み込めないため、Makefileはソースをコンテナ内の `/staging` へコピーし、そこでコンパイルします。`/lom` から直接コンパイルせず、Makefileを使用してください。ステージングされたツリーを更新する必要がある場合は `make recopy` を実行します。
 
-初期セットアップ後は、通常、編集するたびにプロジェクトを**クリーンする必要はありません**。
+## GitHub Issues
 
-```text
-ホスト側でソースを編集
-        |
-        v
-lom-dev 内で make <必要最小限のターゲット>
-        |
-        v
-objdiff / diff の結果を確認
-        |
-        v
-編集して繰り返す
-```
+不具合の報告、質問、要望などは [GitHub Issues](https://github.com/celophi/lom-decomp/issues) からお気軽にどうぞ。
 
-Makefileは、コンパイル前に変更された入力を自動的にステージングします。ステージングされたコピーが古いように見える場合は、次を実行してください。
+メンテナーは日本語をある程度理解でき、話すこともできますので、Issueは**日本語で書いていただいて大丈夫です**。英語で書く必要はありません。返信は日本語と英語の両方で行います。
 
-```bash
-make recopy
-```
-
-`make clean` は、`build/<version>/` と `/staging` のコピーを実際に削除したい場合にのみ使用してください。
-
-## `/staging` が存在する理由
-
-リポジトリはDocker内の `/lom` にマウントされますが、当時のコンパイラによる実際のコンパイルは、コンテナ内のネイティブLinuxファイルシステム上にある `/staging` から行われます。
-
-一部の古い32-bitコンパイラ / プリプロセッサは、Windows側のDocker bind mount上にあるファイルへ安全に `stat()` できず、次のエラーで失敗する場合があります。
-
-```text
-Value too large for defined data type
-```
-
-Makefileでは、必要な入力を `/staging` へコピーし、テキストファイルの改行コードをLFに正規化してからコンパイルすることで、この問題を回避しています。
-
-そのため、ビルドシステムを迂回して `/lom` 以下のファイルに対して古いコンパイラを直接実行しないでください。
-
-## 便利なMakeターゲット
+## Makeターゲット
 
 | ターゲット | 用途 |
 |---|---|
 | `make` | メインの `SLPS_021.70` ELFをビルドします。 |
 | `make bin` | `build/jp/SLPS_021.70.bin` も生成します。 |
-| `make <overlay>` | `make field` など、登録済みのオーバーレイを1つビルドします。 |
-| `make overlays` | 登録済みの全オーバーレイをビルドします。 |
-| `make everything` | メイン実行ファイルと登録済みの全オーバーレイをビルドします。 |
-| `make splat` | メイン実行ファイルと全オーバーレイ設定を分割します。 |
+| `make <overlay>` | `make field` など、オーバーレイを1つビルドします。 |
+| `make overlays` | 17個すべてのオーバーレイをビルドします。 |
+| `make everything` | メイン実行ファイルと17個すべてのオーバーレイをビルドします。 |
+| `make splat` | オーバーレイを展開し、すべてのバイナリをアセンブリ、リンカースクリプト、アセットに分割します。 |
 | `make objdiff-objects` | objdiff用にターゲット側と復元側のオブジェクトをビルドします。 |
-| `make objdiff-config` | `objdiff.json` を再生成します。 |
+| `make objdiff-config` | `objdiff.json` を再生成します。objdiffでリポジトリのルートを開くと、関数を比較できます。 |
 | `make progress` | `build/<version>/progress.json` を生成します。 |
 | `make diff-all` | 設定済みの全ユニットに対してobjdiffを実行します。 |
-| `make diff-text` | `build/<version>/diffs/` 以下に簡潔なテキストレポートを生成します。 |
+| `make diff-text` | まだ一致していない関数を `build/<version>/diffs/` 以下に出力します。 |
 | `make dump-objs` | コード生成の解析用にビルド済みオブジェクトを逆アセンブルします。 |
 | `make validate-assets` | フォーマットを認識するアセットについて、往復変換と検証を行います。 |
 | `make verify-main` | リンク済みのメイン実行ファイルが `disc/jp/SLPS_021.70` と一致するか確認します（`verify-slus` は別名）。 |
-| `make verify-bins` | `verify-main` と、登録済み全オーバーレイのSHA-1チェックを実行します。 |
+| `make verify-<overlay>` | `make verify-field` など、オーバーレイを1つディスク上のファイルと照合します。 |
+| `make verify-bins` | メイン実行ファイルと17個すべてのオーバーレイを、ディスク上のファイルと照合します。 |
 | `make verify-compressor` | 選択したバージョンのオリジナルの17個のオーバーレイファイルに対してコンプレッサーを検証します。 |
 | `make recopy` | ソース / 設定ファイルを `/staging` へ強制的に再コピーします。 |
 | `make clean` | ビルド出力と `/staging` を削除します。 |
 
 すべてのターゲットは、既定では北米版（`VERSION=us`）をビルドします。日本版は `make VERSION=jp` のように `VERSION=jp` を付けて指定します。表中のファイル名は日本版の例です。
 
-## 関数のマッチング
+ツールのテストやデータ抽出用のターゲットは [tools/README.md](tools/README.md) に記載しています。
 
-本プロジェクトでは、ローカルで関数やオブジェクトを比較するために [objdiff](https://github.com/encounter/objdiff) を使用しています。
+## リポジトリ構成
 
-比較する両方のオブジェクトをビルドし、objdiffの設定を生成します。
-
-```bash
-make objdiff-objects
-make objdiff-config
+```text
+lom-decomp/
+|-- src/
+|   |-- common/        # 複数のオーバーレイで共有するコード
+|   |-- main/          # メイン実行ファイル
+|   |-- overlays/      # 17個のオーバーレイ
+|   `-- psyq/          # Psy-Q SDKライブラリ
+|-- include/           # ヘッダ
+|-- config/<version>/  # Splat設定、シンボル、relocation
+|-- mk/                # ビルドルール
+|-- tools/             # ビルド、データ、検証用ツール
+|-- docs/              # アーキテクチャとリファレンスのドキュメント
+|-- dockerfiles/       # 開発用 / CI用イメージ
+`-- disc/<version>/    # 手元のゲームファイル（gitignore対象）
 ```
 
-その後objdiffを起動し、リポジトリのルートディレクトリを指定してください。
-
-コマンドラインで作業する場合:
-
-```bash
-make diff-all
-make diff-text
-```
-
-簡潔なレポートは `build/<version>/diffs/` 以下に出力されます。
-
-共同でマッチング作業を行う場合は [decomp.me](https://decomp.me) も利用できます。既存のソースコメントには多数のdecomp.me scratchへのリンクが含まれているため、関数を編集する際はそれらの参照を残してください。
+`asm/`、`linker/`、`assets/`、`build/` はバージョンごとに生成され、gitignoreの対象です。
 
 ## コンパイラとアセンブラのツールチェーン
 
@@ -322,7 +224,7 @@ make diff-text
 
 ちなみに、この複数のツールチェーンへの対応にはかなり「楽しませてもらいました」。特にGNU版はなかなか強敵でした。
 
-ビルドでは、4種類の古いコンパイラビルドを使い、合計7種類のパイプラインを定義しています。コンパイラとアセンブラのフラグは [`mk/toolchains.mk`](mk/toolchains.mk) にあります。ソースの振り分けとファイル単位のオーバーライドは [`mk/main.mk`](mk/main.mk) と [`mk/overlay-registry.mk`](mk/overlay-registry.mk) にあり、[`mk/overlays.mk`](mk/overlays.mk) がオーバーレイ用の各バリアントを適用します。
+ビルドでは、4種類の古いコンパイラビルドを使い、合計7種類のパイプラインを定義しています。コンパイラとアセンブラのフラグは [`mk/toolchains.mk`](mk/toolchains.mk) にあります。ソースの振り分けは、メイン実行ファイルについては [`mk/main-sources.mk`](mk/main-sources.mk)、オーバーレイについては [`mk/overlay-registry.mk`](mk/overlay-registry.mk) にあります。メイン実行ファイルのファイル単位のオーバーライドは [`mk/main.mk`](mk/main.mk) にあり、[`mk/overlays.mk`](mk/overlays.mk) がオーバーレイ用の各バリアントを適用します。
 
 | パイプライン | コンパイラフラグ | アセンブル経路 |
 |---|---|---|
@@ -333,101 +235,6 @@ make diff-text
 | GCC 2.7.2 CDK G0 | `-O2 -G0 -msoft-float -gcoff` | maspsx、ASPSX 2.67、division展開あり |
 | GCC 2.7.2 GNU G0 | `-O2 -G0` | 当時のGNU `as`（`-O -EL`） |
 | GCC 2.6.0 G0 | `-O2 -G0 -gcoff -msoft-float` | maspsx、ASPSX 2.34、division展開あり |
-
-## 著作権で保護されたデータとアセット
-
-実行ファイルやオーバーレイの一部領域には、アートワーク、テキスト、レイアウト、その他の著作権で保護されたデータが含まれているため、そのままコミットすべきではありません。
-
-本プロジェクトでは、次のようなハイブリッド方式を採用しています。
-
-- 内容を理解できたプログラムデータは、型付きのCデータとして表現できます。
-- 内容を理解できたバイナリ形式は、バイト単位で正確なextractor / builderを使用できます。
-- 未解析のデータや創作性のあるデータは、名前を付けたローカルの `databin` / `rodatabin` アセットとして残し、`.incbin` で参照できます。
-
-## バージョン構成
-
-1つのCソースツリーで、すべてのリージョン版をビルドします。特定のディスクに由来するものはバージョンごとのフォルダに置き、`make` のコマンドラインに `VERSION=<name>` を付けてビルドするバージョンを選びます。
-
-| `VERSION` | リリース | 状態 |
-|---|---|---|
-| `us`（既定） | 北米版 `SLUS-01013` | 完全リンク済み |
-| `jp` | 日本版 `SLPS-02170` | 完全リンク済み |
-
-| 全バージョン共通 | バージョンごと |
-|---|---|
-| `src/`、`include/`、`mk/`、`tools/`、`docs/` | `disc/<version>/`、`config/<version>/`、および生成される `asm/<version>/`、`linker/<version>/`、`assets/<version>/`、`build/<version>/` |
-
-リリース間でコードが異なる箇所は、共通のCソース内で `#if defined(VERSION_JP)` / `#if defined(VERSION_US)` を使って書き分けます。ビルドはどちらか一方だけを定義します（[`mk/version.mk`](mk/version.mk) と [`include/version.h`](include/version.h) を参照）。シンボル名は共通ですがアドレスは異なるため、`config/<version>/symbols/` はバージョンごとに用意します。
-
-進捗レポートはバージョンごとに生成され、CIは両方をビルドします（`SLUS_010.13_report` と `SLPS_021.70_report`）。どちらのバージョンでも、すべてのモジュールが共通のCソースからビルドされます。`config/jp/asm_units.txt` を使えば、コードが異なるユニットを移植している途中などに、日本版だけアセンブリから取り込むこともできますが、現在は空です。
-
-## リポジトリ構成
-
-```text
-lom-decomp/
-|-- src/                    # 復元したCソース
-|   |-- overlays/           # オーバーレイのソースツリー
-|   `-- psyq/               # 復元したPsy-Qライブラリコード
-|-- include/                # プロジェクトおよびPsy-Qのヘッダ / マクロ
-|-- config/<version>/       # Splat設定、シンボル、relocation
-|-- mk/                     # ビルドルールとツールチェーンの振り分け
-|-- tools/                  # デコンパイル、コンパイラ、diff、アセット用ツール
-|-- docs/                   # アーキテクチャとマッチング関連ドキュメント
-|-- disc/<version>/         # 手元のオリジナルゲームファイル（gitignore対象）
-|-- assets/<version>/       # 必要に応じて使用するローカル / 生成アセットデータ
-|-- asm/<version>/          # Splatが生成するターゲットアセンブリ（gitignore対象）
-|-- linker/<version>/       # Splatが生成するリンカーファイル（gitignore対象）
-|-- build/<version>/        # オブジェクト、ELF、map、diff、レポート
-|-- dockerfiles/            # 開発用 / CI用コンテナ
-|-- Makefile
-`-- requirements.txt
-```
-
-まず確認するとよい場所:
-
-- `src/` - 復元したゲームコードとPsy-Qコード。
-- `asm/<version>/nonmatchings/` と `asm/<version>/overlays/*/nonmatchings/` - 未一致関数向けに生成されたターゲットアセンブリ。
-- `config/<version>/symbols/` - 判明している関数 / グローバルのアドレス。
-- `config/<version>/relocations/` - splatがシンボリック参照を正しく復元できない場合に使用するrelocation override。
-- `mk/overlay-registry.mk` - オーバーレイごとのソース / ツールチェーン割り当て。
-
-## ドキュメント
-
-[日本語ドキュメント一覧](docs/jp/README.md)に、ゲームの仕組みの解説と関連資料をまとめています。
-
-- [`tools/compression/README.md`](tools/compression/README.md)
-
-## トラブルシューティング
-
-**`make splat` でファイル不足またはSHA-1不一致が報告される**
-
-北米版は `disc/us/SLUS_010.13` と `disc/us/BIN/*.BIN`、日本版は `disc/jp/SLPS_021.70` と `disc/jp/BIN/*.BIN` に、名前を変更せずに配置していることを確認してください。
-
-**Dockerが `old-gcc/...` イメージを見つけられない**
-
-Gitサブモジュールを初期化し、`lom-dev` をビルドする前に、セットアップ手順にある4つの古いコンパイライメージをビルドしてください。
-
-**GCCで `Value too large for defined data type` と表示される**
-
-`/lom` から直接コンパイルせず、Makefileを使用してください。ステージングされたツリーを更新する必要がある場合は `make recopy` を実行します。
-
-**シンボル / 設定の変更が生成されたアセンブリへ反映されない**
-
-`make splat` を再実行してください。生成された `asm/` や `linker/` のファイルを手動で編集しないでください。
-
-**別のコンパイラでは関数が一致するのに、プロジェクトのビルドでは一致しない**
-
-`mk/main.mk` または `mk/overlay-registry.mk` で、そのソースがどのツールチェーンへ振り分けられているか確認してください。プロジェクトに設定されている当時のツールチェーンが基準です。
-
-**objdiffでは100%なのに、オーバーレイ全体の検証に失敗する**
-
-data / rodata内のジャンプテーブルやcaseのターゲット、relocation addend、リンカーのセクション順序、オーバーレイセグメントの `align:` キー、生成アセットなどを確認してください。
-
-## GitHub Issues
-
-不具合の報告、質問、要望などは [GitHub Issues](https://github.com/celophi/lom-decomp/issues) からお気軽にどうぞ。
-
-メンテナーは日本語をある程度理解でき、話すこともできますので、Issueは**日本語で書いていただいて大丈夫です**。英語で書く必要はありません。返信は日本語と英語の両方で行います。
 
 ## リバースエンジニアリングの出所
 
