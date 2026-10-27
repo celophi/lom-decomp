@@ -10,12 +10,15 @@
 #include "main/audio/akao.h"
 #include "main/cd_resources.h"
 #include "main/cdrom.h"
+#include "main/controller.h"
 #include "main/display.h"
 #include "main/main.h"
+#include "overlays/field/field_input.h"
 #include "overlays/field/field_sound.h"
 #include "overlays/field/field_text.h"
 #include "overlays/field/field_ui_text.h"
 #include "overlays/menu/menu.h"
+#include "overlays/zukan/zukan.h"
 
 /*
  * Encyclopedia overlay UI, entry navigation, resource loading and rendering.
@@ -75,6 +78,12 @@
 #define ZUKAN_ENTRY_IMAGE_X 0x380
 #define ZUKAN_ENTRY_IMAGE_Y 0x100
 #define ZUKAN_ENTRY_CLUT_Y 0x1EE
+
+/* The field's scene textures fill 256-line pixel columns, grouped into 64-pixel texture pages.
+ * From this page count on they reach the border image position. */
+#define ZUKAN_FIELD_TEXTURE_COLUMN_BYTES (256 * 2)
+#define ZUKAN_FIELD_TEXTURE_PAGE_WIDTH 64
+#define ZUKAN_FIELD_TEXTURE_PAGES_AT_BORDER 9
 
 #define ZUKAN_WORK_BUFFER_SIZE 0x8000
 #define ZUKAN_LIST_CAPACITY 512
@@ -173,8 +182,10 @@ typedef struct
 } ZukanRelatedEntries;
 
 extern u8 g_field_ui_text_dashes[];
+extern u32 g_field_vram_byte_count;
 extern u8 g_zukan_resource_archive[];
 extern ZukanEntryResourceHeader* g_zukan_resource_buffer;
+extern RenderContext* g_zukan_render_buffers;
 extern ZukanEntryResourceHeader* g_zukan_work_buffer;
 extern s32 g_zukan_exit_requested;
 extern ZukanUiSpriteRecord g_zukan_ui_sprites[ZUKAN_UI_SPRITE_COUNT];
@@ -222,6 +233,92 @@ void zukan_load_related_entry(s32 resource_id);
 u8* zukan_render_detail_text(u8* packet_cursor, u_long* ordering_table);
 void* zukan_render_detail_sprites(SPRT* sprite, u_long* ordering_table);
 void zukan_commit_loaded_entry(void);
+
+/**
+ * @brief Run the encyclopedia screen until the player leaves it.
+ * @param render_buffers Storage for the two render contexts, followed by the encyclopedia work area.
+ * @param category Encyclopedia category to display.
+ */
+void zukan_run(RenderContext* render_buffers, s32 category)
+{
+    RenderContext* draw_buffer;
+    RenderContext* next_buffer;
+    RenderContext* other_buffer;
+    RenderContext* buffers;
+    s32 texture_pages;
+
+    g_zukan_render_buffers = render_buffers;
+    render_buffers += 2;
+
+    setRECT(&g_zukan_render_buffers[0].clear_rect, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    setRECT(&g_zukan_render_buffers[1].clear_rect, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+
+    SetDefDispEnv(&g_zukan_render_buffers[0].disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&g_zukan_render_buffers[1].disp_env, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDrawEnv(&g_zukan_render_buffers[0].draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&g_zukan_render_buffers[1].draw_env, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+
+    buffers = g_zukan_render_buffers;
+    buffers[1].draw_env.dtd = 0;
+    buffers[0].draw_env.dtd = 0;
+    g_zukan_exit_requested = 0;
+    g_zukan_render_buffers[0].frame_parity = 0;
+    g_zukan_render_buffers[1].frame_parity = 1;
+
+    g_zukan_resource_buffer = (ZukanEntryResourceHeader*)ALIGN4(zukan_initialize_state((u8*)render_buffers, category));
+
+    next_buffer = g_zukan_render_buffers;
+    ClearOTagR(next_buffer->ot, RENDER_CONTEXT_OT_ENTRY_COUNT);
+    ClearOTagR(g_zukan_render_buffers[1].ot, RENDER_CONTEXT_OT_ENTRY_COUNT);
+    VSync(0);
+    PutDispEnv(&next_buffer->disp_env);
+    update_controllers();
+
+    while (1)
+    {
+        draw_buffer = next_buffer;
+        ClearOTagR(draw_buffer->ot, RENDER_CONTEXT_OT_ENTRY_COUNT);
+        draw_buffer->prim_cursor = &draw_buffer->ot[RENDER_CONTEXT_OT_ENTRY_COUNT];
+        field_text_reset_scratch();
+        field_update_input_repeat();
+        zukan_update_frame(draw_buffer);
+        field_text_upload_immediate_cache();
+        DrawSync(0);
+        set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
+        VSync(FRAME_VSYNC_INTERVAL);
+
+        if (g_zukan_exit_requested != 0)
+        {
+            break;
+        }
+
+        ClearImage(&draw_buffer->clear_rect, 0, 0, 0);
+        other_buffer = g_zukan_render_buffers;
+
+        if (draw_buffer == g_zukan_render_buffers)
+        {
+            other_buffer = draw_buffer + 1;
+        }
+
+        next_buffer = other_buffer;
+        PutDispEnv(&other_buffer->disp_env);
+        PutDrawEnv(&next_buffer->draw_env);
+        DrawOTag(&draw_buffer->ot[RENDER_CONTEXT_OT_ENTRY_COUNT - 1]);
+        update_controllers();
+        cdrom_process_state();
+    }
+
+    texture_pages = g_field_vram_byte_count / ZUKAN_FIELD_TEXTURE_COLUMN_BYTES;
+    texture_pages = (texture_pages + ZUKAN_FIELD_TEXTURE_PAGE_WIDTH - 1) / ZUKAN_FIELD_TEXTURE_PAGE_WIDTH;
+
+    if (texture_pages >= ZUKAN_FIELD_TEXTURE_PAGES_AT_BORDER)
+    {
+        zukan_load_ui_resource();
+    }
+
+    field_reset_input_repeat();
+    field_text_reset_windows();
+}
 
 /**
  * @brief Initialize encyclopedia state and return the next free work-buffer address.

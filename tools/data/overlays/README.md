@@ -592,9 +592,8 @@ the previews use those colors; the border TIM still keeps its own stored
 palette words. Palettes without any colors get no PNG. JP text uses CLOAD's
 character chart; US dictionary and control codes stay in braces.
 
-The entry tables sit in a `zukan_entry_tables` rodatabin before the code. The
-overlay's entry function, `zukan_run`, follows them in its own
-`zukan_run_code` rodatabin; it's code, so the extractor leaves it alone. The
+The entry tables sit in a `zukan_entry_tables` rodatabin right before the
+code, which starts with the overlay's entry function, `zukan_run`. The
 data blob's last 2,140 bytes are zero-filled screen state, listed in the byte
 map without another file. JP has no unknown gaps; US has six bytes after the
 category titles, saved in `unknown/`. See

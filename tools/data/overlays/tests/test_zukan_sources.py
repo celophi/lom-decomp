@@ -14,7 +14,7 @@ DISPLAY_HEADER = REPO_ROOT / "include/main/display.h"
 
 
 class SourceTest(unittest.TestCase):
-    def test_regions_have_one_table_blob_the_entry_code_and_one_data_blob(self):
+    def test_regions_have_one_table_blob_and_one_data_blob(self):
         lengths = zukan.table_lengths()
         for version in ("us", "jp"):
             with self.subTest(version=version):
@@ -22,8 +22,8 @@ class SourceTest(unittest.TestCase):
                 names = zukan.ZukanSymbols.load(config / zukan.SYMBOL_FILE)
                 files = splat_config.data_files(config / zukan.OVERLAY_CONFIG, REPO_ROOT / "assets" / version)
                 self.assertEqual([(f.name, f.kind) for f in files], [
-                    ("zukan_entry_tables", "rodatabin"), ("zukan_run_code", "rodatabin"), ("zukan_data", "databin")])
-                tables, code, data = files
+                    ("zukan_entry_tables", "rodatabin"), ("zukan_data", "databin")])
+                tables, data = files
                 table_addresses = [getattr(names, key) for key in zukan.TABLE_KEYS]
                 self.assertEqual(table_addresses, sorted(set(table_addresses)))
                 self.assertEqual(tables.start, names.category_ranges)
@@ -32,9 +32,8 @@ class SourceTest(unittest.TestCase):
                 self.assertEqual(names.display_order - names.entry_values, lengths["entry_values"] * 2)
                 # The display order ends two bytes before zukan_run; those two bytes are padding.
                 self.assertEqual(tables.end - names.display_order, lengths["display_order"] * 2 + 2)
-                self.assertEqual(code.start, tables.end)
                 run = zukan.symbols.load(config / zukan.SYMBOL_FILE)["zukan_run"]
-                self.assertEqual(code.start, run)
+                self.assertEqual(tables.end, run)
                 data_addresses = [getattr(names, key) for key in zukan.DATA_KEYS]
                 self.assertEqual(data_addresses, sorted(set(data_addresses)))
                 self.assertEqual(data.start, names.archive)

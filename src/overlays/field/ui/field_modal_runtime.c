@@ -37,6 +37,7 @@
 #include "common/render_context.h"
 #include "main/overlay_memory.h"
 #include "overlays/gname/gname.h"
+#include "overlays/zukan/zukan.h"
 #include "main/audio/akao.h"
 #include "overlays/field/field_input.h"
 #include "overlays/field/field_overlay_handoff.h"
@@ -254,7 +255,6 @@ s32 addhero_state_step(FieldRenderHalf* render);
 s32 carda_update_frame(FieldRenderHalf* render);
 s32 func_801405B0(RenderContext* render_buffers);
 void gosub_open_screen_sequence(void* work, void* screen_sequence);
-void zukan_run(void* work, s32 context);
 
 s32 field_party_reload_reading(void);
 void* field_draw_sprite_number(s32* ot, void* cursor, s32 value, s32 digits, u16* position, s32 flags);
@@ -2038,14 +2038,14 @@ void field_run_name_entry(u8* initial_name, u8* active_name, s32 source_mode, s3
 
 /**
  * @brief Load ZUKAN.BIN and run the encyclopedia screen.
- * @param context Forwarded to the ZUKAN entry point; meaning not yet established.
+ * @param category Encyclopedia category to display.
  */
-void field_run_zukan(s32 context)
+void field_run_zukan(s32 category)
 {
     field_reset_actor_resources();
     cdrom_stream(CD_RES_ZUKAN_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
     cdrom_wait_queue_empty();
-    zukan_run(GNAME_RENDER_BUFFERS, context);
+    zukan_run(GNAME_RENDER_BUFFERS, category);
     field_reset_actor_resources();
 }
 

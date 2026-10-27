@@ -86,8 +86,8 @@ class FakeOverlay:
         table_start = TABLE_ADDRESS - 0x80140000 + 1
         start = ADDRESS - 0x80140000 + 1
         segment = {"start": 1, "vram": 0x80140000, "subsegments": [
-            [table_start, "rodatabin", "zukan_entry_tables"], [table_start + len(self.tables), "rodatabin", "zukan_run_code"],
-            [table_start + len(self.tables) + 16, "c", "zukan"], [start, "databin", "zukan_data"],
+            [table_start, "rodatabin", "zukan_entry_tables"], [table_start + len(self.tables), "c", "zukan"],
+            [start, "databin", "zukan_data"],
         ]}
         (config / zukan.OVERLAY_CONFIG).write_text(yaml.safe_dump({"segments": [segment, [start + len(self.data)]]}))
         lines = [f"{name} = 0x{address:08X};" for name, address in self.symbols.items() if name != skip_symbol]

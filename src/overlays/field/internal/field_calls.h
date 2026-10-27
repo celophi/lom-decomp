@@ -482,7 +482,7 @@ void field_open_gosub_screen_sequence(void *screen_sequence);
 void field_open_shop_mode_0(s32 shop_options);
 void field_open_shop_mode_1(s32 entry_count, struct ShopEntry *entries, struct FieldItemRecord *item_records, s32 shop_options);
 void field_run_name_entry(u8 *initial_name, u8 *active_name, s32 source_mode, s32 history_index, s32 custom_name);
-void field_run_zukan(s32 context);
+void field_run_zukan(s32 category);
 
 /* field_modal_stream_start.c */
 void field_open_carda(s32 mode);

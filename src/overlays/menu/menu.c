@@ -45,8 +45,8 @@ s32 func_801405B0(RenderContext* render_buffers)
     g_menu_draw_buf_base[1].frame_parity = 1;
     menu_init();
     next_buffer = g_menu_draw_buf_base;
-    ClearOTagR(next_buffer->ot, MENU_OT_ENTRY_COUNT);
-    ClearOTagR(g_menu_draw_buf_base[1].ot, MENU_OT_ENTRY_COUNT);
+    ClearOTagR(next_buffer->ot, RENDER_CONTEXT_OT_ENTRY_COUNT);
+    ClearOTagR(g_menu_draw_buf_base[1].ot, RENDER_CONTEXT_OT_ENTRY_COUNT);
     VSync(0);
     PutDispEnv(&next_buffer->disp_env);
     update_controllers();
@@ -64,8 +64,8 @@ s32 func_801405B0(RenderContext* render_buffers)
     while (1)
     {
         draw_buffer = next_buffer;
-        ClearOTagR(draw_buffer->ot, MENU_OT_ENTRY_COUNT);
-        draw_buffer->prim_cursor = &draw_buffer->ot[MENU_OT_ENTRY_COUNT];
+        ClearOTagR(draw_buffer->ot, RENDER_CONTEXT_OT_ENTRY_COUNT);
+        draw_buffer->prim_cursor = &draw_buffer->ot[RENDER_CONTEXT_OT_ENTRY_COUNT];
         func_8006441C();
         menu_tick(draw_buffer);
         field_text_upload_immediate_cache();

@@ -44,6 +44,9 @@ typedef struct
  */
 #define DRAW_BUF_STRIDE 0x40C0
 
+/** @brief Ordering-table entries at the start of RenderContext::ot; packets follow them. */
+#define RENDER_CONTEXT_OT_ENTRY_COUNT 16
+
 /**
  * @brief Offset of the DRAWENV reserve slot within a draw buffer.
  *
