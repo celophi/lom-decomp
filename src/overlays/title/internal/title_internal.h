@@ -8,38 +8,11 @@
 #include "main/main.h"
 #include "main/audio/akao.h"
 #include "common/pad.h"
+#include "main/controller_internal.h"
 #include <libgte.h>
 #include <libgpu.h>
 #include "main/scene_state.h"
 #include "common/saved_game.h"
-
-/**
- * @brief Current screen-fade colour. RGB only; the fade-target struct carries the
- * step counter. Counterpart to g_fade_current in the CHECKPS overlay.
- */
-typedef struct
-{
-    s32 red;
-    s32 green;
-    s32 blue;
-} FadeCurrent;
-
-/**
- * @brief Target colour and remaining frames for the screen-fade interpolation.
- * Counterpart to g_fade_target in the CHECKPS overlay (which uses a single
- * FadeColor struct for both; here current/target have distinct sizes
- * because g_fade_current is followed immediately by another global).
- */
-typedef struct
-{
-    s32 red;
-    s32 green;
-    s32 blue;
-    s32 steps;
-} FadeTarget;
-
-/** @brief Ordering-table entries of each TITLE frame buffer. */
-#define TITLE_OT_LENGTH 0x1000
 
 /** @brief Shift applied to the second rand() value when two are combined into the game id. */
 #define TITLE_RNG_HIGH_SHIFT 15
@@ -48,16 +21,16 @@ typedef struct
 struct TitleMenuContext
 {
     char first_buffer_header[0x40];
-    u_long otag_buffer[TITLE_OT_LENGTH];
+    u_long otag_buffer[FRAME_ORDERING_TABLE_LENGTH];
     DISPENV disp_env;
     DRAWENV draw_env;
     RECT front_screen;
-    u_long prim_buffer[0x1000];
+    u_long prim_buffer[FRAME_PRIMITIVE_BUFFER_SIZE / sizeof(u_long)];
     u_long* next_prim_ptr;
     char unknown_0x80BC[0x3C10];
 
     char second_buffer_header[0x40];
-    u_long otag_buffer2[TITLE_OT_LENGTH];
+    u_long otag_buffer2[FRAME_ORDERING_TABLE_LENGTH];
     DISPENV disp_env2;
     DRAWENV draw_env2;
     RECT back_screen;
@@ -73,15 +46,6 @@ extern s32 g_title_menu_exit_state;
  */
 extern u8* g_title_audio_bank_base;
 extern s32 g_title_idle_countdown;
-/** @brief g_controller_device_type values at or above this mean no controller is connected. */
-#define TITLE_PAD_UNAVAILABLE 0xFE
-#define TITLE_REPEAT_DELAY 2
-#define TITLE_INITIAL_REPEAT_DELAY 15
-#define TITLE_ANALOG_LOW_THRESHOLD -1
-#define TITLE_ANALOG_HIGH_THRESHOLD 2
-/** @brief Buttons other than the face buttons that still count as the same held input for repeat. */
-#define TITLE_NON_REPEAT_BUTTON_MASK                                                                                                                           \
-    (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1 | PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_SELECT | PAD_BTN_L3 | PAD_BTN_START)
 
 extern s32 g_debounced_input;
 extern u8 g_title_menu_item_flags[];
@@ -191,8 +155,8 @@ extern s32 g_hero_template_type_0[SAVED_CHARACTER_SIZE / 4];
 /** @brief Starting FieldCharacterRecord of the hero with character type 1. */
 extern s32 g_hero_template_type_1[SAVED_CHARACTER_SIZE / 4];
 
-extern FadeCurrent g_fade_current;
-extern FadeTarget g_fade_target;
+extern ScreenFadeWords g_fade_current;
+extern ScreenFadeWords g_fade_target;
 
 /* Private calls that cross the title/title_save translation-unit boundary. */
 void play_title_sfx(s32 sound_id, s32 pan);

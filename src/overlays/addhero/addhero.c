@@ -278,13 +278,13 @@ s32 card_menu_handle_input(void)
     if (input & PAD_BTN_CIRCLE)
     {
         D_80122718 = 3;
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+        field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
         card_menu_close_all_elements();
         return;
     }
     if (input & CARD_MENU_CARD_SWITCH_BUTTON_MASK)
     {
-        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+        field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
         addhero_reset_state();
         return;
     }
@@ -328,7 +328,7 @@ s32 card_menu_handle_input(void)
     if (g_pad_input & (PAD_BTN_UP | PAD_BTN_DOWN))
     {
         card_menu_commit_selected_entry();
-        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+        field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
         card_menu_scroll_to_selection();
         return;
     }
@@ -352,11 +352,11 @@ s32 card_menu_handle_input(void)
                 card_menu_enable_choice_toggle();
                 prompt->draw = card_menu_draw_load_prompt;
                 restart_card_sequence();
-                field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
+                field_play_sound(SFX_CONFIRM, AKAO_PAN_CENTER);
                 return;
             }
         }
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+        field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
     }
 }
 
@@ -799,7 +799,7 @@ void addhero_open_exit_dialog(s32 message_id)
 {
     CardMenuElement* element;
 
-    field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+    field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
     element = &g_card_menu_element_pool[CARD_MENU_ELEMENT_MAIN];
     element->draw = addhero_draw_exit_dialog;
     element->attr.bits.transition_step = 1;
@@ -967,14 +967,14 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         prim = card_menu_draw_choice_prompt(prim, ot, message_x, CARD_MENU_LINE_HEIGHT - y_offset);
         if ((g_pad_input & PAD_BTN_CIRCLE) || ((g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK) && (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)))
         {
-            field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+            field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
             card_menu_enable_choice_toggle();
             g_card_entry_state = CARD_MENU_EXCHANGE_STATE_SAVE_CONFIRM;
             field_reset_input_repeat();
         }
         else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
         {
-            field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+            field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
             g_addhero_result = ADDHERO_RESULT_CANCELLED;
             addhero_clear_elements();
             field_restore_fade_target_with_duration(CARD_MENU_EXIT_FADE_FRAMES);
@@ -998,12 +998,12 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         {
             card_menu_enable_choice_toggle();
             g_card_entry_state = CARD_MENU_EXCHANGE_STATE_CONFIRM_NO_SAVE;
-            field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+            field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
             field_reset_input_repeat();
         }
         else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
         {
-            field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
+            field_play_sound(SFX_CONFIRM, AKAO_PAN_CENTER);
             file = &g_addhero_save_file;
             bcopy((u8*)&g_saved_game_ctx->characters[FIELD_PARTY_GUEST], (u8*)&file->saved_game.characters[FIELD_PARTY_HERO], sizeof(FieldCharacterRecord));
             file->saved_game.characters[FIELD_PARTY_HERO].info.bits.pad_controlled = 1;
@@ -1108,14 +1108,14 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
     if (g_pad_input & PAD_BTN_CIRCLE)
     {
         D_80122718 = 3;
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+        field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
         card_menu_close_all_elements();
         return prim;
     }
 
     if ((g_pad_input & CARD_MENU_CARD_SWITCH_BUTTON_MASK) && (g_card_entry_state != CARD_MENU_ENTRY_STATE_CHECKING_CARD))
     {
-        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+        field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
         addhero_reset_state();
         g_card_menu_progress_bar_active = 0;
         g_card_step = g_card_steps_initial_scan;

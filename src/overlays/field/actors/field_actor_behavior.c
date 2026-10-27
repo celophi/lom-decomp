@@ -1224,7 +1224,7 @@ void field_prepare_actor_action(FieldActor* actor)
 
     if (!action->flags.instrument && (action->command == 0) && (action->animation == 0))
     {
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+        field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
         actor->command = FIELD_ACTOR_COMMAND_NONE;
         return;
     }
@@ -1252,7 +1252,7 @@ void field_prepare_actor_action(FieldActor* actor)
 
         if (g_field_object_states[object_index].technique_gauge != FIELD_TECHNIQUE_GAUGE_FULL)
         {
-            field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+            field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
             actor->command = FIELD_ACTOR_COMMAND_NONE;
             return;
         }

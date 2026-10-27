@@ -28,7 +28,7 @@ void* card_menu_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_off
     {
         card_menu_deactivate_primary_element();
         field_reset_input_repeat();
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+        field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
         g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
         card_reset_entry_ranks();
         g_card_step = NULL;
@@ -37,12 +37,12 @@ void* card_menu_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_off
     {
         card_menu_deactivate_primary_element();
         field_reset_input_repeat();
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+        field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
         g_card_step = g_card_steps_card_info;
     }
     else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
     {
-        field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
+        field_play_sound(SFX_CONFIRM, AKAO_PAN_CENTER);
         g_card_menu_progress_active = 1;
         g_card_step = g_card_steps_read_save;
         element = &g_card_menu_element_pool[CARD_MENU_ELEMENT_MODAL];

@@ -50,11 +50,7 @@ void handle_title_menu_input(void);
 #define TITLE_MENU_HEADER_X 0x64
 #endif
 
-/** @brief Fixed RAM buffer that CD resources are staged into before being unpacked. */
-#define TITLE_LOAD_BUFFER ((u8*)LOAD_BUFFER_ADDRESS)
 #define TITLE_AUDIO_BANK ((u8*)SOUND_BANK_ADDRESS)
-/** @brief Offset table at the head of a staged file: [0] first block, [1] instrument bank. */
-#define TITLE_LOAD_BUFFER_OFFSETS ((u32*)LOAD_BUFFER_AT(0x4))
 
 /* run_save_slot_menu result that returns from the picker to the title menu. */
 #define SAVE_SLOT_MENU_EXIT_CANCEL 2
@@ -72,20 +68,10 @@ void handle_title_menu_input(void);
 
 /* Full-screen fade encoding and blend modes. */
 
-/** @brief Packet view for a fade TILE or draw-mode command. */
-typedef union
-{
-    TILE tile;
-    DR_TPAGE draw_mode;
-} TitleFadePrimitive;
-
 /* The complete .data payload is one databin (title_data), linked unchanged
  * and exported by tools/data/overlays/title.py. Symbols used by the code are
  * declared in title_internal.h and assigned fixed overlay addresses by
  * config/<version>/symbols/title_symbol_addrs.txt. */
-
-/** Advance a fade packet cursor by the concrete packet just emitted. */
-#define TITLE_NEXT_FADE_PRIMITIVE(primitive, type) ((TitleFadePrimitive*)((u8*)(primitive) + sizeof(type)))
 
 void init_title_display(TitleMenuContext* context);
 void render_menu(TitleMenuContext* context);
@@ -180,8 +166,8 @@ void render_menu(TitleMenuContext* context)
     ClearImage(&rect, 0, 0, 0);
 
     current = context;
-    ClearOTagR(current->otag_buffer, TITLE_OT_LENGTH);
-    ClearOTagR(current->otag_buffer2, TITLE_OT_LENGTH);
+    ClearOTagR(current->otag_buffer, FRAME_ORDERING_TABLE_LENGTH);
+    ClearOTagR(current->otag_buffer2, FRAME_ORDERING_TABLE_LENGTH);
     PutDispEnv(&current->disp_env);
     update_controllers();
     SetDispMask(1);
@@ -189,7 +175,7 @@ void render_menu(TitleMenuContext* context)
     while (1)
     {
         ot_head = current->otag_buffer;
-        ClearOTagR(ot_head, TITLE_OT_LENGTH);
+        ClearOTagR(ot_head, FRAME_ORDERING_TABLE_LENGTH);
         current->next_prim_ptr = current->prim_buffer;
         rand();
         VSync(1);
@@ -212,7 +198,7 @@ void render_menu(TitleMenuContext* context)
             current = next_context;
             PutDispEnv(&current->disp_env);
             PutDrawEnv(&current->draw_env);
-            DrawOTag(ot_head + TITLE_OT_LENGTH - 1);
+            DrawOTag(ot_head + FRAME_ORDERING_TABLE_LENGTH - 1);
             update_controllers();
             cdrom_process_state();
             if (g_title_menu_exit_state == 0)
@@ -259,8 +245,8 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
     setRECT(&rect, 0, 0, SCREEN_WIDTH, VRAM_BACK_DISP_Y + SCREEN_HEIGHT);
     ClearImage(&rect, 0, 0, 0);
     current = ctx_base;
-    ClearOTagR(current->otag_buffer, TITLE_OT_LENGTH);
-    ClearOTagR(current->otag_buffer2, TITLE_OT_LENGTH);
+    ClearOTagR(current->otag_buffer, FRAME_ORDERING_TABLE_LENGTH);
+    ClearOTagR(current->otag_buffer2, FRAME_ORDERING_TABLE_LENGTH);
     VSync(0);
     PutDispEnv(&current->disp_env);
     update_controllers();
@@ -268,7 +254,7 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
     do
     {
         ot = current->otag_buffer;
-        ClearOTagR(ot, TITLE_OT_LENGTH);
+        ClearOTagR(ot, FRAME_ORDERING_TABLE_LENGTH);
         current->next_prim_ptr = current->prim_buffer;
         VSync(1);
         render_fade_overlay(current);
@@ -284,7 +270,7 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
         current = next_context;
         PutDispEnv(&current->disp_env);
         PutDrawEnv(&current->draw_env);
-        DrawOTag(ot + TITLE_OT_LENGTH - 1);
+        DrawOTag(ot + FRAME_ORDERING_TABLE_LENGTH - 1);
         update_controllers();
         cdrom_process_state();
     } while (g_title_menu_exit_state == 0);
@@ -381,16 +367,17 @@ void load_title_audio_bank(void)
     {
 
         g_title_audio_bank_base = TITLE_AUDIO_BANK;
-        cdrom_queue_read(CD_RES_SOUND_EFFECT_SET, TITLE_LOAD_BUFFER);
+        cdrom_queue_read(CD_RES_SOUND_EFFECT_SET, LOAD_BUFFER_AKAO_CONTAINER);
         cdrom_wait_queue_empty();
 
-        base = TITLE_LOAD_BUFFER;
-        off = TITLE_LOAD_BUFFER_OFFSETS;
+        base = (u8*)LOAD_BUFFER_AKAO_CONTAINER;
+        off = LOAD_BUFFER_AKAO_CONTAINER->section_offsets;
 
-        bcopy(base + off[0], (u8*)g_title_audio_bank_base, (int)(off[1] - off[0]));
+        bcopy(base + off[AKAO_CONTAINER_RESIDENT_SECTION], (u8*)g_title_audio_bank_base,
+              (int)(off[AKAO_CONTAINER_BANK_SECTION] - off[AKAO_CONTAINER_RESIDENT_SECTION]));
 
         akao_register_bank((AkaoHeader*)g_title_audio_bank_base);
-        akao_upload_bank_blocking((AkaoBankHeader*)(base + off[1]), 1);
+        akao_upload_bank_blocking((AkaoBankHeader*)(base + off[AKAO_CONTAINER_BANK_SECTION]), 1);
     }
 }
 
@@ -411,14 +398,14 @@ void load_title_seq(s32 seq_variant)
     u32* off;
     u8* base;
 
-    cdrom_queue_read(CD_RES_MUSIC_FILE(seq_variant), TITLE_LOAD_BUFFER);
+    cdrom_queue_read(CD_RES_MUSIC_FILE(seq_variant), LOAD_BUFFER_AKAO_CONTAINER);
     cdrom_wait_queue_empty();
 
-    off = TITLE_LOAD_BUFFER_OFFSETS;
-    base = TITLE_LOAD_BUFFER;
+    off = LOAD_BUFFER_AKAO_CONTAINER->section_offsets;
+    base = (u8*)LOAD_BUFFER_AKAO_CONTAINER;
 
-    bcopy(base + off[0], g_resident_song_buffer, (int)(off[1] - off[0]));
-    akao_upload_bank_blocking((AkaoBankHeader*)(base + off[1]), 1);
+    bcopy(base + off[AKAO_CONTAINER_RESIDENT_SECTION], g_resident_song_buffer, (int)(off[AKAO_CONTAINER_BANK_SECTION] - off[AKAO_CONTAINER_RESIDENT_SECTION]));
+    akao_upload_bank_blocking((AkaoBankHeader*)(base + off[AKAO_CONTAINER_BANK_SECTION]), 1);
 }
 
 /**
@@ -482,7 +469,7 @@ void reset_fade_state(void)
     g_fade_target.red = 0;
     g_fade_target.green = 0;
     g_fade_target.blue = 0;
-    g_fade_target.steps = 0;
+    g_fade_target.steps_remaining = 0;
 }
 
 /**
@@ -499,19 +486,19 @@ void reset_fade_state(void)
 void render_fade_overlay(TitleMenuContext* ctx)
 {
     TitleMenuContext* base = ctx;
-    TitleFadePrimitive* primitive = (TitleFadePrimitive*)base->next_prim_ptr;
+    ScreenFadePrimitive* primitive = (ScreenFadePrimitive*)base->next_prim_ptr;
     u_long* ordering_table_tag = base->otag_buffer;
     s32 red_step;
     s32 green_step;
     s32 blue_step;
     s32 draw_mode;
 
-    if (g_fade_target.steps != 0)
+    if (g_fade_target.steps_remaining != 0)
     {
-        red_step = (g_fade_target.red - g_fade_current.red) / g_fade_target.steps;
-        green_step = (g_fade_target.green - g_fade_current.green) / g_fade_target.steps;
-        blue_step = (g_fade_target.blue - g_fade_current.blue) / g_fade_target.steps;
-        g_fade_target.steps = g_fade_target.steps - 1;
+        red_step = (g_fade_target.red - g_fade_current.red) / g_fade_target.steps_remaining;
+        green_step = (g_fade_target.green - g_fade_current.green) / g_fade_target.steps_remaining;
+        blue_step = (g_fade_target.blue - g_fade_current.blue) / g_fade_target.steps_remaining;
+        g_fade_target.steps_remaining = g_fade_target.steps_remaining - 1;
         g_fade_current.red = g_fade_current.red + red_step;
         g_fade_current.green = g_fade_current.green + green_step;
         g_fade_current.blue = g_fade_current.blue + blue_step;
@@ -526,7 +513,8 @@ void render_fade_overlay(TitleMenuContext* ctx)
     {
         if (g_fade_current.red >= FADE_ADDITIVE_THRESHOLD)
         {
-            setRGB0(&primitive->tile, g_fade_current.red - 1, g_fade_current.green - 1, g_fade_current.blue - 1);
+            setRGB0(&primitive->tile, g_fade_current.red - FADE_ADDITIVE_BIAS, g_fade_current.green - FADE_ADDITIVE_BIAS,
+                    g_fade_current.blue - FADE_ADDITIVE_BIAS);
         }
         else
         {
@@ -563,7 +551,7 @@ void render_fade_overlay(TitleMenuContext* ctx)
         addPrim(ordering_table_tag, &primitive->tile);
 
         draw_mode = BLEND_ADD_TPAGE;
-        primitive = TITLE_NEXT_FADE_PRIMITIVE(primitive, TILE);
+        primitive = SCREEN_FADE_NEXT_PRIMITIVE(primitive, TILE);
         if (g_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
             draw_mode = BLEND_SUBTRACT_TPAGE;
@@ -571,7 +559,7 @@ void render_fade_overlay(TitleMenuContext* ctx)
         setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
         addPrim(ordering_table_tag, &primitive->draw_mode);
 
-        primitive = TITLE_NEXT_FADE_PRIMITIVE(primitive, DR_TPAGE);
+        primitive = SCREEN_FADE_NEXT_PRIMITIVE(primitive, DR_TPAGE);
     }
     base->next_prim_ptr = (u_long*)primitive;
 }
@@ -594,7 +582,7 @@ void set_fade_target(s32 red, s32 green, s32 blue, s32 steps)
     g_fade_target.red = red;
     g_fade_target.green = green;
     g_fade_target.blue = blue;
-    g_fade_target.steps = steps;
+    g_fade_target.steps_remaining = steps;
 }
 
 /**
@@ -640,7 +628,7 @@ void render_title_backdrop(TitleMenuContext* ctx)
         prim->v2 = prim->v3 = 8 + VRAM_DRAW_HEIGHT;
         prim->tpage = getTPage(GPU_TEXTURE_16BIT, GPU_BLEND_HALF, page_x, 0x100);
         prim->clut = getClut(0, 481);
-        addPrim(ot + TITLE_OT_LENGTH - 1, prim);
+        addPrim(ot + FRAME_ORDERING_TABLE_LENGTH - 1, prim);
         prim++;
     }
 
@@ -675,12 +663,12 @@ void handle_title_menu_input(void)
     if (g_debounced_input & (PADLup | PADLleft))
     {
         menu_cursor_up();
-        play_title_sfx(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+        play_title_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
     }
     else if (g_debounced_input & (PADLdown | PADLright | PADselect))
     {
         menu_cursor_down();
-        play_title_sfx(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+        play_title_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
     }
 }
 
@@ -1009,7 +997,7 @@ void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
  *
  *
  * @return Remapped button bitmap, or 0 if the pad is not present
- *         (g_controller_device_type >= TITLE_PAD_UNAVAILABLE).
+ *         (g_controller_device_type >= CONTROLLER_DEVICE_CONFIGURING).
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/Z5swg
  * @note JP reports the face buttons as read (no PAD_REMAP_FACE_BITS swap).
@@ -1023,7 +1011,7 @@ s32 read_pad_state(void)
     u16 hi_read;
     u16 lo_read;
 
-    if (regs->device_type >= TITLE_PAD_UNAVAILABLE)
+    if (regs->device_type >= CONTROLLER_DEVICE_CONFIGURING)
     {
         return 0;
     }
@@ -1035,25 +1023,25 @@ s32 read_pad_state(void)
 #if !defined(VERSION_JP)
     buttons = PAD_REMAP_FACE_BITS(buttons);
 #endif
-    if (regs->device_type != 0)
+    if (regs->device_type != CONTROLLER_DEVICE_DIGITAL)
     {
         /* Convert signed analog-axis thresholds to digital directions. */
         axis_x = regs->axis_x.signed_value;
-        if (axis_x < TITLE_ANALOG_LOW_THRESHOLD)
+        if (axis_x < -PAD_STICK_THRESHOLD)
         {
             buttons |= PAD_BTN_LEFT;
         }
-        else if (axis_x >= TITLE_ANALOG_HIGH_THRESHOLD)
+        else if (axis_x > PAD_STICK_THRESHOLD)
         {
             buttons |= PAD_BTN_RIGHT;
         }
 
         axis_y = regs->axis_y.signed_value;
-        if (axis_y < TITLE_ANALOG_LOW_THRESHOLD)
+        if (axis_y < -PAD_STICK_THRESHOLD)
         {
             buttons |= PAD_BTN_UP;
         }
-        else if (axis_y >= TITLE_ANALOG_HIGH_THRESHOLD)
+        else if (axis_y > PAD_STICK_THRESHOLD)
         {
             buttons |= PAD_BTN_DOWN;
         }
@@ -1085,7 +1073,7 @@ void update_menu_input(void)
     s32 axis;
     s32 input_state;
 
-    if (g_controller_device_type >= TITLE_PAD_UNAVAILABLE)
+    if (g_controller_device_type >= CONTROLLER_DEVICE_CONFIGURING)
     {
         input_state = 0;
     }
@@ -1095,24 +1083,24 @@ void update_menu_input(void)
 #if !defined(VERSION_JP)
         buttons = PAD_REMAP_FACE_BITS(buttons);
 #endif
-        if (regs->device_type != 0)
+        if (regs->device_type != CONTROLLER_DEVICE_DIGITAL)
         {
             axis = regs->axis_x.signed_value;
-            if (axis < TITLE_ANALOG_LOW_THRESHOLD)
+            if (axis < -PAD_STICK_THRESHOLD)
             {
                 buttons |= PAD_BTN_LEFT;
             }
-            else if (axis >= TITLE_ANALOG_HIGH_THRESHOLD)
+            else if (axis > PAD_STICK_THRESHOLD)
             {
                 buttons |= PAD_BTN_RIGHT;
             }
 
             axis = regs->axis_y.signed_value;
-            if (axis < TITLE_ANALOG_LOW_THRESHOLD)
+            if (axis < -PAD_STICK_THRESHOLD)
             {
                 buttons |= PAD_BTN_UP;
             }
-            else if (axis >= TITLE_ANALOG_HIGH_THRESHOLD)
+            else if (axis > PAD_STICK_THRESHOLD)
             {
                 buttons |= PAD_BTN_DOWN;
             }
@@ -1120,7 +1108,7 @@ void update_menu_input(void)
         input_state = buttons;
     }
     g_debounced_input = 0;
-    if (((input_state == g_last_input_state) || ((g_last_input_state != 0) && (input_state & (g_last_input_state | TITLE_NON_REPEAT_BUTTON_MASK)))) &&
+    if (((input_state == g_last_input_state) || ((g_last_input_state != 0) && (input_state & (g_last_input_state | PAD_REPEAT_HOLD_BUTTONS)))) &&
         (input_state != 0))
     {
         /* Held input repeats directional buttons only. */
@@ -1131,7 +1119,7 @@ void update_menu_input(void)
         if (g_input_repeat_timer == 0)
         {
             g_debounced_input = input_state;
-            g_input_repeat_timer = TITLE_REPEAT_DELAY;
+            g_input_repeat_timer = PAD_REPEAT_INTERVAL;
         }
         else
         {
@@ -1148,6 +1136,6 @@ void update_menu_input(void)
     {
         g_debounced_input = input_state;
         g_last_input_state = input_state;
-        g_input_repeat_timer = TITLE_INITIAL_REPEAT_DELAY;
+        g_input_repeat_timer = PAD_REPEAT_INITIAL_DELAY;
     }
 }

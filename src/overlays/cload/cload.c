@@ -323,12 +323,12 @@ s32 card_menu_handle_input(void)
     {
         g_card_menu_exit_requested = 1;
         g_cload_result = CLOAD_RESULT_CANCELLED;
-        field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+        field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
         return;
     }
     if (status & CARD_MENU_CARD_SWITCH_BUTTON_MASK)
     {
-        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+        field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
         g_card_menu_scroll_frames = 0;
         g_card_menu_scroll_target_y = 0;
         g_card_menu_scroll_y = 0;
@@ -377,7 +377,7 @@ s32 card_menu_handle_input(void)
     if (g_pad_input & (PAD_BTN_UP | PAD_BTN_DOWN))
     {
         cload_commit_selected_entry();
-        field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+        field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
         cload_scroll_to_selection();
         return;
     }
@@ -385,7 +385,7 @@ s32 card_menu_handle_input(void)
     {
         if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_card_menu_selected_row].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) != 0)
         {
-            sfx_id = FIELD_SOUND_ACTION_REFUSED;
+            sfx_id = SFX_ERROR;
         }
         else
         {
@@ -402,11 +402,11 @@ s32 card_menu_handle_input(void)
                 CARD_MENU_SET_ELEMENT_WIDTH_LOW(prompt, CARD_MENU_MESSAGE_WIDTH);
                 cload_enable_choice_toggle();
                 cload_restart_load_sequence();
-                sfx_id = FIELD_SOUND_SELECT;
+                sfx_id = SFX_CONFIRM;
             }
             else
             {
-                sfx_id = FIELD_SOUND_ACTION_REFUSED;
+                sfx_id = SFX_ERROR;
             }
         }
         field_play_sound(sfx_id, AKAO_PAN_CENTER);

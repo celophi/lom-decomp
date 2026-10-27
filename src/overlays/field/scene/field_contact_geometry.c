@@ -21,6 +21,7 @@
 #include "overlays/field/field_actor_records.h"
 #include <abs.h>
 #include "main/audio/akao.h"
+#include "main/audio/game_audio.h"
 
 /** @brief Object state @p index of @p base. */
 #define FIELD_OBJECT_STATE_AT(base, index) ((FieldObjectState*)((index) * sizeof(FieldObjectState) + (uintptr_t)(base)))
@@ -47,8 +48,6 @@
 #define FIELD_TOUCH_ANIMATION 0x2A
 /** @brief Frames an actor waits in FIELD_ACTOR_COMMAND_SEQUENCE_WAIT before its contact interaction runs. */
 #define FIELD_CONTACT_INTERACTION_DELAY 10
-/** @brief Sound played when an interaction probe finds a talk target. */
-#define FIELD_SOUND_INTERACT 0x7D
 
 /** @brief Object-state contact bits set by the effect-quad answer of Counterattack / Counterstrike. */
 #define FIELD_CONTACT_QUAD_ANSWER_MASK 0x1C
@@ -1261,7 +1260,7 @@ void field_probe_actor_interaction(FieldActor* actor)
 
         if (state->interaction_kind != 0)
         {
-            field_play_sound(FIELD_SOUND_INTERACT, AKAO_PAN_CENTER);
+            field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
             field_pick_up_item_actor(object_index);
             return;
         }

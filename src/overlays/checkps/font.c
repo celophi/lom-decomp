@@ -21,7 +21,6 @@
 #define CHECKPS_GLYPH_SOURCE_ROW_BYTES 2
 #define CHECKPS_GLYPH_SOURCE_PIXEL_PAIRS 4
 #define CHECKPS_GLYPH_HIGH_NIBBLE_SCALE 16
-#define CHECKPS_GLYPH_NEUTRAL_COLOR 0x80
 #define CHECKPS_TEXT_WRAP_LIMIT (SCREEN_WIDTH * 2)
 #define CHECKPS_TEXT_FIRST_PRINTABLE 0x20
 #define CHECKPS_TEXT_SPACE 0x20
@@ -378,9 +377,9 @@ static CheckPSGlyphPacket* emit_glyph_sprite(CheckPSGlyphPacket* packet, u_long*
     g_glyph_cache[cache_slot].raw |= CHECKPS_GLYPH_CACHE_USED_FLAG;
 
     setSprt16(&packet->sprite);
-    packet->sprite.g0 = CHECKPS_GLYPH_NEUTRAL_COLOR;
-    packet->sprite.b0 = CHECKPS_GLYPH_NEUTRAL_COLOR;
-    packet->sprite.r0 = CHECKPS_GLYPH_NEUTRAL_COLOR;
+    packet->sprite.g0 = GPU_TINT_NEUTRAL_LEVEL;
+    packet->sprite.b0 = GPU_TINT_NEUTRAL_LEVEL;
+    packet->sprite.r0 = GPU_TINT_NEUTRAL_LEVEL;
     setXY0(&packet->sprite, g_glyph_cursor_x, g_glyph_cursor_y);
     setUV0(&packet->sprite, (cache_slot % CHECKPS_GLYPH_WIDTH) * CHECKPS_GLYPH_WIDTH, cache_slot & CHECKPS_GLYPH_V_COORD_MASK);
     packet->sprite.clut = getClut(0, CHECKPS_GLYPH_CLUT_Y);

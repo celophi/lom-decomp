@@ -96,7 +96,7 @@ s32 menu_handle_input(s32 process_actions)
     {
         if (g_pad_input & (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1))
         {
-            menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
+            menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
             if (g_pad_input & (PAD_BTN_L2 | PAD_BTN_R2))
             {
                 if (g_menu_item_ptr != NULL)
@@ -151,7 +151,7 @@ s32 menu_handle_input(s32 process_actions)
 
     if (g_menu_scene_type < 0x11U && (g_pad_input & (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1)))
     {
-        menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
+        menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
         switch (g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx - 0x14)
         {
         case 0:
@@ -303,7 +303,7 @@ s32 menu_handle_input(s32 process_actions)
                 else
                 {
                     g_pad_input &= ~PAD_BTN_CIRCLE;
-                    menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
+                    menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
                     menu_reset_content_view();
                 }
             }
@@ -311,14 +311,14 @@ s32 menu_handle_input(s32 process_actions)
             {
                 if (g_party_sort_marker.selected_idx == MENU_NONE)
                 {
-                    menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
+                    menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
                     g_party_sort_marker.x = (s8)(((MenuContentItemBits*)content_items)[g_menu_hit_item_idx].x - 2);
                     g_party_sort_marker.y = (s8)(content_items[g_menu_hit_item_idx].y - MENU_CONTENT_VIEW_Y_OFFSET);
                     g_party_sort_marker.selected_idx = (u8)g_menu_hit_item_idx;
                 }
                 else if (g_party_sort_marker.selected_idx != g_menu_hit_item_idx)
                 {
-                    menu_play_se(MENU_SE_SELECT, AKAO_SFX_DEFAULT_VOLUME);
+                    menu_play_se(SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
                     for (sort_index_a = 0; sort_index_a < 8; sort_index_a++)
                     {
                         if (menu_sort_order_record()->order[sort_index_a] == (g_menu_hit_item_idx - 0x11))
@@ -344,13 +344,13 @@ s32 menu_handle_input(s32 process_actions)
                 }
                 else
                 {
-                    menu_play_se(MENU_SE_CLOSE, AKAO_SFX_DEFAULT_VOLUME);
+                    menu_play_se(SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
                     g_party_sort_marker.selected_idx = MENU_NONE;
                 }
             }
             else if (g_pad_input & PAD_BTN_SQUARE)
             {
-                menu_play_se(MENU_SE_SELECT, AKAO_SFX_DEFAULT_VOLUME);
+                menu_play_se(SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
                 menu_sort_order_record()->order[0] = 0;
                 menu_sort_order_record()->order[1] = 1;
                 menu_sort_order_record()->order[2] = 2;
@@ -381,7 +381,7 @@ s32 menu_handle_input(s32 process_actions)
                         submenu_slot->navigation.packed =
                             (submenu_slot->navigation.packed & 0xFE00FFFF) | ((menu_build_spell_nav_entries() & MENU_ITEM_NAV_INDEX_MASK) << 16);
                         submenu_slot->has_title = 1;
-                        menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
+                        menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
                     }
                     break;
 
@@ -435,7 +435,7 @@ s32 menu_handle_input(s32 process_actions)
                             g_menu_saved_equipment_item = g_menu_item_ptr;
                             g_menu_category2_item = g_menu_item_ptr;
                         }
-                        menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
+                        menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
                     }
                     break;
 
@@ -459,7 +459,7 @@ s32 menu_handle_input(s32 process_actions)
                             g_menu_saved_category0_item = equipped_item;
                             g_menu_saved_category1_item = equipped_item;
                             g_menu_saved_equipment_item = equipped_item;
-                            menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
+                            menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
                         }
                     }
                     break;
@@ -532,7 +532,7 @@ s32 menu_handle_input(s32 process_actions)
                 action_code = g_menu_content_action_codes[action_group][(item_packed_x >> 9) & 7];
                 if (action_code != 0)
                 {
-                    menu_play_se(MENU_SE_SELECT, AKAO_SFX_DEFAULT_VOLUME);
+                    menu_play_se(SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
                     switch (action_code)
                     {
                     case 1:
@@ -633,7 +633,7 @@ s32 menu_handle_input(s32 process_actions)
         }
         else if (g_pad_input & PAD_BTN_CIRCLE)
         {
-            menu_play_se(MENU_SE_CLOSE, AKAO_SFX_DEFAULT_VOLUME);
+            menu_play_se(SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
             if ((u32)g_menu_scene_type >= 0x11U)
             {
                 menu_reset_content_view();
@@ -680,7 +680,7 @@ s32 menu_handle_input(s32 process_actions)
 
         if (work_index != MENU_CONTENT_DIRECTION_COUNT)
         {
-            menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
+            menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
             if (content_items[g_menu_hit_item_idx].params[work_index] == MENU_NONE)
             {
                 if ((u32)g_menu_scene_type >= 0x11U || g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx < 0x14 ||

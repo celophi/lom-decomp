@@ -172,7 +172,6 @@ enum
 #define NAME_GRID_ROW_VISIBLE(y) (((u32)((y) + NAME_GRID_OVERSCAN)) <= (NAME_GRID_VIS_HEIGHT + NAME_GRID_OVERSCAN - 1))
 
 /* Fade channels above neutral use additive blending. */
-#define FADE_ADDITIVE_BIAS (FADE_ADDITIVE_THRESHOLD - FADE_NEUTRAL)
 
 /* Full-screen fade blend pages. */
 
@@ -332,15 +331,6 @@ typedef struct
 #define HISTORY_SUFFIX_TABLE ((GnameRecordTable*)(((u8*)&g_history_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + g_history_names_off))
 #define HISTORY_SUFFIX(index) ((u8*)HISTORY_NAME_TABLE + (&HISTORY_SUFFIX_TABLE->offsets[0])[(index)])
 
-/** @brief RGB fade color with an optional remaining interpolation count. */
-typedef struct
-{
-    s32 red;
-    s32 green;
-    s32 blue;
-    s32 steps_remaining;
-} FadeState;
-
 /** @brief DRAWENV scratch with one trailing stack word. */
 typedef union
 {
@@ -364,9 +354,9 @@ s32 g_overlay_result;
 /** Name restored when the session resets. */
 u8 g_initial_name[GNAME_NAME_BUFFER_SIZE];
 /** RGB fade target color plus remaining lerp step count. */
-FadeState g_fade_target;
+ScreenFadeWords g_fade_target;
 /** RGB fade current interpolated color. */
-FadeState g_fade_current;
+ScreenFadeWords g_fade_current;
 /** If non-zero, pressing cancel while the name is empty triggers an overlay exit. */
 s32 g_allow_empty_cancel;
 /** Index into the saved-name history list (used when g_name_source_mode == 3). */

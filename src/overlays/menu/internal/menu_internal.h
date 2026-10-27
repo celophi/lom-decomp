@@ -1,4 +1,5 @@
 #include "main/audio/akao.h"
+#include "main/audio/game_audio.h"
 #include "overlays/field/field_portrait.h"
 #ifndef LOM_MENU_INTERNAL_H
 #define LOM_MENU_INTERNAL_H
@@ -198,16 +199,6 @@ s32 field_name_byte_length(u8* name);
 #define MENU_TREE_DRAW_X 15
 #define MENU_TREE_DRAW_WIDTH 36
 #define MENU_TREE_DRAW_HEIGHT 170
-
-/* Sound-effect ids passed to menu_play_se; volume is always AKAO_SFX_DEFAULT_VOLUME. */
-/** @brief Scroll navigation sound (D-up / D-down / Circle to scroll). */
-#define MENU_SE_NAVIGATE 0x7D
-/** @brief Open / select sound (Circle or D-right to enter a node). */
-#define MENU_SE_SELECT 0x7E
-/** @brief Close / cancel sound (Circle while at MENU_NODE_BROWSE_ALL). */
-#define MENU_SE_CLOSE 0x7F
-/** @brief Invalid-action sound. */
-#define MENU_SE_ERROR 0x78
 
 /** @brief Byte offset of the learned Special Technique bitsets in SavedGameLayout. */
 #define MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET 0x34

@@ -12,6 +12,7 @@
 #include "common/pad.h"
 #include "common/tim.h"
 #include "common/vector.h"
+#include "main/audio/game_audio.h"
 #include "main/display.h"
 #include "main/main.h"
 #include "overlays/field/field_fade.h"
@@ -47,10 +48,6 @@ typedef struct GosubTilePacket GosubTilePacket;
 
 /** @brief Space between a list's last row and the bottom of its panel. */
 #define GOSUB_LIST_PANEL_PADDING 4
-
-/** @brief Menu sound effects and their volume. */
-#define GOSUB_SFX_CURSOR 0x7D
-#define GOSUB_SFX_CANCEL 0x7F
 
 /** @brief Buttons that confirm, cancel, and move the cursor. */
 #define GOSUB_BUTTONS_CONFIRM (PAD_BTN_CROSS | PAD_BTN_L3)

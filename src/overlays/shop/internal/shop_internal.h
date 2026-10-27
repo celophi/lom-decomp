@@ -11,6 +11,7 @@
 #include "overlays/field/field_fade.h"
 #include "overlays/field/field_input.h"
 #include "overlays/field/field_text.h"
+#include "main/audio/game_audio.h"
 
 #define SHOP_WINDOW_COUNT 8
 /** @brief Window slot reserved for the notice and quantity-prompt popups. */
@@ -30,9 +31,6 @@
 #define SHOP_CONFIRM_BUTTONS (PAD_BTN_CROSS | PAD_BTN_L3)
 #define SHOP_CANCEL_BUTTONS PAD_BTN_CIRCLE
 
-#define SHOP_SFX_CURSOR 0x7D
-#define SHOP_SFX_ERROR 0x78
-#define SHOP_SFX_CANCEL 0x7F
 #define SHOP_SFX_TRADE 0xB4
 
 /** @brief Text colour of the shop's notices; the others are FIELD_TEXT_COLOR_NORMAL and FIELD_TEXT_COLOR_DIM. */

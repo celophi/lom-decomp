@@ -88,7 +88,7 @@ static u8* shop_draw_buy_prompt(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
     {
         if (g_pad_input & PAD_BTN_DPAD)
         {
-            play_menu_sfx(SHOP_SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
+            play_menu_sfx(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
             g_shop_confirm_choice ^= 1;
         }
         else if ((g_pad_input & confirm_mask) && (g_shop_confirm_choice == 0))
@@ -171,7 +171,7 @@ static u8* shop_draw_buy_prompt(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
         else if ((g_pad_input & SHOP_CANCEL_BUTTONS) || ((g_pad_input & confirm_mask) && (g_shop_confirm_choice != 0)))
         {
             g_shop_windows[SHOP_POPUP_WINDOW].frame.bits.state = SHOP_WINDOW_FREE;
-            play_menu_sfx(SHOP_SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
+            play_menu_sfx(SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
             g_shop_prompt_active = 0;
             field_reset_input_repeat();
         }
@@ -251,7 +251,7 @@ static u8* shop_draw_sell_prompt(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
     {
         if (g_pad_input & PAD_BTN_DPAD)
         {
-            play_menu_sfx(SHOP_SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
+            play_menu_sfx(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
             g_shop_confirm_choice ^= 1;
         }
         else if ((g_pad_input & SHOP_CONFIRM_BUTTONS) && (g_shop_confirm_choice == 0))
@@ -287,7 +287,7 @@ static u8* shop_draw_sell_prompt(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
         else if ((g_pad_input & SHOP_CANCEL_BUTTONS) || ((g_pad_input & SHOP_CONFIRM_BUTTONS) && (g_shop_confirm_choice != 0)))
         {
             g_shop_windows[SHOP_POPUP_WINDOW].frame.bits.state = SHOP_WINDOW_FREE;
-            play_menu_sfx(SHOP_SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
+            play_menu_sfx(SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
             g_shop_prompt_active = 0;
             field_reset_input_repeat();
         }

@@ -3,7 +3,6 @@
 
 #include "common.h"
 
-#define WMAP_FULL_BRIGHTNESS 128
 #define WMAP_GAME_RETRY_DELAY 60
 
 /** @brief Visibility limit applied to map lands. */

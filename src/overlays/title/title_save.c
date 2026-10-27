@@ -46,7 +46,7 @@ static void read_pad_input(void)
     s32 axis;
 
     g_debounced_input = 0;
-    if (g_controller_device_type >= TITLE_PAD_UNAVAILABLE)
+    if (g_controller_device_type >= CONTROLLER_DEVICE_CONFIGURING)
     {
         state = 0;
     }
@@ -56,23 +56,23 @@ static void read_pad_input(void)
 #if !defined(VERSION_JP)
         buttons = PAD_REMAP_FACE_BITS(buttons);
 #endif
-        if (base->device_type != 0)
+        if (base->device_type != CONTROLLER_DEVICE_DIGITAL)
         {
             axis = base->axis_x.signed_value;
-            if (axis < TITLE_ANALOG_LOW_THRESHOLD)
+            if (axis < -PAD_STICK_THRESHOLD)
             {
                 buttons |= PAD_BTN_LEFT;
             }
-            else if (axis >= TITLE_ANALOG_HIGH_THRESHOLD)
+            else if (axis > PAD_STICK_THRESHOLD)
             {
                 buttons |= PAD_BTN_RIGHT;
             }
             axis = base->axis_y.signed_value;
-            if (axis < TITLE_ANALOG_LOW_THRESHOLD)
+            if (axis < -PAD_STICK_THRESHOLD)
             {
                 buttons |= PAD_BTN_UP;
             }
-            else if (axis >= TITLE_ANALOG_HIGH_THRESHOLD)
+            else if (axis > PAD_STICK_THRESHOLD)
             {
                 buttons |= PAD_BTN_DOWN;
             }
@@ -80,7 +80,7 @@ static void read_pad_input(void)
         state = buttons;
     }
     g_last_input_state = state;
-    g_input_repeat_timer = TITLE_INITIAL_REPEAT_DELAY;
+    g_input_repeat_timer = PAD_REPEAT_INITIAL_DELAY;
 }
 
 /**
@@ -156,7 +156,7 @@ void handle_save_slot_input(void)
         if (g_debounced_input & (PAD_BTN_LEFT | PAD_BTN_RIGHT))
         {
             SaveLayoutEntry* entry;
-            play_title_sfx(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+            play_title_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
             entry = g_save_layout_table;
             if (entry[18].type != 0)
             {
@@ -170,7 +170,7 @@ void handle_save_slot_input(void)
         }
         if (g_debounced_input & (PAD_BTN_START | PAD_BTN_L3 | PAD_BTN_CROSS))
         {
-            play_title_sfx(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
+            play_title_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
             if (g_save_layout_table[18].type != 0)
             {
                 scroll_slots_right();
@@ -183,7 +183,7 @@ void handle_save_slot_input(void)
         }
         if (g_debounced_input & PAD_BTN_CIRCLE)
         {
-            play_title_sfx(FIELD_SOUND_CANCEL, AKAO_PAN_CENTER);
+            play_title_sfx(SFX_CANCEL, AKAO_PAN_CENTER);
             g_title_menu_exit_state = 2;
         }
     }
@@ -236,13 +236,13 @@ void handle_save_slot_input(void)
                         g_saved_game.layout.technique_bits[i] = 0;
                     }
                 }
-                play_title_sfx(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
+                play_title_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
             }
             g_title_menu_exit_state = 1;
         }
         else if (g_debounced_input & PAD_BTN_CIRCLE)
         {
-            play_title_sfx(FIELD_SOUND_CANCEL, AKAO_PAN_CENTER);
+            play_title_sfx(SFX_CANCEL, AKAO_PAN_CENTER);
             if (g_slot_slide_x > 0)
             {
                 scroll_slots_left();
@@ -258,7 +258,7 @@ void handle_save_slot_input(void)
         {
             if ((g_debounced_input & PAD_BTN_UP) != 0U)
             {
-                play_title_sfx(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+                play_title_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
                 prev_index = g_slot_selected_index - 1;
                 g_slot_selected_index = prev_index;
                 if (prev_index < 0)
@@ -268,7 +268,7 @@ void handle_save_slot_input(void)
             }
             if (g_debounced_input & PAD_BTN_DOWN)
             {
-                play_title_sfx(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+                play_title_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
                 next_index = g_slot_selected_index + 1;
                 g_slot_selected_index = next_index;
                 if (next_index >= 0xB)

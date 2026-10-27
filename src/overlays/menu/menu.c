@@ -1626,7 +1626,7 @@ s32 menu_handle_node_input(void)
     {
         if (g_menu_active_node == MENU_NODE_BROWSE_ALL)
         {
-            menu_play_se(MENU_SE_CLOSE, AKAO_SFX_DEFAULT_VOLUME);
+            menu_play_se(SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
             g_menu_load_request = 1;
             return;
         }
@@ -1634,7 +1634,7 @@ s32 menu_handle_node_input(void)
     }
     if (g_pad_input & (PAD_BTN_UP | PAD_BTN_DOWN | PAD_BTN_CIRCLE))
     {
-        menu_play_se(MENU_SE_NAVIGATE, AKAO_SFX_DEFAULT_VOLUME);
+        menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
         active_row_y = menu_find_nav_node_index(g_menu_active_node);
         active_row_y *= MENU_ROW_HEIGHT;
         work_index = active_row_y - g_menu_scroll_pos;
@@ -1652,7 +1652,7 @@ s32 menu_handle_node_input(void)
     }
     if (g_pad_input & (PAD_BTN_RIGHT | PAD_BTN_CROSS | PAD_BTN_L3))
     {
-        menu_play_se(MENU_SE_SELECT, AKAO_SFX_DEFAULT_VOLUME);
+        menu_play_se(SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
         if (g_menu_active_node == MENU_NODE_BROWSE_ALL)
         {
             if (!(g_pad_input & (PAD_BTN_CROSS | PAD_BTN_L3)))

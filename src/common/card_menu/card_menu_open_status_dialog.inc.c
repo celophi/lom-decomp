@@ -9,7 +9,7 @@ inline void card_menu_open_status_dialog(s32 message_id)
 {
     CardMenuElement* element;
 
-    field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+    field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
     element = &g_card_menu_element_pool[CARD_MENU_ELEMENT_MODAL];
     element->draw = card_menu_draw_status_dialog;
     element->attr.bits.transition_step = 1;

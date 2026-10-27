@@ -416,7 +416,7 @@ void wmap_init_state(void)
     wmap_init_sequences();
     wmap_reset_artifact_carousel();
     g_wmap_spirit_brightness = 0;
-    g_wmap_spirit_target_brightness = WMAP_FULL_BRIGHTNESS;
+    g_wmap_spirit_target_brightness = GPU_TINT_NEUTRAL_LEVEL;
     g_wmap_map_controls_active = 1;
     g_wmap_script_prompt_visible = 0;
     g_wmap_menu_selection = WMAP_HELP_DIRECTIONS;
@@ -425,9 +425,9 @@ void wmap_init_state(void)
     g_wmap_loaded_menu_page = WMAP_HELP_NOT_LOADED;
     wmap_init_label_sprites();
     wmap_start_mesh_transition(0);
-    g_wmap_backdrop_tint.r = WMAP_FULL_BRIGHTNESS;
-    g_wmap_backdrop_tint.g = WMAP_FULL_BRIGHTNESS;
-    g_wmap_backdrop_tint.b = WMAP_FULL_BRIGHTNESS;
+    g_wmap_backdrop_tint.r = GPU_TINT_NEUTRAL_LEVEL;
+    g_wmap_backdrop_tint.g = GPU_TINT_NEUTRAL_LEVEL;
+    g_wmap_backdrop_tint.b = GPU_TINT_NEUTRAL_LEVEL;
     g_wmap_backdrop_level = 1;
     g_wmap_backdrop_target_level = 0;
     g_wmap_exit_frame = 0;
@@ -792,7 +792,7 @@ s32 wmap_update_screen_fade(s32 initialize)
         g_wmap_screen_fade_quad.b0 += WMAP_FADE_COLOR_STEP;
         g_wmap_screen_fade_quad.g0 = g_wmap_screen_fade_quad.b0;
         g_wmap_screen_fade_quad.r0 = g_wmap_screen_fade_quad.b0;
-        if (g_wmap_screen_fade_quad.r0 == WMAP_FULL_BRIGHTNESS)
+        if (g_wmap_screen_fade_quad.r0 == GPU_TINT_NEUTRAL_LEVEL)
         {
             g_wmap_screen_fade_mode = WMAP_FADE_HOLD;
         }
@@ -805,7 +805,7 @@ s32 wmap_update_screen_fade(s32 initialize)
         packet = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
         *packet = g_wmap_screen_fade_quad;
         /* The full-intensity quad is opaque; intermediate levels blend. */
-        if (g_wmap_screen_fade_quad.r0 != WMAP_FULL_BRIGHTNESS)
+        if (g_wmap_screen_fade_quad.r0 != GPU_TINT_NEUTRAL_LEVEL)
         {
             packet->code |= GPU_CODE_SEMI_TRANS;
         }

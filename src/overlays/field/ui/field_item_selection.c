@@ -123,10 +123,10 @@ static inline void flush_input(void)
 {
     g_pad_input = 0;
     g_field_primary_held_buttons = field_read_controller_buttons(0);
-    g_field_primary_repeat_delay = FIELD_PAD_REPEAT_DELAY;
+    g_field_primary_repeat_delay = PAD_REPEAT_INITIAL_DELAY;
     g_pad_input_inject = 0;
     g_field_secondary_held_buttons = field_read_controller_buttons(1);
-    g_field_secondary_repeat_delay = FIELD_PAD_REPEAT_DELAY;
+    g_field_secondary_repeat_delay = PAD_REPEAT_INITIAL_DELAY;
     g_field_buffered_input = 0;
 }
 
@@ -269,7 +269,7 @@ void field_open_item_drop_menu(void)
 /** @brief Play the sound for an action that cannot be taken. */
 static void field_play_action_refused_sound(void)
 {
-    field_play_sound(FIELD_SOUND_ACTION_REFUSED, AKAO_PAN_CENTER);
+    field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
 }
 
 /**
@@ -419,7 +419,7 @@ static s32 field_update_item_drop_menu(FieldMenuElement *window)
     if (g_field_buffered_input & FIELD_ITEM_MENU_CONFIRM)
     {
         flush_input();
-        field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
+        field_play_sound(SFX_CONFIRM, AKAO_PAN_CENTER);
         reset_menu_elements();
         g_field_item_drop_menu_open = 0;
         g_saved_game_ctx->item_counts[g_field_item_list[g_field_item_list_cursor].item_id]--;
@@ -431,7 +431,7 @@ static s32 field_update_item_drop_menu(FieldMenuElement *window)
     {
         flush_input();
         reset_menu_elements();
-        field_play_sound(FIELD_SOUND_CANCEL, AKAO_PAN_CENTER);
+        field_play_sound(SFX_CANCEL, AKAO_PAN_CENTER);
         g_field_item_drop_menu_open = 0;
         return;
     }
@@ -441,7 +441,7 @@ static s32 field_update_item_drop_menu(FieldMenuElement *window)
         return;
     }
 
-    field_play_sound(FIELD_SOUND_CURSOR, AKAO_PAN_CENTER);
+    field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
     steps = 1;
 
     if (g_field_buffered_input & PADR1)

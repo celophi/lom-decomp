@@ -1734,8 +1734,8 @@ void wmap_update_map_display(void)
     }
     if (g_wmap_spirit_brightness >= 0x81)
     {
-        g_wmap_spirit_target_brightness = WMAP_FULL_BRIGHTNESS;
-        g_wmap_spirit_brightness = WMAP_FULL_BRIGHTNESS;
+        g_wmap_spirit_target_brightness = GPU_TINT_NEUTRAL_LEVEL;
+        g_wmap_spirit_brightness = GPU_TINT_NEUTRAL_LEVEL;
     }
 }
 
