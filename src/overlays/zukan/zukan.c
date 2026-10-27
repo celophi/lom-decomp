@@ -4,6 +4,7 @@
 
 #include "common/gpu_packet.h"
 #include "common/render_context.h"
+#include "common/screen_fade.h"
 #include "common/tim.h"
 #include "internal/zukan.h"
 #include "internal/zukan_category.h"
@@ -89,7 +90,6 @@
 #define ZUKAN_LIST_CAPACITY 512
 #define ZUKAN_LIST_ROW_HEIGHT 16
 #define ZUKAN_LIST_VISIBLE_ROWS 8
-#define ZUKAN_FADE_STEPS 6
 #define ZUKAN_TRANSITION_FRAMES 8
 #define ZUKAN_SCROLL_STEPS 4
 #define ZUKAN_DETAIL_TEXT_LINES 12
@@ -171,12 +171,10 @@ extern ZukanEntryResourceHeader* g_zukan_work_buffer;
 extern s32 g_zukan_exit_requested;
 extern ZukanUiSpriteRecord g_zukan_ui_sprites[ZUKAN_UI_SPRITE_COUNT];
 extern ZukanListEntry g_zukan_list_entries[ZUKAN_LIST_CAPACITY];
-extern ScreenFade g_zukan_fade_target;
 extern s16 g_zukan_input_blocked;
 extern s32 g_zukan_category;
 extern s32 g_zukan_entry_count;
 extern s32 g_zukan_previous_resource_id;
-extern ScreenFade g_zukan_fade_current;
 extern s32 g_zukan_displayed_entry;
 extern s32 g_zukan_transition_frame;
 extern s32 g_zukan_view_mode;
@@ -201,9 +199,6 @@ void zukan_start_next_entry_transition(void);
 void zukan_start_previous_entry_transition(void);
 void zukan_update_transition(RenderContext* render_ctx);
 void zukan_render_content(RenderContext* render_ctx);
-static LINE_F2* zukan_emit_panel_outline(LINE_F2* line, u_long* ordering_table, s32 x, s32 y, s32 width, s32 height, s32 color);
-void zukan_set_fade_target(s16 red, s16 green, s16 blue, s16 steps);
-TILE* zukan_render_fade(TILE* tile, u_long* ordering_table);
 void zukan_build_entry_list(s32 category);
 void zukan_load_entry(s32 index);
 void zukan_load_related_entry(s32 resource_id);
@@ -313,7 +308,7 @@ u8* zukan_initialize_state(u8* work_buffer, s32 category)
     next_buffer = work_buffer + ZUKAN_WORK_BUFFER_SIZE;
     zukan_upload_ui_images(work_buffer);
     field_reset_input_repeat();
-    zukan_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, ZUKAN_FADE_STEPS);
+    set_screen_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, SCREEN_FADE_STEPS);
     g_zukan_transition_state = ZUKAN_TRANSITION_IDLE;
     g_zukan_view_mode = ZUKAN_VIEW_LIST;
     g_zukan_selected_entry = 0;
@@ -450,7 +445,7 @@ s32 zukan_handle_input(void)
             if (g_zukan_list_entries[g_zukan_selected_entry].available)
             {
                 field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
-                zukan_set_fade_target(FADE_BLACK, FADE_BLACK, FADE_BLACK, ZUKAN_FADE_STEPS);
+                set_screen_fade_target(FADE_BLACK, FADE_BLACK, FADE_BLACK, SCREEN_FADE_STEPS);
                 zukan_load_entry(g_zukan_selected_entry);
                 g_zukan_transition_state = ZUKAN_TRANSITION_OPEN_DETAIL;
                 g_zukan_transition_frame = 0;
@@ -519,7 +514,7 @@ s32 zukan_handle_input(void)
     if (g_pad_input & (PADRdown | PADRright | PADi))
     {
         field_play_sound(FIELD_SOUND_SELECT, AKAO_PAN_CENTER);
-        zukan_set_fade_target(FADE_BLACK, FADE_BLACK, FADE_BLACK, ZUKAN_FADE_STEPS);
+        set_screen_fade_target(FADE_BLACK, FADE_BLACK, FADE_BLACK, SCREEN_FADE_STEPS);
         g_zukan_transition_state = ZUKAN_TRANSITION_RETURN_TO_LIST;
         g_zukan_transition_frame = 0;
         return;
@@ -677,7 +672,7 @@ void zukan_render_ui(RenderContext* render_ctx)
         packet_cursor = zukan_emit_ui_sprite(packet_cursor, ordering_table, i, g_zukan_ui_sprites[i].x, g_zukan_ui_sprites[i].y, 1);
     }
 
-    render_ctx->prim_cursor = zukan_render_fade(packet_cursor, &render_ctx->ot[ZUKAN_LAYER_FADE]);
+    render_ctx->prim_cursor = render_screen_fade(packet_cursor, &render_ctx->ot[ZUKAN_LAYER_FADE]);
 }
 
 /**
@@ -761,7 +756,7 @@ void* zukan_emit_ui_sprite(SPRT* sprite, u_long* ordering_table, u32 sprite_inde
  */
 void zukan_start_next_entry_transition(void)
 {
-    zukan_set_fade_target(FADE_BLACK, FADE_BLACK, FADE_BLACK, ZUKAN_FADE_STEPS);
+    set_screen_fade_target(FADE_BLACK, FADE_BLACK, FADE_BLACK, SCREEN_FADE_STEPS);
     g_zukan_transition_state = ZUKAN_TRANSITION_NEXT_FADE_OUT;
     g_zukan_transition_frame = 0;
 }
@@ -771,7 +766,7 @@ void zukan_start_next_entry_transition(void)
  */
 void zukan_start_previous_entry_transition(void)
 {
-    zukan_set_fade_target(FADE_BLACK, FADE_BLACK, FADE_BLACK, ZUKAN_FADE_STEPS);
+    set_screen_fade_target(FADE_BLACK, FADE_BLACK, FADE_BLACK, SCREEN_FADE_STEPS);
     g_zukan_transition_state = ZUKAN_TRANSITION_PREVIOUS_FADE_OUT;
     g_zukan_transition_frame = 0;
 }
@@ -798,7 +793,7 @@ void zukan_update_transition(RenderContext* render_ctx)
                     g_zukan_transition_state = ZUKAN_TRANSITION_NEXT_FADE_IN;
                     g_zukan_transition_frame = 0;
                     g_zukan_displayed_entry = g_zukan_selected_entry;
-                    zukan_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, ZUKAN_FADE_STEPS);
+                    set_screen_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, SCREEN_FADE_STEPS);
                 }
 
                 break;
@@ -816,7 +811,7 @@ void zukan_update_transition(RenderContext* render_ctx)
                     g_zukan_transition_state = ZUKAN_TRANSITION_PREVIOUS_FADE_IN;
                     g_zukan_transition_frame = 0;
                     g_zukan_displayed_entry = g_zukan_selected_entry;
-                    zukan_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, ZUKAN_FADE_STEPS);
+                    set_screen_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, SCREEN_FADE_STEPS);
                 }
 
                 break;
@@ -834,7 +829,7 @@ void zukan_update_transition(RenderContext* render_ctx)
                     g_zukan_transition_state = ZUKAN_TRANSITION_NEXT_FADE_IN;
                     g_zukan_transition_frame = 0;
                     g_zukan_view_mode = ZUKAN_VIEW_LIST;
-                    zukan_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, ZUKAN_FADE_STEPS);
+                    set_screen_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, SCREEN_FADE_STEPS);
                 }
 
                 break;
@@ -846,7 +841,7 @@ void zukan_update_transition(RenderContext* render_ctx)
                     g_zukan_view_mode = ZUKAN_VIEW_DETAIL;
                     g_zukan_transition_frame = 0;
                     g_zukan_displayed_entry = g_zukan_selected_entry;
-                    zukan_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, ZUKAN_FADE_STEPS);
+                    set_screen_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, SCREEN_FADE_STEPS);
                 }
 
                 break;
@@ -1009,154 +1004,9 @@ void zukan_render_content(RenderContext* render_ctx)
     render_ctx->prim_cursor = packet_cursor;
 }
 
-/**
- * @brief Emit a rectangular four-line panel outline.
- * @param line Next line packet in the primitive buffer.
- * @param ordering_table Ordering table receiving the lines.
- * @param x Left edge.
- * @param y Top edge.
- * @param width Panel width.
- * @param height Panel height.
- * @param color Packed line color.
- * @return First packet after the four outline lines.
- * @see GOLEM golem_emit_panel_outline
- */
-static LINE_F2* zukan_emit_panel_outline(LINE_F2* line, u_long* ordering_table, s32 x, s32 y, s32 width, s32 height, s32 color)
-{
-    SET_BGR0_PACKED(line, color);
-    setLineF2(line);
-    setXY2(line, x, y, x + width, y);
-    addPrim(ordering_table, line);
-    line++;
-
-    SET_BGR0_PACKED(line, color);
-    setLineF2(line);
-    setXY2(line, x + width, y, x + width, y + height);
-    addPrim(ordering_table, line);
-    line++;
-
-    SET_BGR0_PACKED(line, color);
-    setLineF2(line);
-    setXY2(line, x + width, y + height, x, y + height);
-    addPrim(ordering_table, line);
-    line++;
-
-    SET_BGR0_PACKED(line, color);
-    setLineF2(line);
-    setXY2(line, x, y, x, y + height);
-    addPrim(ordering_table, line);
-    return line + 1;
-}
-
-/**
- * @brief Set the target color and duration for the screen fade.
- * @param red Target red component.
- * @param green Target green component.
- * @param blue Target blue component.
- * @param steps Number of fade steps.
- * @see GOLEM golem_set_fade_target
- */
-void zukan_set_fade_target(s16 red, s16 green, s16 blue, s16 steps)
-{
-    g_zukan_fade_target.red = red;
-    g_zukan_fade_target.green = green;
-    g_zukan_fade_target.blue = blue;
-    g_zukan_fade_target.steps_remaining = steps;
-}
-
-/**
- * @brief Advance the fade color and emit the full-screen fade primitive.
- * @param tile Next free position in the packet buffer.
- * @param ordering_table Ordering-table tag receiving the fade.
- * @return First primitive after the emitted fade packets.
- * @see GOLEM golem_render_fade
- */
-TILE* zukan_render_fade(TILE* tile, u_long* ordering_table)
-{
-    s32 red_step;
-    s32 green_step;
-    s32 blue_step;
-    s32 draw_mode;
-    DR_TPAGE* tpage;
-
-    if (g_zukan_fade_target.steps_remaining != 0)
-    {
-        red_step = (g_zukan_fade_target.red - g_zukan_fade_current.red) / g_zukan_fade_target.steps_remaining;
-        green_step = (g_zukan_fade_target.green - g_zukan_fade_current.green) / g_zukan_fade_target.steps_remaining;
-        blue_step = (g_zukan_fade_target.blue - g_zukan_fade_current.blue) / g_zukan_fade_target.steps_remaining;
-        g_zukan_fade_target.steps_remaining--;
-        g_zukan_fade_current.red += red_step;
-        g_zukan_fade_current.green += green_step;
-        g_zukan_fade_current.blue += blue_step;
-    }
-    else
-    {
-        g_zukan_fade_current.red = g_zukan_fade_target.red;
-        g_zukan_fade_current.green = g_zukan_fade_target.green;
-        g_zukan_fade_current.blue = g_zukan_fade_target.blue;
-    }
-
-    if ((g_zukan_fade_current.red != FADE_NEUTRAL) || (g_zukan_fade_current.green != g_zukan_fade_current.red) ||
-        (g_zukan_fade_current.blue != g_zukan_fade_current.green))
-    {
-        if (g_zukan_fade_current.red >= FADE_ADDITIVE_THRESHOLD)
-        {
-            setRGB0(tile, g_zukan_fade_current.red - 1, g_zukan_fade_current.green - 1, g_zukan_fade_current.blue - 1);
-        }
-        else
-        {
-            if (g_zukan_fade_current.red == FADE_NEUTRAL)
-            {
-                tile->r0 = 0;
-            }
-            else
-            {
-                tile->r0 = ~g_zukan_fade_current.red;
-            }
-
-            if (g_zukan_fade_current.green == FADE_NEUTRAL)
-            {
-                tile->g0 = 0;
-            }
-            else
-            {
-                tile->g0 = ~g_zukan_fade_current.green;
-            }
-
-            if (g_zukan_fade_current.blue == FADE_NEUTRAL)
-            {
-                tile->b0 = 0;
-            }
-            else
-            {
-                tile->b0 = ~g_zukan_fade_current.blue;
-            }
-        }
-
-        setTile(tile);
-        setSemiTrans(tile, 1);
-        tile->w = SCREEN_WIDTH;
-        draw_mode = BLEND_ADD_TPAGE;
-        SET_YX0(tile, 0, 0);
-        tile->h = SCREEN_HEIGHT;
-        addPrim(ordering_table, tile);
-
-        tile++;
-        tpage = (DR_TPAGE*)tile;
-
-        if (g_zukan_fade_current.red < FADE_ADDITIVE_THRESHOLD)
-        {
-            draw_mode = BLEND_SUBTRACT_TPAGE;
-        }
-
-        setDrawTPage(tpage, 0, 0, draw_mode);
-        addPrim(ordering_table, tpage);
-
-        tile = (TILE*)(tpage + 1);
-    }
-
-    return tile;
-}
+#include "../../common/panel_outline/emit_panel_outline.inc.c"
+#include "../../common/screen_fade/set_screen_fade_target.inc.c"
+#include "../../common/screen_fade/render_screen_fade.inc.c"
 
 /**
  * @brief Build the visible entry list for an encyclopedia category.
