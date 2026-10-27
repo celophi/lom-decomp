@@ -98,6 +98,9 @@
 /** @brief Address of the section that @p field locates, as a byte offset from @p header. */
 #define ZUKAN_SECTION(header, field) ((u8*)(header) + (header)->field)
 
+/** @brief The related-entry ids of the entry resource @p header. */
+#define ZUKAN_RELATED_ENTRIES(header) ((ZukanRelatedEntries*)ZUKAN_SECTION(header, related_ids_offset))
+
 /** @brief The UI archive viewed through its header. */
 #define ZUKAN_ARCHIVE ((ZukanArchiveHeader*)g_zukan_resource_archive)
 
@@ -190,9 +193,9 @@ void zukan_upload_ui_images(u8* work_buffer);
 inline s32 zukan_upload_tim(TimUploadDestination* destinations, TimPrefix* tim);
 s32 zukan_handle_input(void);
 void zukan_scroll_to_selection(void);
-inline DR_TPAGE* zukan_emit_page_image_tpage(DR_TPAGE* draw_mode, u_long* ordering_table);
-inline DR_TPAGE* zukan_emit_border_image_tpage(DR_TPAGE* draw_mode, u_long* ordering_table);
-inline DR_TPAGE* zukan_emit_entry_image_tpage(DR_TPAGE* draw_mode, u_long* ordering_table);
+inline void* zukan_emit_page_image_tpage(void* packet_cursor, u_long* ordering_table);
+inline void* zukan_emit_border_image_tpage(void* packet_cursor, u_long* ordering_table);
+inline void* zukan_emit_entry_image_tpage(void* packet_cursor, u_long* ordering_table);
 void zukan_render_ui(RenderContext* render_ctx);
 void* zukan_emit_ui_sprite(SPRT* sprite, u_long* ordering_table, u32 sprite_index, s32 x, s32 y, s32 variant);
 void zukan_start_next_entry_transition(void);
@@ -609,12 +612,14 @@ void zukan_scroll_to_selection(void)
 
 /**
  * @brief Append the texture-page command for the UI page image.
- * @param draw_mode Primitive-buffer position receiving the packet.
+ * @param packet_cursor Primitive-buffer position receiving the packet.
  * @param ordering_table Ordering-table tag address.
  * @return Primitive-buffer address after the emitted packet.
  */
-inline DR_TPAGE* zukan_emit_page_image_tpage(DR_TPAGE* draw_mode, u_long* ordering_table)
+inline void* zukan_emit_page_image_tpage(void* packet_cursor, u_long* ordering_table)
 {
+    DR_TPAGE* draw_mode = packet_cursor;
+
     setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, ZUKAN_PAGE_IMAGE_X, ZUKAN_PAGE_IMAGE_Y));
     addPrim(ordering_table, draw_mode);
     return draw_mode + 1;
@@ -622,12 +627,14 @@ inline DR_TPAGE* zukan_emit_page_image_tpage(DR_TPAGE* draw_mode, u_long* orderi
 
 /**
  * @brief Append the texture-page command for the UI border image.
- * @param draw_mode Primitive-buffer position receiving the packet.
+ * @param packet_cursor Primitive-buffer position receiving the packet.
  * @param ordering_table Ordering-table tag address.
  * @return Primitive-buffer address after the emitted packet.
  */
-inline DR_TPAGE* zukan_emit_border_image_tpage(DR_TPAGE* draw_mode, u_long* ordering_table)
+inline void* zukan_emit_border_image_tpage(void* packet_cursor, u_long* ordering_table)
 {
+    DR_TPAGE* draw_mode = packet_cursor;
+
     setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, ZUKAN_BORDER_IMAGE_X, ZUKAN_BORDER_IMAGE_Y));
     addPrim(ordering_table, draw_mode);
     return draw_mode + 1;
@@ -635,12 +642,14 @@ inline DR_TPAGE* zukan_emit_border_image_tpage(DR_TPAGE* draw_mode, u_long* orde
 
 /**
  * @brief Append the texture-page command for the loaded entry image.
- * @param draw_mode Primitive-buffer position receiving the packet.
+ * @param packet_cursor Primitive-buffer position receiving the packet.
  * @param ordering_table Ordering-table tag address.
  * @return Primitive-buffer address after the emitted packet.
  */
-inline DR_TPAGE* zukan_emit_entry_image_tpage(DR_TPAGE* draw_mode, u_long* ordering_table)
+inline void* zukan_emit_entry_image_tpage(void* packet_cursor, u_long* ordering_table)
 {
+    DR_TPAGE* draw_mode = packet_cursor;
+
     setDrawTPage(draw_mode, 0, 0, getTPage(g_zukan_image_mode, GPU_BLEND_HALF, ZUKAN_ENTRY_IMAGE_X, ZUKAN_ENTRY_IMAGE_Y));
     addPrim(ordering_table, draw_mode);
     return draw_mode + 1;
@@ -741,10 +750,10 @@ void* zukan_emit_ui_sprite(SPRT* sprite, u_long* ordering_table, u32 sprite_inde
     switch (sprite_record->image)
     {
         case ZUKAN_UI_IMAGE_PAGE:
-            sprite = (SPRT*)zukan_emit_page_image_tpage((DR_TPAGE*)sprite, ordering_table);
+            sprite = zukan_emit_page_image_tpage(sprite, ordering_table);
             break;
         case ZUKAN_UI_IMAGE_BORDER:
-            sprite = (SPRT*)zukan_emit_border_image_tpage((DR_TPAGE*)sprite, ordering_table);
+            sprite = zukan_emit_border_image_tpage(sprite, ordering_table);
             break;
     }
 
@@ -1135,7 +1144,7 @@ void* zukan_render_detail_sprites(SPRT* sprite, u_long* ordering_table)
         count--;
     }
 
-    return zukan_emit_entry_image_tpage((DR_TPAGE*)sprite, ordering_table);
+    return zukan_emit_entry_image_tpage(sprite, ordering_table);
 }
 
 /**
@@ -1166,8 +1175,8 @@ void zukan_commit_loaded_entry(void)
     destinations.clut_y = ZUKAN_ENTRY_CLUT_Y;
     g_zukan_image_mode = zukan_upload_tim(&destinations, (TimPrefix*)ZUKAN_SECTION(g_zukan_resource_buffer, image_offset));
 
-    g_zukan_previous_resource_id = ((ZukanRelatedEntries*)ZUKAN_SECTION(g_zukan_resource_buffer, related_ids_offset))->previous;
-    g_zukan_next_resource_id = ((ZukanRelatedEntries*)ZUKAN_SECTION(g_zukan_resource_buffer, related_ids_offset))->next;
+    g_zukan_previous_resource_id = ZUKAN_RELATED_ENTRIES(g_zukan_resource_buffer)->previous;
+    g_zukan_next_resource_id = ZUKAN_RELATED_ENTRIES(g_zukan_resource_buffer)->next;
 }
 
 /**
