@@ -63,7 +63,7 @@ extern s16 g_music_track_index;
 /**
  * @brief Unlock the encyclopedia entries of the lands and their artifacts from the land records.
  */
-void func_8005DBB8(void)
+void wmap_unlock_land_encyclopedia_entries(void)
 {
     s32 i;
 
@@ -118,7 +118,7 @@ void func_8005DF50(s32 arg0, s32 arg1)
     s32 sp20;
     s32 sp24;
 
-    func_8005DBB8();
+    wmap_unlock_land_encyclopedia_entries();
     sp20 = wmap_get_land_at_cell(arg0, arg1);
     sp24 = (sp20 * 4) + ((D_800432C8[sp20 * WMAP_NODE_RECORD_SIZE] >> 4) & 3);
     g_field_entry_scene.id = g_wmap_land_scenes[sp24];
