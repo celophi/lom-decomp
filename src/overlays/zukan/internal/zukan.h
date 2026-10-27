@@ -18,7 +18,7 @@ u8* zukan_initialize_state(u8* work_buffer, s32 category);
  */
 void zukan_update_frame(RenderContext* render_ctx);
 
-/** @brief Load the encyclopedia UI resource archive. */
-void zukan_load_ui_resource(void);
+/** @brief Reload the part of the field map texture that the encyclopedia images drew over. */
+void zukan_restore_map_texture(void);
 
 #endif

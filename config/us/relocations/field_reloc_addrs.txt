@@ -1,7 +1,7 @@
 rom:0x268D reloc:MIPS_NONE symbol:g_field_scene
 rom:0x269D reloc:MIPS_NONE symbol:g_field_scene
 rom:0x26A1 reloc:MIPS_NONE symbol:g_field_scene
-rom:0x26AD reloc:MIPS_NONE symbol:g_field_vram_byte_count
+rom:0x26AD reloc:MIPS_NONE symbol:g_field_map_texture_bytes
 
 // field_build_render_records: the original code addresses the 0x80180000 work
 // area through one literal page base (a single lui shared across fields at

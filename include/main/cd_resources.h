@@ -90,8 +90,8 @@ typedef enum CdResourceId
     /* PocketStation pet-transfer program, filled in and written to the card by CARDA. */
     CD_RES_POCKETSTATION_PET_TRANSFER = 1506,
 
-    /* ZUKAN encyclopedia screen textures and text. */
-    CD_RES_ZUKAN_UI = 1507,
+    /* Columns 512-619 of the Home map MHM_ALC2's texture, which ZUKAN reloads after drawing over them. */
+    CD_RES_ZUKAN_MAP_TEXTURE = 1507,
 
     /* CLOAD backdrop images and save-list party icons. */
     CD_RES_CLOAD_ICON_SET = 1508,

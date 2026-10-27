@@ -494,7 +494,7 @@ D_80051EB4                            = 0x80051F6C;
 
 g_field_scene                         = 0x80180014;
 g_field_objects                       = 0x80180020;
-g_field_vram_byte_count               = 0x8018000C;
+g_field_map_texture_bytes             = 0x8018000C;
 g_field_dyn_count                     = 0x80180010;
 g_field_marker_overlay_enabled        = 0x800353B8;
 g_field_movie_frame_width             = 0x80140000;
