@@ -142,9 +142,8 @@ visible entry list. They're all zero on disc, so the byte map lists them
 without writing a file. The entry-table rodata is 3,556 bytes in both
 versions, ending with two bytes of padding.
 
-The 660 bytes between the tables and the C code are the overlay's entry
-function, `zukan_run`. That's code, so it sits in its own `zukan_run_code`
-rodatabin and isn't exported.
+The code starts right after the tables, with the overlay's entry function,
+`zukan_run`.
 
 Both byte maps account for every byte. JP has no unknown gaps. US has one:
 six bytes after the category titles, saved in `unknown/8015741A.bin`.

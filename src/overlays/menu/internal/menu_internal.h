@@ -5,9 +5,11 @@
 
 #include "overlays/field/field_object_state.h"
 #include "overlays/menu/menu.h"
+#include "common/saved_game.h"
 #include "main/display.h"
 #include "main/controller.h"
 #include "common/vector.h"
+#include "overlays/field/field_numeric_sprites.h"
 #include "overlays/field/field_text.h"
 
 /* Encoded-name functions of FIELD, called while FIELD is resident. */
@@ -19,7 +21,6 @@ s32 field_name_byte_length(u8* name);
 #define MENU_CLUT_GRID_ALT 0x7C81
 #define MENU_CLUT_CORNER 0x7CCA
 #define MENU_GRID_OT_INDEX 0x0F
-#define MENU_OT_ENTRY_COUNT 16
 #define MENU_GRID_ALT_CLUT_START 0x11
 #define MENU_GRID_SPRITE_COUNT 0x1D
 #define MENU_GRID_TEXTURE_WINDOW_SIZE 0xFF
@@ -210,10 +211,6 @@ s32 field_name_byte_length(u8* name);
 
 /** @brief Byte offset of the learned Special Technique bitsets in SavedGameLayout. */
 #define MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET 0x34
-/** @brief Number of Special Technique category bitsets. */
-#define MENU_SPECIAL_TECHNIQUE_GROUP_COUNT 11
-/** @brief Number of Special Technique bits and names in each category. */
-#define MENU_SPECIAL_TECHNIQUES_PER_GROUP 24
 
 /** @brief Byte offset of the ability-record table in SavedGameLayout. */
 #define MENU_ABILITY_TABLE_OFFSET 0x2F0
@@ -228,15 +225,6 @@ s32 field_name_byte_length(u8* name);
 #define MENU_CONTROLLER_ACTUATORS ((MenuControllerActuatorState*)CONTROLLER_STATE_ADDRESS)
 
 /* Rendering and window types. */
-
-/** @brief VRAM destinations for the image and CLUT blocks in the menu TIM asset. */
-typedef struct
-{
-    s16 texture_x;
-    s16 texture_y;
-    s16 clut_x;
-    s16 clut_y;
-} MenuTimVramLayout;
 
 /**
  * @brief Container holding the menu TIM and its additional CLUT.
@@ -270,13 +258,6 @@ typedef struct
     s16 w;
     s16 h;
 } MenuRectU16;
-
-/** @brief 2-D screen coordinate (pixels). */
-typedef struct
-{
-    s16 x; /**< Screen X. */
-    s16 y; /**< Screen Y. */
-} ScreenPos;
 
 /**
  * @brief Two-byte offset into a paged string table.
@@ -588,7 +569,7 @@ void menu_init_item_nav_entries(s32 count);
 void menu_update_active_slot(void);
 void menu_update_slots(RenderContext* render_ctx);
 void menu_draw_window_transition(RenderContext* render_ctx, MenuSlot* slot, s32 cursor_enable);
-void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect, ScreenPos* view_origin, s32 cursor_enable);
+void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect, Vec2s* view_origin, s32 cursor_enable);
 SPRT* menu_emit_corner(SPRT* sprite, u_long* ot_entry, s32 x, s32 y, u32 uv);
 SPRT* menu_fill_window_interior(SPRT* sprite, u_long* ot_entry, const MenuRectU16* rect, u32 uv);
 u_long* menu_build_h_edge(u_long* packet_cursor, u_long* ot_entry, const MenuRectU16* rect, s32 texture_origin);
@@ -600,7 +581,7 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label);
 s32 menu_handle_node_input(void);
 u32 menu_step_item_selection(s32 step);
 
-void menu_upload_tim(const MenuTimVramLayout* layout);
+void menu_upload_tim(const TimUploadDestination* layout);
 void* menu_draw_clamped_number(u_long* ot_entry, void* packet_cursor, s32 value, s32 format, Vec2s* origin, s32 style);
 
 void* menu_spell_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
@@ -636,8 +617,6 @@ MenuItemEntry* field_find_free_inventory_record(void);
 void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, s32 active);
 void menu_swap_item_records(MenuItemEntry*, MenuItemEntry*);
 
-void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 value, s32 digit_count, u16* position, s32 flags);
-void* field_draw_sprite_glyph(void* packet_cursor, u_long* ordering_table, s32 glyph, u16* position, s32 flags);
 void menu_play_se(s32 sound_id, s32 volume);
 
 s32 menu_stage_best_equipment_for_slot0(void);

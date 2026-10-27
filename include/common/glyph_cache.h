@@ -16,10 +16,6 @@
  * from the Kanji ROM (Krom2RawAdd), rasterized to 4 bits per pixel, uploaded
  * to a free cache slot in VRAM and drawn as a 16x16 sprite. Slots not drawn
  * during a frame are freed at its end.
- *
- * Each overlay includes these functions from src/common/glyph_cache/<function>.inc.c
- * at the point where they sit in its binary and maps the globals below to its
- * own data, so every overlay still links its own copy.
  */
 
 /** @brief Cache layout: 256 slots of 16x15 4-bit glyphs, 16 per VRAM row. */

@@ -8,6 +8,8 @@
  */
 
 #include "overlays/field/field_text.h"
+#include "overlays/field/field_numeric_sprites.h"
+#include "overlays/field/field_ui_text.h"
 #include "overlays/field/field_sound.h"
 #include "common/encoded_text.h"
 #include "main/audio/akao_cmd.h"
@@ -37,6 +39,7 @@
 #include "common/render_context.h"
 #include "main/overlay_memory.h"
 #include "overlays/gname/gname.h"
+#include "overlays/zukan/zukan.h"
 #include "main/audio/akao.h"
 #include "overlays/field/field_input.h"
 #include "overlays/field/field_overlay_handoff.h"
@@ -76,8 +79,8 @@ void field_set_cd_error_fade_target(void);
 /** @brief Smallest gap between a label and the left screen edge. */
 #define FIELD_LABEL_MARGIN 8
 /** @brief field_draw_sprite_glyph / field_draw_sprite_number flags of the label glyphs: outline plus palette 1 or 2. */
-#define FIELD_LABEL_SELECTED_DIGITS (FIELD_TEXT_SHADOW | 1)
-#define FIELD_LABEL_NORMAL_DIGITS (FIELD_TEXT_SHADOW | 2)
+#define FIELD_LABEL_SELECTED_DIGITS (FIELD_DIGIT_OUTLINE | 1)
+#define FIELD_LABEL_NORMAL_DIGITS (FIELD_DIGIT_OUTLINE | 2)
 /** @brief Held-button hints: eight hint buttons, portrait and text position (32 pixels per player). */
 #define FIELD_HINT_BUTTON_COUNT 8
 #define FIELD_HINT_PORTRAIT_X 96
@@ -154,7 +157,7 @@ typedef enum FieldDuelPanelPhase
 } FieldDuelPanelPhase;
 
 /**
- * @brief Entry of the dialog text bank at D_800EC3C4: a little-endian byte
+ * @brief Entry of the dialog text bank at g_field_ui_text_table: a little-endian byte
  *        offset from the start of the bank to one string.
  */
 typedef struct
@@ -176,8 +179,6 @@ extern FieldTextOffset g_field_duel_winner_text_offset;
 extern FieldTextOffset D_800EC3E0;
 extern FieldTextOffset D_800EC3E6;
 extern FieldTextOffset D_800EC3E8;
-/* Dialog text bank (starts with FieldTextOffset entries). */
-extern u8 D_800EC3C4[];
 /* Offset tables of the ability and technique names (u16 offsets from the table start). */
 extern u8 g_field_command_names[];
 extern u8 g_field_technique_names[];
@@ -254,12 +255,8 @@ s32 addhero_state_step(FieldRenderHalf* render);
 s32 carda_update_frame(FieldRenderHalf* render);
 s32 func_801405B0(RenderContext* render_buffers);
 void gosub_open_screen_sequence(void* work, void* screen_sequence);
-void zukan_run(void* work, s32 context);
 
 s32 field_party_reload_reading(void);
-void* field_draw_sprite_number(s32* ot, void* cursor, s32 value, s32 digits, u16* position, s32 flags);
-void* field_draw_sprite_glyph(u8* cursor, s32* ot, s32 glyph, s32* position, s32 flags);
-SPRT* field_add_sprite_outline(u_long* ot, SPRT* sprite_cursor, s32 count);
 void* field_draw_player_icon(POLY_FT4* packet_cursor, u_long* ot, s32 player, s32 x, s32 y, s32 flip);
 POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* packet_cursor, u_long* ot, u8* text, s32 color, s32 x, s32 y, s32 align, s32 slot, s32 scale_x, s32 scale_y, s32 arg10, s32 visible);
 
@@ -889,7 +886,7 @@ static void field_draw_cd_error_text(FieldRenderHalf* render)
  */
 static void field_draw_actor_labels(FieldRenderHalf* render)
 {
-    DVECTOR point;
+    Vec2s point;
     FieldTextOffset* bank_entry;
     s32 text_color;
     u16 text_offset;
@@ -943,7 +940,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
         {
             bit_or_actor = 1;
             button_or_x = 0;
-            bank = (uintptr_t)D_800EC3C4;
+            bank = (uintptr_t)g_field_ui_text_table;
             record_offset = index * sizeof(FieldCharacterRecord);
             raw_buttons = port->published_sample.held_buttons;
             record_base_offset = index * sizeof(FieldCharacterRecord) + OFFSETOF(SavedGameLayout, characters);
@@ -1063,10 +1060,10 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                     }
 
                     label_y = index;
-                    point.vx = FIELD_HINT_PORTRAIT_X;
+                    point.x = FIELD_HINT_PORTRAIT_X;
                     label_y <<= 5;
-                    point.vy = label_y + FIELD_HINT_PORTRAIT_Y;
-                    cursor = (u8*)field_emit_actor_portrait((SPRT*)cursor, ot, index, (Vec2s*)&point);
+                    point.y = label_y + FIELD_HINT_PORTRAIT_Y;
+                    cursor = (u8*)field_emit_actor_portrait((SPRT*)cursor, ot, index, &point);
                     cursor = (u8*)field_draw_text((SPRT*)cursor, ot, (u8*)text_or_state, FIELD_TEXT_COLOR_NORMAL, FIELD_HINT_TEXT_X,
                                                   label_y + FIELD_HINT_TEXT_Y, FIELD_TEXT_SHADOW);
                     break;
@@ -1088,33 +1085,33 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
         actor = &g_field_actors[bit_or_actor];
         button_or_x = camera_x / 256;
         screen_x = actor->x / 256 + SCREEN_WIDTH / 2;
-        point.vx = button_or_x + screen_x;
+        point.x = button_or_x + screen_x;
         camera_y = g_field_view_offset_y / 256;
         screen_y = actor->y / 256 + FIELD_SCREEN_CENTER_Y;
-        point.vy = ((camera_y + screen_y) - actor->z / 512) - g_field_view_offset_z / 512;
+        point.y = ((camera_y + screen_y) - actor->z / 512) - g_field_view_offset_z / 512;
         label_half_width = field_count_text_glyphs(((FieldObjectState*)text_or_state)->name) * FIELD_LABEL_GLYPH_HALF_WIDTH;
 
-        if ((point.vx + label_half_width) > SCREEN_WIDTH)
+        if ((point.x + label_half_width) > SCREEN_WIDTH)
         {
-            point.vx = SCREEN_WIDTH - label_half_width;
+            point.x = SCREEN_WIDTH - label_half_width;
         }
 
-        if (((point.vx - label_half_width) - FIELD_LABEL_MARGIN) < 0)
+        if (((point.x - label_half_width) - FIELD_LABEL_MARGIN) < 0)
         {
-            point.vx = label_half_width + FIELD_LABEL_MARGIN;
+            point.x = label_half_width + FIELD_LABEL_MARGIN;
         }
 
-        if (point.vy > FIELD_LABEL_MAX_Y)
+        if (point.y > FIELD_LABEL_MAX_Y)
         {
-            point.vy = FIELD_LABEL_MAX_Y;
+            point.y = FIELD_LABEL_MAX_Y;
         }
 
-        if (point.vy < FIELD_LABEL_MIN_Y)
+        if (point.y < FIELD_LABEL_MIN_Y)
         {
-            point.vy = FIELD_LABEL_MIN_Y;
+            point.y = FIELD_LABEL_MIN_Y;
         }
 
-        button_or_x = point.vx;
+        button_or_x = point.x;
         text_ot = ot;
 
         if (g_field_selected_actor_label == index)
@@ -1129,38 +1126,38 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             text_color = FIELD_TEXT_COLOR_NORMAL;
         }
 
-        cursor = (u8*)field_draw_text((SPRT*)cursor, text_ot, ((FieldObjectState*)text_or_state)->name, text_color, button_or_x, (s32)point.vy,
+        cursor = (u8*)field_draw_text((SPRT*)cursor, text_ot, ((FieldObjectState*)text_or_state)->name, text_color, button_or_x, (s32)point.y,
                                       FIELD_TEXT_SHADOW | FIELD_TEXT_ALIGN_CENTER);
         left_glyph_ot = ot;
-        point.vy = (u16)point.vy - 8;
+        point.y = (u16)point.y - 8;
 
         if (g_field_selected_actor_label == index)
         {
             left_glyph_ot = ot - 1;
         }
 
-        cursor = (u8*)field_draw_sprite_glyph((u8*)cursor, (s32*)left_glyph_ot, FIELD_LABEL_LEFT_BRACKET, (s32*)&point,
-                                    g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
+        cursor = field_draw_sprite_glyph((SPRT*)cursor, left_glyph_ot, FIELD_LABEL_LEFT_BRACKET, &point,
+                                         g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
         right_glyph_ot = ot;
-        point.vx = (u16)point.vx + 8;
+        point.x = (u16)point.x + 8;
 
         if (g_field_selected_actor_label == index)
         {
             right_glyph_ot = ot - 1;
         }
 
-        cursor = (u8*)field_draw_sprite_glyph((u8*)cursor, (s32*)right_glyph_ot, FIELD_LABEL_RIGHT_BRACKET, (s32*)&point,
-                                    g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
+        cursor = field_draw_sprite_glyph((SPRT*)cursor, right_glyph_ot, FIELD_LABEL_RIGHT_BRACKET, &point,
+                                         g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
         number_ot = ot;
-        point.vx = (u16)point.vx + 8;
+        point.x = (u16)point.x + 8;
 
         if (g_field_selected_actor_label == index)
         {
             number_ot -= 1;
         }
 
-        cursor = (u8*)field_draw_sprite_number((s32*)number_ot, (void*)cursor, ((FieldObjectState*)text_or_state)->hud.bytes.flags >> 1, 2, (u16*)&point,
-                                    g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
+        cursor = field_draw_sprite_number(number_ot, cursor, ((FieldObjectState*)text_or_state)->hud.bytes.flags >> 1, 2, &point,
+                                          g_field_selected_actor_label == index ? FIELD_LABEL_SELECTED_DIGITS : FIELD_LABEL_NORMAL_DIGITS);
         if ((g_field_selected_actor_label == index) && (((FieldObjectState*)text_or_state)->hp_display.word >= 0))
         {
             highlight_part = &g_field_object_parts[bit_or_actor];
@@ -2038,14 +2035,14 @@ void field_run_name_entry(u8* initial_name, u8* active_name, s32 source_mode, s3
 
 /**
  * @brief Load ZUKAN.BIN and run the encyclopedia screen.
- * @param context Forwarded to the ZUKAN entry point; meaning not yet established.
+ * @param category Encyclopedia category to display.
  */
-void field_run_zukan(s32 context)
+void field_run_zukan(s32 category)
 {
     field_reset_actor_resources();
     cdrom_stream(CD_RES_ZUKAN_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
     cdrom_wait_queue_empty();
-    zukan_run(GNAME_RENDER_BUFFERS, context);
+    zukan_run(GNAME_RENDER_BUFFERS, category);
     field_reset_actor_resources();
 }
 

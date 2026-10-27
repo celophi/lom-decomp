@@ -34,7 +34,6 @@
  * @param destination Buffer with room for up to six two-byte digits and a null byte.
  * @param value Nonnegative value to format; 1000000 and up becomes full-width "MAX".
  * @return Pointer to the terminator.
- * @note Compiled into ADDHERO, CARDA and NIKI from src/common/sjis/format_decimal.inc.c.
  */
 s8* format_decimal(s8* destination, s32 value);
 

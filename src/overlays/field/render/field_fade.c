@@ -35,7 +35,7 @@ void field_reset_fade_state(void)
     g_field_fade_target.red = 0;
     g_field_fade_target.green = 0;
     g_field_fade_target.blue = 0;
-    g_field_fade_target.duration = 0;
+    g_field_fade_target.steps_remaining = 0;
 }
 
 /**
@@ -51,12 +51,12 @@ void field_update_and_render_fade(FieldRenderHalf* render_half)
     s32 db;
     s32 draw_mode;
 
-    if (g_field_fade_target.duration != 0)
+    if (g_field_fade_target.steps_remaining != 0)
     {
-        dr = (g_field_fade_target.red - g_field_fade_current.red) / g_field_fade_target.duration;
-        dg = (g_field_fade_target.green - g_field_fade_current.green) / g_field_fade_target.duration;
-        db = (g_field_fade_target.blue - g_field_fade_current.blue) / g_field_fade_target.duration;
-        g_field_fade_target.duration--;
+        dr = (g_field_fade_target.red - g_field_fade_current.red) / g_field_fade_target.steps_remaining;
+        dg = (g_field_fade_target.green - g_field_fade_current.green) / g_field_fade_target.steps_remaining;
+        db = (g_field_fade_target.blue - g_field_fade_current.blue) / g_field_fade_target.steps_remaining;
+        g_field_fade_target.steps_remaining--;
         g_field_fade_current.red += dr;
         g_field_fade_current.green += dg;
         g_field_fade_current.blue += db;
@@ -160,7 +160,7 @@ void field_set_fade_target_only(s16 red, s16 green, s16 blue, s16 duration)
  */
 void field_restore_fade_target(void)
 {
-    g_field_fade_target.duration = FIELD_FADE_DEFAULT_FRAMES;
+    g_field_fade_target.steps_remaining = FIELD_FADE_DEFAULT_FRAMES;
     g_field_fade_target.red = g_field_fade_restore_color.red;
     g_field_fade_target.green = g_field_fade_restore_color.green;
     g_field_fade_target.blue = g_field_fade_restore_color.blue;
@@ -172,7 +172,7 @@ void field_restore_fade_target(void)
  */
 void field_restore_fade_target_with_duration(s16 duration)
 {
-    g_field_fade_target.duration = duration;
+    g_field_fade_target.steps_remaining = duration;
     g_field_fade_target.red = g_field_fade_restore_color.red;
     g_field_fade_target.green = g_field_fade_restore_color.green;
     g_field_fade_target.blue = g_field_fade_restore_color.blue;

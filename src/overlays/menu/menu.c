@@ -45,8 +45,8 @@ s32 func_801405B0(RenderContext* render_buffers)
     g_menu_draw_buf_base[1].frame_parity = 1;
     menu_init();
     next_buffer = g_menu_draw_buf_base;
-    ClearOTagR(next_buffer->ot, MENU_OT_ENTRY_COUNT);
-    ClearOTagR(g_menu_draw_buf_base[1].ot, MENU_OT_ENTRY_COUNT);
+    ClearOTagR(next_buffer->ot, RENDER_CONTEXT_OT_ENTRY_COUNT);
+    ClearOTagR(g_menu_draw_buf_base[1].ot, RENDER_CONTEXT_OT_ENTRY_COUNT);
     VSync(0);
     PutDispEnv(&next_buffer->disp_env);
     update_controllers();
@@ -64,8 +64,8 @@ s32 func_801405B0(RenderContext* render_buffers)
     while (1)
     {
         draw_buffer = next_buffer;
-        ClearOTagR(draw_buffer->ot, MENU_OT_ENTRY_COUNT);
-        draw_buffer->prim_cursor = &draw_buffer->ot[MENU_OT_ENTRY_COUNT];
+        ClearOTagR(draw_buffer->ot, RENDER_CONTEXT_OT_ENTRY_COUNT);
+        draw_buffer->prim_cursor = &draw_buffer->ot[RENDER_CONTEXT_OT_ENTRY_COUNT];
         func_8006441C();
         menu_tick(draw_buffer);
         field_text_upload_immediate_cache();
@@ -398,10 +398,10 @@ void menu_build_grid(RenderContext* render_ctx)
  */
 void menu_upload_graphics(void)
 {
-    MenuTimVramLayout layout;
+    TimUploadDestination layout;
 
-    layout.texture_x = SCREEN_WIDTH;
-    layout.texture_y = 0;
+    layout.pixel_x = SCREEN_WIDTH;
+    layout.pixel_y = 0;
     layout.clut_x = 0;
     layout.clut_y = VRAM_CLUT_Y;
     menu_upload_tim(&layout);
@@ -419,7 +419,7 @@ void menu_state_init(void)
  * @brief Upload the menu texture and its two CLUTs to VRAM.
  * @param layout VRAM destinations for the texture and first CLUT; the second CLUT is placed on the following row.
  */
-void menu_upload_tim(const MenuTimVramLayout* layout)
+void menu_upload_tim(const TimUploadDestination* layout)
 {
     MenuTimAsset* asset = (MenuTimAsset*)g_menu_tim;
     Tim* tim = &asset->tim;
@@ -447,8 +447,8 @@ void menu_upload_tim(const MenuTimVramLayout* layout)
     LoadImage(&vram_rect, (u_long*)tim->clut_data);
 
     /* Upload the image block following the variable-length first CLUT. */
-    vram_rect.x = layout->texture_x;
-    vram_rect.y = layout->texture_y;
+    vram_rect.x = layout->pixel_x;
+    vram_rect.y = layout->pixel_y;
     {
         TimBlock* image_block = TIM_PIXEL_BLOCK(tim, clut_block_size);
         setWH(&vram_rect, image_block->dimensions.width, image_block->dimensions.height);
@@ -554,7 +554,7 @@ void menu_reset_slots(void)
  */
 void menu_update_slots(RenderContext* render_ctx)
 {
-    ScreenPos view_origin;
+    Vec2s view_origin;
     s32 unused_pad[2];
     s32 has_active_slot;
     s32 slot_index;
@@ -662,7 +662,7 @@ void menu_update_slots(RenderContext* render_ctx)
 void menu_draw_window_transition(RenderContext* render_ctx, MenuSlot* slot, s32 cursor_enable)
 {
     MenuRect rect;
-    ScreenPos view_origin;
+    Vec2s view_origin;
     s32 inset_x;
     s32 inset_y;
     s32 width;
@@ -706,11 +706,11 @@ void menu_draw_window_transition(RenderContext* render_ctx, MenuSlot* slot, s32 
  * @param view_origin View-origin offset forwarded to the content callback.
  * @param cursor_enable Cursor-highlight enable for the active slot.
  */
-void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect, ScreenPos* view_origin, s32 cursor_enable)
+void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect, Vec2s* view_origin, s32 cursor_enable)
 {
     MenuRectU16 window_rect;
     DRAWENV content_draw_env;
-    ScreenPos title_pos;
+    Vec2s title_pos;
     s32 content_draw_y;
     s32 draw_cursor;
     u_long* ot_entry;
@@ -781,7 +781,7 @@ void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect,
             {
                 packet_cursor = field_draw_sprite_number(ot_entry, packet_cursor, 0, 3, &title_pos, 0);
             }
-            packet_cursor = field_draw_sprite_glyph(packet_cursor, ot_entry, 0xB, &title_pos, 0);
+            packet_cursor = field_draw_sprite_glyph((SPRT*)packet_cursor, ot_entry, FIELD_DIGIT_GLYPH_SEPARATOR, &title_pos, 0);
             title_pos.x += 8;
             packet_cursor = field_draw_sprite_number(ot_entry, packet_cursor, slot->navigation.fields.count_and_ot & MENU_ITEM_NAV_INDEX_MASK, 3, &title_pos, 0);
             switch (g_menu_scene_type)
@@ -791,7 +791,7 @@ void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect,
             case 19:
             case 22:
             case 25:
-                packet_cursor = field_draw_sprite_glyph(packet_cursor, ot_entry, 0xB, &title_pos, 0);
+                packet_cursor = field_draw_sprite_glyph((SPRT*)packet_cursor, ot_entry, FIELD_DIGIT_GLYPH_SEPARATOR, &title_pos, 0);
                 title_pos.x += 8;
                 packet_cursor = field_draw_sprite_number(ot_entry, packet_cursor, menu_count_inventory_items(), 3, &title_pos, 0);
                 break;
@@ -1010,7 +1010,7 @@ u_long* menu_build_v_edge(u_long* packet_cursor, u_long* ot_entry, const MenuRec
  * @param value Selects the nonnegative or negative label.
  * @return Updated primitive buffer location.
  */
-u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos* position, s32 value)
+u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const Vec2s* position, s32 value)
 {
     u8 label_buffer[MENU_LABEL_BUFFER_SIZE];
 

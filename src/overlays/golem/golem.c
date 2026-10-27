@@ -10,6 +10,8 @@
 #include "common/pad.h"
 #include "main/display.h"
 #include "common/gpu_packet.h"
+#include "common/render_context.h"
+#include "common/screen_fade.h"
 #include "common/tim.h"
 #include <libetc.h>
 #include <libgte.h>
@@ -17,8 +19,6 @@
 #include "overlays/menu/menu.h"
 #include "overlays/field/field_input.h"
 
-#define GOLEM_ORDERING_TABLE_SIZE 16
-#define GOLEM_PACKET_BUFFER_SIZE 0x4000
 #define GOLEM_PANEL_COUNT 154
 #define GOLEM_BLOCK_LIST_ROW_HEIGHT 40
 #define GOLEM_SCROLL_FRAMES 4
@@ -81,8 +81,8 @@ typedef enum
 /** @brief One frame's ordering table, GPU packets, and VRAM environments. */
 typedef struct
 {
-    u_long ordering_table[GOLEM_ORDERING_TABLE_SIZE];
-    u8 packets[GOLEM_PACKET_BUFFER_SIZE];
+    u_long ordering_table[RENDER_CONTEXT_OT_ENTRY_COUNT];
+    u8 packets[FRAME_PRIMITIVE_BUFFER_SIZE];
     u8* packet_cursor;
     RECT clear_rect;
     s32 buffer_index;
@@ -116,15 +116,6 @@ typedef struct
     u16 height;
     u16 reserved;
 } GolemPanelRecord;
-
-/** @brief VRAM destinations for a TIM image and its CLUT. */
-typedef struct
-{
-    u16 x;
-    u16 y;
-    u16 clut_x;
-    u16 clut_y;
-} GolemImageClutPos;
 
 /** @brief Shared placement information for all rotations of a logic-block icon. */
 typedef struct
@@ -178,15 +169,6 @@ typedef struct
     u16 height;
 } GolemGlyphMetric;
 
-/** @brief Fade color and its remaining interpolation step count. */
-typedef struct
-{
-    s16 red;
-    s16 green;
-    s16 blue;
-    s16 steps_remaining;
-} GolemFadeState;
-
 /** @brief Byte offsets of the name and description sections from the archive header. */
 typedef struct
 {
@@ -212,7 +194,6 @@ extern GolemRenderContext* g_golem_render_buffers;
 extern s32 g_golem_exit_requested;
 /** @brief Word-aligned scratch memory after the render contexts. */
 extern u8* g_golem_work_buffer;
-extern GolemFadeState g_golem_fade_target;
 extern s32 g_golem_scroll_steps;
 extern s32 g_golem_logic_block_count;
 extern s32 g_golem_grid_size_class;
@@ -220,7 +201,6 @@ extern s32 g_golem_scroll_y;
 extern GolemLogicBlockStatus g_golem_block_status[];
 extern s32 g_golem_is_placing_block;
 extern s32 g_golem_scroll_target_y;
-extern GolemFadeState g_golem_fade_current;
 extern s32 g_golem_block_x;
 extern s32 g_golem_block_y;
 extern s32 g_golem_cursor_steps;
@@ -253,7 +233,6 @@ void func_800A3938(s32 sound_id, s32 pan);
 void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel);
 u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel);
 void golem_upload_ui_image(void);
-void golem_upload_image_archive(GolemImageClutPos* destinations, TimPrefix* tim);
 void golem_update_frame(GolemRenderContext* render_context);
 void golem_handle_input(void);
 void golem_reset_block_position(void);
@@ -268,9 +247,6 @@ u8* golem_draw_logic_grid(u8* packet_cursor, GolemRenderContext* render_context)
 u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index, s32 x, s32 y, s32 width, s32 height);
 u8* golem_draw_composite_icon(u8* packet_cursor, u_long* ordering_table, s32 block_index, s32 rotation, s32 x, s32 y, s32 clut, s32 use_origin, s32 style);
 u8* golem_emit_glyph(u8* packet_cursor, u_long* ordering_table, s32 glyph_id, s32 x, s32 y, s32 clut, s32 style);
-LINE_F2* golem_emit_panel_outline(LINE_F2* packet, u_long* ordering_table, s32 x, s32 y, s32 width, s32 height, s32 color);
-void golem_set_fade_target(s16 red, s16 green, s16 blue, s16 steps);
-u8* golem_render_fade(u8* packet_cursor, u_long* ordering_table_tag);
 
 /**
  * @brief Run the golem logic-grid editor until the user exits.
@@ -305,8 +281,8 @@ void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel)
     g_golem_work_buffer = (u8*)ALIGN4(golem_initialize_state((u8*)render_buffers, restore_slot_on_cancel));
 
     next_buffer = g_golem_render_buffers;
-    ClearOTagR(next_buffer->ordering_table, GOLEM_ORDERING_TABLE_SIZE);
-    ClearOTagR(g_golem_render_buffers[1].ordering_table, GOLEM_ORDERING_TABLE_SIZE);
+    ClearOTagR(next_buffer->ordering_table, RENDER_CONTEXT_OT_ENTRY_COUNT);
+    ClearOTagR(g_golem_render_buffers[1].ordering_table, RENDER_CONTEXT_OT_ENTRY_COUNT);
     VSync(0);
     PutDispEnv(&next_buffer->display_env);
     update_controllers();
@@ -314,7 +290,7 @@ void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel)
     while (1)
     {
         draw_buffer = next_buffer;
-        ClearOTagR(draw_buffer->ordering_table, GOLEM_ORDERING_TABLE_SIZE);
+        ClearOTagR(draw_buffer->ordering_table, RENDER_CONTEXT_OT_ENTRY_COUNT);
         draw_buffer->packet_cursor = draw_buffer->packets;
         field_text_reset_scratch();
         field_update_input_repeat();
@@ -396,7 +372,7 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
     g_golem_selected_block = 0;
     golem_upload_ui_image();
     field_reset_input_repeat();
-    golem_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, 6);
+    set_screen_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, SCREEN_FADE_STEPS);
     D_8014C26C = 0;
     g_golem_interpolation_target = 0;
     g_golem_interpolation_value = 0;
@@ -409,45 +385,16 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
  */
 void golem_upload_ui_image(void)
 {
-    GolemImageClutPos destinations;
+    TimUploadDestination destinations;
 
-    destinations.x = SCREEN_WIDTH;
-    destinations.y = 0;
+    destinations.pixel_x = SCREEN_WIDTH;
+    destinations.pixel_y = 0;
     destinations.clut_x = 0;
     destinations.clut_y = VRAM_CLUT_Y;
-    golem_upload_image_archive(&destinations, &g_golem_ui_image);
+    upload_tim_to_vram(&destinations, &g_golem_ui_image);
 }
 
-/**
- * @brief Upload the editor TIM image and flatten its palettes into one VRAM row.
- * @param destinations VRAM destinations for the image and CLUT blocks.
- * @param tim TIM resource containing 256 palette entries.
- * @note Requires a CLUT block; CLUT-less TIM files are not supported.
- */
-void golem_upload_image_archive(GolemImageClutPos* destinations, TimPrefix* tim)
-{
-    RECT upload_rect;
-    s32 flags;
-    s32 clut_block_size;
-    TimDimensions* pixel_dimensions;
-
-    flags = tim->flags;
-    clut_block_size = tim->clut_block.bnum;
-
-    if (flags & TIM_FLAG_HAS_CLUT)
-    {
-        setRECT(&upload_rect, destinations->clut_x, destinations->clut_y, CLUT_ENTRY_COUNT, 1);
-        LoadImage(&upload_rect, (u_long*)tim->clut_data);
-        pixel_dimensions = &TIM_PIXEL_BLOCK(tim, clut_block_size)->dimensions;
-    }
-    else
-    {
-        pixel_dimensions = &tim->clut_block.dimensions;
-    }
-
-    setRECT(&upload_rect, destinations->x, destinations->y, pixel_dimensions->width, pixel_dimensions->height);
-    LoadImage(&upload_rect, (u_long*)(TIM_PIXEL_BLOCK(tim, clut_block_size) + 1));
-}
+#include "../../common/tim/upload_tim_to_vram.inc.c"
 
 /**
  * @brief Render and update one editor frame.
@@ -943,7 +890,7 @@ void golem_render(GolemRenderContext* render_context)
                                         0xA0, 0xB0, FIELD_TEXT_ALIGN_CENTER);
     }
 
-    render_context->packet_cursor = golem_render_fade(packet_cursor, &render_context->ordering_table[GOLEM_LAYER_FADE]);
+    render_context->packet_cursor = render_screen_fade((TILE*)packet_cursor, &render_context->ordering_table[GOLEM_LAYER_FADE]);
 }
 
 /**
@@ -1346,156 +1293,9 @@ u8* golem_emit_glyph(u8* packet_cursor, u_long* ordering_table, s32 glyph_id, s3
     return packet_cursor + sizeof(SPRT);
 }
 
-/**
- * @brief Emit a rectangle outline as four LINE_F2 packets (top, right,
- *        bottom, left) linked into the ordering table.
- * @param packet Running packet cursor; one 0x10-byte packet per edge.
- * @param ordering_table Ordering-table tag for the line packets.
- * @param x     Left edge x.
- * @param y     Top edge y.
- * @param width Rectangle width.
- * @param height Rectangle height.
- * @param color Packed BGR line color.
- * @return Packet cursor after four line packets.
- */
-LINE_F2* golem_emit_panel_outline(LINE_F2* packet, u_long* ordering_table, s32 x, s32 y, s32 width, s32 height, s32 color)
-{
-    SET_BGR0_PACKED(packet, color);
-    setLineF2(packet);
-    setXY0(packet, x, y);
-    packet->x1 = x + width;
-    packet->y1 = y;
-    addPrim(ordering_table, packet);
-    packet++;
-
-    SET_BGR0_PACKED(packet, color);
-    setLineF2(packet);
-    setXY0(packet, x + width, y);
-    packet->x1 = x + width;
-    packet->y1 = y + height;
-    addPrim(ordering_table, packet);
-    packet++;
-
-    SET_BGR0_PACKED(packet, color);
-    setLineF2(packet);
-    setXY0(packet, x + width, y + height);
-    packet->x1 = x;
-    packet->y1 = y + height;
-    addPrim(ordering_table, packet);
-    packet++;
-
-    SET_BGR0_PACKED(packet, color);
-    setLineF2(packet);
-    setXY0(packet, x, y);
-    packet->x1 = x;
-    packet->y1 = y + height;
-    addPrim(ordering_table, packet);
-    return packet + 1;
-}
-
-/**
- * @brief Set the screen-fade target color and step count.
- * @param red Target red component (0x100 = neutral).
- * @param green Target green component.
- * @param blue Target blue component.
- * @param steps Number of frames to reach the target.
- */
-void golem_set_fade_target(s16 red, s16 green, s16 blue, s16 steps)
-{
-    g_golem_fade_target.red = red;
-    g_golem_fade_target.green = green;
-    g_golem_fade_target.blue = blue;
-    g_golem_fade_target.steps_remaining = steps;
-}
-
-/**
- * @brief Step the current fade color toward the target, then emit a
- *        full-screen semi-transparent TILE plus its draw-mode packet unless
- *        the fade sits at neutral (0x100/0x100/0x100).
- * @param packet_cursor Next free byte in the GPU packet buffer.
- * @param ordering_table_tag  Ordering-table tag the packets are linked into.
- * @return The advanced packet cursor.
- */
-u8* golem_render_fade(u8* packet_cursor, u_long* ordering_table_tag)
-{
-    s32 red_step;
-    s32 green_step;
-    s32 blue_step;
-    s32 draw_mode;
-    DR_TPAGE* draw_mode_packet;
-
-    if (g_golem_fade_target.steps_remaining != 0)
-    {
-        red_step = (g_golem_fade_target.red - g_golem_fade_current.red) / g_golem_fade_target.steps_remaining;
-        green_step = (g_golem_fade_target.green - g_golem_fade_current.green) / g_golem_fade_target.steps_remaining;
-        blue_step = (g_golem_fade_target.blue - g_golem_fade_current.blue) / g_golem_fade_target.steps_remaining;
-        g_golem_fade_target.steps_remaining = g_golem_fade_target.steps_remaining - 1;
-        g_golem_fade_current.red = g_golem_fade_current.red + red_step;
-        g_golem_fade_current.green = g_golem_fade_current.green + green_step;
-        g_golem_fade_current.blue = g_golem_fade_current.blue + blue_step;
-    }
-    else
-    {
-        g_golem_fade_current.red = g_golem_fade_target.red;
-        g_golem_fade_current.green = g_golem_fade_target.green;
-        g_golem_fade_current.blue = g_golem_fade_target.blue;
-    }
-    if ((g_golem_fade_current.red != FADE_NEUTRAL) || (g_golem_fade_current.green != g_golem_fade_current.red) ||
-        (g_golem_fade_current.blue != g_golem_fade_current.green))
-    {
-        if (g_golem_fade_current.red >= FADE_ADDITIVE_THRESHOLD)
-        {
-            setRGB0((TILE*)packet_cursor, g_golem_fade_current.red - 1, g_golem_fade_current.green - 1, g_golem_fade_current.blue - 1);
-        }
-        else
-        {
-            if (g_golem_fade_current.red == FADE_NEUTRAL)
-            {
-                ((TILE*)packet_cursor)->r0 = 0;
-            }
-            else
-            {
-                ((TILE*)packet_cursor)->r0 = ~g_golem_fade_current.red;
-            }
-            if (g_golem_fade_current.green == FADE_NEUTRAL)
-            {
-                ((TILE*)packet_cursor)->g0 = 0;
-            }
-            else
-            {
-                ((TILE*)packet_cursor)->g0 = ~g_golem_fade_current.green;
-            }
-            if (g_golem_fade_current.blue == FADE_NEUTRAL)
-            {
-                ((TILE*)packet_cursor)->b0 = 0;
-            }
-            else
-            {
-                ((TILE*)packet_cursor)->b0 = ~g_golem_fade_current.blue;
-            }
-        }
-
-        setTile((TILE*)packet_cursor);
-        setSemiTrans((TILE*)packet_cursor, 1);
-        ((TILE*)packet_cursor)->w = SCREEN_WIDTH;
-        draw_mode = BLEND_ADD_TPAGE;
-        SET_YX0((TILE*)packet_cursor, 0, 0);
-        ((TILE*)packet_cursor)->h = SCREEN_HEIGHT;
-        addPrim(ordering_table_tag, (TILE*)packet_cursor);
-
-        packet_cursor += sizeof(TILE);
-        if (g_golem_fade_current.red < FADE_ADDITIVE_THRESHOLD)
-        {
-            draw_mode = BLEND_SUBTRACT_TPAGE;
-        }
-        draw_mode_packet = (DR_TPAGE*)packet_cursor;
-        setDrawTPage(draw_mode_packet, 0, 0, draw_mode);
-        addPrim(ordering_table_tag, draw_mode_packet);
-
-        packet_cursor += sizeof(DR_TPAGE);
-    }
-    return packet_cursor;
-}
+#include "../../common/panel_outline/emit_panel_outline.inc.c"
+#include "../../common/screen_fade/set_screen_fade_target.inc.c"
+#include "../../common/screen_fade/render_screen_fade.inc.c"
 
 #include "../../common/encoded_text/encoded_text_append.inc.c"
 #include "../../common/encoded_text/encoded_text_byte_length.inc.c"

@@ -74,10 +74,26 @@
 #define FIELD_CHARACTER_STAT_COUNT 8
 /** @brief Number of pet records. */
 #define PET_RECORD_COUNT 5
+/** @brief Bits in each u32 word of the saved game's bit sets (encyclopedia, abilities, techniques, flags). */
+#define SAVED_BITS_PER_WORD 32
+/** @brief Nonzero when bit @p bit of the u32 bit set @p words is set. */
+#define SAVED_BIT_IS_SET(words, bit) ((words)[(bit) / SAVED_BITS_PER_WORD] & (1 << ((bit) % SAVED_BITS_PER_WORD)))
+/** @brief Set bit @p bit of the u32 bit set @p words. */
+#define SAVED_BIT_SET(words, bit) ((words)[(bit) / SAVED_BITS_PER_WORD] = (words)[(bit) / SAVED_BITS_PER_WORD] | (1 << ((bit) % SAVED_BITS_PER_WORD)))
 /** @brief Words of SavedGameLayout::encyclopedia_bits (1024 entries). */
 #define FIELD_ENCYCLOPEDIA_BIT_WORDS 32
+/** @brief Lands with encyclopedia bits of their own: every FieldLandId before FIELD_LAND_LUCEMIA_2. */
+#define FIELD_ENCYCLOPEDIA_LAND_COUNT FIELD_LAND_LUCEMIA_2
+/** @brief Encyclopedia bit of land id 0's entry; set from FIELD_LAND_FLAG_02, one bit per land. */
+#define FIELD_ENCYCLOPEDIA_LAND_BIT 0x200
+/** @brief Encyclopedia bit of land id 0's artifact entry; set once the land is placed, one bit per land. */
+#define FIELD_ENCYCLOPEDIA_ARTIFACT_BIT 0x240
+/** @brief Encyclopedia bit set from land id 0's FIELD_LAND_FLAG_02 for its artifact entry, one bit per land. */
+#define FIELD_ENCYCLOPEDIA_ARTIFACT_FLAG_02_BIT 0x280
 /** @brief Weapon categories (technique masks and weapon proficiency slots). */
 #define FIELD_WEAPON_CATEGORY_COUNT 11
+/** @brief Techniques of each weapon category: the used low bits of its technique_bits word. */
+#define FIELD_TECHNIQUES_PER_WEAPON 24
 /** @brief Abilities with a proficiency counter. */
 #define FIELD_ABILITY_COUNT 88
 /** @brief Words of the learned-ability bit set. */
@@ -910,6 +926,9 @@ typedef union
 } SavedGame;
 
 extern SavedGame g_saved_game;
+
+/** @brief g_saved_game's SavedGameLayout::encyclopedia_bits, under a symbol of its own. */
+extern u32 g_saved_encyclopedia_bits[FIELD_ENCYCLOPEDIA_BIT_WORDS];
 
 /** @brief Pointer to g_saved_game.layout, bound by field_bind_saved_game_context. */
 extern SavedGameLayout* g_saved_game_ctx;

@@ -29,8 +29,7 @@ enum
     GNAME_OT_GLYPH_APPEND_ANIM = 0x0C,
     GNAME_OT_GLYPH_APPEND = 0x0D,
     GNAME_OT_NAME_STRIP = 0x0E,
-    GNAME_OT_LAYOUT_BACKGROUND = 0x0F,
-    GNAME_OT_ENTRY_COUNT
+    GNAME_OT_LAYOUT_BACKGROUND = 0x0F
 };
 
 /* Null-terminated variable-width name encoding. */
@@ -342,15 +341,6 @@ typedef struct
     s32 steps_remaining;
 } FadeState;
 
-/** @brief Pixel and CLUT destinations for a TIM upload. */
-typedef struct
-{
-    s16 pixel_x;
-    s16 pixel_y;
-    s16 clut_x;
-    s16 clut_y;
-} TimUploadCoords;
-
 /** @brief DRAWENV scratch with one trailing stack word. */
 typedef union
 {
@@ -471,7 +461,7 @@ static void reset_fade_state(void);
 static void render_fade_overlay(RenderContext* render_ctx);
 static void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count);
 static void load_name_entry_tim(void);
-static void load_tim_to_vram(const TimUploadCoords* upload_coords);
+static void load_tim_to_vram(const TimUploadDestination* upload_coords);
 static void gname_update_state(void);
 static void reset_run_state(void);
 static s32 handle_navigation_input(s32 mode, s32 buttons);
@@ -549,8 +539,8 @@ s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_
 
     /* Clear both ordering tables before enabling display output. */
     next_buffer = g_render_buf_base;
-    ClearOTagR(next_buffer->ot, GNAME_OT_ENTRY_COUNT);
-    ClearOTagR(g_render_buf_base[GNAME_RENDER_BUFFER_B].ot, GNAME_OT_ENTRY_COUNT);
+    ClearOTagR(next_buffer->ot, RENDER_CONTEXT_OT_ENTRY_COUNT);
+    ClearOTagR(g_render_buf_base[GNAME_RENDER_BUFFER_B].ot, RENDER_CONTEXT_OT_ENTRY_COUNT);
     VSync(0);
     PutDispEnv(&next_buffer->disp_env);
     update_controllers();
@@ -561,8 +551,8 @@ s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_
     while (1)
     {
         draw_buffer = next_buffer;
-        ClearOTagR(draw_buffer->ot, GNAME_OT_ENTRY_COUNT);
-        draw_buffer->prim_cursor = &draw_buffer->ot[GNAME_OT_ENTRY_COUNT];
+        ClearOTagR(draw_buffer->ot, RENDER_CONTEXT_OT_ENTRY_COUNT);
+        draw_buffer->prim_cursor = &draw_buffer->ot[RENDER_CONTEXT_OT_ENTRY_COUNT];
         field_text_reset_scratch();
         field_update_input_repeat();
         render_fade_overlay(draw_buffer);
@@ -782,7 +772,7 @@ void gname_init(void)
  */
 static void load_name_entry_tim(void)
 {
-    TimUploadCoords upload_coords;
+    TimUploadDestination upload_coords;
 
     upload_coords.pixel_x = SCREEN_WIDTH;
     upload_coords.pixel_y = 0;
@@ -796,7 +786,7 @@ static void load_name_entry_tim(void)
  * @param upload_coords Pixel and CLUT upload destinations.
  * @see https://decomp.me/scratch/P3W9C (100%)
  */
-static void load_tim_to_vram(const TimUploadCoords* upload_coords)
+static void load_tim_to_vram(const TimUploadDestination* upload_coords)
 {
     RECT upload_rect;
     TimBlock* pixel_block;

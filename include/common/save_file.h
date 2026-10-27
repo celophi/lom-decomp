@@ -10,9 +10,7 @@
  * @brief Save-file checksum, card-title and file-name functions compiled into ADDHERO, CARDA, CLOAD and NIKI.
  *
  * They check a save file's checksum, zero-fill its card title after the text,
- * and read and write the hex serial in its file name. Each overlay includes them from
- * src/common/save_file/<function>.inc.c at the point where they sit in its
- * binary, so every overlay still links its own copy.
+ * and read and write the hex serial in its file name.
  */
 
 /** @brief Hex digit layout used to format a 32-bit value. */

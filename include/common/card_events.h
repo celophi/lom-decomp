@@ -9,10 +9,7 @@
  *
  * Psy-Q reports memory-card results through two groups of events, software
  * (SwCARD) and hardware (HwCARD), each with I/O complete, error, timeout and
- * new-card events. Each overlay includes these functions from
- * src/common/card_events/<function>.inc.c at the point where they sit in its binary
- * and maps the globals below to its own data, so every overlay still links its
- * own copy.
+ * new-card events.
  */
 
 /** @brief Memory-card channel of card slot @p slot (port in the high nibble). */

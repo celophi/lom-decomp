@@ -1,7 +1,3 @@
-/*
- * Shared Shift-JIS number formatting; see include/common/sjis.h. Included by each
- * overlay that has it, at the point where it sits in that overlay's binary.
- */
 #include "common/sjis.h"
 
 /**

@@ -2,6 +2,8 @@
 #define FIELD_FADE_H
 
 #include "common.h"
+
+#include "main/display.h"
 #include "main/field_runtime.h"
 
 /**
@@ -19,19 +21,6 @@
 /** @brief Channel level of the dimmed scene behind modal windows and result screens. */
 #define FIELD_FADE_MODAL_LEVEL 0xC0
 
-/**
- * @brief Fade color triple plus its remaining step count.
- * @note @c duration is the transition length in frames when set as a target,
- *       and the number of remaining interpolation steps while the fade runs.
- */
-typedef struct
-{
-    s16 red;
-    s16 green;
-    s16 blue;
-    s16 duration;
-} FieldFade;
-
 /** @brief Saved fade color with no step/duration field. */
 typedef struct
 {
@@ -41,10 +30,10 @@ typedef struct
 } FieldFadeColor;
 
 /** @brief Fade color shown this frame. */
-extern FieldFade g_field_fade_current;
+extern ScreenFade g_field_fade_current;
 
 /** @brief Fade color being approached and the frames left to reach it. */
-extern FieldFade g_field_fade_target;
+extern ScreenFade g_field_fade_target;
 
 /** @brief Fade color restored when a modal window closes. */
 extern FieldFadeColor g_field_fade_restore_color;
@@ -53,12 +42,12 @@ extern FieldFadeColor g_field_fade_restore_color;
 #define FIELD_SET_FADE_TARGET(red_level, green_level, blue_level, frames)                                                                                      \
     (g_field_fade_target.red = (red_level), g_field_fade_restore_color.red = (red_level), g_field_fade_target.green = (green_level),                           \
      g_field_fade_restore_color.green = (green_level), g_field_fade_target.blue = (blue_level), g_field_fade_restore_color.blue = (blue_level),                \
-     g_field_fade_target.duration = (frames))
+     g_field_fade_target.steps_remaining = (frames))
 
 /** @brief Set the fade target without touching the restore color. */
 #define FIELD_SET_FADE_TARGET_ONLY(red_level, green_level, blue_level, frames)                                                                                 \
     (g_field_fade_target.red = (red_level), g_field_fade_target.green = (green_level), g_field_fade_target.blue = (blue_level),                                \
-     g_field_fade_target.duration = (frames))
+     g_field_fade_target.steps_remaining = (frames))
 
 /**
  * @brief Set both the target and saved restore color for the field fade.

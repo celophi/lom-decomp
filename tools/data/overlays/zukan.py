@@ -3,8 +3,8 @@
 
 The build links one data blob after the code and one rodata blob of entry
 tables before it. Readers return Parts; the byte maps cover both inputs. The
-overlay's entry function, zukan_run, sits between the tables and the C code in
-a rodatabin of its own; it is code, so it is not an input here.
+code starts right after the tables with the overlay's entry function,
+zukan_run.
 
 The data blob starts with a four-section archive: the page and border
 textures, the entry names and the category names. Both textures upload their

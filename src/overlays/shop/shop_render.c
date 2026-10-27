@@ -205,7 +205,8 @@ u8* shop_draw_money_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
     s32 y;
 
     y = 2 - y_inset;
-    prim = field_draw_text((SPRT*)prim, ot, FIELD_UI_TEXT_AT(D_800EC3C4, 0), FIELD_TEXT_COLOR_NORMAL, SHOP_MONEY_LABEL_X - x_inset, y, FIELD_TEXT_ALIGN_LEFT);
+    prim = field_draw_text((SPRT*)prim, ot, FIELD_UI_TEXT_AT(g_field_ui_text_table, 0), FIELD_TEXT_COLOR_NORMAL, SHOP_MONEY_LABEL_X - x_inset, y,
+                           FIELD_TEXT_ALIGN_LEFT);
     position.x = SHOP_MONEY_VALUE_X - x_inset;
     position.y = y;
     if (g_saved_game_ctx->money > SHOP_MAX_MONEY)
@@ -281,7 +282,7 @@ u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
 
                     low = D_800EC3E0[0];
                     high = empty_text[1];
-                    base_addr = (uintptr_t)D_800EC3C4;
+                    base_addr = (uintptr_t)g_field_ui_text_table;
                     based = (high << 8) + base_addr;
                     prim = field_draw_text((SPRT*)prim, ot, (u8*)(low + based), FIELD_TEXT_COLOR_NORMAL, name_x, y, FIELD_TEXT_ALIGN_CENTER);
                 }
@@ -318,8 +319,8 @@ u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
                         {
                             prim = field_draw_number(ot, (SPRT*)prim, price, FIELD_TEXT_COLOR_DIM, position_ptr, FIELD_TEXT_ALIGN_LEFT);
                         }
-                        prim = field_draw_text((SPRT*)prim, ot, D_800EC3C4 + D_800EC3DC[0] + (D_800EC3DC[1] << 8), FIELD_TEXT_COLOR_NORMAL, 172 - x, y,
-                                               FIELD_TEXT_ALIGN_LEFT);
+                        prim = field_draw_text((SPRT*)prim, ot, g_field_ui_text_table + D_800EC3DC[0] + (D_800EC3DC[1] << 8), FIELD_TEXT_COLOR_NORMAL, 172 - x,
+                                               y, FIELD_TEXT_ALIGN_LEFT);
                         position.x = 184 - x;
                         prim = field_draw_number(ot, (SPRT*)prim, g_shop_quantity, FIELD_TEXT_COLOR_NORMAL, position_ptr, FIELD_TEXT_ALIGN_LEFT);
                     }
@@ -525,6 +526,6 @@ u8* shop_draw_title_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
     s32 entry;
 
     entry = g_shop_title_text_id * 2;
-    return field_draw_text((SPRT*)prim, ot, D_800EC3C4 + D_800EC3C4[entry] + (D_800EC3C4[entry + 1] << 8), FIELD_TEXT_COLOR_NORMAL, SHOP_TITLE_TEXT_X - x_inset,
-                           2 - y_inset, FIELD_TEXT_ALIGN_CENTER);
+    return field_draw_text((SPRT*)prim, ot, g_field_ui_text_table + g_field_ui_text_table[entry] + (g_field_ui_text_table[entry + 1] << 8),
+                           FIELD_TEXT_COLOR_NORMAL, SHOP_TITLE_TEXT_X - x_inset, 2 - y_inset, FIELD_TEXT_ALIGN_CENTER);
 }

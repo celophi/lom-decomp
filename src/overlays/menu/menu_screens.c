@@ -1002,11 +1002,11 @@ s32 menu_build_special_technique_nav_entries(void)
     group_index = 0;
     none_index = selected_index;
     group_flags_ptr = (s32*)((u8*)g_saved_game_ctx + MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET);
-    while (group_index < MENU_SPECIAL_TECHNIQUE_GROUP_COUNT)
+    while (group_index < FIELD_WEAPON_CATEGORY_COUNT)
     {
         bit_mask = 1;
         group_flags = *group_flags_ptr;
-        index = MENU_SPECIAL_TECHNIQUES_PER_GROUP - 1;
+        index = FIELD_TECHNIQUES_PER_WEAPON - 1;
 
         while (index >= 0)
         {
@@ -2729,10 +2729,10 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                 {
                     ltemp = field_draw_sprite_number(ot_entry, packet_cursor, 0, 3, &pos, 0);
                 }
-                ltemp = field_draw_sprite_glyph(ltemp, ot_entry, 0xB, &pos, 0);
+                ltemp = field_draw_sprite_glyph(ltemp, ot_entry, FIELD_DIGIT_GLYPH_SEPARATOR, &pos, 0);
                 pos.x += 8;
                 ltemp = field_draw_sprite_number(ot_entry, ltemp, g_menu_page_count, 3, &pos, 0);
-                ltemp = field_draw_sprite_glyph(ltemp, ot_entry, 0xB, &pos, 0);
+                ltemp = field_draw_sprite_glyph(ltemp, ot_entry, FIELD_DIGIT_GLYPH_SEPARATOR, &pos, 0);
                 pos.x += 8;
                 packet_cursor = field_draw_sprite_number(ot_entry, ltemp, menu_count_inventory_items(), 3, &pos, 0);
             }

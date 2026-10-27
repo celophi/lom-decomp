@@ -299,7 +299,7 @@ void field_close_dialog_screen(void)
     g_field_fade_target.red = g_field_fade_restore_color.red;
     g_field_fade_target.green = g_field_fade_restore_color.green;
     g_field_fade_target.blue = g_field_fade_restore_color.blue;
-    g_field_fade_target.duration = FIELD_FADE_DEFAULT_FRAMES;
+    g_field_fade_target.steps_remaining = FIELD_FADE_DEFAULT_FRAMES;
     field_text_reset_windows();
 
     g_field_dialog_screen_mode = 0;

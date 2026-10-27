@@ -1,5 +1,6 @@
 #include "../internal/wmap_land_layout.h"
 #include "../internal/wmap_pathfinding.h"
+#include "common/saved_game.h"
 #include "main/field_entry.h"
 #include <abs.h>
 
@@ -10,7 +11,6 @@
  */
 
 #define WMAP_NODE_RECORD_SIZE 12
-#define WMAP_SET_BIT(index) D_800460AC[(index) / 32] = D_800460AC[(index) / 32] | (1 << ((index) % 32))
 
 #define WMAP_ROUTE_NODE_COUNT 64
 #define WMAP_ROUTE_UNVISITED_DISTANCE 100
@@ -54,7 +54,6 @@ extern u8 D_80043390;
 extern u8 D_80043391;
 extern s8 D_800433E4;
 extern u8 D_800433E5;
-extern u32 D_800460AC[];
 extern s32 D_800460EC;
 extern s32 D_800460FC;
 extern u8 D_800D01B0[];
@@ -62,32 +61,32 @@ extern u8 D_800D01F0[];
 extern s16 g_music_track_index;
 
 /**
- * @brief Rebuild the world-map reachability bitmaps from the per-node flag bytes.
+ * @brief Unlock the encyclopedia entries of the lands and their artifacts from the land records.
  */
-void func_8005DBB8(void)
+void wmap_unlock_land_encyclopedia_entries(void)
 {
     s32 i;
 
-    for (i = 0; i < 0x21; i++)
+    for (i = 0; i < FIELD_ENCYCLOPEDIA_LAND_COUNT; i++)
     {
         if ((D_800432C8[i * WMAP_NODE_RECORD_SIZE] >> 1) & 1)
         {
-            WMAP_SET_BIT(i + 0x200);
+            SAVED_BIT_SET(g_saved_encyclopedia_bits, i + FIELD_ENCYCLOPEDIA_LAND_BIT);
         }
     }
     if (g_wmap_replacement_land_status & 4)
     {
         D_800460EC |= 0x01000000;
     }
-    for (i = 0; i < 0x21; i++)
+    for (i = 0; i < FIELD_ENCYCLOPEDIA_LAND_COUNT; i++)
     {
-        if (D_800432C8[i * WMAP_NODE_RECORD_SIZE] & 1)
+        if (D_800432C8[i * WMAP_NODE_RECORD_SIZE] & FIELD_LAND_PLACED)
         {
-            WMAP_SET_BIT(i + 0x240);
+            SAVED_BIT_SET(g_saved_encyclopedia_bits, i + FIELD_ENCYCLOPEDIA_ARTIFACT_BIT);
         }
         if ((D_800432C8[i * WMAP_NODE_RECORD_SIZE] >> 1) & 1)
         {
-            WMAP_SET_BIT(i + 0x280);
+            SAVED_BIT_SET(g_saved_encyclopedia_bits, i + FIELD_ENCYCLOPEDIA_ARTIFACT_FLAG_02_BIT);
         }
     }
     if (g_wmap_replacement_land_status & 4)
@@ -119,7 +118,7 @@ void func_8005DF50(s32 arg0, s32 arg1)
     s32 sp20;
     s32 sp24;
 
-    func_8005DBB8();
+    wmap_unlock_land_encyclopedia_entries();
     sp20 = wmap_get_land_at_cell(arg0, arg1);
     sp24 = (sp20 * 4) + ((D_800432C8[sp20 * WMAP_NODE_RECORD_SIZE] >> 4) & 3);
     g_field_entry_scene.id = g_wmap_land_scenes[sp24];
@@ -128,11 +127,11 @@ void func_8005DF50(s32 arg0, s32 arg1)
 
     for (sp10 = 0; sp10 < 0x40; sp10++)
     {
-        if (D_800432C0[sp10 / 32] & (1 << (sp10 % 32)))
+        if (SAVED_BIT_IS_SET(D_800432C0, sp10))
         {
             if (sp10 == 9 || sp10 == 0xA || sp10 == 0xB || sp10 == 0xC || sp10 == 0xD || sp10 == 0xE || sp10 == 0x18 || sp10 == 0 || sp10 == 0x1B || sp10 == 0x1C)
             {
-                D_800432C0[sp10 / 32] &= ~(1 << (sp10 % 32));
+                D_800432C0[sp10 / SAVED_BITS_PER_WORD] &= ~(1 << (sp10 % SAVED_BITS_PER_WORD));
                 g_music_track_index = D_800D01F0[sp10];
                 sp20 = D_800D01B0[sp10];
                 sp24 = (sp20 * 4) + ((D_800432C8[sp20 * WMAP_NODE_RECORD_SIZE] >> 4) & 3);
