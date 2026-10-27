@@ -278,7 +278,7 @@ void field_load_fixed_song(void)
 
 /**
  * @brief Stop the field song.
- * @details Counterpart of TITLE's stop_title_music.
+ * @details Counterpart of stop_song.
  */
 void field_stop_song(void)
 {

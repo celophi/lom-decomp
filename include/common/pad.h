@@ -36,7 +36,6 @@ typedef enum
 /** @brief The four d-pad direction buttons. */
 #define PAD_BTN_DPAD (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT)
 
-/** @brief Frames a newly pressed button waits before it starts to repeat. */
 #define PAD_REPEAT_INITIAL_DELAY 15
 
 /** @brief Frames between two repeats of a held button (it fires every third frame). */
@@ -46,7 +45,6 @@ typedef enum
 #define PAD_REPEAT_HOLD_BUTTONS                                                                                                                                \
     (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1 | PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_SELECT | PAD_BTN_L3 | PAD_BTN_START)
 
-/** @brief Analog stick offsets beyond this, in either direction, count as a d-pad press. */
 #define PAD_STICK_THRESHOLD 1
 
 /** @brief Input word with every button set; menus treat it as an invalid controller read and clear it. */

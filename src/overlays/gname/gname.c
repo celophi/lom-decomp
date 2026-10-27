@@ -420,6 +420,8 @@ s32 g_char_cursor;
 /** Unknown trailing BSS word retained for layout. */
 s32 D_8014F8D4;
 
+#include "common/screen_fade_words.h"
+
 /* Packed table symbols extracted from the overlay data. */
 extern u32 g_panel_char_offsets[];
 extern s32 g_kanji_cat_names_offset;
@@ -447,9 +449,7 @@ void play_menu_sfx(s32 sfx_id, s32 volume);
 
 void field_update_audio_timer(void);
 
-static void reset_fade_state(void);
 static void render_fade_overlay(RenderContext* render_ctx);
-static void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count);
 static void load_name_entry_tim(void);
 static void load_tim_to_vram(const TimUploadDestination* upload_coords);
 static void gname_update_state(void);
@@ -611,24 +611,7 @@ s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_
     return g_overlay_result;
 }
 
-/**
- * @brief Clear the RGB fade state to all zeros.
- *
- * Zeros @c g_fade_current (current color) and @c g_fade_target (target color
- * plus step count), so the fade starts from black with no animation pending.
- *
- * @see https://decomp.me/scratch/ld2aW (100%)
- */
-static void reset_fade_state(void)
-{
-    g_fade_current.red = 0;
-    g_fade_current.green = 0;
-    g_fade_current.blue = 0;
-    g_fade_target.red = 0;
-    g_fade_target.green = 0;
-    g_fade_target.blue = 0;
-    g_fade_target.steps_remaining = 0;
-}
+#include "../../common/screen_fade_words/reset_fade_state.inc.c"
 
 /**
  * @brief Advance and render the full-screen fade overlay.
@@ -719,21 +702,7 @@ static void render_fade_overlay(RenderContext* render_ctx)
     render_ctx->prim_cursor = packet_cursor;
 }
 
-/**
- * @brief Set the fade target color and interpolation duration.
- * @param red Target red value and blend-mode selector.
- * @param green Target green value.
- * @param blue Target blue value.
- * @param step_count Frames to reach the target, or 0 to snap.
- * @see https://decomp.me/scratch/jq3uD (100%)
- */
-static void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count)
-{
-    g_fade_target.red = red;
-    g_fade_target.green = green;
-    g_fade_target.blue = blue;
-    g_fade_target.steps_remaining = step_count;
-}
+#include "../../common/screen_fade_words/set_fade_target.inc.c"
 
 /**
  * @brief Initialize name-entry resources and session state.

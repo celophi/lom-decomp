@@ -7,7 +7,10 @@
 #include "common/gpu_packet.h"
 #include "main/main.h"
 #include "main/audio/akao.h"
+#include "common/overlay_audio.h"
 #include "common/pad.h"
+#include "common/pad_repeat.h"
+#include "common/screen_fade_words.h"
 #include "main/controller_internal.h"
 #include <libgte.h>
 #include <libgpu.h>
@@ -20,13 +23,7 @@
 /** @brief Display environments and GPU command buffers used by TITLE. */
 struct TitleMenuContext
 {
-    char first_buffer_header[0x40];
-    u_long otag_buffer[FRAME_ORDERING_TABLE_LENGTH];
-    DISPENV disp_env;
-    DRAWENV draw_env;
-    RECT front_screen;
-    u_long prim_buffer[FRAME_PRIMITIVE_BUFFER_SIZE / sizeof(u_long)];
-    u_long* next_prim_ptr;
+    ScreenFrame screen;
     char unknown_0x80BC[0x3C10];
 
     char second_buffer_header[0x40];
@@ -47,7 +44,6 @@ extern s32 g_title_menu_exit_state;
 extern u8* g_title_audio_bank_base;
 extern s32 g_title_idle_countdown;
 
-extern s32 g_debounced_input;
 extern u8 g_title_menu_item_flags[];
 extern u8 g_title_visible_item_rank;
 extern u8 g_title_anim_frame;
@@ -64,8 +60,6 @@ extern u8 g_cursor_blink_u_offsets[];
  * Same semantics as the identically-named symbol in the CHECKPS overlay
  * (separate copy, different address).
  */
-extern s32 g_input_repeat_timer;
-extern s32 g_last_input_state;
 /**
  * Self-relative offset table for the two title-menu TIMs uploaded by
  * init_title_menu_state: entries [1] and [2] are byte offsets from the table's
@@ -155,11 +149,8 @@ extern s32 g_hero_template_type_0[SAVED_CHARACTER_SIZE / 4];
 /** @brief Starting FieldCharacterRecord of the hero with character type 1. */
 extern s32 g_hero_template_type_1[SAVED_CHARACTER_SIZE / 4];
 
-extern ScreenFadeWords g_fade_current;
-extern ScreenFadeWords g_fade_target;
 
 /* Private calls that cross the title/title_save translation-unit boundary. */
-void play_title_sfx(s32 sound_id, s32 pan);
 void update_menu_input(void);
 
 #endif

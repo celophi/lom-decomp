@@ -33,55 +33,9 @@ void load_hero_template(s32 hero_type);
 void upload_save_layout_textures(void);
 void* render_save_layout_prims(u8* ptr, u_long* ot);
 
-/**
- * @brief Read the controller state before opening the save-slot picker.
- * @see decomp.me (100%) https://decomp.me/scratch/1dQbp
- * @note JP reports the face buttons as read (no PAD_REMAP_FACE_BITS swap).
- */
-static void read_pad_input(void)
-{
-    SCDRegs* base = SCD_REGS;
-    s32 state;
-    u32 buttons;
-    s32 axis;
+#include "../../common/pad_repeat/sample_pad_buttons.inc.c"
 
-    g_debounced_input = 0;
-    if (g_controller_device_type >= CONTROLLER_DEVICE_CONFIGURING)
-    {
-        state = 0;
-    }
-    else
-    {
-        buttons = ((base->held_buttons >> 8) & 0xFF) | (base->held_buttons << 8);
-#if !defined(VERSION_JP)
-        buttons = PAD_REMAP_FACE_BITS(buttons);
-#endif
-        if (base->device_type != CONTROLLER_DEVICE_DIGITAL)
-        {
-            axis = base->axis_x.signed_value;
-            if (axis < -PAD_STICK_THRESHOLD)
-            {
-                buttons |= PAD_BTN_LEFT;
-            }
-            else if (axis > PAD_STICK_THRESHOLD)
-            {
-                buttons |= PAD_BTN_RIGHT;
-            }
-            axis = base->axis_y.signed_value;
-            if (axis < -PAD_STICK_THRESHOLD)
-            {
-                buttons |= PAD_BTN_UP;
-            }
-            else if (axis > PAD_STICK_THRESHOLD)
-            {
-                buttons |= PAD_BTN_DOWN;
-            }
-        }
-        state = buttons;
-    }
-    g_last_input_state = state;
-    g_input_repeat_timer = PAD_REPEAT_INITIAL_DELAY;
-}
+#include "../../common/pad_repeat/init_pad_repeat.inc.c"
 
 /**
  * @brief Initialize the save-slot picker state and upload its sprite atlases.
@@ -89,7 +43,7 @@ static void read_pad_input(void)
  */
 void init_save_slot_menu(void)
 {
-    read_pad_input();
+    init_pad_repeat();
     g_slot_slide_frames = 0;
     g_slot_slide_y_lerped = 0;
     g_slot_slide_y = 0;
@@ -109,7 +63,7 @@ void init_save_slot_menu(void)
  */
 void render_save_slot_menu(TitleMenuContext* context)
 {
-    context->next_prim_ptr = (u_long*)render_save_layout_prims((u8*)context->next_prim_ptr, context->otag_buffer);
+    context->screen.prim_cursor = (u_long*)render_save_layout_prims((u8*)context->screen.prim_cursor, context->screen.ot);
     handle_save_slot_input();
 }
 
@@ -156,7 +110,7 @@ void handle_save_slot_input(void)
         if (g_debounced_input & (PAD_BTN_LEFT | PAD_BTN_RIGHT))
         {
             SaveLayoutEntry* entry;
-            play_title_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
+            play_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
             entry = g_save_layout_table;
             if (entry[18].type != 0)
             {
@@ -170,7 +124,7 @@ void handle_save_slot_input(void)
         }
         if (g_debounced_input & (PAD_BTN_START | PAD_BTN_L3 | PAD_BTN_CROSS))
         {
-            play_title_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
+            play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
             if (g_save_layout_table[18].type != 0)
             {
                 scroll_slots_right();
@@ -183,7 +137,7 @@ void handle_save_slot_input(void)
         }
         if (g_debounced_input & PAD_BTN_CIRCLE)
         {
-            play_title_sfx(SFX_CANCEL, AKAO_PAN_CENTER);
+            play_sfx(SFX_CANCEL, AKAO_PAN_CENTER);
             g_title_menu_exit_state = 2;
         }
     }
@@ -236,13 +190,13 @@ void handle_save_slot_input(void)
                         g_saved_game.layout.technique_bits[i] = 0;
                     }
                 }
-                play_title_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
+                play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
             }
             g_title_menu_exit_state = 1;
         }
         else if (g_debounced_input & PAD_BTN_CIRCLE)
         {
-            play_title_sfx(SFX_CANCEL, AKAO_PAN_CENTER);
+            play_sfx(SFX_CANCEL, AKAO_PAN_CENTER);
             if (g_slot_slide_x > 0)
             {
                 scroll_slots_left();
@@ -258,7 +212,7 @@ void handle_save_slot_input(void)
         {
             if ((g_debounced_input & PAD_BTN_UP) != 0U)
             {
-                play_title_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
+                play_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
                 prev_index = g_slot_selected_index - 1;
                 g_slot_selected_index = prev_index;
                 if (prev_index < 0)
@@ -268,7 +222,7 @@ void handle_save_slot_input(void)
             }
             if (g_debounced_input & PAD_BTN_DOWN)
             {
-                play_title_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
+                play_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
                 next_index = g_slot_selected_index + 1;
                 g_slot_selected_index = next_index;
                 if (next_index >= 0xB)

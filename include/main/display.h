@@ -71,7 +71,6 @@
 /** Bytes of one display buffer's GPU primitive buffer. */
 #define FRAME_PRIMITIVE_BUFFER_SIZE 0x4000
 
-/** Ordering-table entries of one display buffer of a standalone screen. */
 #define FRAME_ORDERING_TABLE_LENGTH 4096
 
 /** Vertical blanks per frame of the 30 fps game loop, passed to VSync and set_controller_vsync_interval. */
@@ -80,7 +79,6 @@
 /** Lowest fade level drawn by adding light; levels below FADE_NEUTRAL subtract it. */
 #define FADE_ADDITIVE_THRESHOLD (FADE_NEUTRAL + 1)
 
-/** Amount subtracted from an additive fade level to get its tile colour. */
 #define FADE_ADDITIVE_BIAS (FADE_ADDITIVE_THRESHOLD - FADE_NEUTRAL)
 
 /**
@@ -122,8 +120,22 @@ typedef union
     DR_TPAGE draw_mode;
 } ScreenFadePrimitive;
 
-/** @brief Advance a fade packet cursor by the concrete packet just emitted. */
 #define SCREEN_FADE_NEXT_PRIMITIVE(primitive, type) ((ScreenFadePrimitive*)((u8*)(primitive) + sizeof(type)))
+
+/**
+ * @brief One display buffer of a standalone screen: ordering table, display state and packet area.
+ * @note TODO: the contents of the leading 0x40 bytes are unknown.
+ */
+typedef struct
+{
+    u8 unknown_header[0x40];
+    u_long ot[FRAME_ORDERING_TABLE_LENGTH];
+    DISPENV disp_env;
+    DRAWENV draw_env;
+    RECT clear_rect;
+    u_long packets[FRAME_PRIMITIVE_BUFFER_SIZE / sizeof(u_long)];
+    void* prim_cursor;
+} ScreenFrame;
 
 /** Y coordinate of the CLUT storage row in VRAM.
  * Overlays store their 256-entry palettes in the lines starting here,

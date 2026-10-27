@@ -9,7 +9,10 @@
 #include "common/saved_game.h"
 #include "main/display.h"
 #include "common/gpu_packet.h"
+#include "common/overlay_audio.h"
 #include "common/pad.h"
+#include "common/pad_repeat.h"
+#include "common/screen_fade_words.h"
 #include "main/scene_state.h"
 #include <libetc.h>
 #include <libgpu.h>
@@ -18,7 +21,6 @@
 #include "common/tim.h"
 #include "common/vector.h"
 
-#define WSEL_SEQUENCE_BUFFER_SIZE 0x4000
 #define WSEL_HERO_ANCHOR_X 32
 #define WSEL_HERO_ANCHOR_Y 40
 #define WSEL_HERO_SHADOW_Y 32
@@ -184,14 +186,8 @@ extern WselSprite g_wsel_sprites[WSEL_SPRITE_COUNT];
 extern WselHeroPose g_wsel_hero_poses_default[WSEL_HERO_POSE_COUNT];
 extern WselHeroPose g_wsel_hero_poses_alternate[WSEL_HERO_POSE_COUNT];
 extern WselRenderBuffer* g_wsel_render_context;
-/** @brief Sequence copied from the staged music file; the instrument bank uploads separately. */
-extern u8 g_wsel_sequence_buffer[WSEL_SEQUENCE_BUFFER_SIZE];
-extern ScreenFadeWords g_wsel_fade_target;
-extern ScreenFadeWords g_wsel_fade_current;
 extern s32 g_wsel_buffer_index;
 extern s32 g_wsel_exit_state;
-extern s32 g_wsel_repeat_buttons;
-extern s32 g_wsel_repeat_timer;
 extern WselRect g_wsel_zoom_rect;
 extern s32 g_wsel_buttons_held;
 extern s32 g_wsel_transition_timer;
@@ -201,20 +197,12 @@ extern WselRect g_wsel_zoom_target;
 extern Vec2s g_wsel_map_scroll_target;
 extern Vec2s g_wsel_cursor_target;
 extern s32 g_wsel_mask_shade;
-extern s32 g_wsel_buttons_pressed;
 extern s32 g_wsel_state;
 extern s32 g_wsel_map_scroll_frames;
 extern s32 g_wsel_cursor_frames;
 
 static void wsel_run_loop(WselRenderBuffer* buffers);
 static void wsel_init();
-static void wsel_load_sound_bank(s32 seq_variant);
-static void wsel_stop_music(void);
-static void wsel_start_music(void);
-static void wsel_play_sfx(s32 sound_id, s32 pan);
-static void wsel_reset_fade(void);
-static void wsel_draw_fade(WselRenderBuffer* buffer);
-static void wsel_set_fade_target(s32 red, s32 green, s32 blue, s32 steps);
 static void wsel_draw_frame(WselRenderBuffer* buffer);
 static void wsel_update_scroll(void);
 static void* wsel_draw_selection_mask(TILE* tile, u_long* ot);
@@ -227,10 +215,7 @@ static POLY_FT4* wsel_draw_hero(POLY_FT4* poly, u_long* ot, s32 alternate);
 static void wsel_load_resources(void);
 static void wsel_reset_scroll(void);
 static void wsel_upload_tim(u8* tim_data, s32 index);
-static s32 wsel_read_pad(void);
-static inline s32 wsel_sample_pad(void);
 static void wsel_update_pad_repeat(void);
-static void wsel_init_pad_repeat(void);
 
 /**
  * @brief Initialize and run the WSEL overlay until an exit state is selected.
@@ -272,25 +257,25 @@ static void wsel_run_loop(WselRenderBuffer* buffers)
     s32 unused[2];
 
     buffer = buffers;
-    ClearOTagR(buffers[0].ot, FRAME_ORDERING_TABLE_LENGTH);
-    ClearOTagR(buffers[1].ot, FRAME_ORDERING_TABLE_LENGTH);
+    ClearOTagR(buffers[0].screen.ot, FRAME_ORDERING_TABLE_LENGTH);
+    ClearOTagR(buffers[1].screen.ot, FRAME_ORDERING_TABLE_LENGTH);
     VSync(0);
-    PutDispEnv(&buffers[0].disp_env);
+    PutDispEnv(&buffers[0].screen.disp_env);
     update_controllers();
     SetDispMask(1);
     do
     {
-        ot = buffer->ot;
+        ot = buffer->screen.ot;
         ClearOTagR(ot, FRAME_ORDERING_TABLE_LENGTH);
-        buffer->prim_cursor = buffer->packets;
+        buffer->screen.prim_cursor = buffer->screen.packets;
         VSync(1);
-        wsel_draw_fade(buffer);
+        update_and_draw_fade(&buffer->screen);
         wsel_draw_frame(buffer);
         wsel_update_input();
         DrawSync(0);
         set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
         VSync(FRAME_VSYNC_INTERVAL);
-        ClearImage(&buffer->clear_rect, 0, 0, 0);
+        ClearImage(&buffer->screen.clear_rect, 0, 0, 0);
         if (buffer == buffers)
         {
             buffer = &buffers[1];
@@ -301,8 +286,8 @@ static void wsel_run_loop(WselRenderBuffer* buffers)
             buffer = buffers;
             g_wsel_buffer_index = 0;
         }
-        PutDispEnv(&buffer->disp_env);
-        PutDrawEnv(&buffer->draw_env);
+        PutDispEnv(&buffer->screen.disp_env);
+        PutDrawEnv(&buffer->screen.draw_env);
         DrawOTag(&ot[FRAME_ORDERING_TABLE_LENGTH - 1]);
         update_controllers();
         cdrom_process_state();
@@ -322,194 +307,44 @@ static void wsel_init(WselRenderBuffer* buffers)
     SetGeomScreen(SCREEN_PROJECTION_DISTANCE);
     SetGeomOffset(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 
-    buffers[0].clear_rect.x = 0;
-    buffers[0].clear_rect.y = 0;
-    buffers[0].clear_rect.w = SCREEN_WIDTH;
-    buffers[0].clear_rect.h = SCREEN_HEIGHT;
-    buffers[1].clear_rect.y = VRAM_BACK_DISP_Y;
-    buffers[1].clear_rect.x = 0;
-    buffers[1].clear_rect.w = SCREEN_WIDTH;
-    buffers[1].clear_rect.h = SCREEN_HEIGHT;
+    buffers[0].screen.clear_rect.x = 0;
+    buffers[0].screen.clear_rect.y = 0;
+    buffers[0].screen.clear_rect.w = SCREEN_WIDTH;
+    buffers[0].screen.clear_rect.h = SCREEN_HEIGHT;
+    buffers[1].screen.clear_rect.y = VRAM_BACK_DISP_Y;
+    buffers[1].screen.clear_rect.x = 0;
+    buffers[1].screen.clear_rect.w = SCREEN_WIDTH;
+    buffers[1].screen.clear_rect.h = SCREEN_HEIGHT;
 
     setRECT(&vram_rect, 0, 0, VRAM_WIDTH, VRAM_HEIGHT);
     ClearImage(&vram_rect, 0, 0, 0);
 
-    wsel_reset_fade();
-    wsel_set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, SCREEN_FADE_FRAMES);
-    SetDefDispEnv(&buffers[0].disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDispEnv(&buffers[1].disp_env, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDrawEnv(&buffers[0].draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
-    SetDefDrawEnv(&buffers[1].draw_env, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    reset_fade_state();
+    set_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, SCREEN_FADE_FRAMES);
+    SetDefDispEnv(&buffers[0].screen.disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&buffers[1].screen.disp_env, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDrawEnv(&buffers[0].screen.draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&buffers[1].screen.draw_env, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
-    buffers[1].draw_env.dtd = 0;
-    buffers[0].draw_env.dtd = 0;
+    buffers[1].screen.draw_env.dtd = 0;
+    buffers[0].screen.draw_env.dtd = 0;
     wsel_load_resources();
     g_wsel_exit_state = WSEL_EXIT_NONE;
 }
 
-/**
- * @brief Load a music file from CD and upload its sequence and instrument bank.
- * @param seq_variant Music-file index; 0 selects MSC_DATA.DAT.
- * @see TITLE load_title_seq
- */
-static void wsel_load_sound_bank(s32 seq_variant)
-{
-    u32* offsets;
-    u8* base;
+#include "../../common/overlay_audio/load_song_from_disc.inc.c"
 
-    cdrom_queue_read(CD_RES_MUSIC_FILE(seq_variant), LOAD_BUFFER_AKAO_CONTAINER);
-    cdrom_wait_queue_empty();
+#include "../../common/overlay_audio/stop_song.inc.c"
 
-    offsets = LOAD_BUFFER_AKAO_CONTAINER->section_offsets;
-    base = (u8*)LOAD_BUFFER_AKAO_CONTAINER;
+#include "../../common/overlay_audio/play_loaded_song.inc.c"
 
-    bcopy(base + offsets[AKAO_CONTAINER_RESIDENT_SECTION], g_wsel_sequence_buffer,
-          (s32)(offsets[AKAO_CONTAINER_BANK_SECTION] - offsets[AKAO_CONTAINER_RESIDENT_SECTION]));
-    akao_upload_bank_blocking((AkaoBankHeader*)(base + offsets[AKAO_CONTAINER_BANK_SECTION]), 1);
-}
+#include "../../common/overlay_audio/play_sfx.inc.c"
 
-/**
- * @brief Stop the WSEL background music.
- * @see TITLE stop_title_music
- */
-static void wsel_stop_music(void)
-{
-    akao_stop_song(0);
-}
+#include "../../common/screen_fade_words/reset_fade_state.inc.c"
 
-/**
- * @brief Start the sequence loaded by wsel_load_sound_bank at full volume.
- * @see TITLE start_title_music
- */
-static void wsel_start_music(void)
-{
-    akao_play_song((AkaoHeader*)g_wsel_sequence_buffer);
-    akao_set_song_volume(0, AKAO_VOLUME_MAX);
-}
+#include "../../common/screen_fade_words/update_and_draw_fade.inc.c"
 
-/**
- * @brief Play a WSEL sound effect at full volume.
- * @param sound_id Sound effect ID.
- * @param pan Stereo pan (0x80 is center).
- * @see TITLE play_title_sfx
- */
-static void wsel_play_sfx(s32 sound_id, s32 pan)
-{
-    akao_play_sfx(sound_id, 0, pan, AKAO_VOLUME_MAX);
-}
-
-/**
- * @brief Reset the current and target fade colors to black with no fade in progress.
- * @see TITLE reset_fade_state
- */
-static void wsel_reset_fade(void)
-{
-    g_wsel_fade_current.red = 0;
-    g_wsel_fade_current.green = 0;
-    g_wsel_fade_current.blue = 0;
-
-    g_wsel_fade_target.red = 0;
-    g_wsel_fade_target.green = 0;
-    g_wsel_fade_target.blue = 0;
-    g_wsel_fade_target.steps_remaining = 0;
-}
-
-/**
- * @brief Step the screen fade toward its target and queue the full-screen tint tile.
- * @param buffer Render buffer whose packet cursor and ordering table receive the tile.
- * @note Levels above FADE_NEUTRAL brighten additively, levels below darken subtractively.
- * @see TITLE render_fade_overlay
- */
-static void wsel_draw_fade(WselRenderBuffer* buffer)
-{
-    ScreenFadePrimitive* primitive = (ScreenFadePrimitive*)buffer->prim_cursor;
-    u_long* ot = buffer->ot;
-    s32 draw_mode;
-
-    if (g_wsel_fade_target.steps_remaining != 0)
-    {
-        g_wsel_fade_current.red += (g_wsel_fade_target.red - g_wsel_fade_current.red) / g_wsel_fade_target.steps_remaining;
-        g_wsel_fade_current.green += (g_wsel_fade_target.green - g_wsel_fade_current.green) / g_wsel_fade_target.steps_remaining;
-        g_wsel_fade_current.blue += (g_wsel_fade_target.blue - g_wsel_fade_current.blue) / g_wsel_fade_target.steps_remaining;
-        g_wsel_fade_target.steps_remaining--;
-    }
-    else
-    {
-        g_wsel_fade_current.red = g_wsel_fade_target.red;
-        g_wsel_fade_current.green = g_wsel_fade_target.green;
-        g_wsel_fade_current.blue = g_wsel_fade_target.blue;
-    }
-    if (!((g_wsel_fade_current.red == FADE_NEUTRAL) && (g_wsel_fade_current.green == FADE_NEUTRAL) && (g_wsel_fade_current.blue == FADE_NEUTRAL)))
-    {
-        if (g_wsel_fade_current.red >= FADE_ADDITIVE_THRESHOLD)
-        {
-            primitive->tile.r0 = g_wsel_fade_current.red - FADE_ADDITIVE_BIAS;
-            primitive->tile.g0 = g_wsel_fade_current.green - FADE_ADDITIVE_BIAS;
-            primitive->tile.b0 = g_wsel_fade_current.blue - FADE_ADDITIVE_BIAS;
-        }
-        else
-        {
-            if (g_wsel_fade_current.red == FADE_NEUTRAL)
-            {
-                primitive->tile.r0 = 0;
-            }
-            else
-            {
-                primitive->tile.r0 = ~g_wsel_fade_current.red;
-            }
-            if (g_wsel_fade_current.green == FADE_NEUTRAL)
-            {
-                primitive->tile.g0 = 0;
-            }
-            else
-            {
-                primitive->tile.g0 = ~g_wsel_fade_current.green;
-            }
-            if (g_wsel_fade_current.blue == FADE_NEUTRAL)
-            {
-                primitive->tile.b0 = 0;
-            }
-            else
-            {
-                primitive->tile.b0 = ~g_wsel_fade_current.blue;
-            }
-        }
-
-        setTile(&primitive->tile);
-        setSemiTrans(&primitive->tile, 1);
-        SET_YX0(&primitive->tile, 0, 0);
-        setWH(&primitive->tile, SCREEN_WIDTH, SCREEN_HEIGHT);
-        addPrim(ot, &primitive->tile);
-
-        draw_mode = BLEND_ADD_TPAGE;
-        primitive = SCREEN_FADE_NEXT_PRIMITIVE(primitive, TILE);
-        if (g_wsel_fade_current.red < FADE_ADDITIVE_THRESHOLD)
-        {
-            draw_mode = BLEND_SUBTRACT_TPAGE;
-        }
-        setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
-        addPrim(ot, &primitive->draw_mode);
-
-        primitive = SCREEN_FADE_NEXT_PRIMITIVE(primitive, DR_TPAGE);
-    }
-    buffer->prim_cursor = (u_long*)primitive;
-}
-
-/**
- * @brief Start a fade toward the given color levels.
- * @param red Target red level (FADE_NEUTRAL is unchanged).
- * @param green Target green level.
- * @param blue Target blue level.
- * @param steps Number of frames over which to interpolate.
- * @see TITLE set_fade_target
- */
-static void wsel_set_fade_target(s32 red, s32 green, s32 blue, s32 steps)
-{
-    g_wsel_fade_target.red = red;
-    g_wsel_fade_target.green = green;
-    g_wsel_fade_target.blue = blue;
-    g_wsel_fade_target.steps_remaining = steps;
-}
+#include "../../common/screen_fade_words/set_fade_target.inc.c"
 
 /**
  * @brief Draw the current WSEL screen state and advance its zoom and fade transitions.
@@ -523,8 +358,8 @@ static void wsel_draw_frame(WselRenderBuffer* buffer)
     u8* prim;
     u_long* ot;
 
-    prim = (u8*)buffer->prim_cursor;
-    ot = buffer->ot;
+    prim = (u8*)buffer->screen.prim_cursor;
+    ot = buffer->screen.ot;
 
     switch (g_wsel_state)
     {
@@ -614,7 +449,7 @@ static void wsel_draw_frame(WselRenderBuffer* buffer)
         prim = wsel_draw_zoom_quad((POLY_FT4*)prim, ot, &quad, 0, GPU_TINT_NEUTRAL_LEVEL);
         if (g_wsel_buttons_held & WSEL_CONFIRM_BUTTONS)
         {
-            wsel_play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
+            play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
             g_wsel_state = WSEL_STATE_SELECT_CELL;
             g_wsel_transition_timer = WSEL_LAND_FADE_FRAMES;
         }
@@ -625,7 +460,7 @@ static void wsel_draw_frame(WselRenderBuffer* buffer)
         prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_MAP);
         break;
     }
-    buffer->prim_cursor = (u_long*)prim;
+    buffer->screen.prim_cursor = (u_long*)prim;
 }
 
 /**
@@ -791,7 +626,7 @@ static void* wsel_draw_cell_shading(void* prim, u_long* ot)
     }
     else
     {
-        SetDrawEnv((DR_ENV*)p, &g_wsel_render_context[g_wsel_buffer_index ^ 1].draw_env);
+        SetDrawEnv((DR_ENV*)p, &g_wsel_render_context[g_wsel_buffer_index ^ 1].screen.draw_env);
         addPrim(ot, p);
         p += sizeof(DR_ENV);
 
@@ -1026,9 +861,9 @@ static void wsel_update_input(void)
     switch (g_wsel_state)
     {
     case WSEL_STATE_WORLD_MAP:
-        if (g_wsel_buttons_pressed & WSEL_CONFIRM_BUTTONS)
+        if (g_debounced_input & WSEL_CONFIRM_BUTTONS)
         {
-            wsel_play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
+            play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
             wsel_reset_scroll();
             g_wsel_transition_timer = WSEL_ZOOM_FRAMES;
             g_wsel_zoom_rect.corners[0].x = WSEL_ZOOM_SMALL_LEFT;
@@ -1042,9 +877,9 @@ static void wsel_update_input(void)
             g_wsel_state = WSEL_STATE_ZOOM_IN;
             return;
         }
-        if ((g_wsel_buttons_pressed & WSEL_CANCEL_BUTTONS) && !g_saved_game.layout.options.bits.flag_3)
+        if ((g_debounced_input & WSEL_CANCEL_BUTTONS) && !g_saved_game.layout.options.bits.flag_3)
         {
-            wsel_play_sfx(SFX_CANCEL, AKAO_PAN_CENTER);
+            play_sfx(SFX_CANCEL, AKAO_PAN_CENTER);
             g_wsel_exit_state = WSEL_EXIT_CANCELLED;
         }
         return;
@@ -1054,9 +889,9 @@ static void wsel_update_input(void)
         {
             break;
         }
-        if (g_wsel_buttons_pressed & WSEL_CANCEL_BUTTONS)
+        if (g_debounced_input & WSEL_CANCEL_BUTTONS)
         {
-            wsel_play_sfx(SFX_CANCEL, AKAO_PAN_CENTER);
+            play_sfx(SFX_CANCEL, AKAO_PAN_CENTER);
             g_wsel_transition_timer = WSEL_ZOOM_FRAMES;
             g_wsel_zoom_target.corners[0].x = WSEL_ZOOM_SMALL_LEFT;
             g_wsel_zoom_target.corners[1].x = WSEL_ZOOM_SMALL_RIGHT;
@@ -1068,7 +903,7 @@ static void wsel_update_input(void)
             g_wsel_zoom_rect.corners[1].y = WSEL_ZOOM_LARGE_BOTTOM;
             g_wsel_state = WSEL_STATE_ZOOM_OUT;
         }
-        else if (g_wsel_buttons_pressed & WSEL_CONFIRM_BUTTONS)
+        else if (g_debounced_input & WSEL_CONFIRM_BUTTONS)
         {
             g_wsel_transition_timer = 0;
             g_wsel_sprites[WSEL_SPRITE_CURSOR].brightness = GPU_TINT_NEUTRAL_LEVEL;
@@ -1079,12 +914,12 @@ static void wsel_update_input(void)
             row = WSEL_CURSOR_CELL_ROW();
             if (g_wsel_cell_occupied[WSEL_CELL_INDEX(column, row)] == 0)
             {
-                wsel_play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
+                play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
                 g_wsel_state = WSEL_STATE_CONFIRM;
                 g_wsel_mask_shade = 0;
                 return;
             }
-            wsel_play_sfx(SFX_ERROR, AKAO_PAN_CENTER);
+            play_sfx(SFX_ERROR, AKAO_PAN_CENTER);
             return;
         }
 
@@ -1143,15 +978,15 @@ static void wsel_update_input(void)
         }
         if ((g_wsel_buttons_held & PAD_BTN_DPAD) && (g_wsel_cursor_frames != 0 || g_wsel_map_scroll_frames != 0))
         {
-            wsel_play_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
+            play_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
             return;
         }
         break;
 
     case WSEL_STATE_CONFIRM:
-        if (g_wsel_buttons_pressed & WSEL_FINAL_CONFIRM_BUTTONS)
+        if (g_debounced_input & WSEL_FINAL_CONFIRM_BUTTONS)
         {
-            wsel_play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
+            play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
             column = WSEL_CURSOR_CELL_COLUMN();
             row = WSEL_CURSOR_CELL_ROW();
             g_saved_game.layout.world_map_cell = WSEL_CELL_INDEX(column, row);
@@ -1159,9 +994,9 @@ static void wsel_update_input(void)
             g_saved_game.layout.options.word &= ~SAVED_OPTION_FLAG_3;
             return;
         }
-        if (g_wsel_buttons_pressed & WSEL_CANCEL_BUTTONS)
+        if (g_debounced_input & WSEL_CANCEL_BUTTONS)
         {
-            wsel_play_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
+            play_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
             g_wsel_state = WSEL_STATE_SELECT_CELL;
         }
         break;
@@ -1237,7 +1072,7 @@ static void wsel_load_resources(void)
 {
     g_wsel_state = WSEL_STATE_WORLD_MAP;
     wsel_reset_scroll();
-    wsel_init_pad_repeat();
+    init_pad_repeat();
     wsel_upload_tim(g_wsel_land_map_tim, WSEL_SPRITE_LAND_MAP);
     wsel_upload_tim(g_wsel_world_map_tim, WSEL_SPRITE_WORLD_MAP);
     wsel_upload_tim(g_wsel_cursor_tim, WSEL_SPRITE_CURSOR);
@@ -1306,96 +1141,9 @@ static void wsel_upload_tim(u8* tim_data, s32 index)
     LoadImage(&rect, (u_long*)(pixel_block + 1));
 }
 
-/**
- * @brief Read the controller buttons, folding analog stick deflection into the D-pad bits.
- * @return Button mask in PAD_BTN_* order, or 0 when no controller is available.
- * @note JP reports the face buttons as read (no PAD_REMAP_FACE_BITS swap).
- */
-static s32 wsel_read_pad(void)
-{
-    SCDRegs* regs = SCD_REGS;
-    u32 buttons;
-    s32 axis;
+#include "../../common/pad_repeat/read_pad_buttons.inc.c"
 
-    if (regs->device_type >= CONTROLLER_DEVICE_CONFIGURING)
-    {
-        return 0;
-    }
-
-    buttons = (regs->held_buttons >> 8) | (regs->held_buttons << 8);
-#if !defined(VERSION_JP)
-    buttons = PAD_REMAP_FACE_BITS(buttons);
-#endif
-    if (regs->device_type != CONTROLLER_DEVICE_DIGITAL)
-    {
-        /* Convert signed analog-axis thresholds to digital directions. */
-        axis = regs->axis_x.signed_value;
-        if (axis < -PAD_STICK_THRESHOLD)
-        {
-            buttons |= PAD_BTN_LEFT;
-        }
-        else if (axis > PAD_STICK_THRESHOLD)
-        {
-            buttons |= PAD_BTN_RIGHT;
-        }
-
-        axis = regs->axis_y.signed_value;
-        if (axis < -PAD_STICK_THRESHOLD)
-        {
-            buttons |= PAD_BTN_UP;
-        }
-        else if (axis > PAD_STICK_THRESHOLD)
-        {
-            buttons |= PAD_BTN_DOWN;
-        }
-    }
-    return buttons;
-}
-
-/**
- * @brief Sample the controller buttons, folding analog stick deflection into the D-pad bits.
- * @return Button mask in PAD_BTN_* order, or 0 when no controller is available.
- * @note JP reports the face buttons as read (no PAD_REMAP_FACE_BITS swap).
- */
-static inline s32 wsel_sample_pad(void)
-{
-    SCDRegs* regs = SCD_REGS;
-    u32 buttons;
-    s32 axis;
-
-    if (g_controller_device_type >= CONTROLLER_DEVICE_CONFIGURING)
-    {
-        return 0;
-    }
-
-    buttons = (regs->held_buttons >> 8) | (regs->held_buttons << 8);
-#if !defined(VERSION_JP)
-    buttons = PAD_REMAP_FACE_BITS(buttons);
-#endif
-    if (regs->device_type != CONTROLLER_DEVICE_DIGITAL)
-    {
-        axis = regs->axis_x.signed_value;
-        if (axis < -PAD_STICK_THRESHOLD)
-        {
-            buttons |= PAD_BTN_LEFT;
-        }
-        else if (axis > PAD_STICK_THRESHOLD)
-        {
-            buttons |= PAD_BTN_RIGHT;
-        }
-
-        axis = regs->axis_y.signed_value;
-        if (axis < -PAD_STICK_THRESHOLD)
-        {
-            buttons |= PAD_BTN_UP;
-        }
-        else if (axis > PAD_STICK_THRESHOLD)
-        {
-            buttons |= PAD_BTN_DOWN;
-        }
-    }
-    return buttons;
-}
+#include "../../common/pad_repeat/sample_pad_buttons.inc.c"
 
 /**
  * @brief Sample the controller and update the held, pressed, and key-repeat state.
@@ -1404,10 +1152,10 @@ static void wsel_update_pad_repeat(void)
 {
     s32 input_state;
 
-    g_wsel_buttons_held = wsel_sample_pad();
+    g_wsel_buttons_held = sample_pad_buttons();
     input_state = g_wsel_buttons_held;
-    g_wsel_buttons_pressed = 0;
-    if (((input_state == g_wsel_repeat_buttons) || ((g_wsel_repeat_buttons != 0) && (input_state & (g_wsel_repeat_buttons | PAD_REPEAT_HOLD_BUTTONS)))) &&
+    g_debounced_input = 0;
+    if (((input_state == g_last_input_state) || ((g_last_input_state != 0) && (input_state & (g_last_input_state | PAD_REPEAT_HOLD_BUTTONS)))) &&
         (input_state != 0))
     {
         /* Held input repeats directional buttons only. */
@@ -1415,36 +1163,28 @@ static void wsel_update_pad_repeat(void)
         {
             input_state &= PAD_BTN_DPAD;
         }
-        if (g_wsel_repeat_timer == 0)
+        if (g_input_repeat_timer == 0)
         {
-            g_wsel_buttons_pressed = input_state;
-            g_wsel_repeat_timer = PAD_REPEAT_INTERVAL;
+            g_debounced_input = input_state;
+            g_input_repeat_timer = PAD_REPEAT_INTERVAL;
         }
         else
         {
-            g_wsel_repeat_timer--;
-            g_wsel_buttons_pressed = 0;
+            g_input_repeat_timer--;
+            g_debounced_input = 0;
         }
     }
     else if (input_state == 0)
     {
-        g_wsel_repeat_timer = 0;
-        g_wsel_repeat_buttons = 0;
+        g_input_repeat_timer = 0;
+        g_last_input_state = 0;
     }
     else
     {
-        g_wsel_buttons_pressed = input_state;
-        g_wsel_repeat_buttons = input_state;
-        g_wsel_repeat_timer = PAD_REPEAT_INITIAL_DELAY;
+        g_debounced_input = input_state;
+        g_last_input_state = input_state;
+        g_input_repeat_timer = PAD_REPEAT_INITIAL_DELAY;
     }
 }
 
-/**
- * @brief Seed the key-repeat state from the current controller sample.
- */
-static void wsel_init_pad_repeat(void)
-{
-    g_wsel_buttons_pressed = 0;
-    g_wsel_repeat_buttons = wsel_sample_pad();
-    g_wsel_repeat_timer = PAD_REPEAT_INITIAL_DELAY;
-}
+#include "../../common/pad_repeat/init_pad_repeat.inc.c"
