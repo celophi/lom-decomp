@@ -23,10 +23,13 @@ extern FieldTextConfig* g_field_text_saved_configs;
 #define FIELD_TEXT_SHADOW 0x80
 
 /** @brief field_draw_text / field_draw_number text colours (palette pairs of the text CLUT). */
+#define FIELD_TEXT_COLOR_DEFAULT 0 /**< The colour a text's colour codes reset to. */
 #define FIELD_TEXT_COLOR_MENU 1     /**< Body text of the main menu and of the title screen's load menu. */
 #define FIELD_TEXT_COLOR_MENU_DIM 3 /**< Dimmed FIELD_TEXT_COLOR_MENU text, such as the inactive card slot label. */
 #define FIELD_TEXT_COLOR_NORMAL 4   /**< Body text of field windows and the field-launched card menus. */
 #define FIELD_TEXT_COLOR_DIM 5
+/** @brief Text colour bit that takes the palette pair from the FIELD_TEXT_TEXT_CLUT_Y row instead of FIELD_TEXT_ALT_CLUT_Y. */
+#define FIELD_TEXT_COLOR_TEXT_CLUT 8
 
 /** @brief Glyph height of the field font, and the line advance of text drawn with it. */
 #define FIELD_TEXT_LINE_HEIGHT 12

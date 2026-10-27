@@ -51,7 +51,26 @@
 
 #define ZUKAN_SCROLL_ARROW_COLOR GPU_COLOR_WORD(0x80, 0x80, 0xF0)
 #define ZUKAN_SELECTION_COLOR GPU_COLOR_WORD(0xF0, 0x80, 0xF0)
+
+/* List view: the category title above the list, and the arrows above and below it
+ * that show more rows are scrolled out of view. */
+#define ZUKAN_TITLE_Y 34
+#define ZUKAN_TITLE_TEXT_COLOR (FIELD_TEXT_COLOR_TEXT_CLUT | 2)
+#define ZUKAN_SCROLL_ARROW_SIZE 7
+#define ZUKAN_SCROLL_UP_ARROW_BASE_Y 53
+#define ZUKAN_SCROLL_DOWN_ARROW_BASE_Y 180
+
+/* Detail view: the text lines, where each leading space indents by one full glyph, and the
+ * "page / page count" numbers. */
+#define ZUKAN_DETAIL_TEXT_X 48
+#define ZUKAN_DETAIL_TEXT_Y 26
+#define ZUKAN_DETAIL_LINE_SPACING 13
+#define ZUKAN_DETAIL_INDENT_WIDTH 12
+#define ZUKAN_PAGE_NUMBER_X 238
+#define ZUKAN_PAGE_SEPARATOR_X 262
+#define ZUKAN_PAGE_COUNT_X 270
 #define ZUKAN_PAGE_NUMBER_Y 189
+#define ZUKAN_PAGE_NUMBER_DIGITS 3
 
 /* Scrolling list viewport, relative to the active draw buffer. */
 #define ZUKAN_LIST_VIEW_X 72
@@ -367,7 +386,7 @@ inline s32 zukan_upload_tim(TimUploadDestination* destinations, TimPrefix* tim)
 
     flags = tim->flags;
     clut_block_size = tim->clut_block.bnum;
-    mode = flags & 7;
+    mode = flags & TIM_FLAG_PIXEL_MODE_MASK;
 
     if (flags & TIM_FLAG_HAS_CLUT)
     {
@@ -741,7 +760,7 @@ void* zukan_emit_ui_sprite(SPRT* sprite, u_long* ordering_table, u32 sprite_inde
     sprite_record = &g_zukan_ui_sprites[sprite_index];
     setWH(sprite, sprite_record->width, sprite_record->height);
     setUV0(sprite, sprite_record->u, sprite_record->v);
-    setClut(sprite, sprite_record->clut_column * 16, VRAM_CLUT_Y);
+    setClut(sprite, sprite_record->clut_column * GPU_CLUT_4BIT_COLORS, VRAM_CLUT_Y);
 
     addPrim(ordering_table, sprite);
 
@@ -883,8 +902,8 @@ void zukan_render_content(RenderContext* render_ctx)
     {
         ordering_table = &render_ctx->ot[ZUKAN_LAYER_LIST];
 
-        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, ZUKAN_ARCHIVE_TEXT(category_names_offset, g_zukan_category), 10, SCREEN_WIDTH / 2,
-                                        34, FIELD_TEXT_ALIGN_CENTER);
+        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, ZUKAN_ARCHIVE_TEXT(category_names_offset, g_zukan_category),
+                                        ZUKAN_TITLE_TEXT_COLOR, SCREEN_WIDTH / 2, ZUKAN_TITLE_Y, FIELD_TEXT_ALIGN_CENTER);
 
         /* Arrows above and below the list while more rows are scrolled out of view. */
         if (g_zukan_scroll_y != 0)
@@ -893,11 +912,11 @@ void zukan_render_content(RenderContext* render_ctx)
             SET_BGR0_PACKED(tri, ZUKAN_SCROLL_ARROW_COLOR);
             setPolyF3(tri);
             setSemiTrans(tri, 1);
-            tri->x0 = SCREEN_WIDTH / 2 - 7;
+            tri->x0 = SCREEN_WIDTH / 2 - ZUKAN_SCROLL_ARROW_SIZE;
             tri->x1 = SCREEN_WIDTH / 2;
-            tri->x2 = SCREEN_WIDTH / 2 + 7;
-            tri->y1 = 46;
-            tri->y0 = tri->y2 = 53;
+            tri->x2 = SCREEN_WIDTH / 2 + ZUKAN_SCROLL_ARROW_SIZE;
+            tri->y1 = ZUKAN_SCROLL_UP_ARROW_BASE_Y - ZUKAN_SCROLL_ARROW_SIZE;
+            tri->y0 = tri->y2 = ZUKAN_SCROLL_UP_ARROW_BASE_Y;
             addPrim(ordering_table, tri);
             packet_cursor += sizeof(POLY_F3);
         }
@@ -908,11 +927,11 @@ void zukan_render_content(RenderContext* render_ctx)
             SET_BGR0_PACKED(tri, ZUKAN_SCROLL_ARROW_COLOR);
             setPolyF3(tri);
             setSemiTrans(tri, 1);
-            tri->x0 = SCREEN_WIDTH / 2 - 7;
+            tri->x0 = SCREEN_WIDTH / 2 - ZUKAN_SCROLL_ARROW_SIZE;
             tri->x1 = SCREEN_WIDTH / 2;
-            tri->x2 = SCREEN_WIDTH / 2 + 7;
-            tri->y1 = 187;
-            tri->y0 = tri->y2 = 180;
+            tri->x2 = SCREEN_WIDTH / 2 + ZUKAN_SCROLL_ARROW_SIZE;
+            tri->y1 = ZUKAN_SCROLL_DOWN_ARROW_BASE_Y + ZUKAN_SCROLL_ARROW_SIZE;
+            tri->y0 = tri->y2 = ZUKAN_SCROLL_DOWN_ARROW_BASE_Y;
             addPrim(ordering_table, tri);
             packet_cursor += sizeof(POLY_F3);
         }
@@ -941,18 +960,19 @@ void zukan_render_content(RenderContext* render_ctx)
 
             pos.x = 0;
             pos.y = row_y;
-            packet_cursor = field_draw_number_wide(ordering_table, (SPRT*)packet_cursor, entry_index + 1, 0, &pos, FIELD_TEXT_ALIGN_LEFT);
+            packet_cursor =
+                field_draw_number_wide(ordering_table, (SPRT*)packet_cursor, entry_index + 1, FIELD_TEXT_COLOR_DEFAULT, &pos, FIELD_TEXT_ALIGN_LEFT);
 
             if (g_zukan_list_entries[entry_index].available)
             {
                 packet_cursor =
                     field_draw_text((SPRT*)packet_cursor, ordering_table, ZUKAN_ARCHIVE_TEXT(entry_names_offset, g_zukan_list_entries[entry_index].name_index),
-                                    0, ZUKAN_LIST_NAME_X, row_y, FIELD_TEXT_ALIGN_CENTER);
+                                    FIELD_TEXT_COLOR_DEFAULT, ZUKAN_LIST_NAME_X, row_y, FIELD_TEXT_ALIGN_CENTER);
             }
             else
             {
-                packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(g_field_ui_text_dashes, FIELD_UI_TEXT_DASHES), 0,
-                                                ZUKAN_LIST_NAME_X, row_y, FIELD_TEXT_ALIGN_CENTER);
+                packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(g_field_ui_text_dashes, FIELD_UI_TEXT_DASHES),
+                                                FIELD_TEXT_COLOR_DEFAULT, ZUKAN_LIST_NAME_X, row_y, FIELD_TEXT_ALIGN_CENTER);
             }
         }
 
@@ -997,17 +1017,17 @@ void zukan_render_content(RenderContext* render_ctx)
         packet_cursor = zukan_render_detail_text(packet_cursor, ordering_table);
         packet_cursor = zukan_render_detail_sprites((SPRT*)packet_cursor, ordering_table);
 
-        pos.x = 262;
+        pos.x = ZUKAN_PAGE_SEPARATOR_X;
         pos.y = ZUKAN_PAGE_NUMBER_Y;
         packet_cursor = field_draw_sprite_glyph((SPRT*)packet_cursor, ordering_table, FIELD_DIGIT_GLYPH_SEPARATOR, &pos, 1);
 
-        pos.x = 238;
+        pos.x = ZUKAN_PAGE_NUMBER_X;
         pos.y = ZUKAN_PAGE_NUMBER_Y;
-        packet_cursor = field_draw_sprite_number(ordering_table, packet_cursor, g_zukan_displayed_entry + 1, 3, &pos, 0);
+        packet_cursor = field_draw_sprite_number(ordering_table, packet_cursor, g_zukan_displayed_entry + 1, ZUKAN_PAGE_NUMBER_DIGITS, &pos, 0);
 
-        pos.x = 270;
+        pos.x = ZUKAN_PAGE_COUNT_X;
         pos.y = ZUKAN_PAGE_NUMBER_Y;
-        packet_cursor = field_draw_sprite_number(ordering_table, packet_cursor, g_zukan_entry_count, 3, &pos, 0);
+        packet_cursor = field_draw_sprite_number(ordering_table, packet_cursor, g_zukan_entry_count, ZUKAN_PAGE_NUMBER_DIGITS, &pos, 0);
     }
 
     render_ctx->prim_cursor = packet_cursor;
@@ -1084,22 +1104,22 @@ u8* zukan_render_detail_text(u8* packet_cursor, u_long* ordering_table)
 
     line_offsets = (u16*)ZUKAN_SECTION(g_zukan_work_buffer, text_offset);
     offsets = line_offsets;
-    line_y = 26;
+    line_y = ZUKAN_DETAIL_TEXT_Y;
 
     for (i = 0; i < ZUKAN_DETAIL_TEXT_LINES; i++)
     {
         text = (u8*)line_offsets + *offsets;
-        x = 48;
+        x = ZUKAN_DETAIL_TEXT_X;
 
         while (*text == ' ')
         {
             text++;
-            x += 12;
+            x += ZUKAN_DETAIL_INDENT_WIDTH;
         }
 
-        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, 0, x, line_y, FIELD_TEXT_ALIGN_LEFT);
+        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, FIELD_TEXT_COLOR_DEFAULT, x, line_y, FIELD_TEXT_ALIGN_LEFT);
         offsets++;
-        line_y += 13;
+        line_y += ZUKAN_DETAIL_LINE_SPACING;
     }
 
     return packet_cursor;
@@ -1129,13 +1149,13 @@ void* zukan_render_detail_sprites(SPRT* sprite, u_long* ordering_table)
         sprite->w = *sprite_data++;
         sprite->h = *sprite_data++;
 
-        if (g_zukan_image_mode != 0)
+        if (g_zukan_image_mode != GPU_TEXTURE_4BIT)
         {
             setClut(sprite, 0, ZUKAN_ENTRY_CLUT_Y);
         }
         else
         {
-            setClut(sprite, *sprite_data * 16, ZUKAN_ENTRY_CLUT_Y);
+            setClut(sprite, *sprite_data * GPU_CLUT_4BIT_COLORS, ZUKAN_ENTRY_CLUT_Y);
         }
 
         sprite_data += 2;
