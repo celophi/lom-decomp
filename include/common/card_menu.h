@@ -305,9 +305,6 @@ static inline s32 card_menu_element_width(CardMenuElement* element)
 #define CARD_MENU_ENTRY_VALUE_X 0x86
 #endif
 
-/** @brief Colour of the semi-transparent selected-row highlight. */
-#define CARD_MENU_HIGHLIGHT_COLOR GPU_COLOR_WORD(0xF0, 0x80, 0xF0)
-
 /** @brief Colour of the semi-transparent tile that dims the inactive card slot's label. */
 #define CARD_MENU_INACTIVE_LABEL_COLOR GPU_COLOR_WORD(0x10, 0x10, 0x10)
 

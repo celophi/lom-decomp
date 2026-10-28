@@ -50,7 +50,6 @@
 #define ZUKAN_UI_IMAGE_BORDER 1
 
 #define ZUKAN_SCROLL_ARROW_COLOR GPU_COLOR_WORD(0x80, 0x80, 0xF0)
-#define ZUKAN_SELECTION_COLOR GPU_COLOR_WORD(0xF0, 0x80, 0xF0)
 
 /* List view: the category title above the list, and the arrows above and below it
  * that show more rows are scrolled out of view. */
@@ -989,7 +988,7 @@ void zukan_render_content(RenderContext* render_ctx)
         }
 
         tile = (TILE*)packet_cursor;
-        SET_BGR0_PACKED(tile, ZUKAN_SELECTION_COLOR);
+        SET_BGR0_PACKED(tile, GPU_COLOR_SELECTED_ROW);
         setTile(tile);
         setSemiTrans(tile, 1);
         setXY0(tile, 0, row_y);

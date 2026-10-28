@@ -56,8 +56,6 @@
 /** @brief Frames the window takes to scroll to a new cursor row. */
 #define FIELD_ITEM_SCROLL_TICKS 4
 
-/** @brief Color of the translucent cursor-row highlight. */
-#define FIELD_ITEM_HIGHLIGHT_COLOR 0xF080F0
 /** @brief Height of the cursor-row highlight, in pixels. */
 #define FIELD_ITEM_HIGHLIGHT_HEIGHT 14
 
@@ -319,7 +317,7 @@ static u8 *field_draw_item_drop_list(u_long* ot, u8 *cursor, s32 scroll_x, s32 s
     }
 
     tile = (FieldPackedTile *)cursor;
-    tile->color = FIELD_ITEM_HIGHLIGHT_COLOR;
+    tile->color = GPU_COLOR_SELECTED_ROW;
     setTile(tile);
     setSemiTrans(tile, 1);
     tile->w = FIELD_ITEM_WINDOW_WIDTH;

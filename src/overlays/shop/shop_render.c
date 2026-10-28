@@ -351,7 +351,7 @@ u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
         y = (cursor_y - cursor_top) - scroll;
     }
     tile = (TILE*)prim;
-    *(u32*)&tile->r0 = 0xF080F0;
+    *(u32*)&tile->r0 = GPU_COLOR_SELECTED_ROW;
     setlen(tile, 3);
     setcode(tile, GPU_CODE_TILE | GPU_CODE_SEMI_TRANS);
     setXY0(tile, 0, y - 1);
