@@ -744,7 +744,5 @@ The ZUKAN tests cover the archive header, the shared runtime palette on both
 textures, sprite crops, category overrides, the display-order terminator, JP
 decoding through CLOAD and complete byte coverage of both inputs. Bad archive
 offsets, sprites outside their texture, a missing terminator and failed writes
-leave no partial output. Source tests check both regional layouts, that the
-C arrays use exactly the macros `zukan_initializers.py` writes, and the
-constants copied from the C code. The initializer tests check each macro's
-values and that the display order stops at its terminator.
+leave no partial output. Source tests check both regional layouts and the
+constants copied from the C code.

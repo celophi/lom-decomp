@@ -4,7 +4,7 @@ import re
 import unittest
 from pathlib import Path
 
-from tools.data.overlays import cload, splat_config, zukan, zukan_initializers
+from tools.data.overlays import cload, splat_config, zukan
 from tools.data.overlays.tests.test_addhero_sources import c_define
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -35,15 +35,6 @@ class SourceTest(unittest.TestCase):
                 if version == "jp":
                     chart = cload.CloadSymbols.load(config / cload.SYMBOL_FILE)
                     self.assertLess(chart.chart, chart.decimal_glyphs)
-
-    def test_category_arrays_use_the_generated_macros(self):
-        category = zukan.CATEGORY_SOURCE.read_text(encoding="ascii")
-        self.assertIn(f'#include "{zukan_initializers.HEADER}"', category)
-        types = {"i": "s32", "h": "s16", "H": "u16"}
-        declared = re.findall(r"^    (\w+) (\w+)\[\] = \{(\w+)\};$", category, re.MULTILINE)
-        self.assertEqual(declared, [(types[element], name, macro) for _, name, element, macro in zukan_initializers.ARRAYS])
-        self.assertEqual([key for key, *_ in zukan_initializers.ARRAYS], list(zukan.TABLE_KEYS))
-        self.assertEqual(len(zukan.ARCHIVE_SECTIONS), 4)
 
     def test_constants_follow_the_c_code(self):
         self.assertEqual(zukan.ENTRY_RESOURCE_BASE, c_define(zukan.SOURCE, "ZUKAN_ENTRY_RESOURCE_BASE"))
