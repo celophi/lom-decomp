@@ -21,3 +21,4 @@ decompress: $(DECOMPRESSED_OVERLAYS)
 splat: decompress
 	$(if $(SPLAT_CONFIGS),,$(error No splat configs found under $(CONFIG_DIR)/ for VERSION=$(VERSION)))
 	@printf '%s\n' $(SPLAT_CONFIGS) | xargs -n 1 -P $(SPLAT_JOBS) splat split
+	python3 -m tools.data.overlays.zukan_initializers --version $(VERSION)

@@ -15,8 +15,9 @@ LD             := $(CROSS_COMPILE)ld
 OBJCOPY        := $(CROSS_COMPILE)objcopy
 OBJDUMP        := $(CROSS_COMPILE)objdump
 
-# Shared header search paths for compilers, assemblers, and maspsx.
-INCLUDE_FLAGS := -Iinclude -Iinclude/sdk
+# Shared header search paths for compilers, assemblers, and maspsx. The assets
+# path holds the initializer lists that make splat writes from the disc.
+INCLUDE_FLAGS := -Iinclude -Iinclude/sdk -I$(ASSETS_DIR)
 
 # GCC 2.8.0 is the default compiler. Sources are routed to G0 or G4 in the
 # source lists; G controls the maximum size of gp-relative data. Builtins stay
