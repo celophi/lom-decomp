@@ -74,7 +74,7 @@ g_golem_interpolation_value          = 0x8014C0C0;
 g_golem_interpolation_target         = 0x8014C0C8;
 
 // US ELF names not listed above (splat placeholders shared with the C sources).
-func_800A3938 = 0x800A37E8;
+field_play_sound = 0x800A37E8;
 field_draw_text = 0x800A8750;
 field_format_number = 0x800A8A40;
 golem_rebuild_grid_owners = 0x800CB324;

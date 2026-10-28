@@ -12,7 +12,7 @@ field_restore_fade_target = 0x80067BE0;
 field_set_default_fade_target = 0x80067C44;
 field_text_reset_windows = 0x800640B0;
 field_text_reset_scratch = 0x800640EC;
-play_menu_sfx = 0x800A37E8;
+field_play_sound = 0x800A37E8;
 
 // shop.c
 shop_init = 0x80140004;

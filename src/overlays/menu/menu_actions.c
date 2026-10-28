@@ -1,10 +1,10 @@
 #include "internal/menu_internal.h"
 #include "overlays/field/field_text.h"
 #include "main/audio/akao.h"
+#include "overlays/field/field_sound.h"
 
 s32 menu_find_active_content_item(void);
 s32 menu_clear_pending_status(void);
-void func_800A3938();
 
 /**
  * @brief Build the equipped-item ability mask while excluding one equipment slot.
@@ -1218,7 +1218,7 @@ void menu_play_se(s32 sound_id, s32 volume)
 {
     if (g_active_script == 0)
     {
-        func_800A3938(sound_id, volume);
+        field_play_sound(sound_id, volume);
     }
 }
 

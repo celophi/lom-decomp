@@ -13,7 +13,7 @@ field_set_default_fade_target = 0x80067F8C;
 field_text_reset_windows = 0x800643E0;
 field_text_reset_scratch = 0x8006441C;
 field_format_number = 0x800A8B90;
-play_menu_sfx = 0x800A3938;
+field_play_sound = 0x800A3938;
 
 // shop.c
 shop_init = 0x80140004;
