@@ -3,6 +3,7 @@
 #include "common/saved_game.h"
 #include "internal/zukan_category.h"
 #include "overlays/field/field_actor_records.h"
+#include "zukan_category/tables.h"
 
 #define ZUKAN_HISTORY_GROUP_COUNT 6
 #define ZUKAN_DISPLAY_ORDER_END 0x400
@@ -69,18 +70,10 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
     s32 unused;
     s32 swap_index;
     s32 visible_count;
-    s32 category_ranges[] = {
-#include "zukan_category/category_ranges.inc"
-    };
-    s32 group_ranges[] = {
-#include "zukan_category/group_ranges.inc"
-    };
-    s16 resource_values[] = {
-#include "zukan_category/resource_values.inc"
-    };
-    u16 display_order[] = {
-#include "zukan_category/display_order.inc"
-    };
+    s32 category_ranges[] = {ZUKAN_CATEGORY_RANGES};
+    s32 group_ranges[] = {ZUKAN_GROUP_RANGES};
+    s16 resource_values[] = {ZUKAN_RESOURCE_VALUES};
+    u16 display_order[] = {ZUKAN_DISPLAY_ORDER};
 
     if (category == ZUKAN_CATEGORY_WORLD_HISTORY)
     {

@@ -36,12 +36,13 @@ class SourceTest(unittest.TestCase):
                     chart = cload.CloadSymbols.load(config / cload.SYMBOL_FILE)
                     self.assertLess(chart.chart, chart.decimal_glyphs)
 
-    def test_category_arrays_include_the_generated_lists(self):
+    def test_category_arrays_use_the_generated_macros(self):
         category = zukan.CATEGORY_SOURCE.read_text(encoding="ascii")
+        self.assertIn(f'#include "{zukan_initializers.HEADER}"', category)
         types = {"i": "s32", "h": "s16", "H": "u16"}
-        declared = re.findall(r"^    (\w+) (\w+)\[\] = \{\n#include \"zukan_category/(\w+)\.inc\"\n    \};$", category, re.MULTILINE)
-        self.assertEqual(declared, [(types[element], name, name) for _, name, element in zukan_initializers.ARRAYS])
-        self.assertEqual([key for key, _, _ in zukan_initializers.ARRAYS], list(zukan.TABLE_KEYS))
+        declared = re.findall(r"^    (\w+) (\w+)\[\] = \{(\w+)\};$", category, re.MULTILINE)
+        self.assertEqual(declared, [(types[element], name, macro) for _, name, element, macro in zukan_initializers.ARRAYS])
+        self.assertEqual([key for key, *_ in zukan_initializers.ARRAYS], list(zukan.TABLE_KEYS))
         self.assertEqual(len(zukan.ARCHIVE_SECTIONS), 4)
 
     def test_constants_follow_the_c_code(self):

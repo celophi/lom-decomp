@@ -598,8 +598,8 @@ entry function, `zukan_run`. They aren't a `rodatabin`, though.
 builds a list, so they're `zukan_category.c`'s own rodata and the compiler has
 to see the values in the array initializers. `make splat` runs
 `zukan_initializers.py` to read the four tables from the decompressed overlay
-and write one list per array to `assets/<version>/zukan_category/`, which the C
-includes. `zukan.py` reads the tables from the decompressed overlay the same
+and write them as macros in `assets/<version>/zukan_category/tables.h`, so the
+C reads `s32 category_ranges[] = {ZUKAN_CATEGORY_RANGES};`. `zukan.py` reads the tables from the decompressed overlay the same
 way, so the repository still doesn't carry the values. The
 data blob's last 2,140 bytes are zero-filled screen state, listed in the byte
 map without another file. JP has no unknown gaps; US has six bytes after the
@@ -745,6 +745,6 @@ textures, sprite crops, category overrides, the display-order terminator, JP
 decoding through CLOAD and complete byte coverage of both inputs. Bad archive
 offsets, sprites outside their texture, a missing terminator and failed writes
 leave no partial output. Source tests check both regional layouts, that the
-C arrays include exactly the lists `zukan_initializers.py` writes, and the
-constants copied from the C code. The initializer tests check each list's
+C arrays use exactly the macros `zukan_initializers.py` writes, and the
+constants copied from the C code. The initializer tests check each macro's
 values and that the display order stops at its terminator.
