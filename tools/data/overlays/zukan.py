@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Export ZUKAN's encyclopedia artwork, entry names and category tables.
 
-The build links one data blob after the code and one rodata blob of entry
-tables before it. Readers return Parts; the byte maps cover both inputs. The
-code starts right after the tables with the overlay's entry function,
-zukan_run.
+The build links one data blob after the code. The entry tables before the
+code are zukan_category.c's own rodata: zukan_build_category_entries keeps
+them in local array initializers, so splat extracts no file for them and they
+are read from the decompressed overlay instead. Readers return Parts; the byte
+maps cover both inputs. The code starts right after the tables with the
+overlay's entry function, zukan_run.
 
 The data blob starts with a four-section archive: the page and border
 textures, the entry names and the category names. Both textures upload their
@@ -19,10 +21,8 @@ Example:
 from __future__ import annotations
 
 import argparse
-import ast
 from dataclasses import dataclass
 from pathlib import Path
-import re
 import shutil
 import struct
 import sys
@@ -102,6 +102,7 @@ SYMBOL_NAMES = {
 }
 DATA_KEYS = ("archive", "sprites", "variables")
 TABLE_KEYS = ("category_ranges", "group_ranges", "entry_values", "display_order")
+TABLE_SECTION = ("zukan_category", ".rodata")
 
 
 @dataclass(frozen=True)
@@ -189,30 +190,23 @@ def read_bytes(blob: Blob, address: int, end: int, what: str) -> bytes:
     return blob.data[start:stop]
 
 
-def table_lengths() -> dict[str, int]:
-    """Array lengths of the four table structs copied by zukan_build_category_entries."""
-    source = CATEGORY_SOURCE.read_text(encoding="ascii")
-    defines = dict(re.findall(r"^#define\s+(\w+)\s+([^\n]+)", source, re.MULTILINE))
+def table_lengths(blob: Blob[ZukanSymbols]) -> dict[str, int]:
+    """Element counts of the four tables.
 
-    def array_length(expression: str, seen: frozenset[str] = frozenset()) -> int:
-        """Resolve integer literals, named counts and sums used by the table arrays."""
-        node = ast.parse(expression, mode="eval").body
-        if isinstance(node, ast.Constant) and type(node.value) is int:
-            return node.value
-        if isinstance(node, ast.Name) and node.id in defines and node.id not in seen:
-            return array_length(defines[node.id], seen | {node.id})
-        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
-            return array_length(ast.unparse(node.left), seen) + array_length(ast.unparse(node.right), seen)
-        raise ValueError(f"{CATEGORY_SOURCE} has an unsupported table length: {expression}")
-
-    lengths = {}
-    for key, type_name in (("category_ranges", "ZukanCategoryRangeTable"), ("group_ranges", "ZukanGroupRangeTable"),
-                           ("entry_values", "ZukanEntryValueTable"), ("display_order", "ZukanDisplayOrderTable")):
-        match = re.search(r"typedef struct\s*\{\s*[su](16|32) values\[([^\]]+)\];\s*\}\s*" + type_name + ";", source)
-        if match is None:
-            raise ValueError(f"{CATEGORY_SOURCE} has no {type_name}")
-        lengths[key] = array_length(match[2])
-    return lengths
+    The tables sit back to back, so each one runs up to the next. The display
+    order comes last and ends with its 0x400 terminator.
+    """
+    names = blob.symbols
+    raw = blob.data[blob.offset(names.display_order) :]
+    order = [value for (value,) in struct.iter_unpack("<H", raw[: len(raw) // 2 * 2])]
+    if DISPLAY_ORDER_END not in order:
+        raise ValueError(f"display order has no 0x{DISPLAY_ORDER_END:X} terminator")
+    return {
+        "category_ranges": (names.group_ranges - names.category_ranges) // 4,
+        "group_ranges": (names.entry_values - names.group_ranges) // 4,
+        "entry_values": (names.display_order - names.entry_values) // 2,
+        "display_order": order.index(DISPLAY_ORDER_END) + 1,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -389,13 +383,12 @@ def read_display_order(blob: Blob[ZukanSymbols], count: int, names: TextSection)
     entries = [{"position": position, "entry": index, "name": entry_name(names, index)}
                for position, index in enumerate(order[:end])]
     values = {"record_format": f"<{count}H", "terminator": f"0x{DISPLAY_ORDER_END:X}", "entries": entries,
-              "trailing_values": list(order[end + 1:]),
               "note": "Each category lists its entries in this order; entries missing here are not listed."}
     return table_part(blob, "display_order", address, raw, values)
 
 
 def read_tables(blob: Blob[ZukanSymbols], names: TextSection, categories: TextSection) -> list[Part]:
-    lengths = table_lengths()
+    lengths = table_lengths(blob)
     category_part, ranges = read_categories(blob, lengths["category_ranges"], names, categories)
     parts = [category_part,
              read_history_groups(blob, lengths["group_ranges"], names),
@@ -480,28 +473,39 @@ def _write_sprites(content: Sprites, path: Path) -> None:
 # Putting it together
 
 
+def check_order(names: ZukanSymbols, keys: tuple[str, ...], start: int, end: int, where: str) -> None:
+    """Each symbol in @p keys must lie in [start, end), after the one before it."""
+    previous = start - 1
+    for key in keys:
+        address = getattr(names, key)
+        if not start <= address < end:
+            raise ValueError(f"{SYMBOL_NAMES[key]} is outside {where}")
+        if address <= previous:
+            raise ValueError(f"{SYMBOL_NAMES[key]} is out of resource order")
+        previous = address
+
+
+def load_tables(config: Path, version: str) -> Blob[ZukanSymbols]:
+    """The four entry tables: zukan_category.c's rodata, read from the decompressed overlay."""
+    names = ZukanSymbols.load(config / SYMBOL_FILE)
+    overlay = config / OVERLAY_CONFIG
+    start, end = splat_config.section(overlay, *TABLE_SECTION)
+    check_order(names, TABLE_KEYS, start, end, f"{TABLE_SECTION[0]}'s {TABLE_SECTION[1]}")
+    return Blob(splat_config.read_image(overlay, start, end), start, "ZUKAN.BIN", version, names)
+
+
 def load_inputs(inputs: Inputs) -> tuple[Blob[ZukanSymbols], Blob[ZukanSymbols]]:
     names = ZukanSymbols.load(inputs.config / SYMBOL_FILE)
     files = splat_config.data_files(inputs.config / OVERLAY_CONFIG, inputs.assets)
-
-    def load(keys: tuple[str, ...]) -> Blob:
-        source = splat_config.file_containing(files, getattr(names, keys[0]), SYMBOL_NAMES[keys[0]])
-        if not source.path.exists():
-            raise ValueError(f"{source.path} is missing; run make splat first")
-        raw = source.path.read_bytes()
-        if len(raw) != source.end - source.start:
-            raise ValueError(f"{source.path} size does not match the splat config; run make splat again")
-        previous = source.start - 1
-        for key in keys:
-            address = getattr(names, key)
-            if not source.contains(address):
-                raise ValueError(f"{SYMBOL_NAMES[key]} is outside {source.path}")
-            if address <= previous:
-                raise ValueError(f"{SYMBOL_NAMES[key]} is out of resource order")
-            previous = address
-        return Blob(raw, source.start, source.path.name, inputs.version, names)
-
-    return load(DATA_KEYS), load(TABLE_KEYS)
+    source = splat_config.file_containing(files, names.archive, SYMBOL_NAMES["archive"])
+    if not source.path.exists():
+        raise ValueError(f"{source.path} is missing; run make splat first")
+    raw = source.path.read_bytes()
+    if len(raw) != source.end - source.start:
+        raise ValueError(f"{source.path} size does not match the splat config; run make splat again")
+    check_order(names, DATA_KEYS, source.start, source.end, str(source.path))
+    blob = Blob(raw, source.start, source.path.name, inputs.version, names)
+    return blob, load_tables(inputs.config, inputs.version)
 
 
 def load_text_chart(inputs: Inputs) -> Chart | None:

@@ -31,7 +31,7 @@ FUNCTION_KINDS = (TypeKind.FUNCTIONPROTO, TypeKind.FUNCTIONNOPROTO)
 def clang_args(version: str, includes) -> list[str]:
     """Parse the C the way the PS1 build sees it (the header-only M2CTX mode)."""
     return (["--target=mipsel-unknown-linux-gnu", "-std=gnu89", f"-DVERSION_{version.upper()}", "-DM2CTX",
-             "-Iinclude", "-Iinclude/sdk", "-Wno-everything", "-fms-extensions"]
+             "-Iinclude", "-Iinclude/sdk", f"-Iassets/{version}", "-Wno-everything", "-fms-extensions"]
             + [f"-I{d}" for d in includes])
 
 

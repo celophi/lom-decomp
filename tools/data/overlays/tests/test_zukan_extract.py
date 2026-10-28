@@ -26,7 +26,7 @@ def sprite_record(draw_mode, u, v, palette, width, height, x, y):
 
 
 class FakeOverlay:
-    """A four-section archive, 21 sprites and the four entry tables at their C lengths."""
+    """A four-section archive, 21 sprites and the four entry tables at their game lengths."""
 
     def __init__(self, version="us"):
         self.version = version
@@ -82,14 +82,19 @@ class FakeOverlay:
             (config / "overlays").mkdir()
             assets.mkdir()
         (assets / "zukan_data.databin.bin").write_bytes(self.data)
-        (assets / "zukan_entry_tables.rodatabin.bin").write_bytes(self.tables)
         table_start = TABLE_ADDRESS - 0x80140000 + 1
         start = ADDRESS - 0x80140000 + 1
+        image = bytearray(table_start + len(self.tables))
+        image[table_start:] = self.tables
+        (root / "build").mkdir(exist_ok=True)
+        (root / "build/ZUKAN.BIN").write_bytes(image)
+        options = {"base_path": "../..", "target_path": "build/ZUKAN.BIN"}
         segment = {"start": 1, "vram": 0x80140000, "subsegments": [
-            [table_start, "rodatabin", "zukan_entry_tables"], [table_start + len(self.tables), "c", "zukan"],
+            [table_start, ".rodata", "zukan_category"], [table_start + len(self.tables), "c", "zukan"],
             [start, "databin", "zukan_data"],
         ]}
-        (config / zukan.OVERLAY_CONFIG).write_text(yaml.safe_dump({"segments": [segment, [start + len(self.data)]]}))
+        document = {"options": options, "segments": [segment, [start + len(self.data)]]}
+        (config / zukan.OVERLAY_CONFIG).write_text(yaml.safe_dump(document))
         lines = [f"{name} = 0x{address:08X};" for name, address in self.symbols.items() if name != skip_symbol]
         (config / zukan.SYMBOL_FILE).write_text("\n".join(lines) + "\n")
         return zukan.Inputs(self.version, config, assets)
@@ -168,7 +173,7 @@ class ExtractTest(unittest.TestCase):
         self.assertIsNone(entries[20]["name"])
         order = self.load("tables/display_order.yaml")
         self.assertEqual([entry["entry"] for entry in order["entries"]], [2, 1])
-        self.assertEqual(len(order["trailing_values"]), 716)
+        self.assertEqual(order["record_format"], "<3H")
         groups = self.load("tables/history_groups.yaml")["entries"]
         self.assertEqual(groups[5], {"index": 5, "first_entry": 0x1E5, "end_entry": 0x1E6, "first_name": None,
                                      "unlock_bit": "0x127"})
@@ -201,7 +206,7 @@ class ExtractTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "size does not match"):
             zukan.extract(inputs, self.output)
         data.write_bytes(self.overlay.data)
-        (inputs.assets / "zukan_entry_tables.rodatabin.bin").unlink()
+        (self.root / "build/ZUKAN.BIN").unlink()
         with self.assertRaisesRegex(ValueError, "run make splat first"):
             zukan.extract(inputs, self.output)
         self.assert_no_output()

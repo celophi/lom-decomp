@@ -92,7 +92,7 @@ DIAGNOSTIC = re.compile(r"^(?P<file>[^:\s]+\.[ch]):\d+:\d+: (?P<kind>warning|err
 
 def check(cc: list[str], flags: list[str], version: str, path: str):
     """Compile one file; return (path, first error or None, Counter of categories)."""
-    r = subprocess.run(cc + flags + [f"-DVERSION_{version.upper()}", path], cwd=REPO,
+    r = subprocess.run(cc + flags + [f"-DVERSION_{version.upper()}", f"-Iassets/{version}", path], cwd=REPO,
                        capture_output=True, text=True)
     counts = collections.Counter()
     first_error = None

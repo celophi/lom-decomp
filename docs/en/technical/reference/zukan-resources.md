@@ -6,8 +6,11 @@ ZUKAN is the encyclopedia screen: the category lists and the entry pages for
 lands, artifacts, monsters, characters, world history and the rest. Both
 regional YAMLs keep its artwork, names and sprite layout in one `zukan_data`
 databin after the code. The tables that decide which entries each category
-lists sit before the code in one `zukan_entry_tables` rodatabin. The build
-links the original bytes, and a separate extractor makes them readable.
+lists sit right before the code. They belong to the function that builds the
+lists, which copies them into its own arrays every time, so the build compiles
+them with that function: `make splat` reads them from your disc into
+`assets/<version>/zukan_category/`. The repository stores neither, and a
+separate extractor makes both readable.
 
 ```sh
 make splat

@@ -339,6 +339,7 @@ u8* zukan_initialize_state(u8* work_buffer, s32 category)
     g_zukan_scroll_steps = 0;
     zukan_build_entry_list(category);
 
+    /* TODO: Figure out how to replace this hack and keep it matching. */
     while (1)
     {
         while (1)

@@ -4,11 +4,7 @@
 #include "internal/zukan_category.h"
 #include "overlays/field/field_actor_records.h"
 
-#define ZUKAN_CATEGORY_RANGE_COUNT 13
 #define ZUKAN_HISTORY_GROUP_COUNT 6
-#define ZUKAN_HISTORY_GROUP_RANGE_COUNT (ZUKAN_HISTORY_GROUP_COUNT + 1)
-#define ZUKAN_ENTRY_VALUE_COUNT 1018
-#define ZUKAN_DISPLAY_ORDER_COUNT 719
 #define ZUKAN_DISPLAY_ORDER_END 0x400
 /* Entry indices. The Techniques list also shows the ability entries from ZUKAN_CHARACTER_END, and
  * the artifacts' second pages follow the World History entries the list shows. */
@@ -42,35 +38,6 @@
 #define ZUKAN_LUNGE_BIT (ZUKAN_ABILITY_BIT + 2)
 #define ZUKAN_FLIP_KICK_BIT (ZUKAN_LUNGE_BIT + FIELD_ABILITY_SLIDE + 1 - FIELD_ABILITY_LUNGE)
 
-/** @brief Start index of each category and the final end index. */
-typedef struct
-{
-    s32 values[ZUKAN_CATEGORY_RANGE_COUNT];
-} ZukanCategoryRangeTable;
-
-/** @brief Start index of each World History group and the final end index. */
-typedef struct
-{
-    s32 values[ZUKAN_HISTORY_GROUP_RANGE_COUNT];
-} ZukanGroupRangeTable;
-
-/** @brief CD resource values for every encyclopedia entry. */
-typedef struct
-{
-    s16 values[ZUKAN_ENTRY_VALUE_COUNT];
-} ZukanEntryValueTable;
-
-/** @brief Entry display order followed by its terminal sentinel. */
-typedef struct
-{
-    u16 values[ZUKAN_DISPLAY_ORDER_COUNT];
-} ZukanDisplayOrderTable;
-
-extern ZukanCategoryRangeTable g_zukan_category_ranges;
-extern ZukanGroupRangeTable g_zukan_group_ranges;
-extern ZukanEntryValueTable g_zukan_entry_values;
-extern ZukanDisplayOrderTable g_zukan_display_order;
-
 /* Named views of fields in SavedGameLayout at their fixed game-state addresses. */
 extern u32 g_saved_technique_bits[FIELD_WEAPON_CATEGORY_COUNT];
 extern u32 g_saved_ability_bits[FIELD_ABILITY_WORD_COUNT];
@@ -102,19 +69,18 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
     s32 unused;
     s32 swap_index;
     s32 visible_count;
-    s32 category_ranges[ZUKAN_CATEGORY_RANGE_COUNT];
-    s32 group_ranges[ZUKAN_HISTORY_GROUP_RANGE_COUNT];
-    s16 resource_values[ZUKAN_ENTRY_VALUE_COUNT];
-    u16 display_order[ZUKAN_DISPLAY_ORDER_COUNT];
-
-    __builtin_memcpy(category_ranges, category_ranges, 0);
-    *(ZukanCategoryRangeTable*)category_ranges = g_zukan_category_ranges;
-    __builtin_memcpy(group_ranges, group_ranges, 0);
-    *(ZukanGroupRangeTable*)group_ranges = g_zukan_group_ranges;
-    __builtin_memcpy(resource_values, resource_values, 0);
-    *(ZukanEntryValueTable*)resource_values = g_zukan_entry_values;
-    __builtin_memcpy(display_order, display_order, 0);
-    *(ZukanDisplayOrderTable*)display_order = g_zukan_display_order;
+    s32 category_ranges[] = {
+#include "zukan_category/category_ranges.inc"
+    };
+    s32 group_ranges[] = {
+#include "zukan_category/group_ranges.inc"
+    };
+    s16 resource_values[] = {
+#include "zukan_category/resource_values.inc"
+    };
+    u16 display_order[] = {
+#include "zukan_category/display_order.inc"
+    };
 
     if (category == ZUKAN_CATEGORY_WORLD_HISTORY)
     {

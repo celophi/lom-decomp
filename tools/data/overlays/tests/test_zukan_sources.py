@@ -1,12 +1,10 @@
 """Keep ZUKAN's extractor aligned with the regional maps and the C code."""
 
 import re
-import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
-from tools.data.overlays import cload, splat_config, zukan
+from tools.data.overlays import cload, splat_config, zukan, zukan_initializers
 from tools.data.overlays.tests.test_addhero_sources import c_define
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -14,26 +12,21 @@ DISPLAY_HEADER = REPO_ROOT / "include/main/display.h"
 
 
 class SourceTest(unittest.TestCase):
-    def test_regions_have_one_table_blob_and_one_data_blob(self):
-        lengths = zukan.table_lengths()
+    def test_regions_have_table_rodata_and_one_data_blob(self):
         for version in ("us", "jp"):
             with self.subTest(version=version):
                 config = REPO_ROOT / "config" / version
+                overlay = config / zukan.OVERLAY_CONFIG
                 names = zukan.ZukanSymbols.load(config / zukan.SYMBOL_FILE)
-                files = splat_config.data_files(config / zukan.OVERLAY_CONFIG, REPO_ROOT / "assets" / version)
-                self.assertEqual([(f.name, f.kind) for f in files], [
-                    ("zukan_entry_tables", "rodatabin"), ("zukan_data", "databin")])
-                tables, data = files
+                files = splat_config.data_files(overlay, REPO_ROOT / "assets" / version)
+                self.assertEqual([(f.name, f.kind) for f in files], [("zukan_data", "databin")])
+                start, end = splat_config.section(overlay, *zukan.TABLE_SECTION)
                 table_addresses = [getattr(names, key) for key in zukan.TABLE_KEYS]
                 self.assertEqual(table_addresses, sorted(set(table_addresses)))
-                self.assertEqual(tables.start, names.category_ranges)
-                self.assertEqual(names.group_ranges - names.category_ranges, lengths["category_ranges"] * 4)
-                self.assertEqual(names.entry_values - names.group_ranges, lengths["group_ranges"] * 4)
-                self.assertEqual(names.display_order - names.entry_values, lengths["entry_values"] * 2)
-                # The display order ends two bytes before zukan_run; those two bytes are padding.
-                self.assertEqual(tables.end - names.display_order, lengths["display_order"] * 2 + 2)
-                run = zukan.symbols.load(config / zukan.SYMBOL_FILE)["zukan_run"]
-                self.assertEqual(tables.end, run)
+                self.assertEqual(start, names.category_ranges)
+                self.assertTrue(all(start <= address < end for address in table_addresses))
+                self.assertEqual(end, zukan.symbols.load(config / zukan.SYMBOL_FILE)["zukan_run"])
+                data = files[0]
                 data_addresses = [getattr(names, key) for key in zukan.DATA_KEYS]
                 self.assertEqual(data_addresses, sorted(set(data_addresses)))
                 self.assertEqual(data.start, names.archive)
@@ -43,9 +36,12 @@ class SourceTest(unittest.TestCase):
                     chart = cload.CloadSymbols.load(config / cload.SYMBOL_FILE)
                     self.assertLess(chart.chart, chart.decimal_glyphs)
 
-    def test_table_lengths_come_from_the_category_structs(self):
-        self.assertEqual(zukan.table_lengths(), {
-            "category_ranges": 13, "group_ranges": 7, "entry_values": 1018, "display_order": 719})
+    def test_category_arrays_include_the_generated_lists(self):
+        category = zukan.CATEGORY_SOURCE.read_text(encoding="ascii")
+        types = {"i": "s32", "h": "s16", "H": "u16"}
+        declared = re.findall(r"^    (\w+) (\w+)\[\] = \{\n#include \"zukan_category/(\w+)\.inc\"\n    \};$", category, re.MULTILINE)
+        self.assertEqual(declared, [(types[element], name, name) for _, name, element in zukan_initializers.ARRAYS])
+        self.assertEqual([key for key, _, _ in zukan_initializers.ARRAYS], list(zukan.TABLE_KEYS))
         self.assertEqual(len(zukan.ARCHIVE_SECTIONS), 4)
 
     def test_constants_follow_the_c_code(self):
@@ -99,17 +95,6 @@ class SourceTest(unittest.TestCase):
         self.assertIn("j < ZUKAN_HISTORY_GROUP_COUNT", category)
         self.assertIn("group_ranges[j] + ZUKAN_WORLD_HISTORY_START", category)
         self.assertIn("ZUKAN_ENTRY_UNLOCKED(j + ZUKAN_HISTORY_GROUP_UNLOCK_BIT)", category)
-
-    def test_table_lengths_follow_changed_counts_and_reject_unknown_names(self):
-        source = zukan.CATEGORY_SOURCE.read_text(encoding="ascii")
-        with tempfile.TemporaryDirectory() as folder:
-            path = Path(folder) / "category.c"
-            path.write_text(source.replace("#define ZUKAN_HISTORY_GROUP_COUNT 6", "#define ZUKAN_HISTORY_GROUP_COUNT 8"), encoding="ascii")
-            with patch.object(zukan, "CATEGORY_SOURCE", path):
-                self.assertEqual(zukan.table_lengths()["group_ranges"], 9)
-                path.write_text(source.replace("values[ZUKAN_CATEGORY_RANGE_COUNT]", "values[UNKNOWN_COUNT]"), encoding="ascii")
-                with self.assertRaisesRegex(ValueError, "unsupported table length: UNKNOWN_COUNT"):
-                    zukan.table_lengths()
 
 
 if __name__ == "__main__":
