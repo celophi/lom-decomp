@@ -39,6 +39,9 @@
 #define GPU_COLOR_WHITE GPU_COLOR_WORD(0xFF, 0xFF, 0xFF)
 #define GPU_COLOR_BLACK GPU_COLOR_WORD(0, 0, 0)
 
+/** @brief The translucent pink bar the menus draw behind the selected row of a list. */
+#define GPU_COLOR_SELECTED_ROW GPU_COLOR_WORD(0xF0, 0x80, 0xF0)
+
 /** @brief Write vertex 1, 2 or 3's colour word of a POLY_G4 at once. Vertex 0 uses SET_BGR0_PACKED. */
 #define SET_POLY_G4_BGR1_PACKED(p, _word) \
     (*(u32*)&(p)->r1 = (u32)(_word))

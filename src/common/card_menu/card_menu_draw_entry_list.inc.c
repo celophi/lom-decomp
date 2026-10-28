@@ -148,7 +148,7 @@ void* card_menu_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offs
         {
             TILE* tile = (TILE*)prim;
 
-            SET_BGR0_PACKED(tile, CARD_MENU_HIGHLIGHT_COLOR);
+            SET_BGR0_PACKED(tile, GPU_COLOR_SELECTED_ROW);
             setTile(tile);
             setSemiTrans(tile, 1);
             tile->w = CARD_MENU_EXCHANGE_LIST_WIDTH;

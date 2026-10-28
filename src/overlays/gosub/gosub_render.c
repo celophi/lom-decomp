@@ -623,7 +623,7 @@ u8* gosub_draw_item_list(u_long* ot, u8* initial_prim, s32 x_off, s32 y_off)
     }
 
     tile = (GosubTilePacket*)prim;
-    cursor_color = 0xF080F0;
+    cursor_color = GPU_COLOR_SELECTED_ROW;
     addr_mask = 0xFFFFFF;
     while (1)
     {
