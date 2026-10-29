@@ -42,7 +42,6 @@
 /* Named views of fields in SavedGameLayout at their fixed game-state addresses. */
 extern u32 g_saved_technique_bits[FIELD_WEAPON_CATEGORY_COUNT];
 extern u32 g_saved_ability_bits[FIELD_ABILITY_WORD_COUNT];
-extern FieldLandWords g_saved_lands[FIELD_LAND_COUNT];
 
 /** @brief Nonzero when encyclopedia entry bit @p bit is set in the saved game. */
 #define ZUKAN_ENTRY_UNLOCKED(bit) SAVED_BIT_IS_SET(g_saved_encyclopedia_bits, bit)

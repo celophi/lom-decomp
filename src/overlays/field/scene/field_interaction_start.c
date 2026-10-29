@@ -66,9 +66,6 @@
 /** @brief Non-zero when leaving for the world map returns to scene 1 instead. */
 #define FIELD_VAR_WORLD_MAP_REDIRECT 0xFFF
 
-/** @brief Game control word bit: the game state words must be cleared and a new seed drawn. */
-#define FIELD_CONTROL_RESET_WORDS 0x800000
-
 /** @brief Diagnostic: a guest or companion is present but its variant variable is unset. */
 #define DIAG_MISSING_PARTY_VARIANT 0x320
 

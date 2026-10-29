@@ -3,10 +3,15 @@
 
 #include "common.h"
 
-/** @brief Per-land field scene identifiers from the current layout file. */
+/** @brief wmap_get_land_at_cell result for a cell with no land, or outside the map. */
+#define WMAP_NO_LAND 0xFF
+/** @brief Entry scenes each land has in the layout file's scene and music tables (see FIELD_LAND_ENTRY_SLOT). */
+#define WMAP_LAND_ENTRY_SLOTS 4
+
+/** @brief Field scene id of each land entry slot, from the current layout file. */
 extern u16* g_wmap_land_scenes;
-/** @brief Per-land field entry flags from the current layout file. */
-extern u8* g_wmap_land_entry_flags;
+/** @brief Field music id (g_field_music_id) of each land entry slot, from the current layout file. */
+extern u8* g_wmap_land_music_ids;
 /** @brief Packed saved status of the replacement land. */
 extern u32 g_wmap_replacement_land_status;
 
