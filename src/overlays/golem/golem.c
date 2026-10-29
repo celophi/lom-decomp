@@ -19,6 +19,7 @@
 #include <libgpu.h>
 #include "overlays/menu/menu.h"
 #include "overlays/field/field_input.h"
+#include "overlays/field/field_sound.h"
 
 #define GOLEM_PANEL_COUNT 154
 #define GOLEM_BLOCK_LIST_ROW_HEIGHT 40
@@ -226,8 +227,6 @@ extern GolemGlyphMetric g_golem_glyph_metrics[];
 extern GolemPanelRecord g_golem_panel_records[GOLEM_PANEL_COUNT];
 extern GolemCompositeIconRow g_golem_composite_icon_rows[];
 
-/* Other FIELD overlay functions called from the editor. */
-void func_800A3938(s32 sound_id, s32 pan);
 void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel);
 u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel);
 void golem_upload_ui_image(void);
@@ -420,7 +419,7 @@ void golem_handle_input(void)
     s32 saved_x, saved_y, repeat_count, block_index, scroll_steps, input, cancel_pressed;
     if ((g_pad_input & PAD_BTN_START) && (g_golem_is_placing_block == 0))
     {
-        func_800A3938(SFX_CURSOR, 0x80);
+        field_play_sound(SFX_CURSOR, 0x80);
         g_golem_exit_requested = 1;
         if (g_golem_restore_slot_on_cancel != 0)
         {
@@ -475,11 +474,11 @@ void golem_handle_input(void)
             {
                 g_golem_block_x = saved_x;
                 g_golem_block_y = saved_y;
-                func_800A3938(SFX_ERROR, 0x80);
+                field_play_sound(SFX_ERROR, 0x80);
             }
             else
             {
-                func_800A3938(SFX_CURSOR, 0x80);
+                field_play_sound(SFX_CURSOR, 0x80);
             }
             return;
         }
@@ -511,7 +510,7 @@ void golem_handle_input(void)
             {
                 golem_reset_block_position();
             }
-            func_800A3938(SFX_CURSOR, 0x80);
+            field_play_sound(SFX_CURSOR, 0x80);
             g_golem_panel_records[GOLEM_PANEL_ROTATE].attributes = GOLEM_ACTIVATE_PANEL(g_golem_panel_records[GOLEM_PANEL_ROTATE].attributes);
             return;
         }
@@ -521,12 +520,12 @@ void golem_handle_input(void)
             {
                 g_golem_is_placing_block = 0;
                 golem_reset_cursor_motion();
-                func_800A3938(GOLEM_SOUND_PLACE, 0x80);
+                field_play_sound(GOLEM_SOUND_PLACE, 0x80);
                 golem_place_logic_block(g_golem_selected_block, g_golem_block_rotation, g_golem_block_x, g_golem_block_y);
             }
             else
             {
-                func_800A3938(SFX_ERROR, 0x80);
+                field_play_sound(SFX_ERROR, 0x80);
             }
             return;
         }
@@ -534,7 +533,7 @@ void golem_handle_input(void)
         {
             g_golem_is_placing_block = 0;
             golem_reset_cursor_motion();
-            func_800A3938(SFX_ERROR, 0x80);
+            field_play_sound(SFX_ERROR, 0x80);
             GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
         }
         return;
@@ -556,7 +555,7 @@ void golem_handle_input(void)
         input = g_pad_input;
         if (input & (PAD_BTN_UP | PAD_BTN_DOWN))
         {
-            func_800A3938(SFX_CURSOR, 0x80);
+            field_play_sound(SFX_CURSOR, 0x80);
             while (repeat_count != 0)
             {
                 if (g_pad_input & PAD_BTN_UP)
@@ -598,7 +597,7 @@ void golem_handle_input(void)
             g_golem_scroll_target_y = block_index * GOLEM_BLOCK_LIST_ROW_HEIGHT;
             g_golem_scroll_steps = GOLEM_SCROLL_FRAMES;
             g_golem_panel_records[GOLEM_PANEL_SCROLL_DOWN].attributes = GOLEM_ACTIVATE_PANEL(g_golem_panel_records[GOLEM_PANEL_SCROLL_DOWN].attributes);
-            func_800A3938(SFX_CURSOR, 0x80);
+            field_play_sound(SFX_CURSOR, 0x80);
             return;
         }
         if (input & PAD_BTN_L2)
@@ -621,7 +620,7 @@ void golem_handle_input(void)
             g_golem_scroll_target_y = block_index * GOLEM_BLOCK_LIST_ROW_HEIGHT;
             g_golem_scroll_steps = GOLEM_SCROLL_FRAMES;
             g_golem_panel_records[GOLEM_PANEL_SCROLL_UP].attributes = GOLEM_ACTIVATE_PANEL(g_golem_panel_records[GOLEM_PANEL_SCROLL_UP].attributes);
-            func_800A3938(SFX_CURSOR, 0x80);
+            field_play_sound(SFX_CURSOR, 0x80);
             return;
         }
         if (input & (PAD_BTN_L3 | PAD_BTN_CROSS))
@@ -641,7 +640,7 @@ void golem_handle_input(void)
                     g_golem_block_rotation = 0;
                 }
                 golem_remove_logic_block(g_golem_selected_block);
-                func_800A3938(SFX_CONFIRM, 0x80);
+                field_play_sound(SFX_CONFIRM, 0x80);
             }
             return;
         }
@@ -653,7 +652,7 @@ void golem_handle_input(void)
     }
     if (cancel_pressed != 0)
     {
-        func_800A3938(SFX_CURSOR, 0x80);
+        field_play_sound(SFX_CURSOR, 0x80);
         g_golem_exit_requested = 1;
         if (g_golem_restore_slot_on_cancel != 0)
         {

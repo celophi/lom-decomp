@@ -10,6 +10,7 @@
 #include "common/vector.h"
 #include "overlays/field/field_fade.h"
 #include "overlays/field/field_input.h"
+#include "overlays/field/field_sound.h"
 #include "overlays/field/field_text.h"
 #include "main/audio/game_audio.h"
 
@@ -159,7 +160,6 @@ extern u8 D_800EC3F4[];
 extern u8 D_800EC3F8[];
 extern u8 D_800EC3FE[];
 
-void play_menu_sfx(s32 sfx_id, s32 volume);
 void field_compact_inventory(void);
 FieldItemRecord* field_find_free_inventory_record(void);
 void field_copy_inventory_record(FieldItemRecord* dst, FieldItemRecord* src);

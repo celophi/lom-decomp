@@ -3,6 +3,7 @@ field_text_reset_windows             = 0x800643E0;
 field_text_reset_scratch             = 0x8006441C;
 field_format_number                  = 0x800A8B90;
 field_draw_text                      = 0x800A88A0;
+field_play_sound                     = 0x800A3938;
 
 // Shared data named for this overlay's use.
 g_golem_composite_icon_rows          = 0x800F1CD0;

@@ -5,7 +5,7 @@
 // GNAME.BIN
 
 // Shared functions called from gname (defined in MENU.BIN)
-play_menu_sfx = 0x800A37E8; // play_menu_sfx(sfx_id, volume) - one-shot UI sound effect
+field_play_sound = 0x800A37E8;
 
 // Functions called from gname but defined in another overlay (FIELD.BIN)
 field_update_audio_timer = 0x800680F8;

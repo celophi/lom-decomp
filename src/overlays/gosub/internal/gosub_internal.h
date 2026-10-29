@@ -19,6 +19,7 @@
 #include "overlays/field/field_input.h"
 #include "overlays/field/field_overlay_handoff.h"
 #include "overlays/field/field_portrait.h"
+#include "overlays/field/field_sound.h"
 #include "overlays/field/field_text.h"
 #include "overlays/field/field_ui_text.h"
 
@@ -626,7 +627,6 @@ extern u32 g_golem_logic_block_icons[];
 
 /* FIELD exports with no project header. FIELD stays resident while GOSUB runs. */
 void field_compact_inventory(void);
-void play_menu_sfx(s32 sfx_id, s32 volume);
 void gosub_load_screen_sequence(s32* screen_sequence);
 void gosub_build_golem_parts_elements(void);
 void gosub_build_block_components_elements(void);

@@ -158,7 +158,7 @@ field_text_reset_scratch             = 0x800640EC;
 
 // US ELF names not listed above (splat placeholders shared with the C sources).
 field_restore_fade_target = 0x80067BE0;
-play_menu_sfx = 0x800A37E8;
+field_play_sound = 0x800A37E8;
 field_draw_text = 0x800A8750;
 field_draw_number = 0x800A8928;
 field_format_number = 0x800A8A40;
