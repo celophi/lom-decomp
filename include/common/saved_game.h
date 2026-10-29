@@ -25,6 +25,12 @@
 /** @brief SavedGameLayout::words index of the mode flags; bit 0 marks a TITLE-prepared slot. */
 #define SAVED_GAME_WORD_MODE_FLAGS 0x7F
 
+/**
+ * @brief SavedGameLayout::control bit set when the world map is left: the next field start
+ *        clears it, clears the script words and draws a new random seed.
+ */
+#define FIELD_CONTROL_RESET_WORDS 0x800000
+
 /** @brief Spawn record a save file is written with; loading a game enters the field through it. */
 #define FIELD_SPAWN_LOAD_GAME 6
 
@@ -80,8 +86,14 @@
 #define SAVED_BIT_IS_SET(words, bit) ((words)[(bit) / SAVED_BITS_PER_WORD] & (1 << ((bit) % SAVED_BITS_PER_WORD)))
 /** @brief Set bit @p bit of the u32 bit set @p words. */
 #define SAVED_BIT_SET(words, bit) ((words)[(bit) / SAVED_BITS_PER_WORD] = (words)[(bit) / SAVED_BITS_PER_WORD] | (1 << ((bit) % SAVED_BITS_PER_WORD)))
+/** @brief Clear bit @p bit of the u32 bit set @p words. */
+#define SAVED_BIT_CLEAR(words, bit) ((words)[(bit) / SAVED_BITS_PER_WORD] &= ~(1 << ((bit) % SAVED_BITS_PER_WORD)))
 /** @brief Words of SavedGameLayout::encyclopedia_bits (1024 entries). */
 #define FIELD_ENCYCLOPEDIA_BIT_WORDS 32
+/** @brief Words of SavedGameLayout::flag_bits (64 game flags). */
+#define SAVED_GAME_FLAG_WORDS 2
+/** @brief Game flags in SavedGameLayout::flag_bits. */
+#define SAVED_GAME_FLAG_COUNT (SAVED_GAME_FLAG_WORDS * SAVED_BITS_PER_WORD)
 /** @brief Lands with encyclopedia bits of their own: every FieldLandId before FIELD_LAND_LUCEMIA_2. */
 #define FIELD_ENCYCLOPEDIA_LAND_COUNT FIELD_LAND_LUCEMIA_2
 /** @brief Encyclopedia bit of land id 0's entry; set from FIELD_LAND_FLAG_02, one bit per land. */
@@ -449,12 +461,29 @@ typedef struct FieldLandRecord
     u8 levels[FIELD_LAND_SPIRIT_COUNT];
 } FieldLandRecord;
 
-/** @brief A FieldLandRecord whose first four bytes are also read as one word. */
+/** @brief A FieldLandRecord whose first four bytes are also read as one word, whole or as bitfields. */
 typedef union FieldLandWords
 {
     FieldLandRecord record;
     u32 word;
+    struct
+    {
+        u32 placed : 1;
+        u32 flag_02 : 1;
+        u32 flag_04 : 1;
+        u32 available : 1;
+        u32 unk4 : 4;
+        u32 x : 4;
+        u32 z : 4;
+        u32 unk2 : 8;
+        u32 count : 8;
+    } bits;
 } FieldLandWords;
+
+/** @brief FieldLandRecord::x (map column) read from a FieldLandWords::word. */
+#define FIELD_LAND_WORD_X(word) (((word) >> 8) & 0xF)
+/** @brief FieldLandRecord::z (map row) read from a FieldLandWords::word. */
+#define FIELD_LAND_WORD_Z(word) (((word) >> 12) & 0xF)
 
 /** @brief Menu slot entry index of an empty slot. */
 #define FIELD_MENU_ENTRY_EMPTY 0xFF
@@ -823,7 +852,11 @@ typedef struct SavedGameLayout
             u32 unk23 : 9;
         } bits;
     } control;
-    u32 flag_bits[2];
+    /**
+     * @brief Game flags set by FIELD scripts (field_set_game_flag); bit n lives in word n / 32.
+     * @note WMAP treats some ids as one-shot land events (see wmap_commit_land_entry).
+     */
+    u32 flag_bits[SAVED_GAME_FLAG_WORDS];
     FieldLandRecord lands[FIELD_LAND_COUNT];
     FieldCharacterRecord characters[FIELD_PARTY_SIZE];
     FieldItemRecord items[FIELD_ITEM_COUNT];
@@ -929,6 +962,12 @@ extern SavedGame g_saved_game;
 
 /** @brief g_saved_game's SavedGameLayout::encyclopedia_bits, under a symbol of its own. */
 extern u32 g_saved_encyclopedia_bits[FIELD_ENCYCLOPEDIA_BIT_WORDS];
+
+/** @brief g_saved_game's SavedGameLayout::flag_bits, under a symbol of its own. */
+extern u32 g_saved_flag_bits[SAVED_GAME_FLAG_WORDS];
+
+/** @brief g_saved_game's SavedGameLayout::lands, under a symbol of its own. */
+extern FieldLandWords g_saved_lands[FIELD_LAND_COUNT];
 
 /** @brief Pointer to g_saved_game.layout, bound by field_bind_saved_game_context. */
 extern SavedGameLayout* g_saved_game_ctx;

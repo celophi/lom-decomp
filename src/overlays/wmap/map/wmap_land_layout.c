@@ -10,7 +10,6 @@
 /** @brief Event bits stored in each saved-game flag word. */
 #define WMAP_EVENT_WORD_BITS 32
 #define WMAP_GRID_SIZE 6
-#define WMAP_NO_LAND 0xFF
 #define WMAP_LAND_AVAILABLE 0x01
 #define WMAP_LAND_PLACED 0x02
 #define WMAP_LAND_ACTIVE 0x04
@@ -66,8 +65,8 @@ typedef struct
     u16 starting_y;
     s32 land_count;
     WmapTerrainCell cells[WMAP_GRID_SIZE * WMAP_GRID_SIZE];
-    u16 scenes[256];
-    u8 entry_flags[256];
+    u16 scenes[FIELD_LAND_COUNT * WMAP_LAND_SCENE_VARIANTS];
+    u8 music_ids[FIELD_LAND_COUNT * WMAP_LAND_SCENE_VARIANTS];
 } WmapLayout;
 
 /** @brief Saved land state; coordinates share a byte and flags share a word. */
@@ -783,7 +782,7 @@ s32 wmap_load_land_layout(void)
     cdrom_wait_queue_empty();
     g_wmap_layout = &g_wmap_layout_buffer;
     g_wmap_land_scenes = g_wmap_layout_buffer.scenes;
-    g_wmap_land_entry_flags = g_wmap_layout_buffer.entry_flags;
+    g_wmap_land_music_ids = g_wmap_layout_buffer.music_ids;
     if ((header->option != 1) && (WMAP_SAVED_GAME.calendar.data.placed_land_count == 1))
     {
         WMAP_SAVED_GAME.events[0] = (s32)(WMAP_SAVED_GAME.events[0] | 2);

@@ -1,67 +1,39 @@
+#include "common.h"
+#include <abs.h>
+
 #include "../internal/wmap_land_layout.h"
 #include "../internal/wmap_pathfinding.h"
 #include "common/saved_game.h"
 #include "main/field_entry.h"
-#include <abs.h>
 
 /**
  * @file wmap_pathfinding.c
- * @brief World-map node reachability, queued node-swap state updates, and BFS
- *        route building.
+ * @brief Land encyclopedia unlocks, the land entered on leaving the world map,
+ *        and BFS route building.
  */
 
 #define WMAP_NODE_RECORD_SIZE 12
 
 #define WMAP_ROUTE_NODE_COUNT 64
 #define WMAP_ROUTE_UNVISITED_DISTANCE 100
-#define WMAP_INVALID_NODE 0xFF
 #define WMAP_NODE_X(index) ((u8)(D_800432C9[(index) * WMAP_NODE_RECORD_SIZE] & 0xF))
 #define WMAP_NODE_Y(index) ((u8)(D_800432C9[(index) * WMAP_NODE_RECORD_SIZE] >> 4))
 
-/**
- * @brief Packed world-map slot record: a 32-bit word whose low bits/nibbles hold
- *        flags and grid coordinates, aliased byte-wise and as bitfields.
- */
-typedef union {
-    u32 word;
-    struct { u8 b0; u8 b1; u8 unk2; u8 unk3; } b;
-    struct {
-        u32 bit0 : 1;
-        u32 bit1 : 1;
-        u32 bit2 : 1;
-        u32 pad3 : 5;
-        u32 nib8 : 4;
-        u32 nibC : 4;
-        u32 hi : 16;
-    } f;
-} WmapSlot;
+/** @brief Game flag whose event moves the Flames land record into the Underworld record. */
+#define WMAP_FLAG_FLAMES_TO_UNDERWORLD 12
+/** @brief Game flag whose event moves the Underworld land record back into the Flames record. */
+#define WMAP_FLAG_UNDERWORLD_TO_FLAMES 13
 
-typedef struct { u8 unk0; u8 unk1; u8 unk2; u8 unk3; } WmapQuad;
-typedef struct { u8 unk0; u8 unk1; } WmapPair;
-
-extern s32 D_800432BC;
-extern u32 D_800432C0[];
-extern u8 D_800432C8[];
 extern u8 D_800432C9[];
-extern u8 D_800432D0[];
-extern WmapSlot D_800433DC;
-extern WmapSlot D_80043388;
-extern WmapQuad D_8004338C;
-extern WmapQuad D_800433E0;
-extern WmapPair D_80043392;
-extern WmapPair D_800433E6;
-extern u8 D_80043390;
-extern u8 D_80043391;
-extern s8 D_800433E4;
-extern u8 D_800433E5;
-extern s32 D_800460EC;
-extern s32 D_800460FC;
-extern u8 D_800D01B0[];
-extern u8 D_800D01F0[];
+/** @brief WMAP land id to enter when each game flag is pending (only some flag ids are used). */
+extern u8 g_wmap_flag_event_lands[SAVED_GAME_FLAG_COUNT];
+/** @brief Music track index to play when each game flag's event land is entered. */
+extern u8 g_wmap_flag_event_music_tracks[SAVED_GAME_FLAG_COUNT];
 extern s16 g_music_track_index;
 
 /**
  * @brief Unlock the encyclopedia entries of the lands and their artifacts from the land records.
+ * @note Lucemia's entries are unlocked from FIELD_LAND_LUCEMIA_2 once it has FIELD_LAND_FLAG_04.
  */
 void wmap_unlock_land_encyclopedia_entries(void)
 {
@@ -69,179 +41,182 @@ void wmap_unlock_land_encyclopedia_entries(void)
 
     for (i = 0; i < FIELD_ENCYCLOPEDIA_LAND_COUNT; i++)
     {
-        if ((D_800432C8[i * WMAP_NODE_RECORD_SIZE] >> 1) & 1)
+        if ((g_saved_lands[i].record.flags >> 1) & 1)
         {
             SAVED_BIT_SET(g_saved_encyclopedia_bits, i + FIELD_ENCYCLOPEDIA_LAND_BIT);
         }
     }
-    if (g_wmap_replacement_land_status & 4)
+
+    if (g_saved_lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_FLAG_04)
     {
-        D_800460EC |= 0x01000000;
+        SAVED_BIT_SET(g_saved_encyclopedia_bits, FIELD_ENCYCLOPEDIA_LAND_BIT + FIELD_LAND_LUCEMIA);
     }
+
     for (i = 0; i < FIELD_ENCYCLOPEDIA_LAND_COUNT; i++)
     {
-        if (D_800432C8[i * WMAP_NODE_RECORD_SIZE] & FIELD_LAND_PLACED)
+        if (g_saved_lands[i].record.flags & FIELD_LAND_PLACED)
         {
             SAVED_BIT_SET(g_saved_encyclopedia_bits, i + FIELD_ENCYCLOPEDIA_ARTIFACT_BIT);
         }
-        if ((D_800432C8[i * WMAP_NODE_RECORD_SIZE] >> 1) & 1)
+
+        if ((g_saved_lands[i].record.flags >> 1) & 1)
         {
             SAVED_BIT_SET(g_saved_encyclopedia_bits, i + FIELD_ENCYCLOPEDIA_ARTIFACT_FLAG_02_BIT);
         }
     }
-    if (g_wmap_replacement_land_status & 4)
+
+    if (g_saved_lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_FLAG_04)
     {
-        D_800460FC |= 0x01000000;
+        SAVED_BIT_SET(g_saved_encyclopedia_bits, FIELD_ENCYCLOPEDIA_ARTIFACT_FLAG_02_BIT + FIELD_LAND_LUCEMIA);
     }
 }
 
 /**
- * @brief Commit the land being entered as the world map exits: publish its
- *        field scene and music, then apply the queued land events.
- *
- * Looks up the land at (cell_x, cell_y), derives a slot from the land's
- * packed flag byte, and stores the field entry scene, field music and music
- * track for that slot. It then scans the 0x40-bit pending mask; for each queued
- * event id in the accepted set it clears the pending bit, republishes that
- * event's land scene data, and for ids 0xC / 0xD performs the swap of the two
- * packed slot records (D_800433DC and D_80043388) plus the four-neighbour
- * reachability update.
- *
+ * @brief Set up the field entry for leaving the world map; a pending event flag redirects it to its event land.
  * @param cell_x World-map grid X of the lead traveler.
  * @param cell_y World-map grid Y of the lead traveler.
  */
 void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
 {
-    s32 event_id;
-    s32 record_x;
-    s32 record_y;
-    s32 neighbor_land;
+    s32 flag;
+    s32 column;
+    s32 row;
+    s32 neighbor;
     s32 land;
-    s32 land_slot;
+    s32 scene_index;
 
     wmap_unlock_land_encyclopedia_entries();
     land = wmap_get_land_at_cell(cell_x, cell_y);
-    land_slot = (land * 4) + ((D_800432C8[land * WMAP_NODE_RECORD_SIZE] >> 4) & 3);
-    g_field_entry_scene.id = g_wmap_land_scenes[land_slot];
-    g_field_music_id = g_wmap_land_entry_flags[land_slot];
+    scene_index = (land * WMAP_LAND_SCENE_VARIANTS) + ((g_saved_lands[land].record.flags >> 4) & 3);
+    g_field_entry_scene.id = g_wmap_land_scenes[scene_index];
+    g_field_music_id = g_wmap_land_music_ids[scene_index];
     g_music_track_index = wmap_get_land_at_cell(cell_x, cell_y);
 
-    for (event_id = 0; event_id < 0x40; event_id++)
+    for (flag = 0; flag < SAVED_GAME_FLAG_COUNT; flag++)
     {
-        if (SAVED_BIT_IS_SET(D_800432C0, event_id))
+        if (SAVED_BIT_IS_SET(g_saved_flag_bits, flag))
         {
-            if (event_id == 9 || event_id == 0xA || event_id == 0xB || event_id == 0xC || event_id == 0xD || event_id == 0xE || event_id == 0x18 || event_id == 0 || event_id == 0x1B || event_id == 0x1C)
+            if (flag == 9 || flag == 10 || flag == 11 || flag == WMAP_FLAG_FLAMES_TO_UNDERWORLD || flag == WMAP_FLAG_UNDERWORLD_TO_FLAMES || flag == 14 ||
+                flag == 24 || flag == 0 || flag == 27 || flag == 28)
             {
-                D_800432C0[event_id / SAVED_BITS_PER_WORD] &= ~(1 << (event_id % SAVED_BITS_PER_WORD));
-                g_music_track_index = D_800D01F0[event_id];
-                land = D_800D01B0[event_id];
-                land_slot = (land * 4) + ((D_800432C8[land * WMAP_NODE_RECORD_SIZE] >> 4) & 3);
-                g_field_entry_scene.id = g_wmap_land_scenes[land_slot];
-                g_field_music_id = g_wmap_land_entry_flags[land_slot];
-                if (event_id == 0xC)
+                SAVED_BIT_CLEAR(g_saved_flag_bits, flag);
+                g_music_track_index = g_wmap_flag_event_music_tracks[flag];
+                land = g_wmap_flag_event_lands[flag];
+                scene_index = (land * WMAP_LAND_SCENE_VARIANTS) + ((g_saved_lands[land].record.flags >> 4) & 3);
+                g_field_entry_scene.id = g_wmap_land_scenes[scene_index];
+                g_field_music_id = g_wmap_land_music_ids[scene_index];
+
+                if (flag == WMAP_FLAG_FLAMES_TO_UNDERWORLD)
                 {
-                    D_80043390 = D_8004338C.unk0;
-                    record_x = (u8)((D_800433DC.word >> 8) & 0xF);
-                    record_y = (u8)((D_800433DC.word >> 0xC) & 0xF);
-                    neighbor_land = wmap_get_land_at_cell(record_x - 1, record_y);
-                    D_80043388.f.bit0 = (u8)(D_800433DC.b.b0 & 1);
-                    D_80043388.f.bit1 = (u8)((D_800433DC.word >> 1) & 1);
-                    D_80043388.word = D_80043388.word | 4;
-                    D_80043388.f.nib8 = (u8)((D_800433DC.word >> 8) & 0xF);
-                    D_80043388.f.nibC = (u8)((D_800433DC.word >> 0xC) & 0xF);
-                    D_80043388.b.unk2 = D_800433DC.b.unk2;
-                    D_80043388.b.unk3 = D_800433DC.b.unk3;
-                    D_8004338C.unk0 = D_800433E0.unk0;
-                    D_8004338C.unk1 = D_800433E0.unk1;
-                    D_8004338C.unk2 = D_800433E0.unk2;
-                    D_8004338C.unk3 = D_800433E0.unk3;
-                    D_80043391 = D_800433E5;
-                    D_80043392.unk0 = D_800433E6.unk0;
-                    D_80043392.unk1 = D_800433E6.unk1;
-                    D_800433DC.word = D_800433DC.word & ~1;
-                    D_800433DC.word = D_800433DC.word & ~2;
-                    D_800433DC.word = D_800433DC.word & ~4;
-                    D_800433DC.word = D_800433DC.word | 0xF00;
-                    D_800433DC.word = D_800433DC.word | 0xF000;
-                    D_800433DC.b.unk2 = 0;
-                    D_800433DC.b.unk3 = 0;
-                    D_800433E0.unk0 = 0;
-                    D_800433E0.unk1 = 0;
-                    D_800433E0.unk2 = 0;
-                    D_800433E0.unk3 = 0;
-                    D_800433E4 = 0;
-                    D_800433E5 = 0;
-                    D_800433E6.unk0 = 0;
-                    D_800433E6.unk1 = 0;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[4] = g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[0];
+                    column = (u8)FIELD_LAND_WORD_X(g_saved_lands[FIELD_LAND_FLAMES].word);
+                    row = (u8)FIELD_LAND_WORD_Z(g_saved_lands[FIELD_LAND_FLAMES].word);
+                    neighbor = wmap_get_land_at_cell(column - 1, row);
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.placed = (u8)(g_saved_lands[FIELD_LAND_FLAMES].record.flags & FIELD_LAND_PLACED);
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.flag_02 = (u8)((g_saved_lands[FIELD_LAND_FLAMES].word >> 1) & 1);
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.flag_04 = 1;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.x = (u8)FIELD_LAND_WORD_X(g_saved_lands[FIELD_LAND_FLAMES].word);
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.z = (u8)FIELD_LAND_WORD_Z(g_saved_lands[FIELD_LAND_FLAMES].word);
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.unk2 = g_saved_lands[FIELD_LAND_FLAMES].record.unk2;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.count = g_saved_lands[FIELD_LAND_FLAMES].record.count;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[0] = g_saved_lands[FIELD_LAND_FLAMES].record.levels[0];
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[1] = g_saved_lands[FIELD_LAND_FLAMES].record.levels[1];
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[2] = g_saved_lands[FIELD_LAND_FLAMES].record.levels[2];
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[3] = g_saved_lands[FIELD_LAND_FLAMES].record.levels[3];
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[5] = g_saved_lands[FIELD_LAND_FLAMES].record.levels[5];
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[6] = g_saved_lands[FIELD_LAND_FLAMES].record.levels[6];
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[7] = g_saved_lands[FIELD_LAND_FLAMES].record.levels[7];
+                    g_saved_lands[FIELD_LAND_FLAMES].bits.placed = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].bits.flag_02 = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].bits.flag_04 = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].bits.x = FIELD_LAND_CELL_NONE;
+                    g_saved_lands[FIELD_LAND_FLAMES].bits.z = FIELD_LAND_CELL_NONE;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.unk2 = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.count = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.levels[0] = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.levels[1] = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.levels[2] = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.levels[3] = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.levels[4] = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.levels[5] = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.levels[6] = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.levels[7] = 0;
                 }
-                if (event_id == 0xD)
+
+                if (flag == WMAP_FLAG_UNDERWORLD_TO_FLAMES)
                 {
-                    D_800433DC.f.bit0 = (u8)(D_80043388.b.b0 & 1);
-                    D_800433DC.f.bit1 = (u8)((D_80043388.word >> 1) & 1);
-                    D_800433DC.word = D_800433DC.word & ~4;
-                    D_800433DC.f.nib8 = (u8)((D_80043388.word >> 8) & 0xF);
-                    D_800433DC.f.nibC = (u8)((D_80043388.word >> 0xC) & 0xF);
-                    D_800433DC.b.unk2 = D_80043388.b.unk2;
-                    D_800433DC.b.unk3 = D_80043388.b.unk3;
-                    D_800433E0.unk0 = D_8004338C.unk0;
-                    D_800433E0.unk1 = D_8004338C.unk1;
-                    D_800433E0.unk2 = D_8004338C.unk2;
-                    D_800433E0.unk3 = D_8004338C.unk3;
-                    D_800433E4 = 6;
-                    D_800433E5 = D_80043391;
-                    D_800433E6.unk0 = D_80043392.unk0;
-                    D_800433E6.unk1 = D_80043392.unk1;
-                    D_8004338C.unk0 = D_80043390;
-                    record_x = (u8)((D_80043388.word >> 8) & 0xF);
-                    record_y = (u8)((D_80043388.word >> 0xC) & 0xF);
-                    neighbor_land = wmap_get_land_at_cell(record_x - 1, record_y);
-                    if (neighbor_land != 0xFF)
+                    g_saved_lands[FIELD_LAND_FLAMES].bits.placed = (u8)(g_saved_lands[FIELD_LAND_UNDERWORLD].record.flags & FIELD_LAND_PLACED);
+                    g_saved_lands[FIELD_LAND_FLAMES].bits.flag_02 = (u8)((g_saved_lands[FIELD_LAND_UNDERWORLD].word >> 1) & 1);
+                    g_saved_lands[FIELD_LAND_FLAMES].bits.flag_04 = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].bits.x = (u8)FIELD_LAND_WORD_X(g_saved_lands[FIELD_LAND_UNDERWORLD].word);
+                    g_saved_lands[FIELD_LAND_FLAMES].bits.z = (u8)FIELD_LAND_WORD_Z(g_saved_lands[FIELD_LAND_UNDERWORLD].word);
+                    g_saved_lands[FIELD_LAND_FLAMES].record.unk2 = g_saved_lands[FIELD_LAND_UNDERWORLD].record.unk2;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.count = g_saved_lands[FIELD_LAND_UNDERWORLD].record.count;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.levels[0] = g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[0];
+                    g_saved_lands[FIELD_LAND_FLAMES].record.levels[1] = g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[1];
+                    g_saved_lands[FIELD_LAND_FLAMES].record.levels[2] = g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[2];
+                    g_saved_lands[FIELD_LAND_FLAMES].record.levels[3] = g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[3];
+                    g_saved_lands[FIELD_LAND_FLAMES].record.levels[4] = FIELD_LAND_SPIRIT_MAX;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.levels[5] = g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[5];
+                    g_saved_lands[FIELD_LAND_FLAMES].record.levels[6] = g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[6];
+                    g_saved_lands[FIELD_LAND_FLAMES].record.levels[7] = g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[7];
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[0] = g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[4];
+                    column = (u8)FIELD_LAND_WORD_X(g_saved_lands[FIELD_LAND_UNDERWORLD].word);
+                    row = (u8)FIELD_LAND_WORD_Z(g_saved_lands[FIELD_LAND_UNDERWORLD].word);
+
+                    neighbor = wmap_get_land_at_cell(column - 1, row);
+                    if (neighbor != WMAP_NO_LAND)
                     {
-                        D_8004338C.unk1 = D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE];
-                        if (D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE] < 6)
+                        g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[1] = g_saved_lands[neighbor].record.levels[4];
+                        if (g_saved_lands[neighbor].record.levels[4] < FIELD_LAND_SPIRIT_MAX)
                         {
-                            D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE] = 5;
+                            g_saved_lands[neighbor].record.levels[4] = 5;
                         }
                     }
-                    neighbor_land = wmap_get_land_at_cell(record_x + 1, record_y);
-                    if (neighbor_land != 0xFF)
+
+                    neighbor = wmap_get_land_at_cell(column + 1, row);
+                    if (neighbor != WMAP_NO_LAND)
                     {
-                        D_8004338C.unk2 = D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE];
-                        if (D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE] < 6)
+                        g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[2] = g_saved_lands[neighbor].record.levels[4];
+                        if (g_saved_lands[neighbor].record.levels[4] < FIELD_LAND_SPIRIT_MAX)
                         {
-                            D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE] = 5;
+                            g_saved_lands[neighbor].record.levels[4] = 5;
                         }
                     }
-                    neighbor_land = wmap_get_land_at_cell(record_x, record_y - 1);
-                    if (neighbor_land != 0xFF)
+
+                    neighbor = wmap_get_land_at_cell(column, row - 1);
+                    if (neighbor != WMAP_NO_LAND)
                     {
-                        D_8004338C.unk3 = D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE];
-                        if (D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE] < 6)
+                        g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[3] = g_saved_lands[neighbor].record.levels[4];
+                        if (g_saved_lands[neighbor].record.levels[4] < FIELD_LAND_SPIRIT_MAX)
                         {
-                            D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE] = 5;
+                            g_saved_lands[neighbor].record.levels[4] = 5;
                         }
                     }
-                    neighbor_land = wmap_get_land_at_cell(record_x, record_y + 1);
-                    if (neighbor_land != 0xFF)
+
+                    neighbor = wmap_get_land_at_cell(column, row + 1);
+                    if (neighbor != WMAP_NO_LAND)
                     {
-                        D_80043390 = D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE];
-                        if (D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE] < 6)
+                        g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[4] = g_saved_lands[neighbor].record.levels[4];
+                        if (g_saved_lands[neighbor].record.levels[4] < FIELD_LAND_SPIRIT_MAX)
                         {
-                            D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE] = 5;
+                            g_saved_lands[neighbor].record.levels[4] = 5;
                         }
                     }
-                    D_80043388.word = D_80043388.word & ~1;
-                    D_80043388.word = D_80043388.word & ~2;
-                    D_80043388.word = D_80043388.word & ~4;
-                    D_80043388.word = D_80043388.word | 0xF00;
-                    D_80043388.word = D_80043388.word | 0xF000;
-                    D_80043388.b.unk2 = 0;
-                    D_80043388.b.unk3 = 0;
+
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.placed = 0;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.flag_02 = 0;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.flag_04 = 0;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.x = FIELD_LAND_CELL_NONE;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.z = FIELD_LAND_CELL_NONE;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.unk2 = 0;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.count = 0;
                 }
             }
         }
     }
-    D_800432BC |= 0x800000;
+
+    g_saved_game.layout.control.word |= FIELD_CONTROL_RESET_WORDS;
 }
 
 /**
@@ -264,7 +239,7 @@ void func_8005EB68(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x, s
     s32 distances[WMAP_ROUTE_NODE_COUNT];
     s32 route[WMAP_ROUTE_NODE_COUNT];
 
-    if (wmap_get_land_at_cell(start_x, start_y) == WMAP_INVALID_NODE)
+    if (wmap_get_land_at_cell(start_x, start_y) == WMAP_NO_LAND)
     {
         current_x = start_x;
         current_y = start_y;
@@ -310,7 +285,7 @@ void func_8005EB68(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x, s
             if (distances[i] == distance)
             {
                 node_index = wmap_get_land_at_cell(WMAP_NODE_X(i) - 1, WMAP_NODE_Y(i));
-                if (node_index != WMAP_INVALID_NODE)
+                if (node_index != WMAP_NO_LAND)
                 {
                     if (distances[node_index] > distance + 1)
                     {
@@ -324,7 +299,7 @@ void func_8005EB68(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x, s
                 }
 
                 node_index = wmap_get_land_at_cell(WMAP_NODE_X(i) + 1, WMAP_NODE_Y(i));
-                if (node_index != WMAP_INVALID_NODE)
+                if (node_index != WMAP_NO_LAND)
                 {
                     if (distances[node_index] > distance + 1)
                     {
@@ -338,7 +313,7 @@ void func_8005EB68(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x, s
                 }
 
                 node_index = wmap_get_land_at_cell(WMAP_NODE_X(i), WMAP_NODE_Y(i) - 1);
-                if (node_index != WMAP_INVALID_NODE)
+                if (node_index != WMAP_NO_LAND)
                 {
                     if (distances[node_index] > distance + 1)
                     {
@@ -352,7 +327,7 @@ void func_8005EB68(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x, s
                 }
 
                 node_index = wmap_get_land_at_cell(WMAP_NODE_X(i), WMAP_NODE_Y(i) + 1);
-                if (node_index != WMAP_INVALID_NODE)
+                if (node_index != WMAP_NO_LAND)
                 {
                     if (distances[node_index] > distance + 1)
                     {
