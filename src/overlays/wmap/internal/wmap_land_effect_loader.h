@@ -3,6 +3,6 @@
 
 #include "common.h"
 
-void func_800591A8();
+void wmap_start_land_effect();
 
 #endif

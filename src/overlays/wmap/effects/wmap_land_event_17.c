@@ -398,9 +398,9 @@ void wmap_land_event_17_timeline_step_03(void)
 {
     cdrom_wait_queue_empty();
     wmap_play_sound(0x2D, 0x80);
-    func_800651B4(&g_wmap_effect_texture_buffer_0);
-    func_800651B4(&g_wmap_effect_texture_buffer_1);
-    func_800651B4(&g_wmap_effect_texture_buffer_2);
+    wmap_upload_tim(&g_wmap_effect_texture_buffer_0);
+    wmap_upload_tim(&g_wmap_effect_texture_buffer_1);
+    wmap_upload_tim(&g_wmap_effect_texture_buffer_2);
     wmap_start_sequence(&wmap_land_event_17_run_sequence_9);
     g_wmap_land_event_17_timeline_timer = 0x12;
     g_wmap_land_event_17_timeline_step += 1;

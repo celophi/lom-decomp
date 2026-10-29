@@ -803,9 +803,9 @@ void wmap_effect35_load(void)
     g_wmap_forced_animated_land_id = 0x1F;
     wmap_queue_effect_resources(WMAP_EFFECT35_RESOURCE);
     cdrom_wait_queue_empty();
-    func_800651B4(&g_wmap_effect_texture_buffer_0);
-    func_800651B4(&g_wmap_effect_texture_buffer_1);
-    func_800651B4(&g_wmap_effect_texture_buffer_2);
+    wmap_upload_tim(&g_wmap_effect_texture_buffer_0);
+    wmap_upload_tim(&g_wmap_effect_texture_buffer_1);
+    wmap_upload_tim(&g_wmap_effect_texture_buffer_2);
     wmap_reset_focus_screen_position();
     wmap_start_sequence(wmap_effect35_run_timeline);
     g_wmap_sequence_busy = 1;

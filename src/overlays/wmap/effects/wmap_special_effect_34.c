@@ -316,8 +316,8 @@ WMAP_STEP_WAIT(wmap_special_effect_34_step_02, g_wmap_special_effect_34_step, g_
 void wmap_special_effect_34_step_03(void)
 {
     cdrom_wait_queue_empty();
-    func_800651B4(&g_wmap_effect_texture_buffer_0);
-    func_800651B4(&g_wmap_effect_texture_buffer_1);
+    wmap_upload_tim(&g_wmap_effect_texture_buffer_0);
+    wmap_upload_tim(&g_wmap_effect_texture_buffer_1);
     wmap_start_sequence(wmap_special_effect_34_run_timeline);
     g_wmap_sequence_busy = 1;
     g_wmap_special_effect_34_step++;
