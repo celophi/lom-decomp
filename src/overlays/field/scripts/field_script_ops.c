@@ -2229,7 +2229,7 @@ void field_script_misc_command(u32 command, s32 operand)
         field_copy_words(NULL, &g_field_game_state->control,
                          sizeof(g_field_game_state->control) + sizeof(g_field_game_state->flag_bits) + sizeof(g_field_game_state->lands));
         g_field_game_state->control.fields.placed_land_count = 1;
-        g_field_game_state->flag_bits[0] |= 0x10000000;
+        SAVED_BIT_SET(g_field_game_state->flag_bits, SAVED_EVENT_FLAG_NEW_GAME);
 
         for (index = 0; index < FIELD_LAND_COUNT; index++)
         {

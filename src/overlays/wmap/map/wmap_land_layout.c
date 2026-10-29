@@ -65,8 +65,8 @@ typedef struct
     u16 starting_y;
     s32 land_count;
     WmapTerrainCell cells[WMAP_GRID_SIZE * WMAP_GRID_SIZE];
-    u16 scenes[FIELD_LAND_COUNT * WMAP_LAND_SCENE_VARIANTS];
-    u8 music_ids[FIELD_LAND_COUNT * WMAP_LAND_SCENE_VARIANTS];
+    u16 scenes[FIELD_LAND_COUNT * WMAP_LAND_ENTRY_SLOTS];
+    u8 music_ids[FIELD_LAND_COUNT * WMAP_LAND_ENTRY_SLOTS];
 } WmapLayout;
 
 /** @brief Saved land state; coordinates share a byte and flags share a word. */

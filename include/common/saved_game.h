@@ -94,6 +94,8 @@
 #define SAVED_GAME_FLAG_WORDS 2
 /** @brief Game flags in SavedGameLayout::flag_bits. */
 #define SAVED_GAME_FLAG_COUNT (SAVED_GAME_FLAG_WORDS * SAVED_BITS_PER_WORD)
+/** @brief Event flag set by a new game; its world-map event sends the first exit to its event land. */
+#define SAVED_EVENT_FLAG_NEW_GAME 28
 /** @brief Lands with encyclopedia bits of their own: every FieldLandId before FIELD_LAND_LUCEMIA_2. */
 #define FIELD_ENCYCLOPEDIA_LAND_COUNT FIELD_LAND_LUCEMIA_2
 /** @brief Encyclopedia bit of land id 0's entry; set from FIELD_LAND_FLAG_02, one bit per land. */
@@ -388,6 +390,10 @@ typedef struct FieldCharacterRecord
 #define FIELD_LAND_FLAG_02 0x02   /**< TODO meaning unknown; excludes a placed land from the active count. */
 #define FIELD_LAND_FLAG_04 0x04   /**< TODO meaning unknown. */
 #define FIELD_LAND_AVAILABLE 0x08 /**< The land is available for placement. */
+/** @brief FIELD_LAND_FLAG_02 of a land's flags byte or word, as 0 or 1. */
+#define FIELD_LAND_GET_FLAG_02(flags) (((flags) >> 1) & 1)
+/** @brief Entry slot of a land's flags byte or word: which of its four entry scenes the world map enters. */
+#define FIELD_LAND_ENTRY_SLOT(flags) (((flags) >> 4) & 3)
 /** @brief FieldLandRecord::x and ::z of a land that is not on the map. */
 #define FIELD_LAND_CELL_NONE 15
 
@@ -397,6 +403,19 @@ typedef struct FieldCharacterRecord
 #define FIELD_LAND_SPIRIT_NEUTRAL 3
 /** @brief Highest spirit level a land can reach. */
 #define FIELD_LAND_SPIRIT_MAX 6
+
+/** @brief Mana spirits, in the order of FieldLandRecord::levels and the game's spirit name tables. */
+typedef enum FieldSpirit
+{
+    FIELD_SPIRIT_WISP = 0,
+    FIELD_SPIRIT_SHADE = 1,
+    FIELD_SPIRIT_DRYAD = 2,
+    FIELD_SPIRIT_AURA = 3,
+    FIELD_SPIRIT_SALAMANDER = 4,
+    FIELD_SPIRIT_GNOME = 5,
+    FIELD_SPIRIT_JINN = 6,
+    FIELD_SPIRIT_UNDINE = 7
+} FieldSpirit;
 
 /**
  * @brief Land ids: indexes into SavedGameLayout::lands and the location-name tables.
@@ -472,7 +491,8 @@ typedef union FieldLandWords
         u32 flag_02 : 1;
         u32 flag_04 : 1;
         u32 available : 1;
-        u32 unk4 : 4;
+        u32 entry_slot : 2;
+        u32 unk6 : 2;
         u32 x : 4;
         u32 z : 4;
         u32 unk2 : 8;
@@ -481,9 +501,9 @@ typedef union FieldLandWords
 } FieldLandWords;
 
 /** @brief FieldLandRecord::x (map column) read from a FieldLandWords::word. */
-#define FIELD_LAND_WORD_X(word) (((word) >> 8) & 0xF)
+#define FIELD_LAND_WORD_X(word) ((u8)(((word) >> 8) & 0xF))
 /** @brief FieldLandRecord::z (map row) read from a FieldLandWords::word. */
-#define FIELD_LAND_WORD_Z(word) (((word) >> 12) & 0xF)
+#define FIELD_LAND_WORD_Z(word) ((u8)(((word) >> 12) & 0xF))
 
 /** @brief Menu slot entry index of an empty slot. */
 #define FIELD_MENU_ENTRY_EMPTY 0xFF
