@@ -1934,7 +1934,7 @@ s32 wmap_run_loop(void)
                     {
                         akao_play_sfx_from_buffer(g_wmap_sfx_buffers[WMAP_SOUND_EXIT - 1], 0, 0x80, 0x7F);
                     }
-                    func_8005DF50(g_wmap_travelers[0].cell_x, g_wmap_travelers[0].cell_y);
+                    wmap_commit_land_entry(g_wmap_travelers[0].cell_x, g_wmap_travelers[0].cell_y);
                     DrawSync(0);
                     /* Save the displayed frame for the exit transition. */
                     screen_pixel = (u16*)g_wmap_load_buffer;

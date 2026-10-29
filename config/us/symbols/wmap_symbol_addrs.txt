@@ -5703,3 +5703,4 @@ wmap_set_effect_model_transform = 0x8006ADD0; // type:func size:0x110
 wmap_set_effect_camera_transform = 0x8006AEE0; // type:func size:0xCC
 g_saved_encyclopedia_bits = 0x800460AC;
 wmap_unlock_land_encyclopedia_entries = 0x8005DBB8; // type:func size:0x398
+wmap_commit_land_entry = 0x8005DF50; // type:func size:0xC18

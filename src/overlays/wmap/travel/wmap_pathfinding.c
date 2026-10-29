@@ -96,53 +96,54 @@ void wmap_unlock_land_encyclopedia_entries(void)
 }
 
 /**
- * @brief Resolve a world-map node from (x, y), publish its scene/layout/music,
- *        and sweep the pending-node bitmap performing the queued node swaps.
+ * @brief Commit the land being entered as the world map exits: publish its
+ *        field scene and music, then apply the queued land events.
  *
- * Looks up the node index for (arg0, arg1), derives a slot from the node's
- * packed flag byte, and stores the scene mode, layout flag and music track for
- * that slot. It then scans the 0x40-bit pending mask; for each queued node id in
- * the accepted set it clears the pending bit, republishes that node's scene
- * data, and for ids 0xC / 0xD performs the swap of the two packed slot records
- * (D_800433DC and D_80043388) plus the four-neighbour reachability update.
+ * Looks up the land at (cell_x, cell_y), derives a slot from the land's
+ * packed flag byte, and stores the field entry scene, field music and music
+ * track for that slot. It then scans the 0x40-bit pending mask; for each queued
+ * event id in the accepted set it clears the pending bit, republishes that
+ * event's land scene data, and for ids 0xC / 0xD performs the swap of the two
+ * packed slot records (D_800433DC and D_80043388) plus the four-neighbour
+ * reachability update.
  *
- * @param arg0 World-map cursor X coordinate passed to wmap_get_land_at_cell.
- * @param arg1 World-map cursor Y coordinate passed to wmap_get_land_at_cell.
+ * @param cell_x World-map grid X of the lead traveler.
+ * @param cell_y World-map grid Y of the lead traveler.
  */
-void func_8005DF50(s32 arg0, s32 arg1)
+void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
 {
-    s32 sp10;
-    s32 sp14;
-    s32 sp18;
-    s32 sp1C;
-    s32 sp20;
-    s32 sp24;
+    s32 event_id;
+    s32 record_x;
+    s32 record_y;
+    s32 neighbor_land;
+    s32 land;
+    s32 land_slot;
 
     wmap_unlock_land_encyclopedia_entries();
-    sp20 = wmap_get_land_at_cell(arg0, arg1);
-    sp24 = (sp20 * 4) + ((D_800432C8[sp20 * WMAP_NODE_RECORD_SIZE] >> 4) & 3);
-    g_field_entry_scene.id = g_wmap_land_scenes[sp24];
-    g_field_music_id = g_wmap_land_entry_flags[sp24];
-    g_music_track_index = wmap_get_land_at_cell(arg0, arg1);
+    land = wmap_get_land_at_cell(cell_x, cell_y);
+    land_slot = (land * 4) + ((D_800432C8[land * WMAP_NODE_RECORD_SIZE] >> 4) & 3);
+    g_field_entry_scene.id = g_wmap_land_scenes[land_slot];
+    g_field_music_id = g_wmap_land_entry_flags[land_slot];
+    g_music_track_index = wmap_get_land_at_cell(cell_x, cell_y);
 
-    for (sp10 = 0; sp10 < 0x40; sp10++)
+    for (event_id = 0; event_id < 0x40; event_id++)
     {
-        if (SAVED_BIT_IS_SET(D_800432C0, sp10))
+        if (SAVED_BIT_IS_SET(D_800432C0, event_id))
         {
-            if (sp10 == 9 || sp10 == 0xA || sp10 == 0xB || sp10 == 0xC || sp10 == 0xD || sp10 == 0xE || sp10 == 0x18 || sp10 == 0 || sp10 == 0x1B || sp10 == 0x1C)
+            if (event_id == 9 || event_id == 0xA || event_id == 0xB || event_id == 0xC || event_id == 0xD || event_id == 0xE || event_id == 0x18 || event_id == 0 || event_id == 0x1B || event_id == 0x1C)
             {
-                D_800432C0[sp10 / SAVED_BITS_PER_WORD] &= ~(1 << (sp10 % SAVED_BITS_PER_WORD));
-                g_music_track_index = D_800D01F0[sp10];
-                sp20 = D_800D01B0[sp10];
-                sp24 = (sp20 * 4) + ((D_800432C8[sp20 * WMAP_NODE_RECORD_SIZE] >> 4) & 3);
-                g_field_entry_scene.id = g_wmap_land_scenes[sp24];
-                g_field_music_id = g_wmap_land_entry_flags[sp24];
-                if (sp10 == 0xC)
+                D_800432C0[event_id / SAVED_BITS_PER_WORD] &= ~(1 << (event_id % SAVED_BITS_PER_WORD));
+                g_music_track_index = D_800D01F0[event_id];
+                land = D_800D01B0[event_id];
+                land_slot = (land * 4) + ((D_800432C8[land * WMAP_NODE_RECORD_SIZE] >> 4) & 3);
+                g_field_entry_scene.id = g_wmap_land_scenes[land_slot];
+                g_field_music_id = g_wmap_land_entry_flags[land_slot];
+                if (event_id == 0xC)
                 {
                     D_80043390 = D_8004338C.unk0;
-                    sp14 = (u8)((D_800433DC.word >> 8) & 0xF);
-                    sp18 = (u8)((D_800433DC.word >> 0xC) & 0xF);
-                    sp1C = wmap_get_land_at_cell(sp14 - 1, sp18);
+                    record_x = (u8)((D_800433DC.word >> 8) & 0xF);
+                    record_y = (u8)((D_800433DC.word >> 0xC) & 0xF);
+                    neighbor_land = wmap_get_land_at_cell(record_x - 1, record_y);
                     D_80043388.f.bit0 = (u8)(D_800433DC.b.b0 & 1);
                     D_80043388.f.bit1 = (u8)((D_800433DC.word >> 1) & 1);
                     D_80043388.word = D_80043388.word | 4;
@@ -173,7 +174,7 @@ void func_8005DF50(s32 arg0, s32 arg1)
                     D_800433E6.unk0 = 0;
                     D_800433E6.unk1 = 0;
                 }
-                if (sp10 == 0xD)
+                if (event_id == 0xD)
                 {
                     D_800433DC.f.bit0 = (u8)(D_80043388.b.b0 & 1);
                     D_800433DC.f.bit1 = (u8)((D_80043388.word >> 1) & 1);
@@ -191,42 +192,42 @@ void func_8005DF50(s32 arg0, s32 arg1)
                     D_800433E6.unk0 = D_80043392.unk0;
                     D_800433E6.unk1 = D_80043392.unk1;
                     D_8004338C.unk0 = D_80043390;
-                    sp14 = (u8)((D_80043388.word >> 8) & 0xF);
-                    sp18 = (u8)((D_80043388.word >> 0xC) & 0xF);
-                    sp1C = wmap_get_land_at_cell(sp14 - 1, sp18);
-                    if (sp1C != 0xFF)
+                    record_x = (u8)((D_80043388.word >> 8) & 0xF);
+                    record_y = (u8)((D_80043388.word >> 0xC) & 0xF);
+                    neighbor_land = wmap_get_land_at_cell(record_x - 1, record_y);
+                    if (neighbor_land != 0xFF)
                     {
-                        D_8004338C.unk1 = D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE];
-                        if (D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE] < 6)
+                        D_8004338C.unk1 = D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE];
+                        if (D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE] < 6)
                         {
-                            D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE] = 5;
+                            D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE] = 5;
                         }
                     }
-                    sp1C = wmap_get_land_at_cell(sp14 + 1, sp18);
-                    if (sp1C != 0xFF)
+                    neighbor_land = wmap_get_land_at_cell(record_x + 1, record_y);
+                    if (neighbor_land != 0xFF)
                     {
-                        D_8004338C.unk2 = D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE];
-                        if (D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE] < 6)
+                        D_8004338C.unk2 = D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE];
+                        if (D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE] < 6)
                         {
-                            D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE] = 5;
+                            D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE] = 5;
                         }
                     }
-                    sp1C = wmap_get_land_at_cell(sp14, sp18 - 1);
-                    if (sp1C != 0xFF)
+                    neighbor_land = wmap_get_land_at_cell(record_x, record_y - 1);
+                    if (neighbor_land != 0xFF)
                     {
-                        D_8004338C.unk3 = D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE];
-                        if (D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE] < 6)
+                        D_8004338C.unk3 = D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE];
+                        if (D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE] < 6)
                         {
-                            D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE] = 5;
+                            D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE] = 5;
                         }
                     }
-                    sp1C = wmap_get_land_at_cell(sp14, sp18 + 1);
-                    if (sp1C != 0xFF)
+                    neighbor_land = wmap_get_land_at_cell(record_x, record_y + 1);
+                    if (neighbor_land != 0xFF)
                     {
-                        D_80043390 = D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE];
-                        if (D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE] < 6)
+                        D_80043390 = D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE];
+                        if (D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE] < 6)
                         {
-                            D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE] = 5;
+                            D_800432D0[neighbor_land * WMAP_NODE_RECORD_SIZE] = 5;
                         }
                     }
                     D_80043388.word = D_80043388.word & ~1;
