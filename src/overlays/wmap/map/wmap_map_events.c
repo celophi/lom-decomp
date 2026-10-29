@@ -118,7 +118,7 @@ extern u32 D_801B2E60;
 extern u32 D_801B2E68;
 extern u32 D_801B2E70;
 extern s8 *wmap_turn_vehicle(s32 arg0);
-extern void func_800591A8(s32 arg0);
+extern void wmap_start_land_effect(s32 arg0);
 extern s32 g_wmap_vehicle_cell_x;
 extern s32 g_wmap_vehicle_cell_y;
 extern s32 g_wmap_view_scroll_mode;
@@ -712,7 +712,7 @@ void func_800A7440(void)
     g_wmap_actor_motions[0].angle = 0;
     g_wmap_actor_motions[0].x = 2;
     wmap_install_callback(&wmap_draw_vehicle);
-    func_800591A8(0x21);
+    wmap_start_land_effect(0x21);
     D_801B2E74 = 0x16E;
     D_801B2E70 += 1;
     func_800A72B8();
@@ -1346,7 +1346,7 @@ WMAP_STEP_WAIT_SCROLL(func_800A8864,
 void func_800A88A4(void)
 {
     wmap_queue_effect_resources(0x17);
-    func_800591A8(0x17);
+    wmap_start_land_effect(0x17);
     D_801B2E60 += 1;
 }
 
@@ -1374,6 +1374,6 @@ WMAP_STEP_WAIT_SCROLL(func_800A8968,
 void func_800A89A8(void)
 {
     wmap_queue_effect_resources(0x16);
-    func_800591A8(0x16);
+    wmap_start_land_effect(0x16);
     D_801B2E68 += 1;
 }

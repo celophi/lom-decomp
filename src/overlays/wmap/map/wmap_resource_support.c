@@ -175,7 +175,7 @@ void func_8006518C(s32 resource_index)
  * @brief Upload an optional palette and the enabled pixel data from a TIM resource.
  * @param data Texture resource header.
  */
-void func_800651B4(u8* data)
+void wmap_upload_tim(u8* data)
 {
     WmapTextureRect rectangle;
 

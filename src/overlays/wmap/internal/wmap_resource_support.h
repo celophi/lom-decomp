@@ -34,7 +34,7 @@ void func_80064F5C(void);
 void func_80064F64(s32 resource_index);
 void func_80065078(s32 resource_index);
 void func_8006518C(s32 resource_index);
-void func_800651B4(u8* data);
+void wmap_upload_tim(u8* data);
 void wmap_play_sound(s32 sound_index, s32 pan);
 void func_800652F8(void);
 void wmap_queue_texture_page(s32 texture_page, s32 depth);

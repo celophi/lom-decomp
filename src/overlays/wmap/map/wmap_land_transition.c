@@ -248,7 +248,7 @@ void wmap_update_artifact_selection(void)
                 g_wmap_buttons_repeat = 0;
                 g_wmap_event_active = 1;
                 akao_fade_song_volume_from(0, 60, 127, 1);
-                func_800591A8(g_wmap_selected_artifact);
+                wmap_start_land_effect(g_wmap_selected_artifact);
                 artifact_id = g_wmap_selected_artifact;
                 if (artifact_id == 22)
                 {

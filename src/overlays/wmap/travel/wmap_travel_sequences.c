@@ -188,8 +188,8 @@ static inline void wmap_place_vehicle(void)
     WmapSpriteActor* actor = &g_wmap_vehicle_actor;
 
     cdrom_wait_queue_empty();
-    func_800651B4(g_wmap_effect_texture_buffer_0);
-    func_800651B4(g_wmap_effect_texture_buffer_1);
+    wmap_upload_tim(g_wmap_effect_texture_buffer_0);
+    wmap_upload_tim(g_wmap_effect_texture_buffer_1);
     g_wmap_vehicle_animation.data = g_wmap_animation_bank_0;
     actor->previous_sequence = -1;
     actor->target_shade = WMAP_VEHICLE_SHADE_NEUTRAL;

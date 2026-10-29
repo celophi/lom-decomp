@@ -39,15 +39,15 @@ extern s32 wmap_land_effect_24_run(s32);
 extern s32 wmap_land_effect_33_run(s32);
 
 /** @brief Upload the selected effect resources and register its callback. */
-void func_800591A8(u32 selection)
+void wmap_start_land_effect(u32 selection)
 {
     g_wmap_land_image_cache_missed = 0;
     cdrom_wait_queue_empty();
-    func_800651B4(g_wmap_effect_texture_buffer_0);
-    func_800651B4(g_wmap_effect_texture_buffer_1);
+    wmap_upload_tim(g_wmap_effect_texture_buffer_0);
+    wmap_upload_tim(g_wmap_effect_texture_buffer_1);
     if (selection != 2)
     {
-        func_800651B4(g_wmap_effect_texture_buffer_2);
+        wmap_upload_tim(g_wmap_effect_texture_buffer_2);
     }
     if (selection == 0x16)
     {
