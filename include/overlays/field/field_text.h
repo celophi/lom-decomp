@@ -35,6 +35,9 @@ extern FieldTextConfig* g_field_text_saved_configs;
 #define FIELD_TEXT_LINE_HEIGHT 12
 #define FIELD_TEXT_LINE_SPACING 16
 
+/** @brief Gap above field-font text centred in a FIELD_TEXT_LINE_SPACING list row. */
+#define FIELD_TEXT_ROW_INSET ((FIELD_TEXT_LINE_SPACING - FIELD_TEXT_LINE_HEIGHT) / 2)
+
 /** @brief Number of text window slots. */
 #define FIELD_TEXT_WINDOW_SLOTS 4
 

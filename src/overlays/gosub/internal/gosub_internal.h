@@ -83,10 +83,24 @@ typedef struct GosubTilePacket GosubTilePacket;
 #define GOSUB_ROW_LOGIC_BLOCK (-2)
 #define GOSUB_ROW_COMPANION (-3)
 
+/** @brief Height of a list window that shows @p row_count rows of @p row_height. */
+#define GOSUB_LIST_WINDOW_HEIGHT(row_count, row_height) ((row_count) * (row_height) + GOSUB_LIST_PANEL_PADDING)
+
 /** @brief Row and window layout of the plain item lists. */
 #define GOSUB_ITEM_ROW_HEIGHT 16
 #define GOSUB_ITEM_VISIBLE_ROWS 8
-#define GOSUB_ITEM_WINDOW_HEIGHT (GOSUB_ITEM_ROW_HEIGHT * GOSUB_ITEM_VISIBLE_ROWS + GOSUB_LIST_PANEL_PADDING)
+#define GOSUB_ITEM_WINDOW_HEIGHT GOSUB_LIST_WINDOW_HEIGHT(GOSUB_ITEM_VISIBLE_ROWS, GOSUB_ITEM_ROW_HEIGHT)
+
+/** @brief Visible rows of the logic-block component list. */
+#define GOSUB_COMPONENT_VISIBLE_ROWS 6
+
+/** @brief Row layout of the logic-block list. */
+#define GOSUB_BLOCK_ROW_HEIGHT 32
+#define GOSUB_BLOCK_VISIBLE_ROWS 4
+
+/** @brief Row layout of the pet and golem list: one portrait per row. */
+#define GOSUB_COMPANION_ROW_HEIGHT FIELD_PORTRAIT_SIZE
+#define GOSUB_COMPANION_VISIBLE_ROWS 3
 
 /** @brief Scratch text buffers for rows whose text is assembled at run time. */
 #define GOSUB_TEXT_BUFFER_COUNT 256
@@ -178,21 +192,6 @@ typedef struct GosubTilePacket GosubTilePacket;
 #define GOSUB_INSTRUMENT_POWER_X 0x38
 #endif
 #define GOSUB_INSTRUMENT_EFFECT_X 0x60
-
-/**
- * @brief Columns of the third line of an equipment card row in the item list:
- *        secondary value, the label after it, then the primary value.
- * @note JP lays the line out differently.
- */
-#if defined(VERSION_JP)
-#define GOSUB_CARD_SECONDARY_VALUE_X 0x54
-#define GOSUB_CARD_VALUE_LABEL_X 0x78
-#define GOSUB_CARD_PRIMARY_VALUE_X 0x9C
-#else
-#define GOSUB_CARD_SECONDARY_VALUE_X 0x48
-#define GOSUB_CARD_VALUE_LABEL_X 0x64
-#define GOSUB_CARD_PRIMARY_VALUE_X 0xB0
-#endif
 
 /** @brief Position of the centered current-row description. */
 #define GOSUB_ROW_DESCRIPTION_X 0x84
@@ -302,7 +301,7 @@ typedef struct
         /** @brief Companion list rows. */
         struct
         {
-            u32 egg : 1;     /**< The pet has not hatched; also tested through @c half. */
+            u32 egg : 1;     /**< The pet has not hatched; also tested as GOSUB_COMPANION_EGG in @c half. */
             u32 grazing : 1; /**< The pet is grazing and cannot be taken along. */
             u32 pet : 1;     /**< A pet row; clear for a golem row. */
             u32 reserved_3 : 29;
@@ -318,6 +317,9 @@ typedef struct
         u32 word;
     } flags;
 } GosubListRow;
+
+/** @brief GosubListRow::flags.half bit that holds flags.companion.egg. */
+#define GOSUB_COMPANION_EGG 0x1
 
 /**
  * @brief Equipment categories (InventoryAttributes bits 9:8), as stored in a

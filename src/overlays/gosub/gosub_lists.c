@@ -188,10 +188,10 @@ void gosub_build_logic_block_list(void)
         g_gosub_rows[i].text_color = FIELD_TEXT_COLOR_NORMAL;
     }
     g_gosub_row_count = g_saved_game_ctx->logic_block_count;
-    g_gosub_visible_row_count = 4;
-    g_gosub_row_height = 32;
+    g_gosub_visible_row_count = GOSUB_BLOCK_VISIBLE_ROWS;
+    g_gosub_row_height = GOSUB_BLOCK_ROW_HEIGHT;
     g_gosub_window_width = GOSUB_LOGIC_BLOCK_PANEL_WIDTH;
-    g_gosub_window_height = 4 * 32 + GOSUB_LIST_PANEL_PADDING;
+    g_gosub_window_height = GOSUB_LIST_WINDOW_HEIGHT(GOSUB_BLOCK_VISIBLE_ROWS, GOSUB_BLOCK_ROW_HEIGHT);
     g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_GOLEM_LOGIC_BLOCKS);
 }
 
@@ -278,7 +278,7 @@ void gosub_build_companion_list(s32 mode)
                 g_gosub_rows[row_count].flags.companion.egg = g_saved_game_ctx->pets[slot].status.bits.egg;
                 g_gosub_rows[row_count].flags.companion.grazing = g_saved_game_ctx->pets[slot].status.bits.grazing;
                 g_gosub_rows[row_count].detail_variant = g_saved_game_ctx->pets[slot].progress.level;
-                if (g_gosub_rows[row_count].flags.half & 1)
+                if (g_gosub_rows[row_count].flags.half & GOSUB_COMPANION_EGG)
                 {
                     /* An egg shows its egg portrait and how long it still needs to hatch. */
                     g_gosub_rows[row_count].detail_id = g_saved_game_ctx->pets[slot].egg_species + GOSUB_EGG_PORTRAIT_FIRST;
@@ -305,9 +305,9 @@ void gosub_build_companion_list(s32 mode)
         }
     }
     g_gosub_row_count = row_count;
-    g_gosub_visible_row_count = 3;
-    g_gosub_row_height = 48;
+    g_gosub_visible_row_count = GOSUB_COMPANION_VISIBLE_ROWS;
+    g_gosub_row_height = GOSUB_COMPANION_ROW_HEIGHT;
     g_gosub_window_width = GOSUB_LOGIC_BLOCK_PANEL_WIDTH;
-    g_gosub_window_height = 3 * 48 + GOSUB_LIST_PANEL_PADDING;
+    g_gosub_window_height = GOSUB_LIST_WINDOW_HEIGHT(GOSUB_COMPANION_VISIBLE_ROWS, GOSUB_COMPANION_ROW_HEIGHT);
     g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_PET_OR_GOLEM + mode);
 }
