@@ -556,116 +556,114 @@ u8* gosub_draw_item_list(u_long* ot, u8* initial_prim, s32 x_off, s32 y_off)
     TILE* mark;
 
     prim = initial_prim;
-    row = 0;
     drawn_count = 0;
 
-    if (g_gosub_row_count > 0)
+    for (row = 0; row < g_gosub_row_count; row++)
     {
-        do
+        if (g_gosub_rows[row].value == GOSUB_ROW_COMPANION)
         {
-            if (g_gosub_rows[row].value == GOSUB_ROW_COMPANION)
+            y = row * GOSUB_COMPANION_ROW_HEIGHT - y_off - g_gosub_scroll_y;
+
+            if (y <= -GOSUB_COMPANION_ROW_HEIGHT || y >= g_gosub_window_height)
             {
-                y = row * GOSUB_COMPANION_ROW_HEIGHT - y_off - g_gosub_scroll_y;
-
-                if (y > -GOSUB_COMPANION_ROW_HEIGHT && y < g_gosub_window_height)
-                {
-                    prim = gosub_draw_portrait(prim, ot, row, -x_off, y, drawn_count);
-                    prim = field_draw_text(prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].text_color, GOSUB_COMPANION_TEXT_X - x_off, y,
-                                           FIELD_TEXT_ALIGN_LEFT);
-
-                    if (g_gosub_rows[row].flags.companion.pet)
-                    {
-                        if ((g_gosub_rows[row].flags.half & GOSUB_COMPANION_EGG) == 0)
-                        {
-                            prim = field_draw_text(prim, ot, GOSUB_MESSAGE(GOSUB_MSG_LEVEL), g_gosub_rows[row].text_color, GOSUB_COMPANION_TEXT_X - x_off,
-                                                   y + GOSUB_COMPANION_LINE_2, FIELD_TEXT_ALIGN_LEFT);
-                            pos.x = GOSUB_COMPANION_LEVEL_X - x_off;
-                            pos.y = y + GOSUB_COMPANION_LINE_2;
-                            prim = field_draw_number(ot, prim, g_gosub_rows[row].detail_variant, g_gosub_rows[row].text_color, &pos, FIELD_TEXT_ALIGN_LEFT);
-                            prim = field_draw_text(prim, ot, GOSUB_TEXT(GOSUB_TEXT_PET_SPECIES, g_gosub_rows[row].detail_id), g_gosub_rows[row].text_color,
-                                                   GOSUB_COMPANION_SPECIES_X - x_off, y + GOSUB_COMPANION_LINE_2, FIELD_TEXT_ALIGN_LEFT);
-                        }
-                        else
-                        {
-                            prim = field_draw_text(prim, ot, GOSUB_MESSAGE(GOSUB_MSG_HATCH_ANY_TIME + g_gosub_rows[row].detail_variant),
-                                                   g_gosub_rows[row].text_color, GOSUB_COMPANION_TEXT_X - x_off, y + GOSUB_COMPANION_LINE_2,
-                                                   FIELD_TEXT_ALIGN_LEFT);
-                        }
-                    }
-                    else
-                    {
-                        prim = field_draw_text(prim, ot, GOSUB_TEXT(GOSUB_TEXT_GOLEM_TYPES, g_gosub_rows[row].detail_id), g_gosub_rows[row].text_color,
-                                               GOSUB_COMPANION_TEXT_X - x_off, y + GOSUB_COMPANION_LINE_2, FIELD_TEXT_ALIGN_LEFT);
-                    }
-
-                    prim = field_draw_text(prim, ot, GOSUB_MESSAGE(GOSUB_MSG_HP), g_gosub_rows[row].text_color, GOSUB_COMPANION_TEXT_X - x_off,
-                                           y + GOSUB_COMPANION_LINE_3, FIELD_TEXT_ALIGN_LEFT);
-                    pos.x = GOSUB_COMPANION_HP_X - x_off;
-                    pos.y = y + GOSUB_COMPANION_LINE_3;
-                    prim = field_draw_number(ot, prim, g_gosub_rows[row].secondary_value, g_gosub_rows[row].text_color, &pos, FIELD_TEXT_ALIGN_LEFT);
-                    prim = field_draw_text(prim, ot, GOSUB_MESSAGE(GOSUB_MSG_ATTACK_POWER), g_gosub_rows[row].text_color,
-                                           GOSUB_COMPANION_ATTACK_LABEL_X - x_off, y + GOSUB_COMPANION_LINE_3, FIELD_TEXT_ALIGN_LEFT);
-                    pos.x = GOSUB_COMPANION_ATTACK_X - x_off;
-                    pos.y = y + GOSUB_COMPANION_LINE_3;
-                    prim = field_draw_number(ot, prim, g_gosub_rows[row].primary_value, g_gosub_rows[row].text_color, &pos, FIELD_TEXT_ALIGN_LEFT);
-
-                    if (g_gosub_rows[row].detail_group != 0)
-                    {
-                        prim = field_draw_text(prim, ot, GOSUB_MESSAGE(GOSUB_MSG_ON_FIELD), g_gosub_rows[row].text_color,
-                                               g_gosub_window_width - GOSUB_LIST_MARGIN_X - x_off, y + GOSUB_COMPANION_LINE_3, FIELD_TEXT_ALIGN_RIGHT);
-                    }
-                    else if (g_gosub_rows[row].flags.half & GOSUB_COMPANION_EGG)
-                    {
-                        prim = field_draw_text(prim, ot, GOSUB_MESSAGE(GOSUB_MSG_MONSTER_EGG), g_gosub_rows[row].text_color,
-                                               g_gosub_window_width - GOSUB_LIST_MARGIN_X - x_off, y + GOSUB_COMPANION_LINE_3, FIELD_TEXT_ALIGN_RIGHT);
-                    }
-                    else if (g_gosub_rows[row].flags.companion.grazing)
-                    {
-                        prim = field_draw_text(prim, ot, GOSUB_MESSAGE(GOSUB_MSG_GRAZING), g_gosub_rows[row].text_color,
-                                               g_gosub_window_width - GOSUB_LIST_MARGIN_X - x_off, y + GOSUB_COMPANION_LINE_3, FIELD_TEXT_ALIGN_RIGHT);
-                    }
-
-                    drawn_count++;
-                }
+                continue;
             }
-            else if (g_gosub_rows[row].value == GOSUB_ROW_LOGIC_BLOCK)
+
+            prim = gosub_draw_portrait(prim, ot, row, -x_off, y, drawn_count);
+            prim = field_draw_text(prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].text_color, GOSUB_COMPANION_TEXT_X - x_off, y, FIELD_TEXT_ALIGN_LEFT);
+
+            if (g_gosub_rows[row].flags.companion.pet)
             {
-                y = row * GOSUB_BLOCK_ROW_HEIGHT - y_off - g_gosub_scroll_y;
-
-                if (y > -GOSUB_BLOCK_ROW_HEIGHT && y < g_gosub_window_height)
+                if ((g_gosub_rows[row].flags.half & GOSUB_COMPANION_EGG) == 0)
                 {
-                    prim =
-                        gosub_draw_composite_icon(prim, ot, GOSUB_LIST_MARGIN_X - x_off, y, g_gosub_rows[row].detail_group, g_gosub_rows[row].detail_variant);
-                    prim = field_draw_text(prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].text_color, GOSUB_BLOCK_NAME_X - x_off, y + GOSUB_BLOCK_TEXT_Y,
-                                           FIELD_TEXT_ALIGN_LEFT);
-
-                    if (g_gosub_rows[row].flags.block.in_use)
-                    {
-                        prim = field_draw_text(prim, ot, GOSUB_MESSAGE(GOSUB_MSG_IN_USE), g_gosub_rows[row].text_color, GOSUB_BLOCK_IN_USE_X - x_off,
-                                               y + GOSUB_BLOCK_TEXT_Y, FIELD_TEXT_ALIGN_RIGHT);
-                    }
+                    prim = field_draw_text(prim, ot, GOSUB_MESSAGE(GOSUB_MSG_LEVEL), g_gosub_rows[row].text_color, GOSUB_COMPANION_TEXT_X - x_off,
+                                           y + GOSUB_COMPANION_LINE_2, FIELD_TEXT_ALIGN_LEFT);
+                    pos.x = GOSUB_COMPANION_LEVEL_X - x_off;
+                    pos.y = y + GOSUB_COMPANION_LINE_2;
+                    prim = field_draw_number(ot, prim, g_gosub_rows[row].detail_variant, g_gosub_rows[row].text_color, &pos, FIELD_TEXT_ALIGN_LEFT);
+                    prim = field_draw_text(prim, ot, GOSUB_TEXT(GOSUB_TEXT_PET_SPECIES, g_gosub_rows[row].detail_id), g_gosub_rows[row].text_color,
+                                           GOSUB_COMPANION_SPECIES_X - x_off, y + GOSUB_COMPANION_LINE_2, FIELD_TEXT_ALIGN_LEFT);
+                }
+                else
+                {
+                    prim = field_draw_text(prim, ot, GOSUB_MESSAGE(GOSUB_MSG_HATCH_ANY_TIME + g_gosub_rows[row].detail_variant), g_gosub_rows[row].text_color,
+                                           GOSUB_COMPANION_TEXT_X - x_off, y + GOSUB_COMPANION_LINE_2, FIELD_TEXT_ALIGN_LEFT);
                 }
             }
             else
             {
-                y = gosub_list_row_y(row, y_off);
-
-                if (y > -g_gosub_row_height && y < g_gosub_window_height)
-                {
-                    prim =
-                        field_draw_text(prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].text_color, GOSUB_LIST_MARGIN_X - x_off, y, FIELD_TEXT_ALIGN_LEFT);
-                    pos.y = y;
-                    pos.x = g_gosub_window_width - GOSUB_LIST_MARGIN_X - x_off;
-
-                    if (g_gosub_rows[row].value >= 0)
-                    {
-                        prim = field_draw_number(ot, prim, g_gosub_rows[row].value, g_gosub_rows[row].text_color, &pos, FIELD_TEXT_ALIGN_RIGHT);
-                    }
-                }
+                prim = field_draw_text(prim, ot, GOSUB_TEXT(GOSUB_TEXT_GOLEM_TYPES, g_gosub_rows[row].detail_id), g_gosub_rows[row].text_color,
+                                       GOSUB_COMPANION_TEXT_X - x_off, y + GOSUB_COMPANION_LINE_2, FIELD_TEXT_ALIGN_LEFT);
             }
 
-            row++;
-        } while (row < g_gosub_row_count);
+            prim = field_draw_text(prim, ot, GOSUB_MESSAGE(GOSUB_MSG_HP), g_gosub_rows[row].text_color, GOSUB_COMPANION_TEXT_X - x_off,
+                                   y + GOSUB_COMPANION_LINE_3, FIELD_TEXT_ALIGN_LEFT);
+            pos.x = GOSUB_COMPANION_HP_X - x_off;
+            pos.y = y + GOSUB_COMPANION_LINE_3;
+            prim = field_draw_number(ot, prim, g_gosub_rows[row].secondary_value, g_gosub_rows[row].text_color, &pos, FIELD_TEXT_ALIGN_LEFT);
+            prim = field_draw_text(prim, ot, GOSUB_MESSAGE(GOSUB_MSG_ATTACK_POWER), g_gosub_rows[row].text_color, GOSUB_COMPANION_ATTACK_LABEL_X - x_off,
+                                   y + GOSUB_COMPANION_LINE_3, FIELD_TEXT_ALIGN_LEFT);
+            pos.x = GOSUB_COMPANION_ATTACK_X - x_off;
+            pos.y = y + GOSUB_COMPANION_LINE_3;
+            prim = field_draw_number(ot, prim, g_gosub_rows[row].primary_value, g_gosub_rows[row].text_color, &pos, FIELD_TEXT_ALIGN_LEFT);
+
+            if (g_gosub_rows[row].detail_group != 0)
+            {
+                prim = field_draw_text(prim, ot, GOSUB_MESSAGE(GOSUB_MSG_ON_FIELD), g_gosub_rows[row].text_color,
+                                       g_gosub_window_width - GOSUB_LIST_MARGIN_X - x_off, y + GOSUB_COMPANION_LINE_3, FIELD_TEXT_ALIGN_RIGHT);
+            }
+            else if (g_gosub_rows[row].flags.half & GOSUB_COMPANION_EGG)
+            {
+                prim = field_draw_text(prim, ot, GOSUB_MESSAGE(GOSUB_MSG_MONSTER_EGG), g_gosub_rows[row].text_color,
+                                       g_gosub_window_width - GOSUB_LIST_MARGIN_X - x_off, y + GOSUB_COMPANION_LINE_3, FIELD_TEXT_ALIGN_RIGHT);
+            }
+            else if (g_gosub_rows[row].flags.companion.grazing)
+            {
+                prim = field_draw_text(prim, ot, GOSUB_MESSAGE(GOSUB_MSG_GRAZING), g_gosub_rows[row].text_color,
+                                       g_gosub_window_width - GOSUB_LIST_MARGIN_X - x_off, y + GOSUB_COMPANION_LINE_3, FIELD_TEXT_ALIGN_RIGHT);
+            }
+
+            drawn_count++;
+            continue;
+        }
+
+        if (g_gosub_rows[row].value == GOSUB_ROW_LOGIC_BLOCK)
+        {
+            y = row * GOSUB_BLOCK_ROW_HEIGHT - y_off - g_gosub_scroll_y;
+
+            if (y <= -GOSUB_BLOCK_ROW_HEIGHT || y >= g_gosub_window_height)
+            {
+                continue;
+            }
+
+            prim = gosub_draw_composite_icon(prim, ot, GOSUB_LIST_MARGIN_X - x_off, y, g_gosub_rows[row].detail_group, g_gosub_rows[row].detail_variant);
+            prim = field_draw_text(prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].text_color, GOSUB_BLOCK_NAME_X - x_off, y + GOSUB_BLOCK_TEXT_Y,
+                                   FIELD_TEXT_ALIGN_LEFT);
+
+            if (g_gosub_rows[row].flags.block.in_use)
+            {
+                prim = field_draw_text(prim, ot, GOSUB_MESSAGE(GOSUB_MSG_IN_USE), g_gosub_rows[row].text_color, GOSUB_BLOCK_IN_USE_X - x_off,
+                                       y + GOSUB_BLOCK_TEXT_Y, FIELD_TEXT_ALIGN_RIGHT);
+            }
+
+            continue;
+        }
+
+        y = gosub_list_row_y(row, y_off);
+
+        if (y <= -g_gosub_row_height || y >= g_gosub_window_height)
+        {
+            continue;
+        }
+
+        prim = field_draw_text(prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].text_color, GOSUB_LIST_MARGIN_X - x_off, y, FIELD_TEXT_ALIGN_LEFT);
+        pos.y = y;
+        pos.x = g_gosub_window_width - GOSUB_LIST_MARGIN_X - x_off;
+
+        if (g_gosub_rows[row].value >= 0)
+        {
+            prim = field_draw_number(ot, prim, g_gosub_rows[row].value, g_gosub_rows[row].text_color, &pos, FIELD_TEXT_ALIGN_RIGHT);
+        }
     }
 
     cursor_tile = prim;
@@ -679,7 +677,7 @@ u8* gosub_draw_item_list(u_long* ot, u8* initial_prim, s32 x_off, s32 y_off)
 
     for (row = 0, mark = cursor_tile + 1; row < g_gosub_selection_count; row++, mark++)
     {
-        mark->x0 = (row | 1) & 1;
+        mark->x0 = (y | 1) & 1;
         SET_BGR0_PACKED(mark, GOSUB_SELECTION_MARK_COLOR);
         setlen(mark, 3);
         setcode(mark, GPU_CODE_TILE | GPU_CODE_SEMI_TRANS);
