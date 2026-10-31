@@ -18,7 +18,7 @@ s32 gosub_select_companion_to_take(void)
     list = g_gosub_rows;
     row = g_gosub_cursor_row;
     row_entry = &list[row];
-    if (row_entry->flags.half & 1)
+    if (row_entry->flags.half & GOSUB_COMPANION_EGG)
     {
         gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_EGG_CANNOT_LEAVE));
         g_gosub_selection_count = 0;

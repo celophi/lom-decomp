@@ -278,7 +278,7 @@ void gosub_build_companion_list(s32 mode)
                 g_gosub_rows[row_count].flags.companion.egg = g_saved_game_ctx->pets[slot].status.bits.egg;
                 g_gosub_rows[row_count].flags.companion.grazing = g_saved_game_ctx->pets[slot].status.bits.grazing;
                 g_gosub_rows[row_count].detail_variant = g_saved_game_ctx->pets[slot].progress.level;
-                if (g_gosub_rows[row_count].flags.half & 1)
+                if (g_gosub_rows[row_count].flags.half & GOSUB_COMPANION_EGG)
                 {
                     /* An egg shows its egg portrait and how long it still needs to hatch. */
                     g_gosub_rows[row_count].detail_id = g_saved_game_ctx->pets[slot].egg_species + GOSUB_EGG_PORTRAIT_FIRST;
