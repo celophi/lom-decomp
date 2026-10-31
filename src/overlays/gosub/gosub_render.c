@@ -677,7 +677,9 @@ u8* gosub_draw_item_list(u_long* ot, u8* initial_prim, s32 x_off, s32 y_off)
 
     for (row = 0, mark = cursor_tile + 1; row < g_gosub_selection_count; row++, mark++)
     {
+        /* TODO: Need to figure out a way that I can remove this or replace the hack */
         mark->x0 = (y | 1) & 1;
+
         SET_BGR0_PACKED(mark, GOSUB_SELECTION_MARK_COLOR);
         setlen(mark, 3);
         setcode(mark, GPU_CODE_TILE | GPU_CODE_SEMI_TRANS);
