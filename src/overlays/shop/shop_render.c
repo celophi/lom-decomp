@@ -261,7 +261,7 @@ u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
             ot++;
             ot--;
             row_y = i * SHOP_ROW_HEIGHT;
-            row_top = y_inset - 2;
+            row_top = y_inset - FIELD_TEXT_ROW_INSET;
             row_top += i;
             row_top -= i;
             row_y -= row_top;
@@ -346,7 +346,7 @@ u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
         s32 cursor = g_shop_cursor;
         s32 scroll = g_shop_scroll_y;
         s32 cursor_y = cursor * SHOP_ROW_HEIGHT;
-        s32 cursor_top = y_inset - 2;
+        s32 cursor_top = y_inset - FIELD_TEXT_ROW_INSET;
 
         y = (cursor_y - cursor_top) - scroll;
     }

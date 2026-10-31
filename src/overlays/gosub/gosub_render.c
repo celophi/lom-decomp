@@ -10,9 +10,6 @@
 /** @brief Distance of item list text and icons from the left and right window edges. */
 #define GOSUB_LIST_MARGIN_X 12
 
-/** @brief Distance of a plain row's text below the row's top edge; the highlight bars start at the top edge. */
-#define GOSUB_LIST_TEXT_INSET 2
-
 #define GOSUB_LIST_HIGHLIGHT_X 1
 #define GOSUB_SELECTION_MARK_COLOR GPU_COLOR_WORD(0x80, 0x80, 0x80)
 
@@ -21,7 +18,6 @@
  *        text lines (name; level and species or type; HP and attack power).
  * @note JP lays the third line out differently.
  */
-#define GOSUB_COMPANION_ROW_HEIGHT FIELD_PORTRAIT_SIZE
 #define GOSUB_COMPANION_TEXT_X FIELD_PORTRAIT_SIZE
 #define GOSUB_COMPANION_LINE_2 FIELD_TEXT_LINE_SPACING
 #define GOSUB_COMPANION_LINE_3 (FIELD_TEXT_LINE_SPACING * 2)
@@ -38,7 +34,6 @@
 #endif
 
 /** @brief Layout of a logic-block row: the block's icon, name and in-use note. */
-#define GOSUB_BLOCK_ROW_HEIGHT 32
 #define GOSUB_BLOCK_NAME_X 76
 #define GOSUB_BLOCK_TEXT_Y 8
 #define GOSUB_BLOCK_IN_USE_X 272
@@ -525,14 +520,14 @@ GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, u_long* ot, s32
  * @brief Screen y of a plain list row's text.
  * @param row Row index into g_gosub_rows.
  * @param y_off Vertical element animation offset.
- * @return Text y; the row's highlight bar starts GOSUB_LIST_TEXT_INSET above it.
+ * @return Text y; the row's highlight bar starts FIELD_TEXT_ROW_INSET above it.
  */
 static inline s32 gosub_list_row_y(s32 row, s32 y_off)
 {
     s32 row_offset;
 
     row_offset = row * g_gosub_row_height;
-    y_off -= GOSUB_LIST_TEXT_INSET;
+    y_off -= FIELD_TEXT_ROW_INSET;
     return row_offset - y_off - g_gosub_scroll_y;
 }
 
@@ -678,7 +673,7 @@ u8* gosub_draw_item_list(u_long* ot, u8* initial_prim, s32 x_off, s32 y_off)
     SET_BGR0_PACKED(cursor_tile, GPU_COLOR_SELECTED_ROW);
     setTile(cursor_tile);
     setSemiTrans(cursor_tile, 1);
-    setXY0(cursor_tile, GOSUB_LIST_HIGHLIGHT_X, y - GOSUB_LIST_TEXT_INSET);
+    setXY0(cursor_tile, GOSUB_LIST_HIGHLIGHT_X, y - FIELD_TEXT_ROW_INSET);
     setWH(cursor_tile, g_gosub_window_width, g_gosub_row_height - 1);
     addPrim(ot, cursor_tile);
 
@@ -689,7 +684,7 @@ u8* gosub_draw_item_list(u_long* ot, u8* initial_prim, s32 x_off, s32 y_off)
         setlen(mark, 3);
         setcode(mark, GPU_CODE_TILE | GPU_CODE_SEMI_TRANS);
         y = gosub_list_row_y(g_gosub_selected_rows[row], y_off);
-        mark->y0 = y - GOSUB_LIST_TEXT_INSET;
+        mark->y0 = y - FIELD_TEXT_ROW_INSET;
         setWH(mark, g_gosub_window_width, g_gosub_row_height - 1);
         addPrim(ot, mark);
     }

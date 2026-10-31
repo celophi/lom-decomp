@@ -255,10 +255,10 @@ s32 gosub_handle_make_block_dialog(s32 dialog_result)
         g_gosub_cursor_row = 0;
         g_gosub_allow_duplicate_selection = 0;
         gosub_build_equipment_list(GOSUB_EQUIPMENT_KIND_ANY);
-        g_gosub_visible_row_count = 6;
+        g_gosub_visible_row_count = GOSUB_COMPONENT_VISIBLE_ROWS;
         g_gosub_row_height = GOSUB_ITEM_ROW_HEIGHT;
         g_gosub_window_width = GOSUB_LIST_PANEL_WIDTH;
-        g_gosub_window_height = 6 * GOSUB_ITEM_ROW_HEIGHT + GOSUB_LIST_PANEL_PADDING;
+        g_gosub_window_height = GOSUB_LIST_WINDOW_HEIGHT(GOSUB_COMPONENT_VISIBLE_ROWS, GOSUB_ITEM_ROW_HEIGHT);
         g_gosub_block_shape = 0;
         g_gosub_block_id = 0;
         g_gosub_block_level = 0;
@@ -444,9 +444,9 @@ void gosub_build_equipment_list(u32 item_kind)
         break;
     }
 
-    g_gosub_row_height = 0x10;
-    g_gosub_window_width = 0xE8;
-    g_gosub_window_height = (g_gosub_visible_row_count * 0x10) + 4;
+    g_gosub_row_height = GOSUB_ITEM_ROW_HEIGHT;
+    g_gosub_window_width = GOSUB_LIST_PANEL_WIDTH;
+    g_gosub_window_height = GOSUB_LIST_WINDOW_HEIGHT(g_gosub_visible_row_count, GOSUB_ITEM_ROW_HEIGHT);
 }
 /**
  * @brief List the weapon, armor or instrument types that can be made.
@@ -489,8 +489,8 @@ void gosub_build_equipment_type_list(s32 group)
         break;
     }
 
-    g_gosub_visible_row_count = 8;
-    g_gosub_row_height = 0x10;
-    g_gosub_window_width = 0xE8;
-    g_gosub_window_height = 0x84;
+    g_gosub_visible_row_count = GOSUB_ITEM_VISIBLE_ROWS;
+    g_gosub_row_height = GOSUB_ITEM_ROW_HEIGHT;
+    g_gosub_window_width = GOSUB_LIST_PANEL_WIDTH;
+    g_gosub_window_height = GOSUB_ITEM_WINDOW_HEIGHT;
 }

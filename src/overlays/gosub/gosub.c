@@ -258,10 +258,10 @@ void gosub_enter_screen(s32 screen_id)
         gosub_close_elements();
         gosub_build_equipment_list(GOSUB_EQUIPMENT_KIND_ANY);
         g_gosub_show_row_details = 1;
-        g_gosub_visible_row_count = 6;
-        g_gosub_row_height = 16;
-        g_gosub_window_width = 232;
-        g_gosub_window_height = 100;
+        g_gosub_visible_row_count = GOSUB_COMPONENT_VISIBLE_ROWS;
+        g_gosub_row_height = GOSUB_ITEM_ROW_HEIGHT;
+        g_gosub_window_width = GOSUB_LIST_PANEL_WIDTH;
+        g_gosub_window_height = GOSUB_LIST_WINDOW_HEIGHT(GOSUB_COMPONENT_VISIBLE_ROWS, GOSUB_ITEM_ROW_HEIGHT);
         g_gosub_block_shape = 0;
         g_gosub_block_id = 0;
         g_gosub_block_level = 0;

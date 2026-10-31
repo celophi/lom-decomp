@@ -83,10 +83,24 @@ typedef struct GosubTilePacket GosubTilePacket;
 #define GOSUB_ROW_LOGIC_BLOCK (-2)
 #define GOSUB_ROW_COMPANION (-3)
 
+/** @brief Height of a list window that shows @p row_count rows of @p row_height. */
+#define GOSUB_LIST_WINDOW_HEIGHT(row_count, row_height) ((row_count) * (row_height) + GOSUB_LIST_PANEL_PADDING)
+
 /** @brief Row and window layout of the plain item lists. */
 #define GOSUB_ITEM_ROW_HEIGHT 16
 #define GOSUB_ITEM_VISIBLE_ROWS 8
-#define GOSUB_ITEM_WINDOW_HEIGHT (GOSUB_ITEM_ROW_HEIGHT * GOSUB_ITEM_VISIBLE_ROWS + GOSUB_LIST_PANEL_PADDING)
+#define GOSUB_ITEM_WINDOW_HEIGHT GOSUB_LIST_WINDOW_HEIGHT(GOSUB_ITEM_VISIBLE_ROWS, GOSUB_ITEM_ROW_HEIGHT)
+
+/** @brief Visible rows of the logic-block component list. */
+#define GOSUB_COMPONENT_VISIBLE_ROWS 6
+
+/** @brief Row layout of the logic-block list. */
+#define GOSUB_BLOCK_ROW_HEIGHT 32
+#define GOSUB_BLOCK_VISIBLE_ROWS 4
+
+/** @brief Row layout of the pet and golem list: one portrait per row. */
+#define GOSUB_COMPANION_ROW_HEIGHT FIELD_PORTRAIT_SIZE
+#define GOSUB_COMPANION_VISIBLE_ROWS 3
 
 /** @brief Scratch text buffers for rows whose text is assembled at run time. */
 #define GOSUB_TEXT_BUFFER_COUNT 256
