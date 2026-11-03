@@ -33,14 +33,14 @@ void* card_menu_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_off
         card_reset_entry_ranks();
         g_card_step = NULL;
     }
-    else if ((g_pad_input & PAD_BTN_CIRCLE) || ((g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK) && (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)))
+    else if ((g_pad_input & PAD_BTN_CIRCLE) || ((g_pad_input & PAD_CONFIRM_BUTTONS) && (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)))
     {
         card_menu_deactivate_primary_element();
         field_reset_input_repeat();
         field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
         g_card_step = g_card_steps_card_info;
     }
-    else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+    else if (g_pad_input & PAD_CONFIRM_BUTTONS)
     {
         field_play_sound(SFX_CONFIRM, AKAO_PAN_CENTER);
         g_card_menu_progress_active = 1;

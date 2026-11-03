@@ -381,7 +381,7 @@ s32 card_menu_handle_input(void)
         cload_scroll_to_selection();
         return;
     }
-    if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+    if (g_pad_input & PAD_CONFIRM_BUTTONS)
     {
         if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][g_card_menu_selected_row].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) != 0)
         {

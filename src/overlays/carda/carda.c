@@ -283,7 +283,7 @@ static s32 card_menu_update_card_sequence(void)
 
     while ((result = carda_advance_card_sequence()) == CARD_MENU_SEQUENCE_RUN_AGAIN);
 
-    if (g_carda_format_declined != 0 && (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK))
+    if (g_carda_format_declined != 0 && (g_pad_input & PAD_CONFIRM_BUTTONS))
     {
         g_card_entry_state = CARD_MENU_ENTRY_STATE_UNFORMATTED;
         g_carda_format_declined = 0;
@@ -459,7 +459,7 @@ static s32 card_menu_handle_input(void)
         return;
     }
 
-    if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+    if (g_pad_input & PAD_CONFIRM_BUTTONS)
     {
         if (g_card_menu_mode == CARDA_MODE_LOAD)
         {
@@ -1371,7 +1371,7 @@ void* carda_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
             field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
             g_card_step = g_card_steps_card_info;
         }
-        else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+        else if (g_pad_input & PAD_CONFIRM_BUTTONS)
         {
             if (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)
             {
@@ -1564,7 +1564,7 @@ void* carda_draw_save_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
             field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
             g_card_step = g_card_steps_card_info;
         }
-        else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+        else if (g_pad_input & PAD_CONFIRM_BUTTONS)
         {
             if (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)
             {
@@ -1643,7 +1643,7 @@ void* carda_draw_overwrite_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_of
             field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
             g_card_step = g_card_steps_card_info;
         }
-        else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+        else if (g_pad_input & PAD_CONFIRM_BUTTONS)
         {
             if (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)
             {
@@ -1741,7 +1741,7 @@ static void* carda_draw_save_complete(u_long* ot, void* prim, s32 x_offset, s32 
 
     result = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_carda_text_saved, CARD_MENU_TEXT_SAVED), FIELD_TEXT_COLOR_NORMAL,
                              -x_offset + CARD_MENU_MESSAGE_CENTER_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
-    if (g_pad_input & (CARD_MENU_CONFIRM_BUTTON_MASK | PAD_BTN_CIRCLE))
+    if (g_pad_input & (PAD_CONFIRM_BUTTONS | PAD_BTN_CIRCLE))
     {
         field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
         card_menu_deactivate_primary_element();
@@ -1830,7 +1830,7 @@ void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
     else
     {
         status = g_pad_input;
-        if ((status & PAD_BTN_CIRCLE) || ((status & CARD_MENU_CONFIRM_BUTTON_MASK) && g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES))
+        if ((status & PAD_BTN_CIRCLE) || ((status & PAD_CONFIRM_BUTTONS) && g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES))
         {
             g_carda_format_declined = 1;
             field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
@@ -1848,7 +1848,7 @@ void* carda_draw_format_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offse
                 g_card_step = g_card_steps_card_info;
             }
         }
-        else if (status & CARD_MENU_CONFIRM_BUTTON_MASK)
+        else if (status & PAD_CONFIRM_BUTTONS)
         {
             field_play_sound(SFX_CONFIRM, AKAO_PAN_CENTER);
             card_menu_deactivate_primary_element();
@@ -2137,7 +2137,7 @@ static void* carda_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 
         break;
     }
 
-    if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+    if (g_pad_input & PAD_CONFIRM_BUTTONS)
     {
         switch (g_card_menu_mode)
         {
@@ -2308,7 +2308,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                                    FIELD_TEXT_ALIGN_CENTER);
             prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_NEEDS_SIX_BLOCKS), FIELD_TEXT_COLOR_NORMAL, x, FIELD_TEXT_LINE_SPACING * 2 - y_offset,
                                    FIELD_TEXT_ALIGN_CENTER);
-            if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+            if (g_pad_input & PAD_CONFIRM_BUTTONS)
             {
                 field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
                 g_card_entry_state = CARDA_ENTRY_STATE_SELECT_SLOT;
@@ -2402,7 +2402,7 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
             field_reset_input_repeat();
             break;
         }
-        if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+        if (g_pad_input & PAD_CONFIRM_BUTTONS)
         {
             if (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)
             {
@@ -2544,14 +2544,14 @@ void* carda_draw_save_flow(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                                    CARD_MENU_LINE_HEIGHT * 2 - y_offset, FIELD_TEXT_ALIGN_CENTER);
             prim = card_menu_draw_choice_prompt(prim, ot, x + CARD_MENU_MESSAGE_CENTER_X, CARD_MENU_LINE_HEIGHT * 3 - y_offset);
         }
-        if ((g_pad_input & PAD_BTN_CIRCLE) || ((g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK) && g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES))
+        if ((g_pad_input & PAD_BTN_CIRCLE) || ((g_pad_input & PAD_CONFIRM_BUTTONS) && g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES))
         {
             field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
             g_card_entry_state = CARDA_ENTRY_STATE_SELECT_SLOT;
             g_card_menu_choice_toggle = g_card_slot;
             field_reset_input_repeat();
         }
-        else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+        else if (g_pad_input & PAD_CONFIRM_BUTTONS)
         {
             field_play_sound(SFX_CONFIRM, AKAO_PAN_CENTER);
             g_carda_received_item_count = 0;
@@ -2742,7 +2742,7 @@ static void* carda_draw_slot_prompt(void* prim, u_long* ot, s32 x, s32 y)
         return result;
     }
 
-    if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+    if (g_pad_input & PAD_CONFIRM_BUTTONS)
     {
         s32 slot;
 
@@ -2922,7 +2922,7 @@ void* carda_draw_item_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
                 g_card_menu_scroll_target_y += CARD_MENU_LINE_HEIGHT;
             }
         }
-        else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+        else if (g_pad_input & PAD_CONFIRM_BUTTONS)
         {
             field_play_sound(SFX_CONFIRM, AKAO_PAN_CENTER);
             card_menu_clear_elements();

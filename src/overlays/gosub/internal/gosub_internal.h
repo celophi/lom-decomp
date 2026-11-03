@@ -51,8 +51,6 @@ typedef struct GosubTilePacket GosubTilePacket;
 #define GOSUB_LIST_PANEL_PADDING 4
 
 /** @brief Buttons that confirm, cancel, and move the cursor. */
-#define GOSUB_BUTTONS_CONFIRM (PAD_BTN_CROSS | PAD_BTN_L3)
-#define GOSUB_BUTTONS_DISMISS (GOSUB_BUTTONS_CONFIRM | PAD_BTN_CIRCLE)
 #define GOSUB_BUTTON_CANCEL PAD_BTN_CIRCLE
 #define GOSUB_BUTTON_FINISH PAD_BTN_START
 #define GOSUB_BUTTONS_PREVIOUS (PAD_BTN_UP | PAD_BTN_LEFT)

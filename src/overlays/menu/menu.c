@@ -1387,7 +1387,7 @@ void menu_node_tree_init(void)
     scene_type = zero_value;
     g_menu_scene_type = scene_type;
     packed_value = zero_value;
-    g_menu_ability_mask = packed_value;
+    g_menu_equipment_conflicts = packed_value;
     menu_open_content_page(g_menu_init_content_id);
     menu_set_active_node();
 }
@@ -1650,12 +1650,12 @@ s32 menu_handle_node_input(void)
         }
         return;
     }
-    if (g_pad_input & (PAD_BTN_RIGHT | PAD_BTN_CROSS | PAD_BTN_L3))
+    if (g_pad_input & (PAD_BTN_RIGHT | PAD_CONFIRM_BUTTONS))
     {
         menu_play_se(SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
         if (g_menu_active_node == MENU_NODE_BROWSE_ALL)
         {
-            if (!(g_pad_input & (PAD_BTN_CROSS | PAD_BTN_L3)))
+            if (!(g_pad_input & PAD_CONFIRM_BUTTONS))
             {
                 return;
             }
@@ -1687,7 +1687,7 @@ s32 menu_handle_node_input(void)
 
                 if (g_menu_nodes[g_menu_scene_type].content_id != MENU_NONE)
                 {
-                    g_menu_ability_mask = 0;
+                    g_menu_equipment_conflicts = 0;
                     menu_open_content_page(g_menu_nodes[g_menu_scene_type].content_id);
                 }
             }
@@ -1700,7 +1700,7 @@ s32 menu_handle_node_input(void)
         }
         if (g_menu_scene_type == MENU_NODE_BROWSE_ALL)
         {
-            if (g_pad_input & (PAD_BTN_CROSS | PAD_BTN_L3))
+            if (g_pad_input & PAD_CONFIRM_BUTTONS)
             {
                 g_menu_load_request = 1;
             }

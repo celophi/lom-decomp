@@ -36,6 +36,12 @@ typedef enum
 /** @brief The four d-pad direction buttons. */
 #define PAD_BTN_DPAD (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT)
 
+/** @brief Buttons that confirm a menu choice. */
+#define PAD_CONFIRM_BUTTONS (PAD_BTN_CROSS | PAD_BTN_L3)
+
+/** @brief Buttons that dismiss a message or prompt: a confirm button or Circle. */
+#define PAD_DISMISS_BUTTONS (PAD_CONFIRM_BUTTONS | PAD_BTN_CIRCLE)
+
 #define PAD_REPEAT_INITIAL_DELAY 15
 
 /** @brief Frames between two repeats of a held button (it fires every third frame). */

@@ -66,7 +66,6 @@
 #define FIELD_SOUND_PANEL_EFFECT2_END 0x11F
 
 /** @brief Confirm buttons of the result and panel screens. */
-#define FIELD_PAD_CONFIRM (PAD_BTN_CROSS | PAD_BTN_L3)
 
 /** @brief A 16-color palette strip (one row of a portrait image). */
 typedef struct
@@ -287,7 +286,7 @@ void field_update_timed_panel(FieldRenderHalf* render)
         {
             g_field_timed_panel_brightness = (FIELD_TIMED_PANEL_FRAMES - g_field_timed_panel_timer) * 4;
         }
-        else if (timer >= FIELD_TIMED_PANEL_FADE_OUT_START + 1 && timer < FIELD_TIMED_PANEL_SKIP_END && (g_pad_input & FIELD_PAD_CONFIRM))
+        else if (timer >= FIELD_TIMED_PANEL_FADE_OUT_START + 1 && timer < FIELD_TIMED_PANEL_SKIP_END && (g_pad_input & PAD_CONFIRM_BUTTONS))
         {
             g_field_timed_panel_timer = FIELD_TIMED_PANEL_FADE_OUT_START;
         }
@@ -1341,7 +1340,7 @@ void field_handle_return_to_title_prompt(void)
     }
     else if (field_menu_elements_animating() == 0)
     {
-        if (g_pad_input & (FIELD_PAD_CONFIRM | PAD_BTN_START))
+        if (g_pad_input & (PAD_CONFIRM_BUTTONS | PAD_BTN_START))
         {
             field_play_sound(SFX_CONFIRM, AKAO_PAN_CENTER);
             field_close_menu_elements();
@@ -1362,7 +1361,7 @@ void field_handle_return_to_title_prompt(void)
  */
 void field_update_battle_results_input(void)
 {
-    if ((field_menu_elements_animating() == 0) && (g_pad_input & FIELD_PAD_CONFIRM))
+    if ((field_menu_elements_animating() == 0) && (g_pad_input & PAD_CONFIRM_BUTTONS))
     {
         switch (g_field_dialog_screen_mode)
         {

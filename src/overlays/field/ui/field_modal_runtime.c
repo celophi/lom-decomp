@@ -98,9 +98,6 @@ void field_set_cd_error_fade_target(void);
 /** @brief Button action of the first command: button actions 2 and 3 run resource action slots 0 and 1. */
 #define FIELD_COMMAND_BUTTON_ACTION 2
 #define FIELD_SKILL_ACTION_BASE 4
-/** @brief Saved skill values: none, or an instrument (plus its item record index). */
-#define FIELD_SKILL_NONE 0xFF
-#define FIELD_SKILL_INSTRUMENT 0x80
 /** @brief Action animation of a technique. */
 #define FIELD_TECHNIQUE_ANIMATION 2
 

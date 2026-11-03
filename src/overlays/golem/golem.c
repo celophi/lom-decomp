@@ -514,7 +514,7 @@ void golem_handle_input(void)
             g_golem_panel_records[GOLEM_PANEL_ROTATE].attributes = GOLEM_ACTIVATE_PANEL(g_golem_panel_records[GOLEM_PANEL_ROTATE].attributes);
             return;
         }
-        if (input & (PAD_BTN_START | PAD_BTN_L3 | PAD_BTN_CROSS))
+        if (input & (PAD_BTN_START | PAD_CONFIRM_BUTTONS))
         {
             if (golem_can_place_logic_block(g_golem_selected_block, g_golem_block_rotation, g_golem_block_x, g_golem_block_y) != 0)
             {
@@ -623,7 +623,7 @@ void golem_handle_input(void)
             field_play_sound(SFX_CURSOR, 0x80);
             return;
         }
-        if (input & (PAD_BTN_L3 | PAD_BTN_CROSS))
+        if (input & PAD_CONFIRM_BUTTONS)
         {
             if (g_golem_block_status[g_golem_selected_block].is_unavailable == 0)
             {

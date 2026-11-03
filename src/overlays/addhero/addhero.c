@@ -182,7 +182,7 @@ s32 card_menu_update_card_sequence(void)
 
     while ((result = addhero_advance_load_sequence()) == CARD_MENU_SEQUENCE_RUN_AGAIN);
 
-    if ((g_addhero_load_flow_active != 0) && (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK))
+    if ((g_addhero_load_flow_active != 0) && (g_pad_input & PAD_CONFIRM_BUTTONS))
     {
         if (g_card_menu_mode == 0)
         {
@@ -333,7 +333,7 @@ s32 card_menu_handle_input(void)
         return;
     }
 
-    if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+    if (g_pad_input & PAD_CONFIRM_BUTTONS)
     {
         selected_entry = &g_card_entries[g_card_slot][g_card_menu_selected_row];
         if (strncmp(g_lom_save_filename_prefix, selected_entry->name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
@@ -854,7 +854,7 @@ void* addhero_draw_exit_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offse
                                -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     }
-    if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+    if (g_pad_input & PAD_CONFIRM_BUTTONS)
     {
         g_addhero_result = ADDHERO_RESULT_CANCELLED;
         addhero_clear_elements();
@@ -965,14 +965,14 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_addhero_text_2p_data_not_saved, CARD_MENU_TEXT_2P_DATA_NOT_SAVED), FIELD_TEXT_COLOR_NORMAL,
                                message_x, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         prim = card_menu_draw_choice_prompt(prim, ot, message_x, CARD_MENU_LINE_HEIGHT - y_offset);
-        if ((g_pad_input & PAD_BTN_CIRCLE) || ((g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK) && (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)))
+        if ((g_pad_input & PAD_BTN_CIRCLE) || ((g_pad_input & PAD_CONFIRM_BUTTONS) && (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)))
         {
             field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
             card_menu_enable_choice_toggle();
             g_card_entry_state = CARD_MENU_EXCHANGE_STATE_SAVE_CONFIRM;
             field_reset_input_repeat();
         }
-        else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+        else if (g_pad_input & PAD_CONFIRM_BUTTONS)
         {
             field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
             g_addhero_result = ADDHERO_RESULT_CANCELLED;
@@ -994,14 +994,14 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT(text_table, CARD_MENU_TEXT_OVERWRITE_2P_DATA), FIELD_TEXT_COLOR_NORMAL, message_x,
                                CARD_MENU_LINE_HEIGHT - y_offset, FIELD_TEXT_ALIGN_CENTER);
         prim = card_menu_draw_choice_prompt(prim, ot, message_x, (CARD_MENU_LINE_HEIGHT * 2) - y_offset);
-        if ((g_pad_input & PAD_BTN_CIRCLE) || ((g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK) && (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)))
+        if ((g_pad_input & PAD_BTN_CIRCLE) || ((g_pad_input & PAD_CONFIRM_BUTTONS) && (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)))
         {
             card_menu_enable_choice_toggle();
             g_card_entry_state = CARD_MENU_EXCHANGE_STATE_CONFIRM_NO_SAVE;
             field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
             field_reset_input_repeat();
         }
-        else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+        else if (g_pad_input & PAD_CONFIRM_BUTTONS)
         {
             field_play_sound(SFX_CONFIRM, AKAO_PAN_CENTER);
             file = &g_addhero_save_file;

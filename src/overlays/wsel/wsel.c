@@ -43,8 +43,7 @@
 /** Pixel size of the unit that hero pose cells and offsets are measured in. */
 #define WSEL_HERO_UNIT 8
 
-#define WSEL_CONFIRM_BUTTONS (PAD_BTN_CROSS | PAD_BTN_L3)
-#define WSEL_FINAL_CONFIRM_BUTTONS (PAD_BTN_CROSS | PAD_BTN_L3 | PAD_BTN_START)
+#define WSEL_FINAL_CONFIRM_BUTTONS (PAD_CONFIRM_BUTTONS | PAD_BTN_START)
 #define WSEL_CANCEL_BUTTONS PAD_BTN_CIRCLE
 
 /* Sprite layers in g_wsel_sprites; wsel_load_resources uploads TIM n to layer n. */
@@ -447,7 +446,7 @@ static void wsel_draw_frame(WselRenderBuffer* buffer)
         WSEL_QUAD_FROM_RECT(quad, g_wsel_zoom_rect);
         prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_PROMPT);
         prim = wsel_draw_zoom_quad((POLY_FT4*)prim, ot, &quad, 0, GPU_TINT_NEUTRAL_LEVEL);
-        if (g_wsel_buttons_held & WSEL_CONFIRM_BUTTONS)
+        if (g_wsel_buttons_held & PAD_CONFIRM_BUTTONS)
         {
             play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
             g_wsel_state = WSEL_STATE_SELECT_CELL;
@@ -861,7 +860,7 @@ static void wsel_update_input(void)
     switch (g_wsel_state)
     {
     case WSEL_STATE_WORLD_MAP:
-        if (g_debounced_input & WSEL_CONFIRM_BUTTONS)
+        if (g_debounced_input & PAD_CONFIRM_BUTTONS)
         {
             play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
             wsel_reset_scroll();
@@ -903,7 +902,7 @@ static void wsel_update_input(void)
             g_wsel_zoom_rect.corners[1].y = WSEL_ZOOM_LARGE_BOTTOM;
             g_wsel_state = WSEL_STATE_ZOOM_OUT;
         }
-        else if (g_debounced_input & WSEL_CONFIRM_BUTTONS)
+        else if (g_debounced_input & PAD_CONFIRM_BUTTONS)
         {
             g_wsel_transition_timer = 0;
             g_wsel_sprites[WSEL_SPRITE_CURSOR].brightness = GPU_TINT_NEUTRAL_LEVEL;

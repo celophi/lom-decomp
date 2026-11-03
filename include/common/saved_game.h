@@ -22,6 +22,9 @@
 /** @brief SavedGameLayout::words index of the known-save flags: one bit per product code of a game save found on a memory card. */
 #define SAVED_GAME_WORD_KNOWN_SAVES 0x48
 
+/** @brief SavedGameLayout::words index of the event progress stages: four bits per event, eight events per word. */
+#define SAVED_GAME_WORD_EVENT_PROGRESS 8
+
 /** @brief SavedGameLayout::words index of the mode flags; bit 0 marks a TITLE-prepared slot. */
 #define SAVED_GAME_WORD_MODE_FLAGS 0x7F
 
@@ -78,6 +81,12 @@
 #define FIELD_ARMOR_SLOT (FIELD_WEAPON_SLOT + 1)
 #define FIELD_ITEM_SPECIAL_COUNT 4
 #define FIELD_CHARACTER_STAT_COUNT 8
+/** @brief Battle command and skill slots of FieldCharacterRecord::info. */
+#define FIELD_COMMAND_SLOT_COUNT 2
+#define FIELD_SKILL_SLOT_COUNT 4
+/** @brief Saved skill values: none, or an instrument (plus its item record index). */
+#define FIELD_SKILL_NONE 0xFF
+#define FIELD_SKILL_INSTRUMENT 0x80
 /** @brief Number of pet records. */
 #define PET_RECORD_COUNT 5
 /** @brief Bits in each u32 word of the saved game's bit sets (encyclopedia, abilities, techniques, flags). */
@@ -156,14 +165,26 @@ typedef union
 /** @brief Length of the encoded name at the start of a FieldItemRecord. */
 #define FIELD_ITEM_NAME_LENGTH 0x14
 
+/** @brief Shift and mask of the item category (bits 8-9 of FieldItemRecord.info). */
+#define FIELD_ITEM_CATEGORY_SHIFT 8
+#define FIELD_ITEM_CATEGORY_MASK 3
+/** @brief The item category bits in place in FieldItemRecord.info. */
+#define FIELD_ITEM_CATEGORY_BITS (FIELD_ITEM_CATEGORY_MASK << FIELD_ITEM_CATEGORY_SHIFT)
+
 /** @brief Item category: bits 8-9 of FieldItemRecord.info. */
-#define FIELD_ITEM_CATEGORY(info) (((info) >> 8) & 3)
+#define FIELD_ITEM_CATEGORY(info) (((info) >> FIELD_ITEM_CATEGORY_SHIFT) & FIELD_ITEM_CATEGORY_MASK)
 
 /** @brief Mask of FieldItemRecord.info.halves[1] selecting the material (an item name index). */
 #define FIELD_ITEM_MATERIAL_MASK 0x3F
 
+/** @brief Shift and mask of the item type within its category (bits 10-15 of FieldItemRecord.info). */
+#define FIELD_ITEM_TYPE_SHIFT 10
+#define FIELD_ITEM_TYPE_MASK 0x3F
+/** @brief The item type bits in place in FieldItemRecord.info. */
+#define FIELD_ITEM_TYPE_BITS (FIELD_ITEM_TYPE_MASK << FIELD_ITEM_TYPE_SHIFT)
+
 /** @brief Item type within its category: bits 10-15 of FieldItemRecord.info. */
-#define FIELD_ITEM_TYPE(info) (((info) >> 10) & 0x3F)
+#define FIELD_ITEM_TYPE(info) (((info) >> FIELD_ITEM_TYPE_SHIFT) & FIELD_ITEM_TYPE_MASK)
 
 /** @brief FIELD_ITEM_CATEGORY values. */
 enum
@@ -191,6 +212,23 @@ enum
 
 /** @brief Number of weapon types (FIELD_WEAPON_*). */
 #define FIELD_WEAPON_TYPE_COUNT 11
+
+/** @brief Armor types: FIELD_ITEM_TYPE of an armor item (names from the equipment type text). */
+enum
+{
+    FIELD_ARMOR_SHIELD = 0,
+    FIELD_ARMOR_HELM = 1,
+    FIELD_ARMOR_HAT = 2,
+    FIELD_ARMOR_HAUBERK = 3,
+    FIELD_ARMOR_ROBE = 4,
+    FIELD_ARMOR_GAUNTLET = 5,
+    FIELD_ARMOR_RING = 6,
+    FIELD_ARMOR_BOOTS = 7,
+    FIELD_ARMOR_SHOES = 8,
+    FIELD_ARMOR_ARMOR = 9,
+    FIELD_ARMOR_MANTLE = 10,
+    FIELD_ARMOR_PENDANT = 11
+};
 
 /** @brief Shift of FieldStat's effective value (bits 9-15). */
 #define FIELD_STAT_EFFECTIVE_SHIFT 9
@@ -348,9 +386,9 @@ typedef struct FieldCharacterRecord
             u8 type;
             u8 unk19;
             /** @brief Commands of battle actions 0 and 1. */
-            u8 commands[2];
-            /** @brief Battle actions 4 to 7: a weapon-type skill, or 0x80 plus an item slot. */
-            u8 skills[4];
+            u8 commands[FIELD_COMMAND_SLOT_COUNT];
+            /** @brief Battle actions 4 to 7: a technique of the weapon type, FIELD_SKILL_INSTRUMENT plus an item slot, or FIELD_SKILL_NONE. */
+            u8 skills[FIELD_SKILL_SLOT_COUNT];
         } actions;
     } info;
     /** @brief Low byte: level; bits 8-31: experience. */

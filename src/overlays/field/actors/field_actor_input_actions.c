@@ -21,7 +21,6 @@
 #define FIELD_ACTION_RESTRICTED_LAST 3
 
 /** @brief Buttons that confirm (start an interaction). */
-#define FIELD_CONFIRM_BUTTONS (PAD_BTN_CROSS | PAD_BTN_L3)
 
 /** @brief The four shoulder buttons, which keep their bits through the face-button remap. */
 #define FIELD_SHOULDER_BUTTONS (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1)
@@ -94,10 +93,10 @@ void field_poll_leader_interaction(void)
     s32 second_status;
 
 #if defined(VERSION_JP)
-    if ((g_field_interaction_active == 0) && (g_field_buffered_input & FIELD_CONFIRM_BUTTONS))
+    if ((g_field_interaction_active == 0) && (g_field_buffered_input & PAD_CONFIRM_BUTTONS))
 #else
     if ((g_field_active_group == 0) && (g_field_actors[0].command == FIELD_ACTOR_COMMAND_NONE) && (g_field_dialog_screen_mode == 0) &&
-        (g_field_interaction_active == 0) && (g_field_buffered_input & FIELD_CONFIRM_BUTTONS))
+        (g_field_interaction_active == 0) && (g_field_buffered_input & PAD_CONFIRM_BUTTONS))
 #endif
     {
         first_status = field_text_get_status(0);

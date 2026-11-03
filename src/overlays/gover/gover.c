@@ -114,7 +114,6 @@ extern SfxTableBuffer g_sfx_table_buffer;
 #define GOVER_MUSIC_FADE_OUT_DURATION 0x20
 
 /** Cross, Circle, and L3 dismiss the screen. */
-#define GOVER_DISMISS_BUTTON_MASK (PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_L3)
 
 /** Locates the first nested offset table within the staged resource. */
 #define GOVER_SFX_TABLE_OFFSET (*(u32*)LOAD_BUFFER_AT(0x4))
@@ -253,7 +252,7 @@ static void gover_run(void)
 
         VSync(FRAME_VSYNC_INTERVAL);
 
-        if ((g_fade_level == GOVER_FADE_FULL) && (g_pad_input & GOVER_DISMISS_BUTTON_MASK))
+        if ((g_fade_level == GOVER_FADE_FULL) && (g_pad_input & PAD_DISMISS_BUTTONS))
         {
             // Fade out the music while reversing the screen fade.
             akao_fade_song_volume(0, GOVER_MUSIC_FADE_OUT_DURATION, 0);

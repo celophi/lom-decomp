@@ -32,7 +32,7 @@ void* card_menu_draw_save_status_dialog(u_long* ot, void* prim, s32 x_offset, s3
                                -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     }
-    if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+    if (g_pad_input & PAD_CONFIRM_BUTTONS)
     {
         card_menu_clear_elements();
         field_restore_fade_target_with_duration(CARD_MENU_EXIT_FADE_FRAMES);

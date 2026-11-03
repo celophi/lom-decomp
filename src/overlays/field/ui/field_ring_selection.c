@@ -70,7 +70,6 @@ enum
 #define FIELD_RING_OT_FRONT 16
 
 /** @brief Buttons that confirm, cancel and rotate the ring. */
-#define FIELD_RING_CONFIRM_BUTTONS (PAD_BTN_CROSS | PAD_BTN_L3)
 #define FIELD_RING_CANCEL_BUTTONS PAD_BTN_CIRCLE
 #define FIELD_RING_PREVIOUS_BUTTONS (PAD_BTN_LEFT | PAD_BTN_UP | PAD_BTN_R1)
 #define FIELD_RING_NEXT_BUTTONS (PAD_BTN_DOWN | PAD_BTN_RIGHT | PAD_BTN_L1)
@@ -397,7 +396,7 @@ static void field_ring_menu_select_step(void)
         return;
     }
 
-    if (g_pad_input & FIELD_RING_CONFIRM_BUTTONS)
+    if (g_pad_input & PAD_CONFIRM_BUTTONS)
     {
         g_field_ring_menu_state = FIELD_RING_CLOSING;
 
