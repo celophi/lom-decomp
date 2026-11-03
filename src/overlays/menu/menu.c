@@ -40,11 +40,11 @@ s32 menu_build_special_technique_nav_entries(void);
 s32 menu_remove_technique_skills(void);
 
 /**
- * @brief Run the menu overlay until an exit or follow-up screen is requested.
- * @param render_buffers Pair of render buffers used for alternating frames.
- * @return Requested follow-up screen code, or zero when the menu closes.
+ * @brief MENU overlay entry: run the menu frame loop until Start closes it or another screen is requested.
+ * @param render_buffers Two render contexts drawn on alternate frames.
+ * @return g_menu_transition_code: 0 when the menu closed, otherwise the screen FIELD opens next (see FIELD_MENU_*).
  */
-s32 func_801405B0(RenderContext* render_buffers)
+s32 menu_run(RenderContext* render_buffers)
 {
     RECT clear_rect;
     RenderContext* draw_buffer;
