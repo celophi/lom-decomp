@@ -1,7 +1,11 @@
-#include "internal/menu_internal.h"
+#include "common.h"
+#include <fcntl.h>
+#include <libapi.h>
+#include <strings.h>
+
 #include "common/card_directory.h"
 #include "common/card_events.h"
-#include <fcntl.h>
+#include "main/controller.h"
 
 /** @brief Bytes of g_card_save_title_sjis copied into the title. */
 #define MEMORY_CARD_SAVE_TITLE_SIZE 0x11

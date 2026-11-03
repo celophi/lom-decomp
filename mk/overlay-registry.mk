@@ -194,9 +194,6 @@ OVERLAYS += menu
 overlay_menu_gcc_272_cdk_g0_srcs := \
 	src/overlays/menu/overlay_header.c \
 	src/overlays/menu/menu.c \
-	src/overlays/menu/menu_screens.c \
-	src/overlays/menu/menu_lists.c \
-	src/overlays/menu/menu_actions.c \
 	src/overlays/menu/menu_card.c
 
 OVERLAYS += movie

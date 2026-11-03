@@ -11,7 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 TIM_HEADER = REPO_ROOT / "include/common/tim.h"
 MENU_HEADER = REPO_ROOT / "include/overlays/menu/menu.h"
 DISPLAY_HEADER = REPO_ROOT / "include/main/display.h"
-SCREENS = REPO_ROOT / "src/overlays/menu/menu_screens.c"
+MENU_SOURCE = REPO_ROOT / "src/overlays/menu/menu.c"
 
 
 def struct_body(path: Path, name: str) -> str:
@@ -23,17 +23,13 @@ def struct_body(path: Path, name: str) -> str:
 
 
 class SourceTest(unittest.TestCase):
-    def test_both_versions_have_one_blob_after_the_alignment_rodata(self):
+    def test_both_versions_have_one_data_blob(self):
         for version in ("us", "jp"):
             with self.subTest(version=version):
                 config = REPO_ROOT / "config" / version
                 names = menu.MenuSymbols.load(config / menu.SYMBOL_FILE)
                 files = splat_config.data_files(config / menu.OVERLAY_CONFIG, REPO_ROOT / "assets" / version)
-                self.assertEqual([(f.name, f.kind) for f in files], [
-                    ("menu_scene_rodata_alignment", "rodatabin"),
-                    ("menu_actions_rodata_alignment", "rodatabin"),
-                    ("menu_data", "databin"),
-                ])
+                self.assertEqual([(f.name, f.kind) for f in files], [("menu_data", "databin")])
                 source = files[-1]
                 self.assertEqual(source.start, names.icon_sprites)
                 addresses = [getattr(names, key) for key in menu.SYMBOL_NAMES]
@@ -99,7 +95,7 @@ class SourceTest(unittest.TestCase):
         self.assertIn("u16 second_clut[CLUT_ENTRY_COUNT];", asset)
 
     def test_label_index_base_matches_the_scene_code(self):
-        source = SCREENS.read_text(encoding="ascii")
+        source = MENU_SOURCE.read_text(encoding="ascii")
         match = re.search(r"\(u32\)\(sub - (0x[0-9A-F]+)\) < 0x1E\)\s*\{\s*t0 = D_80168659\[", source)
         self.assertIsNotNone(match)
         self.assertEqual(int(match.group(1), 16), menu.ACTION_LABEL_FIRST)
