@@ -211,9 +211,9 @@ class ExtractTest(unittest.TestCase):
         self.assertEqual(messages["symbol"], "MENU_TEXT_MESSAGES")
         self.assertEqual(messages["entries"][0]["text"], "Yes{1F 00}")
         self.assertEqual(messages["entries"][0]["bytes"], "59 65 73 1f 00")
-        spells = self.load("text/03_spell_names.yaml")["entries"]
-        self.assertNotIn("outside_table", spells[0])
-        self.assertTrue(spells[1]["outside_table"])
+        abilities = self.load("text/03_ability_names.yaml")["entries"]
+        self.assertNotIn("outside_table", abilities[0])
+        self.assertTrue(abilities[1]["outside_table"])
 
     def test_japanese_text_uses_cload(self):
         menu.extract(FakeOverlay("jp").write(self.root), self.output)

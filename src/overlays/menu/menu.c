@@ -34,7 +34,7 @@ s32 menu_find_nav_node_index(s32 node_id);
 s32 menu_find_active_content_item(void);
 s32 menu_count_inventory_items(void);
 void menu_concat_encoded_text(u8* dst, u8* src1, u8* src2);
-s32 menu_build_spell_nav_entries(void);
+s32 menu_build_ability_nav_entries(void);
 s32 menu_lookup_item_nibble(const MenuItemEntry* item, u32 index);
 s32 menu_build_special_technique_nav_entries(void);
 s32 menu_remove_technique_skills(void);
@@ -178,8 +178,8 @@ void menu_upload_party_portraits(void)
         setRECT(&rect, FIELD_PARTY_PORTRAIT_CLUT_X, slot + FIELD_PARTY_PORTRAIT_CLUT_Y, GPU_CLUT_4BIT_COLORS, 1);
         LoadImage(&rect, menu_image_upload_source(portraits, clut_offset));
 
-        setRECT(&rect, (slot == FIELD_PARTY_PORTRAIT_COUNT - 1) ? FIELD_PARTY_PORTRAIT_VRAM_X2 : FIELD_PARTY_PORTRAIT_VRAM_X, (slot == 0) ? FIELD_PARTY_PORTRAIT_VRAM_Y0 : FIELD_PARTY_PORTRAIT_VRAM_Y1,
-                FIELD_PORTRAIT_SIZE / 4, FIELD_PORTRAIT_SIZE);
+        setRECT(&rect, (slot == FIELD_PARTY_PORTRAIT_COUNT - 1) ? FIELD_PARTY_PORTRAIT_VRAM_X2 : FIELD_PARTY_PORTRAIT_VRAM_X,
+                (slot == 0) ? FIELD_PARTY_PORTRAIT_VRAM_Y0 : FIELD_PARTY_PORTRAIT_VRAM_Y1, FIELD_PORTRAIT_SIZE / 4, FIELD_PORTRAIT_SIZE);
         LoadImage(&rect, menu_image_upload_source(portraits, pixels_offset));
 
         pixels_offset += FIELD_PORTRAIT_BYTES;
@@ -600,57 +600,57 @@ void menu_update_slots(RenderContext* render_ctx)
         slot_state = g_menu_slots[slot_index].active;
         switch (slot_state)
         {
-        case MENU_SLOT_STATE_OPENING:
-        {
-            u8 previous_anim_frame;
+            case MENU_SLOT_STATE_OPENING:
+            {
+                u8 previous_anim_frame;
 
-            menu_draw_window_transition(render_ctx, &g_menu_slots[slot_index], g_menu_cursor_mode != MENU_CURSOR_MODE_NODE_TREE);
-            previous_anim_frame = g_menu_slots[slot_index].anim_frame;
-            anim_frame = previous_anim_frame + 1;
-            g_menu_slots[slot_index].anim_frame = anim_frame;
-            if ((anim_frame & 0xFF) == (MENU_WINDOW_TRANSITION_STEPS / 2))
-            {
-                g_menu_slots[slot_index].anim_frame = previous_anim_frame;
-                g_menu_slots[slot_index].active = MENU_SLOT_STATE_OPEN;
-            }
-        }
-            /* Fall through to the shared active-slot callback. */
-        case MENU_SLOT_STATE_OPEN:
-            if (slot_state == MENU_SLOT_STATE_OPEN)
-            {
-                MenuRect* slot_rect;
-
-                slot_rect = (MenuRect*)&g_menu_slots[slot_index].x;
-                view_origin.y = 0;
-                view_origin.x = 0;
-                menu_draw_window(&g_menu_slots[slot_index], render_ctx, slot_rect, &view_origin, g_menu_cursor_mode != MENU_CURSOR_MODE_NODE_TREE);
-            }
-            if (slot_index == g_active_slot)
-            {
-                if (g_menu_slots[slot_index].tick_cb != 0)
+                menu_draw_window_transition(render_ctx, &g_menu_slots[slot_index], g_menu_cursor_mode != MENU_CURSOR_MODE_NODE_TREE);
+                previous_anim_frame = g_menu_slots[slot_index].anim_frame;
+                anim_frame = previous_anim_frame + 1;
+                g_menu_slots[slot_index].anim_frame = anim_frame;
+                if ((anim_frame & 0xFF) == (MENU_WINDOW_TRANSITION_STEPS / 2))
                 {
-                    g_menu_slots[slot_index].tick_cb(&g_menu_slots[slot_index]);
+                    g_menu_slots[slot_index].anim_frame = previous_anim_frame;
+                    g_menu_slots[slot_index].active = MENU_SLOT_STATE_OPEN;
                 }
             }
-            has_active_slot = 1;
-            slot_index -= 1;
-            continue;
+                /* Fall through to the shared active-slot callback. */
+            case MENU_SLOT_STATE_OPEN:
+                if (slot_state == MENU_SLOT_STATE_OPEN)
+                {
+                    MenuRect* slot_rect;
 
-        case MENU_SLOT_STATE_CLOSING:
-            menu_draw_window_transition(render_ctx, &g_menu_slots[slot_index], g_menu_cursor_mode != MENU_CURSOR_MODE_NODE_TREE);
-            anim_frame = g_menu_slots[slot_index].anim_frame - 1;
-            g_menu_slots[slot_index].anim_frame = anim_frame;
-            if (!(anim_frame & 0xFF))
-            {
-                g_menu_slots[slot_index].active = MENU_SLOT_STATE_FREE;
-                menu_update_active_slot();
-            }
-            has_active_slot = 1;
-            slot_index -= 1;
-            continue;
-        default:
-            slot_index -= 1;
-            continue;
+                    slot_rect = (MenuRect*)&g_menu_slots[slot_index].x;
+                    view_origin.y = 0;
+                    view_origin.x = 0;
+                    menu_draw_window(&g_menu_slots[slot_index], render_ctx, slot_rect, &view_origin, g_menu_cursor_mode != MENU_CURSOR_MODE_NODE_TREE);
+                }
+                if (slot_index == g_active_slot)
+                {
+                    if (g_menu_slots[slot_index].tick_cb != 0)
+                    {
+                        g_menu_slots[slot_index].tick_cb(&g_menu_slots[slot_index]);
+                    }
+                }
+                has_active_slot = 1;
+                slot_index -= 1;
+                continue;
+
+            case MENU_SLOT_STATE_CLOSING:
+                menu_draw_window_transition(render_ctx, &g_menu_slots[slot_index], g_menu_cursor_mode != MENU_CURSOR_MODE_NODE_TREE);
+                anim_frame = g_menu_slots[slot_index].anim_frame - 1;
+                g_menu_slots[slot_index].anim_frame = anim_frame;
+                if (!(anim_frame & 0xFF))
+                {
+                    g_menu_slots[slot_index].active = MENU_SLOT_STATE_FREE;
+                    menu_update_active_slot();
+                }
+                has_active_slot = 1;
+                slot_index -= 1;
+                continue;
+            default:
+                slot_index -= 1;
+                continue;
         }
     }
 
@@ -790,16 +790,16 @@ void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect,
         {
             switch (g_menu_scene_type)
             {
-            case 1:
-            case 4:
-            case 19:
-            case 22:
-            case 25:
-                title_pos.x = ((u16)rect->x + (u16)rect->w) - 104;
-                break;
-            default:
-                title_pos.x = ((u16)rect->x + (u16)rect->w) - 72;
-                break;
+                case 1:
+                case 4:
+                case 19:
+                case 22:
+                case 25:
+                    title_pos.x = ((u16)rect->x + (u16)rect->w) - 104;
+                    break;
+                default:
+                    title_pos.x = ((u16)rect->x + (u16)rect->w) - 72;
+                    break;
             }
             title_pos.y = (u16)rect->y;
             if (slot->navigation.packed & MENU_LIST_COUNT_MASK)
@@ -812,18 +812,19 @@ void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect,
             }
             packet_cursor = field_draw_sprite_glyph((SPRT*)packet_cursor, ot_entry, FIELD_DIGIT_GLYPH_SEPARATOR, &title_pos, 0);
             title_pos.x += 8;
-            packet_cursor = field_draw_sprite_number(ot_entry, packet_cursor, slot->navigation.fields.count_and_ot & MENU_ITEM_NAV_INDEX_MASK, 3, &title_pos, 0);
+            packet_cursor =
+                field_draw_sprite_number(ot_entry, packet_cursor, slot->navigation.fields.count_and_ot & MENU_ITEM_NAV_INDEX_MASK, 3, &title_pos, 0);
             switch (g_menu_scene_type)
             {
-            case 1:
-            case 4:
-            case 19:
-            case 22:
-            case 25:
-                packet_cursor = field_draw_sprite_glyph((SPRT*)packet_cursor, ot_entry, FIELD_DIGIT_GLYPH_SEPARATOR, &title_pos, 0);
-                title_pos.x += 8;
-                packet_cursor = field_draw_sprite_number(ot_entry, packet_cursor, menu_count_inventory_items(), 3, &title_pos, 0);
-                break;
+                case 1:
+                case 4:
+                case 19:
+                case 22:
+                case 25:
+                    packet_cursor = field_draw_sprite_glyph((SPRT*)packet_cursor, ot_entry, FIELD_DIGIT_GLYPH_SEPARATOR, &title_pos, 0);
+                    title_pos.x += 8;
+                    packet_cursor = field_draw_sprite_number(ot_entry, packet_cursor, menu_count_inventory_items(), 3, &title_pos, 0);
+                    break;
             }
             packet_cursor = menu_emit_slot_scroll_arrows((SPRT*)packet_cursor, ot_entry, slot);
         }
@@ -1560,33 +1561,33 @@ u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 a
     /* Render and update the active node or content cursor mode. */
     switch (g_menu_cursor_mode)
     {
-    case MENU_CURSOR_MODE_NODE_TREE:
-        frame_cursor = menu_draw_active_node_cursor(draw_env_packet, ot_entry - 1, allow_input);
-        menu_handle_input(0);
-        if (allow_input != 0)
-        {
-            menu_handle_node_input();
-        }
-        break;
+        case MENU_CURSOR_MODE_NODE_TREE:
+            frame_cursor = menu_draw_active_node_cursor(draw_env_packet, ot_entry - 1, allow_input);
+            menu_handle_input(0);
+            if (allow_input != 0)
+            {
+                menu_handle_node_input();
+            }
+            break;
 
-    case MENU_CURSOR_MODE_CONTENT:
-        frame_cursor = menu_draw_content_cursor(draw_env_packet, ot_entry - 1, allow_input);
-        if (g_menu_suppress_cursor == 0)
-        {
-            menu_handle_input(allow_input);
-        }
-        break;
+        case MENU_CURSOR_MODE_CONTENT:
+            frame_cursor = menu_draw_content_cursor(draw_env_packet, ot_entry - 1, allow_input);
+            if (g_menu_suppress_cursor == 0)
+            {
+                menu_handle_input(allow_input);
+            }
+            break;
 
-    case MENU_CURSOR_MODE_CONTENT_EXIT:
-        frame_cursor = menu_draw_content_cursor(draw_env_packet, ot_entry - 1, allow_input);
-        if (g_menu_suppress_cursor == 0)
-        {
-            g_menu_cursor_mode = MENU_CURSOR_MODE_NODE_TREE;
-        }
-        break;
+        case MENU_CURSOR_MODE_CONTENT_EXIT:
+            frame_cursor = menu_draw_content_cursor(draw_env_packet, ot_entry - 1, allow_input);
+            if (g_menu_suppress_cursor == 0)
+            {
+                g_menu_cursor_mode = MENU_CURSOR_MODE_NODE_TREE;
+            }
+            break;
 
-    default:
-        break;
+        default:
+            break;
     }
 
     /* Draw the node tree and its scroll indicators. */
@@ -2024,136 +2025,136 @@ s32 menu_handle_input(s32 process_actions)
         menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
         switch (g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx - 0x14)
         {
-        case 0:
-        case 3:
-        case 6:
-            g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx += 1;
-            menu_focus_active_content_item();
-            break;
+            case 0:
+            case 3:
+            case 6:
+                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx += 1;
+                menu_focus_active_content_item();
+                break;
 
-        case 1:
-        case 4:
-        case 7:
-            g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx -= 1;
-            menu_focus_active_content_item();
-            break;
+            case 1:
+            case 4:
+            case 7:
+                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx -= 1;
+                menu_focus_active_content_item();
+                break;
 
-        case 13:
-        case 14:
-        case 15:
-        case 16:
-        case 17:
-        case 18:
-        case 19:
-        case 20:
-        case 21:
-            break;
+            case 13:
+            case 14:
+            case 15:
+            case 16:
+            case 17:
+            case 18:
+            case 19:
+            case 20:
+            case 21:
+                break;
 
-        case 2:
-        case 5:
-        case 8:
-        case 9:
-        case 10:
-        case 11:
-        case 12:
-        default:
-            while (1)
-            {
-                if (g_pad_input & PAD_BTN_L1)
+            case 2:
+            case 5:
+            case 8:
+            case 9:
+            case 10:
+            case 11:
+            case 12:
+            default:
+                while (1)
                 {
-                    if (g_menu_scene_type == ((g_menu_scene_type / 3) * 3))
+                    if (g_pad_input & PAD_BTN_L1)
                     {
-                        if (g_menu_scene_type >= 9)
+                        if (g_menu_scene_type == ((g_menu_scene_type / 3) * 3))
                         {
-                            g_menu_scene_type += 1;
-                            g_menu_active_node = g_menu_scene_type;
+                            if (g_menu_scene_type >= 9)
+                            {
+                                g_menu_scene_type += 1;
+                                g_menu_active_node = g_menu_scene_type;
+                            }
+                            else
+                            {
+                                g_menu_scene_type += 2;
+                                g_menu_active_node = g_menu_scene_type;
+                            }
                         }
                         else
-                        {
-                            g_menu_scene_type += 2;
-                            g_menu_active_node = g_menu_scene_type;
-                        }
-                    }
-                    else
-                    {
-                        g_menu_scene_type -= 1;
-                        g_menu_active_node = g_menu_scene_type;
-                    }
-                }
-                if (g_pad_input & PAD_BTN_R1)
-                {
-                    if (g_menu_scene_type < 9)
-                    {
-                        if ((g_menu_scene_type % 3) == 2)
-                        {
-                            g_menu_scene_type -= 2;
-                            g_menu_active_node = g_menu_scene_type;
-                        }
-                        else
-                        {
-                            g_menu_scene_type += 1;
-                            g_menu_active_node = g_menu_scene_type;
-                        }
-                    }
-                    else
-                    {
-                        if ((g_menu_scene_type % 3) == 1)
                         {
                             g_menu_scene_type -= 1;
                             g_menu_active_node = g_menu_scene_type;
                         }
+                    }
+                    if (g_pad_input & PAD_BTN_R1)
+                    {
+                        if (g_menu_scene_type < 9)
+                        {
+                            if ((g_menu_scene_type % 3) == 2)
+                            {
+                                g_menu_scene_type -= 2;
+                                g_menu_active_node = g_menu_scene_type;
+                            }
+                            else
+                            {
+                                g_menu_scene_type += 1;
+                                g_menu_active_node = g_menu_scene_type;
+                            }
+                        }
                         else
                         {
-                            g_menu_scene_type += 1;
-                            g_menu_active_node = g_menu_scene_type;
+                            if ((g_menu_scene_type % 3) == 1)
+                            {
+                                g_menu_scene_type -= 1;
+                                g_menu_active_node = g_menu_scene_type;
+                            }
+                            else
+                            {
+                                g_menu_scene_type += 1;
+                                g_menu_active_node = g_menu_scene_type;
+                            }
                         }
                     }
-                }
-                if ((g_pad_input & PAD_BTN_L2) && (g_menu_scene_type < 9))
-                {
-                    if ((g_menu_scene_type / 3) == 0)
+                    if ((g_pad_input & PAD_BTN_L2) && (g_menu_scene_type < 9))
                     {
-                        g_menu_scene_type += 6;
-                        g_menu_active_node = g_menu_scene_type;
+                        if ((g_menu_scene_type / 3) == 0)
+                        {
+                            g_menu_scene_type += 6;
+                            g_menu_active_node = g_menu_scene_type;
+                        }
+                        else
+                        {
+                            g_menu_scene_type -= 3;
+                            g_menu_active_node = g_menu_scene_type;
+                        }
+                        menu_set_active_node();
                     }
-                    else
+                    if ((g_pad_input & PAD_BTN_R2) && (g_menu_scene_type < 9))
                     {
-                        g_menu_scene_type -= 3;
-                        g_menu_active_node = g_menu_scene_type;
+                        if ((g_menu_scene_type / 3) == 2)
+                        {
+                            g_menu_scene_type -= 6;
+                            g_menu_active_node = g_menu_scene_type;
+                        }
+                        else
+                        {
+                            g_menu_scene_type += 3;
+                            g_menu_active_node = g_menu_scene_type;
+                        }
+                        menu_set_active_node();
                     }
-                    menu_set_active_node();
-                }
-                if ((g_pad_input & PAD_BTN_R2) && (g_menu_scene_type < 9))
-                {
-                    if ((g_menu_scene_type / 3) == 2)
+
+                    if (!(g_menu_nodes[(g_menu_scene_type / 3) * 3].u2.s.flags & MENU_NODE_FLAG_ACTIVE))
                     {
-                        g_menu_scene_type -= 6;
-                        g_menu_active_node = g_menu_scene_type;
+                        continue;
                     }
-                    else
+                    if (g_menu_cursor_mode == MENU_CURSOR_MODE_NODE_TREE)
                     {
-                        g_menu_scene_type += 3;
-                        g_menu_active_node = g_menu_scene_type;
+                        menu_snap_view_to_cursor();
                     }
-                    menu_set_active_node();
+                    if (menu_focus_active_content_item())
+                    {
+                        break;
+                    }
                 }
 
-                if (!(g_menu_nodes[(g_menu_scene_type / 3) * 3].u2.s.flags & MENU_NODE_FLAG_ACTIVE))
-                {
-                    continue;
-                }
-                if (g_menu_cursor_mode == MENU_CURSOR_MODE_NODE_TREE)
-                {
-                    menu_snap_view_to_cursor();
-                }
-                if (menu_focus_active_content_item())
-                {
-                    break;
-                }
-            }
-
-            menu_clear_slots();
-            break;
+                menu_clear_slots();
+                break;
         }
     }
 
@@ -2241,163 +2242,163 @@ s32 menu_handle_input(s32 process_actions)
                 content_type = content_items[g_menu_hit_item_idx].action_type;
                 switch (content_type)
                 {
-                case 1:
-                case 2:
-                    if (g_menu_char_slot == 0)
-                    {
-                        setRECT(&rect, 0x40, 0x60, 0xF0, 0x60);
-                        submenu_slot = menu_slot_alloc(3, &rect);
-                        submenu_slot->content_cb = &menu_spell_list_callback;
-                        submenu_slot->navigation.packed =
-                            MENU_LIST_WITH_COUNT(submenu_slot->navigation.packed, menu_build_spell_nav_entries());
-                        submenu_slot->has_title = 1;
-                        menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
-                    }
-                    break;
-
-                case 3:
-                case 4:
-                case 5:
-                case 6:
-                    if (g_menu_char_slot == 0)
-                    {
+                    case 1:
+                    case 2:
+                        if (g_menu_char_slot == 0)
                         {
-                            u8* pad_base0 = (u8*)g_saved_game_ctx;
-                            item_flag = *(pad_base0 + content_type + 0x609);
-                        }
-                        if ((item_flag != MENU_NONE) && (item_flag & 0x80))
-                        {
-                            setRECT(&rect, 0xB0, 0x60, 0x70, 0x50);
-                        }
-                        else
-                        {
-                            setRECT(&rect, 0xB0, 0x60, 0x70, 0x40);
-                        }
-                        submenu_slot = menu_slot_alloc(3, &rect);
-                        submenu_slot->content_cb = &menu_skill_action_callback;
-                        {
-                            u8* pad_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
-                            item_flag = *(pad_base + content_type + 0x609);
-                        }
-                        if ((item_flag != MENU_NONE) && (item_flag & 0x80))
-                        {
-                            submenu_slot->navigation.packed = MENU_LIST_WITH_COUNT(submenu_slot->navigation.packed, 4);
-                            menu_init_item_nav_entries(4);
-                        }
-                        else
-                        {
-                            submenu_slot->navigation.packed = MENU_LIST_WITH_COUNT(submenu_slot->navigation.packed, 3);
-                            menu_init_item_nav_entries(3);
-                        }
-                        scroll_list_update_target((ScrollListState*)submenu_slot, g_menu_scroll_nav_entries);
-
-                        {
-                            MenuItemEntry* equipped_item;
-                            MenuItemEntry** active_equipped_item = &g_menu_active_equipped_item;
-
-                            equipped_item =
-                                (MenuItemEntry*)((u8*)g_saved_game_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET) +
-                                                 ((content_type << 6) + (MENU_CHARACTER_ITEMS_OFFSET + MENU_ITEM_RECORD_SIZE)));
-                            *active_equipped_item = equipped_item;
-                            g_menu_item_ptr = equipped_item;
-                            g_menu_saved_category0_item = g_menu_item_ptr;
-                            g_menu_category0_item = g_menu_item_ptr;
-                            g_menu_saved_category1_item = g_menu_item_ptr;
-                            g_menu_category1_item = g_menu_item_ptr;
-                            g_menu_saved_equipment_item = g_menu_item_ptr;
-                            g_menu_category2_item = g_menu_item_ptr;
-                        }
-                        menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
-                    }
-                    break;
-
-                case 7:
-                case 8:
-                case 9:
-                case 10:
-                    if (g_menu_char_slot == 0)
-                    {
-                        setRECT(&rect, 0xB0, 0x30, 0x70, 0x60);
-                        submenu_slot = menu_slot_alloc(3, &rect);
-                        submenu_slot->content_cb = &menu_equipment_action_callback;
-                        submenu_slot->navigation.packed = MENU_LIST_WITH_COUNT(submenu_slot->navigation.packed, 5);
-                        menu_init_item_nav_entries(5);
-                        {
-                            MenuItemEntry* equipped_item;
-                            MenuItemEntry** active_equipped_item = &g_menu_active_equipped_item;
-
-                            equipped_item =
-                                (MenuItemEntry*)((u8*)g_saved_game_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET) +
-                                                 ((content_type << 6) + (MENU_CHARACTER_ITEMS_OFFSET - MENU_EQUIPMENT_SUBTYPE_BASE * MENU_ITEM_RECORD_SIZE)));
-                            *active_equipped_item = equipped_item;
-                            g_menu_saved_category0_item = equipped_item;
-                            g_menu_saved_category1_item = equipped_item;
-                            g_menu_saved_equipment_item = equipped_item;
+                            setRECT(&rect, 0x40, 0x60, 0xF0, 0x60);
+                            submenu_slot = menu_slot_alloc(3, &rect);
+                            submenu_slot->content_cb = &menu_ability_list_callback;
+                            submenu_slot->navigation.packed = MENU_LIST_WITH_COUNT(submenu_slot->navigation.packed, menu_build_ability_nav_entries());
+                            submenu_slot->has_title = 1;
                             menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
                         }
-                    }
-                    break;
+                        break;
 
-                case 15:
-                    if ((g_menu_scene_type >= 0x12) || (g_menu_scene_type == 1) || (g_menu_scene_type == 2))
-                    {
-                        if ((g_menu_item_ptr != NULL) && (*((u8*)g_menu_item_ptr) != 0))
+                    case 3:
+                    case 4:
+                    case 5:
+                    case 6:
+                        if (g_menu_char_slot == 0)
                         {
-                            D_8011F424 = (((u32)g_menu_item_ptr->attributes.packed) >> 8) & 3;
-                            field_copy_name(&D_801226F0, (u8*)g_menu_item_ptr);
-                            text_buffer[0] = 0;
-                            D_801226B8 = 0;
-                            D_801227D4 = (void*)g_menu_item_ptr;
-                            if (menu_item_differs_from_bare_hands(g_menu_item_ptr) != 0)
                             {
-                                text_cursor = text_buffer;
-                                label_table = menu_text_table_base(MENU_TEXT_ITEM_NAME_PARTS);
-                                field_copy_name(
-                                    text_cursor,
-                                    (s8*)(label_table +
-                                          (*((u16*)(label_table + (((g_menu_item_ptr->attributes.halves.high) & 0x3F) * 2) + 0x48)))));
-                                item_word = g_menu_item_ptr->attributes.packed;
-                                text_variant = (item_word >> 8) & 3;
-                                switch (text_variant)
-                                {
-                                case 0:
-                                    name_table = (uintptr_t)menu_text_table_base(MENU_TEXT_ITEM_NAME_PARTS);
-                                    menu_concat_encoded_text(&D_801226B8, text_buffer,
-                                                             (s8*)(name_table + (*((u16*)(((item_word >> 9) & 0x7E) + name_table)))));
-                                    break;
+                                u8* pad_base0 = (u8*)g_saved_game_ctx;
+                                item_flag = *(pad_base0 + content_type + MENU_ACTION_SLOT_OFFSET);
+                            }
+                            if ((item_flag != MENU_NONE) && (item_flag & 0x80))
+                            {
+                                setRECT(&rect, 0xB0, 0x60, 0x70, 0x50);
+                            }
+                            else
+                            {
+                                setRECT(&rect, 0xB0, 0x60, 0x70, 0x40);
+                            }
+                            submenu_slot = menu_slot_alloc(3, &rect);
+                            submenu_slot->content_cb = &menu_skill_action_callback;
+                            {
+                                u8* pad_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
+                                item_flag = *(pad_base + content_type + MENU_ACTION_SLOT_OFFSET);
+                            }
+                            if ((item_flag != MENU_NONE) && (item_flag & 0x80))
+                            {
+                                submenu_slot->navigation.packed = MENU_LIST_WITH_COUNT(submenu_slot->navigation.packed, 4);
+                                menu_init_item_nav_entries(4);
+                            }
+                            else
+                            {
+                                submenu_slot->navigation.packed = MENU_LIST_WITH_COUNT(submenu_slot->navigation.packed, 3);
+                                menu_init_item_nav_entries(3);
+                            }
+                            scroll_list_update_target((ScrollListState*)submenu_slot, g_menu_scroll_nav_entries);
 
-                                case 1:
-                                    description_table = (uintptr_t)menu_text_table_base(MENU_TEXT_ITEM_NAME_PARTS);
-                                    menu_concat_encoded_text(&D_801226B8, text_buffer,
-                                                             (s8*)(description_table + (*((u16*)(((item_word >> 9) & 0x7E) + description_table + 16 * sizeof(u16))))));
-                                    break;
+                            {
+                                MenuItemEntry* equipped_item;
+                                MenuItemEntry** active_equipped_item = &g_menu_active_equipped_item;
 
-                                default:
-                                    detail_table = (uintptr_t)menu_text_table_base(MENU_TEXT_ITEM_NAME_PARTS);
-                                    menu_concat_encoded_text(
-                                        &D_801226B8, text_buffer,
-                                        (s8*)(detail_table + (*((u16*)((((((u32)g_menu_item_ptr->attributes.packed) >> 9) & 0x7E)) +
-                                                                       detail_table + 32 * sizeof(u16))))));
-                                    break;
-                                }
-                                g_menu_load_request = 1;
-                                D_801229F4 = g_script_repeat_last;
-                                if (g_menu_scene_type == 1)
+                                equipped_item =
+                                    (MenuItemEntry*)((u8*)g_saved_game_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET) +
+                                                     ((content_type << 6) + (MENU_CHARACTER_ITEMS_OFFSET + MENU_ITEM_RECORD_SIZE)));
+                                *active_equipped_item = equipped_item;
+                                g_menu_item_ptr = equipped_item;
+                                g_menu_saved_category0_item = g_menu_item_ptr;
+                                g_menu_category0_item = g_menu_item_ptr;
+                                g_menu_saved_category1_item = g_menu_item_ptr;
+                                g_menu_category1_item = g_menu_item_ptr;
+                                g_menu_saved_equipment_item = g_menu_item_ptr;
+                                g_menu_category2_item = g_menu_item_ptr;
+                            }
+                            menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
+                        }
+                        break;
+
+                    case 7:
+                    case 8:
+                    case 9:
+                    case 10:
+                        if (g_menu_char_slot == 0)
+                        {
+                            setRECT(&rect, 0xB0, 0x30, 0x70, 0x60);
+                            submenu_slot = menu_slot_alloc(3, &rect);
+                            submenu_slot->content_cb = &menu_equipment_action_callback;
+                            submenu_slot->navigation.packed = MENU_LIST_WITH_COUNT(submenu_slot->navigation.packed, 5);
+                            menu_init_item_nav_entries(5);
+                            {
+                                MenuItemEntry* equipped_item;
+                                MenuItemEntry** active_equipped_item = &g_menu_active_equipped_item;
+
+                                equipped_item =
+                                    (MenuItemEntry*)((u8*)g_saved_game_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET) +
+                                                     ((content_type << 6) +
+                                                      (MENU_CHARACTER_ITEMS_OFFSET - MENU_EQUIPMENT_SUBTYPE_BASE * MENU_ITEM_RECORD_SIZE)));
+                                *active_equipped_item = equipped_item;
+                                g_menu_saved_category0_item = equipped_item;
+                                g_menu_saved_category1_item = equipped_item;
+                                g_menu_saved_equipment_item = equipped_item;
+                                menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
+                            }
+                        }
+                        break;
+
+                    case 15:
+                        if ((g_menu_scene_type >= 0x12) || (g_menu_scene_type == 1) || (g_menu_scene_type == 2))
+                        {
+                            if ((g_menu_item_ptr != NULL) && (*((u8*)g_menu_item_ptr) != 0))
+                            {
+                                D_8011F424 = (((u32)g_menu_item_ptr->attributes.packed) >> 8) & 3;
+                                field_copy_name(&D_801226F0, (u8*)g_menu_item_ptr);
+                                text_buffer[0] = 0;
+                                D_801226B8 = 0;
+                                D_801227D4 = (void*)g_menu_item_ptr;
+                                if (menu_item_differs_from_bare_hands(g_menu_item_ptr) != 0)
                                 {
-                                    g_menu_transition_code = 0xB;
-                                }
-                                else if (g_menu_scene_type == 2)
-                                {
-                                    g_menu_transition_code = 0xC;
-                                }
-                                else
-                                {
-                                    g_menu_transition_code = 1;
+                                    text_cursor = text_buffer;
+                                    label_table = menu_text_table_base(MENU_TEXT_ITEM_NAME_PARTS);
+                                    field_copy_name(
+                                        text_cursor,
+                                        (s8*)(label_table + (*((u16*)(label_table + (((g_menu_item_ptr->attributes.halves.high) & 0x3F) * 2) + 0x48)))));
+                                    item_word = g_menu_item_ptr->attributes.packed;
+                                    text_variant = (item_word >> 8) & 3;
+                                    switch (text_variant)
+                                    {
+                                        case 0:
+                                            name_table = (uintptr_t)menu_text_table_base(MENU_TEXT_ITEM_NAME_PARTS);
+                                            menu_concat_encoded_text(&D_801226B8, text_buffer,
+                                                                     (s8*)(name_table + (*((u16*)(((item_word >> 9) & 0x7E) + name_table)))));
+                                            break;
+
+                                        case 1:
+                                            description_table = (uintptr_t)menu_text_table_base(MENU_TEXT_ITEM_NAME_PARTS);
+                                            menu_concat_encoded_text(
+                                                &D_801226B8, text_buffer,
+                                                (s8*)(description_table + (*((u16*)(((item_word >> 9) & 0x7E) + description_table + 16 * sizeof(u16))))));
+                                            break;
+
+                                        default:
+                                            detail_table = (uintptr_t)menu_text_table_base(MENU_TEXT_ITEM_NAME_PARTS);
+                                            menu_concat_encoded_text(
+                                                &D_801226B8, text_buffer,
+                                                (s8*)(detail_table + (*((u16*)((((((u32)g_menu_item_ptr->attributes.packed) >> 9) & 0x7E)) + detail_table +
+                                                                               32 * sizeof(u16))))));
+                                            break;
+                                    }
+                                    g_menu_load_request = 1;
+                                    D_801229F4 = g_script_repeat_last;
+                                    if (g_menu_scene_type == 1)
+                                    {
+                                        g_menu_transition_code = 0xB;
+                                    }
+                                    else if (g_menu_scene_type == 2)
+                                    {
+                                        g_menu_transition_code = 0xC;
+                                    }
+                                    else
+                                    {
+                                        g_menu_transition_code = 1;
+                                    }
                                 }
                             }
                         }
-                    }
-                    break;
+                        break;
                 }
             }
             else if (item_type == MENU_CONTENT_ITEM_TYPE_ACTION)
@@ -2409,99 +2410,99 @@ s32 menu_handle_input(s32 process_actions)
                     menu_play_se(SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
                     switch (action_code)
                     {
-                    case 1:
-                    {
-                        u8* rec;
-                        s32 idx;
-                        s32 count;
-                        u8* slot_base;
-
-                        slot_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
-                        if (slot_base[MENU_CHARACTER_RECORD_OFFSET] != 0)
+                        case 1:
                         {
-                            if ((slot_base[MENU_CHARACTER_INFO_OFFSET] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GOLEM)
+                            u8* rec;
+                            s32 idx;
+                            s32 count;
+                            u8* slot_base;
+
+                            slot_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
+                            if (slot_base[MENU_CHARACTER_RECORD_OFFSET] != 0)
                             {
-                                D_801229F4 = slot_base[0x609] + 0x80;
+                                if ((slot_base[MENU_CHARACTER_INFO_OFFSET] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GOLEM)
+                                {
+                                    D_801229F4 = slot_base[0x609] + 0x80;
+                                }
+                                else
+                                {
+                                    D_801229F4 = slot_base[0x609];
+                                }
+                                field_copy_name(&D_801226F0,
+                                                (u8*)g_saved_game_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET));
+                                count = 0;
+                                idx = 0;
+                                rec = (u8*)&g_field_player_records;
+                                D_801227D4 = (void*)((u8*)g_saved_game_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET));
+                                for (; idx < 3; idx++)
+                                {
+                                    if (idx == g_menu_char_slot)
+                                    {
+                                        break;
+                                    }
+                                    if (*rec & 1)
+                                    {
+                                        count += 1;
+                                    }
+                                    rec += 0x268;
+                                }
+                                D_8011F424 = count + 3;
+                                g_menu_load_request = 1;
+                                g_menu_transition_code = 3;
+                            }
+                        }
+                        break;
+
+                        case 6:
+                            g_saved_game_ctx->options.word |= MENU_OPTION_AUDIO_ENABLED;
+                            akao_set_mono_output(0);
+                            break;
+
+                        case 7:
+                            g_saved_game_ctx->options.word &= ~MENU_OPTION_AUDIO_ENABLED;
+                            akao_set_mono_output(1);
+                            break;
+
+                        case 8:
+                            g_saved_game_ctx->options.word |= MENU_OPTION_VIBRATION_ENABLED;
+                            actuator_state->ports[0].small_motor_command = 1;
+                            actuator_state->ports[0].large_motor_command = AKAO_SFX_DEFAULT_VOLUME;
+                            if (g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & MENU_PAD_INJECT_ENABLED)
+                            {
+                                actuator_state->ports[1].small_motor_command = 1;
+                                actuator_state->ports[1].large_motor_command = AKAO_SFX_DEFAULT_VOLUME;
+                            }
+                            break;
+
+                        case 9:
+                            g_saved_game_ctx->options.word &= ~MENU_OPTION_VIBRATION_ENABLED;
+                            actuator_state->ports[0].small_motor_command = 0;
+                            actuator_state->ports[1].small_motor_command = 0;
+                            break;
+
+                        case 10:
+                            if (actuator_state->ports[1].padding0[0] == MENU_NONE)
+                            {
+                                g_menu_message_line1 = menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_NO_CONTROLLER_LINE1);
+                                g_menu_message_line2 = menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_NO_CONTROLLER_LINE2);
+                                menu_clear_slots();
+                                menu_open_content_page(MENU_PAGE_TWO_LINE_MESSAGE);
                             }
                             else
                             {
-                                D_801229F4 = slot_base[0x609];
+                                inject_flags = &g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word;
+                                *inject_flags |= MENU_PAD_INJECT_ENABLED;
+                                g_menu_companion_node = 0x2B;
+                                menu_set_active_node();
                             }
-                            field_copy_name(&D_801226F0,
-                                            (u8*)g_saved_game_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET));
-                            count = 0;
-                            idx = 0;
-                            rec = (u8*)&g_field_player_records;
-                            D_801227D4 = (void*)((u8*)g_saved_game_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET));
-                            for (; idx < 3; idx++)
-                            {
-                                if (idx == g_menu_char_slot)
-                                {
-                                    break;
-                                }
-                                if (*rec & 1)
-                                {
-                                    count += 1;
-                                }
-                                rec += 0x268;
-                            }
-                            D_8011F424 = count + 3;
-                            g_menu_load_request = 1;
-                            g_menu_transition_code = 3;
-                        }
-                    }
-                    break;
+                            break;
 
-                    case 6:
-                        g_saved_game_ctx->options.word |= MENU_OPTION_AUDIO_ENABLED;
-                        akao_set_mono_output(0);
-                        break;
-
-                    case 7:
-                        g_saved_game_ctx->options.word &= ~MENU_OPTION_AUDIO_ENABLED;
-                        akao_set_mono_output(1);
-                        break;
-
-                    case 8:
-                        g_saved_game_ctx->options.word |= MENU_OPTION_VIBRATION_ENABLED;
-                        actuator_state->ports[0].small_motor_command = 1;
-                        actuator_state->ports[0].large_motor_command = AKAO_SFX_DEFAULT_VOLUME;
-                        if (g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & MENU_PAD_INJECT_ENABLED)
-                        {
-                            actuator_state->ports[1].small_motor_command = 1;
-                            actuator_state->ports[1].large_motor_command = AKAO_SFX_DEFAULT_VOLUME;
-                        }
-                        break;
-
-                    case 9:
-                        g_saved_game_ctx->options.word &= ~MENU_OPTION_VIBRATION_ENABLED;
-                        actuator_state->ports[0].small_motor_command = 0;
-                        actuator_state->ports[1].small_motor_command = 0;
-                        break;
-
-                    case 10:
-                        if (actuator_state->ports[1].padding0[0] == MENU_NONE)
-                        {
-                            g_menu_message_line1 = menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_NO_CONTROLLER_LINE1);
-                            g_menu_message_line2 = menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_NO_CONTROLLER_LINE2);
-                            menu_clear_slots();
-                            menu_open_content_page(MENU_PAGE_TWO_LINE_MESSAGE);
-                        }
-                        else
-                        {
+                        case 11:
                             inject_flags = &g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word;
-                            *inject_flags |= MENU_PAD_INJECT_ENABLED;
-                            g_menu_companion_node = 0x2B;
+                            *inject_flags &= ~MENU_PAD_INJECT_ENABLED;
+                            g_menu_companion_node = MENU_NONE;
                             menu_set_active_node();
-                        }
-                        break;
-
-                    case 11:
-                        inject_flags = &g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word;
-                        *inject_flags &= ~MENU_PAD_INJECT_ENABLED;
-                        g_menu_companion_node = MENU_NONE;
-                        menu_set_active_node();
-                        break;
+                            break;
                     }
                 }
             }
@@ -2783,12 +2784,12 @@ void menu_init_item_nav_entries(s32 count)
 }
 
 /**
- * @brief Build circular navigation entries for the spell grid.
- * @return Number of present grid cells.
+ * @brief Build circular navigation entries for the learned abilities.
+ * @return Number of learned abilities.
  */
-s32 menu_build_spell_nav_entries(void)
+s32 menu_build_ability_nav_entries(void)
 {
-    s32 presence_bits;
+    s32 learned_bits;
     s32 next_index;
     u32 entry_with_position;
     s32 index;
@@ -2798,27 +2799,27 @@ s32 menu_build_spell_nav_entries(void)
     s32 bit_mask;
     s32 wrapped_next_index;
     u32* entry;
-    u8* presence_rows;
+    u8* learned_bytes;
     u32 packed_entry;
     u32 entry_with_previous;
 
     item_count = 0;
-    presence_rows = (u8*)g_saved_game_ctx + MENU_SPELL_GRID_OFFSET;
+    learned_bytes = (u8*)g_saved_game_ctx->ability_bits;
 
-    for (row = MENU_SPELL_GRID_ROW_COUNT - 1; row >= 0; row--)
+    for (row = MENU_ABILITY_BYTE_COUNT - 1; row >= 0; row--)
     {
         bit_mask = 1;
-        presence_bits = *presence_rows;
-        for (index = MENU_SPELL_GRID_COLUMN_COUNT - 1; index >= 0; index--)
+        learned_bits = *learned_bytes;
+        for (index = MENU_ABILITIES_PER_BYTE - 1; index >= 0; index--)
         {
-            if (presence_bits & bit_mask)
+            if (learned_bits & bit_mask)
             {
                 item_count++;
             }
             bit_mask <<= 1;
         }
 
-        presence_rows += 1;
+        learned_bytes++;
     }
 
     g_menu_scroll_nav_entries[0] = 0;
@@ -2887,9 +2888,7 @@ s32 menu_build_special_technique_nav_entries(void)
         {
             if ((group_flags & bit_mask) != 0)
             {
-                if ((group_index ==
-                     (s32)FIELD_ITEM_TYPE(g_menu_equipment_base->attributes.packed)) &&
-                    (selected_index == none_index))
+                if ((group_index == (s32)FIELD_ITEM_TYPE(g_menu_equipment_base->attributes.packed)) && (selected_index == none_index))
                 {
                     selected_index = item_count;
                 }
@@ -3055,8 +3054,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
     void* draw_packet_cursor;
     void *base_a2_0, *base_a2_1, *base_a2_2, *base_a2_3, *base_a2_4, *base_a2_5, *base_a2_6;
     uintptr_t base_a2_7;
-    void *base_a2_8, *base_a2_9, *base_a2_10, *base_a2_11,
-        *base_a2_12;
+    void *base_a2_8, *base_a2_9, *base_a2_10, *base_a2_11, *base_a2_12;
     s32 k;
     u32 shared_s0;
     s32 content_index;
@@ -3087,9 +3085,9 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
             u8* character_equipment_area;
             MenuItemEntry* equipped_items;
             g_menu_equipment_base =
-                (equipped_items = (MenuItemEntry*)((character_equipment_area = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE +
-                                                                                                             MENU_CHARACTER_RECORD_OFFSET)) +
-                                                        MENU_CHARACTER_ITEMS_OFFSET));
+                (equipped_items = (MenuItemEntry*)((character_equipment_area =
+                                                        (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE + MENU_CHARACTER_RECORD_OFFSET)) +
+                                                   MENU_CHARACTER_ITEMS_OFFSET));
             D_80168C30 = equipped_items;
             D_80168C20 = equipped_items;
             D_80168C24 = equipped_items;
@@ -3111,1451 +3109,1473 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                     s32 item_type = item_word >> MENU_CONTENT_TYPE_SHIFT;
                     switch (item_type)
                     {
-                    case 1:
-                        draw_packet_cursor = packet_cursor;
-                        base_a2_0 = menu_text_table_base(MENU_TEXT_MESSAGES);
-                        {
-                            s32 text_color = FIELD_TEXT_COLOR_MENU;
-                            void* a2_2 = (void*)((u8*)base_a2_0 + *(u16*)((u8*)base_a2_0 + (content_item->action_type * 2)));
-                            packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, text_color, content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                            content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                            (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                        }
-                        break;
-
-                    case 2:
-                    {
-                        s32 sub;
-                        if (content_item->action_type < 2)
-                        {
-                            t0 = 0xFF;
+                        case 1:
+                            draw_packet_cursor = packet_cursor;
+                            base_a2_0 = menu_text_table_base(MENU_TEXT_MESSAGES);
                             {
-                                s32 y = two_outer;
-                                if (y == 2)
+                                s32 text_color = FIELD_TEXT_COLOR_MENU;
+                                void* a2_2 = (void*)((u8*)base_a2_0 + *(u16*)((u8*)base_a2_0 + (content_item->action_type * 2)));
+                                packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, text_color, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                            }
+                            break;
+
+                        case 2:
+                        {
+                            s32 sub;
+                            if (content_item->action_type < 2)
+                            {
+                                t0 = 0xFF;
                                 {
-                                    t0 = 0x1E;
+                                    s32 y = two_outer;
+                                    if (y == 2)
+                                    {
+                                        t0 = 0x1E;
+                                    }
                                 }
                             }
-                        }
-                        {
-                            u8 sub_byte = content_item->action_type;
-                            sub = sub_byte;
-                        }
-                        if ((u32)(sub - 2) < 8)
-                        {
-                            s32 s;
-                            val = 0;
-                            if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
                             {
-                                val = g_menu_category1_item->effect_flags[0];
+                                u8 sub_byte = content_item->action_type;
+                                sub = sub_byte;
                             }
-                            s = content_item->action_type;
-                            if (((val >> (s - 2)) & 1) != 0)
+                            if ((u32)(sub - 2) < 8)
                             {
-                                t0 = s + 0x3B;
+                                s32 s;
+                                val = 0;
+                                if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
+                                {
+                                    val = g_menu_category1_item->effect_flags[0];
+                                }
+                                s = content_item->action_type;
+                                if (((val >> (s - 2)) & 1) != 0)
+                                {
+                                    t0 = s + 0x3B;
+                                }
+                                else
+                                {
+                                    t0 = 0x21;
+                                }
                             }
-                            else
+                            else if ((u32)(sub - 0xA) < 8)
                             {
+                                s32 s;
+                                val = 0;
+                                if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
+                                {
+                                    val = g_menu_category1_item->effect_flags[1];
+                                }
                                 t0 = 0x21;
+                                s = content_item->action_type;
+                                if (((val >> (s - 0xA)) & 1) != 0)
+                                {
+                                    t0 = s + 0x2B;
+                                }
                             }
-                        }
-                        else if ((u32)(sub - 0xA) < 8)
-                        {
-                            s32 s;
-                            val = 0;
-                            if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
+                            else if ((u32)(sub - 0x12) < 8)
                             {
-                                val = g_menu_category1_item->effect_flags[1];
-                            }
-                            t0 = 0x21;
-                            s = content_item->action_type;
-                            if (((val >> (s - 0xA)) & 1) != 0)
-                            {
-                                t0 = s + 0x2B;
-                            }
-                        }
-                        else if ((u32)(sub - 0x12) < 8)
-                        {
-                            s32 s;
-                            val = 0;
-                            if (D_80168C20[1].active != 0)
-                            {
-                                val = D_80168C20[1].effect_flags[0];
-                            }
-                            if (D_80168C20[2].active != 0)
-                            {
-                                val |= D_80168C20[2].effect_flags[0];
-                            }
-                            if (D_80168C20[3].active != 0)
-                            {
-                                val |= D_80168C20[3].effect_flags[0];
-                            }
-                            t0 = 0x21;
-                            s = content_item->action_type;
-                            if (((val >> (s - 0x12)) & 1) != 0)
-                            {
-                                t0 = s + 0x2B;
-                            }
-                        }
-                        else if ((u32)(sub - 0x1A) < 8)
-                        {
-                            s32 s;
-                            val = 0;
-                            if (D_80168C20[1].active != 0)
-                            {
-                                val = D_80168C20[1].effect_flags[1];
-                            }
-                            if (D_80168C20[2].active != 0)
-                            {
-                                val |= D_80168C20[2].effect_flags[1];
-                            }
-                            if (D_80168C20[3].active != 0)
-                            {
-                                val |= D_80168C20[3].effect_flags[1];
-                            }
-                            s = content_item->action_type;
-                            if (((val >> (s - 0x1A)) & 1) != 0)
-                            {
-                                t0 = D_80168696[s];
-                            }
-                            else
-                            {
+                                s32 s;
+                                val = 0;
+                                if (D_80168C20[1].active != 0)
+                                {
+                                    val = D_80168C20[1].effect_flags[0];
+                                }
+                                if (D_80168C20[2].active != 0)
+                                {
+                                    val |= D_80168C20[2].effect_flags[0];
+                                }
+                                if (D_80168C20[3].active != 0)
+                                {
+                                    val |= D_80168C20[3].effect_flags[0];
+                                }
                                 t0 = 0x21;
+                                s = content_item->action_type;
+                                if (((val >> (s - 0x12)) & 1) != 0)
+                                {
+                                    t0 = s + 0x2B;
+                                }
                             }
-                        }
-                        else if ((u32)(sub - 0x22) < 8)
-                        {
+                            else if ((u32)(sub - 0x1A) < 8)
+                            {
+                                s32 s;
+                                val = 0;
+                                if (D_80168C20[1].active != 0)
+                                {
+                                    val = D_80168C20[1].effect_flags[1];
+                                }
+                                if (D_80168C20[2].active != 0)
+                                {
+                                    val |= D_80168C20[2].effect_flags[1];
+                                }
+                                if (D_80168C20[3].active != 0)
+                                {
+                                    val |= D_80168C20[3].effect_flags[1];
+                                }
+                                s = content_item->action_type;
+                                if (((val >> (s - 0x1A)) & 1) != 0)
+                                {
+                                    t0 = D_80168696[s];
+                                }
+                                else
+                                {
+                                    t0 = 0x21;
+                                }
+                            }
+                            else if ((u32)(sub - 0x22) < 8)
+                            {
 #if defined(VERSION_JP)
-                            s32 s;
-                            s = content_item->action_type;
-                            if (((g_menu_category0_item->effect_flags[0] >> (s - 0x22)) & 1) != 0)
-                            {
-                                t0 = s + 0x13;
-                            }
-                            else
-                            {
-                                t0 = 0x21;
-                            }
-#else
-                            t0 = 0x21;
-                            if (g_menu_category0_item != 0)
-                            {
                                 s32 s;
                                 s = content_item->action_type;
                                 if (((g_menu_category0_item->effect_flags[0] >> (s - 0x22)) & 1) != 0)
                                 {
                                     t0 = s + 0x13;
                                 }
-                            }
-#endif
-                        }
-                        else if ((u32)(sub - 0x2A) < 8)
-                        {
-                            s32 idx;
-                            s32 s;
-                            s = content_item->action_type;
-                            for (idx = 0; idx < 8; idx++)
-                            {
-                                u8* pad = (u8*)g_saved_game_ctx;
-                                s32 character_offset = g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
-                                if (*(u8*)(pad + character_offset + idx + 0x638) == s - 0x2A)
+                                else
                                 {
-                                    break;
+                                    t0 = 0x21;
                                 }
-                            }
-                            t0 = D_801686B8[idx];
-                        }
-                        else if ((u32)(sub - 0x32) < 4)
-                        {
-                            if (g_menu_char_slot != 2)
-                            {
-                                MenuItemEntry* equipment = (MenuItemEntry*)((content_item->action_type * sizeof(MenuItemEntry)) + (uintptr_t)g_menu_equipment_base - 0x32 * sizeof(MenuItemEntry));
+#else
                                 t0 = 0x21;
-                                if (equipment->active != 0)
+                                if (g_menu_category0_item != 0)
                                 {
-                                    u32 attributes = equipment->attributes.packed;
-                                    s32 item_kind = FIELD_ITEM_CATEGORY(attributes);
-                                    switch (item_kind)
+                                    s32 s;
+                                    s = content_item->action_type;
+                                    if (((g_menu_category0_item->effect_flags[0] >> (s - 0x22)) & 1) != 0)
                                     {
-                                    case 1:
-                                        t0 = FIELD_ITEM_TYPE(attributes) + 0x50;
-                                        break;
-                                    case 2:
-                                        t0 = FIELD_ITEM_TYPE(attributes) + 0x5C;
-                                        break;
-                                    case 0:
-                                        t0 = FIELD_ITEM_TYPE(attributes) + 0x45;
+                                        t0 = s + 0x13;
+                                    }
+                                }
+#endif
+                            }
+                            else if ((u32)(sub - 0x2A) < 8)
+                            {
+                                s32 idx;
+                                s32 s;
+                                s = content_item->action_type;
+                                for (idx = 0; idx < 8; idx++)
+                                {
+                                    u8* pad = (u8*)g_saved_game_ctx;
+                                    s32 character_offset = g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
+                                    if (*(u8*)(pad + character_offset + idx + 0x638) == s - 0x2A)
+                                    {
                                         break;
                                     }
                                 }
+                                t0 = D_801686B8[idx];
                             }
-                        }
-                        else if ((u8)sub == 0x36)
-                        {
-                            t0 = 0xFF;
-                            if (g_menu_item_ptr != 0)
+                            else if ((u32)(sub - 0x32) < 4)
                             {
-                                if (g_menu_item_ptr->active != 0)
+                                if (g_menu_char_slot != 2)
                                 {
-                                    u32 attributes = g_menu_item_ptr->attributes.packed;
-                                    s32 item_kind = FIELD_ITEM_CATEGORY(attributes);
-                                    switch (item_kind)
+                                    MenuItemEntry* equipment = (MenuItemEntry*)((content_item->action_type * sizeof(MenuItemEntry)) +
+                                                                                (uintptr_t)g_menu_equipment_base - 0x32 * sizeof(MenuItemEntry));
+                                    t0 = 0x21;
+                                    if (equipment->active != 0)
                                     {
-                                    case 0:
-                                        t0 = FIELD_ITEM_TYPE(attributes) + 0x45;
-                                        break;
-                                    case 1:
-                                        t0 = FIELD_ITEM_TYPE(attributes) + 0x50;
-                                        break;
-                                    case 2:
-                                        t0 = FIELD_ITEM_TYPE(attributes) + 0x5C;
-                                        break;
+                                        u32 attributes = equipment->attributes.packed;
+                                        s32 item_kind = FIELD_ITEM_CATEGORY(attributes);
+                                        switch (item_kind)
+                                        {
+                                            case 1:
+                                                t0 = FIELD_ITEM_TYPE(attributes) + 0x50;
+                                                break;
+                                            case 2:
+                                                t0 = FIELD_ITEM_TYPE(attributes) + 0x5C;
+                                                break;
+                                            case 0:
+                                                t0 = FIELD_ITEM_TYPE(attributes) + 0x45;
+                                                break;
+                                        }
                                     }
                                 }
                             }
-                        }
-                        else if ((u32)(sub - 0x37) < 0x1E)
-                        {
-                            t0 = D_80168659[content_item->action_type];
-                        }
-                        else if ((u8)sub == 0x55)
-                        {
-                            t0 = 0xFF;
-                            if (((g_saved_game_ctx->options.word >> 1) & 1) != 0)
+                            else if ((u8)sub == 0x36)
                             {
-                                t0 = 0x6A;
+                                t0 = 0xFF;
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    if (g_menu_item_ptr->active != 0)
+                                    {
+                                        u32 attributes = g_menu_item_ptr->attributes.packed;
+                                        s32 item_kind = FIELD_ITEM_CATEGORY(attributes);
+                                        switch (item_kind)
+                                        {
+                                            case 0:
+                                                t0 = FIELD_ITEM_TYPE(attributes) + 0x45;
+                                                break;
+                                            case 1:
+                                                t0 = FIELD_ITEM_TYPE(attributes) + 0x50;
+                                                break;
+                                            case 2:
+                                                t0 = FIELD_ITEM_TYPE(attributes) + 0x5C;
+                                                break;
+                                        }
+                                    }
+                                }
                             }
-                        }
-                        else
-                        {
-                            sub = content_item->action_type;
-                            if (sub == 0x56)
+                            else if ((u32)(sub - 0x37) < 0x1E)
                             {
-                                t0 = 0x6A;
+                                t0 = D_80168659[content_item->action_type];
+                            }
+                            else if ((u8)sub == 0x55)
+                            {
+                                t0 = 0xFF;
                                 if (((g_saved_game_ctx->options.word >> 1) & 1) != 0)
                                 {
-                                    t0 = 0xFF;
-                                }
-                            }
-                            else if (sub == 0x57)
-                            {
-                                t0 = 0xFF;
-                                if ((g_saved_game_ctx->options.word & 1) != 0)
-                                {
                                     t0 = 0x6A;
-                                }
-                            }
-                            else if (sub == 0x58)
-                            {
-                                t0 = 0x6A;
-                                if ((g_saved_game_ctx->options.word & 1) != 0)
-                                {
-                                    t0 = 0xFF;
-                                }
-                            }
-                            else if (sub == 0x59)
-                            {
-                                t0 = 0xFF;
-                                if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & 0x80) != 0)
-                                {
-                                    t0 = 0x6A;
-                                }
-                            }
-                            else if (sub == 0x5A)
-                            {
-                                t0 = 0x6A;
-                                if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & 0x80) != 0)
-                                {
-                                    t0 = 0xFF;
                                 }
                             }
                             else
                             {
-                                t0 = 0xFF;
-                            }
-                        }
-                        if (t0 != 0xFF)
-                        {
-                            packet_cursor = menu_emit_draw_mode_primitive(menu_emit_icon_sprite(packet_cursor, ot_entry, t0,
-                                                                                                content_item->packed_x & MENU_CONTENT_X_MASK,
-                                                                                                content_item->y - MENU_CONTENT_VIEW_Y_OFFSET, 0, 0, 0, 0),
-                                                                          ot_entry);
-                        }
-                    }
-                    break;
-
-                    case 3:
-                    {
-                        content_index = content_item->action_type;
-                        switch (content_index)
-                        {
-                        case 0x1:
-                            if (g_menu_item_ptr != 0)
-                            {
-                                draw_packet_cursor = packet_cursor;
-                                draw_source = (void*)g_menu_item_ptr;
-                                packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, draw_source, FIELD_TEXT_COLOR_MENU,
-                                                                content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                            }
-                            break;
-                        case 0x2:
-                            if (g_menu_item_ptr != 0)
-                            {
-                                u32 v;
-                                u32 v1;
-
-                                if (menu_item_differs_from_bare_hands(g_menu_item_ptr) != 0)
+                                sub = content_item->action_type;
+                                if (sub == 0x56)
                                 {
-                                    void* a3 =
-                                        (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_NAMES]);
-                                    menu_concat_encoded_text(
-                                        &prefix_buffer,
-                                        (void*)((u8*)a3 + *(u16*)((u8*)a3 + (g_menu_item_ptr->attributes.halves.high & 0x3F) * 2)),
-                                        (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] +
-                                                *(u16*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] +
-                                                        0xB4)));
+                                    t0 = 0x6A;
+                                    if (((g_saved_game_ctx->options.word >> 1) & 1) != 0)
+                                    {
+                                        t0 = 0xFF;
+                                    }
+                                }
+                                else if (sub == 0x57)
+                                {
+                                    t0 = 0xFF;
+                                    if ((g_saved_game_ctx->options.word & 1) != 0)
+                                    {
+                                        t0 = 0x6A;
+                                    }
+                                }
+                                else if (sub == 0x58)
+                                {
+                                    t0 = 0x6A;
+                                    if ((g_saved_game_ctx->options.word & 1) != 0)
+                                    {
+                                        t0 = 0xFF;
+                                    }
+                                }
+                                else if (sub == 0x59)
+                                {
+                                    t0 = 0xFF;
+                                    if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & 0x80) != 0)
+                                    {
+                                        t0 = 0x6A;
+                                    }
+                                }
+                                else if (sub == 0x5A)
+                                {
+                                    t0 = 0x6A;
+                                    if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & 0x80) != 0)
+                                    {
+                                        t0 = 0xFF;
+                                    }
                                 }
                                 else
                                 {
-                                    prefix_buffer[0] = 0;
-                                }
-                                v = g_menu_item_ptr->attributes.packed;
-                                v1 = (v >> 8) & 3;
-                                switch (v1)
-                                {
-                                case 0:
-                                {
-                                    uintptr_t base0 = ((uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES));
-                                    menu_concat_encoded_text(&text_buffer, &prefix_buffer,
-                                                             (void*)(base0 + *(u16*)(((v >> 9) & 0x7E) + base0)));
-                                    break;
-                                }
-                                case 1:
-                                {
-                                    uintptr_t base1 = ((uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES));
-                                    menu_concat_encoded_text(&text_buffer, &prefix_buffer,
-                                                             (void*)(base1 + *(u16*)(((v >> 9) & 0x7E) + base1 + 11 * sizeof(u16))));
-                                    break;
-                                }
-                                default:
-                                {
-                                    uintptr_t base2 = ((uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES));
-                                    menu_concat_encoded_text(
-                                        &text_buffer, &prefix_buffer,
-                                        (void*)(base2 +
-                                                *(u16*)(((g_menu_item_ptr->attributes.packed >> 9) & 0x7E) + base2 + 23 * sizeof(u16))));
-                                    break;
-                                }
-                                }
-                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&text_buffer), FIELD_TEXT_COLOR_MENU,
-                                                                content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                            }
-                            break;
-                        case 0x3:
-                            if (g_menu_item_ptr != 0)
-                            {
-                                packet_cursor =
-                                    menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_item_ptr->display_nibbles.packed & 0xF, 1,
-                                                             &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                        case 0x4:
-                            if (g_menu_item_ptr != 0)
-                            {
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
-                                                                         (g_menu_item_ptr->display_nibbles.packed >> 4) & 0xF, 1, &pos,
-                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                        case 0x5:
-                            if (g_menu_item_ptr != 0)
-                            {
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
-                                                                         (g_menu_item_ptr->display_nibbles.packed >> 8) & 0xF, 1, &pos,
-                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                        case 0x6:
-                            if (g_menu_item_ptr != 0)
-                            {
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
-                                                                         (g_menu_item_ptr->display_nibbles.packed >> 12) & 0xF, 1, &pos,
-                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                        case 0x7:
-                            if (g_menu_item_ptr != 0)
-                            {
-                                packet_cursor =
-                                    menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_item_ptr->display_nibbles.halfwords[1] & 0xF,
-                                                             1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                        case 0x8:
-                            if (g_menu_item_ptr != 0)
-                            {
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
-                                                                         (g_menu_item_ptr->display_nibbles.packed >> 20) & 0xF, 1, &pos,
-                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                        case 0x9:
-                            if (g_menu_item_ptr != 0)
-                            {
-                                packet_cursor =
-                                    menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_item_ptr->display_nibbles.bytes[3] & 0xF, 1,
-                                                             &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                        case 0xA:
-                            if (g_menu_item_ptr != 0)
-                            {
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
-                                                                         (g_menu_item_ptr->display_nibbles.packed >> 28) & 0xF, 1, &pos,
-                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                        case 0xB:
-                        case 0xC:
-                        case 0xD:
-                            if (g_menu_item_ptr != 0)
-                            {
-                                draw_packet_cursor = packet_cursor;
-                                base_a2_1 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x5C));
-                                {
-                                    s32 text_color = FIELD_TEXT_COLOR_MENU;
-                                    void* a2_2 = (void*)((u8*)base_a2_1 + *(u16*)((u8*)base_a2_1 + (*((u8*)g_menu_item_ptr + content_index + 0x15) * 2)));
-                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, text_color,
-                                                                    content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                    (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                    t0 = 0xFF;
                                 }
                             }
-                            break;
-                        case 0xE:
-                        case 0xF:
-                        case 0x10:
-                            if (g_menu_category0_item != 0)
+                            if (t0 != 0xFF)
                             {
-                                draw_packet_cursor = packet_cursor;
-                                base_a2_2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
-                                {
-                                    s32 text_color = FIELD_TEXT_COLOR_MENU;
-                                    void* a2_2 =
-                                        (void*)((u8*)base_a2_2 + *(u16*)((u8*)base_a2_2 + (*((u8*)g_menu_category0_item + content_index + 0x1A) * 2)));
-                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, text_color,
-                                                                    content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                    (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                }
-                            }
-                            break;
-                        case 0x11:
-                            if (g_menu_category0_item != 0)
-                            {
-                                packet_cursor = field_draw_number(ot_entry, packet_cursor, g_menu_category0_item->stat_values[0], 1, &pos,
-                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                        case 0x12:
-                            if (g_menu_category1_item != 0)
-                            {
-                                packet_cursor =
-                                    menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_category1_item->stat_values[0], 1, &pos,
-                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                        case 0x13:
-                            if (g_menu_item_ptr != 0)
-                            {
-                                uintptr_t a2;
-                                u8* a3ptr;
-                                s32 idx;
-                                void* a2_2;
-                                draw_packet_cursor = packet_cursor;
-                                a2 = (uintptr_t)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x44);
-                                a3ptr = (u8*)g_menu_category2_item;
-                                idx = (a3ptr[0x24] * 0xE + a3ptr[0x25]) * 2;
-                                a2_2 = (void*)(a2 + *(u16*)(idx + a2));
-                                packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
-                                                                content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                            }
-                            break;
-                        case 0x14:
-                            if (g_menu_item_ptr != 0)
-                            {
-                                draw_packet_cursor = packet_cursor;
-                                base_a2_3 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x28));
-                                {
-                                    void* a2_2 = (void*)((u8*)base_a2_3 + *(u16*)((u8*)base_a2_3 + (*((u8*)g_menu_category2_item + 0x24) * 2)));
-                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
-                                                                    content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                    (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                }
-                            }
-                            break;
-                        case 0x15:
-                            if (g_menu_item_ptr != 0)
-                            {
-                                draw_packet_cursor = packet_cursor;
-                                base_a2_4 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x38));
-                                {
-                                    void* a2_2 = (void*)((u8*)base_a2_4 + *(u16*)((u8*)base_a2_4 + (*((u8*)g_menu_category2_item + 0x25) * 2)));
-                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
-                                                                    content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                    (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                }
-                            }
-                            break;
-                        case 0x16:
-                            if (g_menu_item_ptr != 0)
-                            {
-                                packet_cursor = field_draw_number(ot_entry, packet_cursor, *((u8*)g_menu_category2_item + 0x26), 1, &pos,
-                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                        case 0x17:
-                        case 0x18:
-                        case 0x19:
-                        case 0x1A:
-                        {
-                            val = 0;
-                            if (g_item_slot_flags[content_index - 0x17] != 0)
-                            {
-                                MenuItemEntry* equipment = (MenuItemEntry*)((content_index * sizeof(MenuItemEntry)) + (uintptr_t)D_80168C30 - 0x17 * sizeof(MenuItemEntry));
-                                MenuItemEntry* comparison_item;
-                                if (equipment->active != 0)
-                                {
-                                    val = equipment->stat_values[0];
-                                }
-                                comparison_item = g_item_slot_data[content_index - 0x17];
-                                if (comparison_item != 0 && comparison_item->active != 0)
-                                {
-                                    val -= comparison_item->stat_values[0];
-                                }
-                                else
-                                {
-                                    val -= D_800F0C1C;
-                                }
-                                packet_cursor = field_draw_number(ot_entry, packet_cursor, abs(val), 1, &pos,
-                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                        }
-                        /* fallthrough */
-                        case 0x1B:
-                        case 0x1C:
-                        case 0x1D:
-                        case 0x1E:
-                        {
-                            val = 0;
-                            if (g_item_slot_flags[content_index - 0x1B] != 0)
-                            {
-                                MenuItemEntry* equipment = (MenuItemEntry*)((content_index * sizeof(MenuItemEntry)) + (uintptr_t)D_80168C30 - 0x1B * sizeof(MenuItemEntry));
-                                MenuItemEntry* comparison_item;
-                                if (equipment->active != 0)
-                                {
-                                    val = equipment->stat_values[0];
-                                }
-                                comparison_item = g_item_slot_data[content_index - 0x1B];
-                                if (comparison_item != 0 && comparison_item->active != 0)
-                                {
-                                    val -= comparison_item->stat_values[0];
-                                }
-                                else
-                                {
-                                    val -= D_800F0C1C;
-                                }
-                                menu_copy_sign_label(label_buffer, val);
-                                packet_cursor =
-                                    field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), FIELD_TEXT_COLOR_MENU, pos.x, pos.y, FIELD_TEXT_ALIGN_LEFT);
+                                packet_cursor = menu_emit_draw_mode_primitive(menu_emit_icon_sprite(packet_cursor, ot_entry, t0,
+                                                                                                    content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                                                    content_item->y - MENU_CONTENT_VIEW_Y_OFFSET, 0, 0, 0, 0),
+                                                                              ot_entry);
                             }
                         }
                         break;
-                        case 0x1F:
-                        case 0x20:
-                        case 0x21:
-                        case 0x22:
-                        case 0x23:
-                        case 0x24:
-                        case 0x25:
-                        case 0x26:
-                            if (g_menu_item_ptr != 0)
-                            {
-                                s32 res = menu_lookup_item_nibble(g_menu_item_ptr, content_index - 0x1F);
-                                menu_copy_sign_label(label_buffer, res);
-                                packet_cursor =
-                                    field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), FIELD_TEXT_COLOR_MENU, pos.x, pos.y, FIELD_TEXT_ALIGN_LEFT);
-                            }
-                            break;
-                        case 0x27:
-                        case 0x28:
-                        case 0x29:
-                        case 0x2A:
-                        case 0x2B:
-                        case 0x2C:
-                        case 0x2D:
-                        case 0x2E:
-                            if (g_menu_item_ptr != 0)
-                            {
-                                s32 diff = menu_lookup_item_nibble(g_menu_item_ptr, content_index - 0x27);
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (u32)abs(diff), 1, &pos,
-                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                        case 0x2F:
-                        case 0x30:
-                        case 0x31:
-                        case 0x32:
-                        case 0x33:
-                        case 0x34:
-                        case 0x35:
-                        case 0x36:
-                        {
-                            s32 idx2 = content_index - 0x2F;
-                            if (g_menu_item_ptr != 0)
-                            {
-                                s32 v1 = menu_lookup_item_nibble(g_menu_item_ptr, idx2);
-                                s32 v2 = menu_lookup_item_nibble((void*)g_menu_active_equipped_item, idx2);
-                                s32 diff = v1 - v2;
-                                menu_copy_sign_label(label_buffer, diff);
-                                packet_cursor =
-                                    field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), FIELD_TEXT_COLOR_MENU, pos.x, pos.y, FIELD_TEXT_ALIGN_LEFT);
-                            }
-                        }
-                        break;
-                        case 0x37:
-                        case 0x38:
-                        case 0x39:
-                        case 0x3A:
-                        case 0x3B:
-                        case 0x3C:
-                        case 0x3D:
-                        case 0x3E:
-                        {
-                            s32 idx2 = content_index - 0x2F;
-                            if (g_menu_item_ptr != 0)
-                            {
-                                s32 v1 = menu_lookup_item_nibble(g_menu_item_ptr, idx2);
-                                s32 v2 = menu_lookup_item_nibble((void*)g_menu_active_equipped_item, idx2);
-                                s32 diff = v1 - v2;
-                                packet_cursor = field_draw_number(ot_entry, packet_cursor, abs(diff), 1, &pos,
-                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                        }
-                        break;
-                        case 0x3F:
-                        case 0x40:
-                        case 0x41:
-                        case 0x42:
-                            if (g_menu_category1_item != 0)
-                            {
-                                packet_cursor = menu_draw_clamped_number(
-                                    ot_entry, packet_cursor, g_menu_category1_item->stat_values[content_index - 0x3F], 1, &pos,
-                                    ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                        case 0x43:
-                        case 0x44:
-                        case 0x45:
-                        case 0x46:
-                        {
-                            uintptr_t has = 0;
 
-                            val = has;
-                            for (k = 1; k < 4; k++)
-                            {
-                                MenuItemEntry* slot = &D_80168C20[k];
-                                if (g_item_slot_flags[k] != 0)
-                                {
-                                    if (slot->active != 0)
-                                    {
-                                        val += slot->stat_values[content_index - 0x43];
-                                    }
-                                    has = (uintptr_t)g_item_slot_data[k];
-                                    if (has != 0 && ((MenuItemEntry*)has)->active != 0)
-                                    {
-                                        val -= ((MenuItemEntry*)has)->stat_values[content_index - 0x43];
-                                    }
-                                    has = 1;
-                                }
-                            }
-                            if (has)
-                            {
-                                menu_copy_sign_label(label_buffer, val);
-                                packet_cursor =
-                                    field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), FIELD_TEXT_COLOR_MENU, pos.x, pos.y, FIELD_TEXT_ALIGN_LEFT);
-                            }
-                        }
-                        break;
-                        case 0x47:
-                        case 0x48:
-                        case 0x49:
-                        case 0x4A:
+                        case 3:
                         {
-                            uintptr_t has = 0;
-                            s32 total = has;
-
-                            for (k = 1; k < 4; k++)
+                            content_index = content_item->action_type;
+                            switch (content_index)
                             {
-                                MenuItemEntry* slot = &D_80168C20[k];
-                                if (g_item_slot_flags[k] != 0)
-                                {
-                                    if (slot->active != 0)
+                                case 0x1:
+                                    if (g_menu_item_ptr != 0)
                                     {
-                                        total += slot->stat_values[content_index - 0x47];
-                                    }
-                                    has = (uintptr_t)g_item_slot_data[k];
-                                    if (has != 0 && ((MenuItemEntry*)has)->active != 0)
-                                    {
-                                        total -= ((MenuItemEntry*)has)->stat_values[content_index - 0x47];
-                                    }
-                                    has = 1;
-                                }
-                            }
-                            if (has)
-                            {
-                                packet_cursor = field_draw_number(ot_entry, packet_cursor, abs(total), 1, &pos,
-                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                        }
-                        break;
-                        default:
-                            break;
-                        }
-                    }
-                    break;
-
-                    case 4:
-                    {
-                        content_index = content_item->action_type;
-                        switch (content_index)
-                        {
-                        case 0x1:
-                        {
-                            u8 u_val;
-                            u8 v_val;
-                            SET_BGR0_PACKED(packet_cursor, GPU_TINT_NEUTRAL);
-                            setSprt(packet_cursor);
-                            setXY0((SPRT*)packet_cursor, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET);
-                            u_val = 0xD0;
-                            if (g_menu_char_slot == 2)
-                            {
-                                u_val = 0xA0;
-                            }
-                            ((SPRT*)packet_cursor)->u0 = u_val;
-                            v_val = 0x50;
-                            if (g_menu_char_slot == 0)
-                            {
-                                v_val = 0x20;
-                            }
-                            ((SPRT*)packet_cursor)->v0 = v_val;
-                            SET_SPRT_WH_PACKED(packet_cursor, 0x30, 0x30);
-                            SET_SPRT_CLUT(packet_cursor, (((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
-                            addPrim(ot_entry, packet_cursor);
-                            packet_cursor = (SPRT*)packet_cursor + 1;
-                            SET_BGR0_PACKED(packet_cursor, 0);
-                            setSprt(packet_cursor);
-                            setSemiTrans(packet_cursor, 1);
-                            setXY0((SPRT*)packet_cursor, (content_item->packed_x & MENU_CONTENT_X_MASK) + 2, content_item->y - 6);
-                            u_val = 0xD0;
-                            if (g_menu_char_slot == 2)
-                            {
-                                u_val = 0xA0;
-                            }
-                            ((SPRT*)packet_cursor)->u0 = u_val;
-                            v_val = 0x50;
-                            if (g_menu_char_slot == 0)
-                            {
-                                v_val = 0x20;
-                            }
-                            ((SPRT*)packet_cursor)->v0 = v_val;
-                            SET_SPRT_WH_PACKED(packet_cursor, 0x30, 0x30);
-                            SET_SPRT_CLUT(packet_cursor, (((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
-                            addPrim(ot_entry, packet_cursor);
-                            packet_cursor = (SPRT*)packet_cursor + 1;
-                            setDrawTPage(packet_cursor, 0, 0, FIELD_UI_TPAGE(GPU_BLEND_HALF));
-                            addPrim(ot_entry, packet_cursor);
-                            packet_cursor = (DR_TPAGE*)packet_cursor + 1;
-                        }
-                        break;
-                        case 0x2:
-                        {
-                            u8* call_base = (u8*)g_saved_game_ctx;
-                            s32 off = g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE + MENU_CHARACTER_RECORD_OFFSET;
-                            packet_cursor = field_draw_text(packet_cursor, ot_entry, call_base + off, FIELD_TEXT_COLOR_MENU,
+                                        draw_packet_cursor = packet_cursor;
+                                        draw_source = (void*)g_menu_item_ptr;
+                                        packet_cursor =
+                                            field_draw_text(draw_packet_cursor, ot_entry, draw_source, FIELD_TEXT_COLOR_MENU,
                                                             content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                             (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                        }
-                        break;
-                        case 0x3:
-                        {
-                            SavedGameLayout* context = g_saved_game_ctx;
-                            u8 v = menu_active_character(context)->progression.fields.level;
-                            packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, v, 1, &pos,
+                                    }
+                                    break;
+                                case 0x2:
+                                    if (g_menu_item_ptr != 0)
+                                    {
+                                        u32 v;
+                                        u32 v1;
+
+                                        if (menu_item_differs_from_bare_hands(g_menu_item_ptr) != 0)
+                                        {
+                                            void* a3 =
+                                                (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_NAMES]);
+                                            menu_concat_encoded_text(
+                                                &prefix_buffer, (void*)((u8*)a3 + *(u16*)((u8*)a3 + (g_menu_item_ptr->attributes.halves.high & 0x3F) * 2)),
+                                                (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] +
+                                                        *(u16*)((u8*)g_menu_state_ptr +
+                                                                ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] + 0xB4)));
+                                        }
+                                        else
+                                        {
+                                            prefix_buffer[0] = 0;
+                                        }
+                                        v = g_menu_item_ptr->attributes.packed;
+                                        v1 = (v >> 8) & 3;
+                                        switch (v1)
+                                        {
+                                            case 0:
+                                            {
+                                                uintptr_t base0 = ((uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES));
+                                                menu_concat_encoded_text(&text_buffer, &prefix_buffer, (void*)(base0 + *(u16*)(((v >> 9) & 0x7E) + base0)));
+                                                break;
+                                            }
+                                            case 1:
+                                            {
+                                                uintptr_t base1 = ((uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES));
+                                                menu_concat_encoded_text(&text_buffer, &prefix_buffer,
+                                                                         (void*)(base1 + *(u16*)(((v >> 9) & 0x7E) + base1 + 11 * sizeof(u16))));
+                                                break;
+                                            }
+                                            default:
+                                            {
+                                                uintptr_t base2 = ((uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES));
+                                                menu_concat_encoded_text(
+                                                    &text_buffer, &prefix_buffer,
+                                                    (void*)(base2 + *(u16*)(((g_menu_item_ptr->attributes.packed >> 9) & 0x7E) + base2 + 23 * sizeof(u16))));
+                                                break;
+                                            }
+                                        }
+                                        packet_cursor =
+                                            field_draw_text(packet_cursor, ot_entry, (u8*)(&text_buffer), FIELD_TEXT_COLOR_MENU,
+                                                            content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                            (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                    }
+                                    break;
+                                case 0x3:
+                                    if (g_menu_item_ptr != 0)
+                                    {
+                                        packet_cursor =
+                                            menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_item_ptr->display_nibbles.packed & 0xF, 1, &pos,
                                                                      ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                        }
-                        break;
-                        case 0x4:
-                        {
-                            packet_cursor = field_draw_number(ot_entry, packet_cursor, g_field_object_states[g_menu_char_slot].current_hp.word, 1, &pos,
-                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                        }
-                        break;
-                        case 0x5:
-                        {
-                            SavedGameLayout* context = g_saved_game_ctx;
-                            u16 v = menu_active_character(context)->unknown_0x24;
-                            packet_cursor = field_draw_number(ot_entry, packet_cursor, v, 1, &pos,
-                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                        }
-                        break;
-                        case 0x6:
-                        {
-                            SavedGameLayout* context = g_saved_game_ctx;
-                            u32 v = menu_active_character(context)->progression.packed;
-                            packet_cursor = field_draw_number(ot_entry, packet_cursor, (v >> 8), 1, &pos,
-                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                        }
-                        break;
-                        case 0x7:
-                        case 0x8:
-                        case 0x9:
-                        case 0xA:
-                        case 0xB:
-                        case 0xC:
-                        case 0xD:
-                        case 0xE:
-                        {
-                            void* base = (void*)g_saved_game_ctx;
-                            s32 idx = content_index - 7;
-                            packet_cursor =
-                                menu_draw_clamped_number(ot_entry, packet_cursor, menu_active_character_value((SavedGameLayout*)base, idx) >> 9, 1, &pos,
-                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                        }
-                        break;
-                        case 0xF:
-                        {
-                            void* a2_2 = g_menu_equipment_base;
-                            if (*(u8*)a2_2 != 0)
-                            {
-                                s32 text_color = FIELD_TEXT_COLOR_MENU;
-                                if (g_item_slot_flags[0] != 0)
-                                {
-                                    text_color = FIELD_TEXT_COLOR_MENU_HIGHLIGHT;
-                                }
-                                packet_cursor = field_draw_text(packet_cursor, ot_entry, a2_2, text_color, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                    }
+                                    break;
+                                case 0x4:
+                                    if (g_menu_item_ptr != 0)
+                                    {
+                                        packet_cursor =
+                                            menu_draw_clamped_number(ot_entry, packet_cursor, (g_menu_item_ptr->display_nibbles.packed >> 4) & 0xF, 1, &pos,
+                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                    break;
+                                case 0x5:
+                                    if (g_menu_item_ptr != 0)
+                                    {
+                                        packet_cursor =
+                                            menu_draw_clamped_number(ot_entry, packet_cursor, (g_menu_item_ptr->display_nibbles.packed >> 8) & 0xF, 1, &pos,
+                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                    break;
+                                case 0x6:
+                                    if (g_menu_item_ptr != 0)
+                                    {
+                                        packet_cursor =
+                                            menu_draw_clamped_number(ot_entry, packet_cursor, (g_menu_item_ptr->display_nibbles.packed >> 12) & 0xF, 1, &pos,
+                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                    break;
+                                case 0x7:
+                                    if (g_menu_item_ptr != 0)
+                                    {
+                                        packet_cursor =
+                                            menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_item_ptr->display_nibbles.halfwords[1] & 0xF, 1, &pos,
+                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                    break;
+                                case 0x8:
+                                    if (g_menu_item_ptr != 0)
+                                    {
+                                        packet_cursor =
+                                            menu_draw_clamped_number(ot_entry, packet_cursor, (g_menu_item_ptr->display_nibbles.packed >> 20) & 0xF, 1, &pos,
+                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                    break;
+                                case 0x9:
+                                    if (g_menu_item_ptr != 0)
+                                    {
+                                        packet_cursor =
+                                            menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_item_ptr->display_nibbles.bytes[3] & 0xF, 1, &pos,
+                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                    break;
+                                case 0xA:
+                                    if (g_menu_item_ptr != 0)
+                                    {
+                                        packet_cursor =
+                                            menu_draw_clamped_number(ot_entry, packet_cursor, (g_menu_item_ptr->display_nibbles.packed >> 28) & 0xF, 1, &pos,
+                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                    break;
+                                case 0xB:
+                                case 0xC:
+                                case 0xD:
+                                    if (g_menu_item_ptr != 0)
+                                    {
+                                        draw_packet_cursor = packet_cursor;
+                                        base_a2_1 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x5C));
+                                        {
+                                            s32 text_color = FIELD_TEXT_COLOR_MENU;
+                                            void* a2_2 =
+                                                (void*)((u8*)base_a2_1 + *(u16*)((u8*)base_a2_1 + (*((u8*)g_menu_item_ptr + content_index + 0x15) * 2)));
+                                            packet_cursor =
+                                                field_draw_text(draw_packet_cursor, ot_entry, a2_2, text_color, content_item->packed_x & MENU_CONTENT_X_MASK,
                                                                 content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                 (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                            }
-                        }
-                        break;
-                        case 0x10:
-                        case 0x11:
-                        case 0x12:
-                            if (D_80168C30->active != 0)
-                            {
-                                draw_packet_cursor = packet_cursor;
-                                base_a2_5 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
-                                {
-                                    void* a2_2 = (void*)((u8*)base_a2_5 + *(u16*)((u8*)base_a2_5 + (*((u8*)D_80168C30 + content_index + 0x18) * 2)));
-                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
-                                                                    content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                    (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                }
-                            }
-                            break;
-                        case 0x13:
-                        {
-                            s32 displayed_stat = zero;
-                            if (g_item_slot_flags[0] != 0)
-                            {
-                                MenuItemEntry* comparison_item = g_item_slot_data[0];
-                                if (comparison_item == 0 || comparison_item->active == 0)
-                                {
-                                    displayed_stat += D_800F0C1C;
-                                }
-                                else
-                                {
-                                    displayed_stat = comparison_item->stat_values[0];
-                                }
-                            }
-                            else
-                            {
-                                if (D_80168C30->active != 0)
-                                {
-                                    displayed_stat = D_80168C30->stat_values[0];
-                                }
-                            }
-                            packet_cursor = field_draw_number(ot_entry, packet_cursor, displayed_stat, 1, &pos,
-                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                        }
-                        break;
-                        case 0x14:
-                        case 0x15:
-                        case 0x16:
-                        {
-                            uintptr_t base = (uintptr_t)g_menu_equipment_base;
-                            s32 shl = content_index << 6;
-                            if (*(u8*)(shl + base - 0x4C0) != 0)
-                            {
-                                s32 text_color = FIELD_TEXT_COLOR_MENU;
-                                s32 off = shl - 0x4C0;
-                                void* a2_2 = (void*)(base + off);
-                                if (g_item_slot_flags[content_index - 0x13] != 0)
-                                {
-                                    text_color = FIELD_TEXT_COLOR_MENU_HIGHLIGHT;
-                                }
-                                packet_cursor = field_draw_text(packet_cursor, ot_entry, a2_2, text_color, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                        }
+                                    }
+                                    break;
+                                case 0xE:
+                                case 0xF:
+                                case 0x10:
+                                    if (g_menu_category0_item != 0)
+                                    {
+                                        draw_packet_cursor = packet_cursor;
+                                        base_a2_2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
+                                        {
+                                            s32 text_color = FIELD_TEXT_COLOR_MENU;
+                                            void* a2_2 =
+                                                (void*)((u8*)base_a2_2 + *(u16*)((u8*)base_a2_2 + (*((u8*)g_menu_category0_item + content_index + 0x1A) * 2)));
+                                            packet_cursor =
+                                                field_draw_text(draw_packet_cursor, ot_entry, a2_2, text_color, content_item->packed_x & MENU_CONTENT_X_MASK,
                                                                 content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                 (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                            }
-                        }
-                        break;
-                        case 0x17:
-                        case 0x18:
-                        {
-                            void* base;
-                            u8 idx;
-                            draw_packet_cursor = packet_cursor;
-                            base_a2_6 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x10));
-                            base = (void*)g_saved_game_ctx;
-                            {
-                                u8* idxp = (u8*)base + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE + content_index + 0x5F3;
-                                idx = *idxp;
-                            }
-                            {
-                                void* a2_2 = (void*)((u8*)base_a2_6 + *(u16*)((u8*)base_a2_6 + (idx * 2)));
-                                packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
+                                        }
+                                    }
+                                    break;
+                                case 0x11:
+                                    if (g_menu_category0_item != 0)
+                                    {
+                                        packet_cursor = field_draw_number(ot_entry, packet_cursor, g_menu_category0_item->stat_values[0], 1, &pos,
+                                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                    break;
+                                case 0x12:
+                                    if (g_menu_category1_item != 0)
+                                    {
+                                        packet_cursor =
+                                            menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_category1_item->stat_values[0], 1, &pos,
+                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                    break;
+                                case 0x13:
+                                    if (g_menu_item_ptr != 0)
+                                    {
+                                        uintptr_t a2;
+                                        u8* a3ptr;
+                                        s32 idx;
+                                        void* a2_2;
+                                        draw_packet_cursor = packet_cursor;
+                                        a2 = (uintptr_t)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x44);
+                                        a3ptr = (u8*)g_menu_category2_item;
+                                        idx = (a3ptr[0x24] * 0xE + a3ptr[0x25]) * 2;
+                                        a2_2 = (void*)(a2 + *(u16*)(idx + a2));
+                                        packet_cursor =
+                                            field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
+                                                            content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                            (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                    }
+                                    break;
+                                case 0x14:
+                                    if (g_menu_item_ptr != 0)
+                                    {
+                                        draw_packet_cursor = packet_cursor;
+                                        base_a2_3 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x28));
+                                        {
+                                            void* a2_2 = (void*)((u8*)base_a2_3 + *(u16*)((u8*)base_a2_3 + (*((u8*)g_menu_category2_item + 0x24) * 2)));
+                                            packet_cursor =
+                                                field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
                                                                 content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                 (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                        }
+                                    }
+                                    break;
+                                case 0x15:
+                                    if (g_menu_item_ptr != 0)
+                                    {
+                                        draw_packet_cursor = packet_cursor;
+                                        base_a2_4 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x38));
+                                        {
+                                            void* a2_2 = (void*)((u8*)base_a2_4 + *(u16*)((u8*)base_a2_4 + (*((u8*)g_menu_category2_item + 0x25) * 2)));
+                                            packet_cursor =
+                                                field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
+                                                                content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                        }
+                                    }
+                                    break;
+                                case 0x16:
+                                    if (g_menu_item_ptr != 0)
+                                    {
+                                        packet_cursor = field_draw_number(ot_entry, packet_cursor, *((u8*)g_menu_category2_item + 0x26), 1, &pos,
+                                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                    break;
+                                case 0x17:
+                                case 0x18:
+                                case 0x19:
+                                case 0x1A:
+                                {
+                                    val = 0;
+                                    if (g_item_slot_flags[content_index - 0x17] != 0)
+                                    {
+                                        MenuItemEntry* equipment =
+                                            (MenuItemEntry*)((content_index * sizeof(MenuItemEntry)) + (uintptr_t)D_80168C30 - 0x17 * sizeof(MenuItemEntry));
+                                        MenuItemEntry* comparison_item;
+                                        if (equipment->active != 0)
+                                        {
+                                            val = equipment->stat_values[0];
+                                        }
+                                        comparison_item = g_item_slot_data[content_index - 0x17];
+                                        if (comparison_item != 0 && comparison_item->active != 0)
+                                        {
+                                            val -= comparison_item->stat_values[0];
+                                        }
+                                        else
+                                        {
+                                            val -= D_800F0C1C;
+                                        }
+                                        packet_cursor = field_draw_number(ot_entry, packet_cursor, abs(val), 1, &pos,
+                                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                }
+                                /* fallthrough */
+                                case 0x1B:
+                                case 0x1C:
+                                case 0x1D:
+                                case 0x1E:
+                                {
+                                    val = 0;
+                                    if (g_item_slot_flags[content_index - 0x1B] != 0)
+                                    {
+                                        MenuItemEntry* equipment =
+                                            (MenuItemEntry*)((content_index * sizeof(MenuItemEntry)) + (uintptr_t)D_80168C30 - 0x1B * sizeof(MenuItemEntry));
+                                        MenuItemEntry* comparison_item;
+                                        if (equipment->active != 0)
+                                        {
+                                            val = equipment->stat_values[0];
+                                        }
+                                        comparison_item = g_item_slot_data[content_index - 0x1B];
+                                        if (comparison_item != 0 && comparison_item->active != 0)
+                                        {
+                                            val -= comparison_item->stat_values[0];
+                                        }
+                                        else
+                                        {
+                                            val -= D_800F0C1C;
+                                        }
+                                        menu_copy_sign_label(label_buffer, val);
+                                        packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), FIELD_TEXT_COLOR_MENU, pos.x, pos.y,
+                                                                        FIELD_TEXT_ALIGN_LEFT);
+                                    }
+                                }
+                                break;
+                                case 0x1F:
+                                case 0x20:
+                                case 0x21:
+                                case 0x22:
+                                case 0x23:
+                                case 0x24:
+                                case 0x25:
+                                case 0x26:
+                                    if (g_menu_item_ptr != 0)
+                                    {
+                                        s32 res = menu_lookup_item_nibble(g_menu_item_ptr, content_index - 0x1F);
+                                        menu_copy_sign_label(label_buffer, res);
+                                        packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), FIELD_TEXT_COLOR_MENU, pos.x, pos.y,
+                                                                        FIELD_TEXT_ALIGN_LEFT);
+                                    }
+                                    break;
+                                case 0x27:
+                                case 0x28:
+                                case 0x29:
+                                case 0x2A:
+                                case 0x2B:
+                                case 0x2C:
+                                case 0x2D:
+                                case 0x2E:
+                                    if (g_menu_item_ptr != 0)
+                                    {
+                                        s32 diff = menu_lookup_item_nibble(g_menu_item_ptr, content_index - 0x27);
+                                        packet_cursor =
+                                            menu_draw_clamped_number(ot_entry, packet_cursor, (u32)abs(diff), 1, &pos,
+                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                    break;
+                                case 0x2F:
+                                case 0x30:
+                                case 0x31:
+                                case 0x32:
+                                case 0x33:
+                                case 0x34:
+                                case 0x35:
+                                case 0x36:
+                                {
+                                    s32 idx2 = content_index - 0x2F;
+                                    if (g_menu_item_ptr != 0)
+                                    {
+                                        s32 v1 = menu_lookup_item_nibble(g_menu_item_ptr, idx2);
+                                        s32 v2 = menu_lookup_item_nibble((void*)g_menu_active_equipped_item, idx2);
+                                        s32 diff = v1 - v2;
+                                        menu_copy_sign_label(label_buffer, diff);
+                                        packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), FIELD_TEXT_COLOR_MENU, pos.x, pos.y,
+                                                                        FIELD_TEXT_ALIGN_LEFT);
+                                    }
+                                }
+                                break;
+                                case 0x37:
+                                case 0x38:
+                                case 0x39:
+                                case 0x3A:
+                                case 0x3B:
+                                case 0x3C:
+                                case 0x3D:
+                                case 0x3E:
+                                {
+                                    s32 idx2 = content_index - 0x2F;
+                                    if (g_menu_item_ptr != 0)
+                                    {
+                                        s32 v1 = menu_lookup_item_nibble(g_menu_item_ptr, idx2);
+                                        s32 v2 = menu_lookup_item_nibble((void*)g_menu_active_equipped_item, idx2);
+                                        s32 diff = v1 - v2;
+                                        packet_cursor = field_draw_number(ot_entry, packet_cursor, abs(diff), 1, &pos,
+                                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                }
+                                break;
+                                case 0x3F:
+                                case 0x40:
+                                case 0x41:
+                                case 0x42:
+                                    if (g_menu_category1_item != 0)
+                                    {
+                                        packet_cursor =
+                                            menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_category1_item->stat_values[content_index - 0x3F], 1, &pos,
+                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                    break;
+                                case 0x43:
+                                case 0x44:
+                                case 0x45:
+                                case 0x46:
+                                {
+                                    uintptr_t has = 0;
+
+                                    val = has;
+                                    for (k = 1; k < 4; k++)
+                                    {
+                                        MenuItemEntry* slot = &D_80168C20[k];
+                                        if (g_item_slot_flags[k] != 0)
+                                        {
+                                            if (slot->active != 0)
+                                            {
+                                                val += slot->stat_values[content_index - 0x43];
+                                            }
+                                            has = (uintptr_t)g_item_slot_data[k];
+                                            if (has != 0 && ((MenuItemEntry*)has)->active != 0)
+                                            {
+                                                val -= ((MenuItemEntry*)has)->stat_values[content_index - 0x43];
+                                            }
+                                            has = 1;
+                                        }
+                                    }
+                                    if (has)
+                                    {
+                                        menu_copy_sign_label(label_buffer, val);
+                                        packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), FIELD_TEXT_COLOR_MENU, pos.x, pos.y,
+                                                                        FIELD_TEXT_ALIGN_LEFT);
+                                    }
+                                }
+                                break;
+                                case 0x47:
+                                case 0x48:
+                                case 0x49:
+                                case 0x4A:
+                                {
+                                    uintptr_t has = 0;
+                                    s32 total = has;
+
+                                    for (k = 1; k < 4; k++)
+                                    {
+                                        MenuItemEntry* slot = &D_80168C20[k];
+                                        if (g_item_slot_flags[k] != 0)
+                                        {
+                                            if (slot->active != 0)
+                                            {
+                                                total += slot->stat_values[content_index - 0x47];
+                                            }
+                                            has = (uintptr_t)g_item_slot_data[k];
+                                            if (has != 0 && ((MenuItemEntry*)has)->active != 0)
+                                            {
+                                                total -= ((MenuItemEntry*)has)->stat_values[content_index - 0x47];
+                                            }
+                                            has = 1;
+                                        }
+                                    }
+                                    if (has)
+                                    {
+                                        packet_cursor = field_draw_number(ot_entry, packet_cursor, abs(total), 1, &pos,
+                                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                }
+                                break;
+                                default:
+                                    break;
                             }
                         }
                         break;
-                        case 0x19:
+
+                        case 4:
                         {
-                            s32 v = func_800B607C(g_menu_char_slot);
-                            SavedGameLayout* context = g_saved_game_ctx;
-                            u32 shift = menu_active_character(context)->progression.packed >> 8;
-                            packet_cursor = field_draw_number(ot_entry, packet_cursor, v - shift, 1, &pos,
-                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                        }
-                        break;
-                        case 0x1B:
-                        case 0x1C:
-                        case 0x1D:
-                        case 0x1E:
-                        {
-                            void* base = (void*)g_saved_game_ctx;
-                            u8* ptr;
-                            u8 val;
-                            ptr = (u8*)base + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
-                            ptr += content_index;
-                            content_index = (u32)ptr;
-                            val = ((MenuNameSelection*)(ptr + 0x5F1))->packed;
-                            if (val != 0xFF)
+                            content_index = content_item->action_type;
+                            switch (content_index)
                             {
-                                draw_packet_cursor = packet_cursor;
-                                if (val & 0x80)
+                                case 0x1:
                                 {
-                                    u16* lvar_v1_2 = (u16*)g_saved_game_ctx;
-                                    void* lvar_a2 = (void*)((u8*)lvar_v1_2 + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE + MENU_CHARACTER_RECORD_OFFSET));
-                                    void* a2_2 = (void*)((u8*)lvar_a2 + ((((MenuNameSelection*)(ptr + 0x5F1))->fields.index << 6) + 0x150));
-                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
+                                    u8 u_val;
+                                    u8 v_val;
+                                    SET_BGR0_PACKED(packet_cursor, GPU_TINT_NEUTRAL);
+                                    setSprt(packet_cursor);
+                                    setXY0((SPRT*)packet_cursor, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET);
+                                    u_val = 0xD0;
+                                    if (g_menu_char_slot == 2)
+                                    {
+                                        u_val = 0xA0;
+                                    }
+                                    ((SPRT*)packet_cursor)->u0 = u_val;
+                                    v_val = 0x50;
+                                    if (g_menu_char_slot == 0)
+                                    {
+                                        v_val = 0x20;
+                                    }
+                                    ((SPRT*)packet_cursor)->v0 = v_val;
+                                    SET_SPRT_WH_PACKED(packet_cursor, 0x30, 0x30);
+                                    SET_SPRT_CLUT(packet_cursor, (((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
+                                    addPrim(ot_entry, packet_cursor);
+                                    packet_cursor = (SPRT*)packet_cursor + 1;
+                                    SET_BGR0_PACKED(packet_cursor, 0);
+                                    setSprt(packet_cursor);
+                                    setSemiTrans(packet_cursor, 1);
+                                    setXY0((SPRT*)packet_cursor, (content_item->packed_x & MENU_CONTENT_X_MASK) + 2, content_item->y - 6);
+                                    u_val = 0xD0;
+                                    if (g_menu_char_slot == 2)
+                                    {
+                                        u_val = 0xA0;
+                                    }
+                                    ((SPRT*)packet_cursor)->u0 = u_val;
+                                    v_val = 0x50;
+                                    if (g_menu_char_slot == 0)
+                                    {
+                                        v_val = 0x20;
+                                    }
+                                    ((SPRT*)packet_cursor)->v0 = v_val;
+                                    SET_SPRT_WH_PACKED(packet_cursor, 0x30, 0x30);
+                                    SET_SPRT_CLUT(packet_cursor, (((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
+                                    addPrim(ot_entry, packet_cursor);
+                                    packet_cursor = (SPRT*)packet_cursor + 1;
+                                    setDrawTPage(packet_cursor, 0, 0, FIELD_UI_TPAGE(GPU_BLEND_HALF));
+                                    addPrim(ot_entry, packet_cursor);
+                                    packet_cursor = (DR_TPAGE*)packet_cursor + 1;
+                                }
+                                break;
+                                case 0x2:
+                                {
+                                    u8* call_base = (u8*)g_saved_game_ctx;
+                                    s32 off = g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE + MENU_CHARACTER_RECORD_OFFSET;
+                                    packet_cursor = field_draw_text(packet_cursor, ot_entry, call_base + off, FIELD_TEXT_COLOR_MENU,
                                                                     content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                     (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                 }
-                                else
+                                break;
+                                case 0x3:
                                 {
-                                    u32 tmpv;
-                                    u8 idx;
-                                    u16 off2;
-                                    base_a2_7 = (uintptr_t)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x20);
-                                    tmpv = ((g_menu_equipment_base->attributes.packed >> 10) & 0x3F);
-
-                                    idx = ((MenuNameSelection*)(ptr + 0x5F1))->fields.index;
-                                    off2 = idx * 2;
+                                    SavedGameLayout* context = g_saved_game_ctx;
+                                    u8 v = menu_active_character(context)->progression.fields.level;
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, v, 1, &pos,
+                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                }
+                                break;
+                                case 0x4:
+                                {
+                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, g_field_object_states[g_menu_char_slot].current_hp.word, 1, &pos,
+                                                                      ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                }
+                                break;
+                                case 0x5:
+                                {
+                                    SavedGameLayout* context = g_saved_game_ctx;
+                                    u16 v = menu_active_character(context)->unknown_0x24;
+                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, v, 1, &pos,
+                                                                      ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                }
+                                break;
+                                case 0x6:
+                                {
+                                    SavedGameLayout* context = g_saved_game_ctx;
+                                    u32 v = menu_active_character(context)->progression.packed;
+                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, (v >> 8), 1, &pos,
+                                                                      ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                }
+                                break;
+                                case 0x7:
+                                case 0x8:
+                                case 0x9:
+                                case 0xA:
+                                case 0xB:
+                                case 0xC:
+                                case 0xD:
+                                case 0xE:
+                                {
+                                    void* base = (void*)g_saved_game_ctx;
+                                    s32 idx = content_index - 7;
+                                    packet_cursor =
+                                        menu_draw_clamped_number(ot_entry, packet_cursor, menu_active_character_value((SavedGameLayout*)base, idx) >> 9, 1,
+                                                                 &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                }
+                                break;
+                                case 0xF:
+                                {
+                                    void* a2_2 = g_menu_equipment_base;
+                                    if (*(u8*)a2_2 != 0)
                                     {
-                                        void* a2_2 = (void*)(base_a2_7 + *(u16*)(off2 + (tmpv * 0x30 + base_a2_7)));
+                                        s32 text_color = FIELD_TEXT_COLOR_MENU;
+                                        if (g_item_slot_flags[0] != 0)
+                                        {
+                                            text_color = FIELD_TEXT_COLOR_MENU_HIGHLIGHT;
+                                        }
+                                        packet_cursor = field_draw_text(packet_cursor, ot_entry, a2_2, text_color, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                        content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                        (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                    }
+                                }
+                                break;
+                                case 0x10:
+                                case 0x11:
+                                case 0x12:
+                                    if (D_80168C30->active != 0)
+                                    {
+                                        draw_packet_cursor = packet_cursor;
+                                        base_a2_5 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
+                                        {
+                                            void* a2_2 = (void*)((u8*)base_a2_5 + *(u16*)((u8*)base_a2_5 + (*((u8*)D_80168C30 + content_index + 0x18) * 2)));
+                                            packet_cursor =
+                                                field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
+                                                                content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                        }
+                                    }
+                                    break;
+                                case 0x13:
+                                {
+                                    s32 displayed_stat = zero;
+                                    if (g_item_slot_flags[0] != 0)
+                                    {
+                                        MenuItemEntry* comparison_item = g_item_slot_data[0];
+                                        if (comparison_item == 0 || comparison_item->active == 0)
+                                        {
+                                            displayed_stat += D_800F0C1C;
+                                        }
+                                        else
+                                        {
+                                            displayed_stat = comparison_item->stat_values[0];
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (D_80168C30->active != 0)
+                                        {
+                                            displayed_stat = D_80168C30->stat_values[0];
+                                        }
+                                    }
+                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, displayed_stat, 1, &pos,
+                                                                      ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                }
+                                break;
+                                case 0x14:
+                                case 0x15:
+                                case 0x16:
+                                {
+                                    uintptr_t base = (uintptr_t)g_menu_equipment_base;
+                                    s32 shl = content_index << 6;
+                                    if (*(u8*)(shl + base - 0x4C0) != 0)
+                                    {
+                                        s32 text_color = FIELD_TEXT_COLOR_MENU;
+                                        s32 off = shl - 0x4C0;
+                                        void* a2_2 = (void*)(base + off);
+                                        if (g_item_slot_flags[content_index - 0x13] != 0)
+                                        {
+                                            text_color = FIELD_TEXT_COLOR_MENU_HIGHLIGHT;
+                                        }
+                                        packet_cursor = field_draw_text(packet_cursor, ot_entry, a2_2, text_color, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                        content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                        (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                    }
+                                }
+                                break;
+                                case 0x17:
+                                case 0x18:
+                                {
+                                    void* base;
+                                    u8 idx;
+                                    draw_packet_cursor = packet_cursor;
+                                    base_a2_6 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x10));
+                                    base = (void*)g_saved_game_ctx;
+                                    {
+                                        u8* idxp = (u8*)base + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE + content_index + 0x5F3;
+                                        idx = *idxp;
+                                    }
+                                    {
+                                        void* a2_2 = (void*)((u8*)base_a2_6 + *(u16*)((u8*)base_a2_6 + (idx * 2)));
                                         packet_cursor =
                                             field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
                                                             content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                             (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                     }
                                 }
-                            }
-                        }
-                        break;
-                        case 0x1F:
-                        {
-                            void* base;
-                            u8 idx;
-                            draw_packet_cursor = packet_cursor;
-                            base_a2_8 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x4C));
-                            base = (void*)g_saved_game_ctx;
-                            {
-                                u8* idxp = (u8*)base + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE + 0x609;
-                                idx = *idxp;
-                            }
-                            {
-                                void* a2_2 = (void*)((u8*)base_a2_8 + *(u16*)((u8*)base_a2_8 + (idx * 2)));
-                                packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
+                                break;
+                                case 0x19:
+                                {
+                                    s32 v = func_800B607C(g_menu_char_slot);
+                                    SavedGameLayout* context = g_saved_game_ctx;
+                                    u32 shift = menu_active_character(context)->progression.packed >> 8;
+                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, v - shift, 1, &pos,
+                                                                      ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                }
+                                break;
+                                case 0x1B:
+                                case 0x1C:
+                                case 0x1D:
+                                case 0x1E:
+                                {
+                                    void* base = (void*)g_saved_game_ctx;
+                                    u8* ptr;
+                                    u8 val;
+                                    ptr = (u8*)base + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
+                                    ptr += content_index;
+                                    content_index = (u32)ptr;
+                                    val = ((MenuNameSelection*)(ptr + 0x5F1))->packed;
+                                    if (val != 0xFF)
+                                    {
+                                        draw_packet_cursor = packet_cursor;
+                                        if (val & 0x80)
+                                        {
+                                            u16* lvar_v1_2 = (u16*)g_saved_game_ctx;
+                                            void* lvar_a2 =
+                                                (void*)((u8*)lvar_v1_2 + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE + MENU_CHARACTER_RECORD_OFFSET));
+                                            void* a2_2 = (void*)((u8*)lvar_a2 + ((((MenuNameSelection*)(ptr + 0x5F1))->fields.index << 6) + 0x150));
+                                            packet_cursor =
+                                                field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
                                                                 content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                 (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                            }
-                        }
-                        break;
-                        case 0x20:
-                        {
-                            u32 total = 0;
-                            for (k = 1; k < 4; k++)
-                            {
-                                if (g_item_slot_flags[k] != 0)
-                                {
-                                    MenuItemEntry* ptr = g_item_slot_data[k];
-                                    if (ptr != 0 && ptr->active != 0)
-                                    {
-                                        total += ptr->stat_values[0];
-                                    }
-                                }
-                                else
-                                {
-                                    MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
-                                    if (v->active != 0)
-                                    {
-                                        total += v->stat_values[0];
-                                    }
-                                }
-                            }
-                            packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
-                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                        }
-                        break;
-                        case 0x21:
-                        {
-                            u32 total = 0;
-                            for (k = 1; k < 4; k++)
-                            {
-                                if (g_item_slot_flags[k] != 0)
-                                {
-                                    MenuItemEntry* ptr = g_item_slot_data[k];
-                                    if (ptr != 0 && ptr->active != 0)
-                                    {
-                                        total += ptr->stat_values[1];
-                                    }
-                                }
-                                else
-                                {
-                                    MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
-                                    if (v->active != 0)
-                                    {
-                                        total += v->stat_values[1];
-                                    }
-                                }
-                            }
-                            packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
-                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                        }
-                        break;
-                        case 0x22:
-                        {
-                            u32 total = 0;
-                            for (k = 1; k < 4; k++)
-                            {
-                                if (g_item_slot_flags[k] != 0)
-                                {
-                                    MenuItemEntry* ptr = g_item_slot_data[k];
-                                    if (ptr != 0 && ptr->active != 0)
-                                    {
-                                        total += ptr->stat_values[2];
-                                    }
-                                }
-                                else
-                                {
-                                    MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
-                                    if (v->active != 0)
-                                    {
-                                        total += v->stat_values[2];
-                                    }
-                                }
-                            }
-                            packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
-                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                        }
-                        break;
-                        case 0x23:
-                        {
-                            u32 total = 0;
-                            for (k = 1; k < 4; k++)
-                            {
-                                if (g_item_slot_flags[k] != 0)
-                                {
-                                    MenuItemEntry* ptr = g_item_slot_data[k];
-                                    if (ptr != 0 && ptr->active != 0)
-                                    {
-                                        total += ptr->stat_values[3];
-                                    }
-                                }
-                                else
-                                {
-                                    MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
-                                    if (v->active != 0)
-                                    {
-                                        total += v->stat_values[3];
-                                    }
-                                }
-                            }
-                            packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
-                                                                     ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                        }
-                        break;
-                        case 0x3F:
-                        {
-                            val = 0;
-                            if (g_item_slot_flags[0] != 0)
-                            {
-                                if (D_80168C20->active != 0)
-                                {
-                                    val = D_80168C30->stat_values[0];
-                                }
-                                if (g_item_slot_data[0] != 0 && g_item_slot_data[0]->active != 0)
-                                {
-                                    val = val - (g_item_slot_data[0])->stat_values[0];
-                                }
-                                else
-                                {
-                                    val = val - D_800F0C1C;
-                                }
-                                menu_copy_sign_label(label_buffer, val);
-                                packet_cursor =
-                                    field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), FIELD_TEXT_COLOR_MENU, pos.x, pos.y, FIELD_TEXT_ALIGN_LEFT);
-                            }
-                        }
-                        break;
-                        case 0x40:
-                        case 0x41:
-                        case 0x42:
-                        case 0x43:
-                        {
-                            uintptr_t has = 0;
+                                        }
+                                        else
+                                        {
+                                            u32 tmpv;
+                                            u8 idx;
+                                            u16 off2;
+                                            base_a2_7 = (uintptr_t)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x20);
+                                            tmpv = ((g_menu_equipment_base->attributes.packed >> 10) & 0x3F);
 
-                            val = has;
-                            for (k = 1; k < 4; k++)
-                            {
-                                MenuItemEntry* slot = &D_80168C20[k];
-                                if (g_item_slot_flags[k] != 0)
-                                {
-                                    if (slot->active != 0)
-                                    {
-                                        val += slot->stat_values[content_index - 0x40];
-                                    }
-                                    has = (uintptr_t)g_item_slot_data[k];
-                                    if (has != 0 && ((MenuItemEntry*)has)->active != 0)
-                                    {
-                                        val -= ((MenuItemEntry*)has)->stat_values[content_index - 0x40];
-                                    }
-                                    has = 1;
-                                }
-                            }
-                            if (has)
-                            {
-                                menu_copy_sign_label(label_buffer, val);
-                                packet_cursor =
-                                    field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), FIELD_TEXT_COLOR_MENU, pos.x, pos.y, FIELD_TEXT_ALIGN_LEFT);
-                            }
-                        }
-                        break;
-                        case 0x44:
-                        {
-                            u16 a2_23 = 0;
-                            if (g_item_slot_flags[0] != 0)
-                            {
-                                s32 diff;
-                                if (D_80168C20->active != 0)
-                                {
-                                    a2_23 = D_80168C30->stat_values[0];
-                                }
-                                if (g_item_slot_data[0] != 0 && g_item_slot_data[0]->active != 0)
-                                {
-                                    diff = a2_23 - (g_item_slot_data[0])->stat_values[0];
-                                }
-                                else
-                                {
-                                    diff = a2_23 - D_800F0C1C;
-                                }
-                                packet_cursor = field_draw_number(ot_entry, packet_cursor, abs(diff), 1, &pos,
-                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                        }
-                        break;
-                        case 0x45:
-                        case 0x46:
-                        case 0x47:
-                        case 0x48:
-                        {
-                            uintptr_t has = 0;
-                            s32 total = has;
-
-                            for (k = 1; k < 4; k++)
-                            {
-                                MenuItemEntry* slot = &D_80168C20[k];
-                                if (g_item_slot_flags[k] != 0)
-                                {
-                                    if (slot->active != 0)
-                                    {
-                                        total += slot->stat_values[content_index - 0x45];
-                                    }
-                                    has = (uintptr_t)g_item_slot_data[k];
-                                    if (has != 0 && ((MenuItemEntry*)has)->active != 0)
-                                    {
-                                        total -= ((MenuItemEntry*)has)->stat_values[content_index - 0x45];
-                                    }
-                                    has = 1;
-                                }
-                            }
-                            if (has)
-                            {
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (u32)abs(total), 1, &pos,
-                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                        }
-                        break;
-                        case 0x49:
-                        {
-                            void* base;
-                            u8 idx;
-                            draw_packet_cursor = packet_cursor;
-                            base_a2_9 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x74));
-                            base = (void*)g_saved_game_ctx;
-                            {
-                                u8* idxp = (u8*)base + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE + 0x633;
-                                idx = *idxp;
-                            }
-                            {
-                                void* a2_2 = (void*)((u8*)base_a2_9 + *(u16*)((u8*)base_a2_9 + (idx * 2)));
-                                packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
-                                                                content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                            }
-                        }
-                        break;
-                        case 0x4A:
-                        {
-                            s8 golem_index = g_saved_game_ctx->joined_golem;
-                            if (golem_index >= 0)
-                            {
-                                SavedGameLayout* context = g_saved_game_ctx;
-                                u8 v = menu_golem_record(context, golem_index)->logic_layout & GOLEM_LOGIC_CLASS_MASK;
-                                void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x80));
-                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), FIELD_TEXT_COLOR_MENU,
-                                                                content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                            }
-                        }
-                        break;
-                        case 0x4B:
-                        {
-                            s8 golem_index = g_saved_game_ctx->joined_golem;
-                            if (golem_index >= 0)
-                            {
-                                SavedGameLayout* context = g_saved_game_ctx;
-                                u8 v = menu_golem_record(context, golem_index)->logic_layout >> GOLEM_GRID_BOUND_SHIFT;
-                                void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x7C));
-                                packet_cursor = field_draw_text(packet_cursor, ot_entry, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), FIELD_TEXT_COLOR_MENU,
-                                                                content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                            }
-                        }
-                        break;
-                        case 0x4C:
-                        {
-                            s8 golem_index = g_saved_game_ctx->joined_golem;
-                            if (golem_index >= 0)
-                            {
-                                SavedGameLayout* context = g_saved_game_ctx;
-                                u8 v = menu_golem_record(context, golem_index)->unknown_0x46;
-                                packet_cursor = field_draw_number(ot_entry, packet_cursor, v, 1, &pos,
-                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                        }
-                        break;
-                        case 0x4D:
-                        {
-                            s8 golem_index = g_saved_game_ctx->joined_golem;
-                            if (golem_index >= 0)
-                            {
-                                SavedGameLayout* context;
-                                s32 idx;
-                                draw_packet_cursor = packet_cursor;
-                                base_a2_10 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x70));
-                                context = g_saved_game_ctx;
-                                idx = menu_golem_record(context, golem_index)->palette;
-                                {
-                                    void* a2_2 = (void*)((u8*)base_a2_10 + *(u16*)((u8*)base_a2_10 + (idx * 2)));
-                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
+                                            idx = ((MenuNameSelection*)(ptr + 0x5F1))->fields.index;
+                                            off2 = idx * 2;
+                                            {
+                                                void* a2_2 = (void*)(base_a2_7 + *(u16*)(off2 + (tmpv * 0x30 + base_a2_7)));
+                                                packet_cursor =
+                                                    field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
                                                                     content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                     (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                            }
+                                        }
+                                    }
                                 }
-                            }
-                        }
-                        break;
-                        case 0x4E:
-                        case 0x4F:
-                        case 0x50:
-                        case 0x51:
-                        case 0x52:
-                        case 0x53:
-                        case 0x54:
-                        case 0x55:
-                        {
-                            u32 display_value = 0;
-                            switch (content_index)
-                            {
-                            case 0x4E:
-                                display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed & 0xF;
                                 break;
-                            case 0x4F:
-                                display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.bytes[0];
-                                display_value >>= 4;
+                                case 0x1F:
+                                {
+                                    void* base;
+                                    u8 idx;
+                                    draw_packet_cursor = packet_cursor;
+                                    base_a2_8 = menu_text_table_base(MENU_TEXT_MONSTER_NAMES);
+                                    base = (void*)g_saved_game_ctx;
+                                    {
+                                        u8* idxp = (u8*)base + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE + 0x609;
+                                        idx = *idxp;
+                                    }
+                                    {
+                                        void* a2_2 = (void*)((u8*)base_a2_8 + *(u16*)((u8*)base_a2_8 + (idx * 2)));
+                                        packet_cursor =
+                                            field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
+                                                            content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                            (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                    }
+                                }
                                 break;
-                            case 0x50:
-                                display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 8;
-                                display_value &= 0xF;
+                                case 0x20:
+                                {
+                                    u32 total = 0;
+                                    for (k = 1; k < 4; k++)
+                                    {
+                                        if (g_item_slot_flags[k] != 0)
+                                        {
+                                            MenuItemEntry* ptr = g_item_slot_data[k];
+                                            if (ptr != 0 && ptr->active != 0)
+                                            {
+                                                total += ptr->stat_values[0];
+                                            }
+                                        }
+                                        else
+                                        {
+                                            MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
+                                            if (v->active != 0)
+                                            {
+                                                total += v->stat_values[0];
+                                            }
+                                        }
+                                    }
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
+                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                }
                                 break;
-                            case 0x51:
-                                display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 12;
-                                display_value &= 0xF;
+                                case 0x21:
+                                {
+                                    u32 total = 0;
+                                    for (k = 1; k < 4; k++)
+                                    {
+                                        if (g_item_slot_flags[k] != 0)
+                                        {
+                                            MenuItemEntry* ptr = g_item_slot_data[k];
+                                            if (ptr != 0 && ptr->active != 0)
+                                            {
+                                                total += ptr->stat_values[1];
+                                            }
+                                        }
+                                        else
+                                        {
+                                            MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
+                                            if (v->active != 0)
+                                            {
+                                                total += v->stat_values[1];
+                                            }
+                                        }
+                                    }
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
+                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                }
                                 break;
-                            case 0x52:
-                                display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.halfwords[1];
-                                display_value &= 0xF;
+                                case 0x22:
+                                {
+                                    u32 total = 0;
+                                    for (k = 1; k < 4; k++)
+                                    {
+                                        if (g_item_slot_flags[k] != 0)
+                                        {
+                                            MenuItemEntry* ptr = g_item_slot_data[k];
+                                            if (ptr != 0 && ptr->active != 0)
+                                            {
+                                                total += ptr->stat_values[2];
+                                            }
+                                        }
+                                        else
+                                        {
+                                            MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
+                                            if (v->active != 0)
+                                            {
+                                                total += v->stat_values[2];
+                                            }
+                                        }
+                                    }
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
+                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                }
                                 break;
-                            case 0x53:
-                                display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 20;
-                                display_value &= 0xF;
+                                case 0x23:
+                                {
+                                    u32 total = 0;
+                                    for (k = 1; k < 4; k++)
+                                    {
+                                        if (g_item_slot_flags[k] != 0)
+                                        {
+                                            MenuItemEntry* ptr = g_item_slot_data[k];
+                                            if (ptr != 0 && ptr->active != 0)
+                                            {
+                                                total += ptr->stat_values[3];
+                                            }
+                                        }
+                                        else
+                                        {
+                                            MenuItemEntry* v = (MenuItemEntry*)((u8*)D_80168C20 + 0x40 + (k - 1) * 0x40);
+                                            if (v->active != 0)
+                                            {
+                                                total += v->stat_values[3];
+                                            }
+                                        }
+                                    }
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
+                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                }
                                 break;
-                            case 0x54:
-                                display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.bytes[3];
-                                display_value &= 0xF;
+                                case 0x3F:
+                                {
+                                    val = 0;
+                                    if (g_item_slot_flags[0] != 0)
+                                    {
+                                        if (D_80168C20->active != 0)
+                                        {
+                                            val = D_80168C30->stat_values[0];
+                                        }
+                                        if (g_item_slot_data[0] != 0 && g_item_slot_data[0]->active != 0)
+                                        {
+                                            val = val - (g_item_slot_data[0])->stat_values[0];
+                                        }
+                                        else
+                                        {
+                                            val = val - D_800F0C1C;
+                                        }
+                                        menu_copy_sign_label(label_buffer, val);
+                                        packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), FIELD_TEXT_COLOR_MENU, pos.x, pos.y,
+                                                                        FIELD_TEXT_ALIGN_LEFT);
+                                    }
+                                }
                                 break;
-                            case 0x55:
-                                display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 28;
+                                case 0x40:
+                                case 0x41:
+                                case 0x42:
+                                case 0x43:
+                                {
+                                    uintptr_t has = 0;
+
+                                    val = has;
+                                    for (k = 1; k < 4; k++)
+                                    {
+                                        MenuItemEntry* slot = &D_80168C20[k];
+                                        if (g_item_slot_flags[k] != 0)
+                                        {
+                                            if (slot->active != 0)
+                                            {
+                                                val += slot->stat_values[content_index - 0x40];
+                                            }
+                                            has = (uintptr_t)g_item_slot_data[k];
+                                            if (has != 0 && ((MenuItemEntry*)has)->active != 0)
+                                            {
+                                                val -= ((MenuItemEntry*)has)->stat_values[content_index - 0x40];
+                                            }
+                                            has = 1;
+                                        }
+                                    }
+                                    if (has)
+                                    {
+                                        menu_copy_sign_label(label_buffer, val);
+                                        packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), FIELD_TEXT_COLOR_MENU, pos.x, pos.y,
+                                                                        FIELD_TEXT_ALIGN_LEFT);
+                                    }
+                                }
                                 break;
-                            }
-                            packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, display_value, 1, &pos,
+                                case 0x44:
+                                {
+                                    u16 a2_23 = 0;
+                                    if (g_item_slot_flags[0] != 0)
+                                    {
+                                        s32 diff;
+                                        if (D_80168C20->active != 0)
+                                        {
+                                            a2_23 = D_80168C30->stat_values[0];
+                                        }
+                                        if (g_item_slot_data[0] != 0 && g_item_slot_data[0]->active != 0)
+                                        {
+                                            diff = a2_23 - (g_item_slot_data[0])->stat_values[0];
+                                        }
+                                        else
+                                        {
+                                            diff = a2_23 - D_800F0C1C;
+                                        }
+                                        packet_cursor = field_draw_number(ot_entry, packet_cursor, abs(diff), 1, &pos,
+                                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                }
+                                break;
+                                case 0x45:
+                                case 0x46:
+                                case 0x47:
+                                case 0x48:
+                                {
+                                    uintptr_t has = 0;
+                                    s32 total = has;
+
+                                    for (k = 1; k < 4; k++)
+                                    {
+                                        MenuItemEntry* slot = &D_80168C20[k];
+                                        if (g_item_slot_flags[k] != 0)
+                                        {
+                                            if (slot->active != 0)
+                                            {
+                                                total += slot->stat_values[content_index - 0x45];
+                                            }
+                                            has = (uintptr_t)g_item_slot_data[k];
+                                            if (has != 0 && ((MenuItemEntry*)has)->active != 0)
+                                            {
+                                                total -= ((MenuItemEntry*)has)->stat_values[content_index - 0x45];
+                                            }
+                                            has = 1;
+                                        }
+                                    }
+                                    if (has)
+                                    {
+                                        packet_cursor =
+                                            menu_draw_clamped_number(ot_entry, packet_cursor, (u32)abs(total), 1, &pos,
                                                                      ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                }
+                                break;
+                                case 0x49:
+                                {
+                                    void* base;
+                                    u8 idx;
+                                    draw_packet_cursor = packet_cursor;
+                                    base_a2_9 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x74));
+                                    base = (void*)g_saved_game_ctx;
+                                    {
+                                        u8* idxp = (u8*)base + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE + 0x633;
+                                        idx = *idxp;
+                                    }
+                                    {
+                                        void* a2_2 = (void*)((u8*)base_a2_9 + *(u16*)((u8*)base_a2_9 + (idx * 2)));
+                                        packet_cursor =
+                                            field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
+                                                            content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                            (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                    }
+                                }
+                                break;
+                                case 0x4A:
+                                {
+                                    s8 golem_index = g_saved_game_ctx->joined_golem;
+                                    if (golem_index >= 0)
+                                    {
+                                        SavedGameLayout* context = g_saved_game_ctx;
+                                        u8 v = menu_golem_record(context, golem_index)->logic_layout & GOLEM_LOGIC_CLASS_MASK;
+                                        void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x80));
+                                        packet_cursor =
+                                            field_draw_text(packet_cursor, ot_entry, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), FIELD_TEXT_COLOR_MENU,
+                                                            content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                            (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                    }
+                                }
+                                break;
+                                case 0x4B:
+                                {
+                                    s8 golem_index = g_saved_game_ctx->joined_golem;
+                                    if (golem_index >= 0)
+                                    {
+                                        SavedGameLayout* context = g_saved_game_ctx;
+                                        u8 v = menu_golem_record(context, golem_index)->logic_layout >> GOLEM_GRID_BOUND_SHIFT;
+                                        void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x7C));
+                                        packet_cursor =
+                                            field_draw_text(packet_cursor, ot_entry, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), FIELD_TEXT_COLOR_MENU,
+                                                            content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                            (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                    }
+                                }
+                                break;
+                                case 0x4C:
+                                {
+                                    s8 golem_index = g_saved_game_ctx->joined_golem;
+                                    if (golem_index >= 0)
+                                    {
+                                        SavedGameLayout* context = g_saved_game_ctx;
+                                        u8 v = menu_golem_record(context, golem_index)->unknown_0x46;
+                                        packet_cursor = field_draw_number(ot_entry, packet_cursor, v, 1, &pos,
+                                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                }
+                                break;
+                                case 0x4D:
+                                {
+                                    s8 golem_index = g_saved_game_ctx->joined_golem;
+                                    if (golem_index >= 0)
+                                    {
+                                        SavedGameLayout* context;
+                                        s32 idx;
+                                        draw_packet_cursor = packet_cursor;
+                                        base_a2_10 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x70));
+                                        context = g_saved_game_ctx;
+                                        idx = menu_golem_record(context, golem_index)->palette;
+                                        {
+                                            void* a2_2 = (void*)((u8*)base_a2_10 + *(u16*)((u8*)base_a2_10 + (idx * 2)));
+                                            packet_cursor =
+                                                field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
+                                                                content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                        }
+                                    }
+                                }
+                                break;
+                                case 0x4E:
+                                case 0x4F:
+                                case 0x50:
+                                case 0x51:
+                                case 0x52:
+                                case 0x53:
+                                case 0x54:
+                                case 0x55:
+                                {
+                                    u32 display_value = 0;
+                                    switch (content_index)
+                                    {
+                                        case 0x4E:
+                                            display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed & 0xF;
+                                            break;
+                                        case 0x4F:
+                                            display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.bytes[0];
+                                            display_value >>= 4;
+                                            break;
+                                        case 0x50:
+                                            display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 8;
+                                            display_value &= 0xF;
+                                            break;
+                                        case 0x51:
+                                            display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 12;
+                                            display_value &= 0xF;
+                                            break;
+                                        case 0x52:
+                                            display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.halfwords[1];
+                                            display_value &= 0xF;
+                                            break;
+                                        case 0x53:
+                                            display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 20;
+                                            display_value &= 0xF;
+                                            break;
+                                        case 0x54:
+                                            display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.bytes[3];
+                                            display_value &= 0xF;
+                                            break;
+                                        case 0x55:
+                                            display_value = menu_equipped_item(g_saved_game_ctx, 0)->display_nibbles.packed >> 28;
+                                            break;
+                                    }
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, display_value, 1, &pos,
+                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                }
+                                break;
+                                default:
+                                    break;
+                            }
                         }
                         break;
+
+                        case 6:
+                        {
+                            shared_s0 = content_item->action_type;
+                            switch (shared_s0)
+                            {
+                                case 1:
+                                    if (*(u32*)((void*)g_saved_game_ctx + 0x2C) > 0x989680U)
+                                    {
+                                        packet_cursor = field_draw_number(ot_entry, packet_cursor, 0x989680U, 1, &pos,
+                                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                    else
+                                    {
+                                        packet_cursor = field_draw_number(ot_entry, packet_cursor, *(u32*)((void*)g_saved_game_ctx + 0x2C), 1, &pos,
+                                                                          ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    }
+                                    break;
+                                case 2:
+                                {
+                                    u32 ltemp_v0_6;
+                                    s32 v1;
+                                    s32 s2;
+                                    s32 split_tmp;
+                                    s32 one;
+                                    ltemp_v0_6 = (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK;
+                                    switch (ltemp_v0_6)
+                                    {
+                                        case 1:
+                                            pos.x -= 0x32;
+                                            break;
+                                        case 2:
+                                            pos.x -= 0x19;
+                                            break;
+                                    }
+                                    v1 = *(s32*)((void*)g_saved_game_ctx + 0x30) + VSync(-1);
+                                    shared_s0 = v1 - g_playtime_vsync_origin;
+                                    pos.x += 0x14;
+                                    s2 = shared_s0 / 216000;
+                                    one = 1;
+                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, s2, one, &pos, one);
+                                    if ((g_frame_counter / 15) & 1)
+                                    {
+                                        packet_cursor =
+                                            field_draw_text(packet_cursor, ot_entry, MENU_PLAYTIME_SEPARATOR, one, pos.x, pos.y, FIELD_TEXT_ALIGN_LEFT);
+                                    }
+                                    pos.x += MENU_PLAYTIME_SEPARATOR_ADVANCE;
+                                    split_tmp = s2 * 0x3C;
+                                    shared_s0 = (shared_s0 / 3600) - split_tmp;
+                                    if (shared_s0 < 0xA)
+                                    {
+                                        packet_cursor = field_draw_number(ot_entry, packet_cursor, 0U, 1, &pos, FIELD_TEXT_ALIGN_LEFT);
+                                    }
+                                    pos.x += MENU_PLAYTIME_MINUTES_ADVANCE;
+                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, shared_s0, 1, &pos, one);
+                                }
+                                break;
+                            }
+                        }
+                        break;
+
+                        case 7:
+                        {
+                            shared_s0 = content_item->action_type;
+                            switch (shared_s0)
+                            {
+                                case 1:
+                                {
+                                    void* base = (void*)g_saved_game_ctx + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
+                                    if ((*(u8*)((u8*)base + MENU_CHARACTER_INFO_OFFSET) & FIELD_CHARACTER_TYPE_MASK) != two_outer ||
+                                        ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
+                                    {
+                                        draw_packet_cursor = packet_cursor;
+                                        base_a2_11 = menu_text_table_base(MENU_TEXT_MESSAGES);
+                                        {
+                                            void* a2_2 = (void*)((u8*)base_a2_11 + *(u16*)((u8*)base_a2_11 + 0x74));
+                                            packet_cursor =
+                                                field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
+                                                                content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                        }
+                                    }
+                                }
+                                break;
+                                case 2:
+                                {
+                                    void* base = (void*)g_saved_game_ctx + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
+                                    if ((*(u8*)((u8*)base + MENU_CHARACTER_INFO_OFFSET) & FIELD_CHARACTER_TYPE_MASK) != FIELD_CHARACTER_GUEST ||
+                                        ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
+                                    {
+                                        draw_packet_cursor = packet_cursor;
+                                        base_a2_12 = menu_text_table_base(MENU_TEXT_MESSAGES);
+                                        {
+                                            void* a2_2 = (void*)((u8*)base_a2_12 + *(u16*)((u8*)base_a2_12 + 0x76));
+                                            packet_cursor =
+                                                field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
+                                                                content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                        }
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                        break;
+
                         default:
                             break;
-                        }
-                    }
-                    break;
-
-                    case 6:
-                    {
-                        shared_s0 = content_item->action_type;
-                        switch (shared_s0)
-                        {
-                        case 1:
-                            if (*(u32*)((void*)g_saved_game_ctx + 0x2C) > 0x989680U)
-                            {
-                                packet_cursor = field_draw_number(ot_entry, packet_cursor, 0x989680U, 1, &pos,
-                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            else
-                            {
-                                packet_cursor = field_draw_number(ot_entry, packet_cursor, *(u32*)((void*)g_saved_game_ctx + 0x2C), 1, &pos,
-                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
-                            }
-                            break;
-                        case 2:
-                        {
-                            u32 ltemp_v0_6;
-                            s32 v1;
-                            s32 s2;
-                            s32 split_tmp;
-                            s32 one;
-                            ltemp_v0_6 = (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK;
-                            switch (ltemp_v0_6)
-                            {
-                            case 1:
-                                pos.x -= 0x32;
-                                break;
-                            case 2:
-                                pos.x -= 0x19;
-                                break;
-                            }
-                            v1 = *(s32*)((void*)g_saved_game_ctx + 0x30) + VSync(-1);
-                            shared_s0 = v1 - g_playtime_vsync_origin;
-                            pos.x += 0x14;
-                            s2 = shared_s0 / 216000;
-                            one = 1;
-                            packet_cursor = field_draw_number(ot_entry, packet_cursor, s2, one, &pos, one);
-                            if ((g_frame_counter / 15) & 1)
-                            {
-                                packet_cursor = field_draw_text(packet_cursor, ot_entry, MENU_PLAYTIME_SEPARATOR, one, pos.x, pos.y, FIELD_TEXT_ALIGN_LEFT);
-                            }
-                            pos.x += MENU_PLAYTIME_SEPARATOR_ADVANCE;
-                            split_tmp = s2 * 0x3C;
-                            shared_s0 = (shared_s0 / 3600) - split_tmp;
-                            if (shared_s0 < 0xA)
-                            {
-                                packet_cursor = field_draw_number(ot_entry, packet_cursor, 0U, 1, &pos, FIELD_TEXT_ALIGN_LEFT);
-                            }
-                            pos.x += MENU_PLAYTIME_MINUTES_ADVANCE;
-                            packet_cursor = field_draw_number(ot_entry, packet_cursor, shared_s0, 1, &pos, one);
-                        }
-                        break;
-                        }
-                    }
-                    break;
-
-                    case 7:
-                    {
-                        shared_s0 = content_item->action_type;
-                        switch (shared_s0)
-                        {
-                        case 1:
-                        {
-                            void* base = (void*)g_saved_game_ctx + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
-                            if ((*(u8*)((u8*)base + MENU_CHARACTER_INFO_OFFSET) & FIELD_CHARACTER_TYPE_MASK) != two_outer ||
-                                ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
-                            {
-                                draw_packet_cursor = packet_cursor;
-                                base_a2_11 = menu_text_table_base(MENU_TEXT_MESSAGES);
-                                {
-                                    void* a2_2 = (void*)((u8*)base_a2_11 + *(u16*)((u8*)base_a2_11 + 0x74));
-                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
-                                                                    content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                    (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                }
-                            }
-                        }
-                        break;
-                        case 2:
-                        {
-                            void* base = (void*)g_saved_game_ctx + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
-                            if ((*(u8*)((u8*)base + MENU_CHARACTER_INFO_OFFSET) & FIELD_CHARACTER_TYPE_MASK) != FIELD_CHARACTER_GUEST ||
-                                ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
-                            {
-                                draw_packet_cursor = packet_cursor;
-                                base_a2_12 = menu_text_table_base(MENU_TEXT_MESSAGES);
-                                {
-                                    void* a2_2 = (void*)((u8*)base_a2_12 + *(u16*)((u8*)base_a2_12 + 0x76));
-                                    packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, a2_2, FIELD_TEXT_COLOR_MENU,
-                                                                    content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
-                                                                    (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
-                                }
-                            }
-                        }
-                        break;
-                        }
-                    }
-                    break;
-
-                    default:
-                        break;
                     }
                 }
 
@@ -4592,34 +4612,34 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
 
             switch (g_menu_scene_type)
             {
-            case 20:
-            case 21:
-            case 23:
-            case 24:
-            case 26:
-            case 27:
-            {
-                void* ltemp;
-                pos.x = 0x88;
-                pos.y = 0x28;
-                if (g_menu_page_count != 0)
+                case 20:
+                case 21:
+                case 23:
+                case 24:
+                case 26:
+                case 27:
                 {
-                    ltemp = field_draw_sprite_number(ot_entry, packet_cursor, g_script_repeat_last + 1, 3, &pos, 0);
+                    void* ltemp;
+                    pos.x = 0x88;
+                    pos.y = 0x28;
+                    if (g_menu_page_count != 0)
+                    {
+                        ltemp = field_draw_sprite_number(ot_entry, packet_cursor, g_script_repeat_last + 1, 3, &pos, 0);
+                    }
+                    else
+                    {
+                        ltemp = field_draw_sprite_number(ot_entry, packet_cursor, 0, 3, &pos, 0);
+                    }
+                    ltemp = field_draw_sprite_glyph(ltemp, ot_entry, FIELD_DIGIT_GLYPH_SEPARATOR, &pos, 0);
+                    pos.x += 8;
+                    ltemp = field_draw_sprite_number(ot_entry, ltemp, g_menu_page_count, 3, &pos, 0);
+                    ltemp = field_draw_sprite_glyph(ltemp, ot_entry, FIELD_DIGIT_GLYPH_SEPARATOR, &pos, 0);
+                    pos.x += 8;
+                    packet_cursor = field_draw_sprite_number(ot_entry, ltemp, menu_count_inventory_items(), 3, &pos, 0);
                 }
-                else
-                {
-                    ltemp = field_draw_sprite_number(ot_entry, packet_cursor, 0, 3, &pos, 0);
-                }
-                ltemp = field_draw_sprite_glyph(ltemp, ot_entry, FIELD_DIGIT_GLYPH_SEPARATOR, &pos, 0);
-                pos.x += 8;
-                ltemp = field_draw_sprite_number(ot_entry, ltemp, g_menu_page_count, 3, &pos, 0);
-                ltemp = field_draw_sprite_glyph(ltemp, ot_entry, FIELD_DIGIT_GLYPH_SEPARATOR, &pos, 0);
-                pos.x += 8;
-                packet_cursor = field_draw_sprite_number(ot_entry, ltemp, menu_count_inventory_items(), 3, &pos, 0);
-            }
-            break;
-            default:
                 break;
+                default:
+                    break;
             }
         }
     }
@@ -4703,36 +4723,36 @@ s32 menu_lookup_item_nibble(const MenuItemEntry* item, u32 index)
     {
         switch (index)
         {
-        case 0:
-            nibble = item->nibbles.packed & 0xF;
-            break;
-        case 1:
-            nibble = item->nibbles.bytes[0];
-            nibble = nibble >> 4;
-            break;
-        case 2:
-            nibble = item->nibbles.packed >> 8;
-            nibble = nibble & 0xF;
-            break;
-        case 3:
-            nibble = item->nibbles.packed >> 12;
-            nibble = nibble & 0xF;
-            break;
-        case 4:
-            nibble = item->nibbles.halfwords[1];
-            nibble = nibble & 0xF;
-            break;
-        case 5:
-            nibble = item->nibbles.packed >> 20;
-            nibble = nibble & 0xF;
-            break;
-        case 6:
-            nibble = item->nibbles.bytes[3];
-            nibble = nibble & 0xF;
-            break;
-        case 7:
-            nibble = item->nibbles.packed >> 28;
-            break;
+            case 0:
+                nibble = item->nibbles.packed & 0xF;
+                break;
+            case 1:
+                nibble = item->nibbles.bytes[0];
+                nibble = nibble >> 4;
+                break;
+            case 2:
+                nibble = item->nibbles.packed >> 8;
+                nibble = nibble & 0xF;
+                break;
+            case 3:
+                nibble = item->nibbles.packed >> 12;
+                nibble = nibble & 0xF;
+                break;
+            case 4:
+                nibble = item->nibbles.halfwords[1];
+                nibble = nibble & 0xF;
+                break;
+            case 5:
+                nibble = item->nibbles.packed >> 20;
+                nibble = nibble & 0xF;
+                break;
+            case 6:
+                nibble = item->nibbles.bytes[3];
+                nibble = nibble & 0xF;
+                break;
+            case 7:
+                nibble = item->nibbles.packed >> 28;
+                break;
         }
     }
     return g_field_stat_modifier_values[nibble];
@@ -5014,62 +5034,70 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
                 action_type = content_base[g_menu_hit_item_idx].action_type;
                 switch (action_type)
                 {
-                case 0xF0:
-                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(17), content_base[g_menu_hit_item_idx].action_type));
-                    break;
-                case 0xF1:
-                    prim_buf = menu_emit_content_label(
-                        prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_ARTIFACT_HELP), content_base[g_menu_hit_item_idx].action_type));
-                    break;
-                case 0xF2:
-                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(12), content_base[g_menu_hit_item_idx].action_type));
-                    break;
-                case 0xF3:
-                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(8), content_base[g_menu_hit_item_idx].action_type));
-                    break;
-                case 0xF4:
-                    prim_buf = menu_emit_content_label(
-                        prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_CATEGORY_ENTRY_HELP), content_base[g_menu_hit_item_idx].action_type));
-                    break;
-                case 0xF5:
-                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(21), content_base[g_menu_hit_item_idx].action_type));
-                    break;
-                case 0xF6:
-                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(19), content_base[g_menu_hit_item_idx].action_type));
-                    break;
-                case 0xF7:
-                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(23), content_base[g_menu_hit_item_idx].action_type));
-                    break;
-                case 0xF8:
-                    if (D_80168C6C != 0xFF)
-                    {
-                        if (D_80168C6C & 0x80)
+                    case 0xF0:
+                        prim_buf = menu_emit_content_label(
+                            prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MONSTER_FAMILIES), content_base[g_menu_hit_item_idx].action_type));
+                        break;
+                    case 0xF1:
+                        prim_buf = menu_emit_content_label(
+                            prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_ARTIFACT_HELP), content_base[g_menu_hit_item_idx].action_type));
+                        break;
+                    case 0xF2:
+                        prim_buf = menu_emit_content_label(
+                            prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MAGIC_SHAPE_HELP), content_base[g_menu_hit_item_idx].action_type));
+                        break;
+                    case 0xF3:
+                        prim_buf = menu_emit_content_label(
+                            prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_SPIRIT_HELP), content_base[g_menu_hit_item_idx].action_type));
+                        break;
+                    case 0xF4:
+                        prim_buf = menu_emit_content_label(
+                            prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_CATEGORY_ENTRY_HELP), content_base[g_menu_hit_item_idx].action_type));
+                        break;
+                    case 0xF5:
+                        prim_buf =
+                            menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(21), content_base[g_menu_hit_item_idx].action_type));
+                        break;
+                    case 0xF6:
+                        prim_buf =
+                            menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(19), content_base[g_menu_hit_item_idx].action_type));
+                        break;
+                    case 0xF7:
+                        prim_buf = menu_emit_content_label(
+                            prim_buf, ot,
+                            menu_text_entry(menu_text_table_base(MENU_TEXT_EQUIPMENT_SPECIAL_HELP), content_base[g_menu_hit_item_idx].action_type));
+                        break;
+                    case 0xF8:
+                        if (D_80168C6C != 0xFF)
                         {
-                            prim_buf = menu_emit_content_label(
-                                prim_buf, ot,
-                                menu_text_entry(menu_text_table_base(MENU_TEXT_CATEGORY_ENTRY_HELP), content_base[g_menu_hit_item_idx].action_type));
+                            if (D_80168C6C & 0x80)
+                            {
+                                prim_buf = menu_emit_content_label(
+                                    prim_buf, ot,
+                                    menu_text_entry(menu_text_table_base(MENU_TEXT_CATEGORY_ENTRY_HELP), content_base[g_menu_hit_item_idx].action_type));
+                            }
+                            else
+                            {
+                                prim_buf = menu_emit_content_label(
+                                    prim_buf, ot,
+                                    menu_text_entry(menu_text_table_base(MENU_TEXT_TECHNIQUE_HELP), content_base[g_menu_hit_item_idx].action_type));
+                            }
                         }
-                        else
-                        {
-                            prim_buf = menu_emit_content_label(
-                                prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_TECHNIQUE_HELP), content_base[g_menu_hit_item_idx].action_type));
-                        }
-                    }
-                    break;
-                case 0xF9:
-                    prim_buf = menu_emit_content_label(
-                        prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_TECHNIQUE_HELP), content_base[g_menu_hit_item_idx].action_type));
-                    break;
-                case 0xFA:
-                    prim_buf = menu_emit_content_label(
-                        prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_SPELL_HELP), content_base[g_menu_hit_item_idx].action_type));
-                    break;
-                case 0xFB:
-                case 0xFC:
-                case 0xFD:
-                case 0xFE:
-                    prim_buf = menu_emit_content_label(
-                        prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_ITEM_HELP), content_base[g_menu_hit_item_idx].action_type));
+                        break;
+                    case 0xF9:
+                        prim_buf = menu_emit_content_label(
+                            prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_TECHNIQUE_HELP), content_base[g_menu_hit_item_idx].action_type));
+                        break;
+                    case 0xFA:
+                        prim_buf = menu_emit_content_label(
+                            prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_ABILITY_HELP), content_base[g_menu_hit_item_idx].action_type));
+                        break;
+                    case 0xFB:
+                    case 0xFC:
+                    case 0xFD:
+                    case 0xFE:
+                        prim_buf = menu_emit_content_label(
+                            prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_ITEM_HELP), content_base[g_menu_hit_item_idx].action_type));
                 }
             }
         }
@@ -5078,202 +5106,205 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
             action_type = content_base[g_menu_hit_item_idx].action_type;
             switch (action_type)
             {
-            case 1:
-            case 2:
-            {
-                u8* text_table = menu_text_table_base(MENU_TEXT_SPELL_HELP);
-                u8* character_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
-                u8 entry_index = *(character_base + action_type + 0x609);
+                case 1:
+                case 2:
+                {
+                    u8* text_table = menu_text_table_base(MENU_TEXT_ABILITY_HELP);
+                    u8* character_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
+                    u8 entry_index = *(character_base + action_type + MENU_ACTION_SLOT_OFFSET);
 
-                prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));
-                break;
-            }
-            case 3:
-            case 4:
-            case 5:
-            case 6:
-            {
-                u8* pad_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
-                u8* flag_addr = pad_base + action_type;
-                u8 flag = ((MenuNameSelection*)(flag_addr + 0x609))->packed;
-                if (flag != MENU_NONE)
-                {
-                    if (flag & 0x80)
-                    {
-                        u8* item_ptr = pad_base + (((MenuNameSelection*)(flag_addr + 0x609))->fields.index << 6) +
-                                       (MENU_CHARACTER_RECORD_OFFSET + OFFSETOF(FieldCharacterRecord, unk150));
-                        u8 cat = *(item_ptr + 0x24);
-                        u8 entry = *(item_ptr + 0x25);
-                        u8* state44 = (u8*)g_menu_state_ptr;
-                        state44 += *(s32*)(state44 + 0x44);
-                        prim_buf = menu_emit_content_label(prim_buf, ot, state44 + *(u16*)(state44 + (cat) * 0x1C + (entry) * 2));
-                    }
-                    else
-                    {
-                        u32 slot654 = *(u32*)(pad_base + 0x654);
-                        u8* state1c = (u8*)g_menu_state_ptr;
-                        state1c += *(s32*)(state1c + 0x1C);
-                        prim_buf = menu_emit_content_label(
-                            prim_buf, ot,
-                            state1c + *(u16*)(state1c + ((MenuNameSelection*)(flag_addr + 0x609))->fields.index * 2 + ((slot654 >> 0xA) & 0x3F) * 0x30));
-                    }
+                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));
+                    break;
                 }
-                break;
-            }
-            case 7:
-            case 8:
-            case 9:
-            case 10:
-                if (g_menu_char_slot < 2)
+                case 3:
+                case 4:
+                case 5:
+                case 6:
                 {
-                    SavedGameLayout* context = g_saved_game_ctx;
-                    if (menu_equipped_item(context, action_type - MENU_EQUIPMENT_SUBTYPE_BASE)->active != 0)
+                    u8* pad_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
+                    u8* flag_addr = pad_base + action_type;
+                    u8 flag = ((MenuNameSelection*)(flag_addr + MENU_ACTION_SLOT_OFFSET))->packed;
+                    if (flag != MENU_NONE)
                     {
-                        if (menu_item_differs_from_bare_hands(&menu_character_record(context, g_menu_char_slot)->items[action_type - MENU_EQUIPMENT_SUBTYPE_BASE]) != 0)
+                        if (flag & 0x80)
                         {
-                            s32 name_index = menu_equipped_item(g_saved_game_ctx, action_type - MENU_EQUIPMENT_SUBTYPE_BASE)->attributes.halves.high & 0x3F;
-                            u16 name_offset = *(u16*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_NAMES] +
-                                                      name_index * 2);
-                            u8* message_table = (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES];
-                            u16 suffix_offset = *(u16*)((u8*)message_table + 0xB4);
-                            u8* name = (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_NAMES] + name_offset;
-                            u8* suffix = (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] + suffix_offset;
-                            u8* out = item_name_buffer;
-                            menu_copy_encoded_pair(out, name, suffix);
+                            u8* item_ptr = pad_base + (((MenuNameSelection*)(flag_addr + MENU_ACTION_SLOT_OFFSET))->fields.index << 6) +
+                                           (MENU_CHARACTER_RECORD_OFFSET + OFFSETOF(FieldCharacterRecord, unk150));
+                            u8 cat = *(item_ptr + 0x24);
+                            u8 entry = *(item_ptr + 0x25);
+                            u8* state44 = (u8*)g_menu_state_ptr;
+                            state44 += *(s32*)(state44 + 0x44);
+                            prim_buf = menu_emit_content_label(prim_buf, ot, state44 + *(u16*)(state44 + (cat) * 0x1C + (entry) * 2));
                         }
                         else
                         {
-                            item_name_buffer[0] = 0;
+                            u32 slot654 = *(u32*)(pad_base + 0x654);
+                            u8* state1c = (u8*)g_menu_state_ptr;
+                            state1c += *(s32*)(state1c + 0x1C);
+                            prim_buf = menu_emit_content_label(prim_buf, ot,
+                                                               state1c + *(u16*)(state1c +
+                                                                                 ((MenuNameSelection*)(flag_addr + MENU_ACTION_SLOT_OFFSET))->fields.index * 2 +
+                                                                                 ((slot654 >> 0xA) & 0x3F) * 0x30));
                         }
-                        {
-                            SavedGameLayout* context = g_saved_game_ctx;
-                            u32 item_attributes = menu_equipped_item(context, action_type - MENU_EQUIPMENT_SUBTYPE_BASE)->attributes.packed;
-                            u32 kind = (item_attributes >> 8) & 3;
-                            switch (kind)
-                            {
-                            case 0:
-                            {
-                                u32 idx = (item_attributes >> 9) & 0x7E;
-                                uintptr_t category_help_table = (uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES);
-                                u8* str2 = (u8*)(category_help_table + *(u16*)(idx + category_help_table));
-
-                                u8* out = label_buffer;
-                                u8* first = item_name_buffer;
-                                menu_copy_encoded_pair(out, first, str2);
-                                break;
-                            }
-                            case 1:
-                            {
-                                u32 idx = (item_attributes >> 9) & 0x7E;
-                                uintptr_t category_help_table = (uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES);
-                                u8* str2 = (u8*)(category_help_table + *(u16*)(idx + category_help_table + 11 * sizeof(u16)));
-
-                                u8* out = label_buffer;
-                                u8* first = item_name_buffer;
-                                menu_copy_encoded_pair(out, first, str2);
-                                break;
-                            }
-                            default:
-                            {
-                                s32* category_help_offset = &((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_EQUIPMENT_TYPE_NAMES];
-                                SavedGameLayout* context = g_saved_game_ctx;
-                                u32 reloaded_item_attributes = menu_equipped_item(context, action_type - MENU_EQUIPMENT_SUBTYPE_BASE)->attributes.packed;
-                                u32 idx = (reloaded_item_attributes >> 9) & 0x7E;
-                                uintptr_t category_help_table = (uintptr_t)g_menu_state_ptr + *category_help_offset;
-                                u8* str2 = (u8*)(category_help_table + *(u16*)(idx + category_help_table + 23 * sizeof(u16)));
-
-                                u8* out = label_buffer;
-                                u8* first = item_name_buffer;
-                                menu_copy_encoded_pair(out, first, str2);
-                                break;
-                            }
-                            }
-                        }
-                        prim_buf = menu_emit_content_label(prim_buf, ot, label_buffer);
                     }
+                    break;
                 }
-                break;
-            case 11:
-            case 12:
-            case 13:
-            {
-                u8* char_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
-                if (*(char_base + MENU_FIRST_EQUIPMENT_OFFSET) != 0)
-                {
-                    text_index = (s32) * (char_base + action_type + 0x65D);
-                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(23), text_index));
-                }
-                break;
-            }
-            case 14:
-            {
-                u8* text_table = menu_text_table_base(17);
-                u8* character_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
-                u8 entry_index = character_base[0x609];
+                case 7:
+                case 8:
+                case 9:
+                case 10:
+                    if (g_menu_char_slot < 2)
+                    {
+                        SavedGameLayout* context = g_saved_game_ctx;
+                        if (menu_equipped_item(context, action_type - MENU_EQUIPMENT_SUBTYPE_BASE)->active != 0)
+                        {
+                            if (menu_item_differs_from_bare_hands(
+                                    &menu_character_record(context, g_menu_char_slot)->items[action_type - MENU_EQUIPMENT_SUBTYPE_BASE]) != 0)
+                            {
+                                s32 name_index = menu_equipped_item(g_saved_game_ctx, action_type - MENU_EQUIPMENT_SUBTYPE_BASE)->attributes.halves.high & 0x3F;
+                                u16 name_offset = *(u16*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_NAMES] +
+                                                          name_index * 2);
+                                u8* message_table = (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES];
+                                u16 suffix_offset = *(u16*)((u8*)message_table + 0xB4);
+                                u8* name = (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_NAMES] + name_offset;
+                                u8* suffix = (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] + suffix_offset;
+                                u8* out = item_name_buffer;
+                                menu_copy_encoded_pair(out, name, suffix);
+                            }
+                            else
+                            {
+                                item_name_buffer[0] = 0;
+                            }
+                            {
+                                SavedGameLayout* context = g_saved_game_ctx;
+                                u32 item_attributes = menu_equipped_item(context, action_type - MENU_EQUIPMENT_SUBTYPE_BASE)->attributes.packed;
+                                u32 kind = (item_attributes >> 8) & 3;
+                                switch (kind)
+                                {
+                                    case 0:
+                                    {
+                                        u32 idx = (item_attributes >> 9) & 0x7E;
+                                        uintptr_t category_help_table = (uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES);
+                                        u8* str2 = (u8*)(category_help_table + *(u16*)(idx + category_help_table));
 
-                prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));
-                break;
-            }
-            case 15:
-                if (g_menu_item_ptr != NULL)
-                {
-                    prim_buf = menu_emit_content_label(prim_buf, ot, (u8*)g_menu_item_ptr);
-                }
-                break;
-            case 16:
-            case 17:
-            case 18:
-                if (g_menu_item_ptr != 0)
-                {
-                    text_index = (s32) * ((u8*)g_menu_item_ptr + action_type + 0x10);
-                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(21), text_index));
-                }
-                break;
-            case 19:
-            case 20:
-            case 21:
-                if (g_menu_item_ptr != 0)
-                {
-                    text_index = (s32) * ((u8*)g_menu_item_ptr + action_type + 0x15);
-                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(23), text_index));
-                }
-                break;
-            case 22:
-                if (g_menu_item_ptr != 0)
-                {
-                    u8* help_table = menu_text_table_base(MENU_TEXT_CATEGORY_ENTRY_HELP);
-                    u8 cat = *((u8*)g_menu_category2_item + 0x24);
-                    u8 entry = *((u8*)g_menu_category2_item + 0x25);
-                    prim_buf = menu_emit_content_label(prim_buf, ot, help_table + *(u16*)(help_table + cat * 0x1C + entry * 2));
-                }
-                break;
-            case 23:
-                if (g_menu_item_ptr != 0)
-                {
-                    u8* text_table = menu_text_table_base(8);
-                    u8* item = (u8*)g_menu_category2_item;
-                    u8 entry_index = item[0x24];
-                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));
-                }
-                break;
-            case 24:
-                if (g_menu_item_ptr != 0)
-                {
-                    u8* text_table = menu_text_table_base(12);
-                    u8* item = (u8*)g_menu_category2_item;
-                    u8 entry_index = item[0x25];
-                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));
-                }
-                break;
-            case 25:
-            {
-                u8* text_table = menu_text_table_base(29);
-                u8* character_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
-                u8 entry_index = character_base[0x633];
+                                        u8* out = label_buffer;
+                                        u8* first = item_name_buffer;
+                                        menu_copy_encoded_pair(out, first, str2);
+                                        break;
+                                    }
+                                    case 1:
+                                    {
+                                        u32 idx = (item_attributes >> 9) & 0x7E;
+                                        uintptr_t category_help_table = (uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES);
+                                        u8* str2 = (u8*)(category_help_table + *(u16*)(idx + category_help_table + 11 * sizeof(u16)));
 
-                prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));
-                break;
-            }
+                                        u8* out = label_buffer;
+                                        u8* first = item_name_buffer;
+                                        menu_copy_encoded_pair(out, first, str2);
+                                        break;
+                                    }
+                                    default:
+                                    {
+                                        s32* category_help_offset = &((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_EQUIPMENT_TYPE_NAMES];
+                                        SavedGameLayout* context = g_saved_game_ctx;
+                                        u32 reloaded_item_attributes =
+                                            menu_equipped_item(context, action_type - MENU_EQUIPMENT_SUBTYPE_BASE)->attributes.packed;
+                                        u32 idx = (reloaded_item_attributes >> 9) & 0x7E;
+                                        uintptr_t category_help_table = (uintptr_t)g_menu_state_ptr + *category_help_offset;
+                                        u8* str2 = (u8*)(category_help_table + *(u16*)(idx + category_help_table + 23 * sizeof(u16)));
+
+                                        u8* out = label_buffer;
+                                        u8* first = item_name_buffer;
+                                        menu_copy_encoded_pair(out, first, str2);
+                                        break;
+                                    }
+                                }
+                            }
+                            prim_buf = menu_emit_content_label(prim_buf, ot, label_buffer);
+                        }
+                    }
+                    break;
+                case 11:
+                case 12:
+                case 13:
+                {
+                    u8* char_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
+                    if (*(char_base + MENU_FIRST_EQUIPMENT_OFFSET) != 0)
+                    {
+                        text_index = (s32) * (char_base + action_type + 0x65D);
+                        prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_EQUIPMENT_SPECIAL_HELP), text_index));
+                    }
+                    break;
+                }
+                case 14:
+                {
+                    u8* text_table = menu_text_table_base(MENU_TEXT_MONSTER_FAMILIES);
+                    u8* character_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
+                    u8 entry_index = character_base[0x609];
+
+                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));
+                    break;
+                }
+                case 15:
+                    if (g_menu_item_ptr != NULL)
+                    {
+                        prim_buf = menu_emit_content_label(prim_buf, ot, (u8*)g_menu_item_ptr);
+                    }
+                    break;
+                case 16:
+                case 17:
+                case 18:
+                    if (g_menu_item_ptr != 0)
+                    {
+                        text_index = (s32) * ((u8*)g_menu_item_ptr + action_type + 0x10);
+                        prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(21), text_index));
+                    }
+                    break;
+                case 19:
+                case 20:
+                case 21:
+                    if (g_menu_item_ptr != 0)
+                    {
+                        text_index = (s32) * ((u8*)g_menu_item_ptr + action_type + 0x15);
+                        prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_EQUIPMENT_SPECIAL_HELP), text_index));
+                    }
+                    break;
+                case 22:
+                    if (g_menu_item_ptr != 0)
+                    {
+                        u8* help_table = menu_text_table_base(MENU_TEXT_CATEGORY_ENTRY_HELP);
+                        u8 cat = *((u8*)g_menu_category2_item + 0x24);
+                        u8 entry = *((u8*)g_menu_category2_item + 0x25);
+                        prim_buf = menu_emit_content_label(prim_buf, ot, help_table + *(u16*)(help_table + cat * 0x1C + entry * 2));
+                    }
+                    break;
+                case 23:
+                    if (g_menu_item_ptr != 0)
+                    {
+                        u8* text_table = menu_text_table_base(MENU_TEXT_SPIRIT_HELP);
+                        u8* item = (u8*)g_menu_category2_item;
+                        u8 entry_index = item[0x24];
+                        prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));
+                    }
+                    break;
+                case 24:
+                    if (g_menu_item_ptr != 0)
+                    {
+                        u8* text_table = menu_text_table_base(MENU_TEXT_MAGIC_SHAPE_HELP);
+                        u8* item = (u8*)g_menu_category2_item;
+                        u8 entry_index = item[0x25];
+                        prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));
+                    }
+                    break;
+                case 25:
+                {
+                    u8* text_table = menu_text_table_base(29);
+                    u8* character_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
+                    u8 entry_index = character_base[0x633];
+
+                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));
+                    break;
+                }
             }
         }
     }
@@ -5714,57 +5745,57 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
         menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
         switch (g_menu_active_item_category)
         {
-        case 0:
-        {
-            s32 v = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
-            switch (v)
+            case 0:
             {
-            case 0x21:
-            case 0x22:
-            case 0x23:
-                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = v + 1;
-                break;
-            case 0x13:
-            case 0x24:
-                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = 0x21;
+                s32 v = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
+                switch (v)
+                {
+                    case 0x21:
+                    case 0x22:
+                    case 0x23:
+                        g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = v + 1;
+                        break;
+                    case 0x13:
+                    case 0x24:
+                        g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = 0x21;
+                        break;
+                }
+                g_menu_nodes[g_menu_scene_type].label_id = D_8016869F[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
                 break;
             }
-            g_menu_nodes[g_menu_scene_type].label_id = D_8016869F[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
-            break;
-        }
-        case 1:
-        {
-            s32 v = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
-            switch (v)
+            case 1:
             {
-            case 0x25:
-            case 0x26:
-                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = v + 1;
-                break;
-            case 0x16:
-            case 0x27:
-                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = 0x25;
+                s32 v = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
+                switch (v)
+                {
+                    case 0x25:
+                    case 0x26:
+                        g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = v + 1;
+                        break;
+                    case 0x16:
+                    case 0x27:
+                        g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = 0x25;
+                        break;
+                }
+                g_menu_nodes[g_menu_scene_type].label_id = D_8016869F[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
                 break;
             }
-            g_menu_nodes[g_menu_scene_type].label_id = D_8016869F[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
-            break;
-        }
-        case 2:
-        {
-            u8 v = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
-            switch (v)
+            case 2:
             {
-            case 0x28:
-                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = 0x29;
-                break;
-            case 0x29:
-            case 0x19:
-                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = 0x28;
+                u8 v = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
+                switch (v)
+                {
+                    case 0x28:
+                        g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = 0x29;
+                        break;
+                    case 0x29:
+                    case 0x19:
+                        g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = 0x28;
+                        break;
+                }
+                g_menu_nodes[g_menu_scene_type].label_id = D_801686A0[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
                 break;
             }
-            g_menu_nodes[g_menu_scene_type].label_id = D_801686A0[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
-            break;
-        }
         }
     }
 
@@ -5838,15 +5869,15 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
         {
             switch (item_kind)
             {
-            case 0:
-                icon_id = FIELD_ITEM_TYPE(item_attributes) + 0x45;
-                break;
-            case 1:
-                icon_id = FIELD_ITEM_TYPE(item_attributes) + 0x50;
-                break;
-            case 2:
-                icon_id = FIELD_ITEM_TYPE(item_attributes) + 0x5C;
-                break;
+                case 0:
+                    icon_id = FIELD_ITEM_TYPE(item_attributes) + 0x45;
+                    break;
+                case 1:
+                    icon_id = FIELD_ITEM_TYPE(item_attributes) + 0x50;
+                    break;
+                case 2:
+                    icon_id = FIELD_ITEM_TYPE(item_attributes) + 0x5C;
+                    break;
             }
 
             if ((y - scroll_y) > -MENU_LIST_ROW_HEIGHT && (y - scroll_y) < (list->viewport_h - MENU_LIST_ROW_HEIGHT))
@@ -5909,15 +5940,15 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                 g_menu_item_ptr = &((MenuItemEntry*)((u8*)g_saved_game_ctx + MENU_ITEM_TABLE_OFFSET))[item_index];
                 switch (g_menu_active_item_category)
                 {
-                case 0:
-                    g_menu_category0_item = g_menu_item_ptr;
-                    break;
-                case 1:
-                    g_menu_category1_item = g_menu_item_ptr;
-                    break;
-                case 2:
-                    g_menu_category2_item = g_menu_item_ptr;
-                    break;
+                    case 0:
+                        g_menu_category0_item = g_menu_item_ptr;
+                        break;
+                    case 1:
+                        g_menu_category1_item = g_menu_item_ptr;
+                        break;
+                    case 2:
+                        g_menu_category2_item = g_menu_item_ptr;
+                        break;
                 }
             }
             y += MENU_LIST_ROW_HEIGHT;
@@ -5989,41 +6020,41 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                     u32 item_kind = FIELD_ITEM_CATEGORY(item_attributes);
                     switch (item_kind)
                     {
-                    case 0:
-                    {
-                        u32 category_offset = (item_attributes >> 9) & 0x7E;
-                        uintptr_t description_table = (uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES);
-                        u8* description = (u8*)(description_table + *(u16*)(category_offset + description_table));
+                        case 0:
+                        {
+                            u32 category_offset = (item_attributes >> 9) & 0x7E;
+                            uintptr_t description_table = (uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES);
+                            u8* description = (u8*)(description_table + *(u16*)(category_offset + description_table));
 
-                        u8* text_cursor = g_menu_item_description_buffer;
-                        u8* name_prefix = item_name_buffer;
-                        menu_copy_encoded_pair(text_cursor, name_prefix, description);
-                        break;
-                    }
-                    case 1:
-                    {
-                        u32 category_offset = (item_attributes >> 9) & 0x7E;
-                        uintptr_t description_table = (uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES);
-                        u8* description = (u8*)(description_table + *(u16*)(category_offset + description_table + 11 * sizeof(u16)));
+                            u8* text_cursor = g_menu_item_description_buffer;
+                            u8* name_prefix = item_name_buffer;
+                            menu_copy_encoded_pair(text_cursor, name_prefix, description);
+                            break;
+                        }
+                        case 1:
+                        {
+                            u32 category_offset = (item_attributes >> 9) & 0x7E;
+                            uintptr_t description_table = (uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES);
+                            u8* description = (u8*)(description_table + *(u16*)(category_offset + description_table + 11 * sizeof(u16)));
 
-                        u8* text_cursor = g_menu_item_description_buffer;
-                        u8* name_prefix = item_name_buffer;
-                        menu_copy_encoded_pair(text_cursor, name_prefix, description);
-                        break;
-                    }
-                    default:
-                    {
-                        s32* description_offset = &((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_EQUIPMENT_TYPE_NAMES];
-                        u32 item_attributes = g_menu_item_ptr->attributes.packed;
-                        u32 category_offset = (item_attributes >> 9) & 0x7E;
-                        uintptr_t description_table = (uintptr_t)g_menu_state_ptr + *description_offset;
-                        u8* description = (u8*)(description_table + *(u16*)(category_offset + description_table + 23 * sizeof(u16)));
+                            u8* text_cursor = g_menu_item_description_buffer;
+                            u8* name_prefix = item_name_buffer;
+                            menu_copy_encoded_pair(text_cursor, name_prefix, description);
+                            break;
+                        }
+                        default:
+                        {
+                            s32* description_offset = &((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_EQUIPMENT_TYPE_NAMES];
+                            u32 item_attributes = g_menu_item_ptr->attributes.packed;
+                            u32 category_offset = (item_attributes >> 9) & 0x7E;
+                            uintptr_t description_table = (uintptr_t)g_menu_state_ptr + *description_offset;
+                            u8* description = (u8*)(description_table + *(u16*)(category_offset + description_table + 23 * sizeof(u16)));
 
-                        u8* text_cursor = g_menu_item_description_buffer;
-                        u8* name_prefix = item_name_buffer;
-                        menu_copy_encoded_pair(text_cursor, name_prefix, description);
-                        break;
-                    }
+                            u8* text_cursor = g_menu_item_description_buffer;
+                            u8* name_prefix = item_name_buffer;
+                            menu_copy_encoded_pair(text_cursor, name_prefix, description);
+                            break;
+                        }
                     }
                     g_menu_help_text = (u8*)g_menu_item_description_buffer;
                 }
@@ -6046,7 +6077,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                             s32 char_slot = g_menu_char_slot;
                             u8* ctx = (u8*)g_saved_game_ctx + (char_slot * MENU_CHARACTER_BLOCK_SIZE);
                             ctx += g_menu_active_subtype;
-                            ctx[MENU_SKILL_OFFSET - MENU_SKILL_SUBTYPE_BASE] = (s8)((u8)g_menu_active_subtype + (FIELD_SKILL_INSTRUMENT - MENU_SKILL_SUBTYPE_BASE));
+                            ctx[MENU_ACTION_SLOT_OFFSET] = (s8)((u8)g_menu_active_subtype + (FIELD_SKILL_INSTRUMENT - MENU_SKILL_SUBTYPE_BASE));
                         }
                         menu_play_se(SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
                         g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].idx_nav.s.self_idx = (s8)sub;
@@ -6197,15 +6228,15 @@ u32 menu_step_item_selection(s32 step)
                 g_menu_item_ptr = (MenuItemEntry*)((u8*)g_saved_game_ctx + ((index << 6) + MENU_ITEM_TABLE_OFFSET));
                 switch (kind)
                 {
-                case 0:
-                    g_menu_category0_item = g_menu_item_ptr;
-                    break;
-                case 1:
-                    g_menu_category1_item = g_menu_item_ptr;
-                    break;
-                case 2:
-                    g_menu_category2_item = g_menu_item_ptr;
-                    break;
+                    case 0:
+                        g_menu_category0_item = g_menu_item_ptr;
+                        break;
+                    case 1:
+                        g_menu_category1_item = g_menu_item_ptr;
+                        break;
+                    case 2:
+                        g_menu_category2_item = g_menu_item_ptr;
+                        break;
                 }
                 return index;
             }
@@ -6231,23 +6262,23 @@ u32 menu_step_item_selection(s32 step)
 }
 
 /**
- * @brief Draw the character's spell/ability grid and handle its selection input.
+ * @brief Draw the learned abilities and assign the chosen one to the active battle-action slot.
  * @param ot Ordering-table pointer, forwarded to the glyph renderer.
- * @param state Scroll-list state for this grid.
+ * @param state Scroll-list state for this list.
  * @param prim_buf Primitive buffer write cursor.
  * @param view_origin Viewport anchor; the glyph origin is (0x10 - x, rel_y - y).
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-void* menu_spell_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
+void* menu_ability_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     s32 selected_index;
-    s32 row;
-    s32 col;
+    s32 byte_index;
+    s32 bit_index;
     s32 bit_mask;
     s32 y;
     s32 relative_y;
-    u8* presence_row;
+    u8* learned_byte;
     u32 scroll_y;
     void* name_table;
     void* help_table;
@@ -6266,49 +6297,50 @@ void* menu_spell_list_callback(u_long* ot, ScrollListState* state, void* prim_bu
 
     y = 0;
     selected_index = -1;
-    row = 0;
-    presence_row = (u8*)g_saved_game_ctx + MENU_SPELL_GRID_OFFSET;
+    byte_index = 0;
+    learned_byte = (u8*)g_saved_game_ctx->ability_bits;
     scroll_y = list->scroll_y;
 
-    while (row < MENU_SPELL_GRID_ROW_COUNT)
+    while (byte_index < MENU_ABILITY_BYTE_COUNT)
     {
-        col = 0;
+        bit_index = 0;
         bit_mask = 1;
-        while (col < MENU_SPELL_GRID_COLUMN_COUNT)
+        while (bit_index < MENU_ABILITIES_PER_BYTE)
         {
-            if (*presence_row & bit_mask)
+            if (*learned_byte & bit_mask)
             {
                 relative_y = y - scroll_y;
                 if ((relative_y > -MENU_LIST_ROW_HEIGHT) && (relative_y < (list->viewport_h - MENU_LIST_ROW_HEIGHT)))
                 {
-                    name_table = menu_text_table_base(MENU_TEXT_SPELL_NAMES);
-                    prim_buf = field_draw_text(prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (col * 2) + (row * 0x10))),
-                                               FIELD_TEXT_COLOR_MENU, 0x10 - view_origin->x, relative_y - view_origin->y, FIELD_TEXT_ALIGN_LEFT);
+                    name_table = menu_text_table_base(MENU_TEXT_ABILITY_NAMES);
+                    prim_buf = field_draw_text(
+                        prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (bit_index * 2) + (byte_index * (MENU_ABILITIES_PER_BYTE * 2)))),
+                        FIELD_TEXT_COLOR_MENU, 0x10 - view_origin->x, relative_y - view_origin->y, FIELD_TEXT_ALIGN_LEFT);
                 }
                 if (list->navigation.fields.selected_index == (y >> MENU_LIST_ROW_SHIFT))
                 {
-                    selected_index = col + (row * 8);
+                    selected_index = bit_index + (byte_index * MENU_ABILITIES_PER_BYTE);
                 }
                 y += MENU_LIST_ROW_HEIGHT;
             }
-            col += 1;
+            bit_index++;
             bit_mask <<= 1;
         }
-        row += 1;
-        presence_row += 1;
+        byte_index++;
+        learned_byte++;
     }
 
     if ((g_pad_input & PAD_CONFIRM_BUTTONS) && (active != 0))
     {
-        *((u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + g_menu_active_subtype +
-          (row = MENU_SKILL_OFFSET - MENU_SKILL_SUBTYPE_BASE)) = selected_index;
+        *((u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + g_menu_active_subtype + (byte_index = MENU_ACTION_SLOT_OFFSET)) =
+            selected_index;
         menu_play_se(SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
         list->active = MENU_SLOT_STATE_CLOSING;
     }
 
     if (selected_index != -1)
     {
-        help_table = menu_text_table_base(MENU_TEXT_SPELL_HELP);
+        help_table = menu_text_table_base(MENU_TEXT_ABILITY_HELP);
         g_menu_help_text = (u8*)((u8*)help_table + ((u16*)help_table)[selected_index]);
     }
 
@@ -6631,7 +6663,7 @@ void* menu_skill_action_callback(u_long* ot, ScrollListState* state, void* prim_
             case 2:
                 character_bytes = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
                 character_bytes += g_menu_active_subtype;
-                skill = character_bytes[MENU_SKILL_OFFSET - MENU_SKILL_SUBTYPE_BASE];
+                skill = character_bytes[MENU_ACTION_SLOT_OFFSET];
                 if (skill == FIELD_SKILL_NONE)
                 {
                     break;
@@ -6659,7 +6691,7 @@ void* menu_skill_action_callback(u_long* ot, ScrollListState* state, void* prim_
                 }
 
                 character_bytes = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + g_menu_active_subtype;
-                character_bytes[MENU_SKILL_OFFSET - MENU_SKILL_SUBTYPE_BASE] = FIELD_SKILL_NONE;
+                character_bytes[MENU_ACTION_SLOT_OFFSET] = FIELD_SKILL_NONE;
                 list->active = MENU_SLOT_STATE_CLOSING;
                 break;
 

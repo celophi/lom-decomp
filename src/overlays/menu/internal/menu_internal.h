@@ -1,17 +1,19 @@
-#include "main/audio/akao.h"
-#include "main/audio/game_audio.h"
-#include "overlays/field/field_portrait.h"
 #ifndef LOM_MENU_INTERNAL_H
 #define LOM_MENU_INTERNAL_H
 
-#include "overlays/field/field_object_state.h"
-#include "overlays/menu/menu.h"
+#include "common.h"
+
 #include "common/saved_game.h"
-#include "main/display.h"
-#include "main/controller.h"
 #include "common/vector.h"
+#include "main/audio/akao.h"
+#include "main/audio/game_audio.h"
+#include "main/controller.h"
+#include "main/display.h"
 #include "overlays/field/field_numeric_sprites.h"
+#include "overlays/field/field_object_state.h"
+#include "overlays/field/field_portrait.h"
 #include "overlays/field/field_text.h"
+#include "overlays/menu/menu.h"
 
 /* Encoded-name functions of FIELD, called while FIELD is resident. */
 void field_copy_name(u8* destination, u8* source);
@@ -116,6 +118,8 @@ s32 field_name_byte_length(u8* name);
 #define MENU_EQUIPMENT_SUBTYPE_BASE 7
 /** @brief Menu subtype of equipment slot @p slot (FIELD_WEAPON_SLOT, then the armor slots). */
 #define MENU_EQUIPMENT_SUBTYPE(slot) (MENU_EQUIPMENT_SUBTYPE_BASE + (slot))
+/** @brief Menu subtype of the first Ability button; subtypes 1-2 select FieldCharacterRecord::info.actions.commands[0-1]. */
+#define MENU_COMMAND_SUBTYPE_BASE 1
 /** @brief Menu subtype of the first skill slot; subtypes 3-6 select FieldCharacterRecord::info.actions.skills[0-3]. */
 #define MENU_SKILL_SUBTYPE_BASE 3
 /** @brief g_menu_active_item_category of the pages that do not list inventory records. */
@@ -148,12 +152,16 @@ s32 field_name_byte_length(u8* name);
 #define MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK 0xFF803FFF
 /** @brief Clears the packed next-index field while preserving all other bits. */
 #define MENU_ITEM_NAV_NEXT_CLEAR_MASK 0x007FFFFF
-/** @brief Offset of the 12-row spell-presence bitmap in g_saved_game_ctx. */
-#define MENU_SPELL_GRID_OFFSET 0x60
-#define MENU_SPELL_GRID_ROW_COUNT 12
-#define MENU_SPELL_GRID_COLUMN_COUNT 8
+/** @brief The ability list reads SavedGameLayout::ability_bits one byte (eight abilities) at a time. */
+#define MENU_ABILITY_BYTE_COUNT (FIELD_ABILITY_WORD_COUNT * 4)
+#define MENU_ABILITIES_PER_BYTE 8
 /** @brief Byte offset of the first character's skill slots (FieldCharacterRecord::info.actions.skills) in g_saved_game_ctx. */
 #define MENU_SKILL_OFFSET (MENU_CHARACTER_RECORD_OFFSET + OFFSETOF(FieldCharacterRecord, info.actions.skills))
+/**
+ * @brief Byte offset in g_saved_game_ctx of the first character's battle-action byte for menu subtype 0.
+ * @note The byte of subtype s is at this offset + s: commands for subtypes 1-2, skills for 3-6.
+ */
+#define MENU_ACTION_SLOT_OFFSET (MENU_CHARACTER_INFO_OFFSET + 1)
 /** @brief Event List: words of event progress stages, events per word, and the stage of each event. */
 #define MENU_EVENT_WORD_COUNT 16
 #define MENU_EVENTS_PER_WORD 8
@@ -209,7 +217,6 @@ s32 field_name_byte_length(u8* name);
 #define MENU_TREE_DRAW_X 15
 #define MENU_TREE_DRAW_WIDTH 36
 #define MENU_TREE_DRAW_HEIGHT 170
-
 
 /* Type-view and fixed-address helpers. */
 #define MENU_CONTROLLER_ACTUATORS ((MenuControllerActuatorState*)CONTROLLER_STATE_ADDRESS)
@@ -267,15 +274,20 @@ typedef enum
 {
     MENU_TEXT_GENERAL = 0,
     MENU_TEXT_MESSAGES = 1,
-    MENU_TEXT_SPELL_NAMES = 3,
+    MENU_TEXT_ABILITY_NAMES = 3,
     MENU_TEXT_ARTIFACT_HELP = 4,
     MENU_TEXT_ARTIFACT_NAMES = 5,
     MENU_TEXT_TECHNIQUE_HELP = 6,
     MENU_TEXT_TECHNIQUE_NAMES = 7,
+    MENU_TEXT_SPIRIT_HELP = 8,
     MENU_TEXT_ITEM_HELP = 10,
     MENU_TEXT_ITEM_NAMES = 11,
-    MENU_TEXT_SPELL_HELP = 14,
+    MENU_TEXT_MAGIC_SHAPE_HELP = 12,
+    MENU_TEXT_ABILITY_HELP = 14,
     MENU_TEXT_CATEGORY_ENTRY_HELP = 15,
+    MENU_TEXT_MONSTER_FAMILIES = 17,
+    MENU_TEXT_MONSTER_NAMES = 18,
+    MENU_TEXT_EQUIPMENT_SPECIAL_HELP = 23,
     MENU_TEXT_EQUIPMENT_TYPE_NAMES = 25,
     MENU_TEXT_EVENT_NAMES = 26,
     MENU_TEXT_EVENT_HELP = 32,
@@ -601,7 +613,7 @@ u32 menu_step_item_selection(s32 step);
 void menu_upload_tim(const TimUploadDestination* layout);
 void* menu_draw_clamped_number(u_long* ot_entry, void* packet_cursor, s32 value, s32 format, Vec2s* origin, s32 style);
 
-void* menu_spell_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_ability_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
 void* menu_event_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
 void* menu_item_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
 void* menu_artifact_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
