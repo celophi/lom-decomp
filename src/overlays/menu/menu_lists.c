@@ -24,12 +24,12 @@ void* scroll_list_draw(void* prim_buf, u_long* ot, ScrollListState* state, u32* 
         if (g_pad_input & PADR1)
         {
             g_pad_input = PADLdown;
-            steps_remaining = (state->viewport_h - MENU_ITEM_NAV_POSITION_STRIDE) >> 4;
+            steps_remaining = (state->viewport_h - MENU_LIST_ROW_HEIGHT) >> MENU_LIST_ROW_SHIFT;
         }
         else if (g_pad_input & PADL1)
         {
             g_pad_input = PADLup;
-            steps_remaining = (state->viewport_h - MENU_ITEM_NAV_POSITION_STRIDE) >> 4;
+            steps_remaining = (state->viewport_h - MENU_LIST_ROW_HEIGHT) >> MENU_LIST_ROW_SHIFT;
         }
         else
         {
@@ -350,7 +350,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                 break;
             }
 
-            if ((y - scroll_y) >= -0xF && (y - scroll_y) < (list->viewport_h - 0x10))
+            if ((y - scroll_y) > -MENU_LIST_ROW_HEIGHT && (y - scroll_y) < (list->viewport_h - MENU_LIST_ROW_HEIGHT))
             {
                 u32 display_attributes;
                 s32 text_palette;
@@ -370,17 +370,17 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                 {
                     ability_flags = g_field_weapon_type_conflicts[FIELD_ITEM_TYPE(display_attributes)];
                 }
-                text_palette = 1;
+                text_palette = FIELD_TEXT_COLOR_MENU;
                 if (ability_flags & (u8)g_menu_equipment_conflicts)
                 {
-                    text_palette = 3;
+                    text_palette = FIELD_TEXT_COLOR_MENU_DIM;
                 }
                 packet_cursor = field_draw_text(packet_cursor, ot, (u8*)item_record, text_palette, 0x22 - view_origin->x, (y - scroll_y) - view_origin->y,
                                                 FIELD_TEXT_ALIGN_LEFT);
 
                 if (g_menu_pending_item_row != MENU_NONE)
                 {
-                    if ((y >> 4) == g_menu_pending_item_row)
+                    if ((y >> MENU_LIST_ROW_SHIFT) == g_menu_pending_item_row)
                     {
                         s32 view_x = view_origin->x;
                         s32 view_y = view_origin->y;
@@ -399,12 +399,12 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                 }
             }
 
-            if (g_menu_pending_item_row != MENU_NONE && (y >> 4) == g_menu_pending_item_row)
+            if (g_menu_pending_item_row != MENU_NONE && (y >> MENU_LIST_ROW_SHIFT) == g_menu_pending_item_row)
             {
                 pending_item_record = &((MenuItemEntry*)((u8*)g_saved_game_ctx + MENU_ITEM_TABLE_OFFSET))[item_index];
             }
 
-            if ((y >> 4) == list->navigation.fields.selected_index)
+            if ((y >> MENU_LIST_ROW_SHIFT) == list->navigation.fields.selected_index)
             {
                 g_menu_inventory_index = item_index;
                 g_menu_item_ptr = &((MenuItemEntry*)((u8*)g_saved_game_ctx + MENU_ITEM_TABLE_OFFSET))[item_index];
@@ -421,7 +421,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                     break;
                 }
             }
-            y += 0x10;
+            y += MENU_LIST_ROW_HEIGHT;
         }
 
         item_index += 1;
@@ -449,7 +449,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
         {
             menu_step_item_selection(-1);
             list->navigation.fields.selected_index = (u16)((list->navigation.fields.count_and_ot & 0x1FF) - 1);
-            if (((list->navigation.fields.selected_index * 0x10) - scroll_y) < (list->viewport_h - 0x10))
+            if (((list->navigation.fields.selected_index * MENU_LIST_ROW_HEIGHT) - scroll_y) < (list->viewport_h - MENU_LIST_ROW_HEIGHT))
             {
                 u16 cur = list->scroll_y;
                 if (cur != 0)
@@ -493,7 +493,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                     case 0:
                     {
                         u32 category_offset = (item_attributes >> 9) & 0x7E;
-                        uintptr_t description_table = (uintptr_t)menu_text_table_base(MENU_TEXT_ITEM_CATEGORY_HELP);
+                        uintptr_t description_table = (uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES);
                         u8* description = (u8*)(description_table + *(u16*)(category_offset + description_table));
 
                         u8* text_cursor = g_menu_item_description_buffer;
@@ -504,7 +504,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                     case 1:
                     {
                         u32 category_offset = (item_attributes >> 9) & 0x7E;
-                        uintptr_t description_table = (uintptr_t)menu_text_table_base(MENU_TEXT_ITEM_CATEGORY_HELP);
+                        uintptr_t description_table = (uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES);
                         u8* description = (u8*)(description_table + *(u16*)(category_offset + description_table + 11 * sizeof(u16)));
 
                         u8* text_cursor = g_menu_item_description_buffer;
@@ -514,7 +514,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                     }
                     default:
                     {
-                        s32* description_offset = &((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP];
+                        s32* description_offset = &((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_EQUIPMENT_TYPE_NAMES];
                         u32 item_attributes = g_menu_item_ptr->attributes.packed;
                         u32 category_offset = (item_attributes >> 9) & 0x7E;
                         uintptr_t description_table = (uintptr_t)g_menu_state_ptr + *description_offset;
@@ -545,7 +545,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                         field_compact_inventory();
                         {
                             s32 char_slot = g_menu_char_slot;
-                            u8* ctx = (u8*)g_saved_game_ctx + (char_slot * 0x250);
+                            u8* ctx = (u8*)g_saved_game_ctx + (char_slot * MENU_CHARACTER_BLOCK_SIZE);
                             ctx += g_menu_active_subtype;
                             ctx[MENU_SKILL_OFFSET - MENU_SKILL_SUBTYPE_BASE] = (s8)((u8)g_menu_active_subtype + (FIELD_SKILL_INSTRUMENT - MENU_SKILL_SUBTYPE_BASE));
                         }
@@ -631,7 +631,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                         rect.w = 0x70;
                         rect.h = 0x30;
                         list = (ScrollListState*)menu_slot_alloc(0, &rect);
-                        ((MenuSlot*)list)->content_cb = &menu_item_followup_callback;
+                        ((MenuSlot*)list)->content_cb = &menu_item_action_callback;
                         ((MenuSlot*)list)->navigation.packed = MENU_LIST_WITH_COUNT(((MenuSlot*)list)->navigation.packed, 2);
                         menu_relink_pair();
                     }
@@ -780,17 +780,17 @@ void* menu_spell_list_callback(u_long* ot, ScrollListState* state, void* prim_bu
             if (*presence_row & bit_mask)
             {
                 relative_y = y - scroll_y;
-                if ((relative_y >= -0xF) && (relative_y < (list->viewport_h - 0x10)))
+                if ((relative_y > -MENU_LIST_ROW_HEIGHT) && (relative_y < (list->viewport_h - MENU_LIST_ROW_HEIGHT)))
                 {
-                    name_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_SPELL_NAMES]);
-                    prim_buf = field_draw_text(prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (col * 2) + (row * 0x10))), 1,
-                                               0x10 - view_origin->x, relative_y - view_origin->y, FIELD_TEXT_ALIGN_LEFT);
+                    name_table = menu_text_table_base(MENU_TEXT_SPELL_NAMES);
+                    prim_buf = field_draw_text(prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (col * 2) + (row * 0x10))),
+                                               FIELD_TEXT_COLOR_MENU, 0x10 - view_origin->x, relative_y - view_origin->y, FIELD_TEXT_ALIGN_LEFT);
                 }
-                if (list->navigation.fields.selected_index == (y >> 4))
+                if (list->navigation.fields.selected_index == (y >> MENU_LIST_ROW_SHIFT))
                 {
                     selected_index = col + (row * 8);
                 }
-                y += 0x10;
+                y += MENU_LIST_ROW_HEIGHT;
             }
             col += 1;
             bit_mask <<= 1;
@@ -801,14 +801,15 @@ void* menu_spell_list_callback(u_long* ot, ScrollListState* state, void* prim_bu
 
     if ((g_pad_input & PAD_CONFIRM_BUTTONS) && (active != 0))
     {
-        *((u8*)g_saved_game_ctx + (g_menu_char_slot * 0x250) + g_menu_active_subtype + (row = 0x609)) = selected_index;
+        *((u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + g_menu_active_subtype +
+          (row = MENU_SKILL_OFFSET - MENU_SKILL_SUBTYPE_BASE)) = selected_index;
         menu_play_se(SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
         list->active = MENU_SLOT_STATE_CLOSING;
     }
 
     if (selected_index != -1)
     {
-        help_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_SPELL_HELP]);
+        help_table = menu_text_table_base(MENU_TEXT_SPELL_HELP);
         g_menu_help_text = (u8*)((u8*)help_table + ((u16*)help_table)[selected_index]);
     }
 
@@ -816,9 +817,9 @@ void* menu_spell_list_callback(u_long* ot, ScrollListState* state, void* prim_bu
 }
 
 /**
- * @brief Draw a character's equipment grid and handle its selection input.
+ * @brief Draw the Event List (every event past its listed stage, with progress marks) and handle its input.
  * @param ot Ordering-table pointer, forwarded to the glyph renderer.
- * @param state Scroll-list state for this grid.
+ * @param state Scroll-list state for this list.
  * @param prim_buf Primitive buffer write cursor.
  * @param view_origin Viewport anchor; the glyph origin is (0x20 - x, rel_y - y).
  * @param active Non-zero to process input this frame; zero draws only.
@@ -829,12 +830,12 @@ void* menu_event_list_callback(u_long* ot, ScrollListState* state, void* prim_bu
     ScrollListState* list;
     u32 scroll_y;
     s32 selected_index;
-    s32 row;
-    s32 col;
-    s32 y;
+    s32 word_index;
+    s32 event_index;
+    s32 list_y;
     s32 relative_y;
-    s32 entry_kind;
-    u32 row_entries;
+    s32 stage;
+    u32 stages;
     void* name_table;
     void* help_table;
     DR_TPAGE* draw_mode;
@@ -850,27 +851,28 @@ void* menu_event_list_callback(u_long* ot, ScrollListState* state, void* prim_bu
         g_pad_input = 0;
     }
 
-    y = 0;
+    list_y = 0;
     scroll_y = list->scroll_y;
     selected_index = -1;
 
-    for (row = 0; row < MENU_EVENT_WORD_COUNT; row += 1)
+    for (word_index = 0; word_index < MENU_EVENT_WORD_COUNT; word_index++)
     {
-        row_entries = *(u32*)((u8*)g_saved_game_ctx + (row << 2) + OFFSETOF(SavedGameLayout, words[SAVED_GAME_WORD_EVENT_PROGRESS]));
-        for (col = 0; col < MENU_EVENTS_PER_WORD; col += 1)
+        stages = g_saved_game_ctx->words[SAVED_GAME_WORD_EVENT_PROGRESS + word_index];
+        for (event_index = 0; event_index < MENU_EVENTS_PER_WORD; event_index++)
         {
-            entry_kind = row_entries & MENU_EVENT_STAGE_MASK;
-            if (entry_kind >= MENU_EVENT_STAGE_LISTED)
+            stage = stages & MENU_EVENT_STAGE_MASK;
+            if (stage >= MENU_EVENT_STAGE_LISTED)
             {
-                relative_y = y - scroll_y;
-                if ((relative_y >= -0xF) && (relative_y < (list->viewport_h - 0x10)))
+                relative_y = list_y - scroll_y;
+                if ((relative_y > -MENU_LIST_ROW_HEIGHT) && (relative_y < (list->viewport_h - MENU_LIST_ROW_HEIGHT)))
                 {
-                    name_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_EVENT_NAMES]);
-                    prim_buf = field_draw_text(prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (col * 2) + (row * 0x10))), 1,
-                                               0x20 - view_origin->x, relative_y - view_origin->y, FIELD_TEXT_ALIGN_LEFT);
-                    if (entry_kind >= 8)
+                    name_table = menu_text_table_base(MENU_TEXT_EVENT_NAMES);
+                    prim_buf = field_draw_text(
+                        prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (event_index * 2) + (word_index * (MENU_EVENTS_PER_WORD * 2)))),
+                        FIELD_TEXT_COLOR_MENU, 0x20 - view_origin->x, relative_y - view_origin->y, FIELD_TEXT_ALIGN_LEFT);
+                    if (stage >= MENU_EVENT_STAGE_MARKED)
                     {
-                        if (entry_kind >= 0xF)
+                        if (stage >= MENU_EVENT_STAGE_COMPLETE)
                         {
                             prim_buf = menu_emit_icon_sprite(prim_buf, ot, 0x70, 0x10 - view_origin->x, relative_y - view_origin->y, 0, 0, 0, 0);
                         }
@@ -885,19 +887,19 @@ void* menu_event_list_callback(u_long* ot, ScrollListState* state, void* prim_bu
                         prim_buf = draw_mode + 1;
                     }
                 }
-                if (list->navigation.fields.selected_index == (y >> 4))
+                if (list->navigation.fields.selected_index == (list_y >> MENU_LIST_ROW_SHIFT))
                 {
-                    selected_index = col + (row * 8);
+                    selected_index = event_index + (word_index * MENU_EVENTS_PER_WORD);
                 }
-                y += 0x10;
+                list_y += MENU_LIST_ROW_HEIGHT;
             }
-            row_entries >>= 4;
+            stages >>= MENU_EVENT_STAGE_BITS;
         }
     }
 
     if ((active != 0) && (selected_index != -1))
     {
-        help_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_EVENT_HELP]);
+        help_table = menu_text_table_base(MENU_TEXT_EVENT_HELP);
         g_menu_help_text = (u8*)((u8*)help_table + ((u16*)help_table)[selected_index]);
     }
 
@@ -947,21 +949,21 @@ void* menu_item_list_callback(u_long* ot, ScrollListState* state, void* prim_buf
         if (*quantity != 0)
         {
             relative_y = y - scroll_y;
-            if ((relative_y >= -0xF) && (relative_y < (list->viewport_h - 0x10)))
+            if ((relative_y > -MENU_LIST_ROW_HEIGHT) && (relative_y < (list->viewport_h - MENU_LIST_ROW_HEIGHT)))
             {
                 pos.x = 0xC0 - (u16)view_origin->x;
                 pos.y = relative_y - (u16)view_origin->y;
 
-                name_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_NAMES]);
-                prim_buf = field_draw_text(prim_buf, ot, ((u8*)name_table + ((u16*)name_table)[item_index]), 1, 0x10 - view_origin->x,
+                name_table = menu_text_table_base(MENU_TEXT_ITEM_NAMES);
+                prim_buf = field_draw_text(prim_buf, ot, ((u8*)name_table + ((u16*)name_table)[item_index]), FIELD_TEXT_COLOR_MENU, 0x10 - view_origin->x,
                                            relative_y - view_origin->y, FIELD_TEXT_ALIGN_LEFT);
                 prim_buf = menu_draw_clamped_number(ot, prim_buf, *quantity, 1, &pos, FIELD_TEXT_ALIGN_RIGHT);
             }
-            if (list->navigation.fields.selected_index == (y >> 4))
+            if (list->navigation.fields.selected_index == (y >> MENU_LIST_ROW_SHIFT))
             {
                 selected_index = item_index;
             }
-            y += 0x10;
+            y += MENU_LIST_ROW_HEIGHT;
         }
         quantity += 1;
     }
@@ -970,7 +972,7 @@ void* menu_item_list_callback(u_long* ot, ScrollListState* state, void* prim_buf
     {
         if (active != 0)
         {
-            help_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_HELP]);
+            help_table = menu_text_table_base(MENU_TEXT_ITEM_HELP);
             g_menu_help_text = (u8*)((u8*)help_table + ((u16*)help_table)[selected_index]);
         }
     }
@@ -1021,11 +1023,11 @@ void* menu_artifact_list_callback(u_long* ot, ScrollListState* state, void* prim
         if (land->flags & FIELD_LAND_PLACED)
         {
             relative_y = list_y - scroll_y;
-            if ((relative_y >= -0xF) && (relative_y < (list->viewport_h - 0x10)))
+            if ((relative_y > -MENU_LIST_ROW_HEIGHT) && (relative_y < (list->viewport_h - MENU_LIST_ROW_HEIGHT)))
             {
-                name_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ARTIFACT_NAMES]);
-                prim_buf = field_draw_text(prim_buf, ot, (void*)((u8*)name_table + ((u16*)name_table)[land_index]), 1, 0x20 - view_origin->x,
-                                           relative_y - view_origin->y, FIELD_TEXT_ALIGN_LEFT);
+                name_table = menu_text_table_base(MENU_TEXT_ARTIFACT_NAMES);
+                prim_buf = field_draw_text(prim_buf, ot, (void*)((u8*)name_table + ((u16*)name_table)[land_index]), FIELD_TEXT_COLOR_MENU,
+                                           0x20 - view_origin->x, relative_y - view_origin->y, FIELD_TEXT_ALIGN_LEFT);
                 if (land->flags & FIELD_LAND_FLAG_02)
                 {
                     prim_buf = menu_emit_icon_sprite(prim_buf, ot, 0x2C, 0x10 - view_origin->x, relative_y - view_origin->y, 0, 0, 0, 0);
@@ -1036,11 +1038,11 @@ void* menu_artifact_list_callback(u_long* ot, ScrollListState* state, void* prim
                     prim_buf = draw_mode + 1;
                 }
             }
-            if (list->navigation.fields.selected_index == (list_y >> 4))
+            if (list->navigation.fields.selected_index == (list_y >> MENU_LIST_ROW_SHIFT))
             {
                 selected_index = land_index;
             }
-            list_y += 0x10;
+            list_y += MENU_LIST_ROW_HEIGHT;
         }
         land += 1;
     }
@@ -1049,7 +1051,7 @@ void* menu_artifact_list_callback(u_long* ot, ScrollListState* state, void* prim
     {
         if (active != 0)
         {
-            help_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ARTIFACT_HELP]);
+            help_table = menu_text_table_base(MENU_TEXT_ARTIFACT_HELP);
             g_menu_help_text = (u8*)((u8*)help_table + ((u16*)help_table)[selected_index]);
         }
     }
@@ -1058,25 +1060,23 @@ void* menu_artifact_list_callback(u_long* ot, ScrollListState* state, void* prim
 }
 
 /**
- * @brief Handle input for the equip/status page and draw its four state-table labels.
+ * @brief Draw the ST / Magic / Remove / Status window of a skill slot and run the chosen command.
  * @param ot Ordering-table pointer, forwarded to the glyph renderer.
- * @param state Scroll-list state for this page.
+ * @param state Scroll-list state for this window.
  * @param prim_buf Primitive buffer write cursor.
  * @param view_origin Viewport anchor; label origins are (0x30 - x, N - y).
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor (unchanged on the early-return paths).
  */
-void* menu_subtype_action_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
+void* menu_skill_action_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     MenuSlotRect rect;
-    s32 packed;
-    s32 hi;
-    MenuItemEntry* handle;
-    s32 off;
-    s32 i;
-    s32 i1;
-    s32 i3;
-    u8 flag;
+    s32 technique_nav;
+    s32 selected_row;
+    MenuItemEntry* free_record;
+    s32 item_offset;
+    u8* character_bytes;
+    u8 skill;
     MenuContentItem* items;
     ScrollListState* list;
     void* buf;
@@ -1094,128 +1094,116 @@ void* menu_subtype_action_callback(u_long* ot, ScrollListState* state, void* pri
         menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
         switch (list->navigation.fields.selected_index)
         {
-        case 0:
-            list->anim_frame = 0;
-            list->active = 0;
-            rect.x = 0x40;
-            rect.y = 0x60;
-            rect.w = 0xF0;
-            rect.h = 0x60;
-            list = (ScrollListState*)menu_slot_alloc(3, &rect);
-            ((MenuSlot*)list)->content_cb = &menu_special_technique_list_callback;
-            packed = menu_build_special_technique_nav_entries();
-            hi = packed >> 0x10;
-            ((MenuSlot*)list)->lerp_target_b = hi * 0x10;
-            ((MenuSlot*)list)->lerp_cur_b = hi * 0x10;
-            ((MenuSlot*)list)->anim_frame = MENU_WINDOW_OPEN_FRAME;
-            ((MenuSlot*)list)->active = MENU_SLOT_STATE_OPEN;
-            ((MenuSlot*)list)->has_title = 1;
-            g_menu_draw_early_out = 1;
-            ((MenuSlot*)list)->navigation.packed = MENU_LIST_WITH_COUNT(((MenuSlot*)list)->navigation.packed, packed);
-            ((MenuSlot*)list)->navigation.fields.selected_index = (u16)hi;
-            return buf;
+            case 0:
+                list->anim_frame = 0;
+                list->active = MENU_SLOT_STATE_FREE;
+                rect.x = 0x40;
+                rect.y = 0x60;
+                rect.w = 0xF0;
+                rect.h = 0x60;
+                list = (ScrollListState*)menu_slot_alloc(MENU_CONTENT_OT_INDEX, &rect);
+                ((MenuSlot*)list)->content_cb = &menu_special_technique_list_callback;
+                technique_nav = menu_build_special_technique_nav_entries();
+                selected_row = technique_nav >> 16;
+                ((MenuSlot*)list)->lerp_target_b = selected_row * MENU_LIST_ROW_HEIGHT;
+                ((MenuSlot*)list)->lerp_cur_b = selected_row * MENU_LIST_ROW_HEIGHT;
+                ((MenuSlot*)list)->anim_frame = MENU_WINDOW_OPEN_FRAME;
+                ((MenuSlot*)list)->active = MENU_SLOT_STATE_OPEN;
+                ((MenuSlot*)list)->has_title = 1;
+                g_menu_draw_early_out = 1;
+                ((MenuSlot*)list)->navigation.packed = MENU_LIST_WITH_COUNT(((MenuSlot*)list)->navigation.packed, technique_nav);
+                ((MenuSlot*)list)->navigation.fields.selected_index = (u16)selected_row;
+                return buf;
 
-        case 1:
-            i1 = MENU_SLOT_COUNT - 1;
-            while (i1 >= 0)
-            {
-                g_menu_slots[i1].active = 0;
-                i1--;
-            }
-            g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].idx_nav.s.self_idx = 0x29;
-            g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].label_id = D_801686A0[g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].idx_nav.s.self_idx];
-            g_menu_equipment_conflicts = 0;
-            g_menu_content_ready = 1;
-            menu_open_content_page(MENU_PAGE_INSTRUMENTS);
-            g_menu_draw_early_out = 1;
-            g_menu_item_ptr = 0;
-            g_menu_category0_item = 0;
-            g_menu_category1_item = 0;
-            g_menu_category2_item = 0;
-            return buf;
+            case 1:
+                menu_clear_slots();
+                g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].idx_nav.s.self_idx = 0x29;
+                g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].label_id =
+                    D_801686A0[g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].idx_nav.s.self_idx];
+                g_menu_equipment_conflicts = 0;
+                g_menu_content_ready = 1;
+                menu_open_content_page(MENU_PAGE_INSTRUMENTS);
+                g_menu_draw_early_out = 1;
+                g_menu_item_ptr = NULL;
+                g_menu_category0_item = NULL;
+                g_menu_category1_item = NULL;
+                g_menu_category2_item = NULL;
+                return buf;
 
-        case 2:
-        {
-            u8* flag_ptr = (u8*)g_saved_game_ctx + (g_menu_char_slot * 0x250);
-            flag_ptr += g_menu_active_subtype;
-            flag = *(flag_ptr + (MENU_SKILL_OFFSET - MENU_SKILL_SUBTYPE_BASE));
-            if (flag == FIELD_SKILL_NONE)
-            {
-                break;
-            }
-            if (flag & FIELD_SKILL_INSTRUMENT)
-            {
-                handle = field_find_free_inventory_record();
-                if (handle != 0)
+            case 2:
+                character_bytes = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
+                character_bytes += g_menu_active_subtype;
+                skill = character_bytes[MENU_SKILL_OFFSET - MENU_SKILL_SUBTYPE_BASE];
+                if (skill == FIELD_SKILL_NONE)
                 {
-                    field_copy_inventory_record(handle,
-                                                (((u8*)g_saved_game_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((g_menu_active_subtype << 6) + 0x90)));
-                    off = ((g_menu_active_subtype + 1) << 6) + (g_menu_char_slot * 0x250);
-                    flag_ptr = (u8*)g_saved_game_ctx + off;
-                    flag_ptr[0x640] = 0;
-                    field_compact_inventory(off);
+                    break;
                 }
-                else
+
+                /* An instrument goes back to the inventory; without room the slot keeps it. */
+                if (skill & FIELD_SKILL_INSTRUMENT)
                 {
-                    g_menu_message_line1 = (void*)menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_CANNOT_REMOVE);
-                    i = MENU_SLOT_COUNT - 1;
-                    while (i >= 0)
+                    free_record = field_find_free_inventory_record();
+                    if (free_record != NULL)
                     {
-                        g_menu_slots[i].active = 0;
-                        i--;
+                        field_copy_inventory_record(free_record,
+                                                    (((u8*)g_saved_game_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET)) +
+                                                     ((g_menu_active_subtype << 6) + (MENU_CHARACTER_ITEMS_OFFSET + MENU_ITEM_RECORD_SIZE))));
+                        item_offset = ((g_menu_active_subtype + 1) << 6) + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
+                        character_bytes = (u8*)g_saved_game_ctx + item_offset;
+                        character_bytes[MENU_FIRST_EQUIPMENT_OFFSET] = 0;
+                        field_compact_inventory(item_offset);
                     }
-                    menu_open_content_page(MENU_PAGE_MESSAGE);
-                    return buf;
+                    else
+                    {
+                        menu_show_message(MENU_MESSAGE_CANNOT_REMOVE);
+                        return buf;
+                    }
                 }
-            }
-            flag_ptr = (u8*)g_saved_game_ctx + (g_menu_char_slot * 0x250) + g_menu_active_subtype;
-            *(flag_ptr + (MENU_SKILL_OFFSET - MENU_SKILL_SUBTYPE_BASE)) = FIELD_SKILL_NONE;
-            list->active = MENU_SLOT_STATE_CLOSING;
-            break;
-        }
 
-        case 3:
-            if (g_menu_active_equipped_item->active == 0)
-            {
+                character_bytes = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + g_menu_active_subtype;
+                character_bytes[MENU_SKILL_OFFSET - MENU_SKILL_SUBTYPE_BASE] = FIELD_SKILL_NONE;
+                list->active = MENU_SLOT_STATE_CLOSING;
                 break;
-            }
-            i3 = MENU_SLOT_COUNT - 1;
-            while (i3 >= 0)
-            {
-                g_menu_slots[i3].active = 0;
-                i3--;
-            }
-            g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].idx_nav.s.self_idx = 0x1A;
-            g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].label_id = 0x17;
-            g_menu_hit_item_idx = menu_find_active_content_item();
-            if (g_menu_hit_item_idx != -1)
-            {
-                items = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
-                g_content_view_x = items[g_menu_hit_item_idx].packed_x & MENU_CONTENT_X_MASK;
-                g_content_view_y = items[g_menu_hit_item_idx].y - MENU_CONTENT_VIEW_Y_OFFSET;
-                g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
-                g_menu_cursor_enable = 1;
-            }
-            g_menu_draw_early_out = 1;
-            return buf;
+
+            case 3:
+                if (g_menu_active_equipped_item->active == 0)
+                {
+                    break;
+                }
+
+                menu_clear_slots();
+                g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].idx_nav.s.self_idx = 0x1A;
+                g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].label_id = 0x17;
+                g_menu_hit_item_idx = menu_find_active_content_item();
+                if (g_menu_hit_item_idx != -1)
+                {
+                    items = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
+                    g_content_view_x = items[g_menu_hit_item_idx].packed_x & MENU_CONTENT_X_MASK;
+                    g_content_view_y = items[g_menu_hit_item_idx].y - MENU_CONTENT_VIEW_Y_OFFSET;
+                    g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
+                    g_menu_cursor_mode = MENU_CURSOR_MODE_CONTENT;
+                }
+
+                g_menu_draw_early_out = 1;
+                return buf;
         }
     }
 
     buf = scroll_list_draw(buf, ot, list, g_menu_item_nav_entries, view_origin, active);
 
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_TECHNIQUE), 1, 0x30 - view_origin->x, -view_origin->y,
-                          FIELD_TEXT_ALIGN_CENTER);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_MAGIC), 1, 0x30 - view_origin->x, 0x10 - view_origin->y,
-                          FIELD_TEXT_ALIGN_CENTER);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_REMOVE), 1, 0x30 - view_origin->x, 0x20 - view_origin->y,
-                          FIELD_TEXT_ALIGN_CENTER);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_STATUS), 1, 0x30 - view_origin->x, 0x30 - view_origin->y,
-                          FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_TECHNIQUE), FIELD_TEXT_COLOR_MENU,
+                          0x30 - view_origin->x, -view_origin->y, FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_MAGIC), FIELD_TEXT_COLOR_MENU, 0x30 - view_origin->x,
+                          0x10 - view_origin->y, FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_REMOVE), FIELD_TEXT_COLOR_MENU, 0x30 - view_origin->x,
+                          0x20 - view_origin->y, FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_STATUS), FIELD_TEXT_COLOR_MENU, 0x30 - view_origin->x,
+                          0x30 - view_origin->y, FIELD_TEXT_ALIGN_CENTER);
     return buf;
 }
 
 /**
- * @brief Draws the confirmation page and dismisses it on any cancel/confirm press.
+ * @brief Draw the one-line message window; a confirm or cancel press closes it.
  * @param ot Ordering-table pointer, forwarded to the glyph renderer.
  * @param state Scroll-list state for this page.
  * @param prim_buf Primitive buffer write cursor.
@@ -1233,16 +1221,16 @@ void* menu_message_callback(u_long* ot, ScrollListState* state, void* prim_buf, 
     if ((g_pad_input & PAD_DISMISS_BUTTONS) && (active != 0))
     {
         state->anim_frame = 0;
-        state->active = 0;
+        state->active = MENU_SLOT_STATE_FREE;
         menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
     }
 
-    buf = field_draw_text(buf, ot, g_menu_message_line1, 1, 0x88 - view_origin->x, -view_origin->y, FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, g_menu_message_line1, FIELD_TEXT_COLOR_MENU, 0x88 - view_origin->x, -view_origin->y, FIELD_TEXT_ALIGN_CENTER);
     return buf;
 }
 
 /**
- * @brief Draws the two-line confirmation page and dismisses it on cancel/confirm.
+ * @brief Draw the two-line message window; a confirm or cancel press closes it.
  * @param ot Ordering-table pointer, forwarded to the glyph renderer.
  * @param state Scroll-list state for this page.
  * @param prim_buf Primitive buffer write cursor.
@@ -1260,33 +1248,32 @@ void* menu_two_line_message_callback(u_long* ot, ScrollListState* state, void* p
     if ((g_pad_input & PAD_DISMISS_BUTTONS) && (active != 0))
     {
         state->anim_frame = 0;
-        state->active = 0;
+        state->active = MENU_SLOT_STATE_FREE;
         menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
     }
 
-    buf = field_draw_text(buf, ot, g_menu_message_line1, 1, 0x88 - view_origin->x, -view_origin->y, FIELD_TEXT_ALIGN_CENTER);
-    buf = field_draw_text(buf, ot, g_menu_message_line2, 1, 0x88 - view_origin->x, 0x10 - view_origin->y, FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, g_menu_message_line1, FIELD_TEXT_COLOR_MENU, 0x88 - view_origin->x, -view_origin->y, FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, g_menu_message_line2, FIELD_TEXT_COLOR_MENU, 0x88 - view_origin->x, 0x10 - view_origin->y, FIELD_TEXT_ALIGN_CENTER);
     return buf;
 }
 
 /**
- * @brief Draws a two-glyph scroll-list page and handles its cancel/confirm input.
+ * @brief Draw the Status / Trash window of an inventory item and run the chosen command.
  * @param ot Ordering-table pointer, forwarded to the glyph renderer.
- * @param state Scroll-list state for this page.
+ * @param state Scroll-list state for this window.
  * @param prim_buf Primitive buffer write cursor.
  * @param view_origin Viewport anchor; the glyph origins are (0x30 - x, N - y).
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-void* menu_item_followup_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
+void* menu_item_action_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active)
 {
     MenuContentItem* item;
-    uintptr_t tbl;
+    uintptr_t content_table;
     ScrollListState* list;
     Vec2s pos;
-    s32 i;
     void* buf;
-    s32 idx;
+    s32 hit;
 
     list = state;
     buf = prim_buf;
@@ -1301,29 +1288,28 @@ void* menu_item_followup_callback(u_long* ot, ScrollListState* state, void* prim
         menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
         if (list->navigation.fields.selected_index != 0)
         {
+            /* Trash: drop the item record and close up the inventory. */
             list->active = MENU_SLOT_STATE_CLOSING;
-            *(u8*)g_menu_item_ptr = 0;
+            g_menu_item_ptr->active = 0;
             field_compact_inventory();
-            g_menu_pending_item_row = 0xFF;
+            g_menu_pending_item_row = MENU_NONE;
         }
         else
         {
-            g_menu_scene_type += 1;
+            /* Status: show the item's status page, the next scene node. */
+            g_menu_scene_type++;
             g_menu_active_node = g_menu_scene_type;
-            for (i = 3; i >= 0; i--)
+            menu_clear_slots();
+            hit = menu_find_active_content_item();
+            g_menu_hit_item_idx = hit;
+            if (hit != -1)
             {
-                g_menu_slots[i].active = 0;
-            }
-            idx = menu_find_active_content_item();
-            g_menu_hit_item_idx = idx;
-            if (idx != -1)
-            {
-                tbl = (uintptr_t)g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
-                item = (MenuContentItem*)((idx * sizeof(MenuContentItem)) + tbl);
+                content_table = (uintptr_t)g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
+                item = (MenuContentItem*)((hit * sizeof(MenuContentItem)) + content_table);
                 g_content_view_x = item->packed_x & MENU_CONTENT_X_MASK;
                 g_content_view_y = item->y - MENU_CONTENT_VIEW_Y_OFFSET;
                 g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
-                g_menu_cursor_enable = 1;
+                g_menu_cursor_mode = MENU_CURSOR_MODE_CONTENT;
             }
         }
         return buf;
@@ -1331,10 +1317,10 @@ void* menu_item_followup_callback(u_long* ot, ScrollListState* state, void* prim
 
     buf = scroll_list_draw(buf, ot, list, g_menu_item_nav_entries, view_origin, active);
 
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_ITEM_STATUS), 1, 0x30 - view_origin->x, -view_origin->y,
-                          FIELD_TEXT_ALIGN_CENTER);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_TRASH), 1, 0x30 - view_origin->x, 0x10 - view_origin->y,
-                          FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_ITEM_STATUS), FIELD_TEXT_COLOR_MENU,
+                          0x30 - view_origin->x, -view_origin->y, FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_TRASH), FIELD_TEXT_COLOR_MENU, 0x30 - view_origin->x,
+                          0x10 - view_origin->y, FIELD_TEXT_ALIGN_CENTER);
     return buf;
 }
 

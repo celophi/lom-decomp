@@ -575,7 +575,7 @@ void menu_update_slots(RenderContext* render_ctx)
         {
             u8 previous_anim_frame;
 
-            menu_draw_window_transition(render_ctx, &g_menu_slots[slot_index], g_menu_cursor_enable != 0);
+            menu_draw_window_transition(render_ctx, &g_menu_slots[slot_index], g_menu_cursor_mode != MENU_CURSOR_MODE_NODE_TREE);
             previous_anim_frame = g_menu_slots[slot_index].anim_frame;
             anim_frame = previous_anim_frame + 1;
             g_menu_slots[slot_index].anim_frame = anim_frame;
@@ -594,7 +594,7 @@ void menu_update_slots(RenderContext* render_ctx)
                 slot_rect = (MenuRect*)&g_menu_slots[slot_index].x;
                 view_origin.y = 0;
                 view_origin.x = 0;
-                menu_draw_window(&g_menu_slots[slot_index], render_ctx, slot_rect, &view_origin, g_menu_cursor_enable != 0);
+                menu_draw_window(&g_menu_slots[slot_index], render_ctx, slot_rect, &view_origin, g_menu_cursor_mode != MENU_CURSOR_MODE_NODE_TREE);
             }
             if (slot_index == g_active_slot)
             {
@@ -608,7 +608,7 @@ void menu_update_slots(RenderContext* render_ctx)
             continue;
 
         case MENU_SLOT_STATE_CLOSING:
-            menu_draw_window_transition(render_ctx, &g_menu_slots[slot_index], g_menu_cursor_enable != 0);
+            menu_draw_window_transition(render_ctx, &g_menu_slots[slot_index], g_menu_cursor_mode != MENU_CURSOR_MODE_NODE_TREE);
             anim_frame = g_menu_slots[slot_index].anim_frame - 1;
             g_menu_slots[slot_index].anim_frame = anim_frame;
             if (!(anim_frame & 0xFF))
@@ -639,7 +639,7 @@ void menu_update_slots(RenderContext* render_ctx)
         view_origin.y = 0;
         view_origin.x = 0;
 
-        if ((g_active_slot == -1) || (g_menu_cursor_enable == 0))
+        if ((g_active_slot == -1) || (g_menu_cursor_mode == MENU_CURSOR_MODE_NODE_TREE))
         {
             allow_input = 1;
         }
@@ -647,8 +647,8 @@ void menu_update_slots(RenderContext* render_ctx)
         render_ctx->prim_cursor = menu_draw_frame(render_ctx->prim_cursor, frame_ot, render_ctx->frame_parity, allow_input);
         if (g_menu_help_text != 0)
         {
-            render_ctx->prim_cursor =
-                field_draw_text(render_ctx->prim_cursor, &render_ctx->ot[MENU_FRAME_OT_INDEX], g_menu_help_text, 1, 0xA0, 0xCA, FIELD_TEXT_ALIGN_CENTER);
+            render_ctx->prim_cursor = field_draw_text(render_ctx->prim_cursor, &render_ctx->ot[MENU_FRAME_OT_INDEX], g_menu_help_text, FIELD_TEXT_COLOR_MENU,
+                                                      0xA0, 0xCA, FIELD_TEXT_ALIGN_CENTER);
         }
     }
 }
@@ -1016,7 +1016,7 @@ u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const Vec2s* po
 
     menu_copy_sign_label(label_buffer, value);
 
-    packet_cursor = field_draw_text((SPRT*)packet_cursor, ot_entry, label_buffer, 1, position->x, position->y, FIELD_TEXT_ALIGN_LEFT);
+    packet_cursor = field_draw_text((SPRT*)packet_cursor, ot_entry, label_buffer, FIELD_TEXT_COLOR_MENU, position->x, position->y, FIELD_TEXT_ALIGN_LEFT);
 
     return packet_cursor;
 }
@@ -1061,7 +1061,7 @@ void menu_node_tree_init(void)
     g_menu_scroll_pos = 0;
     g_menu_redraw_state = 0;
     g_menu_active_node = 0;
-    g_menu_cursor_enable = 0;
+    g_menu_cursor_mode = MENU_CURSOR_MODE_NODE_TREE;
     for (node_index = 0; node_index < MENU_NODE_COUNT; node_index++)
     {
         g_menu_nodes[node_index].layout_frames_remaining = MENU_NODE_LAYOUT_IDLE;
@@ -1529,7 +1529,7 @@ u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 a
     }
 
     /* Render and update the active node or content cursor mode. */
-    switch (g_menu_cursor_enable)
+    switch (g_menu_cursor_mode)
     {
     case MENU_CURSOR_MODE_NODE_TREE:
         frame_cursor = menu_draw_active_node_cursor(draw_env_packet, ot_entry - 1, allow_input);
@@ -1552,7 +1552,7 @@ u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 a
         frame_cursor = menu_draw_content_cursor(draw_env_packet, ot_entry - 1, allow_input);
         if (g_menu_suppress_cursor == 0)
         {
-            g_menu_cursor_enable = MENU_CURSOR_MODE_NODE_TREE;
+            g_menu_cursor_mode = MENU_CURSOR_MODE_NODE_TREE;
         }
         break;
 
@@ -1722,7 +1722,7 @@ s32 menu_handle_node_input(void)
         g_content_cursor_x = menu_nav_x(active_node->idx_nav.nav_x_packed) + MENU_CONTENT_CURSOR_X_OFFSET;
         if (active_node->content_id != MENU_NONE)
         {
-            g_menu_cursor_enable = MENU_CURSOR_MODE_CONTENT;
+            g_menu_cursor_mode = MENU_CURSOR_MODE_CONTENT;
             work_index = 0;
             while (work_index < MENU_SLOT_COUNT)
             {
@@ -1745,7 +1745,7 @@ s32 menu_handle_node_input(void)
                 g_content_view_x = content_items[g_menu_hit_item_idx].packed_x & MENU_CONTENT_X_MASK;
                 view_y = content_items[g_menu_hit_item_idx].y - MENU_CONTENT_VIEW_Y_OFFSET;
                 g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
-                g_menu_cursor_enable = MENU_CURSOR_MODE_CONTENT;
+                g_menu_cursor_mode = MENU_CURSOR_MODE_CONTENT;
                 g_content_view_y = view_y;
             }
         }
@@ -1771,7 +1771,7 @@ inline s32 menu_focus_active_content_item(void)
         g_content_view_x = content_items[g_menu_hit_item_idx].packed_x & MENU_CONTENT_X_MASK;
         view_y = content_items[g_menu_hit_item_idx].y - MENU_CONTENT_VIEW_Y_OFFSET;
         g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
-        g_menu_cursor_enable = MENU_CURSOR_MODE_CONTENT;
+        g_menu_cursor_mode = MENU_CURSOR_MODE_CONTENT;
         g_content_view_y = view_y;
         return 1;
     }
