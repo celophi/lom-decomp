@@ -257,7 +257,7 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
                     g_content_view_x = item->packed_x & MENU_CONTENT_X_MASK;
                     g_content_view_y = item->y - MENU_CONTENT_VIEW_Y_OFFSET;
                     g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
-                    g_menu_cursor_enable = 1;
+                    g_menu_cursor_enable = MENU_CURSOR_MODE_CONTENT;
                 }
 
                 g_menu_draw_early_out = 1;
@@ -366,15 +366,15 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
 
     buf = scroll_list_draw(buf, ot, list, g_menu_item_nav_entries, view_origin, active);
 
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_EQUIP), 1, 0x30 - view_origin->x, -view_origin->y,
-                          FIELD_TEXT_ALIGN_CENTER);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_AUTO_SELECT), 1, 0x30 - view_origin->x,
-                          0x10 - view_origin->y, FIELD_TEXT_ALIGN_CENTER);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_TOTAL_AUTO), 1, 0x30 - view_origin->x,
-                          0x20 - view_origin->y, FIELD_TEXT_ALIGN_CENTER);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_STATUS), 1, 0x30 - view_origin->x,
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_EQUIP), FIELD_TEXT_COLOR_MENU, 0x30 - view_origin->x,
+                          -view_origin->y, FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_AUTO_SELECT), FIELD_TEXT_COLOR_MENU,
+                          0x30 - view_origin->x, 0x10 - view_origin->y, FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_TOTAL_AUTO), FIELD_TEXT_COLOR_MENU,
+                          0x30 - view_origin->x, 0x20 - view_origin->y, FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_STATUS), FIELD_TEXT_COLOR_MENU, 0x30 - view_origin->x,
                           0x30 - view_origin->y, FIELD_TEXT_ALIGN_CENTER);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_REMOVE), 1, 0x30 - view_origin->x,
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_REMOVE), FIELD_TEXT_COLOR_MENU, 0x30 - view_origin->x,
                           0x40 - view_origin->y, FIELD_TEXT_ALIGN_CENTER);
     return buf;
 }
@@ -466,9 +466,9 @@ void* menu_equipment_compare_callback(u_long* ot, ScrollListState* state, void* 
     }
 
     buf = scroll_list_draw(buf, ot, list, g_menu_item_nav_entries, view_origin, active);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_CHANGE), 1, 0x30 - view_origin->x, -view_origin->y,
-                          FIELD_TEXT_ALIGN_CENTER);
-    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_CANCEL), 1, 0x30 - view_origin->x,
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_CHANGE), FIELD_TEXT_COLOR_MENU, 0x30 - view_origin->x,
+                          -view_origin->y, FIELD_TEXT_ALIGN_CENTER);
+    buf = field_draw_text(buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_CANCEL), FIELD_TEXT_COLOR_MENU, 0x30 - view_origin->x,
                           0x10 - view_origin->y, FIELD_TEXT_ALIGN_CENTER);
     g_pad_input = 0;
     return buf;
@@ -654,15 +654,15 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
                         s32 name_offset;
                         u8* name;
 
-                        /* Techniques of the equipped weapon's type are drawn in the highlight color. */
-                        glyph_color = 3;
+                        /* Techniques of other weapon types are listed dimmed. */
+                        glyph_color = FIELD_TEXT_COLOR_MENU_DIM;
                         name_table = g_menu_state_ptr;
                         name_table += ((MenuTextResources*)name_table)->table_offsets[MENU_TEXT_TECHNIQUE_NAMES];
                         name_offset = *(u16*)((u8*)name_table + (technique_index * 2) + (weapon_type * (FIELD_TECHNIQUES_PER_WEAPON * 2)));
                         name = name_table + name_offset;
                         if (weapon_type == (s32)FIELD_ITEM_TYPE(g_menu_equipment_base->attributes.packed))
                         {
-                            glyph_color = 1;
+                            glyph_color = FIELD_TEXT_COLOR_MENU;
                         }
                         prim = field_draw_text(prim, ot, name, glyph_color, 0x10 - view_origin->x, relative_y - view_origin->y, FIELD_TEXT_ALIGN_LEFT);
                     }
