@@ -183,9 +183,15 @@ s32 field_name_byte_length(u8* name);
 #define MENU_CURSOR_REVEAL_DELAY 5
 /** @brief Extracts the 9-bit screen X coordinate from MenuContentItem::packed_x. */
 #define MENU_CONTENT_X_MASK 0x1FF
-/** @brief Shift and mask for the three-bit text/style field in MenuContentItem::packed_x. */
+/** @brief Screen X of a content item. */
+#define MENU_CONTENT_X(item) ((item)->packed_x & MENU_CONTENT_X_MASK)
+/** @brief Viewport Y of a content item. */
+#define MENU_CONTENT_Y(item) ((item)->y - MENU_CONTENT_VIEW_Y_OFFSET)
+/** @brief Shift and mask for the three-bit text alignment field in MenuContentItem::packed_x. */
 #define MENU_CONTENT_STYLE_SHIFT 9
 #define MENU_CONTENT_STYLE_MASK 0x7
+/** @brief FIELD_TEXT_ALIGN_* value a content item draws its text and numbers with. */
+#define MENU_CONTENT_ALIGN(item) (((item)->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK)
 /** @brief Shift of the high-nibble content type in MenuContentItem::packed_x. */
 #define MENU_CONTENT_TYPE_SHIFT 12
 /** @brief Converts a content item's Y coordinate to the viewport origin. */
@@ -620,7 +626,7 @@ s32 menu_handle_node_input(void);
 u32 menu_step_item_selection(s32 step);
 
 void menu_upload_tim(const TimUploadDestination* layout);
-void* menu_draw_clamped_number(u_long* ot_entry, void* packet_cursor, s32 value, s32 format, Vec2s* origin, s32 style);
+void* menu_draw_clamped_number(u_long* ot_entry, void* packet_cursor, s32 value, s32 text_color, Vec2s* origin, s32 flags);
 
 void* menu_ability_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
 void* menu_event_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
