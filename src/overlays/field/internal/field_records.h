@@ -777,9 +777,6 @@ extern FieldBattleContext* g_field_battle;
 #define FIELD_INCREASE_DAMPED 0x1
 #define FIELD_INCREASE_CAPPED 0x2
 
-/** @brief Money saturates at this amount. */
-#define FIELD_MONEY_MAX 10000000
-
 /** @brief Pending effect slots of a stored companion record. */
 #define FIELD_REGION_PENDING_EFFECT_COUNT 3
 

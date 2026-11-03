@@ -828,7 +828,7 @@ static s32 field_build_party_records(void)
                 }
             }
             g_field_battle->records[party_index].template = NULL;
-            g_field_battle->records[party_index].unk4C = g_field_game_state->characters[party_index].unk43;
+            g_field_battle->records[party_index].unk4C = g_field_game_state->characters[party_index].companion_ability;
             if (g_field_duel_mode != 0)
             {
                 g_field_battle->records[party_index].state->maximum = g_field_game_state->characters[party_index].hp * FIELD_DUEL_HP_SCALE;

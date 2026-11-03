@@ -205,7 +205,7 @@ class ExtractTest(unittest.TestCase):
         resource = self.load("text/resource.yaml")
         self.assertEqual(resource["table_count"], 34)
         self.assertEqual(resource["tables"][0]["file"], "00_general.yaml")
-        self.assertEqual(resource["tables"][2]["file"], "02.yaml")
+        self.assertEqual(resource["tables"][2]["file"], "02_material_names.yaml")
         self.assertEqual((self.output / "text/resource.bin").read_bytes(), self.overlay.text)
         messages = self.load("text/01_messages.yaml")
         self.assertEqual(messages["symbol"], "MENU_TEXT_MESSAGES")
