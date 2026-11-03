@@ -5052,20 +5052,20 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
                         break;
                     case 0xF4:
                         prim_buf = menu_emit_content_label(
-                            prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_CATEGORY_ENTRY_HELP), content_base[g_menu_hit_item_idx].action_type));
+                            prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MAGIC_HELP), content_base[g_menu_hit_item_idx].action_type));
                         break;
                     case 0xF5:
                         prim_buf =
                             menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(21), content_base[g_menu_hit_item_idx].action_type));
                         break;
                     case 0xF6:
-                        prim_buf =
-                            menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(19), content_base[g_menu_hit_item_idx].action_type));
+                        prim_buf = menu_emit_content_label(
+                            prim_buf, ot,
+                            menu_text_entry(menu_text_table_base(MENU_TEXT_MONSTER_TECHNIQUE_HELP), content_base[g_menu_hit_item_idx].action_type));
                         break;
                     case 0xF7:
                         prim_buf = menu_emit_content_label(
-                            prim_buf, ot,
-                            menu_text_entry(menu_text_table_base(MENU_TEXT_EQUIPMENT_SPECIAL_HELP), content_base[g_menu_hit_item_idx].action_type));
+                            prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_WEAPON_ATTACK_HELP), content_base[g_menu_hit_item_idx].action_type));
                         break;
                     case 0xF8:
                         if (D_80168C6C != 0xFF)
@@ -5073,8 +5073,7 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
                             if (D_80168C6C & 0x80)
                             {
                                 prim_buf = menu_emit_content_label(
-                                    prim_buf, ot,
-                                    menu_text_entry(menu_text_table_base(MENU_TEXT_CATEGORY_ENTRY_HELP), content_base[g_menu_hit_item_idx].action_type));
+                                    prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MAGIC_HELP), content_base[g_menu_hit_item_idx].action_type));
                             }
                             else
                             {
@@ -5232,7 +5231,7 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
                     if (*(char_base + MENU_FIRST_EQUIPMENT_OFFSET) != 0)
                     {
                         text_index = (s32) * (char_base + action_type + 0x65D);
-                        prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_EQUIPMENT_SPECIAL_HELP), text_index));
+                        prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_WEAPON_ATTACK_HELP), text_index));
                     }
                     break;
                 }
@@ -5266,13 +5265,13 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
                     if (g_menu_item_ptr != 0)
                     {
                         text_index = (s32) * ((u8*)g_menu_item_ptr + action_type + 0x15);
-                        prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_EQUIPMENT_SPECIAL_HELP), text_index));
+                        prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_WEAPON_ATTACK_HELP), text_index));
                     }
                     break;
                 case 22:
                     if (g_menu_item_ptr != 0)
                     {
-                        u8* help_table = menu_text_table_base(MENU_TEXT_CATEGORY_ENTRY_HELP);
+                        u8* help_table = menu_text_table_base(MENU_TEXT_MAGIC_HELP);
                         u8 cat = *((u8*)g_menu_category2_item + 0x24);
                         u8 entry = *((u8*)g_menu_category2_item + 0x25);
                         prim_buf = menu_emit_content_label(prim_buf, ot, help_table + *(u16*)(help_table + cat * 0x1C + entry * 2));
@@ -6685,7 +6684,7 @@ void* menu_skill_action_callback(u_long* ot, ScrollListState* state, void* prim_
                     }
                     else
                     {
-                        menu_show_message(MENU_MESSAGE_CANNOT_REMOVE);
+                        menu_show_message(MENU_MESSAGE_INVENTORY_FULL);
                         return buf;
                     }
                 }
@@ -7089,7 +7088,7 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
 
                                             field_copy_inventory_record(menu_weapon_record(), free_record);
                                             free_record->active = 0;
-                                            menu_show_message(MENU_MESSAGE_CANNOT_REMOVE);
+                                            menu_show_message(MENU_MESSAGE_INVENTORY_FULL);
                                             return buf;
                                         }
                                     }
@@ -7125,7 +7124,7 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
                     break;
                 }
 
-                menu_show_message(MENU_MESSAGE_CANNOT_REMOVE);
+                menu_show_message(MENU_MESSAGE_INVENTORY_FULL);
                 return buf;
         }
     }
@@ -7378,7 +7377,7 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
                     }
                     else
                     {
-                        menu_show_message(MENU_MESSAGE_CANNOT_REMOVE);
+                        menu_show_message(MENU_MESSAGE_INVENTORY_FULL);
                         return prim;
                     }
                 }
