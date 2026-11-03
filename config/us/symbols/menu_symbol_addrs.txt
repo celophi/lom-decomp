@@ -6,7 +6,7 @@ field_play_sound = 0x800A3938;
 // MENU.BIN
 
 // Functions
-func_801405B0                            = 0x801405B0;
+menu_run                                 = 0x801405B0;
 menu_init                                 = 0x80140908;
 menu_upload_party_portraits                      = 0x80140968;
 menu_tick                                 = 0x80140A48;
@@ -55,7 +55,7 @@ menu_draw_content_cursor                  = 0x80148A20;
 menu_draw_node_tree                       = 0x80149828;
 menu_draw_node_recursive                  = 0x80149948;
 menu_emit_icon_sprite                     = 0x80149BB4;
-menu_emit_sort_marker                     = 0x80149D90;
+menu_emit_swap_marker                     = 0x80149D90;
 scroll_list_draw                          = 0x80149E10;
 scroll_list_update_target                 = 0x8014A044;
 menu_emit_cursor                          = 0x8014A10C;
@@ -106,7 +106,7 @@ g_menu_overlay_id = 0x80140000;
 jtbl_8014049C = 0x8014049C; // type:jtbl visibility:local
 jtbl_801404DC = 0x801404DC; // type:jtbl visibility:local
 g_menu_frame           = 0x801690AC;
-g_party_sort_marker    = 0x801690B0;
+g_menu_button_swap_marker = 0x801690B0;
 g_menu_item_nav_entries = 0x801690B8;
 g_menu_message_line2   = 0x801690E0;
 g_menu_compare_window_active          = 0x801690E8;

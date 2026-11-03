@@ -63,6 +63,9 @@
 /** @brief SavedGameLayout::play_time ticks in one hour. */
 #define SAVED_PLAY_TIME_TICKS_PER_HOUR (SAVED_PLAY_TIME_TICKS_PER_MINUTE * SAVED_PLAY_TIME_MINUTES_PER_HOUR)
 
+/** @brief SavedGameLayout::money saturates at this amount. */
+#define SAVED_MONEY_MAX 10000000
+
 #define FIELD_PARTY_SIZE 3
 /** @brief Party slot of the hero. */
 #define FIELD_PARTY_HERO 0
@@ -316,12 +319,16 @@ typedef struct FieldItemRecord
     {
         u32 word;
         FieldNibbles bits;
+        u8 bytes[4];
+        u16 halves[2];
     } bonus_nibbles;
     /** @brief Eight four-bit stat modifiers, indexes into g_field_stat_modifier_values. */
     union
     {
         u32 word;
         FieldNibbles bits;
+        u8 bytes[4];
+        u16 halves[2];
     } stat_nibbles;
     u8 special_ids[FIELD_ITEM_SPECIAL_COUNT];
     /** @brief Category-dependent derived values of an equipped item. */
@@ -412,7 +419,8 @@ typedef struct FieldCharacterRecord
     u8 unk40;
     u8 unk41;
     u8 unk42;
-    u8 unk43;
+    /** @brief Companion ability (MENU_TEXT_COMPANION_ABILITY_NAMES), copied from the pet record; golems copy GolemGroupRecord byte 0x3F. */
+    u8 companion_ability;
     /** @brief Duels won and lost against the other player. */
     u16 duel_wins;
     u16 duel_losses;
@@ -866,7 +874,7 @@ typedef struct SavedGameLayout
             u32 unk4 : 28;
         } bits;
     } options;
-    /** @brief Money, saturated at 10,000,000. */
+    /** @brief Money, saturated at SAVED_MONEY_MAX. */
     u32 money;
     /** @brief Play time in 1/60 s ticks (SAVED_PLAY_TIME_TICKS_PER_MINUTE). */
     s32 play_time;

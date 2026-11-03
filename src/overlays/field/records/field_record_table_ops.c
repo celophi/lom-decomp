@@ -315,7 +315,7 @@ void field_generate_item_key(u32 seed, FieldItemKey* out)
 }
 
 /**
- * @brief Add money, saturating at FIELD_MONEY_MAX.
+ * @brief Add money, saturating at SAVED_MONEY_MAX.
  * @param amount Amount to add.
  * @return Always 1.
  */
@@ -326,9 +326,9 @@ s32 field_receive_money(s32 amount)
     money = g_field_game_state->money + amount;
     g_field_game_state->money = money;
 
-    if (money > FIELD_MONEY_MAX)
+    if (money > SAVED_MONEY_MAX)
     {
-        g_field_game_state->money = FIELD_MONEY_MAX;
+        g_field_game_state->money = SAVED_MONEY_MAX;
     }
 
     return 1;

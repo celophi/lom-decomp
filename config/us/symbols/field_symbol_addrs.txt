@@ -1591,6 +1591,7 @@ field_menu_publish_guest_presence = 0x800C963C;
 field_menu_choose_instrument = 0x800C9894;
 field_menu_open_carda = 0x800C9D84;
 golem_run = 0x80140024;
+menu_run = 0x801405B0;
 gosub_open_screen_sequence = 0x80140080;
 gosub_update_frame = 0x801400C4;
 shop_update = 0x801400D4;

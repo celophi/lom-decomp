@@ -65,7 +65,7 @@ void field_golem_build_companion(s32 group, FieldCharacterRecord* record)
     record->equipment[FIELD_ARMOR_SLOT].status_flags = record->unk40 = GOLEM.group_records[group].armor_flags;
     record->equipment[FIELD_WEAPON_SLOT].status_flags = record->unk41 = GOLEM.group_records[group].weapon_flags;
     record->equipment[FIELD_ARMOR_SLOT].element_flags = record->unk42 = GOLEM.group_records[group].armor_flags2;
-    record->unk43 = GOLEM.group_records[group].unknown_0x3F;
+    record->companion_ability = GOLEM.group_records[group].unknown_0x3F;
     record->button_actions[0] = 0;
     record->button_actions[1] = 0;
     record->button_actions[2] = 0;

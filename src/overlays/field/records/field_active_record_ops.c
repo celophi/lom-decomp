@@ -259,7 +259,7 @@ static void field_load_companion(s32 companion_index)
     g_field_game_state->characters[FIELD_PARTY_COMPANION].unk40 = g_field_game_state->pets[companion_index].unk38[0];
     g_field_game_state->characters[FIELD_PARTY_COMPANION].unk41 = g_field_game_state->pets[companion_index].unk38[1];
     g_field_game_state->characters[FIELD_PARTY_COMPANION].unk42 = g_field_game_state->pets[companion_index].unk38[2];
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk43 = g_field_game_state->pets[companion_index].unk38[3];
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].companion_ability = g_field_game_state->pets[companion_index].unk38[3];
 
     for (i = 0; i < FIELD_CHARACTER_ORDER_COUNT; i++)
     {

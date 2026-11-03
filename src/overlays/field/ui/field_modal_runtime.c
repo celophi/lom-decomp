@@ -243,7 +243,7 @@ s32 shop_update(FieldRenderHalf* render);
 s32 niki_update_frame(FieldRenderHalf* render);
 s32 addhero_state_step(FieldRenderHalf* render);
 s32 carda_update_frame(FieldRenderHalf* render);
-s32 func_801405B0(RenderContext* render_buffers);
+s32 menu_run(RenderContext* render_buffers);
 void gosub_open_screen_sequence(void* work, void* screen_sequence);
 
 s32 field_party_reload_reading(void);
@@ -1603,7 +1603,7 @@ static void field_run_menu(void* render_buffers, s32 controller)
     {
         cdrom_stream(CD_RES_MENU_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
         cdrom_wait_queue_empty();
-        screen_id = func_801405B0(render_buffers);
+        screen_id = menu_run(render_buffers);
 
         if (screen_id == FIELD_MENU_CLOSED)
         {

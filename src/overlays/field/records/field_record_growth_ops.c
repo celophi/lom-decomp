@@ -51,7 +51,7 @@ static void field_grow_character_stats(FieldCharacterRecord* character);
 static void field_grow_joined_pet_stats(FieldCharacterRecord* character);
 
 /**
- * @brief Add money, saturating at FIELD_MONEY_MAX.
+ * @brief Add money, saturating at SAVED_MONEY_MAX.
  * @param recipient Reward recipient; only party members are credited.
  * @param amount Money to add.
  */
@@ -61,9 +61,9 @@ void field_add_money(s32 recipient, s32 amount)
     {
         g_field_game_state->money += amount;
 
-        if (g_field_game_state->money > FIELD_MONEY_MAX)
+        if (g_field_game_state->money > SAVED_MONEY_MAX)
         {
-            g_field_game_state->money = FIELD_MONEY_MAX;
+            g_field_game_state->money = SAVED_MONEY_MAX;
         }
     }
 }
