@@ -63,17 +63,6 @@ static inline MenuItemEntry* menu_weapon_record(void)
 }
 
 /**
- * @brief Show a one-line message window in place of the open windows.
- * @param message MENU_TEXT_MESSAGES entry to show.
- */
-static inline void menu_show_message(s32 message)
-{
-    g_menu_message_line1 = menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), message);
-    menu_clear_slots();
-    menu_open_content_page(MENU_PAGE_MESSAGE);
-}
-
-/**
  * @brief Draw the Equip / Auto-Select / Total-Auto / Status / Remove window of an equipment slot and run the chosen command.
  * @param ot Ordering-table pointer, forwarded to the glyph renderer.
  * @param state Scroll-list state for this window.
@@ -257,7 +246,7 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
                     g_content_view_x = item->packed_x & MENU_CONTENT_X_MASK;
                     g_content_view_y = item->y - MENU_CONTENT_VIEW_Y_OFFSET;
                     g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
-                    g_menu_cursor_enable = MENU_CURSOR_MODE_CONTENT;
+                    g_menu_cursor_mode = MENU_CURSOR_MODE_CONTENT;
                 }
 
                 g_menu_draw_early_out = 1;
@@ -575,11 +564,11 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
         {
             if (learned_techniques & bit_mask)
             {
-                if (state->navigation.fields.selected_index == (list_y >> 4))
+                if (state->navigation.fields.selected_index == (list_y >> MENU_LIST_ROW_SHIFT))
                 {
                     selected_technique = technique_index + (weapon_type * FIELD_TECHNIQUES_PER_WEAPON);
                 }
-                list_y += MENU_ITEM_NAV_POSITION_STRIDE;
+                list_y += MENU_LIST_ROW_HEIGHT;
             }
             technique_index++;
             bit_mask <<= 1;
@@ -645,9 +634,9 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
             if (*learned_ptr & bit_mask)
             {
                 relative_y = list_y - scroll_y;
-                if (relative_y >= -0xF)
+                if (relative_y > -MENU_LIST_ROW_HEIGHT)
                 {
-                    if (relative_y < state->viewport_h - 0x10)
+                    if (relative_y < state->viewport_h - MENU_LIST_ROW_HEIGHT)
                     {
                         s32 glyph_color;
                         u8* name_table;
@@ -668,11 +657,11 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
                     }
                 }
 
-                if (state->navigation.fields.selected_index == (list_y >> 4))
+                if (state->navigation.fields.selected_index == (list_y >> MENU_LIST_ROW_SHIFT))
                 {
                     selected_technique = technique_index + (weapon_type * FIELD_TECHNIQUES_PER_WEAPON);
                 }
-                list_y += MENU_ITEM_NAV_POSITION_STRIDE;
+                list_y += MENU_LIST_ROW_HEIGHT;
             }
             technique_index++;
             bit_mask <<= 1;
@@ -683,7 +672,7 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
 
     if (selected_technique != -1)
     {
-        u8* help_table = g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_TECHNIQUE_HELP];
+        u8* help_table = menu_text_table_base(MENU_TEXT_TECHNIQUE_HELP);
 
         g_menu_help_text = (u8*)(help_table + ((u16*)help_table)[selected_technique]);
     }
@@ -873,7 +862,7 @@ s32 menu_build_event_nav_entries(void)
         packed_entry = *entry;
         previous_index = event_index - 1;
         entry_with_position = packed_entry & ~MENU_ITEM_NAV_POSITION_MASK;
-        entry_with_position = entry_with_position | ((event_index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
+        entry_with_position = entry_with_position | ((event_index * MENU_LIST_ROW_HEIGHT) & MENU_ITEM_NAV_POSITION_MASK);
         *entry = entry_with_position;
 
         if (previous_index < 0)
@@ -937,7 +926,7 @@ s32 menu_build_item_nav_entries(void)
         packed_entry = *entry;
         previous_index = entry_index - 1;
         entry_with_position = packed_entry & ~MENU_ITEM_NAV_POSITION_MASK;
-        entry_with_position = entry_with_position | ((entry_index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
+        entry_with_position = entry_with_position | ((entry_index * MENU_LIST_ROW_HEIGHT) & MENU_ITEM_NAV_POSITION_MASK);
         *entry = entry_with_position;
 
         if (previous_index < 0)
@@ -1000,7 +989,7 @@ s32 menu_build_artifact_nav_entries(void)
         packed_entry = *entry;
         previous_index = entry_index - 1;
         entry_with_position = packed_entry & ~MENU_ITEM_NAV_POSITION_MASK;
-        entry_with_position = entry_with_position | ((entry_index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
+        entry_with_position = entry_with_position | ((entry_index * MENU_LIST_ROW_HEIGHT) & MENU_ITEM_NAV_POSITION_MASK);
         *entry = entry_with_position;
 
         if (previous_index < 0)

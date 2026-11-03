@@ -97,8 +97,9 @@ s32 field_name_byte_length(u8* name);
 #define MENU_ROW_HEIGHT 0x13
 /** @brief Full visible scroll-viewport height: 9 rows * MENU_ROW_HEIGHT (171 px). */
 #define MENU_VIEW_HEIGHT 0xAB
-/** @brief Vertical spacing encoded in each packed item-navigation entry. */
-#define MENU_ITEM_NAV_POSITION_STRIDE 0x10
+/** @brief Height of one scroll-list row; each packed navigation entry stores its row times this. */
+#define MENU_LIST_ROW_HEIGHT 0x10
+#define MENU_LIST_ROW_SHIFT 4
 /** @brief Bits [13:0] containing an item's vertical navigation position. */
 #define MENU_ITEM_NAV_POSITION_MASK 0x3FFF
 /** @brief Nine-bit mask for packed previous and next item indices. */
@@ -139,6 +140,8 @@ s32 field_name_byte_length(u8* name);
 #define MENU_CHARACTER_PACKED_VALUES_OFFSET OFFSETOF(SavedGameLayout, characters[0].stats)
 /** @brief Offset of the first equipped-item record within the equipment area. */
 #define MENU_CHARACTER_ITEMS_OFFSET OFFSETOF(FieldCharacterRecord, equipment)
+/** @brief Byte offset of the first character's info word (FieldCharacterRecord::info) within g_saved_game_ctx. */
+#define MENU_CHARACTER_INFO_OFFSET (MENU_CHARACTER_RECORD_OFFSET + OFFSETOF(FieldCharacterRecord, info))
 /** @brief Byte offset of the first character's first equipped-item record within g_saved_game_ctx. */
 #define MENU_FIRST_EQUIPMENT_OFFSET (MENU_CHARACTER_RECORD_OFFSET + MENU_CHARACTER_ITEMS_OFFSET)
 /** @brief Clears the packed previous-index field while preserving all other bits. */
@@ -158,6 +161,10 @@ s32 field_name_byte_length(u8* name);
 #define MENU_EVENT_STAGE_MASK 0xF
 /** @brief Stage from which an event appears in the Event List. */
 #define MENU_EVENT_STAGE_LISTED 2
+/** @brief Stage from which a listed event shows the progress mark. */
+#define MENU_EVENT_STAGE_MARKED 8
+/** @brief Final stage of an event; it shows the completion mark. */
+#define MENU_EVENT_STAGE_COMPLETE 0xF
 /** @brief Minimum Y for g_content_cursor_y within the content sub-window (12 px). */
 #define MENU_CURSOR_Y_MIN 0x0C
 /** @brief Maximum Y for g_content_cursor_y within the content sub-window (163 px). */
@@ -269,9 +276,10 @@ typedef enum
     MENU_TEXT_ITEM_NAMES = 11,
     MENU_TEXT_SPELL_HELP = 14,
     MENU_TEXT_CATEGORY_ENTRY_HELP = 15,
-    MENU_TEXT_ITEM_CATEGORY_HELP = 25,
+    MENU_TEXT_EQUIPMENT_TYPE_NAMES = 25,
     MENU_TEXT_EVENT_NAMES = 26,
     MENU_TEXT_EVENT_HELP = 32,
+    MENU_TEXT_ITEM_NAME_PARTS = 33,
     MENU_TEXT_TABLE_COUNT = 34
 } MenuTextTable;
 
@@ -601,7 +609,7 @@ void* menu_message_callback(u_long* ot, ScrollListState* state, void* prim_buf, 
 void* menu_two_line_message_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
 void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, s32 active);
 void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
-void* menu_subtype_action_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_skill_action_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
 
 void* menu_emit_cursor(void* prim_buf, u_long* ot, s32 x, s32 y, s32 active);
 void* menu_emit_draw_mode_primitive(DR_TPAGE* draw_mode, u_long* ot);
@@ -618,7 +626,7 @@ void* menu_emit_icon_sprite(void*, u_long*, s32, s32, s32, s32, s32, s32, s32);
 
 void scroll_list_update_target(ScrollListState*, u32*);
 
-void* menu_item_followup_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_item_action_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
 void* menu_equipment_compare_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
 void field_copy_inventory_record();
 void field_compact_inventory();
@@ -661,8 +669,8 @@ extern MenuItemEntry* D_80168C30;
 
 /** @brief Optional help/description string drawn below the active menu content. */
 extern u8* g_menu_help_text;
-/** @brief Selects node-tree, content, or content-exit cursor handling. */
-extern s32 g_menu_cursor_enable;
+/** @brief Current MenuCursorMode: node-tree, content, or content-exit cursor handling. */
+extern s32 g_menu_cursor_mode;
 /** @brief Set non-zero by a content callback to abort @ref menu_draw_window early. */
 extern s32 g_menu_draw_early_out;
 /** @brief Base address of the menu double-buffered DRAWENV array. */
@@ -834,7 +842,7 @@ static inline void menu_relink_item_nav(s32 count)
 
         previous_index = count - 1;
         link = packed_entry & ~MENU_ITEM_NAV_POSITION_MASK;
-        link = link | ((entry_index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
+        link = link | ((entry_index * MENU_LIST_ROW_HEIGHT) & MENU_ITEM_NAV_POSITION_MASK);
         entry_with_position = link;
         g_menu_item_nav_entries[entry_index] = entry_with_position;
 
@@ -875,7 +883,7 @@ static inline void menu_relink_pair(void)
         s32 entry_with_position;
         previous_index = 1;
         link = entry & ~MENU_ITEM_NAV_POSITION_MASK;
-        link = link | ((index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
+        link = link | ((index * MENU_LIST_ROW_HEIGHT) & MENU_ITEM_NAV_POSITION_MASK);
         entry_with_position = link;
         g_menu_item_nav_entries[index] = entry_with_position;
         if ((index - 1) >= 0)
@@ -1003,6 +1011,17 @@ static inline u8* menu_text_table_base(s32 table)
 static inline u8* menu_text_entry(void* base, s32 index)
 {
     return (u8*)base + ((u16*)base)[index];
+}
+
+/**
+ * @brief Show a one-line message window in place of the open windows.
+ * @param message MENU_TEXT_MESSAGES entry to show.
+ */
+static inline void menu_show_message(s32 message)
+{
+    g_menu_message_line1 = menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), message);
+    menu_clear_slots();
+    menu_open_content_page(MENU_PAGE_MESSAGE);
 }
 
 /**
