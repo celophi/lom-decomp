@@ -149,7 +149,7 @@ s32 card_menu_update_card_sequence(void)
 
     while ((result = niki_advance_load_sequence()) == CARD_MENU_SEQUENCE_RUN_AGAIN);
 
-    if ((D_80164B80 != 0) && (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK))
+    if ((D_80164B80 != 0) && (g_pad_input & PAD_CONFIRM_BUTTONS))
     {
         g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_GAME_DATA;
         g_card_step = g_card_steps_card_info;
@@ -284,7 +284,7 @@ s32 card_menu_handle_input(void)
         return;
     }
 
-    if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+    if (g_pad_input & PAD_CONFIRM_BUTTONS)
     {
         if (g_card_menu_mode != 0)
         {
@@ -907,7 +907,7 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
             g_card_entry_state = CARD_MENU_EXCHANGE_STATE_SAVE_CONFIRM;
             field_reset_input_repeat();
         }
-        else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+        else if (g_pad_input & PAD_CONFIRM_BUTTONS)
         {
             if (g_card_menu_choice_toggle != 0)
             {
@@ -949,14 +949,14 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
         y = CARD_MENU_LINE_HEIGHT * 2 - y_offset;
         prim = card_menu_draw_choice_prompt(prim, ot, x + CARD_MENU_MESSAGE_CENTER_X, y);
 
-        if ((g_pad_input & NIKI_CANCEL_INPUT_MASK) || ((g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK) && g_card_menu_choice_toggle != 0))
+        if ((g_pad_input & NIKI_CANCEL_INPUT_MASK) || ((g_pad_input & PAD_CONFIRM_BUTTONS) && g_card_menu_choice_toggle != 0))
         {
             card_menu_enable_choice_toggle();
             g_card_entry_state = CARD_MENU_EXCHANGE_STATE_CONFIRM_NO_SAVE;
             field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
             field_reset_input_repeat();
         }
-        else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+        else if (g_pad_input & PAD_CONFIRM_BUTTONS)
         {
             field_play_sound(SFX_CONFIRM, AKAO_PAN_CENTER);
             records = (u8(*)[64])g_field_shared_items;

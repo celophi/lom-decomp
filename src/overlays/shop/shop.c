@@ -310,7 +310,7 @@ static s32 shop_handle_list_input(void)
 
     if (g_shop_notice_active != 0)
     {
-        if ((g_pad_input & (SHOP_CONFIRM_BUTTONS | SHOP_CANCEL_BUTTONS)) == 0)
+        if ((g_pad_input & (PAD_CONFIRM_BUTTONS | SHOP_CANCEL_BUTTONS)) == 0)
         {
             return;
         }
@@ -416,7 +416,7 @@ static s32 shop_handle_list_input(void)
         }
     }
 
-    if (g_pad_input & SHOP_CONFIRM_BUTTONS)
+    if (g_pad_input & PAD_CONFIRM_BUTTONS)
     {
         entry = SHOP_SELECTED_ENTRY();
         if (entry->id != SHOP_ENTRY_EMPTY)

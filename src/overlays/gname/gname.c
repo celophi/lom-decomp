@@ -47,14 +47,13 @@ enum
 #define NAME_GLYPH_BUFFER_SIZE (NAME_GLYPH_TERMINATOR_INDEX + 1)
 
 /* Input groups. */
-#define GNAME_BTN_CONFIRM (PAD_BTN_CROSS | PAD_BTN_L3)
 #define GNAME_BTN_UNDO PAD_BTN_L2
 #define GNAME_BTN_REDO PAD_BTN_R2
 #define GNAME_BTN_CANCEL PAD_BTN_CIRCLE
 #define GNAME_BTN_KANJI_PREV PAD_BTN_L1
 #define GNAME_BTN_KANJI_NEXT PAD_BTN_R1
 #define GNAME_BTN_KANJI_NAV (GNAME_BTN_KANJI_PREV | GNAME_BTN_KANJI_NEXT)
-#define GNAME_BTN_NAV_MASK (PAD_BTN_DPAD | GNAME_BTN_CONFIRM)
+#define GNAME_BTN_NAV_MASK (PAD_BTN_DPAD | PAD_CONFIRM_BUTTONS)
 
 /* Navigation regions and action entries. */
 enum
@@ -882,7 +881,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
         case GNAME_MODE_ACTION_DELETE:
         case GNAME_MODE_ACTION_RANDOM:
         case GNAME_MODE_ACTION_DEFAULT:
-            if (buttons & GNAME_BTN_CONFIRM)
+            if (buttons & PAD_CONFIRM_BUTTONS)
             {
                 g_activated_entry = mode;
                 navigation_step = GNAME_NAVIGATION_STEP;
@@ -991,7 +990,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
         case GNAME_MODE_PANEL_BASE + 2:
         case GNAME_MODE_PANEL_LAST:
             /* Confirm changes panels only when the selected tab is not already active. */
-            if (buttons & GNAME_BTN_CONFIRM)
+            if (buttons & PAD_CONFIRM_BUTTONS)
             {
                 g_activated_entry = mode;
                 if (g_char_panel != (mode - GNAME_MODE_PANEL_BASE))
@@ -1034,7 +1033,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
 
         default:
             /* Other mode values are handled as the active character grid. */
-            if ((buttons & GNAME_BTN_CONFIRM) && (((g_char_last_row * NAME_GRID_COLUMNS) + g_char_last_col) >= g_char_cursor))
+            if ((buttons & PAD_CONFIRM_BUTTONS) && (((g_char_last_row * NAME_GRID_COLUMNS) + g_char_last_col) >= g_char_cursor))
             {
                 if (g_char_panel < CHAR_PANEL_STANDARD_COUNT)
                 {

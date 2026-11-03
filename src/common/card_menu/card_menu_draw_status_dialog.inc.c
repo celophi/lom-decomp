@@ -32,7 +32,7 @@ void* card_menu_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_o
                                -x_offset + CARD_MENU_DIALOG_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
         break;
     }
-    if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+    if (g_pad_input & PAD_CONFIRM_BUTTONS)
     {
         card_menu_deactivate_primary_element();
         field_reset_input_repeat();

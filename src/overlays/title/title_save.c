@@ -122,7 +122,7 @@ void handle_save_slot_input(void)
             entry[19].type = 0;
             return;
         }
-        if (g_debounced_input & (PAD_BTN_START | PAD_BTN_L3 | PAD_BTN_CROSS))
+        if (g_debounced_input & (PAD_BTN_START | PAD_CONFIRM_BUTTONS))
         {
             play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
             if (g_save_layout_table[18].type != 0)
@@ -143,7 +143,7 @@ void handle_save_slot_input(void)
     }
     else
     {
-        if (g_debounced_input & (PAD_BTN_START | PAD_BTN_L3 | PAD_BTN_CROSS))
+        if (g_debounced_input & (PAD_BTN_START | PAD_CONFIRM_BUTTONS))
         {
             if (g_slot_slide_x > 0)
             {

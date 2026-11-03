@@ -23,7 +23,6 @@
  */
 
 /** @brief Pad buttons that confirm a prompt or a selection. */
-#define CARD_MENU_CONFIRM_BUTTON_MASK (PAD_BTN_CROSS | PAD_BTN_L3)
 
 /** @brief Pad buttons that switch the browser to the other card slot. */
 #define CARD_MENU_CARD_SWITCH_BUTTON_MASK (PAD_BTN_SELECT | PAD_BTN_RIGHT | PAD_BTN_LEFT)

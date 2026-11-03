@@ -788,9 +788,6 @@ extern FieldBattleContext* g_field_battle;
 #define FIELD_REGION_APPLIED_BITS 7
 #define FIELD_REGION_APPLIED_MASK (FIELD_REGION_APPLIED_BITS << FIELD_REGION_APPLIED_SHIFT)
 
-/** @brief Battle command and skill slots of FieldCharacterRecord::info. */
-#define FIELD_COMMAND_SLOT_COUNT 2
-#define FIELD_SKILL_SLOT_COUNT 4
 
 /** @brief Item argument of field_spawn_item_record that releases the item actor's record instead of spawning it. */
 #define FIELD_ITEM_RELEASE 0xFF

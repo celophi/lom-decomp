@@ -231,7 +231,7 @@ void* cload_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
             field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
             g_card_step = g_card_steps_card_info;
         }
-        else if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+        else if (g_pad_input & PAD_CONFIRM_BUTTONS)
         {
             if (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)
             {
@@ -420,7 +420,7 @@ void* cload_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offse
         break;
     }
 
-    if (g_pad_input & CARD_MENU_CONFIRM_BUTTON_MASK)
+    if (g_pad_input & PAD_CONFIRM_BUTTONS)
     {
         g_card_menu_element_pool[CARD_MENU_ELEMENT_MODAL].attr.bits.state = CARD_MENU_ELEMENT_FREE;
         field_reset_input_repeat();

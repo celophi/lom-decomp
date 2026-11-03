@@ -39,6 +39,8 @@ s32 field_name_byte_length(u8* name);
 #define MENU_SLOT_OT_INDEX_SHIFT 25
 #define MENU_SLOT_OT_INDEX_CLEAR_MASK 0x01FFFFFF
 #define MENU_WINDOW_TRANSITION_STEPS 12
+/** @brief Last frame of the opening animation; a window created open starts here. */
+#define MENU_WINDOW_OPEN_FRAME (MENU_WINDOW_TRANSITION_STEPS / 2 - 1)
 #define MENU_WINDOW_MIN_WIDTH 0x20
 #define MENU_WINDOW_MIN_HEIGHT 0x10
 
@@ -105,10 +107,24 @@ s32 field_name_byte_length(u8* name);
 #define MENU_ITEM_NAV_NEXT_SHIFT 23
 #define MENU_LIST_COUNT_SHIFT 16
 #define MENU_LIST_COUNT_MASK (MENU_ITEM_NAV_INDEX_MASK << MENU_LIST_COUNT_SHIFT)
+/** @brief A packed MenuListNavigation word with its item count replaced by @p count. */
+#define MENU_LIST_WITH_COUNT(packed, count) (((packed) & ~MENU_LIST_COUNT_MASK) | (((count) & MENU_ITEM_NAV_INDEX_MASK) << MENU_LIST_COUNT_SHIFT))
 /** @brief Number of equipment slots associated with one character. */
 #define MENU_EQUIPMENT_SLOT_COUNT 4
 /** @brief First menu subtype corresponding to an equipment slot. */
 #define MENU_EQUIPMENT_SUBTYPE_BASE 7
+/** @brief Menu subtype of equipment slot @p slot (FIELD_WEAPON_SLOT, then the armor slots). */
+#define MENU_EQUIPMENT_SUBTYPE(slot) (MENU_EQUIPMENT_SUBTYPE_BASE + (slot))
+/** @brief Menu subtype of the first skill slot; subtypes 3-6 select FieldCharacterRecord::info.actions.skills[0-3]. */
+#define MENU_SKILL_SUBTYPE_BASE 3
+/** @brief g_menu_active_item_category of the pages that do not list inventory records. */
+#define MENU_ITEM_CATEGORY_NONE 3
+/** @brief Node of party character @c slot: g_menu_nodes[slot * MENU_NODES_PER_CHARACTER + MENU_CHARACTER_NODE_*]. */
+#define MENU_NODES_PER_CHARACTER 3
+#define MENU_CHARACTER_NODE_EQUIPMENT 1
+#define MENU_CHARACTER_NODE_ABILITIES 2
+/** @brief Ordering-table entry of the content pages opened by menu_open_content_page. */
+#define MENU_CONTENT_OT_INDEX 3
 /** @brief Number of 0x40-byte records in the inventory item table. */
 #define MENU_ITEM_TABLE_COUNT 100
 /** @brief Byte offset of the inventory item table within g_saved_game_ctx. */
@@ -125,12 +141,6 @@ s32 field_name_byte_length(u8* name);
 #define MENU_CHARACTER_ITEMS_OFFSET OFFSETOF(FieldCharacterRecord, equipment)
 /** @brief Byte offset of the first character's first equipped-item record within g_saved_game_ctx. */
 #define MENU_FIRST_EQUIPMENT_OFFSET (MENU_CHARACTER_RECORD_OFFSET + MENU_CHARACTER_ITEMS_OFFSET)
-/** @brief Mask for the two-bit item-kind field in MenuItemEntry::attributes. */
-#define MENU_ITEM_KIND_MASK 0x300
-#define MENU_ITEM_KIND_SHIFT 8
-/** @brief Shift and mask for the six-bit item-category field in MenuItemEntry::attributes. */
-#define MENU_ITEM_CATEGORY_SHIFT 10
-#define MENU_ITEM_CATEGORY_MASK 0x3F
 /** @brief Clears the packed previous-index field while preserving all other bits. */
 #define MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK 0xFF803FFF
 /** @brief Clears the packed next-index field while preserving all other bits. */
@@ -139,22 +149,15 @@ s32 field_name_byte_length(u8* name);
 #define MENU_SPELL_GRID_OFFSET 0x60
 #define MENU_SPELL_GRID_ROW_COUNT 12
 #define MENU_SPELL_GRID_COLUMN_COUNT 8
-/** @brief Offset of the packed 16-row equipment availability grid in g_saved_game_ctx. */
-#define MENU_EQUIPMENT_GRID_OFFSET 0x104
-#define MENU_EQUIPMENT_GRID_ROW_COUNT 16
-#define MENU_EQUIPMENT_GRID_COLUMN_COUNT 8
-#define MENU_EQUIPMENT_GRID_ENTRY_MASK 0xF
-#define MENU_EQUIPMENT_GRID_FIRST_VALID 2
-/** @brief Offset and size of the 256-byte key-item quantity table in g_saved_game_ctx. */
-#define MENU_KEY_ITEM_TABLE_OFFSET 0x25E0
-#define MENU_KEY_ITEM_TABLE_COUNT 256
-#define MENU_KEY_ITEM_SENTINEL_INDEX (MENU_KEY_ITEM_TABLE_COUNT - 1)
-/** @brief Offset of the four pending equipment-status bytes for a character. */
-#define MENU_PENDING_STATUS_OFFSET 0x60C
-/** @brief Value marking an unused pending equipment-status byte. */
-#define MENU_PENDING_STATUS_NONE 0xFF
-/** @brief Pending-status entries with this bit set are preserved. */
-#define MENU_PENDING_STATUS_PRESERVE 0x80
+/** @brief Byte offset of the first character's skill slots (FieldCharacterRecord::info.actions.skills) in g_saved_game_ctx. */
+#define MENU_SKILL_OFFSET (MENU_CHARACTER_RECORD_OFFSET + OFFSETOF(FieldCharacterRecord, info.actions.skills))
+/** @brief Event List: words of event progress stages, events per word, and the stage of each event. */
+#define MENU_EVENT_WORD_COUNT 16
+#define MENU_EVENTS_PER_WORD 8
+#define MENU_EVENT_STAGE_BITS 4
+#define MENU_EVENT_STAGE_MASK 0xF
+/** @brief Stage from which an event appears in the Event List. */
+#define MENU_EVENT_STAGE_LISTED 2
 /** @brief Minimum Y for g_content_cursor_y within the content sub-window (12 px). */
 #define MENU_CURSOR_Y_MIN 0x0C
 /** @brief Maximum Y for g_content_cursor_y within the content sub-window (163 px). */
@@ -200,17 +203,6 @@ s32 field_name_byte_length(u8* name);
 #define MENU_TREE_DRAW_WIDTH 36
 #define MENU_TREE_DRAW_HEIGHT 170
 
-/** @brief Byte offset of the learned Special Technique bitsets in SavedGameLayout. */
-#define MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET 0x34
-
-/** @brief Byte offset of the ability-record table in SavedGameLayout. */
-#define MENU_ABILITY_TABLE_OFFSET 0x2F0
-/** @brief Number of fixed-size ability records. */
-#define MENU_ABILITY_COUNT 64
-/** @brief Ability is learned and appears in the list. */
-#define MENU_ABILITY_FLAG_LEARNED 0x01
-/** @brief Ability displays the auxiliary list icon. */
-#define MENU_ABILITY_FLAG_SHOW_ICON 0x02
 
 /* Type-view and fixed-address helpers. */
 #define MENU_CONTROLLER_ACTUATORS ((MenuControllerActuatorState*)CONTROLLER_STATE_ADDRESS)
@@ -269,19 +261,52 @@ typedef enum
     MENU_TEXT_GENERAL = 0,
     MENU_TEXT_MESSAGES = 1,
     MENU_TEXT_SPELL_NAMES = 3,
-    MENU_TEXT_ABILITY_HELP = 4,
-    MENU_TEXT_ABILITY_NAMES = 5,
+    MENU_TEXT_ARTIFACT_HELP = 4,
+    MENU_TEXT_ARTIFACT_NAMES = 5,
     MENU_TEXT_TECHNIQUE_HELP = 6,
     MENU_TEXT_TECHNIQUE_NAMES = 7,
-    MENU_TEXT_KEY_ITEM_HELP = 10,
-    MENU_TEXT_KEY_ITEM_NAMES = 11,
+    MENU_TEXT_ITEM_HELP = 10,
+    MENU_TEXT_ITEM_NAMES = 11,
     MENU_TEXT_SPELL_HELP = 14,
     MENU_TEXT_CATEGORY_ENTRY_HELP = 15,
     MENU_TEXT_ITEM_CATEGORY_HELP = 25,
-    MENU_TEXT_EQUIPMENT_NAMES = 26,
-    MENU_TEXT_EQUIPMENT_HELP = 32,
+    MENU_TEXT_EVENT_NAMES = 26,
+    MENU_TEXT_EVENT_HELP = 32,
     MENU_TEXT_TABLE_COUNT = 34
 } MenuTextTable;
+
+/** @brief Entries of the MENU_TEXT_MESSAGES table used by the item, equipment and skill windows. */
+typedef enum
+{
+    MENU_MESSAGE_TECHNIQUES_REMOVED = 29,
+    MENU_MESSAGE_TECHNIQUE = 61,
+    MENU_MESSAGE_MAGIC = 62,
+    MENU_MESSAGE_EQUIP = 63,
+    MENU_MESSAGE_STATUS = 64,
+    MENU_MESSAGE_AUTO_SELECT = 65,
+    MENU_MESSAGE_TOTAL_AUTO = 66,
+    MENU_MESSAGE_REMOVE = 67,
+    MENU_MESSAGE_ITEM_STATUS = 68,
+    MENU_MESSAGE_TRASH = 69,
+    MENU_MESSAGE_CHANGE = 72,
+    MENU_MESSAGE_CANCEL = 73,
+    MENU_MESSAGE_CANNOT_REMOVE = 86,
+    MENU_MESSAGE_NO_CONTROLLER_LINE1 = 101,
+    MENU_MESSAGE_NO_CONTROLLER_LINE2 = 102
+} MenuMessage;
+
+/** @brief Content pages opened by menu_open_content_page. */
+typedef enum
+{
+    MENU_PAGE_WEAPONS = 0,
+    MENU_PAGE_ARMOR = 1,
+    MENU_PAGE_INSTRUMENTS = 2,
+    MENU_PAGE_EVENTS = 3,
+    MENU_PAGE_ITEMS = 4,
+    MENU_PAGE_ARTIFACTS = 5,
+    MENU_PAGE_MESSAGE = 6,
+    MENU_PAGE_TWO_LINE_MESSAGE = 7
+} MenuContentPage;
 
 /** @brief Text-resource directory with byte offsets relative to the resource base. */
 typedef struct
@@ -475,13 +500,6 @@ typedef struct
     u8 lerp_steps;  /**< Remaining interpolation steps. */
 } ScrollListState;
 
-/** @brief Partial view of one 12-byte ability record. */
-typedef struct
-{
-    u8 flags; /**< Learned/display state bits used by the menu. */
-    u8 pad01[0xB];
-} MenuAbilityEntry;
-
 /** @brief Packed eight-nibble property field stored in an item record. */
 typedef union
 {
@@ -576,9 +594,9 @@ void menu_upload_tim(const TimUploadDestination* layout);
 void* menu_draw_clamped_number(u_long* ot_entry, void* packet_cursor, s32 value, s32 format, Vec2s* origin, s32 style);
 
 void* menu_spell_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
-void* menu_equipment_grid_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
-void* menu_key_item_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
-void* menu_ability_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_event_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_item_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+void* menu_artifact_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
 void* menu_message_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
 void* menu_two_line_message_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
 void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, s32 active);
@@ -591,7 +609,7 @@ void* menu_emit_slot_scroll_arrows(SPRT* sprite, u_long* ot_entry, MenuSlot* slo
 void* menu_emit_tree_scroll_arrows(SPRT* sprite, u_long* ot_entry);
 
 void* menu_emit_sort_marker(void*, u_long*, s16, s16);
-s32 menu_item_is_nondefault(const MenuItemEntry*);
+s32 menu_item_differs_from_bare_hands(const MenuItemEntry*);
 
 void* menu_draw_node_tree(void* prim_buf, u_long* ot);
 void* menu_draw_node_recursive(s32 node_index, void* prim_buf, u_long* ot);
@@ -610,19 +628,19 @@ void menu_swap_item_records(MenuItemEntry*, MenuItemEntry*);
 
 void menu_play_se(s32 sound_id, s32 volume);
 
-s32 menu_stage_best_equipment_for_slot0(void);
-s32 menu_stage_best_equipment_for_active_slot(void);
+s32 menu_stage_best_weapon(void);
+s32 menu_stage_best_armor(void);
 
 void* scroll_list_draw(void* prim_buf, u_long* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active);
 
-MenuItemEntry* menu_find_best_equipment_for_slot0(void);
-MenuItemEntry* menu_find_best_equipment_for_active_slot(void);
+MenuItemEntry* menu_find_best_weapon(void);
+MenuItemEntry* menu_find_best_armor(void);
 void menu_open_content_page(u32 content_id);
 
 s32 menu_build_inventory_nav_entries(s32 item_kind);
-s32 menu_build_equipment_nav_entries(void);
-s32 menu_build_key_item_nav_entries(void);
-s32 menu_build_ability_nav_entries(void);
+s32 menu_build_event_nav_entries(void);
+s32 menu_build_item_nav_entries(void);
+s32 menu_build_artifact_nav_entries(void);
 extern s32 menu_stage_stack_shape(s32, s32, s32, s32, s32, s32) __attribute__((const));
 
 /* Core menu state and shared assets. */
@@ -689,8 +707,8 @@ extern u8 g_menu_init_content_id;
 extern Struct_D_800FD818 g_field_player_records;
 extern u16 D_800FDA80;
 extern u16 D_800FDCE8;
-/** @brief Ability-compatibility mask rebuilt before item content is loaded. */
-extern s8 g_menu_ability_mask;
+/** @brief Type-conflict bits of the other equipped items; the weapon and armor pages grey out items that conflict. */
+extern s8 g_menu_equipment_conflicts;
 /** @brief Node index for the companion character's stat page (0x2B = companion present, 0xFF = none). */
 extern u8 g_menu_companion_node;
 
@@ -754,8 +772,9 @@ extern void* g_menu_message_line1;
 extern void* g_menu_message_line2;
 extern void* D_801227D4;
 
-extern u8 D_800F0BE0[];
-extern u8 D_800F0BEC[];
+/** @brief Conflict bits of each weapon type and each armor type (FIELD data, indexed by FIELD_ITEM_TYPE). */
+extern u8 g_field_weapon_type_conflicts[];
+extern u8 g_field_armor_type_conflicts[];
 
 /** @brief Signed stat modifier for each four-bit modifier index (index 4 is 0; range -10 to +20). */
 extern s8 g_field_stat_modifier_values[];
@@ -780,9 +799,10 @@ extern s32 g_menu_pending_item_row;
 
 /* Equipment-action assets. */
 extern u8 D_8016869B[];
-extern u8 D_800F0BF8[];
-/** @brief The u32 at D_800F0BF8 + 0x14; the item-kind word of the default compare entry. */
-extern u32 D_800F0C0C;
+/** @brief FIELD's BareHands item record; an empty weapon slot holds a copy of it. */
+extern MenuItemEntry g_field_bare_hands_item;
+/** @brief Item info word of g_field_bare_hands_item. */
+extern u32 g_field_bare_hands_info;
 
 /** @brief Mark every menu window slot as free. */
 static inline void menu_clear_slots(void)
@@ -791,6 +811,51 @@ static inline void menu_clear_slots(void)
     for (slot_index = MENU_SLOT_COUNT - 1; slot_index >= 0; slot_index--)
     {
         g_menu_slots[slot_index].active = 0;
+    }
+}
+
+/**
+ * @brief Link the first @p count entries of g_menu_item_nav_entries into a circular list.
+ * @param count Number of navigation entries to initialize.
+ */
+static inline void menu_relink_item_nav(s32 count)
+{
+    s32 entry_index;
+    s32 previous_index;
+    s32 link;
+    s32 entry_with_position;
+    s32 entry_with_previous;
+    s32 next_index;
+    s32 has_next;
+
+    for (entry_index = 0; entry_index < count; entry_index++)
+    {
+        s32 packed_entry = g_menu_item_nav_entries[entry_index];
+
+        previous_index = count - 1;
+        link = packed_entry & ~MENU_ITEM_NAV_POSITION_MASK;
+        link = link | ((entry_index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
+        entry_with_position = link;
+        g_menu_item_nav_entries[entry_index] = entry_with_position;
+
+        if ((entry_index - 1) >= 0)
+        {
+            previous_index = entry_index - 1;
+        }
+
+        entry_with_previous = entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
+        entry_with_previous = entry_with_previous | ((previous_index & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
+        g_menu_item_nav_entries[entry_index] = entry_with_previous;
+        next_index = entry_index + 1;
+        has_next = next_index < count;
+        link = 0;
+
+        if (has_next != 0)
+        {
+            link = next_index;
+        }
+
+        g_menu_item_nav_entries[entry_index] = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (link << MENU_ITEM_NAV_NEXT_SHIFT);
     }
 }
 

@@ -51,7 +51,7 @@ s32 gosub_handle_input(void)
     {
         if (g_gosub_dialog_accepting_input != 0)
         {
-            if ((g_pad_input & GOSUB_BUTTONS_DISMISS) == 0)
+            if ((g_pad_input & PAD_DISMISS_BUTTONS) == 0)
             {
                 return;
             }
@@ -89,7 +89,7 @@ s32 gosub_handle_input(void)
             return;
         }
 
-        if (g_pad_input & GOSUB_BUTTONS_CONFIRM)
+        if (g_pad_input & PAD_CONFIRM_BUTTONS)
         {
             field_play_sound(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
             if (g_gosub_dialog_handler == 0)
@@ -179,7 +179,7 @@ s32 gosub_handle_input(void)
         return;
     }
 
-    if (g_pad_input & GOSUB_BUTTONS_CONFIRM)
+    if (g_pad_input & PAD_CONFIRM_BUTTONS)
     {
         field_play_sound(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
         if (g_gosub_rows[g_gosub_cursor_row].text_color != FIELD_TEXT_COLOR_NORMAL)
