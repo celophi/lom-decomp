@@ -154,8 +154,8 @@ typedef enum
 typedef enum
 {
     WMAP_LAND_DISPLAY_DOMINA = 1,
-    WMAP_LAND_DISPLAY_GATO = 5,
-    WMAP_LAND_DISPLAY_GATO_OVERRIDE = 35,
+    WMAP_LAND_DISPLAY_GEO = 5,
+    WMAP_LAND_DISPLAY_GEO_OVERRIDE = 35,
     WMAP_LAND_DISPLAY_DOMINA_OVERRIDE = 36
 } WmapLandDisplayId;
 
@@ -273,9 +273,9 @@ extern s32 D_801ADB08;
 extern u8 g_wmap_resident_land_animation_data[];
 extern RECT D_80051A88;
 extern WmapTileDisplay D_8011D108[6][6];
-/** @brief Nonzero to use display resource 35 for Gato's map appearance. */
-extern s32 g_wmap_gato_appearance_override;
-/** @brief Nonzero to use display resource 36 for Domina's map appearance. */
+/** @brief Nonzero to draw Geo (land 5) with display resource 35; no WMAP code sets it. */
+extern s32 g_wmap_geo_appearance_override;
+/** @brief Nonzero to draw Domina (land 1) with display resource 36; no WMAP code sets it. */
 extern s32 g_wmap_domina_appearance_override;
 extern WmapMotion g_wmap_actor_motions[];
 
@@ -1341,19 +1341,19 @@ s32 wmap_run_loop(void)
             g_wmap_attract_1_requested = 1;
             break;
         case 25:
-            g_wmap_pending_converge_events[0] = 1;
+            g_wmap_pending_arrival_events[0] = 1;
             break;
         case 17:
-            g_wmap_pending_converge_events[1] = 1;
+            g_wmap_pending_arrival_events[1] = 1;
             break;
         case 18:
-            g_wmap_pending_converge_events[2] = 1;
+            g_wmap_pending_arrival_events[2] = 1;
             break;
         case 19:
-            g_wmap_pending_converge_events[3] = 1;
+            g_wmap_pending_arrival_events[3] = 1;
             break;
         case 20:
-            g_wmap_pending_converge_events[4] = 1;
+            g_wmap_pending_arrival_events[4] = 1;
             break;
         case 22:
             g_wmap_third_traveler_enabled = 1;
@@ -2287,11 +2287,11 @@ void wmap_refresh_cells(void)
         for (x = 0; x < WMAP_GRID_SIZE; x++)
         {
             land_id = wmap_get_land_at_cell(x, y);
-            if (g_wmap_gato_appearance_override != 0)
+            if (g_wmap_geo_appearance_override != 0)
             {
-                if (land_id == WMAP_LAND_DISPLAY_GATO)
+                if (land_id == WMAP_LAND_DISPLAY_GEO)
                 {
-                    land_id = WMAP_LAND_DISPLAY_GATO_OVERRIDE;
+                    land_id = WMAP_LAND_DISPLAY_GEO_OVERRIDE;
                 }
             }
             if (g_wmap_domina_appearance_override != 0)

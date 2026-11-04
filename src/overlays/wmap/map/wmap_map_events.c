@@ -26,32 +26,53 @@
 #include "main/cdrom.h"
 #include "sdk/gte_dmpsx_compat.h"
 
-/** @brief Land the converge event scrolls to and that event 25 converges on from all four sides. */
-#define WMAP_CONVERGE_LAND 4
+/** @brief Land the arrival event scrolls to; event 25 arrives there from all four sides. */
+#define WMAP_ARRIVAL_LAND 4
 
-/** @brief Sprite actors and effect motion slots of the four converging sprites, one per side. */
-#define WMAP_CONVERGE_FIRST_ACTOR 20
-#define WMAP_CONVERGE_SIDES 4
+/** @brief Sprite actors and effect motion slots of the four arriving sprites, one per side. */
+#define WMAP_ARRIVAL_FIRST_ACTOR 20
+#define WMAP_ARRIVAL_SIDES 4
 
-/** @brief Trail sprites: 16 samples of the four converging sprites, from actor 40 on. */
-#define WMAP_CONVERGE_TRAIL_FIRST_ACTOR 40
-#define WMAP_CONVERGE_TRAIL_SAMPLES 16
-#define WMAP_CONVERGE_TRAIL_END (WMAP_CONVERGE_TRAIL_FIRST_ACTOR + WMAP_CONVERGE_TRAIL_SAMPLES * WMAP_CONVERGE_SIDES)
+/** @brief Trail sprites: 16 samples of the four arriving sprites, from actor 40 on. */
+#define WMAP_ARRIVAL_TRAIL_FIRST_ACTOR 40
+#define WMAP_ARRIVAL_TRAIL_SAMPLES 16
+#define WMAP_ARRIVAL_TRAIL_END (WMAP_ARRIVAL_TRAIL_FIRST_ACTOR + WMAP_ARRIVAL_TRAIL_SAMPLES * WMAP_ARRIVAL_SIDES)
 
-/** @brief Converging sprites: start distance and the distance covered per frame. */
-#define WMAP_CONVERGE_START_RADIUS 90000
-#define WMAP_CONVERGE_RADIUS_STEP 900
+/** @brief Arriving sprites: start distance and the distance covered per frame. */
+#define WMAP_ARRIVAL_START_RADIUS 90000
+#define WMAP_ARRIVAL_RADIUS_STEP 900
 
-/** @brief Sprite texture and draw variant of the converging sprites and their trails. */
-#define WMAP_CONVERGE_TEXTURE 3
-#define WMAP_CONVERGE_VARIANT 0x400
+/** @brief Sprite texture and draw variant of the arriving sprites and their trails. */
+#define WMAP_ARRIVAL_TEXTURE 3
+#define WMAP_ARRIVAL_VARIANT 0x400
 
 /** @brief Land effects started by events 12, 13 and 24. */
 #define WMAP_LAND_EVENT_12_EFFECT 22
 #define WMAP_LAND_EVENT_13_EFFECT 23
 #define WMAP_LAND_EVENT_24_EFFECT 33
 
-/** @brief A g_wmap_actor_motions slot as one of the converge event's sprites or trail samples. */
+/** @brief CD files of the event sprites; each sprite is an animation (.DAT) and a texture (.TIM). */
+typedef enum
+{
+    WMAP_NPCRUR_ANIMATION_RESOURCE = 0x10D8, /* WM/WMAP/NPCRUR.DAT */
+    WMAP_NPCRUR_TEXTURE_RESOURCE = 0x10D9,   /* WM/WMAP/NPCRUR.TIM */
+    WMAP_NPCDAN_ANIMATION_RESOURCE = 0x10DA, /* WM/WMAP/NPCDAN.DAT */
+    WMAP_NPCDAN_TEXTURE_RESOURCE = 0x10DB,   /* WM/WMAP/NPCDAN.TIM */
+    WMAP_NPCLDY_ANIMATION_RESOURCE = 0x10DC, /* WM/WMAP/NPCLDY.DAT */
+    WMAP_NPCLDY_TEXTURE_RESOURCE = 0x10DD,   /* WM/WMAP/NPCLDY.TIM */
+    WMAP_NPCSIN_ANIMATION_RESOURCE = 0x10DE, /* WM/WMAP/NPCSIN.DAT */
+    WMAP_NPCSIN_TEXTURE_RESOURCE = 0x10DF,   /* WM/WMAP/NPCSIN.TIM */
+    WMAP_NPCCPL_ANIMATION_RESOURCE = 0x10E0, /* WM/WMAP/NPCCPL.DAT */
+    WMAP_NPCCPL_TEXTURE_RESOURCE = 0x10E1,   /* WM/WMAP/NPCCPL.TIM */
+    WMAP_NPCLAR_ANIMATION_RESOURCE = 0x10E2, /* WM/WMAP/NPCLAR.DAT */
+    WMAP_NPCLAR_TEXTURE_RESOURCE = 0x10E3,   /* WM/WMAP/NPCLAR.TIM */
+    WMAP_NPCSHD_ANIMATION_RESOURCE = 0x1149, /* WM/WKANKUN/NPCSHD.DAT */
+    WMAP_NPCSHD_TEXTURE_RESOURCE = 0x114A,   /* WM/WKANKUN/NPCSHD.TIM */
+    WMAP_NPCPEL_ANIMATION_RESOURCE = 0x1216, /* WM/WEFF2/NPCPEL.DAT */
+    WMAP_NPCPEL_TEXTURE_RESOURCE = 0x1217    /* WM/WEFF2/NPCPEL.TIM */
+} WmapEventSpriteResource;
+
+/** @brief A g_wmap_actor_motions slot as one of the arrival event's sprites or trail samples. */
 typedef struct
 {
     s16 active;
@@ -64,12 +85,12 @@ typedef struct
     s16 depth;
     s16 height;
     WmapScreenPosition screen;
-} WmapConvergeMotion;
+} WmapArrivalMotion;
 
 /** @brief One g_wmap_actor_motions slot; slot 0 drives the travel vehicle. */
 typedef union
 {
-    WmapConvergeMotion converge;
+    WmapArrivalMotion arrival;
     WmapVehicleMotion vehicle;
 } WmapMotionSlot;
 
@@ -85,10 +106,10 @@ typedef struct
 extern s32 g_wmap_sequence_count;
 extern s32 g_wmap_special_travel_pending;
 extern s32 D_80139234;
-/** @brief Set when the converge event comes from all four sides; it then also draws trails. */
-extern s32 g_wmap_converge_event_all_sides;
-/** @brief Sides the converging sprites come from: +x, +y, -x, -y. */
-extern u8 g_wmap_converge_event_sides[WMAP_CONVERGE_SIDES];
+/** @brief Set when the arrival event comes from all four sides; it then also draws trails. */
+extern s32 g_wmap_arrival_event_all_sides;
+/** @brief Sides the arriving sprites come from: +x, +y, -x, -y. */
+extern u8 g_wmap_arrival_event_sides[WMAP_ARRIVAL_SIDES];
 /** @brief Animation of the scripted traveler (WMAP_SCRIPTED_TRAVELER), loaded by the walk events. */
 extern u8 g_wmap_scripted_traveler_animation[];
 extern s32 g_wmap_view_scroll_mode;
@@ -102,16 +123,16 @@ extern WmapSpriteActor g_wmap_vehicle_actor;
 extern WmapAnimationSlot g_wmap_vehicle_animation;
 extern WmapAnimationSlot g_wmap_actor_animations[];
 extern WmapMotionSlot g_wmap_actor_motions[];
-/** @brief Motion slots from actor WMAP_CONVERGE_FIRST_ACTOR on, addressed as their own array. */
+/** @brief Motion slots from actor WMAP_ARRIVAL_FIRST_ACTOR on, addressed as their own array. */
 extern WmapMotionSlot g_wmap_effect_actor_motions[];
 extern u8 g_wmap_animation_bank_0[];
 extern u8 g_wmap_animation_bank_3[];
 extern WmapView g_wmap_view;
 extern WmapView g_wmap_saved_view;
 
-extern void (*g_wmap_converge_event_steps[])(void);
-extern u32 g_wmap_converge_event_step;
-extern s32 g_wmap_converge_event_timer;
+extern void (*g_wmap_arrival_event_steps[])(void);
+extern u32 g_wmap_arrival_event_step;
+extern s32 g_wmap_arrival_event_timer;
 extern void (*g_wmap_land_event_16_steps[])(void);
 extern u32 g_wmap_land_event_16_step;
 extern s32 g_wmap_land_event_16_timer;
@@ -164,12 +185,12 @@ static inline void wmap_scroll_to_saved_view(void)
 }
 
 /**
- * @brief Test whether the converge event comes from all four sides.
- * @return Nonzero when every entry of g_wmap_converge_event_sides is set.
+ * @brief Test whether the arrival event comes from all four sides.
+ * @return Nonzero when every entry of g_wmap_arrival_event_sides is set.
  */
-static inline s32 wmap_converge_event_from_all_sides(void)
+static inline s32 wmap_arrival_event_from_all_sides(void)
 {
-    return g_wmap_converge_event_sides[3] & (g_wmap_converge_event_sides[2] & (g_wmap_converge_event_sides[0] & g_wmap_converge_event_sides[1]));
+    return g_wmap_arrival_event_sides[3] & (g_wmap_arrival_event_sides[2] & (g_wmap_arrival_event_sides[0] & g_wmap_arrival_event_sides[1]));
 }
 
 /**
@@ -223,27 +244,27 @@ static inline void wmap_walk_event_show_traveler(void)
     actor->shade_step = 8;
 }
 
-/** @brief Move the converging sprites one step in, draw them and their trails, and advance when the timer ends. */
-static inline void wmap_converge_event_approach(void)
+/** @brief Move the arriving sprites one step in, draw them and their trails, and advance when the timer ends. */
+static inline void wmap_arrival_event_approach(void)
 {
     s32 i;
 
     wmap_set_effect_camera_transform();
-    wmap_converge_event_draw_sprites();
-    wmap_converge_event_draw_trails();
+    wmap_arrival_event_draw_sprites();
+    wmap_arrival_event_draw_trails();
 
-    for (i = 0; i < WMAP_CONVERGE_SIDES; i++)
+    for (i = 0; i < WMAP_ARRIVAL_SIDES; i++)
     {
-        g_wmap_actor_motions[WMAP_CONVERGE_FIRST_ACTOR + i].converge.radius -= g_wmap_actor_motions[WMAP_CONVERGE_FIRST_ACTOR + i].converge.radius_step;
+        g_wmap_actor_motions[WMAP_ARRIVAL_FIRST_ACTOR + i].arrival.radius -= g_wmap_actor_motions[WMAP_ARRIVAL_FIRST_ACTOR + i].arrival.radius_step;
     }
 
-    if (--g_wmap_converge_event_timer == 0)
+    if (--g_wmap_arrival_event_timer == 0)
     {
-        g_wmap_converge_event_step += 1;
+        g_wmap_arrival_event_step += 1;
     }
 }
 
-/** @brief Start the first queued map event: a pending land event, special travel, or converge event. */
+/** @brief Start the first queued map event: a pending land event, special travel, or arrival event. */
 void wmap_start_pending_event(void)
 {
     s32 event_index;
@@ -322,7 +343,7 @@ void wmap_start_pending_event(void)
         {
             for (event_index = 0; event_index < 8; event_index++)
             {
-                event = &g_wmap_pending_converge_events[event_index];
+                event = &g_wmap_pending_arrival_events[event_index];
 
                 if (*event != 0)
                 {
@@ -330,43 +351,43 @@ void wmap_start_pending_event(void)
                     switch (event_index)
                     {
                         case 0:
-                            cdrom_queue_read(0x1149, g_wmap_animation_bank_3);
+                            cdrom_queue_read(WMAP_NPCSHD_ANIMATION_RESOURCE, g_wmap_animation_bank_3);
                             cdrom_wait_queue_empty();
-                            wmap_load_tim_file(0x114A);
-                            wmap_find_land_cell(WMAP_CONVERGE_LAND, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
-                            g_wmap_converge_event_all_sides = 1;
-                            g_wmap_converge_event_sides[3] = 1;
-                            g_wmap_converge_event_sides[2] = 1;
-                            g_wmap_converge_event_sides[1] = 1;
-                            g_wmap_converge_event_sides[0] = 1;
+                            wmap_load_tim_file(WMAP_NPCSHD_TEXTURE_RESOURCE);
+                            wmap_find_land_cell(WMAP_ARRIVAL_LAND, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+                            g_wmap_arrival_event_all_sides = 1;
+                            g_wmap_arrival_event_sides[3] = 1;
+                            g_wmap_arrival_event_sides[2] = 1;
+                            g_wmap_arrival_event_sides[1] = 1;
+                            g_wmap_arrival_event_sides[0] = 1;
                             break;
                         case 1:
-                            cdrom_queue_read(0x10DE, g_wmap_animation_bank_3);
+                            cdrom_queue_read(WMAP_NPCSIN_ANIMATION_RESOURCE, g_wmap_animation_bank_3);
                             cdrom_wait_queue_empty();
-                            wmap_load_tim_file(0x10DF);
-                            wmap_converge_event_pick_sides(11);
+                            wmap_load_tim_file(WMAP_NPCSIN_TEXTURE_RESOURCE);
+                            wmap_arrival_event_pick_sides(11);
                             break;
                         case 2:
-                            cdrom_queue_read(0x10D8, g_wmap_animation_bank_3);
+                            cdrom_queue_read(WMAP_NPCRUR_ANIMATION_RESOURCE, g_wmap_animation_bank_3);
                             cdrom_wait_queue_empty();
-                            wmap_load_tim_file(0x10D9);
-                            wmap_converge_event_pick_sides(17);
+                            wmap_load_tim_file(WMAP_NPCRUR_TEXTURE_RESOURCE);
+                            wmap_arrival_event_pick_sides(17);
                             break;
                         case 3:
-                            cdrom_queue_read(0x10DC, g_wmap_animation_bank_3);
+                            cdrom_queue_read(WMAP_NPCLDY_ANIMATION_RESOURCE, g_wmap_animation_bank_3);
                             cdrom_wait_queue_empty();
-                            wmap_load_tim_file(0x10DD);
-                            wmap_converge_event_pick_sides(11);
+                            wmap_load_tim_file(WMAP_NPCLDY_TEXTURE_RESOURCE);
+                            wmap_arrival_event_pick_sides(11);
                             break;
                         case 4:
-                            cdrom_queue_read(0x10DA, g_wmap_animation_bank_3);
+                            cdrom_queue_read(WMAP_NPCDAN_ANIMATION_RESOURCE, g_wmap_animation_bank_3);
                             cdrom_wait_queue_empty();
-                            wmap_load_tim_file(0x10DB);
-                            wmap_converge_event_pick_sides(10);
+                            wmap_load_tim_file(WMAP_NPCDAN_TEXTURE_RESOURCE);
+                            wmap_arrival_event_pick_sides(10);
                             break;
                     }
 
-                    wmap_start_sequence(wmap_converge_event_run);
+                    wmap_start_sequence(wmap_arrival_event_run);
                     break;
                 }
             }
@@ -377,78 +398,78 @@ void wmap_start_pending_event(void)
 }
 
 /**
- * @brief Pick the side the converging sprite comes from: the first neighbor with a land, else a random side.
+ * @brief Pick the side the arriving sprite comes from: the first neighbor with a land, else a random side.
  * @param land_id Land whose neighbors are checked.
  */
-void wmap_converge_event_pick_sides(s32 land_id)
+void wmap_arrival_event_pick_sides(s32 land_id)
 {
     wmap_find_land_cell(land_id, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
-    g_wmap_converge_event_all_sides = 0;
-    g_wmap_converge_event_sides[3] = 0;
-    g_wmap_converge_event_sides[2] = 0;
-    g_wmap_converge_event_sides[1] = 0;
-    g_wmap_converge_event_sides[0] = 0;
+    g_wmap_arrival_event_all_sides = 0;
+    g_wmap_arrival_event_sides[3] = 0;
+    g_wmap_arrival_event_sides[2] = 0;
+    g_wmap_arrival_event_sides[1] = 0;
+    g_wmap_arrival_event_sides[0] = 0;
 
     if (wmap_cell_has_land(g_wmap_vehicle_cell_x + 1, g_wmap_vehicle_cell_y))
     {
-        g_wmap_converge_event_sides[0] = 1;
+        g_wmap_arrival_event_sides[0] = 1;
         return;
     }
 
     if (wmap_cell_has_land(g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y + 1))
     {
-        g_wmap_converge_event_sides[1] = 1;
+        g_wmap_arrival_event_sides[1] = 1;
         return;
     }
 
     if (wmap_cell_has_land(g_wmap_vehicle_cell_x - 1, g_wmap_vehicle_cell_y))
     {
-        g_wmap_converge_event_sides[2] = 1;
+        g_wmap_arrival_event_sides[2] = 1;
         return;
     }
 
     if (wmap_cell_has_land(g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y - 1))
     {
-        g_wmap_converge_event_sides[3] = 1;
+        g_wmap_arrival_event_sides[3] = 1;
         return;
     }
 
-    g_wmap_converge_event_sides[rand() & 3] = 1;
+    g_wmap_arrival_event_sides[rand() & 3] = 1;
 }
 
-/** @brief Converge event: lock input, save the view and scroll to WMAP_CONVERGE_LAND. */
-void wmap_converge_event_step_01(void)
+/** @brief Arrival event: lock input, save the view and scroll to WMAP_ARRIVAL_LAND. */
+void wmap_arrival_event_step_01(void)
 {
     g_wmap_special_travel_pending = 0;
     D_80139234 = 0;
     g_wmap_input_locked = 1;
     g_wmap_event_active = 1;
     g_wmap_saved_view = g_wmap_view;
-    wmap_find_land_cell(WMAP_CONVERGE_LAND, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+    wmap_find_land_cell(WMAP_ARRIVAL_LAND, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     wmap_scroll_to_vehicle_cell();
-    g_wmap_converge_event_step++;
-    wmap_converge_event_step_02();
+    g_wmap_arrival_event_step++;
+    wmap_arrival_event_step_02();
 }
 
-/** @brief Converge event: start one sprite per chosen side, fade the song down and play the arrival sound. */
-void wmap_converge_event_step_03(void)
+/** @brief Arrival event: start one sprite per chosen side, fade the song down and play the arrival sound. */
+void wmap_arrival_event_step_03(void)
 {
     s32 i;
     WmapSpriteActor* actor;
 
-    for (i = WMAP_CONVERGE_TRAIL_FIRST_ACTOR; i < 120; i++)
+    for (i = WMAP_ARRIVAL_TRAIL_FIRST_ACTOR; i < 120; i++)
     {
-        g_wmap_actor_motions[i].converge.active = 0;
+        g_wmap_actor_motions[i].arrival.active = 0;
         g_wmap_actor_animations[i].data = g_wmap_animation_bank_3;
     }
 
-    for (i = 0; i < WMAP_CONVERGE_SIDES; i++)
+    for (i = 0; i < WMAP_ARRIVAL_SIDES; i++)
     {
-        actor = &g_wmap_sprite_actors[WMAP_CONVERGE_FIRST_ACTOR + i];
+        actor = &g_wmap_sprite_actors[WMAP_ARRIVAL_FIRST_ACTOR + i];
 
-        if (g_wmap_converge_event_sides[i] != 0)
+        if (g_wmap_arrival_event_sides[i] != 0)
         {
-            g_wmap_actor_animations[i + WMAP_CONVERGE_FIRST_ACTOR].data = g_wmap_animation_bank_3;
+            g_wmap_actor_animations[i + WMAP_ARRIVAL_FIRST_ACTOR].data = g_wmap_animation_bank_3;
             actor->scale_index = WMAP_STEP_ACTOR_SCALE_INDEX;
             actor->sequence = i + 1;
             actor->previous_sequence = -1;
@@ -456,17 +477,17 @@ void wmap_converge_event_step_03(void)
             actor->shade_step = 2;
             actor->resource_index = 0;
             actor->shade = 0;
-            g_wmap_effect_actor_motions[i].converge.active = 1;
-            g_wmap_effect_actor_motions[i].converge.angle = i << 10;
-            g_wmap_effect_actor_motions[i].converge.radius = WMAP_CONVERGE_START_RADIUS;
-            g_wmap_effect_actor_motions[i].converge.radius_step = WMAP_CONVERGE_RADIUS_STEP;
-            g_wmap_effect_actor_motions[i].converge.height = 0;
+            g_wmap_effect_actor_motions[i].arrival.active = 1;
+            g_wmap_effect_actor_motions[i].arrival.angle = i << 10;
+            g_wmap_effect_actor_motions[i].arrival.radius = WMAP_ARRIVAL_START_RADIUS;
+            g_wmap_effect_actor_motions[i].arrival.radius_step = WMAP_ARRIVAL_RADIUS_STEP;
+            g_wmap_effect_actor_motions[i].arrival.height = 0;
         }
     }
 
     akao_fade_song_volume_from(0, 30, 127, 48);
 
-    if (wmap_converge_event_from_all_sides())
+    if (wmap_arrival_event_from_all_sides())
     {
         wmap_play_sound(49, 128);
     }
@@ -475,58 +496,58 @@ void wmap_converge_event_step_03(void)
         wmap_play_sound(21, 128);
     }
 
-    g_wmap_converge_event_timer = 64;
-    g_wmap_converge_event_step++;
-    wmap_converge_event_step_04();
+    g_wmap_arrival_event_timer = 64;
+    g_wmap_arrival_event_step++;
+    wmap_arrival_event_step_04();
 }
 
-/** @brief Project and draw the converging sprites around the event land. */
-void wmap_converge_event_draw_sprites(void)
+/** @brief Project and draw the arriving sprites around the event land. */
+void wmap_arrival_event_draw_sprites(void)
 {
     SVECTOR position;
     s32 depth;
     s32 draw_depth;
     s32 i;
     WmapSpriteActor* actor;
-    WmapConvergeMotion* motion;
+    WmapArrivalMotion* motion;
 
-    for (i = 0; i < WMAP_CONVERGE_SIDES; i++)
+    for (i = 0; i < WMAP_ARRIVAL_SIDES; i++)
     {
-        motion = &g_wmap_effect_actor_motions[i].converge;
-        actor = &g_wmap_sprite_actors[WMAP_CONVERGE_FIRST_ACTOR + i];
+        motion = &g_wmap_effect_actor_motions[i].arrival;
+        actor = &g_wmap_sprite_actors[WMAP_ARRIVAL_FIRST_ACTOR + i];
         position.vx = ((motion->radius >> 3) * (ccos(motion->angle) >> 6)) >> 12;
         position.vy = ((motion->radius >> 3) * (csin(motion->angle) >> 6)) >> 12;
         position.vz = motion->height;
         gte_ldv0(&position);
         gte_rtps();
-        wmap_step_actor_animation(actor, &g_wmap_actor_animations[WMAP_CONVERGE_FIRST_ACTOR + i]);
+        wmap_step_actor_animation(actor, &g_wmap_actor_animations[WMAP_ARRIVAL_FIRST_ACTOR + i]);
         gte_stsxy(&motion->screen);
         gte_stszotz(&depth);
         draw_depth = (7057 - depth) / 4 + 42;
-        wmap_draw_actor_sprite(actor, motion->screen.packed, WMAP_CONVERGE_TEXTURE, draw_depth, WMAP_CONVERGE_VARIANT);
+        wmap_draw_actor_sprite(actor, motion->screen.packed, WMAP_ARRIVAL_TEXTURE, draw_depth, WMAP_ARRIVAL_VARIANT);
         motion->depth = draw_depth;
     }
 }
 
-/** @brief Draw the trail sprites and, every 10 frames, copy the converging sprites into the next trail sample. */
-void wmap_converge_event_draw_trails(void)
+/** @brief Draw the trail sprites and, every 10 frames, copy the arriving sprites into the next trail sample. */
+void wmap_arrival_event_draw_trails(void)
 {
     s32 i;
     s32 destination;
     WmapSpriteActor* actor;
-    WmapConvergeMotion* motion;
+    WmapArrivalMotion* motion;
 
-    if (g_wmap_converge_event_all_sides != 0)
+    if (g_wmap_arrival_event_all_sides != 0)
     {
-        for (i = WMAP_CONVERGE_TRAIL_FIRST_ACTOR; i < WMAP_CONVERGE_TRAIL_END; i++)
+        for (i = WMAP_ARRIVAL_TRAIL_FIRST_ACTOR; i < WMAP_ARRIVAL_TRAIL_END; i++)
         {
-            motion = &g_wmap_actor_motions[i].converge;
+            motion = &g_wmap_actor_motions[i].arrival;
 
             if (motion->active != 0)
             {
                 actor = &g_wmap_sprite_actors[i];
                 wmap_step_actor_animation(actor, &g_wmap_actor_animations[i]);
-                wmap_draw_actor_sprite(actor, motion->screen.packed, WMAP_CONVERGE_TEXTURE, motion->depth + 1, WMAP_CONVERGE_VARIANT);
+                wmap_draw_actor_sprite(actor, motion->screen.packed, WMAP_ARRIVAL_TEXTURE, motion->depth + 1, WMAP_ARRIVAL_VARIANT);
             }
         }
 
@@ -534,16 +555,16 @@ void wmap_converge_event_draw_trails(void)
         {
             if (D_80139234 != -1)
             {
-                for (i = 0; i < WMAP_CONVERGE_SIDES; i++)
+                for (i = 0; i < WMAP_ARRIVAL_SIDES; i++)
                 {
-                    destination = i + D_80139234 * WMAP_CONVERGE_SIDES + WMAP_CONVERGE_TRAIL_FIRST_ACTOR;
-                    g_wmap_actor_motions[destination] = g_wmap_actor_motions[i + WMAP_CONVERGE_FIRST_ACTOR];
-                    g_wmap_sprite_actors[destination] = g_wmap_sprite_actors[i + WMAP_CONVERGE_FIRST_ACTOR];
+                    destination = i + D_80139234 * WMAP_ARRIVAL_SIDES + WMAP_ARRIVAL_TRAIL_FIRST_ACTOR;
+                    g_wmap_actor_motions[destination] = g_wmap_actor_motions[i + WMAP_ARRIVAL_FIRST_ACTOR];
+                    g_wmap_sprite_actors[destination] = g_wmap_sprite_actors[i + WMAP_ARRIVAL_FIRST_ACTOR];
                     g_wmap_sprite_actors[destination].target_shade = 0;
                     g_wmap_sprite_actors[destination].shade_step = 2;
                 }
 
-                D_80139234 = (D_80139234 + 1) & (WMAP_CONVERGE_TRAIL_SAMPLES - 1);
+                D_80139234 = (D_80139234 + 1) & (WMAP_ARRIVAL_TRAIL_SAMPLES - 1);
             }
         }
     }
@@ -552,7 +573,7 @@ void wmap_converge_event_draw_trails(void)
 /** @brief Land event 16: put the scripted traveler on land 12 and scroll to it. */
 void wmap_land_event_16_step_01(void)
 {
-    wmap_walk_event_start(12, 0x10E2, 0x10E3);
+    wmap_walk_event_start(12, WMAP_NPCLAR_ANIMATION_RESOURCE, WMAP_NPCLAR_TEXTURE_RESOURCE);
     g_wmap_land_event_16_step++;
     wmap_land_event_16_step_02();
 }
@@ -568,7 +589,7 @@ void wmap_land_event_16_step_05(void)
 /** @brief Land event 21: put the scripted traveler on land 1 and scroll to it. */
 void wmap_land_event_21_step_01(void)
 {
-    wmap_walk_event_start(1, 0x10E0, 0x10E1);
+    wmap_walk_event_start(1, WMAP_NPCCPL_ANIMATION_RESOURCE, WMAP_NPCCPL_TEXTURE_RESOURCE);
     g_wmap_land_event_21_step += 1;
     wmap_land_event_21_step_02();
 }
@@ -584,7 +605,7 @@ void wmap_land_event_21_step_05(void)
 /** @brief Land event 15: put the scripted traveler on land 1 and scroll to it. */
 void wmap_land_event_15_step_01(void)
 {
-    wmap_walk_event_start(1, 0x1216, 0x1217);
+    wmap_walk_event_start(1, WMAP_NPCPEL_ANIMATION_RESOURCE, WMAP_NPCPEL_TEXTURE_RESOURCE);
     g_wmap_land_event_15_step += 1;
     wmap_land_event_15_step_02();
 }
@@ -671,7 +692,7 @@ void wmap_land_event_24_step_04(void)
 }
 
 /**
- * @brief Run land event 24: the travel vehicle rises from the special travel land and flies off.
+ * @brief Run land event 24: the travel vehicle rises from Lucemia (land 24) and flies off.
  * @param arg0 Nonzero restarts the sequence at step 1.
  * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
@@ -755,137 +776,137 @@ void wmap_land_event_24_step_08(void)
 WMAP_STEP_ADVANCE(wmap_land_event_24_step_09, g_wmap_land_event_24_step)
 
 /**
- * @brief Run the converge event: sprites come in from neighboring lands to WMAP_CONVERGE_LAND.
+ * @brief Run the arrival event: a sprite comes in to a land from a neighboring land (NPCSHD, event 25: four of them, to Lumina).
  * @param arg0 Nonzero restarts the sequence at step 1.
  * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
-WMAP_STEP_RUNNER(wmap_converge_event_run, g_wmap_converge_event_steps, 0x10, g_wmap_converge_event_step, g_wmap_converge_event_timer)
+WMAP_STEP_RUNNER(wmap_arrival_event_run, g_wmap_arrival_event_steps, 0x10, g_wmap_arrival_event_step, g_wmap_arrival_event_timer)
 
-/** @brief Converge event: restart at step 1 with a one-frame timer. */
-WMAP_STEP_RESET(wmap_converge_event_reset, g_wmap_converge_event_step, g_wmap_converge_event_timer)
+/** @brief Arrival event: restart at step 1 with a one-frame timer. */
+WMAP_STEP_RESET(wmap_arrival_event_reset, g_wmap_arrival_event_step, g_wmap_arrival_event_timer)
 
-/** @brief Converge event: wait for the scroll, then start the sprites. */
-WMAP_STEP_WAIT_SCROLL(wmap_converge_event_step_02, g_wmap_converge_event_step, wmap_converge_event_step_03)
+/** @brief Arrival event: wait for the scroll, then start the sprites. */
+WMAP_STEP_WAIT_SCROLL(wmap_arrival_event_step_02, g_wmap_arrival_event_step, wmap_arrival_event_step_03)
 
-/** @brief Converge event: draw the sprites until the timer ends. */
-WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_converge_event_step_04, g_wmap_converge_event_step, g_wmap_converge_event_timer, wmap_set_effect_camera_transform(),
-                              wmap_converge_event_draw_sprites())
+/** @brief Arrival event: draw the sprites until the timer ends. */
+WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_arrival_event_step_04, g_wmap_arrival_event_step, g_wmap_arrival_event_timer, wmap_set_effect_camera_transform(),
+                              wmap_arrival_event_draw_sprites())
 
-/** @brief Converge event: stop updating land labels and start a 30-frame approach. */
-void wmap_converge_event_step_05(void)
+/** @brief Arrival event: stop updating land labels and start a 30-frame approach. */
+void wmap_arrival_event_step_05(void)
 {
     g_wmap_land_label_updates_enabled = 0;
-    g_wmap_converge_event_timer = 30;
-    g_wmap_converge_event_step += 1;
-    wmap_converge_event_step_06();
+    g_wmap_arrival_event_timer = 30;
+    g_wmap_arrival_event_step += 1;
+    wmap_arrival_event_step_06();
 }
 
-/** @brief Converge event: move the sprites in and draw them and their trails until the timer ends. */
-void wmap_converge_event_step_06(void)
+/** @brief Arrival event: move the sprites in and draw them and their trails until the timer ends. */
+void wmap_arrival_event_step_06(void)
 {
-    wmap_converge_event_approach();
+    wmap_arrival_event_approach();
 }
 
-/** @brief Converge event: start the second approach, shorter when the sprites come from all sides. */
-void wmap_converge_event_step_07(void)
+/** @brief Arrival event: start the second approach, shorter when the sprites come from all sides. */
+void wmap_arrival_event_step_07(void)
 {
     s32 delay;
 
     wmap_set_map_label(-1);
     delay = 70;
 
-    if (g_wmap_converge_event_all_sides != 0)
+    if (g_wmap_arrival_event_all_sides != 0)
     {
         delay = 50;
     }
 
-    g_wmap_converge_event_timer = delay;
-    g_wmap_converge_event_step += 1;
-    wmap_converge_event_step_08();
+    g_wmap_arrival_event_timer = delay;
+    g_wmap_arrival_event_step += 1;
+    wmap_arrival_event_step_08();
 }
 
-/** @brief Converge event: move the sprites in and draw them and their trails until the timer ends. */
-void wmap_converge_event_step_08(void)
+/** @brief Arrival event: move the sprites in and draw them and their trails until the timer ends. */
+void wmap_arrival_event_step_08(void)
 {
-    wmap_converge_event_approach();
+    wmap_arrival_event_approach();
 }
 
-/** @brief Converge event: stop the sounds unless all sides came, stop the sprite animations and the trail sampling. */
-void wmap_converge_event_step_09(void)
+/** @brief Arrival event: stop the sounds unless all sides came, stop the sprite animations and the trail sampling. */
+void wmap_arrival_event_step_09(void)
 {
     s32 i;
 
-    if (!wmap_converge_event_from_all_sides())
+    if (!wmap_arrival_event_from_all_sides())
     {
         akao_release_all_sfx();
     }
 
-    for (i = 0; i < WMAP_CONVERGE_SIDES; i++)
+    for (i = 0; i < WMAP_ARRIVAL_SIDES; i++)
     {
-        g_wmap_sprite_actors[i + WMAP_CONVERGE_FIRST_ACTOR].sequence = 0;
+        g_wmap_sprite_actors[i + WMAP_ARRIVAL_FIRST_ACTOR].sequence = 0;
     }
 
     D_80139234 = -1;
-    g_wmap_converge_event_timer = 40;
-    g_wmap_converge_event_step++;
-    wmap_converge_event_step_10();
+    g_wmap_arrival_event_timer = 40;
+    g_wmap_arrival_event_step++;
+    wmap_arrival_event_step_10();
 }
 
-/** @brief Converge event: draw the sprites and trails until the timer ends. */
-void wmap_converge_event_step_10(void)
+/** @brief Arrival event: draw the sprites and trails until the timer ends. */
+void wmap_arrival_event_step_10(void)
 {
     wmap_set_effect_camera_transform();
-    wmap_converge_event_draw_sprites();
-    wmap_converge_event_draw_trails();
+    wmap_arrival_event_draw_sprites();
+    wmap_arrival_event_draw_trails();
 
-    if (--g_wmap_converge_event_timer == 0)
+    if (--g_wmap_arrival_event_timer == 0)
     {
-        g_wmap_converge_event_step += 1;
+        g_wmap_arrival_event_step += 1;
     }
 }
 
-/** @brief Converge event: fade the sprites out over 64 frames. */
-void wmap_converge_event_step_11(void)
+/** @brief Arrival event: fade the sprites out over 64 frames. */
+void wmap_arrival_event_step_11(void)
 {
     s32 i;
 
-    for (i = 0; i < WMAP_CONVERGE_SIDES; i++)
+    for (i = 0; i < WMAP_ARRIVAL_SIDES; i++)
     {
-        g_wmap_sprite_actors[i + WMAP_CONVERGE_FIRST_ACTOR].target_shade = 0;
+        g_wmap_sprite_actors[i + WMAP_ARRIVAL_FIRST_ACTOR].target_shade = 0;
     }
 
-    g_wmap_converge_event_timer = 64;
-    g_wmap_converge_event_step += 1;
-    wmap_converge_event_step_12();
+    g_wmap_arrival_event_timer = 64;
+    g_wmap_arrival_event_step += 1;
+    wmap_arrival_event_step_12();
 }
 
-/** @brief Converge event: draw the fading sprites until the timer ends. */
-WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_converge_event_step_12, g_wmap_converge_event_step, g_wmap_converge_event_timer, wmap_set_effect_camera_transform(),
-                              wmap_converge_event_draw_sprites())
+/** @brief Arrival event: draw the fading sprites until the timer ends. */
+WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_arrival_event_step_12, g_wmap_arrival_event_step, g_wmap_arrival_event_timer, wmap_set_effect_camera_transform(),
+                              wmap_arrival_event_draw_sprites())
 
-/** @brief Converge event: fade the song back up and scroll back to the saved view. */
-void wmap_converge_event_step_13(void)
+/** @brief Arrival event: fade the song back up and scroll back to the saved view. */
+void wmap_arrival_event_step_13(void)
 {
     akao_fade_song_volume_from(0, 30, 48, 127);
     wmap_scroll_to_saved_view();
-    g_wmap_converge_event_step += 1;
-    wmap_converge_event_step_14();
+    g_wmap_arrival_event_step += 1;
+    wmap_arrival_event_step_14();
 }
 
-/** @brief Converge event: wait for the scroll back. */
-WMAP_STEP_WAIT_SCROLL(wmap_converge_event_step_14, g_wmap_converge_event_step, wmap_converge_event_step_15)
+/** @brief Arrival event: wait for the scroll back. */
+WMAP_STEP_WAIT_SCROLL(wmap_arrival_event_step_14, g_wmap_arrival_event_step, wmap_arrival_event_step_15)
 
-/** @brief Converge event: unlock input, end the event and resume land label updates. */
-void wmap_converge_event_step_15(void)
+/** @brief Arrival event: unlock input, end the event and resume land label updates. */
+void wmap_arrival_event_step_15(void)
 {
     g_wmap_input_locked = 0;
     g_wmap_event_active = 0;
     g_wmap_land_label_updates_enabled = 1;
-    g_wmap_converge_event_step += 1;
+    g_wmap_arrival_event_step += 1;
 }
 
 /**
- * @brief Run land event 16: the scripted traveler walks from land 12 to land 16.
+ * @brief Run land event 16: the NPCLAR sprite walks from White Forest (land 12) to the Underworld (land 16).
  * @param arg0 Nonzero restarts the sequence at step 1.
  * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
@@ -970,7 +991,7 @@ void wmap_land_event_16_step_15(void)
 }
 
 /**
- * @brief Run land event 21: the scripted traveler walks from land 1 to land 2.
+ * @brief Run land event 21: the NPCCPL sprite walks from Domina (land 1) to Gato Grottoes (land 2).
  * @param arg0 Nonzero restarts the sequence at step 1.
  * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
@@ -1055,7 +1076,7 @@ void wmap_land_event_21_step_15(void)
 }
 
 /**
- * @brief Run land event 15: the scripted traveler walks from land 1 to land 18.
+ * @brief Run land event 15: the NPCPEL sprite walks from Domina (land 1) to Luon Highway (land 18).
  * @param arg0 Nonzero restarts the sequence at step 1.
  * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
@@ -1142,7 +1163,7 @@ void wmap_land_event_15_step_15(void)
 }
 
 /**
- * @brief Run land event 13: scroll to land 16 and start land effect 23.
+ * @brief Run land event 13: scroll to the Underworld (land 16) and start land effect 23.
  * @param arg0 Nonzero restarts the sequence at step 1.
  * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
@@ -1163,7 +1184,7 @@ void wmap_land_event_13_step_03(void)
 }
 
 /**
- * @brief Run land event 12: scroll to land 23 and start land effect 22.
+ * @brief Run land event 12: scroll to The Flames (land 23) and start land effect 22.
  * @param arg0 Nonzero restarts the sequence at step 1.
  * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
