@@ -196,7 +196,7 @@ void wmap_queue_effect_04_resources(void)
 /** @brief Queue texture, animation and model resources for effect 18. */
 void wmap_queue_effect_18_resources(void)
 {
-    func_80064F64(WMAP_EFFECT_18_PALETTE_RESOURCE);
+    wmap_load_tim_file(WMAP_EFFECT_18_PALETTE_RESOURCE);
     wmap_queue_effect_texture_0(WMAP_EFFECT_18_TEXTURE_0_RESOURCE);
     wmap_queue_effect_texture_1(WMAP_EFFECT_18_TEXTURE_1_RESOURCE);
     wmap_queue_effect_texture_2(WMAP_EFFECT_18_TEXTURE_2_RESOURCE);

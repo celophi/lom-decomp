@@ -823,7 +823,7 @@ void wmap_update_view_zoom(void)
         if ((g_wmap_buttons_repeat & PADRup) && (g_wmap_selection_phase == 0) && (g_wmap_selected_artifact == -1))
         {
             g_wmap_view_mode = WMAP_VIEW_MODE_ZOOM_OUT;
-            func_8005FF88(-1);
+            wmap_set_map_label(-1);
             g_wmap_saved_view = g_wmap_view;
             g_wmap_zoom_view.x = g_wmap_view.x * WMAP_ZOOM_ONE;
             g_wmap_zoom_view.y = g_wmap_view.y * WMAP_ZOOM_ONE;

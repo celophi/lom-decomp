@@ -118,7 +118,7 @@ s32 wmap_begin_land_placement(s32 initialize)
     {
         return 1;
     }
-    func_80064F64(wmap_get_land_count_tier() + WMAP_PLACEMENT_RESOURCE_BASE);
+    wmap_load_tim_file(wmap_get_land_count_tier() + WMAP_PLACEMENT_RESOURCE_BASE);
     wmap_start_map_tint(0x808080);
     g_wmap_land_display_limit = 2;
     g_wmap_screen_fade_mode = 1;
@@ -197,7 +197,7 @@ void wmap_update_artifact_selection(void)
                 g_wmap_input_locked = 1;
                 g_wmap_buttons_held = 0;
                 g_wmap_buttons_repeat = 0;
-                func_8005FF88(-1);
+                wmap_set_map_label(-1);
 
                 view_index = g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS;
                 first_frame = g_wmap_preview_travel_frame_bounds[view_index];
@@ -266,7 +266,7 @@ void wmap_update_artifact_selection(void)
     {
         if ((g_wmap_buttons_repeat & (WMAP_PAD_CANCEL | PADRleft)) != 0)
         {
-            func_8005FF88(-1);
+            wmap_set_map_label(-1);
             g_wmap_selection_phase = WMAP_SELECTION_SHOW_MAP;
             g_wmap_input_locked = 1;
             g_wmap_preview_travel_frame = g_wmap_preview_travel_frame_bounds[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS + 1] - 1;
@@ -349,7 +349,7 @@ void wmap_update_artifact_selection(void)
                 {
                     label_id += 0x40;
                 }
-                func_8005FF88(label_id);
+                wmap_set_map_label(label_id);
             }
         }
     }

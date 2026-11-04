@@ -5,6 +5,10 @@
 
 #define WMAP_TRAVELER_COUNT 4
 #define WMAP_TRAVEL_PATH_CAPACITY 32
+/** @brief Interpolated position units per cell. */
+#define WMAP_TRAVEL_CELL_UNITS 160
+/** @brief Traveler that event sequences walk between lands. */
+#define WMAP_SCRIPTED_TRAVELER 3
 /** @brief Land reached by the special travel sequence instead of walking. */
 #define WMAP_SPECIAL_TRAVEL_LAND 24
 

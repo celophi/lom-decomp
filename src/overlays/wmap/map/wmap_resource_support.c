@@ -84,7 +84,7 @@ void func_80064F5C(void)
  * @brief Queue a TIM read from CD and upload the decoded image(s) to VRAM.
  * @param resource_index CD resource id to queue.
  */
-void func_80064F64(s32 resource_index)
+void wmap_load_tim_file(s32 resource_index)
 {
     WmapTextureRect rectangle;
     u8* data;

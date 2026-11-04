@@ -71,8 +71,8 @@ extern s32 g_wmap_exit_frame;
 extern s32 g_wmap_exit_mode;
 /** @brief Queued land-event ticks remaining for the event dispatcher. */
 extern s32 g_wmap_pending_event_count;
-/** @brief Pending vehicle events; the first five slots handle flags 25 and 17-20. */
-extern u8 g_wmap_pending_vehicle_events[8];
+/** @brief Pending arrival events (wmap_arrival_event_run); slots 0-4 are raised by land events 25 and 17-20. */
+extern u8 g_wmap_pending_arrival_events[8];
 /** @brief Land-event flag 4-8 selected for special effect 34. */
 extern s32 g_wmap_special_land_event;
 /** @brief Status-panel mode; value three hides the day and placement sprites. */

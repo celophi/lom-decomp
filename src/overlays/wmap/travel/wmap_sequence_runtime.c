@@ -28,7 +28,6 @@
 #define WMAP_VIEW_SCALE 0x6000
 /** @brief Map units between two land cells, and map distance of one cell. */
 #define WMAP_CELL_SIZE 160
-#define WMAP_CELL_SPACING 48
 
 /** @brief Step counts of the land focus, land entry and land return sequences. */
 #define WMAP_LAND_FOCUS_STEPS 10

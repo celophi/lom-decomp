@@ -128,9 +128,9 @@ void wmap_land_event_00_a_step_01(void)
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_pack_1 + 0x7000;
     g_wmap_effect_model_pack_3 = g_wmap_effect_model_pack_2 + 0x3000;
     g_wmap_effect_model_pack_4 = g_wmap_effect_model_pack_2 + 0x7000;
-    func_80064F64(0x1218);
-    func_80064F64(0x1219);
-    func_80064F64(0x121A);
+    wmap_load_tim_file(0x1218);
+    wmap_load_tim_file(0x1219);
+    wmap_load_tim_file(0x121A);
     cdrom_queue_read(0x121B, g_wmap_animation_bank_0);
     cdrom_queue_read(0x121C, g_wmap_effect_model_buffer_2000 - 0x2000);
     cdrom_queue_read(0x121D, g_wmap_effect_model_pack_1);
