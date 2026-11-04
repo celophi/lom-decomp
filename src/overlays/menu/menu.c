@@ -3052,7 +3052,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
     uintptr_t technique_names;
     s32 k;
     u32 shared_s0;
-    s32 content_index;
+    intptr_t content_index;
     s32 two_outer = 2;
     s32 val;
     s32 zero = 0;
@@ -3975,7 +3975,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 u8 val;
                                 ptr = (u8*)base + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
                                 ptr += content_index;
-                                content_index = (u32)ptr;
+                                content_index = (intptr_t)ptr;
                                 val = ((MenuNameSelection*)(ptr + (MENU_SKILL_OFFSET - 0x1B)))->packed;
                                 if (val != 0xFF)
                                 {

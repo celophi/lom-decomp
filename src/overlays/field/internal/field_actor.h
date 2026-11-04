@@ -229,7 +229,7 @@ typedef struct FieldActor
     u8 unk3E;
     u8 unk3F;
     /** @brief Address of the displayed frame's data; bit 31 set selects the alternate (8-bit) renderer. */
-    u32 frame_data;
+    uintptr_t frame_data;
     /** @brief Working position of an effect record (FieldMotionRecord::work_x..work_z); cleared on actor records. */
     u32 work_x;
     u32 work_y;

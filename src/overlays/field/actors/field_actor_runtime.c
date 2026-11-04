@@ -3055,8 +3055,8 @@ s32 field_get_next_animation_frame_count(FieldActor* actor)
 
     entry = entry + (animation_index * 2 + 2);
     entry = FIELD_ANIMATION_FRAMES(resource_base, entry[0], entry[1]);
-    actor = (FieldActor*)(u32)entry[0];
-    return (u32)actor;
+    actor = (FieldActor*)(uintptr_t)entry[0];
+    return (intptr_t)actor;
 }
 
 /**

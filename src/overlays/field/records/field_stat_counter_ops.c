@@ -18,9 +18,9 @@
  * @note JP passes 10 (its item names are Shift-JIS text); US passes 21.
  */
 #if defined(VERSION_JP)
-#define FIELD_ITEM_NAME_LENGTH 10
+#define FIELD_ITEM_NAME_CHARACTER_LIMIT 10
 #else
-#define FIELD_ITEM_NAME_LENGTH 21
+#define FIELD_ITEM_NAME_CHARACTER_LIMIT 21
 #endif
 
 /** @brief Diagnostic codes for an out-of-range item kind (passed as the first argument). */
@@ -112,5 +112,5 @@ void field_consume_item(s32 kind)
  */
 static void field_set_item_name_macro(s32 kind)
 {
-    field_set_text_macro(0, g_field_item_name_table.bytes + g_field_item_name_table.offsets[kind], FIELD_ITEM_NAME_LENGTH);
+    field_set_text_macro(0, g_field_item_name_table.bytes + g_field_item_name_table.offsets[kind], FIELD_ITEM_NAME_CHARACTER_LIMIT);
 }

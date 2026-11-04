@@ -3934,7 +3934,7 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
     s32 width_or_mode;
     s32 frame_x;
     s32 frame_y_or_clut;
-    s32 value0;
+    intptr_t value0;
     s32 value1;
     s32 clut_x;
     s32 clut;
