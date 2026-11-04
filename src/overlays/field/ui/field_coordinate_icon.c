@@ -164,7 +164,7 @@ void* field_draw_player_icon(POLY_FT4* handle, u_long* ordering_table, s32 selec
     /* The shadow is a black, semi-transparent copy moved down and right. */
     source = prim;
     prim++;
-    bcopy(source, prim, sizeof(POLY_FT4));
+    bcopy((u8*)source, (u8*)prim, sizeof(POLY_FT4));
     SET_BGR0_PACKED(prim, 0);
     setPolyFT4(prim);
     setSemiTrans(prim, 1);

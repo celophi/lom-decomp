@@ -3052,7 +3052,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
     uintptr_t technique_names;
     s32 k;
     u32 shared_s0;
-    s32 content_index;
+    intptr_t content_index;
     s32 two_outer = 2;
     s32 val;
     s32 zero = 0;
@@ -3395,7 +3395,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                     {
                                         void* a3 = (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_NAMES]);
                                         menu_concat_encoded_text(
-                                            &prefix_buffer, (void*)((u8*)a3 + *(u16*)((u8*)a3 + (g_menu_item_ptr->info.halves[1] & 0x3F) * 2)),
+                                            prefix_buffer, (void*)((u8*)a3 + *(u16*)((u8*)a3 + (g_menu_item_ptr->info.halves[1] & 0x3F) * 2)),
                                             (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] +
                                                     *(u16*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] +
                                                             0xB4)));
@@ -3411,13 +3411,13 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                         case 0:
                                         {
                                             uintptr_t base0 = ((uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES));
-                                            menu_concat_encoded_text(&text_buffer, &prefix_buffer, (void*)(base0 + *(u16*)(((v >> 9) & 0x7E) + base0)));
+                                            menu_concat_encoded_text(text_buffer, prefix_buffer, (void*)(base0 + *(u16*)(((v >> 9) & 0x7E) + base0)));
                                             break;
                                         }
                                         case 1:
                                         {
                                             uintptr_t base1 = ((uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES));
-                                            menu_concat_encoded_text(&text_buffer, &prefix_buffer,
+                                            menu_concat_encoded_text(text_buffer, prefix_buffer,
                                                                      (void*)(base1 + *(u16*)(((v >> 9) & 0x7E) + base1 + 11 * sizeof(u16))));
                                             break;
                                         }
@@ -3425,7 +3425,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                         {
                                             uintptr_t base2 = ((uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES));
                                             menu_concat_encoded_text(
-                                                &text_buffer, &prefix_buffer,
+                                                text_buffer, prefix_buffer,
                                                 (void*)(base2 + *(u16*)(((g_menu_item_ptr->info.word >> 9) & 0x7E) + base2 + 23 * sizeof(u16))));
                                             break;
                                         }
@@ -3975,7 +3975,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 u8 val;
                                 ptr = (u8*)base + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
                                 ptr += content_index;
-                                content_index = (u32)ptr;
+                                content_index = (intptr_t)ptr;
                                 val = ((MenuNameSelection*)(ptr + (MENU_SKILL_OFFSET - 0x1B)))->packed;
                                 if (val != 0xFF)
                                 {

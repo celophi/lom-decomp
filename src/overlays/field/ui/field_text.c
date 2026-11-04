@@ -1737,7 +1737,7 @@ void field_text_init(void)
     u32 draw_mode;
     FieldWorkspace* text_sys = FIELD_WORKSPACE;
 
-    cdrom_stream(CD_RES_FIELD_WINDOW_TEXTURES, FIELD_TEXT_CACHE);
+    cdrom_stream(CD_RES_FIELD_WINDOW_TEXTURES, (u8*)FIELD_TEXT_CACHE);
 
     /* The file starts with the four text CLUTs, followed by the window frame textures. */
     setRECT(&rect, FIELD_TEXT_CLUT_X, FIELD_TEXT_TEXT_CLUT_Y, 16, 4);

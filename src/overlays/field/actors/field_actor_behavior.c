@@ -994,7 +994,7 @@ s32 field_update_actor_input(FieldActor* actor, s32 pad_index)
         work.input.vz = -work.input.vz;
     }
 
-    VectorNormal(&work.input, &work.motion);
+    VectorNormal((VECTOR*)&work.input, (VECTOR*)&work.motion);
     movement_actor = actor;
     frame_timer = movement_actor->frame_timer;
 
@@ -1517,8 +1517,8 @@ s32 field_update_actor_command(FieldActor* actor)
     {
         s32 targets[12];
         FieldActionSlot combo_action;
-        VECTOR displacement;
-        VECTOR squared;
+        FieldVector displacement;
+        FieldVector squared;
     } FieldCommandWork;
 
     FieldCommandWork scratch;
@@ -2110,7 +2110,8 @@ s32 field_update_actor_command(FieldActor* actor)
                     eligible_count = FIELD_ACTOR_TRACK_COUNT;
                 }
 
-                if (field_start_action_animation(actor->object_index, eligible_count, scratch.targets, action->parameter) != 0)
+                /* The animation reads one byte per target, so targets after the first arrive as 0. */
+                if (field_start_action_animation(actor->object_index, eligible_count, (u8*)scratch.targets, action->parameter) != 0)
                 {
                     for (i = 0; i < eligible_count; i++)
                     {

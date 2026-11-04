@@ -554,7 +554,7 @@ void field_load_sfx_tables(s32 set_id)
     {
         /* Word-aligned offset of the table about to be copied. */
         tables->active_table_offset = ((cursor - base) >> 2) * 4;
-        table = (u8 *)blob + (s32)(table = (u8 *)*entry);
+        table = (u8 *)blob + (intptr_t)(table = (u8 *)(intptr_t)*entry);
         table_end = table + ((s32 *)table)[*(s32 *)table];
         {
             u8 *dst = cursor;

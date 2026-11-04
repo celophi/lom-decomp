@@ -364,7 +364,7 @@ void wmap_update_map_game(void)
     render_x = 0xF0;
     if (g_wmap_game_score == 0)
     {
-        sprite = g_wmap_current_frame->packet_cursor;
+        sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
         *sprite = g_wmap_game_score_digit;
         addPrim(&g_wmap_current_frame->ordering_table[1], sprite);
         if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
@@ -377,7 +377,7 @@ void wmap_update_map_game(void)
     {
         while (render_y != 0)
         {
-            sprite = g_wmap_current_frame->packet_cursor;
+            sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
             *sprite = g_wmap_game_score_digit;
             sprite->x0 = render_x;
             sprite->u0 = (render_y % 10) * 16;
@@ -392,7 +392,7 @@ void wmap_update_map_game(void)
         }
     }
 
-    sprite = g_wmap_current_frame->packet_cursor;
+    sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
     *sprite = g_wmap_game_score_label;
     addPrim(&g_wmap_current_frame->ordering_table[1], sprite);
     if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
@@ -401,7 +401,7 @@ void wmap_update_map_game(void)
         g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
     }
 
-    sprite = g_wmap_current_frame->packet_cursor;
+    sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
     *sprite = g_wmap_game_round_digit;
     sprite->u0 = g_wmap_game_round * 16;
     addPrim(&g_wmap_current_frame->ordering_table[1], sprite);
@@ -411,7 +411,7 @@ void wmap_update_map_game(void)
         g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
     }
 
-    sprite = g_wmap_current_frame->packet_cursor;
+    sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
     *sprite = g_wmap_game_round_label;
     addPrim(&g_wmap_current_frame->ordering_table[1], sprite);
     if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
@@ -457,7 +457,7 @@ void wmap_update_map_game_prompt(void)
 {
     SPRT* sprite;
 
-    sprite = g_wmap_current_frame->packet_cursor;
+    sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
 
     if (g_wmap_game_round < 8 && g_wmap_game_hits >= 12)
     {
@@ -885,7 +885,7 @@ void wmap_draw_land_marker(s32 map_x, s32 map_y, WmapLandDisplay* marker)
     u16* screen_ptr;
     s32 projected_z;
 
-    sprite = g_wmap_current_frame->packet_cursor;
+    sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
 
     switch (g_wmap_view_mode)
     {
@@ -1378,7 +1378,7 @@ void wmap_draw_cell_effect(s32 x, s32 y)
         POLY_G4* poly;
 
         source = &g_wmap_cell_effect_quads[i];
-        poly = g_wmap_current_frame->packet_cursor;
+        poly = (POLY_G4*)g_wmap_current_frame->packet_cursor;
 
         transformed[0].x = base.x + source->vertices[0].x;
         transformed[0].y = base.y + source->vertices[0].y;
@@ -1496,7 +1496,7 @@ void wmap_draw_spirit_icons(s32 selected_index)
             g_wmap_spirit_timers[i] = g_wmap_spirit_sequences[(s8)g_wmap_spirit_frames[i] + 1];
         }
 
-        sprite = g_wmap_current_frame->packet_cursor;
+        sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
         *sprite = D_8004FD94[i];
         sprite->r0 = sprite->g0 = sprite->b0 = g_wmap_spirit_brightness;
         sprite->u0 = (g_wmap_spirit_sequences[(s8)g_wmap_spirit_frames[i]] % 5) * 24;
@@ -1579,7 +1579,7 @@ void wmap_draw_spirit_levels(void)
         SPRT* primary_sprite;
         SPRT* secondary_sprite;
 
-        primary_sprite = g_wmap_current_frame->packet_cursor;
+        primary_sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
         *primary_sprite = g_wmap_spirit_accent_sprites[sprite_indices[i]];
         primary_sprite->r0 = primary_sprite->g0 = primary_sprite->b0 = color;
         *(u32*)&primary_sprite->x0 = D_8004FD9C[i].packed_xy;
@@ -1592,7 +1592,7 @@ void wmap_draw_spirit_levels(void)
             g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
         }
 
-        secondary_sprite = g_wmap_current_frame->packet_cursor;
+        secondary_sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
         *secondary_sprite = g_wmap_spirit_level_sprites[sprite_indices[i]];
         secondary_sprite->r0 = secondary_sprite->g0 = secondary_sprite->b0 = g_wmap_spirit_brightness;
         *(u32*)&secondary_sprite->x0 = D_8004FD9C[i].packed_xy;
@@ -1655,7 +1655,7 @@ void wmap_draw_spirit_grid(s32 spirit_index)
 
             if (cur_x == target_x && cur_y == target_y && (g_wmap_frame_count & 4))
             {
-                sprite = g_wmap_current_frame->packet_cursor;
+                sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
                 *sprite = g_wmap_spirit_level_sprites[spirits->sprite_indices[spirit_index]];
                 *(u32*)&sprite->x0 = D_8004FC74[base_index + cur_x];
                 sprite->r0 = sprite->g0 = sprite->b0 = (u8)g_wmap_spirit_brightness;
@@ -1674,7 +1674,7 @@ void wmap_draw_spirit_grid(s32 spirit_index)
                 }
             }
 
-            sprite = g_wmap_current_frame->packet_cursor;
+            sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
             *sprite = g_wmap_spirit_level_sprites[spirits->sprite_indices[spirit_index]];
             *(u32*)&sprite->x0 = D_8004FC74[base_index + cur_x];
             sprite->r0 = sprite->g0 = sprite->b0 = (u8)g_wmap_spirit_brightness;

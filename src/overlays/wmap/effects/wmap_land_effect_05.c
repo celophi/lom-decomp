@@ -242,17 +242,17 @@ void wmap_land_effect_05_sequence_5_step_02(void)
  */
 void wmap_land_effect_05_sequence_5_step_04(void)
 {
-    u8 *p;
-    u8 *q;
+    VECTOR *position;
+    SVECTOR *rotation;
 
-    p = &g_wmap_effect_model_d_position;
-    if (*(s32 *)(p + 8) < 0x7530)
+    position = &g_wmap_effect_model_d_position;
+    if (position->vz < 0x7530)
     {
-        *(s32 *)(p + 8) = 0x7530;
+        position->vz = 0x7530;
     }
     PushMatrix();
-    q = &g_wmap_effect_model_d_rotation;
-    wmap_set_model_transform(p, q);
+    rotation = &g_wmap_effect_model_d_rotation;
+    wmap_set_model_transform(position, rotation);
     if (g_wmap_effect_fade_d != 0)
     {
         wmap_draw_model_default(g_wmap_effect_model_pack_3, 0, 0xC, 0x35, 0x7840, 1, g_wmap_effect_fade_d);
@@ -261,7 +261,7 @@ void wmap_land_effect_05_sequence_5_step_04(void)
         {
             g_wmap_effect_fade_d = 0;
         }
-        *(s16 *)(q + 4) += 2;
+        rotation->vz += 2;
     }
     PopMatrix();
     if (--g_wmap_land_effect_05_sequence_5_timer == 0)
@@ -305,17 +305,17 @@ void wmap_land_effect_05_sequence_6_step_02(void)
  */
 void wmap_land_effect_05_sequence_6_step_04(void)
 {
-    u8 *p;
-    u8 *q;
+    VECTOR *position;
+    SVECTOR *rotation;
 
-    p = &D_80139898;
-    if (*(s32 *)(p + 8) < 0x7530)
+    position = &D_80139898;
+    if (position->vz < 0x7530)
     {
-        *(s32 *)(p + 8) = 0x7530;
+        position->vz = 0x7530;
     }
     PushMatrix();
-    q = &D_801B2670;
-    wmap_set_model_transform(p, q);
+    rotation = &D_801B2670;
+    wmap_set_model_transform(position, rotation);
     if (D_801B25D8 != 0)
     {
         wmap_draw_model_default(g_wmap_effect_model_pack_4, 0, 0xC, 0x35, 0x7840, 1, D_801B25D8);
@@ -324,7 +324,7 @@ void wmap_land_effect_05_sequence_6_step_04(void)
         {
             D_801B25D8 = 0;
         }
-        *(s16 *)(q + 4) += -3;
+        rotation->vz += -3;
     }
     PopMatrix();
     if (--g_wmap_land_effect_05_sequence_6_timer == 0)

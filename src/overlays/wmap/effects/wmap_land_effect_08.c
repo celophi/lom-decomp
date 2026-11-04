@@ -99,7 +99,7 @@ extern void wmap_land_effect_08_sequence_10_step_02(void);
 extern u32 g_wmap_land_effect_08_sequence_3_step;
 extern u32 g_wmap_land_effect_08_sequence_4_step;
 extern u32 g_wmap_land_effect_08_sequence_5_step;
-extern s32 g_wmap_animation_bank_2;
+extern u8 g_wmap_animation_bank_2[];
 extern u32 g_wmap_land_effect_08_sequence_6_step;
 extern u32 g_wmap_land_effect_08_sequence_8_step;
 extern u32 g_wmap_land_effect_08_sequence_9_step;
@@ -122,7 +122,7 @@ extern WmapScreenPosition g_wmap_focus_screen_position;
 
 extern s32* g_wmap_effect_params;
 
-extern WmapOrbitingStar g_wmap_actor_motions[];
+extern WmapMotion g_wmap_actor_motions[];
 
 /** @brief Move the model closer and fade it until the timer expires. */
 WMAP_STEP_DROP_UPDATE(wmap_land_effect_08_sequence_3_step_02,
@@ -197,7 +197,7 @@ void wmap_land_effect_08_sequence_6_step_01(void)
     for (i = 0x64; i < 0x6C; i++)
     {
         *(s16*)((u8*)g_wmap_actor_motions + i * 0x14) = 0;
-        WMAP_INIT_PARTICLE_ACTOR(i, (u8*)&g_wmap_animation_bank_2, 0);
+        WMAP_INIT_PARTICLE_ACTOR(i, g_wmap_animation_bank_2, 0);
     }
     D_800D9150 = 4;
     g_wmap_land_effect_08_sequence_6_timer = 0x10;
@@ -510,7 +510,7 @@ WMAP_STEP_RESET(wmap_land_effect_08_sequence_7_reset, g_wmap_land_effect_08_sequ
  */
 WMAP_STEP_START_ACTOR(wmap_land_effect_08_sequence_7_step_01,
     g_wmap_land_effect_08_sequence_7_step, g_wmap_land_effect_08_sequence_7_timer,
-    6, &g_wmap_animation_bank_2, 1,
+    6, g_wmap_animation_bank_2, 1,
     1, 0x81, 8,
     0x28, wmap_land_effect_08_sequence_7_step_02)
 

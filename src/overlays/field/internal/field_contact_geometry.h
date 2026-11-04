@@ -17,7 +17,7 @@ typedef union
 typedef struct
 {
     s32 actor;
-    s32 point;
+    FieldContactPoint point;
 } FieldContactResult;
 
 void field_load_actor_sequence_data(void);

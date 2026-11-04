@@ -107,7 +107,7 @@
         }                                                                                                                                                      \
     }
 
-#define FIELD_COLLISION_SCRATCH SCRATCHPAD_ADDRESS
+#define FIELD_COLLISION_SCRATCH ((uintptr_t)SCRATCHPAD_ADDRESS)
 
 /** @brief Fixed RAM list of the nodes that block a probe. */
 #define FIELD_COLLISION_HIT_LIST ((FieldCollisionNodeEntry*)COLLISION_LISTS_ADDRESS)

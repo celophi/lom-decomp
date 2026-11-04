@@ -276,7 +276,7 @@ void wmap_land_effect_33_sequence_9_step_01(void)
     index = 0;
     config_base = (uintptr_t)g_wmap_actor_motions;
     screen_base = (uintptr_t)g_wmap_actor_animations;
-    resource = &g_wmap_animation_bank_2;
+    resource = g_wmap_animation_bank_2;
     screen_offset = 0x5F0;
     config_offset = 0xED8;
     g_wmap_effect_params[41] = 1;

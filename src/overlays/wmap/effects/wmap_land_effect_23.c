@@ -67,7 +67,7 @@ extern s32* g_wmap_effect_model_pack_3;
 extern s32 D_8013923C;
 extern s32 g_wmap_land_effect_23_sequence_8_timer;
 extern s32 g_wmap_land_effect_23_sequence_10_timer;
-extern s32 g_wmap_animation_bank_2[];
+extern u8 g_wmap_animation_bank_2[];
 extern s32 D_800D9154;
 extern s32 D_800DCEAC;
 extern s32 g_wmap_land_effect_23_sequence_13_timer;

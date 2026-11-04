@@ -3055,8 +3055,8 @@ s32 field_get_next_animation_frame_count(FieldActor* actor)
 
     entry = entry + (animation_index * 2 + 2);
     entry = FIELD_ANIMATION_FRAMES(resource_base, entry[0], entry[1]);
-    actor = (FieldActor*)(u32)entry[0];
-    return (u32)actor;
+    actor = (FieldActor*)(uintptr_t)entry[0];
+    return (intptr_t)actor;
 }
 
 /**
@@ -3124,7 +3124,7 @@ u8* field_advance_actor_part_animation_frame(FieldActor* actor, u8* resource_bas
 
             if (FIELD_PART_END_MODE(part) == FIELD_PART_END_ANIMATION)
             {
-                field_retire_effect(actor, part);
+                field_retire_effect((struct FieldMotionRecord*)actor, part);
                 return 0;
             }
 

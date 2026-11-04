@@ -54,13 +54,6 @@ typedef struct
     s32 field_10;
 } WmapMotion;
 
-/** @brief World-map 0x14-byte slot: only the leading halfword is cleared here. */
-typedef struct
-{
-    s16 field_00;
-    u8 pad_02[0x12];
-} WmapSlot14;
-
 extern s32 D_800D922C;
 extern s32 rand(void);
 extern s32 g_wmap_land_effect_13_sequence_6_timer;
@@ -126,7 +119,7 @@ extern WmapAnimationSlot g_wmap_actor_animations[];
 
 extern WmapScreenPosition g_wmap_focus_screen_position;
 
-extern WmapSlot14 g_wmap_actor_motions[];
+extern WmapMotion g_wmap_actor_motions[];
 
 extern s32 D_80182DE4;
 
@@ -441,7 +434,7 @@ WMAP_STEP_RESET(wmap_land_effect_13_sequence_2_reset, g_wmap_land_effect_13_sequ
 /** @brief World-map step handler: init a UI descriptor block, set the timer, advance the step. */
 void wmap_land_effect_13_sequence_2_step_01(void)
 {
-    u8 *base = &g_wmap_sprite_actors;
+    u8 *base = (u8 *)g_wmap_sprite_actors;
 
     g_wmap_actor_animations[5].data = g_wmap_animation_bank_0;
     *(u8 *)(base + 0xE2) = 0xF;
@@ -570,14 +563,14 @@ WMAP_STEP_RESET(wmap_land_effect_13_sequence_1_reset, g_wmap_land_effect_13_sequ
 /** @brief World-map step handler: prime a sub-object and advance the step counter. */
 void wmap_land_effect_13_sequence_1_step_01(void)
 {
-    u8 *base;
+    WmapSpriteActor *actors;
 
     g_wmap_actor_animations[4].data = g_wmap_animation_bank_0;
-    base = g_wmap_sprite_actors;
-    *(u8 *)(base + 0xB6) = 0xF;
-    *(s16 *)(base + 0xB2) = 0;
-    *(s16 *)(base + 0xBE) = 0;
-    *(s16 *)(base + 0xC0) = -1;
+    actors = g_wmap_sprite_actors;
+    actors[4].scale_index = 0xF;
+    actors[4].resource_index = 0;
+    actors[4].sequence = 0;
+    actors[4].previous_sequence = -1;
     D_801B24B4 = 0;
     g_wmap_land_effect_13_sequence_1_timer = 8;
     g_wmap_land_effect_13_sequence_1_step += 1;
@@ -647,7 +640,7 @@ void wmap_land_effect_13_sequence_3_step_01(void)
 
     g_wmap_particle_intensity = 0x18;
     WMAP_RESET_PARTICLE_SLOTS(i, 0x18,
-                              g_wmap_actor_motions[i].field_00,
+                              g_wmap_actor_motions[i].state,
                               0xCC, g_wmap_animation_bank_0);
     g_wmap_land_effect_13_sequence_3_timer = 0x30;
     g_wmap_land_effect_13_sequence_3_step += 1;
@@ -687,11 +680,11 @@ void wmap_land_effect_13_sequence_4_step_01(void)
  */
 void wmap_land_effect_13_sequence_4_step_02(void)
 {
-    u8* obj = (u8*)&g_wmap_sprite_actors[6];
+    WmapSpriteActor* obj = &g_wmap_sprite_actors[6];
     u16 pos = *(u16*)&D_80182DE4;
 
-    *(s16*)&obj[0x24] = pos;
-    *(s16*)&obj[0x22] = pos;
+    obj->shade = pos;
+    obj->target_shade = pos;
     wmap_step_actor_animation(obj, &g_wmap_actor_animations[6]);
     wmap_draw_actor_sprite(obj, g_wmap_focus_screen_position.packed, 0xF, 0xB, 0);
     D_80182DE4 += 4;
@@ -758,11 +751,11 @@ void wmap_land_effect_13_sequence_5_step_01(void)
  */
 void wmap_land_effect_13_sequence_5_step_02(void)
 {
-    u8* obj = (u8*)&g_wmap_sprite_actors[7];
+    WmapSpriteActor* obj = &g_wmap_sprite_actors[7];
     u16 pos = *(u16*)&g_wmap_effect_fade_a;
 
-    *(s16*)&obj[0x24] = pos;
-    *(s16*)&obj[0x22] = pos;
+    obj->shade = pos;
+    obj->target_shade = pos;
     wmap_step_actor_animation(obj, &g_wmap_actor_animations[7]);
     wmap_draw_actor_sprite(obj, g_wmap_focus_screen_position.packed, 0x4, 0xB, 0);
     g_wmap_effect_fade_a += 0x18;
@@ -940,11 +933,11 @@ void wmap_land_effect_13_sequence_10_step_01(void)
  */
 void wmap_land_effect_13_sequence_10_step_02(void)
 {
-    u8* obj = (u8*)&g_wmap_sprite_actors[9];
+    WmapSpriteActor* obj = &g_wmap_sprite_actors[9];
     u16 pos = *(u16*)&g_wmap_effect_fade_c;
 
-    *(s16*)&obj[0x24] = pos;
-    *(s16*)&obj[0x22] = pos;
+    obj->shade = pos;
+    obj->target_shade = pos;
     wmap_step_actor_animation(obj, &g_wmap_actor_animations[9]);
     wmap_draw_actor_sprite(obj, g_wmap_focus_screen_position.packed, 0x10, 0xB, 0);
     g_wmap_effect_fade_c += 0x20;
@@ -1008,11 +1001,11 @@ void wmap_land_effect_13_sequence_11_step_01(void)
  */
 void wmap_land_effect_13_sequence_11_step_02(void)
 {
-    u8* obj = (u8*)&g_wmap_sprite_actors[10];
+    WmapSpriteActor* obj = &g_wmap_sprite_actors[10];
     u16 pos = *(u16*)&g_wmap_effect_fade_d;
 
-    *(s16*)&obj[0x24] = pos;
-    *(s16*)&obj[0x22] = pos;
+    obj->shade = pos;
+    obj->target_shade = pos;
     wmap_step_actor_animation(obj, &g_wmap_actor_animations[10]);
     wmap_draw_actor_sprite(obj, g_wmap_focus_screen_position.packed, 0x10, 0xB, 0);
     g_wmap_effect_fade_d += 0x8;

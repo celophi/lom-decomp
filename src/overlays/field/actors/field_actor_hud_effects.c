@@ -961,7 +961,7 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
         gauge_cursor = status_cursor;
     }
 
-    sprite_cursor = gauge_cursor;
+    sprite_cursor = (SPRT*)gauge_cursor;
     SET_BGR0_PACKED(sprite_cursor, GPU_TINT_NEUTRAL);
     setSprt(sprite_cursor);
     setSemiTrans(sprite_cursor, 1);

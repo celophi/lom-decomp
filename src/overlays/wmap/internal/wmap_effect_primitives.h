@@ -49,7 +49,7 @@ typedef struct
     u8 unknown_36[2];
 } WmapBoxParticleConfig;
 
-void func_8006A2FC(void* arg0, WmapAnimationSlot* animations, s32 arg2, s32 arg3, s32 arg4_value, s32 arg5_value, u32 arg6, void* arg7);
+void func_8006A2FC(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 arg2, s32 arg3, s32 arg4_value, s32 arg5_value, u32 arg6, void* arg7);
 void func_8006A9C4(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 first, s32 end, s32 scale,
                    s32 velocity_min, s32 velocity_range, s32 lifetime_min, s32 lifetime_range, s32 initial_z,
                    s32 frame, s32 spawn_interval);
@@ -61,7 +61,7 @@ void func_8006B328(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s
 void func_8006B6EC(s32 first, s32 end, s32 frame, s32 z_step, s32 depth);
 void func_8006B998(s32 first, s32 end, void* point_data, s32 frame, s32 depth);
 void func_8006BC44(s32 first, s32 count, WmapTrailConfig* config, s32 expire_by_shade);
-s32 func_8006C0EC(void);
+s32 func_8006C0EC(s32 initialize);
 void func_8006C448(WmapBoxParticleConfig* config);
 
 #endif

@@ -503,7 +503,7 @@ void wmap_land_event_00_b_sequence_12_step_01(void)
         slot += 0xA;
     }
     g_wmap_land_event_00_b_sequence_12_timer = 0xB4;
-    actor = (WmapState*)g_wmap_effect_params;
+    actor = (u8 *)g_wmap_effect_params;
     *(s32 *)(actor + 0x7C) = setting = 5;
     *(s32 *)(actor + 0x8C) = setting;
     ((WmapEventActorState*)actor)->state = 1;
