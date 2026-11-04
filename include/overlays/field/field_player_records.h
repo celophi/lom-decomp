@@ -5,11 +5,12 @@
 
 /**
  * @file field_player_records.h
- * @brief Party member records shared by actor commands, resources and the HUD.
+ * @brief Party member records shared by actor commands, resources, the HUD and MENU.
  */
 
-/** @brief FieldPlayerRecord::flags bit: the party member is present. */
+/** @brief FieldPlayerRecord::head bits: the party member is present, and uses the alternate sprite and portrait set. */
 #define FIELD_PLAYER_ACTIVE 0x1
+#define FIELD_PLAYER_ALT_APPEARANCE 0x2
 
 /** @brief FieldPlayerRecord::character_kind values. */
 #define FIELD_PLAYER_KIND_HERO 0

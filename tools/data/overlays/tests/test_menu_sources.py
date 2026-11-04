@@ -96,7 +96,7 @@ class SourceTest(unittest.TestCase):
 
     def test_label_index_base_matches_the_scene_code(self):
         source = MENU_SOURCE.read_text(encoding="ascii")
-        match = re.search(r"\(icon_selector >= (0x[0-9A-F]+) && icon_selector <= 0x54\)\s*\{\s*icon_id = D_80168659\[", source)
+        match = re.search(r"\(icon_selector >= (0x[0-9A-F]+) && icon_selector <= 0x54\)\s*\{\s*icon_id = g_menu_action_icon_ids\[", source)
         self.assertIsNotNone(match)
         self.assertEqual(int(match.group(1), 16), menu.ACTION_LABEL_FIRST)
 

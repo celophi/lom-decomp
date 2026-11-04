@@ -11,6 +11,8 @@
 #include "main/display.h"
 #include "overlays/field/field_numeric_sprites.h"
 #include "overlays/field/field_object_state.h"
+#include "overlays/field/field_overlay_handoff.h"
+#include "overlays/field/field_player_records.h"
 #include "overlays/field/field_portrait.h"
 #include "overlays/field/field_text.h"
 #include "overlays/menu/menu.h"
@@ -18,6 +20,10 @@
 /* Encoded-name functions of FIELD, called while FIELD is resident. */
 void field_copy_name(u8* destination, u8* source);
 s32 field_name_byte_length(u8* name);
+
+/* FIELD functions run from the menu frame loop and the character panel. */
+void field_update_audio_timer(void);
+s32 field_get_next_level_experience(s32 index);
 
 /* Menu chrome CLUT ids produced by getClut for the rows uploaded in menu_upload_tim. */
 #define MENU_CLUT_GRID_BASE 0x7C80
@@ -447,15 +453,6 @@ typedef struct
 
 typedef struct
 {
-    u16 unk0;
-    u8 pad2[0x266];
-    u16 unk268;
-    u8 unk26A;
-    u8 unk26B;
-} Struct_D_800FD818;
-
-typedef struct
-{
     u16 packed_x;   /**< Bottom 9 bits = X screen position; upper bits unknown. */
     u8 y;           /**< Y position; caller subtracts 8 when using as display offset. */
     u8 action_type; /**< Content/action selector interpreted by the active scene. */
@@ -636,18 +633,23 @@ extern s32 menu_stage_stack_shape(s32, s32, s32, s32, s32, s32) __attribute__((c
 /* Core menu state and shared assets. */
 
 extern s32 g_playtime_vsync_origin;
-extern u16 D_800F0C1C;
 /** @brief Default scene content count encoded as count - 1 (value 3). */
 extern u8 g_menu_default_content_count_minus_one;
 extern u8 g_menu_content_item_counts[];
 /** @brief Base of the four default MenuContentItem descriptors used by scene -1. */
 extern MenuContentItem g_menu_default_content_items;
-extern u8 D_80168659[];
-extern u8 D_80168696[];
-extern u8 D_801686B8[];
-extern FieldItemRecord* D_80168C20;
-extern FieldItemRecord* D_80168C24;
-extern FieldItemRecord* D_80168C30;
+/** @brief Icon of content items 0x37-0x54, indexed by action type (the stored entries start at index 0x37). */
+extern u8 g_menu_action_icon_ids[];
+/** @brief Armor element icons for content items 0x1A-0x21, indexed by action type. */
+extern u8 g_menu_element_icon_ids[];
+/** @brief Icon of each pad button on the button-assignment pages. */
+extern u8 g_menu_button_icon_ids[];
+/** @brief Active character's equipment[], as the armor columns and stat totals of the content pages read it (slots 1-3). */
+extern FieldItemRecord* g_menu_shown_armor;
+/** @brief Set with g_menu_shown_equipment; MENU never reads it. TODO: purpose unknown. */
+extern FieldItemRecord* g_menu_shown_equipment_copy;
+/** @brief Active character's equipment[], as the weapon and power comparison columns of the content pages read it. */
+extern FieldItemRecord* g_menu_shown_equipment;
 
 /** @brief Optional help/description string drawn below the active menu content. */
 extern u8* g_menu_help_text;
@@ -694,9 +696,6 @@ extern s32 g_menu_active_node;
 extern FieldItemRecord* g_menu_saved_equipment_item;
 extern u8 g_menu_init_content_id;
 
-extern Struct_D_800FD818 g_field_player_records;
-extern u16 D_800FDA80;
-extern u16 D_800FDCE8;
 /** @brief Type-conflict bits of the other equipped items; the weapon and armor pages grey out items that conflict. */
 extern s8 g_menu_equipment_conflicts;
 /** @brief Node index for the companion character's stat page (0x2B = companion present, 0xFF = none). */
@@ -744,12 +743,8 @@ extern s32 g_menu_char_slot;
 extern s32 g_menu_page_count;
 /** @brief Action sub-type of the most recently confirmed 0x5000 menu item; routes downstream handlers. */
 extern s32 g_menu_active_subtype;
-extern s8 D_801226F0;
 /** @brief Storage for packed circular navigation entries used by scroll-list pages. */
 extern u32 g_menu_scroll_nav_entries[];
-extern s8 D_801226B8;
-extern s32 D_801229F4;
-extern s32 D_8011F424;
 
 /** @brief Party-sort selection marker; selected_idx is MENU_NONE when inactive. */
 extern MenuButtonSwapMarker g_menu_button_swap_marker;
@@ -760,7 +755,6 @@ extern u8 g_menu_content_action_codes[][8];
 extern void* g_menu_message_line1;
 /** @brief Optional second glyph/string pointer used by two-line messages. */
 extern void* g_menu_message_line2;
-extern void* D_801227D4;
 
 /** @brief Conflict bits of each weapon type and each armor type (FIELD data, indexed by FIELD_ITEM_TYPE). */
 extern u8 g_field_weapon_type_conflicts[];
@@ -769,7 +763,8 @@ extern u8 g_field_armor_type_conflicts[];
 /** @brief Signed stat modifier for each four-bit modifier index (index 4 is 0; range -10 to +20). */
 extern s8 g_field_stat_modifier_values[];
 
-extern s32 D_80168C6C;
+/** @brief Skill-slot selection choosing the help text of content help entry 0xF8: MENU_NONE for none, bit 0x80 for magic. TODO: MENU never writes it. */
+extern s32 g_menu_help_skill_selection;
 
 /* Rendering assets. */
 extern MenuIconSpriteInfo g_menu_icon_sprite_defs[];
@@ -779,8 +774,10 @@ extern u8 g_menu_icon_clut_codes[];
 extern u8 g_menu_cursor_icon_ids[];
 
 /* Inventory and equipment state. */
-extern u8 D_8016869F[];
-extern u8 D_801686A0[];
+/** @brief Window title (MENU_TEXT_MESSAGES entry) of item-list and weapon pages, indexed by page id; the page-label tables overlap. */
+extern u8 g_menu_list_page_label_ids[];
+/** @brief Window title of the technique pages, indexed by page id. */
+extern u8 g_menu_technique_page_label_ids[];
 extern u8 g_menu_item_description_buffer[];
 extern s32 g_menu_inventory_index;
 extern s32 g_menu_active_item_category;
@@ -788,7 +785,8 @@ extern s32 g_menu_active_item_category;
 extern s32 g_menu_pending_item_row;
 
 /* Equipment-action assets. */
-extern u8 D_8016869B[];
+/** @brief Window title of the armor page, indexed by page id. */
+extern u8 g_menu_armor_page_label_ids[];
 /** @brief FIELD's BareHands item record; an empty weapon slot holds a copy of it. */
 extern FieldItemRecord g_field_bare_hands_item;
 /** @brief Item info word of g_field_bare_hands_item. */

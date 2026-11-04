@@ -268,8 +268,8 @@ class ExtractTest(unittest.TestCase):
         self.assertEqual((self.output / f"unknown/{ADDRESS + offset:08X}.bin").read_bytes(), b"\x77")
 
     def test_missing_symbol_reports_what_to_update(self):
-        inputs = self.overlay.write(self.root, skip_symbol="D_801686B8")
-        with self.assertRaisesRegex(ValueError, "D_801686B8.*LABEL_BASES"):
+        inputs = self.overlay.write(self.root, skip_symbol="g_menu_button_icon_ids")
+        with self.assertRaisesRegex(ValueError, "g_menu_button_icon_ids.*LABEL_BASES"):
             menu.extract(inputs, self.output)
         self.assert_no_output()
 
