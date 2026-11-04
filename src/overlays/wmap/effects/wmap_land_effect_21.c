@@ -111,7 +111,7 @@ extern WmapScreenPosition D_80182D58;
 extern s32* g_wmap_effect_params;
 
 extern WmapMotion g_wmap_actor_motions[];
-extern WmapMotion D_801AFD60[];
+extern WmapMotion g_wmap_effect_actor_motions[];
 extern WmapMotion D_801B0080;
 
 /** @brief Move the model closer and fade it until the timer expires. */
@@ -245,12 +245,12 @@ void wmap_land_effect_21_sequence_8_step_01(void)
     g_wmap_effect_params[0x1E] = 10;
     for (i = 0; i < 12; i++)
     {
-        D_801AFD60[i].state = 1;
-        D_801AFD60[i].angle = i * 341;
-        D_801AFD60[i].scale = 128;
-        D_801AFD60[i].z = 10;
-        D_801AFD60[i].x = 0;
-        D_801AFD60[i].field_0E = 0;
+        g_wmap_effect_actor_motions[i].state = 1;
+        g_wmap_effect_actor_motions[i].angle = i * 341;
+        g_wmap_effect_actor_motions[i].scale = 128;
+        g_wmap_effect_actor_motions[i].z = 10;
+        g_wmap_effect_actor_motions[i].x = 0;
+        g_wmap_effect_actor_motions[i].field_0E = 0;
         g_wmap_actor_animations[i + 20].data = g_wmap_animation_bank_2;
         actors[i].scale_index = 15;
         actors[i].previous_sequence = -1;

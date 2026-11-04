@@ -219,7 +219,7 @@ void wmap_land_event_17_timeline_step_01(void)
     g_wmap_backdrop_target_level = 4;
     g_wmap_placement_overlay_hidden = 1;
     g_wmap_spirit_target_brightness = 0;
-    func_8005FF88(-1);
+    wmap_set_map_label(-1);
     cdrom_wait_queue_empty();
     cdrom_queue_read(0x1205, g_wmap_effect_texture_buffer_0);
     cdrom_queue_read(0x1206, g_wmap_effect_texture_buffer_1);

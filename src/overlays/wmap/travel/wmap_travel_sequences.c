@@ -18,42 +18,12 @@
 #define WMAP_TRAVEL_START_LAND 2
 #define WMAP_RETURN_LAND 0
 
-/** @brief Map distance of one land cell. */
-#define WMAP_CELL_SPACING 48
-
 /** @brief Vehicle heading: 12-bit angle, turn speed, and the headings the sequences wait for. */
 #define WMAP_HEADING_MASK 0xFFF
 #define WMAP_HEADING_TURN_SPEED 32
 #define WMAP_HEADING_DEPARTURE 0x200
 #define WMAP_HEADING_CRUISE 0x400
 #define WMAP_HEADING_LANDING 0x3E0
-
-/** @brief Vehicle sprite: texture, draw variant, ordering-table depths and flap sound. */
-#define WMAP_VEHICLE_TEXTURE 40
-#define WMAP_VEHICLE_VARIANT 2
-#define WMAP_VEHICLE_OT_FRONT 50
-#define WMAP_VEHICLE_OT_BEHIND 61
-#define WMAP_VEHICLE_OT_START 60
-#define WMAP_VEHICLE_OT_FLIGHT 59
-#define WMAP_VEHICLE_SOUND_FLAP 51
-#define WMAP_VEHICLE_SOUND_PAN 127
-#define WMAP_VEHICLE_SCALE_MAX 15
-#define WMAP_VEHICLE_SHADE_NEUTRAL 128
-
-/** @brief Vehicle orbit: start radius and height, their limits, and the climb step. */
-#define WMAP_VEHICLE_START_RADIUS 200
-#define WMAP_VEHICLE_START_HEIGHT 10
-#define WMAP_VEHICLE_MAX_RADIUS 480
-#define WMAP_VEHICLE_MAX_HEIGHT 100
-#define WMAP_VEHICLE_RADIUS_STEP 4
-#define WMAP_VEHICLE_LOW_HEIGHT 40
-
-/** @brief Size of one vehicle animation bank in g_wmap_animation_bank_0 and the CD files that fill it. */
-#define WMAP_VEHICLE_BANK_SIZE 0x2000
-#define WMAP_VEHICLE_BANK_FILE 0x1145
-#define WMAP_VEHICLE_BANK_FILE_2 0x1146
-#define WMAP_VEHICLE_TEXTURE_FILE 0x1147
-#define WMAP_VEHICLE_PALETTE_FILE 0x1148
 
 /** @brief Sequence timers, in frames. */
 #define WMAP_VEHICLE_CLIMB_FRAMES 60
@@ -70,19 +40,6 @@
 #define WMAP_ROUTE_LEFT 3
 #define WMAP_ROUTE_RIGHT 5
 #define WMAP_ROUTE_DOWN 7
-
-/** @brief Element 0 of the g_wmap_actor_motions motion table while it drives the travel vehicle. */
-typedef struct
-{
-    s16 active;
-    s16 heading;
-    s32 ot_override;
-    s32 radius;
-    s16 unknown_0c;
-    s16 height;
-    s16 ot_index;
-    s16 unknown_12;
-} WmapVehicleMotion;
 
 /** @brief Map scroll position and projection scale (see wmap_view_effects.c). */
 typedef struct
@@ -117,7 +74,7 @@ extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
 extern WmapView g_wmap_view;
 extern WmapView g_wmap_saved_view;
-extern s32 D_8013B288;
+extern s32 g_wmap_special_travel_pending;
 
 extern u32 g_wmap_special_travel_step;
 extern s32 g_wmap_special_travel_timer;
@@ -169,11 +126,11 @@ void wmap_special_return_finish(void);
 /** @brief Lock input, save the map view, and queue the vehicle animation banks and texture. */
 static inline void wmap_load_vehicle(void)
 {
-    D_8013B288 = 0;
+    g_wmap_special_travel_pending = 0;
     g_wmap_input_locked = 1;
     g_wmap_vehicle_bank_flipped = 0;
     g_wmap_event_active = 1;
-    func_8005FF88(-1);
+    wmap_set_map_label(-1);
     g_wmap_land_label_updates_enabled = 0;
     g_wmap_saved_view = g_wmap_view;
     cdrom_queue_read(WMAP_VEHICLE_BANK_FILE, g_wmap_animation_bank_0);

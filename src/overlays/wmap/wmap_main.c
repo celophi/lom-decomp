@@ -1341,19 +1341,19 @@ s32 wmap_run_loop(void)
             g_wmap_attract_1_requested = 1;
             break;
         case 25:
-            g_wmap_pending_vehicle_events[0] = 1;
+            g_wmap_pending_converge_events[0] = 1;
             break;
         case 17:
-            g_wmap_pending_vehicle_events[1] = 1;
+            g_wmap_pending_converge_events[1] = 1;
             break;
         case 18:
-            g_wmap_pending_vehicle_events[2] = 1;
+            g_wmap_pending_converge_events[2] = 1;
             break;
         case 19:
-            g_wmap_pending_vehicle_events[3] = 1;
+            g_wmap_pending_converge_events[3] = 1;
             break;
         case 20:
-            g_wmap_pending_vehicle_events[4] = 1;
+            g_wmap_pending_converge_events[4] = 1;
             break;
         case 22:
             g_wmap_third_traveler_enabled = 1;
@@ -2058,12 +2058,12 @@ s32 wmap_run_loop(void)
                     g_wmap_input_locked = 1;
                     if (g_wmap_frame_count >= WMAP_EVENT_START_DELAY_FRAMES)
                     {
-                        func_800A5DFC();
+                        wmap_start_pending_event();
                     }
                 }
                 if (g_wmap_view_mode != 0)
                 {
-                    func_8005FF88(-1);
+                    wmap_set_map_label(-1);
                 }
                 func_8005F9BC();
                 SetSpadStack(WMAP_SCRATCH_STACK_SAVE_SLOT);

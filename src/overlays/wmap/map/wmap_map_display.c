@@ -22,7 +22,6 @@
 #include "common/saved_game.h"
 #include "common/gpu_packet.h"
 
-#define WMAP_CELL_SPACING 48
 #define WMAP_CACHE_SLOTS 16
 #define WMAP_FADE_STEP 8
 #define WMAP_BLEND_THRESHOLD 64
@@ -318,7 +317,7 @@ void wmap_update_map_game(void)
                 }
 
                 g_wmap_land_label_updates_enabled = 0;
-                func_80064F64(0x1154);
+                wmap_load_tim_file(0x1154);
                 g_wmap_game_score = 0;
                 g_wmap_game_displayed_score = 0;
                 g_wmap_view_scroll_enabled = 0;
@@ -556,7 +555,7 @@ void wmap_update_map_game_countdown(void)
     }
 
     wmap_queue_texture_page(0x55, 1);
-    func_8005FF88(-1);
+    wmap_set_map_label(-1);
 }
 
 /**

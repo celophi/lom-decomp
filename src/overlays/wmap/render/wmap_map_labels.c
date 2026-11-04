@@ -173,7 +173,7 @@ void func_8005F9BC(void)
  * @brief Change the map label sprite while preserving its outgoing fade.
  * @param selection Label identifier, or -1 to hide the current label.
  */
-void func_8005FF88(s32 selection)
+void wmap_set_map_label(s32 selection)
 {
     s32 position;
     s32 previous_selection;

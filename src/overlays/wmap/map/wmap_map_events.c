@@ -1,131 +1,77 @@
+#include <inline_c.h>
+#include <libgte.h>
+#include <rand.h>
+
+#include "../internal/wmap_cells.h"
+#include "../internal/wmap_effect_backdrop.h"
+#include "../internal/wmap_effect_primitives.h"
+#include "../internal/wmap_effect_resources.h"
+#include "../internal/wmap_land_effect_loader.h"
+#include "../internal/wmap_land_event_00_a.h"
+#include "../internal/wmap_land_event_00_b.h"
+#include "../internal/wmap_land_event_17.h"
+#include "../internal/wmap_land_layout.h"
 #include "../internal/wmap_main.h"
-#include "../internal/wmap_step_sequence.h"
+#include "../internal/wmap_map_events.h"
+#include "../internal/wmap_map_labels.h"
 #include "../internal/wmap_party_travel.h"
 #include "../internal/wmap_pathfinding.h"
-#include "../internal/wmap_map_events.h"
 #include "../internal/wmap_resource_support.h"
 #include "../internal/wmap_sequence_runtime.h"
+#include "../internal/wmap_special_effect_35.h"
 #include "../internal/wmap_sprite_render.h"
-#include <libgte.h>
-#include <inline_c.h>
-#include "sdk/gte_dmpsx_compat.h"
-#include "main/cdrom.h"
-#include "../internal/wmap_effect_backdrop.h"
-#include "../internal/wmap_effect_resources.h"
-#include "../internal/wmap_effect_primitives.h"
-#include "../internal/wmap_map_labels.h"
+#include "../internal/wmap_step_sequence.h"
+#include "../internal/wmap_travel_sequences.h"
 #include "main/audio/akao_cmd.h"
-#include "../internal/wmap_cells.h"
+#include "main/cdrom.h"
+#include "sdk/gte_dmpsx_compat.h"
 
+/** @brief Land the converge event scrolls to and that event 25 converges on from all four sides. */
+#define WMAP_CONVERGE_LAND 4
 
-void func_800A76F8(void);
-void func_800A7738(void);
-void func_800A7C78(void);
-void func_800A7D40(void);
-void func_800A8060(void);
-void func_800A8128(void);
-void func_800A8448(void);
-void func_800A8510(void);
-void func_800A8864(void);
-void func_800A8968(void);
-void func_800A7400(void);
-void func_800A7440(void);
-void func_800A7544(void);
-void func_800A7580(void);
-void func_800A75C0(void);
-void func_800A77CC(void);
-void func_800A78B0(void);
-void func_800A79E4(void);
-void func_800A7AA0(void);
-void func_800A7B78(void);
-void func_800A7BB8(void);
-void func_800A7CB8(void);
-void func_800A7D7C(void);
-void func_800A7E0C(void);
-void func_800A7E4C(void);
-void func_800A7F6C(void);
-void func_800A7FAC(void);
-void func_800A80A0(void);
-void func_800A8164(void);
-void func_800A81F4(void);
-void func_800A8234(void);
-void func_800A8354(void);
-void func_800A8394(void);
-void func_800A8488(void);
-void func_800A854C(void);
-void func_800A85DC(void);
-void func_800A861C(void);
-void func_800A8770(void);
-void func_800A87B0(void);
-void func_800A88A4(void);
-void func_800A89A8(void);
+/** @brief Sprite actors and effect motion slots of the four converging sprites, one per side. */
+#define WMAP_CONVERGE_FIRST_ACTOR 20
+#define WMAP_CONVERGE_SIDES 4
 
-/** @brief Per-actor motion and animation parameters. */
+/** @brief Trail sprites: 16 samples of the four converging sprites, from actor 40 on. */
+#define WMAP_CONVERGE_TRAIL_FIRST_ACTOR 40
+#define WMAP_CONVERGE_TRAIL_SAMPLES 16
+#define WMAP_CONVERGE_TRAIL_END (WMAP_CONVERGE_TRAIL_FIRST_ACTOR + WMAP_CONVERGE_TRAIL_SAMPLES * WMAP_CONVERGE_SIDES)
+
+/** @brief Converging sprites: start distance and the distance covered per frame. */
+#define WMAP_CONVERGE_START_RADIUS 90000
+#define WMAP_CONVERGE_RADIUS_STEP 900
+
+/** @brief Sprite texture and draw variant of the converging sprites and their trails. */
+#define WMAP_CONVERGE_TEXTURE 3
+#define WMAP_CONVERGE_VARIANT 0x400
+
+/** @brief Land effects started by events 12, 13 and 24. */
+#define WMAP_LAND_EVENT_12_EFFECT 22
+#define WMAP_LAND_EVENT_13_EFFECT 23
+#define WMAP_LAND_EVENT_24_EFFECT 33
+
+/** @brief A g_wmap_actor_motions slot as one of the converge event's sprites or trail samples. */
 typedef struct
 {
-    s16 state;
+    s16 active;
+    /** @brief Direction the sprite comes from, 12-bit; side n is n quarter turns. */
     s16 angle;
-    s32 x;
-    s32 z;
-    s16 scale;
-    s16 field_0E;
+    s32 radius_step;
+    /** @brief Distance from the land, in 1/8 GTE units. */
+    s32 radius;
+    /** @brief Ordering-table depth of the last draw. */
+    s16 depth;
+    s16 height;
     WmapScreenPosition screen;
-} WmapMotion;
+} WmapConvergeMotion;
 
-typedef struct { s32 w[4]; } WmapBlk16;
-
-extern u8 D_800DCEF4[4];
-extern s32 g_wmap_sequence_count;
-extern s32 D_8013B288;
-extern s32 D_8018222C;
-extern s8 D_800DCEF5;
-extern s8 D_800DCEF6;
-extern s8 D_800DCEF7;
-extern s32 rand(void);
-extern s32 D_80139234;
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern s32 D_801B2E44;
-extern u8 D_800DCA98[];
-extern s32 D_801B2E74;
-extern void (*D_800D6D34[])(void);
-extern void wmap_draw_vehicle(void);
-extern void wmap_finish_vehicle_turn(void);
-extern s32 g_wmap_vehicle_phase;
-extern s32 g_wmap_vehicle_screen_position;
-extern WmapAnimationSlot g_wmap_vehicle_animation;
-extern void (*D_800D6C14[])(void);
-extern s32 D_801B2E4C;
-extern void (*D_800D6C54[])(void);
-extern s32 D_801B2E54;
-extern void (*D_800D6C94[])(void);
-extern s32 D_801B2E5C;
-extern void (*D_800D6CD4[])(void);
-extern s32 D_801B2E64;
-extern void (*D_800D6D14[])(void);
-extern s32 D_801B2E6C;
-extern void (*D_800D6D24[])(void);
-
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
-extern u8 g_wmap_animation_bank_0[];
-extern u8 g_wmap_animation_bank_3[];
-extern u32 D_801B2E40;
-extern u32 D_801B2E50;
-extern u32 D_801B2E58;
-extern u32 D_801B2E60;
-extern u32 D_801B2E68;
-extern u32 D_801B2E70;
-extern s8 *wmap_turn_vehicle(s32 arg0);
-extern void wmap_start_land_effect(s32 arg0);
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern u32 D_801B2E48;
-extern u8 D_800DCA98[];
+/** @brief One g_wmap_actor_motions slot; slot 0 drives the travel vehicle. */
+typedef union
+{
+    WmapConvergeMotion converge;
+    WmapVehicleMotion vehicle;
+} WmapMotionSlot;
 
 /** @brief Map scroll position (map units) and projection scale. */
 typedef struct
@@ -136,60 +82,196 @@ typedef struct
     s32 unknown_0c;
 } WmapView;
 
+extern s32 g_wmap_sequence_count;
+extern s32 g_wmap_special_travel_pending;
+extern s32 D_80139234;
+/** @brief Set when the converge event comes from all four sides; it then also draws trails. */
+extern s32 g_wmap_converge_event_all_sides;
+/** @brief Sides the converging sprites come from: +x, +y, -x, -y. */
+extern u8 g_wmap_converge_event_sides[WMAP_CONVERGE_SIDES];
+/** @brief Animation of the scripted traveler (WMAP_SCRIPTED_TRAVELER), loaded by the walk events. */
+extern u8 g_wmap_scripted_traveler_animation[];
+extern s32 g_wmap_view_scroll_mode;
+extern s32 g_wmap_scroll_remaining_x;
+extern s32 g_wmap_scroll_remaining_y;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
+extern s32 g_wmap_vehicle_phase;
+extern WmapScreenPosition g_wmap_vehicle_screen_position;
+extern WmapSpriteActor g_wmap_vehicle_actor;
+extern WmapAnimationSlot g_wmap_vehicle_animation;
+extern WmapAnimationSlot g_wmap_actor_animations[];
+extern WmapMotionSlot g_wmap_actor_motions[];
+/** @brief Motion slots from actor WMAP_CONVERGE_FIRST_ACTOR on, addressed as their own array. */
+extern WmapMotionSlot g_wmap_effect_actor_motions[];
+extern u8 g_wmap_animation_bank_0[];
+extern u8 g_wmap_animation_bank_3[];
 extern WmapView g_wmap_view;
 extern WmapView g_wmap_saved_view;
 
-extern WmapSpriteActor g_wmap_vehicle_actor;
+extern void (*g_wmap_converge_event_steps[])(void);
+extern u32 g_wmap_converge_event_step;
+extern s32 g_wmap_converge_event_timer;
+extern void (*g_wmap_land_event_16_steps[])(void);
+extern u32 g_wmap_land_event_16_step;
+extern s32 g_wmap_land_event_16_timer;
+extern void (*g_wmap_land_event_21_steps[])(void);
+extern u32 g_wmap_land_event_21_step;
+extern s32 g_wmap_land_event_21_timer;
+extern void (*g_wmap_land_event_15_steps[])(void);
+extern u32 g_wmap_land_event_15_step;
+extern s32 g_wmap_land_event_15_timer;
+extern void (*g_wmap_land_event_13_steps[])(void);
+extern u32 g_wmap_land_event_13_step;
+extern s32 g_wmap_land_event_13_timer;
+extern void (*g_wmap_land_event_12_steps[])(void);
+extern u32 g_wmap_land_event_12_step;
+extern s32 g_wmap_land_event_12_timer;
+extern void (*g_wmap_land_event_24_steps[])(void);
+extern u32 g_wmap_land_event_24_step;
+extern s32 g_wmap_land_event_24_timer;
 
-extern WmapAnimationSlot g_wmap_actor_animations[];
-
-extern WmapMotion g_wmap_actor_motions[];
-extern WmapMotion D_801AFD60[];
-
-static inline s32 tile_exists(s32 x, s32 y)
+/**
+ * @brief Test whether a grid cell holds a land.
+ * @param x Cell column; may be off the grid.
+ * @param y Cell row; may be off the grid.
+ * @return Nonzero when the cell is on the grid and holds a land.
+ */
+static inline s32 wmap_cell_has_land(s32 x, s32 y)
 {
-    if (x < 0 || y < 0 || x >= 6 || y >= 6)
+    if (x < 0 || y < 0 || x >= WMAP_GRID_SIZE || y >= WMAP_GRID_SIZE)
     {
         return 0;
     }
-    return g_wmap_cells[x][y].land_id != 255;
+
+    return g_wmap_cells[x][y].land_id != WMAP_NO_LAND;
 }
 
-/** @brief Dispatch the first pending map event and consume one event tick. */
-void func_800A5DFC(void)
+/** @brief Start a scripted scroll that brings g_wmap_vehicle_cell_x/y into view. */
+static inline void wmap_scroll_to_vehicle_cell(void)
 {
-    s32 wmap_run_special_travel(s32 initialize);
-    s32 wmap_run_special_return(s32 initialize);
-    s32 wmap_land_event_17_run(s32 initialize);
-    s32 wmap_land_event_00_a_run(s32 initialize);
-    s32 wmap_land_event_00_b_run_sequence_1(s32 initialize);
-    s32 wmap_effect35_run(s32 initialize);
+    g_wmap_view_scroll_mode = WMAP_STEP_SCRIPTED_SCROLL_MODE;
+    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * WMAP_CELL_SPACING - g_wmap_view.x;
+    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * WMAP_CELL_SPACING - g_wmap_view.y;
+}
 
+/** @brief Start a scripted scroll back to g_wmap_saved_view. */
+static inline void wmap_scroll_to_saved_view(void)
+{
+    g_wmap_view_scroll_mode = WMAP_STEP_SCRIPTED_SCROLL_MODE;
+    g_wmap_scroll_remaining_x = g_wmap_saved_view.x - g_wmap_view.x;
+    g_wmap_scroll_remaining_y = g_wmap_saved_view.y - g_wmap_view.y;
+}
+
+/**
+ * @brief Test whether the converge event comes from all four sides.
+ * @return Nonzero when every entry of g_wmap_converge_event_sides is set.
+ */
+static inline s32 wmap_converge_event_from_all_sides(void)
+{
+    return g_wmap_converge_event_sides[3] & (g_wmap_converge_event_sides[2] & (g_wmap_converge_event_sides[0] & g_wmap_converge_event_sides[1]));
+}
+
+/**
+ * @brief Place the scripted traveler on a land and scroll to it (first step of a walk event).
+ * @param land_id Land the traveler starts on.
+ * @param animation_file CD file with the traveler's animation.
+ * @param texture_file Sprite texture resource of the traveler.
+ */
+static inline void wmap_walk_event_start(s32 land_id, s32 animation_file, s32 texture_file)
+{
+    g_wmap_saved_view = g_wmap_view;
+    g_wmap_event_active = 1;
+    wmap_find_land_cell(land_id, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+    cdrom_queue_read(animation_file, g_wmap_scripted_traveler_animation);
+    wmap_load_tim_file(texture_file);
+    wmap_set_traveler_position(WMAP_SCRIPTED_TRAVELER, g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y);
+    wmap_scroll_to_vehicle_cell();
+}
+
+/**
+ * @brief Route the scripted traveler to a land and start it walking.
+ * @param land_id Destination land.
+ */
+static inline void wmap_walk_event_route(s32 land_id)
+{
+    wmap_find_land_cell(land_id, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+    wmap_build_route(g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].cell_x, g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].cell_y, g_wmap_vehicle_cell_x,
+                     g_wmap_vehicle_cell_y, g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].path_x.cells, g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].path_y.cells);
+    g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].destination_x = g_wmap_vehicle_cell_x;
+    g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].destination_y = g_wmap_vehicle_cell_y;
+    g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].moving = 1;
+    g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].path_index = 1;
+    g_wmap_scripted_travel_active = 1;
+    g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].next_cell_x = g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].path_x.steps[1].cell;
+    g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].target_x = (g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].path_x.steps[1].cell - 1) * WMAP_TRAVEL_CELL_UNITS;
+    g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].next_cell_y = g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].path_y.steps[1].cell;
+    g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].target_y = (g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].path_y.steps[1].cell - 1) * WMAP_TRAVEL_CELL_UNITS;
+}
+
+/** @brief Show the scripted traveler's sprite and start fading it in. */
+static inline void wmap_walk_event_show_traveler(void)
+{
+    WmapSpriteActor* actor = &g_wmap_sprite_actors[WMAP_SCRIPTED_TRAVELER];
+
+    actor->scale_index = WMAP_STEP_ACTOR_SCALE_INDEX;
+    actor->previous_sequence = -1;
+    actor->target_shade = 128;
+    actor->resource_index = 0;
+    actor->sequence = 0;
+    actor->shade = 0;
+    actor->shade_step = 8;
+}
+
+/** @brief Move the converging sprites one step in, draw them and their trails, and advance when the timer ends. */
+static inline void wmap_converge_event_approach(void)
+{
+    s32 i;
+
+    wmap_set_effect_camera_transform();
+    wmap_converge_event_draw_sprites();
+    wmap_converge_event_draw_trails();
+
+    for (i = 0; i < WMAP_CONVERGE_SIDES; i++)
+    {
+        g_wmap_actor_motions[WMAP_CONVERGE_FIRST_ACTOR + i].converge.radius -= g_wmap_actor_motions[WMAP_CONVERGE_FIRST_ACTOR + i].converge.radius_step;
+    }
+
+    if (--g_wmap_converge_event_timer == 0)
+    {
+        g_wmap_converge_event_step += 1;
+    }
+}
+
+/** @brief Start the first queued map event: a pending land event, special travel, or converge event. */
+void wmap_start_pending_event(void)
+{
     s32 event_index;
-    u8 *event;
+    u8* event;
 
     if (g_wmap_sequence_count == 0)
     {
         g_wmap_input_locked = 1;
         g_wmap_buttons_held = 0;
         g_wmap_buttons_repeat = 0;
+
         if (g_wmap_land_event_27_pending != 0)
         {
             g_wmap_land_event_27_pending = 0;
             wmap_start_sequence(&wmap_effect35_run);
         }
-        else if (D_8013B288 != 0)
+        else if (g_wmap_special_travel_pending != 0)
         {
-            D_8013B288 = 0;
+            g_wmap_special_travel_pending = 0;
             wmap_start_sequence(&wmap_run_special_travel);
         }
         else if (g_wmap_land_event_24_pending != 0)
         {
-            cdrom_queue_read(0x1145, &g_wmap_animation_bank_0);
-            cdrom_queue_read(0x1146, (u8 *)&g_wmap_animation_bank_0 + 0x2000);
+            cdrom_queue_read(WMAP_VEHICLE_BANK_FILE, g_wmap_animation_bank_0);
+            cdrom_queue_read(WMAP_VEHICLE_BANK_FILE_2, g_wmap_animation_bank_0 + WMAP_VEHICLE_BANK_SIZE);
             cdrom_wait_queue_empty();
             g_wmap_land_event_24_pending = 0;
-            wmap_start_sequence(&func_800A7370);
+            wmap_start_sequence(&wmap_land_event_24_run);
         }
         else if (g_wmap_special_return_pending != 0)
         {
@@ -214,164 +296,177 @@ void func_800A5DFC(void)
         else if (g_wmap_land_event_16_pending != 0)
         {
             g_wmap_land_event_16_pending = 0;
-            wmap_start_sequence(&func_800A7BE8);
+            wmap_start_sequence(&wmap_land_event_16_run);
         }
         else if (g_wmap_land_event_21_pending != 0)
         {
             g_wmap_land_event_21_pending = 0;
-            wmap_start_sequence(&func_800A7FD0);
+            wmap_start_sequence(&wmap_land_event_21_run);
         }
         else if (g_wmap_land_event_15_pending != 0)
         {
             g_wmap_land_event_15_pending = 0;
-            wmap_start_sequence(&func_800A83B8);
+            wmap_start_sequence(&wmap_land_event_15_run);
         }
         else if (g_wmap_land_event_13_pending != 0)
         {
             g_wmap_land_event_13_pending = 0;
-            wmap_start_sequence(&func_800A87D4);
+            wmap_start_sequence(&wmap_land_event_13_run);
         }
         else if (g_wmap_land_event_12_pending != 0)
         {
             g_wmap_land_event_12_pending = 0;
-            wmap_start_sequence(&func_800A88D8);
+            wmap_start_sequence(&wmap_land_event_12_run);
         }
         else
         {
             for (event_index = 0; event_index < 8; event_index++)
             {
-                event = &g_wmap_pending_vehicle_events[event_index];
+                event = &g_wmap_pending_converge_events[event_index];
+
                 if (*event != 0)
                 {
                     *event = 0;
                     switch (event_index)
                     {
-                    case 0:
-                        cdrom_queue_read(0x1149, &g_wmap_animation_bank_3);
-                        cdrom_wait_queue_empty();
-                        func_80064F64(0x114A);
-                        wmap_find_land_cell(4, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
-                        D_8018222C = 1;
-                        D_800DCEF4[3] = 1;
-                        D_800DCEF4[2] = 1;
-                        D_800DCEF4[1] = 1;
-                        D_800DCEF4[0] = 1;
-                        break;
-                    case 1:
-                        cdrom_queue_read(0x10DE, &g_wmap_animation_bank_3);
-                        cdrom_wait_queue_empty();
-                        func_80064F64(0x10DF);
-                        func_800A61BC(11);
-                        break;
-                    case 2:
-                        cdrom_queue_read(0x10D8, &g_wmap_animation_bank_3);
-                        cdrom_wait_queue_empty();
-                        func_80064F64(0x10D9);
-                        func_800A61BC(17);
-                        break;
-                    case 3:
-                        cdrom_queue_read(0x10DC, &g_wmap_animation_bank_3);
-                        cdrom_wait_queue_empty();
-                        func_80064F64(0x10DD);
-                        func_800A61BC(11);
-                        break;
-                    case 4:
-                        cdrom_queue_read(0x10DA, &g_wmap_animation_bank_3);
-                        cdrom_wait_queue_empty();
-                        func_80064F64(0x10DB);
-                        func_800A61BC(10);
-                        break;
+                        case 0:
+                            cdrom_queue_read(0x1149, g_wmap_animation_bank_3);
+                            cdrom_wait_queue_empty();
+                            wmap_load_tim_file(0x114A);
+                            wmap_find_land_cell(WMAP_CONVERGE_LAND, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+                            g_wmap_converge_event_all_sides = 1;
+                            g_wmap_converge_event_sides[3] = 1;
+                            g_wmap_converge_event_sides[2] = 1;
+                            g_wmap_converge_event_sides[1] = 1;
+                            g_wmap_converge_event_sides[0] = 1;
+                            break;
+                        case 1:
+                            cdrom_queue_read(0x10DE, g_wmap_animation_bank_3);
+                            cdrom_wait_queue_empty();
+                            wmap_load_tim_file(0x10DF);
+                            wmap_converge_event_pick_sides(11);
+                            break;
+                        case 2:
+                            cdrom_queue_read(0x10D8, g_wmap_animation_bank_3);
+                            cdrom_wait_queue_empty();
+                            wmap_load_tim_file(0x10D9);
+                            wmap_converge_event_pick_sides(17);
+                            break;
+                        case 3:
+                            cdrom_queue_read(0x10DC, g_wmap_animation_bank_3);
+                            cdrom_wait_queue_empty();
+                            wmap_load_tim_file(0x10DD);
+                            wmap_converge_event_pick_sides(11);
+                            break;
+                        case 4:
+                            cdrom_queue_read(0x10DA, g_wmap_animation_bank_3);
+                            cdrom_wait_queue_empty();
+                            wmap_load_tim_file(0x10DB);
+                            wmap_converge_event_pick_sides(10);
+                            break;
                     }
-                    wmap_start_sequence(func_800A7668);
+
+                    wmap_start_sequence(wmap_converge_event_run);
                     break;
                 }
             }
         }
+
         g_wmap_pending_event_count -= 1;
     }
 }
 
-/** @brief Select the first occupied neighbor, or a random direction when isolated. */
-void func_800A61BC(s32 tile)
+/**
+ * @brief Pick the side the converging sprite comes from: the first neighbor with a land, else a random side.
+ * @param land_id Land whose neighbors are checked.
+ */
+void wmap_converge_event_pick_sides(s32 land_id)
 {
-    wmap_find_land_cell(tile, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
-    D_8018222C = 0;
-    D_800DCEF4[3] = 0;
-    D_800DCEF4[2] = 0;
-    D_800DCEF4[1] = 0;
-    D_800DCEF4[0] = 0;
-    if (tile_exists(g_wmap_vehicle_cell_x + 1, g_wmap_vehicle_cell_y))
+    wmap_find_land_cell(land_id, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+    g_wmap_converge_event_all_sides = 0;
+    g_wmap_converge_event_sides[3] = 0;
+    g_wmap_converge_event_sides[2] = 0;
+    g_wmap_converge_event_sides[1] = 0;
+    g_wmap_converge_event_sides[0] = 0;
+
+    if (wmap_cell_has_land(g_wmap_vehicle_cell_x + 1, g_wmap_vehicle_cell_y))
     {
-        D_800DCEF4[0] = 1;
+        g_wmap_converge_event_sides[0] = 1;
         return;
     }
-    if (tile_exists(g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y + 1))
+
+    if (wmap_cell_has_land(g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y + 1))
     {
-        D_800DCEF5 = 1;
+        g_wmap_converge_event_sides[1] = 1;
         return;
     }
-    if (tile_exists(g_wmap_vehicle_cell_x - 1, g_wmap_vehicle_cell_y))
+
+    if (wmap_cell_has_land(g_wmap_vehicle_cell_x - 1, g_wmap_vehicle_cell_y))
     {
-        D_800DCEF6 = 1;
+        g_wmap_converge_event_sides[2] = 1;
         return;
     }
-    if (tile_exists(g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y - 1))
+
+    if (wmap_cell_has_land(g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y - 1))
     {
-        D_800DCEF7 = 1;
+        g_wmap_converge_event_sides[3] = 1;
         return;
     }
-    D_800DCEF4[rand() & 3] = 1;
+
+    g_wmap_converge_event_sides[rand() & 3] = 1;
 }
 
-/** @brief Save the projection state and set the next effect's map-relative position. */
-void func_800A643C(void)
+/** @brief Converge event: lock input, save the view and scroll to WMAP_CONVERGE_LAND. */
+void wmap_converge_event_step_01(void)
 {
-    D_8013B288 = 0;
+    g_wmap_special_travel_pending = 0;
     D_80139234 = 0;
     g_wmap_input_locked = 1;
     g_wmap_event_active = 1;
     g_wmap_saved_view = g_wmap_view;
-    wmap_find_land_cell(4, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
-    g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * 48) - g_wmap_view.x;
-    g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * 48) - g_wmap_view.y;
-    D_801B2E40++;
-    func_800A76F8();
+    wmap_find_land_cell(WMAP_CONVERGE_LAND, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+    wmap_scroll_to_vehicle_cell();
+    g_wmap_converge_event_step++;
+    wmap_converge_event_step_02();
 }
 
-/** @brief Initialize active directional actors and play the transition sound. */
-void func_800A6540(void)
+/** @brief Converge event: start one sprite per chosen side, fade the song down and play the arrival sound. */
+void wmap_converge_event_step_03(void)
 {
     s32 i;
-    WmapSpriteActor *actor;
+    WmapSpriteActor* actor;
 
-    for (i = 40; i < 120; i++)
+    for (i = WMAP_CONVERGE_TRAIL_FIRST_ACTOR; i < 120; i++)
     {
-        g_wmap_actor_motions[i].state = 0;
+        g_wmap_actor_motions[i].converge.active = 0;
         g_wmap_actor_animations[i].data = g_wmap_animation_bank_3;
     }
-    for (i = 0; i < 4; i++)
+
+    for (i = 0; i < WMAP_CONVERGE_SIDES; i++)
     {
-        actor = &g_wmap_sprite_actors[20 + i];
-        if (D_800DCEF4[i] != 0)
+        actor = &g_wmap_sprite_actors[WMAP_CONVERGE_FIRST_ACTOR + i];
+
+        if (g_wmap_converge_event_sides[i] != 0)
         {
-            g_wmap_actor_animations[i + 20].data = g_wmap_animation_bank_3;
-            actor->scale_index = 15;
+            g_wmap_actor_animations[i + WMAP_CONVERGE_FIRST_ACTOR].data = g_wmap_animation_bank_3;
+            actor->scale_index = WMAP_STEP_ACTOR_SCALE_INDEX;
             actor->sequence = i + 1;
             actor->previous_sequence = -1;
             actor->target_shade = 128;
             actor->shade_step = 2;
             actor->resource_index = 0;
             actor->shade = 0;
-            D_801AFD60[i].state = 1;
-            D_801AFD60[i].angle = i << 10;
-            D_801AFD60[i].z = 90000;
-            D_801AFD60[i].x = 900;
-            D_801AFD60[i].field_0E = 0;
+            g_wmap_effect_actor_motions[i].converge.active = 1;
+            g_wmap_effect_actor_motions[i].converge.angle = i << 10;
+            g_wmap_effect_actor_motions[i].converge.radius = WMAP_CONVERGE_START_RADIUS;
+            g_wmap_effect_actor_motions[i].converge.radius_step = WMAP_CONVERGE_RADIUS_STEP;
+            g_wmap_effect_actor_motions[i].converge.height = 0;
         }
     }
+
     akao_fade_song_volume_from(0, 30, 127, 48);
-    if (D_800DCEF4[3] & (D_800DCEF4[2] & (D_800DCEF4[0] & D_800DCEF4[1])))
+
+    if (wmap_converge_event_from_all_sides())
     {
         wmap_play_sound(49, 128);
     }
@@ -379,323 +474,217 @@ void func_800A6540(void)
     {
         wmap_play_sound(21, 128);
     }
-    D_801B2E44 = 64;
-    D_801B2E40++;
-    func_800A7738();
+
+    g_wmap_converge_event_timer = 64;
+    g_wmap_converge_event_step++;
+    wmap_converge_event_step_04();
 }
 
-/** @brief Project four rotating effect actors and update their draw depths. */
-void func_800A66C0(void)
+/** @brief Project and draw the converging sprites around the event land. */
+void wmap_converge_event_draw_sprites(void)
 {
     SVECTOR position;
     s32 depth;
     s32 draw_depth;
     s32 i;
-    WmapSpriteActor *actor;
-    WmapMotion *motion;
+    WmapSpriteActor* actor;
+    WmapConvergeMotion* motion;
 
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < WMAP_CONVERGE_SIDES; i++)
     {
-        motion = &D_801AFD60[i];
-        actor = &g_wmap_sprite_actors[20 + i];
-        position.vx = ((motion->z >> 3) * (ccos(motion->angle) >> 6)) >> 12;
-        position.vy = ((motion->z >> 3) * (csin(motion->angle) >> 6)) >> 12;
-        position.vz = motion->field_0E;
+        motion = &g_wmap_effect_actor_motions[i].converge;
+        actor = &g_wmap_sprite_actors[WMAP_CONVERGE_FIRST_ACTOR + i];
+        position.vx = ((motion->radius >> 3) * (ccos(motion->angle) >> 6)) >> 12;
+        position.vy = ((motion->radius >> 3) * (csin(motion->angle) >> 6)) >> 12;
+        position.vz = motion->height;
         gte_ldv0(&position);
         gte_rtps();
-        wmap_step_actor_animation(actor, &g_wmap_actor_animations[20 + i]);
+        wmap_step_actor_animation(actor, &g_wmap_actor_animations[WMAP_CONVERGE_FIRST_ACTOR + i]);
         gte_stsxy(&motion->screen);
         gte_stszotz(&depth);
         draw_depth = (7057 - depth) / 4 + 42;
-        wmap_draw_actor_sprite(actor, motion->screen.packed, 3, draw_depth, 0x400);
-        motion->scale = draw_depth;
+        wmap_draw_actor_sprite(actor, motion->screen.packed, WMAP_CONVERGE_TEXTURE, draw_depth, WMAP_CONVERGE_VARIANT);
+        motion->depth = draw_depth;
     }
 }
 
-/** @brief Draw active trail actors and periodically copy four new trail samples. */
-void func_800A6800(void)
+/** @brief Draw the trail sprites and, every 10 frames, copy the converging sprites into the next trail sample. */
+void wmap_converge_event_draw_trails(void)
 {
     s32 i;
     s32 destination;
-    WmapSpriteActor *actor;
-    WmapMotion *motion;
+    WmapSpriteActor* actor;
+    WmapConvergeMotion* motion;
 
-    if (D_8018222C != 0)
+    if (g_wmap_converge_event_all_sides != 0)
     {
-        for (i = 40; i < 104; i++)
+        for (i = WMAP_CONVERGE_TRAIL_FIRST_ACTOR; i < WMAP_CONVERGE_TRAIL_END; i++)
         {
-            motion = &g_wmap_actor_motions[i];
-            if (motion->state != 0)
+            motion = &g_wmap_actor_motions[i].converge;
+
+            if (motion->active != 0)
             {
                 actor = &g_wmap_sprite_actors[i];
                 wmap_step_actor_animation(actor, &g_wmap_actor_animations[i]);
-                wmap_draw_actor_sprite(actor, motion->screen.packed, 3, motion->scale + 1, 0x400);
+                wmap_draw_actor_sprite(actor, motion->screen.packed, WMAP_CONVERGE_TEXTURE, motion->depth + 1, WMAP_CONVERGE_VARIANT);
             }
         }
+
         if (g_wmap_frame_count % 10 == 0)
         {
             if (D_80139234 != -1)
             {
-                for (i = 0; i < 4; i++)
+                for (i = 0; i < WMAP_CONVERGE_SIDES; i++)
                 {
-                    destination = i + D_80139234 * 4 + 40;
-                    g_wmap_actor_motions[destination] = g_wmap_actor_motions[i + 20];
-                    g_wmap_sprite_actors[destination] = g_wmap_sprite_actors[i + 20];
+                    destination = i + D_80139234 * WMAP_CONVERGE_SIDES + WMAP_CONVERGE_TRAIL_FIRST_ACTOR;
+                    g_wmap_actor_motions[destination] = g_wmap_actor_motions[i + WMAP_CONVERGE_FIRST_ACTOR];
+                    g_wmap_sprite_actors[destination] = g_wmap_sprite_actors[i + WMAP_CONVERGE_FIRST_ACTOR];
                     g_wmap_sprite_actors[destination].target_shade = 0;
                     g_wmap_sprite_actors[destination].shade_step = 2;
                 }
-                D_80139234 = (D_80139234 + 1) & 15;
+
+                D_80139234 = (D_80139234 + 1) & (WMAP_CONVERGE_TRAIL_SAMPLES - 1);
             }
         }
     }
 }
 
-/** @brief Load resources and set the effect's map-relative position. */
-void func_800A6A20(void)
+/** @brief Land event 16: put the scripted traveler on land 12 and scroll to it. */
+void wmap_land_event_16_step_01(void)
 {
-    g_wmap_saved_view = g_wmap_view;
-    g_wmap_event_active = 1;
-    wmap_find_land_cell(12, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
-    cdrom_queue_read(0x10E2, D_800DCA98);
-    func_80064F64(0x10E3);
-    wmap_set_traveler_position(3, g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y);
-    g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * 48) - g_wmap_view.x;
-    g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * 48) - g_wmap_view.y;
-    D_801B2E48++;
-    func_800A7C78();
+    wmap_walk_event_start(12, 0x10E2, 0x10E3);
+    g_wmap_land_event_16_step++;
+    wmap_land_event_16_step_02();
 }
 
-/**
- * @brief World-map step handler: seed a pathfinding move for the actor, populate its
- *        motion record, and advance the step counter.
- */
-void func_800A6B34(void)
+/** @brief Land event 16: walk the scripted traveler to land 16. */
+void wmap_land_event_16_step_05(void)
 {
-    u8* base;
-    u16 a;
-    u16 b;
-
-    wmap_find_land_cell(0x10, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
-    base = (u8*)g_wmap_travelers;
-    func_8005EB68(*(s32*)(base + 0x36C), *(s32*)(base + 0x370), g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y,
-                  (s32*)(base + 0x390), (s32*)(base + 0x410));
-    *(s32*)(base + 0x384) = g_wmap_vehicle_cell_x;
-    *(s32*)(base + 0x388) = g_wmap_vehicle_cell_y;
-    a = *(u16*)(base + 0x394);
-    g_wmap_travelers[3].moving = 1;
-    g_wmap_travelers[3].path_index = 1;
-    g_wmap_scripted_travel_active = 1;
-    *(u16*)(base + 0x374) = a;
-    *(u16*)(base + 0x37C) = ((s16)a - 1) * 0xA0;
-    b = *(u16*)(base + 0x414);
-    *(u16*)(base + 0x376) = b;
-    *(u16*)(base + 0x37E) = ((s16)b - 1) * 0xA0;
-    D_801B2E48 += 1;
-    func_800A7D40();
+    wmap_walk_event_route(16);
+    g_wmap_land_event_16_step += 1;
+    wmap_land_event_16_step_06();
 }
 
-/**
- * @brief World-map step handler: kick off the streamed cell load and seed the scroll
- *        target from the current cell, then advance the step.
- */
-void func_800A6C24(void)
+/** @brief Land event 21: put the scripted traveler on land 1 and scroll to it. */
+void wmap_land_event_21_step_01(void)
 {
-    *(WmapBlk16*)&g_wmap_saved_view = *(WmapBlk16*)&g_wmap_view;
-    g_wmap_event_active = 1;
-    wmap_find_land_cell(1, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
-    cdrom_queue_read(0x10E0, D_800DCA98);
-    func_80064F64(0x10E1);
-    wmap_set_traveler_position(3, g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y);
-    g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view.x;
-    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view.y;
-    D_801B2E50 += 1;
-    func_800A8060();
+    wmap_walk_event_start(1, 0x10E0, 0x10E1);
+    g_wmap_land_event_21_step += 1;
+    wmap_land_event_21_step_02();
 }
 
-/**
- * @brief World-map step handler: seed a pathfinding move for the actor, populate its
- *        motion record, and advance the step counter.
- */
-void func_800A6D38(void)
+/** @brief Land event 21: walk the scripted traveler to land 2. */
+void wmap_land_event_21_step_05(void)
 {
-    u8* base;
-    u16 a;
-    u16 b;
-
-    wmap_find_land_cell(0x2, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
-    base = (u8*)g_wmap_travelers;
-    func_8005EB68(*(s32*)(base + 0x36C), *(s32*)(base + 0x370), g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y,
-                  (s32*)(base + 0x390), (s32*)(base + 0x410));
-    *(s32*)(base + 0x384) = g_wmap_vehicle_cell_x;
-    *(s32*)(base + 0x388) = g_wmap_vehicle_cell_y;
-    a = *(u16*)(base + 0x394);
-    g_wmap_travelers[3].moving = 1;
-    g_wmap_travelers[3].path_index = 1;
-    g_wmap_scripted_travel_active = 1;
-    *(u16*)(base + 0x374) = a;
-    *(u16*)(base + 0x37C) = ((s16)a - 1) * 0xA0;
-    b = *(u16*)(base + 0x414);
-    *(u16*)(base + 0x376) = b;
-    *(u16*)(base + 0x37E) = ((s16)b - 1) * 0xA0;
-    D_801B2E50 += 1;
-    func_800A8128();
+    wmap_walk_event_route(2);
+    g_wmap_land_event_21_step += 1;
+    wmap_land_event_21_step_06();
 }
 
-/**
- * @brief World-map step handler: kick off the streamed cell load and seed the scroll
- *        target from the current cell, then advance the step.
- */
-void func_800A6E28(void)
+/** @brief Land event 15: put the scripted traveler on land 1 and scroll to it. */
+void wmap_land_event_15_step_01(void)
 {
-    *(WmapBlk16*)&g_wmap_saved_view = *(WmapBlk16*)&g_wmap_view;
-    g_wmap_event_active = 1;
-    wmap_find_land_cell(1, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
-    cdrom_queue_read(0x1216, D_800DCA98);
-    func_80064F64(0x1217);
-    wmap_set_traveler_position(3, g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y);
-    g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view.x;
-    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view.y;
-    D_801B2E58 += 1;
-    func_800A8448();
+    wmap_walk_event_start(1, 0x1216, 0x1217);
+    g_wmap_land_event_15_step += 1;
+    wmap_land_event_15_step_02();
 }
 
-/**
- * @brief Build the effect route, initialize its position, and advance the sequence.
- */
-void func_800A6F3C(void)
+/** @brief Land event 15: walk the scripted traveler to land 18 and play its departure sound. */
+void wmap_land_event_15_step_05(void)
 {
-    u8* base;
-    u16 cell_x;
-    u16 cell_y;
-    s32 state;
-    s32 coordinate;
-
-    wmap_find_land_cell(0x12, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
-    base = (u8*)g_wmap_travelers;
-    func_8005EB68(*(s32*)(base + 0x36C), *(s32*)(base + 0x370), g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y,
-                  (s32*)(base + 0x390), (s32*)(base + 0x410));
-    *(s32*)(base + 0x384) = g_wmap_vehicle_cell_x;
-    *(s32*)(base + 0x388) = g_wmap_vehicle_cell_y;
-    state = 1;
-    cell_x = *(u16*)(base + 0x394);
-    g_wmap_scripted_travel_active = state;
-    g_wmap_travelers[3].moving = state;
-    g_wmap_travelers[3].path_index = state;
-    *(u16*)(base + 0x374) = cell_x;
-    coordinate = (s16)cell_x - 1;
-    *(u16*)(base + 0x37C) = coordinate * 0xA0;
-    cell_y = *(u16*)(base + 0x414);
-    coordinate = cell_y;
-    *(u16*)(base + 0x376) = cell_y;
-    *(u16*)(base + 0x37E) = ((s16)coordinate - 1) * 0xA0;
+    wmap_walk_event_route(18);
     wmap_play_sound(50, 128);
-    D_801B2E58 += 1;
-    func_800A8510();
+    g_wmap_land_event_15_step += 1;
+    wmap_land_event_15_step_06();
 }
 
-/** @brief World-map step: seed the scroll target from the current cell, then advance. */
-void func_800A703C(void)
+/** @brief Land event 13: start the mesh transition and scroll to land 16. */
+void wmap_land_event_13_step_01(void)
 {
     wmap_select_mesh_motion(1);
     wmap_start_mesh_transition(1);
-    wmap_find_land_cell(0x10, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
-    g_wmap_view_scroll_mode = 2;
+    wmap_find_land_cell(16, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_focus_cell_x = g_wmap_vehicle_cell_x;
     g_wmap_focus_cell_y = g_wmap_vehicle_cell_y;
-    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view.x;
-    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view.y;
-    D_801B2E60 += 1;
-    func_800A8864();
+    wmap_scroll_to_vehicle_cell();
+    g_wmap_land_event_13_step += 1;
+    wmap_land_event_13_step_02();
 }
 
-/** @brief World-map step: seed the scroll target from the current cell, then advance. */
-void func_800A7108(void)
+/** @brief Land event 12: start the mesh transition and scroll to land 23. */
+void wmap_land_event_12_step_01(void)
 {
     wmap_select_mesh_motion(1);
     wmap_start_mesh_transition(1);
-    wmap_find_land_cell(0x17, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
-    g_wmap_view_scroll_mode = 2;
+    wmap_find_land_cell(23, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_focus_cell_x = g_wmap_vehicle_cell_x;
     g_wmap_focus_cell_y = g_wmap_vehicle_cell_y;
-    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view.x;
-    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view.y;
-    D_801B2E68 += 1;
-    func_800A8968();
+    wmap_scroll_to_vehicle_cell();
+    g_wmap_land_event_12_step += 1;
+    wmap_land_event_12_step_02();
 }
 
-/** @brief Set the map-relative effect position, load resources, and advance the sequence. */
-void func_800A71D4(void)
+/** @brief Land event 24: animate the special travel land, scroll to it and queue its effect's resources. */
+void wmap_land_event_24_step_01(void)
 {
     g_wmap_vehicle_flap_sound_enabled = 0;
-    g_wmap_forced_animated_land_id = 0x18;
+    g_wmap_forced_animated_land_id = WMAP_SPECIAL_TRAVEL_LAND;
     g_wmap_land_display_limit = 0;
-    wmap_find_land_cell(0x18, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
-    g_wmap_view_scroll_mode = 2;
+    wmap_find_land_cell(WMAP_SPECIAL_TRAVEL_LAND, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_focus_cell_x = g_wmap_vehicle_cell_x;
     g_wmap_focus_cell_y = g_wmap_vehicle_cell_y;
-    g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * 0x30) - g_wmap_view.x;
-    g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * 0x30) - g_wmap_view.y;
-    wmap_queue_effect_resources(0x21);
-    D_801B2E70 += 1;
-    func_800A7400();
+    wmap_scroll_to_vehicle_cell();
+    wmap_queue_effect_resources(WMAP_LAND_EVENT_24_EFFECT);
+    g_wmap_land_event_24_step += 1;
+    wmap_land_event_24_step_02();
 }
 
-/**
- * @brief World-map actor tick: advance timers, bump a wave index, and expire the step.
- */
-void func_800A72B8(void)
+/** @brief Land event 24: turn the vehicle while it climbs, moves out and grows, until the timer ends. */
+void wmap_land_event_24_step_04(void)
 {
-    s8 *obj;
-    u8 *base;
+    WmapSpriteActor* vehicle;
 
-    obj = wmap_turn_vehicle(1);
-    base = (u8*)g_wmap_actor_motions;
-    if (*(s16 *)(base + 0xE) < 100)
+    vehicle = wmap_turn_vehicle(1);
+
+    if (g_wmap_actor_motions[0].vehicle.height < WMAP_VEHICLE_MAX_HEIGHT)
     {
-        *(s16 *)(base + 0xE) += 1;
+        g_wmap_actor_motions[0].vehicle.height += 1;
     }
-    if (*(s32 *)(base + 0x8) < 0x3E8)
+
+    if (g_wmap_actor_motions[0].vehicle.radius < 1000)
     {
-        *(s32 *)(base + 0x8) += 0x1E;
+        g_wmap_actor_motions[0].vehicle.radius += 30;
     }
+
     if ((g_wmap_frame_count & 3) == 0)
     {
-        if (obj[6] < 0xF)
+        if (vehicle->scale_index < WMAP_VEHICLE_SCALE_MAX)
         {
-            obj[6] += 1;
+            vehicle->scale_index += 1;
         }
     }
-    if (--D_801B2E74 == 0)
+
+    if (--g_wmap_land_event_24_timer == 0)
     {
-        D_801B2E70 += 1;
+        g_wmap_land_event_24_step += 1;
     }
 }
 
 /**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
+ * @brief Run land event 24: the travel vehicle rises from the special travel land and flies off.
+ * @param arg0 Nonzero restarts the sequence at step 1.
+ * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
-WMAP_STEP_RUNNER(func_800A7370,
-    D_800D6D34, 0xA,
-    D_801B2E70, D_801B2E74)
+WMAP_STEP_RUNNER(wmap_land_event_24_run, g_wmap_land_event_24_steps, 0xA, g_wmap_land_event_24_step, g_wmap_land_event_24_timer)
 
-/**
- * @brief Restart the sequence at step 1 with a one-frame timer.
- */
-WMAP_STEP_RESET(func_800A73E8, D_801B2E70, D_801B2E74)
+/** @brief Land event 24: restart at step 1 with a one-frame timer. */
+WMAP_STEP_RESET(wmap_land_event_24_reset, g_wmap_land_event_24_step, g_wmap_land_event_24_timer)
 
-/**
- * @brief Wait for scripted map scrolling, then run the next step.
- */
-WMAP_STEP_WAIT_SCROLL(func_800A7400,
-    D_801B2E70, func_800A7440)
+/** @brief Land event 24: wait for the scroll, then show the vehicle. */
+WMAP_STEP_WAIT_SCROLL(wmap_land_event_24_step_02, g_wmap_land_event_24_step, wmap_land_event_24_step_03)
 
-/** @brief Initialize the actor, register its callback, and start the sequence delay. */
-void func_800A7440(void)
+/** @brief Land event 24: show the vehicle above the land, install its draw callback and start the land effect. */
+void wmap_land_event_24_step_03(void)
 {
     g_wmap_vehicle_animation.data = g_wmap_animation_bank_0;
     g_wmap_vehicle_actor.previous_sequence = -1;
@@ -703,677 +692,493 @@ void func_800A7440(void)
     g_wmap_vehicle_actor.scale_index = 0;
     g_wmap_vehicle_actor.sequence = 0;
     g_wmap_vehicle_actor.shade_step = 0;
-    g_wmap_vehicle_actor.target_shade = 0x80;
-    g_wmap_vehicle_actor.shade = 0x80;
-    g_wmap_actor_motions[0].state = 1;
-    g_wmap_actor_motions[0].z = 0xC8;
-    g_wmap_actor_motions[0].field_0E = 0xA;
-    g_wmap_actor_motions[0].screen.point.x = 0x3C;
-    g_wmap_actor_motions[0].angle = 0;
-    g_wmap_actor_motions[0].x = 2;
+    g_wmap_vehicle_actor.target_shade = WMAP_VEHICLE_SHADE_NEUTRAL;
+    g_wmap_vehicle_actor.shade = WMAP_VEHICLE_SHADE_NEUTRAL;
+    g_wmap_actor_motions[0].vehicle.active = 1;
+    g_wmap_actor_motions[0].vehicle.radius = WMAP_VEHICLE_START_RADIUS;
+    g_wmap_actor_motions[0].vehicle.height = WMAP_VEHICLE_START_HEIGHT;
+    g_wmap_actor_motions[0].vehicle.ot_index = WMAP_VEHICLE_OT_START;
+    g_wmap_actor_motions[0].vehicle.heading = 0;
+    g_wmap_actor_motions[0].vehicle.ot_override = 2;
     wmap_install_callback(&wmap_draw_vehicle);
-    wmap_start_land_effect(0x21);
-    D_801B2E74 = 0x16E;
-    D_801B2E70 += 1;
-    func_800A72B8();
+    wmap_start_land_effect(WMAP_LAND_EVENT_24_EFFECT);
+    g_wmap_land_event_24_timer = 366;
+    g_wmap_land_event_24_step += 1;
+    wmap_land_event_24_step_04();
 }
 
-/** @brief World-map step handler: install a callback, advance the step counter, chain to the next step. */
-void func_800A74FC(void)
+/** @brief Land event 24: start the vehicle's final turn. */
+void wmap_land_event_24_step_05(void)
 {
     g_wmap_vehicle_phase = 1;
     wmap_start_sequence(wmap_finish_vehicle_turn);
-    D_801B2E70 += 1;
-    func_800A7544();
+    g_wmap_land_event_24_step += 1;
+    wmap_land_event_24_step_06();
 }
 
-/**
- * @brief Advance this sequence one step while its gate flag is clear.
- */
-void func_800A7544(void)
+/** @brief Land event 24: wait for the turn to finish. */
+void wmap_land_event_24_step_06(void)
 {
     if (g_wmap_vehicle_phase == 0)
     {
-        D_801B2E70 += 1;
-        func_800A7580();
+        g_wmap_land_event_24_step += 1;
+        wmap_land_event_24_step_07();
     }
 }
 
-/**
- * @brief Reset a world-map animation flag and schedule the next step.
- */
-void func_800A7580(void)
+/** @brief Land event 24: release the vehicle's motion slot and start the 120-frame fly-off. */
+void wmap_land_event_24_step_07(void)
 {
-    g_wmap_actor_motions[0].state = 0;
-    D_801B2E74 = 0x78;
-    D_801B2E70 += 1;
-    func_800A75C0();
+    g_wmap_actor_motions[0].vehicle.active = 0;
+    g_wmap_land_event_24_timer = 120;
+    g_wmap_land_event_24_step += 1;
+    wmap_land_event_24_step_08();
 }
 
-/** @brief Draw the sprite, move its packed coordinate, and update the countdown. */
-void func_800A75C0(void)
+/** @brief Land event 24: draw the vehicle 4 pixels further left each frame until the timer ends. */
+void wmap_land_event_24_step_08(void)
 {
-    s32 remaining_ticks;
-    u8 *sprite = (u8*)&g_wmap_vehicle_actor;
+    WmapSpriteActor* vehicle = &g_wmap_vehicle_actor;
 
     wmap_turn_vehicle(0);
-    wmap_step_actor_animation(sprite, &g_wmap_vehicle_animation);
-    wmap_draw_actor_sprite(sprite, g_wmap_vehicle_screen_position, 0x28, 2, 2);
-    remaining_ticks = D_801B2E74 - 1;
-    *(s16 *)&g_wmap_vehicle_screen_position -= 4;
-    D_801B2E74 = remaining_ticks;
-    if (remaining_ticks == 0)
+    wmap_step_actor_animation(vehicle, &g_wmap_vehicle_animation);
+    wmap_draw_actor_sprite(vehicle, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, 2, WMAP_VEHICLE_VARIANT);
+    g_wmap_vehicle_screen_position.point.x -= 4;
+
+    if (--g_wmap_land_event_24_timer == 0)
     {
-        D_801B2E70 += 1;
+        g_wmap_land_event_24_step += 1;
     }
 }
 
-/**
- * @brief Advance past the last sequence step.
- */
-WMAP_STEP_ADVANCE(func_800A7650, D_801B2E70)
+/** @brief Land event 24: finish. */
+WMAP_STEP_ADVANCE(wmap_land_event_24_step_09, g_wmap_land_event_24_step)
 
 /**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
+ * @brief Run the converge event: sprites come in from neighboring lands to WMAP_CONVERGE_LAND.
+ * @param arg0 Nonzero restarts the sequence at step 1.
+ * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
-WMAP_STEP_RUNNER(func_800A7668,
-    D_800D6C14, 0x10,
-    D_801B2E40, D_801B2E44)
+WMAP_STEP_RUNNER(wmap_converge_event_run, g_wmap_converge_event_steps, 0x10, g_wmap_converge_event_step, g_wmap_converge_event_timer)
 
-/**
- * @brief Restart the sequence at step 1 with a one-frame timer.
- */
-WMAP_STEP_RESET(func_800A76E0, D_801B2E40, D_801B2E44)
+/** @brief Converge event: restart at step 1 with a one-frame timer. */
+WMAP_STEP_RESET(wmap_converge_event_reset, g_wmap_converge_event_step, g_wmap_converge_event_timer)
 
-/**
- * @brief Wait for scripted map scrolling, then run the next step.
- */
-WMAP_STEP_WAIT_SCROLL(func_800A76F8,
-    D_801B2E40, func_800A6540)
+/** @brief Converge event: wait for the scroll, then start the sprites. */
+WMAP_STEP_WAIT_SCROLL(wmap_converge_event_step_02, g_wmap_converge_event_step, wmap_converge_event_step_03)
 
-/** @brief World-map step: run the two sub-steps, then advance after the timer. */
-WMAP_STEP_UPDATE_TWO_AND_WAIT(func_800A7738, D_801B2E40, D_801B2E44,
-                          wmap_set_effect_camera_transform(),
-                          func_800A66C0())
+/** @brief Converge event: draw the sprites until the timer ends. */
+WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_converge_event_step_04, g_wmap_converge_event_step, g_wmap_converge_event_timer, wmap_set_effect_camera_transform(),
+                              wmap_converge_event_draw_sprites())
 
-/**
- * @brief Clear the sub-flag, set the sequence parameter, advance the counter, and run the handler.
- */
-void func_800A778C(void)
+/** @brief Converge event: stop updating land labels and start a 30-frame approach. */
+void wmap_converge_event_step_05(void)
 {
     g_wmap_land_label_updates_enabled = 0;
-    D_801B2E44 = 0x1E;
-    D_801B2E40 += 1;
-    func_800A77CC();
+    g_wmap_converge_event_timer = 30;
+    g_wmap_converge_event_step += 1;
+    wmap_converge_event_step_06();
 }
 
-/** @brief Step the world-map particle set, decaying each slot's velocity field. */
-void func_800A77CC(void)
+/** @brief Converge event: move the sprites in and draw them and their trails until the timer ends. */
+void wmap_converge_event_step_06(void)
 {
-    s32 i;
-    u8* p;
-
-    wmap_set_effect_camera_transform();
-    func_800A66C0();
-    func_800A6800();
-    for (i = 0; i < 4; i++)
-    {
-        p = (u8*)g_wmap_actor_motions + (0x14 + i) * 0x14;
-        *(s32*)(p + 0x8) -= *(s32*)(p + 0x4);
-    }
-    if (--D_801B2E44 == 0)
-    {
-        D_801B2E40 += 1;
-    }
+    wmap_converge_event_approach();
 }
 
-/** @brief Set up the effect, select its delay, and run the next sequence step. */
-void func_800A785C(void)
+/** @brief Converge event: start the second approach, shorter when the sprites come from all sides. */
+void wmap_converge_event_step_07(void)
 {
     s32 delay;
 
-    func_8005FF88(-1);
-    delay = 0x46;
-    if (D_8018222C != 0)
+    wmap_set_map_label(-1);
+    delay = 70;
+
+    if (g_wmap_converge_event_all_sides != 0)
     {
-        delay = 0x32;
+        delay = 50;
     }
-    D_801B2E44 = delay;
-    D_801B2E40 += 1;
-    func_800A78B0();
+
+    g_wmap_converge_event_timer = delay;
+    g_wmap_converge_event_step += 1;
+    wmap_converge_event_step_08();
 }
 
-/** @brief Step the world-map particle set, decaying each slot's velocity field. */
-void func_800A78B0(void)
+/** @brief Converge event: move the sprites in and draw them and their trails until the timer ends. */
+void wmap_converge_event_step_08(void)
 {
-    s32 i;
-    u8* p;
-
-    wmap_set_effect_camera_transform();
-    func_800A66C0();
-    func_800A6800();
-    for (i = 0; i < 4; i++)
-    {
-        p = (u8*)g_wmap_actor_motions + (0x14 + i) * 0x14;
-        *(s32*)(p + 0x8) -= *(s32*)(p + 0x4);
-    }
-    if (--D_801B2E44 == 0)
-    {
-        D_801B2E40 += 1;
-    }
+    wmap_converge_event_approach();
 }
 
-/** @brief Clear four actor states and start the next timed sequence step. */
-void func_800A7940(void)
+/** @brief Converge event: stop the sounds unless all sides came, stop the sprite animations and the trail sampling. */
+void wmap_converge_event_step_09(void)
 {
     s32 i;
 
-    if (!(D_800DCEF4[3] & (D_800DCEF4[2] & (D_800DCEF4[0] & D_800DCEF4[1]))))
+    if (!wmap_converge_event_from_all_sides())
     {
         akao_release_all_sfx();
     }
-    for (i = 0; i < 4; i++)
+
+    for (i = 0; i < WMAP_CONVERGE_SIDES; i++)
     {
-        g_wmap_sprite_actors[i + 20].sequence = 0;
+        g_wmap_sprite_actors[i + WMAP_CONVERGE_FIRST_ACTOR].sequence = 0;
     }
+
     D_80139234 = -1;
-    D_801B2E44 = 0x28;
-    D_801B2E40++;
-    func_800A79E4();
+    g_wmap_converge_event_timer = 40;
+    g_wmap_converge_event_step++;
+    wmap_converge_event_step_10();
 }
 
-/** @brief Run three drawing updates and advance when the countdown expires. */
-void func_800A79E4(void)
+/** @brief Converge event: draw the sprites and trails until the timer ends. */
+void wmap_converge_event_step_10(void)
 {
-    s32 remaining_ticks;
-
     wmap_set_effect_camera_transform();
-    func_800A66C0();
-    func_800A6800();
-    remaining_ticks = D_801B2E44 - 1;
-    D_801B2E44 = remaining_ticks;
-    if (remaining_ticks == 0)
+    wmap_converge_event_draw_sprites();
+    wmap_converge_event_draw_trails();
+
+    if (--g_wmap_converge_event_timer == 0)
     {
-        D_801B2E40 += 1;
+        g_wmap_converge_event_step += 1;
     }
 }
 
-/** @brief Clear four resource fields and start a 64-tick sequence step. */
-void func_800A7A40(void)
+/** @brief Converge event: fade the sprites out over 64 frames. */
+void wmap_converge_event_step_11(void)
 {
-    s32 index;
-    for (index = 0; index < 4; index++)
+    s32 i;
+
+    for (i = 0; i < WMAP_CONVERGE_SIDES; i++)
     {
-        g_wmap_sprite_actors[index + 20].target_shade = 0;
+        g_wmap_sprite_actors[i + WMAP_CONVERGE_FIRST_ACTOR].target_shade = 0;
     }
-    D_801B2E44 = 64;
-    D_801B2E40 += 1;
-    func_800A7AA0();
+
+    g_wmap_converge_event_timer = 64;
+    g_wmap_converge_event_step += 1;
+    wmap_converge_event_step_12();
 }
 
-/** @brief World-map step: run the two sub-steps, then advance after the timer. */
-WMAP_STEP_UPDATE_TWO_AND_WAIT(func_800A7AA0, D_801B2E40, D_801B2E44,
-                          wmap_set_effect_camera_transform(),
-                          func_800A66C0())
+/** @brief Converge event: draw the fading sprites until the timer ends. */
+WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_converge_event_step_12, g_wmap_converge_event_step, g_wmap_converge_event_timer, wmap_set_effect_camera_transform(),
+                              wmap_converge_event_draw_sprites())
 
-/** @brief Start audio, compute the coordinate delta, and advance the sequence. */
-void func_800A7AF4(void)
+/** @brief Converge event: fade the song back up and scroll back to the saved view. */
+void wmap_converge_event_step_13(void)
 {
-    akao_fade_song_volume_from(0, 0x1E, 0x30, 0x7F);
-    g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = g_wmap_saved_view.x - g_wmap_view.x;
-    g_wmap_scroll_remaining_y = g_wmap_saved_view.y - g_wmap_view.y;
-    D_801B2E40 += 1;
-    func_800A7B78();
+    akao_fade_song_volume_from(0, 30, 48, 127);
+    wmap_scroll_to_saved_view();
+    g_wmap_converge_event_step += 1;
+    wmap_converge_event_step_14();
 }
 
-/**
- * @brief Wait for scripted map scrolling, then run the next step.
- */
-WMAP_STEP_WAIT_SCROLL(func_800A7B78,
-    D_801B2E40, func_800A7BB8)
+/** @brief Converge event: wait for the scroll back. */
+WMAP_STEP_WAIT_SCROLL(wmap_converge_event_step_14, g_wmap_converge_event_step, wmap_converge_event_step_15)
 
-/** @brief Reset two world-map values, set the enable flag, and advance the state. */
-void func_800A7BB8(void)
+/** @brief Converge event: unlock input, end the event and resume land label updates. */
+void wmap_converge_event_step_15(void)
 {
     g_wmap_input_locked = 0;
     g_wmap_event_active = 0;
     g_wmap_land_label_updates_enabled = 1;
-    D_801B2E40 += 1;
+    g_wmap_converge_event_step += 1;
 }
 
 /**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
+ * @brief Run land event 16: the scripted traveler walks from land 12 to land 16.
+ * @param arg0 Nonzero restarts the sequence at step 1.
+ * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
-WMAP_STEP_RUNNER(func_800A7BE8,
-    D_800D6C54, 0x10,
-    D_801B2E48, D_801B2E4C)
+WMAP_STEP_RUNNER(wmap_land_event_16_run, g_wmap_land_event_16_steps, 0x10, g_wmap_land_event_16_step, g_wmap_land_event_16_timer)
 
-/**
- * @brief Restart the sequence at step 1 with a one-frame timer.
- */
-WMAP_STEP_RESET(func_800A7C60, D_801B2E48, D_801B2E4C)
+/** @brief Land event 16: restart at step 1 with a one-frame timer. */
+WMAP_STEP_RESET(wmap_land_event_16_reset, g_wmap_land_event_16_step, g_wmap_land_event_16_timer)
 
-/**
- * @brief Wait for scripted map scrolling, then run the next step.
- */
-WMAP_STEP_WAIT_SCROLL(func_800A7C78,
-    D_801B2E48, func_800A7CB8)
+/** @brief Land event 16: wait for the scroll, then show the traveler. */
+WMAP_STEP_WAIT_SCROLL(wmap_land_event_16_step_02, g_wmap_land_event_16_step, wmap_land_event_16_step_03)
 
-/** @brief Reset a world-map HUD sprite record, then bump its shared refcount. */
-void func_800A7CB8(void)
+/** @brief Land event 16: fade the traveler in over 16 frames. */
+void wmap_land_event_16_step_03(void)
 {
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[3];
-
-    actor->scale_index = 0xF;
-    actor->previous_sequence = -1;
-    actor->target_shade = 0x80;
-    actor->resource_index = 0;
-    actor->sequence = 0;
-    actor->shade = 0;
-    actor->shade_step = 8;
-    D_801B2E4C = 0x10;
-    D_801B2E48 += 1;
+    wmap_walk_event_show_traveler();
+    g_wmap_land_event_16_timer = 16;
+    g_wmap_land_event_16_step += 1;
 }
 
-/**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
- */
-WMAP_STEP_WAIT(func_800A7D0C, D_801B2E48, D_801B2E4C)
+/** @brief Land event 16: wait for the fade-in. */
+WMAP_STEP_WAIT(wmap_land_event_16_step_04, g_wmap_land_event_16_step, g_wmap_land_event_16_timer)
 
-/**
- * @brief Advance this sequence one step while its gate flag is clear.
- */
-void func_800A7D40(void)
+/** @brief Land event 16: wait for the walk to end. */
+void wmap_land_event_16_step_06(void)
 {
     if (g_wmap_scripted_travel_active == 0)
     {
-        D_801B2E48 += 1;
-        func_800A7D7C();
+        g_wmap_land_event_16_step += 1;
+        wmap_land_event_16_step_07();
     }
 }
 
-/**
- * @brief World-map step: recompute the scroll offsets from the camera position and
- *        advance to the next handler.
- */
-void func_800A7D7C(void)
+/** @brief Land event 16: scroll to the destination land. */
+void wmap_land_event_16_step_07(void)
 {
-    g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view.x;
-    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view.y;
-    D_801B2E48 += 1;
-    func_800A7E0C();
+    wmap_scroll_to_vehicle_cell();
+    g_wmap_land_event_16_step += 1;
+    wmap_land_event_16_step_08();
 }
 
-/**
- * @brief Wait for scripted map scrolling, then run the next step.
- */
-WMAP_STEP_WAIT_SCROLL(func_800A7E0C,
-    D_801B2E48, func_800A7E4C)
+/** @brief Land event 16: wait for the scroll. */
+WMAP_STEP_WAIT_SCROLL(wmap_land_event_16_step_08, g_wmap_land_event_16_step, wmap_land_event_16_step_09)
 
-/**
- * @brief Reset a world-map step slot: arm its wait and advance the step index.
- */
-void func_800A7E4C(void)
+/** @brief Land event 16: pause for 60 frames. */
+void wmap_land_event_16_step_09(void)
 {
-    D_801B2E4C = 0x3C;
-    D_801B2E48 += 1;
+    g_wmap_land_event_16_timer = 60;
+    g_wmap_land_event_16_step += 1;
 }
 
-/**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
- */
-WMAP_STEP_WAIT(func_800A7E6C, D_801B2E48, D_801B2E4C)
+/** @brief Land event 16: wait for the pause. */
+WMAP_STEP_WAIT(wmap_land_event_16_step_10, g_wmap_land_event_16_step, g_wmap_land_event_16_timer)
 
-/** @brief World-map step handler: clear a flag and advance the step. */
-void func_800A7EA0(void)
+/** @brief Land event 16: fade the traveler out over 30 frames. */
+void wmap_land_event_16_step_11(void)
 {
-    g_wmap_sprite_actors[3].target_shade = 0;
-    D_801B2E4C = 0x1E;
-    D_801B2E48 += 1;
+    g_wmap_sprite_actors[WMAP_SCRIPTED_TRAVELER].target_shade = 0;
+    g_wmap_land_event_16_timer = 30;
+    g_wmap_land_event_16_step += 1;
 }
 
-/**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
- */
-WMAP_STEP_WAIT(func_800A7EC8, D_801B2E48, D_801B2E4C)
+/** @brief Land event 16: wait for the fade-out. */
+WMAP_STEP_WAIT(wmap_land_event_16_step_12, g_wmap_land_event_16_step, g_wmap_land_event_16_timer)
 
-/**
- * @brief World-map step handler: cache the relative scroll delta, bump the frame
- *        counter, and run the sub-step handler.
- */
-void func_800A7EFC(void)
+/** @brief Land event 16: scroll back to the saved view. */
+void wmap_land_event_16_step_13(void)
 {
-    g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = g_wmap_saved_view.x - g_wmap_view.x;
-    g_wmap_scroll_remaining_y = g_wmap_saved_view.y - g_wmap_view.y;
-    D_801B2E48 += 1;
-    func_800A7F6C();
+    wmap_scroll_to_saved_view();
+    g_wmap_land_event_16_step += 1;
+    wmap_land_event_16_step_14();
 }
 
-/**
- * @brief Wait for scripted map scrolling, then run the next step.
- */
-WMAP_STEP_WAIT_SCROLL(func_800A7F6C,
-    D_801B2E48, func_800A7FAC)
+/** @brief Land event 16: wait for the scroll back. */
+WMAP_STEP_WAIT_SCROLL(wmap_land_event_16_step_14, g_wmap_land_event_16_step, wmap_land_event_16_step_15)
 
-/** @brief World-map step handler: clear two flags and advance the step counter. */
-void func_800A7FAC(void)
+/** @brief Land event 16: unlock input and end the event. */
+void wmap_land_event_16_step_15(void)
 {
     g_wmap_input_locked = 0;
     g_wmap_event_active = 0;
-    D_801B2E48 += 1;
+    g_wmap_land_event_16_step += 1;
 }
 
 /**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
+ * @brief Run land event 21: the scripted traveler walks from land 1 to land 2.
+ * @param arg0 Nonzero restarts the sequence at step 1.
+ * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
-WMAP_STEP_RUNNER(func_800A7FD0,
-    D_800D6C94, 0x10,
-    D_801B2E50, D_801B2E54)
+WMAP_STEP_RUNNER(wmap_land_event_21_run, g_wmap_land_event_21_steps, 0x10, g_wmap_land_event_21_step, g_wmap_land_event_21_timer)
 
-/**
- * @brief Restart the sequence at step 1 with a one-frame timer.
- */
-WMAP_STEP_RESET(func_800A8048, D_801B2E50, D_801B2E54)
+/** @brief Land event 21: restart at step 1 with a one-frame timer. */
+WMAP_STEP_RESET(wmap_land_event_21_reset, g_wmap_land_event_21_step, g_wmap_land_event_21_timer)
 
-/**
- * @brief Wait for scripted map scrolling, then run the next step.
- */
-WMAP_STEP_WAIT_SCROLL(func_800A8060,
-    D_801B2E50, func_800A80A0)
+/** @brief Land event 21: wait for the scroll, then show the traveler. */
+WMAP_STEP_WAIT_SCROLL(wmap_land_event_21_step_02, g_wmap_land_event_21_step, wmap_land_event_21_step_03)
 
-/** @brief Reset a world-map HUD sprite record, then bump its shared refcount. */
-void func_800A80A0(void)
+/** @brief Land event 21: fade the traveler in over 16 frames. */
+void wmap_land_event_21_step_03(void)
 {
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[3];
-
-    actor->scale_index = 0xF;
-    actor->previous_sequence = -1;
-    actor->target_shade = 0x80;
-    actor->resource_index = 0;
-    actor->sequence = 0;
-    actor->shade = 0;
-    actor->shade_step = 8;
-    D_801B2E54 = 0x10;
-    D_801B2E50 += 1;
+    wmap_walk_event_show_traveler();
+    g_wmap_land_event_21_timer = 16;
+    g_wmap_land_event_21_step += 1;
 }
 
-/**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
- */
-WMAP_STEP_WAIT(func_800A80F4, D_801B2E50, D_801B2E54)
+/** @brief Land event 21: wait for the fade-in. */
+WMAP_STEP_WAIT(wmap_land_event_21_step_04, g_wmap_land_event_21_step, g_wmap_land_event_21_timer)
 
-/**
- * @brief Advance this sequence one step while its gate flag is clear.
- */
-void func_800A8128(void)
+/** @brief Land event 21: wait for the walk to end. */
+void wmap_land_event_21_step_06(void)
 {
     if (g_wmap_scripted_travel_active == 0)
     {
-        D_801B2E50 += 1;
-        func_800A8164();
+        g_wmap_land_event_21_step += 1;
+        wmap_land_event_21_step_07();
     }
 }
 
-/**
- * @brief World-map step: recompute the scroll offsets from the camera position and
- *        advance to the next handler.
- */
-void func_800A8164(void)
+/** @brief Land event 21: scroll to the destination land. */
+void wmap_land_event_21_step_07(void)
 {
-    g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view.x;
-    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view.y;
-    D_801B2E50 += 1;
-    func_800A81F4();
+    wmap_scroll_to_vehicle_cell();
+    g_wmap_land_event_21_step += 1;
+    wmap_land_event_21_step_08();
 }
 
-/**
- * @brief Wait for scripted map scrolling, then run the next step.
- */
-WMAP_STEP_WAIT_SCROLL(func_800A81F4,
-    D_801B2E50, func_800A8234)
+/** @brief Land event 21: wait for the scroll. */
+WMAP_STEP_WAIT_SCROLL(wmap_land_event_21_step_08, g_wmap_land_event_21_step, wmap_land_event_21_step_09)
 
-/**
- * @brief Reset a world-map step slot: arm its wait and advance the step index.
- */
-void func_800A8234(void)
+/** @brief Land event 21: pause for 60 frames. */
+void wmap_land_event_21_step_09(void)
 {
-    D_801B2E54 = 0x3C;
-    D_801B2E50 += 1;
+    g_wmap_land_event_21_timer = 60;
+    g_wmap_land_event_21_step += 1;
 }
 
-/**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
- */
-WMAP_STEP_WAIT(func_800A8254, D_801B2E50, D_801B2E54)
+/** @brief Land event 21: wait for the pause. */
+WMAP_STEP_WAIT(wmap_land_event_21_step_10, g_wmap_land_event_21_step, g_wmap_land_event_21_timer)
 
-/** @brief World-map step handler: clear a flag and advance the step. */
-void func_800A8288(void)
+/** @brief Land event 21: fade the traveler out over 30 frames. */
+void wmap_land_event_21_step_11(void)
 {
-    g_wmap_sprite_actors[3].target_shade = 0;
-    D_801B2E54 = 0x1E;
-    D_801B2E50 += 1;
+    g_wmap_sprite_actors[WMAP_SCRIPTED_TRAVELER].target_shade = 0;
+    g_wmap_land_event_21_timer = 30;
+    g_wmap_land_event_21_step += 1;
 }
 
-/**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
- */
-WMAP_STEP_WAIT(func_800A82B0, D_801B2E50, D_801B2E54)
+/** @brief Land event 21: wait for the fade-out. */
+WMAP_STEP_WAIT(wmap_land_event_21_step_12, g_wmap_land_event_21_step, g_wmap_land_event_21_timer)
 
-/**
- * @brief World-map step handler: cache the relative scroll delta, bump the frame
- *        counter, and run the sub-step handler.
- */
-void func_800A82E4(void)
+/** @brief Land event 21: scroll back to the saved view. */
+void wmap_land_event_21_step_13(void)
 {
-    g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = g_wmap_saved_view.x - g_wmap_view.x;
-    g_wmap_scroll_remaining_y = g_wmap_saved_view.y - g_wmap_view.y;
-    D_801B2E50 += 1;
-    func_800A8354();
+    wmap_scroll_to_saved_view();
+    g_wmap_land_event_21_step += 1;
+    wmap_land_event_21_step_14();
 }
 
-/**
- * @brief Wait for scripted map scrolling, then run the next step.
- */
-WMAP_STEP_WAIT_SCROLL(func_800A8354,
-    D_801B2E50, func_800A8394)
+/** @brief Land event 21: wait for the scroll back. */
+WMAP_STEP_WAIT_SCROLL(wmap_land_event_21_step_14, g_wmap_land_event_21_step, wmap_land_event_21_step_15)
 
-/** @brief World-map step handler: clear two flags and advance the step counter. */
-void func_800A8394(void)
+/** @brief Land event 21: unlock input and end the event. */
+void wmap_land_event_21_step_15(void)
 {
     g_wmap_input_locked = 0;
     g_wmap_event_active = 0;
-    D_801B2E50 += 1;
+    g_wmap_land_event_21_step += 1;
 }
 
 /**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
+ * @brief Run land event 15: the scripted traveler walks from land 1 to land 18.
+ * @param arg0 Nonzero restarts the sequence at step 1.
+ * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
-WMAP_STEP_RUNNER(func_800A83B8,
-    D_800D6CD4, 0x10,
-    D_801B2E58, D_801B2E5C)
+WMAP_STEP_RUNNER(wmap_land_event_15_run, g_wmap_land_event_15_steps, 0x10, g_wmap_land_event_15_step, g_wmap_land_event_15_timer)
 
-/**
- * @brief Restart the sequence at step 1 with a one-frame timer.
- */
-WMAP_STEP_RESET(func_800A8430, D_801B2E58, D_801B2E5C)
+/** @brief Land event 15: restart at step 1 with a one-frame timer. */
+WMAP_STEP_RESET(wmap_land_event_15_reset, g_wmap_land_event_15_step, g_wmap_land_event_15_timer)
 
-/**
- * @brief Wait for scripted map scrolling, then run the next step.
- */
-WMAP_STEP_WAIT_SCROLL(func_800A8448,
-    D_801B2E58, func_800A8488)
+/** @brief Land event 15: wait for the scroll, then show the traveler. */
+WMAP_STEP_WAIT_SCROLL(wmap_land_event_15_step_02, g_wmap_land_event_15_step, wmap_land_event_15_step_03)
 
-/** @brief Reset a world-map HUD sprite record, then bump its shared refcount. */
-void func_800A8488(void)
+/** @brief Land event 15: fade the traveler in over 16 frames. */
+void wmap_land_event_15_step_03(void)
 {
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[3];
-
-    actor->scale_index = 0xF;
-    actor->previous_sequence = -1;
-    actor->target_shade = 0x80;
-    actor->resource_index = 0;
-    actor->sequence = 0;
-    actor->shade = 0;
-    actor->shade_step = 8;
-    D_801B2E5C = 0x10;
-    D_801B2E58 += 1;
+    wmap_walk_event_show_traveler();
+    g_wmap_land_event_15_timer = 16;
+    g_wmap_land_event_15_step += 1;
 }
 
-/**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
- */
-WMAP_STEP_WAIT(func_800A84DC, D_801B2E58, D_801B2E5C)
+/** @brief Land event 15: wait for the fade-in. */
+WMAP_STEP_WAIT(wmap_land_event_15_step_04, g_wmap_land_event_15_step, g_wmap_land_event_15_timer)
 
-/**
- * @brief Advance this sequence one step while its gate flag is clear.
- */
-void func_800A8510(void)
+/** @brief Land event 15: wait for the walk to end. */
+void wmap_land_event_15_step_06(void)
 {
     if (g_wmap_scripted_travel_active == 0)
     {
-        D_801B2E58 += 1;
-        func_800A854C();
+        g_wmap_land_event_15_step += 1;
+        wmap_land_event_15_step_07();
     }
 }
 
-/**
- * @brief World-map step: recompute the scroll offsets from the camera position and
- *        advance to the next handler.
- */
-void func_800A854C(void)
+/** @brief Land event 15: scroll to the destination land. */
+void wmap_land_event_15_step_07(void)
 {
-    g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * 0x30 - g_wmap_view.x;
-    g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * 0x30 - g_wmap_view.y;
-    D_801B2E58 += 1;
-    func_800A85DC();
+    wmap_scroll_to_vehicle_cell();
+    g_wmap_land_event_15_step += 1;
+    wmap_land_event_15_step_08();
 }
 
-/**
- * @brief Wait for scripted map scrolling, then run the next step.
- */
-WMAP_STEP_WAIT_SCROLL(func_800A85DC,
-    D_801B2E58, func_800A861C)
+/** @brief Land event 15: wait for the scroll. */
+WMAP_STEP_WAIT_SCROLL(wmap_land_event_15_step_08, g_wmap_land_event_15_step, wmap_land_event_15_step_09)
 
-/** @brief Issue audio command F1, start a 60-tick delay, and advance the state. */
-void func_800A861C(void)
+/** @brief Land event 15: stop the departure sound and pause for 60 frames. */
+void wmap_land_event_15_step_09(void)
 {
     akao_release_all_sfx();
-    D_801B2E5C = 60;
-    D_801B2E58 += 1;
+    g_wmap_land_event_15_timer = 60;
+    g_wmap_land_event_15_step += 1;
 }
 
-/**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
- */
-WMAP_STEP_WAIT(func_800A8654, D_801B2E58, D_801B2E5C)
+/** @brief Land event 15: wait for the pause. */
+WMAP_STEP_WAIT(wmap_land_event_15_step_10, g_wmap_land_event_15_step, g_wmap_land_event_15_timer)
 
-/** @brief Play sound 57, clear its field, and start a 30-tick delay. */
-void func_800A8688(void)
+/** @brief Land event 15: play the arrival sound and fade the traveler out over 30 frames. */
+void wmap_land_event_15_step_11(void)
 {
-    wmap_play_sound(0x39, 0x80);
-    g_wmap_sprite_actors[3].target_shade = 0;
-    D_801B2E5C = 0x1E;
-    D_801B2E58 += 1;
+    wmap_play_sound(57, 128);
+    g_wmap_sprite_actors[WMAP_SCRIPTED_TRAVELER].target_shade = 0;
+    g_wmap_land_event_15_timer = 30;
+    g_wmap_land_event_15_step += 1;
 }
 
-/**
- * @brief Tick the sequence wait timer; advance the step counter when it expires.
- */
-WMAP_STEP_WAIT(func_800A86CC, D_801B2E58, D_801B2E5C)
+/** @brief Land event 15: wait for the fade-out. */
+WMAP_STEP_WAIT(wmap_land_event_15_step_12, g_wmap_land_event_15_step, g_wmap_land_event_15_timer)
 
-/**
- * @brief World-map step handler: cache the relative scroll delta, bump the frame
- *        counter, and run the sub-step handler.
- */
-void func_800A8700(void)
+/** @brief Land event 15: scroll back to the saved view. */
+void wmap_land_event_15_step_13(void)
 {
-    g_wmap_view_scroll_mode = 2;
-    g_wmap_scroll_remaining_x = g_wmap_saved_view.x - g_wmap_view.x;
-    g_wmap_scroll_remaining_y = g_wmap_saved_view.y - g_wmap_view.y;
-    D_801B2E58 += 1;
-    func_800A8770();
+    wmap_scroll_to_saved_view();
+    g_wmap_land_event_15_step += 1;
+    wmap_land_event_15_step_14();
 }
 
-/**
- * @brief Wait for scripted map scrolling, then run the next step.
- */
-WMAP_STEP_WAIT_SCROLL(func_800A8770,
-    D_801B2E58, func_800A87B0)
+/** @brief Land event 15: wait for the scroll back. */
+WMAP_STEP_WAIT_SCROLL(wmap_land_event_15_step_14, g_wmap_land_event_15_step, wmap_land_event_15_step_15)
 
-/** @brief World-map step handler: clear two flags and advance the step counter. */
-void func_800A87B0(void)
+/** @brief Land event 15: unlock input and end the event. */
+void wmap_land_event_15_step_15(void)
 {
     g_wmap_input_locked = 0;
     g_wmap_event_active = 0;
-    D_801B2E58 += 1;
+    g_wmap_land_event_15_step += 1;
 }
 
 /**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
+ * @brief Run land event 13: scroll to land 16 and start land effect 23.
+ * @param arg0 Nonzero restarts the sequence at step 1.
+ * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
-WMAP_STEP_RUNNER(func_800A87D4,
-    D_800D6D14, 0x4,
-    D_801B2E60, D_801B2E64)
+WMAP_STEP_RUNNER(wmap_land_event_13_run, g_wmap_land_event_13_steps, 0x4, g_wmap_land_event_13_step, g_wmap_land_event_13_timer)
 
-/**
- * @brief Restart the sequence at step 1 with a one-frame timer.
- */
-WMAP_STEP_RESET(func_800A884C, D_801B2E60, D_801B2E64)
+/** @brief Land event 13: restart at step 1 with a one-frame timer. */
+WMAP_STEP_RESET(wmap_land_event_13_reset, g_wmap_land_event_13_step, g_wmap_land_event_13_timer)
 
-/**
- * @brief Wait for scripted map scrolling, then run the next step.
- */
-WMAP_STEP_WAIT_SCROLL(func_800A8864,
-    D_801B2E60, func_800A88A4)
+/** @brief Land event 13: wait for the scroll, then start the land effect. */
+WMAP_STEP_WAIT_SCROLL(wmap_land_event_13_step_02, g_wmap_land_event_13_step, wmap_land_event_13_step_03)
 
-/** @brief World-map step handler: kick two sub-tasks and expire the step counter. */
-void func_800A88A4(void)
+/** @brief Land event 13: queue and start the land effect, ending the event. */
+void wmap_land_event_13_step_03(void)
 {
-    wmap_queue_effect_resources(0x17);
-    wmap_start_land_effect(0x17);
-    D_801B2E60 += 1;
+    wmap_queue_effect_resources(WMAP_LAND_EVENT_13_EFFECT);
+    wmap_start_land_effect(WMAP_LAND_EVENT_13_EFFECT);
+    g_wmap_land_event_13_step += 1;
 }
 
 /**
- * @brief Dispatch the current world-map sequence step, or reset it.
- * @param arg0 Non-zero forces a reset of the step counters.
- * @return 1 if a step ran or reset, 0 if the step index was out of range.
+ * @brief Run land event 12: scroll to land 23 and start land effect 22.
+ * @param arg0 Nonzero restarts the sequence at step 1.
+ * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
-WMAP_STEP_RUNNER(func_800A88D8,
-    D_800D6D24, 0x4,
-    D_801B2E68, D_801B2E6C)
+WMAP_STEP_RUNNER(wmap_land_event_12_run, g_wmap_land_event_12_steps, 0x4, g_wmap_land_event_12_step, g_wmap_land_event_12_timer)
 
-/**
- * @brief Restart the sequence at step 1 with a one-frame timer.
- */
-WMAP_STEP_RESET(func_800A8950, D_801B2E68, D_801B2E6C)
+/** @brief Land event 12: restart at step 1 with a one-frame timer. */
+WMAP_STEP_RESET(wmap_land_event_12_reset, g_wmap_land_event_12_step, g_wmap_land_event_12_timer)
 
-/**
- * @brief Wait for scripted map scrolling, then run the next step.
- */
-WMAP_STEP_WAIT_SCROLL(func_800A8968,
-    D_801B2E68, func_800A89A8)
+/** @brief Land event 12: wait for the scroll, then start the land effect. */
+WMAP_STEP_WAIT_SCROLL(wmap_land_event_12_step_02, g_wmap_land_event_12_step, wmap_land_event_12_step_03)
 
-/** @brief World-map step handler: kick two sub-tasks and expire the step counter. */
-void func_800A89A8(void)
+/** @brief Land event 12: queue and start the land effect, ending the event. */
+void wmap_land_event_12_step_03(void)
 {
-    wmap_queue_effect_resources(0x16);
-    wmap_start_land_effect(0x16);
-    D_801B2E68 += 1;
+    wmap_queue_effect_resources(WMAP_LAND_EVENT_12_EFFECT);
+    wmap_start_land_effect(WMAP_LAND_EVENT_12_EFFECT);
+    g_wmap_land_event_12_step += 1;
 }

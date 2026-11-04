@@ -4,7 +4,7 @@
 #include "common.h"
 
 void func_8005F9BC(void);
-void func_8005FF88(s32 selection);
+void wmap_set_map_label(s32 selection);
 void wmap_init_label_sprites(void);
 
 /** @brief Auxiliary label set selected by the map and artifact controls. */

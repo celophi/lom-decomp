@@ -284,7 +284,7 @@ WMAP_STEP_RESET(wmap_special_effect_34_step_00, g_wmap_special_effect_34_step, g
 /**
  * @brief Effect 34 step: save the view and cursor, move the focus, load
  *        effect resource 0x22 and advance the step.
- * @note JP keeps the cursor and calls func_8005FF88(-1) instead.
+ * @note JP keeps the cursor and calls wmap_set_map_label(-1) instead.
  */
 void wmap_special_effect_34_step_01(void)
 {
@@ -297,7 +297,7 @@ void wmap_special_effect_34_step_01(void)
     g_wmap_focus_screen_position.point.y = 0x69;
     g_wmap_saved_view = g_wmap_view;
 #if defined(VERSION_JP)
-    func_8005FF88(-1);
+    wmap_set_map_label(-1);
 #else
     field_00 = g_wmap_cursor_column;
     field_04 = g_wmap_cursor_row;

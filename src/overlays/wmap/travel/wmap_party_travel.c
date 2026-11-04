@@ -17,10 +17,7 @@
 #include "../internal/wmap_cells.h"
 #include "main/audio/akao.h"
 
-#define WMAP_CELL_SPACING 48
-#define WMAP_TRAVEL_CELL_UNITS 160
 #define WMAP_TRAVEL_STEP 4
-#define WMAP_SCRIPTED_TRAVELER 3
 #define WMAP_TRAVEL_ANIMATION_BYTES 0x400
 #define WMAP_TRAVEL_SCALE_INDEX 15
 #define WMAP_TRAVEL_SHADE 128
@@ -318,7 +315,7 @@ void wmap_update_party_travel(void)
                     g_wmap_travelers[0].destination_y = selected_y;
                     if (selected_x != g_wmap_travelers[0].cell_x || selected_y != g_wmap_travelers[0].cell_y)
                     {
-                        func_8005EB68(g_wmap_travelers[0].cell_x, g_wmap_travelers[0].cell_y, selected_x, selected_y, g_wmap_travelers[0].path_x.cells,
+                        wmap_build_route(g_wmap_travelers[0].cell_x, g_wmap_travelers[0].cell_y, selected_x, selected_y, g_wmap_travelers[0].path_x.cells,
                                       g_wmap_travelers[0].path_y.cells);
                         g_wmap_travelers[0].moving = 1;
                         /* The route begins with the cell the party already occupies. */
@@ -392,7 +389,7 @@ void wmap_init_party_travel(void)
     {
         resource_id = WMAP_TRAVEL_ALTERNATE_SPRITE_RESOURCE;
     }
-    func_80064F64(resource_id);
+    wmap_load_tim_file(resource_id);
     if (g_wmap_second_traveler_enabled != 0)
     {
         cdrom_queue_read(WMAP_TRAVEL_SECOND_ANIMATION_RESOURCE, D_800DC298);

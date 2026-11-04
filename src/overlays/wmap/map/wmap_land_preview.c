@@ -518,7 +518,7 @@ void wmap_update_land_preview(void)
                 {
                     land_id = -1;
                 }
-                func_8005FF88(land_id);
+                wmap_set_map_label(land_id);
             }
 
             if ((g_wmap_cells[cell_x][cell_y].land_id == WMAP_EMPTY_CELL) && (g_wmap_selection_phase == WMAP_SELECTION_MAP) && (g_wmap_view_scroll_mode != WMAP_PREVIEW_PROJECTED_MODE) &&

@@ -6,6 +6,9 @@
 /** @brief Width and height of the world map's land grid, in cells. */
 #define WMAP_GRID_SIZE 6
 
+/** @brief Map distance between neighboring land cells. */
+#define WMAP_CELL_SPACING 48
+
 /** @brief One cell of the world map's land grid (40 bytes). */
 typedef struct
 {

@@ -130,5 +130,5 @@ inspected payloads are byte-identical between US and JP.
   packing conventions explain them.
 - Most animation-bank records and their relationship to sprite actor setup
   still need a separate format audit.
-- `func_80064F64` is the palette upload path used by effect 18. Its broader
-  shared-buffer behavior is outside this loader-family cleanup.
+- `wmap_load_tim_file` is the palette upload path used by effect 18. It reads
+  a TIM file into the shared load buffer and uploads it to VRAM.

@@ -114,7 +114,7 @@ typedef struct
 } WmapMotion;
 
 extern WmapMotion g_wmap_actor_motions[];
-extern WmapMotion D_801AFD60[];
+extern WmapMotion g_wmap_effect_actor_motions[];
 extern WmapMotion D_801AFFB8[];
 
 /** @brief Move the model closer and fade it until the timer expires. */
@@ -147,12 +147,12 @@ void wmap_land_effect_17_sequence_5_step_01(void)
     g_wmap_effect_params[0x1E] = 12000;
     for (i = 0; i < 3; i++)
     {
-        D_801AFD60[i].state = 1;
-        D_801AFD60[i].angle = i * 1365;
-        D_801AFD60[i].scale = 128;
-        D_801AFD60[i].z = 12000;
-        D_801AFD60[i].x = 0;
-        D_801AFD60[i].field_0E = 0;
+        g_wmap_effect_actor_motions[i].state = 1;
+        g_wmap_effect_actor_motions[i].angle = i * 1365;
+        g_wmap_effect_actor_motions[i].scale = 128;
+        g_wmap_effect_actor_motions[i].z = 12000;
+        g_wmap_effect_actor_motions[i].x = 0;
+        g_wmap_effect_actor_motions[i].field_0E = 0;
         g_wmap_actor_animations[i + 20].data = g_wmap_animation_bank_0;
         WMAP_ACTOR_BLOCK(20)[i].scale_index = 15;
         WMAP_ACTOR_BLOCK(20)[i].previous_sequence = -1;
@@ -320,7 +320,7 @@ void wmap_land_effect_17_sequence_9_step_01(void)
         WmapAnimationSlot *resources;
         u8 *resource_data;
 
-        motion = &D_801AFD60[i];
+        motion = &g_wmap_effect_actor_motions[i];
         motion->state = 1;
         angle = rand();
         resource_offset = (i + 20) * 8;

@@ -200,7 +200,7 @@ extern WmapScreenPosition g_wmap_focus_screen_position;
 extern s32* g_wmap_effect_params;
 
 extern WmapMotion g_wmap_actor_motions[];
-extern WmapMotion D_801AFD60[];
+extern WmapMotion g_wmap_effect_actor_motions[];
 extern WmapMotion D_801B0080[];
 
 /**
@@ -358,12 +358,12 @@ void wmap_land_effect_10_sequence_5_step_01(void)
     g_wmap_effect_params[0x1E] = 13000;
     for (i = 0; i < 20; i++)
     {
-        D_801AFD60[i].state = 0;
-        D_801AFD60[i].angle = i * 204;
-        D_801AFD60[i].scale = 128;
-        D_801AFD60[i].z = 13000;
-        D_801AFD60[i].x = 0;
-        D_801AFD60[i].field_0E = 0;
+        g_wmap_effect_actor_motions[i].state = 0;
+        g_wmap_effect_actor_motions[i].angle = i * 204;
+        g_wmap_effect_actor_motions[i].scale = 128;
+        g_wmap_effect_actor_motions[i].z = 13000;
+        g_wmap_effect_actor_motions[i].x = 0;
+        g_wmap_effect_actor_motions[i].field_0E = 0;
         g_wmap_actor_animations[i + 20].data = g_wmap_animation_bank_0;
         actors[i].scale_index = 15;
         actors[i].sequence = 3;
