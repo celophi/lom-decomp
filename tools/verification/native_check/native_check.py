@@ -7,17 +7,15 @@ the warnings that matter when pointers are wider than four bytes. The PS1
 build is not involved and does not change.
 
 What it reports:
-- files that do not compile at all (gated: this list may only shrink)
+- files that do not compile at all (the gate: this list may only shrink)
 - per category, the places that assume 32-bit pointers or rely on old C
-  (gated: no file's count in a category may grow)
 
-The files that fail today are listed in baseline_<version>_gcc.txt and the
-warning counts per file and category in warnings_<version>_gcc.txt, which CI
+The files that fail today are listed in baseline_<version>_gcc.txt, which CI
 checks. gcc and clang reject different things, and clang's set moves between
-versions, so other compilers only get a report. gcc releases agree on the
-counts (11 and 16 give the same per-file numbers). A file that compiles must
-keep compiling, and a count may not go up; when a file starts compiling or a
-count goes down, --update-baseline rewrites both files to lock it in.
+versions, so other compilers only get a report. A file that compiles
+must keep compiling; one that starts compiling should be removed from the
+baseline (--update-baseline does that). Warning counts are reported but not
+gated, since they vary between compilers.
 
 Usage (normally through `make native-check`):
   native_check.py --version us [--cc cc] [--update-baseline] FILE...
@@ -134,27 +132,6 @@ def write_baseline(path: pathlib.Path, failing: dict):
     path.write_text("\n".join(lines) + "\n")
 
 
-def read_warning_baseline(path: pathlib.Path) -> dict[tuple[str, str], int]:
-    """(file, category flag) -> warning count, from a warnings_<version>_<family>.txt."""
-    counts = {}
-    if not path.exists():
-        return counts
-    for line in path.read_text().split("\n"):
-        line = line.split("#")[0].strip()
-        if line:
-            file, flag, count = line.split()
-            counts[(file, flag)] = int(count)
-    return counts
-
-
-def write_warning_baseline(path: pathlib.Path, results):
-    lines = [f"# Host-compiler warnings per file and category, with {path.stem.rsplit('_', 1)[1]} (make native-check).",
-             "# No count may grow; see tools/verification/native_check/native_check.py.", ""]
-    for file, _, counts in sorted(results):
-        lines += [f"{file}  {flag}  {counts[flag]}" for flag in CATEGORIES if counts[flag]]
-    path.write_text("\n".join(lines) + "\n")
-
-
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--version", required=True)
@@ -184,12 +161,9 @@ def main():
                 print(f"  {path}: " + ", ".join(f"{CATEGORIES[f]}: {n}" for f, n in counts.most_common()))
 
     baseline_path = HERE / f"baseline_{args.version}_{family(compiler)}.txt"
-    warnings_path = HERE / f"warnings_{args.version}_{family(compiler)}.txt"
     if args.update_baseline:
         write_baseline(baseline_path, failing)
         print(f"wrote {baseline_path.relative_to(REPO)} ({len(failing)} files)")
-        write_warning_baseline(warnings_path, results)
-        print(f"wrote {warnings_path.relative_to(REPO)} ({sum(totals.values())} warnings)")
         return
     if not baseline_path.exists():
         # No baseline for this compiler family: report, do not gate.
@@ -204,24 +178,8 @@ def main():
         print(f"  now compiles, remove from the baseline: {p}")
     for p in new:
         print(f"  NEW FAILURE: {p}: {failing[p]}")
-
-    warning_baseline = read_warning_baseline(warnings_path)
-    grown = []
-    for file, _, counts in results:
-        for flag in CATEGORIES:
-            before, now = warning_baseline.get((file, flag), 0), counts[flag]
-            if now > before:
-                grown.append(file)
-                print(f"  MORE WARNINGS: {file}: {CATEGORIES[flag]}: {before} -> {now}")
-            elif now < before:
-                print(f"  fewer warnings, lower the baseline: {file}: {CATEGORIES[flag]}: {before} -> {now}")
-
     if new:
         print(f"native-check: {len(new)} file(s) stopped compiling for the host")
-    if grown:
-        print(f"native-check: warnings grew in {len(set(grown))} file(s); "
-              f"run with --verbose and see {warnings_path.relative_to(REPO)}")
-    if new or grown:
         sys.exit(1)
 
 

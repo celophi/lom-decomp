@@ -4,7 +4,7 @@
 # PS1 build is not involved. The Psy-Q SDK sources are left out: a port
 # replaces the SDK.
 #
-#   make native-check                         check against the baselines (compile + warning counts)
+#   make native-check                         check against the baseline
 #   make native-check NATIVE_CC=clang         with another compiler
 #   make native-check NATIVE_CHECK_FLAGS=--update-baseline
 
