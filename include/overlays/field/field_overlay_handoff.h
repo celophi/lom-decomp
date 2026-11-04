@@ -27,4 +27,31 @@ extern s32 g_field_card_pet_slot;
 /** @brief NIKI and ADDHERO progress: FIELD sets 1 when it opens them. TODO: later values unknown. */
 extern s32 g_field_niki_addhero_state;
 
+/**
+ * @brief menu_run results: the screen FIELD opens once MENU closes. The rename
+ *        results are also the GNAME source mode (the Equipment and Ability page
+ *        renames use mode FIELD_MENU_NAME_ITEM).
+ */
+#define FIELD_MENU_CLOSED 0
+#define FIELD_MENU_NAME_ITEM 1
+#define FIELD_MENU_NAME_CHARACTER 3
+#define FIELD_MENU_GOLEM 10
+#define FIELD_MENU_NAME_EQUIPMENT_ITEM 11
+#define FIELD_MENU_NAME_ABILITY_ITEM 12
+
+/** @brief Name GNAME starts from when MENU requests a rename. */
+extern u8 g_field_rename_initial_name[];
+
+/** @brief Record whose name GNAME edits: an item record or a FieldCharacterRecord. */
+extern u8* g_field_rename_target;
+
+/** @brief GNAME history-list entry: g_script_repeat_last for an item, the character's info.actions.unk19 (+0x80 for a golem) for a character. */
+extern s32 g_field_rename_source;
+
+/** @brief Extra text GNAME offers for an item rename (the item's type name). */
+extern u8 g_field_rename_custom_name[];
+
+/** @brief After an item or character rename FIELD runs script g_field_rename_script_index + 1: the item category, or 3 + the character's party position. */
+extern s32 g_field_rename_script_index;
+
 #endif

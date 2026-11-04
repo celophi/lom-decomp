@@ -4,7 +4,7 @@
 #include "common.h"
 #include "field_actor.h"
 #include "field_actor_binding.h"
-#include "field_player_records.h"
+#include "overlays/field/field_player_records.h"
 #include "field_resource_actions.h"
 #include "overlays/field/field_actor_records.h"
 

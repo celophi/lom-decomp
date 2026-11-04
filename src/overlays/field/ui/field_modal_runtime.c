@@ -7,42 +7,43 @@
  * ADDHERO and duel modal screens.
  */
 
-#include "overlays/field/field_text.h"
-#include "overlays/field/field_numeric_sprites.h"
-#include "overlays/field/field_ui_text.h"
-#include "overlays/field/field_sound.h"
-#include "common/encoded_text.h"
-#include "main/audio/akao_cmd.h"
 #include "common.h"
+#include <libetc.h>
+#include <libgpu.h>
+#include <libgte.h>
+#include <memory.h>
+
 #include "../internal/field_actor_routes.h"
 #include "../internal/field_actor_runtime.h"
+#include "../internal/field_actor_tables.h"
 #include "../internal/field_calls.h"
-#include "../internal/field_menu_element.h"
-#include "common/gpu_packet.h"
-#include <libgte.h>
-#include <libgpu.h>
-#include "../internal/field_modal_runtime.h"
 #include "../internal/field_effect_render_state.h"
-#include "main/cdrom.h"
+#include "../internal/field_menu_element.h"
+#include "../internal/field_modal_runtime.h"
+#include "../internal/field_records.h"
+#include "common/encoded_text.h"
+#include "common/gpu_packet.h"
+#include "common/render_context.h"
 #include "common/saved_game.h"
 #include "common/vector.h"
-#include <libetc.h>
-#include "overlays/field/field_scene_transition.h"
+#include "main/audio/akao.h"
+#include "main/audio/akao_cmd.h"
 #include "main/cd_resources.h"
+#include "main/cdrom.h"
 #include "main/controller_internal.h"
-#include "../internal/field_records.h"
-#include "../internal/field_actor_tables.h"
-#include "main/field_runtime.h"
 #include "main/display.h"
+#include "main/field_runtime.h"
 #include "main/game_state.h"
-#include <memory.h>
-#include "common/render_context.h"
 #include "main/overlay_memory.h"
+#include "overlays/field/field_input.h"
+#include "overlays/field/field_numeric_sprites.h"
+#include "overlays/field/field_overlay_handoff.h"
+#include "overlays/field/field_scene_transition.h"
+#include "overlays/field/field_sound.h"
+#include "overlays/field/field_text.h"
+#include "overlays/field/field_ui_text.h"
 #include "overlays/gname/gname.h"
 #include "overlays/zukan/zukan.h"
-#include "main/audio/akao.h"
-#include "overlays/field/field_input.h"
-#include "overlays/field/field_overlay_handoff.h"
 
 void field_set_cd_error_fade_target(void);
 
@@ -106,12 +107,6 @@ void field_set_cd_error_fade_target(void);
 #define FIELD_GOLEM_WORK_BUFFER SECONDARY_OVERLAY_AT(0x10000)
 #define FIELD_SHOP_WORK_BUFFER ((void*)SECONDARY_OVERLAY_AT(0x10000))
 #define FIELD_GOSUB_WORK_BUFFER ((void*)SECONDARY_OVERLAY_AT(0x35000))
-
-/** @brief Screens the MENU overlay returns: 0 closes the menu, others open GNAME with that mode. */
-#define FIELD_MENU_CLOSED 0
-#define FIELD_MENU_GOLEM 10
-#define FIELD_MENU_NAME_ENTRY_B 11
-#define FIELD_MENU_NAME_ENTRY_C 12
 
 /** @brief g_field_gosub_phase: idle, closing (the screens finished), running. */
 #define FIELD_GOSUB_IDLE 0
@@ -224,13 +219,6 @@ extern s32 g_field_duel_panel_offset;
 extern s32 g_field_duel_panel_hold_frames;
 extern s32 g_field_duel_winner;
 
-/* Item rename request left by the MENU overlay for GNAME: the item record, its old name, extra text, source selector and item category. */
-extern u8 g_field_rename_custom_name[];
-extern u8 g_field_rename_initial_name[];
-extern s32 g_field_rename_item_category;
-extern u8* g_field_rename_target;
-extern s32 g_field_rename_source;
-
 void akao_play_sound(s32 id);
 void akao_set_mono_output(s32 mode);
 
@@ -248,7 +236,8 @@ void gosub_open_screen_sequence(void* work, void* screen_sequence);
 
 s32 field_party_reload_reading(void);
 void* field_draw_player_icon(POLY_FT4* packet_cursor, u_long* ot, s32 player, s32 x, s32 y, s32 flip);
-POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* packet_cursor, u_long* ot, u8* text, s32 color, s32 x, s32 y, s32 align, s32 slot, s32 scale_x, s32 scale_y, s32 arg10, s32 visible);
+POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* packet_cursor, u_long* ot, u8* text, s32 color, s32 x, s32 y, s32 align, s32 slot, s32 scale_x, s32 scale_y,
+                                      s32 arg10, s32 visible);
 
 s32 field_name_byte_length(u8* name);
 void field_copy_name(u8* destination, u8* source);
@@ -880,7 +869,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
     FieldTextOffset* bank_entry;
     s32 text_color;
     u16 text_offset;
-    s32 work; /* Text index or skill; in JP also the character info byte of case 0. */
+    s32 work;                /* Text index or skill; in JP also the character info byte of case 0. */
     uintptr_t text_or_state; /* Hint text in the first loop, the label actor's object state in the second. */
     uintptr_t bank;
     s32 record_offset;
@@ -925,8 +914,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
         action_offset = index * sizeof(FieldActionRow);
 
         port = &ports[index];
-        if ((g_field_player_records[index].head.bytes.flags & FIELD_PLAYER_ACTIVE) &&
-            (port->published_sample.device_type < CONTROLLER_DEVICE_CONFIGURING))
+        if ((g_field_player_records[index].head.bytes.flags & FIELD_PLAYER_ACTIVE) && (port->published_sample.device_type < CONTROLLER_DEVICE_CONFIGURING))
         {
             bit_or_actor = 1;
             button_or_x = 0;
@@ -948,105 +936,105 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
 
                     switch (action)
                     {
-                    case FIELD_COMMAND_BUTTON_ACTION: /* The two commands: resource action slots 0 and 1. */
-                    case FIELD_COMMAND_BUTTON_ACTION + 1:
-                        text_part = (uintptr_t)&g_field_resource_actions->slots[-FIELD_COMMAND_BUTTON_ACTION] + action_offset;
-                        action *= sizeof(FieldActionSlot);
-                        work = ((FieldActionSlot*)(text_part + action))->command & FIELD_ACTION_TECHNIQUE_MASK;
-                        text_value = (uintptr_t)g_field_command_names;
-                        text_part = ((u16*)text_value)[work];
-                        text_or_state = text_part + text_value;
-                        break;
+                        case FIELD_COMMAND_BUTTON_ACTION: /* The two commands: resource action slots 0 and 1. */
+                        case FIELD_COMMAND_BUTTON_ACTION + 1:
+                            text_part = (uintptr_t)&g_field_resource_actions->slots[-FIELD_COMMAND_BUTTON_ACTION] + action_offset;
+                            action *= sizeof(FieldActionSlot);
+                            work = ((FieldActionSlot*)(text_part + action))->command & FIELD_ACTION_TECHNIQUE_MASK;
+                            text_value = (uintptr_t)g_field_command_names;
+                            text_part = ((u16*)text_value)[work];
+                            text_or_state = text_part + text_value;
+                            break;
 
-                    case 0: /* Guests 5 and 8 have no attack or guard. */
+                        case 0: /* Guests 5 and 8 have no attack or guard. */
 #if defined(VERSION_JP)
-                        work = save->characters[0].info.bytes[0];
-                        switch (work & FIELD_CHARACTER_TYPE_MASK)
+                            work = save->characters[0].info.bytes[0];
+                            switch (work & FIELD_CHARACTER_TYPE_MASK)
 #else
-                        switch (save->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK)
+                            switch (save->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK)
 #endif
-                        {
-                        case FIELD_CHARACTER_GUEST:
-                            secondary_action = save->characters[0].info.bytes[1];
-                            if ((secondary_action == 5) || (secondary_action == 8))
+                            {
+                                case FIELD_CHARACTER_GUEST:
+                                    secondary_action = save->characters[0].info.bytes[1];
+                                    if ((secondary_action == 5) || (secondary_action == 8))
+                                    {
+                                        text_offset = D_800EC3E0.high << 8;
+                                        text_part = text_offset + bank;
+                                        text_value = D_800EC3E0.low;
+                                        text_or_state = text_part + text_value;
+                                        break;
+                                    }
+                                    /* Other guests use the normal action label. */
+                                    /* fallthrough */
+                                default:
+                                    bank_entry = &D_800EC3E6;
+                                    text_part = bank_entry->high;
+                                    text_value = D_800EC3E6.low;
+                                    text_part <<= 8;
+                                    text_part += bank;
+                                    text_or_state = text_part + text_value;
+                                    break;
+                            }
+
+                            break;
+                        case 1:
+                            switch (save->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK)
+                            {
+                                case FIELD_CHARACTER_GUEST:
+                                    secondary_action_alt = save->characters[0].info.bytes[1];
+                                    if ((secondary_action_alt == 5) || (secondary_action_alt == 8))
+                                    {
+                                        text_offset = D_800EC3E0.high << 8;
+                                        text_part = text_offset + bank;
+                                        text_value = D_800EC3E0.low;
+                                        text_or_state = text_part + text_value;
+                                        break;
+                                    }
+                                    /* Other guests use the normal action label. */
+                                    /* fallthrough */
+                                default:
+                                    text_part = D_800EC3E8.high;
+                                    text_part <<= 8;
+                                    text_part += bank;
+                                    text_value = D_800EC3E8.low;
+                                    text_or_state = text_part + text_value;
+                                    break;
+                            }
+
+                            break;
+                        default:
+                            text_value = (uintptr_t)g_field_technique_names;
+                            work = ((SavedGameLayout*)((u8*)g_saved_game_ctx + record_offset))->characters[0].info.bytes[action];
+
+                            if (work == FIELD_SKILL_NONE)
                             {
                                 text_offset = D_800EC3E0.high << 8;
                                 text_part = text_offset + bank;
                                 text_value = D_800EC3E0.low;
                                 text_or_state = text_part + text_value;
-                                break;
-                            }
-                            /* Other guests use the normal action label. */
-                            /* fallthrough */
-                        default:
-                            bank_entry = &D_800EC3E6;
-                            text_part = bank_entry->high;
-                            text_value = D_800EC3E6.low;
-                            text_part <<= 8;
-                            text_part += bank;
-                            text_or_state = text_part + text_value;
-                            break;
-                        }
-
-                        break;
-                    case 1:
-                        switch (save->characters[0].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK)
-                        {
-                        case FIELD_CHARACTER_GUEST:
-                            secondary_action_alt = save->characters[0].info.bytes[1];
-                            if ((secondary_action_alt == 5) || (secondary_action_alt == 8))
-                            {
-                                text_offset = D_800EC3E0.high << 8;
-                                text_part = text_offset + bank;
-                                text_value = D_800EC3E0.low;
-                                text_or_state = text_part + text_value;
-                                break;
-                            }
-                            /* Other guests use the normal action label. */
-                            /* fallthrough */
-                        default:
-                            text_part = D_800EC3E8.high;
-                            text_part <<= 8;
-                            text_part += bank;
-                            text_value = D_800EC3E8.low;
-                            text_or_state = text_part + text_value;
-                            break;
-                        }
-
-                        break;
-                    default:
-                        text_value = (uintptr_t)g_field_technique_names;
-                        work = ((SavedGameLayout*)((u8*)g_saved_game_ctx + record_offset))->characters[0].info.bytes[action];
-
-                        if (work == FIELD_SKILL_NONE)
-                        {
-                            text_offset = D_800EC3E0.high << 8;
-                            text_part = text_offset + bank;
-                            text_value = D_800EC3E0.low;
-                            text_or_state = text_part + text_value;
-                        }
-                        else
-                        {
-                            if (work & FIELD_SKILL_INSTRUMENT)
-                            {
-                                text_offset = work & ~FIELD_SKILL_INSTRUMENT;
-                                text_or_state = (uintptr_t)&((FieldCharacterRecord*)((u8*)g_saved_game_ctx + record_base_offset))->unk150[text_offset];
                             }
                             else
                             {
-                                action = (uintptr_t)&g_field_resource_actions->slots[action];
-                                work = ((FieldActionSlot*)(index * sizeof(FieldActionRow) + action))->command;
-                                work &= FIELD_ACTION_TECHNIQUE_MASK;
-                                text_value = g_field_player_records[index].head.bytes.weapon_type;
-                                work += text_value * FIELD_TECHNIQUES_PER_WEAPON;
+                                if (work & FIELD_SKILL_INSTRUMENT)
+                                {
+                                    text_offset = work & ~FIELD_SKILL_INSTRUMENT;
+                                    text_or_state = (uintptr_t)&((FieldCharacterRecord*)((u8*)g_saved_game_ctx + record_base_offset))->unk150[text_offset];
+                                }
+                                else
+                                {
+                                    action = (uintptr_t)&g_field_resource_actions->slots[action];
+                                    work = ((FieldActionSlot*)(index * sizeof(FieldActionRow) + action))->command;
+                                    work &= FIELD_ACTION_TECHNIQUE_MASK;
+                                    text_value = g_field_player_records[index].head.bytes.weapon_type;
+                                    work += text_value * FIELD_TECHNIQUES_PER_WEAPON;
 
-                                text_value = (uintptr_t)g_field_technique_names;
-                                text_part = ((u16*)text_value)[work];
-                                text_or_state = text_part + text_value;
+                                    text_value = (uintptr_t)g_field_technique_names;
+                                    text_part = ((u16*)text_value)[work];
+                                    text_or_state = text_part + text_value;
+                                }
                             }
-                        }
 
-                        break;
+                            break;
                     }
 
                     label_y = index;
@@ -1465,8 +1453,8 @@ void field_process_input(FieldRenderHalf* render)
             }
         }
 
-        if (field_text_get_status(0) == FIELD_TEXT_STATUS_CLOSED && g_field_timed_panel_active == 0 && g_field_dialog_screen_mode == 0 && g_field_return_to_title_prompt_state == 0 &&
-            g_field_item_drop_menu_open == 0 && field_party_reload_pending() == 0)
+        if (field_text_get_status(0) == FIELD_TEXT_STATUS_CLOSED && g_field_timed_panel_active == 0 && g_field_dialog_screen_mode == 0 &&
+            g_field_return_to_title_prompt_state == 0 && g_field_item_drop_menu_open == 0 && field_party_reload_pending() == 0)
         {
             if (g_field_menu_controller_types[0] != CONTROLLER_DEVICE_DISCONNECTED && ports[0].published_sample.device_type == CONTROLLER_DEVICE_DISCONNECTED)
             {
@@ -1553,14 +1541,15 @@ static s32 field_play_low_hp_warning(void)
     {
         if (!(g_frame_counter & 0x1F))
         {
-            if ((g_field_object_states[0].current_hp.word != 0) && ((u32)(g_field_object_states[0].current_hp.word * 4) < (u32)g_field_object_states[0].maximum_hp))
+            if ((g_field_object_states[0].current_hp.word != 0) &&
+                ((u32)(g_field_object_states[0].current_hp.word * 4) < (u32)g_field_object_states[0].maximum_hp))
             {
                 field_play_sound(FIELD_SOUND_LOW_HP, AKAO_PAN_CENTER);
             }
         }
 
-        if (!((g_frame_counter + 0x10) & 0x1F) && !(g_field_actors[1].control.word & FIELD_CONTROL_MODE_MASK) && (g_field_object_states[1].current_hp.word != 0) &&
-            ((u32)(g_field_object_states[1].current_hp.word * 4) < (u32)g_field_object_states[1].maximum_hp))
+        if (!((g_frame_counter + 0x10) & 0x1F) && !(g_field_actors[1].control.word & FIELD_CONTROL_MODE_MASK) &&
+            (g_field_object_states[1].current_hp.word != 0) && ((u32)(g_field_object_states[1].current_hp.word * 4) < (u32)g_field_object_states[1].maximum_hp))
         {
             field_play_sound(FIELD_SOUND_LOW_HP, AKAO_PAN_CENTER);
         }
@@ -1629,26 +1618,28 @@ static void field_run_menu(void* render_buffers, s32 controller)
             cdrom_stream(CD_RES_GNAME_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
             cdrom_wait_queue_empty();
 
-            if ((screen_id == FIELD_MENU_NAME_ENTRY_B) || (screen_id == FIELD_MENU_NAME_ENTRY_C))
+            if ((screen_id == FIELD_MENU_NAME_EQUIPMENT_ITEM) || (screen_id == FIELD_MENU_NAME_ABILITY_ITEM))
             {
-                func_80140004(GNAME_RENDER_BUFFERS, g_field_rename_initial_name, g_field_rename_target, 1, g_field_rename_source, g_field_rename_custom_name, 0);
+                func_80140004(GNAME_RENDER_BUFFERS, g_field_rename_initial_name, g_field_rename_target, FIELD_MENU_NAME_ITEM, g_field_rename_source,
+                              g_field_rename_custom_name, 0);
             }
             else
             {
-                func_80140004(GNAME_RENDER_BUFFERS, g_field_rename_initial_name, g_field_rename_target, screen_id, g_field_rename_source, g_field_rename_custom_name, 0);
+                func_80140004(GNAME_RENDER_BUFFERS, g_field_rename_initial_name, g_field_rename_target, screen_id, g_field_rename_source,
+                              g_field_rename_custom_name, 0);
             }
 
             field_text_reset_windows();
             g_script_repeat_count = g_field_rename_source;
 
-            if ((screen_id == FIELD_MENU_NAME_ENTRY_B) || (screen_id == FIELD_MENU_NAME_ENTRY_C))
+            if ((screen_id == FIELD_MENU_NAME_EQUIPMENT_ITEM) || (screen_id == FIELD_MENU_NAME_ABILITY_ITEM))
             {
                 g_script_repeat_count = 0;
                 g_active_script = screen_id;
             }
             else
             {
-                g_active_script = g_field_rename_item_category + 1;
+                g_active_script = g_field_rename_script_index + 1;
             }
         }
     }
@@ -2137,162 +2128,162 @@ void field_update_modal(FieldRenderHalf* render)
 
     switch (g_field_modal_state)
     {
-    case FIELD_MODAL_SHOP:
-        if ((g_field_shop_active != 0) && (shop_update(render) != 0))
-        {
-            g_field_shop_active = 0;
-            g_field_modal_state = FIELD_MODAL_NONE;
-            field_reset_actor_resources();
-            return;
-        }
-    case FIELD_MODAL_NONE:
-        return;
-    case FIELD_MODAL_GOSUB:
-        if (g_field_gosub_phase != FIELD_GOSUB_IDLE)
-        {
-            if (g_field_gosub_phase >= FIELD_GOSUB_RUNNING)
+        case FIELD_MODAL_SHOP:
+            if ((g_field_shop_active != 0) && (shop_update(render) != 0))
             {
-                if (gosub_update_frame(render) != 0)
+                g_field_shop_active = 0;
+                g_field_modal_state = FIELD_MODAL_NONE;
+                field_reset_actor_resources();
+                return;
+            }
+        case FIELD_MODAL_NONE:
+            return;
+        case FIELD_MODAL_GOSUB:
+            if (g_field_gosub_phase != FIELD_GOSUB_IDLE)
+            {
+                if (g_field_gosub_phase >= FIELD_GOSUB_RUNNING)
+                {
+                    if (gosub_update_frame(render) != 0)
+                    {
+                        DrawSync(0);
+                        g_field_gosub_phase = FIELD_GOSUB_CLOSING;
+                        field_reset_actor_resources();
+                        return;
+                    }
+                }
+                else
                 {
                     DrawSync(0);
-                    g_field_gosub_phase = FIELD_GOSUB_CLOSING;
-                    field_reset_actor_resources();
+                    field_text_reset_windows();
+                    g_field_gosub_state = 2;
+                    g_field_modal_state = FIELD_MODAL_NONE;
+                    g_field_gosub_phase = FIELD_GOSUB_IDLE;
                     return;
                 }
             }
-            else
+
+            return;
+        case FIELD_MODAL_CARDA:
+            if ((g_field_card_overlay_mode != 0) && (carda_update_frame(render) != 0))
             {
-                DrawSync(0);
-                field_text_reset_windows();
-                g_field_gosub_state = 2;
-                g_field_modal_state = FIELD_MODAL_NONE;
-                g_field_gosub_phase = FIELD_GOSUB_IDLE;
-                return;
-            }
-        }
+                field_reset_actor_resources();
 
-        return;
-    case FIELD_MODAL_CARDA:
-        if ((g_field_card_overlay_mode != 0) && (carda_update_frame(render) != 0))
-        {
-            field_reset_actor_resources();
-
-            switch (g_field_card_overlay_mode)
-            {
-            case 2:
-                field_rebuild_party_actions(0);
-
-                for (index = 0; index < FIELD_PARTY_COUNT; index++)
+                switch (g_field_card_overlay_mode)
                 {
-                    g_field_player_records[index].resource_id = 0;
-                    g_field_player_records[index].portrait_index = FIELD_PORTRAIT_NONE;
+                    case 2:
+                        field_rebuild_party_actions(0);
+
+                        for (index = 0; index < FIELD_PARTY_COUNT; index++)
+                        {
+                            g_field_player_records[index].resource_id = 0;
+                            g_field_player_records[index].portrait_index = FIELD_PORTRAIT_NONE;
+                        }
+
+                        g_music_track_index = g_saved_game_ctx->track.bits.music_track;
+                        field_set_scene_parameters(g_saved_game_ctx->scene_id, g_saved_game_ctx->object_id, g_saved_game_ctx->spawn.bits.id,
+                                                   g_saved_game_ctx->music_id, g_saved_game_ctx->sound_bank_id, g_saved_game_ctx->secondary_music_id);
+                        field_set_fade_target_only(FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, 8);
+                        break;
+                    case 6:
+                    case 7:
+                        g_gosub_result_values[0] = 6;
+                        /* fall through */
+                    default:
+                    case 3:
+                    case 4:
+                    case 5:
+                        break;
                 }
 
-                g_music_track_index = g_saved_game_ctx->track.bits.music_track;
-                field_set_scene_parameters(g_saved_game_ctx->scene_id, g_saved_game_ctx->object_id, g_saved_game_ctx->spawn.bits.id, g_saved_game_ctx->music_id,
-                                           g_saved_game_ctx->sound_bank_id, g_saved_game_ctx->secondary_music_id);
-                field_set_fade_target_only(FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, 8);
-                break;
-            case 6:
-            case 7:
-                g_gosub_result_values[0] = 6;
-                /* fall through */
-            default:
-            case 3:
-            case 4:
-            case 5:
-                break;
+                g_gosub_result_count = 1;
+                g_field_gosub_state = 2;
+                g_field_card_overlay_mode = 0;
+                g_field_modal_state = FIELD_MODAL_NONE;
+                return;
             }
 
-            g_gosub_result_count = 1;
-            g_field_gosub_state = 2;
-            g_field_card_overlay_mode = 0;
-            g_field_modal_state = FIELD_MODAL_NONE;
             return;
-        }
-
-        return;
-    case FIELD_MODAL_NIKI:
-        if ((g_field_niki_addhero_state != 0) && (niki_update_frame(render) != 0))
-        {
-            field_reset_actor_resources();
-            g_field_niki_addhero_state = 0;
-            g_field_modal_state = FIELD_MODAL_NONE;
-            return;
-        }
-
-        return;
-    case FIELD_MODAL_ADDHERO:
-        if (g_field_niki_addhero_state != 0)
-        {
-            result = addhero_state_step(render);
-
-            switch (result)
+        case FIELD_MODAL_NIKI:
+            if ((g_field_niki_addhero_state != 0) && (niki_update_frame(render) != 0))
             {
-            case 1:
-                g_field_player_records[1].head.bits.active = 0;
-                g_field_player_records[1].head.bits.alt_appearance = g_saved_game_ctx->characters[1].info.bytes[0] & 1;
-                g_field_player_records[1].character_kind = FIELD_PLAYER_KIND_HERO;
-                field_activate_actor_resource_slot(-2, 0, 0);
-                field_reset_actor_resources();
-                g_field_niki_addhero_state = 0;
-                g_field_modal_state = FIELD_MODAL_NONE;
-                return;
-            case 3:
-                field_reset_actor_resources();
-                g_field_niki_addhero_state = 0;
-                g_field_modal_state = FIELD_MODAL_NONE;
-                return;
-            case 2:
-                field_release_actor_resource_slot(0);
                 field_reset_actor_resources();
                 g_field_niki_addhero_state = 0;
                 g_field_modal_state = FIELD_MODAL_NONE;
                 return;
             }
-        }
 
-        return;
-    case FIELD_MODAL_EMPTY_SHOP:
-        if (g_pad_input & (PADRright | PADi))
-        {
+            return;
+        case FIELD_MODAL_ADDHERO:
+            if (g_field_niki_addhero_state != 0)
+            {
+                result = addhero_state_step(render);
+
+                switch (result)
+                {
+                    case 1:
+                        g_field_player_records[1].head.bits.active = 0;
+                        g_field_player_records[1].head.bits.alt_appearance = g_saved_game_ctx->characters[1].info.bytes[0] & 1;
+                        g_field_player_records[1].character_kind = FIELD_PLAYER_KIND_HERO;
+                        field_activate_actor_resource_slot(-2, 0, 0);
+                        field_reset_actor_resources();
+                        g_field_niki_addhero_state = 0;
+                        g_field_modal_state = FIELD_MODAL_NONE;
+                        return;
+                    case 3:
+                        field_reset_actor_resources();
+                        g_field_niki_addhero_state = 0;
+                        g_field_modal_state = FIELD_MODAL_NONE;
+                        return;
+                    case 2:
+                        field_release_actor_resource_slot(0);
+                        field_reset_actor_resources();
+                        g_field_niki_addhero_state = 0;
+                        g_field_modal_state = FIELD_MODAL_NONE;
+                        return;
+                }
+            }
+
+            return;
+        case FIELD_MODAL_EMPTY_SHOP:
+            if (g_pad_input & (PADRright | PADi))
+            {
+                field_text_reset_windows();
+                index = 0;
+                g_field_modal_state = FIELD_MODAL_NONE;
+                g_pad_input = 0;
+                break;
+            }
+
+            field_text_reset_scratch();
+            field_draw_empty_shop_notice(render);
+            field_text_upload_immediate_cache();
+            return;
+        case FIELD_MODAL_DUEL_INTRO:
+            if (field_draw_duel_intro(render) == 0)
+            {
+                return;
+            }
+
+            field_play_set_sfx(0, AKAO_PAN_CENTER, 0, 3);
             field_text_reset_windows();
             index = 0;
             g_field_modal_state = FIELD_MODAL_NONE;
             g_pad_input = 0;
             break;
-        }
+        case FIELD_MODAL_DUEL_RESULT:
+            if (field_draw_duel_result(render) == 0 || field_party_reload_reading() != 0)
+            {
+                return;
+            }
 
-        field_text_reset_scratch();
-        field_draw_empty_shop_notice(render);
-        field_text_upload_immediate_cache();
-        return;
-    case FIELD_MODAL_DUEL_INTRO:
-        if (field_draw_duel_intro(render) == 0)
-        {
+            field_close_battle_results();
+            field_text_reset_windows();
+            index = 0;
+            g_field_modal_state = FIELD_MODAL_NONE;
+            g_pad_input = 0;
+            break;
+        default:
             return;
-        }
-
-        field_play_set_sfx(0, AKAO_PAN_CENTER, 0, 3);
-        field_text_reset_windows();
-        index = 0;
-        g_field_modal_state = FIELD_MODAL_NONE;
-        g_pad_input = 0;
-        break;
-    case FIELD_MODAL_DUEL_RESULT:
-        if (field_draw_duel_result(render) == 0 || field_party_reload_reading() != 0)
-        {
-            return;
-        }
-
-        field_close_battle_results();
-        field_text_reset_windows();
-        index = 0;
-        g_field_modal_state = FIELD_MODAL_NONE;
-        g_pad_input = 0;
-        break;
-    default:
-        return;
     }
 
     g_field_primary_held_buttons = field_read_controller_buttons(index);
@@ -2328,8 +2319,8 @@ static void field_draw_empty_shop_notice(FieldRenderHalf* render)
 
     if (g_field_shop_notice_hidden == 0)
     {
-        packet_cursor = field_draw_text(packet_cursor, render->ordering_table, field_dialog_text(&D_800EC400, 30), FIELD_TEXT_COLOR_NORMAL,
-                                        SCREEN_WIDTH / 2, 104, FIELD_TEXT_ALIGN_CENTER);
+        packet_cursor = field_draw_text(packet_cursor, render->ordering_table, field_dialog_text(&D_800EC400, 30), FIELD_TEXT_COLOR_NORMAL, SCREEN_WIDTH / 2,
+                                        104, FIELD_TEXT_ALIGN_CENTER);
     }
 
     render->primitive_cursor = (u8*)packet_cursor;
@@ -2401,38 +2392,38 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render)
 
     switch (g_field_duel_panel_phase)
     {
-    case FIELD_DUEL_SLIDE_IN:
-        g_field_duel_panel_offset /= 2;
+        case FIELD_DUEL_SLIDE_IN:
+            g_field_duel_panel_offset /= 2;
 
-        if (g_field_duel_panel_offset == 0)
-        {
-            g_field_duel_panel_phase = FIELD_DUEL_HOLD;
-            g_field_duel_panel_hold_frames = FIELD_DUEL_PANEL_HOLD_FRAMES;
-        }
+            if (g_field_duel_panel_offset == 0)
+            {
+                g_field_duel_panel_phase = FIELD_DUEL_HOLD;
+                g_field_duel_panel_hold_frames = FIELD_DUEL_PANEL_HOLD_FRAMES;
+            }
 
-        break;
-    case FIELD_DUEL_HOLD:
-        g_field_duel_panel_hold_frames--;
+            break;
+        case FIELD_DUEL_HOLD:
+            g_field_duel_panel_hold_frames--;
 
-        if (g_field_duel_panel_hold_frames == 0)
-        {
-            field_play_sound(FIELD_SOUND_DUEL_PANEL_OUT, AKAO_PAN_CENTER);
-            g_field_duel_panel_phase = FIELD_DUEL_SLIDE_OUT;
-            g_field_duel_panel_offset = -1;
-        }
+            if (g_field_duel_panel_hold_frames == 0)
+            {
+                field_play_sound(FIELD_SOUND_DUEL_PANEL_OUT, AKAO_PAN_CENTER);
+                g_field_duel_panel_phase = FIELD_DUEL_SLIDE_OUT;
+                g_field_duel_panel_offset = -1;
+            }
 
-        break;
-    case FIELD_DUEL_SLIDE_OUT:
-        g_field_duel_panel_offset *= 2;
+            break;
+        case FIELD_DUEL_SLIDE_OUT:
+            g_field_duel_panel_offset *= 2;
 
-        if (g_field_duel_panel_offset < FIELD_DUEL_PANEL_END_OFFSET)
-        {
-            g_field_duel_panel_phase = FIELD_DUEL_FINISHED;
-        }
+            if (g_field_duel_panel_offset < FIELD_DUEL_PANEL_END_OFFSET)
+            {
+                g_field_duel_panel_phase = FIELD_DUEL_FINISHED;
+            }
 
-        break;
-    case FIELD_DUEL_FINISHED:
-        return 1;
+            break;
+        case FIELD_DUEL_FINISHED:
+            return 1;
     }
 
     packet_cursor = field_draw_player_icon(packet_cursor, ot, 0, g_field_duel_panel_offset + 50, 34, 1);
@@ -2489,38 +2480,38 @@ static s32 field_draw_duel_result(FieldRenderHalf* render)
 
     switch (g_field_duel_panel_phase)
     {
-    case FIELD_DUEL_SLIDE_IN:
-        g_field_duel_panel_offset /= 2;
+        case FIELD_DUEL_SLIDE_IN:
+            g_field_duel_panel_offset /= 2;
 
-        if (g_field_duel_panel_offset == 0)
-        {
-            g_field_duel_panel_phase = FIELD_DUEL_HOLD;
-            g_field_duel_panel_hold_frames = FIELD_DUEL_PANEL_HOLD_FRAMES;
-        }
+            if (g_field_duel_panel_offset == 0)
+            {
+                g_field_duel_panel_phase = FIELD_DUEL_HOLD;
+                g_field_duel_panel_hold_frames = FIELD_DUEL_PANEL_HOLD_FRAMES;
+            }
 
-        break;
-    case FIELD_DUEL_HOLD:
-        g_field_duel_panel_hold_frames--;
+            break;
+        case FIELD_DUEL_HOLD:
+            g_field_duel_panel_hold_frames--;
 
-        if (g_field_duel_panel_hold_frames == 0)
-        {
-            field_play_sound(FIELD_SOUND_DUEL_PANEL_OUT, AKAO_PAN_CENTER);
-            g_field_duel_panel_phase = FIELD_DUEL_SLIDE_OUT;
-            g_field_duel_panel_offset = -1;
-        }
+            if (g_field_duel_panel_hold_frames == 0)
+            {
+                field_play_sound(FIELD_SOUND_DUEL_PANEL_OUT, AKAO_PAN_CENTER);
+                g_field_duel_panel_phase = FIELD_DUEL_SLIDE_OUT;
+                g_field_duel_panel_offset = -1;
+            }
 
-        break;
-    case FIELD_DUEL_SLIDE_OUT:
-        g_field_duel_panel_offset *= 2;
+            break;
+        case FIELD_DUEL_SLIDE_OUT:
+            g_field_duel_panel_offset *= 2;
 
-        if (g_field_duel_panel_offset < FIELD_DUEL_PANEL_END_OFFSET)
-        {
-            g_field_duel_panel_phase = FIELD_DUEL_FINISHED;
-        }
+            if (g_field_duel_panel_offset < FIELD_DUEL_PANEL_END_OFFSET)
+            {
+                g_field_duel_panel_phase = FIELD_DUEL_FINISHED;
+            }
 
-        break;
-    case FIELD_DUEL_FINISHED:
-        return 1;
+            break;
+        case FIELD_DUEL_FINISHED:
+            return 1;
     }
 
     packet_cursor =

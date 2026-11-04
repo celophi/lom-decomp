@@ -18,7 +18,7 @@
 #include <memory.h>
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_actor_sequence_runtime.h"
-#include "../internal/field_player_records.h"
+#include "overlays/field/field_player_records.h"
 #include "../internal/field_resource_actions.h"
 #include "../internal/field_contact_geometry.h"
 #include "overlays/field/field_actor_records.h"

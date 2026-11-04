@@ -54,7 +54,7 @@ CONTENT_X_MASK = 0x1FF  # MENU_CONTENT_X_MASK
 CONTENT_STYLE_SHIFT = 9  # MENU_CONTENT_STYLE_SHIFT
 CONTENT_STYLE_MASK = 0x7  # MENU_CONTENT_STYLE_MASK
 CONTENT_TYPE_SHIFT = 12  # MENU_CONTENT_TYPE_SHIFT
-# menu_draw_scene_content reads D_80168659[action_type] for action types 0x37-0x54,
+# menu_draw_scene_content reads g_menu_action_icon_ids[action_type] for action types 0x37-0x54,
 # the lowest index any code applies to the label-id bases.
 ACTION_LABEL_FIRST = 0x37
 
@@ -123,7 +123,14 @@ SYMBOL_NAMES = {
 
 # Index bases into the label-id bytes, in address order. Each is read as
 # base[index] with index well above zero, so a base can sit before the bytes.
-LABEL_BASES = ("D_80168659", "D_80168696", "D_8016869B", "D_8016869F", "D_801686A0", "D_801686B8")
+LABEL_BASES = (
+    "g_menu_action_icon_ids",
+    "g_menu_element_icon_ids",
+    "g_menu_armor_page_label_ids",
+    "g_menu_list_page_label_ids",
+    "g_menu_technique_page_label_ids",
+    "g_menu_button_icon_ids",
+)
 
 
 @dataclass(frozen=True)

@@ -147,6 +147,15 @@ g_menu_label_key_a     = 0x800EC3DA;
 g_menu_label_key_b     = 0x800EC3E4;
 g_field_weapon_type_conflicts = 0x800F0BE0;
 g_field_armor_type_conflicts = 0x800F0BEC;
+field_text_reset_windows = 0x800643E0;
+field_text_reset_scratch = 0x8006441C;
+field_update_audio_timer = 0x80068440;
+field_get_next_level_experience = 0x800B607C;
+g_field_rename_script_index = 0x8011F424;
+g_field_rename_custom_name = 0x801226B8;
+g_field_rename_initial_name = 0x801226F0;
+g_field_rename_target = 0x801227D4;
+g_field_rename_source = 0x801229F4;
 g_field_bare_hands_item = 0x800F0BF8;
 g_field_bare_hands_info = 0x800F0C0C;
 g_field_stat_modifier_values = 0x800F0C38;
@@ -213,16 +222,16 @@ g_menu_page_count      = 0x801690FC;
 g_menu_companion_node  = 0x80169324;
 
 // Data inside menu_data that the C sources reference by address name.
-D_80168659    = 0x80168659;
-D_80168696    = 0x80168696;
-D_8016869B    = 0x8016869B;
-D_8016869F    = 0x8016869F;
-D_801686A0    = 0x801686A0;
-D_801686B8    = 0x801686B8;
-D_80168C20    = 0x80168C20;
-D_80168C24    = 0x80168C24;
-D_80168C30    = 0x80168C30;
-D_80168C6C    = 0x80168C6C;
+g_menu_action_icon_ids = 0x80168659;
+g_menu_element_icon_ids = 0x80168696;
+g_menu_armor_page_label_ids = 0x8016869B;
+g_menu_list_page_label_ids = 0x8016869F;
+g_menu_technique_page_label_ids = 0x801686A0;
+g_menu_button_icon_ids = 0x801686B8;
+g_menu_shown_armor = 0x80168C20;
+g_menu_shown_equipment_copy = 0x80168C24;
+g_menu_shown_equipment = 0x80168C30;
+g_menu_help_skill_selection = 0x80168C6C;
 
 // Field dialogue/text renderer exports used by this overlay.
 field_text_build_sprites             = 0x800644FC;
