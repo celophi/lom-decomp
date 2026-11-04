@@ -168,24 +168,24 @@ void wmap_land_effect_32_sequence_2_step_01(void)
 /** @brief Move the model closer, draw its fade-in, and advance its countdown. */
 void wmap_land_effect_32_sequence_3_step_02(void)
 {
-    s32 *p = &g_wmap_effect_model_d_position;
-    u16 *q;
+    VECTOR *position = &g_wmap_effect_model_d_position;
+    SVECTOR *rotation;
     s32 v;
     s32 t;
     s32 c;
 
-    v = p[2] - 0x5DC;
-    p[2] = v;
+    v = position->vz - 0x5DC;
+    position->vz = v;
     if (v <= 0x9C3F)
     {
-        p[2] = 0x9C40;
+        position->vz = 0x9C40;
     }
     PushMatrix();
-    q = &g_wmap_effect_model_d_rotation;
-    wmap_set_model_transform(p, q);
+    rotation = &g_wmap_effect_model_d_rotation;
+    wmap_set_model_transform(position, rotation);
     wmap_draw_model_default(g_wmap_effect_model_pack_3, 0, 0xC, 0x35, 0x7800, 1, D_80182DE4);
     WMAP_MODEL_FADE_IN(D_80182DE4, 0x10, 0x81, t);
-    *(u16 *)((u8 *)q + 4) += 2;
+    rotation->vz += 2;
     PopMatrix();
     c = g_wmap_land_effect_32_sequence_3_timer - 1;
     g_wmap_land_effect_32_sequence_3_timer = c;
@@ -198,26 +198,26 @@ void wmap_land_effect_32_sequence_3_step_02(void)
 /** @brief Move the model closer, draw its fade-out, and advance its countdown. */
 void wmap_land_effect_32_sequence_3_step_04(void)
 {
-    s32 *p = &g_wmap_effect_model_d_position;
-    u16 *q;
+    VECTOR *position = &g_wmap_effect_model_d_position;
+    SVECTOR *rotation;
     s32 v;
     s32 t;
     s32 c;
 
-    v = p[2] - 0x5DC;
-    p[2] = v;
+    v = position->vz - 0x5DC;
+    position->vz = v;
     if (v <= 0x9C3F)
     {
-        p[2] = 0x9C40;
+        position->vz = 0x9C40;
     }
     PushMatrix();
-    q = &g_wmap_effect_model_d_rotation;
-    wmap_set_model_transform(p, q);
+    rotation = &g_wmap_effect_model_d_rotation;
+    wmap_set_model_transform(position, rotation);
     if (D_80182DE4 != 0)
     {
         wmap_draw_model_default(g_wmap_effect_model_pack_3, 0, 0xC, 0x35, 0x7800, 1, D_80182DE4);
         WMAP_MODEL_FADE_OUT(D_80182DE4, 2, t);
-        *(u16 *)((u8 *)q + 4) += 2;
+        rotation->vz += 2;
     }
     PopMatrix();
     c = g_wmap_land_effect_32_sequence_3_timer - 1;
@@ -231,24 +231,24 @@ void wmap_land_effect_32_sequence_3_step_04(void)
 /** @brief Move the model closer, draw its fade-in, and advance its countdown. */
 void wmap_land_effect_32_sequence_4_step_02(void)
 {
-    s32 *p = &D_80139898;
-    u16 *q;
+    VECTOR *position = &D_80139898;
+    SVECTOR *rotation;
     s32 v;
     s32 t;
     s32 c;
 
-    v = p[2] - 0x5DC;
-    p[2] = v;
+    v = position->vz - 0x5DC;
+    position->vz = v;
     if (v <= 0x9C3F)
     {
-        p[2] = 0x9C40;
+        position->vz = 0x9C40;
     }
     PushMatrix();
-    q = &D_801B2670;
-    wmap_set_model_transform(p, q);
+    rotation = &D_801B2670;
+    wmap_set_model_transform(position, rotation);
     wmap_draw_model_default(g_wmap_effect_model_pack_4, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_a);
     WMAP_MODEL_FADE_IN(g_wmap_effect_fade_a, 0x10, 0x81, t);
-    *(u16 *)((u8 *)q + 4) -= 3;
+    rotation->vz -= 3;
     PopMatrix();
     c = g_wmap_land_effect_32_sequence_4_timer - 1;
     g_wmap_land_effect_32_sequence_4_timer = c;
@@ -261,26 +261,26 @@ void wmap_land_effect_32_sequence_4_step_02(void)
 /** @brief Move the model closer, draw its fade-out, and advance its countdown. */
 void wmap_land_effect_32_sequence_4_step_04(void)
 {
-    s32 *p = &D_80139898;
-    u16 *q;
+    VECTOR *position = &D_80139898;
+    SVECTOR *rotation;
     s32 v;
     s32 t;
     s32 c;
 
-    v = p[2] - 0x5DC;
-    p[2] = v;
+    v = position->vz - 0x5DC;
+    position->vz = v;
     if (v <= 0x9C3F)
     {
-        p[2] = 0x9C40;
+        position->vz = 0x9C40;
     }
     PushMatrix();
-    q = &D_801B2670;
-    wmap_set_model_transform(p, q);
+    rotation = &D_801B2670;
+    wmap_set_model_transform(position, rotation);
     if (g_wmap_effect_fade_a != 0)
     {
         wmap_draw_model_default(g_wmap_effect_model_pack_4, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_a);
         WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_a, 2, t);
-        *(u16 *)((u8 *)q + 4) -= 3;
+        rotation->vz -= 3;
     }
     PopMatrix();
     c = g_wmap_land_effect_32_sequence_4_timer - 1;
@@ -294,24 +294,24 @@ void wmap_land_effect_32_sequence_4_step_04(void)
 /** @brief Move the model closer, draw its fade-in, and advance its countdown. */
 void wmap_land_effect_32_sequence_5_step_02(void)
 {
-    s32 *p = &D_801B2660;
-    u16 *q;
+    VECTOR *position = &D_801B2660;
+    SVECTOR *rotation;
     s32 v;
     s32 t;
     s32 c;
 
-    v = p[2] - 0x5DC;
-    p[2] = v;
+    v = position->vz - 0x5DC;
+    position->vz = v;
     if (v <= 0x9C3F)
     {
-        p[2] = 0x9C40;
+        position->vz = 0x9C40;
     }
     PushMatrix();
-    q = &D_801B2678;
-    wmap_set_model_transform(p, q);
+    rotation = &D_801B2678;
+    wmap_set_model_transform(position, rotation);
     wmap_draw_model_default(g_wmap_effect_model_pack_5, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_b);
     WMAP_MODEL_FADE_IN(g_wmap_effect_fade_b, 0x10, 0x81, t);
-    *(u16 *)((u8 *)q + 4) += 4;
+    rotation->vz += 4;
     PopMatrix();
     c = g_wmap_land_effect_32_sequence_5_timer - 1;
     g_wmap_land_effect_32_sequence_5_timer = c;
@@ -324,26 +324,26 @@ void wmap_land_effect_32_sequence_5_step_02(void)
 /** @brief Move the model closer, draw its fade-out, and advance its countdown. */
 void wmap_land_effect_32_sequence_5_step_04(void)
 {
-    s32 *p = &D_801B2660;
-    u16 *q;
+    VECTOR *position = &D_801B2660;
+    SVECTOR *rotation;
     s32 v;
     s32 t;
     s32 c;
 
-    v = p[2] - 0x5DC;
-    p[2] = v;
+    v = position->vz - 0x5DC;
+    position->vz = v;
     if (v <= 0x9C3F)
     {
-        p[2] = 0x9C40;
+        position->vz = 0x9C40;
     }
     PushMatrix();
-    q = &D_801B2678;
-    wmap_set_model_transform(p, q);
+    rotation = &D_801B2678;
+    wmap_set_model_transform(position, rotation);
     if (g_wmap_effect_fade_b != 0)
     {
         wmap_draw_model_default(g_wmap_effect_model_pack_5, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_b);
         WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_b, 2, t);
-        *(u16 *)((u8 *)q + 4) += 4;
+        rotation->vz += 4;
     }
     PopMatrix();
     c = g_wmap_land_effect_32_sequence_5_timer - 1;

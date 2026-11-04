@@ -267,16 +267,8 @@ extern s32 wmap_land_effect_31_run_sequence_20(s32);
 extern void wmap_land_effect_31_sequence_20_step_02(void);
 extern void wmap_land_effect_31_sequence_20_step_04();
 
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    u16 field_04;
-    s16 field_06;
-} WmapPair;
-
 extern u8 g_wmap_animation_bank_1[];
-extern WmapPair D_801B3118;
+extern SVECTOR D_801B3118;
 
 extern VECTOR g_wmap_camera_translation;
 
@@ -606,7 +598,7 @@ void wmap_land_effect_31_sequence_11_step_02(void)
     wmap_draw_model(g_wmap_load_buffer, (D_8013926C / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1001, g_wmap_aux_effect_fade_b, 4, -0x14, -1);
     D_8013926C -= 0x10;
     WMAP_MODEL_FADE_IN(g_wmap_aux_effect_fade_b, 2, 0x81, value);
-    ((u16*)&D_801B3118)[2] += 0x10;
+    D_801B3118.vz += 0x10;
     timer = g_wmap_land_effect_31_sequence_11_timer - 1;
     g_wmap_land_effect_31_sequence_11_timer = timer;
     if (timer == 0)
@@ -629,7 +621,7 @@ void wmap_land_effect_31_sequence_11_step_04(void)
     D_8013926C -= 0x10;
     timer = g_wmap_land_effect_31_sequence_11_timer - 1;
     g_wmap_land_effect_31_sequence_11_timer = timer;
-    ((u16*)&D_801B3118)[2] += 0x10;
+    D_801B3118.vz += 0x10;
     if (timer == 0)
     {
         g_wmap_land_effect_31_sequence_11_step++;
@@ -1267,7 +1259,7 @@ WMAP_STEP_RESET(wmap_land_effect_31_sequence_11_reset, g_wmap_land_effect_31_seq
  */
 WMAP_STEP_START_MODEL(wmap_land_effect_31_sequence_11_step_01,
     g_wmap_land_effect_31_sequence_11_step, g_wmap_land_effect_31_sequence_11_timer,
-    D_801B3118, *(WmapPair*)&g_wmap_zero_rotation,
+    D_801B3118, g_wmap_zero_rotation,
     g_wmap_aux_effect_fade_b, 1, D_8013926C,
     0xB6, wmap_land_effect_31_sequence_11_step_02)
 

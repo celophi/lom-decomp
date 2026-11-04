@@ -348,7 +348,7 @@ void func_800BA408(void)
 
         scan_base = (u8*)g_wmap_sprite_actors;
         copy_end = scan_base + 0x154;
-        screen_base = g_wmap_actor_animations;
+        screen_base = (u8*)g_wmap_actor_animations;
         config_offset = 0x1DE8;
         screen_offset = 0x570;
         while (index < 0xB9)

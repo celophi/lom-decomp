@@ -352,7 +352,7 @@ void wmap_land_effect_17_sequence_9_step_01(void)
 void wmap_land_effect_17_sequence_10_step_01(void)
 {
     s32 i;
-    WmapParticle *particles = g_wmap_effect_model_buffer_8000;
+    WmapParticle *particles = (WmapParticle *)g_wmap_effect_model_buffer_8000;
 
     for (i = 100; i < 124; i++)
     {

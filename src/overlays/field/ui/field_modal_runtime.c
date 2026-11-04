@@ -720,7 +720,7 @@ void field_compact_inventory(void)
         {
             if (read_record != write_record)
             {
-                bcopy(read_record, write_record, sizeof(*read_record));
+                bcopy((u8*)read_record, (u8*)write_record, sizeof(*read_record));
                 read_record->name[0] = 0;
             }
 

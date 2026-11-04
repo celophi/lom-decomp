@@ -271,13 +271,6 @@ typedef struct
     unsigned int upper : 8;
 } FieldPlacementBits;
 
-/** @brief Output of field_test_quad_actor_contacts: the resolved track or actor index and its screen x/y. */
-typedef struct
-{
-    s32 index;
-    s16 x;
-    s16 y;
-} TrackPlacement;
 
 /** @brief GPU coordinates accessed individually or as a packed XY word. */
 typedef union
@@ -3258,7 +3251,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
             case FIELD_PICKUP_EXPERIENCE_OR_CURRENCY:
                 if ((u16)actor->track_frames[0] >= FIELD_PICKUP_DELAY)
                 {
-                    recipient_index = field_find_actor_in_range(record, FIELD_PICKUP_DISTANCE, actor, 0);
+                    recipient_index = field_find_actor_in_range(&record->x, FIELD_PICKUP_DISTANCE, actor, 0);
 
                     if (recipient_index != -1)
                     {
@@ -3293,7 +3286,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
             case FIELD_PICKUP_ITEM:
                 if ((u16)actor->track_frames[0] >= FIELD_PICKUP_DELAY)
                 {
-                    recipient_index = field_find_actor_in_range(record, FIELD_PICKUP_DISTANCE, actor, 0);
+                    recipient_index = field_find_actor_in_range(&record->x, FIELD_PICKUP_DISTANCE, actor, 0);
 
                     if (recipient_index != -1)
                     {
@@ -3321,7 +3314,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
             case FIELD_PICKUP_RESTORE_QUARTER:
                 if ((u16)actor->track_frames[0] >= FIELD_PICKUP_DELAY)
                 {
-                    recipient_index = field_find_actor_in_range(record, FIELD_PICKUP_DISTANCE, actor, 0);
+                    recipient_index = field_find_actor_in_range(&record->x, FIELD_PICKUP_DISTANCE, actor, 0);
 
                     if (recipient_index != -1)
                     {
@@ -3339,7 +3332,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                         recipient_object = &object_base[recipient_index];
                         field_set_action_context(recipient_object->key, object_base[actor->owner_object_index].key, 5);
                         field_grant_reward(recipient_object->key, object_base[actor->owner_object_index].key, 5);
-                        field_play_object_animation(&g_field_actors[recipient_index], 0x2C);
+                        field_play_object_animation((struct FieldActor*)&g_field_actors[recipient_index], 0x2C);
                         field_release_actor_if_no_effects(record);
                         return;
                     }
@@ -3350,7 +3343,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
             case FIELD_PICKUP_RESTORE_HALF:
                 if ((u16)actor->track_frames[0] >= FIELD_PICKUP_DELAY)
                 {
-                    recipient_index = field_find_actor_in_range(record, FIELD_PICKUP_DISTANCE, actor, 0);
+                    recipient_index = field_find_actor_in_range(&record->x, FIELD_PICKUP_DISTANCE, actor, 0);
 
                     if (recipient_index != -1)
                     {
@@ -3368,7 +3361,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                         recipient_object = &object_base[recipient_index];
                         field_set_action_context(recipient_object->key, object_base[actor->owner_object_index].key, 6);
                         field_grant_reward(recipient_object->key, object_base[actor->owner_object_index].key, 6);
-                        field_play_object_animation(&g_field_actors[recipient_index], 0x2D);
+                        field_play_object_animation((struct FieldActor*)&g_field_actors[recipient_index], 0x2D);
                         field_release_actor_if_no_effects(record);
                         return;
                     }
@@ -3901,7 +3894,7 @@ void field_render_effects(FieldRenderContext* render_context)
                     break;
 
                 case FIELD_EFFECT_RENDER_RIBBON:
-                    packet_cursor = field_render_effect_ribbon(effect, packet_cursor, ordering_table);
+                    packet_cursor = (s32*)field_render_effect_ribbon(effect, (u8*)packet_cursor, ordering_table);
                     break;
             }
         }
@@ -4165,7 +4158,7 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
 
     if (shadow_count != 0)
     {
-        packet_cursor = field_render_actor_ground_shadow(effect, packet_cursor, ordering_table, shadow_footprint);
+        packet_cursor = (s32*)field_render_actor_ground_shadow(effect, packet_cursor, ordering_table, shadow_footprint);
     }
 
     return packet_cursor;
@@ -4215,12 +4208,12 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
     VECTOR* gte_out = (VECTOR*)SCRATCHPAD_AT(0x44);
     SVECTOR* dir = (SVECTOR*)SCRATCHPAD_AT(0x54);
     s16* quad_bounds = (s16*)SCRATCHPAD_AT(0x64);
-    Vec2s* contact_quad;
+    FieldContactPoint* contact_quad;
     Vec2s* target_screen;
     FieldActorSlot* actor;
     s32 vertical_lift;
     s32 shadow_count;
-    TrackPlacement contact;
+    FieldContactResult contact;
     struct
     {
         s32 target_index;
@@ -4266,7 +4259,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
     FieldObjectState* target_state;
 
     shadow_count = 0;
-    contact_quad = (Vec2s*)SCRATCHPAD_AT(0x80);
+    contact_quad = (FieldContactPoint*)SCRATCHPAD_AT(0x80);
     target_screen = (Vec2s*)SCRATCHPAD_AT(0x94);
     slot = &g_field_object_states[rec->source_object_index];
     slot->collision.word = 0;
@@ -4818,8 +4811,8 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                             gte_ldv0(dir);
                             gte_rtv0();
                             gte_stlvnl(gte_out);
-                            contact_quad[0].x = sxy->x + gte_out->vx;
-                            contact_quad[0].y = sxy->y + gte_out->vy;
+                            contact_quad[0].coord.x = sxy->x + gte_out->vx;
+                            contact_quad[0].coord.y = sxy->y + gte_out->vy;
 
                             if (rec->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                             {
@@ -4837,8 +4830,8 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                             gte_ldv0(dir);
                             gte_rtv0();
                             gte_stlvnl(gte_out);
-                            contact_quad[1].x = sxy->x + gte_out->vx;
-                            contact_quad[1].y = sxy->y + gte_out->vy;
+                            contact_quad[1].coord.x = sxy->x + gte_out->vx;
+                            contact_quad[1].coord.y = sxy->y + gte_out->vy;
 
                             if (rec->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                             {
@@ -4856,8 +4849,8 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                             gte_ldv0(dir);
                             gte_rtv0();
                             gte_stlvnl(gte_out);
-                            contact_quad[2].x = sxy->x + gte_out->vx;
-                            contact_quad[2].y = sxy->y + gte_out->vy;
+                            contact_quad[2].coord.x = sxy->x + gte_out->vx;
+                            contact_quad[2].coord.y = sxy->y + gte_out->vy;
 
                             if (rec->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                             {
@@ -4875,14 +4868,14 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                             gte_ldv0(dir);
                             gte_rtv0();
                             gte_stlvnl(gte_out);
-                            contact_quad[3].x = sxy->x + gte_out->vx;
-                            contact_quad[3].y = sxy->y + gte_out->vy;
+                            contact_quad[3].coord.x = sxy->x + gte_out->vx;
+                            contact_quad[3].coord.y = sxy->y + gte_out->vy;
                             contact_result = field_test_quad_actor_contacts(contact_quad, rec, &contact);
 
                             if (contact_result == 1)
                             {
-                                g_field_object_states[contact.index].flags &= ~0x400;
-                                slot->targets[slot->contact.bytes.target_count] = contact.index;
+                                g_field_object_states[contact.actor].flags &= ~0x400;
+                                slot->targets[slot->contact.bytes.target_count] = contact.actor;
                                 target_count = slot->contact.bytes.target_count;
 
                                 if (target_count < 9U)
@@ -4893,32 +4886,32 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                                 if (actor->animation->hit_test_mode == 3)
                                 {
                                     actor->track_mask |= 1 << actor->target_count;
-                                    actor->targets[actor->target_count] = contact.index;
-                                    target_screen->x = FIELD_SCREEN_X(g_field_actors[contact.index].x);
-                                    target_screen->y = FIELD_SCREEN_Y(g_field_actors[contact.index].y, g_field_actors[contact.index].z);
+                                    actor->targets[actor->target_count] = contact.actor;
+                                    target_screen->x = FIELD_SCREEN_X(g_field_actors[contact.actor].x);
+                                    target_screen->y = FIELD_SCREEN_Y(g_field_actors[contact.actor].y, g_field_actors[contact.actor].z);
 
-                                    if (g_field_actors[contact.index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
+                                    if (g_field_actors[contact.actor].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                                     {
-                                        actor->track_offsets[actor->target_count].x = target_screen->x - contact.x;
+                                        actor->track_offsets[actor->target_count].x = target_screen->x - contact.point.coord.x;
                                     }
                                     else
                                     {
-                                        actor->track_offsets[actor->target_count].x = contact.x - target_screen->x;
+                                        actor->track_offsets[actor->target_count].x = contact.point.coord.x - target_screen->x;
                                     }
 
-                                    actor->track_offsets[actor->target_count].y = contact.y - target_screen->y;
+                                    actor->track_offsets[actor->target_count].y = contact.point.coord.y - target_screen->y;
                                     actor->target_count++;
-                                    g_field_object_states[contact.index].contact.word |= FIELD_CONTACT_TARGETED;
+                                    g_field_object_states[contact.actor].contact.word |= FIELD_CONTACT_TARGETED;
 
-                                    field_resolve_contact_hit(actor->owner_object_index, contact.index);
-                                    attach_x = contact.x - sxy->x;
+                                    field_resolve_contact_hit(actor->owner_object_index, contact.actor);
+                                    attach_x = contact.point.coord.x - sxy->x;
                                     layer = ~FIELD_MOVEMENT_SEQUENCE_MASK;
                                     placement_flags = slot->movement.word & layer;
                                     slot->attachment_points[3].x = attach_x;
                                     slot->attachment_points[2].x = attach_x;
                                     slot->attachment_points[1].x = attach_x;
                                     slot->attachment_points[0].x = attach_x;
-                                    attach_y = contact.y - sxy->y;
+                                    attach_y = contact.point.coord.y - sxy->y;
                                     placement_flags |= FIELD_MOVEMENT_SEQUENCE_CONTACT;
                                     slot->movement.word = placement_flags;
                                     slot->attachment_points[3].y = attach_y;
@@ -4930,41 +4923,41 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                                 {
                                     if (slot->action_parameter == 0x24)
                                     {
-                                        if (g_field_actors[contact.index].state != 0)
+                                        if (g_field_actors[contact.actor].state != 0)
                                         {
                                             break;
                                         }
 
                                         slot->contact.word |= 2;
-                                        slot->linked_object_index = contact.index;
-                                        g_field_object_states[contact.index].flags |= 0x2000;
+                                        slot->linked_object_index = contact.actor;
+                                        g_field_object_states[contact.actor].flags |= 0x2000;
                                     }
                                     else
                                     {
                                         if ((slot->action_parameter == 0x59) || (slot->action_parameter == 0x66) || (slot->action_parameter == 0x2B))
                                         {
-                                            if ((!((g_field_object_states[contact.index].contact.word >> FIELD_CONTACT_ACTION_PENDING_BIT) & 1) &&
-                                                 (bound_index = field_get_object_binding(contact.index)->owner) == contact.index &&
+                                            if ((!((g_field_object_states[contact.actor].contact.word >> FIELD_CONTACT_ACTION_PENDING_BIT) & 1) &&
+                                                 (bound_index = field_get_object_binding(contact.actor)->owner) == contact.actor &&
                                                  field_get_object_binding(bound_index)->state != 0) ||
-                                                (g_field_object_states[contact.index].contact.bytes.flags & 1))
+                                                (g_field_object_states[contact.actor].contact.bytes.flags & 1))
                                             {
                                                 slot->action_parameter = 0;
                                             }
                                             else
                                             {
-                                                g_field_actors[contact.index].facing_or_reward_kind &= 0x7F;
+                                                g_field_actors[contact.actor].facing_or_reward_kind &= 0x7F;
 
-                                                if (contact.index < 2)
+                                                if (contact.actor < 2)
                                                 {
-                                                    field_command_history_clear(contact.index);
-                                                    g_field_object_states[contact.index].retry_count = 0;
-                                                    g_field_actors[contact.index].reference_index = 0;
+                                                    field_command_history_clear(contact.actor);
+                                                    g_field_object_states[contact.actor].retry_count = 0;
+                                                    g_field_actors[contact.actor].reference_index = 0;
                                                 }
                                             }
                                         }
                                         else
                                         {
-                                            target_state = &g_field_object_states[contact.index];
+                                            target_state = &g_field_object_states[contact.actor];
                                             y_offset = 1;
 
                                             if (!(target_state->contact.bytes.flags & 1) ||
@@ -4975,28 +4968,28 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                                                 switch (rec->facing_or_reward_kind & FIELD_ANIMATION_INDEX_MASK)
                                                 {
                                                     case FIELD_ANIMATION_AIR_ATTACK:
-                                                        y_offset = field_resolve_object_hit(rec->source_object_index, contact.index, 0x10);
+                                                        y_offset = field_resolve_object_hit(rec->source_object_index, contact.actor, 0x10);
                                                         break;
                                                     case FIELD_ANIMATION_AIR_POWER_ATTACK:
-                                                        y_offset = field_resolve_object_hit(rec->source_object_index, contact.index, 0x11);
+                                                        y_offset = field_resolve_object_hit(rec->source_object_index, contact.actor, 0x11);
                                                         break;
                                                     case FIELD_ABILITY_TACKLE:
-                                                        y_offset = field_resolve_object_hit(rec->source_object_index, contact.index, 0x19);
+                                                        y_offset = field_resolve_object_hit(rec->source_object_index, contact.actor, 0x19);
                                                         break;
                                                     case FIELD_ABILITY_SLIDE:
-                                                        y_offset = field_resolve_object_hit(rec->source_object_index, contact.index, 0x1A);
+                                                        y_offset = field_resolve_object_hit(rec->source_object_index, contact.actor, 0x1A);
                                                         break;
                                                     default:
-                                                        y_offset = field_resolve_contact_hit(rec->source_object_index, contact.index);
+                                                        y_offset = field_resolve_contact_hit(rec->source_object_index, contact.actor);
                                                         break;
                                                 }
                                             }
 
-                                            if (contact.index < 2)
+                                            if (contact.actor < 2)
                                             {
-                                                if (!((u16)g_field_actors[contact.index].flags & 0x1FF))
+                                                if (!((u16)g_field_actors[contact.actor].flags & 0x1FF))
                                                 {
-                                                    field_command_history_clear(contact.index);
+                                                    field_command_history_clear(contact.actor);
                                                 }
                                             }
 
@@ -5012,28 +5005,28 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
 
                                     if (slot->action_parameter & FIELD_ACTION_PARAMETER_TRANSIENT_ACTOR)
                                     {
-                                        scratch.target_index = contact.index;
+                                        scratch.target_index = contact.actor;
 
                                         if (rec->motion_parameter == FIELD_ACTOR_COMMAND_TECHNIQUE)
                                         {
                                             if (slot->contact.bytes.animation_actor_index != FIELD_ANIMATION_ACTOR_NONE)
                                             {
-                                                g_field_object_states[contact.index].contact.word |= FIELD_CONTACT_TARGETED;
-                                                field_start_actor_animation(slot->contact.bytes.animation_actor_index, 1, &scratch.target_index);
+                                                g_field_object_states[contact.actor].contact.word |= FIELD_CONTACT_TARGETED;
+                                                field_start_actor_animation(slot->contact.bytes.animation_actor_index, 1, (u8*)&scratch.target_index);
                                             }
                                         }
-                                        else if (field_start_bound_action_animation(rec->source_object_index, 1, &scratch.target_index,
+                                        else if (field_start_bound_action_animation(rec->source_object_index, 1, (u8*)&scratch.target_index,
                                                                                     slot->action_parameter) != 0)
                                         {
                                             slot->movement.word = (slot->movement.word & ~FIELD_MOVEMENT_SEQUENCE_MASK) | FIELD_MOVEMENT_SEQUENCE_CONTACT;
                                         }
 
-                                        attach_x = contact.x - sxy->x;
+                                        attach_x = contact.point.coord.x - sxy->x;
                                         slot->attachment_points[3].x = attach_x;
                                         slot->attachment_points[2].x = attach_x;
                                         slot->attachment_points[1].x = attach_x;
                                         slot->attachment_points[0].x = attach_x;
-                                        attach_y = contact.y - sxy->y;
+                                        attach_y = contact.point.coord.y - sxy->y;
                                         slot->attachment_points[3].y = attach_y;
                                         slot->attachment_points[2].y = attach_y;
                                         slot->attachment_points[1].y = attach_y;
@@ -5061,14 +5054,14 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                                             if (field_start_builtin_animation(rec->source_object_index, x_offset, slot->action_parameter) != 0)
                                             {
                                                 slot->contact.bytes.animation_actor_index = x_offset;
-                                                scratch.target_index = contact.index;
-                                                field_start_actor_animation(x_offset, 1, &scratch.target_index);
-                                                attach_x = contact.x - sxy->x;
+                                                scratch.target_index = contact.actor;
+                                                field_start_actor_animation(x_offset, 1, (u8*)&scratch.target_index);
+                                                attach_x = contact.point.coord.x - sxy->x;
                                                 slot->attachment_points[3].x = attach_x;
                                                 slot->attachment_points[2].x = attach_x;
                                                 slot->attachment_points[1].x = attach_x;
                                                 slot->attachment_points[0].x = attach_x;
-                                                attach_y = contact.y - sxy->y;
+                                                attach_y = contact.point.coord.y - sxy->y;
                                                 slot->attachment_points[3].y = attach_y;
                                                 slot->attachment_points[2].y = attach_y;
                                                 slot->attachment_points[1].y = attach_y;
@@ -5092,14 +5085,14 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                                     if (field_start_builtin_animation(rec->source_object_index, x_offset, slot->action_parameter) != 0)
                                     {
                                         slot->contact.bytes.animation_actor_index = x_offset;
-                                        scratch.target_index = contact.index;
-                                        field_start_actor_animation(x_offset, 1, &scratch.target_index);
-                                        attach_x = contact.x - sxy->x;
+                                        scratch.target_index = contact.actor;
+                                        field_start_actor_animation(x_offset, 1, (u8*)&scratch.target_index);
+                                        attach_x = contact.point.coord.x - sxy->x;
                                         slot->attachment_points[3].x = attach_x;
                                         slot->attachment_points[2].x = attach_x;
                                         slot->attachment_points[1].x = attach_x;
                                         slot->attachment_points[0].x = attach_x;
-                                        attach_y = contact.y - sxy->y;
+                                        attach_y = contact.point.coord.y - sxy->y;
                                         slot->attachment_points[3].y = attach_y;
                                         slot->attachment_points[2].y = attach_y;
                                         slot->attachment_points[1].y = attach_y;
@@ -5289,7 +5282,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
             slot->collision.signed_half.center_offset = (quad_bounds[4] + quad_bounds[0]) >> 1;
         }
 
-        cursor = field_render_actor_ground_shadow(rec, cursor, base, quad_bounds);
+        cursor = (s32*)field_render_actor_ground_shadow(rec, cursor, base, quad_bounds);
     }
 
     return cursor;
@@ -5326,12 +5319,12 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
     VECTOR* gte_out = (VECTOR*)SCRATCHPAD_AT(0x44);
     SVECTOR* dir = (SVECTOR*)SCRATCHPAD_AT(0x54);
     s16* corners = (s16*)SCRATCHPAD_AT(0x64);
-    Vec2s* contact_quad;
+    FieldContactPoint* contact_quad;
     Vec2s* target_screen;
     FieldActorSlot* actor;
     s32 vertical_lift;
     s32 shadow_count;
-    TrackPlacement contact;
+    FieldContactResult contact;
     struct
     {
         s32 target_index;
@@ -5382,7 +5375,7 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
     FieldObjectState* target_state;
 
     shadow_count = 0;
-    contact_quad = (Vec2s*)SCRATCHPAD_AT(0x80);
+    contact_quad = (FieldContactPoint*)SCRATCHPAD_AT(0x80);
     target_screen = (Vec2s*)SCRATCHPAD_AT(0x94);
     slot = &g_field_object_states[rec->source_object_index];
     actor = &g_field_actor_slots[rec->actor_index];
@@ -5712,8 +5705,8 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                                 gte_ldv0(dir);
                                 gte_rtv0();
                                 gte_stlvnl(gte_out);
-                                contact_quad[0].x = (s16)(sxy->x + gte_out->vx);
-                                contact_quad[0].y = (s16)(sxy->y + gte_out->vy);
+                                contact_quad[0].coord.x = (s16)(sxy->x + gte_out->vx);
+                                contact_quad[0].coord.y = (s16)(sxy->y + gte_out->vy);
 
                                 if (rec->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                                 {
@@ -5731,8 +5724,8 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                                 gte_ldv0(dir);
                                 gte_rtv0();
                                 gte_stlvnl(gte_out);
-                                contact_quad[1].x = (s16)(sxy->x + gte_out->vx);
-                                contact_quad[1].y = (s16)(sxy->y + gte_out->vy);
+                                contact_quad[1].coord.x = (s16)(sxy->x + gte_out->vx);
+                                contact_quad[1].coord.y = (s16)(sxy->y + gte_out->vy);
 
                                 if (rec->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                                 {
@@ -5750,8 +5743,8 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                                 gte_ldv0(dir);
                                 gte_rtv0();
                                 gte_stlvnl(gte_out);
-                                contact_quad[2].x = (s16)(sxy->x + gte_out->vx);
-                                contact_quad[2].y = (s16)(sxy->y + gte_out->vy);
+                                contact_quad[2].coord.x = (s16)(sxy->x + gte_out->vx);
+                                contact_quad[2].coord.y = (s16)(sxy->y + gte_out->vy);
 
                                 if (rec->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                                 {
@@ -5769,8 +5762,8 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                                 gte_ldv0(dir);
                                 gte_rtv0();
                                 gte_stlvnl(gte_out);
-                                contact_quad[3].x = (s16)(sxy->x + gte_out->vx);
-                                contact_quad[3].y = (s16)(sxy->y + gte_out->vy);
+                                contact_quad[3].coord.x = (s16)(sxy->x + gte_out->vx);
+                                contact_quad[3].coord.y = (s16)(sxy->y + gte_out->vy);
 
                                 if (!(slot->movement.word & FIELD_MOVEMENT_SEQUENCE_MASK) &&
                                     (((slot->action_parameter != FIELD_ACTION_PARAMETER_NONE) && (slot->action_parameter != 0)) ||
@@ -5782,11 +5775,11 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                                     {
                                         {
                                             FieldObjectState* states = g_field_object_states;
-                                            target_state = &states[contact.index];
+                                            target_state = &states[contact.actor];
                                         }
 
                                         target_state->flags &= ~0x400;
-                                        slot->targets[slot->contact.bytes.target_count] = contact.index;
+                                        slot->targets[slot->contact.bytes.target_count] = contact.actor;
                                         target_count = slot->contact.bytes.target_count;
 
                                         if (target_count < 9U)
@@ -5797,35 +5790,35 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                                         if (actor->animation->hit_test_mode == 3)
                                         {
                                             actor->track_mask = (u8)(actor->track_mask | (1 << actor->target_count));
-                                            actor->targets[actor->target_count] = (u8)contact.index;
-                                            target_screen->x = FIELD_SCREEN_X(g_field_actors[contact.index].x);
-                                            target_screen->y = FIELD_SCREEN_Y(g_field_actors[contact.index].y, g_field_actors[contact.index].z);
+                                            actor->targets[actor->target_count] = (u8)contact.actor;
+                                            target_screen->x = FIELD_SCREEN_X(g_field_actors[contact.actor].x);
+                                            target_screen->y = FIELD_SCREEN_Y(g_field_actors[contact.actor].y, g_field_actors[contact.actor].z);
 
-                                            if (g_field_actors[contact.index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
+                                            if (g_field_actors[contact.actor].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                                             {
-                                                actor->track_offsets[actor->target_count].x = target_screen->x - contact.x;
+                                                actor->track_offsets[actor->target_count].x = target_screen->x - contact.point.coord.x;
                                             }
                                             else
                                             {
-                                                actor->track_offsets[actor->target_count].x = contact.x - target_screen->x;
+                                                actor->track_offsets[actor->target_count].x = contact.point.coord.x - target_screen->x;
                                             }
 
-                                            actor->track_offsets[actor->target_count].y = (s16)(contact.y - target_screen->y);
+                                            actor->track_offsets[actor->target_count].y = (s16)(contact.point.coord.y - target_screen->y);
                                             actor->target_count = (u8)(actor->target_count + 1);
-                                            field_resolve_contact_hit(actor->owner_object_index, contact.index);
+                                            field_resolve_contact_hit(actor->owner_object_index, contact.actor);
 
                                             do
                                             {
                                                 do
                                                 {
                                                     placement_mask = ~0x1800;
-                                                    offset_x_a = contact.x - sxy->x;
+                                                    offset_x_a = contact.point.coord.x - sxy->x;
                                                     placement_flags = slot->movement.word & placement_mask;
                                                     slot->attachment_points[3].x = offset_x_a;
                                                     slot->attachment_points[2].x = offset_x_a;
                                                     slot->attachment_points[1].x = offset_x_a;
                                                     slot->attachment_points[0].x = offset_x_a;
-                                                    offset_y_a = contact.y - sxy->y;
+                                                    offset_y_a = contact.point.coord.y - sxy->y;
                                                     placement_flags |= FIELD_MOVEMENT_SEQUENCE_CONTACT;
                                                     slot->movement.word = placement_flags;
                                                     slot->attachment_points[3].y = offset_y_a;
@@ -5838,7 +5831,7 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                                         }
                                         else
                                         {
-                                            if ((field_resolve_contact_hit(rec->source_object_index, contact.index) == 1) &&
+                                            if ((field_resolve_contact_hit(rec->source_object_index, contact.actor) == 1) &&
                                                 ((slot->action_parameter == 1) || (slot->action_parameter == 3) || (slot->action_parameter == 0x10)))
                                             {
                                                 slot->action_parameter = 0x1E;
@@ -5846,9 +5839,9 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
 
                                             if (slot->action_parameter & FIELD_ACTION_PARAMETER_TRANSIENT_ACTOR)
                                             {
-                                                scratch.target_index = contact.index;
+                                                scratch.target_index = contact.actor;
 
-                                                if (field_start_bound_action_animation(rec->source_object_index, 1, &scratch.target_index,
+                                                if (field_start_bound_action_animation(rec->source_object_index, 1, (u8*)&scratch.target_index,
                                                                                        slot->action_parameter) != 0)
                                                 {
                                                     slot->movement.word =
@@ -5864,14 +5857,14 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                                                     if (field_start_builtin_animation(rec->source_object_index, offset_x, slot->action_parameter) != 0)
                                                     {
                                                         slot->contact.bytes.animation_actor_index = offset_x;
-                                                        scratch.target_index = contact.index;
-                                                        field_start_actor_animation(offset_x, 1, &scratch.target_index);
-                                                        offset_x_b = contact.x - sxy->x;
+                                                        scratch.target_index = contact.actor;
+                                                        field_start_actor_animation(offset_x, 1, (u8*)&scratch.target_index);
+                                                        offset_x_b = contact.point.coord.x - sxy->x;
                                                         slot->attachment_points[3].x = offset_x_b;
                                                         slot->attachment_points[2].x = offset_x_b;
                                                         slot->attachment_points[1].x = offset_x_b;
                                                         slot->attachment_points[0].x = offset_x_b;
-                                                        offset_y_b = contact.y - sxy->y;
+                                                        offset_y_b = contact.point.coord.y - sxy->y;
                                                         slot->attachment_points[3].y = offset_y_b;
                                                         slot->attachment_points[2].y = offset_y_b;
                                                         slot->attachment_points[1].y = offset_y_b;
@@ -5891,14 +5884,14 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                                             if (field_start_builtin_animation(rec->source_object_index, offset_x, slot->action_parameter) != 0)
                                             {
                                                 slot->contact.bytes.animation_actor_index = offset_x;
-                                                scratch.target_index = contact.index;
-                                                field_start_actor_animation(offset_x, 1, &scratch.target_index);
-                                                offset_x_c = contact.x - sxy->x;
+                                                scratch.target_index = contact.actor;
+                                                field_start_actor_animation(offset_x, 1, (u8*)&scratch.target_index);
+                                                offset_x_c = contact.point.coord.x - sxy->x;
                                                 slot->attachment_points[3].x = offset_x_c;
                                                 slot->attachment_points[2].x = offset_x_c;
                                                 slot->attachment_points[1].x = offset_x_c;
                                                 slot->attachment_points[0].x = offset_x_c;
-                                                offset_y_b = contact.y - sxy->y;
+                                                offset_y_b = contact.point.coord.y - sxy->y;
                                                 slot->attachment_points[3].y = offset_y_b;
                                                 slot->attachment_points[2].y = offset_y_b;
                                                 slot->attachment_points[1].y = offset_y_b;
@@ -6174,7 +6167,7 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
         corner_span = abs(corners[2] - corners[0]);
         slot->collision.signed_half.extent = (corner_span * 7) / 10;
         slot->collision.signed_half.center_offset = (corners[2] + corners[0]) >> 1;
-        cursor = field_render_actor_ground_shadow(rec, cursor, base, corners);
+        cursor = (s32*)field_render_actor_ground_shadow(rec, cursor, base, corners);
     }
 
     return cursor;
@@ -8870,7 +8863,7 @@ void field_extract_effect_quad_corners16(FieldMotionRecord* effect, u8* frame_da
  * @param fallback_depth Horizontal offset used when mode does not derive it from the quad.
  * @param mode Zero skips adjustment; one derives the center from the quad; other values use fallback_depth.
  */
-void field_apply_effect_quad_center_offset(FieldMotionRecord* effect, DVECTOR* screen_origin, s16* quad_bounds, s32 fallback_depth, s32 mode)
+void field_apply_effect_quad_center_offset(FieldMotionRecord* effect, Vec2s* screen_origin, s16* quad_bounds, s32 fallback_depth, s32 mode)
 {
     SVECTOR offset;
     VECTOR rotated;
@@ -8897,8 +8890,8 @@ void field_apply_effect_quad_center_offset(FieldMotionRecord* effect, DVECTOR* s
             center_x = -center_x;
         }
 
-        screen_origin->vx += (s16)rotated.vx + center_x;
-        screen_origin->vy += (s16)rotated.vy + center_y;
+        screen_origin->x += (s16)rotated.vx + center_x;
+        screen_origin->y += (s16)rotated.vy + center_y;
     }
 }
 

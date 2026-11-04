@@ -47,23 +47,6 @@ typedef struct
     s32 screen_xy;
 } WmapSparkSlot;
 
-/** @brief World-map actor configuration. */
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} WmapSparkActor;
-
 void wmap_land_effect_10_sequence_4_step_02(void);
 void wmap_land_effect_10_sequence_5_step_02(void);
 void wmap_land_effect_10_sequence_10_step_02(void);
@@ -93,20 +76,6 @@ void wmap_land_effect_10_sequence_4_step_04(void);
 void wmap_land_effect_10_sequence_5_step_04(void);
 void wmap_land_effect_10_sequence_6_step_02(void);
 void func_8008ECF8(s32 first, s32 end, WmapSparkParticle *particles, WmapSparkConfig *config);
-
-/** @brief World-map 8-byte slot: only the +4 pointer field is written here. */
-typedef struct
-{
-    s32 field_00;
-    void *field_04;
-} WmapSlot8;
-
-/** @brief World-map 0x14-byte slot: only the leading halfword is cleared here. */
-typedef struct
-{
-    s16 field_00;
-    u8 pad_02[0x12];
-} WmapSlot14;
 
 /** @brief Per-actor motion and animation parameters. */
 typedef struct
@@ -216,7 +185,7 @@ void func_8008ECF8(s32 first, s32 end, WmapSparkParticle *particles, WmapSparkCo
     s32 head_xy;
     s32 tail_xy;
     LINE_G2 *line;
-    WmapSparkActor *actor;
+    WmapSpriteActor *actor;
     WmapSparkSlot *slot;
     SVECTOR *velocity;
     s32 spawn;
@@ -227,7 +196,7 @@ void func_8008ECF8(s32 first, s32 end, WmapSparkParticle *particles, WmapSparkCo
     {
         for (i = first; i < end; i++)
         {
-            slot = &g_wmap_actor_motions[i];
+            slot = (WmapSparkSlot *)&g_wmap_actor_motions[i];
             if (slot->state == 0)
             {
                 slot->state = 1;
@@ -248,7 +217,7 @@ void func_8008ECF8(s32 first, s32 end, WmapSparkParticle *particles, WmapSparkCo
     D_800D9230 = 0;
     for (i = first; i < end; i++)
     {
-        slot = &g_wmap_actor_motions[i];
+        slot = (WmapSparkSlot *)&g_wmap_actor_motions[i];
         switch (slot->state)
         {
         case 1:
@@ -287,13 +256,13 @@ void func_8008ECF8(s32 first, s32 end, WmapSparkParticle *particles, WmapSparkCo
                 slot->screen_xy = head_xy;
                 slot->timer = config->fade_frames;
                 slot->state = 2;
-                actor->field_02 = 0;
-                actor->field_06 = 0xF;
-                actor->field_0E = config->sprite_field_0E;
-                actor->field_10 = -1;
-                actor->field_26 = 0x80 / config->fade_frames;
-                actor->field_22 = 1;
-                actor->field_24 = 0x81;
+                actor->resource_index = 0;
+                actor->scale_index = 0xF;
+                actor->sequence = config->sprite_field_0E;
+                actor->previous_sequence = -1;
+                actor->shade_step = 0x80 / config->fade_frames;
+                actor->target_shade = 1;
+                actor->shade = 0x81;
             }
             break;
         case 2:
@@ -451,8 +420,8 @@ void wmap_land_effect_10_sequence_10_step_01(void)
 {
     s32 i;
     WmapSpriteActor *actor;
-    WmapSlot8 *resource;
-    WmapSlot14 *slot;
+    WmapAnimationSlot *resource;
+    WmapMotion *slot;
 
     D_80139234 = 0;
     D_8013923C = 0xFFFF;
@@ -461,7 +430,7 @@ void wmap_land_effect_10_sequence_10_step_01(void)
         actor = &g_wmap_sprite_actors[i];
         resource = &g_wmap_actor_animations[i];
         slot = &g_wmap_actor_motions[i];
-        resource->field_04 = g_wmap_animation_bank_2;
+        resource->data = g_wmap_animation_bank_2;
         actor->scale_index = 15;
         actor->previous_sequence = -1;
         actor->shade_step = 4;
@@ -469,7 +438,7 @@ void wmap_land_effect_10_sequence_10_step_01(void)
         actor->resource_index = 0;
         actor->sequence = 0;
         actor->shade = 0x81;
-        slot->field_00 = 0;
+        slot->state = 0;
     }
     g_wmap_land_effect_10_sequence_10_timer = D_8013923C;
     g_wmap_land_effect_10_sequence_10_step++;

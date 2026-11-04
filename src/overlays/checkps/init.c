@@ -253,7 +253,7 @@ static void run_checkps_display_loop(CheckPSRenderState* render_state)
         ClearOTagR(drawn_ordering_table, FRAME_ORDERING_TABLE_LENGTH);
         frame->screen.prim_cursor = frame->screen.packets;
         begin_glyph_cache_frame();
-        update_and_draw_fade(frame);
+        update_and_draw_fade(&frame->screen);
         draw_checkps_image(frame);
         update_checkps_input_and_timeout();
         evict_unused_glyphs();

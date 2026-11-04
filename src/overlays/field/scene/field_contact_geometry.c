@@ -389,7 +389,7 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
                         intersection = field_intersect_screen_segments(&input_vertex->coord, &input_quad[(input_edge + 1) & 3].coord,
                                                                        &target_quad[quad_edge].coord,
                                                                        &((FieldContactPoint*)((u8*)target_quad + next_edge_offset))->coord);
-                        contact->point = intersection;
+                        contact->point.packed = intersection;
 
                         if (intersection != FIELD_NO_SEGMENT_INTERSECTION)
                         {
@@ -441,7 +441,7 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
                     {
                         packed_center = (u16)scratch.center.coord.x | (scratch.center.coord.y << 16);
                         contact->actor = target_index;
-                        contact->point = packed_center;
+                        contact->point.packed = packed_center;
                         return layer_or_index / 4 + 1;
                     }
                 }
@@ -451,7 +451,7 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
                 {
                     packed_center = (u16)scratch.center.coord.x | (scratch.center.coord.y << 16);
                     contact->actor = target_index;
-                    contact->point = packed_center;
+                    contact->point.packed = packed_center;
                     return layer_or_index / 4 + 1;
                 }
             }

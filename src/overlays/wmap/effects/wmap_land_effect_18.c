@@ -832,7 +832,7 @@ WMAP_STEP_RESET(wmap_land_effect_18_sequence_7_reset, g_wmap_land_effect_18_sequ
 /** @brief World-map step handler: init a UI descriptor block, set the timer, advance the step. */
 void wmap_land_effect_18_sequence_7_step_01(void)
 {
-    u8 *base = &g_wmap_sprite_actors;
+    u8 *base = (u8 *)g_wmap_sprite_actors;
 
     g_wmap_actor_animations[5].data = g_wmap_animation_bank_0;
     *(u8 *)(base + 0xE2) = 0xF;
@@ -851,7 +851,7 @@ void wmap_land_effect_18_sequence_7_step_02(void)
 {
     s32 screen_position;
     s32 remaining;
-    u8 *actor = (u8*)&g_wmap_sprite_actors[5];
+    WmapSpriteActor *actor = &g_wmap_sprite_actors[5];
 
     wmap_project_focus_cell();
     gte_stsxy(&screen_position);

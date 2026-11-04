@@ -34,42 +34,6 @@ void wmap_land_effect_02_sequence_6_step_06(void);
 
 typedef struct
 {
-    s16 unk0;
-    s16 unk2;
-    u8 unk4[2];
-    u8 unk6;
-    u8 unk7[7];
-    s16 unkE;
-    s16 unk10;
-    u8 unk12[0x10];
-    s16 unk22;
-    s16 unk24;
-    s16 unk26;
-    u8 unk28[4];
-} WmapD94Entry;
-
-typedef union
-{
-    struct
-    {
-        s16 field_00;
-        s16 field_02;
-        u8 pad_04[2];
-        u8 field_06;
-        u8 pad_07[7];
-        s16 field_0E;
-        s16 field_10;
-        u8 pad_12[0x10];
-        s16 field_22;
-        s16 field_24;
-        s16 field_26;
-        u8 pad_28[4];
-    } f;
-    s32 words[11];
-} WmapEffect02Config;
-
-typedef struct
-{
     s16 state;
     s16 angle;
     s32 x;
@@ -86,12 +50,6 @@ typedef struct
         } half;
     } screen;
 } WmapEffect02Motion;
-
-typedef struct
-{
-    s32 field_00;
-    void *resource;
-} WmapEffect02Resource;
 
 extern s32 D_80139240;
 extern s32 D_8013924C;
@@ -161,7 +119,7 @@ void wmap_land_effect_02_sequence_3_step_01(void)
 {
     s32 i;
     s16 shift;
-    WmapD94Entry *entry;
+    WmapSpriteActor *entry;
 
     g_wmap_particle_intensity = 4;
     g_wmap_effect_fade_b = 0x7F;
@@ -183,13 +141,13 @@ void wmap_land_effect_02_sequence_3_step_01(void)
         entry = &g_wmap_sprite_actors[14 + i];
         g_wmap_actor_animations[i + 14].data = g_wmap_animation_bank_0;
         shift = i << 10;
-        entry->unk6 = 0xF;
-        entry->unk10 = -1;
-        entry->unk26 = 4;
-        entry->unk2 = 0;
-        entry->unk22 = 0x81;
-        entry->unk24 = 0x81;
-        entry->unkE = D_8013926C;
+        entry->scale_index = 0xF;
+        entry->previous_sequence = -1;
+        entry->shade_step = 4;
+        entry->resource_index = 0;
+        entry->target_shade = 0x81;
+        entry->shade = 0x81;
+        entry->sequence = D_8013926C;
         D_801AFC98[i].state = 1;
         D_801AFC98[i].z = D_80139284;
         D_801AFC98[i].scale = 0x50;
@@ -293,8 +251,8 @@ void wmap_land_effect_02_sequence_5_step_02(void)
     i = 20;
     {
         WmapEffect02Motion *motion = &g_wmap_actor_motions[i];
-        WmapEffect02Resource *resource = &g_wmap_actor_animations[i];
-        WmapEffect02Config *actor = &g_wmap_sprite_actors[i];
+        WmapAnimationSlot *resource = &g_wmap_actor_animations[i];
+        WmapSpriteActor *actor = &g_wmap_sprite_actors[i];
 
         for (; i < 80; i++)
         {
@@ -302,7 +260,7 @@ void wmap_land_effect_02_sequence_5_step_02(void)
             {
                 wmap_step_actor_animation(actor, resource);
                 wmap_draw_actor_sprite(actor, motion->screen.packed, 8, 8, 0);
-                if (actor->f.field_24 < 5)
+                if (actor->shade < 5)
                 {
                     motion->state = 0;
                 }

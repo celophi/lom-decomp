@@ -3124,7 +3124,7 @@ u8* field_advance_actor_part_animation_frame(FieldActor* actor, u8* resource_bas
 
             if (FIELD_PART_END_MODE(part) == FIELD_PART_END_ANIMATION)
             {
-                field_retire_effect(actor, part);
+                field_retire_effect((struct FieldMotionRecord*)actor, part);
                 return 0;
             }
 

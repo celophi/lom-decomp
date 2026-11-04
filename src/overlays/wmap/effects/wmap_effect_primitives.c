@@ -121,21 +121,6 @@ s32 rand(void);
 
 typedef struct
 {
-    s16 id, state;
-    u8 pad04[2];
-    s8 scale;
-    u8 pad07[7];
-    s16 sequence, previous_sequence;
-    u8 pad12[2];
-    u8* cursor;
-    u8* sequence_start;
-    u8* frame_data;
-    s16 remaining, target_shade, shade, shade_step;
-    u8 pad28[4];
-} WmapParticleActor;
-
-typedef struct
-{
     s32 unknown00;
     s32 velocity_min, velocity_range;
     s32 lifetime_min, lifetime_range;
@@ -145,7 +130,7 @@ typedef struct
 
 /**
  * @brief Update, project, and replenish a configured particle effect.
- * @param arg0 Actor records to update.
+ * @param actors Actor records to update.
  * @param animations Animation resource slots, one per actor record.
  * @param arg2 Number of actor records to process.
  * @param arg3 Effect parameter; semantics remain unresolved.
@@ -154,7 +139,7 @@ typedef struct
  * @param arg6 Particle behavior selector.
  * @param arg7 Particle effect configuration record.
  */
-void func_8006A2FC(void* arg0, WmapAnimationSlot* animations, s32 arg2, s32 arg3, s32 arg4_value, s32 arg5_value, u32 arg6, void* arg7)
+void func_8006A2FC(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 arg2, s32 arg3, s32 arg4_value, s32 arg5_value, u32 arg6, void* arg7)
 {
     SVECTOR position;
     s32 screen_position;
@@ -176,13 +161,13 @@ void func_8006A2FC(void* arg0, WmapAnimationSlot* animations, s32 arg2, s32 arg3
     u16 new_z;
     s32 frame;
     WmapMotion* motion;
-    WmapParticleActor* actor;
+    WmapSpriteActor* actor;
     WmapParticleConfig* config = arg7;
 
     ot_index = 4;
     for (i = 0; i < arg2; i++)
     {
-        actor = &((WmapParticleActor*)arg0)[i];
+        actor = &actors[i];
         motion = &g_wmap_actor_motions[i + config->first_motion];
         if (motion->state != 0)
         {
@@ -319,14 +304,14 @@ void func_8006A2FC(void* arg0, WmapAnimationSlot* animations, s32 arg2, s32 arg3
             motion = &g_wmap_actor_motions[i + config->first_motion];
             if (motion->state == 0)
             {
-                WmapParticleActor* spawn_actor = &((WmapParticleActor*)arg0)[i];
-                spawn_actor->state = 0;
-                spawn_actor->scale = 0xF;
+                WmapSpriteActor* spawn_actor = &actors[i];
+                spawn_actor->resource_index = 0;
+                spawn_actor->scale_index = 0xF;
                 sequence = (u16)config->sequence;
-                spawn_actor->previous_sequence = -1;          /* previous sequence */
-                spawn_actor->target_shade = (u16)arg3;  /* target shade */
+                spawn_actor->previous_sequence = -1;
+                spawn_actor->target_shade = (u16)arg3;
                 spawn_actor->shade = arg4_value;
-                spawn_actor->sequence = sequence;    /* sequence */
+                spawn_actor->sequence = sequence;
                 spawn_actor->shade_step = arg5_value;
                 motion->state = 1;
                 motion->angle = rand();
@@ -1107,9 +1092,10 @@ void func_8006BC44(s32 first, s32 count, WmapTrailConfig* config, s32 expire_by_
 
 /**
  * @brief Advance the map transform effect toward its configured position.
+ * @param initialize Sequence callback flag; unused.
  * @return Sequence continuation flag.
  */
-s32 func_8006C0EC(void)
+s32 func_8006C0EC(s32 initialize)
 {
     SVECTOR position;
 

@@ -78,8 +78,8 @@ extern void (*D_800D72FC[])(void);
 extern u8 g_wmap_animation_bank_0[];
 extern u8 *g_wmap_effect_model_pack_1;
 extern u8 *g_wmap_effect_model_pack_2;
-extern s32* g_wmap_effect_model_pack_3;
-extern s32* g_wmap_effect_model_pack_4;
+extern u8 *g_wmap_effect_model_pack_3;
+extern u8 *g_wmap_effect_model_pack_4;
 extern u32 g_wmap_land_event_00_a_step;
 extern u8 g_wmap_animation_bank_2;
 extern u8 g_wmap_actor_motions[];
@@ -97,7 +97,7 @@ extern WmapColor D_80182D94;
 extern u32 g_wmap_land_event_00_a_sequence_1_step;
 extern u32 g_wmap_land_event_00_a_sequence_2_step;
 extern u32 g_wmap_land_event_00_a_sequence_3_step;
-extern void func_8008ECF8(s32, s32, s32*, void*);
+extern void func_8008ECF8(s32, s32, u8*, void*);
 
 extern VECTOR g_wmap_camera_translation;
 
