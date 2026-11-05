@@ -1,14 +1,14 @@
 #ifndef WMAP_SPARK_EFFECT_H
 #define WMAP_SPARK_EFFECT_H
 
-#include "wmap_sequence_runtime.h"
-#include "wmap_actor_motion.h"
-#include "wmap_sprite_render.h"
+#include "common.h"
 #include <inline_c.h>
-#include "sdk/gte_dmpsx_compat.h"
 #include <rand.h>
 
-extern WmapAnimationSlot g_wmap_actor_animations[];
+#include "sdk/gte_dmpsx_compat.h"
+#include "wmap_actor_motion.h"
+#include "wmap_sequence_runtime.h"
+#include "wmap_sprite_render.h"
 
 #define WMAP_SPARK_OPERAND_SHIFT 6
 #define WMAP_SPARK_PRODUCT_SHIFT 12
@@ -28,68 +28,65 @@ extern WmapAnimationSlot g_wmap_actor_animations[];
  * @param shade_value Shared shade global; only its low 16 bits are read.
  * @note Projects sparks with the current GTE transform.
  */
-#define WMAP_DEFINE_RADIAL_SPARK_UPDATE(name, slot_count, first_actor, texture_index,                \
-                                       ot_index, lifetime_min, shade_value)                          \
-    void name(void)                                                                                  \
-    {                                                                                                \
-        SVECTOR position;                                                                            \
-        s32 screen;                                                                                  \
-        WmapMotion* spark;                                                                           \
-        WmapSpriteActor* actor;                                                                      \
-        s32 count;                                                                                   \
-        s32 i;                                                                                       \
-                                                                                                     \
-        count = 0;                                                                                   \
-        for (i = 0; i < (slot_count); i++)                                                           \
-        {                                                                                            \
-            spark = &g_wmap_actor_motions[i];                                                        \
-            if (spark->state != 0)                                                                   \
-            {                                                                                        \
-                actor = &g_wmap_sprite_actors[(first_actor) + i];                                    \
-                position.vx = ((spark->radius >> WMAP_SPARK_OPERAND_SHIFT) *                         \
-                    (ccos(spark->angle) >> WMAP_SPARK_OPERAND_SHIFT)) >> WMAP_SPARK_PRODUCT_SHIFT;   \
-                position.vy = ((spark->radius >> WMAP_SPARK_OPERAND_SHIFT) *                         \
-                    (csin(spark->angle) >> WMAP_SPARK_OPERAND_SHIFT)) >> WMAP_SPARK_PRODUCT_SHIFT;   \
-                position.vz = 0;                                                                     \
-                gte_ldv0(&position);                                                                 \
-                gte_rtps();                                                                          \
-                spark->radius += spark->velocity;                                                    \
-                actor->target_shade = *(u16*)&(shade_value);                                         \
-                actor->shade = *(u16*)&(shade_value);                                                \
-                gte_stsxy(&screen);                                                                  \
-                wmap_step_actor_animation(actor, &g_wmap_actor_animations[(first_actor) + i]);       \
-                wmap_draw_actor_sprite(actor, screen, (texture_index), (ot_index), 0);               \
-                if (--spark->lifetime == 0)                                                          \
-                {                                                                                    \
-                    spark->state = 0;                                                                \
-                }                                                                                    \
-                count++;                                                                             \
-            }                                                                                        \
-        }                                                                                            \
-                                                                                                     \
-        /* Sparks that expired above still count for this frame. */                                  \
-        for (i = 0; i < (slot_count); i++)                                                           \
-        {                                                                                            \
-            spark = &g_wmap_actor_motions[i];                                                        \
-            if (spark->state == 0)                                                                   \
-            {                                                                                        \
-                /* This allows one more spark than the intensity value. */                           \
-                if (g_wmap_particle_intensity < count++)                                             \
-                {                                                                                    \
-                    break;                                                                           \
-                }                                                                                    \
-                actor = &g_wmap_sprite_actors[(first_actor) + i];                                    \
-                actor->scale_index = WMAP_SPARK_SCALE_INDEX;                                         \
-                actor->previous_sequence = -1;                                                       \
-                actor->resource_index = 0;                                                           \
-                actor->sequence = 0;                                                                 \
-                spark->state = 1;                                                                    \
-                spark->angle = (u32)rand() >> WMAP_SPARK_RANDOM_ANGLE_SHIFT;                         \
-                spark->radius = 0;                                                                   \
-                spark->velocity = rand() / 2 + WMAP_SPARK_MIN_RADIUS_STEP;                           \
-                spark->lifetime = (rand() & WMAP_SPARK_LIFETIME_MASK) + (lifetime_min);              \
-            }                                                                                        \
-        }                                                                                            \
+#define WMAP_DEFINE_RADIAL_SPARK_UPDATE(name, slot_count, first_actor, texture_index, ot_index, lifetime_min, shade_value)                                     \
+    void name(void)                                                                                                                                            \
+    {                                                                                                                                                          \
+        SVECTOR position;                                                                                                                                      \
+        s32 screen;                                                                                                                                            \
+        WmapMotion* spark;                                                                                                                                     \
+        WmapSpriteActor* actor;                                                                                                                                \
+        s32 count;                                                                                                                                             \
+        s32 i;                                                                                                                                                 \
+                                                                                                                                                               \
+        count = 0;                                                                                                                                             \
+        for (i = 0; i < (slot_count); i++)                                                                                                                     \
+        {                                                                                                                                                      \
+            spark = &g_wmap_actor_motions[i];                                                                                                                  \
+            if (spark->state != 0)                                                                                                                             \
+            {                                                                                                                                                  \
+                actor = &g_wmap_sprite_actors[(first_actor) + i];                                                                                              \
+                position.vx = ((spark->radius >> WMAP_SPARK_OPERAND_SHIFT) * (ccos(spark->angle) >> WMAP_SPARK_OPERAND_SHIFT)) >> WMAP_SPARK_PRODUCT_SHIFT;    \
+                position.vy = ((spark->radius >> WMAP_SPARK_OPERAND_SHIFT) * (csin(spark->angle) >> WMAP_SPARK_OPERAND_SHIFT)) >> WMAP_SPARK_PRODUCT_SHIFT;    \
+                position.vz = 0;                                                                                                                               \
+                gte_ldv0(&position);                                                                                                                           \
+                gte_rtps();                                                                                                                                    \
+                spark->radius += spark->velocity;                                                                                                              \
+                actor->target_shade = *(u16*)&(shade_value);                                                                                                   \
+                actor->shade = *(u16*)&(shade_value);                                                                                                          \
+                gte_stsxy(&screen);                                                                                                                            \
+                wmap_step_actor_animation(actor, &g_wmap_actor_animations[(first_actor) + i]);                                                                 \
+                wmap_draw_actor_sprite(actor, screen, (texture_index), (ot_index), 0);                                                                         \
+                if (--spark->lifetime == 0)                                                                                                                    \
+                {                                                                                                                                              \
+                    spark->state = 0;                                                                                                                          \
+                }                                                                                                                                              \
+                count++;                                                                                                                                       \
+            }                                                                                                                                                  \
+        }                                                                                                                                                      \
+                                                                                                                                                               \
+        /* Sparks that expired above still count for this frame. */                                                                                            \
+        for (i = 0; i < (slot_count); i++)                                                                                                                     \
+        {                                                                                                                                                      \
+            spark = &g_wmap_actor_motions[i];                                                                                                                  \
+            if (spark->state == 0)                                                                                                                             \
+            {                                                                                                                                                  \
+                /* This allows one more spark than the intensity value. */                                                                                     \
+                if (g_wmap_particle_intensity < count++)                                                                                                       \
+                {                                                                                                                                              \
+                    break;                                                                                                                                     \
+                }                                                                                                                                              \
+                actor = &g_wmap_sprite_actors[(first_actor) + i];                                                                                              \
+                actor->scale_index = WMAP_SPARK_SCALE_INDEX;                                                                                                   \
+                actor->previous_sequence = -1;                                                                                                                 \
+                actor->resource_index = 0;                                                                                                                     \
+                actor->sequence = 0;                                                                                                                           \
+                spark->state = 1;                                                                                                                              \
+                spark->angle = (u32)rand() >> WMAP_SPARK_RANDOM_ANGLE_SHIFT;                                                                                   \
+                spark->radius = 0;                                                                                                                             \
+                spark->velocity = rand() / 2 + WMAP_SPARK_MIN_RADIUS_STEP;                                                                                     \
+                spark->lifetime = (rand() & WMAP_SPARK_LIFETIME_MASK) + (lifetime_min);                                                                        \
+            }                                                                                                                                                  \
+        }                                                                                                                                                      \
     }
 
 #endif

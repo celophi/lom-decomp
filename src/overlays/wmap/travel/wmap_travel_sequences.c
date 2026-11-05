@@ -1,19 +1,21 @@
+#include "common.h"
+#include <abs.h>
+#include <inline_c.h>
+#include <libgte.h>
+
+#include "../internal/wmap_cells.h"
+#include "../internal/wmap_effect_resources.h"
 #include "../internal/wmap_main.h"
+#include "../internal/wmap_map_labels.h"
 #include "../internal/wmap_party_travel.h"
-#include "../internal/wmap_travel_sequences.h"
 #include "../internal/wmap_resource_support.h"
 #include "../internal/wmap_sequence_runtime.h"
 #include "../internal/wmap_sprite_render.h"
-#include <abs.h>
-#include <libgte.h>
-#include <inline_c.h>
-#include "sdk/gte_dmpsx_compat.h"
-#include "../internal/wmap_map_labels.h"
-#include "../internal/wmap_effect_resources.h"
-#include "main/cdrom.h"
-#include "../internal/wmap_cells.h"
 #include "../internal/wmap_step_sequence.h"
+#include "../internal/wmap_travel_sequences.h"
 #include "../internal/wmap_view_effects.h"
+#include "main/cdrom.h"
+#include "sdk/gte_dmpsx_compat.h"
 
 /** @brief Land the special travel starts from and the land the return trip ends on. */
 #define WMAP_TRAVEL_START_LAND 2
@@ -150,14 +152,17 @@ static inline void wmap_climb_vehicle(void)
     WmapSpriteActor* actor;
 
     actor = wmap_turn_vehicle(1);
+
     if (g_wmap_actor_motions.height < WMAP_VEHICLE_MAX_HEIGHT)
     {
         g_wmap_actor_motions.height++;
     }
+
     if (g_wmap_actor_motions.radius < WMAP_VEHICLE_MAX_RADIUS)
     {
         g_wmap_actor_motions.radius += WMAP_VEHICLE_RADIUS_STEP;
     }
+
     if ((g_wmap_frame_count & 3) == 0)
     {
         if (actor->scale_index < WMAP_VEHICLE_SCALE_MAX)
@@ -180,6 +185,7 @@ WmapSpriteActor* wmap_turn_vehicle(s32 advance)
     WmapSpriteActor* actor;
 
     actor = &g_wmap_vehicle_actor;
+
     /* The heading is read unsigned here (lhu); the other users read it signed. */
     if (advance != 0)
     {
@@ -197,14 +203,17 @@ WmapSpriteActor* wmap_turn_vehicle(s32 advance)
         angle &= WMAP_HEADING_MASK;
         heading = motion->heading = angle;
     }
+
     facing_angle = heading + 0x200;
     actor->sequence = (facing_angle >> 9) & 3;
+
     if (facing_angle & 0x800)
     {
         if (g_wmap_vehicle_bank_flipped == 0)
         {
             actor->previous_sequence = -1;
         }
+
         g_wmap_vehicle_animation.data = &g_wmap_animation_bank_0[WMAP_VEHICLE_BANK_SIZE];
         g_wmap_vehicle_bank_flipped = 1;
     }
@@ -214,9 +223,11 @@ WmapSpriteActor* wmap_turn_vehicle(s32 advance)
         {
             actor->previous_sequence = -1;
         }
+
         g_wmap_vehicle_animation.data = g_wmap_animation_bank_0;
         g_wmap_vehicle_bank_flipped = 0;
     }
+
     if ((u32)(heading - 0x401) < 0x7FFU && g_wmap_actor_motions.height < WMAP_VEHICLE_LOW_HEIGHT)
     {
         heading = WMAP_VEHICLE_OT_BEHIND;
@@ -225,6 +236,7 @@ WmapSpriteActor* wmap_turn_vehicle(s32 advance)
     {
         heading = WMAP_VEHICLE_OT_FRONT;
     }
+
     g_wmap_actor_motions.ot_index = heading;
     return actor;
 }
@@ -239,9 +251,7 @@ void wmap_special_travel_spawn_vehicle(void)
 }
 
 /** @brief Special travel step 6: turn the vehicle while it climbs and grows, until the timer ends. */
-WMAP_STEP_UPDATE_AND_WAIT(wmap_special_travel_climb_vehicle,
-    g_wmap_special_travel_step, g_wmap_special_travel_timer,
-    wmap_climb_vehicle())
+WMAP_STEP_UPDATE_AND_WAIT(wmap_special_travel_climb_vehicle, g_wmap_special_travel_step, g_wmap_special_travel_timer, wmap_climb_vehicle())
 
 /**
  * @brief Project and draw the vehicle on its orbit, playing the flap sound on wing frames.
@@ -265,6 +275,7 @@ s32 wmap_draw_vehicle(s32 initialize)
     gte_ldv0(&position);
     gte_rtps();
     animation_frame = wmap_step_actor_animation(actor, &g_wmap_vehicle_animation);
+
     if (g_wmap_vehicle_flap_sound_enabled != 0)
     {
         if (animation_frame == 12 || animation_frame == 22 || animation_frame == 0)
@@ -272,7 +283,9 @@ s32 wmap_draw_vehicle(s32 initialize)
             wmap_play_sound(WMAP_VEHICLE_SOUND_FLAP, WMAP_VEHICLE_SOUND_PAN);
         }
     }
+
     gte_stsxy(&g_wmap_vehicle_screen_position);
+
     if (g_wmap_actor_motions.ot_override != 0)
     {
         wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, g_wmap_actor_motions.ot_override, WMAP_VEHICLE_VARIANT);
@@ -281,6 +294,7 @@ s32 wmap_draw_vehicle(s32 initialize)
     {
         wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, g_wmap_actor_motions.ot_index, WMAP_VEHICLE_VARIANT);
     }
+
     PopMatrix();
     return g_wmap_actor_motions.active;
 }
@@ -305,11 +319,13 @@ s32 wmap_start_vehicle_flight(s32 initialize)
 
     g_wmap_vehicle_route = WMAP_ROUTE_NONE;
     g_wmap_vehicle_phase = 0;
+
     if ((g_wmap_vehicle_cell_x == g_wmap_vehicle_target_x && g_wmap_vehicle_cell_y != g_wmap_vehicle_target_y) ||
         (g_wmap_vehicle_cell_x != g_wmap_vehicle_target_x && g_wmap_vehicle_cell_y == g_wmap_vehicle_target_y))
     {
         dx = g_wmap_vehicle_target_x - g_wmap_vehicle_cell_x;
         dy = g_wmap_vehicle_target_y - g_wmap_vehicle_cell_y;
+
         if (dx != 0)
         {
             dx = dx / abs(dx) + 1;
@@ -318,6 +334,7 @@ s32 wmap_start_vehicle_flight(s32 initialize)
         {
             dx = 1;
         }
+
         if (dy != 0)
         {
             dy = dy / abs(dy) + 1;
@@ -326,15 +343,18 @@ s32 wmap_start_vehicle_flight(s32 initialize)
         {
             dy = 1;
         }
+
         g_wmap_vehicle_route = dx + dy * 3;
     }
     else
     {
         delta = g_wmap_vehicle_target_x - g_wmap_vehicle_cell_x;
         dy = g_wmap_vehicle_target_y - g_wmap_vehicle_cell_y;
+
         if (abs(delta) == abs(dy))
         {
             dx = delta;
+
             if (dx != 0)
             {
                 dx = dx / abs(dx) + 1;
@@ -343,6 +363,7 @@ s32 wmap_start_vehicle_flight(s32 initialize)
             {
                 dx = 1;
             }
+
             if (dy != 0)
             {
                 dy = dy / abs(dy) + 1;
@@ -351,12 +372,14 @@ s32 wmap_start_vehicle_flight(s32 initialize)
             {
                 dy = 1;
             }
+
             g_wmap_vehicle_route = dx + dy * 3;
         }
     }
+
     if (g_wmap_vehicle_route != WMAP_ROUTE_NONE)
     {
-        g_wmap_view_scroll_mode = 2;
+        g_wmap_view_scroll_mode = WMAP_SCROLL_SCRIPTED;
         wmap_install_callback(wmap_fly_vehicle);
     }
     else
@@ -366,21 +389,26 @@ s32 wmap_start_vehicle_flight(s32 initialize)
         magnitude_x = abs(dx);
         magnitude_y = abs(leg_dy);
         difference = magnitude_x - magnitude_y;
+
         if (difference > 0)
         {
             sign = 0;
+
             if (dx != 0)
             {
                 sign = -1;
+
                 if (dx > 0)
                 {
                     sign = 1;
                 }
             }
+
             difference = difference * sign;
             g_wmap_scroll_remaining_y = 0;
             g_wmap_scroll_remaining_x = difference * WMAP_CELL_SPACING;
             g_wmap_vehicle_cell_x += difference;
+
             if (dx > 0)
             {
                 g_wmap_vehicle_route = WMAP_ROUTE_RIGHT;
@@ -394,19 +422,23 @@ s32 wmap_start_vehicle_flight(s32 initialize)
         {
             delta = g_wmap_vehicle_cell_y - g_wmap_vehicle_target_y;
             sign = 0;
+
             if (delta != 0)
             {
                 sign = -1;
                 dx = delta > 0;
+
                 if (dx)
                 {
                     sign = 1;
                 }
             }
+
             difference = difference * sign;
             g_wmap_scroll_remaining_x = 0;
             g_wmap_scroll_remaining_y = difference * WMAP_CELL_SPACING;
             g_wmap_vehicle_cell_y += difference;
+
             if (leg_dy > 0)
             {
                 g_wmap_vehicle_route = WMAP_ROUTE_DOWN;
@@ -416,8 +448,10 @@ s32 wmap_start_vehicle_flight(s32 initialize)
                 g_wmap_vehicle_route = WMAP_ROUTE_UP;
             }
         }
+
         wmap_install_callback(wmap_fly_vehicle_first_leg);
     }
+
     return 0;
 }
 
@@ -431,19 +465,23 @@ s32 wmap_fly_vehicle(s32 initialize)
     if (g_wmap_vehicle_phase == 0)
     {
         wmap_turn_vehicle(1);
+
         if (g_wmap_actor_motions.heading == g_wmap_route_headings[g_wmap_vehicle_route])
         {
-            g_wmap_view_scroll_mode = 2;
+            g_wmap_view_scroll_mode = WMAP_SCROLL_SCRIPTED;
             g_wmap_scroll_remaining_x = (g_wmap_vehicle_target_x - g_wmap_vehicle_cell_x) * WMAP_CELL_SPACING;
             g_wmap_scroll_remaining_y = (g_wmap_vehicle_target_y - g_wmap_vehicle_cell_y) * WMAP_CELL_SPACING;
             g_wmap_vehicle_phase++;
         }
+
         return 1;
     }
-    if (g_wmap_view_scroll_mode == 2)
+
+    if (g_wmap_view_scroll_mode == WMAP_SCROLL_SCRIPTED)
     {
         return 1;
     }
+
     g_wmap_vehicle_flying = 0;
     g_wmap_vehicle_cell_x = g_wmap_vehicle_target_x;
     g_wmap_vehicle_cell_y = g_wmap_vehicle_target_y;
@@ -463,20 +501,25 @@ s32 wmap_fly_vehicle_first_leg(s32 initialize)
     if (g_wmap_vehicle_phase == 0)
     {
         wmap_turn_vehicle(1);
+
         if (g_wmap_actor_motions.heading == g_wmap_route_headings[g_wmap_vehicle_route])
         {
-            g_wmap_view_scroll_mode = 2;
+            g_wmap_view_scroll_mode = WMAP_SCROLL_SCRIPTED;
             g_wmap_vehicle_phase++;
         }
+
         return 1;
     }
-    if (g_wmap_view_scroll_mode == 2)
+
+    if (g_wmap_view_scroll_mode == WMAP_SCROLL_SCRIPTED)
     {
         return 1;
     }
+
     g_wmap_vehicle_phase = 0;
     delta_x = g_wmap_vehicle_target_x - g_wmap_vehicle_cell_x;
     delta_y = g_wmap_vehicle_target_y - g_wmap_vehicle_cell_y;
+
     if (delta_x != 0)
     {
         delta_x = (delta_x / abs(delta_x)) + 1;
@@ -485,6 +528,7 @@ s32 wmap_fly_vehicle_first_leg(s32 initialize)
     {
         delta_x = 1;
     }
+
     if (delta_y != 0)
     {
         delta_y = (delta_y / abs(delta_y)) + 1;
@@ -493,6 +537,7 @@ s32 wmap_fly_vehicle_first_leg(s32 initialize)
     {
         delta_y = 1;
     }
+
     g_wmap_vehicle_route = delta_x + (delta_y * 3);
     wmap_install_callback(wmap_fly_vehicle);
     return 0;
@@ -503,7 +548,7 @@ void wmap_special_return_prepare(void)
 {
     wmap_load_vehicle();
     wmap_find_land_cell(WMAP_SPECIAL_TRAVEL_LAND, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
-    g_wmap_view_scroll_mode = 2;
+    g_wmap_view_scroll_mode = WMAP_SCROLL_SCRIPTED;
     g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * WMAP_CELL_SPACING) - g_wmap_view.x;
     g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * WMAP_CELL_SPACING) - g_wmap_view.y;
     g_wmap_special_return_step++;
@@ -520,9 +565,7 @@ void wmap_special_return_spawn_vehicle(void)
 }
 
 /** @brief Special return step 4: as wmap_special_travel_climb_vehicle, on the return sequence. */
-WMAP_STEP_UPDATE_AND_WAIT(wmap_special_return_climb_vehicle,
-    g_wmap_special_return_step, g_wmap_special_return_timer,
-    wmap_climb_vehicle())
+WMAP_STEP_UPDATE_AND_WAIT(wmap_special_return_climb_vehicle, g_wmap_special_return_step, g_wmap_special_return_timer, wmap_climb_vehicle())
 
 /**
  * @brief Turn the vehicle until it faces the landing heading.
@@ -532,11 +575,13 @@ WMAP_STEP_UPDATE_AND_WAIT(wmap_special_return_climb_vehicle,
 s32 wmap_finish_vehicle_turn(s32 initialize)
 {
     wmap_turn_vehicle(1);
+
     if (g_wmap_actor_motions.heading == WMAP_HEADING_LANDING)
     {
         g_wmap_vehicle_phase = 0;
         return 0;
     }
+
     return 1;
 }
 
@@ -545,9 +590,7 @@ s32 wmap_finish_vehicle_turn(s32 initialize)
  * @param arg0 Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once every step has run.
  */
-WMAP_STEP_RUNNER(wmap_run_special_travel,
-    g_wmap_special_travel_steps, WMAP_SPECIAL_TRAVEL_STEPS,
-    g_wmap_special_travel_step, g_wmap_special_travel_timer)
+WMAP_STEP_RUNNER(wmap_run_special_travel, g_wmap_special_travel_steps, WMAP_SPECIAL_TRAVEL_STEPS, g_wmap_special_travel_step, g_wmap_special_travel_timer)
 
 /** @brief Special travel step 0: restart the sequence. */
 WMAP_STEP_RESET(wmap_special_travel_reset, g_wmap_special_travel_step, g_wmap_special_travel_timer)
@@ -568,7 +611,7 @@ WMAP_STEP_WAIT(wmap_special_travel_wait, g_wmap_special_travel_step, g_wmap_spec
 void wmap_special_travel_scroll_to_start(void)
 {
     wmap_find_land_cell(WMAP_TRAVEL_START_LAND, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
-    g_wmap_view_scroll_mode = 2;
+    g_wmap_view_scroll_mode = WMAP_SCROLL_SCRIPTED;
     g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * WMAP_CELL_SPACING) - g_wmap_view.x;
     g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * WMAP_CELL_SPACING) - g_wmap_view.y;
     g_wmap_special_travel_step++;
@@ -576,13 +619,13 @@ void wmap_special_travel_scroll_to_start(void)
 }
 
 /** @brief Special travel step 4: wait for the map scroll, then spawn the vehicle. */
-WMAP_STEP_WAIT_SCROLL(wmap_special_travel_wait_scroll,
-    g_wmap_special_travel_step, wmap_special_travel_spawn_vehicle)
+WMAP_STEP_WAIT_SCROLL(wmap_special_travel_wait_scroll, g_wmap_special_travel_step, wmap_special_travel_spawn_vehicle)
 
 /** @brief Special travel step 7: fly the vehicle to the party unless the party is at the start land. */
 void wmap_special_travel_fly_to_party(void)
 {
     g_wmap_actor_motions.ot_index = WMAP_VEHICLE_OT_FLIGHT;
+
     if (g_wmap_cells[g_wmap_travelers[0].cell_x][g_wmap_travelers[0].cell_y].land_id == WMAP_TRAVEL_START_LAND)
     {
         g_wmap_vehicle_flying = 0;
@@ -594,6 +637,7 @@ void wmap_special_travel_fly_to_party(void)
         g_wmap_vehicle_flying = 1;
         wmap_install_callback(wmap_start_vehicle_flight);
     }
+
     g_wmap_special_travel_step++;
     wmap_special_travel_wait_party();
 }
@@ -609,8 +653,7 @@ void wmap_special_travel_wait_party(void)
 }
 
 /** @brief Special travel step 9: start the turn to the departure heading. */
-WMAP_STEP_ARM_TIMER(wmap_special_travel_start_turn,
-    g_wmap_special_travel_step, g_wmap_special_travel_timer, WMAP_VEHICLE_TURN_FRAMES, wmap_special_travel_turn)
+WMAP_STEP_ARM_TIMER(wmap_special_travel_start_turn, g_wmap_special_travel_step, g_wmap_special_travel_timer, WMAP_VEHICLE_TURN_FRAMES, wmap_special_travel_turn)
 
 /** @brief Special travel step 10: turn to the departure heading (sets actor 0 unknown_02 to -1 there). */
 void wmap_special_travel_turn(void)
@@ -618,14 +661,17 @@ void wmap_special_travel_turn(void)
     s32 remaining_ticks;
 
     wmap_turn_vehicle(1);
+
     if (g_wmap_actor_motions.heading == WMAP_HEADING_DEPARTURE)
     {
         g_wmap_sprite_actors[0].resource_index = -1;
         g_wmap_special_travel_timer = 0;
         g_wmap_special_travel_step++;
     }
+
     remaining_ticks = g_wmap_special_travel_timer - 1;
     g_wmap_special_travel_timer = remaining_ticks;
+
     if (remaining_ticks == 0)
     {
         g_wmap_special_travel_step++;
@@ -654,17 +700,19 @@ void wmap_special_travel_wait_land(void)
 }
 
 /** @brief Special travel step 13: start circling over the special land. */
-WMAP_STEP_ARM_TIMER(wmap_special_travel_start_cruise,
-    g_wmap_special_travel_step, g_wmap_special_travel_timer, WMAP_VEHICLE_WAIT_FRAMES, wmap_special_travel_cruise)
+WMAP_STEP_ARM_TIMER(wmap_special_travel_start_cruise, g_wmap_special_travel_step, g_wmap_special_travel_timer, WMAP_VEHICLE_WAIT_FRAMES,
+                    wmap_special_travel_cruise)
 
 /** @brief Special travel step 14: circle over the land (clears actor 0 unknown_02 at the cruise heading). */
 void wmap_special_travel_cruise(void)
 {
     wmap_turn_vehicle(1);
+
     if (g_wmap_actor_motions.heading == WMAP_HEADING_CRUISE)
     {
         g_wmap_sprite_actors[0].resource_index = 0;
     }
+
     if (--g_wmap_special_travel_timer == 0)
     {
         g_wmap_special_travel_step++;
@@ -708,6 +756,7 @@ void wmap_special_travel_fly_away(void)
     wmap_step_actor_animation(actor, &g_wmap_vehicle_animation);
     wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, g_wmap_actor_motions.ot_index, WMAP_VEHICLE_VARIANT);
     g_wmap_vehicle_screen_position.point.x -= 6;
+
     if (--g_wmap_special_travel_timer == 0)
     {
         g_wmap_special_travel_step++;
@@ -726,16 +775,13 @@ void wmap_special_travel_finish(void)
  * @param arg0 Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once every step has run.
  */
-WMAP_STEP_RUNNER(wmap_run_special_return,
-    g_wmap_special_return_steps, WMAP_SPECIAL_RETURN_STEPS,
-    g_wmap_special_return_step, g_wmap_special_return_timer)
+WMAP_STEP_RUNNER(wmap_run_special_return, g_wmap_special_return_steps, WMAP_SPECIAL_RETURN_STEPS, g_wmap_special_return_step, g_wmap_special_return_timer)
 
 /** @brief Special return step 0: restart the sequence. */
 WMAP_STEP_RESET(wmap_special_return_reset, g_wmap_special_return_step, g_wmap_special_return_timer)
 
 /** @brief Special return step 2: wait for the map scroll, then spawn the vehicle. */
-WMAP_STEP_WAIT_SCROLL(wmap_special_return_wait_scroll,
-    g_wmap_special_return_step, wmap_special_return_spawn_vehicle)
+WMAP_STEP_WAIT_SCROLL(wmap_special_return_wait_scroll, g_wmap_special_return_step, wmap_special_return_spawn_vehicle)
 
 /** @brief Special return step 5: move the party to the return land and fly the vehicle there. */
 void wmap_special_return_fly_home(void)
@@ -759,17 +805,19 @@ void wmap_special_return_wait_home(void)
 }
 
 /** @brief Special return step 7: start circling over the return land. */
-WMAP_STEP_ARM_TIMER(wmap_special_return_start_cruise,
-    g_wmap_special_return_step, g_wmap_special_return_timer, WMAP_VEHICLE_WAIT_FRAMES, wmap_special_return_cruise)
+WMAP_STEP_ARM_TIMER(wmap_special_return_start_cruise, g_wmap_special_return_step, g_wmap_special_return_timer, WMAP_VEHICLE_WAIT_FRAMES,
+                    wmap_special_return_cruise)
 
 /** @brief Special return step 8: circle over the land (clears actor 0 unknown_02 at the cruise heading). */
 void wmap_special_return_cruise(void)
 {
     wmap_turn_vehicle(1);
+
     if (g_wmap_actor_motions.heading == WMAP_HEADING_CRUISE)
     {
         g_wmap_sprite_actors[0].resource_index = 0;
     }
+
     if (--g_wmap_special_return_timer == 0)
     {
         g_wmap_special_return_step++;
@@ -813,6 +861,7 @@ void wmap_special_return_fly_away(void)
     wmap_step_actor_animation(actor, &g_wmap_vehicle_animation);
     wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, g_wmap_actor_motions.ot_index, WMAP_VEHICLE_VARIANT);
     g_wmap_vehicle_screen_position.point.x -= 4;
+
     if (--g_wmap_special_return_timer == 0)
     {
         g_wmap_special_return_step++;

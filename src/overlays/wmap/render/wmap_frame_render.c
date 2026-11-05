@@ -1,14 +1,14 @@
-#include "../internal/wmap_frame_render.h"
-#include "../internal/wmap_sequence_runtime.h"
+#include "common.h"
+#include <inline_c.h>
+#include <libetc.h>
 #include <libgpu.h>
 #include <libgte.h>
-#include <libetc.h>
-#include <inline_c.h>
-#include "sdk/gte_dmpsx_compat.h"
-#include "main/cdrom.h"
+
+#include "../internal/wmap_frame_render.h"
+#include "../internal/wmap_sequence_runtime.h"
 #include "common/gpu_packet.h"
-
-
+#include "main/cdrom.h"
+#include "sdk/gte_dmpsx_compat.h"
 
 /** @brief Full-screen flat quad copied for the screen fades. */
 extern POLY_F4 g_wmap_fill_quad_template;
@@ -16,7 +16,8 @@ extern POLY_F4 g_wmap_fill_quad_template;
 extern s32 D_800DBE7C;
 extern s32 g_wmap_projection_distance;
 
-static void wmap_draw_exit_panel_quads(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bottom, VECTOR* center_bottom, VECTOR* right_top, VECTOR* right_bottom);
+static void wmap_draw_exit_panel_quads(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bottom, VECTOR* center_bottom, VECTOR* right_top,
+                                       VECTOR* right_bottom);
 
 /** @brief Append the overlay quad and texture-page triangle to the ordering table. */
 void wmap_draw_exit_fade(void)
@@ -32,11 +33,13 @@ void wmap_draw_exit_fade(void)
     setlen(quad, 5);
     setcode(quad, GPU_CODE_POLY_F4 | GPU_CODE_SEMI_TRANS);
     addPrim(&g_wmap_current_frame->ordering_table[1], quad);
+
     if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
         g_wmap_packet_bytes += sizeof(POLY_F4);
         g_wmap_current_frame->packet_cursor += sizeof(POLY_F4);
     }
+
     triangle = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
     setlen(triangle, 7);
     setcode(triangle, GPU_CODE_POLY_FT3);
@@ -45,6 +48,7 @@ void wmap_draw_exit_fade(void)
     *(s32*)&triangle->x0 = WMAP_MODEL_TPAGE_XY;
     triangle->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 0, 0);
     addPrim(&g_wmap_current_frame->ordering_table[1], triangle);
+
     if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
         g_wmap_packet_bytes += sizeof(POLY_FT3);
@@ -61,7 +65,8 @@ void wmap_draw_exit_fade(void)
  * @param right_top Top-right vertex of the right quad.
  * @param right_bottom Bottom-right vertex of the right quad.
  */
-static void wmap_draw_exit_panel_quads(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bottom, VECTOR* center_bottom, VECTOR* right_top, VECTOR* right_bottom)
+static void wmap_draw_exit_panel_quads(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bottom, VECTOR* center_bottom, VECTOR* right_top,
+                                       VECTOR* right_bottom)
 {
     POLY_FT4* quad;
 
@@ -87,6 +92,7 @@ static void wmap_draw_exit_panel_quads(VECTOR* left_top, VECTOR* center_top, VEC
     setSemiTrans(quad, 1);
 
     addPrim(&g_wmap_current_frame->ordering_table[1], quad);
+
     if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
         g_wmap_packet_bytes += sizeof(POLY_FT4);
@@ -115,6 +121,7 @@ static void wmap_draw_exit_panel_quads(VECTOR* left_top, VECTOR* center_top, VEC
     setSemiTrans(quad, 1);
 
     addPrim(&g_wmap_current_frame->ordering_table[1], quad);
+
     if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
         g_wmap_packet_bytes += sizeof(POLY_FT4);
@@ -122,45 +129,56 @@ static void wmap_draw_exit_panel_quads(VECTOR* left_top, VECTOR* center_top, VEC
     }
 }
 
-static __inline__ void project_panels(VECTOR* p38, VECTOR* p48, VECTOR* p58, VECTOR* p68, VECTOR* p78, VECTOR* p88)
+/**
+ * @brief Project the six corners of the two exit panels and draw the panels.
+ * @param left_top Receives the projected top-left corner.
+ * @param center_top Receives the projected top corner shared by both panels.
+ * @param left_bottom Receives the projected bottom-left corner.
+ * @param center_bottom Receives the projected bottom corner shared by both panels.
+ * @param right_top Receives the projected top-right corner.
+ * @param right_bottom Receives the projected bottom-right corner.
+ * @note Uses g_wmap_effect_model_e_rotation as the corner vector it loads into the GTE.
+ */
+static inline void wmap_project_exit_panel_corners(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bottom, VECTOR* center_bottom, VECTOR* right_top,
+                                                   VECTOR* right_bottom)
 {
-    D_801B2490.vx = -0xA0;
-    D_801B2490.vy = -0x78;
-    D_801B2490.vz = 0;
-    gte_ldv0(&D_801B2490);
+    g_wmap_effect_model_e_rotation.vx = -0xA0;
+    g_wmap_effect_model_e_rotation.vy = -0x78;
+    g_wmap_effect_model_e_rotation.vz = 0;
+    gte_ldv0(&g_wmap_effect_model_e_rotation);
     gte_rtv0tr();
-    D_801B2490.vx = 0x5F;
-    D_801B2490.vy = -0x78;
-    D_801B2490.vz = 0;
-    gte_stlvnl(p38);
-    gte_ldv0(&D_801B2490);
+    g_wmap_effect_model_e_rotation.vx = 0x5F;
+    g_wmap_effect_model_e_rotation.vy = -0x78;
+    g_wmap_effect_model_e_rotation.vz = 0;
+    gte_stlvnl(left_top);
+    gte_ldv0(&g_wmap_effect_model_e_rotation);
     gte_rtv0tr();
-    D_801B2490.vx = -0xA0;
-    D_801B2490.vy = 0x78;
-    D_801B2490.vz = 0;
-    gte_stlvnl(p48);
-    gte_ldv0(&D_801B2490);
+    g_wmap_effect_model_e_rotation.vx = -0xA0;
+    g_wmap_effect_model_e_rotation.vy = 0x78;
+    g_wmap_effect_model_e_rotation.vz = 0;
+    gte_stlvnl(center_top);
+    gte_ldv0(&g_wmap_effect_model_e_rotation);
     gte_rtv0tr();
-    D_801B2490.vx = 0x5F;
-    D_801B2490.vy = 0x78;
-    D_801B2490.vz = 0;
-    gte_stlvnl(p58);
-    gte_ldv0(&D_801B2490);
+    g_wmap_effect_model_e_rotation.vx = 0x5F;
+    g_wmap_effect_model_e_rotation.vy = 0x78;
+    g_wmap_effect_model_e_rotation.vz = 0;
+    gte_stlvnl(left_bottom);
+    gte_ldv0(&g_wmap_effect_model_e_rotation);
     gte_rtv0tr();
-    D_801B2490.vx = 0xA0;
-    D_801B2490.vy = -0x78;
-    D_801B2490.vz = 0;
-    gte_stlvnl(p68);
-    gte_ldv0(&D_801B2490);
+    g_wmap_effect_model_e_rotation.vx = 0xA0;
+    g_wmap_effect_model_e_rotation.vy = -0x78;
+    g_wmap_effect_model_e_rotation.vz = 0;
+    gte_stlvnl(center_bottom);
+    gte_ldv0(&g_wmap_effect_model_e_rotation);
     gte_rtv0tr();
-    D_801B2490.vx = 0xA0;
-    D_801B2490.vy = 0x78;
-    D_801B2490.vz = 0;
-    gte_stlvnl(p78);
-    gte_ldv0(&D_801B2490);
+    g_wmap_effect_model_e_rotation.vx = 0xA0;
+    g_wmap_effect_model_e_rotation.vy = 0x78;
+    g_wmap_effect_model_e_rotation.vz = 0;
+    gte_stlvnl(right_top);
+    gte_ldv0(&g_wmap_effect_model_e_rotation);
     gte_rtv0tr();
-    gte_stlvnl(p88);
-    wmap_draw_exit_panel_quads(p38, p48, p58, p68, p78, p88);
+    gte_stlvnl(right_bottom);
+    wmap_draw_exit_panel_quads(left_top, center_top, left_bottom, center_bottom, right_top, right_bottom);
 }
 
 /** @brief Update and project the paired world-map panels, then append their primitives. */
@@ -187,7 +205,7 @@ void wmap_update_exit_panels(void)
     TransMatrix(&transform, &g_wmap_effect_model_c_position);
     SetRotMatrix(&transform);
     SetTransMatrix(&transform);
-    project_panels(&left_top, &center_top, &left_bottom, &center_bottom, &right_top, &right_bottom);
+    wmap_project_exit_panel_corners(&left_top, &center_top, &left_bottom, &center_bottom, &right_top, &right_bottom);
     g_wmap_effect_model_d_rotation.vz = g_wmap_effect_model_d_rotation.vz - g_wmap_effect_model_b_rotation.vz;
     g_wmap_effect_model_d_rotation.vy = g_wmap_effect_model_d_rotation.vy - g_wmap_effect_model_b_rotation.vy;
     g_wmap_effect_model_d_rotation.vx = g_wmap_effect_model_d_rotation.vx - g_wmap_effect_model_b_rotation.vx;
@@ -198,7 +216,7 @@ void wmap_update_exit_panels(void)
     TransMatrix(&transform, &g_wmap_effect_model_d_position);
     SetRotMatrix(&transform);
     SetTransMatrix(&transform);
-    project_panels(&left_top, &center_top, &left_bottom, &center_bottom, &right_top, &right_bottom);
+    wmap_project_exit_panel_corners(&left_top, &center_top, &left_bottom, &center_bottom, &right_top, &right_bottom);
 
     quad = (POLY_F4*)g_wmap_current_frame->packet_cursor;
     g_wmap_current_frame->packet_cursor += 0;
@@ -250,6 +268,7 @@ void wmap_render_callback_frame(void)
         g_wmap_frames[1].packet_cursor = g_wmap_packet_buffer_1;
         g_wmap_current_frame = &g_wmap_frames[1];
     }
+
     g_wmap_packet_bytes = 0;
     ClearOTagR(g_wmap_current_frame->ordering_table, 179);
     D_800DBE7C = 0;
@@ -272,6 +291,7 @@ void wmap_draw_entry_fade(void)
     POLY_FT3* triangle;
 
     quad = (POLY_F4*)g_wmap_current_frame->packet_cursor;
+
     if (g_wmap_entry_fade_level >= 4)
     {
         *quad = g_wmap_fill_quad_template;
@@ -280,11 +300,13 @@ void wmap_draw_entry_fade(void)
         setlen(quad, 5);
         setcode(quad, GPU_CODE_POLY_F4 | GPU_CODE_SEMI_TRANS);
         addPrim(&g_wmap_current_frame->ordering_table[1], quad);
+
         if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {
             g_wmap_packet_bytes += sizeof(POLY_F4);
             g_wmap_current_frame->packet_cursor += sizeof(POLY_F4);
         }
+
         triangle = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
         setlen(triangle, 7);
         setcode(triangle, GPU_CODE_POLY_FT3);
@@ -293,6 +315,7 @@ void wmap_draw_entry_fade(void)
         *(s32*)&triangle->x0 = WMAP_MODEL_TPAGE_XY;
         triangle->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 0, 0);
         addPrim(&g_wmap_current_frame->ordering_table[1], triangle);
+
         if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {
             g_wmap_packet_bytes += sizeof(POLY_FT3);
@@ -314,6 +337,7 @@ s32 wmap_run_overlay_fade(s32 initialize)
     POLY_FT3* triangle;
 
     quad = (POLY_F4*)g_wmap_current_frame->packet_cursor;
+
     if (g_wmap_overlay_fade_level > g_wmap_overlay_fade_target)
     {
         g_wmap_overlay_fade_level -= 2;
@@ -322,21 +346,25 @@ s32 wmap_run_overlay_fade(s32 initialize)
     {
         g_wmap_overlay_fade_level += 2;
     }
+
     if (g_wmap_overlay_fade_level == 0)
     {
         return 1;
     }
+
     intensity = g_wmap_overlay_fade_level;
     *quad = g_wmap_fill_quad_template;
     setlen(quad, 5);
     setcode(quad, GPU_CODE_POLY_F4 | GPU_CODE_SEMI_TRANS);
     quad->r0 = quad->g0 = quad->b0 = intensity;
     addPrim(&g_wmap_current_frame->ordering_table[g_wmap_overlay_fade_depth], quad);
+
     if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
         g_wmap_packet_bytes += sizeof(POLY_F4);
         g_wmap_current_frame->packet_cursor += sizeof(POLY_F4);
     }
+
     triangle = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
     depth = g_wmap_overlay_fade_depth;
     setlen(triangle, 7);
@@ -346,10 +374,12 @@ s32 wmap_run_overlay_fade(s32 initialize)
     *(s32*)&triangle->x0 = WMAP_MODEL_TPAGE_XY;
     triangle->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 0, 0);
     addPrim(&g_wmap_current_frame->ordering_table[depth], triangle);
+
     if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
         g_wmap_packet_bytes += sizeof(POLY_FT3);
         g_wmap_current_frame->packet_cursor += sizeof(POLY_FT3);
     }
+
     return 1;
 }

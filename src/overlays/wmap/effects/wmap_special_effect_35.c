@@ -1,18 +1,20 @@
+#include "common.h"
+#include <inline_c.h>
+#include <libgte.h>
+#include <rand.h>
+
+#include "../internal/wmap_effect_resources.h"
 #include "../internal/wmap_frame_render.h"
-#include "../internal/wmap_model_render.h"
 #include "../internal/wmap_main.h"
+#include "../internal/wmap_model_render.h"
+#include "../internal/wmap_resource_support.h"
+#include "../internal/wmap_sequence_runtime.h"
 #include "../internal/wmap_special_effect_35.h"
 #include "../internal/wmap_sprite_render.h"
-#include "../internal/wmap_sequence_runtime.h"
-#include <libgte.h>
-#include <inline_c.h>
-#include "sdk/gte_dmpsx_compat.h"
-#include "../internal/wmap_view_effects.h"
-#include "../internal/wmap_resource_support.h"
-#include "../internal/wmap_effect_resources.h"
-#include "main/cdrom.h"
-#include <rand.h>
 #include "../internal/wmap_step_sequence.h"
+#include "../internal/wmap_view_effects.h"
+#include "main/cdrom.h"
+#include "sdk/gte_dmpsx_compat.h"
 
 /** @brief Step counts of the effect's sequences. */
 #define WMAP_EFFECT35_MAIN_STEPS 4
@@ -80,9 +82,7 @@ typedef struct
     s32 spawning;
 } WmapEffectEmitter;
 
-
 /** @brief Sequence step handler. */
-extern WmapAnimationSlot g_wmap_actor_animations[];
 extern WmapEffectMotion g_wmap_actor_motions[];
 extern s32 g_wmap_load_buffer[];
 extern WmapSequenceStep g_wmap_effect35_drop_a_steps[WMAP_EFFECT35_DROP_STEPS];
@@ -159,7 +159,6 @@ void wmap_effect35_orbiter_6_update(void);
 void wmap_effect35_orbiter_7_update(void);
 void wmap_effect35_emitter_a_start(void);
 void wmap_effect35_emitter_b_start(void);
-s32 wmap_effect35_run(s32 reset);
 void wmap_effect35_reset(void);
 void wmap_effect35_load(void);
 void wmap_effect35_wait_timeline(void);
@@ -302,10 +301,12 @@ static void wmap_effect35_update_emitter(WmapEffectEmitter* emitter)
 
         motion_base = (uintptr_t)g_wmap_actor_motions;
         walker = (WmapEffectMotion*)((index * sizeof(WmapEffectMotion)) + motion_base);
+
         for (; index < emitter->end; index++)
         {
             motion = (WmapEffectMotion*)((uintptr_t)walker + index);
             motion = (WmapEffectMotion*)((uintptr_t)motion - index);
+
             if (motion->active != 0)
             {
                 uintptr_t data_base;
@@ -324,6 +325,7 @@ static void wmap_effect35_update_emitter(WmapEffectEmitter* emitter)
                 data_base = 0;
                 wmap_step_actor_animation(actor, (void*)(resource_offset + resource_base));
                 gte_stsxy(&screen_position);
+
                 if (index < WMAP_EFFECT35_EMITTER_B_FIRST)
                 {
                     wmap_draw_actor_sprite(actor, screen_position, WMAP_EFFECT35_TEXTURE_SPARK, WMAP_EFFECT35_PARTICLE_OT, 0);
@@ -350,12 +352,15 @@ static void wmap_effect35_update_emitter(WmapEffectEmitter* emitter)
                     walker->active = 0;
                 }
             }
+
             walker++;
         }
     }
+
     if (emitter->spawning != 0)
     {
         index = emitter->first;
+
         for (; index < emitter->end; index++)
         {
             if (g_wmap_actor_motions[index].active == 0)
@@ -387,18 +392,7 @@ static void wmap_effect35_update_emitter(WmapEffectEmitter* emitter)
 void wmap_effect35_timeline_flash_backdrop(void)
 {
     g_wmap_backdrop_target_level = 0;
-    g_wmap_backdrop_target_color_0.r = 0xC8;
-    g_wmap_backdrop_target_color_0.g = 0xC8;
-    g_wmap_backdrop_target_color_0.b = 0xC8;
-    g_wmap_backdrop_target_color_1.r = 0xC8;
-    g_wmap_backdrop_target_color_1.g = 0xC8;
-    g_wmap_backdrop_target_color_1.b = 0xC8;
-    g_wmap_backdrop_target_color_2.r = 0xC8;
-    g_wmap_backdrop_target_color_2.g = 0xC8;
-    g_wmap_backdrop_target_color_2.b = 0xC8;
-    g_wmap_backdrop_target_color_3.r = 0xC8;
-    g_wmap_backdrop_target_color_3.g = 0xC8;
-    g_wmap_backdrop_target_color_3.b = 0xC8;
+    WMAP_SET_BACKDROP_TARGET(0xC8, 0xC8, 0xC8, 0xC8, 0xC8, 0xC8);
     g_wmap_effect35_timeline_timer = 8;
     g_wmap_effect35_timeline_step++;
 }
@@ -412,18 +406,7 @@ void wmap_effect35_timeline_start_finale(void)
     wmap_start_sequence(wmap_effect35_run_spin_a);
     wmap_start_sequence(wmap_effect35_run_sprite_c);
     g_wmap_backdrop_target_level = 0;
-    g_wmap_backdrop_target_color_0.r = 0x40;
-    g_wmap_backdrop_target_color_0.g = 0x10;
-    g_wmap_backdrop_target_color_0.b = 0x20;
-    g_wmap_backdrop_target_color_1.r = 0x40;
-    g_wmap_backdrop_target_color_1.g = 0x10;
-    g_wmap_backdrop_target_color_1.b = 0x20;
-    g_wmap_backdrop_target_color_2.r = 0x40;
-    g_wmap_backdrop_target_color_2.g = 0x10;
-    g_wmap_backdrop_target_color_2.b = 0x20;
-    g_wmap_backdrop_target_color_3.r = 0x40;
-    g_wmap_backdrop_target_color_3.g = 0x10;
-    g_wmap_backdrop_target_color_3.b = 0x20;
+    WMAP_SET_BACKDROP_TARGET(0x40, 0x10, 0x20, 0x40, 0x10, 0x20);
     g_wmap_effect35_timeline_timer = 24;
     g_wmap_effect35_timeline_step++;
 }
@@ -431,20 +414,14 @@ void wmap_effect35_timeline_start_finale(void)
 /**
  * @brief Model drop A: update and draw until the step timer runs out.
  */
-WMAP_STEP_MAP_DROP_UPDATE(wmap_effect35_drop_a_update,
-    g_wmap_effect35_drop_a_step, g_wmap_effect35_drop_a_timer,
-    g_wmap_zero_rotation, g_wmap_effect_model_a_position, g_wmap_effect_fade_a,
-    g_wmap_effect_model_pack_1, -WMAP_EFFECT35_DROP_SPEED,
-    4)
+WMAP_STEP_MAP_DROP_UPDATE(wmap_effect35_drop_a_update, g_wmap_effect35_drop_a_step, g_wmap_effect35_drop_a_timer, g_wmap_zero_rotation,
+                          g_wmap_effect_model_a_position, g_wmap_effect_fade_a, g_wmap_effect_model_pack_1, -WMAP_EFFECT35_DROP_SPEED, 4)
 
 /**
  * @brief Model drop B: update and draw until the step timer runs out.
  */
-WMAP_STEP_MAP_DROP_UPDATE(wmap_effect35_drop_b_update,
-    g_wmap_effect35_drop_b_step, g_wmap_effect35_drop_b_timer,
-    g_wmap_zero_rotation, g_wmap_effect_model_b_position, g_wmap_effect_fade_b,
-    g_wmap_load_buffer, -WMAP_EFFECT35_DROP_SPEED,
-    1)
+WMAP_STEP_MAP_DROP_UPDATE(wmap_effect35_drop_b_update, g_wmap_effect35_drop_b_step, g_wmap_effect35_drop_b_timer, g_wmap_zero_rotation,
+                          g_wmap_effect_model_b_position, g_wmap_effect_fade_b, g_wmap_load_buffer, -WMAP_EFFECT35_DROP_SPEED, 1)
 
 /**
  * @brief Spinning model A: spin and draw the model while fading it in.
@@ -455,12 +432,12 @@ void wmap_effect35_spin_a_fade_in(void)
 
     PushMatrix();
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_c_rotation);
-    wmap_draw_model(g_wmap_effect_model_pack_2, (D_8013923C >> 4) & 3, 0xA, 0x35,
-                  0x7800, 0x1001, g_wmap_effect_fade_c, 0, 0, -1);
+    wmap_draw_model(g_wmap_effect_model_pack_2, (D_8013923C >> 4) & 3, 0xA, 0x35, 0x7800, 0x1001, g_wmap_effect_fade_c, 0, 0, -1);
     WMAP_MODEL_FADE_IN(g_wmap_effect_fade_c, 2, 0x81, value);
     D_8013923C += 8;
     g_wmap_effect_model_c_rotation.vz += 0xA;
     PopMatrix();
+
     if (--g_wmap_effect35_spin_a_timer == 0)
     {
         g_wmap_effect35_spin_a_step++;
@@ -476,12 +453,12 @@ void wmap_effect35_spin_a_fade_out(void)
 
     PushMatrix();
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_c_rotation);
-    wmap_draw_model(g_wmap_effect_model_pack_2, (D_8013923C >> 4) & 3, 0xA, 0x35,
-                  0x7800, 0x1001, g_wmap_effect_fade_c, 0, 0, -1);
+    wmap_draw_model(g_wmap_effect_model_pack_2, (D_8013923C >> 4) & 3, 0xA, 0x35, 0x7800, 0x1001, g_wmap_effect_fade_c, 0, 0, -1);
     WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_c, 4, value);
     D_8013923C += 8;
     g_wmap_effect_model_c_rotation.vz += 0xA;
     PopMatrix();
+
     if (--g_wmap_effect35_spin_a_timer == 0)
     {
         g_wmap_effect35_spin_a_step++;
@@ -497,12 +474,12 @@ void wmap_effect35_spin_b_fade_in(void)
 
     PushMatrix();
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_d_rotation);
-    wmap_draw_model(g_wmap_effect_model_pack_3, (D_80139260 >> 4) & 7, 0xA, 0x36,
-                  0x7880, 0x1001, g_wmap_effect_fade_d, 0, 0, -1);
+    wmap_draw_model(g_wmap_effect_model_pack_3, (D_80139260 >> 4) & 7, 0xA, 0x36, 0x7880, 0x1001, g_wmap_effect_fade_d, 0, 0, -1);
     WMAP_MODEL_FADE_IN(g_wmap_effect_fade_d, 2, 0x61, value);
     D_80139260 -= 0x10;
     g_wmap_effect_model_d_rotation.vz += 4;
     PopMatrix();
+
     if (--g_wmap_effect35_spin_b_timer == 0)
     {
         g_wmap_effect35_spin_b_step++;
@@ -518,12 +495,12 @@ void wmap_effect35_spin_b_fade_out(void)
 
     PushMatrix();
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_d_rotation);
-    wmap_draw_model(g_wmap_effect_model_pack_3, (D_80139260 >> 4) & 7, 0xA, 0x36,
-                  0x7880, 0x1001, g_wmap_effect_fade_d, 0, 0, -1);
+    wmap_draw_model(g_wmap_effect_model_pack_3, (D_80139260 >> 4) & 7, 0xA, 0x36, 0x7880, 0x1001, g_wmap_effect_fade_d, 0, 0, -1);
     WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_d, 8, value);
     D_80139260 -= 0x10;
     g_wmap_effect_model_d_rotation.vz += 4;
     PopMatrix();
+
     if (--g_wmap_effect35_spin_b_timer == 0)
     {
         g_wmap_effect35_spin_b_step++;
@@ -549,35 +526,35 @@ void wmap_effect35_spin_b_fade_out(void)
  * @param next Update function, called immediately after advancing.
  * @note The constant conditions preserve the sprite's assignment order.
  */
-#define WMAP_EFFECT35_DEFINE_ORBITER_START(name, step, timer, slot, sequence_id, start_radius, start_angle, start_delay, next) \
-    void name(void)                                                                      \
-    {                                                                                    \
-        WmapSpriteActor* actor = &g_wmap_sprite_actors[(slot)];                          \
-        WmapEffectMotion* motion = &g_wmap_actor_motions[(slot)];                        \
-                                                                                         \
-        g_wmap_actor_animations[(slot)].data = g_wmap_animation_bank_0;                  \
-        actor->scale_index = WMAP_STEP_ACTOR_SCALE_INDEX;                                \
-        if ((sequence_id) != 0)                                                          \
-        {                                                                                \
-            actor->sequence = (sequence_id);                                             \
-        }                                                                                \
-        actor->previous_sequence = -1;                                                   \
-        actor->shade_step = WMAP_EFFECT35_ORBITER_SHADE_STEP;                            \
-        actor->resource_index = 0;                                                       \
-        if ((sequence_id) == 0)                                                          \
-        {                                                                                \
-            actor->sequence = 0;                                                         \
-        }                                                                                \
-        actor->target_shade = WMAP_EFFECT35_ORBITER_SHADE;                               \
-        actor->shade = 0;                                                                \
-        motion->radius = (start_radius);                                                 \
-        motion->angle = (start_angle);                                                   \
-        motion->speed = WMAP_EFFECT35_ORBITER_SPEED;                                     \
-        motion->height = 0;                                                              \
-        motion->delay = (start_delay);                                                   \
-        (timer) = WMAP_EFFECT35_ORBITER_FRAMES;                                          \
-        (step)++;                                                                        \
-        next();                                                                          \
+#define WMAP_EFFECT35_DEFINE_ORBITER_START(name, step, timer, slot, sequence_id, start_radius, start_angle, start_delay, next)                                 \
+    void name(void)                                                                                                                                            \
+    {                                                                                                                                                          \
+        WmapSpriteActor* actor = &g_wmap_sprite_actors[(slot)];                                                                                                \
+        WmapEffectMotion* motion = &g_wmap_actor_motions[(slot)];                                                                                              \
+                                                                                                                                                               \
+        g_wmap_actor_animations[(slot)].data = g_wmap_animation_bank_0;                                                                                        \
+        actor->scale_index = WMAP_STEP_ACTOR_SCALE_INDEX;                                                                                                      \
+        if ((sequence_id) != 0)                                                                                                                                \
+        {                                                                                                                                                      \
+            actor->sequence = (sequence_id);                                                                                                                   \
+        }                                                                                                                                                      \
+        actor->previous_sequence = -1;                                                                                                                         \
+        actor->shade_step = WMAP_EFFECT35_ORBITER_SHADE_STEP;                                                                                                  \
+        actor->resource_index = 0;                                                                                                                             \
+        if ((sequence_id) == 0)                                                                                                                                \
+        {                                                                                                                                                      \
+            actor->sequence = 0;                                                                                                                               \
+        }                                                                                                                                                      \
+        actor->target_shade = WMAP_EFFECT35_ORBITER_SHADE;                                                                                                     \
+        actor->shade = 0;                                                                                                                                      \
+        motion->radius = (start_radius);                                                                                                                       \
+        motion->angle = (start_angle);                                                                                                                         \
+        motion->speed = WMAP_EFFECT35_ORBITER_SPEED;                                                                                                           \
+        motion->height = 0;                                                                                                                                    \
+        motion->delay = (start_delay);                                                                                                                         \
+        (timer) = WMAP_EFFECT35_ORBITER_FRAMES;                                                                                                                \
+        (step)++;                                                                                                                                              \
+        next();                                                                                                                                                \
     }
 
 /** @brief Fixed-point shifts used to project an orbiter's radius and angle. */
@@ -593,78 +570,66 @@ void wmap_effect35_spin_b_fade_out(void)
  * @note Clearing the motion's active flag does not end this step. It keeps
  *       drawing until the timer expires.
  */
-#define WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(name, slot_index, step, timer)                       \
-    void name(void)                                                                              \
-    {                                                                                            \
-        SVECTOR position;                                                                        \
-        s32 screen_position;                                                                     \
-        WmapSpriteActor* actor = &g_wmap_sprite_actors[(slot_index)];                            \
-        WmapEffectMotion* motion = &g_wmap_actor_motions[(slot_index)];                          \
-        WmapAnimationSlot* slots;                                                                \
-                                                                                                 \
-        position.vx = (motion->radius *                                                          \
-            (ccos(motion->angle) >> WMAP_EFFECT35_ORBITER_TRIG_SHIFT)) >>                        \
-            WMAP_EFFECT35_ORBITER_PRODUCT_SHIFT;                                                 \
-        position.vy = (motion->radius *                                                          \
-            (csin(motion->angle) >> WMAP_EFFECT35_ORBITER_TRIG_SHIFT)) >>                        \
-            WMAP_EFFECT35_ORBITER_PRODUCT_SHIFT;                                                 \
-        position.vz = motion->height;                                                            \
-        gte_ldv0(&position);                                                                     \
-        gte_rtps();                                                                              \
-        slots = g_wmap_actor_animations;                                                         \
-        wmap_step_actor_animation(actor, &slots[(slot_index)]);                                  \
-        gte_stsxy(&screen_position);                                                             \
-        wmap_draw_actor_sprite(actor, screen_position, WMAP_EFFECT35_TEXTURE_SPARK,              \
-                               WMAP_EFFECT35_PARTICLE_OT, 0);                                    \
-        if (motion->delay != 0)                                                                  \
-        {                                                                                        \
-            motion->delay--;                                                                     \
-        }                                                                                        \
-        else if (motion->radius >= WMAP_EFFECT35_INNER_RADIUS)                                   \
-        {                                                                                        \
-            motion->radius -= motion->speed;                                                     \
-        }                                                                                        \
-        else if (actor->shade >= WMAP_EFFECT35_FADED_SHADE)                                      \
-        {                                                                                        \
-            actor->target_shade = 0;                                                             \
-        }                                                                                        \
-        else                                                                                     \
-        {                                                                                        \
-            motion->active = 0;                                                                  \
-        }                                                                                        \
-        if (--(timer) == 0)                                                                      \
-        {                                                                                        \
-            (step)++;                                                                            \
-        }                                                                                        \
+#define WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(name, slot_index, step, timer)                                                                                     \
+    void name(void)                                                                                                                                            \
+    {                                                                                                                                                          \
+        SVECTOR position;                                                                                                                                      \
+        s32 screen_position;                                                                                                                                   \
+        WmapSpriteActor* actor = &g_wmap_sprite_actors[(slot_index)];                                                                                          \
+        WmapEffectMotion* motion = &g_wmap_actor_motions[(slot_index)];                                                                                        \
+        WmapAnimationSlot* slots;                                                                                                                              \
+                                                                                                                                                               \
+        position.vx = (motion->radius * (ccos(motion->angle) >> WMAP_EFFECT35_ORBITER_TRIG_SHIFT)) >> WMAP_EFFECT35_ORBITER_PRODUCT_SHIFT;                     \
+        position.vy = (motion->radius * (csin(motion->angle) >> WMAP_EFFECT35_ORBITER_TRIG_SHIFT)) >> WMAP_EFFECT35_ORBITER_PRODUCT_SHIFT;                     \
+        position.vz = motion->height;                                                                                                                          \
+        gte_ldv0(&position);                                                                                                                                   \
+        gte_rtps();                                                                                                                                            \
+        slots = g_wmap_actor_animations;                                                                                                                       \
+        wmap_step_actor_animation(actor, &slots[(slot_index)]);                                                                                                \
+        gte_stsxy(&screen_position);                                                                                                                           \
+        wmap_draw_actor_sprite(actor, screen_position, WMAP_EFFECT35_TEXTURE_SPARK, WMAP_EFFECT35_PARTICLE_OT, 0);                                             \
+        if (motion->delay != 0)                                                                                                                                \
+        {                                                                                                                                                      \
+            motion->delay--;                                                                                                                                   \
+        }                                                                                                                                                      \
+        else if (motion->radius >= WMAP_EFFECT35_INNER_RADIUS)                                                                                                 \
+        {                                                                                                                                                      \
+            motion->radius -= motion->speed;                                                                                                                   \
+        }                                                                                                                                                      \
+        else if (actor->shade >= WMAP_EFFECT35_FADED_SHADE)                                                                                                    \
+        {                                                                                                                                                      \
+            actor->target_shade = 0;                                                                                                                           \
+        }                                                                                                                                                      \
+        else                                                                                                                                                   \
+        {                                                                                                                                                      \
+            motion->active = 0;                                                                                                                                \
+        }                                                                                                                                                      \
+        if (--(timer) == 0)                                                                                                                                    \
+        {                                                                                                                                                      \
+            (step)++;                                                                                                                                          \
+        }                                                                                                                                                      \
     }
 
 /** @brief Draw and update orbiter 1 until its timer expires. */
-WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(wmap_effect35_orbiter_1_update, 8,
-    g_wmap_effect35_orbiter_1_step, g_wmap_effect35_orbiter_1_timer)
+WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(wmap_effect35_orbiter_1_update, 8, g_wmap_effect35_orbiter_1_step, g_wmap_effect35_orbiter_1_timer)
 
 /** @brief Draw and update orbiter 2 until its timer expires. */
-WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(wmap_effect35_orbiter_2_update, 9,
-    g_wmap_effect35_orbiter_2_step, g_wmap_effect35_orbiter_2_timer)
+WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(wmap_effect35_orbiter_2_update, 9, g_wmap_effect35_orbiter_2_step, g_wmap_effect35_orbiter_2_timer)
 
 /** @brief Draw and update orbiter 3 until its timer expires. */
-WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(wmap_effect35_orbiter_3_update, 10,
-    g_wmap_effect35_orbiter_3_step, g_wmap_effect35_orbiter_3_timer)
+WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(wmap_effect35_orbiter_3_update, 10, g_wmap_effect35_orbiter_3_step, g_wmap_effect35_orbiter_3_timer)
 
 /** @brief Draw and update orbiter 4 until its timer expires. */
-WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(wmap_effect35_orbiter_4_update, 14,
-    g_wmap_effect35_orbiter_4_step, g_wmap_effect35_orbiter_4_timer)
+WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(wmap_effect35_orbiter_4_update, 14, g_wmap_effect35_orbiter_4_step, g_wmap_effect35_orbiter_4_timer)
 
 /** @brief Draw and update orbiter 5 until its timer expires. */
-WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(wmap_effect35_orbiter_5_update, 15,
-    g_wmap_effect35_orbiter_5_step, g_wmap_effect35_orbiter_5_timer)
+WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(wmap_effect35_orbiter_5_update, 15, g_wmap_effect35_orbiter_5_step, g_wmap_effect35_orbiter_5_timer)
 
 /** @brief Draw and update orbiter 6 until its timer expires. */
-WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(wmap_effect35_orbiter_6_update, 16,
-    g_wmap_effect35_orbiter_6_step, g_wmap_effect35_orbiter_6_timer)
+WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(wmap_effect35_orbiter_6_update, 16, g_wmap_effect35_orbiter_6_step, g_wmap_effect35_orbiter_6_timer)
 
 /** @brief Draw and update orbiter 7 until its timer expires. */
-WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(wmap_effect35_orbiter_7_update, 17,
-    g_wmap_effect35_orbiter_7_step, g_wmap_effect35_orbiter_7_timer)
+WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(wmap_effect35_orbiter_7_update, 17, g_wmap_effect35_orbiter_7_step, g_wmap_effect35_orbiter_7_timer)
 
 #undef WMAP_EFFECT35_DEFINE_ORBITER_UPDATE
 
@@ -681,6 +646,7 @@ void wmap_effect35_emitter_a_start(void)
         g_wmap_actor_animations[i].data = g_wmap_animation_bank_0;
         g_wmap_actor_motions[i].active = 0;
     }
+
     /* A plain word store: it may alias g_wmap_effect_params, so the pointer is reloaded below. */
     *(s32*)g_wmap_effect_params = WMAP_EFFECT35_EMITTER_A_FIRST;
     g_wmap_effect35_emitter_a_timer = 144;
@@ -710,6 +676,7 @@ void wmap_effect35_emitter_b_start(void)
         g_wmap_actor_animations[i].data = &g_wmap_animation_bank_0[WMAP_EFFECT_BANK_SIZE];
         g_wmap_actor_motions[i].active = 0;
     }
+
     for (i = WMAP_EFFECT35_EMITTER_B_FIRST; i < WMAP_EFFECT35_EMITTER_B_PRESPAWN_END; i++)
     {
         g_wmap_sprite_actors[i].scale_index = 0xF;
@@ -725,6 +692,7 @@ void wmap_effect35_emitter_b_start(void)
         g_wmap_actor_motions[i].height = 0;
         g_wmap_actor_motions[i].delay = 0x26;
     }
+
     g_wmap_effect35_emitter_b_timer = 240;
     g_wmap_effect_params[1].first = WMAP_EFFECT35_EMITTER_B_FIRST;
     g_wmap_effect_params[1].end = WMAP_EFFECT35_EMITTER_B_END;
@@ -745,9 +713,7 @@ void wmap_effect35_emitter_b_start(void)
  * @param arg0 Nonzero restarts the effect instead of running a step.
  * @return 1 while the effect runs, 0 once it has finished.
  */
-WMAP_STEP_RUNNER(wmap_effect35_run,
-    g_wmap_effect35_steps, WMAP_EFFECT35_MAIN_STEPS,
-    g_wmap_effect35_step, g_wmap_effect35_timer)
+WMAP_STEP_RUNNER(wmap_effect35_run, g_wmap_effect35_steps, WMAP_EFFECT35_MAIN_STEPS, g_wmap_effect35_step, g_wmap_effect35_timer)
 
 /**
  * @brief Effect step 0: restart the effect.
@@ -775,8 +741,7 @@ void wmap_effect35_load(void)
 /**
  * @brief Effect step 2: wait for the timeline to finish.
  */
-WMAP_STEP_WAIT_IDLE(wmap_effect35_wait_timeline,
-    g_wmap_effect35_step, wmap_effect35_finish)
+WMAP_STEP_WAIT_IDLE(wmap_effect35_wait_timeline, g_wmap_effect35_step, wmap_effect35_finish)
 
 /**
  * @brief Start the world-map exit and advance the sequence.
@@ -788,24 +753,23 @@ WMAP_STEP_BEGIN_EXIT(wmap_effect35_finish, g_wmap_effect35_step, WMAP_EXIT_DIREC
  * @param arg0 Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
-static WMAP_STEP_RUNNER(wmap_effect35_run_timeline,
-    g_wmap_effect35_timeline_steps, WMAP_EFFECT35_TIMELINE_STEPS,
-    g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer)
+static WMAP_STEP_RUNNER(wmap_effect35_run_timeline, g_wmap_effect35_timeline_steps, WMAP_EFFECT35_TIMELINE_STEPS, g_wmap_effect35_timeline_step,
+                        g_wmap_effect35_timeline_timer)
 
-/**
- * @brief Timeline: step 0: restart the sequence.
- */
-WMAP_STEP_RESET(wmap_effect35_timeline_reset, g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer)
+    /**
+     * @brief Timeline: step 0: restart the sequence.
+     */
+    WMAP_STEP_RESET(wmap_effect35_timeline_reset, g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer)
 
-/**
- * @brief Timeline step 1: scroll the map to the effect land.
- */
-void wmap_effect35_timeline_scroll_to_land(void)
+    /**
+     * @brief Timeline step 1: scroll the map to the effect land.
+     */
+    void wmap_effect35_timeline_scroll_to_land(void)
 {
     g_wmap_event_active = 1;
     g_wmap_placement_overlay_hidden = 1;
     wmap_find_land_cell(WMAP_EFFECT35_LAND, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
-    g_wmap_view_scroll_mode = 2;
+    g_wmap_view_scroll_mode = WMAP_SCROLL_SCRIPTED;
     g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * 48) - g_wmap_view.x;
     g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * 48) - g_wmap_view.y;
     g_wmap_effect35_timeline_step++;
@@ -815,8 +779,7 @@ void wmap_effect35_timeline_scroll_to_land(void)
 /**
  * @brief Timeline step 2: wait for the map scroll.
  */
-WMAP_STEP_WAIT_SCROLL(wmap_effect35_timeline_wait_scroll,
-    g_wmap_effect35_timeline_step, wmap_effect35_timeline_start_sprite_a)
+WMAP_STEP_WAIT_SCROLL(wmap_effect35_timeline_wait_scroll, g_wmap_effect35_timeline_step, wmap_effect35_timeline_start_sprite_a)
 
 /**
  * @brief Timeline step 3: play the effect sound and start sprite A.
@@ -870,8 +833,8 @@ WMAP_STEP_WAIT(wmap_effect35_timeline_wait_08, g_wmap_effect35_timeline_step, g_
 /**
  * @brief Timeline: start orbit particle 1.
  */
-WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_orbiter_1,
-    g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer, wmap_effect35_run_orbiter_1, 100)
+WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_orbiter_1, g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer, wmap_effect35_run_orbiter_1,
+                         100)
 
 /**
  * @brief Timeline step 10: wait for the step timer.
@@ -881,8 +844,7 @@ WMAP_STEP_WAIT(wmap_effect35_timeline_wait_10, g_wmap_effect35_timeline_step, g_
 /**
  * @brief Timeline: start orbit particle 2.
  */
-WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_orbiter_2,
-    g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer, wmap_effect35_run_orbiter_2, 20)
+WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_orbiter_2, g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer, wmap_effect35_run_orbiter_2, 20)
 
 /**
  * @brief Timeline step 12: wait for the step timer.
@@ -892,8 +854,7 @@ WMAP_STEP_WAIT(wmap_effect35_timeline_wait_12, g_wmap_effect35_timeline_step, g_
 /**
  * @brief Timeline: start orbit particle 3.
  */
-WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_orbiter_3,
-    g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer, wmap_effect35_run_orbiter_3, 15)
+WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_orbiter_3, g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer, wmap_effect35_run_orbiter_3, 15)
 
 /**
  * @brief Timeline step 14: wait for the step timer.
@@ -903,8 +864,7 @@ WMAP_STEP_WAIT(wmap_effect35_timeline_wait_14, g_wmap_effect35_timeline_step, g_
 /**
  * @brief Timeline: start orbit particle 4.
  */
-WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_orbiter_4,
-    g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer, wmap_effect35_run_orbiter_4, 15)
+WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_orbiter_4, g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer, wmap_effect35_run_orbiter_4, 15)
 
 /**
  * @brief Timeline step 16: wait for the step timer.
@@ -914,8 +874,7 @@ WMAP_STEP_WAIT(wmap_effect35_timeline_wait_16, g_wmap_effect35_timeline_step, g_
 /**
  * @brief Timeline: start orbit particle 5.
  */
-WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_orbiter_5,
-    g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer, wmap_effect35_run_orbiter_5, 10)
+WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_orbiter_5, g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer, wmap_effect35_run_orbiter_5, 10)
 
 /**
  * @brief Timeline step 18: wait for the step timer.
@@ -925,8 +884,7 @@ WMAP_STEP_WAIT(wmap_effect35_timeline_wait_18, g_wmap_effect35_timeline_step, g_
 /**
  * @brief Timeline: start orbit particle 6.
  */
-WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_orbiter_6,
-    g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer, wmap_effect35_run_orbiter_6, 5)
+WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_orbiter_6, g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer, wmap_effect35_run_orbiter_6, 5)
 
 /**
  * @brief Timeline step 20: wait for the step timer.
@@ -952,8 +910,8 @@ WMAP_STEP_WAIT(wmap_effect35_timeline_wait_22, g_wmap_effect35_timeline_step, g_
 /**
  * @brief Timeline: start particle emitter A.
  */
-WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_emitter_a,
-    g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer, wmap_effect35_run_emitter_a, 144)
+WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_emitter_a, g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer, wmap_effect35_run_emitter_a,
+                         144)
 
 /**
  * @brief Timeline step 24: wait for the step timer.
@@ -973,7 +931,7 @@ void wmap_effect35_timeline_start_drop_b(void)
     wmap_start_sequence(wmap_effect35_run_drop_b);
     g_wmap_transition_mesh_hidden = 1;
     g_wmap_forced_animated_land_id = -1;
-    g_wmap_view_mode = -1;
+    g_wmap_view_mode = WMAP_VIEW_MODE_HIDDEN;
     g_wmap_effect35_timeline_timer = 2;
     g_wmap_effect35_timeline_step++;
 }
@@ -986,8 +944,7 @@ WMAP_STEP_WAIT(wmap_effect35_timeline_wait_28, g_wmap_effect35_timeline_step, g_
 /**
  * @brief Timeline: start particle emitter B.
  */
-WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_emitter_b,
-    g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer, wmap_effect35_run_emitter_b, 13)
+WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_emitter_b, g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer, wmap_effect35_run_emitter_b, 13)
 
 /**
  * @brief Timeline step 30: wait for the step timer.
@@ -1002,8 +959,7 @@ WMAP_STEP_WAIT(wmap_effect35_timeline_wait_32, g_wmap_effect35_timeline_step, g_
 /**
  * @brief Timeline step 33: start spinning model B.
  */
-WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_spin_b,
-    g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer, wmap_effect35_run_spin_b, 124)
+WMAP_STEP_START_AND_WAIT(wmap_effect35_timeline_start_spin_b, g_wmap_effect35_timeline_step, g_wmap_effect35_timeline_timer, wmap_effect35_run_spin_b, 124)
 
 /**
  * @brief Timeline step 34: wait for the step timer.
@@ -1028,27 +984,25 @@ WMAP_STEP_WAIT(wmap_effect35_timeline_wait_36, g_wmap_effect35_timeline_step, g_
 /**
  * @brief Timeline step 37: end the timeline.
  */
-WMAP_STEP_FINISH_BLOCKING(wmap_effect35_timeline_finish,
-    g_wmap_effect35_timeline_step)
+WMAP_STEP_FINISH_BLOCKING(wmap_effect35_timeline_finish, g_wmap_effect35_timeline_step)
 
 /**
  * @brief Run the current step of the model drop A sequence.
  * @param arg0 Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
-static WMAP_STEP_RUNNER(wmap_effect35_run_drop_a,
-    g_wmap_effect35_drop_a_steps, WMAP_EFFECT35_DROP_STEPS,
-    g_wmap_effect35_drop_a_step, g_wmap_effect35_drop_a_timer)
+static WMAP_STEP_RUNNER(wmap_effect35_run_drop_a, g_wmap_effect35_drop_a_steps, WMAP_EFFECT35_DROP_STEPS, g_wmap_effect35_drop_a_step,
+                        g_wmap_effect35_drop_a_timer)
 
-/**
- * @brief Model drop A: step 0: restart the sequence.
- */
-WMAP_STEP_RESET(wmap_effect35_drop_a_reset, g_wmap_effect35_drop_a_step, g_wmap_effect35_drop_a_timer)
+    /**
+     * @brief Model drop A: step 0: restart the sequence.
+     */
+    WMAP_STEP_RESET(wmap_effect35_drop_a_reset, g_wmap_effect35_drop_a_step, g_wmap_effect35_drop_a_timer)
 
-/**
- * @brief Model drop A: set up and run the first update.
- */
-void wmap_effect35_drop_a_start(void)
+    /**
+     * @brief Model drop A: set up and run the first update.
+     */
+    void wmap_effect35_drop_a_start(void)
 {
     g_wmap_effect_model_a_position = g_wmap_camera_translation;
     g_wmap_effect_fade_a = 0x80;
@@ -1068,19 +1022,18 @@ WMAP_STEP_ADVANCE(wmap_effect35_drop_a_end, g_wmap_effect35_drop_a_step)
  * @param arg0 Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
-static WMAP_STEP_RUNNER(wmap_effect35_run_drop_b,
-    g_wmap_effect35_drop_b_steps, WMAP_EFFECT35_DROP_STEPS,
-    g_wmap_effect35_drop_b_step, g_wmap_effect35_drop_b_timer)
+static WMAP_STEP_RUNNER(wmap_effect35_run_drop_b, g_wmap_effect35_drop_b_steps, WMAP_EFFECT35_DROP_STEPS, g_wmap_effect35_drop_b_step,
+                        g_wmap_effect35_drop_b_timer)
 
-/**
- * @brief Model drop B: step 0: restart the sequence.
- */
-WMAP_STEP_RESET(wmap_effect35_drop_b_reset, g_wmap_effect35_drop_b_step, g_wmap_effect35_drop_b_timer)
+    /**
+     * @brief Model drop B: step 0: restart the sequence.
+     */
+    WMAP_STEP_RESET(wmap_effect35_drop_b_reset, g_wmap_effect35_drop_b_step, g_wmap_effect35_drop_b_timer)
 
-/**
- * @brief Model drop B: set up and run the first update.
- */
-void wmap_effect35_drop_b_start(void)
+    /**
+     * @brief Model drop B: set up and run the first update.
+     */
+    void wmap_effect35_drop_b_start(void)
 {
     g_wmap_effect_model_b_position = g_wmap_camera_translation;
     g_wmap_effect_fade_b = 0x80;
@@ -1100,80 +1053,71 @@ WMAP_STEP_ADVANCE(wmap_effect35_drop_b_end, g_wmap_effect35_drop_b_step)
  * @param arg0 Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
-static WMAP_STEP_RUNNER(wmap_effect35_run_sprite_a,
-    g_wmap_effect35_sprite_a_steps, WMAP_EFFECT35_SPRITE_STEPS,
-    g_wmap_effect35_sprite_a_step, g_wmap_effect35_sprite_a_timer)
+static WMAP_STEP_RUNNER(wmap_effect35_run_sprite_a, g_wmap_effect35_sprite_a_steps, WMAP_EFFECT35_SPRITE_STEPS, g_wmap_effect35_sprite_a_step,
+                        g_wmap_effect35_sprite_a_timer)
 
-/**
- * @brief Sprite A: step 0: restart the sequence.
- */
-WMAP_STEP_RESET(wmap_effect35_sprite_a_reset, g_wmap_effect35_sprite_a_step, g_wmap_effect35_sprite_a_timer)
+    /**
+     * @brief Sprite A: step 0: restart the sequence.
+     */
+    WMAP_STEP_RESET(wmap_effect35_sprite_a_reset, g_wmap_effect35_sprite_a_step, g_wmap_effect35_sprite_a_timer)
 
-/**
- * @brief Sprite A: set up and run the first update.
- */
-WMAP_STEP_START_ACTOR(wmap_effect35_sprite_a_start,
-    g_wmap_effect35_sprite_a_step, g_wmap_effect35_sprite_a_timer,
-    5, &g_wmap_animation_bank_0[2 * WMAP_EFFECT_BANK_SIZE], 0,
-    1, 0x81, 2,
-    502, wmap_effect35_sprite_a_draw)
+    /**
+     * @brief Sprite A: set up and run the first update.
+     */
+    WMAP_STEP_START_ACTOR(wmap_effect35_sprite_a_start, g_wmap_effect35_sprite_a_step, g_wmap_effect35_sprite_a_timer, 5,
+                          &g_wmap_animation_bank_0[2 * WMAP_EFFECT_BANK_SIZE], 0, 1, 0x81, 2, 502, wmap_effect35_sprite_a_draw)
 
-/**
- * @brief Sprite A: animate and draw until the step timer runs out.
- */
-WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_effect35_sprite_a_draw,
-    g_wmap_effect35_sprite_a_step, g_wmap_effect35_sprite_a_timer,
-    wmap_step_actor_animation(&g_wmap_sprite_actors[5], &g_wmap_actor_animations[5]),
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[5], g_wmap_focus_screen_position.packed, 8, 2, 0))
+    /**
+     * @brief Sprite A: animate and draw until the step timer runs out.
+     */
+    WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_effect35_sprite_a_draw, g_wmap_effect35_sprite_a_step, g_wmap_effect35_sprite_a_timer,
+                                  wmap_step_actor_animation(&g_wmap_sprite_actors[5], &g_wmap_actor_animations[5]),
+                                  wmap_draw_actor_sprite(&g_wmap_sprite_actors[5], g_wmap_focus_screen_position.packed, 8, 2, 0))
 
-/**
- * @brief Sprite A: start fading the sprite out.
- */
-WMAP_STEP_FADE_ACTOR(wmap_effect35_sprite_a_fade,
-    g_wmap_effect35_sprite_a_step, g_wmap_effect35_sprite_a_timer,
-    g_wmap_sprite_actors[5], 8, 16, wmap_effect35_sprite_a_draw_fading)
+    /**
+     * @brief Sprite A: start fading the sprite out.
+     */
+    WMAP_STEP_FADE_ACTOR(wmap_effect35_sprite_a_fade, g_wmap_effect35_sprite_a_step, g_wmap_effect35_sprite_a_timer, g_wmap_sprite_actors[5], 8, 16,
+                         wmap_effect35_sprite_a_draw_fading)
 
-/**
- * @brief Sprite A: animate and draw while fading out.
- */
-WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_effect35_sprite_a_draw_fading,
-    g_wmap_effect35_sprite_a_step, g_wmap_effect35_sprite_a_timer,
-    wmap_step_actor_animation(&g_wmap_sprite_actors[5], &g_wmap_actor_animations[5]),
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[5], g_wmap_focus_screen_position.packed, 8, 2, 0))
+    /**
+     * @brief Sprite A: animate and draw while fading out.
+     */
+    WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_effect35_sprite_a_draw_fading, g_wmap_effect35_sprite_a_step, g_wmap_effect35_sprite_a_timer,
+                                  wmap_step_actor_animation(&g_wmap_sprite_actors[5], &g_wmap_actor_animations[5]),
+                                  wmap_draw_actor_sprite(&g_wmap_sprite_actors[5], g_wmap_focus_screen_position.packed, 8, 2, 0))
 
-/**
- * @brief Sprite A: last step: finish the sequence.
- */
-WMAP_STEP_ADVANCE(wmap_effect35_sprite_a_end, g_wmap_effect35_sprite_a_step)
+    /**
+     * @brief Sprite A: last step: finish the sequence.
+     */
+    WMAP_STEP_ADVANCE(wmap_effect35_sprite_a_end, g_wmap_effect35_sprite_a_step)
 
-/**
- * @brief Run the current step of the sprite B sequence.
- * @param arg0 Nonzero restarts the sequence instead of running a step.
- * @return 1 while the sequence runs, 0 once it has finished.
- */
-static WMAP_STEP_RUNNER(wmap_effect35_run_sprite_b,
-    g_wmap_effect35_sprite_b_steps, WMAP_EFFECT35_SPRITE_STEPS,
-    g_wmap_effect35_sprite_b_step, g_wmap_effect35_sprite_b_timer)
+    /**
+     * @brief Run the current step of the sprite B sequence.
+     * @param arg0 Nonzero restarts the sequence instead of running a step.
+     * @return 1 while the sequence runs, 0 once it has finished.
+     */
+    static WMAP_STEP_RUNNER(wmap_effect35_run_sprite_b, g_wmap_effect35_sprite_b_steps, WMAP_EFFECT35_SPRITE_STEPS, g_wmap_effect35_sprite_b_step,
+                            g_wmap_effect35_sprite_b_timer)
 
-/**
- * @brief Sprite B: step 0: restart the sequence.
- */
-WMAP_STEP_RESET(wmap_effect35_sprite_b_reset, g_wmap_effect35_sprite_b_step, g_wmap_effect35_sprite_b_timer)
+    /**
+     * @brief Sprite B: step 0: restart the sequence.
+     */
+    WMAP_STEP_RESET(wmap_effect35_sprite_b_reset, g_wmap_effect35_sprite_b_step, g_wmap_effect35_sprite_b_timer)
 
-/**
- * @brief Sprite B: set up and run the first update.
- */
-void wmap_effect35_sprite_b_start(void)
+    /**
+     * @brief Sprite B: set up and run the first update.
+     */
+    void wmap_effect35_sprite_b_start(void)
 {
     WmapSpriteActor* actor = &g_wmap_sprite_actors[6];
-    s32 value;
 
     g_wmap_actor_animations[6].data = &g_wmap_animation_bank_0[WMAP_EFFECT_BANK_SIZE];
     actor->scale_index = 0xF;
-    actor->sequence = value = 1;
-    actor->previous_sequence = -value;
+    actor->sequence = 1;
+    actor->previous_sequence = -1;
     actor->shade_step = 0x80;
-    actor->shade = value;
+    actor->shade = 1;
     actor->resource_index = 0;
     actor->target_shade = 0x81;
     g_wmap_effect35_sprite_b_timer = 280;
@@ -1184,25 +1128,22 @@ void wmap_effect35_sprite_b_start(void)
 /**
  * @brief Sprite B: animate and draw until the step timer runs out.
  */
-WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_effect35_sprite_b_draw,
-    g_wmap_effect35_sprite_b_step, g_wmap_effect35_sprite_b_timer,
-    wmap_step_actor_animation(&g_wmap_sprite_actors[6], &g_wmap_actor_animations[6]),
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[6], g_wmap_focus_screen_position.packed, 0x19, 7, 0))
+WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_effect35_sprite_b_draw, g_wmap_effect35_sprite_b_step, g_wmap_effect35_sprite_b_timer,
+                              wmap_step_actor_animation(&g_wmap_sprite_actors[6], &g_wmap_actor_animations[6]),
+                              wmap_draw_actor_sprite(&g_wmap_sprite_actors[6], g_wmap_focus_screen_position.packed, 0x19, 7, 0))
 
 /**
  * @brief Sprite B: start fading the sprite out.
  */
-WMAP_STEP_FADE_ACTOR(wmap_effect35_sprite_b_fade,
-    g_wmap_effect35_sprite_b_step, g_wmap_effect35_sprite_b_timer,
-    g_wmap_sprite_actors[6], 0x80, 1, wmap_effect35_sprite_b_draw_fading)
+WMAP_STEP_FADE_ACTOR(wmap_effect35_sprite_b_fade, g_wmap_effect35_sprite_b_step, g_wmap_effect35_sprite_b_timer, g_wmap_sprite_actors[6], 0x80, 1,
+                     wmap_effect35_sprite_b_draw_fading)
 
 /**
  * @brief Sprite B: animate and draw while fading out.
  */
-WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_effect35_sprite_b_draw_fading,
-    g_wmap_effect35_sprite_b_step, g_wmap_effect35_sprite_b_timer,
-    wmap_step_actor_animation(&g_wmap_sprite_actors[6], &g_wmap_actor_animations[6]),
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[6], g_wmap_focus_screen_position.packed, 0x19, 7, 0))
+WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_effect35_sprite_b_draw_fading, g_wmap_effect35_sprite_b_step, g_wmap_effect35_sprite_b_timer,
+                              wmap_step_actor_animation(&g_wmap_sprite_actors[6], &g_wmap_actor_animations[6]),
+                              wmap_draw_actor_sprite(&g_wmap_sprite_actors[6], g_wmap_focus_screen_position.packed, 0x19, 7, 0))
 
 /**
  * @brief Sprite B: last step: finish the sequence.
@@ -1214,70 +1155,62 @@ WMAP_STEP_ADVANCE(wmap_effect35_sprite_b_end, g_wmap_effect35_sprite_b_step)
  * @param arg0 Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
-static WMAP_STEP_RUNNER(wmap_effect35_run_sprite_c,
-    g_wmap_effect35_sprite_c_steps, WMAP_EFFECT35_SPRITE_STEPS,
-    g_wmap_effect35_sprite_c_step, g_wmap_effect35_sprite_c_timer)
+static WMAP_STEP_RUNNER(wmap_effect35_run_sprite_c, g_wmap_effect35_sprite_c_steps, WMAP_EFFECT35_SPRITE_STEPS, g_wmap_effect35_sprite_c_step,
+                        g_wmap_effect35_sprite_c_timer)
 
-/**
- * @brief Sprite C: step 0: restart the sequence.
- */
-WMAP_STEP_RESET(wmap_effect35_sprite_c_reset, g_wmap_effect35_sprite_c_step, g_wmap_effect35_sprite_c_timer)
+    /**
+     * @brief Sprite C: step 0: restart the sequence.
+     */
+    WMAP_STEP_RESET(wmap_effect35_sprite_c_reset, g_wmap_effect35_sprite_c_step, g_wmap_effect35_sprite_c_timer)
 
-/**
- * @brief Sprite C: set up and run the first update.
- */
-WMAP_STEP_START_ACTOR(wmap_effect35_sprite_c_start,
-    g_wmap_effect35_sprite_c_step, g_wmap_effect35_sprite_c_timer,
-    7, &g_wmap_animation_bank_0[WMAP_EFFECT_BANK_SIZE], 0,
-    1, 0x81, 2,
-    240, wmap_effect35_sprite_c_draw)
+    /**
+     * @brief Sprite C: set up and run the first update.
+     */
+    WMAP_STEP_START_ACTOR(wmap_effect35_sprite_c_start, g_wmap_effect35_sprite_c_step, g_wmap_effect35_sprite_c_timer, 7,
+                          &g_wmap_animation_bank_0[WMAP_EFFECT_BANK_SIZE], 0, 1, 0x81, 2, 240, wmap_effect35_sprite_c_draw)
 
-/**
- * @brief Sprite C: animate and draw until the step timer runs out.
- */
-WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_effect35_sprite_c_draw,
-    g_wmap_effect35_sprite_c_step, g_wmap_effect35_sprite_c_timer,
-    wmap_step_actor_animation(&g_wmap_sprite_actors[7], &g_wmap_actor_animations[7]),
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[7], g_wmap_focus_screen_position.packed, 0x19, 8, 0))
+    /**
+     * @brief Sprite C: animate and draw until the step timer runs out.
+     */
+    WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_effect35_sprite_c_draw, g_wmap_effect35_sprite_c_step, g_wmap_effect35_sprite_c_timer,
+                                  wmap_step_actor_animation(&g_wmap_sprite_actors[7], &g_wmap_actor_animations[7]),
+                                  wmap_draw_actor_sprite(&g_wmap_sprite_actors[7], g_wmap_focus_screen_position.packed, 0x19, 8, 0))
 
-/**
- * @brief Sprite C: start fading the sprite out.
- */
-WMAP_STEP_FADE_ACTOR(wmap_effect35_sprite_c_fade,
-    g_wmap_effect35_sprite_c_step, g_wmap_effect35_sprite_c_timer,
-    g_wmap_sprite_actors[7], 4, 32, wmap_effect35_sprite_c_draw_fading)
+    /**
+     * @brief Sprite C: start fading the sprite out.
+     */
+    WMAP_STEP_FADE_ACTOR(wmap_effect35_sprite_c_fade, g_wmap_effect35_sprite_c_step, g_wmap_effect35_sprite_c_timer, g_wmap_sprite_actors[7], 4, 32,
+                         wmap_effect35_sprite_c_draw_fading)
 
-/**
- * @brief Sprite C: animate and draw while fading out.
- */
-WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_effect35_sprite_c_draw_fading,
-    g_wmap_effect35_sprite_c_step, g_wmap_effect35_sprite_c_timer,
-    wmap_step_actor_animation(&g_wmap_sprite_actors[7], &g_wmap_actor_animations[7]),
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[7], g_wmap_focus_screen_position.packed, 0x19, 8, 0))
+    /**
+     * @brief Sprite C: animate and draw while fading out.
+     */
+    WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_effect35_sprite_c_draw_fading, g_wmap_effect35_sprite_c_step, g_wmap_effect35_sprite_c_timer,
+                                  wmap_step_actor_animation(&g_wmap_sprite_actors[7], &g_wmap_actor_animations[7]),
+                                  wmap_draw_actor_sprite(&g_wmap_sprite_actors[7], g_wmap_focus_screen_position.packed, 0x19, 8, 0))
 
-/**
- * @brief Sprite C: last step: finish the sequence.
- */
-WMAP_STEP_ADVANCE(wmap_effect35_sprite_c_end, g_wmap_effect35_sprite_c_step)
+    /**
+     * @brief Sprite C: last step: finish the sequence.
+     */
+    WMAP_STEP_ADVANCE(wmap_effect35_sprite_c_end, g_wmap_effect35_sprite_c_step)
 
-/**
- * @brief Run the current step of the spinning model A sequence.
- * @param arg0 Nonzero restarts the sequence instead of running a step.
- * @return 1 while the sequence runs, 0 once it has finished.
- */
-static WMAP_STEP_RUNNER(wmap_effect35_run_spin_a,
-    g_wmap_effect35_spin_a_steps, WMAP_EFFECT35_SPIN_STEPS,
-    g_wmap_effect35_spin_a_step, g_wmap_effect35_spin_a_timer)
+    /**
+     * @brief Run the current step of the spinning model A sequence.
+     * @param arg0 Nonzero restarts the sequence instead of running a step.
+     * @return 1 while the sequence runs, 0 once it has finished.
+     */
+    static WMAP_STEP_RUNNER(wmap_effect35_run_spin_a, g_wmap_effect35_spin_a_steps, WMAP_EFFECT35_SPIN_STEPS, g_wmap_effect35_spin_a_step,
+                            g_wmap_effect35_spin_a_timer)
 
-/**
- * @brief Spinning model A: step 0: restart the sequence.
- */
-WMAP_STEP_RESET(wmap_effect35_spin_a_reset, g_wmap_effect35_spin_a_step, g_wmap_effect35_spin_a_timer)
+    /**
+     * @brief Spinning model A: step 0: restart the sequence.
+     */
+    WMAP_STEP_RESET(wmap_effect35_spin_a_reset, g_wmap_effect35_spin_a_step, g_wmap_effect35_spin_a_timer)
 
-/**
- * @brief Spinning model A: set up and run the first update.
- */
-void wmap_effect35_spin_a_start(void)
+    /**
+     * @brief Spinning model A: set up and run the first update.
+     */
+    void wmap_effect35_spin_a_start(void)
 {
     g_wmap_effect_fade_c = 1;
     g_wmap_effect_model_c_rotation = g_wmap_zero_rotation;
@@ -1290,8 +1223,7 @@ void wmap_effect35_spin_a_start(void)
 /**
  * @brief Spinning model A: start fading the model out.
  */
-WMAP_STEP_ARM_TIMER(wmap_effect35_spin_a_start_fade_out,
-    g_wmap_effect35_spin_a_step, g_wmap_effect35_spin_a_timer, 32, wmap_effect35_spin_a_fade_out)
+WMAP_STEP_ARM_TIMER(wmap_effect35_spin_a_start_fade_out, g_wmap_effect35_spin_a_step, g_wmap_effect35_spin_a_timer, 32, wmap_effect35_spin_a_fade_out)
 
 /**
  * @brief Spinning model A: last step: finish the sequence.
@@ -1303,19 +1235,18 @@ WMAP_STEP_ADVANCE(wmap_effect35_spin_a_end, g_wmap_effect35_spin_a_step)
  * @param arg0 Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
-static WMAP_STEP_RUNNER(wmap_effect35_run_spin_b,
-    g_wmap_effect35_spin_b_steps, WMAP_EFFECT35_SPIN_STEPS,
-    g_wmap_effect35_spin_b_step, g_wmap_effect35_spin_b_timer)
+static WMAP_STEP_RUNNER(wmap_effect35_run_spin_b, g_wmap_effect35_spin_b_steps, WMAP_EFFECT35_SPIN_STEPS, g_wmap_effect35_spin_b_step,
+                        g_wmap_effect35_spin_b_timer)
 
-/**
- * @brief Spinning model B: step 0: restart the sequence.
- */
-WMAP_STEP_RESET(wmap_effect35_spin_b_reset, g_wmap_effect35_spin_b_step, g_wmap_effect35_spin_b_timer)
+    /**
+     * @brief Spinning model B: step 0: restart the sequence.
+     */
+    WMAP_STEP_RESET(wmap_effect35_spin_b_reset, g_wmap_effect35_spin_b_step, g_wmap_effect35_spin_b_timer)
 
-/**
- * @brief Spinning model B: set up and run the first update.
- */
-void wmap_effect35_spin_b_start(void)
+    /**
+     * @brief Spinning model B: set up and run the first update.
+     */
+    void wmap_effect35_spin_b_start(void)
 {
     g_wmap_effect_fade_d = 1;
     g_wmap_effect_model_d_rotation = g_wmap_zero_rotation;
@@ -1328,8 +1259,7 @@ void wmap_effect35_spin_b_start(void)
 /**
  * @brief Spinning model B: start fading the model out.
  */
-WMAP_STEP_ARM_TIMER(wmap_effect35_spin_b_start_fade_out,
-    g_wmap_effect35_spin_b_step, g_wmap_effect35_spin_b_timer, 16, wmap_effect35_spin_b_fade_out)
+WMAP_STEP_ARM_TIMER(wmap_effect35_spin_b_start_fade_out, g_wmap_effect35_spin_b_step, g_wmap_effect35_spin_b_timer, 16, wmap_effect35_spin_b_fade_out)
 
 /**
  * @brief Spinning model B: last step: finish the sequence.
@@ -1341,210 +1271,194 @@ WMAP_STEP_ADVANCE(wmap_effect35_spin_b_end, g_wmap_effect35_spin_b_step)
  * @param arg0 Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
-static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_1,
-    g_wmap_effect35_orbiter_1_steps, WMAP_EFFECT35_ORBITER_STEPS,
-    g_wmap_effect35_orbiter_1_step, g_wmap_effect35_orbiter_1_timer)
+static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_1, g_wmap_effect35_orbiter_1_steps, WMAP_EFFECT35_ORBITER_STEPS, g_wmap_effect35_orbiter_1_step,
+                        g_wmap_effect35_orbiter_1_timer)
 
-/**
- * @brief Orbit particle 1: step 0: restart the sequence.
- */
-WMAP_STEP_RESET(wmap_effect35_orbiter_1_reset, g_wmap_effect35_orbiter_1_step, g_wmap_effect35_orbiter_1_timer)
+    /**
+     * @brief Orbit particle 1: step 0: restart the sequence.
+     */
+    WMAP_STEP_RESET(wmap_effect35_orbiter_1_reset, g_wmap_effect35_orbiter_1_step, g_wmap_effect35_orbiter_1_timer)
 
-/**
- * @brief Orbit particle 1: set up and run the first update.
- */
-WMAP_EFFECT35_DEFINE_ORBITER_START(wmap_effect35_orbiter_1_start,
-    g_wmap_effect35_orbiter_1_step, g_wmap_effect35_orbiter_1_timer,
-    8, 0, 0x1964, 0xBB8, 0x5A, wmap_effect35_orbiter_1_update)
+    /**
+     * @brief Orbit particle 1: set up and run the first update.
+     */
+    WMAP_EFFECT35_DEFINE_ORBITER_START(wmap_effect35_orbiter_1_start, g_wmap_effect35_orbiter_1_step, g_wmap_effect35_orbiter_1_timer, 8, 0, 0x1964, 0xBB8,
+                                       0x5A, wmap_effect35_orbiter_1_update)
 
-/**
- * @brief Orbit particle 1: last step: finish the sequence.
- */
-WMAP_STEP_ADVANCE(wmap_effect35_orbiter_1_end, g_wmap_effect35_orbiter_1_step)
+    /**
+     * @brief Orbit particle 1: last step: finish the sequence.
+     */
+    WMAP_STEP_ADVANCE(wmap_effect35_orbiter_1_end, g_wmap_effect35_orbiter_1_step)
 
-/**
- * @brief Run the current step of the orbit particle 2 sequence.
- * @param arg0 Nonzero restarts the sequence instead of running a step.
- * @return 1 while the sequence runs, 0 once it has finished.
- */
-static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_2,
-    g_wmap_effect35_orbiter_2_steps, WMAP_EFFECT35_ORBITER_STEPS,
-    g_wmap_effect35_orbiter_2_step, g_wmap_effect35_orbiter_2_timer)
+    /**
+     * @brief Run the current step of the orbit particle 2 sequence.
+     * @param arg0 Nonzero restarts the sequence instead of running a step.
+     * @return 1 while the sequence runs, 0 once it has finished.
+     */
+    static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_2, g_wmap_effect35_orbiter_2_steps, WMAP_EFFECT35_ORBITER_STEPS, g_wmap_effect35_orbiter_2_step,
+                            g_wmap_effect35_orbiter_2_timer)
 
-/**
- * @brief Orbit particle 2: step 0: restart the sequence.
- */
-WMAP_STEP_RESET(wmap_effect35_orbiter_2_reset, g_wmap_effect35_orbiter_2_step, g_wmap_effect35_orbiter_2_timer)
+    /**
+     * @brief Orbit particle 2: step 0: restart the sequence.
+     */
+    WMAP_STEP_RESET(wmap_effect35_orbiter_2_reset, g_wmap_effect35_orbiter_2_step, g_wmap_effect35_orbiter_2_timer)
 
-/**
- * @brief Orbit particle 2: set up and run the first update.
- */
-WMAP_EFFECT35_DEFINE_ORBITER_START(wmap_effect35_orbiter_2_start,
-    g_wmap_effect35_orbiter_2_step, g_wmap_effect35_orbiter_2_timer,
-    9, 1, 0x2710, 0x200, 0x3D, wmap_effect35_orbiter_2_update)
+    /**
+     * @brief Orbit particle 2: set up and run the first update.
+     */
+    WMAP_EFFECT35_DEFINE_ORBITER_START(wmap_effect35_orbiter_2_start, g_wmap_effect35_orbiter_2_step, g_wmap_effect35_orbiter_2_timer, 9, 1, 0x2710, 0x200,
+                                       0x3D, wmap_effect35_orbiter_2_update)
 
-/**
- * @brief Orbit particle 2: last step: finish the sequence.
- */
-WMAP_STEP_ADVANCE(wmap_effect35_orbiter_2_end, g_wmap_effect35_orbiter_2_step)
+    /**
+     * @brief Orbit particle 2: last step: finish the sequence.
+     */
+    WMAP_STEP_ADVANCE(wmap_effect35_orbiter_2_end, g_wmap_effect35_orbiter_2_step)
 
-/**
- * @brief Run the current step of the orbit particle 3 sequence.
- * @param arg0 Nonzero restarts the sequence instead of running a step.
- * @return 1 while the sequence runs, 0 once it has finished.
- */
-static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_3,
-    g_wmap_effect35_orbiter_3_steps, WMAP_EFFECT35_ORBITER_STEPS,
-    g_wmap_effect35_orbiter_3_step, g_wmap_effect35_orbiter_3_timer)
+    /**
+     * @brief Run the current step of the orbit particle 3 sequence.
+     * @param arg0 Nonzero restarts the sequence instead of running a step.
+     * @return 1 while the sequence runs, 0 once it has finished.
+     */
+    static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_3, g_wmap_effect35_orbiter_3_steps, WMAP_EFFECT35_ORBITER_STEPS, g_wmap_effect35_orbiter_3_step,
+                            g_wmap_effect35_orbiter_3_timer)
 
-/**
- * @brief Orbit particle 3: step 0: restart the sequence.
- */
-WMAP_STEP_RESET(wmap_effect35_orbiter_3_reset, g_wmap_effect35_orbiter_3_step, g_wmap_effect35_orbiter_3_timer)
+    /**
+     * @brief Orbit particle 3: step 0: restart the sequence.
+     */
+    WMAP_STEP_RESET(wmap_effect35_orbiter_3_reset, g_wmap_effect35_orbiter_3_step, g_wmap_effect35_orbiter_3_timer)
 
-/**
- * @brief Orbit particle 3: set up and run the first update.
- */
-WMAP_EFFECT35_DEFINE_ORBITER_START(wmap_effect35_orbiter_3_start,
-    g_wmap_effect35_orbiter_3_step, g_wmap_effect35_orbiter_3_timer,
-    10, 1, 0x2710, 0x898, 0x3D, wmap_effect35_orbiter_3_update)
+    /**
+     * @brief Orbit particle 3: set up and run the first update.
+     */
+    WMAP_EFFECT35_DEFINE_ORBITER_START(wmap_effect35_orbiter_3_start, g_wmap_effect35_orbiter_3_step, g_wmap_effect35_orbiter_3_timer, 10, 1, 0x2710, 0x898,
+                                       0x3D, wmap_effect35_orbiter_3_update)
 
-/**
- * @brief Orbit particle 3: last step: finish the sequence.
- */
-WMAP_STEP_ADVANCE(wmap_effect35_orbiter_3_end, g_wmap_effect35_orbiter_3_step)
+    /**
+     * @brief Orbit particle 3: last step: finish the sequence.
+     */
+    WMAP_STEP_ADVANCE(wmap_effect35_orbiter_3_end, g_wmap_effect35_orbiter_3_step)
 
-/**
- * @brief Run the current step of the orbit particle 4 sequence.
- * @param arg0 Nonzero restarts the sequence instead of running a step.
- * @return 1 while the sequence runs, 0 once it has finished.
- */
-static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_4,
-    g_wmap_effect35_orbiter_4_steps, WMAP_EFFECT35_ORBITER_STEPS,
-    g_wmap_effect35_orbiter_4_step, g_wmap_effect35_orbiter_4_timer)
+    /**
+     * @brief Run the current step of the orbit particle 4 sequence.
+     * @param arg0 Nonzero restarts the sequence instead of running a step.
+     * @return 1 while the sequence runs, 0 once it has finished.
+     */
+    static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_4, g_wmap_effect35_orbiter_4_steps, WMAP_EFFECT35_ORBITER_STEPS, g_wmap_effect35_orbiter_4_step,
+                            g_wmap_effect35_orbiter_4_timer)
 
-/**
- * @brief Orbit particle 4: step 0: restart the sequence.
- */
-WMAP_STEP_RESET(wmap_effect35_orbiter_4_reset, g_wmap_effect35_orbiter_4_step, g_wmap_effect35_orbiter_4_timer)
+    /**
+     * @brief Orbit particle 4: step 0: restart the sequence.
+     */
+    WMAP_STEP_RESET(wmap_effect35_orbiter_4_reset, g_wmap_effect35_orbiter_4_step, g_wmap_effect35_orbiter_4_timer)
 
-/**
- * @brief Orbit particle 4: set up and run the first update.
- */
-WMAP_EFFECT35_DEFINE_ORBITER_START(wmap_effect35_orbiter_4_start,
-    g_wmap_effect35_orbiter_4_step, g_wmap_effect35_orbiter_4_timer,
-    14, 2, 0x2710, 0x50, 0x26, wmap_effect35_orbiter_4_update)
+    /**
+     * @brief Orbit particle 4: set up and run the first update.
+     */
+    WMAP_EFFECT35_DEFINE_ORBITER_START(wmap_effect35_orbiter_4_start, g_wmap_effect35_orbiter_4_step, g_wmap_effect35_orbiter_4_timer, 14, 2, 0x2710, 0x50,
+                                       0x26, wmap_effect35_orbiter_4_update)
 
-/**
- * @brief Orbit particle 4: last step: finish the sequence.
- */
-WMAP_STEP_ADVANCE(wmap_effect35_orbiter_4_end, g_wmap_effect35_orbiter_4_step)
+    /**
+     * @brief Orbit particle 4: last step: finish the sequence.
+     */
+    WMAP_STEP_ADVANCE(wmap_effect35_orbiter_4_end, g_wmap_effect35_orbiter_4_step)
 
-/**
- * @brief Run the current step of the orbit particle 5 sequence.
- * @param arg0 Nonzero restarts the sequence instead of running a step.
- * @return 1 while the sequence runs, 0 once it has finished.
- */
-static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_5,
-    g_wmap_effect35_orbiter_5_steps, WMAP_EFFECT35_ORBITER_STEPS,
-    g_wmap_effect35_orbiter_5_step, g_wmap_effect35_orbiter_5_timer)
+    /**
+     * @brief Run the current step of the orbit particle 5 sequence.
+     * @param arg0 Nonzero restarts the sequence instead of running a step.
+     * @return 1 while the sequence runs, 0 once it has finished.
+     */
+    static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_5, g_wmap_effect35_orbiter_5_steps, WMAP_EFFECT35_ORBITER_STEPS, g_wmap_effect35_orbiter_5_step,
+                            g_wmap_effect35_orbiter_5_timer)
 
-/**
- * @brief Orbit particle 5: step 0: restart the sequence.
- */
-WMAP_STEP_RESET(wmap_effect35_orbiter_5_reset, g_wmap_effect35_orbiter_5_step, g_wmap_effect35_orbiter_5_timer)
+    /**
+     * @brief Orbit particle 5: step 0: restart the sequence.
+     */
+    WMAP_STEP_RESET(wmap_effect35_orbiter_5_reset, g_wmap_effect35_orbiter_5_step, g_wmap_effect35_orbiter_5_timer)
 
-/**
- * @brief Orbit particle 5: set up and run the first update.
- */
-WMAP_EFFECT35_DEFINE_ORBITER_START(wmap_effect35_orbiter_5_start,
-    g_wmap_effect35_orbiter_5_step, g_wmap_effect35_orbiter_5_timer,
-    15, 2, 0x1388, 0x6D6, 0x26, wmap_effect35_orbiter_5_update)
+    /**
+     * @brief Orbit particle 5: set up and run the first update.
+     */
+    WMAP_EFFECT35_DEFINE_ORBITER_START(wmap_effect35_orbiter_5_start, g_wmap_effect35_orbiter_5_step, g_wmap_effect35_orbiter_5_timer, 15, 2, 0x1388, 0x6D6,
+                                       0x26, wmap_effect35_orbiter_5_update)
 
-/**
- * @brief Orbit particle 5: last step: finish the sequence.
- */
-WMAP_STEP_ADVANCE(wmap_effect35_orbiter_5_end, g_wmap_effect35_orbiter_5_step)
+    /**
+     * @brief Orbit particle 5: last step: finish the sequence.
+     */
+    WMAP_STEP_ADVANCE(wmap_effect35_orbiter_5_end, g_wmap_effect35_orbiter_5_step)
 
-/**
- * @brief Run the current step of the orbit particle 6 sequence.
- * @param arg0 Nonzero restarts the sequence instead of running a step.
- * @return 1 while the sequence runs, 0 once it has finished.
- */
-static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_6,
-    g_wmap_effect35_orbiter_6_steps, WMAP_EFFECT35_ORBITER_STEPS,
-    g_wmap_effect35_orbiter_6_step, g_wmap_effect35_orbiter_6_timer)
+    /**
+     * @brief Run the current step of the orbit particle 6 sequence.
+     * @param arg0 Nonzero restarts the sequence instead of running a step.
+     * @return 1 while the sequence runs, 0 once it has finished.
+     */
+    static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_6, g_wmap_effect35_orbiter_6_steps, WMAP_EFFECT35_ORBITER_STEPS, g_wmap_effect35_orbiter_6_step,
+                            g_wmap_effect35_orbiter_6_timer)
 
-/**
- * @brief Orbit particle 6: step 0: restart the sequence.
- */
-WMAP_STEP_RESET(wmap_effect35_orbiter_6_reset, g_wmap_effect35_orbiter_6_step, g_wmap_effect35_orbiter_6_timer)
+    /**
+     * @brief Orbit particle 6: step 0: restart the sequence.
+     */
+    WMAP_STEP_RESET(wmap_effect35_orbiter_6_reset, g_wmap_effect35_orbiter_6_step, g_wmap_effect35_orbiter_6_timer)
 
-/**
- * @brief Orbit particle 6: set up and run the first update.
- */
-WMAP_EFFECT35_DEFINE_ORBITER_START(wmap_effect35_orbiter_6_start,
-    g_wmap_effect35_orbiter_6_step, g_wmap_effect35_orbiter_6_timer,
-    16, 2, 0x2710, 0xA8C, 0x26, wmap_effect35_orbiter_6_update)
+    /**
+     * @brief Orbit particle 6: set up and run the first update.
+     */
+    WMAP_EFFECT35_DEFINE_ORBITER_START(wmap_effect35_orbiter_6_start, g_wmap_effect35_orbiter_6_step, g_wmap_effect35_orbiter_6_timer, 16, 2, 0x2710, 0xA8C,
+                                       0x26, wmap_effect35_orbiter_6_update)
 
-/**
- * @brief Orbit particle 6: last step: finish the sequence.
- */
-WMAP_STEP_ADVANCE(wmap_effect35_orbiter_6_end, g_wmap_effect35_orbiter_6_step)
+    /**
+     * @brief Orbit particle 6: last step: finish the sequence.
+     */
+    WMAP_STEP_ADVANCE(wmap_effect35_orbiter_6_end, g_wmap_effect35_orbiter_6_step)
 
-/**
- * @brief Run the current step of the orbit particle 7 sequence.
- * @param arg0 Nonzero restarts the sequence instead of running a step.
- * @return 1 while the sequence runs, 0 once it has finished.
- */
-static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_7,
-    g_wmap_effect35_orbiter_7_steps, WMAP_EFFECT35_ORBITER_STEPS,
-    g_wmap_effect35_orbiter_7_step, g_wmap_effect35_orbiter_7_timer)
+    /**
+     * @brief Run the current step of the orbit particle 7 sequence.
+     * @param arg0 Nonzero restarts the sequence instead of running a step.
+     * @return 1 while the sequence runs, 0 once it has finished.
+     */
+    static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_7, g_wmap_effect35_orbiter_7_steps, WMAP_EFFECT35_ORBITER_STEPS, g_wmap_effect35_orbiter_7_step,
+                            g_wmap_effect35_orbiter_7_timer)
 
-/**
- * @brief Orbit particle 7: step 0: restart the sequence.
- */
-WMAP_STEP_RESET(wmap_effect35_orbiter_7_reset, g_wmap_effect35_orbiter_7_step, g_wmap_effect35_orbiter_7_timer)
+    /**
+     * @brief Orbit particle 7: step 0: restart the sequence.
+     */
+    WMAP_STEP_RESET(wmap_effect35_orbiter_7_reset, g_wmap_effect35_orbiter_7_step, g_wmap_effect35_orbiter_7_timer)
 
-/**
- * @brief Orbit particle 7: set up and run the first update.
- */
-WMAP_EFFECT35_DEFINE_ORBITER_START(wmap_effect35_orbiter_7_start,
-    g_wmap_effect35_orbiter_7_step, g_wmap_effect35_orbiter_7_timer,
-    17, 2, 0x2710, 0x320, 0x26, wmap_effect35_orbiter_7_update)
+    /**
+     * @brief Orbit particle 7: set up and run the first update.
+     */
+    WMAP_EFFECT35_DEFINE_ORBITER_START(wmap_effect35_orbiter_7_start, g_wmap_effect35_orbiter_7_step, g_wmap_effect35_orbiter_7_timer, 17, 2, 0x2710, 0x320,
+                                       0x26, wmap_effect35_orbiter_7_update)
 
 #undef WMAP_EFFECT35_DEFINE_ORBITER_START
 
-/**
- * @brief Orbit particle 7: last step: finish the sequence.
- */
-WMAP_STEP_ADVANCE(wmap_effect35_orbiter_7_end, g_wmap_effect35_orbiter_7_step)
+    /**
+     * @brief Orbit particle 7: last step: finish the sequence.
+     */
+    WMAP_STEP_ADVANCE(wmap_effect35_orbiter_7_end, g_wmap_effect35_orbiter_7_step)
 
-/**
- * @brief Run the current step of the particle emitter A sequence.
- * @param arg0 Nonzero restarts the sequence instead of running a step.
- * @return 1 while the sequence runs, 0 once it has finished.
- */
-static WMAP_STEP_RUNNER(wmap_effect35_run_emitter_a,
-    g_wmap_effect35_emitter_a_steps, WMAP_EFFECT35_EMITTER_STEPS,
-    g_wmap_effect35_emitter_a_step, g_wmap_effect35_emitter_a_timer)
+    /**
+     * @brief Run the current step of the particle emitter A sequence.
+     * @param arg0 Nonzero restarts the sequence instead of running a step.
+     * @return 1 while the sequence runs, 0 once it has finished.
+     */
+    static WMAP_STEP_RUNNER(wmap_effect35_run_emitter_a, g_wmap_effect35_emitter_a_steps, WMAP_EFFECT35_EMITTER_STEPS, g_wmap_effect35_emitter_a_step,
+                            g_wmap_effect35_emitter_a_timer)
 
-/**
- * @brief Particle emitter A: step 0: restart the sequence.
- */
-WMAP_STEP_RESET(wmap_effect35_emitter_a_reset, g_wmap_effect35_emitter_a_step, g_wmap_effect35_emitter_a_timer)
+    /**
+     * @brief Particle emitter A: step 0: restart the sequence.
+     */
+    WMAP_STEP_RESET(wmap_effect35_emitter_a_reset, g_wmap_effect35_emitter_a_step, g_wmap_effect35_emitter_a_timer)
 
-/**
- * @brief Particle emitter A: update and draw until the step timer runs out.
- */
-WMAP_STEP_UPDATE_AND_WAIT(wmap_effect35_emitter_a_update,
-    g_wmap_effect35_emitter_a_step, g_wmap_effect35_emitter_a_timer,
-    wmap_effect35_update_emitter(g_wmap_effect_params))
+    /**
+     * @brief Particle emitter A: update and draw until the step timer runs out.
+     */
+    WMAP_STEP_UPDATE_AND_WAIT(wmap_effect35_emitter_a_update, g_wmap_effect35_emitter_a_step, g_wmap_effect35_emitter_a_timer,
+                              wmap_effect35_update_emitter(g_wmap_effect_params))
 
-/**
- * @brief Particle emitter A: stop spawning new particles.
- */
-void wmap_effect35_emitter_a_stop(void)
+    /**
+     * @brief Particle emitter A: stop spawning new particles.
+     */
+    void wmap_effect35_emitter_a_stop(void)
 {
     g_wmap_effect_params->spawning = 0;
     g_wmap_effect35_emitter_a_timer = 16;
@@ -1555,9 +1469,8 @@ void wmap_effect35_emitter_a_stop(void)
 /**
  * @brief Particle emitter A: update the remaining particles until the timer runs out.
  */
-WMAP_STEP_UPDATE_AND_WAIT(wmap_effect35_emitter_a_update_stopping,
-    g_wmap_effect35_emitter_a_step, g_wmap_effect35_emitter_a_timer,
-    wmap_effect35_update_emitter(g_wmap_effect_params))
+WMAP_STEP_UPDATE_AND_WAIT(wmap_effect35_emitter_a_update_stopping, g_wmap_effect35_emitter_a_step, g_wmap_effect35_emitter_a_timer,
+                          wmap_effect35_update_emitter(g_wmap_effect_params))
 
 /**
  * @brief Particle emitter A: last step: finish the sequence.
@@ -1569,26 +1482,24 @@ WMAP_STEP_ADVANCE(wmap_effect35_emitter_a_end, g_wmap_effect35_emitter_a_step)
  * @param arg0 Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
-static WMAP_STEP_RUNNER(wmap_effect35_run_emitter_b,
-    g_wmap_effect35_emitter_b_steps, WMAP_EFFECT35_EMITTER_STEPS,
-    g_wmap_effect35_emitter_b_step, g_wmap_effect35_emitter_b_timer)
+static WMAP_STEP_RUNNER(wmap_effect35_run_emitter_b, g_wmap_effect35_emitter_b_steps, WMAP_EFFECT35_EMITTER_STEPS, g_wmap_effect35_emitter_b_step,
+                        g_wmap_effect35_emitter_b_timer)
 
-/**
- * @brief Particle emitter B: step 0: restart the sequence.
- */
-WMAP_STEP_RESET(wmap_effect35_emitter_b_reset, g_wmap_effect35_emitter_b_step, g_wmap_effect35_emitter_b_timer)
+    /**
+     * @brief Particle emitter B: step 0: restart the sequence.
+     */
+    WMAP_STEP_RESET(wmap_effect35_emitter_b_reset, g_wmap_effect35_emitter_b_step, g_wmap_effect35_emitter_b_timer)
 
-/**
- * @brief Particle emitter B: update and draw until the step timer runs out.
- */
-WMAP_STEP_UPDATE_AND_WAIT(wmap_effect35_emitter_b_update,
-    g_wmap_effect35_emitter_b_step, g_wmap_effect35_emitter_b_timer,
-    wmap_effect35_update_emitter(&g_wmap_effect_params[1]))
+    /**
+     * @brief Particle emitter B: update and draw until the step timer runs out.
+     */
+    WMAP_STEP_UPDATE_AND_WAIT(wmap_effect35_emitter_b_update, g_wmap_effect35_emitter_b_step, g_wmap_effect35_emitter_b_timer,
+                              wmap_effect35_update_emitter(&g_wmap_effect_params[1]))
 
-/**
- * @brief Particle emitter B: stop spawning new particles.
- */
-void wmap_effect35_emitter_b_stop(void)
+    /**
+     * @brief Particle emitter B: stop spawning new particles.
+     */
+    void wmap_effect35_emitter_b_stop(void)
 {
     g_wmap_effect_params[1].spawning = 0;
     g_wmap_effect35_emitter_b_timer = 32;
@@ -1599,9 +1510,8 @@ void wmap_effect35_emitter_b_stop(void)
 /**
  * @brief Particle emitter B: update the remaining particles until the timer runs out.
  */
-WMAP_STEP_UPDATE_AND_WAIT(wmap_effect35_emitter_b_update_stopping,
-    g_wmap_effect35_emitter_b_step, g_wmap_effect35_emitter_b_timer,
-    wmap_effect35_update_emitter(&g_wmap_effect_params[1]))
+WMAP_STEP_UPDATE_AND_WAIT(wmap_effect35_emitter_b_update_stopping, g_wmap_effect35_emitter_b_step, g_wmap_effect35_emitter_b_timer,
+                          wmap_effect35_update_emitter(&g_wmap_effect_params[1]))
 
 /**
  * @brief Particle emitter B: last step: finish the sequence.

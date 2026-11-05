@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include <libgte.h>
+
 #include "wmap_sprite_render.h"
 
 /**
@@ -45,10 +46,8 @@ void wmap_draw_model_default(u8* resource_table, s32 resource_index, s32 ot_inde
 void wmap_project_focus_cell(void);
 s32 wmap_scale_color(CVECTOR color, s32 scale);
 void wmap_set_model_transform(VECTOR* translation, SVECTOR* rotation);
-void wmap_update_default_particles_from_settings(void* actors, WmapAnimationSlot* animations, s32 count, s32 peak_shade,
-                                                 s32 initial_shade, s32 shade_step);
-void wmap_update_particles_from_settings(void* actors, WmapAnimationSlot* animations, s32 count, s32 peak_shade,
-                                         s32 initial_shade, s32 shade_step, s32 mode);
+void wmap_update_default_particles_from_settings(void* actors, WmapAnimationSlot* animations, s32 count, s32 peak_shade, s32 initial_shade, s32 shade_step);
+void wmap_update_particles_from_settings(void* actors, WmapAnimationSlot* animations, s32 count, s32 peak_shade, s32 initial_shade, s32 shade_step, s32 mode);
 s32 wmap_find_land_cell(s32 value, s32* row_out, s32* column_out);
 void wmap_set_map_rotation(SVECTOR* rotation);
 void wmap_reset_focus_screen_position(void);
@@ -60,7 +59,7 @@ extern SVECTOR g_wmap_zero_rotation;
 /** @brief Zero translation used for model matrices and to reset effect positions. */
 extern VECTOR g_wmap_zero_translation;
 
-/* Effect model slots a-d. Land effects share them because only one effect runs at a time;
+/* Effect model slots a-h. Land effects share them because only one effect runs at a time;
  * slots a and b hold the model drops, c and d the spins (see wmap_special_effect_35.c). */
 /** @brief Rotation of effect model slot a. */
 extern SVECTOR g_wmap_effect_model_a_rotation;
@@ -84,6 +83,18 @@ extern VECTOR g_wmap_effect_model_c_position;
 extern SVECTOR g_wmap_effect_model_d_rotation;
 /** @brief Position of effect model slot d; the exit transition reuses it for the second screen panel. */
 extern VECTOR g_wmap_effect_model_d_position;
+/** @brief Rotation of effect model slot e, drawn at the camera translation; the exit transition reuses it as a panel corner. */
+extern SVECTOR g_wmap_effect_model_e_rotation;
+/** @brief Rotation of effect model slot f, drawn at the camera translation. */
+extern SVECTOR g_wmap_effect_model_f_rotation;
+/** @brief Rotation of effect model slot g. */
+extern SVECTOR g_wmap_effect_model_g_rotation;
+/** @brief Position of effect model slot g. */
+extern VECTOR g_wmap_effect_model_g_position;
+/** @brief Rotation of effect model slot h. */
+extern SVECTOR g_wmap_effect_model_h_rotation;
+/** @brief Position of effect model slot h. */
+extern VECTOR g_wmap_effect_model_h_position;
 /** @brief Effect model fade level (draw color scale), usually for slot a. */
 extern s32 g_wmap_effect_fade_a;
 /** @brief Effect model fade level (draw color scale), usually for slot b. */
@@ -138,12 +149,6 @@ extern s32 D_8013B264;
 extern s32 D_8013B270;
 extern s32 D_8013B278;
 extern s32 D_8013B280;
-extern SVECTOR D_801B2490;
-extern SVECTOR D_801B2498;
-extern SVECTOR D_801B2670;
-extern SVECTOR D_801B2678;
-extern VECTOR D_801B2660;
-extern VECTOR D_80139898;
 extern WmapScreenPosition D_80182D58;
 extern WmapScreenPosition D_80182D60;
 extern s32 D_80139838[];

@@ -1,52 +1,16 @@
-#include "../internal/wmap_main.h"
-#include "../internal/wmap_land_effect_30.h"
-#include "../internal/wmap_sequence_runtime.h"
+#include "common.h"
 #include <libgte.h>
+
+#include "../internal/wmap_actor_motion.h"
+#include "../internal/wmap_cells.h"
 #include "../internal/wmap_effect_primitives.h"
-#include "../internal/wmap_view_effects.h"
+#include "../internal/wmap_land_effect_30.h"
+#include "../internal/wmap_main.h"
 #include "../internal/wmap_resource_support.h"
+#include "../internal/wmap_sequence_runtime.h"
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_step_sequence.h"
-#include "../internal/wmap_cells.h"
-#include "../internal/wmap_actor_motion.h"
-
-void wmap_land_effect_30_sequence_12_step_02(void);
-void wmap_land_effect_30_sequence_13_step_02(void);
-void wmap_land_effect_30_sequence_14_step_02(void);
-void wmap_land_effect_30_wait_idle_02(void);
-void wmap_land_effect_30_step_03(void);
-s32 wmap_land_effect_30_run_timeline(s32 arg0);
-void wmap_land_effect_30_wait_idle_04(void);
-void wmap_land_effect_30_end(void);
-s32 wmap_land_effect_30_run_sequence_1(s32 arg0);
-s32 wmap_land_effect_30_run_sequence_3(s32 arg0);
-s32 wmap_land_effect_30_run_sequence_6(s32 arg0);
-s32 wmap_land_effect_30_run_sequence_7(s32 arg0);
-s32 wmap_land_effect_30_run_sequence_8(s32 arg0);
-s32 wmap_land_effect_30_run_sequence_9(s32 arg0);
-s32 wmap_land_effect_30_run_sequence_4(s32 arg0);
-s32 wmap_land_effect_30_run_sequence_12(s32 arg0);
-s32 wmap_land_effect_30_run_sequence_14(s32 arg0);
-s32 wmap_land_effect_30_run_sequence_13(s32 arg0);
-s32 wmap_land_effect_30_run_sequence_10(s32 arg0);
-s32 wmap_land_effect_30_run_sequence_2(s32 arg0);
-s32 wmap_land_effect_30_run_sequence_5(s32 arg0);
-s32 wmap_land_effect_30_run_sequence_11(s32 arg0);
-void wmap_land_effect_30_sequence_1_step_02(void);
-void wmap_land_effect_30_sequence_2_step_02(void);
-void wmap_land_effect_30_sequence_5_step_02(void);
-void wmap_land_effect_30_sequence_6_step_02(void);
-void wmap_land_effect_30_sequence_6_step_04(void);
-void wmap_land_effect_30_sequence_7_step_02(void);
-void wmap_land_effect_30_sequence_7_step_04(void);
-void wmap_land_effect_30_sequence_8_step_02(void);
-void wmap_land_effect_30_sequence_8_step_04(void);
-void wmap_land_effect_30_sequence_9_step_02(void);
-void wmap_land_effect_30_sequence_9_step_04(void);
-void wmap_land_effect_30_sequence_10_step_02(void);
-void wmap_land_effect_30_sequence_11_step_02(void);
-void wmap_land_effect_30_sequence_13_step_04(void);
-void wmap_land_effect_30_sequence_13_step_06(void);
+#include "../internal/wmap_view_effects.h"
 
 extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_30_sequence_3_timer;
@@ -62,34 +26,24 @@ extern WmapMotion D_801AFCFC[];
 extern s32 g_wmap_land_effect_30_sequence_14_timer;
 extern s32 g_wmap_land_effect_30_timer;
 extern WmapSequenceStep g_wmap_land_effect_30_steps[];
-extern void wmap_land_effect_30_step_03(void);
-extern void wmap_land_effect_30_end(void);
 extern s32 g_wmap_land_effect_30_timeline_timer;
 extern WmapSequenceStep g_wmap_land_effect_30_timeline_steps[];
 extern s32 g_wmap_land_effect_30_sequence_1_timer;
 extern WmapSequenceStep g_wmap_land_effect_30_sequence_1_steps[];
-extern void wmap_land_effect_30_sequence_1_step_02(void);
 extern s32 g_wmap_land_effect_30_sequence_2_timer;
 extern WmapSequenceStep g_wmap_land_effect_30_sequence_2_steps[];
-extern void wmap_land_effect_30_sequence_2_step_02(void);
 extern WmapSequenceStep g_wmap_land_effect_30_sequence_3_steps[];
 extern WmapSequenceStep g_wmap_land_effect_30_sequence_4_steps[];
 extern s32 g_wmap_land_effect_30_sequence_5_timer;
 extern WmapSequenceStep g_wmap_land_effect_30_sequence_5_steps[];
 extern s32 g_wmap_land_effect_30_sequence_6_timer;
 extern WmapSequenceStep g_wmap_land_effect_30_sequence_6_steps[];
-extern void wmap_land_effect_30_sequence_6_step_02(void);
-extern void wmap_land_effect_30_sequence_6_step_04(void);
 extern s32 g_wmap_land_effect_30_sequence_7_timer;
 extern WmapSequenceStep g_wmap_land_effect_30_sequence_7_steps[];
-extern void wmap_land_effect_30_sequence_7_step_02(void);
-extern void wmap_land_effect_30_sequence_7_step_04(void);
 extern s32 g_wmap_land_effect_30_sequence_8_timer;
 extern WmapSequenceStep g_wmap_land_effect_30_sequence_8_steps[];
-extern void wmap_land_effect_30_sequence_8_step_04(void);
 extern s32 g_wmap_land_effect_30_sequence_9_timer;
 extern WmapSequenceStep g_wmap_land_effect_30_sequence_9_steps[];
-extern void wmap_land_effect_30_sequence_9_step_04(void);
 extern WmapSequenceStep g_wmap_land_effect_30_sequence_10_steps[];
 extern WmapSequenceStep g_wmap_land_effect_30_sequence_11_steps[];
 extern WmapSequenceStep g_wmap_land_effect_30_sequence_12_steps[];
@@ -113,26 +67,15 @@ extern u32 g_wmap_land_effect_30_sequence_7_step;
 extern u32 g_wmap_land_effect_30_sequence_8_step;
 extern u32 g_wmap_land_effect_30_sequence_9_step;
 
-
-
-
-extern WmapAnimationSlot g_wmap_actor_animations[];
-
-
 extern s32* g_wmap_effect_params;
 
+/** @brief Move the model closer and fade it until the timer expires. */
+WMAP_STEP_DROP_UPDATE(wmap_land_effect_30_sequence_3_step_02, g_wmap_land_effect_30_sequence_3_step, g_wmap_land_effect_30_sequence_3_timer,
+                      g_wmap_effect_model_a_rotation, g_wmap_effect_model_a_position, g_wmap_effect_fade_a, g_wmap_load_buffer, -3500, 5)
 
 /** @brief Move the model closer and fade it until the timer expires. */
-WMAP_STEP_DROP_UPDATE(wmap_land_effect_30_sequence_3_step_02,
-    g_wmap_land_effect_30_sequence_3_step, g_wmap_land_effect_30_sequence_3_timer,
-    g_wmap_effect_model_a_rotation, g_wmap_effect_model_a_position,
-    g_wmap_effect_fade_a, g_wmap_load_buffer, -3500, 5)
-
-/** @brief Move the model closer and fade it until the timer expires. */
-WMAP_STEP_DROP_UPDATE(wmap_land_effect_30_sequence_4_step_02,
-    g_wmap_land_effect_30_sequence_4_step, g_wmap_land_effect_30_sequence_4_timer,
-    g_wmap_effect_model_a_rotation, g_wmap_effect_model_a_position,
-    g_wmap_effect_fade_a, g_wmap_effect_model_pack_1, -3500, 2)
+WMAP_STEP_DROP_UPDATE(wmap_land_effect_30_sequence_4_step_02, g_wmap_land_effect_30_sequence_4_step, g_wmap_land_effect_30_sequence_4_timer,
+                      g_wmap_effect_model_a_rotation, g_wmap_effect_model_a_position, g_wmap_effect_fade_a, g_wmap_effect_model_pack_1, -3500, 2)
 
 /** @brief Reduce the effect parameters, draw it, and advance its countdown. */
 void wmap_land_effect_30_sequence_10_step_04(void)
@@ -142,21 +85,26 @@ void wmap_land_effect_30_sequence_10_step_04(void)
 
     value = D_80139980 - 1;
     D_80139980 = value;
+
     if (value < 0)
     {
         D_80139980 = 0;
     }
+
     if (!(g_wmap_frame_count & 3))
     {
         g_wmap_particle_intensity--;
     }
+
     if (g_wmap_particle_intensity < 0)
     {
         g_wmap_particle_intensity = 0;
     }
+
     wmap_update_flat_radial_burst(0x13, 0x45, 0x13, 0x20, 0xFD0, 4, 0x20, 1);
     remaining = g_wmap_land_effect_30_sequence_10_timer - 1;
     g_wmap_land_effect_30_sequence_10_timer = remaining;
+
     if (remaining == 0)
     {
         g_wmap_land_effect_30_sequence_10_step++;
@@ -171,21 +119,26 @@ void wmap_land_effect_30_sequence_11_step_04(void)
 
     value = D_80139980 - 1;
     D_80139980 = value;
+
     if (value < 0)
     {
         D_80139980 = 0;
     }
+
     if (!(g_wmap_frame_count & 3))
     {
         g_wmap_particle_intensity--;
     }
+
     if (g_wmap_particle_intensity < 0)
     {
         g_wmap_particle_intensity = 0;
     }
+
     wmap_update_flat_radial_burst(0x54, 0x5C, 0x13, 0x20, 0x1000, 0x20, 8, 2);
     remaining = g_wmap_land_effect_30_sequence_11_timer - 1;
     g_wmap_land_effect_30_sequence_11_timer = remaining;
+
     if (remaining == 0)
     {
         g_wmap_land_effect_30_sequence_11_step++;
@@ -196,15 +149,14 @@ void wmap_land_effect_30_sequence_11_step_04(void)
 void wmap_land_effect_30_sequence_12_step_01(void)
 {
     s32 i;
-    WmapSpriteActor *actor;
+    WmapSpriteActor* actor;
 
     D_80139264 = 120;
     D_80139268 = 19;
     D_8013926C = 0;
-    WMAP_RESET_PARTICLE_SLOTS(i, 60,
-                              g_wmap_actor_motions[i + 120].state,
-                              120, g_wmap_animation_bank_3);
+    WMAP_RESET_PARTICLE_SLOTS(i, 60, g_wmap_actor_motions[i + 120].state, 120, g_wmap_animation_bank_3);
     D_80139240 = 0;
+
     for (i = 0; i < 60; i += 5)
     {
         actor = &g_wmap_sprite_actors[120 + i];
@@ -222,6 +174,7 @@ void wmap_land_effect_30_sequence_12_step_01(void)
         D_80139240 += 341;
         D_801B0530[i].z = 0;
     }
+
     D_8013B264 = 60;
     D_8013B270 = 4;
     D_8013B278 = 5000;
@@ -241,14 +194,17 @@ void wmap_land_effect_30_sequence_12_step_02(void)
     s32 remaining;
 
     wmap_update_particles_from_settings(&g_wmap_sprite_actors[120], &g_wmap_actor_animations[120], 60, 128, 128, 8, 3);
+
     for (i = 120; i < 180; i += 5)
     {
         if (g_wmap_actor_motions[i].lifetime != 0)
         {
             g_wmap_actor_motions[i].lifetime--;
         }
+
         g_wmap_actor_motions[i].radius += 5000;
     }
+
     if ((g_wmap_frame_count & 1) == 0)
     {
         for (i = 120; i < 180; i += 5)
@@ -260,10 +216,13 @@ void wmap_land_effect_30_sequence_12_step_02(void)
             g_wmap_actor_animations[destination] = g_wmap_actor_animations[i];
             g_wmap_sprite_actors[destination].target_shade = 0;
         }
+
         D_80139284 = (D_80139284 + 1) % 4;
     }
+
     remaining = g_wmap_land_effect_30_sequence_12_timer - 1;
     g_wmap_land_effect_30_sequence_12_timer = remaining;
+
     if (remaining == 0)
     {
         g_wmap_land_effect_30_sequence_12_step++;
@@ -301,10 +260,9 @@ void wmap_land_effect_30_sequence_14_step_01(void)
     g_wmap_effect_params[0x25] = 15;
     g_wmap_effect_params[0x26] = 19;
     g_wmap_effect_params[0x27] = 0;
-    WMAP_RESET_PARTICLE_SLOTS(i, 60,
-                              g_wmap_actor_motions[i + 15].state,
-                              15, g_wmap_animation_bank_4);
+    WMAP_RESET_PARTICLE_SLOTS(i, 60, g_wmap_actor_motions[i + 15].state, 15, g_wmap_animation_bank_4);
     g_wmap_effect_params[0x21] = 256;
+
     for (i = 0; i < 60; i += 5)
     {
         actor_field_value = 2;
@@ -324,6 +282,7 @@ void wmap_land_effect_30_sequence_14_step_01(void)
         g_wmap_effect_params[0x21] += 341;
         D_801AFCFC[i].z = 0;
     }
+
     D_8013B264 = 60;
     D_8013B270 = 4;
     D_8013B278 = 5000;
@@ -343,15 +302,18 @@ void wmap_land_effect_30_sequence_14_step_02(void)
     s32 remaining;
 
     wmap_update_particle_system(&g_wmap_sprite_actors[15], &g_wmap_actor_animations[15], 60, 128, 128, 8, 3, &g_wmap_effect_params[30]);
+
     for (i = 15; i < 75; i += 5)
     {
         if (g_wmap_actor_motions[i].lifetime != 0)
         {
             g_wmap_actor_motions[i].lifetime--;
         }
+
         g_wmap_actor_motions[i].radius += 5000;
         g_wmap_actor_motions[i].angle += 128;
     }
+
     if ((g_wmap_frame_count & 1) == 0)
     {
         for (i = 15; i < 75; i += 5)
@@ -363,10 +325,13 @@ void wmap_land_effect_30_sequence_14_step_02(void)
             g_wmap_actor_animations[destination] = g_wmap_actor_animations[i];
             g_wmap_sprite_actors[destination].target_shade = 0;
         }
+
         g_wmap_effect_params[40] = (g_wmap_effect_params[40] + 1) % 4;
     }
+
     remaining = g_wmap_land_effect_30_sequence_14_timer - 1;
     g_wmap_land_effect_30_sequence_14_timer = remaining;
+
     if (remaining == 0)
     {
         g_wmap_land_effect_30_sequence_14_step++;
@@ -387,7 +352,8 @@ WMAP_STEP_WAIT_IDLE(wmap_land_effect_30_wait_idle_04, g_wmap_land_effect_30_step
 
 WMAP_STEP_ADVANCE(wmap_land_effect_30_end, g_wmap_land_effect_30_step)
 
-WMAP_STEP_RUNNER(wmap_land_effect_30_run_timeline, g_wmap_land_effect_30_timeline_steps, 0x18, g_wmap_land_effect_30_timeline_step, g_wmap_land_effect_30_timeline_timer)
+WMAP_STEP_RUNNER(wmap_land_effect_30_run_timeline, g_wmap_land_effect_30_timeline_steps, 0x18, g_wmap_land_effect_30_timeline_step,
+                 g_wmap_land_effect_30_timeline_timer)
 
 WMAP_STEP_RESET(wmap_land_effect_30_timeline_reset, g_wmap_land_effect_30_timeline_step, g_wmap_land_effect_30_timeline_timer)
 
@@ -434,9 +400,8 @@ WMAP_STEP_WAIT(wmap_land_effect_30_timeline_wait_10, g_wmap_land_effect_30_timel
 /**
  * @brief Start three sequences and set the wait timer.
  */
-WMAP_STEP_START_THREE_AND_WAIT(wmap_land_effect_30_timeline_step_11,
-    g_wmap_land_effect_30_timeline_step, g_wmap_land_effect_30_timeline_timer,
-    wmap_land_effect_30_run_sequence_4, wmap_land_effect_30_run_sequence_12, wmap_land_effect_30_run_sequence_14, 0x38)
+WMAP_STEP_START_THREE_AND_WAIT(wmap_land_effect_30_timeline_step_11, g_wmap_land_effect_30_timeline_step, g_wmap_land_effect_30_timeline_timer,
+                               wmap_land_effect_30_run_sequence_4, wmap_land_effect_30_run_sequence_12, wmap_land_effect_30_run_sequence_14, 0x38)
 
 WMAP_STEP_WAIT(wmap_land_effect_30_timeline_wait_12, g_wmap_land_effect_30_timeline_step, g_wmap_land_effect_30_timeline_timer)
 
@@ -465,63 +430,65 @@ WMAP_STEP_START_AND_WAIT(wmap_land_effect_30_timeline_step_21, g_wmap_land_effec
 
 WMAP_STEP_WAIT(wmap_land_effect_30_timeline_wait_22, g_wmap_land_effect_30_timeline_step, g_wmap_land_effect_30_timeline_timer)
 
-WMAP_STEP_FINISH_MARK_CELL(wmap_land_effect_30_timeline_finish, g_wmap_land_effect_30_timeline_step, g_wmap_cells, g_wmap_focus_cell_x, g_wmap_focus_cell_y, g_wmap_selected_artifact)
+WMAP_STEP_FINISH_MARK_CELL(wmap_land_effect_30_timeline_finish, g_wmap_land_effect_30_timeline_step, g_wmap_cells, g_wmap_focus_cell_x, g_wmap_focus_cell_y,
+                           g_wmap_selected_artifact)
 
-WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_1, g_wmap_land_effect_30_sequence_1_steps, 0x4, g_wmap_land_effect_30_sequence_1_step, g_wmap_land_effect_30_sequence_1_timer)
+WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_1, g_wmap_land_effect_30_sequence_1_steps, 0x4, g_wmap_land_effect_30_sequence_1_step,
+                 g_wmap_land_effect_30_sequence_1_timer)
 
 WMAP_STEP_RESET(wmap_land_effect_30_sequence_1_reset, g_wmap_land_effect_30_sequence_1_step, g_wmap_land_effect_30_sequence_1_timer)
 
 /**
  * @brief Start the sprite animation and run its first update.
  */
-WMAP_STEP_START_ACTOR(wmap_land_effect_30_sequence_1_step_01,
-    g_wmap_land_effect_30_sequence_1_step, g_wmap_land_effect_30_sequence_1_timer,
-    4, g_wmap_animation_bank_0, 0,
-    0, 0x80, 8,
-    0x3C, wmap_land_effect_30_sequence_1_step_02)
+WMAP_STEP_START_ACTOR(wmap_land_effect_30_sequence_1_step_01, g_wmap_land_effect_30_sequence_1_step, g_wmap_land_effect_30_sequence_1_timer, 4,
+                      g_wmap_animation_bank_0, 0, 0, 0x80, 8, 0x3C, wmap_land_effect_30_sequence_1_step_02)
 
-WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_1_step_02, g_wmap_land_effect_30_sequence_1_step, g_wmap_land_effect_30_sequence_1_timer, g_wmap_sprite_actors[4],
-                              g_wmap_actor_animations[4], g_wmap_focus_screen_position, 0x13, 0x14, 0)
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_1_step_02, g_wmap_land_effect_30_sequence_1_step, g_wmap_land_effect_30_sequence_1_timer,
+                              g_wmap_sprite_actors[4], g_wmap_actor_animations[4], g_wmap_focus_screen_position, 0x13, 0x14, 0)
 
 WMAP_STEP_ADVANCE(wmap_land_effect_30_sequence_1_end, g_wmap_land_effect_30_sequence_1_step)
 
-WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_2, g_wmap_land_effect_30_sequence_2_steps, 0x4, g_wmap_land_effect_30_sequence_2_step, g_wmap_land_effect_30_sequence_2_timer)
+WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_2, g_wmap_land_effect_30_sequence_2_steps, 0x4, g_wmap_land_effect_30_sequence_2_step,
+                 g_wmap_land_effect_30_sequence_2_timer)
 
 WMAP_STEP_RESET(wmap_land_effect_30_sequence_2_reset, g_wmap_land_effect_30_sequence_2_step, g_wmap_land_effect_30_sequence_2_timer)
 
 /**
  * @brief Start the sprite animation and run its first update.
  */
-WMAP_STEP_START_ACTOR(wmap_land_effect_30_sequence_2_step_01,
-    g_wmap_land_effect_30_sequence_2_step, g_wmap_land_effect_30_sequence_2_timer,
-    5, g_wmap_animation_bank_2, 0,
-    0x80, 0x80, 8,
-    0x5D, wmap_land_effect_30_sequence_2_step_02)
+WMAP_STEP_START_ACTOR(wmap_land_effect_30_sequence_2_step_01, g_wmap_land_effect_30_sequence_2_step, g_wmap_land_effect_30_sequence_2_timer, 5,
+                      g_wmap_animation_bank_2, 0, 0x80, 0x80, 8, 0x5D, wmap_land_effect_30_sequence_2_step_02)
 
-WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_2_step_02, g_wmap_land_effect_30_sequence_2_step, g_wmap_land_effect_30_sequence_2_timer, g_wmap_sprite_actors[5],
-                              g_wmap_actor_animations[5], g_wmap_focus_screen_position, 0x18, 0x33, 0)
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_2_step_02, g_wmap_land_effect_30_sequence_2_step, g_wmap_land_effect_30_sequence_2_timer,
+                              g_wmap_sprite_actors[5], g_wmap_actor_animations[5], g_wmap_focus_screen_position, 0x18, 0x33, 0)
 
 WMAP_STEP_ADVANCE(wmap_land_effect_30_sequence_2_end, g_wmap_land_effect_30_sequence_2_step)
 
-WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_3, g_wmap_land_effect_30_sequence_3_steps, 0x4, g_wmap_land_effect_30_sequence_3_step, g_wmap_land_effect_30_sequence_3_timer)
+WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_3, g_wmap_land_effect_30_sequence_3_steps, 0x4, g_wmap_land_effect_30_sequence_3_step,
+                 g_wmap_land_effect_30_sequence_3_timer)
 
 WMAP_STEP_RESET(wmap_land_effect_30_sequence_3_reset, g_wmap_land_effect_30_sequence_3_step, g_wmap_land_effect_30_sequence_3_timer)
 
-WMAP_STEP_DROP_START(wmap_land_effect_30_sequence_3_step_01, g_wmap_land_effect_30_sequence_3_step, g_wmap_land_effect_30_sequence_3_timer, g_wmap_effect_model_a_rotation,
-                     g_wmap_zero_rotation, g_wmap_effect_model_a_position, g_wmap_effect_fade_a, 0x80, 0xAFC8, 0x14, wmap_land_effect_30_sequence_3_step_02)
+WMAP_STEP_DROP_START(wmap_land_effect_30_sequence_3_step_01, g_wmap_land_effect_30_sequence_3_step, g_wmap_land_effect_30_sequence_3_timer,
+                     g_wmap_effect_model_a_rotation, g_wmap_zero_rotation, g_wmap_effect_model_a_position, g_wmap_effect_fade_a, 0x80, 0xAFC8, 0x14,
+                     wmap_land_effect_30_sequence_3_step_02)
 
 WMAP_STEP_ADVANCE(wmap_land_effect_30_sequence_3_end, g_wmap_land_effect_30_sequence_3_step)
 
-WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_4, g_wmap_land_effect_30_sequence_4_steps, 0x4, g_wmap_land_effect_30_sequence_4_step, g_wmap_land_effect_30_sequence_4_timer)
+WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_4, g_wmap_land_effect_30_sequence_4_steps, 0x4, g_wmap_land_effect_30_sequence_4_step,
+                 g_wmap_land_effect_30_sequence_4_timer)
 
 WMAP_STEP_RESET(wmap_land_effect_30_sequence_4_reset, g_wmap_land_effect_30_sequence_4_step, g_wmap_land_effect_30_sequence_4_timer)
 
-WMAP_STEP_DROP_START(wmap_land_effect_30_sequence_4_step_01, g_wmap_land_effect_30_sequence_4_step, g_wmap_land_effect_30_sequence_4_timer, g_wmap_effect_model_a_rotation,
-                     g_wmap_zero_rotation, g_wmap_effect_model_a_position, g_wmap_effect_fade_a, 0x80, 0xAFC8, 0x40, wmap_land_effect_30_sequence_4_step_02)
+WMAP_STEP_DROP_START(wmap_land_effect_30_sequence_4_step_01, g_wmap_land_effect_30_sequence_4_step, g_wmap_land_effect_30_sequence_4_timer,
+                     g_wmap_effect_model_a_rotation, g_wmap_zero_rotation, g_wmap_effect_model_a_position, g_wmap_effect_fade_a, 0x80, 0xAFC8, 0x40,
+                     wmap_land_effect_30_sequence_4_step_02)
 
 WMAP_STEP_ADVANCE(wmap_land_effect_30_sequence_4_end, g_wmap_land_effect_30_sequence_4_step)
 
-WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_5, g_wmap_land_effect_30_sequence_5_steps, 0x4, g_wmap_land_effect_30_sequence_5_step, g_wmap_land_effect_30_sequence_5_timer)
+WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_5, g_wmap_land_effect_30_sequence_5_steps, 0x4, g_wmap_land_effect_30_sequence_5_step,
+                 g_wmap_land_effect_30_sequence_5_timer)
 
 WMAP_STEP_RESET(wmap_land_effect_30_sequence_5_reset, g_wmap_land_effect_30_sequence_5_step, g_wmap_land_effect_30_sequence_5_timer)
 
@@ -544,122 +511,111 @@ void wmap_land_effect_30_sequence_5_step_01(void)
     wmap_land_effect_30_sequence_5_step_02();
 }
 
-WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_5_step_02, g_wmap_land_effect_30_sequence_5_step, g_wmap_land_effect_30_sequence_5_timer, g_wmap_sprite_actors[6],
-                              g_wmap_actor_animations[6], g_wmap_focus_screen_position, 0x18, 0x22, 0)
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_5_step_02, g_wmap_land_effect_30_sequence_5_step, g_wmap_land_effect_30_sequence_5_timer,
+                              g_wmap_sprite_actors[6], g_wmap_actor_animations[6], g_wmap_focus_screen_position, 0x18, 0x22, 0)
 
 WMAP_STEP_ADVANCE(wmap_land_effect_30_sequence_5_end, g_wmap_land_effect_30_sequence_5_step)
 
-WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_6, g_wmap_land_effect_30_sequence_6_steps, 0x6, g_wmap_land_effect_30_sequence_6_step, g_wmap_land_effect_30_sequence_6_timer)
+WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_6, g_wmap_land_effect_30_sequence_6_steps, 0x6, g_wmap_land_effect_30_sequence_6_step,
+                 g_wmap_land_effect_30_sequence_6_timer)
 
 WMAP_STEP_RESET(wmap_land_effect_30_sequence_6_reset, g_wmap_land_effect_30_sequence_6_step, g_wmap_land_effect_30_sequence_6_timer)
 
 /**
  * @brief Start the sprite animation and run its first update.
  */
-WMAP_STEP_START_ACTOR(wmap_land_effect_30_sequence_6_step_01,
-    g_wmap_land_effect_30_sequence_6_step, g_wmap_land_effect_30_sequence_6_timer,
-    7, g_wmap_animation_bank_1, 0,
-    1, 0x81, 2,
-    0x30, wmap_land_effect_30_sequence_6_step_02)
+WMAP_STEP_START_ACTOR(wmap_land_effect_30_sequence_6_step_01, g_wmap_land_effect_30_sequence_6_step, g_wmap_land_effect_30_sequence_6_timer, 7,
+                      g_wmap_animation_bank_1, 0, 1, 0x81, 2, 0x30, wmap_land_effect_30_sequence_6_step_02)
 
-WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_6_step_02, g_wmap_land_effect_30_sequence_6_step, g_wmap_land_effect_30_sequence_6_timer, g_wmap_sprite_actors[7],
-                              g_wmap_actor_animations[7], g_wmap_focus_screen_position, 0x8, 0xA, 0)
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_6_step_02, g_wmap_land_effect_30_sequence_6_step, g_wmap_land_effect_30_sequence_6_timer,
+                              g_wmap_sprite_actors[7], g_wmap_actor_animations[7], g_wmap_focus_screen_position, 0x8, 0xA, 0)
 
 /**
  * @brief Start the sprite fade and run its first update.
  */
-WMAP_STEP_FADE_ACTOR(wmap_land_effect_30_sequence_6_step_03,
-    g_wmap_land_effect_30_sequence_6_step, g_wmap_land_effect_30_sequence_6_timer,
-    g_wmap_sprite_actors[7], 2, 0x8, wmap_land_effect_30_sequence_6_step_04)
+WMAP_STEP_FADE_ACTOR(wmap_land_effect_30_sequence_6_step_03, g_wmap_land_effect_30_sequence_6_step, g_wmap_land_effect_30_sequence_6_timer,
+                     g_wmap_sprite_actors[7], 2, 0x8, wmap_land_effect_30_sequence_6_step_04)
 
-WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_6_step_04, g_wmap_land_effect_30_sequence_6_step, g_wmap_land_effect_30_sequence_6_timer, g_wmap_sprite_actors[7],
-                              g_wmap_actor_animations[7], g_wmap_focus_screen_position, 0x8, 0xA, 0)
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_6_step_04, g_wmap_land_effect_30_sequence_6_step, g_wmap_land_effect_30_sequence_6_timer,
+                              g_wmap_sprite_actors[7], g_wmap_actor_animations[7], g_wmap_focus_screen_position, 0x8, 0xA, 0)
 
 WMAP_STEP_ADVANCE(wmap_land_effect_30_sequence_6_end, g_wmap_land_effect_30_sequence_6_step)
 
-WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_7, g_wmap_land_effect_30_sequence_7_steps, 0x6, g_wmap_land_effect_30_sequence_7_step, g_wmap_land_effect_30_sequence_7_timer)
+WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_7, g_wmap_land_effect_30_sequence_7_steps, 0x6, g_wmap_land_effect_30_sequence_7_step,
+                 g_wmap_land_effect_30_sequence_7_timer)
 
 WMAP_STEP_RESET(wmap_land_effect_30_sequence_7_reset, g_wmap_land_effect_30_sequence_7_step, g_wmap_land_effect_30_sequence_7_timer)
 
 /**
  * @brief Start the sprite animation and run its first update.
  */
-WMAP_STEP_START_ACTOR(wmap_land_effect_30_sequence_7_step_01,
-    g_wmap_land_effect_30_sequence_7_step, g_wmap_land_effect_30_sequence_7_timer,
-    8, g_wmap_animation_bank_5, 0,
-    1, 0x81, 8,
-    0x20, wmap_land_effect_30_sequence_7_step_02)
+WMAP_STEP_START_ACTOR(wmap_land_effect_30_sequence_7_step_01, g_wmap_land_effect_30_sequence_7_step, g_wmap_land_effect_30_sequence_7_timer, 8,
+                      g_wmap_animation_bank_5, 0, 1, 0x81, 8, 0x20, wmap_land_effect_30_sequence_7_step_02)
 
-WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_7_step_02, g_wmap_land_effect_30_sequence_7_step, g_wmap_land_effect_30_sequence_7_timer, g_wmap_sprite_actors[8],
-                              g_wmap_actor_animations[8], g_wmap_focus_screen_position, 0x8, 0xA, 0)
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_7_step_02, g_wmap_land_effect_30_sequence_7_step, g_wmap_land_effect_30_sequence_7_timer,
+                              g_wmap_sprite_actors[8], g_wmap_actor_animations[8], g_wmap_focus_screen_position, 0x8, 0xA, 0)
 
 /**
  * @brief Start the sprite fade and run its first update.
  */
-WMAP_STEP_FADE_ACTOR(wmap_land_effect_30_sequence_7_step_03,
-    g_wmap_land_effect_30_sequence_7_step, g_wmap_land_effect_30_sequence_7_timer,
-    g_wmap_sprite_actors[8], 8, 0x8, wmap_land_effect_30_sequence_7_step_04)
+WMAP_STEP_FADE_ACTOR(wmap_land_effect_30_sequence_7_step_03, g_wmap_land_effect_30_sequence_7_step, g_wmap_land_effect_30_sequence_7_timer,
+                     g_wmap_sprite_actors[8], 8, 0x8, wmap_land_effect_30_sequence_7_step_04)
 
-WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_7_step_04, g_wmap_land_effect_30_sequence_7_step, g_wmap_land_effect_30_sequence_7_timer, g_wmap_sprite_actors[8],
-                              g_wmap_actor_animations[8], g_wmap_focus_screen_position, 0x8, 0xA, 0)
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_7_step_04, g_wmap_land_effect_30_sequence_7_step, g_wmap_land_effect_30_sequence_7_timer,
+                              g_wmap_sprite_actors[8], g_wmap_actor_animations[8], g_wmap_focus_screen_position, 0x8, 0xA, 0)
 
 WMAP_STEP_ADVANCE(wmap_land_effect_30_sequence_7_end, g_wmap_land_effect_30_sequence_7_step)
 
-WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_8, g_wmap_land_effect_30_sequence_8_steps, 0x6, g_wmap_land_effect_30_sequence_8_step, g_wmap_land_effect_30_sequence_8_timer)
+WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_8, g_wmap_land_effect_30_sequence_8_steps, 0x6, g_wmap_land_effect_30_sequence_8_step,
+                 g_wmap_land_effect_30_sequence_8_timer)
 
 WMAP_STEP_RESET(wmap_land_effect_30_sequence_8_reset, g_wmap_land_effect_30_sequence_8_step, g_wmap_land_effect_30_sequence_8_timer)
 
 /** @brief Start the sprite animation and run its first update. */
-WMAP_STEP_START_ACTOR(wmap_land_effect_30_sequence_8_step_01,
-    g_wmap_land_effect_30_sequence_8_step, g_wmap_land_effect_30_sequence_8_timer,
-    9, g_wmap_animation_bank_5, 1,
-    1, 0x81, 8,
-    0x1C, wmap_land_effect_30_sequence_8_step_02)
+WMAP_STEP_START_ACTOR(wmap_land_effect_30_sequence_8_step_01, g_wmap_land_effect_30_sequence_8_step, g_wmap_land_effect_30_sequence_8_timer, 9,
+                      g_wmap_animation_bank_5, 1, 1, 0x81, 8, 0x1C, wmap_land_effect_30_sequence_8_step_02)
 
-WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_8_step_02, g_wmap_land_effect_30_sequence_8_step, g_wmap_land_effect_30_sequence_8_timer, g_wmap_sprite_actors[9],
-                              g_wmap_actor_animations[9], g_wmap_focus_screen_position, 0x8, 0xA, 0)
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_8_step_02, g_wmap_land_effect_30_sequence_8_step, g_wmap_land_effect_30_sequence_8_timer,
+                              g_wmap_sprite_actors[9], g_wmap_actor_animations[9], g_wmap_focus_screen_position, 0x8, 0xA, 0)
 
 /**
  * @brief Start the sprite fade and run its first update.
  */
-WMAP_STEP_FADE_ACTOR(wmap_land_effect_30_sequence_8_step_03,
-    g_wmap_land_effect_30_sequence_8_step, g_wmap_land_effect_30_sequence_8_timer,
-    g_wmap_sprite_actors[9], 8, 0x8, wmap_land_effect_30_sequence_8_step_04)
+WMAP_STEP_FADE_ACTOR(wmap_land_effect_30_sequence_8_step_03, g_wmap_land_effect_30_sequence_8_step, g_wmap_land_effect_30_sequence_8_timer,
+                     g_wmap_sprite_actors[9], 8, 0x8, wmap_land_effect_30_sequence_8_step_04)
 
-WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_8_step_04, g_wmap_land_effect_30_sequence_8_step, g_wmap_land_effect_30_sequence_8_timer, g_wmap_sprite_actors[9],
-                              g_wmap_actor_animations[9], g_wmap_focus_screen_position, 0x8, 0xA, 0)
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_8_step_04, g_wmap_land_effect_30_sequence_8_step, g_wmap_land_effect_30_sequence_8_timer,
+                              g_wmap_sprite_actors[9], g_wmap_actor_animations[9], g_wmap_focus_screen_position, 0x8, 0xA, 0)
 
 WMAP_STEP_ADVANCE(wmap_land_effect_30_sequence_8_end, g_wmap_land_effect_30_sequence_8_step)
 
-WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_9, g_wmap_land_effect_30_sequence_9_steps, 0x6, g_wmap_land_effect_30_sequence_9_step, g_wmap_land_effect_30_sequence_9_timer)
+WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_9, g_wmap_land_effect_30_sequence_9_steps, 0x6, g_wmap_land_effect_30_sequence_9_step,
+                 g_wmap_land_effect_30_sequence_9_timer)
 
 WMAP_STEP_RESET(wmap_land_effect_30_sequence_9_reset, g_wmap_land_effect_30_sequence_9_step, g_wmap_land_effect_30_sequence_9_timer)
 
 /**
  * @brief Start the sprite animation and run its first update.
  */
-WMAP_STEP_START_ACTOR(wmap_land_effect_30_sequence_9_step_01,
-    g_wmap_land_effect_30_sequence_9_step, g_wmap_land_effect_30_sequence_9_timer,
-    10, g_wmap_animation_bank_5, 2,
-    1, 0x81, 8,
-    0x18, wmap_land_effect_30_sequence_9_step_02)
+WMAP_STEP_START_ACTOR(wmap_land_effect_30_sequence_9_step_01, g_wmap_land_effect_30_sequence_9_step, g_wmap_land_effect_30_sequence_9_timer, 10,
+                      g_wmap_animation_bank_5, 2, 1, 0x81, 8, 0x18, wmap_land_effect_30_sequence_9_step_02)
 
-WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_9_step_02, g_wmap_land_effect_30_sequence_9_step, g_wmap_land_effect_30_sequence_9_timer, g_wmap_sprite_actors[10],
-                              g_wmap_actor_animations[10], g_wmap_focus_screen_position, 0x8, 0xA, 0)
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_9_step_02, g_wmap_land_effect_30_sequence_9_step, g_wmap_land_effect_30_sequence_9_timer,
+                              g_wmap_sprite_actors[10], g_wmap_actor_animations[10], g_wmap_focus_screen_position, 0x8, 0xA, 0)
 
 /**
  * @brief Start the sprite fade and run its first update.
  */
-WMAP_STEP_FADE_ACTOR(wmap_land_effect_30_sequence_9_step_03,
-    g_wmap_land_effect_30_sequence_9_step, g_wmap_land_effect_30_sequence_9_timer,
-    g_wmap_sprite_actors[10], 8, 0x8, wmap_land_effect_30_sequence_9_step_04)
+WMAP_STEP_FADE_ACTOR(wmap_land_effect_30_sequence_9_step_03, g_wmap_land_effect_30_sequence_9_step, g_wmap_land_effect_30_sequence_9_timer,
+                     g_wmap_sprite_actors[10], 8, 0x8, wmap_land_effect_30_sequence_9_step_04)
 
-WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_9_step_04, g_wmap_land_effect_30_sequence_9_step, g_wmap_land_effect_30_sequence_9_timer, g_wmap_sprite_actors[10],
-                              g_wmap_actor_animations[10], g_wmap_focus_screen_position, 0x8, 0xA, 0)
+WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_30_sequence_9_step_04, g_wmap_land_effect_30_sequence_9_step, g_wmap_land_effect_30_sequence_9_timer,
+                              g_wmap_sprite_actors[10], g_wmap_actor_animations[10], g_wmap_focus_screen_position, 0x8, 0xA, 0)
 
 WMAP_STEP_ADVANCE(wmap_land_effect_30_sequence_9_end, g_wmap_land_effect_30_sequence_9_step)
 
-WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_10, g_wmap_land_effect_30_sequence_10_steps, 0x6, g_wmap_land_effect_30_sequence_10_step, g_wmap_land_effect_30_sequence_10_timer)
+WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_10, g_wmap_land_effect_30_sequence_10_steps, 0x6, g_wmap_land_effect_30_sequence_10_step,
+                 g_wmap_land_effect_30_sequence_10_timer)
 
 WMAP_STEP_RESET(wmap_land_effect_30_sequence_10_reset, g_wmap_land_effect_30_sequence_10_step, g_wmap_land_effect_30_sequence_10_timer)
 
@@ -670,9 +626,7 @@ void wmap_land_effect_30_sequence_10_step_01(void)
 
     g_wmap_particle_intensity = 0;
     D_80139980 = 0x7F;
-    WMAP_RESET_PARTICLE_SLOTS(i, 0x32,
-                              g_wmap_actor_motions[i + 0x13].state,
-                              0x13, g_wmap_animation_bank_4);
+    WMAP_RESET_PARTICLE_SLOTS(i, 0x32, g_wmap_actor_motions[i + 0x13].state, 0x13, g_wmap_animation_bank_4);
     g_wmap_land_effect_30_sequence_10_timer = 0x32;
     g_wmap_land_effect_30_sequence_10_step++;
     wmap_land_effect_30_sequence_10_step_02();
@@ -687,9 +641,11 @@ void wmap_land_effect_30_sequence_10_step_02(void)
     {
         g_wmap_particle_intensity++;
     }
+
     wmap_update_flat_radial_burst(0x13, 0x45, 0x13, 0x20, 0xFD0, 4, 0x20, 1);
     remaining_ticks = g_wmap_land_effect_30_sequence_10_timer - 1;
     g_wmap_land_effect_30_sequence_10_timer = remaining_ticks;
+
     if (remaining_ticks == 0)
     {
         g_wmap_land_effect_30_sequence_10_step++;
@@ -701,7 +657,8 @@ WMAP_STEP_ARM_TIMER(wmap_land_effect_30_sequence_10_step_03, g_wmap_land_effect_
 
 WMAP_STEP_ADVANCE(wmap_land_effect_30_sequence_10_end, g_wmap_land_effect_30_sequence_10_step)
 
-WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_11, g_wmap_land_effect_30_sequence_11_steps, 0x6, g_wmap_land_effect_30_sequence_11_step, g_wmap_land_effect_30_sequence_11_timer)
+WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_11, g_wmap_land_effect_30_sequence_11_steps, 0x6, g_wmap_land_effect_30_sequence_11_step,
+                 g_wmap_land_effect_30_sequence_11_timer)
 
 WMAP_STEP_RESET(wmap_land_effect_30_sequence_11_reset, g_wmap_land_effect_30_sequence_11_step, g_wmap_land_effect_30_sequence_11_timer)
 
@@ -712,9 +669,7 @@ void wmap_land_effect_30_sequence_11_step_01(void)
 
     g_wmap_particle_intensity = 0;
     D_80139980 = 0x7F;
-    WMAP_RESET_PARTICLE_SLOTS(i, 0x8,
-                              g_wmap_actor_motions[i + 0x54].state,
-                              0x54, g_wmap_animation_bank_4);
+    WMAP_RESET_PARTICLE_SLOTS(i, 0x8, g_wmap_actor_motions[i + 0x54].state, 0x54, g_wmap_animation_bank_4);
     g_wmap_land_effect_30_sequence_11_timer = 2;
     g_wmap_land_effect_30_sequence_11_step++;
     wmap_land_effect_30_sequence_11_step_02();
@@ -729,9 +684,11 @@ void wmap_land_effect_30_sequence_11_step_02(void)
     {
         g_wmap_particle_intensity++;
     }
+
     wmap_update_flat_radial_burst(0x54, 0x5C, 0x13, 0x20, 0x1000, 0x20, 8, 2);
     remaining_ticks = g_wmap_land_effect_30_sequence_11_timer - 1;
     g_wmap_land_effect_30_sequence_11_timer = remaining_ticks;
+
     if (remaining_ticks == 0)
     {
         g_wmap_land_effect_30_sequence_11_step++;
@@ -743,45 +700,45 @@ WMAP_STEP_ARM_TIMER(wmap_land_effect_30_sequence_11_step_03, g_wmap_land_effect_
 
 WMAP_STEP_ADVANCE(wmap_land_effect_30_sequence_11_end, g_wmap_land_effect_30_sequence_11_step)
 
-WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_12, g_wmap_land_effect_30_sequence_12_steps, 0x4, g_wmap_land_effect_30_sequence_12_step, g_wmap_land_effect_30_sequence_12_timer)
+WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_12, g_wmap_land_effect_30_sequence_12_steps, 0x4, g_wmap_land_effect_30_sequence_12_step,
+                 g_wmap_land_effect_30_sequence_12_timer)
 
 WMAP_STEP_RESET(wmap_land_effect_30_sequence_12_reset, g_wmap_land_effect_30_sequence_12_step, g_wmap_land_effect_30_sequence_12_timer)
 
 WMAP_STEP_ADVANCE(wmap_land_effect_30_sequence_12_end, g_wmap_land_effect_30_sequence_12_step)
 
-WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_13, g_wmap_land_effect_30_sequence_13_steps, 0x8, g_wmap_land_effect_30_sequence_13_step, g_wmap_land_effect_30_sequence_13_timer)
+WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_13, g_wmap_land_effect_30_sequence_13_steps, 0x8, g_wmap_land_effect_30_sequence_13_step,
+                 g_wmap_land_effect_30_sequence_13_timer)
 
 WMAP_STEP_RESET(wmap_land_effect_30_sequence_13_reset, g_wmap_land_effect_30_sequence_13_step, g_wmap_land_effect_30_sequence_13_timer)
 
 /**
  * @brief Update the particles and increase the shared fade value until the timer expires.
  */
-WMAP_STEP_UPDATE_AND_RAMP(wmap_land_effect_30_sequence_13_step_02, g_wmap_land_effect_30_sequence_13_step, g_wmap_land_effect_30_sequence_13_timer,
-                          D_801B25D8, 8,
-                          wmap_update_falling_particles(0xC8, 0xF0, 2, -1, 0x12, 4, 0x168, 0x13, -0x32, 0x64, -0x32, 0x64, 0xB4, 0x81, 0x81, 8, 0))
+WMAP_STEP_UPDATE_AND_RAMP(wmap_land_effect_30_sequence_13_step_02, g_wmap_land_effect_30_sequence_13_step, g_wmap_land_effect_30_sequence_13_timer, D_801B25D8,
+                          8, wmap_update_falling_particles(0xC8, 0xF0, 2, -1, 0x12, 4, 0x168, 0x13, -0x32, 0x64, -0x32, 0x64, 0xB4, 0x81, 0x81, 8, 0))
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_30_sequence_13_step_03, g_wmap_land_effect_30_sequence_13_step, g_wmap_land_effect_30_sequence_13_timer, 0x18,
                     wmap_land_effect_30_sequence_13_step_04)
 
 /** @brief Update the effect until the step timer expires. */
-WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_30_sequence_13_step_04,
-    g_wmap_land_effect_30_sequence_13_step, g_wmap_land_effect_30_sequence_13_timer,
-    wmap_update_falling_particles(0xC8, 0xF0, 2, -1, 0x12, 4, 0x168, 0x13, -0x32, 0x64, -0x32, 0x64, 0xB4, 0x81, 0x81, 8, 0))
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_30_sequence_13_step_04, g_wmap_land_effect_30_sequence_13_step, g_wmap_land_effect_30_sequence_13_timer,
+                          wmap_update_falling_particles(0xC8, 0xF0, 2, -1, 0x12, 4, 0x168, 0x13, -0x32, 0x64, -0x32, 0x64, 0xB4, 0x81, 0x81, 8, 0))
 
 /**
  * @brief Stop spawning particles and keep updating those already active.
  */
 WMAP_STEP_STOP_PARTICLE_SPAWNS(wmap_land_effect_30_sequence_13_step_05, g_wmap_land_effect_30_sequence_13_step, g_wmap_land_effect_30_sequence_13_timer,
-                              g_wmap_falling_spawn_counts[0], 0x18, wmap_land_effect_30_sequence_13_step_06)
+                               g_wmap_falling_spawn_counts[0], 0x18, wmap_land_effect_30_sequence_13_step_06)
 
 /** @brief Update the effect until the step timer expires. */
-WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_30_sequence_13_step_06,
-    g_wmap_land_effect_30_sequence_13_step, g_wmap_land_effect_30_sequence_13_timer,
-    wmap_update_falling_particles(0xC8, 0xF0, 2, -1, 0x12, 4, 0x168, 0x13, -0x32, 0x64, -0x32, 0x64, 0xB4, 0x81, 0x81, 8, 0))
+WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_30_sequence_13_step_06, g_wmap_land_effect_30_sequence_13_step, g_wmap_land_effect_30_sequence_13_timer,
+                          wmap_update_falling_particles(0xC8, 0xF0, 2, -1, 0x12, 4, 0x168, 0x13, -0x32, 0x64, -0x32, 0x64, 0xB4, 0x81, 0x81, 8, 0))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_30_sequence_13_end, g_wmap_land_effect_30_sequence_13_step)
 
-WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_14, g_wmap_land_effect_30_sequence_14_steps, 0x4, g_wmap_land_effect_30_sequence_14_step, g_wmap_land_effect_30_sequence_14_timer)
+WMAP_STEP_RUNNER(wmap_land_effect_30_run_sequence_14, g_wmap_land_effect_30_sequence_14_steps, 0x4, g_wmap_land_effect_30_sequence_14_step,
+                 g_wmap_land_effect_30_sequence_14_timer)
 
 WMAP_STEP_RESET(wmap_land_effect_30_sequence_14_reset, g_wmap_land_effect_30_sequence_14_step, g_wmap_land_effect_30_sequence_14_timer)
 

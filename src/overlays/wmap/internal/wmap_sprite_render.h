@@ -56,6 +56,9 @@ void wmap_draw_actor_sprite(WmapSpriteActor* actor, s32 screen_position, s32 tex
 /** @brief Sprite actor pool (256 actors); actor i animates from g_wmap_actor_animations[i]. */
 extern WmapSpriteActor g_wmap_sprite_actors[];
 
+/** @brief Animation slot of each sprite actor, parallel to g_wmap_sprite_actors. */
+extern WmapAnimationSlot g_wmap_actor_animations[];
+
 /**
  * @brief The run of sprite actors an effect uses, starting at actor @p first; index it with [i].
  * @param first Index of the block's first actor in g_wmap_sprite_actors.

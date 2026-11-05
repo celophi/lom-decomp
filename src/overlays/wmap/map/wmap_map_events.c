@@ -1,3 +1,4 @@
+#include "common.h"
 #include <inline_c.h>
 #include <libgte.h>
 #include <rand.h>
@@ -104,7 +105,6 @@ extern u8 g_wmap_arrival_event_sides[WMAP_ARRIVAL_SIDES];
 extern u8 g_wmap_scripted_traveler_animation[];
 extern s32 g_wmap_vehicle_phase;
 extern WmapScreenPosition g_wmap_vehicle_screen_position;
-extern WmapAnimationSlot g_wmap_actor_animations[];
 extern WmapMotionSlot g_wmap_actor_motions[];
 /** @brief Motion slots from actor WMAP_ARRIVAL_FIRST_ACTOR on, addressed as their own array. */
 extern WmapMotionSlot g_wmap_effect_actor_motions[];
@@ -150,7 +150,7 @@ static inline s32 wmap_cell_has_land(s32 x, s32 y)
 /** @brief Start a scripted scroll that brings g_wmap_vehicle_cell_x/y into view. */
 static inline void wmap_scroll_to_vehicle_cell(void)
 {
-    g_wmap_view_scroll_mode = WMAP_STEP_SCRIPTED_SCROLL_MODE;
+    g_wmap_view_scroll_mode = WMAP_SCROLL_SCRIPTED;
     g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * WMAP_CELL_SPACING - g_wmap_view.x;
     g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * WMAP_CELL_SPACING - g_wmap_view.y;
 }
@@ -158,7 +158,7 @@ static inline void wmap_scroll_to_vehicle_cell(void)
 /** @brief Start a scripted scroll back to g_wmap_saved_view. */
 static inline void wmap_scroll_to_saved_view(void)
 {
-    g_wmap_view_scroll_mode = WMAP_STEP_SCRIPTED_SCROLL_MODE;
+    g_wmap_view_scroll_mode = WMAP_SCROLL_SCRIPTED;
     g_wmap_scroll_remaining_x = g_wmap_saved_view.x - g_wmap_view.x;
     g_wmap_scroll_remaining_y = g_wmap_saved_view.y - g_wmap_view.y;
 }
