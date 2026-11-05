@@ -8,6 +8,7 @@
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_cells.h"
+#include "../internal/wmap_actor_motion.h"
 
 void wmap_land_effect_07_sequence_10_step_02(void);
 void wmap_land_effect_07_wait_idle_02(void);
@@ -35,35 +36,11 @@ void wmap_land_effect_07_sequence_9_step_02(void);
 void wmap_land_effect_07_sequence_10_step_04(void);
 void wmap_land_effect_07_sequence_11_step_02(void);
 
-/** @brief World-map 0x14-byte slot: only the leading halfword is cleared here. */
-typedef struct
-{
-    s16 field_00;
-    u8 pad_02[0x12];
-} WmapSlot14;
-
-extern s8 D_80051B4C[];
 extern u8 g_wmap_load_buffer[];
-extern s32 D_80182DE4;
-extern s32 D_801B2468;
-extern s32 D_801B24B4;
 extern s32 g_wmap_land_effect_07_sequence_1_timer;
-extern u8* g_wmap_effect_model_pack_1;
 extern s32 g_wmap_land_effect_07_sequence_2_timer;
-extern u8* g_wmap_effect_model_pack_2;
 extern s32 g_wmap_land_effect_07_sequence_3_timer;
-extern s32 D_80139234;
-extern s32 D_8013923C;
-extern s32 D_80139240;
-extern s32 D_8013924C;
-extern s32 D_80139250;
-extern s32 D_80139260;
-extern s32 D_80139264;
-extern s32 D_80139268;
-extern s32 D_8013926C;
-extern s32 D_80139284;
 extern s32 g_wmap_land_effect_07_sequence_10_timer;
-extern u8 g_wmap_animation_bank_1[];
 extern s32 D_80139980;
 extern s32 g_wmap_land_effect_07_sequence_11_timer;
 extern s32 g_wmap_land_effect_07_timer;
@@ -72,17 +49,14 @@ extern void wmap_land_effect_07_step_03(void);
 extern void wmap_land_effect_07_end(void);
 extern s32 g_wmap_land_effect_07_timeline_timer;
 extern WmapSequenceStep g_wmap_land_effect_07_timeline_steps[];
-extern u32 g_wmap_selected_artifact;
 extern WmapSequenceStep g_wmap_land_effect_07_sequence_1_steps[];
 extern WmapSequenceStep g_wmap_land_effect_07_sequence_2_steps[];
 extern WmapSequenceStep g_wmap_land_effect_07_sequence_3_steps[];
 extern s32 g_wmap_land_effect_07_sequence_4_timer;
 extern WmapSequenceStep g_wmap_land_effect_07_sequence_4_steps[];
-extern u8 g_wmap_animation_bank_0[];
 extern void wmap_land_effect_07_sequence_4_step_02(void);
 extern s32 g_wmap_land_effect_07_sequence_5_timer;
 extern WmapSequenceStep g_wmap_land_effect_07_sequence_5_steps[];
-extern u8 g_wmap_animation_bank_2[];
 extern void wmap_land_effect_07_sequence_5_step_02(void);
 extern s32 g_wmap_land_effect_07_sequence_6_timer;
 extern WmapSequenceStep g_wmap_land_effect_07_sequence_6_steps[];
@@ -109,19 +83,14 @@ extern u32 g_wmap_land_effect_07_sequence_7_step;
 extern u32 g_wmap_land_effect_07_sequence_8_step;
 extern u32 g_wmap_land_effect_07_sequence_9_step;
 
-extern VECTOR g_wmap_camera_translation;
 
-extern SVECTOR D_801B2498;
-extern SVECTOR D_801B2490;
 
 
 extern WmapAnimationSlot g_wmap_actor_animations[];
 
-extern WmapScreenPosition g_wmap_focus_screen_position;
 
 extern s32* g_wmap_effect_params;
 
-extern WmapSlot14 g_wmap_actor_motions[];
 
 /** @brief Draw two oscillating effect layers and update their intensity. */
 void wmap_land_effect_07_sequence_1_step_02(void)
@@ -219,7 +188,7 @@ void wmap_land_effect_07_sequence_10_step_01(void)
     D_8013926C = 1;
     D_80139284 = 0x938801F4;
     WMAP_RESET_PARTICLE_SLOTS(i, 12,
-                              g_wmap_actor_motions[i + D_80139264].field_00,
+                              g_wmap_actor_motions[i + D_80139264].state,
                               104, g_wmap_animation_bank_1);
     g_wmap_land_effect_07_sequence_10_timer = 24;
     g_wmap_land_effect_07_sequence_10_step++;
@@ -691,7 +660,7 @@ void wmap_land_effect_07_sequence_11_step_01(void)
     g_wmap_particle_intensity = 0;
     D_80139980 = 0x7F;
     WMAP_RESET_PARTICLE_SLOTS(i, 6,
-                              g_wmap_actor_motions[i].field_00,
+                              g_wmap_actor_motions[i].state,
                               204, g_wmap_animation_bank_1);
     g_wmap_land_effect_07_sequence_11_timer = 0x20;
     g_wmap_land_effect_07_sequence_11_step++;

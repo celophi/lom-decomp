@@ -1,9 +1,9 @@
 #include "../internal/wmap_land_layout.h"
 #include "../internal/wmap_land_transition.h"
 #include "../internal/wmap_land_selection.h"
+#include "../internal/wmap_sequence_runtime.h"
 
 extern s32 D_80139270;
-extern s32 D_80139838[];
 
 /** @brief Rebuild the artifact carousel and advance to an available selection. */
 void wmap_reset_artifact_carousel(void)

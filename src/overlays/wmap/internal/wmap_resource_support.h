@@ -32,13 +32,34 @@ void func_80064F14();
 void wmap_copy_words(s32* source, s32* destination, s32 byte_count);
 void func_80064F5C(void);
 void wmap_load_tim_file(s32 resource_index);
-void func_80065078(s32 resource_index);
-void func_8006518C(s32 resource_index);
+void wmap_stream_tim_file(s32 resource_index);
+void wmap_queue_load_buffer_read(s32 resource_index);
 void wmap_upload_tim(u8* data);
 void wmap_play_sound(s32 sound_index, s32 pan);
-void func_800652F8(void);
+void wmap_clear_framebuffers(void);
 void wmap_queue_texture_page(s32 texture_page, s32 depth);
 void wmap_init_actor_display_states(void);
 s32 wmap_get_controller_repeat_buttons(void);
+
+/** @brief Load targets for effect animations, textures and models. */
+extern u8 g_wmap_animation_bank_0[];
+extern u8 g_wmap_animation_bank_1[];
+extern u8 g_wmap_animation_bank_2[];
+extern u8 g_wmap_animation_bank_3[];
+extern u8 g_wmap_animation_bank_4[];
+extern u8 g_wmap_animation_bank_5[];
+extern u8 g_wmap_effect_texture_buffer_0[];
+extern u8 g_wmap_effect_texture_buffer_1[];
+extern u8 g_wmap_effect_texture_buffer_2[];
+extern u8 g_wmap_effect_model_buffer_2000[];
+
+/** @brief Model packs of the running effect, each pointing into the effect model buffers. */
+extern u8* g_wmap_effect_model_pack_1;
+extern u8* g_wmap_effect_model_pack_2;
+extern u8* g_wmap_effect_model_pack_3;
+extern u8* g_wmap_effect_model_pack_4;
+extern u8* g_wmap_effect_model_pack_5;
+extern u8* g_wmap_effect_model_pack_6;
+extern u8* g_wmap_effect_model_pack_7;
 
 #endif

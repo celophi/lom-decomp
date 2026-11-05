@@ -31,10 +31,10 @@
 #include <rand.h>
 #include "internal/wmap_map_events.h"
 #include "internal/wmap_cells.h"
+#include "internal/wmap_actor_motion.h"
 #include "main/audio/akao.h"
 
 #define WMAP_MAP_CELL_SIZE 48
-#define WMAP_TRAVEL_CELL_SIZE 160
 #define WMAP_ACTOR_COUNT 256
 #define WMAP_MENU_ITEM_HEIGHT 16
 #define WMAP_MENU_CURSOR_STEP 4
@@ -61,7 +61,6 @@
 #define WMAP_CD_ERROR_TEXTURE_HEIGHT 32
 #define WMAP_ENTRY_FADE_MAX 255
 #define WMAP_INITIAL_MAP_SHADOW_LEVEL 64
-#define WMAP_INITIAL_VIEW_DEPTH 24576
 #define WMAP_INITIAL_CAMERA_PITCH 736
 #define WMAP_INITIAL_CAMERA_ROLL 432
 #define WMAP_INITIAL_CAMERA_X 8
@@ -159,13 +158,6 @@ typedef struct
     u8 pad_04[24];
 } WmapTileDisplay;
 
-/** @brief Motion state for a world-map actor. */
-typedef struct
-{
-    s16 state;
-    u8 pad_02[0x12];
-} WmapMotion;
-
 extern s32 wmap_special_effect_34_run(s32 initialize);
 
 extern s32 g_wmap_script_button_mask;
@@ -185,7 +177,7 @@ extern s32 g_wmap_backdrop_scroll;
 extern s32 g_wmap_small_motor;
 extern s32 g_wmap_large_motor;
 
-extern s32 D_800DCEDC;
+extern s32 g_wmap_projection_distance;
 
 extern RECT D_80051A80;
 /** @brief World-map loop result before attract movie requests are applied. */
@@ -194,28 +186,18 @@ extern s32 g_wmap_loop_result;
 extern s32 g_wmap_attract_1_requested;
 /** @brief Nonzero to play attract movies two through four after the map returns. */
 extern s32 g_wmap_attract_2_requested;
-extern s32 D_800D923C;
 extern s32 D_800DBE6C;
 extern s32 D_800DBE74;
-extern s32 g_wmap_cursor_column;
-extern s32 g_wmap_cursor_row;
 extern s32 D_800DCEFC;
-extern s32 g_wmap_sequence_count;
-extern s32 g_wmap_view_scroll_enabled;
-extern s32 g_wmap_selected_artifact;
 extern CVECTOR g_wmap_tint;
 extern s32 D_80139218;
-extern SVECTOR g_wmap_camera_rotation;
 extern s32* g_wmap_effect_params;
 extern s32 g_wmap_tint_blending;
-extern s32 g_wmap_view_scroll_mode;
 extern s32 D_801398F4;
-extern VECTOR g_wmap_view;
 extern DVECTOR D_8013B260;
 extern s32 D_8013B290;
 extern s32 D_8013B27C;
 extern s32 D_80182D88;
-extern VECTOR g_wmap_camera_translation;
 extern s32 g_wmap_map_shadow_level;
 /** @brief Base RGB tint of the scrolling textured backdrop. */
 extern CVECTOR g_wmap_backdrop_tint;
@@ -244,7 +226,6 @@ extern u16 g_wmap_entry_palette[16];
 extern s32 g_wmap_controller_1_l1_held;
 /** @brief Raw L2 repeat state from the second controller. */
 extern s32 g_wmap_controller_2_l2_repeat;
-extern s32 g_wmap_view_mode;
 /** @brief Last land-event flag read from the queue, or the end sentinel. */
 extern u32 g_wmap_last_land_event;
 /** @brief Entry palette expanded into five-bit RGB channels. */
@@ -259,13 +240,12 @@ extern AkaoHeader g_wmap_music_buffer;
 extern s32 D_801ADB08;
 /** @brief Animation data for land display 31, kept in cache slot 16. */
 extern u8 g_wmap_resident_land_animation_data[];
-extern RECT D_80051A88;
+extern RECT g_wmap_framebuffer_rect;
 extern WmapTileDisplay D_8011D108[6][6];
 /** @brief Nonzero to draw Geo (land 5) with display resource 35; no WMAP code sets it. */
 extern s32 g_wmap_geo_appearance_override;
 /** @brief Nonzero to draw Domina (land 1) with display resource 36; no WMAP code sets it. */
 extern s32 g_wmap_domina_appearance_override;
-extern WmapMotion g_wmap_actor_motions[];
 
 void wmap_init_frame_buffers(void);
 void wmap_init_state(void);
@@ -282,7 +262,7 @@ void wmap_refresh_cells(void);
 void wmap_init_frame_buffers(void)
 {
     SetGeomOffset(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
-    D_800DCEDC = 0x4000;
+    g_wmap_projection_distance = 0x4000;
     SetGeomScreen(0x4000);
     SetDispMask(1);
     SetDefDrawEnv(&g_wmap_frames[0].draw_env, 0, 8, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
@@ -420,9 +400,9 @@ void wmap_init_state(void)
     g_wmap_backdrop_target_level = 0;
     g_wmap_exit_frame = 0;
     /* Restore the camera pose and map-selection defaults. */
-    g_wmap_view.vx = 0;
-    g_wmap_view.vy = 0;
-    g_wmap_view.vz = WMAP_INITIAL_VIEW_DEPTH;
+    g_wmap_view.x = 0;
+    g_wmap_view.y = 0;
+    g_wmap_view.projection_scale = WMAP_VIEW_SCALE;
     g_wmap_camera_rotation.vx = WMAP_INITIAL_CAMERA_PITCH;
     g_wmap_camera_rotation.vz = WMAP_INITIAL_CAMERA_ROLL;
     g_wmap_camera_rotation.vy = 0;
@@ -1216,7 +1196,7 @@ static inline void wmap_upload_tim_block(RECT* rect, TimBlock* block)
 /** @brief Clear the map image destination to black. */
 static inline void wmap_clear_map_surface(RECT* rectangle)
 {
-    *rectangle = D_80051A88;
+    *rectangle = g_wmap_framebuffer_rect;
     ClearImage(rectangle, 0, 0, 0);
 }
 
@@ -1403,7 +1383,7 @@ s32 wmap_run_loop(void)
             g_wmap_overlay_fade_depth = 1;
             g_wmap_entry_music_enabled = 0;
             g_wmap_entry_fade_level = 0;
-            wmap_install_callback(&func_80064D64);
+            wmap_install_callback(&wmap_run_overlay_fade);
             g_wmap_transition_mesh_hidden = 1;
             g_wmap_event_active = 1;
             g_wmap_party_visible = 0;
@@ -1424,7 +1404,7 @@ s32 wmap_run_loop(void)
             g_wmap_party_visible = 0;
             g_wmap_event_active = 1;
             g_wmap_entry_fade_level = 0;
-            wmap_install_callback(&func_80064D64);
+            wmap_install_callback(&wmap_run_overlay_fade);
             g_wmap_transition_mesh_hidden = 1;
             g_wmap_status_panel_mode = 3;
             g_wmap_carousel_mode = WMAP_CAROUSEL_HIDDEN;
@@ -1464,7 +1444,7 @@ s32 wmap_run_loop(void)
             wmap_start_mesh_transition(1);
             g_wmap_overlay_fade_target = 0;
             g_wmap_overlay_fade_level = 0;
-            wmap_install_callback(&func_80064D64);
+            wmap_install_callback(&wmap_run_overlay_fade);
             g_wmap_land_event_27_pending = 1;
             g_wmap_entry_music_enabled = 0;
             g_wmap_party_visible = 0;
@@ -1751,14 +1731,14 @@ s32 wmap_run_loop(void)
             scroll_cell_y = 3;
             g_wmap_cursor_row = 2;
         }
-        g_wmap_view.vx = scroll_cell_x * WMAP_MAP_CELL_SIZE;
-        g_wmap_view.vy = scroll_cell_y * WMAP_MAP_CELL_SIZE;
+        g_wmap_view.x = scroll_cell_x * WMAP_MAP_CELL_SIZE;
+        g_wmap_view.y = scroll_cell_y * WMAP_MAP_CELL_SIZE;
         g_wmap_travelers[0].next_cell_x = g_wmap_travelers[0].cell_x;
         g_wmap_travelers[0].next_cell_y = g_wmap_travelers[0].cell_y;
-        traveler_x = (g_wmap_travelers[0].cell_x - 1) * WMAP_TRAVEL_CELL_SIZE;
+        traveler_x = (g_wmap_travelers[0].cell_x - 1) * WMAP_CELL_SIZE;
         g_wmap_travelers[0].position_x = traveler_x;
         g_wmap_travelers[0].target_x = traveler_x;
-        traveler_y = (g_wmap_travelers[0].cell_y - 1) * WMAP_TRAVEL_CELL_SIZE;
+        traveler_y = (g_wmap_travelers[0].cell_y - 1) * WMAP_CELL_SIZE;
         g_wmap_travelers[0].position_y = traveler_y;
         g_wmap_travelers[0].target_y = traveler_y;
         wmap_clear_map_surface(&rects[0]);
@@ -1981,7 +1961,7 @@ s32 wmap_run_loop(void)
                 switch (g_wmap_exit_mode)
                 {
                 case WMAP_EXIT_FADE_OVERLAY:
-                    func_800641DC();
+                    wmap_draw_exit_fade();
                     break;
                 case WMAP_EXIT_SCREEN_PANELS:
                     wmap_update_exit_panels();
@@ -2053,7 +2033,7 @@ s32 wmap_run_loop(void)
                 {
                     wmap_set_map_label(-1);
                 }
-                func_8005F9BC();
+                wmap_draw_status_panel();
                 SetSpadStack(WMAP_SCRATCH_STACK_SAVE_SLOT);
                 wmap_update_party_travel();
                 wmap_update_map_display();
@@ -2087,7 +2067,7 @@ s32 wmap_run_loop(void)
                 rects[1].h = 1;
                 LoadImage(&rects[1], (u_long*)g_wmap_pending_palette);
             }
-            func_80064BF8();
+            wmap_draw_entry_fade();
             DrawOTag(&g_wmap_current_frame->ordering_table[WMAP_OT_COUNT - 1]);
             update_controllers();
             cdrom_process_state();

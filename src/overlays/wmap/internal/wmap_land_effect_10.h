@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-void func_8008ECF8();
+void wmap_land_effect_10_update_falling_sparks();
 void wmap_land_effect_10_sequence_4_step_01(void);
 void wmap_land_effect_10_sequence_5_step_01(void);
 void wmap_land_effect_10_sequence_7_step_02(void);

@@ -12,8 +12,9 @@
 #include "../internal/wmap_effect_primitives.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_cells.h"
+#include "../internal/wmap_actor_motion.h"
 
-/** @brief Spark emitter tuning block passed to func_8008ECF8. */
+/** @brief Spark emitter tuning block passed to wmap_land_effect_10_update_falling_sparks. */
 typedef struct
 {
     s32 period;
@@ -75,36 +76,14 @@ void wmap_land_effect_10_sequence_3_step_04(void);
 void wmap_land_effect_10_sequence_4_step_04(void);
 void wmap_land_effect_10_sequence_5_step_04(void);
 void wmap_land_effect_10_sequence_6_step_02(void);
-void func_8008ECF8(s32 first, s32 end, WmapSparkParticle *particles, WmapSparkConfig *config);
-
-/** @brief Per-actor motion and animation parameters. */
-typedef struct
-{
-    s16 state;
-    s16 angle;
-    s32 x;
-    s32 z;
-    s16 scale;
-    s16 field_0E;
-    s32 field_10;
-} WmapMotion;
 
 extern s32 D_800D9230;
 extern s32 g_wmap_land_effect_10_sequence_4_timer;
 extern s32 g_wmap_land_effect_10_sequence_5_timer;
-extern u8* g_wmap_effect_model_pack_1;
 extern s32 g_wmap_land_effect_10_sequence_8_timer;
 extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_10_sequence_7_timer;
-extern s8 D_80051B4C[];
-extern void *g_wmap_effect_model_pack_2;
-extern s32 D_80182DE4;
-extern s32 D_801B2468;
-extern s32 D_801B24B4;
 extern s32 g_wmap_land_effect_10_sequence_9_timer;
-extern u8 g_wmap_animation_bank_2[];
-extern s32 D_80139234;
-extern s32 D_8013923C;
 extern s32 g_wmap_land_effect_10_sequence_10_timer;
 extern s32 rand(void);
 extern s32 g_wmap_land_effect_10_sequence_11_timer;
@@ -114,7 +93,6 @@ extern void wmap_land_effect_10_step_03(void);
 extern void wmap_land_effect_10_end(void);
 extern s32 g_wmap_land_effect_10_timeline_timer;
 extern WmapSequenceStep g_wmap_land_effect_10_timeline_steps[];
-extern u32 g_wmap_selected_artifact;
 extern s32 g_wmap_land_effect_10_sequence_1_timer;
 extern WmapSequenceStep g_wmap_land_effect_10_sequence_1_steps[];
 extern void wmap_land_effect_10_sequence_1_step_02(void);
@@ -123,7 +101,6 @@ extern WmapSequenceStep g_wmap_land_effect_10_sequence_2_steps[];
 extern void wmap_land_effect_10_sequence_2_step_04(void);
 extern s32 g_wmap_land_effect_10_sequence_3_timer;
 extern WmapSequenceStep g_wmap_land_effect_10_sequence_3_steps[];
-extern u8 g_wmap_animation_bank_1[];
 extern void wmap_land_effect_10_sequence_3_step_02(void);
 extern void wmap_land_effect_10_sequence_3_step_04(void);
 extern WmapSequenceStep g_wmap_land_effect_10_sequence_4_steps[];
@@ -138,9 +115,7 @@ extern WmapSequenceStep g_wmap_land_effect_10_sequence_8_steps[];
 extern WmapSequenceStep g_wmap_land_effect_10_sequence_9_steps[];
 extern WmapSequenceStep g_wmap_land_effect_10_sequence_10_steps[];
 extern WmapSequenceStep g_wmap_land_effect_10_sequence_11_steps[];
-extern WmapSparkParticle* g_wmap_effect_model_pack_3;
 
-extern u8 g_wmap_animation_bank_0[];
 extern u32 g_wmap_land_effect_10_sequence_4_step;
 extern u32 g_wmap_land_effect_10_sequence_5_step;
 extern u32 g_wmap_land_effect_10_sequence_8_step;
@@ -156,19 +131,14 @@ extern u32 g_wmap_land_effect_10_sequence_2_step;
 extern u32 g_wmap_land_effect_10_sequence_3_step;
 extern u32 g_wmap_land_effect_10_sequence_6_step;
 
-extern VECTOR g_wmap_camera_translation;
 
-extern SVECTOR D_801B2498;
-extern SVECTOR D_801B2490;
 
 
 extern WmapAnimationSlot g_wmap_actor_animations[];
 
-extern WmapScreenPosition g_wmap_focus_screen_position;
 
 extern s32* g_wmap_effect_params;
 
-extern WmapMotion g_wmap_actor_motions[];
 extern WmapMotion g_wmap_effect_actor_motions[];
 extern WmapMotion D_801B0080[];
 
@@ -176,10 +146,10 @@ extern WmapMotion D_801B0080[];
  * @brief Spawn, move, and draw a batch of falling sparks, then fade them out as sprites.
  * @param first First particle index to process.
  * @param end One past the last particle index to process.
- * @param particles Particle position/velocity array indexed by particle.
+ * @param particles Particle position/velocity records, indexed by particle.
  * @param config Emitter tuning block.
  */
-void func_8008ECF8(s32 first, s32 end, WmapSparkParticle *particles, WmapSparkConfig *config)
+void wmap_land_effect_10_update_falling_sparks(s32 first, s32 end, WmapSparkParticle* particles, WmapSparkConfig* config)
 {
     SVECTOR position;
     s32 head_xy;
@@ -241,7 +211,7 @@ void func_8008ECF8(s32 first, s32 end, WmapSparkParticle *particles, WmapSparkCo
             setlen(line, 4);
             setcode(line, 0x52);
             addPrim(&g_wmap_current_frame->ordering_table[config->ot_index], line);
-            if (g_wmap_packet_bytes < 0x7D00)
+            if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
             {
                 g_wmap_packet_bytes += 0x14;
                 g_wmap_current_frame->packet_cursor += 0x14;
@@ -329,10 +299,10 @@ void wmap_land_effect_10_sequence_5_step_01(void)
     {
         g_wmap_effect_actor_motions[i].state = 0;
         g_wmap_effect_actor_motions[i].angle = i * 204;
-        g_wmap_effect_actor_motions[i].scale = 128;
-        g_wmap_effect_actor_motions[i].z = 13000;
-        g_wmap_effect_actor_motions[i].x = 0;
-        g_wmap_effect_actor_motions[i].field_0E = 0;
+        g_wmap_effect_actor_motions[i].lifetime = 128;
+        g_wmap_effect_actor_motions[i].radius = 13000;
+        g_wmap_effect_actor_motions[i].velocity = 0;
+        g_wmap_effect_actor_motions[i].z = 0;
         g_wmap_actor_animations[i + 20].data = g_wmap_animation_bank_0;
         actors[i].scale_index = 15;
         actors[i].sequence = 3;
@@ -460,9 +430,9 @@ void wmap_land_effect_10_sequence_10_step_02(void)
     {
         motion = &D_801B0080[D_80139234];
         motion->state = 1;
-        motion->z = 150000;
+        motion->radius = 150000;
         motion->angle = rand() & 0xFFF;
-        motion->field_0E = 0;
+        motion->z = 0;
         D_80139234++;
     }
     finished = 1;
@@ -473,14 +443,14 @@ void wmap_land_effect_10_sequence_10_step_02(void)
         if (motion->state != 0)
         {
             finished = 0;
-            position.vx = ((motion->z >> 3) * (ccos(motion->angle) >> 6)) >> 12;
-            position.vy = ((motion->z >> 3) * (csin(motion->angle) >> 6)) >> 12;
-            position.vz = motion->field_0E;
+            position.vx = ((motion->radius >> 3) * (ccos(motion->angle) >> 6)) >> 12;
+            position.vy = ((motion->radius >> 3) * (csin(motion->angle) >> 6)) >> 12;
+            position.vz = motion->z;
             gte_ldv0(&position);
             gte_rtps();
             wmap_step_actor_animation(actor, &g_wmap_actor_animations[i]);
-            value = motion->z - 3500;
-            motion->z = value;
+            value = motion->radius - 3500;
+            motion->radius = value;
             if (value < 5000)
             {
                 motion->state = 0;
@@ -832,7 +802,7 @@ WMAP_STEP_RESET(wmap_land_effect_10_sequence_11_reset, g_wmap_land_effect_10_seq
 
 /** @brief Draw the effect, select texture page 37, and update the sequence countdown. */
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_land_effect_10_sequence_11_step_02, g_wmap_land_effect_10_sequence_11_step, g_wmap_land_effect_10_sequence_11_timer,
-                          func_8008ECF8(100, 150, g_wmap_effect_model_pack_3, (WmapSparkConfig*)&g_wmap_effect_params[30]),
+                          wmap_land_effect_10_update_falling_sparks(100, 150, (WmapSparkParticle*)g_wmap_effect_model_pack_3, (WmapSparkConfig*)&g_wmap_effect_params[30]),
                           wmap_queue_texture_page(0x25, 2))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_10_sequence_11_end, g_wmap_land_effect_10_sequence_11_step)

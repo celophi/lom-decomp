@@ -5,7 +5,7 @@
 
 void wmap_land_effect_24_timeline_step_07(void);
 void wmap_land_effect_24_timeline_step_15(void);
-void func_800BA408(void);
+void wmap_land_effect_24_update_focus_sprites(void);
 void wmap_land_effect_24_sequence_7_step_02(void);
 void wmap_land_effect_24_sequence_8_step_02(void);
 void wmap_land_effect_24_sequence_9_step_02(void);

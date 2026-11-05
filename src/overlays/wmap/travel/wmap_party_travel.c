@@ -15,6 +15,7 @@
 #include "main/cdrom.h"
 #include "main/audio/akao_cmd.h"
 #include "../internal/wmap_cells.h"
+#include "../internal/wmap_view_effects.h"
 #include "main/audio/akao.h"
 
 #define WMAP_TRAVEL_STEP 4
@@ -49,14 +50,6 @@ typedef struct
     u8* data;
 } WmapTravelAnimation;
 
-/** @brief Map translation and projection scale. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 scale;
-} WmapTravelProjection;
-
 /** @brief Screen coordinates in the packed format used by sprite rendering. */
 typedef union
 {
@@ -69,18 +62,10 @@ typedef union
 } WmapTravelScreen;
 
 extern WmapTravelAnimation g_wmap_actor_animations[];
-extern WmapTravelProjection g_wmap_view;
 extern const WmapTravelScreen D_8004FD04[];
 extern u8 D_800DBE98[];
 extern u8 D_800DC298[];
 extern u8 D_800DC698[];
-extern s32 g_wmap_cursor_column;
-extern s32 g_wmap_cursor_row;
-extern s32 g_wmap_sequence_count;
-extern s32 g_wmap_view_mode;
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
 extern s32 g_wmap_travel_sound_active;
 
 void wmap_update_travelers(void);
@@ -151,10 +136,10 @@ void wmap_update_travelers(void)
                 traveler->path_index = path_index;
                 next_x = g_wmap_travelers[i].path_x.steps[path_index].cell;
                 traveler->next_cell_x = next_x;
-                traveler->target_x = (next_x - 1) * WMAP_TRAVEL_CELL_UNITS;
+                traveler->target_x = (next_x - 1) * WMAP_CELL_SIZE;
                 next_y = g_wmap_travelers[i].path_y.steps[path_index].cell;
                 traveler->next_cell_y = next_y;
-                traveler->target_y = (next_y - 1) * WMAP_TRAVEL_CELL_UNITS;
+                traveler->target_y = (next_y - 1) * WMAP_CELL_SIZE;
                 if (g_wmap_scripted_travel_active != 0 && i == WMAP_SCRIPTED_TRAVELER)
                 {
                     g_wmap_view_scroll_mode = 2;
@@ -255,11 +240,11 @@ void wmap_update_party_travel(void)
                 {
                     screen.point.x = g_wmap_travelers[i].position_x;
                     screen.point.y = g_wmap_travelers[i].position_y;
-                    scale = g_wmap_view.scale;
-                    view_x = g_wmap_view.x * 0x14000 / scale - 20;
-                    position.vx = (g_wmap_travelers[i].position_x - view_x) * 0x6000 / scale;
-                    view_y = g_wmap_view.y * 0x14000 / scale - 20;
-                    position.vy = (g_wmap_travelers[i].position_y - view_y) * 0x6000 / scale;
+                    scale = g_wmap_view.projection_scale;
+                    view_x = g_wmap_view.x * WMAP_MAP_PROJECTION_SCALE / scale - 20;
+                    position.vx = (g_wmap_travelers[i].position_x - view_x) * WMAP_VIEW_SCALE / scale;
+                    view_y = g_wmap_view.y * WMAP_MAP_PROJECTION_SCALE / scale - 20;
+                    position.vy = (g_wmap_travelers[i].position_y - view_y) * WMAP_VIEW_SCALE / scale;
                     position.vz = 0;
                     gte_ldv0(&position);
                     gte_rtps();
@@ -271,8 +256,8 @@ void wmap_update_party_travel(void)
                     {
                         ot_index = WMAP_TRAVEL_OT_FALLBACK;
                     }
-                    if (wmap_get_point_display_mode(g_wmap_travelers[i].position_x * WMAP_CELL_SPACING / WMAP_TRAVEL_CELL_UNITS + WMAP_CELL_SPACING,
-                                                    g_wmap_travelers[i].position_y * WMAP_CELL_SPACING / WMAP_TRAVEL_CELL_UNITS + WMAP_CELL_SPACING,
+                    if (wmap_get_point_display_mode(g_wmap_travelers[i].position_x * WMAP_CELL_SPACING / WMAP_CELL_SIZE + WMAP_CELL_SPACING,
+                                                    g_wmap_travelers[i].position_y * WMAP_CELL_SPACING / WMAP_CELL_SIZE + WMAP_CELL_SPACING,
                                                     scale) != 0)
                     {
                         wmap_draw_actor_sprite(sprite, screen.packed, i, ot_index, WMAP_TRAVEL_TEXTURE_ROW + i * WMAP_TRAVEL_TEXTURE_ROW);
@@ -321,9 +306,9 @@ void wmap_update_party_travel(void)
                         /* The route begins with the cell the party already occupies. */
                         g_wmap_travelers[0].path_index = 1;
                         g_wmap_travelers[0].next_cell_x = g_wmap_travelers[0].path_x.steps[1].cell;
-                        g_wmap_travelers[0].target_x = (g_wmap_travelers[0].path_x.steps[1].cell - 1) * WMAP_TRAVEL_CELL_UNITS;
+                        g_wmap_travelers[0].target_x = (g_wmap_travelers[0].path_x.steps[1].cell - 1) * WMAP_CELL_SIZE;
                         g_wmap_travelers[0].next_cell_y = g_wmap_travelers[0].path_y.steps[1].cell;
-                        g_wmap_travelers[0].target_y = (g_wmap_travelers[0].path_y.steps[1].cell - 1) * WMAP_TRAVEL_CELL_UNITS;
+                        g_wmap_travelers[0].target_y = (g_wmap_travelers[0].path_y.steps[1].cell - 1) * WMAP_CELL_SIZE;
                     }
                     else
                     {
@@ -426,13 +411,13 @@ void wmap_set_traveler_position(s32 index, s32 x, s32 y)
     traveler->cell_x = x;
     traveler->destination_x = x;
     traveler->next_cell_x = (s16)x;
-    position_x = ((s16)x - 1) * WMAP_TRAVEL_CELL_UNITS;
+    position_x = ((s16)x - 1) * WMAP_CELL_SIZE;
     traveler->cell_y = y;
     traveler->destination_y = y;
     traveler->next_cell_y = (s16)y;
     traveler->target_x = position_x;
     traveler->position_x = position_x;
-    position_y = ((s16)y - 1) * WMAP_TRAVEL_CELL_UNITS;
+    position_y = ((s16)y - 1) * WMAP_CELL_SIZE;
     traveler->target_y = position_y;
     traveler->position_y = position_y;
 }

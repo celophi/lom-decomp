@@ -113,4 +113,43 @@ extern s32 g_wmap_frame_count;
 /** @brief Emission level of the shared particle pool: live-particle cap for emitters, and the burst's scale. */
 extern s32 g_wmap_particle_intensity;
 
+/** @brief Per-group spawn timers and remaining spawn counts of wmap_update_falling_particles. */
+extern s32 g_wmap_falling_spawn_timers[4];
+extern s32 g_wmap_falling_spawn_counts[4];
+
+/** @brief Words shared by the effect sequences; wmap_update_particles_from_settings also reads several as particle settings. */
+extern s32 D_80139234;
+extern s32 D_8013923C;
+extern s32 D_80139240;
+extern s32 D_8013924C;
+extern s32 D_80139250;
+extern s32 D_80139260;
+extern s32 D_80139264;
+extern s32 D_80139268;
+extern s32 D_8013926C;
+extern s32 D_80139284;
+extern s32 D_80182DE4;
+extern s32 D_801B25D8;
+extern s32 D_801B24B4;
+extern s32 D_801B24B0;
+extern s32 D_801B2468;
+extern s32 D_801B2470;
+extern s32 D_8013B264;
+extern s32 D_8013B270;
+extern s32 D_8013B278;
+extern s32 D_8013B280;
+extern SVECTOR D_801B2490;
+extern SVECTOR D_801B2498;
+extern SVECTOR D_801B2670;
+extern SVECTOR D_801B2678;
+extern VECTOR D_801B2660;
+extern VECTOR D_80139898;
+extern WmapScreenPosition D_80182D58;
+extern WmapScreenPosition D_80182D60;
+extern s32 D_80139838[];
+extern s32 D_800D923C;
+extern s32 D_800D922C;
+extern s8 D_80051B4C[];
+extern s32 g_wmap_sequence_count;
+
 #endif

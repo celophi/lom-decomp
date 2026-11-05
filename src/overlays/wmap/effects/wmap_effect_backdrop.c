@@ -1,6 +1,8 @@
 #include "../internal/wmap_frame_render.h"
 #include "../internal/wmap_resource_support.h"
 #include "../internal/wmap_effect_backdrop.h"
+#include "../internal/wmap_sprite_render.h"
+#include "../internal/wmap_sequence_runtime.h"
 #include <libgpu.h>
 
 #define WMAP_MESH_TRIANGLE_COUNT 176
@@ -31,17 +33,6 @@ typedef struct
     s16 x2, y2;
 } WmapTriangle;
 
-/** @brief Packed screen coordinate and its signed components. */
-typedef union
-{
-    s32 packed;
-    struct
-    {
-        s16 x;
-        s16 y;
-    } point;
-} WmapPoint;
-
 /** @brief Fixed-point coordinate with direct access to its integer halfword. */
 typedef union
 {
@@ -60,13 +51,12 @@ typedef struct
     WmapFixed y;
 } WmapFixedPoint;
 
-extern WmapPoint g_wmap_transition_mesh_vertices[];
+extern WmapScreenPosition g_wmap_transition_mesh_vertices[];
 extern WmapTriangle g_wmap_transition_mesh_triangles_0[];
 extern WmapTriangle g_wmap_transition_mesh_triangles_1[];
 extern WmapFixedPoint g_wmap_transition_mesh_positions[];
 extern WmapFixedPoint* g_wmap_transition_mesh_motion;
 
-extern s32 g_wmap_frame_count;
 extern s32 g_wmap_transition_mesh_hidden;
 extern WmapFixedPoint g_wmap_transition_mesh_motion_0[];
 extern WmapFixedPoint g_wmap_transition_mesh_motion_1[];

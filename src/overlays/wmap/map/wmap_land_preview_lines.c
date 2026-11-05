@@ -1,7 +1,9 @@
 #include "../internal/wmap_land_preview_lines.h"
 #include <libgpu.h>
 
-extern u32 D_800D81FC[];
+#include "common/gpu_packet.h"
+
+extern LINE_F2 g_wmap_preview_lines[16];
 
 /**
  * @brief Empty world-map handler (no operation).
@@ -16,8 +18,8 @@ void wmap_init_preview_lines(void)
     s32 index;
     for (index = 0; index < 16; index++)
     {
-        D_800D81FC[index * 4] = 0;
-        setlen((LINE_F2 *)((u8 *)D_800D81FC - 4) + index, 3);
-        setcode((LINE_F2 *)((u8 *)D_800D81FC - 4) + index, 0x42);
+        SET_BGR0_PACKED(&g_wmap_preview_lines[index], 0);
+        setlen(&g_wmap_preview_lines[index], 3);
+        setcode(&g_wmap_preview_lines[index], 0x42);
     }
 }

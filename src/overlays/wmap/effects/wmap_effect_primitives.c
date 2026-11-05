@@ -1,20 +1,14 @@
 #include "../internal/wmap_view_effects.h"
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_effect_primitives.h"
+#include "../internal/wmap_actor_motion.h"
+#include "../internal/wmap_main.h"
+#include "../internal/wmap_sequence_runtime.h"
 #include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 
 /** @brief Halfword index of the animation resource's frame-offset table. */
 #define WMAP_ANIMATION_FRAME_TABLE_INDEX 32
-
-/** @brief Radial particle motion and lifetime. */
-typedef struct
-{
-    s16 state, angle;
-    s32 velocity, radius;
-    s16 lifetime, z;
-    s32 angular_velocity;
-} WmapMotion;
 
 /** @brief Falling velocity stored as a word and stepped by its low halfword. */
 typedef union
@@ -49,18 +43,6 @@ typedef struct
 #define WMAP_PARTICLE_TRAIL_MIN_SHADE 4
 #define WMAP_PARTICLE_TRAIL_MAX_SHADE 252
 
-/** @brief Radial trail motion with a cached projected screen position. */
-typedef struct
-{
-    s16 state;
-    s16 angle;
-    s32 velocity;
-    s32 radius;
-    s16 lifetime;
-    s16 z;
-    WmapScreenPosition screen_position;
-} WmapTrailMotion;
-
 /** @brief Particle motion slot with packed Y, X, Z coordinate halfwords. */
 typedef struct
 {
@@ -78,39 +60,14 @@ typedef struct
     SVECTOR velocity;
 } WmapMovingPoint;
 
-/** @brief Map scroll position and projection scale. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 projection_scale;
-    s32 unknown_0c;
-} WmapEffectProjection;
 
-/** @brief Map cell size and projection scales used by effect positions. */
-#define WMAP_EFFECT_CELL_SIZE 160
-#define WMAP_EFFECT_MAP_SCALE 0x14000
-#define WMAP_EFFECT_PROJECTION_SCALE 0x6000
-
-extern s32 g_wmap_frame_count;
-extern s32 D_8013B264;
-extern s32 D_8013B270;
-extern s32 D_8013B278;
-extern s32 D_8013B280;
 extern s32 D_8013B284;
-extern WmapMotion g_wmap_actor_motions[];
 extern s32 g_wmap_particle_intensity;
-extern SVECTOR g_wmap_camera_rotation;
-extern VECTOR g_wmap_camera_translation;
-extern MATRIX D_8011D0E8;
+extern MATRIX g_wmap_effect_camera_matrix;
 extern u16 D_80139980;
 extern WmapAnimationSlot g_wmap_actor_animations[];
-extern s32 D_800D9150[];
-extern s32 D_800DCEA8[];
-extern WmapScreenPosition g_wmap_focus_screen_position;
 extern s32 g_wmap_focus_cell_x;
 extern s32 g_wmap_focus_cell_y;
-extern WmapEffectProjection g_wmap_view;
 
 s32 rand(void);
 
@@ -509,10 +466,10 @@ void wmap_set_effect_camera_transform(void)
     translation.vx = g_wmap_camera_translation.vx + g_wmap_effect_camera_translation_offset.vx;
     translation.vy = g_wmap_camera_translation.vy + g_wmap_effect_camera_translation_offset.vy;
     translation.vz = g_wmap_camera_translation.vz + g_wmap_effect_camera_translation_offset.vz;
-    RotMatrix(&rotation, &D_8011D0E8);
-    TransMatrix(&D_8011D0E8, &translation);
-    SetRotMatrix(&D_8011D0E8);
-    SetTransMatrix(&D_8011D0E8);
+    RotMatrix(&rotation, &g_wmap_effect_camera_matrix);
+    TransMatrix(&g_wmap_effect_camera_matrix, &translation);
+    SetRotMatrix(&g_wmap_effect_camera_matrix);
+    SetTransMatrix(&g_wmap_effect_camera_matrix);
 }
 
 /**
@@ -677,7 +634,7 @@ void wmap_update_falling_particles(s32 first, s32 end, s32 spawn_interval, s32 s
     u8* sequence_cursor;
 
     address = group * 4;
-    initial_timer = (s32*)(address + (u8*)D_800D9150);
+    initial_timer = (s32*)(address + (u8*)g_wmap_falling_spawn_timers);
     i = first;
     (*initial_timer)--;
     if (i < end)
@@ -749,10 +706,10 @@ void wmap_update_falling_particles(s32 first, s32 end, s32 spawn_interval, s32 s
             }
             else
             {
-                spawn_timer = (s32*)(timer_offset + (u8*)D_800D9150);
+                spawn_timer = (s32*)(timer_offset + (u8*)g_wmap_falling_spawn_timers);
                 if (*spawn_timer == 0)
                 {
-                    spawn_count = (s32*)(timer_offset + (u8*)D_800DCEA8);
+                    spawn_count = (s32*)(timer_offset + (u8*)g_wmap_falling_spawn_counts);
                     remaining_spawns = *spawn_count;
                     if (remaining_spawns != 0)
                     {
@@ -777,7 +734,7 @@ void wmap_update_falling_particles(s32 first, s32 end, s32 spawn_interval, s32 s
             }
         }
     }
-    timer_base = (u8*)D_800D9150;
+    timer_base = (u8*)g_wmap_falling_spawn_timers;
     final_timer = (s32*)((group * 4) + timer_base);
     if (*final_timer == 0)
     {
@@ -821,7 +778,7 @@ void wmap_update_spiral_particles(s32 first, s32 end, s32 frame, s32 z_step, s32
             gte_rtps();
             motion->z += z_step;
             motion->radius += motion->velocity;
-            motion->angle = (motion->angle + motion->angular_velocity) & 4095;
+            motion->angle = (motion->angle + motion->angular_velocity.value) & 4095;
             gte_stsxy(&screen_position);
             animation_slot = &g_wmap_actor_animations[i];
             offsets = (s16*)animation_slot->data;
@@ -1097,12 +1054,12 @@ s32 wmap_run_effect_camera_move(s32 initialize)
 
     wmap_set_effect_camera_transform();
     position.vz = 0;
-    position.vx = ((((g_wmap_focus_cell_x - 1) * WMAP_EFFECT_CELL_SIZE -
-                     (g_wmap_view.x * WMAP_EFFECT_MAP_SCALE) / g_wmap_view.projection_scale) *
-                    WMAP_EFFECT_PROJECTION_SCALE) / g_wmap_view.projection_scale);
-    position.vy = ((((g_wmap_focus_cell_y - 1) * WMAP_EFFECT_CELL_SIZE -
-                     (g_wmap_view.y * WMAP_EFFECT_MAP_SCALE) / g_wmap_view.projection_scale) *
-                    WMAP_EFFECT_PROJECTION_SCALE) / g_wmap_view.projection_scale);
+    position.vx = ((((g_wmap_focus_cell_x - 1) * WMAP_CELL_SIZE -
+                     (g_wmap_view.x * WMAP_MAP_PROJECTION_SCALE) / g_wmap_view.projection_scale) *
+                    WMAP_VIEW_SCALE) / g_wmap_view.projection_scale);
+    position.vy = ((((g_wmap_focus_cell_y - 1) * WMAP_CELL_SIZE -
+                     (g_wmap_view.y * WMAP_MAP_PROJECTION_SCALE) / g_wmap_view.projection_scale) *
+                    WMAP_VIEW_SCALE) / g_wmap_view.projection_scale);
     gte_ldv0(&position);
     gte_rtps();
     if (g_wmap_effect_camera_rotation_target.vx != g_wmap_effect_camera_rotation_offset.vx)
@@ -1174,8 +1131,8 @@ s32 wmap_run_effect_camera_move(s32 initialize)
         g_wmap_effect_camera_rotation_target.vx = 0;
         g_wmap_effect_camera_rotation_target.vy = 0;
         g_wmap_effect_camera_rotation_target.vz = 0;
-        g_wmap_focus_screen_position.point.x = 0xA4;
-        g_wmap_focus_screen_position.point.y = 0x69;
+        g_wmap_focus_screen_position.point.x = WMAP_FOCUS_DEFAULT_X;
+        g_wmap_focus_screen_position.point.y = WMAP_FOCUS_DEFAULT_Y;
         return 0;
     }
     gte_stsxy(&g_wmap_focus_screen_position.packed);

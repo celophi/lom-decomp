@@ -59,7 +59,7 @@ blobの大半はデータではありません。US版の先頭79,672バイト(J
 | `0x7BDC` | `g_wmap_artifact_images` | 64個のアーティファクトのテクスチャ範囲と描画オフセット |
 | `0x8770` | `g_wmap_artifact_pickup_frames` | アーティファクトを取り出す経路の740フレーム。続いて戻す経路の280フレーム |
 | `0xB844` | `g_wmap_land_attributes` | 64個のアーティファクト。それぞれ8つの精霊の強さとフラグのワード |
-| `0xBCCC` | `D_800D0254` | 地名ラベルの幅。両版で内容が違う唯一のテーブル |
+| `0xBCCC` | `g_wmap_land_label_widths` | 地名ラベルの幅。両版で内容が違う唯一のテーブル |
 | `0xBFBC` | `g_wmap_input_scripts` | 直前にある3つの入力スクリプトへのポインタ |
 | `0xC170` | `g_wmap_menu_triangles` | メニューカーソルの28個のグーローシェーディング三角形 |
 | `0xC4E4` | `g_wmap_sprite_textures` | 48個のスプライト用テクスチャページとパレット |

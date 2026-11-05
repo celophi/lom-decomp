@@ -18,6 +18,7 @@
 #include "../internal/wmap_map_labels.h"
 #include "../internal/wmap_sequence_runtime.h"
 #include "../internal/wmap_effect_backdrop.h"
+#include "../internal/wmap_actor_motion.h"
 #include "main/audio/akao.h"
 
 /** @brief Map tiles drawn inside the one-tile border of the grid. */
@@ -64,17 +65,11 @@
 /** @brief Spirit entries cycled in the spirit view (0 = none). */
 #define WMAP_SPIRIT_SELECTIONS 9
 
-/** @brief Projection scale of the map view and of the zoomed-out spirit view. */
-#define WMAP_VIEW_SCALE 0x6000
+/** @brief Projection scale of the zoomed-out spirit view. */
 #define WMAP_SPIRIT_VIEW_SCALE 0xC000
 /** @brief Frames of the zoom animation; zoom values are 8.8 fixed point. */
 #define WMAP_ZOOM_FRAMES 16
 #define WMAP_ZOOM_ONE 256
-
-/** @brief Map-to-model scale used to project a map position. */
-#define WMAP_MAP_PROJECTION_SCALE 0x14000
-/** @brief Map units between two land cells. */
-#define WMAP_CELL_SIZE 160
 
 /** @brief Burst particle slots, their first sprite actor, and the burst center. */
 #define WMAP_BURST_PARTICLES 110
@@ -106,34 +101,6 @@ typedef union
     } channels;
 } WmapColor;
 
-/** @brief Map scroll position (map units) and projection scale. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 projection_scale;
-    s32 unknown_0c;
-} WmapView;
-
-/** @brief One particle of the radial burst. */
-typedef struct
-{
-    s16 active;
-    s16 angle;
-    s32 speed;
-    s32 distance;
-    s16 lifetime;
-    s16 unknown_0e;
-    s32 unknown_10;
-} WmapBurstParticle;
-
-/** @brief Screen-space offset of a cursor cell. */
-typedef struct
-{
-    s16 x;
-    s16 y;
-} WmapPoint;
-
 extern u32 g_wmap_view_sequence_step;
 extern s32 g_wmap_view_sequence_timer;
 extern WmapSequenceStep g_wmap_view_sequence_steps[];
@@ -145,35 +112,19 @@ extern WmapColor g_wmap_tint;
 extern s32 g_wmap_tint_blending;
 extern u8 g_wmap_tint_speed;
 extern s32 g_wmap_cursor_limits[];
-extern s32 g_wmap_cursor_column;
-extern s32 g_wmap_cursor_row;
 extern s32 g_wmap_spirit_selection;
-extern s32 g_wmap_sequence_count;
-extern s32 g_wmap_view_scroll_enabled;
-extern s32 g_wmap_view_mode;
-extern s32 g_wmap_view_scroll_mode;
-extern WmapView g_wmap_view;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
 extern SVECTOR g_wmap_grid_vertices[];
 extern s16 g_wmap_grid_vertex_indices[];
-extern WmapView g_wmap_saved_view;
-extern s32 g_wmap_selected_artifact;
 extern WmapView g_wmap_zoom_view;
 extern WmapView g_wmap_zoom_step;
 extern s32 D_80139288;
-extern WmapBurstParticle g_wmap_actor_motions[];
 extern WmapAnimationSlot g_wmap_actor_animations[];
 extern s32 g_wmap_burst_spawning;
-extern u8 g_wmap_animation_bank_0[];
 extern WmapPoint g_wmap_cell_focus_offsets[][3];
-extern SVECTOR g_wmap_camera_rotation;
-extern VECTOR g_wmap_camera_translation;
 extern s32 g_wmap_focus_origin_x;
 extern s32 g_wmap_focus_origin_y;
 extern s32 g_wmap_land_focus_step;
 extern s32 g_wmap_land_focus_timer;
-extern s32 g_wmap_focus_screen_position;
 
 static s32 wmap_update_map_tint(s32 initialize);
 void wmap_project_map_grid(void);
@@ -941,7 +892,7 @@ s32 wmap_update_burst_particles(void)
     s32 random_value;
     WmapScreenPosition screen;
     WmapSpriteActor* actor;
-    WmapBurstParticle* particle;
+    WmapMotion* particle;
     s32 actor_index;
 
     active = 0;
@@ -950,7 +901,7 @@ s32 wmap_update_burst_particles(void)
     {
         actor_index = i + WMAP_BURST_ACTOR_FIRST;
         particle = &g_wmap_actor_motions[i];
-        if (particle->active == 0)
+        if (particle->state == 0)
         {
             actor = &g_wmap_sprite_actors[actor_index];
             if (g_wmap_burst_spawning != 0)
@@ -961,10 +912,10 @@ s32 wmap_update_burst_particles(void)
                 actor->previous_sequence = -1;
                 actor->target_shade = WMAP_BURST_ACTOR_SHADE;
                 actor->shade = WMAP_BURST_ACTOR_SHADE;
-                particle->active = 1;
+                particle->state = 1;
                 particle->angle = (u32)rand() >> 3;
-                particle->distance = 0;
-                particle->speed = rand() * g_wmap_particle_intensity;
+                particle->radius = 0;
+                particle->velocity = rand() * g_wmap_particle_intensity;
                 random_value = rand();
                 particle->lifetime = ((random_value * ((g_wmap_particle_intensity * 5) << 2)) >> 15) + WMAP_BURST_LIFETIME_MIN;
                 if (--remaining == 0)
@@ -978,11 +929,11 @@ s32 wmap_update_burst_particles(void)
     {
         particle = &g_wmap_actor_motions[i];
         actor = &g_wmap_sprite_actors[WMAP_BURST_ACTOR_FIRST + i];
-        if (particle->active != 0)
+        if (particle->state != 0)
         {
-            particle->distance += particle->speed;
-            screen.point.x = ((particle->distance * ccos(particle->angle)) >> 24) + WMAP_BURST_CENTER_X;
-            screen.point.y = ((particle->distance * csin(particle->angle)) >> 24) + WMAP_BURST_CENTER_Y;
+            particle->radius += particle->velocity;
+            screen.point.x = ((particle->radius * ccos(particle->angle)) >> 24) + WMAP_BURST_CENTER_X;
+            screen.point.y = ((particle->radius * csin(particle->angle)) >> 24) + WMAP_BURST_CENTER_Y;
             wmap_step_actor_animation(actor, &g_wmap_actor_animations[WMAP_BURST_ACTOR_FIRST + i]);
             if (g_wmap_sprite_actors[i + WMAP_BURST_ACTOR_FIRST].sequence == WMAP_BURST_SEQUENCE_LARGE)
             {
@@ -995,7 +946,7 @@ s32 wmap_update_burst_particles(void)
             particle->lifetime--;
             if (particle->lifetime == 0)
             {
-                particle->active = 0;
+                particle->state = 0;
             }
             active++;
         }
@@ -1009,7 +960,7 @@ void wmap_init_burst_particles(void)
     s32 i;
 
     WMAP_RESET_PARTICLE_SLOTS(i, WMAP_BURST_PARTICLES,
-                              g_wmap_actor_motions[i].active,
+                              g_wmap_actor_motions[i].state,
                               WMAP_BURST_ACTOR_FIRST, g_wmap_animation_bank_0);
     g_wmap_particle_intensity = 1;
     g_wmap_burst_spawning = 1;
@@ -1063,7 +1014,7 @@ void wmap_project_focus_position(void)
     position.vy = (((g_wmap_focus_cell_y - 1) * WMAP_CELL_SIZE - g_wmap_view.y * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
     gte_ldv0(&position);
     gte_rtps();
-    gte_stsxy(&g_wmap_focus_screen_position);
+    gte_stsxy(&g_wmap_focus_screen_position.packed);
     g_wmap_sequence_busy = 0;
     g_wmap_land_focus_step++;
 }

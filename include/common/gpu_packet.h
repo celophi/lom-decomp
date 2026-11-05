@@ -75,6 +75,7 @@
     (*(u16*)((u8*)(p) + 0x0E) = (u16)(_clut))
 
 /** @brief GPU command codes, the bit that makes a primitive semi-transparent and the bit that draws a texture unshaded. */
+#define GPU_CODE_POLY_FT3 0x24
 #define GPU_CODE_POLY_F4 0x28
 #define GPU_CODE_POLY_FT4 0x2C
 #define GPU_CODE_POLY_G4 0x38

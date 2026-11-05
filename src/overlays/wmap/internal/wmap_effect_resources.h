@@ -6,6 +6,11 @@
 #define WMAP_EFFECT_RESOURCE_SET_COUNT 36
 #define WMAP_EFFECT_SHARED_RESOURCE_SET 0
 
+/** @brief Offsets of land effect 18's flash models (FLASH2, FLASH_C, WST_FLA) within its second model pack. */
+#define WMAP_EFFECT_18_FLASH2_OFFSET 0x4000
+#define WMAP_EFFECT_18_FLASH_C_OFFSET 0x5000
+#define WMAP_EFFECT_18_WST_FLA_OFFSET 0x6000
+
 /**
  * @brief Wait for prior reads and queue a changed world-map effect resource set.
  * @param effect_index Requested effect index; invalid indices select the shared set.

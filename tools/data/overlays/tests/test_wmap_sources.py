@@ -111,7 +111,7 @@ class SourceTest(unittest.TestCase):
         self.assertEqual(struct.calcsize("<" + specs["g_wmap_land_attributes"].format), 12)
         label = struct_body(SOURCES / "render/wmap_map_labels.c", "WmapLabelChar")
         self.assertEqual(len(re.findall(r"\bu8\s+\w+;", label)), 4)
-        self.assertEqual(struct.calcsize("<" + specs["D_800D040C"].format), 6)
+        self.assertEqual(struct.calcsize("<" + specs["g_wmap_auxiliary_label_chars"].format), 6)
         for symbol, size in (("g_wmap_game_continue_prompt", 20), ("g_wmap_backdrop_front_quads", 40),
                              ("g_wmap_backdrop_gradient_template", 36), ("g_wmap_menu_triangles", 28), ("g_wmap_transition_mesh_triangles_0", 28)):
             self.assertEqual(struct.calcsize("<" + specs[symbol].format), size, symbol)

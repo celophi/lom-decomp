@@ -62,6 +62,6 @@ void wmap_special_effect_34_sequence_4_step_02(void);
 void wmap_special_effect_34_sequence_4_step_03(void);
 void wmap_special_effect_34_sequence_4_step_04(void);
 void wmap_special_effect_34_sequence_4_end(void);
-void func_800C0C5C(VECTOR* translation, SVECTOR* rotation);
+void wmap_special_effect_34_set_model_transform(VECTOR* translation, SVECTOR* rotation);
 
 #endif

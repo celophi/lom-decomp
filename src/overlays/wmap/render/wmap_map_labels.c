@@ -4,148 +4,146 @@
 #include "../internal/wmap_party_travel.h"
 #include "../internal/wmap_resource_support.h"
 #include "../internal/wmap_map_labels.h"
+#include "../internal/wmap_sprite_render.h"
+#include "../internal/wmap_view_effects.h"
 #include <libgpu.h>
 #include "common/gpu_packet.h"
 
-/** @brief Screen position of a map label at a particular map scale. */
+/** @brief Glyph texture rectangle in the auxiliary label font table. */
 typedef struct
 {
-    s16 x, y;
-} WmapPoint;
+    u8 u;
+    u8 pad_01;
+    u8 v;
+    u8 pad_03;
+    u16 w;
+    u16 h;
+} WmapLabelGlyph;
 
-extern u8 D_800515F4;
-extern u8 D_80051A58;
+/** @brief One placed glyph of an auxiliary label string. */
+typedef struct
+{
+    u8 glyph;
+    u8 pad_01;
+    u16 x;
+    u8 y;
+    u8 pad_05;
+} WmapLabelChar;
 
-extern SPRT D_800DBE80;
-extern s32 D_800DBE84;
-extern s32 D_8011CF80;
-extern SPRT D_801391E8;
-extern SPRT D_801398D8;
-extern u8 D_801398DC;
+extern POLY_G3 g_wmap_status_panel_shades[];
+extern SPRT g_wmap_status_panel_template;
+extern SPRT g_wmap_day_icon_template;
+extern SPRT g_wmap_day_name_template;
+extern SPRT g_wmap_land_label_template;
+extern SPRT g_wmap_artifact_label_template;
+extern WmapPoint g_wmap_label_positions[];
+extern s32 g_wmap_label_width_scales[];
+extern s32 g_wmap_land_label_widths[];
+extern s32 g_wmap_label_clut_row;
+extern u16 g_wmap_land_label_cells[];
+extern WmapLabelGlyph g_wmap_auxiliary_label_glyphs[];
+extern WmapLabelChar g_wmap_auxiliary_label_chars[];
+extern s32 g_wmap_auxiliary_label_starts[];
 
-extern SPRT D_80182DA0;
-extern s32 D_80182DA4;
-extern WmapPoint D_800519E4[];
-extern SPRT D_80051A08;
-extern SPRT D_80051A1C;
-extern s32 D_800D0230[];
-extern s32 D_800D0254[];
-extern s32 D_800D0368;
-extern u16 D_800D036C[];
-extern s32 g_wmap_cursor_column;
-extern s32 g_wmap_cursor_row;
-extern u16 D_8011CF78;
-extern SPRT D_8011D518;
-extern s32 g_wmap_view_scroll_mode;
-extern u16 D_80182DD0;
-extern s32 D_80182E04;
-extern SPRT D_80182E08;
-extern s32 D_801ADAE4;
-extern s32 D_80051A6C[];
-extern u8 D_800D03EC;
-extern u8 D_800D040C;
-extern SPRT D_80051A30;
-extern SPRT D_80051A44;
+/** @brief Day shown by the status panel; -1 forces a refresh. */
+extern s32 g_wmap_status_panel_day;
+extern SPRT g_wmap_day_icon_sprite;
+extern SPRT g_wmap_outgoing_day_icon_sprite;
+extern SPRT g_wmap_day_name_sprite;
+extern SPRT g_wmap_outgoing_day_name_sprite;
+
+/** @brief Label selection: a land id, an artifact id plus 64, or -1 for none. */
+extern s32 g_wmap_label_selection;
+extern s32 g_wmap_outgoing_label_selection;
+extern SPRT g_wmap_label_sprite;
+extern SPRT g_wmap_outgoing_label_sprite;
+extern u16 g_wmap_label_texture_page;
+extern u16 g_wmap_outgoing_label_texture_page;
 extern s8 D_80182E0C;
 
-void func_80060230(void);
-
-/** @brief Gouraud-shaded triangle packet (libgpu WmapShadeTriangle layout). */
-typedef struct
-{
-    u_long tag;
-    u8 r0, g0, b0, code;
-    s16 x0, y0;
-    u8 r1, g1, b1, pad1;
-    s16 x1, y1;
-    u8 r2, g2, b2, pad2;
-    s16 x2, y2;
-} WmapShadeTriangle;
-
-/** @brief Current map render context viewed through its ordering-table layout. */
 
 /**
  * @brief Append map label and decorative packets with selection fades.
  */
-void func_8005F9BC(void)
+void wmap_draw_status_panel(void)
 {
     SPRT* sprite;
     SPRT* shadow;
-    WmapShadeTriangle* shade;
+    POLY_G3* shade;
     s32 i;
 
     if (g_wmap_status_panel_mode != 3)
     {
         sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
-        *sprite = *(SPRT*)&D_80051A58;
+        *sprite = g_wmap_status_panel_template;
         addPrim(&g_wmap_current_frame->ordering_table[7], sprite);
-        if (g_wmap_packet_bytes < 0x7D00)
+        if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {
             g_wmap_packet_bytes += sizeof(SPRT);
             g_wmap_current_frame->packet_cursor += sizeof(SPRT);
         }
-        if (g_wmap_travel_day != D_8011CF80)
+        if (g_wmap_travel_day != g_wmap_status_panel_day)
         {
-            D_8011CF80 = g_wmap_travel_day;
-            D_801391E8 = D_80182DA0;
-            D_80182DA0.r0 = 0;
-            setSemiTrans(&D_801391E8, 1);
-            D_80182DA0.u0 = ((g_wmap_travel_day & 1) * 0x30) + 8;
-            D_80182DA0.v0 = ((g_wmap_travel_day / 2) * 0x38) + 0xE;
-            D_800DBE80 = D_801398D8;
-            D_801398D8.u0 = 0;
-            setSemiTrans(&D_800DBE80, 1);
-            D_801398D8.v0 = g_wmap_travel_day * 32;
+            g_wmap_status_panel_day = g_wmap_travel_day;
+            g_wmap_outgoing_day_icon_sprite = g_wmap_day_icon_sprite;
+            g_wmap_day_icon_sprite.r0 = 0;
+            setSemiTrans(&g_wmap_outgoing_day_icon_sprite, 1);
+            g_wmap_day_icon_sprite.u0 = ((g_wmap_travel_day & 1) * 0x30) + 8;
+            g_wmap_day_icon_sprite.v0 = ((g_wmap_travel_day / 2) * 0x38) + 0xE;
+            g_wmap_outgoing_day_name_sprite = g_wmap_day_name_sprite;
+            g_wmap_day_name_sprite.u0 = 0;
+            setSemiTrans(&g_wmap_outgoing_day_name_sprite, 1);
+            g_wmap_day_name_sprite.v0 = g_wmap_travel_day * 32;
         }
-        D_80182DA0.g0 = D_80182DA0.r0;
-        D_80182DA0.b0 = D_80182DA0.r0;
+        g_wmap_day_icon_sprite.g0 = g_wmap_day_icon_sprite.r0;
+        g_wmap_day_icon_sprite.b0 = g_wmap_day_icon_sprite.r0;
         sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
-        *sprite = D_80182DA0;
-        if ((s8)D_80182DA0.r0 >= 0)
+        *sprite = g_wmap_day_icon_sprite;
+        if ((s8)g_wmap_day_icon_sprite.r0 >= 0)
         {
-            D_80182DA0.r0 += 8;
+            g_wmap_day_icon_sprite.r0 += 8;
             setSemiTrans(sprite, 1);
         }
         addPrim(&g_wmap_current_frame->ordering_table[7], g_wmap_current_frame->packet_cursor);
-        if (g_wmap_packet_bytes < 0x7D00)
+        if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {
             g_wmap_packet_bytes += sizeof(SPRT);
             g_wmap_current_frame->packet_cursor += sizeof(SPRT);
         }
-        if (D_801391E8.r0 != 0)
+        if (g_wmap_outgoing_day_icon_sprite.r0 != 0)
         {
-            D_801391E8.g0 = D_801391E8.r0;
-            D_801391E8.b0 = D_801391E8.r0;
+            g_wmap_outgoing_day_icon_sprite.g0 = g_wmap_outgoing_day_icon_sprite.r0;
+            g_wmap_outgoing_day_icon_sprite.b0 = g_wmap_outgoing_day_icon_sprite.r0;
             sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
-            *sprite = D_801391E8;
+            *sprite = g_wmap_outgoing_day_icon_sprite;
             addPrim(&g_wmap_current_frame->ordering_table[7], sprite);
-            D_800DBE84 = *(s32*)&D_801391E8.r0;
-            if (g_wmap_packet_bytes < 0x7D00)
+            SET_BGR0_PACKED(&g_wmap_outgoing_day_name_sprite, *(u32*)&g_wmap_outgoing_day_icon_sprite.r0);
+            if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
             {
                 g_wmap_packet_bytes += sizeof(SPRT);
                 g_wmap_current_frame->packet_cursor += sizeof(SPRT);
             }
-            D_801391E8.r0 -= 8;
+            g_wmap_outgoing_day_icon_sprite.r0 -= 8;
         }
         wmap_queue_texture_page(0xBC, 7);
-        func_80060230();
+        wmap_draw_map_labels();
         sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
-        *(s32*)&D_801398DC = D_80182DA4;
-        shadow = (SPRT*)(&D_801398DC - 4);
+        SET_BGR0_PACKED(&g_wmap_day_name_sprite, *(u32*)&g_wmap_day_icon_sprite.r0);
+        shadow = &g_wmap_day_name_sprite;
         setSemiTrans(shadow, 1);
         *sprite = *shadow;
         addPrim(&g_wmap_current_frame->ordering_table[7], g_wmap_current_frame->packet_cursor);
-        if (g_wmap_packet_bytes < 0x7D00)
+        if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {
             g_wmap_packet_bytes += sizeof(SPRT);
             g_wmap_current_frame->packet_cursor += sizeof(SPRT);
         }
-        if (D_800DBE80.r0 >= 9)
+        if (g_wmap_outgoing_day_name_sprite.r0 >= 9)
         {
             sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
-            *sprite = D_800DBE80;
+            *sprite = g_wmap_outgoing_day_name_sprite;
             addPrim(&g_wmap_current_frame->ordering_table[7], g_wmap_current_frame->packet_cursor);
-            if (g_wmap_packet_bytes < 0x7D00)
+            if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
             {
                 g_wmap_packet_bytes += sizeof(SPRT);
                 g_wmap_current_frame->packet_cursor += sizeof(SPRT);
@@ -154,15 +152,15 @@ void func_8005F9BC(void)
         wmap_queue_texture_page(0x3E, 7);
         for (i = 0; i < 0x24; i++)
         {
-            shade = (WmapShadeTriangle*)g_wmap_current_frame->packet_cursor;
-            *shade = ((WmapShadeTriangle*)&D_800515F4)[i];
+            shade = (POLY_G3*)g_wmap_current_frame->packet_cursor;
+            *shade = g_wmap_status_panel_shades[i];
             setlen(shade, 6);
             setcode(shade, 0x32);
             addPrim(&g_wmap_current_frame->ordering_table[8], shade);
-            if (g_wmap_packet_bytes < 0x7D00)
+            if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
             {
-                g_wmap_packet_bytes += sizeof(WmapShadeTriangle);
-                g_wmap_current_frame->packet_cursor += sizeof(WmapShadeTriangle);
+                g_wmap_packet_bytes += sizeof(POLY_G3);
+                g_wmap_current_frame->packet_cursor += sizeof(POLY_G3);
             }
         }
         wmap_queue_texture_page(0x20, 8);
@@ -188,78 +186,58 @@ void wmap_set_map_label(s32 selection)
     {
         selection = -1;
     }
-    previous_selection = D_801ADAE4;
-    if (previous_selection != selection && (D_80182E08.r0 == 0 || selection == -1))
+    previous_selection = g_wmap_label_selection;
+    if (previous_selection != selection && (g_wmap_outgoing_label_sprite.r0 == 0 || selection == -1))
     {
-        D_80182E04 = previous_selection;
-        D_80182E08 = D_8011D518;
-        D_801ADAE4 = selection;
-        D_80182DD0 = D_8011CF78;
-        D_80182E08.code |= 2;
-        D_80182E08.clut = (D_800D0368 << 6) | 47;
+        g_wmap_outgoing_label_selection = previous_selection;
+        g_wmap_outgoing_label_sprite = g_wmap_label_sprite;
+        g_wmap_label_selection = selection;
+        g_wmap_outgoing_label_texture_page = g_wmap_label_texture_page;
+        g_wmap_outgoing_label_sprite.code |= 2;
+        g_wmap_outgoing_label_sprite.clut = (g_wmap_label_clut_row << 6) | 47;
         if (selection == -1)
         {
-            D_8011D518.r0 = 0;
+            g_wmap_label_sprite.r0 = 0;
             return;
         }
         position = g_wmap_cursor_column + g_wmap_cursor_row * 3;
         if (selection >= 64)
         {
-            D_8011CF78 = 45;
-            D_8011D518 = D_80051A08;
-            D_800D0368 = 506;
+            g_wmap_label_texture_page = 45;
+            g_wmap_label_sprite = g_wmap_artifact_label_template;
+            g_wmap_label_clut_row = 506;
         }
         else
         {
-            D_8011CF78 = 43;
-            D_8011D518 = D_80051A1C;
+            g_wmap_label_texture_page = 43;
+            g_wmap_label_sprite = g_wmap_land_label_template;
             if (wmap_is_land_active(selection) == 0)
             {
-                D_800D0368 = 508;
+                g_wmap_label_clut_row = 508;
             }
             else
             {
-                D_800D0368 = 506;
+                g_wmap_label_clut_row = 506;
             }
-            scale = &D_800D0230[position];
-            width = *scale * D_800D0254[selection];
-            D_8011D518.y0 = D_800519E4[position].y;
-            D_8011D518.x0 = D_800519E4[position].x - width / 2;
+            scale = &g_wmap_label_width_scales[position];
+            width = *scale * g_wmap_land_label_widths[selection];
+            g_wmap_label_sprite.y0 = g_wmap_label_positions[position].y;
+            g_wmap_label_sprite.x0 = g_wmap_label_positions[position].x - width / 2;
         }
         selection &= 63;
-        selection = (s16)D_800D036C[selection];
-        D_8011D518.r0 = 8;
-        D_8011D518.u0 = (selection / 14) * 112;
-        D_8011D518.v0 = (selection % 14) * 16;
+        selection = (s16)g_wmap_land_label_cells[selection];
+        g_wmap_label_sprite.r0 = 8;
+        g_wmap_label_sprite.u0 = (selection / 14) * 112;
+        g_wmap_label_sprite.v0 = (selection % 14) * 16;
     }
 }
 
 
-/** @brief Glyph texture rectangle in the auxiliary label font table. */
-typedef struct
-{
-    u8 u;
-    u8 pad_01;
-    u8 v;
-    u8 pad_03;
-    u16 w;
-    u16 h;
-} WmapLabelGlyph;
-
-/** @brief One placed glyph of an auxiliary label string. */
-typedef struct
-{
-    u8 glyph;
-    u8 pad_01;
-    u16 x;
-    u8 y;
-    u8 pad_05;
-} WmapLabelChar;
 
 /**
  * @brief Append the current and outgoing label sprites and auxiliary labels.
  */
-void func_80060230(void)
+void wmap_draw_map_labels(void)
 {
     SPRT* sprite;
     WmapLabelChar* label_char;
@@ -269,7 +247,7 @@ void func_80060230(void)
     u8 fade;
     SPRT* label;
 
-    label = &D_8011D518;
+    label = &g_wmap_label_sprite;
     if (label->r0 != 0)
     {
         label->b0 = label->r0;
@@ -277,42 +255,42 @@ void func_80060230(void)
         sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
         if ((s8)label->r0 >= 0)
         {
-            clut_y = *(u16*)&D_800D0368;
+            clut_y = *(u16*)&g_wmap_label_clut_row;
             label->r0 += 8;
             label->clut = (clut_y << 6) | 0x2F;
         }
         else
         {
-            clut_y = *(u16*)&D_800D0368 + 1;
+            clut_y = *(u16*)&g_wmap_label_clut_row + 1;
             label->clut = (clut_y << 6) | 0x2F;
         }
-        *sprite = D_8011D518;
+        *sprite = g_wmap_label_sprite;
         setSemiTrans(sprite, 1);
         addPrim(&g_wmap_current_frame->ordering_table[3], sprite);
-        if (g_wmap_packet_bytes < 0x7D00)
+        if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {
             g_wmap_packet_bytes += sizeof(SPRT);
             g_wmap_current_frame->packet_cursor += sizeof(SPRT);
         }
-        wmap_queue_texture_page(D_8011CF78, 3);
+        wmap_queue_texture_page(g_wmap_label_texture_page, 3);
     }
-    fade = D_80182E08.r0;
+    fade = g_wmap_outgoing_label_sprite.r0;
     if (fade != 0)
     {
         sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
-        D_80182E08.r0 = fade - 8;
-        D_80182E08.b0 = fade;
-        D_80182E08.g0 = fade;
-        *sprite = D_80182E08;
-        if (D_80182E04 != -1)
+        g_wmap_outgoing_label_sprite.r0 = fade - 8;
+        g_wmap_outgoing_label_sprite.b0 = fade;
+        g_wmap_outgoing_label_sprite.g0 = fade;
+        *sprite = g_wmap_outgoing_label_sprite;
+        if (g_wmap_outgoing_label_selection != -1)
         {
             addPrim(&g_wmap_current_frame->ordering_table[3], sprite);
-            if (g_wmap_packet_bytes < 0x7D00)
+            if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
             {
                 g_wmap_packet_bytes += sizeof(SPRT);
                 g_wmap_current_frame->packet_cursor += sizeof(SPRT);
             }
-            wmap_queue_texture_page(D_80182DD0, 3);
+            wmap_queue_texture_page(g_wmap_outgoing_label_texture_page, 3);
         }
     }
     if (g_wmap_auxiliary_label_draw_mode != g_wmap_auxiliary_label_mode)
@@ -321,14 +299,14 @@ void func_80060230(void)
     }
     if (g_wmap_auxiliary_labels_hidden == 0)
     {
-        char_index = D_80051A6C[g_wmap_auxiliary_label_draw_mode];
+        char_index = g_wmap_auxiliary_label_starts[g_wmap_auxiliary_label_draw_mode];
         do
         {
             SPRT* glyph_sprite;
 
-            label_char = &((WmapLabelChar*)&D_800D040C)[char_index];
+            label_char = &g_wmap_auxiliary_label_chars[char_index];
             glyph_sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
-            glyph = &((WmapLabelGlyph*)&D_800D03EC)[label_char->glyph];
+            glyph = &g_wmap_auxiliary_label_glyphs[label_char->glyph];
             glyph_sprite->u0 = glyph->u;
             glyph_sprite->v0 = glyph->v - 0x20;
             glyph_sprite->w = glyph->w;
@@ -339,13 +317,13 @@ void func_80060230(void)
             SET_BGR0_PACKED(glyph_sprite, 0x808080);
             setSprt(glyph_sprite);
             addPrim(&g_wmap_current_frame->ordering_table[1], glyph_sprite);
-            if (g_wmap_packet_bytes < 0x7D00)
+            if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
             {
                 g_wmap_packet_bytes += sizeof(SPRT);
                 g_wmap_current_frame->packet_cursor += sizeof(SPRT);
             }
             char_index++;
-        } while (D_80051A6C[g_wmap_auxiliary_label_draw_mode + 1] != char_index);
+        } while (g_wmap_auxiliary_label_starts[g_wmap_auxiliary_label_draw_mode + 1] != char_index);
         wmap_queue_texture_page(0xB, 1);
     }
 }
@@ -355,19 +333,19 @@ void func_80060230(void)
  */
 void wmap_init_label_sprites(void)
 {
-    D_8011D518 = D_80051A1C;
-    D_80182DA0 = D_80051A44;
-    D_801391E8 = D_80051A44;
-    D_801398D8 = D_80051A30;
-    D_800DBE80 = D_80051A30;
-    D_801391E8.b0 = 0;
-    D_801391E8.g0 = 0;
-    D_801391E8.r0 = 0;
-    D_800DBE80.b0 = 0;
-    D_800DBE80.g0 = 0;
-    D_800DBE80.r0 = 0;
+    g_wmap_label_sprite = g_wmap_land_label_template;
+    g_wmap_day_icon_sprite = g_wmap_day_icon_template;
+    g_wmap_outgoing_day_icon_sprite = g_wmap_day_icon_template;
+    g_wmap_day_name_sprite = g_wmap_day_name_template;
+    g_wmap_outgoing_day_name_sprite = g_wmap_day_name_template;
+    g_wmap_outgoing_day_icon_sprite.b0 = 0;
+    g_wmap_outgoing_day_icon_sprite.g0 = 0;
+    g_wmap_outgoing_day_icon_sprite.r0 = 0;
+    g_wmap_outgoing_day_name_sprite.b0 = 0;
+    g_wmap_outgoing_day_name_sprite.g0 = 0;
+    g_wmap_outgoing_day_name_sprite.r0 = 0;
     D_80182E0C = 0;
-    D_8011D518.r0 = 0;
-    D_801ADAE4 = -1;
-    D_8011CF80 = -1;
+    g_wmap_label_sprite.r0 = 0;
+    g_wmap_label_selection = -1;
+    g_wmap_status_panel_day = -1;
 }

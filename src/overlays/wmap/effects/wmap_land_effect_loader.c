@@ -5,9 +5,6 @@
 #include "main/cdrom.h"
 
 extern WmapLandDisplay D_80182508;
-extern u8 g_wmap_effect_texture_buffer_0[];
-extern u8 g_wmap_effect_texture_buffer_1[];
-extern u8 g_wmap_effect_texture_buffer_2[];
 extern s32 wmap_land_effect_18_run(s32);
 extern s32 wmap_land_effect_04_run(s32);
 extern s32 wmap_land_effect_01_run(s32);

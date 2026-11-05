@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include <libgte.h>
+#include "wmap_sprite_render.h"
 
 /** @brief g_wmap_view_mode values. */
 #define WMAP_VIEW_MODE_HIDDEN (-1)
@@ -24,10 +25,30 @@ void wmap_init_burst_particles(void);
 void wmap_begin_cell_focus(void);
 void wmap_project_focus_position(void);
 
+/** @brief Screen position of the focused land, projected by wmap_project_focus_position. */
+extern WmapScreenPosition g_wmap_focus_screen_position;
+
+/** @brief Default screen position of the focused land. */
+#define WMAP_FOCUS_DEFAULT_X 164
+#define WMAP_FOCUS_DEFAULT_Y 105
+
+/** @brief Screen position of the focused land while a land event plays. */
+#define WMAP_EVENT_FOCUS_X 148
+#define WMAP_EVENT_FOCUS_Y 49
+
 /** @brief Rotation added to the camera while projecting lands and effects. */
 extern SVECTOR g_wmap_effect_camera_rotation_offset;
 
 /** @brief Translation added to the camera while projecting lands and effects. */
 extern VECTOR g_wmap_effect_camera_translation_offset;
+
+/** @brief Camera pose and view scrolling. */
+extern VECTOR g_wmap_camera_translation;
+extern SVECTOR g_wmap_camera_rotation;
+extern s32 g_wmap_view_mode;
+extern s32 g_wmap_view_scroll_mode;
+extern s32 g_wmap_view_scroll_enabled;
+extern s32 g_wmap_scroll_remaining_x;
+extern s32 g_wmap_scroll_remaining_y;
 
 #endif

@@ -8,6 +8,7 @@
 #include "../internal/wmap_effect_primitives.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_cells.h"
+#include "../internal/wmap_actor_motion.h"
 
 void wmap_land_effect_05_sequence_3_step_02(void);
 void wmap_land_effect_05_sequence_10_step_02(void);
@@ -32,38 +33,14 @@ void wmap_land_effect_05_sequence_3_step_04(void);
 void wmap_land_effect_05_sequence_10_step_04(void);
 void wmap_land_effect_05_sequence_10_step_06(void);
 
-/** @brief Per-actor motion and animation parameters. */
-typedef struct
-{
-    s16 field_00;
-    s16 angle;
-    s32 field_04;
-    s32 field_08;
-    s16 field_0C;
-    s16 field_0E;
-    s16 field_10;
-    s16 pad_12;
-} WmapMotion;
-
 extern s32 g_wmap_land_effect_05_sequence_3_timer;
-extern s8 D_80051B4C[];
-extern void *g_wmap_effect_model_pack_2;
-extern s32 D_80182DE4;
-extern s32 D_801B2468;
-extern s32 D_801B24B4;
 extern s32 g_wmap_land_effect_05_sequence_4_timer;
-extern u8* g_wmap_effect_model_pack_3;
 extern s32 g_wmap_land_effect_05_sequence_5_timer;
-extern u8* g_wmap_effect_model_pack_4;
-extern s32 D_801B25D8;
 extern s32 g_wmap_land_effect_05_sequence_6_timer;
 extern s32 g_wmap_land_effect_05_sequence_7_timer;
 extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_05_sequence_8_timer;
-extern u8* g_wmap_effect_model_pack_1;
 extern s32 g_wmap_land_effect_05_sequence_9_timer;
-extern s32 D_800D9150;
-extern s32 D_800DCEA8;
 extern s32 g_wmap_land_effect_05_sequence_10_timer;
 extern s32 g_wmap_land_effect_05_timer;
 extern WmapSequenceStep g_wmap_land_effect_05_steps[];
@@ -71,14 +48,11 @@ extern void wmap_land_effect_05_step_03(void);
 extern void wmap_land_effect_05_end(void);
 extern s32 g_wmap_land_effect_05_timeline_timer;
 extern WmapSequenceStep g_wmap_land_effect_05_timeline_steps[];
-extern u32 g_wmap_selected_artifact;
 extern s32 g_wmap_land_effect_05_sequence_1_timer;
 extern WmapSequenceStep g_wmap_land_effect_05_sequence_1_steps[];
-extern u8 g_wmap_animation_bank_0[];
 extern void wmap_land_effect_05_sequence_1_step_02(void);
 extern s32 g_wmap_land_effect_05_sequence_2_timer;
 extern WmapSequenceStep g_wmap_land_effect_05_sequence_2_steps[];
-extern u8 g_wmap_animation_bank_1[];
 extern void wmap_land_effect_05_sequence_2_step_02(void);
 extern WmapSequenceStep g_wmap_land_effect_05_sequence_3_steps[];
 extern WmapSequenceStep g_wmap_land_effect_05_sequence_4_steps[];
@@ -88,12 +62,10 @@ extern WmapSequenceStep g_wmap_land_effect_05_sequence_7_steps[];
 extern WmapSequenceStep g_wmap_land_effect_05_sequence_8_steps[];
 extern WmapSequenceStep g_wmap_land_effect_05_sequence_9_steps[];
 extern WmapSequenceStep g_wmap_land_effect_05_sequence_10_steps[];
-extern u8 g_wmap_animation_bank_2[];
 extern u32 g_wmap_land_effect_05_sequence_3_step;
 extern u32 g_wmap_land_effect_05_sequence_4_step;
 extern u32 g_wmap_land_effect_05_sequence_5_step;
 extern u32 g_wmap_land_effect_05_sequence_6_step;
-extern u8* g_wmap_effect_model_pack_5;
 extern u32 g_wmap_land_effect_05_sequence_7_step;
 extern u32 g_wmap_land_effect_05_sequence_8_step;
 extern u32 g_wmap_land_effect_05_sequence_9_step;
@@ -103,21 +75,12 @@ extern u32 g_wmap_land_effect_05_timeline_step;
 extern u32 g_wmap_land_effect_05_sequence_1_step;
 extern u32 g_wmap_land_effect_05_sequence_2_step;
 
-extern VECTOR g_wmap_camera_translation;
-extern VECTOR D_80139898;
-extern VECTOR D_801B2660;
 
-extern SVECTOR D_801B2498;
-extern SVECTOR D_801B2490;
-extern SVECTOR D_801B2670;
-extern SVECTOR D_801B2678;
 
 
 extern WmapAnimationSlot g_wmap_actor_animations[];
 
-extern WmapScreenPosition g_wmap_focus_screen_position;
 
-extern WmapMotion g_wmap_actor_motions[];
 
 /** @brief Initialize the actor group and its animation resources, then advance. */
 void wmap_land_effect_05_sequence_3_step_01(void)
@@ -137,13 +100,13 @@ void wmap_land_effect_05_sequence_3_step_01(void)
         config->target_shade = 63;
         config->shade = 2;
         config->shade_step = 2;
-        g_wmap_actor_motions[i].field_00 = 1;
+        g_wmap_actor_motions[i].state = 1;
         g_wmap_actor_motions[i].angle = i * 0x333;
-        g_wmap_actor_motions[i].field_08 = 340000;
-        g_wmap_actor_motions[i].field_04 = 0;
-        g_wmap_actor_motions[i].field_0C = 9999;
-        g_wmap_actor_motions[i].field_0E = 0;
-        g_wmap_actor_motions[i].field_10 = 80;
+        g_wmap_actor_motions[i].radius = 340000;
+        g_wmap_actor_motions[i].velocity = 0;
+        g_wmap_actor_motions[i].lifetime = 9999;
+        g_wmap_actor_motions[i].z = 0;
+        g_wmap_actor_motions[i].angular_velocity.low = 80;
     }
     g_wmap_land_effect_05_sequence_3_timer = 180;
     g_wmap_land_effect_05_sequence_3_step++;
@@ -410,15 +373,15 @@ void wmap_land_effect_05_sequence_10_step_01(void)
     s32 i;
 
     g_wmap_effect_fade_c = 1;
-    D_800DCEA8 = 1;
+    g_wmap_falling_spawn_counts[0] = 1;
 
     for (i = 100; i < 200; i++)
     {
-        g_wmap_actor_motions[i].field_00 = 0;
+        g_wmap_actor_motions[i].state = 0;
         WMAP_INIT_PARTICLE_ACTOR(i, g_wmap_animation_bank_2, 1);
     }
 
-    D_800D9150 = 1;
+    g_wmap_falling_spawn_timers[0] = 1;
     g_wmap_land_effect_05_sequence_10_timer = 0x10;
     g_wmap_land_effect_05_sequence_10_step++;
     wmap_land_effect_05_sequence_10_step_02();
@@ -686,7 +649,7 @@ WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_05_sequence_10_step_04,
  * @brief Stop spawning particles and keep updating those already active.
  */
 WMAP_STEP_STOP_PARTICLE_SPAWNS(wmap_land_effect_05_sequence_10_step_05, g_wmap_land_effect_05_sequence_10_step, g_wmap_land_effect_05_sequence_10_timer,
-                              D_800DCEA8, 0x40, wmap_land_effect_05_sequence_10_step_06)
+                              g_wmap_falling_spawn_counts[0], 0x40, wmap_land_effect_05_sequence_10_step_06)
 
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_05_sequence_10_step_06,

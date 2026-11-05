@@ -8,89 +8,47 @@
 #include "main/cdrom.h"
 #include "common/gpu_packet.h"
 
-#define M2C_FIELD(expr, type_ptr, offset) (*(type_ptr)((s8*)(expr) + (offset)))
-#define M2C_UNALIGNED32(expr) (expr)
-#define M2C_BITWISE(type, expr) ((type)(expr))
-
-typedef s32 M2C_UNK;
-typedef s8 M2C_UNK8;
-typedef s16 M2C_UNK16;
-typedef s32 M2C_UNK32;
-
-typedef union
-{
-    u32 tag;
-    struct
-    {
-        u8 address[3];
-        u8 length;
-    } packet;
-} WmapPacketHeader;
-
-typedef struct
-{
-    WmapPacketHeader header;
-    u8 r0, g0, b0, code;
-    s16 x0, y0, x1, y1, x2, y2, x3, y3;
-} WmapQuad;
-
-typedef struct
-{
-    WmapPacketHeader header;
-    u8 r0, g0, b0, code;
-    s16 x0, y0;
-    u8 u0, v0;
-    u16 clut;
-    s16 x1, y1;
-    u8 u1, v1;
-    u16 tpage;
-    s16 x2, y2;
-    u8 u2, v2;
-    u16 pad_1E;
-} WmapTexturedTriangle;
 
 
-extern WmapQuad D_800D043C;
+/** @brief Full-screen flat quad copied for the screen fades. */
+extern POLY_F4 g_wmap_fill_quad_template;
 
-extern SVECTOR D_801B2490;
 extern s32 D_800DBE7C;
-extern s32 D_800DCEDC;
+extern s32 g_wmap_projection_distance;
 
-static void func_8006432C(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bottom, VECTOR* center_bottom, VECTOR* right_top, VECTOR* right_bottom);
+static void wmap_draw_exit_panel_quads(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bottom, VECTOR* center_bottom, VECTOR* right_top, VECTOR* right_bottom);
 
 /** @brief Append the overlay quad and texture-page triangle to the ordering table. */
-void func_800641DC(void)
+void wmap_draw_exit_fade(void)
 {
-    WmapQuad* quad;
-    WmapTexturedTriangle* triangle;
+    POLY_F4* quad;
+    POLY_FT3* triangle;
 
-    quad = (WmapQuad*)g_wmap_current_frame->packet_cursor;
-    *quad = D_800D043C;
+    quad = (POLY_F4*)g_wmap_current_frame->packet_cursor;
+    *quad = g_wmap_fill_quad_template;
     quad->b0 = 8;
     quad->g0 = 8;
     quad->r0 = 8;
-    quad->header.packet.length = 5;
-    quad->code = 0x2A;
-    quad->header.tag = ((quad->header.tag & 0xFF000000) | (g_wmap_current_frame->ordering_table[1] & 0xFFFFFF));
-    g_wmap_current_frame->ordering_table[1] = ((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((uintptr_t)quad & 0xFFFFFF));
-    if (g_wmap_packet_bytes < 0x7D00)
+    setlen(quad, 5);
+    setcode(quad, GPU_CODE_POLY_F4 | GPU_CODE_SEMI_TRANS);
+    addPrim(&g_wmap_current_frame->ordering_table[1], quad);
+    if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
-        g_wmap_packet_bytes += 0x18;
-        g_wmap_current_frame->packet_cursor += sizeof(WmapQuad);
+        g_wmap_packet_bytes += sizeof(POLY_F4);
+        g_wmap_current_frame->packet_cursor += sizeof(POLY_F4);
     }
-    triangle = (WmapTexturedTriangle*)g_wmap_current_frame->packet_cursor;
-    triangle->header.packet.length = 7;
-    triangle->code = 0x24;
+    triangle = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
+    setlen(triangle, 7);
+    setcode(triangle, GPU_CODE_POLY_FT3);
     *(s32*)&triangle->x2 = WMAP_MODEL_TPAGE_XY;
     *(s32*)&triangle->x1 = WMAP_MODEL_TPAGE_XY;
     *(s32*)&triangle->x0 = WMAP_MODEL_TPAGE_XY;
-    triangle->tpage = 0x40;
-    triangle->header.tag = ((triangle->header.tag & 0xFF000000) | (g_wmap_current_frame->ordering_table[1] & 0xFFFFFF));
-    g_wmap_current_frame->ordering_table[1] = ((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((uintptr_t)triangle & 0xFFFFFF));
-    if (g_wmap_packet_bytes < 0x7D00)
+    triangle->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 0, 0);
+    addPrim(&g_wmap_current_frame->ordering_table[1], triangle);
+    if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
-        g_wmap_packet_bytes += 0x20;
-        g_wmap_current_frame->packet_cursor += sizeof(WmapTexturedTriangle);
+        g_wmap_packet_bytes += sizeof(POLY_FT3);
+        g_wmap_current_frame->packet_cursor += sizeof(POLY_FT3);
     }
 }
 
@@ -103,7 +61,7 @@ void func_800641DC(void)
  * @param right_top Top-right vertex of the right quad.
  * @param right_bottom Bottom-right vertex of the right quad.
  */
-static void func_8006432C(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bottom, VECTOR* center_bottom, VECTOR* right_top, VECTOR* right_bottom)
+static void wmap_draw_exit_panel_quads(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bottom, VECTOR* center_bottom, VECTOR* right_top, VECTOR* right_bottom)
 {
     POLY_FT4* quad;
 
@@ -129,7 +87,7 @@ static void func_8006432C(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bot
     setSemiTrans(quad, 1);
 
     addPrim(&g_wmap_current_frame->ordering_table[1], quad);
-    if (g_wmap_packet_bytes < 0x7D00)
+    if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
         g_wmap_packet_bytes += sizeof(POLY_FT4);
         g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(POLY_FT4);
@@ -157,7 +115,7 @@ static void func_8006432C(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bot
     setSemiTrans(quad, 1);
 
     addPrim(&g_wmap_current_frame->ordering_table[1], quad);
-    if (g_wmap_packet_bytes < 0x7D00)
+    if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
         g_wmap_packet_bytes += sizeof(POLY_FT4);
         g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(POLY_FT4);
@@ -202,7 +160,7 @@ static __inline__ void project_panels(VECTOR* p38, VECTOR* p48, VECTOR* p58, VEC
     gte_ldv0(&D_801B2490);
     gte_rtv0tr();
     gte_stlvnl(p88);
-    func_8006432C(p38, p48, p58, p68, p78, p88);
+    wmap_draw_exit_panel_quads(p38, p48, p58, p68, p78, p88);
 }
 
 /** @brief Update and project the paired world-map panels, then append their primitives. */
@@ -280,7 +238,7 @@ void wmap_update_exit_panels(void)
 }
 
 /** @brief Select the back buffer, run effects, and submit a world-map frame. */
-void func_80064AF8(void)
+void wmap_render_callback_frame(void)
 {
     if (g_wmap_frame_count & 1)
     {
@@ -301,46 +259,44 @@ void func_80064AF8(void)
     VSync(4);
     PutDispEnv(&g_wmap_current_frame->disp_env);
     PutDrawEnv(&g_wmap_current_frame->draw_env);
-    SetGeomScreen(D_800DCEDC);
+    SetGeomScreen(g_wmap_projection_distance);
     DrawOTag(&g_wmap_current_frame->ordering_table[178]);
     cdrom_process_state();
     DrawSync(0);
 }
 
 /** @brief Append the overlay quad and texture-page triangle to the ordering table. */
-void func_80064BF8(void)
+void wmap_draw_entry_fade(void)
 {
-    WmapQuad* quad;
-    WmapTexturedTriangle* triangle;
+    POLY_F4* quad;
+    POLY_FT3* triangle;
 
-    quad = (WmapQuad*)g_wmap_current_frame->packet_cursor;
+    quad = (POLY_F4*)g_wmap_current_frame->packet_cursor;
     if (g_wmap_entry_fade_level >= 4)
     {
-        *quad = D_800D043C;
+        *quad = g_wmap_fill_quad_template;
         quad->r0 = quad->g0 = quad->b0 = g_wmap_entry_fade_level;
         g_wmap_entry_fade_level -= 8;
-        quad->header.packet.length = 5;
-        quad->code = 0x2A;
-        quad->header.tag = ((quad->header.tag & 0xFF000000) | (g_wmap_current_frame->ordering_table[1] & 0xFFFFFF));
-        g_wmap_current_frame->ordering_table[1] = ((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((uintptr_t)quad & 0xFFFFFF));
-        if (g_wmap_packet_bytes < 0x7D00)
+        setlen(quad, 5);
+        setcode(quad, GPU_CODE_POLY_F4 | GPU_CODE_SEMI_TRANS);
+        addPrim(&g_wmap_current_frame->ordering_table[1], quad);
+        if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {
-            g_wmap_packet_bytes += 0x18;
-            g_wmap_current_frame->packet_cursor += sizeof(WmapQuad);
+            g_wmap_packet_bytes += sizeof(POLY_F4);
+            g_wmap_current_frame->packet_cursor += sizeof(POLY_F4);
         }
-        triangle = (WmapTexturedTriangle*)g_wmap_current_frame->packet_cursor;
-        triangle->header.packet.length = 7;
-        triangle->code = 0x24;
+        triangle = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
+        setlen(triangle, 7);
+        setcode(triangle, GPU_CODE_POLY_FT3);
         *(s32*)&triangle->x2 = WMAP_MODEL_TPAGE_XY;
         *(s32*)&triangle->x1 = WMAP_MODEL_TPAGE_XY;
         *(s32*)&triangle->x0 = WMAP_MODEL_TPAGE_XY;
-        triangle->tpage = 0x40;
-        triangle->header.tag = ((triangle->header.tag & 0xFF000000) | (g_wmap_current_frame->ordering_table[1] & 0xFFFFFF));
-        g_wmap_current_frame->ordering_table[1] = ((g_wmap_current_frame->ordering_table[1] & 0xFF000000) | ((uintptr_t)triangle & 0xFFFFFF));
-        if (g_wmap_packet_bytes < 0x7D00)
+        triangle->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 0, 0);
+        addPrim(&g_wmap_current_frame->ordering_table[1], triangle);
+        if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {
-            g_wmap_packet_bytes += 0x20;
-            g_wmap_current_frame->packet_cursor += sizeof(WmapTexturedTriangle);
+            g_wmap_packet_bytes += sizeof(POLY_FT3);
+            g_wmap_current_frame->packet_cursor += sizeof(POLY_FT3);
         }
     }
 }
@@ -350,14 +306,14 @@ void func_80064BF8(void)
  * @param initialize Sequence event selector, unused by this fade callback.
  * @return One to keep the callback registered.
  */
-s32 func_80064D64(s32 initialize)
+s32 wmap_run_overlay_fade(s32 initialize)
 {
     u8 intensity;
     s32 depth;
-    WmapQuad* quad;
-    WmapTexturedTriangle* triangle;
+    POLY_F4* quad;
+    POLY_FT3* triangle;
 
-    quad = (WmapQuad*)g_wmap_current_frame->packet_cursor;
+    quad = (POLY_F4*)g_wmap_current_frame->packet_cursor;
     if (g_wmap_overlay_fade_level > g_wmap_overlay_fade_target)
     {
         g_wmap_overlay_fade_level -= 2;
@@ -371,29 +327,29 @@ s32 func_80064D64(s32 initialize)
         return 1;
     }
     intensity = g_wmap_overlay_fade_level;
-    *quad = D_800D043C;
-    quad->header.packet.length = 5;
-    quad->code = 0x2A;
+    *quad = g_wmap_fill_quad_template;
+    setlen(quad, 5);
+    setcode(quad, GPU_CODE_POLY_F4 | GPU_CODE_SEMI_TRANS);
     quad->r0 = quad->g0 = quad->b0 = intensity;
-    addPrim(&g_wmap_overlay_fade_depth[g_wmap_current_frame->ordering_table], quad);
-    if (g_wmap_packet_bytes < 0x7D00)
+    addPrim(&g_wmap_current_frame->ordering_table[g_wmap_overlay_fade_depth], quad);
+    if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
-        g_wmap_packet_bytes += 0x18;
-        g_wmap_current_frame->packet_cursor += sizeof(WmapQuad);
+        g_wmap_packet_bytes += sizeof(POLY_F4);
+        g_wmap_current_frame->packet_cursor += sizeof(POLY_F4);
     }
-    triangle = (WmapTexturedTriangle*)g_wmap_current_frame->packet_cursor;
+    triangle = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
     depth = g_wmap_overlay_fade_depth;
-    triangle->header.packet.length = 7;
-    triangle->code = 0x24;
+    setlen(triangle, 7);
+    setcode(triangle, GPU_CODE_POLY_FT3);
     *(s32*)&triangle->x2 = WMAP_MODEL_TPAGE_XY;
     *(s32*)&triangle->x1 = WMAP_MODEL_TPAGE_XY;
     *(s32*)&triangle->x0 = WMAP_MODEL_TPAGE_XY;
-    triangle->tpage = 0x40;
-    addPrim(&depth[g_wmap_current_frame->ordering_table], triangle);
-    if (g_wmap_packet_bytes < 0x7D00)
+    triangle->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 0, 0);
+    addPrim(&g_wmap_current_frame->ordering_table[depth], triangle);
+    if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
-        g_wmap_packet_bytes += 0x20;
-        g_wmap_current_frame->packet_cursor += sizeof(WmapTexturedTriangle);
+        g_wmap_packet_bytes += sizeof(POLY_FT3);
+        g_wmap_current_frame->packet_cursor += sizeof(POLY_FT3);
     }
     return 1;
 }

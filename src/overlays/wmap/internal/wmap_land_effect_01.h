@@ -4,11 +4,11 @@
 #include "common.h"
 #include "wmap_sprite_render.h"
 
-void func_80072644(WmapSpriteActor* actors, WmapAnimationSlot* resources, s32 count);
+void wmap_land_effect_01_update_particles(WmapSpriteActor* actors, WmapAnimationSlot* resources, s32 count);
 void wmap_land_effect_01_sequence_3_step_02(void);
 void wmap_land_effect_01_sequence_4_step_02(void);
 void wmap_land_effect_01_sequence_5_step_01(void);
-void func_80072D30(void);
+void wmap_land_effect_01_draw_ring(void);
 void wmap_land_effect_01_sequence_8_step_01(void);
 s32 wmap_land_effect_01_run_timeline(s32 reset);
 void wmap_land_effect_01_timeline_reset(void);

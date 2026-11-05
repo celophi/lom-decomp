@@ -9,18 +9,7 @@
 #include "../internal/wmap_main.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_cells.h"
-
-/** @brief Per-actor motion and animation parameters. */
-typedef struct
-{
-    s16 state;
-    s16 angle;
-    s32 x;
-    s32 z;
-    s16 scale;
-    s16 field_0E;
-    s32 field_10;
-} WmapMotion;
+#include "../internal/wmap_actor_motion.h"
 
 void wmap_land_effect_01_sequence_5_step_02(void);
 void wmap_land_effect_01_sequence_8_step_02(void);
@@ -45,29 +34,14 @@ void wmap_land_effect_01_sequence_7_step_02(void);
 void wmap_land_effect_01_sequence_7_step_04(void);
 void wmap_land_effect_01_sequence_8_step_04(void);
 
-extern s32 D_800D922C;
 extern s32 rand(void);
 extern s32 g_wmap_land_effect_01_sequence_3_timer;
 extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_01_sequence_4_timer;
-extern s32 D_801B2470;
-extern u8 g_wmap_animation_bank_1[];
 extern s32 g_wmap_land_effect_01_sequence_5_timer;
-extern SVECTOR g_wmap_camera_rotation;
-extern s32 D_80139234;
-extern s32 D_8013923C;
-extern s32 D_80139240;
-extern s32 D_8013924C;
-extern s32 D_80139250;
-extern s32 D_80139260;
-extern s32 D_80139264;
-extern s32 D_80139268;
-extern s32 D_8013926C;
-extern s32 D_80139284;
 extern s32 g_wmap_land_effect_01_sequence_8_timer;
 extern s32 g_wmap_land_effect_01_timeline_timer;
 extern WmapSequenceStep g_wmap_land_effect_01_timeline_steps[];
-extern u32 g_wmap_selected_artifact;
 extern s32 g_wmap_land_effect_01_sequence_2_timer;
 extern WmapSequenceStep g_wmap_land_effect_01_sequence_2_steps[];
 extern s32 g_wmap_land_effect_01_timer;
@@ -80,48 +54,30 @@ extern WmapSequenceStep g_wmap_land_effect_01_sequence_4_steps[];
 extern WmapSequenceStep g_wmap_land_effect_01_sequence_5_steps[];
 extern s32 g_wmap_land_effect_01_sequence_6_timer;
 extern WmapSequenceStep g_wmap_land_effect_01_sequence_6_steps[];
-extern u8 g_wmap_animation_bank_5[];
 extern s32 g_wmap_land_effect_01_sequence_7_timer;
 extern WmapSequenceStep g_wmap_land_effect_01_sequence_7_steps[];
-extern WmapAnimationSlot g_wmap_vehicle_animation;
 extern WmapSequenceStep g_wmap_land_effect_01_sequence_8_steps[];
 
 extern u32 g_wmap_land_effect_01_sequence_3_step;
 extern u32 g_wmap_land_effect_01_sequence_4_step;
-extern WmapMotion* D_801B2560;
+extern WmapMotion* g_wmap_land_effect_01_ring_motions;
 extern s32 D_80139980;
 extern u32 g_wmap_land_effect_01_sequence_5_step;
 extern u32 g_wmap_land_effect_01_sequence_8_step;
-extern u8 g_wmap_animation_bank_4[];
 extern u32 g_wmap_land_effect_01_timeline_step;
 extern u32 g_wmap_land_effect_01_sequence_2_step;
-extern u8 g_wmap_animation_bank_0[];
 extern u32 g_wmap_land_effect_01_step;
 extern u32 g_wmap_land_effect_01_sequence_1_step;
 extern u32 g_wmap_land_effect_01_sequence_6_step;
 extern u32 g_wmap_land_effect_01_sequence_7_step;
 
-extern VECTOR g_wmap_camera_translation;
-
-/** @brief Map scroll position (map units) and projection scale. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 projection_scale;
-    s32 unknown_0c;
-} WmapView;
-
-extern WmapView g_wmap_view;
 
 
-extern WmapSpriteActor g_wmap_vehicle_actor;
+
 
 extern WmapAnimationSlot g_wmap_actor_animations[];
 
-extern WmapScreenPosition g_wmap_focus_screen_position;
 
-extern WmapMotion g_wmap_actor_motions[];
 extern WmapMotion D_801AFC98[];
 
 /**
@@ -130,7 +86,7 @@ extern WmapMotion D_801AFC98[];
  * @param resources Animation resources corresponding to the actor slots.
  * @param count Number of slots to process.
  */
-void func_80072644(WmapSpriteActor* actors, WmapAnimationSlot* resources, s32 count)
+void wmap_land_effect_01_update_particles(WmapSpriteActor* actors, WmapAnimationSlot* resources, s32 count)
 {
     SVECTOR position;
     s32 screen_position;
@@ -142,18 +98,18 @@ void func_80072644(WmapSpriteActor* actors, WmapAnimationSlot* resources, s32 co
     {
         if (g_wmap_actor_motions[i].state != 0)
         {
-            position.vx = ((g_wmap_actor_motions[i].z >> 3) * (ccos(g_wmap_actor_motions[i].angle) >> 6)) >> 12;
-            position.vy = ((g_wmap_actor_motions[i].z >> 3) * (csin(g_wmap_actor_motions[i].angle) >> 6)) >> 12;
-            position.vz = g_wmap_actor_motions[i].field_0E;
+            position.vx = ((g_wmap_actor_motions[i].radius >> 3) * (ccos(g_wmap_actor_motions[i].angle) >> 6)) >> 12;
+            position.vy = ((g_wmap_actor_motions[i].radius >> 3) * (csin(g_wmap_actor_motions[i].angle) >> 6)) >> 12;
+            position.vz = g_wmap_actor_motions[i].z;
             gte_ldv0(&position);
             gte_rtps();
-            g_wmap_actor_motions[i].field_0E += g_wmap_actor_motions[i].x;
-            g_wmap_actor_motions[i].z += 1000;
+            g_wmap_actor_motions[i].z += g_wmap_actor_motions[i].velocity;
+            g_wmap_actor_motions[i].radius += 1000;
             gte_stsxy(&screen_position);
             wmap_step_actor_animation(&actors[i], &resources[i]);
             wmap_draw_actor_sprite(&actors[i], screen_position, 13, 10, 0);
-            g_wmap_actor_motions[i].scale--;
-            if (g_wmap_actor_motions[i].scale == 0)
+            g_wmap_actor_motions[i].lifetime--;
+            if (g_wmap_actor_motions[i].lifetime == 0)
             {
                 g_wmap_actor_motions[i].state = 0;
             }
@@ -175,10 +131,10 @@ void func_80072644(WmapSpriteActor* actors, WmapAnimationSlot* resources, s32 co
                 actors[i].shade = 129;
                 g_wmap_actor_motions[i].state = 1;
                 g_wmap_actor_motions[i].angle = rand();
-                g_wmap_actor_motions[i].z = 10000;
-                g_wmap_actor_motions[i].x = ((rand() * 5) >> 15) + 1;
-                g_wmap_actor_motions[i].scale = ((rand() * 2) >> 15) + 24;
-                g_wmap_actor_motions[i].field_0E = 0;
+                g_wmap_actor_motions[i].radius = 10000;
+                g_wmap_actor_motions[i].velocity = ((rand() * 5) >> 15) + 1;
+                g_wmap_actor_motions[i].lifetime = ((rand() * 2) >> 15) + 24;
+                g_wmap_actor_motions[i].z = 0;
             }
             break;
         }
@@ -194,11 +150,11 @@ void wmap_land_effect_01_sequence_3_step_02(void)
     WmapSpriteActor *actor = &g_wmap_sprite_actors[5];
 
     position.vz = 0;
-    position.vx = (((g_wmap_focus_cell_x - 1) * 160 -
-                   g_wmap_view.x * 0x14000 / g_wmap_view.projection_scale) * 0x6000) /
+    position.vx = (((g_wmap_focus_cell_x - 1) * WMAP_CELL_SIZE -
+                   g_wmap_view.x * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) /
                   g_wmap_view.projection_scale;
-    position.vy = (((g_wmap_focus_cell_y - 1) * 160 -
-                   g_wmap_view.y * 0x14000 / g_wmap_view.projection_scale) * 0x6000) /
+    position.vy = (((g_wmap_focus_cell_y - 1) * WMAP_CELL_SIZE -
+                   g_wmap_view.y * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) /
                   g_wmap_view.projection_scale;
     gte_ldv0(&position);
     gte_rtps();
@@ -252,14 +208,14 @@ void wmap_land_effect_01_sequence_5_step_01(void)
     s32 i = 0;
     WmapSpriteActor* actor;
 
-    D_801B2560 = D_801AFC98;
+    g_wmap_land_effect_01_ring_motions = D_801AFC98;
     g_wmap_effect_model_a_rotation = g_wmap_zero_rotation;
     g_wmap_effect_model_c_position = g_wmap_camera_translation;
     D_801B2470 = 128;
     for (; i < 20; i++)
     {
         actor = &g_wmap_sprite_actors[6 + i];
-        D_801B2560[i].state = 0;
+        g_wmap_land_effect_01_ring_motions[i].state = 0;
         g_wmap_actor_animations[i + 6].data = g_wmap_animation_bank_1 + ((i % 3) << 13);
         actor->resource_index = 0;
         actor->scale_index = 15;
@@ -267,17 +223,17 @@ void wmap_land_effect_01_sequence_5_step_01(void)
         actor->previous_sequence = -1;
         actor->target_shade = 128;
         actor->shade = 128;
-        D_801B2560[i].state = 1;
-        D_801B2560[i].x = 30000;
-        D_801B2560[i].angle = i * 204;
-        D_801B2560[i].z = 0;
+        g_wmap_land_effect_01_ring_motions[i].state = 1;
+        g_wmap_land_effect_01_ring_motions[i].velocity = 30000;
+        g_wmap_land_effect_01_ring_motions[i].angle = i * 204;
+        g_wmap_land_effect_01_ring_motions[i].radius = 0;
         if (i & 1)
         {
-            D_801B2560[i].field_0E = 30;
+            g_wmap_land_effect_01_ring_motions[i].z = 30;
         }
         else
         {
-            D_801B2560[i].field_0E = 0;
+            g_wmap_land_effect_01_ring_motions[i].z = 0;
         }
     }
     D_80139980 = 128;
@@ -287,7 +243,7 @@ void wmap_land_effect_01_sequence_5_step_01(void)
 }
 
 /** @brief Compose the effect transform and project its twenty actors. */
-void func_80072D30(void)
+void wmap_land_effect_01_draw_ring(void)
 {
     MATRIX base_matrix;
     MATRIX effect_matrix;
@@ -313,18 +269,18 @@ void func_80072D30(void)
     for (i = 0; i < 20; i++)
     {
         actor = &g_wmap_sprite_actors[6 + i];
-        position.vx = ((D_801B2560[i].z >> 6) * (ccos(D_801B2560[i].angle) >> 6)) >> 12;
-        position.vy = ((D_801B2560[i].z >> 6) * (csin(D_801B2560[i].angle) >> 6)) >> 12;
-        motion = &D_801B2560[i];
+        position.vx = ((g_wmap_land_effect_01_ring_motions[i].radius >> 6) * (ccos(g_wmap_land_effect_01_ring_motions[i].angle) >> 6)) >> 12;
+        position.vy = ((g_wmap_land_effect_01_ring_motions[i].radius >> 6) * (csin(g_wmap_land_effect_01_ring_motions[i].angle) >> 6)) >> 12;
+        motion = &g_wmap_land_effect_01_ring_motions[i];
         resource = &g_wmap_actor_animations[6 + i];
-        position.vz = motion->field_0E;
+        position.vz = motion->z;
         gte_ldv0(&position);
         gte_rtps();
-        value = motion->z + motion->x;
-        motion->z = value;
+        value = motion->radius + motion->velocity;
+        motion->radius = value;
         if (value > 900000)
         {
-            motion->z = 900000;
+            motion->radius = 900000;
         }
         actor->target_shade = D_80139980;
         actor->shade = D_80139980;
@@ -547,7 +503,7 @@ void wmap_land_effect_01_sequence_1_step_01(void)
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_01_sequence_1_step_02,
     g_wmap_land_effect_01_sequence_1_step, g_wmap_land_effect_01_sequence_1_timer,
-    func_80072644(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0x18))
+    wmap_land_effect_01_update_particles(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0x18))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_01_sequence_1_end, g_wmap_land_effect_01_sequence_1_step)
 
@@ -599,7 +555,7 @@ WMAP_STEP_RESET(wmap_land_effect_01_sequence_5_reset, g_wmap_land_effect_01_sequ
 
 /** @brief Update the sequence effect and advance when its countdown reaches zero. */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_01_sequence_5_step_02, g_wmap_land_effect_01_sequence_5_step, g_wmap_land_effect_01_sequence_5_timer,
-                          func_80072D30())
+                          wmap_land_effect_01_draw_ring())
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_01_sequence_5_step_03, g_wmap_land_effect_01_sequence_5_step, g_wmap_land_effect_01_sequence_5_timer, 0x20,
                     wmap_land_effect_01_sequence_5_step_04)
@@ -616,7 +572,7 @@ void wmap_land_effect_01_sequence_5_step_04(void)
     {
         D_80139980 = 0;
     }
-    func_80072D30();
+    wmap_land_effect_01_draw_ring();
     remaining_ticks = g_wmap_land_effect_01_sequence_5_timer - 1;
     g_wmap_land_effect_01_sequence_5_timer = remaining_ticks;
     if (remaining_ticks == 0)

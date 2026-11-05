@@ -13,6 +13,7 @@
 #include "main/cdrom.h"
 #include "../internal/wmap_cells.h"
 #include "../internal/wmap_step_sequence.h"
+#include "../internal/wmap_view_effects.h"
 
 /** @brief Land the special travel starts from and the land the return trip ends on. */
 #define WMAP_TRAVEL_START_LAND 2
@@ -41,39 +42,18 @@
 #define WMAP_ROUTE_RIGHT 5
 #define WMAP_ROUTE_DOWN 7
 
-/** @brief Map scroll position and projection scale (see wmap_view_effects.c). */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 projection_scale;
-    s32 unknown_0c;
-} WmapView;
-
-extern WmapSpriteActor g_wmap_vehicle_actor;
 extern WmapVehicleMotion g_wmap_actor_motions;
-extern WmapAnimationSlot g_wmap_vehicle_animation;
-extern u8 g_wmap_animation_bank_0[];
 extern s32 g_wmap_vehicle_bank_flipped;
-extern MATRIX D_8011D0E8;
+extern MATRIX g_wmap_effect_camera_matrix;
 extern WmapScreenPosition g_wmap_vehicle_screen_position;
-extern u8 g_wmap_effect_texture_buffer_0[];
-extern u8 g_wmap_effect_texture_buffer_1[];
 
 extern s16 g_wmap_route_headings[];
 extern s32 g_wmap_vehicle_route;
 extern s32 g_wmap_vehicle_phase;
 extern s32 g_wmap_vehicle_flying;
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
 extern s32 g_wmap_vehicle_target_x;
 extern s32 g_wmap_vehicle_target_y;
 
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern WmapView g_wmap_view;
-extern WmapView g_wmap_saved_view;
 extern s32 g_wmap_special_travel_pending;
 
 extern u32 g_wmap_special_travel_step;
@@ -277,8 +257,8 @@ s32 wmap_draw_vehicle(s32 initialize)
 
     angle = g_wmap_actor_motions.heading;
     PushMatrix();
-    SetRotMatrix(&D_8011D0E8);
-    SetTransMatrix(&D_8011D0E8);
+    SetRotMatrix(&g_wmap_effect_camera_matrix);
+    SetTransMatrix(&g_wmap_effect_camera_matrix);
     position.vx = ((g_wmap_actor_motions.radius >> 4) * (ccos(angle) >> 4)) >> 6;
     position.vy = ((g_wmap_actor_motions.radius >> 4) * (csin(angle) >> 4)) >> 6;
     position.vz = g_wmap_actor_motions.height;
