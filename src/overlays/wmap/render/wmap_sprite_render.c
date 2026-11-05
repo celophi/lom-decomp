@@ -18,7 +18,6 @@
 #define WMAP_SPRITE_PART_FLIP_V 0x40
 #define WMAP_SPRITE_PART_CLUT_MASK 0x3F
 /** @brief Shade range: 0x80 draws the texture unmodified, higher values fade it back down. */
-#define WMAP_SPRITE_SHADE_NEUTRAL 0x80
 #define WMAP_SPRITE_SHADE_MAX 0xFF
 /** @brief Variant bits above the scale row select a texture page row (64 texels each). */
 #define WMAP_SPRITE_VARIANT_ROW_SHIFT 8

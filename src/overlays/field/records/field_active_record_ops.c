@@ -1,9 +1,10 @@
-#include "main/audio/game_audio.h"
 #include "common.h"
-#include "../internal/field_calls.h"
-#include "../internal/field_script.h"
+
 #include "../internal/field_actor_runtime.h"
+#include "../internal/field_calls.h"
 #include "../internal/field_records.h"
+#include "../internal/field_script.h"
+#include "main/audio/game_audio.h"
 #include "overlays/field/field_overlay_handoff.h"
 
 /** @brief Number of guest characters with a template in resource 3. */
@@ -79,7 +80,7 @@ static void field_load_companion(s32 companion_index);
 static void field_store_companion(void);
 
 /**
- * @brief Put a guest into party slot 1, using the template bank for the hero's level.
+ * @brief Put a guest into party slot 1, using the template bank and level for the placed land count.
  * @param guest_id Guest index, below FIELD_GUEST_COUNT.
  * @return -1 when the guest joined, 0 when it has no template.
  */
@@ -91,7 +92,7 @@ s32 field_join_guest(s32 guest_id)
     u32 pad_controlled;
     s32 level_index;
     s32 i;
-    u8 hero_level;
+    u8 placed_land_count;
 
     if (guest_id < FIELD_GUEST_COUNT)
     {
@@ -101,18 +102,18 @@ s32 field_join_guest(s32 guest_id)
         {
             if (table->guests[i].id == guest_id)
             {
-                hero_level = g_field_game_state->control.fields.hero_level;
+                placed_land_count = g_field_game_state->control.fields.placed_land_count;
                 pad_controlled = g_field_game_state->characters[FIELD_PARTY_GUEST].info.bytes[0] >> FIELD_CHARACTER_PAD_CONTROLLED_SHIFT;
 
-                if (hero_level < FIELD_GUEST_BANK_LEVELS)
+                if (placed_land_count < FIELD_GUEST_BANK_LEVELS)
                 {
                     bank = &table->guests[i].banks[0];
                 }
-                else if (hero_level < 2 * FIELD_GUEST_BANK_LEVELS)
+                else if (placed_land_count < 2 * FIELD_GUEST_BANK_LEVELS)
                 {
                     bank = &table->guests[i].banks[1];
                 }
-                else if (hero_level < 3 * FIELD_GUEST_BANK_LEVELS)
+                else if (placed_land_count < 3 * FIELD_GUEST_BANK_LEVELS)
                 {
                     bank = &table->guests[i].banks[2];
                 }
@@ -125,9 +126,9 @@ s32 field_join_guest(s32 guest_id)
                 g_field_game_state->characters[FIELD_PARTY_GUEST].info.word =
                     (g_field_game_state->characters[FIELD_PARTY_GUEST].info.word & ~FIELD_CHARACTER_PAD_CONTROLLED) |
                     (pad_controlled << FIELD_CHARACTER_PAD_CONTROLLED_SHIFT);
-                if (g_field_game_state->control.fields.hero_level < FIELD_LEVEL_EXPERIENCE_COUNT)
+                if (g_field_game_state->control.fields.placed_land_count < FIELD_LEVEL_EXPERIENCE_COUNT)
                 {
-                    level_index = g_field_game_state->control.fields.hero_level - 1;
+                    level_index = g_field_game_state->control.fields.placed_land_count - 1;
                 }
                 else
                 {
@@ -135,8 +136,9 @@ s32 field_join_guest(s32 guest_id)
                 }
 
                 progress = g_field_game_state->characters[FIELD_PARTY_GUEST].progress.level;
-                progress |= (g_field_game_state->words[FIELD_GUEST_EXPERIENCE_WORD + guest_id + level_index - level_index] + g_field_level_experience[level_index])
-                            << 8;
+                progress |=
+                    (g_field_game_state->words[FIELD_GUEST_EXPERIENCE_WORD + guest_id + level_index - level_index] + g_field_level_experience[level_index])
+                    << 8;
                 g_field_game_state->characters[FIELD_PARTY_GUEST].progress.word = progress;
 
                 if ((s32)(progress >> 8) > FIELD_EXPERIENCE_MAX)
@@ -250,7 +252,8 @@ static void field_load_companion(s32 companion_index)
     for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
     {
         scaled = g_field_game_state->pets[companion_index].stats[i] & FIELD_STAT_SCALED_MASK;
-        g_field_game_state->characters[FIELD_PARTY_COMPANION].stats[i] = (g_field_game_state->characters[FIELD_PARTY_COMPANION].stats[i] & ~FIELD_STAT_SCALED_MASK) | scaled;
+        g_field_game_state->characters[FIELD_PARTY_COMPANION].stats[i] =
+            (g_field_game_state->characters[FIELD_PARTY_COMPANION].stats[i] & ~FIELD_STAT_SCALED_MASK) | scaled;
         g_field_game_state->characters[FIELD_PARTY_COMPANION].stats[i] =
             (g_field_game_state->characters[FIELD_PARTY_COMPANION].stats[i] & FIELD_STAT_SCALED_MASK) |
             (g_field_game_state->pets[companion_index].stats[i] & ~FIELD_STAT_SCALED_MASK);

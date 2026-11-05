@@ -36,7 +36,6 @@
 #include "main/game_state.h"
 
 #define WMAP_MAP_CELL_SIZE 48
-#define WMAP_ACTOR_COUNT 256
 #define WMAP_MENU_ITEM_HEIGHT 16
 #define WMAP_MENU_CURSOR_STEP 4
 #define WMAP_MENU_OT_INDEX 1
@@ -58,7 +57,6 @@
 #define WMAP_SHADOW_RETRY_MASK 0x1F
 #define WMAP_SHADOW_VSYNC_LIMIT 526
 #define WMAP_RESIDENT_LAND_SLOT 16
-#define WMAP_RESIDENT_LAND_DISPLAY 31
 #define WMAP_CD_ERROR_TEXTURE_HEIGHT 32
 #define WMAP_ENTRY_FADE_MAX 255
 #define WMAP_INITIAL_MAP_SHADOW_LEVEL 64
@@ -443,9 +441,9 @@ void wmap_init_state(void)
     g_wmap_tint.b = 0;
     SetPolyFT4(g_wmap_preview_saved_quads);
     /* Clear each packed (x, y) pair before copying the packet templates. */
-    *(s32*)&g_wmap_preview_saved_quads[0].x2 = 0;
-    *(s32*)&g_wmap_preview_saved_quads[0].x1 = 0;
-    *(s32*)&g_wmap_preview_saved_quads[0].x0 = 0;
+    SET_XY2_PACKED(&g_wmap_preview_saved_quads[0], 0);
+    SET_XY1_PACKED(&g_wmap_preview_saved_quads[0], 0);
+    SET_XY0_PACKED(&g_wmap_preview_saved_quads[0], 0);
     g_wmap_preview_saved_quads[1] = g_wmap_preview_saved_quads[2] = g_wmap_preview_saved_quads[3] = g_wmap_preview_saved_quads[0];
     g_wmap_travel_day = wmap_get_day();
     wmap_refresh_cells();
@@ -1764,7 +1762,7 @@ s32 wmap_run_loop(void)
         /* Slot 16 holds the resident land 31 image read above. */
         g_wmap_land_image_cache[WMAP_RESIDENT_LAND_SLOT].animation_data = g_wmap_resident_land_animation_data;
         g_wmap_land_image_cache[WMAP_RESIDENT_LAND_SLOT].slot_index = WMAP_RESIDENT_LAND_SLOT;
-        g_wmap_land_image_cache[WMAP_RESIDENT_LAND_SLOT].resource_id = WMAP_RESIDENT_LAND_DISPLAY;
+        g_wmap_land_image_cache[WMAP_RESIDENT_LAND_SLOT].resource_id = FIELD_LAND_TREE_OF_MANA;
         g_wmap_land_image_cache[WMAP_RESIDENT_LAND_SLOT].loaded_frame = 0xFFFF;
         g_wmap_land_image_cache[WMAP_RESIDENT_LAND_SLOT].busy = 0;
         g_wmap_land_image_cache[WMAP_RESIDENT_LAND_SLOT].slot_index = WMAP_RESIDENT_LAND_SLOT;
@@ -1803,8 +1801,8 @@ s32 wmap_run_loop(void)
             }
         }
 
-        g_wmap_land_display[WMAP_RESIDENT_LAND_DISPLAY].previous_animation_index = -1;
-        g_wmap_land_display[WMAP_RESIDENT_LAND_DISPLAY].animation_index = 0;
+        g_wmap_land_display[FIELD_LAND_TREE_OF_MANA].previous_animation_index = -1;
+        g_wmap_land_display[FIELD_LAND_TREE_OF_MANA].animation_index = 0;
         /* Clamp the map origin so the party stays within the scrolling area. */
         wmap_init_party_travel();
         scroll_cell_x = g_wmap_travelers[0].cell_x - 1;

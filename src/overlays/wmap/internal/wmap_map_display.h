@@ -3,6 +3,8 @@
 
 #include "common.h"
 
+#include "common/saved_game.h"
+
 #define WMAP_GAME_RETRY_DELAY 60
 
 /** @brief Visibility limit applied to map lands. */
@@ -56,7 +58,7 @@ typedef struct
     s16 x3;
     s16 y3;
 } WmapQuadScale;
-extern WmapLandDisplay g_wmap_land_display[64];
+extern WmapLandDisplay g_wmap_land_display[FIELD_LAND_COUNT];
 extern WmapCacheEntry g_wmap_land_image_cache[];
 /** @brief Sprite quad corner scales: one row of WMAP_QUAD_SCALE_STEPS per draw variant. */
 #define WMAP_QUAD_SCALE_VARIANTS 3

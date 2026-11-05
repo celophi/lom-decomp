@@ -1,8 +1,10 @@
+#include "common.h"
+#include <libgpu.h>
+
+#include "common/encoded_text.h"
+#include "common/gpu_packet.h"
 #include "internal/shop_render.h"
 #include "overlays/field/field_text.h"
-#include "common/encoded_text.h"
-#include <libgpu.h>
-#include "common/gpu_packet.h"
 
 /**
  * @brief Low byte of a window's 9-bit width, read from the whole frame word.
@@ -94,6 +96,7 @@ void shop_draw_windows(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
     }
 
     window = g_shop_windows;
+
     for (i = 0; i < SHOP_WINDOW_COUNT; i++, window++)
     {
         if (window->frame.bits.state != SHOP_WINDOW_FREE)
@@ -108,6 +111,7 @@ void shop_draw_windows(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
                 {
                     prim = func_800AE76C(prim, ot, SHOP_SCROLL_ARROW_X, SHOP_SCROLL_ARROW_DOWN_Y, 0);
                 }
+
                 if (g_shop_scroll_y != 0)
                 {
                     prim = func_800AE76C(prim, ot, SHOP_SCROLL_ARROW_X, SHOP_SCROLL_ARROW_UP_Y, 1);
@@ -123,10 +127,12 @@ void shop_draw_windows(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
                 setcode(bar, 0x60);
                 bar->w = SHOP_SCROLLBAR_WIDTH;
                 bar->h = (window->extent.bits.height * (window->extent.bits.height / SHOP_ROW_HEIGHT)) / g_shop_entry_count;
+
                 if (bar->h >= window->extent.bits.height - 2)
                 {
                     bar->h = window->extent.bits.height;
                 }
+
                 bar->x0 = 1;
                 bar->y0 = ((window->extent.bits.height - 3) * (g_shop_scroll_y / SHOP_ROW_HEIGHT)) / g_shop_entry_count;
                 addPrim(ot, bar);
@@ -145,49 +151,54 @@ void shop_draw_windows(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
 
             switch (window->frame.bits.state)
             {
-            case SHOP_WINDOW_OPENING:
-                inset_width = (SHOP_WINDOW_WIDTH(window) * window->frame.bits.anim_step) / SHOP_WINDOW_ANIM_STEPS;
-                inset_height = (window->extent.bits.height * window->frame.bits.anim_step) / SHOP_WINDOW_ANIM_STEPS;
-                prim = window->draw(ot, prim, (SHOP_WINDOW_WIDTH(window) - inset_width) / 2, (window->extent.bits.height - inset_height) / 2);
-                opening_x = window->frame.bits.x;
-                opening_width_low = SHOP_WINDOW_WIDTH_LOW_BYTE(window);
-                prim = func_800AD850(prim, ot, opening_x + (SHOP_WINDOW_JOIN_WIDTH(window, opening_width_low) - inset_width) / 2,
-                                     window->frame.bits.y + (window->extent.bits.height - inset_height) / 2, inset_width, inset_height,
-                                     ctx->display_buffer_index, i == 0);
-                window->frame.bits.anim_step++;
-                if (window->frame.bits.anim_step == SHOP_WINDOW_ANIM_STEPS)
-                {
-                    window->frame.bits.state = SHOP_WINDOW_OPEN;
-                    field_reset_input_repeat();
-                }
-                break;
+                case SHOP_WINDOW_OPENING:
+                    inset_width = (SHOP_WINDOW_WIDTH(window) * window->frame.bits.anim_step) / SHOP_WINDOW_ANIM_STEPS;
+                    inset_height = (window->extent.bits.height * window->frame.bits.anim_step) / SHOP_WINDOW_ANIM_STEPS;
+                    prim = window->draw(ot, prim, (SHOP_WINDOW_WIDTH(window) - inset_width) / 2, (window->extent.bits.height - inset_height) / 2);
+                    opening_x = window->frame.bits.x;
+                    opening_width_low = SHOP_WINDOW_WIDTH_LOW_BYTE(window);
+                    prim = func_800AD850(prim, ot, opening_x + (SHOP_WINDOW_JOIN_WIDTH(window, opening_width_low) - inset_width) / 2,
+                                         window->frame.bits.y + (window->extent.bits.height - inset_height) / 2, inset_width, inset_height,
+                                         ctx->display_buffer_index, i == 0);
+                    window->frame.bits.anim_step++;
 
-            case SHOP_WINDOW_OPEN:
-                prim = window->draw(ot, prim, 0, 0);
-                open_width_low = SHOP_WINDOW_WIDTH_LOW_BYTE(window);
-                prim = func_800AD850(prim, ot, window->frame.bits.x, window->frame.bits.y, SHOP_WINDOW_JOIN_WIDTH(window, open_width_low),
-                                     window->extent.bits.height, ctx->display_buffer_index, i == 0);
-                break;
+                    if (window->frame.bits.anim_step == SHOP_WINDOW_ANIM_STEPS)
+                    {
+                        window->frame.bits.state = SHOP_WINDOW_OPEN;
+                        field_reset_input_repeat();
+                    }
 
-            case SHOP_WINDOW_CLOSING:
-                inset_width = (SHOP_WINDOW_WIDTH(window) * window->frame.bits.anim_step) / SHOP_WINDOW_ANIM_STEPS;
-                inset_height = (window->extent.bits.height * window->frame.bits.anim_step) / SHOP_WINDOW_ANIM_STEPS;
-                prim = window->draw(ot, prim, (SHOP_WINDOW_WIDTH(window) - inset_width) / 2, (window->extent.bits.height - inset_height) / 2);
-                closing_x = window->frame.bits.x;
-                closing_width_low = SHOP_WINDOW_WIDTH_LOW_BYTE(window);
-                prim = func_800AD850(prim, ot, closing_x + (SHOP_WINDOW_JOIN_WIDTH(window, closing_width_low) - inset_width) / 2,
-                                     window->frame.bits.y + (window->extent.bits.height - inset_height) / 2, inset_width, inset_height,
-                                     ctx->display_buffer_index, i == 0);
-                window->frame.bits.anim_step--;
-                if (window->frame.bits.anim_step == 0)
-                {
-                    window->frame.bits.state = SHOP_WINDOW_FREE;
-                }
-                g_shop_notice_active = 0;
-                break;
+                    break;
+
+                case SHOP_WINDOW_OPEN:
+                    prim = window->draw(ot, prim, 0, 0);
+                    open_width_low = SHOP_WINDOW_WIDTH_LOW_BYTE(window);
+                    prim = func_800AD850(prim, ot, window->frame.bits.x, window->frame.bits.y, SHOP_WINDOW_JOIN_WIDTH(window, open_width_low),
+                                         window->extent.bits.height, ctx->display_buffer_index, i == 0);
+                    break;
+
+                case SHOP_WINDOW_CLOSING:
+                    inset_width = (SHOP_WINDOW_WIDTH(window) * window->frame.bits.anim_step) / SHOP_WINDOW_ANIM_STEPS;
+                    inset_height = (window->extent.bits.height * window->frame.bits.anim_step) / SHOP_WINDOW_ANIM_STEPS;
+                    prim = window->draw(ot, prim, (SHOP_WINDOW_WIDTH(window) - inset_width) / 2, (window->extent.bits.height - inset_height) / 2);
+                    closing_x = window->frame.bits.x;
+                    closing_width_low = SHOP_WINDOW_WIDTH_LOW_BYTE(window);
+                    prim = func_800AD850(prim, ot, closing_x + (SHOP_WINDOW_JOIN_WIDTH(window, closing_width_low) - inset_width) / 2,
+                                         window->frame.bits.y + (window->extent.bits.height - inset_height) / 2, inset_width, inset_height,
+                                         ctx->display_buffer_index, i == 0);
+                    window->frame.bits.anim_step--;
+
+                    if (window->frame.bits.anim_step == 0)
+                    {
+                        window->frame.bits.state = SHOP_WINDOW_FREE;
+                    }
+
+                    g_shop_notice_active = 0;
+                    break;
             }
         }
     }
+
     buffer->prim_cursor = prim;
 }
 
@@ -209,6 +220,7 @@ u8* shop_draw_money_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
                            FIELD_TEXT_ALIGN_LEFT);
     position.x = SHOP_MONEY_VALUE_X - x_inset;
     position.y = y;
+
     if (g_saved_game_ctx->money > SHOP_MAX_MONEY)
     {
         prim = field_draw_number(ot, (SPRT*)prim, SHOP_MAX_MONEY, FIELD_TEXT_COLOR_NORMAL, &position, FIELD_TEXT_ALIGN_CENTER);
@@ -217,6 +229,7 @@ u8* shop_draw_money_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
     {
         prim = field_draw_number(ot, (SPRT*)prim, g_saved_game_ctx->money, FIELD_TEXT_COLOR_NORMAL, &position, FIELD_TEXT_ALIGN_CENTER);
     }
+
     return prim;
 }
 
@@ -245,12 +258,14 @@ u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
 
     i = 0;
     x = x_inset;
+
     if (g_shop_entry_count > 0)
     {
         s32 name_x;
         uintptr_t text_base;
 
         empty_text = D_800EC3E0;
+
         do
         {
             ShopEntry** entries = &g_shop_entries;
@@ -266,6 +281,7 @@ u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
             row_top -= i;
             row_y -= row_top;
             y = row_y - g_shop_scroll_y;
+
             if ((u32)(y + 15) < 131)
             {
                 do
@@ -273,6 +289,7 @@ u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
                     entry = (ShopEntry*)(i * sizeof(ShopEntry) + (uintptr_t)*entries);
                 } while (0);
                 id = entry->id;
+
                 if (id == SHOP_ENTRY_EMPTY)
                 {
                     s32 low;
@@ -306,11 +323,14 @@ u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
                                                    FIELD_TEXT_ALIGN_CENTER);
                         } while (0);
                     }
+
                     position.x = 208 - x;
                     position.y = y;
+
                     if (i == g_shop_cursor)
                     {
                         price = SHOP_SELECTED_ENTRY()->price * g_shop_quantity;
+
                         if (g_saved_game_ctx->money >= (u32)price || g_shop_is_buying == 0)
                         {
                             prim = field_draw_number(ot, (SPRT*)prim, price, FIELD_TEXT_COLOR_NORMAL, position_ptr, FIELD_TEXT_ALIGN_LEFT);
@@ -319,6 +339,7 @@ u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
                         {
                             prim = field_draw_number(ot, (SPRT*)prim, price, FIELD_TEXT_COLOR_DIM, position_ptr, FIELD_TEXT_ALIGN_LEFT);
                         }
+
                         prim = field_draw_text((SPRT*)prim, ot, g_field_ui_text_table + D_800EC3DC[0] + (D_800EC3DC[1] << 8), FIELD_TEXT_COLOR_NORMAL, 172 - x,
                                                y, FIELD_TEXT_ALIGN_LEFT);
                         position.x = 184 - x;
@@ -350,8 +371,9 @@ u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
 
         y = (cursor_y - cursor_top) - scroll;
     }
+
     tile = (TILE*)prim;
-    *(u32*)&tile->r0 = GPU_COLOR_SELECTED_ROW;
+    SET_BGR0_PACKED(tile, GPU_COLOR_SELECTED_ROW);
     setlen(tile, 3);
     setcode(tile, GPU_CODE_TILE | GPU_CODE_SEMI_TRANS);
     setXY0(tile, 0, y - 1);
@@ -383,6 +405,7 @@ u8* shop_draw_detail_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
 
     entry = SHOP_SELECTED_ENTRY();
     id = entry->id;
+
     if (id != SHOP_ENTRY_EMPTY)
     {
         if (id & SHOP_ENTRY_RECORD_FLAG)
@@ -409,89 +432,94 @@ u8* shop_draw_detail_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
             encoded_text_append(name_text, (u8*)(low + ((high << 8) + (uintptr_t)ui_text_table)));
 
             attributes = SHOP_SELECTED_RECORD()->info.word;
+
             switch (FIELD_ITEM_CATEGORY(attributes))
             {
-            case FIELD_ITEM_CATEGORY_WEAPON:
-            {
-                u32 category_offset = archive->section_offsets[SHOP_TEXT_EQUIPMENT_TYPES];
-                s32 x;
-                s32 y;
-                s32 difference;
-
-                encoded_text_append(name_text, SHOP_ARCHIVE_TEXT(archive, category_offset, (FIELD_ITEM_TYPE(attributes) + WEAPON_CATEGORY_FIRST) * 2));
-                y = 18 - y_inset;
-                prim = field_draw_text((SPRT*)prim, ot, FIELD_UI_TEXT(ui_text_table, 21), FIELD_TEXT_COLOR_NORMAL, 16 - x_inset, y, FIELD_TEXT_ALIGN_LEFT);
-                x = SHOP_WEAPON_VALUE_X - x_inset;
-                position.x = x;
-                position.y = y;
-                prim =
-                    field_draw_number(ot, (SPRT*)prim, SHOP_SELECTED_RECORD()->derived.values[0], FIELD_TEXT_COLOR_NORMAL, &position, FIELD_TEXT_ALIGN_RIGHT);
-                difference = SHOP_SELECTED_RECORD()->derived.values[0] - g_saved_game_ctx->characters[FIELD_PARTY_HERO].equipment[0].derived.values[0];
-                encoded_text_copy(difference_text, FIELD_UI_TEXT(ui_text_table, 31));
-                if (difference >= 0)
+                case FIELD_ITEM_CATEGORY_WEAPON:
                 {
-                    encoded_text_append(difference_text, FIELD_UI_TEXT(ui_text_table, 11));
-                }
-                field_format_number(number_text, difference, 0);
-                encoded_text_append(difference_text, number_text);
-                encoded_text_append(difference_text, FIELD_UI_TEXT(ui_text_table, 32));
+                    u32 category_offset = archive->section_offsets[SHOP_TEXT_EQUIPMENT_TYPES];
+                    s32 x;
+                    s32 y;
+                    s32 difference;
+
+                    encoded_text_append(name_text, SHOP_ARCHIVE_TEXT(archive, category_offset, (FIELD_ITEM_TYPE(attributes) + WEAPON_CATEGORY_FIRST) * 2));
+                    y = 18 - y_inset;
+                    prim = field_draw_text((SPRT*)prim, ot, FIELD_UI_TEXT(ui_text_table, 21), FIELD_TEXT_COLOR_NORMAL, 16 - x_inset, y, FIELD_TEXT_ALIGN_LEFT);
+                    x = SHOP_WEAPON_VALUE_X - x_inset;
+                    position.x = x;
+                    position.y = y;
+                    prim = field_draw_number(ot, (SPRT*)prim, SHOP_SELECTED_RECORD()->derived.values[0], FIELD_TEXT_COLOR_NORMAL, &position,
+                                             FIELD_TEXT_ALIGN_RIGHT);
+                    difference = SHOP_SELECTED_RECORD()->derived.values[0] - g_saved_game_ctx->characters[FIELD_PARTY_HERO].equipment[0].derived.values[0];
+                    encoded_text_copy(difference_text, FIELD_UI_TEXT(ui_text_table, 31));
+
+                    if (difference >= 0)
+                    {
+                        encoded_text_append(difference_text, FIELD_UI_TEXT(ui_text_table, 11));
+                    }
+
+                    field_format_number(number_text, difference, 0);
+                    encoded_text_append(difference_text, number_text);
+                    encoded_text_append(difference_text, FIELD_UI_TEXT(ui_text_table, 32));
 #if defined(VERSION_JP)
-                position.x = 112 - x_inset;
+                    position.x = 112 - x_inset;
 #else
-                position.x = x;
+                    position.x = x;
 #endif
-                position.y = y;
-                prim = field_draw_text((SPRT*)prim, ot, difference_text, FIELD_TEXT_COLOR_NORMAL, position.x, position.y, FIELD_TEXT_ALIGN_LEFT);
-                break;
-            }
-            case FIELD_ITEM_CATEGORY_ARMOR:
-            {
-                u32 category_offset = archive->section_offsets[SHOP_TEXT_EQUIPMENT_TYPES];
-                s32 y;
-                FieldItemRecord* selected;
-                u16 offset;
+                    position.y = y;
+                    prim = field_draw_text((SPRT*)prim, ot, difference_text, FIELD_TEXT_COLOR_NORMAL, position.x, position.y, FIELD_TEXT_ALIGN_LEFT);
+                    break;
+                }
+                case FIELD_ITEM_CATEGORY_ARMOR:
+                {
+                    u32 category_offset = archive->section_offsets[SHOP_TEXT_EQUIPMENT_TYPES];
+                    s32 y;
+                    FieldItemRecord* selected;
+                    u16 offset;
 
-                offset = *(u16*)((u8*)&g_shop_text_archive + (FIELD_ITEM_TYPE(attributes) * 2 + category_offset) + ARMOR_CATEGORY_FIRST * 2);
-                encoded_text_append(name_text, (u8*)(category_offset + (offset + (uintptr_t)archive)));
-                y = 18 - y_inset;
-                prim = field_draw_text((SPRT*)prim, ot, FIELD_UI_TEXT(ui_text_table, 22), FIELD_TEXT_COLOR_NORMAL, 16 - x_inset, y, FIELD_TEXT_ALIGN_LEFT);
-                position.x = SHOP_ARMOR_VALUE_X - x_inset;
-                position.y = y;
-                selected = SHOP_SELECTED_RECORD();
-                prim = field_draw_number(ot, (SPRT*)prim,
-                                         selected->derived.values[0] + selected->derived.values[1] + selected->derived.values[2] + selected->derived.values[3],
-                                         FIELD_TEXT_COLOR_NORMAL, &position, FIELD_TEXT_ALIGN_LEFT);
-                break;
-            }
-            default:
-            {
-                u32* category_offsets;
-                ShopTextArchive* text_archive;
-                FieldItemRecord* selected;
-                u8* text;
-                u32 detail_offset;
-                u16 offset;
+                    offset = *(u16*)((u8*)&g_shop_text_archive + (FIELD_ITEM_TYPE(attributes) * 2 + category_offset) + ARMOR_CATEGORY_FIRST * 2);
+                    encoded_text_append(name_text, (u8*)(category_offset + (offset + (uintptr_t)archive)));
+                    y = 18 - y_inset;
+                    prim = field_draw_text((SPRT*)prim, ot, FIELD_UI_TEXT(ui_text_table, 22), FIELD_TEXT_COLOR_NORMAL, 16 - x_inset, y, FIELD_TEXT_ALIGN_LEFT);
+                    position.x = SHOP_ARMOR_VALUE_X - x_inset;
+                    position.y = y;
+                    selected = SHOP_SELECTED_RECORD();
+                    prim = field_draw_number(
+                        ot, (SPRT*)prim, selected->derived.values[0] + selected->derived.values[1] + selected->derived.values[2] + selected->derived.values[3],
+                        FIELD_TEXT_COLOR_NORMAL, &position, FIELD_TEXT_ALIGN_LEFT);
+                    break;
+                }
+                default:
+                {
+                    u32* category_offsets;
+                    ShopTextArchive* text_archive;
+                    FieldItemRecord* selected;
+                    u8* text;
+                    u32 detail_offset;
+                    u16 offset;
 
-                category_offsets = &g_shop_text_archive.section_offsets[SHOP_TEXT_EQUIPMENT_TYPES];
-                offset = *(u16*)((u8*)&g_shop_text_archive + (FIELD_ITEM_TYPE(SHOP_SELECTED_RECORD()->info.word) * 2 + *category_offsets) +
-                                 INSTRUMENT_CATEGORY_FIRST * 2);
-                text_archive = &g_shop_text_archive;
-                text = (u8*)(*category_offsets + (offset + (uintptr_t)text_archive));
-                encoded_text_append(name_text, text);
-                prim = field_draw_text((SPRT*)prim, ot, FIELD_UI_TEXT_AT(D_800EC3F2, 23), FIELD_TEXT_COLOR_NORMAL, 16 - x_inset, 18 - y_inset,
-                                       FIELD_TEXT_ALIGN_LEFT);
-                position.x = SHOP_OTHER_VALUE_X - x_inset;
-                position.y = 18 - y_inset;
-                prim = field_draw_number(ot, (SPRT*)prim, SHOP_SELECTED_RECORD()->derived.bytes[2], FIELD_TEXT_COLOR_NORMAL, &position, FIELD_TEXT_ALIGN_LEFT);
-                detail_offset = text_archive->section_offsets[SHOP_TEXT_INSTRUMENT_SPELLS];
-                selected = SHOP_SELECTED_RECORD();
-                offset =
-                    *(u16*)((selected->derived.bytes[1] * 2) + ((selected->derived.bytes[0] * SPELLS_PER_SPIRIT * 2) + detail_offset) + (uintptr_t)text_archive);
-                text = (u8*)(detail_offset + (offset + (uintptr_t)text_archive));
-                prim = field_draw_text((SPRT*)prim, ot, text, FIELD_TEXT_COLOR_NORMAL, 284 - x_inset, 18 - y_inset, FIELD_TEXT_ALIGN_RIGHT);
-                break;
+                    category_offsets = &g_shop_text_archive.section_offsets[SHOP_TEXT_EQUIPMENT_TYPES];
+                    offset = *(u16*)((u8*)&g_shop_text_archive + (FIELD_ITEM_TYPE(SHOP_SELECTED_RECORD()->info.word) * 2 + *category_offsets) +
+                                     INSTRUMENT_CATEGORY_FIRST * 2);
+                    text_archive = &g_shop_text_archive;
+                    text = (u8*)(*category_offsets + (offset + (uintptr_t)text_archive));
+                    encoded_text_append(name_text, text);
+                    prim = field_draw_text((SPRT*)prim, ot, FIELD_UI_TEXT_AT(D_800EC3F2, 23), FIELD_TEXT_COLOR_NORMAL, 16 - x_inset, 18 - y_inset,
+                                           FIELD_TEXT_ALIGN_LEFT);
+                    position.x = SHOP_OTHER_VALUE_X - x_inset;
+                    position.y = 18 - y_inset;
+                    prim =
+                        field_draw_number(ot, (SPRT*)prim, SHOP_SELECTED_RECORD()->derived.bytes[2], FIELD_TEXT_COLOR_NORMAL, &position, FIELD_TEXT_ALIGN_LEFT);
+                    detail_offset = text_archive->section_offsets[SHOP_TEXT_INSTRUMENT_SPELLS];
+                    selected = SHOP_SELECTED_RECORD();
+                    offset = *(u16*)((selected->derived.bytes[1] * 2) + ((selected->derived.bytes[0] * SPELLS_PER_SPIRIT * 2) + detail_offset) +
+                                     (uintptr_t)text_archive);
+                    text = (u8*)(detail_offset + (offset + (uintptr_t)text_archive));
+                    prim = field_draw_text((SPRT*)prim, ot, text, FIELD_TEXT_COLOR_NORMAL, 284 - x_inset, 18 - y_inset, FIELD_TEXT_ALIGN_RIGHT);
+                    break;
+                }
             }
-            }
+
             prim = field_draw_text((SPRT*)prim, ot, name_text, FIELD_TEXT_COLOR_NORMAL, 150 - x_inset, 2 - y_inset, FIELD_TEXT_ALIGN_CENTER);
         }
         else
@@ -509,6 +537,7 @@ u8* shop_draw_detail_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
                                      FIELD_TEXT_ALIGN_LEFT);
         }
     }
+
     return prim;
 }
 

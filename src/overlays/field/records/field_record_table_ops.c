@@ -3,14 +3,15 @@
  * @brief Land placement flags, land distance, item keys, money and item values.
  */
 
-#include "main/audio/game_audio.h"
 #include "common.h"
-#include "../internal/field_calls.h"
-#include "../internal/field_records.h"
 #include <abs.h>
 
+#include "../internal/field_calls.h"
+#include "../internal/field_records.h"
+#include "main/audio/game_audio.h"
+
 /** @brief Most lands that can be active before only the first requested land is placed. */
-#define FIELD_ACTIVE_LAND_LIMIT 3
+#define FIELD_ARTIFACTS_IN_HAND_LIMIT 3
 
 /** @brief Terminator of a placed-land list. */
 #define FIELD_LAND_LIST_END 0xFF
@@ -33,11 +34,11 @@
 /** @brief field_get_land_state results. */
 enum
 {
-    FIELD_LAND_STATE_UNAVAILABLE = 0, /**< Not available, or the index is out of range. */
-    FIELD_LAND_STATE_AVAILABLE = 1,   /**< Available but not placed. */
-    FIELD_LAND_STATE_PLACED = 2,      /**< Placed, FIELD_LAND_FLAG_02 clear. */
-    FIELD_LAND_STATE_FLAG_02 = 3,     /**< Placed with FIELD_LAND_FLAG_02, FIELD_LAND_FLAG_04 clear. */
-    FIELD_LAND_STATE_FLAG_04 = 4      /**< Placed with FIELD_LAND_FLAG_02 and FIELD_LAND_FLAG_04. */
+    FIELD_LAND_STATE_LOCKED = 0,   /**< Artifact not unlocked, or the index is out of range. */
+    FIELD_LAND_STATE_UNLOCKED = 1, /**< Artifact unlocked but not obtained. */
+    FIELD_LAND_STATE_OBTAINED = 2, /**< Artifact obtained, land not placed. */
+    FIELD_LAND_STATE_PLACED = 3,   /**< Land placed, FIELD_LAND_FLAG_04 clear. */
+    FIELD_LAND_STATE_FLAG_04 = 4   /**< Land placed with FIELD_LAND_FLAG_04. */
 };
 
 /** @brief Item value tables (resource FIELD_RESOURCE_ITEM_VALUES). */
@@ -54,75 +55,75 @@ typedef struct
 
 s32 rand(void);
 
-/** @brief Item kind given by field_place_lands when no land could be placed, by land distance. */
+/** @brief Item kind given by field_award_land_artifacts when no artifact could be awarded, by land distance. */
 extern u8 g_field_land_distance_items[];
 extern u16 g_music_track_index;
 
-static s32 field_try_place_land(s32 land_index);
+static s32 field_try_award_land_artifact(s32 land_index);
 static s32 field_is_item_key_used(FieldItemKey* key);
 
 /**
- * @brief Place up to two lands and write the placed land ids to a list.
+ * @brief Award up to two land artifacts and write the lands whose artifacts were given to a list.
  *
- * When neither land can be placed, the item for the current land's
+ * When neither artifact can be awarded, the item for the current land's
  * distance from land 0 is given instead.
  *
- * @param first_land First land to place.
- * @param second_land Second land to place; only tried while fewer than FIELD_ACTIVE_LAND_LIMIT lands are active.
- * @param placed Output list of placed lands, terminated with FIELD_LAND_LIST_END.
- * @return Number of lands placed.
+ * @param first_land Land whose artifact to award first.
+ * @param second_land Second land; only tried while fewer than FIELD_ARTIFACTS_IN_HAND_LIMIT artifacts are obtained but not placed.
+ * @param awarded Output list of lands whose artifacts were awarded, terminated with FIELD_LAND_LIST_END.
+ * @return Number of artifacts awarded.
  * @note JP indexes the distance item table without clamping the distance.
  */
-s32 field_place_lands(s32 first_land, s32 second_land, s32* placed)
+s32 field_award_land_artifacts(s32 first_land, s32 second_land, s32* awarded)
 {
     s32* cursor;
-    s32 placed_count;
-    s32 active_count;
+    s32 awarded_count;
+    s32 artifacts_in_hand;
     s32 i;
 #if !defined(VERSION_JP)
     u32 table_index;
 #endif
     u32 flags;
 
-    cursor = placed;
-    active_count = 0;
+    cursor = awarded;
+    artifacts_in_hand = 0;
 
     for (i = 0; i < FIELD_LAND_COUNT; i++)
     {
         flags = g_field_game_state->lands[i].flags;
 
-        if ((flags & FIELD_LAND_PLACED) && !((flags >> 1) & 1))
+        if ((flags & FIELD_LAND_ARTIFACT_OBTAINED) && !((flags >> 1) & 1))
         {
-            active_count += 1;
+            artifacts_in_hand += 1;
         }
     }
 
-    placed_count = 0;
+    awarded_count = 0;
 
-    if (active_count < FIELD_ACTIVE_LAND_LIMIT)
+    if (artifacts_in_hand < FIELD_ARTIFACTS_IN_HAND_LIMIT)
     {
-        if (field_try_place_land(first_land) >= 0)
+        if (field_try_award_land_artifact(first_land) >= 0)
         {
-            placed_count = 1;
+            awarded_count = 1;
             *cursor = first_land;
             cursor++;
         }
 
-        if (field_try_place_land(second_land) >= 0)
+        if (field_try_award_land_artifact(second_land) >= 0)
         {
-            placed_count += 1;
+            awarded_count += 1;
             *cursor = second_land;
             cursor++;
         }
     }
-    else if (field_try_place_land(first_land) >= 0)
+    else if (field_try_award_land_artifact(first_land) >= 0)
     {
-        placed_count = 1;
+        awarded_count = 1;
         *cursor = first_land;
         cursor++;
     }
 
-    if (placed_count == 0)
+    if (awarded_count == 0)
     {
 #if defined(VERSION_JP)
         i = field_get_land_distance(g_music_track_index);
@@ -141,15 +142,15 @@ s32 field_place_lands(s32 first_land, s32 second_land, s32* placed)
     }
 
     *cursor = FIELD_LAND_LIST_END;
-    return placed_count;
+    return awarded_count;
 }
 
 /**
- * @brief Place an available land that is not placed yet, recording its placement order.
+ * @brief Award a land's artifact if it is unlocked and not obtained yet, recording its artifact order.
  * @param land_index Land index.
- * @return @p land_index on success, -1 when out of range or not placeable.
+ * @return @p land_index on success, -1 when out of range or the artifact cannot be awarded.
  */
-static s32 field_try_place_land(s32 land_index)
+static s32 field_try_award_land_artifact(s32 land_index)
 {
     u8 flags;
 
@@ -157,14 +158,14 @@ static s32 field_try_place_land(s32 land_index)
     {
         flags = g_field_game_state->lands[land_index].flags;
 
-        if ((flags & FIELD_LAND_PLACED) != 0 || !((flags >> 3) & 1))
+        if ((flags & FIELD_LAND_ARTIFACT_OBTAINED) != 0 || !((flags >> 3) & 1))
         {
             return -1;
         }
 
-        g_field_game_state->control.fields.placed_land_count += 1;
-        g_field_game_state->lands[land_index].flags |= FIELD_LAND_PLACED;
-        g_field_game_state->lands[land_index].count = g_field_game_state->control.fields.placed_land_count;
+        g_field_game_state->control.fields.artifact_count += 1;
+        g_field_game_state->lands[land_index].flags |= FIELD_LAND_ARTIFACT_OBTAINED;
+        g_field_game_state->lands[land_index].artifact_order = g_field_game_state->control.fields.artifact_count;
         return land_index;
     }
 
@@ -172,14 +173,14 @@ static s32 field_try_place_land(s32 land_index)
 }
 
 /**
- * @brief Mark a land as available.
+ * @brief Unlock a land's artifact so that it can be awarded.
  * @param land_index Land index; ignored when >= FIELD_LAND_COUNT.
  */
-void field_make_land_available(s32 land_index)
+void field_unlock_land_artifact(s32 land_index)
 {
     if (land_index < FIELD_LAND_COUNT)
     {
-        g_field_game_state->lands[land_index].flags |= FIELD_LAND_AVAILABLE;
+        g_field_game_state->lands[land_index].flags |= FIELD_LAND_ARTIFACT_UNLOCKED;
     }
 }
 
@@ -200,19 +201,19 @@ s32 field_get_land_state(s32 land_index)
 
         if ((bits >> 3) & 1)
         {
-            if (!(flags & FIELD_LAND_PLACED))
+            if (!(flags & FIELD_LAND_ARTIFACT_OBTAINED))
             {
-                return FIELD_LAND_STATE_AVAILABLE;
+                return FIELD_LAND_STATE_UNLOCKED;
             }
 
             if (!((bits >> 1) & 1))
             {
-                return FIELD_LAND_STATE_PLACED;
+                return FIELD_LAND_STATE_OBTAINED;
             }
 
             if (((bits >> 2) & 1) == 0)
             {
-                return FIELD_LAND_STATE_FLAG_02;
+                return FIELD_LAND_STATE_PLACED;
             }
 
             return FIELD_LAND_STATE_FLAG_04;
@@ -223,13 +224,13 @@ s32 field_get_land_state(s32 land_index)
         record_game_diagnostic(DIAG_ERROR, DIAG_BAD_LAND, land_index, 0);
     }
 
-    return FIELD_LAND_STATE_UNAVAILABLE;
+    return FIELD_LAND_STATE_LOCKED;
 }
 
 /**
- * @brief Map grid distance from land 0 to a land, plus the land's unk2 byte.
+ * @brief Map grid distance from land 0 to a land, plus the land's placement order.
  * @param land_index Land to measure.
- * @return |dx| + |dz| between the two lands' grid cells plus the land's unk2 byte.
+ * @return |dx| + |dz| between the two lands' grid cells plus the land's placement order.
  */
 s32 field_get_land_distance(s32 land_index)
 {
@@ -241,7 +242,7 @@ s32 field_get_land_distance(s32 land_index)
     dx = abs(dx);
 
     dz = g_field_game_state->lands[land_index].z - g_field_game_state->lands[0].z;
-    extra = g_field_game_state->lands[land_index].unk2;
+    extra = g_field_game_state->lands[land_index].placement_order;
     dz = abs(dz);
 
     return extra + dx + dz;

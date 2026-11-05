@@ -537,7 +537,7 @@ void wmap_update_land_preview(void)
                 packet->u0 = 0;
                 packet->tpage = WMAP_EMPTY_MARKER_TPAGE;
                 /* The table and packet both store adjacent signed X/Y halfwords. */
-                *(u32*)&packet->x0 = *(u32*)&g_wmap_empty_marker_positions[row][column].vx;
+                SET_XY0_PACKED(packet, *(u32*)&g_wmap_empty_marker_positions[row][column].vx);
                 setPolyFT4(packet);
                 setSemiTrans(packet, 1);
                 packet->x2 = packet->x0;

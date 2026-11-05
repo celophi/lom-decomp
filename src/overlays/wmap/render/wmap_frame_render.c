@@ -43,9 +43,9 @@ void wmap_draw_exit_fade(void)
     triangle = g_wmap_current_frame->packet_cursor;
     setlen(triangle, 7);
     setcode(triangle, GPU_CODE_POLY_FT3);
-    *(s32*)&triangle->x2 = WMAP_MODEL_TPAGE_XY;
-    *(s32*)&triangle->x1 = WMAP_MODEL_TPAGE_XY;
-    *(s32*)&triangle->x0 = WMAP_MODEL_TPAGE_XY;
+    SET_XY2_PACKED(triangle, WMAP_MODEL_TPAGE_XY);
+    SET_XY1_PACKED(triangle, WMAP_MODEL_TPAGE_XY);
+    SET_XY0_PACKED(triangle, WMAP_MODEL_TPAGE_XY);
     triangle->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 0, 0);
     addPrim(&g_wmap_current_frame->ordering_table[1], triangle);
 
@@ -84,7 +84,7 @@ static void wmap_draw_exit_panel_quads(VECTOR* left_top, VECTOR* center_top, VEC
     quad->u0 = quad->u2 = 0;
     quad->u1 = quad->u3 = 248;
     quad->v2 = quad->v3 = 240;
-    *(u32*)&quad->r0 = g_wmap_exit_panel_color;
+    SET_BGR0_PACKED(quad, g_wmap_exit_panel_color);
     quad->u0 = quad->v0 = 0;
     setClut(quad, 0, 0);
     setTPage(quad, 2, 1, 0x140, 0);
@@ -113,7 +113,7 @@ static void wmap_draw_exit_panel_quads(VECTOR* left_top, VECTOR* center_top, VEC
     quad->u0 = quad->u2 = 0;
     quad->u1 = quad->u3 = 63;
     quad->v2 = quad->v3 = 240;
-    *(u32*)&quad->r0 = g_wmap_exit_panel_color;
+    SET_BGR0_PACKED(quad, g_wmap_exit_panel_color);
     quad->u0 = quad->v0 = 0;
     setClut(quad, 0, 0);
     setTPage(quad, 2, 1, 0x240, 0);
@@ -242,9 +242,9 @@ void wmap_update_exit_panels(void)
 
     triangle = g_wmap_current_frame->packet_cursor;
     setPolyFT3(triangle);
-    *(s32*)&triangle->x2 = WMAP_MODEL_TPAGE_XY;
-    *(s32*)&triangle->x1 = WMAP_MODEL_TPAGE_XY;
-    *(s32*)&triangle->x0 = WMAP_MODEL_TPAGE_XY;
+    SET_XY2_PACKED(triangle, WMAP_MODEL_TPAGE_XY);
+    SET_XY1_PACKED(triangle, WMAP_MODEL_TPAGE_XY);
+    SET_XY0_PACKED(triangle, WMAP_MODEL_TPAGE_XY);
     setTPage(triangle, GPU_TEXTURE_16BIT, GPU_BLEND_SUBTRACT, 0, 0);
     addPrim(&g_wmap_current_frame->ordering_table[1], triangle);
 
@@ -310,9 +310,9 @@ void wmap_draw_entry_fade(void)
         triangle = g_wmap_current_frame->packet_cursor;
         setlen(triangle, 7);
         setcode(triangle, GPU_CODE_POLY_FT3);
-        *(s32*)&triangle->x2 = WMAP_MODEL_TPAGE_XY;
-        *(s32*)&triangle->x1 = WMAP_MODEL_TPAGE_XY;
-        *(s32*)&triangle->x0 = WMAP_MODEL_TPAGE_XY;
+        SET_XY2_PACKED(triangle, WMAP_MODEL_TPAGE_XY);
+        SET_XY1_PACKED(triangle, WMAP_MODEL_TPAGE_XY);
+        SET_XY0_PACKED(triangle, WMAP_MODEL_TPAGE_XY);
         triangle->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 0, 0);
         addPrim(&g_wmap_current_frame->ordering_table[1], triangle);
 
@@ -369,9 +369,9 @@ s32 wmap_run_overlay_fade(s32 initialize)
     depth = g_wmap_overlay_fade_depth;
     setlen(triangle, 7);
     setcode(triangle, GPU_CODE_POLY_FT3);
-    *(s32*)&triangle->x2 = WMAP_MODEL_TPAGE_XY;
-    *(s32*)&triangle->x1 = WMAP_MODEL_TPAGE_XY;
-    *(s32*)&triangle->x0 = WMAP_MODEL_TPAGE_XY;
+    SET_XY2_PACKED(triangle, WMAP_MODEL_TPAGE_XY);
+    SET_XY1_PACKED(triangle, WMAP_MODEL_TPAGE_XY);
+    SET_XY0_PACKED(triangle, WMAP_MODEL_TPAGE_XY);
     triangle->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 0, 0);
     addPrim(&g_wmap_current_frame->ordering_table[depth], triangle);
 

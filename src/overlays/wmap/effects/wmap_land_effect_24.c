@@ -604,7 +604,7 @@ void wmap_land_effect_24_sequence_4_step_01(void)
     actor = &g_wmap_sprite_actors[7];
     g_wmap_actor_animations[7].data = g_wmap_animation_bank_1;
     g_wmap_particle_texture_index = 0x1E;
-    actor->scale_index = 0xF;
+    actor->scale_index = WMAP_SPRITE_SCALE_FULL;
     actor->sequence = 3;
     actor->previous_sequence = -1;
     actor->shade_step = 8;
@@ -863,7 +863,7 @@ void wmap_land_effect_24_sequence_15_step_01(void)
 
     g_wmap_actor_animations[10].data = g_wmap_animation_bank_2;
     g_wmap_particle_spawn_interval = 0x780;
-    actor->scale_index = 0xF;
+    actor->scale_index = WMAP_SPRITE_SCALE_FULL;
     actor->previous_sequence = -1;
     actor->shade_step = 4;
     actor->target_shade = 0x81;

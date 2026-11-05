@@ -466,12 +466,12 @@ void wmap_land_effect_18_sequence_6_step_01(void)
     SVECTOR position;
 
     g_wmap_actor_animations[4].data = g_wmap_animation_bank_0;
-    g_wmap_sprite_actors[4].scale_index = 15;
+    g_wmap_sprite_actors[4].scale_index = WMAP_SPRITE_SCALE_FULL;
     g_wmap_sprite_actors[4].previous_sequence = -1;
     g_wmap_sprite_actors[4].resource_index = 0;
     g_wmap_sprite_actors[4].sequence = 0;
-    g_wmap_sprite_actors[4].target_shade = 128;
-    g_wmap_sprite_actors[4].shade = 128;
+    g_wmap_sprite_actors[4].target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
+    g_wmap_sprite_actors[4].shade = WMAP_SPRITE_SHADE_NEUTRAL;
     position.vz = 0;
     position.vx = (((g_wmap_focus_cell_x - 1) * WMAP_CELL_SIZE - g_wmap_view.x * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) /
                   g_wmap_view.projection_scale;

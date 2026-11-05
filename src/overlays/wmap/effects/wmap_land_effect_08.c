@@ -154,7 +154,7 @@ void wmap_land_effect_08_sequence_8_step_01(void)
         actor = &g_wmap_sprite_actors[i];
         g_wmap_actor_animations[i].data = g_wmap_animation_bank_0;
         field_value = 1;
-        actor->scale_index = 15;
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;
         actor->previous_sequence = -1;
         actor->shade_step = 2;
         actor->resource_index = 0;

@@ -1,14 +1,15 @@
-#include "main/audio/game_audio.h"
-#include "common/saved_game.h"
 #include "common.h"
+#include <abs.h>
+
 #include "../internal/field_calls.h"
-#include "../internal/field_script.h"
 #include "../internal/field_menu_vars.h"
 #include "../internal/field_records.h"
+#include "../internal/field_script.h"
+#include "common/saved_game.h"
+#include "main/audio/game_audio.h"
 #include "main/main.h"
-#include <abs.h>
-#include "overlays/field/field_overlay_handoff.h"
 #include "overlays/field/field_actor_records.h"
+#include "overlays/field/field_overlay_handoff.h"
 
 void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s32 y, s32 z);
 
@@ -77,9 +78,9 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 #define FIELD_AFFINITY_CATEGORIES 6        /**< Four 2-bit categories: first, first alt, second, second alt. */
 #define FIELD_AFFINITY_SELECTED_CATEGORY 7 /**< Category of the applied source. */
 #define FIELD_AFFINITY_LEVEL 8
-#define FIELD_AFFINITY_NEUTRAL 10          /**< Nonzero: every element factor is 2. */
-#define FIELD_AFFINITY_FIRST_VALUE 8       /**< Halfword index (D_80122C10). */
-#define FIELD_AFFINITY_SECOND_VALUE 9      /**< Halfword index (D_80122C12). */
+#define FIELD_AFFINITY_NEUTRAL 10     /**< Nonzero: every element factor is 2. */
+#define FIELD_AFFINITY_FIRST_VALUE 8  /**< Halfword index (D_80122C10). */
+#define FIELD_AFFINITY_SECOND_VALUE 9 /**< Halfword index (D_80122C12). */
 
 /* Script locals written by field_menu_read_ring_selection (halfword indices). */
 #define FIELD_RING_ENTRY 0xA /**< Selected ring entry. */
@@ -121,10 +122,10 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 #define FIELD_NO_CARD 0xFF
 
 /* Script locals of the pending and shared item record menus (byte indices unless noted). */
-#define FIELD_RECORD_INDEX 2       /**< Selected record. */
-#define FIELD_RECORD_STATUS 3      /**< 0 shown, 1 empty, 2 duplicate. */
-#define FIELD_PENDING_COUNT 6      /**< Number of active pending records. */
-#define FIELD_RECORD_RESULT 2      /**< Word index: pending result given to a set-aside record. */
+#define FIELD_RECORD_INDEX 2        /**< Selected record. */
+#define FIELD_RECORD_STATUS 3       /**< 0 shown, 1 empty, 2 duplicate. */
+#define FIELD_PENDING_COUNT 6       /**< Number of active pending records. */
+#define FIELD_RECORD_RESULT 2       /**< Word index: pending result given to a set-aside record. */
 #define FIELD_SET_ASIDE_ACTIVE 0x19 /**< Four bytes: saved active byte of each set-aside shared record. */
 
 /* Script locals of the pet ranch menus (byte indices). */
@@ -143,7 +144,7 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 /* Script locals written by field_menu_refresh_golem_order (halfword indices). */
 #define FIELD_GOLEM_SLOT_STATUS 3       /**< Three halfwords: golem record per slot, or a FIELD_GOLEM_SLOT_* status. */
 #define FIELD_GOLEM_ACTIVE_POSITION 0xE /**< Display position of the selected slot. */
-#define FIELD_GOLEM_ACTIVE_RECORD 0xF  /**< Active golem record index. */
+#define FIELD_GOLEM_ACTIVE_RECORD 0xF   /**< Active golem record index. */
 
 /** @brief Byte local index of the four values field_menu_describe_selected_item stores. */
 #define FIELD_ITEM_DESC_INDEX 1
@@ -153,9 +154,9 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 #define FIELD_UNIFORM_ELEMENT 6 /**< Element drawn uniformly (other modes). */
 
 /* Script locals of the grazing pet cursor menus (field_menu_swap_joined_pet, field_menu_publish_cursor_pet). */
-#define FIELD_CURSOR_SPECIES 0xA      /**< Halfword index: species of the pet sent grazing. */
-#define FIELD_CURSOR_SLOT 0x1C        /**< Selected cursor slot; also the text macro index. */
-#define FIELD_CURSOR_SLOT_TABLE 0x1D  /**< Pet record index shown in each cursor slot. */
+#define FIELD_CURSOR_SPECIES 0xA     /**< Halfword index: species of the pet sent grazing. */
+#define FIELD_CURSOR_SLOT 0x1C       /**< Selected cursor slot; also the text macro index. */
+#define FIELD_CURSOR_SLOT_TABLE 0x1D /**< Pet record index shown in each cursor slot. */
 
 /** @brief Text resource @p id. */
 #define FIELD_TEXT_RESOURCE(id) ((FieldTextResource*)field_find_resource(id))
@@ -375,12 +376,12 @@ typedef struct
     u8 kind;     /**< Item kind, bits 9:8 of the attributes. */
     u8 category; /**< Category with the kind's table offset added. */
 #if defined(VERSION_JP)
-    u8 value;    /**< Displayed stat value. */
-    u8 special;  /**< Special-item flag or instrument spirit. */
+    u8 value;   /**< Displayed stat value. */
+    u8 special; /**< Special-item flag or instrument spirit. */
 #else
-    u16 value;   /**< Displayed stat value; bit 15 marks a special item. */
+    u16 value; /**< Displayed stat value; bit 15 marks a special item. */
 #endif
-    u32 amount;  /**< Item value. */
+    u32 amount; /**< Item value. */
 } FieldMenuItemInfoVars;
 
 /** @brief 0x40-byte item record (FieldItemRecord) viewed with its identity words. */
@@ -405,7 +406,7 @@ typedef struct
     {
         u16 values[4];
         u8 bytes[8];
-    } stats;              /**< 0x24: stats, read as halfwords or bytes by kind. */
+    } stats; /**< 0x24: stats, read as halfwords or bytes by kind. */
     u8 unknown_0x2C[8];
     s32 unknown_0x34; /**< item value; for a pending record, its pending result. */
     u32 identity[2];  /**< words that identify the item; both zero for no item. */
@@ -765,8 +766,9 @@ void field_menu_dismiss_golem(void)
         {
             if (field_find_free_inventory_record() != 0)
             {
-                field_copy_inventory_record(field_find_free_inventory_record(),
-                                            g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name);
+                field_copy_inventory_record(
+                    field_find_free_inventory_record(),
+                    g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name);
             }
         }
     }
@@ -1008,7 +1010,8 @@ void field_menu_publish_golem_items(void)
     {
         if (g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name[0] != 0)
         {
-            field_set_text_macro(count, g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name, FIELD_TEXT_MACRO_UNLIMITED);
+            field_set_text_macro(count, g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name,
+                                 FIELD_TEXT_MACRO_UNLIMITED);
             count += 1;
         }
     }
@@ -2057,7 +2060,8 @@ void field_menu_add_action_item(void)
 
     used = slot + 1;
     FIELD_LOCAL_BYTE(FIELD_ACTION_USED_SLOTS) = used;
-    FIELD_MENU_ACTIONS.groups[group].flags = (FIELD_MENU_ACTIONS.groups[group].flags & ~FIELD_MENU_GROUP_USED_MASK) | ((used & FIELD_MENU_GROUP_FIELD_MASK) << FIELD_MENU_GROUP_USED_SHIFT);
+    FIELD_MENU_ACTIONS.groups[group].flags =
+        (FIELD_MENU_ACTIONS.groups[group].flags & ~FIELD_MENU_GROUP_USED_MASK) | ((used & FIELD_MENU_GROUP_FIELD_MASK) << FIELD_MENU_GROUP_USED_SHIFT);
 
     if (capacity < slot + 3)
     {
@@ -2553,39 +2557,39 @@ void field_reset_menu_action_slot(void)
     FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.word |= ~0xFF;
 }
 
-/** @brief Reset all lands and place the default set in order. */
+/** @brief Reset all lands and award the default set of land artifacts in order. */
 void field_reset_default_lands(void)
 {
     field_reset_lands();
-    field_place_land(0);
-    field_place_land(1);
-    field_place_land(2);
-    field_place_land(3);
-    field_place_land(4);
-    field_place_land(5);
-    field_place_land(7);
-    field_place_land(8);
-    field_place_land(9);
-    field_place_land(0xA);
-    field_place_land(0xB);
-    field_place_land(0xC);
-    field_place_land(0xD);
-    field_place_land(0xF);
-    field_place_land(0x10);
-    field_place_land(0x11);
-    field_place_land(0x12);
-    field_place_land(0x13);
-    field_place_land(0x15);
-    field_place_land(0x16);
-    field_place_land(0x18);
-    field_place_land(0x19);
-    field_place_land(0x1A);
-    field_place_land(0x1B);
-    field_place_land(0x1E);
-    field_place_land(0x1F);
-    field_place_land(0x20);
-    field_place_land(0x20);
-    field_place_land(0x17);
+    field_award_land_artifact(0);
+    field_award_land_artifact(1);
+    field_award_land_artifact(2);
+    field_award_land_artifact(3);
+    field_award_land_artifact(4);
+    field_award_land_artifact(5);
+    field_award_land_artifact(7);
+    field_award_land_artifact(8);
+    field_award_land_artifact(9);
+    field_award_land_artifact(0xA);
+    field_award_land_artifact(0xB);
+    field_award_land_artifact(0xC);
+    field_award_land_artifact(0xD);
+    field_award_land_artifact(0xF);
+    field_award_land_artifact(0x10);
+    field_award_land_artifact(0x11);
+    field_award_land_artifact(0x12);
+    field_award_land_artifact(0x13);
+    field_award_land_artifact(0x15);
+    field_award_land_artifact(0x16);
+    field_award_land_artifact(0x18);
+    field_award_land_artifact(0x19);
+    field_award_land_artifact(0x1A);
+    field_award_land_artifact(0x1B);
+    field_award_land_artifact(0x1E);
+    field_award_land_artifact(0x1F);
+    field_award_land_artifact(0x20);
+    field_award_land_artifact(0x20);
+    field_award_land_artifact(0x17);
 }
 
 /** @brief Restore the saved field mode through the mode dispatcher. */

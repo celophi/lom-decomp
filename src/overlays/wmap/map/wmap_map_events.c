@@ -24,6 +24,7 @@
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_travel_sequences.h"
 #include "../internal/wmap_view_effects.h"
+#include "common/saved_game.h"
 #include "main/audio/akao_cmd.h"
 #include "main/cdrom.h"
 #include "sdk/gte_dmpsx_compat.h"
@@ -214,9 +215,9 @@ static inline void wmap_walk_event_show_traveler(void)
 {
     WmapSpriteActor* actor = &g_wmap_sprite_actors[WMAP_SCRIPTED_TRAVELER];
 
-    actor->scale_index = WMAP_STEP_ACTOR_SCALE_INDEX;
+    actor->scale_index = WMAP_SPRITE_SCALE_FULL;
     actor->previous_sequence = -1;
-    actor->target_shade = 128;
+    actor->target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
     actor->resource_index = 0;
     actor->sequence = 0;
     actor->shade = 0;
@@ -268,7 +269,7 @@ void wmap_start_pending_event(void)
         else if (g_wmap_land_event_24_pending != 0)
         {
             cdrom_queue_read(WMAP_VEHICLE_BANK_FILE, g_wmap_animation_bank_0);
-            cdrom_queue_read(WMAP_VEHICLE_BANK_FILE_2, g_wmap_animation_bank_0 + WMAP_VEHICLE_BANK_SIZE);
+            cdrom_queue_read(WMAP_VEHICLE_BANK_FILE_2, g_wmap_animation_bank_0 + WMAP_ANIMATION_BANK_SIZE);
             cdrom_wait_queue_empty();
             g_wmap_land_event_24_pending = 0;
             wmap_start_sequence(&wmap_land_event_24_run);
@@ -449,10 +450,10 @@ void wmap_arrival_event_step_03(void)
         if (g_wmap_arrival_event_sides[i] != 0)
         {
             g_wmap_actor_animations[i + WMAP_ARRIVAL_FIRST_ACTOR].data = g_wmap_animation_bank_3;
-            actor->scale_index = WMAP_STEP_ACTOR_SCALE_INDEX;
+            actor->scale_index = WMAP_SPRITE_SCALE_FULL;
             actor->sequence = i + 1;
             actor->previous_sequence = -1;
-            actor->target_shade = 128;
+            actor->target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
             actor->shade_step = 2;
             actor->resource_index = 0;
             actor->shade = 0;
@@ -603,7 +604,7 @@ void wmap_land_event_13_step_01(void)
 {
     wmap_select_mesh_motion(1);
     wmap_start_mesh_transition(1);
-    wmap_find_land_cell(16, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+    wmap_find_land_cell(FIELD_LAND_UNDERWORLD, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_focus_cell_x = g_wmap_vehicle_cell_x;
     g_wmap_focus_cell_y = g_wmap_vehicle_cell_y;
     wmap_scroll_to_vehicle_cell();
@@ -616,7 +617,7 @@ void wmap_land_event_12_step_01(void)
 {
     wmap_select_mesh_motion(1);
     wmap_start_mesh_transition(1);
-    wmap_find_land_cell(23, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+    wmap_find_land_cell(FIELD_LAND_FLAMES, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_focus_cell_x = g_wmap_vehicle_cell_x;
     g_wmap_focus_cell_y = g_wmap_vehicle_cell_y;
     wmap_scroll_to_vehicle_cell();
@@ -628,9 +629,9 @@ void wmap_land_event_12_step_01(void)
 void wmap_land_event_24_step_01(void)
 {
     g_wmap_vehicle_flap_sound_enabled = 0;
-    g_wmap_forced_animated_land_id = WMAP_SPECIAL_TRAVEL_LAND;
+    g_wmap_forced_animated_land_id = FIELD_LAND_LUCEMIA;
     g_wmap_land_display_limit = 0;
-    wmap_find_land_cell(WMAP_SPECIAL_TRAVEL_LAND, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+    wmap_find_land_cell(FIELD_LAND_LUCEMIA, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_focus_cell_x = g_wmap_vehicle_cell_x;
     g_wmap_focus_cell_y = g_wmap_vehicle_cell_y;
     wmap_scroll_to_vehicle_cell();
@@ -658,7 +659,7 @@ void wmap_land_event_24_step_04(void)
 
     if ((g_wmap_frame_count & 3) == 0)
     {
-        if (vehicle->scale_index < WMAP_VEHICLE_SCALE_MAX)
+        if (vehicle->scale_index < WMAP_SPRITE_SCALE_FULL)
         {
             vehicle->scale_index++;
         }
@@ -692,8 +693,8 @@ void wmap_land_event_24_step_03(void)
     g_wmap_vehicle_actor.scale_index = 0;
     g_wmap_vehicle_actor.sequence = 0;
     g_wmap_vehicle_actor.shade_step = 0;
-    g_wmap_vehicle_actor.target_shade = WMAP_VEHICLE_SHADE_NEUTRAL;
-    g_wmap_vehicle_actor.shade = WMAP_VEHICLE_SHADE_NEUTRAL;
+    g_wmap_vehicle_actor.target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
+    g_wmap_vehicle_actor.shade = WMAP_SPRITE_SHADE_NEUTRAL;
     g_wmap_actor_motions[0].vehicle.active = 1;
     g_wmap_actor_motions[0].vehicle.radius = WMAP_VEHICLE_START_RADIUS;
     g_wmap_actor_motions[0].vehicle.height = WMAP_VEHICLE_START_HEIGHT;

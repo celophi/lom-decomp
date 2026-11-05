@@ -12,7 +12,6 @@
 
 #define WMAP_SPARK_OPERAND_SHIFT 6
 #define WMAP_SPARK_PRODUCT_SHIFT 12
-#define WMAP_SPARK_SCALE_INDEX 15
 #define WMAP_SPARK_RANDOM_ANGLE_SHIFT 3
 #define WMAP_SPARK_MIN_RADIUS_STEP 0x1000
 #define WMAP_SPARK_LIFETIME_MASK 0x3C
@@ -76,7 +75,7 @@
                     break;                                                                                                                                     \
                 }                                                                                                                                              \
                 actor = &g_wmap_sprite_actors[(first_actor) + i];                                                                                              \
-                actor->scale_index = WMAP_SPARK_SCALE_INDEX;                                                                                                   \
+                actor->scale_index = WMAP_SPRITE_SCALE_FULL;                                                                                                   \
                 actor->previous_sequence = -1;                                                                                                                 \
                 actor->resource_index = 0;                                                                                                                     \
                 actor->sequence = 0;                                                                                                                           \

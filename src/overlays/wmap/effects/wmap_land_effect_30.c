@@ -78,27 +78,9 @@ WMAP_STEP_DROP_UPDATE(wmap_land_effect_30_sequence_4_step_02, g_wmap_land_effect
 /** @brief Reduce the effect parameters, draw it, and advance its countdown. */
 void wmap_land_effect_30_sequence_10_step_04(void)
 {
-    s32 value;
     s32 remaining;
 
-    value = g_wmap_particle_shade - 1;
-    g_wmap_particle_shade = value;
-
-    if (value < 0)
-    {
-        g_wmap_particle_shade = 0;
-    }
-
-    if (!(g_wmap_frame_count & 3))
-    {
-        g_wmap_particle_intensity--;
-    }
-
-    if (g_wmap_particle_intensity < 0)
-    {
-        g_wmap_particle_intensity = 0;
-    }
-
+    WMAP_FADE_OUT_PARTICLE_BURST(1);
     wmap_update_flat_radial_burst(0x13, 0x45, 0x13, 0x20, 0xFD0, 4, 0x20, 1);
     remaining = g_wmap_land_effect_30_sequence_10_timer - 1;
     g_wmap_land_effect_30_sequence_10_timer = remaining;
@@ -112,27 +94,9 @@ void wmap_land_effect_30_sequence_10_step_04(void)
 /** @brief Reduce the effect parameters, draw it, and advance its countdown. */
 void wmap_land_effect_30_sequence_11_step_04(void)
 {
-    s32 value;
     s32 remaining;
 
-    value = g_wmap_particle_shade - 1;
-    g_wmap_particle_shade = value;
-
-    if (value < 0)
-    {
-        g_wmap_particle_shade = 0;
-    }
-
-    if (!(g_wmap_frame_count & 3))
-    {
-        g_wmap_particle_intensity--;
-    }
-
-    if (g_wmap_particle_intensity < 0)
-    {
-        g_wmap_particle_intensity = 0;
-    }
-
+    WMAP_FADE_OUT_PARTICLE_BURST(1);
     wmap_update_flat_radial_burst(0x54, 0x5C, 0x13, 0x20, 0x1000, 0x20, 8, 2);
     remaining = g_wmap_land_effect_30_sequence_11_timer - 1;
     g_wmap_land_effect_30_sequence_11_timer = remaining;
@@ -159,7 +123,7 @@ void wmap_land_effect_30_sequence_12_step_01(void)
     {
         actor = &g_wmap_sprite_actors[120 + i];
         actor->resource_index = 0;
-        actor->scale_index = 15;
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;
         actor->sequence = rand() % 3;
         actor->previous_sequence = -1;
         actor->shade_step = 2;
@@ -270,7 +234,7 @@ void wmap_land_effect_30_sequence_14_step_01(void)
         actor_field_value = 8;
         WMAP_ACTOR_BLOCK(15)[i].shade = actor_field_value;
         WMAP_ACTOR_BLOCK(15)[i].resource_index = 0;
-        WMAP_ACTOR_BLOCK(15)[i].scale_index = 15;
+        WMAP_ACTOR_BLOCK(15)[i].scale_index = WMAP_SPRITE_SCALE_FULL;
         WMAP_ACTOR_BLOCK(15)[i].sequence = 0;
         WMAP_ACTOR_BLOCK(15)[i].previous_sequence = -1;
         g_wmap_actor_motions_at_15[i].state = 1;
@@ -496,12 +460,12 @@ void wmap_land_effect_30_sequence_5_step_01(void)
     WmapSpriteActor* actor = &g_wmap_sprite_actors[6];
 
     g_wmap_actor_animations[6].data = g_wmap_animation_bank_2;
-    actor->scale_index = 0xF;
+    actor->scale_index = WMAP_SPRITE_SCALE_FULL;
     actor->sequence = 1;
     actor->previous_sequence = -1;
     actor->shade_step = 8;
-    actor->target_shade = 0x80;
-    actor->shade = 0x80;
+    actor->target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
+    actor->shade = WMAP_SPRITE_SHADE_NEUTRAL;
     actor->resource_index = 0;
     g_wmap_land_effect_30_sequence_5_timer = 0x2C;
     g_wmap_effect_sprite_position_a.packed = g_wmap_focus_screen_position.packed;

@@ -14,8 +14,6 @@
 #define WMAP_VEHICLE_OT_FLIGHT 59
 #define WMAP_VEHICLE_SOUND_FLAP 51
 #define WMAP_VEHICLE_SOUND_PAN 127
-#define WMAP_VEHICLE_SCALE_MAX 15
-#define WMAP_VEHICLE_SHADE_NEUTRAL 128
 
 /** @brief Vehicle orbit: start radius and height, their limits, and the climb step. */
 #define WMAP_VEHICLE_START_RADIUS 200
@@ -25,8 +23,7 @@
 #define WMAP_VEHICLE_RADIUS_STEP 4
 #define WMAP_VEHICLE_LOW_HEIGHT 40
 
-/** @brief Size of one vehicle animation bank in g_wmap_animation_bank_0 and the CD files that fill it. */
-#define WMAP_VEHICLE_BANK_SIZE 0x2000
+/** @brief CD files of the vehicle's two animation banks and its texture. */
 #define WMAP_VEHICLE_BANK_FILE 0x1145
 #define WMAP_VEHICLE_BANK_FILE_2 0x1146
 #define WMAP_VEHICLE_TEXTURE_FILE 0x1147

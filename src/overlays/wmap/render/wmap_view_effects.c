@@ -76,7 +76,6 @@
 #define WMAP_BURST_ACTOR_FIRST 6
 #define WMAP_BURST_CENTER_X 160
 #define WMAP_BURST_CENTER_Y 120
-#define WMAP_BURST_ACTOR_SCALE 15
 #define WMAP_BURST_ACTOR_SHADE 129
 #define WMAP_BURST_SEQUENCE_LARGE 3
 #define WMAP_BURST_OT_INDEX 4
@@ -89,7 +88,6 @@
 #define WMAP_BURST_TEXTURE_LARGE 6
 #define WMAP_BURST_TEXTURE_SMALL 7
 /** @brief Sprite shade that draws the texture unmodified. */
-#define WMAP_ACTOR_SHADE_NEUTRAL 128
 
 /** @brief Packed color word: three channels and the GPU command byte. */
 typedef union
@@ -187,9 +185,9 @@ void wmap_init_map_packets(void)
         buffer->tpage_select.tpage = BLEND_SUBTRACT_TPAGE;
         g_wmap_current_frame = buffer;
         /* Each vertex is cleared as one packed x/y word. */
-        *(u32*)&buffer->tpage_select.x2 = 0;
-        *(u32*)&buffer->tpage_select.x1 = 0;
-        *(u32*)&buffer->tpage_select.x0 = 0;
+        SET_XY2_PACKED(&buffer->tpage_select, 0);
+        SET_XY1_PACKED(&buffer->tpage_select, 0);
+        SET_XY0_PACKED(&buffer->tpage_select, 0);
         SET_BGR0_PACKED(&buffer->tpage_select, 0);
         setPolyFT3(&g_wmap_current_frame->tpage_select);
 
@@ -590,10 +588,10 @@ void wmap_project_map_grid(void)
             column++;
             gte_stsxy(&screen_position);
             /* The GTE result is one packed x/y word for each shared corner. */
-            *(s32*)&bottom_right->x0 = screen_position;
-            *(s32*)&bottom_left->x1 = screen_position;
-            *(s32*)&top_right->x2 = screen_position;
-            *(s32*)&top_left->x3 = screen_position;
+            SET_XY0_PACKED(bottom_right, screen_position);
+            SET_XY1_PACKED(bottom_left, screen_position);
+            SET_XY2_PACKED(top_right, screen_position);
+            SET_XY3_PACKED(top_left, screen_position);
             top_left++;
             top_right++;
             bottom_left++;
@@ -873,7 +871,7 @@ void wmap_update_view_zoom(void)
             if (g_wmap_buttons_repeat & (PADRup | WMAP_PAD_CANCEL))
             {
                 g_wmap_view_mode = WMAP_VIEW_MODE_ZOOM_IN;
-                g_wmap_sprite_actors[0].target_shade = WMAP_ACTOR_SHADE_NEUTRAL;
+                g_wmap_sprite_actors[0].target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
                 wmap_play_sound(WMAP_SOUND_ZOOM_IN, AKAO_PAN_CENTER);
                 g_wmap_map_button_mask = -1;
                 g_wmap_buttons_held = 0;
@@ -996,7 +994,7 @@ s32 wmap_update_burst_particles(void)
             if (g_wmap_burst_spawning != 0)
             {
                 actor->resource_index = 0;
-                actor->scale_index = WMAP_BURST_ACTOR_SCALE;
+                actor->scale_index = WMAP_SPRITE_SCALE_FULL;
                 actor->sequence = ((rand() * g_wmap_particle_intensity) >> 15) + 1;
                 actor->previous_sequence = -1;
                 actor->target_shade = WMAP_BURST_ACTOR_SHADE;

@@ -7,6 +7,7 @@
 #include "../internal/wmap_resource_support.h"
 #include "../internal/wmap_sprite_render.h"
 #include "common/gpu_packet.h"
+#include "common/tim.h"
 #include "main/audio/akao_cmd.h"
 #include "main/cdrom.h"
 
@@ -75,31 +76,31 @@ void wmap_load_tim_file(s32 resource_index)
     data = g_wmap_load_buffer;
     cdrom_queue_read(resource_index & 0xFFFF, data);
     cdrom_wait_queue_empty();
-    data += 8;
+    data += TIM_HEADER_SIZE;
     header = g_wmap_load_buffer;
 
-    if (header[4] & 8)
+    if (header[OFFSETOF(TimPrefix, flags)] & TIM_FLAG_HAS_CLUT)
     {
         header = (u8*)&rectangle;
-        rectangle = *(WmapTextureRect*)(data + 4);
-        LoadImage((RECT*)header, (u_long*)(data + 12));
+        rectangle = *(WmapTextureRect*)(data + OFFSETOF(TimBlock, dx));
+        LoadImage((RECT*)header, (u_long*)(data + sizeof(TimBlock)));
         data += *(s32*)data;
-        rectangle = *(WmapTextureRect*)(data + 4);
+        rectangle = *(WmapTextureRect*)(data + OFFSETOF(TimBlock, dx));
 
         if (((RECT*)header)->x != -1)
         {
-            LoadImage((RECT*)header, (u_long*)(data + 12));
+            LoadImage((RECT*)header, (u_long*)(data + sizeof(TimBlock)));
             DrawSync(0);
             g_wmap_artifact_shadows_enabled = 1;
         }
     }
     else
     {
-        rectangle = *(WmapTextureRect*)(data + 4);
+        rectangle = *(WmapTextureRect*)(data + OFFSETOF(TimBlock, dx));
 
         if (((RECT*)&rectangle)->x != -1)
         {
-            LoadImage((RECT*)&rectangle, (u_long*)(data + 12));
+            LoadImage((RECT*)&rectangle, (u_long*)(data + sizeof(TimBlock)));
             DrawSync(0);
             g_wmap_artifact_shadows_enabled = 1;
         }
@@ -119,31 +120,31 @@ void wmap_stream_tim_file(s32 resource_index)
     data = g_wmap_load_buffer;
     cdrom_stream(resource_index & 0xFFFF, data);
     cdrom_wait_queue_empty();
-    data += 8;
+    data += TIM_HEADER_SIZE;
     header = g_wmap_load_buffer;
 
-    if (header[4] & 8)
+    if (header[OFFSETOF(TimPrefix, flags)] & TIM_FLAG_HAS_CLUT)
     {
         header = (u8*)&rectangle;
-        rectangle = *(WmapTextureRect*)(data + 4);
-        LoadImage((RECT*)header, (u_long*)(data + 12));
+        rectangle = *(WmapTextureRect*)(data + OFFSETOF(TimBlock, dx));
+        LoadImage((RECT*)header, (u_long*)(data + sizeof(TimBlock)));
         data += *(s32*)data;
-        rectangle = *(WmapTextureRect*)(data + 4);
+        rectangle = *(WmapTextureRect*)(data + OFFSETOF(TimBlock, dx));
 
         if (((RECT*)header)->x != -1)
         {
-            LoadImage((RECT*)header, (u_long*)(data + 12));
+            LoadImage((RECT*)header, (u_long*)(data + sizeof(TimBlock)));
             DrawSync(0);
             g_wmap_artifact_shadows_enabled = 1;
         }
     }
     else
     {
-        rectangle = *(WmapTextureRect*)(data + 4);
+        rectangle = *(WmapTextureRect*)(data + OFFSETOF(TimBlock, dx));
 
         if (((RECT*)&rectangle)->x != -1)
         {
-            LoadImage((RECT*)&rectangle, (u_long*)(data + 12));
+            LoadImage((RECT*)&rectangle, (u_long*)(data + sizeof(TimBlock)));
             DrawSync(0);
             g_wmap_artifact_shadows_enabled = 1;
         }
@@ -167,28 +168,28 @@ void wmap_upload_tim(u8* data)
 {
     WmapTextureRect rectangle;
 
-    if (data[4] & 8)
+    if (data[OFFSETOF(TimPrefix, flags)] & TIM_FLAG_HAS_CLUT)
     {
-        data += 8;
-        rectangle = *(WmapTextureRect*)(data + 4);
-        LoadImage((RECT*)&rectangle, (u_long*)(data + 12));
+        data += TIM_HEADER_SIZE;
+        rectangle = *(WmapTextureRect*)(data + OFFSETOF(TimBlock, dx));
+        LoadImage((RECT*)&rectangle, (u_long*)(data + sizeof(TimBlock)));
         data += *(s32*)data;
-        rectangle = *(WmapTextureRect*)(data + 4);
+        rectangle = *(WmapTextureRect*)(data + OFFSETOF(TimBlock, dx));
 
         if (((RECT*)&rectangle)->x != -1)
         {
-            LoadImage((RECT*)&rectangle, (u_long*)(data + 12));
+            LoadImage((RECT*)&rectangle, (u_long*)(data + sizeof(TimBlock)));
             DrawSync(0);
         }
     }
     else
     {
-        data += 8;
-        rectangle = *(WmapTextureRect*)(data + 4);
+        data += TIM_HEADER_SIZE;
+        rectangle = *(WmapTextureRect*)(data + OFFSETOF(TimBlock, dx));
 
         if (((RECT*)&rectangle)->x != -1)
         {
-            LoadImage((RECT*)&rectangle, (u_long*)(data + 12));
+            LoadImage((RECT*)&rectangle, (u_long*)(data + sizeof(TimBlock)));
             DrawSync(0);
         }
     }
@@ -229,9 +230,9 @@ void wmap_queue_texture_page(s32 texture_page, s32 depth)
     setlen(primitive, 7);
     setcode(primitive, GPU_CODE_POLY_FT3);
     primitive->tpage = texture_page;
-    *(s32*)&primitive->x2 = WMAP_MODEL_TPAGE_XY;
-    *(s32*)&primitive->x1 = WMAP_MODEL_TPAGE_XY;
-    *(s32*)&primitive->x0 = WMAP_MODEL_TPAGE_XY;
+    SET_XY2_PACKED(primitive, WMAP_MODEL_TPAGE_XY);
+    SET_XY1_PACKED(primitive, WMAP_MODEL_TPAGE_XY);
+    SET_XY0_PACKED(primitive, WMAP_MODEL_TPAGE_XY);
     addPrim(&g_wmap_current_frame->ordering_table[depth], primitive);
 
     if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)

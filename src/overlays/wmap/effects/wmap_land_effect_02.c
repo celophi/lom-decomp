@@ -90,7 +90,7 @@ void wmap_land_effect_02_sequence_3_step_01(void)
         entry = &g_wmap_sprite_actors[14 + i];
         g_wmap_actor_animations[i + 14].data = g_wmap_animation_bank_0;
         shift = i << 10;
-        entry->scale_index = 0xF;
+        entry->scale_index = WMAP_SPRITE_SCALE_FULL;
         entry->previous_sequence = -1;
         entry->shade_step = 4;
         entry->resource_index = 0;
@@ -134,7 +134,7 @@ void wmap_land_effect_02_sequence_5_step_01(void)
     {
         actor = &g_wmap_sprite_actors[i];
         g_wmap_actor_animations[i].data = g_wmap_animation_bank_0;
-        actor->scale_index = 15;
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;
         actor->previous_sequence = -1;
         actor->shade_step = 2;
         actor->resource_index = 0;
@@ -158,6 +158,9 @@ void wmap_land_effect_02_sequence_5_step_01(void)
  */
 void wmap_land_effect_02_sequence_5_step_02(void)
 {
+    WmapEffect02Motion* motion;
+    WmapAnimationSlot* resource;
+    WmapSpriteActor* actor;
     SVECTOR position;
     u32 screen_position;
     s32 i;
@@ -201,28 +204,26 @@ void wmap_land_effect_02_sequence_5_step_02(void)
     }
 
     i = 20;
+    motion = &g_wmap_actor_motions[i];
+    resource = &g_wmap_actor_animations[i];
+    actor = &g_wmap_sprite_actors[i];
+
+    for (; i < 80; i++)
     {
-        WmapEffect02Motion* motion = &g_wmap_actor_motions[i];
-        WmapAnimationSlot* resource = &g_wmap_actor_animations[i];
-        WmapSpriteActor* actor = &g_wmap_sprite_actors[i];
-
-        for (; i < 80; i++)
+        if (motion->state != 0)
         {
-            if (motion->state != 0)
+            wmap_step_actor_animation(actor, resource);
+            wmap_draw_actor_sprite(actor, motion->screen.packed, 8, 8, 0);
+
+            if (actor->shade < 5)
             {
-                wmap_step_actor_animation(actor, resource);
-                wmap_draw_actor_sprite(actor, motion->screen.packed, 8, 8, 0);
-
-                if (actor->shade < 5)
-                {
-                    motion->state = 0;
-                }
+                motion->state = 0;
             }
-
-            motion++;
-            resource++;
-            actor++;
         }
+
+        motion++;
+        resource++;
+        actor++;
     }
 
     value = g_wmap_land_effect_02_sequence_5_timer - 1;

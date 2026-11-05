@@ -108,7 +108,7 @@ s32 wmap_begin_land_placement(s32 initialize)
     g_wmap_view_scroll_mode = WMAP_SCROLL_SCRIPTED;
     g_wmap_view_mode = WMAP_VIEW_MODE_MAP;
     g_wmap_event_active = 0;
-    g_wmap_sprite_actors[0].target_shade = 0x80;
+    g_wmap_sprite_actors[0].target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
     points = g_wmap_cell_focus_offsets;
     y = g_wmap_cursor_row;
     x = g_wmap_cursor_column;

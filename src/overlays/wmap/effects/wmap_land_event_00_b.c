@@ -13,6 +13,7 @@
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
+#include "common/saved_game.h"
 #include "main/cdrom.h"
 
 /** @brief Event actor state at the start of its parameter block. */
@@ -88,7 +89,7 @@ void wmap_land_event_00_b_sequence_1_step_01(void)
     cdrom_queue_read(0x1229, g_wmap_effect_model_pack_7);
     cdrom_queue_read(0x122A, g_wmap_effect_model_pack_5);
     cdrom_queue_read(0x122B, g_wmap_effect_model_pack_6);
-    wmap_find_land_cell(0, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+    wmap_find_land_cell(FIELD_LAND_HOME, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     WMAP_START_SCROLL_TO_CELL(g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y);
     g_wmap_land_event_00_b_sequence_1_step++;
     wmap_land_event_00_b_sequence_1_step_02();

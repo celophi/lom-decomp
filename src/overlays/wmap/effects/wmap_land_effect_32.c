@@ -349,10 +349,10 @@ void wmap_land_effect_32_sequence_10_step_01(void)
         actor = &g_wmap_sprite_actors[204 + i];
         motion = &g_wmap_actor_motions_at_200[i];
         g_wmap_actor_animations[i + 204].data = g_wmap_animation_bank_0;
-        actor->scale_index = 15;
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;
         actor->previous_sequence = -1;
-        actor->target_shade = 128;
-        actor->shade = 128;
+        actor->target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
+        actor->shade = WMAP_SPRITE_SHADE_NEUTRAL;
         actor->resource_index = 0;
         actor->shade_step = 0;
         actor->sequence = g_wmap_particle_sequence;

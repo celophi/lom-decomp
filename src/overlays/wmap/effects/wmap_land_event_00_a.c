@@ -13,6 +13,7 @@
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
+#include "common/saved_game.h"
 #include "main/cdrom.h"
 
 /** @brief Event actor state at the start of its parameter block. */
@@ -79,7 +80,7 @@ void wmap_land_event_00_a_step_01(void)
     cdrom_queue_read(0x121E, g_wmap_effect_model_pack_2);
     cdrom_queue_read(0x121F, g_wmap_effect_model_pack_3);
     g_wmap_sprite_actors[0].resource_index = -1;
-    wmap_find_land_cell(0, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+    wmap_find_land_cell(FIELD_LAND_HOME, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_view_scroll_mode = WMAP_SCROLL_SCRIPTED;
     g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * 48) - g_wmap_view.x;
     g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * 48) - g_wmap_view.y;
@@ -436,7 +437,7 @@ void wmap_land_event_00_a_sequence_2_step_01(void)
     WmapSpriteActor* actor = &g_wmap_sprite_actors[5];
 
     g_wmap_actor_animations[5].data = g_wmap_animation_bank_0;
-    actor->scale_index = 0xF;
+    actor->scale_index = WMAP_SPRITE_SCALE_FULL;
     actor->sequence = 1;
     actor->previous_sequence = -1;
     actor->shade_step = 4;

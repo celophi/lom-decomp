@@ -12,6 +12,64 @@
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
 
+/**
+ * @brief Define a step that starts a sprite pair (sequences 2 and 3) fading in and runs its first update.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param timer The sequence's timer global.
+ * @param first First of the two consecutive sprite slots.
+ * @param frames Frames the update step runs.
+ * @param next Update step, called immediately after advancing.
+ */
+#define WMAP_EFFECT07_START_SPRITE_PAIR(name, step, timer, first, frames, next)                                                                                \
+    void name(void)                                                                                                                                            \
+    {                                                                                                                                                          \
+        WmapSpriteActor* src = &g_wmap_sprite_actors[(first)];                                                                                                 \
+        WmapSpriteActor* dst = &g_wmap_sprite_actors[(first) + 1];                                                                                             \
+        WmapAnimationSlot* animations = g_wmap_actor_animations;                                                                                               \
+                                                                                                                                                               \
+        animations[(first)].data = g_wmap_animation_bank_1;                                                                                                    \
+        animations[(first) + 1].data = g_wmap_animation_bank_1;                                                                                                \
+        src->scale_index = WMAP_SPRITE_SCALE_FULL;                                                                                                             \
+        src->sequence = 2;                                                                                                                                     \
+        src->previous_sequence = -1;                                                                                                                           \
+        src->shade_step = 8;                                                                                                                                   \
+        src->target_shade = 0x81;                                                                                                                              \
+        src->resource_index = 0;                                                                                                                               \
+        src->shade = 1;                                                                                                                                        \
+        *dst = *src;                                                                                                                                           \
+        dst->sequence = 3;                                                                                                                                     \
+        (timer) = (frames);                                                                                                                                    \
+        (step)++;                                                                                                                                              \
+        next();                                                                                                                                                \
+    }
+
+/**
+ * @brief Animate and draw a sprite pair at an offset from the focus point.
+ * @param first First of the two consecutive sprite slots.
+ * @param x_offset Pixels right of the focus point (the x half wraps at 16 bits).
+ * @param y_offset Pixels above the focus point.
+ */
+#define WMAP_EFFECT07_DRAW_SPRITE_PAIR(first, x_offset, y_offset)                                                                                              \
+    {                                                                                                                                                          \
+        s32 pos;                                                                                                                                               \
+        s32 x_bits;                                                                                                                                            \
+        s32 y;                                                                                                                                                 \
+                                                                                                                                                               \
+        pos = g_wmap_focus_screen_position.packed;                                                                                                             \
+        x_bits = pos + (x_offset);                                                                                                                             \
+        pos &= 0xFFFF0000;                                                                                                                                     \
+        x_bits &= 0xFFFF;                                                                                                                                      \
+        pos |= x_bits;                                                                                                                                         \
+        y = pos >> 16;                                                                                                                                         \
+        pos &= 0xFFFF;                                                                                                                                         \
+        pos |= (y - (y_offset)) << 16;                                                                                                                         \
+        wmap_step_actor_animation(&g_wmap_sprite_actors[(first)], &g_wmap_actor_animations[(first)]);                                                          \
+        wmap_draw_actor_sprite(&g_wmap_sprite_actors[(first)], pos, 0x13, 1, 0);                                                                               \
+        wmap_step_actor_animation(&g_wmap_sprite_actors[(first) + 1], &g_wmap_actor_animations[(first) + 1]);                                                  \
+        wmap_draw_actor_sprite(&g_wmap_sprite_actors[(first) + 1], pos, 0x13, 1, 0);                                                                           \
+    }
+
 extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_07_sequence_1_timer;
 extern s32 g_wmap_land_effect_07_sequence_2_timer;
@@ -150,27 +208,9 @@ void wmap_land_effect_07_sequence_10_step_01(void)
 /** @brief Reduce the effect parameters, draw it, and advance its countdown. */
 void wmap_land_effect_07_sequence_11_step_04(void)
 {
-    s32 value;
     s32 remaining;
 
-    value = g_wmap_particle_shade - 2;
-    g_wmap_particle_shade = value;
-
-    if (value < 0)
-    {
-        g_wmap_particle_shade = 0;
-    }
-
-    if (!(g_wmap_frame_count & 3))
-    {
-        g_wmap_particle_intensity--;
-    }
-
-    if (g_wmap_particle_intensity < 0)
-    {
-        g_wmap_particle_intensity = 0;
-    }
-
+    WMAP_FADE_OUT_PARTICLE_BURST(2);
     wmap_update_flat_radial_burst(0xCC, 0xD2, 0x13, 0x20, 0x650, 8, 0x60, 0);
     remaining = g_wmap_land_effect_07_sequence_11_timer - 1;
     g_wmap_land_effect_07_sequence_11_timer = remaining;
@@ -355,27 +395,8 @@ WMAP_STEP_RESET(wmap_land_effect_07_sequence_6_reset, g_wmap_land_effect_07_sequ
 /**
  * @brief Populate a world-map actor pair and schedule its animation step.
  */
-void wmap_land_effect_07_sequence_6_step_01(void)
-{
-    WmapSpriteActor* src = &g_wmap_sprite_actors[6];
-    WmapSpriteActor* dst = &g_wmap_sprite_actors[7];
-    WmapAnimationSlot* animations = g_wmap_actor_animations;
-
-    animations[6].data = g_wmap_animation_bank_1;
-    animations[7].data = g_wmap_animation_bank_1;
-    src->scale_index = 0xF;
-    src->sequence = 2;
-    src->previous_sequence = -1;
-    src->shade_step = 8;
-    src->target_shade = 0x81;
-    src->resource_index = 0;
-    src->shade = 1;
-    *dst = *src;
-    dst->sequence = 3;
-    g_wmap_land_effect_07_sequence_6_timer = 0x68;
-    g_wmap_land_effect_07_sequence_6_step++;
-    wmap_land_effect_07_sequence_6_step_02();
-}
+WMAP_EFFECT07_START_SPRITE_PAIR(wmap_land_effect_07_sequence_6_step_01, g_wmap_land_effect_07_sequence_6_step, g_wmap_land_effect_07_sequence_6_timer, 6, 0x68,
+                                wmap_land_effect_07_sequence_6_step_02)
 
 /**
  * @brief Draw a world-map actor pair at an offset copy of the cursor position.
@@ -417,47 +438,13 @@ WMAP_STEP_RESET(wmap_land_effect_07_sequence_7_reset, g_wmap_land_effect_07_sequ
 /**
  * @brief Populate a world-map actor pair and schedule its animation step.
  */
-void wmap_land_effect_07_sequence_7_step_01(void)
-{
-    WmapSpriteActor* src = &g_wmap_sprite_actors[8];
-    WmapSpriteActor* dst = &g_wmap_sprite_actors[9];
-    WmapAnimationSlot* animations = g_wmap_actor_animations;
-
-    animations[8].data = g_wmap_animation_bank_1;
-    animations[9].data = g_wmap_animation_bank_1;
-    src->scale_index = 0xF;
-    src->sequence = 2;
-    src->previous_sequence = -1;
-    src->shade_step = 8;
-    src->target_shade = 0x81;
-    src->resource_index = 0;
-    src->shade = 1;
-    *dst = *src;
-    dst->sequence = 3;
-    g_wmap_land_effect_07_sequence_7_timer = 0x54;
-    g_wmap_land_effect_07_sequence_7_step++;
-    wmap_land_effect_07_sequence_7_step_02();
-}
+WMAP_EFFECT07_START_SPRITE_PAIR(wmap_land_effect_07_sequence_7_step_01, g_wmap_land_effect_07_sequence_7_step, g_wmap_land_effect_07_sequence_7_timer, 8, 0x54,
+                                wmap_land_effect_07_sequence_7_step_02)
 
 /** @brief Draw a world-map actor pair at an offset copy of the cursor position. */
 void wmap_land_effect_07_sequence_7_step_02(void)
 {
-    s32 pos;
-    s32 x_bits;
-    s32 y;
-
-    pos = g_wmap_focus_screen_position.packed;
-    x_bits = pos + 2;
-    pos &= 0xFFFF0000;
-    x_bits &= 0xFFFF;
-    pos |= x_bits;
-    y = pos >> 16;
-    pos &= 0xFFFF;
-    pos |= (y - 0x1C) << 16;
-    wmap_step_actor_animation(&g_wmap_sprite_actors[8], &g_wmap_actor_animations[8]);
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[8], pos, 0x13, 1, 0);
-    wmap_step_actor_animation(&g_wmap_sprite_actors[9], &g_wmap_actor_animations[9]);
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[9], pos, 0x13, 1, 0);
+    WMAP_EFFECT07_DRAW_SPRITE_PAIR(8, 2, 0x1C);
 
     if (--g_wmap_land_effect_07_sequence_7_timer == 0)
     {
@@ -475,47 +462,13 @@ WMAP_STEP_RESET(wmap_land_effect_07_sequence_8_reset, g_wmap_land_effect_07_sequ
 /**
  * @brief Populate a world-map actor pair and schedule its animation step.
  */
-void wmap_land_effect_07_sequence_8_step_01(void)
-{
-    WmapSpriteActor* src = &g_wmap_sprite_actors[10];
-    WmapSpriteActor* dst = &g_wmap_sprite_actors[11];
-    WmapAnimationSlot* animations = g_wmap_actor_animations;
-
-    animations[10].data = g_wmap_animation_bank_1;
-    animations[11].data = g_wmap_animation_bank_1;
-    src->scale_index = 0xF;
-    src->sequence = 2;
-    src->previous_sequence = -1;
-    src->shade_step = 8;
-    src->target_shade = 0x81;
-    src->resource_index = 0;
-    src->shade = 1;
-    *dst = *src;
-    dst->sequence = 3;
-    g_wmap_land_effect_07_sequence_8_timer = 0x40;
-    g_wmap_land_effect_07_sequence_8_step++;
-    wmap_land_effect_07_sequence_8_step_02();
-}
+WMAP_EFFECT07_START_SPRITE_PAIR(wmap_land_effect_07_sequence_8_step_01, g_wmap_land_effect_07_sequence_8_step, g_wmap_land_effect_07_sequence_8_timer, 10, 0x40,
+                                wmap_land_effect_07_sequence_8_step_02)
 
 /** @brief Draw a world-map actor pair at an offset copy of the cursor position. */
 void wmap_land_effect_07_sequence_8_step_02(void)
 {
-    s32 pos;
-    s32 x_bits;
-    s32 y;
-
-    pos = g_wmap_focus_screen_position.packed;
-    x_bits = pos + 0x14;
-    pos &= 0xFFFF0000;
-    x_bits &= 0xFFFF;
-    pos |= x_bits;
-    y = pos >> 16;
-    pos &= 0xFFFF;
-    pos |= (y - 0xF) << 16;
-    wmap_step_actor_animation(&g_wmap_sprite_actors[10], &g_wmap_actor_animations[10]);
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[10], pos, 0x13, 1, 0);
-    wmap_step_actor_animation(&g_wmap_sprite_actors[11], &g_wmap_actor_animations[11]);
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[11], pos, 0x13, 1, 0);
+    WMAP_EFFECT07_DRAW_SPRITE_PAIR(10, 0x14, 0xF);
 
     if (--g_wmap_land_effect_07_sequence_8_timer == 0)
     {
@@ -533,47 +486,13 @@ WMAP_STEP_RESET(wmap_land_effect_07_sequence_9_reset, g_wmap_land_effect_07_sequ
 /**
  * @brief Populate a world-map actor pair and schedule its animation step.
  */
-void wmap_land_effect_07_sequence_9_step_01(void)
-{
-    WmapSpriteActor* src = &g_wmap_sprite_actors[12];
-    WmapSpriteActor* dst = &g_wmap_sprite_actors[13];
-    WmapAnimationSlot* animations = g_wmap_actor_animations;
-
-    animations[12].data = g_wmap_animation_bank_1;
-    animations[13].data = g_wmap_animation_bank_1;
-    src->scale_index = 0xF;
-    src->sequence = 2;
-    src->previous_sequence = -1;
-    src->shade_step = 8;
-    src->target_shade = 0x81;
-    src->resource_index = 0;
-    src->shade = 1;
-    *dst = *src;
-    dst->sequence = 3;
-    g_wmap_land_effect_07_sequence_9_timer = 0x2C;
-    g_wmap_land_effect_07_sequence_9_step++;
-    wmap_land_effect_07_sequence_9_step_02();
-}
+WMAP_EFFECT07_START_SPRITE_PAIR(wmap_land_effect_07_sequence_9_step_01, g_wmap_land_effect_07_sequence_9_step, g_wmap_land_effect_07_sequence_9_timer, 12, 0x2C,
+                                wmap_land_effect_07_sequence_9_step_02)
 
 /** @brief Draw a world-map actor pair at an offset copy of the cursor position. */
 void wmap_land_effect_07_sequence_9_step_02(void)
 {
-    s32 pos;
-    s32 x_bits;
-    s32 y;
-
-    pos = g_wmap_focus_screen_position.packed;
-    x_bits = pos + 0x8;
-    pos &= 0xFFFF0000;
-    x_bits &= 0xFFFF;
-    pos |= x_bits;
-    y = pos >> 16;
-    pos &= 0xFFFF;
-    pos |= (y - 0x16) << 16;
-    wmap_step_actor_animation(&g_wmap_sprite_actors[12], &g_wmap_actor_animations[12]);
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[12], pos, 0x13, 1, 0);
-    wmap_step_actor_animation(&g_wmap_sprite_actors[13], &g_wmap_actor_animations[13]);
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[13], pos, 0x13, 1, 0);
+    WMAP_EFFECT07_DRAW_SPRITE_PAIR(12, 0x8, 0x16);
 
     if (--g_wmap_land_effect_07_sequence_9_timer == 0)
     {

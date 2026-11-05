@@ -99,7 +99,7 @@ void wmap_land_effect_01_update_particles(WmapSpriteActor* actors, WmapAnimation
         {
             if (g_wmap_particle_intensity >= active_count)
             {
-                actors[i].scale_index = 15;
+                actors[i].scale_index = WMAP_SPRITE_SCALE_FULL;
                 actors[i].previous_sequence = -1;
                 actors[i].resource_index = 0;
                 actors[i].sequence = 1;
@@ -200,11 +200,11 @@ void wmap_land_effect_01_sequence_5_step_01(void)
         g_wmap_land_effect_01_ring_motions[i].state = 0;
         g_wmap_actor_animations[i + 6].data = g_wmap_animation_bank_1 + ((i % 3) << 13);
         actor->resource_index = 0;
-        actor->scale_index = 15;
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;
         actor->sequence = rand() & 1;
         actor->previous_sequence = -1;
-        actor->target_shade = 128;
-        actor->shade = 128;
+        actor->target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
+        actor->shade = WMAP_SPRITE_SHADE_NEUTRAL;
         g_wmap_land_effect_01_ring_motions[i].state = 1;
         g_wmap_land_effect_01_ring_motions[i].velocity = 30000;
         g_wmap_land_effect_01_ring_motions[i].angle = i * 204;
@@ -363,7 +363,7 @@ WMAP_STEP_RESET(wmap_land_effect_01_sequence_2_reset, g_wmap_land_effect_01_sequ
 void wmap_land_effect_01_sequence_2_step_01(void)
 {
     g_wmap_actor_animations[4].data = g_wmap_animation_bank_0;
-    g_wmap_sprite_actors[4].scale_index = 0xF;
+    g_wmap_sprite_actors[4].scale_index = WMAP_SPRITE_SCALE_FULL;
     g_wmap_sprite_actors[4].sequence = 1;
     g_wmap_sprite_actors[4].previous_sequence = -1;
     g_wmap_sprite_actors[4].shade = 1;

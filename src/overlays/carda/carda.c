@@ -35,8 +35,8 @@
 /** @brief Number of memory-card blocks a CARDA save file occupies. */
 #define CARDA_SAVE_BLOCK_COUNT 2
 
-/** @brief Placed lands at which a save shows the last save icon; fewer lands pick a proportionally earlier one. */
-#define CARDA_SAVE_ICON_LAST_LAND_COUNT 26
+/** @brief Artifact count at which a save shows the last save icon; fewer artifacts pick a proportionally earlier one. */
+#define CARDA_SAVE_ICON_LAST_ARTIFACT_COUNT 26
 
 /** @brief One save icon: a 16-color CLUT followed by two 16x16 4-bit frames. */
 typedef struct
@@ -1186,7 +1186,7 @@ void carda_build_save_file(void)
         ((u8*)blob)[CARD_FILE_TITLE_OFFSET + i] = 0;
     }
 
-    icon = g_saved_game_ctx->control.fields.placed_land_count * (CARDA_SAVE_ICON_COUNT - 1) / CARDA_SAVE_ICON_LAST_LAND_COUNT;
+    icon = g_saved_game_ctx->control.fields.artifact_count * (CARDA_SAVE_ICON_COUNT - 1) / CARDA_SAVE_ICON_LAST_ARTIFACT_COUNT;
     i = 0;
     if (icon >= CARDA_SAVE_ICON_COUNT)
     {

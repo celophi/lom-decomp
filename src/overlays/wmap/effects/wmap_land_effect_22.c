@@ -12,6 +12,7 @@
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
+#include "common/saved_game.h"
 
 extern s32 g_wmap_land_effect_22_sequence_3_timer;
 extern u8 g_wmap_load_buffer[];
@@ -344,7 +345,7 @@ WMAP_STEP_RESET(wmap_land_effect_22_reset, g_wmap_land_effect_22_step, g_wmap_la
 /** @brief World-map step: arm a timed callback, flag it active, then tick the sub-counter. */
 void wmap_land_effect_22_step_01(void)
 {
-    g_wmap_forced_animated_land_id = 0x17;
+    g_wmap_forced_animated_land_id = FIELD_LAND_FLAMES;
     g_wmap_focus_screen_position.point.x = WMAP_FOCUS_DEFAULT_X;
     g_wmap_focus_screen_position.point.y = WMAP_FOCUS_DEFAULT_Y;
     wmap_start_sequence(wmap_land_effect_22_run_timeline);
@@ -451,7 +452,7 @@ WMAP_STEP_WAIT(wmap_land_effect_22_timeline_wait_20, g_wmap_land_effect_22_timel
 void wmap_land_effect_22_timeline_finish(void)
 {
     g_wmap_sequence_busy = 0;
-    g_wmap_cells[g_wmap_focus_cell_x][g_wmap_focus_cell_y].land_id = WMAP_LAND_FULL_SIZE | 0x10;
+    g_wmap_cells[g_wmap_focus_cell_x][g_wmap_focus_cell_y].land_id = WMAP_LAND_FULL_SIZE | FIELD_LAND_UNDERWORLD;
     g_wmap_land_effect_22_timeline_step++;
 }
 

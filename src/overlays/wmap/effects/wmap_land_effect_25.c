@@ -300,7 +300,7 @@ void wmap_land_effect_25_sequence_12_step_01(void)
         actor = &g_wmap_sprite_actors[20 + i];
         motion = &g_wmap_effect_actor_motions[i];
         motion->state = 1;
-        actor->scale_index = 15;
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;
         actor->previous_sequence = -1;
         actor->resource_index = 0;
         actor->sequence = 0;
@@ -335,7 +335,7 @@ void wmap_land_effect_25_sequence_13_step_01(void)
         actor = &g_wmap_sprite_actors[50 + i];
         motion = &g_wmap_actor_motions_at_50[i];
         motion->state = 1;
-        actor->scale_index = 15;
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;
         actor->previous_sequence = -1;
         actor->resource_index = 0;
         actor->sequence = 1;

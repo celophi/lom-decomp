@@ -12,20 +12,17 @@
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
+#include "common/saved_game.h"
 #include "sdk/gte_dmpsx_compat.h"
 
 /** @brief Sequence and callback slot counts, and the number of sprite actors. */
 #define WMAP_SEQUENCE_SLOTS 14
 #define WMAP_CALLBACK_SLOTS 8
-#define WMAP_ACTOR_COUNT 256
 
 /** @brief Step counts of the land focus, land entry and land return sequences. */
 #define WMAP_LAND_FOCUS_STEPS 10
 #define WMAP_LAND_ENTRY_STEPS 4
 #define WMAP_LAND_RETURN_STEPS 6
-
-/** @brief Land entered without a screen fade. */
-#define WMAP_NO_FADE_LAND 31
 
 extern s32 g_wmap_sequence_active[];
 extern WmapSequenceCallback g_wmap_sequences[];
@@ -120,11 +117,11 @@ WMAP_STEP_RESET(wmap_land_focus_reset, g_wmap_land_focus_step, g_wmap_land_focus
 WMAP_STEP_WAIT(wmap_land_focus_wait_2, g_wmap_land_focus_step, g_wmap_land_focus_timer)
 
 /**
- * @brief Land focus step 3: start the screen fade (not for WMAP_NO_FADE_LAND) and dim the spirit panel.
+ * @brief Land focus step 3: start the screen fade (not for FIELD_LAND_TREE_OF_MANA) and dim the spirit panel.
  */
 void wmap_land_focus_fade_out(void)
 {
-    if (g_wmap_selected_artifact != WMAP_NO_FADE_LAND)
+    if (g_wmap_selected_artifact != FIELD_LAND_TREE_OF_MANA)
     {
         g_wmap_screen_fade_mode = WMAP_FADE_DECREASE;
     }

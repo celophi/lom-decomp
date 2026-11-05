@@ -14,6 +14,7 @@
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
+#include "common/saved_game.h"
 #include "main/cdrom.h"
 
 extern u8 g_wmap_load_buffer[];
@@ -97,7 +98,7 @@ extern WmapScreenPosition g_wmap_effect_sprite_position_i;
         WmapSpriteActor* actor = &g_wmap_sprite_actors[(slot)];                                                                                                \
                                                                                                                                                                \
         g_wmap_actor_animations[(slot)].data = (animation);                                                                                                    \
-        actor->scale_index = WMAP_STEP_ACTOR_SCALE_INDEX;                                                                                                      \
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;                                                                                                           \
         actor->previous_sequence = -1;                                                                                                                         \
         actor->shade_step = WMAP_EVENT17_SPRITE_SHADE_STEP;                                                                                                    \
         actor->resource_index = 0;                                                                                                                             \
@@ -119,7 +120,7 @@ void wmap_land_event_17_step_01(void)
     g_wmap_focus_screen_position.point.x = WMAP_EVENT_FOCUS_X;
     g_wmap_focus_screen_position.point.y = WMAP_EVENT_FOCUS_Y;
     g_wmap_auxiliary_labels_hidden = 1;
-    wmap_find_land_cell(0x11, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+    wmap_find_land_cell(FIELD_LAND_DUMA_DESERT, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     WMAP_START_SCROLL_TO_CELL(g_wmap_vehicle_cell_x, g_wmap_vehicle_cell_y);
     g_wmap_land_event_17_step++;
     wmap_land_event_17_step_02();
@@ -139,8 +140,8 @@ void wmap_land_event_17_timeline_step_01(void)
     cdrom_queue_read(0x1206, g_wmap_effect_texture_buffer_1);
     cdrom_queue_read(0x1207, g_wmap_effect_texture_buffer_2);
     cdrom_queue_read(0x1208, g_wmap_animation_bank_0);
-    cdrom_queue_read(0x1209, g_wmap_animation_bank_0 + 0x2000);
-    cdrom_queue_read(0x120A, g_wmap_animation_bank_0 + 0x4000);
+    cdrom_queue_read(0x1209, g_wmap_animation_bank_0 + WMAP_ANIMATION_BANK_SIZE);
+    cdrom_queue_read(0x120A, g_wmap_animation_bank_0 + 2 * WMAP_ANIMATION_BANK_SIZE);
     cdrom_queue_read(0x120B, g_wmap_load_buffer);
     cdrom_queue_read(0x120C, g_wmap_effect_model_pack_1);
     cdrom_queue_read(0x120D, g_wmap_effect_model_pack_2);

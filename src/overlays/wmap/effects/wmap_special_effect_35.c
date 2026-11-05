@@ -13,6 +13,7 @@
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
+#include "common/saved_game.h"
 #include "main/cdrom.h"
 #include "sdk/gte_dmpsx_compat.h"
 
@@ -25,8 +26,7 @@
 #define WMAP_EFFECT35_ORBITER_STEPS 4
 #define WMAP_EFFECT35_EMITTER_STEPS 6
 
-/** @brief Land the map scrolls to, the effect sound and its resource file. */
-#define WMAP_EFFECT35_LAND 31
+/** @brief The effect sound, its resource file and the map tint. */
 #define WMAP_EFFECT35_SOUND 58
 #define WMAP_EFFECT35_RESOURCE 35
 #define WMAP_EFFECT35_TINT 0x801530
@@ -50,10 +50,6 @@
 /** @brief Dropping models: start height above the camera, fall per frame, lowest height. */
 #define WMAP_EFFECT35_DROP_START_Z 45000
 #define WMAP_EFFECT35_DROP_SPEED 3500
-#define WMAP_EFFECT35_DROP_MIN_Z 10000
-
-/** @brief Size of one effect animation bank in g_wmap_animation_bank_0. */
-#define WMAP_EFFECT_BANK_SIZE 0x2000
 
 /** @brief Orbit particle motion: angle and radius around the screen center, inward speed. */
 typedef struct
@@ -366,7 +362,7 @@ static void wmap_effect35_update_emitter(WmapEffectEmitter* emitter)
             if (g_wmap_actor_motions[index].active == 0)
             {
                 g_wmap_actor_motions[index].active = 1;
-                g_wmap_sprite_actors[index].scale_index = 0xF;
+                g_wmap_sprite_actors[index].scale_index = WMAP_SPRITE_SCALE_FULL;
                 g_wmap_sprite_actors[index].sequence = 2;
                 g_wmap_sprite_actors[index].resource_index = 0;
                 g_wmap_sprite_actors[index].previous_sequence = -1;
@@ -533,7 +529,7 @@ void wmap_effect35_spin_b_fade_out(void)
         WmapEffectMotion* motion = &g_wmap_actor_motions[(slot)];                                                                                              \
                                                                                                                                                                \
         g_wmap_actor_animations[(slot)].data = g_wmap_animation_bank_0;                                                                                        \
-        actor->scale_index = WMAP_STEP_ACTOR_SCALE_INDEX;                                                                                                      \
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;                                                                                                           \
         if ((sequence_id) != 0)                                                                                                                                \
         {                                                                                                                                                      \
             actor->sequence = (sequence_id);                                                                                                                   \
@@ -673,13 +669,13 @@ void wmap_effect35_emitter_b_start(void)
 
     for (i = WMAP_EFFECT35_EMITTER_B_FIRST; i < WMAP_EFFECT35_EMITTER_B_END; i++)
     {
-        g_wmap_actor_animations[i].data = &g_wmap_animation_bank_0[WMAP_EFFECT_BANK_SIZE];
+        g_wmap_actor_animations[i].data = &g_wmap_animation_bank_0[WMAP_ANIMATION_BANK_SIZE];
         g_wmap_actor_motions[i].active = 0;
     }
 
     for (i = WMAP_EFFECT35_EMITTER_B_FIRST; i < WMAP_EFFECT35_EMITTER_B_PRESPAWN_END; i++)
     {
-        g_wmap_sprite_actors[i].scale_index = 0xF;
+        g_wmap_sprite_actors[i].scale_index = WMAP_SPRITE_SCALE_FULL;
         g_wmap_sprite_actors[i].sequence = 2;
         g_wmap_sprite_actors[i].previous_sequence = -1;
         g_wmap_sprite_actors[i].shade_step = 0x10;
@@ -725,7 +721,7 @@ WMAP_STEP_RESET(wmap_effect35_reset, g_wmap_effect35_step, g_wmap_effect35_timer
  */
 void wmap_effect35_load(void)
 {
-    g_wmap_forced_animated_land_id = 0x1F;
+    g_wmap_forced_animated_land_id = FIELD_LAND_TREE_OF_MANA;
     wmap_queue_effect_resources(WMAP_EFFECT35_RESOURCE);
     cdrom_wait_queue_empty();
     wmap_upload_tim(g_wmap_effect_texture_buffer_0);
@@ -768,7 +764,7 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_timeline, g_wmap_effect35_timeline_ste
 {
     g_wmap_event_active = 1;
     g_wmap_placement_overlay_hidden = 1;
-    wmap_find_land_cell(WMAP_EFFECT35_LAND, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+    wmap_find_land_cell(FIELD_LAND_TREE_OF_MANA, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_view_scroll_mode = WMAP_SCROLL_SCRIPTED;
     g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * 48) - g_wmap_view.x;
     g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * 48) - g_wmap_view.y;
@@ -1065,7 +1061,7 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_sprite_a, g_wmap_effect35_sprite_a_ste
      * @brief Sprite A: set up and run the first update.
      */
     WMAP_STEP_START_ACTOR(wmap_effect35_sprite_a_start, g_wmap_effect35_sprite_a_step, g_wmap_effect35_sprite_a_timer, 5,
-                          &g_wmap_animation_bank_0[2 * WMAP_EFFECT_BANK_SIZE], 0, 1, 0x81, 2, 502, wmap_effect35_sprite_a_draw)
+                          &g_wmap_animation_bank_0[2 * WMAP_ANIMATION_BANK_SIZE], 0, 1, 0x81, 2, 502, wmap_effect35_sprite_a_draw)
 
     /**
      * @brief Sprite A: animate and draw until the step timer runs out.
@@ -1112,8 +1108,8 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_sprite_a, g_wmap_effect35_sprite_a_ste
 {
     WmapSpriteActor* actor = &g_wmap_sprite_actors[6];
 
-    g_wmap_actor_animations[6].data = &g_wmap_animation_bank_0[WMAP_EFFECT_BANK_SIZE];
-    actor->scale_index = 0xF;
+    g_wmap_actor_animations[6].data = &g_wmap_animation_bank_0[WMAP_ANIMATION_BANK_SIZE];
+    actor->scale_index = WMAP_SPRITE_SCALE_FULL;
     actor->sequence = 1;
     actor->previous_sequence = -1;
     actor->shade_step = 0x80;
@@ -1167,7 +1163,7 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_sprite_c, g_wmap_effect35_sprite_c_ste
      * @brief Sprite C: set up and run the first update.
      */
     WMAP_STEP_START_ACTOR(wmap_effect35_sprite_c_start, g_wmap_effect35_sprite_c_step, g_wmap_effect35_sprite_c_timer, 7,
-                          &g_wmap_animation_bank_0[WMAP_EFFECT_BANK_SIZE], 0, 1, 0x81, 2, 240, wmap_effect35_sprite_c_draw)
+                          &g_wmap_animation_bank_0[WMAP_ANIMATION_BANK_SIZE], 0, 1, 0x81, 2, 240, wmap_effect35_sprite_c_draw)
 
     /**
      * @brief Sprite C: animate and draw until the step timer runs out.

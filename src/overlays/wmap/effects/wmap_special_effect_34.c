@@ -469,13 +469,13 @@ void wmap_special_effect_34_sequence_3_step_01(void)
     WmapSpriteActor* actor = &g_wmap_sprite_actors[5];
 
     g_wmap_actor_animations[5].data = g_wmap_animation_bank_1;
-    actor->scale_index = 0xF;
+    actor->scale_index = WMAP_SPRITE_SCALE_FULL;
     actor->sequence = 1;
     actor->previous_sequence = -1;
     actor->resource_index = 0;
     actor->shade_step = 0;
-    actor->target_shade = 0x80;
-    actor->shade = 0x80;
+    actor->target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
+    actor->shade = WMAP_SPRITE_SHADE_NEUTRAL;
     g_wmap_effect_sprite_position_b.point.x = 0;
     g_wmap_effect_sprite_position_b.point.y = 0;
     g_wmap_special_effect_34_sequence_3_timer = 0x64;

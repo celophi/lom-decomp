@@ -88,7 +88,7 @@ void wmap_land_effect_17_sequence_5_step_01(void)
         g_wmap_effect_actor_motions[i].velocity = 0;
         g_wmap_effect_actor_motions[i].z = 0;
         g_wmap_actor_animations[i + 20].data = g_wmap_animation_bank_0;
-        WMAP_ACTOR_BLOCK(20)[i].scale_index = 15;
+        WMAP_ACTOR_BLOCK(20)[i].scale_index = WMAP_SPRITE_SCALE_FULL;
         WMAP_ACTOR_BLOCK(20)[i].previous_sequence = -1;
         WMAP_ACTOR_BLOCK(20)[i].shade_step = 2;
         WMAP_ACTOR_BLOCK(20)[i].resource_index = 0;
@@ -119,7 +119,7 @@ void wmap_land_effect_17_sequence_6_step_01(void)
         g_wmap_actor_motions_at_50[i].velocity = 0;
         g_wmap_actor_motions_at_50[i].z = 0;
         g_wmap_actor_animations[i + 50].data = g_wmap_animation_bank_0;
-        WMAP_ACTOR_BLOCK(50)[i].scale_index = 15;
+        WMAP_ACTOR_BLOCK(50)[i].scale_index = WMAP_SPRITE_SCALE_FULL;
         WMAP_ACTOR_BLOCK(50)[i].previous_sequence = -1;
         WMAP_ACTOR_BLOCK(50)[i].resource_index = 0;
         WMAP_ACTOR_BLOCK(50)[i].sequence = 2;
@@ -148,7 +148,7 @@ void wmap_land_effect_17_sequence_7_step_01(void)
         actor = &g_wmap_sprite_actors[i];
         g_wmap_actor_animations[i].data = g_wmap_animation_bank_2;
         actor->resource_index = 0;
-        actor->scale_index = 15;
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;
         actor->sequence = 2;
         actor->previous_sequence = -1;
         actor->target_shade = 129;
@@ -202,7 +202,7 @@ void wmap_land_effect_17_sequence_8_step_01(void)
         motion->velocity = 0;
         motion->z = 0;
         resource->data = resource_data;
-        actor->scale_index = 15;
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;
         actor->previous_sequence = -1;
         actor->shade_step = 2;
         actor->shade = 127;
@@ -250,7 +250,7 @@ void wmap_land_effect_17_sequence_9_step_01(void)
         motion->velocity = 0;
         motion->z = 0;
         resource->data = resource_data;
-        actor->scale_index = 15;
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;
         actor->sequence = 2;
         actor->previous_sequence = -1;
         actor->shade_step = 4;
@@ -279,7 +279,7 @@ void wmap_land_effect_17_sequence_10_step_01(void)
         particles[i].vy = ((rand() << 6) >> 15) - 20;
         particles[i].vz = ((rand() << 6) >> 15) - 20;
         g_wmap_sprite_actors[i].resource_index = 0;
-        g_wmap_sprite_actors[i].scale_index = 15;
+        g_wmap_sprite_actors[i].scale_index = WMAP_SPRITE_SCALE_FULL;
         g_wmap_sprite_actors[i].sequence = (rand() * 3) >> 15;
         g_wmap_sprite_actors[i].previous_sequence = -1;
         g_wmap_sprite_actors[i].shade_step = 4;

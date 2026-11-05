@@ -14,6 +14,7 @@
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_travel_sequences.h"
 #include "../internal/wmap_view_effects.h"
+#include "common/saved_game.h"
 #include "main/cdrom.h"
 #include "sdk/gte_dmpsx_compat.h"
 
@@ -116,7 +117,7 @@ static inline void wmap_load_vehicle(void)
     g_wmap_land_label_updates_enabled = 0;
     g_wmap_saved_view = g_wmap_view;
     cdrom_queue_read(WMAP_VEHICLE_BANK_FILE, g_wmap_animation_bank_0);
-    cdrom_queue_read(WMAP_VEHICLE_BANK_FILE_2, g_wmap_animation_bank_0 + WMAP_VEHICLE_BANK_SIZE);
+    cdrom_queue_read(WMAP_VEHICLE_BANK_FILE_2, g_wmap_animation_bank_0 + WMAP_ANIMATION_BANK_SIZE);
     wmap_queue_effect_texture_0(WMAP_VEHICLE_TEXTURE_FILE);
     wmap_queue_effect_texture_1(WMAP_VEHICLE_PALETTE_FILE);
 }
@@ -131,8 +132,8 @@ static inline void wmap_place_vehicle(void)
     wmap_upload_tim(g_wmap_effect_texture_buffer_1);
     g_wmap_vehicle_animation.data = g_wmap_animation_bank_0;
     actor->previous_sequence = -1;
-    actor->target_shade = WMAP_VEHICLE_SHADE_NEUTRAL;
-    actor->shade = WMAP_VEHICLE_SHADE_NEUTRAL;
+    actor->target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
+    actor->shade = WMAP_SPRITE_SHADE_NEUTRAL;
     actor->resource_index = 0;
     actor->scale_index = 0;
     actor->sequence = 0;
@@ -165,7 +166,7 @@ static inline void wmap_climb_vehicle(void)
 
     if ((g_wmap_frame_count & 3) == 0)
     {
-        if (actor->scale_index < WMAP_VEHICLE_SCALE_MAX)
+        if (actor->scale_index < WMAP_SPRITE_SCALE_FULL)
         {
             actor->scale_index++;
         }
@@ -214,7 +215,7 @@ WmapSpriteActor* wmap_turn_vehicle(s32 advance)
             actor->previous_sequence = -1;
         }
 
-        g_wmap_vehicle_animation.data = &g_wmap_animation_bank_0[WMAP_VEHICLE_BANK_SIZE];
+        g_wmap_vehicle_animation.data = &g_wmap_animation_bank_0[WMAP_ANIMATION_BANK_SIZE];
         g_wmap_vehicle_bank_flipped = 1;
     }
     else
@@ -547,7 +548,7 @@ s32 wmap_fly_vehicle_first_leg(s32 initialize)
 void wmap_special_return_prepare(void)
 {
     wmap_load_vehicle();
-    wmap_find_land_cell(WMAP_SPECIAL_TRAVEL_LAND, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+    wmap_find_land_cell(FIELD_LAND_LUCEMIA, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_view_scroll_mode = WMAP_SCROLL_SCRIPTED;
     g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * WMAP_CELL_SPACING) - g_wmap_view.x;
     g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * WMAP_CELL_SPACING) - g_wmap_view.y;
@@ -681,7 +682,7 @@ void wmap_special_travel_turn(void)
 /** @brief Special travel step 11: move the party to the special land and fly the vehicle there. */
 void wmap_special_travel_fly_to_land(void)
 {
-    wmap_find_land_cell(WMAP_SPECIAL_TRAVEL_LAND, &g_wmap_vehicle_target_x, &g_wmap_vehicle_target_y);
+    wmap_find_land_cell(FIELD_LAND_LUCEMIA, &g_wmap_vehicle_target_x, &g_wmap_vehicle_target_y);
     wmap_set_traveler_position(0, g_wmap_vehicle_target_x, g_wmap_vehicle_target_y);
     g_wmap_vehicle_flying = 1;
     wmap_install_callback(wmap_start_vehicle_flight);

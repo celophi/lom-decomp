@@ -1,18 +1,19 @@
-#include "main/audio/game_audio.h"
 #include "common.h"
+
 #include "../internal/field_calls.h"
-#include "../internal/field_script.h"
 #include "../internal/field_records.h"
+#include "../internal/field_script.h"
+#include "main/audio/game_audio.h"
 
 /** @brief Runtime actor flag bits holding the trigger group. */
 #define FIELD_TRIGGER_GROUP_MASK 0xF
 /** @brief FieldActorTemplate::flags bits. */
-#define FIELD_TEMPLATE_UNLINKED 0x2   /**< The object state keeps no link to the template. */
-#define FIELD_TEMPLATE_HERO_LEVEL 0x4 /**< The level follows the hero's level instead of the land's. */
+#define FIELD_TEMPLATE_UNLINKED 0x2         /**< The object state keeps no link to the template. */
+#define FIELD_TEMPLATE_LAND_COUNT_LEVEL 0x4 /**< The level follows the placed land count instead of the land's distance. */
 
-s32 field_compute_monster_level(FieldActorTemplate *template);
+s32 field_compute_monster_level(FieldActorTemplate* template);
 /* Defined without a result; the value is the one it leaves in the return register. */
-FieldStatusState *field_find_object_state(s32 key);
+FieldStatusState* field_find_object_state(s32 key);
 
 /**
  * @brief Build the battle status records of the monsters in a trigger group.
@@ -23,7 +24,7 @@ s32 field_build_group_monster_records(s32 group)
 {
     s32 i;
     s32 count;
-    FieldStatusState *state;
+    FieldStatusState* state;
 
     count = 0;
 
@@ -54,15 +55,15 @@ s32 field_build_group_monster_records(s32 group)
  * @param record Status record to initialize.
  * @param state Object state of the monster.
  */
-void field_init_monster_record(s32 actor_id, FieldStatusRecord *record, FieldStatusState *state)
+void field_init_monster_record(s32 actor_id, FieldStatusRecord* record, FieldStatusState* state)
 {
     s32 flags;
     s32 level;
     u32 clamped;
     u32 work;
     u32 stat;
-    FieldActorTemplate *template;
-    FieldBattleContext *ctx;
+    FieldActorTemplate* template;
+    FieldBattleContext* ctx;
 
     record->meta.bytes.id = actor_id;
     record->unk0 = FIELD_RECORD_MONSTER_SIDE;
@@ -141,18 +142,19 @@ void field_init_monster_record(s32 actor_id, FieldStatusRecord *record, FieldSta
 
         for (; (u32)level >= work; work++)
         {
-            state->maximum = field_add_stat_increase(state->maximum, (u32)((template->stats[4].base * 4) + (template->stats[4].growth * work)) >> 2, FIELD_INCREASE_DAMPED);
+            state->maximum =
+                field_add_stat_increase(state->maximum, (u32)((template->stats[4].base * 4) + (template->stats[4].growth * work)) >> 2, FIELD_INCREASE_DAMPED);
         }
     }
 
     switch (field_get_script_var(0, FIELD_VAR_DIFFICULTY))
     {
-    case FIELD_DIFFICULTY_HARD:
-        state->maximum *= 2;
-        break;
-    case FIELD_DIFFICULTY_HARDEST:
-        state->maximum *= 3;
-        break;
+        case FIELD_DIFFICULTY_HARD:
+            state->maximum *= 2;
+            break;
+        case FIELD_DIFFICULTY_HARDEST:
+            state->maximum *= 3;
+            break;
     }
 
     if ((field_get_script_var(0, FIELD_VAR_DEBUG_ONE_HP_MONSTERS) != 0) || (state->maximum == 0))
@@ -180,7 +182,7 @@ void field_init_monster_record(s32 actor_id, FieldStatusRecord *record, FieldSta
  * @param template Template with the raise and lower element masks.
  * @return Level from 1 to FIELD_LEVEL_MAX.
  */
-s32 field_compute_monster_level(FieldActorTemplate *template)
+s32 field_compute_monster_level(FieldActorTemplate* template)
 {
     u32 add_mask;
     u32 sub_mask;
@@ -226,7 +228,7 @@ s32 field_compute_monster_level(FieldActorTemplate *template)
 
     value = clamped;
 
-    scaled = (u32)(field_compute_base_monster_level(template->flags & FIELD_TEMPLATE_HERO_LEVEL) * value) >> 3;
+    scaled = (u32)(field_compute_base_monster_level(template->flags & FIELD_TEMPLATE_LAND_COUNT_LEVEL) * value) >> 3;
 
     if (scaled >= 2)
     {

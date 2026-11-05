@@ -15,6 +15,7 @@
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_travel_sequences.h"
 #include "../internal/wmap_view_effects.h"
+#include "common/saved_game.h"
 #include "main/audio/akao.h"
 #include "main/audio/akao_cmd.h"
 #include "main/cdrom.h"
@@ -22,8 +23,6 @@
 
 #define WMAP_TRAVEL_STEP 4
 #define WMAP_TRAVEL_ANIMATION_BYTES 0x400
-#define WMAP_TRAVEL_SCALE_INDEX 15
-#define WMAP_TRAVEL_SHADE 128
 #define WMAP_TRAVEL_SOUND 21
 #define WMAP_TRAVEL_TEXTURE_ROW 0x100
 #define WMAP_TRAVEL_OT_FALLBACK 31
@@ -314,7 +313,7 @@ void wmap_update_party_travel(void)
 
             if (at_destination == 0)
             {
-                if (g_wmap_cells[selected_x][selected_y].land_id == WMAP_SPECIAL_TRAVEL_LAND)
+                if (g_wmap_cells[selected_x][selected_y].land_id == FIELD_LAND_LUCEMIA)
                 {
                     wmap_start_sequence(wmap_run_special_travel);
                 }
@@ -377,17 +376,17 @@ void wmap_init_party_travel(void)
         traveler->position_x = 0;
         traveler->moving = 0;
         sprite = &g_wmap_sprite_actors[i];
-        sprite->scale_index = WMAP_TRAVEL_SCALE_INDEX;
+        sprite->scale_index = WMAP_SPRITE_SCALE_FULL;
         sprite->previous_sequence = -1;
-        sprite->target_shade = WMAP_TRAVEL_SHADE;
-        sprite->shade = WMAP_TRAVEL_SHADE;
+        sprite->target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
+        sprite->shade = WMAP_SPRITE_SHADE_NEUTRAL;
         g_wmap_actor_animations[i].data = resource + i * WMAP_TRAVEL_ANIMATION_BYTES;
     }
 
     g_wmap_entry_day = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
     wmap_set_traveler_position(0, g_wmap_travelers[0].cell_x, g_wmap_travelers[0].cell_y);
 
-    if (g_wmap_cells[g_wmap_travelers[0].cell_x][g_wmap_travelers[0].cell_y].land_id == WMAP_SPECIAL_TRAVEL_LAND)
+    if (g_wmap_cells[g_wmap_travelers[0].cell_x][g_wmap_travelers[0].cell_y].land_id == FIELD_LAND_LUCEMIA)
     {
         g_wmap_input_locked = 1;
         g_wmap_buttons_held = 0;
@@ -412,7 +411,7 @@ void wmap_init_party_travel(void)
     {
         cdrom_queue_read(WMAP_TRAVEL_SECOND_ANIMATION_RESOURCE, g_wmap_travel_second_animation_buffer);
         g_wmap_sprite_actors[1].resource_index = 1;
-        wmap_find_land_cell(27, &first_x, &first_y);
+        wmap_find_land_cell(FIELD_LAND_SS_BUCCANEER, &first_x, &first_y);
         wmap_set_traveler_position(1, first_x, first_y);
         cdrom_wait_queue_empty();
     }
@@ -421,7 +420,7 @@ void wmap_init_party_travel(void)
     {
         cdrom_queue_read(WMAP_TRAVEL_THIRD_ANIMATION_RESOURCE, g_wmap_travel_third_animation_buffer);
         g_wmap_sprite_actors[2].resource_index = 2;
-        wmap_find_land_cell(3, &second_x, &second_y);
+        wmap_find_land_cell(FIELD_LAND_POLPOTA_HARBOR, &second_x, &second_y);
         wmap_set_traveler_position(2, second_x, second_y);
         cdrom_wait_queue_empty();
     }

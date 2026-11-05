@@ -229,7 +229,7 @@ void wmap_update_particle_system(WmapSpriteActor* actors, WmapAnimationSlot* ani
             {
                 WmapSpriteActor* spawn_actor = &actors[i];
                 spawn_actor->resource_index = 0;
-                spawn_actor->scale_index = 0xF;
+                spawn_actor->scale_index = WMAP_SPRITE_SCALE_FULL;
                 sequence = (u16)config->sequence;
                 spawn_actor->previous_sequence = -1;
                 spawn_actor->target_shade = (u16)peak_shade;
@@ -352,7 +352,7 @@ void wmap_update_radial_burst(WmapSpriteActor* actors, WmapAnimationSlot* animat
             {
                 if (g_wmap_particle_intensity >= active)
                 {
-                    spawn_actor->scale_index = 0xF;
+                    spawn_actor->scale_index = WMAP_SPRITE_SCALE_FULL;
                     spawn_actor->resource_index = 0;
                     spawn_actor->sequence = 1;
                     spawn_actor->previous_sequence = -1;
@@ -492,7 +492,7 @@ void wmap_update_flat_radial_burst(s32 first, s32 end, s32 frame, s32 depth, s32
             }
 
             spawn_actor->resource_index = 0;
-            spawn_actor->scale_index = 0xF;
+            spawn_actor->scale_index = WMAP_SPRITE_SCALE_FULL;
             spawn_actor->sequence = sequence;
             spawn_actor->previous_sequence = -1;
             spawn_motion->state = 1;
@@ -1026,7 +1026,7 @@ void wmap_update_box_particles(WmapBoxParticleConfig* config)
             spawn_motion->y = config->y_min + ((rand() * config->y_range) >> 15);
             spawn_motion->z = config->z_min + ((rand() * config->z_range) >> 15);
             spawn_actor->resource_index = 0;
-            spawn_actor->scale_index = 0xF;
+            spawn_actor->scale_index = WMAP_SPRITE_SCALE_FULL;
             spawn_actor->sequence = config->sequence;
             spawn_actor->previous_sequence = -1;
             spawn_actor->target_shade = config->target_shade;

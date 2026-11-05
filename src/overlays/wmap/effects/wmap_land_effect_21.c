@@ -183,7 +183,7 @@ void wmap_land_effect_21_sequence_8_step_01(void)
         g_wmap_effect_actor_motions[i].velocity = 0;
         g_wmap_effect_actor_motions[i].z = 0;
         g_wmap_actor_animations[i + 20].data = g_wmap_animation_bank_2;
-        actors[i].scale_index = 15;
+        actors[i].scale_index = WMAP_SPRITE_SCALE_FULL;
         actors[i].previous_sequence = -1;
         actors[i].shade_step = 2;
         actors[i].resource_index = 0;
@@ -382,7 +382,7 @@ void wmap_land_effect_21_sequence_5_step_01(void)
     g_wmap_particle_velocity_min = 0;
     g_wmap_particle_velocity_range = 2;
     g_wmap_actor_animations[60].data = g_wmap_animation_bank_2;
-    actor->scale_index = 0xF;
+    actor->scale_index = WMAP_SPRITE_SCALE_FULL;
     actor->previous_sequence = -1;
     actor->shade_step = 8;
     actor->resource_index = 0;

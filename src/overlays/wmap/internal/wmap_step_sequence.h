@@ -162,9 +162,6 @@
         }                                                                                                                                                      \
     }
 
-/** Sprite scale-table entry used when a sequence starts an actor. */
-#define WMAP_STEP_ACTOR_SCALE_INDEX 15
-
 /**
  * @brief Define a step that starts a sprite animation and runs its first update.
  * @param name Step function name.
@@ -186,7 +183,7 @@
         WmapSpriteActor* actor = &g_wmap_sprite_actors[(slot)];                                                                                                \
                                                                                                                                                                \
         g_wmap_actor_animations[(slot)].data = (animation);                                                                                                    \
-        actor->scale_index = WMAP_STEP_ACTOR_SCALE_INDEX;                                                                                                      \
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;                                                                                                           \
         if ((sequence_id) != 0)                                                                                                                                \
         {                                                                                                                                                      \
             actor->sequence = (sequence_id);                                                                                                                   \
@@ -273,7 +270,7 @@
         g_wmap_actor_animations[(slot)].data = (animation_data);                                                                                               \
         actor = &g_wmap_sprite_actors[(slot)];                                                                                                                 \
         actor->resource_index = 0;                                                                                                                             \
-        actor->scale_index = WMAP_STEP_ACTOR_SCALE_INDEX;                                                                                                      \
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;                                                                                                           \
         actor->sequence = (sequence_id);                                                                                                                       \
         actor->previous_sequence = -1;                                                                                                                         \
     }
@@ -512,6 +509,33 @@
         if (--timer == 0)                                                                                                                                      \
         {                                                                                                                                                      \
             step++;                                                                                                                                            \
+        }                                                                                                                                                      \
+    }
+
+/**
+ * @brief Lower the shade of new particles and, every fourth frame, the particle intensity, both to no less than zero.
+ * @param shade_step Amount taken from g_wmap_particle_shade each frame.
+ */
+#define WMAP_FADE_OUT_PARTICLE_BURST(shade_step)                                                                                                               \
+    {                                                                                                                                                          \
+        s32 value;                                                                                                                                             \
+                                                                                                                                                               \
+        value = g_wmap_particle_shade - (shade_step);                                                                                                          \
+        g_wmap_particle_shade = value;                                                                                                                         \
+                                                                                                                                                               \
+        if (value < 0)                                                                                                                                         \
+        {                                                                                                                                                      \
+            g_wmap_particle_shade = 0;                                                                                                                         \
+        }                                                                                                                                                      \
+                                                                                                                                                               \
+        if (!(g_wmap_frame_count & 3))                                                                                                                         \
+        {                                                                                                                                                      \
+            g_wmap_particle_intensity--;                                                                                                                       \
+        }                                                                                                                                                      \
+                                                                                                                                                               \
+        if (g_wmap_particle_intensity < 0)                                                                                                                     \
+        {                                                                                                                                                      \
+            g_wmap_particle_intensity = 0;                                                                                                                     \
         }                                                                                                                                                      \
     }
 

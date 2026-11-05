@@ -13,6 +13,7 @@
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
+#include "common/saved_game.h"
 #include "main/cdrom.h"
 
 extern u32 g_wmap_land_effect_33_sequence_6_step;
@@ -264,7 +265,7 @@ WMAP_STEP_WAIT(wmap_land_effect_33_timeline_step_18, g_wmap_land_effect_33_timel
 /** @brief Put land 0x21 in the focused cell and fade out all sound effects. */
 void wmap_land_effect_33_timeline_step_19(void)
 {
-    g_wmap_cells[g_wmap_focus_cell_x][g_wmap_focus_cell_y].land_id = WMAP_LAND_FULL_SIZE | 0x21;
+    g_wmap_cells[g_wmap_focus_cell_x][g_wmap_focus_cell_y].land_id = WMAP_LAND_FULL_SIZE | FIELD_LAND_LUCEMIA_2;
     akao_fade_all_sfx_volume(0x3C, 0);
     g_wmap_land_effect_33_timeline_timer = 0x5A;
     g_wmap_land_effect_33_timeline_step++;
@@ -313,12 +314,12 @@ void wmap_land_effect_33_sequence_2_step_01(void)
     WmapSpriteActor* actor = &g_wmap_sprite_actors[6];
 
     g_wmap_actor_animations[6].data = g_wmap_animation_bank_3;
-    actor->scale_index = 0xF;
+    actor->scale_index = WMAP_SPRITE_SCALE_FULL;
     actor->previous_sequence = -1;
     actor->resource_index = 0;
     actor->sequence = 0;
     actor->shade_step = 0x80;
-    actor->target_shade = 0x80;
+    actor->target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
     actor->shade = 0;
     g_wmap_land_effect_33_sequence_2_timer = 0x3E;
     g_wmap_land_effect_33_sequence_2_step++;

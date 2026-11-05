@@ -16,8 +16,9 @@
  */
 
 #include "common.h"
-#include "field_menu_vars.h"
+
 #include "common/saved_game.h"
+#include "field_menu_vars.h"
 #include "field_state_ops.h"
 
 /** @brief g_saved_game.layout, bound by field_bind_runtime_pointers. */
@@ -25,7 +26,8 @@ extern SavedGameLayout* g_field_game_state;
 
 #define FIELD_ACTOR_RECORD_COUNT 16
 #define FIELD_EVENT_RECORD_COUNT 2
-/** @brief Actor ids from this one up name the event records (FieldRuntimeContext::events): event record n is this plus n; record 0 runs the field's own event scripts. */
+/** @brief Actor ids from this one up name the event records (FieldRuntimeContext::events): event record n is this plus n; record 0 runs the field's own event
+ * scripts. */
 #define FIELD_EVENT_ACTOR_ID_BASE 0x80
 #define FIELD_ACTOR_SCRIPT_COUNT 16
 #define FIELD_SCRIPT_FRAME_COUNT 8
@@ -701,14 +703,14 @@ extern FieldBattleContext* g_field_battle;
 #define FIELD_BATTLE_FINISHED 0x80000000
 
 /** @brief FIELD diagnostic codes passed to record_game_diagnostic. */
-#define DIAG_SCRIPT_FRAME_OVERFLOW 2 /**< A script pushed past its last frame. */
-#define DIAG_BAD_MONSTER_OBJECT 0x64 /**< A monster group member has no object state. */
-#define DIAG_BAD_COMMAND 0x66        /**< Unknown command in a character's command slot. */
-#define DIAG_NO_MONSTER_TEMPLATE 0x67 /**< No monster template has the requested id. */
-#define DIAG_BAD_MONSTER_ACTION 0x69 /**< Monster action id past the end of its template's list. */
-#define DIAG_BAD_GUEST 0x6D          /**< No guest template for the requested guest. */
-#define DIAG_BAD_COMPANION 0x6E      /**< The requested stored companion does not exist. */
-#define DIAG_BAD_LAND 0x73           /**< Land index past the land table. */
+#define DIAG_SCRIPT_FRAME_OVERFLOW 2         /**< A script pushed past its last frame. */
+#define DIAG_BAD_MONSTER_OBJECT 0x64         /**< A monster group member has no object state. */
+#define DIAG_BAD_COMMAND 0x66                /**< Unknown command in a character's command slot. */
+#define DIAG_NO_MONSTER_TEMPLATE 0x67        /**< No monster template has the requested id. */
+#define DIAG_BAD_MONSTER_ACTION 0x69         /**< Monster action id past the end of its template's list. */
+#define DIAG_BAD_GUEST 0x6D                  /**< No guest template for the requested guest. */
+#define DIAG_BAD_COMPANION 0x6E              /**< The requested stored companion does not exist. */
+#define DIAG_BAD_LAND 0x73                   /**< Land index past the land table. */
 #define DIAG_MISSING_EFFECT_THRESHOLDS 0x3E7 /**< The effect threshold resource (0x10) is not loaded. */
 
 /** @brief Script variables holding the resource variant of the guest and companion actors. */
@@ -754,9 +756,9 @@ extern FieldBattleContext* g_field_battle;
 #define FIELD_DIFFICULTY_NORMAL 0
 #define FIELD_DIFFICULTY_HARD 1
 #define FIELD_DIFFICULTY_HARDEST 2
-/** @brief Script variable: bit 7 bases every monster level on the hero's level. */
+/** @brief Script variable: bit 7 bases every monster level on the placed land count. */
 #define FIELD_VAR_LEVEL_FLAGS 0x52F0
-#define FIELD_LEVEL_FLAG_HERO 0x80
+#define FIELD_LEVEL_FLAG_LAND_COUNT 0x80
 /** @brief Script variables: lowest and highest monster level. */
 #define FIELD_VAR_MONSTER_LEVEL_MIN 0x52E0
 #define FIELD_VAR_MONSTER_LEVEL_MAX 0x52E8
@@ -784,7 +786,6 @@ extern FieldBattleContext* g_field_battle;
 #define FIELD_REGION_APPLIED_SHIFT 24
 #define FIELD_REGION_APPLIED_BITS 7
 #define FIELD_REGION_APPLIED_MASK (FIELD_REGION_APPLIED_BITS << FIELD_REGION_APPLIED_SHIFT)
-
 
 /** @brief Item argument of field_spawn_item_record that releases the item actor's record instead of spawning it. */
 #define FIELD_ITEM_RELEASE 0xFF

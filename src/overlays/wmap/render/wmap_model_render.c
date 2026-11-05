@@ -5,6 +5,7 @@
 #include "../internal/wmap_frame_render.h"
 #include "../internal/wmap_model_render.h"
 #include "../internal/wmap_resource_support.h"
+#include "common/gpu_packet.h"
 #include "sdk/gte_dmpsx_compat.h"
 
 #define WMAP_MODEL_COLOR_SHIFT 7
@@ -297,10 +298,10 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                 ft4->clut = clut;
                 gte_stsxy(&screen_xy3);
                 OFFSET_SCREEN_XY(screen_xy3, x_offset, y_offset);
-                *(s32*)&ft4->x0 = screen_xy0.packed;
-                *(s32*)&ft4->x1 = screen_xy1.packed;
-                *(s32*)&ft4->x2 = screen_xy2.packed;
-                *(s32*)&ft4->x3 = screen_xy3.packed;
+                SET_XY0_PACKED(ft4, screen_xy0.packed);
+                SET_XY1_PACKED(ft4, screen_xy1.packed);
+                SET_XY2_PACKED(ft4, screen_xy2.packed);
+                SET_XY3_PACKED(ft4, screen_xy3.packed);
                 colors[0] = attributes->colors[0];
                 SET_MODEL_COLOR(ft4->r0, colors[0], (color_scale & WMAP_MODEL_COLOR_MASK));
                 setlen(ft4, 9);
@@ -385,9 +386,9 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                     }
                 }
 
-                *(s32*)&ft3->x0 = screen_xy0.packed;
-                *(s32*)&ft3->x1 = screen_xy1.packed;
-                *(s32*)&ft3->x2 = screen_xy2.packed;
+                SET_XY0_PACKED(ft3, screen_xy0.packed);
+                SET_XY1_PACKED(ft3, screen_xy1.packed);
+                SET_XY2_PACKED(ft3, screen_xy2.packed);
                 colors[0] = attributes->colors[0];
                 SET_MODEL_COLOR(ft3->r0, colors[0], (color_scale & WMAP_MODEL_COLOR_MASK));
                 setlen(ft3, 7);
@@ -467,12 +468,12 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                 OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
                 gte_ldv0(&projection_vertices[3]);
                 gte_rtps();
-                *(s32*)&g4->x0 = screen_xy0.packed;
-                *(s32*)&g4->x1 = screen_xy1.packed;
+                SET_XY0_PACKED(g4, screen_xy0.packed);
+                SET_XY1_PACKED(g4, screen_xy1.packed);
                 gte_stsxy(&screen_xy3);
                 OFFSET_SCREEN_XY(screen_xy3, x_offset, y_offset);
-                *(s32*)&g4->x2 = screen_xy2.packed;
-                *(s32*)&g4->x3 = screen_xy3.packed;
+                SET_XY2_PACKED(g4, screen_xy2.packed);
+                SET_XY3_PACKED(g4, screen_xy3.packed);
                 setlen(g4, 8);
                 setcode(g4, WMAP_MODEL_G4);
 
@@ -541,9 +542,9 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                 OFFSET_SCREEN_XY(screen_xy0, x_offset, y_offset);
                 OFFSET_SCREEN_XY(screen_xy1, x_offset, y_offset);
                 OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
-                *(s32*)&g3->x0 = screen_xy0.packed;
-                *(s32*)&g3->x1 = screen_xy1.packed;
-                *(s32*)&g3->x2 = screen_xy2.packed;
+                SET_XY0_PACKED(g3, screen_xy0.packed);
+                SET_XY1_PACKED(g3, screen_xy1.packed);
+                SET_XY2_PACKED(g3, screen_xy2.packed);
                 colors[4] = attributes->colors[1];
                 SET_MODEL_COLOR(g3->r1, colors[4], color_scale);
                 colors[8] = attributes->colors[2];
@@ -603,11 +604,11 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
 
                 gte_ldv0(&projection_vertices[3]);
                 gte_rtps();
-                *(s32*)&f4->x0 = screen_xy0.packed;
-                *(s32*)&f4->x1 = screen_xy1.packed;
+                SET_XY0_PACKED(f4, screen_xy0.packed);
+                SET_XY1_PACKED(f4, screen_xy1.packed);
                 gte_stsxy(&screen_xy3);
-                *(s32*)&f4->x2 = screen_xy2.packed;
-                *(s32*)&f4->x3 = screen_xy3.packed;
+                SET_XY2_PACKED(f4, screen_xy2.packed);
+                SET_XY3_PACKED(f4, screen_xy3.packed);
                 colors[0] = attributes->colors[0];
                 SET_MODEL_COLOR(f4->r0, colors[0], color_scale);
                 setlen(f4, 5);
@@ -667,9 +668,9 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                 OFFSET_SCREEN_XY(screen_xy0, x_offset, y_offset);
                 OFFSET_SCREEN_XY(screen_xy1, x_offset, y_offset);
                 OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
-                *(s32*)&f3->x0 = screen_xy0.packed;
-                *(s32*)&f3->x1 = screen_xy1.packed;
-                *(s32*)&f3->x2 = screen_xy2.packed;
+                SET_XY0_PACKED(f3, screen_xy0.packed);
+                SET_XY1_PACKED(f3, screen_xy1.packed);
+                SET_XY2_PACKED(f3, screen_xy2.packed);
                 setlen(f3, 4);
                 setcode(f3, WMAP_MODEL_F3);
 
@@ -742,9 +743,9 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                 OFFSET_SCREEN_XY(screen_xy0, x_offset, y_offset);
                 OFFSET_SCREEN_XY(screen_xy1, x_offset, y_offset);
                 OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
-                *(s32*)&gt3->x0 = screen_xy0.packed;
-                *(s32*)&gt3->x1 = screen_xy1.packed;
-                *(s32*)&gt3->x2 = screen_xy2.packed;
+                SET_XY0_PACKED(gt3, screen_xy0.packed);
+                SET_XY1_PACKED(gt3, screen_xy1.packed);
+                SET_XY2_PACKED(gt3, screen_xy2.packed);
                 colors[0] = attributes->colors[0];
                 colors[2] = colors[0];
                 SET_MODEL_COLOR(gt3->r0, colors[2], (color_scale & WMAP_MODEL_COLOR_MASK));
@@ -843,10 +844,10 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                 OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
                 gte_stsxy(&screen_xy3);
                 OFFSET_SCREEN_XY(screen_xy3, x_offset, y_offset);
-                *(s32*)&gt4->x0 = screen_xy0.packed;
-                *(s32*)&gt4->x1 = screen_xy1.packed;
-                *(s32*)&gt4->x2 = screen_xy2.packed;
-                *(s32*)&gt4->x3 = screen_xy3.packed;
+                SET_XY0_PACKED(gt4, screen_xy0.packed);
+                SET_XY1_PACKED(gt4, screen_xy1.packed);
+                SET_XY2_PACKED(gt4, screen_xy2.packed);
+                SET_XY3_PACKED(gt4, screen_xy3.packed);
                 colors[0] = attributes->colors[0];
                 colors[2] = colors[0];
                 SET_MODEL_COLOR(gt4->r0, colors[2], (color_scale & WMAP_MODEL_COLOR_MASK));
@@ -906,9 +907,9 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
         poly = g_wmap_current_frame->packet_cursor;
         setlen(poly, 7);
         setcode(poly, WMAP_MODEL_FT3);
-        *(s32*)&poly->x2 = WMAP_MODEL_TPAGE_XY;
-        *(s32*)&poly->x1 = WMAP_MODEL_TPAGE_XY;
-        *(s32*)&poly->x0 = WMAP_MODEL_TPAGE_XY;
+        SET_XY2_PACKED(poly, WMAP_MODEL_TPAGE_XY);
+        SET_XY1_PACKED(poly, WMAP_MODEL_TPAGE_XY);
+        SET_XY0_PACKED(poly, WMAP_MODEL_TPAGE_XY);
         final_tpage = ((blend_mode & WMAP_MODEL_BLEND_MASK) << WMAP_MODEL_BLEND_SHIFT) | WMAP_MODEL_BLEND_TPAGE;
         poly->tpage = final_tpage;
         addPrim(&g_wmap_current_frame->ordering_table[ot_index], poly);
@@ -922,9 +923,9 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
         poly = g_wmap_current_frame->packet_cursor;
         setlen(poly, 7);
         setcode(poly, WMAP_MODEL_FT3);
-        *(s32*)&poly->x2 = WMAP_MODEL_TPAGE_XY;
-        *(s32*)&poly->x1 = WMAP_MODEL_TPAGE_XY;
-        *(s32*)&poly->x0 = WMAP_MODEL_TPAGE_XY;
+        SET_XY2_PACKED(poly, WMAP_MODEL_TPAGE_XY);
+        SET_XY1_PACKED(poly, WMAP_MODEL_TPAGE_XY);
+        SET_XY0_PACKED(poly, WMAP_MODEL_TPAGE_XY);
         poly->tpage = final_tpage;
         addPrim(&g_wmap_current_frame->ordering_table[ot_index + WMAP_MODEL_BACK_OT_OFFSET], poly);
 

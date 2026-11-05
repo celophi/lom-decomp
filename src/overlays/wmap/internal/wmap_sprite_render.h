@@ -26,6 +26,11 @@ typedef struct
     u8 unknown_28[4];
 } WmapSpriteActor;
 
+/** @brief Scale-table entry that draws a sprite at full size. */
+#define WMAP_SPRITE_SCALE_FULL 15
+/** @brief Sprite shade that draws the texture unmodified; higher values fade it back down. */
+#define WMAP_SPRITE_SHADE_NEUTRAL 0x80
+
 /** @brief An animation resource starts with this many sequence offsets, followed by the frame offsets. */
 #define WMAP_ANIMATION_SEQUENCES 32
 /** @brief Animation duration that never counts down. */
@@ -113,11 +118,14 @@ static inline void wmap_advance_actor_animation(WmapSpriteActor* actor, u8* reso
     }
 }
 
-/** @brief Sprite actor pool (256 actors); actor i animates from g_wmap_actor_animations[i]. */
-extern WmapSpriteActor g_wmap_sprite_actors[];
+/** @brief Number of sprite actors, animation slots and motion slots. */
+#define WMAP_ACTOR_COUNT 256
+
+/** @brief Sprite actor pool; actor i animates from g_wmap_actor_animations[i]. */
+extern WmapSpriteActor g_wmap_sprite_actors[WMAP_ACTOR_COUNT];
 
 /** @brief Animation slot of each sprite actor, parallel to g_wmap_sprite_actors. */
-extern WmapAnimationSlot g_wmap_actor_animations[];
+extern WmapAnimationSlot g_wmap_actor_animations[WMAP_ACTOR_COUNT];
 
 /**
  * @brief The run of sprite actors an effect uses, starting at actor @p first; index it with [i].

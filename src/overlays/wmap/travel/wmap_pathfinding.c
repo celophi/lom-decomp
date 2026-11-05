@@ -69,7 +69,7 @@ void wmap_unlock_land_encyclopedia_entries(void)
 
     for (i = 0; i < FIELD_ENCYCLOPEDIA_LAND_COUNT; i++)
     {
-        if (FIELD_LAND_GET_FLAG_02(g_saved_lands[i].record.flags))
+        if (FIELD_LAND_GET_PLACED(g_saved_lands[i].record.flags))
         {
             SAVED_BIT_SET(g_saved_encyclopedia_bits, i + FIELD_ENCYCLOPEDIA_LAND_BIT);
         }
@@ -82,20 +82,20 @@ void wmap_unlock_land_encyclopedia_entries(void)
 
     for (i = 0; i < FIELD_ENCYCLOPEDIA_LAND_COUNT; i++)
     {
-        if (g_saved_lands[i].record.flags & FIELD_LAND_PLACED)
+        if (g_saved_lands[i].record.flags & FIELD_LAND_ARTIFACT_OBTAINED)
         {
             SAVED_BIT_SET(g_saved_encyclopedia_bits, i + FIELD_ENCYCLOPEDIA_ARTIFACT_BIT);
         }
 
-        if (FIELD_LAND_GET_FLAG_02(g_saved_lands[i].record.flags))
+        if (FIELD_LAND_GET_PLACED(g_saved_lands[i].record.flags))
         {
-            SAVED_BIT_SET(g_saved_encyclopedia_bits, i + FIELD_ENCYCLOPEDIA_ARTIFACT_FLAG_02_BIT);
+            SAVED_BIT_SET(g_saved_encyclopedia_bits, i + FIELD_ENCYCLOPEDIA_ARTIFACT_PLACED_BIT);
         }
     }
 
     if (g_saved_lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_FLAG_04)
     {
-        SAVED_BIT_SET(g_saved_encyclopedia_bits, FIELD_ENCYCLOPEDIA_ARTIFACT_FLAG_02_BIT + FIELD_LAND_LUCEMIA);
+        SAVED_BIT_SET(g_saved_encyclopedia_bits, FIELD_ENCYCLOPEDIA_ARTIFACT_PLACED_BIT + FIELD_LAND_LUCEMIA);
     }
 }
 
@@ -142,13 +142,14 @@ void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
                     column = FIELD_LAND_WORD_X(g_saved_lands[FIELD_LAND_FLAMES].word);
                     row = FIELD_LAND_WORD_Z(g_saved_lands[FIELD_LAND_FLAMES].word);
                     neighbor = wmap_get_land_at_cell(column - 1, row);
-                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.placed = (u8)(g_saved_lands[FIELD_LAND_FLAMES].record.flags & FIELD_LAND_PLACED);
-                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.flag_02 = (u8)FIELD_LAND_GET_FLAG_02(g_saved_lands[FIELD_LAND_FLAMES].word);
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.artifact_obtained =
+                        (u8)(g_saved_lands[FIELD_LAND_FLAMES].record.flags & FIELD_LAND_ARTIFACT_OBTAINED);
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.placed = (u8)FIELD_LAND_GET_PLACED(g_saved_lands[FIELD_LAND_FLAMES].word);
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.flag_04 = 1;
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.x = FIELD_LAND_WORD_X(g_saved_lands[FIELD_LAND_FLAMES].word);
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.z = FIELD_LAND_WORD_Z(g_saved_lands[FIELD_LAND_FLAMES].word);
-                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.unk2 = g_saved_lands[FIELD_LAND_FLAMES].record.unk2;
-                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.count = g_saved_lands[FIELD_LAND_FLAMES].record.count;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.placement_order = g_saved_lands[FIELD_LAND_FLAMES].record.placement_order;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.artifact_order = g_saved_lands[FIELD_LAND_FLAMES].record.artifact_order;
                     g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[FIELD_SPIRIT_WISP] = g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_WISP];
                     g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[FIELD_SPIRIT_SHADE] = g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_SHADE];
                     g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[FIELD_SPIRIT_DRYAD] = g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_DRYAD];
@@ -157,13 +158,13 @@ void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
                     g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[FIELD_SPIRIT_JINN] = g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_JINN];
                     g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[FIELD_SPIRIT_UNDINE] =
                         g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_UNDINE];
+                    g_saved_lands[FIELD_LAND_FLAMES].bits.artifact_obtained = 0;
                     g_saved_lands[FIELD_LAND_FLAMES].bits.placed = 0;
-                    g_saved_lands[FIELD_LAND_FLAMES].bits.flag_02 = 0;
                     g_saved_lands[FIELD_LAND_FLAMES].bits.flag_04 = 0;
                     g_saved_lands[FIELD_LAND_FLAMES].bits.x = FIELD_LAND_CELL_NONE;
                     g_saved_lands[FIELD_LAND_FLAMES].bits.z = FIELD_LAND_CELL_NONE;
-                    g_saved_lands[FIELD_LAND_FLAMES].record.unk2 = 0;
-                    g_saved_lands[FIELD_LAND_FLAMES].record.count = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.placement_order = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.artifact_order = 0;
                     g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_WISP] = 0;
                     g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_SHADE] = 0;
                     g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_DRYAD] = 0;
@@ -176,13 +177,14 @@ void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
 
                 if (flag == WMAP_EVENT_FLAG_UNDERWORLD_TO_FLAMES)
                 {
-                    g_saved_lands[FIELD_LAND_FLAMES].bits.placed = (u8)(g_saved_lands[FIELD_LAND_UNDERWORLD].record.flags & FIELD_LAND_PLACED);
-                    g_saved_lands[FIELD_LAND_FLAMES].bits.flag_02 = (u8)FIELD_LAND_GET_FLAG_02(g_saved_lands[FIELD_LAND_UNDERWORLD].word);
+                    g_saved_lands[FIELD_LAND_FLAMES].bits.artifact_obtained =
+                        (u8)(g_saved_lands[FIELD_LAND_UNDERWORLD].record.flags & FIELD_LAND_ARTIFACT_OBTAINED);
+                    g_saved_lands[FIELD_LAND_FLAMES].bits.placed = (u8)FIELD_LAND_GET_PLACED(g_saved_lands[FIELD_LAND_UNDERWORLD].word);
                     g_saved_lands[FIELD_LAND_FLAMES].bits.flag_04 = 0;
                     g_saved_lands[FIELD_LAND_FLAMES].bits.x = FIELD_LAND_WORD_X(g_saved_lands[FIELD_LAND_UNDERWORLD].word);
                     g_saved_lands[FIELD_LAND_FLAMES].bits.z = FIELD_LAND_WORD_Z(g_saved_lands[FIELD_LAND_UNDERWORLD].word);
-                    g_saved_lands[FIELD_LAND_FLAMES].record.unk2 = g_saved_lands[FIELD_LAND_UNDERWORLD].record.unk2;
-                    g_saved_lands[FIELD_LAND_FLAMES].record.count = g_saved_lands[FIELD_LAND_UNDERWORLD].record.count;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.placement_order = g_saved_lands[FIELD_LAND_UNDERWORLD].record.placement_order;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.artifact_order = g_saved_lands[FIELD_LAND_UNDERWORLD].record.artifact_order;
                     g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_WISP] = g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[FIELD_SPIRIT_WISP];
                     g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_SHADE] = g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[FIELD_SPIRIT_SHADE];
                     g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_DRYAD] = g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[FIELD_SPIRIT_DRYAD];
@@ -245,13 +247,13 @@ void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
                         }
                     }
 
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.artifact_obtained = 0;
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.placed = 0;
-                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.flag_02 = 0;
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.flag_04 = 0;
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.x = FIELD_LAND_CELL_NONE;
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.z = FIELD_LAND_CELL_NONE;
-                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.unk2 = 0;
-                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.count = 0;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.placement_order = 0;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.artifact_order = 0;
                 }
             }
         }

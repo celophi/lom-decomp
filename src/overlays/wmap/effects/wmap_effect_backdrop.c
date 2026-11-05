@@ -6,6 +6,7 @@
 #include "../internal/wmap_resource_support.h"
 #include "../internal/wmap_sequence_runtime.h"
 #include "../internal/wmap_sprite_render.h"
+#include "common/gpu_packet.h"
 
 #define WMAP_MESH_TRIANGLE_COUNT 176
 #define WMAP_MESH_VERTEX_COUNT (WMAP_MESH_TRIANGLE_COUNT * 3)
@@ -73,9 +74,9 @@ void wmap_init_transition_mesh(void)
     {
         g_wmap_transition_mesh_triangles_0[i].header.packet.length = WMAP_MESH_PACKET_WORDS;
         g_wmap_transition_mesh_triangles_0[i].code = WMAP_MESH_POLY_G3_CODE;
-        *(s32*)&g_wmap_transition_mesh_triangles_0[i].x0 = g_wmap_transition_mesh_vertices[i * 3].packed;
-        *(s32*)&g_wmap_transition_mesh_triangles_0[i].x1 = g_wmap_transition_mesh_vertices[i * 3 + 1].packed;
-        *(s32*)&g_wmap_transition_mesh_triangles_0[i].x2 = g_wmap_transition_mesh_vertices[i * 3 + 2].packed;
+        SET_XY0_PACKED(&g_wmap_transition_mesh_triangles_0[i], g_wmap_transition_mesh_vertices[i * 3].packed);
+        SET_XY1_PACKED(&g_wmap_transition_mesh_triangles_0[i], g_wmap_transition_mesh_vertices[i * 3 + 1].packed);
+        SET_XY2_PACKED(&g_wmap_transition_mesh_triangles_0[i], g_wmap_transition_mesh_vertices[i * 3 + 2].packed);
         g_wmap_transition_mesh_triangles_1[i] = g_wmap_transition_mesh_triangles_0[i];
     }
 

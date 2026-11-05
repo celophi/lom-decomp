@@ -12,6 +12,28 @@
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
+#include "common/saved_game.h"
+
+/**
+ * @brief Animate and draw a sprite at a screen position whose y follows a height counter, then raise the counter to its limit.
+ * @param slot Sprite actor and animation slot.
+ * @param position Screen position global; its y is the counter divided by @p step.
+ * @param texture_index Sprite texture.
+ * @param counter Height counter global, in 1/@p step pixels.
+ * @param limit Counter value at which it stops.
+ * @param step Amount added to the counter each frame, and its pixel scale.
+ */
+#define WMAP_EFFECT23_DRAW_SINKING_SPRITE(slot, position, texture_index, counter, limit, step)                                                                 \
+    {                                                                                                                                                          \
+        wmap_step_actor_animation(&g_wmap_sprite_actors[(slot)], &g_wmap_actor_animations[(slot)]);                                                            \
+        wmap_draw_actor_sprite(&g_wmap_sprite_actors[(slot)], (position).packed, (texture_index), 0x2, 0);                                                     \
+        (position).point.y = (counter) / (step);                                                                                                               \
+                                                                                                                                                               \
+        if ((counter) < (limit))                                                                                                                               \
+        {                                                                                                                                                      \
+            (counter) += (step);                                                                                                                               \
+        }                                                                                                                                                      \
+    }
 
 extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_23_sequence_2_timer;
@@ -287,7 +309,7 @@ WMAP_STEP_RESET(wmap_land_effect_23_reset, g_wmap_land_effect_23_step, g_wmap_la
 /** @brief World-map step: arm a timed callback, flag it active, then tick the sub-counter. */
 void wmap_land_effect_23_step_01(void)
 {
-    g_wmap_forced_animated_land_id = 0x10;
+    g_wmap_forced_animated_land_id = FIELD_LAND_UNDERWORLD;
     g_wmap_focus_screen_position.point.x = WMAP_FOCUS_DEFAULT_X;
     g_wmap_focus_screen_position.point.y = WMAP_FOCUS_DEFAULT_Y;
     wmap_start_sequence(wmap_land_effect_23_run_timeline);
@@ -434,7 +456,7 @@ WMAP_STEP_WAIT(wmap_land_effect_23_timeline_wait_32, g_wmap_land_effect_23_timel
 void wmap_land_effect_23_timeline_step_33(void)
 {
     g_wmap_land_effect_23_timeline_timer = 50;
-    g_wmap_cells[g_wmap_focus_cell_x][g_wmap_focus_cell_y].land_id = WMAP_LAND_FULL_SIZE | 0x17;
+    g_wmap_cells[g_wmap_focus_cell_x][g_wmap_focus_cell_y].land_id = WMAP_LAND_FULL_SIZE | FIELD_LAND_FLAMES;
     g_wmap_land_effect_23_timeline_step++;
 }
 
@@ -598,7 +620,7 @@ void wmap_land_effect_23_sequence_9_step_01(void)
 
     g_wmap_actor_animations[6].data = g_wmap_animation_bank_4;
     g_wmap_particle_lifetime_range = 0x280;
-    actor->scale_index = 0xF;
+    actor->scale_index = WMAP_SPRITE_SCALE_FULL;
     actor->previous_sequence = -1;
     actor->shade_step = 4;
     actor->target_shade = 0x81;
@@ -617,14 +639,7 @@ void wmap_land_effect_23_sequence_9_step_01(void)
  */
 void wmap_land_effect_23_sequence_9_step_02(void)
 {
-    wmap_step_actor_animation(&g_wmap_sprite_actors[6], &g_wmap_actor_animations[6]);
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[6], g_wmap_effect_sprite_position_c.packed, 0x17, 0x2, 0);
-    g_wmap_effect_sprite_position_c.point.y = g_wmap_particle_lifetime_range / 0x10;
-
-    if (g_wmap_particle_lifetime_range < 0x640)
-    {
-        g_wmap_particle_lifetime_range += 0x10;
-    }
+    WMAP_EFFECT23_DRAW_SINKING_SPRITE(6, g_wmap_effect_sprite_position_c, 0x17, g_wmap_particle_lifetime_range, 0x640, 0x10);
 
     if (--g_wmap_land_effect_23_sequence_9_timer == 0)
     {
@@ -644,14 +659,7 @@ WMAP_STEP_FADE_ACTOR(wmap_land_effect_23_sequence_9_step_03, g_wmap_land_effect_
  */
 void wmap_land_effect_23_sequence_9_step_04(void)
 {
-    wmap_step_actor_animation(&g_wmap_sprite_actors[6], &g_wmap_actor_animations[6]);
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[6], g_wmap_effect_sprite_position_c.packed, 0x17, 0x2, 0);
-    g_wmap_effect_sprite_position_c.point.y = g_wmap_particle_lifetime_range / 0x10;
-
-    if (g_wmap_particle_lifetime_range < 0x640)
-    {
-        g_wmap_particle_lifetime_range += 0x10;
-    }
+    WMAP_EFFECT23_DRAW_SINKING_SPRITE(6, g_wmap_effect_sprite_position_c, 0x17, g_wmap_particle_lifetime_range, 0x640, 0x10);
 
     if (--g_wmap_land_effect_23_sequence_9_timer == 0)
     {
@@ -702,7 +710,7 @@ void wmap_land_effect_23_sequence_11_step_01(void)
 
     g_wmap_actor_animations[7].data = g_wmap_animation_bank_3;
     g_wmap_particle_spawn_interval = 0x780;
-    actor->scale_index = 0xF;
+    actor->scale_index = WMAP_SPRITE_SCALE_FULL;
     actor->previous_sequence = -1;
     actor->shade_step = 1;
     actor->target_shade = 0x7F;
@@ -771,7 +779,7 @@ void wmap_land_effect_23_sequence_12_step_01(void)
 
     g_wmap_actor_animations[8].data = g_wmap_animation_bank_3;
     g_wmap_particle_radial_step = 0x320;
-    actor->scale_index = 0xF;
+    actor->scale_index = WMAP_SPRITE_SCALE_FULL;
     actor->resource_index = 0;
     actor->sequence = 1;
     actor->previous_sequence = -1;

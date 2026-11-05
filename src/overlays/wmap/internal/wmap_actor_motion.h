@@ -40,7 +40,7 @@ typedef struct
 } WmapTrailMotion;
 
 /** @brief Motion slots, parallel to g_wmap_sprite_actors and g_wmap_actor_animations. */
-extern WmapMotion g_wmap_actor_motions[];
+extern WmapMotion g_wmap_actor_motions[WMAP_ACTOR_COUNT];
 
 /**
  * @brief Symbols for runs of g_wmap_actor_motions that start at the slot in their name.

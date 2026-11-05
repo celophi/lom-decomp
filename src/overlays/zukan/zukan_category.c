@@ -148,34 +148,34 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
     {
         for (i = 0; i < FIELD_ENCYCLOPEDIA_LAND_COUNT; i++)
         {
-            if (g_saved_lands[i].record.flags & FIELD_LAND_PLACED)
+            if (g_saved_lands[i].record.flags & FIELD_LAND_ARTIFACT_OBTAINED)
             {
                 ZUKAN_UNLOCK_ENTRY(i + FIELD_ENCYCLOPEDIA_ARTIFACT_BIT);
             }
 
             if ((g_saved_lands[i].record.flags >> 1) & 1)
             {
-                ZUKAN_UNLOCK_ENTRY(i + FIELD_ENCYCLOPEDIA_ARTIFACT_FLAG_02_BIT);
+                ZUKAN_UNLOCK_ENTRY(i + FIELD_ENCYCLOPEDIA_ARTIFACT_PLACED_BIT);
             }
         }
 
         if (g_saved_lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_FLAG_04)
         {
-            ZUKAN_UNLOCK_ENTRY(FIELD_ENCYCLOPEDIA_ARTIFACT_FLAG_02_BIT + FIELD_LAND_LUCEMIA);
+            ZUKAN_UNLOCK_ENTRY(FIELD_ENCYCLOPEDIA_ARTIFACT_PLACED_BIT + FIELD_LAND_LUCEMIA);
         }
 
         for (i = 0; i < count; i++)
         {
             if (!ZUKAN_ENTRY_UNLOCKED(ZUKAN_RANGE_BIT(entry_indices[i], ZUKAN_FIRST_ARTIFACT_ENTRY, FIELD_ENCYCLOPEDIA_ARTIFACT_BIT)))
             {
-                if (!ZUKAN_ENTRY_UNLOCKED(ZUKAN_RANGE_BIT(entry_indices[i], ZUKAN_FIRST_ARTIFACT_ENTRY, FIELD_ENCYCLOPEDIA_ARTIFACT_FLAG_02_BIT)))
+                if (!ZUKAN_ENTRY_UNLOCKED(ZUKAN_RANGE_BIT(entry_indices[i], ZUKAN_FIRST_ARTIFACT_ENTRY, FIELD_ENCYCLOPEDIA_ARTIFACT_PLACED_BIT)))
                 {
                     entry_values[i] = 0;
                     entry_indices[i] = 0;
                 }
             }
 
-            if (ZUKAN_ENTRY_UNLOCKED(ZUKAN_RANGE_BIT(entry_indices[i], ZUKAN_FIRST_ARTIFACT_ENTRY, FIELD_ENCYCLOPEDIA_ARTIFACT_FLAG_02_BIT)))
+            if (ZUKAN_ENTRY_UNLOCKED(ZUKAN_RANGE_BIT(entry_indices[i], ZUKAN_FIRST_ARTIFACT_ENTRY, FIELD_ENCYCLOPEDIA_ARTIFACT_PLACED_BIT)))
             {
                 entry_values[i] = resource_values[entry_indices[i] + (ZUKAN_FIRST_ARTIFACT_ALT_ENTRY - ZUKAN_FIRST_ARTIFACT_ENTRY)];
             }

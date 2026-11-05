@@ -14,6 +14,7 @@
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
+#include "common/gpu_packet.h"
 #include "sdk/gte_dmpsx_compat.h"
 
 /** @brief Spark emitter tuning block passed to wmap_land_effect_10_update_falling_sparks. */
@@ -168,10 +169,10 @@ void wmap_land_effect_10_update_falling_sparks(s32 first, s32 end, WmapSparkPart
                 gte_rtps();
                 gte_stsxy(&tail_xy);
                 line = g_wmap_current_frame->packet_cursor;
-                *(s32*)&line->r0 = 0x808080;
+                SET_BGR0_PACKED(line, 0x808080);
                 *(s32*)&line->r1 = 0;
-                *(s32*)&line->x0 = head_xy;
-                *(s32*)&line->x1 = tail_xy;
+                SET_XY0_PACKED(line, head_xy);
+                SET_XY1_PACKED(line, tail_xy);
                 setlen(line, 4);
                 setcode(line, 0x52);
                 addPrim(&g_wmap_current_frame->ordering_table[config->ot_index], line);
@@ -194,7 +195,7 @@ void wmap_land_effect_10_update_falling_sparks(s32 first, s32 end, WmapSparkPart
                     slot->timer = config->fade_frames;
                     slot->state = 2;
                     actor->resource_index = 0;
-                    actor->scale_index = 0xF;
+                    actor->scale_index = WMAP_SPRITE_SCALE_FULL;
                     actor->sequence = config->sprite_field_0E;
                     actor->previous_sequence = -1;
                     actor->shade_step = 0x80 / config->fade_frames;
@@ -255,7 +256,7 @@ void wmap_land_effect_10_sequence_5_step_01(void)
         g_wmap_effect_actor_motions[i].velocity = 0;
         g_wmap_effect_actor_motions[i].z = 0;
         g_wmap_actor_animations[i + 20].data = g_wmap_animation_bank_0;
-        actors[i].scale_index = 15;
+        actors[i].scale_index = WMAP_SPRITE_SCALE_FULL;
         actors[i].sequence = 3;
         actors[i].previous_sequence = -1;
         actors[i].shade_step = 1;
@@ -352,7 +353,7 @@ void wmap_land_effect_10_sequence_10_step_01(void)
         resource = &g_wmap_actor_animations[i];
         slot = &g_wmap_actor_motions[i];
         resource->data = g_wmap_animation_bank_2;
-        actor->scale_index = 15;
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;
         actor->previous_sequence = -1;
         actor->shade_step = 4;
         actor->target_shade = 1;

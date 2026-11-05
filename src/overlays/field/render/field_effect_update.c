@@ -271,7 +271,6 @@ typedef struct
     unsigned int upper : 8;
 } FieldPlacementBits;
 
-
 /** @brief GPU coordinates accessed individually or as a packed XY word. */
 typedef union
 {
@@ -3965,7 +3964,7 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
             {
                 value1 = packed_color.signed_word;
                 setlen(packet_cursor, 9);
-                *(s32*)&((POLY_FT4*)packet_cursor)->r0 = value1;
+                SET_BGR0_PACKED(((POLY_FT4*)packet_cursor), value1);
                 setcode(packet_cursor, 0x2C);
                 setSemiTrans((POLY_FT4*)packet_cursor, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
                 width_or_mode = frame_data[4];
@@ -4119,6 +4118,7 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
                 else
                 {
                     value1 = effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
+
                     if (value1 < 0)
                     {
                         addPrim(&ordering_table[0], packet_cursor);
@@ -4152,7 +4152,7 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
             frame_data += 9;
             frame_count -= 1;
             value0 = *(s32*)&((POLY_FT4*)packet_cursor)[-1].r0;
-            *(s32*)&((POLY_FT4*)packet_cursor)->r0 = value0;
+            SET_BGR0_PACKED(((POLY_FT4*)packet_cursor), value0);
         }
     }
 
@@ -8763,6 +8763,7 @@ void field_resolve_actor_part_anchor(FieldActorSlot* actor, FieldObjectPart* par
                     out->z = g_field_effect_records[index].z;
                 }
             }
+
             return;
 
         default:

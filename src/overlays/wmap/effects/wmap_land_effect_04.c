@@ -83,7 +83,7 @@ void wmap_land_effect_04_sequence_5_step_01(void)
     {
         actor = &g_wmap_sprite_actors[i];
         g_wmap_actor_animations[i].data = g_wmap_animation_bank_2;
-        actor->scale_index = 15;
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;
         actor->previous_sequence = -1;
         actor->resource_index = 0;
         actor->sequence = 0;
@@ -169,7 +169,7 @@ void wmap_land_effect_04_sequence_9_step_01(void)
     {
         actor = &g_wmap_sprite_actors[i];
         g_wmap_actor_animations[i].data = g_wmap_animation_bank_2;
-        actor->scale_index = 15;
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;
         actor->sequence = 2;
         actor->previous_sequence = -1;
         actor->resource_index = 0;
@@ -326,7 +326,7 @@ void wmap_land_effect_04_sequence_2_step_01(void)
     WmapSpriteActor* actor = &g_wmap_sprite_actors[6];
 
     g_wmap_actor_animations[6].data = g_wmap_animation_bank_1;
-    actor->scale_index = 0xF;
+    actor->scale_index = WMAP_SPRITE_SCALE_FULL;
     actor->sequence = 1;
     actor->previous_sequence = -one;
     actor->shade_step = 2;

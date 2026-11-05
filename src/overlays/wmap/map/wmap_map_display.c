@@ -29,7 +29,6 @@
 #define WMAP_FADE_STEP 8
 #define WMAP_BLEND_THRESHOLD 64
 #define WMAP_GAME_AREA_SIZE 3
-#define WMAP_LAND_COUNT 64
 #define WMAP_LAND_SCALE_MAX 15
 #define WMAP_DYNAMIC_GLYPH 0xFF
 #define WMAP_SPIRIT_CLUT_X 736
@@ -762,10 +761,14 @@ s32 wmap_resolve_land_image(WmapLandDisplay* resource)
     s32 oldest_slot;
     u32 oldest_frame;
     WmapCacheEntry* cache;
+    WmapCacheEntry* oldest_entry;
+    WmapCacheEntry* oldest_cache;
+    u8* oldest_image;
+    s16 oldest_resource_id;
 
     resource_id = resource->resource_id;
 
-    if (resource_id == 0x1F)
+    if (resource_id == FIELD_LAND_TREE_OF_MANA)
     {
         return 0x10;
     }
@@ -847,33 +850,26 @@ s32 wmap_resolve_land_image(WmapLandDisplay* resource)
         }
     }
 
+    oldest_cache = g_wmap_land_image_cache;
+    /* The cache must contain an inactive land before replacement is requested. */
+    oldest_entry = &oldest_cache[oldest_slot];
+
+    if (oldest_entry->busy != 0)
     {
-        WmapCacheEntry* oldest_entry;
-        WmapCacheEntry* cache_base;
-        u8* image;
-        s16 resource_id;
-
-        cache_base = g_wmap_land_image_cache;
-        /* The cache must contain an inactive land before replacement is requested. */
-        oldest_entry = &cache_base[oldest_slot];
-
-        if (oldest_entry->busy != 0)
-        {
-            return -1;
-        }
-
-        oldest_entry->resource_id = -1;
-        resource_id = resource->resource_id;
-        oldest_entry->resource_id = resource_id;
-        image = (u8*)g_wmap_land_image_pack + g_wmap_land_image_pack[resource_id];
-        LoadImage(&g_wmap_land_image_uploads[oldest_slot].upload.rect, (u_long*)image);
-        image += 0x2004;
-        oldest_entry->animation_data = image;
-        oldest_entry->loaded_frame = g_wmap_frame_count;
-        resource->animation_cursor = 0;
-        resource->previous_animation_index = -1;
-        return oldest_slot;
+        return -1;
     }
+
+    oldest_entry->resource_id = -1;
+    oldest_resource_id = resource->resource_id;
+    oldest_entry->resource_id = oldest_resource_id;
+    oldest_image = (u8*)g_wmap_land_image_pack + g_wmap_land_image_pack[oldest_resource_id];
+    LoadImage(&g_wmap_land_image_uploads[oldest_slot].upload.rect, (u_long*)oldest_image);
+    oldest_image += 0x2004;
+    oldest_entry->animation_data = oldest_image;
+    oldest_entry->loaded_frame = g_wmap_frame_count;
+    resource->animation_cursor = 0;
+    resource->previous_animation_index = -1;
+    return oldest_slot;
 }
 
 /**
@@ -884,6 +880,9 @@ s32 wmap_resolve_land_image(WmapLandDisplay* resource)
  */
 void wmap_draw_land_marker(s32 map_x, s32 map_y, WmapLandDisplay* marker)
 {
+    s32 texture;
+    s32 u_index;
+    s32 v_index;
     SPRT* sprite;
     s32 depth;
     s32 type;
@@ -947,38 +946,32 @@ void wmap_draw_land_marker(s32 map_x, s32 map_y, WmapLandDisplay* marker)
             return;
     }
 
-    *(u32*)&sprite->r0 = 0x808080;
+    SET_BGR0_PACKED(sprite, 0x808080);
 
+    texture = g_wmap_land_label_cells[marker->resource_id];
+    u_index = texture & 7;
+    sprite->u0 = u_index << 5;
+    v_index = texture / 8;
+    sprite->v0 = v_index << 5;
+
+    switch (v_index)
     {
-        s32 texture;
-        s32 u_index;
-        s32 v_index;
-
-        texture = g_wmap_land_label_cells[marker->resource_id];
-        u_index = texture & 7;
-        sprite->u0 = u_index << 5;
-        v_index = texture / 8;
-        sprite->v0 = v_index << 5;
-
-        switch (v_index)
-        {
-            case 0:
-                sprite->clut = (u_index << 6) | 0x582E;
-                type = 12;
-                break;
-            case 1:
-                sprite->clut = (u_index << 6) | 0x5A2E;
-                type = 12;
-                break;
-            case 2:
-                sprite->clut = (u_index << 6) | 0x5C2E;
-                type = 12;
-                break;
-            case 3:
-                sprite->clut = (u_index << 6) | 0x5E2E;
-                type = 12;
-                break;
-        }
+        case 0:
+            sprite->clut = (u_index << 6) | 0x582E;
+            type = 12;
+            break;
+        case 1:
+            sprite->clut = (u_index << 6) | 0x5A2E;
+            type = 12;
+            break;
+        case 2:
+            sprite->clut = (u_index << 6) | 0x5C2E;
+            type = 12;
+            break;
+        case 3:
+            sprite->clut = (u_index << 6) | 0x5E2E;
+            type = 12;
+            break;
     }
 
     *(u32*)&sprite->w = PACK_U16_PAIR(32, 32);
@@ -1144,7 +1137,7 @@ void wmap_draw_land_animation(s32 x, s32 y, WmapLandDisplay* state, s32 resource
         packet->v1 = quad->v + texture->upload.uv.v_offset;
         packet->v2 = quad->v + quad->height + texture->upload.uv.v_offset;
         packet->v3 = quad->v + quad->height + texture->upload.uv.v_offset;
-        *(u32*)&packet->r0 = 0x80808080;
+        SET_BGR0_PACKED(packet, 0x80808080);
         locals.blend_mode = (s8)quad->blend_mode;
         packet->tpage = getTPage(GPU_TEXTURE_4BIT, quad->blend_mode & 3, texture->tpage_x, texture->tpage_y);
         packet->clut = *(u16*)((u8*)texture_base->clut + (quad->texture_index * 2 + texture_offset));
@@ -1420,7 +1413,7 @@ void wmap_draw_cell_effect(s32 x, s32 y)
         gte_ldv3(&transformed[0], &transformed[1], &transformed[2]);
         gte_rtpt();
 
-        *(u32*)&poly->r0 = wmap_scale_color(source->colors[0], color_frame);
+        SET_BGR0_PACKED(poly, wmap_scale_color(source->colors[0], color_frame));
         *(u32*)&poly->r1 = wmap_scale_color(source->colors[1], color_frame);
         *(u32*)&poly->r2 = wmap_scale_color(source->colors[2], color_frame);
         *(u32*)&poly->r3 = wmap_scale_color(source->colors[3], color_frame);
@@ -1434,11 +1427,11 @@ void wmap_draw_cell_effect(s32 x, s32 y)
         gte_ldv0(&transformed[3]);
         gte_rtps();
 
-        *(u32*)&poly->x0 = sxy0;
-        *(u32*)&poly->x1 = sxy1;
-        *(u32*)&poly->x2 = sxy2;
+        SET_XY0_PACKED(poly, sxy0);
+        SET_XY1_PACKED(poly, sxy1);
+        SET_XY2_PACKED(poly, sxy2);
         gte_stsxy(&sxy3);
-        *(u32*)&poly->x3 = sxy3;
+        SET_XY3_PACKED(poly, sxy3);
 
         setlen(poly, 8);
         setcode(poly, 0x3A);
@@ -1463,7 +1456,7 @@ void wmap_init_land_display(void)
     s32 x;
     s32 y;
 
-    for (i = 0; i < WMAP_LAND_COUNT; i++)
+    for (i = 0; i < FIELD_LAND_COUNT; i++)
     {
         g_wmap_land_display[i].object_id = i;
         g_wmap_land_display[i].resource_id = i;
@@ -1612,7 +1605,7 @@ void wmap_draw_spirit_levels(void)
         primary_sprite = g_wmap_current_frame->packet_cursor;
         *primary_sprite = g_wmap_spirit_accent_sprites[sprite_indices[i]];
         primary_sprite->r0 = primary_sprite->g0 = primary_sprite->b0 = color;
-        *(u32*)&primary_sprite->x0 = g_wmap_spirit_sprite_positions[i].packed_xy;
+        SET_XY0_PACKED(primary_sprite, g_wmap_spirit_sprite_positions[i].packed_xy);
         primary_sprite->clut = getClut(WMAP_SPIRIT_CLUT_X, i + WMAP_SPIRIT_ACCENT_CLUT_Y);
         setSemiTrans(primary_sprite, 1);
         addPrim(&g_wmap_current_frame->ordering_table[1], primary_sprite);
@@ -1626,7 +1619,7 @@ void wmap_draw_spirit_levels(void)
         secondary_sprite = g_wmap_current_frame->packet_cursor;
         *secondary_sprite = g_wmap_spirit_level_sprites[sprite_indices[i]];
         secondary_sprite->r0 = secondary_sprite->g0 = secondary_sprite->b0 = g_wmap_spirit_brightness;
-        *(u32*)&secondary_sprite->x0 = g_wmap_spirit_sprite_positions[i].packed_xy;
+        SET_XY0_PACKED(secondary_sprite, g_wmap_spirit_sprite_positions[i].packed_xy);
         secondary_sprite->clut = getClut(WMAP_SPIRIT_CLUT_X, i + WMAP_SPIRIT_CLUT_Y);
         secondary_sprite->x0 += 4;
         secondary_sprite->y0 += 0x14;
@@ -1691,7 +1684,7 @@ void wmap_draw_spirit_grid(s32 spirit_index)
             {
                 sprite = g_wmap_current_frame->packet_cursor;
                 *sprite = g_wmap_spirit_level_sprites[spirits->sprite_indices[spirit_index]];
-                *(u32*)&sprite->x0 = g_wmap_spirit_level_positions[base_index + cur_x];
+                SET_XY0_PACKED(sprite, g_wmap_spirit_level_positions[base_index + cur_x]);
                 sprite->r0 = sprite->g0 = sprite->b0 = g_wmap_spirit_brightness;
                 sprite->u0 = 0xD0;
                 sprite->v0 = 0;
@@ -1713,7 +1706,7 @@ void wmap_draw_spirit_grid(s32 spirit_index)
 
             sprite = g_wmap_current_frame->packet_cursor;
             *sprite = g_wmap_spirit_level_sprites[spirits->sprite_indices[spirit_index]];
-            *(u32*)&sprite->x0 = g_wmap_spirit_level_positions[base_index + cur_x];
+            SET_XY0_PACKED(sprite, g_wmap_spirit_level_positions[base_index + cur_x]);
             sprite->r0 = sprite->g0 = sprite->b0 = g_wmap_spirit_brightness;
             sprite->clut = getClut(WMAP_SPIRIT_CLUT_X, spirit_index + WMAP_SPIRIT_CLUT_Y);
 

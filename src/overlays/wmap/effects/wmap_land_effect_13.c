@@ -16,6 +16,58 @@
 
 static void wmap_land_effect_13_update_particles(WmapSpriteActor* actors, WmapAnimationSlot* resources, s32 count);
 
+/**
+ * @brief Animate and draw a sprite at the focus with its shade at a fade level, then raise the fade level.
+ * @param slot Sprite actor and animation slot.
+ * @param fade Fade level global; its low halfword is the sprite's shade.
+ * @param texture_index Sprite texture.
+ * @param amount Amount added to the fade level each frame.
+ * @param maximum Highest fade level.
+ */
+#define WMAP_EFFECT13_DRAW_BRIGHTENING_SPRITE(slot, fade, texture_index, amount, maximum)                                                                      \
+    {                                                                                                                                                          \
+        WmapSpriteActor* actor = &g_wmap_sprite_actors[(slot)];                                                                                                \
+        u16 shade = *(u16*)&(fade);                                                                                                                            \
+                                                                                                                                                               \
+        actor->shade = shade;                                                                                                                                  \
+        actor->target_shade = shade;                                                                                                                           \
+        wmap_step_actor_animation(actor, &g_wmap_actor_animations[(slot)]);                                                                                    \
+        wmap_draw_actor_sprite(actor, g_wmap_focus_screen_position.packed, (texture_index), 0xB, 0);                                                           \
+        (fade) += (amount);                                                                                                                                    \
+                                                                                                                                                               \
+        if ((fade) > (maximum))                                                                                                                                \
+        {                                                                                                                                                      \
+            (fade) = (maximum);                                                                                                                                \
+        }                                                                                                                                                      \
+    }
+
+/**
+ * @brief Define a step that starts sprite sequence 1 on a slot, clears a fade level and runs its first update.
+ * @param name Step function name.
+ * @param step The sequence's step global.
+ * @param timer The sequence's timer global.
+ * @param slot Sprite actor and animation slot.
+ * @param animation Animation data assigned to the slot.
+ * @param fade Fade level global the update step raises from zero.
+ * @param frames Frames the update step runs.
+ * @param next Update step, called immediately after advancing.
+ */
+#define WMAP_EFFECT13_START_SPRITE(name, step, timer, slot, animation, fade, frames, next)                                                                     \
+    void name(void)                                                                                                                                            \
+    {                                                                                                                                                          \
+        WmapSpriteActor* actor = &g_wmap_sprite_actors[(slot)];                                                                                                \
+                                                                                                                                                               \
+        g_wmap_actor_animations[(slot)].data = (animation);                                                                                                    \
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;                                                                                                           \
+        actor->sequence = 1;                                                                                                                                   \
+        actor->previous_sequence = -1;                                                                                                                         \
+        (fade) = 0;                                                                                                                                            \
+        actor->resource_index = 0;                                                                                                                             \
+        (timer) = (frames);                                                                                                                                    \
+        (step)++;                                                                                                                                              \
+        next();                                                                                                                                                \
+    }
+
 extern s32 rand(void);
 extern s32 g_wmap_land_effect_13_sequence_6_timer;
 extern s32 g_wmap_land_effect_13_sequence_7_timer;
@@ -121,7 +173,7 @@ static void wmap_land_effect_13_update_particles(WmapSpriteActor* actors, WmapAn
         {
             if (g_wmap_particle_intensity >= active_count)
             {
-                actor->scale_index = 15;
+                actor->scale_index = WMAP_SPRITE_SCALE_FULL;
                 actor->sequence = 3;
                 actor->previous_sequence = -1;
                 actor->target_shade = 129;
@@ -532,7 +584,7 @@ void wmap_land_effect_13_sequence_1_step_01(void)
 
     g_wmap_actor_animations[4].data = g_wmap_animation_bank_0;
     actors = g_wmap_sprite_actors;
-    actors[4].scale_index = 0xF;
+    actors[4].scale_index = WMAP_SPRITE_SCALE_FULL;
     actors[4].resource_index = 0;
     actors[4].sequence = 0;
     actors[4].previous_sequence = -1;
@@ -631,7 +683,7 @@ WMAP_STEP_RESET(wmap_land_effect_13_sequence_4_reset, g_wmap_land_effect_13_sequ
 void wmap_land_effect_13_sequence_4_step_01(void)
 {
     g_wmap_actor_animations[6].data = g_wmap_animation_bank_0;
-    g_wmap_sprite_actors[6].scale_index = 0xF;
+    g_wmap_sprite_actors[6].scale_index = WMAP_SPRITE_SCALE_FULL;
     g_wmap_sprite_actors[6].sequence = 2;
     g_wmap_sprite_actors[6].previous_sequence = -1;
     g_wmap_effect_fade_e = 0;
@@ -646,19 +698,7 @@ void wmap_land_effect_13_sequence_4_step_01(void)
  */
 void wmap_land_effect_13_sequence_4_step_02(void)
 {
-    WmapSpriteActor* obj = &g_wmap_sprite_actors[6];
-    u16 pos = *(u16*)&g_wmap_effect_fade_e;
-
-    obj->shade = pos;
-    obj->target_shade = pos;
-    wmap_step_actor_animation(obj, &g_wmap_actor_animations[6]);
-    wmap_draw_actor_sprite(obj, g_wmap_focus_screen_position.packed, 0xF, 0xB, 0);
-    g_wmap_effect_fade_e += 4;
-
-    if (g_wmap_effect_fade_e >= 0x82)
-    {
-        g_wmap_effect_fade_e = 0x81;
-    }
+    WMAP_EFFECT13_DRAW_BRIGHTENING_SPRITE(6, g_wmap_effect_fade_e, 0xF, 4, 0x81);
 
     if (--g_wmap_land_effect_13_sequence_4_timer == 0)
     {
@@ -721,19 +761,7 @@ void wmap_land_effect_13_sequence_5_step_01(void)
  */
 void wmap_land_effect_13_sequence_5_step_02(void)
 {
-    WmapSpriteActor* obj = &g_wmap_sprite_actors[7];
-    u16 pos = *(u16*)&g_wmap_effect_fade_a;
-
-    obj->shade = pos;
-    obj->target_shade = pos;
-    wmap_step_actor_animation(obj, &g_wmap_actor_animations[7]);
-    wmap_draw_actor_sprite(obj, g_wmap_focus_screen_position.packed, 0x4, 0xB, 0);
-    g_wmap_effect_fade_a += 0x18;
-
-    if (g_wmap_effect_fade_a >= 0x82)
-    {
-        g_wmap_effect_fade_a = 0x81;
-    }
+    WMAP_EFFECT13_DRAW_BRIGHTENING_SPRITE(7, g_wmap_effect_fade_a, 0x4, 0x18, 0x81);
 
     if (--g_wmap_land_effect_13_sequence_5_timer == 0)
     {
@@ -774,20 +802,8 @@ WMAP_STEP_RESET(wmap_land_effect_13_sequence_6_reset, g_wmap_land_effect_13_sequ
 /**
  * @brief Populate a world-map actor control block and schedule its spawn step.
  */
-void wmap_land_effect_13_sequence_6_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[16];
-
-    g_wmap_actor_animations[16].data = g_wmap_animation_bank_1;
-    actor->scale_index = 0xF;
-    actor->sequence = 1;
-    actor->previous_sequence = -1;
-    g_wmap_effect_fade_b = 0;
-    actor->resource_index = 0;
-    g_wmap_land_effect_13_sequence_6_timer = 0x18;
-    g_wmap_land_effect_13_sequence_6_step++;
-    wmap_land_effect_13_sequence_6_step_02();
-}
+WMAP_EFFECT13_START_SPRITE(wmap_land_effect_13_sequence_6_step_01, g_wmap_land_effect_13_sequence_6_step, g_wmap_land_effect_13_sequence_6_timer, 16,
+                           g_wmap_animation_bank_1, g_wmap_effect_fade_b, 0x18, wmap_land_effect_13_sequence_6_step_02)
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_13_sequence_6_step_03, g_wmap_land_effect_13_sequence_6_step, g_wmap_land_effect_13_sequence_6_timer, 0x28,
                     wmap_land_effect_13_sequence_6_step_04)
@@ -802,20 +818,8 @@ WMAP_STEP_RESET(wmap_land_effect_13_sequence_7_reset, g_wmap_land_effect_13_sequ
 /**
  * @brief Populate a world-map actor control block and schedule its spawn step.
  */
-void wmap_land_effect_13_sequence_7_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[17];
-
-    g_wmap_actor_animations[17].data = g_wmap_animation_bank_1;
-    actor->scale_index = 0xF;
-    actor->sequence = 1;
-    actor->previous_sequence = -1;
-    g_wmap_aux_effect_fade_a = 0;
-    actor->resource_index = 0;
-    g_wmap_land_effect_13_sequence_7_timer = 0x18;
-    g_wmap_land_effect_13_sequence_7_step++;
-    wmap_land_effect_13_sequence_7_step_02();
-}
+WMAP_EFFECT13_START_SPRITE(wmap_land_effect_13_sequence_7_step_01, g_wmap_land_effect_13_sequence_7_step, g_wmap_land_effect_13_sequence_7_timer, 17,
+                           g_wmap_animation_bank_1, g_wmap_aux_effect_fade_a, 0x18, wmap_land_effect_13_sequence_7_step_02)
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_13_sequence_7_step_03, g_wmap_land_effect_13_sequence_7_step, g_wmap_land_effect_13_sequence_7_timer, 0x20,
                     wmap_land_effect_13_sequence_7_step_04)
@@ -830,20 +834,8 @@ WMAP_STEP_RESET(wmap_land_effect_13_sequence_8_reset, g_wmap_land_effect_13_sequ
 /**
  * @brief Populate a world-map actor control block and schedule its spawn step.
  */
-void wmap_land_effect_13_sequence_8_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[18];
-
-    g_wmap_actor_animations[18].data = g_wmap_animation_bank_1;
-    actor->scale_index = 0xF;
-    actor->sequence = 1;
-    actor->previous_sequence = -1;
-    g_wmap_aux_effect_fade_b = 0;
-    actor->resource_index = 0;
-    g_wmap_land_effect_13_sequence_8_timer = 0x20;
-    g_wmap_land_effect_13_sequence_8_step++;
-    wmap_land_effect_13_sequence_8_step_02();
-}
+WMAP_EFFECT13_START_SPRITE(wmap_land_effect_13_sequence_8_step_01, g_wmap_land_effect_13_sequence_8_step, g_wmap_land_effect_13_sequence_8_timer, 18,
+                           g_wmap_animation_bank_1, g_wmap_aux_effect_fade_b, 0x20, wmap_land_effect_13_sequence_8_step_02)
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_13_sequence_8_step_03, g_wmap_land_effect_13_sequence_8_step, g_wmap_land_effect_13_sequence_8_timer, 0x20,
                     wmap_land_effect_13_sequence_8_step_04)
@@ -861,20 +853,8 @@ WMAP_STEP_RUNNER_RESET_AND_RUN(wmap_land_effect_13_run_sequence_9, g_wmap_land_e
 WMAP_STEP_RESET(wmap_land_effect_13_sequence_9_reset, g_wmap_land_effect_13_sequence_9_step, g_wmap_land_effect_13_sequence_9_timer)
 
 /** @brief Start the sequence 9 sprite animation with zero shade and its fade-in timer. */
-void wmap_land_effect_13_sequence_9_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[19];
-
-    g_wmap_actor_animations[19].data = g_wmap_animation_bank_1;
-    actor->scale_index = 0xF;
-    actor->sequence = 1;
-    actor->previous_sequence = -1;
-    g_wmap_land_effect_13_sequence_9_shade = 0;
-    actor->resource_index = 0;
-    g_wmap_land_effect_13_sequence_9_timer = 0xC;
-    g_wmap_land_effect_13_sequence_9_step++;
-    wmap_land_effect_13_sequence_9_step_02();
-}
+WMAP_EFFECT13_START_SPRITE(wmap_land_effect_13_sequence_9_step_01, g_wmap_land_effect_13_sequence_9_step, g_wmap_land_effect_13_sequence_9_timer, 19,
+                           g_wmap_animation_bank_1, g_wmap_land_effect_13_sequence_9_shade, 0xC, wmap_land_effect_13_sequence_9_step_02)
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_13_sequence_9_step_03, g_wmap_land_effect_13_sequence_9_step, g_wmap_land_effect_13_sequence_9_timer, 0x28,
                     wmap_land_effect_13_sequence_9_step_04)
@@ -908,19 +888,7 @@ void wmap_land_effect_13_sequence_10_step_01(void)
  */
 void wmap_land_effect_13_sequence_10_step_02(void)
 {
-    WmapSpriteActor* obj = &g_wmap_sprite_actors[9];
-    u16 pos = *(u16*)&g_wmap_effect_fade_c;
-
-    obj->shade = pos;
-    obj->target_shade = pos;
-    wmap_step_actor_animation(obj, &g_wmap_actor_animations[9]);
-    wmap_draw_actor_sprite(obj, g_wmap_focus_screen_position.packed, 0x10, 0xB, 0);
-    g_wmap_effect_fade_c += 0x20;
-
-    if (g_wmap_effect_fade_c >= 0x82)
-    {
-        g_wmap_effect_fade_c = 0x81;
-    }
+    WMAP_EFFECT13_DRAW_BRIGHTENING_SPRITE(9, g_wmap_effect_fade_c, 0x10, 0x20, 0x81);
 
     if (--g_wmap_land_effect_13_sequence_10_timer == 0)
     {
@@ -961,39 +929,15 @@ WMAP_STEP_RESET(wmap_land_effect_13_sequence_11_reset, g_wmap_land_effect_13_seq
 /**
  * @brief Populate a world-map actor control block and schedule its spawn step.
  */
-void wmap_land_effect_13_sequence_11_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[10];
-
-    g_wmap_actor_animations[10].data = g_wmap_animation_bank_2;
-    actor->scale_index = 0xF;
-    actor->sequence = 1;
-    actor->previous_sequence = -1;
-    g_wmap_effect_fade_d = 0;
-    actor->resource_index = 0;
-    g_wmap_land_effect_13_sequence_11_timer = 0x59;
-    g_wmap_land_effect_13_sequence_11_step++;
-    wmap_land_effect_13_sequence_11_step_02();
-}
+WMAP_EFFECT13_START_SPRITE(wmap_land_effect_13_sequence_11_step_01, g_wmap_land_effect_13_sequence_11_step, g_wmap_land_effect_13_sequence_11_timer, 10,
+                           g_wmap_animation_bank_2, g_wmap_effect_fade_d, 0x59, wmap_land_effect_13_sequence_11_step_02)
 
 /**
  * @brief Draw a scrolling world-map element and advance its slide/hold state.
  */
 void wmap_land_effect_13_sequence_11_step_02(void)
 {
-    WmapSpriteActor* obj = &g_wmap_sprite_actors[10];
-    u16 pos = *(u16*)&g_wmap_effect_fade_d;
-
-    obj->shade = pos;
-    obj->target_shade = pos;
-    wmap_step_actor_animation(obj, &g_wmap_actor_animations[10]);
-    wmap_draw_actor_sprite(obj, g_wmap_focus_screen_position.packed, 0x10, 0xB, 0);
-    g_wmap_effect_fade_d += 0x8;
-
-    if (g_wmap_effect_fade_d >= 0x81)
-    {
-        g_wmap_effect_fade_d = 0x80;
-    }
+    WMAP_EFFECT13_DRAW_BRIGHTENING_SPRITE(10, g_wmap_effect_fade_d, 0x10, 0x8, 0x80);
 
     if (--g_wmap_land_effect_13_sequence_11_timer == 0)
     {

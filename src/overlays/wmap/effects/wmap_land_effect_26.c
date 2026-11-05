@@ -35,6 +35,41 @@ typedef struct
     s16 sway_phase;
 } WmapSwayParticle;
 
+/**
+ * @brief Lower a model slot toward its resting depth and draw its model pack while the fade level is nonzero.
+ * @param position Slot position; its depth falls by 1500 a frame to no lower than 40000.
+ * @param rotation Slot rotation.
+ * @param pack Model pack to draw.
+ * @param fade Fade level (draw color scale), clamped at zero.
+ */
+#define WMAP_EFFECT26_LOWER_MODEL(position, rotation, pack, fade)                                                                                              \
+    {                                                                                                                                                          \
+        s32 depth;                                                                                                                                             \
+                                                                                                                                                               \
+        depth = (position).vz - 1500;                                                                                                                          \
+        (position).vz = depth;                                                                                                                                 \
+                                                                                                                                                               \
+        if (depth < 40000)                                                                                                                                     \
+        {                                                                                                                                                      \
+            (position).vz = 40000;                                                                                                                             \
+        }                                                                                                                                                      \
+                                                                                                                                                               \
+        PushMatrix();                                                                                                                                          \
+        wmap_set_model_transform(&(position), &(rotation));                                                                                                    \
+                                                                                                                                                               \
+        if ((fade) != 0)                                                                                                                                       \
+        {                                                                                                                                                      \
+            wmap_draw_model_default((pack), 0, 12, 0x35, 0x7800, 1, (fade));                                                                                   \
+                                                                                                                                                               \
+            if ((fade) < 0)                                                                                                                                    \
+            {                                                                                                                                                  \
+                (fade) = 0;                                                                                                                                    \
+            }                                                                                                                                                  \
+        }                                                                                                                                                      \
+                                                                                                                                                               \
+        PopMatrix();                                                                                                                                           \
+    }
+
 extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_26_sequence_1_timer;
 extern s32 g_wmap_land_effect_26_sequence_2_timer;
@@ -193,30 +228,7 @@ void wmap_land_effect_26_sequence_3_step_02(void)
 /** @brief World-map step handler: decay a value, draw the model while active, then countdown-advance. */
 void wmap_land_effect_26_sequence_4_step_02(void)
 {
-    s32 v1;
-
-    v1 = g_wmap_effect_model_d_position.vz - 0x5DC;
-    g_wmap_effect_model_d_position.vz = v1;
-
-    if (v1 < 0x9C40)
-    {
-        g_wmap_effect_model_d_position.vz = 0x9C40;
-    }
-
-    PushMatrix();
-    wmap_set_model_transform(&g_wmap_effect_model_d_position, &g_wmap_effect_model_d_rotation);
-
-    if (g_wmap_effect_fade_e != 0)
-    {
-        wmap_draw_model_default(g_wmap_effect_model_pack_3, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_e);
-
-        if (g_wmap_effect_fade_e < 0)
-        {
-            g_wmap_effect_fade_e = 0;
-        }
-    }
-
-    PopMatrix();
+    WMAP_EFFECT26_LOWER_MODEL(g_wmap_effect_model_d_position, g_wmap_effect_model_d_rotation, g_wmap_effect_model_pack_3, g_wmap_effect_fade_e);
 
     if (--g_wmap_land_effect_26_sequence_4_timer == 0)
     {
@@ -227,30 +239,7 @@ void wmap_land_effect_26_sequence_4_step_02(void)
 /** @brief World-map step handler: decay a value, draw the model while active, then countdown-advance. */
 void wmap_land_effect_26_sequence_5_step_02(void)
 {
-    s32 v1;
-
-    v1 = g_wmap_effect_model_g_position.vz - 0x5DC;
-    g_wmap_effect_model_g_position.vz = v1;
-
-    if (v1 < 0x9C40)
-    {
-        g_wmap_effect_model_g_position.vz = 0x9C40;
-    }
-
-    PushMatrix();
-    wmap_set_model_transform(&g_wmap_effect_model_g_position, &g_wmap_effect_model_g_rotation);
-
-    if (g_wmap_effect_fade_a != 0)
-    {
-        wmap_draw_model_default(g_wmap_effect_model_pack_4, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_a);
-
-        if (g_wmap_effect_fade_a < 0)
-        {
-            g_wmap_effect_fade_a = 0;
-        }
-    }
-
-    PopMatrix();
+    WMAP_EFFECT26_LOWER_MODEL(g_wmap_effect_model_g_position, g_wmap_effect_model_g_rotation, g_wmap_effect_model_pack_4, g_wmap_effect_fade_a);
 
     if (--g_wmap_land_effect_26_sequence_5_timer == 0)
     {
@@ -261,30 +250,7 @@ void wmap_land_effect_26_sequence_5_step_02(void)
 /** @brief World-map step handler: decay a value, draw the model while active, then countdown-advance. */
 void wmap_land_effect_26_sequence_6_step_02(void)
 {
-    s32 v1;
-
-    v1 = g_wmap_effect_model_h_position.vz - 0x5DC;
-    g_wmap_effect_model_h_position.vz = v1;
-
-    if (v1 < 0x9C40)
-    {
-        g_wmap_effect_model_h_position.vz = 0x9C40;
-    }
-
-    PushMatrix();
-    wmap_set_model_transform(&g_wmap_effect_model_h_position, &g_wmap_effect_model_h_rotation);
-
-    if (g_wmap_effect_fade_b != 0)
-    {
-        wmap_draw_model_default(g_wmap_effect_model_pack_5, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_b);
-
-        if (g_wmap_effect_fade_b < 0)
-        {
-            g_wmap_effect_fade_b = 0;
-        }
-    }
-
-    PopMatrix();
+    WMAP_EFFECT26_LOWER_MODEL(g_wmap_effect_model_h_position, g_wmap_effect_model_h_rotation, g_wmap_effect_model_pack_5, g_wmap_effect_fade_b);
 
     if (--g_wmap_land_effect_26_sequence_6_timer == 0)
     {
@@ -311,7 +277,7 @@ void wmap_land_effect_26_sequence_11_step_01(void)
         g_wmap_actor_motions[i].sway_step = ((s32)(rand() << 6) >> 15) + 4;
         g_wmap_actor_motions[i].sway_phase = 0;
         g_wmap_actor_animations[i].data = g_wmap_animation_bank_2;
-        actor->scale_index = 15;
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;
         actor->resource_index = 0;
         actor->previous_sequence = -1;
         actor->shade_step = 0;

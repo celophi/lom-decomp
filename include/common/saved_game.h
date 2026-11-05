@@ -8,6 +8,7 @@
  */
 
 #include "common.h"
+
 #include "common/card_file.h"
 
 #define SAVED_GAME_DATA_SIZE 0x3268
@@ -110,12 +111,12 @@
 #define SAVED_EVENT_FLAG_NEW_GAME 28
 /** @brief Lands with encyclopedia bits of their own: every FieldLandId before FIELD_LAND_LUCEMIA_2. */
 #define FIELD_ENCYCLOPEDIA_LAND_COUNT FIELD_LAND_LUCEMIA_2
-/** @brief Encyclopedia bit of land id 0's entry; set from FIELD_LAND_FLAG_02, one bit per land. */
+/** @brief Encyclopedia bit of land id 0's entry; set once the land is placed, one bit per land. */
 #define FIELD_ENCYCLOPEDIA_LAND_BIT 0x200
-/** @brief Encyclopedia bit of land id 0's artifact entry; set once the land is placed, one bit per land. */
+/** @brief Encyclopedia bit of land id 0's artifact entry; set once its artifact is obtained, one bit per land. */
 #define FIELD_ENCYCLOPEDIA_ARTIFACT_BIT 0x240
-/** @brief Encyclopedia bit set from land id 0's FIELD_LAND_FLAG_02 for its artifact entry, one bit per land. */
-#define FIELD_ENCYCLOPEDIA_ARTIFACT_FLAG_02_BIT 0x280
+/** @brief Encyclopedia bit of land id 0's artifact entry set once the land is placed, one bit per land. */
+#define FIELD_ENCYCLOPEDIA_ARTIFACT_PLACED_BIT 0x280
 /** @brief Weapon categories (technique masks and weapon proficiency slots). */
 #define FIELD_WEAPON_CATEGORY_COUNT 11
 /** @brief Techniques of each weapon category: the used low bits of its technique_bits word. */
@@ -432,12 +433,12 @@ typedef struct FieldCharacterRecord
 } FieldCharacterRecord;
 
 /** @brief FieldLandRecord::flags bits. */
-#define FIELD_LAND_PLACED 0x01    /**< The land has been placed on the map. */
-#define FIELD_LAND_FLAG_02 0x02   /**< TODO meaning unknown; excludes a placed land from the active count. */
-#define FIELD_LAND_FLAG_04 0x04   /**< TODO meaning unknown. */
-#define FIELD_LAND_AVAILABLE 0x08 /**< The land is available for placement. */
-/** @brief FIELD_LAND_FLAG_02 of a land's flags byte or word, as 0 or 1. */
-#define FIELD_LAND_GET_FLAG_02(flags) (((flags) >> 1) & 1)
+#define FIELD_LAND_ARTIFACT_OBTAINED 0x01 /**< The player has the land's artifact (placed or not). */
+#define FIELD_LAND_PLACED 0x02            /**< The land is placed on the map. */
+#define FIELD_LAND_FLAG_04 0x04           /**< TODO meaning unknown; a new game sets it on lands 0-6 and 32. */
+#define FIELD_LAND_ARTIFACT_UNLOCKED 0x08 /**< The land's artifact can be awarded. */
+/** @brief FIELD_LAND_PLACED of a land's flags byte or word, as 0 or 1. */
+#define FIELD_LAND_GET_PLACED(flags) (((flags) >> 1) & 1)
 /** @brief Entry slot of a land's flags byte or word: which of its four entry scenes the world map enters. */
 #define FIELD_LAND_ENTRY_SLOT(flags) (((flags) >> 4) & 3)
 /** @brief FieldLandRecord::x and ::z of a land that is not on the map. */
@@ -519,9 +520,10 @@ typedef struct FieldLandRecord
     u8 x : 4;
     /** @brief Map grid row, or FIELD_LAND_CELL_NONE. */
     u8 z : 4;
-    u8 unk2;
-    /** @brief Placement order: SavedGameLayout placed_land_count when the land was placed. */
-    u8 count;
+    /** @brief Placement order: SavedGameLayout placed_land_count once the land was placed, or 0. */
+    u8 placement_order;
+    /** @brief Artifact order: SavedGameLayout artifact_count once the land's artifact was obtained, or 0. */
+    u8 artifact_order;
     /** @brief Level of each mana spirit, 0 to FIELD_LAND_SPIRIT_MAX. */
     u8 levels[FIELD_LAND_SPIRIT_COUNT];
 } FieldLandRecord;
@@ -533,16 +535,16 @@ typedef union FieldLandWords
     u32 word;
     struct
     {
+        u32 artifact_obtained : 1;
         u32 placed : 1;
-        u32 flag_02 : 1;
         u32 flag_04 : 1;
-        u32 available : 1;
+        u32 artifact_unlocked : 1;
         u32 entry_slot : 2;
         u32 unk6 : 2;
         u32 x : 4;
         u32 z : 4;
-        u32 unk2 : 8;
-        u32 count : 8;
+        u32 placement_order : 8;
+        u32 artifact_order : 8;
     } bits;
 } FieldLandWords;
 
@@ -793,12 +795,12 @@ typedef struct
     u16 primary_value;   /**< Weapon power; the first stat column of the GOSUB roster. */
     u16 stats[COMPANION_STAT_COUNT];
     u8 unknown_0x22[2];
-    FieldNibbles weapon_bonus; /**< Summed weapon bonus nibbles, 0-9. */
-    FieldNibbles armor_bonus; /**< Summed armor bonus nibbles, 0-9. */
+    FieldNibbles weapon_bonus;                             /**< Summed weapon bonus nibbles, 0-9. */
+    FieldNibbles armor_bonus;                              /**< Summed armor bonus nibbles, 0-9. */
     FieldStat character_stats[FIELD_CHARACTER_STAT_COUNT]; /**< Effective values 20-99; base values 0. */
-    u8 armor_flags; /**< OR of the source armor items' status_flags. */
-    u8 weapon_flags; /**< OR of the source weapon items' status_flags. */
-    u8 armor_flags2; /**< OR of the source armor items' element_flags. */
+    u8 armor_flags;                                        /**< OR of the source armor items' status_flags. */
+    u8 weapon_flags;                                       /**< OR of the source weapon items' status_flags. */
+    u8 armor_flags2;                                       /**< OR of the source armor items' element_flags. */
     u8 unknown_0x3f;
     u32 unknown_0x40;
     u8 logic_layout; /**< Low nibble: logic class; high nibble: grid bound. */
@@ -903,16 +905,17 @@ typedef struct SavedGameLayout
         u32 word;
         struct
         {
-            /** @brief Lands placed so far; the next placed land gets this count as its order. */
+            /** @brief Land artifacts obtained so far; the next artifact gets this count as its order. */
+            u8 artifact_count;
+            /** @brief Lands placed on the map so far; monster and guest levels scale with it. */
             u8 placed_land_count;
-            u8 hero_level;
             /** @brief Bits 0-6: day of the week (index into g_field_weekday_names). */
             u16 weekday;
         } fields;
         struct
         {
+            u32 artifact_count : 8;
             u32 placed_land_count : 8;
-            u32 hero_level : 8;
             /** @brief Day of the week (index into g_field_weekday_names). */
             u32 weekday : 7;
             u32 unk23 : 9;

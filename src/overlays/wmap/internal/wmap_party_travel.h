@@ -7,8 +7,6 @@
 #define WMAP_TRAVEL_PATH_CAPACITY 32
 /** @brief Traveler that event sequences walk between lands. */
 #define WMAP_SCRIPTED_TRAVELER 3
-/** @brief Land reached by the special travel sequence instead of walking. */
-#define WMAP_SPECIAL_TRAVEL_LAND 24
 
 /** @brief Route coordinates written as words and consumed as signed halfwords. */
 typedef union

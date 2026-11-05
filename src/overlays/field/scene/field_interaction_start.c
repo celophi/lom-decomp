@@ -1,19 +1,20 @@
-#include "overlays/field/field_scene_transition.h"
-#include "overlays/field/field_text.h"
+#include "common.h"
+#include <rand.h>
+
+#include "../internal/field_actor.h"
+#include "../internal/field_actor_key_ops.h"
+#include "../internal/field_calls.h"
+#include "../internal/field_records.h"
+#include "../internal/field_scene_internal.h"
+#include "../internal/field_script.h"
+#include "common/saved_game.h"
 #include "main/audio/game_audio.h"
 #include "main/game_state.h"
 #include "main/main.h"
-#include "common/saved_game.h"
 #include "main/scene_state.h"
-#include <rand.h>
-#include "common.h"
-#include "../internal/field_actor_key_ops.h"
-#include "../internal/field_calls.h"
-#include "../internal/field_actor.h"
-#include "../internal/field_script.h"
 #include "overlays/field/field_interaction_start.h"
-#include "../internal/field_records.h"
-#include "../internal/field_scene_internal.h"
+#include "overlays/field/field_scene_transition.h"
+#include "overlays/field/field_text.h"
 
 /** @brief Text macro holding the name of the current day of the week. */
 #define FIELD_TEXT_MACRO_WEEKDAY 12
@@ -239,7 +240,8 @@ static void field_init_text_macros(void)
     }
 
     g_field_text_macros[FIELD_TEXT_MACRO_WEEKDAY].character_limit = FIELD_WEEKDAY_CHARACTER_LIMIT;
-    g_field_text_macros[FIELD_TEXT_MACRO_WEEKDAY].text = FIELD_OFFSET_TABLE_TEXT(g_field_weekday_names, g_field_game_state->control.fields.weekday & FIELD_WEEKDAY_MASK);
+    g_field_text_macros[FIELD_TEXT_MACRO_WEEKDAY].text =
+        FIELD_OFFSET_TABLE_TEXT(g_field_weekday_names, g_field_game_state->control.fields.weekday & FIELD_WEEKDAY_MASK);
 
 #if !defined(VERSION_JP)
     if ((field_get_script_var(0, FIELD_VAR_UNKA02) != 0) || ((g_field_game_state->characters[1].info.word & FIELD_CHARACTER_PAD_CONTROLLED) != 0))
@@ -326,7 +328,7 @@ static void field_init_script_variables(void)
         field_set_script_var(0, FIELD_VAR_RANDOM_SEED, rand() & 0xFF);
     }
 
-    if (g_field_game_state->control.fields.hero_level >= 18)
+    if (g_field_game_state->control.fields.placed_land_count >= 18)
     {
         field_set_script_var(0, FIELD_VAR_UNKA00, 1);
     }
@@ -370,118 +372,118 @@ void field_install_actor_action(FieldLayoutRecord* layout_record, s32 record_ind
     {
         switch (layout_record->control.bits.kind)
         {
-        case FIELD_ACTION_ACTOR:
-        {
-            u16 count;
-            FieldActorRecord* record;
-
-            layout_record->control.bits.active = 1;
-            count = g_field_runtime->state.actor_count++;
-            record = &g_field_runtime->actors[count];
-            entry = record;
-            record->id = record_index + FIELD_ACTION_ID_BASE;
-            record->flags.bits.active = 1;
-            entry->flags.bits.trigger_group = layout_record->control.flags;
-            layout_record->control.flags &= ~FIELD_ACTION_TRIGGER_GROUP_MASK;
-            entry->flags.bits.source = layout_record->source.actor >> FIELD_ACTION_SOURCE_SHIFT;
-            action_index = 0;
-            layout_record->source.actor &= FIELD_ACTION_SOURCE_ACTOR_MASK;
-            break;
-        }
-        case FIELD_ACTION_GROUP_ACTOR:
-        {
-            u16 count;
-            FieldActorRecord* record;
-
-            layout_record->control.bits.active = 1;
-            count = g_field_runtime->state.actor_count++;
-            record = &g_field_runtime->actors[count];
-            entry = record;
-            record->id = record_index + FIELD_ACTION_ID_BASE;
-            record->flags.bits.active = 1;
-            entry->flags.bits.trigger_group = layout_record->control.flags;
-            entry->flags.bits.source = layout_record->source.actor >> FIELD_ACTION_SOURCE_SHIFT;
-            layout_record->control.flags &= ~FIELD_ACTION_TRIGGER_GROUP_MASK;
-            action_index = 0;
-
-            if (layout_record->control.bits.golem_color == 0)
+            case FIELD_ACTION_ACTOR:
             {
-                layout_record->control.bits.golem_color = FIELD_GOLEM_COLOR(g_field_game_state->golem_count >> 4);
+                u16 count;
+                FieldActorRecord* record;
+
+                layout_record->control.bits.active = 1;
+                count = g_field_runtime->state.actor_count++;
+                record = &g_field_runtime->actors[count];
+                entry = record;
+                record->id = record_index + FIELD_ACTION_ID_BASE;
+                record->flags.bits.active = 1;
+                entry->flags.bits.trigger_group = layout_record->control.flags;
+                layout_record->control.flags &= ~FIELD_ACTION_TRIGGER_GROUP_MASK;
+                entry->flags.bits.source = layout_record->source.actor >> FIELD_ACTION_SOURCE_SHIFT;
+                action_index = 0;
+                layout_record->source.actor &= FIELD_ACTION_SOURCE_ACTOR_MASK;
+                break;
             }
-
-            layout_record->source.actor &= FIELD_ACTION_SOURCE_ACTOR_MASK;
-            break;
-        }
-        case FIELD_ACTION_SCRIPT:
-        {
-            u16 count;
-            FieldActorRecord* record;
-            s32 flags;
-            s32 flags_to_set;
-
-            layout_record->control.bits.active = 0;
-            count = g_field_runtime->state.actor_count++;
-            record = &g_field_runtime->actors[count];
-            entry = record;
-            record->id = record_index + FIELD_ACTION_ID_BASE;
-            action_index = 0;
-            record->flags.bits.active = 1;
-            flags_to_set = (entry->flags.word & ~FIELD_ACTION_TRIGGER_GROUP_MASK) | (layout_record->control.flags & FIELD_ACTION_TRIGGER_GROUP_MASK);
-
-            do
+            case FIELD_ACTION_GROUP_ACTOR:
             {
-                entry->flags.word = flags_to_set;
-            } while (0);
-            flag_entry = entry;
-            flags = flag_entry->flags.word;
-            flags_to_set = FIELD_ACTOR_SCRIPT_ONLY;
-            flag_entry->flags.word = flags | flags_to_set;
-            break;
-        }
-        case FIELD_ACTION_PARTY_0:
-            action_index = 0;
-            layout_record->control.bits.active = 0;
-            entry = &g_field_runtime->actors[0];
-            entry->flags.bits.active = 1;
-            break;
-        case FIELD_ACTION_PARTY_1:
-            action_index = 0;
-            layout_record->control.bits.active = 0;
-            /* The original activates the previous entry, not party actor 1 (flag_entry is shared with the script case). */
-            flag_entry = entry;
-            entry = &g_field_runtime->actors[1];
-            flag_entry->flags.bits.active = 1;
-            break;
-        case FIELD_ACTION_PARTY_2:
-            action_index = 0;
-            layout_record->control.bits.active = 0;
-            entry = &g_field_runtime->actors[2];
-            entry->flags.bits.active = 1;
-            break;
-        case FIELD_ACTION_EVENT:
-        {
-            FieldActorRecord* event;
+                u16 count;
+                FieldActorRecord* record;
 
-            layout_record->control.bits.active = 0;
+                layout_record->control.bits.active = 1;
+                count = g_field_runtime->state.actor_count++;
+                record = &g_field_runtime->actors[count];
+                entry = record;
+                record->id = record_index + FIELD_ACTION_ID_BASE;
+                record->flags.bits.active = 1;
+                entry->flags.bits.trigger_group = layout_record->control.flags;
+                entry->flags.bits.source = layout_record->source.actor >> FIELD_ACTION_SOURCE_SHIFT;
+                layout_record->control.flags &= ~FIELD_ACTION_TRIGGER_GROUP_MASK;
+                action_index = 0;
 
-            if (layout_record->control.bits.selector < FIELD_MENU_GROUP_COUNT)
-            {
-                field_classify_menu_slots(layout_record->control.bits.selector);
+                if (layout_record->control.bits.golem_color == 0)
+                {
+                    layout_record->control.bits.golem_color = FIELD_GOLEM_COLOR(g_field_game_state->golem_count >> 4);
+                }
+
+                layout_record->source.actor &= FIELD_ACTION_SOURCE_ACTOR_MASK;
+                break;
             }
+            case FIELD_ACTION_SCRIPT:
+            {
+                u16 count;
+                FieldActorRecord* record;
+                s32 flags;
+                s32 flags_to_set;
 
-            event = &g_field_runtime->events[0];
-            event->flags.bits.active = 1;
-            g_field_runtime->state.flags |= FIELD_STATE_PARTY_MODE_MASK;
-            action_index = 0;
-            entry = event;
-            field_start_interaction(FIELD_EVENT_ACTOR_ID_BASE, layout_record->scripts[FIELD_EVENT_START]);
-            layout_record->scripts[FIELD_EVENT_START] = FIELD_NO_SCRIPT;
-            field_begin_party_script_control(FIELD_PARTY_MODE_EVENT);
-            break;
-        }
-        case FIELD_ACTION_MENU:
-            layout_record->control.bits.active = field_install_menu_action(layout_record, &entry, record_index, &action_index);
-            break;
+                layout_record->control.bits.active = 0;
+                count = g_field_runtime->state.actor_count++;
+                record = &g_field_runtime->actors[count];
+                entry = record;
+                record->id = record_index + FIELD_ACTION_ID_BASE;
+                action_index = 0;
+                record->flags.bits.active = 1;
+                flags_to_set = (entry->flags.word & ~FIELD_ACTION_TRIGGER_GROUP_MASK) | (layout_record->control.flags & FIELD_ACTION_TRIGGER_GROUP_MASK);
+
+                do
+                {
+                    entry->flags.word = flags_to_set;
+                } while (0);
+                flag_entry = entry;
+                flags = flag_entry->flags.word;
+                flags_to_set = FIELD_ACTOR_SCRIPT_ONLY;
+                flag_entry->flags.word = flags | flags_to_set;
+                break;
+            }
+            case FIELD_ACTION_PARTY_0:
+                action_index = 0;
+                layout_record->control.bits.active = 0;
+                entry = &g_field_runtime->actors[0];
+                entry->flags.bits.active = 1;
+                break;
+            case FIELD_ACTION_PARTY_1:
+                action_index = 0;
+                layout_record->control.bits.active = 0;
+                /* The original activates the previous entry, not party actor 1 (flag_entry is shared with the script case). */
+                flag_entry = entry;
+                entry = &g_field_runtime->actors[1];
+                flag_entry->flags.bits.active = 1;
+                break;
+            case FIELD_ACTION_PARTY_2:
+                action_index = 0;
+                layout_record->control.bits.active = 0;
+                entry = &g_field_runtime->actors[2];
+                entry->flags.bits.active = 1;
+                break;
+            case FIELD_ACTION_EVENT:
+            {
+                FieldActorRecord* event;
+
+                layout_record->control.bits.active = 0;
+
+                if (layout_record->control.bits.selector < FIELD_MENU_GROUP_COUNT)
+                {
+                    field_classify_menu_slots(layout_record->control.bits.selector);
+                }
+
+                event = &g_field_runtime->events[0];
+                event->flags.bits.active = 1;
+                g_field_runtime->state.flags |= FIELD_STATE_PARTY_MODE_MASK;
+                action_index = 0;
+                entry = event;
+                field_start_interaction(FIELD_EVENT_ACTOR_ID_BASE, layout_record->scripts[FIELD_EVENT_START]);
+                layout_record->scripts[FIELD_EVENT_START] = FIELD_NO_SCRIPT;
+                field_begin_party_script_control(FIELD_PARTY_MODE_EVENT);
+                break;
+            }
+            case FIELD_ACTION_MENU:
+                layout_record->control.bits.active = field_install_menu_action(layout_record, &entry, record_index, &action_index);
+                break;
         }
 
         if (entry != NULL)
@@ -521,17 +523,17 @@ void field_begin_party_script_control(s32 mode)
         {
             switch (mode)
             {
-            case FIELD_PARTY_MODE_ALL:
-            case FIELD_PARTY_MODE_EVENT:
-                field_set_actor_control_mode(i, FIELD_CONTROL_SCRIPTED);
-                break;
-            case FIELD_PARTY_MODE_PAD_CONTROLLED:
-                if (g_field_game_state->characters[i].info.bits.pad_controlled)
-                {
+                case FIELD_PARTY_MODE_ALL:
+                case FIELD_PARTY_MODE_EVENT:
                     field_set_actor_control_mode(i, FIELD_CONTROL_SCRIPTED);
-                }
+                    break;
+                case FIELD_PARTY_MODE_PAD_CONTROLLED:
+                    if (g_field_game_state->characters[i].info.bits.pad_controlled)
+                    {
+                        field_set_actor_control_mode(i, FIELD_CONTROL_SCRIPTED);
+                    }
 
-                break;
+                    break;
             }
         }
     }
@@ -549,28 +551,28 @@ void field_end_party_script_control(void)
     {
         switch (g_field_runtime->state.bits.party_mode)
         {
-        case FIELD_PARTY_MODE_ALL:
-        case FIELD_PARTY_MODE_EVENT:
-            if (g_field_game_state->characters[i].info.bits.pad_controlled)
-            {
-                field_set_actor_control_mode(i, FIELD_CONTROL_PLAYER);
-                field_stop_actor_script(i, 0);
-            }
-            else
-            {
-                field_set_actor_control_mode(i, FIELD_CONTROL_FOLLOWER);
-                field_stop_actor_script(i, 0);
-            }
+            case FIELD_PARTY_MODE_ALL:
+            case FIELD_PARTY_MODE_EVENT:
+                if (g_field_game_state->characters[i].info.bits.pad_controlled)
+                {
+                    field_set_actor_control_mode(i, FIELD_CONTROL_PLAYER);
+                    field_stop_actor_script(i, 0);
+                }
+                else
+                {
+                    field_set_actor_control_mode(i, FIELD_CONTROL_FOLLOWER);
+                    field_stop_actor_script(i, 0);
+                }
 
-            break;
-        case FIELD_PARTY_MODE_PAD_CONTROLLED:
-            if (g_field_game_state->characters[i].info.bits.pad_controlled)
-            {
-                field_set_actor_control_mode(i, FIELD_CONTROL_PLAYER);
-                field_stop_actor_script(i, 0);
-            }
+                break;
+            case FIELD_PARTY_MODE_PAD_CONTROLLED:
+                if (g_field_game_state->characters[i].info.bits.pad_controlled)
+                {
+                    field_set_actor_control_mode(i, FIELD_CONTROL_PLAYER);
+                    field_stop_actor_script(i, 0);
+                }
 
-            break;
+                break;
         }
     }
 
@@ -604,27 +606,27 @@ static s32 field_install_menu_action(FieldLayoutRecord* layout_record, FieldActo
 
         switch (handle)
         {
-        case FIELD_MENU_SLOT_UNUSED:
-            *entry_out = NULL;
-            return 0;
+            case FIELD_MENU_SLOT_UNUSED:
+                *entry_out = NULL;
+                return 0;
 
-        case FIELD_MENU_SLOT_PLAIN:
-            *action_index = 0;
-            layout_record->source.result_type = 2;
-            break;
+            case FIELD_MENU_SLOT_PLAIN:
+                *action_index = 0;
+                layout_record->source.result_type = 2;
+                break;
 
-        case FIELD_MENU_SLOT_ITEM:
-            *action_index = g_field_game_state->menu_slots[group].slots[slot].entry.index - FIELD_MENU_ITEM_BASE;
-            layout_record->source.result_type = g_field_game_state->menu_slots[group].slots[slot].entry.bits.result_type;
-            break;
+            case FIELD_MENU_SLOT_ITEM:
+                *action_index = g_field_game_state->menu_slots[group].slots[slot].entry.index - FIELD_MENU_ITEM_BASE;
+                layout_record->source.result_type = g_field_game_state->menu_slots[group].slots[slot].entry.bits.result_type;
+                break;
 
-        case FIELD_MENU_SLOT_INDEXED:
-            *action_index = g_field_game_state->menu_slots[group].slots[slot].entry.index;
-            layout_record->source.result_type = g_field_game_state->menu_slots[group].slots[slot].entry.bits.result_type;
-            break;
+            case FIELD_MENU_SLOT_INDEXED:
+                *action_index = g_field_game_state->menu_slots[group].slots[slot].entry.index;
+                layout_record->source.result_type = g_field_game_state->menu_slots[group].slots[slot].entry.bits.result_type;
+                break;
 
-        default:
-            break;
+            default:
+                break;
         }
 
         count = g_field_runtime->state.actor_count++;
@@ -677,30 +679,31 @@ static void field_leave_scene(void)
 
     switch (scene_id)
     {
-    case FIELD_SCENE_TITLE:
-        g_pending_game_state = GAME_STATE_RETURN_TO_TITLE;
-        g_field_runtime->scene_entry = 0xFFFF;
-        g_field_secondary_music_id = -1;
-        g_field_sound_bank_id = -1;
-        return;
-    case FIELD_SCENE_WORLD_MAP:
-        g_field_runtime->scene_entry = scene_id;
-        g_pending_game_state = GAME_STATE_WORLD_MAP;
-        g_field_secondary_music_id = -1;
-        g_field_sound_bank_id = -1;
+        case FIELD_SCENE_TITLE:
+            g_pending_game_state = GAME_STATE_RETURN_TO_TITLE;
+            g_field_runtime->scene_entry = 0xFFFF;
+            g_field_secondary_music_id = -1;
+            g_field_sound_bank_id = -1;
+            return;
+        case FIELD_SCENE_WORLD_MAP:
+            g_field_runtime->scene_entry = scene_id;
+            g_pending_game_state = GAME_STATE_WORLD_MAP;
+            g_field_secondary_music_id = -1;
+            g_field_sound_bank_id = -1;
 
-        if (field_get_script_var(0, FIELD_VAR_WORLD_MAP_REDIRECT) != 0)
-        {
-            g_pending_game_state = GAME_STATE_FIELD;
-            g_field_runtime->transition.fields.scene_id = 1;
-            g_field_runtime->scene_entry = 0;
-        }
+            if (field_get_script_var(0, FIELD_VAR_WORLD_MAP_REDIRECT) != 0)
+            {
+                g_pending_game_state = GAME_STATE_FIELD;
+                g_field_runtime->transition.fields.scene_id = 1;
+                g_field_runtime->scene_entry = 0;
+            }
 
-        return;
-    default:
-        field_set_scene_parameters(g_field_runtime->transition.fields.scene_id, g_field_runtime->transition.fields.object_id, g_field_runtime->transition.fields.spawn & FIELD_SPAWN_ID_MASK,
-                                   g_field_runtime->scene_entry, g_field_runtime->scene_argument1, g_field_runtime->scene_argument2);
-        break;
+            return;
+        default:
+            field_set_scene_parameters(g_field_runtime->transition.fields.scene_id, g_field_runtime->transition.fields.object_id,
+                                       g_field_runtime->transition.fields.spawn & FIELD_SPAWN_ID_MASK, g_field_runtime->scene_entry,
+                                       g_field_runtime->scene_argument1, g_field_runtime->scene_argument2);
+            break;
     }
 }
 
@@ -731,7 +734,8 @@ static void field_update_scene_transition(void)
                 field_seek_scene_resource(scene_id & FIELD_SCENE_ID_MASK);
             }
 
-            ((void (*)(s32, s32, s32, s32))field_set_fade_target)(g_field_runtime->fade_color.bits.red, g_field_runtime->fade_color.bits.green, g_field_runtime->fade_color.bits.blue, g_field_runtime->fade_timer);
+            ((void (*)(s32, s32, s32, s32))field_set_fade_target)(g_field_runtime->fade_color.bits.red, g_field_runtime->fade_color.bits.green,
+                                                                  g_field_runtime->fade_color.bits.blue, g_field_runtime->fade_timer);
 
             if (g_field_runtime->transition.fields.scene_id == FIELD_SCENE_WORLD_MAP)
             {
@@ -1146,12 +1150,12 @@ void field_resolve_talk_window(s32* actor_id, s32* plane, s32* effect, s32* sele
 
     switch (effect_value)
     {
-    case FIELD_TALK_EFFECT_SELECTOR:
-        *effect = field_get_actor_selector(field_find_actor_record_or_default(original_actor_id, g_field_runtime));
-        break;
-    case FIELD_TALK_AUTO:
-        *effect = -1;
-        break;
+        case FIELD_TALK_EFFECT_SELECTOR:
+            *effect = field_get_actor_selector(field_find_actor_record_or_default(original_actor_id, g_field_runtime));
+            break;
+        case FIELD_TALK_AUTO:
+            *effect = -1;
+            break;
     }
 
     *effect |= facing_flag;
