@@ -344,7 +344,7 @@ void func_80060230(void)
                 g_wmap_packet_bytes += sizeof(SPRT);
                 g_wmap_current_frame->packet_cursor += sizeof(SPRT);
             }
-            char_index += 1;
+            char_index++;
         } while (D_80051A6C[g_wmap_auxiliary_label_draw_mode + 1] != char_index);
         wmap_queue_texture_page(0xB, 1);
     }

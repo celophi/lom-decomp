@@ -36,11 +36,9 @@ void wmap_special_effect_34_sequence_3_step_04(void);
 void wmap_special_effect_34_sequence_4_step_02(void);
 void wmap_special_effect_34_sequence_4_step_04(void);
 
-typedef void (*WmapHandler)(void);
-
 extern WmapAnimationSlot g_wmap_actor_animations[];
-extern WmapHandler D_800D7A0C[];
-extern WmapHandler D_800D7A2C[];
+extern WmapSequenceStep g_wmap_special_effect_34_steps[];
+extern WmapSequenceStep g_wmap_special_effect_34_timeline_steps[];
 extern s32 g_wmap_cursor_column;
 extern s32 g_wmap_cursor_row;
 extern s32 g_wmap_vehicle_cell_x;
@@ -73,10 +71,10 @@ extern void wmap_special_effect_34_step_06(void);
 extern void wmap_special_effect_34_step_07(void);
 extern s32 wmap_special_effect_34_run_timeline(s32);
 extern void wmap_special_effect_34_timeline_step_02(void);
-extern WmapHandler D_800D7A64[];
-extern WmapHandler D_800D7A84[];
-extern WmapHandler D_800D7AAC[];
-extern WmapHandler D_800D7AC4[];
+extern WmapSequenceStep g_wmap_special_effect_34_sequence_1_steps[];
+extern WmapSequenceStep g_wmap_special_effect_34_sequence_2_steps[];
+extern WmapSequenceStep g_wmap_special_effect_34_sequence_3_steps[];
+extern WmapSequenceStep g_wmap_special_effect_34_sequence_4_steps[];
 extern s32 g_wmap_special_effect_34_sequence_2_timer;
 extern u32 g_wmap_special_effect_34_sequence_4_step;
 extern s32 g_wmap_special_effect_34_sequence_4_timer;
@@ -277,7 +275,7 @@ void wmap_special_effect_34_sequence_3_step_02(void)
     }
 }
 
-WMAP_STEP_RUNNER(wmap_special_effect_34_run, D_800D7A0C, 8, g_wmap_special_effect_34_step, g_wmap_special_effect_34_timer)
+WMAP_STEP_RUNNER(wmap_special_effect_34_run, g_wmap_special_effect_34_steps, 8, g_wmap_special_effect_34_step, g_wmap_special_effect_34_timer)
 
 WMAP_STEP_RESET(wmap_special_effect_34_step_00, g_wmap_special_effect_34_step, g_wmap_special_effect_34_timer)
 
@@ -358,7 +356,7 @@ void wmap_special_effect_34_step_07(void)
     g_wmap_special_effect_34_step++;
 }
 
-WMAP_STEP_RUNNER(wmap_special_effect_34_run_timeline, D_800D7A2C, 0xE, g_wmap_special_effect_34_timeline_step, g_wmap_special_effect_34_timeline_timer)
+WMAP_STEP_RUNNER(wmap_special_effect_34_run_timeline, g_wmap_special_effect_34_timeline_steps, 0xE, g_wmap_special_effect_34_timeline_step, g_wmap_special_effect_34_timeline_timer)
 
 WMAP_STEP_RESET(wmap_special_effect_34_timeline_step_00, g_wmap_special_effect_34_timeline_step, g_wmap_special_effect_34_timeline_timer)
 
@@ -383,7 +381,7 @@ void wmap_special_effect_34_timeline_step_02(void)
 {
     if (D_80139234 == 0)
     {
-        g_wmap_special_effect_34_timeline_step += 1;
+        g_wmap_special_effect_34_timeline_step++;
         wmap_special_effect_34_timeline_step_03();
     }
 }
@@ -410,7 +408,7 @@ WMAP_STEP_WAIT_SCROLL(wmap_special_effect_34_timeline_step_04,
 /** @brief World-map step handler: bump the step counter and run the next step. */
 void wmap_special_effect_34_timeline_step_05(void)
 {
-    g_wmap_special_effect_34_timeline_step += 1;
+    g_wmap_special_effect_34_timeline_step++;
     wmap_special_effect_34_timeline_step_06();
 }
 
@@ -449,7 +447,7 @@ WMAP_STEP_WAIT(wmap_special_effect_34_timeline_step_12, g_wmap_special_effect_34
 WMAP_STEP_FINISH_BLOCKING(wmap_special_effect_34_timeline_finish,
     g_wmap_special_effect_34_timeline_step)
 
-WMAP_STEP_RUNNER(wmap_special_effect_34_run_sequence_1, D_800D7A64, 8, g_wmap_special_effect_34_sequence_1_step, g_wmap_special_effect_34_sequence_1_timer)
+WMAP_STEP_RUNNER(wmap_special_effect_34_run_sequence_1, g_wmap_special_effect_34_sequence_1_steps, 8, g_wmap_special_effect_34_sequence_1_step, g_wmap_special_effect_34_sequence_1_timer)
 
 WMAP_STEP_RESET(wmap_special_effect_34_sequence_1_reset, g_wmap_special_effect_34_sequence_1_step, g_wmap_special_effect_34_sequence_1_timer)
 
@@ -478,7 +476,7 @@ void wmap_special_effect_34_sequence_1_step_07(void)
     g_wmap_special_effect_34_sequence_1_step++;
 }
 
-WMAP_STEP_RUNNER(wmap_special_effect_34_run_sequence_2, D_800D7A84, 0xA, g_wmap_special_effect_34_sequence_2_step, g_wmap_special_effect_34_sequence_2_timer)
+WMAP_STEP_RUNNER(wmap_special_effect_34_run_sequence_2, g_wmap_special_effect_34_sequence_2_steps, 0xA, g_wmap_special_effect_34_sequence_2_step, g_wmap_special_effect_34_sequence_2_timer)
 
 WMAP_STEP_RESET(wmap_special_effect_34_sequence_2_reset, g_wmap_special_effect_34_sequence_2_step, g_wmap_special_effect_34_sequence_2_timer)
 
@@ -512,7 +510,7 @@ void wmap_special_effect_34_sequence_2_step_09(void)
     g_wmap_special_effect_34_sequence_2_step++;
 }
 
-WMAP_STEP_RUNNER(wmap_special_effect_34_run_sequence_3, D_800D7AAC, 6, g_wmap_special_effect_34_sequence_3_step, g_wmap_special_effect_34_sequence_3_timer)
+WMAP_STEP_RUNNER(wmap_special_effect_34_run_sequence_3, g_wmap_special_effect_34_sequence_3_steps, 6, g_wmap_special_effect_34_sequence_3_step, g_wmap_special_effect_34_sequence_3_timer)
 
 WMAP_STEP_RESET(wmap_special_effect_34_sequence_3_reset, g_wmap_special_effect_34_sequence_3_step, g_wmap_special_effect_34_sequence_3_timer)
 
@@ -545,7 +543,7 @@ WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_special_effect_34_sequence_3_step_04, g_wmap_
 
 WMAP_STEP_ADVANCE(wmap_special_effect_34_sequence_3_end, g_wmap_special_effect_34_sequence_3_step)
 
-WMAP_STEP_RUNNER(wmap_special_effect_34_run_sequence_4, D_800D7AC4, 6, g_wmap_special_effect_34_sequence_4_step, g_wmap_special_effect_34_sequence_4_timer)
+WMAP_STEP_RUNNER(wmap_special_effect_34_run_sequence_4, g_wmap_special_effect_34_sequence_4_steps, 6, g_wmap_special_effect_34_sequence_4_step, g_wmap_special_effect_34_sequence_4_timer)
 
 WMAP_STEP_RESET(wmap_special_effect_34_sequence_4_reset, g_wmap_special_effect_34_sequence_4_step, g_wmap_special_effect_34_sequence_4_timer)
 

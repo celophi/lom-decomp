@@ -78,10 +78,10 @@ extern s32 g_wmap_special_travel_pending;
 
 extern u32 g_wmap_special_travel_step;
 extern s32 g_wmap_special_travel_timer;
-extern void (*g_wmap_special_travel_steps[])(void);
+extern WmapSequenceStep g_wmap_special_travel_steps[];
 extern u32 g_wmap_special_return_step;
 extern s32 g_wmap_special_return_timer;
-extern void (*g_wmap_special_return_steps[])(void);
+extern WmapSequenceStep g_wmap_special_return_steps[];
 
 s32 wmap_start_vehicle_flight(s32 initialize);
 s32 wmap_fly_vehicle(s32 initialize);
@@ -172,7 +172,7 @@ static inline void wmap_climb_vehicle(void)
     actor = wmap_turn_vehicle(1);
     if (g_wmap_actor_motions.height < WMAP_VEHICLE_MAX_HEIGHT)
     {
-        g_wmap_actor_motions.height += 1;
+        g_wmap_actor_motions.height++;
     }
     if (g_wmap_actor_motions.radius < WMAP_VEHICLE_MAX_RADIUS)
     {
@@ -182,7 +182,7 @@ static inline void wmap_climb_vehicle(void)
     {
         if (actor->scale_index < WMAP_VEHICLE_SCALE_MAX)
         {
-            actor->scale_index += 1;
+            actor->scale_index++;
         }
     }
 }
@@ -254,7 +254,7 @@ void wmap_special_travel_spawn_vehicle(void)
 {
     wmap_place_vehicle();
     g_wmap_special_travel_timer = WMAP_VEHICLE_CLIMB_FRAMES;
-    g_wmap_special_travel_step += 1;
+    g_wmap_special_travel_step++;
     wmap_special_travel_climb_vehicle();
 }
 
@@ -456,7 +456,7 @@ s32 wmap_fly_vehicle(s32 initialize)
             g_wmap_view_scroll_mode = 2;
             g_wmap_scroll_remaining_x = (g_wmap_vehicle_target_x - g_wmap_vehicle_cell_x) * WMAP_CELL_SPACING;
             g_wmap_scroll_remaining_y = (g_wmap_vehicle_target_y - g_wmap_vehicle_cell_y) * WMAP_CELL_SPACING;
-            g_wmap_vehicle_phase += 1;
+            g_wmap_vehicle_phase++;
         }
         return 1;
     }
@@ -535,7 +535,7 @@ void wmap_special_return_spawn_vehicle(void)
 {
     wmap_place_vehicle();
     g_wmap_special_return_timer = WMAP_VEHICLE_CLIMB_FRAMES;
-    g_wmap_special_return_step += 1;
+    g_wmap_special_return_step++;
     wmap_special_return_climb_vehicle();
 }
 
@@ -578,7 +578,7 @@ void wmap_special_travel_prepare(void)
     g_wmap_vehicle_flap_sound_enabled = 1;
     wmap_load_vehicle();
     g_wmap_special_travel_timer = 1;
-    g_wmap_special_travel_step += 1;
+    g_wmap_special_travel_step++;
 }
 
 /** @brief Special travel step 2: wait for the step timer. */
@@ -591,7 +591,7 @@ void wmap_special_travel_scroll_to_start(void)
     g_wmap_view_scroll_mode = 2;
     g_wmap_scroll_remaining_x = ((g_wmap_vehicle_cell_x - 1) * WMAP_CELL_SPACING) - g_wmap_view.x;
     g_wmap_scroll_remaining_y = ((g_wmap_vehicle_cell_y - 1) * WMAP_CELL_SPACING) - g_wmap_view.y;
-    g_wmap_special_travel_step += 1;
+    g_wmap_special_travel_step++;
     wmap_special_travel_wait_scroll();
 }
 
@@ -623,7 +623,7 @@ void wmap_special_travel_wait_party(void)
 {
     if (g_wmap_vehicle_flying == 0)
     {
-        g_wmap_special_travel_step += 1;
+        g_wmap_special_travel_step++;
         wmap_special_travel_start_turn();
     }
 }
@@ -642,13 +642,13 @@ void wmap_special_travel_turn(void)
     {
         g_wmap_sprite_actors[0].resource_index = -1;
         g_wmap_special_travel_timer = 0;
-        g_wmap_special_travel_step += 1;
+        g_wmap_special_travel_step++;
     }
     remaining_ticks = g_wmap_special_travel_timer - 1;
     g_wmap_special_travel_timer = remaining_ticks;
     if (remaining_ticks == 0)
     {
-        g_wmap_special_travel_step += 1;
+        g_wmap_special_travel_step++;
     }
 }
 
@@ -659,7 +659,7 @@ void wmap_special_travel_fly_to_land(void)
     wmap_set_traveler_position(0, g_wmap_vehicle_target_x, g_wmap_vehicle_target_y);
     g_wmap_vehicle_flying = 1;
     wmap_install_callback(wmap_start_vehicle_flight);
-    g_wmap_special_travel_step += 1;
+    g_wmap_special_travel_step++;
     wmap_special_travel_wait_land();
 }
 
@@ -668,7 +668,7 @@ void wmap_special_travel_wait_land(void)
 {
     if (g_wmap_vehicle_flying == 0)
     {
-        g_wmap_special_travel_step += 1;
+        g_wmap_special_travel_step++;
         wmap_special_travel_start_cruise();
     }
 }
@@ -687,7 +687,7 @@ void wmap_special_travel_cruise(void)
     }
     if (--g_wmap_special_travel_timer == 0)
     {
-        g_wmap_special_travel_step += 1;
+        g_wmap_special_travel_step++;
     }
 }
 
@@ -696,7 +696,7 @@ void wmap_special_travel_start_landing(void)
 {
     g_wmap_vehicle_phase = 1;
     wmap_start_sequence(wmap_finish_vehicle_turn);
-    g_wmap_special_travel_step += 1;
+    g_wmap_special_travel_step++;
     wmap_special_travel_wait_landing();
 }
 
@@ -705,7 +705,7 @@ void wmap_special_travel_wait_landing(void)
 {
     if (g_wmap_vehicle_phase == 0)
     {
-        g_wmap_special_travel_step += 1;
+        g_wmap_special_travel_step++;
         wmap_special_travel_stop_vehicle();
     }
 }
@@ -715,7 +715,7 @@ void wmap_special_travel_stop_vehicle(void)
 {
     g_wmap_actor_motions.active = 0;
     g_wmap_special_travel_timer = WMAP_VEHICLE_WAIT_FRAMES;
-    g_wmap_special_travel_step += 1;
+    g_wmap_special_travel_step++;
     wmap_special_travel_fly_away();
 }
 
@@ -730,7 +730,7 @@ void wmap_special_travel_fly_away(void)
     g_wmap_vehicle_screen_position.point.x -= 6;
     if (--g_wmap_special_travel_timer == 0)
     {
-        g_wmap_special_travel_step += 1;
+        g_wmap_special_travel_step++;
     }
 }
 
@@ -738,7 +738,7 @@ void wmap_special_travel_fly_away(void)
 void wmap_special_travel_finish(void)
 {
     g_wmap_exit_frame = 1;
-    g_wmap_special_travel_step += 1;
+    g_wmap_special_travel_step++;
 }
 
 /**
@@ -764,7 +764,7 @@ void wmap_special_return_fly_home(void)
     wmap_set_traveler_position(0, g_wmap_vehicle_target_x, g_wmap_vehicle_target_y);
     g_wmap_vehicle_flying = 1;
     wmap_install_callback(wmap_start_vehicle_flight);
-    g_wmap_special_return_step += 1;
+    g_wmap_special_return_step++;
     wmap_special_return_wait_home();
 }
 
@@ -773,7 +773,7 @@ void wmap_special_return_wait_home(void)
 {
     if (g_wmap_vehicle_flying == 0)
     {
-        g_wmap_special_return_step += 1;
+        g_wmap_special_return_step++;
         wmap_special_return_start_cruise();
     }
 }
@@ -792,7 +792,7 @@ void wmap_special_return_cruise(void)
     }
     if (--g_wmap_special_return_timer == 0)
     {
-        g_wmap_special_return_step += 1;
+        g_wmap_special_return_step++;
     }
 }
 
@@ -801,7 +801,7 @@ void wmap_special_return_start_landing(void)
 {
     g_wmap_vehicle_phase = 1;
     wmap_start_sequence(wmap_finish_vehicle_turn);
-    g_wmap_special_return_step += 1;
+    g_wmap_special_return_step++;
     wmap_special_return_wait_landing();
 }
 
@@ -810,7 +810,7 @@ void wmap_special_return_wait_landing(void)
 {
     if (g_wmap_vehicle_phase == 0)
     {
-        g_wmap_special_return_step += 1;
+        g_wmap_special_return_step++;
         wmap_special_return_stop_vehicle();
     }
 }
@@ -820,7 +820,7 @@ void wmap_special_return_stop_vehicle(void)
 {
     g_wmap_actor_motions.active = 0;
     g_wmap_special_return_timer = WMAP_VEHICLE_WAIT_FRAMES;
-    g_wmap_special_return_step += 1;
+    g_wmap_special_return_step++;
     wmap_special_return_fly_away();
 }
 
@@ -835,7 +835,7 @@ void wmap_special_return_fly_away(void)
     g_wmap_vehicle_screen_position.point.x -= 4;
     if (--g_wmap_special_return_timer == 0)
     {
-        g_wmap_special_return_step += 1;
+        g_wmap_special_return_step++;
     }
 }
 
@@ -843,5 +843,5 @@ void wmap_special_return_fly_away(void)
 void wmap_special_return_finish(void)
 {
     g_wmap_exit_frame = 1;
-    g_wmap_special_return_step += 1;
+    g_wmap_special_return_step++;
 }

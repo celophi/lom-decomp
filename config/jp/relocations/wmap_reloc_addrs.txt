@@ -24,7 +24,7 @@ rom:0x56455 reloc:MIPS_LO16 symbol:g_wmap_animation_bank_3
 rom:0x56479 reloc:MIPS_LO16 symbol:g_wmap_animation_bank_3
 rom:0x5649D reloc:MIPS_LO16 symbol:g_wmap_animation_bank_3
 
-// func_8006A2FC retains the particle globals in s6/s5 across switch paths.
+// wmap_update_particle_system retains the particle globals in s6/s5 across switch paths.
 rom:0x1A695 reloc:MIPS_HI16 symbol:D_8013B264
 rom:0x1A699 reloc:MIPS_HI16 symbol:D_8013B270
 rom:0x1A805 reloc:MIPS_LO16 symbol:D_8013B264

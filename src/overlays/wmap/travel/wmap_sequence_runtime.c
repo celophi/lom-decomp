@@ -63,7 +63,7 @@ extern WmapSequenceCallback g_wmap_sequences[];
 extern u32 g_wmap_land_entry_step;
 extern u32 g_wmap_land_focus_step;
 extern s32 g_wmap_land_focus_timer;
-extern void (*g_wmap_land_focus_steps[WMAP_LAND_FOCUS_STEPS])(void);
+extern WmapSequenceStep g_wmap_land_focus_steps[WMAP_LAND_FOCUS_STEPS];
 extern s32 g_wmap_selected_artifact;
 extern s32 g_wmap_callback_active[];
 extern WmapSequenceCallback g_wmap_callbacks[];
@@ -85,10 +85,10 @@ extern s32 D_80139284;
 extern WmapCoordinatePair g_wmap_focus_screen_position;
 extern SVECTOR g_wmap_camera_rotation;
 extern s32 g_wmap_land_entry_timer;
-extern void (*g_wmap_land_entry_steps[WMAP_LAND_ENTRY_STEPS])(void);
+extern WmapSequenceStep g_wmap_land_entry_steps[WMAP_LAND_ENTRY_STEPS];
 extern u32 g_wmap_land_return_step;
 extern s32 g_wmap_land_return_timer;
-extern void (*g_wmap_land_return_steps[WMAP_LAND_RETURN_STEPS])(void);
+extern WmapSequenceStep g_wmap_land_return_steps[WMAP_LAND_RETURN_STEPS];
 extern s32 g_wmap_vehicle_cell_x;
 extern s32 g_wmap_vehicle_cell_y;
 extern s32 g_wmap_view_scroll_mode;
@@ -184,7 +184,7 @@ void wmap_land_focus_fade_out(void)
     g_wmap_status_panel_mode = 3;
     g_wmap_spirit_target_brightness = 0;
     g_wmap_land_focus_timer = 2;
-    g_wmap_land_focus_step += 1;
+    g_wmap_land_focus_step++;
 }
 
 /**
@@ -198,7 +198,7 @@ WMAP_STEP_WAIT(wmap_land_focus_wait_4, g_wmap_land_focus_step, g_wmap_land_focus
 void wmap_land_focus_hold(void)
 {
     g_wmap_land_focus_timer = 4;
-    g_wmap_land_focus_step += 1;
+    g_wmap_land_focus_step++;
 }
 
 /**
@@ -215,7 +215,7 @@ void wmap_land_focus_lock(void)
     g_wmap_event_active = 1;
     g_wmap_carousel_mode = 1;
     g_wmap_land_focus_timer = 8;
-    g_wmap_land_focus_step += 1;
+    g_wmap_land_focus_step++;
 }
 
 /**
@@ -427,30 +427,32 @@ void wmap_set_model_transform(VECTOR* translation, SVECTOR* rotation)
 }
 
 /**
- * @brief Call func_8006D014 with its last drawing parameter cleared.
- * @param actor Actor configuration passed to the drawing helper.
- * @param resource Animation resource slots, one per actor record.
- * @param arg2 TODO: drawing parameter meaning unknown.
- * @param arg3 TODO: drawing parameter meaning unknown.
- * @param arg4 TODO: drawing parameter meaning unknown.
- * @param arg5 TODO: drawing parameter meaning unknown.
+ * @brief Run wmap_update_particles_from_settings in motion mode 0.
+ * @param actors Sprite actor records of the particles.
+ * @param animations Animation resource slots, one per actor record.
+ * @param count Number of particles.
+ * @param peak_shade Target shade of a new particle.
+ * @param initial_shade Shade of a new particle.
+ * @param shade_step Shade step of a new particle.
  */
-void func_8006CFE4(void* actor, WmapAnimationSlot* resource, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
+void wmap_update_default_particles_from_settings(void* actors, WmapAnimationSlot* animations, s32 count, s32 peak_shade,
+                                                 s32 initial_shade, s32 shade_step)
 {
-    func_8006D014(actor, resource, arg2, arg3, arg4, arg5, 0);
+    wmap_update_particles_from_settings(actors, animations, count, peak_shade, initial_shade, shade_step, 0);
 }
 
 /**
- * @brief Copy the global effect parameters into the descriptor and draw it.
- * @param actor Actor configuration passed to the drawing helper.
- * @param resource Animation resource slots, one per actor record.
- * @param arg2 TODO: drawing parameter meaning unknown.
- * @param arg3 TODO: drawing parameter meaning unknown.
- * @param arg4 TODO: drawing parameter meaning unknown.
- * @param arg5 TODO: drawing parameter meaning unknown.
- * @param arg6 TODO: drawing parameter meaning unknown.
+ * @brief Load the particle settings into the shared effect parameters and run the particle system.
+ * @param actors Sprite actor records of the particles.
+ * @param animations Animation resource slots, one per actor record.
+ * @param count Number of particles.
+ * @param peak_shade Target shade of a new particle.
+ * @param initial_shade Shade of a new particle.
+ * @param shade_step Shade step of a new particle.
+ * @param mode Motion mode passed to wmap_update_particle_system.
  */
-void func_8006D014(void* actor, WmapAnimationSlot* resource, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6)
+void wmap_update_particles_from_settings(void* actors, WmapAnimationSlot* animations, s32 count, s32 peak_shade,
+                                         s32 initial_shade, s32 shade_step, s32 mode)
 {
     g_wmap_effect_params[1] = D_80139234;
     g_wmap_effect_params[2] = D_8013923C;
@@ -462,7 +464,7 @@ void func_8006D014(void* actor, WmapAnimationSlot* resource, s32 arg2, s32 arg3,
     g_wmap_effect_params[8] = D_80139268;
     g_wmap_effect_params[9] = D_8013926C;
     g_wmap_effect_params[10] = D_80139284;
-    func_8006A2FC(actor, resource, arg2, arg3, arg4, arg5, arg6, g_wmap_effect_params);
+    wmap_update_particle_system(actors, animations, count, peak_shade, initial_shade, shade_step, mode, g_wmap_effect_params);
 }
 
 /**
@@ -575,7 +577,7 @@ WMAP_STEP_RESET(wmap_land_return_reset, g_wmap_land_return_step, g_wmap_land_ret
  */
 void wmap_land_return_start(void)
 {
-    g_wmap_land_return_step += 1;
+    g_wmap_land_return_step++;
     wmap_land_return_wait_sequences();
 }
 
@@ -586,7 +588,7 @@ void wmap_land_return_wait_sequences(void)
 {
     if (g_wmap_sequence_count == 0)
     {
-        g_wmap_land_return_step += 1;
+        g_wmap_land_return_step++;
         wmap_land_return_scroll_back();
     }
 }
@@ -599,7 +601,7 @@ void wmap_land_return_scroll_back(void)
     g_wmap_view_scroll_mode = 2;
     g_wmap_scroll_remaining_x = g_wmap_view.x - ((g_wmap_vehicle_cell_x - 1) * WMAP_CELL_SPACING);
     g_wmap_scroll_remaining_y = g_wmap_view.y - ((g_wmap_vehicle_cell_y - 1) * WMAP_CELL_SPACING);
-    g_wmap_land_return_step += 1;
+    g_wmap_land_return_step++;
     wmap_land_return_wait_scroll();
 }
 
@@ -616,5 +618,5 @@ void wmap_land_return_finish(void)
 {
     g_wmap_event_active = 0;
     wmap_reset_after_transition();
-    g_wmap_land_return_step += 1;
+    g_wmap_land_return_step++;
 }

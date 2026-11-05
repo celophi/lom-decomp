@@ -136,7 +136,7 @@ typedef struct
 
 extern u32 g_wmap_view_sequence_step;
 extern s32 g_wmap_view_sequence_timer;
-extern void (*g_wmap_view_sequence_steps[])(void);
+extern WmapSequenceStep g_wmap_view_sequence_steps[];
 extern s32 D_80182D88;
 
 extern s32 g_wmap_map_shadow_level;
@@ -361,7 +361,7 @@ s32 wmap_update_map_view(s32 initialize)
         if (g_wmap_buttons_repeat & PADLleft)
         {
             left_pan = ((g_wmap_cursor_column - 2) * WMAP_PAN_PER_COLUMN) + AKAO_PAN_CENTER;
-            g_wmap_cursor_column -= 1;
+            g_wmap_cursor_column--;
             wmap_play_sound(WMAP_SOUND_CURSOR, left_pan);
             if (g_wmap_cursor_column < 0)
             {
@@ -379,7 +379,7 @@ s32 wmap_update_map_view(s32 initialize)
         if (g_wmap_buttons_repeat & PADLright)
         {
             right_pan = (g_wmap_cursor_column * WMAP_PAN_PER_COLUMN) + AKAO_PAN_CENTER;
-            g_wmap_cursor_column += 1;
+            g_wmap_cursor_column++;
             wmap_play_sound(WMAP_SOUND_CURSOR, right_pan);
             if (g_wmap_cursor_column > g_wmap_cursor_limits[g_wmap_view_mode])
             {
@@ -415,7 +415,7 @@ s32 wmap_update_map_view(s32 initialize)
         if (g_wmap_buttons_repeat & PADLdown)
         {
             wmap_play_sound(WMAP_SOUND_CURSOR, ((g_wmap_cursor_column - 1) * WMAP_PAN_PER_COLUMN) + AKAO_PAN_CENTER);
-            g_wmap_cursor_row += 1;
+            g_wmap_cursor_row++;
             if (g_wmap_cursor_row > g_wmap_cursor_limits[g_wmap_view_mode])
             {
                 g_wmap_cursor_row = g_wmap_cursor_limits[g_wmap_view_mode];

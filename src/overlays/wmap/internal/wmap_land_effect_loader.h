@@ -3,6 +3,6 @@
 
 #include "common.h"
 
-void wmap_start_land_effect();
+void wmap_start_land_effect(u32 selection);
 
 #endif

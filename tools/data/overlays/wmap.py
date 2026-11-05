@@ -49,7 +49,7 @@ INPUT_SCRIPT_COUNT = 3
 # Script commands that take one argument word (wmap_step_input_script).
 SCRIPT_ARGUMENT_COMMANDS = ("WMAP_SCRIPT_IMAGE", "WMAP_SCRIPT_BUTTON_MASK", "WMAP_SCRIPT_VISIBILITY")
 HANDLER_DECLARATION = re.compile(
-    r"^\s*extern\s+(?:void\s*\(\s*\*\s*(\w+)\s*\[[^\]]*\]\s*\)\s*\([^)]*\)|WmapHandler\s+(\w+)\s*\[[^\]]*\])\s*;",
+    r"^\s*extern\s+(?:void\s*\(\s*\*\s*(\w+)\s*\[[^\]]*\]\s*\)\s*\([^)]*\)|WmapSequenceStep\s+(\w+)\s*\[[^\]]*\])\s*;",
     re.MULTILINE,
 )
 

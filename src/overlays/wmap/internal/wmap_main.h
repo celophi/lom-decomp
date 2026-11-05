@@ -5,6 +5,14 @@
 #include <libgpu.h>
 #include "main/controller_internal.h"
 
+/** @brief Red, green and blue bytes of a backdrop gradient corner color. */
+typedef struct
+{
+    u8 r;
+    u8 g;
+    u8 b;
+} WmapColor3;
+
 /** @brief Controller ports used for world-map input and vibration commands. */
 extern ControllerPortState* g_wmap_controller_ports;
 
@@ -103,6 +111,12 @@ extern POLY_G4 g_wmap_backdrop_gradient_template;
 
 /** @brief Backdrop gradient whose vertex colors approach their targets. */
 extern POLY_G4 g_wmap_backdrop_gradient;
+
+/** @brief Colors that the backdrop gradient's vertices 0-3 fade toward. */
+extern WmapColor3 g_wmap_backdrop_target_color_0;
+extern WmapColor3 g_wmap_backdrop_target_color_1;
+extern WmapColor3 g_wmap_backdrop_target_color_2;
+extern WmapColor3 g_wmap_backdrop_target_color_3;
 
 /** @brief Nonzero to start the special return sequence after party setup. */
 extern s32 g_wmap_special_return_pending;

@@ -19,11 +19,11 @@
  * @param timer The sequence's timer global.
  */
 #define WMAP_STEP_RUNNER(name, table, count, step, timer)                                                                                                      \
-    s32 name(s32 arg0)                                                                                                                                         \
+    s32 name(s32 reset)                                                                                                                                        \
     {                                                                                                                                                          \
         s32 result;                                                                                                                                            \
                                                                                                                                                                \
-        if (arg0 != 0)                                                                                                                                         \
+        if (reset != 0)                                                                                                                                        \
         {                                                                                                                                                      \
             step = 1;                                                                                                                                          \
             timer = 1;                                                                                                                                         \
@@ -52,11 +52,11 @@
  * @note Unlike WMAP_STEP_RUNNER, a reset request does not return early.
  */
 #define WMAP_STEP_RUNNER_RESET_AND_RUN(name, table, count, step, timer)                                                                                        \
-    s32 name(s32 arg0)                                                                                                                                         \
+    s32 name(s32 reset)                                                                                                                                        \
     {                                                                                                                                                          \
         s32 result;                                                                                                                                            \
                                                                                                                                                                \
-        if (arg0 != 0)                                                                                                                                         \
+        if (reset != 0)                                                                                                                                        \
         {                                                                                                                                                      \
             step = 1;                                                                                                                                          \
             timer = 1;                                                                                                                                         \
@@ -98,7 +98,7 @@
     {                                                                                                                                                          \
         if (--timer == 0)                                                                                                                                      \
         {                                                                                                                                                      \
-            step += 1;                                                                                                                                         \
+            step++;                                                                                                                                            \
         }                                                                                                                                                      \
     }
 
@@ -115,7 +115,7 @@
         update_call;                                                                     \
         if (--(timer) == 0)                                                              \
         {                                                                                \
-            (step) += 1;                                                                 \
+            (step)++;                                                                    \
         }                                                                                \
     }
 
@@ -139,7 +139,7 @@
         (timer) = remaining;                                                             \
         if (remaining == 0)                                                              \
         {                                                                                \
-            (step) += 1;                                                                 \
+            (step)++;                                                                    \
         }                                                                                \
     }
 
@@ -158,7 +158,7 @@
         second_call;                                                                     \
         if (--(timer) == 0)                                                              \
         {                                                                                \
-            (step) += 1;                                                                 \
+            (step)++;                                                                    \
         }                                                                                \
     }
 
@@ -208,7 +208,7 @@
         actor->target_shade = (shade_target);                                            \
         actor->shade = (initial_shade);                                                  \
         (timer) = (frames);                                                              \
-        (step) += 1;                                                                     \
+        (step)++;                                                                        \
         next();                                                                          \
     }
 
@@ -230,7 +230,7 @@
         actor->shade_step = (shade_delta);                                               \
         actor->target_shade = 0;                                                         \
         (timer) = (frames);                                                              \
-        (step) += 1;                                                                     \
+        (step)++;                                                                        \
         next();                                                                          \
     }
 
@@ -256,7 +256,7 @@
             g_wmap_sprite_actors[i].shade_step = (shade_delta);                          \
         }                                                                                \
         (timer) = (frames);                                                              \
-        (step) += 1;                                                                     \
+        (step)++;                                                                        \
         next();                                                                          \
     }
 
@@ -307,7 +307,7 @@
     {                                                                                    \
         (timer) = (frames);                                                              \
         (spawn_interval) = -1;                                                           \
-        (step) += 1;                                                                     \
+        (step)++;                                                                        \
         next();                                                                          \
     }
 
@@ -325,7 +325,7 @@
     {                                                                                    \
         (spawn_count) = 0;                                                               \
         (timer) = (frames);                                                              \
-        (step) += 1;                                                                     \
+        (step)++;                                                                        \
         next();                                                                          \
     }
 
@@ -337,7 +337,7 @@
 #define WMAP_STEP_ADVANCE(name, step)                                                                                                                          \
     void name(void)                                                                                                                                            \
     {                                                                                                                                                          \
-        step += 1;                                                                                                                                             \
+        step++;                                                                                                                                                \
     }
 
 /**
@@ -351,7 +351,7 @@
     {                                                                                                                                                          \
         if (g_wmap_sequence_busy == 0)                                                                                                                         \
         {                                                                                                                                                      \
-            step += 1;                                                                                                                                         \
+            step++;                                                                                                                                            \
             next();                                                                                                                                            \
         }                                                                                                                                                      \
     }
@@ -370,7 +370,7 @@
     {                                                                                    \
         if (g_wmap_view_scroll_mode != WMAP_STEP_SCRIPTED_SCROLL_MODE)                   \
         {                                                                                \
-            (step) += 1;                                                                 \
+            (step)++;                                                                    \
             next();                                                                      \
         }                                                                                \
     }
@@ -388,7 +388,7 @@
     {                                                                                                                                                          \
         wmap_start_sequence(runner);                                                                                                                           \
         timer = frames;                                                                                                                                        \
-        step += 1;                                                                                                                                             \
+        step++;                                                                                                                                                \
     }
 
 /**
@@ -406,7 +406,7 @@
         wmap_start_sequence(first);                                                                                                                            \
         wmap_start_sequence(second);                                                                                                                           \
         timer = frames;                                                                                                                                        \
-        step += 1;                                                                                                                                             \
+        step++;                                                                                                                                                \
     }
 
 /**
@@ -426,7 +426,7 @@
         wmap_start_sequence(second);                                                     \
         wmap_start_sequence(third);                                                      \
         (timer) = (frames);                                                              \
-        (step) += 1;                                                                     \
+        (step)++;                                                                        \
     }
 
 /**
@@ -442,7 +442,7 @@
     {                                                                                    \
         (hidden) = 1;                                                                    \
         (timer) = (frames);                                                              \
-        (step) += 1;                                                                     \
+        (step)++;                                                                        \
     }
 
 /**
@@ -460,7 +460,7 @@
         (hidden) = 1;                                                                    \
         wmap_start_sequence(runner);                                                     \
         (timer) = (frames);                                                              \
-        (step) += 1;                                                                     \
+        (step)++;                                                                        \
     }
 
 /**
@@ -475,7 +475,7 @@
     void name(void)                                                                                                                                            \
     {                                                                                                                                                          \
         timer = frames;                                                                                                                                        \
-        step += 1;                                                                                                                                             \
+        step++;                                                                                                                                                \
         next();                                                                                                                                                \
     }
 
@@ -491,7 +491,7 @@
     {                                                                                                                                                          \
         wmap_start_sequence(runner);                                                                                                                           \
         g_wmap_sequence_busy = 1;                                                                                                                              \
-        step += 1;                                                                                                                                             \
+        step++;                                                                                                                                                \
         next();                                                                                                                                                \
     }
 
@@ -514,7 +514,7 @@
         wmap_draw_actor_sprite(&actor, position.packed, texture_index, ot_index, variant);                                                                     \
         if (--timer == 0)                                                                                                                                      \
         {                                                                                                                                                      \
-            step += 1;                                                                                                                                         \
+            step++;                                                                                                                                            \
         }                                                                                                                                                      \
     }
 
@@ -571,7 +571,7 @@
         (rotation_copy) = (rotation);                                                    \
         (frame_counter) = 0;                                                             \
         (timer) = (frames);                                                              \
-        (step) += 1;                                                                     \
+        (step)++;                                                                        \
         next();                                                                          \
     }
 
@@ -597,7 +597,7 @@
         shade = shade_value;                                                                                                                                   \
         position.vz = start_z;                                                                                                                                 \
         timer = frames;                                                                                                                                        \
-        step += 1;                                                                                                                                             \
+        step++;                                                                                                                                                \
         next();                                                                                                                                                \
     }
 
@@ -651,7 +651,7 @@
         PopMatrix();                                                                     \
         if (--(timer) == 0)                                                              \
         {                                                                                \
-            (step) += 1;                                                                 \
+            (step)++;                                                                    \
         }                                                                                \
     }
 
@@ -712,7 +712,7 @@
         PopMatrix();                                                                     \
         if (--(timer) == 0)                                                              \
         {                                                                                \
-            (step) += 1;                                                                 \
+            (step)++;                                                                    \
         }                                                                                \
     }
 
@@ -725,7 +725,7 @@
     void name(void)                                                                      \
     {                                                                                    \
         g_wmap_sequence_busy = 0;                                                        \
-        (step) += 1;                                                                     \
+        (step)++;                                                                        \
     }
 
 /**
@@ -737,9 +737,9 @@
 #define WMAP_STEP_BEGIN_EXIT(name, step, mode)                                           \
     void name(void)                                                                      \
     {                                                                                    \
-        g_wmap_exit_frame = 1;                                                                  \
-        g_wmap_exit_mode = (mode);                                                             \
-        (step) += 1;                                                                     \
+        g_wmap_exit_frame = 1;                                                           \
+        g_wmap_exit_mode = (mode);                                                       \
+        (step)++;                                                                        \
     }
 
 /**
@@ -756,7 +756,7 @@
     {                                                                                                                                                          \
         g_wmap_sequence_busy = 0;                                                                                                                              \
         cells[cell_x][cell_y].land_id = cell_value | 0x100;                                                                                                    \
-        step += 1;                                                                                                                                             \
+        step++;                                                                                                                                                \
     }
 
 static inline s32 wmap_tick_model_motion(SVECTOR* rotation, s32 rotation_step, s32* timer)

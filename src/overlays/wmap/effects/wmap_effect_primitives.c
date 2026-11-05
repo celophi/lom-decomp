@@ -107,15 +107,10 @@ extern u16 D_80139980;
 extern WmapAnimationSlot g_wmap_actor_animations[];
 extern s32 D_800D9150[];
 extern s32 D_800DCEA8[];
-extern SVECTOR D_800DCEB8;
 extern WmapScreenPosition g_wmap_focus_screen_position;
 extern s32 g_wmap_focus_cell_x;
 extern s32 g_wmap_focus_cell_y;
-extern VECTOR D_80139200;
-extern SVECTOR D_80139210;
 extern WmapEffectProjection g_wmap_view;
-extern VECTOR D_80139968;
-extern s32 D_8013B29C;
 
 s32 rand(void);
 
@@ -129,17 +124,18 @@ typedef struct
 } WmapParticleConfig;
 
 /**
- * @brief Update, project, and replenish a configured particle effect.
- * @param actors Actor records to update.
+ * @brief Move, animate and draw radial particles in one of several motion modes, then spawn one per interval.
+ * @param actors Sprite actor records of the particles.
  * @param animations Animation resource slots, one per actor record.
- * @param arg2 Number of actor records to process.
- * @param arg3 Effect parameter; semantics remain unresolved.
- * @param arg4_value Effect parameter stored in a halfword.
- * @param arg5_value Effect parameter stored in a halfword.
- * @param arg6 Particle behavior selector.
- * @param arg7 Particle effect configuration record.
+ * @param count Number of particles.
+ * @param peak_shade Target shade of a new particle; in mode 5 a particle starts fading out once it reaches it.
+ * @param initial_shade Shade of a new particle.
+ * @param shade_step Shade step of a new particle.
+ * @param mode Motion mode (0-7): how depth, radius and angle advance each frame.
+ * @param params Shared effect parameter words, read as a WmapParticleConfig.
  */
-void func_8006A2FC(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 arg2, s32 arg3, s32 arg4_value, s32 arg5_value, u32 arg6, void* arg7)
+void wmap_update_particle_system(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 count, s32 peak_shade, s32 initial_shade, s32 shade_step, u32 mode,
+                                 void* params)
 {
     SVECTOR position;
     s32 screen_position;
@@ -162,10 +158,10 @@ void func_8006A2FC(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 a
     s32 frame;
     WmapMotion* motion;
     WmapSpriteActor* actor;
-    WmapParticleConfig* config = arg7;
+    WmapParticleConfig* config = params;
 
     ot_index = 4;
-    for (i = 0; i < arg2; i++)
+    for (i = 0; i < count; i++)
     {
         actor = &actors[i];
         motion = &g_wmap_actor_motions[i + config->first_motion];
@@ -176,10 +172,10 @@ void func_8006A2FC(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 a
             position.vz = (u16)motion->z;
             gte_ldv0(&position);
             gte_rtps();
-            switch (arg6)
+            switch (mode)
             {
             case 5:
-                if (actor->shade >= arg3)
+                if (actor->shade >= peak_shade)
                 {
                     actor->target_shade = 0;
                 }
@@ -299,7 +295,7 @@ void func_8006A2FC(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 a
     spawn_interval = config->spawn_interval;
     if ((spawn_interval != -1) && (((s32)g_wmap_frame_count % spawn_interval) == 0))
     {
-        for (i = 0; i < arg2; i++)
+        for (i = 0; i < count; i++)
         {
             motion = &g_wmap_actor_motions[i + config->first_motion];
             if (motion->state == 0)
@@ -309,10 +305,10 @@ void func_8006A2FC(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 a
                 spawn_actor->scale_index = 0xF;
                 sequence = (u16)config->sequence;
                 spawn_actor->previous_sequence = -1;
-                spawn_actor->target_shade = (u16)arg3;
-                spawn_actor->shade = arg4_value;
+                spawn_actor->target_shade = (u16)peak_shade;
+                spawn_actor->shade = initial_shade;
                 spawn_actor->sequence = sequence;
-                spawn_actor->shade_step = arg5_value;
+                spawn_actor->shade_step = shade_step;
                 motion->state = 1;
                 motion->angle = rand();
                 packed_radius = config->radius;
@@ -351,7 +347,7 @@ void func_8006A2FC(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 a
  * @param frame Sprite texture index passed to the renderer.
  * @param spawn_interval Number of updates between spawn attempts.
  */
-void func_8006A9C4(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 first, s32 end, s32 scale,
+void wmap_update_radial_burst(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 first, s32 end, s32 scale,
                    s32 velocity_min, s32 velocity_range, s32 lifetime_min, s32 lifetime_range, s32 initial_z,
                    s32 frame, s32 spawn_interval)
 {
@@ -440,7 +436,7 @@ void func_8006A9C4(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 f
                 {
                     motion->state = 0;
                 }
-                active += 1;
+                active++;
             }
         }
     }
@@ -531,7 +527,7 @@ void wmap_set_effect_camera_transform(void)
  * @param sequence Animation sequence of a new particle.
  * @note The spawn limit is tested before counting the next candidate slot.
  */
-void func_8006AFAC(s32 first, s32 end, s32 frame, s32 depth,
+void wmap_update_flat_radial_burst(s32 first, s32 end, s32 frame, s32 depth,
                    s32 velocity_base, s32 velocity_divisor, s32 lifetime_base, s32 sequence)
 {
     SVECTOR position;
@@ -607,7 +603,7 @@ void func_8006AFAC(s32 first, s32 end, s32 frame, s32 depth,
             {
                 motion->state = 0;
             }
-            active += 1;
+            active++;
         }
     }
     for (i = first; i < end; i++)
@@ -654,7 +650,7 @@ void func_8006AFAC(s32 first, s32 end, s32 frame, s32 depth,
  * @param scale_step Shade step of a new particle.
  * @param group Index in the spawn timer and remaining-count tables.
  */
-void func_8006B328(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s32 velocity_min, s32 velocity_range, 
+void wmap_update_falling_particles(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s32 velocity_min, s32 velocity_range, 
                    s32 initial_z, s32 frame, s32 x_min, s32 x_range, s32 y_min, s32 y_range, s32 fade_z, 
                    s32 initial_scale_target, s32 initial_scale, s32 scale_step, s32 group)
 {
@@ -683,7 +679,7 @@ void func_8006B328(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s
     address = group * 4;
     initial_timer = (s32*)(address + (u8*)D_800D9150);
     i = first;
-    *initial_timer -= 1;
+    (*initial_timer)--;
     if (i < end)
     {
         sequence_end = 255;
@@ -797,7 +793,7 @@ void func_8006B328(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s
  * @param z_step Per-update change in particle Z.
  * @param depth Base ordering-table depth.
  */
-void func_8006B6EC(s32 first, s32 end, s32 frame, s32 z_step, s32 depth)
+void wmap_update_spiral_particles(s32 first, s32 end, s32 frame, s32 z_step, s32 depth)
 {
     SVECTOR position;
     s32 screen_position;
@@ -884,7 +880,7 @@ void func_8006B6EC(s32 first, s32 end, s32 frame, s32 z_step, s32 depth)
  * @param frame Sprite texture index passed to the renderer.
  * @param depth Ordering-table depth.
  */
-void func_8006B998(s32 first, s32 end, void *point_data, s32 frame, s32 depth)
+void wmap_update_bouncing_particles(s32 first, s32 end, void *point_data, s32 frame, s32 depth)
 {
     WmapMovingPoint* points = point_data;
     s32 screen_position;
@@ -967,7 +963,7 @@ void func_8006B998(s32 first, s32 end, void *point_data, s32 frame, s32 depth)
  * @param config Trail timing, motion, shade, and rendering parameters.
  * @param expire_by_shade Clear active slots when their shade leaves [4, 252].
  */
-void func_8006BC44(s32 first, s32 count, WmapTrailConfig* config, s32 expire_by_shade)
+void wmap_update_particle_trails(s32 first, s32 count, WmapTrailConfig* config, s32 expire_by_shade)
 {
     SVECTOR position;
     WmapScreenPosition screen_position;
@@ -1091,11 +1087,11 @@ void func_8006BC44(s32 first, s32 count, WmapTrailConfig* config, s32 expire_by_
 }
 
 /**
- * @brief Advance the map transform effect toward its configured position.
+ * @brief Step the effect camera offsets toward their targets and project the focus cell to the screen.
  * @param initialize Sequence callback flag; unused.
- * @return Sequence continuation flag.
+ * @return Nonzero while the camera move runs; 0 once it stops and the offsets are reset.
  */
-s32 func_8006C0EC(s32 initialize)
+s32 wmap_run_effect_camera_move(s32 initialize)
 {
     SVECTOR position;
 
@@ -1109,62 +1105,62 @@ s32 func_8006C0EC(s32 initialize)
                     WMAP_EFFECT_PROJECTION_SCALE) / g_wmap_view.projection_scale);
     gte_ldv0(&position);
     gte_rtps();
-    if (D_800DCEB8.vx != g_wmap_effect_camera_rotation_offset.vx)
+    if (g_wmap_effect_camera_rotation_target.vx != g_wmap_effect_camera_rotation_offset.vx)
     {
-        if (D_800DCEB8.vx < g_wmap_effect_camera_rotation_offset.vx)
+        if (g_wmap_effect_camera_rotation_target.vx < g_wmap_effect_camera_rotation_offset.vx)
         {
-            g_wmap_effect_camera_rotation_offset.vx = (u16)g_wmap_effect_camera_rotation_offset.vx - (u16)D_80139210.vx;
+            g_wmap_effect_camera_rotation_offset.vx = (u16)g_wmap_effect_camera_rotation_offset.vx - (u16)g_wmap_effect_camera_rotation_step.vx;
         }
         else
         {
-            g_wmap_effect_camera_rotation_offset.vx = (u16)g_wmap_effect_camera_rotation_offset.vx + (u16)D_80139210.vx;
+            g_wmap_effect_camera_rotation_offset.vx = (u16)g_wmap_effect_camera_rotation_offset.vx + (u16)g_wmap_effect_camera_rotation_step.vx;
         }
     }
-    if (D_800DCEB8.vy != g_wmap_effect_camera_rotation_offset.vy)
+    if (g_wmap_effect_camera_rotation_target.vy != g_wmap_effect_camera_rotation_offset.vy)
     {
-        if (D_800DCEB8.vy < g_wmap_effect_camera_rotation_offset.vy)
+        if (g_wmap_effect_camera_rotation_target.vy < g_wmap_effect_camera_rotation_offset.vy)
         {
-            g_wmap_effect_camera_rotation_offset.vy = (u16)g_wmap_effect_camera_rotation_offset.vy - (u16)D_80139210.vy;
+            g_wmap_effect_camera_rotation_offset.vy = (u16)g_wmap_effect_camera_rotation_offset.vy - (u16)g_wmap_effect_camera_rotation_step.vy;
         }
         else
         {
-            g_wmap_effect_camera_rotation_offset.vy = (u16)g_wmap_effect_camera_rotation_offset.vy + (u16)D_80139210.vy;
+            g_wmap_effect_camera_rotation_offset.vy = (u16)g_wmap_effect_camera_rotation_offset.vy + (u16)g_wmap_effect_camera_rotation_step.vy;
         }
     }
-    if (D_800DCEB8.vz != g_wmap_effect_camera_rotation_offset.vz)
+    if (g_wmap_effect_camera_rotation_target.vz != g_wmap_effect_camera_rotation_offset.vz)
     {
-        if (D_800DCEB8.vz < g_wmap_effect_camera_rotation_offset.vz)
+        if (g_wmap_effect_camera_rotation_target.vz < g_wmap_effect_camera_rotation_offset.vz)
         {
-            g_wmap_effect_camera_rotation_offset.vz = (u16)g_wmap_effect_camera_rotation_offset.vz - (u16)D_80139210.vz;
+            g_wmap_effect_camera_rotation_offset.vz = (u16)g_wmap_effect_camera_rotation_offset.vz - (u16)g_wmap_effect_camera_rotation_step.vz;
         }
         else
         {
-            g_wmap_effect_camera_rotation_offset.vz = (u16)g_wmap_effect_camera_rotation_offset.vz + (u16)D_80139210.vz;
+            g_wmap_effect_camera_rotation_offset.vz = (u16)g_wmap_effect_camera_rotation_offset.vz + (u16)g_wmap_effect_camera_rotation_step.vz;
         }
     }
-    if (D_80139200.vx != g_wmap_effect_camera_translation_offset.vx)
+    if (g_wmap_effect_camera_translation_target.vx != g_wmap_effect_camera_translation_offset.vx)
     {
-        if (D_80139200.vx < g_wmap_effect_camera_translation_offset.vx)
+        if (g_wmap_effect_camera_translation_target.vx < g_wmap_effect_camera_translation_offset.vx)
         {
-            g_wmap_effect_camera_translation_offset.vx = g_wmap_effect_camera_translation_offset.vx - D_80139968.vx;
+            g_wmap_effect_camera_translation_offset.vx = g_wmap_effect_camera_translation_offset.vx - g_wmap_effect_camera_translation_step.vx;
         }
         else
         {
-            g_wmap_effect_camera_translation_offset.vx = g_wmap_effect_camera_translation_offset.vx + D_80139968.vx;
+            g_wmap_effect_camera_translation_offset.vx = g_wmap_effect_camera_translation_offset.vx + g_wmap_effect_camera_translation_step.vx;
         }
     }
-    if (D_80139200.vy != g_wmap_effect_camera_translation_offset.vy)
+    if (g_wmap_effect_camera_translation_target.vy != g_wmap_effect_camera_translation_offset.vy)
     {
-        if (D_80139200.vy < g_wmap_effect_camera_translation_offset.vy)
+        if (g_wmap_effect_camera_translation_target.vy < g_wmap_effect_camera_translation_offset.vy)
         {
-            g_wmap_effect_camera_translation_offset.vy = g_wmap_effect_camera_translation_offset.vy - D_80139968.vy;
+            g_wmap_effect_camera_translation_offset.vy = g_wmap_effect_camera_translation_offset.vy - g_wmap_effect_camera_translation_step.vy;
         }
         else
         {
-            g_wmap_effect_camera_translation_offset.vy = g_wmap_effect_camera_translation_offset.vy + D_80139968.vy;
+            g_wmap_effect_camera_translation_offset.vy = g_wmap_effect_camera_translation_offset.vy + g_wmap_effect_camera_translation_step.vy;
         }
     }
-    if (D_8013B29C == 0)
+    if (g_wmap_effect_camera_move_active == 0)
     {
         g_wmap_effect_camera_rotation_offset.vx = 0;
         g_wmap_effect_camera_rotation_offset.vy = 0;
@@ -1172,25 +1168,25 @@ s32 func_8006C0EC(s32 initialize)
         g_wmap_effect_camera_translation_offset.vx = 0;
         g_wmap_effect_camera_translation_offset.vy = 0;
         g_wmap_effect_camera_translation_offset.vz = 0;
-        D_80139200.vx = 0;
-        D_80139200.vy = 0;
-        D_80139200.vz = 0;
-        D_800DCEB8.vx = 0;
-        D_800DCEB8.vy = 0;
-        D_800DCEB8.vz = 0;
+        g_wmap_effect_camera_translation_target.vx = 0;
+        g_wmap_effect_camera_translation_target.vy = 0;
+        g_wmap_effect_camera_translation_target.vz = 0;
+        g_wmap_effect_camera_rotation_target.vx = 0;
+        g_wmap_effect_camera_rotation_target.vy = 0;
+        g_wmap_effect_camera_rotation_target.vz = 0;
         g_wmap_focus_screen_position.point.x = 0xA4;
         g_wmap_focus_screen_position.point.y = 0x69;
         return 0;
     }
     gte_stsxy(&g_wmap_focus_screen_position.packed);
-    return D_8013B29C;
+    return g_wmap_effect_camera_move_active;
 }
 
 /**
  * @brief Spawn one free particle, then animate and draw all active particles.
  * @param config Particle range, spawn bounds, animation, and drawing settings.
  */
-void func_8006C448(WmapBoxParticleConfig* config)
+void wmap_update_box_particles(WmapBoxParticleConfig* config)
 {
     SVECTOR position;
     s32 screen_position;

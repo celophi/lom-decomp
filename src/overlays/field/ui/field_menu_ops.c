@@ -287,10 +287,10 @@ typedef struct
 typedef struct
 {
     u8 name[0x15];
-    u8 species; /**< 0x15: monster species. */
+    u8 species; /**< monster species. */
     u8 unknown_0x16[0x44 - 0x16];
-    u8 extra_slots[FIELD_PET_EXTRA_SLOT_COUNT]; /**< 0x44: extra slot ids; FIELD_PET_SLOT_CLEARED and FIELD_PET_SLOT_EMPTY mark an unused slot. */
-    u8 status_bits;    /**< 0x47: bits 30-31 of the status word (grazing, egg). */
+    u8 extra_slots[FIELD_PET_EXTRA_SLOT_COUNT]; /**< extra slot ids; FIELD_PET_SLOT_CLEARED and FIELD_PET_SLOT_EMPTY mark an unused slot. */
+    u8 status_bits;                             /**< bits 30-31 of the status word (grazing, egg). */
     u8 unknown_0x48[0x5A - 0x48];
     u16 unknown_0x5A;
     u8 unknown_0x5C[4];
@@ -333,7 +333,7 @@ typedef struct
 {
     u32 flags;
     u32 unknown_0x04;
-    u8 item_slots[4]; /**< 0x08: item ids of the group; FIELD_MENU_ITEM_NONE marks an empty entry. */
+    u8 item_slots[4]; /**< item ids of the group; FIELD_MENU_ITEM_NONE marks an empty entry. */
     FieldMenuActionSlot slots[8];
 } FieldMenuActionGroup;
 
@@ -356,10 +356,10 @@ typedef struct
 {
     u8 action_slot; /**< Action slot number plus 4. */
     u8 unk01[0xE];
-    u8 item_index; /**< 0x0F (D_80122C1C): item of the slot, read by field_menu_load_action_slot. */
-    u8 handle;     /**< 0x10 (D_80122C1D): low byte of the slot handle. */
+    u8 item_index; /**< item of the slot, read by field_menu_load_action_slot. */
+    u8 handle;     /**< low byte of the slot handle. */
     u8 unk11;
-    u8 group; /**< 0x12 (D_80122C1F): action group index. */
+    u8 group; /**< action group index. */
 } FieldMenuActionSlotVars;
 
 /** @brief Script variables from D_80122C02 that select a record and report the result. */
@@ -398,8 +398,8 @@ typedef struct
             u16 high;
         } halves;
     } attributes;
-    u32 nibbles[2];                 /**< 0x18: sixteen 4-bit values. */
-    u8 saved_active;                /**< 0x20: active byte kept while the record is set aside. */
+    u32 nibbles[2];  /**< sixteen 4-bit values. */
+    u8 saved_active; /**< active byte kept while the record is set aside. */
     u8 unknown_0x21[3];
     union
     {
@@ -407,8 +407,8 @@ typedef struct
         u8 bytes[8];
     } stats;              /**< 0x24: stats, read as halfwords or bytes by kind. */
     u8 unknown_0x2C[8];
-    s32 unknown_0x34;     /**< 0x34: item value; for a pending record, its pending result. */
-    u32 identity[2];      /**< 0x38: words that identify the item; both zero for no item. */
+    s32 unknown_0x34; /**< item value; for a pending record, its pending result. */
+    u32 identity[2];  /**< words that identify the item; both zero for no item. */
 } FieldMenuItemRecord;
 
 /**

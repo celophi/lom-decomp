@@ -25,6 +25,9 @@
  */
 typedef s32 (*WmapSequenceCallback)(s32 initialize);
 
+/** @brief Entry of a sequence's step table; the runner calls the entry for the current step. */
+typedef void (*WmapSequenceStep)(void);
+
 /**
  * @brief Nonzero while a blocking sequence runs (the land focus or an effect timeline).
  * @note The step that starts the sequence sets it; the sequence's last step clears it.
@@ -42,8 +45,10 @@ void wmap_draw_model_default(u8* resource_table, s32 resource_index, s32 ot_inde
 void wmap_project_focus_cell(void);
 s32 wmap_scale_color(CVECTOR color, s32 scale);
 void wmap_set_model_transform(VECTOR* translation, SVECTOR* rotation);
-void func_8006CFE4(void* actor, WmapAnimationSlot* resource, s32 arg2, s32 arg3, s32 arg4, s32 arg5);
-void func_8006D014(void* actor, WmapAnimationSlot* resource, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6);
+void wmap_update_default_particles_from_settings(void* actors, WmapAnimationSlot* animations, s32 count, s32 peak_shade,
+                                                 s32 initial_shade, s32 shade_step);
+void wmap_update_particles_from_settings(void* actors, WmapAnimationSlot* animations, s32 count, s32 peak_shade,
+                                         s32 initial_shade, s32 shade_step, s32 mode);
 s32 wmap_find_land_cell(s32 value, s32* row_out, s32* column_out);
 void wmap_set_map_rotation(SVECTOR* rotation);
 void wmap_reset_focus_screen_position(void);

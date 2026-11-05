@@ -90,40 +90,30 @@ typedef struct
     s32 unknown_0c;
 } WmapView;
 
-/** @brief Backdrop color: three channels. */
-typedef struct
-{
-    u8 r;
-    u8 g;
-    u8 b;
-} WmapColor3;
-
 /** @brief Sequence step handler. */
-typedef void (*WmapHandler)(void);
-
 extern WmapAnimationSlot g_wmap_actor_animations[];
 extern WmapEffectMotion g_wmap_actor_motions[];
 extern s32 g_wmap_vehicle_cell_x;
 extern s32 g_wmap_vehicle_cell_y;
 extern s32 g_wmap_load_buffer[];
-extern WmapHandler g_wmap_effect35_drop_a_steps[WMAP_EFFECT35_DROP_STEPS];
-extern WmapHandler g_wmap_effect35_drop_b_steps[WMAP_EFFECT35_DROP_STEPS];
-extern WmapHandler g_wmap_effect35_sprite_a_steps[WMAP_EFFECT35_SPRITE_STEPS];
-extern WmapHandler g_wmap_effect35_sprite_b_steps[WMAP_EFFECT35_SPRITE_STEPS];
-extern WmapHandler g_wmap_effect35_sprite_c_steps[WMAP_EFFECT35_SPRITE_STEPS];
-extern WmapHandler g_wmap_effect35_spin_a_steps[WMAP_EFFECT35_SPIN_STEPS];
-extern WmapHandler g_wmap_effect35_spin_b_steps[WMAP_EFFECT35_SPIN_STEPS];
-extern WmapHandler g_wmap_effect35_orbiter_1_steps[WMAP_EFFECT35_ORBITER_STEPS];
-extern WmapHandler g_wmap_effect35_orbiter_2_steps[WMAP_EFFECT35_ORBITER_STEPS];
-extern WmapHandler g_wmap_effect35_orbiter_3_steps[WMAP_EFFECT35_ORBITER_STEPS];
-extern WmapHandler g_wmap_effect35_orbiter_4_steps[WMAP_EFFECT35_ORBITER_STEPS];
-extern WmapHandler g_wmap_effect35_orbiter_5_steps[WMAP_EFFECT35_ORBITER_STEPS];
-extern WmapHandler g_wmap_effect35_orbiter_6_steps[WMAP_EFFECT35_ORBITER_STEPS];
-extern WmapHandler g_wmap_effect35_orbiter_7_steps[WMAP_EFFECT35_ORBITER_STEPS];
-extern WmapHandler g_wmap_effect35_emitter_a_steps[WMAP_EFFECT35_EMITTER_STEPS];
-extern WmapHandler g_wmap_effect35_emitter_b_steps[WMAP_EFFECT35_EMITTER_STEPS];
-extern WmapHandler g_wmap_effect35_timeline_steps[WMAP_EFFECT35_TIMELINE_STEPS];
-extern WmapHandler g_wmap_effect35_steps[WMAP_EFFECT35_MAIN_STEPS];
+extern WmapSequenceStep g_wmap_effect35_drop_a_steps[WMAP_EFFECT35_DROP_STEPS];
+extern WmapSequenceStep g_wmap_effect35_drop_b_steps[WMAP_EFFECT35_DROP_STEPS];
+extern WmapSequenceStep g_wmap_effect35_sprite_a_steps[WMAP_EFFECT35_SPRITE_STEPS];
+extern WmapSequenceStep g_wmap_effect35_sprite_b_steps[WMAP_EFFECT35_SPRITE_STEPS];
+extern WmapSequenceStep g_wmap_effect35_sprite_c_steps[WMAP_EFFECT35_SPRITE_STEPS];
+extern WmapSequenceStep g_wmap_effect35_spin_a_steps[WMAP_EFFECT35_SPIN_STEPS];
+extern WmapSequenceStep g_wmap_effect35_spin_b_steps[WMAP_EFFECT35_SPIN_STEPS];
+extern WmapSequenceStep g_wmap_effect35_orbiter_1_steps[WMAP_EFFECT35_ORBITER_STEPS];
+extern WmapSequenceStep g_wmap_effect35_orbiter_2_steps[WMAP_EFFECT35_ORBITER_STEPS];
+extern WmapSequenceStep g_wmap_effect35_orbiter_3_steps[WMAP_EFFECT35_ORBITER_STEPS];
+extern WmapSequenceStep g_wmap_effect35_orbiter_4_steps[WMAP_EFFECT35_ORBITER_STEPS];
+extern WmapSequenceStep g_wmap_effect35_orbiter_5_steps[WMAP_EFFECT35_ORBITER_STEPS];
+extern WmapSequenceStep g_wmap_effect35_orbiter_6_steps[WMAP_EFFECT35_ORBITER_STEPS];
+extern WmapSequenceStep g_wmap_effect35_orbiter_7_steps[WMAP_EFFECT35_ORBITER_STEPS];
+extern WmapSequenceStep g_wmap_effect35_emitter_a_steps[WMAP_EFFECT35_EMITTER_STEPS];
+extern WmapSequenceStep g_wmap_effect35_emitter_b_steps[WMAP_EFFECT35_EMITTER_STEPS];
+extern WmapSequenceStep g_wmap_effect35_timeline_steps[WMAP_EFFECT35_TIMELINE_STEPS];
+extern WmapSequenceStep g_wmap_effect35_steps[WMAP_EFFECT35_MAIN_STEPS];
 extern s32 g_wmap_focus_screen_position;
 extern u8* g_wmap_effect_model_pack_1;
 extern u8* g_wmap_effect_model_pack_2;
@@ -135,10 +125,6 @@ extern WmapEffectEmitter* g_wmap_effect_params;
 extern s32 g_wmap_view_mode;
 extern s32 g_wmap_view_scroll_mode;
 extern WmapView g_wmap_view;
-extern WmapColor3 D_80182D74;
-extern WmapColor3 D_80182D80;
-extern WmapColor3 D_80182D8C;
-extern WmapColor3 D_80182D94;
 extern VECTOR g_wmap_camera_translation;
 extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
@@ -428,18 +414,18 @@ static void wmap_effect35_update_emitter(WmapEffectEmitter* emitter)
 void wmap_effect35_timeline_flash_backdrop(void)
 {
     g_wmap_backdrop_target_level = 0;
-    D_80182D74.r = 0xC8;
-    D_80182D74.g = 0xC8;
-    D_80182D74.b = 0xC8;
-    D_80182D80.r = 0xC8;
-    D_80182D80.g = 0xC8;
-    D_80182D80.b = 0xC8;
-    D_80182D8C.r = 0xC8;
-    D_80182D8C.g = 0xC8;
-    D_80182D8C.b = 0xC8;
-    D_80182D94.r = 0xC8;
-    D_80182D94.g = 0xC8;
-    D_80182D94.b = 0xC8;
+    g_wmap_backdrop_target_color_0.r = 0xC8;
+    g_wmap_backdrop_target_color_0.g = 0xC8;
+    g_wmap_backdrop_target_color_0.b = 0xC8;
+    g_wmap_backdrop_target_color_1.r = 0xC8;
+    g_wmap_backdrop_target_color_1.g = 0xC8;
+    g_wmap_backdrop_target_color_1.b = 0xC8;
+    g_wmap_backdrop_target_color_2.r = 0xC8;
+    g_wmap_backdrop_target_color_2.g = 0xC8;
+    g_wmap_backdrop_target_color_2.b = 0xC8;
+    g_wmap_backdrop_target_color_3.r = 0xC8;
+    g_wmap_backdrop_target_color_3.g = 0xC8;
+    g_wmap_backdrop_target_color_3.b = 0xC8;
     g_wmap_effect35_timeline_timer = 8;
     g_wmap_effect35_timeline_step++;
 }
@@ -453,18 +439,18 @@ void wmap_effect35_timeline_start_finale(void)
     wmap_start_sequence(wmap_effect35_run_spin_a);
     wmap_start_sequence(wmap_effect35_run_sprite_c);
     g_wmap_backdrop_target_level = 0;
-    D_80182D74.r = 0x40;
-    D_80182D74.g = 0x10;
-    D_80182D74.b = 0x20;
-    D_80182D80.r = 0x40;
-    D_80182D80.g = 0x10;
-    D_80182D80.b = 0x20;
-    D_80182D8C.r = 0x40;
-    D_80182D8C.g = 0x10;
-    D_80182D8C.b = 0x20;
-    D_80182D94.r = 0x40;
-    D_80182D94.g = 0x10;
-    D_80182D94.b = 0x20;
+    g_wmap_backdrop_target_color_0.r = 0x40;
+    g_wmap_backdrop_target_color_0.g = 0x10;
+    g_wmap_backdrop_target_color_0.b = 0x20;
+    g_wmap_backdrop_target_color_1.r = 0x40;
+    g_wmap_backdrop_target_color_1.g = 0x10;
+    g_wmap_backdrop_target_color_1.b = 0x20;
+    g_wmap_backdrop_target_color_2.r = 0x40;
+    g_wmap_backdrop_target_color_2.g = 0x10;
+    g_wmap_backdrop_target_color_2.b = 0x20;
+    g_wmap_backdrop_target_color_3.r = 0x40;
+    g_wmap_backdrop_target_color_3.g = 0x10;
+    g_wmap_backdrop_target_color_3.b = 0x20;
     g_wmap_effect35_timeline_timer = 24;
     g_wmap_effect35_timeline_step++;
 }
@@ -617,7 +603,7 @@ void wmap_effect35_spin_b_fade_out(void)
         motion->height = 0;                                                              \
         motion->delay = (start_delay);                                                   \
         (timer) = WMAP_EFFECT35_ORBITER_FRAMES;                                          \
-        (step) += 1;                                                                     \
+        (step)++;                                                                        \
         next();                                                                          \
     }
 

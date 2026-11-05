@@ -272,6 +272,6 @@ void wmap_draw_actor_sprite(WmapSpriteActor* actor, s32 screen_position, s32 tex
             frame->packet_cursor += sizeof(POLY_FT4);
         }
         part++;
-        part_count -= 1;
+        part_count--;
     } while (part_count != 0);
 }
