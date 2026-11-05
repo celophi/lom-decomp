@@ -18,9 +18,7 @@ extern s32 g_wmap_land_effect_32_sequence_5_timer;
 extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_32_sequence_6_timer;
 extern s32 g_wmap_land_effect_32_sequence_7_timer;
-extern s32 D_8013B284;
 extern s32 g_wmap_land_effect_32_sequence_10_timer;
-extern WmapMotion D_801B0B70[];
 extern s32 rand(void);
 extern s32 g_wmap_land_effect_32_timer;
 extern WmapSequenceStep g_wmap_land_effect_32_steps[];
@@ -61,18 +59,9 @@ void wmap_land_effect_32_sequence_2_step_01(void)
     s32 i;
 
     g_wmap_particle_intensity = 24;
-    D_801B24B4 = 127;
-    D_80139234 = 1;
-    D_8013923C = 10;
-    D_80139240 = 20;
-    D_8013924C = 2;
-    D_80139250 = 2;
-    D_80139260 = 1500;
-    D_80139264 = 100;
-    D_80139268 = 19;
-    D_8013926C = 0;
-    D_80139284 = 1000;
-    WMAP_RESET_PARTICLE_SLOTS(i, 24, g_wmap_actor_motions[i + D_80139264].state, 104, g_wmap_animation_bank_0);
+    g_wmap_effect_wave_phase = 127;
+    WMAP_SET_PARTICLE_SETTINGS(1, 10, 20, 2, 2, 1500, 100, 19, 0, 1000);
+    WMAP_RESET_PARTICLE_SLOTS(i, 24, g_wmap_actor_motions[i + g_wmap_particle_first_motion].state, 104, g_wmap_animation_bank_0);
     g_wmap_land_effect_32_sequence_2_timer = 40;
     g_wmap_land_effect_32_sequence_2_step++;
     wmap_land_effect_32_sequence_2_step_02();
@@ -98,8 +87,8 @@ void wmap_land_effect_32_sequence_3_step_02(void)
     PushMatrix();
     rotation = &g_wmap_effect_model_d_rotation;
     wmap_set_model_transform(position, rotation);
-    wmap_draw_model_default(g_wmap_effect_model_pack_3, 0, 0xC, 0x35, 0x7800, 1, D_80182DE4);
-    WMAP_MODEL_FADE_IN(D_80182DE4, 0x10, 0x81, t);
+    wmap_draw_model_default(g_wmap_effect_model_pack_3, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_e);
+    WMAP_MODEL_FADE_IN(g_wmap_effect_fade_e, 0x10, 0x81, t);
     rotation->vz += 2;
     PopMatrix();
     c = g_wmap_land_effect_32_sequence_3_timer - 1;
@@ -132,10 +121,10 @@ void wmap_land_effect_32_sequence_3_step_04(void)
     rotation = &g_wmap_effect_model_d_rotation;
     wmap_set_model_transform(position, rotation);
 
-    if (D_80182DE4 != 0)
+    if (g_wmap_effect_fade_e != 0)
     {
-        wmap_draw_model_default(g_wmap_effect_model_pack_3, 0, 0xC, 0x35, 0x7800, 1, D_80182DE4);
-        WMAP_MODEL_FADE_OUT(D_80182DE4, 2, t);
+        wmap_draw_model_default(g_wmap_effect_model_pack_3, 0, 0xC, 0x35, 0x7800, 1, g_wmap_effect_fade_e);
+        WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_e, 2, t);
         rotation->vz += 2;
     }
 
@@ -347,27 +336,18 @@ void wmap_land_effect_32_sequence_10_step_01(void)
     WmapMotion* motion;
 
     g_wmap_particle_intensity = 40;
-    D_801B25D8 = 256;
-    D_80139234 = 48;
-    D_8013923C = 10;
-    D_80139240 = 60;
-    D_8013924C = 2;
-    D_80139250 = -1;
-    D_80139260 = 8000;
-    D_80139264 = 200;
-    D_80139268 = 19;
-    D_8013926C = 1;
-    D_80139284 = 200;
-    D_8013B264 = 54;
-    D_8013B270 = 1;
-    D_8013B278 = 30;
-    D_8013B280 = 1;
-    D_8013B284 = 3;
+    g_wmap_aux_effect_fade_c = 256;
+    WMAP_SET_PARTICLE_SETTINGS(48, 10, 60, 2, -1, 8000, 200, 19, 1, 200);
+    g_wmap_particle_arc_apex_lifetime = 54;
+    g_wmap_particle_arc_peak = 1;
+    g_wmap_particle_arc_divisor = 30;
+    g_wmap_particle_arc_base = 1;
+    g_wmap_particle_fall_range = 3;
 
     for (i = 0; i < 40; i++)
     {
         actor = &g_wmap_sprite_actors[204 + i];
-        motion = &D_801B0B70[i];
+        motion = &g_wmap_actor_motions_at_200[i];
         g_wmap_actor_animations[i + 204].data = g_wmap_animation_bank_0;
         actor->scale_index = 15;
         actor->previous_sequence = -1;
@@ -375,13 +355,13 @@ void wmap_land_effect_32_sequence_10_step_01(void)
         actor->shade = 128;
         actor->resource_index = 0;
         actor->shade_step = 0;
-        actor->sequence = D_8013926C;
+        actor->sequence = g_wmap_particle_sequence;
         motion->state = 1;
         motion->angle = rand() & 0xFFF;
         motion->lifetime = 60;
         motion->z = 50;
         motion->velocity = 0;
-        motion->radius = D_80139284;
+        motion->radius = g_wmap_particle_radius;
     }
 
     g_wmap_land_effect_32_sequence_10_timer = 90;
@@ -500,8 +480,8 @@ WMAP_STEP_RESET(wmap_land_effect_32_sequence_2_reset, g_wmap_land_effect_32_sequ
 
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_32_sequence_2_step_02, g_wmap_land_effect_32_sequence_2_step, g_wmap_land_effect_32_sequence_2_timer,
-                          wmap_update_default_particles_from_settings(&g_wmap_sprite_actors[104], &g_wmap_actor_animations[104], 0x18, D_801B24B4, D_801B24B4,
-                                                                      0))
+                          wmap_update_default_particles_from_settings(&g_wmap_sprite_actors[104], &g_wmap_actor_animations[104], 0x18, g_wmap_effect_wave_phase,
+                                                                      g_wmap_effect_wave_phase, 0))
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_32_sequence_2_step_03, g_wmap_land_effect_32_sequence_2_step, g_wmap_land_effect_32_sequence_2_timer, 0x10,
                     wmap_land_effect_32_sequence_2_step_04)
@@ -512,15 +492,16 @@ void wmap_land_effect_32_sequence_2_step_04(void)
     s32 value;
     s32 remaining_ticks;
 
-    if (D_801B24B4 != 0)
+    if (g_wmap_effect_wave_phase != 0)
     {
-        wmap_update_default_particles_from_settings(&g_wmap_sprite_actors[104], &g_wmap_actor_animations[104], 0x18, D_801B24B4, D_801B24B4, 0);
-        value = D_801B24B4 - 8;
-        D_801B24B4 = value;
+        wmap_update_default_particles_from_settings(&g_wmap_sprite_actors[104], &g_wmap_actor_animations[104], 0x18, g_wmap_effect_wave_phase,
+                                                    g_wmap_effect_wave_phase, 0);
+        value = g_wmap_effect_wave_phase - 8;
+        g_wmap_effect_wave_phase = value;
 
         if (value < 0)
         {
-            D_801B24B4 = 0;
+            g_wmap_effect_wave_phase = 0;
         }
     }
 
@@ -541,7 +522,7 @@ WMAP_STEP_RUNNER_RESET_AND_RUN(wmap_land_effect_32_run_sequence_3, g_wmap_land_e
 WMAP_STEP_RESET(wmap_land_effect_32_sequence_3_reset, g_wmap_land_effect_32_sequence_3_step, g_wmap_land_effect_32_sequence_3_timer)
 
 WMAP_STEP_DROP_START(wmap_land_effect_32_sequence_3_step_01, g_wmap_land_effect_32_sequence_3_step, g_wmap_land_effect_32_sequence_3_timer,
-                     g_wmap_effect_model_d_rotation, g_wmap_zero_rotation, g_wmap_effect_model_d_position, D_80182DE4, 0x1, 0xA410, 0x42,
+                     g_wmap_effect_model_d_rotation, g_wmap_zero_rotation, g_wmap_effect_model_d_position, g_wmap_effect_fade_e, 0x1, 0xA410, 0x42,
                      wmap_land_effect_32_sequence_3_step_02)
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_32_sequence_3_step_03, g_wmap_land_effect_32_sequence_3_step, g_wmap_land_effect_32_sequence_3_timer, 0x40,
@@ -638,7 +619,8 @@ WMAP_STEP_RESET(wmap_land_effect_32_sequence_10_reset, g_wmap_land_effect_32_seq
 
 /** @brief Draw the sequence effect and advance when its countdown expires. */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_32_sequence_10_step_02, g_wmap_land_effect_32_sequence_10_step, g_wmap_land_effect_32_sequence_10_timer,
-                          wmap_update_particles_from_settings(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0x28, 0, D_801B25D8, 8, 1))
+                          wmap_update_particles_from_settings(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0x28, 0, g_wmap_aux_effect_fade_c, 8,
+                                                              1))
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_32_sequence_10_step_03, g_wmap_land_effect_32_sequence_10_step, g_wmap_land_effect_32_sequence_10_timer, 0x10,
                     wmap_land_effect_32_sequence_10_step_04)
@@ -649,15 +631,15 @@ void wmap_land_effect_32_sequence_10_step_04(void)
     s32 value;
     s32 remaining_ticks;
 
-    if (D_801B25D8 != 0)
+    if (g_wmap_aux_effect_fade_c != 0)
     {
-        wmap_update_particles_from_settings(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0x28, 1, D_801B25D8, 8, 1);
-        value = D_801B25D8 - 8;
-        D_801B25D8 = value;
+        wmap_update_particles_from_settings(&g_wmap_sprite_actors[204], &g_wmap_actor_animations[204], 0x28, 1, g_wmap_aux_effect_fade_c, 8, 1);
+        value = g_wmap_aux_effect_fade_c - 8;
+        g_wmap_aux_effect_fade_c = value;
 
         if (value < 0)
         {
-            D_801B25D8 = 0;
+            g_wmap_aux_effect_fade_c = 0;
         }
     }
 

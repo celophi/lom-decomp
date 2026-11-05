@@ -81,22 +81,22 @@ void wmap_special_effect_34_sequence_1_step_04(void)
     SVECTOR* rotation = &g_wmap_effect_model_a_rotation;
     VECTOR* translation;
 
-    rotation->vy += D_80139240;
-    D_80139240 += 4;
+    rotation->vy += g_wmap_particle_lifetime_min;
+    g_wmap_particle_lifetime_min += 4;
 
-    if (D_80139240 >= 0x101)
+    if (g_wmap_particle_lifetime_min >= 0x101)
     {
-        D_80139240 = 0x100;
+        g_wmap_particle_lifetime_min = 0x100;
     }
 
-    D_8013923C -= 2;
+    g_wmap_particle_velocity_range -= 2;
     PushMatrix();
     translation = &g_wmap_effect_model_a_position;
     RotMatrix(rotation, &matrix);
     TransMatrix(&matrix, translation);
     SetRotMatrix(&matrix);
     SetTransMatrix(&matrix);
-    wmap_draw_model(g_wmap_load_buffer, 0, 4, 0xB6, 0x7880, 1, 0x10080, 0, D_8013923C >> 4, -1);
+    wmap_draw_model(g_wmap_load_buffer, 0, 4, 0xB6, 0x7880, 1, 0x10080, 0, g_wmap_particle_velocity_range >> 4, -1);
     PopMatrix();
 
     if (--g_wmap_special_effect_34_sequence_1_timer == 0)
@@ -112,22 +112,22 @@ void wmap_special_effect_34_sequence_1_step_06(void)
     SVECTOR* rotation = &g_wmap_effect_model_a_rotation;
     VECTOR* translation;
 
-    rotation->vy += D_80139240;
-    D_80139240++;
+    rotation->vy += g_wmap_particle_lifetime_min;
+    g_wmap_particle_lifetime_min++;
 
-    if (D_80139240 >= 0x81)
+    if (g_wmap_particle_lifetime_min >= 0x81)
     {
-        D_80139240 = 0x80;
+        g_wmap_particle_lifetime_min = 0x80;
     }
 
-    D_8013923C -= 0x12C;
+    g_wmap_particle_velocity_range -= 0x12C;
     PushMatrix();
     translation = &g_wmap_effect_model_a_position;
     RotMatrix(rotation, &matrix);
     TransMatrix(&matrix, translation);
     SetRotMatrix(&matrix);
     SetTransMatrix(&matrix);
-    wmap_draw_model(g_wmap_load_buffer, 0, 4, 0xB6, 0x7880, 1, 0x10080, 0, D_8013923C >> 4, -1);
+    wmap_draw_model(g_wmap_load_buffer, 0, 4, 0xB6, 0x7880, 1, 0x10080, 0, g_wmap_particle_velocity_range >> 4, -1);
     PopMatrix();
 
     if (--g_wmap_special_effect_34_sequence_1_timer == 0)
@@ -190,30 +190,30 @@ void wmap_special_effect_34_sequence_3_step_02(void)
     s32 y;
     WmapSpriteActor* actor = &g_wmap_sprite_actors[5];
 
-    if (D_80182D58.point.y < 0x78)
+    if (g_wmap_effect_sprite_position_a.point.y < 0x78)
     {
-        D_80182D60.point.x -= 0x80;
-        D_80182D60.point.y += 0x168;
+        g_wmap_effect_sprite_position_b.point.x -= 0x80;
+        g_wmap_effect_sprite_position_b.point.y += 0x168;
     }
 
-    x = D_80182D60.point.x;
+    x = g_wmap_effect_sprite_position_b.point.x;
 
     if (x < 0)
     {
         x += 0xF;
     }
 
-    y = D_80182D60.point.y;
-    D_80182D58.point.x = (x >> 4) + 0xE6;
+    y = g_wmap_effect_sprite_position_b.point.y;
+    g_wmap_effect_sprite_position_a.point.x = (x >> 4) + 0xE6;
 
     if (y < 0)
     {
         y += 0xF;
     }
 
-    D_80182D58.point.y = y >> 4;
+    g_wmap_effect_sprite_position_a.point.y = y >> 4;
     wmap_step_actor_animation(actor, &g_wmap_actor_animations[5]);
-    wmap_draw_actor_sprite(actor, D_80182D58.packed, 8, 8, 0);
+    wmap_draw_actor_sprite(actor, g_wmap_effect_sprite_position_a.packed, 8, 8, 0);
 
     if (--g_wmap_special_effect_34_sequence_3_timer == 0)
     {
@@ -315,8 +315,8 @@ void wmap_special_effect_34_timeline_step_01(void)
     wmap_play_sound(0x3B, 0x80);
     wmap_start_map_tint(0x703040);
     g_wmap_backdrop_target_level = 0xA;
-    D_80139234 = 1;
-    D_8013924C = 1;
+    g_wmap_particle_velocity_min = 1;
+    g_wmap_particle_lifetime_range = 1;
     wmap_start_sequence(wmap_special_effect_34_run_sequence_1);
     wmap_start_sequence(wmap_special_effect_34_run_sequence_2);
     g_wmap_special_effect_34_timeline_step++;
@@ -328,7 +328,7 @@ void wmap_special_effect_34_timeline_step_01(void)
  */
 void wmap_special_effect_34_timeline_step_02(void)
 {
-    if (D_80139234 == 0)
+    if (g_wmap_particle_velocity_min == 0)
     {
         g_wmap_special_effect_34_timeline_step++;
         wmap_special_effect_34_timeline_step_03();
@@ -361,7 +361,7 @@ void wmap_special_effect_34_timeline_step_05(void)
 /** @brief Wait for sequence 1 to clear its running flag. */
 void wmap_special_effect_34_timeline_step_06(void)
 {
-    if (D_8013924C == 0)
+    if (g_wmap_particle_lifetime_range == 0)
     {
         g_wmap_special_effect_34_timeline_step++;
         wmap_special_effect_34_timeline_step_07();
@@ -406,8 +406,8 @@ void wmap_special_effect_34_sequence_1_step_01(void)
     g_wmap_effect_model_a_position = g_wmap_zero_translation;
     g_wmap_effect_fade_a = 0;
     g_wmap_effect_model_a_position.vz = 0x1388;
-    D_80139240 = 0;
-    D_8013923C = 0;
+    g_wmap_particle_lifetime_min = 0;
+    g_wmap_particle_velocity_range = 0;
     g_wmap_special_effect_34_sequence_1_timer = 0x3C;
     g_wmap_special_effect_34_sequence_1_step++;
     wmap_special_effect_34_sequence_1_step_02();
@@ -422,7 +422,7 @@ WMAP_STEP_ARM_TIMER(wmap_special_effect_34_sequence_1_step_05, g_wmap_special_ef
 /** @brief Clear the running flag that timeline step 6 waits on. */
 void wmap_special_effect_34_sequence_1_step_07(void)
 {
-    D_8013924C = 0;
+    g_wmap_particle_lifetime_range = 0;
     g_wmap_special_effect_34_sequence_1_step++;
 }
 
@@ -454,7 +454,7 @@ WMAP_STEP_WAIT_SCROLL(wmap_special_effect_34_sequence_2_step_08, g_wmap_special_
 /** @brief Clear sequence 2's running flag. */
 void wmap_special_effect_34_sequence_2_step_09(void)
 {
-    D_80139234 = 0;
+    g_wmap_particle_velocity_min = 0;
     g_wmap_special_effect_34_sequence_2_step++;
 }
 
@@ -476,8 +476,8 @@ void wmap_special_effect_34_sequence_3_step_01(void)
     actor->shade_step = 0;
     actor->target_shade = 0x80;
     actor->shade = 0x80;
-    D_80182D60.point.x = 0;
-    D_80182D60.point.y = 0;
+    g_wmap_effect_sprite_position_b.point.x = 0;
+    g_wmap_effect_sprite_position_b.point.y = 0;
     g_wmap_special_effect_34_sequence_3_timer = 0x64;
     g_wmap_special_effect_34_sequence_3_step++;
     wmap_special_effect_34_sequence_3_step_02();
@@ -488,7 +488,7 @@ WMAP_STEP_FADE_ACTOR(wmap_special_effect_34_sequence_3_step_03, g_wmap_special_e
                      g_wmap_sprite_actors[5], 4, 0x20, wmap_special_effect_34_sequence_3_step_04)
 
 WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_special_effect_34_sequence_3_step_04, g_wmap_special_effect_34_sequence_3_step, g_wmap_special_effect_34_sequence_3_timer,
-                              g_wmap_sprite_actors[5], g_wmap_actor_animations[5], D_80182D58, 8, 8, 0)
+                              g_wmap_sprite_actors[5], g_wmap_actor_animations[5], g_wmap_effect_sprite_position_a, 8, 8, 0)
 
 WMAP_STEP_ADVANCE(wmap_special_effect_34_sequence_3_end, g_wmap_special_effect_34_sequence_3_step)
 

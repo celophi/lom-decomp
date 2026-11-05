@@ -2,6 +2,7 @@
 #define _TIM_H
 
 #include "common.h"
+
 #include "common/gpu_packet.h"
 
 /**
@@ -21,9 +22,17 @@
 /** @brief Advance to the next TIM block by skipping @p block->bnum bytes. */
 #define TIM_NEXT_BLOCK(block) ((TimBlock*)((u8*)(block) + (block)->bnum))
 
+/** @brief The first block of a TIM file, right after its header. */
+#define TIM_FIRST_BLOCK(tim) ((TimBlock*)((u8*)(tim) + TIM_HEADER_SIZE))
+
+/** @brief The VRAM rectangle of a TIM block: its dx, dy, width and height read as a RECT. */
+#define TIM_BLOCK_RECT(block) (*(RECT*)&(block)->dx)
+
+/** @brief Nonzero when a TIM file has a CLUT block; tests the low byte of its flag word. */
+#define TIM_HAS_CLUT(tim) (*(u8*)&(tim)->flags & TIM_FLAG_HAS_CLUT)
+
 /** @brief Locate the pixel block given the TIM base and a pre-loaded CLUT bnum. */
-#define TIM_PIXEL_BLOCK(tim, bnum) \
-    ((TimBlock*)((u8*)(tim) + ((bnum) + TIM_HEADER_SIZE)))
+#define TIM_PIXEL_BLOCK(tim, bnum) ((TimBlock*)((u8*)(tim) + ((bnum) + TIM_HEADER_SIZE)))
 
 /** Number of color entries in a 256-entry palette block. */
 #define CLUT_ENTRY_COUNT 0x100

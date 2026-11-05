@@ -68,7 +68,7 @@ TABLES = (
     TableSpec("g_wmap_information_group_starts", "i", 11,
               note="First placement of each panel group; each group ends where the next one starts."),
     spec("g_wmap_cell_effect_quads", QUAD_TEMPLATE, 16, "Vertices and corner colors of the cell effect quads."),
-    TableSpec("D_800CBBE8", "4h8H2H", 17,
+    TableSpec("g_wmap_land_image_uploads", "4h8H2H", 17,
               ("x", "y", "width", "height", *[f"clut{index}" for index in range(8)], "tpage_x", "tpage_y"),
               "Land texture cache slots: the VRAM rectangle LoadImage fills, palettes and texture page."),
     TableSpec("g_wmap_land_quad_scales", "8h", 48, ("x0", "y0", "x1", "y1", "x2", "y2", "x3", "y3"),
@@ -91,7 +91,7 @@ TABLES = (
               "Carousel rotation; the code writes vy (also named D_800CC776) from the carousel angle table."),
     TableSpec("g_wmap_preview_travel_frames", "2h4B", 126, ("x", "y", "pad_04", "pad_05", "pad_06", "pad_07"),
               "Path from the map to the artifact carousel."),
-    TableSpec("D_800CCBF4", "i", 65, note="First pickup frame of each artifact; the next entry minus one is the last."),
+    TableSpec("g_wmap_artifact_transfer_frame_bounds", "i", 65, note="First pickup frame of each artifact; the next entry minus one is the last."),
     spec("g_wmap_artifact_pickup_frames", TRANSFER_FRAME, 740, "Artifact pickup animation frames."),
     TableSpec("g_wmap_artifact_return_offsets", "i", 65, note="First return frame of each artifact."),
     spec("g_wmap_artifact_return_frames", TRANSFER_FRAME, 280, "Artifact return animation frames."),
@@ -136,6 +136,6 @@ TABLES = (
     TableSpec("g_wmap_transition_mesh_motion_1", "2i", 528, ("x", "y"), "Second backdrop per-vertex motion table, 16.16 fixed point; zero on disc."),
     # Travel and land effects.
     TableSpec("g_wmap_route_headings", "h", 10, note="Heading the vehicle must face on each special travel route."),
-    TableSpec("D_800D665C", "i", 6,
+    TableSpec("g_wmap_land_effect_27_model_frames", "i", 6,
               note="Model index in the effect resource that land effect 27 draws, by animation frame."),
 )

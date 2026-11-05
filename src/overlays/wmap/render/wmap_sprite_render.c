@@ -1,15 +1,15 @@
-#include "../internal/wmap_frame_render.h"
-#include "../internal/wmap_map_display.h"
-#include "../internal/wmap_sprite_render.h"
-#include "../internal/wmap_resource_support.h"
 #include "common.h"
+#include <inline_c.h>
 #include <libgpu.h>
 #include <libgte.h>
-#include <inline_c.h>
-#include "sdk/gte_dmpsx_compat.h"
-
 #include <memory.h>
+
+#include "../internal/wmap_frame_render.h"
+#include "../internal/wmap_map_display.h"
+#include "../internal/wmap_resource_support.h"
+#include "../internal/wmap_sprite_render.h"
 #include "common/gpu_packet.h"
+#include "sdk/gte_dmpsx_compat.h"
 
 /** @brief Parts per sprite frame. */
 #define WMAP_SPRITE_PARTS_MAX 32
@@ -107,17 +107,20 @@ void wmap_draw_actor_sprite(WmapSpriteActor* actor, s32 screen_position, s32 tex
     {
         page_y_offset = 0;
     }
+
     part = (WmapSpritePart*)actor->frame_data;
     current_shade = actor->shade;
     target_shade = actor->target_shade;
     part_count = *(s8*)part;
     /* The frame data is a part count byte followed by the parts. */
     part = (WmapSpritePart*)((u8*)part + 1);
+
     if (current_shade != target_shade)
     {
         if (target_shade < current_shade)
         {
             actor->shade -= actor->shade_step;
+
             if (actor->shade < 0)
             {
                 actor->shade = 0;
@@ -126,22 +129,27 @@ void wmap_draw_actor_sprite(WmapSpriteActor* actor, s32 screen_position, s32 tex
         else
         {
             actor->shade += actor->shade_step;
+
             if (actor->shade > WMAP_SPRITE_SHADE_MAX)
             {
                 actor->shade = WMAP_SPRITE_SHADE_MAX;
             }
+
             if (actor->shade < 0)
             {
                 actor->shade = 0;
             }
         }
     }
+
     if (part_count < 1 || part_count > WMAP_SPRITE_PARTS_MAX)
     {
         func_80064F14();
         return;
     }
+
     shade = actor->shade;
+
     if (shade >= WMAP_SPRITE_SHADE_NEUTRAL)
     {
         brightness = 0x100 - shade;
@@ -150,12 +158,15 @@ void wmap_draw_actor_sprite(WmapSpriteActor* actor, s32 screen_position, s32 tex
     {
         brightness = shade;
     }
+
     translation = &translation_vector;
     rotation = &rotation_vector;
     screen_y = screen_position >> 0x10;
+
     do
     {
-        quad = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+        quad = g_wmap_current_frame->packet_cursor;
+
         if (part->angle != 0)
         {
             memset(translation, 0, sizeof(VECTOR));
@@ -219,7 +230,9 @@ void wmap_draw_actor_sprite(WmapSpriteActor* actor, s32 screen_position, s32 tex
             quad->y2 = screen_y + ((scaled_bottom * scale->y2) >> 8);
             bottom_y = screen_y + ((scaled_bottom * scale->y3) >> 8);
         }
+
         quad->y3 = bottom_y;
+
         if (part->flags & WMAP_SPRITE_PART_FLIP_U)
         {
             flipped_u = part->u;
@@ -238,6 +251,7 @@ void wmap_draw_actor_sprite(WmapSpriteActor* actor, s32 screen_position, s32 tex
             quad->u3 = right_u;
             quad->u1 = right_u;
         }
+
         if (part->flags & WMAP_SPRITE_PART_FLIP_V)
         {
             flipped_v = part->v + part->height;
@@ -256,21 +270,26 @@ void wmap_draw_actor_sprite(WmapSpriteActor* actor, s32 screen_position, s32 tex
             quad->v3 = bottom_v;
             quad->v2 = bottom_v;
         }
+
         SET_BGR0_PACKED(quad, brightness | (brightness << 8) | (brightness << 16));
         quad->tpage = g_wmap_sprite_textures[texture_index + part->texture].tpage;
         quad->clut = g_wmap_sprite_textures[texture_index].clut[part->flags & WMAP_SPRITE_PART_CLUT_MASK];
         setPolyFT4(quad);
+
         if ((brightness != WMAP_SPRITE_SHADE_NEUTRAL) || (part->blend != 0))
         {
             setSemiTrans(quad, 1);
         }
+
         frame = g_wmap_current_frame;
         addPrim(&frame->ordering_table[ot_index], quad);
+
         if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {
             g_wmap_packet_bytes += sizeof(POLY_FT4);
             frame->packet_cursor += sizeof(POLY_FT4);
         }
+
         part++;
         part_count--;
     } while (part_count != 0);

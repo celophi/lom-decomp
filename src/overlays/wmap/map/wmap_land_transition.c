@@ -63,9 +63,9 @@ enum WmapCarouselTextureWord
 
 extern const WmapPoint g_wmap_cell_focus_offsets[];
 extern u16 D_800CC776;
-extern s32 D_800CCBF4[];
-extern WmapRouteCell D_8011D108[6][6];
-extern s32 D_801398F4;
+extern s32 g_wmap_artifact_transfer_frame_bounds[];
+extern WmapRouteCell g_wmap_cell_effects[6][6];
+extern s32 g_wmap_carousel_position;
 
 extern s32 g_wmap_carousel_turn_frames;
 extern s32 g_wmap_carousel_turn_step;
@@ -272,7 +272,7 @@ void wmap_update_artifact_selection(void)
             wmap_play_sound(WMAP_SOUND_TURN_RIGHT, WMAP_CAROUSEL_VOLUME);
             g_wmap_carousel_turn_step = 1;
             g_wmap_carousel_turn_frames = WMAP_CAROUSEL_STEP_FRAMES;
-            wmap_scroll_artifact_list(1, D_80139838);
+            wmap_scroll_artifact_list(1, g_wmap_carousel_artifacts);
         }
 
         if ((g_wmap_buttons_repeat & PADLleft) != 0)
@@ -283,7 +283,7 @@ void wmap_update_artifact_selection(void)
             wmap_play_sound(WMAP_SOUND_TURN_LEFT, WMAP_CAROUSEL_VOLUME);
             g_wmap_carousel_turn_step = -1;
             g_wmap_carousel_turn_frames = WMAP_CAROUSEL_STEP_FRAMES;
-            wmap_scroll_artifact_list(0, D_80139838);
+            wmap_scroll_artifact_list(0, g_wmap_carousel_artifacts);
         }
 
         if ((g_wmap_buttons_repeat & WMAP_PAD_CONFIRM) != 0)
@@ -303,7 +303,7 @@ void wmap_update_artifact_selection(void)
                     for (map_x = 0; map_x < WMAP_GRID_SIZE; map_x++)
                     {
                         g_wmap_cells[map_x][map_y].placement_allowed = wmap_can_place_land(map_x, map_y, g_wmap_selected_artifact);
-                        D_8011D108[map_x][map_y].state = 0;
+                        g_wmap_cell_effects[map_x][map_y].state = 0;
                     }
                 }
 
@@ -311,8 +311,8 @@ void wmap_update_artifact_selection(void)
                 g_wmap_input_locked = 1;
                 g_wmap_buttons_held = 0;
                 g_wmap_buttons_repeat = 0;
-                g_wmap_artifact_transfer_frame = D_800CCBF4[g_wmap_selected_artifact];
-                g_wmap_artifact_transfer_end = D_800CCBF4[g_wmap_selected_artifact + 1] - 1;
+                g_wmap_artifact_transfer_frame = g_wmap_artifact_transfer_frame_bounds[g_wmap_selected_artifact];
+                g_wmap_artifact_transfer_end = g_wmap_artifact_transfer_frame_bounds[g_wmap_selected_artifact + 1] - 1;
                 g_wmap_preview_travel_frame = g_wmap_preview_travel_frame_bounds[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS + 1] - 1;
                 g_wmap_preview_travel_end = g_wmap_preview_travel_frame_bounds[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS];
                 wmap_start_mesh_transition(0);
@@ -326,8 +326,8 @@ void wmap_update_artifact_selection(void)
             s32* artifact_slot;
             s32 label_id;
 
-            artifacts = D_80139838;
-            artifact_slot = &artifacts[(D_801398F4 + 0x7FFF) % WMAP_ARTIFACT_SLOTS];
+            artifacts = g_wmap_carousel_artifacts;
+            artifact_slot = &artifacts[(g_wmap_carousel_position + 0x7FFF) % WMAP_ARTIFACT_SLOTS];
 
             if (*artifact_slot != 0xFF)
             {
@@ -397,7 +397,7 @@ void wmap_draw_artifact_carousel(void)
     /* Cull the back of the carousel before committing each triangle packet. */
     for (index = 0; index < WMAP_CAROUSEL_TRIANGLES; index++)
     {
-        triangle = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
+        triangle = g_wmap_current_frame->packet_cursor;
         gte_ldv3(&g_wmap_carousel_vertices[g_wmap_carousel_faces[index * WMAP_TRIANGLE_VERTICES]],
                  &g_wmap_carousel_vertices[g_wmap_carousel_faces[index * WMAP_TRIANGLE_VERTICES + 1]],
                  &g_wmap_carousel_vertices[g_wmap_carousel_faces[index * WMAP_TRIANGLE_VERTICES + 2]]);
@@ -434,16 +434,16 @@ void wmap_draw_artifact_carousel(void)
     {
         index = (draw_index + WMAP_ARTIFACT_SLOTS) % WMAP_ARTIFACT_SLOTS;
 
-        if (D_80139838[index] != WMAP_NO_ARTIFACT)
+        if (g_wmap_carousel_artifacts[index] != WMAP_NO_ARTIFACT)
         {
-            sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+            sprite = g_wmap_current_frame->packet_cursor;
             position.vx = g_wmap_artifact_positions[index].x;
             position.vy = 0;
             position.vz = g_wmap_artifact_positions[index].y;
             gte_ldv0(&position);
             gte_rtps();
             SET_BGR0_PACKED(sprite, 0x80808080);
-            image = &g_wmap_artifact_images[D_80139838[index]];
+            image = &g_wmap_artifact_images[g_wmap_carousel_artifacts[index]];
             gte_stsxy(&screen.packed);
             sprite->x0 = screen.packed + image->carousel_x;
             sprite->y0 = screen.point.y + image->carousel_y;
@@ -463,7 +463,7 @@ void wmap_draw_artifact_carousel(void)
                 g_wmap_current_frame->packet_cursor += sizeof(SPRT);
             }
 
-            shadow = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+            shadow = g_wmap_current_frame->packet_cursor;
             SET_BGR0_PACKED(shadow, 0x00404040);
             shadow->x0 = screen.packed + image->shadow_x + WMAP_ARTIFACT_SHADOW_SKEW;
             shadow->y0 = image->height + (screen.point.y + image->shadow_y);

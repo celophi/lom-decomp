@@ -19,13 +19,6 @@
 #define WMAP_CALLBACK_SLOTS 8
 #define WMAP_ACTOR_COUNT 256
 
-/** @brief An animation resource starts with this many sequence offsets, followed by the frame offsets. */
-#define WMAP_ANIMATION_SEQUENCES 32
-/** @brief Animation duration that never counts down. */
-#define WMAP_ANIMATION_HOLD 255
-/** @brief End-of-sequence marker in a sequence's frame list. */
-#define WMAP_ANIMATION_LOOP 255
-
 /** @brief Step counts of the land focus, land entry and land return sequences. */
 #define WMAP_LAND_FOCUS_STEPS 10
 #define WMAP_LAND_ENTRY_STEPS 4
@@ -381,11 +374,11 @@ s32 wmap_scale_color(CVECTOR color, s32 scale)
 }
 
 /**
- * @brief Install the model transform through the helper selected by D_800D923C.
+ * @brief Install the model transform through the helper selected by g_wmap_models_use_effect_camera.
  */
 void wmap_set_model_transform(VECTOR* translation, SVECTOR* rotation)
 {
-    if (D_800D923C != 0)
+    if (g_wmap_models_use_effect_camera != 0)
     {
         wmap_set_effect_model_transform(translation, rotation);
         return;
@@ -420,16 +413,9 @@ void wmap_update_default_particles_from_settings(void* actors, WmapAnimationSlot
  */
 void wmap_update_particles_from_settings(void* actors, WmapAnimationSlot* animations, s32 count, s32 peak_shade, s32 initial_shade, s32 shade_step, s32 mode)
 {
-    g_wmap_effect_params[1] = D_80139234;
-    g_wmap_effect_params[2] = D_8013923C;
-    g_wmap_effect_params[3] = D_80139240;
-    g_wmap_effect_params[4] = D_8013924C;
-    g_wmap_effect_params[5] = D_80139250;
-    g_wmap_effect_params[6] = D_80139260;
-    g_wmap_effect_params[7] = D_80139264;
-    g_wmap_effect_params[8] = D_80139268;
-    g_wmap_effect_params[9] = D_8013926C;
-    g_wmap_effect_params[10] = D_80139284;
+    WMAP_SET_PARTICLE_CONFIG(0, g_wmap_particle_velocity_min, g_wmap_particle_velocity_range, g_wmap_particle_lifetime_min, g_wmap_particle_lifetime_range,
+                             g_wmap_particle_spawn_interval, g_wmap_particle_radial_step, g_wmap_particle_first_motion, g_wmap_particle_texture_index,
+                             g_wmap_particle_sequence, g_wmap_particle_radius);
     wmap_update_particle_system(actors, animations, count, peak_shade, initial_shade, shade_step, mode, g_wmap_effect_params);
 }
 

@@ -39,7 +39,7 @@ extern WmapSequenceStep g_wmap_land_effect_01_sequence_8_steps[];
 extern u32 g_wmap_land_effect_01_sequence_3_step;
 extern u32 g_wmap_land_effect_01_sequence_4_step;
 extern WmapMotion* g_wmap_land_effect_01_ring_motions;
-extern s32 D_80139980;
+extern s32 g_wmap_particle_shade;
 extern u32 g_wmap_land_effect_01_sequence_5_step;
 extern u32 g_wmap_land_effect_01_sequence_8_step;
 extern u32 g_wmap_land_effect_01_timeline_step;
@@ -49,7 +49,7 @@ extern u32 g_wmap_land_effect_01_sequence_1_step;
 extern u32 g_wmap_land_effect_01_sequence_6_step;
 extern u32 g_wmap_land_effect_01_sequence_7_step;
 
-extern WmapMotion D_801AFC98[];
+extern WmapMotion g_wmap_actor_motions_at_10[];
 
 /**
  * @brief Project active particles and initialize the first available slot.
@@ -167,13 +167,13 @@ void wmap_land_effect_01_sequence_4_step_02(void)
     SetRotMatrix(&matrix);
     SetTransMatrix(&matrix);
 
-    if (D_801B2470 != 0)
+    if (g_wmap_effect_flash_fade_a != 0)
     {
-        wmap_draw_model_default(g_wmap_load_buffer, 0, 4, -1, -1, 1, D_801B2470);
+        wmap_draw_model_default(g_wmap_load_buffer, 0, 4, -1, -1, 1, g_wmap_effect_flash_fade_a);
     }
 
     PopMatrix();
-    WMAP_MODEL_FADE_OUT(D_801B2470, 9, intensity);
+    WMAP_MODEL_FADE_OUT(g_wmap_effect_flash_fade_a, 9, intensity);
     remaining = g_wmap_land_effect_01_sequence_4_timer - 1;
     g_wmap_land_effect_01_sequence_4_timer = remaining;
 
@@ -189,10 +189,10 @@ void wmap_land_effect_01_sequence_5_step_01(void)
     s32 i = 0;
     WmapSpriteActor* actor;
 
-    g_wmap_land_effect_01_ring_motions = D_801AFC98;
+    g_wmap_land_effect_01_ring_motions = g_wmap_actor_motions_at_10;
     g_wmap_effect_model_a_rotation = g_wmap_zero_rotation;
     g_wmap_effect_model_c_position = g_wmap_camera_translation;
-    D_801B2470 = 128;
+    g_wmap_effect_flash_fade_a = 128;
 
     for (; i < 20; i++)
     {
@@ -220,7 +220,7 @@ void wmap_land_effect_01_sequence_5_step_01(void)
         }
     }
 
-    D_80139980 = 128;
+    g_wmap_particle_shade = 128;
     g_wmap_land_effect_01_sequence_5_timer = 36;
     g_wmap_land_effect_01_sequence_5_step++;
     wmap_land_effect_01_sequence_5_step_02();
@@ -269,8 +269,8 @@ void wmap_land_effect_01_draw_ring(void)
             motion->radius = 900000;
         }
 
-        actor->target_shade = D_80139980;
-        actor->shade = D_80139980;
+        actor->target_shade = g_wmap_particle_shade;
+        actor->shade = g_wmap_particle_shade;
         gte_stsxy(&screen_position);
         wmap_step_actor_animation(actor, resource);
         wmap_draw_actor_sprite(actor, screen_position, 13, 31, 0);
@@ -286,17 +286,8 @@ void wmap_land_effect_01_sequence_8_step_01(void)
 
     g_wmap_particle_intensity = 24;
     g_wmap_effect_fade_b = 256;
-    D_80139234 = 12;
-    D_8013923C = 10;
-    D_80139240 = 24;
-    D_8013924C = 2;
-    D_80139250 = 2;
-    D_80139260 = 1500;
-    D_80139264 = 128;
-    D_80139268 = 13;
-    D_8013926C = 1;
-    D_80139284 = 0;
-    WMAP_RESET_PARTICLE_SLOTS(i, 24, g_wmap_actor_motions[i + D_80139264].state, 204, g_wmap_animation_bank_4);
+    WMAP_SET_PARTICLE_SETTINGS(12, 10, 24, 2, 2, 1500, 128, 13, 1, 0);
+    WMAP_RESET_PARTICLE_SLOTS(i, 24, g_wmap_actor_motions[i + g_wmap_particle_first_motion].state, 204, g_wmap_animation_bank_4);
     g_wmap_land_effect_01_sequence_8_timer = 32;
     g_wmap_land_effect_01_sequence_8_step++;
     wmap_land_effect_01_sequence_8_step_02();
@@ -527,7 +518,7 @@ void wmap_land_effect_01_sequence_4_step_01(void)
 {
     g_wmap_effect_model_b_rotation = g_wmap_zero_rotation;
     g_wmap_effect_model_b_position = g_wmap_camera_translation;
-    D_801B2470 = 0x80;
+    g_wmap_effect_flash_fade_a = 0x80;
     g_wmap_land_effect_01_sequence_4_timer = 0x20;
     g_wmap_land_effect_01_sequence_4_step++;
     wmap_land_effect_01_sequence_4_step_02();
@@ -553,12 +544,12 @@ void wmap_land_effect_01_sequence_5_step_04(void)
     s32 value;
     s32 remaining_ticks;
 
-    value = D_80139980 - 4;
-    D_80139980 = value;
+    value = g_wmap_particle_shade - 4;
+    g_wmap_particle_shade = value;
 
     if (value < 0)
     {
-        D_80139980 = 0;
+        g_wmap_particle_shade = 0;
     }
 
     wmap_land_effect_01_draw_ring();

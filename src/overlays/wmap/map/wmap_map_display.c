@@ -184,7 +184,7 @@ typedef struct
     u8 packet_tail[16];
 } WmapSpritePosition;
 
-extern WmapSpritePosition D_8004FD9C[8];
+extern WmapSpritePosition g_wmap_spirit_sprite_positions[8];
 extern s32 rand(void);
 extern SPRT g_wmap_game_score_label;
 extern SPRT g_wmap_game_score_digit;
@@ -207,22 +207,22 @@ extern s32 g_wmap_game_spawn_timer;
 extern s32 D_800D9234;
 extern u8 g_wmap_game_spawn_patterns[][9];
 extern s32 D_800500DC[];
-extern WmapTextureInfo D_800CBBE8[];
+extern WmapTextureInfo g_wmap_land_image_uploads[];
 extern s32 D_800DBE74;
-extern WmapMapPoint D_8004FD04[];
+extern WmapMapPoint g_wmap_spirit_view_cell_positions[];
 extern s16 g_wmap_land_label_cells[];
 extern s32 g_wmap_land_scale_steps[];
 extern s32 g_wmap_cell_effect_steps[];
 extern WmapQuadTemplate g_wmap_cell_effect_quads[16];
-extern WmapEffectCell D_8011D108[6][6];
-extern SPRT D_8004FD94[];
+extern WmapEffectCell g_wmap_cell_effects[6][6];
+extern SPRT g_wmap_spirit_sprite_templates[];
 extern u8 g_wmap_spirit_sequence_bounds[];
 extern u8 g_wmap_spirit_sequences[];
 extern u8 g_wmap_spirit_timers[];
 extern u8 g_wmap_spirit_frames[];
 extern SPRT g_wmap_spirit_level_sprites[16];
 extern SPRT g_wmap_spirit_accent_sprites[16];
-extern const s32 D_8004FC74[];
+extern const s32 g_wmap_spirit_level_positions[];
 extern s32 g_wmap_spirit_selection;
 extern s32 D_80139218;
 extern WmapGlyph g_wmap_information_glyphs[];
@@ -350,21 +350,21 @@ void wmap_update_map_game(void)
 
     if (g_wmap_game_score == 0)
     {
-        sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+        sprite = g_wmap_current_frame->packet_cursor;
         *sprite = g_wmap_game_score_digit;
         addPrim(&g_wmap_current_frame->ordering_table[1], sprite);
 
         if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {
             g_wmap_packet_bytes += sizeof(SPRT);
-            g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
+            g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(SPRT);
         }
     }
     else
     {
         while (render_y != 0)
         {
-            sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+            sprite = g_wmap_current_frame->packet_cursor;
             *sprite = g_wmap_game_score_digit;
             sprite->x0 = render_x;
             sprite->u0 = (render_y % 10) * 16;
@@ -374,24 +374,24 @@ void wmap_update_map_game(void)
             if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
             {
                 g_wmap_packet_bytes += sizeof(SPRT);
-                g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
+                g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(SPRT);
             }
 
             render_x -= 16;
         }
     }
 
-    sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+    sprite = g_wmap_current_frame->packet_cursor;
     *sprite = g_wmap_game_score_label;
     addPrim(&g_wmap_current_frame->ordering_table[1], sprite);
 
     if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
         g_wmap_packet_bytes += sizeof(SPRT);
-        g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
+        g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(SPRT);
     }
 
-    sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+    sprite = g_wmap_current_frame->packet_cursor;
     *sprite = g_wmap_game_round_digit;
     sprite->u0 = g_wmap_game_round * 16;
     addPrim(&g_wmap_current_frame->ordering_table[1], sprite);
@@ -399,17 +399,17 @@ void wmap_update_map_game(void)
     if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
         g_wmap_packet_bytes += sizeof(SPRT);
-        g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
+        g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(SPRT);
     }
 
-    sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+    sprite = g_wmap_current_frame->packet_cursor;
     *sprite = g_wmap_game_round_label;
     addPrim(&g_wmap_current_frame->ordering_table[1], sprite);
 
     if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
         g_wmap_packet_bytes += sizeof(SPRT);
-        g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
+        g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(SPRT);
     }
 
     wmap_queue_texture_page(0x55, 1);
@@ -451,7 +451,7 @@ void wmap_update_map_game_prompt(void)
 {
     SPRT* sprite;
 
-    sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+    sprite = g_wmap_current_frame->packet_cursor;
 
     if (g_wmap_game_round < 8 && g_wmap_game_hits >= 12)
     {
@@ -501,7 +501,7 @@ void wmap_update_map_game_prompt(void)
     if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
         g_wmap_packet_bytes += sizeof(SPRT);
-        g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
+        g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(SPRT);
     }
 
     wmap_queue_texture_page(0x55, 1);
@@ -517,14 +517,14 @@ void wmap_update_map_game_countdown(void)
     s32 j;
     s32 object_id;
 
-    sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+    sprite = g_wmap_current_frame->packet_cursor;
     *sprite = g_wmap_game_countdown_sprite;
     addPrim(&g_wmap_current_frame->ordering_table[1], sprite);
 
     if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
         g_wmap_packet_bytes += sizeof(SPRT);
-        g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
+        g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(SPRT);
     }
 
     g_wmap_game_timer--;
@@ -802,7 +802,7 @@ s32 wmap_resolve_land_image(WmapLandDisplay* resource)
                 resource_id = resource->resource_id;
                 free_entry->resource_id = resource_id;
                 image = (u8*)g_wmap_land_image_pack + g_wmap_land_image_pack[resource_id];
-                LoadImage(&D_800CBBE8[slot].upload.rect, (u_long*)image);
+                LoadImage(&g_wmap_land_image_uploads[slot].upload.rect, (u_long*)image);
                 free_entry->animation_data = image + 0x2004;
                 free_entry->loaded_frame = g_wmap_frame_count;
 
@@ -866,7 +866,7 @@ s32 wmap_resolve_land_image(WmapLandDisplay* resource)
         resource_id = resource->resource_id;
         oldest_entry->resource_id = resource_id;
         image = (u8*)g_wmap_land_image_pack + g_wmap_land_image_pack[resource_id];
-        LoadImage(&D_800CBBE8[oldest_slot].upload.rect, (u_long*)image);
+        LoadImage(&g_wmap_land_image_uploads[oldest_slot].upload.rect, (u_long*)image);
         image += 0x2004;
         oldest_entry->animation_data = image;
         oldest_entry->loaded_frame = g_wmap_frame_count;
@@ -892,7 +892,7 @@ void wmap_draw_land_marker(s32 map_x, s32 map_y, WmapLandDisplay* marker)
     u16* screen_ptr;
     s32 projected_z;
 
-    sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+    sprite = g_wmap_current_frame->packet_cursor;
 
     switch (g_wmap_view_mode)
     {
@@ -913,7 +913,7 @@ void wmap_draw_land_marker(s32 map_x, s32 map_y, WmapLandDisplay* marker)
             gte_stszotz(&projected_z);
             screen_ptr = (u16*)&screen;
 
-            if ((s32)(screen_ptr[1] << 16) < 0)
+            if ((screen_ptr[1] << 16) < 0)
             {
                 return;
             }
@@ -936,8 +936,8 @@ void wmap_draw_land_marker(s32 map_x, s32 map_y, WmapLandDisplay* marker)
             s32 sprite_x;
             s32 sprite_y;
 
-            sprite_x = D_8004FD04[map_x + map_y * 6].x;
-            sprite_y = D_8004FD04[map_x + map_y * 6].y;
+            sprite_x = g_wmap_spirit_view_cell_positions[map_x + map_y * 6].x;
+            sprite_y = g_wmap_spirit_view_cell_positions[map_x + map_y * 6].y;
             depth = 0xAE - map_y;
             sprite->x0 = sprite_x;
             sprite->y0 = sprite_y;
@@ -990,7 +990,7 @@ void wmap_draw_land_marker(s32 map_x, s32 map_y, WmapLandDisplay* marker)
     if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
         g_wmap_packet_bytes += sizeof(SPRT);
-        g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
+        g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(SPRT);
     }
 
     wmap_queue_texture_page(type, depth);
@@ -1026,6 +1026,7 @@ void wmap_draw_land_animation(s32 x, s32 y, WmapLandDisplay* state, s32 resource
     u8* animation_data;
     u32 address_mask;
     u32 tag_mask;
+    DVECTOR* projected_screen;
 
     phase_delta = g_wmap_land_scale_steps[state->transition];
     state->scale_frame += phase_delta;
@@ -1050,17 +1051,13 @@ void wmap_draw_land_animation(s32 x, s32 y, WmapLandDisplay* state, s32 resource
 
     gte_ldv0(&locals.position);
     gte_rtps();
+    projected_screen = &locals.screen;
+    gte_stsxy(projected_screen);
+    gte_stszotz(&locals.depth);
+
+    if (((u16)projected_screen->vy << 16) < 0)
     {
-        DVECTOR* projected_screen;
-
-        projected_screen = &locals.screen;
-        gte_stsxy(projected_screen);
-        gte_stszotz(&locals.depth);
-
-        if (((u16)projected_screen->vy << 16) < 0)
-        {
-            return;
-        }
+        return;
     }
 
     /* The image tail holds relative sequence and quad offsets. */
@@ -1121,9 +1118,9 @@ void wmap_draw_land_animation(s32 x, s32 y, WmapLandDisplay* state, s32 resource
 
     do
     {
-        packet = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+        packet = g_wmap_current_frame->packet_cursor;
         screen_ptr = &locals.screen;
-        texture_base = D_800CBBE8;
+        texture_base = g_wmap_land_image_uploads;
         address_mask = 0x00FFFFFF;
         tag_mask = 0xFF000000;
         scale = &g_wmap_land_quad_scales[0][(s8)state->scale_frame];
@@ -1159,7 +1156,7 @@ void wmap_draw_land_animation(s32 x, s32 y, WmapLandDisplay* state, s32 resource
         if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {
             g_wmap_packet_bytes += sizeof(POLY_FT4);
-            g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(POLY_FT4);
+            g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(POLY_FT4);
         }
 
         quad++;
@@ -1367,7 +1364,7 @@ void wmap_draw_cell_effect(s32 x, s32 y)
     s32 color_frame;
     s32 frame_delta;
 
-    cell = &D_8011D108[x][y];
+    cell = &g_wmap_cell_effects[x][y];
     frame_delta = g_wmap_cell_effect_steps[cell->state];
     cell->frame += frame_delta;
 
@@ -1405,7 +1402,7 @@ void wmap_draw_cell_effect(s32 x, s32 y)
         POLY_G4* poly;
 
         source = &g_wmap_cell_effect_quads[i];
-        poly = (POLY_G4*)g_wmap_current_frame->packet_cursor;
+        poly = g_wmap_current_frame->packet_cursor;
 
         transformed[0].x = base.x + source->vertices[0].x;
         transformed[0].y = base.y + source->vertices[0].y;
@@ -1450,7 +1447,7 @@ void wmap_draw_cell_effect(s32 x, s32 y)
         if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {
             g_wmap_packet_bytes += sizeof(POLY_G4);
-            g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(POLY_G4);
+            g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(POLY_G4);
         }
     }
 
@@ -1484,12 +1481,12 @@ void wmap_init_land_display(void)
         {
             WmapEffectCell cell;
 
-            D_8011D108[x][y].unk00 = i;
-            D_8011D108[x][y].frame = 0;
-            D_8011D108[x][y].state = 0;
-            D_8011D108[x][y].mode = 0;
-            D_8011D108[x][y].unk10 = 0;
-            cell = D_8011D108[x][y];
+            g_wmap_cell_effects[x][y].unk00 = i;
+            g_wmap_cell_effects[x][y].frame = 0;
+            g_wmap_cell_effects[x][y].state = 0;
+            g_wmap_cell_effects[x][y].mode = 0;
+            g_wmap_cell_effects[x][y].unk10 = 0;
+            cell = g_wmap_cell_effects[x][y];
         }
     }
 }
@@ -1525,8 +1522,8 @@ void wmap_draw_spirit_icons(s32 selected_index)
             g_wmap_spirit_timers[i] = g_wmap_spirit_sequences[(s8)g_wmap_spirit_frames[i] + 1];
         }
 
-        sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
-        *sprite = D_8004FD94[i];
+        sprite = g_wmap_current_frame->packet_cursor;
+        *sprite = g_wmap_spirit_sprite_templates[i];
         sprite->r0 = sprite->g0 = sprite->b0 = g_wmap_spirit_brightness;
         sprite->u0 = (g_wmap_spirit_sequences[(s8)g_wmap_spirit_frames[i]] % 5) * 24;
         sprite->v0 = (g_wmap_spirit_sequences[(s8)g_wmap_spirit_frames[i]] / 5) * 24;
@@ -1540,7 +1537,7 @@ void wmap_draw_spirit_icons(s32 selected_index)
 
         if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {
-            g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
+            g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(SPRT);
             g_wmap_packet_bytes += sizeof(SPRT);
         }
     }
@@ -1612,10 +1609,10 @@ void wmap_draw_spirit_levels(void)
         SPRT* primary_sprite;
         SPRT* secondary_sprite;
 
-        primary_sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+        primary_sprite = g_wmap_current_frame->packet_cursor;
         *primary_sprite = g_wmap_spirit_accent_sprites[sprite_indices[i]];
         primary_sprite->r0 = primary_sprite->g0 = primary_sprite->b0 = color;
-        *(u32*)&primary_sprite->x0 = D_8004FD9C[i].packed_xy;
+        *(u32*)&primary_sprite->x0 = g_wmap_spirit_sprite_positions[i].packed_xy;
         primary_sprite->clut = getClut(WMAP_SPIRIT_CLUT_X, i + WMAP_SPIRIT_ACCENT_CLUT_Y);
         setSemiTrans(primary_sprite, 1);
         addPrim(&g_wmap_current_frame->ordering_table[1], primary_sprite);
@@ -1623,13 +1620,13 @@ void wmap_draw_spirit_levels(void)
         if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {
             g_wmap_packet_bytes += sizeof(SPRT);
-            g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
+            g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(SPRT);
         }
 
-        secondary_sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+        secondary_sprite = g_wmap_current_frame->packet_cursor;
         *secondary_sprite = g_wmap_spirit_level_sprites[sprite_indices[i]];
         secondary_sprite->r0 = secondary_sprite->g0 = secondary_sprite->b0 = g_wmap_spirit_brightness;
-        *(u32*)&secondary_sprite->x0 = D_8004FD9C[i].packed_xy;
+        *(u32*)&secondary_sprite->x0 = g_wmap_spirit_sprite_positions[i].packed_xy;
         secondary_sprite->clut = getClut(WMAP_SPIRIT_CLUT_X, i + WMAP_SPIRIT_CLUT_Y);
         secondary_sprite->x0 += 4;
         secondary_sprite->y0 += 0x14;
@@ -1644,7 +1641,7 @@ void wmap_draw_spirit_levels(void)
         if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
         {
             g_wmap_packet_bytes += sizeof(SPRT);
-            g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
+            g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(SPRT);
         }
     }
 
@@ -1692,10 +1689,10 @@ void wmap_draw_spirit_grid(s32 spirit_index)
 
             if (cur_x == target_x && cur_y == target_y && (g_wmap_frame_count & 4))
             {
-                sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+                sprite = g_wmap_current_frame->packet_cursor;
                 *sprite = g_wmap_spirit_level_sprites[spirits->sprite_indices[spirit_index]];
-                *(u32*)&sprite->x0 = D_8004FC74[base_index + cur_x];
-                sprite->r0 = sprite->g0 = sprite->b0 = (u8)g_wmap_spirit_brightness;
+                *(u32*)&sprite->x0 = g_wmap_spirit_level_positions[base_index + cur_x];
+                sprite->r0 = sprite->g0 = sprite->b0 = g_wmap_spirit_brightness;
                 sprite->u0 = 0xD0;
                 sprite->v0 = 0;
                 sprite->clut = 0x6AAE;
@@ -1710,14 +1707,14 @@ void wmap_draw_spirit_grid(s32 spirit_index)
                 if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
                 {
                     g_wmap_packet_bytes += sizeof(SPRT);
-                    g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
+                    g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(SPRT);
                 }
             }
 
-            sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+            sprite = g_wmap_current_frame->packet_cursor;
             *sprite = g_wmap_spirit_level_sprites[spirits->sprite_indices[spirit_index]];
-            *(u32*)&sprite->x0 = D_8004FC74[base_index + cur_x];
-            sprite->r0 = sprite->g0 = sprite->b0 = (u8)g_wmap_spirit_brightness;
+            *(u32*)&sprite->x0 = g_wmap_spirit_level_positions[base_index + cur_x];
+            sprite->r0 = sprite->g0 = sprite->b0 = g_wmap_spirit_brightness;
             sprite->clut = getClut(WMAP_SPIRIT_CLUT_X, spirit_index + WMAP_SPIRIT_CLUT_Y);
 
             if (g_wmap_spirit_brightness < WMAP_BLEND_THRESHOLD)
@@ -1730,7 +1727,7 @@ void wmap_draw_spirit_grid(s32 spirit_index)
             if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
             {
                 g_wmap_packet_bytes += sizeof(SPRT);
-                g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
+                g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(SPRT);
             }
         }
     }
@@ -1837,7 +1834,7 @@ void wmap_draw_information_labels(void)
                     glyph = g_wmap_information_values[dynamic_index++];
                 }
 
-                packet = (SPRT*)g_wmap_current_frame->packet_cursor;
+                packet = g_wmap_current_frame->packet_cursor;
                 packet->x0 = placement->x;
                 image = &g_wmap_information_glyphs[glyph];
                 packet->y0 = placement->y;
@@ -1857,7 +1854,7 @@ void wmap_draw_information_labels(void)
                 if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
                 {
                     g_wmap_packet_bytes += sizeof(SPRT);
-                    g_wmap_current_frame->packet_cursor = (u8*)g_wmap_current_frame->packet_cursor + sizeof(SPRT);
+                    g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(SPRT);
                 }
             }
         }
@@ -1960,7 +1957,7 @@ void wmap_upload_land_image(WmapLandDisplay* resource, s32 slot)
     resource_id = resource->resource_id;
     cache->resource_id = resource_id;
     image = (u8*)g_wmap_land_image_pack + g_wmap_land_image_pack[resource_id];
-    LoadImage(&D_800CBBE8[slot].upload.rect, (u_long*)image);
+    LoadImage(&g_wmap_land_image_uploads[slot].upload.rect, (u_long*)image);
     cache->animation_data = image + 0x2004;
     cache->loaded_frame = g_wmap_frame_count;
 }
@@ -2002,7 +1999,7 @@ void wmap_init_land_image_cache(void)
 {
     u32 slot_index;
 
-    for (slot_index = 0; slot_index < (u32)WMAP_CACHE_SLOTS; slot_index++)
+    for (slot_index = 0; slot_index < WMAP_CACHE_SLOTS; slot_index++)
     {
         g_wmap_land_image_cache[slot_index].slot_index = slot_index;
         g_wmap_land_image_cache[slot_index].resource_id = -1;
@@ -2064,7 +2061,7 @@ void wmap_set_cell_effect_mode(s32 x, s32 y, s32 mode)
 {
     WmapEffectCell* cell;
 
-    cell = &D_8011D108[x][y];
+    cell = &g_wmap_cell_effects[x][y];
 
     if (mode != cell->mode)
     {
@@ -2133,7 +2130,7 @@ s32 wmap_classify_map_point(s32 x, s32 y)
         return 2;
     }
 
-    if ((u32)(dx - 16) < 97 && dy >= 16 && dy < 113)
+    if ((dx - 16) < 97 && dy >= 16 && dy < 113)
     {
         return 1;
     }

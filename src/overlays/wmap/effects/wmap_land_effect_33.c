@@ -61,16 +61,7 @@ void wmap_land_effect_33_sequence_6_step_01(void)
 {
     s32 i;
 
-    g_wmap_effect_params[1] = 0;
-    g_wmap_effect_params[2] = 3;
-    g_wmap_effect_params[3] = 0x20;
-    g_wmap_effect_params[4] = 0;
-    g_wmap_effect_params[5] = 2;
-    g_wmap_effect_params[6] = 0x190;
-    g_wmap_effect_params[7] = 0x14;
-    g_wmap_effect_params[8] = 0x2C;
-    g_wmap_effect_params[9] = 3;
-    g_wmap_effect_params[10] = 0x32C8;
+    WMAP_SET_PARTICLE_CONFIG(0, 0, 3, 0x20, 0, 2, 0x190, 0x14, 0x2C, 3, 0x32C8);
 
     WMAP_RESET_PARTICLE_SLOTS(i, 50, g_wmap_actor_motions[i + 20].state, 20, g_wmap_animation_bank_2);
 
@@ -84,16 +75,7 @@ void wmap_land_effect_33_sequence_7_step_01(void)
 {
     s32 i;
 
-    g_wmap_effect_params[11] = 1;
-    g_wmap_effect_params[12] = 2;
-    g_wmap_effect_params[13] = 0x80;
-    g_wmap_effect_params[14] = 0;
-    g_wmap_effect_params[15] = 1;
-    g_wmap_effect_params[16] = 0x190;
-    g_wmap_effect_params[17] = 0x50;
-    g_wmap_effect_params[18] = 0x2C;
-    g_wmap_effect_params[19] = 4;
-    g_wmap_effect_params[20] = 0x4650;
+    WMAP_SET_PARTICLE_CONFIG(10, 1, 2, 0x80, 0, 1, 0x190, 0x50, 0x2C, 4, 0x4650);
 
     WMAP_RESET_PARTICLE_SLOTS(i, 40, g_wmap_actor_motions[i + 80].state, 80, g_wmap_animation_bank_2);
 
@@ -122,16 +104,7 @@ void wmap_land_effect_33_sequence_8_step_01(void)
     resource = g_wmap_animation_bank_4;
     screen_offset = 0x460;
     config_offset = 0xAF0;
-    g_wmap_effect_params[21] = 0;
-    g_wmap_effect_params[22] = 0;
-    g_wmap_effect_params[23] = 0x80;
-    g_wmap_effect_params[24] = 0;
-    g_wmap_effect_params[25] = 3;
-    g_wmap_effect_params[26] = 0x3E8;
-    g_wmap_effect_params[27] = 0x8C;
-    g_wmap_effect_params[28] = 0x13;
-    g_wmap_effect_params[29] = 0;
-    g_wmap_effect_params[30] = 0x32C8;
+    WMAP_SET_PARTICLE_CONFIG(20, 0, 0, 0x80, 0, 3, 0x3E8, 0x8C, 0x13, 0, 0x32C8);
 
     while (index < 34)
     {
@@ -169,16 +142,7 @@ void wmap_land_effect_33_sequence_9_step_01(void)
     resource = g_wmap_animation_bank_2;
     screen_offset = 0x5F0;
     config_offset = 0xED8;
-    g_wmap_effect_params[41] = 1;
-    g_wmap_effect_params[42] = 3;
-    g_wmap_effect_params[43] = 0x40;
-    g_wmap_effect_params[44] = 0;
-    g_wmap_effect_params[45] = 3;
-    g_wmap_effect_params[46] = -0x1C2;
-    g_wmap_effect_params[47] = 0xBE;
-    g_wmap_effect_params[48] = 0x2C;
-    g_wmap_effect_params[49] = 5;
-    g_wmap_effect_params[50] = 0x6D60;
+    WMAP_SET_PARTICLE_CONFIG(40, 1, 3, 0x40, 0, 3, -0x1C2, 0xBE, 0x2C, 5, 0x6D60);
 
     while (index < 40)
     {
@@ -402,22 +366,8 @@ WMAP_STEP_RUNNER(wmap_land_effect_33_run_sequence_4, g_wmap_land_effect_33_seque
 WMAP_STEP_RESET(wmap_land_effect_33_sequence_4_step_00, g_wmap_land_effect_33_sequence_4_step, g_wmap_land_effect_33_sequence_4_timer)
 
 /** @brief Set up sprite actor 8 with animation bank 2 and fade it in, then run step 2. */
-void wmap_land_effect_33_sequence_4_step_01(void)
-{
-    WmapSpriteActor* actor = &g_wmap_sprite_actors[8];
-
-    g_wmap_actor_animations[8].data = g_wmap_animation_bank_2;
-    actor->scale_index = 0xF;
-    actor->sequence = 1;
-    actor->previous_sequence = -1;
-    actor->shade_step = 8;
-    actor->shade = 1;
-    actor->resource_index = 0;
-    actor->target_shade = 0x81;
-    g_wmap_land_effect_33_sequence_4_timer = 0x65;
-    g_wmap_land_effect_33_sequence_4_step++;
-    wmap_land_effect_33_sequence_4_step_02();
-}
+WMAP_STEP_START_ACTOR(wmap_land_effect_33_sequence_4_step_01, g_wmap_land_effect_33_sequence_4_step, g_wmap_land_effect_33_sequence_4_timer, 8,
+                      g_wmap_animation_bank_2, 1, 1, 0x81, 8, 0x65, wmap_land_effect_33_sequence_4_step_02)
 
 WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_land_effect_33_sequence_4_step_02, g_wmap_land_effect_33_sequence_4_step, g_wmap_land_effect_33_sequence_4_timer,
                               g_wmap_sprite_actors[8], g_wmap_actor_animations[8], g_wmap_focus_screen_position, 0x2E, 0xC, 0)

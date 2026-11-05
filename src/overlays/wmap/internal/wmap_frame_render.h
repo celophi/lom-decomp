@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include <libgpu.h>
+
 #include "main/display.h"
 
 #define WMAP_OT_COUNT 179
@@ -19,7 +20,7 @@ typedef struct
     DRAWENV draw_env;
     DISPENV disp_env;
     u_long ordering_table[WMAP_OT_COUNT];
-    u8* packet_cursor;
+    void* packet_cursor;
     union
     {
         POLY_FT4 flat[WMAP_MAP_TILES * WMAP_MAP_TILES];

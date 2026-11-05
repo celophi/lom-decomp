@@ -26,6 +26,13 @@ typedef struct
     u8 unknown_28[4];
 } WmapSpriteActor;
 
+/** @brief An animation resource starts with this many sequence offsets, followed by the frame offsets. */
+#define WMAP_ANIMATION_SEQUENCES 32
+/** @brief Animation duration that never counts down. */
+#define WMAP_ANIMATION_HOLD 255
+/** @brief End-of-sequence marker in a sequence's frame list. */
+#define WMAP_ANIMATION_LOOP 255
+
 /** @brief Animation resource slot of a sprite actor. */
 typedef struct
 {
@@ -52,6 +59,59 @@ typedef struct
 } WmapPoint;
 
 void wmap_draw_actor_sprite(WmapSpriteActor* actor, s32 screen_position, s32 texture_index, s32 ot_index, s32 variant);
+
+/**
+ * @brief Advance a sprite actor's animation by one frame and point it at the current frame's data.
+ * @param actor Sprite actor to animate.
+ * @param resource Animation resource: WMAP_ANIMATION_SEQUENCES sequence offsets, then frame offsets.
+ * @note wmap_step_actor_animation does the same and also returns the new frame.
+ */
+static inline void wmap_advance_actor_animation(WmapSpriteActor* actor, u8* resource)
+{
+    s16* offsets;
+    u8* data;
+    u8* cursor;
+    s32 frame;
+
+    offsets = (s16*)resource;
+    data = (u8*)offsets;
+
+    if (actor->previous_sequence != actor->sequence)
+    {
+        s32 offset;
+        u8* sequence_cursor;
+
+        actor->previous_sequence = actor->sequence;
+        offset = offsets[actor->sequence];
+        actor->remaining = 1;
+        sequence_cursor = (u8*)offsets + offset;
+        actor->sequence_start = sequence_cursor;
+        actor->cursor = sequence_cursor;
+    }
+
+    if (actor->remaining != WMAP_ANIMATION_HOLD)
+    {
+        actor->remaining--;
+    }
+
+    if (actor->remaining == 0)
+    {
+        cursor = actor->cursor;
+        frame = cursor[0];
+        actor->remaining = cursor[1];
+
+        if (frame == WMAP_ANIMATION_LOOP)
+        {
+            cursor = actor->sequence_start;
+            actor->cursor = cursor;
+            frame = cursor[0];
+            actor->remaining = cursor[1];
+        }
+
+        actor->cursor += 4;
+        actor->frame_data = data + offsets[frame + WMAP_ANIMATION_SEQUENCES];
+    }
+}
 
 /** @brief Sprite actor pool (256 actors); actor i animates from g_wmap_actor_animations[i]. */
 extern WmapSpriteActor g_wmap_sprite_actors[];

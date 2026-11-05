@@ -149,9 +149,9 @@ void wmap_land_event_00_a_sequence_6_step_02(void)
     s32 next_timer;
 
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_f_rotation);
-    wmap_draw_model(g_wmap_effect_model_pack_1, (D_8013923C / 0x10) & 3, 0xA, 0x35, 0x7800, 0x1, D_80182DE4, 0, -0xA, -1);
-    D_8013923C += 0x8;
-    WMAP_MODEL_FADE_IN(D_80182DE4, 0x2, 0x81, value);
+    wmap_draw_model(g_wmap_effect_model_pack_1, (g_wmap_particle_velocity_range / 0x10) & 3, 0xA, 0x35, 0x7800, 0x1, g_wmap_effect_fade_e, 0, -0xA, -1);
+    g_wmap_particle_velocity_range += 0x8;
+    WMAP_MODEL_FADE_IN(g_wmap_effect_fade_e, 0x2, 0x81, value);
     timer = g_wmap_land_event_00_a_sequence_6_timer;
     g_wmap_effect_model_f_rotation.vz += 0x4;
     next_timer = timer - 1;
@@ -173,9 +173,9 @@ void wmap_land_event_00_a_sequence_6_step_04(void)
     s32 next_timer;
 
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_f_rotation);
-    wmap_draw_model(g_wmap_effect_model_pack_1, (D_8013923C / 0x10) & 3, 0xA, 0x35, 0x7800, 0x1, D_80182DE4, 0, -0xA, -1);
-    WMAP_MODEL_FADE_OUT(D_80182DE4, 0x10, value);
-    D_8013923C += 0x8;
+    wmap_draw_model(g_wmap_effect_model_pack_1, (g_wmap_particle_velocity_range / 0x10) & 3, 0xA, 0x35, 0x7800, 0x1, g_wmap_effect_fade_e, 0, -0xA, -1);
+    WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_e, 0x10, value);
+    g_wmap_particle_velocity_range += 0x8;
     timer = g_wmap_land_event_00_a_sequence_6_timer;
     g_wmap_effect_model_f_rotation.vz += 0x4;
     next_timer = timer - 1;
@@ -197,8 +197,8 @@ void wmap_land_event_00_a_sequence_7_step_02(void)
     s32 next_timer;
 
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_a_rotation);
-    wmap_draw_model(g_wmap_effect_model_pack_2, (D_80139240 / 0x10) & 3, 0xA, 0x35, 0x7840, 0x1, g_wmap_effect_fade_a, 0, -0xA, -1);
-    D_80139240 += 0x10;
+    wmap_draw_model(g_wmap_effect_model_pack_2, (g_wmap_particle_lifetime_min / 0x10) & 3, 0xA, 0x35, 0x7840, 0x1, g_wmap_effect_fade_a, 0, -0xA, -1);
+    g_wmap_particle_lifetime_min += 0x10;
     WMAP_MODEL_FADE_IN(g_wmap_effect_fade_a, 0x8, 0x81, value);
     timer = g_wmap_land_event_00_a_sequence_7_timer;
     g_wmap_effect_model_a_rotation.vz += 0x20;
@@ -221,9 +221,9 @@ void wmap_land_event_00_a_sequence_7_step_04(void)
     s32 next_timer;
 
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_a_rotation);
-    wmap_draw_model(g_wmap_effect_model_pack_2, (D_80139240 / 0x10) & 3, 0xA, 0x35, 0x7840, 0x1, g_wmap_effect_fade_a, 0, -0xA, -1);
+    wmap_draw_model(g_wmap_effect_model_pack_2, (g_wmap_particle_lifetime_min / 0x10) & 3, 0xA, 0x35, 0x7840, 0x1, g_wmap_effect_fade_a, 0, -0xA, -1);
     WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_a, 0x10, value);
-    D_80139240 += 0x10;
+    g_wmap_particle_lifetime_min += 0x10;
     timer = g_wmap_land_event_00_a_sequence_7_timer;
     g_wmap_effect_model_a_rotation.vz += 0x20;
     next_timer = timer - 1;
@@ -245,8 +245,8 @@ void wmap_land_event_00_a_sequence_8_step_02(void)
     s32 next_timer;
 
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_b_rotation);
-    wmap_draw_model(g_wmap_effect_model_pack_3, (D_8013924C / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1, g_wmap_effect_fade_b, 0, -0xA, -1);
-    D_8013924C += 0x10;
+    wmap_draw_model(g_wmap_effect_model_pack_3, (g_wmap_particle_lifetime_range / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1, g_wmap_effect_fade_b, 0, -0xA, -1);
+    g_wmap_particle_lifetime_range += 0x10;
     WMAP_MODEL_FADE_IN(g_wmap_effect_fade_b, 0x8, 0x81, value);
     timer = g_wmap_land_event_00_a_sequence_8_timer;
     g_wmap_effect_model_b_rotation.vz += 0x8;
@@ -269,9 +269,9 @@ void wmap_land_event_00_a_sequence_8_step_04(void)
     s32 next_timer;
 
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_b_rotation);
-    wmap_draw_model(g_wmap_effect_model_pack_3, (D_8013924C / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1, g_wmap_effect_fade_b, 0, -0xA, -1);
+    wmap_draw_model(g_wmap_effect_model_pack_3, (g_wmap_particle_lifetime_range / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1, g_wmap_effect_fade_b, 0, -0xA, -1);
     WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_b, 0x10, value);
-    D_8013924C += 0x10;
+    g_wmap_particle_lifetime_range += 0x10;
     timer = g_wmap_land_event_00_a_sequence_8_timer;
     g_wmap_effect_model_b_rotation.vz += 0x8;
     next_timer = timer - 1;
@@ -533,7 +533,8 @@ WMAP_STEP_RESET(wmap_land_event_00_a_sequence_6_reset, g_wmap_land_event_00_a_se
  * @brief Set the model shade, reset its animation and rotation, and run the first update.
  */
 WMAP_STEP_START_MODEL(wmap_land_event_00_a_sequence_6_step_01, g_wmap_land_event_00_a_sequence_6_step, g_wmap_land_event_00_a_sequence_6_timer,
-                      g_wmap_effect_model_f_rotation, g_wmap_zero_rotation, D_80182DE4, 1, D_8013923C, 0x159, wmap_land_event_00_a_sequence_6_step_02)
+                      g_wmap_effect_model_f_rotation, g_wmap_zero_rotation, g_wmap_effect_fade_e, 1, g_wmap_particle_velocity_range, 0x159,
+                      wmap_land_event_00_a_sequence_6_step_02)
 
 WMAP_STEP_ARM_TIMER(wmap_land_event_00_a_sequence_6_step_03, g_wmap_land_event_00_a_sequence_6_step, g_wmap_land_event_00_a_sequence_6_timer, 0x8,
                     wmap_land_event_00_a_sequence_6_step_04)
@@ -549,7 +550,8 @@ WMAP_STEP_RESET(wmap_land_event_00_a_sequence_7_reset, g_wmap_land_event_00_a_se
  * @brief Set the model shade, reset its animation and rotation, and run the first update.
  */
 WMAP_STEP_START_MODEL(wmap_land_event_00_a_sequence_7_step_01, g_wmap_land_event_00_a_sequence_7_step, g_wmap_land_event_00_a_sequence_7_timer,
-                      g_wmap_effect_model_a_rotation, g_wmap_zero_rotation, g_wmap_effect_fade_a, 1, D_80139240, 0xE9, wmap_land_event_00_a_sequence_7_step_02)
+                      g_wmap_effect_model_a_rotation, g_wmap_zero_rotation, g_wmap_effect_fade_a, 1, g_wmap_particle_lifetime_min, 0xE9,
+                      wmap_land_event_00_a_sequence_7_step_02)
 
 WMAP_STEP_ARM_TIMER(wmap_land_event_00_a_sequence_7_step_03, g_wmap_land_event_00_a_sequence_7_step, g_wmap_land_event_00_a_sequence_7_timer, 0x8,
                     wmap_land_event_00_a_sequence_7_step_04)
@@ -565,7 +567,8 @@ WMAP_STEP_RESET(wmap_land_event_00_a_sequence_8_reset, g_wmap_land_event_00_a_se
  * @brief Set the model shade, reset its animation and rotation, and run the first update.
  */
 WMAP_STEP_START_MODEL(wmap_land_event_00_a_sequence_8_step_01, g_wmap_land_event_00_a_sequence_8_step, g_wmap_land_event_00_a_sequence_8_timer,
-                      g_wmap_effect_model_b_rotation, g_wmap_zero_rotation, g_wmap_effect_fade_b, 1, D_8013924C, 0xA7, wmap_land_event_00_a_sequence_8_step_02)
+                      g_wmap_effect_model_b_rotation, g_wmap_zero_rotation, g_wmap_effect_fade_b, 1, g_wmap_particle_lifetime_range, 0xA7,
+                      wmap_land_event_00_a_sequence_8_step_02)
 
 WMAP_STEP_ARM_TIMER(wmap_land_event_00_a_sequence_8_step_03, g_wmap_land_event_00_a_sequence_8_step, g_wmap_land_event_00_a_sequence_8_timer, 8,
                     wmap_land_event_00_a_sequence_8_step_04)

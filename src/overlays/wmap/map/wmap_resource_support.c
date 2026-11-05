@@ -1,12 +1,14 @@
-#include "../internal/wmap_main.h"
-#include "../internal/wmap_frame_render.h"
-#include "../internal/wmap_resource_support.h"
+#include "common.h"
 #include <libgpu.h>
-#include "main/cdrom.h"
-#include "common/gpu_packet.h"
-#include "../internal/wmap_sprite_render.h"
+
 #include "../internal/wmap_actor_motion.h"
+#include "../internal/wmap_frame_render.h"
+#include "../internal/wmap_main.h"
+#include "../internal/wmap_resource_support.h"
+#include "../internal/wmap_sprite_render.h"
+#include "common/gpu_packet.h"
 #include "main/audio/akao_cmd.h"
+#include "main/cdrom.h"
 
 #define WMAP_COPY_WORD_SHIFT 2
 #define WMAP_COPY_END -1
@@ -19,7 +21,6 @@ typedef struct
 
 extern u8 g_wmap_load_buffer[];
 extern RECT g_wmap_framebuffer_rect;
-
 
 /**
  * @brief Empty world-map handler (no operation).
@@ -37,11 +38,14 @@ void func_80064F14(void)
 void wmap_copy_words(s32* source, s32* destination, s32 byte_count)
 {
     s32 copy_limit = byte_count;
+
     if (byte_count < 0)
     {
         copy_limit = byte_count + BYTES_PER_WORD - 1;
     }
+
     byte_count = copy_limit >> WMAP_COPY_WORD_SHIFT;
+
     if (--byte_count != WMAP_COPY_END)
     {
         for (copy_limit = WMAP_COPY_END; byte_count != copy_limit; byte_count--)
@@ -73,6 +77,7 @@ void wmap_load_tim_file(s32 resource_index)
     cdrom_wait_queue_empty();
     data += 8;
     header = g_wmap_load_buffer;
+
     if (header[4] & 8)
     {
         header = (u8*)&rectangle;
@@ -80,6 +85,7 @@ void wmap_load_tim_file(s32 resource_index)
         LoadImage((RECT*)header, (u_long*)(data + 12));
         data += *(s32*)data;
         rectangle = *(WmapTextureRect*)(data + 4);
+
         if (((RECT*)header)->x != -1)
         {
             LoadImage((RECT*)header, (u_long*)(data + 12));
@@ -90,6 +96,7 @@ void wmap_load_tim_file(s32 resource_index)
     else
     {
         rectangle = *(WmapTextureRect*)(data + 4);
+
         if (((RECT*)&rectangle)->x != -1)
         {
             LoadImage((RECT*)&rectangle, (u_long*)(data + 12));
@@ -114,6 +121,7 @@ void wmap_stream_tim_file(s32 resource_index)
     cdrom_wait_queue_empty();
     data += 8;
     header = g_wmap_load_buffer;
+
     if (header[4] & 8)
     {
         header = (u8*)&rectangle;
@@ -121,6 +129,7 @@ void wmap_stream_tim_file(s32 resource_index)
         LoadImage((RECT*)header, (u_long*)(data + 12));
         data += *(s32*)data;
         rectangle = *(WmapTextureRect*)(data + 4);
+
         if (((RECT*)header)->x != -1)
         {
             LoadImage((RECT*)header, (u_long*)(data + 12));
@@ -131,6 +140,7 @@ void wmap_stream_tim_file(s32 resource_index)
     else
     {
         rectangle = *(WmapTextureRect*)(data + 4);
+
         if (((RECT*)&rectangle)->x != -1)
         {
             LoadImage((RECT*)&rectangle, (u_long*)(data + 12));
@@ -164,6 +174,7 @@ void wmap_upload_tim(u8* data)
         LoadImage((RECT*)&rectangle, (u_long*)(data + 12));
         data += *(s32*)data;
         rectangle = *(WmapTextureRect*)(data + 4);
+
         if (((RECT*)&rectangle)->x != -1)
         {
             LoadImage((RECT*)&rectangle, (u_long*)(data + 12));
@@ -174,6 +185,7 @@ void wmap_upload_tim(u8* data)
     {
         data += 8;
         rectangle = *(WmapTextureRect*)(data + 4);
+
         if (((RECT*)&rectangle)->x != -1)
         {
             LoadImage((RECT*)&rectangle, (u_long*)(data + 12));
@@ -189,10 +201,11 @@ void wmap_upload_tim(u8* data)
  */
 void wmap_play_sound(s32 sound_index, s32 pan)
 {
-    if ((u32)(sound_index - 1) >= 0x41U)
+    if ((sound_index - 1) >= 0x41U)
     {
         sound_index = 1;
     }
+
     akao_play_sfx_from_buffer(g_wmap_sfx_buffers[sound_index - 1], 0, pan, 0x7F);
 }
 
@@ -212,7 +225,7 @@ void wmap_queue_texture_page(s32 texture_page, s32 depth)
 {
     POLY_FT3* primitive;
 
-    primitive = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
+    primitive = g_wmap_current_frame->packet_cursor;
     setlen(primitive, 7);
     setcode(primitive, GPU_CODE_POLY_FT3);
     primitive->tpage = texture_page;
@@ -220,6 +233,7 @@ void wmap_queue_texture_page(s32 texture_page, s32 depth)
     *(s32*)&primitive->x1 = WMAP_MODEL_TPAGE_XY;
     *(s32*)&primitive->x0 = WMAP_MODEL_TPAGE_XY;
     addPrim(&g_wmap_current_frame->ordering_table[depth], primitive);
+
     if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
         g_wmap_packet_bytes += sizeof(POLY_FT3);
@@ -231,6 +245,7 @@ void wmap_queue_texture_page(s32 texture_page, s32 depth)
 void wmap_init_actor_display_states(void)
 {
     s32 index;
+
     for (index = 0; index < 256; index++)
     {
         g_wmap_sprite_actors[index].shade_step = 16;

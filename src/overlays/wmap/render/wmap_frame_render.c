@@ -25,7 +25,7 @@ void wmap_draw_exit_fade(void)
     POLY_F4* quad;
     POLY_FT3* triangle;
 
-    quad = (POLY_F4*)g_wmap_current_frame->packet_cursor;
+    quad = g_wmap_current_frame->packet_cursor;
     *quad = g_wmap_fill_quad_template;
     quad->b0 = 8;
     quad->g0 = 8;
@@ -40,7 +40,7 @@ void wmap_draw_exit_fade(void)
         g_wmap_current_frame->packet_cursor += sizeof(POLY_F4);
     }
 
-    triangle = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
+    triangle = g_wmap_current_frame->packet_cursor;
     setlen(triangle, 7);
     setcode(triangle, GPU_CODE_POLY_FT3);
     *(s32*)&triangle->x2 = WMAP_MODEL_TPAGE_XY;
@@ -70,7 +70,7 @@ static void wmap_draw_exit_panel_quads(VECTOR* left_top, VECTOR* center_top, VEC
 {
     POLY_FT4* quad;
 
-    quad = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+    quad = g_wmap_current_frame->packet_cursor;
     quad->x0 = left_top->vx;
     quad->y0 = left_top->vy;
     quad->x1 = center_top->vx;
@@ -99,7 +99,7 @@ static void wmap_draw_exit_panel_quads(VECTOR* left_top, VECTOR* center_top, VEC
         g_wmap_current_frame->packet_cursor = g_wmap_current_frame->packet_cursor + sizeof(POLY_FT4);
     }
 
-    quad = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+    quad = g_wmap_current_frame->packet_cursor;
     quad->x0 = center_top->vx;
     quad->y0 = center_top->vy;
     quad->x1 = right_top->vx;
@@ -218,7 +218,7 @@ void wmap_update_exit_panels(void)
     SetTransMatrix(&transform);
     wmap_project_exit_panel_corners(&left_top, &center_top, &left_bottom, &center_bottom, &right_top, &right_bottom);
 
-    quad = (POLY_F4*)g_wmap_current_frame->packet_cursor;
+    quad = g_wmap_current_frame->packet_cursor;
     g_wmap_current_frame->packet_cursor += 0;
     width = SCREEN_WIDTH;
     quad->x3 = width;
@@ -240,7 +240,7 @@ void wmap_update_exit_panels(void)
         g_wmap_current_frame->packet_cursor += sizeof(*quad);
     }
 
-    triangle = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
+    triangle = g_wmap_current_frame->packet_cursor;
     setPolyFT3(triangle);
     *(s32*)&triangle->x2 = WMAP_MODEL_TPAGE_XY;
     *(s32*)&triangle->x1 = WMAP_MODEL_TPAGE_XY;
@@ -290,7 +290,7 @@ void wmap_draw_entry_fade(void)
     POLY_F4* quad;
     POLY_FT3* triangle;
 
-    quad = (POLY_F4*)g_wmap_current_frame->packet_cursor;
+    quad = g_wmap_current_frame->packet_cursor;
 
     if (g_wmap_entry_fade_level >= 4)
     {
@@ -307,7 +307,7 @@ void wmap_draw_entry_fade(void)
             g_wmap_current_frame->packet_cursor += sizeof(POLY_F4);
         }
 
-        triangle = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
+        triangle = g_wmap_current_frame->packet_cursor;
         setlen(triangle, 7);
         setcode(triangle, GPU_CODE_POLY_FT3);
         *(s32*)&triangle->x2 = WMAP_MODEL_TPAGE_XY;
@@ -336,7 +336,7 @@ s32 wmap_run_overlay_fade(s32 initialize)
     POLY_F4* quad;
     POLY_FT3* triangle;
 
-    quad = (POLY_F4*)g_wmap_current_frame->packet_cursor;
+    quad = g_wmap_current_frame->packet_cursor;
 
     if (g_wmap_overlay_fade_level > g_wmap_overlay_fade_target)
     {
@@ -365,7 +365,7 @@ s32 wmap_run_overlay_fade(s32 initialize)
         g_wmap_current_frame->packet_cursor += sizeof(POLY_F4);
     }
 
-    triangle = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
+    triangle = g_wmap_current_frame->packet_cursor;
     depth = g_wmap_overlay_fade_depth;
     setlen(triangle, 7);
     setcode(triangle, GPU_CODE_POLY_FT3);

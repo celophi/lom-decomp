@@ -1,6 +1,6 @@
 #include "../internal/wmap_land_layout.h"
-#include "../internal/wmap_land_transition.h"
 #include "../internal/wmap_land_selection.h"
+#include "../internal/wmap_land_transition.h"
 #include "../internal/wmap_sequence_runtime.h"
 
 extern s32 D_80139270;
@@ -11,19 +11,24 @@ void wmap_reset_artifact_carousel(void)
     s32 selection_index;
 
     D_80139270 = wmap_build_artifact_list(g_wmap_carousel_frame / 4);
-    for (selection_index = 0; (u32)selection_index < 12U; selection_index++)
+
+    for (selection_index = 0; selection_index < 12U; selection_index++)
     {
-        D_80139838[selection_index] = -1;
+        g_wmap_carousel_artifacts[selection_index] = -1;
     }
+
     selection_index = 12;
+
     while (selection_index != -1)
     {
         if (wmap_get_selected_artifact() != -1)
         {
             break;
         }
+
         g_wmap_carousel_frame += 4;
-        wmap_scroll_artifact_list(1, D_80139838);
+        wmap_scroll_artifact_list(1, g_wmap_carousel_artifacts);
+
         if (g_wmap_carousel_frame < 0)
         {
             g_wmap_carousel_frame = 47;
@@ -32,6 +37,7 @@ void wmap_reset_artifact_carousel(void)
         {
             g_wmap_carousel_frame = 0;
         }
+
         selection_index--;
         g_wmap_carousel_rotation.vy = g_wmap_carousel_angles[g_wmap_carousel_frame].angle;
     }

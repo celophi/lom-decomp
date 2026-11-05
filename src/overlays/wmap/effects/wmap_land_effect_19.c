@@ -170,7 +170,7 @@ void wmap_land_effect_19_sequence_7_step_01(void)
 {
     s32 i;
 
-    D_80182DE4 = 1;
+    g_wmap_effect_fade_e = 1;
     g_wmap_falling_spawn_counts[0] = 1;
 
     for (i = 0xA; i < 0x14; i++)
@@ -190,16 +190,7 @@ void wmap_land_effect_19_sequence_8_step_01(void)
 {
     s32 i;
 
-    g_wmap_effect_params[1] = 0;
-    g_wmap_effect_params[2] = 0;
-    g_wmap_effect_params[3] = 0x20;
-    g_wmap_effect_params[4] = 0;
-    g_wmap_effect_params[5] = 2;
-    g_wmap_effect_params[6] = 0x384;
-    g_wmap_effect_params[7] = 0x14;
-    g_wmap_effect_params[8] = 8;
-    g_wmap_effect_params[9] = 1;
-    g_wmap_effect_params[10] = 0x32C8;
+    WMAP_SET_PARTICLE_CONFIG(0, 0, 0, 0x20, 0, 2, 0x384, 0x14, 8, 1, 0x32C8);
 
     WMAP_RESET_PARTICLE_SLOTS(i, 0xC, g_wmap_actor_motions[i + 20].state, 20, g_wmap_animation_bank_3);
 
@@ -213,7 +204,7 @@ void wmap_land_effect_19_sequence_9_step_01(void)
 {
     s32 i;
 
-    D_801B25D8 = 1;
+    g_wmap_aux_effect_fade_c = 1;
     g_wmap_falling_spawn_counts[1] = 1;
 
     for (i = 80; i < 140; i++)
@@ -255,7 +246,7 @@ void wmap_land_effect_19_sequence_11_step_01(void)
 {
     s32 i;
 
-    D_801B25D8 = 1;
+    g_wmap_aux_effect_fade_c = 1;
     g_wmap_falling_spawn_counts[3] = 8;
 
     for (i = 0xD2; i < 0xE6; i++)
@@ -477,7 +468,8 @@ WMAP_STEP_RESET(wmap_land_effect_19_sequence_7_reset, g_wmap_land_effect_19_sequ
 /**
  * @brief Update the particles and increase the shared fade value until the timer expires.
  */
-WMAP_STEP_UPDATE_AND_RAMP(wmap_land_effect_19_sequence_7_step_02, g_wmap_land_effect_19_sequence_7_step, g_wmap_land_effect_19_sequence_7_timer, D_80182DE4, 8,
+WMAP_STEP_UPDATE_AND_RAMP(wmap_land_effect_19_sequence_7_step_02, g_wmap_land_effect_19_sequence_7_step, g_wmap_land_effect_19_sequence_7_timer,
+                          g_wmap_effect_fade_e, 8,
                           wmap_update_falling_particles(0xA, 0x14, 6, -1, -1, -6, 0, 0x19, -0x32, 0x64, -0x32, 0x64, 1, 0x7F, 0x7F, 0, 0))
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_19_sequence_7_step_03, g_wmap_land_effect_19_sequence_7_step, g_wmap_land_effect_19_sequence_7_timer, 0x3C,
@@ -536,7 +528,8 @@ WMAP_STEP_RESET(wmap_land_effect_19_sequence_9_reset, g_wmap_land_effect_19_sequ
 /**
  * @brief Update the particles and increase the shared fade value until the timer expires.
  */
-WMAP_STEP_UPDATE_AND_RAMP(wmap_land_effect_19_sequence_9_step_02, g_wmap_land_effect_19_sequence_9_step, g_wmap_land_effect_19_sequence_9_timer, D_801B25D8, 8,
+WMAP_STEP_UPDATE_AND_RAMP(wmap_land_effect_19_sequence_9_step_02, g_wmap_land_effect_19_sequence_9_step, g_wmap_land_effect_19_sequence_9_timer,
+                          g_wmap_aux_effect_fade_c, 8,
                           wmap_update_falling_particles(0x50, 0x8C, 2, -1, 0x14, 4, 0x168, 0x19, -0x32, 0x64, -0x32, 0x64, 0xB4, 0x81, 0x81, 8, 1))
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_19_sequence_9_step_03, g_wmap_land_effect_19_sequence_9_step, g_wmap_land_effect_19_sequence_9_timer, 0x18,
@@ -597,8 +590,9 @@ WMAP_STEP_RESET(wmap_land_effect_19_sequence_11_reset, g_wmap_land_effect_19_seq
 /**
  * @brief Update the particles and increase the shared fade value until the timer expires.
  */
-WMAP_STEP_UPDATE_AND_RAMP(wmap_land_effect_19_sequence_11_step_02, g_wmap_land_effect_19_sequence_11_step, g_wmap_land_effect_19_sequence_11_timer, D_801B25D8,
-                          8, wmap_update_falling_particles(0xD2, 0xE6, 2, -1, -1, -8, 0x28, 8, -0xB4, 0x168, -0xB4, 0x168, 1, 1, 0x81, 4, 3))
+WMAP_STEP_UPDATE_AND_RAMP(wmap_land_effect_19_sequence_11_step_02, g_wmap_land_effect_19_sequence_11_step, g_wmap_land_effect_19_sequence_11_timer,
+                          g_wmap_aux_effect_fade_c, 8,
+                          wmap_update_falling_particles(0xD2, 0xE6, 2, -1, -1, -8, 0x28, 8, -0xB4, 0x168, -0xB4, 0x168, 1, 1, 0x81, 4, 3))
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_19_sequence_11_step_03, g_wmap_land_effect_19_sequence_11_step, g_wmap_land_effect_19_sequence_11_timer, 0x28,
                     wmap_land_effect_19_sequence_11_step_04)

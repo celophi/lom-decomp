@@ -171,7 +171,7 @@ extern s32 g_wmap_large_motor;
 
 extern s32 g_wmap_projection_distance;
 
-extern RECT D_80051A80;
+extern RECT g_wmap_vram_clear_rect;
 /** @brief World-map loop result before attract movie requests are applied. */
 extern s32 g_wmap_loop_result;
 /** @brief Nonzero to play attract movie one when the world map returns. */
@@ -185,7 +185,7 @@ extern CVECTOR g_wmap_tint;
 extern s32 D_80139218;
 extern s32* g_wmap_effect_params;
 extern s32 g_wmap_tint_blending;
-extern s32 D_801398F4;
+extern s32 g_wmap_carousel_position;
 extern DVECTOR D_8013B260;
 extern s32 D_8013B290;
 extern s32 D_8013B27C;
@@ -233,7 +233,7 @@ extern s32 D_801ADB08;
 /** @brief Animation data for land display 31, kept in cache slot 16. */
 extern u8 g_wmap_resident_land_animation_data[];
 extern RECT g_wmap_framebuffer_rect;
-extern WmapTileDisplay D_8011D108[6][6];
+extern WmapTileDisplay g_wmap_cell_effects[6][6];
 /** @brief Nonzero to draw Geo (land 5) with display resource 35; no WMAP code sets it. */
 extern s32 g_wmap_geo_appearance_override;
 /** @brief Nonzero to draw Domina (land 1) with display resource 36; no WMAP code sets it. */
@@ -276,7 +276,7 @@ s32 run_world_map(void)
 {
     RECT clear_rect;
 
-    clear_rect = D_80051A80;
+    clear_rect = g_wmap_vram_clear_rect;
     akao_stop_all_songs();
     akao_release_all_sfx();
     wmap_init_frame_buffers();
@@ -326,7 +326,7 @@ void wmap_init_state(void)
     D_800DBE74 = 0;
     g_wmap_land_event_10_active = 0;
     g_wmap_land_event_09_pending = 0;
-    D_800D923C = 0;
+    g_wmap_models_use_effect_camera = 0;
     g_wmap_backdrop_gradient = g_wmap_backdrop_gradient_template;
     g_wmap_exit_mode = WMAP_EXIT_SCREEN_PANELS;
     g_wmap_land_image_load_locked = 0;
@@ -424,7 +424,7 @@ void wmap_init_state(void)
     land_display_mode = WMAP_LAND_DISPLAY_ANIMATED;
     g_wmap_carousel_mode = WMAP_CAROUSEL_VISIBLE;
     g_wmap_land_display_limit = land_display_mode;
-    D_801398F4 = 0;
+    g_wmap_carousel_position = 0;
     g_wmap_selected_artifact = -1;
     g_wmap_preview_artifact_visible = 0;
     g_wmap_artifact_transfer_end = 0;
@@ -517,7 +517,7 @@ s32 wmap_draw_backdrop(s32 initialize)
         {
             for (strip = 0; strip < 4; strip++)
             {
-                packet = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+                packet = g_wmap_current_frame->packet_cursor;
                 *packet = g_wmap_backdrop_front_quads[strip];
                 front_x = packet->x0 + SCREEN_WIDTH;
                 wrapped_x = (front_x + g_wmap_backdrop_scroll) % WMAP_BACKDROP_WRAP_WIDTH;
@@ -533,7 +533,7 @@ s32 wmap_draw_backdrop(s32 initialize)
                     g_wmap_current_frame->packet_cursor += sizeof(POLY_FT4);
                 }
 
-                packet = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+                packet = g_wmap_current_frame->packet_cursor;
                 *packet = g_wmap_backdrop_front_quads[strip];
                 wrapped_x = (packet->x0 + g_wmap_backdrop_scroll) % WMAP_BACKDROP_WRAP_WIDTH;
                 packet->x0 = packet->x2 = wrapped_x - SCREEN_WIDTH;
@@ -557,7 +557,7 @@ s32 wmap_draw_backdrop(s32 initialize)
 
         for (strip = 0; strip < 4; strip++)
         {
-            packet = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+            packet = g_wmap_current_frame->packet_cursor;
             *packet = g_wmap_backdrop_back_quads[strip];
             back_x = packet->x0 + 0x8140;
             wrapped_x = (back_x - g_wmap_backdrop_scroll) % WMAP_BACKDROP_WRAP_WIDTH;
@@ -572,7 +572,7 @@ s32 wmap_draw_backdrop(s32 initialize)
                 g_wmap_current_frame->packet_cursor += sizeof(POLY_FT4);
             }
 
-            packet = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+            packet = g_wmap_current_frame->packet_cursor;
             *packet = g_wmap_backdrop_back_quads[strip];
             wrapped_back_x = packet->x0 + 0x8000;
             wrapped_x = (wrapped_back_x - g_wmap_backdrop_scroll) % WMAP_BACKDROP_WRAP_WIDTH;
@@ -740,7 +740,7 @@ s32 wmap_draw_backdrop(s32 initialize)
             }
         }
 
-        gradient = (POLY_G4*)g_wmap_current_frame->packet_cursor;
+        gradient = g_wmap_current_frame->packet_cursor;
         *gradient = g_wmap_backdrop_gradient;
         addPrim(&g_wmap_current_frame->ordering_table[177], g_wmap_current_frame->packet_cursor);
 
@@ -794,7 +794,7 @@ s32 wmap_update_screen_fade(s32 initialize)
 
     if (g_wmap_screen_fade_quad.r0 != 0)
     {
-        packet = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+        packet = g_wmap_current_frame->packet_cursor;
 
         *packet = g_wmap_screen_fade_quad;
         /* The full-intensity quad is opaque; intermediate levels blend. */
@@ -823,7 +823,7 @@ static inline void wmap_load_image_block(TimBlock* block)
 {
     RECT rect;
 
-    rect = *(RECT*)&block->dx;
+    rect = TIM_BLOCK_RECT(block);
     LoadImage(&rect, (u_long*)(block + 1));
 }
 
@@ -961,7 +961,7 @@ void wmap_update_menu(s32 buttons)
         for (triangle_index = 0; triangle_index < WMAP_MENU_TRIANGLE_COUNT; triangle_index++)
         {
             triangle_template = &g_wmap_menu_triangles[triangle_index];
-            triangle = (WmapMenuTriangle*)g_wmap_current_frame->packet_cursor;
+            triangle = g_wmap_current_frame->packet_cursor;
             *triangle = *triangle_template;
             triangle->y0 += g_wmap_menu_cursor_y;
             triangle->y1 += g_wmap_menu_cursor_y;
@@ -978,7 +978,7 @@ void wmap_update_menu(s32 buttons)
 
     /* Prepending packets draws the subtractive image before the additive cursor. */
     wmap_queue_texture_page(WMAP_HELP_CURSOR_TPAGE, WMAP_MENU_OT_INDEX);
-    sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+    sprite = g_wmap_current_frame->packet_cursor;
     *sprite = g_wmap_prompt_sprite_template;
     addPrim(&g_wmap_current_frame->ordering_table[WMAP_MENU_OT_INDEX], sprite);
 
@@ -1228,7 +1228,7 @@ void wmap_step_input_script(void)
  */
 static inline void wmap_copy_rectangle(RECT* rectangle, TimBlock* block)
 {
-    *rectangle = *(RECT*)&block->dx;
+    *rectangle = TIM_BLOCK_RECT(block);
 }
 
 /**
@@ -1256,7 +1256,7 @@ static inline void wmap_set_error_uv(POLY_FT4* quad, s32 error)
  */
 static inline void wmap_upload_tim_block(RECT* rect, TimBlock* block)
 {
-    *rect = *(RECT*)&block->dx;
+    *rect = TIM_BLOCK_RECT(block);
     LoadImage(rect, (u_long*)(block + 1));
 }
 
@@ -1287,7 +1287,7 @@ static inline void wmap_load_pixel_block(TimBlock* block)
 {
     RECT rect;
 
-    rect = *(RECT*)&block->dx;
+    rect = TIM_BLOCK_RECT(block);
 
     if (rect.x != -1)
     {
@@ -1538,10 +1538,10 @@ s32 wmap_run_loop(void)
             block = (TimBlock*)g_wmap_load_buffer;
             cdrom_queue_read(resource & 0xFFFF, block);
             cdrom_wait_queue_empty();
-            block = (TimBlock*)((u8*)block + TIM_HEADER_SIZE);
+            block = TIM_FIRST_BLOCK(block);
             image = (TimPrefix*)g_wmap_load_buffer;
 
-            if (*(u8*)&image->flags & TIM_FLAG_HAS_CLUT)
+            if (TIM_HAS_CLUT(image))
             {
                 wmap_load_image_block(block);
                 block = TIM_NEXT_BLOCK(block);
@@ -1609,17 +1609,17 @@ s32 wmap_run_loop(void)
         block = (TimBlock*)g_wmap_load_buffer;
         cdrom_stream((g_wmap_layout_id + WMAP_LAYOUT_IMAGE_RESOURCE_BASE) & 0xFFFF, (u8*)block);
         cdrom_wait_queue_empty();
-        block = (TimBlock*)((u8*)block + TIM_HEADER_SIZE);
+        block = TIM_FIRST_BLOCK(block);
         image = (TimPrefix*)g_wmap_load_buffer;
 
-        if (*(u8*)&image->flags & TIM_FLAG_HAS_CLUT)
+        if (TIM_HAS_CLUT(image))
         {
             wmap_load_image_block(block);
             block = TIM_NEXT_BLOCK(block);
             {
                 RECT rect;
 
-                rect = *(RECT*)&block->dx;
+                rect = TIM_BLOCK_RECT(block);
 
                 if (rect.x != -1)
                 {
@@ -1633,7 +1633,7 @@ s32 wmap_run_loop(void)
         {
             RECT rect;
 
-            rect = *(RECT*)&block->dx;
+            rect = TIM_BLOCK_RECT(block);
             wmap_upload_image_rect(&rect, (u_long*)(block + 1));
         }
     }
@@ -1676,10 +1676,10 @@ s32 wmap_run_loop(void)
             block = (TimBlock*)g_wmap_load_buffer;
             cdrom_stream(WMAP_INTERFACE_IMAGE_RESOURCE, (u8*)block);
             cdrom_wait_queue_empty();
-            block = (TimBlock*)((u8*)block + TIM_HEADER_SIZE);
+            block = TIM_FIRST_BLOCK(block);
             image = (TimPrefix*)g_wmap_load_buffer;
 
-            if (*(u8*)&image->flags & TIM_FLAG_HAS_CLUT)
+            if (TIM_HAS_CLUT(image))
             {
                 wmap_upload_tim_block(&rects[0], block);
                 block = TIM_NEXT_BLOCK(block);
@@ -1734,12 +1734,12 @@ s32 wmap_run_loop(void)
             block = (TimBlock*)g_wmap_load_buffer;
             image = (TimPrefix*)g_wmap_load_buffer;
 
-            if (*(u8*)&image->flags & TIM_FLAG_HAS_CLUT)
+            if (TIM_HAS_CLUT(image))
             {
-                block = (TimBlock*)((u8*)block + TIM_HEADER_SIZE);
+                block = TIM_FIRST_BLOCK(block);
                 wmap_upload_tim_block(&rects[0], block);
                 block = TIM_NEXT_BLOCK(block);
-                rects[0] = *(RECT*)&block->dx;
+                rects[0] = TIM_BLOCK_RECT(block);
 
                 if (rects[0].x != -1)
                 {
@@ -1749,8 +1749,8 @@ s32 wmap_run_loop(void)
             }
             else
             {
-                block = (TimBlock*)((u8*)block + TIM_HEADER_SIZE);
-                rects[0] = *(RECT*)&block->dx;
+                block = TIM_FIRST_BLOCK(block);
+                rects[0] = TIM_BLOCK_RECT(block);
 
                 if (rects[0].x != -1)
                 {
@@ -1774,10 +1774,10 @@ s32 wmap_run_loop(void)
             block = (TimBlock*)g_wmap_load_buffer;
             cdrom_queue_read(WMAP_MAP_OVERLAY_IMAGE_RESOURCE, block);
             cdrom_wait_queue_empty();
-            block = (TimBlock*)((u8*)block + TIM_HEADER_SIZE);
+            block = TIM_FIRST_BLOCK(block);
             image = (TimPrefix*)g_wmap_load_buffer;
 
-            if (*(u8*)&image->flags & TIM_FLAG_HAS_CLUT)
+            if (TIM_HAS_CLUT(image))
             {
                 wmap_upload_tim_block(&rects[0], block);
                 block = TIM_NEXT_BLOCK(block);
@@ -1870,10 +1870,10 @@ s32 wmap_run_loop(void)
             block = (TimBlock*)g_wmap_load_buffer;
             cdrom_queue_read((wmap_get_land_count_tier() + WMAP_PLACEMENT_RESOURCE_BASE) & 0xFFFF, block);
             cdrom_wait_queue_empty();
-            block = (TimBlock*)((u8*)block + TIM_HEADER_SIZE);
+            block = TIM_FIRST_BLOCK(block);
             image = (TimPrefix*)g_wmap_load_buffer;
 
-            if (*(u8*)&image->flags & TIM_FLAG_HAS_CLUT)
+            if (TIM_HAS_CLUT(image))
             {
                 wmap_upload_tim_block(&rects[1], block);
                 block = TIM_NEXT_BLOCK(block);
@@ -2109,7 +2109,7 @@ s32 wmap_run_loop(void)
 
                 if (g_wmap_script_prompt_visible != 0)
                 {
-                    prompt_sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+                    prompt_sprite = g_wmap_current_frame->packet_cursor;
                     *prompt_sprite = g_wmap_prompt_sprite_template;
                     addPrim(&g_wmap_current_frame->ordering_table[1], prompt_sprite);
                     packet_bytes = g_wmap_packet_bytes;
@@ -2224,7 +2224,7 @@ s32 wmap_run_loop(void)
 
             if (cd_error != 0)
             {
-                error_quad = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+                error_quad = g_wmap_current_frame->packet_cursor;
 
                 if (cd_error < 0)
                 {
@@ -2455,7 +2455,7 @@ void wmap_refresh_cells(void)
             g_wmap_cells[x][y].travel_allowed = wmap_is_other_land_cell(x, y);
             wmap_get_cell_spirit_sprites(x, y, g_wmap_cells[x][y].spirit_sprites);
             g_wmap_cells[x][y].placement_allowed = wmap_can_place_land(x, y, g_wmap_selected_artifact);
-            D_8011D108[x][y].frame = 0;
+            g_wmap_cell_effects[x][y].frame = 0;
         }
     }
 }

@@ -57,16 +57,7 @@ void wmap_land_effect_11_sequence_3_step_01(void)
     s32 i;
 
     g_wmap_particle_intensity = 0x46;
-    g_wmap_effect_params[1] = 2;
-    g_wmap_effect_params[2] = 8;
-    g_wmap_effect_params[3] = 0x40;
-    g_wmap_effect_params[4] = 2;
-    g_wmap_effect_params[5] = 2;
-    g_wmap_effect_params[6] = 0x190;
-    g_wmap_effect_params[7] = 0x14;
-    g_wmap_effect_params[8] = 0xD;
-    g_wmap_effect_params[9] = 1;
-    g_wmap_effect_params[10] = 0x3E8;
+    WMAP_SET_PARTICLE_CONFIG(0, 2, 8, 0x40, 2, 2, 0x190, 0x14, 0xD, 1, 0x3E8);
     WMAP_RESET_PARTICLE_SLOTS(i, 0x46, g_wmap_actor_motions[i + g_wmap_effect_params[7]].state, 0x18, g_wmap_animation_bank_0);
     g_wmap_land_effect_11_sequence_3_timer = 0x8D;
     g_wmap_land_effect_11_sequence_3_step++;
@@ -79,16 +70,7 @@ void wmap_land_effect_11_sequence_5_step_01(void)
     s32 i;
 
     g_wmap_particle_intensity = 0xA;
-    g_wmap_effect_params[11] = 1;
-    g_wmap_effect_params[12] = 6;
-    g_wmap_effect_params[13] = 0x90;
-    g_wmap_effect_params[14] = 2;
-    g_wmap_effect_params[15] = 3;
-    g_wmap_effect_params[16] = 0x60;
-    g_wmap_effect_params[17] = 0x64;
-    g_wmap_effect_params[18] = 0xD;
-    g_wmap_effect_params[19] = 0;
-    g_wmap_effect_params[20] = 0x2EE0;
+    WMAP_SET_PARTICLE_CONFIG(10, 1, 6, 0x90, 2, 3, 0x60, 0x64, 0xD, 0, 0x2EE0);
     WMAP_RESET_PARTICLE_SLOTS(i, 0xA, g_wmap_actor_motions[i + g_wmap_effect_params[17]].state, 0x68, g_wmap_animation_bank_0);
     g_wmap_land_effect_11_sequence_5_timer = 0x29;
     g_wmap_land_effect_11_sequence_5_step++;
@@ -112,10 +94,10 @@ void wmap_land_effect_11_sequence_8_step_02(void)
     PushMatrix();
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_e_rotation);
     wmap_draw_model_default(g_wmap_effect_model_pack_2, 0, 4, 54, 0x7900, 1, g_wmap_effect_fade_c);
-    g_wmap_effect_model_e_rotation.vz = (u16)(g_wmap_effect_model_e_rotation.vz + 24);
+    g_wmap_effect_model_e_rotation.vz = (g_wmap_effect_model_e_rotation.vz + 24);
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_f_rotation);
     wmap_draw_model_default(g_wmap_effect_model_pack_3, 0, 4, 54, 0x7900, 1, g_wmap_effect_fade_c);
-    g_wmap_effect_model_f_rotation.vz = (u16)(g_wmap_effect_model_f_rotation.vz - 16);
+    g_wmap_effect_model_f_rotation.vz = (g_wmap_effect_model_f_rotation.vz - 16);
     PopMatrix();
     WMAP_MODEL_FADE_IN(g_wmap_effect_fade_c, 2, 129, intensity);
     remaining = g_wmap_land_effect_11_sequence_8_timer - 1;
@@ -135,10 +117,10 @@ void wmap_land_effect_11_sequence_8_step_04(void)
     PushMatrix();
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_e_rotation);
     wmap_draw_model_default(g_wmap_effect_model_pack_2, 0, 4, 54, 0x7900, 1, g_wmap_effect_fade_c);
-    g_wmap_effect_model_e_rotation.vz = (u16)(g_wmap_effect_model_e_rotation.vz + 24);
+    g_wmap_effect_model_e_rotation.vz = (g_wmap_effect_model_e_rotation.vz + 24);
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_f_rotation);
     wmap_draw_model_default(g_wmap_effect_model_pack_3, 0, 4, 54, 0x7900, 1, g_wmap_effect_fade_c);
-    g_wmap_effect_model_f_rotation.vz = (u16)(g_wmap_effect_model_f_rotation.vz - 16);
+    g_wmap_effect_model_f_rotation.vz = (g_wmap_effect_model_f_rotation.vz - 16);
     PopMatrix();
     remaining = g_wmap_land_effect_11_sequence_8_timer - 1;
     g_wmap_effect_fade_c -= 2;

@@ -128,33 +128,79 @@ extern s32 g_wmap_particle_intensity;
 extern s32 g_wmap_falling_spawn_timers[4];
 extern s32 g_wmap_falling_spawn_counts[4];
 
-/** @brief Words shared by the effect sequences; wmap_update_particles_from_settings also reads several as particle settings. */
-extern s32 D_80139234;
-extern s32 D_8013923C;
-extern s32 D_80139240;
-extern s32 D_8013924C;
-extern s32 D_80139250;
-extern s32 D_80139260;
-extern s32 D_80139264;
-extern s32 D_80139268;
-extern s32 D_8013926C;
-extern s32 D_80139284;
-extern s32 D_80182DE4;
-extern s32 D_801B25D8;
-extern s32 D_801B24B4;
-extern s32 D_801B24B0;
-extern s32 D_801B2468;
-extern s32 D_801B2470;
-extern s32 D_8013B264;
-extern s32 D_8013B270;
-extern s32 D_8013B278;
-extern s32 D_8013B280;
-extern WmapScreenPosition D_80182D58;
-extern WmapScreenPosition D_80182D60;
-extern s32 D_80139838[];
-extern s32 D_800D923C;
+/**
+ * @brief Particle settings that wmap_update_particles_from_settings copies into a WmapParticleConfig.
+ * @note Effects that run no particles reuse these words as their own counters, frame indexes and fade levels.
+ */
+extern s32 g_wmap_particle_velocity_min;
+extern s32 g_wmap_particle_velocity_range;
+extern s32 g_wmap_particle_lifetime_min;
+extern s32 g_wmap_particle_lifetime_range;
+extern s32 g_wmap_particle_spawn_interval;
+extern s32 g_wmap_particle_radial_step;
+extern s32 g_wmap_particle_first_motion;
+extern s32 g_wmap_particle_texture_index;
+extern s32 g_wmap_particle_sequence;
+extern s32 g_wmap_particle_radius;
+
+/**
+ * @brief Set all ten particle settings read by wmap_update_particles_from_settings.
+ * @param velocity_min g_wmap_particle_velocity_min.
+ * @param velocity_range g_wmap_particle_velocity_range.
+ * @param lifetime_min g_wmap_particle_lifetime_min.
+ * @param lifetime_range g_wmap_particle_lifetime_range.
+ * @param spawn_interval g_wmap_particle_spawn_interval.
+ * @param radial_step g_wmap_particle_radial_step.
+ * @param first_motion g_wmap_particle_first_motion.
+ * @param texture_index g_wmap_particle_texture_index.
+ * @param sequence g_wmap_particle_sequence.
+ * @param radius g_wmap_particle_radius.
+ */
+#define WMAP_SET_PARTICLE_SETTINGS(velocity_min, velocity_range, lifetime_min, lifetime_range, spawn_interval, radial_step, first_motion, texture_index,       \
+                                   sequence, radius)                                                                                                           \
+    (g_wmap_particle_velocity_min = (velocity_min), g_wmap_particle_velocity_range = (velocity_range), g_wmap_particle_lifetime_min = (lifetime_min),          \
+     g_wmap_particle_lifetime_range = (lifetime_range), g_wmap_particle_spawn_interval = (spawn_interval), g_wmap_particle_radial_step = (radial_step),        \
+     g_wmap_particle_first_motion = (first_motion), g_wmap_particle_texture_index = (texture_index), g_wmap_particle_sequence = (sequence),                    \
+     g_wmap_particle_radius = (radius))
+
+/** @brief Effect model fade levels (draw color scale) that land effects share; fade e also serves as a frame counter. */
+extern s32 g_wmap_effect_fade_e;
+extern s32 g_wmap_effect_fade_f;
+/** @brief Auxiliary fade level shared by model, sprite and particle sequences. */
+extern s32 g_wmap_aux_effect_fade_c;
+/** @brief Flash fade levels; effect 18 restarts flash b from flash a, which falls with each flash. */
+extern s32 g_wmap_effect_flash_fade_a;
+extern s32 g_wmap_effect_flash_fade_b;
+/** @brief Index into g_wmap_cosine_wave that wraps at 256; some effects use it as a fade level instead. */
+extern s32 g_wmap_effect_wave_phase;
+/** @brief Model frame drawn by wmap_draw_model_default in the model loop effects. */
+extern s32 g_wmap_effect_model_frame;
+
+/**
+ * @brief Arc settings of wmap_update_particle_system modes 1-3.
+ * @note Mode 2 (parabola): height = base + peak - (lifetime - apex_lifetime)^2 / divisor.
+ * @note Mode 1 (rise then fall): while lifetime > apex_lifetime the particle rises by peak plus a random part of divisor,
+ *       then falls by base plus a random part of g_wmap_particle_fall_range.
+ * @note Mode 3: height = (apex_lifetime - lifetime)^2 / peak.
+ */
+extern s32 g_wmap_particle_arc_apex_lifetime;
+extern s32 g_wmap_particle_arc_peak;
+extern s32 g_wmap_particle_arc_divisor;
+extern s32 g_wmap_particle_arc_base;
+extern s32 g_wmap_particle_fall_range;
+
+/**
+ * @brief Screen positions of effect sprites; event 17 uses a-i for its nine scattered sprites.
+ * @note Effect 34 keeps sprite b's path in 1/16 pixels and draws it at position a.
+ */
+extern WmapScreenPosition g_wmap_effect_sprite_position_a;
+extern WmapScreenPosition g_wmap_effect_sprite_position_b;
+extern WmapScreenPosition g_wmap_effect_sprite_position_c;
+extern s32 g_wmap_carousel_artifacts[];
+extern s32 g_wmap_models_use_effect_camera;
 extern s32 D_800D922C;
-extern s8 D_80051B4C[];
+/** @brief 127 * cos(2 * pi * i / 128): two full periods over 256 entries. */
+extern s8 g_wmap_cosine_wave[256];
 extern s32 g_wmap_sequence_count;
 
 #endif

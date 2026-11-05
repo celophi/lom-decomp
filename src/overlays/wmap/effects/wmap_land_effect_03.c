@@ -99,16 +99,7 @@ void wmap_land_effect_03_sequence_5_step_01(void)
     s32 i;
 
     g_wmap_particle_intensity = 50;
-    g_wmap_effect_params[0x1] = 4;
-    g_wmap_effect_params[0x2] = 1;
-    g_wmap_effect_params[0x3] = 20;
-    g_wmap_effect_params[0x4] = 30;
-    g_wmap_effect_params[0x5] = 16;
-    g_wmap_effect_params[0x6] = 1500;
-    g_wmap_effect_params[0x7] = 20;
-    g_wmap_effect_params[0x8] = 19;
-    g_wmap_effect_params[0x9] = 0;
-    g_wmap_effect_params[0xA] = 10000;
+    WMAP_SET_PARTICLE_CONFIG(0, 4, 1, 20, 30, 16, 1500, 20, 19, 0, 10000);
     WMAP_RESET_PARTICLE_SLOTS(i, 50, g_wmap_actor_motions[i + g_wmap_effect_params[0x7]].state, 24, g_wmap_animation_bank_2);
     g_wmap_land_effect_03_sequence_5_timer = 144;
     g_wmap_land_effect_03_sequence_5_step++;
@@ -121,16 +112,7 @@ void wmap_land_effect_03_sequence_6_step_01(void)
     s32 i;
 
     g_wmap_particle_intensity = 50;
-    g_wmap_effect_params[0xB] = 4;
-    g_wmap_effect_params[0xC] = 1;
-    g_wmap_effect_params[0xD] = 20;
-    g_wmap_effect_params[0xE] = 30;
-    g_wmap_effect_params[0xF] = 4;
-    g_wmap_effect_params[0x10] = 1500;
-    g_wmap_effect_params[0x11] = 70;
-    g_wmap_effect_params[0x12] = 19;
-    g_wmap_effect_params[0x13] = 1;
-    g_wmap_effect_params[0x14] = 10000;
+    WMAP_SET_PARTICLE_CONFIG(10, 4, 1, 20, 30, 4, 1500, 70, 19, 1, 10000);
     WMAP_RESET_PARTICLE_SLOTS(i, 50, g_wmap_actor_motions[i + g_wmap_effect_params[0x11]].state, 74, g_wmap_animation_bank_2);
     g_wmap_land_effect_03_sequence_6_timer = 144;
     g_wmap_land_effect_03_sequence_6_step++;
@@ -143,16 +125,7 @@ void wmap_land_effect_03_sequence_7_step_01(void)
     s32 i;
 
     g_wmap_particle_intensity = 0x32;
-    g_wmap_effect_params[21] = 2;
-    g_wmap_effect_params[22] = 1;
-    g_wmap_effect_params[23] = 0x14;
-    g_wmap_effect_params[24] = 0x1E;
-    g_wmap_effect_params[25] = 2;
-    g_wmap_effect_params[26] = 0x5DC;
-    g_wmap_effect_params[27] = 0x78;
-    g_wmap_effect_params[28] = 0x13;
-    g_wmap_effect_params[29] = 2;
-    g_wmap_effect_params[30] = 0x2710;
+    WMAP_SET_PARTICLE_CONFIG(20, 2, 1, 0x14, 0x1E, 2, 0x5DC, 0x78, 0x13, 2, 0x2710);
     WMAP_RESET_PARTICLE_SLOTS(i, 0x32, g_wmap_actor_motions[i + g_wmap_effect_params[27]].state, 0x7C, g_wmap_animation_bank_2);
     g_wmap_land_effect_03_sequence_7_timer = 0x90;
     g_wmap_land_effect_03_sequence_7_step++;
@@ -165,16 +138,7 @@ void wmap_land_effect_03_sequence_8_step_01(void)
     s32 i;
 
     g_wmap_particle_intensity = 50;
-    g_wmap_effect_params[0x1F] = 1;
-    g_wmap_effect_params[0x20] = 1;
-    g_wmap_effect_params[0x21] = 20;
-    g_wmap_effect_params[0x22] = 30;
-    g_wmap_effect_params[0x23] = 2;
-    g_wmap_effect_params[0x24] = 1500;
-    g_wmap_effect_params[0x25] = 170;
-    g_wmap_effect_params[0x26] = 19;
-    g_wmap_effect_params[0x27] = 3;
-    g_wmap_effect_params[0x28] = 10000;
+    WMAP_SET_PARTICLE_CONFIG(30, 1, 1, 20, 30, 2, 1500, 170, 19, 3, 10000);
     WMAP_RESET_PARTICLE_SLOTS(i, 50, g_wmap_actor_motions[i + g_wmap_effect_params[0x25]].state, 174, g_wmap_animation_bank_2);
     g_wmap_land_effect_03_sequence_8_timer = 144;
     g_wmap_land_effect_03_sequence_8_step++;

@@ -432,9 +432,9 @@ void wmap_effect35_spin_a_fade_in(void)
 
     PushMatrix();
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_c_rotation);
-    wmap_draw_model(g_wmap_effect_model_pack_2, (D_8013923C >> 4) & 3, 0xA, 0x35, 0x7800, 0x1001, g_wmap_effect_fade_c, 0, 0, -1);
+    wmap_draw_model(g_wmap_effect_model_pack_2, (g_wmap_particle_velocity_range >> 4) & 3, 0xA, 0x35, 0x7800, 0x1001, g_wmap_effect_fade_c, 0, 0, -1);
     WMAP_MODEL_FADE_IN(g_wmap_effect_fade_c, 2, 0x81, value);
-    D_8013923C += 8;
+    g_wmap_particle_velocity_range += 8;
     g_wmap_effect_model_c_rotation.vz += 0xA;
     PopMatrix();
 
@@ -453,9 +453,9 @@ void wmap_effect35_spin_a_fade_out(void)
 
     PushMatrix();
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_c_rotation);
-    wmap_draw_model(g_wmap_effect_model_pack_2, (D_8013923C >> 4) & 3, 0xA, 0x35, 0x7800, 0x1001, g_wmap_effect_fade_c, 0, 0, -1);
+    wmap_draw_model(g_wmap_effect_model_pack_2, (g_wmap_particle_velocity_range >> 4) & 3, 0xA, 0x35, 0x7800, 0x1001, g_wmap_effect_fade_c, 0, 0, -1);
     WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_c, 4, value);
-    D_8013923C += 8;
+    g_wmap_particle_velocity_range += 8;
     g_wmap_effect_model_c_rotation.vz += 0xA;
     PopMatrix();
 
@@ -474,9 +474,9 @@ void wmap_effect35_spin_b_fade_in(void)
 
     PushMatrix();
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_d_rotation);
-    wmap_draw_model(g_wmap_effect_model_pack_3, (D_80139260 >> 4) & 7, 0xA, 0x36, 0x7880, 0x1001, g_wmap_effect_fade_d, 0, 0, -1);
+    wmap_draw_model(g_wmap_effect_model_pack_3, (g_wmap_particle_radial_step >> 4) & 7, 0xA, 0x36, 0x7880, 0x1001, g_wmap_effect_fade_d, 0, 0, -1);
     WMAP_MODEL_FADE_IN(g_wmap_effect_fade_d, 2, 0x61, value);
-    D_80139260 -= 0x10;
+    g_wmap_particle_radial_step -= 0x10;
     g_wmap_effect_model_d_rotation.vz += 4;
     PopMatrix();
 
@@ -495,9 +495,9 @@ void wmap_effect35_spin_b_fade_out(void)
 
     PushMatrix();
     wmap_set_model_transform(&g_wmap_camera_translation, &g_wmap_effect_model_d_rotation);
-    wmap_draw_model(g_wmap_effect_model_pack_3, (D_80139260 >> 4) & 7, 0xA, 0x36, 0x7880, 0x1001, g_wmap_effect_fade_d, 0, 0, -1);
+    wmap_draw_model(g_wmap_effect_model_pack_3, (g_wmap_particle_radial_step >> 4) & 7, 0xA, 0x36, 0x7880, 0x1001, g_wmap_effect_fade_d, 0, 0, -1);
     WMAP_MODEL_FADE_OUT(g_wmap_effect_fade_d, 8, value);
-    D_80139260 -= 0x10;
+    g_wmap_particle_radial_step -= 0x10;
     g_wmap_effect_model_d_rotation.vz += 4;
     PopMatrix();
 
@@ -1214,7 +1214,7 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_sprite_c, g_wmap_effect35_sprite_c_ste
 {
     g_wmap_effect_fade_c = 1;
     g_wmap_effect_model_c_rotation = g_wmap_zero_rotation;
-    D_8013923C = 0;
+    g_wmap_particle_velocity_range = 0;
     g_wmap_effect35_spin_a_timer = 240;
     g_wmap_effect35_spin_a_step++;
     wmap_effect35_spin_a_fade_in();
@@ -1250,7 +1250,7 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_spin_b, g_wmap_effect35_spin_b_steps, 
 {
     g_wmap_effect_fade_d = 1;
     g_wmap_effect_model_d_rotation = g_wmap_zero_rotation;
-    D_80139260 = 0;
+    g_wmap_particle_radial_step = 0;
     g_wmap_effect35_spin_b_timer = 208;
     g_wmap_effect35_spin_b_step++;
     wmap_effect35_spin_b_fade_in();

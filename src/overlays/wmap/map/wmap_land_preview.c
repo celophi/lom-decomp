@@ -102,8 +102,8 @@ extern WmapArtifactTransferFrame g_wmap_artifact_return_frames[];
 extern s32 g_wmap_preview_foreground;
 
 extern s32 g_wmap_preview_bob_y;
-extern s32 D_8011D504;
-extern s32 D_8011D508;
+extern s32 g_wmap_placement_preview_x;
+extern s32 g_wmap_placement_preview_y;
 
 extern s32 g_wmap_preview_projection_x;
 extern s32 g_wmap_preview_projection_y;
@@ -147,7 +147,7 @@ void wmap_update_land_preview(void)
 
         if (g_wmap_artifact_placement_frame == 0)
         {
-            bob_sample = D_80051B4C[(next_frame & WMAP_PREVIEW_BOB_MASK) + WMAP_PREVIEW_BOB_PHASE];
+            bob_sample = g_wmap_cosine_wave[(next_frame & WMAP_PREVIEW_BOB_MASK) + WMAP_PREVIEW_BOB_PHASE];
             g_wmap_preview_bob_y = bob_sample / WMAP_PREVIEW_BOB_SCALE;
         }
         else
@@ -256,7 +256,7 @@ void wmap_update_land_preview(void)
                         {
                             s32* artifact_slots;
                             carousel_frame = g_wmap_carousel_frame;
-                            artifact_slots = D_80139838;
+                            artifact_slots = g_wmap_carousel_artifacts;
 
                             if (carousel_frame < 0)
                             {
@@ -314,7 +314,7 @@ void wmap_update_land_preview(void)
                     {
                         s32* artifact_slots;
                         carousel_frame = g_wmap_carousel_frame;
-                        artifact_slots = D_80139838;
+                        artifact_slots = g_wmap_carousel_artifacts;
                         artifact_slots[((carousel_frame / WMAP_CAROUSEL_STEP_FRAMES) + WMAP_PREVIEW_SLOT_OFFSET) % WMAP_ARTIFACT_SLOTS] = -1;
                     }
                 }
@@ -363,7 +363,7 @@ void wmap_update_land_preview(void)
             s16 x3_offset;
             s16 y3_offset;
 
-            packet = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+            packet = g_wmap_current_frame->packet_cursor;
             *packet = g_wmap_preview_quad_template;
 
             if (g_wmap_selected_artifact == WMAP_NO_ARTIFACT)
@@ -431,7 +431,7 @@ void wmap_update_land_preview(void)
                 }
 
                 /* The second marker layer uses the next texture row. */
-                second_layer = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+                second_layer = g_wmap_current_frame->packet_cursor;
                 *second_layer = *packet;
                 second_layer->v0 += WMAP_PREVIEW_SECOND_LAYER_V;
                 second_layer->v1 += WMAP_PREVIEW_SECOND_LAYER_V;
@@ -466,20 +466,20 @@ void wmap_update_land_preview(void)
             {
                 SPRT* sprite;
 
-                sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+                sprite = g_wmap_current_frame->packet_cursor;
 
                 if ((g_wmap_placement_preview_locked != 0) && (g_wmap_view_scroll_mode != WMAP_SCROLL_SCRIPTED))
                 {
-                    sprite->x0 = D_8011D504;
-                    sprite->y0 = D_8011D508;
+                    sprite->x0 = g_wmap_placement_preview_x;
+                    sprite->y0 = g_wmap_placement_preview_y;
                 }
                 else
                 {
                     sprite->x0 = (g_wmap_preview_draw_x + g_wmap_artifact_images[g_wmap_selected_artifact].anchor_x) + g_wmap_preview_projection_x;
-                    D_8011D504 = sprite->x0;
+                    g_wmap_placement_preview_x = sprite->x0;
                     sprite->y0 = ((g_wmap_preview_draw_y + g_wmap_artifact_images[g_wmap_selected_artifact].anchor_y) + g_wmap_artifact_placement_frame) +
                                  g_wmap_preview_bob_y + g_wmap_preview_projection_y;
-                    D_8011D508 = sprite->y0;
+                    g_wmap_placement_preview_y = sprite->y0;
                 }
 
                 sprite->w = g_wmap_artifact_images[g_wmap_selected_artifact].width;
@@ -522,7 +522,7 @@ void wmap_update_land_preview(void)
                 POLY_FT4* packet;
                 s32 row;
                 s32 column;
-                packet = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+                packet = g_wmap_current_frame->packet_cursor;
                 SET_BGR0_PACKED(packet, GPU_TINT_NEUTRAL);
                 row = g_wmap_cursor_row;
                 column = g_wmap_cursor_column;

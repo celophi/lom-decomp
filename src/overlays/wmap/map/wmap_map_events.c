@@ -420,7 +420,7 @@ void wmap_arrival_event_pick_sides(s32 land_id)
 void wmap_arrival_event_step_01(void)
 {
     g_wmap_special_travel_pending = 0;
-    D_80139234 = 0;
+    g_wmap_particle_velocity_min = 0;
     g_wmap_input_locked = 1;
     g_wmap_event_active = 1;
     g_wmap_saved_view = g_wmap_view;
@@ -532,18 +532,18 @@ void wmap_arrival_event_draw_trails(void)
 
         if (g_wmap_frame_count % 10 == 0)
         {
-            if (D_80139234 != -1)
+            if (g_wmap_particle_velocity_min != -1)
             {
                 for (i = 0; i < WMAP_ARRIVAL_SIDES; i++)
                 {
-                    destination = i + D_80139234 * WMAP_ARRIVAL_SIDES + WMAP_ARRIVAL_TRAIL_FIRST_ACTOR;
+                    destination = i + g_wmap_particle_velocity_min * WMAP_ARRIVAL_SIDES + WMAP_ARRIVAL_TRAIL_FIRST_ACTOR;
                     g_wmap_actor_motions[destination] = g_wmap_actor_motions[i + WMAP_ARRIVAL_FIRST_ACTOR];
                     g_wmap_sprite_actors[destination] = g_wmap_sprite_actors[i + WMAP_ARRIVAL_FIRST_ACTOR];
                     g_wmap_sprite_actors[destination].target_shade = 0;
                     g_wmap_sprite_actors[destination].shade_step = 2;
                 }
 
-                D_80139234 = (D_80139234 + 1) & (WMAP_ARRIVAL_TRAIL_SAMPLES - 1);
+                g_wmap_particle_velocity_min = (g_wmap_particle_velocity_min + 1) & (WMAP_ARRIVAL_TRAIL_SAMPLES - 1);
             }
         }
     }
@@ -825,7 +825,7 @@ void wmap_arrival_event_step_09(void)
         g_wmap_sprite_actors[i + WMAP_ARRIVAL_FIRST_ACTOR].sequence = 0;
     }
 
-    D_80139234 = -1;
+    g_wmap_particle_velocity_min = -1;
     g_wmap_arrival_event_timer = 40;
     g_wmap_arrival_event_step++;
     wmap_arrival_event_step_10();

@@ -62,7 +62,6 @@ extern u32 g_wmap_land_effect_17_sequence_2_step;
 extern s32* g_wmap_effect_params;
 
 extern WmapMotion g_wmap_effect_actor_motions[];
-extern WmapMotion D_801AFFB8[];
 
 /** @brief Move the model closer and fade it until the timer expires. */
 WMAP_STEP_DROP_UPDATE(wmap_land_effect_17_sequence_3_step_02, g_wmap_land_effect_17_sequence_3_step, g_wmap_land_effect_17_sequence_3_timer,
@@ -78,16 +77,7 @@ void wmap_land_effect_17_sequence_5_step_01(void)
     s32 i;
 
     g_wmap_particle_intensity = 3;
-    g_wmap_effect_params[0x15] = 20;
-    g_wmap_effect_params[0x16] = 20;
-    g_wmap_effect_params[0x17] = 128;
-    g_wmap_effect_params[0x18] = 0;
-    g_wmap_effect_params[0x19] = -1;
-    g_wmap_effect_params[0x1A] = 1000;
-    g_wmap_effect_params[0x1B] = 20;
-    g_wmap_effect_params[0x1C] = 15;
-    g_wmap_effect_params[0x1D] = 1;
-    g_wmap_effect_params[0x1E] = 12000;
+    WMAP_SET_PARTICLE_CONFIG(20, 20, 20, 128, 0, -1, 1000, 20, 15, 1, 12000);
 
     for (i = 0; i < 3; i++)
     {
@@ -118,25 +108,16 @@ void wmap_land_effect_17_sequence_6_step_01(void)
     s32 i;
 
     g_wmap_particle_intensity = 3;
-    g_wmap_effect_params[0xB] = 4;
-    g_wmap_effect_params[0xC] = 4;
-    g_wmap_effect_params[0xD] = 128;
-    g_wmap_effect_params[0xE] = 0;
-    g_wmap_effect_params[0xF] = -1;
-    g_wmap_effect_params[0x10] = 100;
-    g_wmap_effect_params[0x11] = 50;
-    g_wmap_effect_params[0x12] = 15;
-    g_wmap_effect_params[0x13] = 2;
-    g_wmap_effect_params[0x14] = 12000;
+    WMAP_SET_PARTICLE_CONFIG(10, 4, 4, 128, 0, -1, 100, 50, 15, 2, 12000);
 
     for (i = 0; i < 3; i++)
     {
-        D_801AFFB8[i].state = 1;
-        D_801AFFB8[i].angle = i * 1365;
-        D_801AFFB8[i].lifetime = 128;
-        D_801AFFB8[i].radius = 12000;
-        D_801AFFB8[i].velocity = 0;
-        D_801AFFB8[i].z = 0;
+        g_wmap_actor_motions_at_50[i].state = 1;
+        g_wmap_actor_motions_at_50[i].angle = i * 1365;
+        g_wmap_actor_motions_at_50[i].lifetime = 128;
+        g_wmap_actor_motions_at_50[i].radius = 12000;
+        g_wmap_actor_motions_at_50[i].velocity = 0;
+        g_wmap_actor_motions_at_50[i].z = 0;
         g_wmap_actor_animations[i + 50].data = g_wmap_animation_bank_0;
         WMAP_ACTOR_BLOCK(50)[i].scale_index = 15;
         WMAP_ACTOR_BLOCK(50)[i].previous_sequence = -1;
@@ -160,7 +141,7 @@ void wmap_land_effect_17_sequence_7_step_01(void)
     WmapSpriteActor* actor;
 
     g_wmap_particle_intensity = 8;
-    angle = (s16)0x27FD8;
+    angle = 0x27FD8;
 
     for (i = 80; i < 88; i++)
     {
@@ -199,23 +180,14 @@ void wmap_land_effect_17_sequence_8_step_01(void)
     WmapMotion* motion;
 
     g_wmap_particle_intensity = 20;
-    g_wmap_effect_params[0xB] = 64;
-    g_wmap_effect_params[0xC] = 20;
-    g_wmap_effect_params[0xD] = 128;
-    g_wmap_effect_params[0xE] = 0;
-    g_wmap_effect_params[0xF] = -1;
-    g_wmap_effect_params[0x10] = 2000;
-    g_wmap_effect_params[0x11] = 50;
-    g_wmap_effect_params[0x12] = 8;
-    g_wmap_effect_params[0x13] = 1;
-    g_wmap_effect_params[0x14] = 10;
+    WMAP_SET_PARTICLE_CONFIG(10, 64, 20, 128, 0, -1, 2000, 50, 8, 1, 10);
 
     for (i = 0; i < 20; i++)
     {
         WmapAnimationSlot* resources;
         u8* resource_data;
 
-        motion = &D_801AFFB8[i];
+        motion = &g_wmap_actor_motions_at_50[i];
         motion->state = 1;
         angle = rand();
         resource_offset = (i + 50) * 8;
@@ -256,16 +228,7 @@ void wmap_land_effect_17_sequence_9_step_01(void)
     WmapMotion* motion;
 
     g_wmap_particle_intensity = 30;
-    g_wmap_effect_params[0x15] = 192;
-    g_wmap_effect_params[0x16] = 16;
-    g_wmap_effect_params[0x17] = 128;
-    g_wmap_effect_params[0x18] = 0;
-    g_wmap_effect_params[0x19] = -1;
-    g_wmap_effect_params[0x1A] = 4000;
-    g_wmap_effect_params[0x1B] = 20;
-    g_wmap_effect_params[0x1C] = 8;
-    g_wmap_effect_params[0x1D] = 2;
-    g_wmap_effect_params[0x1E] = 10;
+    WMAP_SET_PARTICLE_CONFIG(20, 192, 16, 128, 0, -1, 4000, 20, 8, 2, 10);
 
     for (i = 0; i < 30; i++)
     {

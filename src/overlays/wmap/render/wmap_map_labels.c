@@ -75,7 +75,7 @@ void wmap_draw_status_panel(void)
 
     if (g_wmap_status_panel_mode != 3)
     {
-        sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+        sprite = g_wmap_current_frame->packet_cursor;
         *sprite = g_wmap_status_panel_template;
         addPrim(&g_wmap_current_frame->ordering_table[7], sprite);
 
@@ -101,7 +101,7 @@ void wmap_draw_status_panel(void)
 
         g_wmap_day_icon_sprite.g0 = g_wmap_day_icon_sprite.r0;
         g_wmap_day_icon_sprite.b0 = g_wmap_day_icon_sprite.r0;
-        sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+        sprite = g_wmap_current_frame->packet_cursor;
 
         *sprite = g_wmap_day_icon_sprite;
         if ((s8)g_wmap_day_icon_sprite.r0 >= 0)
@@ -122,7 +122,7 @@ void wmap_draw_status_panel(void)
         {
             g_wmap_outgoing_day_icon_sprite.g0 = g_wmap_outgoing_day_icon_sprite.r0;
             g_wmap_outgoing_day_icon_sprite.b0 = g_wmap_outgoing_day_icon_sprite.r0;
-            sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+            sprite = g_wmap_current_frame->packet_cursor;
             *sprite = g_wmap_outgoing_day_icon_sprite;
             addPrim(&g_wmap_current_frame->ordering_table[7], sprite);
             SET_BGR0_PACKED(&g_wmap_outgoing_day_name_sprite, *(u32*)&g_wmap_outgoing_day_icon_sprite.r0);
@@ -138,7 +138,7 @@ void wmap_draw_status_panel(void)
 
         wmap_queue_texture_page(0xBC, 7);
         wmap_draw_map_labels();
-        sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+        sprite = g_wmap_current_frame->packet_cursor;
         SET_BGR0_PACKED(&g_wmap_day_name_sprite, *(u32*)&g_wmap_day_icon_sprite.r0);
         shadow = &g_wmap_day_name_sprite;
         setSemiTrans(shadow, 1);
@@ -153,7 +153,7 @@ void wmap_draw_status_panel(void)
 
         if (g_wmap_outgoing_day_name_sprite.r0 >= 9)
         {
-            sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+            sprite = g_wmap_current_frame->packet_cursor;
             *sprite = g_wmap_outgoing_day_name_sprite;
             addPrim(&g_wmap_current_frame->ordering_table[7], g_wmap_current_frame->packet_cursor);
 
@@ -168,7 +168,7 @@ void wmap_draw_status_panel(void)
 
         for (i = 0; i < 0x24; i++)
         {
-            shade = (POLY_G3*)g_wmap_current_frame->packet_cursor;
+            shade = g_wmap_current_frame->packet_cursor;
             *shade = g_wmap_status_panel_shades[i];
             setlen(shade, 6);
             setcode(shade, 0x32);
@@ -278,7 +278,7 @@ void wmap_draw_map_labels(void)
     {
         label->b0 = label->r0;
         label->g0 = label->r0;
-        sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+        sprite = g_wmap_current_frame->packet_cursor;
 
         if ((s8)label->r0 >= 0)
         {
@@ -309,7 +309,7 @@ void wmap_draw_map_labels(void)
 
     if (fade != 0)
     {
-        sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+        sprite = g_wmap_current_frame->packet_cursor;
         g_wmap_outgoing_label_sprite.r0 = fade - 8;
         g_wmap_outgoing_label_sprite.b0 = fade;
         g_wmap_outgoing_label_sprite.g0 = fade;
@@ -343,7 +343,7 @@ void wmap_draw_map_labels(void)
             SPRT* glyph_sprite;
 
             label_char = &g_wmap_auxiliary_label_chars[char_index];
-            glyph_sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
+            glyph_sprite = g_wmap_current_frame->packet_cursor;
             glyph = &g_wmap_auxiliary_label_glyphs[label_char->glyph];
             glyph_sprite->u0 = glyph->u;
             glyph_sprite->v0 = glyph->v - 0x20;
