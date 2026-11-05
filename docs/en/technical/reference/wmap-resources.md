@@ -61,7 +61,7 @@ because the JP data only moves as a whole: US starts at `0x800C4588`, JP at
 | `0x7BDC` | `g_wmap_artifact_images` | 64 artifact texture rectangles and drawing offsets |
 | `0x8770` | `g_wmap_artifact_pickup_frames` | 740 frames of artifact pickup paths, 280 return frames follow |
 | `0xB844` | `g_wmap_land_attributes` | 64 artifacts: eight spirit strengths and a flags word each |
-| `0xBCCC` | `D_800D0254` | Land name label widths; the only table that differs between regions |
+| `0xBCCC` | `g_wmap_land_label_widths` | Land name label widths; the only table that differs between regions |
 | `0xBFBC` | `g_wmap_input_scripts` | Pointers to the three input scripts just before it |
 | `0xC170` | `g_wmap_menu_triangles` | 28 Gouraud triangles of the menu cursor |
 | `0xC4E4` | `g_wmap_sprite_textures` | 48 sprite texture pages and palettes |

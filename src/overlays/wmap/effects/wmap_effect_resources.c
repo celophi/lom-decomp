@@ -27,7 +27,6 @@ extern u8 g_wmap_fig_bundle_model_pack_2[];
 /** @brief Effect workspace view at byte offset 0x1FB8. */
 extern u8 g_wmap_shared_bundle_model_pack_2[];
 /** @brief Effect workspace view at byte offset 0x2000. */
-extern u8 g_wmap_effect_model_buffer_2000[];
 /** @brief Effect workspace view at byte offset 0x2460. */
 extern u8 g_wmap_mnt_bundle_model_pack_4[];
 /** @brief Effect workspace view at byte offset 0x2B4C. */
@@ -86,22 +85,6 @@ extern u8 g_wmap_man_bundle_model_pack_9[];
 extern u8 g_wmap_jul_bundle_empty_slot[];
 /** @brief Effect workspace view at byte offset 0x1DF48. */
 extern u8 g_wmap_man_bundle_empty_slot[];
-extern u8 g_wmap_animation_bank_0[];
-extern u8 g_wmap_animation_bank_1[];
-extern u8 g_wmap_animation_bank_2[];
-extern u8 g_wmap_animation_bank_3[];
-extern u8 g_wmap_animation_bank_4[];
-extern u8 g_wmap_animation_bank_5[];
-extern u8 g_wmap_effect_texture_buffer_0[];
-extern u8 g_wmap_effect_texture_buffer_1[];
-extern u8 g_wmap_effect_texture_buffer_2[];
-extern u8* g_wmap_effect_model_pack_1;
-extern u8* g_wmap_effect_model_pack_2;
-extern u8* g_wmap_effect_model_pack_3;
-extern u8* g_wmap_effect_model_pack_4;
-extern u8* g_wmap_effect_model_pack_5;
-extern u8* g_wmap_effect_model_pack_6;
-extern u8* g_wmap_effect_model_pack_7;
 extern u8* g_wmap_effect_model_pack_8;
 extern u8* g_wmap_effect_model_pack_9;
 /** @brief Pointer to the zero-filled trailing slot in MANBTP.DAT; no known reader. */
@@ -206,9 +189,9 @@ void wmap_queue_effect_18_resources(void)
     cdrom_queue_read(WMAP_EFFECT_18_ANIMATION_1_RESOURCE, g_wmap_animation_bank_1);
     cdrom_queue_read(WMAP_EFFECT_18_MODEL_1_RESOURCE, g_wmap_effect_model_pack_1);
     cdrom_queue_read(WMAP_EFFECT_18_MODEL_2_RESOURCE, g_wmap_effect_model_pack_2);
-    cdrom_queue_read(WMAP_EFFECT_18_MODEL_2_AT_4000_RESOURCE, g_wmap_effect_model_pack_2 + 0x4000);
-    cdrom_queue_read(WMAP_EFFECT_18_MODEL_2_AT_5000_RESOURCE, g_wmap_effect_model_pack_2 + 0x5000);
-    cdrom_queue_read(WMAP_EFFECT_18_MODEL_2_AT_6000_RESOURCE, g_wmap_effect_model_pack_2 + 0x6000);
+    cdrom_queue_read(WMAP_EFFECT_18_MODEL_2_AT_4000_RESOURCE, g_wmap_effect_model_pack_2 + WMAP_EFFECT_18_FLASH2_OFFSET);
+    cdrom_queue_read(WMAP_EFFECT_18_MODEL_2_AT_5000_RESOURCE, g_wmap_effect_model_pack_2 + WMAP_EFFECT_18_FLASH_C_OFFSET);
+    cdrom_queue_read(WMAP_EFFECT_18_MODEL_2_AT_6000_RESOURCE, g_wmap_effect_model_pack_2 + WMAP_EFFECT_18_WST_FLA_OFFSET);
 }
 
 /** @brief Queue texture, animation and model resources for effect 1. */

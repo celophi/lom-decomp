@@ -3,7 +3,9 @@
 #include "../internal/wmap_resource_support.h"
 #include <libgpu.h>
 #include "main/cdrom.h"
+#include "common/gpu_packet.h"
 #include "../internal/wmap_sprite_render.h"
+#include "../internal/wmap_actor_motion.h"
 #include "main/audio/akao_cmd.h"
 
 #define WMAP_COPY_WORD_SHIFT 2
@@ -15,33 +17,9 @@ typedef struct
     u8 bytes[8];
 } WmapTextureRect;
 
-/** @brief GPU packet for a flat-shaded textured triangle. */
-typedef struct
-{
-    u32 tag;
-    u8 r0, g0, b0, code;
-    s16 x0, y0;
-    u8 u0, v0;
-    u16 clut;
-    s16 x1, y1;
-    u8 u1, v1;
-    u16 tpage;
-    s16 x2, y2;
-    u8 u2, v2;
-    u16 pad;
-} WmapTexturedTriangle;
-
-/** @brief World-map display record with a leading state field. */
-typedef struct
-{
-    s16 state;
-    u8 unknown_2[0x12];
-} WmapInitDisplay;
-
 extern u8 g_wmap_load_buffer[];
-extern RECT D_80051A88;
+extern RECT g_wmap_framebuffer_rect;
 
-extern WmapInitDisplay g_wmap_actor_motions[];
 
 /**
  * @brief Empty world-map handler (no operation).
@@ -125,7 +103,7 @@ void wmap_load_tim_file(s32 resource_index)
  * @brief Stream a TIM read from CD and upload the decoded image(s) to VRAM.
  * @param resource_index CD resource id to stream.
  */
-void func_80065078(s32 resource_index)
+void wmap_stream_tim_file(s32 resource_index)
 {
     WmapTextureRect rectangle;
     u8* data;
@@ -166,7 +144,7 @@ void func_80065078(s32 resource_index)
  * @brief Queue a resource read into the world-map buffer.
  * @param resource_index Resource identifier; only the low 16 bits are used.
  */
-void func_8006518C(s32 resource_index)
+void wmap_queue_load_buffer_read(s32 resource_index)
 {
     cdrom_queue_read(resource_index & 0xFFFF, g_wmap_load_buffer);
 }
@@ -219,9 +197,9 @@ void wmap_play_sound(s32 sound_index, s32 pan)
 }
 
 /** @brief Clear the configured image rectangle to black. */
-void func_800652F8(void)
+void wmap_clear_framebuffers(void)
 {
-    RECT rectangle = D_80051A88;
+    RECT rectangle = g_wmap_framebuffer_rect;
     ClearImage(&rectangle, 0, 0, 0);
 }
 
@@ -232,23 +210,20 @@ void func_800652F8(void)
  */
 void wmap_queue_texture_page(s32 texture_page, s32 depth)
 {
-    WmapTexturedTriangle* primitive;
-    WmapFrame* table_base;
+    POLY_FT3* primitive;
 
-    primitive = (WmapTexturedTriangle*)g_wmap_current_frame->packet_cursor;
-    ((u8*)&primitive->tag)[3] = 7;
-    primitive->code = 0x24;
+    primitive = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
+    setlen(primitive, 7);
+    setcode(primitive, GPU_CODE_POLY_FT3);
     primitive->tpage = texture_page;
     *(s32*)&primitive->x2 = WMAP_MODEL_TPAGE_XY;
     *(s32*)&primitive->x1 = WMAP_MODEL_TPAGE_XY;
     *(s32*)&primitive->x0 = WMAP_MODEL_TPAGE_XY;
-    table_base = (WmapFrame*)(depth * sizeof(u_long) + (uintptr_t)g_wmap_current_frame);
-    primitive->tag = (primitive->tag & 0xFF000000) | (table_base->ordering_table[0] & 0xFFFFFF);
-    table_base->ordering_table[0] = (table_base->ordering_table[0] & 0xFF000000) | ((uintptr_t)primitive & 0xFFFFFF);
-    if (g_wmap_packet_bytes < 0x7D00)
+    addPrim(&g_wmap_current_frame->ordering_table[depth], primitive);
+    if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
     {
-        g_wmap_packet_bytes += 32;
-        g_wmap_current_frame->packet_cursor += 32;
+        g_wmap_packet_bytes += sizeof(POLY_FT3);
+        g_wmap_current_frame->packet_cursor += sizeof(POLY_FT3);
     }
 }
 

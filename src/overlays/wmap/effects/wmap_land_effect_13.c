@@ -10,6 +10,7 @@
 #include "../internal/wmap_resource_support.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_cells.h"
+#include "../internal/wmap_actor_motion.h"
 
 static void wmap_land_effect_13_update_particles(WmapSpriteActor* actors, WmapAnimationSlot* resources, s32 count);
 
@@ -42,19 +43,6 @@ void wmap_land_effect_13_sequence_10_step_04(void);
 void wmap_land_effect_13_sequence_11_step_02(void);
 void wmap_land_effect_13_sequence_11_step_04(void);
 
-/** @brief Per-actor motion and animation parameters. */
-typedef struct
-{
-    s16 state;
-    s16 angle;
-    s32 x;
-    s32 z;
-    s16 scale;
-    s16 field_0E;
-    s32 field_10;
-} WmapMotion;
-
-extern s32 D_800D922C;
 extern s32 rand(void);
 extern s32 g_wmap_land_effect_13_sequence_6_timer;
 extern s32 g_wmap_land_effect_13_sequence_7_timer;
@@ -64,7 +52,6 @@ extern s32 g_wmap_land_effect_13_sequence_9_shade;
 extern s32 g_wmap_land_effect_13_sequence_9_timer;
 extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_13_sequence_12_timer;
-extern s32 D_801B25D8;
 extern s32 g_wmap_land_effect_13_sequence_2_timer;
 extern WmapSequenceStep g_wmap_land_effect_13_sequence_2_steps[];
 extern s32 g_wmap_land_effect_13_timer;
@@ -73,10 +60,8 @@ extern void wmap_land_effect_13_step_03(void);
 extern void wmap_land_effect_13_end(void);
 extern s32 g_wmap_land_effect_13_timeline_timer;
 extern WmapSequenceStep g_wmap_land_effect_13_timeline_steps[];
-extern u32 g_wmap_selected_artifact;
 extern s32 g_wmap_land_effect_13_sequence_1_timer;
 extern WmapSequenceStep g_wmap_land_effect_13_sequence_1_steps[];
-extern s32 D_801B24B4;
 extern s32 g_wmap_land_effect_13_sequence_3_timer;
 extern WmapSequenceStep g_wmap_land_effect_13_sequence_3_steps[];
 extern s32 g_wmap_land_effect_13_sequence_4_timer;
@@ -99,29 +84,22 @@ extern u32 g_wmap_land_effect_13_sequence_8_step;
 extern u32 g_wmap_land_effect_13_sequence_9_step;
 extern u32 g_wmap_land_effect_13_sequence_12_step;
 extern u32 g_wmap_land_effect_13_sequence_2_step;
-extern u8 g_wmap_animation_bank_0[];
 extern u32 g_wmap_land_effect_13_step;
 extern u32 g_wmap_land_effect_13_timeline_step;
 extern u32 g_wmap_land_effect_13_sequence_1_step;
 extern u32 g_wmap_land_effect_13_sequence_3_step;
 extern u32 g_wmap_land_effect_13_sequence_4_step;
 extern u32 g_wmap_land_effect_13_sequence_5_step;
-extern u8 g_wmap_animation_bank_1[];
 extern u32 g_wmap_land_effect_13_sequence_10_step;
-extern u8 g_wmap_animation_bank_2[];
 extern u32 g_wmap_land_effect_13_sequence_11_step;
 
-extern VECTOR g_wmap_camera_translation;
 
 
 
 extern WmapAnimationSlot g_wmap_actor_animations[];
 
-extern WmapScreenPosition g_wmap_focus_screen_position;
 
-extern WmapMotion g_wmap_actor_motions[];
 
-extern s32 D_80182DE4;
 
 /**
  * @brief Update and draw active particles, then initialize the first available slot.
@@ -144,18 +122,18 @@ static void wmap_land_effect_13_update_particles(WmapSpriteActor* actors, WmapAn
         motion = &g_wmap_actor_motions[i];
         if (motion->state != 0)
         {
-            position.vx = ((motion->z >> 3) * (ccos(motion->angle) >> 6)) >> 12;
-            position.vy = ((motion->z >> 3) * (csin(motion->angle) >> 6)) >> 12;
-            position.vz = motion->field_0E;
+            position.vx = ((motion->radius >> 3) * (ccos(motion->angle) >> 6)) >> 12;
+            position.vy = ((motion->radius >> 3) * (csin(motion->angle) >> 6)) >> 12;
+            position.vz = motion->z;
             gte_ldv0(&position);
             gte_rtps();
-            motion->field_0E += motion->x;
-            motion->z += 1000;
+            motion->z += motion->velocity;
+            motion->radius += 1000;
             gte_stsxy(&screen_position);
             wmap_step_actor_animation(&actors[i], &resources[i]);
             wmap_draw_actor_sprite(&actors[i], screen_position, 15, 7, 0);
-            motion->scale--;
-            if (motion->scale == 0)
+            motion->lifetime--;
+            if (motion->lifetime == 0)
             {
                 motion->state = 0;
             }
@@ -181,10 +159,10 @@ static void wmap_land_effect_13_update_particles(WmapSpriteActor* actors, WmapAn
                 actor->resource_index = 0;
                 slot->state = 1;
                 slot->angle = rand();
-                slot->z = 10000;
-                slot->x = ((rand() * 5) >> 15) + 1;
-                slot->scale = ((rand() * 2) >> 15) + 24;
-                slot->field_0E = 0;
+                slot->radius = 10000;
+                slot->velocity = ((rand() * 5) >> 15) + 1;
+                slot->lifetime = ((rand() * 2) >> 15) + 24;
+                slot->z = 0;
             }
             break;
         }

@@ -81,20 +81,9 @@ typedef struct
 } WmapEffectEmitter;
 
 
-/** @brief Map scroll position and projection scale (see wmap_view_effects.c). */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 projection_scale;
-    s32 unknown_0c;
-} WmapView;
-
 /** @brief Sequence step handler. */
 extern WmapAnimationSlot g_wmap_actor_animations[];
 extern WmapEffectMotion g_wmap_actor_motions[];
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
 extern s32 g_wmap_load_buffer[];
 extern WmapSequenceStep g_wmap_effect35_drop_a_steps[WMAP_EFFECT35_DROP_STEPS];
 extern WmapSequenceStep g_wmap_effect35_drop_b_steps[WMAP_EFFECT35_DROP_STEPS];
@@ -114,23 +103,7 @@ extern WmapSequenceStep g_wmap_effect35_emitter_a_steps[WMAP_EFFECT35_EMITTER_ST
 extern WmapSequenceStep g_wmap_effect35_emitter_b_steps[WMAP_EFFECT35_EMITTER_STEPS];
 extern WmapSequenceStep g_wmap_effect35_timeline_steps[WMAP_EFFECT35_TIMELINE_STEPS];
 extern WmapSequenceStep g_wmap_effect35_steps[WMAP_EFFECT35_MAIN_STEPS];
-extern s32 g_wmap_focus_screen_position;
-extern u8* g_wmap_effect_model_pack_1;
-extern u8* g_wmap_effect_model_pack_2;
-extern u8* g_wmap_effect_model_pack_3;
-extern u8 g_wmap_animation_bank_0[];
-extern s32 D_8013923C;
-extern s32 D_80139260;
 extern WmapEffectEmitter* g_wmap_effect_params;
-extern s32 g_wmap_view_mode;
-extern s32 g_wmap_view_scroll_mode;
-extern WmapView g_wmap_view;
-extern VECTOR g_wmap_camera_translation;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern u8 g_wmap_effect_texture_buffer_0;
-extern u8 g_wmap_effect_texture_buffer_1;
-extern u8 g_wmap_effect_texture_buffer_2;
 extern u32 g_wmap_effect35_step;
 extern s32 g_wmap_effect35_timer;
 extern u32 g_wmap_effect35_timeline_step;
@@ -789,9 +762,9 @@ void wmap_effect35_load(void)
     g_wmap_forced_animated_land_id = 0x1F;
     wmap_queue_effect_resources(WMAP_EFFECT35_RESOURCE);
     cdrom_wait_queue_empty();
-    wmap_upload_tim(&g_wmap_effect_texture_buffer_0);
-    wmap_upload_tim(&g_wmap_effect_texture_buffer_1);
-    wmap_upload_tim(&g_wmap_effect_texture_buffer_2);
+    wmap_upload_tim(g_wmap_effect_texture_buffer_0);
+    wmap_upload_tim(g_wmap_effect_texture_buffer_1);
+    wmap_upload_tim(g_wmap_effect_texture_buffer_2);
     wmap_reset_focus_screen_position();
     wmap_start_sequence(wmap_effect35_run_timeline);
     g_wmap_sequence_busy = 1;
@@ -1151,7 +1124,7 @@ WMAP_STEP_START_ACTOR(wmap_effect35_sprite_a_start,
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_effect35_sprite_a_draw,
     g_wmap_effect35_sprite_a_step, g_wmap_effect35_sprite_a_timer,
     wmap_step_actor_animation(&g_wmap_sprite_actors[5], &g_wmap_actor_animations[5]),
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[5], g_wmap_focus_screen_position, 8, 2, 0))
+    wmap_draw_actor_sprite(&g_wmap_sprite_actors[5], g_wmap_focus_screen_position.packed, 8, 2, 0))
 
 /**
  * @brief Sprite A: start fading the sprite out.
@@ -1166,7 +1139,7 @@ WMAP_STEP_FADE_ACTOR(wmap_effect35_sprite_a_fade,
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_effect35_sprite_a_draw_fading,
     g_wmap_effect35_sprite_a_step, g_wmap_effect35_sprite_a_timer,
     wmap_step_actor_animation(&g_wmap_sprite_actors[5], &g_wmap_actor_animations[5]),
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[5], g_wmap_focus_screen_position, 8, 2, 0))
+    wmap_draw_actor_sprite(&g_wmap_sprite_actors[5], g_wmap_focus_screen_position.packed, 8, 2, 0))
 
 /**
  * @brief Sprite A: last step: finish the sequence.
@@ -1214,7 +1187,7 @@ void wmap_effect35_sprite_b_start(void)
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_effect35_sprite_b_draw,
     g_wmap_effect35_sprite_b_step, g_wmap_effect35_sprite_b_timer,
     wmap_step_actor_animation(&g_wmap_sprite_actors[6], &g_wmap_actor_animations[6]),
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[6], g_wmap_focus_screen_position, 0x19, 7, 0))
+    wmap_draw_actor_sprite(&g_wmap_sprite_actors[6], g_wmap_focus_screen_position.packed, 0x19, 7, 0))
 
 /**
  * @brief Sprite B: start fading the sprite out.
@@ -1229,7 +1202,7 @@ WMAP_STEP_FADE_ACTOR(wmap_effect35_sprite_b_fade,
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_effect35_sprite_b_draw_fading,
     g_wmap_effect35_sprite_b_step, g_wmap_effect35_sprite_b_timer,
     wmap_step_actor_animation(&g_wmap_sprite_actors[6], &g_wmap_actor_animations[6]),
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[6], g_wmap_focus_screen_position, 0x19, 7, 0))
+    wmap_draw_actor_sprite(&g_wmap_sprite_actors[6], g_wmap_focus_screen_position.packed, 0x19, 7, 0))
 
 /**
  * @brief Sprite B: last step: finish the sequence.
@@ -1265,7 +1238,7 @@ WMAP_STEP_START_ACTOR(wmap_effect35_sprite_c_start,
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_effect35_sprite_c_draw,
     g_wmap_effect35_sprite_c_step, g_wmap_effect35_sprite_c_timer,
     wmap_step_actor_animation(&g_wmap_sprite_actors[7], &g_wmap_actor_animations[7]),
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[7], g_wmap_focus_screen_position, 0x19, 8, 0))
+    wmap_draw_actor_sprite(&g_wmap_sprite_actors[7], g_wmap_focus_screen_position.packed, 0x19, 8, 0))
 
 /**
  * @brief Sprite C: start fading the sprite out.
@@ -1280,7 +1253,7 @@ WMAP_STEP_FADE_ACTOR(wmap_effect35_sprite_c_fade,
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_effect35_sprite_c_draw_fading,
     g_wmap_effect35_sprite_c_step, g_wmap_effect35_sprite_c_timer,
     wmap_step_actor_animation(&g_wmap_sprite_actors[7], &g_wmap_actor_animations[7]),
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[7], g_wmap_focus_screen_position, 0x19, 8, 0))
+    wmap_draw_actor_sprite(&g_wmap_sprite_actors[7], g_wmap_focus_screen_position.packed, 0x19, 8, 0))
 
 /**
  * @brief Sprite C: last step: finish the sequence.

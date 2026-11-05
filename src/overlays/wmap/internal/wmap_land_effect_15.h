@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-void func_8007B0D8(s32 color_mask);
+void wmap_land_effect_15_draw_models(s32 color_mask);
 void wmap_land_effect_15_sequence_4_step_02(void);
 void wmap_land_effect_15_sequence_5_step_02(void);
 void wmap_land_effect_15_sequence_7_step_01(void);

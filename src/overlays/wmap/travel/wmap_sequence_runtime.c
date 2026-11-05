@@ -10,6 +10,7 @@
 #include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 #include "../internal/wmap_cells.h"
+#include "../internal/wmap_view_effects.h"
 
 /** @brief Sequence and callback slot counts, and the number of sprite actors. */
 #define WMAP_SEQUENCE_SLOTS 14
@@ -23,77 +24,31 @@
 /** @brief End-of-sequence marker in a sequence's frame list. */
 #define WMAP_ANIMATION_LOOP 255
 
-/** @brief Map-to-model and model scales used to project a map position (see wmap_view_effects.c). */
-#define WMAP_MAP_PROJECTION_SCALE 0x14000
-#define WMAP_VIEW_SCALE 0x6000
-/** @brief Map units between two land cells, and map distance of one cell. */
-#define WMAP_CELL_SIZE 160
-
 /** @brief Step counts of the land focus, land entry and land return sequences. */
 #define WMAP_LAND_FOCUS_STEPS 10
 #define WMAP_LAND_ENTRY_STEPS 4
 #define WMAP_LAND_RETURN_STEPS 6
 
-/** @brief Default screen position of the land focus. */
-#define WMAP_FOCUS_DEFAULT_X 164
-#define WMAP_FOCUS_DEFAULT_Y 105
 
 /** @brief Land entered without a screen fade. */
 #define WMAP_NO_FADE_LAND 31
 
-/** @brief Map scroll position and projection scale (see wmap_view_effects.c). */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 projection_scale;
-    s32 unknown_0c;
-} WmapView;
-
-/** @brief Two signed coordinates stored consecutively. */
-typedef struct
-{
-    s16 x;
-    s16 y;
-} WmapCoordinatePair;
-
-extern s32 g_wmap_sequence_count;
 extern s32 g_wmap_sequence_active[];
 extern WmapSequenceCallback g_wmap_sequences[];
 extern u32 g_wmap_land_entry_step;
 extern u32 g_wmap_land_focus_step;
 extern s32 g_wmap_land_focus_timer;
 extern WmapSequenceStep g_wmap_land_focus_steps[WMAP_LAND_FOCUS_STEPS];
-extern s32 g_wmap_selected_artifact;
 extern s32 g_wmap_callback_active[];
 extern WmapSequenceCallback g_wmap_callbacks[];
 extern WmapAnimationSlot g_wmap_actor_animations[];
 
-extern WmapView g_wmap_view;
-extern s32 D_800D923C;
 extern s32* g_wmap_effect_params;
-extern s32 D_80139234;
-extern s32 D_8013923C;
-extern s32 D_80139240;
-extern s32 D_8013924C;
-extern s32 D_80139250;
-extern s32 D_80139260;
-extern s32 D_80139264;
-extern s32 D_80139268;
-extern s32 D_8013926C;
-extern s32 D_80139284;
-extern WmapCoordinatePair g_wmap_focus_screen_position;
-extern SVECTOR g_wmap_camera_rotation;
 extern s32 g_wmap_land_entry_timer;
 extern WmapSequenceStep g_wmap_land_entry_steps[WMAP_LAND_ENTRY_STEPS];
 extern u32 g_wmap_land_return_step;
 extern s32 g_wmap_land_return_timer;
 extern WmapSequenceStep g_wmap_land_return_steps[WMAP_LAND_RETURN_STEPS];
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
 
 /* Sequence steps: reached through the step tables and from the step before them. */
 void wmap_land_entry_start_focus(void);
@@ -511,8 +466,8 @@ void wmap_set_map_rotation(SVECTOR* rotation)
  */
 void wmap_reset_focus_screen_position(void)
 {
-    g_wmap_focus_screen_position.x = WMAP_FOCUS_DEFAULT_X;
-    g_wmap_focus_screen_position.y = WMAP_FOCUS_DEFAULT_Y;
+    g_wmap_focus_screen_position.point.x = WMAP_FOCUS_DEFAULT_X;
+    g_wmap_focus_screen_position.point.y = WMAP_FOCUS_DEFAULT_Y;
 }
 
 /**

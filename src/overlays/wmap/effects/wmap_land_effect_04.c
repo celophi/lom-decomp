@@ -11,6 +11,7 @@
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_star_effect.h"
 #include "../internal/wmap_cells.h"
+#include "../internal/wmap_actor_motion.h"
 
 void wmap_land_effect_04_sequence_5_step_02(void);
 void wmap_land_effect_04_wait_idle_02(void);
@@ -32,26 +33,10 @@ void wmap_land_effect_04_sequence_2_step_02(void);
 void wmap_land_effect_04_sequence_3_step_02(void);
 void wmap_land_effect_04_sequence_4_step_02(void);
 
-/** @brief Per-actor motion and animation parameters. */
-typedef struct
-{
-    s16 state;
-    s16 angle;
-    s32 x;
-    s32 z;
-    s16 scale;
-    s16 field_0E;
-    s32 field_10;
-} WmapMotion;
-
-extern u8 g_wmap_animation_bank_2[];
 extern s32 g_wmap_land_effect_04_sequence_5_timer;
 extern u8 g_wmap_load_buffer[];
-extern s32 D_801B2468;
 extern s32 g_wmap_land_effect_04_sequence_6_timer;
-extern u8* g_wmap_effect_model_pack_1;
 extern s32 g_wmap_land_effect_04_sequence_7_timer;
-extern u8* g_wmap_effect_model_pack_2;
 extern s32 g_wmap_land_effect_04_sequence_8_timer;
 extern s32 g_wmap_land_effect_04_sequence_9_timer;
 extern s32 rand(void);
@@ -63,10 +48,8 @@ extern void wmap_land_effect_04_step_03(void);
 extern void wmap_land_effect_04_end(void);
 extern s32 g_wmap_land_effect_04_timeline_timer;
 extern WmapSequenceStep g_wmap_land_effect_04_timeline_steps[];
-extern s32 g_wmap_selected_artifact;
 extern s32 g_wmap_land_effect_04_sequence_1_timer;
 extern WmapSequenceStep g_wmap_land_effect_04_sequence_1_steps[];
-extern u8 g_wmap_animation_bank_1[];
 extern void wmap_land_effect_04_sequence_1_step_02(void);
 extern s32 g_wmap_land_effect_04_sequence_2_timer;
 extern WmapSequenceStep g_wmap_land_effect_04_sequence_2_steps[];
@@ -75,11 +58,9 @@ extern s32 g_wmap_land_effect_04_sequence_3_timer;
 extern WmapSequenceStep g_wmap_land_effect_04_sequence_3_steps[];
 extern s32 g_wmap_land_effect_04_sequence_4_timer;
 extern WmapSequenceStep g_wmap_land_effect_04_sequence_4_steps[];
-extern u8 g_wmap_animation_bank_0[];
 extern void wmap_land_effect_04_sequence_4_step_02(void);
 extern WmapSequenceStep g_wmap_land_effect_04_sequence_5_steps[];
 extern WmapSequenceStep g_wmap_land_effect_04_sequence_6_steps[];
-extern s32 D_801B24B0;
 extern WmapSequenceStep g_wmap_land_effect_04_sequence_7_steps[];
 extern WmapSequenceStep g_wmap_land_effect_04_sequence_8_steps[];
 extern WmapSequenceStep g_wmap_land_effect_04_sequence_9_steps[];
@@ -96,19 +77,14 @@ extern u32 g_wmap_land_effect_04_sequence_2_step;
 extern u32 g_wmap_land_effect_04_sequence_3_step;
 extern u32 g_wmap_land_effect_04_sequence_4_step;
 
-extern VECTOR g_wmap_camera_translation;
 
-extern SVECTOR D_801B2498;
-extern SVECTOR D_801B2490;
 
 
 extern WmapAnimationSlot g_wmap_actor_animations[];
 
-extern WmapScreenPosition g_wmap_focus_screen_position;
 
 extern s32* g_wmap_effect_params;
 
-extern WmapMotion g_wmap_actor_motions[];
 
 /** @brief Initialize four effect actors and their angular spacing. */
 void wmap_land_effect_04_sequence_5_step_01(void)
@@ -145,9 +121,9 @@ void wmap_land_effect_04_sequence_5_step_01(void)
         actor->target_shade = 1;
         actor->shade = 129;
         g_wmap_actor_motions[i].state = 1;
-        g_wmap_actor_motions[i].z = 150000;
+        g_wmap_actor_motions[i].radius = 150000;
         g_wmap_actor_motions[i].angle = g_wmap_effect_params[3];
-        g_wmap_actor_motions[i].field_0E = 0;
+        g_wmap_actor_motions[i].z = 0;
         g_wmap_effect_params[3] += 1024;
     }
     g_wmap_land_effect_04_sequence_5_timer = 40;
@@ -233,9 +209,9 @@ void wmap_land_effect_04_sequence_9_step_01(void)
         actor->shade = 1;
         motion = (WmapMotion *)((u8 *)g_wmap_actor_motions + i * sizeof(WmapMotion));
         motion->angle = rand() & 4095;
-        motion->field_0E = ((i - 100) * 140) / 30;
-        motion->z = ccos(2048 - (((i - 100) * 1024) / 30)) * 140;
-        motion->x = ((rand() * 100) >> 15) + 40;
+        motion->z = ((i - 100) * 140) / 30;
+        motion->radius = ccos(2048 - (((i - 100) * 1024) / 30)) * 140;
+        motion->velocity = ((rand() * 100) >> 15) + 40;
     }
     g_wmap_land_effect_04_sequence_9_timer = 64;
     g_wmap_land_effect_04_sequence_9_step++;

@@ -12,6 +12,7 @@
 #include "../internal/wmap_effect_primitives.h"
 #include <rand.h>
 #include "../internal/wmap_step_sequence.h"
+#include "../internal/wmap_actor_motion.h"
 
 void wmap_land_event_17_step_02(void);
 void wmap_land_event_17_sequence_1_step_02(void);
@@ -44,45 +45,20 @@ s32 wmap_land_event_17_run_sequence_7(s32 arg0);
 void wmap_land_event_17_sequence_13_step_04(void);
 void wmap_land_event_17_sequence_13_step_06(void);
 
-typedef struct
-{
-    s16 unk0;
-    s16 unk2;
-    s32 unk4;
-    s32 unk8;
-    s16 unkC;
-    s16 unkE;
-    s32 unk10;
-} WmapAfcEntry;
-
-extern u8 g_wmap_effect_model_buffer_2000[];
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
 extern u8 g_wmap_load_buffer[];
-extern u8 g_wmap_effect_texture_buffer_0[];
-extern u8 g_wmap_effect_texture_buffer_1[];
-extern u8 g_wmap_effect_texture_buffer_2[];
 extern s32 g_wmap_land_event_17_timeline_timer;
 extern s32 g_wmap_land_event_17_sequence_1_timer;
 extern s32 g_wmap_land_event_17_sequence_2_timer;
 extern s32 g_wmap_land_event_17_sequence_3_timer;
-extern u8 g_wmap_animation_bank_1[];
 extern s32 g_wmap_land_event_17_sequence_4_timer;
 extern s32 g_wmap_land_event_17_sequence_5_timer;
 extern s32 g_wmap_land_event_17_sequence_6_timer;
-extern u8 g_wmap_animation_bank_2[];
 extern s32 g_wmap_land_event_17_sequence_7_timer;
 extern s32 g_wmap_land_event_17_sequence_8_timer;
 extern s32 g_wmap_land_event_17_sequence_9_timer;
 extern s32 g_wmap_land_event_17_sequence_10_timer;
 extern s32 g_wmap_land_event_17_sequence_11_timer;
 extern s32 g_wmap_land_event_17_sequence_12_timer;
-extern s32 D_800D9154;
-extern s32 D_800DCEAC;
-extern s32 D_801B25D8;
 extern s32 g_wmap_land_event_17_sequence_13_timer;
 extern s32 g_wmap_land_event_17_timer;
 extern WmapSequenceStep g_wmap_land_event_17_steps[];
@@ -101,10 +77,7 @@ extern WmapSequenceStep g_wmap_land_event_17_sequence_10_steps[];
 extern WmapSequenceStep g_wmap_land_event_17_sequence_11_steps[];
 extern WmapSequenceStep g_wmap_land_event_17_sequence_12_steps[];
 extern WmapSequenceStep g_wmap_land_event_17_sequence_13_steps[];
-extern u8 *g_wmap_effect_model_pack_1;
-extern u8 *g_wmap_effect_model_pack_2;
 extern u32 g_wmap_land_event_17_step;
-extern u8 g_wmap_animation_bank_0[];
 extern u32 g_wmap_land_event_17_timeline_step;
 extern u32 g_wmap_land_event_17_sequence_1_step;
 extern u32 g_wmap_land_event_17_sequence_2_step;
@@ -120,26 +93,12 @@ extern u32 g_wmap_land_event_17_sequence_11_step;
 extern u32 g_wmap_land_event_17_sequence_12_step;
 extern u32 g_wmap_land_event_17_sequence_13_step;
 
-extern VECTOR g_wmap_camera_translation;
 
-/** @brief Map scroll position (map units) and projection scale. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 projection_scale;
-    s32 unknown_0c;
-} WmapView;
-
-extern WmapView g_wmap_view;
 
 
 
 extern WmapAnimationSlot g_wmap_actor_animations[];
 
-extern WmapScreenPosition g_wmap_focus_screen_position;
-extern WmapScreenPosition D_80182D58;
-extern WmapScreenPosition D_80182D60;
 extern WmapScreenPosition D_80182D64;
 extern WmapScreenPosition D_80182D6C;
 extern WmapScreenPosition D_80182D7C;
@@ -148,7 +107,6 @@ extern WmapScreenPosition D_80182D90;
 extern WmapScreenPosition D_80182D98;
 extern WmapScreenPosition D_80182DB8;
 
-extern WmapAfcEntry g_wmap_actor_motions[];
 
 /** @brief Size of the random screen-space area shared by the nine sprites. */
 #define WMAP_EVENT17_SCATTER_WIDTH 50
@@ -200,8 +158,8 @@ void wmap_land_event_17_step_01(void)
 {
     g_wmap_effect_model_pack_1 = g_wmap_effect_model_buffer_2000;
     g_wmap_effect_model_pack_2 = g_wmap_effect_model_buffer_2000 + 0x2000;
-    g_wmap_focus_screen_position.point.x = 0x94;
-    g_wmap_focus_screen_position.point.y = 0x31;
+    g_wmap_focus_screen_position.point.x = WMAP_EVENT_FOCUS_X;
+    g_wmap_focus_screen_position.point.y = WMAP_EVENT_FOCUS_Y;
     g_wmap_auxiliary_labels_hidden = 1;
     wmap_find_land_cell(0x11, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_view_scroll_mode = 2;
@@ -356,15 +314,15 @@ void wmap_land_event_17_sequence_13_step_01(void)
     s32 i;
 
     D_801B25D8 = 1;
-    D_800DCEAC = 1;
+    g_wmap_falling_spawn_counts[1] = 1;
 
     for (i = 80; i < 124; i++)
     {
-        g_wmap_actor_motions[i].unk0 = 0;
+        g_wmap_actor_motions[i].state = 0;
         WMAP_INIT_PARTICLE_ACTOR(i, g_wmap_animation_bank_0, 1);
     }
 
-    D_800D9154 = 2;
+    g_wmap_falling_spawn_timers[1] = 2;
     g_wmap_land_event_17_sequence_13_timer = 0x10;
     g_wmap_land_event_17_sequence_13_step++;
     wmap_land_event_17_sequence_13_step_02();
@@ -739,7 +697,7 @@ WMAP_STEP_UPDATE_AND_WAIT(wmap_land_event_17_sequence_13_step_04,
  * @brief Stop spawning particles and keep updating those already active.
  */
 WMAP_STEP_STOP_PARTICLE_SPAWNS(wmap_land_event_17_sequence_13_step_05, g_wmap_land_event_17_sequence_13_step, g_wmap_land_event_17_sequence_13_timer,
-                              D_800DCEAC, 0x64, wmap_land_event_17_sequence_13_step_06)
+                              g_wmap_falling_spawn_counts[1], 0x64, wmap_land_event_17_sequence_13_step_06)
 
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_event_17_sequence_13_step_06,

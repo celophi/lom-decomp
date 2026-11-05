@@ -64,14 +64,6 @@ typedef enum
     WMAP_GAME_PLAYING = 2
 } WmapGamePhase;
 
-/** @brief Map scroll position and perspective scale. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 scale;
-} WmapDisplayProjection;
-
 /** @brief VRAM upload area, sprite palettes, and texture-page origin. */
 typedef struct
 {
@@ -201,12 +193,8 @@ extern s32 g_wmap_game_origin_x;
 extern s32 g_wmap_game_origin_y;
 extern s32 g_wmap_game_hits;
 
-extern s32 g_wmap_view_scroll_enabled;
-extern s32 g_wmap_selected_artifact;
-extern s32 g_wmap_view_mode;
 extern s32 g_wmap_game_phase;
 
-extern WmapDisplayProjection g_wmap_view;
 extern s32 g_wmap_game_round;
 extern s32 g_wmap_game_timer;
 extern s32 g_wmap_game_score;
@@ -214,20 +202,14 @@ extern SPRT g_wmap_game_continue_prompt;
 extern SPRT g_wmap_game_exit_prompt;
 extern SPRT g_wmap_game_countdown_sprite;
 extern s32 g_wmap_game_spawn_timer;
-extern s32 D_800D922C;
 extern s32 D_800D9234;
-extern s32 g_wmap_cursor_column;
-extern s32 g_wmap_cursor_row;
 extern u8 g_wmap_game_spawn_patterns[][9];
 extern s32 D_800500DC[];
 extern WmapTextureInfo D_800CBBE8[];
 extern s32 D_800DBE74;
 extern WmapMapPoint D_8004FD04[];
-extern s16 D_800D036C[];
+extern s16 g_wmap_land_label_cells[];
 extern s32 g_wmap_land_scale_steps[];
-extern SVECTOR g_wmap_camera_rotation;
-extern s32 D_80139958;
-extern VECTOR g_wmap_camera_translation;
 extern s32 g_wmap_cell_effect_steps[];
 extern WmapQuadTemplate g_wmap_cell_effect_quads[16];
 extern WmapEffectCell D_8011D108[6][6];
@@ -239,14 +221,12 @@ extern u8 g_wmap_spirit_frames[];
 extern SPRT g_wmap_spirit_level_sprites[16];
 extern SPRT g_wmap_spirit_accent_sprites[16];
 extern const s32 D_8004FC74[];
-extern WmapDisplayProjection g_wmap_saved_view;
 extern s32 g_wmap_spirit_selection;
 extern s32 D_80139218;
 extern WmapGlyph g_wmap_information_glyphs[];
 extern WmapGlyphPlacement g_wmap_information_placements[];
 extern s32 g_wmap_information_group_starts[];
 extern s32 g_wmap_information_values[];
-extern s32 g_wmap_view_scroll_mode;
 extern s32 D_800D7D60;
 extern s32 D_800D7D64;
 extern s32 D_800D7D68;
@@ -895,9 +875,9 @@ void wmap_draw_land_marker(s32 map_x, s32 map_y, WmapLandDisplay* marker)
         s32 z_bucket;
         s32 sprite_y;
 
-        scale = g_wmap_view.scale;
-        position.vx = ((((map_x - 1) * 160) - ((g_wmap_view.x * 0x14000) / scale)) * 0x6000) / scale;
-        position.vy = ((((map_y - 1) * 160) - ((g_wmap_view.y * 0x14000) / scale)) * 0x6000) / scale;
+        scale = g_wmap_view.projection_scale;
+        position.vx = ((((map_x - 1) * WMAP_CELL_SIZE) - ((g_wmap_view.x * WMAP_MAP_PROJECTION_SCALE) / scale)) * WMAP_VIEW_SCALE) / scale;
+        position.vy = ((((map_y - 1) * WMAP_CELL_SIZE) - ((g_wmap_view.y * WMAP_MAP_PROJECTION_SCALE) / scale)) * WMAP_VIEW_SCALE) / scale;
         position.vz = 0;
 
         gte_ldv0(&position);
@@ -946,7 +926,7 @@ void wmap_draw_land_marker(s32 map_x, s32 map_y, WmapLandDisplay* marker)
         s32 u_index;
         s32 v_index;
 
-        texture = D_800D036C[marker->resource_id];
+        texture = g_wmap_land_label_cells[marker->resource_id];
         u_index = texture & 7;
         sprite->u0 = u_index << 5;
         v_index = texture / 8;
@@ -1035,9 +1015,9 @@ void wmap_draw_land_animation(s32 x, s32 y, WmapLandDisplay* state, s32 resource
         return;
     }
 
-    projection_scale = g_wmap_view.scale;
-    locals.position.vx = (((x - 1) * 0xA0 - (g_wmap_view.x * 0x14000) / projection_scale) * 0x6000) / projection_scale;
-    locals.position.vy = (((y - 1) * 0xA0 - (g_wmap_view.y * 0x14000) / projection_scale) * 0x6000) / projection_scale;
+    projection_scale = g_wmap_view.projection_scale;
+    locals.position.vx = (((x - 1) * WMAP_CELL_SIZE - (g_wmap_view.x * WMAP_MAP_PROJECTION_SCALE) / projection_scale) * WMAP_VIEW_SCALE) / projection_scale;
+    locals.position.vy = (((y - 1) * WMAP_CELL_SIZE - (g_wmap_view.y * WMAP_MAP_PROJECTION_SCALE) / projection_scale) * WMAP_VIEW_SCALE) / projection_scale;
     locals.position.vz = 0;
 
     gte_ldv0(&locals.position);
@@ -1178,7 +1158,7 @@ void wmap_draw_lands(void)
     world_position.vz = g_wmap_camera_translation.vz + g_wmap_effect_camera_translation_offset.vz;
 
     translation = world_position;
-    translation.vz = (translation.vz * D_80139958) / 0x6000;
+    translation.vz = (translation.vz * g_wmap_view.projection_scale) / WMAP_VIEW_SCALE;
 
     RotMatrix(&rotation, &matrix);
     TransMatrix(&matrix, &translation);
@@ -1364,10 +1344,10 @@ void wmap_draw_cell_effect(s32 x, s32 y)
         return;
     }
 
-    projected_x = (g_wmap_view.x * 0x14000) / g_wmap_view.scale;
-    projected_y = (g_wmap_view.y * 0x14000) / g_wmap_view.scale;
-    base.x = ((((x - 1) * 0xA0) - projected_x) * 0x6000) / g_wmap_view.scale + 0xA;
-    base.y = ((((y - 1) * 0xA0) - projected_y) * 0x6000) / g_wmap_view.scale + 0xC;
+    projected_x = (g_wmap_view.x * WMAP_MAP_PROJECTION_SCALE) / g_wmap_view.projection_scale;
+    projected_y = (g_wmap_view.y * WMAP_MAP_PROJECTION_SCALE) / g_wmap_view.projection_scale;
+    base.x = ((((x - 1) * WMAP_CELL_SIZE) - projected_x) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale + 0xA;
+    base.y = ((((y - 1) * WMAP_CELL_SIZE) - projected_y) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale + 0xC;
     base.z = 0;
 
     color_frame = cell->frame * 7;

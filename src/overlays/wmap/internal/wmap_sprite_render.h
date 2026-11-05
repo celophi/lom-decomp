@@ -44,6 +44,13 @@ typedef union
     } point;
 } WmapScreenPosition;
 
+/** @brief Signed coordinate pair. */
+typedef struct
+{
+    s16 x;
+    s16 y;
+} WmapPoint;
+
 void wmap_draw_actor_sprite(WmapSpriteActor* actor, s32 screen_position, s32 texture_index, s32 ot_index, s32 variant);
 
 /** @brief Sprite actor pool (256 actors); actor i animates from g_wmap_actor_animations[i]. */
@@ -54,5 +61,9 @@ extern WmapSpriteActor g_wmap_sprite_actors[];
  * @param first Index of the block's first actor in g_wmap_sprite_actors.
  */
 #define WMAP_ACTOR_BLOCK(first) (&g_wmap_sprite_actors[first])
+
+/** @brief Sprite actor and animation slot of the travel vehicle. */
+extern WmapSpriteActor g_wmap_vehicle_actor;
+extern WmapAnimationSlot g_wmap_vehicle_animation;
 
 #endif

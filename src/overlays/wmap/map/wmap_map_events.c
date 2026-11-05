@@ -22,6 +22,7 @@
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_travel_sequences.h"
+#include "../internal/wmap_view_effects.h"
 #include "main/audio/akao_cmd.h"
 #include "main/cdrom.h"
 #include "sdk/gte_dmpsx_compat.h"
@@ -94,41 +95,19 @@ typedef union
     WmapVehicleMotion vehicle;
 } WmapMotionSlot;
 
-/** @brief Map scroll position (map units) and projection scale. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 projection_scale;
-    s32 unknown_0c;
-} WmapView;
-
-extern s32 g_wmap_sequence_count;
 extern s32 g_wmap_special_travel_pending;
-extern s32 D_80139234;
 /** @brief Set when the arrival event comes from all four sides; it then also draws trails. */
 extern s32 g_wmap_arrival_event_all_sides;
 /** @brief Sides the arriving sprites come from: +x, +y, -x, -y. */
 extern u8 g_wmap_arrival_event_sides[WMAP_ARRIVAL_SIDES];
 /** @brief Animation of the scripted traveler (WMAP_SCRIPTED_TRAVELER), loaded by the walk events. */
 extern u8 g_wmap_scripted_traveler_animation[];
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
 extern s32 g_wmap_vehicle_phase;
 extern WmapScreenPosition g_wmap_vehicle_screen_position;
-extern WmapSpriteActor g_wmap_vehicle_actor;
-extern WmapAnimationSlot g_wmap_vehicle_animation;
 extern WmapAnimationSlot g_wmap_actor_animations[];
 extern WmapMotionSlot g_wmap_actor_motions[];
 /** @brief Motion slots from actor WMAP_ARRIVAL_FIRST_ACTOR on, addressed as their own array. */
 extern WmapMotionSlot g_wmap_effect_actor_motions[];
-extern u8 g_wmap_animation_bank_0[];
-extern u8 g_wmap_animation_bank_3[];
-extern WmapView g_wmap_view;
-extern WmapView g_wmap_saved_view;
 
 extern WmapSequenceStep g_wmap_arrival_event_steps[];
 extern u32 g_wmap_arrival_event_step;
@@ -225,9 +204,9 @@ static inline void wmap_walk_event_route(s32 land_id)
     g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].path_index = 1;
     g_wmap_scripted_travel_active = 1;
     g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].next_cell_x = g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].path_x.steps[1].cell;
-    g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].target_x = (g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].path_x.steps[1].cell - 1) * WMAP_TRAVEL_CELL_UNITS;
+    g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].target_x = (g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].path_x.steps[1].cell - 1) * WMAP_CELL_SIZE;
     g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].next_cell_y = g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].path_y.steps[1].cell;
-    g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].target_y = (g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].path_y.steps[1].cell - 1) * WMAP_TRAVEL_CELL_UNITS;
+    g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].target_y = (g_wmap_travelers[WMAP_SCRIPTED_TRAVELER].path_y.steps[1].cell - 1) * WMAP_CELL_SIZE;
 }
 
 /** @brief Show the scripted traveler's sprite and start fading it in. */

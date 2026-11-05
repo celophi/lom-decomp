@@ -38,21 +38,6 @@
 #define WMAP_ARTIFACT_SHADOW_SKEW 10
 #define WMAP_CAROUSEL_VOLUME 143
 
-/** @brief Signed map-screen coordinate pair. */
-typedef struct
-{
-    s16 x;
-    s16 y;
-} WmapPoint;
-
-/** @brief Map translation and projection scale. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 scale;
-} WmapProjectionState;
-
 /** @brief Route state reset when selecting an artifact. */
 typedef struct
 {
@@ -75,21 +60,11 @@ enum WmapCarouselTextureWord
 };
 
 extern const WmapPoint g_wmap_cell_focus_offsets[];
-extern s32 g_wmap_cursor_column;
-extern s32 g_wmap_cursor_row;
-extern s32 g_wmap_sequence_count;
-extern s32 g_wmap_view_mode;
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
 extern u16 D_800CC776;
 extern s32 D_800CCBF4[];
 extern WmapRouteCell D_8011D108[6][6];
-extern s32 g_wmap_selected_artifact;
 extern s32 D_801398F4;
-extern WmapProjectionState g_wmap_view;
 
-extern s32 D_80139838[WMAP_ARTIFACT_SLOTS];
 extern s32 g_wmap_carousel_turn_frames;
 extern s32 g_wmap_carousel_turn_step;
 

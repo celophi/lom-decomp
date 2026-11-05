@@ -37,11 +37,11 @@ extern WmapFrame* g_wmap_current_frame;
 /** @brief Bytes committed to the current frame's dynamic packet buffer. */
 extern s32 g_wmap_packet_bytes;
 
-void func_800641DC(void);
+void wmap_draw_exit_fade(void);
 void wmap_update_exit_panels(void);
-void func_80064AF8(void);
-void func_80064BF8(void);
-s32 func_80064D64(s32 initialize);
+void wmap_render_callback_frame(void);
+void wmap_draw_entry_fade(void);
+s32 wmap_run_overlay_fade(s32 initialize);
 
 /** @brief Packed RGB color used to shade the captured exit panels. */
 extern u32 g_wmap_exit_panel_color;

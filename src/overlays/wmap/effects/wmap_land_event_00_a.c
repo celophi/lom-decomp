@@ -11,6 +11,7 @@
 #include "../internal/wmap_main.h"
 #include "../internal/wmap_effect_resources.h"
 #include "../internal/wmap_step_sequence.h"
+#include "../internal/wmap_land_effect_10.h"
 
 void wmap_land_event_00_a_step_02(void);
 void wmap_land_event_00_a_step_03(void);
@@ -42,21 +43,11 @@ typedef struct
     u8 r, g, b;
 } WmapColor;
 
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
-extern u8 g_wmap_effect_model_buffer_2000[];
-extern s32 g_wmap_view_scroll_mode;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
 extern s32 g_wmap_land_event_00_a_sequence_4_timer;
 extern void wmap_land_event_00_a_sequence_4_step_02(void);
 extern s32 g_wmap_land_event_00_a_sequence_5_timer;
-extern s32 D_8013923C;
-extern s32 D_80182DE4;
 extern s32 g_wmap_land_event_00_a_sequence_6_timer;
-extern s32 D_80139240;
 extern s32 g_wmap_land_event_00_a_sequence_7_timer;
-extern s32 D_8013924C;
 extern s32 g_wmap_land_event_00_a_sequence_8_timer;
 extern s32 g_wmap_land_event_00_a_timer;
 extern WmapSequenceStep g_wmap_land_event_00_a_steps[];
@@ -75,13 +66,7 @@ extern WmapSequenceStep g_wmap_land_event_00_a_sequence_5_steps[];
 extern WmapSequenceStep g_wmap_land_event_00_a_sequence_6_steps[];
 extern WmapSequenceStep g_wmap_land_event_00_a_sequence_7_steps[];
 extern WmapSequenceStep g_wmap_land_event_00_a_sequence_8_steps[];
-extern u8 g_wmap_animation_bank_0[];
-extern u8 *g_wmap_effect_model_pack_1;
-extern u8 *g_wmap_effect_model_pack_2;
-extern u8 *g_wmap_effect_model_pack_3;
-extern u8 *g_wmap_effect_model_pack_4;
 extern u32 g_wmap_land_event_00_a_step;
-extern u8 g_wmap_animation_bank_2;
 extern u8 g_wmap_actor_motions[];
 extern u32 g_wmap_land_event_00_a_sequence_4_step;
 extern s32 g_wmap_load_buffer[];
@@ -93,27 +78,13 @@ extern u32 g_wmap_land_event_00_a_timeline_step;
 extern u32 g_wmap_land_event_00_a_sequence_1_step;
 extern u32 g_wmap_land_event_00_a_sequence_2_step;
 extern u32 g_wmap_land_event_00_a_sequence_3_step;
-extern void func_8008ECF8(s32, s32, u8*, void*);
 
-extern VECTOR g_wmap_camera_translation;
 
-/** @brief Map scroll position (map units) and projection scale. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 projection_scale;
-    s32 unknown_0c;
-} WmapView;
 
-extern WmapView g_wmap_view;
-
-extern SVECTOR D_801B2498;
 
 
 extern WmapAnimationSlot g_wmap_actor_animations[];
 
-extern WmapScreenPosition g_wmap_focus_screen_position;
 
 extern s32* g_wmap_effect_params;
 
@@ -155,7 +126,7 @@ void wmap_land_event_00_a_sequence_4_step_01(void)
     s32 current;
 
     index = 0x14;
-    resource = &g_wmap_animation_bank_2;
+    resource = g_wmap_animation_bank_2;
     resource_cursor = (u8 *)&g_wmap_actor_animations + index * 8;
     slot = (s16 *)((u8 *)&g_wmap_actor_motions + index * 20);
     for (; index < 0x78; index++)
@@ -345,8 +316,8 @@ WMAP_STEP_WAIT_SCROLL(wmap_land_event_00_a_step_02,
 void wmap_land_event_00_a_step_03(void)
 {
     cdrom_wait_queue_empty();
-    g_wmap_focus_screen_position.point.x = 0x94;
-    g_wmap_focus_screen_position.point.y = 0x31;
+    g_wmap_focus_screen_position.point.x = WMAP_EVENT_FOCUS_X;
+    g_wmap_focus_screen_position.point.y = WMAP_EVENT_FOCUS_Y;
     g_wmap_auxiliary_labels_hidden = 1;
     g_wmap_overlay_fade_depth = 4;
     g_wmap_overlay_fade_target = 0x35;
@@ -540,7 +511,7 @@ WMAP_STEP_RESET(wmap_land_event_00_a_sequence_4_reset, g_wmap_land_event_00_a_se
 void wmap_land_event_00_a_sequence_4_step_02(void)
 {
     wmap_set_effect_camera_transform();
-    func_8008ECF8(0x14, 0x78, g_wmap_effect_model_pack_4, &g_wmap_effect_params[30]);
+    wmap_land_effect_10_update_falling_sparks(0x14, 0x78, g_wmap_effect_model_pack_4, &g_wmap_effect_params[30]);
     wmap_queue_texture_page(0x25, 5);
     if (--g_wmap_land_event_00_a_sequence_4_timer == 0)
     {
@@ -563,7 +534,7 @@ void wmap_land_event_00_a_sequence_4_step_03(void)
 void wmap_land_event_00_a_sequence_4_step_04(void)
 {
     wmap_set_effect_camera_transform();
-    func_8008ECF8(0x14, 0x78, g_wmap_effect_model_pack_4, &g_wmap_effect_params[30]);
+    wmap_land_effect_10_update_falling_sparks(0x14, 0x78, g_wmap_effect_model_pack_4, &g_wmap_effect_params[30]);
     wmap_queue_texture_page(0x25, 5);
     if (--g_wmap_land_event_00_a_sequence_4_timer == 0)
     {

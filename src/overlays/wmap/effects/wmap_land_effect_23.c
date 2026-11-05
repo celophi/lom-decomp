@@ -9,6 +9,7 @@
 #include "../internal/wmap_effect_primitives.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_cells.h"
+#include "../internal/wmap_actor_motion.h"
 
 void wmap_land_effect_23_sequence_5_step_02(void);
 void wmap_land_effect_23_sequence_6_step_02(void);
@@ -44,35 +45,17 @@ void wmap_land_effect_23_sequence_12_step_04(void);
 void wmap_land_effect_23_sequence_13_step_04(void);
 void wmap_land_effect_23_sequence_13_step_06(void);
 
-/** @brief World-map 0x14-byte slot: only the leading halfword is cleared here. */
-typedef struct
-{
-    s16 field_00;
-    u8 pad_02[0x12];
-} WmapSlot14;
-
 extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_23_sequence_2_timer;
-extern u8* g_wmap_effect_model_pack_1;
 extern s32 g_wmap_land_effect_23_sequence_3_timer;
 extern s32 g_wmap_land_effect_23_sequence_4_timer;
-extern u8 g_wmap_animation_bank_1[];
 extern s32 g_wmap_land_effect_23_sequence_5_timer;
 extern s32 g_wmap_land_effect_23_sequence_6_timer;
-extern s32* g_wmap_effect_model_pack_4;
-extern s32 D_80139234;
-extern s32 D_801B25D8;
 extern s32 g_wmap_land_effect_23_sequence_7_timer;
-extern s32* g_wmap_effect_model_pack_3;
-extern s32 D_8013923C;
 extern s32 g_wmap_land_effect_23_sequence_8_timer;
 extern s32 g_wmap_land_effect_23_sequence_10_timer;
-extern u8 g_wmap_animation_bank_2[];
-extern s32 D_800D9154;
-extern s32 D_800DCEAC;
 extern s32 g_wmap_land_effect_23_sequence_13_timer;
 extern int rand(void);
-extern s32 D_80139264;
 extern s32 g_wmap_land_effect_23_sequence_14_timer;
 extern s32 g_wmap_land_effect_23_timer;
 extern WmapSequenceStep g_wmap_land_effect_23_steps[];
@@ -80,7 +63,6 @@ extern s32 g_wmap_land_effect_23_timeline_timer;
 extern WmapSequenceStep g_wmap_land_effect_23_timeline_steps[];
 extern s32 g_wmap_land_effect_23_sequence_1_timer;
 extern WmapSequenceStep g_wmap_land_effect_23_sequence_1_steps[];
-extern u8 g_wmap_animation_bank_0[];
 extern void wmap_land_effect_23_sequence_1_step_02(void);
 extern WmapSequenceStep g_wmap_land_effect_23_sequence_2_steps[];
 extern WmapSequenceStep g_wmap_land_effect_23_sequence_3_steps[];
@@ -92,17 +74,12 @@ extern WmapSequenceStep g_wmap_land_effect_23_sequence_7_steps[];
 extern WmapSequenceStep g_wmap_land_effect_23_sequence_8_steps[];
 extern s32 g_wmap_land_effect_23_sequence_9_timer;
 extern WmapSequenceStep g_wmap_land_effect_23_sequence_9_steps[];
-extern u8 g_wmap_animation_bank_4[];
-extern s32 D_8013924C;
 extern WmapSequenceStep g_wmap_land_effect_23_sequence_10_steps[];
 extern void wmap_land_effect_23_sequence_10_step_04(void);
 extern s32 g_wmap_land_effect_23_sequence_11_timer;
 extern WmapSequenceStep g_wmap_land_effect_23_sequence_11_steps[];
-extern u8 g_wmap_animation_bank_3[];
-extern s32 D_80139250;
 extern s32 g_wmap_land_effect_23_sequence_12_timer;
 extern WmapSequenceStep g_wmap_land_effect_23_sequence_12_steps[];
-extern s32 D_80139260;
 extern WmapSequenceStep g_wmap_land_effect_23_sequence_13_steps[];
 extern WmapSequenceStep g_wmap_land_effect_23_sequence_14_steps[];
 extern u32 g_wmap_land_effect_23_sequence_2_step;
@@ -126,16 +103,11 @@ extern u32 g_wmap_land_effect_23_sequence_12_step;
 
 extern WmapAnimationSlot g_wmap_actor_animations[];
 
-extern WmapScreenPosition g_wmap_focus_screen_position;
-extern WmapScreenPosition D_80182D58;
-extern WmapScreenPosition D_80182D60;
 extern WmapScreenPosition D_80182D64;
 
 extern s32* g_wmap_effect_params;
 
-extern WmapSlot14 g_wmap_actor_motions[];
 
-extern VECTOR g_wmap_camera_translation;
 
 
 /** @brief Move the model closer and fade it until the timer expires. */
@@ -172,7 +144,7 @@ void wmap_land_effect_23_sequence_5_step_01(void)
     g_wmap_effect_params[0x9] = 1;
     g_wmap_effect_params[0xA] = 0x124F8;
     WMAP_RESET_PARTICLE_SLOTS(i, 20,
-                              g_wmap_actor_motions[i + 180].field_00,
+                              g_wmap_actor_motions[i + 180].state,
                               180, g_wmap_animation_bank_1);
     g_wmap_land_effect_23_sequence_5_timer = 80;
     g_wmap_land_effect_23_sequence_5_step++;
@@ -195,7 +167,7 @@ void wmap_land_effect_23_sequence_6_step_01(void)
     g_wmap_effect_params[0x13] = 2;
     g_wmap_effect_params[0x14] = 0x2710;
     WMAP_RESET_PARTICLE_SLOTS(i, 90,
-                              g_wmap_actor_motions[i + 30].field_00,
+                              g_wmap_actor_motions[i + 30].state,
                               30, g_wmap_animation_bank_1);
     g_wmap_land_effect_23_sequence_6_timer = 450;
     g_wmap_land_effect_23_sequence_6_step++;
@@ -310,7 +282,7 @@ void wmap_land_effect_23_sequence_10_step_01(void)
     g_wmap_effect_params[29] = 0;
     g_wmap_effect_params[30] = 0x4650;
     WMAP_RESET_PARTICLE_SLOTS(i, 48,
-                              g_wmap_actor_motions[i + 130].field_00,
+                              g_wmap_actor_motions[i + 130].state,
                               130, g_wmap_animation_bank_1);
     g_wmap_land_effect_23_sequence_10_timer = 0xC0;
     g_wmap_land_effect_23_sequence_10_step++;
@@ -325,15 +297,15 @@ void wmap_land_effect_23_sequence_13_step_01(void)
     s32 i;
 
     g_wmap_effect_fade_d = 1;
-    D_800DCEAC = 8;
+    g_wmap_falling_spawn_counts[1] = 8;
 
     for (i = 0xB4; i < 0xF0; i++)
     {
-        g_wmap_actor_motions[i].field_00 = 0;
+        g_wmap_actor_motions[i].state = 0;
         WMAP_INIT_PARTICLE_ACTOR(i, g_wmap_animation_bank_2, 0);
     }
 
-    D_800D9154 = 1;
+    g_wmap_falling_spawn_timers[1] = 1;
     g_wmap_land_effect_23_sequence_13_timer = 0x10;
     g_wmap_land_effect_23_sequence_13_step++;
     wmap_land_effect_23_sequence_13_step_02();
@@ -391,8 +363,8 @@ WMAP_STEP_RESET(wmap_land_effect_23_reset, g_wmap_land_effect_23_step, g_wmap_la
 void wmap_land_effect_23_step_01(void)
 {
     g_wmap_forced_animated_land_id = 0x10;
-    g_wmap_focus_screen_position.point.x = 0xA4;
-    g_wmap_focus_screen_position.point.y = 0x69;
+    g_wmap_focus_screen_position.point.x = WMAP_FOCUS_DEFAULT_X;
+    g_wmap_focus_screen_position.point.y = WMAP_FOCUS_DEFAULT_Y;
     wmap_start_sequence(wmap_land_effect_23_run_timeline);
     g_wmap_sequence_busy = 1;
     g_wmap_land_effect_23_step++;
@@ -948,7 +920,7 @@ WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_23_sequence_13_step_04,
  * @brief Stop spawning particles and keep updating those already active.
  */
 WMAP_STEP_STOP_PARTICLE_SPAWNS(wmap_land_effect_23_sequence_13_step_05, g_wmap_land_effect_23_sequence_13_step, g_wmap_land_effect_23_sequence_13_timer,
-                              D_800DCEAC, 0x40, wmap_land_effect_23_sequence_13_step_06)
+                              g_wmap_falling_spawn_counts[1], 0x40, wmap_land_effect_23_sequence_13_step_06)
 
 /** @brief Update the effect until the step timer expires. */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_23_sequence_13_step_06,

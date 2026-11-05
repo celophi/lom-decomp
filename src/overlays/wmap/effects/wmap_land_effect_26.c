@@ -8,6 +8,7 @@
 #include "../internal/wmap_effect_primitives.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_cells.h"
+#include "../internal/wmap_main.h"
 
 /** @brief Screen coordinates and their packed renderer argument. */
 typedef union
@@ -19,18 +20,18 @@ typedef union
     } point;
 } WmapScreenPoint;
 
-/** @brief Per-actor motion and animation parameters. */
+/** @brief Screen-space particle in a g_wmap_actor_motions slot that falls and sways sideways; positions are in 1/16 pixels. */
 typedef struct
 {
     s16 state;
-    s16 angle;
-    s32 x;
-    s32 z;
-    s16 scale;
-    s16 field_0E;
-    s16 field_10;
-    s16 field_12;
-} WmapMotion;
+    s16 base_x;
+    s32 fall_speed;
+    s32 unknown_08;
+    s16 sway_amplitude;
+    s16 y;
+    s16 sway_step;
+    s16 sway_phase;
+} WmapSwayParticle;
 
 void wmap_land_effect_26_sequence_11_step_02(void);
 void wmap_land_effect_26_wait_idle_02(void);
@@ -59,32 +60,21 @@ void wmap_land_effect_26_sequence_11_step_04(void);
 void wmap_land_effect_26_sequence_11_step_06(void);
 
 extern u8 g_wmap_load_buffer[];
-extern s32 D_801B2470;
 extern s32 g_wmap_land_effect_26_sequence_1_timer;
-extern void *g_wmap_effect_model_pack_1;
 extern s32 D_801B2474;
 extern s32 g_wmap_land_effect_26_sequence_2_timer;
-extern void *g_wmap_effect_model_pack_2;
 extern s32 g_wmap_land_effect_26_sequence_3_timer;
-extern s32 D_801B24B4;
-extern s32 D_80182DE4;
-extern u8* g_wmap_effect_model_pack_3;
 extern s32 g_wmap_land_effect_26_sequence_4_timer;
-extern u8* g_wmap_effect_model_pack_4;
 extern s32 g_wmap_land_effect_26_sequence_5_timer;
-extern u8* g_wmap_effect_model_pack_5;
 extern s32 g_wmap_land_effect_26_sequence_6_timer;
-extern u8 g_wmap_animation_bank_2[];
 extern s32 g_wmap_land_effect_26_sequence_11_timer;
 extern u32 rand(void);
-extern s8 D_80051B4C[];
 extern s32 g_wmap_land_effect_26_timer;
 extern WmapSequenceStep g_wmap_land_effect_26_steps[];
 extern void wmap_land_effect_26_step_03(void);
 extern void wmap_land_effect_26_end(void);
 extern s32 g_wmap_land_effect_26_timeline_timer;
 extern WmapSequenceStep g_wmap_land_effect_26_timeline_steps[];
-extern u32 g_wmap_selected_artifact;
 extern WmapSequenceStep g_wmap_land_effect_26_sequence_1_steps[];
 extern WmapSequenceStep g_wmap_land_effect_26_sequence_2_steps[];
 extern WmapSequenceStep g_wmap_land_effect_26_sequence_3_steps[];
@@ -93,7 +83,6 @@ extern WmapSequenceStep g_wmap_land_effect_26_sequence_5_steps[];
 extern WmapSequenceStep g_wmap_land_effect_26_sequence_6_steps[];
 extern s32 g_wmap_land_effect_26_sequence_7_timer;
 extern WmapSequenceStep g_wmap_land_effect_26_sequence_7_steps[];
-extern u8 g_wmap_animation_bank_0[];
 extern s32 g_wmap_land_effect_26_sequence_9_timer;
 extern WmapSequenceStep g_wmap_land_effect_26_sequence_9_steps[];
 extern s32 g_wmap_land_effect_26_sequence_8_timer;
@@ -101,7 +90,6 @@ extern WmapSequenceStep g_wmap_land_effect_26_sequence_8_steps[];
 extern void wmap_land_effect_26_sequence_8_step_04(void);
 extern s32 g_wmap_land_effect_26_sequence_10_timer;
 extern WmapSequenceStep g_wmap_land_effect_26_sequence_10_steps[];
-extern u8 g_wmap_animation_bank_1[];
 extern void wmap_land_effect_26_sequence_10_step_02(void);
 extern WmapSequenceStep g_wmap_land_effect_26_sequence_11_steps[];
 
@@ -119,19 +107,13 @@ extern u32 g_wmap_land_effect_26_sequence_9_step;
 extern u32 g_wmap_land_effect_26_sequence_8_step;
 extern u32 g_wmap_land_effect_26_sequence_10_step;
 
-extern VECTOR g_wmap_camera_translation;
-extern VECTOR D_80139898;
-extern VECTOR D_801B2660;
 
-extern SVECTOR D_801B2670;
-extern SVECTOR D_801B2678;
 
 
 extern WmapAnimationSlot g_wmap_actor_animations[];
 
-extern WmapScreenPosition g_wmap_focus_screen_position;
 
-extern WmapMotion g_wmap_actor_motions[];
+extern WmapSwayParticle g_wmap_actor_motions[];
 
 /** @brief Approach the effect depth and draw its alternating-brightness fade. */
 void wmap_land_effect_26_sequence_1_step_02(void)
@@ -332,12 +314,12 @@ void wmap_land_effect_26_sequence_11_step_01(void)
     {
         actor = &g_wmap_sprite_actors[i];
         g_wmap_actor_motions[i].state = 1;
-        g_wmap_actor_motions[i].angle = (rand() * 155) >> 10;
-        g_wmap_actor_motions[i].field_0E = (rand() * 7) >> 6;
-        g_wmap_actor_motions[i].x = ((s32)(rand() << 6) >> 15) + 16;
-        g_wmap_actor_motions[i].scale = rand() >> 9;
-        g_wmap_actor_motions[i].field_10 = ((s32)(rand() << 6) >> 15) + 4;
-        g_wmap_actor_motions[i].field_12 = 0;
+        g_wmap_actor_motions[i].base_x = (rand() * 155) >> 10;
+        g_wmap_actor_motions[i].y = (rand() * 7) >> 6;
+        g_wmap_actor_motions[i].fall_speed = ((s32)(rand() << 6) >> 15) + 16;
+        g_wmap_actor_motions[i].sway_amplitude = rand() >> 9;
+        g_wmap_actor_motions[i].sway_step = ((s32)(rand() << 6) >> 15) + 4;
+        g_wmap_actor_motions[i].sway_phase = 0;
         g_wmap_actor_animations[i].data = g_wmap_animation_bank_2;
         actor->scale_index = 15;
         actor->resource_index = 0;
@@ -357,10 +339,10 @@ void wmap_land_effect_26_sequence_11_step_01(void)
  * @param end Exclusive end index.
  * @param depth Rendering depth.
  */
-void func_800773B8(s32 start, s32 end, s32 depth)
+void wmap_land_effect_26_update_sway_particles(s32 start, s32 end, s32 depth)
 {
     s32 i;
-    WmapMotion *motion;
+    WmapSwayParticle *motion;
     WmapSpriteActor *actor;
     WmapScreenPoint screen;
 
@@ -368,14 +350,14 @@ void func_800773B8(s32 start, s32 end, s32 depth)
     {
         actor = &g_wmap_sprite_actors[i];
         motion = &g_wmap_actor_motions[i];
-        motion->field_0E += motion->x;
-        if (motion->field_0E >= 3841)
+        motion->y += motion->fall_speed;
+        if (motion->y >= 3841)
         {
-            motion->field_0E = 0;
+            motion->y = 0;
         }
-        motion->field_12 = (motion->field_12 + motion->field_10) & 4095;
-        screen.point.x = (motion->angle + (D_80051B4C[motion->field_12 / 16] * motion->scale) / 16) / 16;
-        screen.point.y = motion->field_0E / 16;
+        motion->sway_phase = (motion->sway_phase + motion->sway_step) & 4095;
+        screen.point.x = (motion->base_x + (D_80051B4C[motion->sway_phase / 16] * motion->sway_amplitude) / 16) / 16;
+        screen.point.y = motion->y / 16;
         actor->target_shade = g_wmap_effect_fade_d;
         actor->shade = g_wmap_effect_fade_d;
         wmap_step_actor_animation(actor, &g_wmap_actor_animations[i]);
@@ -678,7 +660,7 @@ void wmap_land_effect_26_sequence_11_step_02(void)
     s32 value;
     s32 remaining_ticks;
 
-    func_800773B8(0x7C, 0xAA, 0xD);
+    wmap_land_effect_26_update_sway_particles(0x7C, 0xAA, 0xD);
     value = g_wmap_effect_fade_d + 8;
     g_wmap_effect_fade_d = value;
     if (value >= 0x82)
@@ -698,7 +680,7 @@ WMAP_STEP_ARM_TIMER(wmap_land_effect_26_sequence_11_step_03, g_wmap_land_effect_
 
 /** @brief Update the sequence effect and advance when its countdown expires. */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_land_effect_26_sequence_11_step_04, g_wmap_land_effect_26_sequence_11_step, g_wmap_land_effect_26_sequence_11_timer,
-                          func_800773B8(0x7C, 0xAA, 0xD))
+                          wmap_land_effect_26_update_sway_particles(0x7C, 0xAA, 0xD))
 
 WMAP_STEP_ARM_TIMER(wmap_land_effect_26_sequence_11_step_05, g_wmap_land_effect_26_sequence_11_step, g_wmap_land_effect_26_sequence_11_timer, 0x10,
                     wmap_land_effect_26_sequence_11_step_06)
@@ -709,7 +691,7 @@ void wmap_land_effect_26_sequence_11_step_06(void)
     s32 value;
     s32 remaining_ticks;
 
-    func_800773B8(0x7C, 0xAA, 0xD);
+    wmap_land_effect_26_update_sway_particles(0x7C, 0xAA, 0xD);
     value = g_wmap_effect_fade_d - 8;
     g_wmap_effect_fade_d = value;
     if (value < 0)

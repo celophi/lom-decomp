@@ -11,6 +11,8 @@
 #include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 #include "../internal/wmap_cells.h"
+#include "../internal/wmap_view_effects.h"
+#include "../internal/wmap_sequence_runtime.h"
 
 #define WMAP_VIEW_ROWS 3
 #define WMAP_PREVIEW_BOB_MASK 0xFF
@@ -30,21 +32,9 @@
 #define WMAP_PREVIEW_SECOND_LAYER_V 32
 #define WMAP_ARTIFACT_PICKUP_VOLUME 143
 #define WMAP_ARTIFACT_RETURN_VOLUME 152
-#define WMAP_PREVIEW_MAP_SCALE 81920
-#define WMAP_PREVIEW_EFFECT_SCALE 24576
 #define WMAP_PREVIEW_PROJECTED_MODE 2
 /* Seven slots ahead, with whole turns retained for signed remainder arithmetic. */
 #define WMAP_PREVIEW_SLOT_OFFSET 43
-
-/** @brief Map translation, projection scale, and unreconstructed trailing state. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 projection_scale;
-    s32 unknown_0c;
-    s32 unknown_10;
-} WmapProjection;
 
 /** @brief Screen position on the path between the map and artifact carousel. */
 typedef struct
@@ -105,32 +95,21 @@ extern const WmapPreviewTextureCell g_wmap_preview_textures[];
 extern const DVECTOR g_wmap_preview_map_positions[WMAP_VIEW_ROWS * WMAP_VIEW_COLUMNS];
 extern const DVECTOR g_wmap_empty_marker_positions[WMAP_VIEW_ROWS][WMAP_VIEW_COLUMNS];
 extern u8 g_wmap_preview_quad_shapes[];
-extern s8 D_80051B4C[];
 extern WmapPreviewPathPoint g_wmap_preview_travel_frames[];
 extern WmapArtifactTransferFrame g_wmap_artifact_pickup_frames[];
 extern s32 g_wmap_artifact_return_offsets[];
 extern WmapArtifactTransferFrame g_wmap_artifact_return_frames[];
 extern s32 g_wmap_preview_foreground;
 
-extern s32 g_wmap_cursor_column;
-extern s32 g_wmap_cursor_row;
 extern s32 g_wmap_preview_bob_y;
-extern s32 g_wmap_frame_count;
-extern s32 g_wmap_selected_artifact;
 extern s32 D_8011D504;
 extern s32 D_8011D508;
-extern SVECTOR g_wmap_camera_rotation;
-extern s32 D_80139838[];
-extern s32 g_wmap_view_mode;
-extern s32 g_wmap_view_scroll_mode;
 
-extern WmapProjection g_wmap_view;
 extern s32 g_wmap_event_active;
 extern s32 g_wmap_preview_projection_x;
 extern s32 g_wmap_preview_projection_y;
 extern s32 g_wmap_focus_origin_x;
 extern s32 g_wmap_focus_origin_y;
-extern VECTOR g_wmap_camera_translation;
 extern s32 g_wmap_placement_overlay_hidden;
 
 /**
@@ -198,8 +177,8 @@ void wmap_update_land_preview(void)
             SetTransMatrix(&matrix);
 
             position.vz = 0;
-            position.vx = ((g_wmap_view.x * WMAP_PREVIEW_MAP_SCALE) / g_wmap_view.projection_scale * WMAP_PREVIEW_EFFECT_SCALE) / g_wmap_view.projection_scale;
-            position.vy = ((g_wmap_view.y * WMAP_PREVIEW_MAP_SCALE) / g_wmap_view.projection_scale * WMAP_PREVIEW_EFFECT_SCALE) / g_wmap_view.projection_scale;
+            position.vx = ((g_wmap_view.x * WMAP_MAP_PROJECTION_SCALE) / g_wmap_view.projection_scale * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
+            position.vy = ((g_wmap_view.y * WMAP_MAP_PROJECTION_SCALE) / g_wmap_view.projection_scale * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
 
             gte_ldv0(&position);
             gte_rtps();

@@ -13,6 +13,24 @@ typedef struct
     u8 b;
 } WmapColor3;
 
+/** @brief Map scroll position and projection scale. */
+typedef struct
+{
+    s32 x;
+    s32 y;
+    s32 projection_scale;
+    s32 unknown_0c;
+} WmapView;
+
+/** @brief Map units between two land cells. */
+#define WMAP_CELL_SIZE 160
+
+/** @brief Map-to-model scale used to project a map position. */
+#define WMAP_MAP_PROJECTION_SCALE 0x14000
+
+/** @brief Projection scale of the map view; positions are scaled by it over the current scale. */
+#define WMAP_VIEW_SCALE 0x6000
+
 /** @brief Controller ports used for world-map input and vibration commands. */
 extern ControllerPortState* g_wmap_controller_ports;
 
@@ -118,7 +136,22 @@ extern WmapColor3 g_wmap_backdrop_target_color_1;
 extern WmapColor3 g_wmap_backdrop_target_color_2;
 extern WmapColor3 g_wmap_backdrop_target_color_3;
 
+/** @brief Current map view. */
+extern WmapView g_wmap_view;
+
+/** @brief Map view saved while an event or effect moves the view. */
+extern WmapView g_wmap_saved_view;
+
 /** @brief Nonzero to start the special return sequence after party setup. */
 extern s32 g_wmap_special_return_pending;
+
+/** @brief Map cursor and vehicle state. */
+extern s32 g_wmap_cursor_row;
+extern s32 g_wmap_cursor_column;
+extern s32 g_wmap_vehicle_cell_x;
+extern s32 g_wmap_vehicle_cell_y;
+
+/** @brief Artifact chosen for placement, or -1 when none is chosen. */
+extern u32 g_wmap_selected_artifact;
 
 #endif

@@ -39,21 +39,7 @@ void wmap_special_effect_34_sequence_4_step_04(void);
 extern WmapAnimationSlot g_wmap_actor_animations[];
 extern WmapSequenceStep g_wmap_special_effect_34_steps[];
 extern WmapSequenceStep g_wmap_special_effect_34_timeline_steps[];
-extern s32 g_wmap_cursor_column;
-extern s32 g_wmap_cursor_row;
-extern s32 g_wmap_vehicle_cell_x;
-extern s32 g_wmap_vehicle_cell_y;
 extern s32 g_wmap_load_buffer[];
-extern u8 g_wmap_animation_bank_1;
-extern s32 D_80139234;
-extern s32 D_8013923C;
-extern s32 D_80139240;
-extern s32 D_8013924C;
-extern s32 g_wmap_view_scroll_mode;
-extern u8 g_wmap_effect_texture_buffer_0;
-extern s32 g_wmap_scroll_remaining_x;
-extern s32 g_wmap_scroll_remaining_y;
-extern u8 g_wmap_effect_texture_buffer_1;
 extern s32 D_801B3210;
 extern s32 D_801B3214;
 extern u32 g_wmap_special_effect_34_step;
@@ -88,24 +74,10 @@ extern void wmap_special_effect_34_sequence_4_step_04(void);
 extern const s32 D_80054A18[];
 
 
-/** @brief Map scroll position (map units) and projection scale. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 projection_scale;
-    s32 unknown_0c;
-} WmapView;
-
-extern WmapView g_wmap_view;
-extern WmapView g_wmap_saved_view;
 
 
 
 
-extern WmapScreenPosition g_wmap_focus_screen_position;
-extern WmapScreenPosition D_80182D58;
-extern WmapScreenPosition D_80182D60;
 
 void wmap_special_effect_34_sequence_1_step_02(void)
 {
@@ -291,8 +263,8 @@ void wmap_special_effect_34_step_01(void)
     s32 field_04;
 #endif
 
-    g_wmap_focus_screen_position.point.x = 0xA4;
-    g_wmap_focus_screen_position.point.y = 0x69;
+    g_wmap_focus_screen_position.point.x = WMAP_FOCUS_DEFAULT_X;
+    g_wmap_focus_screen_position.point.y = WMAP_FOCUS_DEFAULT_Y;
     g_wmap_saved_view = g_wmap_view;
 #if defined(VERSION_JP)
     wmap_set_map_label(-1);
@@ -314,8 +286,8 @@ WMAP_STEP_WAIT(wmap_special_effect_34_step_02, g_wmap_special_effect_34_step, g_
 void wmap_special_effect_34_step_03(void)
 {
     cdrom_wait_queue_empty();
-    wmap_upload_tim(&g_wmap_effect_texture_buffer_0);
-    wmap_upload_tim(&g_wmap_effect_texture_buffer_1);
+    wmap_upload_tim(g_wmap_effect_texture_buffer_0);
+    wmap_upload_tim(g_wmap_effect_texture_buffer_1);
     wmap_start_sequence(wmap_special_effect_34_run_timeline);
     g_wmap_sequence_busy = 1;
     g_wmap_special_effect_34_step++;
@@ -518,7 +490,7 @@ void wmap_special_effect_34_sequence_3_step_01(void)
 {
     WmapSpriteActor* actor = &g_wmap_sprite_actors[5];
 
-    g_wmap_actor_animations[5].data = &g_wmap_animation_bank_1;
+    g_wmap_actor_animations[5].data = g_wmap_animation_bank_1;
     actor->scale_index = 0xF;
     actor->sequence = 1;
     actor->previous_sequence = -1;
@@ -552,7 +524,7 @@ WMAP_STEP_RESET(wmap_special_effect_34_sequence_4_reset, g_wmap_special_effect_3
  */
 WMAP_STEP_START_ACTOR(wmap_special_effect_34_sequence_4_step_01,
     g_wmap_special_effect_34_sequence_4_step, g_wmap_special_effect_34_sequence_4_timer,
-    6, &g_wmap_animation_bank_1, 0,
+    6, g_wmap_animation_bank_1, 0,
     0, 0x80, 0x10,
     0x3E, wmap_special_effect_34_sequence_4_step_02)
 
@@ -569,7 +541,12 @@ WMAP_STEP_DRAW_ACTOR_AND_WAIT(wmap_special_effect_34_sequence_4_step_04, g_wmap_
 
 WMAP_STEP_ADVANCE(wmap_special_effect_34_sequence_4_end, g_wmap_special_effect_34_sequence_4_step)
 
-void func_800C0C5C(VECTOR* translation, SVECTOR* rotation)
+/**
+ * @brief Install a model transform built from a rotation and a translation.
+ * @param translation Model translation.
+ * @param rotation Model rotation.
+ */
+void wmap_special_effect_34_set_model_transform(VECTOR* translation, SVECTOR* rotation)
 {
     MATRIX matrix;
 

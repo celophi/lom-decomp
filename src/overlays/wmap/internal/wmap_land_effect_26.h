@@ -10,7 +10,7 @@ void wmap_land_effect_26_sequence_4_step_02(void);
 void wmap_land_effect_26_sequence_5_step_02(void);
 void wmap_land_effect_26_sequence_6_step_02(void);
 void wmap_land_effect_26_sequence_11_step_01(void);
-void func_800773B8(s32 start, s32 end, s32 depth);
+void wmap_land_effect_26_update_sway_particles(s32 start, s32 end, s32 depth);
 s32 wmap_land_effect_26_run(s32 reset);
 void wmap_land_effect_26_reset(void);
 void wmap_land_effect_26_step_01(void);

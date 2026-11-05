@@ -3,7 +3,8 @@
 
 #include "common.h"
 
-void func_8005F9BC(void);
+void wmap_draw_status_panel(void);
+void wmap_draw_map_labels(void);
 void wmap_set_map_label(s32 selection);
 void wmap_init_label_sprites(void);
 

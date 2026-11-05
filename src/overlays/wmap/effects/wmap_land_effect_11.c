@@ -8,6 +8,7 @@
 #include "../internal/wmap_effect_primitives.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_cells.h"
+#include "../internal/wmap_actor_motion.h"
 
 void wmap_land_effect_11_sequence_3_step_02(void);
 void wmap_land_effect_11_sequence_5_step_02(void);
@@ -33,21 +34,11 @@ void wmap_land_effect_11_sequence_5_step_04(void);
 void wmap_land_effect_11_sequence_9_step_02(void);
 void wmap_land_effect_11_sequence_9_step_04(void);
 
-/** @brief World-map 0x14-byte slot: only the leading halfword is cleared here. */
-typedef struct
-{
-    s16 field_00;
-    u8 pad_02[0x12];
-} WmapSlot14;
-
 extern s32 g_wmap_land_effect_11_sequence_3_timer;
 extern s32 g_wmap_land_effect_11_sequence_5_timer;
-extern u8* g_wmap_effect_model_pack_1;
 extern s32 g_wmap_land_effect_11_sequence_7_timer;
 extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_11_sequence_6_timer;
-extern void *g_wmap_effect_model_pack_2;
-extern void *g_wmap_effect_model_pack_3;
 extern s32 g_wmap_land_effect_11_sequence_8_timer;
 extern s32 g_wmap_land_effect_11_timer;
 extern WmapSequenceStep g_wmap_land_effect_11_steps[];
@@ -55,13 +46,11 @@ extern void wmap_land_effect_11_step_03(void);
 extern void wmap_land_effect_11_end(void);
 extern s32 g_wmap_land_effect_11_timeline_timer;
 extern WmapSequenceStep g_wmap_land_effect_11_timeline_steps[];
-extern u32 g_wmap_selected_artifact;
 extern s32 g_wmap_land_effect_11_sequence_1_timer;
 extern WmapSequenceStep g_wmap_land_effect_11_sequence_1_steps[];
 extern void wmap_land_effect_11_sequence_1_step_02(void);
 extern s32 g_wmap_land_effect_11_sequence_2_timer;
 extern WmapSequenceStep g_wmap_land_effect_11_sequence_2_steps[];
-extern u8 g_wmap_animation_bank_1[];
 extern void wmap_land_effect_11_sequence_2_step_02(void);
 extern WmapSequenceStep g_wmap_land_effect_11_sequence_3_steps[];
 extern s32 g_wmap_land_effect_11_sequence_4_timer;
@@ -76,7 +65,6 @@ extern WmapSequenceStep g_wmap_land_effect_11_sequence_9_steps[];
 extern void wmap_land_effect_11_sequence_9_step_02(void);
 extern void wmap_land_effect_11_sequence_9_step_04(void);
 
-extern u8 g_wmap_animation_bank_0[];
 extern u32 g_wmap_land_effect_11_sequence_3_step;
 extern u32 g_wmap_land_effect_11_sequence_5_step;
 extern u32 g_wmap_land_effect_11_sequence_7_step;
@@ -90,19 +78,14 @@ extern u32 g_wmap_land_effect_11_sequence_2_step;
 extern u32 g_wmap_land_effect_11_sequence_4_step;
 extern u32 g_wmap_land_effect_11_sequence_9_step;
 
-extern VECTOR g_wmap_camera_translation;
 
-extern SVECTOR D_801B2498;
-extern SVECTOR D_801B2490;
 
 
 extern WmapAnimationSlot g_wmap_actor_animations[];
 
-extern WmapScreenPosition g_wmap_focus_screen_position;
 
 extern s32* g_wmap_effect_params;
 
-extern WmapSlot14 g_wmap_actor_motions[];
 
 /** @brief World-map step: fill a spawn descriptor, clear its slot run, then advance. */
 void wmap_land_effect_11_sequence_3_step_01(void)
@@ -121,7 +104,7 @@ void wmap_land_effect_11_sequence_3_step_01(void)
     g_wmap_effect_params[9] = 1;
     g_wmap_effect_params[10] = 0x3E8;
     WMAP_RESET_PARTICLE_SLOTS(i, 0x46,
-                              g_wmap_actor_motions[i + g_wmap_effect_params[7]].field_00,
+                              g_wmap_actor_motions[i + g_wmap_effect_params[7]].state,
                               0x18, g_wmap_animation_bank_0);
     g_wmap_land_effect_11_sequence_3_timer = 0x8D;
     g_wmap_land_effect_11_sequence_3_step++;
@@ -145,7 +128,7 @@ void wmap_land_effect_11_sequence_5_step_01(void)
     g_wmap_effect_params[19] = 0;
     g_wmap_effect_params[20] = 0x2EE0;
     WMAP_RESET_PARTICLE_SLOTS(i, 0xA,
-                              g_wmap_actor_motions[i + g_wmap_effect_params[17]].field_00,
+                              g_wmap_actor_motions[i + g_wmap_effect_params[17]].state,
                               0x68, g_wmap_animation_bank_0);
     g_wmap_land_effect_11_sequence_5_timer = 0x29;
     g_wmap_land_effect_11_sequence_5_step++;
