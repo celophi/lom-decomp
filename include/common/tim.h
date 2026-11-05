@@ -54,10 +54,10 @@ typedef struct
  */
 typedef struct
 {
-    u32 bnum; /* 0x00 - block length in bytes, including this header */
-    u16 dx;   /* 0x04 - VRAM destination X */
-    u16 dy;   /* 0x06 - VRAM destination Y */
-    TimDimensions dimensions; /* 0x08 - region size */
+    u32 bnum;                 /* block length in bytes, including this header */
+    u16 dx;                   /* VRAM destination X */
+    u16 dy;                   /* VRAM destination Y */
+    TimDimensions dimensions; /* region size */
 } TimBlock;
 
 /**
@@ -91,10 +91,10 @@ void upload_tim_to_vram(TimUploadDestination* destinations, TimPrefix* tim);
  */
 typedef struct
 {
-    u32 magic;                       /* 0x00 - TIM magic/type word (low byte = 0x10) */
-    u32 flags;                       /* 0x04 - flag word (bit3=hasCLUT, bits1:0=bit-depth) */
-    TimBlock clut_block;             /* 0x08 - CLUT block header */
-    u16 clut_data[CLUT_ENTRY_COUNT]; /* 0x14 - 256-entry 16bpp palette */
+    u32 magic; /* TIM magic/type word (low byte = 0x10) */
+    u32 flags; /* flag word (bit3=hasCLUT, bits1:0=bit-depth) */
+    TimBlock clut_block;
+    u16 clut_data[CLUT_ENTRY_COUNT]; /* 256-entry 16bpp palette */
     /* pixel block follows clut_data */
 } Tim;
 

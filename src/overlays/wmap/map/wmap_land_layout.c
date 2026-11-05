@@ -361,7 +361,7 @@ void wmap_update_travel_growth(void)
     s32* day_growth;
 
     blocked = 0;
-    for (event = 0; event < WMAP_LAND_COUNT; event += 1)
+    for (event = 0; event < WMAP_LAND_COUNT; event++)
     {
         flag_word = event / WMAP_EVENT_WORD_BITS;
         if ((((WmapSave*)((flag_word * 4) + (u8*)&g_saved_game))->events[0] & (1 << (event - (flag_word << 5)))) &&
@@ -379,7 +379,7 @@ void wmap_update_travel_growth(void)
         {
             WMAP_SAVED_GAME.calendar.word = (u32)(day_flags & 0xFF80FFFF);
         }
-        for (growth_group = 0; growth_group < 5; growth_group += 1)
+        for (growth_group = 0; growth_group < 5; growth_group++)
         {
             timed_record = (WmapTimedSaveView*)(g_saved_game.bytes + growth_group * 96);
             if (timed_record->active != 0)
@@ -436,19 +436,19 @@ void wmap_update_travel_growth(void)
         day_growth[8] = (s32)(day_growth[8] + 1);
         day_growth[16] = (s32)(day_growth[16] + 1);
         day_growth[24] = (s32)(day_growth[24] + 1);
-        growth[0][0] += 1;
-        growth[0][1] += 1;
-        growth[1][0] += 1;
-        growth[1][1] += 1;
-        growth[2][0] += 1;
-        growth[2][1] += 1;
-        growth[3][0] += 1;
-        growth[3][1] += 1;
-        for (growth_group = 0; growth_group < 4; growth_group += 1)
+        growth[0][0]++;
+        growth[0][1]++;
+        growth[1][0]++;
+        growth[1][1]++;
+        growth[2][0]++;
+        growth[2][1]++;
+        growth[3][0]++;
+        growth[3][1]++;
+        for (growth_group = 0; growth_group < 4; growth_group++)
         {
-            for (growth_slot = 0; growth_slot < FIELD_LAND_SPIRIT_COUNT; growth_slot += 1)
+            for (growth_slot = 0; growth_slot < FIELD_LAND_SPIRIT_COUNT; growth_slot++)
             {
-                for (spirit = 0; spirit < FIELD_LAND_SPIRIT_COUNT; spirit += 1)
+                for (spirit = 0; spirit < FIELD_LAND_SPIRIT_COUNT; spirit++)
                 {
                     total = ((WmapGrowthSave*)&g_saved_game)->groups[growth_group].slots[growth_slot].spirits[spirit];
                     total += growth[growth_group][spirit];
@@ -637,7 +637,7 @@ void wmap_apply_land_influence(s32 land, u32 x, s32 y, s32 (*spirits)[8])
         while (spirit >= 0)
         {
             *clear_entry = 0;
-            spirit -= 1;
+            spirit--;
             clear_entry--;
         }
         wmap_accumulate_land_spirits(wmap_get_land_at_cell(x - 1, y), land, 0, neighbor_influence);
@@ -670,7 +670,7 @@ void wmap_apply_land_influence(s32 land, u32 x, s32 y, s32 (*spirits)[8])
             }
             *land_spirit = clamped;
             land_spirit++;
-            spirit += 1;
+            spirit++;
             influence++;
         }
     }
@@ -825,10 +825,10 @@ s32 wmap_load_land_layout(void)
     empty = WMAP_NO_LAND;
     index = 0x23;
     cell = g_wmap_land_lookup + index;
-    for (; index >= 0; index -= 1)
+    for (; index >= 0; index--)
     {
         *cell = empty;
-        cell -= 1;
+        cell--;
     }
     wmap_rebuild_land_lookup();
     wmap_build_artifact_list(0);
@@ -1193,7 +1193,7 @@ void wmap_build_placement_labels(s32 selected_cell, u32 x, s32 y, s32* groups, s
 
                 wmap_append_land_spirit_labels(0, cell_x, top_y + record, group_mask, &count, groups, output, land, g_wmap_proposed_spirits);
 
-                cell_x += 1;
+                cell_x++;
             }
             else
             {
@@ -1215,25 +1215,25 @@ void wmap_build_placement_labels(s32 selected_cell, u32 x, s32 y, s32* groups, s
                     while (component < FIELD_LAND_SPIRIT_COUNT)
                     {
                         terrain_offset = component + ((cell_x + row_offset) * (s32)sizeof(WmapSavedLand));
-                        component += 1;
+                        component++;
                         level = ((WmapLayout*)(((u8*)g_wmap_layout + terrain_offset)))->cells[0].spirits[0];
                         output[count] = level + WMAP_LABEL_TERRAIN_BASE;
-                        count += 1;
+                        count++;
                     }
                     component = 0;
                     while (component < 0x10)
                     {
-                        component += 1;
+                        component++;
                         output[count] = 0;
-                        count += 1;
+                        count++;
                     }
                 }
-                cell_x += 1;
+                cell_x++;
             }
-            spirit += 1;
+            spirit++;
 
         }
-        record += 1;
+        record++;
     }
     record = 0;
     *groups |= WMAP_LABEL_PROPOSED_GROUP;
@@ -1262,8 +1262,8 @@ void wmap_build_placement_labels(s32 selected_cell, u32 x, s32 y, s32* groups, s
             count = next_count;
             output[next_count] = difference + WMAP_LABEL_PROPOSED_CHANGE_BASE;
         }
-        record += 1;
-        count += 1;
+        record++;
+        count++;
     }
 }
 
@@ -1479,7 +1479,7 @@ void wmap_get_artifact_spirit_sprites(s32 table_index, s32* output)
             value = g_wmap_spirit_sprites[index * WMAP_SPIRIT_SPRITE_DIAGONAL];
         }
         *entry = value;
-        entry += 1;
+        entry++;
     }
 }
 

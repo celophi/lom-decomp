@@ -66,7 +66,7 @@ because the JP data only moves as a whole: US starts at `0x800C4588`, JP at
 | `0xC170` | `g_wmap_menu_triangles` | 28 Gouraud triangles of the menu cursor |
 | `0xC4E4` | `g_wmap_sprite_textures` | 48 sprite texture pages and palettes |
 | `0xCA4C` | `D_800D0FD4` | Backdrop triangle vertices, triangles and point buffers |
-| `0x106CC` | `D_800D4C54` onward | Step tables for the land effects and events |
+| `0x106CC` | `g_wmap_land_effect_18_timeline_steps` onward | Step tables for the land effects and events |
 
 The primitive templates are complete libgpu packets (`SPRT`, `POLY_FT4`,
 `POLY_G4`, and Gouraud triangles), copied into the packet buffer and then
@@ -121,14 +121,15 @@ swap `wmap_main.h` makes for `WMAP_PAD_CONFIRM`.
 Most of WMAP's land effects and events run as step tables: arrays of function
 pointers that a sequence walks one entry per step. The extractor finds them
 by their declarations in `src/overlays/wmap` (`void (*name[])(void)` or
-`WmapHandler name[]`), so each file under `handlers/` matches one C file.
-Every entry is written as the function's name. Most are still `func_<address>`
-in the source. Those names are the US addresses; JP uses the same names.
+`WmapSequenceStep name[]`), so each file under `handlers/` matches one C file.
+Every entry is written as the function's name, which is the same in both
+versions.
 
 A null entry is a zero word. The last US table,
 `g_wmap_effect35_emitter_b_steps`, has one extra null word before the
-runtime variables start; JP doesn't. One entry of `D_800D4DB4` in land effect
-18 points into WMAP's own data instead of code: sprite actor 12. It's kept as
+runtime variables start; JP doesn't. One entry of
+`g_wmap_land_effect_18_sequence_11_steps` in land effect 18 points into WMAP's
+own data instead of code: sprite actor 12. It's kept as
 `{data: g_wmap_sprite_actors+0x210}` rather than hidden. An address inside a
 symbol with a known size is named as that symbol plus an offset.
 

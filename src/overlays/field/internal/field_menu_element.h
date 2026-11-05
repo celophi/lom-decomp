@@ -105,13 +105,13 @@ typedef union FieldMenuSize
 /** @brief Twenty-byte menu element with packed geometry, scrolling, and draw callback. */
 struct FieldMenuElement
 {
-    FieldMenuAttr attr;   /**< 0x00: state, step, x, y, width low byte. */
-    FieldMenuSize size;   /**< 0x04: width high bit, height, flags, content height. */
-    s16 scroll;           /**< 0x08: current vertical content scroll. */
-    s16 scroll_target;    /**< 0x0A: scroll the element eases towards. */
-    s16 scroll_ticks;     /**< 0x0C: frames left in the scroll ease. */
-    u16 padE;             /**< 0x0E: unused. */
-    FieldMenuDrawFn draw; /**< 0x10: content draw callback. */
+    FieldMenuAttr attr; /**< state, step, x, y, width low byte. */
+    FieldMenuSize size; /**< width high bit, height, flags, content height. */
+    s16 scroll;         /**< current vertical content scroll. */
+    s16 scroll_target;  /**< scroll the element eases towards. */
+    s16 scroll_ticks;   /**< frames left in the scroll ease. */
+    u16 padE;
+    FieldMenuDrawFn draw; /**< content draw callback. */
 };
 
 /** @brief The eight menu elements. */

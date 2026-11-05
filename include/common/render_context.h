@@ -33,13 +33,17 @@
  */
 typedef struct
 {
-    u_long ot[RENDER_CONTEXT_OT_ENTRY_COUNT + FRAME_PRIMITIVE_BUFFER_SIZE / sizeof(u_long)]; /* 0x0000 - 16 OT entries, then 0x4000 bytes of packets */
-    void*   prim_cursor;  /* 0x4040 - next free byte in the primitive heap */
-    RECT    clear_rect;   /* 0x4044 - ClearImage rect for this buffer's draw area */
-    u32     frame_parity; /* 0x404C - active double-buffer index (0 or 1) */
-    DISPENV disp_env;     /* 0x4050 - display environment for this buffer */
-    DRAWENV draw_env;     /* 0x4064 - drawing environment for this buffer */
-} RenderContext;          /* 0x40C0 bytes == DRAW_BUF_STRIDE */
+    /** 16 OT entries, then 0x4000 bytes of packets. */
+    u_long ot[RENDER_CONTEXT_OT_ENTRY_COUNT + FRAME_PRIMITIVE_BUFFER_SIZE / sizeof(u_long)];
+    /** Next free byte in the primitive heap. */
+    void* prim_cursor;
+    /** ClearImage rect for this buffer's draw area. */
+    RECT clear_rect;
+    /** Active double-buffer index (0 or 1). */
+    u32 frame_parity;
+    DISPENV disp_env;
+    DRAWENV draw_env;
+} RenderContext; /* 0x40C0 bytes == DRAW_BUF_STRIDE */
 
 /**
  * @brief Stride in bytes between the two double-buffered draw buffers.

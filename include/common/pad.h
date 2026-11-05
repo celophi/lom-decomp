@@ -66,15 +66,15 @@ typedef union
 /** @brief Published controller state updated asynchronously by the SCD driver. */
 typedef struct
 {
-    u8 device_type; // 0x00 - 0 digital, 1 analog joystick, 2 analog controller, 0xFE/0xFF unavailable
+    u8 device_type; // 0 digital, 1 analog joystick, 2 analog controller, 0xFE/0xFF unavailable
     u8 _pad1;
-    volatile u16 held_buttons; // 0x02 - asynchronously updated buttons in controller-protocol bit order
-    u16 pressed_buttons; // 0x04 - newly pressed buttons, OR-merged across sampled VSyncs
+    volatile u16 held_buttons; // asynchronously updated buttons in controller-protocol bit order
+    u16 pressed_buttons;       // newly pressed buttons, OR-merged across sampled VSyncs
 
-    u8 _pad2[0x28 - 2]; // 0x06-0x2B - unused here
+    u8 _pad2[0x28 - 2];
 
-    PadAxisSample axis_x; // 0x2C - horizontal axis sample
-    PadAxisSample axis_y; // 0x2E - vertical axis sample
+    PadAxisSample axis_x;
+    PadAxisSample axis_y;
 } SCDRegs;
 
 /** @brief Merged-controller register block at its fixed RAM address. */

@@ -105,14 +105,6 @@ enum WmapHelpPage
 /** @brief Scratchpad word holding the world-map caller's saved stack pointer. */
 #define WMAP_SCRATCH_STACK_SAVE_SLOT SCRATCHPAD_AT(0x3F0)
 
-/** @brief Backdrop color: three channels. */
-typedef struct
-{
-    u8 r;
-    u8 g;
-    u8 b;
-} WmapColor3;
-
 /** @brief Gouraud triangle used by the world-map menu cursor. */
 typedef struct
 {
@@ -232,10 +224,6 @@ extern s32 g_wmap_entry_music_enabled;
 extern POLY_FT4 g_wmap_backdrop_front_quads[4];
 extern POLY_FT4 g_wmap_backdrop_back_quads[4];
 
-extern WmapColor3 D_80182D74;
-extern WmapColor3 D_80182D80;
-extern WmapColor3 D_80182D8C;
-extern WmapColor3 D_80182D94;
 /** @brief Textured fade quad drawn in the upper-left corner of the map. */
 extern POLY_FT4 g_wmap_screen_fade_quad;
 /** @brief Sprite template shared by menu and scripted input prompts. */
@@ -622,9 +610,9 @@ s32 wmap_draw_backdrop(s32 initialize)
     {
 #endif
         /* The gradient takes over once the textured backdrop has faded away. */
-        if (D_80182D74.r != g_wmap_backdrop_gradient.r0)
+        if (g_wmap_backdrop_target_color_0.r != g_wmap_backdrop_gradient.r0)
         {
-            if (g_wmap_backdrop_gradient.r0 >= D_80182D74.r)
+            if (g_wmap_backdrop_gradient.r0 >= g_wmap_backdrop_target_color_0.r)
             {
                 g_wmap_backdrop_gradient.r0 -= WMAP_BACKDROP_COLOR_STEP;
             }
@@ -633,9 +621,9 @@ s32 wmap_draw_backdrop(s32 initialize)
                 g_wmap_backdrop_gradient.r0 += WMAP_BACKDROP_COLOR_STEP;
             }
         }
-        if (D_80182D74.g != g_wmap_backdrop_gradient.g0)
+        if (g_wmap_backdrop_target_color_0.g != g_wmap_backdrop_gradient.g0)
         {
-            if (g_wmap_backdrop_gradient.g0 >= D_80182D74.g)
+            if (g_wmap_backdrop_gradient.g0 >= g_wmap_backdrop_target_color_0.g)
             {
                 g_wmap_backdrop_gradient.g0 -= WMAP_BACKDROP_COLOR_STEP;
             }
@@ -644,9 +632,9 @@ s32 wmap_draw_backdrop(s32 initialize)
                 g_wmap_backdrop_gradient.g0 += WMAP_BACKDROP_COLOR_STEP;
             }
         }
-        if (D_80182D74.b != g_wmap_backdrop_gradient.b0)
+        if (g_wmap_backdrop_target_color_0.b != g_wmap_backdrop_gradient.b0)
         {
-            if (g_wmap_backdrop_gradient.b0 >= D_80182D74.b)
+            if (g_wmap_backdrop_gradient.b0 >= g_wmap_backdrop_target_color_0.b)
             {
                 g_wmap_backdrop_gradient.b0 -= WMAP_BACKDROP_COLOR_STEP;
             }
@@ -655,9 +643,9 @@ s32 wmap_draw_backdrop(s32 initialize)
                 g_wmap_backdrop_gradient.b0 += WMAP_BACKDROP_COLOR_STEP;
             }
         }
-        if (D_80182D80.r != g_wmap_backdrop_gradient.r1)
+        if (g_wmap_backdrop_target_color_1.r != g_wmap_backdrop_gradient.r1)
         {
-            if (g_wmap_backdrop_gradient.r1 >= D_80182D80.r)
+            if (g_wmap_backdrop_gradient.r1 >= g_wmap_backdrop_target_color_1.r)
             {
                 g_wmap_backdrop_gradient.r1 -= WMAP_BACKDROP_COLOR_STEP;
             }
@@ -666,9 +654,9 @@ s32 wmap_draw_backdrop(s32 initialize)
                 g_wmap_backdrop_gradient.r1 += WMAP_BACKDROP_COLOR_STEP;
             }
         }
-        if (D_80182D80.g != g_wmap_backdrop_gradient.g1)
+        if (g_wmap_backdrop_target_color_1.g != g_wmap_backdrop_gradient.g1)
         {
-            if (g_wmap_backdrop_gradient.g1 >= D_80182D80.g)
+            if (g_wmap_backdrop_gradient.g1 >= g_wmap_backdrop_target_color_1.g)
             {
                 g_wmap_backdrop_gradient.g1 -= WMAP_BACKDROP_COLOR_STEP;
             }
@@ -677,9 +665,9 @@ s32 wmap_draw_backdrop(s32 initialize)
                 g_wmap_backdrop_gradient.g1 += WMAP_BACKDROP_COLOR_STEP;
             }
         }
-        if (D_80182D80.b != g_wmap_backdrop_gradient.b1)
+        if (g_wmap_backdrop_target_color_1.b != g_wmap_backdrop_gradient.b1)
         {
-            if (g_wmap_backdrop_gradient.b1 >= D_80182D80.b)
+            if (g_wmap_backdrop_gradient.b1 >= g_wmap_backdrop_target_color_1.b)
             {
                 g_wmap_backdrop_gradient.b1 -= WMAP_BACKDROP_COLOR_STEP;
             }
@@ -688,9 +676,9 @@ s32 wmap_draw_backdrop(s32 initialize)
                 g_wmap_backdrop_gradient.b1 += WMAP_BACKDROP_COLOR_STEP;
             }
         }
-        if (D_80182D8C.r != g_wmap_backdrop_gradient.r2)
+        if (g_wmap_backdrop_target_color_2.r != g_wmap_backdrop_gradient.r2)
         {
-            if (g_wmap_backdrop_gradient.r2 >= D_80182D8C.r)
+            if (g_wmap_backdrop_gradient.r2 >= g_wmap_backdrop_target_color_2.r)
             {
                 g_wmap_backdrop_gradient.r2 -= WMAP_BACKDROP_COLOR_STEP;
             }
@@ -699,9 +687,9 @@ s32 wmap_draw_backdrop(s32 initialize)
                 g_wmap_backdrop_gradient.r2 += WMAP_BACKDROP_COLOR_STEP;
             }
         }
-        if (D_80182D8C.g != g_wmap_backdrop_gradient.g2)
+        if (g_wmap_backdrop_target_color_2.g != g_wmap_backdrop_gradient.g2)
         {
-            if (g_wmap_backdrop_gradient.g2 >= D_80182D8C.g)
+            if (g_wmap_backdrop_gradient.g2 >= g_wmap_backdrop_target_color_2.g)
             {
                 g_wmap_backdrop_gradient.g2 -= WMAP_BACKDROP_COLOR_STEP;
             }
@@ -710,9 +698,9 @@ s32 wmap_draw_backdrop(s32 initialize)
                 g_wmap_backdrop_gradient.g2 += WMAP_BACKDROP_COLOR_STEP;
             }
         }
-        if (D_80182D8C.b != g_wmap_backdrop_gradient.b2)
+        if (g_wmap_backdrop_target_color_2.b != g_wmap_backdrop_gradient.b2)
         {
-            if (g_wmap_backdrop_gradient.b2 >= D_80182D8C.b)
+            if (g_wmap_backdrop_gradient.b2 >= g_wmap_backdrop_target_color_2.b)
             {
                 g_wmap_backdrop_gradient.b2 -= WMAP_BACKDROP_COLOR_STEP;
             }
@@ -721,9 +709,9 @@ s32 wmap_draw_backdrop(s32 initialize)
                 g_wmap_backdrop_gradient.b2 += WMAP_BACKDROP_COLOR_STEP;
             }
         }
-        if (D_80182D94.r != g_wmap_backdrop_gradient.r3)
+        if (g_wmap_backdrop_target_color_3.r != g_wmap_backdrop_gradient.r3)
         {
-            if (g_wmap_backdrop_gradient.r3 >= D_80182D94.r)
+            if (g_wmap_backdrop_gradient.r3 >= g_wmap_backdrop_target_color_3.r)
             {
                 g_wmap_backdrop_gradient.r3 -= WMAP_BACKDROP_COLOR_STEP;
             }
@@ -732,9 +720,9 @@ s32 wmap_draw_backdrop(s32 initialize)
                 g_wmap_backdrop_gradient.r3 += WMAP_BACKDROP_COLOR_STEP;
             }
         }
-        if (D_80182D94.g != g_wmap_backdrop_gradient.g3)
+        if (g_wmap_backdrop_target_color_3.g != g_wmap_backdrop_gradient.g3)
         {
-            if (g_wmap_backdrop_gradient.g3 >= D_80182D94.g)
+            if (g_wmap_backdrop_gradient.g3 >= g_wmap_backdrop_target_color_3.g)
             {
                 g_wmap_backdrop_gradient.g3 -= WMAP_BACKDROP_COLOR_STEP;
             }
@@ -743,9 +731,9 @@ s32 wmap_draw_backdrop(s32 initialize)
                 g_wmap_backdrop_gradient.g3 += WMAP_BACKDROP_COLOR_STEP;
             }
         }
-        if (D_80182D94.b != g_wmap_backdrop_gradient.b3)
+        if (g_wmap_backdrop_target_color_3.b != g_wmap_backdrop_gradient.b3)
         {
-            if (g_wmap_backdrop_gradient.b3 >= D_80182D94.b)
+            if (g_wmap_backdrop_gradient.b3 >= g_wmap_backdrop_target_color_3.b)
             {
                 g_wmap_backdrop_gradient.b3 -= WMAP_BACKDROP_COLOR_STEP;
             }
@@ -1311,7 +1299,7 @@ s32 wmap_run_loop(void)
         {
             break;
         }
-        g_wmap_pending_event_count += 1;
+        g_wmap_pending_event_count++;
 #if !defined(VERSION_JP)
         if ((event - 4) < 5U)
         {
@@ -1850,7 +1838,7 @@ s32 wmap_run_loop(void)
             g_wmap_packet_bytes = 0;
             ClearOTagR(g_wmap_current_frame->ordering_table, WMAP_OT_COUNT);
             D_800DBE7C = 0;
-            g_wmap_frame_count = g_wmap_frame_count + 1;
+            g_wmap_frame_count++;
             if ((g_wmap_input_locked != 0) || (g_wmap_selection_phase >= WMAP_SELECTION_SHOW_ARTIFACTS) ||
                 (g_wmap_mesh_transition_direction != 0) || (g_wmap_view_scroll_mode != 0) || (g_wmap_sequence_count != 0))
             {
@@ -1922,7 +1910,7 @@ s32 wmap_run_loop(void)
                 }
                 else
                 {
-                    g_wmap_exit_frame += 1;
+                    g_wmap_exit_frame++;
                 }
             }
             if (g_wmap_exit_frame >= WMAP_EXIT_CAPTURE_FRAME)

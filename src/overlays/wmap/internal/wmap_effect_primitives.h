@@ -49,19 +49,31 @@ typedef struct
     u8 unknown_36[2];
 } WmapBoxParticleConfig;
 
-void func_8006A2FC(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 arg2, s32 arg3, s32 arg4_value, s32 arg5_value, u32 arg6, void* arg7);
-void func_8006A9C4(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 first, s32 end, s32 scale,
+/** @brief Effect camera rotation offset that wmap_run_effect_camera_move steps toward. */
+extern SVECTOR g_wmap_effect_camera_rotation_target;
+/** @brief Per-frame rotation step of the effect camera move. */
+extern SVECTOR g_wmap_effect_camera_rotation_step;
+/** @brief Effect camera translation offset that wmap_run_effect_camera_move steps toward. */
+extern VECTOR g_wmap_effect_camera_translation_target;
+/** @brief Per-frame translation step of the effect camera move. */
+extern VECTOR g_wmap_effect_camera_translation_step;
+/** @brief Nonzero while wmap_run_effect_camera_move runs; clearing it stops the move and resets the offsets. */
+extern s32 g_wmap_effect_camera_move_active;
+
+void wmap_update_particle_system(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 count, s32 peak_shade,
+                                 s32 initial_shade, s32 shade_step, u32 mode, void* params);
+void wmap_update_radial_burst(WmapSpriteActor* actors, WmapAnimationSlot* animations, s32 first, s32 end, s32 scale,
                    s32 velocity_min, s32 velocity_range, s32 lifetime_min, s32 lifetime_range, s32 initial_z,
                    s32 frame, s32 spawn_interval);
 void wmap_set_effect_model_transform(VECTOR* translation, SVECTOR* rotation);
 void wmap_set_effect_camera_transform(void);
-void func_8006AFAC(s32 first, s32 end, s32 frame, s32 depth,
+void wmap_update_flat_radial_burst(s32 first, s32 end, s32 frame, s32 depth,
                    s32 velocity_base, s32 velocity_divisor, s32 lifetime_base, s32 sequence);
-void func_8006B328(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s32 velocity_min, s32 velocity_range, s32 initial_z, s32 frame, s32 x_min, s32 x_range, s32 y_min, s32 y_range, s32 fade_z, s32 initial_scale_target, s32 initial_scale, s32 scale_step, s32 group);
-void func_8006B6EC(s32 first, s32 end, s32 frame, s32 z_step, s32 depth);
-void func_8006B998(s32 first, s32 end, void* point_data, s32 frame, s32 depth);
-void func_8006BC44(s32 first, s32 count, WmapTrailConfig* config, s32 expire_by_shade);
-s32 func_8006C0EC(s32 initialize);
-void func_8006C448(WmapBoxParticleConfig* config);
+void wmap_update_falling_particles(s32 first, s32 end, s32 spawn_interval, s32 scale_override, s32 velocity_min, s32 velocity_range, s32 initial_z, s32 frame, s32 x_min, s32 x_range, s32 y_min, s32 y_range, s32 fade_z, s32 initial_scale_target, s32 initial_scale, s32 scale_step, s32 group);
+void wmap_update_spiral_particles(s32 first, s32 end, s32 frame, s32 z_step, s32 depth);
+void wmap_update_bouncing_particles(s32 first, s32 end, void* point_data, s32 frame, s32 depth);
+void wmap_update_particle_trails(s32 first, s32 count, WmapTrailConfig* config, s32 expire_by_shade);
+s32 wmap_run_effect_camera_move(s32 initialize);
+void wmap_update_box_particles(WmapBoxParticleConfig* config);
 
 #endif
