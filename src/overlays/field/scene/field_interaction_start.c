@@ -107,8 +107,8 @@
 #define FIELD_ACTION_SOURCE_ACTOR_MASK 7
 #define FIELD_ACTION_SOURCE_SHIFT 3
 
-/** @brief Number of menu slot groups (SavedGameLayout.menu_slots). */
-#define FIELD_MENU_GROUP_COUNT 2
+/** @brief Menu slot groups a layout record's selector can pick for classification (groups 0 and 1). */
+#define FIELD_MENU_SELECTABLE_GROUP_COUNT 2
 
 /** @brief First item entry index of a FIELD_MENU_SLOT_ITEM slot. */
 #define FIELD_MENU_ITEM_BASE 0x30
@@ -147,7 +147,6 @@ extern u8 g_field_talk_plane_masks[];
 extern FieldMapPoint g_field_player_map_position;
 
 /* Functions of other FIELD files without a shared prototype. */
-s32 field_read_script_var(s32 owner_id, s32 variable);
 u8* field_get_event_script(s32 script_id);
 s32 field_get_actor_facing(s32 actor_id);
 FieldActorRecord* field_find_actor_record();
@@ -466,7 +465,7 @@ void field_install_actor_action(FieldLayoutRecord* layout_record, s32 record_ind
 
                 layout_record->control.bits.active = 0;
 
-                if (layout_record->control.bits.selector < FIELD_MENU_GROUP_COUNT)
+                if (layout_record->control.bits.selector < FIELD_MENU_SELECTABLE_GROUP_COUNT)
                 {
                     field_classify_menu_slots(layout_record->control.bits.selector);
                 }

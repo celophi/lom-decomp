@@ -497,7 +497,7 @@ void handle_title_menu_input(void)
         g_title_selected_item = TITLE_SELECTION_SENTINEL;
         return;
     }
-    g_title_idle_countdown -= 1;
+    g_title_idle_countdown--;
     if (g_debounced_input & (PADh | PADi | PADRright))
     {
         play_sfx(0x7C, AKAO_PAN_CENTER);
@@ -543,7 +543,7 @@ void menu_cursor_down(void)
     }
     else
     {
-        g_title_selected_item = (u8)item;
+        g_title_selected_item = item;
         g_title_visible_item_rank++;
     }
 }
@@ -588,7 +588,7 @@ void menu_cursor_up(void)
         }
 
         g_title_visible_item_rank = enabled_count - 1;
-        g_title_selected_item = (u8)last_enabled;
+        g_title_selected_item = last_enabled;
         return;
     }
     g_title_selected_item = item;
@@ -683,28 +683,28 @@ void* emit_menu_item_quad(u_long* ot_head, void* prim, s32 tex_row, s32 x, s32 y
 
     quad = prim;
     setPolyFT4(quad);
-    v_top = (u8)(tex_row << 4);
+    v_top = (tex_row << 4);
     quad->b0 = 0x80;
     quad->v1 = v_top;
     quad->v0 = v_top;
-    v_bottom = (u8)((tex_row << 4) + 0x10);
+    v_bottom = ((tex_row << 4) + 0x10);
     quad->g0 = 0x80;
     quad->r0 = 0x80;
     quad->v3 = v_bottom;
     quad->v2 = v_bottom;
-    quad->x2 = (u16)x;
-    quad->x0 = (u16)x;
+    quad->x2 = x;
+    quad->x0 = x;
     quad->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, 0x140, 0);
-    x_right = (u16)(x + width);
+    x_right = (x + width);
     quad->x3 = x_right;
     quad->x1 = x_right;
-    quad->y1 = (u16)y;
-    quad->y0 = (u16)y;
-    y_bottom = (u16)(y + 0x10);
-    quad->u2 = (u8)u0_base;
-    quad->u0 = (u8)u0_base;
-    u_right = (u8)(u0_base + width);
-    clut_word = (u16)((clut_index & 0x3F) | getClut(0, 480));
+    quad->y1 = y;
+    quad->y0 = y;
+    y_bottom = (y + 0x10);
+    quad->u2 = u0_base;
+    quad->u0 = u0_base;
+    u_right = (u0_base + width);
+    clut_word = ((clut_index & 0x3F) | getClut(0, 480));
     quad->y3 = y_bottom;
     quad->y2 = y_bottom;
     quad->u3 = u_right;
@@ -772,7 +772,7 @@ void init_title_menu_state(void)
         }
         else
         {
-            g_title_selected_item = (u8)next_item;
+            g_title_selected_item = next_item;
             g_title_visible_item_rank++;
         }
     }
@@ -820,7 +820,7 @@ void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
         clut_height = *((u16*)(p + 0x12));
         clut_block_len = *((s32*)(p + tim_header_size));
         clut_skip_base = 8;
-        setRECT(&rect, clut_x, (s16)clut_y, clut_width * clut_height, clut_rows);
+        setRECT(&rect, clut_x, clut_y, clut_width * clut_height, clut_rows);
         LoadImage(&rect, (u_long*)(p + 0x14));
         p = (p + clut_skip_base) + clut_block_len;
     }

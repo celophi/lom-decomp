@@ -38,9 +38,6 @@
  */
 #define FIELD_GOLEM_VARIANT_BASE 65
 
-/** @brief Bytes of a stored companion name copied into the party record. */
-#define PET_NAME_LENGTH 21
-
 /** @brief Number of entries in FieldCharacterRecord.button_actions. */
 #define FIELD_CHARACTER_ORDER_COUNT 8
 

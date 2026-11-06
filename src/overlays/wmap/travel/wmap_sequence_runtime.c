@@ -84,7 +84,7 @@ static inline void wmap_start_sequence_slot(WmapSequenceCallback callback)
 
     if (i == WMAP_SEQUENCE_SLOTS)
     {
-        func_80064F14();
+        wmap_report_error();
     }
 }
 
@@ -318,6 +318,13 @@ void wmap_init_sequences(void)
 
 /**
  * @brief Draw a model with no screen offset and the default depth divisor.
+ * @param resource_table Model resource.
+ * @param resource_index Zero-based model index in the resource.
+ * @param ot_index Front-face ordering-table bucket.
+ * @param tpage Texture page for textured faces.
+ * @param clut Palette for textured faces.
+ * @param blend_mode Blend setting, as for wmap_draw_model.
+ * @param color_scale RGB multiplier in units of 1/128.
  */
 void wmap_draw_model_default(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpage, s32 clut, s32 blend_mode, s32 color_scale)
 {
@@ -372,6 +379,8 @@ s32 wmap_scale_color(CVECTOR color, s32 scale)
 
 /**
  * @brief Install the model transform through the helper selected by g_wmap_models_use_effect_camera.
+ * @param translation Model position.
+ * @param rotation Model rotation.
  */
 void wmap_set_model_transform(VECTOR* translation, SVECTOR* rotation)
 {
@@ -468,6 +477,8 @@ void wmap_reset_focus_screen_position(void)
 
 /**
  * @brief Compose the camera rotation with a model rotation and install the result.
+ * @param translation Model position, applied in camera space.
+ * @param rotation Model rotation.
  */
 void wmap_set_camera_model_transform(VECTOR* translation, SVECTOR* rotation)
 {

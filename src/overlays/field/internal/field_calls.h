@@ -22,6 +22,7 @@
 #include "field_progression_ops.h"
 #include "field_stat_counter_ops.h"
 #include "overlays/field/field_fade.h"
+#include "overlays/field/field_inventory.h"
 #include "overlays/field/field_portrait.h"
 
 struct AkaoHeader;
@@ -334,13 +335,11 @@ s32 field_load_instrument_bank(s32 bank_index);
 void field_upload_resource_22_bank(void);
 void field_load_song(s32 music_index, s32 second_song);
 void field_load_fixed_song(void);
-void field_stop_song(void);
 void field_stop_field_song(void);
 void field_stop_second_song(void);
 void field_play_song(void);
 void field_play_second_song(void);
 void field_fade_song(s32 song, s32 frames, s32 volume);
-void field_play_sound(s32 sound_id, s32 pan);
 void field_play_sound_half_pan(s32 sound_id, s32 pan);
 void field_play_set_sfx_group0(s32 sfx_index, s32 pan, s32 unused);
 void field_play_set_sfx(s32 sfx_index, s32 pan, s32 unused, s32 channel_group);
@@ -477,8 +476,6 @@ void field_run_menu_op(s32 op);
 /** @brief Pad input latched for the current frame (cleared once consumed). */
 extern s32 g_field_buffered_input;
 void field_bind_saved_game_context(void);
-void field_compact_inventory(void);
-void field_copy_inventory_record(u8* destination, u8* source);
 void field_open_gosub_screen_sequence(void* screen_sequence);
 void field_open_shop_mode_0(s32 shop_options);
 void field_open_shop_mode_1(s32 entry_count, struct ShopEntry* entries, struct FieldItemRecord* item_records, s32 shop_options);

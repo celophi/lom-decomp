@@ -881,11 +881,11 @@ inline void field_advance_actor_tracks(FieldActorSlot* slot)
         {
             if ((slot->track_mask >> i) & 1)
             {
-                slot->track_frames[i] += 1;
+                slot->track_frames[i]++;
             }
         }
 
-        slot->frame_counter += 1;
+        slot->frame_counter++;
 
         if ((slot->track_interval != 0) && (slot->target_count != 0))
         {
@@ -1060,44 +1060,44 @@ void field_dispatch_actor_audio_event(FieldActorSlot* slot, s32 event_type, s32 
 
                 switch (sound_command >> FIELD_SOUND_KIND_SHIFT)
                 {
-                case FIELD_SOUND_KIND_PLAIN:
-                    field_play_sound(sound_command & AKAO_SFX_ID_MASK, pan);
-                    break;
+                    case FIELD_SOUND_KIND_PLAIN:
+                        field_play_sound(sound_command & AKAO_SFX_ID_MASK, pan);
+                        break;
 
-                case FIELD_SOUND_KIND_OWNER:
-                    if (slot->owner_object_index < FIELD_PLAYER_COUNT)
-                    {
-                        field_play_weapon_sfx(sound_command & AKAO_SFX_ID_MASK, pan, slot->owner_object_index);
-                    }
-                    else
-                    {
-                        actors = g_field_actors;
-                        owner = &actors[slot->owner_object_index];
-                        resource_index = owner->resource_index;
-
-                        if (resource_index >= FIELD_RESOURCE_VOICE_FIRST && resource_index < FIELD_RESOURCE_VOICE_FIRST + FIELD_RESOURCE_VOICE_COUNT)
+                    case FIELD_SOUND_KIND_OWNER:
+                        if (slot->owner_object_index < FIELD_PLAYER_COUNT)
                         {
-                            if (g_field_resource_entries[FIELD_RESOURCE_VOICE_FIRST].multi_image != 0)
+                            field_play_weapon_sfx(sound_command & AKAO_SFX_ID_MASK, pan, slot->owner_object_index);
+                        }
+                        else
+                        {
+                            actors = g_field_actors;
+                            owner = &actors[slot->owner_object_index];
+                            resource_index = owner->resource_index;
+
+                            if (resource_index >= FIELD_RESOURCE_VOICE_FIRST && resource_index < FIELD_RESOURCE_VOICE_FIRST + FIELD_RESOURCE_VOICE_COUNT)
                             {
-                                field_play_set_sfx(sound_command & AKAO_SFX_ID_MASK, pan, 0, slot->owner_object_index);
-                            }
-                            else
-                            {
-                                field_play_set_sfx(sound_command & AKAO_SFX_ID_MASK, pan, owner->resource_index - FIELD_RESOURCE_VOICE_FIRST,
-                                                   slot->owner_object_index);
+                                if (g_field_resource_entries[FIELD_RESOURCE_VOICE_FIRST].multi_image != 0)
+                                {
+                                    field_play_set_sfx(sound_command & AKAO_SFX_ID_MASK, pan, 0, slot->owner_object_index);
+                                }
+                                else
+                                {
+                                    field_play_set_sfx(sound_command & AKAO_SFX_ID_MASK, pan, owner->resource_index - FIELD_RESOURCE_VOICE_FIRST,
+                                                       slot->owner_object_index);
+                                }
                             }
                         }
-                    }
 
-                    break;
+                        break;
 
-                case FIELD_SOUND_KIND_BUFFER:
-                    if ((sound_command & AKAO_SFX_ID_MASK) < FIELD_ACTOR_SOUND_COUNT)
-                    {
-                        field_play_sfx_buffer(slot->sound_data[sound_command & AKAO_SFX_ID_MASK], pan, slot->owner_object_index);
-                    }
+                    case FIELD_SOUND_KIND_BUFFER:
+                        if ((sound_command & AKAO_SFX_ID_MASK) < FIELD_ACTOR_SOUND_COUNT)
+                        {
+                            field_play_sfx_buffer(slot->sound_data[sound_command & AKAO_SFX_ID_MASK], pan, slot->owner_object_index);
+                        }
 
-                    break;
+                        break;
                 }
 
                 if (event_type == FIELD_SOUND_EVENT_PART_SPAWN_ONCE)
@@ -1434,24 +1434,24 @@ static void field_build_actor_render_commands(FieldRenderContext* render_ctx, s3
 
                 switch (offset_mode & FIELD_ANIM_CAMERA_MODE_MASK)
                 {
-                case FIELD_ANIM_CAMERA_X:
-                    g_field_camera_offset_x = field_evaluate_parameter_track(slot, animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT);
-                    break;
+                    case FIELD_ANIM_CAMERA_X:
+                        g_field_camera_offset_x = field_evaluate_parameter_track(slot, animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT);
+                        break;
 
-                case FIELD_ANIM_CAMERA_Y:
-                    g_field_camera_offset_y = field_evaluate_parameter_track(slot, animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT);
-                    break;
+                    case FIELD_ANIM_CAMERA_Y:
+                        g_field_camera_offset_y = field_evaluate_parameter_track(slot, animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT);
+                        break;
 
-                case FIELD_ANIM_CAMERA_XY:
-                    g_field_camera_offset_y = g_field_camera_offset_x =
-                        field_evaluate_parameter_track(slot, animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT);
-                    break;
+                    case FIELD_ANIM_CAMERA_XY:
+                        g_field_camera_offset_y = g_field_camera_offset_x =
+                            field_evaluate_parameter_track(slot, animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT);
+                        break;
 
-                case FIELD_ANIM_CAMERA_X_THEN_Y:
-                    g_field_camera_offset_x = field_evaluate_parameter_track(slot, animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT);
-                    g_field_camera_offset_y = field_evaluate_parameter_track(slot, ((slot->animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT) + 1) &
-                                                                                       FIELD_TRACK_INDEX_MASK);
-                    break;
+                    case FIELD_ANIM_CAMERA_X_THEN_Y:
+                        g_field_camera_offset_x = field_evaluate_parameter_track(slot, animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT);
+                        g_field_camera_offset_y = field_evaluate_parameter_track(
+                            slot, ((slot->animation->palette_animation >> FIELD_ANIM_CAMERA_CURVE_SHIFT) + 1) & FIELD_TRACK_INDEX_MASK);
+                        break;
                 }
             }
         }
@@ -1780,35 +1780,35 @@ inline s32 field_get_actor_resource_id(s32 unused_slot_index, FieldPlayerRecord*
     {
         switch (player->character_kind)
         {
-        case FIELD_PLAYER_KIND_HERO:
-            if (player->head.bits.alt_appearance)
-            {
-                return player->head.bytes.weapon_type + FIELD_RES_HERO_ALT_WEAPON_SPRITES;
-            }
+            case FIELD_PLAYER_KIND_HERO:
+                if (player->head.bits.alt_appearance)
+                {
+                    return player->head.bytes.weapon_type + FIELD_RES_HERO_ALT_WEAPON_SPRITES;
+                }
 
-            return player->head.bytes.weapon_type + FIELD_RES_HERO_WEAPON_SPRITES;
+                return player->head.bytes.weapon_type + FIELD_RES_HERO_WEAPON_SPRITES;
 
-        case FIELD_PLAYER_KIND_PARTNER:
-            return player->character_id + FIELD_RES_PARTNER_WEAPON_SPRITES;
+            case FIELD_PLAYER_KIND_PARTNER:
+                return player->character_id + FIELD_RES_PARTNER_WEAPON_SPRITES;
 
-        case FIELD_PLAYER_KIND_COMPANION:
-        default:
-            return player->character_id + FIELD_RES_COMPANION_WEAPON_SPRITES;
+            case FIELD_PLAYER_KIND_COMPANION:
+            default:
+                return player->character_id + FIELD_RES_COMPANION_WEAPON_SPRITES;
         }
     }
     else
     {
         switch (player->character_kind)
         {
-        case FIELD_PLAYER_KIND_HERO:
-            return player->head.bits.alt_appearance + FIELD_RES_HERO_SPRITES;
+            case FIELD_PLAYER_KIND_HERO:
+                return player->head.bits.alt_appearance + FIELD_RES_HERO_SPRITES;
 
-        case FIELD_PLAYER_KIND_PARTNER:
-            return player->character_id + FIELD_RES_PARTNER_SPRITES;
+            case FIELD_PLAYER_KIND_PARTNER:
+                return player->character_id + FIELD_RES_PARTNER_SPRITES;
 
-        case FIELD_PLAYER_KIND_COMPANION:
-        default:
-            return player->character_id + FIELD_RES_COMPANION_SPRITES;
+            case FIELD_PLAYER_KIND_COMPANION:
+            default:
+                return player->character_id + FIELD_RES_COMPANION_SPRITES;
         }
     }
 }
@@ -1901,7 +1901,7 @@ void field_release_actor_resource_slot(s32 slot_index_minus_one)
     FieldResourceEntry* entry;
 
     slot_index = slot_index_minus_one;
-    slot_index += 1;
+    slot_index++;
 
     if (g_field_player_records[slot_index].head.bytes.flags & FIELD_PLAYER_ACTIVE)
     {
@@ -2078,14 +2078,14 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
 
     switch (g_field_player_records[slot].character_kind)
     {
-    case FIELD_PLAYER_KIND_PARTNER:
-        field_load_party_script_page(1, g_field_player_records[slot].character_id + FIELD_RES_PARTNER_ACTIONS);
-        field_apply_weapon_action_params(1);
-        break;
+        case FIELD_PLAYER_KIND_PARTNER:
+            field_load_party_script_page(1, g_field_player_records[slot].character_id + FIELD_RES_PARTNER_ACTIONS);
+            field_apply_weapon_action_params(1);
+            break;
 
-    case FIELD_PLAYER_KIND_COMPANION:
-        field_load_party_script_page(2, g_field_player_records[slot].character_id + FIELD_RES_COMPANION_ACTIONS);
-        break;
+        case FIELD_PLAYER_KIND_COMPANION:
+            field_load_party_script_page(2, g_field_player_records[slot].character_id + FIELD_RES_COMPANION_ACTIONS);
+            break;
     }
 
     return 1;
@@ -3204,21 +3204,21 @@ void field_unpack_resource_package(FieldCdBuffer* buf, s32 size, s32 slot_index,
 {
     switch (buf->offsets[0] >> 2)
     {
-    case 2:
-        field_append_resource_data(FIELD_PACKAGE_SECTION_BYTES(buf, 1), size - buf->offsets[1], slot_index);
-        field_upload_resource_texture(FIELD_PACKAGE_SECTION(buf, 0), slot_index, 0, palette_row);
-        break;
-    case 3:
-        field_append_resource_data(FIELD_PACKAGE_SECTION_BYTES(buf, 2), size - buf->offsets[2], slot_index);
-        field_upload_resource_texture(FIELD_PACKAGE_SECTION(buf, 0), slot_index, 0, palette_row);
-        field_upload_resource_texture(FIELD_PACKAGE_SECTION(buf, 1), slot_index, 1, palette_row);
-        break;
-    case 4:
-        field_append_resource_data(FIELD_PACKAGE_SECTION_BYTES(buf, 3), size - buf->offsets[3], slot_index);
-        field_upload_resource_texture(FIELD_PACKAGE_SECTION(buf, 0), slot_index, 0, palette_row);
-        field_upload_resource_texture(FIELD_PACKAGE_SECTION(buf, 1), slot_index, 1, palette_row);
-        field_upload_resource_texture(FIELD_PACKAGE_SECTION(buf, 2), slot_index, 2, palette_row);
-        break;
+        case 2:
+            field_append_resource_data(FIELD_PACKAGE_SECTION_BYTES(buf, 1), size - buf->offsets[1], slot_index);
+            field_upload_resource_texture(FIELD_PACKAGE_SECTION(buf, 0), slot_index, 0, palette_row);
+            break;
+        case 3:
+            field_append_resource_data(FIELD_PACKAGE_SECTION_BYTES(buf, 2), size - buf->offsets[2], slot_index);
+            field_upload_resource_texture(FIELD_PACKAGE_SECTION(buf, 0), slot_index, 0, palette_row);
+            field_upload_resource_texture(FIELD_PACKAGE_SECTION(buf, 1), slot_index, 1, palette_row);
+            break;
+        case 4:
+            field_append_resource_data(FIELD_PACKAGE_SECTION_BYTES(buf, 3), size - buf->offsets[3], slot_index);
+            field_upload_resource_texture(FIELD_PACKAGE_SECTION(buf, 0), slot_index, 0, palette_row);
+            field_upload_resource_texture(FIELD_PACKAGE_SECTION(buf, 1), slot_index, 1, palette_row);
+            field_upload_resource_texture(FIELD_PACKAGE_SECTION(buf, 2), slot_index, 2, palette_row);
+            break;
     }
 }
 

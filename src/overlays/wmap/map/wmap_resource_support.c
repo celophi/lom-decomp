@@ -24,9 +24,10 @@ extern u8 g_wmap_load_buffer[];
 extern RECT g_wmap_framebuffer_rect;
 
 /**
- * @brief Empty world-map handler (no operation).
+ * @brief Report invalid data or a full table; empty in the retail build.
+ * @note Called for a bad sprite part count, a bad model face, and a full sequence table; some calls pass the model's face attributes.
  */
-void func_80064F14(void)
+void wmap_report_error(void)
 {
 }
 

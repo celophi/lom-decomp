@@ -564,12 +564,12 @@ MenuSlot* menu_slot_alloc(s32 ot_index, const MenuSlotRect* rect)
     slot_flags = slot->navigation.packed;
     slot->active = 1;
     slot->content_cb = 0;
-    slot->index = (u8)slot_index;
+    slot->index = slot_index;
     slot->tick_cb = 0;
     slot->anim_frame = 0;
     ot_index_clear_mask = MENU_SLOT_OT_INDEX_CLEAR_MASK;
     slot_flags = slot_flags & ot_index_clear_mask;
-    slot_flags = slot_flags | (((u32)ot_index) << MENU_SLOT_OT_INDEX_SHIFT);
+    slot_flags = slot_flags | ((ot_index) << MENU_SLOT_OT_INDEX_SHIFT);
     slot->navigation.packed = slot_flags;
     setRECT(slot, rect->x, rect->y, rect->w, rect->h);
     slot->lerp_cur_a = 0;
@@ -663,7 +663,7 @@ void menu_update_slots(RenderContext* render_ctx)
                 }
 
                 has_active_slot = 1;
-                slot_index -= 1;
+                slot_index--;
                 continue;
 
             case MENU_SLOT_STATE_CLOSING:
@@ -678,10 +678,10 @@ void menu_update_slots(RenderContext* render_ctx)
                 }
 
                 has_active_slot = 1;
-                slot_index -= 1;
+                slot_index--;
                 continue;
             default:
-                slot_index -= 1;
+                slot_index--;
                 continue;
         }
     }
@@ -727,10 +727,10 @@ void menu_draw_window_transition(RenderContext* render_ctx, MenuSlot* slot, s32 
     s32 height;
 
     /* Expand from the center as anim_frame advances; closing runs it in reverse. */
-    inset_x = (slot->w >> 1) - ((s16)(slot->w / MENU_WINDOW_TRANSITION_STEPS) * slot->anim_frame);
+    inset_x = (slot->w >> 1) - ((slot->w / MENU_WINDOW_TRANSITION_STEPS) * slot->anim_frame);
     view_origin.x = inset_x;
 
-    inset_y = (slot->h >> 1) - ((s16)(slot->h / MENU_WINDOW_TRANSITION_STEPS) * slot->anim_frame);
+    inset_y = (slot->h >> 1) - ((slot->h / MENU_WINDOW_TRANSITION_STEPS) * slot->anim_frame);
     view_origin.y = inset_y;
 
     if (inset_x > 0)
@@ -781,7 +781,7 @@ void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect,
     DRAWENV* draw_env;
 
     packet_cursor = render_ctx->prim_cursor;
-    ot_entry = &render_ctx->ot[(u32)slot->navigation.packed >> MENU_SLOT_OT_INDEX_SHIFT];
+    ot_entry = &render_ctx->ot[slot->navigation.packed >> MENU_SLOT_OT_INDEX_SHIFT];
 
     if (slot->lerp_steps != 0)
     {
@@ -833,14 +833,14 @@ void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect,
                 case 19:
                 case 22:
                 case 25:
-                    title_pos.x = ((u16)rect->x + (u16)rect->w) - 104;
+                    title_pos.x = (rect->x + rect->w) - 104;
                     break;
                 default:
-                    title_pos.x = ((u16)rect->x + (u16)rect->w) - 72;
+                    title_pos.x = (rect->x + rect->w) - 72;
                     break;
             }
 
-            title_pos.y = (u16)rect->y;
+            title_pos.y = rect->y;
 
             if (slot->navigation.packed & MENU_LIST_COUNT_MASK)
             {
@@ -881,29 +881,29 @@ void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect,
 
     if (rect->h >= MENU_WINDOW_MIN_HEIGHT)
     {
-        setRECT(&window_rect, (u16)rect->x + 8, (u16)rect->y, (u16)rect->w - MENU_WINDOW_MIN_HEIGHT, 8);
+        setRECT(&window_rect, rect->x + 8, rect->y, rect->w - MENU_WINDOW_MIN_HEIGHT, 8);
         window_cursor = menu_build_h_edge(window_cursor, ot_entry, &window_rect, MENU_TW_EDGE_TOP);
 
         if (rect->h >= MENU_WINDOW_MIN_HEIGHT)
         {
-            setRECT(&window_rect, (u16)rect->x + 8, ((u16)rect->y + (u16)rect->h) - 8, (u16)rect->w - MENU_WINDOW_MIN_HEIGHT, 8);
+            setRECT(&window_rect, rect->x + 8, (rect->y + rect->h) - 8, rect->w - MENU_WINDOW_MIN_HEIGHT, 8);
             window_cursor = menu_build_h_edge(window_cursor, ot_entry, &window_rect, MENU_TW_EDGE_BOT);
         }
     }
 
     if (rect->w >= MENU_WINDOW_MIN_WIDTH)
     {
-        setRECT(&window_rect, (u16)rect->x, (u16)rect->y + 8, 8, (u16)rect->h - MENU_WINDOW_MIN_HEIGHT);
+        setRECT(&window_rect, rect->x, rect->y + 8, 8, rect->h - MENU_WINDOW_MIN_HEIGHT);
         window_cursor = menu_build_v_edge(window_cursor, ot_entry, &window_rect, MENU_TW_EDGE_LEFT);
 
         if (rect->w >= MENU_WINDOW_MIN_WIDTH)
         {
-            setRECT(&window_rect, ((u16)rect->x + (u16)rect->w) - 8, (u16)rect->y + 8, 8, (u16)rect->h - MENU_WINDOW_MIN_HEIGHT);
+            setRECT(&window_rect, (rect->x + rect->w) - 8, rect->y + 8, 8, rect->h - MENU_WINDOW_MIN_HEIGHT);
             window_cursor = menu_build_v_edge(window_cursor, ot_entry, &window_rect, MENU_TW_EDGE_RIGHT);
         }
     }
 
-    setRECT(&window_rect, (u16)rect->x + 8, (u16)rect->y + 8, (u16)rect->w - MENU_WINDOW_MIN_HEIGHT, (u16)rect->h - MENU_WINDOW_MIN_HEIGHT);
+    setRECT(&window_rect, rect->x + 8, rect->y + 8, rect->w - MENU_WINDOW_MIN_HEIGHT, rect->h - MENU_WINDOW_MIN_HEIGHT);
     sprite_cursor = menu_fill_window_interior((SPRT*)window_cursor, ot_entry, &window_rect, MENU_TW_FILL);
     sprite_cursor = menu_emit_corner(sprite_cursor, ot_entry, rect->x, rect->y, MENU_TW_CORNER_TL);
     sprite_cursor = menu_emit_corner(sprite_cursor, ot_entry, rect->x + rect->w - 8, rect->y, MENU_TW_CORNER_TR);
@@ -1456,15 +1456,15 @@ void menu_node_tree_init(void)
                 packed_value = (layout_y_16 & 1) << 15;
                 layout_y_high = (layout_y_16 >> 1) & 0xFF;
                 work_value_a = g_menu_nodes[node_index].u8_u.nav_y_packed & 0x80FF;
-                g_menu_nodes[node_index].u8_u.nav_y_packed = (u16)work_value_a;
+                g_menu_nodes[node_index].u8_u.nav_y_packed = work_value_a;
                 work_value_b = g_menu_nodes[node_index].idx_nav.nav_x_packed & 0x80FF;
-                g_menu_nodes[node_index].idx_nav.nav_x_packed = (u16)work_value_b;
-                g_menu_nodes[node_index].layout.layout_child_packed = (u16)((g_menu_nodes[node_index].layout.layout_child_packed & 0xFF00) | layout_y_high);
+                g_menu_nodes[node_index].idx_nav.nav_x_packed = work_value_b;
+                g_menu_nodes[node_index].layout.layout_child_packed = ((g_menu_nodes[node_index].layout.layout_child_packed & 0xFF00) | layout_y_high);
                 nav_x_low_bit = (layout_y_9 & 1) << 15;
-                g_menu_nodes[node_index].u8_u.nav_y_packed = (u16)((g_menu_nodes[node_index].u8_u.nav_y_packed & 0x7FFF) | packed_value);
-                g_menu_nodes[node_index].idx_nav.nav_x_packed = (u16)((g_menu_nodes[node_index].idx_nav.nav_x_packed & 0x7FFF) | nav_x_low_bit);
+                g_menu_nodes[node_index].u8_u.nav_y_packed = ((g_menu_nodes[node_index].u8_u.nav_y_packed & 0x7FFF) | packed_value);
+                g_menu_nodes[node_index].idx_nav.nav_x_packed = ((g_menu_nodes[node_index].idx_nav.nav_x_packed & 0x7FFF) | nav_x_low_bit);
                 layout_y_high_9 = layout_y_9 >> 1;
-                g_menu_nodes[node_index].u8_u.nav_y_packed = (u16)((g_menu_nodes[node_index].u8_u.nav_y_packed & 0xFF00) | layout_y_high_9);
+                g_menu_nodes[node_index].u8_u.nav_y_packed = ((g_menu_nodes[node_index].u8_u.nav_y_packed & 0xFF00) | layout_y_high_9);
             }
         }
 
@@ -1507,7 +1507,7 @@ void menu_update_layout(void)
     s32 layout_end = has_visible_children;
     s32 node_index = layout_end;
 
-    for (; node_index < MENU_NODE_COUNT; node_index += 1)
+    for (; node_index < MENU_NODE_COUNT; node_index++)
     {
         if (g_menu_nodes[node_index].u2.s.parent_idx == MENU_NONE)
         {
@@ -1554,7 +1554,7 @@ s32 menu_layout_node(s32 node_index, s32 base_pos)
     MenuNode* child_source;
 
     layout_pos = base_pos;
-    is_expanded = (((u16)(&g_menu_nodes[node_index])->u2.unk2) >> 1) & 1;
+    is_expanded = (((&g_menu_nodes[node_index])->u2.unk2) >> 1) & 1;
     layout_y = layout_pos & 0xFFFF;
     layout_pos += MENU_ROW_HEIGHT;
     node = &g_menu_nodes[node_index];
@@ -1980,15 +1980,15 @@ void menu_set_active_node(void)
                 break;
             }
 
-            child_node = (MenuNode*)(((u32)wide_child_index << 4) + node_base_addr);
+            child_node = (MenuNode*)((wide_child_index << 4) + node_base_addr);
             ((MenuNodeCoordinateView*)child_node)->layout_x = ((MenuNodeCoordinateView*)child_node)->nav_x = ((MenuNodeCoordinateView*)loop_active)->nav_x;
             reloaded_child_index = loop_active->layout.s.children[child_slot];
-            ((MenuNodeCoordinateView*)(((u32)reloaded_child_index << 4) + node_base_addr))->nav_y = ((MenuNodeCoordinateView*)loop_active)->nav_y;
+            ((MenuNodeCoordinateView*)((reloaded_child_index << 4) + node_base_addr))->nav_y = ((MenuNodeCoordinateView*)loop_active)->nav_y;
         }
     }
 
     /* Update g_menu_char_slot from bits [5:4] of u2.unk2 (3 = preserve current value). */
-    char_slot_bits = (((u16)g_menu_nodes[g_menu_active_node].u2.unk2) >> 4) & 3;
+    char_slot_bits = ((g_menu_nodes[g_menu_active_node].u2.unk2) >> 4) & 3;
 
     if (char_slot_bits != 3)
     {
@@ -2043,7 +2043,10 @@ static inline u8* menu_character_block(void)
     return (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
 }
 
-/** @brief Return the saved game shifted so that characters[0] is the character whose button bindings the active page edits (party slot 0 or 1). */
+/**
+ * @brief The saved game shifted so that characters[0] is the character whose button bindings the active page edits.
+ * @return g_saved_game_ctx, offset by one character record for party slot 1.
+ */
 static inline SavedGameLayout* menu_button_page_context(void)
 {
     u8* base = (u8*)g_saved_game_ctx;
@@ -2108,7 +2111,7 @@ s32 menu_handle_input(s32 process_actions)
                         }
                         else
                         {
-                            g_script_repeat_last -= 1;
+                            g_script_repeat_last--;
                         }
                     }
                     else if (g_pad_input & PAD_BTN_R2)
@@ -2121,7 +2124,7 @@ s32 menu_handle_input(s32 process_actions)
                         }
                         else
                         {
-                            g_script_repeat_last += 1;
+                            g_script_repeat_last++;
                         }
                     }
                 }
@@ -2130,12 +2133,12 @@ s32 menu_handle_input(s32 process_actions)
             {
                 if (g_menu_scene_type == 0x14 || g_menu_scene_type == 0x17 || g_menu_scene_type == 0x1A)
                 {
-                    g_menu_scene_type += 1;
+                    g_menu_scene_type++;
                     g_menu_active_node = g_menu_scene_type;
                 }
                 else if (g_menu_scene_type == 0x15 || g_menu_scene_type == 0x18 || g_menu_scene_type == 0x1B)
                 {
-                    g_menu_scene_type -= 1;
+                    g_menu_scene_type--;
                     g_menu_active_node = g_menu_scene_type;
                 }
 
@@ -2159,14 +2162,14 @@ s32 menu_handle_input(s32 process_actions)
             case 0:
             case 3:
             case 6:
-                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx += 1;
+                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx++;
                 menu_focus_active_content_item();
                 break;
 
             case 1:
             case 4:
             case 7:
-                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx -= 1;
+                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx--;
                 menu_focus_active_content_item();
                 break;
 
@@ -2197,7 +2200,7 @@ s32 menu_handle_input(s32 process_actions)
                         {
                             if (g_menu_scene_type >= 9)
                             {
-                                g_menu_scene_type += 1;
+                                g_menu_scene_type++;
                                 g_menu_active_node = g_menu_scene_type;
                             }
                             else
@@ -2208,7 +2211,7 @@ s32 menu_handle_input(s32 process_actions)
                         }
                         else
                         {
-                            g_menu_scene_type -= 1;
+                            g_menu_scene_type--;
                             g_menu_active_node = g_menu_scene_type;
                         }
                     }
@@ -2224,7 +2227,7 @@ s32 menu_handle_input(s32 process_actions)
                             }
                             else
                             {
-                                g_menu_scene_type += 1;
+                                g_menu_scene_type++;
                                 g_menu_active_node = g_menu_scene_type;
                             }
                         }
@@ -2232,12 +2235,12 @@ s32 menu_handle_input(s32 process_actions)
                         {
                             if ((g_menu_scene_type % 3) == 1)
                             {
-                                g_menu_scene_type -= 1;
+                                g_menu_scene_type--;
                                 g_menu_active_node = g_menu_scene_type;
                             }
                             else
                             {
-                                g_menu_scene_type += 1;
+                                g_menu_scene_type++;
                                 g_menu_active_node = g_menu_scene_type;
                             }
                         }
@@ -2583,7 +2586,7 @@ s32 menu_handle_input(s32 process_actions)
 
                                     if (player->head.bytes.flags & FIELD_PLAYER_ACTIVE)
                                     {
-                                        count += 1;
+                                        count++;
                                     }
 
                                     player++;
@@ -3052,20 +3055,20 @@ s32 menu_build_special_technique_nav_entries(void)
         {
             if ((group_flags & bit_mask) != 0)
             {
-                if ((group_index == (s32)FIELD_ITEM_TYPE(g_menu_equipment_base->info.word)) && (selected_index == none_index))
+                if ((group_index == FIELD_ITEM_TYPE(g_menu_equipment_base->info.word)) && (selected_index == none_index))
                 {
                     selected_index = item_count;
                 }
 
-                item_count += 1;
+                item_count++;
             }
 
-            index -= 1;
+            index--;
             bit_mask <<= 1;
         }
 
-        group_index += 1;
-        group_flags_ptr += 1;
+        group_index++;
+        group_flags_ptr++;
     }
 
     if (selected_index == MENU_NONE)
@@ -3136,9 +3139,9 @@ s32 menu_build_inventory_nav_entries(s32 item_kind)
             break;
         }
 
-        if (FIELD_ITEM_CATEGORY(item->info.word) == (u32)item_kind)
+        if (FIELD_ITEM_CATEGORY(item->info.word) == item_kind)
         {
-            item_count += 1;
+            item_count++;
         }
     }
 
@@ -4611,7 +4614,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 if (golem_index >= 0)
                                 {
                                     SavedGameLayout* context = g_saved_game_ctx;
-                                    u8 v = menu_golem_record(context, golem_index)->logic_layout & GOLEM_LOGIC_CLASS_MASK;
+                                    u8 v = menu_golem_record(context, golem_index)->logic_layout.byte & GOLEM_LOGIC_CLASS_MASK;
                                     void* a2 =
                                         (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_GOLEM_CLASS_NAMES]);
                                     packet_cursor =
@@ -4628,7 +4631,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 if (golem_index >= 0)
                                 {
                                     SavedGameLayout* context = g_saved_game_ctx;
-                                    u8 v = menu_golem_record(context, golem_index)->logic_layout >> GOLEM_GRID_BOUND_SHIFT;
+                                    u8 v = menu_golem_record(context, golem_index)->logic_layout.byte >> GOLEM_GRID_BOUND_SHIFT;
                                     void* a2 =
                                         (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_GOLEM_GRID_SIZES]);
                                     packet_cursor =
@@ -4918,7 +4921,7 @@ inline s32 menu_get_equipment_conflicts(s32 excluded_slot)
     conflicts = 0;
     equipment = g_menu_equipment_base;
 
-    for (equipment_index = 0; equipment_index < MENU_EQUIPMENT_SLOT_COUNT; equipment_index++)
+    for (equipment_index = 0; equipment_index < FIELD_EQUIPMENT_SLOT_COUNT; equipment_index++)
     {
         if ((equipment_index != excluded_slot) && (equipment->name[0] != 0))
         {
@@ -5125,7 +5128,7 @@ void* menu_emit_slot_scroll_arrows(SPRT* sprite, u_long* ot_entry, MenuSlot* slo
         SET_SPRT_WH_PACKED(sprite, MENU_SCROLL_ARROW_SIZE, MENU_SCROLL_ARROW_SIZE);
         SET_SPRT_CLUT(sprite, MENU_SCROLL_ARROW_CLUT);
         addPrim(ot_entry, sprite);
-        arrow_count += 1;
+        arrow_count++;
         sprite++;
     }
 
@@ -5280,7 +5283,7 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
         s32 dx = (g_content_view_x - *cxp) / g_menu_suppress_cursor;
         s32* cyp = &g_content_cursor_y;
         s32 dy = (g_content_view_y - *cyp) / g_menu_suppress_cursor;
-        g_menu_suppress_cursor -= 1;
+        g_menu_suppress_cursor--;
         *cxp = dx + *cxp;
         *cyp = dy + *cyp;
     }
@@ -5639,7 +5642,7 @@ void* menu_draw_node_tree(void* prim_buf, u_long* ot)
     else
     {
         scroll_step = (g_menu_scroll_pos - g_menu_content_height) / g_menu_redraw_state;
-        g_menu_redraw_state -= 1;
+        g_menu_redraw_state--;
         g_menu_content_height += scroll_step;
     }
 
@@ -5670,7 +5673,7 @@ void* menu_draw_node_recursive(s32 node_index, void* prim_buf, u_long* ot)
     g_menu_nav_nodes[g_menu_nav_count] = node_index;
     node_base = g_menu_nodes;
     node = node_base + node_index;
-    g_menu_nav_count += 1;
+    g_menu_nav_count++;
     next_prim = menu_emit_icon_sprite(prim_buf, ot, node->icon_id, ((node->idx_nav.nav_x_packed >> 8) & (MENU_NAV_X_MASK >> 8)) + 1,
                                       ((node->u8_u.s.nav_y_hi << 1) | (work_value = node->idx_nav.nav_x_packed >> 15)) - g_menu_content_height, 1,
                                       ((node->u2.unk2 >> 2) & 3) != 0, g_menu_scene_type == node_index, (node->u2.unk2 >> 6) & 3);
@@ -5721,7 +5724,7 @@ void* menu_draw_node_recursive(s32 node_index, void* prim_buf, u_long* ot)
             new_y_hi = (new_y >> 1) & 0xFF;
             new_y_low_bit = (new_y & 1) << 15;
             node->idx_nav.nav_x_packed = (nav_x_packed & 0x7FFF) | new_y_low_bit;
-            node->layout_frames_remaining -= 1;
+            node->layout_frames_remaining--;
             node->u8_u.nav_y_packed = (node->u8_u.nav_y_packed & 0xFF00) | new_y_hi;
         }
     }
@@ -5774,12 +5777,12 @@ void* menu_emit_icon_sprite(void* prim_buf, u_long* ot, s32 icon_id, s32 x, s32 
     SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
     setSprt(sprite);
     sprite_x = x - secondary_offset;
-    setXY0(sprite, (s16)(sprite_x + animation_offset), (s16)((y - secondary_offset) + animation_offset));
+    setXY0(sprite, (sprite_x + animation_offset), ((y - secondary_offset) + animation_offset));
     setUV0(sprite, g_menu_icon_sprite_defs[icon_id].u_coord, g_menu_icon_sprite_defs[icon_id].v_coord);
-    setWH(sprite, (s16)g_menu_icon_sprite_defs[icon_id].w, (s16)g_menu_icon_sprite_defs[icon_id].h);
+    setWH(sprite, g_menu_icon_sprite_defs[icon_id].w, g_menu_icon_sprite_defs[icon_id].h);
     SET_SPRT_CLUT(sprite, menu_icon_clut(g_menu_icon_clut_codes[icon_id]));
     addPrim((u_long*)ot, sprite);
-    sprite += 1;
+    sprite++;
 
     if (secondary_offset != 0)
     {
@@ -5799,12 +5802,12 @@ void* menu_emit_icon_sprite(void* prim_buf, u_long* ot, s32 icon_id, s32 x, s32 
             setSemiTrans(sprite, 1);
         }
 
-        setXY0(sprite, (s16)(x + (secondary_offset - animation_offset) * 2), (s16)(y + (secondary_offset - animation_offset) * 2));
+        setXY0(sprite, (x + (secondary_offset - animation_offset) * 2), (y + (secondary_offset - animation_offset) * 2));
         setUV0(sprite, g_menu_icon_sprite_defs[icon_id].u_coord, g_menu_icon_sprite_defs[icon_id].v_coord);
-        setWH(sprite, (s16)g_menu_icon_sprite_defs[icon_id].w, (s16)g_menu_icon_sprite_defs[icon_id].h);
+        setWH(sprite, g_menu_icon_sprite_defs[icon_id].w, g_menu_icon_sprite_defs[icon_id].h);
         SET_SPRT_CLUT(sprite, menu_icon_clut(g_menu_icon_clut_codes[icon_id]));
         addPrim((u_long*)ot, sprite);
-        sprite += 1;
+        sprite++;
     }
 
     return sprite;
@@ -6279,8 +6282,8 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
             y += MENU_LIST_ROW_HEIGHT;
         }
 
-        item_index += 1;
-        item_record += 1;
+        item_index++;
+        item_record++;
     }
 
     if ((y - scroll_y) <= 0 && list->lerp_steps == 0)
@@ -6832,7 +6835,7 @@ void* menu_item_list_callback(u_long* ot, ScrollListState* state, void* prim_buf
     quantity = g_saved_game_ctx->item_counts;
     scroll_y = list->scroll_y;
 
-    for (item_index = 0; item_index < FIELD_ITEM_KIND_COUNT; item_index += 1)
+    for (item_index = 0; item_index < FIELD_ITEM_KIND_COUNT; item_index++)
     {
         if (*quantity != 0)
         {
@@ -6840,8 +6843,8 @@ void* menu_item_list_callback(u_long* ot, ScrollListState* state, void* prim_buf
 
             if ((relative_y > -MENU_LIST_ROW_HEIGHT) && (relative_y < (list->viewport_h - MENU_LIST_ROW_HEIGHT)))
             {
-                pos.x = 0xC0 - (u16)view_origin->x;
-                pos.y = relative_y - (u16)view_origin->y;
+                pos.x = 0xC0 - view_origin->x;
+                pos.y = relative_y - view_origin->y;
 
                 name_table = menu_text_table_base(MENU_TEXT_ITEM_NAMES);
                 prim_buf = field_draw_text(prim_buf, ot, ((u8*)name_table + ((u16*)name_table)[item_index]), FIELD_TEXT_COLOR_MENU, 0x10 - view_origin->x,
@@ -6857,7 +6860,7 @@ void* menu_item_list_callback(u_long* ot, ScrollListState* state, void* prim_buf
             y += MENU_LIST_ROW_HEIGHT;
         }
 
-        quantity += 1;
+        quantity++;
     }
 
     if (selected_index != -1)
@@ -6910,7 +6913,7 @@ void* menu_artifact_list_callback(u_long* ot, ScrollListState* state, void* prim
     land = g_saved_game_ctx->lands;
     scroll_y = list->scroll_y;
 
-    for (land_index = 0; land_index < FIELD_LAND_COUNT; land_index += 1)
+    for (land_index = 0; land_index < FIELD_LAND_COUNT; land_index++)
     {
         if (land->flags & FIELD_LAND_ARTIFACT_OBTAINED)
         {
@@ -6940,7 +6943,7 @@ void* menu_artifact_list_callback(u_long* ot, ScrollListState* state, void* prim
             list_y += MENU_LIST_ROW_HEIGHT;
         }
 
-        land += 1;
+        land++;
     }
 
     if (selected_index != -1)
@@ -7008,7 +7011,7 @@ void* menu_skill_action_callback(u_long* ot, ScrollListState* state, void* prim_
                 ((MenuSlot*)list)->has_title = 1;
                 g_menu_draw_early_out = 1;
                 ((MenuSlot*)list)->navigation.packed = MENU_LIST_WITH_COUNT(((MenuSlot*)list)->navigation.packed, technique_nav);
-                ((MenuSlot*)list)->navigation.fields.selected_index = (u16)selected_row;
+                ((MenuSlot*)list)->navigation.fields.selected_index = selected_row;
                 return buf;
 
             case 1:
@@ -7445,7 +7448,7 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
                                     &menu_character_record((SavedGameLayout*)saved_game, g_menu_char_slot)->equipment[FIELD_WEAPON_SLOT], bare_hands);
 
                                 /* Bare hands cannot hold a shield: move it to the inventory, or undo the removal when there is no room. */
-                                for (equipment_index = FIELD_ARMOR_SLOT; equipment_index < MENU_EQUIPMENT_SLOT_COUNT; equipment_index++)
+                                for (equipment_index = FIELD_ARMOR_SLOT; equipment_index < FIELD_EQUIPMENT_SLOT_COUNT; equipment_index++)
                                 {
                                     armor_offset = equipment_index * MENU_ITEM_RECORD_SIZE;
                                     armor_record = (u8*)g_saved_game_ctx + (armor_offset + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE));
@@ -7553,7 +7556,7 @@ void* menu_equipment_compare_callback(u_long* ot, ScrollListState* state, void* 
             menu_play_se(SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
             list->active = MENU_SLOT_STATE_CLOSING;
 
-            for (equipment_index = 0; equipment_index < MENU_EQUIPMENT_SLOT_COUNT; equipment_index++)
+            for (equipment_index = 0; equipment_index < FIELD_EQUIPMENT_SLOT_COUNT; equipment_index++)
             {
                 if (g_item_slot_flags[equipment_index] != 0)
                 {
@@ -7740,7 +7743,7 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
 
     if ((g_pad_input & PAD_CONFIRM_BUTTONS) && (active != 0))
     {
-        if ((selected_technique / FIELD_TECHNIQUES_PER_WEAPON) == (s32)FIELD_ITEM_TYPE(g_menu_equipment_base->info.word))
+        if ((selected_technique / FIELD_TECHNIQUES_PER_WEAPON) == FIELD_ITEM_TYPE(g_menu_equipment_base->info.word))
         {
             skill = g_saved_game_ctx->characters[g_menu_char_slot].info.actions.skills[g_menu_active_subtype - MENU_SKILL_SUBTYPE_BASE];
 
@@ -7816,7 +7819,7 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
                         name_offset = *(u16*)((u8*)name_table + (technique_index * 2) + (weapon_type * (FIELD_TECHNIQUES_PER_WEAPON * 2)));
                         name = name_table + name_offset;
 
-                        if (weapon_type == (s32)FIELD_ITEM_TYPE(g_menu_equipment_base->info.word))
+                        if (weapon_type == FIELD_ITEM_TYPE(g_menu_equipment_base->info.word))
                         {
                             glyph_color = FIELD_TEXT_COLOR_MENU;
                         }
@@ -8311,7 +8314,7 @@ s32 menu_stage_best_armor(void)
             /* A candidate staged for another slot is now the record being replaced here. */
             staged_items = &g_item_slot_data[0];
 
-            for (; slot_index < MENU_EQUIPMENT_SLOT_COUNT; slot_index++)
+            for (; slot_index < FIELD_EQUIPMENT_SLOT_COUNT; slot_index++)
             {
                 if (candidate == staged_items[slot_index])
                 {
@@ -8328,7 +8331,7 @@ s32 menu_stage_best_armor(void)
         {
             staged_items = &g_item_slot_data[0];
 
-            for (; slot_index < MENU_EQUIPMENT_SLOT_COUNT; slot_index++)
+            for (; slot_index < FIELD_EQUIPMENT_SLOT_COUNT; slot_index++)
             {
                 if (candidate == staged_items[slot_index])
                 {

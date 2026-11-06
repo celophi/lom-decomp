@@ -2,50 +2,38 @@
 #define LOM_NIKI_INTERNAL_H
 
 #include "common.h"
+#include <kernel.h>
+#include <libapi.h>
+#include <libetc.h>
+#include <libgpu.h>
+#include <libmcx.h>
+#include <memory.h>
+#include <strings.h>
+
+#include "common/card_directory.h"
+#include "common/card_events.h"
+#include "common/card_menu.h"
+#include "common/encoded_text.h"
+#include "common/glyph_cache.h"
+#include "common/save_file.h"
 #include "common/saved_game.h"
 #include "common/vector.h"
-#include "main/display.h"
-#include "overlays/field/field_menu_window.h"
-#include "common/card_menu.h"
-#include <kernel.h>
-#include <libetc.h>
-#include <libmcx.h>
-#include "common/encoded_text.h"
-#include "common/save_file.h"
-#include "common/glyph_cache.h"
-#include "common/card_events.h"
-#include "common/card_directory.h"
-#include <strings.h>
+#include "main/audio/akao.h"
 #include "main/controller.h"
-#include <libapi.h>
+#include "main/display.h"
 #include "overlays/field/field_fade.h"
 #include "overlays/field/field_input.h"
-#include "overlays/field/field_sound.h"
-#include "main/audio/akao.h"
-#include <memory.h>
-#include <libgpu.h>
-#include "overlays/field/field_ui_text.h"
+#include "overlays/field/field_menu_window.h"
 #include "overlays/field/field_overlay_handoff.h"
+#include "overlays/field/field_sound.h"
+#include "overlays/field/field_ui_text.h"
 
 #define NIKI_CANCEL_INPUT_MASK PAD_BTN_CIRCLE
 
-/** @brief Fields restored from a loaded save before returning to the game. */
-typedef struct
-{
-    u8 unknown_0x000[0x197];
-    u8 trailing_record_count;
-    u8 unknown_0x198[0x254 - 0x198];
-    u16 unknown_0x254;
-    u16 unknown_0x256;
-    u8 unknown_0x258[0x32E0 - 0x258];
-    u8 trailing_data[0x100];
-} NikiLoadedSavePayload;
-
-/** @brief Memory-card transfer buffer with serialized and loaded-payload views. */
+/** @brief Memory-card transfer buffer: a save file, or its raw bytes. */
 typedef union
 {
     SaveFile save;
-    NikiLoadedSavePayload loaded;
     u8 bytes[SAVE_FILE_BYTES];
 } NikiSaveBuffer;
 
@@ -53,9 +41,7 @@ typedef union
 extern void* g_niki_work_buffer;
 /** @brief The saved game's item records (g_saved_game_ctx->items). */
 extern FieldItemRecord* g_niki_items;
-extern s32 g_pad_input;
 extern s32 D_80164B80;
-extern s32 g_save_compatibility_tag;
 /**
  * @brief Start of the selected entry's save file: only the card header and the
  *        first 0x100 bytes of the saved game are read (CARD_MENU_ENTRY_READ_BYTES).
@@ -77,13 +63,6 @@ extern u16 g_niki_text_found_load_file;
 extern u16 g_niki_text_trade_data_not_saved;
 
 extern NikiSaveBuffer g_niki_save_blob;
-extern u8 D_8011F3D8[];
-/** @brief FIELD's NIKI outcome: 0 none or written back, 1 save loaded, 2 failed or declined. */
-extern s32 g_field_niki_state;
-extern s32 D_801227CC;
-extern s32 D_801227F4;
-extern s32 D_8011F418;
-extern u8 g_field_shared_items[];
 
 s32 card_menu_update_card_sequence(void);
 s32 card_menu_handle_input(void);

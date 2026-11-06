@@ -3,10 +3,11 @@
  * @brief Spawn and release dropped-item actor records, find the nearest one, toggle script-only mode.
  */
 
-#include "main/audio/game_audio.h"
 #include "common.h"
+
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
+#include "main/audio/game_audio.h"
 
 /** @brief Actor record whose event table every spawned item record copies. */
 #define FIELD_ITEM_TEMPLATE_RECORD 4
@@ -94,7 +95,7 @@ s32 field_find_nearest_faced_item(s32 unused)
                 field_get_actor_position(record->id, &item_position);
                 list.entries[list.count].id = record->id;
                 list.entries[list.count].distance = field_distance_xz(&search_position, &item_position);
-                list.count += 1;
+                list.count++;
             }
         }
     }

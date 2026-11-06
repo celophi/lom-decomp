@@ -27,6 +27,33 @@ void animate_save_slot_panel(void);
 /* Entries in g_save_layout_tex_table. */
 #define SAVE_LAYOUT_TEX_COUNT 11
 
+/**
+ * @brief One UV/size descriptor in the save-slot panel and sprite UV tables.
+ *
+ * @note Every field is in 8-pixel units; the renderer multiplies by 8 on use.
+ */
+typedef struct
+{
+    u8 u;  /**< source U, in 8-pixel units */
+    u8 v;  /**< source V, in 8-pixel units */
+    u8 w;  /**< width, in 8-pixel units */
+    u8 h;  /**< height, in 8-pixel units */
+    u8 ox; /**< X origin offset, in 8-pixel units */
+    u8 oy; /**< Y origin offset, in 8-pixel units */
+} SlotUvRect;
+
+/** Number of entries in g_save_layout_table. */
+#define SAVE_LAYOUT_ENTRIES 0x1B
+
+/** A glyph strip wider than this is split into chunks of this many pixels. */
+#define GLYPH_CHUNK_WIDTH 0x80
+
+/** Primitive selectors stored in SaveLayoutEntry::type. */
+#define SAVE_LAYOUT_PRIM_NONE 0
+#define SAVE_LAYOUT_PRIM_TILE 2
+#define SAVE_LAYOUT_PRIM_POLY_FT4 3
+#define SAVE_LAYOUT_PRIM_SPRT 4
+
 static void scroll_slots_right(void);
 static void scroll_slots_left(void);
 void load_hero_template(s32 hero_type);
@@ -97,7 +124,7 @@ void handle_save_slot_input(void)
         slide_x_lerped_ptr = &g_slot_slide_x_lerped;
         slide_x_step = (g_slot_slide_x - *slide_x_lerped_ptr) / g_slot_slide_frames;
         slide_y_step = (g_slot_slide_y - g_slot_slide_y_lerped) / g_slot_slide_frames;
-        g_slot_slide_frames -= 1;
+        g_slot_slide_frames--;
         g_slot_slide_x_lerped += slide_x_step;
         g_slot_slide_y_lerped += slide_y_step;
         return;
@@ -256,7 +283,7 @@ void animate_save_slot_panel(void)
     if (g_slot_highlight_frames != 0)
     {
         g_slot_highlight_x += (g_slot_highlight_target_x - g_slot_highlight_x) / g_slot_highlight_frames;
-        g_slot_highlight_frames -= 1;
+        g_slot_highlight_frames--;
     }
     else
     {
@@ -281,10 +308,10 @@ void animate_save_slot_panel(void)
         g_slot_highlight_frames = 4;
     }
     ptr = g_save_layout_table;
-    ptr[2].v0 = (u16)g_slot_highlight_x;
-    ptr[3].v0 = ((u16)g_slot_highlight_x) + SAVE_HIGHLIGHT_SPAN;
-    ptr[9].v0 = (u16)g_slot_highlight_x;
-    ptr[10].v0 = ((u16)g_slot_highlight_x) + SAVE_HIGHLIGHT_SPAN;
+    ptr[2].v0 = g_slot_highlight_x;
+    ptr[3].v0 = (g_slot_highlight_x) + SAVE_HIGHLIGHT_SPAN;
+    ptr[9].v0 = g_slot_highlight_x;
+    ptr[10].v0 = (g_slot_highlight_x) + SAVE_HIGHLIGHT_SPAN;
     if (g_slot_highlight_x != 0)
     {
         g_save_layout_table[7].type = 1;
@@ -360,7 +387,7 @@ void reset_save_slot_panel(void)
         entry[8].type = 0;
         entry[14].type = 0;
         entry[15].type = 0;
-        highlight_bottom_v = ((u16)g_slot_highlight_x) + SAVE_HIGHLIGHT_SPAN;
+        highlight_bottom_v = (g_slot_highlight_x) + SAVE_HIGHLIGHT_SPAN;
         entry[6].y = SAVE_SCROLL_WIDTH_HOME;
         entry[6].tile_y = SAVE_SCROLL_WIDTH_HOME;
         entry[13].y = SAVE_SCROLL_WIDTH_HOME;
@@ -371,9 +398,9 @@ void reset_save_slot_panel(void)
         entry[11].type = 1;
         entry[12].type = 1;
 
-        entry[2].v0 = (u16)g_slot_highlight_x;
+        entry[2].v0 = g_slot_highlight_x;
         entry[3].v0 = highlight_bottom_v;
-        entry[9].v0 = (u16)g_slot_highlight_x;
+        entry[9].v0 = g_slot_highlight_x;
         entry[10].v0 = highlight_bottom_v;
         return;
     }
@@ -420,43 +447,29 @@ static void scroll_slots_left(void)
     }
 }
 
-/**
- * @brief One UV/size descriptor in the save-slot panel and sprite UV tables.
- *
- * @note Every field is in 8-pixel units; the renderer multiplies by 8 on use.
- */
-typedef struct
-{
-    u8 u;  /**< source U, in 8-pixel units */
-    u8 v;  /**< source V, in 8-pixel units */
-    u8 w;  /**< width, in 8-pixel units */
-    u8 h;  /**< height, in 8-pixel units */
-    u8 ox; /**< X origin offset, in 8-pixel units */
-    u8 oy; /**< Y origin offset, in 8-pixel units */
-} SlotUvRect;
-
 /** @brief UV rectangles of the save-slot background panel quads. */
 extern SlotUvRect g_save_slot_panel_uv_table[];
 /** @brief UV rectangles of the save-slot free-size sprites. */
 extern SlotUvRect g_save_slot_sprite_uv_table[];
 
-/** Number of entries in g_save_layout_table. */
-#define SAVE_LAYOUT_ENTRIES 0x1B
-
-/** A glyph strip wider than this is split into chunks of this many pixels. */
-#define GLYPH_CHUNK_WIDTH 0x80
-
-/** Primitive selectors stored in SaveLayoutEntry::type. */
-#define SAVE_LAYOUT_PRIM_NONE 0
-#define SAVE_LAYOUT_PRIM_TILE 2
-#define SAVE_LAYOUT_PRIM_POLY_FT4 3
-#define SAVE_LAYOUT_PRIM_SPRT 4
-
+/**
+ * @brief Texture page of a save-layout texture at a given VRAM x.
+ * @param tex Texture whose mode and y position are used.
+ * @param flags Blend mode in bits 2 and up.
+ * @param x VRAM x of the page.
+ * @return The texture page value.
+ */
 static inline u32 get_save_layout_tpage(SaveLayoutTex* tex, u32 flags, s32 x)
 {
     return getTPage(tex->control.mode & 3, flags >> 2, x, *(u16*)&tex->tex_y);
 }
 
+/**
+ * @brief Texture page of a save-layout texture at its own VRAM position.
+ * @param tex Texture whose mode and position are used.
+ * @param flags Blend mode in bits 2 and up.
+ * @return The texture page value.
+ */
 static inline u32 get_save_layout_base_tpage(SaveLayoutTex* tex, u32 flags)
 {
     return getTPage(tex->control.mode & 3, flags >> 2, *(u16*)&tex->tex_x, *(u16*)&tex->tex_y);

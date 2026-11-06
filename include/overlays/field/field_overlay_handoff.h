@@ -3,6 +3,8 @@
 
 #include "common.h"
 
+#include "common/saved_game.h"
+
 /**
  * @file field_overlay_handoff.h
  * @brief FIELD-resident state passed between FIELD and the menu overlays it
@@ -53,5 +55,24 @@ extern u8 g_field_rename_custom_name[];
 
 /** @brief After an item or character rename FIELD runs script g_field_rename_script_index + 1: the item category, or 3 + the character's party position. */
 extern s32 g_field_rename_script_index;
+
+/**
+ * @brief Outcome of the last NIKI run: 0 none or written back, 1 save loaded, 2 failed or declined.
+ * @note Field scripts wait on it through opcode 0x14 selectors 3 and 4.
+ */
+extern s32 g_field_niki_state;
+
+/** @brief Item records exchanged with the trade partner's SavedGameLayout::pending_items. */
+extern FieldItemRecord g_field_shared_items[SAVED_GAME_PENDING_ITEM_COUNT];
+
+/** @brief SaveIdentity of the trade partner's save; NIKI writes back only to a save with the same ids. */
+extern s32 g_field_niki_partner_game_id;
+extern s32 g_field_niki_partner_save_id;
+
+/** @brief Card slot holding the trade partner's save. */
+extern s32 g_field_niki_card_slot;
+
+/** @brief Card path of the trade partner's save. */
+extern u8 g_field_niki_save_path[];
 
 #endif

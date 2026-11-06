@@ -602,8 +602,8 @@ void wmap_land_effect_13_sequence_1_step_02(void)
 
     obj = &g_wmap_sprite_actors[4];
     actors = obj - 4;
-    actors[4].shade = *(u16*)&g_wmap_effect_wave_phase;
-    actors[4].target_shade = *(u16*)&g_wmap_effect_wave_phase;
+    actors[4].shade = *&g_wmap_effect_wave_phase;
+    actors[4].target_shade = *&g_wmap_effect_wave_phase;
     wmap_step_actor_animation(obj, &g_wmap_actor_animations[4]);
     wmap_draw_actor_sprite(obj, g_wmap_focus_screen_position.packed, 15, 4, 0);
     g_wmap_effect_wave_phase += 8;
@@ -630,8 +630,8 @@ void wmap_land_effect_13_sequence_1_step_04(void)
 
     obj = &g_wmap_sprite_actors[4];
     actors = obj - 4;
-    actors[4].shade = *(u16*)&g_wmap_effect_wave_phase;
-    actors[4].target_shade = *(u16*)&g_wmap_effect_wave_phase;
+    actors[4].shade = *&g_wmap_effect_wave_phase;
+    actors[4].target_shade = *&g_wmap_effect_wave_phase;
     wmap_step_actor_animation(obj, &g_wmap_actor_animations[4]);
     wmap_draw_actor_sprite(obj, g_wmap_focus_screen_position.packed, 15, 4, 0);
     g_wmap_effect_wave_phase -= 2;
@@ -717,8 +717,8 @@ void wmap_land_effect_13_sequence_4_step_04(void)
     wmap_step_actor_animation(&g_wmap_sprite_actors[6], &g_wmap_actor_animations[6]);
     wmap_draw_actor_sprite(&g_wmap_sprite_actors[6], g_wmap_focus_screen_position.packed, 15, 11, 0);
     actors = &g_wmap_sprite_actors[6] - 6;
-    actors[6].shade = *(u16*)&g_wmap_effect_fade_e;
-    actors[6].target_shade = *(u16*)&g_wmap_effect_fade_e;
+    actors[6].shade = *&g_wmap_effect_fade_e;
+    actors[6].target_shade = *&g_wmap_effect_fade_e;
     g_wmap_effect_fade_e -= 8;
 
     if (g_wmap_effect_fade_e < 0)

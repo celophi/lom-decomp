@@ -259,12 +259,15 @@ typedef struct
     FieldItemRecord records[1];
 } FieldItemResource;
 
+/** @brief Case entries of script opcode 0x09: a key byte and a branch halfword; key FIELD_SCRIPT_CASE_DEFAULT ends the list. */
+#define FIELD_SCRIPT_CASE_ENTRY_SIZE 3
+#define FIELD_SCRIPT_CASE_DEFAULT 0xFF
+
 /* Opcodes below 0x40 dispatch through this table, indexed by opcode. */
 extern void (*g_field_script_op_table[])();
 /* Opcodes 0x40 to 0x5F dispatch through this table, indexed by opcode - 0x40. */
 extern FieldDispatchFn g_field_script_pair_op_table[];
 
-extern s32 g_field_niki_state;
 extern s32 g_field_hide_actor_panels, g_field_pair_indicators_disabled, g_field_item_drop_enabled;
 
 void field_script_op_00(void);
@@ -613,7 +616,7 @@ void field_script_op_05(void)
  */
 void field_script_op_06(void)
 {
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc += 1;
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc++;
 }
 
 /**
@@ -657,10 +660,6 @@ void field_script_test_range(void)
         FIELD_SCRIPT_ACTIVE_RECORD_STATE()->flags &= ~FIELD_SCRIPT_COND;
     }
 }
-
-/** @brief Case entries of script opcode 0x09: a key byte and a branch halfword; key FIELD_SCRIPT_CASE_DEFAULT ends the list. */
-#define FIELD_SCRIPT_CASE_ENTRY_SIZE 3
-#define FIELD_SCRIPT_CASE_DEFAULT 0xFF
 
 /**
  * @brief Opcode 0x09: skip to the case entry that matches an operand, then take its branch.
@@ -1323,7 +1322,7 @@ void field_script_op_1e(void)
 void field_script_op_1f(void)
 {
     field_battle_suspend();
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc += 1;
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc++;
 }
 
 /**
@@ -1369,7 +1368,7 @@ void field_script_op_23(void)
 void field_script_op_24(void)
 {
     record_game_diagnostic(DIAG_ERROR, DIAG_SCRIPT_BAD_OPCODE, g_field_script->status.owner_id, 0x24);
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc += 1;
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc++;
 }
 
 /**
@@ -1467,7 +1466,7 @@ void field_script_op_29(void)
 
     field_set_script_var(0, FIELD_VAR_RESULT, result);
     field_queue_actor_event(FIELD_EVENT_ACTOR_ID_BASE, 0, 0x10);
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc += 1;
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc++;
 }
 
 /**
@@ -1774,7 +1773,7 @@ void field_script_op_37(void)
  */
 void field_script_op_38(void)
 {
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc += 1;
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc++;
 }
 
 /**

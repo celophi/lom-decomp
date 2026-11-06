@@ -38,8 +38,6 @@ enum
 #define MAKE_DOUBLE_BYTE_GLYPH(lead_byte, trail_byte) (u16)(((u16)(trail_byte) << 8) | (u16)(lead_byte))
 #define LOW_BYTE(value) ((value) & 0xFFU)
 #define HIGH_BYTE(value) ((value) >> 8)
-#define NAME_GLYPH_SIZE_SINGLE 1
-#define NAME_GLYPH_SIZE_DOUBLE 2
 #define NAME_GLYPH_VALUE_MASK 0xFFFFU
 #define NAME_GLYPH_LEAD_INDEX 0
 #define NAME_GLYPH_TRAIL_INDEX 1
@@ -1308,7 +1306,7 @@ static void gname_process_input(void)
     {
         g_cursor_x += (g_cursor_x_target - g_cursor_x) / g_cursor_lerp_steps;
         g_cursor_y += (g_cursor_y_target - g_cursor_y) / g_cursor_lerp_steps;
-        g_cursor_lerp_steps -= 1;
+        g_cursor_lerp_steps--;
     }
     else
     {
@@ -1320,7 +1318,7 @@ static void gname_process_input(void)
     {
         scroll_position = &g_scroll_pos;
         scroll_delta = (g_scroll_target - *scroll_position) / remaining_scroll_steps;
-        g_scroll_steps -= 1;
+        g_scroll_steps--;
         g_scroll_pos += scroll_delta;
         return;
     }

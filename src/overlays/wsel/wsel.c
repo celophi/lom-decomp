@@ -357,7 +357,7 @@ static void wsel_draw_frame(WselRenderBuffer* buffer)
     u8* prim;
     u_long* ot;
 
-    prim = (u8*)buffer->screen.prim_cursor;
+    prim = buffer->screen.prim_cursor;
     ot = buffer->screen.ot;
 
     switch (g_wsel_state)
@@ -459,7 +459,7 @@ static void wsel_draw_frame(WselRenderBuffer* buffer)
         prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_MAP);
         break;
     }
-    buffer->screen.prim_cursor = (u_long*)prim;
+    buffer->screen.prim_cursor = prim;
 }
 
 /**

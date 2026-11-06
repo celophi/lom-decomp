@@ -10,6 +10,7 @@
  */
 
 #include "common.h"
+
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
 #include "../internal/field_script.h"
@@ -48,8 +49,6 @@
 /** @brief Largest row or column of the instrument grid. */
 #define FIELD_GRID_MAX 7
 
-FieldItemRecord* field_find_free_inventory_record(void);
-
 static void field_create_instrument_item(FieldItemRecord* record, s32 category, s32 item_type, s32 material, s32 secondary_item);
 static void field_generate_staged_item(void);
 static void field_load_staged_material(void);
@@ -76,35 +75,39 @@ void field_create_item_from_gosub(s32 kind)
     {
         switch (kind)
         {
-        case FIELD_ITEM_CATEGORY_INSTRUMENT:
-            record = field_find_free_inventory_record();
-            if (record != NULL)
-            {
-                field_create_instrument_item(record, FIELD_ITEM_CATEGORY_INSTRUMENT, g_gosub_result_values[0], g_gosub_result_values[1],
-                                             g_gosub_result_values[2]);
-                field_set_script_var(0, FIELD_ITEM_RESULT_VARIABLE, record - g_field_game_state->items);
-            }
-            else
-            {
-                field_set_script_var(0, FIELD_ITEM_RESULT_VARIABLE, FIELD_ITEM_RESULT_FULL);
-            }
-            break;
-        case FIELD_CREATE_KIND_TEMPER:
-            field_temper_item(&g_field_game_state->items[g_gosub_result_values[0]], g_gosub_result_values[1]);
-            field_set_script_var(0, FIELD_ITEM_RESULT_VARIABLE, g_gosub_result_values[0]);
-            break;
-        default:
-            record = field_find_free_inventory_record();
-            if (record != NULL)
-            {
-                field_create_equipment_item(record, kind, g_gosub_result_values[0], g_gosub_result_values[1]);
-                field_set_script_var(0, FIELD_ITEM_RESULT_VARIABLE, record - g_field_game_state->items);
-            }
-            else
-            {
-                field_set_script_var(0, FIELD_ITEM_RESULT_VARIABLE, FIELD_ITEM_RESULT_FULL);
-            }
-            break;
+            case FIELD_ITEM_CATEGORY_INSTRUMENT:
+                record = field_find_free_inventory_record();
+
+                if (record != NULL)
+                {
+                    field_create_instrument_item(record, FIELD_ITEM_CATEGORY_INSTRUMENT, g_gosub_result_values[0], g_gosub_result_values[1],
+                                                 g_gosub_result_values[2]);
+                    field_set_script_var(0, FIELD_ITEM_RESULT_VARIABLE, record - g_field_game_state->items);
+                }
+                else
+                {
+                    field_set_script_var(0, FIELD_ITEM_RESULT_VARIABLE, FIELD_ITEM_RESULT_FULL);
+                }
+
+                break;
+            case FIELD_CREATE_KIND_TEMPER:
+                field_temper_item(&g_field_game_state->items[g_gosub_result_values[0]], g_gosub_result_values[1]);
+                field_set_script_var(0, FIELD_ITEM_RESULT_VARIABLE, g_gosub_result_values[0]);
+                break;
+            default:
+                record = field_find_free_inventory_record();
+
+                if (record != NULL)
+                {
+                    field_create_equipment_item(record, kind, g_gosub_result_values[0], g_gosub_result_values[1]);
+                    field_set_script_var(0, FIELD_ITEM_RESULT_VARIABLE, record - g_field_game_state->items);
+                }
+                else
+                {
+                    field_set_script_var(0, FIELD_ITEM_RESULT_VARIABLE, FIELD_ITEM_RESULT_FULL);
+                }
+
+                break;
         }
     }
     else
@@ -185,6 +188,7 @@ static void field_create_instrument_item(FieldItemRecord* record, s32 category, 
     {
         g_field_item_staging->stats.bytes[i] = (g_field_item_staging->stats.bytes[i] & FIELD_STAGING_BOUNDS_MASK) | FIELD_DEFAULT_STAT_MODIFIER;
     }
+
     for (i = 0; i < FIELD_STAGING_SLOT_COUNT; i++)
     {
         g_field_item_staging->slots[i] = FIELD_STAGING_SLOT_EMPTY;
@@ -206,6 +210,7 @@ static void field_create_instrument_item(FieldItemRecord* record, s32 category, 
     if ((s8)g_field_item_staging->properties[1] >= 0)
     {
         column = FIELD_GRID_MAX;
+
         if (g_field_item_staging->properties[1] <= FIELD_GRID_MAX)
         {
             column = g_field_item_staging->properties[1];
@@ -219,6 +224,7 @@ static void field_create_instrument_item(FieldItemRecord* record, s32 category, 
     if ((s8)g_field_item_staging->properties[2] >= 0)
     {
         grid_row = FIELD_GRID_MAX;
+
         if (g_field_item_staging->properties[2] <= FIELD_GRID_MAX)
         {
             grid_row = g_field_item_staging->properties[2];
@@ -281,33 +287,35 @@ void field_temper_item(FieldItemRecord* record, s32 secondary_item)
 
     g_field_item_staging->slots[0] = FIELD_STAGING_SLOT_EMPTY;
     g_field_item_staging->slots[1] = record->special_ids[3];
+
     for (i = 0; i < FIELD_ITEM_SPECIAL_COUNT - 1; i++)
     {
         g_field_item_staging->slots[i + 2] = record->special_ids[i];
     }
+
     g_field_item_staging->slots[5] = FIELD_STAGING_SLOT_EMPTY;
 
     switch (g_field_item_staging->category)
     {
-    case FIELD_ITEM_CATEGORY_WEAPON:
-        for (i = 0; i < FIELD_STAGING_PROPERTY_COUNT; i++)
-        {
-            g_field_item_staging->properties[i] = record->derived.weapon.stats[i];
-        }
+        case FIELD_ITEM_CATEGORY_WEAPON:
+            for (i = 0; i < FIELD_STAGING_PROPERTY_COUNT; i++)
+            {
+                g_field_item_staging->properties[i] = record->derived.weapon.stats[i];
+            }
 #if defined(VERSION_JP)
-        g_field_item_staging->power_flags = record->status_flags;
+            g_field_item_staging->power_flags = record->status_flags;
 #else
-        g_field_item_staging->power_flags = 0;
+            g_field_item_staging->power_flags = 0;
 #endif
-        break;
-    case FIELD_ITEM_CATEGORY_ARMOR:
+            break;
+        case FIELD_ITEM_CATEGORY_ARMOR:
 #if defined(VERSION_JP)
-        g_field_item_staging->element_flags = record->element_flags;
+            g_field_item_staging->element_flags = record->element_flags;
 #else
-        g_field_item_staging->element_flags = 0;
+            g_field_item_staging->element_flags = 0;
 #endif
-        g_field_item_staging->immunity_flags = record->status_flags;
-        break;
+            g_field_item_staging->immunity_flags = record->status_flags;
+            break;
     }
 
     field_generate_staged_item();
@@ -328,6 +336,7 @@ static void field_generate_staged_item(void)
     saved_script = g_field_script;
     g_field_script = (FieldScriptContext*)&g_field_runtime->events[0].script;
     field_load_staged_material();
+
     if (g_field_item_staging->category == FIELD_ITEM_CATEGORY_WEAPON)
     {
         field_run_item_script(g_field_item_tables->item.weapon_types[g_field_item_staging->item_type].scripts[0]);
@@ -336,6 +345,7 @@ static void field_generate_staged_item(void)
     {
         field_run_item_script(g_field_item_tables->item.armor_types[g_field_item_staging->item_type].scripts[0]);
     }
+
     field_run_item_script(g_field_item_tables->item.materials[g_field_item_staging->material].script);
     field_run_item_script(g_field_item_tables->item.secondary_items[g_field_item_staging->secondary_item - FIELD_SECONDARY_ITEM_FIRST].script);
     field_run_slot_scripts();
@@ -350,18 +360,19 @@ static void field_generate_staged_item(void)
     {
         field_run_item_script(g_field_item_tables->item.armor_types[g_field_item_staging->item_type].scripts[1]);
     }
+
     field_finish_staged_item();
     g_field_script = saved_script;
     field_write_staged_item();
 
     switch (g_field_item_staging->category)
     {
-    case FIELD_ITEM_CATEGORY_WEAPON:
-        field_derive_weapon_values(g_field_item_staging->record);
-        return;
-    case FIELD_ITEM_CATEGORY_ARMOR:
-        field_derive_armor_values(g_field_item_staging->record);
-        return;
+        case FIELD_ITEM_CATEGORY_WEAPON:
+            field_derive_weapon_values(g_field_item_staging->record);
+            return;
+        case FIELD_ITEM_CATEGORY_ARMOR:
+            field_derive_armor_values(g_field_item_staging->record);
+            return;
     }
 }
 
@@ -374,14 +385,17 @@ static void field_load_staged_material(void)
 
     g_field_item_tables = field_find_resource(FIELD_ITEM_TABLE);
     g_field_item_staging->divisor = g_field_item_tables->item.materials[g_field_item_staging->material].divisor;
+
     for (i = 0; i < FIELD_STAGING_FACTOR_COUNT; i++)
     {
         g_field_item_staging->weights[i] = g_field_item_tables->item.materials[g_field_item_staging->material].weights[i];
     }
+
     for (i = 0; i < FIELD_STAGING_FACTOR_COUNT; i++)
     {
         g_field_item_staging->multipliers[i] = g_field_item_tables->item.materials[g_field_item_staging->material].multipliers[i];
     }
+
     for (i = 0; i < FIELD_STAGING_LEVEL_COUNT; i++)
     {
         g_field_item_staging->levels[i].cost = g_field_item_tables->item.materials[g_field_item_staging->material].costs[i];
@@ -390,6 +404,7 @@ static void field_load_staged_material(void)
 
     /* Slots 0 and 5 never hold a slot value. */
     g_field_item_staging->flags.bits.slot_class = FIELD_SLOT_CLASS_NONE;
+
     for (i = 1; i < FIELD_STAGING_SLOT_COUNT - 1; i++)
     {
         if (g_field_item_staging->slots[i] < FIELD_SLOT_CLASS_LIMIT)

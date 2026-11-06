@@ -143,7 +143,7 @@ void wmap_draw_actor_sprite(WmapSpriteActor* actor, s32 screen_position, s32 tex
 
     if (part_count < 1 || part_count > WMAP_SPRITE_PARTS_MAX)
     {
-        func_80064F14();
+        wmap_report_error();
         return;
     }
 

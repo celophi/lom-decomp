@@ -14,15 +14,16 @@
  */
 
 #include "common.h"
-#include "main/cdrom.h"
 #include <libetc.h>
 #include <libgpu.h>
+
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_calls.h"
-#include "overlays/field/field_scene_transition.h"
 #include "../internal/field_state_ops.h"
 #include "main/audio/akao.h"
+#include "main/cdrom.h"
+#include "overlays/field/field_scene_transition.h"
 
 /** @brief Capacity of g_field_battle_entry_changes. */
 #define FIELD_BATTLE_ENTRY_CHANGE_COUNT 8
@@ -109,161 +110,161 @@ void field_update_battle_entry(void)
 
     switch (state)
     {
-    case FIELD_BATTLE_ENTRY_WAIT_BINDINGS:
-        if ((g_field_actor_bindings[0].state | g_field_actor_bindings[1].state | g_field_actor_bindings[2].state) == FIELD_BINDING_IDLE)
-        {
-            g_field_battle_entry_state = FIELD_BATTLE_ENTRY_REQUEST_RESOURCES;
-        }
-
-        break;
-
-    case FIELD_BATTLE_ENTRY_REQUEST_RESOURCES:
-        field_request_party_reload(FIELD_WEAPON_SET_BATTLE);
-        g_field_battle_entry_state = FIELD_BATTLE_ENTRY_APPLY_CHANGES;
-        break;
-
-    case FIELD_BATTLE_ENTRY_APPLY_CHANGES:
-    {
-        FieldActor* actor;
-        s32 actor_slot;
-        u8 animation;
-
-        for (i = 0; i < g_field_battle_entry_change_count; i++)
-        {
-            actor = &g_field_actors[g_field_battle_entry_changes[i].actor_index];
-
-            if (g_field_battle_entry_changes[i].animation != FIELD_BATTLE_ENTRY_KEEP)
+        case FIELD_BATTLE_ENTRY_WAIT_BINDINGS:
+            if ((g_field_actor_bindings[0].state | g_field_actor_bindings[1].state | g_field_actor_bindings[2].state) == FIELD_BINDING_IDLE)
             {
-                actor->presence = FIELD_ACTOR_VISIBLE;
-                actor->command = FIELD_ACTOR_COMMAND_SEQUENCE_STEP;
-                animation = g_field_battle_entry_changes[i].animation | (actor->animation & FIELD_ANIMATION_FACING);
-                actor->animation = animation;
-
-                if (animation & FIELD_ANIMATION_FACING)
-                {
-                    actor->direction = 0;
-                }
-                else
-                {
-                    actor->direction = FIELD_HEADING_HALF_TURN;
-                }
-
-                actor->animation_state = 1;
-                actor->animation_active = 1;
-                actor->control.word &= ~FIELD_CONTROL_PLAY_ONCE;
-                actor->script_offset += 3;
-                field_restart_actor_animation(actor);
+                g_field_battle_entry_state = FIELD_BATTLE_ENTRY_REQUEST_RESOURCES;
             }
 
-            if (g_field_battle_entry_changes[i].builtin_animation != FIELD_BATTLE_ENTRY_KEEP)
-            {
-                actor_slot = field_find_free_actor_slot(actor->object_index, 0);
+            break;
 
-                if ((actor_slot != FIELD_ACTOR_SLOT_NONE) &&
-                    (field_start_builtin_animation(actor->object_index, actor_slot, g_field_battle_entry_changes[i].builtin_animation) != 0))
-                {
-                    field_start_actor_animation(actor_slot, 0, NULL);
-                    g_field_object_states[actor->object_index].contact.bytes.animation_actor_index = actor_slot;
-                }
-            }
+        case FIELD_BATTLE_ENTRY_REQUEST_RESOURCES:
+            field_request_party_reload(FIELD_WEAPON_SET_BATTLE);
+            g_field_battle_entry_state = FIELD_BATTLE_ENTRY_APPLY_CHANGES;
+            break;
 
-            if (g_field_battle_entry_changes[i].sound != FIELD_BATTLE_ENTRY_KEEP)
-            {
-                field_play_sound(g_field_battle_entry_changes[i].sound, AKAO_PAN_CENTER);
-                VSync(0);
-            }
-        }
-
-        g_field_battle_entry_state = FIELD_BATTLE_ENTRY_WAIT_SETTLED;
-        break;
-    }
-
-    case FIELD_BATTLE_ENTRY_WAIT_SETTLED:
-    {
-        s16 command;
-
-        if (field_party_reload_reading() == 0)
+        case FIELD_BATTLE_ENTRY_APPLY_CHANGES:
         {
+            FieldActor* actor;
+            s32 actor_slot;
+            u8 animation;
+
             for (i = 0; i < g_field_battle_entry_change_count; i++)
             {
-                if (field_object_has_active_actor_tracks(g_field_battle_entry_changes[i].actor_index) != 0)
+                actor = &g_field_actors[g_field_battle_entry_changes[i].actor_index];
+
+                if (g_field_battle_entry_changes[i].animation != FIELD_BATTLE_ENTRY_KEEP)
                 {
-                    break;
+                    actor->presence = FIELD_ACTOR_VISIBLE;
+                    actor->command = FIELD_ACTOR_COMMAND_SEQUENCE_STEP;
+                    animation = g_field_battle_entry_changes[i].animation | (actor->animation & FIELD_ANIMATION_FACING);
+                    actor->animation = animation;
+
+                    if (animation & FIELD_ANIMATION_FACING)
+                    {
+                        actor->direction = 0;
+                    }
+                    else
+                    {
+                        actor->direction = FIELD_HEADING_HALF_TURN;
+                    }
+
+                    actor->animation_state = 1;
+                    actor->animation_active = 1;
+                    actor->control.word &= ~FIELD_CONTROL_PLAY_ONCE;
+                    actor->script_offset += 3;
+                    field_restart_actor_animation(actor);
+                }
+
+                if (g_field_battle_entry_changes[i].builtin_animation != FIELD_BATTLE_ENTRY_KEEP)
+                {
+                    actor_slot = field_find_free_actor_slot(actor->object_index, 0);
+
+                    if ((actor_slot != FIELD_ACTOR_SLOT_NONE) &&
+                        (field_start_builtin_animation(actor->object_index, actor_slot, g_field_battle_entry_changes[i].builtin_animation) != 0))
+                    {
+                        field_start_actor_animation(actor_slot, 0, NULL);
+                        g_field_object_states[actor->object_index].contact.bytes.animation_actor_index = actor_slot;
+                    }
+                }
+
+                if (g_field_battle_entry_changes[i].sound != FIELD_BATTLE_ENTRY_KEEP)
+                {
+                    field_play_sound(g_field_battle_entry_changes[i].sound, AKAO_PAN_CENTER);
+                    VSync(0);
                 }
             }
 
-            if (i == g_field_battle_entry_change_count)
+            g_field_battle_entry_state = FIELD_BATTLE_ENTRY_WAIT_SETTLED;
+            break;
+        }
+
+        case FIELD_BATTLE_ENTRY_WAIT_SETTLED:
+        {
+            s16 command;
+
+            if (field_party_reload_reading() == 0)
             {
-                for (i = FIELD_PARTY_COUNT; i < FIELD_ACTOR_COUNT; i++)
+                for (i = 0; i < g_field_battle_entry_change_count; i++)
                 {
-                    if (g_field_actors[i].presence != FIELD_ACTOR_UNUSED && g_field_actors[i].command == FIELD_ACTOR_COMMAND_SEQUENCE_STEP)
+                    if (field_object_has_active_actor_tracks(g_field_battle_entry_changes[i].actor_index) != 0)
                     {
                         break;
                     }
                 }
 
-                if (i == FIELD_ACTOR_COUNT)
+                if (i == g_field_battle_entry_change_count)
                 {
-                    for (i = 1; i < FIELD_PARTY_COUNT; i++)
+                    for (i = FIELD_PARTY_COUNT; i < FIELD_ACTOR_COUNT; i++)
                     {
-                        if (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE)
+                        if (g_field_actors[i].presence != FIELD_ACTOR_UNUSED && g_field_actors[i].command == FIELD_ACTOR_COMMAND_SEQUENCE_STEP)
                         {
-                            command = g_field_actors[i].command;
-
-                            if ((command == FIELD_ACTOR_COMMAND_FOLLOW_LEADER) || (command == FIELD_ACTOR_COMMAND_RUN_PATH))
-                            {
-                                break;
-                            }
+                            break;
                         }
                     }
 
-                    if (i == FIELD_PARTY_COUNT)
+                    if (i == FIELD_ACTOR_COUNT)
                     {
-                        for (i = 0; i < FIELD_PARTY_COUNT; i++)
-                        {
-                            g_field_object_parts[i].spawn_flags.word &= ~FIELD_PART_IGNORE_MAP_COLLISION;
-                            g_field_actors[i].command = FIELD_ACTOR_COMMAND_NONE;
-                        }
-
-                        field_play_sound(FIELD_SOUND_BATTLE_ENTRY, AKAO_PAN_CENTER);
-
-                        for (i = 0; i < FIELD_PLAYER_COUNT; i++)
-                        {
-                            if (g_field_party_reload_resource_ids[i] != 0)
-                            {
-                                field_install_party_reload(FIELD_RESOURCE_HAS_ACTIONS, i);
-                                g_field_actors[i].command = FIELD_ACTOR_COMMAND_IDLE_AFTER_ANIMATION;
-                                g_field_actors[i].animation_state = 1;
-                                g_field_actors[i].animation_frame = 0;
-                                g_field_actors[i].animation_active = 1;
-                                g_field_actors[i].animation = (g_field_actors[i].animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_BATTLE_ENTRY;
-                                g_field_actors[i].control.word &= ~FIELD_CONTROL_PLAY_ONCE;
-                                g_field_object_states[i].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
-                                field_restart_actor_animation(&g_field_actors[i]);
-                            }
-                        }
-
-                        for (i = 0; i < FIELD_PARTY_COUNT; i++)
+                        for (i = 1; i < FIELD_PARTY_COUNT; i++)
                         {
                             if (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE)
                             {
-                                g_field_object_states[i].tint_timer = FIELD_BATTLE_ENTRY_TINT_FRAMES;
-                                g_field_object_states[i].movement.word |= FIELD_MOVEMENT_INVULNERABLE;
+                                command = g_field_actors[i].command;
+
+                                if ((command == FIELD_ACTOR_COMMAND_FOLLOW_LEADER) || (command == FIELD_ACTOR_COMMAND_RUN_PATH))
+                                {
+                                    break;
+                                }
                             }
                         }
 
-                        DrawSync(0);
-                        field_reset_actor_resources();
-                        field_restore_default_action_animation_mappings(1);
-                        field_battle_setup(g_field_active_group);
-                        g_field_battle_entry_state = FIELD_BATTLE_ENTRY_IDLE;
+                        if (i == FIELD_PARTY_COUNT)
+                        {
+                            for (i = 0; i < FIELD_PARTY_COUNT; i++)
+                            {
+                                g_field_object_parts[i].spawn_flags.word &= ~FIELD_PART_IGNORE_MAP_COLLISION;
+                                g_field_actors[i].command = FIELD_ACTOR_COMMAND_NONE;
+                            }
+
+                            field_play_sound(FIELD_SOUND_BATTLE_ENTRY, AKAO_PAN_CENTER);
+
+                            for (i = 0; i < FIELD_PLAYER_COUNT; i++)
+                            {
+                                if (g_field_party_reload_resource_ids[i] != 0)
+                                {
+                                    field_install_party_reload(FIELD_RESOURCE_HAS_ACTIONS, i);
+                                    g_field_actors[i].command = FIELD_ACTOR_COMMAND_IDLE_AFTER_ANIMATION;
+                                    g_field_actors[i].animation_state = 1;
+                                    g_field_actors[i].animation_frame = 0;
+                                    g_field_actors[i].animation_active = 1;
+                                    g_field_actors[i].animation = (g_field_actors[i].animation & FIELD_ANIMATION_FACING) + FIELD_ANIMATION_BATTLE_ENTRY;
+                                    g_field_actors[i].control.word &= ~FIELD_CONTROL_PLAY_ONCE;
+                                    g_field_object_states[i].movement.word &= ~FIELD_MOVEMENT_SEQUENCE_MASK;
+                                    field_restart_actor_animation(&g_field_actors[i]);
+                                }
+                            }
+
+                            for (i = 0; i < FIELD_PARTY_COUNT; i++)
+                            {
+                                if (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE)
+                                {
+                                    g_field_object_states[i].tint_timer = FIELD_BATTLE_ENTRY_TINT_FRAMES;
+                                    g_field_object_states[i].movement.word |= FIELD_MOVEMENT_INVULNERABLE;
+                                }
+                            }
+
+                            DrawSync(0);
+                            field_reset_actor_resources();
+                            field_restore_default_action_animation_mappings(1);
+                            field_battle_setup(g_field_active_group);
+                            g_field_battle_entry_state = FIELD_BATTLE_ENTRY_IDLE;
+                        }
                     }
                 }
             }
-        }
 
-        break;
-    }
+            break;
+        }
     }
 }
 
@@ -331,7 +332,7 @@ s32 field_queue_battle_entry_change(s32 actor_key, s32 animation, s32 builtin_an
     }
 
     changes[g_field_battle_entry_change_count].sound = sound;
-    g_field_battle_entry_change_count += 1;
+    g_field_battle_entry_change_count++;
     return 0;
 }
 

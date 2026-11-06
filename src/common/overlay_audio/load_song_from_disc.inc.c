@@ -20,6 +20,6 @@ void load_song_from_disc(s32 song_index)
     base = (u8*)LOAD_BUFFER_AKAO_CONTAINER;
 
     bcopy(base + offsets[AKAO_CONTAINER_RESIDENT_SECTION], g_overlay_song_buffer,
-          (s32)(offsets[AKAO_CONTAINER_BANK_SECTION] - offsets[AKAO_CONTAINER_RESIDENT_SECTION]));
+          (offsets[AKAO_CONTAINER_BANK_SECTION] - offsets[AKAO_CONTAINER_RESIDENT_SECTION]));
     akao_upload_bank_blocking((AkaoBankHeader*)(base + offsets[AKAO_CONTAINER_BANK_SECTION]), 1);
 }

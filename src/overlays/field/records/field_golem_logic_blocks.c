@@ -7,12 +7,14 @@
  * class. The GOLEM overlay calls these functions.
  */
 
-#include "common/saved_game.h"
 #include "common.h"
-#include "overlays/field/field_golem_logic_blocks.h"
-#include "../internal/field_golem_layout.h"
+
 #include "../internal/field_menu_vars.h"
 #include "../internal/field_records.h"
+#include "common/golem_shape.h"
+#include "common/saved_game.h"
+#include "main/main.h"
+#include "overlays/field/field_golem_logic_blocks.h"
 
 /** @brief Logic class of a block that fits every group. */
 #define GOLEM_LOGIC_CLASS_ANY 0
@@ -43,12 +45,12 @@ extern GolemLogicBlockIcon g_golem_logic_block_icons[];
  */
 void golem_logic_block_append(u32 block_id, u32 level, u32 shape)
 {
-    GOLEM.logic_blocks[GOLEM.header.fields.block_count].f.id = block_id;
-    GOLEM.logic_blocks[GOLEM.header.fields.block_count].f.level = level;
-    GOLEM.logic_blocks[GOLEM.header.fields.block_count].f.shape = shape;
-    GOLEM.logic_blocks[GOLEM.header.fields.block_count].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
-    GOLEM.logic_blocks[GOLEM.header.fields.block_count].f.placed = 0;
-    GOLEM.header.fields.block_count++;
+    g_saved_game.layout.logic_blocks[g_saved_game.layout.logic_block_count].f.id = block_id;
+    g_saved_game.layout.logic_blocks[g_saved_game.layout.logic_block_count].f.level = level;
+    g_saved_game.layout.logic_blocks[g_saved_game.layout.logic_block_count].f.shape = shape;
+    g_saved_game.layout.logic_blocks[g_saved_game.layout.logic_block_count].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
+    g_saved_game.layout.logic_blocks[g_saved_game.layout.logic_block_count].f.placed = 0;
+    g_saved_game.layout.logic_block_count++;
 }
 
 /**
@@ -67,25 +69,28 @@ u32 golem_rebuild_grid_owners(void)
 
     for (i = 0; i < GOLEM_GRID_CELL_COUNT; i++)
     {
-        GOLEM.grid[i].owner = GOLEM_GRID_EMPTY;
+        g_saved_game.layout.golem_grid[i].owner = GOLEM_GRID_EMPTY;
     }
 
-    count = GOLEM.header.fields.block_count;
+    count = g_saved_game.layout.logic_block_count;
+
     for (i = 0; i < count; i++)
     {
-        block = GOLEM.logic_blocks[i];
-        if ((block.f.placed == 1) && (block.f.logic_type == GOLEM.group_order[D_80122C00.locals.golem.slot]))
+        block = g_saved_game.layout.logic_blocks[i];
+
+        if ((block.f.placed == 1) && (block.f.logic_type == g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]))
         {
-            for (part = 0; part < g_golem_shape_table[GOLEM.logic_blocks[i].f.shape].count; part++)
+            for (part = 0; part < g_golem_shape_table[g_saved_game.layout.logic_blocks[i].f.shape].count; part++)
             {
-                placed = GOLEM.logic_blocks[i];
+                placed = g_saved_game.layout.logic_blocks[i];
                 offset_x = g_golem_shape_table[placed.f.shape].rotations[placed.f.rotation].parts[part].x;
                 offset_y = g_golem_shape_table[placed.f.shape].rotations[placed.f.rotation].parts[part].y;
-                GOLEM.grid[placed.f.grid_x + offset_x + (placed.f.grid_y + offset_y) * GOLEM_GRID_WIDTH].owner = i;
+                g_saved_game.layout.golem_grid[placed.f.grid_x + offset_x + (placed.f.grid_y + offset_y) * GOLEM_GRID_WIDTH].owner = i;
             }
         }
     }
-    return GOLEM.group_records[GOLEM.group_order[D_80122C00.locals.golem.slot]].grid_bound;
+
+    return g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].logic_layout.bits.grid_bound;
 }
 
 /**
@@ -101,20 +106,21 @@ void golem_place_logic_block(s32 index, s32 rotation, s32 x, s32 y)
     u8 group;
     LogicBlock block;
 
-    group = GOLEM.group_order[D_80122C00.locals.golem.slot];
-    block = GOLEM.logic_blocks[index];
+    group = g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot];
+    block = g_saved_game.layout.logic_blocks[index];
     block.f.logic_type = group;
     block.f.placed = 1;
     block.f.rotation = rotation;
     block.f.grid_x = x;
     block.f.grid_y = y;
-    GOLEM.logic_blocks[index] = block;
-    for (i = 0; i < g_golem_shape_table[GOLEM.logic_blocks[index].f.shape].count; i++)
-    {
-        s32 cell_x = x + g_golem_shape_table[GOLEM.logic_blocks[index].f.shape].rotations[rotation].parts[i].x;
-        s32 cell_y = y + g_golem_shape_table[GOLEM.logic_blocks[index].f.shape].rotations[rotation].parts[i].y;
+    g_saved_game.layout.logic_blocks[index] = block;
 
-        GOLEM.grid[cell_x + cell_y * GOLEM_GRID_WIDTH].owner = index;
+    for (i = 0; i < g_golem_shape_table[g_saved_game.layout.logic_blocks[index].f.shape].count; i++)
+    {
+        s32 cell_x = x + g_golem_shape_table[g_saved_game.layout.logic_blocks[index].f.shape].rotations[rotation].parts[i].x;
+        s32 cell_y = y + g_golem_shape_table[g_saved_game.layout.logic_blocks[index].f.shape].rotations[rotation].parts[i].y;
+
+        g_saved_game.layout.golem_grid[cell_x + cell_y * GOLEM_GRID_WIDTH].owner = index;
     }
 }
 
@@ -135,24 +141,28 @@ s32 golem_can_place_logic_block(s32 index, s32 rotation, s32 x, s32 y)
     s32 logic_class;
 
     valid = 1;
-    for (i = 0; i < g_golem_shape_table[GOLEM.logic_blocks[index].f.shape].count; i++)
+
+    for (i = 0; i < g_golem_shape_table[g_saved_game.layout.logic_blocks[index].f.shape].count; i++)
     {
-        cell_x = x + g_golem_shape_table[GOLEM.logic_blocks[index].f.shape].rotations[rotation].parts[i].x;
-        cell_y = y + g_golem_shape_table[GOLEM.logic_blocks[index].f.shape].rotations[rotation].parts[i].y;
-        if (GOLEM.grid[cell_x + cell_y * GOLEM_GRID_WIDTH].owner != GOLEM_GRID_EMPTY)
+        cell_x = x + g_golem_shape_table[g_saved_game.layout.logic_blocks[index].f.shape].rotations[rotation].parts[i].x;
+        cell_y = y + g_golem_shape_table[g_saved_game.layout.logic_blocks[index].f.shape].rotations[rotation].parts[i].y;
+
+        if (g_saved_game.layout.golem_grid[cell_x + cell_y * GOLEM_GRID_WIDTH].owner != GOLEM_GRID_EMPTY)
         {
             valid = 0;
         }
     }
 
-    logic_class = g_golem_logic_block_class[GOLEM.logic_blocks[index].f.id];
+    logic_class = g_golem_logic_block_class[g_saved_game.layout.logic_blocks[index].f.id];
+
     if (logic_class != GOLEM_LOGIC_CLASS_ANY)
     {
-        if (logic_class != GOLEM.group_records[GOLEM.group_order[D_80122C00.locals.golem.slot]].logic_class)
+        if (logic_class != g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].logic_layout.bits.logic_class)
         {
             valid = 0;
         }
     }
+
     return valid;
 }
 
@@ -172,25 +182,31 @@ s32 golem_logic_block_fits_grid(s32 index, s32 rotation, s32 x, s32 y)
     s32 cell_x;
     s32 cell_y;
 
-    limit = GOLEM.group_records[GOLEM.group_order[D_80122C00.locals.golem.slot]].grid_bound;
+    limit = g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].logic_layout.bits.grid_bound;
+
     if (limit >= GOLEM_GRID_WIDTH)
     {
         limit = GOLEM_GRID_WIDTH;
     }
+
     valid = 1;
-    for (i = 0; i < g_golem_shape_table[GOLEM.logic_blocks[index].f.shape].count; i++)
+
+    for (i = 0; i < g_golem_shape_table[g_saved_game.layout.logic_blocks[index].f.shape].count; i++)
     {
-        cell_x = g_golem_shape_table[GOLEM.logic_blocks[index].f.shape].rotations[rotation].parts[i].x + x;
-        cell_y = g_golem_shape_table[GOLEM.logic_blocks[index].f.shape].rotations[rotation].parts[i].y + y;
+        cell_x = g_golem_shape_table[g_saved_game.layout.logic_blocks[index].f.shape].rotations[rotation].parts[i].x + x;
+        cell_y = g_golem_shape_table[g_saved_game.layout.logic_blocks[index].f.shape].rotations[rotation].parts[i].y + y;
+
         if ((cell_x < 0) || (cell_x >= limit))
         {
             valid = 0;
         }
+
         if ((cell_y < 0) || (cell_y >= limit))
         {
             valid = 0;
         }
     }
+
     return valid;
 }
 
@@ -206,12 +222,14 @@ s32 golem_fill_logic_block_status(GolemLogicBlockStatus* results)
     u8 group;
     s32 logic_class;
 
-    for (i = 0; i < GOLEM.header.fields.block_count; i++)
+    for (i = 0; i < g_saved_game.layout.logic_block_count; i++)
     {
-        block = GOLEM.logic_blocks[i];
-        group = GOLEM.group_order[D_80122C00.locals.golem.slot];
+        block = g_saved_game.layout.logic_blocks[i];
+        group = g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot];
+
         if (((block.f.logic_type != group) && (block.f.logic_type != LOGIC_BLOCK_UNASSIGNED)) ||
-            (((logic_class = g_golem_logic_block_class[block.f.id]) != GOLEM_LOGIC_CLASS_ANY) && (GOLEM.group_records[group].logic_class != logic_class)))
+            (((logic_class = g_golem_logic_block_class[block.f.id]) != GOLEM_LOGIC_CLASS_ANY) &&
+             (g_saved_game.layout.golem_records[group].logic_layout.bits.logic_class != logic_class)))
         {
             results[i].is_unavailable = 1;
             results[i].clut = GOLEM_UNAVAILABLE_CLUT;
@@ -219,9 +237,10 @@ s32 golem_fill_logic_block_status(GolemLogicBlockStatus* results)
         else
         {
             results[i].is_unavailable = 0;
-            results[i].clut = g_golem_logic_block_icons[GOLEM.logic_blocks[i].f.id].clut;
+            results[i].clut = g_golem_logic_block_icons[g_saved_game.layout.logic_blocks[i].f.id].clut;
         }
     }
+
     return g_saved_game.layout.logic_block_count;
 }
 
@@ -234,12 +253,13 @@ void golem_remove_logic_block(s32 index)
     s32 i;
     s32 unused[2];
 
-    GOLEM.logic_blocks[index].f.placed = 0;
+    g_saved_game.layout.logic_blocks[index].f.placed = 0;
+
     for (i = 0; i < GOLEM_GRID_CELL_COUNT; i++)
     {
-        if (GOLEM.grid[i].owner == index)
+        if (g_saved_game.layout.golem_grid[i].owner == index)
         {
-            GOLEM.grid[i].owner = GOLEM_GRID_EMPTY;
+            g_saved_game.layout.golem_grid[i].owner = GOLEM_GRID_EMPTY;
         }
     }
 }
@@ -262,10 +282,12 @@ void golem_build_grid_markers(s32* markers)
 
     for (i = 0; i < GOLEM_GRID_CELL_COUNT - GOLEM_GRID_WIDTH; i++)
     {
-        owner = GOLEM.grid[i].owner;
+        owner = g_saved_game.layout.golem_grid[i].owner;
+
         if (owner != GOLEM_GRID_EMPTY)
         {
-            below = GOLEM.grid[i + GOLEM_GRID_WIDTH].owner;
+            below = g_saved_game.layout.golem_grid[i + GOLEM_GRID_WIDTH].owner;
+
             if ((below != GOLEM_GRID_EMPTY) && (owner != below))
             {
                 markers[GOLEM_HORIZONTAL_MARKER_BASE + i] = GOLEM_MARKER_BLOCK_EDGE;

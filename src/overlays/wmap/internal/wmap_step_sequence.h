@@ -175,7 +175,6 @@
  * @param shade_delta Constant amount the animation update changes the shade each frame.
  * @param frames Frames the following update step runs.
  * @param next Update step, called immediately after advancing.
- * @note The constant conditions preserve store order without runtime branches.
  */
 #define WMAP_STEP_START_ACTOR(name, step, timer, slot, animation, sequence_id, initial_shade, shade_target, shade_delta, frames, next)                         \
     void name(void)                                                                                                                                            \
@@ -778,6 +777,13 @@
         step++;                                                                                                                                                \
     }
 
+/**
+ * @brief Turn a model by one rotation step and count down its timer.
+ * @param rotation Model rotation; its z angle advances.
+ * @param rotation_step Angle added this frame.
+ * @param timer Frames left; decremented.
+ * @return Frames left after this one.
+ */
 static inline s32 wmap_tick_model_motion(SVECTOR* rotation, s32 rotation_step, s32* timer)
 {
     s32 remaining;

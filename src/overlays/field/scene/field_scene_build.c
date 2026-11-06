@@ -3,12 +3,14 @@
  * @brief Scene build from a map object and the per-frame drawing of its objects.
  */
 
-#include "../internal/field_scene_internal.h"
-#include "main/scene_state.h"
-#include "../internal/field_calls.h"
-#include "main/display.h"
+#include "common.h"
 #include <libpress.h>
+
+#include "../internal/field_calls.h"
+#include "../internal/field_scene_internal.h"
 #include "common/gpu_packet.h"
+#include "main/display.h"
+#include "main/scene_state.h"
 
 /*
  * FieldObjDef::flags bits (see also FIELD_OBJ_DEF_SCREEN_FIXED). A wrapping
@@ -738,7 +740,7 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
             part_defs++;
         }
 
-        obj_defs += 1;
+        obj_defs++;
         prev_part->next = NULL;
     }
 
@@ -823,160 +825,160 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
 
                     switch (part->kind)
                     {
-                    case 0:
-                        stride = FIELD_CEL_RECORD_SIZE;
-                        code_word = part->code_word;
-                        part->records = arena.cur;
-                        cursor = part->records;
+                        case 0:
+                            stride = FIELD_CEL_RECORD_SIZE;
+                            code_word = part->code_word;
+                            part->records = arena.cur;
+                            cursor = part->records;
 
-                        if (code_word != 0)
-                        {
-                            color = code_word - 1;
-                            part->code_word = FIELD_TILE_COLOR_WORDS[color & FIELD_SHARED_CODE_COLOR_MASK];
-                            share_flags = FIELD_TILE_REC_SHARED_RGB_CODE;
-
-                            if (color & (1 << FIELD_SHARED_CODE_SEMI_SHIFT))
+                            if (code_word != 0)
                             {
-                                /* Semi-transparency bit of the word's GPU code byte (setSemiTrans). */
-                                ((u8*)&part->code_word)[3] |= 2;
-                            }
+                                color = code_word - 1;
+                                part->code_word = FIELD_TILE_COLOR_WORDS[color & FIELD_SHARED_CODE_COLOR_MASK];
+                                share_flags = FIELD_TILE_REC_SHARED_RGB_CODE;
 
-                            stride = FIELD_CEL_RECORD_SIZE - FIELD_CEL_SHARED_WORD_SIZE;
-                        }
-                        else
-                        {
-                            share_flags = 0;
-                        }
+                                if (color & (1 << FIELD_SHARED_CODE_SEMI_SHIFT))
+                                {
+                                    /* Semi-transparency bit of the word's GPU code byte (setSemiTrans). */
+                                    ((u8*)&part->code_word)[3] |= 2;
+                                }
 
-                        sprite_tpage_word = part->tpage_word;
-                        tpage = sprite_tpage_word - 1;
-
-                        if (sprite_tpage_word != 0)
-                        {
-                            page_slot = tpage & FIELD_TILE_TPAGE_SLOT_MASK;
-
-                            if (page_slot >= FIELD_TILE_LOWER_BANK_SLOTS)
-                            {
-                                tpage = FIELD_TPAGE_DEPTH_BITS(part_def->u.word) | FIELD_TPAGE_ABR_BITS(tpage) |
-                                        ((u32)(FIELD_TILE_UPPER_BANK_PAGE_X(page_slot) & 0x3FF) >> FIELD_TILE_TPAGE_X_SHIFT);
+                                stride = FIELD_CEL_RECORD_SIZE - FIELD_CEL_SHARED_WORD_SIZE;
                             }
                             else
                             {
-                                tpage = FIELD_TPAGE_DEPTH_BITS(part_def->u.word) | FIELD_TPAGE_ABR_BITS(tpage) |
-                                        (((u32)FIELD_TILE_LOWER_BANK_PAGE_X(page_slot) >> FIELD_TILE_TPAGE_X_SHIFT) | lower_bank_y_bit);
+                                share_flags = 0;
                             }
 
-                            part->tpage_word = _get_mode(1, 0, tpage);
-                            share_flags |= FIELD_TILE_REC_SHARED_TPAGE;
-                            stride -= FIELD_CEL_SHARED_WORD_SIZE;
-                        }
+                            sprite_tpage_word = part->tpage_word;
+                            tpage = sprite_tpage_word - 1;
 
-                        bits = part->bits;
-                        count = part_def->u.b.cols * part_def->u.b.rows;
-                        bit = 0;
-
-                        while (--count != -1)
-                        {
-                            if (bit == 0)
+                            if (sprite_tpage_word != 0)
                             {
-                                bit_word = *bits;
-                                bits++;
-                                bit = 1;
+                                page_slot = tpage & FIELD_TILE_TPAGE_SLOT_MASK;
+
+                                if (page_slot >= FIELD_TILE_LOWER_BANK_SLOTS)
+                                {
+                                    tpage = FIELD_TPAGE_DEPTH_BITS(part_def->u.word) | FIELD_TPAGE_ABR_BITS(tpage) |
+                                            ((u32)(FIELD_TILE_UPPER_BANK_PAGE_X(page_slot) & 0x3FF) >> FIELD_TILE_TPAGE_X_SHIFT);
+                                }
+                                else
+                                {
+                                    tpage = FIELD_TPAGE_DEPTH_BITS(part_def->u.word) | FIELD_TPAGE_ABR_BITS(tpage) |
+                                            (((u32)FIELD_TILE_LOWER_BANK_PAGE_X(page_slot) >> FIELD_TILE_TPAGE_X_SHIFT) | lower_bank_y_bit);
+                                }
+
+                                part->tpage_word = _get_mode(1, 0, tpage);
+                                share_flags |= FIELD_TILE_REC_SHARED_TPAGE;
+                                stride -= FIELD_CEL_SHARED_WORD_SIZE;
                             }
 
-                            if (bit_word & bit)
+                            bits = part->bits;
+                            count = part_def->u.b.cols * part_def->u.b.rows;
+                            bit = 0;
+
+                            while (--count != -1)
                             {
-                                field_build_sprite_tile_record(tiles, (FieldTileRec*)cursor, FIELD_PART_DEF_DEPTH(part_def->u.word), share_flags);
-                                cursor += stride;
-                                instances++;
+                                if (bit == 0)
+                                {
+                                    bit_word = *bits;
+                                    bits++;
+                                    bit = 1;
+                                }
+
+                                if (bit_word & bit)
+                                {
+                                    field_build_sprite_tile_record(tiles, (FieldTileRec*)cursor, FIELD_PART_DEF_DEPTH(part_def->u.word), share_flags);
+                                    cursor += stride;
+                                    instances++;
+                                }
+
+                                bit <<= 1;
+                                tiles++;
                             }
 
-                            bit <<= 1;
-                            tiles++;
-                        }
+                            arena.cur += (u16)instances * stride;
+                            break;
+                        case 1:
+                            break;
+                        case 2:
+                        case 3:
+                        case 4:
+                        case 5:
+                            code_word = part->code_word;
+                            part->records = arena.cur;
+                            quad_records = part->records;
+                            cursor = quad_records;
+                            stride = FIELD_CEL_RECORD_SIZE;
 
-                        arena.cur += (u16)instances * stride;
-                        break;
-                    case 1:
-                        break;
-                    case 2:
-                    case 3:
-                    case 4:
-                    case 5:
-                        code_word = part->code_word;
-                        part->records = arena.cur;
-                        quad_records = part->records;
-                        cursor = quad_records;
-                        stride = FIELD_CEL_RECORD_SIZE;
-
-                        if (code_word != 0)
-                        {
-                            color = code_word - 1;
-                            part->code_word = FIELD_TILE_COLOR_WORDS[color & FIELD_SHARED_CODE_COLOR_MASK];
-                            share_flags = FIELD_TILE_REC_SHARED_RGB_CODE;
-
-                            if (color & (1 << FIELD_SHARED_CODE_SEMI_SHIFT))
+                            if (code_word != 0)
                             {
-                                /* Semi-transparency bit of the word's GPU code byte (setSemiTrans). */
-                                ((u8*)&part->code_word)[3] |= 2;
-                            }
+                                color = code_word - 1;
+                                part->code_word = FIELD_TILE_COLOR_WORDS[color & FIELD_SHARED_CODE_COLOR_MASK];
+                                share_flags = FIELD_TILE_REC_SHARED_RGB_CODE;
 
-                            stride = FIELD_CEL_RECORD_SIZE - FIELD_CEL_SHARED_WORD_SIZE;
-                        }
-                        else
-                        {
-                            share_flags = 0;
-                        }
+                                if (color & (1 << FIELD_SHARED_CODE_SEMI_SHIFT))
+                                {
+                                    /* Semi-transparency bit of the word's GPU code byte (setSemiTrans). */
+                                    ((u8*)&part->code_word)[3] |= 2;
+                                }
 
-                        quad_tpage_word = part->tpage_word;
-                        tpage = quad_tpage_word - 1;
-
-                        if (quad_tpage_word != 0)
-                        {
-                            page_slot = tpage & FIELD_TILE_TPAGE_SLOT_MASK;
-
-                            if (page_slot >= FIELD_TILE_LOWER_BANK_SLOTS)
-                            {
-                                tpage = FIELD_TPAGE_DEPTH_BITS(part_def->u.word) | FIELD_TPAGE_ABR_BITS(tpage) |
-                                        ((u32)(FIELD_TILE_UPPER_BANK_PAGE_X(page_slot) & 0x3FF) >> FIELD_TILE_TPAGE_X_SHIFT);
+                                stride = FIELD_CEL_RECORD_SIZE - FIELD_CEL_SHARED_WORD_SIZE;
                             }
                             else
                             {
-                                tpage = FIELD_TPAGE_DEPTH_BITS(part_def->u.word) | FIELD_TPAGE_ABR_BITS(tpage) |
-                                        (((u32)FIELD_TILE_LOWER_BANK_PAGE_X(page_slot) >> FIELD_TILE_TPAGE_X_SHIFT) | lower_bank_y_bit);
+                                share_flags = 0;
                             }
 
-                            part->tpage_word = tpage;
-                            share_flags |= FIELD_TILE_REC_SHARED_TPAGE;
-                            stride -= FIELD_CEL_SHARED_WORD_SIZE;
-                        }
+                            quad_tpage_word = part->tpage_word;
+                            tpage = quad_tpage_word - 1;
 
-                        bits = part->bits;
-                        count = part_def->u.b.cols * part_def->u.b.rows;
-                        bit = 0;
-
-                        while (--count != -1)
-                        {
-                            if (bit == 0)
+                            if (quad_tpage_word != 0)
                             {
-                                bit_word = *bits;
-                                bits++;
-                                bit = 1;
+                                page_slot = tpage & FIELD_TILE_TPAGE_SLOT_MASK;
+
+                                if (page_slot >= FIELD_TILE_LOWER_BANK_SLOTS)
+                                {
+                                    tpage = FIELD_TPAGE_DEPTH_BITS(part_def->u.word) | FIELD_TPAGE_ABR_BITS(tpage) |
+                                            ((u32)(FIELD_TILE_UPPER_BANK_PAGE_X(page_slot) & 0x3FF) >> FIELD_TILE_TPAGE_X_SHIFT);
+                                }
+                                else
+                                {
+                                    tpage = FIELD_TPAGE_DEPTH_BITS(part_def->u.word) | FIELD_TPAGE_ABR_BITS(tpage) |
+                                            (((u32)FIELD_TILE_LOWER_BANK_PAGE_X(page_slot) >> FIELD_TILE_TPAGE_X_SHIFT) | lower_bank_y_bit);
+                                }
+
+                                part->tpage_word = tpage;
+                                share_flags |= FIELD_TILE_REC_SHARED_TPAGE;
+                                stride -= FIELD_CEL_SHARED_WORD_SIZE;
                             }
 
-                            if (bit_word & bit)
+                            bits = part->bits;
+                            count = part_def->u.b.cols * part_def->u.b.rows;
+                            bit = 0;
+
+                            while (--count != -1)
                             {
-                                field_build_quad_tile_record(tiles, (FieldTileRec*)cursor, FIELD_PART_DEF_DEPTH(part_def->u.word), share_flags);
-                                cursor += stride;
-                                instances++;
+                                if (bit == 0)
+                                {
+                                    bit_word = *bits;
+                                    bits++;
+                                    bit = 1;
+                                }
+
+                                if (bit_word & bit)
+                                {
+                                    field_build_quad_tile_record(tiles, (FieldTileRec*)cursor, FIELD_PART_DEF_DEPTH(part_def->u.word), share_flags);
+                                    cursor += stride;
+                                    instances++;
+                                }
+
+                                bit <<= 1;
+                                tiles++;
                             }
 
-                            bit <<= 1;
-                            tiles++;
-                        }
-
-                        arena.cur += (u16)instances * stride;
-                        break;
+                            arena.cur += (u16)instances * stride;
+                            break;
                     }
 
                     part->instance_count = instances;
@@ -1385,119 +1387,119 @@ static void field_build_animation_list(FieldAnimDef* def, u8** arena, FieldAnim*
 
         switch (def->flags.b.handler_group)
         {
-        case FIELD_ANIM_GROUP_TILE:
-            tile_def = def;
+            case FIELD_ANIM_GROUP_TILE:
+                tile_def = def;
 
-            switch (tile_def->flags.b.kind_flags & FIELD_ANIM_KIND_MASK)
-            {
-            case FIELD_TILE_ANIM_BLIT:
-            case FIELD_TILE_ANIM_CEL_RECORDS:
-                grid = tile_def->u.tile.grid;
-                cel = field_find_grid_part(grid, &tint_src);
-                anim->cels = cel;
-                break;
-            case FIELD_TILE_ANIM_CEL_CYCLE:
-                grid = tile_def->u.tile.grid;
-                cel = field_find_grid_part(grid, &tint_src);
-                anim->cels = cel;
-
-                if (anim->flags.word & FIELD_ANIM_FLAG_ACTIVE)
+                switch (tile_def->flags.b.kind_flags & FIELD_ANIM_KIND_MASK)
                 {
-                    /* Only the cel of the starting frame is visible. */
-                    range_start = 0;
-                    frame = def->flags.b.last_frame + 1;
+                    case FIELD_TILE_ANIM_BLIT:
+                    case FIELD_TILE_ANIM_CEL_RECORDS:
+                        grid = tile_def->u.tile.grid;
+                        cel = field_find_grid_part(grid, &tint_src);
+                        anim->cels = cel;
+                        break;
+                    case FIELD_TILE_ANIM_CEL_CYCLE:
+                        grid = tile_def->u.tile.grid;
+                        cel = field_find_grid_part(grid, &tint_src);
+                        anim->cels = cel;
 
-                    while (--frame != -1)
-                    {
-                        cel->visible = range_start == anim->flags.b.state;
-                        cel = cel->next;
-                        range_start += 1;
-                    }
+                        if (anim->flags.word & FIELD_ANIM_FLAG_ACTIVE)
+                        {
+                            /* Only the cel of the starting frame is visible. */
+                            range_start = 0;
+                            frame = def->flags.b.last_frame + 1;
+
+                            while (--frame != -1)
+                            {
+                                cel->visible = range_start == anim->flags.b.state;
+                                cel = cel->next;
+                                range_start++;
+                            }
+                        }
+
+                        break;
+                    case FIELD_TILE_ANIM_UPLOAD:
+                        if ((anim->flags.word & FIELD_ANIM_FLAG_ACTIVE) && (anim->timer != 1))
+                        {
+                            anim->flags.word |= FIELD_ANIM_FLAG_UPLOAD_PENDING;
+                        }
+
+                        break;
+                    case FIELD_TILE_ANIM_MOVIE:
+                        grid = tile_def->u.tile.grid;
+                        cel = field_find_grid_part(grid, &tint_src);
+                        anim->cels = cel;
+                        scene->vlc_table = FIELD_VLC_TABLE_REQUESTED;
+                        break;
+                    case FIELD_TILE_ANIM_TWEEN_PART:
+                        grid = tile_def->u.tile.grid;
+                        cel = field_find_grid_part(grid, &tint_src);
+                        anim->cels = cel;
+                        field_apply_animation_tween(def, anim, 0);
+                        break;
+                    case FIELD_TILE_ANIM_TWEEN_OBJECT:
+                        tint_src = (FieldTintSrc*)field_find_object_by_definition(tile_def->u.tile.grid);
+                        anim->cels = (FieldPart*)tint_src;
+                        field_apply_animation_tween(def, anim, 0);
+                        break;
+                    case FIELD_TILE_ANIM_SOUND:
+                    default:
+                        grid = tile_def->u.tile.grid;
+                        cel = field_find_grid_part(grid, &tint_src);
+                        anim->cels = cel;
+                        anim->owner.tint_src = tint_src;
+                        key = (FieldSfxKey*)tile_def->data;
+
+                        if (((key->control.b.lo & FIELD_SFX_KEY_KIND_MASK) == FIELD_SFX_KEY_SOUND) && (key->sound.word & FIELD_SFX_ONE_SHOT))
+                        {
+                            anim->timer = 1;
+                            anim->flags.word |= FIELD_ANIM_FLAG_START_PENDING;
+                        }
+
+                        break;
                 }
 
                 break;
-            case FIELD_TILE_ANIM_UPLOAD:
-                if ((anim->flags.word & FIELD_ANIM_FLAG_ACTIVE) && (anim->timer != 1))
+            case FIELD_ANIM_GROUP_PALETTE:
+                switch (def->flags.b.kind_flags & FIELD_ANIM_KIND_MASK)
                 {
-                    anim->flags.word |= FIELD_ANIM_FLAG_UPLOAD_PENDING;
+                    case FIELD_PALETTE_ANIM_CEL_CLUT:
+                        grid = (FieldPartDef*)def->data;
+                        cel = field_find_grid_part(grid, &tint_src);
+                        anim->cels = cel;
+                        break;
+                    case FIELD_PALETTE_ANIM_CEL_LIST_CLUT:
+                        tint_src = (FieldTintSrc*)field_find_object_by_definition(def->data);
+                        anim->cels = (FieldPart*)tint_src;
+                        break;
                 }
 
                 break;
-            case FIELD_TILE_ANIM_MOVIE:
-                grid = tile_def->u.tile.grid;
-                cel = field_find_grid_part(grid, &tint_src);
-                anim->cels = cel;
-                scene->vlc_table = FIELD_VLC_TABLE_REQUESTED;
+            case FIELD_ANIM_GROUP_TINT:
+                switch (def->flags.b.kind_flags & FIELD_ANIM_KIND_MASK)
+                {
+                    case FIELD_TINT_ANIM_CEL:
+                        grid = def->u.tint.grid;
+                        cel = field_find_grid_part(grid, &tint_src);
+                        anim->cels = cel;
+                        anim->owner.tint_src = tint_src;
+                        break;
+                    case FIELD_TINT_ANIM_CEL_LIST:
+                        tint_src = (FieldTintSrc*)field_find_object_by_definition(def->u.tint.grid);
+                        anim->cels = (FieldPart*)tint_src;
+                        break;
+                }
+
                 break;
-            case FIELD_TILE_ANIM_TWEEN_PART:
-                grid = tile_def->u.tile.grid;
-                cel = field_find_grid_part(grid, &tint_src);
-                anim->cels = cel;
-                field_apply_animation_tween(def, anim, 0);
-                break;
-            case FIELD_TILE_ANIM_TWEEN_OBJECT:
-                tint_src = (FieldTintSrc*)field_find_object_by_definition(tile_def->u.tile.grid);
-                anim->cels = (FieldPart*)tint_src;
-                field_apply_animation_tween(def, anim, 0);
-                break;
-            case FIELD_TILE_ANIM_SOUND:
             default:
-                grid = tile_def->u.tile.grid;
-                cel = field_find_grid_part(grid, &tint_src);
-                anim->cels = cel;
-                anim->owner.tint_src = tint_src;
-                key = (FieldSfxKey*)tile_def->data;
-
-                if (((key->control.b.lo & FIELD_SFX_KEY_KIND_MASK) == FIELD_SFX_KEY_SOUND) && (key->sound.word & FIELD_SFX_ONE_SHOT))
-                {
-                    anim->timer = 1;
-                    anim->flags.word |= FIELD_ANIM_FLAG_START_PENDING;
-                }
-
-                break;
-            }
-
-            break;
-        case FIELD_ANIM_GROUP_PALETTE:
-            switch (def->flags.b.kind_flags & FIELD_ANIM_KIND_MASK)
-            {
-            case FIELD_PALETTE_ANIM_CEL_CLUT:
-                grid = (FieldPartDef*)def->data;
+                grid = def->u.tile.grid;
                 cel = field_find_grid_part(grid, &tint_src);
                 anim->cels = cel;
                 break;
-            case FIELD_PALETTE_ANIM_CEL_LIST_CLUT:
-                tint_src = (FieldTintSrc*)field_find_object_by_definition(def->data);
-                anim->cels = (FieldPart*)tint_src;
-                break;
-            }
-
-            break;
-        case FIELD_ANIM_GROUP_TINT:
-            switch (def->flags.b.kind_flags & FIELD_ANIM_KIND_MASK)
-            {
-            case FIELD_TINT_ANIM_CEL:
-                grid = def->u.tint.grid;
-                cel = field_find_grid_part(grid, &tint_src);
-                anim->cels = cel;
-                anim->owner.tint_src = tint_src;
-                break;
-            case FIELD_TINT_ANIM_CEL_LIST:
-                tint_src = (FieldTintSrc*)field_find_object_by_definition(def->u.tint.grid);
-                anim->cels = (FieldPart*)tint_src;
-                break;
-            }
-
-            break;
-        default:
-            grid = def->u.tile.grid;
-            cel = field_find_grid_part(grid, &tint_src);
-            anim->cels = cel;
-            break;
         }
 
         /* Tile blits and effects get their cel's tint and one record set per frame. */
-        if (((u32)(def->flags.word & FIELD_ANIM_GROUP_KIND_MASK) <= FIELD_TILE_ANIM_CEL_RECORDS) || (def->flags.b.handler_group == FIELD_ANIM_GROUP_EFFECT))
+        if (((def->flags.word & FIELD_ANIM_GROUP_KIND_MASK) <= FIELD_TILE_ANIM_CEL_RECORDS) || (def->flags.b.handler_group == FIELD_ANIM_GROUP_EFFECT))
         {
             rgb[0] = tint_src->red << 8;
             rgb[1] = tint_src->green << 8;
@@ -1512,18 +1514,18 @@ static void field_build_animation_list(FieldAnimDef* def, u8** arena, FieldAnim*
             /* Sprite and quad records happen to be the same size. */
             switch (cel->kind)
             {
-            case 0:
-                record_stride = FIELD_CEL_RECORD_SIZE;
-                break;
-            case 2:
-            case 3:
-            case 4:
-            case 5:
-                record_stride = FIELD_CEL_RECORD_SIZE;
-                break;
-            case 1:
-            case 6:
-                break;
+                case 0:
+                    record_stride = FIELD_CEL_RECORD_SIZE;
+                    break;
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                    record_stride = FIELD_CEL_RECORD_SIZE;
+                    break;
+                case 1:
+                case 6:
+                    break;
             }
 
             record_flags = FIELD_TILE_REC_SHARED_RGB_CODE;
@@ -1595,22 +1597,22 @@ static void field_build_animation_list(FieldAnimDef* def, u8** arena, FieldAnim*
                                     {
                                         switch (cel->kind)
                                         {
-                                        case 0:
-                                            field_build_sprite_tile_record(tile_data, (FieldTileRec*)arena_cursor, FIELD_PART_DEF_DEPTH(grid->u.word),
-                                                                           record_flags);
-                                            arena_cursor += record_stride;
-                                            break;
-                                        case 2:
-                                        case 3:
-                                        case 4:
-                                        case 5:
-                                            field_build_quad_tile_record(tile_data, (FieldTileRec*)arena_cursor, FIELD_PART_DEF_DEPTH(grid->u.word),
-                                                                         record_flags);
-                                            arena_cursor += record_stride;
-                                            break;
-                                        case 1:
-                                        case 6:
-                                            break;
+                                            case 0:
+                                                field_build_sprite_tile_record(tile_data, (FieldTileRec*)arena_cursor, FIELD_PART_DEF_DEPTH(grid->u.word),
+                                                                               record_flags);
+                                                arena_cursor += record_stride;
+                                                break;
+                                            case 2:
+                                            case 3:
+                                            case 4:
+                                            case 5:
+                                                field_build_quad_tile_record(tile_data, (FieldTileRec*)arena_cursor, FIELD_PART_DEF_DEPTH(grid->u.word),
+                                                                             record_flags);
+                                                arena_cursor += record_stride;
+                                                break;
+                                            case 1:
+                                            case 6:
+                                                break;
                                         }
 
                                         tile_count++;
@@ -1658,7 +1660,7 @@ static void field_build_animation_list(FieldAnimDef* def, u8** arena, FieldAnim*
         /* Uploading kinds reserve an upload request, plus scratch colours for the cycle and the blend. */
         if ((((def->flags.word & FIELD_ANIM_GROUP_KIND_MASK) >= FIELD_TILE_ANIM_UPLOAD) &&
              ((def->flags.word & FIELD_ANIM_GROUP_KIND_MASK) <= FIELD_TILE_ANIM_MOVIE)) ||
-            ((def->flags.b.handler_group == FIELD_ANIM_GROUP_PALETTE) && ((u32)(def->flags.b.kind_flags & FIELD_ANIM_KIND_MASK) >= FIELD_PALETTE_ANIM_CYCLE)))
+            ((def->flags.b.handler_group == FIELD_ANIM_GROUP_PALETTE) && ((def->flags.b.kind_flags & FIELD_ANIM_KIND_MASK) >= FIELD_PALETTE_ANIM_CYCLE)))
         {
             if ((def->flags.word & FIELD_ANIM_GROUP_KIND_MASK) == FIELD_ANIM_GROUP_KIND(FIELD_ANIM_GROUP_PALETTE, FIELD_PALETTE_ANIM_CYCLE))
             {
@@ -1721,20 +1723,20 @@ static void field_build_sprite_tile_record(FieldTileDesc* desc, FieldTileRec* re
 
         switch (texture_depth)
         {
-        case FIELD_TEXTURE_4_BIT:
-        {
-            u32 clut_ref = desc->clut_slot;
+            case FIELD_TEXTURE_4_BIT:
+            {
+                u32 clut_ref = desc->clut_slot;
 
-            setClut(record, FIELD_TILE_4BIT_CLUT_X(clut_ref), FIELD_TILE_4BIT_CLUT_Y(clut_ref));
-        }
+                setClut(record, FIELD_TILE_4BIT_CLUT_X(clut_ref), FIELD_TILE_4BIT_CLUT_Y(clut_ref));
+            }
 
-        break;
-        case FIELD_TEXTURE_8_BIT:
-            setClut(record, 0, FIELD_TILE_8BIT_CLUT_Y(desc->clut_slot));
             break;
-        default:
-            record->clut = 0;
-            break;
+            case FIELD_TEXTURE_8_BIT:
+                setClut(record, 0, FIELD_TILE_8BIT_CLUT_Y(desc->clut_slot));
+                break;
+            default:
+                record->clut = 0;
+                break;
         }
 
         if (!(record_flags & FIELD_TILE_REC_SHARED_RGB_CODE))
@@ -1752,7 +1754,7 @@ static void field_build_sprite_tile_record(FieldTileDesc* desc, FieldTileRec* re
             texture_attrs = desc->texture_attrs;
             page_slot = texture_attrs & FIELD_TILE_TPAGE_SLOT_MASK;
 
-            if ((u32)FIELD_TILE_TPAGE_COLUMN(page_slot, u_cell, texture_depth) >= FIELD_TILE_LOWER_BANK_SLOTS)
+            if (FIELD_TILE_TPAGE_COLUMN(page_slot, u_cell, texture_depth) >= FIELD_TILE_LOWER_BANK_SLOTS)
             {
                 /*
                  * U crossed the ten-slot lower bank. Rebase it onto the upper
@@ -1814,20 +1816,20 @@ static void field_build_quad_tile_record(FieldTileDesc* desc, FieldTileRec* reco
 
         switch (texture_depth)
         {
-        case FIELD_TEXTURE_4_BIT:
-        {
-            u32 clut_ref = desc->clut_slot;
+            case FIELD_TEXTURE_4_BIT:
+            {
+                u32 clut_ref = desc->clut_slot;
 
-            setClut(record, FIELD_TILE_4BIT_CLUT_X(clut_ref), FIELD_TILE_4BIT_CLUT_Y(clut_ref));
-        }
+                setClut(record, FIELD_TILE_4BIT_CLUT_X(clut_ref), FIELD_TILE_4BIT_CLUT_Y(clut_ref));
+            }
 
-        break;
-        case FIELD_TEXTURE_8_BIT:
-            setClut(record, 0, FIELD_TILE_8BIT_CLUT_Y(desc->clut_slot));
             break;
-        default:
-            record->clut = 0;
-            break;
+            case FIELD_TEXTURE_8_BIT:
+                setClut(record, 0, FIELD_TILE_8BIT_CLUT_Y(desc->clut_slot));
+                break;
+            default:
+                record->clut = 0;
+                break;
         }
 
         if (!(record_flags & FIELD_TILE_REC_SHARED_RGB_CODE))
@@ -1949,21 +1951,21 @@ void field_size_work_buffer(void)
 
                 switch (kind)
                 {
-                case 0:
-                    total += part->instance_count * sprite_cost;
-                    break;
-                case 1:
-                    total += single_cost;
-                    break;
-                case 2:
-                case 3:
-                case 4:
-                case 5:
-                    total += part->instance_count * quad_cost;
-                    break;
-                default:
-                    total += part->instance_count * other_cost;
-                    break;
+                    case 0:
+                        total += part->instance_count * sprite_cost;
+                        break;
+                    case 1:
+                        total += single_cost;
+                        break;
+                    case 2:
+                    case 3:
+                    case 4:
+                    case 5:
+                        total += part->instance_count * quad_cost;
+                        break;
+                    default:
+                        total += part->instance_count * other_cost;
+                        break;
                 }
             }
 
@@ -2772,32 +2774,32 @@ static void field_emit_rotated_sprite_grid(FieldPart* part, u8** cursor_ptr, Fie
 
     switch (FIELD_PART_SWEEP_MODE(part->def))
     {
-    case 1:
-    case 2:
-        pivot_y = origin->camera_y;
-        pivot_x = origin->camera_x + (origin->width / 2);
-        offset_x = origin->x - pivot_x;
-        offset_y = origin->y - pivot_y;
-        break;
-    case 3:
-        pivot_x = origin->camera_x;
-        pivot_y = origin->camera_y;
-        offset_x = origin->x - pivot_x;
-        offset_y = origin->y - pivot_y;
-        break;
-    case 4:
-        pivot_x = origin->width + origin->camera_x;
-        pivot_y = origin->camera_y;
-        offset_x = origin->x - pivot_x;
-        offset_y = origin->y - pivot_y;
-        break;
-    case 5:
-    default:
-        offset_x = -width * (FIELD_TILE_SIZE / 2);
-        offset_y = -height * (FIELD_TILE_SIZE / 2);
-        pivot_x = origin->x + (width * (FIELD_TILE_SIZE / 2));
-        pivot_y = origin->y + (height * (FIELD_TILE_SIZE / 2));
-        break;
+        case 1:
+        case 2:
+            pivot_y = origin->camera_y;
+            pivot_x = origin->camera_x + (origin->width / 2);
+            offset_x = origin->x - pivot_x;
+            offset_y = origin->y - pivot_y;
+            break;
+        case 3:
+            pivot_x = origin->camera_x;
+            pivot_y = origin->camera_y;
+            offset_x = origin->x - pivot_x;
+            offset_y = origin->y - pivot_y;
+            break;
+        case 4:
+            pivot_x = origin->width + origin->camera_x;
+            pivot_y = origin->camera_y;
+            offset_x = origin->x - pivot_x;
+            offset_y = origin->y - pivot_y;
+            break;
+        case 5:
+        default:
+            offset_x = -width * (FIELD_TILE_SIZE / 2);
+            offset_y = -height * (FIELD_TILE_SIZE / 2);
+            pivot_x = origin->x + (width * (FIELD_TILE_SIZE / 2));
+            pivot_y = origin->y + (height * (FIELD_TILE_SIZE / 2));
+            break;
     }
 
     scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(offset_y * part->scale_y, 8) * row_cos, 12);
@@ -3080,17 +3082,17 @@ static void field_draw_part(FieldPart* part, u8** cursor, FieldViewport* origin,
 {
     switch (part->kind)
     {
-    case 0:
-        field_emit_sprite_grid(part, cursor, origin, ot);
-        break;
-    case 1:
-        break;
-    case 2:
-    case 3:
-    case 4:
-    case 5:
-        field_emit_rotated_sprite_grid(part, cursor, origin, ot);
-        break;
+        case 0:
+            field_emit_sprite_grid(part, cursor, origin, ot);
+            break;
+        case 1:
+            break;
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+            field_emit_rotated_sprite_grid(part, cursor, origin, ot);
+            break;
     }
 }
 

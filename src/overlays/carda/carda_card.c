@@ -1070,7 +1070,7 @@ static s32 carda_begin_entry_scan(s32 page)
         if (firstfile(search_path.text, g_card_entries[page]) != 0)
         {
             field_flag_known_save(g_card_entries[page][g_card_entry_state].name);
-            g_card_entry_state += 1;
+            g_card_entry_state++;
             return 1;
         }
     }
@@ -1099,7 +1099,7 @@ static s32 carda_scan_next_entry(s32 page)
         if (nextfile(&g_card_entries[page][g_card_entry_state]) != 0)
         {
             field_flag_known_save(g_card_entries[page][g_card_entry_state].name);
-            g_card_entry_state += 1;
+            g_card_entry_state++;
             return 1;
         }
     }
@@ -1118,7 +1118,7 @@ static s32 carda_scan_next_entry(s32 page)
             {
                 strcpy(g_card_entries[page][g_card_entry_state].name, g_card_full_entry_name);
                 g_card_entries[page][g_card_entry_state].size = 0;
-                g_card_entry_state += 1;
+                g_card_entry_state++;
             }
             selected = carda_rank_entries();
             if (carda_has_known_entry_type() == 0)
@@ -1146,13 +1146,13 @@ static s32 carda_scan_next_entry(s32 page)
             {
                 strcpy(g_card_entries[page][g_card_entry_state].name, g_new_save_entry_prefix);
                 g_card_entries[page][g_card_entry_state].size = CARDA_POCKETSTATION_SAVE_BYTES;
-                g_card_entry_state += 1;
+                g_card_entry_state++;
             }
             else if (g_card_menu_mode == CARDA_MODE_SAVE)
             {
                 strcpy(g_card_entries[page][g_card_entry_state].name, g_new_save_entry_prefix);
                 g_card_entries[page][g_card_entry_state].size = SAVE_FILE_BYTES;
-                g_card_entry_state += 1;
+                g_card_entry_state++;
             }
             selected = carda_rank_entries();
             if (carda_has_known_entry_type() == 0)

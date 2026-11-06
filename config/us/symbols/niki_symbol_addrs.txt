@@ -258,3 +258,7 @@ g_lom_save_dummy_filename = 0x800ECF9C;
 g_lom_pocketstation_dummy_filename = 0x800ECFB0;
 g_new_save_entry_prefix = 0x800ECFC4;
 g_field_shared_items = 0x80122A08;
+g_field_niki_partner_game_id = 0x801227CC;
+g_field_niki_partner_save_id = 0x801227F4;
+g_field_niki_card_slot = 0x8011F418;
+g_field_niki_save_path = 0x8011F3D8;

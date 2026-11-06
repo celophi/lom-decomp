@@ -167,7 +167,7 @@ void wmap_start_mesh_transition(s32 selection)
     {
         if (g_wmap_mesh_transition_direction != 0)
         {
-            func_80064F14();
+            wmap_report_error();
         }
 
         if (selection == 0)

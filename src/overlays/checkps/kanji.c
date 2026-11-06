@@ -1,10 +1,10 @@
-#include "internal/kanji.h"
+#include "common.h"
+#include <libapi.h>
+#include <libgpu.h>
+#include <strings.h>
 
 #include "internal/checkps_internal.h"
-
-#include <libapi.h>
-#include <strings.h>
-#include <libgpu.h>
+#include "internal/kanji.h"
 
 #define CHECKPS_KANJI_LINE_HEIGHT 18
 #define CHECKPS_KANJI_ADVANCE 17
@@ -33,6 +33,7 @@ void draw_kanji_string(const char* text, KanjiDrawState* draw_state, s32 color)
 
     length = strlen(text);
     line_start_x = draw_state->position.coord.x;
+
     for (cursor = (const u8*)text; cursor < (const u8*)text + length; cursor++)
     {
         if (*cursor == newline)
@@ -80,7 +81,8 @@ static void draw_kanji_glyph(KanjiDrawState* draw_state, u8* bitmap, s32 color)
     packet.tag = CHECKPS_KANJI_PACKET_WORDS << 24;
     packet.command = CHECKPS_GPU_LOAD_IMAGE_COMMAND;
     packet.wh = draw_state->size.packed;
-    for (row = 0; row < CHECKPS_GLYPH_BITMAP_ROWS; row++)
+
+    for (row = 0; row < GLYPH_ROWS; row++)
     {
         write_ptr = packet.pixels;
 

@@ -4,13 +4,14 @@
  *        guard and stance, and apply the outcome.
  */
 
-#include "main/audio/game_audio.h"
 #include "common.h"
-#include "common/saved_game.h"
+#include <rand.h>
+
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
-#include <rand.h>
 #include "../internal/field_state_ops.h"
+#include "common/saved_game.h"
+#include "main/audio/game_audio.h"
 
 /** @brief FIELD_EVENT_ACTION modes. */
 enum
@@ -38,10 +39,6 @@ enum
     FIELD_STANCE_IMMUNE = 2,
     FIELD_STANCE_REPEL = 3
 };
-
-/** @brief Kind of an action descriptor (low nibble of its first word). */
-#define FIELD_DESCRIPTOR_KIND_MASK 0xF
-#define FIELD_DESCRIPTOR_KIND(descriptor) ((descriptor)->info.word & FIELD_DESCRIPTOR_KIND_MASK)
 
 /** @brief Status intensity shift of an action descriptor (bits 8-10). */
 #define FIELD_DESCRIPTOR_SHIFT(descriptor) (((descriptor)->info.word >> 8) & 7)
@@ -305,63 +302,61 @@ static s32 field_battle_check_target_stance(void)
 
     switch (FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor))
     {
-    case 1:
-        if (animation == FIELD_ANIM_IMMUNE)
-        {
-            return FIELD_STANCE_IMMUNE;
-        }
-
-        if (animation == FIELD_ANIM_WEAPON_GUARD)
-        {
-            target = g_field_battle->target;
-            kind = target->meta.packed & FIELD_STATUS_META_KIND_MASK;
-
-            if (kind == (0 << FIELD_STATUS_META_KIND_SHIFT) || kind == (1 << FIELD_STATUS_META_KIND_SHIFT))
+        case 1:
+            if (animation == FIELD_ANIM_IMMUNE)
             {
-                u32 weapon_type =
-                    FIELD_ITEM_TYPE(g_field_game_state->characters[target->meta.bytes.id].equipment[FIELD_WEAPON_SLOT].info.word);
+                return FIELD_STANCE_IMMUNE;
+            }
 
-                if (weapon_type == FIELD_WEAPON_SPEAR || weapon_type == FIELD_WEAPON_STAFF)
+            if (animation == FIELD_ANIM_WEAPON_GUARD)
+            {
+                target = g_field_battle->target;
+                kind = target->meta.packed & FIELD_STATUS_META_KIND_MASK;
+
+                if (kind == (0 << FIELD_STATUS_META_KIND_SHIFT) || kind == (1 << FIELD_STATUS_META_KIND_SHIFT))
                 {
-                    return FIELD_STANCE_WEAPON_GUARD;
+                    u32 weapon_type = FIELD_ITEM_TYPE(g_field_game_state->characters[target->meta.bytes.id].equipment[FIELD_WEAPON_SLOT].info.word);
+
+                    if (weapon_type == FIELD_WEAPON_SPEAR || weapon_type == FIELD_WEAPON_STAFF)
+                    {
+                        return FIELD_STANCE_WEAPON_GUARD;
+                    }
                 }
             }
-        }
 
-        break;
-    case 4:
-        if (g_field_battle->action_flags.bits.side)
-        {
-            return FIELD_STANCE_IMMUNE;
-        }
+            break;
+        case 4:
+            if (g_field_battle->action_flags.bits.side)
+            {
+                return FIELD_STANCE_IMMUNE;
+            }
 
-        if ((g_field_battle->target->status_flags & FIELD_RECORD_STATUS_10) &&
-            (animation == FIELD_ANIM_REPEL_A || animation == FIELD_ANIM_REPEL_B))
-        {
-            g_field_battle->action_flags.bits.follow_up = 1;
-            return FIELD_STANCE_REPEL;
-        }
+            if ((g_field_battle->target->status_flags & FIELD_RECORD_STATUS_10) && (animation == FIELD_ANIM_REPEL_A || animation == FIELD_ANIM_REPEL_B))
+            {
+                g_field_battle->action_flags.bits.follow_up = 1;
+                return FIELD_STANCE_REPEL;
+            }
 
-        if (field_count_status_slots(g_field_battle->target, FIELD_SLOT_REPEL_KIND_4))
-        {
-            g_field_battle->action_flags.bits.follow_up = 1;
-            return FIELD_STANCE_REPEL;
-        }
+            if (field_count_status_slots(g_field_battle->target, FIELD_SLOT_REPEL_KIND_4))
+            {
+                g_field_battle->action_flags.bits.follow_up = 1;
+                return FIELD_STANCE_REPEL;
+            }
 
-        break;
-    case 5:
-        if (field_count_status_slots(g_field_battle->target, FIELD_SLOT_REPEL_KIND_5))
-        {
-            g_field_battle->action_flags.bits.follow_up = 1;
-            return FIELD_STANCE_REPEL;
-        }
+            break;
+        case 5:
+            if (field_count_status_slots(g_field_battle->target, FIELD_SLOT_REPEL_KIND_5))
+            {
+                g_field_battle->action_flags.bits.follow_up = 1;
+                return FIELD_STANCE_REPEL;
+            }
 
-        break;
-    case 2:
-    case 3:
-    case 6:
-    default:
-        break;
+            break;
+        case 2:
+        case 3:
+        case 6:
+        default:
+            break;
     }
 
     return FIELD_STANCE_NONE;
@@ -391,9 +386,8 @@ static s32 field_battle_check_target_guard(void)
     {
         if (FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor) == 0)
         {
-            field_apply_status_effect(g_field_battle->target, g_field_battle->attacker,
-                          FIELD_STATUS_APPLY_IGNORE_IMMUNITY | FIELD_STATUS_APPLY_ALLOW_ACTIVE, FIELD_COUNTER_EFFECT,
-                          FIELD_CHANCE_ALWAYS, 300);
+            field_apply_status_effect(g_field_battle->target, g_field_battle->attacker, FIELD_STATUS_APPLY_IGNORE_IMMUNITY | FIELD_STATUS_APPLY_ALLOW_ACTIVE,
+                                      FIELD_COUNTER_EFFECT, FIELD_CHANCE_ALWAYS, 300);
             field_clear_status_effect(g_field_battle->target, FIELD_COUNTER_CLEARED_EFFECT);
             return FIELD_GUARD_BLOCKED;
         }
@@ -427,9 +421,8 @@ static void field_battle_run_down_counters(s32 amount)
     if (attacker->counter <= 0)
     {
         attacker->counter = attacker->counter_reset;
-        field_apply_status_effect(g_field_battle->attacker, g_field_battle->attacker,
-                      FIELD_STATUS_APPLY_IGNORE_IMMUNITY | FIELD_STATUS_APPLY_ALLOW_ACTIVE, FIELD_EXHAUSTED_EFFECT,
-                      FIELD_CHANCE_ALWAYS, 60);
+        field_apply_status_effect(g_field_battle->attacker, g_field_battle->attacker, FIELD_STATUS_APPLY_IGNORE_IMMUNITY | FIELD_STATUS_APPLY_ALLOW_ACTIVE,
+                                  FIELD_EXHAUSTED_EFFECT, FIELD_CHANCE_ALWAYS, 60);
     }
 
     if (g_field_battle->action->param != 0)
@@ -440,9 +433,8 @@ static void field_battle_run_down_counters(s32 amount)
         if (target->counter <= 0)
         {
             target->counter = target->counter_reset;
-            field_apply_status_effect(g_field_battle->target, g_field_battle->target,
-                          FIELD_STATUS_APPLY_IGNORE_IMMUNITY | FIELD_STATUS_APPLY_ALLOW_ACTIVE, FIELD_EXHAUSTED_EFFECT,
-                          FIELD_CHANCE_ALWAYS, 180);
+            field_apply_status_effect(g_field_battle->target, g_field_battle->target, FIELD_STATUS_APPLY_IGNORE_IMMUNITY | FIELD_STATUS_APPLY_ALLOW_ACTIVE,
+                                      FIELD_EXHAUSTED_EFFECT, FIELD_CHANCE_ALWAYS, 180);
         }
     }
 }

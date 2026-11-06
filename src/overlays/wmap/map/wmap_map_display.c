@@ -1097,7 +1097,7 @@ void wmap_draw_land_animation(s32 x, s32 y, WmapLandDisplay* state, s32 resource
 
     if ((u32)(count - 1) >= 32)
     {
-        func_80064F14(animation_data, sequence_end, projection_scale, resource);
+        wmap_report_error(animation_data, sequence_end, projection_scale, resource);
         return;
     }
 

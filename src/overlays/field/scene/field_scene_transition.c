@@ -194,7 +194,6 @@ typedef struct
     FieldLayoutRecord records[1];
 } FieldSceneLayout;
 
-s32 akao_fade_song_volume(s32 song_handle, s32 frames, s32 volume);
 void* field_header_record_at(s32 index);
 void field_restart_actor_animation(FieldActor* actor);
 void field_store_entry_settings();
@@ -587,7 +586,7 @@ void field_update_scene(void)
                             action->flags.instrument = action_fields->flags.instrument;
                             action->command = action_ids->command;
                             action->flags.target_filter = action_fields->flags.target_filter;
-                            action_index += 1;
+                            action_index++;
                             action->animation = action_fields->animation;
                             action_ids++;
                             action->parameter = action_fields->parameter;
@@ -630,7 +629,7 @@ void field_update_scene(void)
                         action->flags.instrument = action_fields->flags.instrument;
                         action->command = action_ids->command;
                         action->flags.target_filter = action_fields->flags.target_filter;
-                        action_index += 1;
+                        action_index++;
                         action->animation = action_fields->animation;
                         action_ids++;
                         action->parameter = action_fields->parameter;

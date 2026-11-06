@@ -8,16 +8,17 @@
  * be freed together. Owners 0 and 1 are the two party players; every other owner shares
  * FIELD_SHARED_OWNER.
  */
-#include "main/cdrom.h"
 #include "common.h"
-#include "../internal/field_calls.h"
-#include "../internal/field_actor_palette.h"
-#include "../internal/field_effect_types.h"
-#include "../internal/field_actor.h"
-#include "../internal/field_mesh.h"
-#include <memory.h>
 #include <libgpu.h>
+#include <memory.h>
+
+#include "../internal/field_actor.h"
+#include "../internal/field_actor_palette.h"
+#include "../internal/field_calls.h"
+#include "../internal/field_effect_types.h"
+#include "../internal/field_mesh.h"
 #include "common/tim.h"
+#include "main/cdrom.h"
 #include "main/display.h"
 #include "main/field_entry.h"
 
@@ -289,7 +290,7 @@ void field_issue_next_resource_read(void)
             g_field_resource_queue[i] = g_field_resource_queue[i + 1];
         }
 
-        g_field_resource_queue_count -= 1;
+        g_field_resource_queue_count--;
     }
 }
 
@@ -463,7 +464,7 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
 
                     if (texture_height == 0)
                     {
-                        j += 1;
+                        j++;
                         texture++;
                         continue;
                     }
@@ -477,16 +478,16 @@ void field_unpack_actor_resource(s32 owner, FieldActorSlot* actor)
                             *pixel_output = *pixel_input;
                         }
 
-                        row += 1;
+                        row++;
                         row_input.halves += FIELD_ACTOR_TEXTURE_ROW_PIXELS;
                     } while (row < texture->height);
 
-                    j += 1;
+                    j++;
                     texture++;
                 } while (j < mesh_fields->texture_part_count);
             }
 
-            i += 1;
+            i++;
             cursor.halves++;
             texture_total += mesh_fields->texture_part_count;
             mesh_fields++;

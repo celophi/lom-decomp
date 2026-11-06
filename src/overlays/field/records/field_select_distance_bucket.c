@@ -3,13 +3,16 @@
  * @brief Distance-weighted random choice of a golem logic grid column.
  */
 
-#include "common/saved_game.h"
 #include "common.h"
-#include "../internal/field_calls.h"
-#include "../internal/field_golem_layout.h"
-#include "common/vector.h"
 #include <abs.h>
 #include <rand.h>
+
+#include "../internal/field_calls.h"
+#include "../internal/field_records.h"
+#include "common/golem_shape.h"
+#include "common/saved_game.h"
+#include "common/vector.h"
+#include "main/main.h"
 
 /** @brief Smallest and largest number of distance buckets (the grid bound is clamped to them). */
 #define DISTANCE_BUCKET_COUNT_MIN 4
@@ -56,10 +59,12 @@ s32 field_select_distance_bucket(s32 actor_id)
     s32 bucket_count;
 
     selected = -1;
-    if (GOLEM.header.fields.joined_group != GOLEM_NO_GROUP)
+
+    if (g_saved_game.layout.joined_golem != GOLEM_NO_GROUP)
     {
-        bucket_count = GOLEM.group_records[GOLEM.header.fields.joined_group].grid_bound;
+        bucket_count = g_saved_game.layout.golem_records[g_saved_game.layout.joined_golem].logic_layout.bits.grid_bound;
     }
+
     bucket_count = CLAMP(bucket_count, DISTANCE_BUCKET_COUNT_MIN, DISTANCE_BUCKET_COUNT_MAX);
     field_get_actor_position(FIELD_PARTY_COMPANION, &companion_position);
     field_get_actor_position(actor_id, &actor_position);
@@ -68,37 +73,48 @@ s32 field_select_distance_bucket(s32 actor_id)
     center = CLAMP(center, 0, DISTANCE_STEP_COUNT - 1);
     divisor = 1;
     center /= DISTANCE_STEP_COUNT / bucket_count;
+
     for (radius = 0; radius < bucket_count; radius++)
     {
         index = center + radius;
+
         if (index < bucket_count)
         {
             weights[index] = DISTANCE_BUCKET_WEIGHT / divisor;
         }
+
         index = center - radius;
+
         if (index >= 0)
         {
             weights[index] = DISTANCE_BUCKET_WEIGHT / divisor;
         }
+
         divisor *= 3;
     }
+
     for (radius = 0; radius < bucket_count; radius++)
     {
         total_weight += weights[radius];
     }
+
     draw = (rand() * total_weight) / RAND_MAX;
     cumulative_weight = 0;
+
     for (bucket = 0; bucket < bucket_count; bucket++)
     {
         if (draw >= cumulative_weight && draw < cumulative_weight + weights[bucket])
         {
             selected = bucket;
         }
+
         cumulative_weight += weights[bucket];
     }
+
     if (selected == -1)
     {
         selected = center;
     }
+
     return selected;
 }

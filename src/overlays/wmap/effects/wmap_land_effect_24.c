@@ -133,7 +133,7 @@ void wmap_land_effect_24_update_focus_sprites(void)
 
         if (*(s16*)(entry + 2) == 0)
         {
-            wmap_draw_actor_sprite((void*)actor, g_wmap_focus_screen_position.packed, 0xB, 2, 0);
+            wmap_draw_actor_sprite(actor, g_wmap_focus_screen_position.packed, 0xB, 2, 0);
             value = actor->shade - 5;
             actor->shade = value;
 
@@ -755,7 +755,7 @@ WMAP_STEP_RESET(wmap_land_effect_24_sequence_11_step_00, g_wmap_land_effect_24_s
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_land_effect_24_sequence_11_step_02, g_wmap_land_effect_24_sequence_11_step, g_wmap_land_effect_24_sequence_11_timer,
                               wmap_set_effect_camera_transform(),
                               wmap_update_particle_system(&g_wmap_sprite_actors[80], &g_wmap_actor_animations[80], 0x1E, 0xFF, 1, 4, 0,
-                                                          (u8*)g_wmap_effect_params + 0x28))
+                                                          &g_wmap_effect_params[10]))
 
 /**
  * @brief Stop spawning particles and run the next update.
@@ -769,7 +769,7 @@ WMAP_STEP_STOP_EMITTER(wmap_land_effect_24_sequence_11_step_03, g_wmap_land_effe
 WMAP_STEP_UPDATE_TWO_AND_WAIT(wmap_land_effect_24_sequence_11_step_04, g_wmap_land_effect_24_sequence_11_step, g_wmap_land_effect_24_sequence_11_timer,
                               wmap_set_effect_camera_transform(),
                               wmap_update_particle_system(&g_wmap_sprite_actors[80], &g_wmap_actor_animations[80], 0x1E, 0xFF, 1, 4, 0,
-                                                          (u8*)g_wmap_effect_params + 0x28))
+                                                          &g_wmap_effect_params[10]))
 
 WMAP_STEP_ADVANCE(wmap_land_effect_24_sequence_11_step_05, g_wmap_land_effect_24_sequence_11_step)
 

@@ -10,6 +10,7 @@ void gosub_build_color_material_list(void)
     s32 count;
 
     count = 0;
+
     for (i = GOSUB_COLOR_MATERIAL_FIRST; i < GOSUB_COLOR_MATERIAL_END; i++)
     {
         if (g_saved_game_ctx->item_counts[i] != 0)
@@ -23,6 +24,7 @@ void gosub_build_color_material_list(void)
             count++;
         }
     }
+
     g_gosub_row_count = count;
     g_gosub_visible_row_count = GOSUB_ITEM_VISIBLE_ROWS;
     g_gosub_row_height = GOSUB_ITEM_ROW_HEIGHT;
@@ -40,6 +42,7 @@ void gosub_build_produce_list(void)
     s32 count;
 
     count = 0;
+
     for (i = GOSUB_PRODUCE_FIRST; i < GOSUB_PRODUCE_END; i++)
     {
         if (g_saved_game_ctx->item_counts[i] != 0)
@@ -53,6 +56,7 @@ void gosub_build_produce_list(void)
             count++;
         }
     }
+
     g_gosub_row_count = count;
     g_gosub_visible_row_count = GOSUB_ITEM_VISIBLE_ROWS;
     g_gosub_row_height = GOSUB_ITEM_ROW_HEIGHT;
@@ -70,6 +74,7 @@ void gosub_build_elemental_coin_list(void)
     s32 count;
 
     count = 0;
+
     for (i = GOSUB_ELEMENTAL_COIN_FIRST; i < GOSUB_ELEMENTAL_COIN_END; i++)
     {
         if (g_saved_game_ctx->item_counts[i] != 0)
@@ -82,6 +87,7 @@ void gosub_build_elemental_coin_list(void)
             count++;
         }
     }
+
     g_gosub_row_count = count;
     g_gosub_visible_row_count = GOSUB_ITEM_VISIBLE_ROWS;
     g_gosub_row_height = GOSUB_ITEM_ROW_HEIGHT;
@@ -99,6 +105,7 @@ void gosub_build_secondary_material_list(void)
     s32 count;
 
     count = 0;
+
     for (i = GOSUB_SECONDARY_MATERIAL_FIRST; i < GOSUB_SECONDARY_MATERIAL_END; i++)
     {
         if (g_saved_game_ctx->item_counts[i] != 0)
@@ -112,6 +119,7 @@ void gosub_build_secondary_material_list(void)
             count++;
         }
     }
+
     g_gosub_row_count = count;
     g_gosub_visible_row_count = GOSUB_ITEM_VISIBLE_ROWS;
     g_gosub_row_height = GOSUB_ITEM_ROW_HEIGHT;
@@ -129,6 +137,7 @@ void gosub_build_primary_material_list(void)
     s32 count;
 
     count = 0;
+
     for (i = GOSUB_PRIMARY_MATERIAL_FIRST; i < GOSUB_PRIMARY_MATERIAL_END; i++)
     {
         if (g_saved_game_ctx->item_counts[i] != 0)
@@ -142,6 +151,7 @@ void gosub_build_primary_material_list(void)
             count++;
         }
     }
+
     g_gosub_row_count = count;
     g_gosub_visible_row_count = GOSUB_ITEM_VISIBLE_ROWS;
     g_gosub_row_height = GOSUB_ITEM_ROW_HEIGHT;
@@ -166,16 +176,19 @@ void gosub_build_logic_block_list(void)
         g_gosub_rows[i].detail_id = g_saved_game_ctx->logic_blocks[i].f.level;
         row_name = g_gosub_text_buffers[i];
         encoded_text_copy(row_name, GOSUB_TEXT(GOSUB_TEXT_LOGIC_BLOCK_NAMES, g_gosub_rows[i].detail_group));
+
         if (g_gosub_rows[i].detail_id != 0)
         {
             encoded_text_append(row_name, FIELD_UI_TEXT_AT(D_800EC3DA, FIELD_UI_TEXT_PLUS));
             field_format_number(number_text, g_gosub_rows[i].detail_id, 1);
             encoded_text_append(row_name, number_text);
         }
+
         g_gosub_rows[i].name = row_name;
         g_gosub_rows[i].desc = GOSUB_TEXT(GOSUB_TEXT_LOGIC_BLOCK_DESCRIPTIONS, g_gosub_rows[i].detail_group);
         g_gosub_rows[i].value = GOSUB_ROW_LOGIC_BLOCK;
         g_gosub_rows[i].detail_variant = g_saved_game_ctx->logic_blocks[i].f.shape;
+
         if (g_saved_game_ctx->logic_blocks[i].f.placed != 0 || g_saved_game_ctx->logic_blocks[i].f.logic_type != LOGIC_BLOCK_UNASSIGNED)
         {
             g_gosub_rows[i].flags.block.in_use = 1;
@@ -184,9 +197,11 @@ void gosub_build_logic_block_list(void)
         {
             g_gosub_rows[i].flags.block.in_use = 0;
         }
+
         g_gosub_rows[i].index = i;
         g_gosub_rows[i].text_color = FIELD_TEXT_COLOR_NORMAL;
     }
+
     g_gosub_row_count = g_saved_game_ctx->logic_block_count;
     g_gosub_visible_row_count = GOSUB_BLOCK_VISIBLE_ROWS;
     g_gosub_row_height = GOSUB_BLOCK_ROW_HEIGHT;
@@ -211,11 +226,13 @@ void gosub_build_companion_list(s32 mode)
     u8 unused[32];
 
     row_count = 0;
+
     if (mode != GOSUB_COMPANIONS_PETS)
     {
         for (order_index = 0; order_index < GOLEM_RECORD_COUNT; order_index++)
         {
             record_index = g_saved_game_ctx->golem_order[order_index];
+
             if (record_index < GOLEM_RECORD_COUNT)
             {
                 if (mode == GOSUB_COMPANIONS_ALL)
@@ -226,8 +243,10 @@ void gosub_build_companion_list(s32 mode)
                 {
                     g_gosub_rows[row_count].index = record_index;
                 }
+
                 g_gosub_rows[row_count].value = GOSUB_ROW_COMPANION;
                 g_gosub_rows[row_count].flags.companion.pet = 0;
+
                 if (g_saved_game_ctx->joined_golem == record_index)
                 {
                     g_gosub_rows[row_count].detail_group = 1;
@@ -236,23 +255,27 @@ void gosub_build_companion_list(s32 mode)
                 {
                     g_gosub_rows[row_count].detail_group = 0;
                 }
+
                 g_gosub_rows[row_count].flags.companion.egg = 0;
                 g_gosub_rows[row_count].flags.companion.grazing = 0;
                 g_gosub_rows[row_count].text_color = FIELD_TEXT_COLOR_NORMAL;
                 g_gosub_rows[row_count].name = g_saved_game_ctx->golem_records[record_index].name;
                 /* The golem's type and palette. */
-                g_gosub_rows[row_count].detail_id = g_saved_game_ctx->golem_records[record_index].logic_layout & GOLEM_LOGIC_CLASS_MASK;
+                g_gosub_rows[row_count].detail_id = g_saved_game_ctx->golem_records[record_index].logic_layout.byte & GOLEM_LOGIC_CLASS_MASK;
                 g_gosub_rows[row_count].detail_variant = g_saved_game_ctx->golem_records[record_index].palette;
-                g_gosub_rows[row_count].primary_value = g_saved_game_ctx->golem_records[record_index].primary_value;
+                g_gosub_rows[row_count].primary_value = g_saved_game_ctx->golem_records[record_index].power;
+
                 for (stat_index = 0; stat_index < COMPANION_STAT_COUNT; stat_index++)
                 {
-                    g_gosub_rows[row_count].stats[stat_index] = g_saved_game_ctx->golem_records[record_index].stats[stat_index];
+                    g_gosub_rows[row_count].stats[stat_index] = g_saved_game_ctx->golem_records[record_index].equipment_totals[stat_index];
                 }
-                g_gosub_rows[row_count].secondary_value = g_saved_game_ctx->golem_records[record_index].secondary_value;
+
+                g_gosub_rows[row_count].secondary_value = g_saved_game_ctx->golem_records[record_index].hp;
                 row_count++;
             }
         }
     }
+
     if (mode != GOSUB_COMPANIONS_GOLEMS)
     {
         for (slot = 0; slot < PET_RECORD_COUNT; slot++)
@@ -262,6 +285,7 @@ void gosub_build_companion_list(s32 mode)
                 g_gosub_rows[row_count].index = slot;
                 g_gosub_rows[row_count].value = GOSUB_ROW_COMPANION;
                 g_gosub_rows[row_count].flags.companion.pet = 1;
+
                 if (g_saved_game_ctx->joined_pet == slot)
                 {
                     g_gosub_rows[row_count].detail_group = 1;
@@ -270,6 +294,7 @@ void gosub_build_companion_list(s32 mode)
                 {
                     g_gosub_rows[row_count].detail_group = 0;
                 }
+
                 g_gosub_rows[row_count].text_color = FIELD_TEXT_COLOR_NORMAL;
                 g_gosub_rows[row_count].name = g_saved_game_ctx->pets[slot].name;
                 /* The pet's species and level. */
@@ -278,10 +303,12 @@ void gosub_build_companion_list(s32 mode)
                 g_gosub_rows[row_count].flags.companion.egg = g_saved_game_ctx->pets[slot].status.bits.egg;
                 g_gosub_rows[row_count].flags.companion.grazing = g_saved_game_ctx->pets[slot].status.bits.grazing;
                 g_gosub_rows[row_count].detail_variant = g_saved_game_ctx->pets[slot].progress.level;
+
                 if (g_gosub_rows[row_count].flags.half & GOSUB_COMPANION_EGG)
                 {
                     /* An egg shows its egg portrait and how long it still needs to hatch. */
                     g_gosub_rows[row_count].detail_id = g_saved_game_ctx->pets[slot].egg_species + GOSUB_EGG_PORTRAIT_FIRST;
+
                     if (g_saved_game_ctx->pets[slot].hatch_counter < GOSUB_EGG_ANY_TIME_BELOW)
                     {
                         g_gosub_rows[row_count].detail_variant = GOSUB_EGG_HATCH_ANY_TIME;
@@ -295,15 +322,18 @@ void gosub_build_companion_list(s32 mode)
                         g_gosub_rows[row_count].detail_variant = GOSUB_EGG_HATCH_NEEDS_TIME;
                     }
                 }
+
                 for (stat_index = 0; stat_index < COMPANION_STAT_COUNT; stat_index++)
                 {
                     g_gosub_rows[row_count].stats[stat_index] = g_saved_game_ctx->pets[slot].equipment_totals[stat_index];
                 }
+
                 g_gosub_rows[row_count].secondary_value = g_saved_game_ctx->pets[slot].hp;
                 row_count++;
             }
         }
     }
+
     g_gosub_row_count = row_count;
     g_gosub_visible_row_count = GOSUB_COMPANION_VISIBLE_ROWS;
     g_gosub_row_height = GOSUB_COMPANION_ROW_HEIGHT;

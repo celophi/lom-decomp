@@ -8,21 +8,22 @@
  * (field_pick_up_item_actor) puts it back.
  */
 
-#include "main/main.h"
 #include "common.h"
-#include "overlays/field/field_text.h"
-#include "overlays/field/field_sound.h"
-#include "overlays/field/field_scene_transition.h"
-#include "../internal/field_actor_runtime.h"
-#include "../internal/field_calls.h"
 #include <libgpu.h>
+
+#include "../internal/field_actor_runtime.h"
 #include "../internal/field_actor_tables.h"
+#include "../internal/field_calls.h"
 #include "../internal/field_menu_element.h"
-#include "common/gpu_packet.h"
-#include "main/audio/akao.h"
 #include "../internal/field_modal_runtime.h"
 #include "../internal/field_records.h"
+#include "common/gpu_packet.h"
+#include "main/audio/akao.h"
+#include "main/main.h"
 #include "overlays/field/field_input.h"
+#include "overlays/field/field_scene_transition.h"
+#include "overlays/field/field_sound.h"
+#include "overlays/field/field_text.h"
 
 /** @brief First item id that can be dropped on the field; its actor animation is 0. */
 #define FIELD_DROP_ITEM_FIRST 0x60
@@ -75,14 +76,14 @@
  * @param table Offset table (one halfword per item id) followed by the names.
  * @param item Item id.
  */
-#define FIELD_ITEM_NAME(table, item) ((u8 *)((table)[item] + (uintptr_t)(table)))
+#define FIELD_ITEM_NAME(table, item) ((u8*)((table)[item] + (uintptr_t)(table)))
 
 /**
  * @brief Facing offset of one of the eight facings.
  * @param table Facing offset table.
  * @param facing Facing index, 0 to 7.
  */
-#define FIELD_FACING_OFFSET(table, facing) ((FieldDirectionOffset *)((facing) * sizeof(FieldDirectionOffset) + (uintptr_t)(table)))
+#define FIELD_FACING_OFFSET(table, facing) ((FieldDirectionOffset*)((facing) * sizeof(FieldDirectionOffset) + (uintptr_t)(table)))
 
 /** @brief One row of the item-drop list. */
 typedef struct FieldItemListEntry
@@ -105,13 +106,13 @@ extern s32 g_field_item_list_count;
 extern s32 g_field_item_list_cursor;
 extern s32 g_field_primary_held_buttons, g_field_primary_repeat_delay;
 extern s32 g_field_secondary_held_buttons, g_field_secondary_repeat_delay;
-void field_restart_actor_animation(FieldActor *actor);
+void field_restart_actor_animation(FieldActor* actor);
 
 s32 field_read_controller_buttons(s32 controller);
 
 static void field_play_action_refused_sound(void);
-static u8 *field_draw_item_drop_list(u_long* ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, void *element);
-static s32 field_update_item_drop_menu(FieldMenuElement *window);
+static u8* field_draw_item_drop_list(u_long* ot, u8* cursor, s32 scroll_x, s32 scroll_y, s32 unused, void* element);
+static s32 field_update_item_drop_menu(FieldMenuElement* window);
 
 /**
  * @brief Clear delivered input and restart both pads' held-button delays.
@@ -134,7 +135,7 @@ static inline void flush_input(void)
  */
 static inline void reset_menu_elements(void)
 {
-    FieldMenuElement *element;
+    FieldMenuElement* element;
     s32 i;
 
     g_field_menu_frame_style = FIELD_MENU_FRAME_STYLE_FIELD;
@@ -152,9 +153,9 @@ static inline void reset_menu_elements(void)
  * @return The claimed element, or the first element when none is idle.
  * @note Same as field_claim_menu_element, expanded inline.
  */
-static inline FieldMenuElement *claim_menu_element(void)
+static inline FieldMenuElement* claim_menu_element(void)
 {
-    FieldMenuElement *element;
+    FieldMenuElement* element;
     s32 i;
 
     element = g_field_menu_elements;
@@ -188,7 +189,7 @@ static inline FieldMenuElement *claim_menu_element(void)
  * @return Cursor after the text primitives.
  * @note Same as field_draw_number, expanded inline.
  */
-static inline u8 *draw_number(u8 *cursor, u_long* ot, s32 value, s16 *position, s32 color, s32 flags)
+static inline u8* draw_number(u8* cursor, u_long* ot, s32 value, s16* position, s32 color, s32 flags)
 {
     u8 text[64];
 
@@ -199,7 +200,7 @@ static inline u8 *draw_number(u8 *cursor, u_long* ot, s32 value, s16 *position, 
 /** @brief Build the list of droppable items the player owns and open the item-drop menu. */
 void field_open_item_drop_menu(void)
 {
-    FieldMenuElement *window;
+    FieldMenuElement* window;
     u32 attr;
     s32 item_count;
     s32 item_id;
@@ -280,17 +281,17 @@ static void field_play_action_refused_sound(void)
  * @param element Menu element of the item list.
  * @return Cursor after the list, the highlight tile and its draw-mode packet.
  */
-static u8 *field_draw_item_drop_list(u_long* ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, void *element)
+static u8* field_draw_item_drop_list(u_long* ot, u8* cursor, s32 scroll_x, s32 scroll_y, s32 unused, void* element)
 {
     s16 position[2];
-    FieldItemListEntry *entry;
+    FieldItemListEntry* entry;
     s32 count_x;
     s32 y;
     s32 i;
-    FieldPackedTile *tile;
-    DR_TPAGE *mode;
-    u16 *names;
-    FieldMenuElement *window;
+    FieldPackedTile* tile;
+    DR_TPAGE* mode;
+    u16* names;
+    FieldMenuElement* window;
 
     window = element;
     field_update_item_drop_menu(window);
@@ -307,7 +308,7 @@ static u8 *field_draw_item_drop_list(u_long* ot, u8 *cursor, s32 scroll_x, s32 s
         entry = &g_field_item_list[i];
         y = FIELD_ITEM_ROW_Y(i) - scroll_y;
 
-        if (y > -FIELD_ITEM_ROW_HEIGHT && y < (s32)window->size.bits.height)
+        if (y > -FIELD_ITEM_ROW_HEIGHT && y < window->size.bits.height)
         {
             cursor = field_draw_text((SPRT*)cursor, ot, FIELD_ITEM_NAME(names, entry->item_id), FIELD_TEXT_COLOR_NORMAL, -scroll_x, y, FIELD_TEXT_ALIGN_LEFT);
             position[1] = y;
@@ -316,19 +317,19 @@ static u8 *field_draw_item_drop_list(u_long* ot, u8 *cursor, s32 scroll_x, s32 s
         }
     }
 
-    tile = (FieldPackedTile *)cursor;
+    tile = (FieldPackedTile*)cursor;
     tile->color = GPU_COLOR_SELECTED_ROW;
     setTile(tile);
     setSemiTrans(tile, 1);
     tile->w = FIELD_ITEM_WINDOW_WIDTH;
-    mode = (DR_TPAGE *)(tile + 1);
+    mode = (DR_TPAGE*)(tile + 1);
     tile->x = 0;
     tile->h = FIELD_ITEM_HIGHLIGHT_HEIGHT;
     tile->y = FIELD_ITEM_ROW_Y(g_field_item_list_cursor) - scroll_y;
     addPrim(ot, tile);
     setDrawTPage(mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, 320, 0));
     addPrim(ot, mode);
-    return (u8 *)(mode + 1);
+    return (u8*)(mode + 1);
 }
 
 /**
@@ -336,10 +337,10 @@ static u8 *field_draw_item_drop_list(u_long* ot, u8 *cursor, s32 scroll_x, s32 s
  */
 static inline void drop_selected_item(void)
 {
-    FieldActor *actor;
-    FieldObjectState *state;
-    FieldDirectionOffset *offsets;
-    FieldDirectionOffset *facing;
+    FieldActor* actor;
+    FieldObjectState* state;
+    FieldDirectionOffset* offsets;
+    FieldDirectionOffset* facing;
     s32 offset[3];
     s32 actor_index;
     s32 control;
@@ -403,7 +404,7 @@ static inline void drop_selected_item(void)
  * @param window Menu element of the item list.
  * @return Undefined; the function is int-typed but never sets a value and callers ignore it.
  */
-static s32 field_update_item_drop_menu(FieldMenuElement *window)
+static s32 field_update_item_drop_menu(FieldMenuElement* window)
 {
     s32 scroll_target;
     u16 window_height;
@@ -509,10 +510,10 @@ static s32 field_update_item_drop_menu(FieldMenuElement *window)
  */
 void field_pick_up_item_actor(s32 actor_index)
 {
-    FieldActor *actor;
-    FieldObjectState *state;
+    FieldActor* actor;
+    FieldObjectState* state;
     SavedGameLayout* save = g_saved_game_ctx;
-    FieldActor *actors = g_field_actors;
+    FieldActor* actors = g_field_actors;
 
     actor = &actors[actor_index];
     save->item_counts[FIELD_DROP_ITEM_FIRST + (actor->animation & FIELD_ANIMATION_INDEX_MASK)]++;

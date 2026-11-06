@@ -124,8 +124,6 @@ s32 field_get_next_level_experience(s32 index);
 /** @brief Content items of the eight bindings on a button-assignment page; item MENU_BUTTON_ITEM_FIRST + n is action n. */
 #define MENU_BUTTON_ITEM_FIRST 0x11
 #define MENU_BUTTON_COUNT 8
-/** @brief Number of equipment slots associated with one character. */
-#define MENU_EQUIPMENT_SLOT_COUNT 4
 /** @brief First menu subtype corresponding to an equipment slot. */
 #define MENU_EQUIPMENT_SUBTYPE_BASE 7
 /** @brief Menu subtype of equipment slot @p slot (FIELD_WEAPON_SLOT, then the armor slots). */
@@ -607,6 +605,11 @@ void scroll_list_update_target(ScrollListState*, u32*);
 
 void* menu_item_action_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
 void* menu_equipment_compare_callback(u_long* ot, ScrollListState* state, void* prim_buf, Vec2s* view_origin, int active);
+/*
+ * MENU calls these FIELD functions (overlays/field/field_inventory.h) through
+ * unprototyped declarations: one call passes field_compact_inventory an
+ * argument it ignores.
+ */
 void field_copy_inventory_record();
 void field_compact_inventory();
 FieldItemRecord* field_find_free_inventory_record(void);
@@ -672,9 +675,9 @@ extern u8 g_menu_prev_node;
 extern s32 g_menu_content_ready;
 
 /** @brief Comparison item addresses, or zero for an empty replacement. */
-extern FieldItemRecord* g_item_slot_data[MENU_EQUIPMENT_SLOT_COUNT];
+extern FieldItemRecord* g_item_slot_data[FIELD_EQUIPMENT_SLOT_COUNT];
 /** @brief Nonzero for slots with a pending comparison change. */
-extern u8 g_item_slot_flags[MENU_EQUIPMENT_SLOT_COUNT];
+extern u8 g_item_slot_flags[FIELD_EQUIPMENT_SLOT_COUNT];
 
 /** @brief Pointer into g_saved_game_ctx item data for the current category; null = no items. */
 extern FieldItemRecord* g_menu_item_ptr;
@@ -796,6 +799,7 @@ extern u32 g_field_bare_hands_info;
 static inline void menu_clear_slots(void)
 {
     s32 slot_index;
+
     for (slot_index = MENU_SLOT_COUNT - 1; slot_index >= 0; slot_index--)
     {
         g_menu_slots[slot_index].active = 0;
@@ -857,6 +861,7 @@ static inline void menu_relink_pair(void)
     s32 link;
     s32 entry_with_previous;
     index = 0;
+
     while (index < 2)
     {
         s32 entry = g_menu_item_nav_entries[index];
@@ -866,20 +871,24 @@ static inline void menu_relink_pair(void)
         link = link | ((index * MENU_LIST_ROW_HEIGHT) & MENU_ITEM_NAV_POSITION_MASK);
         entry_with_position = link;
         g_menu_item_nav_entries[index] = entry_with_position;
+
         if ((index - 1) >= 0)
         {
             previous_index = index - 1;
         }
+
         entry_with_previous = entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
         entry_with_previous = entry_with_previous | ((previous_index & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
         g_menu_item_nav_entries[index] = entry_with_previous;
         next_index = index + 1;
         has_next = next_index < 2;
         link = 0;
+
         if (has_next != 0)
         {
             link = next_index;
         }
+
         g_menu_item_nav_entries[index] = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (link << MENU_ITEM_NAV_NEXT_SHIFT);
         index = next_index;
     }
@@ -933,10 +942,12 @@ static inline void menu_copy_encoded_pair(u8* destination, const u8* first, cons
     while (1)
     {
         u8 character = *first;
+
         if (character == 0)
         {
             break;
         }
+
         if ((u8)(character - MENU_TEXT_PREFIX_FIRST) < MENU_TEXT_PREFIX_COUNT)
         {
             *destination++ = character;
@@ -949,13 +960,16 @@ static inline void menu_copy_encoded_pair(u8* destination, const u8* first, cons
             first++;
         }
     }
+
     while (1)
     {
         u8 character = *second;
+
         if (character == 0)
         {
             break;
         }
+
         if ((u8)(character - MENU_TEXT_PREFIX_FIRST) < MENU_TEXT_PREFIX_COUNT)
         {
             *destination++ = character;
@@ -968,6 +982,7 @@ static inline void menu_copy_encoded_pair(u8* destination, const u8* first, cons
             second++;
         }
     }
+
     *destination = 0;
 }
 
@@ -1015,7 +1030,11 @@ static inline u_long* menu_image_upload_source(void* buffer, s32 byte_offset)
     return (u_long*)(((byte_offset >> 2) << 2) + (uintptr_t)buffer);
 }
 
-/** @brief Convert a packed menu icon palette code to a Psy-Q CLUT id. */
+/**
+ * @brief Convert a packed menu icon palette code to a Psy-Q CLUT id.
+ * @param code Palette column in the low nibble, row above VRAM_CLUT_Y in the high nibble.
+ * @return The CLUT id.
+ */
 static inline u16 menu_icon_clut(u8 code)
 {
     return getClut((code & 0xF) << 4, (code >> 4) + VRAM_CLUT_Y);
@@ -1043,7 +1062,11 @@ static inline u8* menu_shared_text_entry(const StringTableOffset* entry, s32 ind
     return (u8*)(entry->entry + string_page_base);
 }
 
-/** @brief Copy the label for a value's sign and append its terminator. */
+/**
+ * @brief Copy the label for a value's sign and append its terminator.
+ * @param buffer Destination text buffer.
+ * @param value Value whose sign picks the label (zero counts as positive).
+ */
 static inline void menu_copy_sign_label(u8* buffer, s32 value)
 {
     u8* write_cursor = buffer;
@@ -1059,6 +1082,7 @@ static inline void menu_copy_sign_label(u8* buffer, s32 value)
         source = menu_shared_text_entry(&g_menu_label_key_b, 16);
         field_copy_name(write_cursor, source);
     }
+
     write_cursor += field_name_byte_length(source);
     *write_cursor = 0;
 }

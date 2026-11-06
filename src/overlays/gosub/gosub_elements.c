@@ -8,7 +8,7 @@ void gosub_build_golem_parts_elements(void)
     GosubElement* element;
 
     element = gosub_allocate_element();
-    element->draw_handler = (void*)gosub_draw_item_list;
+    element->draw_handler = gosub_draw_item_list;
     element->attr.f.transition_step = 1;
     element->attr.f.x = SCREEN_WIDTH / 2 - g_gosub_window_width / 2;
     element->attr.f.y = 56;
@@ -18,7 +18,7 @@ void gosub_build_golem_parts_elements(void)
     g_gosub_selection_count = 0;
 
     element = gosub_allocate_element();
-    element->draw_handler = (void*)&gosub_draw_golem_parts_header;
+    element->draw_handler = &gosub_draw_golem_parts_header;
     element->attr.f.transition_step = 1;
     element->attr.f.x = GOSUB_TEXT_PANEL_X;
     element->attr.f.y = GOSUB_TITLE_PANEL_Y;
@@ -27,7 +27,7 @@ void gosub_build_golem_parts_elements(void)
     GOSUB_SET_ELEMENT_WIDTH_LOW(element, GOSUB_TEXT_PANEL_WIDTH);
 
     element = gosub_allocate_element();
-    element->draw_handler = (void*)&gosub_draw_row_description;
+    element->draw_handler = &gosub_draw_row_description;
     element->attr.f.transition_step = 1;
     element->attr.f.x = GOSUB_TEXT_PANEL_X;
     element->attr.f.y = GOSUB_DESCRIPTION_PANEL_Y;
@@ -44,7 +44,7 @@ void gosub_build_block_components_elements(void)
     GosubElement* element;
 
     element = gosub_allocate_element();
-    element->draw_handler = (void*)gosub_draw_item_list;
+    element->draw_handler = gosub_draw_item_list;
     element->attr.f.transition_step = 1;
     element->attr.f.x = SCREEN_WIDTH / 2 - g_gosub_window_width / 2;
     element->attr.f.y = 72;
@@ -54,7 +54,7 @@ void gosub_build_block_components_elements(void)
     g_gosub_selection_count = 0;
 
     element = gosub_allocate_element();
-    element->draw_handler = (void*)&gosub_draw_block_components_header;
+    element->draw_handler = &gosub_draw_block_components_header;
     element->attr.f.transition_step = 1;
     element->attr.f.x = GOSUB_TEXT_PANEL_X;
     element->attr.f.y = GOSUB_DESCRIPTION_PANEL_Y;
@@ -63,7 +63,7 @@ void gosub_build_block_components_elements(void)
     GOSUB_SET_ELEMENT_WIDTH_LOW(element, GOSUB_TEXT_PANEL_WIDTH);
 
     element = gosub_allocate_element();
-    element->draw_handler = (void*)gosub_draw_block_preview;
+    element->draw_handler = gosub_draw_block_preview;
     element->attr.f.transition_step = 1;
     element->attr.f.x = GOSUB_TEXT_PANEL_X;
     element->attr.f.y = 0x20;
@@ -81,7 +81,7 @@ void gosub_open_confirmation_dialog(void)
     GosubElement* element;
 
     element = &g_gosub_elements[0];
-    element->draw_handler = (void*)&gosub_draw_confirmation_prompt;
+    element->draw_handler = &gosub_draw_confirmation_prompt;
     g_gosub_dialog_choice = 0;
     element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
     element->attr.f.transition_step = 1;
@@ -100,7 +100,7 @@ void gosub_build_equipment_screen_elements(void)
     GosubElement* element;
 
     element = gosub_allocate_element();
-    element->draw_handler = (void*)gosub_draw_item_list;
+    element->draw_handler = gosub_draw_item_list;
     element->attr.f.transition_step = 1;
     element->attr.f.x = SCREEN_WIDTH / 2 - g_gosub_window_width / 2;
     element->attr.f.y = 40;
@@ -110,7 +110,7 @@ void gosub_build_equipment_screen_elements(void)
     g_gosub_selection_count = 0;
 
     element = gosub_allocate_element();
-    element->draw_handler = (void*)&gosub_draw_row_description;
+    element->draw_handler = &gosub_draw_row_description;
     element->attr.f.transition_step = 1;
     element->attr.f.x = GOSUB_TEXT_PANEL_X;
     element->attr.f.y = GOSUB_DESCRIPTION_PANEL_Y;
@@ -119,7 +119,7 @@ void gosub_build_equipment_screen_elements(void)
     GOSUB_SET_ELEMENT_WIDTH_LOW(element, GOSUB_TEXT_PANEL_WIDTH);
 
     element = gosub_allocate_element();
-    element->draw_handler = (void*)gosub_draw_title;
+    element->draw_handler = gosub_draw_title;
     element->attr.f.transition_step = 1;
     element->attr.f.x = GOSUB_TEXT_PANEL_X;
     element->attr.f.y = GOSUB_TITLE_PANEL_Y;
@@ -137,7 +137,7 @@ void gosub_build_list_screen_elements(s32 include_middle)
     GosubElement* element;
 
     element = gosub_allocate_element();
-    element->draw_handler = (void*)gosub_draw_item_list;
+    element->draw_handler = gosub_draw_item_list;
     element->attr.f.transition_step = 1;
     element->attr.f.x = SCREEN_WIDTH / 2 - g_gosub_window_width / 2;
     element->attr.f.y = 40;
@@ -149,7 +149,7 @@ void gosub_build_list_screen_elements(s32 include_middle)
     if (include_middle != 0)
     {
         element = gosub_allocate_element();
-        element->draw_handler = (void*)&gosub_draw_row_description;
+        element->draw_handler = &gosub_draw_row_description;
         element->attr.f.transition_step = 1;
         element->attr.f.x = GOSUB_TEXT_PANEL_X;
         element->attr.f.y = GOSUB_DESCRIPTION_PANEL_Y;
@@ -159,7 +159,7 @@ void gosub_build_list_screen_elements(s32 include_middle)
     }
 
     element = gosub_allocate_element();
-    element->draw_handler = (void*)gosub_draw_title;
+    element->draw_handler = gosub_draw_title;
     element->attr.f.transition_step = 1;
     element->attr.f.x = GOSUB_TEXT_PANEL_X;
     element->attr.f.y = GOSUB_TITLE_PANEL_Y;
@@ -176,7 +176,7 @@ void gosub_build_logic_block_list_elements(void)
     GosubElement* element;
 
     element = gosub_allocate_element();
-    element->draw_handler = (void*)gosub_draw_item_list;
+    element->draw_handler = gosub_draw_item_list;
     element->attr.f.transition_step = 1;
     element->attr.f.x = SCREEN_WIDTH / 2 - g_gosub_window_width / 2;
     element->attr.f.y = 40;
@@ -186,7 +186,7 @@ void gosub_build_logic_block_list_elements(void)
     g_gosub_selection_count = 0;
 
     element = gosub_allocate_element();
-    element->draw_handler = (void*)&gosub_draw_row_description;
+    element->draw_handler = &gosub_draw_row_description;
     element->attr.f.transition_step = 1;
     element->attr.f.x = GOSUB_TEXT_PANEL_X;
     element->attr.f.y = GOSUB_DESCRIPTION_PANEL_Y;
@@ -195,7 +195,7 @@ void gosub_build_logic_block_list_elements(void)
     GOSUB_SET_ELEMENT_WIDTH_LOW(element, GOSUB_TEXT_PANEL_WIDTH);
 
     element = gosub_allocate_element();
-    element->draw_handler = (void*)gosub_draw_title;
+    element->draw_handler = gosub_draw_title;
     element->attr.f.transition_step = 1;
     element->attr.f.x = GOSUB_TEXT_PANEL_X;
     element->attr.f.y = GOSUB_TITLE_PANEL_Y;
@@ -212,7 +212,7 @@ void gosub_build_companion_list_elements(void)
     GosubElement* element;
 
     element = gosub_allocate_element();
-    element->draw_handler = (void*)gosub_draw_item_list;
+    element->draw_handler = gosub_draw_item_list;
     element->attr.f.transition_step = 1;
     element->attr.f.x = SCREEN_WIDTH / 2 - g_gosub_window_width / 2;
     element->attr.f.y = 48;
@@ -222,7 +222,7 @@ void gosub_build_companion_list_elements(void)
     g_gosub_selection_count = 0;
 
     element = gosub_allocate_element();
-    element->draw_handler = (void*)gosub_draw_title;
+    element->draw_handler = gosub_draw_title;
     element->attr.f.transition_step = 1;
     element->attr.f.x = GOSUB_TEXT_PANEL_X;
     element->attr.f.y = GOSUB_TITLE_PANEL_Y;

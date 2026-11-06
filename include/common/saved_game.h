@@ -44,8 +44,8 @@
 /** @brief Bytes of SavedGameLayout::summary_name, the hero name shown by the save browsers. */
 #define SAVED_GAME_SUMMARY_NAME_BYTES 21
 
-/** @brief Entries of SavedGameLayout::summary_records. */
-#define SAVED_GAME_SUMMARY_RECORD_COUNT 4
+/** @brief Entries of SavedGameLayout::pending_items. */
+#define SAVED_GAME_PENDING_ITEM_COUNT 4
 
 /** @brief Save-browser party icon of an empty party slot. */
 #define SAVE_NO_ICON 0x7F
@@ -350,7 +350,7 @@ typedef struct FieldItemRecord
             u8 spell;
             u8 power;
         } instrument;
-        /** @brief Golem companion (party slot 2, unk150[0]): GolemGroupRecord bytes 0x44-0x4B. */
+        /** @brief Golem companion (party slot 2, unk150[0]): GolemRecord bytes 0x44-0x4B. */
         struct
         {
             u32 logic_class : 4;
@@ -420,7 +420,7 @@ typedef struct FieldCharacterRecord
     u8 unk40;
     u8 unk41;
     u8 unk42;
-    /** @brief Companion ability (MENU_TEXT_COMPANION_ABILITY_NAMES), copied from the pet record; golems copy GolemGroupRecord byte 0x3F. */
+    /** @brief Companion ability (MENU_TEXT_COMPANION_ABILITY_NAMES), copied from the pet record; golems copy GolemRecord::companion_ability. */
     u8 companion_ability;
     /** @brief Duels won and lost against the other player. */
     u16 duel_wins;
@@ -546,6 +546,14 @@ typedef union FieldLandWords
         u32 placement_order : 8;
         u32 artifact_order : 8;
     } bits;
+    /** @brief The first four bytes; @c cell packs the map column in its low nibble and the row in its high nibble. */
+    struct
+    {
+        u8 flags;
+        u8 cell;
+        u8 placement_order;
+        u8 artifact_order;
+    } bytes;
 } FieldLandWords;
 
 /** @brief FieldLandRecord::x (map column) read from a FieldLandWords::word. */
@@ -553,7 +561,7 @@ typedef union FieldLandWords
 /** @brief FieldLandRecord::z (map row) read from a FieldLandWords::word. */
 #define FIELD_LAND_WORD_Z(word) ((u8)(((word) >> 12) & 0xF))
 
-/** @brief Menu slot entry index of an empty slot. */
+/** @brief Entry index of an empty menu slot, and the item id of an unused group item. */
 #define FIELD_MENU_ENTRY_EMPTY 0xFF
 
 /** @brief First entry index of an effect slot (effect id; row 0 of the effect tables). */
@@ -597,6 +605,9 @@ typedef struct FieldMenuSlot
 
 /** @brief Action slots of a menu slot group. */
 #define FIELD_MENU_GROUP_SLOT_COUNT 8
+
+/** @brief Menu action slot groups in SavedGameLayout. */
+#define FIELD_MENU_GROUP_COUNT 4
 
 /** @brief Menu action slot group (0x8C bytes): a header, then eight slots. */
 typedef struct FieldMenuSlotGroup
@@ -752,6 +763,13 @@ typedef struct
 #define COMPANION_STAT_COUNT 4
 /** @brief Mask of SavedGameLayout::golem_count selecting the number of golems. */
 #define GOLEM_COUNT_MASK 0xF
+/** @brief Mask and shift of the golem that last left the party (high nibble of SavedGameLayout::golem_count). */
+#define GOLEM_SAVED_GROUP_MASK 0xF0
+#define GOLEM_SAVED_GROUP_SHIFT 4
+/** @brief SavedGameLayout::joined_golem when no golem is in the party. */
+#define GOLEM_NO_GROUP 3
+/** @brief SavedGameLayout::golem_count, golems_created, logic_block_count and joined_golem as one word. */
+#define SAVED_GAME_GOLEM_HEADER_WORD(layout) (*(u32*)&(layout).golem_count)
 /** @brief Capacity of the packed logic-block table. */
 #define LOGIC_BLOCK_CAPACITY 40
 /** @brief Logic-type value marking a logic block that no logic type owns. */
@@ -783,27 +801,40 @@ typedef union
 /** @brief Number of source items (weapons and armor) a golem is built from. */
 #define GOLEM_SOURCE_ITEM_COUNT 4
 
+/** @brief Length of a golem name. */
+#define GOLEM_NAME_LENGTH 21
+
 /**
  * @brief Golem record: a golem built at the workshop from weapons and armor.
- * @note FIELD reads the same bytes through GolemGroupRecord (field_golem_layout.h).
+ * @note field_golem_build_companion copies it into the party companion record
+ *       (characters[FIELD_PARTY_COMPANION]); the names follow the members they fill.
  */
 typedef struct
 {
-    u8 name[0x15];
+    u8 name[GOLEM_NAME_LENGTH];
     u8 unknown_0x15;
-    u16 secondary_value; /**< Hit points; the second stat column of the GOSUB roster. */
-    u16 primary_value;   /**< Weapon power; the first stat column of the GOSUB roster. */
-    u16 stats[COMPANION_STAT_COUNT];
+    u16 hp;                                     /**< Hit points; the second stat column of the GOSUB roster. */
+    u16 power;                                  /**< Weapon power; the first stat column of the GOSUB roster. */
+    u16 equipment_totals[COMPANION_STAT_COUNT]; /**< Summed armor values, 0-99. */
     u8 unknown_0x22[2];
-    FieldNibbles weapon_bonus;                             /**< Summed weapon bonus nibbles, 0-9. */
-    FieldNibbles armor_bonus;                              /**< Summed armor bonus nibbles, 0-9. */
-    FieldStat character_stats[FIELD_CHARACTER_STAT_COUNT]; /**< Effective values 20-99; base values 0. */
-    u8 armor_flags;                                        /**< OR of the source armor items' status_flags. */
-    u8 weapon_flags;                                       /**< OR of the source weapon items' status_flags. */
-    u8 armor_flags2;                                       /**< OR of the source armor items' element_flags. */
-    u8 unknown_0x3f;
+    FieldNibbles weapon_bonus;                   /**< Summed weapon bonus nibbles, 0-9. */
+    FieldNibbles armor_bonus;                    /**< Summed armor bonus nibbles, 0-9. */
+    FieldStat stats[FIELD_CHARACTER_STAT_COUNT]; /**< Effective values 20-99; base values 0. */
+    u8 armor_flags;                              /**< OR of the source armor items' status_flags. */
+    u8 weapon_flags;                             /**< OR of the source weapon items' status_flags. */
+    u8 armor_flags2;                             /**< OR of the source armor items' element_flags. */
+    u8 companion_ability;                        /**< Copied to the companion's FieldCharacterRecord::companion_ability. */
     u32 unknown_0x40;
-    u8 logic_layout; /**< Low nibble: logic class; high nibble: grid bound. */
+    /** @brief Low nibble: logic class a class-bound logic block must match; high nibble: grid bound. */
+    union
+    {
+        u8 byte;
+        struct
+        {
+            u8 logic_class : 4; /**< Logic class a class-bound logic block must match. */
+            u8 grid_bound : 4;  /**< Usable width and height of the placement grid. */
+        } bits;
+    } logic_layout;
     u8 unknown_0x45;
     u8 unknown_0x46; /**< 75 - 10 * grid bound, clamped to 0-50; shown as a number by MENU. */
     u8 unknown_0x47;
@@ -823,7 +854,7 @@ typedef struct SavedGameLayout
     u8 summary_level;
     /** @brief Low byte of the hero's weapon power, stored for the save browsers when saving. */
     u8 summary_weapon_power;
-    /** @brief Number of in-use save slot records, stored for the save browsers. */
+    /** @brief Number of in-use pending_items, stored for the save browsers. */
     u8 summary_slot_count;
     /** @brief Word 0x18: spawn record of the current field scene, and the first party icon. */
     union
@@ -932,22 +963,22 @@ typedef struct SavedGameLayout
     /** @brief Quantity held of each consumable item, at most ITEM_COUNT_MAX. */
     u8 item_counts[FIELD_ITEM_KIND_COUNT];
     u8 pad26E0[0x26E4 - 0x26E0];
-    FieldMenuSlotGroup menu_slots[2];
-    u8 pad27FC[0x29D4 - 0x27FC];
+    FieldMenuSlotGroup menu_slots[FIELD_MENU_GROUP_COUNT];
+    u8 pad2914[0x29D4 - 0x2914];
     /** @brief Low nibble: the number of golems; high nibble: the golem that last left the party. */
     u8 golem_count;
     /** @brief Golems created so far, saturating at 200. */
     u8 golems_created;
     /** @brief Number of used entries in @c logic_blocks. */
     u8 logic_block_count;
-    /** @brief Golem record in the party, or 3 for none. */
+    /** @brief Golem record in the party, or GOLEM_NO_GROUP. */
     s8 joined_golem;
     /** @brief Display order of @c golem_records; values >= 3 are empty. */
     u8 golem_order[GOLEM_RECORD_COUNT];
     /** @brief Golem slot shown at each display position, three 2-bit fields. */
     u8 golem_display_order;
     LogicBlock logic_blocks[LOGIC_BLOCK_CAPACITY];
-    /** @brief Logic-block grid of the golem companion (GolemLayoutView::grid). */
+    /** @brief Logic-block placement grid of the golem in the party. */
     GolemGridCell golem_grid[GOLEM_GRID_CELL_COUNT];
     GolemRecord golem_records[GOLEM_RECORD_COUNT];
     /** @brief Pet record in the party (characters[2]), or PET_RECORD_COUNT for none. */
@@ -961,12 +992,8 @@ typedef struct SavedGameLayout
     s32 enemies_defeated;
     /** @brief Times the battle was retried from g_field_retry_snapshot; -1 stops counting. */
     s32 retry_count;
-    /** @brief Records whose first byte is nonzero while in use; the save summary counts them. */
-    struct
-    {
-        u8 in_use;
-        u8 unk01[0x3F];
-    } summary_records[SAVED_GAME_SUMMARY_RECORD_COUNT];
+    /** @brief Inventory items set aside with a pending result; a record is in use while its name is not empty. */
+    FieldItemRecord pending_items[SAVED_GAME_PENDING_ITEM_COUNT];
 } SavedGameLayout;
 
 /** @brief Size of a Legend of Mana save file: two 8 KiB memory-card blocks. */
@@ -1025,9 +1052,24 @@ typedef union
     SavedGameLayout layout;
     u8 bytes[SAVED_GAME_BUFFER_SIZE];
     s32 words[SAVED_GAME_BUFFER_SIZE / sizeof(s32)];
+    /** @brief SavedGameLayout::lands (at 0x2F0) read as FieldLandWords. */
+    struct
+    {
+        u8 _pad[0x2F0];
+        FieldLandWords lands[FIELD_LAND_COUNT];
+    } land_words;
+    /** @brief The hero's equipment and unk150 records (at 0x640) scanned as one run of eight. */
+    struct
+    {
+        u8 _pad[0x640];
+        FieldItemRecord records[FIELD_EQUIPMENT_SLOT_COUNT * 2];
+    } hero_items;
 } SavedGame;
 
 extern SavedGame g_saved_game;
+
+/** @brief Index of SavedGameLayout::flag_bits in SavedGame::words. */
+#define SAVED_GAME_FLAG_WORD_INDEX (OFFSETOF(SavedGameLayout, flag_bits) / sizeof(s32))
 
 /** @brief g_saved_game's SavedGameLayout::encyclopedia_bits, under a symbol of its own. */
 extern u32 g_saved_encyclopedia_bits[FIELD_ENCYCLOPEDIA_BIT_WORDS];

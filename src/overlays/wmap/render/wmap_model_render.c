@@ -223,7 +223,7 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
 
     if (face_count < 0)
     {
-        func_80064F14(attributes);
+        wmap_report_error(attributes);
         return;
     }
 
@@ -890,7 +890,7 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                 break;
             }
             default:
-                func_80064F14(attributes);
+                wmap_report_error(attributes);
                 break;
         }
 

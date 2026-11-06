@@ -17,7 +17,7 @@ VERSIONS = ("us", "jp")
 PORTRAIT_HEADER = REPO_ROOT / "include/overlays/field/field_portrait.h"
 GPU_HEADER = REPO_ROOT / "include/common/gpu_packet.h"
 
-GLYPH_HEADER = REPO_ROOT / "include/common/glyph_cache.h"
+GLYPH_HEADER = REPO_ROOT / "include/common/glyph_format.h"
 
 # Each card_data constant, and the shared glyph-chart #define that must agree with it.
 C_CONSTANTS = (

@@ -294,7 +294,6 @@ extern SceneState* g_field_scene_state;
 FieldStatusState* field_find_object_state(s32 key);
 FieldActorRecord* field_find_actor_record_or_default(s32 id);
 s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound);
-FieldItemRecord* field_find_free_inventory_record(void);
 s32 field_award_land_artifacts(s32 first_land, s32 second_land, s32* awarded);
 void field_begin_party_script_control(s32 mode);
 
@@ -345,7 +344,7 @@ void field_command_actor_status(s32 command, FieldActorStatusParams* params)
 
     state = field_find_object_state(actor);
 
-    if (state != (FieldStatusState*)FIELD_OBJECT_STATE_NONE)
+    if (state != FIELD_OBJECT_STATE_NONE)
     {
         switch (params->operation)
         {
@@ -696,7 +695,7 @@ void field_query_records_by_side(FieldKeyedList* list, FieldStatusRecord* source
             field_get_actor_position(g_field_battle->records[i].meta.bytes.id, &record_position);
             list->entries[list->count].id = g_field_battle->records[i].meta.bytes.id;
             list->entries[list->count].distance = field_distance_xz(&record_position, &source_position);
-            list->count += 1;
+            list->count++;
         }
     }
 }

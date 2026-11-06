@@ -1,7 +1,8 @@
 #include "common.h"
-#include "../internal/field_script.h"
+
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
+#include "../internal/field_script.h"
 
 /*
  * Script variables.
@@ -14,7 +15,6 @@
  * the start of the field runtime context. Bit 15 makes a local reference
  * relative to the owner actor's local variable base.
  */
-
 
 /** @brief Element widths of field_read_bits and field_write_bits. */
 enum
@@ -30,8 +30,6 @@ extern u8 g_field_script_var_widths[8];
 void field_script_op_00(void);
 FieldActorRecord* field_find_actor_record_or_default(s32 id);
 
-s32 field_read_script_var(s32 owner_id, FieldScriptVariableRef var_ref);
-void field_write_script_var(s32 owner_id, FieldScriptVariableRef var_ref, s32 value);
 static u32* field_resolve_script_var(s32 owner_id, FieldScriptVariableRef var_ref, s32* word_index, s32* bit_shift);
 static void field_write_script_var_keep_top_bit(s32 owner_id, FieldScriptVariableRef var_ref, s32 value);
 
@@ -53,6 +51,7 @@ void field_script_branch(s32 delta_offset)
     rec = FIELD_SCRIPT_ACTIVE_RECORD();
     pc = rec->pc;
     delta = pc[delta_offset] + (pc[delta_offset + 1] << 8);
+
     if (delta != 0)
     {
         if (delta & 0x8000)
@@ -60,9 +59,11 @@ void field_script_branch(s32 delta_offset)
             rec->pc = pc - (0x10000 - delta);
             return;
         }
+
         rec->pc = pc + delta;
         return;
     }
+
     field_script_op_00();
 }
 
@@ -78,10 +79,12 @@ u8* field_script_read_operand_or_owner(s32 type, u8* data, s32* value)
     u8* result;
 
     result = field_script_read_operand(type, data, value);
+
     if (*value == 0xFF)
     {
         *value = g_field_script->status.owner_id;
     }
+
     return result;
 }
 
@@ -96,23 +99,23 @@ u8* field_script_read_operand(s32 type, u8* data, s32* value)
 {
     switch (type & 3)
     {
-    case 0:
-    {
-        FieldScriptVariableRef var_ref;
+        case 0:
+        {
+            FieldScriptVariableRef var_ref;
 
-        data = field_script_read_u16(data, &var_ref.value);
-        *value = field_read_script_var(g_field_script->status.owner_id, var_ref);
-        return data;
-    }
-    case 1:
-        *value = *data;
-        return data + 1;
-    case 2:
-        *value = data[0] + (data[1] << 8);
-        return data + 2;
-    case 3:
-        *value = data[0] + (data[1] << 8) + (data[2] << 16) + (data[3] << 24);
-        return data + 4;
+            data = field_script_read_u16(data, &var_ref.value);
+            *value = field_read_script_var(g_field_script->status.owner_id, var_ref);
+            return data;
+        }
+        case 1:
+            *value = *data;
+            return data + 1;
+        case 2:
+            *value = data[0] + (data[1] << 8);
+            return data + 2;
+        case 3:
+            *value = data[0] + (data[1] << 8) + (data[2] << 16) + (data[3] << 24);
+            return data + 4;
     }
 }
 
@@ -142,6 +145,7 @@ static u32* field_resolve_script_var(s32 owner_id, FieldScriptVariableRef var_re
     u32* base;
 
     location = var_ref.value & FIELD_SCRIPT_VAR_LOCATION_MASK;
+
     *word_index = location >> 5;
     *bit_shift = location & FIELD_SCRIPT_VAR_SHIFT_MASK;
     if (FIELD_SCRIPT_VAR_KIND(var_ref.value) < FIELD_SCRIPT_VAR_LOCAL_KIND)
@@ -151,11 +155,13 @@ static u32* field_resolve_script_var(s32 owner_id, FieldScriptVariableRef var_re
     else
     {
         base = (u32*)g_field_runtime;
+
         if (var_ref.value & FIELD_SCRIPT_VAR_OWNER_RELATIVE)
         {
             *word_index += field_find_actor_record_or_default(owner_id)->script.status.bits.local_base;
         }
     }
+
     return base;
 }
 
@@ -232,11 +238,13 @@ void field_set_script_var(s32 owner_id, u32 variable, s32 value)
     FieldScriptVariableRef var_ref;
 
     var_ref.value = variable;
+
     if (variable <= 0xFFFF)
     {
         field_write_script_var(owner_id, var_ref, value);
         return;
     }
+
     field_write_script_var_keep_top_bit(owner_id, var_ref, value);
 }
 
@@ -258,6 +266,7 @@ void field_write_bits(s32 width, void* base, s32 index, s32 shift, s32 bit_count
     {
         return;
     }
+
     if (base == (void*)-1)
     {
         return;
@@ -283,15 +292,15 @@ void field_write_bits(s32 width, void* base, s32 index, s32 shift, s32 bit_count
 
     switch (width)
     {
-    case FIELD_BITS_BYTE:
-        ((u8*)base)[index] = (((u8*)base)[index] & clear_mask) | (value_mask & (value << shift));
-        break;
-    case FIELD_BITS_HALFWORD:
-        ((u16*)base)[index] = (((u16*)base)[index] & clear_mask) | (value_mask & (value << shift));
-        break;
-    case FIELD_BITS_WORD:
-        ((u32*)base)[index] = (((u32*)base)[index] & clear_mask) | (value_mask & (value << shift));
-        break;
+        case FIELD_BITS_BYTE:
+            ((u8*)base)[index] = (((u8*)base)[index] & clear_mask) | (value_mask & (value << shift));
+            break;
+        case FIELD_BITS_HALFWORD:
+            ((u16*)base)[index] = (((u16*)base)[index] & clear_mask) | (value_mask & (value << shift));
+            break;
+        case FIELD_BITS_WORD:
+            ((u32*)base)[index] = (((u32*)base)[index] & clear_mask) | (value_mask & (value << shift));
+            break;
     }
 }
 
@@ -320,13 +329,13 @@ s32 field_read_bits(s32 width, void* base, s32 index, s32 shift, s32 bit_count)
 
     switch (width)
     {
-    case FIELD_BITS_BYTE:
-        value = ((u8*)base)[index] >> shift;
-        return value & mask;
-    case FIELD_BITS_HALFWORD:
-        value = ((u16*)base)[index] >> shift;
-        return value & mask;
-    case FIELD_BITS_WORD:
-        return (((u32*)base)[index] >> shift) & mask;
+        case FIELD_BITS_BYTE:
+            value = ((u8*)base)[index] >> shift;
+            return value & mask;
+        case FIELD_BITS_HALFWORD:
+            value = ((u16*)base)[index] >> shift;
+            return value & mask;
+        case FIELD_BITS_WORD:
+            return (((u32*)base)[index] >> shift) & mask;
     }
 }

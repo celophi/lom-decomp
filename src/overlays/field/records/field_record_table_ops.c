@@ -94,7 +94,7 @@ s32 field_award_land_artifacts(s32 first_land, s32 second_land, s32* awarded)
 
         if ((flags & FIELD_LAND_ARTIFACT_OBTAINED) && !((flags >> 1) & 1))
         {
-            artifacts_in_hand += 1;
+            artifacts_in_hand++;
         }
     }
 
@@ -111,7 +111,7 @@ s32 field_award_land_artifacts(s32 first_land, s32 second_land, s32* awarded)
 
         if (field_try_award_land_artifact(second_land) >= 0)
         {
-            awarded_count += 1;
+            awarded_count++;
             *cursor = second_land;
             cursor++;
         }
@@ -163,7 +163,7 @@ static s32 field_try_award_land_artifact(s32 land_index)
             return -1;
         }
 
-        g_field_game_state->control.fields.artifact_count += 1;
+        g_field_game_state->control.fields.artifact_count++;
         g_field_game_state->lands[land_index].flags |= FIELD_LAND_ARTIFACT_OBTAINED;
         g_field_game_state->lands[land_index].artifact_order = g_field_game_state->control.fields.artifact_count;
         return land_index;

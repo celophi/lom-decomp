@@ -844,7 +844,7 @@ static u8* field_build_effect_strips(u_long* ordering_table, u8* packet, VECTOR*
         SetPolyG4(cursor);
         setSemiTrans(cursor, 1);
         ADD_PRIM_BY_DEPTH(ordering_table, cursor, (p0.vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
-        setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
+        setDrawTPage(cursor, 0, 0, BLEND_ADD_TPAGE);
         ADD_PRIM_BY_DEPTH(ordering_table, cursor, (p0.vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);
 
         for (j = 1; j <= STRIP_SEGMENT_COUNT; j++)
@@ -878,7 +878,7 @@ static u8* field_build_effect_strips(u_long* ordering_table, u8* packet, VECTOR*
             SetPolyG4(cursor);
             setSemiTrans(cursor, 1);
             ADD_PRIM_BY_DEPTH(ordering_table, cursor, (p0.vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
-            setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
+            setDrawTPage(cursor, 0, 0, BLEND_ADD_TPAGE);
             ADD_PRIM_BY_DEPTH(ordering_table, cursor, (p0.vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);
             v[1].vx = v[2].vx;
             v[1].vy = v[2].vy;

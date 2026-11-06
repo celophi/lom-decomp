@@ -2,29 +2,27 @@
  * @brief Resolve field actor contacts, movement, interactions, and attack hits.
  */
 #include "common.h"
-#include "../internal/field_effect_render_state.h"
-#include "../internal/field_calls.h"
+#include <abs.h>
+#include <inline_c.h>
+#include <libgte.h>
+
 #include "../internal/field_actor.h"
 #include "../internal/field_actor_behavior.h"
-#include "../internal/field_effect_transform.h"
-#include "main/cdrom.h"
-#include "overlays/field/field_types.h"
 #include "../internal/field_actor_runtime.h"
-#include "../internal/field_effect_types.h"
-#include "../internal/field_effect_geometry.h"
-#include "../internal/field_contact_geometry.h"
 #include "../internal/field_actor_sequence_runtime.h"
+#include "../internal/field_calls.h"
+#include "../internal/field_contact_geometry.h"
+#include "../internal/field_effect_geometry.h"
+#include "../internal/field_effect_render_state.h"
+#include "../internal/field_effect_transform.h"
+#include "../internal/field_effect_types.h"
 #include "common/vector.h"
-#include <libgte.h>
-#include <inline_c.h>
-#include "sdk/gte_dmpsx_compat.h"
-#include "overlays/field/field_actor_records.h"
-#include <abs.h>
 #include "main/audio/akao.h"
 #include "main/audio/game_audio.h"
-
-/** @brief Object state @p index of @p base. */
-#define FIELD_OBJECT_STATE_AT(base, index) ((FieldObjectState*)((index) * sizeof(FieldObjectState) + (uintptr_t)(base)))
+#include "main/cdrom.h"
+#include "overlays/field/field_actor_records.h"
+#include "overlays/field/field_types.h"
+#include "sdk/gte_dmpsx_compat.h"
 
 /** @brief CD resource holding the actor sequence bytecode banks. */
 #define FIELD_SEQUENCE_RESOURCE_ID 1501
@@ -165,6 +163,7 @@ static inline FieldActorBinding* field_contact_object_binding(FieldActorBinding*
     {
         offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
     }
+
     return (FieldActorBinding*)((u8*)bindings + offset);
 }
 
@@ -186,6 +185,7 @@ static inline FieldActorBinding* field_contact_actor_binding(FieldActorBinding* 
     {
         offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
     }
+
     return (FieldActorBinding*)((u8*)bindings + offset);
 }
 
@@ -327,8 +327,7 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
 
         command = target->command;
 
-        if ((command == FIELD_ACTOR_COMMAND_TECHNIQUE) || (command == FIELD_ACTOR_COMMAND_INSTRUMENT) ||
-            (command == FIELD_ACTOR_COMMAND_DEFEAT_DELAY))
+        if ((command == FIELD_ACTOR_COMMAND_TECHNIQUE) || (command == FIELD_ACTOR_COMMAND_INSTRUMENT) || (command == FIELD_ACTOR_COMMAND_DEFEAT_DELAY))
         {
             continue;
         }
@@ -386,9 +385,9 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
                 {
                     if ((target_quad[0].packed != 0) || (target_quad[1].packed != 0))
                     {
-                        intersection = field_intersect_screen_segments(&input_vertex->coord, &input_quad[(input_edge + 1) & 3].coord,
-                                                                       &target_quad[quad_edge].coord,
-                                                                       &((FieldContactPoint*)((u8*)target_quad + next_edge_offset))->coord);
+                        intersection =
+                            field_intersect_screen_segments(&input_vertex->coord, &input_quad[(input_edge + 1) & 3].coord, &target_quad[quad_edge].coord,
+                                                            &((FieldContactPoint*)((u8*)target_quad + next_edge_offset))->coord);
                         contact->point.packed = intersection;
 
                         if (intersection != FIELD_NO_SEGMENT_INTERSECTION)
@@ -402,7 +401,8 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
                                     target->command = FIELD_ACTION_COMMAND(2);
                                     field_prepare_actor_action(target);
                                     g_field_object_states[target->object_index].contact.word =
-                                        (g_field_object_states[target->object_index].contact.word & ~FIELD_CONTACT_QUAD_ANSWER_MASK) | FIELD_CONTACT_QUAD_ANSWER_2;
+                                        (g_field_object_states[target->object_index].contact.word & ~FIELD_CONTACT_QUAD_ANSWER_MASK) |
+                                        FIELD_CONTACT_QUAD_ANSWER_2;
                                     return 3;
                                 }
 
@@ -411,7 +411,8 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
                                     target->command = FIELD_ACTION_COMMAND(3);
                                     field_prepare_actor_action(target);
                                     g_field_object_states[target->object_index].contact.word =
-                                        (g_field_object_states[target->object_index].contact.word & ~FIELD_CONTACT_QUAD_ANSWER_MASK) | FIELD_CONTACT_QUAD_ANSWER_3;
+                                        (g_field_object_states[target->object_index].contact.word & ~FIELD_CONTACT_QUAD_ANSWER_MASK) |
+                                        FIELD_CONTACT_QUAD_ANSWER_3;
                                     return 3;
                                 }
                             }
@@ -537,34 +538,43 @@ static s32 field_intersect_screen_segments(Vec2s* a0, Vec2s* a1, Vec2s* b0, Vec2
             {
                 return FIELD_NO_SEGMENT_INTERSECTION;
             }
+
             b0_x_a = b0->x;
             a0_x_a = a0->x;
+
             if (b0_x_a < a0_x_a)
             {
                 b1_x_a = b1->x;
+
                 if (b1_x_a < a0_x_a)
                 {
                     a1_x_a = a1->x;
+
                     if ((b0_x_a < a1_x_a) && (b1_x_a < a1_x_a))
                     {
                         return FIELD_NO_SEGMENT_INTERSECTION;
                     }
                 }
             }
+
             b0_x_b = b0->x;
             a0_x_b = a0->x;
+
             if (a0_x_b < b0_x_b)
             {
                 b1_x_b = b1->x;
+
                 if (a0_x_b < b1_x_b)
                 {
                     a1_x_b = a1->x;
+
                     if ((a1_x_b < b0_x_b) && (a1_x_b < b1_x_b))
                     {
                         return FIELD_NO_SEGMENT_INTERSECTION;
                     }
                 }
             }
+
             packed_x_or_total = (u16)a0->x;
             work = y << 0x10;
             return packed_x_or_total | work;
@@ -603,29 +613,37 @@ static s32 field_intersect_screen_segments(Vec2s* a0, Vec2s* a1, Vec2s* b0, Vec2
                 {
                     return FIELD_NO_SEGMENT_INTERSECTION;
                 }
+
                 b0_y_a = b0->y;
+
                 if (b0_y_a < a0_y)
                 {
                     b1_y_a = b1->y;
+
                     if ((b1_y_a < a0_y) && (b0_y_a < a1_y) && (b1_y_a < a1_y))
                     {
                         return FIELD_NO_SEGMENT_INTERSECTION;
                     }
                 }
+
                 b0_y_b = b0->y;
                 a0_y_b = a0->y;
+
                 if (a0_y_b < b0_y_b)
                 {
                     b1_y_b = b1->y;
+
                     if (a0_y_b < b1_y_b)
                     {
                         a1_y_b = a1->y;
+
                         if ((a1_y_b < b0_y_b) && (a1_y_b < b1_y_b))
                         {
                             return FIELD_NO_SEGMENT_INTERSECTION;
                         }
                     }
                 }
+
                 packed_x_or_total = x & 0xFFFF;
                 work = a0->y << y_shift;
                 return packed_x_or_total | work;
@@ -641,8 +659,7 @@ static s32 field_intersect_screen_segments(Vec2s* a0, Vec2s* a1, Vec2s* b0, Vec2
             }
             else
             {
-                y = ((s32)((x - b0_x_value_vertical) * b_dy_vertical) / b_dx_vertical) +
-                                 b0_y_value_vertical;
+                y = ((s32)((x - b0_x_value_vertical) * b_dy_vertical) / b_dx_vertical) + b0_y_value_vertical;
             }
         }
         else
@@ -674,8 +691,7 @@ static s32 field_intersect_screen_segments(Vec2s* a0, Vec2s* a1, Vec2s* b0, Vec2
                     if (a_slope == b_slope)
                     {
                         if ((b0_y_general == (((s32)((b0_x_value_general - a0_x) * a_dy) / a_dx) + a0_y)) &&
-                            ((b0_x_value_general >= a0_x) || (b1_x_general >= a0_x) ||
-                             (b0_x_value_general >= a1_x) || (b1_x_general >= a1_x)))
+                            ((b0_x_value_general >= a0_x) || (b1_x_general >= a0_x) || (b0_x_value_general >= a1_x) || (b1_x_general >= a1_x)))
                         {
                             b0_x_collinear = b0->x;
                             a0_x_collinear = a0->x;
@@ -683,15 +699,18 @@ static s32 field_intersect_screen_segments(Vec2s* a0, Vec2s* a1, Vec2s* b0, Vec2
                             if (a0_x_collinear < b0_x_collinear)
                             {
                                 b1_x_collinear = b1->x;
+
                                 if (a0_x_collinear < b1_x_collinear)
                                 {
                                     a1_x_collinear = a1->x;
+
                                     if ((a1_x_collinear < b0_x_collinear) && (a1_x_collinear < b1_x_collinear))
                                     {
                                         return FIELD_NO_SEGMENT_INTERSECTION;
                                     }
                                 }
                             }
+
                             packed_x_or_total = (u16)a0->x;
                             work = a0->y << 0x10;
                             return packed_x_or_total | work;
@@ -700,10 +719,8 @@ static s32 field_intersect_screen_segments(Vec2s* a0, Vec2s* a1, Vec2s* b0, Vec2
                         return FIELD_NO_SEGMENT_INTERSECTION;
                     }
 
-                    x = ((s32)((((b0_y_general - ((s32)(b_dy * b0_x_value_general) / b_dx)) - a0_y) +
-                                             ((s32)(a_dy * a0_x) / a_dx)) *
-                                            (a_dx * b_dx)) /
-                                      (s32)(a_slope - b_slope));
+                    x = ((s32)((((b0_y_general - ((s32)(b_dy * b0_x_value_general) / b_dx)) - a0_y) + ((s32)(a_dy * a0_x) / a_dx)) * (a_dx * b_dx)) /
+                         (s32)(a_slope - b_slope));
                 }
 
                 y = ((s32)((x - a0_x) * a_dy) / a_dx) + a0_y;
@@ -1084,16 +1101,18 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
 
     for (; target_index < target_end; target_index++, target++, target_state++)
     {
-        if ((target->presence == FIELD_ACTOR_UNUSED) ||
-            (target_state->flags & FIELD_OBJECT_IMMOBILE_FLAGS) || (target == actor))
+        if ((target->presence == FIELD_ACTOR_UNUSED) || (target_state->flags & FIELD_OBJECT_IMMOBILE_FLAGS) || (target == actor))
         {
             continue;
         }
+
         contact_flags = target_state->contact.word;
+
         if (contact_flags & FIELD_CONTACT_NO_HIT_TEST)
         {
             continue;
         }
+
         if ((contact_flags & FIELD_CONTACT_ANIMATION_HIDDEN) || (target_state->collision.word == 0))
         {
             continue;
@@ -1103,10 +1122,8 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
         actor_height = actor->height;
         position_y = position[1];
 
-        if (((target->y + ((target_state->bounds.half.top + target_height) << 8)) >
-             (position_y + ((actor_state->bounds.half.bottom + actor_height) << 8))) ||
-            ((target->y + ((target_state->bounds.half.bottom + target_height) << 8)) <
-             (position_y + ((actor_state->bounds.half.top + actor_height) << 8))))
+        if (((target->y + ((target_state->bounds.half.top + target_height) << 8)) > (position_y + ((actor_state->bounds.half.bottom + actor_height) << 8))) ||
+            ((target->y + ((target_state->bounds.half.bottom + target_height) << 8)) < (position_y + ((actor_state->bounds.half.top + actor_height) << 8))))
         {
             continue;
         }
@@ -1119,7 +1136,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
         gte_stlvnl(&scratch.squared);
 
         if (SquareRoot0(scratch.squared.vx + scratch.squared.vy) <
-            (((s32)(actor_state->collision.half.extent << 16) >> 17) + ((s32)(target_state->collision.half.extent << 16) >> 17)))
+            (((actor_state->collision.half.extent << 16) >> 17) + ((target_state->collision.half.extent << 16) >> 17)))
         {
             break;
         }
@@ -1135,15 +1152,13 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
     {
         if (g_field_resource_entries[target->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS)
         {
-            if (target_state->current_hp.word != 0 &&
-                !(target_state->flags & (FIELD_OBJECT_FLAG_PETRIFIED | FIELD_OBJECT_FLAG_KNOCKED_OUT)) &&
+            if (target_state->current_hp.word != 0 && !(target_state->flags & (FIELD_OBJECT_FLAG_PETRIFIED | FIELD_OBJECT_FLAG_KNOCKED_OUT)) &&
                 !(target_state->contact.word & FIELD_CONTACT_ANIMATION_HIDDEN))
             {
                 index = target->object_index;
 
-                if ((((u32)g_field_object_states[index].contact.word >> FIELD_CONTACT_ACTION_PENDING_BIT) & 1) ||
-                    field_object_binding(index)->owner != target->object_index ||
-                    field_object_binding(target->object_index)->state == FIELD_BINDING_IDLE)
+                if (((g_field_object_states[index].contact.word >> FIELD_CONTACT_ACTION_PENDING_BIT) & 1) ||
+                    field_object_binding(index)->owner != target->object_index || field_object_binding(target->object_index)->state == FIELD_BINDING_IDLE)
                 {
                     if (target->command == FIELD_ACTOR_COMMAND_NONE)
                     {
@@ -1151,7 +1166,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
 
                         if (animation_slot != FIELD_ACTOR_SLOT_NONE)
                         {
-                            scratch.targets.words[0] = (s32)actor->object_index;
+                            scratch.targets.words[0] = actor->object_index;
 
                             if (field_start_builtin_animation(target->object_index, animation_slot, FIELD_TOUCH_ANIMATION) != 0)
                             {
@@ -1166,6 +1181,7 @@ s32 field_find_actor_overlap(FieldActor* actor, s32* position, s32 filter_group)
                     }
                 }
             }
+
             return 0;
         }
     }
@@ -1273,7 +1289,7 @@ void field_probe_actor_interaction(FieldActor* actor)
 
             if (g_field_resource_entries[actor->resource_index].flags & FIELD_RESOURCE_HAS_ACTIONS)
             {
-                actor->animation = (u8)(actor->animation & FIELD_ANIMATION_FACING);
+                actor->animation = (actor->animation & FIELD_ANIMATION_FACING);
             }
             else
             {
@@ -1427,8 +1443,8 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
 
             command = candidate->command;
 
-            if ((command == FIELD_ACTOR_COMMAND_TECHNIQUE) || (command == FIELD_ACTOR_COMMAND_DEFEAT_DELAY) || (command == FIELD_ACTOR_COMMAND_INSTRUMENT) || (candidate->presence == FIELD_ACTOR_UNUSED) ||
-                (owner_index == candidate_index) || (candidate_state->current_hp.word == 0))
+            if ((command == FIELD_ACTOR_COMMAND_TECHNIQUE) || (command == FIELD_ACTOR_COMMAND_DEFEAT_DELAY) || (command == FIELD_ACTOR_COMMAND_INSTRUMENT) ||
+                (candidate->presence == FIELD_ACTOR_UNUSED) || (owner_index == candidate_index) || (candidate_state->current_hp.word == 0))
             {
                 continue;
             }
@@ -1437,8 +1453,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
 
             if ((contact_flags & FIELD_CONTACT_ANIMATION_HIDDEN) ||
                 ((candidate_index >= FIELD_PARTY_COUNT) && ((candidate_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)) ||
-                (contact_flags & FIELD_CONTACT_NO_HIT_TEST) || (eligible == 0) ||
-                (candidate_state->movement.word & FIELD_MOVEMENT_INVULNERABLE))
+                (contact_flags & FIELD_CONTACT_NO_HIT_TEST) || (eligible == 0) || (candidate_state->movement.word & FIELD_MOVEMENT_INVULNERABLE))
             {
                 continue;
             }
@@ -1462,8 +1477,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
                 }
             }
 
-            if (candidate_state->flags &
-                FIELD_OBJECT_UNTARGETABLE_FLAGS)
+            if (candidate_state->flags & FIELD_OBJECT_UNTARGETABLE_FLAGS)
             {
                 continue;
             }
@@ -1473,7 +1487,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
 
             while (track_index < (s32)track_count && candidate_index != actor->targets[track_index])
             {
-                track_index += 1;
+                track_index++;
             }
 
             if (track_index != actor->target_count)
@@ -1584,7 +1598,8 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
                 field_command_history_clear(candidate_index);
             }
 
-            if (((u8)actor->hit_reaction < FIELD_HIT_REACTION_DIRECT_COUNT) || (actors[actor->owner_object_index].command == FIELD_ACTOR_COMMAND_WAIT_BOUND_ACTOR))
+            if (((u8)actor->hit_reaction < FIELD_HIT_REACTION_DIRECT_COUNT) ||
+                (actors[actor->owner_object_index].command == FIELD_ACTOR_COMMAND_WAIT_BOUND_ACTOR))
             {
                 field_resolve_object_hit(actor->owner_object_index, candidate_index, actor->hit_reaction);
             }
@@ -1592,30 +1607,30 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
             {
                 switch (actor->hit_reaction)
                 {
-                case FIELD_ABILITY_SPIN:
-                    field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x16U);
-                    break;
-                case FIELD_ABILITY_FOLLOW_UP_50:
-                    field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x12U);
-                    break;
-                case FIELD_ABILITY_FOLLOW_UP_51:
-                    field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x13U);
-                    break;
-                case FIELD_ABILITY_FOLLOW_UP_4E:
-                    field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x14U);
-                    break;
-                case FIELD_ABILITY_FLIP_KICK:
-                    field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x15U);
-                    break;
-                case FIELD_ABILITY_TACKLE:
-                    field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x19U);
-                    break;
-                case FIELD_ABILITY_SLIDE:
-                    field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x1AU);
-                    break;
-                default:
-                    field_resolve_contact_hit(actor->owner_object_index, candidate_index);
-                    break;
+                    case FIELD_ABILITY_SPIN:
+                        field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x16U);
+                        break;
+                    case FIELD_ABILITY_FOLLOW_UP_50:
+                        field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x12U);
+                        break;
+                    case FIELD_ABILITY_FOLLOW_UP_51:
+                        field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x13U);
+                        break;
+                    case FIELD_ABILITY_FOLLOW_UP_4E:
+                        field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x14U);
+                        break;
+                    case FIELD_ABILITY_FLIP_KICK:
+                        field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x15U);
+                        break;
+                    case FIELD_ABILITY_TACKLE:
+                        field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x19U);
+                        break;
+                    case FIELD_ABILITY_SLIDE:
+                        field_resolve_object_hit(actor->owner_object_index, candidate_index, 0x1AU);
+                        break;
+                    default:
+                        field_resolve_contact_hit(actor->owner_object_index, candidate_index);
+                        break;
                 }
             }
         }
@@ -1688,7 +1703,7 @@ s32 field_find_actor_in_range(s32* reference_position, s32 distance_limit, Field
         gte_sqr0();
         gte_stlvnl(squared);
 
-        if (SquareRoot0(squared->vx + squared->vy + squared->vz) < distance_limit + ((s32)(candidate_state->collision.half.extent << 16) >> 17))
+        if (SquareRoot0(squared->vx + squared->vy + squared->vz) < distance_limit + ((candidate_state->collision.half.extent << 16) >> 17))
         {
             return candidate_index;
         }
@@ -1834,8 +1849,7 @@ void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* pa
 
             if ((contact_flags & FIELD_CONTACT_ANIMATION_HIDDEN) ||
                 ((target_index >= FIELD_PARTY_COUNT) && ((target_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)) ||
-                (contact_flags & FIELD_CONTACT_NO_HIT_TEST) || (eligible == 0) ||
-                (target_state->movement.word & FIELD_MOVEMENT_INVULNERABLE))
+                (contact_flags & FIELD_CONTACT_NO_HIT_TEST) || (eligible == 0) || (target_state->movement.word & FIELD_MOVEMENT_INVULNERABLE))
             {
                 continue;
             }
@@ -1859,8 +1873,7 @@ void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* pa
                 }
             }
 
-            if (target_state->flags &
-                FIELD_OBJECT_UNTARGETABLE_FLAGS)
+            if (target_state->flags & FIELD_OBJECT_UNTARGETABLE_FLAGS)
             {
                 continue;
             }
@@ -1870,7 +1883,7 @@ void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* pa
 
             while (track_index < (s32)track_count && target_index != actor->targets[track_index])
             {
-                track_index += 1;
+                track_index++;
             }
 
             if (track_index != actor->target_count)
@@ -1889,13 +1902,13 @@ void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* pa
                 gte_sqr0();
                 gte_stlvnl(squares);
 
-                if ((SquareRoot0(squares->vx + squares->vy + squares->vz) <
-                     (attack_radius + ((s16)target_state->collision.half.extent >> 1))) &&
+                if ((SquareRoot0(squares->vx + squares->vy + squares->vz) < (attack_radius + ((s16)target_state->collision.half.extent >> 1))) &&
                     ((u8)g_field_object_states[actor->owner_object_index].contact.bytes.target_count < FIELD_ACTOR_TRACK_COUNT))
                 {
                     target_state->contact.word |= FIELD_CONTACT_TARGETED;
                     target_state->flags &= ~FIELD_OBJECT_FLAG_MINI;
-                    g_field_object_states[actor->owner_object_index].targets[g_field_object_states[actor->owner_object_index].contact.bytes.target_count] = target_index;
+                    g_field_object_states[actor->owner_object_index].targets[g_field_object_states[actor->owner_object_index].contact.bytes.target_count] =
+                        target_index;
                     g_field_object_states[actor->owner_object_index].contact.bytes.target_count++;
                     actor->track_mask |= 1 << actor->target_count;
                     actor->targets[actor->target_count] = target_index;
@@ -1908,7 +1921,8 @@ void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* pa
 
                     field_release_object_link(&g_field_actors[target_index]);
 
-                    if (((u8)actor->hit_reaction < FIELD_HIT_REACTION_DIRECT_COUNT) || (g_field_actors[actor->owner_object_index].command == FIELD_ACTOR_COMMAND_WAIT_BOUND_ACTOR))
+                    if (((u8)actor->hit_reaction < FIELD_HIT_REACTION_DIRECT_COUNT) ||
+                        (g_field_actors[actor->owner_object_index].command == FIELD_ACTOR_COMMAND_WAIT_BOUND_ACTOR))
                     {
                         field_resolve_object_hit(actor->owner_object_index, target_index, actor->hit_reaction);
                     }
@@ -1916,27 +1930,27 @@ void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* pa
                     {
                         switch (actor->hit_reaction)
                         {
-                        case FIELD_ABILITY_FOLLOW_UP_50:
-                            field_resolve_object_hit(actor->owner_object_index, target_index, 0x12U);
-                            break;
-                        case FIELD_ABILITY_FOLLOW_UP_51:
-                            field_resolve_object_hit(actor->owner_object_index, target_index, 0x13U);
-                            break;
-                        case FIELD_ABILITY_FOLLOW_UP_4E:
-                            field_resolve_object_hit(actor->owner_object_index, target_index, 0x14U);
-                            break;
-                        case FIELD_ABILITY_FLIP_KICK:
-                            field_resolve_object_hit(actor->owner_object_index, target_index, 0x15U);
-                            break;
-                        case FIELD_ABILITY_TACKLE:
-                            field_resolve_object_hit(actor->owner_object_index, target_index, 0x19U);
-                            break;
-                        case FIELD_ABILITY_SLIDE:
-                            field_resolve_object_hit(actor->owner_object_index, target_index, 0x1AU);
-                            break;
-                        default:
-                            field_resolve_contact_hit(actor->owner_object_index, target_index);
-                            break;
+                            case FIELD_ABILITY_FOLLOW_UP_50:
+                                field_resolve_object_hit(actor->owner_object_index, target_index, 0x12U);
+                                break;
+                            case FIELD_ABILITY_FOLLOW_UP_51:
+                                field_resolve_object_hit(actor->owner_object_index, target_index, 0x13U);
+                                break;
+                            case FIELD_ABILITY_FOLLOW_UP_4E:
+                                field_resolve_object_hit(actor->owner_object_index, target_index, 0x14U);
+                                break;
+                            case FIELD_ABILITY_FLIP_KICK:
+                                field_resolve_object_hit(actor->owner_object_index, target_index, 0x15U);
+                                break;
+                            case FIELD_ABILITY_TACKLE:
+                                field_resolve_object_hit(actor->owner_object_index, target_index, 0x19U);
+                                break;
+                            case FIELD_ABILITY_SLIDE:
+                                field_resolve_object_hit(actor->owner_object_index, target_index, 0x1AU);
+                                break;
+                            default:
+                                field_resolve_contact_hit(actor->owner_object_index, target_index);
+                                break;
                         }
                     }
                 }

@@ -928,7 +928,7 @@ static s32 field_build_party_records(void)
                 field_publish_companion_flags();
             }
 
-            active_count += 1;
+            active_count++;
         }
     }
 

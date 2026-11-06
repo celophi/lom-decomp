@@ -49,27 +49,15 @@ extern SavedGameLayout* g_field_game_state;
 /** @brief Value of an empty pending-effect slot in PetRecord::status. */
 #define FIELD_NO_EFFECT 0xFF
 
+/** @brief Value of a pending-effect slot whose effect was cleared; free for a new effect. */
+#define FIELD_EFFECT_CLEARED 0xFE
+
 /**
  * @brief View of a pet record shifted by @p bytes bytes.
  * @note Element 0 of a byte array member of the view is element @p bytes of the real
  *       record.
  */
 #define FIELD_PET_AT(record, bytes) ((PetRecord*)((u8*)(record) + (bytes)))
-
-/**
- * @brief Experience a character or stored companion needs to advance from @p level.
- * @param level Current level.
- * @return 10 * level * (2 * level - 1); JP: 5 * level * (5 * level - 2).
- * @note JP uses a steeper curve.
- */
-static inline s32 field_level_threshold(s32 level)
-{
-#if defined(VERSION_JP)
-    return (level - 1) * (level * 24 + level) + level * 15;
-#else
-    return (level - 1) * ((level * 5) << 2) + ((level * 5) << 1);
-#endif
-}
 
 #define FIELD_STAGING_LEVEL_COUNT 8
 #define FIELD_STAGING_STAT_COUNT 8
@@ -630,6 +618,10 @@ typedef struct FieldActionDescriptor
     FieldActionParams params;
 } FieldActionDescriptor;
 
+/** @brief Kind of an action descriptor (low nibble of its first word). */
+#define FIELD_DESCRIPTOR_KIND_MASK 0xF
+#define FIELD_DESCRIPTOR_KIND(descriptor) ((descriptor)->info.word & FIELD_DESCRIPTOR_KIND_MASK)
+
 /**
  * @brief Action descriptor bank (g_field_default_action_bank, reached through g_field_action_bank).
  * @note Holds four descriptor tables, located by byte offsets from the bank start.
@@ -792,5 +784,20 @@ extern FieldBattleContext* g_field_battle;
 
 /** @brief field_find_resource id of the item template table. */
 #define FIELD_RESOURCE_ITEM_TEMPLATES 5
+
+/**
+ * @brief Experience a character or stored companion needs to advance from @p level.
+ * @param level Current level.
+ * @return 10 * level * (2 * level - 1); JP: 5 * level * (5 * level - 2).
+ * @note JP uses a steeper curve.
+ */
+static inline s32 field_level_threshold(s32 level)
+{
+#if defined(VERSION_JP)
+    return (level - 1) * (level * 24 + level) + level * 15;
+#else
+    return (level - 1) * ((level * 5) << 2) + ((level * 5) << 1);
+#endif
+}
 
 #endif

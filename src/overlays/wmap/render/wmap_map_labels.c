@@ -282,13 +282,13 @@ void wmap_draw_map_labels(void)
 
         if ((s8)label->r0 >= 0)
         {
-            clut_y = *(u16*)&g_wmap_label_clut_row;
+            clut_y = *&g_wmap_label_clut_row;
             label->r0 += 8;
             label->clut = (clut_y << 6) | 0x2F;
         }
         else
         {
-            clut_y = *(u16*)&g_wmap_label_clut_row + 1;
+            clut_y = *&g_wmap_label_clut_row + 1;
             label->clut = (clut_y << 6) | 0x2F;
         }
 

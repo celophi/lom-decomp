@@ -5,24 +5,25 @@
  *        and tint flashing.
  */
 #include "common.h"
-#include "common/saved_game.h"
-#include "main/main.h"
-#include "../internal/field_calls.h"
-#include "../internal/field_held_action_buttons.h"
-#include "common/vector.h"
-#include "overlays/field/field_types.h"
-#include "../internal/field_actor.h"
-#include "../internal/field_actor_tables.h"
 #include <inline_c.h>
-#include "sdk/gte_dmpsx_compat.h"
 #include <memory.h>
+
+#include "../internal/field_actor.h"
+#include "../internal/field_actor_behavior.h"
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_actor_sequence_runtime.h"
-#include "overlays/field/field_player_records.h"
-#include "../internal/field_resource_actions.h"
+#include "../internal/field_actor_tables.h"
+#include "../internal/field_calls.h"
 #include "../internal/field_contact_geometry.h"
+#include "../internal/field_held_action_buttons.h"
+#include "../internal/field_resource_actions.h"
+#include "common/saved_game.h"
+#include "common/vector.h"
+#include "main/main.h"
 #include "overlays/field/field_actor_records.h"
-#include "../internal/field_actor_behavior.h"
+#include "overlays/field/field_player_records.h"
+#include "overlays/field/field_types.h"
+#include "sdk/gte_dmpsx_compat.h"
 
 /** @brief Actor template followed by the remaining per-player record data. */
 typedef struct
@@ -60,11 +61,6 @@ void field_resolve_collected_hits();
 /** @brief A dimmed tint is the colour scaled by 100/128. */
 #define FIELD_TINT_DIM_NUMERATOR 100
 #define FIELD_TINT_DIM_DENOMINATOR 128
-
-/**
- * @brief Runtime state of object @p index in @p states, addressed as index-first byte arithmetic.
- */
-#define FIELD_OBJECT_STATE_AT(states, index) ((FieldObjectState*)((index) * sizeof(FieldObjectState) + (uintptr_t)(states)))
 
 /** @brief Control bytes following the frame values in a 32-byte sequence row. */
 typedef enum
@@ -145,75 +141,75 @@ s32 field_update_actor_landing(FieldActor* actor)
 
     switch (actor->animation & FIELD_ANIMATION_INDEX_MASK)
     {
-    case FIELD_ABILITY_JUMP:
-        actor->animation = (actor->animation & FIELD_ANIMATION_FACING) | FIELD_ANIMATION_JUMP_LANDING;
-        field_restart_actor_animation(actor);
-        return 0;
-    case FIELD_ABILITY_DOUBLE_JUMP:
-        height = actor->y;
-
-        if (height < -FIELD_LANDING_FALL_STEP)
-        {
-            actor->y = height + FIELD_LANDING_FALL_STEP;
-            return 0;
-        }
-        else
-        {
-            actor->y = 0;
+        case FIELD_ABILITY_JUMP:
             actor->animation = (actor->animation & FIELD_ANIMATION_FACING) | FIELD_ANIMATION_JUMP_LANDING;
             field_restart_actor_animation(actor);
             return 0;
-        }
-    case FIELD_ANIMATION_AIR_ATTACK:
-    case FIELD_ANIMATION_AIR_POWER_ATTACK:
-        height = actor->y;
+        case FIELD_ABILITY_DOUBLE_JUMP:
+            height = actor->y;
 
-        if (height < -FIELD_LANDING_FALL_STEP)
-        {
-            if (actor->animation & FIELD_ANIMATION_FACING)
+            if (height < -FIELD_LANDING_FALL_STEP)
             {
-                displacement->x = FIELD_AIR_ATTACK_DRIFT;
+                actor->y = height + FIELD_LANDING_FALL_STEP;
+                return 0;
             }
             else
             {
-                displacement->x = -FIELD_AIR_ATTACK_DRIFT;
+                actor->y = 0;
+                actor->animation = (actor->animation & FIELD_ANIMATION_FACING) | FIELD_ANIMATION_JUMP_LANDING;
+                field_restart_actor_animation(actor);
+                return 0;
+            }
+        case FIELD_ANIMATION_AIR_ATTACK:
+        case FIELD_ANIMATION_AIR_POWER_ATTACK:
+            height = actor->y;
+
+            if (height < -FIELD_LANDING_FALL_STEP)
+            {
+                if (actor->animation & FIELD_ANIMATION_FACING)
+                {
+                    displacement->x = FIELD_AIR_ATTACK_DRIFT;
+                }
+                else
+                {
+                    displacement->x = -FIELD_AIR_ATTACK_DRIFT;
+                }
+
+                displacement->z = 0;
+                displacement->y = 0;
+                rising_height = actor->y;
+                field_resolve_actor_movement(actor, &displacement->x, 1);
+                rising_height += FIELD_LANDING_FALL_STEP;
+                actor->y = rising_height;
+                return 0;
+            }
+            else if (height == 0)
+            {
+                break;
+            }
+            else if (height < -FIELD_LANDING_SETTLE_HEIGHT)
+            {
+                actor->y = -FIELD_LANDING_SETTLE_HEIGHT;
+                field_play_object_animation(actor, FIELD_LANDING_EFFECT);
+            }
+            else
+            {
+                actor->y = height + 1;
             }
 
-            displacement->z = 0;
-            displacement->y = 0;
-            rising_height = actor->y;
-            field_resolve_actor_movement(actor, &displacement->x, 1);
-            rising_height += FIELD_LANDING_FALL_STEP;
-            actor->y = rising_height;
             return 0;
-        }
-        else if (height == 0)
-        {
-            break;
-        }
-        else if (height < -FIELD_LANDING_SETTLE_HEIGHT)
-        {
-            actor->y = -FIELD_LANDING_SETTLE_HEIGHT;
+        case FIELD_ANIMATION_JUMP_LANDING:
+        case FIELD_ABILITY_BACK_FLIP:
+        case FIELD_ABILITY_MOONSAULT:
+        case FIELD_ABILITY_HIGH_JUMP:
+        case FIELD_ANIMATION_AERIAL_46:
+        case FIELD_ANIMATION_AERIAL_47:
+        case FIELD_ABILITY_FOLLOW_UP_4E:
+        case FIELD_ABILITY_FLIP_KICK:
             field_play_object_animation(actor, FIELD_LANDING_EFFECT);
-        }
-        else
-        {
-            actor->y = height + 1;
-        }
-
-        return 0;
-    case FIELD_ANIMATION_JUMP_LANDING:
-    case FIELD_ABILITY_BACK_FLIP:
-    case FIELD_ABILITY_MOONSAULT:
-    case FIELD_ABILITY_HIGH_JUMP:
-    case FIELD_ANIMATION_AERIAL_46:
-    case FIELD_ANIMATION_AERIAL_47:
-    case FIELD_ABILITY_FOLLOW_UP_4E:
-    case FIELD_ABILITY_FLIP_KICK:
-        field_play_object_animation(actor, FIELD_LANDING_EFFECT);
-        return 1;
-    default:
-        break;
+            return 1;
+        default:
+            break;
     }
 
     return 1;
@@ -310,126 +306,126 @@ s32 field_update_actor_action_chain(FieldActor* actor)
     {
         switch (actor->animation & FIELD_ANIMATION_INDEX_MASK)
         {
-        case FIELD_ABILITY_LUNGE:
-        case FIELD_ABILITY_DEFENSIVE_LUNGE:
-            actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_DASH_POWER_ATTACK);
-            field_prepare_actor_action(actor);
-            field_command_history_clear(actor->object_index);
-            break;
-        case FIELD_ABILITY_TACKLE:
-            actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK);
-            field_prepare_actor_action(actor);
-            field_command_history_clear(actor->object_index);
-            break;
-        case FIELD_ABILITY_SOMERSAULT:
-            actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK);
-            field_prepare_actor_action(actor);
-            field_command_history_clear(actor->object_index);
-            break;
-        case FIELD_ABILITY_BACK_FLIP:
-            FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FLIP_KICK, FIELD_FLIP_KICK_EFFECT, 0);
-            actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_CHAIN);
-            field_prepare_actor_action(actor);
-            field_command_history_clear(actor->object_index);
-            break;
-        case FIELD_ABILITY_BACK_ROLL:
-            FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FLIP_KICK, FIELD_FLIP_KICK_EFFECT, 0);
-            actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_CHAIN);
-            field_prepare_actor_action(actor);
-            field_command_history_clear(actor->object_index);
-            break;
-        case FIELD_ABILITY_SPIN:
-            FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FOLLOW_UP_51, FIELD_SPIN_FOLLOW_UP_51_EFFECT, 0);
-            actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_CHAIN);
-            field_prepare_actor_action(actor);
-            field_command_history_clear(actor->object_index);
-            break;
-        case FIELD_ABILITY_JUMP:
-        case FIELD_ABILITY_MOONSAULT:
-        case FIELD_ABILITY_HIGH_JUMP:
-        case FIELD_ABILITY_DOUBLE_JUMP:
-            if (actor->animation_frame < FIELD_AIR_POWER_ATTACK_FIRST_FRAME)
-            {
-                return;
-            }
-
-            actor->animation = (actor->animation & FIELD_ANIMATION_FACING) | FIELD_ANIMATION_AIR_POWER_ATTACK;
-            actor->y -= FIELD_STEP_OFFSET(actor);
-            field_restart_actor_animation(actor);
-            field_command_history_clear(actor->object_index);
-            actor->command = FIELD_ACTOR_COMMAND_AIR_FOLLOW_UP;
-            actor->frame_timer = 1;
-            actor->frame_ticks = 1;
-            actor->frame_length = 1;
-            return;
-        case FIELD_ABILITY_GRAPPLE:
-            if ((g_field_object_states[actor->object_index].contact.word >> FIELD_CONTACT_LINKED_BIT) & 1)
-            {
-                g_field_object_states[g_field_object_states[actor->object_index].linked_object_index].flags &= ~FIELD_OBJECT_FLAG_LINK_TARGET;
-                actor->command = 0;
-                field_restart_sequence_animation(actor);
-                tmp = field_find_free_actor_slot(actor->object_index, 0);
-
-                if (tmp != FIELD_ACTOR_SLOT_NONE)
+            case FIELD_ABILITY_LUNGE:
+            case FIELD_ABILITY_DEFENSIVE_LUNGE:
+                actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_DASH_POWER_ATTACK);
+                field_prepare_actor_action(actor);
+                field_command_history_clear(actor->object_index);
+                break;
+            case FIELD_ABILITY_TACKLE:
+                actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK);
+                field_prepare_actor_action(actor);
+                field_command_history_clear(actor->object_index);
+                break;
+            case FIELD_ABILITY_SOMERSAULT:
+                actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK);
+                field_prepare_actor_action(actor);
+                field_command_history_clear(actor->object_index);
+                break;
+            case FIELD_ABILITY_BACK_FLIP:
+                FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FLIP_KICK, FIELD_FLIP_KICK_EFFECT, 0);
+                actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_CHAIN);
+                field_prepare_actor_action(actor);
+                field_command_history_clear(actor->object_index);
+                break;
+            case FIELD_ABILITY_BACK_ROLL:
+                FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FLIP_KICK, FIELD_FLIP_KICK_EFFECT, 0);
+                actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_CHAIN);
+                field_prepare_actor_action(actor);
+                field_command_history_clear(actor->object_index);
+                break;
+            case FIELD_ABILITY_SPIN:
+                FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_FOLLOW_UP_51, FIELD_SPIN_FOLLOW_UP_51_EFFECT, 0);
+                actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_CHAIN);
+                field_prepare_actor_action(actor);
+                field_command_history_clear(actor->object_index);
+                break;
+            case FIELD_ABILITY_JUMP:
+            case FIELD_ABILITY_MOONSAULT:
+            case FIELD_ABILITY_HIGH_JUMP:
+            case FIELD_ABILITY_DOUBLE_JUMP:
+                if (actor->animation_frame < FIELD_AIR_POWER_ATTACK_FIRST_FRAME)
                 {
-                    if (field_roll_object_evasion(actor->object_index, g_field_object_states[actor->object_index].linked_object_index) != 0)
-                    {
-                        if (g_field_player_records[actor->object_index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
-                        {
-                            field_resolve_object_hit(actor->object_index, g_field_object_states[actor->object_index].linked_object_index,
-                                                     FIELD_GRAPPLE_GLOVE_THROW_ACTION);
-                        }
-                        else
-                        {
-                            field_resolve_object_hit(actor->object_index, g_field_object_states[actor->object_index].linked_object_index,
-                                                     FIELD_GRAPPLE_THROW_ACTION);
-                        }
-
-                        index = actor->object_index;
-                        anim_id = FIELD_GRAPPLE_THROW_ANIMATION;
-
-                        if (g_field_player_records[index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
-                        {
-                            anim_id = FIELD_GRAPPLE_GLOVE_THROW_ANIMATION;
-                        }
-                    }
-                    else
-                    {
-                        if (g_field_player_records[actor->object_index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
-                        {
-                            field_resolve_object_hit(g_field_object_states[actor->object_index].linked_object_index, actor->object_index,
-                                                     FIELD_GRAPPLE_GLOVE_REVERSAL_ACTION);
-                        }
-                        else
-                        {
-                            field_resolve_object_hit(g_field_object_states[actor->object_index].linked_object_index, actor->object_index,
-                                                     FIELD_GRAPPLE_REVERSAL_ACTION);
-                        }
-
-                        index = actor->object_index;
-                        anim_id = FIELD_GRAPPLE_REVERSAL_ANIMATION;
-
-                        if (g_field_player_records[index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
-                        {
-                            anim_id = FIELD_GRAPPLE_GLOVE_REVERSAL_ANIMATION;
-                        }
-                    }
-
-                    if (field_start_builtin_animation(index, tmp, anim_id) != 0)
-                    {
-                        targets = g_field_object_states[actor->object_index].linked_object_index;
-                        field_start_actor_animation(tmp, 1, (u8*)&targets);
-                    }
-
-                    field_command_history_clear(actor->object_index);
+                    return;
                 }
 
-                field_release_object_link(actor);
-            }
+                actor->animation = (actor->animation & FIELD_ANIMATION_FACING) | FIELD_ANIMATION_AIR_POWER_ATTACK;
+                actor->y -= FIELD_STEP_OFFSET(actor);
+                field_restart_actor_animation(actor);
+                field_command_history_clear(actor->object_index);
+                actor->command = FIELD_ACTOR_COMMAND_AIR_FOLLOW_UP;
+                actor->frame_timer = 1;
+                actor->frame_ticks = 1;
+                actor->frame_length = 1;
+                return;
+            case FIELD_ABILITY_GRAPPLE:
+                if ((g_field_object_states[actor->object_index].contact.word >> FIELD_CONTACT_LINKED_BIT) & 1)
+                {
+                    g_field_object_states[g_field_object_states[actor->object_index].linked_object_index].flags &= ~FIELD_OBJECT_FLAG_LINK_TARGET;
+                    actor->command = 0;
+                    field_restart_sequence_animation(actor);
+                    tmp = field_find_free_actor_slot(actor->object_index, 0);
 
-            return;
-        default:
-            return;
+                    if (tmp != FIELD_ACTOR_SLOT_NONE)
+                    {
+                        if (field_roll_object_evasion(actor->object_index, g_field_object_states[actor->object_index].linked_object_index) != 0)
+                        {
+                            if (g_field_player_records[actor->object_index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
+                            {
+                                field_resolve_object_hit(actor->object_index, g_field_object_states[actor->object_index].linked_object_index,
+                                                         FIELD_GRAPPLE_GLOVE_THROW_ACTION);
+                            }
+                            else
+                            {
+                                field_resolve_object_hit(actor->object_index, g_field_object_states[actor->object_index].linked_object_index,
+                                                         FIELD_GRAPPLE_THROW_ACTION);
+                            }
+
+                            index = actor->object_index;
+                            anim_id = FIELD_GRAPPLE_THROW_ANIMATION;
+
+                            if (g_field_player_records[index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
+                            {
+                                anim_id = FIELD_GRAPPLE_GLOVE_THROW_ANIMATION;
+                            }
+                        }
+                        else
+                        {
+                            if (g_field_player_records[actor->object_index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
+                            {
+                                field_resolve_object_hit(g_field_object_states[actor->object_index].linked_object_index, actor->object_index,
+                                                         FIELD_GRAPPLE_GLOVE_REVERSAL_ACTION);
+                            }
+                            else
+                            {
+                                field_resolve_object_hit(g_field_object_states[actor->object_index].linked_object_index, actor->object_index,
+                                                         FIELD_GRAPPLE_REVERSAL_ACTION);
+                            }
+
+                            index = actor->object_index;
+                            anim_id = FIELD_GRAPPLE_REVERSAL_ANIMATION;
+
+                            if (g_field_player_records[index].head.bytes.weapon_type == FIELD_WEAPON_GLOVE)
+                            {
+                                anim_id = FIELD_GRAPPLE_GLOVE_REVERSAL_ANIMATION;
+                            }
+                        }
+
+                        if (field_start_builtin_animation(index, tmp, anim_id) != 0)
+                        {
+                            targets = g_field_object_states[actor->object_index].linked_object_index;
+                            field_start_actor_animation(tmp, 1, (u8*)&targets);
+                        }
+
+                        field_command_history_clear(actor->object_index);
+                    }
+
+                    field_release_object_link(actor);
+                }
+
+                return;
+            default:
+                return;
         }
     }
     else if (field_get_held_action_buttons(actor->object_index, FIELD_RESOURCE_ACTION_ABILITY_1, actor) != 0 ||
@@ -439,26 +435,26 @@ s32 field_update_actor_action_chain(FieldActor* actor)
 
         switch (actor->animation & FIELD_ANIMATION_INDEX_MASK)
         {
-        case FIELD_ANIMATION_POWER_ATTACK:
-            if (g_field_resource_actions[actor->object_index].slots[tmp].command == FIELD_ABILITY_JUMP ||
-                g_field_resource_actions[actor->object_index].slots[tmp].command == FIELD_ABILITY_HIGH_JUMP)
-            {
-                actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_JUMP_POWER_ATTACK);
-                field_prepare_actor_action(actor);
-                field_command_history_clear(actor->object_index);
-            }
+            case FIELD_ANIMATION_POWER_ATTACK:
+                if (g_field_resource_actions[actor->object_index].slots[tmp].command == FIELD_ABILITY_JUMP ||
+                    g_field_resource_actions[actor->object_index].slots[tmp].command == FIELD_ABILITY_HIGH_JUMP)
+                {
+                    actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_JUMP_POWER_ATTACK);
+                    field_prepare_actor_action(actor);
+                    field_command_history_clear(actor->object_index);
+                }
 
-            break;
-        case FIELD_ABILITY_CROUCH:
-            if (g_field_resource_actions[actor->object_index].slots[tmp].command == FIELD_ABILITY_JUMP)
-            {
-                FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_HIGH_JUMP, 0, 1);
-                actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_CHAIN);
-                field_prepare_actor_action(actor);
-                field_command_history_clear(actor->object_index);
-            }
+                break;
+            case FIELD_ABILITY_CROUCH:
+                if (g_field_resource_actions[actor->object_index].slots[tmp].command == FIELD_ABILITY_JUMP)
+                {
+                    FIELD_SET_CHAIN_ACTION(actor, FIELD_ABILITY_HIGH_JUMP, 0, 1);
+                    actor->command = FIELD_ACTION_COMMAND(FIELD_RESOURCE_ACTION_CHAIN);
+                    field_prepare_actor_action(actor);
+                    field_command_history_clear(actor->object_index);
+                }
 
-            break;
+                break;
         }
     }
     else if (field_get_held_action_buttons(actor->object_index, FIELD_RESOURCE_ACTION_COMBO, actor) != 0)
@@ -625,33 +621,33 @@ s32 field_update_pending_action(FieldActor* actor)
 
     switch (mode)
     {
-    case FIELD_RESOURCE_ACTION_POWER_ATTACK:
-        if (selection != 4 && selection != 6 && selection != 5 && selection != 7 && selection != FIELD_RESOURCE_ACTION_DASH_POWER_ATTACK &&
-            selection != FIELD_RESOURCE_ACTION_JUMP_POWER_ATTACK && selection != FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK)
-        {
-            field_command_history_clear(object_index);
-            g_field_object_states[actor->object_index].retry_count = 0;
-            actor->variant = 0;
-            g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_CHAINING;
-            field_restart_actor_animation_reverse(actor);
-            actor->command = FIELD_ACTOR_COMMAND_SEQUENCE_WAIT;
-            actor->command_param = FIELD_COMBO_END_WAIT;
-            return 1;
-        }
+        case FIELD_RESOURCE_ACTION_POWER_ATTACK:
+            if (selection != 4 && selection != 6 && selection != 5 && selection != 7 && selection != FIELD_RESOURCE_ACTION_DASH_POWER_ATTACK &&
+                selection != FIELD_RESOURCE_ACTION_JUMP_POWER_ATTACK && selection != FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK)
+            {
+                field_command_history_clear(object_index);
+                g_field_object_states[actor->object_index].retry_count = 0;
+                actor->variant = 0;
+                g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_CHAINING;
+                field_restart_actor_animation_reverse(actor);
+                actor->command = FIELD_ACTOR_COMMAND_SEQUENCE_WAIT;
+                actor->command_param = FIELD_COMBO_END_WAIT;
+                return 1;
+            }
 
-        break;
-    case FIELD_RESOURCE_ACTION_DASH_POWER_ATTACK:
-    case FIELD_RESOURCE_ACTION_JUMP_POWER_ATTACK:
-    case FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK:
-        if (selection != 4 && selection != 6 && selection != 5 && selection != 7)
-        {
-            field_command_history_clear(object_index);
-            g_field_object_states[actor->object_index].retry_count = 0;
-            actor->variant = 0;
-            g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_CHAINING;
-        }
+            break;
+        case FIELD_RESOURCE_ACTION_DASH_POWER_ATTACK:
+        case FIELD_RESOURCE_ACTION_JUMP_POWER_ATTACK:
+        case FIELD_RESOURCE_ACTION_TACKLE_POWER_ATTACK:
+            if (selection != 4 && selection != 6 && selection != 5 && selection != 7)
+            {
+                field_command_history_clear(object_index);
+                g_field_object_states[actor->object_index].retry_count = 0;
+                actor->variant = 0;
+                g_field_object_states[actor->object_index].flags &= ~FIELD_OBJECT_CHAINING;
+            }
 
-        break;
+            break;
     }
 
     return 0;
@@ -747,8 +743,7 @@ static inline u8 field_sequence_byte(s32 sequence_index, s32 object_index, s32 c
  * @param sequence_index Row within the selected weapon bank.
  * @return Address of the current sequence byte.
  */
-static inline u8* field_current_actor_sequence_cursor(u8* scripts, FieldPlayerRecord* players, FieldObjectState* states,
-                                                      s32 object_index, s32 sequence_index)
+static inline u8* field_current_actor_sequence_cursor(u8* scripts, FieldPlayerRecord* players, FieldObjectState* states, s32 object_index, s32 sequence_index)
 {
     s32 bank;
     s32 row_offset;
@@ -811,16 +806,14 @@ void field_update_technique_command(FieldActor* actor, s32 sequence_index)
                 players = g_field_player_records;
                 object_index = actor->object_index;
 
-                if (*field_current_actor_sequence_cursor(scripts, players, states, object_index, sequence_index) ==
-                    FIELD_SEQUENCE_WAIT_ANIMATION)
+                if (*field_current_actor_sequence_cursor(scripts, players, states, object_index, sequence_index) == FIELD_SEQUENCE_WAIT_ANIMATION)
                 {
                     states[object_index].sequence_position++;
                 }
 
                 object_index = actor->object_index;
 
-                if (*field_current_actor_sequence_cursor(scripts, players, states, object_index, sequence_index) ==
-                    FIELD_SEQUENCE_WAIT_REPEAT)
+                if (*field_current_actor_sequence_cursor(scripts, players, states, object_index, sequence_index) == FIELD_SEQUENCE_WAIT_REPEAT)
                 {
                     if (states[object_index].contact.bytes.target_count == 0)
                     {
@@ -983,6 +976,7 @@ void field_follow_leader(FieldActor* actor)
     distance = squares->vx + squares->vz;
 
     advance_route = (index + 1) * FIELD_FOLLOW_START_DISTANCE < distance;
+
     if (advance_route)
     {
         states = g_field_object_states;
@@ -990,6 +984,7 @@ void field_follow_leader(FieldActor* actor)
         next = state->route_index;
         advance_route = next < FIELD_ROUTE_HISTORY_LENGTH - 1;
     }
+
     if (advance_route)
     {
         state->route_index = next + 1;
@@ -1165,7 +1160,7 @@ void field_update_timed_walk(FieldActor* actor, s32 dx, s32 dz)
     x = actor->x;
     z = actor->z;
 
-    if (x >= 0 && x < (bounds->width << 8) && z >= 0 && z < ((s32)(bounds->depth << 16) >> 7))
+    if (x >= 0 && x < (bounds->width << 8) && z >= 0 && z < ((bounds->depth << 16) >> 7))
     {
         mover->x = x;
         mover->height = actor->y;
@@ -1660,200 +1655,200 @@ s32 field_execute_actor_sequence(FieldActor* actor, s32 script_index)
     {
         switch (opcode)
         {
-        case FIELD_SEQUENCE_END:
-            g_field_object_states[command_slot].sequence_position = cursor;
-            actor->animation_state = FIELD_SEQUENCE_FRAME_WAIT;
-            actor->animation_frame = 0;
-            actor->animation_active = 1;
-            actor->animation &= FIELD_ANIMATION_FACING;
-            return 0;
-        default:
-            command = *opcode_ptr;
-
-            switch (command)
-            {
-            case FIELD_SEQUENCE_START_TARGETS_0:
-            case FIELD_SEQUENCE_START_TARGETS_1:
-            case FIELD_SEQUENCE_START_TARGETS_2:
-                source_state = FIELD_OBJECT_STATE_AT(slots, actor->object_index);
-                target_kind_flags =
-                    ((command - FIELD_SEQUENCE_START_TARGETS_0) << FIELD_ACTION_PARAMETER_ANIMATION_SHIFT) | FIELD_ACTION_PARAMETER_TRANSIENT_ACTOR;
-                target_command = source_state->sequence_id & FIELD_ACTION_PARAMETER_SEQUENCE_MASK;
-                target_state = source_state;
-                target_command |= target_kind_flags;
-                target_command |= FIELD_ACTION_PARAMETER_SELECT_ANIMATION;
-                target_state->action_parameter = target_command;
-                target_owner = actor->object_index;
-                actor_index = field_allocate_sequence_actor(target_owner, slots[target_owner].action_parameter);
-
-                for (target_index = 0; target_index < slots[actor->object_index].contact.bytes.target_count; target_index++)
-                {
-                    parameters[target_index] = slots[actor->object_index].targets[target_index];
-                }
-
-                field_start_actor_animation(actor_index, slots[actor->object_index].contact.bytes.target_count, (u8*)parameters);
-                cursor += 1;
-                slots[actor->object_index].action_parameter = FIELD_ACTION_PARAMETER_NONE;
-                continue;
-            case FIELD_SEQUENCE_START_CURRENT_TARGETS:
-                current_target_state = FIELD_OBJECT_STATE_AT(slots, actor->object_index);
-                current_target_state->action_parameter = current_target_state->sequence_id;
-                current_target_owner = actor->object_index;
-                actor_index = field_allocate_sequence_actor(current_target_owner, slots[current_target_owner].sequence_id);
-                slots[actor->object_index].action_parameter = FIELD_ACTION_PARAMETER_NONE;
-                current_copy_owner = actor->object_index;
-                current_target_index = 0;
-
-                if (slots[current_copy_owner].contact.bytes.target_count != 0)
-                {
-                    current_target_output = parameters;
-
-                    do
-                    {
-                        *current_target_output = slots[current_copy_owner].targets[current_target_index];
-                        current_target_index++;
-                        current_target_output++;
-                        current_copy_owner = actor->object_index;
-                    } while (current_target_index < slots[current_copy_owner].contact.bytes.target_count);
-                }
-
-                field_start_actor_animation(actor_index, slots[actor->object_index].contact.bytes.target_count, (u8*)parameters);
-                cursor += 1;
-                continue;
-            case FIELD_SEQUENCE_DELAY:
-                result = 0;
-                delay_owner = actor->object_index;
-                pending_state = (FieldObjectState*)(delay_owner * sizeof(*slots));
-                delay_operand = script_offset + players[delay_owner].head.bytes.weapon_type * FIELD_SEQUENCE_BANK_SIZE;
-                delay_operand += (uintptr_t)programs;
-                delay_operand += cursor;
-                pending_state = (FieldObjectState*)((uintptr_t)pending_state + (uintptr_t)slots);
-                pending_state->command_timer = ((u8*)delay_operand)[1];
-                cursor += 2;
-                slots[actor->object_index].sequence_position = cursor;
-                return result;
-            case FIELD_SEQUENCE_WAIT_REPEAT:
-            case FIELD_SEQUENCE_WAIT_ANIMATION:
-                slots[actor->object_index].sequence_position = cursor;
+            case FIELD_SEQUENCE_END:
+                g_field_object_states[command_slot].sequence_position = cursor;
+                actor->animation_state = FIELD_SEQUENCE_FRAME_WAIT;
+                actor->animation_frame = 0;
+                actor->animation_active = 1;
+                actor->animation &= FIELD_ANIMATION_FACING;
                 return 0;
-            case FIELD_SEQUENCE_TOGGLE_DASH:
-                flag_state = FIELD_OBJECT_STATE_AT(slots, actor->object_index);
-                updated_flags = flag_state->flags ^ FIELD_OBJECT_FLAG_DASH;
-                flag_state->flags = updated_flags;
-                cursor += 1;
-                field_update_object_effects(actor->object_index);
-                continue;
-            case FIELD_SEQUENCE_TOGGLE_CHAINING:
-                flag_state = FIELD_OBJECT_STATE_AT(slots, actor->object_index);
-                updated_flags = flag_state->flags ^ FIELD_OBJECT_CHAINING;
-                flag_state->flags = updated_flags;
-                cursor += 1;
-                field_update_object_effects(actor->object_index);
-                continue;
-            case FIELD_SEQUENCE_TOGGLE_FACING:
-                cursor += 1;
-                actor->animation ^= FIELD_ANIMATION_FACING;
-                continue;
-            case FIELD_SEQUENCE_START_RESOURCE:
-                actor_index = field_find_free_actor_slot(actor->object_index, 0);
-
-                if (actor_index != FIELD_ACTOR_SLOT_NONE)
-                {
-                    resource_owner = actor->object_index;
-                    resource_operand = script_offset + players[resource_owner].head.bytes.weapon_type * FIELD_SEQUENCE_BANK_SIZE;
-                    resource_operand += (uintptr_t)programs;
-                    resource_operand += cursor;
-                    field_start_builtin_animation(resource_owner, actor_index, ((u8*)resource_operand)[1]);
-                    field_start_actor_animation(actor_index, 0, NULL);
-                }
-
-                cursor += 2;
-                clear_slot = actor->object_index;
-                movement_mask = ~FIELD_MOVEMENT_SEQUENCE_MASK;
-                slots[clear_slot].movement.word &= movement_mask;
-
-                break;
-            case FIELD_SEQUENCE_START_0:
-            case FIELD_SEQUENCE_START_1:
-            case FIELD_SEQUENCE_START_2:
-                animation_state = FIELD_OBJECT_STATE_AT(slots, actor->object_index);
-                kind_flags = ((command - FIELD_SEQUENCE_START_0) << FIELD_ACTION_PARAMETER_ANIMATION_SHIFT) | FIELD_ACTION_PARAMETER_TRANSIENT_ACTOR;
-                sequence_command = animation_state->sequence_id & FIELD_ACTION_PARAMETER_SEQUENCE_MASK;
-                sequence_command |= kind_flags;
-                sequence_command |= FIELD_ACTION_PARAMETER_SELECT_ANIMATION;
-                animation_state->action_parameter = sequence_command;
-
-                animation_owner = actor->object_index;
-                field_start_actor_animation(field_allocate_sequence_actor(animation_owner, slots[animation_owner].action_parameter), 0, NULL);
-                slots[actor->object_index].action_parameter = FIELD_ACTION_PARAMETER_NONE;
-                clear_slot = actor->object_index;
-                cursor += 1;
-                movement_mask = ~FIELD_MOVEMENT_SEQUENCE_MASK;
-                slots[clear_slot].movement.word &= movement_mask;
-
-                break;
-            case FIELD_SEQUENCE_START_CURRENT:
-                current_animation_state = FIELD_OBJECT_STATE_AT(slots, actor->object_index);
-                current_animation_state->action_parameter = current_animation_state->sequence_id;
-                allocation_owner = actor->object_index;
-                actor_index = field_allocate_sequence_actor(allocation_owner, slots[allocation_owner].sequence_id);
-                slots[actor->object_index].action_parameter = FIELD_ACTION_PARAMETER_NONE;
-                field_start_actor_animation(actor_index, 0, NULL);
-                clear_slot = actor->object_index;
-                cursor += 1;
-                movement_mask = ~FIELD_MOVEMENT_SEQUENCE_MASK;
-                slots[clear_slot].movement.word &= movement_mask;
-
-                break;
-            case FIELD_SEQUENCE_SET_ANIMATION:
-                command_owner = actor->object_index;
-                target_state = (FieldObjectState*)(command_owner * sizeof(*slots));
-                animation_operand = script_offset + players[command_owner].head.bytes.weapon_type * FIELD_SEQUENCE_BANK_SIZE;
-                animation_operand += (uintptr_t)programs;
-                animation_operand += cursor;
-                target_state = (FieldObjectState*)((uintptr_t)target_state + (uintptr_t)slots);
-                target_state->action_parameter = ((u8*)animation_operand)[1];
-                cursor += 2;
-                clear_slot = actor->object_index;
-                movement_mask = ~FIELD_MOVEMENT_SEQUENCE_MASK;
-                slots[clear_slot].movement.word &= movement_mask;
-
-                break;
-            case FIELD_SEQUENCE_ALLOCATE_0:
-            case FIELD_SEQUENCE_ALLOCATE_1:
-            case FIELD_SEQUENCE_ALLOCATE_2:
-                allocation_state = FIELD_OBJECT_STATE_AT(slots, actor->object_index);
-                allocation_kind_flags =
-                    ((command - FIELD_SEQUENCE_ALLOCATE_0) << FIELD_ACTION_PARAMETER_ANIMATION_SHIFT) | FIELD_ACTION_PARAMETER_TRANSIENT_ACTOR;
-                allocation_command = allocation_state->sequence_id & FIELD_ACTION_PARAMETER_SEQUENCE_MASK;
-                allocation_command |= allocation_kind_flags;
-                allocation_command |= FIELD_ACTION_PARAMETER_SELECT_ANIMATION;
-                allocation_state->action_parameter = allocation_command;
-
-                allocation_owner = actor->object_index;
-                animation_command = slots[allocation_owner].action_parameter;
-                field_allocate_sequence_actor(allocation_owner, animation_command);
-                clear_slot = actor->object_index;
-                cursor += 1;
-                movement_mask = ~FIELD_MOVEMENT_SEQUENCE_MASK;
-                slots[clear_slot].movement.word &= movement_mask;
-
-                break;
-            case FIELD_SEQUENCE_ALLOCATE_CURRENT:
-                current_allocation_state = FIELD_OBJECT_STATE_AT(slots, actor->object_index);
-                current_allocation_state->action_parameter = current_allocation_state->sequence_id;
-                allocation_owner = actor->object_index;
-                animation_command = slots[allocation_owner].sequence_id;
-                field_allocate_sequence_actor(allocation_owner, animation_command);
-                clear_slot = actor->object_index;
-                cursor += 1;
-                movement_mask = ~FIELD_MOVEMENT_SEQUENCE_MASK;
-                slots[clear_slot].movement.word &= movement_mask;
-
-                break;
             default:
-                continue;
-            }
+                command = *opcode_ptr;
+
+                switch (command)
+                {
+                    case FIELD_SEQUENCE_START_TARGETS_0:
+                    case FIELD_SEQUENCE_START_TARGETS_1:
+                    case FIELD_SEQUENCE_START_TARGETS_2:
+                        source_state = FIELD_OBJECT_STATE_AT(slots, actor->object_index);
+                        target_kind_flags =
+                            ((command - FIELD_SEQUENCE_START_TARGETS_0) << FIELD_ACTION_PARAMETER_ANIMATION_SHIFT) | FIELD_ACTION_PARAMETER_TRANSIENT_ACTOR;
+                        target_command = source_state->sequence_id & FIELD_ACTION_PARAMETER_SEQUENCE_MASK;
+                        target_state = source_state;
+                        target_command |= target_kind_flags;
+                        target_command |= FIELD_ACTION_PARAMETER_SELECT_ANIMATION;
+                        target_state->action_parameter = target_command;
+                        target_owner = actor->object_index;
+                        actor_index = field_allocate_sequence_actor(target_owner, slots[target_owner].action_parameter);
+
+                        for (target_index = 0; target_index < slots[actor->object_index].contact.bytes.target_count; target_index++)
+                        {
+                            parameters[target_index] = slots[actor->object_index].targets[target_index];
+                        }
+
+                        field_start_actor_animation(actor_index, slots[actor->object_index].contact.bytes.target_count, (u8*)parameters);
+                        cursor++;
+                        slots[actor->object_index].action_parameter = FIELD_ACTION_PARAMETER_NONE;
+                        continue;
+                    case FIELD_SEQUENCE_START_CURRENT_TARGETS:
+                        current_target_state = FIELD_OBJECT_STATE_AT(slots, actor->object_index);
+                        current_target_state->action_parameter = current_target_state->sequence_id;
+                        current_target_owner = actor->object_index;
+                        actor_index = field_allocate_sequence_actor(current_target_owner, slots[current_target_owner].sequence_id);
+                        slots[actor->object_index].action_parameter = FIELD_ACTION_PARAMETER_NONE;
+                        current_copy_owner = actor->object_index;
+                        current_target_index = 0;
+
+                        if (slots[current_copy_owner].contact.bytes.target_count != 0)
+                        {
+                            current_target_output = parameters;
+
+                            do
+                            {
+                                *current_target_output = slots[current_copy_owner].targets[current_target_index];
+                                current_target_index++;
+                                current_target_output++;
+                                current_copy_owner = actor->object_index;
+                            } while (current_target_index < slots[current_copy_owner].contact.bytes.target_count);
+                        }
+
+                        field_start_actor_animation(actor_index, slots[actor->object_index].contact.bytes.target_count, (u8*)parameters);
+                        cursor++;
+                        continue;
+                    case FIELD_SEQUENCE_DELAY:
+                        result = 0;
+                        delay_owner = actor->object_index;
+                        pending_state = (FieldObjectState*)(delay_owner * sizeof(*slots));
+                        delay_operand = script_offset + players[delay_owner].head.bytes.weapon_type * FIELD_SEQUENCE_BANK_SIZE;
+                        delay_operand += (uintptr_t)programs;
+                        delay_operand += cursor;
+                        pending_state = (FieldObjectState*)((uintptr_t)pending_state + (uintptr_t)slots);
+                        pending_state->command_timer = ((u8*)delay_operand)[1];
+                        cursor += 2;
+                        slots[actor->object_index].sequence_position = cursor;
+                        return result;
+                    case FIELD_SEQUENCE_WAIT_REPEAT:
+                    case FIELD_SEQUENCE_WAIT_ANIMATION:
+                        slots[actor->object_index].sequence_position = cursor;
+                        return 0;
+                    case FIELD_SEQUENCE_TOGGLE_DASH:
+                        flag_state = FIELD_OBJECT_STATE_AT(slots, actor->object_index);
+                        updated_flags = flag_state->flags ^ FIELD_OBJECT_FLAG_DASH;
+                        flag_state->flags = updated_flags;
+                        cursor++;
+                        field_update_object_effects(actor->object_index);
+                        continue;
+                    case FIELD_SEQUENCE_TOGGLE_CHAINING:
+                        flag_state = FIELD_OBJECT_STATE_AT(slots, actor->object_index);
+                        updated_flags = flag_state->flags ^ FIELD_OBJECT_CHAINING;
+                        flag_state->flags = updated_flags;
+                        cursor++;
+                        field_update_object_effects(actor->object_index);
+                        continue;
+                    case FIELD_SEQUENCE_TOGGLE_FACING:
+                        cursor++;
+                        actor->animation ^= FIELD_ANIMATION_FACING;
+                        continue;
+                    case FIELD_SEQUENCE_START_RESOURCE:
+                        actor_index = field_find_free_actor_slot(actor->object_index, 0);
+
+                        if (actor_index != FIELD_ACTOR_SLOT_NONE)
+                        {
+                            resource_owner = actor->object_index;
+                            resource_operand = script_offset + players[resource_owner].head.bytes.weapon_type * FIELD_SEQUENCE_BANK_SIZE;
+                            resource_operand += (uintptr_t)programs;
+                            resource_operand += cursor;
+                            field_start_builtin_animation(resource_owner, actor_index, ((u8*)resource_operand)[1]);
+                            field_start_actor_animation(actor_index, 0, NULL);
+                        }
+
+                        cursor += 2;
+                        clear_slot = actor->object_index;
+                        movement_mask = ~FIELD_MOVEMENT_SEQUENCE_MASK;
+                        slots[clear_slot].movement.word &= movement_mask;
+
+                        break;
+                    case FIELD_SEQUENCE_START_0:
+                    case FIELD_SEQUENCE_START_1:
+                    case FIELD_SEQUENCE_START_2:
+                        animation_state = FIELD_OBJECT_STATE_AT(slots, actor->object_index);
+                        kind_flags = ((command - FIELD_SEQUENCE_START_0) << FIELD_ACTION_PARAMETER_ANIMATION_SHIFT) | FIELD_ACTION_PARAMETER_TRANSIENT_ACTOR;
+                        sequence_command = animation_state->sequence_id & FIELD_ACTION_PARAMETER_SEQUENCE_MASK;
+                        sequence_command |= kind_flags;
+                        sequence_command |= FIELD_ACTION_PARAMETER_SELECT_ANIMATION;
+                        animation_state->action_parameter = sequence_command;
+
+                        animation_owner = actor->object_index;
+                        field_start_actor_animation(field_allocate_sequence_actor(animation_owner, slots[animation_owner].action_parameter), 0, NULL);
+                        slots[actor->object_index].action_parameter = FIELD_ACTION_PARAMETER_NONE;
+                        clear_slot = actor->object_index;
+                        cursor++;
+                        movement_mask = ~FIELD_MOVEMENT_SEQUENCE_MASK;
+                        slots[clear_slot].movement.word &= movement_mask;
+
+                        break;
+                    case FIELD_SEQUENCE_START_CURRENT:
+                        current_animation_state = FIELD_OBJECT_STATE_AT(slots, actor->object_index);
+                        current_animation_state->action_parameter = current_animation_state->sequence_id;
+                        allocation_owner = actor->object_index;
+                        actor_index = field_allocate_sequence_actor(allocation_owner, slots[allocation_owner].sequence_id);
+                        slots[actor->object_index].action_parameter = FIELD_ACTION_PARAMETER_NONE;
+                        field_start_actor_animation(actor_index, 0, NULL);
+                        clear_slot = actor->object_index;
+                        cursor++;
+                        movement_mask = ~FIELD_MOVEMENT_SEQUENCE_MASK;
+                        slots[clear_slot].movement.word &= movement_mask;
+
+                        break;
+                    case FIELD_SEQUENCE_SET_ANIMATION:
+                        command_owner = actor->object_index;
+                        target_state = (FieldObjectState*)(command_owner * sizeof(*slots));
+                        animation_operand = script_offset + players[command_owner].head.bytes.weapon_type * FIELD_SEQUENCE_BANK_SIZE;
+                        animation_operand += (uintptr_t)programs;
+                        animation_operand += cursor;
+                        target_state = (FieldObjectState*)((uintptr_t)target_state + (uintptr_t)slots);
+                        target_state->action_parameter = ((u8*)animation_operand)[1];
+                        cursor += 2;
+                        clear_slot = actor->object_index;
+                        movement_mask = ~FIELD_MOVEMENT_SEQUENCE_MASK;
+                        slots[clear_slot].movement.word &= movement_mask;
+
+                        break;
+                    case FIELD_SEQUENCE_ALLOCATE_0:
+                    case FIELD_SEQUENCE_ALLOCATE_1:
+                    case FIELD_SEQUENCE_ALLOCATE_2:
+                        allocation_state = FIELD_OBJECT_STATE_AT(slots, actor->object_index);
+                        allocation_kind_flags =
+                            ((command - FIELD_SEQUENCE_ALLOCATE_0) << FIELD_ACTION_PARAMETER_ANIMATION_SHIFT) | FIELD_ACTION_PARAMETER_TRANSIENT_ACTOR;
+                        allocation_command = allocation_state->sequence_id & FIELD_ACTION_PARAMETER_SEQUENCE_MASK;
+                        allocation_command |= allocation_kind_flags;
+                        allocation_command |= FIELD_ACTION_PARAMETER_SELECT_ANIMATION;
+                        allocation_state->action_parameter = allocation_command;
+
+                        allocation_owner = actor->object_index;
+                        animation_command = slots[allocation_owner].action_parameter;
+                        field_allocate_sequence_actor(allocation_owner, animation_command);
+                        clear_slot = actor->object_index;
+                        cursor++;
+                        movement_mask = ~FIELD_MOVEMENT_SEQUENCE_MASK;
+                        slots[clear_slot].movement.word &= movement_mask;
+
+                        break;
+                    case FIELD_SEQUENCE_ALLOCATE_CURRENT:
+                        current_allocation_state = FIELD_OBJECT_STATE_AT(slots, actor->object_index);
+                        current_allocation_state->action_parameter = current_allocation_state->sequence_id;
+                        allocation_owner = actor->object_index;
+                        animation_command = slots[allocation_owner].sequence_id;
+                        field_allocate_sequence_actor(allocation_owner, animation_command);
+                        clear_slot = actor->object_index;
+                        cursor++;
+                        movement_mask = ~FIELD_MOVEMENT_SEQUENCE_MASK;
+                        slots[clear_slot].movement.word &= movement_mask;
+
+                        break;
+                    default:
+                        continue;
+                }
         }
     }
 

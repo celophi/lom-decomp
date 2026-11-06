@@ -9,9 +9,6 @@
 #include "../internal/field_records.h"
 #include "common/saved_game.h"
 
-/** @brief g_saved_game viewed as FIELD's game state. */
-#define FIELD_SAVED_GAME ((SavedGameLayout*)&g_saved_game)
-
 /**
  * @brief Give the player a land's artifact without any checks and record its artifact order.
  * @param land_index Land index, below FIELD_LAND_COUNT.
@@ -19,7 +16,7 @@
  */
 void field_award_land_artifact(s32 land_index)
 {
-    SavedGameLayout* game = FIELD_SAVED_GAME;
+    SavedGameLayout* game = &g_saved_game.layout;
 
     game->control.fields.artifact_count++;
     game->lands[land_index].flags |= FIELD_LAND_ARTIFACT_OBTAINED;
@@ -37,31 +34,31 @@ void field_reset_lands(void)
     SavedGameLayout* game;
     s32 i;
 
-    FIELD_SAVED_GAME->control.fields.artifact_count = 0;
-    FIELD_SAVED_GAME->control.fields.placed_land_count = 0;
+    g_saved_game.layout.control.fields.artifact_count = 0;
+    g_saved_game.layout.control.fields.placed_land_count = 0;
 
     for (i = 0; i < FIELD_LAND_COUNT; i++)
     {
-        FIELD_SAVED_GAME->lands[i].x = FIELD_LAND_CELL_NONE;
-        FIELD_SAVED_GAME->lands[i].z = FIELD_LAND_CELL_NONE;
-        FIELD_SAVED_GAME->lands[i].placement_order = 0;
-        FIELD_SAVED_GAME->lands[i].artifact_order = 0;
-        FIELD_SAVED_GAME->lands[i].levels[0] = 0;
-        FIELD_SAVED_GAME->lands[i].levels[1] = 0;
-        FIELD_SAVED_GAME->lands[i].levels[2] = 0;
-        FIELD_SAVED_GAME->lands[i].levels[3] = 0;
-        FIELD_SAVED_GAME->lands[i].levels[4] = 0;
-        FIELD_SAVED_GAME->lands[i].levels[5] = 0;
-        FIELD_SAVED_GAME->lands[i].levels[6] = 0;
-        FIELD_SAVED_GAME->lands[i].levels[7] = 0;
-        FIELD_SAVED_GAME->lands[i].flags &= ~(FIELD_LAND_ARTIFACT_OBTAINED | FIELD_LAND_PLACED | FIELD_LAND_FLAG_04);
+        g_saved_game.layout.lands[i].x = FIELD_LAND_CELL_NONE;
+        g_saved_game.layout.lands[i].z = FIELD_LAND_CELL_NONE;
+        g_saved_game.layout.lands[i].placement_order = 0;
+        g_saved_game.layout.lands[i].artifact_order = 0;
+        g_saved_game.layout.lands[i].levels[0] = 0;
+        g_saved_game.layout.lands[i].levels[1] = 0;
+        g_saved_game.layout.lands[i].levels[2] = 0;
+        g_saved_game.layout.lands[i].levels[3] = 0;
+        g_saved_game.layout.lands[i].levels[4] = 0;
+        g_saved_game.layout.lands[i].levels[5] = 0;
+        g_saved_game.layout.lands[i].levels[6] = 0;
+        g_saved_game.layout.lands[i].levels[7] = 0;
+        g_saved_game.layout.lands[i].flags &= ~(FIELD_LAND_ARTIFACT_OBTAINED | FIELD_LAND_PLACED | FIELD_LAND_FLAG_04);
     }
 
     for (i = 0; i < FIELD_LAND_COUNT; i++)
     {
-        FIELD_SAVED_GAME->lands[i].flags |= FIELD_LAND_FLAG_04;
+        g_saved_game.layout.lands[i].flags |= FIELD_LAND_FLAG_04;
     }
 
-    game = FIELD_SAVED_GAME;
+    game = &g_saved_game.layout;
     ((FieldLandWords*)game->lands)[24].word &= ~FIELD_LAND_FLAG_04;
 }

@@ -3,6 +3,10 @@
 
 #include "common/render_context.h"
 
+/** @brief Bytes a name character takes: a single-byte glyph or a double-byte Shift-JIS glyph. */
+#define NAME_GLYPH_SIZE_SINGLE 1
+#define NAME_GLYPH_SIZE_DOUBLE 2
+
 /** @brief GNAME's render buffers, 0x20000 into the secondary overlay slot. */
 #define GNAME_RENDER_BUFFERS ((RenderContext*)SECONDARY_OVERLAY_AT(0x20000))
 
@@ -17,14 +21,8 @@
  * @param allow_empty_cancel Whether cancel may exit with an empty name.
  * @return Final cancel or confirmation result.
  */
-s32 gname_run(
-    RenderContext* render_buffers,
-    const u8* initial_name,
-    u8* active_name,
-    s32 source_mode,
-    s32 history_index,
-    const u8* custom_name,
-    s32 allow_empty_cancel);
+s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_name, s32 source_mode, s32 history_index, const u8* custom_name,
+              s32 allow_empty_cancel);
 
 /** @brief Initialize name-entry resources and session state. */
 void gname_init(void);

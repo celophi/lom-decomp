@@ -28,7 +28,7 @@ s32 field_build_group_monster_records(s32 group)
 
     count = 0;
 
-    for (i = FIELD_PARTY_SIZE; i < (s32)g_field_runtime->state.actor_count; i++)
+    for (i = FIELD_PARTY_SIZE; i < g_field_runtime->state.actor_count; i++)
     {
         if ((g_field_runtime->actors[i].flags.word & FIELD_TRIGGER_GROUP_MASK) != group)
         {

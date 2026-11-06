@@ -7,6 +7,8 @@
 #define CD_DATA_SECTOR_SIZE 2048
 /** @brief Error code in the first reply byte when the drive rejects a command. */
 #define CD_DRIVE_ERROR_INVALID_COMMAND 0x40
+/** @brief g_cd_data_ready_pending while a data-ready callback is waiting to run. */
+#define CD_READY_CALLBACK_PENDING 1
 
 /**
  * @brief Supplies the next data-sector destination, or handles an XA sector.

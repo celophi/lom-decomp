@@ -65,6 +65,25 @@ typedef struct
 
 void wmap_draw_actor_sprite(WmapSpriteActor* actor, s32 screen_position, s32 texture_index, s32 ot_index, s32 variant);
 
+/** @brief Number of sprite actors, animation slots and motion slots. */
+#define WMAP_ACTOR_COUNT 256
+
+/** @brief Sprite actor pool; actor i animates from g_wmap_actor_animations[i]. */
+extern WmapSpriteActor g_wmap_sprite_actors[WMAP_ACTOR_COUNT];
+
+/** @brief Animation slot of each sprite actor, parallel to g_wmap_sprite_actors. */
+extern WmapAnimationSlot g_wmap_actor_animations[WMAP_ACTOR_COUNT];
+
+/**
+ * @brief The run of sprite actors an effect uses, starting at actor @p first; index it with [i].
+ * @param first Index of the block's first actor in g_wmap_sprite_actors.
+ */
+#define WMAP_ACTOR_BLOCK(first) (&g_wmap_sprite_actors[first])
+
+/** @brief Sprite actor and animation slot of the travel vehicle. */
+extern WmapSpriteActor g_wmap_vehicle_actor;
+extern WmapAnimationSlot g_wmap_vehicle_animation;
+
 /**
  * @brief Advance a sprite actor's animation by one frame and point it at the current frame's data.
  * @param actor Sprite actor to animate.
@@ -117,24 +136,5 @@ static inline void wmap_advance_actor_animation(WmapSpriteActor* actor, u8* reso
         actor->frame_data = data + offsets[frame + WMAP_ANIMATION_SEQUENCES];
     }
 }
-
-/** @brief Number of sprite actors, animation slots and motion slots. */
-#define WMAP_ACTOR_COUNT 256
-
-/** @brief Sprite actor pool; actor i animates from g_wmap_actor_animations[i]. */
-extern WmapSpriteActor g_wmap_sprite_actors[WMAP_ACTOR_COUNT];
-
-/** @brief Animation slot of each sprite actor, parallel to g_wmap_sprite_actors. */
-extern WmapAnimationSlot g_wmap_actor_animations[WMAP_ACTOR_COUNT];
-
-/**
- * @brief The run of sprite actors an effect uses, starting at actor @p first; index it with [i].
- * @param first Index of the block's first actor in g_wmap_sprite_actors.
- */
-#define WMAP_ACTOR_BLOCK(first) (&g_wmap_sprite_actors[first])
-
-/** @brief Sprite actor and animation slot of the travel vehicle. */
-extern WmapSpriteActor g_wmap_vehicle_actor;
-extern WmapAnimationSlot g_wmap_vehicle_animation;
 
 #endif

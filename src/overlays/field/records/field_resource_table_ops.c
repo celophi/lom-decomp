@@ -3,10 +3,11 @@
  * @brief Party script page lookups, encyclopedia entry bits and inventory record creation and release.
  */
 
-#include "main/audio/game_audio.h"
 #include "common.h"
+
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
+#include "main/audio/game_audio.h"
 
 /** @brief Diagnostic for a missing or out-of-range item template (detail 0 or 1). */
 #define DIAG_BAD_ITEM_TEMPLATE 0x6C
@@ -30,8 +31,6 @@ typedef struct
 } FieldItemTemplateTable;
 
 static s32 field_discard_all_items(void);
-
-FieldItemRecord* field_find_free_inventory_record(void);
 
 /**
  * @brief Return an event script of a party member.
@@ -125,7 +124,7 @@ s32 field_add_template_item(s32 index)
 
     if (record != NULL)
     {
-        field_copy_inventory_record((u8*)record, (u8*)item_template);
+        field_copy_inventory_record(record, item_template);
         return 0;
     }
 

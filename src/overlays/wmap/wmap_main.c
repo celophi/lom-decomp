@@ -148,6 +148,21 @@ typedef struct
     u8 pad_04[24];
 } WmapTileDisplay;
 
+/**
+ * @brief A CVECTOR read back as the packed word a packet's color slot holds.
+ */
+typedef union
+{
+    CVECTOR rgb;
+    u_long word;
+} WmapPackedColor;
+
+#if defined(VERSION_JP)
+#define WMAP_BACKDROP_COLOR_WORD(color) (*(u_long*)&(color))
+#else
+#define WMAP_BACKDROP_COLOR_WORD(color) (((WmapPackedColor*)&(color))->word)
+#endif
+
 extern s32 wmap_special_effect_34_run(s32 initialize);
 
 extern s32 g_wmap_script_button_mask;
@@ -449,21 +464,6 @@ void wmap_init_state(void)
     wmap_refresh_cells();
     wmap_init_preview_lines();
 }
-
-/**
- * @brief A CVECTOR read back as the packed word a packet's color slot holds.
- */
-typedef union
-{
-    CVECTOR rgb;
-    u_long word;
-} WmapPackedColor;
-
-#if defined(VERSION_JP)
-#define WMAP_BACKDROP_COLOR_WORD(color) (*(u_long*)&(color))
-#else
-#define WMAP_BACKDROP_COLOR_WORD(color) (((WmapPackedColor*)&(color))->word)
-#endif
 
 /**
  * @brief Fade and scroll the textured backdrop, or draw its color gradient.
@@ -1258,7 +1258,10 @@ static inline void wmap_upload_tim_block(RECT* rect, TimBlock* block)
     LoadImage(rect, (u_long*)(block + 1));
 }
 
-/** @brief Clear the map image destination to black. */
+/**
+ * @brief Clear the framebuffer area to black.
+ * @param rectangle Receives g_wmap_framebuffer_rect, the area cleared.
+ */
 static inline void wmap_clear_map_surface(RECT* rectangle)
 {
     *rectangle = g_wmap_framebuffer_rect;
@@ -1280,7 +1283,10 @@ static inline void wmap_upload_image_rect(RECT* rect, u_long* pixels)
     }
 }
 
-/** @brief Upload and synchronize a TIM pixel block with a valid destination. */
+/**
+ * @brief Upload a TIM pixel block when it has a VRAM position, then enable the artifact shadows.
+ * @param block TIM pixel block.
+ */
 static inline void wmap_load_pixel_block(TimBlock* block)
 {
     RECT rect;

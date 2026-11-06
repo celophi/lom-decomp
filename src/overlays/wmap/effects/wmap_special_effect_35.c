@@ -78,6 +78,107 @@ typedef struct
     s32 spawning;
 } WmapEffectEmitter;
 
+/** @brief Fade increment, inward speed, and duration of each orbiter. */
+#define WMAP_EFFECT35_ORBITER_SHADE_STEP 16
+#define WMAP_EFFECT35_ORBITER_SPEED 100
+#define WMAP_EFFECT35_ORBITER_FRAMES 191
+
+/**
+ * @brief Define an orbiter start: set its sprite and motion, then run the first update.
+ * @param name Start function name.
+ * @param step The orbiter sequence's step global.
+ * @param timer Frames left before advancing the sequence.
+ * @param slot Shared index in the actor, motion and animation pools.
+ * @param sequence_id Constant animation sequence to start.
+ * @param start_radius Initial radius stored in the motion record.
+ * @param start_angle Initial angle stored in the motion record.
+ * @param start_delay Initial delay counter.
+ * @param next Update function, called immediately after advancing.
+ */
+#define WMAP_EFFECT35_DEFINE_ORBITER_START(name, step, timer, slot, sequence_id, start_radius, start_angle, start_delay, next)                                 \
+    void name(void)                                                                                                                                            \
+    {                                                                                                                                                          \
+        WmapSpriteActor* actor = &g_wmap_sprite_actors[(slot)];                                                                                                \
+        WmapEffectMotion* motion = &g_wmap_actor_motions[(slot)];                                                                                              \
+                                                                                                                                                               \
+        g_wmap_actor_animations[(slot)].data = g_wmap_animation_bank_0;                                                                                        \
+        actor->scale_index = WMAP_SPRITE_SCALE_FULL;                                                                                                           \
+        if ((sequence_id) != 0)                                                                                                                                \
+        {                                                                                                                                                      \
+            actor->sequence = (sequence_id);                                                                                                                   \
+        }                                                                                                                                                      \
+        actor->previous_sequence = -1;                                                                                                                         \
+        actor->shade_step = WMAP_EFFECT35_ORBITER_SHADE_STEP;                                                                                                  \
+        actor->resource_index = 0;                                                                                                                             \
+        if ((sequence_id) == 0)                                                                                                                                \
+        {                                                                                                                                                      \
+            actor->sequence = 0;                                                                                                                               \
+        }                                                                                                                                                      \
+        actor->target_shade = WMAP_SPRITE_SHADE_NEUTRAL;                                                                                                       \
+        actor->shade = 0;                                                                                                                                      \
+        motion->radius = (start_radius);                                                                                                                       \
+        motion->angle = (start_angle);                                                                                                                         \
+        motion->speed = WMAP_EFFECT35_ORBITER_SPEED;                                                                                                           \
+        motion->height = 0;                                                                                                                                    \
+        motion->delay = (start_delay);                                                                                                                         \
+        (timer) = WMAP_EFFECT35_ORBITER_FRAMES;                                                                                                                \
+        (step)++;                                                                                                                                              \
+        next();                                                                                                                                                \
+    }
+
+/** @brief Fixed-point shifts used to project an orbiter's radius and angle. */
+#define WMAP_EFFECT35_ORBITER_TRIG_SHIFT 5
+#define WMAP_EFFECT35_ORBITER_PRODUCT_SHIFT 12
+
+/**
+ * @brief Define an orbiter update: draw, wait, move inward, then fade.
+ * @param name Update function name.
+ * @param slot_index Shared index in the actor, motion and animation pools.
+ * @param step The orbiter sequence's step global.
+ * @param timer Frames left before advancing the sequence.
+ * @note Clearing the motion's active flag does not end this step. It keeps
+ *       drawing until the timer expires.
+ */
+#define WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(name, slot_index, step, timer)                                                                                     \
+    void name(void)                                                                                                                                            \
+    {                                                                                                                                                          \
+        SVECTOR position;                                                                                                                                      \
+        s32 screen_position;                                                                                                                                   \
+        WmapSpriteActor* actor = &g_wmap_sprite_actors[(slot_index)];                                                                                          \
+        WmapEffectMotion* motion = &g_wmap_actor_motions[(slot_index)];                                                                                        \
+        WmapAnimationSlot* slots;                                                                                                                              \
+                                                                                                                                                               \
+        position.vx = (motion->radius * (ccos(motion->angle) >> WMAP_EFFECT35_ORBITER_TRIG_SHIFT)) >> WMAP_EFFECT35_ORBITER_PRODUCT_SHIFT;                     \
+        position.vy = (motion->radius * (csin(motion->angle) >> WMAP_EFFECT35_ORBITER_TRIG_SHIFT)) >> WMAP_EFFECT35_ORBITER_PRODUCT_SHIFT;                     \
+        position.vz = motion->height;                                                                                                                          \
+        gte_ldv0(&position);                                                                                                                                   \
+        gte_rtps();                                                                                                                                            \
+        slots = g_wmap_actor_animations;                                                                                                                       \
+        wmap_step_actor_animation(actor, &slots[(slot_index)]);                                                                                                \
+        gte_stsxy(&screen_position);                                                                                                                           \
+        wmap_draw_actor_sprite(actor, screen_position, WMAP_EFFECT35_TEXTURE_SPARK, WMAP_EFFECT35_PARTICLE_OT, 0);                                             \
+        if (motion->delay != 0)                                                                                                                                \
+        {                                                                                                                                                      \
+            motion->delay--;                                                                                                                                   \
+        }                                                                                                                                                      \
+        else if (motion->radius >= WMAP_EFFECT35_INNER_RADIUS)                                                                                                 \
+        {                                                                                                                                                      \
+            motion->radius -= motion->speed;                                                                                                                   \
+        }                                                                                                                                                      \
+        else if (actor->shade >= WMAP_EFFECT35_FADED_SHADE)                                                                                                    \
+        {                                                                                                                                                      \
+            actor->target_shade = 0;                                                                                                                           \
+        }                                                                                                                                                      \
+        else                                                                                                                                                   \
+        {                                                                                                                                                      \
+            motion->active = 0;                                                                                                                                \
+        }                                                                                                                                                      \
+        if (--(timer) == 0)                                                                                                                                    \
+        {                                                                                                                                                      \
+            (step)++;                                                                                                                                          \
+        }                                                                                                                                                      \
+    }
+
 /** @brief Sequence step handler. */
 extern WmapEffectMotion g_wmap_actor_motions[];
 extern s32 g_wmap_load_buffer[];
@@ -502,109 +603,6 @@ void wmap_effect35_spin_b_fade_out(void)
         g_wmap_effect35_spin_b_step++;
     }
 }
-
-/** @brief Target shade, fade increment, inward speed, and duration of each orbiter. */
-#define WMAP_EFFECT35_ORBITER_SHADE 128
-#define WMAP_EFFECT35_ORBITER_SHADE_STEP 16
-#define WMAP_EFFECT35_ORBITER_SPEED 100
-#define WMAP_EFFECT35_ORBITER_FRAMES 191
-
-/**
- * @brief Define an orbiter start: set its sprite and motion, then run the first update.
- * @param name Start function name.
- * @param step The orbiter sequence's step global.
- * @param timer Frames left before advancing the sequence.
- * @param slot Shared index in the actor, motion and animation pools.
- * @param sequence_id Constant animation sequence to start.
- * @param start_radius Initial radius stored in the motion record.
- * @param start_angle Initial angle stored in the motion record.
- * @param start_delay Initial delay counter.
- * @param next Update function, called immediately after advancing.
- * @note The constant conditions preserve the sprite's assignment order.
- */
-#define WMAP_EFFECT35_DEFINE_ORBITER_START(name, step, timer, slot, sequence_id, start_radius, start_angle, start_delay, next)                                 \
-    void name(void)                                                                                                                                            \
-    {                                                                                                                                                          \
-        WmapSpriteActor* actor = &g_wmap_sprite_actors[(slot)];                                                                                                \
-        WmapEffectMotion* motion = &g_wmap_actor_motions[(slot)];                                                                                              \
-                                                                                                                                                               \
-        g_wmap_actor_animations[(slot)].data = g_wmap_animation_bank_0;                                                                                        \
-        actor->scale_index = WMAP_SPRITE_SCALE_FULL;                                                                                                           \
-        if ((sequence_id) != 0)                                                                                                                                \
-        {                                                                                                                                                      \
-            actor->sequence = (sequence_id);                                                                                                                   \
-        }                                                                                                                                                      \
-        actor->previous_sequence = -1;                                                                                                                         \
-        actor->shade_step = WMAP_EFFECT35_ORBITER_SHADE_STEP;                                                                                                  \
-        actor->resource_index = 0;                                                                                                                             \
-        if ((sequence_id) == 0)                                                                                                                                \
-        {                                                                                                                                                      \
-            actor->sequence = 0;                                                                                                                               \
-        }                                                                                                                                                      \
-        actor->target_shade = WMAP_EFFECT35_ORBITER_SHADE;                                                                                                     \
-        actor->shade = 0;                                                                                                                                      \
-        motion->radius = (start_radius);                                                                                                                       \
-        motion->angle = (start_angle);                                                                                                                         \
-        motion->speed = WMAP_EFFECT35_ORBITER_SPEED;                                                                                                           \
-        motion->height = 0;                                                                                                                                    \
-        motion->delay = (start_delay);                                                                                                                         \
-        (timer) = WMAP_EFFECT35_ORBITER_FRAMES;                                                                                                                \
-        (step)++;                                                                                                                                              \
-        next();                                                                                                                                                \
-    }
-
-/** @brief Fixed-point shifts used to project an orbiter's radius and angle. */
-#define WMAP_EFFECT35_ORBITER_TRIG_SHIFT 5
-#define WMAP_EFFECT35_ORBITER_PRODUCT_SHIFT 12
-
-/**
- * @brief Define an orbiter update: draw, wait, move inward, then fade.
- * @param name Update function name.
- * @param slot_index Shared index in the actor, motion and animation pools.
- * @param step The orbiter sequence's step global.
- * @param timer Frames left before advancing the sequence.
- * @note Clearing the motion's active flag does not end this step. It keeps
- *       drawing until the timer expires.
- */
-#define WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(name, slot_index, step, timer)                                                                                     \
-    void name(void)                                                                                                                                            \
-    {                                                                                                                                                          \
-        SVECTOR position;                                                                                                                                      \
-        s32 screen_position;                                                                                                                                   \
-        WmapSpriteActor* actor = &g_wmap_sprite_actors[(slot_index)];                                                                                          \
-        WmapEffectMotion* motion = &g_wmap_actor_motions[(slot_index)];                                                                                        \
-        WmapAnimationSlot* slots;                                                                                                                              \
-                                                                                                                                                               \
-        position.vx = (motion->radius * (ccos(motion->angle) >> WMAP_EFFECT35_ORBITER_TRIG_SHIFT)) >> WMAP_EFFECT35_ORBITER_PRODUCT_SHIFT;                     \
-        position.vy = (motion->radius * (csin(motion->angle) >> WMAP_EFFECT35_ORBITER_TRIG_SHIFT)) >> WMAP_EFFECT35_ORBITER_PRODUCT_SHIFT;                     \
-        position.vz = motion->height;                                                                                                                          \
-        gte_ldv0(&position);                                                                                                                                   \
-        gte_rtps();                                                                                                                                            \
-        slots = g_wmap_actor_animations;                                                                                                                       \
-        wmap_step_actor_animation(actor, &slots[(slot_index)]);                                                                                                \
-        gte_stsxy(&screen_position);                                                                                                                           \
-        wmap_draw_actor_sprite(actor, screen_position, WMAP_EFFECT35_TEXTURE_SPARK, WMAP_EFFECT35_PARTICLE_OT, 0);                                             \
-        if (motion->delay != 0)                                                                                                                                \
-        {                                                                                                                                                      \
-            motion->delay--;                                                                                                                                   \
-        }                                                                                                                                                      \
-        else if (motion->radius >= WMAP_EFFECT35_INNER_RADIUS)                                                                                                 \
-        {                                                                                                                                                      \
-            motion->radius -= motion->speed;                                                                                                                   \
-        }                                                                                                                                                      \
-        else if (actor->shade >= WMAP_EFFECT35_FADED_SHADE)                                                                                                    \
-        {                                                                                                                                                      \
-            actor->target_shade = 0;                                                                                                                           \
-        }                                                                                                                                                      \
-        else                                                                                                                                                   \
-        {                                                                                                                                                      \
-            motion->active = 0;                                                                                                                                \
-        }                                                                                                                                                      \
-        if (--(timer) == 0)                                                                                                                                    \
-        {                                                                                                                                                      \
-            (step)++;                                                                                                                                          \
-        }                                                                                                                                                      \
-    }
 
 /** @brief Draw and update orbiter 1 until its timer expires. */
 WMAP_EFFECT35_DEFINE_ORBITER_UPDATE(wmap_effect35_orbiter_1_update, 8, g_wmap_effect35_orbiter_1_step, g_wmap_effect35_orbiter_1_timer)

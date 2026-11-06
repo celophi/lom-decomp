@@ -445,7 +445,7 @@ void wmap_land_event_00_a_sequence_2_step_01(void)
     actor->target_shade = 1;
     actor->shade = 0x81;
     g_wmap_land_event_00_a_sequence_2_timer = 0x10;
-    g_wmap_land_event_00_a_sequence_2_step += 1;
+    g_wmap_land_event_00_a_sequence_2_step++;
     wmap_land_event_00_a_sequence_2_step_02();
 }
 

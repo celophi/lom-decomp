@@ -352,6 +352,13 @@ typedef struct FieldObjectState
     FieldPathPoint path[FIELD_PATH_MAX_POINTS];
 } FieldObjectState;
 
+/**
+ * @brief Runtime state of object @p index in @p states, addressed as index-first byte arithmetic.
+ * @param states FieldObjectState array.
+ * @param index Object index.
+ */
+#define FIELD_OBJECT_STATE_AT(states, index) ((FieldObjectState*)((index) * sizeof(FieldObjectState) + (uintptr_t)(states)))
+
 /** @brief FieldObjectState HP words: the HP value in the low 24 bits, HUD flags in the high byte of hp_display. */
 #define FIELD_HP_VALUE_MASK 0xFFFFFF
 #define FIELD_HP_FLAGS_MASK 0xFF000000

@@ -5,12 +5,13 @@
  * The drop handlers are only called through g_field_drop_handlers, a data table.
  */
 
-#include "main/audio/game_audio.h"
 #include "common.h"
+#include <rand.h>
+
 #include "../internal/field_calls.h"
 #include "../internal/field_effect_types.h"
 #include "../internal/field_records.h"
-#include <rand.h>
+#include "main/audio/game_audio.h"
 
 /** @brief Drop handlers of field_roll_defeat_drop. */
 #define FIELD_DROP_HANDLER_COUNT 4
@@ -65,34 +66,44 @@ s32 field_roll_defeat_drop(FieldStatusRecord* record)
     {
         return -1;
     }
+
     slot_count = g_field_drop_slots_by_level[record->state->level.bits.level >> FIELD_DROP_LEVEL_BAND_SHIFT];
+
     if (record->unkC & FIELD_DEFEAT_EXTRA_DROP_SLOTS)
     {
         slot_count += FIELD_DROP_EXTRA_SLOTS;
     }
+
     if (slot_count >= FIELD_ACTOR_DROP_SLOT_COUNT)
     {
         slot_count = FIELD_ACTOR_DROP_SLOT_COUNT - 1;
     }
+
     random = rand();
     mask = random & 0xFFFF;
+
     if (record->unkC & FIELD_DEFEAT_NO_COMMON_DROPS)
     {
         mask = random & 0xFFFC;
     }
+
     for (slot = 0; slot < slot_count; slot++)
     {
         if (mask & 1)
         {
             break;
         }
+
         mask >>= 1;
     }
+
     template = record->template;
+
     if (template->drops[slot].handler < FIELD_DROP_HANDLER_COUNT)
     {
         return g_field_drop_handlers[template->drops[slot].handler](template->drops[slot].handler, template->drops[slot].value, record);
     }
+
     return -1;
 }
 
@@ -108,40 +119,44 @@ void field_grant_reward(s32 recipient, s32 owner, u32 kind)
 
     switch (kind)
     {
-    case FIELD_REWARD_EXPERIENCE_LARGE:
-        level = g_field_battle->state.level;
-        if (level > FIELD_REWARD_LEVEL_KNEE)
-        {
-            level = ((level - FIELD_REWARD_LEVEL_KNEE) / 2) + FIELD_REWARD_LEVEL_KNEE;
-        }
-        field_award_experience(recipient, level * FIELD_REWARD_LARGE_EXPERIENCE_SCALE);
-        return;
-    case FIELD_REWARD_EXPERIENCE_SMALL:
-        level = g_field_battle->state.level;
-        if (level > FIELD_REWARD_LEVEL_KNEE)
-        {
-            level = ((level - FIELD_REWARD_LEVEL_KNEE) / 2) + FIELD_REWARD_LEVEL_KNEE;
-        }
-        field_award_experience(recipient, level);
-        return;
-    case FIELD_REWARD_MONEY_LARGE:
-        field_add_money(recipient, FIELD_REWARD_MONEY_LARGE_AMOUNT);
-        return;
-    case FIELD_REWARD_MONEY_SMALL:
-        field_add_money(recipient, FIELD_REWARD_MONEY_SMALL_AMOUNT);
-        return;
-    case FIELD_REWARD_ITEM:
-        field_grant_actor_pickup(recipient, owner);
-        return;
-    case FIELD_REWARD_RESTORE_QUARTER:
-        field_restore_actor_capacity_fraction(recipient, FIELD_REWARD_RESTORE_QUARTER_SHARE);
-        return;
-    case FIELD_REWARD_RESTORE_HALF:
-        field_restore_actor_capacity_fraction(recipient, FIELD_REWARD_RESTORE_HALF_SHARE);
-        return;
-    default:
-        record_game_diagnostic(DIAG_ERROR, DIAG_BAD_REWARD_KIND, owner, kind);
-        return;
+        case FIELD_REWARD_EXPERIENCE_LARGE:
+            level = g_field_battle->state.level;
+
+            if (level > FIELD_REWARD_LEVEL_KNEE)
+            {
+                level = ((level - FIELD_REWARD_LEVEL_KNEE) / 2) + FIELD_REWARD_LEVEL_KNEE;
+            }
+
+            field_award_experience(recipient, level * FIELD_REWARD_LARGE_EXPERIENCE_SCALE);
+            return;
+        case FIELD_REWARD_EXPERIENCE_SMALL:
+            level = g_field_battle->state.level;
+
+            if (level > FIELD_REWARD_LEVEL_KNEE)
+            {
+                level = ((level - FIELD_REWARD_LEVEL_KNEE) / 2) + FIELD_REWARD_LEVEL_KNEE;
+            }
+
+            field_award_experience(recipient, level);
+            return;
+        case FIELD_REWARD_MONEY_LARGE:
+            field_add_money(recipient, FIELD_REWARD_MONEY_LARGE_AMOUNT);
+            return;
+        case FIELD_REWARD_MONEY_SMALL:
+            field_add_money(recipient, FIELD_REWARD_MONEY_SMALL_AMOUNT);
+            return;
+        case FIELD_REWARD_ITEM:
+            field_grant_actor_pickup(recipient, owner);
+            return;
+        case FIELD_REWARD_RESTORE_QUARTER:
+            field_restore_actor_capacity_fraction(recipient, FIELD_REWARD_RESTORE_QUARTER_SHARE);
+            return;
+        case FIELD_REWARD_RESTORE_HALF:
+            field_restore_actor_capacity_fraction(recipient, FIELD_REWARD_RESTORE_HALF_SHARE);
+            return;
+        default:
+            record_game_diagnostic(DIAG_ERROR, DIAG_BAD_REWARD_KIND, owner, kind);
+            return;
     }
 }
 
@@ -160,27 +175,33 @@ s32 field_drop_pickups(s32 handler, s32 value, FieldStatusRecord* record)
     experience = value >> 4;
     flags = record->unkC;
     value = value & 0xF;
+
     if (flags & FIELD_DEFEAT_EXPERIENCE_AS_MONEY)
     {
         value += experience;
         experience = 0;
     }
+
     if (flags & FIELD_DEFEAT_MONEY_PLUS_2)
     {
         value += 2;
     }
+
     if (flags & FIELD_DEFEAT_MONEY_PLUS_1)
     {
-        value += 1;
+        value++;
     }
+
     if (flags & FIELD_DEFEAT_EXPERIENCE_PLUS_2)
     {
         experience += 2;
     }
+
     if (flags & FIELD_DEFEAT_EXPERIENCE_PLUS_1)
     {
-        experience += 1;
+        experience++;
     }
+
     if (record->template->flags & FIELD_TEMPLATE_BOSS)
     {
         record->state->signal.drop_counts[FIELD_REWARD_EXPERIENCE_LARGE] = experience;

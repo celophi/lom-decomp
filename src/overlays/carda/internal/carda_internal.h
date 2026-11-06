@@ -1,42 +1,44 @@
 #ifndef CARDA_INTERNAL_H
 #define CARDA_INTERNAL_H
 
-#include "overlays/field/field_text.h"
 #include "common.h"
-#include "common/saved_game.h"
-#include "common/sjis.h"
-#include "common/pad.h"
-#include "common/vector.h"
-#include "common/gpu_packet.h"
-#include "main/display.h"
-#include <libgte.h>
-#include <libgpu.h>
 #include <kernel.h>
 #include <libapi.h>
+#include <libetc.h>
+#include <libgpu.h>
+#include <libgte.h>
 #include <libmcx.h>
 #include <rand.h>
-#include "overlays/field/field_menu_window.h"
-#include "main/field_runtime.h"
-#include "overlays/field/field_sound.h"
-#include "overlays/field/field_ui_text.h"
-#include "common/encoded_text.h"
-#include "common/save_file.h"
-#include "common/glyph_cache.h"
-#include "common/card_events.h"
-#include "main/card_callbacks.h"
-#include "common/card_directory.h"
-#include "common/card_menu.h"
-#include "main/cdrom.h"
-#include "main/controller.h"
 #include <strings.h>
-#include <libetc.h>
+
 #include "carda.h"
 #include "carda_card.h"
+#include "common/card_directory.h"
+#include "common/card_events.h"
+#include "common/card_menu.h"
+#include "common/encoded_text.h"
+#include "common/glyph_cache.h"
+#include "common/gpu_packet.h"
+#include "common/pad.h"
+#include "common/save_file.h"
+#include "common/saved_game.h"
+#include "common/sjis.h"
+#include "common/vector.h"
+#include "main/card_callbacks.h"
+#include "main/cd_resources.h"
+#include "main/cdrom.h"
+#include "main/controller.h"
+#include "main/display.h"
+#include "main/field_runtime.h"
+#include "main/main.h"
 #include "overlays/field/field_fade.h"
 #include "overlays/field/field_input.h"
-#include "overlays/field/field_portrait.h"
+#include "overlays/field/field_menu_window.h"
 #include "overlays/field/field_overlay_handoff.h"
-#include "main/cd_resources.h"
+#include "overlays/field/field_portrait.h"
+#include "overlays/field/field_sound.h"
+#include "overlays/field/field_text.h"
+#include "overlays/field/field_ui_text.h"
 /**
  * @brief g_card_menu_mode values: what FIELD opened the card screen for.
  * @note The US release keeps the PocketStation modes but leaves their texts empty.
@@ -112,7 +114,7 @@ typedef enum CardaCardStep
 #define CARDA_FORMAT_FRAME 12
 
 /** @brief CARDA's own g_card_menu_selection_status value, after the shared CARD_MENU_SELECTION_* ones. */
-#define CARDA_SELECTION_CARD_FULL 4  /**< The full-card placeholder is selected. */
+#define CARDA_SELECTION_CARD_FULL 4 /**< The full-card placeholder is selected. */
 
 /** @brief Length of the full-card placeholder entry name ("Fulldummy"). */
 #define CARDA_CARD_FULL_ENTRY_NAME_LENGTH 9
@@ -153,11 +155,8 @@ typedef enum CardaCardStep
 #define CARDA_ITEM_SCROLL_ARROW_UP_Y (CARDA_ITEM_LIST_Y + CARD_MENU_SCROLL_ARROW_INSET)
 #define CARDA_ITEM_SCROLL_ARROW_DOWN_Y (CARDA_ITEM_LIST_Y + CARDA_ITEM_LIST_HEIGHT - CARD_MENU_SCROLL_ARROW_INSET)
 
-
 /* FIELD / main-executable globals used by this overlay. */
-extern s32 g_save_compatibility_tag;
 extern s32 g_playtime_vsync_origin;
-extern s32 g_pad_input;
 
 /* Memory-card file names. */
 extern char g_card_full_entry_name[];

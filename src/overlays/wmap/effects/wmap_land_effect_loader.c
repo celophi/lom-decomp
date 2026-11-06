@@ -34,7 +34,10 @@ extern s32 wmap_land_effect_31_run(s32);
 extern s32 wmap_land_effect_24_run(s32);
 extern s32 wmap_land_effect_33_run(s32);
 
-/** @brief Upload the selected effect resources and register its callback. */
+/**
+ * @brief Upload the selected effect resources and register its callback.
+ * @param selection Land effect to start; selects its land display and run sequence.
+ */
 void wmap_start_land_effect(u32 selection)
 {
     g_wmap_land_image_cache_missed = 0;

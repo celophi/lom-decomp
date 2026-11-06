@@ -12,8 +12,9 @@
 #include "common.h"
 #include <abs.h>
 #include <libgte.h>
-#include "../internal/field_calls.h"
+
 #include "../internal/field_actor_tables.h"
+#include "../internal/field_calls.h"
 #include "../internal/field_effect_render_state.h"
 #include "main/display.h"
 #include "main/scene_state.h"
@@ -146,7 +147,7 @@ void field_camera_track_party(void)
                 target_z = target_z / divisor;
             }
 
-            count += 1;
+            count++;
         }
     }
 
@@ -313,7 +314,7 @@ static void field_camera_step_scroll_limits(void)
     {
         g_field_scroll_limit_left += (g_field_scroll_limit_left_target - g_field_scroll_limit_left) / g_field_scroll_ease_timer;
         g_field_scroll_limit_right += (g_field_scroll_limit_right_target - g_field_scroll_limit_right) / g_field_scroll_ease_timer;
-        g_field_scroll_ease_timer -= 1;
+        g_field_scroll_ease_timer--;
     }
 }
 
@@ -326,7 +327,7 @@ static void field_camera_step_scripted_scroll(void)
     {
         g_field_scripted_scroll_x += (g_field_scripted_scroll_target_x - g_field_scripted_scroll_x) / g_field_scripted_scroll_frames;
         g_field_scripted_scroll_z += (g_field_scripted_scroll_target_z - g_field_scripted_scroll_z) / g_field_scripted_scroll_frames;
-        g_field_scripted_scroll_frames -= 1;
+        g_field_scripted_scroll_frames--;
     }
     else
     {

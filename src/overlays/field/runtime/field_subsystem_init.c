@@ -3,19 +3,20 @@
  */
 
 #include "common.h"
+
 #include "../internal/field_actor.h"
-#include "../internal/field_contact_geometry.h"
+#include "../internal/field_actor_routes.h"
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_calls.h"
+#include "../internal/field_contact_geometry.h"
 #include "../internal/field_menu_element.h"
 #include "../internal/field_modal_runtime.h"
 #include "main/audio/game_audio.h"
+#include "main/field_runtime.h"
 #include "main/game_state.h"
 #include "main/main.h"
-#include "main/field_runtime.h"
-#include "overlays/menu/menu.h"
 #include "overlays/field/field_overlay_handoff.h"
-#include "../internal/field_actor_routes.h"
+#include "overlays/menu/menu.h"
 
 /** @brief Fixed work areas of the field overlay: CD read buffer and actor resource heap. */
 #define FIELD_CD_BUFFER_AREA ((u8*)SECONDARY_OVERLAY_ADDRESS)
@@ -32,11 +33,6 @@ extern s32 g_field_preserve_entry_music;
  *       main executable or any overlay reads it.
  */
 extern s32 D_801178C8;
-/**
- * @brief Outcome of the last NIKI run: 0 none or written back, 1 save loaded, 2 failed or declined.
- * @note Field scripts wait on it through opcode 0x14 selectors 3 and 4.
- */
-extern s32 g_field_niki_state;
 /** @brief Set while an interaction runs; pad input waits until the follower routes are rebuilt. */
 extern s32 g_field_actor_text_count;
 extern s32 g_field_ring_menu_state;
@@ -96,6 +92,7 @@ void field_initialize_subsystems(FieldRenderHalf* render_context)
     g_field_gosub_state = 0;
     g_field_audio_timer = 0;
     previous_state = g_previous_game_state;
+
     if (previous_state == GAME_STATE_WORLD_MAP && g_music_track_table[g_music_track_index] != FIELD_MUSIC_TRACK_NONE)
     {
         g_field_preserve_entry_music = previous_state;
@@ -104,6 +101,7 @@ void field_initialize_subsystems(FieldRenderHalf* render_context)
     {
         g_field_preserve_entry_music = 0;
     }
+
     field_reset_battle_entry();
     field_reset_input_repeat();
     field_clear_fade_prims();

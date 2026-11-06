@@ -1,9 +1,10 @@
-#include "overlays/shop/shop.h"
+#include "common/list_scroll.h"
 #include "internal/shop_internal.h"
 #include "internal/shop_render.h"
 #include "internal/shop_trade.h"
-#include "overlays/field/field_text.h"
 #include "main/audio/akao.h"
+#include "overlays/field/field_text.h"
+#include "overlays/shop/shop.h"
 
 #define SHOP_MONEY_WINDOW_X 160
 #define SHOP_MONEY_WINDOW_Y 32
@@ -27,7 +28,6 @@
 /** @brief Row offset past which the list scrolls to keep the cursor visible. */
 #define SHOP_LIST_SCROLL_LIMIT 100
 #define SHOP_LIST_SCROLL_LIMIT_ROWS 6
-#define SHOP_SCROLL_FRAMES 4
 
 static u8* shop_build_sell_list(u8* work_end);
 static u8* shop_build_buy_list(u8* work_end, s32 entry_count, ShopEntry* entries, FieldItemRecord* item_records);
@@ -57,6 +57,7 @@ void shop_init(u8* work, s32 is_buying, s32 entry_count, ShopEntry* entries, Fie
     g_shop_is_buying = is_buying;
     g_shop_title_text_id = title_text_id;
     field_reset_input_repeat();
+
     if (g_shop_is_buying != 0)
     {
         work = shop_build_buy_list(work, entry_count, entries, item_records);
@@ -65,6 +66,7 @@ void shop_init(u8* work, s32 is_buying, s32 entry_count, ShopEntry* entries, Fie
     {
         work = shop_build_sell_list(work);
     }
+
     g_shop_work_end = work;
 }
 
@@ -83,10 +85,12 @@ s32 shop_update(ShopFrameContext* ctx)
     shop_run_frame(ctx, buffer);
     field_text_upload_immediate_cache();
     g_shop_frame_index ^= 1;
+
     if (g_shop_finished != 0)
     {
         field_text_reset_windows();
     }
+
     return g_shop_finished;
 }
 
@@ -106,12 +110,14 @@ static u8* shop_build_sell_list(u8* work_end)
     g_shop_prompt_active = 0;
     g_shop_confirm_choice = 0;
     record = g_saved_game_ctx->items;
+
     for (count = 0; count < FIELD_ITEM_COUNT; count++, record++)
     {
         if (record->name[0] == 0)
         {
             break;
         }
+
         g_shop_entry_buffer[count].id = count + SHOP_ENTRY_RECORD_FLAG;
         g_shop_entry_buffer[count].count = 1;
         g_shop_entry_buffer[count].price = record->value;
@@ -197,12 +203,14 @@ static u8* shop_build_buy_list(u8* work_end, s32 entry_count, ShopEntry* entries
 
     g_shop_prompt_active = 0;
     g_shop_confirm_choice = 0;
+
     for (i = 0; i < entry_count; i++)
     {
         g_shop_entry_buffer[i].id = entries[i].id;
         g_shop_entry_buffer[i].count = entries[i].count;
         g_shop_entry_buffer[i].price = entries[i].price;
     }
+
     g_shop_entries = g_shop_entry_buffer;
     g_shop_entry_count = entry_count;
     g_shop_item_records = item_records;
@@ -272,6 +280,7 @@ static void shop_run_frame(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
 {
     shop_draw(ctx, buffer);
     shop_handle_list_input();
+
     if (g_shop_scroll_frames != 0)
     {
         g_shop_scroll_y += (g_shop_scroll_target - g_shop_scroll_y) / g_shop_scroll_frames;
@@ -299,10 +308,12 @@ static s32 shop_handle_list_input(void)
     s32 i;
 
     state = g_shop_windows[SHOP_MONEY_WINDOW].frame.bits.state;
+
     if (state == SHOP_WINDOW_FREE)
     {
         g_shop_finished = 1;
     }
+
     if (state != SHOP_WINDOW_OPEN)
     {
         return;
@@ -314,10 +325,12 @@ static s32 shop_handle_list_input(void)
         {
             return;
         }
+
         if (g_shop_windows[SHOP_POPUP_WINDOW].frame.bits.state == SHOP_WINDOW_FREE)
         {
             return;
         }
+
         g_shop_windows[SHOP_POPUP_WINDOW].frame.bits.state = SHOP_WINDOW_CLOSING;
         g_shop_windows[SHOP_POPUP_WINDOW].frame.bits.anim_step = SHOP_WINDOW_ANIM_STEPS;
         return;
@@ -330,41 +343,49 @@ static s32 shop_handle_list_input(void)
 
     /* R1 and L1 page through the list; i counts the rows still to move. */
     i = 1;
+
     if (g_pad_input & PAD_BTN_R1)
     {
         g_pad_input = PAD_BTN_DOWN;
         i = SHOP_PAGE_ROWS;
     }
+
     if (g_pad_input & PAD_BTN_L1)
     {
         g_pad_input = PAD_BTN_UP;
         i = SHOP_PAGE_ROWS;
     }
+
     while (i != 0)
     {
         if (g_pad_input & PAD_BTN_UP)
         {
             g_shop_quantity = 1;
             g_shop_cursor--;
+
             if (g_shop_cursor < 0)
             {
                 g_shop_cursor = g_shop_entry_count - 1;
             }
         }
+
         if (g_pad_input & PAD_BTN_DOWN)
         {
             g_shop_quantity = 1;
             g_shop_cursor++;
+
             if (g_shop_cursor >= g_shop_entry_count)
             {
                 g_shop_cursor = 0;
             }
         }
+
         /* A page jump stops at either end of the list. */
         if ((g_shop_cursor == g_shop_entry_count - 1) || (g_shop_cursor == 0))
         {
             i = 1;
         }
+
         i--;
     }
 
@@ -374,15 +395,17 @@ static s32 shop_handle_list_input(void)
         target_y = g_shop_cursor << SHOP_ROW_HEIGHT_SHIFT;
         current_scroll = g_shop_scroll_y;
         delta = target_y - current_scroll;
+
         if (delta > SHOP_LIST_SCROLL_LIMIT)
         {
             g_shop_scroll_target = target_y - SHOP_LIST_SCROLL_LIMIT_ROWS * SHOP_ROW_HEIGHT;
-            g_shop_scroll_frames = SHOP_SCROLL_FRAMES;
+            g_shop_scroll_frames = LIST_SCROLL_FRAMES;
         }
+
         if (delta < 0)
         {
             g_shop_scroll_target = target_y;
-            g_shop_scroll_frames = SHOP_SCROLL_FRAMES;
+            g_shop_scroll_frames = LIST_SCROLL_FRAMES;
         }
     }
 
@@ -398,6 +421,7 @@ static s32 shop_handle_list_input(void)
     if (g_pad_input & PAD_BTN_RIGHT)
     {
         stock = SHOP_SELECTED_ENTRY();
+
         if (stock->count != 0)
         {
             if (g_shop_quantity < stock->count)
@@ -419,11 +443,12 @@ static s32 shop_handle_list_input(void)
     if (g_pad_input & PAD_CONFIRM_BUTTONS)
     {
         entry = SHOP_SELECTED_ENTRY();
+
         if (entry->id != SHOP_ENTRY_EMPTY)
         {
             if (g_shop_is_buying != 0)
             {
-                if (g_saved_game_ctx->money >= (u32)(entry->price * g_shop_quantity))
+                if (g_saved_game_ctx->money >= (entry->price * g_shop_quantity))
                 {
                     if (entry->id & SHOP_ENTRY_RECORD_FLAG)
                     {
@@ -462,12 +487,15 @@ static s32 shop_handle_list_input(void)
     if (g_pad_input & SHOP_CANCEL_BUTTONS)
     {
         field_play_sound(SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
+
         if (g_shop_is_buying == 0)
         {
             field_compact_inventory();
         }
+
         field_restore_fade_target();
         window = g_shop_windows;
+
         for (i = 0; i < SHOP_WINDOW_COUNT; i++, window++)
         {
             if (window->frame.bits.state != SHOP_WINDOW_FREE)
@@ -519,6 +547,7 @@ static void shop_reset_windows(void)
 
     g_field_menu_frame_style = FIELD_MENU_FRAME_STYLE_SUBSCREEN;
     window = g_shop_windows;
+
     for (i = 0; i < SHOP_WINDOW_COUNT; i++)
     {
         window->frame.bits.state = SHOP_WINDOW_FREE;
@@ -536,6 +565,7 @@ static ShopWindow* shop_alloc_window(void)
     s32 i;
 
     window = g_shop_windows;
+
     for (i = 0; i < SHOP_WINDOW_COUNT; i++, window++)
     {
         if (window->frame.bits.state == SHOP_WINDOW_FREE)
@@ -544,5 +574,6 @@ static ShopWindow* shop_alloc_window(void)
             return window;
         }
     }
+
     return &g_shop_windows[SHOP_POPUP_WINDOW];
 }
