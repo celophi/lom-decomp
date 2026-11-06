@@ -3,11 +3,11 @@
 
 #include "common.h"
 #include "main/field_runtime.h"
+#include "overlays/carda/carda.h"
 #include <libgpu.h>
 
 struct CardMenuElement;
 
-void carda_init(void* work, s32 mode);
 
 void carda_build_save_file(void);
 s32 carda_test_option_flag_2(void);

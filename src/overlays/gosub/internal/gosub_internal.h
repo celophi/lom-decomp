@@ -13,6 +13,7 @@
 #include "common/pad.h"
 #include "common/tim.h"
 #include "common/vector.h"
+#include "overlays/gosub/gosub.h"
 #include "main/audio/game_audio.h"
 #include "main/display.h"
 #include "main/main.h"
@@ -400,7 +401,7 @@ struct GosubTilePacket
 };
 
 /** @brief Render context fields used by the gosub element renderer. */
-typedef struct
+typedef struct GosubRenderContext
 {
     u_long tag;
     u8 reserved_0004[0x40AE];

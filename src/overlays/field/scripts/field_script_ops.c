@@ -268,8 +268,6 @@ static void field_script_dispatch_pair_op(void);
 static void field_script_dispatch_ext_op(void);
 static u8* field_script_decode_operand(s32 type, u8* data, s32* value);
 void field_script_op_85(s32 scene_id, s32 object_id, s32 audio, s32 spawn_id);
-FieldObjectState* field_find_object_state(s32 key);
-
 /* Local: field_contact_geometry.c calls it with a third argument, so it stays out of field_calls.h. */
 /**
  * @brief Report an opcode that has no handler, step past it and end the step loop.
@@ -277,7 +275,7 @@ FieldObjectState* field_find_object_state(s32 key);
  * @param record Active record of @p context.
  * @param pc Address of the opcode.
  */
-static inline void field_script_reject_opcode(FieldScriptContext* context, FieldScriptRecordState* record, u8* pc)
+static inline void field_script_reject_opcode(FieldScriptState* context, FieldScriptRecordState* record, u8* pc)
 {
     s32 owner_id;
     s32 opcode;
@@ -302,10 +300,10 @@ static inline s32 field_is_battle_active(void)
  * @brief Run a field script until it yields, preserving any enclosing script context.
  * @param context Script context to run.
  */
-void field_script_run(FieldScriptContext* context)
+void field_script_run(FieldScriptState* context)
 {
-    FieldScriptContext* previous_context;
-    FieldScriptContext* current_context;
+    FieldScriptState* previous_context;
+    FieldScriptState* current_context;
     FieldScriptRecordState* waiting_record;
     FieldScriptRecordState* record;
     s32 status;
@@ -485,7 +483,7 @@ void field_script_op_00(void)
 {
     s32 depth;
 
-    depth = g_field_script->active_record;
+    depth = g_field_script->depth;
 
     if (depth > 0)
     {
@@ -494,7 +492,7 @@ void field_script_op_00(void)
             g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
         }
 
-        g_field_script->active_record--;
+        g_field_script->depth--;
         return;
     }
 
@@ -519,26 +517,26 @@ void field_script_op_02(void)
     s32 depth;
     s32 next_depth;
 
-    depth = g_field_script->active_record;
+    depth = g_field_script->depth;
     next_depth = depth + 1;
-    g_field_script->active_record = next_depth;
+    g_field_script->depth = next_depth;
 
     if (next_depth >= FIELD_SCRIPT_FRAME_COUNT)
     {
         FieldScriptRecord* rec;
 
         record_game_diagnostic(DIAG_ERROR, DIAG_SCRIPT_FRAME_OVERFLOW, g_field_script->status.owner_id, 0);
-        g_field_script->active_record = FIELD_SCRIPT_FRAME_COUNT - 1;
+        g_field_script->depth = FIELD_SCRIPT_FRAME_COUNT - 1;
         rec = FIELD_SCRIPT_RECORD(FIELD_SCRIPT_FRAME_COUNT - 1);
         rec->pc += 3;
         return;
     }
 
     FIELD_SCRIPT_RECORD(next_depth)->pc = FIELD_SCRIPT_RECORD(depth)->pc;
-    FIELD_SCRIPT_ACTIVE_RECORD_STATE()->flags = FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record - 1)->flags;
+    FIELD_SCRIPT_ACTIVE_RECORD_STATE()->flags = FIELD_SCRIPT_RECORD_STATE(g_field_script->depth - 1)->flags;
     FIELD_SCRIPT_ACTIVE_RECORD_STATE()->wait.bits.resume = 1;
     FIELD_SCRIPT_ACTIVE_RECORD_STATE()->wait.bits.frames = 0;
-    FIELD_SCRIPT_RECORD(g_field_script->active_record - 1)->pc += 3;
+    FIELD_SCRIPT_RECORD(g_field_script->depth - 1)->pc += 3;
     field_script_branch(1);
 }
 
@@ -800,22 +798,22 @@ void field_script_op_10(void)
     FieldScriptVariableRef script_ref;
     s32 depth;
 
-    depth = g_field_script->active_record + 1;
-    g_field_script->active_record = depth;
+    depth = g_field_script->depth + 1;
+    g_field_script->depth = depth;
 
     if (depth >= FIELD_SCRIPT_FRAME_COUNT)
     {
-        g_field_script->active_record = FIELD_SCRIPT_FRAME_COUNT - 1;
+        g_field_script->depth = FIELD_SCRIPT_FRAME_COUNT - 1;
         record_game_diagnostic(DIAG_ERROR, DIAG_SCRIPT_FRAME_OVERFLOW, g_field_script->status.owner_id, 0x4B);
     }
 
-    FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc = FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record - 1)->pc;
-    FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->flags = FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record - 1)->flags;
-    FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->wait.bits.resume = 1;
-    FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->wait.bits.frames = 0;
-    FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record - 1)->pc =
-        field_script_read_u16(FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc + 1, &script_ref.value);
-    FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc =
+    FIELD_SCRIPT_RECORD_STATE(g_field_script->depth)->pc = FIELD_SCRIPT_RECORD_STATE(g_field_script->depth - 1)->pc;
+    FIELD_SCRIPT_RECORD_STATE(g_field_script->depth)->flags = FIELD_SCRIPT_RECORD_STATE(g_field_script->depth - 1)->flags;
+    FIELD_SCRIPT_RECORD_STATE(g_field_script->depth)->wait.bits.resume = 1;
+    FIELD_SCRIPT_RECORD_STATE(g_field_script->depth)->wait.bits.frames = 0;
+    FIELD_SCRIPT_RECORD_STATE(g_field_script->depth - 1)->pc =
+        field_script_read_u16(FIELD_SCRIPT_RECORD_STATE(g_field_script->depth)->pc + 1, &script_ref.value);
+    FIELD_SCRIPT_RECORD_STATE(g_field_script->depth)->pc =
         field_get_event_script(field_read_script_var(g_field_script->status.owner_id, script_ref) & FIELD_SCRIPT_ID_MASK);
 }
 
@@ -2907,7 +2905,7 @@ void field_script_op_85(s32 scene_id, s32 object_id, s32 audio, s32 spawn_id)
     }
 
     g_field_runtime->transition.bits.spawn_id = spawn_id;
-    g_field_script->active_record = 0;
+    g_field_script->depth = 0;
     g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = NULL;
 }

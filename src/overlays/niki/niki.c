@@ -1,6 +1,7 @@
 #include "overlays/field/field_text.h"
 #include "internal/niki_internal.h"
 #include "overlays/menu/menu.h"
+#include "overlays/niki/niki.h"
 
 /**
  * @brief Initialize card browsing, drawing resources, and the selected menu mode.

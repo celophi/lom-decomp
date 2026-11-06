@@ -8,18 +8,14 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_modal_runtime.h"
 #include "main/overlay_memory.h"
+#include "overlays/carda/carda.h"
 #include "overlays/field/field_overlay_handoff.h"
-
-/** @brief Render buffers handed to the GOLEM entry point. */
-#define FIELD_GOLEM_RENDER_BUFFERS ((void*)SECONDARY_OVERLAY_AT(0x10000))
+#include "overlays/golem/golem.h"
 
 /** @brief Work buffer handed to the CARDA, NIKI and ADDHERO entry points. */
 #define FIELD_MODAL_WORK_BUFFER ((void*)SECONDARY_OVERLAY_AT(0x30000))
 
 
-void carda_init(void* work, s32 mode);
-void golem_run(void* render_buffers, s32 restore_slot_on_cancel);
-void niki_addhero_init(void* work, s32 mode);
 
 /**
  * @brief Load CARDA and start it, unless another modal is already running.

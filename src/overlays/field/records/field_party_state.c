@@ -107,8 +107,6 @@ extern u8 g_field_status_duration_stats[FIELD_STATUS_SLOT_ID_COUNT];
 extern u8 g_field_stat_change_signals[];
 /** @brief Base monster level of each level rank. */
 extern u8 g_field_monster_level_by_rank[FIELD_LEVEL_RANK_COUNT];
-FieldStatusState* field_find_object_state(s32 actor_id);
-
 static void field_battle_reset_context(void);
 static s32 field_build_party_records(void);
 static void field_publish_companion_flags(void);
@@ -183,7 +181,7 @@ void field_apply_status_effect(FieldStatusRecord* source, FieldStatusRecord* tar
         return;
     }
 
-    if (target->state->current == 0)
+    if (target->state->current_hp.word == 0)
     {
         return;
     }
@@ -214,7 +212,7 @@ void field_apply_status_effect(FieldStatusRecord* source, FieldStatusRecord* tar
 
     effect_mask = 1 << effect_index;
 
-    if (!(apply_flags & FIELD_STATUS_APPLY_ALLOW_ACTIVE) && (target->state->effect_flags & effect_mask))
+    if (!(apply_flags & FIELD_STATUS_APPLY_ALLOW_ACTIVE) && (target->state->flags & effect_mask))
     {
         return;
     }
@@ -224,7 +222,7 @@ void field_apply_status_effect(FieldStatusRecord* source, FieldStatusRecord* tar
         return;
     }
 
-    target->state->effect_flags |= effect_mask;
+    target->state->flags |= effect_mask;
     attack = field_get_status_stat(source, g_field_status_duration_stats[effect_index] >> 4);
     defense = field_get_status_stat(target, g_field_status_duration_stats[effect_index] & 0xF);
     scaled_duration = duration * attack / defense;
@@ -272,7 +270,7 @@ s32 field_scale_status_stat(FieldStatusRecord* record, u32 stat_selector, u32 sc
     u32 value;
     s32 stat_index;
 
-    if (record->state->current == 0)
+    if (record->state->current_hp.word == 0)
     {
         return 0;
     }
@@ -413,25 +411,25 @@ s32 field_is_actor_in_front(s32 actor_id, s32 observer_id)
  * @param state Status state to update.
  * @param damage Damage to take; a negative value is only reported.
  */
-void field_damage_status(FieldStatusState* state, s32 damage)
+void field_damage_status(FieldObjectState* state, s32 damage)
 {
     s32 remaining;
 
     if (damage < 0)
     {
-        record_game_diagnostic(DIAG_ERROR, DIAG_NEGATIVE_DAMAGE, state->actor_id, damage);
+        record_game_diagnostic(DIAG_ERROR, DIAG_NEGATIVE_DAMAGE, state->key, damage);
     }
     else
     {
-        remaining = state->current - damage;
+        remaining = state->current_hp.word - damage;
 
         if (remaining >= 0)
         {
-            state->current = remaining;
+            state->current_hp.word = remaining;
         }
         else
         {
-            state->current = 0;
+            state->current_hp.word = 0;
         }
     }
 }
@@ -441,18 +439,18 @@ void field_damage_status(FieldStatusState* state, s32 damage)
  * @param state Status state to update.
  * @param amount HP to restore.
  */
-void field_heal_status(FieldStatusState* state, s32 amount)
+void field_heal_status(FieldObjectState* state, s32 amount)
 {
     u32 maximum;
     u32 sum;
 
-    maximum = state->maximum;
-    sum = state->current + amount;
-    state->current = sum;
+    maximum = state->maximum_hp;
+    sum = state->current_hp.word + amount;
+    state->current_hp.word = sum;
 
     if (maximum < sum)
     {
-        state->current = maximum;
+        state->current_hp.word = maximum;
     }
 }
 
@@ -476,12 +474,12 @@ void field_clear_status_effect(FieldStatusRecord* record, u32 effect_index)
 
     if (effect_index < FIELD_STATUS_TIMER_COUNT)
     {
-        record->state->effect_flags &= ~(1 << effect_index);
+        record->state->flags &= ~(1 << effect_index);
         record->status_timers[effect_index] = 0;
         return;
     }
 
-    record->state->effect_flags &= ~FIELD_STATUS_TIMED_EFFECT_FLAGS_MASK;
+    record->state->flags &= ~FIELD_STATUS_TIMED_EFFECT_FLAGS_MASK;
 
     for (timer_index = FIELD_STATUS_TIMER_COUNT - 1; timer_index >= 0; timer_index--)
     {
@@ -530,7 +528,7 @@ void field_golem_select_logic_cell(s32 actor_id)
             column = grid_bound - 1;
         }
 
-        row = field_find_status_record(FIELD_PARTY_COMPANION)->state->status_intensity * grid_bound / FIELD_INTENSITY_RANGE;
+        row = field_find_status_record(FIELD_PARTY_COMPANION)->state->technique_gauge * grid_bound / FIELD_INTENSITY_RANGE;
         field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_LOGIC_CELL, row * GOLEM_GRID_WIDTH + column);
     }
 }
@@ -578,32 +576,32 @@ void field_golem_publish_logic_cell(s32 cell_index)
 void field_raise_companion_intensity(s32 amount)
 {
     FieldStatusRecord* record;
-    FieldStatusState* state;
+    FieldObjectState* state;
     u32 value;
 
     record = field_find_status_record(FIELD_PARTY_COMPANION);
     state = record->state;
-    value = state->status_intensity;
+    value = state->technique_gauge;
 
     switch (value / FIELD_INTENSITY_QUARTER)
     {
         case 0:
-            state->status_intensity = value + (amount * 4);
+            state->technique_gauge = value + (amount * 4);
             break;
         case 1:
-            state->status_intensity = value + (amount * 3);
+            state->technique_gauge = value + (amount * 3);
             break;
         case 2:
-            state->status_intensity = value + (amount * 2);
+            state->technique_gauge = value + (amount * 2);
             break;
         case 3:
-            state->status_intensity = value + amount;
+            state->technique_gauge = value + amount;
             break;
     }
 
-    if (record->state->status_intensity >= FIELD_INTENSITY_RANGE)
+    if (record->state->technique_gauge >= FIELD_INTENSITY_RANGE)
     {
-        record->state->status_intensity = 0;
+        record->state->technique_gauge = 0;
     }
 }
 
@@ -885,18 +883,18 @@ static s32 field_build_party_records(void)
 
             if (g_field_duel_mode != 0)
             {
-                g_field_battle->records[party_index].state->maximum = g_field_game_state->characters[party_index].hp * FIELD_DUEL_HP_SCALE;
-                g_field_battle->records[party_index].state->current = g_field_game_state->characters[party_index].hp * FIELD_DUEL_HP_SCALE;
-                g_field_battle->records[party_index].state->gauge.bits.value = g_field_game_state->characters[party_index].hp * FIELD_DUEL_HP_SCALE;
-                g_field_battle->records[party_index].state->gauge.bits.hud_bits = 0;
+                g_field_battle->records[party_index].state->maximum_hp = g_field_game_state->characters[party_index].hp * FIELD_DUEL_HP_SCALE;
+                g_field_battle->records[party_index].state->current_hp.word = g_field_game_state->characters[party_index].hp * FIELD_DUEL_HP_SCALE;
+                g_field_battle->records[party_index].state->hp_display.bits.value = g_field_game_state->characters[party_index].hp * FIELD_DUEL_HP_SCALE;
+                g_field_battle->records[party_index].state->hp_display.bits.panel_timer = 0;
             }
             else
             {
-                g_field_battle->records[party_index].state->maximum = g_field_game_state->characters[party_index].hp;
+                g_field_battle->records[party_index].state->maximum_hp = g_field_game_state->characters[party_index].hp;
             }
 
             {
-                FieldStatusState* state;
+                FieldObjectState* state;
 
                 strength = g_field_battle->records[party_index].stats[3] * 2;
 

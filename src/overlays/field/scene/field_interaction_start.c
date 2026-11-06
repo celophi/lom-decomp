@@ -150,7 +150,6 @@ extern u8 g_field_talk_plane_masks[];
 extern FieldMapPoint g_field_player_map_position;
 
 /* Functions of other FIELD files without a shared prototype. */
-void field_script_run(FieldScriptState* state);
 /* Public functions of this file that other files call without a prototype. */
 static void field_runtime_init(void);
 static void field_bind_runtime_pointers(void);

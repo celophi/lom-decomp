@@ -39,8 +39,6 @@ extern u8 g_field_weapon_type_conflicts[];
 
 /** @brief Conflict bits of each armor type, indexed by FIELD_ITEM_TYPE. */
 extern u8 g_field_armor_type_conflicts[];
-FieldStatusState* field_find_object_state(s32 index);
-
 static s32 field_can_equip_item(FieldCharacterRecord* character, s32 slot_index, FieldItemRecord* item);
 static void field_collect_equipment_conflicts(FieldCharacterRecord* character, s32 skip_slot, u8* conflicts);
 static void field_refresh_equipment_stats(FieldCharacterRecord* character);
@@ -236,20 +234,20 @@ static void field_refresh_equipment_stats(FieldCharacterRecord* character)
  */
 void field_refresh_party_member(s32 index)
 {
-    FieldStatusState* state;
+    FieldObjectState* state;
 
     field_refresh_equipment_stats(&g_field_game_state->characters[index]);
     state = field_find_object_state(index);
-    state->maximum = g_field_game_state->characters[index].hp;
+    state->maximum_hp = g_field_game_state->characters[index].hp;
 
-    if (state->maximum == 0)
+    if (state->maximum_hp == 0)
     {
-        state->maximum = 1;
+        state->maximum_hp = 1;
     }
 
-    state->current = g_field_game_state->characters[index].hp;
-    state->gauge.bits.value = g_field_game_state->characters[index].hp;
-    state->effect_flags = 0;
+    state->current_hp.word = g_field_game_state->characters[index].hp;
+    state->hp_display.bits.value = g_field_game_state->characters[index].hp;
+    state->flags = 0;
 }
 
 /**

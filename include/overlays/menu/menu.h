@@ -97,4 +97,11 @@ extern MenuScript g_script_table[];
 #define MENU_PAD_SHOULDERS (PADL1 | PADL2 | PADR1 | PADR2)
 /** @} */
 
+/**
+ * @brief Run one frame of the MENU overlay; FIELD calls it once the overlay is loaded.
+ * @param render_buffers Render context of the frame.
+ * @return Screen id of the request MENU hands back to FIELD, or 0 while it keeps running.
+ */
+s32 menu_run(RenderContext* render_buffers);
+
 #endif

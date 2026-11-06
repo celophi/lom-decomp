@@ -55,7 +55,7 @@ enum
  */
 static inline void field_set_object_group(s32 object_index, s32 group)
 {
-    g_field_object_states[object_index].group_flags = (g_field_object_states[object_index].group_flags & ~FIELD_OBJECT_GROUP_MASK) | group;
+    g_field_object_states[object_index].group.flags = (g_field_object_states[object_index].group.flags & ~FIELD_OBJECT_GROUP_MASK) | group;
 }
 
 /**

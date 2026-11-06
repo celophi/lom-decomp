@@ -938,7 +938,7 @@ void field_load_scene_actors(FieldSceneLayout* layout)
             state->current_hp.word = state->maximum_hp & FIELD_HP_VALUE_MASK;
             state->key = index + FIELD_PARTY_COUNT;
             state->enabled_events = layout_record->enabled_events;
-            state->group_flags = layout_record->control.flags;
+            state->group.flags = layout_record->control.flags;
 
             for (i = 0; i < FIELD_ACTION_SCRIPT_COUNT; i++)
             {

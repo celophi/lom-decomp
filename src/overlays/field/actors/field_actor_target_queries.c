@@ -335,7 +335,7 @@ s32 field_collect_action_targets(s32 source_index, FieldActionSlot* action, s32 
             continue;
         }
 
-        if (g_field_active_group != (state->group_flags & FIELD_OBJECT_GROUP_MASK) && index >= FIELD_PARTY_COUNT)
+        if (g_field_active_group != (state->group.flags & FIELD_OBJECT_GROUP_MASK) && index >= FIELD_PARTY_COUNT)
         {
             continue;
         }

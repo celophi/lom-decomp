@@ -288,8 +288,6 @@ typedef void (*FieldRecordQuery)(FieldKeyedList* list, FieldStatusRecord* source
 
 extern FieldCommandHandler g_field_script_commands[FIELD_SCRIPT_COMMAND_COUNT];
 extern FieldRecordQuery g_field_record_queries[];
-FieldStatusState* field_find_object_state(s32 key);
-
 /**
  * @brief Run a script command.
  * @param command Command number, an index into g_field_script_commands.
@@ -324,7 +322,7 @@ void field_command_clear_params(s32 command, FieldCommandParams* params)
 void field_command_actor_status(s32 command, FieldActorStatusParams* params)
 {
     s32 actor;
-    FieldStatusState* state;
+    FieldObjectState* state;
 
     if (params->actor == FIELD_SCRIPT_OWNER)
     {
@@ -342,34 +340,34 @@ void field_command_actor_status(s32 command, FieldActorStatusParams* params)
         switch (params->operation)
         {
             case FIELD_ACTOR_STATUS_SET_POSITION:
-                state->position_x = params->values[0];
-                state->position_y = params->values[1];
-                state->position_z = params->values[2];
+                state->target_x = params->values[0];
+                state->target_y = params->values[1];
+                state->target_z = params->values[2];
                 break;
             case FIELD_ACTOR_STATUS_SET_HP:
-                state->current = params->values[0];
-                state->maximum = params->values[1];
+                state->current_hp.word = params->values[0];
+                state->maximum_hp = params->values[1];
                 break;
             case FIELD_ACTOR_STATUS_SET_FLAGS:
-                state->effect_flags |= params->values[0];
-                state->script_flags |= params->values[1];
+                state->flags |= params->values[0];
+                state->enabled_events |= params->values[1];
                 break;
             case FIELD_ACTOR_STATUS_MASK_FLAGS:
-                state->effect_flags &= params->values[0];
-                state->script_flags &= params->values[1];
+                state->flags &= params->values[0];
+                state->enabled_events &= params->values[1];
                 break;
             case FIELD_ACTOR_STATUS_GET_GAUGES:
-                params->values[0] = state->status_intensity;
+                params->values[0] = state->technique_gauge;
                 params->values[1] = state->action_charge;
-                params->values[2] = state->level.byte & FIELD_HUD_SHOW_TECHNIQUE_GAUGE;
+                params->values[2] = state->hud.bytes.flags & FIELD_HUD_SHOW_TECHNIQUE_GAUGE;
                 break;
             case FIELD_ACTOR_STATUS_GET_HP:
-                params->values[0] = state->current;
-                params->values[1] = state->maximum;
+                params->values[0] = state->current_hp.word;
+                params->values[1] = state->maximum_hp;
 
-                if (state->maximum != 0)
+                if (state->maximum_hp != 0)
                 {
-                    params->values[2] = (state->current * FIELD_HP_EIGHTHS) / state->maximum;
+                    params->values[2] = (state->current_hp.word * FIELD_HP_EIGHTHS) / state->maximum_hp;
                 }
                 else
                 {
@@ -378,13 +376,13 @@ void field_command_actor_status(s32 command, FieldActorStatusParams* params)
 
                 break;
             case FIELD_ACTOR_STATUS_SET_DROPS:
-                state->signal.drop_counts[0] = params->drop_counts[0];
-                state->signal.drop_counts[1] = params->drop_counts[1];
-                state->signal.drop_counts[2] = params->drop_counts[2];
-                state->signal.drop_counts[3] = params->drop_counts[3];
+                state->signal.reward_counters[0] = params->drop_counts[0];
+                state->signal.reward_counters[1] = params->drop_counts[1];
+                state->signal.reward_counters[2] = params->drop_counts[2];
+                state->signal.reward_counters[3] = params->drop_counts[3];
                 break;
             case FIELD_ACTOR_STATUS_SET_GAUGE:
-                state->status_intensity = params->values[0];
+                state->technique_gauge = params->values[0];
                 break;
         }
     }
@@ -683,7 +681,7 @@ void field_query_records_by_side(FieldKeyedList* list, FieldStatusRecord* source
 
     for (i = 0; i < FIELD_BATTLE_RECORD_COUNT; i++)
     {
-        if ((g_field_battle->records[i].side & params->side_mask) && g_field_battle->records[i].state->current != 0)
+        if ((g_field_battle->records[i].side & params->side_mask) && g_field_battle->records[i].state->current_hp.word != 0)
         {
             field_get_actor_position(g_field_battle->records[i].meta.bytes.id, &record_position);
             list->entries[list->count].id = g_field_battle->records[i].meta.bytes.id;

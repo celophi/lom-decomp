@@ -20,6 +20,7 @@
 #include "../internal/field_contact_geometry.h"
 #include "../internal/field_effect_dispatch.h"
 #include "../internal/field_effect_render_state.h"
+#include "../internal/field_effect_types.h"
 #include "../internal/field_modal_runtime.h"
 #include "common/gpu_packet.h"
 #include "main/audio/akao.h"
@@ -37,6 +38,8 @@
 #include "overlays/field/field_scene_transition.h"
 #include "overlays/field/field_text.h"
 #include "overlays/field/field_types.h"
+#include "overlays/field/field_overlay_handoff.h"
+
 
 void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_entry_index);
 
@@ -210,14 +213,6 @@ typedef struct FieldCdBuffer
 #define FIELD_PACKAGE_SECTION_BYTES(package, index) ((u8*)(package) + (package)->offsets[index])
 #define FIELD_PACKAGE_SECTION(package, index) ((FieldCdBuffer*)FIELD_PACKAGE_SECTION_BYTES(package, index))
 
-/**
- * @brief Entry point of the secondary overlay loaded at SECONDARY_OVERLAY_LOAD_ADDRESS; here GOVER's gover_show_screen.
- * @param work_address Work buffer for the overlay.
- * @param image_resource_index Resource index of the Game Over image.
- * @param music_resource_index Resource index of the Game Over music.
- * @param audio_clip_index Sound effect bank resource index.
- */
-void secondary_overlay_entry(s32 work_address, s32 image_resource_index, s32 music_resource_index, s32 audio_clip_index);
 static void field_relocate_resource_buffer(s32 resource_index);
 void field_load_actor_resource_slot(s32 resource_index, s32 slot_index, s32 resource_id, s32 alternate_layout);
 static void field_build_actor_render_commands(FieldRenderContext* render_ctx, s32 unused);
@@ -226,21 +221,17 @@ static void field_update_actor_part_effects(FieldActorSlot* slot);
 static void field_reset_actor_track_mask(FieldActorSlot* slot);
 static void field_apply_global_color_scale(void);
 u8* field_advance_actor_animation_frame(FieldActor* actor);
-u8* field_begin_actor_animation_forward(FieldActor* actor, u8* resource_base);
 static u8* field_begin_actor_animation_reverse(FieldActor* actor, u8* resource_base);
 static void field_settle_actor_vertical_offset(FieldActor* actor);
 static void field_upload_resource_texture(FieldCdBuffer* buf, s32 slot_index, s32 texture_index, s32 palette_row);
 static void field_append_resource_data(void* data, s32 length, s32 slot_index);
 static void field_refresh_actor_portraits();
-s32* field_render_effect_frame16(FieldActor* actor, s32* packet, u32* ordering_table, u8* frame_data, s32 unused, FieldObjectPart* part);
-s32* field_render_effect_frame8(FieldActor* actor, s32* packet, u32* ordering_table, u8* frame_data, s32 unused, FieldObjectPart* part);
 extern FieldColorScale g_field_color_scale;
 extern u8 g_field_color_scale_active;
 extern s32 g_field_gover_image_resource_id;
 extern s32 g_field_gover_music_resource_id;
 extern s32 g_field_gover_audio_clip_id;
 extern FieldAnimationDef g_field_object_default_animation;
-extern FieldActor g_field_effect_records[];
 /**
  * @brief Advance the active field dialog runtime and finish any pending text work.
  * @param render_half Render half the dialog windows are drawn into.
@@ -2525,7 +2516,7 @@ void field_update_actor_objects(void)
                 FIELD_ACTOR_FRAME_WORD(actor) |= FIELD_FRAME_UNCHANGED;
             }
 
-            group = state->group_flags & FIELD_OBJECT_GROUP_MASK;
+            group = state->group.flags & FIELD_OBJECT_GROUP_MASK;
 
             if (g_field_active_group == group || group == 0)
             {
@@ -2647,11 +2638,11 @@ void field_render_actor_objects(FieldRenderContext* render_context)
         {
             if (!(actor->frame_data & FIELD_FRAME_DATA_8BIT))
             {
-                packet_cursor = field_render_effect_frame16(actor, packet_cursor, ordering_table, (u8*)actor->frame_data, 0, &g_field_object_parts[i]);
+                packet_cursor = field_render_effect_frame16((FieldMotionRecord*)actor, packet_cursor, ordering_table, (u8*)actor->frame_data, 0, &g_field_object_parts[i]);
             }
             else
             {
-                packet_cursor = field_render_effect_frame8(actor, packet_cursor, ordering_table, (u8*)actor->frame_data, 0, &g_field_object_parts[i]);
+                packet_cursor = field_render_effect_frame8((FieldMotionRecord*)actor, packet_cursor, ordering_table, (u8*)actor->frame_data, 0, &g_field_object_parts[i]);
             }
         }
         else if (actor->presence == FIELD_ACTOR_HIDDEN)
@@ -3418,7 +3409,7 @@ void field_reset_effect_pool(void)
 
     for (i = FIELD_EFFECT_POOL_COUNT - 1; i >= 0; i--)
     {
-        g_field_effect_records[i].presence = free_presence;
+        FIELD_EFFECT_ACTOR_RECORDS[i].presence = free_presence;
     }
 
     g_field_next_path_group = 0;
@@ -3435,7 +3426,7 @@ void field_clear_actor_effects(FieldActorSlot* slot)
     FieldActor* effects;
 
     owner_slot = slot->slot_index;
-    effects = g_field_effect_records;
+    effects = FIELD_EFFECT_ACTOR_RECORDS;
 
     for (i = 0; i < FIELD_EFFECT_POOL_COUNT; i++, effects++)
     {

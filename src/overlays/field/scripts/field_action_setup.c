@@ -57,7 +57,7 @@ enum
 #define FIELD_RECORD_FLAG_EXTRA_EXPERIENCE 0x80 /**< Defeated targets drop one more experience pickup. */
 #define FIELD_RECORD_FLAG_EXTRA_MONEY 0x100     /**< Defeated targets drop one more money pickup. */
 
-/** @brief FieldStatusState::effect_flags bits read here. */
+/** @brief FieldObjectState::effect_flags bits read here. */
 #define FIELD_EFFECT_NO_INTENSITY 0x200    /**< The attacker's intensity does not rise. */
 #define FIELD_EFFECT_HOLD_MODIFIERS 0x8000 /**< The held action modifiers survive the action. */
 
@@ -161,7 +161,7 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
         return result;
     }
 
-    if (!(g_field_battle->attacker->state->effect_flags & FIELD_EFFECT_HOLD_MODIFIERS))
+    if (!(g_field_battle->attacker->state->flags & FIELD_EFFECT_HOLD_MODIFIERS))
     {
         g_field_battle->attacker->modifier_flags &= ~FIELD_RECORD_HELD_MODIFIERS;
     }
@@ -170,7 +170,7 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
     {
         field_battle_raise_attacker_intensity();
 
-        if (g_field_battle->target->state->current == 0)
+        if (g_field_battle->target->state->current_hp.word == 0)
         {
             if (!g_field_battle->action_flags.bits.follow_up)
             {
@@ -440,26 +440,26 @@ static void field_battle_run_down_counters(s32 amount)
 static void field_battle_raise_attacker_intensity(void)
 {
     FieldStatusRecord* attacker;
-    FieldStatusState* state;
+    FieldObjectState* state;
 
     attacker = g_field_battle->attacker;
 
-    if (attacker->meta.bytes.id < FIELD_PLAYER_RECORD_COUNT && !(attacker->state->effect_flags & FIELD_EFFECT_NO_INTENSITY))
+    if (attacker->meta.bytes.id < FIELD_PLAYER_RECORD_COUNT && !(attacker->state->flags & FIELD_EFFECT_NO_INTENSITY))
     {
         if (field_count_status_slots(attacker, FIELD_SLOT_QUICK_INTENSITY) != 0)
         {
-            g_field_battle->attacker->state->status_intensity += 8 << FIELD_DESCRIPTOR_SHIFT(g_field_battle->descriptor);
+            g_field_battle->attacker->state->technique_gauge += 8 << FIELD_DESCRIPTOR_SHIFT(g_field_battle->descriptor);
         }
         else
         {
-            g_field_battle->attacker->state->status_intensity += 4 << FIELD_DESCRIPTOR_SHIFT(g_field_battle->descriptor);
+            g_field_battle->attacker->state->technique_gauge += 4 << FIELD_DESCRIPTOR_SHIFT(g_field_battle->descriptor);
         }
 
         state = g_field_battle->attacker->state;
 
-        if (state->status_intensity > FIELD_INTENSITY_MAX)
+        if (state->technique_gauge > FIELD_INTENSITY_MAX)
         {
-            state->status_intensity = FIELD_INTENSITY_MAX;
+            state->technique_gauge = FIELD_INTENSITY_MAX;
         }
     }
 }

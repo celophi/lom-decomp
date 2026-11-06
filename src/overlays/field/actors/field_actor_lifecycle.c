@@ -34,8 +34,6 @@
 #define FIELD_MUSIC_LEAVING_SORROW_BEHIND 46
 /** @brief Boss music of the "Sanctuary of Mana" (SEI_BSS0). */
 #define FIELD_MUSIC_SANCTUARY_OF_MANA 47
-FieldStatusState* field_find_object_state(s32 actor_id);
-
 /**
  * @brief Look up the object state of every non-party actor record.
  * @note The results are discarded; called instead of building a battle for group 0.
@@ -96,7 +94,7 @@ void field_battle_start(s32 group)
 void field_battle_suspend(void)
 {
     s32 i;
-    FieldStatusState* state;
+    FieldObjectState* state;
 
     g_field_battle->state.flags |= FIELD_BATTLE_FINISHED;
     field_set_battle_group(0, g_field_battle);
@@ -116,7 +114,7 @@ void field_battle_suspend(void)
 
         if (state != FIELD_STATUS_STATE_NONE)
         {
-            state->current = state->maximum;
+            state->current_hp.word = state->maximum_hp;
         }
     }
 }

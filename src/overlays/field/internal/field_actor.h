@@ -162,7 +162,10 @@ typedef union
     } bits;
 } FieldActorControl;
 
-/** @brief Script, motion and animation state of one field object (0x54 bytes). */
+/**
+ * @brief Script, motion and animation state of one field object (0x54 bytes): a field record in the actor role.
+ * @note FieldMotionRecord is the same record in the effect role; fields shared by both roles have the same names.
+ */
 typedef struct FieldActor
 {
     s32 x;

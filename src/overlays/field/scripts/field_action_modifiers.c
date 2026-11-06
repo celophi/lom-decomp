@@ -36,7 +36,7 @@
 #define FIELD_RECORD_FLAG_SHORT_DEFEAT_TIMER 0x20
 #define FIELD_RECORD_FLAG_NO_DEFEAT_TIMER 0x40
 
-/** @brief FieldStatusState::effect_flags bits. */
+/** @brief FieldObjectState::effect_flags bits. */
 #define FIELD_EFFECT_DEFENSELESS 0x2
 #define FIELD_EFFECT_KNOCKED_OUT 0x200
 
@@ -270,13 +270,13 @@ s32 field_battle_handle_defeat(FieldStatusRecord* record)
         {
             field_spawn_shared_animation_actor(record->meta.bytes.id, FIELD_REVIVE_EFFECT);
             remaining = 1;
-            record->state->current = record->state->maximum;
+            record->state->current_hp.word = record->state->maximum_hp;
             field_consume_revive_item(record);
         }
         else
         {
-            record->state->effect_flags &= ~FIELD_EFFECT_DEFEAT_CLEAR_MASK;
-            record->state->effect_flags |= FIELD_EFFECT_KNOCKED_OUT;
+            record->state->flags &= ~FIELD_EFFECT_DEFEAT_CLEAR_MASK;
+            record->state->flags |= FIELD_EFFECT_KNOCKED_OUT;
             field_start_actor_defeat_by_key(record->meta.bytes.id, -1);
             duration = FIELD_DEFEAT_TIMER_NORMAL;
 
@@ -312,11 +312,11 @@ s32 field_battle_handle_defeat(FieldStatusRecord* record)
     }
     else
     {
-        record->state->effect_flags &= ~FIELD_EFFECT_DEFEAT_CLEAR_MASK;
+        record->state->flags &= ~FIELD_EFFECT_DEFEAT_CLEAR_MASK;
 
         if ((record->meta.bytes.guard_flags & FIELD_GUARD_FLAG_KEEP_KNOCKED_OUT) || (record->template->flags & FIELD_TEMPLATE_KEEP_KNOCKED_OUT))
         {
-            record->state->effect_flags |= FIELD_EFFECT_KNOCKED_OUT;
+            record->state->flags |= FIELD_EFFECT_KNOCKED_OUT;
         }
 
         field_set_actor_record_script_only(record->meta.bytes.id, 0);
@@ -511,7 +511,7 @@ s32 field_action_damage_drain(void)
     field_apply_element_modifiers(0, 0, &attack, &defense);
     damage = field_apply_damage(attack, defense);
 
-    if (g_field_battle->attacker->state->current == 0)
+    if (g_field_battle->attacker->state->current_hp.word == 0)
     {
         return 0;
     }
@@ -586,7 +586,7 @@ s32 field_action_damage_from_hp(void)
     roll = rand() % params.roll.spread;
     percent = params.roll.base + roll;
     defense = 0;
-    attack = (u32)(g_field_battle->attacker->state->current * percent) >> 4;
+    attack = (u32)(g_field_battle->attacker->state->current_hp.word * percent) >> 4;
     field_apply_element_modifiers(0, 0, &attack, &defense);
     damage = field_apply_damage(attack, defense);
     field_apply_on_hit_statuses();
@@ -666,7 +666,7 @@ s32 field_action_damage_modify(void)
     switch (params.modify.operation)
     {
         case 0:
-            g_field_battle->target->state->status_intensity = 0;
+            g_field_battle->target->state->technique_gauge = 0;
             break;
         case 1:
             g_field_battle->target->modifier_flags |= params.modify.value << 16;
@@ -688,7 +688,7 @@ s32 field_action_damage_modify(void)
 void field_action_scale_target_hp(void)
 {
     FieldActionParams params;
-    FieldStatusState* state;
+    FieldObjectState* state;
     s32 roll;
     u32 hp;
 
@@ -702,14 +702,14 @@ void field_action_scale_target_hp(void)
     roll = rand() % params.roll.spread;
     state = g_field_battle->target->state;
     hp = params.roll.base + roll;
-    hp = (state->current * hp) >> 4;
+    hp = (state->current_hp.word * hp) >> 4;
 
     if (hp == 0)
     {
         hp = 1;
     }
 
-    state->current = hp;
+    state->current_hp.word = hp;
 }
 
 /**
@@ -751,7 +751,7 @@ void field_compute_defense(s32 stat_index, s32* defense)
     stat = field_get_status_stat(g_field_battle->target, stat_index);
     target = g_field_battle->target;
 
-    if ((target->state->effect_flags & FIELD_EFFECT_DEFENSELESS) || animation == FIELD_ABILITY_CROUCH)
+    if ((target->state->flags & FIELD_EFFECT_DEFENSELESS) || animation == FIELD_ABILITY_CROUCH)
     {
         *defense = 0;
     }
@@ -924,7 +924,7 @@ s32 field_apply_damage(u32 attack, u32 defense)
             value = (uintptr_t)attacker->state;
         }
 
-        field_heal_status((FieldStatusState*)value, quarter >> 2);
+        field_heal_status((FieldObjectState*)value, quarter >> 2);
     }
 
     attack = field_apply_attacker_double(attack);

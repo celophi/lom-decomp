@@ -604,7 +604,7 @@ void field_reset_object_tints(void)
         g_field_object_states[i].flags = 0;
         g_field_object_states[i].previous_flags = 0;
         g_field_object_states[i].action_parameter = 0;
-        g_field_object_states[i].name = NULL;
+        g_field_object_states[i].label.name = NULL;
         g_field_object_states[i].action = 0;
         g_field_object_states[i].interaction_kind = 0;
         g_field_object_states[i].movement.bits.invulnerable = 0;

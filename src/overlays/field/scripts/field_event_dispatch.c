@@ -6,8 +6,6 @@
 #include "common.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
-void field_script_run(FieldScriptState* state);
-
 /**
  * @brief Queue an event on an actor when the event is enabled and nothing is pending.
  * @param owner_id Actor id.

@@ -35,8 +35,6 @@
 
 /** @brief Lowest and highest modifier index a stat may have, per limits row. */
 extern u8 g_field_stat_modifier_limits[][2];
-void field_script_run(FieldScriptContext* context);
-
 static s32 field_shift_slot_chain(s32 slot);
 static void field_clamp_staged_stats(void);
 static void field_apply_power_flags(void);
@@ -54,19 +52,19 @@ static void field_apply_element_flags(void);
 void field_run_item_script(s32 offset)
 {
     s32 depth;
-    FieldScriptContext* context;
+    FieldScriptState* context;
 
-    depth = g_field_script->active_record;
+    depth = g_field_script->depth;
 
     if (FIELD_SCRIPT_RECORD(depth)->pc != NULL)
     {
-        g_field_script->active_record = depth + 1;
+        g_field_script->depth = depth + 1;
     }
 
     context = g_field_script;
-    FIELD_SCRIPT_RECORD_STATE(context->active_record)->pc = g_field_item_tables->bytes + (offset & 0xFFFF);
-    FIELD_SCRIPT_RECORD_STATE(context->active_record)->wait.bits.resume = 0;
-    FIELD_SCRIPT_RECORD_STATE(context->active_record)->wait.bits.frames = 0;
+    FIELD_SCRIPT_RECORD_STATE(context->depth)->pc = g_field_item_tables->bytes + (offset & 0xFFFF);
+    FIELD_SCRIPT_RECORD_STATE(context->depth)->wait.bits.resume = 0;
+    FIELD_SCRIPT_RECORD_STATE(context->depth)->wait.bits.frames = 0;
     field_write_script_var(context->status.owner_id, FIELD_VAR_EVENT_ARGUMENT << 16, 0);
     field_script_run(g_field_script);
 }

@@ -65,7 +65,7 @@ s32 field_roll_defeat_drop(FieldStatusRecord* record)
         return -1;
     }
 
-    slot_count = g_field_drop_slots_by_level[record->state->level.bits.level >> FIELD_DROP_LEVEL_BAND_SHIFT];
+    slot_count = g_field_drop_slots_by_level[record->state->hud.bits.level >> FIELD_DROP_LEVEL_BAND_SHIFT];
 
     if (record->modifier_flags & FIELD_DEFEAT_EXTRA_DROP_SLOTS)
     {
@@ -202,17 +202,17 @@ s32 field_drop_pickups(s32 handler, s32 value, FieldStatusRecord* record)
 
     if (record->template->flags & FIELD_TEMPLATE_BOSS)
     {
-        record->state->signal.drop_counts[FIELD_REWARD_EXPERIENCE_LARGE] = experience;
-        record->state->signal.drop_counts[FIELD_REWARD_EXPERIENCE_SMALL] = 0;
-        record->state->signal.drop_counts[FIELD_REWARD_MONEY_LARGE] = value;
-        record->state->signal.drop_counts[FIELD_REWARD_MONEY_SMALL] = 0;
+        record->state->signal.reward_counters[FIELD_REWARD_EXPERIENCE_LARGE] = experience;
+        record->state->signal.reward_counters[FIELD_REWARD_EXPERIENCE_SMALL] = 0;
+        record->state->signal.reward_counters[FIELD_REWARD_MONEY_LARGE] = value;
+        record->state->signal.reward_counters[FIELD_REWARD_MONEY_SMALL] = 0;
     }
     else
     {
-        record->state->signal.drop_counts[FIELD_REWARD_EXPERIENCE_LARGE] = 0;
-        record->state->signal.drop_counts[FIELD_REWARD_EXPERIENCE_SMALL] = experience;
-        record->state->signal.drop_counts[FIELD_REWARD_MONEY_LARGE] = 0;
-        record->state->signal.drop_counts[FIELD_REWARD_MONEY_SMALL] = value;
+        record->state->signal.reward_counters[FIELD_REWARD_EXPERIENCE_LARGE] = 0;
+        record->state->signal.reward_counters[FIELD_REWARD_EXPERIENCE_SMALL] = experience;
+        record->state->signal.reward_counters[FIELD_REWARD_MONEY_LARGE] = 0;
+        record->state->signal.reward_counters[FIELD_REWARD_MONEY_SMALL] = value;
     }
 
     return FIELD_PICKUP_EXPERIENCE_OR_CURRENCY;

@@ -288,7 +288,7 @@ static void field_run_actor_script_command(FieldActor* actor)
                     spawn_actor->script_index = 0;
                     spawn_actor->script_busy = 1;
                     spawn_state = &spawn_states[index_or_count];
-                    spawn_state->group_flags = 0;
+                    spawn_state->group.flags = 0;
                     spawn_state->flags = 0;
                     spawn_state->key = index_or_count;
                     spawn_state->enabled_events = 0;

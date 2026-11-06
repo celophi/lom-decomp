@@ -70,7 +70,7 @@ typedef struct
 /** @brief Fixed address of the field map header block. */
 #define FIELD_MAP_BOUNDS ((FieldMapBounds*)MAP_BOUNDS_ADDRESS)
 
-/** @brief FieldObjectState::hud flag (FieldStatusState::level byte) showing the technique gauge. */
+/** @brief FieldObjectState::hud flag (FieldObjectState::level byte) showing the technique gauge. */
 #define FIELD_HUD_SHOW_TECHNIQUE_GAUGE 0x01
 
 /** @brief Sentinel returned by field_find_object_state when no object matches. */
@@ -87,7 +87,6 @@ typedef struct
 
 
 extern FieldObjectState g_field_scene_object_states[];
-extern FieldObjectPart g_field_object_parts[];
 
 /**
  * @brief Find the field actor whose object state carries @p key.
@@ -102,6 +101,7 @@ static inline FieldActor* field_find_actor(s32 key)
 
     actor = g_field_actors;
     state = g_field_object_states;
+
     for (i = 0; i < FIELD_ACTOR_COUNT; i++, state++, actor++)
     {
         if (state->key == key)
@@ -109,6 +109,7 @@ static inline FieldActor* field_find_actor(s32 key)
             return actor;
         }
     }
+
     return FIELD_ACTOR_NONE;
 }
 

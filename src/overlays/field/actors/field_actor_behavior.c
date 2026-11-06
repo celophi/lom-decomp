@@ -2265,7 +2265,7 @@ static s32 field_filter_action_targets(s32 count, s32* indices, s32 unused_slot)
                 continue;
             }
 
-            if (i >= FIELD_PARTY_COUNT && (state->group_flags & FIELD_OBJECT_GROUP_MASK) != group)
+            if (i >= FIELD_PARTY_COUNT && (state->group.flags & FIELD_OBJECT_GROUP_MASK) != group)
             {
                 continue;
             }

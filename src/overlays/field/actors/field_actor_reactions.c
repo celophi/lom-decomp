@@ -356,7 +356,7 @@ s32 field_test_actor_depth_overlap(s32 first_key, s32 second_key)
         return -1;
     }
 
-    if (second_object >= FIELD_PARTY_COUNT && (second_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)
+    if (second_object >= FIELD_PARTY_COUNT && (second_state->group.flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)
     {
         return 0;
     }

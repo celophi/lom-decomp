@@ -30,6 +30,7 @@
 struct AkaoHeader;
 
 struct FieldActionBank;
+struct FieldScriptState;
 struct FieldActionDescriptor;
 struct FieldActor;
 struct FieldActionSlot;
@@ -53,7 +54,7 @@ struct FieldObjectPart;
 struct FieldNode;
 struct FieldRenderHalf;
 struct FieldStatusRecord;
-struct FieldStatusState;
+struct FieldObjectState;
 
 /**
  * @brief Collision probe: world position (24.8 fixed point), footprint and
@@ -240,6 +241,7 @@ s32 field_reload_actor(s32 key, s32 resource_entry_index, s32 resource_slot_id, 
 u8* field_get_event_script(s32 index);
 void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s32 y, s32 z);
 s32 field_start_actor_private_script(s32 key, u8* script);
+struct FieldObjectState* field_find_object_state(s32 key);
 
 /* field_actor_lifecycle.c */
 struct FieldActorTemplate;
@@ -305,6 +307,8 @@ void field_restart_actor_animation();
 void field_dispatch_actor_audio_event();
 u32 field_evaluate_parameter_track_at_time(struct FieldActorSlot* slot, s32 curve_index, s32 frame);
 void field_interpolate_palette_track(struct FieldActorSlot* slot, s32 palette_sequence, u8* palette_table, s16* output);
+u8* field_begin_actor_animation_forward(struct FieldActor* actor, u8* resource_base);
+u8* field_advance_actor_part_animation_frame(struct FieldActor* actor, u8* resource_base);
 
 /* field_actor_script_ops.c */
 void field_step_actor_script(struct FieldActor* actor);
@@ -381,7 +385,7 @@ s32 field_collect_action_targets(s32 source_index, struct FieldActionSlot* actio
 
 /* field_actor_templates.c */
 s32 field_build_group_monster_records(s32 group);
-void field_init_monster_record(s32 actor_id, struct FieldStatusRecord* record, struct FieldStatusState* state);
+void field_init_monster_record(s32 actor_id, struct FieldStatusRecord* record, struct FieldObjectState* state);
 
 /* field_actor_transition_reset.c */
 void field_set_battle_group(s32 mode, void* actor_data);
@@ -512,6 +516,8 @@ extern s32 g_field_next_path_group;
 extern s32 g_field_spawn_ground_point;
 /** @brief Suppress repeated pickup audio until the next frame-command build. */
 extern s32 g_field_pickup_sound_played;
+s32* field_render_effect_frame8(struct FieldMotionRecord* rec, s32* cursor, s32* base, u8* item, s32 flag, struct FieldObjectPart* part);
+s32* field_render_effect_frame16(struct FieldMotionRecord* rec, s32* cursor, s32* base, u8* item, s32 flag, struct FieldObjectPart* part);
 
 /* field_event_dispatch.c */
 s32 field_queue_actor_event(s32 owner_id, u8 event_id, s32 argument);
@@ -729,6 +735,7 @@ extern s32 g_field_scene_mode_bit;
 /** @brief Non-zero while a duel (scene script command) runs; cleared when the battle ends. */
 extern s32 g_field_duel_mode;
 void field_script_op_00(void);
+void field_script_run(struct FieldScriptState* context);
 
 /* field_scene_transition.c */
 /** @brief Set while the player stands on the marker whose interaction already started; cleared when the player leaves it. */

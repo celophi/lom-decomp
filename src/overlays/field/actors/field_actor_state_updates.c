@@ -1285,7 +1285,7 @@ void field_restart_idle_animation(FieldActor* actor)
     {
         for (i = 0; i < FIELD_REWARD_KIND_COUNT; i++)
         {
-            if (g_field_object_states[actor->object_index].reward_counters[i] != 0)
+            if (g_field_object_states[actor->object_index].signal.reward_counters[i] != 0)
             {
                 animation_id = g_field_object_states[actor->object_index].idle_animation;
                 actor_index = field_find_free_actor_slot(actor->object_index, 0);

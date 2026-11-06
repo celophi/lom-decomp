@@ -103,10 +103,10 @@ void field_set_battle_group(s32 mode, void* actor_data)
     {
         progress = g_saved_game_ctx->characters[index].progress.word;
         g_field_experience_snapshot[index] = progress >> 8;
-        g_field_player_records[index].small_money_pickups = 0;
-        g_field_player_records[index].large_money_pickups = 0;
-        g_field_player_records[index].small_experience_pickups = 0;
-        g_field_player_records[index].large_experience_pickups = 0;
+        g_field_player_records[index].pickup_counts[FIELD_REWARD_MONEY_SMALL] = 0;
+        g_field_player_records[index].pickup_counts[FIELD_REWARD_MONEY_LARGE] = 0;
+        g_field_player_records[index].pickup_counts[FIELD_REWARD_EXPERIENCE_SMALL] = 0;
+        g_field_player_records[index].pickup_counts[FIELD_REWARD_EXPERIENCE_LARGE] = 0;
     }
 
     saved_game = g_saved_game_ctx;
