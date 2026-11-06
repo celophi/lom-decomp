@@ -394,12 +394,14 @@ s32 g_strip_width;
 s32 g_navigation_mode;
 /** Current frame index into g_glyph_append_anim_frames. */
 u8 g_glyph_append_anim_frame;
-u8 pad_8014F8B1[3];
+/** Never read or written; holds the BSS layout. */
+u8 g_gname_unused_bytes0[3];
 /** Current vertical scroll position of the character grid in pixels. */
 s32 g_scroll_pos;
 /** Render ticks until the next append-animation frame. */
 u8 g_glyph_append_anim_timer;
-u8 pad_8014F8B9[3];
+/** Never read or written; holds the BSS layout. */
+u8 g_gname_unused_bytes1[3];
 /** Target name-strip width in pixels for the width lerp. */
 s32 g_strip_width_target;
 /** Target vertical scroll position for the scroll lerp. */
@@ -414,8 +416,8 @@ s32 g_name_pixel_width;
 #endif
 /** Linearized character cursor position in the grid: row * 10 + col. */
 s32 g_char_cursor;
-/** Unknown trailing BSS word retained for layout. */
-s32 D_8014F8D4;
+/** Never read or written; holds the BSS layout. */
+s32 g_gname_unused_word;
 
 #include "common/screen_fade_words.h"
 #include "overlays/field/field_sound.h"

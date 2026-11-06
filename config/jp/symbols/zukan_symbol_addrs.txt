@@ -76,5 +76,7 @@ field_text_reset_windows = 0x800640B0;
 field_text_reset_scratch = 0x800640EC;
 field_draw_sprite_number = 0x800ACE5C;
 field_draw_sprite_glyph = 0x800AD178;
-g_field_ui_text_dashes = 0x800EBFAC;
 g_field_map_texture_bytes = 0x8018000C;
+
+// FIELD UI string table entries.
+g_field_ui_text_dashes = 0x800EBFAC;

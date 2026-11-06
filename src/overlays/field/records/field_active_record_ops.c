@@ -256,10 +256,10 @@ static void field_load_companion(s32 companion_index)
             (g_field_game_state->pets[companion_index].stats[i] & ~FIELD_STAT_SCALED_MASK);
     }
 
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk40 = g_field_game_state->pets[companion_index].unk38[0];
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk41 = g_field_game_state->pets[companion_index].unk38[1];
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].unk42 = g_field_game_state->pets[companion_index].unk38[2];
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].companion_ability = g_field_game_state->pets[companion_index].unk38[3];
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].status_immunities = g_field_game_state->pets[companion_index].status_immunities;
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].weapon_flags = g_field_game_state->pets[companion_index].weapon_flags;
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].element_resistances = g_field_game_state->pets[companion_index].element_resistances;
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].companion_ability = g_field_game_state->pets[companion_index].companion_ability;
 
     for (i = 0; i < FIELD_CHARACTER_ORDER_COUNT; i++)
     {
@@ -294,8 +294,10 @@ static void field_load_companion(s32 companion_index)
         item->derived.values[i] = state->pets[companion_index].equipment_totals[i];
     }
 
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT].status_flags = g_field_game_state->pets[companion_index].unk38[0];
-    g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT].element_flags = g_field_game_state->pets[companion_index].unk38[2];
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT].status_flags =
+        g_field_game_state->pets[companion_index].status_immunities;
+    g_field_game_state->characters[FIELD_PARTY_COMPANION].equipment[FIELD_ARMOR_SLOT].element_flags =
+        g_field_game_state->pets[companion_index].element_resistances;
     field_refresh_party_member(FIELD_PARTY_COMPANION);
 }
 

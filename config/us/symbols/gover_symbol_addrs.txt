@@ -11,7 +11,8 @@ g_gover_frame_header = 0x80140710;
 g_gover_frame_tail = 0x801407A0;
 g_fade_level = 0x80141048;
 g_fade_step = 0x80140708;
-D_8014070C = 0x8014070C;
+g_gover_unused_a = 0x80140704;
+g_gover_unused_b = 0x8014070C;
 g_sfx_table_offset = 0x80180004;
 g_sfx_table_buffer = 0x80119F00;
 
@@ -22,3 +23,8 @@ g_akao_music_volume = 0x8011588C;
 D_80180000 = 0x80180000; // ignore:true
 D_80180001 = 0x80180001; // ignore:true
 D_80180004 = 0x80180004; // ignore:true
+
+// FIELD functions GOVER calls.
+field_load_song = 0x800A368C;
+field_play_song = 0x800A380C;
+field_play_set_sfx = 0x800A39A8;

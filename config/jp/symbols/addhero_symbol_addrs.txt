@@ -223,8 +223,6 @@ field_play_sound                                 = 0x800A37E8;
 
 // Shared main-executable data globals referenced from addhero
 g_save_compatibility_tag                          = 0x8003EE08;
-g_text_time_separator_offset_bytes         = 0x800EBFC2;
-g_text_choice_glyph_offsets                = 0x800EBFC6;
 g_lom_save_filename_prefix                 = 0x800ECAE8;
 g_lom_pocketstation_filename_prefix             = 0x800ECAF8;
 g_lom_save_dummy_filename                  = 0x800ECB20;
@@ -252,4 +250,8 @@ field_draw_number = 0x800A8928;
 field_draw_menu_frame = 0x800AD4A4;
 field_draw_menu_scroll_arrow = 0x800AE3C0;
 field_flag_known_save = 0x800AFDC4;
-D_80122718    = 0x8011F1C0;
+g_field_addhero_cancel_result    = 0x8011F1C0;
+
+// FIELD UI string table entries.
+g_field_ui_text_time_separator = 0x800EBFC2;
+g_field_ui_text_yes = 0x800EBFC6;

@@ -31,7 +31,8 @@ typedef union
     {
         u8 id;
         u8 flags;
-        u16 unk2;
+        /** @brief FIELD_GUARD_FLAG_* bits. */
+        u16 guard_flags;
     } bytes;
     struct
     {
@@ -42,7 +43,7 @@ typedef union
         u32 ally : 1;
         /** @brief Character type for party records, FIELD_STATUS_KIND_MONSTER for monsters. */
         u32 kind : 6;
-        u32 unk16 : 16;
+        u32 guard_flags : 16;
     } bits;
 } FieldStatusRecordMeta;
 
@@ -77,14 +78,16 @@ typedef struct FieldActorTemplate
     u8 pad17;
     /** @brief Identifier matched against FieldStatusState::template_index. */
     u8 id;
-    u8 unk19;
-    u8 unk1A;
+    /** @brief Evasion chance given to the monster's status record. */
+    u8 evasion;
+    /** @brief Monster race. */
+    u8 race;
     u8 counter_reset;
     u16 hp_base;
     /** @brief Per-level HP increment, or 0xFFFF to grow HP along the stat 4 curve. */
     u16 hp_growth;
-    u16 unk20_base;
-    u16 unk20_growth;
+    u16 power_base;
+    u16 power_growth;
     FieldGrowthPair equipment_stats[4];
     FieldGrowthPair stats[FIELD_STATUS_STAT_COUNT];
     u8 immunity_flags;
@@ -140,7 +143,8 @@ typedef struct FieldStatusState
     u8 template_index;
     u8 pad12[2];
     s32 actor_id;
-    u16 unk18;
+    /** @brief Flags scripts set and mask together with effect_flags. */
+    u16 script_flags;
     u8 pad1A[0x48 - 0x1A];
     u16 status_intensity;
     /** @brief Same halfword as FieldObjectState::action_charge. */
@@ -184,7 +188,7 @@ typedef struct FieldStatusState
 typedef struct FieldStatusRecord
 {
     /** @brief Bit 6 set for monsters and the versus-mode leader, bit 7 for other party members. */
-    u8 unk0;
+    u8 side;
     u8 pad1[2];
     /** @brief Monster race, matched by the race-dependent statuses and action handler 4. */
     u8 race;
@@ -192,11 +196,14 @@ typedef struct FieldStatusRecord
     s8 counter;
     u8 counter_reset;
     u16 status_flags;
-    u32 unkC;
+    /** @brief FIELD_RECORD_ACTION_MODIFIERS, FIELD_RECORD_HELD_MODIFIERS and FIELD_RECORD_DEFEAT_FLAGS. */
+    u32 modifier_flags;
     FieldStatusState* state;
     FieldActorTemplate* template;
-    u16 unk18;
-    u8 unk1A;
+    /** @brief Attack power: the weapon's for party records, the template's base and growth for monsters. */
+    u16 power;
+    /** @brief Evasion chance; 25 for party records. */
+    u8 evasion;
     u8 pad1B;
     u16 equipment_stats[4];
     u8 equipment_attributes[4];
@@ -212,12 +219,13 @@ typedef struct FieldStatusRecord
     u8 element_attack[FIELD_ELEMENT_COUNT];
     /** @brief Defense level per element, 5 by default. */
     u8 element_defense[FIELD_ELEMENT_COUNT];
-    u8 unk4C;
+    /** @brief Companion ability copied from the character record. */
+    u8 companion_ability;
     u8 status_slots[FIELD_STATUS_SLOT_COUNT];
     u16 status_timers[FIELD_STATUS_TIMER_COUNT];
 } FieldStatusRecord;
 
-/** @brief Fields of FieldStatusRecord::unkC. */
+/** @brief Fields of FieldStatusRecord::modifier_flags. */
 #define FIELD_RECORD_ACTION_MODIFIERS 0xFF    /**< Cleared after every action. */
 #define FIELD_RECORD_HELD_MODIFIERS 0xFF00    /**< Cleared unless FIELD_EFFECT_HOLD_MODIFIERS. */
 #define FIELD_RECORD_DEFEAT_FLAGS 0xFF000000U /**< Set on the target when it is defeated. */

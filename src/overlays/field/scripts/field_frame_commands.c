@@ -3,19 +3,20 @@
  */
 
 #include "common.h"
+
 #include "../internal/field_actor.h"
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_modal_runtime.h"
-#include "main/field_runtime.h"
-#include "overlays/field/field_text.h"
-#include "main/main.h"
 #include "main/field_entry.h"
+#include "main/field_runtime.h"
+#include "main/main.h"
 #include "overlays/field/field_input.h"
+#include "overlays/field/field_text.h"
 
 void field_update_timed_panel(FieldRenderHalf* render);
 void field_update_actor_texts(FieldRenderHalf* render);
-/** @brief Nonzero while a picture screen is shown (set by func_800A5670). */
+/** @brief Nonzero while a picture screen is shown (set by field_start_timed_panel). */
 extern s32 g_field_pickup_sound_played;
 extern s32 g_field_hide_actor_panels;
 /** @brief Ring menu state; nonzero while the ring menu is open. */
@@ -41,6 +42,7 @@ void field_build_frame_commands(FieldRenderHalf* render_half, s32 alternate)
     field_process_input(render_half);
     field_update_and_render_fade(render_half);
     field_update_battle_entry();
+
     if (g_field_active_group != 0)
     {
         if (g_field_hide_actor_panels == 0)
@@ -48,24 +50,31 @@ void field_build_frame_commands(FieldRenderHalf* render_half, s32 alternate)
             field_draw_actor_hud(render_half);
         }
     }
+
     if ((g_field_timed_panel_active == 0) && (g_field_gover_load_countdown == 0) && (g_field_modal_state == 0) && (g_field_text_session_active == 0))
     {
         field_runtime_update();
+
         if (g_field_scene_request_pending != 0)
         {
             return;
         }
+
         if (g_field_ring_menu_state == 0)
         {
             field_update_actor_objects();
         }
     }
+
     field_update_ring_menu(render_half);
     field_cancel_animation_bindings();
-    if ((g_field_timed_panel_active == 0) && (g_field_gover_load_countdown == 0) && (g_field_modal_state == 0) && (g_field_ring_menu_state == 0) && (g_field_text_session_active == 0))
+
+    if ((g_field_timed_panel_active == 0) && (g_field_gover_load_countdown == 0) && (g_field_modal_state == 0) && (g_field_ring_menu_state == 0) &&
+        (g_field_text_session_active == 0))
     {
         field_update_actor_animations();
     }
+
     field_prepare_actor_render_commands((FieldRenderContext*)render_half, alternate);
     field_render_actor_objects((FieldRenderContext*)render_half);
     field_draw_fade_prims(render_half);

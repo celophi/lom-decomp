@@ -13,7 +13,7 @@ rom:0x2941 reloc:MIPS_NONE symbol:g_field_scene
 rom:0x296D reloc:MIPS_NONE symbol:g_field_node_angle_table
 rom:0x39F9 reloc:MIPS_NONE symbol:g_field_dyn_count
 rom:0x3A01 reloc:MIPS_NONE symbol:g_field_dyn_count
-rom:0x3A05 reloc:MIPS_NONE symbol:D_80180018
+rom:0x3A05 reloc:MIPS_NONE symbol:g_field_seq_defs
 
 rom:0x62ED reloc:MIPS_NONE symbol:D_1F800008
 rom:0x6425 reloc:MIPS_NONE symbol:D_1F800008

@@ -602,8 +602,8 @@ void* cload_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y)
     s32 color;
 
     color = FIELD_TEXT_COLOR_NORMAL;
-    text = FIELD_UI_TEXT_AT(g_text_choice_glyph_offsets, FIELD_UI_TEXT_YES);
-    text_table = FIELD_UI_TEXT_TABLE(g_text_choice_glyph_offsets, FIELD_UI_TEXT_YES);
+    text = FIELD_UI_TEXT_AT(g_field_ui_text_yes, FIELD_UI_TEXT_YES);
+    text_table = FIELD_UI_TEXT_TABLE(g_field_ui_text_yes, FIELD_UI_TEXT_YES);
     if (g_card_menu_choice_toggle != CARD_MENU_CHOICE_YES)
     {
         color = FIELD_TEXT_COLOR_DIM;

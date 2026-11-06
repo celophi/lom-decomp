@@ -198,8 +198,6 @@ g_carda_text_card_unformatted = 0x8014B030;
 // Main-executable / FIELD / SDK symbols used by this overlay.
 g_save_compatibility_tag = 0x8003EE08;
 g_playtime_vsync_origin = 0x80043124;
-g_text_time_separator_offset_bytes = 0x800EBFC2;
-g_text_choice_glyph_offsets = 0x800EBFC6;
 g_lom_save_filename_prefix = 0x800ECAE8;
 g_lom_pocketstation_filename_prefix = 0x800ECAF8;
 g_lom_save_dummy_filename = 0x800ECB20;
@@ -264,7 +262,6 @@ field_draw_menu_frame = 0x800AD4A4;
 field_draw_menu_scroll_arrow = 0x800AE3C0;
 field_flag_known_save = 0x800AFDC4;
 field_apply_pet_level_ups = 0x800C0E04;
-g_field_ui_text_cant_hold_more    = 0x800EBF9C;
 g_card_full_entry_name    = 0x800ECB14;
 g_field_card_pet_slot    = 0x8011F26C;
 g_carda_text_save_title    = 0x8014B016;
@@ -319,3 +316,7 @@ g_card_software_event_error    = 0x80167910;
 g_card_software_event_timeout    = 0x80167914;
 g_card_software_event_new_card    = 0x80167918;
 
+// FIELD UI string table entries.
+g_field_ui_text_cant_hold_more = 0x800EBF9C;
+g_field_ui_text_time_separator = 0x800EBFC2;
+g_field_ui_text_yes = 0x800EBFC6;

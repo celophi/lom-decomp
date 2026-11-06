@@ -91,7 +91,7 @@ void wmap_land_effect_01_update_particles(WmapSpriteActor* actors, WmapAnimation
         }
     }
 
-    D_800D922C = active_count;
+    g_wmap_unused_tally = active_count;
 
     for (i = 0; i < count; i++)
     {

@@ -236,13 +236,13 @@ static inline void field_rewind_animation(FieldAnimDef* def, FieldAnim* anim)
         anim->flags.word &= ~FIELD_ANIM_FLAG_REVERSE;
         if (def->flags.word & FIELD_ANIM_DEF_SPAN_INDEXED)
         {
-            frame = def->head.b.unk1;
+            frame = def->head.b.start_frame;
             anim->flags.b.keyframe = 0;
             anim->flags.b.state = frame;
         }
         else
         {
-            frame = def->head.b.unk1;
+            frame = def->head.b.start_frame;
             anim->flags.b.state = frame;
             anim->flags.b.keyframe = frame;
         }
@@ -572,7 +572,7 @@ void field_update_scene_fade(void)
                 obj = obj->next;
                 while (obj != NULL)
                 {
-                    obj->flags.word = ((obj->flags.word & ~FIELD_OBJ_SAVED_VISIBLE) | ((obj->flags.b.unk0 & FIELD_OBJ_VISIBLE) << 1)) & ~FIELD_OBJ_VISIBLE;
+                    obj->flags.word = ((obj->flags.word & ~FIELD_OBJ_SAVED_VISIBLE) | ((obj->flags.b.low_flags & FIELD_OBJ_VISIBLE) << 1)) & ~FIELD_OBJ_VISIBLE;
                     obj = obj->next;
                 }
                 anim = scene->anims;

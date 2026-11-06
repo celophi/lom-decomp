@@ -69,7 +69,7 @@ s32 field_roll_defeat_drop(FieldStatusRecord* record)
 
     slot_count = g_field_drop_slots_by_level[record->state->level.bits.level >> FIELD_DROP_LEVEL_BAND_SHIFT];
 
-    if (record->unkC & FIELD_DEFEAT_EXTRA_DROP_SLOTS)
+    if (record->modifier_flags & FIELD_DEFEAT_EXTRA_DROP_SLOTS)
     {
         slot_count += FIELD_DROP_EXTRA_SLOTS;
     }
@@ -82,7 +82,7 @@ s32 field_roll_defeat_drop(FieldStatusRecord* record)
     random = rand();
     mask = random & 0xFFFF;
 
-    if (record->unkC & FIELD_DEFEAT_NO_COMMON_DROPS)
+    if (record->modifier_flags & FIELD_DEFEAT_NO_COMMON_DROPS)
     {
         mask = random & 0xFFFC;
     }
@@ -173,7 +173,7 @@ s32 field_drop_pickups(s32 handler, s32 value, FieldStatusRecord* record)
     s32 experience;
 
     experience = value >> 4;
-    flags = record->unkC;
+    flags = record->modifier_flags;
     value = value & 0xF;
 
     if (flags & FIELD_DEFEAT_EXPERIENCE_AS_MONEY)

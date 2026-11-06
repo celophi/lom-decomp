@@ -162,15 +162,17 @@ field_play_sound = 0x800A37E8;
 field_draw_text = 0x800A8750;
 field_draw_number = 0x800A8928;
 field_format_number = 0x800A8A40;
-D_800EC3DA    = 0x800EBFA6;
-D_800EC3E2    = 0x800EBFAE;
-D_800EC3EE    = 0x800EBFBA;
-D_800EC3F0    = 0x800EBFBC;
-D_800EC3F2    = 0x800EBFBE;
 g_golem_shape_table = 0x800F1774;
 g_golem_logic_block_icons = 0x800F1C24;
-D_8016B8DD    = 0x8016B725;
-D_8016B8FE    = 0x8016B746;
-D_8016B904    = 0x8016B74C;
-D_80170961    = 0x801707A9;
-D_80170984    = 0x801707CC;
+g_gosub_unused_bytes0    = 0x8016B725;
+g_gosub_unused_bytes1    = 0x8016B746;
+g_gosub_unused_word0    = 0x8016B74C;
+g_gosub_unused_bytes2    = 0x801707A9;
+g_gosub_unused_word1    = 0x801707CC;
+
+// FIELD UI string table entries.
+g_field_ui_text_plus = 0x800EBFA6;
+g_field_ui_text_space = 0x800EBFAE;
+g_field_ui_text_attack_power = 0x800EBFBA;
+g_field_ui_text_total_defense = 0x800EBFBC;
+g_field_ui_text_power = 0x800EBFBE;

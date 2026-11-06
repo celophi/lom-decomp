@@ -30,8 +30,8 @@ void field_begin_scene_fade_in(void);
 #define FIELD_SCENE_MOVIE_COUNT 2
 /** CD resource of movie 0's stream; each movie has a stream and a still image resource. */
 #define FIELD_MOVIE_RESOURCE_FIRST 0x16A6
-#define FIELD_MOVIE_STREAM_RESOURCE(def) ((def)->head.b.unk1 * 2 + FIELD_MOVIE_RESOURCE_FIRST)
-#define FIELD_MOVIE_STILL_RESOURCE(def) ((def)->head.b.unk1 * 2 + (FIELD_MOVIE_RESOURCE_FIRST + 1))
+#define FIELD_MOVIE_STREAM_RESOURCE(def) ((def)->head.b.start_frame * 2 + FIELD_MOVIE_RESOURCE_FIRST)
+#define FIELD_MOVIE_STILL_RESOURCE(def) ((def)->head.b.start_frame * 2 + (FIELD_MOVIE_RESOURCE_FIRST + 1))
 /** MOVIE.BIN is streamed here and started in place; the still image reuses the buffer. */
 #define FIELD_MOVIE_BUFFER ((void*)SECONDARY_OVERLAY_ADDRESS)
 /** Pixels of a full-screen still image, after its size word. */
@@ -183,7 +183,7 @@ void field_update_scene_animations(void)
                                 cel = anim->cels;
                                 FIELD_CD_STATUS->word &= ~FIELD_CD_STATUS_QUEUE_LOCK;
 
-                                if (definition->head.b.unk1 < FIELD_SCENE_MOVIE_COUNT)
+                                if (definition->head.b.start_frame < FIELD_SCENE_MOVIE_COUNT)
                                 {
                                     movie_init(FIELD_MOVIE_STREAM_RESOURCE(definition), 1, definition->flags.b.last_frame - 2, cel->visible);
                                 }
@@ -206,7 +206,7 @@ void field_update_scene_animations(void)
                                     {
                                         upload = &anim->upload;
 
-                                        if (definition->head.b.unk1 < FIELD_SCENE_MOVIE_COUNT)
+                                        if (definition->head.b.start_frame < FIELD_SCENE_MOVIE_COUNT)
                                         {
                                             cel = anim->cels;
                                             upload->rect.x = MOVIE_STATE->rects[cel->visible].x;
@@ -248,7 +248,7 @@ void field_update_scene_animations(void)
                                 }
                                 else
                                 {
-                                    if (definition->head.b.unk1 >= FIELD_SCENE_MOVIE_COUNT)
+                                    if (definition->head.b.start_frame >= FIELD_SCENE_MOVIE_COUNT)
                                     {
                                         field_begin_scene_fade_in();
                                     }
@@ -261,7 +261,7 @@ void field_update_scene_animations(void)
                                 break;
                             }
 
-                            if (definition->head.b.unk1 < FIELD_SCENE_MOVIE_COUNT)
+                            if (definition->head.b.start_frame < FIELD_SCENE_MOVIE_COUNT)
                             {
                                 set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
                             }

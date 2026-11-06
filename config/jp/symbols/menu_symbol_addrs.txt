@@ -142,8 +142,6 @@ g_card_save_title_sjis  = 0x80140594;
 g_card_test_payload     = 0x801405A8;
 
 
-g_menu_label_key_a     = 0x800EBFA6;
-g_menu_label_key_b     = 0x800EBFB0;
 
 // Unnamed globals (named during decomp)
 g_menu_item_description_buffer  = 0x80168318;
@@ -244,3 +242,7 @@ g_menu_help_skill_selection = 0x8016834C;
 // JP-only names at addresses that ported US placeholder names encode; without them splat would auto-name these the same.
 D_80168C20_jp = 0x80168C20;
 D_80168C24_jp = 0x80168C24;
+
+// FIELD UI string table entries.
+g_field_ui_text_plus = 0x800EBFA6;
+g_field_ui_text_minus = 0x800EBFB0;

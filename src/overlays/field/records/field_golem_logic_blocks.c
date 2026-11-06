@@ -9,12 +9,12 @@
 
 #include "common.h"
 
-#include "../internal/field_menu_vars.h"
 #include "../internal/field_records.h"
 #include "common/golem_shape.h"
 #include "common/saved_game.h"
 #include "main/main.h"
 #include "overlays/field/field_golem_logic_blocks.h"
+#include "overlays/field/field_script_locals.h"
 
 /** @brief Logic class of a block that fits every group. */
 #define GOLEM_LOGIC_CLASS_ANY 0
@@ -78,7 +78,7 @@ u32 golem_rebuild_grid_owners(void)
     {
         block = g_saved_game.layout.logic_blocks[i];
 
-        if ((block.f.placed == 1) && (block.f.logic_type == g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]))
+        if ((block.f.placed == 1) && (block.f.logic_type == g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot]))
         {
             for (part = 0; part < g_golem_shape_table[g_saved_game.layout.logic_blocks[i].f.shape].count; part++)
             {
@@ -90,7 +90,7 @@ u32 golem_rebuild_grid_owners(void)
         }
     }
 
-    return g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].logic_layout.bits.grid_bound;
+    return g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot]].logic_layout.bits.grid_bound;
 }
 
 /**
@@ -106,7 +106,7 @@ void golem_place_logic_block(s32 index, s32 rotation, s32 x, s32 y)
     u8 group;
     LogicBlock block;
 
-    group = g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot];
+    group = g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot];
     block = g_saved_game.layout.logic_blocks[index];
     block.f.logic_type = group;
     block.f.placed = 1;
@@ -157,7 +157,8 @@ s32 golem_can_place_logic_block(s32 index, s32 rotation, s32 x, s32 y)
 
     if (logic_class != GOLEM_LOGIC_CLASS_ANY)
     {
-        if (logic_class != g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].logic_layout.bits.logic_class)
+        if (logic_class !=
+            g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot]].logic_layout.bits.logic_class)
         {
             valid = 0;
         }
@@ -182,7 +183,7 @@ s32 golem_logic_block_fits_grid(s32 index, s32 rotation, s32 x, s32 y)
     s32 cell_x;
     s32 cell_y;
 
-    limit = g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].logic_layout.bits.grid_bound;
+    limit = g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot]].logic_layout.bits.grid_bound;
 
     if (limit >= GOLEM_GRID_WIDTH)
     {
@@ -225,7 +226,7 @@ s32 golem_fill_logic_block_status(GolemLogicBlockStatus* results)
     for (i = 0; i < g_saved_game.layout.logic_block_count; i++)
     {
         block = g_saved_game.layout.logic_blocks[i];
-        group = g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot];
+        group = g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot];
 
         if (((block.f.logic_type != group) && (block.f.logic_type != LOGIC_BLOCK_UNASSIGNED)) ||
             (((logic_class = g_golem_logic_block_class[block.f.id]) != GOLEM_LOGIC_CLASS_ANY) &&

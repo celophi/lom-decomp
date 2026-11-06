@@ -79,7 +79,7 @@ class FakeOverlay:
         self.data.extend(self.data[-4:])
         add_table("g_field_target_filters")
         self.ui_start = len(self.data)
-        self.symbols[field.SYMBOL_NAMES["title_choice"]] = ADDRESS + len(self.data) + field.TITLE_CHOICE_INDEX * 2
+        self.symbols[field.SYMBOL_NAMES["ui_text"]] = ADDRESS + len(self.data)
         text = b"Load?" if version == "us" else b"\x41\x19\x00"
         self.data.extend(make_table([text] * 37))
         pad()

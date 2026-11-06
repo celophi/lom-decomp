@@ -70,7 +70,8 @@ typedef union
 extern FieldBuiltinResource g_field_resource_blob;
 /** @brief Built-in animation resource in use. */
 extern FieldBuiltinResource* g_field_builtin_animations;
-extern s32 D_8010CFD4;
+/** @brief Cleared when an actor binding is released; nothing reads it. */
+extern s32 g_field_unused_binding_word;
 
 /**
  * @brief Locate data inside the built-in animation resource.
@@ -545,7 +546,7 @@ void field_release_actor_binding(s32 owner)
         {
             field_release_sfx_group(owner);
             g_field_actor_bindings[FIELD_BINDING_INDEX(owner)].state = FIELD_BINDING_IDLE;
-            D_8010CFD4 = 0;
+            g_field_unused_binding_word = 0;
             field_free_owner_resources(FIELD_BINDING_INDEX(owner));
         }
     }

@@ -160,7 +160,7 @@ static void wmap_land_effect_13_update_particles(WmapSpriteActor* actors, WmapAn
         }
     }
 
-    D_800D922C = active_count;
+    g_wmap_unused_tally = active_count;
 
     for (i = 0; i < count; i++)
     {
@@ -846,7 +846,7 @@ WMAP_STEP_ADVANCE(wmap_land_effect_13_sequence_8_end, g_wmap_land_effect_13_sequ
 
 /**
  * @brief Run the current step of sequence 9, restarting it when requested.
- * @param arg0 Nonzero to restart the sequence and run its first step immediately.
+ * @param reset Nonzero to restart the sequence and run its first step immediately.
  * @return Nonzero while the sequence has a step to run.
  */
 WMAP_STEP_RUNNER_RESET_AND_RUN(wmap_land_effect_13_run_sequence_9, g_wmap_land_effect_13_sequence_9_steps, 0x6, g_wmap_land_effect_13_sequence_9_step,

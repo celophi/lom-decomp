@@ -3,13 +3,11 @@
  */
 
 #include "common.h"
-#include "overlays/field/field_text.h"
 #include <libgpu.h>
-#include "../internal/field_calls.h"
-#include "overlays/field/field_ui_text.h"
 
-/** @brief UI string index of the first return-to-title choice; the second follows it. */
-#define FIELD_TITLE_CHOICE_FIRST_TEXT 19
+#include "../internal/field_calls.h"
+#include "overlays/field/field_text.h"
+#include "overlays/field/field_ui_text.h"
 
 /** @brief g_field_return_to_title_choice value: continue from the saved state. */
 #define FIELD_TITLE_CHOICE_CONTINUE 0
@@ -32,10 +30,6 @@
 /** @brief Top of the second choice inside the prompt window. */
 #define FIELD_CHOICE_SECOND_Y 17
 
-
-/** @brief Offset entry of UI string FIELD_TITLE_CHOICE_FIRST_TEXT (each entry is its own symbol). */
-extern u8 g_field_title_choice_text_entry[];
-
 /**
  * @brief Draw both return-to-title choices, highlighting the selected one.
  * @param ot Ordering table the text is added to.
@@ -55,13 +49,13 @@ void field_draw_return_to_title_choices(u_long* ot, void* prim, s32 scroll_x, s3
     s32 unused[2];
 
     cursor = prim;
-    first_text = FIELD_UI_TEXT_AT(g_field_title_choice_text_entry, FIELD_TITLE_CHOICE_FIRST_TEXT);
-    text_table = g_field_title_choice_text_entry - FIELD_TITLE_CHOICE_FIRST_TEXT * 2;
+    first_text = FIELD_UI_TEXT_AT(g_field_ui_text_continue, FIELD_UI_TEXT_CONTINUE);
+    text_table = FIELD_UI_TEXT_TABLE(g_field_ui_text_continue, FIELD_UI_TEXT_CONTINUE);
     first_color = (g_field_return_to_title_choice == FIELD_TITLE_CHOICE_CONTINUE) ? FIELD_CHOICE_COLOR_ACTIVE : FIELD_CHOICE_COLOR_INACTIVE;
     x = FIELD_CHOICE_CENTER_X - scroll_x;
     cursor = field_draw_text(cursor, ot, first_text, first_color, x, FIELD_CHOICE_FIRST_Y - scroll_y, FIELD_TEXT_ALIGN_CENTER);
 
-    second_text = FIELD_UI_TEXT(text_table, FIELD_TITLE_CHOICE_FIRST_TEXT + 1);
+    second_text = FIELD_UI_TEXT(text_table, FIELD_UI_TEXT_TO_TITLE_SCREEN);
     second_color = (g_field_return_to_title_choice == FIELD_TITLE_CHOICE_QUIT) ? FIELD_CHOICE_COLOR_ACTIVE : FIELD_CHOICE_COLOR_INACTIVE;
     field_draw_text(cursor, ot, second_text, second_color, x, FIELD_CHOICE_SECOND_Y - scroll_y, FIELD_TEXT_ALIGN_CENTER);
 }

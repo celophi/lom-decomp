@@ -109,12 +109,12 @@ void shop_draw_windows(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
 
                 if (g_shop_entry_count * SHOP_ROW_HEIGHT > g_shop_scroll_y + SHOP_LIST_VIEW_HEIGHT)
                 {
-                    prim = func_800AE76C(prim, ot, SHOP_SCROLL_ARROW_X, SHOP_SCROLL_ARROW_DOWN_Y, 0);
+                    prim = field_draw_menu_scroll_arrow(prim, ot, SHOP_SCROLL_ARROW_X, SHOP_SCROLL_ARROW_DOWN_Y, FIELD_MENU_ARROW_DOWN);
                 }
 
                 if (g_shop_scroll_y != 0)
                 {
-                    prim = func_800AE76C(prim, ot, SHOP_SCROLL_ARROW_X, SHOP_SCROLL_ARROW_UP_Y, 1);
+                    prim = field_draw_menu_scroll_arrow(prim, ot, SHOP_SCROLL_ARROW_X, SHOP_SCROLL_ARROW_UP_Y, FIELD_MENU_ARROW_UP);
                 }
 
                 SetDrawEnv((DR_ENV*)prim, &draw_env);
@@ -141,8 +141,8 @@ void shop_draw_windows(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
                 /* The scrollbar frame sits 3 pixels right of the list window. */
                 list_x = window->frame.bits.x;
                 list_width_low = SHOP_WINDOW_WIDTH_LOW_BYTE(window);
-                prim = func_800AD850(prim, ot, list_x + SHOP_WINDOW_JOIN_WIDTH(window, list_width_low) + 3, window->frame.bits.y, SHOP_SCROLLBAR_FRAME_WIDTH,
-                                     window->extent.bits.height, ctx->display_buffer_index, i == 0);
+                prim = field_draw_menu_frame(prim, ot, list_x + SHOP_WINDOW_JOIN_WIDTH(window, list_width_low) + 3, window->frame.bits.y,
+                                             SHOP_SCROLLBAR_FRAME_WIDTH, window->extent.bits.height, ctx->display_buffer_index, i == 0);
             }
 
             SetDrawEnv((DR_ENV*)prim, &draw_env);
@@ -157,9 +157,9 @@ void shop_draw_windows(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
                     prim = window->draw(ot, prim, (SHOP_WINDOW_WIDTH(window) - inset_width) / 2, (window->extent.bits.height - inset_height) / 2);
                     opening_x = window->frame.bits.x;
                     opening_width_low = SHOP_WINDOW_WIDTH_LOW_BYTE(window);
-                    prim = func_800AD850(prim, ot, opening_x + (SHOP_WINDOW_JOIN_WIDTH(window, opening_width_low) - inset_width) / 2,
-                                         window->frame.bits.y + (window->extent.bits.height - inset_height) / 2, inset_width, inset_height,
-                                         ctx->display_buffer_index, i == 0);
+                    prim = field_draw_menu_frame(prim, ot, opening_x + (SHOP_WINDOW_JOIN_WIDTH(window, opening_width_low) - inset_width) / 2,
+                                                 window->frame.bits.y + (window->extent.bits.height - inset_height) / 2, inset_width, inset_height,
+                                                 ctx->display_buffer_index, i == 0);
                     window->frame.bits.anim_step++;
 
                     if (window->frame.bits.anim_step == SHOP_WINDOW_ANIM_STEPS)
@@ -173,8 +173,8 @@ void shop_draw_windows(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
                 case SHOP_WINDOW_OPEN:
                     prim = window->draw(ot, prim, 0, 0);
                     open_width_low = SHOP_WINDOW_WIDTH_LOW_BYTE(window);
-                    prim = func_800AD850(prim, ot, window->frame.bits.x, window->frame.bits.y, SHOP_WINDOW_JOIN_WIDTH(window, open_width_low),
-                                         window->extent.bits.height, ctx->display_buffer_index, i == 0);
+                    prim = field_draw_menu_frame(prim, ot, window->frame.bits.x, window->frame.bits.y, SHOP_WINDOW_JOIN_WIDTH(window, open_width_low),
+                                                 window->extent.bits.height, ctx->display_buffer_index, i == 0);
                     break;
 
                 case SHOP_WINDOW_CLOSING:
@@ -183,9 +183,9 @@ void shop_draw_windows(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
                     prim = window->draw(ot, prim, (SHOP_WINDOW_WIDTH(window) - inset_width) / 2, (window->extent.bits.height - inset_height) / 2);
                     closing_x = window->frame.bits.x;
                     closing_width_low = SHOP_WINDOW_WIDTH_LOW_BYTE(window);
-                    prim = func_800AD850(prim, ot, closing_x + (SHOP_WINDOW_JOIN_WIDTH(window, closing_width_low) - inset_width) / 2,
-                                         window->frame.bits.y + (window->extent.bits.height - inset_height) / 2, inset_width, inset_height,
-                                         ctx->display_buffer_index, i == 0);
+                    prim = field_draw_menu_frame(prim, ot, closing_x + (SHOP_WINDOW_JOIN_WIDTH(window, closing_width_low) - inset_width) / 2,
+                                                 window->frame.bits.y + (window->extent.bits.height - inset_height) / 2, inset_width, inset_height,
+                                                 ctx->display_buffer_index, i == 0);
                     window->frame.bits.anim_step--;
 
                     if (window->frame.bits.anim_step == 0)
@@ -216,8 +216,8 @@ u8* shop_draw_money_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
     s32 y;
 
     y = 2 - y_inset;
-    prim = field_draw_text((SPRT*)prim, ot, FIELD_UI_TEXT_AT(g_field_ui_text_table, 0), FIELD_TEXT_COLOR_NORMAL, SHOP_MONEY_LABEL_X - x_inset, y,
-                           FIELD_TEXT_ALIGN_LEFT);
+    prim = field_draw_text((SPRT*)prim, ot, g_field_ui_text_table + g_field_ui_text_table[0] + (g_field_ui_text_table[1] << 8), FIELD_TEXT_COLOR_NORMAL,
+                           SHOP_MONEY_LABEL_X - x_inset, y, FIELD_TEXT_ALIGN_LEFT);
     position.x = SHOP_MONEY_VALUE_X - x_inset;
     position.y = y;
 
@@ -264,7 +264,7 @@ u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
         s32 name_x;
         uintptr_t text_base;
 
-        empty_text = D_800EC3E0;
+        empty_text = &g_field_ui_text_dashes.low;
 
         do
         {
@@ -297,7 +297,7 @@ u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
                     uintptr_t base_addr;
                     uintptr_t based;
 
-                    low = D_800EC3E0[0];
+                    low = g_field_ui_text_dashes.low;
                     high = empty_text[1];
                     base_addr = (uintptr_t)g_field_ui_text_table;
                     based = (high << 8) + base_addr;
@@ -340,8 +340,8 @@ u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
                             prim = field_draw_number(ot, (SPRT*)prim, price, FIELD_TEXT_COLOR_DIM, position_ptr, FIELD_TEXT_ALIGN_LEFT);
                         }
 
-                        prim = field_draw_text((SPRT*)prim, ot, g_field_ui_text_table + D_800EC3DC[0] + (D_800EC3DC[1] << 8), FIELD_TEXT_COLOR_NORMAL, 172 - x,
-                                               y, FIELD_TEXT_ALIGN_LEFT);
+                        prim = field_draw_text((SPRT*)prim, ot, g_field_ui_text_table + g_field_ui_text_times.low + (g_field_ui_text_times.high << 8),
+                                               FIELD_TEXT_COLOR_NORMAL, 172 - x, y, FIELD_TEXT_ALIGN_LEFT);
                         position.x = 184 - x;
                         prim = field_draw_number(ot, (SPRT*)prim, g_shop_quantity, FIELD_TEXT_COLOR_NORMAL, position_ptr, FIELD_TEXT_ALIGN_LEFT);
                     }
@@ -424,9 +424,8 @@ u8* shop_draw_detail_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
             material = record->info.halves[1] & FIELD_ITEM_MATERIAL_MASK;
             archive = &g_shop_text_archive;
             encoded_text_copy(dst, SHOP_ARCHIVE_TEXT(archive, *material_offsets, material * 2));
-            /* FIELD UI string 15, read as a little-endian offset relative to the table start */
-            ui_entry = D_800EC3E2;
-            ui_text_table = ui_entry - 15 * 2;
+            ui_entry = &g_field_ui_text_space.low;
+            ui_text_table = ui_entry - FIELD_UI_TEXT_SPACE * 2;
             low = *ui_entry++;
             high = *ui_entry;
             encoded_text_append(name_text, (u8*)(low + ((high << 8) + (uintptr_t)ui_text_table)));
@@ -444,23 +443,24 @@ u8* shop_draw_detail_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
 
                     encoded_text_append(name_text, SHOP_ARCHIVE_TEXT(archive, category_offset, (FIELD_ITEM_TYPE(attributes) + WEAPON_CATEGORY_FIRST) * 2));
                     y = 18 - y_inset;
-                    prim = field_draw_text((SPRT*)prim, ot, FIELD_UI_TEXT(ui_text_table, 21), FIELD_TEXT_COLOR_NORMAL, 16 - x_inset, y, FIELD_TEXT_ALIGN_LEFT);
+                    prim = field_draw_text((SPRT*)prim, ot, FIELD_UI_TEXT(ui_text_table, FIELD_UI_TEXT_ATTACK_POWER), FIELD_TEXT_COLOR_NORMAL, 16 - x_inset, y,
+                                           FIELD_TEXT_ALIGN_LEFT);
                     x = SHOP_WEAPON_VALUE_X - x_inset;
                     position.x = x;
                     position.y = y;
                     prim = field_draw_number(ot, (SPRT*)prim, SHOP_SELECTED_RECORD()->derived.values[0], FIELD_TEXT_COLOR_NORMAL, &position,
                                              FIELD_TEXT_ALIGN_RIGHT);
                     difference = SHOP_SELECTED_RECORD()->derived.values[0] - g_saved_game_ctx->characters[FIELD_PARTY_HERO].equipment[0].derived.values[0];
-                    encoded_text_copy(difference_text, FIELD_UI_TEXT(ui_text_table, 31));
+                    encoded_text_copy(difference_text, FIELD_UI_TEXT(ui_text_table, FIELD_UI_TEXT_OPEN_PAREN));
 
                     if (difference >= 0)
                     {
-                        encoded_text_append(difference_text, FIELD_UI_TEXT(ui_text_table, 11));
+                        encoded_text_append(difference_text, FIELD_UI_TEXT(ui_text_table, FIELD_UI_TEXT_PLUS));
                     }
 
                     field_format_number(number_text, difference, 0);
                     encoded_text_append(difference_text, number_text);
-                    encoded_text_append(difference_text, FIELD_UI_TEXT(ui_text_table, 32));
+                    encoded_text_append(difference_text, FIELD_UI_TEXT(ui_text_table, FIELD_UI_TEXT_CLOSE_PAREN));
 #if defined(VERSION_JP)
                     position.x = 112 - x_inset;
 #else
@@ -480,7 +480,8 @@ u8* shop_draw_detail_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
                     offset = *(u16*)((u8*)&g_shop_text_archive + (FIELD_ITEM_TYPE(attributes) * 2 + category_offset) + ARMOR_CATEGORY_FIRST * 2);
                     encoded_text_append(name_text, (u8*)(category_offset + (offset + (uintptr_t)archive)));
                     y = 18 - y_inset;
-                    prim = field_draw_text((SPRT*)prim, ot, FIELD_UI_TEXT(ui_text_table, 22), FIELD_TEXT_COLOR_NORMAL, 16 - x_inset, y, FIELD_TEXT_ALIGN_LEFT);
+                    prim = field_draw_text((SPRT*)prim, ot, FIELD_UI_TEXT(ui_text_table, FIELD_UI_TEXT_TOTAL_DEFENSE), FIELD_TEXT_COLOR_NORMAL, 16 - x_inset, y,
+                                           FIELD_TEXT_ALIGN_LEFT);
                     position.x = SHOP_ARMOR_VALUE_X - x_inset;
                     position.y = y;
                     selected = SHOP_SELECTED_RECORD();
@@ -504,8 +505,8 @@ u8* shop_draw_detail_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
                     text_archive = &g_shop_text_archive;
                     text = (u8*)(*category_offsets + (offset + (uintptr_t)text_archive));
                     encoded_text_append(name_text, text);
-                    prim = field_draw_text((SPRT*)prim, ot, FIELD_UI_TEXT_AT(D_800EC3F2, 23), FIELD_TEXT_COLOR_NORMAL, 16 - x_inset, 18 - y_inset,
-                                           FIELD_TEXT_ALIGN_LEFT);
+                    prim = field_draw_text((SPRT*)prim, ot, FIELD_UI_TEXT_AT(g_field_ui_text_power, FIELD_UI_TEXT_POWER), FIELD_TEXT_COLOR_NORMAL, 16 - x_inset,
+                                           18 - y_inset, FIELD_TEXT_ALIGN_LEFT);
                     position.x = SHOP_OTHER_VALUE_X - x_inset;
                     position.y = 18 - y_inset;
                     prim =
@@ -529,8 +530,8 @@ u8* shop_draw_detail_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
 
             prim = field_draw_text((SPRT*)prim, ot, SHOP_ARCHIVE_TEXT(archive, *description_offsets, entry->id * 2), FIELD_TEXT_COLOR_NORMAL, 150 - x_inset,
                                    2 - y_inset, FIELD_TEXT_ALIGN_CENTER);
-            prim =
-                field_draw_text((SPRT*)prim, ot, FIELD_UI_TEXT_AT(D_800EC3F4, 24), FIELD_TEXT_COLOR_NORMAL, 16 - x_inset, 18 - y_inset, FIELD_TEXT_ALIGN_LEFT);
+            prim = field_draw_text((SPRT*)prim, ot, FIELD_UI_TEXT_AT(g_field_ui_text_you_have, FIELD_UI_TEXT_YOU_HAVE), FIELD_TEXT_COLOR_NORMAL, 16 - x_inset,
+                                   18 - y_inset, FIELD_TEXT_ALIGN_LEFT);
             position.x = 112 - x_inset;
             position.y = 18 - y_inset;
             prim = field_draw_number(ot, (SPRT*)prim, g_saved_game_ctx->item_counts[SHOP_SELECTED_ENTRY()->id], FIELD_TEXT_COLOR_NORMAL, &position,

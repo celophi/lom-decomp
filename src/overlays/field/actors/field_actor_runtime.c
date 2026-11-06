@@ -211,7 +211,14 @@ typedef struct FieldCdBuffer
 #define FIELD_PACKAGE_SECTION_BYTES(package, index) ((u8*)(package) + (package)->offsets[index])
 #define FIELD_PACKAGE_SECTION(package, index) ((FieldCdBuffer*)FIELD_PACKAGE_SECTION_BYTES(package, index))
 
-void func_80140004(s32 work_address, s32 image_resource_index, s32 music_resource_index, s32 audio_clip_index);
+/**
+ * @brief Entry point of the secondary overlay loaded at SECONDARY_OVERLAY_LOAD_ADDRESS; here GOVER's gover_show_screen.
+ * @param work_address Work buffer for the overlay.
+ * @param image_resource_index Resource index of the Game Over image.
+ * @param music_resource_index Resource index of the Game Over music.
+ * @param audio_clip_index Sound effect bank resource index.
+ */
+void secondary_overlay_entry(s32 work_address, s32 image_resource_index, s32 music_resource_index, s32 audio_clip_index);
 void field_draw_dialog_windows(FieldRenderHalf* render_half);
 void field_merge_dialog_items(void);
 
@@ -382,7 +389,7 @@ void field_update_gover_load(void)
         controller->ports[0].small_motor_command = 0;
         cdrom_stream(CD_RES_GOVER_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
         cdrom_wait_queue_empty();
-        func_80140004(FIELD_GOVER_WORK_ADDRESS, g_field_gover_image_resource_id, g_field_gover_music_resource_id, g_field_gover_audio_clip_id);
+        secondary_overlay_entry(FIELD_GOVER_WORK_ADDRESS, g_field_gover_image_resource_id, g_field_gover_music_resource_id, g_field_gover_audio_clip_id);
         field_reset_actor_resources();
     }
 }

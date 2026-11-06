@@ -46,7 +46,7 @@ enum
 /** @brief Both defense slot bits of an action descriptor (bits 6-7). */
 #define FIELD_DESCRIPTOR_DEFENSE_SLOT_MASK 0xC0
 
-/** @brief Guard flags in FieldStatusRecordMeta::bytes.unk2. */
+/** @brief Guard flags in FieldStatusRecordMeta::bytes.guard_flags. */
 #define FIELD_GUARD_FLAG_DEFLECT 0x1000 /**< Deflects descriptor kinds 2 and 3. */
 #define FIELD_GUARD_FLAG_COUNTER 0x2000 /**< Counters descriptor kind 0. */
 #define FIELD_GUARD_FLAG_BLOCK 0x4000   /**< Blocks every action. */
@@ -148,7 +148,7 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
             field_run_actor_event(action->target_id, FIELD_EVENT_ACTION, FIELD_ACTION_EVENT_MISS);
         }
 
-        g_field_battle->attacker->unkC &= ~FIELD_RECORD_ACTION_MODIFIERS;
+        g_field_battle->attacker->modifier_flags &= ~FIELD_RECORD_ACTION_MODIFIERS;
         return result;
     }
 
@@ -162,13 +162,13 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
             return 1;
         }
 
-        g_field_battle->attacker->unkC &= ~FIELD_RECORD_ACTION_MODIFIERS;
+        g_field_battle->attacker->modifier_flags &= ~FIELD_RECORD_ACTION_MODIFIERS;
         return result;
     }
 
     if (!(g_field_battle->attacker->state->effect_flags & FIELD_EFFECT_HOLD_MODIFIERS))
     {
-        g_field_battle->attacker->unkC &= ~FIELD_RECORD_HELD_MODIFIERS;
+        g_field_battle->attacker->modifier_flags &= ~FIELD_RECORD_HELD_MODIFIERS;
     }
 
     if (field_run_action_handler() != 0)
@@ -186,32 +186,32 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
 
             if (field_count_status_slots(g_field_battle->attacker, FIELD_SLOT_MONEY_PLUS_2) != 0)
             {
-                g_field_battle->target->unkC |= FIELD_DEFEAT_MONEY_PLUS_2;
+                g_field_battle->target->modifier_flags |= FIELD_DEFEAT_MONEY_PLUS_2;
             }
 
             if (field_count_status_slots(g_field_battle->attacker, FIELD_SLOT_EXPERIENCE_PLUS_2) != 0)
             {
-                g_field_battle->target->unkC |= FIELD_DEFEAT_EXPERIENCE_PLUS_2;
+                g_field_battle->target->modifier_flags |= FIELD_DEFEAT_EXPERIENCE_PLUS_2;
             }
 
             if (field_count_status_slots(g_field_battle->attacker, FIELD_SLOT_RARE_DROPS) != 0)
             {
-                g_field_battle->target->unkC |= FIELD_DEFEAT_EXTRA_DROP_SLOTS | FIELD_DEFEAT_NO_COMMON_DROPS;
+                g_field_battle->target->modifier_flags |= FIELD_DEFEAT_EXTRA_DROP_SLOTS | FIELD_DEFEAT_NO_COMMON_DROPS;
             }
 
             if (field_roll_last_stat(g_field_battle->attacker) != 0)
             {
-                g_field_battle->target->unkC |= FIELD_DEFEAT_NO_COMMON_DROPS;
+                g_field_battle->target->modifier_flags |= FIELD_DEFEAT_NO_COMMON_DROPS;
             }
 
             if (g_field_battle->attacker->status_flags & FIELD_RECORD_STATUS_100)
             {
-                g_field_battle->target->unkC |= FIELD_DEFEAT_MONEY_PLUS_1;
+                g_field_battle->target->modifier_flags |= FIELD_DEFEAT_MONEY_PLUS_1;
             }
 
             if (g_field_battle->attacker->status_flags & FIELD_RECORD_STATUS_80)
             {
-                g_field_battle->target->unkC |= FIELD_DEFEAT_EXPERIENCE_PLUS_1;
+                g_field_battle->target->modifier_flags |= FIELD_DEFEAT_EXPERIENCE_PLUS_1;
             }
 
             effect = field_battle_handle_defeat(g_field_battle->target);
@@ -226,19 +226,19 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
             field_battle_run_down_counters(1);
             field_run_actor_event(action->attacker_id, FIELD_EVENT_ACTION, FIELD_ACTION_EVENT_HIT);
             field_run_actor_event(action->target_id, FIELD_EVENT_ACTION, FIELD_ACTION_EVENT_HURT);
-            g_field_battle->target->unkC &= ~FIELD_RECORD_DEFEAT_FLAGS;
+            g_field_battle->target->modifier_flags &= ~FIELD_RECORD_DEFEAT_FLAGS;
             field_register_actor_hit(action->target_id, 0);
         }
 
-        g_field_battle->attacker->unkC &= ~FIELD_RECORD_ACTION_MODIFIERS;
+        g_field_battle->attacker->modifier_flags &= ~FIELD_RECORD_ACTION_MODIFIERS;
         return 0;
     }
     else
     {
         field_battle_run_down_counters(0);
         field_run_actor_event(action->target_id, FIELD_EVENT_ACTION, FIELD_ACTION_EVENT_MISS);
-        g_field_battle->target->unkC &= ~FIELD_RECORD_DEFEAT_FLAGS;
-        g_field_battle->attacker->unkC &= ~FIELD_RECORD_ACTION_MODIFIERS;
+        g_field_battle->target->modifier_flags &= ~FIELD_RECORD_DEFEAT_FLAGS;
+        g_field_battle->attacker->modifier_flags &= ~FIELD_RECORD_ACTION_MODIFIERS;
         return 0;
     }
 }
@@ -370,7 +370,7 @@ static s32 field_battle_check_target_guard(void)
 {
     u16 flags;
 
-    flags = g_field_battle->target->meta.bytes.unk2;
+    flags = g_field_battle->target->meta.bytes.guard_flags;
 
     if (flags & FIELD_GUARD_FLAG_IGNORE)
     {
@@ -393,7 +393,7 @@ static s32 field_battle_check_target_guard(void)
         }
     }
 
-    if (g_field_battle->target->meta.bytes.unk2 & FIELD_GUARD_FLAG_DEFLECT)
+    if (g_field_battle->target->meta.bytes.guard_flags & FIELD_GUARD_FLAG_DEFLECT)
     {
         u32 kind = FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor);
 
@@ -481,7 +481,7 @@ s32 field_battle_roll_evasion(FieldBattleAction* action)
     s32 chance;
     s32 evasion;
 
-    evasion = g_field_battle->target->unk1A;
+    evasion = g_field_battle->target->evasion;
 
     if (evasion >= FIELD_EVASION_ALWAYS)
     {

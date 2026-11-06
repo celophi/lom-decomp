@@ -160,3 +160,15 @@ g_gosub_equipment_type_counts                     = 0x80140074;
 
 // Field dialogue/text renderer exports used by this overlay.
 field_text_reset_scratch             = 0x8006441C;
+
+// FIELD UI string table entries.
+g_field_ui_text_plus = 0x800EC3DA;
+g_field_ui_text_space = 0x800EC3E2;
+g_field_ui_text_attack_power = 0x800EC3EE;
+g_field_ui_text_total_defense = 0x800EC3F0;
+g_field_ui_text_power = 0x800EC3F2;
+g_gosub_unused_bytes0 = 0x8016B8DD;
+g_gosub_unused_bytes1 = 0x8016B8FE;
+g_gosub_unused_word0 = 0x8016B904;
+g_gosub_unused_bytes2 = 0x80170961;
+g_gosub_unused_word1 = 0x80170984;

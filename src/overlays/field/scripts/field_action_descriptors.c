@@ -108,7 +108,7 @@ FieldActionDescriptor* field_select_action_descriptor(void)
     FieldActorTemplate* template;
     FieldBattleContext* ctx;
 
-    g_field_battle->power = g_field_battle->attacker->unk18;
+    g_field_battle->power = g_field_battle->attacker->power;
     g_field_battle->power_flags = 0;
     attacker = g_field_battle->attacker;
     kind = attacker->meta.packed & STATUS_KIND_MASK;

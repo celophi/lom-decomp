@@ -1,5 +1,6 @@
 #include "main/main.h"
 #include "overlays/field/field_text.h"
+#include "overlays/field/field_script_locals.h"
 #include "overlays/field/field_ui_text.h"
 #include "overlays/field/field_golem_logic_blocks.h"
 #include "common/encoded_text.h"
@@ -39,7 +40,6 @@
 #define GOLEM_PANEL_FLASH_FRAMES 3
 #define GOLEM_ACTIVATE_PANEL(word) (((word) & ~GOLEM_PANEL_FLASH_MASK) | (GOLEM_PANEL_FLASH_FRAMES << GOLEM_PANEL_FLASH_SHIFT))
 #define GOLEM_SET_PANEL_FLASH(word, frames) (((word) & ~GOLEM_PANEL_FLASH_MASK) | (((frames) & 0xF) << GOLEM_PANEL_FLASH_SHIFT))
-#define GOLEM_SHARED_PLUS_TEXT_INDEX 11
 /**
  * @brief Address of string @p index in the archive section @p offset bytes into @p archive.
  */
@@ -186,9 +186,6 @@ typedef struct
     GolemTextSections sections;
 } GolemTextArchive;
 
-extern s32 D_80122C00;
-/** @brief Two-byte little-endian offset of "+" in the shared text directory. */
-extern u8 D_800EC3DA[];
 extern GolemRenderContext* g_golem_render_buffers;
 extern s32 g_golem_exit_requested;
 /** @brief Word-aligned scratch memory after the render contexts. */
@@ -208,7 +205,8 @@ extern s32 g_golem_cursor_y;
 extern s32 g_golem_active_logic_type;
 extern s32 g_golem_cursor_target_x;
 extern s32 g_golem_cursor_target_y;
-extern s32 D_8014C26C;
+/** @brief Cleared when GOLEM starts; nothing reads it. */
+extern s32 g_golem_unused_word;
 extern s32 g_golem_saved_logic_type_slot;
 /** @brief Frames remaining in the auxiliary scalar interpolation. */
 extern s32 g_golem_interpolation_steps;
@@ -339,19 +337,19 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
     {
         menu_data = GOLEM_SAVED_GAME;
         selected_logic_type = menu_data->joined_golem;
-        g_golem_saved_logic_type_slot = D_80122C00;
-        D_80122C00 = 0;
+        g_golem_saved_logic_type_slot = g_field_script_locals.golem.slot;
+        g_field_script_locals.golem.slot = 0;
         for (slot_index = 0; slot_index < GOLEM_RECORD_COUNT; slot_index++)
         {
             if (*(menu_data->golem_order + slot_index) == selected_logic_type)
             {
-                D_80122C00 = slot_index;
+                g_field_script_locals.golem.slot = slot_index;
             }
         }
     }
 
     g_golem_grid_size_class = golem_rebuild_grid_owners() - 4;
-    logic_type = GOLEM_SAVED_GAME->golem_order[D_80122C00];
+    logic_type = GOLEM_SAVED_GAME->golem_order[g_field_script_locals.golem.slot];
     g_golem_block_rotation = 0;
     g_golem_block_y = 0;
     g_golem_block_x = 0;
@@ -370,7 +368,7 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
     golem_upload_ui_image();
     field_reset_input_repeat();
     set_screen_fade_target(FADE_NEUTRAL, FADE_NEUTRAL, FADE_NEUTRAL, SCREEN_FADE_STEPS);
-    D_8014C26C = 0;
+    g_golem_unused_word = 0;
     g_golem_interpolation_target = 0;
     g_golem_interpolation_value = 0;
     g_golem_interpolation_steps = 0;
@@ -423,7 +421,7 @@ void golem_handle_input(void)
         g_golem_exit_requested = 1;
         if (g_golem_restore_slot_on_cancel != 0)
         {
-            D_80122C00 = g_golem_saved_logic_type_slot;
+            g_field_script_locals.golem.slot = g_golem_saved_logic_type_slot;
         }
         return;
     }
@@ -656,7 +654,7 @@ void golem_handle_input(void)
         g_golem_exit_requested = 1;
         if (g_golem_restore_slot_on_cancel != 0)
         {
-            D_80122C00 = g_golem_saved_logic_type_slot;
+            g_field_script_locals.golem.slot = g_golem_saved_logic_type_slot;
         }
     }
 }
@@ -876,7 +874,7 @@ void golem_render(GolemRenderContext* render_context)
         encoded_text_copy(name_text, GOLEM_ARCHIVE_TEXT(archive, names_offset, name_index));
         if (GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.level)
         {
-            encoded_text_append(name_text, FIELD_UI_TEXT_AT(D_800EC3DA, GOLEM_SHARED_PLUS_TEXT_INDEX));
+            encoded_text_append(name_text, FIELD_UI_TEXT_AT(g_field_ui_text_plus, FIELD_UI_TEXT_PLUS));
             field_format_number(number_text, GOLEM_SAVED_GAME->logic_blocks[g_golem_selected_block].f.level, 1);
             encoded_text_append(name_text, number_text);
         }

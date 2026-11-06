@@ -1250,35 +1250,35 @@ void wmap_build_placement_labels(s32 selected_cell, u32 x, s32 y, s32* groups, s
 /**
  * @brief Empty world-map handler (no operation).
  */
-void func_8005D46C(void)
+void wmap_land_layout_stub_1(void)
 {
 }
 
 /**
  * @brief Empty world-map handler (no operation).
  */
-void func_8005D474(void)
+void wmap_land_layout_stub_2(void)
 {
 }
 
 /**
  * @brief Empty world-map handler (no operation).
  */
-void func_8005D47C(void)
+void wmap_land_layout_stub_3(void)
 {
 }
 
 /**
  * @brief Empty world-map handler (no operation).
  */
-void func_8005D484(void)
+void wmap_land_layout_stub_4(void)
 {
 }
 
 /**
  * @brief Empty world-map handler (no operation).
  */
-void func_8005D48C(void)
+void wmap_land_layout_stub_5(void)
 {
 }
 

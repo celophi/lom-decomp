@@ -47,7 +47,7 @@ extern u8 g_field_rename_initial_name[];
 /** @brief Record whose name GNAME edits: an item record or a FieldCharacterRecord. */
 extern u8* g_field_rename_target;
 
-/** @brief GNAME history-list entry: g_script_repeat_last for an item, the character's info.actions.unk19 (+0x80 for a golem) for a character. */
+/** @brief GNAME history-list entry: g_script_repeat_last for an item, the character's info.actions.variant (+0x80 for a golem) for a character. */
 extern s32 g_field_rename_source;
 
 /** @brief Extra text GNAME offers for an item rename (the item's type name). */

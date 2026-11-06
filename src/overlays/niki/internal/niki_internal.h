@@ -41,7 +41,8 @@ typedef union
 extern void* g_niki_work_buffer;
 /** @brief The saved game's item records (g_saved_game_ctx->items). */
 extern FieldItemRecord* g_niki_items;
-extern s32 D_80164B80;
+/** @brief When nonzero, a confirm press during the card scan jumps to the card info screen; NIKI only ever clears it. */
+extern s32 g_niki_confirm_skips_scan;
 /**
  * @brief Start of the selected entry's save file: only the card header and the
  *        first 0x100 bytes of the saved game are read (CARD_MENU_ENTRY_READ_BYTES).

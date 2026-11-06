@@ -60,7 +60,7 @@ void wmap_copy_words(s32* source, s32* destination, s32 byte_count)
 /**
  * @brief Empty world-map handler (no operation).
  */
-void func_80064F5C(void)
+void wmap_resource_stub(void)
 {
 }
 

@@ -137,7 +137,7 @@ void wmap_update_land_preview(void)
     s32 bob_sample;
     s32 travel_frame;
 
-    func_8005B540();
+    wmap_land_preview_stub();
     ot_shift = 0;
 
     if ((g_wmap_event_active == 0) || (g_wmap_placement_overlay_hidden == 0))

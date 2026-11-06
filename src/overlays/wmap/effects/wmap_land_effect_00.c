@@ -129,7 +129,7 @@ void wmap_land_effect_00_sequence_7_step_01(void)
 
     for (i = 0x64; i < 0x7C; i++)
     {
-        *(s16*)((u8*)g_wmap_actor_motions + i * 0x14) = 0;
+        g_wmap_actor_motions[i].state = 0;
         WMAP_INIT_PARTICLE_ACTOR(i, (u8*)&g_wmap_animation_bank_2, 0);
     }
 

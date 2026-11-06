@@ -2,30 +2,31 @@
 #define ADDHERO_INTERNAL_H
 
 #include "common.h"
-#include "common/saved_game.h"
-#include "common/pad.h"
-#include "common/vector.h"
-#include "main/display.h"
-#include "common/gpu_packet.h"
-#include <libgte.h>
-#include <libgpu.h>
 #include <kernel.h>
 #include <libapi.h>
 #include <libetc.h>
-#include <strings.h>
+#include <libgpu.h>
+#include <libgte.h>
 #include <libmcx.h>
+#include <strings.h>
+
+#include "common/card_directory.h"
+#include "common/card_events.h"
+#include "common/card_menu.h"
+#include "common/encoded_text.h"
+#include "common/glyph_cache.h"
+#include "common/gpu_packet.h"
+#include "common/pad.h"
+#include "common/save_file.h"
+#include "common/saved_game.h"
+#include "common/vector.h"
 #include "main/controller.h"
+#include "main/display.h"
+#include "overlays/field/field_fade.h"
+#include "overlays/field/field_input.h"
 #include "overlays/field/field_menu_window.h"
 #include "overlays/field/field_sound.h"
 #include "overlays/field/field_ui_text.h"
-#include "common/encoded_text.h"
-#include "common/save_file.h"
-#include "common/glyph_cache.h"
-#include "common/card_events.h"
-#include "common/card_directory.h"
-#include "common/card_menu.h"
-#include "overlays/field/field_fade.h"
-#include "overlays/field/field_input.h"
 
 /* Declarations shared by ADDHERO implementation files. */
 
@@ -41,20 +42,18 @@ void addhero_open_exit_dialog(s32 message_id);
 s32 addhero_scan_next_entry(s32 slot);
 s32 addhero_advance_load_sequence(void);
 
-
 /** @brief g_addhero_result values, reported to the host when the overlay exits. */
 #define ADDHERO_RESULT_LOADED 1
 #define ADDHERO_RESULT_SAVED 2
 #define ADDHERO_RESULT_CANCELLED 3
 
-
 extern s32 g_save_compatibility_tag;
 
 /**
- * @brief FIELD data word next to g_field_item_drop_menu_open; ADDHERO stores 3 into it when Circle cancels the browser.
+ * @brief FIELD data word next to g_field_item_drop_menu_open; ADDHERO stores ADDHERO_RESULT_CANCELLED into it when Circle cancels the browser.
  * @note TODO: purpose unknown; no code in the main executable or any overlay reads it.
  */
-extern s32 D_80122718;
+extern s32 g_field_addhero_cancel_result;
 extern s32 g_pad_input;
 /** @brief The saved game's item records (g_saved_game_ctx->items). */
 extern FieldItemRecord* g_addhero_items;

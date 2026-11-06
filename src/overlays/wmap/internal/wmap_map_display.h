@@ -76,12 +76,12 @@ void wmap_update_map_display(void);
 void wmap_set_land_display_mode(s32 index, s32 mode);
 void wmap_upload_land_image(WmapLandDisplay* resource, s32 slot);
 void wmap_init_land_image_cache(void);
-void func_80058298(void);
+void wmap_map_display_stub_1(void);
 s32 wmap_get_point_display_mode(s32 x, s32 y, s32 scale);
 void wmap_init_spirit_animation(void);
-s32 func_80058488(void);
-void func_80058490(void);
-void func_80058498(void);
+s32 wmap_map_display_stub_2(void);
+void wmap_map_display_stub_3(void);
+void wmap_clear_information_unused(void);
 
 /** @brief Resident land image and animation pack, indexed by byte offsets. */
 extern s32 g_wmap_land_image_pack[];

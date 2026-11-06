@@ -277,7 +277,7 @@ s32 card_menu_handle_input(void)
     input = g_pad_input;
     if (input & PAD_BTN_CIRCLE)
     {
-        D_80122718 = 3;
+        g_field_addhero_cancel_result = ADDHERO_RESULT_CANCELLED;
         field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
         card_menu_close_all_elements();
         return;
@@ -532,7 +532,7 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
             pos.y = y;
             hours = time / SAVED_PLAY_TIME_TICKS_PER_HOUR;
             result = field_draw_number(ot, result, hours, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
-            result = field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, FIELD_UI_TEXT_TIME_SEPARATOR), FIELD_TEXT_COLOR_NORMAL,
+            result = field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_field_ui_text_time_separator, FIELD_UI_TEXT_TIME_SEPARATOR), FIELD_TEXT_COLOR_NORMAL,
                                      x + CARD_MENU_DETAILS_TIME_SEPARATOR_X, y, FIELD_TEXT_ALIGN_LEFT);
             time = (time / SAVED_PLAY_TIME_TICKS_PER_MINUTE) - (hours * SAVED_PLAY_TIME_MINUTES_PER_HOUR);
             if (time < 10)
@@ -1107,7 +1107,7 @@ void* addhero_draw_transfer_status(u_long* ot, void* prim, s32 x_offset, s32 y_o
 
     if (g_pad_input & PAD_BTN_CIRCLE)
     {
-        D_80122718 = 3;
+        g_field_addhero_cancel_result = ADDHERO_RESULT_CANCELLED;
         field_play_sound(SFX_ERROR, AKAO_PAN_CENTER);
         card_menu_close_all_elements();
         return prim;

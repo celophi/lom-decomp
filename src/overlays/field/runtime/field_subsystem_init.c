@@ -32,7 +32,7 @@ extern s32 g_field_preserve_entry_music;
  * @note TODO: purpose unknown; it is only ever cleared here, and no code in the
  *       main executable or any overlay reads it.
  */
-extern s32 D_801178C8;
+extern s32 g_field_unused_scene_word;
 /** @brief Set while an interaction runs; pad input waits until the follower routes are rebuilt. */
 extern s32 g_field_actor_text_count;
 extern s32 g_field_ring_menu_state;
@@ -60,7 +60,7 @@ void field_initialize_subsystems(FieldRenderHalf* render_context)
     field_reset_actor_resource_slots();
     g_field_render_context = render_context;
     g_field_scene_mode_bit = 0;
-    D_801178C8 = 0;
+    g_field_unused_scene_word = 0;
     field_bind_builtin_animations();
     field_upload_common_texture();
     field_initialize_actor_slots();

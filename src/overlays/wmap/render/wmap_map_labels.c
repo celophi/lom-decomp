@@ -61,7 +61,6 @@ extern SPRT g_wmap_label_sprite;
 extern SPRT g_wmap_outgoing_label_sprite;
 extern u16 g_wmap_label_texture_page;
 extern u16 g_wmap_outgoing_label_texture_page;
-extern s8 D_80182E0C;
 
 /**
  * @brief Append map label and decorative packets with selection fades.
@@ -384,7 +383,7 @@ void wmap_init_label_sprites(void)
     g_wmap_outgoing_day_name_sprite.b0 = 0;
     g_wmap_outgoing_day_name_sprite.g0 = 0;
     g_wmap_outgoing_day_name_sprite.r0 = 0;
-    D_80182E0C = 0;
+    g_wmap_outgoing_label_sprite.r0 = 0;
     g_wmap_label_sprite.r0 = 0;
     g_wmap_label_selection = -1;
     g_wmap_status_panel_day = -1;

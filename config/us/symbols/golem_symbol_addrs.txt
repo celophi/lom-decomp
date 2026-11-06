@@ -79,3 +79,10 @@ golem_logic_block_fits_grid = 0x800CBC0C;
 golem_fill_logic_block_status = 0x800CBD70;
 golem_remove_logic_block = 0x800CBE64;
 golem_build_grid_markers = 0x800CBEC4;
+
+// FIELD UI string table entries.
+g_field_ui_text_plus = 0x800EC3DA;
+
+// FIELD script locals (FieldRuntimeContext.locals).
+g_field_script_locals = 0x80122C00;
+g_golem_unused_word = 0x8014C26C;

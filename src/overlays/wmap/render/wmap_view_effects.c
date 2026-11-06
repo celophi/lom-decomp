@@ -102,7 +102,8 @@ typedef union
 extern u32 g_wmap_view_sequence_step;
 extern s32 g_wmap_view_sequence_timer;
 extern WmapSequenceStep g_wmap_view_sequence_steps[];
-extern s32 D_80182D88;
+/** @brief Cleared by wmap_init_state and wmap_clear_view_unused; nothing reads it. */
+extern s32 g_wmap_view_unused_word;
 
 extern s32 g_wmap_map_shadow_level;
 extern CVECTOR g_wmap_tint_target;
@@ -115,7 +116,8 @@ extern SVECTOR g_wmap_grid_vertices[];
 extern s16 g_wmap_grid_vertex_indices[];
 extern WmapView g_wmap_zoom_view;
 extern WmapView g_wmap_zoom_step;
-extern s32 D_80139288;
+/** @brief Set when a map tint starts; nothing reads it. */
+extern s32 g_wmap_tint_started;
 extern s32 g_wmap_burst_spawning;
 extern WmapPoint g_wmap_cell_focus_offsets[][3];
 extern s32 g_wmap_focus_origin_x;
@@ -163,10 +165,10 @@ WMAP_STEP_RESET(wmap_reset_view_sequence, g_wmap_view_sequence_step, g_wmap_view
 /** @brief Map view sequence step 1: advance to the next step. */
 WMAP_STEP_ADVANCE(wmap_advance_view_sequence, g_wmap_view_sequence_step)
 
-/** @brief Clear the world-map state value at D_80182D88. */
-void func_800654EC(void)
+/** @brief Clear the world-map state value at g_wmap_view_unused_word. */
+void wmap_clear_view_unused(void)
 {
-    D_80182D88 = 0;
+    g_wmap_view_unused_word = 0;
 }
 
 /** @brief Build the map tiles, shadow polygons and texture-page selector of both frames. */
@@ -959,7 +961,7 @@ s32 wmap_start_map_tint(s32 color)
 {
     /* The packed word is reinterpreted as the color bytes. */
     g_wmap_tint_target = *(CVECTOR*)&color;
-    D_80139288 = 1;
+    g_wmap_tint_started = 1;
     wmap_install_callback(wmap_update_map_tint);
     return 1;
 }

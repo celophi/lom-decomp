@@ -28,7 +28,7 @@
 /** @brief Item types per category in FieldItemValueTables::type_values. */
 #define FIELD_ITEM_TYPES_PER_CATEGORY 16
 
-/** @brief Hero item records scanned for a used key: equipment[] runs on into unk150[]. */
+/** @brief Hero item records scanned for a used key: equipment[] runs on into instruments[]. */
 #define FIELD_HERO_ITEM_RECORD_COUNT 8
 
 /** @brief field_get_land_state results. */

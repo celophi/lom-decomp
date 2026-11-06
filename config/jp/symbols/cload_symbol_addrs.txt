@@ -232,8 +232,6 @@ g_lom_save_dummy_filename               = 0x800ECB20;
 g_lom_pocketstation_dummy_filename           = 0x800ECB34;
 g_new_save_entry_prefix                 = 0x800ECB08;
 g_playtime_vsync_origin                 = 0x80043124;
-g_text_time_separator_offset_bytes      = 0x800EBFC2;
-g_text_choice_glyph_offsets             = 0x800EBFC6;
 
 // CLOAD load-state scripts (byte values dispatch cload_advance_load_sequence cases).
 g_card_steps_initial_scan              = 0x801465F0;
@@ -266,3 +264,7 @@ field_draw_text = 0x800A8750;
 field_draw_number = 0x800A8928;
 g_card_menu_text_not_pocketstation    = 0x80145ED6;
 g_card_menu_write_in_progress    = 0x80163150;
+
+// FIELD UI string table entries.
+g_field_ui_text_time_separator = 0x800EBFC2;
+g_field_ui_text_yes = 0x800EBFC6;

@@ -139,7 +139,8 @@ typedef struct
     /** @brief Image indices, FIELD_ACTOR_IMAGE_END-terminated when shorter than six. */
     u8 images[FIELD_ACTOR_IMAGE_COUNT];
     u16 palette;
-    u16 unkA;
+    /** @brief Copied to the resource's bound_animation_flags. */
+    u16 bound_animation_flags;
     s32 action_count;
     FieldActionSlot actions[1];
 } FieldSceneActorDescription;
@@ -211,8 +212,11 @@ extern u16 g_field_transition_tiles_alt[FIELD_TRANSITION_TILE_PIXELS];
 extern s32 g_field_transition_tile_bank;
 /** @brief Number of loaded actors; the next scene actor takes this object index. */
 extern s32 g_field_loaded_actor_count;
-/* TODO: Multiple-image resource flag also raises ability growth from 1 to 4. */
-extern s32 D_80115890;
+/**
+ * @brief Set while the last scene actor loaded has more than one image.
+ * @note TODO: field_dialog_screens also reads it to raise ability growth from 1 to 4.
+ */
+extern s32 g_field_last_actor_multi_image;
 
 extern s32 g_field_pending_spawn_id;
 extern s32 g_field_pending_music_id;
@@ -510,7 +514,7 @@ void field_update_scene(void)
         }
 
         top_image_slot = FIELD_FIRST_IMAGE_SLOT;
-        D_80115890 = 0;
+        g_field_last_actor_multi_image = 0;
         action_base = (u8*)g_field_resource_actions;
         field_setup_chest_resource();
         i = 0;
@@ -553,7 +557,7 @@ void field_update_scene(void)
                     resource_fields->attribute.palette = description->palette;
                     resource_fields->slot_index = top_image_slot;
 
-                    if (D_80115890 != 0)
+                    if (g_field_last_actor_multi_image != 0)
                     {
                         resource_fields->multi_image = 0;
                     }
@@ -562,7 +566,7 @@ void field_update_scene(void)
                         resource_fields->multi_image = image_count != 1;
                     }
 
-                    D_80115890 = image_count != 1;
+                    g_field_last_actor_multi_image = image_count != 1;
                     resource_base = resource_table;
                     resource = OFFSET_FIRST_PTR(FieldResourceEntry, resource_offset, resource_base);
                     resource->start = g_field_resource_cursor;
@@ -571,7 +575,7 @@ void field_update_scene(void)
                     resource->end = g_field_resource_cursor;
                     resource->flags |= FIELD_RESOURCE_LOADED;
                     action_ids = description->actions;
-                    resource->bound_animation_flags = description->unkA;
+                    resource->bound_animation_flags = description->bound_animation_flags;
                     /* image_index holds the action count until the image upload below. */
                     image_index = description->action_count;
                     action_index = 0;
@@ -617,7 +621,7 @@ void field_update_scene(void)
                     inherited_resource->end = g_field_resource_cursor;
                     inherited_resource->flags |= FIELD_RESOURCE_LOADED;
                     action_ids = description->actions;
-                    inherited_resource->bound_animation_flags = description->unkA;
+                    inherited_resource->bound_animation_flags = description->bound_animation_flags;
                     image_index = description->action_count;
                     action_index = 0;
 

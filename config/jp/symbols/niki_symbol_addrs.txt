@@ -186,7 +186,7 @@ g_card_steps_read_saved_copy                                   = 0x801607B4;
 g_card_steps_write_save                                   = 0x801607BD;
 g_niki_items                                   = 0x801658B4;
 g_niki_work_buffer                           = 0x801658BC;
-D_80164B80                                   = 0x80165958;
+g_niki_confirm_skips_scan                                   = 0x80165958;
 g_niki_entry_file                         = 0x80165970; // size:0x280 allow_addend:True
 g_card_selected_save_path                                   = 0x80165C48;
 g_card_menu_has_free_space                                   = 0x80165DAC;
@@ -245,9 +245,6 @@ field_draw_number = 0x800A8928;
 field_draw_menu_frame = 0x800AD4A4;
 field_draw_menu_scroll_arrow = 0x800AE3C0;
 field_flag_known_save = 0x800AFDC4;
-g_field_ui_text_cant_hold_more    = 0x800EBF9C;
-g_text_time_separator_offset_bytes    = 0x800EBFC2;
-g_text_choice_glyph_offsets    = 0x800EBFC6;
 g_lom_save_filename_prefix    = 0x800ECAE8;
 g_lom_pocketstation_filename_prefix    = 0x800ECAF8;
 g_lom_save_dummy_filename    = 0x800ECB20;
@@ -260,3 +257,8 @@ g_saved_game_ctx    = 0x8011F1C4;
 g_field_niki_partner_game_id    = 0x8011F274;
 g_field_niki_partner_save_id    = 0x8011F29C;
 g_field_shared_items    = 0x8011F490;
+
+// FIELD UI string table entries.
+g_field_ui_text_cant_hold_more = 0x800EBF9C;
+g_field_ui_text_time_separator = 0x800EBFC2;
+g_field_ui_text_yes = 0x800EBFC6;

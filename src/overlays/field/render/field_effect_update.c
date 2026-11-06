@@ -442,7 +442,8 @@ typedef struct
 extern FieldObjectPart g_field_object_parts[];
 extern FieldMotionRecord g_field_actors[];
 extern FieldMotionRecord g_field_effect_records[FIELD_EFFECT_ACTIVE_RECORD_COUNT];
-extern VECTOR D_80105778;
+/** @brief Position of the effect spawning child parts; FIELD_PLACEMENT_GLOBAL_POINT parts start there. */
+extern VECTOR g_field_effect_spawn_point;
 extern s32 g_field_spawn_ground_point;
 extern s32 g_field_next_path_group;
 
@@ -1515,9 +1516,9 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
             break;
 
         case FIELD_PLACEMENT_GLOBAL_POINT:
-            effect->x += D_80105778.vx;
-            effect->y += D_80105778.vy;
-            effect->z += D_80105778.vz;
+            effect->x += g_field_effect_spawn_point.vx;
+            effect->y += g_field_effect_spawn_point.vy;
+            effect->z += g_field_effect_spawn_point.vz;
             break;
 
         case FIELD_PLACEMENT_PART_OFFSET:
@@ -2102,10 +2103,10 @@ void field_retire_effect(FieldMotionRecord* effect, FieldObjectPart* part)
         {
             if ((part->appearance.word >> 0x1C) & spawn_mask)
             {
-                D_80105778.vx = effect->x;
-                D_80105778.vy = effect->y;
+                g_field_effect_spawn_point.vx = effect->x;
+                g_field_effect_spawn_point.vy = effect->y;
                 g_field_spawn_ground_point = 0;
-                D_80105778.vz = effect->z;
+                g_field_effect_spawn_point.vz = effect->z;
 
                 spawn_part = &g_field_actor_slots[effect->actor_index].parts[(part->spawn_flags.halves.part_selectors >> (spawn_slot * 4)) & 0xF];
                 spawn_count = 1;

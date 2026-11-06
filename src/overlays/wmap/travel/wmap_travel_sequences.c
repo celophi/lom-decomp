@@ -588,7 +588,7 @@ s32 wmap_finish_vehicle_turn(s32 initialize)
 
 /**
  * @brief Run the current step of the special travel sequence (flight to the special land).
- * @param arg0 Nonzero restarts the sequence instead of running a step.
+ * @param reset Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once every step has run.
  */
 WMAP_STEP_RUNNER(wmap_run_special_travel, g_wmap_special_travel_steps, WMAP_SPECIAL_TRAVEL_STEPS, g_wmap_special_travel_step, g_wmap_special_travel_timer)
@@ -773,7 +773,7 @@ void wmap_special_travel_finish(void)
 
 /**
  * @brief Run the current step of the special return sequence (flight back from the special land).
- * @param arg0 Nonzero restarts the sequence instead of running a step.
+ * @param reset Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once every step has run.
  */
 WMAP_STEP_RUNNER(wmap_run_special_return, g_wmap_special_return_steps, WMAP_SPECIAL_RETURN_STEPS, g_wmap_special_return_step, g_wmap_special_return_timer)

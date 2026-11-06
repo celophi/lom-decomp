@@ -198,7 +198,8 @@ extern WmapScreenPosition g_wmap_effect_sprite_position_b;
 extern WmapScreenPosition g_wmap_effect_sprite_position_c;
 extern s32 g_wmap_carousel_artifacts[];
 extern s32 g_wmap_models_use_effect_camera;
-extern s32 D_800D922C;
+/** @brief Last map-game score, or the active count of land effects 1 and 13; nothing reads it. */
+extern s32 g_wmap_unused_tally;
 /** @brief 127 * cos(2 * pi * i / 128): two full periods over 256 entries. */
 extern s8 g_wmap_cosine_wave[256];
 extern s32 g_wmap_sequence_count;

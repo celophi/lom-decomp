@@ -51,7 +51,8 @@ typedef struct
     s32 screen_xy;
 } WmapSparkSlot;
 
-extern s32 D_800D9230;
+/** @brief Counted up by land effect 10; nothing reads it. */
+extern s32 g_wmap_effect10_unused_count;
 extern s32 g_wmap_land_effect_10_sequence_4_timer;
 extern s32 g_wmap_land_effect_10_sequence_5_timer;
 extern s32 g_wmap_land_effect_10_sequence_8_timer;
@@ -147,7 +148,7 @@ void wmap_land_effect_10_update_falling_sparks(s32 first, s32 end, WmapSparkPart
         }
     }
 
-    D_800D9230 = 0;
+    g_wmap_effect10_unused_count = 0;
 
     for (i = first; i < end; i++)
     {
@@ -186,7 +187,7 @@ void wmap_land_effect_10_update_falling_sparks(s32 first, s32 end, WmapSparkPart
                 particles[i].position.vx += particles[i].velocity.vx;
                 particles[i].position.vy += particles[i].velocity.vy;
                 particles[i].position.vz += particles[i].velocity.vz;
-                D_800D9230++;
+                g_wmap_effect10_unused_count++;
 
                 if (particles[i].position.vz < 0)
                 {
@@ -209,7 +210,8 @@ void wmap_land_effect_10_update_falling_sparks(s32 first, s32 end, WmapSparkPart
                 {
                     actor = &g_wmap_sprite_actors[i];
                     wmap_step_actor_animation(actor, &g_wmap_actor_animations[i]);
-                    wmap_draw_actor_sprite(actor, *(s32*)((u8*)&g_wmap_actor_motions[i] + 0x10), config->sprite_id, config->ot_index, 0);
+                    wmap_draw_actor_sprite(actor, *(s32*)((u8*)&g_wmap_actor_motions[i] + OFFSETOF(WmapSparkSlot, screen_xy)), config->sprite_id,
+                                           config->ot_index, 0);
                     /* Reuse the exhausted spawn counter for the fade test. */
                     spawn = --slot->timer >= 0;
 

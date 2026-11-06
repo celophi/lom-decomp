@@ -2,7 +2,6 @@
 #include <abs.h>
 
 #include "../internal/field_calls.h"
-#include "../internal/field_menu_vars.h"
 #include "../internal/field_records.h"
 #include "../internal/field_script.h"
 #include "common/saved_game.h"
@@ -10,6 +9,7 @@
 #include "main/main.h"
 #include "overlays/field/field_actor_records.h"
 #include "overlays/field/field_overlay_handoff.h"
+#include "overlays/field/field_script_locals.h"
 
 void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s32 y, s32 z);
 
@@ -25,32 +25,42 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 /** @brief FIELD_VARIABLE_GUEST_VARIANT value meaning a guest hero is loaded. */
 #define FIELD_GUEST_PRESENT 0x80
 
-/** @brief The object-menu variables, which start at D_80122C0C. */
-#define FIELD_MENU_OBJECT ((FieldMenuObjectVars*)&D_80122C0C)
+/** @brief The object-menu variables, which start at script local byte 0x0C. */
+#define FIELD_MENU_OBJECT ((FieldMenuObjectVars*)&FIELD_LOCAL_BYTE(0x0C))
 
-/** @brief The record display variables, which start at D_80122C10. */
-#define FIELD_MENU_RECORD ((FieldMenuRecordVars*)&D_80122C10)
+/** @brief The record display variables, which start at script local byte 0x10. */
+#define FIELD_MENU_RECORD ((FieldMenuRecordVars*)&FIELD_LOCAL_BYTE(0x10))
 
-/** @brief The gosub result variables, which start at D_80122C12. */
-#define FIELD_MENU_RESULT ((FieldMenuResultVars*)&D_80122C12)
+/** @brief The gosub result variables, which start at script local byte 0x12. */
+#define FIELD_MENU_RESULT ((FieldMenuResultVars*)&FIELD_LOCAL_BYTE(0x12))
 
-/** @brief The named-selection variables, which start at D_80122C02. */
-#define FIELD_MENU_NAMED ((FieldMenuNamedVars*)&D_80122C02)
+/** @brief The named-selection variables, which start at script local byte 0x02. */
+#define FIELD_MENU_NAMED ((FieldMenuNamedVars*)&FIELD_LOCAL_BYTE(0x02))
 
-/** @brief The golem swap variables, which start at D_80122C0A. */
-#define FIELD_MENU_SWAP ((FieldMenuSwapVars*)&D_80122C0A)
+/** @brief The golem swap variables, which start at script local byte 0x0A. */
+#define FIELD_MENU_SWAP ((FieldMenuSwapVars*)&FIELD_LOCAL_BYTE(0x0A))
 
 /**
- * @brief Byte script local variable @p index (the locals start at D_80122C00).
+ * @brief Byte script local variable @p index.
  * @note Menu programs pass their arguments in these locals by index.
  */
-#define FIELD_LOCAL_BYTE(index) (((u8*)&D_80122C00)[index])
+#define FIELD_LOCAL_BYTE(index) (((u8*)&g_field_runtime_context)[index])
+
+/** @brief Signed byte script local variable @p index. */
+#define FIELD_LOCAL_SIGNED_BYTE(index) (((s8*)&g_field_runtime_context)[index])
 
 /** @brief Halfword script local variable @p index. */
-#define FIELD_LOCAL_HALF(index) (((s16*)&D_80122C00)[index])
+#define FIELD_LOCAL_HALF(index) (((s16*)&g_field_runtime_context)[index])
+
+/** @brief Unsigned halfword script local variable @p index. */
+#define FIELD_LOCAL_UNSIGNED_HALF(index) (((u16*)&g_field_runtime_context)[index])
 
 /** @brief Word script local variable @p index. */
-#define FIELD_LOCAL_WORD(index) (((s32*)&D_80122C00)[index])
+#define FIELD_LOCAL_WORD(index) (((s32*)&g_field_runtime_context)[index])
+
+/* Script locals most menu ops take their argument from and return their result in. */
+#define FIELD_MENU_VALUE 8   /**< Halfword index: argument or result. */
+#define FIELD_MENU_COUNT 0xB /**< Unsigned halfword index: counted result. */
 
 /** @brief @p value clamped to @p low..@p high. */
 #define FIELD_CLAMP(value, low, high) ((value) < (low) ? (low) : ((value) > (high) ? (high) : (value)))
@@ -79,8 +89,8 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 #define FIELD_AFFINITY_SELECTED_CATEGORY 7 /**< Category of the applied source. */
 #define FIELD_AFFINITY_LEVEL 8
 #define FIELD_AFFINITY_NEUTRAL 10     /**< Nonzero: every element factor is 2. */
-#define FIELD_AFFINITY_FIRST_VALUE 8  /**< Halfword index (D_80122C10). */
-#define FIELD_AFFINITY_SECOND_VALUE 9 /**< Halfword index (D_80122C12). */
+#define FIELD_AFFINITY_FIRST_VALUE 8  /**< Halfword index. */
+#define FIELD_AFFINITY_SECOND_VALUE 9 /**< Halfword index. */
 
 /* Script locals written by field_menu_read_ring_selection (halfword indices). */
 #define FIELD_RING_ENTRY 0xA /**< Selected ring entry. */
@@ -158,6 +168,40 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 #define FIELD_CURSOR_SLOT 0x1C       /**< Selected cursor slot; also the text macro index. */
 #define FIELD_CURSOR_SLOT_TABLE 0x1D /**< Pet record index shown in each cursor slot. */
 
+/* Script locals of the golem menus. */
+#define FIELD_GOLEM_PALETTE_SELECTION 4 /**< Halfword index: palette selection field_menu_set_golem_palette was given. */
+#define FIELD_GOLEM_CLASS 0xE           /**< Halfword index: class field_menu_set_golem_class gives the joined golem. */
+#define FIELD_GOLEM_SAVED_GROUP 0x12    /**< Signed byte index: group of the golem that last left the party. */
+
+/* Script locals of the action item menus (byte indices). */
+#define FIELD_ACTION_GROUP 0x1F     /**< Action group the action item menus work on. */
+#define FIELD_ACTION_ITEM_SLOTS 0xF /**< Item slot count of the group, or 0xFF when its slots are full. */
+
+/** @brief Unsigned halfword index of the value field_menu_lookup_object_value finds; it replaces the object variant. */
+#define FIELD_OBJECT_VALUE 7
+
+/** @brief Halfword index of the actor field_menu_select_distance_bucket measures. */
+#define FIELD_DISTANCE_ACTOR 0xE
+
+/** @brief Byte index of the actor field_place_actor_beside_actor0 moves. */
+#define FIELD_PLACED_ACTOR 0xD
+
+/** @brief Byte index of field_menu_add_pending_record's FIELD_PENDING_ADD_* result. */
+#define FIELD_PENDING_ADD_RESULT 0x1F
+#define FIELD_PENDING_ADD_NONE 0      /**< The gosub returned nothing. */
+#define FIELD_PENDING_ADD_DONE 1      /**< The record was copied. */
+#define FIELD_PENDING_ADD_NO_ITEM 2   /**< The selected record holds no item. */
+#define FIELD_PENDING_ADD_DUPLICATE 3 /**< A pending record already holds the same item. */
+
+/** @brief Byte index of the free record count field_menu_count_free_pending_items and field_menu_count_free_inventory return. */
+#define FIELD_FREE_RECORD_COUNT 0x1F
+
+/** @brief Byte index of the NIKI mode the script requested; field_menu_sync_shared_items replaces it with NIKI's. */
+#define FIELD_NIKI_MODE 0x1E
+
+/** @brief Byte index of the mode field_menu_open_carda opens CARDA in. */
+#define FIELD_CARDA_MODE 1
+
 /** @brief Text resource @p id. */
 #define FIELD_TEXT_RESOURCE(id) ((FieldTextResource*)field_find_resource(id))
 
@@ -166,6 +210,9 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 
 /** @brief Text resource of the menu objects' names. */
 #define FIELD_OBJECT_TEXT_RESOURCE 0x101
+
+/** @brief Resource of the menu objects' values: a 4-byte header, then two u16 values per object (one per variant). */
+#define FIELD_OBJECT_VALUE_RESOURCE 0x102
 
 /** @brief Text resource indexed by an item's stat bytes 0 and 1 (row * 14 + column). */
 #define FIELD_ITEM_ENTRY_TEXT_RESOURCE 0x103
@@ -192,19 +239,19 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 /** @brief Item id of the first of the eight menu action items. */
 #define FIELD_ACTION_ITEM_BASE 0x58
 
-/** @brief The action item choice variables, which start at D_80122C08. */
-#define FIELD_MENU_CHOICES ((FieldMenuChoiceVars*)&D_80122C08)
+/** @brief The action item choice variables, which start at script local byte 0x08. */
+#define FIELD_MENU_CHOICES ((FieldMenuChoiceVars*)&FIELD_LOCAL_BYTE(0x08))
 
-/** @brief The record selection variables, which start at D_80122C02. */
-#define FIELD_MENU_RECORD_SELECT ((FieldMenuRecordSelectVars*)&D_80122C02)
+/** @brief The record selection variables, which start at script local byte 0x02. */
+#define FIELD_MENU_RECORD_SELECT ((FieldMenuRecordSelectVars*)&FIELD_LOCAL_BYTE(0x02))
 
-/** @brief The item description variables, which start at D_80122C04. */
-#define FIELD_MENU_ITEM_INFO ((FieldMenuItemInfoVars*)&D_80122C04)
+/** @brief The item description variables, which start at script local byte 0x04. */
+#define FIELD_MENU_ITEM_INFO ((FieldMenuItemInfoVars*)&FIELD_LOCAL_BYTE(0x04))
 
-/** @brief The action slot variables, which start at D_80122C0D. */
-#define FIELD_MENU_ACTION_SLOT ((FieldMenuActionSlotVars*)&D_80122C0D)
+/** @brief The action slot variables, which start at script local byte 0x0D. */
+#define FIELD_MENU_ACTION_SLOT ((FieldMenuActionSlotVars*)&FIELD_LOCAL_BYTE(0x0D))
 
-/** @brief Script variables from D_80122C0C used by the menus that move a field object. */
+/** @brief Script locals from byte 0x0C used by the menus that move a field object. */
 typedef struct
 {
     s16 object_id;
@@ -216,14 +263,14 @@ typedef struct
     s16 target_height;
 } FieldMenuObjectVars;
 
-/** @brief Script variables from D_80122C10 that receive a record's display id. */
+/** @brief Script locals from byte 0x10 that receive a record's display id. */
 typedef struct
 {
     s16 display_id;
     s16 mode;
 } FieldMenuRecordVars;
 
-/** @brief Script variables from D_80122C12 that receive a gosub selection. */
+/** @brief Script locals from byte 0x12 that receive a gosub selection. */
 typedef struct
 {
     s16 index;
@@ -231,7 +278,7 @@ typedef struct
     u16 count;
 } FieldMenuResultVars;
 
-/** @brief Script variables from D_80122C02 used to name a gosub selection. */
+/** @brief Script locals from byte 0x02 used to name a gosub selection. */
 typedef struct
 {
     u8 macro_index;
@@ -241,13 +288,13 @@ typedef struct
     u16 count;
 } FieldMenuNamedVars;
 
-/** @brief Table at D_80051CBC mapping selection ids from 0x60 to palette slots. */
+/** @brief Table at g_field_golem_palette_slots mapping selection ids from 0x60 to palette slots. */
 typedef struct
 {
     u8 slots[0x25];
 } FieldPaletteSlotTable;
 
-/** @brief Script variables from D_80122C0A that receive a golem slot swap. */
+/** @brief Script locals from byte 0x0A that receive a golem slot swap. */
 typedef struct
 {
     s16 selected_position;
@@ -255,7 +302,7 @@ typedef struct
     s16 active_slot;
 } FieldMenuSwapVars;
 
-/** @brief Per-logic-block class table (D_80051CE4), indexed by logic-block id. */
+/** @brief Per-logic-block class table (g_field_logic_block_classes), indexed by logic-block id. */
 typedef struct
 {
     s32 classes[0xE8 / 4];
@@ -273,14 +320,14 @@ typedef struct
 #define FIELD_MENU_GROUP_USED_SHIFT 12
 #define FIELD_MENU_GROUP_USED_MASK (FIELD_MENU_GROUP_FIELD_MASK << FIELD_MENU_GROUP_USED_SHIFT)
 
-/** @brief Script variables from D_80122C08: the action item choice mask and count. */
+/** @brief Script locals from byte 0x08: the action item choice mask and count. */
 typedef struct
 {
     u16 mask; /**< Bit set for each choice that is disabled. */
     u8 count;
 } FieldMenuChoiceVars;
 
-/** @brief Script variables from D_80122C0D that select one menu action slot. */
+/** @brief Script locals from byte 0x0D that select one menu action slot. */
 typedef struct
 {
     u8 action_slot; /**< Action slot number plus 4. */
@@ -291,14 +338,14 @@ typedef struct
     u8 group; /**< action group index. */
 } FieldMenuActionSlotVars;
 
-/** @brief Script variables from D_80122C02 that select a record and report the result. */
+/** @brief Script locals from byte 0x02 that select a record and report the result. */
 typedef struct
 {
     u8 index;  /**< Selected record index. */
     u8 status; /**< 0 when the record is shown, 1 when it is empty, 2 when it is a duplicate. */
 } FieldMenuRecordSelectVars;
 
-/** @brief Script variables from D_80122C04 that describe the selected item. */
+/** @brief Script locals from byte 0x04 that describe the selected item. */
 typedef struct
 {
     u8 kind;     /**< Item kind, bits 9:8 of the attributes. */
@@ -310,6 +357,7 @@ typedef struct
     u16 value; /**< Displayed stat value; bit 15 marks a special item. */
 #endif
     u32 amount; /**< Item value. */
+    u8 digits;  /**< Number of decimal digits of amount. */
 } FieldMenuItemInfoVars;
 
 /**
@@ -348,45 +396,24 @@ typedef struct
     u8 texts[1];
 } FieldTextResource;
 
-extern u8 D_80122C01;
-extern u8 D_80122C02;
-extern u8 D_80122C03;
-extern u8 D_80122C04;
-extern u8 D_80122C05;
-extern s16 D_80122C06;
-extern s16 D_80122C08;
-extern s16 D_80122C0A;
-extern u8 D_80122C0C;
-extern u8 D_80122C0D;
-extern u16 D_80122C0E;
-extern u8 D_80122C0F;
-extern s16 D_80122C10;
-extern u8 D_80122C11;
-extern s8 D_80122C12;
-extern s16 D_80122C14;
-extern u16 D_80122C16;
-extern u8 D_80122C19;
-extern s16 D_80122C1C;
-extern u8 D_80122C1E;
-extern u8 D_80122C1F;
-extern FieldGosubSequence D_80051EB4;
-extern void (*g_field_menu_ops[])(s32 arg0);
-extern FieldGosubSequence D_800F19AC;
-extern FieldGosubSequence D_800F19B8;
-extern FieldGosubSequence D_800F19C4;
-extern FieldPaletteSlotTable D_80051CBC;
-extern FieldGosubSequence D_800F19CC;
-extern FieldLogicClassTable D_80051CE4;
-extern FieldLogicClassTable D_80051DCC;
-extern FieldGosubSequence D_80051EC0;
-extern FieldGosubSequence D_80051ECC;
+extern FieldGosubSequence g_field_gosub_equipment_sequence;
+extern void (*g_field_menu_ops[])(s32 op);
+extern FieldGosubSequence g_field_gosub_golem_parts_sequence;
+extern FieldGosubSequence g_field_gosub_block_components_sequence;
+extern FieldGosubSequence g_field_gosub_logic_blocks_sequence;
+extern FieldPaletteSlotTable g_field_golem_palette_slots;
+extern FieldGosubSequence g_field_gosub_color_material_sequence;
+extern FieldLogicClassTable g_field_logic_block_classes;
+extern FieldLogicClassTable g_field_logic_block_unused_classes;
+extern FieldGosubSequence g_field_gosub_produce_sequence;
+extern FieldGosubSequence g_field_gosub_pet_sequence;
 extern void field_menu_clear_item_slots(void);
 extern s32 rand(void);
-s32 field_get_actor_facing(s32 arg0);
+s32 field_get_actor_facing(s32 actor_id);
 extern void field_menu_compact_pending_items(void);
 extern FieldFavoredElementTable g_field_weekday_favored_elements;
-extern FieldGosubSequence D_80051EF8;
-extern FieldElementTable D_80051F04;
+extern FieldGosubSequence g_field_gosub_instrument_sequence;
+extern FieldElementTable g_field_element_pairs;
 void field_menu_clear_gosub_request(void);
 
 /**
@@ -429,25 +456,25 @@ void field_menu_classify_golem_slot(void)
 
     ctx = &g_saved_game.layout;
 
-    if (ctx->golem_order[D_80122C00.locals.golem.slot] == FIELD_GOLEM_NO_RECORD)
+    if (ctx->golem_order[g_field_runtime_context.locals.golem.slot] == FIELD_GOLEM_NO_RECORD)
     {
         if ((u8)ctx->joined_golem >= GOLEM_RECORD_COUNT)
         {
-            D_80122C00.locals.golem.state = 1;
+            g_field_runtime_context.locals.golem.state = 1;
             return;
         }
 
-        D_80122C00.locals.golem.state = 2;
+        g_field_runtime_context.locals.golem.state = 2;
         return;
     }
 
-    if (ctx->golem_order[D_80122C00.locals.golem.slot] == ctx->joined_golem)
+    if (ctx->golem_order[g_field_runtime_context.locals.golem.slot] == ctx->joined_golem)
     {
-        D_80122C00.locals.golem.state = 3;
+        g_field_runtime_context.locals.golem.state = 3;
         return;
     }
 
-    D_80122C00.locals.golem.state = 4;
+    g_field_runtime_context.locals.golem.state = 4;
 }
 
 /**
@@ -464,7 +491,7 @@ void field_menu_clear_gosub_request(void)
  */
 void field_menu_choose_golem_parts(void)
 {
-    field_open_gosub_screen_sequence(&D_800F19AC);
+    field_open_gosub_screen_sequence(&g_field_gosub_golem_parts_sequence);
 }
 
 /**
@@ -517,7 +544,7 @@ void field_menu_create_golem(void)
         }
 
         /* A golem already in the slot moves to the first empty slot. */
-        previous = g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot];
+        previous = g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot];
 
         if (previous != FIELD_GOLEM_NO_RECORD)
         {
@@ -535,7 +562,7 @@ void field_menu_create_golem(void)
             }
         }
 
-        g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot] = free_record;
+        g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot] = free_record;
         /* The count nibble is updated with word read-modify-writes. */
         packed_counts = (SAVED_GAME_GOLEM_HEADER_WORD(g_saved_game.layout) & ~GOLEM_COUNT_MASK) |
                         (((g_saved_game.layout.golem_count & GOLEM_COUNT_MASK) + 1) & GOLEM_COUNT_MASK);
@@ -548,8 +575,9 @@ void field_menu_create_golem(void)
 
         for (i = 0; i < g_gosub_result_count; i++)
         {
-            field_copy_inventory_record(&g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i],
-                                        &g_saved_game.layout.items[g_gosub_result_values[i]]);
+            field_copy_inventory_record(
+                &g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot]].source_items[i],
+                &g_saved_game.layout.items[g_gosub_result_values[i]]);
             g_saved_game.layout.items[g_gosub_result_values[i]].name[0] = 0;
         }
 
@@ -557,7 +585,7 @@ void field_menu_create_golem(void)
 
         for (i = g_gosub_result_count; i < GOLEM_SOURCE_ITEM_COUNT; i++)
         {
-            g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name[0] = 0;
+            g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot]].source_items[i].name[0] = 0;
         }
 
         field_upload_golem_palettes();
@@ -569,7 +597,7 @@ void field_menu_create_golem(void)
  */
 void field_menu_choose_block_components(void)
 {
-    field_open_gosub_screen_sequence(&D_800F19B8);
+    field_open_gosub_screen_sequence(&g_field_gosub_block_components_sequence);
 }
 
 /**
@@ -577,7 +605,7 @@ void field_menu_choose_block_components(void)
  */
 void field_menu_choose_logic_blocks(void)
 {
-    field_open_gosub_screen_sequence(&D_800F19C4);
+    field_open_gosub_screen_sequence(&g_field_gosub_logic_blocks_sequence);
 }
 
 /**
@@ -598,9 +626,9 @@ void field_menu_load_golem_class(void)
     s32 record_index;
 
     ctx = &g_saved_game.layout;
-    record_index = ctx->golem_order[D_80122C00.locals.golem.slot];
-    D_80122C00.locals.golem.slot_status[0] = record_index;
-    D_80122C00.locals.golem.detail = ctx->golem_records[record_index].logic_layout.byte & GOLEM_LOGIC_CLASS_MASK;
+    record_index = ctx->golem_order[g_field_runtime_context.locals.golem.slot];
+    g_field_runtime_context.locals.golem.slot_status[0] = record_index;
+    g_field_runtime_context.locals.golem.detail = ctx->golem_records[record_index].logic_layout.byte & GOLEM_LOGIC_CLASS_MASK;
 }
 
 /**
@@ -619,15 +647,15 @@ void field_menu_check_golem_creation(void)
 
     if ((g_saved_game.layout.characters[FIELD_PARTY_COMPANION].info.word & FIELD_CHARACTER_TYPE_MASK) == 3)
     {
-        D_80122C00.locals.golem.result = 2;
+        g_field_runtime_context.locals.golem.result = 2;
     }
     else if (g_saved_game.layout.joined_golem == FIELD_GOLEM_NO_RECORD)
     {
-        D_80122C00.locals.golem.result = 0;
+        g_field_runtime_context.locals.golem.result = 0;
     }
     else
     {
-        D_80122C00.locals.golem.result = 1;
+        g_field_runtime_context.locals.golem.result = 1;
     }
 }
 
@@ -645,7 +673,7 @@ void field_menu_dismiss_golem(void)
 
     for (i = 0; i < g_saved_game.layout.logic_block_count; i++)
     {
-        if (g_saved_game.layout.logic_blocks[i].f.logic_type == g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot])
+        if (g_saved_game.layout.logic_blocks[i].f.logic_type == g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot])
         {
             g_saved_game.layout.logic_blocks[i].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
             g_saved_game.layout.logic_blocks[i].f.placed = 0;
@@ -654,18 +682,19 @@ void field_menu_dismiss_golem(void)
 
     for (i = 0; i < GOLEM_SOURCE_ITEM_COUNT; i++)
     {
-        if (g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name[0] != 0)
+        if (g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot]].source_items[i].name[0] != 0)
         {
             if (field_find_free_inventory_record() != 0)
             {
-                field_copy_inventory_record(field_find_free_inventory_record(),
-                                            &g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i]);
+                field_copy_inventory_record(
+                    field_find_free_inventory_record(),
+                    &g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot]].source_items[i]);
             }
         }
     }
 
-    g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].name[0] = 0;
-    g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot] = FIELD_GOLEM_NO_RECORD;
+    g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot]].name[0] = 0;
+    g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot] = FIELD_GOLEM_NO_RECORD;
     word = SAVED_GAME_GOLEM_HEADER_WORD(g_saved_game.layout);
 
     if ((word & GOLEM_COUNT_MASK) != 0)
@@ -680,7 +709,7 @@ void field_menu_dismiss_golem(void)
  */
 void field_menu_publish_golem_name(void)
 {
-    u8 record_index = g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot];
+    u8 record_index = g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot];
 
     field_set_text_macro(0, g_saved_game.layout.golem_records[record_index].name, FIELD_TEXT_MACRO_UNLIMITED);
 }
@@ -692,7 +721,7 @@ void field_menu_clear_golem_result(void)
 {
     if (g_gosub_result_count == 0)
     {
-        D_80122C00.locals.golem.result = 0;
+        g_field_runtime_context.locals.golem.result = 0;
     }
 }
 
@@ -851,7 +880,7 @@ void field_menu_refresh_golem_order(void)
         }
     }
 
-    active_index = D_80122C00.locals.golem.slot;
+    active_index = g_field_runtime_context.locals.golem.slot;
 
     for (i = 0; i < GOLEM_RECORD_COUNT; i++)
     {
@@ -871,11 +900,11 @@ void field_menu_check_logic_blocks_full(void)
 {
     if (g_saved_game.layout.logic_block_count >= LOGIC_BLOCK_CAPACITY)
     {
-        D_80122C10 = 1;
+        FIELD_LOCAL_HALF(FIELD_MENU_VALUE) = 1;
     }
     else
     {
-        D_80122C10 = 0;
+        FIELD_LOCAL_HALF(FIELD_MENU_VALUE) = 0;
     }
 }
 
@@ -900,15 +929,16 @@ void field_menu_publish_golem_items(void)
 
     for (i = 0; i < 4; i++)
     {
-        if (g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name[0] != 0)
+        if (g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot]].source_items[i].name[0] != 0)
         {
-            field_set_text_macro(count, g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name,
-                                 FIELD_TEXT_MACRO_UNLIMITED);
+            field_set_text_macro(
+                count, g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot]].source_items[i].name,
+                FIELD_TEXT_MACRO_UNLIMITED);
             count++;
         }
     }
 
-    D_80122C10 = count;
+    FIELD_LOCAL_HALF(FIELD_MENU_VALUE) = count;
 }
 
 /**
@@ -931,7 +961,7 @@ void field_menu_count_missing_inventory_space(void)
         }
     }
 
-    requested = &D_80122C10;
+    requested = &FIELD_LOCAL_HALF(FIELD_MENU_VALUE);
 
     if (free_count >= *requested)
     {
@@ -1069,7 +1099,7 @@ void field_menu_ease_object(void)
 /**
  * @brief Store the gosub-selected palette entry's slot in the selected golem record.
  *
- * Looks the selection (an id from 0x60) up in the D_80051CBC table and stores
+ * Looks the selection (an id from 0x60) up in the g_field_golem_palette_slots table and stores
  * the result, clamped to 0..31, in the golem record's word at 0x48.
  */
 void field_menu_set_golem_palette(void)
@@ -1081,11 +1111,11 @@ void field_menu_set_golem_palette(void)
     s32 clamped;
     u8 record_index;
 
-    table = D_80051CBC;
+    table = g_field_golem_palette_slots;
     selection = g_gosub_result_values[0];
     selection_low = *g_gosub_result_values;
     slot = table.slots[selection - 0x60];
-    D_80122C08 = selection_low;
+    FIELD_LOCAL_HALF(FIELD_GOLEM_PALETTE_SELECTION) = selection_low;
 
     if (slot >= 32)
     {
@@ -1106,7 +1136,7 @@ void field_menu_set_golem_palette(void)
         clamped = 0;
     }
 
-    record_index = g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot];
+    record_index = g_saved_game.layout.golem_order[g_field_runtime_context.locals.golem.slot];
     g_saved_game.layout.golem_records[record_index].palette = clamped;
     field_upload_golem_palettes();
 }
@@ -1116,7 +1146,7 @@ void field_menu_set_golem_palette(void)
  */
 void field_menu_set_active_golem(void)
 {
-    s32 status = D_80122C06;
+    s32 status = FIELD_LOCAL_HALF(FIELD_GOLEM_SLOT_STATUS);
 
     g_game_diagnostic_status = status;
     g_saved_game.layout.joined_golem = status;
@@ -1148,7 +1178,7 @@ void field_menu_read_ring_selection(void)
  */
 void field_menu_choose_color_material(void)
 {
-    field_open_gosub_screen_sequence(&D_800F19CC);
+    field_open_gosub_screen_sequence(&g_field_gosub_color_material_sequence);
 }
 
 /**
@@ -1173,7 +1203,7 @@ void field_menu_swap_golem_order(void)
     order[1] = (packed_order >> 2) & 3;
     order[2] = (packed_order >> 4) & 3;
     active_record = g_saved_game.layout.joined_golem;
-    selected_slot = D_80122C00.locals.golem.slot;
+    selected_slot = g_field_runtime_context.locals.golem.slot;
 
     if (g_saved_game.layout.golem_order[selected_slot] != active_record)
     {
@@ -1219,7 +1249,7 @@ void field_menu_swap_golem_order(void)
  */
 void field_menu_publish_inventory_item(void)
 {
-    field_set_text_macro(0, g_saved_game.layout.items[D_80122C10].name, FIELD_TEXT_MACRO_UNLIMITED);
+    field_set_text_macro(0, g_saved_game.layout.items[FIELD_LOCAL_HALF(FIELD_MENU_VALUE)].name, FIELD_TEXT_MACRO_UNLIMITED);
 }
 
 /**
@@ -1231,7 +1261,7 @@ void field_menu_count_inventory_kind(void)
     s32 count;
     s32 kind;
 
-    kind = D_80122C10;
+    kind = FIELD_LOCAL_HALF(FIELD_MENU_VALUE);
     count = 0;
 
     for (i = 0; i < FIELD_ITEM_COUNT; i++)
@@ -1245,7 +1275,7 @@ void field_menu_count_inventory_kind(void)
         }
     }
 
-    D_80122C10 = count;
+    FIELD_LOCAL_HALF(FIELD_MENU_VALUE) = count;
 }
 
 /**
@@ -1266,9 +1296,9 @@ void field_menu_fill_free_inventory(void)
 /**
  * @brief Change the active golem's class and unassign its logic blocks that conflict.
  *
- * Stores the class in the variables at D_80122C1C into the active golem's
+ * Stores the class in FIELD_GOLEM_CLASS into the active golem's
  * record, then unassigns every placed logic block of that golem whose class
- * entry in the D_80051CE4 table is set and differs from the new class.
+ * entry in the g_field_logic_block_classes table is set and differs from the new class.
  */
 void field_menu_set_golem_class(void)
 {
@@ -1280,19 +1310,19 @@ void field_menu_set_golem_class(void)
     s32 golem_class;
     s32 block_class;
 
-    class_table = D_80051CE4;
-    unused_table = D_80051DCC;
+    class_table = g_field_logic_block_classes;
+    unused_table = g_field_logic_block_unused_classes;
 
     ctx = &g_saved_game.layout;
     active_record = ctx->joined_golem;
-    golem_class = D_80122C1C;
+    golem_class = FIELD_LOCAL_HALF(FIELD_GOLEM_CLASS);
 
     if (active_record < GOLEM_RECORD_COUNT)
     {
-        g_saved_game.bytes[FIELD_ACTIVE_GOLEM_CLASS] = (u8)D_80122C1C;
+        g_saved_game.bytes[FIELD_ACTIVE_GOLEM_CLASS] = (u8)FIELD_LOCAL_HALF(FIELD_GOLEM_CLASS);
         /* The class nibble is updated with a word read-modify-write of bytes 0x44-0x47. */
-        *(s32*)&ctx->golem_records[active_record].logic_layout =
-            (*(s32*)&ctx->golem_records[active_record].logic_layout & ~GOLEM_LOGIC_CLASS_MASK) | ((u8)D_80122C1C & GOLEM_LOGIC_CLASS_MASK);
+        *(s32*)&ctx->golem_records[active_record].logic_layout = (*(s32*)&ctx->golem_records[active_record].logic_layout & ~GOLEM_LOGIC_CLASS_MASK) |
+                                                                 ((u8)FIELD_LOCAL_HALF(FIELD_GOLEM_CLASS) & GOLEM_LOGIC_CLASS_MASK);
         for (i = 0; i < ctx->logic_block_count; i++)
         {
             if (ctx->logic_blocks[i].f.placed == 1 && ctx->logic_blocks[i].f.logic_type == active_record)
@@ -1341,12 +1371,12 @@ void field_menu_add_logic_block(void)
 }
 
 /**
- * @brief Run field_select_distance_bucket for the actor in D_80122C1C.
+ * @brief Run field_select_distance_bucket for the actor in FIELD_DISTANCE_ACTOR.
  * @note The selected bucket is discarded, so the only effect is the random draw.
  */
 void field_menu_select_distance_bucket(void)
 {
-    field_select_distance_bucket(D_80122C1C);
+    field_select_distance_bucket(FIELD_LOCAL_HALF(FIELD_DISTANCE_ACTOR));
 }
 
 /**
@@ -1356,7 +1386,7 @@ void field_menu_choose_equipment(void)
 {
     FieldGosubSequence sequence;
 
-    sequence = D_80051EB4;
+    sequence = g_field_gosub_equipment_sequence;
     field_open_gosub_screen_sequence(&sequence);
 }
 
@@ -1382,7 +1412,7 @@ void field_menu_item_name_row(void)
     s32 kind;
     s32 row;
 
-    index = D_80122C10;
+    index = FIELD_LOCAL_HALF(FIELD_MENU_VALUE);
     attributes = g_saved_game.layout.items[index].info.word;
     kind = FIELD_ITEM_CATEGORY(attributes);
 
@@ -1405,7 +1435,7 @@ void field_menu_item_name_row(void)
         row = 0;
     }
 
-    D_80122C10 = row;
+    FIELD_LOCAL_HALF(FIELD_MENU_VALUE) = row;
 }
 
 /**
@@ -1413,7 +1443,7 @@ void field_menu_item_name_row(void)
  *
  * Reads the three card ids of the inventory record selected by the result
  * variable. Each card-list entry that matches one of them is set to 0xFF and
- * that id is used up; the ids left over are stored at D_80122C06.
+ * that id is used up; the ids left over are stored at script local byte 0x06.
  */
 void field_menu_remove_record_cards(void)
 {
@@ -1424,30 +1454,30 @@ void field_menu_remove_record_cards(void)
     u8 third;
     s16 card;
 
-    index = D_80122C10;
+    index = FIELD_LOCAL_HALF(FIELD_MENU_VALUE);
     first = g_saved_game.layout.items[index].special_ids[0];
     second = g_saved_game.layout.items[index].special_ids[1];
     third = g_saved_game.layout.items[index].special_ids[2];
 
     for (i = 0; i < 3; i++)
     {
-        card = D_80122C00.locals.cards.card_ids[i];
+        card = g_field_runtime_context.locals.cards.card_ids[i];
 
         if (card != FIELD_NO_CARD)
         {
             if (card == first)
             {
-                D_80122C00.locals.cards.card_ids[i] = FIELD_NO_CARD;
+                g_field_runtime_context.locals.cards.card_ids[i] = FIELD_NO_CARD;
                 first = FIELD_NO_CARD;
             }
             else if (card == second)
             {
-                D_80122C00.locals.cards.card_ids[i] = FIELD_NO_CARD;
+                g_field_runtime_context.locals.cards.card_ids[i] = FIELD_NO_CARD;
                 second = FIELD_NO_CARD;
             }
             else if (card == third)
             {
-                D_80122C00.locals.cards.card_ids[i] = FIELD_NO_CARD;
+                g_field_runtime_context.locals.cards.card_ids[i] = FIELD_NO_CARD;
                 third = FIELD_NO_CARD;
             }
         }
@@ -1466,9 +1496,9 @@ void field_menu_load_record_cards(void)
     s32 index;
 
     index = g_gosub_result_values[0];
-    D_80122C00.locals.cards.card_ids[0] = g_saved_game.layout.items[index].special_ids[0];
-    D_80122C00.locals.cards.card_ids[1] = g_saved_game.layout.items[index].special_ids[1];
-    D_80122C00.locals.cards.card_ids[2] = g_saved_game.layout.items[index].special_ids[2];
+    g_field_runtime_context.locals.cards.card_ids[0] = g_saved_game.layout.items[index].special_ids[0];
+    g_field_runtime_context.locals.cards.card_ids[1] = g_saved_game.layout.items[index].special_ids[1];
+    g_field_runtime_context.locals.cards.card_ids[2] = g_saved_game.layout.items[index].special_ids[2];
 }
 
 /**
@@ -1494,12 +1524,12 @@ void field_menu_lookup_object_value(void)
     {
         if (FIELD_MENU_OBJECT->variant == 0)
         {
-            resource = field_find_resource(0x102);
+            resource = field_find_resource(FIELD_OBJECT_VALUE_RESOURCE);
             offset = object_id * 4;
         }
         else
         {
-            resource = field_find_resource(0x102);
+            resource = field_find_resource(FIELD_OBJECT_VALUE_RESOURCE);
             offset = object_id * 4;
             offset = offset | 2;
         }
@@ -1507,7 +1537,7 @@ void field_menu_lookup_object_value(void)
         result = *(u16*)(resource + offset + 4);
     }
 
-    D_80122C0E = result;
+    FIELD_LOCAL_UNSIGNED_HALF(FIELD_OBJECT_VALUE) = result;
 }
 
 /**
@@ -1567,11 +1597,11 @@ void field_menu_describe_selected_pet(void)
         }
     }
 
-    D_80122C16 = g_gosub_result_count;
+    FIELD_LOCAL_UNSIGNED_HALF(FIELD_MENU_COUNT) = g_gosub_result_count;
 }
 
 /**
- * @brief Count the grazing pets into D_80122C16.
+ * @brief Count the grazing pets into FIELD_MENU_COUNT.
  */
 void field_menu_count_grazing_pets(void)
 {
@@ -1591,7 +1621,7 @@ void field_menu_count_grazing_pets(void)
         }
     }
 
-    D_80122C16 = count;
+    FIELD_LOCAL_UNSIGNED_HALF(FIELD_MENU_COUNT) = count;
 }
 
 /**
@@ -1620,7 +1650,7 @@ void field_menu_choose_produce(void)
 {
     FieldGosubSequence sequence;
 
-    sequence = D_80051EC0;
+    sequence = g_field_gosub_produce_sequence;
     field_open_gosub_screen_sequence(&sequence);
 }
 
@@ -1644,14 +1674,14 @@ void field_menu_choose_pet(void)
 {
     FieldGosubSequence sequence;
 
-    sequence = D_80051ECC;
+    sequence = g_field_gosub_pet_sequence;
     field_open_gosub_screen_sequence(&sequence);
 }
 
 /**
  * @brief Store the gosub-selected pet and publish its name to a text macro.
  *
- * The text macro index comes from the variable at D_80122C02.
+ * The text macro index comes from the variable at script local byte 0x02.
  */
 void field_menu_publish_selected_pet_name(void)
 {
@@ -1663,8 +1693,8 @@ void field_menu_publish_selected_pet_name(void)
 }
 
 /**
- * @brief Publish the texts of pet D_80122C10's pending effects and its name.
- * @note Empty and cleared effects are skipped; the number published goes to D_80122C16.
+ * @brief Publish the texts of the pending effects of pet FIELD_MENU_VALUE, and its name.
+ * @note Empty and cleared effects are skipped; the number published goes to FIELD_MENU_COUNT.
  * @note Selections of five or greater record a diagnostic instead.
  */
 void field_menu_publish_pet_pending_effects(void)
@@ -1674,7 +1704,7 @@ void field_menu_publish_pet_pending_effects(void)
     s32 count;
     u8 entry;
 
-    selection = D_80122C10;
+    selection = FIELD_LOCAL_HALF(FIELD_MENU_VALUE);
 
     if (selection < PET_RECORD_COUNT)
     {
@@ -1695,7 +1725,7 @@ void field_menu_publish_pet_pending_effects(void)
         }
 
         field_set_text_macro(3, g_saved_game.layout.pets[selection].name, FIELD_TEXT_MACRO_UNLIMITED);
-        D_80122C16 = count;
+        FIELD_LOCAL_UNSIGNED_HALF(FIELD_MENU_COUNT) = count;
         return;
     }
 
@@ -1713,12 +1743,12 @@ void field_menu_clear_golem_random_chance(void)
 
     ctx = &g_saved_game.layout;
     index = ctx->joined_golem;
-    g_saved_game.layout.characters[FIELD_PARTY_COMPANION].unk150[0].derived.bytes[2] = 0;
-    ctx->golem_records[index].unknown_0x46 = 0;
+    g_saved_game.layout.characters[FIELD_PARTY_COMPANION].instruments[0].derived.bytes[2] = 0;
+    ctx->golem_records[index].random_chance = 0;
 }
 
 /**
- * @brief Store effect D_80122C12 in the first empty or cleared pending effect of pet D_80122C10.
+ * @brief Store effect FIELD_MENU_RECORD->mode in the first empty or cleared pending effect of pet FIELD_MENU_RECORD->display_id.
  * @note Selections of five or greater record a diagnostic instead.
  */
 void field_menu_add_pet_pending_effect(void)
@@ -1750,10 +1780,10 @@ void field_menu_add_pet_pending_effect(void)
     record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_ADD_PET_PENDING_EFFECT, selection, 0);
 }
 
-/** @brief Replace the pet record index in D_80122C10 with that pet's species. */
+/** @brief Replace the pet record index in FIELD_MENU_VALUE with that pet's species. */
 void field_menu_load_pet_species(void)
 {
-    D_80122C10 = g_saved_game.layout.pets[D_80122C10].species;
+    FIELD_LOCAL_HALF(FIELD_MENU_VALUE) = g_saved_game.layout.pets[FIELD_LOCAL_HALF(FIELD_MENU_VALUE)].species;
 }
 
 /**
@@ -1798,7 +1828,7 @@ void field_menu_recall_selected_pet(void)
 }
 
 /**
- * @brief Load the gosub-selected pet's extra_growth.halves[1] into D_80122C00.locals.
+ * @brief Load the gosub-selected pet's extra_growth.halves[1] into g_field_runtime_context.locals.
  * @note Does nothing when the gosub returned no selection.
  */
 void field_menu_load_pet_value(void)
@@ -1808,15 +1838,15 @@ void field_menu_load_pet_value(void)
     if (g_gosub_result_count != 0)
     {
         index = g_gosub_result_values[0];
-        D_80122C00.locals.words[0] = g_saved_game.layout.pets[index].extra_growth.halves[1];
+        g_field_runtime_context.locals.words[0] = g_saved_game.layout.pets[index].extra_growth.halves[1];
     }
 }
 
 /**
- * @brief Prepare the action item choices for group D_80122C1F and show the first owned item.
+ * @brief Prepare the action item choices for group FIELD_ACTION_GROUP and show the first owned item.
  *
- * Copies the eight action item counts to D_80122C00, stores the mask of items
- * not owned and the owned count plus one at D_80122C08, sets D_80122C0F to the
+ * Copies the eight action item counts to the script locals, stores the mask of items
+ * not owned and the owned count plus one at script local byte 0x08, sets script local byte 0x0F to the
  * group's item slot count (0xFF when the group has no free action slot) and
  * publishes the first owned item's text to macro 4.
  */
@@ -1832,7 +1862,7 @@ void field_menu_prepare_action_items(void)
     s32 item;
     u32 flags;
 
-    group = D_80122C1F;
+    group = FIELD_LOCAL_BYTE(FIELD_ACTION_GROUP);
     count = 0;
 
     for (i = 0; i < 8; i++)
@@ -1847,7 +1877,7 @@ void field_menu_prepare_action_items(void)
 
     for (i = 0; i < 8; i++)
     {
-        D_80122C00.locals.bytes[i] = counts[i];
+        g_field_runtime_context.locals.bytes[i] = counts[i];
     }
 
     mask = 0x1FFF;
@@ -1879,16 +1909,16 @@ void field_menu_prepare_action_items(void)
 
     if (count >= capacity)
     {
-        D_80122C0F = 0xFF;
+        FIELD_LOCAL_BYTE(FIELD_ACTION_ITEM_SLOTS) = 0xFF;
     }
     else
     {
-        D_80122C0F = item_slot_count;
+        FIELD_LOCAL_BYTE(FIELD_ACTION_ITEM_SLOTS) = item_slot_count;
     }
 
     for (i = 0; i < 8; i++)
     {
-        if (D_80122C00.locals.bytes[i] != 0)
+        if (g_field_runtime_context.locals.bytes[i] != 0)
         {
             break;
         }
@@ -1900,12 +1930,12 @@ void field_menu_prepare_action_items(void)
 }
 
 /**
- * @brief Put the chosen action item into the first free item slot of group D_80122C1F.
+ * @brief Put the chosen action item into the first free item slot of group FIELD_ACTION_GROUP.
  *
- * Records the new used-slot count in the group flags and at D_80122C0B, sets
- * D_80122C0C when fewer than three slots stay free, takes one of the item
- * (D_80122C14) from the counts copied to D_80122C00, publishes its text to
- * macro 0 and refreshes the item mask and owned count at D_80122C08.
+ * Records the new used-slot count in the group flags and at script local byte 0x0B, sets
+ * script local byte 0x0C when fewer than three slots stay free, takes one of the item
+ * (script local byte 0x14) from the counts copied to the script locals, publishes its text to
+ * macro 0 and refreshes the item mask and owned count at script local byte 0x08.
  */
 void field_menu_add_action_item(void)
 {
@@ -1922,7 +1952,7 @@ void field_menu_add_action_item(void)
     s32 selected;
 
     count = 0;
-    group = D_80122C1F;
+    group = FIELD_LOCAL_BYTE(FIELD_ACTION_GROUP);
     flags = g_saved_game.layout.menu_slots[group].flags.word;
     item_slot_count = flags >> FIELD_MENU_GROUP_ITEM_SLOTS_SHIFT;
     item_slot_count &= FIELD_MENU_GROUP_FIELD_MASK;
@@ -1979,7 +2009,7 @@ void field_menu_add_action_item(void)
 }
 
 /**
- * @brief Fill free action slots of group D_80122C1F and take back its item slots' items.
+ * @brief Fill free action slots of group FIELD_ACTION_GROUP and take back its item slots' items.
  *
  * Fills up to (flags bits 12-15) + 2 free action slots, clamped to the free
  * slot count, through field_roll_menu_slot_effect. Each fill picks a random slot (at most
@@ -2000,7 +2030,7 @@ void field_menu_fill_action_slots(void)
     u32 flags;
 
     i = j = 0;
-    group = D_80122C1F;
+    group = FIELD_LOCAL_BYTE(FIELD_ACTION_GROUP);
     flags = g_saved_game.layout.menu_slots[group].flags.word;
     free_slots = flags & FIELD_MENU_GROUP_FIELD_MASK;
     item_slot_count = flags >> FIELD_MENU_GROUP_ITEM_SLOTS_SHIFT;
@@ -2077,13 +2107,13 @@ void field_menu_fill_action_slots(void)
     field_menu_clear_item_slots();
 }
 
-/** @brief Clear the used item-slot count of group D_80122C1F and empty its item slots. */
+/** @brief Clear the used item-slot count of group FIELD_ACTION_GROUP and empty its item slots. */
 void field_menu_clear_item_slots(void)
 {
     s32 group;
     s32 i;
 
-    group = D_80122C1F;
+    group = FIELD_LOCAL_BYTE(FIELD_ACTION_GROUP);
     g_saved_game.layout.menu_slots[group].flags.word &= ~FIELD_MENU_GROUP_USED_MASK;
 
     for (i = 0; i < 4; i++)
@@ -2119,17 +2149,17 @@ void field_menu_reset_group0_slots(void)
     data->menu_slots[0].flags.word = flags & ~FIELD_MENU_GROUP_USED_MASK;
 }
 
-/** @brief Publish the text of the chosen action item (D_80122C14) to macro 4. */
+/** @brief Publish the text of the chosen action item (script local byte 0x14) to macro 4. */
 void field_menu_publish_chosen_action_item(void)
 {
     s32 item;
 
-    item = D_80122C14 + FIELD_ACTION_ITEM_BASE;
+    item = FIELD_LOCAL_HALF(FIELD_ACTION_SELECTED_ITEM) + FIELD_ACTION_ITEM_BASE;
     field_set_text_macro(4, FIELD_MENU_TEXT(item), FIELD_TEXT_MACRO_UNLIMITED);
 }
 
 /**
- * @brief Place actor D_80122C0D next to actor 0, on the side it faces.
+ * @brief Place actor FIELD_PLACED_ACTOR next to actor 0, on the side it faces.
  *
  * Takes actor 0's position (8.8 fixed point) and heading, steps 20 along x or
  * 12 along z for the four main headings and 10 along both axes in between, and
@@ -2141,7 +2171,7 @@ void field_place_actor_beside_actor0(void)
     s32 heading;
     s32 actor;
 
-    actor = D_80122C0D;
+    actor = FIELD_LOCAL_BYTE(FIELD_PLACED_ACTOR);
     field_get_actor_position(0, &pos);
     pos.x /= 256;
     pos.y /= 256;
@@ -2190,7 +2220,7 @@ void field_place_actor_beside_actor0(void)
 }
 
 /**
- * @brief Free the action slot selected by D_80122C0D and give its item back.
+ * @brief Free the action slot selected by script local byte 0x0D and give its item back.
  * @note The item count is clamped to 0-ITEM_COUNT_MAX.
  */
 void field_menu_release_action_slot(void)
@@ -2236,8 +2266,8 @@ void field_menu_release_action_slot(void)
 }
 
 /**
- * @brief Load the action slot selected by D_80122C0D into its script variables.
- * @note Publishes the slot item's text to macro 0 and stores the item in D_80122C1C.
+ * @brief Load the action slot selected by script local byte 0x0D into its script variables.
+ * @note Publishes the slot item's text to macro 0 and stores the item in script local byte 0x1C.
  */
 void field_menu_load_action_slot(void)
 {
@@ -2258,7 +2288,7 @@ void field_menu_load_action_slot(void)
 /**
  * @brief Copy the gosub-selected inventory record into the first free pending record.
  *
- * Sets D_80122C1F to 0 when the gosub returned nothing, 2 when the record
+ * Sets FIELD_PENDING_ADD_RESULT to 0 when the gosub returned nothing, 2 when the record
  * holds no item, 3 when a pending record already holds the same item and 1
  * when the record was copied (its value is then at least 1).
  */
@@ -2268,7 +2298,7 @@ void field_menu_add_pending_record(void)
     s32 i;
     s32 value;
 
-    D_80122C1F = 0;
+    FIELD_LOCAL_BYTE(FIELD_PENDING_ADD_RESULT) = FIELD_PENDING_ADD_NONE;
 
     if (g_gosub_result_count == 0)
     {
@@ -2279,7 +2309,7 @@ void field_menu_add_pending_record(void)
 
     if (g_saved_game.layout.items[selected].key.first == 0 && g_saved_game.layout.items[selected].key.second == 0)
     {
-        D_80122C1F = 2;
+        FIELD_LOCAL_BYTE(FIELD_PENDING_ADD_RESULT) = FIELD_PENDING_ADD_NO_ITEM;
         return;
     }
 
@@ -2289,7 +2319,7 @@ void field_menu_add_pending_record(void)
             g_saved_game.layout.items[selected].key.first == g_saved_game.layout.pending_items[i].key.first &&
             g_saved_game.layout.items[selected].key.second == g_saved_game.layout.pending_items[i].key.second)
         {
-            D_80122C1F = 3;
+            FIELD_LOCAL_BYTE(FIELD_PENDING_ADD_RESULT) = FIELD_PENDING_ADD_DUPLICATE;
             return;
         }
     }
@@ -2308,7 +2338,7 @@ void field_menu_add_pending_record(void)
             }
 
             g_saved_game.layout.pending_items[i].value = value;
-            D_80122C1F = 1;
+            FIELD_LOCAL_BYTE(FIELD_PENDING_ADD_RESULT) = FIELD_PENDING_ADD_DONE;
             return;
         }
     }
@@ -2322,7 +2352,7 @@ void field_menu_choose_pending_equipment(void)
 {
     FieldGosubSequence sequence;
 
-    sequence = D_80051EB4;
+    sequence = g_field_gosub_equipment_sequence;
     field_open_gosub_screen_sequence(&sequence);
 }
 
@@ -2424,7 +2454,7 @@ void field_menu_advance_action_counters(void)
     }
 }
 
-/** @brief Free the action slot selected by D_80122C0D without giving its item back. */
+/** @brief Free the action slot selected by script local byte 0x0D without giving its item back. */
 void field_reset_menu_action_slot(void)
 {
     s32 slot;
@@ -2484,14 +2514,14 @@ void field_reset_default_lands(void)
 /** @brief Restore the saved field mode through the mode dispatcher. */
 void field_menu_restore_field_mode(void)
 {
-    g_field_niki_state = D_80122C1E;
-    field_open_niki(D_80122C1E);
+    g_field_niki_state = FIELD_LOCAL_BYTE(FIELD_NIKI_MODE);
+    field_open_niki(FIELD_LOCAL_BYTE(FIELD_NIKI_MODE));
 }
 
 /**
  * @brief List the grazing pets.
- * @note Stores each listed pet's species from D_80122C00 and its index from
- *       D_80122C1D, and publishes its name to macro 0, 1, ... in order.
+ * @note Stores each listed pet's species from the script locals and its index from
+ *       script local byte 0x1D, and publishes its name to macro 0, 1, ... in order.
  */
 void field_menu_list_grazing_pets(void)
 {
@@ -2518,7 +2548,7 @@ void field_menu_list_grazing_pets(void)
  * An empty record sets status 1. A record whose key matches an
  * inventory, equipment or pending record sets status 2. Otherwise the name,
  * name text, kind, category, stat value and item value go to the script
- * variables, with the value's digit count at D_80122C0C.
+ * variables, with the value's digit count at script local byte 0x0C.
  * @note JP returns a byte stat value and a separate special-item byte.
  */
 void field_menu_describe_shared_item(void)
@@ -2651,11 +2681,11 @@ void field_menu_describe_shared_item(void)
             amount /= 10;
             digits++;
         } while (amount != 0);
-        D_80122C0C = digits;
+        FIELD_MENU_ITEM_INFO->digits = digits;
         return;
     }
 
-    D_80122C03 = 2;
+    FIELD_LOCAL_BYTE(FIELD_RECORD_STATUS) = 2;
     field_set_text_macro(0, g_field_shared_items[selected].name, FIELD_TEXT_MACRO_UNLIMITED);
 }
 
@@ -2704,7 +2734,7 @@ void field_menu_take_pending_item(void)
     s32 selected;
     FieldItemRecord* free_record;
 
-    selected = D_80122C02;
+    selected = FIELD_LOCAL_BYTE(FIELD_RECORD_INDEX);
     free_record = field_find_free_inventory_record();
     field_copy_inventory_record(free_record, &g_saved_game.layout.pending_items[selected]);
     g_saved_game.layout.pending_items[selected].name[0] = 0;
@@ -2715,8 +2745,8 @@ void field_menu_take_pending_item(void)
 /**
  * @brief Restore the first set-aside pending item record and publish its pending result.
  *
- * The record's index goes to D_80122C02 (0xFF when there is none) and its
- * result to the word at D_80122C08. Without a result the table is compacted.
+ * The record's index goes to script local byte 0x02 (0xFF when there is none) and its
+ * result to the word at script local byte 0x08. Without a result the table is compacted.
  */
 void field_menu_restore_pending_item(void)
 {
@@ -2724,7 +2754,7 @@ void field_menu_restore_pending_item(void)
     s32 result;
 
     result = 0;
-    D_80122C02 = 0xFF;
+    FIELD_LOCAL_BYTE(FIELD_RECORD_INDEX) = 0xFF;
 
     for (i = 0; i < 4; i++)
     {
@@ -2734,12 +2764,12 @@ void field_menu_restore_pending_item(void)
             field_set_text_macro(0, g_saved_game.layout.pending_items[i].name, FIELD_TEXT_MACRO_UNLIMITED);
             result = g_saved_game.layout.pending_items[i].value;
             g_saved_game.layout.pending_items[i].value = 0;
-            D_80122C02 = i;
+            FIELD_LOCAL_BYTE(FIELD_RECORD_INDEX) = i;
             break;
         }
     }
 
-    D_80122C00.locals.words[2] = result;
+    g_field_runtime_context.locals.words[2] = result;
 
     if (result == 0)
     {
@@ -2750,7 +2780,7 @@ void field_menu_restore_pending_item(void)
 /**
  * @brief Count the pending item records and publish the selected one's description.
  *
- * The number of active pending records goes to D_80122C06. An empty selected
+ * The number of active pending records goes to script local byte 0x06. An empty selected
  * record sets status 1, one whose key matches an inventory or
  * equipment record sets status 2; otherwise its name, name text, kind and
  * category go to the script variables.
@@ -2849,7 +2879,7 @@ void field_reset_music_track_index(void)
 /**
  * @brief Bring the grazing pet picked by the cursor slot back from grazing.
  *
- * The record index comes from the cursor slot table at D_80122C19; an index
+ * The record index comes from the cursor slot table at script local byte 0x19; an index
  * of five or more is reported as a diagnostic.
  */
 void field_menu_recall_cursor_pet(void)
@@ -2920,15 +2950,15 @@ void field_menu_open_addhero(void)
  */
 void field_menu_publish_guest_name(void)
 {
-    D_80122C00.locals.bytes[0] = g_saved_game.layout.characters[FIELD_PARTY_GUEST].name[0];
+    g_field_runtime_context.locals.bytes[0] = g_saved_game.layout.characters[FIELD_PARTY_GUEST].name[0];
 
-    if (D_80122C00.locals.bytes[0] != 0)
+    if (g_field_runtime_context.locals.bytes[0] != 0)
     {
         field_set_text_macro(0, g_saved_game.layout.characters[FIELD_PARTY_GUEST].name, FIELD_TEXT_MACRO_UNLIMITED);
     }
 }
 
-/** @brief Count the free pending item records into D_80122C1F. */
+/** @brief Count the free pending item records into FIELD_FREE_RECORD_COUNT. */
 void field_menu_count_free_pending_items(void)
 {
     s32 i;
@@ -2944,10 +2974,10 @@ void field_menu_count_free_pending_items(void)
         }
     }
 
-    D_80122C1F = count;
+    FIELD_LOCAL_BYTE(FIELD_FREE_RECORD_COUNT) = count;
 }
 
-/** @brief Count the free inventory records into D_80122C1F. */
+/** @brief Count the free inventory records into FIELD_FREE_RECORD_COUNT. */
 void field_menu_count_free_inventory(void)
 {
     s32 i;
@@ -2963,7 +2993,7 @@ void field_menu_count_free_inventory(void)
         }
     }
 
-    D_80122C1F = count;
+    FIELD_LOCAL_BYTE(FIELD_FREE_RECORD_COUNT) = count;
 }
 
 /** @brief Clear the four shared item records and their values. */
@@ -2982,10 +3012,10 @@ void field_menu_clear_shared_items(void)
 /**
  * @brief Update the four shared item records for the mode NIKI finished in.
  *
- * D_80122C1E holds the mode the script requested and g_field_niki_state the mode NIKI
+ * FIELD_NIKI_MODE holds the mode the script requested and g_field_niki_state the mode NIKI
  * left. Going from 1 to 0 moves every set-aside record with a value back into
  * the inventory; going from 0 to 1 gives every active record a value of at
- * least 1. D_80122C1E then takes NIKI's mode.
+ * least 1. FIELD_NIKI_MODE then takes NIKI's mode.
  */
 void field_menu_sync_shared_items(void)
 {
@@ -2994,7 +3024,7 @@ void field_menu_sync_shared_items(void)
     u8* entry;
     s32 result;
 
-    mode = D_80122C1E;
+    mode = FIELD_LOCAL_BYTE(FIELD_NIKI_MODE);
 
     if (mode == 1 && g_field_niki_state == 0)
     {
@@ -3036,7 +3066,7 @@ void field_menu_sync_shared_items(void)
         }
     }
 
-    D_80122C1E = g_field_niki_state;
+    FIELD_LOCAL_BYTE(FIELD_NIKI_MODE) = g_field_niki_state;
 }
 
 /** @brief Set FIELD_VARIABLE_GUEST_VARIANT to FIELD_GUEST_PRESENT when a guest hero is loaded, else FIELD_NO_VARIANT. */
@@ -3056,7 +3086,7 @@ void field_menu_publish_guest_presence(void)
  * @brief Set the selected shared item record aside and give it the pending result.
  *
  * Its special_ids[0] goes to the FIELD_SET_ASIDE_SPECIAL_IDS locals, the
- * name byte is kept in FIELD_ITEM_SET_ASIDE_NAME, and the word at D_80122C08 becomes
+ * name byte is kept in FIELD_ITEM_SET_ASIDE_NAME, and the word at script local byte 0x08 becomes
  * the record's value.
  */
 void field_menu_set_aside_shared_item(void)
@@ -3099,7 +3129,7 @@ void field_menu_draw_land_element(void)
     total = 0;
     i = total;
     work.view = &g_saved_game.layout;
-    mode = D_80122C00.locals.bytes[0];
+    mode = g_field_runtime_context.locals.bytes[0];
     land = g_music_track_index;
     favored = g_field_weekday_favored_elements;
     land_offset = land * FIELD_LAND_RECORD_SIZE;
@@ -3186,7 +3216,7 @@ void field_menu_choose_instrument(void)
 {
     FieldGosubSequence local;
 
-    local = D_80051EF8;
+    local = g_field_gosub_instrument_sequence;
     field_open_gosub_screen_sequence(&local);
 }
 
@@ -3237,7 +3267,7 @@ void field_menu_describe_selected_item(void)
  * element factor and multiplied by level + 7, then clamped to 0..0x7FFF.
  * The category factor is 10 when the selected category is the value's first
  * category, 1 when it is its second and 2 otherwise. The element factor is 3
- * for the same element, 1 for the element's pair in D_80051F04 and 2
+ * for the same element, 1 for the element's pair in g_field_element_pairs and 2
  * otherwise, or always 2 in neutral mode.
  */
 void field_menu_apply_affinity(void)
@@ -3262,7 +3292,7 @@ void field_menu_apply_affinity(void)
     s32 first_element_factor;
     s32 second_element_factor;
 
-    pairs = D_80051F04;
+    pairs = g_field_element_pairs;
     first_category_factor = 10;
     packed = FIELD_LOCAL_BYTE(FIELD_AFFINITY_CATEGORIES);
     first = FIELD_LOCAL_HALF(FIELD_AFFINITY_FIRST_VALUE);
@@ -3349,7 +3379,7 @@ void field_menu_apply_affinity(void)
 }
 
 /**
- * @brief Copy item record D_80122C00 of resource 5 into a free inventory record.
+ * @brief Copy the item record of resource 5 selected by script local byte 0 into a free inventory record.
  * @note Also publishes the copied record's name to text macro 0.
  */
 void field_menu_copy_resource_item(void)
@@ -3358,7 +3388,7 @@ void field_menu_copy_resource_item(void)
     FieldItemRecord* free_record;
     s32 offset;
 
-    index = D_80122C00.locals.bytes[0];
+    index = g_field_runtime_context.locals.bytes[0];
 
     if (field_find_free_inventory_record() != 0)
     {
@@ -3403,18 +3433,18 @@ void field_menu_swap_joined_pet(void)
 
 /**
  * @brief Publish the name of the pet in the cursor slot to text macro 3.
- * @note Local 0x1C is replaced by the record's unk48 flag byte.
+ * @note Local 0x1C is replaced by the low byte of the record's companion_flags.
  */
 void field_menu_publish_cursor_pet(void)
 {
     s32 index;
 
     index = FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT_TABLE + FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT));
-    FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT) = g_saved_game.layout.pets[index].unk48.flags;
+    FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT) = g_saved_game.layout.pets[index].companion_flags.low;
     field_set_text_macro(3, g_saved_game.layout.pets[index].name, FIELD_TEXT_MACRO_UNLIMITED);
 }
 
-/** @brief Count the pets (occupied pet records) into D_80122C16. */
+/** @brief Count the pets (occupied pet records) into FIELD_MENU_COUNT. */
 void field_menu_count_pets(void)
 {
     s32 i;
@@ -3430,28 +3460,28 @@ void field_menu_count_pets(void)
         }
     }
 
-    D_80122C16 = count;
+    FIELD_LOCAL_UNSIGNED_HALF(FIELD_MENU_COUNT) = count;
 }
 
 /**
- * @brief Clear the GOSUB request and open CARDA in the mode held in D_80122C01.
+ * @brief Clear the GOSUB request and open CARDA in the mode held in FIELD_CARDA_MODE.
  */
 void field_menu_open_carda(void)
 {
     field_menu_clear_gosub_request();
-    field_open_carda(D_80122C01);
+    field_open_carda(FIELD_LOCAL_BYTE(FIELD_CARDA_MODE));
 }
 
 /**
- * @brief Store the golem that last left the party (high nibble of golem_count) into D_80122C12.
+ * @brief Store the golem that last left the party (high nibble of golem_count) into FIELD_GOLEM_SAVED_GROUP.
  */
 void field_menu_load_golem_saved_group(void)
 {
-    D_80122C12 = g_saved_game.layout.golem_count >> 4;
+    FIELD_LOCAL_SIGNED_BYTE(FIELD_GOLEM_SAVED_GROUP) = g_saved_game.layout.golem_count >> 4;
 }
 
 /**
- * @brief Publish inventory record D_80122C10 and its two description texts.
+ * @brief Publish inventory record FIELD_MENU_VALUE and its two description texts.
  *
  * The record's name goes to text macro 0. Its first two stat bytes select
  * text row * 14 + column of resource 0x103 (macro 1) and text column of
@@ -3467,7 +3497,7 @@ void field_menu_publish_item_texts(void)
     s32 entry;
     s32 offset;
 
-    index = D_80122C10;
+    index = FIELD_LOCAL_HALF(FIELD_MENU_VALUE);
     records = g_saved_game.layout.items;
     record = records + index;
     row = record->derived.bytes[0];

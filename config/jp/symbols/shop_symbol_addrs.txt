@@ -74,14 +74,16 @@ g_shop_scroll_frames = 0x80145868;
 field_draw_text = 0x800A8750;
 field_draw_number = 0x800A8928;
 field_format_number = 0x800A8A40;
-func_800AD850 = 0x800AD4A4;
-func_800AE76C = 0x800AE3C0;
+field_draw_menu_frame = 0x800AD4A4;
+field_draw_menu_scroll_arrow = 0x800AE3C0;
 g_field_ui_text_table = 0x800EBF90;
-g_field_ui_text_cant_hold_more    = 0x800EBF9C;
-D_800EC3DC    = 0x800EBFA8;
-D_800EC3E0    = 0x800EBFAC;
-D_800EC3E2    = 0x800EBFAE;
-D_800EC3F2    = 0x800EBFBE;
-D_800EC3F4    = 0x800EBFC0;
-D_800EC3F8    = 0x800EBFC4;
-D_800EC3FE    = 0x800EBFCA;
+
+// FIELD UI string table entries.
+g_field_ui_text_cant_hold_more = 0x800EBF9C;
+g_field_ui_text_times = 0x800EBFA8;
+g_field_ui_text_dashes = 0x800EBFAC;
+g_field_ui_text_space = 0x800EBFAE;
+g_field_ui_text_power = 0x800EBFBE;
+g_field_ui_text_you_have = 0x800EBFC0;
+g_field_ui_text_confirm = 0x800EBFC4;
+g_field_ui_text_cant_buy_more = 0x800EBFCA;

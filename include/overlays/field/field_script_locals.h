@@ -1,15 +1,15 @@
-#ifndef FIELD_MENU_VARS_H
-#define FIELD_MENU_VARS_H
+#ifndef FIELD_SCRIPT_LOCALS_H
+#define FIELD_SCRIPT_LOCALS_H
 
 /**
- * @file field_menu_vars.h
- * @brief FIELD view of the script temporary variables at D_80122C00.
+ * @file field_script_locals.h
+ * @brief The field scripts' local variables, as the menu and golem programs use them.
  */
 
 #include "common.h"
 
 /**
- * @brief Script temporary-variable words at D_80122C00, as the menu and golem programs use them.
+ * @brief The 0x20 bytes of script local variables at the start of FIELD's runtime context.
  *
  * Field scripts address this area as bitfield variables; each menu program
  * gives the bytes its own meaning, so each program has its own view.
@@ -30,7 +30,7 @@ typedef union
         s16 result;
         u8 unk12[6];
         s16 unk18;
-        s16 unk1A;
+        s16 joined_group; /**< Group of the joined golem after a reorder. */
         s16 order_position;
         s16 detail;
     } golem;
@@ -52,4 +52,10 @@ typedef union
     } actions;
 } FieldMenuVars;
 
-#endif /* FIELD_MENU_VARS_H */
+/**
+ * @brief GOLEM's name for the script locals.
+ * @note FIELD reaches the same bytes as g_field_runtime_context.locals.
+ */
+extern FieldMenuVars g_field_script_locals;
+
+#endif /* FIELD_SCRIPT_LOCALS_H */

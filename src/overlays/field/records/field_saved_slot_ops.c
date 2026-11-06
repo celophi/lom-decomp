@@ -3,12 +3,13 @@
  * @brief Create, release, query and rename the stored companion records.
  */
 
-#include "main/audio/game_audio.h"
 #include "common.h"
-#include "main/main.h"
 #include <rand.h>
+
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
+#include "main/audio/game_audio.h"
+#include "main/main.h"
 #include "overlays/field/field_overlay_handoff.h"
 
 /** @brief Resource id of the companion template table. */
@@ -37,7 +38,7 @@
 /** @brief Results of field_get_stored_companion_status. */
 enum
 {
-    FIELD_COMPANION_STATUS_NEW_HELD = 0,         /**< Newly joined, not acknowledged while unk42 is set. */
+    FIELD_COMPANION_STATUS_NEW_HELD = 0,         /**< Still an egg; not acknowledged while hatch_counter is nonzero. */
     FIELD_COMPANION_STATUS_NEW = 1,              /**< Newly joined; the flag is cleared by the query. */
     FIELD_COMPANION_STATUS_GAINS_EXPERIENCE = 2, /**< Status bit 30 is set. */
     FIELD_COMPANION_STATUS_IDLE = 3,
@@ -51,7 +52,6 @@ typedef struct
     u16 count;
     PetRecord templates[1];
 } FieldCompanionTemplateTable;
-
 
 /**
  * @brief Copy a companion template into the first free stored record and give it a unique id.

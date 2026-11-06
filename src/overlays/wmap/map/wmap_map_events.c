@@ -673,7 +673,7 @@ void wmap_land_event_24_step_04(void)
 
 /**
  * @brief Run land event 24: the travel vehicle rises from Lucemia (land 24) and flies off.
- * @param arg0 Nonzero restarts the sequence at step 1.
+ * @param reset Nonzero restarts the sequence at step 1.
  * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
 WMAP_STEP_RUNNER(wmap_land_event_24_run, g_wmap_land_event_24_steps, 0xA, g_wmap_land_event_24_step, g_wmap_land_event_24_timer)
@@ -757,7 +757,7 @@ WMAP_STEP_ADVANCE(wmap_land_event_24_step_09, g_wmap_land_event_24_step)
 
 /**
  * @brief Run the arrival event: a sprite comes in to a land from a neighboring land (NPCSHD, event 25: four of them, to Lumina).
- * @param arg0 Nonzero restarts the sequence at step 1.
+ * @param reset Nonzero restarts the sequence at step 1.
  * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
 WMAP_STEP_RUNNER(wmap_arrival_event_run, g_wmap_arrival_event_steps, 0x10, g_wmap_arrival_event_step, g_wmap_arrival_event_timer)
@@ -887,7 +887,7 @@ void wmap_arrival_event_step_15(void)
 
 /**
  * @brief Run land event 16: the NPCLAR sprite walks from White Forest (land 12) to the Underworld (land 16).
- * @param arg0 Nonzero restarts the sequence at step 1.
+ * @param reset Nonzero restarts the sequence at step 1.
  * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
 WMAP_STEP_RUNNER(wmap_land_event_16_run, g_wmap_land_event_16_steps, 0x10, g_wmap_land_event_16_step, g_wmap_land_event_16_timer)
@@ -972,7 +972,7 @@ void wmap_land_event_16_step_15(void)
 
 /**
  * @brief Run land event 21: the NPCCPL sprite walks from Domina (land 1) to Gato Grottoes (land 2).
- * @param arg0 Nonzero restarts the sequence at step 1.
+ * @param reset Nonzero restarts the sequence at step 1.
  * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
 WMAP_STEP_RUNNER(wmap_land_event_21_run, g_wmap_land_event_21_steps, 0x10, g_wmap_land_event_21_step, g_wmap_land_event_21_timer)
@@ -1057,7 +1057,7 @@ void wmap_land_event_21_step_15(void)
 
 /**
  * @brief Run land event 15: the NPCPEL sprite walks from Domina (land 1) to Luon Highway (land 18).
- * @param arg0 Nonzero restarts the sequence at step 1.
+ * @param reset Nonzero restarts the sequence at step 1.
  * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
 WMAP_STEP_RUNNER(wmap_land_event_15_run, g_wmap_land_event_15_steps, 0x10, g_wmap_land_event_15_step, g_wmap_land_event_15_timer)
@@ -1144,7 +1144,7 @@ void wmap_land_event_15_step_15(void)
 
 /**
  * @brief Run land event 13: scroll to the Underworld (land 16) and start land effect 23.
- * @param arg0 Nonzero restarts the sequence at step 1.
+ * @param reset Nonzero restarts the sequence at step 1.
  * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
 WMAP_STEP_RUNNER(wmap_land_event_13_run, g_wmap_land_event_13_steps, 0x4, g_wmap_land_event_13_step, g_wmap_land_event_13_timer)
@@ -1165,7 +1165,7 @@ void wmap_land_event_13_step_03(void)
 
 /**
  * @brief Run land event 12: scroll to The Flames (land 23) and start land effect 22.
- * @param arg0 Nonzero restarts the sequence at step 1.
+ * @param reset Nonzero restarts the sequence at step 1.
  * @return 1 while the sequence runs or after a restart, 0 once it has finished.
  */
 WMAP_STEP_RUNNER(wmap_land_event_12_run, g_wmap_land_event_12_steps, 0x4, g_wmap_land_event_12_step, g_wmap_land_event_12_timer)

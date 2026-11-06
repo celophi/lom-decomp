@@ -409,7 +409,7 @@ void gosub_build_equipment_list(u32 item_kind)
 
                 encoded_text_copy(g_gosub_text_buffers[row_count],
                                   GOSUB_TEXT(GOSUB_TEXT_ITEM_NAMES, g_saved_game_ctx->items[item_index].info.halves[1] & FIELD_ITEM_MATERIAL_MASK));
-                encoded_text_append(g_gosub_text_buffers[row_count], FIELD_UI_TEXT_AT(D_800EC3E2, FIELD_UI_TEXT_SPACE));
+                encoded_text_append(g_gosub_text_buffers[row_count], FIELD_UI_TEXT_AT(g_field_ui_text_space, FIELD_UI_TEXT_SPACE));
 
                 g_gosub_rows[row_count].equipment_kind = FIELD_ITEM_CATEGORY(g_saved_game_ctx->items[item_index].info.word);
                 attributes = g_saved_game_ctx->items[item_index].info.word;

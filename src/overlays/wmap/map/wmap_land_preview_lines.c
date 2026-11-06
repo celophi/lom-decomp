@@ -8,7 +8,7 @@ extern LINE_F2 g_wmap_preview_lines[16];
 /**
  * @brief Empty world-map handler (no operation).
  */
-void func_8005B540(void)
+void wmap_land_preview_stub(void)
 {
 }
 
@@ -16,6 +16,7 @@ void func_8005B540(void)
 void wmap_init_preview_lines(void)
 {
     s32 index;
+
     for (index = 0; index < 16; index++)
     {
         SET_BGR0_PACKED(&g_wmap_preview_lines[index], 0);

@@ -32,8 +32,10 @@
 #define WSEL_RENDER_ADDRESS SECONDARY_OVERLAY_AT(0x30000)
 
 #if !defined(VERSION_JP)
-extern s32 D_8003EC8C;
-extern s32 D_80042FD0;
+/** @brief Set to 11 at US startup; nothing reads it. */
+extern s32 g_startup_unused_a;
+/** @brief Set to 19 at US startup; nothing reads it. */
+extern s32 g_startup_unused_b;
 #endif
 
 void __main(void);
@@ -93,8 +95,8 @@ void main_game_loop(void)
 #if defined(VERSION_JP)
     g_game_state = GAME_STATE_CHECKPS;
 #else
-    D_8003EC8C = 11;
-    D_80042FD0 = 19;
+    g_startup_unused_a = 11;
+    g_startup_unused_b = 19;
     g_game_state = GAME_STATE_INTRO_MOVIE;
     get_field_render_buffers();
     cdrom_stream(CD_RES_CHECKPS_BIN, g_overlay_load_address);
@@ -104,6 +106,7 @@ void main_game_loop(void)
     VSync(0);
 #endif
     g_previous_game_state = GAME_STATE_NONE;
+
     while (1)
     {
         switch (g_game_state)
@@ -116,10 +119,12 @@ void main_game_loop(void)
             DrawSync(0);
             get_field_render_buffers();
             cdrom_stream(CD_RES_FIELD_BIN, g_overlay_load_address);
+
             if (g_game_state != GAME_STATE_FIELD)
             {
                 cdrom_stream(CD_RES_MOVIE_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
                 cdrom_wait_queue_empty();
+
                 if (g_game_state == GAME_STATE_ATTRACT_1)
                 {
                     movie_play(MOVIE_INDEX_ATTRACT_1);
@@ -135,6 +140,7 @@ void main_game_loop(void)
             {
                 cdrom_wait_queue_empty();
             }
+
             g_field_object_id = 0;
             g_field_spawn_id = 0;
             g_game_state = run_field_scene();
@@ -158,10 +164,12 @@ void main_game_loop(void)
             g_game_state = run_world_map();
             akao_stop_all_songs();
             akao_release_all_sfx();
+
             if ((g_game_state != GAME_STATE_TITLE) && (g_game_state != GAME_STATE_ATTRACT_1) && (g_game_state != GAME_STATE_ATTRACT_2))
             {
                 load_and_play_song(g_music_track_table[g_music_track_index]);
             }
+
             g_field_secondary_music_id = -1;
             g_previous_game_state = GAME_STATE_WORLD_MAP;
             break;
@@ -228,6 +236,7 @@ void main_game_loop(void)
             field_scene_reset(NULL);
             spawn_id = &g_field_spawn_id;
             g_save_compatibility_tag = SAVE_TAG_STARTUP;
+
             if (cload_main() != CLOAD_RESULT_LOADED)
             {
                 g_game_state = GAME_STATE_TITLE;
@@ -242,6 +251,7 @@ void main_game_loop(void)
                 g_field_secondary_music_id = g_saved_game.layout.secondary_music_id;
                 g_saved_game.layout.spawn.bits.id = FIELD_SPAWN_LOAD_GAME;
                 g_music_track_index = g_saved_game.layout.track.bits.music_track;
+
                 if ((g_saved_game.layout.options.word & (SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3)) == (SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3))
                 {
                     g_game_state = GAME_STATE_WORLD_SELECT;
@@ -252,6 +262,7 @@ void main_game_loop(void)
                     g_game_state = run_field_scene();
                 }
             }
+
             DrawSync(0);
             VSync(0);
             g_previous_game_state = GAME_STATE_FIELD;
@@ -269,6 +280,7 @@ void main_game_loop(void)
             g_previous_game_state = GAME_STATE_INTRO_MOVIE;
             break;
         }
+
         if (g_game_state == GAME_STATE_RETURN_TO_TITLE)
         {
             g_game_state = GAME_STATE_TITLE;

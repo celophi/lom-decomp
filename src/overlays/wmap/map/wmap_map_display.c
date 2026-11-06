@@ -203,11 +203,14 @@ extern SPRT g_wmap_game_continue_prompt;
 extern SPRT g_wmap_game_exit_prompt;
 extern SPRT g_wmap_game_countdown_sprite;
 extern s32 g_wmap_game_spawn_timer;
-extern s32 D_800D9234;
+/** @brief Held buttons copied every map-game frame; nothing reads it. */
+extern s32 g_wmap_game_unused_buttons;
 extern u8 g_wmap_game_spawn_patterns[][9];
-extern s32 D_800500DC[];
+/** @brief Image index of each land, or -1 for a land without an image. */
+extern s32 g_wmap_land_image_indices[];
 extern WmapTextureInfo g_wmap_land_image_uploads[];
-extern s32 D_800DBE74;
+/** @brief Land image loads are refused once this reaches 10; WMAP only ever clears it. */
+extern s32 g_wmap_land_image_load_count;
 extern WmapMapPoint g_wmap_spirit_view_cell_positions[];
 extern s16 g_wmap_land_label_cells[];
 extern s32 g_wmap_land_scale_steps[];
@@ -223,14 +226,18 @@ extern SPRT g_wmap_spirit_level_sprites[16];
 extern SPRT g_wmap_spirit_accent_sprites[16];
 extern const s32 g_wmap_spirit_level_positions[];
 extern s32 g_wmap_spirit_selection;
-extern s32 D_80139218;
+/** @brief Three-bit phase advanced every other spirit display frame; nothing reads it. */
+extern s32 g_wmap_spirit_unused_phase;
 extern WmapGlyph g_wmap_information_glyphs[];
 extern WmapGlyphPlacement g_wmap_information_placements[];
 extern s32 g_wmap_information_group_starts[];
 extern s32 g_wmap_information_values[];
-extern s32 D_800D7D60;
-extern s32 D_800D7D64;
-extern s32 D_800D7D68;
+/** @brief Cleared by wmap_clear_information_unused; nothing reads it. */
+extern s32 g_wmap_information_unused_a;
+/** @brief Cleared by wmap_clear_information_unused; nothing reads it. */
+extern s32 g_wmap_information_unused_b;
+/** @brief Cleared by wmap_clear_information_unused; nothing reads it. */
+extern s32 g_wmap_information_unused_c;
 
 void wmap_update_map_game_prompt(void);
 void wmap_update_map_game_countdown(void);
@@ -570,7 +577,7 @@ void wmap_update_map_game_round(void)
         g_wmap_game_phase = WMAP_GAME_PROMPT;
     }
 
-    D_800D9234 = g_wmap_buttons_held;
+    g_wmap_game_unused_buttons = g_wmap_buttons_held;
     wmap_update_map_game_spawns();
 
     y = g_wmap_game_origin_y + g_wmap_cursor_row;
@@ -591,7 +598,7 @@ void wmap_update_map_game_round(void)
                 g_wmap_game_score += step;
             }
 
-            D_800D922C = g_wmap_game_score;
+            g_wmap_unused_tally = g_wmap_game_score;
             wmap_set_land_display_mode(object_id, 1);
             object->scale_frame = 1;
             wmap_play_sound(0x3E, 0x80);
@@ -773,7 +780,7 @@ s32 wmap_resolve_land_image(WmapLandDisplay* resource)
         return 0x10;
     }
 
-    if (D_800500DC[resource_id] == -1)
+    if (g_wmap_land_image_indices[resource_id] == -1)
     {
         return -1;
     }
@@ -786,7 +793,7 @@ s32 wmap_resolve_land_image(WmapLandDisplay* resource)
 
         if (g_wmap_land_image_load_locked == 0)
         {
-            if (D_800DBE74 >= 10)
+            if (g_wmap_land_image_load_count >= 10)
             {
                 return -1;
             }
@@ -1753,7 +1760,7 @@ void wmap_update_map_display(void)
 
     if (g_wmap_frame_count & 1)
     {
-        D_80139218 = (D_80139218 + 1) & 7;
+        g_wmap_spirit_unused_phase = (g_wmap_spirit_unused_phase + 1) & 7;
     }
 
     /* Fade requests use multiples of eight; the two tests also catch overshoot. */
@@ -2004,7 +2011,7 @@ void wmap_init_land_image_cache(void)
 /**
  * @brief Reserved world-map entry point; performs no work.
  */
-void func_80058298(void)
+void wmap_map_display_stub_1(void)
 {
 }
 
@@ -2135,7 +2142,7 @@ s32 wmap_classify_map_point(s32 x, s32 y)
  * @brief Return one; the purpose of this entry point is unknown.
  * @return Always one.
  */
-s32 func_80058488(void)
+s32 wmap_map_display_stub_2(void)
 {
     return 1;
 }
@@ -2143,16 +2150,16 @@ s32 func_80058488(void)
 /**
  * @brief Reserved world-map entry point; performs no work.
  */
-void func_80058490(void)
+void wmap_map_display_stub_3(void)
 {
 }
 
 /**
- * @brief Clear three world-map state values.
+ * @brief Clear g_wmap_information_unused_a to _c; nothing calls it.
  */
-void func_80058498(void)
+void wmap_clear_information_unused(void)
 {
-    D_800D7D60 = 0;
-    D_800D7D64 = 0;
-    D_800D7D68 = 0;
+    g_wmap_information_unused_a = 0;
+    g_wmap_information_unused_b = 0;
+    g_wmap_information_unused_c = 0;
 }

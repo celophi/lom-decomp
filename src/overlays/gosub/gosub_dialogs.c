@@ -448,7 +448,7 @@ u8* gosub_draw_equipment_details(u8* packet_cursor, u_long* ordering_table, s32 
     switch (equipment_kind)
     {
     case GOSUB_EQUIPMENT_KIND_WEAPON:
-        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3EE, FIELD_UI_TEXT_ATTACK_POWER), FIELD_TEXT_COLOR_NORMAL,
+        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(g_field_ui_text_attack_power, FIELD_UI_TEXT_ATTACK_POWER), FIELD_TEXT_COLOR_NORMAL,
                                         GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
         number_position.x = GOSUB_WEAPON_POWER_X - x_offset;
         number_position.y = (GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
@@ -458,7 +458,7 @@ u8* gosub_draw_equipment_details(u8* packet_cursor, u_long* ordering_table, s32 
 
     case GOSUB_EQUIPMENT_KIND_ARMOR:
         packet_cursor =
-            field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3F0, FIELD_UI_TEXT_TOTAL_DEFENSE), FIELD_TEXT_COLOR_NORMAL,
+            field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(g_field_ui_text_total_defense, FIELD_UI_TEXT_TOTAL_DEFENSE), FIELD_TEXT_COLOR_NORMAL,
                             GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
         number_position.x = GOSUB_ARMOR_DEFENSE_X - x_offset;
         number_position.y = (GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
@@ -470,7 +470,7 @@ u8* gosub_draw_equipment_details(u8* packet_cursor, u_long* ordering_table, s32 
 
     /* Instruments and the reserved fourth kind use the same detail layout. */
     default:
-        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3F2, FIELD_UI_TEXT_POWER), FIELD_TEXT_COLOR_NORMAL,
+        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(g_field_ui_text_power, FIELD_UI_TEXT_POWER), FIELD_TEXT_COLOR_NORMAL,
                                         GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
         number_position.x = GOSUB_INSTRUMENT_POWER_X - x_offset;
         number_position.y = (GOSUB_EQUIPMENT_DETAIL_Y - y_offset);

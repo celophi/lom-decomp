@@ -21,14 +21,14 @@
 /** @brief Record id whose script variables hold the companion values. */
 #define FIELD_COMPANION_RECORD_ID 2
 
-/** @brief FieldStatusRecordMeta::bytes.unk2 bit: actions never apply to the record. */
+/** @brief FieldStatusRecordMeta::bytes.guard_flags bit: actions never apply to the record. */
 #define FIELD_STATUS_META_UNTARGETABLE 0x4000
 
-/** @brief FieldStatusRecordMeta::bytes.unk2 bit 0; a defeated monster keeps its knocked-out flag. */
-#define FIELD_STATUS_META_UNK16 0x1
+/** @brief FieldStatusRecordMeta::bytes.guard_flags bit: a defeated monster keeps its knocked-out flag. */
+#define FIELD_GUARD_FLAG_KEEP_KNOCKED_OUT 0x1
 
-/** @brief FieldActorTemplate::flags bit 0; a defeated monster keeps its knocked-out flag. */
-#define FIELD_TEMPLATE_FLAG_UNK0 0x1
+/** @brief FieldActorTemplate::flags bit: a defeated monster keeps its knocked-out flag. */
+#define FIELD_TEMPLATE_KEEP_KNOCKED_OUT 0x1
 
 /** @brief FieldStatusRecord::status_flags bits read on defeat. */
 #define FIELD_RECORD_FLAG_AUTO_REVIVE 0x2
@@ -191,7 +191,7 @@ s32 field_action_target_applies(void)
     s32 opposed;
     s32 side_rule;
 
-    if (g_field_battle->target->meta.bytes.unk2 & FIELD_STATUS_META_UNTARGETABLE)
+    if (g_field_battle->target->meta.bytes.guard_flags & FIELD_STATUS_META_UNTARGETABLE)
     {
         return 0;
     }
@@ -325,7 +325,7 @@ s32 field_battle_handle_defeat(FieldStatusRecord* record)
     {
         record->state->effect_flags &= ~FIELD_EFFECT_DEFEAT_CLEAR_MASK;
 
-        if ((record->meta.bytes.unk2 & FIELD_STATUS_META_UNK16) || (record->template->flags & FIELD_TEMPLATE_FLAG_UNK0))
+        if ((record->meta.bytes.guard_flags & FIELD_GUARD_FLAG_KEEP_KNOCKED_OUT) || (record->template->flags & FIELD_TEMPLATE_KEEP_KNOCKED_OUT))
         {
             record->state->effect_flags |= FIELD_EFFECT_KNOCKED_OUT;
         }
@@ -680,10 +680,10 @@ s32 field_action_damage_modify(void)
             g_field_battle->target->state->status_intensity = 0;
             break;
         case 1:
-            g_field_battle->target->unkC |= params.modify.value << 16;
+            g_field_battle->target->modifier_flags |= params.modify.value << 16;
             break;
         case 2:
-            g_field_battle->target->unkC |= params.modify.value;
+            g_field_battle->target->modifier_flags |= params.modify.value;
             break;
         case 3:
             g_field_battle->target->weak_elements |= params.modify.value;
@@ -1011,7 +1011,7 @@ s32 field_apply_status_multipliers(s32 damage)
 }
 
 /**
- * @brief Double the damage while bit 0 of the attacker's unkC flags is set.
+ * @brief Double the damage while bit 0 of the attacker's modifier_flags is set.
  * @param damage Damage so far.
  * @return The possibly doubled damage.
  */
@@ -1021,7 +1021,7 @@ s32 field_apply_attacker_double(s32 damage)
 
     result = damage;
 
-    if (g_field_battle->attacker->unkC & 1)
+    if (g_field_battle->attacker->modifier_flags & 1)
     {
         result *= 2;
     }

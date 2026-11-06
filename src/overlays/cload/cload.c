@@ -803,7 +803,7 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
             pos.y = y;
             hours = time / SAVED_PLAY_TIME_TICKS_PER_HOUR;
             result = field_draw_number(ot, result, hours, FIELD_TEXT_COLOR_MENU, &pos, FIELD_TEXT_ALIGN_RIGHT);
-            result = field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_text_time_separator_offset_bytes, FIELD_UI_TEXT_TIME_SEPARATOR), FIELD_TEXT_COLOR_MENU,
+            result = field_draw_text(result, ot, FIELD_UI_TEXT_AT(g_field_ui_text_time_separator, FIELD_UI_TEXT_TIME_SEPARATOR), FIELD_TEXT_COLOR_MENU,
                                      x + CARD_MENU_DETAILS_TIME_SEPARATOR_X, y, FIELD_TEXT_ALIGN_LEFT);
             time = (time / SAVED_PLAY_TIME_TICKS_PER_MINUTE) - (hours * SAVED_PLAY_TIME_MINUTES_PER_HOUR);
             if (time < 10)

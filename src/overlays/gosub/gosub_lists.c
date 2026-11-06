@@ -179,7 +179,7 @@ void gosub_build_logic_block_list(void)
 
         if (g_gosub_rows[i].detail_id != 0)
         {
-            encoded_text_append(row_name, FIELD_UI_TEXT_AT(D_800EC3DA, FIELD_UI_TEXT_PLUS));
+            encoded_text_append(row_name, FIELD_UI_TEXT_AT(g_field_ui_text_plus, FIELD_UI_TEXT_PLUS));
             field_format_number(number_text, g_gosub_rows[i].detail_id, 1);
             encoded_text_append(row_name, number_text);
         }

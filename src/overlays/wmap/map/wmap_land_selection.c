@@ -3,14 +3,15 @@
 #include "../internal/wmap_land_transition.h"
 #include "../internal/wmap_sequence_runtime.h"
 
-extern s32 D_80139270;
+/** @brief Artifact count returned by the last carousel rebuild; nothing reads it. */
+extern s32 g_wmap_artifact_list_count;
 
 /** @brief Rebuild the artifact carousel and advance to an available selection. */
 void wmap_reset_artifact_carousel(void)
 {
     s32 selection_index;
 
-    D_80139270 = wmap_build_artifact_list(g_wmap_carousel_frame / 4);
+    g_wmap_artifact_list_count = wmap_build_artifact_list(g_wmap_carousel_frame / 4);
 
     for (selection_index = 0; selection_index < 12U; selection_index++)
     {

@@ -38,8 +38,8 @@ void akao_driver_init_state(void)
     sequence_channel = g_akao_seq_channels;
     g_akao_seq_channels_base = sequence_channel;
 
-    D_8003EC30[1] = 0;
-    D_8003EC30[0] = 0;
+    g_akao_song_match_words[1] = 0;
+    g_akao_song_match_words[0] = 0;
     g_akao_bank_slot_keys[5] = 0;
     g_akao_bank_slot_keys[4] = 0;
     g_akao_bank_slot_keys[3] = 0;
