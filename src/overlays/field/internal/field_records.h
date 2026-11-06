@@ -18,6 +18,7 @@
 #include "common.h"
 
 #include "common/saved_game.h"
+#include "field_script.h"
 #include "field_state_ops.h"
 #include "overlays/field/field_script_locals.h"
 
@@ -30,7 +31,6 @@ extern SavedGameLayout* g_field_game_state;
  * scripts. */
 #define FIELD_EVENT_ACTOR_ID_BASE 0x80
 #define FIELD_ACTOR_SCRIPT_COUNT 16
-#define FIELD_SCRIPT_FRAME_COUNT 8
 
 #define FIELD_BATTLE_RECORD_COUNT 11
 
@@ -250,47 +250,6 @@ extern FieldItemStaging* g_field_item_staging;
 
 /** @brief Generation table currently loaded by field_find_resource. */
 extern FieldItemTables* g_field_item_tables;
-
-/** @brief One nested script frame (0xC bytes). */
-typedef struct FieldScriptFrame
-{
-    u8* pc;
-    /** @brief Bit 0 holds the result of the last comparison. */
-    u32 flags;
-    /** @brief Remaining wait frames; bit 0 lets the frame resume after a return. */
-    union
-    {
-        u32 word;
-        struct
-        {
-            u32 resume : 1;
-            u32 frames : 31;
-        } bits;
-    } wait;
-} FieldScriptFrame;
-
-/**
- * @brief Script execution state: owner, nesting depth and eight frames (0x68 bytes).
- * @note field_script_run takes a pointer to this block.
- */
-typedef struct FieldScriptState
-{
-    union
-    {
-        u32 word;
-        u8 owner_id;
-        struct
-        {
-            u32 owner_id : 8;
-            u32 unk8 : 1;
-            u32 local_base : 7;
-            u32 unk16 : 15;
-            u32 running : 1;
-        } bits;
-    } status;
-    s32 depth;
-    FieldScriptFrame frames[FIELD_SCRIPT_FRAME_COUNT];
-} FieldScriptState;
 
 /**
  * @brief Actor or event record in the field runtime context (0x94 bytes).

@@ -7059,7 +7059,7 @@ void* menu_skill_action_callback(u_long* ot, ScrollListState* state, void* prim_
                     }
                     else
                     {
-                        menu_show_message(MENU_MESSAGE_INVENTORY_FULL);
+                        menu_show_message(MENU_MESSAGE_CANNOT_REMOVE_EQUIPMENT);
                         return buf;
                     }
                 }
@@ -7475,7 +7475,7 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
 
                                             field_copy_inventory_record(menu_weapon_record(), free_record);
                                             free_record->name[0] = 0;
-                                            menu_show_message(MENU_MESSAGE_INVENTORY_FULL);
+                                            menu_show_message(MENU_MESSAGE_CANNOT_REMOVE_EQUIPMENT);
                                             return buf;
                                         }
                                     }
@@ -7507,7 +7507,7 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
                     break;
                 }
 
-                menu_show_message(MENU_MESSAGE_INVENTORY_FULL);
+                menu_show_message(MENU_MESSAGE_CANNOT_REMOVE_EQUIPMENT);
                 return buf;
         }
     }
@@ -7769,7 +7769,7 @@ void* menu_special_technique_list_callback(u_long* ot, ScrollListState* state_ar
                     }
                     else
                     {
-                        menu_show_message(MENU_MESSAGE_INVENTORY_FULL);
+                        menu_show_message(MENU_MESSAGE_CANNOT_REMOVE_EQUIPMENT);
                         return prim;
                     }
                 }

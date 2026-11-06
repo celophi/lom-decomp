@@ -2,6 +2,7 @@
  * @file field_scene_build.c
  * @brief Scene build from a map object and the per-frame drawing of its objects.
  */
+void* field_draw_sprite_number();
 
 #include "common.h"
 #include <libpress.h>
@@ -242,8 +243,6 @@ extern u16 g_field_resource_version;
  * Main-executable number renderer (ot, cursor, value, digits, position,
  * flags).
  */
-void* field_draw_sprite_number();
-
 static void field_prepare_animation_definitions(FieldAnimDef* def, s32 handler_group);
 static void field_build_animation_list(FieldAnimDef* def, u8** arena, FieldAnim** tail);
 static void field_build_sprite_tile_record(FieldTileDesc* desc, FieldTileRec* record, s32 texture_depth, s32 record_flags);

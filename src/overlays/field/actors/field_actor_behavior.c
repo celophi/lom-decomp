@@ -32,8 +32,6 @@
 #include "overlays/field/field_types.h"
 #include "sdk/gte_dmpsx_compat.h"
 
-s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound);
-
 /** @brief Route history entries between the leader and each follower. */
 #define FIELD_ROUTE_FOLLOWER_SAMPLES (FIELD_ROUTE_HISTORY_LENGTH / 2)
 /** @brief Minimum route distance between two samples. */
@@ -115,16 +113,12 @@ s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound);
 #define FIELD_COLLISION_PROBE ((struct FieldCollisionQuery*)SCRATCHPAD_AT(0x40))
 
 extern u8 g_field_route_animation_history[];
-extern s32 g_field_direction_animation_modes[];
 extern u8 g_field_follower_animation_map[];
-extern s32 g_field_actor_walk_animations[];
 extern s32 g_field_actor_diagonal_walk_animations[];
 extern u8 g_field_actor_turn_animations[];
 extern u8 g_field_action_sound_ids[];
 extern u8 g_field_collision_disabled;
 extern u32 g_field_pad_buttons;
-void field_restart_actor_animation(FieldActor* actor);
-
 static s32 field_apply_action_animation(FieldActor* actor, FieldObjectState* state, FieldActionSlot* action);
 static s32 field_actor_action_is_charging(FieldActor* actor);
 static s32 field_start_action_animation(s32 object_index, s32 target_count, u8* targets, s32 request);
@@ -2271,7 +2265,7 @@ static s32 field_filter_action_targets(s32 count, s32* indices, s32 unused_slot)
                 continue;
             }
 
-            if (i >= FIELD_PARTY_COUNT && (state->group_flags & FIELD_OBJECT_GROUP_MASK) != group)
+            if (i >= FIELD_PARTY_COUNT && (state->group.flags & FIELD_OBJECT_GROUP_MASK) != group)
             {
                 continue;
             }

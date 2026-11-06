@@ -17,6 +17,11 @@
 #include "common/saved_game.h"
 #include "main/cdrom.h"
 #include "sdk/gte_dmpsx_compat.h"
+#include "../internal/wmap_effect_primitives.h"
+#include "../internal/wmap_actor_motion.h"
+
+/** @brief The start of the actor motion pool viewed as the vehicle's motion. */
+#define WMAP_VEHICLE_MOTION (*(WmapVehicleMotion*)g_wmap_actor_motions)
 
 /** @brief Land the special travel starts from and the land the return trip ends on. */
 #define WMAP_TRAVEL_START_LAND 2
@@ -45,19 +50,14 @@
 #define WMAP_ROUTE_RIGHT 5
 #define WMAP_ROUTE_DOWN 7
 
-extern WmapVehicleMotion g_wmap_actor_motions;
 extern s32 g_wmap_vehicle_bank_flipped;
-extern MATRIX g_wmap_effect_camera_matrix;
-extern WmapScreenPosition g_wmap_vehicle_screen_position;
 
 extern s16 g_wmap_route_headings[];
 extern s32 g_wmap_vehicle_route;
-extern s32 g_wmap_vehicle_phase;
 extern s32 g_wmap_vehicle_flying;
 extern s32 g_wmap_vehicle_target_x;
 extern s32 g_wmap_vehicle_target_y;
 
-extern s32 g_wmap_special_travel_pending;
 
 extern u32 g_wmap_special_travel_step;
 extern s32 g_wmap_special_travel_timer;
@@ -138,12 +138,12 @@ static inline void wmap_place_vehicle(void)
     actor->scale_index = 0;
     actor->sequence = 0;
     actor->shade_step = 0;
-    g_wmap_actor_motions.active = 1;
-    g_wmap_actor_motions.radius = WMAP_VEHICLE_START_RADIUS;
-    g_wmap_actor_motions.height = WMAP_VEHICLE_START_HEIGHT;
-    g_wmap_actor_motions.heading = 0;
-    g_wmap_actor_motions.ot_index = WMAP_VEHICLE_OT_START;
-    g_wmap_actor_motions.ot_override = 0;
+    WMAP_VEHICLE_MOTION.active = 1;
+    WMAP_VEHICLE_MOTION.radius = WMAP_VEHICLE_START_RADIUS;
+    WMAP_VEHICLE_MOTION.height = WMAP_VEHICLE_START_HEIGHT;
+    WMAP_VEHICLE_MOTION.heading = 0;
+    WMAP_VEHICLE_MOTION.ot_index = WMAP_VEHICLE_OT_START;
+    WMAP_VEHICLE_MOTION.ot_override = 0;
     wmap_install_callback(wmap_draw_vehicle);
 }
 
@@ -154,14 +154,14 @@ static inline void wmap_climb_vehicle(void)
 
     actor = wmap_turn_vehicle(1);
 
-    if (g_wmap_actor_motions.height < WMAP_VEHICLE_MAX_HEIGHT)
+    if (WMAP_VEHICLE_MOTION.height < WMAP_VEHICLE_MAX_HEIGHT)
     {
-        g_wmap_actor_motions.height++;
+        WMAP_VEHICLE_MOTION.height++;
     }
 
-    if (g_wmap_actor_motions.radius < WMAP_VEHICLE_MAX_RADIUS)
+    if (WMAP_VEHICLE_MOTION.radius < WMAP_VEHICLE_MAX_RADIUS)
     {
-        g_wmap_actor_motions.radius += WMAP_VEHICLE_RADIUS_STEP;
+        WMAP_VEHICLE_MOTION.radius += WMAP_VEHICLE_RADIUS_STEP;
     }
 
     if ((g_wmap_frame_count & 3) == 0)
@@ -190,7 +190,7 @@ WmapSpriteActor* wmap_turn_vehicle(s32 advance)
     /* The heading is read unsigned here (lhu); the other users read it signed. */
     if (advance != 0)
     {
-        WmapVehicleMotion* motion = &g_wmap_actor_motions;
+        WmapVehicleMotion* motion = &WMAP_VEHICLE_MOTION;
         s32 angle = (u16)motion->heading + WMAP_HEADING_TURN_SPEED;
 
         angle &= WMAP_HEADING_MASK;
@@ -198,7 +198,7 @@ WmapSpriteActor* wmap_turn_vehicle(s32 advance)
     }
     else
     {
-        WmapVehicleMotion* motion = &g_wmap_actor_motions;
+        WmapVehicleMotion* motion = &WMAP_VEHICLE_MOTION;
         s32 angle = (u16)motion->heading;
 
         angle &= WMAP_HEADING_MASK;
@@ -229,7 +229,7 @@ WmapSpriteActor* wmap_turn_vehicle(s32 advance)
         g_wmap_vehicle_bank_flipped = 0;
     }
 
-    if ((u32)(heading - 0x401) < 0x7FFU && g_wmap_actor_motions.height < WMAP_VEHICLE_LOW_HEIGHT)
+    if ((u32)(heading - 0x401) < 0x7FFU && WMAP_VEHICLE_MOTION.height < WMAP_VEHICLE_LOW_HEIGHT)
     {
         heading = WMAP_VEHICLE_OT_BEHIND;
     }
@@ -238,7 +238,7 @@ WmapSpriteActor* wmap_turn_vehicle(s32 advance)
         heading = WMAP_VEHICLE_OT_FRONT;
     }
 
-    g_wmap_actor_motions.ot_index = heading;
+    WMAP_VEHICLE_MOTION.ot_index = heading;
     return actor;
 }
 
@@ -266,13 +266,13 @@ s32 wmap_draw_vehicle(s32 initialize)
     WmapSpriteActor* actor = &g_wmap_vehicle_actor;
     s32 animation_frame;
 
-    angle = g_wmap_actor_motions.heading;
+    angle = WMAP_VEHICLE_MOTION.heading;
     PushMatrix();
     SetRotMatrix(&g_wmap_effect_camera_matrix);
     SetTransMatrix(&g_wmap_effect_camera_matrix);
-    position.vx = ((g_wmap_actor_motions.radius >> 4) * (ccos(angle) >> 4)) >> 6;
-    position.vy = ((g_wmap_actor_motions.radius >> 4) * (csin(angle) >> 4)) >> 6;
-    position.vz = g_wmap_actor_motions.height;
+    position.vx = ((WMAP_VEHICLE_MOTION.radius >> 4) * (ccos(angle) >> 4)) >> 6;
+    position.vy = ((WMAP_VEHICLE_MOTION.radius >> 4) * (csin(angle) >> 4)) >> 6;
+    position.vz = WMAP_VEHICLE_MOTION.height;
     gte_ldv0(&position);
     gte_rtps();
     animation_frame = wmap_step_actor_animation(actor, &g_wmap_vehicle_animation);
@@ -287,17 +287,17 @@ s32 wmap_draw_vehicle(s32 initialize)
 
     gte_stsxy(&g_wmap_vehicle_screen_position);
 
-    if (g_wmap_actor_motions.ot_override != 0)
+    if (WMAP_VEHICLE_MOTION.ot_override != 0)
     {
-        wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, g_wmap_actor_motions.ot_override, WMAP_VEHICLE_VARIANT);
+        wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, WMAP_VEHICLE_MOTION.ot_override, WMAP_VEHICLE_VARIANT);
     }
     else
     {
-        wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, g_wmap_actor_motions.ot_index, WMAP_VEHICLE_VARIANT);
+        wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, WMAP_VEHICLE_MOTION.ot_index, WMAP_VEHICLE_VARIANT);
     }
 
     PopMatrix();
-    return g_wmap_actor_motions.active;
+    return WMAP_VEHICLE_MOTION.active;
 }
 
 /**
@@ -467,7 +467,7 @@ s32 wmap_fly_vehicle(s32 initialize)
     {
         wmap_turn_vehicle(1);
 
-        if (g_wmap_actor_motions.heading == g_wmap_route_headings[g_wmap_vehicle_route])
+        if (WMAP_VEHICLE_MOTION.heading == g_wmap_route_headings[g_wmap_vehicle_route])
         {
             g_wmap_view_scroll_mode = WMAP_SCROLL_SCRIPTED;
             g_wmap_scroll_remaining_x = (g_wmap_vehicle_target_x - g_wmap_vehicle_cell_x) * WMAP_CELL_SPACING;
@@ -503,7 +503,7 @@ s32 wmap_fly_vehicle_first_leg(s32 initialize)
     {
         wmap_turn_vehicle(1);
 
-        if (g_wmap_actor_motions.heading == g_wmap_route_headings[g_wmap_vehicle_route])
+        if (WMAP_VEHICLE_MOTION.heading == g_wmap_route_headings[g_wmap_vehicle_route])
         {
             g_wmap_view_scroll_mode = WMAP_SCROLL_SCRIPTED;
             g_wmap_vehicle_phase++;
@@ -577,7 +577,7 @@ s32 wmap_finish_vehicle_turn(s32 initialize)
 {
     wmap_turn_vehicle(1);
 
-    if (g_wmap_actor_motions.heading == WMAP_HEADING_LANDING)
+    if (WMAP_VEHICLE_MOTION.heading == WMAP_HEADING_LANDING)
     {
         g_wmap_vehicle_phase = 0;
         return 0;
@@ -625,7 +625,7 @@ WMAP_STEP_WAIT_SCROLL(wmap_special_travel_wait_scroll, g_wmap_special_travel_ste
 /** @brief Special travel step 7: fly the vehicle to the party unless the party is at the start land. */
 void wmap_special_travel_fly_to_party(void)
 {
-    g_wmap_actor_motions.ot_index = WMAP_VEHICLE_OT_FLIGHT;
+    WMAP_VEHICLE_MOTION.ot_index = WMAP_VEHICLE_OT_FLIGHT;
 
     if (g_wmap_cells[g_wmap_travelers[0].cell_x][g_wmap_travelers[0].cell_y].land_id == WMAP_TRAVEL_START_LAND)
     {
@@ -663,7 +663,7 @@ void wmap_special_travel_turn(void)
 
     wmap_turn_vehicle(1);
 
-    if (g_wmap_actor_motions.heading == WMAP_HEADING_DEPARTURE)
+    if (WMAP_VEHICLE_MOTION.heading == WMAP_HEADING_DEPARTURE)
     {
         g_wmap_sprite_actors[0].resource_index = -1;
         g_wmap_special_travel_timer = 0;
@@ -709,7 +709,7 @@ void wmap_special_travel_cruise(void)
 {
     wmap_turn_vehicle(1);
 
-    if (g_wmap_actor_motions.heading == WMAP_HEADING_CRUISE)
+    if (WMAP_VEHICLE_MOTION.heading == WMAP_HEADING_CRUISE)
     {
         g_wmap_sprite_actors[0].resource_index = 0;
     }
@@ -742,7 +742,7 @@ void wmap_special_travel_wait_landing(void)
 /** @brief Special travel step 17: stop drawing the vehicle on its orbit. */
 void wmap_special_travel_stop_vehicle(void)
 {
-    g_wmap_actor_motions.active = 0;
+    WMAP_VEHICLE_MOTION.active = 0;
     g_wmap_special_travel_timer = WMAP_VEHICLE_WAIT_FRAMES;
     g_wmap_special_travel_step++;
     wmap_special_travel_fly_away();
@@ -755,7 +755,7 @@ void wmap_special_travel_fly_away(void)
 
     wmap_turn_vehicle(0);
     wmap_step_actor_animation(actor, &g_wmap_vehicle_animation);
-    wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, g_wmap_actor_motions.ot_index, WMAP_VEHICLE_VARIANT);
+    wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, WMAP_VEHICLE_MOTION.ot_index, WMAP_VEHICLE_VARIANT);
     g_wmap_vehicle_screen_position.point.x -= 6;
 
     if (--g_wmap_special_travel_timer == 0)
@@ -814,7 +814,7 @@ void wmap_special_return_cruise(void)
 {
     wmap_turn_vehicle(1);
 
-    if (g_wmap_actor_motions.heading == WMAP_HEADING_CRUISE)
+    if (WMAP_VEHICLE_MOTION.heading == WMAP_HEADING_CRUISE)
     {
         g_wmap_sprite_actors[0].resource_index = 0;
     }
@@ -847,7 +847,7 @@ void wmap_special_return_wait_landing(void)
 /** @brief Special return step 11: stop drawing the vehicle on its orbit. */
 void wmap_special_return_stop_vehicle(void)
 {
-    g_wmap_actor_motions.active = 0;
+    WMAP_VEHICLE_MOTION.active = 0;
     g_wmap_special_return_timer = WMAP_VEHICLE_WAIT_FRAMES;
     g_wmap_special_return_step++;
     wmap_special_return_fly_away();
@@ -860,7 +860,7 @@ void wmap_special_return_fly_away(void)
 
     wmap_turn_vehicle(0);
     wmap_step_actor_animation(actor, &g_wmap_vehicle_animation);
-    wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, g_wmap_actor_motions.ot_index, WMAP_VEHICLE_VARIANT);
+    wmap_draw_actor_sprite(actor, g_wmap_vehicle_screen_position.packed, WMAP_VEHICLE_TEXTURE, WMAP_VEHICLE_MOTION.ot_index, WMAP_VEHICLE_VARIANT);
     g_wmap_vehicle_screen_position.point.x -= 4;
 
     if (--g_wmap_special_return_timer == 0)

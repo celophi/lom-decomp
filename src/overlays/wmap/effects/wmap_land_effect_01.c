@@ -1,6 +1,7 @@
 #include "common.h"
 #include <inline_c.h>
 #include <libgte.h>
+#include <rand.h>
 
 #include "../internal/wmap_actor_motion.h"
 #include "../internal/wmap_cells.h"
@@ -12,10 +13,9 @@
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
 #include "sdk/gte_dmpsx_compat.h"
+#include "../internal/wmap_effect_primitives.h"
 
-extern s32 rand(void);
 extern s32 g_wmap_land_effect_01_sequence_3_timer;
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_01_sequence_4_timer;
 extern s32 g_wmap_land_effect_01_sequence_5_timer;
 extern s32 g_wmap_land_effect_01_sequence_8_timer;
@@ -39,7 +39,6 @@ extern WmapSequenceStep g_wmap_land_effect_01_sequence_8_steps[];
 extern u32 g_wmap_land_effect_01_sequence_3_step;
 extern u32 g_wmap_land_effect_01_sequence_4_step;
 extern WmapMotion* g_wmap_land_effect_01_ring_motions;
-extern s32 g_wmap_particle_shade;
 extern u32 g_wmap_land_effect_01_sequence_5_step;
 extern u32 g_wmap_land_effect_01_sequence_8_step;
 extern u32 g_wmap_land_effect_01_timeline_step;
@@ -49,7 +48,6 @@ extern u32 g_wmap_land_effect_01_sequence_1_step;
 extern u32 g_wmap_land_effect_01_sequence_6_step;
 extern u32 g_wmap_land_effect_01_sequence_7_step;
 
-extern WmapMotion g_wmap_actor_motions_at_10[];
 
 /**
  * @brief Project active particles and initialize the first available slot.

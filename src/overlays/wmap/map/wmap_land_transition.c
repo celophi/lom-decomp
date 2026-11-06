@@ -40,14 +40,6 @@
 #define WMAP_ARTIFACT_SHADOW_SKEW 10
 #define WMAP_CAROUSEL_VOLUME 143
 
-/** @brief Route state reset when selecting an artifact. */
-typedef struct
-{
-    u8 pad_00[2];
-    s16 state;
-    u8 pad_04[0x18];
-} WmapRouteCell;
-
 /** @brief Word indices in each carousel triangle's texture record. */
 enum WmapCarouselTextureWord
 {
@@ -61,10 +53,7 @@ enum WmapCarouselTextureWord
     WMAP_TEXTURE_WORDS
 };
 
-extern const WmapPoint g_wmap_cell_focus_offsets[];
 extern s32 g_wmap_artifact_transfer_frame_bounds[];
-extern WmapRouteCell g_wmap_cell_effects[6][6];
-extern s32 g_wmap_carousel_position;
 
 extern s32 g_wmap_carousel_turn_frames;
 extern s32 g_wmap_carousel_turn_step;
@@ -108,7 +97,7 @@ s32 wmap_begin_land_placement(s32 initialize)
     g_wmap_view_mode = WMAP_VIEW_MODE_MAP;
     g_wmap_event_active = 0;
     g_wmap_sprite_actors[0].target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
-    points = g_wmap_cell_focus_offsets;
+    points = g_wmap_cell_focus_offsets[0];
     y = g_wmap_cursor_row;
     x = g_wmap_cursor_column;
     index = y * WMAP_VIEW_COLUMNS + x;
@@ -302,7 +291,7 @@ void wmap_update_artifact_selection(void)
                     for (map_x = 0; map_x < WMAP_GRID_SIZE; map_x++)
                     {
                         g_wmap_cells[map_x][map_y].placement_allowed = wmap_can_place_land(map_x, map_y, g_wmap_selected_artifact);
-                        g_wmap_cell_effects[map_x][map_y].state = 0;
+                        g_wmap_cell_effects[map_x][map_y].mode = 0;
                     }
                 }
 

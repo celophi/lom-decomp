@@ -1,6 +1,7 @@
 #include "common.h"
 #include <inline_c.h>
 #include <libgte.h>
+#include <rand.h>
 
 #include "../internal/wmap_actor_motion.h"
 #include "../internal/wmap_cells.h"
@@ -68,14 +69,12 @@ static void wmap_land_effect_13_update_particles(WmapSpriteActor* actors, WmapAn
         next();                                                                                                                                                \
     }
 
-extern s32 rand(void);
 extern s32 g_wmap_land_effect_13_sequence_6_timer;
 extern s32 g_wmap_land_effect_13_sequence_7_timer;
 extern s32 g_wmap_land_effect_13_sequence_8_timer;
 /** @brief Sprite shade for land effect 13 sequence 9. */
 extern s32 g_wmap_land_effect_13_sequence_9_shade;
 extern s32 g_wmap_land_effect_13_sequence_9_timer;
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_13_sequence_12_timer;
 extern s32 g_wmap_land_effect_13_sequence_2_timer;
 extern WmapSequenceStep g_wmap_land_effect_13_sequence_2_steps[];

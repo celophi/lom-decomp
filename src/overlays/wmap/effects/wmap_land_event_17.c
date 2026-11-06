@@ -17,7 +17,6 @@
 #include "common/saved_game.h"
 #include "main/cdrom.h"
 
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_event_17_timeline_timer;
 extern s32 g_wmap_land_event_17_sequence_1_timer;
 extern s32 g_wmap_land_event_17_sequence_2_timer;

@@ -91,7 +91,7 @@ void main_game_loop(void)
     g_field_sound_bank_id = -1;
     g_field_entry_scene.id = 0;
     g_save_compatibility_tag = SAVE_TAG_STARTUP;
-    g_script_pair_value_49 = 0;
+    g_script_unused_value = 0;
 #if defined(VERSION_JP)
     g_game_state = GAME_STATE_CHECKPS;
 #else

@@ -41,7 +41,6 @@ void field_update_gover_load(void);
 void field_update_return_to_title_prompt(struct FieldRenderHalf* render_half);
 void field_open_return_to_title_prompt(void);
 void field_begin_return_to_title_prompt_close(void);
-void field_update_audio_timer(void);
 s32 field_get_track_counter_modulo(struct FieldActorSlot* slot, s32 divisor);
 void field_initialize_actor_slots(void);
 void field_clear_actor_slots(void);

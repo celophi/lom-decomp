@@ -107,8 +107,6 @@ extern s32 g_wmap_placement_preview_y;
 
 extern s32 g_wmap_preview_projection_x;
 extern s32 g_wmap_preview_projection_y;
-extern s32 g_wmap_focus_origin_x;
-extern s32 g_wmap_focus_origin_y;
 
 /**
  * @brief Advance the map selection preview and draw its marker and artifact.

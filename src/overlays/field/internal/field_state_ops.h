@@ -3,6 +3,8 @@
 
 #include "common.h"
 
+#include "overlays/field/field_actor_records.h"
+
 enum
 {
     FIELD_STATUS_STAT_COUNT = 8,
@@ -76,7 +78,7 @@ typedef struct FieldActorTemplate
     /** @brief Bit n set: element level n lowers the monster level. */
     u8 lower_mask;
     u8 pad17;
-    /** @brief Identifier matched against FieldStatusState::template_index. */
+    /** @brief Identifier matched against FieldObjectState::template_index. */
     u8 id;
     /** @brief Evasion chance given to the monster's status record. */
     u8 evasion;
@@ -107,19 +109,7 @@ typedef struct FieldActorTemplateTable
     u32 offsets[1];
 } FieldActorTemplateTable;
 
-/** @brief Displayed HP gauge (low 24 bits) and HUD bits. */
-typedef union
-{
-    u32 word;
-    struct
-    {
-        u32 value : 24;
-        u32 hud_bits : 7;
-        u32 hud_flag : 1;
-    } bits;
-} FieldStatusGauge;
-
-/** @brief Rewards granted by field_grant_reward; kinds 0 to 3 also index FieldStatusState drop_counts. */
+/** @brief Rewards granted by field_grant_reward; kinds 0 to 3 also index FieldObjectState drop_counts. */
 typedef enum
 {
     FIELD_REWARD_EXPERIENCE_LARGE = 0,
@@ -131,56 +121,13 @@ typedef enum
     FIELD_REWARD_RESTORE_HALF = 6
 } FieldRewardKind;
 
-/** @brief Runtime status values shared by a field actor and its status record. */
-typedef struct FieldStatusState
-{
-    u32 maximum;
-    s32 current;
-    FieldStatusGauge gauge;
-    u32 effect_flags;
-    u8 unk10;
-    /** @brief Template id passed to field_find_actor_template. */
-    u8 template_index;
-    u8 pad12[2];
-    s32 actor_id;
-    /** @brief Flags scripts set and mask together with effect_flags. */
-    u16 script_flags;
-    u8 pad1A[0x48 - 0x1A];
-    u16 status_intensity;
-    /** @brief Same halfword as FieldObjectState::action_charge. */
-    u16 action_charge;
-    /** @brief Bit 0: the HUD shows the special attack gauge; bits 1-7: level. */
-    union
-    {
-        s32 word;
-        u8 byte;
-        struct
-        {
-            u32 show_technique_gauge : 1;
-            u32 level : 7;
-        } bits;
-    } level;
-    /** @brief Stored world position, compared with the live actor position. */
-    s32 position_x;
-    s32 position_y;
-    s32 position_z;
-    u8 pad5C[0x60 - 0x5C];
-    union
-    {
-        /** @brief Signal of the last stat change (field_scale_status_stat). */
-        u8 stat_change;
-        /** @brief Set on defeat: experience and money pickups to drop, indexed by FieldRewardKind 0 to 3. */
-        u8 drop_counts[4];
-    } signal;
-    FieldActorTemplate* template;
-    /** @brief Stat-derived footprint strength, saturated to 255 during setup. */
-    u16 effect_footprint_strength;
-} FieldStatusState;
+/** @brief facing_or_reward_kind of a pickup effect of reward kind 0; kind n is this plus n. */
+#define FIELD_REWARD_EFFECT_KIND_FIRST 0x16
 
-/** @brief Sentinel returned through the FieldStatusState view when field_find_object_state finds no object. */
-#define FIELD_STATUS_STATE_NONE ((FieldStatusState*)-1)
+/** @brief Sentinel returned by field_find_object_state when it finds no object. */
+#define FIELD_STATUS_STATE_NONE ((FieldObjectState*)-1)
 
-/** @brief FieldStatusRecord::unk0 bits: record on the monsters' side (also the duel leader), or on the party's side. */
+/** @brief FieldStatusRecord::side bits: record on the monsters' side (also the duel leader), or on the party's side. */
 #define FIELD_RECORD_MONSTER_SIDE 0x40
 #define FIELD_RECORD_PARTY_SIDE 0x80
 
@@ -198,7 +145,7 @@ typedef struct FieldStatusRecord
     u16 status_flags;
     /** @brief FIELD_RECORD_ACTION_MODIFIERS, FIELD_RECORD_HELD_MODIFIERS and FIELD_RECORD_DEFEAT_FLAGS. */
     u32 modifier_flags;
-    FieldStatusState* state;
+    struct FieldObjectState* state;
     FieldActorTemplate* template;
     /** @brief Attack power: the weapon's for party records, the template's base and growth for monsters. */
     u16 power;
@@ -253,8 +200,8 @@ s32 field_get_status_stat(FieldStatusRecord* record, s32 stat_index);
 s32 field_scale_status_stat(FieldStatusRecord* record, u32 stat_selector, u32 scale, s32 emit_signal);
 s32 field_roll_last_stat(FieldStatusRecord* record);
 s32 field_is_actor_in_front(s32 actor_id, s32 observer_id);
-void field_damage_status(FieldStatusState* state, s32 damage);
-void field_heal_status(FieldStatusState* state, s32 amount);
+void field_damage_status(struct FieldObjectState* state, s32 damage);
+void field_heal_status(struct FieldObjectState* state, s32 amount);
 void field_revive_status_record(FieldStatusRecord* record);
 void field_clear_status_effect(FieldStatusRecord* record, u32 effect_index);
 void field_golem_select_logic_cell(s32 actor_id);

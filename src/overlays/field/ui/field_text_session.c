@@ -8,10 +8,6 @@
 #include "../internal/field_menu_element.h"
 #include "../internal/field_modal_runtime.h"
 
-extern s32 g_field_item_list_count;
-extern s32 g_field_item_drop_enabled;
-extern s32 g_field_item_list_cursor;
-
 /**
  * @brief Close the item-drop menu and clear its list, cursor and drop permission.
  * @note Clearing g_field_item_drop_enabled means Square does nothing until a
@@ -42,6 +38,7 @@ void field_update_item_menu(FieldRenderHalf* render_half)
         field_text_reset_scratch();
         field_draw_menu_elements(render_half);
         field_text_upload_immediate_cache();
+
         if (g_field_item_drop_menu_open == 0)
         {
             field_text_reset_windows();

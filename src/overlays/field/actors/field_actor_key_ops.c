@@ -48,9 +48,6 @@ enum
     FIELD_BINDING_QUERY_PLAYING = 3,
     FIELD_BINDING_QUERY_READY = 4
 };
-void field_restart_actor_animation(FieldActor* actor);
-
-
 /**
  * @brief Replace the group bits of object @p object_index.
  * @param object_index Object whose group_flags change.
@@ -58,7 +55,7 @@ void field_restart_actor_animation(FieldActor* actor);
  */
 static inline void field_set_object_group(s32 object_index, s32 group)
 {
-    g_field_object_states[object_index].group_flags = (g_field_object_states[object_index].group_flags & ~FIELD_OBJECT_GROUP_MASK) | group;
+    g_field_object_states[object_index].group.flags = (g_field_object_states[object_index].group.flags & ~FIELD_OBJECT_GROUP_MASK) | group;
 }
 
 /**

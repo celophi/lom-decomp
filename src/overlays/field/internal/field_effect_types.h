@@ -180,11 +180,16 @@ typedef enum
 } FieldPositionSource;
 
 /**
- * @brief Shared 0x54-byte position/state record used by world objects and effects.
+ * @brief A 0x54-byte field record in the effect role; FieldActor is the same record in the actor role.
+ *
+ * Both roles share the position, texture slot, owner, animation timing, resource,
+ * frame data and work fields at the same offsets and under the same names; the other
+ * fields mean different things per role. Code that follows either kind of record
+ * (a position source, a linked effect) uses this type for both, through
+ * FIELD_ACTOR_MOTION_RECORDS for actor records.
  * @note Positions have eight fractional bits; angles use 0x1000 units per turn.
  * In the effect pool, motion_parameter is speed or an angular increment,
- * age counts updates, and state 0xFF marks retirement. World-object records
- * reuse some fields for animation state, so this is not a universal effect schema.
+ * age counts updates, and state 0xFF marks retirement.
  * work_x/work_y/work_z also hold different data for linked segment effects.
  */
 typedef struct FieldMotionRecord
@@ -217,8 +222,9 @@ typedef struct FieldMotionRecord
         u8 linked_effect_index; /* Position sources 8 and 15. */
     } position_data;
     u8 facing_or_reward_kind;
-    u8 actor_index;
-    u8 part_index;
+    /** @brief Animation actor slot and part that emitted the effect (FieldActor::owner_slot/owner_part). */
+    u8 owner_slot;
+    u8 owner_part;
     u8 animation_active;
     u8 state;
     s8 height_or_retired_state;
@@ -245,12 +251,22 @@ typedef struct FieldMotionRecord
     u8 previous_effect_index;
     u8 next_effect_index;
     u8 pad3F;
-    s32 unknown_0x40;
+    /** @brief Displayed frame data (FieldActor::frame_data), written through the actor role by the animation functions. */
+    uintptr_t frame_data;
     u32 work_x;
     u32 work_y;
     u32 work_z;
     u8 pad50[0x54 - 0x50];
 } FieldMotionRecord;
+
+/** @brief The effect records: FIELD_EFFECT_ACTIVE_RECORD_COUNT records in the effect role of the actor record layout. */
+extern FieldMotionRecord g_field_effect_records[];
+
+/** @brief The effect records viewed in the actor role, for code that treats them like actor records. */
+#define FIELD_EFFECT_ACTOR_RECORDS ((struct FieldActor*)g_field_effect_records)
+
+/** @brief The actor records (g_field_actors) viewed in the effect role, for code that follows either kind of record. */
+#define FIELD_ACTOR_MOTION_RECORDS ((FieldMotionRecord*)g_field_actors)
 
 void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActorSlot* actor);
 void field_release_actor_if_no_effects(FieldMotionRecord* effect);

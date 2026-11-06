@@ -446,7 +446,6 @@ extern u32 g_random_names_off;
  * @param volume Playback volume.
  */
 
-void field_update_audio_timer(void);
 
 static void render_fade_overlay(RenderContext* render_ctx);
 static void load_name_entry_tim(void);
@@ -589,6 +588,7 @@ s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_
     if ((source_mode == GNAME_SRC_HISTORY) && (active_name == g_saved_game_ctx->characters[FIELD_PARTY_COMPANION].name))
     {
         name_byte_index = 0;
+
         if (GNAME_COMPANION_IS_GOLEM(g_saved_game_ctx))
         {
             while (name_byte_index < (s32)sizeof(g_saved_game_ctx->golem_records[0].name))
@@ -763,6 +763,7 @@ static void load_tim_to_vram(const TimUploadDestination* upload_coords)
         {
             *clut_entry |= GPU_STP_BIT;
         }
+
         clut_entry++;
     }
 
@@ -810,6 +811,7 @@ static void gname_update_state(void)
 
     /* Interpolate the backing strip to its target width. */
     remaining_width_steps = g_strip_width_steps;
+
     if (remaining_width_steps != 0)
     {
         g_strip_width_steps--;
@@ -885,6 +887,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
             {
                 g_activated_entry = mode;
                 navigation_step = GNAME_NAVIGATION_STEP;
+
                 switch (mode)
                 {
                 case GNAME_MODE_ACTION_OK:
@@ -897,6 +900,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     {
                         field_play_sound(GNAME_SFX_ERROR, AKAO_SFX_DEFAULT_VOLUME);
                     }
+
                     break;
 
                 case GNAME_MODE_ACTION_DELETE:
@@ -908,6 +912,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
 
                 case GNAME_MODE_ACTION_RANDOM:
                     field_play_sound(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
+
                     if (g_name_source_mode == GNAME_SRC_RAND_PRIMARY)
                     {
                         g_name_clipboard[0] = 0;
@@ -921,6 +926,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     else if (g_name_source_mode == GNAME_SRC_HISTORY)
                     {
                         g_name_clipboard[0] = 0;
+
                         if (g_history_name_idx >= HISTORY_NAME_INDEX_LIMIT)
                         {
                             encoded_text_copy(g_active_name, g_initial_name);
@@ -942,6 +948,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                         g_name_clipboard[0] = 0;
                         encoded_text_copy(g_active_name, g_initial_name);
                     }
+
                     recalc_name_width();
                     g_strip_width_steps = NAME_STRIP_LERP_STEPS;
                     break;
@@ -967,6 +974,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                         buttons = 0;
                         continue;
                     }
+
                     if (buttons & PAD_BTN_LEFT)
                     {
                         mode = (mode == GNAME_MODE_ACTION_OK) ? GNAME_MODE_ACTION_DEFAULT : (mode - navigation_step);
@@ -976,12 +984,14 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                         mode = (mode < GNAME_MODE_ACTION_DEFAULT) ? (mode + GNAME_NAVIGATION_STEP) : GNAME_MODE_ACTION_OK;
                     }
                 }
+
                 field_play_sound(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
                 g_cursor_x_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].x - GNAME_TAB_CURSOR_X_BIAS;
                 g_cursor_y_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].y;
                 g_cursor_lerp_steps = GNAME_CURSOR_LERP_STEPS;
                 repeat_dispatch = GNAME_REDISPATCH_DONE;
             }
+
             break;
 
         /* Left-column character-panel selector tabs. */
@@ -993,6 +1003,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
             if (buttons & PAD_CONFIRM_BUTTONS)
             {
                 g_activated_entry = mode;
+
                 if (g_char_panel != (mode - GNAME_MODE_PANEL_BASE))
                 {
                     g_char_panel = mode - GNAME_MODE_PANEL_BASE;
@@ -1015,6 +1026,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     buttons = 0;
                     continue;
                 }
+
                 if (buttons & PAD_BTN_UP)
                 {
                     mode = (mode == GNAME_MODE_PANEL_BASE) ? GNAME_MODE_PANEL_NAV_LAST : (mode - navigation_step);
@@ -1024,6 +1036,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     mode = (mode < GNAME_MODE_PANEL_NAV_LAST) ? (mode + navigation_step) : GNAME_MODE_PANEL_BASE;
                 }
             }
+
             field_play_sound(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
             g_cursor_x_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].x - GNAME_TAB_CURSOR_X_BIAS;
             g_cursor_y_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].y;
@@ -1060,6 +1073,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                         repeat_dispatch = GNAME_REDISPATCH_DONE;
                         continue;
                     }
+
                     g_kanji_cat = g_char_cursor;
                     g_char_panel = CHAR_PANEL_KANJI;
                     g_scroll_target = 0;
@@ -1090,6 +1104,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                         field_play_sound(GNAME_SFX_ERROR, AKAO_SFX_DEFAULT_VOLUME);
                     }
                 }
+
                 repeat_dispatch = GNAME_REDISPATCH_DONE;
             }
             else
@@ -1102,12 +1117,14 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                         buttons = 0;
                         continue;
                     }
+
                     if ((buttons & PAD_BTN_LEFT) && ((g_char_cursor % NAME_GRID_COLUMNS) == 0))
                     {
                         mode = GNAME_MODE_PANEL_BASE;
                         buttons = 0;
                         continue;
                     }
+
                     if ((buttons & PAD_BTN_UP) && ((g_char_cursor / NAME_GRID_COLUMNS) != 0))
                     {
                         g_char_cursor -= NAME_GRID_COLUMNS;
@@ -1152,6 +1169,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                 g_cursor_lerp_steps = GNAME_GRID_LERP_STEPS;
                 repeat_dispatch = GNAME_REDISPATCH_DONE;
             }
+
             break;
         }
     }
@@ -1192,10 +1210,12 @@ static void gname_process_input(void)
     {
         g_navigation_mode = handle_navigation_input(g_navigation_mode, navigation_input);
     }
+
     /* Undo: move the last name glyph to the front of the clipboard. */
     else if (g_pad_input & GNAME_BTN_UNDO)
     {
         moved_glyph = name_pop_last_glyph(g_active_name);
+
         while (name_glyph_count(g_name_clipboard) >= NAME_CLIPBOARD_MAX_GLYPHS)
         {
             name_pop_last_glyph(g_name_clipboard);
@@ -1207,6 +1227,7 @@ static void gname_process_input(void)
         volume_or_nav_mask = AKAO_SFX_DEFAULT_VOLUME;
         field_play_sound(GNAME_SFX_MOVE, volume_or_nav_mask);
     }
+
     /* Redo: move the first clipboard glyph back into the active name. */
     else if (g_pad_input & GNAME_BTN_REDO)
     {
@@ -1214,6 +1235,7 @@ static void gname_process_input(void)
         {
             moved_glyph = name_pop_first_glyph(g_name_clipboard);
             glyph_value = moved_glyph;
+
             if (glyph_value != 0)
             {
                 moved_glyph_bytes[NAME_GLYPH_LEAD_INDEX] = moved_glyph;
@@ -1223,6 +1245,7 @@ static void gname_process_input(void)
                 recalc_name_width();
                 g_strip_width_steps = NAME_STRIP_LERP_STEPS;
             }
+
             field_play_sound(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
         }
         else
@@ -1238,15 +1261,18 @@ static void gname_process_input(void)
             field_play_sound(GNAME_SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
             return;
         }
+
         field_play_sound(GNAME_SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
         name_pop_last_glyph(g_active_name);
         recalc_name_width();
         g_strip_width_steps = NAME_STRIP_LERP_STEPS;
     }
+
     /* Dormant in the shipped data: cycle kanji categories, skipping empty entries. */
     if (((g_navigation_mode == GNAME_MODE_GRID) && (g_char_panel == CHAR_PANEL_KANJI)) && (g_pad_input & GNAME_BTN_KANJI_NAV))
     {
         field_play_sound(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
+
         while (g_pad_input & GNAME_BTN_KANJI_NAV)
         {
             if (g_pad_input & GNAME_BTN_KANJI_PREV)
@@ -1254,6 +1280,7 @@ static void gname_process_input(void)
                 category_before_step = g_kanji_cat;
                 previous_page_category = category_before_step - KANJI_CATEGORY_STEP;
                 g_kanji_cat = previous_page_category;
+
                 if (previous_page_category == KANJI_CATEGORY_PREV_EDGE)
                 {
                     g_kanji_cat = KANJI_CATEGORY_FIRST;
@@ -1268,6 +1295,7 @@ static void gname_process_input(void)
                 category_before_step = g_kanji_cat;
                 next_category = category_before_step + KANJI_CATEGORY_STEP;
                 g_kanji_cat = next_category;
+
                 if (next_category == KANJI_CATEGORY_COUNT)
                 {
                     g_kanji_cat = KANJI_CATEGORY_NEXT_EDGE;
@@ -1279,6 +1307,7 @@ static void gname_process_input(void)
             }
 
             category_entry = g_kanji_cat;
+
             if (g_kanji_cat_entries[category_entry] == KANJI_CATEGORY_EMPTY)
             {
                 continue;
@@ -1303,6 +1332,7 @@ static void gname_process_input(void)
             *category_name_ptr = (void*)(g_panel_tbl_off + (category_name_offset + ((unsigned long)panel_data_base)));
         }
     }
+
     /* Advance the cursor and panel-scroll interpolations. */
     if (g_cursor_lerp_steps != 0)
     {
@@ -1315,7 +1345,9 @@ static void gname_process_input(void)
         g_cursor_x = g_cursor_x_target;
         g_cursor_y = g_cursor_y_target;
     }
+
     remaining_scroll_steps = g_scroll_steps;
+
     if (remaining_scroll_steps != 0)
     {
         scroll_position = &g_scroll_pos;
@@ -1324,6 +1356,7 @@ static void gname_process_input(void)
         g_scroll_pos += scroll_delta;
         return;
     }
+
     g_scroll_pos = g_scroll_target;
 }
 
@@ -1477,6 +1510,7 @@ static void* emit_panel_tab_sprite(void* packet_cursor, u_long* ot_entry)
                                             GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_TAB_X, GNAME_PANEL_TAB_Y, FIELD_TEXT_ALIGN_CENTER);
         }
     }
+
     return packet_cursor;
 }
 
@@ -1542,6 +1576,7 @@ static void render_name_strip(RenderContext* render_ctx, u8* name, s32 strip_wid
     strip_env = &strip_draw_env;
     backing_x = NAME_STRIP_BACKING_RIGHT - strip_width;
     backing_y = NAME_STRIP_BACKING_PAGE0_Y;
+
     if (render_ctx->frame_parity != 0)
     {
         backing_y = NAME_STRIP_BACKING_PAGE1_Y;
@@ -1609,20 +1644,26 @@ static void render_char_panel(RenderContext* render_ctx, s32 panel_index)
     /* Walk the range row-major, emitting only glyphs inside the visible window. */
     grid_row = 0;
     grid_column = grid_row;
+
     while (1)
     {
         glyph_y = (grid_row * NAME_GRID_CELL_SIZE) - g_scroll_pos;
+
         if (NAME_GRID_ROW_VISIBLE(glyph_y))
         {
             glyph_packet_cursor = field_draw_text((SPRT*)(glyph_packet_cursor), ot_entry, GNAME_RECORD(glyph_table, glyph_index), CHAR_PANEL_GLYPH_COLOR,
                                                   grid_column * NAME_GRID_CELL_SIZE, glyph_y, FIELD_TEXT_ALIGN_LEFT);
         }
+
         glyph_index++;
+
         if (glyph_end == glyph_index)
         {
             break;
         }
+
         grid_column++;
+
         if (grid_column == NAME_GRID_COLUMNS)
         {
             grid_column = 0;
@@ -1636,10 +1677,12 @@ static void render_char_panel(RenderContext* render_ctx, s32 panel_index)
     g_char_last_col = grid_column;
     packet_cursor = glyph_packet_cursor;
     backing_y = NAME_GRID_BACKING_PAGE0_Y;
+
     if (render_ctx->frame_parity != 0)
     {
         backing_y = NAME_GRID_BACKING_PAGE1_Y;
     }
+
     SetDefDrawEnv(grid_draw_env, NAME_GRID_BACKING_X, backing_y, NAME_GRID_BACKING_W, NAME_GRID_VIS_HEIGHT);
     SetDrawEnv(packet_cursor, grid_draw_env);
     addPrim(ot_entry, packet_cursor);
@@ -1754,6 +1797,7 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
     packet_cursor += sizeof(DR_TWIN);
 
     sprite_cursor = (SPRT*)packet_cursor;
+
     while (sprite_count < GNAME_LAYOUT_SPRITE_COUNT)
     {
         u32 glyph_id = sequence_entry->glyph_id;
@@ -1784,6 +1828,7 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
         addPrim(&ot[GNAME_OT_LAYOUT_BACKGROUND], sprite);
         sprite_cursor++;
     }
+
     packet_cursor = (u8*)sprite_cursor;
 
     /* Restore the full-size texture window after the sprite batch. */
@@ -1824,6 +1869,7 @@ static inline s32 name_glyph_count(const u8* name_buf)
         {
             name_buf += NAME_GLYPH_SIZE_SINGLE;
         }
+
         glyph_count++;
     }
 
@@ -1905,6 +1951,7 @@ static s32 name_pop_last_glyph(u8* name_buf)
     while (*scan_cursor)
     {
         last_glyph_cursor = scan_cursor;
+
         if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(*scan_cursor))
         {
             scan_cursor += NAME_GLYPH_SIZE_DOUBLE;
@@ -2003,12 +2050,14 @@ static void name_prepend_glyph(u8* name_buf, u16 glyph)
 
     /* Include the null terminator. */
     bytes_to_move = byte_count + 1;
+
     for (byte_index = bytes_to_move; byte_index > 0; byte_index--)
     {
         name_buf[(glyph_size + byte_index) - 1] = name_buf[byte_index - 1];
     }
 
     name_buf[0] = LOW_BYTE(glyph);
+
     if (glyph_size == NAME_GLYPH_SIZE_DOUBLE)
     {
         name_buf[1] = HIGH_BYTE(glyph);
@@ -2070,6 +2119,7 @@ static s32 name_pop_first_glyph(u8* name_buf)
     /* Include the null terminator. */
     bytes_to_move = tail_byte_count + 1;
     glyph_value_mask = NAME_GLYPH_VALUE_MASK;
+
     for (byte_index = 0; byte_index < bytes_to_move; byte_index++)
     {
         name_buf[byte_index] = name_buf[byte_index + glyph_size];

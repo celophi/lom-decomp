@@ -3,6 +3,8 @@
 
 #include "common.h"
 
+#include "wmap_sprite_render.h"
+
 #define WMAP_TRAVELER_COUNT 4
 #define WMAP_TRAVEL_PATH_CAPACITY 32
 /** @brief Traveler that event sequences walk between lands. */
@@ -62,5 +64,11 @@ extern s32 g_wmap_entry_day;
 
 /** @brief Nonzero to play flap sounds on vehicle wing animation frames. */
 extern s32 g_wmap_vehicle_flap_sound_enabled;
+
+extern s32 g_wmap_special_travel_pending;
+
+extern s32 g_wmap_vehicle_phase;
+
+extern WmapScreenPosition g_wmap_vehicle_screen_position;
 
 #endif

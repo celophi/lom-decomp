@@ -34,6 +34,7 @@
 #include "main/controller_internal.h"
 #include "main/display.h"
 #include "main/game_state.h"
+#include "internal/wmap_effect_primitives.h"
 
 #define WMAP_MAP_CELL_SIZE 48
 #define WMAP_MENU_ITEM_HEIGHT 16
@@ -140,13 +141,6 @@ typedef enum
     WMAP_LAND_DISPLAY_DOMINA_OVERRIDE = 36
 } WmapLandDisplayId;
 
-/** @brief Per-tile display state. */
-typedef struct
-{
-    s16 unknown_00;
-    s16 frame;
-    u8 pad_04[24];
-} WmapTileDisplay;
 
 /**
  * @brief A CVECTOR read back as the packed word a packet's color slot holds.
@@ -182,7 +176,6 @@ extern s32 g_wmap_backdrop_scroll;
 extern s32 g_wmap_small_motor;
 extern s32 g_wmap_large_motor;
 
-extern s32 g_wmap_projection_distance;
 
 extern RECT g_wmap_vram_clear_rect;
 /** @brief World-map loop result before attract movie requests are applied. */
@@ -193,23 +186,12 @@ extern s32 g_wmap_attract_1_requested;
 extern s32 g_wmap_attract_2_requested;
 /** @brief Set to -1 by wmap_init_state; nothing reads it. */
 extern s32 g_wmap_unused_init_word;
-/** @brief Land image loads are refused once this reaches 10; WMAP only ever clears it. */
-extern s32 g_wmap_land_image_load_count;
 /** @brief Word between the vehicle cell coordinates; cleared by wmap_init_state, nothing reads it. */
 extern s32 g_wmap_vehicle_cell_unused;
-extern CVECTOR g_wmap_tint;
-/** @brief Three-bit phase advanced every other spirit display frame; nothing reads it. */
-extern s32 g_wmap_spirit_unused_phase;
-extern s32* g_wmap_effect_params;
-extern s32 g_wmap_tint_blending;
-extern s32 g_wmap_carousel_position;
 /** @brief Cleared by wmap_init_state; nothing reads it. */
 extern DVECTOR g_wmap_unused_position;
 /** @brief Set to -1 by wmap_init_state; nothing reads it. */
 extern s32 g_wmap_unused_selection;
-/** @brief Cleared by wmap_init_state and wmap_clear_view_unused; nothing reads it. */
-extern s32 g_wmap_view_unused_word;
-extern s32 g_wmap_map_shadow_level;
 /** @brief Base RGB tint of the scrolling textured backdrop. */
 extern CVECTOR g_wmap_backdrop_tint;
 /** @brief Nonzero to start the normal world-map song after loading. */
@@ -229,9 +211,6 @@ extern s16* g_wmap_input_scripts[];
 extern POLY_FT4 g_wmap_loading_quad;
 /** @brief Loaded layout selector used to choose the entry image. */
 extern s32 g_wmap_layout_id;
-/** @brief Cleared every frame; nothing reads it. */
-extern s32 g_wmap_unused_frame_word;
-extern u8 g_wmap_load_buffer[];
 /** @brief Sixteen-color CLUT of the image loaded on map entry. */
 extern u16 g_wmap_entry_palette[16];
 /** @brief Raw L1 held state from the first controller. */
@@ -246,15 +225,12 @@ extern CVECTOR g_wmap_entry_palette_channels[16];
 extern u16 g_wmap_pending_palette[16];
 /** @brief Layout selector recorded when world-map entry begins. */
 extern s32 g_wmap_entry_layout_id;
-extern s32 g_wmap_tint_speed;
 /** @brief World-map song loaded from the entry music resource. */
 extern AkaoHeader g_wmap_music_buffer;
 /** @brief Set to -1 when the world map loads; nothing reads it. */
 extern s32 g_wmap_unused_load_word;
 /** @brief Animation data for land display 31, kept in cache slot 16. */
 extern u8 g_wmap_resident_land_animation_data[];
-extern RECT g_wmap_framebuffer_rect;
-extern WmapTileDisplay g_wmap_cell_effects[6][6];
 /** @brief Nonzero to draw Geo (land 5) with display resource 35; no WMAP code sets it. */
 extern s32 g_wmap_geo_appearance_override;
 /** @brief Nonzero to draw Domina (land 1) with display resource 36; no WMAP code sets it. */
@@ -458,10 +434,10 @@ void wmap_init_state(void)
     g_wmap_preview_x = 0;
     g_wmap_status_panel_mode = 0;
     g_wmap_unused_position.vy = 0;
-    g_wmap_tint.r = 0;
+    g_wmap_tint.channels.r = 0;
     g_wmap_unused_position.vx = 0;
-    g_wmap_tint.g = 0;
-    g_wmap_tint.b = 0;
+    g_wmap_tint.channels.g = 0;
+    g_wmap_tint.channels.b = 0;
     SetPolyFT4(g_wmap_preview_saved_quads);
     /* Clear each packed (x, y) pair before copying the packet templates. */
     SET_XY2_PACKED(&g_wmap_preview_saved_quads[0], 0);
@@ -2456,7 +2432,7 @@ void wmap_refresh_cells(void)
             g_wmap_cells[x][y].travel_allowed = wmap_is_other_land_cell(x, y);
             wmap_get_cell_spirit_sprites(x, y, g_wmap_cells[x][y].spirit_sprites);
             g_wmap_cells[x][y].placement_allowed = wmap_can_place_land(x, y, g_wmap_selected_artifact);
-            g_wmap_cell_effects[x][y].frame = 0;
+            g_wmap_cell_effects[x][y].mode = 0;
         }
     }
 }

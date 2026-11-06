@@ -78,4 +78,6 @@ extern s32 g_wmap_carousel_mode;
 /** @brief Preview travel-frame boundaries for the nine map view cells. */
 extern const s32 g_wmap_preview_travel_frame_bounds[WMAP_PREVIEW_FRAME_BOUND_COUNT];
 
+extern s32 g_wmap_carousel_position;
+
 #endif

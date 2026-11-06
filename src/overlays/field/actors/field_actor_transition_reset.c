@@ -17,6 +17,8 @@
 #include "common/saved_game.h"
 #include "main/audio/akao.h"
 #include "main/controller_internal.h"
+#include "main/audio/akao_cmd.h"
+#include "../internal/field_state_ops.h"
 
 /** @brief Idle checks in a row after which the pending reset completes. */
 #define FIELD_RESET_IDLE_CHECKS 15
@@ -43,12 +45,6 @@ typedef struct
 
 extern s32 g_field_restore_group;
 extern s32 g_field_battle_idle_checks;
-extern s32 g_field_money_snapshot;
-extern u32 g_field_experience_snapshot[];
-
-void akao_release_all_sfx(void);
-void field_restart_actor_animation(FieldActor* actor);
-void field_battle_setup(s32 mode);
 s32 field_find_defeating_actor(void);
 s32 field_defeat_animation_playing(void);
 
@@ -107,10 +103,10 @@ void field_set_battle_group(s32 mode, void* actor_data)
     {
         progress = g_saved_game_ctx->characters[index].progress.word;
         g_field_experience_snapshot[index] = progress >> 8;
-        g_field_player_records[index].unk25D = 0;
-        g_field_player_records[index].unk25C = 0;
-        g_field_player_records[index].unk25B = 0;
-        g_field_player_records[index].unk25A = 0;
+        g_field_player_records[index].pickup_counts[FIELD_REWARD_MONEY_SMALL] = 0;
+        g_field_player_records[index].pickup_counts[FIELD_REWARD_MONEY_LARGE] = 0;
+        g_field_player_records[index].pickup_counts[FIELD_REWARD_EXPERIENCE_SMALL] = 0;
+        g_field_player_records[index].pickup_counts[FIELD_REWARD_EXPERIENCE_LARGE] = 0;
     }
 
     saved_game = g_saved_game_ctx;

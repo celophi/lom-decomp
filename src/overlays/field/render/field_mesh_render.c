@@ -14,6 +14,7 @@
 #include <libgpu.h>
 #include <libgte.h>
 
+#include "../internal/field_calls.h"
 #include "../internal/field_actor_palette.h"
 #include "../internal/field_effect_render_state.h"
 #include "../internal/field_effect_transform.h"
@@ -26,7 +27,6 @@
 #include "main/field_runtime.h"
 #include "sdk/gte_dmpsx_compat.h"
 
-extern FieldMotionRecord g_field_effect_records[];
 /* FieldActorSlot view of the slots field_actor_tables.h declares as FieldActorSlot. */
 
 /** @brief Frame period bits of an animation's palette_animation word. */
@@ -364,8 +364,8 @@ s32* field_render_effect_mesh(FieldMotionRecord* effect, s32 mesh_index, s32* pa
 
     screen_origin = (DVECTOR*)getScratchAddr(0);
     ordering_table_base = ordering_table;
-    part = &g_field_actor_slots[effect->actor_index].parts[effect->part_index];
-    actor = &g_field_actor_slots[effect->actor_index];
+    part = &g_field_actor_slots[effect->owner_slot].parts[effect->owner_part];
+    actor = &g_field_actor_slots[effect->owner_slot];
 
     field_build_part_matrix(actor, effect, part, &transform, &base_matrix);
     transform.t[2] = 0;
@@ -562,8 +562,8 @@ s32* field_render_lit_effect_mesh(FieldMotionRecord* effect, s32 mesh_index, s32
     s32 primitive_kind;
 
     write_cursor = buffer;
-    part = &g_field_actor_slots[effect->actor_index].parts[effect->part_index];
-    actor = &g_field_actor_slots[effect->actor_index];
+    part = &g_field_actor_slots[effect->owner_slot].parts[effect->owner_part];
+    actor = &g_field_actor_slots[effect->owner_slot];
 
     field_build_part_matrix(actor, effect, part, &transform, &base_matrix);
     transform.t[2] = 0;
@@ -584,7 +584,7 @@ s32* field_render_lit_effect_mesh(FieldMotionRecord* effect, s32 mesh_index, s32
             {
                 light_effect = &g_field_effect_records[count];
 
-                if (FIELD_PART_LIGHT_SOURCE(part, light_index) == light_effect->part_index && effect->actor_index == light_effect->actor_index)
+                if (FIELD_PART_LIGHT_SOURCE(part, light_index) == light_effect->owner_part && effect->owner_slot == light_effect->owner_slot)
                 {
                     RotMatrix_gte((SVECTOR*)&g_field_effect_records[count].rotation_x, &base_matrix);
                     RotMatrixZ(effect->rotation_z_16 * 16, &base_matrix);
@@ -599,9 +599,9 @@ s32* field_render_lit_effect_mesh(FieldMotionRecord* effect, s32 mesh_index, s32
                     light_matrix.m[light_index][0] = transformed_light.vx;
                     light_matrix.m[light_index][1] = transformed_light.vy;
                     light_matrix.m[light_index][2] = transformed_light.vz;
-                    color_matrix.m[0][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].tint_red * 16;
-                    color_matrix.m[1][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].tint_green * 16;
-                    color_matrix.m[2][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].tint_blue * 16;
+                    color_matrix.m[0][light_index] = g_field_actor_slots[effect->owner_slot].parts[light_effect->owner_part].tint_red * 16;
+                    color_matrix.m[1][light_index] = g_field_actor_slots[effect->owner_slot].parts[light_effect->owner_part].tint_green * 16;
+                    color_matrix.m[2][light_index] = g_field_actor_slots[effect->owner_slot].parts[light_effect->owner_part].tint_blue * 16;
                     break;
                 }
             }

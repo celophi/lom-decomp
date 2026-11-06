@@ -4,6 +4,7 @@
 #include "common.h"
 
 #include "common/saved_game.h"
+#include "main/overlay_memory.h"
 
 /**
  * @file field_overlay_handoff.h
@@ -74,5 +75,37 @@ extern s32 g_field_niki_card_slot;
 
 /** @brief Card path of the trade partner's save. */
 extern u8 g_field_niki_save_path[];
+
+struct FieldRenderHalf;
+
+/** @brief Render buffers FIELD hands to golem_run. */
+#define FIELD_GOLEM_RENDER_BUFFERS ((void*)SECONDARY_OVERLAY_AT(0x10000))
+
+/**
+ * @brief Entry point of the loaded secondary overlay: gname_run, shop_init or gover_show_screen.
+ * @note Declared without parameters: the three overlays take different parameter lists.
+ */
+void secondary_overlay_entry();
+
+/**
+ * @brief niki_init or addhero_init, whichever overlay is loaded (both start at the same address).
+ * @param work Work buffer.
+ * @param mode Mode FIELD opens the overlay in.
+ */
+void niki_addhero_init(void* work, s32 mode);
+
+/**
+ * @brief NIKI's card_menu_update_frame at its load address.
+ * @param render FIELD's render half for the frame.
+ * @return Nonzero once NIKI has finished.
+ */
+s32 niki_update_frame(struct FieldRenderHalf* render);
+
+/**
+ * @brief CARDA's card_menu_update_frame at its load address.
+ * @param render FIELD's render half for the frame.
+ * @return Nonzero once CARDA has finished.
+ */
+s32 carda_update_frame(struct FieldRenderHalf* render);
 
 #endif

@@ -16,6 +16,14 @@
 #include "common/saved_game.h"
 #include "main/cdrom.h"
 #include "sdk/gte_dmpsx_compat.h"
+#include "../internal/wmap_effect_primitives.h"
+#include "../internal/wmap_actor_motion.h"
+
+/** @brief The actor motion pool viewed as this effect's motion records. */
+#define WMAP_EFFECT35_MOTIONS ((WmapEffectMotion*)g_wmap_actor_motions)
+
+/** @brief The effect parameter words viewed as this effect's emitter records. */
+#define WMAP_EFFECT35_EMITTERS ((WmapEffectEmitter*)g_wmap_effect_params)
 
 /** @brief Step counts of the effect's sequences. */
 #define WMAP_EFFECT35_MAIN_STEPS 4
@@ -99,7 +107,7 @@ typedef struct
     void name(void)                                                                                                                                            \
     {                                                                                                                                                          \
         WmapSpriteActor* actor = &g_wmap_sprite_actors[(slot)];                                                                                                \
-        WmapEffectMotion* motion = &g_wmap_actor_motions[(slot)];                                                                                              \
+        WmapEffectMotion* motion = &WMAP_EFFECT35_MOTIONS[(slot)];                                                                                              \
                                                                                                                                                                \
         g_wmap_actor_animations[(slot)].data = g_wmap_animation_bank_0;                                                                                        \
         actor->scale_index = WMAP_SPRITE_SCALE_FULL;                                                                                                           \
@@ -145,7 +153,7 @@ typedef struct
         SVECTOR position;                                                                                                                                      \
         s32 screen_position;                                                                                                                                   \
         WmapSpriteActor* actor = &g_wmap_sprite_actors[(slot_index)];                                                                                          \
-        WmapEffectMotion* motion = &g_wmap_actor_motions[(slot_index)];                                                                                        \
+        WmapEffectMotion* motion = &WMAP_EFFECT35_MOTIONS[(slot_index)];                                                                                        \
         WmapAnimationSlot* slots;                                                                                                                              \
                                                                                                                                                                \
         position.vx = (motion->radius * (ccos(motion->angle) >> WMAP_EFFECT35_ORBITER_TRIG_SHIFT)) >> WMAP_EFFECT35_ORBITER_PRODUCT_SHIFT;                     \
@@ -179,9 +187,6 @@ typedef struct
         }                                                                                                                                                      \
     }
 
-/** @brief Sequence step handler. */
-extern WmapEffectMotion g_wmap_actor_motions[];
-extern s32 g_wmap_load_buffer[];
 extern WmapSequenceStep g_wmap_effect35_drop_a_steps[WMAP_EFFECT35_DROP_STEPS];
 extern WmapSequenceStep g_wmap_effect35_drop_b_steps[WMAP_EFFECT35_DROP_STEPS];
 extern WmapSequenceStep g_wmap_effect35_sprite_a_steps[WMAP_EFFECT35_SPRITE_STEPS];
@@ -200,7 +205,6 @@ extern WmapSequenceStep g_wmap_effect35_emitter_a_steps[WMAP_EFFECT35_EMITTER_ST
 extern WmapSequenceStep g_wmap_effect35_emitter_b_steps[WMAP_EFFECT35_EMITTER_STEPS];
 extern WmapSequenceStep g_wmap_effect35_timeline_steps[WMAP_EFFECT35_TIMELINE_STEPS];
 extern WmapSequenceStep g_wmap_effect35_steps[WMAP_EFFECT35_MAIN_STEPS];
-extern WmapEffectEmitter* g_wmap_effect_params;
 extern u32 g_wmap_effect35_step;
 extern s32 g_wmap_effect35_timer;
 extern u32 g_wmap_effect35_timeline_step;
@@ -396,7 +400,7 @@ static void wmap_effect35_update_emitter(WmapEffectEmitter* emitter)
     {
         uintptr_t motion_base;
 
-        motion_base = (uintptr_t)g_wmap_actor_motions;
+        motion_base = (uintptr_t)WMAP_EFFECT35_MOTIONS;
         walker = (WmapEffectMotion*)((index * sizeof(WmapEffectMotion)) + motion_base);
 
         for (; index < emitter->end; index++)
@@ -460,9 +464,9 @@ static void wmap_effect35_update_emitter(WmapEffectEmitter* emitter)
 
         for (; index < emitter->end; index++)
         {
-            if (g_wmap_actor_motions[index].active == 0)
+            if (WMAP_EFFECT35_MOTIONS[index].active == 0)
             {
-                g_wmap_actor_motions[index].active = 1;
+                WMAP_EFFECT35_MOTIONS[index].active = 1;
                 g_wmap_sprite_actors[index].scale_index = WMAP_SPRITE_SCALE_FULL;
                 g_wmap_sprite_actors[index].sequence = 2;
                 g_wmap_sprite_actors[index].resource_index = 0;
@@ -470,13 +474,13 @@ static void wmap_effect35_update_emitter(WmapEffectEmitter* emitter)
                 g_wmap_sprite_actors[index].shade_step = emitter->shade_step;
                 g_wmap_sprite_actors[index].target_shade = emitter->target_shade;
                 g_wmap_sprite_actors[index].shade = emitter->shade;
-                g_wmap_actor_motions[index].radius = emitter->radius;
-                g_wmap_actor_motions[index].angle = rand() & 0xFFF;
+                WMAP_EFFECT35_MOTIONS[index].radius = emitter->radius;
+                WMAP_EFFECT35_MOTIONS[index].angle = rand() & 0xFFF;
                 speed = rand() * emitter->speed_range;
                 speed_min = emitter->speed_min;
-                g_wmap_actor_motions[index].height = 0;
-                g_wmap_actor_motions[index].speed = (speed >> 0xF) + speed_min;
-                g_wmap_actor_motions[index].delay = emitter->delay;
+                WMAP_EFFECT35_MOTIONS[index].height = 0;
+                WMAP_EFFECT35_MOTIONS[index].speed = (speed >> 0xF) + speed_min;
+                WMAP_EFFECT35_MOTIONS[index].delay = emitter->delay;
                 return;
             }
         }
@@ -638,13 +642,13 @@ void wmap_effect35_emitter_a_start(void)
     for (i = WMAP_EFFECT35_EMITTER_A_FIRST; i < WMAP_EFFECT35_EMITTER_A_END; i++)
     {
         g_wmap_actor_animations[i].data = g_wmap_animation_bank_0;
-        g_wmap_actor_motions[i].active = 0;
+        WMAP_EFFECT35_MOTIONS[i].active = 0;
     }
 
-    /* A plain word store: it may alias g_wmap_effect_params, so the pointer is reloaded below. */
-    *(s32*)g_wmap_effect_params = WMAP_EFFECT35_EMITTER_A_FIRST;
+    /* A plain word store: it may alias the emitter records, so the pointer is reloaded below. */
+    g_wmap_effect_params[0] = WMAP_EFFECT35_EMITTER_A_FIRST;
     g_wmap_effect35_emitter_a_timer = 144;
-    emitter = g_wmap_effect_params;
+    emitter = WMAP_EFFECT35_EMITTERS;
     emitter->shade = 1;
     emitter->end = WMAP_EFFECT35_EMITTER_A_END;
     emitter->shade_step = 0x10;
@@ -668,7 +672,7 @@ void wmap_effect35_emitter_b_start(void)
     for (i = WMAP_EFFECT35_EMITTER_B_FIRST; i < WMAP_EFFECT35_EMITTER_B_END; i++)
     {
         g_wmap_actor_animations[i].data = &g_wmap_animation_bank_0[WMAP_ANIMATION_BANK_SIZE];
-        g_wmap_actor_motions[i].active = 0;
+        WMAP_EFFECT35_MOTIONS[i].active = 0;
     }
 
     for (i = WMAP_EFFECT35_EMITTER_B_FIRST; i < WMAP_EFFECT35_EMITTER_B_PRESPAWN_END; i++)
@@ -680,24 +684,24 @@ void wmap_effect35_emitter_b_start(void)
         g_wmap_sprite_actors[i].target_shade = 0x81;
         g_wmap_sprite_actors[i].resource_index = 0;
         g_wmap_sprite_actors[i].shade = 1;
-        g_wmap_actor_motions[i].radius = 0x2710;
-        g_wmap_actor_motions[i].angle = rand() & 0xFFF;
-        g_wmap_actor_motions[i].speed = ((rand() * 0x32) >> 0xF) + 0x32;
-        g_wmap_actor_motions[i].height = 0;
-        g_wmap_actor_motions[i].delay = 0x26;
+        WMAP_EFFECT35_MOTIONS[i].radius = 0x2710;
+        WMAP_EFFECT35_MOTIONS[i].angle = rand() & 0xFFF;
+        WMAP_EFFECT35_MOTIONS[i].speed = ((rand() * 0x32) >> 0xF) + 0x32;
+        WMAP_EFFECT35_MOTIONS[i].height = 0;
+        WMAP_EFFECT35_MOTIONS[i].delay = 0x26;
     }
 
     g_wmap_effect35_emitter_b_timer = 240;
-    g_wmap_effect_params[1].first = WMAP_EFFECT35_EMITTER_B_FIRST;
-    g_wmap_effect_params[1].end = WMAP_EFFECT35_EMITTER_B_END;
-    g_wmap_effect_params[1].shade_step = 0x10;
-    g_wmap_effect_params[1].target_shade = 0x81;
-    g_wmap_effect_params[1].speed_min = 0x32;
-    g_wmap_effect_params[1].speed_range = 0x32;
-    g_wmap_effect_params[1].shade = 1;
-    g_wmap_effect_params[1].radius = 0x2710;
-    g_wmap_effect_params[1].delay = 2;
-    g_wmap_effect_params[1].spawning = 1;
+    WMAP_EFFECT35_EMITTERS[1].first = WMAP_EFFECT35_EMITTER_B_FIRST;
+    WMAP_EFFECT35_EMITTERS[1].end = WMAP_EFFECT35_EMITTER_B_END;
+    WMAP_EFFECT35_EMITTERS[1].shade_step = 0x10;
+    WMAP_EFFECT35_EMITTERS[1].target_shade = 0x81;
+    WMAP_EFFECT35_EMITTERS[1].speed_min = 0x32;
+    WMAP_EFFECT35_EMITTERS[1].speed_range = 0x32;
+    WMAP_EFFECT35_EMITTERS[1].shade = 1;
+    WMAP_EFFECT35_EMITTERS[1].radius = 0x2710;
+    WMAP_EFFECT35_EMITTERS[1].delay = 2;
+    WMAP_EFFECT35_EMITTERS[1].spawning = 1;
     g_wmap_effect35_emitter_b_step++;
     wmap_effect35_emitter_b_update();
 }
@@ -1447,14 +1451,14 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_1, g_wmap_effect35_orbiter_1_s
      * @brief Particle emitter A: update and draw until the step timer runs out.
      */
     WMAP_STEP_UPDATE_AND_WAIT(wmap_effect35_emitter_a_update, g_wmap_effect35_emitter_a_step, g_wmap_effect35_emitter_a_timer,
-                              wmap_effect35_update_emitter(g_wmap_effect_params))
+                              wmap_effect35_update_emitter(WMAP_EFFECT35_EMITTERS))
 
     /**
      * @brief Particle emitter A: stop spawning new particles.
      */
     void wmap_effect35_emitter_a_stop(void)
 {
-    g_wmap_effect_params->spawning = 0;
+    WMAP_EFFECT35_EMITTERS->spawning = 0;
     g_wmap_effect35_emitter_a_timer = 16;
     g_wmap_effect35_emitter_a_step++;
     wmap_effect35_emitter_a_update_stopping();
@@ -1464,7 +1468,7 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_1, g_wmap_effect35_orbiter_1_s
  * @brief Particle emitter A: update the remaining particles until the timer runs out.
  */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_effect35_emitter_a_update_stopping, g_wmap_effect35_emitter_a_step, g_wmap_effect35_emitter_a_timer,
-                          wmap_effect35_update_emitter(g_wmap_effect_params))
+                          wmap_effect35_update_emitter(WMAP_EFFECT35_EMITTERS))
 
 /**
  * @brief Particle emitter A: last step: finish the sequence.
@@ -1488,14 +1492,14 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_emitter_b, g_wmap_effect35_emitter_b_s
      * @brief Particle emitter B: update and draw until the step timer runs out.
      */
     WMAP_STEP_UPDATE_AND_WAIT(wmap_effect35_emitter_b_update, g_wmap_effect35_emitter_b_step, g_wmap_effect35_emitter_b_timer,
-                              wmap_effect35_update_emitter(&g_wmap_effect_params[1]))
+                              wmap_effect35_update_emitter(&WMAP_EFFECT35_EMITTERS[1]))
 
     /**
      * @brief Particle emitter B: stop spawning new particles.
      */
     void wmap_effect35_emitter_b_stop(void)
 {
-    g_wmap_effect_params[1].spawning = 0;
+    WMAP_EFFECT35_EMITTERS[1].spawning = 0;
     g_wmap_effect35_emitter_b_timer = 32;
     g_wmap_effect35_emitter_b_step++;
     wmap_effect35_emitter_b_update_stopping();
@@ -1505,7 +1509,7 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_emitter_b, g_wmap_effect35_emitter_b_s
  * @brief Particle emitter B: update the remaining particles until the timer runs out.
  */
 WMAP_STEP_UPDATE_AND_WAIT(wmap_effect35_emitter_b_update_stopping, g_wmap_effect35_emitter_b_step, g_wmap_effect35_emitter_b_timer,
-                          wmap_effect35_update_emitter(&g_wmap_effect_params[1]))
+                          wmap_effect35_update_emitter(&WMAP_EFFECT35_EMITTERS[1]))
 
 /**
  * @brief Particle emitter B: last step: finish the sequence.

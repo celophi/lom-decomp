@@ -27,13 +27,10 @@
 extern s32 g_wmap_sequence_active[];
 extern WmapSequenceCallback g_wmap_sequences[];
 extern u32 g_wmap_land_entry_step;
-extern u32 g_wmap_land_focus_step;
-extern s32 g_wmap_land_focus_timer;
 extern WmapSequenceStep g_wmap_land_focus_steps[WMAP_LAND_FOCUS_STEPS];
 extern s32 g_wmap_callback_active[];
 extern WmapSequenceCallback g_wmap_callbacks[];
 
-extern s32* g_wmap_effect_params;
 extern s32 g_wmap_land_entry_timer;
 extern WmapSequenceStep g_wmap_land_entry_steps[WMAP_LAND_ENTRY_STEPS];
 extern u32 g_wmap_land_return_step;

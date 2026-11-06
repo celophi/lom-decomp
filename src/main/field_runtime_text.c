@@ -8,8 +8,6 @@
 #define HEX_DIGIT_TABLE_SIZE 17
 #define FIELD_GLYPH_ADVANCE 8
 
-extern u8 g_hex_digit_table[HEX_DIGIT_TABLE_SIZE];
-
 /**
  * @brief Draw a string at a fixed screen position using the field text engine.
  * @param str      Null-terminated ASCII string to draw.

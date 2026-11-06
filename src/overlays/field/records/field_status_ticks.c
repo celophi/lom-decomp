@@ -54,10 +54,10 @@
 #define STATUS_FLAG_NO_REGEN 0x1
 #define STATUS_FLAG_FAST_REGEN 0x8
 
-/** @brief FieldStatusState::effect_flags bits that drain HP: for party members, and for monsters. */
+/** @brief FieldObjectState::effect_flags bits that drain HP: for party members, and for monsters. */
 #define STATUS_EFFECTS_DRAIN_PARTY 0x190
 #define STATUS_EFFECTS_DRAIN_MONSTER 0x191
-/** @brief FieldStatusState::effect_flags bits that stop regeneration. */
+/** @brief FieldObjectState::effect_flags bits that stop regeneration. */
 #define STATUS_EFFECTS_NO_REGEN 0x391
 
 /** @brief HP drained per tick, as a right shift of the maximum HP (bosses drain less). */
@@ -85,8 +85,6 @@ static void field_tick_status_timers(FieldStatusRecord* record);
 static void field_drain_status_hp(FieldStatusRecord* record);
 static void field_recover_status_stats(FieldStatusRecord* record);
 static void field_regenerate_status_hp(FieldStatusRecord* record);
-
-s32 field_get_actor_animation(s32 key);
 
 /**
  * @brief Count one more standing record on the side of a revived actor.
@@ -158,7 +156,7 @@ void field_tick_battle_status(void)
             {
                 if (field_get_script_var(0, FIELD_VAR_DEBUG_FULL_INTENSITY) != 0 && g_field_battle->records[i].meta.bytes.id < FULL_INTENSITY_RECORD_COUNT)
                 {
-                    g_field_battle->records[i].state->status_intensity = STATUS_INTENSITY_FULL;
+                    g_field_battle->records[i].state->technique_gauge = STATUS_INTENSITY_FULL;
                 }
 
                 if (i < FIELD_PARTY_SIZE)
@@ -283,7 +281,7 @@ static void field_apply_status_slots(FieldStatusRecord* record)
     {
         if (record->meta.bytes.id == 0)
         {
-            record->state->status_intensity = STATUS_INTENSITY_FULL;
+            record->state->technique_gauge = STATUS_INTENSITY_FULL;
         }
     }
 
@@ -325,15 +323,15 @@ static void field_tick_status_timers(FieldStatusRecord* record)
  * @param state Status state to update.
  * @param hp HP after the drain; values below 1 store 1.
  */
-static inline void field_store_drained_hp(FieldStatusState* state, s32 hp)
+static inline void field_store_drained_hp(FieldObjectState* state, s32 hp)
 {
     if (hp > 0)
     {
-        state->current = hp;
+        state->current_hp.word = hp;
         return;
     }
 
-    state->current = 1;
+    state->current_hp.word = 1;
 }
 
 /**
@@ -346,20 +344,20 @@ static inline void field_store_drained_hp(FieldStatusState* state, s32 hp)
  */
 static void field_drain_status_hp(FieldStatusRecord* record)
 {
-    FieldStatusState* state;
+    FieldObjectState* state;
     s32 hp;
     u32 drain;
     s32 cost;
 
     state = record->state;
-    hp = state->current;
+    hp = state->current_hp.word;
 
     if (record->meta.bytes.id < FIELD_PARTY_SIZE)
     {
-        if (state->effect_flags & STATUS_EFFECTS_DRAIN_PARTY)
+        if (state->flags & STATUS_EFFECTS_DRAIN_PARTY)
         {
             cost = 1;
-            drain = state->maximum >> DRAIN_SHIFT;
+            drain = state->maximum_hp >> DRAIN_SHIFT;
 
             if (drain != 0)
             {
@@ -370,12 +368,12 @@ static void field_drain_status_hp(FieldStatusRecord* record)
             field_store_drained_hp(state, hp);
         }
     }
-    else if (state->effect_flags & STATUS_EFFECTS_DRAIN_MONSTER)
+    else if (state->flags & STATUS_EFFECTS_DRAIN_MONSTER)
     {
         if (record->template->flags & FIELD_TEMPLATE_BOSS)
         {
             cost = 1;
-            drain = state->maximum >> DRAIN_SHIFT_BOSS;
+            drain = state->maximum_hp >> DRAIN_SHIFT_BOSS;
 
             if (drain != 0)
             {
@@ -385,7 +383,7 @@ static void field_drain_status_hp(FieldStatusRecord* record)
         else
         {
             cost = 1;
-            drain = state->maximum >> DRAIN_SHIFT;
+            drain = state->maximum_hp >> DRAIN_SHIFT;
 
             if (drain != 0)
             {
@@ -447,7 +445,7 @@ static void field_regenerate_status_hp(FieldStatusRecord* record)
         return;
     }
 
-    if (record->state->effect_flags & STATUS_EFFECTS_NO_REGEN)
+    if (record->state->flags & STATUS_EFFECTS_NO_REGEN)
     {
         return;
     }

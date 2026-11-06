@@ -63,4 +63,12 @@ void field_clear_node_accumulators(s32 update_mode, s32 force_unscaled);
 #endif
 void field_restore_entry_music(void);
 
+/** @brief Encoded glyphs of the hexadecimal digits 0-F, plus a terminator. */
+extern u8 g_hex_digit_table[];
+
+extern FieldRenderHalf* g_field_current_render_half;
+
+/** @brief Next free byte of the current frame's primitive buffer. */
+extern void* g_field_primitive_cursor;
+
 #endif

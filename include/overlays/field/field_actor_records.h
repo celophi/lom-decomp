@@ -252,12 +252,22 @@ typedef enum GroundEffectKind
  */
 typedef struct FieldObjectState
 {
-    s32 maximum_hp;
+    u32 maximum_hp;
     FieldValueWord current_hp;
     /** @brief Low 24 bits track the animated HP gauge; the high byte carries HUD flags. */
     FieldValueWord hp_display;
     u32 flags;
-    s32 group_flags;
+    /** @brief Group flags word; battle code reads its second byte as the monster template index. */
+    union
+    {
+        s32 flags;
+        struct
+        {
+            u8 low;
+            /** @brief Template id passed to field_find_actor_template. */
+            u8 template_index;
+        } bytes;
+    } group;
     s32 key;
     /** @brief Event bits the object's scripts react to (FieldLayoutRecord::enabled_events); the low two enable touch and action-button interactions. */
     u16 enabled_events;
@@ -281,15 +291,31 @@ typedef struct FieldObjectState
             u8 unk4E;
             u8 unk4F;
         } bytes;
+        struct
+        {
+            u32 show_technique_gauge : 1;
+            /** @brief Level of the object's status record. */
+            u32 level : 7;
+        } bits;
     } hud;
     s32 target_x;
     s32 target_y;
     s32 target_z;
     s32 effect_angle;
     /** @brief Drops left per reward kind; each drop effect takes one, FIELD_IDLE_ANIMATION_REWARD plays only while any is left. */
-    u8 reward_counters[FIELD_REWARD_KIND_COUNT];
+    union
+    {
+        /** @brief Signal of the last stat change (field_scale_status_stat). */
+        u8 stat_change;
+        u8 reward_counters[FIELD_REWARD_KIND_COUNT];
+    } signal;
     /** @brief Display name of the object, NULL when it has no label. */
-    u8* name;
+    union
+    {
+        u8* name;
+        /** @brief Monster template; it starts with the monster's name, so name points at it too. */
+        struct FieldActorTemplate* template;
+    } label;
     /** @brief Stat-derived footprint strength, saturated to 255 during setup. */
     u16 effect_footprint_strength;
     u8 unk6A[2];
@@ -588,6 +614,9 @@ typedef struct FieldObjectPart
     /** @brief Part whose live effect a FIELD_POSITION_LINKED_EFFECT effect follows. */
     s16 linked_effect_part;
 } FieldObjectPart;
+
+/** @brief Part definitions of every loaded animation actor. */
+extern FieldObjectPart g_field_object_parts[];
 
 /** @brief FieldObjectPart::spawn_flags bit 23: the object moves without map collision (script opcodes 0xA5/0xA6 toggle it). */
 #define FIELD_PART_IGNORE_MAP_COLLISION_BIT 23

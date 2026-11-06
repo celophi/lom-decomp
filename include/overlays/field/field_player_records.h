@@ -3,6 +3,8 @@
 
 #include "common.h"
 
+#include "overlays/field/field_actor_records.h"
+
 /**
  * @file field_player_records.h
  * @brief Party member records shared by actor commands, resources, the HUD and MENU.
@@ -58,10 +60,8 @@ typedef struct FieldPlayerRecord
     u8 combo_timer;
     u8 hide_shield_sprite;
     u8 hit_state;
-    u8 unk25A;
-    u8 unk25B;
-    u8 unk25C;
-    u8 unk25D;
+    /** @brief Pickups collected this battle, indexed by reward kind (FIELD_REWARD_*); the results screens show them. */
+    u8 pickup_counts[FIELD_REWARD_KIND_COUNT];
     /** @brief Frames spent knocked down; at revive_delay the member revives (the HUD shows it as the recovery gauge). */
     s16 revive_time;
     s16 revive_delay;

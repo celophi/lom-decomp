@@ -70,12 +70,10 @@
         wmap_draw_actor_sprite(&g_wmap_sprite_actors[(first) + 1], pos, 0x13, 1, 0);                                                                           \
     }
 
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_07_sequence_1_timer;
 extern s32 g_wmap_land_effect_07_sequence_2_timer;
 extern s32 g_wmap_land_effect_07_sequence_3_timer;
 extern s32 g_wmap_land_effect_07_sequence_10_timer;
-extern s32 g_wmap_particle_shade;
 extern s32 g_wmap_land_effect_07_sequence_11_timer;
 extern s32 g_wmap_land_effect_07_timer;
 extern WmapSequenceStep g_wmap_land_effect_07_steps[];
@@ -112,8 +110,6 @@ extern u32 g_wmap_land_effect_07_sequence_6_step;
 extern u32 g_wmap_land_effect_07_sequence_7_step;
 extern u32 g_wmap_land_effect_07_sequence_8_step;
 extern u32 g_wmap_land_effect_07_sequence_9_step;
-
-extern s32* g_wmap_effect_params;
 
 /** @brief Draw two oscillating effect layers and update their intensity. */
 void wmap_land_effect_07_sequence_1_step_02(void)

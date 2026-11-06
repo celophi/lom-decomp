@@ -13,7 +13,6 @@
 #include "../internal/wmap_view_effects.h"
 
 extern s32 g_wmap_land_effect_03_sequence_3_timer;
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_03_sequence_4_timer;
 extern s32 g_wmap_land_effect_03_sequence_5_timer;
 extern s32 g_wmap_land_effect_03_sequence_6_timer;
@@ -44,8 +43,6 @@ extern u32 g_wmap_land_effect_03_step;
 extern u32 g_wmap_land_effect_03_timeline_step;
 extern u32 g_wmap_land_effect_03_sequence_1_step;
 extern u32 g_wmap_land_effect_03_sequence_2_step;
-
-extern s32* g_wmap_effect_params;
 
 /** @brief Draw the rotating effect, increase its scale, and update the sequence timer. */
 void wmap_land_effect_03_sequence_3_step_02(void)

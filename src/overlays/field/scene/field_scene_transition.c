@@ -194,13 +194,9 @@ typedef struct
     s32 count;
     FieldLayoutRecord records[1];
 } FieldSceneLayout;
-
-void* field_header_record_at(s32 index);
-void field_restart_actor_animation(FieldActor* actor);
+/** @brief field_modal_runtime.c; called here without a prototype, so the arguments are passed unconverted. */
 void field_store_entry_settings();
 
-extern FieldRenderHalf* g_field_render_context;
-extern s32 g_field_direction_animation_modes[];
 /** @brief Built-in geometry for the closed and open chest sprites. */
 extern u8 g_field_chest_geometry[0x3C];
 /** @brief CLUT row of the hero per party palette index. */
@@ -210,14 +206,10 @@ extern u16 g_field_transition_tiles[FIELD_TRANSITION_TILE_PIXELS];
 extern u16 g_field_transition_tiles_alt[FIELD_TRANSITION_TILE_PIXELS];
 /** @brief Non-zero uploads g_field_transition_tiles_alt next; flips on every upload. */
 extern s32 g_field_transition_tile_bank;
-/** @brief Number of loaded actors; the next scene actor takes this object index. */
-extern s32 g_field_loaded_actor_count;
 /**
  * @brief Set while the last scene actor loaded has more than one image.
  * @note TODO: field_dialog_screens also reads it to raise ability growth from 1 to 4.
  */
-extern s32 g_field_last_actor_multi_image;
-
 extern s32 g_field_pending_spawn_id;
 extern s32 g_field_pending_music_id;
 extern s32 g_field_pending_secondary_music_id;
@@ -225,19 +217,11 @@ extern s32 g_field_pending_scene_id;
 extern s32 g_field_pending_object_id;
 extern s32 g_field_pending_sound_bank_id;
 extern s32 g_field_scene_data_size;
-extern u16* g_field_actor_scripts;
-extern u32* g_field_scene_record_table;
-extern s32 g_field_hide_actor_panels;
 /* TODO: Script command 0x44 selects alternate party control and triple HP. */
 extern u8 g_field_scene_data_buffer[];
-extern s32 g_field_preserve_entry_music;
 extern s32 g_field_previous_song_volume;
 extern s32 g_field_party_palette_index;
 extern u32 g_field_scene_portrait_count;
-extern u8* g_field_scene_portraits;
-extern u8* g_field_scene_strings;
-extern s32 g_field_dialog_item_count;
-
 static void field_setup_chest_resource(void);
 void field_upload_actor_image(FieldTimData* image, s32 image_slot, s32 actor_index, s32 upload_palette);
 void field_copy_scene_geometry(s32* src, s32* end);
@@ -954,7 +938,7 @@ void field_load_scene_actors(FieldSceneLayout* layout)
             state->current_hp.word = state->maximum_hp & FIELD_HP_VALUE_MASK;
             state->key = index + FIELD_PARTY_COUNT;
             state->enabled_events = layout_record->enabled_events;
-            state->group_flags = layout_record->control.flags;
+            state->group.flags = layout_record->control.flags;
 
             for (i = 0; i < FIELD_ACTION_SCRIPT_COUNT; i++)
             {

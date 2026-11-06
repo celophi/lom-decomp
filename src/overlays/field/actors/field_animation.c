@@ -15,8 +15,6 @@
 #include "overlays/movie/movie.h"
 #include "overlays/movie/movie_state.h"
 
-void field_begin_scene_fade_in(void);
-
 /** VRAM halfwords per tile column of an animation rectangle (16 pixels at 4 bpp). */
 #define FIELD_ANIM_TILE_VRAM_WIDTH 4
 /** Bytes of image data per tile of an animation rectangle. */

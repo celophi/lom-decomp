@@ -27,9 +27,6 @@ enum
 /** @brief Bit width of each variable kind. */
 extern u8 g_field_script_var_widths[8];
 
-void field_script_op_00(void);
-FieldActorRecord* field_find_actor_record_or_default(s32 id);
-
 static u32* field_resolve_script_var(s32 owner_id, FieldScriptVariableRef var_ref, s32* word_index, s32* bit_shift);
 static void field_write_script_var_keep_top_bit(s32 owner_id, FieldScriptVariableRef var_ref, s32 value);
 

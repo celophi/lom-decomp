@@ -55,7 +55,6 @@ typedef union
     } point;
 } WmapTravelScreen;
 
-extern const WmapTravelScreen g_wmap_spirit_view_cell_positions[];
 extern u8 g_wmap_travel_animation_buffer[];
 extern u8 g_wmap_travel_second_animation_buffer[];
 extern u8 g_wmap_travel_third_animation_buffer[];

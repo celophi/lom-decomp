@@ -102,14 +102,8 @@ typedef struct FieldPackedTile
 
 extern u16 g_field_item_names[];
 extern FieldItemListEntry g_field_item_list[];
-extern s32 g_field_item_list_count;
-extern s32 g_field_item_list_cursor;
-extern s32 g_field_primary_held_buttons, g_field_primary_repeat_delay;
-extern s32 g_field_secondary_held_buttons, g_field_secondary_repeat_delay;
-void field_restart_actor_animation(FieldActor* actor);
-
-s32 field_read_controller_buttons(s32 controller);
-
+extern s32 g_field_primary_held_buttons;
+extern s32 g_field_secondary_held_buttons;
 static void field_play_action_refused_sound(void);
 static u8* field_draw_item_drop_list(u_long* ot, u8* cursor, s32 scroll_x, s32 scroll_y, s32 unused, void* element);
 static s32 field_update_item_drop_menu(FieldMenuElement* window);

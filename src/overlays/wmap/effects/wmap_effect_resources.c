@@ -11,7 +11,6 @@
  * allocations. Embedded bundle slots are shared or asset-specific views of it.
  */
 
-extern u8 g_wmap_load_buffer[];
 /** @brief Effect workspace view at byte offset 0x89C. */
 extern u8 g_wmap_mnt_bundle_model_pack_1[];
 /** @brief Effect workspace view at byte offset 0xF3C. */
@@ -57,8 +56,6 @@ extern u8 g_wmap_mgc_bundle_model_pack_4[];
 extern u8 g_wmap_mgc_bundle_model_pack_5[];
 /** @brief Effect workspace view at byte offset 0x6A68. */
 extern u8 g_wmap_mgc_bundle_empty_slot[];
-/** @brief Effect workspace view at byte offset 0x8000. */
-extern u8 g_wmap_effect_model_buffer_8000[];
 /** @brief Effect workspace view at byte offset 0xB04C. */
 extern u8 g_wmap_man_bundle_model_pack_1[];
 /** @brief Effect workspace view at byte offset 0xC2A8. */
@@ -85,8 +82,6 @@ extern u8 g_wmap_man_bundle_model_pack_9[];
 extern u8 g_wmap_jul_bundle_empty_slot[];
 /** @brief Effect workspace view at byte offset 0x1DF48. */
 extern u8 g_wmap_man_bundle_empty_slot[];
-extern u8* g_wmap_effect_model_pack_8;
-extern u8* g_wmap_effect_model_pack_9;
 /** @brief Pointer to the zero-filled trailing slot in MANBTP.DAT; no known reader. */
 extern u8* g_wmap_effect_empty_model_slot;
 extern void (*g_wmap_effect_resource_loaders[WMAP_EFFECT_RESOURCE_SET_COUNT])(void);
@@ -102,16 +97,20 @@ static void wmap_queue_effect_texture_2(s32 resource_index);
 void wmap_queue_effect_resources(s32 effect_index)
 {
     cdrom_wait_queue_empty();
+
     if (effect_index == g_wmap_last_effect_resource_set)
     {
         return;
     }
+
     g_wmap_last_effect_resource_set = effect_index;
+
     if (effect_index >= WMAP_EFFECT_RESOURCE_SET_COUNT || effect_index < 0)
     {
         effect_index = WMAP_EFFECT_SHARED_RESOURCE_SET;
         g_wmap_exit_frame = 1;
     }
+
     g_wmap_effect_resource_loaders[effect_index]();
 }
 

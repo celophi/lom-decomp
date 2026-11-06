@@ -25,8 +25,6 @@ extern u8 g_field_weapon_chain_limits[];
 
 static void field_release_links_to_actor(FieldActor* actor);
 static void field_end_actor_chain(FieldActor* actor);
-void field_restart_actor_animation(FieldActor* actor);
-
 /**
  * @brief Put an actor into its hit reaction and reset its motion and animation flags.
  * @param actor Actor receiving the hit.
@@ -358,7 +356,7 @@ s32 field_test_actor_depth_overlap(s32 first_key, s32 second_key)
         return -1;
     }
 
-    if (second_object >= FIELD_PARTY_COUNT && (second_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)
+    if (second_object >= FIELD_PARTY_COUNT && (second_state->group.flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)
     {
         return 0;
     }

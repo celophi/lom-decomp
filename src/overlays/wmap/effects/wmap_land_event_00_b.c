@@ -31,7 +31,6 @@ extern WmapSequenceStep g_wmap_land_event_00_b_sequence_9_steps[];
 extern WmapSequenceStep g_wmap_land_event_00_b_sequence_10_steps[];
 extern WmapSequenceStep g_wmap_land_event_00_b_sequence_11_steps[];
 extern WmapSequenceStep g_wmap_land_event_00_b_sequence_12_steps[];
-extern s32 g_wmap_load_buffer[];
 extern s32 g_wmap_land_event_00_b_sequence_1_timer;
 extern u32 g_wmap_land_event_00_b_timeline_step;
 extern s32 g_wmap_land_event_00_b_timeline_timer;
@@ -57,8 +56,6 @@ extern u32 g_wmap_land_event_00_b_sequence_11_step;
 extern s32 g_wmap_land_event_00_b_sequence_11_timer;
 extern u32 g_wmap_land_event_00_b_sequence_12_step;
 extern s32 g_wmap_land_event_00_b_sequence_12_timer;
-
-extern s32* g_wmap_effect_params;
 
 /** @brief Queue world-map effect resources and initialize their map position. */
 void wmap_land_event_00_b_sequence_1_step_01(void)

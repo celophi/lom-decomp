@@ -13,8 +13,6 @@
 
 s32 field_compute_monster_level(FieldActorTemplate* template);
 /* Defined without a result; the value is the one it leaves in the return register. */
-FieldStatusState* field_find_object_state(s32 key);
-
 /**
  * @brief Build the battle status records of the monsters in a trigger group.
  * @param group Trigger group whose actors join the battle.
@@ -24,7 +22,7 @@ s32 field_build_group_monster_records(s32 group)
 {
     s32 i;
     s32 count;
-    FieldStatusState* state;
+    FieldObjectState* state;
 
     count = 0;
 
@@ -55,7 +53,7 @@ s32 field_build_group_monster_records(s32 group)
  * @param record Status record to initialize.
  * @param state Object state of the monster.
  */
-void field_init_monster_record(s32 actor_id, FieldStatusRecord* record, FieldStatusState* state)
+void field_init_monster_record(s32 actor_id, FieldStatusRecord* record, FieldObjectState* state)
 {
     s32 flags;
     s32 level;
@@ -76,7 +74,7 @@ void field_init_monster_record(s32 actor_id, FieldStatusRecord* record, FieldSta
     flags |= FIELD_STATUS_KIND_MONSTER << FIELD_STATUS_META_KIND_SHIFT;
     record->meta.packed = flags;
     record->meta.bytes.guard_flags = 0;
-    template = field_find_actor_template(ctx->templates, state->template_index);
+    template = field_find_actor_template(ctx->templates, state->group.bytes.template_index);
     record->template = template;
     record->race = template->race;
     record->counter = template->counter_reset;
@@ -120,52 +118,52 @@ void field_init_monster_record(s32 actor_id, FieldStatusRecord* record, FieldSta
     record->immunity_flags = template->immunity_flags;
     record->weak_elements = template->weak_elements;
     record->resist_elements = template->resist_elements;
-    state->level.word = (state->level.word & ~0xFE) | ((level & 0x7F) * 2);
+    state->hud.word = (state->hud.word & ~0xFE) | ((level & 0x7F) * 2);
 
     if (template->flags & FIELD_TEMPLATE_UNLINKED)
     {
-        state->template = NULL;
+        state->label.template = NULL;
     }
     else
     {
-        state->template = template;
+        state->label.template = template;
     }
 
     if (template->hp_growth != 0xFFFF)
     {
-        state->maximum = template->hp_base + (template->hp_growth * level);
+        state->maximum_hp = template->hp_base + (template->hp_growth * level);
     }
     else
     {
         work = 1;
-        state->maximum = template->hp_base;
+        state->maximum_hp = template->hp_base;
 
         for (; (u32)level >= work; work++)
         {
-            state->maximum =
-                field_add_stat_increase(state->maximum, (u32)((template->stats[4].base * 4) + (template->stats[4].growth * work)) >> 2, FIELD_INCREASE_DAMPED);
+            state->maximum_hp = field_add_stat_increase(state->maximum_hp, (u32)((template->stats[4].base * 4) + (template->stats[4].growth * work)) >> 2,
+                                                        FIELD_INCREASE_DAMPED);
         }
     }
 
     switch (field_get_script_var(0, FIELD_VAR_DIFFICULTY))
     {
         case FIELD_DIFFICULTY_HARD:
-            state->maximum *= 2;
+            state->maximum_hp *= 2;
             break;
         case FIELD_DIFFICULTY_HARDEST:
-            state->maximum *= 3;
+            state->maximum_hp *= 3;
             break;
     }
 
-    if ((field_get_script_var(0, FIELD_VAR_DEBUG_ONE_HP_MONSTERS) != 0) || (state->maximum == 0))
+    if ((field_get_script_var(0, FIELD_VAR_DEBUG_ONE_HP_MONSTERS) != 0) || (state->maximum_hp == 0))
     {
-        state->maximum = 1;
+        state->maximum_hp = 1;
     }
 
-    state->current = state->maximum;
-    state->gauge.bits.value = state->maximum;
-    state->gauge.bits.hud_bits = 0;
-    state->gauge.bits.hud_flag = template->flags >> 7;
+    state->current_hp.word = state->maximum_hp;
+    state->hp_display.bits.value = state->maximum_hp;
+    state->hp_display.bits.panel_timer = 0;
+    state->hp_display.bits.boss = template->flags >> 7;
     work = record->base_stats[3] * 2;
 
     if (work < 0x100U)

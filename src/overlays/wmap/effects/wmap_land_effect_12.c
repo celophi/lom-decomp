@@ -13,7 +13,6 @@
 #include "../internal/wmap_view_effects.h"
 
 extern s32 g_wmap_land_effect_12_sequence_3_timer;
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_12_sequence_4_timer;
 extern s32 g_wmap_land_effect_12_sequence_5_timer;
 extern s32 g_wmap_land_effect_12_sequence_6_timer;
@@ -40,8 +39,6 @@ extern u32 g_wmap_land_effect_12_step;
 extern u32 g_wmap_land_effect_12_timeline_step;
 extern u32 g_wmap_land_effect_12_sequence_1_step;
 extern u32 g_wmap_land_effect_12_sequence_2_step;
-
-extern s32* g_wmap_effect_params;
 
 /**
  * @brief Draw and brighten two rotating model layers, then advance their countdown.

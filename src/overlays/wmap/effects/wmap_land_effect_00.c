@@ -15,7 +15,6 @@
 
 extern s32 g_wmap_land_effect_00_sequence_4_timer;
 extern s32 g_wmap_land_effect_00_sequence_5_timer;
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_00_sequence_6_timer;
 extern s32 g_wmap_land_effect_00_sequence_7_timer;
 extern s32 g_wmap_land_effect_00_sequence_8_timer;
@@ -49,8 +48,6 @@ extern u32 g_wmap_land_effect_00_sequence_1_step;
 extern u32 g_wmap_land_effect_00_sequence_2_step;
 extern u32 g_wmap_land_effect_00_sequence_3_step;
 extern u32 g_wmap_land_effect_00_sequence_9_step;
-
-extern s32* g_wmap_effect_params;
 
 /** @brief Move the model closer and fade it until the timer expires. */
 WMAP_STEP_DROP_UPDATE(wmap_land_effect_00_sequence_4_step_02, g_wmap_land_effect_00_sequence_4_step, g_wmap_land_effect_00_sequence_4_timer,

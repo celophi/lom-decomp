@@ -35,17 +35,21 @@
 #include "main/field_runtime.h"
 #include "main/game_state.h"
 #include "main/overlay_memory.h"
+#include "main/main.h"
 #include "overlays/field/field_input.h"
 #include "overlays/field/field_numeric_sprites.h"
+#include "overlays/addhero/addhero.h"
 #include "overlays/field/field_overlay_handoff.h"
+#include "overlays/golem/golem.h"
+#include "overlays/gosub/gosub.h"
+#include "overlays/menu/menu.h"
+#include "overlays/shop/shop.h"
 #include "overlays/field/field_scene_transition.h"
 #include "overlays/field/field_sound.h"
 #include "overlays/field/field_text.h"
 #include "overlays/field/field_ui_text.h"
 #include "overlays/gname/gname.h"
 #include "overlays/zukan/zukan.h"
-
-void field_set_cd_error_fade_target(void);
 
 /** @brief Minus sign entry in the dialog text bank. */
 
@@ -99,7 +103,6 @@ void field_set_cd_error_fade_target(void);
 
 /** @brief Work buffers handed to the sub-overlays. */
 #define FIELD_MENU_RENDER_BUFFERS ((void*)SECONDARY_OVERLAY_AT(0x30000))
-#define FIELD_GOLEM_WORK_BUFFER SECONDARY_OVERLAY_AT(0x10000)
 #define FIELD_SHOP_WORK_BUFFER ((void*)SECONDARY_OVERLAY_AT(0x10000))
 #define FIELD_GOSUB_WORK_BUFFER ((void*)SECONDARY_OVERLAY_AT(0x35000))
 
@@ -138,9 +141,7 @@ typedef enum FieldDuelPanelPhase
 
 /* Offset tables of the ability and technique names (u16 offsets from the table start). */
 extern u8 g_field_command_names[];
-extern u8 g_field_technique_names[];
 /* Action slot bound to each hint button (index into FieldCharacterRecord::button_actions). */
-extern u8 g_field_hint_button_map[];
 /* Action icons of the instrument types. */
 extern u8 g_field_instrument_icons[];
 
@@ -149,19 +150,8 @@ extern u8 g_field_instrument_icons[];
  * pointer as SavedGameLayout, so this file does not include main.h and declares
  * the main executable globals it uses itself.
  */
-extern s32 g_pad_input;
-extern s32 g_pad_input_inject;
-extern s32 g_save_compatibility_tag;
-extern u16 g_music_track_index;
-extern s32 g_frame_counter;
-extern s32 g_active_script;
-extern s32 g_script_repeat_count;
 
 /* Dialog item list shown by the result screens. */
-extern u8* g_field_dialog_item_texts[];
-extern s32 g_field_dialog_item_count;
-extern u8 g_field_dialog_item_quantities[];
-
 /* Actor-label text session. */
 extern u8 g_field_selected_actor_label;
 extern u8 g_field_label_actor_indices[];
@@ -174,14 +164,10 @@ extern s32 g_field_draw_count;
 
 /* Input repeat state of both controllers. */
 extern s32 g_field_primary_held_buttons;
-extern s32 g_field_primary_repeat_delay;
 extern s32 g_field_secondary_held_buttons;
-extern s32 g_field_secondary_repeat_delay;
 extern u8 g_field_menu_controller_types[CONTROLLER_PORT_COUNT];
 
 /* Field state that blocks the menu. */
-extern s32 g_field_item_drop_enabled;
-
 /* Modal overlays. */
 extern s32 g_field_gosub_phase;
 extern s32 g_field_shop_active;
@@ -191,28 +177,13 @@ extern s32 g_field_duel_panel_offset;
 extern s32 g_field_duel_panel_hold_frames;
 extern s32 g_field_duel_winner;
 
-/* Sub-overlay entry points, valid once their overlay is loaded at SECONDARY_OVERLAY_LOAD_ADDRESS. */
-/* GNAME and SHOP share this entry address but have different parameter lists. */
-/** @brief Entry point of the loaded secondary overlay: gname_run or shop_init. */
-void secondary_overlay_entry();
-void golem_run(u32 work, s32 mode);
-s32 gosub_update_frame(FieldRenderHalf* render);
-s32 shop_update(FieldRenderHalf* render);
-s32 niki_update_frame(FieldRenderHalf* render);
-s32 addhero_state_step(FieldRenderHalf* render);
-s32 carda_update_frame(FieldRenderHalf* render);
-s32 menu_run(RenderContext* render_buffers);
-void gosub_open_screen_sequence(void* work, void* screen_sequence);
 
-s32 field_party_reload_reading(void);
-void* field_draw_player_icon(POLY_FT4* packet_cursor, u_long* ot, s32 player, s32 x, s32 y, s32 flip);
 POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* packet_cursor, u_long* ot, u8* text, s32 color, s32 x, s32 y, s32 align, s32 slot, s32 scale_x, s32 scale_y,
                                       s32 arg10, s32 visible);
 
 s32 field_name_byte_length(u8* name);
 void field_copy_name(u8* destination, u8* source);
 void field_append_name(u8* destination, const u8* source);
-s32 field_read_controller_buttons(s32 index);
 void field_draw_text_session(FieldRenderHalf* render);
 void field_restore_label_actor_parts(void);
 static void field_init_actor_labels(void);
@@ -792,8 +763,8 @@ static void field_init_actor_labels(void)
 
     for (; actor_index < FIELD_ACTOR_COUNT; actor_index++, state++, actor++)
     {
-        if (actor->presence != FIELD_ACTOR_UNUSED && state->current_hp.word != 0 && g_field_active_group == (state->group_flags & FIELD_OBJECT_GROUP_MASK) &&
-            state->name != NULL)
+        if (actor->presence != FIELD_ACTOR_UNUSED && state->current_hp.word != 0 && g_field_active_group == (state->group.flags & FIELD_OBJECT_GROUP_MASK) &&
+            state->label.name != NULL)
         {
             g_field_label_actor_indices[g_field_label_actor_count] = actor_index;
             g_field_label_saved_scale_x[g_field_label_actor_count] = g_field_object_parts[actor_index].appearance.fields.scale_xz;
@@ -1047,7 +1018,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
         camera_y = g_field_view_offset_y / 256;
         screen_y = actor->y / 256 + FIELD_SCREEN_CENTER_Y;
         point.y = ((camera_y + screen_y) - actor->z / 512) - g_field_view_offset_z / 512;
-        label_half_width = field_count_text_glyphs(((FieldObjectState*)text_or_state)->name) * FIELD_LABEL_GLYPH_HALF_WIDTH;
+        label_half_width = field_count_text_glyphs(((FieldObjectState*)text_or_state)->label.name) * FIELD_LABEL_GLYPH_HALF_WIDTH;
 
         if ((point.x + label_half_width) > SCREEN_WIDTH)
         {
@@ -1084,7 +1055,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             text_color = FIELD_TEXT_COLOR_NORMAL;
         }
 
-        cursor = (u8*)field_draw_text((SPRT*)cursor, text_ot, ((FieldObjectState*)text_or_state)->name, text_color, button_or_x, (s32)point.y,
+        cursor = (u8*)field_draw_text((SPRT*)cursor, text_ot, ((FieldObjectState*)text_or_state)->label.name, text_color, button_or_x, (s32)point.y,
                                       FIELD_TEXT_SHADOW | FIELD_TEXT_ALIGN_CENTER);
         left_glyph_ot = ot;
         point.y = (u16)point.y - 8;
@@ -1585,7 +1556,7 @@ static void field_run_menu(void* render_buffers, s32 controller)
             field_rebuild_party_actions(1);
             cdrom_stream(CD_RES_GOLEM_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
             cdrom_wait_queue_empty();
-            golem_run(FIELD_GOLEM_WORK_BUFFER, 1);
+            golem_run(FIELD_GOLEM_RENDER_BUFFERS, 1);
             field_golem_rebuild_current_grid();
             field_reset_actor_resources();
             field_text_reset_windows();
@@ -2109,7 +2080,7 @@ void field_update_modal(FieldRenderHalf* render)
     switch (g_field_modal_state)
     {
         case FIELD_MODAL_SHOP:
-            if ((g_field_shop_active != 0) && (shop_update(render) != 0))
+            if ((g_field_shop_active != 0) && (shop_update((ShopFrameContext*)render) != 0))
             {
                 g_field_shop_active = 0;
                 g_field_modal_state = FIELD_MODAL_NONE;
@@ -2123,7 +2094,7 @@ void field_update_modal(FieldRenderHalf* render)
             {
                 if (g_field_gosub_phase >= FIELD_GOSUB_RUNNING)
                 {
-                    if (gosub_update_frame(render) != 0)
+                    if (gosub_update_frame((struct GosubRenderContext*)render) != 0)
                     {
                         DrawSync(0);
                         g_field_gosub_phase = FIELD_GOSUB_CLOSING;

@@ -157,7 +157,7 @@ typedef enum
     FIELD_TEXT_ACTIVE,
     FIELD_TEXT_CLOSING,
     FIELD_TEXT_TIMED,
-    FIELD_TEXT_MODE_UNKNOWN_5,
+    FIELD_TEXT_MODE_UNUSED,
     FIELD_TEXT_IMMEDIATE
 } FieldTextMode;
 
@@ -2541,7 +2541,7 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
                 }
 
                 break;
-            case FIELD_TEXT_MODE_UNKNOWN_5:
+            case FIELD_TEXT_MODE_UNUSED:
             case FIELD_TEXT_IMMEDIATE:
                 break;
             default:

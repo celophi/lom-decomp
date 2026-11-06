@@ -14,6 +14,7 @@
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
 #include "sdk/gte_dmpsx_compat.h"
+#include "../internal/wmap_effect_primitives.h"
 
 extern s32 g_wmap_land_effect_18_sequence_1_timer;
 extern s32 g_wmap_land_effect_18_sequence_2_timer;
@@ -21,7 +22,6 @@ extern s32 g_wmap_land_effect_18_sequence_3_timer;
 extern s32 g_wmap_land_effect_18_depth_stage;
 extern s32 g_wmap_land_effect_18_flash_2_fade;
 extern s32 g_wmap_land_effect_18_sequence_4_timer;
-extern s32 g_wmap_particle_shade;
 extern s32 g_wmap_land_effect_18_sequence_6_timer;
 extern s32 g_wmap_land_effect_18_sequence_9_timer;
 extern s32 g_wmap_land_effect_18_sequence_10_timer;

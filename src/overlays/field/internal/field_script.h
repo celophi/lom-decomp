@@ -46,6 +46,51 @@
 #define OPERAND_TYPE_2(descriptor) (((descriptor) >> 2) & 3)
 #define OPERAND_TYPE_3(descriptor) ((descriptor) & 3)
 
+/** @brief Script frames of a FieldScriptState: the nesting depth limit. */
+#define FIELD_SCRIPT_FRAME_COUNT 8
+
+/** @brief One nested script frame (0xC bytes). */
+typedef struct FieldScriptFrame
+{
+    u8* pc;
+    /** @brief Bit 0 holds the result of the last comparison. */
+    u32 flags;
+    /** @brief Remaining wait frames; bit 0 lets the frame resume after a return. */
+    union
+    {
+        u32 word;
+        struct
+        {
+            u32 resume : 1;
+            u32 frames : 31;
+        } bits;
+    } wait;
+} FieldScriptFrame;
+
+/**
+ * @brief Script execution state: owner, nesting depth and eight frames (0x68 bytes).
+ * @note field_script_run takes a pointer to this block; g_field_script points at the running one.
+ * FIELD_SCRIPT_RECORD views frame n at a 12-byte stride from the block start.
+ */
+typedef struct FieldScriptState
+{
+    union
+    {
+        u32 word;
+        u8 owner_id;
+        struct
+        {
+            u32 owner_id : 8;
+            u32 unk8 : 1;
+            u32 local_base : 7;
+            u32 unk16 : 15;
+            u32 running : 1;
+        } bits;
+    } status;
+    s32 depth;
+    FieldScriptFrame frames[FIELD_SCRIPT_FRAME_COUNT];
+} FieldScriptState;
+
 /** @brief One script record: the program counter lives at offset 8. */
 typedef struct
 {
@@ -77,21 +122,6 @@ typedef struct
     } wait;
 } FieldScriptRecordState;
 
-/**
- * @brief Script context header. Records follow at a 12-byte stride from the
- *        base, so record 0 aliases this header and its pc sits at offset 8.
- */
-typedef struct
-{
-    union
-    {
-        u32 word;
-        u8 owner_id;
-    } status;
-    s32 active_record;
-    u8* pc;
-} FieldScriptContext;
-
 /** @brief Bits 0-11 of a variable reference: word index and bit position. */
 #define FIELD_SCRIPT_VAR_LOCATION_MASK 0xFFF
 
@@ -118,15 +148,15 @@ typedef struct
     u16 value;
 } FieldScriptVariableRef;
 
-extern FieldScriptContext* g_field_script;
+extern FieldScriptState* g_field_script;
 
 /* Opcodes 0x80 and above dispatch through this table, indexed by opcode - 0x80. */
 extern void (*g_field_script_ext_op_table[16])();
 
 #define FIELD_SCRIPT_RECORD(index) ((FieldScriptRecord*)((u8*)g_field_script + ((index) * 3 << 2)))
 #define FIELD_SCRIPT_RECORD_STATE(index) ((FieldScriptRecordState*)((u8*)g_field_script + ((index) * 3 << 2)))
-#define FIELD_SCRIPT_ACTIVE_RECORD() FIELD_SCRIPT_RECORD(g_field_script->active_record)
-#define FIELD_SCRIPT_ACTIVE_RECORD_STATE() FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)
+#define FIELD_SCRIPT_ACTIVE_RECORD() FIELD_SCRIPT_RECORD(g_field_script->depth)
+#define FIELD_SCRIPT_ACTIVE_RECORD_STATE() FIELD_SCRIPT_RECORD_STATE(g_field_script->depth)
 
 u8* field_script_read_operand(s32 type, u8* data, s32* value);
 u8* field_script_read_operand_or_owner(s32 type, u8* data, s32* value);

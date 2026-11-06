@@ -41,10 +41,6 @@
 
 /** @brief Per item type: eight four-bit stat increases applied on a level-up. */
 extern u32 g_field_item_type_stat_growth[];
-
-FieldStatusState* field_find_object_state(s32 actor_id);
-s32 field_spawn_shared_animation_actor(s32 key, s32 resource_index);
-
 static void field_add_guest_experience(s32 amount);
 static void field_award_grazing_pet_experience(u32 amount);
 static void field_grow_character_stats(FieldCharacterRecord* character);
@@ -110,7 +106,7 @@ void field_award_experience(s32 record_index, s32 amount)
     {
         for (index = 0, eligible_count = 0; index < FIELD_PARTY_SIZE; index++)
         {
-            if ((g_field_game_state->characters[index].name[0] != 0) && (field_find_object_state(index)->current != 0))
+            if ((g_field_game_state->characters[index].name[0] != 0) && (field_find_object_state(index)->current_hp.word != 0))
             {
                 eligible_count++;
             }
@@ -126,7 +122,7 @@ void field_award_experience(s32 record_index, s32 amount)
 
         for (index = 0; index < FIELD_PARTY_SIZE; index++)
         {
-            if ((g_field_game_state->characters[index].name[0] != 0) && (field_find_object_state(index)->current != 0))
+            if ((g_field_game_state->characters[index].name[0] != 0) && (field_find_object_state(index)->current_hp.word != 0))
             {
                 if (index == FIELD_PARTY_GUEST)
                 {

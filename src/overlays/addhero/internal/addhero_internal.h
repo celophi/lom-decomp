@@ -27,6 +27,7 @@
 #include "overlays/field/field_menu_window.h"
 #include "overlays/field/field_sound.h"
 #include "overlays/field/field_ui_text.h"
+#include "overlays/addhero/addhero.h"
 
 /* Declarations shared by ADDHERO implementation files. */
 
@@ -71,8 +72,6 @@ extern u16 g_addhero_text_no_load_file;
 extern u16 g_addhero_text_found_load_file;
 
 /* Overlay function declarations. */
-void addhero_init(void* work, s32 mode);
-s32 addhero_state_step(FieldRenderHalf* draw_state);
 void addhero_build_ui_elements(void);
 s32 card_menu_update_card_sequence(void);
 s32 card_menu_handle_input(void);

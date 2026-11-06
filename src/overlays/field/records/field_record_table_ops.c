@@ -5,10 +5,12 @@
 
 #include "common.h"
 #include <abs.h>
+#include <rand.h>
 
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
 #include "main/audio/game_audio.h"
+#include "main/main.h"
 
 /** @brief Most lands that can be active before only the first requested land is placed. */
 #define FIELD_ARTIFACTS_IN_HAND_LIMIT 3
@@ -53,11 +55,8 @@ typedef struct
     u16 special_values[1];
 } FieldItemValueTables;
 
-s32 rand(void);
-
 /** @brief Item kind given by field_award_land_artifacts when no artifact could be awarded, by land distance. */
 extern u8 g_field_land_distance_items[];
-extern u16 g_music_track_index;
 
 static s32 field_try_award_land_artifact(s32 land_index);
 static s32 field_is_item_key_used(FieldItemKey* key);

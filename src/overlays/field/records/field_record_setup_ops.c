@@ -171,7 +171,7 @@ void field_create_equipment_item(FieldItemRecord* record, s32 category, s32 item
  */
 static void field_create_instrument_item(FieldItemRecord* record, s32 category, s32 item_type, s32 material, s32 secondary_item)
 {
-    FieldScriptContext* saved_script;
+    FieldScriptState* saved_script;
     s32 column;
     s32 grid_row;
     s32 i;
@@ -200,7 +200,7 @@ static void field_create_instrument_item(FieldItemRecord* record, s32 category, 
     g_field_item_staging->properties[3] = g_field_item_tables->grid.pairs[material][item_type][1];
 
     saved_script = g_field_script;
-    g_field_script = (FieldScriptContext*)&g_field_runtime->events[0].script;
+    g_field_script = &g_field_runtime->events[0].script;
     field_run_item_script(g_field_item_tables->grid.secondary_scripts[secondary_item - FIELD_SECONDARY_ITEM_FIRST]);
     g_field_script = saved_script;
     field_write_staged_item();
@@ -331,10 +331,10 @@ void field_temper_item(FieldItemRecord* record, s32 secondary_item)
  */
 static void field_generate_staged_item(void)
 {
-    FieldScriptContext* saved_script;
+    FieldScriptState* saved_script;
 
     saved_script = g_field_script;
-    g_field_script = (FieldScriptContext*)&g_field_runtime->events[0].script;
+    g_field_script = &g_field_runtime->events[0].script;
     field_load_staged_material();
 
     if (g_field_item_staging->category == FIELD_ITEM_CATEGORY_WEAPON)

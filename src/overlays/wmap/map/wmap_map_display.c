@@ -13,6 +13,7 @@
 #include <libetc.h>
 #include <libgpu.h>
 #include <libgte.h>
+#include <rand.h>
 
 #include "../internal/wmap_cells.h"
 #include "../internal/wmap_land_layout.h"
@@ -84,28 +85,6 @@ typedef struct
     u16 tpage_x;
     u16 tpage_y;
 } WmapTextureInfo;
-
-/** @brief Per-cell display mode and effect animation counters. */
-typedef struct
-{
-    s16 unk00;
-    s16 mode;
-    s16 state;
-    s16 frame;
-    s32 unk08;
-    s32 unk0c;
-    s16 unk10;
-    u8 pad12[2];
-    s32 unk14;
-    s32 unk18;
-} WmapEffectCell;
-
-/** @brief Map marker screen coordinates. */
-typedef struct
-{
-    u16 x;
-    u16 y;
-} WmapMapPoint;
 
 /** @brief Sprite sequence command and frame duration. */
 typedef struct
@@ -184,7 +163,6 @@ typedef struct
 } WmapSpritePosition;
 
 extern WmapSpritePosition g_wmap_spirit_sprite_positions[8];
-extern s32 rand(void);
 extern SPRT g_wmap_game_score_label;
 extern SPRT g_wmap_game_score_digit;
 extern SPRT g_wmap_game_round_label;
@@ -209,14 +187,9 @@ extern u8 g_wmap_game_spawn_patterns[][9];
 /** @brief Image index of each land, or -1 for a land without an image. */
 extern s32 g_wmap_land_image_indices[];
 extern WmapTextureInfo g_wmap_land_image_uploads[];
-/** @brief Land image loads are refused once this reaches 10; WMAP only ever clears it. */
-extern s32 g_wmap_land_image_load_count;
-extern WmapMapPoint g_wmap_spirit_view_cell_positions[];
-extern s16 g_wmap_land_label_cells[];
 extern s32 g_wmap_land_scale_steps[];
 extern s32 g_wmap_cell_effect_steps[];
 extern WmapQuadTemplate g_wmap_cell_effect_quads[16];
-extern WmapEffectCell g_wmap_cell_effects[6][6];
 extern SPRT g_wmap_spirit_sprite_templates[];
 extern u8 g_wmap_spirit_sequence_bounds[];
 extern u8 g_wmap_spirit_sequences[];
@@ -225,9 +198,6 @@ extern u8 g_wmap_spirit_frames[];
 extern SPRT g_wmap_spirit_level_sprites[16];
 extern SPRT g_wmap_spirit_accent_sprites[16];
 extern const s32 g_wmap_spirit_level_positions[];
-extern s32 g_wmap_spirit_selection;
-/** @brief Three-bit phase advanced every other spirit display frame; nothing reads it. */
-extern s32 g_wmap_spirit_unused_phase;
 extern WmapGlyph g_wmap_information_glyphs[];
 extern WmapGlyphPlacement g_wmap_information_placements[];
 extern s32 g_wmap_information_group_starts[];
@@ -942,8 +912,8 @@ void wmap_draw_land_marker(s32 map_x, s32 map_y, WmapLandDisplay* marker)
             s32 sprite_x;
             s32 sprite_y;
 
-            sprite_x = g_wmap_spirit_view_cell_positions[map_x + map_y * 6].x;
-            sprite_y = g_wmap_spirit_view_cell_positions[map_x + map_y * 6].y;
+            sprite_x = g_wmap_spirit_view_cell_positions[map_x + map_y * 6].point.x;
+            sprite_y = g_wmap_spirit_view_cell_positions[map_x + map_y * 6].point.y;
             depth = 0xAE - map_y;
             sprite->x0 = sprite_x;
             sprite->y0 = sprite_y;

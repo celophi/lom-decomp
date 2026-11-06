@@ -25,20 +25,12 @@
 /** @brief g_music_track_table entry of a track index that has no music. */
 #define FIELD_MUSIC_TRACK_NONE 0xFF
 
-extern FieldRenderHalf* g_field_render_context;
-extern s32 g_field_preserve_entry_music;
 /**
  * @brief Scene word between the pending sound bank and the portrait count.
  * @note TODO: purpose unknown; it is only ever cleared here, and no code in the
  *       main executable or any overlay reads it.
  */
 extern s32 g_field_unused_scene_word;
-/** @brief Set while an interaction runs; pad input waits until the follower routes are rebuilt. */
-extern s32 g_field_actor_text_count;
-extern s32 g_field_ring_menu_state;
-/** @brief Nonzero while a timed panel image is shown; pauses the field runtime, actor animation and the field menu. */
-extern s32 g_field_hide_actor_panels;
-
 /**
  * @brief Reset every field subsystem for a freshly entered scene.
  *

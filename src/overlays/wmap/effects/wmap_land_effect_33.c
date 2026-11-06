@@ -32,7 +32,6 @@ extern WmapSequenceStep g_wmap_land_effect_33_sequence_7_steps[];
 extern WmapSequenceStep g_wmap_land_effect_33_sequence_8_steps[];
 extern WmapSequenceStep g_wmap_land_effect_33_sequence_9_steps[];
 extern WmapSequenceStep g_wmap_land_effect_33_sequence_10_steps[];
-extern s32 g_wmap_load_buffer[];
 extern u32 g_wmap_land_effect_33_step;
 extern s32 g_wmap_land_effect_33_timer;
 extern u32 g_wmap_land_effect_33_timeline_step;
@@ -54,8 +53,6 @@ extern s32 g_wmap_land_effect_33_sequence_9_timer;
 extern u32 g_wmap_land_effect_33_sequence_10_step;
 extern s32 g_wmap_land_effect_33_sequence_10_timer;
 extern void akao_fade_all_sfx_volume(s32, s32);
-
-extern s32* g_wmap_effect_params;
 
 /** @brief Configure the first world-map effect state and reset its fifty resource slots. */
 void wmap_land_effect_33_sequence_6_step_01(void)

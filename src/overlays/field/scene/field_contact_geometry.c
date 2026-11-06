@@ -73,16 +73,6 @@
 #define FIELD_GTE_DELTA_ADDRESS SCRATCHPAD_AT(0x80)
 #define FIELD_GTE_SQUARE_ADDRESS SCRATCHPAD_AT(0x90)
 
-/** @brief View of g_field_object_parts (FieldObjectPart in field_actor_tables.h, which this file cannot include). */
-typedef struct
-{
-    u8 pad_0x0[0x2E];
-    u8 scale_z;
-    u8 pad_0x2f[5];
-    u32 flags;
-    u8 pad_0x38[0x10];
-} FieldMoveObject;
-
 /** @brief Map size words of the field map header (FieldMapBounds in field_actor_tables.h). */
 typedef struct
 {
@@ -102,12 +92,8 @@ typedef struct
     VECTOR squared;
 } FieldContactScanWorkspace;
 
-extern FieldMoveObject g_field_object_parts[];
 /** @brief Last field_find_actor_overlap result: zero, or the object index plus FIELD_CONTACT_RESULT_PRESENT. */
 extern s32 g_field_last_actor_contact;
-
-void field_start_interaction(s32 value, u16 entry, FieldObjectState* states);
-void field_restart_actor_animation();
 
 static s32 field_intersect_screen_segments(Vec2s* first_start, Vec2s* first_end, Vec2s* second_start, Vec2s* second_end);
 static s32 field_is_outside_group_bounds(FieldActor* actor, s32* position);
@@ -254,7 +240,7 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* e
     for (; target_index < FIELD_ACTOR_COUNT; target_index++, target++, target_state++)
     {
         if ((target->presence == FIELD_ACTOR_UNUSED) || (target_state->flags & FIELD_OBJECT_UNTARGETABLE_FLAGS) ||
-            ((target_index >= FIELD_PARTY_COUNT) && ((target_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)) ||
+            ((target_index >= FIELD_PARTY_COUNT) && ((target_state->group.flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)) ||
             (target_state->current_hp.word == 0) ||
             ((target->animation & FIELD_ANIMATION_INDEX_MASK) >= FIELD_ABILITY_SOMERSAULT &&
              (target->animation & FIELD_ANIMATION_INDEX_MASK) <= FIELD_ABILITY_BACK_ROLL) ||
@@ -834,7 +820,7 @@ s32 field_resolve_actor_movement(FieldActor* actor, s32* position, s32 mode)
     u16 command;
     u16 resolved_command;
 
-    if (((u32)g_field_object_parts[actor->object_index].flags >> FIELD_PART_IGNORE_MAP_COLLISION_BIT) & 1)
+    if (((u32)g_field_object_parts[actor->object_index].spawn_flags.word >> FIELD_PART_IGNORE_MAP_COLLISION_BIT) & 1)
     {
         actor->x += position[0];
         actor->y += position[1];
@@ -869,7 +855,7 @@ s32 field_resolve_actor_movement(FieldActor* actor, s32* position, s32 mode)
         mover->height_bias = FIELD_FOOTPRINT_STEP;
         query->height_tolerance = FIELD_FOOTPRINT_STEP;
 
-        if (g_field_object_parts[actor->object_index].scale_z == FIELD_PART_FULL_SCALE)
+        if (g_field_object_parts[actor->object_index].appearance.fields.scale_xz == FIELD_PART_FULL_SCALE)
         {
             mover->footprint_width = FIELD_FOOTPRINT_LARGE_WIDTH;
             query->width = FIELD_FOOTPRINT_LARGE_WIDTH;
@@ -1024,7 +1010,7 @@ static s32 field_is_outside_group_bounds(FieldActor* actor, s32* position)
     s32 minimum;
     s32 value;
 
-    if ((g_field_object_states[actor->object_index].group_flags & FIELD_OBJECT_GROUP_MASK) == 0)
+    if ((g_field_object_states[actor->object_index].group.flags & FIELD_OBJECT_GROUP_MASK) == 0)
     {
         return 0;
     }
@@ -1452,7 +1438,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
             contact_flags = candidate_state->contact.word;
 
             if ((contact_flags & FIELD_CONTACT_ANIMATION_HIDDEN) ||
-                ((candidate_index >= FIELD_PARTY_COUNT) && ((candidate_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)) ||
+                ((candidate_index >= FIELD_PARTY_COUNT) && ((candidate_state->group.flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)) ||
                 (contact_flags & FIELD_CONTACT_NO_HIT_TEST) || (eligible == 0) || (candidate_state->movement.word & FIELD_MOVEMENT_INVULNERABLE))
             {
                 continue;
@@ -1848,7 +1834,7 @@ void field_collect_attack_sphere_hits(FieldActorSlot* actor, FieldObjectPart* pa
             contact_flags = target_state->contact.word;
 
             if ((contact_flags & FIELD_CONTACT_ANIMATION_HIDDEN) ||
-                ((target_index >= FIELD_PARTY_COUNT) && ((target_state->group_flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)) ||
+                ((target_index >= FIELD_PARTY_COUNT) && ((target_state->group.flags & FIELD_OBJECT_GROUP_MASK) != g_field_active_group)) ||
                 (contact_flags & FIELD_CONTACT_NO_HIT_TEST) || (eligible == 0) || (target_state->movement.word & FIELD_MOVEMENT_INVULNERABLE))
             {
                 continue;

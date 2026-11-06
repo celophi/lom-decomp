@@ -31,4 +31,22 @@ typedef struct
 /** @brief The land grid, indexed [x][y]. */
 extern WmapCell g_wmap_cells[WMAP_GRID_SIZE][WMAP_GRID_SIZE];
 
+/** @brief Per-cell display mode and effect animation counters. */
+typedef struct
+{
+    s16 unk00;
+    s16 mode;
+    s16 state;
+    s16 frame;
+    s32 unk08;
+    s32 unk0c;
+    s16 unk10;
+    u8 pad12[2];
+    s32 unk14;
+    s32 unk18;
+} WmapEffectCell;
+
+/** @brief Display mode and effect animation state of each cell of the visible 6x6 grid. */
+extern WmapEffectCell g_wmap_cell_effects[6][6];
+
 #endif

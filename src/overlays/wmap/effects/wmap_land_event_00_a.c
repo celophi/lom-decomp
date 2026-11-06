@@ -17,12 +17,6 @@
 #include "common/saved_game.h"
 #include "main/cdrom.h"
 
-/** @brief Three color channels. */
-typedef struct
-{
-    u8 r, g, b;
-} WmapColor;
-
 extern s32 g_wmap_land_event_00_a_sequence_4_timer;
 extern s32 g_wmap_land_event_00_a_sequence_5_timer;
 extern s32 g_wmap_land_event_00_a_sequence_6_timer;
@@ -45,7 +39,6 @@ extern WmapSequenceStep g_wmap_land_event_00_a_sequence_7_steps[];
 extern WmapSequenceStep g_wmap_land_event_00_a_sequence_8_steps[];
 extern u32 g_wmap_land_event_00_a_step;
 extern u32 g_wmap_land_event_00_a_sequence_4_step;
-extern s32 g_wmap_load_buffer[];
 extern u32 g_wmap_land_event_00_a_sequence_5_step;
 extern u32 g_wmap_land_event_00_a_sequence_6_step;
 extern u32 g_wmap_land_event_00_a_sequence_7_step;
@@ -54,8 +47,6 @@ extern u32 g_wmap_land_event_00_a_timeline_step;
 extern u32 g_wmap_land_event_00_a_sequence_1_step;
 extern u32 g_wmap_land_event_00_a_sequence_2_step;
 extern u32 g_wmap_land_event_00_a_sequence_3_step;
-
-extern s32* g_wmap_effect_params;
 
 /** @brief Queue effect resources and establish the map-relative effect position. */
 void wmap_land_event_00_a_step_01(void)

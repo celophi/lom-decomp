@@ -17,6 +17,7 @@
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_effect_render_state.h"
+#include "../internal/field_effect_types.h"
 #include "common/gpu_packet.h"
 #include "common/saved_game.h"
 #include "common/tim.h"
@@ -24,6 +25,7 @@
 #include "main/cdrom.h"
 #include "main/display.h"
 #include "main/field_runtime.h"
+#include "main/main.h"
 #include "overlays/field/field_actor_records.h"
 #include "overlays/field/field_vram.h"
 
@@ -151,16 +153,12 @@ extern CVECTOR g_field_hud_status_colors[2];
 extern CVECTOR g_field_hud_effect_colors[2];
 extern CVECTOR g_field_hud_full_status_colors[2];
 extern CVECTOR g_field_hud_companion_status_colors[2];
-extern s32 g_field_party_hud_order[FIELD_PARTY_COUNT];
 extern s16 g_field_hud_shake_offsets[];
 extern s32 g_field_hud_blink_frames[FIELD_PARTY_COUNT];
 extern s32 g_field_hud_bar_height;
 extern s32 g_field_hud_bar_width;
 extern s32 g_field_hud_bar_offset_x;
 extern s32 g_field_hud_bar_offset_y;
-extern s32 g_frame_counter;
-extern u8 g_field_pair_indicator_list[];
-
 /** @brief Number of bits in FieldObjectState.flags that have a handler entry. */
 #define FIELD_OBJECT_HANDLER_COUNT 16
 
@@ -268,15 +266,12 @@ typedef struct
 extern POLY_FT4 g_field_fade_prims[FIELD_FADE_PRIM_COUNT];
 extern u16 g_field_fade_prim_depths[FIELD_FADE_PRIM_COUNT];
 extern FieldActor* g_field_updating_actor;
-extern u32* g_field_scene_record_table;
-
 static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* render_half, s32 hp_per_bar);
 static u8* field_emit_hud_status_line(LINE_G2* line, FieldRenderHalf* render_half, CVECTOR* colors, s32 intensity, s32 x, s32 y);
 static void* field_emit_hud_percentage(void* packet, FieldRenderHalf* render_half, s32 value, Vec2s* position);
 static void* field_emit_hud_glyph(SPRT* sprite, FieldRenderHalf* render_half, s32 value, Vec2s* position);
 static POLY_F4* field_emit_hud_damage_quad(POLY_F4* prim, s32 y, u_long* ot);
 static POLY_F4* field_emit_hud_healing_quad(POLY_F4* prim, s32 y, u_long* ot);
-void field_restart_actor_animation(FieldActor* actor);
 static inline void field_clear_link_target_flag(s32 object_index);
 static inline void field_dispatch_object_flag(s32 index, FieldObjectState* state, s32 pending_flags);
 
@@ -325,9 +320,6 @@ static inline POLY_F4* field_hud_link_change_quad(POLY_F4* prim, s32 y, u_long* 
  */
 void field_draw_actor_hud(FieldRenderHalf* render_half)
 {
-    /* Effect records share the actor record layout (position and animation). */
-    extern FieldActor g_field_effect_records[];
-
     Vec2s position;
     s32 i;
     s32 panel_count;
@@ -413,7 +405,7 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
         {
             for (i = FIELD_PARTY_COUNT; i < FIELD_ACTOR_COUNT; i++)
             {
-                group = g_field_object_states[i].group_flags & FIELD_OBJECT_GROUP_MASK;
+                group = g_field_object_states[i].group.flags & FIELD_OBJECT_GROUP_MASK;
 
                 if (group == g_field_active_group && group != 0)
                 {
@@ -443,10 +435,10 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
                         {
                             if (!(g_field_object_states[i].flags & FIELD_OBJECT_FLAG_FROZEN) &&
                                 (g_field_object_states[i].contact.bytes.flags & FIELD_CONTACT_ANIMATION_HIDDEN) &&
-                                (g_field_effect_records[g_field_object_states[i].linked_effect_index].animation & FIELD_ANIMATION_INDEX_MASK) !=
+                                (FIELD_EFFECT_ACTOR_RECORDS[g_field_object_states[i].linked_effect_index].animation & FIELD_ANIMATION_INDEX_MASK) !=
                                     FIELD_HUD_ANCHOR_IGNORED_ANIMATION)
                             {
-                                anchor = &g_field_effect_records[g_field_object_states[i].linked_effect_index];
+                                anchor = &FIELD_EFFECT_ACTOR_RECORDS[g_field_object_states[i].linked_effect_index];
                                 {
                                     s32 camera_x = g_field_view_offset_x / 256;
                                     s32 world_x = anchor->x / 256 + FIELD_SCREEN_CENTER_X;
@@ -455,10 +447,10 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
                                 }
 
                                 projected_y = g_field_view_offset_y / 256;
-                                world_y = g_field_effect_records[g_field_object_states[i].linked_effect_index].y / 256 + FIELD_SCREEN_CENTER_Y;
+                                world_y = FIELD_EFFECT_ACTOR_RECORDS[g_field_object_states[i].linked_effect_index].y / 256 + FIELD_SCREEN_CENTER_Y;
                                 projected_y = projected_y + world_y;
-                                coordinate =
-                                    projected_y - g_field_effect_records[g_field_object_states[i].linked_effect_index].z / 512 - g_field_view_offset_z / 512;
+                                coordinate = projected_y - FIELD_EFFECT_ACTOR_RECORDS[g_field_object_states[i].linked_effect_index].z / 512 -
+                                             g_field_view_offset_z / 512;
                                 position.y = coordinate;
 
                                 coordinate = position.x;
