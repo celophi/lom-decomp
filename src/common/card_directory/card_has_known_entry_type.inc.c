@@ -17,5 +17,6 @@ s32 card_has_known_entry_type(void)
             return 1;
         }
     }
+
     return 0;
 }

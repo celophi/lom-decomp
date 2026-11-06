@@ -14,6 +14,7 @@ s32 card_menu_update_frame(FieldRenderHalf* render)
         DrawSync(0);
         return 1;
     }
+
     field_text_reset_scratch();
     begin_glyph_cache_frame();
     card_menu_update_state(render);

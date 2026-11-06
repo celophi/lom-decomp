@@ -118,18 +118,22 @@ s32 memory_card_prepare_slot1(void)
 
     _card_info(0);
     status = memory_card_wait_software_event();
+
     if ((status == CARD_EVENT_ERROR) || (status == CARD_EVENT_TIMEOUT))
     {
         return 0;
     }
+
     if (status == CARD_EVENT_NEW_CARD)
     {
         memory_card_clear_hardware_events();
         _card_clear(0);
         memory_card_wait_hardware_event();
     }
+
     memory_card_clear_software_events();
     _card_load(0);
+
     if (memory_card_wait_software_event() == CARD_EVENT_NEW_CARD)
     {
         if (_card_format(0) == 0)
@@ -137,6 +141,7 @@ s32 memory_card_prepare_slot1(void)
             return 0;
         }
     }
+
     return 1;
 }
 
@@ -161,14 +166,17 @@ s32 memory_card_wait_software_event(void)
         {
             return CARD_EVENT_COMPLETE;
         }
+
         if (TestEvent(g_card_sw_error_event) == 1)
         {
             return CARD_EVENT_ERROR;
         }
+
         if (TestEvent(g_card_sw_timeout_event) == 1)
         {
             return CARD_EVENT_TIMEOUT;
         }
+
         if (TestEvent(g_card_sw_new_event) == 1)
         {
             return CARD_EVENT_NEW_CARD;
@@ -199,14 +207,17 @@ s32 memory_card_wait_hardware_event(void)
         {
             return CARD_EVENT_COMPLETE;
         }
+
         if (TestEvent(g_card_hw_error_event) == 1)
         {
             return CARD_EVENT_ERROR;
         }
+
         if (TestEvent(g_card_hw_timeout_event) == 1)
         {
             return CARD_EVENT_TIMEOUT;
         }
+
         if (TestEvent(g_card_hw_new_event) == 1)
         {
             return CARD_EVENT_NEW_CARD;
@@ -240,11 +251,13 @@ s32 memory_card_scan_files(char* path, struct DIRENTRY* entry)
     strcpy(pattern, path);
     strcat(pattern, g_card_wildcard);
     count = 0;
+
     for (found = firstfile(pattern, entry); found == entry; found = nextfile(entry))
     {
         count++;
         entry++;
     }
+
     return count;
 }
 
@@ -275,26 +288,31 @@ s32 memory_card_check_formatted(s32 channel)
         event_ready = 1;
         error_event = &g_card_hw_error_event;
         status = CARD_EVENT_NEW_CARD;
+
         if (TestEvent(*io_event) == event_ready)
         {
             status = CARD_EVENT_COMPLETE;
             break;
         }
+
         if (TestEvent(*error_event) == event_ready)
         {
             status = CARD_EVENT_ERROR;
             break;
         }
+
         if (TestEvent(g_card_hw_timeout_event) == event_ready)
         {
             status = CARD_EVENT_TIMEOUT;
             break;
         }
+
         if (TestEvent(g_card_hw_new_event) == event_ready)
         {
             break;
         }
     }
+
     if (status != CARD_EVENT_COMPLETE)
     {
         return -1;
@@ -332,12 +350,15 @@ s32 memory_card_create_save_file(char* path, void* save_buffer)
 
     /* Allocate one card block, then reopen the file for writing. */
     file_descriptor = open(path, CARD_FILE_BLOCKS(g_card_header_block_count) | FCREAT);
+
     if (file_descriptor == CARD_FILE_ERROR)
     {
         return 0;
     }
+
     close(file_descriptor);
     file_descriptor = open(path, FWRITE);
+
     if (file_descriptor == CARD_FILE_ERROR)
     {
         return 0;
@@ -345,11 +366,13 @@ s32 memory_card_create_save_file(char* path, void* save_buffer)
 
     /* Each memory-card block contains 8 KiB. */
     byte_count = block_count * CARD_BLOCK_BYTES;
+
     if (write(file_descriptor, save_buffer, byte_count) != byte_count)
     {
         close(file_descriptor);
         return 0;
     }
+
     close(file_descriptor);
     return 1;
 }

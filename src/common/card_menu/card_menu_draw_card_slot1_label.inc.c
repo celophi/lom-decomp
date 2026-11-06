@@ -25,6 +25,7 @@ void* card_menu_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 
         addPrim(ot, tile);
         prim = tile + 1;
     }
+
     return field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_card_slot1_label, CARD_MENU_TEXT_CARD_SLOT1_LABEL), FIELD_TEXT_COLOR_NORMAL,
                            -x_offset + CARD_MENU_CARD_LABEL_TEXT_X, -y_offset, FIELD_TEXT_ALIGN_CENTER);
 }

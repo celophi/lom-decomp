@@ -444,36 +444,36 @@ s32 field_set_actor_control_mode(s32 key, s32 mode)
 
     switch (control_mode)
     {
-    case FIELD_CONTROL_PLAYER:
-        actor->script_index = FIELD_SCRIPT_NONE;
-        actor->script_busy = 0;
+        case FIELD_CONTROL_PLAYER:
+            actor->script_index = FIELD_SCRIPT_NONE;
+            actor->script_busy = 0;
 
-        if (actor->object_index == FIELD_SECOND_MEMBER)
-        {
-            if (!g_saved_game_ctx->options.bits.vibration)
+            if (actor->object_index == FIELD_SECOND_MEMBER)
+            {
+                if (!g_saved_game_ctx->options.bits.vibration)
+                {
+                    controller->ports[1].actuators_enabled = 0;
+                }
+                else
+                {
+                    controller->ports[1].actuators_enabled = 1;
+                }
+            }
+
+            break;
+        case FIELD_CONTROL_FOLLOWER:
+            actor->script_index = FIELD_SCRIPT_NONE;
+            actor->script_busy = 0;
+            field_refresh_party_routes();
+
+            if (actor->object_index == FIELD_SECOND_MEMBER)
             {
                 controller->ports[1].actuators_enabled = 0;
             }
-            else
-            {
-                controller->ports[1].actuators_enabled = 1;
-            }
-        }
 
-        break;
-    case FIELD_CONTROL_FOLLOWER:
-        actor->script_index = FIELD_SCRIPT_NONE;
-        actor->script_busy = 0;
-        field_refresh_party_routes();
-
-        if (actor->object_index == FIELD_SECOND_MEMBER)
-        {
-            controller->ports[1].actuators_enabled = 0;
-        }
-
-        break;
-    case FIELD_CONTROL_SCRIPTED:
-        break;
+            break;
+        case FIELD_CONTROL_SCRIPTED:
+            break;
     }
 
     return 0;

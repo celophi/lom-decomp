@@ -20,6 +20,7 @@ s32 field_find_combined_ability(s32 first_ability, s32 second_ability)
     s32 i;
 
     rule = g_field_ability_unlock_rules;
+
     for (i = 0; i < FIELD_ABILITY_UNLOCK_RULE_COUNT; i++, rule++)
     {
         if ((rule->prerequisites[0].ability == first_ability && rule->prerequisites[1].ability == second_ability) ||
@@ -28,5 +29,6 @@ s32 field_find_combined_ability(s32 first_ability, s32 second_ability)
             return rule->result;
         }
     }
+
     return FIELD_ABILITY_NONE;
 }

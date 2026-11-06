@@ -136,22 +136,19 @@ void* field_draw_menu_frame(void* packet, u_long* ot, s32 x, s32 y, s32 width, s
     setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U, MENU_FRAME_TEX_V + MENU_FRAME_FAR, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
     packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
     setRECT(&destination, x + width - MENU_FRAME_BORDER / 2, y + height - MENU_FRAME_BORDER / 2, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
-    setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U + MENU_FRAME_FAR, MENU_FRAME_TEX_V + MENU_FRAME_FAR, MENU_FRAME_BORDER,
-            MENU_FRAME_BORDER);
+    setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U + MENU_FRAME_FAR, MENU_FRAME_TEX_V + MENU_FRAME_FAR, MENU_FRAME_BORDER, MENU_FRAME_BORDER);
     packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
     setRECT(&destination, x + MENU_FRAME_BORDER / 2, y - MENU_FRAME_BORDER / 2, width - MENU_FRAME_BORDER, MENU_FRAME_BORDER);
     setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U + MENU_FRAME_BORDER, MENU_FRAME_TEX_V, MENU_FRAME_EDGE, MENU_FRAME_BORDER);
     packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
     setRECT(&destination, x + MENU_FRAME_BORDER / 2, y + height - MENU_FRAME_BORDER / 2, width - MENU_FRAME_BORDER, MENU_FRAME_BORDER);
-    setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U + MENU_FRAME_BORDER, MENU_FRAME_TEX_V + MENU_FRAME_FAR, MENU_FRAME_EDGE,
-            MENU_FRAME_BORDER);
+    setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U + MENU_FRAME_BORDER, MENU_FRAME_TEX_V + MENU_FRAME_FAR, MENU_FRAME_EDGE, MENU_FRAME_BORDER);
     packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
     setRECT(&destination, x - MENU_FRAME_BORDER / 2, y + MENU_FRAME_BORDER / 2, MENU_FRAME_BORDER, height - MENU_FRAME_BORDER);
     setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U, MENU_FRAME_TEX_V + MENU_FRAME_BORDER, MENU_FRAME_BORDER, MENU_FRAME_EDGE);
     packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
     setRECT(&destination, x + width - MENU_FRAME_BORDER / 2, y + MENU_FRAME_BORDER / 2, MENU_FRAME_BORDER, height - MENU_FRAME_BORDER);
-    setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U + MENU_FRAME_FAR, MENU_FRAME_TEX_V + MENU_FRAME_BORDER, MENU_FRAME_BORDER,
-            MENU_FRAME_EDGE);
+    setRECT(&texture, g_field_menu_frame_style + MENU_FRAME_TEX_U + MENU_FRAME_FAR, MENU_FRAME_TEX_V + MENU_FRAME_BORDER, MENU_FRAME_BORDER, MENU_FRAME_EDGE);
     packet = field_draw_menu_sprite_tiles(packet, ot, &destination, &texture);
 
     fill = packet;
@@ -452,7 +449,7 @@ void field_draw_menu_elements(FieldRenderHalf* render_half)
 
             switch (element->attr.bits.state)
             {
-            case FIELD_MENU_STATE_OPENING:
+                case FIELD_MENU_STATE_OPENING:
                 {
                     s32 width;
                     s32 height;
@@ -471,44 +468,44 @@ void field_draw_menu_elements(FieldRenderHalf* render_half)
                                                    render_half->display_rect.y, 0);
                 }
 
-                element->attr.bits.step++;
+                    element->attr.bits.step++;
 
-                if (element->attr.bits.step == MENU_ANIMATION_STEPS)
-                {
-                    element->attr.bits.state = FIELD_MENU_STATE_OPEN;
-                }
-
-                break;
-            case FIELD_MENU_STATE_OPEN:
-                if (element->size.bits.blink)
-                {
-                    s32 width_low;
-
-                    frame_width = 0;
-
-                    if (!(g_frame_counter & MENU_BLINK_FRAME_BIT))
+                    if (element->attr.bits.step == MENU_ANIMATION_STEPS)
                     {
-                        frame_width = -MENU_BLINK_GROW;
+                        element->attr.bits.state = FIELD_MENU_STATE_OPEN;
                     }
 
-                    packet = element->draw(ot, packet, frame_width, frame_width + element->scroll, element->size.bits.height, element);
-                    width_low = FIELD_MENU_WIDTH_LOW(element);
-                    packet = field_draw_menu_frame(packet, ot, FIELD_MENU_X(element) + frame_width, element->attr.bytes.y + frame_width,
-                                                   FIELD_MENU_JOIN_WIDTH(element, width_low) - frame_width * 2, element->size.bits.height - frame_width * 2,
-                                                   render_half->display_rect.y, 0);
-                }
-                else
-                {
-                    s32 width_low;
+                    break;
+                case FIELD_MENU_STATE_OPEN:
+                    if (element->size.bits.blink)
+                    {
+                        s32 width_low;
 
-                    packet = element->draw(ot, packet, 0, element->scroll, element->size.bits.height, element);
-                    width_low = FIELD_MENU_WIDTH_LOW(element);
-                    packet = field_draw_menu_frame(packet, ot, FIELD_MENU_X(element), element->attr.bytes.y, FIELD_MENU_JOIN_WIDTH(element, width_low),
-                                                   element->size.bits.height, render_half->display_rect.y, 0);
-                }
+                        frame_width = 0;
 
-                break;
-            case FIELD_MENU_STATE_CLOSING:
+                        if (!(g_frame_counter & MENU_BLINK_FRAME_BIT))
+                        {
+                            frame_width = -MENU_BLINK_GROW;
+                        }
+
+                        packet = element->draw(ot, packet, frame_width, frame_width + element->scroll, element->size.bits.height, element);
+                        width_low = FIELD_MENU_WIDTH_LOW(element);
+                        packet = field_draw_menu_frame(packet, ot, FIELD_MENU_X(element) + frame_width, element->attr.bytes.y + frame_width,
+                                                       FIELD_MENU_JOIN_WIDTH(element, width_low) - frame_width * 2, element->size.bits.height - frame_width * 2,
+                                                       render_half->display_rect.y, 0);
+                    }
+                    else
+                    {
+                        s32 width_low;
+
+                        packet = element->draw(ot, packet, 0, element->scroll, element->size.bits.height, element);
+                        width_low = FIELD_MENU_WIDTH_LOW(element);
+                        packet = field_draw_menu_frame(packet, ot, FIELD_MENU_X(element), element->attr.bytes.y, FIELD_MENU_JOIN_WIDTH(element, width_low),
+                                                       element->size.bits.height, render_half->display_rect.y, 0);
+                    }
+
+                    break;
+                case FIELD_MENU_STATE_CLOSING:
                 {
                     s32 width;
                     s32 height;
@@ -527,14 +524,14 @@ void field_draw_menu_elements(FieldRenderHalf* render_half)
                                                    render_half->display_rect.y, 0);
                 }
 
-                element->attr.bits.step--;
+                    element->attr.bits.step--;
 
-                if (element->attr.bits.step == 0)
-                {
-                    element->attr.bits.state = FIELD_MENU_STATE_IDLE;
-                }
+                    if (element->attr.bits.step == 0)
+                    {
+                        element->attr.bits.state = FIELD_MENU_STATE_IDLE;
+                    }
 
-                break;
+                    break;
             }
         }
     }

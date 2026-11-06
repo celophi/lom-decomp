@@ -24,6 +24,7 @@ s32 parse_entry_fields(void)
     s32 suffix_value;
 
     largest_suffix = 0;
+
     for (entry_index = 0; entry_index < g_card_entry_state; entry_index++)
     {
         if (strncmp(g_lom_save_filename_prefix, g_card_entries[g_card_slot][entry_index].name, CARD_SAVE_FILENAME_PREFIX_LENGTH) == 0)
@@ -31,15 +32,16 @@ s32 parse_entry_fields(void)
             digits_left = CARD_SERIAL_DIGITS;
             serial_text = CARD_ENTRY_SERIAL_TEXT(g_card_slot, entry_index);
             serial_value = 0;
-            while ((*serial_text >= '0' && *serial_text <= '9') ||
-                   (*serial_text >= 'a' && *serial_text <= 'f') ||
-                   (*serial_text >= 'A' && *serial_text <= 'F'))
+
+            while ((*serial_text >= '0' && *serial_text <= '9') || (*serial_text >= 'a' && *serial_text <= 'f') || (*serial_text >= 'A' && *serial_text <= 'F'))
             {
                 if (digits_left == 0)
                 {
                     break;
                 }
+
                 serial_value <<= CARD_SERIAL_DIGIT_BITS;
+
                 if (*serial_text >= '0' && *serial_text <= '9')
                 {
                     u32 adjusted_serial;
@@ -61,6 +63,7 @@ s32 parse_entry_fields(void)
                     adjusted_serial = serial_value - ('a' - CARD_SERIAL_DECIMAL_DIGITS);
                     serial_value = adjusted_serial + *serial_text;
                 }
+
                 serial_text++;
                 digits_left--;
             }
@@ -70,6 +73,7 @@ s32 parse_entry_fields(void)
             g_card_entry_fields[g_card_slot][entry_index] = serial_value;
             suffix_value = parse_hex_suffix_byte(filename_fields);
             g_card_entry_suffix_values[entry_index] = suffix_value;
+
             if (largest_suffix < suffix_value)
             {
                 largest_suffix = suffix_value;
@@ -81,5 +85,6 @@ s32 parse_entry_fields(void)
             g_card_entry_suffix_values[entry_index] = 0;
         }
     }
+
     return largest_suffix;
 }

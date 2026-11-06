@@ -28,6 +28,7 @@ s32 gosub_handle_block_action_dialog(s32 dialog_result)
             g_gosub_suppress_dialog_sound = 1;
             return 0;
         }
+
         gosub_open_confirmation_dialog();
         g_gosub_dialog_handler = gosub_handle_discard_dialog;
     }
@@ -35,6 +36,7 @@ s32 gosub_handle_block_action_dialog(s32 dialog_result)
     {
         gosub_open_sort_dialog();
     }
+
     return 0;
 }
 
@@ -53,33 +55,41 @@ s32 gosub_handle_discard_dialog(s32 dialog_result)
     s32 max_scroll;
 
     g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
+
     if (dialog_result == 0 && (g_gosub_dialog_choice & GOSUB_CONFIRMATION_CHOICE_MASK) == 0)
     {
         gosub_delete_logic_block(g_gosub_rows[g_gosub_cursor_row].index);
         gosub_delete_list_row(g_gosub_cursor_row);
         g_gosub_selection_count = 0;
+
         if (g_gosub_row_count == 0)
         {
             return 1;
         }
+
         if (g_gosub_cursor_row >= g_gosub_row_count)
         {
             g_gosub_cursor_row = g_gosub_row_count - 1;
         }
+
         scroll_y = g_gosub_scroll_y;
         max_scroll = ((g_gosub_row_count * g_gosub_row_height) - g_gosub_window_height) + GOSUB_LIST_PANEL_PADDING;
+
         if (max_scroll < scroll_y)
         {
             scroll_y = max_scroll;
         }
+
         if (scroll_y < 0)
         {
             scroll_y = 0;
         }
+
         g_gosub_scroll_target_y = scroll_y;
         g_gosub_scroll_frames_remaining = LIST_SCROLL_FRAMES;
         return 0;
     }
+
     g_gosub_selection_count = 1;
     return 0;
 }
@@ -106,6 +116,7 @@ s32 gosub_handle_backtrack_dialog(s32 dialog_result)
     }
 
     g_gosub_screen_sequence_index--;
+
     if (g_gosub_select_handler != 0)
     {
         g_gosub_select_handler();
@@ -210,19 +221,23 @@ u8* gosub_draw_block_action_dialog(u_long* ordering_table, u8* initial_packet, s
     packet_cursor = initial_packet;
     sort_text = GOSUB_MESSAGE(GOSUB_MSG_SORT);
     sort_color = FIELD_TEXT_COLOR_DIM;
+
     if ((g_gosub_dialog_choice & GOSUB_ROW_ACTION_CHOICE_MASK) == 0)
     {
         sort_color = FIELD_TEXT_COLOR_NORMAL;
     }
+
     packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, sort_text, sort_color, GOSUB_ROW_ACTION_DIALOG_X - x_offset,
                                     GOSUB_ROW_ACTION_SORT_Y - y_offset, FIELD_TEXT_ALIGN_CENTER);
 
     delete_text = GOSUB_MESSAGE(GOSUB_MSG_DISCARD);
     delete_color = FIELD_TEXT_COLOR_DIM;
+
     if ((g_gosub_dialog_choice & GOSUB_ROW_ACTION_CHOICE_MASK) != 0)
     {
         delete_color = FIELD_TEXT_COLOR_NORMAL;
     }
+
     packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, delete_text, delete_color, GOSUB_ROW_ACTION_DIALOG_X - x_offset,
                                     GOSUB_ROW_ACTION_DELETE_Y - y_offset, FIELD_TEXT_ALIGN_CENTER);
 
@@ -253,28 +268,34 @@ u8* gosub_draw_sort_dialog(u_long* ordering_table, u8* initial_packet, s32 x_off
     selected_sort_key = g_gosub_dialog_choice;
     selected_sort_key %= GOSUB_SORT_KEY_COUNT;
     type_color = FIELD_TEXT_COLOR_DIM;
+
     if (selected_sort_key == GOSUB_SORT_BY_TYPE)
     {
         type_color = FIELD_TEXT_COLOR_NORMAL;
     }
+
     packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, type_text, type_color, GOSUB_SORT_DIALOG_X - x_offset,
                                     GOSUB_SORT_DIALOG_TYPE_Y - y_offset, FIELD_TEXT_ALIGN_CENTER);
 
     power_text = GOSUB_MESSAGE(GOSUB_MSG_SORT_BY_POWER);
     text_color = FIELD_TEXT_COLOR_DIM;
+
     if (g_gosub_dialog_choice % GOSUB_SORT_KEY_COUNT == GOSUB_SORT_BY_POWER)
     {
         text_color = FIELD_TEXT_COLOR_NORMAL;
     }
+
     packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, power_text, text_color, GOSUB_SORT_DIALOG_X - x_offset,
                                     GOSUB_SORT_DIALOG_POWER_Y - y_offset, FIELD_TEXT_ALIGN_CENTER);
 
     shape_text = GOSUB_MESSAGE(GOSUB_MSG_SORT_BY_SHAPE);
     text_color = FIELD_TEXT_COLOR_DIM;
+
     if (g_gosub_dialog_choice % GOSUB_SORT_KEY_COUNT == GOSUB_SORT_BY_SHAPE)
     {
         text_color = FIELD_TEXT_COLOR_NORMAL;
     }
+
     packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, shape_text, text_color, GOSUB_SORT_DIALOG_X - x_offset,
                                     GOSUB_SORT_DIALOG_SHAPE_Y - y_offset, FIELD_TEXT_ALIGN_CENTER);
 
@@ -343,6 +364,7 @@ u8* gosub_draw_block_components_header(u_long* ordering_table, u8* packet_cursor
     {
         packet_cursor = gosub_draw_equipment_details(packet_cursor, ordering_table, x_offset, y_offset);
     }
+
     return packet_cursor;
 }
 
@@ -390,19 +412,23 @@ u8* gosub_draw_confirmation_prompt(u_long* ordering_table, u8* packet_cursor, s3
 
     text = GOSUB_MESSAGE(GOSUB_MSG_YES);
     text_color = FIELD_TEXT_COLOR_DIM;
+
     if ((g_gosub_dialog_choice & GOSUB_CONFIRMATION_CHOICE_MASK) == 0)
     {
         text_color = FIELD_TEXT_COLOR_NORMAL;
     }
+
     packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, text_color, GOSUB_CONFIRMATION_FIRST_CHOICE_X - x_offset,
                                     GOSUB_CONFIRMATION_CHOICE_Y - y_offset, FIELD_TEXT_ALIGN_RIGHT);
 
     text = GOSUB_MESSAGE(GOSUB_MSG_NO);
     text_color = FIELD_TEXT_COLOR_NORMAL;
+
     if ((g_gosub_dialog_choice & GOSUB_CONFIRMATION_CHOICE_MASK) == 0)
     {
         text_color = FIELD_TEXT_COLOR_DIM;
     }
+
     packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, text, text_color, GOSUB_CONFIRMATION_SECOND_CHOICE_X - x_offset,
                                     GOSUB_CONFIRMATION_CHOICE_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
 
@@ -427,6 +453,7 @@ u8* gosub_draw_row_description(u_long* ordering_table, u8* packet_cursor, s32 x_
     {
         packet_cursor = gosub_draw_equipment_details(packet_cursor, ordering_table, x_offset, y_offset);
     }
+
     return packet_cursor;
 }
 
@@ -447,40 +474,43 @@ u8* gosub_draw_equipment_details(u8* packet_cursor, u_long* ordering_table, s32 
 
     switch (equipment_kind)
     {
-    case GOSUB_EQUIPMENT_KIND_WEAPON:
-        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(g_field_ui_text_attack_power, FIELD_UI_TEXT_ATTACK_POWER), FIELD_TEXT_COLOR_NORMAL,
-                                        GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
-        number_position.x = GOSUB_WEAPON_POWER_X - x_offset;
-        number_position.y = (GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
-        packet_cursor = field_draw_number(ordering_table, (SPRT*)packet_cursor, g_gosub_rows[g_gosub_cursor_row].primary_value, FIELD_TEXT_COLOR_NORMAL,
-                                          &number_position, FIELD_TEXT_ALIGN_LEFT);
-        break;
+        case GOSUB_EQUIPMENT_KIND_WEAPON:
+            packet_cursor =
+                field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(g_field_ui_text_attack_power, FIELD_UI_TEXT_ATTACK_POWER),
+                                FIELD_TEXT_COLOR_NORMAL, GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
+            number_position.x = GOSUB_WEAPON_POWER_X - x_offset;
+            number_position.y = (GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
+            packet_cursor = field_draw_number(ordering_table, (SPRT*)packet_cursor, g_gosub_rows[g_gosub_cursor_row].primary_value, FIELD_TEXT_COLOR_NORMAL,
+                                              &number_position, FIELD_TEXT_ALIGN_LEFT);
+            break;
 
-    case GOSUB_EQUIPMENT_KIND_ARMOR:
-        packet_cursor =
-            field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(g_field_ui_text_total_defense, FIELD_UI_TEXT_TOTAL_DEFENSE), FIELD_TEXT_COLOR_NORMAL,
-                            GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
-        number_position.x = GOSUB_ARMOR_DEFENSE_X - x_offset;
-        number_position.y = (GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
-        packet_cursor = field_draw_number(ordering_table, (SPRT*)packet_cursor,
-                                          g_gosub_rows[g_gosub_cursor_row].stats[0] + g_gosub_rows[g_gosub_cursor_row].stats[1] +
-                                              g_gosub_rows[g_gosub_cursor_row].stats[2] + g_gosub_rows[g_gosub_cursor_row].stats[3],
-                                          FIELD_TEXT_COLOR_NORMAL, &number_position, FIELD_TEXT_ALIGN_LEFT);
-        break;
+        case GOSUB_EQUIPMENT_KIND_ARMOR:
+            packet_cursor =
+                field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(g_field_ui_text_total_defense, FIELD_UI_TEXT_TOTAL_DEFENSE),
+                                FIELD_TEXT_COLOR_NORMAL, GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
+            number_position.x = GOSUB_ARMOR_DEFENSE_X - x_offset;
+            number_position.y = (GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
+            packet_cursor = field_draw_number(ordering_table, (SPRT*)packet_cursor,
+                                              g_gosub_rows[g_gosub_cursor_row].stats[0] + g_gosub_rows[g_gosub_cursor_row].stats[1] +
+                                                  g_gosub_rows[g_gosub_cursor_row].stats[2] + g_gosub_rows[g_gosub_cursor_row].stats[3],
+                                              FIELD_TEXT_COLOR_NORMAL, &number_position, FIELD_TEXT_ALIGN_LEFT);
+            break;
 
-    /* Instruments and the reserved fourth kind use the same detail layout. */
-    default:
-        packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(g_field_ui_text_power, FIELD_UI_TEXT_POWER), FIELD_TEXT_COLOR_NORMAL,
-                                        GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
-        number_position.x = GOSUB_INSTRUMENT_POWER_X - x_offset;
-        number_position.y = (GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
-        packet_cursor = field_draw_number(ordering_table, (SPRT*)packet_cursor, g_gosub_rows[g_gosub_cursor_row].primary_value, FIELD_TEXT_COLOR_NORMAL,
-                                          &number_position, FIELD_TEXT_ALIGN_LEFT);
-        packet_cursor =
-            field_draw_text((SPRT*)packet_cursor, ordering_table, GOSUB_TEXT(GOSUB_TEXT_INSTRUMENT_SPELLS, g_gosub_rows[g_gosub_cursor_row].stats[0]),
-                            FIELD_TEXT_COLOR_NORMAL, GOSUB_INSTRUMENT_EFFECT_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
-        break;
+        /* Instruments and the reserved fourth kind use the same detail layout. */
+        default:
+            packet_cursor =
+                field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(g_field_ui_text_power, FIELD_UI_TEXT_POWER), FIELD_TEXT_COLOR_NORMAL,
+                                GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
+            number_position.x = GOSUB_INSTRUMENT_POWER_X - x_offset;
+            number_position.y = (GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
+            packet_cursor = field_draw_number(ordering_table, (SPRT*)packet_cursor, g_gosub_rows[g_gosub_cursor_row].primary_value, FIELD_TEXT_COLOR_NORMAL,
+                                              &number_position, FIELD_TEXT_ALIGN_LEFT);
+            packet_cursor =
+                field_draw_text((SPRT*)packet_cursor, ordering_table, GOSUB_TEXT(GOSUB_TEXT_INSTRUMENT_SPELLS, g_gosub_rows[g_gosub_cursor_row].stats[0]),
+                                FIELD_TEXT_COLOR_NORMAL, GOSUB_INSTRUMENT_EFFECT_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
+            break;
     }
+
     return packet_cursor;
 }
 

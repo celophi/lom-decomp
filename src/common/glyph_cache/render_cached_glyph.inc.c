@@ -31,6 +31,7 @@ void* render_cached_glyph(void* primitive, u_long* ot_tag, u16 character_code, s
 
     /* Psy-Q exposes the KROM pointer as a signed integer address. */
     font_data = (const u8*)Krom2RawAdd(character_code);
+
     if (font_data == (const u8*)GLYPH_INVALID_KROM_ADDRESS)
     {
         return primitive;
@@ -40,12 +41,14 @@ void* render_cached_glyph(void* primitive, u_long* ot_tag, u16 character_code, s
     row = 0;
     color_index = (palette + 1) * GLYPH_PALETTE_COLOR_STRIDE;
     high_nibble_color = color_index * GLYPH_HIGH_NIBBLE_SCALE;
+
     /* Expand ROM bits to 4-bit colors, packing two pixels into each output byte. */
     for (; row < GLYPH_ROWS; row++)
     {
         for (row_byte_index = 0; row_byte_index < GLYPH_FONT_ROW_BYTES; row_byte_index++)
         {
             source_mask = GLYPH_FONT_SOURCE_MSB;
+
             for (index = 0; index < GLYPH_FONT_PIXEL_PAIRS; index++)
             {
                 *raster_cursor = (*font_data & source_mask) ? color_index : 0;
@@ -54,6 +57,7 @@ void* render_cached_glyph(void* primitive, u_long* ot_tag, u16 character_code, s
                 source_mask >>= 1;
                 raster_cursor++;
             }
+
             font_data++;
         }
     }
@@ -71,6 +75,7 @@ void* render_cached_glyph(void* primitive, u_long* ot_tag, u16 character_code, s
     {
         return primitive;
     }
+
     g_glyph_cache[index].raw = character_code;
     primitive = emit_glyph_sprite(primitive, ot_tag, index, palette);
 

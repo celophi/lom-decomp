@@ -21,8 +21,7 @@ typedef struct FieldMenuElement FieldMenuElement;
  * @note Some callbacks are defined with fewer parameters or other pointer
  *       types and are cast on assignment.
  */
-typedef void *(*FieldMenuDrawFn)(u_long *ot, void *packet, s32 scroll_x, s32 scroll_y, s32 height,
-                                 FieldMenuElement *element);
+typedef void* (*FieldMenuDrawFn)(u_long* ot, void* packet, s32 scroll_x, s32 scroll_y, s32 height, FieldMenuElement* element);
 
 /** @brief Element word 0: lifecycle state, open/close step, position and width low byte. */
 typedef union FieldMenuAttr
@@ -38,9 +37,9 @@ typedef union FieldMenuAttr
     } bits;
     struct
     {
-        u16 low;           /**< state, step and x. */
-        u8 y;              /**< Top edge, read and stored as a byte. */
-        u8 width_low;      /**< Width bits 0-7. */
+        u16 low;      /**< state, step and x. */
+        u8 y;         /**< Top edge, read and stored as a byte. */
+        u8 width_low; /**< Width bits 0-7. */
     } bytes;
 } FieldMenuAttr;
 
@@ -58,8 +57,8 @@ typedef union FieldMenuSize
     } bits;
     struct
     {
-        u16 low;             /**< width_high, height, blink and scroll_mode. */
-        s16 content_height;  /**< Total content height in pixels. */
+        u16 low;            /**< width_high, height, blink and scroll_mode. */
+        s16 content_height; /**< Total content height in pixels. */
     } fields;
 } FieldMenuSize;
 
@@ -121,8 +120,8 @@ void field_load_menu_frame_image(void);
 void field_reset_menu_elements(void);
 s32 field_menu_elements_animating(void);
 void field_close_menu_elements(void);
-FieldMenuElement *field_claim_menu_element(void);
-void field_draw_menu_elements(FieldRenderHalf *render_half);
-s32 field_count_text_glyphs(u8 *text);
+FieldMenuElement* field_claim_menu_element(void);
+void field_draw_menu_elements(FieldRenderHalf* render_half);
+s32 field_count_text_glyphs(u8* text);
 
 #endif

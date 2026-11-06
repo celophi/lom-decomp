@@ -189,6 +189,8 @@ typedef union
 
 /** @brief Item type within its category: bits 10-15 of FieldItemRecord.info. */
 #define FIELD_ITEM_TYPE(info) (((info) >> FIELD_ITEM_TYPE_SHIFT) & FIELD_ITEM_TYPE_MASK)
+/** @brief Byte offset of an item record's type in a table of u16 offsets (type * 2). */
+#define FIELD_ITEM_TYPE_TABLE_OFFSET(info) (((info) >> (FIELD_ITEM_TYPE_SHIFT - 1)) & (FIELD_ITEM_TYPE_MASK << 1))
 
 /** @brief FIELD_ITEM_CATEGORY values. */
 enum

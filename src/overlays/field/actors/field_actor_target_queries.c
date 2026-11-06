@@ -288,32 +288,32 @@ s32 field_collect_action_targets(s32 source_index, FieldActionSlot* action, s32 
     {
         switch (group_mode)
         {
-        case 0:
-            if (source_index < FIELD_PARTY_COUNT)
-            {
-                start = FIELD_PARTY_COUNT;
-                end = FIELD_ACTOR_COUNT;
-            }
-            else
-            {
-                start = 0;
-                end = FIELD_PARTY_COUNT;
-            }
+            case 0:
+                if (source_index < FIELD_PARTY_COUNT)
+                {
+                    start = FIELD_PARTY_COUNT;
+                    end = FIELD_ACTOR_COUNT;
+                }
+                else
+                {
+                    start = 0;
+                    end = FIELD_PARTY_COUNT;
+                }
 
-            break;
-        case 1:
-            if (source_index < FIELD_PARTY_COUNT)
-            {
-                start = 0;
-                end = FIELD_PARTY_COUNT;
-            }
-            else
-            {
-                start = FIELD_PARTY_COUNT;
-                end = FIELD_ACTOR_COUNT;
-            }
+                break;
+            case 1:
+                if (source_index < FIELD_PARTY_COUNT)
+                {
+                    start = 0;
+                    end = FIELD_PARTY_COUNT;
+                }
+                else
+                {
+                    start = FIELD_PARTY_COUNT;
+                    end = FIELD_ACTOR_COUNT;
+                }
 
-            break;
+                break;
         }
     }
 

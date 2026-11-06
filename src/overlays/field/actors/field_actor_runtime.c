@@ -40,7 +40,6 @@
 #include "overlays/field/field_types.h"
 #include "overlays/field/field_overlay_handoff.h"
 
-
 void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_entry_index);
 
 /** @brief Frames of the fade out before the game-over overlay loads. */
@@ -2638,11 +2637,13 @@ void field_render_actor_objects(FieldRenderContext* render_context)
         {
             if (!(actor->frame_data & FIELD_FRAME_DATA_8BIT))
             {
-                packet_cursor = field_render_effect_frame16((FieldMotionRecord*)actor, packet_cursor, ordering_table, (u8*)actor->frame_data, 0, &g_field_object_parts[i]);
+                packet_cursor =
+                    field_render_effect_frame16((FieldMotionRecord*)actor, packet_cursor, ordering_table, (u8*)actor->frame_data, 0, &g_field_object_parts[i]);
             }
             else
             {
-                packet_cursor = field_render_effect_frame8((FieldMotionRecord*)actor, packet_cursor, ordering_table, (u8*)actor->frame_data, 0, &g_field_object_parts[i]);
+                packet_cursor =
+                    field_render_effect_frame8((FieldMotionRecord*)actor, packet_cursor, ordering_table, (u8*)actor->frame_data, 0, &g_field_object_parts[i]);
             }
         }
         else if (actor->presence == FIELD_ACTOR_HIDDEN)

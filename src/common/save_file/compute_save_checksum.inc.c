@@ -15,11 +15,13 @@ s32 compute_save_checksum(const void* save_data)
     cursor = save_data;
     byte_sum = 0;
     byte_count = 0;
+
     while (byte_count < SAVE_FILE_CHECKSUM_BYTES)
     {
         byte_count++;
         byte_sum += *cursor;
         cursor++;
     }
+
     return byte_sum * SAVE_FILE_CHECKSUM_MULTIPLIER + SAVE_FILE_CHECKSUM_BIAS;
 }

@@ -7,11 +7,10 @@
  */
 u8* skip_hex_digits(u8* cursor)
 {
-    while ((*cursor >= '0' && *cursor <= '9') ||
-           (*cursor >= 'a' && *cursor <= 'f') ||
-           (*cursor >= 'A' && *cursor <= 'F'))
+    while ((*cursor >= '0' && *cursor <= '9') || (*cursor >= 'a' && *cursor <= 'f') || (*cursor >= 'A' && *cursor <= 'F'))
     {
         cursor++;
     }
+
     return cursor;
 }

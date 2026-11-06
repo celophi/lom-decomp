@@ -53,6 +53,7 @@ void draw_hardware_check_pattern(void)
 
     packet.tag = CHECKPS_PATTERN_PACKET_LENGTH << 24;
     packet.color_code = (CHECKPS_PATTERN_POLY_F4_CODE << 24) | GPU_COLOR_WORD(0xFF, 0, 0);
+
     for (ring_index = 0; ring_index < CHECKPS_PATTERN_RING_COUNT; ring_index++)
     {
         for (quadrant_index = 0; quadrant_index < CHECKPS_PATTERN_QUADRANT_COUNT; quadrant_index++)

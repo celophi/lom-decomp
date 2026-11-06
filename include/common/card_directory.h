@@ -116,9 +116,8 @@ typedef union
  * @param index Directory entry index.
  * @return Unsigned bytes following the save filename prefix.
  */
-#define CARD_ENTRY_SERIAL_TEXT(card, index) \
-    (((card) * CARD_DIRECTORY_BYTES + (index) * CARD_DIRECTORY_ENTRY_BYTES) + \
-     (u8*)&g_card_entries[0][0].name[CARD_SAVE_FILENAME_PREFIX_LENGTH])
+#define CARD_ENTRY_SERIAL_TEXT(card, index)                                                                                                                    \
+    (((card) * CARD_DIRECTORY_BYTES + (index) * CARD_DIRECTORY_ENTRY_BYTES) + (u8*)&g_card_entries[0][0].name[CARD_SAVE_FILENAME_PREFIX_LENGTH])
 
 /** @brief Directory listing of both cards. */
 extern struct DIRENTRY g_card_entries[CARD_SLOT_COUNT][CARD_DIRECTORY_ENTRY_COUNT];

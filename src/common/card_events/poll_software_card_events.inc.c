@@ -10,17 +10,21 @@ s32 poll_software_card_events(void)
     {
         return CARD_EVENT_COMPLETE;
     }
+
     if (TestEvent(g_card_software_event_error) == 1)
     {
         return CARD_EVENT_ERROR;
     }
+
     if (TestEvent(g_card_software_event_timeout) == 1)
     {
         return CARD_EVENT_TIMEOUT;
     }
+
     if (TestEvent(g_card_software_event_new_card) == 1)
     {
         return CARD_EVENT_NEW_CARD;
     }
+
     return CARD_EVENT_NONE;
 }

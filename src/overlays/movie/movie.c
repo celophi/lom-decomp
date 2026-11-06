@@ -141,6 +141,7 @@ void movie_play(u16 movie_index)
     VSync(0);
     update_controllers();
     cdrom_process_state();
+
     if (((movie_index == MOVIE_INDEX_INTRO) && ((SCD_REGS)->device_type < SCD_VALID_DEVICE_TYPE_COUNT)) &&
         (((SCD_REGS)->held_buttons & MOVIE_INTRO_SKIP_MASK) != 0))
     {
@@ -158,32 +159,32 @@ void movie_play(u16 movie_index)
     /* Select the stream length; movie resources are contiguous by index. */
     switch (movie_index)
     {
-    case MOVIE_INDEX_INTRO:
-        frame_count = MOVIE_INTRO_TOTAL_FRAMES;
-        init_flags = MOVIE_INIT_USE_CD_AUDIO;
-        break;
+        case MOVIE_INDEX_INTRO:
+            frame_count = MOVIE_INTRO_TOTAL_FRAMES;
+            init_flags = MOVIE_INIT_USE_CD_AUDIO;
+            break;
 
-    case MOVIE_INDEX_ATTRACT_1:
-        frame_count = MOVIE_ATTRACT_1_TOTAL_FRAMES;
-        init_flags = MOVIE_INIT_USE_CD_AUDIO;
-        break;
+        case MOVIE_INDEX_ATTRACT_1:
+            frame_count = MOVIE_ATTRACT_1_TOTAL_FRAMES;
+            init_flags = MOVIE_INIT_USE_CD_AUDIO;
+            break;
 
-    case MOVIE_INDEX_ATTRACT_2_PART_1:
-        frame_count = MOVIE_ATTRACT_2_PART_1_TOTAL_FRAMES;
-        init_flags = MOVIE_INIT_USE_CD_AUDIO;
-        break;
+        case MOVIE_INDEX_ATTRACT_2_PART_1:
+            frame_count = MOVIE_ATTRACT_2_PART_1_TOTAL_FRAMES;
+            init_flags = MOVIE_INIT_USE_CD_AUDIO;
+            break;
 
-    case MOVIE_INDEX_ATTRACT_2_PART_2:
-        frame_count = MOVIE_ATTRACT_2_PART_2_TOTAL_FRAMES;
-        init_flags = MOVIE_INIT_USE_CD_AUDIO;
-        break;
+        case MOVIE_INDEX_ATTRACT_2_PART_2:
+            frame_count = MOVIE_ATTRACT_2_PART_2_TOTAL_FRAMES;
+            init_flags = MOVIE_INIT_USE_CD_AUDIO;
+            break;
 
-    case MOVIE_INDEX_ATTRACT_2_PART_3:
+        case MOVIE_INDEX_ATTRACT_2_PART_3:
 
-    default:
-        frame_count = MOVIE_ATTRACT_2_PART_3_TOTAL_FRAMES;
-        init_flags = MOVIE_INIT_USE_CD_AUDIO;
-        break;
+        default:
+            frame_count = MOVIE_ATTRACT_2_PART_3_TOTAL_FRAMES;
+            init_flags = MOVIE_INIT_USE_CD_AUDIO;
+            break;
     }
 
     /* Stage the selected stream and initialize playback state. */
@@ -256,10 +257,12 @@ void movie_play(u16 movie_index)
 #endif
         VSync(0);
         display_env = &display_envs[0];
+
         if (state->chunk_idx == 0)
         {
             display_env = &display_envs[1];
         }
+
         PutDispEnv(display_env);
         SetDispMask(1);
         update_controllers();
@@ -269,6 +272,7 @@ void movie_play(u16 movie_index)
         if ((movie_index < MOVIE_FIRST_UNSKIPPABLE_INDEX) && ((SCD_REGS)->device_type < SCD_VALID_DEVICE_TYPE_COUNT))
 #else
         movie_index_value = movie_index_low;
+
         if ((movie_index_value < MOVIE_FIRST_UNSKIPPABLE_INDEX) && ((SCD_REGS)->device_type < SCD_VALID_DEVICE_TYPE_COUNT))
 #endif
         {
@@ -337,6 +341,7 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
 
     /* Decode the GPU and audio modes from the initialization flags. */
     MOVIE_STATE->gpu_mode = flags & MOVIE_INIT_GPU_MODE_MASK;
+
     if (flags & MOVIE_INIT_USE_CD_AUDIO)
     {
         MOVIE_STATE->use_cd_audio = 1;
@@ -345,6 +350,7 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
     {
         MOVIE_STATE->use_cd_audio = 0;
     }
+
     if (MOVIE_STATE->gpu_mode == MOVIE_GPU_MODE_STANDARD)
     {
         /* Configure the fixed-buffer layout used by normal playback. */
@@ -382,6 +388,7 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
         MOVIE_STATE->vlc_input_buf[1] = ALTERNATE_MOVIE_BUFFERS->vlc_input_buf[1];
         MOVIE_STATE->mdec_output_buf[0] = ((AlternateMovieDecodeBuffers*)scene->vlc_table)->mdec_output_buf[0];
         MOVIE_STATE->mdec_output_buf[1] = ((AlternateMovieDecodeBuffers*)scene->vlc_table)->mdec_output_buf[1];
+
         if (MOVIE_STATE->rects[0].x >= ALTERNATE_RECT_WRAP_THRESHOLD)
         {
             MOVIE_STATE->rects[1].x = ALTERNATE_RECT_WRAP_X;
@@ -392,6 +399,7 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
             MOVIE_STATE->rects[1].x = MOVIE_STATE->rects[0].x + MOVIE_STATE->rects[0].w;
             MOVIE_STATE->rects[1].y = MOVIE_STATE->rects[0].y;
         }
+
         MOVIE_STATE->rects[1].w = MOVIE_STATE->rects[0].w;
         MOVIE_STATE->rects[1].h = MOVIE_STATE->rects[0].h;
         MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].h = MOVIE_STATE->rects[0].h;
@@ -503,14 +511,17 @@ void movie_update(void)
     if (g_movie_mdec_retry_pending == 0)
     {
         u8 retry_count = MOVIE_STATE->vlc_retry_count;
+
         if (retry_count != 0)
         {
             retry_count--;
             MOVIE_STATE->vlc_retry_count = retry_count;
+
             if (retry_count == 0)
             {
                 DecDCTvlcSize2(0);
             }
+
             if (DecDCTvlc2(0, 0, MOVIE_STATE->vlc_table) == 0)
             {
                 vlc_decode_complete = 1;
@@ -538,6 +549,7 @@ void movie_update(void)
                 DecDCTvlcSize2(ALTERNATE_VLC_DECODE_SIZE);
                 MOVIE_STATE->vlc_retry_count = ALTERNATE_VLC_RETRY_COUNT;
             }
+
             if (DecDCTvlc2(frame.video->words, MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx], MOVIE_STATE->vlc_table) == 0)
             {
                 vlc_decode_complete = 1;
@@ -572,6 +584,7 @@ void movie_update(void)
 
     /* Release audio sectors only after the SPU has consumed their samples. */
     movie_state = MOVIE_STATE;
+
     if (g_movie_use_cd_audio != 0)
     {
         if (get_next_audio_entry(&frame.audio) != 0)
@@ -583,9 +596,12 @@ void movie_update(void)
             {
                 movie_state->end_state = END_STATE_DONE;
             }
+
             akao_xa_advance_frame();
         }
+
         movie_state = MOVIE_STATE;
+
         if (g_movie_audio_stream_state == AUDIO_STREAM_STATE_PRIMED)
         {
             audio_ring_capacity = movie_state->audio_ring_capacity;
@@ -600,6 +616,7 @@ void movie_update(void)
         if ((MOVIE_STATE->audio_write_idx != MOVIE_STATE->audio_read_idx) || (MOVIE_STATE->last_audio_frame != MOVIE_STATE->last_consumed_audio_frame))
         {
             s32 position = akao_xa_get_position();
+
             if (((position != AKAO_XA_POSITION_UNAVAILABLE) && (MOVIE_STATE->audio_buffered_count != 0)) &&
                 (MOVIE_STATE->audio_read_idx != (position * AUDIO_SECTORS_PER_XA_FRAME)))
             {

@@ -15,6 +15,7 @@ s8* format_decimal(s8* destination, s32 value)
 
     cursor = destination;
     divisor = SJIS_DECIMAL_FIRST_DIVISOR;
+
     if (value >= divisor * SJIS_DECIMAL_RADIX)
     {
         strcpy(cursor, SJIS_DECIMAL_OVERFLOW_TEXT);
@@ -22,26 +23,32 @@ s8* format_decimal(s8* destination, s32 value)
     }
 
     emit_zero_digits = 0;
+
     for (;; divisor /= SJIS_DECIMAL_RADIX)
     {
         digit = value / divisor;
+
         if (digit != 0 || emit_zero_digits != 0)
         {
             *cursor++ = (digit + SJIS_DIGIT_ZERO) >> SJIS_CODE_LEAD_SHIFT;
             *cursor++ = digit + (SJIS_DIGIT_ZERO & SJIS_CODE_TRAIL_MASK);
             emit_zero_digits = 1;
         }
+
         if (divisor == 1)
         {
             break;
         }
+
         /* Always emit the units digit, even when the value is zero. */
         if (divisor == SJIS_DECIMAL_RADIX)
         {
             emit_zero_digits = 1;
         }
+
         value -= digit * divisor;
     }
+
     *cursor = 0;
     return cursor;
 }

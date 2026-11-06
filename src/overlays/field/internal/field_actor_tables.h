@@ -39,7 +39,6 @@ extern s32 g_field_boss_hud_shake_frame;
 /** @brief Total number of animation actor slots (general, per-object and per-object effect slots). */
 #define FIELD_ACTOR_SLOT_TOTAL 80
 
-
 /** @brief FieldObjectState::interaction_kind of a dropped item the player can pick up. */
 #define FIELD_INTERACTION_ITEM 1
 
@@ -76,15 +75,12 @@ typedef struct
 /** @brief Sentinel returned by field_find_object_state when no object matches. */
 #define FIELD_OBJECT_STATE_NONE ((FieldObjectState*)-1)
 
-
 /** @brief Parameter curve count of an animation (curve selectors are four bits). */
 #define FIELD_CURVE_COUNT 16
 /** @brief Curve selector of an unused render-state track. */
 #define FIELD_CURVE_NONE 0xFF
 /** @brief Neutral global colour scale. */
 #define FIELD_COLOR_SCALE_NEUTRAL 0x100
-
-
 
 extern FieldObjectState g_field_scene_object_states[];
 

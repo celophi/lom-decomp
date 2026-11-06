@@ -2232,7 +2232,7 @@ void field_retire_effect(FieldMotionRecord* effect, FieldObjectPart* part)
         g_field_actors[actor->owner_object_index].z = effect->z;
         g_field_actors[actor->owner_object_index].y = 0;
         g_field_actors[actor->owner_object_index].animation =
-            (g_field_actors[actor->owner_object_index].animation & 0x7F) | (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED);
+            (g_field_actors[actor->owner_object_index].animation & FIELD_ANIMATION_INDEX_MASK) | (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED);
     }
 
     if (effect->owner_part == (((actor->animation->sync_parts >> 5) & 0x1F) - 1))
@@ -2244,7 +2244,8 @@ void field_retire_effect(FieldMotionRecord* effect, FieldObjectPart* part)
             g_field_actors[actor->targets[effect->track_index]].z = effect->z;
             g_field_actors[actor->targets[effect->track_index]].y = 0;
             g_field_actors[actor->targets[effect->track_index]].animation =
-                (g_field_actors[actor->targets[effect->track_index]].animation & 0x7F) | (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED);
+                (g_field_actors[actor->targets[effect->track_index]].animation & FIELD_ANIMATION_INDEX_MASK) |
+                (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED);
         }
     }
 
@@ -2386,7 +2387,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
             u32 bounds_flags;
             s32 placement_kind;
             bounds_flags = part->placement_flags.word;
-            placement_kind = (bounds_flags >> 0x12) & 0x3F;
+            placement_kind = (bounds_flags >> FIELD_PART_PLACEMENT_KIND_SHIFT) & FIELD_PART_PLACEMENT_KIND_MASK;
 
             if (placement_kind < 0x14)
             {
@@ -3621,7 +3622,7 @@ void field_resolve_effect_position(FieldMotionRecord* effect, FieldObjectPart* p
             {
                 if (((part->placement_flags.word >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) || (part->spawn_flags.word & FIELD_PART_MIRROR_X_WITH_OWNER))
                 {
-                    effect->facing_or_reward_kind = effect->facing_or_reward_kind & 0x7F;
+                    effect->facing_or_reward_kind = effect->facing_or_reward_kind & FIELD_ANIMATION_INDEX_MASK;
                 }
 
                 horizontal_offset = effect->work_x;
@@ -4036,7 +4037,8 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
                     {
                         *(s16*)&((POLY_FT4*)packet_cursor)->tpage = ((texture_slot_flags[texture_slot] & 3) << 7) |
                                                                     ((part->behavior_flags.word >> FIELD_PART_BLEND_TPAGE_SHIFT) & GPU_TPAGE_BLEND_MASK) |
-                                                                    0x10 | ((((actor->owner_object_index << 6) + FIELD_ACTOR_TEXTURE_VRAM_X) & 0x3FF) >> 6);
+                                                                    0x10 |
+                                                                    ((((actor->owner_object_index << 6) + FIELD_ACTOR_TEXTURE_VRAM_X) & (VRAM_WIDTH - 1)) >> 6);
                         frame_y_or_clut = (actor->owner_object_index * 2) + FIELD_ACTOR_CLUT_VRAM_Y;
                     }
                     else
@@ -4052,7 +4054,7 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
                 else
                 {
                     frame_y_or_clut = (width_or_mode * 2) + FIELD_EFFECT_CLUT_VRAM_Y;
-                    value0 = (((width_or_mode << 6) + FIELD_EFFECT_TEXTURE_VRAM_X) & 0x3FF) >> 6;
+                    value0 = (((width_or_mode << 6) + FIELD_EFFECT_TEXTURE_VRAM_X) & (VRAM_WIDTH - 1)) >> 6;
                     value1 = (part->behavior_flags.word >> FIELD_PART_BLEND_TPAGE_SHIFT) & GPU_TPAGE_BLEND_MASK;
                     value1 |= value0;
                     ((POLY_FT4*)packet_cursor)->tpage = value1;
@@ -4314,9 +4316,9 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
     {
         frame_flags = item[7];
 
-        if (!(frame_flags & 0x20))
+        if (!(frame_flags & FIELD_SPRITE_FRAME_FOOTPRINT))
         {
-            if (rec->source_object_index >= 3 || (frame_flags & 3) != 2 || item[6] != 2 ||
+            if (rec->source_object_index >= 3 || (frame_flags & FIELD_SPRITE_TEXTURE_MODE_MASK) != 2 || item[6] != 2 ||
                 g_field_player_records[rec->source_object_index].hide_shield_sprite == 0)
             {
                 field_resolve_effect_part_color(actor, rec, part, (FieldPrimitiveColor*)&((P_TAG*)cursor)->r0);
@@ -4340,7 +4342,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
 
                 field_project_effect_sprite_quad(rec, sxy, (POLY_FT4*)cursor, u_extent, v_extent, x_offset, y_offset, (FieldSpriteFrame*)item, mtx);
 
-                if ((item[7] ^ (rec->facing_or_reward_kind >> 1)) & 0x40)
+                if ((item[7] ^ (rec->facing_or_reward_kind >> 1)) & FIELD_SPRITE_FRAME_FLIP_X)
                 {
                     u_left = item[2];
                     poly->u1 = u_left;
@@ -4373,7 +4375,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                     poly->u1 = u_right_flat;
                 }
 
-                if (item[7] & 0x80)
+                if (item[7] & FIELD_SPRITE_FRAME_FLIP_Y)
                 {
                     v_bottom = item[3];
                     poly->v2 = v_bottom;
@@ -4453,7 +4455,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                         page_x <<= 6;
                         page_x += FIELD_COMPANION_TEXTURE_VRAM_X;
                         page_x -= tpage_x;
-                        page_x = (page_x & 0x3FF) >> 6;
+                        page_x = (page_x & (VRAM_WIDTH - 1)) >> 6;
                         page_abr = (part->behavior_flags.word >> FIELD_PART_BLEND_TPAGE_SHIFT) & GPU_TPAGE_BLEND_MASK;
                         poly->tpage = page_x | page_abr;
                     }
@@ -4468,11 +4470,11 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
 
                     if (item[7] & 3)
                     {
-                        page_x = (tpage_x + FIELD_TEXTURE_COLUMN_WIDTH) & 0x3FF;
+                        page_x = (tpage_x + FIELD_TEXTURE_COLUMN_WIDTH) & (VRAM_WIDTH - 1);
                     }
                     else
                     {
-                        page_x = tpage_x & 0x3FF;
+                        page_x = tpage_x & (VRAM_WIDTH - 1);
                     }
 
                     poly->tpage = page_abr | (page_x >> 6);
@@ -4480,7 +4482,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
 
                 effect_flags = rec->flags;
 
-                if ((effect_flags & 0x7F0000) && (item[6] == 0) && ((item[7] & 3) != 2))
+                if ((effect_flags & 0x7F0000) && (item[6] == 0) && ((item[7] & FIELD_SPRITE_TEXTURE_MODE_MASK) != 2))
                 {
                     if (effect_flags & 0x40000)
                     {
@@ -4575,7 +4577,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                 }
                 else if (FIELD_PART_PALETTE_SOURCE(part) == FIELD_PART_PALETTE_RESOURCE)
                 {
-                    if ((item[7] & 3) != 2)
+                    if ((item[7] & FIELD_SPRITE_TEXTURE_MODE_MASK) != 2)
                     {
                         if (rec->resource_index == FIELD_RESOURCE_FIXED)
                         {
@@ -4631,7 +4633,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                                 break;
                             }
 
-                            if ((item[7] & 3) != 2)
+                            if ((item[7] & FIELD_SPRITE_TEXTURE_MODE_MASK) != 2)
                             {
                                 poly->clut = getClut(item[6] << 4, rec->resource_index + FIELD_RESOURCE_CLUT_VRAM_Y);
                             }
@@ -5427,7 +5429,7 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
         {
             frame_flags = item[7];
 
-            if (!(frame_flags & 0x20))
+            if (!(frame_flags & FIELD_SPRITE_FRAME_FOOTPRINT))
             {
                 field_resolve_effect_part_color(actor, rec, part, (FieldPrimitiveColor*)&((P_TAG*)cursor)->r0);
                 setPolyFT4(poly);
@@ -5445,7 +5447,7 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                 width--;
                 field_project_effect_sprite_quad(rec, sxy, (POLY_FT4*)cursor, width, height, offset_x, offset_y, (FieldSpriteFrame*)item, mtx);
 
-                if ((item[7] ^ ((u8)rec->facing_or_reward_kind >> 1)) & 0x40)
+                if ((item[7] ^ ((u8)rec->facing_or_reward_kind >> 1)) & FIELD_SPRITE_FRAME_FLIP_X)
                 {
                     u_start_flip = item[2];
                     poly->u1 = u_start_flip;
@@ -5478,7 +5480,7 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                     poly->u1 = u_end;
                 }
 
-                if (item[7] & 0x80)
+                if (item[7] & FIELD_SPRITE_FRAME_FLIP_Y)
                 {
                     v_start_flip = item[3];
                     poly->v2 = v_start_flip;
@@ -5550,7 +5552,7 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                         page_x <<= 6;
                         page_x += FIELD_COMPANION_TEXTURE_VRAM_X;
                         page_x -= tpage_x;
-                        page_x = (page_x & 0x3FF) >> 6;
+                        page_x = (page_x & (VRAM_WIDTH - 1)) >> 6;
                         page_abr = ((u32)part->behavior_flags.word >> FIELD_PART_BLEND_TPAGE_SHIFT) & GPU_TPAGE_BLEND_MASK;
                         poly->tpage = (s16)(page_x | page_abr);
                     }
@@ -5565,11 +5567,11 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
 
                     if (item[7] & 3)
                     {
-                        page_x = (tpage_x + FIELD_TEXTURE_COLUMN_WIDTH) & 0x3FF;
+                        page_x = (tpage_x + FIELD_TEXTURE_COLUMN_WIDTH) & (VRAM_WIDTH - 1);
                     }
                     else
                     {
-                        page_x = tpage_x & 0x3FF;
+                        page_x = tpage_x & (VRAM_WIDTH - 1);
                     }
 
                     poly->tpage = (s16)(page_abr | (page_x >> 6));
@@ -8794,7 +8796,7 @@ void field_extract_effect_quad_corners8(FieldMotionRecord* effect, u8* frame_dat
 
     for (count = *frame_data++; count != 0; frame_data += 9, count--)
     {
-        if (frame_data[7] & 0x20)
+        if (frame_data[7] & FIELD_SPRITE_FRAME_FOOTPRINT)
         {
             if ((frame_data[7] & 0xF) == 2)
             {
@@ -8842,7 +8844,7 @@ void field_extract_effect_quad_corners16(FieldMotionRecord* effect, u8* frame_da
 
     for (count = *frame_data++; count != 0; count--)
     {
-        if (frame_data[7] & 0x20)
+        if (frame_data[7] & FIELD_SPRITE_FRAME_FOOTPRINT)
         {
             if ((frame_data[7] & 0xF) == 2)
             {

@@ -296,39 +296,39 @@ static inline void field_apply_part_rotation(FieldActorSlot* actor, FieldMotionR
     {
         switch (component)
         {
-        case 1:
-            rotation = field_evaluate_parameter_track_at_time(actor, rotation_flags >> 26, (u16)record->age) << 4;
-            axis = part->track_flags.bytes.high;
-            axis &= 3;
-            break;
-        case 2:
-            RotMatrixX(ONE / 4, matrix);
-            rotation = record->heading;
-            axis = 2;
-            break;
-        case 3:
-            rotation = (((rotation_flags >> 26) * (u16)record->age) << 4) & 0xfff;
-            axis = rotation_flags >> 24;
-            axis &= 3;
-            break;
+            case 1:
+                rotation = field_evaluate_parameter_track_at_time(actor, rotation_flags >> 26, (u16)record->age) << 4;
+                axis = part->track_flags.bytes.high;
+                axis &= 3;
+                break;
+            case 2:
+                RotMatrixX(ONE / 4, matrix);
+                rotation = record->heading;
+                axis = 2;
+                break;
+            case 3:
+                rotation = (((rotation_flags >> 26) * (u16)record->age) << 4) & 0xfff;
+                axis = rotation_flags >> 24;
+                axis &= 3;
+                break;
         }
 
         switch (axis)
         {
-        case 1:
-            RotMatrixZ(rotation, matrix);
-            break;
-        case 0:
-            RotMatrixY(rotation, matrix);
-            break;
-        case 3:
-            RotMatrixZ(rotation, matrix);
-            RotMatrixY(rotation, matrix);
-            RotMatrixX(rotation, matrix);
-            break;
-        case 2:
-            RotMatrixX(rotation, matrix);
-            break;
+            case 1:
+                RotMatrixZ(rotation, matrix);
+                break;
+            case 0:
+                RotMatrixY(rotation, matrix);
+                break;
+            case 3:
+                RotMatrixZ(rotation, matrix);
+                RotMatrixY(rotation, matrix);
+                RotMatrixX(rotation, matrix);
+                break;
+            case 2:
+                RotMatrixX(rotation, matrix);
+                break;
         }
     }
 }
@@ -468,28 +468,28 @@ s32 field_build_part_matrix(FieldActorSlot* actor, FieldMotionRecord* record, Fi
 
         switch (scale_mode)
         {
-        case 0:
-            track_scale_xz = field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, (u16)record->age) * 16;
-            scale->vz = track_scale_xz;
-            scale->vx = track_scale_xz;
-            break;
-        case 1:
-            track_index = scale_flags >> 0x1C;
-            scale->vy = field_evaluate_parameter_track_at_time(actor, track_index, (u16)record->age) * 16;
-            break;
-        case 2:
-            track_scale_xyz = field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, (u16)record->age) * 16;
-            scale->vz = track_scale_xyz;
-            scale->vy = track_scale_xyz;
-            scale->vx = track_scale_xyz;
-            break;
-        case 3:
-            track_scale_pair = field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, (u16)record->age) * 16;
-            scale->vz = track_scale_pair;
-            scale->vx = track_scale_pair;
-            track_index = (part->behavior_flags.word >> 0x1C) + 1;
-            scale->vy = field_evaluate_parameter_track_at_time(actor, track_index, (u16)record->age) * 16;
-            break;
+            case 0:
+                track_scale_xz = field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, (u16)record->age) * 16;
+                scale->vz = track_scale_xz;
+                scale->vx = track_scale_xz;
+                break;
+            case 1:
+                track_index = scale_flags >> 0x1C;
+                scale->vy = field_evaluate_parameter_track_at_time(actor, track_index, (u16)record->age) * 16;
+                break;
+            case 2:
+                track_scale_xyz = field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, (u16)record->age) * 16;
+                scale->vz = track_scale_xyz;
+                scale->vy = track_scale_xyz;
+                scale->vx = track_scale_xyz;
+                break;
+            case 3:
+                track_scale_pair = field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, (u16)record->age) * 16;
+                scale->vz = track_scale_pair;
+                scale->vx = track_scale_pair;
+                track_index = (part->behavior_flags.word >> 0x1C) + 1;
+                scale->vy = field_evaluate_parameter_track_at_time(actor, track_index, (u16)record->age) * 16;
+                break;
         }
 
         ScaleMatrix(matrix, scale);

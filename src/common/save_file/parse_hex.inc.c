@@ -12,15 +12,16 @@ u32 parse_hex(const u8* cursor, s32 digits_left)
     u32 parsed_value;
 
     parsed_value = 0;
-    while ((*cursor >= '0' && *cursor <= '9') ||
-           (*cursor >= 'a' && *cursor <= 'f') ||
-           (*cursor >= 'A' && *cursor <= 'F'))
+
+    while ((*cursor >= '0' && *cursor <= '9') || (*cursor >= 'a' && *cursor <= 'f') || (*cursor >= 'A' && *cursor <= 'F'))
     {
         if (digits_left == 0)
         {
             break;
         }
+
         parsed_value <<= SAVE_HEX_DIGIT_BITS;
+
         if (*cursor >= '0' && *cursor <= '9')
         {
             u32 decimal_base;
@@ -42,8 +43,10 @@ u32 parse_hex(const u8* cursor, s32 digits_left)
             lowercase_base = parsed_value - ('a' - SAVE_HEX_DECIMAL_DIGITS);
             parsed_value = lowercase_base + *cursor;
         }
+
         cursor++;
         digits_left--;
     }
+
     return parsed_value;
 }

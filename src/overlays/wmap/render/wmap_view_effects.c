@@ -90,7 +90,6 @@
 #define WMAP_BURST_TEXTURE_SMALL 7
 /** @brief Sprite shade that draws the texture unmodified. */
 
-
 extern u32 g_wmap_view_sequence_step;
 extern s32 g_wmap_view_sequence_timer;
 extern WmapSequenceStep g_wmap_view_sequence_steps[];

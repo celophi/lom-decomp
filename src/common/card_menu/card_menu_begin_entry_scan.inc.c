@@ -16,11 +16,13 @@ s32 card_menu_begin_entry_scan(s32 slot)
     g_card_menu_scroll_y = 0;
     g_card_entry_state = 0;
     pattern.device.characters.slot += slot;
+
     if (firstfile(pattern.text, &g_card_entries[slot][0]) != 0)
     {
         field_flag_known_save(g_card_entries[slot][g_card_entry_state].name);
         g_card_entry_state++;
         return 1;
     }
+
     return 0;
 }

@@ -24,6 +24,7 @@ void* emit_glyph_sprite(GlyphSprite* sprite, u_long* ot, s32 cache_slot, s32 pal
     sprite++;
 
     g_glyph_cursor_x += GLYPH_SIZE;
+
     if (g_glyph_cursor_x + GLYPH_SIZE >= GLYPH_TEXT_WRAP_X)
     {
         g_glyph_cursor_x = g_glyph_line_start_x;

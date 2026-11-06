@@ -4,22 +4,22 @@
 #include "include_asm.h"
 #include "common/memory_map.h"
 
-typedef unsigned char   u_char;
-typedef unsigned short  u_short;
-typedef unsigned int    u_int;
-typedef unsigned long   u_long;
+typedef unsigned char u_char;
+typedef unsigned short u_short;
+typedef unsigned int u_int;
+typedef unsigned long u_long;
 
-typedef unsigned char   undefined;
-typedef unsigned char   undefined1;
-typedef unsigned short  undefined2;
-typedef unsigned int    undefined4;
+typedef unsigned char undefined;
+typedef unsigned char undefined1;
+typedef unsigned short undefined2;
+typedef unsigned int undefined4;
 
-typedef int             s32;
-typedef unsigned int    u32;
-typedef unsigned char   u8;
-typedef signed char     s8;
-typedef unsigned short  u16;
-typedef signed short    s16;
+typedef int s32;
+typedef unsigned int u32;
+typedef unsigned char u8;
+typedef signed char s8;
+typedef unsigned short u16;
+typedef signed short s16;
 
 /*
  * Integers wide enough to hold an address (uintptr_t, and intptr_t for signed address
@@ -39,9 +39,9 @@ typedef s32 intptr_t;
 #define BYTES_PER_WORD_MASK (BYTES_PER_WORD - 1)
 
 /* Boolean / null macros */
-#define TRUE    1
-#define FALSE   0
-#define NULL    ((void*)0)
+#define TRUE 1
+#define FALSE 0
+#define NULL ((void*)0)
 
 /* Common sizes */
 #define MAX_SHORT_VALUE 32767

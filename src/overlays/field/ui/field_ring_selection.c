@@ -225,21 +225,21 @@ void field_open_ring_menu(s32 position_mode, s32 menu_id, u16 excluded_mask, s32
 
         switch (position_mode)
         {
-        case FIELD_RING_AT_SCREEN_CENTER:
-            g_field_ring_center_x = FIELD_RING_CENTER_X;
-            g_field_ring_center_y = FIELD_RING_CENTER_Y;
-            break;
+            case FIELD_RING_AT_SCREEN_CENTER:
+                g_field_ring_center_x = FIELD_RING_CENTER_X;
+                g_field_ring_center_y = FIELD_RING_CENTER_Y;
+                break;
 
-        case FIELD_RING_AT_PLAYER:
-            view_x = g_field_view_offset_x / 256;
-            screen_x = g_field_actors[0].x / 256 + FIELD_RING_CENTER_X;
-            center.vx = view_x + screen_x;
-            view_y = g_field_view_offset_y / 256;
-            screen_y = g_field_actors[0].y / 256 + FIELD_RING_CENTER_Y;
-            center.vy = view_y + screen_y - g_field_actors[0].z / 512 - g_field_view_offset_z / 512;
-            g_field_ring_center_x = center.vx;
-            g_field_ring_center_y = center.vy;
-            break;
+            case FIELD_RING_AT_PLAYER:
+                view_x = g_field_view_offset_x / 256;
+                screen_x = g_field_actors[0].x / 256 + FIELD_RING_CENTER_X;
+                center.vx = view_x + screen_x;
+                view_y = g_field_view_offset_y / 256;
+                screen_y = g_field_actors[0].y / 256 + FIELD_RING_CENTER_Y;
+                center.vy = view_y + screen_y - g_field_actors[0].z / 512 - g_field_view_offset_z / 512;
+                g_field_ring_center_x = center.vx;
+                g_field_ring_center_y = center.vy;
+                break;
         }
 
         g_field_ring_menu_state = FIELD_RING_OPENING;
@@ -292,17 +292,17 @@ s32 field_update_ring_menu(FieldRenderHalf* render_half)
 
     switch (state)
     {
-    case FIELD_RING_SELECTING:
-        field_ring_menu_select_step();
-        break;
+        case FIELD_RING_SELECTING:
+            field_ring_menu_select_step();
+            break;
 
-    case FIELD_RING_OPENING:
-        field_ring_menu_open_step();
-        break;
+        case FIELD_RING_OPENING:
+            field_ring_menu_open_step();
+            break;
 
-    case FIELD_RING_CLOSING:
-        field_ring_menu_close_step();
-        break;
+        case FIELD_RING_CLOSING:
+            field_ring_menu_close_step();
+            break;
     }
 
     field_draw_ring_menu(render_half);

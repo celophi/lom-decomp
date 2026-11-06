@@ -50,6 +50,7 @@ u8* gosub_draw_composite_icon(u8* packet, u_long* ot, s32 x, s32 y, s32 block_id
                                   g_golem_shape_table[shape].rotations[0].parts[i].x * GOSUB_COMPOSITE_ICON_PART_CELL_SIZE + icon_x,
                                   g_golem_shape_table[shape].rotations[0].parts[i].y * GOSUB_COMPOSITE_ICON_PART_CELL_SIZE + icon_y, clut);
     }
+
     return gosub_finish_glyph_run(packet, ot);
 }
 
@@ -108,6 +109,7 @@ void gosub_delete_logic_block(s32 record_index)
     {
         gosub_copy_logic_block(&g_saved_game_ctx->logic_blocks[shift_index], &g_saved_game_ctx->logic_blocks[shift_index + 1]);
     }
+
     g_saved_game_ctx->logic_block_count--;
 }
 
@@ -128,7 +130,9 @@ void gosub_delete_list_row(s32 row)
     {
         gosub_copy_list_row(&g_gosub_rows[i], &g_gosub_rows[i + 1]);
     }
+
     g_gosub_row_count--;
+
     for (i = 0; i < g_gosub_row_count; i++)
     {
         if (row < g_gosub_rows[i].index)
@@ -153,6 +157,7 @@ inline void gosub_copy_logic_block(void* dst, void* src)
     dst_bytes = dst;
     src_bytes = src;
     byte_count = 0;
+
     while (byte_count < sizeof(LogicBlock))
     {
         byte_count++;
@@ -175,6 +180,7 @@ inline void gosub_copy_list_row(void* dst, void* src)
     dst_bytes = dst;
     src_bytes = src;
     byte_count = 0;
+
     while (byte_count < sizeof(GosubListRow))
     {
         byte_count++;
@@ -206,6 +212,7 @@ void gosub_sort_logic_blocks(s32 sort_mode)
                 break;
             }
         }
+
         if (insertion_index != row_index)
         {
             for (shift_index = row_index; shift_index > insertion_index; shift_index--)
@@ -213,6 +220,7 @@ void gosub_sort_logic_blocks(s32 sort_mode)
                 workspace.row_order[shift_index] = workspace.row_order[shift_index - 1];
             }
         }
+
         workspace.row_order[insertion_index] = row_index;
     }
 
@@ -246,27 +254,32 @@ s32 gosub_compare_logic_blocks(s32 mode, s32 left_row_index, s32 right_row_index
         left_row_index = right_row_index;
         right_row_index = swapped_row_index;
     }
+
     switch (mode & GOSUB_SORT_KEY_MASK)
     {
-    case GOSUB_SORT_BY_TYPE:
-        if (g_gosub_rows[left_row_index].detail_group < g_gosub_rows[right_row_index].detail_group)
-        {
-            return 1;
-        }
-        break;
-    case GOSUB_SORT_BY_POWER:
-        if (g_gosub_rows[left_row_index].detail_id < g_gosub_rows[right_row_index].detail_id)
-        {
-            return 1;
-        }
-        break;
-    case GOSUB_SORT_BY_SHAPE:
-        if (g_gosub_rows[left_row_index].detail_variant < g_gosub_rows[right_row_index].detail_variant)
-        {
-            return 1;
-        }
-        break;
+        case GOSUB_SORT_BY_TYPE:
+            if (g_gosub_rows[left_row_index].detail_group < g_gosub_rows[right_row_index].detail_group)
+            {
+                return 1;
+            }
+
+            break;
+        case GOSUB_SORT_BY_POWER:
+            if (g_gosub_rows[left_row_index].detail_id < g_gosub_rows[right_row_index].detail_id)
+            {
+                return 1;
+            }
+
+            break;
+        case GOSUB_SORT_BY_SHAPE:
+            if (g_gosub_rows[left_row_index].detail_variant < g_gosub_rows[right_row_index].detail_variant)
+            {
+                return 1;
+            }
+
+            break;
     }
+
     return 0;
 }
 

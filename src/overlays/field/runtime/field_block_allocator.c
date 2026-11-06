@@ -93,6 +93,7 @@ void* field_block_alloc(void* pool, s32 size, s32 tag)
     block = pool;
     /* Round up to whole words (the original mask keeps 24 bits). */
     need = (size + 3) & 0xFFFFFC;
+
     while (1)
     {
         if (!block->used)
@@ -105,6 +106,7 @@ void* field_block_alloc(void* pool, s32 size, s32 tag)
                     block->tag = tag;
                     return block + 1;
                 }
+
                 next = (FieldBlockHeader*)((u8*)block + need) + 1;
                 next->used = 0;
                 next->size = block->size - need - sizeof(FieldBlockHeader);
@@ -119,6 +121,7 @@ void* field_block_alloc(void* pool, s32 size, s32 tag)
         {
             return NULL;
         }
+
         block = field_block_next(block);
     }
 }
@@ -135,12 +138,14 @@ void field_block_free_tag(void* pool, s32 tag)
 
     block = pool;
     previous = block;
+
     while (1)
     {
         if (block->tag == FIELD_BLOCK_TAG_END)
         {
             return;
         }
+
         if (block->used && block->tag == tag)
         {
             if (previous == block)
@@ -157,11 +162,13 @@ void field_block_free_tag(void* pool, s32 tag)
                 field_block_release(block);
             }
         }
+
         if (previous != block && !block->used && !previous->used)
         {
             field_block_absorb(previous, block);
             block = previous;
         }
+
         previous = block;
         block = field_block_next(block);
     }

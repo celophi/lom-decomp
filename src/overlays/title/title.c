@@ -115,11 +115,13 @@ s32 run_title(TitleMenuContext* menu_context)
         {
             load_saved_game_template(0);
             g_title_menu_exit_state = 0;
+
             if (run_save_slot_menu(context) == SAVE_SLOT_MENU_EXIT_CANCEL)
             {
                 screen_transition(0);
                 continue;
             }
+
             return GAME_STATE_GNAME;
         }
         else if (selection == TITLE_MENU_ITEM_CONTINUE)
@@ -187,21 +189,25 @@ void render_menu(TitleMenuContext* context)
             VSync(FRAME_VSYNC_INTERVAL);
 
             next_context = context;
+
             if (current == context)
             {
                 next_context = current->second_buffer_header;
             }
+
             current = next_context;
             PutDispEnv(&current->screen.disp_env);
             PutDrawEnv(&current->screen.draw_env);
             DrawOTag(ot_head + FRAME_ORDERING_TABLE_LENGTH - 1);
             update_controllers();
             cdrom_process_state();
+
             if (g_title_menu_exit_state == 0)
             {
                 continue;
             }
         }
+
         break;
     }
 
@@ -247,6 +253,7 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
     PutDispEnv(&current->screen.disp_env);
     update_controllers();
     SetDispMask(1);
+
     do
     {
         ot = current->screen.ot;
@@ -259,10 +266,12 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
         set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
         VSync(FRAME_VSYNC_INTERVAL);
         next_context = ctx_base;
+
         if (current == ctx_base)
         {
             next_context = current->second_buffer_header;
         }
+
         current = next_context;
         PutDispEnv(&current->screen.disp_env);
         PutDrawEnv(&current->screen.draw_env);
@@ -491,19 +500,23 @@ void render_title_backdrop(TitleMenuContext* ctx)
 void handle_title_menu_input(void)
 {
     update_menu_input();
+
     if (g_title_idle_countdown == 0)
     {
         g_title_menu_exit_state = 1;
         g_title_selected_item = TITLE_SELECTION_SENTINEL;
         return;
     }
+
     g_title_idle_countdown--;
+
     if (g_debounced_input & (PADh | PADi | PADRright))
     {
         play_sfx(0x7C, AKAO_PAN_CENTER);
         g_title_menu_exit_state = 1;
         return;
     }
+
     if (g_debounced_input & (PADLup | PADLleft))
     {
         menu_cursor_up();
@@ -536,6 +549,7 @@ void menu_cursor_down(void)
             break;
         }
     }
+
     if (item == TITLE_MENU_SLOT_COUNT)
     {
         g_title_visible_item_rank = 0;
@@ -574,10 +588,12 @@ void menu_cursor_up(void)
             break;
         }
     }
+
     if (item < 0)
     {
         /* Wrap to the last enabled slot; its rank is the number of enabled slots minus one. */
         enabled_count = 0;
+
         for (item = 0; item < TITLE_MENU_SLOT_COUNT; item++)
         {
             if (g_title_menu_item_flags[item * 2] != 0)
@@ -591,6 +607,7 @@ void menu_cursor_up(void)
         g_title_selected_item = last_enabled;
         return;
     }
+
     g_title_selected_item = item;
     g_title_visible_item_rank--;
 }
@@ -631,9 +648,11 @@ void render_title_menu_items(TitleMenuContext* ctx)
     item_y = 0xA0;
     visible_index = 0;
     flag_ptr = &g_title_menu_item_flags[0];
+
     for (slot = 0; slot < TITLE_MENU_SLOT_COUNT; slot++)
     {
         item_visible = (*flag_ptr) != 0;
+
         if (item_visible)
         {
             prim = (u8*)emit_menu_item_quad(ot_head, prim, slot + 1, item_x, item_y, 0, 0x80, (g_title_visible_item_rank == visible_index) ? 1 : 2);
@@ -641,8 +660,10 @@ void render_title_menu_items(TitleMenuContext* ctx)
             visible_index++;
             prim += 0x28;
         }
+
         flag_ptr += 2;
     }
+
     result =
         emit_menu_item_quad(ot_head, prim, 7, 0x78, g_title_visible_item_rank * 12 + 0x9D, g_cursor_blink_u_offsets[(g_title_anim_frame >> 2) & 3], 0x10, 0);
 
@@ -734,6 +755,7 @@ void init_title_menu_state(void)
 
     i = 0;
     flag_ptr = g_title_menu_item_flags;
+
     for (; i < TITLE_MENU_SLOT_COUNT; i++)
     {
         flag_ptr[0] = 0;
@@ -756,6 +778,7 @@ void init_title_menu_state(void)
     g_title_idle_countdown = TITLE_IDLE_COUNTDOWN_FRAMES;
     upload_tim((void*)(((u8*)&g_title_menu_tim_table) + g_title_menu_tim_table[1]), 0x140, 0, 0, 0x1E0);
     upload_tim((void*)(((u8*)&g_title_menu_tim_table) + g_title_menu_tim_table[2]), 0x140, 0x100, 0, 0x1E1);
+
     if (g_previous_game_state == GAME_STATE_FIELD)
     {
         for (next_item = g_title_selected_item + 1; next_item < TITLE_MENU_SLOT_COUNT; next_item++)
@@ -765,6 +788,7 @@ void init_title_menu_state(void)
                 break;
             }
         }
+
         if (next_item == TITLE_MENU_SLOT_COUNT)
         {
             g_title_visible_item_rank = 0;
@@ -814,6 +838,7 @@ void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
     u16 clut_height;
     tim_header_size = 8;
     clut_rows = 1;
+
     if (p[4] & tim_header_size)
     {
         clut_width = *((u16*)(p + 0x10));
@@ -828,6 +853,7 @@ void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
     {
         p = p + 8;
     }
+
     setRECT(&rect, x, y, *((u16*)(p + 8)), *((u16*)(p + 0xA)));
     LoadImage(&rect, (u_long*)(p + 0xC));
 }
@@ -871,6 +897,7 @@ void update_menu_input(void)
         if (regs->device_type != CONTROLLER_DEVICE_DIGITAL)
         {
             axis = regs->axis_x.signed_value;
+
             if (axis < -PAD_STICK_THRESHOLD)
             {
                 buttons |= PAD_BTN_LEFT;
@@ -881,6 +908,7 @@ void update_menu_input(void)
             }
 
             axis = regs->axis_y.signed_value;
+
             if (axis < -PAD_STICK_THRESHOLD)
             {
                 buttons |= PAD_BTN_UP;
@@ -890,9 +918,12 @@ void update_menu_input(void)
                 buttons |= PAD_BTN_DOWN;
             }
         }
+
         input_state = buttons;
     }
+
     g_debounced_input = 0;
+
     if (((input_state == g_last_input_state) || ((g_last_input_state != 0) && (input_state & (g_last_input_state | PAD_REPEAT_HOLD_BUTTONS)))) &&
         (input_state != 0))
     {
@@ -901,6 +932,7 @@ void update_menu_input(void)
         {
             input_state &= PAD_BTN_DPAD;
         }
+
         if (g_input_repeat_timer == 0)
         {
             g_debounced_input = input_state;

@@ -144,30 +144,30 @@ static POLY_FT4* field_text_add_quad_outline(u_long* ot, POLY_FT4* output)
 
         switch (i)
         {
-        case 0:
-            poly->x0++;
-            poly->x1++;
-            poly->x2++;
-            poly->x3++;
-            break;
-        case 1:
-            poly->x0--;
-            poly->x1--;
-            poly->x2--;
-            poly->x3--;
-            break;
-        case 2:
-            poly->y0++;
-            poly->y1++;
-            poly->y2++;
-            poly->y3++;
-            break;
-        default:
-            poly->y0--;
-            poly->y1--;
-            poly->y2--;
-            poly->y3--;
-            break;
+            case 0:
+                poly->x0++;
+                poly->x1++;
+                poly->x2++;
+                poly->x3++;
+                break;
+            case 1:
+                poly->x0--;
+                poly->x1--;
+                poly->x2--;
+                poly->x3--;
+                break;
+            case 2:
+                poly->y0++;
+                poly->y1++;
+                poly->y2++;
+                poly->y3++;
+                break;
+            default:
+                poly->y0--;
+                poly->y1--;
+                poly->y2--;
+                poly->y3--;
+                break;
         }
 
         addPrim(ot, poly);

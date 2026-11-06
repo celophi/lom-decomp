@@ -15,25 +15,26 @@ s32 parse_hex_suffix_byte(const char* field_text)
 
     /* Decode filename characters as unsigned bytes. */
     cursor = (const u8*)field_text;
-    while ((*cursor >= '0' && *cursor <= '9') ||
-           (*cursor >= 'a' && *cursor <= 'f') ||
-           (*cursor >= 'A' && *cursor <= 'F'))
+
+    while ((*cursor >= '0' && *cursor <= '9') || (*cursor >= 'a' && *cursor <= 'f') || (*cursor >= 'A' && *cursor <= 'F'))
     {
         cursor++;
     }
+
     /* The first non-hex byte separates the serial from the suffix. */
     cursor++;
     digits_left = SAVE_HEX_SUFFIX_DIGITS;
     suffix_value = 0;
-    while ((*cursor >= '0' && *cursor <= '9') ||
-           (*cursor >= 'a' && *cursor <= 'f') ||
-           (*cursor >= 'A' && *cursor <= 'F'))
+
+    while ((*cursor >= '0' && *cursor <= '9') || (*cursor >= 'a' && *cursor <= 'f') || (*cursor >= 'A' && *cursor <= 'F'))
     {
         if (digits_left == 0)
         {
             break;
         }
+
         suffix_value <<= SAVE_HEX_DIGIT_BITS;
+
         if (*cursor >= '0' && *cursor <= '9')
         {
             u32 decimal_base;
@@ -55,8 +56,10 @@ s32 parse_hex_suffix_byte(const char* field_text)
             lowercase_base = suffix_value - ('a' - SAVE_HEX_DECIMAL_DIGITS);
             suffix_value = lowercase_base + *cursor;
         }
+
         cursor++;
         digits_left--;
     }
+
     return suffix_value;
 }

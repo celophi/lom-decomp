@@ -141,7 +141,6 @@ typedef enum
     WMAP_LAND_DISPLAY_DOMINA_OVERRIDE = 36
 } WmapLandDisplayId;
 
-
 /**
  * @brief A CVECTOR read back as the packed word a packet's color slot holds.
  */
@@ -175,7 +174,6 @@ extern s32 g_wmap_backdrop_level;
 extern s32 g_wmap_backdrop_scroll;
 extern s32 g_wmap_small_motor;
 extern s32 g_wmap_large_motor;
-
 
 extern RECT g_wmap_vram_clear_rect;
 /** @brief World-map loop result before attract movie requests are applied. */

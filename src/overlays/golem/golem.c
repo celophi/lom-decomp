@@ -1071,36 +1071,36 @@ u8* golem_draw_logic_grid(u8* packet_cursor, GolemRenderContext* render_context)
 
     switch (g_golem_grid_size_class)
     {
-    case 0:
-        draw_y = 0x38;
+        case 0:
+            draw_y = 0x38;
 
-        if (render_context->buffer_index != 0)
-        {
-            draw_y = 0x120;
-        }
+            if (render_context->buffer_index != 0)
+            {
+                draw_y = 0x120;
+            }
 
-        SetDefDrawEnv(&draw_env, 0x50, draw_y, 0x40, 0x40);
-        break;
-    case 1:
-        draw_y = 0x30;
+            SetDefDrawEnv(&draw_env, 0x50, draw_y, 0x40, 0x40);
+            break;
+        case 1:
+            draw_y = 0x30;
 
-        if (render_context->buffer_index != 0)
-        {
-            draw_y = 0x118;
-        }
+            if (render_context->buffer_index != 0)
+            {
+                draw_y = 0x118;
+            }
 
-        SetDefDrawEnv(&draw_env, 0x48, draw_y, 0x50, 0x50);
-        break;
-    case 2:
-        draw_y = 0x28;
+            SetDefDrawEnv(&draw_env, 0x48, draw_y, 0x50, 0x50);
+            break;
+        case 2:
+            draw_y = 0x28;
 
-        if (render_context->buffer_index != 0)
-        {
-            draw_y = 0x110;
-        }
+            if (render_context->buffer_index != 0)
+            {
+                draw_y = 0x110;
+            }
 
-        SetDefDrawEnv(&draw_env, 0x40, draw_y, 0x60, 0x60);
-        break;
+            SetDefDrawEnv(&draw_env, 0x40, draw_y, 0x60, 0x60);
+            break;
     }
 
     SetDrawEnv((DR_ENV*)cursor, &draw_env);
@@ -1141,58 +1141,58 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
 
     switch ((g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_BEHAVIOR_SHIFT) & 0xF)
     {
-    case GOLEM_PANEL_ALWAYS:
-    case GOLEM_PANEL_ALWAYS_7:
-        break;
-    case GOLEM_PANEL_GRID_4X4:
-    case GOLEM_PANEL_GRID_5X5:
-    case GOLEM_PANEL_GRID_6X6:
-        if ((((g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_BEHAVIOR_SHIFT) & 0xF) - GOLEM_PANEL_GRID_4X4) != g_golem_grid_size_class)
-        {
-            return packet_cursor;
-        }
+        case GOLEM_PANEL_ALWAYS:
+        case GOLEM_PANEL_ALWAYS_7:
+            break;
+        case GOLEM_PANEL_GRID_4X4:
+        case GOLEM_PANEL_GRID_5X5:
+        case GOLEM_PANEL_GRID_6X6:
+            if ((((g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_BEHAVIOR_SHIFT) & 0xF) - GOLEM_PANEL_GRID_4X4) != g_golem_grid_size_class)
+            {
+                return packet_cursor;
+            }
 
-        break;
-    case GOLEM_PANEL_IF_SCROLL_UP:
-        if (g_golem_scroll_y == 0)
-        {
-            return packet_cursor;
-        }
+            break;
+        case GOLEM_PANEL_IF_SCROLL_UP:
+            if (g_golem_scroll_y == 0)
+            {
+                return packet_cursor;
+            }
 
-        flash_frames = (g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_FLASH_SHIFT) & 0xF;
+            flash_frames = (g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_FLASH_SHIFT) & 0xF;
 
-        if (flash_frames != 0)
-        {
-            tint = GPU_COLOR_WORD(0xC0, 0, 0);
-            g_golem_panel_records[panel_index].attributes = GOLEM_SET_PANEL_FLASH(g_golem_panel_records[panel_index].attributes, flash_frames - 1);
-        }
+            if (flash_frames != 0)
+            {
+                tint = GPU_COLOR_WORD(0xC0, 0, 0);
+                g_golem_panel_records[panel_index].attributes = GOLEM_SET_PANEL_FLASH(g_golem_panel_records[panel_index].attributes, flash_frames - 1);
+            }
 
-        break;
-    case GOLEM_PANEL_IF_SCROLL_DOWN:
-        if (g_golem_scroll_y / GOLEM_BLOCK_LIST_ROW_HEIGHT >= g_golem_logic_block_count - 1)
-        {
-            return packet_cursor;
-        }
+            break;
+        case GOLEM_PANEL_IF_SCROLL_DOWN:
+            if (g_golem_scroll_y / GOLEM_BLOCK_LIST_ROW_HEIGHT >= g_golem_logic_block_count - 1)
+            {
+                return packet_cursor;
+            }
 
-        flash_frames = (g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_FLASH_SHIFT) & 0xF;
+            flash_frames = (g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_FLASH_SHIFT) & 0xF;
 
-        if (flash_frames != 0)
-        {
-            tint = GPU_COLOR_WORD(0xC0, 0, 0);
-            g_golem_panel_records[panel_index].attributes = GOLEM_SET_PANEL_FLASH(g_golem_panel_records[panel_index].attributes, flash_frames - 1);
-        }
+            if (flash_frames != 0)
+            {
+                tint = GPU_COLOR_WORD(0xC0, 0, 0);
+                g_golem_panel_records[panel_index].attributes = GOLEM_SET_PANEL_FLASH(g_golem_panel_records[panel_index].attributes, flash_frames - 1);
+            }
 
-        break;
-    case GOLEM_PANEL_FLASH_WHITE:
-        flash_frames = (g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_FLASH_SHIFT) & 0xF;
+            break;
+        case GOLEM_PANEL_FLASH_WHITE:
+            flash_frames = (g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_FLASH_SHIFT) & 0xF;
 
-        if (flash_frames != 0)
-        {
-            tint = GPU_COLOR_WORD(0xC0, 0xC0, 0xC0);
-            g_golem_panel_records[panel_index].attributes = GOLEM_SET_PANEL_FLASH(g_golem_panel_records[panel_index].attributes, flash_frames - 1);
-        }
+            if (flash_frames != 0)
+            {
+                tint = GPU_COLOR_WORD(0xC0, 0xC0, 0xC0);
+                g_golem_panel_records[panel_index].attributes = GOLEM_SET_PANEL_FLASH(g_golem_panel_records[panel_index].attributes, flash_frames - 1);
+            }
 
-        break;
+            break;
     }
 
     ordering_table++;
@@ -1331,15 +1331,15 @@ u8* golem_emit_glyph(u8* packet_cursor, u_long* ordering_table, s32 glyph_id, s3
 
         switch (style & 0x7F)
         {
-        case 1:
-            SET_BGR0_PACKED(packet_cursor, GPU_COLOR_WORD(0x80, 0, 0));
-            break;
-        case 2:
-            SET_BGR0_PACKED(packet_cursor, GPU_COLOR_WORD(0x80, 0, 0x80));
-            break;
-        case 3:
-            SET_BGR0_PACKED(packet_cursor, GPU_COLOR_WORD(0, 0x80, 0));
-            break;
+            case 1:
+                SET_BGR0_PACKED(packet_cursor, GPU_COLOR_WORD(0x80, 0, 0));
+                break;
+            case 2:
+                SET_BGR0_PACKED(packet_cursor, GPU_COLOR_WORD(0x80, 0, 0x80));
+                break;
+            case 3:
+                SET_BGR0_PACKED(packet_cursor, GPU_COLOR_WORD(0, 0x80, 0));
+                break;
         }
 
         setlen(tile, 3);

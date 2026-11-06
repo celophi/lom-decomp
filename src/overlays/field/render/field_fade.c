@@ -56,6 +56,7 @@ void field_update_and_render_fade(FieldRenderHalf* render_half)
         g_field_fade_current.green = g_field_fade_target.green;
         g_field_fade_current.blue = g_field_fade_target.blue;
     }
+
     if ((g_field_fade_current.red != FADE_NEUTRAL) || (g_field_fade_current.green != g_field_fade_current.red) ||
         (g_field_fade_current.blue != g_field_fade_current.green))
     {
@@ -74,6 +75,7 @@ void field_update_and_render_fade(FieldRenderHalf* render_half)
             {
                 primitive->tile.r0 = ~g_field_fade_current.red;
             }
+
             if (g_field_fade_current.green == FADE_NEUTRAL)
             {
                 primitive->tile.g0 = 0;
@@ -82,6 +84,7 @@ void field_update_and_render_fade(FieldRenderHalf* render_half)
             {
                 primitive->tile.g0 = ~g_field_fade_current.green;
             }
+
             if (g_field_fade_current.blue == FADE_NEUTRAL)
             {
                 primitive->tile.b0 = 0;
@@ -101,15 +104,18 @@ void field_update_and_render_fade(FieldRenderHalf* render_half)
         addPrim(ordering_table_tag, &primitive->tile);
 
         primitive = SCREEN_FADE_NEXT_PRIMITIVE(primitive, TILE);
+
         if (g_field_fade_current.red < FADE_ADDITIVE_THRESHOLD)
         {
             draw_mode = BLEND_SUBTRACT_TPAGE;
         }
+
         setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
         addPrim(ordering_table_tag, &primitive->draw_mode);
 
         primitive = SCREEN_FADE_NEXT_PRIMITIVE(primitive, DR_TPAGE);
     }
+
     render_half->primitive_cursor = (u8*)primitive;
 }
 

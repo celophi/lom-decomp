@@ -11,6 +11,7 @@ inline void card_reset_entry_ranks(void)
 
     g_card_rank_count = CARD_RANK_COUNT_NONE;
     empty_rank = -1;
+
     for (entry_index = CARD_SAVE_SLOTS - 1; entry_index >= 0; entry_index--)
     {
         g_card_entry_ranks[entry_index] = empty_rank;

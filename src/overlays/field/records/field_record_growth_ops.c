@@ -94,12 +94,12 @@ void field_award_experience(s32 record_index, s32 amount)
 
     switch (entry->meta.bytes.id)
     {
-    case FIELD_PARTY_HERO:
-        field_award_grazing_pet_experience(amount);
-        break;
-    case FIELD_PARTY_GUEST:
-        field_add_guest_experience(amount);
-        break;
+        case FIELD_PARTY_HERO:
+            field_award_grazing_pet_experience(amount);
+            break;
+        case FIELD_PARTY_GUEST:
+            field_add_guest_experience(amount);
+            break;
     }
 
     if (entry->status_flags & FIELD_RECORD_FLAG_SHARE_EXPERIENCE)

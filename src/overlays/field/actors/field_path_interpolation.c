@@ -102,6 +102,7 @@ void field_update_path_position(u8* time, FieldMotionRecord* record, s32 group)
     {
         *time -= g_field_path_length;
     }
+
     field_evaluate_path(*time, record, group);
 }
 
@@ -121,9 +122,11 @@ void field_init_path(FieldMotionRecord* center, s32 radius, s32 randomize, s32 g
     g_field_path_degree = FIELD_PATH_DEGREE;
     g_field_path_segment_steps = FIELD_PATH_SEGMENT_STEPS;
     g_field_path_generated_count = FIELD_PATH_POINT_COUNT;
+
     for (i = 0; i < FIELD_PATH_POINT_COUNT; i++)
     {
         angle = rand() >> 3;
+
         if (randomize)
         {
             point_radius = ((rand() | FIELD_PATH_MIN_RADIUS_BIT) * radius) >> 15;
@@ -132,9 +135,11 @@ void field_init_path(FieldMotionRecord* center, s32 radius, s32 randomize, s32 g
         {
             point_radius = radius;
         }
+
         g_field_path_groups[group].x[i] = ((rcos(angle) * point_radius) >> 12) + (center->x >> 8);
         g_field_path_groups[group].z[i] = ((rsin(angle) * point_radius) >> 12) + (center->z >> 8);
     }
+
     g_field_path_point_count = g_field_path_generated_count;
     g_field_path_basis_count = g_field_path_generated_count + g_field_path_degree;
     g_field_path_order = g_field_path_degree + 1;
@@ -165,18 +170,22 @@ static void field_evaluate_path(s32 time, FieldMotionRecord* record, s32 group)
     field_fold_path_weights(workspace.basis, workspace.folded.weights);
     last = span - g_field_path_half_order + 1;
     first = last - g_field_path_degree;
+
     if (first < 0 || last > g_field_path_point_count - 1)
     {
         first = 0;
         last = g_field_path_point_count - 1;
     }
+
     x = 0;
     z = 0;
+
     for (i = first; i <= last; i++)
     {
         x += (g_field_path_groups[group].x[i] * workspace.folded.weights[i]) >> 12;
         z += (g_field_path_groups[group].z[i] * workspace.folded.weights[i]) >> 12;
     }
+
     record->x = x << 8;
     record->z = z << 8;
 }
@@ -209,10 +218,12 @@ static void field_fold_path_weights(s32 (*basis)[2], s32* weights)
         weights[i] = basis[i + g_field_path_half_order - 1][(g_field_path_order - 1) & 1] +
                      basis[i + g_field_path_point_count + g_field_path_half_order - 1][(g_field_path_order - 1) & 1];
     }
+
     for (i = 0; i < g_field_path_point_count - g_field_path_degree; i++)
     {
         weights[i + g_field_path_half_order] = basis[i + g_field_path_degree][(g_field_path_order - 1) & 1];
     }
+
     for (i = 0; i < g_field_path_half_order - 1; i++)
     {
         weights[i + g_field_path_point_count - g_field_path_half_order + 1] =
@@ -239,6 +250,7 @@ static void field_compute_path_basis(s32 order, s32 parameter, s32* span, s32* k
     {
         basis[i][0] = 0;
     }
+
     for (i = 0; i < g_field_path_basis_count; i++)
     {
         if (parameter >= knots[i] && parameter < knots[i + 1])
@@ -247,28 +259,34 @@ static void field_compute_path_basis(s32 order, s32 parameter, s32* span, s32* k
             *span = i;
         }
     }
+
     if (parameter >= knots[g_field_path_basis_count - 1] && parameter <= knots[g_field_path_basis_count] + 1)
     {
         basis[g_field_path_basis_count - 1][0] = ONE;
         *span = g_field_path_basis_count - 1;
     }
+
     for (level = 1; level < order; level++)
     {
         for (i = 0; i < g_field_path_basis_count + 1; i++)
         {
             basis[i][level & 1] = 0;
         }
+
         for (i = *span - level; i <= *span; i++)
         {
             left = right = 0;
+
             if (knots[i + 1] != knots[i + level + 1])
             {
                 right = ((knots[i + level + 1] - parameter) * basis[i + 1][(level - 1) & 1]) / (knots[i + level + 1] - knots[i + 1]);
             }
+
             if (knots[i] != knots[i + level])
             {
                 left = ((parameter - knots[i]) * basis[i][(level - 1) & 1]) / (knots[i + level] - knots[i]);
             }
+
             basis[i][level & 1] = right + left;
         }
     }

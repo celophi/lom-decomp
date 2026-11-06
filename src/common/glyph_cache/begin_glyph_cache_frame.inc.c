@@ -9,6 +9,7 @@ void begin_glyph_cache_frame(void)
     s32 i;
 
     g_glyph_raster_cursor = g_glyph_raster_buffer;
+
     for (i = 0; i < GLYPH_CACHE_SLOTS; i++)
     {
         g_glyph_cache[i].raw &= GLYPH_CACHE_CODE_MASK;

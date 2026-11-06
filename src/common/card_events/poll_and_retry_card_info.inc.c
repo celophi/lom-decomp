@@ -9,10 +9,12 @@ s32 poll_and_retry_card_info(void)
     s32 event_status;
 
     event_status = poll_software_card_events();
+
     if (event_status != CARD_EVENT_NONE)
     {
         _card_wait(g_card_slot);
         _card_info(CARD_CHANNEL(g_card_slot));
     }
+
     return event_status;
 }

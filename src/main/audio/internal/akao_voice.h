@@ -74,16 +74,16 @@ typedef struct
  */
 typedef struct
 {
-    s32 voice;             /**< Assigned SPU voice index in the channel overlay. */
-    s32 update_flags;      /**< Pending SPU register update mask; cleared on write. */
-    u32 sample_start_addr; /**< ADPCM sample start address in SPU RAM. */
-    u32 sample_repeat_addr;/**< ADPCM repeat address in SPU RAM. */
-    u16 pitch;             /**< SPU pitch/sample-rate register image. */
-    u16 adsr_low;          /**< SPU ADSR low halfword (voice register +0x08). */
-    u16 adsr_high;         /**< SPU ADSR high halfword (voice register +0x0A). */
-    u16 volume_scale;      /**< Optional Q7 scale applied to both volume fields. */
-    s16 volume_left;       /**< Computed left volume. */
-    s16 volume_right;      /**< Computed right volume. */
+    s32 voice;              /**< Assigned SPU voice index in the channel overlay. */
+    s32 update_flags;       /**< Pending SPU register update mask; cleared on write. */
+    u32 sample_start_addr;  /**< ADPCM sample start address in SPU RAM. */
+    u32 sample_repeat_addr; /**< ADPCM repeat address in SPU RAM. */
+    u16 pitch;              /**< SPU pitch/sample-rate register image. */
+    u16 adsr_low;           /**< SPU ADSR low halfword (voice register +0x08). */
+    u16 adsr_high;          /**< SPU ADSR high halfword (voice register +0x0A). */
+    u16 volume_scale;       /**< Optional Q7 scale applied to both volume fields. */
+    s16 volume_left;        /**< Computed left volume. */
+    s16 volume_right;       /**< Computed right volume. */
 } SpuVoiceParams;
 
 extern AkaoSongState* g_akao_voice_owners[];

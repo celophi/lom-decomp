@@ -102,10 +102,12 @@ s32 akao_register_bank(AkaoHeader* bank)
     s32 result;
 
     result = akao_check_magic(bank);
+
     if (result == 0)
     {
         akao_set_bank_data_ptrs((u8*)(bank + 1));
     }
+
     return result;
 }
 
@@ -288,22 +290,27 @@ s32 akao_get_active_sfx_tags(void)
     u32 channel_bit;
 
     active_mask = g_akao_sfx_control.active_mask;
+
     if (active_mask == 0)
     {
         return 0;
     }
+
     channel = g_sfx_channels;
     active_tags = 0;
     channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+
     while (channel_bit & AKAO_VOICE_MASK)
     {
         if (active_mask & channel_bit)
         {
             active_tags |= channel->sfx_tag;
         }
+
         channel_bit <<= 1;
         channel++;
     }
+
     active_tags &= AKAO_SFX_TAG_MASK;
     return active_tags;
 }
@@ -327,22 +334,28 @@ s32 akao_is_sfx_playing(s32 sfx_tag)
     {
         return 0;
     }
+
     active_mask = g_akao_sfx_control.active_mask;
+
     if (active_mask == 0)
     {
         return 0;
     }
+
     channel = g_sfx_channels;
     channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+
     while (channel_bit & AKAO_VOICE_MASK)
     {
         if ((active_mask & channel_bit) && sfx_tag == channel->sfx_tag)
         {
             return 1;
         }
+
         channel_bit <<= 1;
         channel++;
     }
+
     return 0;
 }
 
@@ -396,18 +409,18 @@ void akao_pause_audio(u32 target)
 
     switch (target)
     {
-    case AKAO_AUDIO_SONG:
-        opcode = AKAO_CMD_PAUSE_SONG;
-        break;
-    case AKAO_AUDIO_SFX:
-        opcode = AKAO_CMD_PAUSE_SFX;
-        break;
-    case AKAO_AUDIO_XA:
-        opcode = AKAO_CMD_PAUSE_XA;
-        break;
-    default:
-        opcode = AKAO_CMD_PAUSE_ALL;
-        break;
+        case AKAO_AUDIO_SONG:
+            opcode = AKAO_CMD_PAUSE_SONG;
+            break;
+        case AKAO_AUDIO_SFX:
+            opcode = AKAO_CMD_PAUSE_SFX;
+            break;
+        case AKAO_AUDIO_XA:
+            opcode = AKAO_CMD_PAUSE_XA;
+            break;
+        default:
+            opcode = AKAO_CMD_PAUSE_ALL;
+            break;
     }
 
     akao_send_command(opcode);
@@ -424,18 +437,18 @@ void akao_resume_audio(u32 target)
 
     switch (target)
     {
-    case AKAO_AUDIO_SONG:
-        opcode = AKAO_CMD_RESUME_SONG;
-        break;
-    case AKAO_AUDIO_SFX:
-        opcode = AKAO_CMD_RESUME_SFX;
-        break;
-    case AKAO_AUDIO_XA:
-        opcode = AKAO_CMD_RESUME_XA;
-        break;
-    default:
-        opcode = AKAO_CMD_RESUME_ALL;
-        break;
+        case AKAO_AUDIO_SONG:
+            opcode = AKAO_CMD_RESUME_SONG;
+            break;
+        case AKAO_AUDIO_SFX:
+            opcode = AKAO_CMD_RESUME_SFX;
+            break;
+        case AKAO_AUDIO_XA:
+            opcode = AKAO_CMD_RESUME_XA;
+            break;
+        default:
+            opcode = AKAO_CMD_RESUME_ALL;
+            break;
     }
 
     akao_send_command(opcode);
@@ -863,6 +876,7 @@ s32 akao_release_all_sfx(void)
 void akao_upload_bank_blocking(AkaoBankHeader* bank, s32 wait_for_completion)
 {
     g_akao_driver_flags.upload_flags &= ~AKAO_UPLOAD_STREAMING;
+
     while (akao_submit_bank(bank, wait_for_completion) == AKAO_BANK_UPLOAD_BUSY)
     {
     }
@@ -942,21 +956,25 @@ s32 akao_streaming_upload_tick(u8* source, u32 available_bytes, s32 wait_for_spu
                 g_akao_streaming_state.articulation_remaining = 0U;
             }
         }
+
         if (g_akao_streaming_state.articulation_remaining != 0)
         {
             articulation_chunk = g_akao_streaming_state.articulation_remaining;
+
             if (available_bytes != 0)
             {
                 if (articulation_chunk >= available_bytes)
                 {
                     articulation_chunk = available_bytes;
                 }
+
                 akao_copy_bytes((s32*)source, (s32*)g_akao_streaming_state.articulation_dst, articulation_chunk);
                 copied_bytes = (articulation_chunk >> BYTES_PER_WORD_SHIFT) * BYTES_PER_WORD;
                 source += copied_bytes;
                 available_bytes -= articulation_chunk;
                 g_akao_streaming_state.articulation_dst = g_akao_streaming_state.articulation_dst + copied_bytes;
                 g_akao_streaming_state.articulation_remaining -= articulation_chunk;
+
                 if (g_akao_streaming_state.articulation_remaining == 0)
                 {
                     articulations = &((AkaoArticulation*)g_akao_articulation_slots)[g_akao_bank_staging.bank_id];
@@ -964,6 +982,7 @@ s32 akao_streaming_upload_tick(u8* source, u32 available_bytes, s32 wait_for_spu
                 }
             }
         }
+
         if (available_bytes != 0 && g_akao_streaming_state.sample_remaining == 0)
         {
             g_akao_driver_flags.upload_flags &= ~AKAO_UPLOAD_STREAMING;
@@ -973,26 +992,31 @@ s32 akao_streaming_upload_tick(u8* source, u32 available_bytes, s32 wait_for_spu
             if (available_bytes != 0)
             {
                 sample_chunk = g_akao_streaming_state.sample_remaining;
+
                 if (g_akao_streaming_state.sample_remaining >= available_bytes)
                 {
                     sample_chunk = available_bytes;
                 }
+
                 available_bytes = sample_chunk;
                 SpuSetTransferStartAddr(g_akao_streaming_state.spu_addr);
                 akao_spu_write(source, available_bytes);
                 g_akao_streaming_state.spu_addr += available_bytes;
                 g_akao_streaming_state.sample_remaining -= available_bytes;
+
                 if (wait_for_spu != 0)
                 {
                     akao_spu_wait();
                 }
             }
+
             if (g_akao_streaming_state.sample_remaining == 0)
             {
                 g_akao_driver_flags.upload_flags &= ~AKAO_UPLOAD_STREAMING;
             }
         }
     }
+
     return g_akao_streaming_state.sample_remaining;
 }
 
@@ -1037,41 +1061,41 @@ s32 akao_upload_bank_slot(void* bank, s32 slot, s32 wait_for_completion)
 
     switch (slot)
     {
-    case 1:
-        spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(1);
-        articulation_index = AKAO_BANK_SLOT_ARTICULATION_INDEX(1);
-        g_akao_bank_slot_keys[1] = identity->key;
-        break;
+        case 1:
+            spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(1);
+            articulation_index = AKAO_BANK_SLOT_ARTICULATION_INDEX(1);
+            g_akao_bank_slot_keys[1] = identity->key;
+            break;
 
-    case 2:
-        spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(2);
-        articulation_index = AKAO_BANK_SLOT_ARTICULATION_INDEX(2);
-        g_akao_bank_slot_keys[2] = identity->key;
-        break;
+        case 2:
+            spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(2);
+            articulation_index = AKAO_BANK_SLOT_ARTICULATION_INDEX(2);
+            g_akao_bank_slot_keys[2] = identity->key;
+            break;
 
-    case 3:
-        spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(3);
-        articulation_index = AKAO_BANK_SLOT_ARTICULATION_INDEX(3);
-        g_akao_bank_slot_keys[3] = identity->key;
-        break;
+        case 3:
+            spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(3);
+            articulation_index = AKAO_BANK_SLOT_ARTICULATION_INDEX(3);
+            g_akao_bank_slot_keys[3] = identity->key;
+            break;
 
-    case 4:
-        spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(4);
-        articulation_index = AKAO_BANK_SLOT_ARTICULATION_INDEX(4);
-        g_akao_bank_slot_keys[4] = identity->key;
-        break;
+        case 4:
+            spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(4);
+            articulation_index = AKAO_BANK_SLOT_ARTICULATION_INDEX(4);
+            g_akao_bank_slot_keys[4] = identity->key;
+            break;
 
-    case 5:
-        spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(5);
-        articulation_index = AKAO_BANK_SLOT_ARTICULATION_INDEX(5);
-        g_akao_bank_slot_keys[5] = identity->key;
-        break;
+        case 5:
+            spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(5);
+            articulation_index = AKAO_BANK_SLOT_ARTICULATION_INDEX(5);
+            g_akao_bank_slot_keys[5] = identity->key;
+            break;
 
-    default:
-        spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(0);
-        articulation_index = AKAO_BANK_SLOT_ARTICULATION_INDEX(0);
-        g_akao_bank_slot_keys[0] = identity->key;
-        break;
+        default:
+            spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(0);
+            articulation_index = AKAO_BANK_SLOT_ARTICULATION_INDEX(0);
+            g_akao_bank_slot_keys[0] = identity->key;
+            break;
     }
 
     akao_upload_bank(bank, wait_for_completion, articulation_index, spu_base);
@@ -1137,6 +1161,7 @@ s32 akao_set_cd_mix(s32 volume)
         g_akao_cdmix.val3 = 0;
         g_akao_cdmix.val1 = 0;
     }
+
     CdMix(&g_akao_cdmix);
     return 0;
 }
@@ -1231,20 +1256,23 @@ s32 akao_upload_xa_program(void* buffer, s32 upper_slot)
     AkaoXaProgramHeader* program;
 
     result = akao_check_magic(buffer);
+
     if (result == 0)
     {
         akao_spu_wait();
         spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(AKAO_BANK_FIRST_UPPER_SLOT);
+
         if (upper_slot == 0)
         {
             spu_base = AKAO_BANK_SLOT_SPU_ADDRESS(0);
         }
+
         /* Loaded songs with this flag use the lower XA area. */
-        if (((AKAO_PRIMARY_SONG->masks.active_mask | AKAO_PRIMARY_SONG->parked_mask) != 0) &&
-            (AKAO_PRIMARY_SONG->flags & AKAO_SONG_LOWER_XA_AREA_FLAG))
+        if (((AKAO_PRIMARY_SONG->masks.active_mask | AKAO_PRIMARY_SONG->parked_mask) != 0) && (AKAO_PRIMARY_SONG->flags & AKAO_SONG_LOWER_XA_AREA_FLAG))
         {
             spu_base -= AKAO_XA_SPU_AREA_OFFSET;
         }
+
         program = buffer;
         buffer = program + 1;
         SpuSetTransferStartAddr(spu_base);
@@ -1294,8 +1322,7 @@ void akao_play_xa_one_shot(void* buffer, s32 pan, s32 upper_slot, s32 use_reverb
 
     spu_base = upper_slot == 0 ? AKAO_BANK_SLOT_SPU_ADDRESS(0) : AKAO_BANK_SLOT_SPU_ADDRESS(AKAO_BANK_FIRST_UPPER_SLOT);
 
-    if (((AKAO_PRIMARY_SONG->masks.active_mask | AKAO_PRIMARY_SONG->parked_mask) != 0) &&
-        (AKAO_PRIMARY_SONG->flags & AKAO_SONG_LOWER_XA_AREA_FLAG))
+    if (((AKAO_PRIMARY_SONG->masks.active_mask | AKAO_PRIMARY_SONG->parked_mask) != 0) && (AKAO_PRIMARY_SONG->flags & AKAO_SONG_LOWER_XA_AREA_FLAG))
     {
         spu_base -= AKAO_XA_SPU_AREA_OFFSET;
     }
@@ -1324,6 +1351,7 @@ s32 akao_start_xa_stream(void* ring_base, u32 byte_count)
     {
         return -1;
     }
+
     SpuSetIRQ(SPU_OFF);
     SpuSetIRQAddr(0);
     g_akao_cmd_params[0].buffer = ring_base;
@@ -1357,14 +1385,17 @@ s32 akao_xa_advance_frame(void)
     g_akao_xa_tracker.filled_blocks = g_akao_xa_tracker.filled_blocks + 1;
     next_fill_block = g_akao_xa_tracker.fill_block + 1;
     g_akao_xa_tracker.fill_block = next_fill_block;
+
     if (next_fill_block > g_akao_xa_tracker.ring_block_count - 1)
     {
         g_akao_xa_tracker.fill_block = 0;
     }
+
     if ((g_akao_xa_tracker.flags & XA_FLAG_RING_STREAM) && (g_akao_xa_tracker.fill_block >= AKAO_XA_START_FILL_BLOCK))
     {
         akao_xa_start_ring_stream();
     }
+
     return g_akao_xa_tracker.upload_block;
 }
 

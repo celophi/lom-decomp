@@ -15,8 +15,6 @@
 /** @brief Work buffer handed to the CARDA, NIKI and ADDHERO entry points. */
 #define FIELD_MODAL_WORK_BUFFER ((void*)SECONDARY_OVERLAY_AT(0x30000))
 
-
-
 /**
  * @brief Load CARDA and start it, unless another modal is already running.
  * @param mode Card-screen mode; stored plus one and passed to the CARDA entry point.

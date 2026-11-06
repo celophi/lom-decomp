@@ -24,6 +24,7 @@ void* card_menu_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_off
     result = card_menu_draw_choice_prompt(result, ot, x, CARD_MENU_LINE_HEIGHT - y_offset);
 
     status = poll_and_retry_card_info();
+
     if (status == CARD_EVENT_ERROR || status == CARD_EVENT_TIMEOUT)
     {
         card_menu_deactivate_primary_element();
@@ -55,5 +56,6 @@ void* card_menu_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_off
         element->size.bits.height = CARD_MENU_MESSAGE_HEIGHT;
         CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, CARD_MENU_MESSAGE_WIDTH);
     }
+
     return result;
 }
