@@ -891,15 +891,15 @@ void field_blit_animation_frame(FieldAnimDef* def, FieldAnim* anim, s32 frame)
 
     switch (cel->kind)
     {
-        case 0:
-        case 2:
-        case 3:
-        case 4:
-        case 5:
+        case FIELD_CEL_KIND_SPRITE_16:
+        case FIELD_CEL_KIND_QUAD_FIRST:
+        case FIELD_CEL_KIND_QUAD_FIRST + 1:
+        case FIELD_CEL_KIND_QUAD_FIRST + 2:
+        case FIELD_CEL_KIND_QUAD_FIRST + 3:
             stride = FIELD_CEL_RECORD_SIZE;
             break;
-        case 1:
-        case 6:
+        case FIELD_CEL_KIND_SPRITE:
+        case FIELD_CEL_KIND_GOURAUD_QUAD:
             break;
     }
 
@@ -1413,15 +1413,15 @@ static void field_retarget_cel_cluts(FieldAnimDef* anim_def, FieldPart* cel, s32
 
         switch (cel->kind)
         {
-            case 0:
-            case 2:
-            case 3:
-            case 4:
-            case 5:
+            case FIELD_CEL_KIND_SPRITE_16:
+            case FIELD_CEL_KIND_QUAD_FIRST:
+            case FIELD_CEL_KIND_QUAD_FIRST + 1:
+            case FIELD_CEL_KIND_QUAD_FIRST + 2:
+            case FIELD_CEL_KIND_QUAD_FIRST + 3:
                 stride = FIELD_CEL_RECORD_SIZE;
                 break;
-            case 1:
-            case 6:
+            case FIELD_CEL_KIND_SPRITE:
+            case FIELD_CEL_KIND_GOURAUD_QUAD:
                 break;
         }
 
@@ -1699,15 +1699,15 @@ void field_tint_animation_cel(FieldAnimDef* def, FieldPart* cel, FieldTintSrc* s
 
     switch (cel->kind)
     {
-        case 0:
-        case 2:
-        case 3:
-        case 4:
-        case 5:
+        case FIELD_CEL_KIND_SPRITE_16:
+        case FIELD_CEL_KIND_QUAD_FIRST:
+        case FIELD_CEL_KIND_QUAD_FIRST + 1:
+        case FIELD_CEL_KIND_QUAD_FIRST + 2:
+        case FIELD_CEL_KIND_QUAD_FIRST + 3:
             stride = FIELD_CEL_RECORD_SIZE;
             break;
-        case 1:
-        case 6:
+        case FIELD_CEL_KIND_SPRITE:
+        case FIELD_CEL_KIND_GOURAUD_QUAD:
             break;
     }
 
@@ -1821,15 +1821,15 @@ static void field_tint_animation_cel_list(FieldAnimDef* def, FieldTintSrc* src, 
 
         switch (cel->kind)
         {
-            case 0:
-            case 2:
-            case 3:
-            case 4:
-            case 5:
+            case FIELD_CEL_KIND_SPRITE_16:
+            case FIELD_CEL_KIND_QUAD_FIRST:
+            case FIELD_CEL_KIND_QUAD_FIRST + 1:
+            case FIELD_CEL_KIND_QUAD_FIRST + 2:
+            case FIELD_CEL_KIND_QUAD_FIRST + 3:
                 stride = FIELD_CEL_RECORD_SIZE;
                 break;
-            case 1:
-            case 6:
+            case FIELD_CEL_KIND_SPRITE:
+            case FIELD_CEL_KIND_GOURAUD_QUAD:
                 break;
         }
 
@@ -2097,13 +2097,13 @@ FieldTweenSpan* field_find_count_table_span(FieldAnimDef* def, s32 keyframe, u8*
         *range_start_out = header_count;
         switch (table.def->flags.b.handler_group)
         {
-            case 0:
+            case FIELD_ANIM_GROUP_TILE:
                 table.def++;
                 break;
-            case 1:
+            case FIELD_ANIM_GROUP_PALETTE:
                 table.def++;
                 break;
-            case 2:
+            case FIELD_ANIM_GROUP_TINT:
                 table.def++;
                 break;
             default:

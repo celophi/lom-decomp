@@ -3,10 +3,10 @@
  *        scene fade, the tint colour table and small scene queries.
  */
 
-#include "main/audio/akao_cmd.h"
-#include "../internal/field_scene_internal.h"
 #include "../internal/field_animation.h"
 #include "../internal/field_calls.h"
+#include "../internal/field_scene_internal.h"
+#include "main/audio/akao_cmd.h"
 
 /** Object index of field_set_color_scale that selects every object and the tile and effect lists. */
 #define FIELD_ALL_OBJECTS (-1)
@@ -97,20 +97,24 @@ void field_set_object_position(s32 obj_index, s32 part_index, FieldPos* pos, s32
 
     part = NULL;
     delta = 0;
+
     if (part_index == FIELD_WHOLE_OBJECT)
     {
         obj = field_get_object(obj_index);
+
         if (rebias_cluts != 0)
         {
             new_z = pos->z;
             delta = (s16)(obj->z / 256) - new_z;
         }
+
         if (obj->flags.b.node_count != 0)
         {
             field_move_object_nodes(obj, (pos->x << 8) - obj->x, FIELD_AXIS_X);
             field_move_object_nodes(obj, (pos->y << 8) - obj->y, FIELD_AXIS_Y);
             field_move_object_nodes(obj, (pos->z << 8) - obj->z, FIELD_AXIS_Z);
         }
+
         obj->x = pos->x << 8;
         obj->y = pos->y << 8;
         obj->z = pos->z << 8;
@@ -118,22 +122,26 @@ void field_set_object_position(s32 obj_index, s32 part_index, FieldPos* pos, s32
     else
     {
         part = field_get_object_part(obj_index, part_index);
+
         if (rebias_cluts != 0)
         {
             new_z = pos->z;
             delta = (s16)(part->z / 256) - new_z;
         }
+
         if (part->node_count != 0)
         {
             field_move_part_nodes(part, (pos->x << 8) - part->x, FIELD_AXIS_X);
             field_move_part_nodes(part, (pos->y << 8) - part->y, FIELD_AXIS_Y);
             field_move_part_nodes(part, (pos->z << 8) - part->z, FIELD_AXIS_Z);
         }
+
         part->x = pos->x << 8;
         part->y = pos->y << 8;
         part->z = pos->z << 8;
         obj = NULL;
     }
+
     if (rebias_cluts != 0)
     {
         do
@@ -142,12 +150,15 @@ void field_set_object_position(s32 obj_index, s32 part_index, FieldPos* pos, s32
             {
                 part = obj->parts;
             }
+
             while (part != NULL)
             {
                 clut_sum = part->clut_bl + (s16)delta;
+
                 if (clut_sum > 0)
                 {
                     clamped_clut = clut_sum;
+
                     if (clamped_clut > FIELD_CLUT_ID_MAX)
                     {
                         clamped_clut = FIELD_CLUT_ID_MAX;
@@ -157,12 +168,15 @@ void field_set_object_position(s32 obj_index, s32 part_index, FieldPos* pos, s32
                 {
                     clamped_clut = 0;
                 }
+
                 part->clut_bl = clamped_clut;
 
                 clut_sum = part->clut_tl + (s16)delta;
+
                 if (clut_sum > 0)
                 {
                     clamped_clut = clut_sum;
+
                     if (clamped_clut > FIELD_CLUT_ID_MAX)
                     {
                         clamped_clut = FIELD_CLUT_ID_MAX;
@@ -172,12 +186,15 @@ void field_set_object_position(s32 obj_index, s32 part_index, FieldPos* pos, s32
                 {
                     clamped_clut = 0;
                 }
+
                 part->clut_tl = clamped_clut;
 
                 clut_sum = part->clut_br + (s16)delta;
+
                 if (clut_sum > 0)
                 {
                     clamped_clut = clut_sum;
+
                     if (clamped_clut > FIELD_CLUT_ID_MAX)
                     {
                         clamped_clut = FIELD_CLUT_ID_MAX;
@@ -187,30 +204,37 @@ void field_set_object_position(s32 obj_index, s32 part_index, FieldPos* pos, s32
                 {
                     clamped_clut = 0;
                 }
+
                 part->clut_br = clamped_clut;
 
                 clut_sum = part->clut_tr + (s16)delta;
+
                 if (clut_sum > 0)
                 {
                     clamped_clut = clut_sum;
+
                     if (clamped_clut > FIELD_CLUT_ID_MAX)
                     {
                         clamped_clut = FIELD_CLUT_ID_MAX;
                     }
+
                     clut_sum = clamped_clut;
                 }
                 else
                 {
                     clut_sum = 0;
                 }
+
                 part->clut_tr = clut_sum;
 
                 if (obj == NULL)
                 {
                     return;
                 }
+
                 part = part->next;
             }
+
             obj = obj->next;
         } while (obj != NULL);
     }
@@ -234,6 +258,7 @@ static inline void field_rewind_animation(FieldAnimDef* def, FieldAnim* anim)
     if ((def->flags.word & FIELD_ANIM_GROUP_KIND_MASK) != FIELD_ANIM_GROUP_KIND(FIELD_ANIM_GROUP_TILE, FIELD_TILE_ANIM_MOVIE))
     {
         anim->flags.word &= ~FIELD_ANIM_FLAG_REVERSE;
+
         if (def->flags.word & FIELD_ANIM_DEF_SPAN_INDEXED)
         {
             frame = def->head.b.start_frame;
@@ -246,7 +271,9 @@ static inline void field_rewind_animation(FieldAnimDef* def, FieldAnim* anim)
             anim->flags.b.state = frame;
             anim->flags.b.keyframe = frame;
         }
+
         span = field_find_count_table_span(def, anim->flags.b.keyframe, &range_start);
+
         if (def->flags.word & FIELD_ANIM_DEF_TIMED)
         {
             anim->timer = span->duration;
@@ -255,11 +282,13 @@ static inline void field_rewind_animation(FieldAnimDef* def, FieldAnim* anim)
         {
             anim->timer = 1;
         }
+
         if (((def->flags.word & FIELD_ANIM_GROUP_KIND_MASK) == FIELD_ANIM_GROUP_KIND(FIELD_ANIM_GROUP_TILE, FIELD_TILE_ANIM_UPLOAD)) ||
             ((def->flags.b.handler_group == FIELD_ANIM_GROUP_PALETTE) && ((def->flags.b.kind_flags & FIELD_ANIM_KIND_MASK) >= FIELD_PALETTE_ANIM_CYCLE)))
         {
             anim->flags.word |= FIELD_ANIM_FLAG_UPLOAD_PENDING;
         }
+
         if (((def->flags.word & FIELD_ANIM_GROUP_KIND_MASK) >= FIELD_TILE_ANIM_TWEEN_PART) &&
             ((def->flags.word & FIELD_ANIM_GROUP_KIND_MASK) <= FIELD_TILE_ANIM_TWEEN_OBJECT))
         {
@@ -287,27 +316,32 @@ static void field_start_animation(FieldSeq* seq)
 
     cmd = seq->def;
     scene = g_field_scene.scene;
+
     switch (cmd->list_kind)
     {
-    case FIELD_LIST_TILE_ANIMS:
-        anim = scene->anims;
-        break;
-    case FIELD_LIST_PALETTE_ANIMS:
-        anim = scene->strips;
-        break;
-    default:
-        anim = scene->sprites;
-        break;
+        case FIELD_LIST_TILE_ANIMS:
+            anim = scene->anims;
+            break;
+        case FIELD_LIST_PALETTE_ANIMS:
+            anim = scene->strips;
+            break;
+        default:
+            anim = scene->sprites;
+            break;
     }
+
     i = cmd->anim_index;
+
     while (--i != -1)
     {
         anim = anim->next;
     }
+
     def = anim->def;
     field_rewind_animation(def, anim);
     anim->repeat_count = cmd->repeat_count;
     stop_keyframe = cmd->stop_keyframe;
+
     if (stop_keyframe == FIELD_SEQ_NO_STOP)
     {
         anim->flags.word &= ~FIELD_ANIM_FLAG_STOP_AT_KEYFRAME;
@@ -317,6 +351,7 @@ static void field_start_animation(FieldSeq* seq)
         anim->flags.b.stop_keyframe = stop_keyframe;
         anim->flags.word |= FIELD_ANIM_FLAG_STOP_AT_KEYFRAME;
     }
+
     anim->flags.word = (anim->flags.word & ~FIELD_ANIM_FLAG_PING_PONG) | ((def->flags.word >> 3) & FIELD_ANIM_FLAG_PING_PONG) | FIELD_ANIM_FLAG_ACTIVE;
 }
 
@@ -337,16 +372,20 @@ static inline void field_start_or_stop_sequence(s32 index, s32 start)
     s32 i;
 
     seq = g_field_scene.scene->seqs;
+
     if (start)
     {
         i = index;
+
         while (--i != -1)
         {
             seq = seq->next;
         }
+
         field_start_sequence(seq, index & 0xFF);
         return;
     }
+
     while (seq != NULL)
     {
         if ((seq->flags.word & FIELD_SEQ_PHASE_MASK) != 0)
@@ -355,9 +394,11 @@ static inline void field_start_or_stop_sequence(s32 index, s32 start)
             {
                 seq->flags.word &= ~FIELD_SEQ_PHASE_MASK;
             }
+
             cmd = seq->def;
             field_control_animation(cmd->list_kind, cmd->anim_index, FIELD_KEYFRAME_NONE, FIELD_ANIM_OP_STOP);
         }
+
         seq = seq->next;
     }
 }
@@ -373,6 +414,7 @@ static inline s32 field_scan_sequence_chain(s32 index)
     FieldSeq* seq;
 
     seq = g_field_scene.scene->seqs;
+
     while (seq != NULL)
     {
         if ((seq->flags.word & FIELD_SEQ_PHASE_MASK) != 0)
@@ -382,8 +424,10 @@ static inline s32 field_scan_sequence_chain(s32 index)
                 return 0;
             }
         }
+
         seq = seq->next;
     }
+
     return 1;
 }
 
@@ -416,121 +460,137 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
     s32 flags;
 
     scene = g_field_scene.scene;
+
     switch (list_kind)
     {
-    case FIELD_LIST_TILE_ANIMS:
-        anim = scene->anims;
-        break;
-    case FIELD_LIST_PALETTE_ANIMS:
-        anim = scene->strips;
-        break;
-    case FIELD_LIST_SEQUENCES:
-        field_start_or_stop_sequence(index, op != FIELD_ANIM_OP_STOP);
-        return;
-    default:
-        anim = scene->sprites;
-        break;
+        case FIELD_LIST_TILE_ANIMS:
+            anim = scene->anims;
+            break;
+        case FIELD_LIST_PALETTE_ANIMS:
+            anim = scene->strips;
+            break;
+        case FIELD_LIST_SEQUENCES:
+            field_start_or_stop_sequence(index, op != FIELD_ANIM_OP_STOP);
+            return;
+        default:
+            anim = scene->sprites;
+            break;
     }
+
     while (--index != -1)
     {
         anim = anim->next;
     }
+
     switch (op)
     {
-    case FIELD_ANIM_OP_RESTART:
-        def = anim->def;
-        field_rewind_animation(def, anim);
-        /* fallthrough */
-    case FIELD_ANIM_OP_START:
-        def = anim->def;
-        anim->flags.word &= ~FIELD_ANIM_FLAG_STOP_AT_KEYFRAME;
-        anim->repeat_count = 0;
-        flags = anim->flags.word & ~FIELD_ANIM_FLAG_PING_PONG;
-        flags |= (def->flags.word >> 3) & FIELD_ANIM_FLAG_PING_PONG;
-        anim->flags.word = flags;
-        if ((list_kind == FIELD_LIST_TILE_ANIMS) && ((def->flags.word & FIELD_ANIM_KIND_MASK) == FIELD_TILE_ANIM_MOVIE))
-        {
-            if ((anim->flags.word & FIELD_ANIM_FLAG_ACTIVE) == 0)
+        case FIELD_ANIM_OP_RESTART:
+            def = anim->def;
+            field_rewind_animation(def, anim);
+            /* fallthrough */
+        case FIELD_ANIM_OP_START:
+            def = anim->def;
+            anim->flags.word &= ~FIELD_ANIM_FLAG_STOP_AT_KEYFRAME;
+            anim->repeat_count = 0;
+            flags = anim->flags.word & ~FIELD_ANIM_FLAG_PING_PONG;
+            flags |= (def->flags.word >> 3) & FIELD_ANIM_FLAG_PING_PONG;
+            anim->flags.word = flags;
+
+            if ((list_kind == FIELD_LIST_TILE_ANIMS) && ((def->flags.word & FIELD_ANIM_KIND_MASK) == FIELD_TILE_ANIM_MOVIE))
             {
-                anim->flags.word |= FIELD_ANIM_FLAG_ACTIVE;
-                anim->flags.b.state = 0;
-            }
-        }
-        else
-        {
-            anim->flags.word |= FIELD_ANIM_FLAG_ACTIVE;
-        }
-        break;
-    case FIELD_ANIM_OP_STOP:
-        if (keyframe == FIELD_KEYFRAME_NONE)
-        {
-            if ((list_kind == FIELD_LIST_TILE_ANIMS) && (anim->flags.word & FIELD_ANIM_FLAG_ACTIVE))
-            {
-                sfx_def = anim->def;
-                if ((sfx_def->flags.word & FIELD_ANIM_KIND_MASK) == FIELD_TILE_ANIM_SOUND)
+                if ((anim->flags.word & FIELD_ANIM_FLAG_ACTIVE) == 0)
                 {
-                    key = (FieldSfxKey*)sfx_def->data;
-                    if (key->sound.word & FIELD_SFX_ONE_SHOT)
-                    {
-                        if (key->control.word & FIELD_SFX_CHANNEL_MASK)
-                        {
-                            channel_mask = 1 << (((key->control.word >> 8) & 0x1F) - 1);
-                            sfx_id = 0;
-                        }
-                        else
-                        {
-                            channel_mask = 0;
-                            sfx_id = key->sfx_id & AKAO_SFX_ID_MASK;
-                        }
-                        akao_stop_sfx(sfx_id, channel_mask);
-                    }
+                    anim->flags.word |= FIELD_ANIM_FLAG_ACTIVE;
+                    anim->flags.b.state = 0;
                 }
             }
-            anim->flags.word &= ~FIELD_ANIM_FLAG_ACTIVE;
-        }
-        else
-        {
-            anim->flags.word |= FIELD_ANIM_FLAG_STOP_AT_KEYFRAME;
-            anim->flags.b.stop_keyframe = keyframe;
-        }
-        anim->repeat_count = 0;
-        break;
-    case FIELD_ANIM_OP_FINISH_LOOP:
-        def = anim->def;
-        if (def->flags.word & FIELD_ANIM_DEF_IGNORE_REPEAT_COUNT)
-        {
-            if (def->flags.word & FIELD_ANIM_DEF_PING_PONG)
+            else
             {
-                anim->flags.b.stop_keyframe = 0;
+                anim->flags.word |= FIELD_ANIM_FLAG_ACTIVE;
+            }
+
+            break;
+        case FIELD_ANIM_OP_STOP:
+            if (keyframe == FIELD_KEYFRAME_NONE)
+            {
+                if ((list_kind == FIELD_LIST_TILE_ANIMS) && (anim->flags.word & FIELD_ANIM_FLAG_ACTIVE))
+                {
+                    sfx_def = anim->def;
+
+                    if ((sfx_def->flags.word & FIELD_ANIM_KIND_MASK) == FIELD_TILE_ANIM_SOUND)
+                    {
+                        key = (FieldSfxKey*)sfx_def->data;
+
+                        if (key->sound.word & FIELD_SFX_ONE_SHOT)
+                        {
+                            if (key->control.word & FIELD_SFX_CHANNEL_MASK)
+                            {
+                                channel_mask = 1 << (((key->control.word >> 8) & 0x1F) - 1);
+                                sfx_id = 0;
+                            }
+                            else
+                            {
+                                channel_mask = 0;
+                                sfx_id = key->sfx_id & AKAO_SFX_ID_MASK;
+                            }
+
+                            akao_stop_sfx(sfx_id, channel_mask);
+                        }
+                    }
+                }
+
+                anim->flags.word &= ~FIELD_ANIM_FLAG_ACTIVE;
             }
             else
             {
-                anim->flags.b.stop_keyframe = def->flags.b.last_frame;
+                anim->flags.word |= FIELD_ANIM_FLAG_STOP_AT_KEYFRAME;
+                anim->flags.b.stop_keyframe = keyframe;
             }
+
             anim->repeat_count = 0;
-            anim->flags.word |= FIELD_ANIM_FLAG_STOP_AT_KEYFRAME;
-        }
-        break;
-    case FIELD_ANIM_OP_SEEK:
-    default:
-        if (anim->flags.b.keyframe != keyframe)
-        {
-            flags = anim->flags.word | FIELD_ANIM_FLAG_PING_PONG;
-            anim->flags.word = flags;
-            if (anim->flags.b.keyframe < keyframe)
+            break;
+        case FIELD_ANIM_OP_FINISH_LOOP:
+            def = anim->def;
+
+            if (def->flags.word & FIELD_ANIM_DEF_IGNORE_REPEAT_COUNT)
             {
-                anim->flags.word = flags & ~FIELD_ANIM_FLAG_REVERSE;
+                if (def->flags.word & FIELD_ANIM_DEF_PING_PONG)
+                {
+                    anim->flags.b.stop_keyframe = 0;
+                }
+                else
+                {
+                    anim->flags.b.stop_keyframe = def->flags.b.last_frame;
+                }
+
+                anim->repeat_count = 0;
+                anim->flags.word |= FIELD_ANIM_FLAG_STOP_AT_KEYFRAME;
             }
-            else
+
+            break;
+        case FIELD_ANIM_OP_SEEK:
+        default:
+            if (anim->flags.b.keyframe != keyframe)
             {
-                anim->flags.word = flags | FIELD_ANIM_FLAG_REVERSE;
+                flags = anim->flags.word | FIELD_ANIM_FLAG_PING_PONG;
+                anim->flags.word = flags;
+
+                if (anim->flags.b.keyframe < keyframe)
+                {
+                    anim->flags.word = flags & ~FIELD_ANIM_FLAG_REVERSE;
+                }
+                else
+                {
+                    anim->flags.word = flags | FIELD_ANIM_FLAG_REVERSE;
+                }
+
+                anim->repeat_count = 0;
+                anim->timer = 1;
+                anim->flags.word |= FIELD_ANIM_FLAG_ACTIVE | FIELD_ANIM_FLAG_STOP_AT_KEYFRAME;
+                anim->flags.b.stop_keyframe = keyframe;
             }
-            anim->repeat_count = 0;
-            anim->timer = 1;
-            anim->flags.word |= FIELD_ANIM_FLAG_ACTIVE | FIELD_ANIM_FLAG_STOP_AT_KEYFRAME;
-            anim->flags.b.stop_keyframe = keyframe;
-        }
-        break;
+
+            break;
     }
 }
 
@@ -554,76 +614,95 @@ void field_update_scene_fade(void)
 
     state = FIELD_WORKSPACE;
     scene = g_field_scene.scene;
+
     switch (state->fade_mode)
     {
-    case FIELD_FADE_OUT:
-        state->fade_level -= FIELD_FADE_STEP;
-        field_set_color_scale((s16)FIELD_ALL_OBJECTS, (u16)state->fade_level, (u16)state->fade_level, (u16)state->fade_level);
-        if (state->fade_level == 0)
-        {
-            obj = scene->objects;
-            if ((obj->flags.word & FIELD_OBJ_VISIBLE) == 0)
+        case FIELD_FADE_OUT:
+            state->fade_level -= FIELD_FADE_STEP;
+            field_set_color_scale((s16)FIELD_ALL_OBJECTS, (u16)state->fade_level, (u16)state->fade_level, (u16)state->fade_level);
+
+            if (state->fade_level == 0)
             {
-                obj->flags.word |= FIELD_OBJ_VISIBLE;
-                part = obj->parts;
-                part->visible = 0;
-                part = part->next;
-                part->visible = 0;
-                obj = obj->next;
-                while (obj != NULL)
+                obj = scene->objects;
+
+                if ((obj->flags.word & FIELD_OBJ_VISIBLE) == 0)
                 {
-                    obj->flags.word = ((obj->flags.word & ~FIELD_OBJ_SAVED_VISIBLE) | ((obj->flags.b.low_flags & FIELD_OBJ_VISIBLE) << 1)) & ~FIELD_OBJ_VISIBLE;
+                    obj->flags.word |= FIELD_OBJ_VISIBLE;
+                    part = obj->parts;
+                    part->visible = 0;
+                    part = part->next;
+                    part->visible = 0;
                     obj = obj->next;
+
+                    while (obj != NULL)
+                    {
+                        obj->flags.word =
+                            ((obj->flags.word & ~FIELD_OBJ_SAVED_VISIBLE) | ((obj->flags.b.low_flags & FIELD_OBJ_VISIBLE) << 1)) & ~FIELD_OBJ_VISIBLE;
+                        obj = obj->next;
+                    }
+
+                    anim = scene->anims;
+
+                    while (anim != NULL)
+                    {
+                        anim->flags.word = ((anim->flags.word & ~FIELD_ANIM_FLAG_SAVED_ACTIVE) | ((anim->flags.word << 1) & FIELD_ANIM_FLAG_SAVED_ACTIVE)) &
+                                           ~FIELD_ANIM_FLAG_ACTIVE;
+                        anim = anim->next;
+                    }
+
+                    anim = scene->strips;
+
+                    while (anim != NULL)
+                    {
+                        anim->flags.word = ((anim->flags.word & ~FIELD_ANIM_FLAG_SAVED_ACTIVE) | ((anim->flags.word << 1) & FIELD_ANIM_FLAG_SAVED_ACTIVE)) &
+                                           ~FIELD_ANIM_FLAG_ACTIVE;
+                        anim = anim->next;
+                    }
+
+                    anim = scene->sprites;
+
+                    while (anim != NULL)
+                    {
+                        anim->flags.word = ((anim->flags.word & ~FIELD_ANIM_FLAG_SAVED_ACTIVE) | ((anim->flags.word << 1) & FIELD_ANIM_FLAG_SAVED_ACTIVE)) &
+                                           ~FIELD_ANIM_FLAG_ACTIVE;
+                        anim = anim->next;
+                    }
+
+                    anim = scene->effects;
+
+                    while (anim != NULL)
+                    {
+                        anim->flags.word = ((anim->flags.word & ~FIELD_ANIM_FLAG_SAVED_ACTIVE) | ((anim->flags.word << 1) & FIELD_ANIM_FLAG_SAVED_ACTIVE)) &
+                                           ~FIELD_ANIM_FLAG_ACTIVE;
+                        anim = anim->next;
+                    }
+
+                    seq = scene->seqs;
+
+                    while (seq != NULL)
+                    {
+                        seq->flags.word =
+                            ((seq->flags.word & ~FIELD_SEQ_SAVED_PHASE_MASK) | ((seq->flags.b.state & FIELD_SEQ_PHASE_MASK) << 2)) & ~FIELD_SEQ_PHASE_MASK;
+                        seq = seq->next;
+                    }
+
+                    field_control_animation(FIELD_LIST_TILE_ANIMS, 0, 0, FIELD_ANIM_OP_START);
+                    g_field_scene_fade_mode = FIELD_FADE_HELD;
+                    field_set_color_scale(0, FIELD_FADE_LEVEL_FULL, FIELD_FADE_LEVEL_FULL, FIELD_FADE_LEVEL_FULL);
                 }
-                anim = scene->anims;
-                while (anim != NULL)
-                {
-                    anim->flags.word = ((anim->flags.word & ~FIELD_ANIM_FLAG_SAVED_ACTIVE) | ((anim->flags.word << 1) & FIELD_ANIM_FLAG_SAVED_ACTIVE)) &
-                                       ~FIELD_ANIM_FLAG_ACTIVE;
-                    anim = anim->next;
-                }
-                anim = scene->strips;
-                while (anim != NULL)
-                {
-                    anim->flags.word = ((anim->flags.word & ~FIELD_ANIM_FLAG_SAVED_ACTIVE) | ((anim->flags.word << 1) & FIELD_ANIM_FLAG_SAVED_ACTIVE)) &
-                                       ~FIELD_ANIM_FLAG_ACTIVE;
-                    anim = anim->next;
-                }
-                anim = scene->sprites;
-                while (anim != NULL)
-                {
-                    anim->flags.word = ((anim->flags.word & ~FIELD_ANIM_FLAG_SAVED_ACTIVE) | ((anim->flags.word << 1) & FIELD_ANIM_FLAG_SAVED_ACTIVE)) &
-                                       ~FIELD_ANIM_FLAG_ACTIVE;
-                    anim = anim->next;
-                }
-                anim = scene->effects;
-                while (anim != NULL)
-                {
-                    anim->flags.word = ((anim->flags.word & ~FIELD_ANIM_FLAG_SAVED_ACTIVE) | ((anim->flags.word << 1) & FIELD_ANIM_FLAG_SAVED_ACTIVE)) &
-                                       ~FIELD_ANIM_FLAG_ACTIVE;
-                    anim = anim->next;
-                }
-                seq = scene->seqs;
-                while (seq != NULL)
-                {
-                    seq->flags.word =
-                        ((seq->flags.word & ~FIELD_SEQ_SAVED_PHASE_MASK) | ((seq->flags.b.state & FIELD_SEQ_PHASE_MASK) << 2)) & ~FIELD_SEQ_PHASE_MASK;
-                    seq = seq->next;
-                }
-                field_control_animation(FIELD_LIST_TILE_ANIMS, 0, 0, FIELD_ANIM_OP_START);
-                g_field_scene_fade_mode = FIELD_FADE_HELD;
-                field_set_color_scale(0, FIELD_FADE_LEVEL_FULL, FIELD_FADE_LEVEL_FULL, FIELD_FADE_LEVEL_FULL);
             }
-        }
-        break;
-    case FIELD_FADE_IN:
-        state->fade_level += FIELD_FADE_STEP;
-        field_set_color_scale((s16)FIELD_ALL_OBJECTS, (u16)state->fade_level, (u16)state->fade_level, (u16)state->fade_level);
-        if (state->fade_level == FIELD_FADE_LEVEL_FULL)
-        {
-            state->fade_mode = FIELD_FADE_IDLE;
-        }
-        break;
+
+            break;
+        case FIELD_FADE_IN:
+            state->fade_level += FIELD_FADE_STEP;
+            field_set_color_scale((s16)FIELD_ALL_OBJECTS, (u16)state->fade_level, (u16)state->fade_level, (u16)state->fade_level);
+
+            if (state->fade_level == FIELD_FADE_LEVEL_FULL)
+            {
+                state->fade_mode = FIELD_FADE_IDLE;
+            }
+
+            break;
     }
 }
 
@@ -653,36 +732,47 @@ void field_begin_scene_fade_in(void)
     part = part->next;
     part->visible = 0;
     obj = obj->next;
+
     while (obj != NULL)
     {
         obj->flags.word = (obj->flags.word & ~FIELD_OBJ_VISIBLE) | (((u32)obj->flags.word >> 1) & FIELD_OBJ_VISIBLE);
         obj = obj->next;
     }
+
     anim = scene->anims;
+
     while (anim != NULL)
     {
         anim->flags.word = (anim->flags.word & ~FIELD_ANIM_FLAG_ACTIVE) | (((u32)anim->flags.word >> 1) & FIELD_ANIM_FLAG_ACTIVE);
         anim = anim->next;
     }
+
     anim = scene->strips;
+
     while (anim != NULL)
     {
         anim->flags.word = (anim->flags.word & ~FIELD_ANIM_FLAG_ACTIVE) | (((u32)anim->flags.word >> 1) & FIELD_ANIM_FLAG_ACTIVE);
         anim = anim->next;
     }
+
     anim = scene->sprites;
+
     while (anim != NULL)
     {
         anim->flags.word = (anim->flags.word & ~FIELD_ANIM_FLAG_ACTIVE) | (((u32)anim->flags.word >> 1) & FIELD_ANIM_FLAG_ACTIVE);
         anim = anim->next;
     }
+
     anim = scene->effects;
+
     while (anim != NULL)
     {
         anim->flags.word = (anim->flags.word & ~FIELD_ANIM_FLAG_ACTIVE) | (((u32)anim->flags.word >> 1) & FIELD_ANIM_FLAG_ACTIVE);
         anim = anim->next;
     }
+
     seq = scene->seqs;
+
     while (seq != NULL)
     {
         seq->flags.word = (seq->flags.word & ~FIELD_SEQ_PHASE_MASK) | (((u32)seq->flags.word >> 2) & FIELD_SEQ_PHASE_MASK);
@@ -725,6 +815,7 @@ void field_set_color_scale(s32 index_value, s32 red_value, s32 green_value, s32 
     i = 0;
     scene = g_field_scene.scene;
     owner = (FieldTintSrc*)scene->objects;
+
     while (owner != NULL)
     {
         if ((index == FIELD_ALL_OBJECTS || index == i) &&
@@ -740,21 +831,26 @@ void field_set_color_scale(s32 index_value, s32 red_value, s32 green_value, s32 
             pal = tint->data;
             field_build_tint_colors((u8*)(pal + 2), pal[0], rgb);
             part = owner->cels;
+
             while (part != NULL)
             {
                 if (part->instance_count != 0 && (part->code_word != 0 || part->shared == NULL))
                 {
                     field_tint_part_cells(part);
                 }
+
                 part = part->next;
             }
         }
+
         owner = owner->next;
         i++;
     }
+
     if (index == FIELD_ALL_OBJECTS)
     {
         anim = scene->anims;
+
         while (anim != NULL)
         {
             if ((anim->def->flags.word & FIELD_ANIM_KIND_MASK) < FIELD_TILE_ANIM_CEL_CYCLE)
@@ -766,14 +862,18 @@ void field_set_color_scale(s32 index_value, s32 red_value, s32 green_value, s32 
                 rgb[2] = owner->blue * blue_scale;
                 pal = tint->data;
                 field_build_tint_colors((u8*)(pal + 2), pal[0], rgb);
+
                 if (cel->code_word == 0)
                 {
                     field_tint_animation_frames(cel, anim);
                 }
             }
+
             anim = anim->next;
         }
+
         anim = scene->effects;
+
         while (anim != NULL)
         {
             cel = field_find_grid_part(anim->def->u.tile.grid, &owner);
@@ -783,10 +883,12 @@ void field_set_color_scale(s32 index_value, s32 red_value, s32 green_value, s32 
             rgb[2] = owner->blue * blue_scale;
             pal = tint->data;
             field_build_tint_colors((u8*)(pal + 2), pal[0], rgb);
+
             if (cel->code_word == 0)
             {
                 field_tint_animation_frames(cel, anim);
             }
+
             anim = anim->next;
         }
     }
@@ -819,93 +921,108 @@ static void field_tint_part_cells(FieldPart* part)
     grid = part->def;
     tile = grid->tiles;
     pal = FIELD_TINT_COLORS;
+
     switch (part->kind)
     {
-    case 0:
-        dst = part->records;
-        stride = FIELD_CEL_RECORD_SIZE;
-        if (part->code_word != 0)
-        {
-            stride -= FIELD_CEL_SHARED_WORD_SIZE;
-        }
-        if (part->tpage_word != 0)
-        {
-            stride -= FIELD_CEL_SHARED_WORD_SIZE;
-        }
-        mask = part->bits;
-        count = grid->u.b.rows * grid->u.b.cols;
-        bit = 0;
-        while (--count != -1)
-        {
-            if (bit == 0)
-            {
-                word = *mask++;
-                bit = 1;
-            }
+        case FIELD_CEL_KIND_SPRITE_16:
+            dst = part->records;
+            stride = FIELD_CEL_RECORD_SIZE;
+
             if (part->code_word != 0)
             {
-                if ((word & bit) && (tile->clut_slot & FIELD_TILE_ANIMATED))
+                stride -= FIELD_CEL_SHARED_WORD_SIZE;
+            }
+
+            if (part->tpage_word != 0)
+            {
+                stride -= FIELD_CEL_SHARED_WORD_SIZE;
+            }
+
+            mask = part->bits;
+            count = grid->u.b.rows * grid->u.b.cols;
+            bit = 0;
+
+            while (--count != -1)
+            {
+                if (bit == 0)
+                {
+                    word = *mask++;
+                    bit = 1;
+                }
+
+                if (part->code_word != 0)
+                {
+                    if ((word & bit) && (tile->clut_slot & FIELD_TILE_ANIMATED))
+                    {
+                        entry = &pal[tile->color_index];
+                        FIELD_COPY_TINT_COLOR(((FieldTintColor*)&part->code_word), entry);
+                        return;
+                    }
+                }
+                else if (word & bit)
                 {
                     entry = &pal[tile->color_index];
-                    FIELD_COPY_TINT_COLOR(((FieldTintColor*)&part->code_word), entry);
-                    return;
+                    FIELD_COPY_TINT_COLOR(((FieldCellTint*)dst), entry);
+                    dst += stride;
                 }
+
+                bit <<= 1;
+                tile++;
             }
-            else if (word & bit)
-            {
-                entry = &pal[tile->color_index];
-                FIELD_COPY_TINT_COLOR(((FieldCellTint*)dst), entry);
-                dst += stride;
-            }
-            bit <<= 1;
-            tile++;
-        }
-        break;
-    case 1:
-        break;
-    case 2:
-    case 3:
-    case 4:
-    case 5:
-        dst = part->records;
-        stride = FIELD_CEL_RECORD_SIZE;
-        if (part->code_word != 0)
-        {
-            stride -= FIELD_CEL_SHARED_WORD_SIZE;
-        }
-        if (part->tpage_word != 0)
-        {
-            stride -= FIELD_CEL_SHARED_WORD_SIZE;
-        }
-        mask = part->bits;
-        count = grid->u.b.rows * grid->u.b.cols;
-        bit = 0;
-        while (--count != -1)
-        {
-            if (bit == 0)
-            {
-                word = *mask++;
-                bit = 1;
-            }
+
+            break;
+        case FIELD_CEL_KIND_SPRITE:
+            break;
+        case FIELD_CEL_KIND_QUAD_FIRST:
+        case FIELD_CEL_KIND_QUAD_FIRST + 1:
+        case FIELD_CEL_KIND_QUAD_FIRST + 2:
+        case FIELD_CEL_KIND_QUAD_FIRST + 3:
+            dst = part->records;
+            stride = FIELD_CEL_RECORD_SIZE;
+
             if (part->code_word != 0)
             {
-                if ((word & bit) && (tile->clut_slot & FIELD_TILE_ANIMATED))
+                stride -= FIELD_CEL_SHARED_WORD_SIZE;
+            }
+
+            if (part->tpage_word != 0)
+            {
+                stride -= FIELD_CEL_SHARED_WORD_SIZE;
+            }
+
+            mask = part->bits;
+            count = grid->u.b.rows * grid->u.b.cols;
+            bit = 0;
+
+            while (--count != -1)
+            {
+                if (bit == 0)
+                {
+                    word = *mask++;
+                    bit = 1;
+                }
+
+                if (part->code_word != 0)
+                {
+                    if ((word & bit) && (tile->clut_slot & FIELD_TILE_ANIMATED))
+                    {
+                        entry = &pal[tile->color_index];
+                        FIELD_COPY_TINT_COLOR(((FieldTintColor*)&part->code_word), entry);
+                        return;
+                    }
+                }
+                else if (word & bit)
                 {
                     entry = &pal[tile->color_index];
-                    FIELD_COPY_TINT_COLOR(((FieldTintColor*)&part->code_word), entry);
-                    return;
+                    FIELD_COPY_TINT_COLOR(((FieldCellTint*)dst), entry);
+                    dst += stride;
                 }
+
+                bit <<= 1;
+                tile++;
             }
-            else if (word & bit)
-            {
-                entry = &pal[tile->color_index];
-                FIELD_COPY_TINT_COLOR(((FieldCellTint*)dst), entry);
-                dst += stride;
-            }
-            bit <<= 1;
-            tile++;
-        }
-        break;
+
+            break;
     }
 }
 
@@ -943,13 +1060,16 @@ void field_start_sequence(FieldSeq* seq, u8 index)
     seq->flags.b.index = index;
     field_start_animation(seq);
     i = def->start_link;
+
     if (i != FIELD_SEQ_NO_LINK && def->start_delay == 0)
     {
         link = scene->seqs;
+
         while (--i != -1)
         {
             link = link->next;
         }
+
         field_start_sequence(link, index);
     }
 }
@@ -964,6 +1084,7 @@ s32 field_is_sequence_chain_idle(s32 index)
     FieldSeq* seq;
 
     seq = g_field_scene.scene->seqs;
+
     while (seq != NULL)
     {
         if ((seq->flags.word & FIELD_SEQ_PHASE_MASK) != 0)
@@ -973,8 +1094,10 @@ s32 field_is_sequence_chain_idle(s32 index)
                 return 0;
             }
         }
+
         seq = seq->next;
     }
+
     return 1;
 }
 
@@ -991,33 +1114,38 @@ s32 field_get_animation_state(s32 list_kind, s32 index)
     FieldScene* scene;
 
     scene = g_field_scene.scene;
+
     switch (list_kind)
     {
-    case FIELD_LIST_TILE_ANIMS:
-        anim = scene->anims;
-        break;
-    case FIELD_LIST_PALETTE_ANIMS:
-        anim = scene->strips;
-        break;
-    case FIELD_LIST_SEQUENCES:
-        return field_scan_sequence_chain(index) * FIELD_ANIM_STATE_FINISHED;
-    default:
-        anim = scene->sprites;
-        break;
+        case FIELD_LIST_TILE_ANIMS:
+            anim = scene->anims;
+            break;
+        case FIELD_LIST_PALETTE_ANIMS:
+            anim = scene->strips;
+            break;
+        case FIELD_LIST_SEQUENCES:
+            return field_scan_sequence_chain(index) * FIELD_ANIM_STATE_FINISHED;
+        default:
+            anim = scene->sprites;
+            break;
     }
+
     while (--index != -1)
     {
         anim = anim->next;
     }
+
     if (anim->flags.word & FIELD_ANIM_FLAG_ACTIVE)
     {
         if ((anim->flags.word & FIELD_ANIM_FLAG_STOP_AT_KEYFRAME) != 0)
         {
             return FIELD_ANIM_STATE_STOPPING;
         }
+
         if (list_kind == FIELD_LIST_TILE_ANIMS)
         {
             def = anim->def;
+
             if ((def->flags.word & FIELD_ANIM_KIND_MASK) == FIELD_TILE_ANIM_MOVIE)
             {
                 if (anim->flags.b.state < 2)
@@ -1026,8 +1154,10 @@ s32 field_get_animation_state(s32 list_kind, s32 index)
                 }
             }
         }
+
         return FIELD_ANIM_STATE_RUNNING;
     }
+
     return FIELD_ANIM_STATE_FINISHED;
 }
 
@@ -1046,37 +1176,42 @@ void field_move_part_nodes(FieldPart* part, s32 delta, s32 axis)
 
     count = part->node_count;
     scene = g_field_scene.scene;
+
     if (count != 0 && delta != 0)
     {
         node = scene->nodes;
+
         while (node != NULL)
         {
             if (node->part == part)
             {
                 switch (axis)
                 {
-                case FIELD_AXIS_X:
-                    node->motion_x += delta;
-                    node->offset_x += delta;
-                    break;
-                case FIELD_AXIS_Y:
-                    node->motion_height0 += delta;
-                    node->motion_height1 += delta;
-                    node->height0_offset += delta;
-                    node->height1_offset += delta;
-                    break;
-                case FIELD_AXIS_Z:
-                default:
-                    node->motion_z += delta;
-                    node->offset_z += delta;
-                    break;
+                    case FIELD_AXIS_X:
+                        node->motion_x += delta;
+                        node->offset_x += delta;
+                        break;
+                    case FIELD_AXIS_Y:
+                        node->motion_height0 += delta;
+                        node->motion_height1 += delta;
+                        node->height0_offset += delta;
+                        node->height1_offset += delta;
+                        break;
+                    case FIELD_AXIS_Z:
+                    default:
+                        node->motion_z += delta;
+                        node->offset_z += delta;
+                        break;
                 }
+
                 count--;
+
                 if (count == 0)
                 {
                     break;
                 }
             }
+
             node = node->next;
         }
     }
@@ -1096,37 +1231,42 @@ void field_move_object_nodes(FieldObj* obj, s32 delta, s32 axis)
 
     count = obj->flags.b.node_count;
     scene = g_field_scene.scene;
+
     if (count != 0 && delta != 0)
     {
         node = scene->nodes;
+
         while (node != NULL)
         {
             if (node->obj == obj)
             {
                 switch (axis)
                 {
-                case FIELD_AXIS_X:
-                    node->motion_x += delta;
-                    node->offset_x += delta;
-                    break;
-                case FIELD_AXIS_Y:
-                    node->motion_height0 -= delta;
-                    node->motion_height1 -= delta;
-                    node->height0_offset -= delta;
-                    node->height1_offset -= delta;
-                    break;
-                case FIELD_AXIS_Z:
-                default:
-                    node->motion_z += delta;
-                    node->offset_z += delta;
-                    break;
+                    case FIELD_AXIS_X:
+                        node->motion_x += delta;
+                        node->offset_x += delta;
+                        break;
+                    case FIELD_AXIS_Y:
+                        node->motion_height0 -= delta;
+                        node->motion_height1 -= delta;
+                        node->height0_offset -= delta;
+                        node->height1_offset -= delta;
+                        break;
+                    case FIELD_AXIS_Z:
+                    default:
+                        node->motion_z += delta;
+                        node->offset_z += delta;
+                        break;
                 }
+
                 count--;
+
                 if (count == 0)
                 {
                     break;
                 }
             }
+
             node = node->next;
         }
     }
@@ -1142,10 +1282,12 @@ FieldObj* field_get_object(s32 index)
     FieldObj* obj;
 
     obj = g_field_scene.scene->objects;
+
     while (--index != -1)
     {
         obj = obj->next;
     }
+
     return obj;
 }
 
@@ -1161,15 +1303,19 @@ FieldPart* field_get_object_part(s32 obj_index, s32 part_index)
     FieldPart* part;
 
     obj = g_field_scene.scene->objects;
+
     while (--obj_index != -1)
     {
         obj = obj->next;
     }
+
     part = obj->parts;
+
     while (--part_index != -1)
     {
         part = part->next;
     }
+
     return part;
 }
 
@@ -1185,9 +1331,11 @@ FieldPart* field_find_grid_part(FieldPartDef* grid, FieldTintSrc** out_src)
     FieldPart* cel;
 
     src = (FieldTintSrc*)g_field_scene.scene->objects;
+
     while (src != NULL)
     {
         cel = src->cels;
+
         while (cel != NULL)
         {
             if (grid == cel->def)
@@ -1196,12 +1344,16 @@ FieldPart* field_find_grid_part(FieldPartDef* grid, FieldTintSrc** out_src)
                 {
                     *out_src = src;
                 }
+
                 return cel;
             }
+
             cel = cel->next;
         }
+
         src = src->next;
     }
+
     return NULL;
 }
 
@@ -1228,9 +1380,11 @@ void field_build_tint_colors(u8* colors, s32 count, s32* rgb_scale)
     red = rgb_scale[0];
     green = rgb_scale[1];
     blue = rgb_scale[2];
+
     while (--count != -1)
     {
         v = colors[0] * red;
+
         if (v > FIELD_TINT_PRODUCT_MAX)
         {
             dst[0] = 0xFF;
@@ -1239,7 +1393,9 @@ void field_build_tint_colors(u8* colors, s32 count, s32* rgb_scale)
         {
             dst[0] = v >> 16;
         }
+
         v = colors[1] * green;
+
         if (v > FIELD_TINT_PRODUCT_MAX)
         {
             dst[1] = 0xFF;
@@ -1248,7 +1404,9 @@ void field_build_tint_colors(u8* colors, s32 count, s32* rgb_scale)
         {
             dst[1] = v >> 16;
         }
+
         v = colors[2] * blue;
+
         if (v > FIELD_TINT_PRODUCT_MAX)
         {
             dst[2] = 0xFF;
@@ -1257,6 +1415,7 @@ void field_build_tint_colors(u8* colors, s32 count, s32* rgb_scale)
         {
             dst[2] = v >> 16;
         }
+
         colors += 4;
         dst += 4;
     }
@@ -1275,30 +1434,33 @@ void field_set_tint_primitive_code(u8 format, s32 count, u8* primitive_code)
 
     switch (format)
     {
-    case 0:
-        code = FIELD_PRIM_CODE_SPRT_16;
-        break;
-    case 1:
-        code = FIELD_PRIM_CODE_SPRT;
-        break;
-    case 2:
-    case 3:
-    case 4:
-    case 5:
-        code = FIELD_PRIM_CODE_POLY_FT4;
-        break;
-    default:
-        code = FIELD_PRIM_CODE_POLY_GT4;
-        break;
+        case FIELD_CEL_KIND_SPRITE_16:
+            code = FIELD_PRIM_CODE_SPRT_16;
+            break;
+        case FIELD_CEL_KIND_SPRITE:
+            code = FIELD_PRIM_CODE_SPRT;
+            break;
+        case FIELD_CEL_KIND_QUAD_FIRST:
+        case FIELD_CEL_KIND_QUAD_FIRST + 1:
+        case FIELD_CEL_KIND_QUAD_FIRST + 2:
+        case FIELD_CEL_KIND_QUAD_FIRST + 3:
+            code = FIELD_PRIM_CODE_POLY_FT4;
+            break;
+        default:
+            code = FIELD_PRIM_CODE_POLY_GT4;
+            break;
     }
+
     if (code != *primitive_code)
     {
         entry_code = &FIELD_TINT_COLORS[0].code;
+
         while (--count != -1)
         {
             *entry_code = code;
             entry_code += sizeof(FieldTintColor);
         }
+
         *primitive_code = code;
     }
 }
@@ -1324,55 +1486,66 @@ static void field_tint_animation_frames(FieldPart* cel, FieldAnim* anim)
 
     pal = FIELD_TINT_COLORS;
     def = anim->def;
+
     switch (cel->kind)
     {
-    case 0:
-        stride = FIELD_CEL_RECORD_SIZE;
-        dst = anim->frame_data;
-        if (cel->code_word != 0)
-        {
-            stride -= FIELD_CEL_SHARED_WORD_SIZE;
-        }
-        if (cel->tpage_word != 0)
-        {
-            stride -= FIELD_CEL_SHARED_WORD_SIZE;
-        }
-        tile = (FieldTileDesc*)def->data;
-        count = anim->frame_tile_count * def->flags.b.frame_count;
-        while (--count != -1)
-        {
-            entry = &pal[tile->color_index];
-            FIELD_COPY_TINT_COLOR(((FieldCellTint*)dst), entry);
-            tile++;
-            dst += stride;
-        }
-        break;
-    case 1:
-        break;
-    case 2:
-    case 3:
-    case 4:
-    case 5:
-        stride = FIELD_CEL_RECORD_SIZE;
-        dst = anim->frame_data;
-        if (cel->code_word != 0)
-        {
-            stride -= FIELD_CEL_SHARED_WORD_SIZE;
-        }
-        if (cel->tpage_word != 0)
-        {
-            stride -= FIELD_CEL_SHARED_WORD_SIZE;
-        }
-        tile = (FieldTileDesc*)def->data;
-        count = anim->frame_tile_count * def->flags.b.frame_count;
-        while (--count != -1)
-        {
-            entry = &pal[tile->color_index];
-            FIELD_COPY_TINT_COLOR(((FieldCellTint*)dst), entry);
-            tile++;
-            dst += stride;
-        }
-        break;
+        case FIELD_CEL_KIND_SPRITE_16:
+            stride = FIELD_CEL_RECORD_SIZE;
+            dst = anim->frame_data;
+
+            if (cel->code_word != 0)
+            {
+                stride -= FIELD_CEL_SHARED_WORD_SIZE;
+            }
+
+            if (cel->tpage_word != 0)
+            {
+                stride -= FIELD_CEL_SHARED_WORD_SIZE;
+            }
+
+            tile = (FieldTileDesc*)def->data;
+            count = anim->frame_tile_count * def->flags.b.frame_count;
+
+            while (--count != -1)
+            {
+                entry = &pal[tile->color_index];
+                FIELD_COPY_TINT_COLOR(((FieldCellTint*)dst), entry);
+                tile++;
+                dst += stride;
+            }
+
+            break;
+        case FIELD_CEL_KIND_SPRITE:
+            break;
+        case FIELD_CEL_KIND_QUAD_FIRST:
+        case FIELD_CEL_KIND_QUAD_FIRST + 1:
+        case FIELD_CEL_KIND_QUAD_FIRST + 2:
+        case FIELD_CEL_KIND_QUAD_FIRST + 3:
+            stride = FIELD_CEL_RECORD_SIZE;
+            dst = anim->frame_data;
+
+            if (cel->code_word != 0)
+            {
+                stride -= FIELD_CEL_SHARED_WORD_SIZE;
+            }
+
+            if (cel->tpage_word != 0)
+            {
+                stride -= FIELD_CEL_SHARED_WORD_SIZE;
+            }
+
+            tile = (FieldTileDesc*)def->data;
+            count = anim->frame_tile_count * def->flags.b.frame_count;
+
+            while (--count != -1)
+            {
+                entry = &pal[tile->color_index];
+                FIELD_COPY_TINT_COLOR(((FieldCellTint*)dst), entry);
+                tile++;
+                dst += stride;
+            }
+
+            break;
     }
 }
 
@@ -1479,17 +1652,21 @@ void field_play_effect_animation(s32 index, s32 forward)
     FieldAnimDef* def;
 
     anim = g_field_scene.scene->effects;
+
     if (anim != NULL)
     {
         while (--index != -1)
         {
             anim = anim->next;
+
             if (anim == NULL)
             {
                 return;
             }
         }
+
         def = anim->def;
+
         if (((def->flags.word & FIELD_ANIM_DEF_TIMED) != 0) && (forward == 0))
         {
             if (anim->flags.b.keyframe != 0)
@@ -1504,6 +1681,7 @@ void field_play_effect_animation(s32 index, s32 forward)
             anim->flags.word &= ~FIELD_ANIM_FLAG_REVERSE;
             anim->flags.word &= ~FIELD_ANIM_FLAG_PING_PONG;
             anim->timer = 1;
+
             if (((def->flags.word & FIELD_ANIM_DEF_TIMED) == 0) && (anim->flags.b.keyframe == 0))
             {
                 anim->flags.word |= FIELD_ANIM_FLAG_START_PENDING;
@@ -1545,11 +1723,14 @@ void field_set_node_enabled(s32 index, s32 enabled)
     FieldScene* scene = g_field_scene.scene;
 
     node = scene->nodes;
+
     while (--index != -1)
     {
         node = node->next;
     }
+
     node->active = enabled;
+
     if (scene->group_work != 0)
     {
         field_collision_rasterize_groups(0, node);
@@ -1587,20 +1768,25 @@ void field_apply_pixel_lookup(u16* pixels, s32 pixel_count, s32 table_index, voi
 
     count = pixel_count;
     table = g_field_pixel_lookup_tables[table_index];
+
     while (--count != -1)
     {
         pixel = *pixels;
         level = pixel & FIELD_PIXEL_COMPONENT_MASK;
         green = (pixel >> 5) & FIELD_PIXEL_COMPONENT_MASK;
+
         if (level < green)
         {
             level = green;
         }
+
         red = (pixel >> 10) & FIELD_PIXEL_COMPONENT_MASK;
+
         if (level < red)
         {
             level = red;
         }
+
         *pixels = table[level] + (pixel & FIELD_PIXEL_STP);
         pixels++;
     }
@@ -1617,13 +1803,16 @@ FieldObj* field_find_object_by_definition(void* definition)
     FieldObj* obj;
 
     obj = g_field_scene.scene->objects;
+
     while (obj != NULL)
     {
         if (definition == obj->def)
         {
             return obj;
         }
+
         obj = obj->next;
     }
+
     return NULL;
 }

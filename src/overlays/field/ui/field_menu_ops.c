@@ -1730,10 +1730,10 @@ void field_menu_publish_pet_pending_effects(void)
 }
 
 /**
- * @brief Set the joined golem's random-action chance to zero.
+ * @brief Set the joined golem's failure rate to zero.
  * @note Clears both the golem record and the companion's copy (byte 2 of its golem data).
  */
-void field_menu_clear_golem_random_chance(void)
+void field_menu_clear_golem_failure_rate(void)
 {
     SavedGameLayout* ctx;
     s32 index;
@@ -1741,7 +1741,7 @@ void field_menu_clear_golem_random_chance(void)
     ctx = &g_saved_game.layout;
     index = ctx->joined_golem;
     g_saved_game.layout.characters[FIELD_PARTY_COMPANION].instruments[0].derived.bytes[2] = 0;
-    ctx->golem_records[index].random_chance = 0;
+    ctx->golem_records[index].failure_rate = 0;
 }
 
 /**

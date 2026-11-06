@@ -24,6 +24,19 @@ extern s32 g_gosub_result_values[];
 /** @brief CARDA overlay mode plus one while CARDA is open, 0 otherwise; CARDA replaces it with its CARDA_RESULT_* code. */
 extern s32 g_field_card_overlay_mode;
 
+/**
+ * @brief Results CARDA leaves in g_field_card_overlay_mode for FIELD.
+ * @note FIELD sets it to the mode plus one before CARDA starts, so a finished
+ *       save leaves CARDA_RESULT_SAVED and a finished load CARDA_RESULT_LOADED.
+ */
+#define CARDA_RESULT_SAVED 1
+#define CARDA_RESULT_LOADED 2
+#define CARDA_RESULT_CANCELLED 3
+#define CARDA_RESULT_PET_SENT 4
+#define CARDA_RESULT_PET_RETURNED 5
+#define CARDA_RESULT_SEND_PET_CANCELLED 6
+#define CARDA_RESULT_RETURN_PET_CANCELLED 7 /**< Also set when the ranch has no free pet slot. */
+
 /** @brief Ranch pet slot CARDA transfers to or from a PocketStation. */
 extern s32 g_field_card_pet_slot;
 

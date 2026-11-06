@@ -44,14 +44,14 @@ void wmap_start_land_effect(u32 selection)
     wmap_upload_tim(g_wmap_effect_texture_buffer_0);
     wmap_upload_tim(g_wmap_effect_texture_buffer_1);
 
-    if (selection != 2)
+    if (selection != FIELD_LAND_GATO_GROTTOES)
     {
         wmap_upload_tim(g_wmap_effect_texture_buffer_2);
     }
 
-    if (selection == 0x16)
+    if (selection == FIELD_LAND_UNUSED_22)
     {
-        wmap_resolve_land_image(&g_wmap_land_display[16]);
+        wmap_resolve_land_image(&g_wmap_land_display[FIELD_LAND_UNDERWORLD]);
     }
     else
     {
@@ -60,91 +60,91 @@ void wmap_start_land_effect(u32 selection)
 
     switch (selection)
     {
-        case 33:
+        case FIELD_LAND_LUCEMIA_2:
             wmap_start_sequence(wmap_land_effect_33_run);
             break;
-        case 24:
+        case FIELD_LAND_LUCEMIA:
             wmap_start_sequence(wmap_land_effect_24_run);
             break;
-        case 31:
+        case FIELD_LAND_TREE_OF_MANA:
             wmap_start_sequence(wmap_land_effect_31_run);
             break;
-        case 25:
+        case FIELD_LAND_BEJEWELED_CITY:
             wmap_start_sequence(wmap_land_effect_25_run);
             break;
-        case 22:
+        case FIELD_LAND_UNUSED_22:
             wmap_start_sequence(wmap_land_effect_22_run);
             break;
-        case 19:
+        case FIELD_LAND_JUNKYARD:
             wmap_start_sequence(wmap_land_effect_19_run);
             break;
-        case 23:
+        case FIELD_LAND_FLAMES:
             wmap_start_sequence(wmap_land_effect_23_run);
             break;
-        case 27:
+        case FIELD_LAND_SS_BUCCANEER:
             wmap_start_sequence(wmap_land_effect_27_run);
             break;
-        case 16:
+        case FIELD_LAND_UNDERWORLD:
             wmap_start_sequence(wmap_land_effect_16_run);
             break;
-        case 0:
+        case FIELD_LAND_HOME:
             wmap_start_sequence(wmap_land_effect_00_run);
             break;
-        case 9:
+        case FIELD_LAND_BONE_FORTRESS:
             wmap_start_sequence(wmap_land_effect_09_run);
             break;
-        case 8:
+        case FIELD_LAND_ULKAN_MINES:
             wmap_start_sequence(wmap_land_effect_08_run);
             break;
-        case 10:
+        case FIELD_LAND_LAKE_KILMA:
             wmap_start_sequence(wmap_land_effect_10_run);
             break;
-        case 5:
+        case FIELD_LAND_GEO:
             wmap_start_sequence(wmap_land_effect_05_run);
             break;
-        case 17:
+        case FIELD_LAND_DUMA_DESERT:
             wmap_start_sequence(wmap_land_effect_17_run);
             break;
-        case 21:
+        case FIELD_LAND_JUNGLE:
             wmap_start_sequence(wmap_land_effect_21_run);
             break;
-        case 3:
+        case FIELD_LAND_POLPOTA_HARBOR:
             wmap_start_sequence(wmap_land_effect_03_run);
             break;
-        case 11:
+        case FIELD_LAND_TOWER_OF_LEIRES:
             wmap_start_sequence(wmap_land_effect_11_run);
             break;
-        case 12:
+        case FIELD_LAND_WHITE_FOREST:
             wmap_start_sequence(wmap_land_effect_12_run);
             break;
-        case 30:
+        case FIELD_LAND_MINDAS_RUINS:
             wmap_start_sequence(wmap_land_effect_30_run);
             break;
-        case 7:
+        case FIELD_LAND_MADORA_BEACH:
             wmap_start_sequence(wmap_land_effect_07_run);
             break;
-        case 2:
+        case FIELD_LAND_GATO_GROTTOES:
             wmap_start_sequence(wmap_land_effect_02_run);
             break;
-        case 15:
+        case FIELD_LAND_NORN_PEAKS:
             wmap_start_sequence(wmap_land_effect_15_run);
             break;
-        case 32:
+        case FIELD_LAND_ORCHARDS:
             wmap_start_sequence(wmap_land_effect_32_run);
             break;
-        case 26:
+        case FIELD_LAND_FIEG_SNOWFIELDS:
             wmap_start_sequence(wmap_land_effect_26_run);
             break;
-        case 1:
+        case FIELD_LAND_DOMINA:
             wmap_start_sequence(wmap_land_effect_01_run);
             break;
-        case 18:
+        case FIELD_LAND_LUON_HIGHWAY:
             wmap_start_sequence(wmap_land_effect_18_run);
             break;
-        case 4:
+        case FIELD_LAND_LUMINA:
             wmap_start_sequence(wmap_land_effect_04_run);
             break;
-        case 13:
+        case FIELD_LAND_MEKIV_CAVERNS:
             wmap_start_sequence(wmap_land_effect_13_run);
             break;
         default:

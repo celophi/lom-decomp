@@ -52,17 +52,6 @@
 #define CARDA_IS_POCKETSTATION_MODE(mode) ((mode) == CARDA_MODE_SEND_PET || (mode) == CARDA_MODE_RETURN_PET)
 
 /**
- * @brief Results CARDA leaves in g_field_card_overlay_mode for FIELD.
- * @note FIELD sets it to the mode plus one before CARDA starts, so a finished
- *       save leaves 1 and a finished load leaves 2.
- */
-#define CARDA_RESULT_CANCELLED 3
-#define CARDA_RESULT_PET_SENT 4
-#define CARDA_RESULT_PET_RETURNED 5
-#define CARDA_RESULT_SEND_PET_CANCELLED 6
-#define CARDA_RESULT_RETURN_PET_CANCELLED 7 /**< Also set when the ranch has no free pet slot. */
-
-/**
  * @brief g_card_entry_state values.
  *
  * Below CARD_MENU_ENTRY_COUNT_LIMIT the value is the number of directory entries

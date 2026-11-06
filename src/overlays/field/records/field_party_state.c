@@ -490,7 +490,7 @@ void field_clear_status_effect(FieldStatusRecord* record, u32 effect_index)
 /**
  * @brief Choose the golem companion's logic grid cell and store it in FIELD_VAR_LOGIC_CELL.
  *
- * With the companion's random-action chance (byte 2 of its golem data, in
+ * With the companion's failure rate (byte 2 of its golem data, in
  * percent) the result is FIELD_LOGIC_RANDOM. Otherwise the row follows the
  * companion's status intensity and the column the distance bucket of
  * @p actor_id, both within the golem's grid_bound.

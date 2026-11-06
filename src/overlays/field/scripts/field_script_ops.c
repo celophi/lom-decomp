@@ -83,6 +83,52 @@ enum
 
 #define FIELD_SCRIPT_READ_RECORD 0x0C
 
+/** @brief Subcommands of the debug and reset script opcode (0x0F). */
+enum
+{
+    FIELD_SCRIPT_DEBUG_LEARN_ALL = 0,
+    FIELD_SCRIPT_DEBUG_BATTLE_GROUP_1 = 1,
+    FIELD_SCRIPT_DEBUG_RELOAD_TRIGGERS = 3,
+    FIELD_SCRIPT_DEBUG_CLEAR_VARIABLES = 4,
+    FIELD_SCRIPT_DEBUG_APPLY_COMPANION_LEVEL_UPS = 5,
+    FIELD_SCRIPT_DEBUG_CLEAR_COMPANION_NEW_FLAGS = 6,
+    FIELD_SCRIPT_DEBUG_FILL_ITEM_STOCK = 7
+};
+
+/** @brief Conditions of the wait opcode (0x12): the script waits until the condition holds. */
+enum
+{
+    FIELD_SCRIPT_WAIT_ANIMATION_FINISHED = 0,
+    FIELD_SCRIPT_WAIT_MOVIE_STARTING = 1,
+    FIELD_SCRIPT_WAIT_ACTOR_READY = 2,
+    FIELD_SCRIPT_WAIT_ACTOR_LOADING = 3,
+    FIELD_SCRIPT_WAIT_ACTOR_IDLE = 4,
+    FIELD_SCRIPT_WAIT_TEXT_BUSY = 5,
+    FIELD_SCRIPT_WAIT_TEXT_DONE = 6
+};
+
+/** @brief Conditions of the field-state wait opcode (0x14): the script waits while the condition holds. */
+enum
+{
+    FIELD_SCRIPT_WAIT_WHILE_BATTLE = 1,
+    /** @brief While g_field_gosub_state is not 2. */
+    FIELD_SCRIPT_WAIT_WHILE_GOSUB = 2,
+    /** @brief While g_field_niki_state is 1 (FIELD has opened NIKI). */
+    FIELD_SCRIPT_WAIT_WHILE_NIKI_OPEN = 3,
+    FIELD_SCRIPT_WAIT_WHILE_NIKI_CLOSED = 4
+};
+
+/** @brief Selector of the actor event opcode (0x87). */
+enum
+{
+    FIELD_SCRIPT_ACTOR_EVENT_RUN = 0,
+    FIELD_SCRIPT_ACTOR_EVENT_QUEUE = 1
+};
+
+/** @brief Scene transition audio operand bytes: keep what is playing, or stop it. */
+#define FIELD_TRANSITION_AUDIO_KEEP 0xFE
+#define FIELD_TRANSITION_AUDIO_STOP 0xFF
+
 /** @brief Subcommands of the miscellaneous script opcode (0x44). */
 enum
 {
@@ -908,13 +954,13 @@ void field_script_op_12(void)
 
     switch (selector)
     {
-        case 0:
+        case FIELD_SCRIPT_WAIT_ANIMATION_FINISHED:
             wait = field_get_animation_state(FIELD_LIST_TILE_ANIMS, operand) != FIELD_ANIM_STATE_FINISHED;
             break;
-        case 1:
+        case FIELD_SCRIPT_WAIT_MOVIE_STARTING:
             wait = field_get_animation_state(FIELD_LIST_TILE_ANIMS, operand) != FIELD_ANIM_STATE_MOVIE_STARTING;
             break;
-        case 2:
+        case FIELD_SCRIPT_WAIT_ACTOR_READY:
             actor = operand;
 
             if (actor == FIELD_SCRIPT_OWNER)
@@ -924,7 +970,7 @@ void field_script_op_12(void)
 
             wait = field_read_actor_binding_state(actor) < FIELD_BINDING_READY;
             break;
-        case 3:
+        case FIELD_SCRIPT_WAIT_ACTOR_LOADING:
             actor = operand;
 
             if (actor == FIELD_SCRIPT_OWNER)
@@ -934,7 +980,7 @@ void field_script_op_12(void)
 
             wait = field_read_actor_binding_state(actor) != FIELD_BINDING_LOADING;
             break;
-        case 4:
+        case FIELD_SCRIPT_WAIT_ACTOR_IDLE:
             actor = operand;
 
             if (actor == FIELD_SCRIPT_OWNER)
@@ -944,10 +990,10 @@ void field_script_op_12(void)
 
             wait = field_read_actor_binding_state(actor) != FIELD_BINDING_IDLE;
             break;
-        case 5:
+        case FIELD_SCRIPT_WAIT_TEXT_BUSY:
             wait = field_text_get_status(operand & FIELD_TALK_PLANE_MASK) != FIELD_TEXT_STATUS_BUSY;
             break;
-        case 6:
+        case FIELD_SCRIPT_WAIT_TEXT_DONE:
             wait = field_text_get_status(operand & FIELD_TALK_PLANE_MASK) != FIELD_TEXT_STATUS_DONE;
             break;
     }
@@ -1009,16 +1055,16 @@ void field_script_op_14(void)
 
     switch (selector)
     {
-        case 1:
+        case FIELD_SCRIPT_WAIT_WHILE_BATTLE:
             wait = field_is_battle_active();
             break;
-        case 2:
+        case FIELD_SCRIPT_WAIT_WHILE_GOSUB:
             wait = g_field_gosub_state != 2;
             break;
-        case 3:
+        case FIELD_SCRIPT_WAIT_WHILE_NIKI_OPEN:
             wait = g_field_niki_state == 1;
             break;
-        case 4:
+        case FIELD_SCRIPT_WAIT_WHILE_NIKI_CLOSED:
             wait = g_field_niki_state == 0;
             break;
     }
@@ -1827,7 +1873,7 @@ void field_script_op_0f(void)
 
     switch (FIELD_SCRIPT_ACTIVE_RECORD()->pc[1])
     {
-        case 0:
+        case FIELD_SCRIPT_DEBUG_LEARN_ALL:
             all_techniques = 0xFFFFFF;
 
             for (i = FIELD_WEAPON_CATEGORY_COUNT - 1; i >= 0; i--)
@@ -1840,25 +1886,25 @@ void field_script_op_0f(void)
             g_field_game_state->ability_bits[2] = 0x803F;
             FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
             return;
-        case 1:
+        case FIELD_SCRIPT_DEBUG_BATTLE_GROUP_1:
             field_battle_setup(1);
             break;
-        case 3:
+        case FIELD_SCRIPT_DEBUG_RELOAD_TRIGGERS:
             g_field_runtime->trigger_table = field_find_resource(FIELD_RESOURCE_TRIGGERS);
             FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
             return;
-        case 4:
+        case FIELD_SCRIPT_DEBUG_CLEAR_VARIABLES:
             field_copy_words(NULL, g_field_game_state->words, sizeof(g_field_game_state->words));
             FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
             return;
-        case 5:
+        case FIELD_SCRIPT_DEBUG_APPLY_COMPANION_LEVEL_UPS:
             field_apply_pet_level_ups(0);
             field_apply_pet_level_ups(1);
             field_apply_pet_level_ups(2);
             field_apply_pet_level_ups(3);
             field_apply_pet_level_ups(4);
             break;
-        case 6:
+        case FIELD_SCRIPT_DEBUG_CLEAR_COMPANION_NEW_FLAGS:
             for (i = 0; i < PET_RECORD_COUNT; i++)
             {
                 g_field_game_state->pets[i].hatch_counter = 0;
@@ -1866,7 +1912,7 @@ void field_script_op_0f(void)
             }
 
             break;
-        case 7:
+        case FIELD_SCRIPT_DEBUG_FILL_ITEM_STOCK:
             for (i = 0; i < FIELD_DEBUG_ITEM_KIND_COUNT; i++)
             {
                 g_field_game_state->item_counts[i] = ITEM_COUNT_MAX;
@@ -2850,10 +2896,10 @@ void field_script_op_85(s32 scene_id, s32 object_id, s32 audio, s32 spawn_id)
 
     switch (sound_bank)
     {
-        case 0xFE:
+        case FIELD_TRANSITION_AUDIO_KEEP:
             g_field_runtime->scene_argument1 = -2;
             break;
-        case 0xFF:
+        case FIELD_TRANSITION_AUDIO_STOP:
             g_field_sound_bank_id = -1;
             g_field_runtime->scene_argument1 = -1;
             break;
@@ -2872,10 +2918,10 @@ void field_script_op_85(s32 scene_id, s32 object_id, s32 audio, s32 spawn_id)
 
     switch (music)
     {
-        case 0xFE:
+        case FIELD_TRANSITION_AUDIO_KEEP:
             g_field_runtime->scene_entry = -2;
             break;
-        case 0xFF:
+        case FIELD_TRANSITION_AUDIO_STOP:
             g_field_runtime->scene_entry = -1;
             break;
         default:
@@ -2893,10 +2939,10 @@ void field_script_op_85(s32 scene_id, s32 object_id, s32 audio, s32 spawn_id)
 
     switch (secondary_music)
     {
-        case 0xFE:
+        case FIELD_TRANSITION_AUDIO_KEEP:
             g_field_runtime->scene_argument2 = -2;
             break;
-        case 0xFF:
+        case FIELD_TRANSITION_AUDIO_STOP:
             g_field_runtime->scene_argument2 = -1;
             break;
         default:
@@ -2947,10 +2993,10 @@ void field_script_op_87(s32 selector, s32 actor_id, s32 event_id, s32 argument)
 
     switch (selector)
     {
-        case 0:
+        case FIELD_SCRIPT_ACTOR_EVENT_RUN:
             field_run_actor_event(actor_id, event_id & 0xFF, argument & 0xFF);
             break;
-        case 1:
+        case FIELD_SCRIPT_ACTOR_EVENT_QUEUE:
             field_queue_actor_event(actor_id, event_id & 0xFF, argument & 0xFF);
             break;
     }

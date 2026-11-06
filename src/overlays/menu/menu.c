@@ -829,11 +829,11 @@ void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect,
         {
             switch (g_menu_scene_type)
             {
-                case 1:
-                case 4:
-                case 19:
-                case 22:
-                case 25:
+                case MENU_NODE_HERO_EQUIPMENT:
+                case MENU_NODE_GUEST_HERO_EQUIPMENT:
+                case MENU_NODE_WEAPONS:
+                case MENU_NODE_ARMOR:
+                case MENU_NODE_INSTRUMENTS:
                     title_pos.x = (rect->x + rect->w) - 104;
                     break;
                 default:
@@ -858,11 +858,11 @@ void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect,
                 field_draw_sprite_number(ot_entry, packet_cursor, slot->navigation.fields.count_and_ot & MENU_ITEM_NAV_INDEX_MASK, 3, &title_pos, 0);
             switch (g_menu_scene_type)
             {
-                case 1:
-                case 4:
-                case 19:
-                case 22:
-                case 25:
+                case MENU_NODE_HERO_EQUIPMENT:
+                case MENU_NODE_GUEST_HERO_EQUIPMENT:
+                case MENU_NODE_WEAPONS:
+                case MENU_NODE_ARMOR:
+                case MENU_NODE_INSTRUMENTS:
                     packet_cursor = field_draw_sprite_glyph((SPRT*)packet_cursor, ot_entry, FIELD_DIGIT_GLYPH_SEPARATOR, &title_pos, 0);
                     title_pos.x += 8;
                     packet_cursor = field_draw_sprite_number(ot_entry, packet_cursor, menu_count_inventory_items(), 3, &title_pos, 0);
@@ -1129,9 +1129,9 @@ void menu_node_tree_init(void)
     g_item_slot_flags[2] = 0;
     g_item_slot_flags[3] = 0;
     g_menu_item_ptr = 0;
-    g_menu_category0_item = 0;
-    g_menu_category1_item = 0;
-    g_menu_category2_item = 0;
+    g_menu_weapon_item = 0;
+    g_menu_armor_item = 0;
+    g_menu_instrument_item = 0;
     g_menu_active_equipped_item = 0;
     g_menu_saved_category0_item = 0;
     g_menu_saved_category1_item = 0;
@@ -1139,7 +1139,7 @@ void menu_node_tree_init(void)
     g_menu_content_height = 0;
     g_menu_scroll_pos = 0;
     g_menu_redraw_state = 0;
-    g_menu_active_node = 0;
+    g_menu_active_node = MENU_NODE_HERO_STATUS;
     g_menu_cursor_mode = MENU_CURSOR_MODE_NODE_TREE;
 
     for (node_index = 0; node_index < MENU_NODE_COUNT; node_index++)
@@ -1157,265 +1157,265 @@ void menu_node_tree_init(void)
         g_menu_nodes[node_index].u2.s.parent_idx = MENU_NONE;
     }
 
-    g_menu_nodes[0].u2.bits.expanded = 0;
-    g_menu_nodes[0].u2.bits.char_slot = 0;
-    g_menu_nodes[0].label_id = 1;
-    g_menu_nodes[0].u2.bits.depth = 0;
-    g_menu_nodes[0].idx_nav.s.self_idx = 0;
-    g_menu_nodes[0].u2.bits.active = 1;
-    g_menu_nodes[0].u2.s.parent_idx = MENU_NONE;
+    g_menu_nodes[MENU_NODE_HERO_STATUS].u2.bits.expanded = 0;
+    g_menu_nodes[MENU_NODE_HERO_STATUS].u2.bits.char_slot = 0;
+    g_menu_nodes[MENU_NODE_HERO_STATUS].label_id = 1;
+    g_menu_nodes[MENU_NODE_HERO_STATUS].u2.bits.depth = 0;
+    g_menu_nodes[MENU_NODE_HERO_STATUS].idx_nav.s.self_idx = MENU_NODE_HERO_STATUS;
+    g_menu_nodes[MENU_NODE_HERO_STATUS].u2.bits.active = 1;
+    g_menu_nodes[MENU_NODE_HERO_STATUS].u2.s.parent_idx = MENU_NONE;
 
     if (g_field_player_records[0].head.word & FIELD_PLAYER_ALT_APPEARANCE)
     {
-        g_menu_nodes[0].icon_id = 2;
+        g_menu_nodes[MENU_NODE_HERO_STATUS].icon_id = 2;
     }
     else
     {
-        g_menu_nodes[0].icon_id = 1;
+        g_menu_nodes[MENU_NODE_HERO_STATUS].icon_id = 1;
     }
 
-    g_menu_nodes[0].layout.s.children[0] = 1;
-    g_menu_nodes[1].idx_nav.s.self_idx = 1;
-    g_menu_nodes[0].layout.s.children[1] = 2;
-    g_menu_nodes[1].icon_id = 5;
-    g_menu_nodes[2].label_id = 2;
-    g_menu_nodes[2].idx_nav.s.self_idx = 2;
-    g_menu_nodes[1].label_id = 3;
-    g_menu_nodes[2].icon_id = 4;
-    g_menu_nodes[1].u2.bits.char_slot = 0;
-    g_menu_nodes[1].u2.bits.depth = 1;
-    g_menu_nodes[1].u2.s.parent_idx = 0;
-    g_menu_nodes[2].u2.bits.char_slot = 0;
-    g_menu_nodes[2].u2.bits.depth = 1;
-    g_menu_nodes[2].u2.s.parent_idx = 0;
-    g_menu_nodes[3].u2.bits.expanded = 0;
-    g_menu_nodes[3].u2.bits.char_slot = 1;
-    g_menu_nodes[3].label_id = 4;
-    g_menu_nodes[3].u2.bits.char_slot = 1;
-    g_menu_nodes[3].u2.bits.depth = 0;
-    g_menu_nodes[3].idx_nav.s.self_idx = 3;
-    g_menu_nodes[3].u2.bits.active = 0;
-    g_menu_nodes[3].u2.s.parent_idx = MENU_NONE;
+    g_menu_nodes[MENU_NODE_HERO_STATUS].layout.s.children[0] = MENU_NODE_HERO_EQUIPMENT;
+    g_menu_nodes[MENU_NODE_HERO_EQUIPMENT].idx_nav.s.self_idx = MENU_NODE_HERO_EQUIPMENT;
+    g_menu_nodes[MENU_NODE_HERO_STATUS].layout.s.children[1] = MENU_NODE_HERO_ABILITIES;
+    g_menu_nodes[MENU_NODE_HERO_EQUIPMENT].icon_id = 5;
+    g_menu_nodes[MENU_NODE_HERO_ABILITIES].label_id = 2;
+    g_menu_nodes[MENU_NODE_HERO_ABILITIES].idx_nav.s.self_idx = MENU_NODE_HERO_ABILITIES;
+    g_menu_nodes[MENU_NODE_HERO_EQUIPMENT].label_id = 3;
+    g_menu_nodes[MENU_NODE_HERO_ABILITIES].icon_id = 4;
+    g_menu_nodes[MENU_NODE_HERO_EQUIPMENT].u2.bits.char_slot = 0;
+    g_menu_nodes[MENU_NODE_HERO_EQUIPMENT].u2.bits.depth = 1;
+    g_menu_nodes[MENU_NODE_HERO_EQUIPMENT].u2.s.parent_idx = MENU_NODE_HERO_STATUS;
+    g_menu_nodes[MENU_NODE_HERO_ABILITIES].u2.bits.char_slot = 0;
+    g_menu_nodes[MENU_NODE_HERO_ABILITIES].u2.bits.depth = 1;
+    g_menu_nodes[MENU_NODE_HERO_ABILITIES].u2.s.parent_idx = MENU_NODE_HERO_STATUS;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].u2.bits.expanded = 0;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].u2.bits.char_slot = 1;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].label_id = 4;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].u2.bits.char_slot = 1;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].u2.bits.depth = 0;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].idx_nav.s.self_idx = MENU_NODE_GUEST_HERO_STATUS;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].u2.bits.active = 0;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].u2.s.parent_idx = MENU_NONE;
 
     if (g_field_player_records[1].head.word & FIELD_PLAYER_ALT_APPEARANCE)
     {
-        g_menu_nodes[3].icon_id = 0x6F;
+        g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].icon_id = 0x6F;
     }
     else
     {
-        g_menu_nodes[3].icon_id = 0x6E;
+        g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].icon_id = 0x6E;
     }
 
-    g_menu_nodes[4].u2.bits.char_slot = 1;
-    g_menu_nodes[4].u2.bits.depth = 1;
-    g_menu_nodes[5].u2.bits.char_slot = 1;
-    g_menu_nodes[5].u2.bits.depth = 1;
-    g_menu_nodes[3].layout.s.children[0] = 4;
-    g_menu_nodes[3].layout.s.children[1] = 5;
-    g_menu_nodes[4].label_id = 6;
-    g_menu_nodes[4].idx_nav.s.self_idx = 4;
-    g_menu_nodes[4].icon_id = 5;
-    g_menu_nodes[5].label_id = 5;
-    g_menu_nodes[5].idx_nav.s.self_idx = 5;
-    g_menu_nodes[5].icon_id = 4;
-    g_menu_nodes[6].u2.bits.expanded = 0;
-    g_menu_nodes[6].u2.bits.char_slot = 1;
-    g_menu_nodes[6].label_id = 7;
-    g_menu_nodes[6].u2.bits.char_slot = 1;
-    g_menu_nodes[6].u2.bits.depth = 0;
-    g_menu_nodes[6].idx_nav.s.self_idx = 6;
-    g_menu_nodes[6].u2.bits.active = 0;
-    g_menu_nodes[6].icon_id = 3;
-    g_menu_nodes[6].layout.s.children[0] = 7;
-    g_menu_nodes[6].layout.s.children[1] = 8;
-    g_menu_nodes[7].label_id = 9;
-    g_menu_nodes[7].idx_nav.s.self_idx = 7;
-    g_menu_nodes[7].icon_id = 5;
-    g_menu_nodes[8].label_id = 8;
-    g_menu_nodes[4].u2.s.parent_idx = 3;
-    g_menu_nodes[5].u2.s.parent_idx = 3;
-    g_menu_nodes[6].u2.s.parent_idx = MENU_NONE;
-    g_menu_nodes[7].u2.bits.char_slot = 1;
-    g_menu_nodes[7].u2.bits.depth = 1;
-    g_menu_nodes[7].u2.s.parent_idx = 6;
-    g_menu_nodes[8].u2.bits.char_slot = 1;
-    g_menu_nodes[8].u2.bits.depth = 1;
-    g_menu_nodes[8].idx_nav.s.self_idx = 8;
-    g_menu_nodes[8].u2.s.parent_idx = 6;
-    g_menu_nodes[8].icon_id = 4;
-    g_menu_nodes[9].u2.bits.expanded = 0;
-    g_menu_nodes[9].u2.bits.char_slot = 2;
-    g_menu_nodes[9].label_id = 0xA;
-    g_menu_nodes[9].u2.bits.char_slot = 2;
-    g_menu_nodes[9].u2.bits.depth = 0;
-    g_menu_nodes[9].idx_nav.s.self_idx = 9;
-    g_menu_nodes[9].u2.bits.active = 0;
-    g_menu_nodes[0xA].u2.bits.char_slot = 2;
-    g_menu_nodes[0xA].u2.bits.depth = 1;
-    g_menu_nodes[9].icon_id = 6;
-    g_menu_nodes[9].layout.s.children[0] = 0xA;
-    g_menu_nodes[0xA].label_id = 0xB;
-    g_menu_nodes[0xA].idx_nav.s.self_idx = 0xA;
-    g_menu_nodes[0xA].icon_id = 7;
-    g_menu_nodes[0xC].u2.bits.expanded = 0;
-    g_menu_nodes[0xC].u2.bits.char_slot = 2;
-    g_menu_nodes[0xC].label_id = 0xA;
-    g_menu_nodes[0xC].u2.bits.char_slot = 2;
-    g_menu_nodes[0xC].u2.bits.depth = 0;
-    g_menu_nodes[0xC].idx_nav.s.self_idx = 0xC;
-    g_menu_nodes[0xC].u2.bits.active = 0;
-    g_menu_nodes[0xC].icon_id = 6;
-    g_menu_nodes[0xC].layout.s.children[0] = 0xD;
-    g_menu_nodes[0xD].label_id = 0xB;
-    g_menu_nodes[0xD].idx_nav.s.self_idx = 0xD;
-    g_menu_nodes[0xD].icon_id = 7;
-    g_menu_nodes[9].u2.s.parent_idx = MENU_NONE;
-    g_menu_nodes[0xA].u2.s.parent_idx = 9;
-    g_menu_nodes[0xC].u2.s.parent_idx = MENU_NONE;
-    g_menu_nodes[0xD].u2.bits.char_slot = 2;
-    g_menu_nodes[0xD].u2.bits.depth = 1;
-    g_menu_nodes[0xD].u2.s.parent_idx = 0xC;
-    g_menu_nodes[0xF].u2.bits.expanded = 0;
-    g_menu_nodes[0xF].u2.bits.char_slot = 2;
-    g_menu_nodes[0xF].icon_id = 8;
-    g_menu_nodes[0xF].u2.bits.char_slot = 2;
-    g_menu_nodes[0xF].u2.bits.depth = 1;
-    g_menu_nodes[0x10].icon_id = 7;
-    g_menu_nodes[0xF].u2.bits.active = 0;
-    g_menu_nodes[0xF].label_id = 0xD;
-    g_menu_nodes[0xF].idx_nav.s.self_idx = 0xF;
-    g_menu_nodes[0xF].u2.s.parent_idx = MENU_NONE;
-    g_menu_nodes[0xF].layout.s.children[0] = 0x10;
-    g_menu_nodes[0xF].layout.s.children[1] = 0x11;
-    g_menu_nodes[0x10].label_id = 0xC;
-    g_menu_nodes[0x10].idx_nav.s.self_idx = 0x10;
-    g_menu_nodes[0x11].label_id = 0xE;
-    g_menu_nodes[0x11].idx_nav.s.self_idx = 0x11;
-    g_menu_nodes[0x11].icon_id = 9;
-    g_menu_nodes[0x12].label_id = 0x10;
-    g_menu_nodes[0x12].idx_nav.s.self_idx = 0x12;
-    g_menu_nodes[0x12].icon_id = 0xA;
-    g_menu_nodes[0x12].content_id = 4;
-    g_menu_nodes[0x12].layout.s.children[0] = 0x13;
-    g_menu_nodes[0x12].layout.s.children[1] = 0x16;
-    g_menu_nodes[0x12].layout.s.children[2] = 0x19;
-    g_menu_nodes[0x10].u2.bits.char_slot = 2;
-    g_menu_nodes[0x10].u2.bits.depth = 1;
-    g_menu_nodes[0x10].u2.s.parent_idx = 0xF;
-    g_menu_nodes[0x11].u2.bits.char_slot = 2;
-    g_menu_nodes[0x11].u2.bits.depth = 1;
-    g_menu_nodes[0x12].u2.bits.expanded = 0;
-    g_menu_nodes[0x11].u2.s.parent_idx = 0xF;
-    g_menu_nodes[0x12].u2.bits.depth = 0;
-    g_menu_nodes[0x12].layout.s.children[3] = 0x1C;
-    g_menu_nodes[0x12].u2.bits.active = 1;
-    g_menu_nodes[0x12].u2.s.parent_idx = MENU_NONE;
-    g_menu_nodes[0x13].label_id = 0x11;
-    g_menu_nodes[0x14].icon_id = 0xF;
-    g_menu_nodes[0x13].icon_id = 0xB;
-    g_menu_nodes[0x13].idx_nav.s.self_idx = 0x13;
-    g_menu_nodes[0x13].content_id = 0;
-    g_menu_nodes[0x13].layout.s.children[0] = 0x14;
-    g_menu_nodes[0x13].layout.s.children[1] = 0x15;
-    g_menu_nodes[0x14].label_id = 0x12;
-    g_menu_nodes[0x14].idx_nav.s.self_idx = 0x14;
-    g_menu_nodes[0x15].label_id = 0x13;
-    g_menu_nodes[0x16].content_id = 1;
-    g_menu_nodes[0x15].idx_nav.s.self_idx = 0x15;
-    g_menu_nodes[0x15].icon_id = 0x12;
-    g_menu_nodes[0x16].label_id = 0x14;
-    g_menu_nodes[0x16].idx_nav.s.self_idx = 0x16;
-    g_menu_nodes[0x16].icon_id = 0xC;
-    g_menu_nodes[0x16].layout.s.children[0] = 0x17;
-    g_menu_nodes[0x16].layout.s.children[1] = 0x18;
-    g_menu_nodes[0x17].label_id = 0x15;
-    g_menu_nodes[0x17].idx_nav.s.self_idx = 0x17;
-    g_menu_nodes[0x13].u2.bits.depth = 1;
-    g_menu_nodes[0x14].u2.bits.depth = 2;
-    g_menu_nodes[0x13].u2.s.parent_idx = 0x12;
-    g_menu_nodes[0x14].u2.s.parent_idx = 0x13;
-    g_menu_nodes[0x16].u2.bits.depth = 1;
-    g_menu_nodes[0x16].u2.s.parent_idx = 0x12;
-    g_menu_nodes[0x15].u2.bits.depth = 2;
-    g_menu_nodes[0x15].u2.s.parent_idx = 0x13;
-    g_menu_nodes[0x17].u2.bits.depth = 2;
-    g_menu_nodes[0x17].u2.s.parent_idx = 0x16;
-    g_menu_nodes[0x19].content_id = 2;
-    g_menu_nodes[0x17].icon_id = 0x10;
-    g_menu_nodes[0x18].label_id = 0x13;
-    g_menu_nodes[0x18].idx_nav.s.self_idx = 0x18;
-    g_menu_nodes[0x18].icon_id = 0x12;
-    g_menu_nodes[0x19].label_id = 0x16;
-    g_menu_nodes[0x19].idx_nav.s.self_idx = 0x19;
-    g_menu_nodes[0x19].icon_id = 0xD;
-    g_menu_nodes[0x19].layout.s.children[0] = 0x1A;
-    g_menu_nodes[0x19].layout.s.children[1] = 0x1B;
-    g_menu_nodes[0x1A].label_id = 0x17;
-    g_menu_nodes[0x1A].idx_nav.s.self_idx = 0x1A;
-    g_menu_nodes[0x1A].icon_id = 0x11;
-    g_menu_nodes[0x1B].label_id = 0x13;
-    g_menu_nodes[0x1B].idx_nav.s.self_idx = 0x1B;
-    g_menu_nodes[0x1B].icon_id = 0x12;
-    g_menu_nodes[0x1C].label_id = 0x18;
-    g_menu_nodes[0x1C].idx_nav.s.self_idx = 0x1C;
-    g_menu_nodes[0x18].u2.bits.depth = 2;
-    g_menu_nodes[0x19].u2.bits.depth = 1;
-    g_menu_nodes[0x18].u2.s.parent_idx = 0x16;
-    g_menu_nodes[0x19].u2.s.parent_idx = 0x12;
-    g_menu_nodes[0x1B].u2.bits.depth = 2;
-    g_menu_nodes[0x1B].u2.s.parent_idx = 0x19;
-    g_menu_nodes[0x1A].u2.bits.depth = 2;
-    g_menu_nodes[0x1C].u2.bits.depth = 1;
-    g_menu_nodes[0x1C].u2.s.parent_idx = 0x12;
-    g_menu_nodes[0x1A].u2.s.parent_idx = 0x19;
-    g_menu_nodes[0x1C].icon_id = 0xE;
-    g_menu_nodes[0x1C].content_id = 5;
-    g_menu_nodes[0x1D].label_id = 0x1C;
-    g_menu_nodes[0x1D].content_id = 3;
-    g_menu_nodes[0x1D].icon_id = 0x18;
-    g_menu_nodes[0x1D].idx_nav.s.self_idx = 0x1D;
-    g_menu_nodes[0x1E].label_id = 0x19;
-    g_menu_nodes[0x1E].idx_nav.s.self_idx = 0x1E;
-    g_menu_nodes[0x1E].layout.s.children[0] = 0x1F;
-    g_menu_nodes[0x1F].idx_nav.s.self_idx = 0x1F;
-    g_menu_nodes[0x1E].icon_id = 0x13;
-    g_menu_nodes[0x1F].label_id = 0x1A;
-    g_menu_nodes[0x1F].icon_id = 0x14;
-    g_menu_nodes[0x2B].label_id = 0x1A;
-    g_menu_nodes[0x1D].u2.bits.expanded = 0;
-    g_menu_nodes[0x2B].idx_nav.s.self_idx = 0x2B;
-    g_menu_nodes[0x1D].u2.bits.depth = 0;
-    node30_flags = g_menu_nodes[0x1E].u2.word;
-    g_menu_nodes[0x1D].u2.bits.active = 1;
-    g_menu_nodes[0x1D].u2.s.parent_idx = MENU_NONE;
-    g_menu_nodes[0x1F].u2.bits.depth = 1;
-    g_menu_nodes[0x1E].u2.word = node30_flags & ~MENU_NODE_FLAG_EXPANDED;
-    g_menu_nodes[0x1F].u2.s.parent_idx = 0x1E;
-    g_menu_nodes[0x1E].u2.bits.depth = 0;
-    g_menu_nodes[0x2B].u2.bits.depth = 1;
-    g_menu_nodes[0x1E].u2.bits.active = 1;
-    g_menu_nodes[0x1E].u2.s.parent_idx = MENU_NONE;
-    g_menu_nodes[0x2B].u2.s.parent_idx = 0x1E;
-    g_menu_nodes[0x1F].u2.bits.char_slot = 0;
-    g_menu_nodes[0x2B].u2.bits.char_slot = 1;
-    g_menu_nodes[0x2B].icon_id = 0x15;
-    g_menu_nodes[0x20].label_id = 0x1B;
-    g_menu_nodes[0x20].u2.bits.expanded = 0;
-    g_menu_nodes[0x20].idx_nav.s.self_idx = 0x20;
-    g_menu_nodes[0x20].u2.bits.depth = 0;
-    g_menu_nodes[0x20].icon_id = 0x16;
-    g_menu_nodes[0x20].u2.bits.active = 1;
-    g_menu_nodes[0x20].u2.s.parent_idx = MENU_NONE;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_EQUIPMENT].u2.bits.char_slot = 1;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_EQUIPMENT].u2.bits.depth = 1;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_ABILITIES].u2.bits.char_slot = 1;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_ABILITIES].u2.bits.depth = 1;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].layout.s.children[0] = MENU_NODE_GUEST_HERO_EQUIPMENT;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].layout.s.children[1] = MENU_NODE_GUEST_HERO_ABILITIES;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_EQUIPMENT].label_id = 6;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_EQUIPMENT].idx_nav.s.self_idx = MENU_NODE_GUEST_HERO_EQUIPMENT;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_EQUIPMENT].icon_id = 5;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_ABILITIES].label_id = 5;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_ABILITIES].idx_nav.s.self_idx = MENU_NODE_GUEST_HERO_ABILITIES;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_ABILITIES].icon_id = 4;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].u2.bits.expanded = 0;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].u2.bits.char_slot = 1;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].label_id = 7;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].u2.bits.char_slot = 1;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].u2.bits.depth = 0;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].idx_nav.s.self_idx = MENU_NODE_GUEST_PARTNER_STATUS;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].u2.bits.active = 0;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].icon_id = 3;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].layout.s.children[0] = MENU_NODE_GUEST_PARTNER_ATTRIBUTES;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].layout.s.children[1] = MENU_NODE_GUEST_PARTNER_ABILITIES;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_ATTRIBUTES].label_id = 9;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_ATTRIBUTES].idx_nav.s.self_idx = MENU_NODE_GUEST_PARTNER_ATTRIBUTES;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_ATTRIBUTES].icon_id = 5;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_ABILITIES].label_id = 8;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_EQUIPMENT].u2.s.parent_idx = MENU_NODE_GUEST_HERO_STATUS;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_ABILITIES].u2.s.parent_idx = MENU_NODE_GUEST_HERO_STATUS;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].u2.s.parent_idx = MENU_NONE;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_ATTRIBUTES].u2.bits.char_slot = 1;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_ATTRIBUTES].u2.bits.depth = 1;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_ATTRIBUTES].u2.s.parent_idx = MENU_NODE_GUEST_PARTNER_STATUS;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_ABILITIES].u2.bits.char_slot = 1;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_ABILITIES].u2.bits.depth = 1;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_ABILITIES].idx_nav.s.self_idx = MENU_NODE_GUEST_PARTNER_ABILITIES;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_ABILITIES].u2.s.parent_idx = MENU_NODE_GUEST_PARTNER_STATUS;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_ABILITIES].icon_id = 4;
+    g_menu_nodes[MENU_NODE_PET_STATUS].u2.bits.expanded = 0;
+    g_menu_nodes[MENU_NODE_PET_STATUS].u2.bits.char_slot = 2;
+    g_menu_nodes[MENU_NODE_PET_STATUS].label_id = 0xA;
+    g_menu_nodes[MENU_NODE_PET_STATUS].u2.bits.char_slot = 2;
+    g_menu_nodes[MENU_NODE_PET_STATUS].u2.bits.depth = 0;
+    g_menu_nodes[MENU_NODE_PET_STATUS].idx_nav.s.self_idx = MENU_NODE_PET_STATUS;
+    g_menu_nodes[MENU_NODE_PET_STATUS].u2.bits.active = 0;
+    g_menu_nodes[MENU_NODE_PET_ATTRIBUTES].u2.bits.char_slot = 2;
+    g_menu_nodes[MENU_NODE_PET_ATTRIBUTES].u2.bits.depth = 1;
+    g_menu_nodes[MENU_NODE_PET_STATUS].icon_id = 6;
+    g_menu_nodes[MENU_NODE_PET_STATUS].layout.s.children[0] = MENU_NODE_PET_ATTRIBUTES;
+    g_menu_nodes[MENU_NODE_PET_ATTRIBUTES].label_id = 0xB;
+    g_menu_nodes[MENU_NODE_PET_ATTRIBUTES].idx_nav.s.self_idx = MENU_NODE_PET_ATTRIBUTES;
+    g_menu_nodes[MENU_NODE_PET_ATTRIBUTES].icon_id = 7;
+    g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].u2.bits.expanded = 0;
+    g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].u2.bits.char_slot = 2;
+    g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].label_id = 0xA;
+    g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].u2.bits.char_slot = 2;
+    g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].u2.bits.depth = 0;
+    g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].idx_nav.s.self_idx = MENU_NODE_PET_STATUS_UNUSED;
+    g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].u2.bits.active = 0;
+    g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].icon_id = 6;
+    g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].layout.s.children[0] = MENU_NODE_PET_ATTRIBUTES_UNUSED;
+    g_menu_nodes[MENU_NODE_PET_ATTRIBUTES_UNUSED].label_id = 0xB;
+    g_menu_nodes[MENU_NODE_PET_ATTRIBUTES_UNUSED].idx_nav.s.self_idx = MENU_NODE_PET_ATTRIBUTES_UNUSED;
+    g_menu_nodes[MENU_NODE_PET_ATTRIBUTES_UNUSED].icon_id = 7;
+    g_menu_nodes[MENU_NODE_PET_STATUS].u2.s.parent_idx = MENU_NONE;
+    g_menu_nodes[MENU_NODE_PET_ATTRIBUTES].u2.s.parent_idx = MENU_NODE_PET_STATUS;
+    g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].u2.s.parent_idx = MENU_NONE;
+    g_menu_nodes[MENU_NODE_PET_ATTRIBUTES_UNUSED].u2.bits.char_slot = 2;
+    g_menu_nodes[MENU_NODE_PET_ATTRIBUTES_UNUSED].u2.bits.depth = 1;
+    g_menu_nodes[MENU_NODE_PET_ATTRIBUTES_UNUSED].u2.s.parent_idx = MENU_NODE_PET_STATUS_UNUSED;
+    g_menu_nodes[MENU_NODE_GOLEM_STATUS].u2.bits.expanded = 0;
+    g_menu_nodes[MENU_NODE_GOLEM_STATUS].u2.bits.char_slot = 2;
+    g_menu_nodes[MENU_NODE_GOLEM_STATUS].icon_id = 8;
+    g_menu_nodes[MENU_NODE_GOLEM_STATUS].u2.bits.char_slot = 2;
+    g_menu_nodes[MENU_NODE_GOLEM_STATUS].u2.bits.depth = 1;
+    g_menu_nodes[MENU_NODE_GOLEM_ATTRIBUTES].icon_id = 7;
+    g_menu_nodes[MENU_NODE_GOLEM_STATUS].u2.bits.active = 0;
+    g_menu_nodes[MENU_NODE_GOLEM_STATUS].label_id = 0xD;
+    g_menu_nodes[MENU_NODE_GOLEM_STATUS].idx_nav.s.self_idx = MENU_NODE_GOLEM_STATUS;
+    g_menu_nodes[MENU_NODE_GOLEM_STATUS].u2.s.parent_idx = MENU_NONE;
+    g_menu_nodes[MENU_NODE_GOLEM_STATUS].layout.s.children[0] = MENU_NODE_GOLEM_ATTRIBUTES;
+    g_menu_nodes[MENU_NODE_GOLEM_STATUS].layout.s.children[1] = MENU_NODE_GOLEM_LOGIC_BLOCKS;
+    g_menu_nodes[MENU_NODE_GOLEM_ATTRIBUTES].label_id = 0xC;
+    g_menu_nodes[MENU_NODE_GOLEM_ATTRIBUTES].idx_nav.s.self_idx = MENU_NODE_GOLEM_ATTRIBUTES;
+    g_menu_nodes[MENU_NODE_GOLEM_LOGIC_BLOCKS].label_id = 0xE;
+    g_menu_nodes[MENU_NODE_GOLEM_LOGIC_BLOCKS].idx_nav.s.self_idx = MENU_NODE_GOLEM_LOGIC_BLOCKS;
+    g_menu_nodes[MENU_NODE_GOLEM_LOGIC_BLOCKS].icon_id = 9;
+    g_menu_nodes[MENU_NODE_ITEMS].label_id = 0x10;
+    g_menu_nodes[MENU_NODE_ITEMS].idx_nav.s.self_idx = MENU_NODE_ITEMS;
+    g_menu_nodes[MENU_NODE_ITEMS].icon_id = 0xA;
+    g_menu_nodes[MENU_NODE_ITEMS].content_id = 4;
+    g_menu_nodes[MENU_NODE_ITEMS].layout.s.children[0] = MENU_NODE_WEAPONS;
+    g_menu_nodes[MENU_NODE_ITEMS].layout.s.children[1] = MENU_NODE_ARMOR;
+    g_menu_nodes[MENU_NODE_ITEMS].layout.s.children[2] = MENU_NODE_INSTRUMENTS;
+    g_menu_nodes[MENU_NODE_GOLEM_ATTRIBUTES].u2.bits.char_slot = 2;
+    g_menu_nodes[MENU_NODE_GOLEM_ATTRIBUTES].u2.bits.depth = 1;
+    g_menu_nodes[MENU_NODE_GOLEM_ATTRIBUTES].u2.s.parent_idx = MENU_NODE_GOLEM_STATUS;
+    g_menu_nodes[MENU_NODE_GOLEM_LOGIC_BLOCKS].u2.bits.char_slot = 2;
+    g_menu_nodes[MENU_NODE_GOLEM_LOGIC_BLOCKS].u2.bits.depth = 1;
+    g_menu_nodes[MENU_NODE_ITEMS].u2.bits.expanded = 0;
+    g_menu_nodes[MENU_NODE_GOLEM_LOGIC_BLOCKS].u2.s.parent_idx = MENU_NODE_GOLEM_STATUS;
+    g_menu_nodes[MENU_NODE_ITEMS].u2.bits.depth = 0;
+    g_menu_nodes[MENU_NODE_ITEMS].layout.s.children[3] = MENU_NODE_ARTIFACTS;
+    g_menu_nodes[MENU_NODE_ITEMS].u2.bits.active = 1;
+    g_menu_nodes[MENU_NODE_ITEMS].u2.s.parent_idx = MENU_NONE;
+    g_menu_nodes[MENU_NODE_WEAPONS].label_id = 0x11;
+    g_menu_nodes[MENU_NODE_WEAPON_STATUS].icon_id = 0xF;
+    g_menu_nodes[MENU_NODE_WEAPONS].icon_id = 0xB;
+    g_menu_nodes[MENU_NODE_WEAPONS].idx_nav.s.self_idx = MENU_NODE_WEAPONS;
+    g_menu_nodes[MENU_NODE_WEAPONS].content_id = 0;
+    g_menu_nodes[MENU_NODE_WEAPONS].layout.s.children[0] = MENU_NODE_WEAPON_STATUS;
+    g_menu_nodes[MENU_NODE_WEAPONS].layout.s.children[1] = MENU_NODE_WEAPON_ITEM_STATUS;
+    g_menu_nodes[MENU_NODE_WEAPON_STATUS].label_id = 0x12;
+    g_menu_nodes[MENU_NODE_WEAPON_STATUS].idx_nav.s.self_idx = MENU_NODE_WEAPON_STATUS;
+    g_menu_nodes[MENU_NODE_WEAPON_ITEM_STATUS].label_id = 0x13;
+    g_menu_nodes[MENU_NODE_ARMOR].content_id = 1;
+    g_menu_nodes[MENU_NODE_WEAPON_ITEM_STATUS].idx_nav.s.self_idx = MENU_NODE_WEAPON_ITEM_STATUS;
+    g_menu_nodes[MENU_NODE_WEAPON_ITEM_STATUS].icon_id = 0x12;
+    g_menu_nodes[MENU_NODE_ARMOR].label_id = 0x14;
+    g_menu_nodes[MENU_NODE_ARMOR].idx_nav.s.self_idx = MENU_NODE_ARMOR;
+    g_menu_nodes[MENU_NODE_ARMOR].icon_id = 0xC;
+    g_menu_nodes[MENU_NODE_ARMOR].layout.s.children[0] = MENU_NODE_ARMOR_STATUS;
+    g_menu_nodes[MENU_NODE_ARMOR].layout.s.children[1] = MENU_NODE_ARMOR_ITEM_STATUS;
+    g_menu_nodes[MENU_NODE_ARMOR_STATUS].label_id = 0x15;
+    g_menu_nodes[MENU_NODE_ARMOR_STATUS].idx_nav.s.self_idx = MENU_NODE_ARMOR_STATUS;
+    g_menu_nodes[MENU_NODE_WEAPONS].u2.bits.depth = 1;
+    g_menu_nodes[MENU_NODE_WEAPON_STATUS].u2.bits.depth = 2;
+    g_menu_nodes[MENU_NODE_WEAPONS].u2.s.parent_idx = MENU_NODE_ITEMS;
+    g_menu_nodes[MENU_NODE_WEAPON_STATUS].u2.s.parent_idx = MENU_NODE_WEAPONS;
+    g_menu_nodes[MENU_NODE_ARMOR].u2.bits.depth = 1;
+    g_menu_nodes[MENU_NODE_ARMOR].u2.s.parent_idx = MENU_NODE_ITEMS;
+    g_menu_nodes[MENU_NODE_WEAPON_ITEM_STATUS].u2.bits.depth = 2;
+    g_menu_nodes[MENU_NODE_WEAPON_ITEM_STATUS].u2.s.parent_idx = MENU_NODE_WEAPONS;
+    g_menu_nodes[MENU_NODE_ARMOR_STATUS].u2.bits.depth = 2;
+    g_menu_nodes[MENU_NODE_ARMOR_STATUS].u2.s.parent_idx = MENU_NODE_ARMOR;
+    g_menu_nodes[MENU_NODE_INSTRUMENTS].content_id = 2;
+    g_menu_nodes[MENU_NODE_ARMOR_STATUS].icon_id = 0x10;
+    g_menu_nodes[MENU_NODE_ARMOR_ITEM_STATUS].label_id = 0x13;
+    g_menu_nodes[MENU_NODE_ARMOR_ITEM_STATUS].idx_nav.s.self_idx = MENU_NODE_ARMOR_ITEM_STATUS;
+    g_menu_nodes[MENU_NODE_ARMOR_ITEM_STATUS].icon_id = 0x12;
+    g_menu_nodes[MENU_NODE_INSTRUMENTS].label_id = 0x16;
+    g_menu_nodes[MENU_NODE_INSTRUMENTS].idx_nav.s.self_idx = MENU_NODE_INSTRUMENTS;
+    g_menu_nodes[MENU_NODE_INSTRUMENTS].icon_id = 0xD;
+    g_menu_nodes[MENU_NODE_INSTRUMENTS].layout.s.children[0] = MENU_NODE_INSTRUMENT_STATUS;
+    g_menu_nodes[MENU_NODE_INSTRUMENTS].layout.s.children[1] = MENU_NODE_INSTRUMENT_ITEM_STATUS;
+    g_menu_nodes[MENU_NODE_INSTRUMENT_STATUS].label_id = 0x17;
+    g_menu_nodes[MENU_NODE_INSTRUMENT_STATUS].idx_nav.s.self_idx = MENU_NODE_INSTRUMENT_STATUS;
+    g_menu_nodes[MENU_NODE_INSTRUMENT_STATUS].icon_id = 0x11;
+    g_menu_nodes[MENU_NODE_INSTRUMENT_ITEM_STATUS].label_id = 0x13;
+    g_menu_nodes[MENU_NODE_INSTRUMENT_ITEM_STATUS].idx_nav.s.self_idx = MENU_NODE_INSTRUMENT_ITEM_STATUS;
+    g_menu_nodes[MENU_NODE_INSTRUMENT_ITEM_STATUS].icon_id = 0x12;
+    g_menu_nodes[MENU_NODE_ARTIFACTS].label_id = 0x18;
+    g_menu_nodes[MENU_NODE_ARTIFACTS].idx_nav.s.self_idx = MENU_NODE_ARTIFACTS;
+    g_menu_nodes[MENU_NODE_ARMOR_ITEM_STATUS].u2.bits.depth = 2;
+    g_menu_nodes[MENU_NODE_INSTRUMENTS].u2.bits.depth = 1;
+    g_menu_nodes[MENU_NODE_ARMOR_ITEM_STATUS].u2.s.parent_idx = MENU_NODE_ARMOR;
+    g_menu_nodes[MENU_NODE_INSTRUMENTS].u2.s.parent_idx = MENU_NODE_ITEMS;
+    g_menu_nodes[MENU_NODE_INSTRUMENT_ITEM_STATUS].u2.bits.depth = 2;
+    g_menu_nodes[MENU_NODE_INSTRUMENT_ITEM_STATUS].u2.s.parent_idx = MENU_NODE_INSTRUMENTS;
+    g_menu_nodes[MENU_NODE_INSTRUMENT_STATUS].u2.bits.depth = 2;
+    g_menu_nodes[MENU_NODE_ARTIFACTS].u2.bits.depth = 1;
+    g_menu_nodes[MENU_NODE_ARTIFACTS].u2.s.parent_idx = MENU_NODE_ITEMS;
+    g_menu_nodes[MENU_NODE_INSTRUMENT_STATUS].u2.s.parent_idx = MENU_NODE_INSTRUMENTS;
+    g_menu_nodes[MENU_NODE_ARTIFACTS].icon_id = 0xE;
+    g_menu_nodes[MENU_NODE_ARTIFACTS].content_id = 5;
+    g_menu_nodes[MENU_NODE_BACKFIELD].label_id = 0x1C;
+    g_menu_nodes[MENU_NODE_BACKFIELD].content_id = 3;
+    g_menu_nodes[MENU_NODE_BACKFIELD].icon_id = 0x18;
+    g_menu_nodes[MENU_NODE_BACKFIELD].idx_nav.s.self_idx = MENU_NODE_BACKFIELD;
+    g_menu_nodes[MENU_NODE_GAME_ENVIRONMENT].label_id = 0x19;
+    g_menu_nodes[MENU_NODE_GAME_ENVIRONMENT].idx_nav.s.self_idx = MENU_NODE_GAME_ENVIRONMENT;
+    g_menu_nodes[MENU_NODE_GAME_ENVIRONMENT].layout.s.children[0] = MENU_NODE_BUTTONS_CHARACTER_0;
+    g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_0].idx_nav.s.self_idx = MENU_NODE_BUTTONS_CHARACTER_0;
+    g_menu_nodes[MENU_NODE_GAME_ENVIRONMENT].icon_id = 0x13;
+    g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_0].label_id = 0x1A;
+    g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_0].icon_id = 0x14;
+    g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_1].label_id = 0x1A;
+    g_menu_nodes[MENU_NODE_BACKFIELD].u2.bits.expanded = 0;
+    g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_1].idx_nav.s.self_idx = MENU_NODE_BUTTONS_CHARACTER_1;
+    g_menu_nodes[MENU_NODE_BACKFIELD].u2.bits.depth = 0;
+    node30_flags = g_menu_nodes[MENU_NODE_GAME_ENVIRONMENT].u2.word;
+    g_menu_nodes[MENU_NODE_BACKFIELD].u2.bits.active = 1;
+    g_menu_nodes[MENU_NODE_BACKFIELD].u2.s.parent_idx = MENU_NONE;
+    g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_0].u2.bits.depth = 1;
+    g_menu_nodes[MENU_NODE_GAME_ENVIRONMENT].u2.word = node30_flags & ~MENU_NODE_FLAG_EXPANDED;
+    g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_0].u2.s.parent_idx = MENU_NODE_GAME_ENVIRONMENT;
+    g_menu_nodes[MENU_NODE_GAME_ENVIRONMENT].u2.bits.depth = 0;
+    g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_1].u2.bits.depth = 1;
+    g_menu_nodes[MENU_NODE_GAME_ENVIRONMENT].u2.bits.active = 1;
+    g_menu_nodes[MENU_NODE_GAME_ENVIRONMENT].u2.s.parent_idx = MENU_NONE;
+    g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_1].u2.s.parent_idx = MENU_NODE_GAME_ENVIRONMENT;
+    g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_0].u2.bits.char_slot = 0;
+    g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_1].u2.bits.char_slot = 1;
+    g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_1].icon_id = 0x15;
+    g_menu_nodes[MENU_NODE_BROWSE_ALL].label_id = 0x1B;
+    g_menu_nodes[MENU_NODE_BROWSE_ALL].u2.bits.expanded = 0;
+    g_menu_nodes[MENU_NODE_BROWSE_ALL].idx_nav.s.self_idx = MENU_NODE_BROWSE_ALL;
+    g_menu_nodes[MENU_NODE_BROWSE_ALL].u2.bits.depth = 0;
+    g_menu_nodes[MENU_NODE_BROWSE_ALL].icon_id = 0x16;
+    g_menu_nodes[MENU_NODE_BROWSE_ALL].u2.bits.active = 1;
+    g_menu_nodes[MENU_NODE_BROWSE_ALL].u2.s.parent_idx = MENU_NONE;
 
     if (g_field_player_records[1].head.word & FIELD_PLAYER_ACTIVE)
     {
         if (g_field_player_records[1].character_kind)
         {
-            g_menu_nodes[6].u2.bits.active = 1;
+            g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].u2.bits.active = 1;
         }
         else
         {
-            g_menu_nodes[3].u2.bits.active = 1;
+            g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].u2.bits.active = 1;
         }
     }
 
@@ -1423,17 +1423,17 @@ void menu_node_tree_init(void)
     {
         if ((g_saved_game_ctx->characters[FIELD_PARTY_COMPANION].info.word & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GOLEM)
         {
-            g_menu_nodes[0xF].u2.bits.active = 1;
+            g_menu_nodes[MENU_NODE_GOLEM_STATUS].u2.bits.active = 1;
         }
         else
         {
-            g_menu_nodes[9].u2.bits.active = 1;
+            g_menu_nodes[MENU_NODE_PET_STATUS].u2.bits.active = 1;
         }
     }
 
     if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & 0x80) && g_saved_game_ctx->characters[FIELD_PARTY_GUEST].name[0])
     {
-        g_menu_companion_node = 0x2B;
+        g_menu_companion_node = MENU_NODE_BUTTONS_CHARACTER_1;
     }
 
     layout_y = 0;
@@ -1777,7 +1777,7 @@ s32 menu_handle_node_input(void)
             g_menu_load_request = 1;
         }
 
-        if (g_menu_active_node == 0x11)
+        if (g_menu_active_node == MENU_NODE_GOLEM_LOGIC_BLOCKS)
         {
             g_menu_load_request = 1;
             g_menu_transition_code = FIELD_MENU_GOLEM;
@@ -1791,9 +1791,9 @@ s32 menu_handle_node_input(void)
         if (active_node->u2.s.parent_idx == MENU_NONE)
         {
             g_menu_item_ptr = 0;
-            g_menu_category0_item = 0;
-            g_menu_category1_item = 0;
-            g_menu_category2_item = 0;
+            g_menu_weapon_item = 0;
+            g_menu_armor_item = 0;
+            g_menu_instrument_item = 0;
         }
 
         g_menu_prev_node = MENU_NONE;
@@ -1816,7 +1816,7 @@ s32 menu_handle_node_input(void)
             return;
         }
 
-        if (g_menu_scene_type == (-1))
+        if (g_menu_scene_type == -1)
         {
             return;
         }
@@ -2051,7 +2051,7 @@ static inline u8* menu_character_block(void)
 static inline SavedGameLayout* menu_button_page_context(void)
 {
     u8* base = (u8*)g_saved_game_ctx;
-    s32 off = (g_menu_scene_type == MENU_SCENE_BUTTONS_CHARACTER_0) ? 0 : MENU_CHARACTER_BLOCK_SIZE;
+    s32 off = (g_menu_scene_type == MENU_NODE_BUTTONS_CHARACTER_0) ? 0 : MENU_CHARACTER_BLOCK_SIZE;
 
     return (SavedGameLayout*)(base + off);
 }
@@ -2092,7 +2092,9 @@ s32 menu_handle_input(s32 process_actions)
     s8 text_buffer[0x40];
     s8* text_cursor;
 
-    if ((u32)(g_menu_scene_type - 0x14) < 2 || g_menu_scene_type == 0x17 || g_menu_scene_type == 0x18 || g_menu_scene_type == 0x1A || g_menu_scene_type == 0x1B)
+    if ((u32)(g_menu_scene_type - MENU_NODE_WEAPON_STATUS) < 2 || g_menu_scene_type == MENU_NODE_ARMOR_STATUS ||
+        g_menu_scene_type == MENU_NODE_ARMOR_ITEM_STATUS || g_menu_scene_type == MENU_NODE_INSTRUMENT_STATUS ||
+        g_menu_scene_type == MENU_NODE_INSTRUMENT_ITEM_STATUS)
     {
         if (g_pad_input & (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1))
         {
@@ -2132,12 +2134,14 @@ s32 menu_handle_input(s32 process_actions)
             }
             else
             {
-                if (g_menu_scene_type == 0x14 || g_menu_scene_type == 0x17 || g_menu_scene_type == 0x1A)
+                if (g_menu_scene_type == MENU_NODE_WEAPON_STATUS || g_menu_scene_type == MENU_NODE_ARMOR_STATUS ||
+                    g_menu_scene_type == MENU_NODE_INSTRUMENT_STATUS)
                 {
                     g_menu_scene_type++;
                     g_menu_active_node = g_menu_scene_type;
                 }
-                else if (g_menu_scene_type == 0x15 || g_menu_scene_type == 0x18 || g_menu_scene_type == 0x1B)
+                else if (g_menu_scene_type == MENU_NODE_WEAPON_ITEM_STATUS || g_menu_scene_type == MENU_NODE_ARMOR_ITEM_STATUS ||
+                         g_menu_scene_type == MENU_NODE_INSTRUMENT_ITEM_STATUS)
                 {
                     g_menu_scene_type--;
                     g_menu_active_node = g_menu_scene_type;
@@ -2154,7 +2158,7 @@ s32 menu_handle_input(s32 process_actions)
         }
     }
 
-    if (g_menu_scene_type < 0x11U && (g_pad_input & (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1)))
+    if (g_menu_scene_type < (u32)MENU_NODE_GOLEM_LOGIC_BLOCKS && (g_pad_input & (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1)))
     {
         menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
 
@@ -2199,7 +2203,7 @@ s32 menu_handle_input(s32 process_actions)
                     {
                         if (g_menu_scene_type == ((g_menu_scene_type / 3) * 3))
                         {
-                            if (g_menu_scene_type >= 9)
+                            if (g_menu_scene_type >= MENU_NODE_CHARACTER_END)
                             {
                                 g_menu_scene_type++;
                                 g_menu_active_node = g_menu_scene_type;
@@ -2219,7 +2223,7 @@ s32 menu_handle_input(s32 process_actions)
 
                     if (g_pad_input & PAD_BTN_R1)
                     {
-                        if (g_menu_scene_type < 9)
+                        if (g_menu_scene_type < MENU_NODE_CHARACTER_END)
                         {
                             if ((g_menu_scene_type % 3) == 2)
                             {
@@ -2247,7 +2251,7 @@ s32 menu_handle_input(s32 process_actions)
                         }
                     }
 
-                    if ((g_pad_input & PAD_BTN_L2) && (g_menu_scene_type < 9))
+                    if ((g_pad_input & PAD_BTN_L2) && (g_menu_scene_type < MENU_NODE_CHARACTER_END))
                     {
                         if ((g_menu_scene_type / 3) == 0)
                         {
@@ -2263,7 +2267,7 @@ s32 menu_handle_input(s32 process_actions)
                         menu_set_active_node();
                     }
 
-                    if ((g_pad_input & PAD_BTN_R2) && (g_menu_scene_type < 9))
+                    if ((g_pad_input & PAD_BTN_R2) && (g_menu_scene_type < MENU_NODE_CHARACTER_END))
                     {
                         if ((g_menu_scene_type / 3) == 2)
                         {
@@ -2304,7 +2308,7 @@ s32 menu_handle_input(s32 process_actions)
     {
         content_items = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
 
-        if ((g_menu_scene_type == MENU_SCENE_BUTTONS_CHARACTER_0 || g_menu_scene_type == MENU_SCENE_BUTTONS_CHARACTER_1) &&
+        if ((g_menu_scene_type == MENU_NODE_BUTTONS_CHARACTER_0 || g_menu_scene_type == MENU_NODE_BUTTONS_CHARACTER_1) &&
             g_menu_hit_item_idx >= MENU_BUTTON_ITEM_FIRST && g_menu_hit_item_idx < MENU_BUTTON_ITEM_FIRST + MENU_BUTTON_COUNT)
         {
             if (g_pad_input & PAD_BTN_CIRCLE)
@@ -2389,8 +2393,8 @@ s32 menu_handle_input(s32 process_actions)
 
                 switch (content_type)
                 {
-                    case 1:
-                    case 2:
+                    case MENU_COMMAND_SUBTYPE_BASE:
+                    case MENU_COMMAND_SUBTYPE_BASE + 1:
                         if (g_menu_char_slot == 0)
                         {
                             setRECT(&rect, 0x40, 0x60, 0xF0, 0x60);
@@ -2403,10 +2407,10 @@ s32 menu_handle_input(s32 process_actions)
 
                         break;
 
-                    case 3:
-                    case 4:
-                    case 5:
-                    case 6:
+                    case MENU_SKILL_SUBTYPE_BASE:
+                    case MENU_SKILL_SUBTYPE_BASE + 1:
+                    case MENU_SKILL_SUBTYPE_BASE + 2:
+                    case MENU_SKILL_SUBTYPE_BASE + 3:
                         if (g_menu_char_slot == 0)
                         {
                             item_flag = *((u8*)g_saved_game_ctx + content_type + MENU_ACTION_SLOT_OFFSET);
@@ -2442,20 +2446,20 @@ s32 menu_handle_input(s32 process_actions)
                                                    ((content_type * MENU_ITEM_RECORD_SIZE) + (MENU_CHARACTER_ITEMS_OFFSET + MENU_ITEM_RECORD_SIZE)));
                             g_menu_item_ptr = g_menu_active_equipped_item;
                             g_menu_saved_category0_item = g_menu_item_ptr;
-                            g_menu_category0_item = g_menu_item_ptr;
+                            g_menu_weapon_item = g_menu_item_ptr;
                             g_menu_saved_category1_item = g_menu_item_ptr;
-                            g_menu_category1_item = g_menu_item_ptr;
+                            g_menu_armor_item = g_menu_item_ptr;
                             g_menu_saved_equipment_item = g_menu_item_ptr;
-                            g_menu_category2_item = g_menu_item_ptr;
+                            g_menu_instrument_item = g_menu_item_ptr;
                             menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
                         }
 
                         break;
 
-                    case 7:
-                    case 8:
-                    case 9:
-                    case 10:
+                    case MENU_EQUIPMENT_SUBTYPE(FIELD_WEAPON_SLOT):
+                    case MENU_EQUIPMENT_SUBTYPE(1):
+                    case MENU_EQUIPMENT_SUBTYPE(2):
+                    case MENU_EQUIPMENT_SUBTYPE(3):
                         if (g_menu_char_slot == 0)
                         {
                             setRECT(&rect, 0xB0, 0x30, 0x70, 0x60);
@@ -2475,8 +2479,9 @@ s32 menu_handle_input(s32 process_actions)
 
                         break;
 
-                    case 15:
-                        if ((g_menu_scene_type >= 0x12) || (g_menu_scene_type == 1) || (g_menu_scene_type == 2))
+                    case MENU_RENAME_ITEM_SUBTYPE:
+                        if ((g_menu_scene_type >= MENU_NODE_ITEMS) || (g_menu_scene_type == MENU_NODE_HERO_EQUIPMENT) ||
+                            (g_menu_scene_type == MENU_NODE_HERO_ABILITIES))
                         {
                             if ((g_menu_item_ptr != NULL) && (*((u8*)g_menu_item_ptr) != 0))
                             {
@@ -2497,13 +2502,13 @@ s32 menu_handle_input(s32 process_actions)
 
                                     switch (text_variant)
                                     {
-                                        case 0:
+                                        case FIELD_ITEM_CATEGORY_WEAPON:
                                             name_table = (uintptr_t)menu_text_table_base(MENU_TEXT_ITEM_NAME_PARTS);
                                             menu_concat_encoded_text(g_field_rename_custom_name, text_buffer,
                                                                      (s8*)(name_table + (*((u16*)(((item_word >> 9) & 0x7E) + name_table)))));
                                             break;
 
-                                        case 1:
+                                        case FIELD_ITEM_CATEGORY_ARMOR:
                                             description_table = (uintptr_t)menu_text_table_base(MENU_TEXT_ITEM_NAME_PARTS);
                                             menu_concat_encoded_text(
                                                 g_field_rename_custom_name, text_buffer,
@@ -2521,11 +2526,11 @@ s32 menu_handle_input(s32 process_actions)
                                     g_menu_load_request = 1;
                                     g_field_rename_source = g_script_repeat_last;
 
-                                    if (g_menu_scene_type == 1)
+                                    if (g_menu_scene_type == MENU_NODE_HERO_EQUIPMENT)
                                     {
                                         g_menu_transition_code = FIELD_MENU_NAME_EQUIPMENT_ITEM;
                                     }
-                                    else if (g_menu_scene_type == 2)
+                                    else if (g_menu_scene_type == MENU_NODE_HERO_ABILITIES)
                                     {
                                         g_menu_transition_code = FIELD_MENU_NAME_ABILITY_ITEM;
                                     }
@@ -2551,7 +2556,7 @@ s32 menu_handle_input(s32 process_actions)
 
                     switch (action_code)
                     {
-                        case 1:
+                        case MENU_ACTION_RENAME:
                         {
                             FieldPlayerRecord* player;
                             s32 idx;
@@ -2601,17 +2606,17 @@ s32 menu_handle_input(s32 process_actions)
 
                         break;
 
-                        case 6:
-                            g_saved_game_ctx->options.word |= MENU_OPTION_AUDIO_ENABLED;
+                        case MENU_ACTION_SOUND_STEREO:
+                            g_saved_game_ctx->options.word |= MENU_OPTION_STEREO;
                             akao_set_mono_output(0);
                             break;
 
-                        case 7:
-                            g_saved_game_ctx->options.word &= ~MENU_OPTION_AUDIO_ENABLED;
+                        case MENU_ACTION_SOUND_MONO:
+                            g_saved_game_ctx->options.word &= ~MENU_OPTION_STEREO;
                             akao_set_mono_output(1);
                             break;
 
-                        case 8:
+                        case MENU_ACTION_VIBRATION_ON:
                             g_saved_game_ctx->options.word |= MENU_OPTION_VIBRATION_ENABLED;
                             actuator_state->ports[0].small_motor_command = 1;
                             actuator_state->ports[0].large_motor_command = AKAO_SFX_DEFAULT_VOLUME;
@@ -2624,13 +2629,13 @@ s32 menu_handle_input(s32 process_actions)
 
                             break;
 
-                        case 9:
+                        case MENU_ACTION_VIBRATION_OFF:
                             g_saved_game_ctx->options.word &= ~MENU_OPTION_VIBRATION_ENABLED;
                             actuator_state->ports[0].small_motor_command = 0;
                             actuator_state->ports[1].small_motor_command = 0;
                             break;
 
-                        case 10:
+                        case MENU_ACTION_GUEST_PORT_2_ON:
                             if (actuator_state->ports[1].padding0[0] == MENU_NONE)
                             {
                                 g_menu_message_line1 = menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_NO_CONTROLLER_LINE1);
@@ -2642,13 +2647,13 @@ s32 menu_handle_input(s32 process_actions)
                             {
                                 inject_flags = &g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word;
                                 *inject_flags |= MENU_PAD_INJECT_ENABLED;
-                                g_menu_companion_node = 0x2B;
+                                g_menu_companion_node = MENU_NODE_BUTTONS_CHARACTER_1;
                                 menu_set_active_node();
                             }
 
                             break;
 
-                        case 11:
+                        case MENU_ACTION_GUEST_PORT_2_OFF:
                             inject_flags = &g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word;
                             *inject_flags &= ~MENU_PAD_INJECT_ENABLED;
                             g_menu_companion_node = MENU_NONE;
@@ -2743,16 +2748,16 @@ s32 menu_handle_input(s32 process_actions)
             }
             else if (content_items[g_menu_hit_item_idx].params[work_index] != 0)
             {
-                if (g_menu_scene_type < 0x11)
+                if (g_menu_scene_type < MENU_NODE_GOLEM_LOGIC_BLOCKS)
                 {
                     if ((content_items[g_menu_hit_item_idx].packed_x & MENU_CONTENT_ITEM_TYPE_MASK) == MENU_CONTENT_ITEM_TYPE_SUBMENU)
                     {
-                        if (g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx < 0x11)
+                        if (g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx < MENU_NODE_GOLEM_LOGIC_BLOCKS)
                         {
                             g_menu_item_ptr = NULL;
-                            g_menu_category0_item = NULL;
-                            g_menu_category2_item = NULL;
-                            g_menu_category1_item = NULL;
+                            g_menu_weapon_item = NULL;
+                            g_menu_instrument_item = NULL;
+                            g_menu_armor_item = NULL;
                         }
                     }
                 }
@@ -2802,7 +2807,7 @@ s32 menu_item_has_action(void)
 
     items = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
 
-    if ((g_menu_scene_type == MENU_SCENE_BUTTONS_CHARACTER_0) || (g_menu_scene_type == MENU_SCENE_BUTTONS_CHARACTER_1))
+    if ((g_menu_scene_type == MENU_NODE_BUTTONS_CHARACTER_0) || (g_menu_scene_type == MENU_NODE_BUTTONS_CHARACTER_1))
     {
         if (g_menu_hit_item_idx >= MENU_BUTTON_ITEM_FIRST)
         {
@@ -2844,11 +2849,11 @@ s32 menu_item_has_action(void)
 
         if (action_code != 0)
         {
-            if (action_code == 1)
+            if (action_code == MENU_ACTION_RENAME)
             {
                 return 1;
             }
-            else if ((action_code != 0) && (action_code < 12) && (action_code >= 6))
+            else if ((action_code != 0) && (action_code < MENU_ACTION_OPTION_END) && (action_code >= MENU_ACTION_OPTION_FIRST))
             {
             success:
                 return 1;
@@ -3289,12 +3294,12 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
             g_menu_shown_armor = equipped_items;
             g_menu_shown_equipment_copy = equipped_items;
 
-            if (g_menu_scene_type == 0x10)
+            if (g_menu_scene_type == MENU_NODE_GOLEM_ATTRIBUTES)
             {
                 FieldItemRecord* second_equipped_item;
-                g_menu_category0_item = equipped_items;
-                g_menu_category1_item = second_equipped_item = &equipped_items[1];
-                g_menu_category2_item = second_equipped_item;
+                g_menu_weapon_item = equipped_items;
+                g_menu_armor_item = second_equipped_item = &equipped_items[1];
+                g_menu_instrument_item = second_equipped_item;
             }
 
             while (remaining_count != 0)
@@ -3305,76 +3310,76 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
 
                 pos.x = (s16)MENU_CONTENT_X(content_item);
                 pos.y = (s16)MENU_CONTENT_Y(content_item);
-                icon_id = 0xFF;
+                icon_id = MENU_ICON_NONE;
                 item_word = content_item->packed_x;
                 item_type = item_word >> MENU_CONTENT_TYPE_SHIFT;
 
                 switch (item_type)
                 {
-                    case 1:
+                    case MENU_CONTENT_KIND_MESSAGE:
                         packet_cursor = menu_draw_content_text(packet_cursor, ot_entry,
                                                                menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), content_item->action_type),
                                                                FIELD_TEXT_COLOR_MENU, content_item);
                         break;
 
-                    case 2:
+                    case MENU_CONTENT_KIND_ICON:
                     {
                         s32 icon_selector;
                         u8 action_type;
 
-                        if (content_item->action_type < 2)
+                        if (content_item->action_type < MENU_ICON_SELECT_R1_HINT_END)
                         {
-                            icon_id = 0xFF;
+                            icon_id = MENU_ICON_NONE;
 
                             if (two_outer == 2)
                             {
-                                icon_id = 0x1E;
+                                icon_id = MENU_ICON_R1_HINT;
                             }
                         }
 
                         action_type = content_item->action_type;
                         icon_selector = action_type;
 
-                        if (icon_selector >= 0x02 && icon_selector <= 0x09)
+                        if (icon_selector >= MENU_ICON_SELECT_ARMOR_STATUS_FIRST && icon_selector < MENU_ICON_SELECT_ARMOR_ELEMENT_FIRST)
                         {
                             s32 action;
                             val = 0;
 
-                            if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
+                            if (*(u8*)g_menu_armor_item != 0 && g_menu_armor_item != 0)
                             {
-                                val = g_menu_category1_item->status_flags;
+                                val = g_menu_armor_item->status_flags;
                             }
 
                             action = content_item->action_type;
 
-                            if (((val >> (action - 2)) & 1) != 0)
+                            if (((val >> (action - MENU_ICON_SELECT_ARMOR_STATUS_FIRST)) & 1) != 0)
                             {
-                                icon_id = action + 0x3B;
+                                icon_id = action + (MENU_ICON_STATUS_FIRST - MENU_ICON_SELECT_ARMOR_STATUS_FIRST);
                             }
                             else
                             {
-                                icon_id = 0x21;
+                                icon_id = MENU_ICON_EMPTY;
                             }
                         }
-                        else if (icon_selector >= 0x0A && icon_selector <= 0x11)
+                        else if (icon_selector >= MENU_ICON_SELECT_ARMOR_ELEMENT_FIRST && icon_selector < MENU_ICON_SELECT_ARMOR_SET_STATUS_FIRST)
                         {
                             s32 action;
                             val = 0;
 
-                            if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
+                            if (*(u8*)g_menu_armor_item != 0 && g_menu_armor_item != 0)
                             {
-                                val = g_menu_category1_item->element_flags;
+                                val = g_menu_armor_item->element_flags;
                             }
 
-                            icon_id = 0x21;
+                            icon_id = MENU_ICON_EMPTY;
                             action = content_item->action_type;
 
-                            if (((val >> (action - 0xA)) & 1) != 0)
+                            if (((val >> (action - MENU_ICON_SELECT_ARMOR_ELEMENT_FIRST)) & 1) != 0)
                             {
-                                icon_id = action + 0x2B;
+                                icon_id = action + (MENU_ICON_SPIRIT_FIRST - MENU_ICON_SELECT_ARMOR_ELEMENT_FIRST);
                             }
                         }
-                        else if (icon_selector >= 0x12 && icon_selector <= 0x19)
+                        else if (icon_selector >= MENU_ICON_SELECT_ARMOR_SET_STATUS_FIRST && icon_selector < MENU_ICON_SELECT_ARMOR_SET_ELEMENT_FIRST)
                         {
                             s32 action;
                             val = 0;
@@ -3394,15 +3399,15 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 val |= g_menu_shown_armor[3].status_flags;
                             }
 
-                            icon_id = 0x21;
+                            icon_id = MENU_ICON_EMPTY;
                             action = content_item->action_type;
 
-                            if (((val >> (action - 0x12)) & 1) != 0)
+                            if (((val >> (action - MENU_ICON_SELECT_ARMOR_SET_STATUS_FIRST)) & 1) != 0)
                             {
-                                icon_id = action + 0x2B;
+                                icon_id = action + (MENU_ICON_STATUS_FIRST - MENU_ICON_SELECT_ARMOR_SET_STATUS_FIRST);
                             }
                         }
-                        else if (icon_selector >= 0x1A && icon_selector <= 0x21)
+                        else if (icon_selector >= MENU_ICON_SELECT_ARMOR_SET_ELEMENT_FIRST && icon_selector < MENU_ICON_SELECT_WEAPON_FLAG_FIRST)
                         {
                             s32 action;
                             val = 0;
@@ -3424,45 +3429,45 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
 
                             action = content_item->action_type;
 
-                            if (((val >> (action - 0x1A)) & 1) != 0)
+                            if (((val >> (action - MENU_ICON_SELECT_ARMOR_SET_ELEMENT_FIRST)) & 1) != 0)
                             {
                                 icon_id = g_menu_element_icon_ids[action];
                             }
                             else
                             {
-                                icon_id = 0x21;
+                                icon_id = MENU_ICON_EMPTY;
                             }
                         }
-                        else if (icon_selector >= 0x22 && icon_selector <= 0x29)
+                        else if (icon_selector >= MENU_ICON_SELECT_WEAPON_FLAG_FIRST && icon_selector < MENU_ICON_SELECT_BUTTON_FIRST)
                         {
 #if defined(VERSION_JP)
                             s32 action;
                             action = content_item->action_type;
 
-                            if (((g_menu_category0_item->status_flags >> (action - 0x22)) & 1) != 0)
+                            if (((g_menu_weapon_item->status_flags >> (action - MENU_ICON_SELECT_WEAPON_FLAG_FIRST)) & 1) != 0)
                             {
-                                icon_id = action + 0x13;
+                                icon_id = action + (MENU_ICON_SPIRIT_FIRST - MENU_ICON_SELECT_WEAPON_FLAG_FIRST);
                             }
                             else
                             {
-                                icon_id = 0x21;
+                                icon_id = MENU_ICON_EMPTY;
                             }
 #else
-                            icon_id = 0x21;
+                            icon_id = MENU_ICON_EMPTY;
 
-                            if (g_menu_category0_item != 0)
+                            if (g_menu_weapon_item != 0)
                             {
                                 s32 action;
                                 action = content_item->action_type;
 
-                                if (((g_menu_category0_item->status_flags >> (action - 0x22)) & 1) != 0)
+                                if (((g_menu_weapon_item->status_flags >> (action - MENU_ICON_SELECT_WEAPON_FLAG_FIRST)) & 1) != 0)
                                 {
-                                    icon_id = action + 0x13;
+                                    icon_id = action + (MENU_ICON_SPIRIT_FIRST - MENU_ICON_SELECT_WEAPON_FLAG_FIRST);
                                 }
                             }
 #endif
                         }
-                        else if (icon_selector >= 0x2A && icon_selector <= 0x31)
+                        else if (icon_selector >= MENU_ICON_SELECT_BUTTON_FIRST && icon_selector < MENU_ICON_SELECT_SLOT_FIRST)
                         {
                             s32 button;
                             s32 action;
@@ -3473,7 +3478,8 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 u8* saved_game = (u8*)g_saved_game_ctx;
                                 s32 character_offset = g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
 
-                                if (*(u8*)(saved_game + character_offset + button + MENU_CHARACTER_FIELD_OFFSET(button_actions)) == action - 0x2A)
+                                if (*(u8*)(saved_game + character_offset + button + MENU_CHARACTER_FIELD_OFFSET(button_actions)) ==
+                                    action - MENU_ICON_SELECT_BUTTON_FIRST)
                                 {
                                     break;
                                 }
@@ -3481,13 +3487,14 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
 
                             icon_id = g_menu_button_icon_ids[button];
                         }
-                        else if (icon_selector >= 0x32 && icon_selector <= 0x35)
+                        else if (icon_selector >= MENU_ICON_SELECT_SLOT_FIRST && icon_selector < MENU_ICON_SELECT_VIEWED_ITEM)
                         {
                             if (g_menu_char_slot != 2)
                             {
-                                FieldItemRecord* equipment = (FieldItemRecord*)((content_item->action_type * sizeof(FieldItemRecord)) +
-                                                                                (uintptr_t)g_menu_equipment_base - 0x32 * sizeof(FieldItemRecord));
-                                icon_id = 0x21;
+                                FieldItemRecord* equipment =
+                                    (FieldItemRecord*)((content_item->action_type * sizeof(FieldItemRecord)) + (uintptr_t)g_menu_equipment_base -
+                                                       MENU_ICON_SELECT_SLOT_FIRST * sizeof(FieldItemRecord));
+                                icon_id = MENU_ICON_EMPTY;
 
                                 if (equipment->name[0] != 0)
                                 {
@@ -3496,22 +3503,22 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
 
                                     switch (item_kind)
                                     {
-                                        case 1:
-                                            icon_id = FIELD_ITEM_TYPE(attributes) + 0x50;
+                                        case FIELD_ITEM_CATEGORY_ARMOR:
+                                            icon_id = FIELD_ITEM_TYPE(attributes) + MENU_ICON_ARMOR_FIRST;
                                             break;
-                                        case 2:
-                                            icon_id = FIELD_ITEM_TYPE(attributes) + 0x5C;
+                                        case FIELD_ITEM_CATEGORY_INSTRUMENT:
+                                            icon_id = FIELD_ITEM_TYPE(attributes) + MENU_ICON_INSTRUMENT_FIRST;
                                             break;
-                                        case 0:
-                                            icon_id = FIELD_ITEM_TYPE(attributes) + 0x45;
+                                        case FIELD_ITEM_CATEGORY_WEAPON:
+                                            icon_id = FIELD_ITEM_TYPE(attributes) + MENU_ICON_WEAPON_FIRST;
                                             break;
                                     }
                                 }
                             }
                         }
-                        else if ((u8)icon_selector == 0x36)
+                        else if ((u8)icon_selector == MENU_ICON_SELECT_VIEWED_ITEM)
                         {
-                            icon_id = 0xFF;
+                            icon_id = MENU_ICON_NONE;
 
                             if (g_menu_item_ptr != 0)
                             {
@@ -3522,88 +3529,88 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
 
                                     switch (item_kind)
                                     {
-                                        case 0:
-                                            icon_id = FIELD_ITEM_TYPE(attributes) + 0x45;
+                                        case FIELD_ITEM_CATEGORY_WEAPON:
+                                            icon_id = FIELD_ITEM_TYPE(attributes) + MENU_ICON_WEAPON_FIRST;
                                             break;
-                                        case 1:
-                                            icon_id = FIELD_ITEM_TYPE(attributes) + 0x50;
+                                        case FIELD_ITEM_CATEGORY_ARMOR:
+                                            icon_id = FIELD_ITEM_TYPE(attributes) + MENU_ICON_ARMOR_FIRST;
                                             break;
-                                        case 2:
-                                            icon_id = FIELD_ITEM_TYPE(attributes) + 0x5C;
+                                        case FIELD_ITEM_CATEGORY_INSTRUMENT:
+                                            icon_id = FIELD_ITEM_TYPE(attributes) + MENU_ICON_INSTRUMENT_FIRST;
                                             break;
                                     }
                                 }
                             }
                         }
-                        else if (icon_selector >= 0x37 && icon_selector <= 0x54)
+                        else if (icon_selector >= MENU_ICON_SELECT_ACTION_FIRST && icon_selector <= MENU_ICON_SELECT_ACTION_LAST)
                         {
                             icon_id = g_menu_action_icon_ids[content_item->action_type];
                         }
-                        else if ((u8)icon_selector == 0x55)
+                        else if ((u8)icon_selector == MENU_ICON_SELECT_STEREO)
                         {
-                            icon_id = 0xFF;
+                            icon_id = MENU_ICON_NONE;
 
-                            if (((g_saved_game_ctx->options.word >> 1) & 1) != 0)
+                            if (g_saved_game_ctx->options.bits.stereo != 0)
                             {
-                                icon_id = 0x6A;
+                                icon_id = MENU_ICON_SET;
                             }
                         }
                         else
                         {
                             icon_selector = content_item->action_type;
 
-                            if (icon_selector == 0x56)
+                            if (icon_selector == MENU_ICON_SELECT_MONO)
                             {
-                                icon_id = 0x6A;
+                                icon_id = MENU_ICON_SET;
 
-                                if (((g_saved_game_ctx->options.word >> 1) & 1) != 0)
+                                if (g_saved_game_ctx->options.bits.stereo != 0)
                                 {
-                                    icon_id = 0xFF;
+                                    icon_id = MENU_ICON_NONE;
                                 }
                             }
-                            else if (icon_selector == 0x57)
+                            else if (icon_selector == MENU_ICON_SELECT_VIBRATION_ON)
                             {
-                                icon_id = 0xFF;
+                                icon_id = MENU_ICON_NONE;
 
-                                if ((g_saved_game_ctx->options.word & 1) != 0)
+                                if ((g_saved_game_ctx->options.word & MENU_OPTION_VIBRATION_ENABLED) != 0)
                                 {
-                                    icon_id = 0x6A;
+                                    icon_id = MENU_ICON_SET;
                                 }
                             }
-                            else if (icon_selector == 0x58)
+                            else if (icon_selector == MENU_ICON_SELECT_VIBRATION_OFF)
                             {
-                                icon_id = 0x6A;
+                                icon_id = MENU_ICON_SET;
 
-                                if ((g_saved_game_ctx->options.word & 1) != 0)
+                                if ((g_saved_game_ctx->options.word & MENU_OPTION_VIBRATION_ENABLED) != 0)
                                 {
-                                    icon_id = 0xFF;
+                                    icon_id = MENU_ICON_NONE;
                                 }
                             }
-                            else if (icon_selector == 0x59)
+                            else if (icon_selector == MENU_ICON_SELECT_GUEST_PORT_2_ON)
                             {
-                                icon_id = 0xFF;
+                                icon_id = MENU_ICON_NONE;
 
-                                if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & 0x80) != 0)
+                                if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & MENU_PAD_INJECT_ENABLED) != 0)
                                 {
-                                    icon_id = 0x6A;
+                                    icon_id = MENU_ICON_SET;
                                 }
                             }
-                            else if (icon_selector == 0x5A)
+                            else if (icon_selector == MENU_ICON_SELECT_GUEST_PORT_2_OFF)
                             {
-                                icon_id = 0x6A;
+                                icon_id = MENU_ICON_SET;
 
-                                if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & 0x80) != 0)
+                                if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & MENU_PAD_INJECT_ENABLED) != 0)
                                 {
-                                    icon_id = 0xFF;
+                                    icon_id = MENU_ICON_NONE;
                                 }
                             }
                             else
                             {
-                                icon_id = 0xFF;
+                                icon_id = MENU_ICON_NONE;
                             }
                         }
 
-                        if (icon_id != 0xFF)
+                        if (icon_id != MENU_ICON_NONE)
                         {
                             packet_cursor = menu_emit_draw_mode_primitive(
                                 menu_emit_icon_sprite(packet_cursor, ot_entry, icon_id, MENU_CONTENT_X(content_item), MENU_CONTENT_Y(content_item), 0, 0, 0, 0),
@@ -3613,20 +3620,20 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
 
                     break;
 
-                    case 3:
+                    case MENU_CONTENT_KIND_ITEM_FIELD:
                     {
                         content_index = content_item->action_type;
 
                         switch (content_index)
                         {
-                            case 0x1:
+                            case MENU_ITEM_FIELD_NAME:
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor = menu_draw_content_text(packet_cursor, ot_entry, (u8*)g_menu_item_ptr, FIELD_TEXT_COLOR_MENU, content_item);
                                 }
 
                                 break;
-                            case 0x2:
+                            case MENU_ITEM_FIELD_TYPE_NAME:
                                 if (g_menu_item_ptr != 0)
                                 {
                                     u32 v;
@@ -3651,13 +3658,13 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
 
                                     switch (v1)
                                     {
-                                        case 0:
+                                        case FIELD_ITEM_CATEGORY_WEAPON:
                                         {
                                             uintptr_t base0 = ((uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES));
                                             menu_concat_encoded_text(text_buffer, prefix_buffer, (void*)(base0 + *(u16*)(((v >> 9) & 0x7E) + base0)));
                                             break;
                                         }
-                                        case 1:
+                                        case FIELD_ITEM_CATEGORY_ARMOR:
                                         {
                                             uintptr_t base1 = ((uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES));
                                             menu_concat_encoded_text(text_buffer, prefix_buffer,
@@ -3678,7 +3685,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 }
 
                                 break;
-                            case 0x3:
+                            case MENU_ITEM_FIELD_BONUS_FIRST:
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_item_ptr->bonus_nibbles.word & 0xF,
@@ -3686,7 +3693,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 }
 
                                 break;
-                            case 0x4:
+                            case MENU_ITEM_FIELD_BONUS_FIRST + 1:
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (g_menu_item_ptr->bonus_nibbles.word >> 4) & 0xF,
@@ -3694,7 +3701,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 }
 
                                 break;
-                            case 0x5:
+                            case MENU_ITEM_FIELD_BONUS_FIRST + 2:
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (g_menu_item_ptr->bonus_nibbles.word >> 8) & 0xF,
@@ -3702,7 +3709,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 }
 
                                 break;
-                            case 0x6:
+                            case MENU_ITEM_FIELD_BONUS_FIRST + 3:
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (g_menu_item_ptr->bonus_nibbles.word >> 12) & 0xF,
@@ -3710,7 +3717,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 }
 
                                 break;
-                            case 0x7:
+                            case MENU_ITEM_FIELD_BONUS_FIRST + 4:
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_item_ptr->bonus_nibbles.halves[1] & 0xF,
@@ -3718,7 +3725,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 }
 
                                 break;
-                            case 0x8:
+                            case MENU_ITEM_FIELD_BONUS_FIRST + 5:
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (g_menu_item_ptr->bonus_nibbles.word >> 20) & 0xF,
@@ -3726,7 +3733,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 }
 
                                 break;
-                            case 0x9:
+                            case MENU_ITEM_FIELD_BONUS_FIRST + 6:
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_item_ptr->bonus_nibbles.bytes[3] & 0xF,
@@ -3734,7 +3741,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 }
 
                                 break;
-                            case 0xA:
+                            case MENU_ITEM_FIELD_BONUS_FIRST + 7:
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (g_menu_item_ptr->bonus_nibbles.word >> 28) & 0xF,
@@ -3742,96 +3749,99 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 }
 
                                 break;
-                            case 0xB:
-                            case 0xC:
-                            case 0xD:
+                            case MENU_ITEM_FIELD_SPECIAL_FIRST:
+                            case MENU_ITEM_FIELD_SPECIAL_FIRST + 1:
+                            case MENU_ITEM_FIELD_SPECIAL_FIRST + 2:
                                 if (g_menu_item_ptr != 0)
+                                {
+                                    packet_cursor =
+                                        menu_draw_content_text(packet_cursor, ot_entry,
+                                                               menu_text_entry(menu_text_table_base(MENU_TEXT_ITEM_SPECIAL_NAMES),
+                                                                               g_menu_item_ptr->special_ids[content_index - MENU_ITEM_FIELD_SPECIAL_FIRST]),
+                                                               FIELD_TEXT_COLOR_MENU, content_item);
+                                }
+
+                                break;
+                            case MENU_ITEM_FIELD_WEAPON_ATTACK_FIRST:
+                            case MENU_ITEM_FIELD_WEAPON_ATTACK_FIRST + 1:
+                            case MENU_ITEM_FIELD_WEAPON_ATTACK_FIRST + 2:
+                                if (g_menu_weapon_item != 0)
                                 {
                                     packet_cursor = menu_draw_content_text(
                                         packet_cursor, ot_entry,
-                                        menu_text_entry(menu_text_table_base(MENU_TEXT_ITEM_SPECIAL_NAMES), g_menu_item_ptr->special_ids[content_index - 0xB]),
+                                        menu_text_entry(menu_text_table_base(MENU_TEXT_WEAPON_ATTACK_NAMES),
+                                                        g_menu_weapon_item->derived.weapon.stats[content_index - MENU_ITEM_FIELD_WEAPON_ATTACK_FIRST + 2]),
                                         FIELD_TEXT_COLOR_MENU, content_item);
                                 }
 
                                 break;
-                            case 0xE:
-                            case 0xF:
-                            case 0x10:
-                                if (g_menu_category0_item != 0)
+                            case MENU_ITEM_FIELD_WEAPON_POWER:
+                                if (g_menu_weapon_item != 0)
                                 {
-                                    packet_cursor = menu_draw_content_text(packet_cursor, ot_entry,
-                                                                           menu_text_entry(menu_text_table_base(MENU_TEXT_WEAPON_ATTACK_NAMES),
-                                                                                           g_menu_category0_item->derived.weapon.stats[content_index - 0xC]),
-                                                                           FIELD_TEXT_COLOR_MENU, content_item);
-                                }
-
-                                break;
-                            case 0x11:
-                                if (g_menu_category0_item != 0)
-                                {
-                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, g_menu_category0_item->derived.values[0], FIELD_TEXT_COLOR_MENU,
+                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, g_menu_weapon_item->derived.values[0], FIELD_TEXT_COLOR_MENU,
                                                                       &pos, MENU_CONTENT_ALIGN(content_item));
                                 }
 
                                 break;
-                            case 0x12:
-                                if (g_menu_category1_item != 0)
+                            case MENU_ITEM_FIELD_ARMOR_VALUE:
+                                if (g_menu_armor_item != 0)
                                 {
-                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_category1_item->derived.values[0],
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_armor_item->derived.values[0],
                                                                              FIELD_TEXT_COLOR_MENU, &pos, MENU_CONTENT_ALIGN(content_item));
                                 }
 
                                 break;
-                            case 0x13:
+                            case MENU_ITEM_FIELD_INSTRUMENT_MAGIC_NAME:
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor = menu_draw_content_text(
                                         packet_cursor, ot_entry,
-                                        menu_text_entry(menu_text_table_base(MENU_TEXT_MAGIC_NAMES), g_menu_category2_item->derived.instrument.spirit * 14 +
-                                                                                                         g_menu_category2_item->derived.instrument.spell),
+                                        menu_text_entry(menu_text_table_base(MENU_TEXT_MAGIC_NAMES), g_menu_instrument_item->derived.instrument.spirit * 14 +
+                                                                                                         g_menu_instrument_item->derived.instrument.spell),
                                         FIELD_TEXT_COLOR_MENU, content_item);
                                 }
 
                                 break;
-                            case 0x14:
+                            case MENU_ITEM_FIELD_INSTRUMENT_SPIRIT_NAME:
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor = menu_draw_content_text(
                                         packet_cursor, ot_entry,
-                                        menu_text_entry(menu_text_table_base(MENU_TEXT_SPIRIT_NAMES), g_menu_category2_item->derived.instrument.spirit),
+                                        menu_text_entry(menu_text_table_base(MENU_TEXT_SPIRIT_NAMES), g_menu_instrument_item->derived.instrument.spirit),
                                         FIELD_TEXT_COLOR_MENU, content_item);
                                 }
 
                                 break;
-                            case 0x15:
+                            case MENU_ITEM_FIELD_INSTRUMENT_SHAPE_NAME:
                                 if (g_menu_item_ptr != 0)
                                 {
                                     packet_cursor = menu_draw_content_text(
                                         packet_cursor, ot_entry,
-                                        menu_text_entry(menu_text_table_base(MENU_TEXT_MAGIC_SHAPE_NAMES), g_menu_category2_item->derived.instrument.spell),
+                                        menu_text_entry(menu_text_table_base(MENU_TEXT_MAGIC_SHAPE_NAMES), g_menu_instrument_item->derived.instrument.spell),
                                         FIELD_TEXT_COLOR_MENU, content_item);
                                 }
 
                                 break;
-                            case 0x16:
+                            case MENU_ITEM_FIELD_INSTRUMENT_POWER:
                                 if (g_menu_item_ptr != 0)
                                 {
-                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, g_menu_category2_item->derived.instrument.power,
+                                    packet_cursor = field_draw_number(ot_entry, packet_cursor, g_menu_instrument_item->derived.instrument.power,
                                                                       FIELD_TEXT_COLOR_MENU, &pos, MENU_CONTENT_ALIGN(content_item));
                                 }
 
                                 break;
-                            case 0x17:
-                            case 0x18:
-                            case 0x19:
-                            case 0x1A:
+                            case MENU_ITEM_FIELD_SLOT_CHANGE_FIRST:
+                            case MENU_ITEM_FIELD_SLOT_CHANGE_FIRST + 1:
+                            case MENU_ITEM_FIELD_SLOT_CHANGE_FIRST + 2:
+                            case MENU_ITEM_FIELD_SLOT_CHANGE_FIRST + 3:
                             {
                                 val = 0;
 
-                                if (g_item_slot_flags[content_index - 0x17] != 0)
+                                if (g_item_slot_flags[content_index - MENU_ITEM_FIELD_SLOT_CHANGE_FIRST] != 0)
                                 {
-                                    FieldItemRecord* equipment = (FieldItemRecord*)((content_index * sizeof(FieldItemRecord)) +
-                                                                                    (uintptr_t)g_menu_shown_equipment - 0x17 * sizeof(FieldItemRecord));
+                                    FieldItemRecord* equipment =
+                                        (FieldItemRecord*)((content_index * sizeof(FieldItemRecord)) + (uintptr_t)g_menu_shown_equipment -
+                                                           MENU_ITEM_FIELD_SLOT_CHANGE_FIRST * sizeof(FieldItemRecord));
                                     FieldItemRecord* comparison_item;
 
                                     if (equipment->name[0] != 0)
@@ -3839,7 +3849,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                         val = equipment->derived.values[0];
                                     }
 
-                                    comparison_item = g_item_slot_data[content_index - 0x17];
+                                    comparison_item = g_item_slot_data[content_index - MENU_ITEM_FIELD_SLOT_CHANGE_FIRST];
 
                                     if (comparison_item != 0 && comparison_item->name[0] != 0)
                                     {
@@ -3856,17 +3866,18 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             /* fallthrough */
-                            case 0x1B:
-                            case 0x1C:
-                            case 0x1D:
-                            case 0x1E:
+                            case MENU_ITEM_FIELD_SLOT_CHANGE_SIGN_FIRST:
+                            case MENU_ITEM_FIELD_SLOT_CHANGE_SIGN_FIRST + 1:
+                            case MENU_ITEM_FIELD_SLOT_CHANGE_SIGN_FIRST + 2:
+                            case MENU_ITEM_FIELD_SLOT_CHANGE_SIGN_FIRST + 3:
                             {
                                 val = 0;
 
-                                if (g_item_slot_flags[content_index - 0x1B] != 0)
+                                if (g_item_slot_flags[content_index - MENU_ITEM_FIELD_SLOT_CHANGE_SIGN_FIRST] != 0)
                                 {
-                                    FieldItemRecord* equipment = (FieldItemRecord*)((content_index * sizeof(FieldItemRecord)) +
-                                                                                    (uintptr_t)g_menu_shown_equipment - 0x1B * sizeof(FieldItemRecord));
+                                    FieldItemRecord* equipment =
+                                        (FieldItemRecord*)((content_index * sizeof(FieldItemRecord)) + (uintptr_t)g_menu_shown_equipment -
+                                                           MENU_ITEM_FIELD_SLOT_CHANGE_SIGN_FIRST * sizeof(FieldItemRecord));
                                     FieldItemRecord* comparison_item;
 
                                     if (equipment->name[0] != 0)
@@ -3874,7 +3885,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                         val = equipment->derived.values[0];
                                     }
 
-                                    comparison_item = g_item_slot_data[content_index - 0x1B];
+                                    comparison_item = g_item_slot_data[content_index - MENU_ITEM_FIELD_SLOT_CHANGE_SIGN_FIRST];
 
                                     if (comparison_item != 0 && comparison_item->name[0] != 0)
                                     {
@@ -3892,49 +3903,49 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x1F:
-                            case 0x20:
-                            case 0x21:
-                            case 0x22:
-                            case 0x23:
-                            case 0x24:
-                            case 0x25:
-                            case 0x26:
+                            case MENU_ITEM_FIELD_MODIFIER_SIGN_FIRST:
+                            case MENU_ITEM_FIELD_MODIFIER_SIGN_FIRST + 1:
+                            case MENU_ITEM_FIELD_MODIFIER_SIGN_FIRST + 2:
+                            case MENU_ITEM_FIELD_MODIFIER_SIGN_FIRST + 3:
+                            case MENU_ITEM_FIELD_MODIFIER_SIGN_FIRST + 4:
+                            case MENU_ITEM_FIELD_MODIFIER_SIGN_FIRST + 5:
+                            case MENU_ITEM_FIELD_MODIFIER_SIGN_FIRST + 6:
+                            case MENU_ITEM_FIELD_MODIFIER_SIGN_FIRST + 7:
                                 if (g_menu_item_ptr != 0)
                                 {
-                                    s32 res = menu_lookup_item_nibble(g_menu_item_ptr, content_index - 0x1F);
+                                    s32 res = menu_lookup_item_nibble(g_menu_item_ptr, content_index - MENU_ITEM_FIELD_MODIFIER_SIGN_FIRST);
                                     menu_copy_sign_label(label_buffer, res);
                                     packet_cursor = field_draw_text(packet_cursor, ot_entry, (u8*)(&label_buffer), FIELD_TEXT_COLOR_MENU, pos.x, pos.y,
                                                                     FIELD_TEXT_ALIGN_LEFT);
                                 }
 
                                 break;
-                            case 0x27:
-                            case 0x28:
-                            case 0x29:
-                            case 0x2A:
-                            case 0x2B:
-                            case 0x2C:
-                            case 0x2D:
-                            case 0x2E:
+                            case MENU_ITEM_FIELD_MODIFIER_FIRST:
+                            case MENU_ITEM_FIELD_MODIFIER_FIRST + 1:
+                            case MENU_ITEM_FIELD_MODIFIER_FIRST + 2:
+                            case MENU_ITEM_FIELD_MODIFIER_FIRST + 3:
+                            case MENU_ITEM_FIELD_MODIFIER_FIRST + 4:
+                            case MENU_ITEM_FIELD_MODIFIER_FIRST + 5:
+                            case MENU_ITEM_FIELD_MODIFIER_FIRST + 6:
+                            case MENU_ITEM_FIELD_MODIFIER_FIRST + 7:
                                 if (g_menu_item_ptr != 0)
                                 {
-                                    s32 diff = menu_lookup_item_nibble(g_menu_item_ptr, content_index - 0x27);
+                                    s32 diff = menu_lookup_item_nibble(g_menu_item_ptr, content_index - MENU_ITEM_FIELD_MODIFIER_FIRST);
                                     packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (u32)abs(diff), FIELD_TEXT_COLOR_MENU, &pos,
                                                                              MENU_CONTENT_ALIGN(content_item));
                                 }
 
                                 break;
-                            case 0x2F:
-                            case 0x30:
-                            case 0x31:
-                            case 0x32:
-                            case 0x33:
-                            case 0x34:
-                            case 0x35:
-                            case 0x36:
+                            case MENU_ITEM_FIELD_MODIFIER_CHANGE_SIGN_FIRST:
+                            case MENU_ITEM_FIELD_MODIFIER_CHANGE_SIGN_FIRST + 1:
+                            case MENU_ITEM_FIELD_MODIFIER_CHANGE_SIGN_FIRST + 2:
+                            case MENU_ITEM_FIELD_MODIFIER_CHANGE_SIGN_FIRST + 3:
+                            case MENU_ITEM_FIELD_MODIFIER_CHANGE_SIGN_FIRST + 4:
+                            case MENU_ITEM_FIELD_MODIFIER_CHANGE_SIGN_FIRST + 5:
+                            case MENU_ITEM_FIELD_MODIFIER_CHANGE_SIGN_FIRST + 6:
+                            case MENU_ITEM_FIELD_MODIFIER_CHANGE_SIGN_FIRST + 7:
                             {
-                                s32 idx2 = content_index - 0x2F;
+                                s32 idx2 = content_index - MENU_ITEM_FIELD_MODIFIER_CHANGE_SIGN_FIRST;
 
                                 if (g_menu_item_ptr != 0)
                                 {
@@ -3948,16 +3959,17 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x37:
-                            case 0x38:
-                            case 0x39:
-                            case 0x3A:
-                            case 0x3B:
-                            case 0x3C:
-                            case 0x3D:
-                            case 0x3E:
+                            case MENU_ITEM_FIELD_MODIFIER_CHANGE_FIRST:
+                            case MENU_ITEM_FIELD_MODIFIER_CHANGE_FIRST + 1:
+                            case MENU_ITEM_FIELD_MODIFIER_CHANGE_FIRST + 2:
+                            case MENU_ITEM_FIELD_MODIFIER_CHANGE_FIRST + 3:
+                            case MENU_ITEM_FIELD_MODIFIER_CHANGE_FIRST + 4:
+                            case MENU_ITEM_FIELD_MODIFIER_CHANGE_FIRST + 5:
+                            case MENU_ITEM_FIELD_MODIFIER_CHANGE_FIRST + 6:
+                            case MENU_ITEM_FIELD_MODIFIER_CHANGE_FIRST + 7:
                             {
-                                s32 idx2 = content_index - 0x2F;
+                                /* Original bug: the base is the sign fields', so idx2 is 8-15 and menu_lookup_item_nibble sets no nibble for it. */
+                                s32 idx2 = content_index - MENU_ITEM_FIELD_MODIFIER_CHANGE_SIGN_FIRST;
 
                                 if (g_menu_item_ptr != 0)
                                 {
@@ -3970,22 +3982,22 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x3F:
-                            case 0x40:
-                            case 0x41:
-                            case 0x42:
-                                if (g_menu_category1_item != 0)
+                            case MENU_ITEM_FIELD_ARMOR_VALUE_FIRST:
+                            case MENU_ITEM_FIELD_ARMOR_VALUE_FIRST + 1:
+                            case MENU_ITEM_FIELD_ARMOR_VALUE_FIRST + 2:
+                            case MENU_ITEM_FIELD_ARMOR_VALUE_FIRST + 3:
+                                if (g_menu_armor_item != 0)
                                 {
-                                    packet_cursor =
-                                        menu_draw_clamped_number(ot_entry, packet_cursor, g_menu_category1_item->derived.values[content_index - 0x3F],
-                                                                 FIELD_TEXT_COLOR_MENU, &pos, MENU_CONTENT_ALIGN(content_item));
+                                    packet_cursor = menu_draw_clamped_number(
+                                        ot_entry, packet_cursor, g_menu_armor_item->derived.values[content_index - MENU_ITEM_FIELD_ARMOR_VALUE_FIRST],
+                                        FIELD_TEXT_COLOR_MENU, &pos, MENU_CONTENT_ALIGN(content_item));
                                 }
 
                                 break;
-                            case 0x43:
-                            case 0x44:
-                            case 0x45:
-                            case 0x46:
+                            case MENU_ITEM_FIELD_ARMOR_TOTAL_CHANGE_SIGN_FIRST:
+                            case MENU_ITEM_FIELD_ARMOR_TOTAL_CHANGE_SIGN_FIRST + 1:
+                            case MENU_ITEM_FIELD_ARMOR_TOTAL_CHANGE_SIGN_FIRST + 2:
+                            case MENU_ITEM_FIELD_ARMOR_TOTAL_CHANGE_SIGN_FIRST + 3:
                             {
                                 uintptr_t has = 0;
 
@@ -3999,14 +4011,14 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                     {
                                         if (slot->name[0] != 0)
                                         {
-                                            val += slot->derived.values[content_index - 0x43];
+                                            val += slot->derived.values[content_index - MENU_ITEM_FIELD_ARMOR_TOTAL_CHANGE_SIGN_FIRST];
                                         }
 
                                         has = (uintptr_t)g_item_slot_data[k];
 
                                         if (has != 0 && ((FieldItemRecord*)has)->name[0] != 0)
                                         {
-                                            val -= ((FieldItemRecord*)has)->derived.values[content_index - 0x43];
+                                            val -= ((FieldItemRecord*)has)->derived.values[content_index - MENU_ITEM_FIELD_ARMOR_TOTAL_CHANGE_SIGN_FIRST];
                                         }
 
                                         has = 1;
@@ -4022,10 +4034,10 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x47:
-                            case 0x48:
-                            case 0x49:
-                            case 0x4A:
+                            case MENU_ITEM_FIELD_ARMOR_TOTAL_CHANGE_FIRST:
+                            case MENU_ITEM_FIELD_ARMOR_TOTAL_CHANGE_FIRST + 1:
+                            case MENU_ITEM_FIELD_ARMOR_TOTAL_CHANGE_FIRST + 2:
+                            case MENU_ITEM_FIELD_ARMOR_TOTAL_CHANGE_FIRST + 3:
                             {
                                 uintptr_t has = 0;
                                 s32 total = has;
@@ -4038,14 +4050,14 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                     {
                                         if (slot->name[0] != 0)
                                         {
-                                            total += slot->derived.values[content_index - 0x47];
+                                            total += slot->derived.values[content_index - MENU_ITEM_FIELD_ARMOR_TOTAL_CHANGE_FIRST];
                                         }
 
                                         has = (uintptr_t)g_item_slot_data[k];
 
                                         if (has != 0 && ((FieldItemRecord*)has)->name[0] != 0)
                                         {
-                                            total -= ((FieldItemRecord*)has)->derived.values[content_index - 0x47];
+                                            total -= ((FieldItemRecord*)has)->derived.values[content_index - MENU_ITEM_FIELD_ARMOR_TOTAL_CHANGE_FIRST];
                                         }
 
                                         has = 1;
@@ -4067,13 +4079,13 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
 
                     break;
 
-                    case 4:
+                    case MENU_CONTENT_KIND_PARTY_FIELD:
                     {
                         content_index = content_item->action_type;
 
                         switch (content_index)
                         {
-                            case 0x1:
+                            case MENU_PARTY_FIELD_PORTRAIT:
                             {
                                 u8 tex_u;
                                 u8 tex_v;
@@ -4130,7 +4142,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x2:
+                            case MENU_PARTY_FIELD_NAME:
                             {
                                 u8* saved_game = (u8*)g_saved_game_ctx;
                                 s32 off = g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE + MENU_CHARACTER_RECORD_OFFSET;
@@ -4139,7 +4151,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x3:
+                            case MENU_PARTY_FIELD_LEVEL:
                             {
                                 SavedGameLayout* context = g_saved_game_ctx;
                                 u8 v = menu_active_character(context)->progress.level;
@@ -4148,14 +4160,14 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x4:
+                            case MENU_PARTY_FIELD_CURRENT_HP:
                             {
                                 packet_cursor = field_draw_number(ot_entry, packet_cursor, g_field_object_states[g_menu_char_slot].current_hp.word,
                                                                   FIELD_TEXT_COLOR_MENU, &pos, MENU_CONTENT_ALIGN(content_item));
                             }
 
                             break;
-                            case 0x5:
+                            case MENU_PARTY_FIELD_MAXIMUM_HP:
                             {
                                 SavedGameLayout* context = g_saved_game_ctx;
                                 u16 v = menu_active_character(context)->hp;
@@ -4163,7 +4175,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x6:
+                            case MENU_PARTY_FIELD_EXPERIENCE:
                             {
                                 SavedGameLayout* context = g_saved_game_ctx;
                                 u32 v = menu_active_character(context)->progress.word;
@@ -4172,23 +4184,23 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x7:
-                            case 0x8:
-                            case 0x9:
-                            case 0xA:
-                            case 0xB:
-                            case 0xC:
-                            case 0xD:
-                            case 0xE:
+                            case MENU_PARTY_FIELD_STAT_FIRST:
+                            case MENU_PARTY_FIELD_STAT_FIRST + 1:
+                            case MENU_PARTY_FIELD_STAT_FIRST + 2:
+                            case MENU_PARTY_FIELD_STAT_FIRST + 3:
+                            case MENU_PARTY_FIELD_STAT_FIRST + 4:
+                            case MENU_PARTY_FIELD_STAT_FIRST + 5:
+                            case MENU_PARTY_FIELD_STAT_FIRST + 6:
+                            case MENU_PARTY_FIELD_STAT_FIRST + 7:
                             {
                                 void* base = (void*)g_saved_game_ctx;
-                                s32 idx = content_index - 7;
+                                s32 idx = content_index - MENU_PARTY_FIELD_STAT_FIRST;
                                 packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, menu_active_character_value((SavedGameLayout*)base, idx) >> 9,
                                                                          FIELD_TEXT_COLOR_MENU, &pos, MENU_CONTENT_ALIGN(content_item));
                             }
 
                             break;
-                            case 0xF:
+                            case MENU_PARTY_FIELD_WEAPON_NAME:
                             {
                                 void* text = g_menu_equipment_base;
 
@@ -4206,19 +4218,20 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x10:
-                            case 0x11:
-                            case 0x12:
+                            case MENU_PARTY_FIELD_WEAPON_ATTACK_FIRST:
+                            case MENU_PARTY_FIELD_WEAPON_ATTACK_FIRST + 1:
+                            case MENU_PARTY_FIELD_WEAPON_ATTACK_FIRST + 2:
                                 if (g_menu_shown_equipment->name[0] != 0)
                                 {
-                                    packet_cursor = menu_draw_content_text(packet_cursor, ot_entry,
-                                                                           menu_text_entry(menu_text_table_base(MENU_TEXT_WEAPON_ATTACK_NAMES),
-                                                                                           g_menu_shown_equipment->derived.weapon.stats[content_index - 0xE]),
-                                                                           FIELD_TEXT_COLOR_MENU, content_item);
+                                    packet_cursor = menu_draw_content_text(
+                                        packet_cursor, ot_entry,
+                                        menu_text_entry(menu_text_table_base(MENU_TEXT_WEAPON_ATTACK_NAMES),
+                                                        g_menu_shown_equipment->derived.weapon.stats[content_index - MENU_PARTY_FIELD_WEAPON_ATTACK_FIRST + 2]),
+                                        FIELD_TEXT_COLOR_MENU, content_item);
                                 }
 
                                 break;
-                            case 0x13:
+                            case MENU_PARTY_FIELD_WEAPON_POWER:
                             {
                                 s32 displayed_stat = zero;
 
@@ -4248,20 +4261,20 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x14:
-                            case 0x15:
-                            case 0x16:
+                            case MENU_PARTY_FIELD_ARMOR_NAME_FIRST:
+                            case MENU_PARTY_FIELD_ARMOR_NAME_FIRST + 1:
+                            case MENU_PARTY_FIELD_ARMOR_NAME_FIRST + 2:
                             {
                                 uintptr_t base = (uintptr_t)g_menu_equipment_base;
                                 s32 slot_offset = content_index * MENU_ITEM_RECORD_SIZE;
 
-                                if (*(u8*)(slot_offset + base - 0x4C0) != 0)
+                                if (*(u8*)(slot_offset + base - (MENU_PARTY_FIELD_ARMOR_NAME_FIRST - 1) * MENU_ITEM_RECORD_SIZE) != 0)
                                 {
                                     s32 text_color = FIELD_TEXT_COLOR_MENU;
-                                    s32 off = slot_offset - 0x4C0;
+                                    s32 off = slot_offset - (MENU_PARTY_FIELD_ARMOR_NAME_FIRST - 1) * MENU_ITEM_RECORD_SIZE;
                                     void* text = (void*)(base + off);
 
-                                    if (g_item_slot_flags[content_index - 0x13] != 0)
+                                    if (g_item_slot_flags[content_index - MENU_PARTY_FIELD_ARMOR_NAME_FIRST + 1] != 0)
                                     {
                                         text_color = FIELD_TEXT_COLOR_MENU_HIGHLIGHT;
                                     }
@@ -4271,15 +4284,16 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x17:
-                            case 0x18:
+                            case MENU_PARTY_FIELD_COMMAND_NAME_FIRST:
+                            case MENU_PARTY_FIELD_COMMAND_NAME_FIRST + 1:
                                 packet_cursor = menu_draw_content_text(
                                     packet_cursor, ot_entry,
                                     menu_text_entry(menu_text_table_base(MENU_TEXT_ABILITY_NAMES),
-                                                    *(menu_character_block() + content_index + (MENU_CHARACTER_FIELD_OFFSET(info.actions.commands) - 0x17))),
+                                                    *(menu_character_block() + content_index +
+                                                      (MENU_CHARACTER_FIELD_OFFSET(info.actions.commands) - MENU_PARTY_FIELD_COMMAND_NAME_FIRST))),
                                     FIELD_TEXT_COLOR_MENU, content_item);
                                 break;
-                            case 0x19:
+                            case MENU_PARTY_FIELD_NEXT_LEVEL_EXPERIENCE:
                             {
                                 s32 v = field_get_next_level_experience(g_menu_char_slot);
                                 SavedGameLayout* context = g_saved_game_ctx;
@@ -4289,10 +4303,10 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x1B:
-                            case 0x1C:
-                            case 0x1D:
-                            case 0x1E:
+                            case MENU_PARTY_FIELD_SKILL_NAME_FIRST:
+                            case MENU_PARTY_FIELD_SKILL_NAME_FIRST + 1:
+                            case MENU_PARTY_FIELD_SKILL_NAME_FIRST + 2:
+                            case MENU_PARTY_FIELD_SKILL_NAME_FIRST + 3:
                             {
                                 void* base = (void*)g_saved_game_ctx;
                                 u8* ptr;
@@ -4300,7 +4314,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 ptr = (u8*)base + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
                                 ptr += content_index;
                                 content_index = (intptr_t)ptr;
-                                val = ((MenuNameSelection*)(ptr + (MENU_SKILL_OFFSET - 0x1B)))->packed;
+                                val = ((MenuNameSelection*)(ptr + (MENU_SKILL_OFFSET - MENU_PARTY_FIELD_SKILL_NAME_FIRST)))->packed;
 
                                 if (val != 0xFF)
                                 {
@@ -4311,9 +4325,11 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                         u16* saved_game = (u16*)g_saved_game_ctx;
                                         void* character_record =
                                             (void*)((u8*)saved_game + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE + MENU_CHARACTER_RECORD_OFFSET));
-                                        void* text = (void*)((u8*)character_record +
-                                                             ((((MenuNameSelection*)(ptr + (MENU_SKILL_OFFSET - 0x1B)))->fields.index * MENU_ITEM_RECORD_SIZE) +
-                                                              OFFSETOF(FieldCharacterRecord, instruments)));
+                                        void* text =
+                                            (void*)((u8*)character_record +
+                                                    ((((MenuNameSelection*)(ptr + (MENU_SKILL_OFFSET - MENU_PARTY_FIELD_SKILL_NAME_FIRST)))->fields.index *
+                                                      MENU_ITEM_RECORD_SIZE) +
+                                                     OFFSETOF(FieldCharacterRecord, instruments)));
                                         packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, text, FIELD_TEXT_COLOR_MENU, MENU_CONTENT_X(content_item),
                                                                         MENU_CONTENT_Y(content_item), MENU_CONTENT_ALIGN(content_item));
                                     }
@@ -4328,7 +4344,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                             (uintptr_t)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_TECHNIQUE_NAMES];
                                         weapon_type = ((g_menu_equipment_base->info.word >> 10) & 0x3F);
 
-                                        idx = ((MenuNameSelection*)(ptr + (MENU_SKILL_OFFSET - 0x1B)))->fields.index;
+                                        idx = ((MenuNameSelection*)(ptr + (MENU_SKILL_OFFSET - MENU_PARTY_FIELD_SKILL_NAME_FIRST)))->fields.index;
                                         technique_offset = idx * 2;
                                         technique_name = (void*)(technique_names + *(u16*)(technique_offset + (weapon_type * 0x30 + technique_names)));
                                         packet_cursor =
@@ -4339,14 +4355,14 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x1F:
+                            case MENU_PARTY_FIELD_MONSTER_NAME:
                                 packet_cursor =
                                     menu_draw_content_text(packet_cursor, ot_entry,
                                                            menu_text_entry(menu_text_table_base(MENU_TEXT_MONSTER_NAMES),
                                                                            menu_character_block()[MENU_CHARACTER_FIELD_OFFSET(info.actions.variant)]),
                                                            FIELD_TEXT_COLOR_MENU, content_item);
                                 break;
-                            case 0x20:
+                            case MENU_PARTY_FIELD_ARMOR_TOTAL_FIRST:
                             {
                                 u32 total = 0;
 
@@ -4377,7 +4393,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x21:
+                            case MENU_PARTY_FIELD_ARMOR_TOTAL_FIRST + 1:
                             {
                                 u32 total = 0;
 
@@ -4408,7 +4424,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x22:
+                            case MENU_PARTY_FIELD_ARMOR_TOTAL_FIRST + 2:
                             {
                                 u32 total = 0;
 
@@ -4439,7 +4455,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x23:
+                            case MENU_PARTY_FIELD_ARMOR_TOTAL_FIRST + 3:
                             {
                                 u32 total = 0;
 
@@ -4470,7 +4486,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x3F:
+                            case MENU_PARTY_FIELD_WEAPON_POWER_CHANGE_SIGN:
                             {
                                 val = 0;
 
@@ -4497,10 +4513,10 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x40:
-                            case 0x41:
-                            case 0x42:
-                            case 0x43:
+                            case MENU_PARTY_FIELD_ARMOR_TOTAL_CHANGE_SIGN_FIRST:
+                            case MENU_PARTY_FIELD_ARMOR_TOTAL_CHANGE_SIGN_FIRST + 1:
+                            case MENU_PARTY_FIELD_ARMOR_TOTAL_CHANGE_SIGN_FIRST + 2:
+                            case MENU_PARTY_FIELD_ARMOR_TOTAL_CHANGE_SIGN_FIRST + 3:
                             {
                                 uintptr_t has = 0;
 
@@ -4514,14 +4530,14 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                     {
                                         if (slot->name[0] != 0)
                                         {
-                                            val += slot->derived.values[content_index - 0x40];
+                                            val += slot->derived.values[content_index - MENU_PARTY_FIELD_ARMOR_TOTAL_CHANGE_SIGN_FIRST];
                                         }
 
                                         has = (uintptr_t)g_item_slot_data[k];
 
                                         if (has != 0 && ((FieldItemRecord*)has)->name[0] != 0)
                                         {
-                                            val -= ((FieldItemRecord*)has)->derived.values[content_index - 0x40];
+                                            val -= ((FieldItemRecord*)has)->derived.values[content_index - MENU_PARTY_FIELD_ARMOR_TOTAL_CHANGE_SIGN_FIRST];
                                         }
 
                                         has = 1;
@@ -4537,7 +4553,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x44:
+                            case MENU_PARTY_FIELD_WEAPON_POWER_CHANGE:
                             {
                                 u16 current_stat = 0;
 
@@ -4565,10 +4581,10 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x45:
-                            case 0x46:
-                            case 0x47:
-                            case 0x48:
+                            case MENU_PARTY_FIELD_ARMOR_TOTAL_CHANGE_FIRST:
+                            case MENU_PARTY_FIELD_ARMOR_TOTAL_CHANGE_FIRST + 1:
+                            case MENU_PARTY_FIELD_ARMOR_TOTAL_CHANGE_FIRST + 2:
+                            case MENU_PARTY_FIELD_ARMOR_TOTAL_CHANGE_FIRST + 3:
                             {
                                 uintptr_t has = 0;
                                 s32 total = has;
@@ -4581,14 +4597,14 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                     {
                                         if (slot->name[0] != 0)
                                         {
-                                            total += slot->derived.values[content_index - 0x45];
+                                            total += slot->derived.values[content_index - MENU_PARTY_FIELD_ARMOR_TOTAL_CHANGE_FIRST];
                                         }
 
                                         has = (uintptr_t)g_item_slot_data[k];
 
                                         if (has != 0 && ((FieldItemRecord*)has)->name[0] != 0)
                                         {
-                                            total -= ((FieldItemRecord*)has)->derived.values[content_index - 0x45];
+                                            total -= ((FieldItemRecord*)has)->derived.values[content_index - MENU_PARTY_FIELD_ARMOR_TOTAL_CHANGE_FIRST];
                                         }
 
                                         has = 1;
@@ -4603,13 +4619,13 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x49:
+                            case MENU_PARTY_FIELD_COMPANION_ABILITY_NAME:
                                 packet_cursor = menu_draw_content_text(packet_cursor, ot_entry,
                                                                        menu_text_entry(menu_text_table_base(MENU_TEXT_COMPANION_ABILITY_NAMES),
                                                                                        menu_character_block()[MENU_CHARACTER_FIELD_OFFSET(companion_ability)]),
                                                                        FIELD_TEXT_COLOR_MENU, content_item);
                                 break;
-                            case 0x4A:
+                            case MENU_PARTY_FIELD_GOLEM_CLASS_NAME:
                             {
                                 s8 golem_index = g_saved_game_ctx->joined_golem;
 
@@ -4626,7 +4642,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x4B:
+                            case MENU_PARTY_FIELD_GOLEM_GRID_SIZE:
                             {
                                 s8 golem_index = g_saved_game_ctx->joined_golem;
 
@@ -4643,21 +4659,21 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x4C:
+                            case MENU_PARTY_FIELD_GOLEM_FAILURE_RATE:
                             {
                                 s8 golem_index = g_saved_game_ctx->joined_golem;
 
                                 if (golem_index >= 0)
                                 {
                                     SavedGameLayout* context = g_saved_game_ctx;
-                                    u8 v = menu_golem_record(context, golem_index)->random_chance;
+                                    u8 v = menu_golem_record(context, golem_index)->failure_rate;
                                     packet_cursor =
                                         field_draw_number(ot_entry, packet_cursor, v, FIELD_TEXT_COLOR_MENU, &pos, MENU_CONTENT_ALIGN(content_item));
                                 }
                             }
 
                             break;
-                            case 0x4D:
+                            case MENU_PARTY_FIELD_GOLEM_PALETTE_NAME:
                             {
                                 s8 golem_index = g_saved_game_ctx->joined_golem;
 
@@ -4671,47 +4687,47 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 0x4E:
-                            case 0x4F:
-                            case 0x50:
-                            case 0x51:
-                            case 0x52:
-                            case 0x53:
-                            case 0x54:
-                            case 0x55:
+                            case MENU_PARTY_FIELD_WEAPON_BONUS_FIRST:
+                            case MENU_PARTY_FIELD_WEAPON_BONUS_FIRST + 1:
+                            case MENU_PARTY_FIELD_WEAPON_BONUS_FIRST + 2:
+                            case MENU_PARTY_FIELD_WEAPON_BONUS_FIRST + 3:
+                            case MENU_PARTY_FIELD_WEAPON_BONUS_FIRST + 4:
+                            case MENU_PARTY_FIELD_WEAPON_BONUS_FIRST + 5:
+                            case MENU_PARTY_FIELD_WEAPON_BONUS_FIRST + 6:
+                            case MENU_PARTY_FIELD_WEAPON_BONUS_FIRST + 7:
                             {
                                 u32 display_value = 0;
 
                                 switch (content_index)
                                 {
-                                    case 0x4E:
+                                    case MENU_PARTY_FIELD_WEAPON_BONUS_FIRST:
                                         display_value = menu_equipped_item(g_saved_game_ctx, 0)->bonus_nibbles.word & 0xF;
                                         break;
-                                    case 0x4F:
+                                    case MENU_PARTY_FIELD_WEAPON_BONUS_FIRST + 1:
                                         display_value = menu_equipped_item(g_saved_game_ctx, 0)->bonus_nibbles.bytes[0];
                                         display_value >>= 4;
                                         break;
-                                    case 0x50:
+                                    case MENU_PARTY_FIELD_WEAPON_BONUS_FIRST + 2:
                                         display_value = menu_equipped_item(g_saved_game_ctx, 0)->bonus_nibbles.word >> 8;
                                         display_value &= 0xF;
                                         break;
-                                    case 0x51:
+                                    case MENU_PARTY_FIELD_WEAPON_BONUS_FIRST + 3:
                                         display_value = menu_equipped_item(g_saved_game_ctx, 0)->bonus_nibbles.word >> 12;
                                         display_value &= 0xF;
                                         break;
-                                    case 0x52:
+                                    case MENU_PARTY_FIELD_WEAPON_BONUS_FIRST + 4:
                                         display_value = menu_equipped_item(g_saved_game_ctx, 0)->bonus_nibbles.halves[1];
                                         display_value &= 0xF;
                                         break;
-                                    case 0x53:
+                                    case MENU_PARTY_FIELD_WEAPON_BONUS_FIRST + 5:
                                         display_value = menu_equipped_item(g_saved_game_ctx, 0)->bonus_nibbles.word >> 20;
                                         display_value &= 0xF;
                                         break;
-                                    case 0x54:
+                                    case MENU_PARTY_FIELD_WEAPON_BONUS_FIRST + 6:
                                         display_value = menu_equipped_item(g_saved_game_ctx, 0)->bonus_nibbles.bytes[3];
                                         display_value &= 0xF;
                                         break;
-                                    case 0x55:
+                                    case MENU_PARTY_FIELD_WEAPON_BONUS_FIRST + 7:
                                         display_value = menu_equipped_item(g_saved_game_ctx, 0)->bonus_nibbles.word >> 28;
                                         break;
                                 }
@@ -4728,13 +4744,13 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
 
                     break;
 
-                    case 6:
+                    case MENU_CONTENT_KIND_GAME_FIELD:
                     {
                         shared_s0 = content_item->action_type;
 
                         switch (shared_s0)
                         {
-                            case 1:
+                            case MENU_GAME_FIELD_MONEY:
                                 if (g_saved_game_ctx->money > SAVED_MONEY_MAX)
                                 {
                                     packet_cursor = field_draw_number(ot_entry, packet_cursor, SAVED_MONEY_MAX, FIELD_TEXT_COLOR_MENU, &pos,
@@ -4747,7 +4763,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 }
 
                                 break;
-                            case 2:
+                            case MENU_GAME_FIELD_PLAY_TIME:
                             {
                                 u32 align;
                                 s32 total_frames;
@@ -4796,13 +4812,13 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
 
                     break;
 
-                    case 7:
+                    case MENU_CONTENT_KIND_ATTACK_LABEL:
                     {
                         shared_s0 = content_item->action_type;
 
                         switch (shared_s0)
                         {
-                            case 1:
+                            case MENU_ATTACK_LABEL_QUICK:
                             {
                                 void* base = (void*)g_saved_game_ctx + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
 
@@ -4817,7 +4833,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                             }
 
                             break;
-                            case 2:
+                            case MENU_ATTACK_LABEL_POWER:
                             {
                                 void* base = (void*)g_saved_game_ctx + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
 
@@ -4857,7 +4873,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                     packet_cursor = field_draw_text(packet_cursor, ot_entry, title, FIELD_TEXT_COLOR_MENU, 0xAC, 0xC, FIELD_TEXT_ALIGN_CENTER);
                 }
             }
-            else if (g_menu_scene_type == 0x1D)
+            else if (g_menu_scene_type == MENU_NODE_BACKFIELD)
             {
                 packet_cursor = field_draw_text(packet_cursor, ot_entry, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_EVENT_LIST),
                                                 FIELD_TEXT_COLOR_MENU, 0xAC, 0xC, FIELD_TEXT_ALIGN_CENTER);
@@ -4870,12 +4886,12 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
 
             switch (g_menu_scene_type)
             {
-                case 20:
-                case 21:
-                case 23:
-                case 24:
-                case 26:
-                case 27:
+                case MENU_NODE_WEAPON_STATUS:
+                case MENU_NODE_WEAPON_ITEM_STATUS:
+                case MENU_NODE_ARMOR_STATUS:
+                case MENU_NODE_ARMOR_ITEM_STATUS:
+                case MENU_NODE_INSTRUMENT_STATUS:
+                case MENU_NODE_INSTRUMENT_ITEM_STATUS:
                 {
                     void* number_cursor;
                     pos.x = 0x88;
@@ -5302,7 +5318,7 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
 
         if (content_type == MENU_CONTENT_ITEM_TYPE_ACTION)
         {
-            if (content_base[g_menu_hit_item_idx].action_type < 0xF0U)
+            if (content_base[g_menu_hit_item_idx].action_type < (u32)MENU_HELP_FIRST)
             {
                 prim_buf = menu_emit_content_label(prim_buf, ot,
                                                    menu_text_entry(menu_text_table_base(MENU_TEXT_GENERAL), content_base[g_menu_hit_item_idx].action_type));
@@ -5313,40 +5329,40 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
 
                 switch (action_type)
                 {
-                    case 0xF0:
+                    case MENU_HELP_MONSTER_FAMILY:
                         prim_buf = menu_emit_content_label(
                             prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MONSTER_FAMILIES), content_base[g_menu_hit_item_idx].action_type));
                         break;
-                    case 0xF1:
+                    case MENU_HELP_ARTIFACT:
                         prim_buf = menu_emit_content_label(
                             prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_ARTIFACT_HELP), content_base[g_menu_hit_item_idx].action_type));
                         break;
-                    case 0xF2:
+                    case MENU_HELP_MAGIC_SHAPE:
                         prim_buf = menu_emit_content_label(
                             prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MAGIC_SHAPE_HELP), content_base[g_menu_hit_item_idx].action_type));
                         break;
-                    case 0xF3:
+                    case MENU_HELP_SPIRIT:
                         prim_buf = menu_emit_content_label(
                             prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_SPIRIT_HELP), content_base[g_menu_hit_item_idx].action_type));
                         break;
-                    case 0xF4:
+                    case MENU_HELP_MAGIC:
                         prim_buf = menu_emit_content_label(
                             prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MAGIC_HELP), content_base[g_menu_hit_item_idx].action_type));
                         break;
-                    case 0xF5:
+                    case MENU_HELP_ITEM_SPECIAL:
                         prim_buf = menu_emit_content_label(
                             prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_ITEM_SPECIAL_HELP), content_base[g_menu_hit_item_idx].action_type));
                         break;
-                    case 0xF6:
+                    case MENU_HELP_MONSTER_TECHNIQUE:
                         prim_buf = menu_emit_content_label(
                             prim_buf, ot,
                             menu_text_entry(menu_text_table_base(MENU_TEXT_MONSTER_TECHNIQUE_HELP), content_base[g_menu_hit_item_idx].action_type));
                         break;
-                    case 0xF7:
+                    case MENU_HELP_WEAPON_ATTACK:
                         prim_buf = menu_emit_content_label(
                             prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_WEAPON_ATTACK_HELP), content_base[g_menu_hit_item_idx].action_type));
                         break;
-                    case 0xF8:
+                    case MENU_HELP_SKILL:
                         if (g_menu_help_skill_selection != MENU_NONE)
                         {
                             if (g_menu_help_skill_selection & 0x80)
@@ -5363,18 +5379,18 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
                         }
 
                         break;
-                    case 0xF9:
+                    case MENU_HELP_TECHNIQUE:
                         prim_buf = menu_emit_content_label(
                             prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_TECHNIQUE_HELP), content_base[g_menu_hit_item_idx].action_type));
                         break;
-                    case 0xFA:
+                    case MENU_HELP_ABILITY:
                         prim_buf = menu_emit_content_label(
                             prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_ABILITY_HELP), content_base[g_menu_hit_item_idx].action_type));
                         break;
-                    case 0xFB:
-                    case 0xFC:
-                    case 0xFD:
-                    case 0xFE:
+                    case MENU_HELP_ITEM_FIRST:
+                    case MENU_HELP_ITEM_FIRST + 1:
+                    case MENU_HELP_ITEM_FIRST + 2:
+                    case MENU_HELP_ITEM_FIRST + 3:
                         prim_buf = menu_emit_content_label(
                             prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_ITEM_HELP), content_base[g_menu_hit_item_idx].action_type));
                 }
@@ -5386,8 +5402,8 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
 
             switch (action_type)
             {
-                case 1:
-                case 2:
+                case MENU_COMMAND_SUBTYPE_BASE:
+                case MENU_COMMAND_SUBTYPE_BASE + 1:
                 {
                     u8* text_table = menu_text_table_base(MENU_TEXT_ABILITY_HELP);
                     u8* character_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
@@ -5396,10 +5412,10 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
                     prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));
                     break;
                 }
-                case 3:
-                case 4:
-                case 5:
-                case 6:
+                case MENU_SKILL_SUBTYPE_BASE:
+                case MENU_SKILL_SUBTYPE_BASE + 1:
+                case MENU_SKILL_SUBTYPE_BASE + 2:
+                case MENU_SKILL_SUBTYPE_BASE + 3:
                 {
                     u8* pad_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
                     u8* flag_addr = pad_base + action_type;
@@ -5431,10 +5447,10 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
 
                     break;
                 }
-                case 7:
-                case 8:
-                case 9:
-                case 10:
+                case MENU_EQUIPMENT_SUBTYPE(FIELD_WEAPON_SLOT):
+                case MENU_EQUIPMENT_SUBTYPE(1):
+                case MENU_EQUIPMENT_SUBTYPE(2):
+                case MENU_EQUIPMENT_SUBTYPE(3):
                     if (g_menu_char_slot < 2)
                     {
                         SavedGameLayout* context = g_saved_game_ctx;
@@ -5467,7 +5483,7 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
 
                             switch (kind)
                             {
-                                case 0:
+                                case FIELD_ITEM_CATEGORY_WEAPON:
                                 {
                                     u32 idx = (item_attributes >> 9) & 0x7E;
                                     uintptr_t category_help_table = (uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES);
@@ -5478,7 +5494,7 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
                                     menu_copy_encoded_pair(out, first, str2);
                                     break;
                                 }
-                                case 1:
+                                case FIELD_ITEM_CATEGORY_ARMOR:
                                 {
                                     u32 idx = (item_attributes >> 9) & 0x7E;
                                     uintptr_t category_help_table = (uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES);
@@ -5510,21 +5526,22 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
                     }
 
                     break;
-                case 11:
-                case 12:
-                case 13:
+                case MENU_WEAPON_ATTACK_SUBTYPE_BASE:
+                case MENU_WEAPON_ATTACK_SUBTYPE_BASE + 1:
+                case MENU_WEAPON_ATTACK_SUBTYPE_BASE + 2:
                 {
                     u8* char_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
 
                     if (*(char_base + MENU_FIRST_EQUIPMENT_OFFSET) != 0)
                     {
-                        text_index = *(char_base + action_type + (MENU_CHARACTER_FIELD_OFFSET(equipment[FIELD_WEAPON_SLOT].derived.weapon.stats[2]) - 11));
+                        text_index = *(char_base + action_type +
+                                       (MENU_CHARACTER_FIELD_OFFSET(equipment[FIELD_WEAPON_SLOT].derived.weapon.stats[2]) - MENU_WEAPON_ATTACK_SUBTYPE_BASE));
                         prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_WEAPON_ATTACK_HELP), text_index));
                     }
 
                     break;
                 }
-                case 14:
+                case MENU_MONSTER_FAMILY_SUBTYPE:
                 {
                     u8* text_table = menu_text_table_base(MENU_TEXT_MONSTER_FAMILIES);
                     u8* character_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
@@ -5533,64 +5550,64 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
                     prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));
                     break;
                 }
-                case 15:
+                case MENU_RENAME_ITEM_SUBTYPE:
                     if (g_menu_item_ptr != NULL)
                     {
                         prim_buf = menu_emit_content_label(prim_buf, ot, (u8*)g_menu_item_ptr);
                     }
 
                     break;
-                case 16:
-                case 17:
-                case 18:
+                case MENU_ITEM_SPECIAL_SUBTYPE_BASE:
+                case MENU_ITEM_SPECIAL_SUBTYPE_BASE + 1:
+                case MENU_ITEM_SPECIAL_SUBTYPE_BASE + 2:
                     if (g_menu_item_ptr != 0)
                     {
-                        text_index = g_menu_item_ptr->special_ids[action_type - 16];
+                        text_index = g_menu_item_ptr->special_ids[action_type - MENU_ITEM_SPECIAL_SUBTYPE_BASE];
                         prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_ITEM_SPECIAL_HELP), text_index));
                     }
 
                     break;
-                case 19:
-                case 20:
-                case 21:
+                case MENU_ITEM_ATTACK_SUBTYPE_BASE:
+                case MENU_ITEM_ATTACK_SUBTYPE_BASE + 1:
+                case MENU_ITEM_ATTACK_SUBTYPE_BASE + 2:
                     if (g_menu_item_ptr != 0)
                     {
-                        text_index = g_menu_item_ptr->derived.weapon.stats[action_type - 17];
+                        text_index = g_menu_item_ptr->derived.weapon.stats[action_type - MENU_ITEM_ATTACK_SUBTYPE_BASE + 2];
                         prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_WEAPON_ATTACK_HELP), text_index));
                     }
 
                     break;
-                case 22:
+                case MENU_INSTRUMENT_MAGIC_SUBTYPE:
                     if (g_menu_item_ptr != 0)
                     {
                         u8* help_table = menu_text_table_base(MENU_TEXT_MAGIC_HELP);
-                        u8 cat = g_menu_category2_item->derived.instrument.spirit;
-                        u8 entry = g_menu_category2_item->derived.instrument.spell;
+                        u8 cat = g_menu_instrument_item->derived.instrument.spirit;
+                        u8 entry = g_menu_instrument_item->derived.instrument.spell;
                         prim_buf = menu_emit_content_label(prim_buf, ot, help_table + *(u16*)(help_table + cat * 0x1C + entry * 2));
                     }
 
                     break;
-                case 23:
+                case MENU_INSTRUMENT_SPIRIT_SUBTYPE:
                     if (g_menu_item_ptr != 0)
                     {
                         u8* text_table = menu_text_table_base(MENU_TEXT_SPIRIT_HELP);
-                        u8* item = (u8*)g_menu_category2_item;
+                        u8* item = (u8*)g_menu_instrument_item;
                         u8 entry_index = item[OFFSETOF(FieldItemRecord, derived.instrument.spirit)];
                         prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));
                     }
 
                     break;
-                case 24:
+                case MENU_INSTRUMENT_SHAPE_SUBTYPE:
                     if (g_menu_item_ptr != 0)
                     {
                         u8* text_table = menu_text_table_base(MENU_TEXT_MAGIC_SHAPE_HELP);
-                        u8* item = (u8*)g_menu_category2_item;
+                        u8* item = (u8*)g_menu_instrument_item;
                         u8 entry_index = item[OFFSETOF(FieldItemRecord, derived.instrument.spell)];
                         prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));
                     }
 
                     break;
-                case 25:
+                case MENU_COMPANION_ABILITY_SUBTYPE:
                 {
                     u8* text_table = menu_text_table_base(MENU_TEXT_COMPANION_ABILITY_HELP);
                     u8* character_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
@@ -6058,7 +6075,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
 
         switch (g_menu_active_item_category)
         {
-            case 0:
+            case FIELD_ITEM_CATEGORY_WEAPON:
             {
                 s32 v = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
 
@@ -6078,7 +6095,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                 g_menu_nodes[g_menu_scene_type].label_id = g_menu_list_page_label_ids[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
                 break;
             }
-            case 1:
+            case FIELD_ITEM_CATEGORY_ARMOR:
             {
                 s32 v = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
 
@@ -6097,7 +6114,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                 g_menu_nodes[g_menu_scene_type].label_id = g_menu_list_page_label_ids[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
                 break;
             }
-            case 2:
+            case FIELD_ITEM_CATEGORY_INSTRUMENT:
             {
                 u8 v = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
 
@@ -6120,7 +6137,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
 
     packet_cursor = scroll_list_draw(packet_cursor, ot, list, g_menu_scroll_nav_entries, view_origin, active);
 
-    if (g_menu_scene_type < 0x13 && (g_pad_input & 0x8000))
+    if (g_menu_scene_type < MENU_NODE_WEAPONS && (g_pad_input & 0x8000))
     {
         g_pad_input &= ~0x40;
     }
@@ -6129,7 +6146,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
     {
         menu_play_se(SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
 
-        if (g_menu_scene_type < 0x13)
+        if (g_menu_scene_type < MENU_NODE_WEAPONS)
         {
             s32 item_kind;
             g_menu_content_ready = 0;
@@ -6155,9 +6172,9 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
         }
         else
         {
-            g_menu_nodes[0x13].label_id = 0x11;
-            g_menu_nodes[0x16].label_id = 0x14;
-            g_menu_nodes[0x19].label_id = 0x16;
+            g_menu_nodes[MENU_NODE_WEAPONS].label_id = 0x11;
+            g_menu_nodes[MENU_NODE_ARMOR].label_id = 0x14;
+            g_menu_nodes[MENU_NODE_INSTRUMENTS].label_id = 0x16;
             g_menu_content_ready = 0;
             menu_play_se(SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
             menu_reset_content_view();
@@ -6169,9 +6186,9 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
     y = item_index;
     scroll_y = list->scroll_y;
     g_menu_item_ptr = 0;
-    g_menu_category0_item = 0;
-    g_menu_category1_item = 0;
-    g_menu_category2_item = 0;
+    g_menu_weapon_item = 0;
+    g_menu_armor_item = 0;
+    g_menu_instrument_item = 0;
     item_record = (FieldItemRecord*)((u8*)g_saved_game_ctx + MENU_ITEM_TABLE_OFFSET);
 
     while (item_index < MENU_ITEM_TABLE_COUNT)
@@ -6187,20 +6204,20 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
 
         item_attributes = item_record->info.word;
         item_kind = FIELD_ITEM_CATEGORY(item_attributes);
-        icon_id = 0x45;
+        icon_id = MENU_ICON_WEAPON_FIRST;
 
         if (item_kind == g_menu_active_item_category)
         {
             switch (item_kind)
             {
-                case 0:
-                    icon_id = FIELD_ITEM_TYPE(item_attributes) + 0x45;
+                case FIELD_ITEM_CATEGORY_WEAPON:
+                    icon_id = FIELD_ITEM_TYPE(item_attributes) + MENU_ICON_WEAPON_FIRST;
                     break;
-                case 1:
-                    icon_id = FIELD_ITEM_TYPE(item_attributes) + 0x50;
+                case FIELD_ITEM_CATEGORY_ARMOR:
+                    icon_id = FIELD_ITEM_TYPE(item_attributes) + MENU_ICON_ARMOR_FIRST;
                     break;
-                case 2:
-                    icon_id = FIELD_ITEM_TYPE(item_attributes) + 0x5C;
+                case FIELD_ITEM_CATEGORY_INSTRUMENT:
+                    icon_id = FIELD_ITEM_TYPE(item_attributes) + MENU_ICON_INSTRUMENT_FIRST;
                     break;
             }
 
@@ -6269,14 +6286,14 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
 
                 switch (g_menu_active_item_category)
                 {
-                    case 0:
-                        g_menu_category0_item = g_menu_item_ptr;
+                    case FIELD_ITEM_CATEGORY_WEAPON:
+                        g_menu_weapon_item = g_menu_item_ptr;
                         break;
-                    case 1:
-                        g_menu_category1_item = g_menu_item_ptr;
+                    case FIELD_ITEM_CATEGORY_ARMOR:
+                        g_menu_armor_item = g_menu_item_ptr;
                         break;
-                    case 2:
-                        g_menu_category2_item = g_menu_item_ptr;
+                    case FIELD_ITEM_CATEGORY_INSTRUMENT:
+                        g_menu_instrument_item = g_menu_item_ptr;
                         break;
                 }
             }
@@ -6357,7 +6374,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
 
                 switch (item_kind)
                 {
-                    case 0:
+                    case FIELD_ITEM_CATEGORY_WEAPON:
                     {
                         u32 category_offset = (item_attributes >> 9) & 0x7E;
                         uintptr_t description_table = (uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES);
@@ -6368,7 +6385,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                         menu_copy_encoded_pair(text_cursor, name_prefix, description);
                         break;
                     }
-                    case 1:
+                    case FIELD_ITEM_CATEGORY_ARMOR:
                     {
                         u32 category_offset = (item_attributes >> 9) & 0x7E;
                         uintptr_t description_table = (uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES);
@@ -6402,7 +6419,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
         {
             if (active != 0)
             {
-                if (g_menu_scene_type < 0x13)
+                if (g_menu_scene_type < MENU_NODE_WEAPONS)
                 {
                     s32 sub = g_menu_active_item_category;
 
@@ -6475,9 +6492,9 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                 {
                     u16 sel;
 
-                    g_menu_nodes[0x13].label_id = 0x11;
-                    g_menu_nodes[0x16].label_id = 0x14;
-                    g_menu_nodes[0x19].label_id = 0x16;
+                    g_menu_nodes[MENU_NODE_WEAPONS].label_id = 0x11;
+                    g_menu_nodes[MENU_NODE_ARMOR].label_id = 0x14;
+                    g_menu_nodes[MENU_NODE_INSTRUMENTS].label_id = 0x16;
                     menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
                     sel = list->navigation.fields.selected_index;
 
@@ -6573,14 +6590,14 @@ u32 menu_step_item_selection(s32 step)
 
                 switch (kind)
                 {
-                    case 0:
-                        g_menu_category0_item = g_menu_item_ptr;
+                    case FIELD_ITEM_CATEGORY_WEAPON:
+                        g_menu_weapon_item = g_menu_item_ptr;
                         break;
-                    case 1:
-                        g_menu_category1_item = g_menu_item_ptr;
+                    case FIELD_ITEM_CATEGORY_ARMOR:
+                        g_menu_armor_item = g_menu_item_ptr;
                         break;
-                    case 2:
-                        g_menu_category2_item = g_menu_item_ptr;
+                    case FIELD_ITEM_CATEGORY_INSTRUMENT:
+                        g_menu_instrument_item = g_menu_item_ptr;
                         break;
                 }
 
@@ -6995,7 +7012,7 @@ void* menu_skill_action_callback(u_long* ot, ScrollListState* state, void* prim_
 
         switch (list->navigation.fields.selected_index)
         {
-            case 0:
+            case MENU_SKILL_COMMAND_TECHNIQUE:
                 list->anim_frame = 0;
                 list->active = MENU_SLOT_STATE_FREE;
                 rect.x = 0x40;
@@ -7016,7 +7033,7 @@ void* menu_skill_action_callback(u_long* ot, ScrollListState* state, void* prim_
                 ((MenuSlot*)list)->navigation.fields.selected_index = selected_row;
                 return buf;
 
-            case 1:
+            case MENU_SKILL_COMMAND_MAGIC:
                 menu_clear_slots();
                 g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].idx_nav.s.self_idx = 0x29;
                 g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].label_id =
@@ -7027,12 +7044,12 @@ void* menu_skill_action_callback(u_long* ot, ScrollListState* state, void* prim_
                 menu_open_content_page(MENU_PAGE_INSTRUMENTS);
                 g_menu_draw_early_out = 1;
                 g_menu_item_ptr = NULL;
-                g_menu_category0_item = NULL;
-                g_menu_category1_item = NULL;
-                g_menu_category2_item = NULL;
+                g_menu_weapon_item = NULL;
+                g_menu_armor_item = NULL;
+                g_menu_instrument_item = NULL;
                 return buf;
 
-            case 2:
+            case MENU_SKILL_COMMAND_REMOVE:
                 character_bytes = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
                 character_bytes += g_menu_active_subtype;
                 skill = character_bytes[MENU_ACTION_SLOT_OFFSET];
@@ -7069,7 +7086,7 @@ void* menu_skill_action_callback(u_long* ot, ScrollListState* state, void* prim_
                 list->active = MENU_SLOT_STATE_CLOSING;
                 break;
 
-            case 3:
+            case MENU_SKILL_COMMAND_STATUS:
                 if (g_menu_active_equipped_item->name[0] == 0)
                 {
                     break;
@@ -7270,7 +7287,7 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
 
         switch (list->navigation.fields.selected_index)
         {
-            case 0:
+            case MENU_EQUIPMENT_COMMAND_EQUIP:
                 switch (g_menu_active_subtype)
                 {
                     case MENU_EQUIPMENT_SUBTYPE(FIELD_WEAPON_SLOT):
@@ -7311,7 +7328,7 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
 
                 break;
 
-            case 1:
+            case MENU_EQUIPMENT_COMMAND_AUTO_SELECT:
                 if (g_menu_active_subtype == MENU_EQUIPMENT_SUBTYPE(FIELD_WEAPON_SLOT))
                 {
                     if (menu_stage_best_weapon() == 0)
@@ -7355,7 +7372,7 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
                 menu_relink_pair();
                 break;
 
-            case 2:
+            case MENU_EQUIPMENT_COMMAND_TOTAL_AUTO:
                 g_item_slot_data[3] = 0;
                 g_item_slot_data[2] = 0;
                 g_item_slot_data[1] = 0;
@@ -7380,7 +7397,7 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
                 menu_relink_pair();
                 break;
 
-            case 3:
+            case MENU_EQUIPMENT_COMMAND_STATUS:
                 if (g_menu_active_equipped_item->name[0] == 0)
                 {
                     break;
@@ -7392,7 +7409,7 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
                 {
                     case MENU_EQUIPMENT_SUBTYPE(FIELD_WEAPON_SLOT):
                         g_menu_item_ptr = g_menu_active_equipped_item;
-                        g_menu_category0_item = g_menu_saved_category0_item;
+                        g_menu_weapon_item = g_menu_saved_category0_item;
                         g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].idx_nav.s.self_idx = 0x14;
                         g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].label_id = 0x12;
                         break;
@@ -7401,7 +7418,7 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
                     case MENU_EQUIPMENT_SUBTYPE(2):
                     case MENU_EQUIPMENT_SUBTYPE(3):
                         g_menu_item_ptr = g_menu_active_equipped_item;
-                        g_menu_category1_item = g_menu_saved_category1_item;
+                        g_menu_armor_item = g_menu_saved_category1_item;
                         g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].idx_nav.s.self_idx = 0x17;
                         g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].label_id = 0x15;
                         break;
@@ -7412,7 +7429,7 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
                 g_menu_draw_early_out = 1;
                 return buf;
 
-            case 4:
+            case MENU_EQUIPMENT_COMMAND_REMOVE:
                 if (g_menu_active_equipped_item->name[0] == 0)
                 {
                     break;

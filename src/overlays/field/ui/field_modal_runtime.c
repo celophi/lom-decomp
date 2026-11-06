@@ -1701,8 +1701,8 @@ void field_rebuild_party_actions(s32 refresh_only)
     SavedGameLayout* command_view;
     SavedGameLayout* skill_cursor;
 
-    akao_set_mono_output(g_saved_game_ctx->options.bits.mono_sound ^ 1);
-    cdrom_set_audio_volume(0x7F, g_saved_game_ctx->options.bits.mono_sound);
+    akao_set_mono_output(g_saved_game_ctx->options.bits.stereo ^ 1);
+    cdrom_set_audio_volume(0x7F, g_saved_game_ctx->options.bits.stereo);
     controllers_or_is_player = (uintptr_t)CONTROLLER_STATE;
     ((ControllerState*)controllers_or_is_player)->ports[0].actuators_enabled = g_saved_game_ctx->options.bits.vibration;
 
@@ -2121,7 +2121,7 @@ void field_update_modal(FieldRenderHalf* render)
 
                 switch (g_field_card_overlay_mode)
                 {
-                    case 2:
+                    case CARDA_RESULT_LOADED:
                         field_rebuild_party_actions(0);
 
                         for (index = 0; index < FIELD_PARTY_COUNT; index++)
@@ -2135,14 +2135,14 @@ void field_update_modal(FieldRenderHalf* render)
                                                    g_saved_game_ctx->music_id, g_saved_game_ctx->sound_bank_id, g_saved_game_ctx->secondary_music_id);
                         field_set_fade_target_only(FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, 8);
                         break;
-                    case 6:
-                    case 7:
+                    case CARDA_RESULT_SEND_PET_CANCELLED:
+                    case CARDA_RESULT_RETURN_PET_CANCELLED:
                         g_gosub_result_values[0] = 6;
                         /* fall through */
                     default:
-                    case 3:
-                    case 4:
-                    case 5:
+                    case CARDA_RESULT_CANCELLED:
+                    case CARDA_RESULT_PET_SENT:
+                    case CARDA_RESULT_PET_RETURNED:
                         break;
                 }
 

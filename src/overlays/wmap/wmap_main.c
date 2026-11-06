@@ -2147,7 +2147,7 @@ s32 wmap_run_loop(void)
                     }
                 }
 
-                if (g_wmap_view_mode != 0)
+                if (g_wmap_view_mode != WMAP_VIEW_MODE_MAP)
                 {
                     wmap_set_map_label(-1);
                 }

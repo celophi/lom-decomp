@@ -228,13 +228,6 @@ extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_
     (field_start_builtin_animation((actor)->object_index, (actor)->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, (resource)),                                  \
      field_start_actor_animation((actor)->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0))
 
-/** @brief First two footprint corners; only their horizontal coordinates are used. */
-typedef struct
-{
-    s16 left_x;
-    s16 first_y;
-    s16 right_x;
-} ShadowFootprint;
 
 /** @brief Projected ground position in the field renderer scratchpad. */
 typedef struct
@@ -1786,7 +1779,7 @@ void field_draw_fade_prims(FieldRenderHalf* render_half)
  * @param footprint First two footprint corners supplying the horizontal bounds.
  * @return Next free primitive, unchanged if the shadow has collapsed.
  */
-POLY_FT4* field_render_actor_ground_shadow(FieldActor* actor, POLY_FT4* prim, s32* ordering_table, ShadowFootprint* footprint)
+POLY_FT4* field_render_actor_ground_shadow(FieldActor* actor, POLY_FT4* prim, s32* ordering_table, Vec2s* footprint)
 {
     ShadowScreenPosition* screen;
     ShadowWorldPosition* world;
@@ -1809,17 +1802,17 @@ POLY_FT4* field_render_actor_ground_shadow(FieldActor* actor, POLY_FT4* prim, s3
     if (g_field_resource_entries[actor->object_index].multi_image != 0)
     {
         /* The resource profile widens the height-dependent inset by 5/4. */
-        prim->x2 = prim->x0 = screen->x + footprint->left_x - (SHADOW_ELEVATION(actor, height) + (size >> 2)) * 5 / 4;
-        prim->x3 = prim->x1 = screen->x + footprint->right_x + (SHADOW_ELEVATION(actor, height) - (size >> 2)) * 5 / 4;
+        prim->x2 = prim->x0 = screen->x + footprint[0].x - (SHADOW_ELEVATION(actor, height) + (size >> 2)) * 5 / 4;
+        prim->x3 = prim->x1 = screen->x + footprint[1].x + (SHADOW_ELEVATION(actor, height) - (size >> 2)) * 5 / 4;
     }
     else
     {
-        prim->x2 = prim->x0 = screen->x + footprint->left_x - SHADOW_ELEVATION(actor, height) + (size >> 2);
-        prim->x3 = prim->x1 = screen->x + footprint->right_x + SHADOW_ELEVATION(actor, height) - (size >> 2);
+        prim->x2 = prim->x0 = screen->x + footprint[0].x - SHADOW_ELEVATION(actor, height) + (size >> 2);
+        prim->x3 = prim->x1 = screen->x + footprint[1].x + SHADOW_ELEVATION(actor, height) - (size >> 2);
     }
 
     /* Reject inverted horizontal bounds or a vertical diameter below two pixels. */
-    diameter = abs((footprint->left_x - footprint->right_x) >> 1) + SHADOW_ELEVATION(actor, height) - (size >> 2);
+    diameter = abs((footprint[0].x - footprint[1].x) >> 1) + SHADOW_ELEVATION(actor, height) - (size >> 2);
 
     if (prim->x0 <= prim->x1 && diameter >= 2)
     {

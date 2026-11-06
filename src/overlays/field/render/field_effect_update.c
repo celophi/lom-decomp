@@ -134,7 +134,7 @@
 /* Effect render dispatch and sprite-frame rendering. */
 #define FIELD_EFFECT_SCRATCH_MATRIX ((void*)SCRATCHPAD_ADDRESS)
 #define FIELD_EFFECT_SCRATCH_SCREEN_ORIGIN ((Vec2s*)SCRATCHPAD_AT(0x40))
-#define FIELD_EFFECT_SCRATCH_FOOTPRINT ((s16*)SCRATCHPAD_AT(0x64))
+#define FIELD_EFFECT_SCRATCH_FOOTPRINT ((Vec2s*)SCRATCHPAD_AT(0x64))
 
 #define FIELD_SPRITE_FRAME_FOOTPRINT 0x20
 #define FIELD_SPRITE_FRAME_FLIP_X 0x40
@@ -171,6 +171,47 @@
 #define FIELD_PART_SCALE_TRACK_SHIFT 7
 #define FIELD_PART_ROTATION_MODE_SHIFT 6
 #define FIELD_PART_ROTATION_TRACK_SHIFT 26
+
+/** @brief Rotation of a part's effect (track_flags bits 6-7). */
+typedef enum
+{
+    FIELD_PART_ROTATION_NONE = 0,
+    /** @brief Angle from a parameter track; the axis comes from track_flags. */
+    FIELD_PART_ROTATION_TRACK = 1,
+    /** @brief The effect's heading, about the Y axis. */
+    FIELD_PART_ROTATION_HEADING = 2,
+    /** @brief Constant spin: a per-frame step times the effect's age. */
+    FIELD_PART_ROTATION_SPIN = 3
+} FieldPartRotationMode;
+
+/** @brief Axis a part's rotation turns about. */
+typedef enum
+{
+    FIELD_ROTATION_AXIS_X = 0,
+    FIELD_ROTATION_AXIS_Y = 1,
+    FIELD_ROTATION_AXIS_Z = 2,
+    /** @brief The same angle about Z, then Y, then X. */
+    FIELD_ROTATION_AXIS_ALL = 3
+} FieldRotationAxis;
+
+/** @brief Which axes a part's scale track drives (behavior_flags bits 20-21). */
+typedef enum
+{
+    FIELD_PART_SCALE_Z = 0,
+    FIELD_PART_SCALE_X = 1,
+    FIELD_PART_SCALE_UNIFORM = 2,
+    /** @brief Z from the track, X from the next track. */
+    FIELD_PART_SCALE_Z_THEN_X = 3
+} FieldPartScaleMode;
+
+/** @brief Source of a part's extent (rotation_extent bits 6-7). */
+typedef enum
+{
+    FIELD_PART_EXTENT_CONSTANT = 0,
+    FIELD_PART_EXTENT_TRACK = 1,
+    /** @brief The track's value at time 0. */
+    FIELD_PART_EXTENT_TRACK_START = 2
+} FieldPartExtentMode;
 #define FIELD_PART_ARC_MODE_SHIFT 6
 #define FIELD_PART_ARC_HEIGHT_SHIFT 26
 #define FIELD_PART_ROTATE_QUARTER_X_SHIFT 17
@@ -431,7 +472,6 @@ typedef struct
 extern VECTOR g_field_effect_spawn_point;
 extern s32 g_field_active_group;
 
-POLY_FT4* field_render_actor_ground_shadow();
 static s32 field_roll_effect_rotation(FieldActorSlot* actor, FieldObjectPart* part, FieldMotionRecord* effect);
 static void field_face_effect_target(FieldMotionRecord* effect, FieldObjectPart* part);
 static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPart* part, FieldActorSlot* actor);
@@ -2412,26 +2452,26 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
 
         switch (selector)
         {
-            case 0x0:
-            case 0x1:
-            case 0x2:
-            case 0x3:
-            case 0x4:
-            case 0x5:
-            case 0x6:
-            case 0x7:
-            case 0x8:
-            case 0x9:
-            case 0xA:
-            case 0xB:
-            case 0xC:
-            case 0xD:
-            case 0xE:
-            case 0xF:
-            case 0x10:
-            case 0x11:
-            case 0x12:
-            case 0x13:
+            case FIELD_PLACEMENT_OWNER_BOUNDS:
+            case FIELD_PLACEMENT_OWNER_BOUNDS + 1:
+            case FIELD_PLACEMENT_OWNER_BOUNDS + 2:
+            case FIELD_PLACEMENT_OWNER_BOUNDS + 3:
+            case FIELD_PLACEMENT_OWNER_BOUNDS + 4:
+            case FIELD_PLACEMENT_OWNER_BOUNDS + 5:
+            case FIELD_PLACEMENT_OWNER_BOUNDS + 6:
+            case FIELD_PLACEMENT_OWNER_BOUNDS + 7:
+            case FIELD_PLACEMENT_OWNER_BOUNDS + 8:
+            case FIELD_PLACEMENT_OWNER_BOUNDS + 9:
+            case FIELD_PLACEMENT_TRACK_BOUNDS:
+            case FIELD_PLACEMENT_TRACK_BOUNDS + 1:
+            case FIELD_PLACEMENT_TRACK_BOUNDS + 2:
+            case FIELD_PLACEMENT_TRACK_BOUNDS + 3:
+            case FIELD_PLACEMENT_TRACK_BOUNDS + 4:
+            case FIELD_PLACEMENT_TRACK_BOUNDS + 5:
+            case FIELD_PLACEMENT_TRACK_BOUNDS + 6:
+            case FIELD_PLACEMENT_TRACK_BOUNDS + 7:
+            case FIELD_PLACEMENT_TRACK_BOUNDS + 8:
+            case FIELD_PLACEMENT_TRACK_BOUNDS + 9:
             {
                 s32 offset_y;
                 FieldObjectState* owner;
@@ -2522,22 +2562,22 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                 placement_origin->vz = reference_record->z;
                 break;
             }
-            case 0x14:
-            case 0x15:
-            case 0x16:
-            case 0x17:
-            case 0x18:
-            case 0x19:
-            case 0x1A:
-            case 0x1B:
-            case 0x2A:
-            case 0x2B:
-            case 0x2C:
-            case 0x2D:
-            case 0x2E:
-            case 0x2F:
-            case 0x30:
-            case 0x31:
+            case FIELD_PLACEMENT_SIBLING:
+            case FIELD_PLACEMENT_SIBLING + 1:
+            case FIELD_PLACEMENT_SIBLING + 2:
+            case FIELD_PLACEMENT_SIBLING + 3:
+            case FIELD_PLACEMENT_SIBLING + 4:
+            case FIELD_PLACEMENT_SIBLING + 5:
+            case FIELD_PLACEMENT_SIBLING + 6:
+            case FIELD_PLACEMENT_SIBLING + 7:
+            case FIELD_PLACEMENT_SIBLING_HIGH:
+            case FIELD_PLACEMENT_SIBLING_HIGH + 1:
+            case FIELD_PLACEMENT_SIBLING_HIGH + 2:
+            case FIELD_PLACEMENT_SIBLING_HIGH + 3:
+            case FIELD_PLACEMENT_SIBLING_HIGH + 4:
+            case FIELD_PLACEMENT_SIBLING_HIGH + 5:
+            case FIELD_PLACEMENT_SIBLING_HIGH + 6:
+            case FIELD_PLACEMENT_SIBLING_HIGH + 7:
             {
                 FieldMotionRecord* effect;
                 FieldMotionRecord* effect_base;
@@ -2614,7 +2654,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                 placement_origin->vy = FIELD_SCREEN_HALF_HEIGHT_FIXED;
                 placement_origin->vz = 0;
                 break;
-            case 0x27:
+            case FIELD_PLACEMENT_OWNER_OFFSET:
                 reference_record = &FIELD_ACTOR_MOTION_RECORDS[actor->owner_object_index];
 
                 if (((part->placement_flags.word >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) &&
@@ -2630,7 +2670,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                 placement_origin->vy = reference_record->y + (part->offset_y << 8);
                 placement_origin->vz = reference_record->z + (part->offset_z << 8);
                 break;
-            case 0x28:
+            case FIELD_PLACEMENT_TRACK_OFFSET:
                 reference_record = &FIELD_ACTOR_MOTION_RECORDS[actor->targets[g_field_track_index]];
 
                 if ((part->spawn_flags.word & FIELD_PART_MIRROR_X_WITH_OWNER) &&
@@ -2651,7 +2691,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                 placement_origin->vy = reference_record->y + (part->offset_y << 8);
                 placement_origin->vz = reference_record->z + (part->offset_z << 8);
                 break;
-            case 0x29:
+            case FIELD_PLACEMENT_OWNER_ATTACHMENT:
                 reference_record = &FIELD_ACTOR_MOTION_RECORDS[actor->owner_object_index];
                 reference_object = &g_field_object_states[actor->owner_object_index];
                 placement_origin->vx = reference_record->x;
@@ -2664,7 +2704,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                     reference_object->attachment_points[(part->effect_flags.word >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x
                     << 8;
                 break;
-            case 0x32:
+            case FIELD_PLACEMENT_OWNER_ATTACHMENT_X:
                 reference_record = &FIELD_ACTOR_MOTION_RECORDS[actor->owner_object_index];
                 reference_object = &g_field_object_states[actor->owner_object_index];
                 placement_origin->vx =
@@ -2685,14 +2725,14 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                 }
 
                 break;
-            case 0x33:
+            case FIELD_PLACEMENT_GROUND_POINT:
                 reference_record = &FIELD_ACTOR_MOTION_RECORDS[actor->owner_object_index];
                 reference_object = &g_field_object_states[actor->owner_object_index];
                 placement_origin->vx = reference_record->x + (reference_object->ground_effect_points[((u32)record->flags >> 0xD) & 3].x << 8);
                 placement_origin->vy = reference_record->y;
                 placement_origin->vz = reference_record->z + (reference_object->ground_effect_points[((u32)record->flags >> 0xD) & 3].y << 8);
                 break;
-            case 0x34:
+            case FIELD_PLACEMENT_TRACK_ACTION_OFFSET:
                 reference_record = &FIELD_ACTOR_MOTION_RECORDS[actor->targets[g_field_track_index]];
 
                 if (!(reference_record->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
@@ -2707,19 +2747,19 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                 placement_origin->vy = reference_record->y + (actor->track_offsets[g_field_track_index].y << 8);
                 placement_origin->vz = reference_record->z;
                 break;
-            case 0x36:
+            case FIELD_PLACEMENT_PART_OFFSET:
                 placement_origin->vx = part->offset_x << 8;
                 placement_origin->vy = part->offset_y << 8;
                 placement_origin->vz = part->offset_z << 8;
                 break;
-            case 0x37:
-            case 0x38:
-            case 0x39:
-            case 0x3A:
-            case 0x3B:
-            case 0x3C:
-            case 0x3D:
-            case 0x3E:
+            case FIELD_PLACEMENT_SIBLING_OFFSET:
+            case FIELD_PLACEMENT_SIBLING_OFFSET + 1:
+            case FIELD_PLACEMENT_SIBLING_OFFSET + 2:
+            case FIELD_PLACEMENT_SIBLING_OFFSET + 3:
+            case FIELD_PLACEMENT_SIBLING_OFFSET + 4:
+            case FIELD_PLACEMENT_SIBLING_OFFSET + 5:
+            case FIELD_PLACEMENT_SIBLING_OFFSET + 6:
+            case FIELD_PLACEMENT_SIBLING_OFFSET + 7:
             {
                 FieldMotionRecord* effect;
                 FieldMotionRecord* effect_base;
@@ -3870,7 +3910,7 @@ void field_render_effects(FieldRenderContext* render_context)
 static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* packet_cursor, s32* ordering_table, u8* frame_data)
 {
     Vec2s* screen_origin = FIELD_EFFECT_SCRATCH_SCREEN_ORIGIN;
-    s16* shadow_footprint = FIELD_EFFECT_SCRATCH_FOOTPRINT;
+    Vec2s* shadow_footprint = FIELD_EFFECT_SCRATCH_FOOTPRINT;
     MATRIX* matrix = FIELD_EFFECT_SCRATCH_MATRIX;
     s32 frame_count;
     s32 shadow_count;
@@ -4095,15 +4135,15 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
             }
             else if (((flags & 0xF) == 2) && (part->effect_flags.word & FIELD_PART_SOLID))
             {
-                shadow_footprint[0] = ((s8)frame_data[0] * part->appearance.fields.scale_xz) >> FIELD_PART_SCALE_SHIFT;
-                shadow_footprint[1] = ((s8)frame_data[1] * part->scale_y) >> FIELD_PART_SCALE_SHIFT;
-                shadow_footprint[2] = ((s8)frame_data[2] * part->appearance.fields.scale_xz) >> FIELD_PART_SCALE_SHIFT;
-                shadow_footprint[3] = ((s8)frame_data[3] * part->scale_y) >> FIELD_PART_SCALE_SHIFT;
-                shadow_footprint[4] = ((s8)frame_data[4] * part->appearance.fields.scale_xz) >> FIELD_PART_SCALE_SHIFT;
-                shadow_footprint[5] = ((s8)frame_data[5] * part->scale_y) >> FIELD_PART_SCALE_SHIFT;
-                shadow_footprint[6] = ((s8)frame_data[6] * part->appearance.fields.scale_xz) >> FIELD_PART_SCALE_SHIFT;
+                shadow_footprint[0].x = ((s8)frame_data[0] * part->appearance.fields.scale_xz) >> FIELD_PART_SCALE_SHIFT;
+                shadow_footprint[0].y = ((s8)frame_data[1] * part->scale_y) >> FIELD_PART_SCALE_SHIFT;
+                shadow_footprint[1].x = ((s8)frame_data[2] * part->appearance.fields.scale_xz) >> FIELD_PART_SCALE_SHIFT;
+                shadow_footprint[1].y = ((s8)frame_data[3] * part->scale_y) >> FIELD_PART_SCALE_SHIFT;
+                shadow_footprint[2].x = ((s8)frame_data[4] * part->appearance.fields.scale_xz) >> FIELD_PART_SCALE_SHIFT;
+                shadow_footprint[2].y = ((s8)frame_data[5] * part->scale_y) >> FIELD_PART_SCALE_SHIFT;
+                shadow_footprint[3].x = ((s8)frame_data[6] * part->appearance.fields.scale_xz) >> FIELD_PART_SCALE_SHIFT;
                 shadow_count++;
-                shadow_footprint[7] = ((s8)frame_data[8] * part->scale_y) >> FIELD_PART_SCALE_SHIFT;
+                shadow_footprint[3].y = ((s8)frame_data[8] * part->scale_y) >> FIELD_PART_SCALE_SHIFT;
             }
 
             frame_data += 9;
@@ -4115,7 +4155,7 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
 
     if (shadow_count != 0)
     {
-        packet_cursor = (s32*)field_render_actor_ground_shadow(effect, packet_cursor, ordering_table, shadow_footprint);
+        packet_cursor = (s32*)field_render_actor_ground_shadow((FieldActor*)effect, (POLY_FT4*)packet_cursor, ordering_table, shadow_footprint);
     }
 
     return packet_cursor;
@@ -4164,7 +4204,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
     s32 item_count;
     VECTOR* gte_out = (VECTOR*)SCRATCHPAD_AT(0x44);
     SVECTOR* dir = (SVECTOR*)SCRATCHPAD_AT(0x54);
-    s16* quad_bounds = (s16*)SCRATCHPAD_AT(0x64);
+    Vec2s* quad_bounds = FIELD_EFFECT_SCRATCH_FOOTPRINT;
     FieldContactPoint* contact_quad;
     Vec2s* target_screen;
     FieldActorSlot* actor;
@@ -4262,10 +4302,10 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
         field_apply_effect_quad_center_offset(rec, sxy, quad_bounds, (uintptr_t)mtx, (spawn_flags >> 0x14) & 1);
     }
 
-    slot->bounds.half.left = quad_bounds[0];
-    slot->bounds.half.top = quad_bounds[1];
-    slot->bounds.half.right = quad_bounds[4];
-    slot->bounds.half.bottom = quad_bounds[5];
+    slot->bounds.half.left = quad_bounds[0].x;
+    slot->bounds.half.top = quad_bounds[0].y;
+    slot->bounds.half.right = quad_bounds[2].x;
+    slot->bounds.half.bottom = quad_bounds[2].y;
     item_count = *item++;
 
     poly = (POLY_FT4*)cursor;
@@ -5222,24 +5262,24 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
 
     if (shadow_count != 0)
     {
-        s16* corner;
+        Vec2s* corner;
 
-        for (corner = quad_bounds; corner != quad_bounds + 8; corner += 2)
+        for (corner = quad_bounds; corner != quad_bounds + 4; corner++)
         {
-            corner[0] = ((corner[0] * part->appearance.fields.scale_xz >> FIELD_PART_SCALE_SHIFT) * g_field_effect_track_scale.x) >> 12;
-            corner[1] = ((corner[1] * part->scale_y >> FIELD_PART_SCALE_SHIFT) * g_field_effect_track_scale.z) >> 12;
+            corner->x = ((corner->x * part->appearance.fields.scale_xz >> FIELD_PART_SCALE_SHIFT) * g_field_effect_track_scale.x) >> 12;
+            corner->y = ((corner->y * part->scale_y >> FIELD_PART_SCALE_SHIFT) * g_field_effect_track_scale.z) >> 12;
         }
 
-        slot->collision.signed_half.center_offset = (quad_bounds[2] + quad_bounds[0]) >> 1;
-        slot->collision.signed_half.extent = abs(quad_bounds[2] - quad_bounds[0]);
+        slot->collision.signed_half.center_offset = (quad_bounds[1].x + quad_bounds[0].x) >> 1;
+        slot->collision.signed_half.extent = abs(quad_bounds[1].x - quad_bounds[0].x);
 
         if (slot->collision.signed_half.extent == 0)
         {
-            slot->collision.signed_half.extent = abs(quad_bounds[4] - quad_bounds[0]);
-            slot->collision.signed_half.center_offset = (quad_bounds[4] + quad_bounds[0]) >> 1;
+            slot->collision.signed_half.extent = abs(quad_bounds[2].x - quad_bounds[0].x);
+            slot->collision.signed_half.center_offset = (quad_bounds[2].x + quad_bounds[0].x) >> 1;
         }
 
-        cursor = (s32*)field_render_actor_ground_shadow(rec, cursor, base, quad_bounds);
+        cursor = (s32*)field_render_actor_ground_shadow((FieldActor*)rec, (POLY_FT4*)cursor, base, quad_bounds);
     }
 
     return cursor;
@@ -5275,7 +5315,7 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
     s32 frame_count;
     VECTOR* gte_out = (VECTOR*)SCRATCHPAD_AT(0x44);
     SVECTOR* dir = (SVECTOR*)SCRATCHPAD_AT(0x54);
-    s16* corners = (s16*)SCRATCHPAD_AT(0x64);
+    Vec2s* corners = FIELD_EFFECT_SCRATCH_FOOTPRINT;
     FieldContactPoint* contact_quad;
     Vec2s* target_screen;
     FieldActorSlot* actor;
@@ -5372,10 +5412,10 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
         field_apply_effect_quad_center_offset(rec, sxy, corners, (uintptr_t)mtx, (spawn_flags >> 0x14) & 1);
     }
 
-    slot->bounds.half.left = corners[0];
-    slot->bounds.half.top = corners[1];
-    slot->bounds.half.right = corners[4];
-    slot->bounds.half.bottom = corners[5];
+    slot->bounds.half.left = corners[0].x;
+    slot->bounds.half.top = corners[0].y;
+    slot->bounds.half.right = corners[2].x;
+    slot->bounds.half.bottom = corners[2].y;
     frame_count = *item;
     item++;
 
@@ -6112,19 +6152,19 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
 
     if (shadow_count != 0)
     {
-        s16* p = corners;
+        Vec2s* p = corners;
 
-        while (p != corners + 8)
+        while (p != corners + 4)
         {
-            p[0] = ((p[0] * part->appearance.fields.scale_xz >> FIELD_PART_SCALE_SHIFT) * g_field_effect_track_scale.x) >> 12;
-            p[1] = ((p[1] * part->scale_y >> FIELD_PART_SCALE_SHIFT) * g_field_effect_track_scale.z) >> 12;
-            p += 2;
+            p->x = ((p->x * part->appearance.fields.scale_xz >> FIELD_PART_SCALE_SHIFT) * g_field_effect_track_scale.x) >> 12;
+            p->y = ((p->y * part->scale_y >> FIELD_PART_SCALE_SHIFT) * g_field_effect_track_scale.z) >> 12;
+            p++;
         }
 
-        corner_span = abs(corners[2] - corners[0]);
+        corner_span = abs(corners[1].x - corners[0].x);
         slot->collision.signed_half.extent = (corner_span * 7) / 10;
-        slot->collision.signed_half.center_offset = (corners[2] + corners[0]) >> 1;
-        cursor = (s32*)field_render_actor_ground_shadow(rec, cursor, base, corners);
+        slot->collision.signed_half.center_offset = (corners[1].x + corners[0].x) >> 1;
+        cursor = (s32*)field_render_actor_ground_shadow((FieldActor*)rec, (POLY_FT4*)cursor, base, corners);
     }
 
     return cursor;
@@ -7626,20 +7666,20 @@ s32 field_build_effect_part_matrix(FieldMotionRecord* effect, FieldObjectPart* p
     flags = part->track_flags.word;
     rotation_mode = (flags >> FIELD_PART_ROTATION_MODE_SHIFT) & 3;
 
-    if (rotation_mode != 0)
+    if (rotation_mode != FIELD_PART_ROTATION_NONE)
     {
         switch (rotation_mode)
         {
-            case 1:
+            case FIELD_PART_ROTATION_TRACK:
                 angle = field_evaluate_parameter_track_at_time(actor, flags >> 26, (u16)effect->age) << 4;
                 axis = part->track_flags.bytes.high;
                 axis &= 3;
                 break;
-            case 2:
+            case FIELD_PART_ROTATION_HEADING:
                 angle = effect->heading;
-                axis = 1;
+                axis = FIELD_ROTATION_AXIS_Y;
                 break;
-            case 3:
+            case FIELD_PART_ROTATION_SPIN:
                 angle = (((flags >> FIELD_PART_ROTATION_TRACK_SHIFT) * (u16)effect->age) << 4) & FIELD_ANGLE_MASK;
                 axis = flags >> 24;
                 axis &= 3;
@@ -7658,16 +7698,16 @@ s32 field_build_effect_part_matrix(FieldMotionRecord* effect, FieldObjectPart* p
 
         switch (axis)
         {
-            case 0:
+            case FIELD_ROTATION_AXIS_X:
                 RotMatrixX(angle, matrix);
                 break;
-            case 1:
+            case FIELD_ROTATION_AXIS_Y:
                 RotMatrixY(angle, matrix);
                 break;
-            case 2:
+            case FIELD_ROTATION_AXIS_Z:
                 RotMatrixZ(angle, matrix);
                 break;
-            case 3:
+            case FIELD_ROTATION_AXIS_ALL:
                 RotMatrixZ(angle, matrix);
                 RotMatrixY(angle, matrix);
                 RotMatrixX(angle, matrix);
@@ -7818,13 +7858,13 @@ s32 field_build_effect_part_matrix(FieldMotionRecord* effect, FieldObjectPart* p
 
         switch (scale_mode)
         {
-            case 0:
+            case FIELD_PART_SCALE_Z:
                 scale->vz = field_evaluate_parameter_track_at_time(actor, flags >> 28, (u16)effect->age) << 4;
                 break;
-            case 1:
+            case FIELD_PART_SCALE_X:
                 scale->vx = field_evaluate_parameter_track_at_time(actor, flags >> 28, (u16)effect->age) << 4;
                 break;
-            case 2:
+            case FIELD_PART_SCALE_UNIFORM:
             {
                 u32 value = field_evaluate_parameter_track_at_time(actor, flags >> 28, (u16)effect->age) << 4;
                 scale->vz = value;
@@ -7832,7 +7872,7 @@ s32 field_build_effect_part_matrix(FieldMotionRecord* effect, FieldObjectPart* p
                 scale->vx = value;
                 break;
             }
-            case 3:
+            case FIELD_PART_SCALE_Z_THEN_X:
                 scale->vz = field_evaluate_parameter_track_at_time(actor, flags >> 28, (u16)effect->age) << 4;
                 next_scale_track = (part->behavior_flags.word >> 28) + 1;
                 scale->vx = field_evaluate_parameter_track_at_time(actor, next_scale_track % FIELD_TRACK_COUNT, (u16)effect->age) << 4;
@@ -8147,29 +8187,29 @@ void field_project_effect_sprite_quad(FieldMotionRecord* effect, Vec2s* origin, 
  * @param flip Nonzero to reverse corner order and negate x coordinates.
  * @param item Packed corner record; byte 7 is not a coordinate.
  */
-void field_unpack_effect_quad_corners8(s16* out, s32 flip, s8* item)
+void field_unpack_effect_quad_corners8(Vec2s* out, s32 flip, s8* item)
 {
     if (flip)
     {
-        out[0] = -item[2];
-        out[1] = item[3];
-        out[2] = -item[0];
-        out[3] = item[1];
-        out[4] = -item[6];
-        out[5] = item[8];
-        out[6] = -item[4];
-        out[7] = item[5];
+        out[0].x = -item[2];
+        out[0].y = item[3];
+        out[1].x = -item[0];
+        out[1].y = item[1];
+        out[2].x = -item[6];
+        out[2].y = item[8];
+        out[3].x = -item[4];
+        out[3].y = item[5];
     }
     else
     {
-        out[0] = item[0];
-        out[1] = item[1];
-        out[2] = item[2];
-        out[3] = item[3];
-        out[4] = item[4];
-        out[5] = item[5];
-        out[6] = item[6];
-        out[7] = item[8];
+        out[0].x = item[0];
+        out[0].y = item[1];
+        out[1].x = item[2];
+        out[1].y = item[3];
+        out[2].x = item[4];
+        out[2].y = item[5];
+        out[3].x = item[6];
+        out[3].y = item[8];
     }
 }
 
@@ -8179,29 +8219,29 @@ void field_unpack_effect_quad_corners8(s16* out, s32 flip, s8* item)
  * @param mirror Nonzero to reverse corner order and negate x coordinates.
  * @param item Packed corner record; byte 7 interrupts the second y component.
  */
-void field_unpack_effect_quad_corners16(s16* out, s32 mirror, u8* item)
+void field_unpack_effect_quad_corners16(Vec2s* out, s32 mirror, u8* item)
 {
     if (mirror != 0)
     {
-        out[0] = -(item[4] + (item[5] << 8));
-        out[1] = item[6] + (item[8] << 8);
-        out[2] = -(item[0] + (item[1] << 8));
-        out[3] = item[2] + (item[3] << 8);
-        out[4] = -(item[13] + (item[14] << 8));
-        out[5] = item[15] + (item[16] << 8);
-        out[6] = -(item[9] + (item[10] << 8));
-        out[7] = item[11] + (item[12] << 8);
+        out[0].x = -(item[4] + (item[5] << 8));
+        out[0].y = item[6] + (item[8] << 8);
+        out[1].x = -(item[0] + (item[1] << 8));
+        out[1].y = item[2] + (item[3] << 8);
+        out[2].x = -(item[13] + (item[14] << 8));
+        out[2].y = item[15] + (item[16] << 8);
+        out[3].x = -(item[9] + (item[10] << 8));
+        out[3].y = item[11] + (item[12] << 8);
     }
     else
     {
-        out[0] = item[0] + (item[1] << 8);
-        out[1] = item[2] + (item[3] << 8);
-        out[2] = item[4] + (item[5] << 8);
-        out[3] = item[6] + (item[8] << 8);
-        out[4] = item[9] + (item[10] << 8);
-        out[5] = item[11] + (item[12] << 8);
-        out[6] = item[13] + (item[14] << 8);
-        out[7] = item[15] + (item[16] << 8);
+        out[0].x = item[0] + (item[1] << 8);
+        out[0].y = item[2] + (item[3] << 8);
+        out[1].x = item[4] + (item[5] << 8);
+        out[1].y = item[6] + (item[8] << 8);
+        out[2].x = item[9] + (item[10] << 8);
+        out[2].y = item[11] + (item[12] << 8);
+        out[3].x = item[13] + (item[14] << 8);
+        out[3].y = item[15] + (item[16] << 8);
     }
 }
 
@@ -8229,19 +8269,19 @@ s32 field_resolve_effect_extent(FieldActorSlot* actor, FieldObjectPart* part)
 
         switch (value_mode)
         {
-            case 0:
+            case FIELD_PART_EXTENT_CONSTANT:
             {
                 s32 value_low_bits = part->palette_extent.word >> 29;
                 extent = ((value_flags & 0x3F) << 3) | value_low_bits;
                 break;
             }
-            case 1:
+            case FIELD_PART_EXTENT_TRACK:
             {
                 u32 value_low_bits = part->palette_extent.word >> 29;
                 extent = field_evaluate_parameter_track(owner, (((value_flags & 0x3F) << 3) | value_low_bits) & FIELD_TRACK_INDEX_MASK);
                 break;
             }
-            case 2:
+            case FIELD_PART_EXTENT_TRACK_START:
             {
                 u32 value_low_bits = part->palette_extent.word;
                 extent = field_evaluate_parameter_track_at_time(owner, (((value_flags & 0x3F) << 3) | (value_low_bits >> 29)) & FIELD_TRACK_INDEX_MASK, 0);
@@ -8418,26 +8458,26 @@ void field_resolve_actor_part_anchor(FieldActorSlot* actor, FieldObjectPart* par
 
     switch (anchor_mode)
     {
-        case 0x00:
-        case 0x01:
-        case 0x02:
-        case 0x03:
-        case 0x04:
-        case 0x05:
-        case 0x06:
-        case 0x07:
-        case 0x08:
-        case 0x09:
-        case 0x0A:
-        case 0x0B:
-        case 0x0C:
-        case 0x0D:
-        case 0x0E:
-        case 0x0F:
-        case 0x10:
-        case 0x11:
-        case 0x12:
-        case 0x13:
+        case FIELD_PLACEMENT_OWNER_BOUNDS:
+        case FIELD_PLACEMENT_OWNER_BOUNDS + 1:
+        case FIELD_PLACEMENT_OWNER_BOUNDS + 2:
+        case FIELD_PLACEMENT_OWNER_BOUNDS + 3:
+        case FIELD_PLACEMENT_OWNER_BOUNDS + 4:
+        case FIELD_PLACEMENT_OWNER_BOUNDS + 5:
+        case FIELD_PLACEMENT_OWNER_BOUNDS + 6:
+        case FIELD_PLACEMENT_OWNER_BOUNDS + 7:
+        case FIELD_PLACEMENT_OWNER_BOUNDS + 8:
+        case FIELD_PLACEMENT_OWNER_BOUNDS + 9:
+        case FIELD_PLACEMENT_TRACK_BOUNDS:
+        case FIELD_PLACEMENT_TRACK_BOUNDS + 1:
+        case FIELD_PLACEMENT_TRACK_BOUNDS + 2:
+        case FIELD_PLACEMENT_TRACK_BOUNDS + 3:
+        case FIELD_PLACEMENT_TRACK_BOUNDS + 4:
+        case FIELD_PLACEMENT_TRACK_BOUNDS + 5:
+        case FIELD_PLACEMENT_TRACK_BOUNDS + 6:
+        case FIELD_PLACEMENT_TRACK_BOUNDS + 7:
+        case FIELD_PLACEMENT_TRACK_BOUNDS + 8:
+        case FIELD_PLACEMENT_TRACK_BOUNDS + 9:
         {
             if (anchor_mode >= FIELD_PLACEMENT_TRACK_BOUNDS)
             {
@@ -8518,22 +8558,22 @@ void field_resolve_actor_part_anchor(FieldActorSlot* actor, FieldObjectPart* par
             return;
         }
 
-        case 0x14:
-        case 0x15:
-        case 0x16:
-        case 0x17:
-        case 0x18:
-        case 0x19:
-        case 0x1A:
-        case 0x1B:
-        case 0x2A:
-        case 0x2B:
-        case 0x2C:
-        case 0x2D:
-        case 0x2E:
-        case 0x2F:
-        case 0x30:
-        case 0x31:
+        case FIELD_PLACEMENT_SIBLING:
+        case FIELD_PLACEMENT_SIBLING + 1:
+        case FIELD_PLACEMENT_SIBLING + 2:
+        case FIELD_PLACEMENT_SIBLING + 3:
+        case FIELD_PLACEMENT_SIBLING + 4:
+        case FIELD_PLACEMENT_SIBLING + 5:
+        case FIELD_PLACEMENT_SIBLING + 6:
+        case FIELD_PLACEMENT_SIBLING + 7:
+        case FIELD_PLACEMENT_SIBLING_HIGH:
+        case FIELD_PLACEMENT_SIBLING_HIGH + 1:
+        case FIELD_PLACEMENT_SIBLING_HIGH + 2:
+        case FIELD_PLACEMENT_SIBLING_HIGH + 3:
+        case FIELD_PLACEMENT_SIBLING_HIGH + 4:
+        case FIELD_PLACEMENT_SIBLING_HIGH + 5:
+        case FIELD_PLACEMENT_SIBLING_HIGH + 6:
+        case FIELD_PLACEMENT_SIBLING_HIGH + 7:
             value = anchor_mode - 0x14;
 
             if (anchor_mode >= 0x2A)
@@ -8620,7 +8660,7 @@ void field_resolve_actor_part_anchor(FieldActorSlot* actor, FieldObjectPart* par
         case FIELD_PLACEMENT_NONE:
             return;
 
-        case 0x27:
+        case FIELD_PLACEMENT_OWNER_OFFSET:
             object_record = &FIELD_ACTOR_MOTION_RECORDS[actor->owner_object_index];
 
             if ((((part->placement_flags.word >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) || (part->spawn_flags.word & FIELD_PART_MIRROR_X_WITH_OWNER)) &&
@@ -8637,7 +8677,7 @@ void field_resolve_actor_part_anchor(FieldActorSlot* actor, FieldObjectPart* par
             out->z = object_record->z + (part->offset_z << 8);
             return;
 
-        case 0x28:
+        case FIELD_PLACEMENT_TRACK_OFFSET:
             object_record = &FIELD_ACTOR_MOTION_RECORDS[actor->targets[g_field_track_index]];
 
             if ((part->spawn_flags.word & FIELD_PART_MIRROR_X_WITH_OWNER) &&
@@ -8659,7 +8699,7 @@ void field_resolve_actor_part_anchor(FieldActorSlot* actor, FieldObjectPart* par
             out->z = object_record->z + (part->offset_z << 8);
             return;
 
-        case 0x29:
+        case FIELD_PLACEMENT_OWNER_ATTACHMENT:
             object_index = actor->owner_object_index;
             object_record = &FIELD_ACTOR_MOTION_RECORDS[object_index];
             object = &g_field_object_states[object_index];
@@ -8670,7 +8710,7 @@ void field_resolve_actor_part_anchor(FieldActorSlot* actor, FieldObjectPart* par
             out->z = object_record->z;
             return;
 
-        case 0x32:
+        case FIELD_PLACEMENT_OWNER_ATTACHMENT_X:
             object_index = actor->owner_object_index;
             object_record = &FIELD_ACTOR_MOTION_RECORDS[object_index];
             object = &g_field_object_states[object_index];
@@ -8691,7 +8731,7 @@ void field_resolve_actor_part_anchor(FieldActorSlot* actor, FieldObjectPart* par
 
             return;
 
-        case 0x33:
+        case FIELD_PLACEMENT_GROUND_POINT:
             object_index = actor->owner_object_index;
             object_record = &FIELD_ACTOR_MOTION_RECORDS[object_index];
             object = &g_field_object_states[object_index];
@@ -8700,20 +8740,20 @@ void field_resolve_actor_part_anchor(FieldActorSlot* actor, FieldObjectPart* par
             out->z = object_record->z + (object->ground_effect_points[attachment_index].y << 8);
             return;
 
-        case 0x36:
+        case FIELD_PLACEMENT_PART_OFFSET:
             out->x = part->offset_x << 8;
             out->y = part->offset_y << 8;
             out->z = part->offset_z << 8;
             return;
 
-        case 0x37:
-        case 0x38:
-        case 0x39:
-        case 0x3A:
-        case 0x3B:
-        case 0x3C:
-        case 0x3D:
-        case 0x3E:
+        case FIELD_PLACEMENT_SIBLING_OFFSET:
+        case FIELD_PLACEMENT_SIBLING_OFFSET + 1:
+        case FIELD_PLACEMENT_SIBLING_OFFSET + 2:
+        case FIELD_PLACEMENT_SIBLING_OFFSET + 3:
+        case FIELD_PLACEMENT_SIBLING_OFFSET + 4:
+        case FIELD_PLACEMENT_SIBLING_OFFSET + 5:
+        case FIELD_PLACEMENT_SIBLING_OFFSET + 6:
+        case FIELD_PLACEMENT_SIBLING_OFFSET + 7:
             value = anchor_mode - 0x37;
 
             for (index = 0; index < FIELD_EFFECT_ACTIVE_RECORD_COUNT; index++)
@@ -8743,14 +8783,14 @@ void field_resolve_actor_part_anchor(FieldActorSlot* actor, FieldObjectPart* par
  * @param frame_data Encoded frame entry list; the first byte is the entry count.
  * @param corners Receives four x/y corner pairs.
  */
-void field_extract_effect_quad_corners8(FieldMotionRecord* effect, u8* frame_data, s16* corners)
+void field_extract_effect_quad_corners8(FieldMotionRecord* effect, u8* frame_data, Vec2s* corners)
 {
     s32 count;
 
-    corners[0] = corners[1] = 0;
-    corners[2] = corners[3] = 0;
-    corners[4] = corners[5] = 0;
-    corners[6] = corners[7] = 0;
+    corners[0].x = corners[0].y = 0;
+    corners[1].x = corners[1].y = 0;
+    corners[2].x = corners[2].y = 0;
+    corners[3].x = corners[3].y = 0;
 
     for (count = *frame_data++; count != 0; frame_data += 9, count--)
     {
@@ -8760,25 +8800,25 @@ void field_extract_effect_quad_corners8(FieldMotionRecord* effect, u8* frame_dat
             {
                 if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                 {
-                    corners[0] = -(s8)frame_data[2];
-                    corners[1] = (s8)frame_data[3];
-                    corners[2] = -(s8)frame_data[0];
-                    corners[3] = (s8)frame_data[1];
-                    corners[4] = -(s8)frame_data[6];
-                    corners[5] = (s8)frame_data[8];
-                    corners[6] = -(s8)frame_data[4];
-                    corners[7] = (s8)frame_data[5];
+                    corners[0].x = -(s8)frame_data[2];
+                    corners[0].y = (s8)frame_data[3];
+                    corners[1].x = -(s8)frame_data[0];
+                    corners[1].y = (s8)frame_data[1];
+                    corners[2].x = -(s8)frame_data[6];
+                    corners[2].y = (s8)frame_data[8];
+                    corners[3].x = -(s8)frame_data[4];
+                    corners[3].y = (s8)frame_data[5];
                 }
                 else
                 {
-                    corners[0] = (s8)frame_data[0];
-                    corners[1] = (s8)frame_data[1];
-                    corners[2] = (s8)frame_data[2];
-                    corners[3] = (s8)frame_data[3];
-                    corners[4] = (s8)frame_data[4];
-                    corners[5] = (s8)frame_data[5];
-                    corners[6] = (s8)frame_data[6];
-                    corners[7] = (s8)frame_data[8];
+                    corners[0].x = (s8)frame_data[0];
+                    corners[0].y = (s8)frame_data[1];
+                    corners[1].x = (s8)frame_data[2];
+                    corners[1].y = (s8)frame_data[3];
+                    corners[2].x = (s8)frame_data[4];
+                    corners[2].y = (s8)frame_data[5];
+                    corners[3].x = (s8)frame_data[6];
+                    corners[3].y = (s8)frame_data[8];
                 }
             }
         }
@@ -8791,14 +8831,14 @@ void field_extract_effect_quad_corners8(FieldMotionRecord* effect, u8* frame_dat
  * @param frame_data Encoded frame entry list; the first byte is the entry count.
  * @param corners Receives four x/y corner pairs.
  */
-void field_extract_effect_quad_corners16(FieldMotionRecord* effect, u8* frame_data, s16* corners)
+void field_extract_effect_quad_corners16(FieldMotionRecord* effect, u8* frame_data, Vec2s* corners)
 {
     s32 count;
 
-    corners[0] = corners[1] = 0;
-    corners[2] = corners[3] = 0;
-    corners[4] = corners[5] = 0;
-    corners[6] = corners[7] = 0;
+    corners[0].x = corners[0].y = 0;
+    corners[1].x = corners[1].y = 0;
+    corners[2].x = corners[2].y = 0;
+    corners[3].x = corners[3].y = 0;
 
     for (count = *frame_data++; count != 0; count--)
     {
@@ -8827,7 +8867,7 @@ void field_extract_effect_quad_corners16(FieldMotionRecord* effect, u8* frame_da
  * @param fallback_depth Horizontal offset used when mode does not derive it from the quad.
  * @param mode Zero skips adjustment; one derives the center from the quad; other values use fallback_depth.
  */
-void field_apply_effect_quad_center_offset(FieldMotionRecord* effect, Vec2s* screen_origin, s16* quad_bounds, s32 fallback_depth, s32 mode)
+void field_apply_effect_quad_center_offset(FieldMotionRecord* effect, Vec2s* screen_origin, Vec2s* quad_bounds, s32 fallback_depth, s32 mode)
 {
     SVECTOR offset;
     VECTOR rotated;
@@ -8838,8 +8878,8 @@ void field_apply_effect_quad_center_offset(FieldMotionRecord* effect, Vec2s* scr
     {
         if (mode == 1)
         {
-            center_x = (quad_bounds[2] + quad_bounds[0]) / 2;
-            center_y = (quad_bounds[5] + quad_bounds[1]) / 2;
+            center_x = (quad_bounds[1].x + quad_bounds[0].x) / 2;
+            center_y = (quad_bounds[2].y + quad_bounds[0].y) / 2;
         }
 
         offset.vx = -center_y;

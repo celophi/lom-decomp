@@ -1343,37 +1343,37 @@ static void field_text_blit_glyph(FieldTextState* state, s32 code, u16 width)
     {
         switch (state->text_color)
         {
-            case 0:
+            case FIELD_TEXT_COLOR_DEFAULT:
                 fill_low = 2;
                 fill_high = 0x20;
                 shadow_low = 3;
                 shadow_high = 0x30;
                 break;
-            case 1:
+            case FIELD_TEXT_COLOR_MENU:
                 fill_low = 4;
                 fill_high = 0x40;
                 shadow_low = 5;
                 shadow_high = 0x50;
                 break;
-            case 2:
+            case FIELD_TEXT_COLOR_MENU_HIGHLIGHT:
                 fill_low = 6;
                 fill_high = 0x60;
                 shadow_low = 7;
                 shadow_high = 0x70;
                 break;
-            case 3:
+            case FIELD_TEXT_COLOR_MENU_DIM:
                 fill_low = 8;
                 fill_high = 0x80;
                 shadow_low = 9;
                 shadow_high = 0x90;
                 break;
-            case 4:
+            case FIELD_TEXT_COLOR_NORMAL:
                 fill_low = 0xA;
                 fill_high = 0xA0;
                 shadow_low = 0xB;
                 shadow_high = 0xB0;
                 break;
-            case 5:
+            case FIELD_TEXT_COLOR_DIM:
                 fill_low = 0xC;
                 fill_high = 0xC0;
                 shadow_low = 0xD;
