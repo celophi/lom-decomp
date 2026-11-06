@@ -31,7 +31,7 @@
 #define CLOAD_ELEMENT_HEIGHT_MASK (0xFF << CLOAD_ELEMENT_HEIGHT_SHIFT)
 
 /** @brief Store the window height of a CardMenuElement. */
-#define CLOAD_SET_ELEMENT_HEIGHT(element, height) \
+#define CLOAD_SET_ELEMENT_HEIGHT(element, height)                                                                                                              \
     ((element)->size.word = ((element)->size.word & ~CLOAD_ELEMENT_HEIGHT_MASK) | ((height) << CLOAD_ELEMENT_HEIGHT_SHIFT))
 
 /**
@@ -64,7 +64,7 @@
 #define CLOAD_OT_SIZE (FIELD_ORDERING_TABLE_SIZE - FIELD_FADE_OT_INDEX)
 
 extern FieldRenderHalf g_cload_render_buffers[DISPLAY_BUFFER_COUNT];
-extern u8 *g_cload_icon_resource;
+extern u8* g_cload_icon_resource;
 extern u8 g_cload_primitive_buffers[DISPLAY_BUFFER_COUNT][FRAME_PRIMITIVE_BUFFER_SIZE];
 /** @brief Result cload_main returns: a CLOAD_RESULT_* code. */
 extern s32 g_cload_result;
@@ -83,7 +83,7 @@ extern s32 g_playtime_vsync_origin;
 extern u16 g_cload_text_version_error;
 
 /* FIELD and main-executable entry points used by CLOAD. */
-s32 field_upload_image_resource(RECT *rect, void *resource, s32 mode);
+s32 field_upload_image_resource(RECT* rect, void* resource, s32 mode);
 
 /* Functions shared across the CLOAD translation units. */
 void cload_run_menu_loop(void);
@@ -94,23 +94,23 @@ s32 card_menu_handle_input(void);
 void cload_close_all_elements(void);
 void cload_scroll_to_selection(void);
 void* cload_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
-void *cload_draw_header_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
-void *cload_draw_card_slot0_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
-void *cload_draw_card_slot1_label(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
+void* cload_draw_header_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+void* cload_draw_card_slot0_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+void* cload_draw_card_slot1_label(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void cload_clear_elements(void);
-CardMenuElement *cload_alloc_element(void);
-void *cload_emit_window_frame(void *prim, u_long *ot, s32 x, s32 y, s32 w, s32 h, s32 front_buffer, s32 draw_fill);
-void *cload_emit_rect_outline(LINE_F2 *line, u_long *ot, s32 x, s32 y, s32 w, s32 h, s32 color);
-void *cload_emit_scroll_arrow(SPRT *sprite, u_long *ot, s32 x, s32 y, s32 upper);
-void *cload_draw_load_prompt(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
-void *cload_draw_load_progress(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
-void *cload_draw_progress_bar(POLY_G4 *quad, u_long *ot);
+CardMenuElement* cload_alloc_element(void);
+void* cload_emit_window_frame(void* prim, u_long* ot, s32 x, s32 y, s32 w, s32 h, s32 front_buffer, s32 draw_fill);
+void* cload_emit_rect_outline(LINE_F2* line, u_long* ot, s32 x, s32 y, s32 w, s32 h, s32 color);
+void* cload_emit_scroll_arrow(SPRT* sprite, u_long* ot, s32 x, s32 y, s32 upper);
+void* cload_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+void* cload_draw_load_progress(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+void* cload_draw_progress_bar(POLY_G4* quad, u_long* ot);
 void cload_open_status_dialog(s32 dialog_state);
-void *cload_draw_status_dialog(u_long *ot, void *prim, s32 x_offset, s32 y_offset);
-void *cload_draw_icon_highlight(POLY_FT4 *quad, u_long *ot, s32 x, s32 y, s32 width, s32 icon, s32 index, s32 row);
+void* cload_draw_status_dialog(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
+void* cload_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s32 width, s32 icon, s32 index, s32 row);
 void cload_load_icon_resources(void);
-void *cload_draw_backdrop(SPRT *sprite, u_long *ot);
+void* cload_draw_backdrop(SPRT* sprite, u_long* ot);
 s32 cload_enable_choice_toggle(void);
 void* cload_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y);
 s32 cload_advance_load_sequence(void);

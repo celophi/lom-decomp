@@ -262,6 +262,7 @@ static void wsel_run_loop(WselRenderBuffer* buffers)
     PutDispEnv(&buffers[0].screen.disp_env);
     update_controllers();
     SetDispMask(1);
+
     do
     {
         ot = buffer->screen.ot;
@@ -275,6 +276,7 @@ static void wsel_run_loop(WselRenderBuffer* buffers)
         set_controller_vsync_interval(FRAME_VSYNC_INTERVAL);
         VSync(FRAME_VSYNC_INTERVAL);
         ClearImage(&buffer->screen.clear_rect, 0, 0, 0);
+
         if (buffer == buffers)
         {
             buffer = &buffers[1];
@@ -285,6 +287,7 @@ static void wsel_run_loop(WselRenderBuffer* buffers)
             buffer = buffers;
             g_wsel_buffer_index = 0;
         }
+
         PutDispEnv(&buffer->screen.disp_env);
         PutDrawEnv(&buffer->screen.draw_env);
         DrawOTag(&ot[FRAME_ORDERING_TABLE_LENGTH - 1]);
@@ -362,103 +365,116 @@ static void wsel_draw_frame(WselRenderBuffer* buffer)
 
     switch (g_wsel_state)
     {
-    case WSEL_STATE_SELECT_CELL:
-        /* Fade the land map and cursor in while the zoomed world map fades out. */
-        if (g_wsel_transition_timer != 0)
-        {
-            timer = --g_wsel_transition_timer;
-            g_wsel_sprites[WSEL_SPRITE_CURSOR].brightness = g_wsel_sprites[WSEL_SPRITE_LAND_MAP].brightness =
-                (WSEL_LAND_FADE_FRAMES - timer) * WSEL_LAND_FADE_STEP;
-            if (timer == 0)
+        case WSEL_STATE_SELECT_CELL:
+            /* Fade the land map and cursor in while the zoomed world map fades out. */
+            if (g_wsel_transition_timer != 0)
             {
-                g_wsel_sprites[WSEL_SPRITE_LAND_MAP].semi_trans = 0;
-                g_wsel_sprites[WSEL_SPRITE_CURSOR].semi_trans = 1;
+                timer = --g_wsel_transition_timer;
+                g_wsel_sprites[WSEL_SPRITE_CURSOR].brightness = g_wsel_sprites[WSEL_SPRITE_LAND_MAP].brightness =
+                    (WSEL_LAND_FADE_FRAMES - timer) * WSEL_LAND_FADE_STEP;
+                if (timer == 0)
+                {
+                    g_wsel_sprites[WSEL_SPRITE_LAND_MAP].semi_trans = 0;
+                    g_wsel_sprites[WSEL_SPRITE_CURSOR].semi_trans = 1;
+                }
+                else
+                {
+                    g_wsel_sprites[WSEL_SPRITE_LAND_MAP].semi_trans = 1;
+                    g_wsel_sprites[WSEL_SPRITE_LAND_MAP].blend_mode = GPU_BLEND_ADD;
+                    g_wsel_sprites[WSEL_SPRITE_CURSOR].semi_trans = 1;
+                    g_wsel_sprites[WSEL_SPRITE_CURSOR].blend_mode = GPU_BLEND_ADD;
+                }
             }
-            else
+
+            prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_CURSOR);
+            prim = wsel_draw_cell_shading(prim, ot);
+
+            if (g_wsel_transition_timer != 0)
             {
-                g_wsel_sprites[WSEL_SPRITE_LAND_MAP].semi_trans = 1;
-                g_wsel_sprites[WSEL_SPRITE_LAND_MAP].blend_mode = GPU_BLEND_ADD;
-                g_wsel_sprites[WSEL_SPRITE_CURSOR].semi_trans = 1;
-                g_wsel_sprites[WSEL_SPRITE_CURSOR].blend_mode = GPU_BLEND_ADD;
+                WSEL_QUAD_FROM_RECT(quad, g_wsel_zoom_rect);
+                prim = wsel_draw_zoom_quad((POLY_FT4*)prim, ot, &quad, 1, g_wsel_transition_timer * WSEL_LAND_FADE_STEP);
             }
-        }
-        prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_CURSOR);
-        prim = wsel_draw_cell_shading(prim, ot);
-        if (g_wsel_transition_timer != 0)
-        {
+
+            prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_LAND_MAP);
+            wsel_update_scroll();
+            break;
+
+        case WSEL_STATE_ZOOM_IN:
+            for (i = 0; i < WSEL_RECT_CORNERS; i++)
+            {
+                g_wsel_zoom_rect.corners[i].x += (g_wsel_zoom_target.corners[i].x - g_wsel_zoom_rect.corners[i].x) / g_wsel_transition_timer;
+                g_wsel_zoom_rect.corners[i].y += (g_wsel_zoom_target.corners[i].y - g_wsel_zoom_rect.corners[i].y) / g_wsel_transition_timer;
+            }
+
             WSEL_QUAD_FROM_RECT(quad, g_wsel_zoom_rect);
-            prim = wsel_draw_zoom_quad((POLY_FT4*)prim, ot, &quad, 1, g_wsel_transition_timer * WSEL_LAND_FADE_STEP);
-        }
-        prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_LAND_MAP);
-        wsel_update_scroll();
-        break;
+            prim = wsel_draw_zoom_quad((POLY_FT4*)prim, ot, &quad, 0, GPU_TINT_NEUTRAL_LEVEL);
 
-    case WSEL_STATE_ZOOM_IN:
-        for (i = 0; i < WSEL_RECT_CORNERS; i++)
-        {
-            g_wsel_zoom_rect.corners[i].x += (g_wsel_zoom_target.corners[i].x - g_wsel_zoom_rect.corners[i].x) / g_wsel_transition_timer;
-            g_wsel_zoom_rect.corners[i].y += (g_wsel_zoom_target.corners[i].y - g_wsel_zoom_rect.corners[i].y) / g_wsel_transition_timer;
-        }
-        WSEL_QUAD_FROM_RECT(quad, g_wsel_zoom_rect);
-        prim = wsel_draw_zoom_quad((POLY_FT4*)prim, ot, &quad, 0, GPU_TINT_NEUTRAL_LEVEL);
-        if (--g_wsel_transition_timer == 0)
-        {
-            g_wsel_state = WSEL_STATE_ZOOMED;
-            g_wsel_transition_timer = WSEL_LAND_FADE_FRAMES;
-        }
-        prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_OVERLAY);
-        prim = (u8*)wsel_draw_hero((POLY_FT4*)prim, ot, g_saved_game.layout.characters[FIELD_PARTY_HERO].info.bits.type);
-        prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_MAP);
-        break;
+            if (--g_wsel_transition_timer == 0)
+            {
+                g_wsel_state = WSEL_STATE_ZOOMED;
+                g_wsel_transition_timer = WSEL_LAND_FADE_FRAMES;
+            }
 
-    case WSEL_STATE_CONFIRM:
-        prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_CURSOR);
-        prim = wsel_draw_cell_shading(prim, ot);
-        prim = wsel_draw_selection_mask((TILE*)prim, ot);
-        prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_LAND_MAP);
-        wsel_update_scroll();
-        break;
+            prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_OVERLAY);
+            prim = (u8*)wsel_draw_hero((POLY_FT4*)prim, ot, g_saved_game.layout.characters[FIELD_PARTY_HERO].info.bits.type);
+            prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_MAP);
+            break;
 
-    case WSEL_STATE_ZOOM_OUT:
-        for (i = 0; i < WSEL_RECT_CORNERS; i++)
-        {
-            g_wsel_zoom_rect.corners[i].x += (g_wsel_zoom_target.corners[i].x - g_wsel_zoom_rect.corners[i].x) / g_wsel_transition_timer;
-            g_wsel_zoom_rect.corners[i].y += (g_wsel_zoom_target.corners[i].y - g_wsel_zoom_rect.corners[i].y) / g_wsel_transition_timer;
-        }
-        WSEL_QUAD_FROM_RECT(quad, g_wsel_zoom_rect);
-        prim = wsel_draw_zoom_quad((POLY_FT4*)prim, ot, &quad, 0, GPU_TINT_NEUTRAL_LEVEL);
-        if (--g_wsel_transition_timer == 0)
-        {
-            g_wsel_state = WSEL_STATE_WORLD_MAP;
-            g_wsel_transition_timer = 0;
-        }
-        prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_OVERLAY);
-        prim = (u8*)wsel_draw_hero((POLY_FT4*)prim, ot, g_saved_game.layout.characters[FIELD_PARTY_HERO].info.bits.type);
-        prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_MAP);
-        break;
+        case WSEL_STATE_CONFIRM:
+            prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_CURSOR);
+            prim = wsel_draw_cell_shading(prim, ot);
+            prim = wsel_draw_selection_mask((TILE*)prim, ot);
+            prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_LAND_MAP);
+            wsel_update_scroll();
+            break;
 
-    case WSEL_STATE_ZOOMED:
-        for (i = 0; i < WSEL_RECT_CORNERS; i++)
-        {
-            g_wsel_zoom_rect.corners[i].x = g_wsel_zoom_target.corners[i].x;
-            g_wsel_zoom_rect.corners[i].y = g_wsel_zoom_target.corners[i].y;
-        }
-        WSEL_QUAD_FROM_RECT(quad, g_wsel_zoom_rect);
-        prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_PROMPT);
-        prim = wsel_draw_zoom_quad((POLY_FT4*)prim, ot, &quad, 0, GPU_TINT_NEUTRAL_LEVEL);
-        if (g_wsel_buttons_held & PAD_CONFIRM_BUTTONS)
-        {
-            play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
-            g_wsel_state = WSEL_STATE_SELECT_CELL;
-            g_wsel_transition_timer = WSEL_LAND_FADE_FRAMES;
-        }
-        /* fall through */
-    case WSEL_STATE_WORLD_MAP:
-        prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_OVERLAY);
-        prim = (u8*)wsel_draw_hero((POLY_FT4*)prim, ot, g_saved_game.layout.characters[FIELD_PARTY_HERO].info.bits.type);
-        prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_MAP);
-        break;
+        case WSEL_STATE_ZOOM_OUT:
+            for (i = 0; i < WSEL_RECT_CORNERS; i++)
+            {
+                g_wsel_zoom_rect.corners[i].x += (g_wsel_zoom_target.corners[i].x - g_wsel_zoom_rect.corners[i].x) / g_wsel_transition_timer;
+                g_wsel_zoom_rect.corners[i].y += (g_wsel_zoom_target.corners[i].y - g_wsel_zoom_rect.corners[i].y) / g_wsel_transition_timer;
+            }
+
+            WSEL_QUAD_FROM_RECT(quad, g_wsel_zoom_rect);
+            prim = wsel_draw_zoom_quad((POLY_FT4*)prim, ot, &quad, 0, GPU_TINT_NEUTRAL_LEVEL);
+
+            if (--g_wsel_transition_timer == 0)
+            {
+                g_wsel_state = WSEL_STATE_WORLD_MAP;
+                g_wsel_transition_timer = 0;
+            }
+
+            prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_OVERLAY);
+            prim = (u8*)wsel_draw_hero((POLY_FT4*)prim, ot, g_saved_game.layout.characters[FIELD_PARTY_HERO].info.bits.type);
+            prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_MAP);
+            break;
+
+        case WSEL_STATE_ZOOMED:
+            for (i = 0; i < WSEL_RECT_CORNERS; i++)
+            {
+                g_wsel_zoom_rect.corners[i].x = g_wsel_zoom_target.corners[i].x;
+                g_wsel_zoom_rect.corners[i].y = g_wsel_zoom_target.corners[i].y;
+            }
+
+            WSEL_QUAD_FROM_RECT(quad, g_wsel_zoom_rect);
+            prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_PROMPT);
+            prim = wsel_draw_zoom_quad((POLY_FT4*)prim, ot, &quad, 0, GPU_TINT_NEUTRAL_LEVEL);
+
+            if (g_wsel_buttons_held & PAD_CONFIRM_BUTTONS)
+            {
+                play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
+                g_wsel_state = WSEL_STATE_SELECT_CELL;
+                g_wsel_transition_timer = WSEL_LAND_FADE_FRAMES;
+            }
+
+            /* fall through */
+        case WSEL_STATE_WORLD_MAP:
+            prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_OVERLAY);
+            prim = (u8*)wsel_draw_hero((POLY_FT4*)prim, ot, g_saved_game.layout.characters[FIELD_PARTY_HERO].info.bits.type);
+            prim = wsel_draw_sprite((SPRT*)prim, ot, WSEL_SPRITE_WORLD_MAP);
+            break;
     }
+
     buffer->screen.prim_cursor = prim;
 }
 
@@ -669,15 +685,18 @@ static void* wsel_draw_cell_shading(void* prim, u_long* ot)
 
         draw_x = g_wsel_sprites[WSEL_SPRITE_CURSOR].x + WSEL_CLIP_INSET;
         draw_y = g_wsel_sprites[WSEL_SPRITE_CURSOR].y + WSEL_CLIP_INSET + VRAM_BACK_DRAW_Y;
+
         if (g_wsel_buffer_index != 0)
         {
             draw_y = g_wsel_sprites[WSEL_SPRITE_CURSOR].y + WSEL_CLIP_INSET + SCREEN_HEIGHT;
         }
+
         SetDefDrawEnv(&draw_env, draw_x, draw_y, WSEL_MASK_SIZE, WSEL_MASK_SIZE);
         SetDrawEnv((DR_ENV*)p, &draw_env);
         addPrim(ot, p);
         p += sizeof(DR_ENV);
     }
+
     return p;
 }
 
@@ -695,6 +714,7 @@ static void* wsel_draw_shade_tile(TILE* tile, u_long* ot, s32 x, s32 y, s32 inte
     DR_TPAGE* draw_mode;
 
     setTile(tile);
+
     if (intensity < WSEL_SHADE_ADDITIVE)
     {
         SET_BGR0(tile, -intensity, -intensity, -intensity);
@@ -703,12 +723,14 @@ static void* wsel_draw_shade_tile(TILE* tile, u_long* ot, s32 x, s32 y, s32 inte
     {
         SET_BGR0(tile, intensity, intensity, intensity);
     }
+
     setXY0(tile, x, y);
     setWH(tile, WSEL_CELL_SIZE, WSEL_CELL_SIZE);
     setSemiTrans(tile, 1);
     addPrim(ot, tile);
 
     draw_mode = (DR_TPAGE*)(tile + 1);
+
     if (intensity < WSEL_SHADE_ADDITIVE)
     {
         setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 0, 0));
@@ -717,6 +739,7 @@ static void* wsel_draw_shade_tile(TILE* tile, u_long* ot, s32 x, s32 y, s32 inte
     {
         setDrawTPage(draw_mode, 0, 0, getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, 0, 0));
     }
+
     addPrim(ot, draw_mode);
     return draw_mode + 1;
 }
@@ -748,6 +771,7 @@ static void* wsel_draw_sprite(SPRT* prim, u_long* ot, s32 index)
     s32 v;
 
     sprite = &g_wsel_sprites[index];
+
     if (index == WSEL_SPRITE_CURSOR)
     {
         passes = 2;
@@ -760,6 +784,7 @@ static void* wsel_draw_sprite(SPRT* prim, u_long* ot, s32 index)
         x = sprite->x;
         y = sprite->y;
     }
+
     brightness = sprite->brightness;
 
     for (; passes != 0; passes--)
@@ -769,10 +794,12 @@ static void* wsel_draw_sprite(SPRT* prim, u_long* ot, s32 index)
         height_left = sprite->height;
         tpage_y = sprite->tpage_y;
         v = sprite->v;
+
         if (height_left <= WSEL_SPRITE_BAND_HEIGHT)
         {
             band_height = height_left;
         }
+
         do
         {
             strip_x = x;
@@ -780,10 +807,12 @@ static void* wsel_draw_sprite(SPRT* prim, u_long* ot, s32 index)
             tpage_x = sprite->tpage_x;
             u = sprite->u;
             strip_width = WSEL_SPRITE_STRIP_WIDTH;
+
             if (width_left <= WSEL_SPRITE_STRIP_WIDTH)
             {
                 strip_width = width_left;
             }
+
             while (1)
             {
                 setSprt(prim);
@@ -803,12 +832,15 @@ static void* wsel_draw_sprite(SPRT* prim, u_long* ot, s32 index)
                 prim = (SPRT*)(draw_mode + 1);
                 width_left -= strip_width;
                 addPrim(ot, draw_mode);
+
                 if (width_left == 0)
                 {
                     break;
                 }
+
                 /* Next strip: 4-bit pages hold two strips (32 VRAM columns each). */
                 u ^= WSEL_SPRITE_STRIP_WIDTH;
+
                 if (sprite->tpage_mode == 0)
                 {
                     tpage_x += 32;
@@ -819,23 +851,30 @@ static void* wsel_draw_sprite(SPRT* prim, u_long* ot, s32 index)
                     tpage_x += 64;
                     u = 0;
                 }
+
                 strip_width = WSEL_SPRITE_STRIP_WIDTH;
+
                 if (width_left <= WSEL_SPRITE_STRIP_WIDTH)
                 {
                     strip_width = width_left;
                 }
+
                 strip_x += WSEL_SPRITE_STRIP_WIDTH;
             }
+
             height_left -= band_height;
             tpage_y += WSEL_SPRITE_BAND_HEIGHT;
+
             if (height_left != 0)
             {
                 v = 0;
                 band_height = WSEL_SPRITE_BAND_HEIGHT;
+
                 if (height_left <= WSEL_SPRITE_BAND_HEIGHT)
                 {
                     band_height = height_left;
                 }
+
                 band_y += WSEL_SPRITE_BAND_HEIGHT;
             }
         } while (height_left != 0);
@@ -843,6 +882,7 @@ static void* wsel_draw_sprite(SPRT* prim, u_long* ot, s32 index)
         y += WSEL_SHADOW_OFFSET;
         brightness = 0;
     }
+
     return prim;
 }
 
@@ -857,148 +897,161 @@ static void wsel_update_input(void)
     s32 row;
 
     wsel_update_pad_repeat();
+
     switch (g_wsel_state)
     {
-    case WSEL_STATE_WORLD_MAP:
-        if (g_debounced_input & PAD_CONFIRM_BUTTONS)
-        {
-            play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
-            wsel_reset_scroll();
-            g_wsel_transition_timer = WSEL_ZOOM_FRAMES;
-            g_wsel_zoom_rect.corners[0].x = WSEL_ZOOM_SMALL_LEFT;
-            g_wsel_zoom_rect.corners[1].x = WSEL_ZOOM_SMALL_RIGHT;
-            g_wsel_zoom_target.corners[0].x = WSEL_ZOOM_LARGE_LEFT;
-            g_wsel_zoom_target.corners[1].x = WSEL_ZOOM_LARGE_RIGHT;
-            g_wsel_zoom_rect.corners[0].y = WSEL_ZOOM_SMALL_TOP;
-            g_wsel_zoom_rect.corners[1].y = WSEL_ZOOM_SMALL_BOTTOM;
-            g_wsel_zoom_target.corners[0].y = WSEL_ZOOM_LARGE_TOP;
-            g_wsel_zoom_target.corners[1].y = WSEL_ZOOM_LARGE_BOTTOM;
-            g_wsel_state = WSEL_STATE_ZOOM_IN;
-            return;
-        }
-        if ((g_debounced_input & WSEL_CANCEL_BUTTONS) && !g_saved_game.layout.options.bits.flag_3)
-        {
-            play_sfx(SFX_CANCEL, AKAO_PAN_CENTER);
-            g_wsel_exit_state = WSEL_EXIT_CANCELLED;
-        }
-        return;
-
-    case WSEL_STATE_SELECT_CELL:
-        if (g_wsel_cursor_frames != 0 || g_wsel_map_scroll_frames != 0)
-        {
-            break;
-        }
-        if (g_debounced_input & WSEL_CANCEL_BUTTONS)
-        {
-            play_sfx(SFX_CANCEL, AKAO_PAN_CENTER);
-            g_wsel_transition_timer = WSEL_ZOOM_FRAMES;
-            g_wsel_zoom_target.corners[0].x = WSEL_ZOOM_SMALL_LEFT;
-            g_wsel_zoom_target.corners[1].x = WSEL_ZOOM_SMALL_RIGHT;
-            g_wsel_zoom_rect.corners[0].x = WSEL_ZOOM_LARGE_LEFT;
-            g_wsel_zoom_rect.corners[1].x = WSEL_ZOOM_LARGE_RIGHT;
-            g_wsel_zoom_target.corners[0].y = WSEL_ZOOM_SMALL_TOP;
-            g_wsel_zoom_target.corners[1].y = WSEL_ZOOM_SMALL_BOTTOM;
-            g_wsel_zoom_rect.corners[0].y = WSEL_ZOOM_LARGE_TOP;
-            g_wsel_zoom_rect.corners[1].y = WSEL_ZOOM_LARGE_BOTTOM;
-            g_wsel_state = WSEL_STATE_ZOOM_OUT;
-        }
-        else if (g_debounced_input & PAD_CONFIRM_BUTTONS)
-        {
-            g_wsel_transition_timer = 0;
-            g_wsel_sprites[WSEL_SPRITE_CURSOR].brightness = GPU_TINT_NEUTRAL_LEVEL;
-            g_wsel_sprites[WSEL_SPRITE_LAND_MAP].brightness = GPU_TINT_NEUTRAL_LEVEL;
-            g_wsel_sprites[WSEL_SPRITE_LAND_MAP].semi_trans = 0;
-            g_wsel_sprites[WSEL_SPRITE_CURSOR].semi_trans = 1;
-            column = WSEL_CURSOR_CELL_COLUMN();
-            row = WSEL_CURSOR_CELL_ROW();
-            if (g_wsel_cell_occupied[WSEL_CELL_INDEX(column, row)] == 0)
+        case WSEL_STATE_WORLD_MAP:
+            if (g_debounced_input & PAD_CONFIRM_BUTTONS)
             {
                 play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
-                g_wsel_state = WSEL_STATE_CONFIRM;
-                g_wsel_mask_shade = 0;
+                wsel_reset_scroll();
+                g_wsel_transition_timer = WSEL_ZOOM_FRAMES;
+                g_wsel_zoom_rect.corners[0].x = WSEL_ZOOM_SMALL_LEFT;
+                g_wsel_zoom_rect.corners[1].x = WSEL_ZOOM_SMALL_RIGHT;
+                g_wsel_zoom_target.corners[0].x = WSEL_ZOOM_LARGE_LEFT;
+                g_wsel_zoom_target.corners[1].x = WSEL_ZOOM_LARGE_RIGHT;
+                g_wsel_zoom_rect.corners[0].y = WSEL_ZOOM_SMALL_TOP;
+                g_wsel_zoom_rect.corners[1].y = WSEL_ZOOM_SMALL_BOTTOM;
+                g_wsel_zoom_target.corners[0].y = WSEL_ZOOM_LARGE_TOP;
+                g_wsel_zoom_target.corners[1].y = WSEL_ZOOM_LARGE_BOTTOM;
+                g_wsel_state = WSEL_STATE_ZOOM_IN;
                 return;
             }
-            play_sfx(SFX_ERROR, AKAO_PAN_CENTER);
-            return;
-        }
 
-        /* The cursor stays near the middle while the map can still scroll. */
-        if (g_wsel_buttons_held & PAD_BTN_UP)
-        {
-            if (g_wsel_cursor_target.y <= WSEL_CURSOR_START_Y && g_wsel_map_scroll_target.y < 0)
+            if ((g_debounced_input & WSEL_CANCEL_BUTTONS) && !g_saved_game.layout.options.bits.flag_3)
             {
-                g_wsel_map_scroll_target.y += WSEL_CELL_SIZE;
-                g_wsel_map_scroll_frames = WSEL_CURSOR_MOVE_FRAMES;
+                play_sfx(SFX_CANCEL, AKAO_PAN_CENTER);
+                g_wsel_exit_state = WSEL_EXIT_CANCELLED;
             }
-            else if (g_wsel_cursor_target.y > WSEL_CURSOR_MIN)
-            {
-                g_wsel_cursor_target.y -= WSEL_CELL_SIZE;
-                g_wsel_cursor_frames = WSEL_CURSOR_MOVE_FRAMES;
-            }
-        }
-        if (g_wsel_buttons_held & PAD_BTN_DOWN)
-        {
-            if (g_wsel_cursor_target.y >= WSEL_CURSOR_START_Y && g_wsel_map_scroll_target.y > WSEL_MAP_SCROLL_MIN_Y)
-            {
-                g_wsel_map_scroll_target.y -= WSEL_CELL_SIZE;
-                g_wsel_map_scroll_frames = WSEL_CURSOR_MOVE_FRAMES;
-            }
-            else if (g_wsel_cursor_target.y < WSEL_CURSOR_MAX_Y)
-            {
-                g_wsel_cursor_target.y += WSEL_CELL_SIZE;
-                g_wsel_cursor_frames = WSEL_CURSOR_MOVE_FRAMES;
-            }
-        }
-        if (g_wsel_buttons_held & PAD_BTN_LEFT)
-        {
-            if (g_wsel_cursor_target.x <= WSEL_CURSOR_START_X && g_wsel_map_scroll_target.x < 0)
-            {
-                g_wsel_map_scroll_target.x += WSEL_CELL_SIZE;
-                g_wsel_map_scroll_frames = WSEL_CURSOR_MOVE_FRAMES;
-            }
-            else if (g_wsel_cursor_target.x > WSEL_CURSOR_MIN)
-            {
-                g_wsel_cursor_target.x -= WSEL_CELL_SIZE;
-                g_wsel_cursor_frames = WSEL_CURSOR_MOVE_FRAMES;
-            }
-        }
-        if (g_wsel_buttons_held & PAD_BTN_RIGHT)
-        {
-            if (g_wsel_cursor_target.x >= WSEL_CURSOR_START_X && g_wsel_map_scroll_target.x > WSEL_MAP_SCROLL_MIN_X)
-            {
-                g_wsel_map_scroll_target.x -= WSEL_CELL_SIZE;
-                g_wsel_map_scroll_frames = WSEL_CURSOR_MOVE_FRAMES;
-            }
-            else if (g_wsel_cursor_target.x < WSEL_CURSOR_MAX_X)
-            {
-                g_wsel_cursor_target.x += WSEL_CELL_SIZE;
-                g_wsel_cursor_frames = WSEL_CURSOR_MOVE_FRAMES;
-            }
-        }
-        if ((g_wsel_buttons_held & PAD_BTN_DPAD) && (g_wsel_cursor_frames != 0 || g_wsel_map_scroll_frames != 0))
-        {
-            play_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
-            return;
-        }
-        break;
 
-    case WSEL_STATE_CONFIRM:
-        if (g_debounced_input & WSEL_FINAL_CONFIRM_BUTTONS)
-        {
-            play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
-            column = WSEL_CURSOR_CELL_COLUMN();
-            row = WSEL_CURSOR_CELL_ROW();
-            g_saved_game.layout.world_map_cell = WSEL_CELL_INDEX(column, row);
-            g_wsel_exit_state = WSEL_EXIT_CELL_CHOSEN;
-            g_saved_game.layout.options.word &= ~SAVED_OPTION_FLAG_3;
             return;
-        }
-        if (g_debounced_input & WSEL_CANCEL_BUTTONS)
-        {
-            play_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
-            g_wsel_state = WSEL_STATE_SELECT_CELL;
-        }
-        break;
+
+        case WSEL_STATE_SELECT_CELL:
+            if (g_wsel_cursor_frames != 0 || g_wsel_map_scroll_frames != 0)
+            {
+                break;
+            }
+
+            if (g_debounced_input & WSEL_CANCEL_BUTTONS)
+            {
+                play_sfx(SFX_CANCEL, AKAO_PAN_CENTER);
+                g_wsel_transition_timer = WSEL_ZOOM_FRAMES;
+                g_wsel_zoom_target.corners[0].x = WSEL_ZOOM_SMALL_LEFT;
+                g_wsel_zoom_target.corners[1].x = WSEL_ZOOM_SMALL_RIGHT;
+                g_wsel_zoom_rect.corners[0].x = WSEL_ZOOM_LARGE_LEFT;
+                g_wsel_zoom_rect.corners[1].x = WSEL_ZOOM_LARGE_RIGHT;
+                g_wsel_zoom_target.corners[0].y = WSEL_ZOOM_SMALL_TOP;
+                g_wsel_zoom_target.corners[1].y = WSEL_ZOOM_SMALL_BOTTOM;
+                g_wsel_zoom_rect.corners[0].y = WSEL_ZOOM_LARGE_TOP;
+                g_wsel_zoom_rect.corners[1].y = WSEL_ZOOM_LARGE_BOTTOM;
+                g_wsel_state = WSEL_STATE_ZOOM_OUT;
+            }
+            else if (g_debounced_input & PAD_CONFIRM_BUTTONS)
+            {
+                g_wsel_transition_timer = 0;
+                g_wsel_sprites[WSEL_SPRITE_CURSOR].brightness = GPU_TINT_NEUTRAL_LEVEL;
+                g_wsel_sprites[WSEL_SPRITE_LAND_MAP].brightness = GPU_TINT_NEUTRAL_LEVEL;
+                g_wsel_sprites[WSEL_SPRITE_LAND_MAP].semi_trans = 0;
+                g_wsel_sprites[WSEL_SPRITE_CURSOR].semi_trans = 1;
+                column = WSEL_CURSOR_CELL_COLUMN();
+                row = WSEL_CURSOR_CELL_ROW();
+
+                if (g_wsel_cell_occupied[WSEL_CELL_INDEX(column, row)] == 0)
+                {
+                    play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
+                    g_wsel_state = WSEL_STATE_CONFIRM;
+                    g_wsel_mask_shade = 0;
+                    return;
+                }
+
+                play_sfx(SFX_ERROR, AKAO_PAN_CENTER);
+                return;
+            }
+
+            /* The cursor stays near the middle while the map can still scroll. */
+            if (g_wsel_buttons_held & PAD_BTN_UP)
+            {
+                if (g_wsel_cursor_target.y <= WSEL_CURSOR_START_Y && g_wsel_map_scroll_target.y < 0)
+                {
+                    g_wsel_map_scroll_target.y += WSEL_CELL_SIZE;
+                    g_wsel_map_scroll_frames = WSEL_CURSOR_MOVE_FRAMES;
+                }
+                else if (g_wsel_cursor_target.y > WSEL_CURSOR_MIN)
+                {
+                    g_wsel_cursor_target.y -= WSEL_CELL_SIZE;
+                    g_wsel_cursor_frames = WSEL_CURSOR_MOVE_FRAMES;
+                }
+            }
+
+            if (g_wsel_buttons_held & PAD_BTN_DOWN)
+            {
+                if (g_wsel_cursor_target.y >= WSEL_CURSOR_START_Y && g_wsel_map_scroll_target.y > WSEL_MAP_SCROLL_MIN_Y)
+                {
+                    g_wsel_map_scroll_target.y -= WSEL_CELL_SIZE;
+                    g_wsel_map_scroll_frames = WSEL_CURSOR_MOVE_FRAMES;
+                }
+                else if (g_wsel_cursor_target.y < WSEL_CURSOR_MAX_Y)
+                {
+                    g_wsel_cursor_target.y += WSEL_CELL_SIZE;
+                    g_wsel_cursor_frames = WSEL_CURSOR_MOVE_FRAMES;
+                }
+            }
+
+            if (g_wsel_buttons_held & PAD_BTN_LEFT)
+            {
+                if (g_wsel_cursor_target.x <= WSEL_CURSOR_START_X && g_wsel_map_scroll_target.x < 0)
+                {
+                    g_wsel_map_scroll_target.x += WSEL_CELL_SIZE;
+                    g_wsel_map_scroll_frames = WSEL_CURSOR_MOVE_FRAMES;
+                }
+                else if (g_wsel_cursor_target.x > WSEL_CURSOR_MIN)
+                {
+                    g_wsel_cursor_target.x -= WSEL_CELL_SIZE;
+                    g_wsel_cursor_frames = WSEL_CURSOR_MOVE_FRAMES;
+                }
+            }
+
+            if (g_wsel_buttons_held & PAD_BTN_RIGHT)
+            {
+                if (g_wsel_cursor_target.x >= WSEL_CURSOR_START_X && g_wsel_map_scroll_target.x > WSEL_MAP_SCROLL_MIN_X)
+                {
+                    g_wsel_map_scroll_target.x -= WSEL_CELL_SIZE;
+                    g_wsel_map_scroll_frames = WSEL_CURSOR_MOVE_FRAMES;
+                }
+                else if (g_wsel_cursor_target.x < WSEL_CURSOR_MAX_X)
+                {
+                    g_wsel_cursor_target.x += WSEL_CELL_SIZE;
+                    g_wsel_cursor_frames = WSEL_CURSOR_MOVE_FRAMES;
+                }
+            }
+
+            if ((g_wsel_buttons_held & PAD_BTN_DPAD) && (g_wsel_cursor_frames != 0 || g_wsel_map_scroll_frames != 0))
+            {
+                play_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
+                return;
+            }
+
+            break;
+
+        case WSEL_STATE_CONFIRM:
+            if (g_debounced_input & WSEL_FINAL_CONFIRM_BUTTONS)
+            {
+                play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
+                column = WSEL_CURSOR_CELL_COLUMN();
+                row = WSEL_CURSOR_CELL_ROW();
+                g_saved_game.layout.world_map_cell = WSEL_CELL_INDEX(column, row);
+                g_wsel_exit_state = WSEL_EXIT_CELL_CHOSEN;
+                g_saved_game.layout.options.word &= ~SAVED_OPTION_FLAG_3;
+                return;
+            }
+
+            if (g_debounced_input & WSEL_CANCEL_BUTTONS)
+            {
+                play_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
+                g_wsel_state = WSEL_STATE_SELECT_CELL;
+            }
+
+            break;
     }
 }
 
@@ -1118,6 +1171,7 @@ static void wsel_upload_tim(u8* tim_data, s32 index)
     clut_x = g_wsel_sprites[index].clut_x;
     clut_y = g_wsel_sprites[index].clut_y;
     tim = (TimPrefix*)tim_data;
+
     if ((u8)tim->flags & TIM_FLAG_HAS_CLUT)
     {
         /* The CLUT block's length locates the pixel block that follows it. */
@@ -1135,6 +1189,7 @@ static void wsel_upload_tim(u8* tim_data, s32 index)
         /* Without a CLUT the pixel block directly follows the file header. */
         tim_data += TIM_HEADER_SIZE;
     }
+
     pixel_block = (TimBlock*)tim_data;
     setRECT(&rect, image_x, image_y, pixel_block->dimensions.width, pixel_block->dimensions.height);
     LoadImage(&rect, (u_long*)(pixel_block + 1));
@@ -1154,6 +1209,7 @@ static void wsel_update_pad_repeat(void)
     g_wsel_buttons_held = sample_pad_buttons();
     input_state = g_wsel_buttons_held;
     g_debounced_input = 0;
+
     if (((input_state == g_last_input_state) || ((g_last_input_state != 0) && (input_state & (g_last_input_state | PAD_REPEAT_HOLD_BUTTONS)))) &&
         (input_state != 0))
     {
@@ -1162,6 +1218,7 @@ static void wsel_update_pad_repeat(void)
         {
             input_state &= PAD_BTN_DPAD;
         }
+
         if (g_input_repeat_timer == 0)
         {
             g_debounced_input = input_state;

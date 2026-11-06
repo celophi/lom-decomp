@@ -15,6 +15,7 @@ s32 encoded_text_byte_length(u8* text)
     cursor = text;
     code = *cursor;
     byte_length = 0;
+
     while (code != 0)
     {
         if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(code))
@@ -27,7 +28,9 @@ s32 encoded_text_byte_length(u8* text)
             cursor++;
             byte_length++;
         }
+
         code = *cursor;
     }
+
     return byte_length;
 }

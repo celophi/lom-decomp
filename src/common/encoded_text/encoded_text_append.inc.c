@@ -13,9 +13,11 @@ void encoded_text_append(u8* dst, u8* src)
 
     dst_length = encoded_text_byte_length(dst);
     src_length = encoded_text_byte_length(src);
+
     for (i = 0; i < src_length; i++)
     {
         dst[dst_length + i] = src[i];
     }
+
     dst[dst_length + i] = 0;
 }

@@ -22,5 +22,6 @@ void* card_menu_draw_mode_title(u_long* ot, void* prim, s32 x_offset, s32 y_offs
         prim = field_draw_text(prim, ot, CARD_MENU_TEXT_AT(g_card_menu_text_select_save_data, CARD_MENU_TEXT_SELECT_SAVE_DATA), FIELD_TEXT_COLOR_NORMAL,
                                -x_offset + CARD_MENU_EXCHANGE_TITLE_WIDTH / 2, -y_offset, FIELD_TEXT_ALIGN_CENTER);
     }
+
     return prim;
 }

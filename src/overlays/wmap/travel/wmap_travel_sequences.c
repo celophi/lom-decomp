@@ -58,7 +58,6 @@ extern s32 g_wmap_vehicle_flying;
 extern s32 g_wmap_vehicle_target_x;
 extern s32 g_wmap_vehicle_target_y;
 
-
 extern u32 g_wmap_special_travel_step;
 extern s32 g_wmap_special_travel_timer;
 extern WmapSequenceStep g_wmap_special_travel_steps[];

@@ -13,6 +13,7 @@
 #include <libgte.h>
 #include <memory.h>
 
+#include "common/pad.h"
 #include "../internal/field_actor_routes.h"
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_actor_tables.h"
@@ -176,7 +177,6 @@ extern s32 g_field_duel_panel_phase;
 extern s32 g_field_duel_panel_offset;
 extern s32 g_field_duel_panel_hold_frames;
 extern s32 g_field_duel_winner;
-
 
 POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* packet_cursor, u_long* ot, u8* text, s32 color, s32 x, s32 y, s32 align, s32 slot, s32 scale_x, s32 scale_y,
                                       s32 arg10, s32 visible);
@@ -870,8 +870,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
             record_base_offset = index * sizeof(FieldCharacterRecord) + OFFSETOF(SavedGameLayout, characters);
             held_buttons = ((raw_buttons << 8) & 0xFF00) | (raw_buttons >> 8);
 #if !defined(VERSION_JP)
-            held_buttons = (((u32)(held_buttons & 0x40) >> 1) | ((held_buttons & 0x20) * 2) | ((u32)(held_buttons & 0x80) >> 3) | ((held_buttons & 0x10) * 8) |
-                            (held_buttons & 0xFF0F));
+            held_buttons = PAD_REMAP_FACE_BITS_16(held_buttons);
 #endif
             while (button_or_x < FIELD_HINT_BUTTON_COUNT)
             {
@@ -1207,7 +1206,7 @@ s32 field_read_controller_buttons(s32 index)
     raw_buttons = port->published_sample.held_buttons;
     buttons = (raw_buttons >> 8) | ((raw_buttons & 0xFF) << 8);
 #if !defined(VERSION_JP)
-    buttons = ((u32)(buttons & 0x40) >> 1) | ((buttons & 0x20) << 1) | ((u32)(buttons & 0x80) >> 3) | ((buttons & 0x10) << 3) | (buttons & 0xFF0F);
+    buttons = PAD_REMAP_FACE_BITS_16(buttons);
 #endif
 
     if (port->published_sample.device_type != CONTROLLER_DEVICE_DIGITAL)
@@ -1357,7 +1356,7 @@ void field_process_input(FieldRenderHalf* render)
     buttons = ports[0].published_sample.held_buttons;
     buttons = (buttons >> 8) | ((buttons & 0xFF) << 8);
 #if !defined(VERSION_JP)
-    buttons = ((buttons & 0x40) >> 1) | ((buttons & 0x20) << 1) | ((buttons & 0x80) >> 3) | ((buttons & 0x10) << 3) | (buttons & 0xFF0F);
+    buttons = PAD_REMAP_FACE_BITS_16(buttons);
 #endif
     if (g_field_modal_state != 0)
     {

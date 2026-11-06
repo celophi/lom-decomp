@@ -13,20 +13,24 @@ void terminate_multibyte_text(void* title_text)
 
     cursor = (u8*)title_text;
     byte_offset = 0;
+
     while (1)
     {
         if (byte_offset >= CARD_FILE_TITLE_BYTES)
         {
             return;
         }
+
         if (*cursor == 0)
         {
             for (; byte_offset < CARD_FILE_TITLE_BYTES; byte_offset++, cursor++)
             {
                 *cursor = 0;
             }
+
             return;
         }
+
         if (*cursor >= SJIS_LEAD_MIN)
         {
             cursor += SJIS_MULTIBYTE_CHAR_BYTES;

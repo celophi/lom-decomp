@@ -10,6 +10,7 @@ inline CardMenuElement* card_menu_alloc_element(void)
     s32 i;
 
     p = g_card_menu_element_pool;
+
     for (i = 0; i < CARD_MENU_ELEMENT_COUNT; i++, p++)
     {
         if (p->attr.bits.state == CARD_MENU_ELEMENT_FREE)
@@ -18,5 +19,6 @@ inline CardMenuElement* card_menu_alloc_element(void)
             return p;
         }
     }
+
     return g_card_menu_element_pool;
 }

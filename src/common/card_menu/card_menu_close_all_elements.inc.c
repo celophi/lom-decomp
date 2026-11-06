@@ -10,6 +10,7 @@ inline void card_menu_close_all_elements(void)
 
     field_restore_fade_target();
     element = g_card_menu_element_pool;
+
     for (slot = 0; slot < CARD_MENU_ELEMENT_COUNT; slot++, element++)
     {
         if (element->attr.bits.state != CARD_MENU_ELEMENT_FREE)

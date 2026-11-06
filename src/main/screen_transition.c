@@ -98,6 +98,7 @@ void screen_transition(s32 skip_fade)
     reset_controller_vsync_state();
     DrawSync(0);
     VSync(0);
+
     if (skip_fade == 0)
     {
         SetDispMask(0);

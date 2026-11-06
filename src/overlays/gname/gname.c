@@ -446,7 +446,6 @@ extern u32 g_random_names_off;
  * @param volume Playback volume.
  */
 
-
 static void render_fade_overlay(RenderContext* render_ctx);
 static void load_name_entry_tim(void);
 static void load_tim_to_vram(const TimUploadDestination* upload_coords);
@@ -878,110 +877,162 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
     {
         switch (mode)
         {
-        /* Top-row action buttons: OK, Delete, Random, and Default. */
-        case GNAME_MODE_ACTION_OK:
-        case GNAME_MODE_ACTION_DELETE:
-        case GNAME_MODE_ACTION_RANDOM:
-        case GNAME_MODE_ACTION_DEFAULT:
-            if (buttons & PAD_CONFIRM_BUTTONS)
-            {
-                g_activated_entry = mode;
-                navigation_step = GNAME_NAVIGATION_STEP;
-
-                switch (mode)
+            /* Top-row action buttons: OK, Delete, Random, and Default. */
+            case GNAME_MODE_ACTION_OK:
+            case GNAME_MODE_ACTION_DELETE:
+            case GNAME_MODE_ACTION_RANDOM:
+            case GNAME_MODE_ACTION_DEFAULT:
+                if (buttons & PAD_CONFIRM_BUTTONS)
                 {
-                case GNAME_MODE_ACTION_OK:
-                    if ((name_glyph_count(g_active_name) != 0) && (!name_is_blank(g_active_name)))
-                    {
-                        field_play_sound(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
-                        g_overlay_result = GNAME_RESULT_CONFIRM;
-                    }
-                    else
-                    {
-                        field_play_sound(GNAME_SFX_ERROR, AKAO_SFX_DEFAULT_VOLUME);
-                    }
+                    g_activated_entry = mode;
+                    navigation_step = GNAME_NAVIGATION_STEP;
 
-                    break;
-
-                case GNAME_MODE_ACTION_DELETE:
-                    field_play_sound(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
-                    name_pop_last_glyph(g_active_name);
-                    recalc_name_width();
-                    g_strip_width_steps = NAME_STRIP_LERP_STEPS;
-                    break;
-
-                case GNAME_MODE_ACTION_RANDOM:
-                    field_play_sound(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
-
-                    if (g_name_source_mode == GNAME_SRC_RAND_PRIMARY)
+                    switch (mode)
                     {
-                        g_name_clipboard[0] = 0;
-                        encoded_text_copy(g_active_name, RANDOM_NAME(rand() % RANDOM_NAME_COUNT));
-                    }
-                    else if (g_name_source_mode == GNAME_SRC_RAND_ALT)
-                    {
-                        g_name_clipboard[0] = 0;
-                        encoded_text_copy(g_active_name, RANDOM_NAME((rand() % RANDOM_NAME_COUNT) + RANDOM_NAME_COUNT));
-                    }
-                    else if (g_name_source_mode == GNAME_SRC_HISTORY)
-                    {
-                        g_name_clipboard[0] = 0;
+                        case GNAME_MODE_ACTION_OK:
+                            if ((name_glyph_count(g_active_name) != 0) && (!name_is_blank(g_active_name)))
+                            {
+                                field_play_sound(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
+                                g_overlay_result = GNAME_RESULT_CONFIRM;
+                            }
+                            else
+                            {
+                                field_play_sound(GNAME_SFX_ERROR, AKAO_SFX_DEFAULT_VOLUME);
+                            }
 
-                        if (g_history_name_idx >= HISTORY_NAME_INDEX_LIMIT)
-                        {
+                            break;
+
+                        case GNAME_MODE_ACTION_DELETE:
+                            field_play_sound(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
+                            name_pop_last_glyph(g_active_name);
+                            recalc_name_width();
+                            g_strip_width_steps = NAME_STRIP_LERP_STEPS;
+                            break;
+
+                        case GNAME_MODE_ACTION_RANDOM:
+                            field_play_sound(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
+
+                            if (g_name_source_mode == GNAME_SRC_RAND_PRIMARY)
+                            {
+                                g_name_clipboard[0] = 0;
+                                encoded_text_copy(g_active_name, RANDOM_NAME(rand() % RANDOM_NAME_COUNT));
+                            }
+                            else if (g_name_source_mode == GNAME_SRC_RAND_ALT)
+                            {
+                                g_name_clipboard[0] = 0;
+                                encoded_text_copy(g_active_name, RANDOM_NAME((rand() % RANDOM_NAME_COUNT) + RANDOM_NAME_COUNT));
+                            }
+                            else if (g_name_source_mode == GNAME_SRC_HISTORY)
+                            {
+                                g_name_clipboard[0] = 0;
+
+                                if (g_history_name_idx >= HISTORY_NAME_INDEX_LIMIT)
+                                {
+                                    encoded_text_copy(g_active_name, g_initial_name);
+                                }
+                                else
+                                {
+                                    encoded_text_copy(g_active_name, HISTORY_NAME(g_history_name_idx));
+                                    name_append(g_active_name, HISTORY_SUFFIX((rand() % RANDOM_NAME_COUNT) + HISTORY_SUFFIX_INDEX_BASE));
+                                }
+                            }
+                            else if (g_name_source_mode == GNAME_SRC_CUSTOM)
+                            {
+                                g_name_clipboard[0] = 0;
+                                encoded_text_copy(g_active_name, g_custom_name_buf);
+                            }
+                            else
+                            {
+                                field_play_sound(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
+                                g_name_clipboard[0] = 0;
+                                encoded_text_copy(g_active_name, g_initial_name);
+                            }
+
+                            recalc_name_width();
+                            g_strip_width_steps = NAME_STRIP_LERP_STEPS;
+                            break;
+
+                        case GNAME_MODE_ACTION_DEFAULT:
+                            field_play_sound(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
+                            g_name_clipboard[0] = 0;
                             encoded_text_copy(g_active_name, g_initial_name);
-                        }
-                        else
+                            recalc_name_width();
+                            g_strip_width_steps = NAME_STRIP_LERP_STEPS;
+                            break;
+                    }
+
+                    repeat_dispatch = GNAME_REDISPATCH_DONE;
+                }
+                else
+                {
+                    if (buttons != 0)
+                    {
+                        if (buttons & PAD_BTN_DOWN)
                         {
-                            encoded_text_copy(g_active_name, HISTORY_NAME(g_history_name_idx));
-                            name_append(g_active_name, HISTORY_SUFFIX((rand() % RANDOM_NAME_COUNT) + HISTORY_SUFFIX_INDEX_BASE));
+                            mode = GNAME_MODE_GRID;
+                            buttons = 0;
+                            continue;
+                        }
+
+                        if (buttons & PAD_BTN_LEFT)
+                        {
+                            mode = (mode == GNAME_MODE_ACTION_OK) ? GNAME_MODE_ACTION_DEFAULT : (mode - navigation_step);
+                        }
+                        else if (buttons & PAD_BTN_RIGHT)
+                        {
+                            mode = (mode < GNAME_MODE_ACTION_DEFAULT) ? (mode + GNAME_NAVIGATION_STEP) : GNAME_MODE_ACTION_OK;
                         }
                     }
-                    else if (g_name_source_mode == GNAME_SRC_CUSTOM)
-                    {
-                        g_name_clipboard[0] = 0;
-                        encoded_text_copy(g_active_name, g_custom_name_buf);
-                    }
-                    else
-                    {
-                        field_play_sound(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
-                        g_name_clipboard[0] = 0;
-                        encoded_text_copy(g_active_name, g_initial_name);
-                    }
 
-                    recalc_name_width();
-                    g_strip_width_steps = NAME_STRIP_LERP_STEPS;
-                    break;
-
-                case GNAME_MODE_ACTION_DEFAULT:
-                    field_play_sound(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
-                    g_name_clipboard[0] = 0;
-                    encoded_text_copy(g_active_name, g_initial_name);
-                    recalc_name_width();
-                    g_strip_width_steps = NAME_STRIP_LERP_STEPS;
-                    break;
+                    field_play_sound(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
+                    g_cursor_x_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].x - GNAME_TAB_CURSOR_X_BIAS;
+                    g_cursor_y_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].y;
+                    g_cursor_lerp_steps = GNAME_CURSOR_LERP_STEPS;
+                    repeat_dispatch = GNAME_REDISPATCH_DONE;
                 }
 
-                repeat_dispatch = GNAME_REDISPATCH_DONE;
-            }
-            else
-            {
+                break;
+
+            /* Left-column character-panel selector tabs. */
+            case GNAME_MODE_PANEL_BASE:
+            case GNAME_MODE_PANEL_BASE + GNAME_NAVIGATION_STEP:
+            case GNAME_MODE_PANEL_BASE + 2:
+            case GNAME_MODE_PANEL_LAST:
+                /* Confirm changes panels only when the selected tab is not already active. */
+                if (buttons & PAD_CONFIRM_BUTTONS)
+                {
+                    g_activated_entry = mode;
+
+                    if (g_char_panel != (mode - GNAME_MODE_PANEL_BASE))
+                    {
+                        g_char_panel = mode - GNAME_MODE_PANEL_BASE;
+                        mode = GNAME_MODE_GRID;
+                        buttons = 0;
+                        g_scroll_target = 0;
+                        g_scroll_pos = 0;
+                        g_scroll_steps = 0;
+                        g_char_cursor = 0;
+                        field_play_sound(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
+                        continue;
+                    }
+                }
+
                 if (buttons != 0)
                 {
-                    if (buttons & PAD_BTN_DOWN)
+                    if (buttons & PAD_BTN_RIGHT)
                     {
                         mode = GNAME_MODE_GRID;
                         buttons = 0;
                         continue;
                     }
 
-                    if (buttons & PAD_BTN_LEFT)
+                    if (buttons & PAD_BTN_UP)
                     {
-                        mode = (mode == GNAME_MODE_ACTION_OK) ? GNAME_MODE_ACTION_DEFAULT : (mode - navigation_step);
+                        mode = (mode == GNAME_MODE_PANEL_BASE) ? GNAME_MODE_PANEL_NAV_LAST : (mode - navigation_step);
                     }
-                    else if (buttons & PAD_BTN_RIGHT)
+                    else if (buttons & PAD_BTN_DOWN)
                     {
-                        mode = (mode < GNAME_MODE_ACTION_DEFAULT) ? (mode + GNAME_NAVIGATION_STEP) : GNAME_MODE_ACTION_OK;
+                        mode = (mode < GNAME_MODE_PANEL_NAV_LAST) ? (mode + navigation_step) : GNAME_MODE_PANEL_BASE;
                     }
                 }
 
@@ -990,187 +1041,136 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                 g_cursor_y_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].y;
                 g_cursor_lerp_steps = GNAME_CURSOR_LERP_STEPS;
                 repeat_dispatch = GNAME_REDISPATCH_DONE;
-            }
+                break;
 
-            break;
-
-        /* Left-column character-panel selector tabs. */
-        case GNAME_MODE_PANEL_BASE:
-        case GNAME_MODE_PANEL_BASE + GNAME_NAVIGATION_STEP:
-        case GNAME_MODE_PANEL_BASE + 2:
-        case GNAME_MODE_PANEL_LAST:
-            /* Confirm changes panels only when the selected tab is not already active. */
-            if (buttons & PAD_CONFIRM_BUTTONS)
-            {
-                g_activated_entry = mode;
-
-                if (g_char_panel != (mode - GNAME_MODE_PANEL_BASE))
+            default:
+                /* Other mode values are handled as the active character grid. */
+                if ((buttons & PAD_CONFIRM_BUTTONS) && (((g_char_last_row * NAME_GRID_COLUMNS) + g_char_last_col) >= g_char_cursor))
                 {
-                    g_char_panel = mode - GNAME_MODE_PANEL_BASE;
-                    mode = GNAME_MODE_GRID;
-                    buttons = 0;
-                    g_scroll_target = 0;
-                    g_scroll_pos = 0;
-                    g_scroll_steps = 0;
-                    g_char_cursor = 0;
-                    field_play_sound(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
-                    continue;
-                }
-            }
-
-            if (buttons != 0)
-            {
-                if (buttons & PAD_BTN_RIGHT)
-                {
-                    mode = GNAME_MODE_GRID;
-                    buttons = 0;
-                    continue;
-                }
-
-                if (buttons & PAD_BTN_UP)
-                {
-                    mode = (mode == GNAME_MODE_PANEL_BASE) ? GNAME_MODE_PANEL_NAV_LAST : (mode - navigation_step);
-                }
-                else if (buttons & PAD_BTN_DOWN)
-                {
-                    mode = (mode < GNAME_MODE_PANEL_NAV_LAST) ? (mode + navigation_step) : GNAME_MODE_PANEL_BASE;
-                }
-            }
-
-            field_play_sound(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
-            g_cursor_x_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].x - GNAME_TAB_CURSOR_X_BIAS;
-            g_cursor_y_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].y;
-            g_cursor_lerp_steps = GNAME_CURSOR_LERP_STEPS;
-            repeat_dispatch = GNAME_REDISPATCH_DONE;
-            break;
-
-        default:
-            /* Other mode values are handled as the active character grid. */
-            if ((buttons & PAD_CONFIRM_BUTTONS) && (((g_char_last_row * NAME_GRID_COLUMNS) + g_char_last_col) >= g_char_cursor))
-            {
-                if (g_char_panel < CHAR_PANEL_STANDARD_COUNT)
-                {
-                    if (name_glyph_count(g_active_name) < NAME_MAX_GLYPHS)
+                    if (g_char_panel < CHAR_PANEL_STANDARD_COUNT)
                     {
-                        u8* selected_glyph;
-                        g_glyph_append_anim_timer = GLYPH_APPEND_ANIM_TIMER_START;
-                        selected_glyph = GNAME_RECORD_IN_RANGE(PANEL_CHARACTER_TABLE, g_panel_char_offsets[g_char_panel], g_char_cursor);
-                        g_glyph_append_anim_frame = 0;
-                        name_append(g_active_name, selected_glyph);
-                        recalc_name_width();
-                        g_strip_width_steps = NAME_STRIP_LERP_STEPS;
-                        field_play_sound(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
+                        if (name_glyph_count(g_active_name) < NAME_MAX_GLYPHS)
+                        {
+                            u8* selected_glyph;
+                            g_glyph_append_anim_timer = GLYPH_APPEND_ANIM_TIMER_START;
+                            selected_glyph = GNAME_RECORD_IN_RANGE(PANEL_CHARACTER_TABLE, g_panel_char_offsets[g_char_panel], g_char_cursor);
+                            g_glyph_append_anim_frame = 0;
+                            name_append(g_active_name, selected_glyph);
+                            recalc_name_width();
+                            g_strip_width_steps = NAME_STRIP_LERP_STEPS;
+                            field_play_sound(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
+                        }
+                        else
+                        {
+                            field_play_sound(GNAME_SFX_ERROR, AKAO_SFX_DEFAULT_VOLUME);
+                        }
                     }
-                    else
+                    else if (g_char_panel == CHAR_PANEL_KANJI_CATEGORY)
                     {
-                        field_play_sound(GNAME_SFX_ERROR, AKAO_SFX_DEFAULT_VOLUME);
+                        if (g_kanji_cat_entries[g_char_cursor] == KANJI_CATEGORY_EMPTY)
+                        {
+                            repeat_dispatch = GNAME_REDISPATCH_DONE;
+                            continue;
+                        }
+
+                        g_kanji_cat = g_char_cursor;
+                        g_char_panel = CHAR_PANEL_KANJI;
+                        g_scroll_target = 0;
+                        g_scroll_pos = 0;
+                        g_scroll_steps = 0;
+                        g_cursor_x_target = NAME_GRID_X_BASE;
+                        g_cursor_y_target = NAME_GRID_Y_TOP;
+                        g_cursor_lerp_steps = GNAME_GRID_LERP_STEPS;
+                        g_char_cursor = 0;
+                        g_kanji_cat_name = GNAME_RECORD_IN_RANGE(PANEL_CHARACTER_TABLE, g_kanji_cat_names_offset, g_kanji_cat);
+                        field_play_sound(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
                     }
-                }
-                else if (g_char_panel == CHAR_PANEL_KANJI_CATEGORY)
-                {
-                    if (g_kanji_cat_entries[g_char_cursor] == KANJI_CATEGORY_EMPTY)
+                    else if (g_char_panel == CHAR_PANEL_KANJI)
                     {
-                        repeat_dispatch = GNAME_REDISPATCH_DONE;
-                        continue;
+                        if (name_glyph_count(g_active_name) < NAME_MAX_GLYPHS)
+                        {
+                            u8* selected_glyph;
+                            g_glyph_append_anim_timer = GLYPH_APPEND_ANIM_TIMER_START;
+                            selected_glyph =
+                                GNAME_RECORD_IN_RANGE(KANJI_CHARACTER_TABLE, g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat]], g_char_cursor);
+                            g_glyph_append_anim_frame = 0;
+                            name_append(g_active_name, selected_glyph);
+                            recalc_name_width();
+                            g_strip_width_steps = NAME_STRIP_LERP_STEPS;
+                            field_play_sound(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
+                        }
+                        else
+                        {
+                            field_play_sound(GNAME_SFX_ERROR, AKAO_SFX_DEFAULT_VOLUME);
+                        }
                     }
 
-                    g_kanji_cat = g_char_cursor;
-                    g_char_panel = CHAR_PANEL_KANJI;
-                    g_scroll_target = 0;
-                    g_scroll_pos = 0;
-                    g_scroll_steps = 0;
-                    g_cursor_x_target = NAME_GRID_X_BASE;
-                    g_cursor_y_target = NAME_GRID_Y_TOP;
+                    repeat_dispatch = GNAME_REDISPATCH_DONE;
+                }
+                else
+                {
+                    if (buttons != 0)
+                    {
+                        if ((buttons & PAD_BTN_UP) && ((g_char_cursor / NAME_GRID_COLUMNS) == 0))
+                        {
+                            mode = GNAME_MODE_ACTION_OK;
+                            buttons = 0;
+                            continue;
+                        }
+
+                        if ((buttons & PAD_BTN_LEFT) && ((g_char_cursor % NAME_GRID_COLUMNS) == 0))
+                        {
+                            mode = GNAME_MODE_PANEL_BASE;
+                            buttons = 0;
+                            continue;
+                        }
+
+                        if ((buttons & PAD_BTN_UP) && ((g_char_cursor / NAME_GRID_COLUMNS) != 0))
+                        {
+                            g_char_cursor -= NAME_GRID_COLUMNS;
+                        }
+                        else if ((buttons & PAD_BTN_DOWN) && ((g_char_cursor / NAME_GRID_COLUMNS) != g_char_last_row))
+                        {
+                            g_char_cursor += NAME_GRID_COLUMNS;
+                        }
+                        else if ((buttons & PAD_BTN_LEFT) && ((g_char_cursor % NAME_GRID_COLUMNS) != 0))
+                        {
+                            g_char_cursor -= GNAME_NAVIGATION_STEP;
+                        }
+                        else if ((buttons & PAD_BTN_RIGHT) && ((g_char_cursor % NAME_GRID_COLUMNS) != NAME_GRID_LAST_COL))
+                        {
+                            g_char_cursor += navigation_step;
+                        }
+                        else
+                        {
+                            repeat_dispatch = GNAME_REDISPATCH_DONE;
+                            continue;
+                        }
+                    }
+
+                    field_play_sound(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
+                    g_cursor_x_target = ((g_char_cursor % NAME_GRID_COLUMNS) * NAME_GRID_CELL_SIZE) + NAME_GRID_X_BASE;
+                    g_cursor_y_target = ((g_char_cursor / NAME_GRID_COLUMNS) * NAME_GRID_CELL_SIZE) + NAME_GRID_Y_TOP - g_scroll_pos;
+
+                    if (g_cursor_y_target < NAME_GRID_Y_TOP)
+                    {
+                        g_cursor_y_target = NAME_GRID_Y_TOP;
+                        g_scroll_target = (g_char_cursor / NAME_GRID_COLUMNS) * NAME_GRID_CELL_SIZE;
+                        g_scroll_steps = GNAME_GRID_LERP_STEPS;
+                    }
+
+                    if (g_cursor_y_target >= NAME_GRID_Y_EXIT_BOUND)
+                    {
+                        g_cursor_y_target = NAME_GRID_Y_BOTTOM;
+                        g_scroll_target = ((g_char_cursor / NAME_GRID_COLUMNS) * NAME_GRID_CELL_SIZE) - NAME_GRID_SCROLL_STEP;
+                        g_scroll_steps = GNAME_GRID_LERP_STEPS;
+                    }
+
                     g_cursor_lerp_steps = GNAME_GRID_LERP_STEPS;
-                    g_char_cursor = 0;
-                    g_kanji_cat_name = GNAME_RECORD_IN_RANGE(PANEL_CHARACTER_TABLE, g_kanji_cat_names_offset, g_kanji_cat);
-                    field_play_sound(GNAME_SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
-                }
-                else if (g_char_panel == CHAR_PANEL_KANJI)
-                {
-                    if (name_glyph_count(g_active_name) < NAME_MAX_GLYPHS)
-                    {
-                        u8* selected_glyph;
-                        g_glyph_append_anim_timer = GLYPH_APPEND_ANIM_TIMER_START;
-                        selected_glyph = GNAME_RECORD_IN_RANGE(KANJI_CHARACTER_TABLE, g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat]], g_char_cursor);
-                        g_glyph_append_anim_frame = 0;
-                        name_append(g_active_name, selected_glyph);
-                        recalc_name_width();
-                        g_strip_width_steps = NAME_STRIP_LERP_STEPS;
-                        field_play_sound(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
-                    }
-                    else
-                    {
-                        field_play_sound(GNAME_SFX_ERROR, AKAO_SFX_DEFAULT_VOLUME);
-                    }
+                    repeat_dispatch = GNAME_REDISPATCH_DONE;
                 }
 
-                repeat_dispatch = GNAME_REDISPATCH_DONE;
-            }
-            else
-            {
-                if (buttons != 0)
-                {
-                    if ((buttons & PAD_BTN_UP) && ((g_char_cursor / NAME_GRID_COLUMNS) == 0))
-                    {
-                        mode = GNAME_MODE_ACTION_OK;
-                        buttons = 0;
-                        continue;
-                    }
-
-                    if ((buttons & PAD_BTN_LEFT) && ((g_char_cursor % NAME_GRID_COLUMNS) == 0))
-                    {
-                        mode = GNAME_MODE_PANEL_BASE;
-                        buttons = 0;
-                        continue;
-                    }
-
-                    if ((buttons & PAD_BTN_UP) && ((g_char_cursor / NAME_GRID_COLUMNS) != 0))
-                    {
-                        g_char_cursor -= NAME_GRID_COLUMNS;
-                    }
-                    else if ((buttons & PAD_BTN_DOWN) && ((g_char_cursor / NAME_GRID_COLUMNS) != g_char_last_row))
-                    {
-                        g_char_cursor += NAME_GRID_COLUMNS;
-                    }
-                    else if ((buttons & PAD_BTN_LEFT) && ((g_char_cursor % NAME_GRID_COLUMNS) != 0))
-                    {
-                        g_char_cursor -= GNAME_NAVIGATION_STEP;
-                    }
-                    else if ((buttons & PAD_BTN_RIGHT) && ((g_char_cursor % NAME_GRID_COLUMNS) != NAME_GRID_LAST_COL))
-                    {
-                        g_char_cursor += navigation_step;
-                    }
-                    else
-                    {
-                        repeat_dispatch = GNAME_REDISPATCH_DONE;
-                        continue;
-                    }
-                }
-
-                field_play_sound(GNAME_SFX_MOVE, AKAO_SFX_DEFAULT_VOLUME);
-                g_cursor_x_target = ((g_char_cursor % NAME_GRID_COLUMNS) * NAME_GRID_CELL_SIZE) + NAME_GRID_X_BASE;
-                g_cursor_y_target = ((g_char_cursor / NAME_GRID_COLUMNS) * NAME_GRID_CELL_SIZE) + NAME_GRID_Y_TOP - g_scroll_pos;
-
-                if (g_cursor_y_target < NAME_GRID_Y_TOP)
-                {
-                    g_cursor_y_target = NAME_GRID_Y_TOP;
-                    g_scroll_target = (g_char_cursor / NAME_GRID_COLUMNS) * NAME_GRID_CELL_SIZE;
-                    g_scroll_steps = GNAME_GRID_LERP_STEPS;
-                }
-
-                if (g_cursor_y_target >= NAME_GRID_Y_EXIT_BOUND)
-                {
-                    g_cursor_y_target = NAME_GRID_Y_BOTTOM;
-                    g_scroll_target = ((g_char_cursor / NAME_GRID_COLUMNS) * NAME_GRID_CELL_SIZE) - NAME_GRID_SCROLL_STEP;
-                    g_scroll_steps = GNAME_GRID_LERP_STEPS;
-                }
-
-                g_cursor_lerp_steps = GNAME_GRID_LERP_STEPS;
-                repeat_dispatch = GNAME_REDISPATCH_DONE;
-            }
-
-            break;
+                break;
         }
     }
 

@@ -9,7 +9,6 @@
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
 
-
 /** @brief Item kinds at or above this value are rejected with a diagnostic. */
 #define FIELD_ITEM_KIND_LIMIT 0xFF
 
@@ -58,6 +57,7 @@ s32 field_get_item_count(s32 kind)
         field_set_item_name_macro(kind);
         return g_field_game_state->item_counts[kind];
     }
+
     record_game_diagnostic(DIAG_ERROR, DIAG_BAD_ITEM_KIND_GET, kind, 0);
     return 0;
 }
@@ -71,10 +71,12 @@ void field_receive_item(s32 kind)
     if (kind < FIELD_ITEM_KIND_LIMIT)
     {
         g_field_game_state->item_counts[kind]++;
+
         if (g_field_game_state->item_counts[kind] > ITEM_COUNT_MAX)
         {
             g_field_game_state->item_counts[kind] = ITEM_COUNT_MAX;
         }
+
         field_set_item_name_macro(kind);
     }
     else
@@ -94,10 +96,12 @@ void field_consume_item(s32 kind)
     if (kind < FIELD_ITEM_KIND_LIMIT)
     {
         count = g_field_game_state->item_counts[kind];
+
         if (count != 0)
         {
             g_field_game_state->item_counts[kind] = count - 1;
         }
+
         field_set_item_name_macro(kind);
     }
     else

@@ -109,15 +109,18 @@ void field_capture_card_clock(void)
     if (g_field_card_clock_valid == 0)
     {
         status = McxCardType(CARD_CLOCK_PORT);
+
         if (status == MCX_COMMAND_ISSUED)
         {
             McxSync(MCX_SYNC_WAIT, &command, &result);
+
             if (result == McxErrSuccess || result == McxErrNewCard)
             {
                 if (McxGetTime(CARD_CLOCK_PORT, (u8*)&time) == MCX_COMMAND_ISSUED)
                 {
                     McxSync(MCX_SYNC_WAIT, &command, &result);
                 }
+
                 if (result == McxErrSuccess)
                 {
                     bcopy((u8*)&time, (u8*)&g_field_card_clock_snapshot, sizeof(time));

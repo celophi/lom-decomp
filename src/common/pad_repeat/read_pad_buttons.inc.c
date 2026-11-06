@@ -26,6 +26,7 @@ s32 read_pad_buttons(void)
     {
         /* Convert signed analog-axis thresholds to digital directions. */
         axis = regs->axis_x.signed_value;
+
         if (axis < -PAD_STICK_THRESHOLD)
         {
             buttons |= PAD_BTN_LEFT;
@@ -36,6 +37,7 @@ s32 read_pad_buttons(void)
         }
 
         axis = regs->axis_y.signed_value;
+
         if (axis < -PAD_STICK_THRESHOLD)
         {
             buttons |= PAD_BTN_UP;
@@ -45,5 +47,6 @@ s32 read_pad_buttons(void)
             buttons |= PAD_BTN_DOWN;
         }
     }
+
     return buttons;
 }

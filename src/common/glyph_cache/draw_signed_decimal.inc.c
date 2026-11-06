@@ -20,6 +20,7 @@ void* draw_signed_decimal(void* prim, u_long* ot, s32 value, s32 x, s32 y, s32 p
     s32 negative;
 
     magnitude = value;
+
     if (magnitude < 0)
     {
         magnitude = -magnitude;
@@ -29,6 +30,7 @@ void* draw_signed_decimal(void* prim, u_long* ot, s32 value, s32 x, s32 y, s32 p
     {
         negative = 0;
     }
+
     buf[1] = g_glyph_decimal_digits[magnitude / 10000];
     buf[2] = g_glyph_decimal_digits[(magnitude % 10000) / 1000];
     buf[3] = g_glyph_decimal_digits[(magnitude % 1000) / 100];
@@ -48,6 +50,7 @@ void* draw_signed_decimal(void* prim, u_long* ot, s32 value, s32 x, s32 y, s32 p
         first_digit--;
         buf[first_digit] = GLYPH_PAIR_MINUS;
     }
+
     prim = draw_cached_text(prim, ot, (u8*)&buf[first_digit], x, y, palette, alignment);
     return prim;
 }

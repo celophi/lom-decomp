@@ -15,6 +15,7 @@ void encoded_text_copy(u8* dst, u8* src)
 
     cursor = src;
     byte_length = 0;
+
     while (*cursor != 0)
     {
         if (ENCODED_TEXT_IS_DOUBLE_BYTE_LEAD(*cursor))
@@ -28,9 +29,11 @@ void encoded_text_copy(u8* dst, u8* src)
             byte_length++;
         }
     }
+
     for (i = 0; i < byte_length; i++)
     {
         dst[i] = src[i];
     }
+
     dst[i] = 0;
 }

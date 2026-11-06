@@ -374,9 +374,37 @@ typedef enum
     MENU_TEXT_TABLE_COUNT = 34
 } MenuTextTable;
 
-/** @brief Entries of the MENU_TEXT_MESSAGES table used by the item, equipment and skill windows. */
+/** @brief Entries of the MENU_TEXT_MESSAGES table: node titles and the item, equipment and skill window texts. */
 typedef enum
 {
+    /** @brief Node titles, named after the MenuNodeId that first uses each. */
+    MENU_MESSAGE_TITLE_HERO_STATUS = 1,
+    MENU_MESSAGE_TITLE_HERO_ABILITIES = 2,
+    MENU_MESSAGE_TITLE_HERO_EQUIPMENT = 3,
+    MENU_MESSAGE_TITLE_GUEST_HERO_STATUS = 4,
+    MENU_MESSAGE_TITLE_GUEST_HERO_ABILITIES = 5,
+    MENU_MESSAGE_TITLE_GUEST_HERO_EQUIPMENT = 6,
+    MENU_MESSAGE_TITLE_GUEST_PARTNER_STATUS = 7,
+    MENU_MESSAGE_TITLE_GUEST_PARTNER_ABILITIES = 8,
+    MENU_MESSAGE_TITLE_GUEST_PARTNER_ATTRIBUTES = 9,
+    MENU_MESSAGE_TITLE_PET_STATUS = 10,
+    MENU_MESSAGE_TITLE_PET_ATTRIBUTES = 11,
+    MENU_MESSAGE_TITLE_GOLEM_ATTRIBUTES = 12,
+    MENU_MESSAGE_TITLE_GOLEM_STATUS = 13,
+    MENU_MESSAGE_TITLE_GOLEM_LOGIC_BLOCKS = 14,
+    MENU_MESSAGE_TITLE_ITEMS = 16,
+    MENU_MESSAGE_TITLE_WEAPONS = 17,
+    MENU_MESSAGE_TITLE_WEAPON_STATUS = 18,
+    MENU_MESSAGE_TITLE_ITEMS_STATUS = 19,
+    MENU_MESSAGE_TITLE_ARMOR = 20,
+    MENU_MESSAGE_TITLE_ARMOR_STATUS = 21,
+    MENU_MESSAGE_TITLE_INSTRUMENTS = 22,
+    MENU_MESSAGE_TITLE_INSTRUMENT_STATUS = 23,
+    MENU_MESSAGE_TITLE_ARTIFACTS = 24,
+    MENU_MESSAGE_TITLE_GAME_ENVIRONMENT = 25,
+    MENU_MESSAGE_TITLE_KEY_CONFIGURATION = 26,
+    MENU_MESSAGE_TITLE_BROWSE_ALL = 27,
+    MENU_MESSAGE_TITLE_BACKFIELD = 28,
     MENU_MESSAGE_TECHNIQUES_REMOVED = 29,
     MENU_MESSAGE_QUICK_ATTACKS = 58,
     MENU_MESSAGE_POWER_ATTACKS = 59,
@@ -448,6 +476,16 @@ typedef enum
     /** @brief Four values, all item help. */
     MENU_HELP_ITEM_FIRST = 0xFB
 } MenuHelpSource;
+
+/** @brief First entries of the armor, instrument and material sections of MENU_TEXT_ITEM_NAME_PARTS; weapons start at 0. */
+#define MENU_NAME_PARTS_ARMOR_FIRST 16
+#define MENU_NAME_PARTS_INSTRUMENT_FIRST 32
+#define MENU_NAME_PARTS_MATERIAL_FIRST 36
+/** @brief First entries of the armor and instrument sections of MENU_TEXT_EQUIPMENT_TYPE_NAMES; weapons start at 0. */
+#define MENU_TYPE_NAMES_ARMOR_FIRST FIELD_WEAPON_TYPE_COUNT
+#define MENU_TYPE_NAMES_INSTRUMENT_FIRST 23
+/** @brief MenuNode::u2.word bits of the highlight animation counter (bits.anim_frames). */
+#define MENU_NODE_ANIM_FRAMES_MASK 0x000C
 
 /** @brief Icon ids of g_menu_icon_sprite_defs. */
 #define MENU_ICON_NONE 0xFF

@@ -25,6 +25,7 @@ static inline s32 sample_pad_buttons(void)
     if (regs->device_type != CONTROLLER_DEVICE_DIGITAL)
     {
         axis = regs->axis_x.signed_value;
+
         if (axis < -PAD_STICK_THRESHOLD)
         {
             buttons |= PAD_BTN_LEFT;
@@ -35,6 +36,7 @@ static inline s32 sample_pad_buttons(void)
         }
 
         axis = regs->axis_y.signed_value;
+
         if (axis < -PAD_STICK_THRESHOLD)
         {
             buttons |= PAD_BTN_UP;
@@ -44,5 +46,6 @@ static inline s32 sample_pad_buttons(void)
             buttons |= PAD_BTN_DOWN;
         }
     }
+
     return buttons;
 }

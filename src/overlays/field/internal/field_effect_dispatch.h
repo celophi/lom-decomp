@@ -10,12 +10,12 @@ typedef struct FieldRenderContext
     u8 pad0[0x40];
     u32 ordering_table;
     u8 pad44[0x40B8 - 0x44];
-    s32 *packet_cursor;
+    s32* packet_cursor;
 } FieldRenderContext;
 
 /** @brief Render half being built this frame. */
 extern FieldRenderHalf* g_field_render_half;
 
-void field_render_effects(FieldRenderContext *render_context);
+void field_render_effects(FieldRenderContext* render_context);
 
 #endif

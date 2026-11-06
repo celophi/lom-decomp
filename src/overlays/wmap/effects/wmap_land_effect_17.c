@@ -58,8 +58,6 @@ extern u32 g_wmap_land_effect_17_timeline_step;
 extern u32 g_wmap_land_effect_17_sequence_1_step;
 extern u32 g_wmap_land_effect_17_sequence_2_step;
 
-
-
 /** @brief Move the model closer and fade it until the timer expires. */
 WMAP_STEP_DROP_UPDATE(wmap_land_effect_17_sequence_3_step_02, g_wmap_land_effect_17_sequence_3_step, g_wmap_land_effect_17_sequence_3_timer,
                       g_wmap_effect_model_a_rotation, g_wmap_effect_model_a_position, g_wmap_effect_fade_a, g_wmap_load_buffer, -3500, 4)

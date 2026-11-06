@@ -8,6 +8,7 @@
 #include "main/cdrom.h"
 #include "main/display.h"
 #include "overlays/field/field_input.h"
+#include "overlays/field/field_portrait.h"
 #include "overlays/field/field_sound.h"
 #include "overlays/field/field_text.h"
 
@@ -1159,7 +1160,7 @@ void menu_node_tree_init(void)
 
     g_menu_nodes[MENU_NODE_HERO_STATUS].u2.bits.expanded = 0;
     g_menu_nodes[MENU_NODE_HERO_STATUS].u2.bits.char_slot = 0;
-    g_menu_nodes[MENU_NODE_HERO_STATUS].label_id = 1;
+    g_menu_nodes[MENU_NODE_HERO_STATUS].label_id = MENU_MESSAGE_TITLE_HERO_STATUS;
     g_menu_nodes[MENU_NODE_HERO_STATUS].u2.bits.depth = 0;
     g_menu_nodes[MENU_NODE_HERO_STATUS].idx_nav.s.self_idx = MENU_NODE_HERO_STATUS;
     g_menu_nodes[MENU_NODE_HERO_STATUS].u2.bits.active = 1;
@@ -1178,9 +1179,9 @@ void menu_node_tree_init(void)
     g_menu_nodes[MENU_NODE_HERO_EQUIPMENT].idx_nav.s.self_idx = MENU_NODE_HERO_EQUIPMENT;
     g_menu_nodes[MENU_NODE_HERO_STATUS].layout.s.children[1] = MENU_NODE_HERO_ABILITIES;
     g_menu_nodes[MENU_NODE_HERO_EQUIPMENT].icon_id = 5;
-    g_menu_nodes[MENU_NODE_HERO_ABILITIES].label_id = 2;
+    g_menu_nodes[MENU_NODE_HERO_ABILITIES].label_id = MENU_MESSAGE_TITLE_HERO_ABILITIES;
     g_menu_nodes[MENU_NODE_HERO_ABILITIES].idx_nav.s.self_idx = MENU_NODE_HERO_ABILITIES;
-    g_menu_nodes[MENU_NODE_HERO_EQUIPMENT].label_id = 3;
+    g_menu_nodes[MENU_NODE_HERO_EQUIPMENT].label_id = MENU_MESSAGE_TITLE_HERO_EQUIPMENT;
     g_menu_nodes[MENU_NODE_HERO_ABILITIES].icon_id = 4;
     g_menu_nodes[MENU_NODE_HERO_EQUIPMENT].u2.bits.char_slot = 0;
     g_menu_nodes[MENU_NODE_HERO_EQUIPMENT].u2.bits.depth = 1;
@@ -1190,7 +1191,7 @@ void menu_node_tree_init(void)
     g_menu_nodes[MENU_NODE_HERO_ABILITIES].u2.s.parent_idx = MENU_NODE_HERO_STATUS;
     g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].u2.bits.expanded = 0;
     g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].u2.bits.char_slot = 1;
-    g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].label_id = 4;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].label_id = MENU_MESSAGE_TITLE_GUEST_HERO_STATUS;
     g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].u2.bits.char_slot = 1;
     g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].u2.bits.depth = 0;
     g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].idx_nav.s.self_idx = MENU_NODE_GUEST_HERO_STATUS;
@@ -1212,15 +1213,15 @@ void menu_node_tree_init(void)
     g_menu_nodes[MENU_NODE_GUEST_HERO_ABILITIES].u2.bits.depth = 1;
     g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].layout.s.children[0] = MENU_NODE_GUEST_HERO_EQUIPMENT;
     g_menu_nodes[MENU_NODE_GUEST_HERO_STATUS].layout.s.children[1] = MENU_NODE_GUEST_HERO_ABILITIES;
-    g_menu_nodes[MENU_NODE_GUEST_HERO_EQUIPMENT].label_id = 6;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_EQUIPMENT].label_id = MENU_MESSAGE_TITLE_GUEST_HERO_EQUIPMENT;
     g_menu_nodes[MENU_NODE_GUEST_HERO_EQUIPMENT].idx_nav.s.self_idx = MENU_NODE_GUEST_HERO_EQUIPMENT;
     g_menu_nodes[MENU_NODE_GUEST_HERO_EQUIPMENT].icon_id = 5;
-    g_menu_nodes[MENU_NODE_GUEST_HERO_ABILITIES].label_id = 5;
+    g_menu_nodes[MENU_NODE_GUEST_HERO_ABILITIES].label_id = MENU_MESSAGE_TITLE_GUEST_HERO_ABILITIES;
     g_menu_nodes[MENU_NODE_GUEST_HERO_ABILITIES].idx_nav.s.self_idx = MENU_NODE_GUEST_HERO_ABILITIES;
     g_menu_nodes[MENU_NODE_GUEST_HERO_ABILITIES].icon_id = 4;
     g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].u2.bits.expanded = 0;
     g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].u2.bits.char_slot = 1;
-    g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].label_id = 7;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].label_id = MENU_MESSAGE_TITLE_GUEST_PARTNER_STATUS;
     g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].u2.bits.char_slot = 1;
     g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].u2.bits.depth = 0;
     g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].idx_nav.s.self_idx = MENU_NODE_GUEST_PARTNER_STATUS;
@@ -1228,10 +1229,10 @@ void menu_node_tree_init(void)
     g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].icon_id = 3;
     g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].layout.s.children[0] = MENU_NODE_GUEST_PARTNER_ATTRIBUTES;
     g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].layout.s.children[1] = MENU_NODE_GUEST_PARTNER_ABILITIES;
-    g_menu_nodes[MENU_NODE_GUEST_PARTNER_ATTRIBUTES].label_id = 9;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_ATTRIBUTES].label_id = MENU_MESSAGE_TITLE_GUEST_PARTNER_ATTRIBUTES;
     g_menu_nodes[MENU_NODE_GUEST_PARTNER_ATTRIBUTES].idx_nav.s.self_idx = MENU_NODE_GUEST_PARTNER_ATTRIBUTES;
     g_menu_nodes[MENU_NODE_GUEST_PARTNER_ATTRIBUTES].icon_id = 5;
-    g_menu_nodes[MENU_NODE_GUEST_PARTNER_ABILITIES].label_id = 8;
+    g_menu_nodes[MENU_NODE_GUEST_PARTNER_ABILITIES].label_id = MENU_MESSAGE_TITLE_GUEST_PARTNER_ABILITIES;
     g_menu_nodes[MENU_NODE_GUEST_HERO_EQUIPMENT].u2.s.parent_idx = MENU_NODE_GUEST_HERO_STATUS;
     g_menu_nodes[MENU_NODE_GUEST_HERO_ABILITIES].u2.s.parent_idx = MENU_NODE_GUEST_HERO_STATUS;
     g_menu_nodes[MENU_NODE_GUEST_PARTNER_STATUS].u2.s.parent_idx = MENU_NONE;
@@ -1245,7 +1246,7 @@ void menu_node_tree_init(void)
     g_menu_nodes[MENU_NODE_GUEST_PARTNER_ABILITIES].icon_id = 4;
     g_menu_nodes[MENU_NODE_PET_STATUS].u2.bits.expanded = 0;
     g_menu_nodes[MENU_NODE_PET_STATUS].u2.bits.char_slot = 2;
-    g_menu_nodes[MENU_NODE_PET_STATUS].label_id = 0xA;
+    g_menu_nodes[MENU_NODE_PET_STATUS].label_id = MENU_MESSAGE_TITLE_PET_STATUS;
     g_menu_nodes[MENU_NODE_PET_STATUS].u2.bits.char_slot = 2;
     g_menu_nodes[MENU_NODE_PET_STATUS].u2.bits.depth = 0;
     g_menu_nodes[MENU_NODE_PET_STATUS].idx_nav.s.self_idx = MENU_NODE_PET_STATUS;
@@ -1254,19 +1255,19 @@ void menu_node_tree_init(void)
     g_menu_nodes[MENU_NODE_PET_ATTRIBUTES].u2.bits.depth = 1;
     g_menu_nodes[MENU_NODE_PET_STATUS].icon_id = 6;
     g_menu_nodes[MENU_NODE_PET_STATUS].layout.s.children[0] = MENU_NODE_PET_ATTRIBUTES;
-    g_menu_nodes[MENU_NODE_PET_ATTRIBUTES].label_id = 0xB;
+    g_menu_nodes[MENU_NODE_PET_ATTRIBUTES].label_id = MENU_MESSAGE_TITLE_PET_ATTRIBUTES;
     g_menu_nodes[MENU_NODE_PET_ATTRIBUTES].idx_nav.s.self_idx = MENU_NODE_PET_ATTRIBUTES;
     g_menu_nodes[MENU_NODE_PET_ATTRIBUTES].icon_id = 7;
     g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].u2.bits.expanded = 0;
     g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].u2.bits.char_slot = 2;
-    g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].label_id = 0xA;
+    g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].label_id = MENU_MESSAGE_TITLE_PET_STATUS;
     g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].u2.bits.char_slot = 2;
     g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].u2.bits.depth = 0;
     g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].idx_nav.s.self_idx = MENU_NODE_PET_STATUS_UNUSED;
     g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].u2.bits.active = 0;
     g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].icon_id = 6;
     g_menu_nodes[MENU_NODE_PET_STATUS_UNUSED].layout.s.children[0] = MENU_NODE_PET_ATTRIBUTES_UNUSED;
-    g_menu_nodes[MENU_NODE_PET_ATTRIBUTES_UNUSED].label_id = 0xB;
+    g_menu_nodes[MENU_NODE_PET_ATTRIBUTES_UNUSED].label_id = MENU_MESSAGE_TITLE_PET_ATTRIBUTES;
     g_menu_nodes[MENU_NODE_PET_ATTRIBUTES_UNUSED].idx_nav.s.self_idx = MENU_NODE_PET_ATTRIBUTES_UNUSED;
     g_menu_nodes[MENU_NODE_PET_ATTRIBUTES_UNUSED].icon_id = 7;
     g_menu_nodes[MENU_NODE_PET_STATUS].u2.s.parent_idx = MENU_NONE;
@@ -1282,17 +1283,17 @@ void menu_node_tree_init(void)
     g_menu_nodes[MENU_NODE_GOLEM_STATUS].u2.bits.depth = 1;
     g_menu_nodes[MENU_NODE_GOLEM_ATTRIBUTES].icon_id = 7;
     g_menu_nodes[MENU_NODE_GOLEM_STATUS].u2.bits.active = 0;
-    g_menu_nodes[MENU_NODE_GOLEM_STATUS].label_id = 0xD;
+    g_menu_nodes[MENU_NODE_GOLEM_STATUS].label_id = MENU_MESSAGE_TITLE_GOLEM_STATUS;
     g_menu_nodes[MENU_NODE_GOLEM_STATUS].idx_nav.s.self_idx = MENU_NODE_GOLEM_STATUS;
     g_menu_nodes[MENU_NODE_GOLEM_STATUS].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[MENU_NODE_GOLEM_STATUS].layout.s.children[0] = MENU_NODE_GOLEM_ATTRIBUTES;
     g_menu_nodes[MENU_NODE_GOLEM_STATUS].layout.s.children[1] = MENU_NODE_GOLEM_LOGIC_BLOCKS;
-    g_menu_nodes[MENU_NODE_GOLEM_ATTRIBUTES].label_id = 0xC;
+    g_menu_nodes[MENU_NODE_GOLEM_ATTRIBUTES].label_id = MENU_MESSAGE_TITLE_GOLEM_ATTRIBUTES;
     g_menu_nodes[MENU_NODE_GOLEM_ATTRIBUTES].idx_nav.s.self_idx = MENU_NODE_GOLEM_ATTRIBUTES;
-    g_menu_nodes[MENU_NODE_GOLEM_LOGIC_BLOCKS].label_id = 0xE;
+    g_menu_nodes[MENU_NODE_GOLEM_LOGIC_BLOCKS].label_id = MENU_MESSAGE_TITLE_GOLEM_LOGIC_BLOCKS;
     g_menu_nodes[MENU_NODE_GOLEM_LOGIC_BLOCKS].idx_nav.s.self_idx = MENU_NODE_GOLEM_LOGIC_BLOCKS;
     g_menu_nodes[MENU_NODE_GOLEM_LOGIC_BLOCKS].icon_id = 9;
-    g_menu_nodes[MENU_NODE_ITEMS].label_id = 0x10;
+    g_menu_nodes[MENU_NODE_ITEMS].label_id = MENU_MESSAGE_TITLE_ITEMS;
     g_menu_nodes[MENU_NODE_ITEMS].idx_nav.s.self_idx = MENU_NODE_ITEMS;
     g_menu_nodes[MENU_NODE_ITEMS].icon_id = 0xA;
     g_menu_nodes[MENU_NODE_ITEMS].content_id = 4;
@@ -1310,25 +1311,25 @@ void menu_node_tree_init(void)
     g_menu_nodes[MENU_NODE_ITEMS].layout.s.children[3] = MENU_NODE_ARTIFACTS;
     g_menu_nodes[MENU_NODE_ITEMS].u2.bits.active = 1;
     g_menu_nodes[MENU_NODE_ITEMS].u2.s.parent_idx = MENU_NONE;
-    g_menu_nodes[MENU_NODE_WEAPONS].label_id = 0x11;
+    g_menu_nodes[MENU_NODE_WEAPONS].label_id = MENU_MESSAGE_TITLE_WEAPONS;
     g_menu_nodes[MENU_NODE_WEAPON_STATUS].icon_id = 0xF;
     g_menu_nodes[MENU_NODE_WEAPONS].icon_id = 0xB;
     g_menu_nodes[MENU_NODE_WEAPONS].idx_nav.s.self_idx = MENU_NODE_WEAPONS;
     g_menu_nodes[MENU_NODE_WEAPONS].content_id = 0;
     g_menu_nodes[MENU_NODE_WEAPONS].layout.s.children[0] = MENU_NODE_WEAPON_STATUS;
     g_menu_nodes[MENU_NODE_WEAPONS].layout.s.children[1] = MENU_NODE_WEAPON_ITEM_STATUS;
-    g_menu_nodes[MENU_NODE_WEAPON_STATUS].label_id = 0x12;
+    g_menu_nodes[MENU_NODE_WEAPON_STATUS].label_id = MENU_MESSAGE_TITLE_WEAPON_STATUS;
     g_menu_nodes[MENU_NODE_WEAPON_STATUS].idx_nav.s.self_idx = MENU_NODE_WEAPON_STATUS;
-    g_menu_nodes[MENU_NODE_WEAPON_ITEM_STATUS].label_id = 0x13;
+    g_menu_nodes[MENU_NODE_WEAPON_ITEM_STATUS].label_id = MENU_MESSAGE_TITLE_ITEMS_STATUS;
     g_menu_nodes[MENU_NODE_ARMOR].content_id = 1;
     g_menu_nodes[MENU_NODE_WEAPON_ITEM_STATUS].idx_nav.s.self_idx = MENU_NODE_WEAPON_ITEM_STATUS;
     g_menu_nodes[MENU_NODE_WEAPON_ITEM_STATUS].icon_id = 0x12;
-    g_menu_nodes[MENU_NODE_ARMOR].label_id = 0x14;
+    g_menu_nodes[MENU_NODE_ARMOR].label_id = MENU_MESSAGE_TITLE_ARMOR;
     g_menu_nodes[MENU_NODE_ARMOR].idx_nav.s.self_idx = MENU_NODE_ARMOR;
     g_menu_nodes[MENU_NODE_ARMOR].icon_id = 0xC;
     g_menu_nodes[MENU_NODE_ARMOR].layout.s.children[0] = MENU_NODE_ARMOR_STATUS;
     g_menu_nodes[MENU_NODE_ARMOR].layout.s.children[1] = MENU_NODE_ARMOR_ITEM_STATUS;
-    g_menu_nodes[MENU_NODE_ARMOR_STATUS].label_id = 0x15;
+    g_menu_nodes[MENU_NODE_ARMOR_STATUS].label_id = MENU_MESSAGE_TITLE_ARMOR_STATUS;
     g_menu_nodes[MENU_NODE_ARMOR_STATUS].idx_nav.s.self_idx = MENU_NODE_ARMOR_STATUS;
     g_menu_nodes[MENU_NODE_WEAPONS].u2.bits.depth = 1;
     g_menu_nodes[MENU_NODE_WEAPON_STATUS].u2.bits.depth = 2;
@@ -1342,21 +1343,21 @@ void menu_node_tree_init(void)
     g_menu_nodes[MENU_NODE_ARMOR_STATUS].u2.s.parent_idx = MENU_NODE_ARMOR;
     g_menu_nodes[MENU_NODE_INSTRUMENTS].content_id = 2;
     g_menu_nodes[MENU_NODE_ARMOR_STATUS].icon_id = 0x10;
-    g_menu_nodes[MENU_NODE_ARMOR_ITEM_STATUS].label_id = 0x13;
+    g_menu_nodes[MENU_NODE_ARMOR_ITEM_STATUS].label_id = MENU_MESSAGE_TITLE_ITEMS_STATUS;
     g_menu_nodes[MENU_NODE_ARMOR_ITEM_STATUS].idx_nav.s.self_idx = MENU_NODE_ARMOR_ITEM_STATUS;
     g_menu_nodes[MENU_NODE_ARMOR_ITEM_STATUS].icon_id = 0x12;
-    g_menu_nodes[MENU_NODE_INSTRUMENTS].label_id = 0x16;
+    g_menu_nodes[MENU_NODE_INSTRUMENTS].label_id = MENU_MESSAGE_TITLE_INSTRUMENTS;
     g_menu_nodes[MENU_NODE_INSTRUMENTS].idx_nav.s.self_idx = MENU_NODE_INSTRUMENTS;
     g_menu_nodes[MENU_NODE_INSTRUMENTS].icon_id = 0xD;
     g_menu_nodes[MENU_NODE_INSTRUMENTS].layout.s.children[0] = MENU_NODE_INSTRUMENT_STATUS;
     g_menu_nodes[MENU_NODE_INSTRUMENTS].layout.s.children[1] = MENU_NODE_INSTRUMENT_ITEM_STATUS;
-    g_menu_nodes[MENU_NODE_INSTRUMENT_STATUS].label_id = 0x17;
+    g_menu_nodes[MENU_NODE_INSTRUMENT_STATUS].label_id = MENU_MESSAGE_TITLE_INSTRUMENT_STATUS;
     g_menu_nodes[MENU_NODE_INSTRUMENT_STATUS].idx_nav.s.self_idx = MENU_NODE_INSTRUMENT_STATUS;
     g_menu_nodes[MENU_NODE_INSTRUMENT_STATUS].icon_id = 0x11;
-    g_menu_nodes[MENU_NODE_INSTRUMENT_ITEM_STATUS].label_id = 0x13;
+    g_menu_nodes[MENU_NODE_INSTRUMENT_ITEM_STATUS].label_id = MENU_MESSAGE_TITLE_ITEMS_STATUS;
     g_menu_nodes[MENU_NODE_INSTRUMENT_ITEM_STATUS].idx_nav.s.self_idx = MENU_NODE_INSTRUMENT_ITEM_STATUS;
     g_menu_nodes[MENU_NODE_INSTRUMENT_ITEM_STATUS].icon_id = 0x12;
-    g_menu_nodes[MENU_NODE_ARTIFACTS].label_id = 0x18;
+    g_menu_nodes[MENU_NODE_ARTIFACTS].label_id = MENU_MESSAGE_TITLE_ARTIFACTS;
     g_menu_nodes[MENU_NODE_ARTIFACTS].idx_nav.s.self_idx = MENU_NODE_ARTIFACTS;
     g_menu_nodes[MENU_NODE_ARMOR_ITEM_STATUS].u2.bits.depth = 2;
     g_menu_nodes[MENU_NODE_INSTRUMENTS].u2.bits.depth = 1;
@@ -1370,18 +1371,18 @@ void menu_node_tree_init(void)
     g_menu_nodes[MENU_NODE_INSTRUMENT_STATUS].u2.s.parent_idx = MENU_NODE_INSTRUMENTS;
     g_menu_nodes[MENU_NODE_ARTIFACTS].icon_id = 0xE;
     g_menu_nodes[MENU_NODE_ARTIFACTS].content_id = 5;
-    g_menu_nodes[MENU_NODE_BACKFIELD].label_id = 0x1C;
+    g_menu_nodes[MENU_NODE_BACKFIELD].label_id = MENU_MESSAGE_TITLE_BACKFIELD;
     g_menu_nodes[MENU_NODE_BACKFIELD].content_id = 3;
     g_menu_nodes[MENU_NODE_BACKFIELD].icon_id = 0x18;
     g_menu_nodes[MENU_NODE_BACKFIELD].idx_nav.s.self_idx = MENU_NODE_BACKFIELD;
-    g_menu_nodes[MENU_NODE_GAME_ENVIRONMENT].label_id = 0x19;
+    g_menu_nodes[MENU_NODE_GAME_ENVIRONMENT].label_id = MENU_MESSAGE_TITLE_GAME_ENVIRONMENT;
     g_menu_nodes[MENU_NODE_GAME_ENVIRONMENT].idx_nav.s.self_idx = MENU_NODE_GAME_ENVIRONMENT;
     g_menu_nodes[MENU_NODE_GAME_ENVIRONMENT].layout.s.children[0] = MENU_NODE_BUTTONS_CHARACTER_0;
     g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_0].idx_nav.s.self_idx = MENU_NODE_BUTTONS_CHARACTER_0;
     g_menu_nodes[MENU_NODE_GAME_ENVIRONMENT].icon_id = 0x13;
-    g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_0].label_id = 0x1A;
+    g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_0].label_id = MENU_MESSAGE_TITLE_KEY_CONFIGURATION;
     g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_0].icon_id = 0x14;
-    g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_1].label_id = 0x1A;
+    g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_1].label_id = MENU_MESSAGE_TITLE_KEY_CONFIGURATION;
     g_menu_nodes[MENU_NODE_BACKFIELD].u2.bits.expanded = 0;
     g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_1].idx_nav.s.self_idx = MENU_NODE_BUTTONS_CHARACTER_1;
     g_menu_nodes[MENU_NODE_BACKFIELD].u2.bits.depth = 0;
@@ -1399,7 +1400,7 @@ void menu_node_tree_init(void)
     g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_0].u2.bits.char_slot = 0;
     g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_1].u2.bits.char_slot = 1;
     g_menu_nodes[MENU_NODE_BUTTONS_CHARACTER_1].icon_id = 0x15;
-    g_menu_nodes[MENU_NODE_BROWSE_ALL].label_id = 0x1B;
+    g_menu_nodes[MENU_NODE_BROWSE_ALL].label_id = MENU_MESSAGE_TITLE_BROWSE_ALL;
     g_menu_nodes[MENU_NODE_BROWSE_ALL].u2.bits.expanded = 0;
     g_menu_nodes[MENU_NODE_BROWSE_ALL].idx_nav.s.self_idx = MENU_NODE_BROWSE_ALL;
     g_menu_nodes[MENU_NODE_BROWSE_ALL].u2.bits.depth = 0;
@@ -1431,7 +1432,7 @@ void menu_node_tree_init(void)
         }
     }
 
-    if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & 0x80) && g_saved_game_ctx->characters[FIELD_PARTY_GUEST].name[0])
+    if ((g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.word & MENU_PAD_INJECT_ENABLED) && g_saved_game_ctx->characters[FIELD_PARTY_GUEST].name[0])
     {
         g_menu_companion_node = MENU_NODE_BUTTONS_CHARACTER_1;
     }
@@ -1458,7 +1459,7 @@ void menu_node_tree_init(void)
                 layout_y_high = (layout_y_16 >> 1) & 0xFF;
                 work_value_a = g_menu_nodes[node_index].u8_u.nav_y_packed & 0x80FF;
                 g_menu_nodes[node_index].u8_u.nav_y_packed = work_value_a;
-                work_value_b = g_menu_nodes[node_index].idx_nav.nav_x_packed & 0x80FF;
+                work_value_b = g_menu_nodes[node_index].idx_nav.nav_x_packed & MENU_NAV_X_CLEAR;
                 g_menu_nodes[node_index].idx_nav.nav_x_packed = work_value_b;
                 g_menu_nodes[node_index].layout.layout_child_packed = ((g_menu_nodes[node_index].layout.layout_child_packed & 0xFF00) | layout_y_high);
                 nav_x_low_bit = (layout_y_9 & 1) << 15;
@@ -1786,7 +1787,7 @@ s32 menu_handle_node_input(void)
 
         nodes = g_menu_nodes;
         active_node = nodes + g_menu_active_node;
-        active_node->u2.word |= 0xC;
+        active_node->u2.word |= MENU_NODE_ANIM_FRAMES_MASK;
 
         if (active_node->u2.s.parent_idx == MENU_NONE)
         {
@@ -2415,7 +2416,7 @@ s32 menu_handle_input(s32 process_actions)
                         {
                             item_flag = *((u8*)g_saved_game_ctx + content_type + MENU_ACTION_SLOT_OFFSET);
 
-                            if ((item_flag != MENU_NONE) && (item_flag & 0x80))
+                            if ((item_flag != FIELD_SKILL_NONE) && (item_flag & FIELD_SKILL_INSTRUMENT))
                             {
                                 setRECT(&rect, 0xB0, 0x60, 0x70, 0x50);
                             }
@@ -2428,7 +2429,7 @@ s32 menu_handle_input(s32 process_actions)
                             submenu_slot->content_cb = &menu_skill_action_callback;
                             item_flag = *(menu_character_block() + content_type + MENU_ACTION_SLOT_OFFSET);
 
-                            if ((item_flag != MENU_NONE) && (item_flag & 0x80))
+                            if ((item_flag != FIELD_SKILL_NONE) && (item_flag & FIELD_SKILL_INSTRUMENT))
                             {
                                 submenu_slot->navigation.packed = MENU_LIST_WITH_COUNT(submenu_slot->navigation.packed, 4);
                                 menu_init_item_nav_entries(4);
@@ -2495,8 +2496,10 @@ s32 menu_handle_input(s32 process_actions)
                                 {
                                     text_cursor = text_buffer;
                                     label_table = menu_text_table_base(MENU_TEXT_ITEM_NAME_PARTS);
-                                    field_copy_name(text_cursor,
-                                                    (s8*)(label_table + (*((u16*)(label_table + (((g_menu_item_ptr->info.halves[1]) & 0x3F) * 2) + 0x48)))));
+                                    field_copy_name(
+                                        text_cursor,
+                                        (s8*)(label_table + (*((u16*)(label_table + (((g_menu_item_ptr->info.halves[1]) & FIELD_ITEM_MATERIAL_MASK) * 2) +
+                                                                      MENU_NAME_PARTS_MATERIAL_FIRST * sizeof(u16))))));
                                     item_word = g_menu_item_ptr->info.word;
                                     text_variant = (item_word >> 8) & 3;
 
@@ -2505,21 +2508,23 @@ s32 menu_handle_input(s32 process_actions)
                                         case FIELD_ITEM_CATEGORY_WEAPON:
                                             name_table = (uintptr_t)menu_text_table_base(MENU_TEXT_ITEM_NAME_PARTS);
                                             menu_concat_encoded_text(g_field_rename_custom_name, text_buffer,
-                                                                     (s8*)(name_table + (*((u16*)(((item_word >> 9) & 0x7E) + name_table)))));
+                                                                     (s8*)(name_table + (*((u16*)(FIELD_ITEM_TYPE_TABLE_OFFSET(item_word) + name_table)))));
                                             break;
 
                                         case FIELD_ITEM_CATEGORY_ARMOR:
                                             description_table = (uintptr_t)menu_text_table_base(MENU_TEXT_ITEM_NAME_PARTS);
                                             menu_concat_encoded_text(
                                                 g_field_rename_custom_name, text_buffer,
-                                                (s8*)(description_table + (*((u16*)(((item_word >> 9) & 0x7E) + description_table + 16 * sizeof(u16))))));
+                                                (s8*)(description_table + (*((u16*)(FIELD_ITEM_TYPE_TABLE_OFFSET(item_word) + description_table +
+                                                                                    MENU_NAME_PARTS_ARMOR_FIRST * sizeof(u16))))));
                                             break;
 
                                         default:
                                             detail_table = (uintptr_t)menu_text_table_base(MENU_TEXT_ITEM_NAME_PARTS);
-                                            menu_concat_encoded_text(g_field_rename_custom_name, text_buffer,
-                                                                     (s8*)(detail_table + (*((u16*)((((((u32)g_menu_item_ptr->info.word) >> 9) & 0x7E)) +
-                                                                                                    detail_table + 32 * sizeof(u16))))));
+                                            menu_concat_encoded_text(
+                                                g_field_rename_custom_name, text_buffer,
+                                                (s8*)(detail_table + (*((u16*)((FIELD_ITEM_TYPE_TABLE_OFFSET((u32)g_menu_item_ptr->info.word)) + detail_table +
+                                                                               MENU_NAME_PARTS_INSTRUMENT_FIRST * sizeof(u16))))));
                                             break;
                                     }
 
@@ -2688,13 +2693,15 @@ s32 menu_handle_input(s32 process_actions)
                     if ((u32)(node_self_index - 0x14) < 5)
                     {
                         g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].idx_nav.s.self_idx = 1;
-                        g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].label_id = (g_menu_char_slot * 3) + 3;
+                        g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].label_id =
+                            (g_menu_char_slot * 3) + MENU_MESSAGE_TITLE_HERO_EQUIPMENT;
                         menu_focus_active_content_item();
                     }
                     else if ((u32)(node_self_index - 0x1A) < 2)
                     {
                         g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].idx_nav.s.self_idx = 2;
-                        g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].label_id = (g_menu_char_slot * 3) + 3;
+                        g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].label_id =
+                            (g_menu_char_slot * 3) + MENU_MESSAGE_TITLE_HERO_EQUIPMENT;
                         menu_focus_active_content_item();
                     }
                 }
@@ -3643,7 +3650,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                     {
                                         void* a3 = (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_NAMES]);
                                         menu_concat_encoded_text(
-                                            prefix_buffer, TEXT_TABLE_STRING(a3, g_menu_item_ptr->info.halves[1] & 0x3F),
+                                            prefix_buffer, TEXT_TABLE_STRING(a3, g_menu_item_ptr->info.halves[1] & FIELD_ITEM_MATERIAL_MASK),
                                             (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] +
                                                     *(u16*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] +
                                                             0xB4)));
@@ -3661,22 +3668,24 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                         case FIELD_ITEM_CATEGORY_WEAPON:
                                         {
                                             uintptr_t base0 = ((uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES));
-                                            menu_concat_encoded_text(text_buffer, prefix_buffer, (void*)(base0 + *(u16*)(((v >> 9) & 0x7E) + base0)));
+                                            menu_concat_encoded_text(text_buffer, prefix_buffer,
+                                                                     (void*)(base0 + *(u16*)(FIELD_ITEM_TYPE_TABLE_OFFSET(v) + base0)));
                                             break;
                                         }
                                         case FIELD_ITEM_CATEGORY_ARMOR:
                                         {
                                             uintptr_t base1 = ((uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES));
-                                            menu_concat_encoded_text(text_buffer, prefix_buffer,
-                                                                     (void*)(base1 + *(u16*)(((v >> 9) & 0x7E) + base1 + 11 * sizeof(u16))));
+                                            menu_concat_encoded_text(
+                                                text_buffer, prefix_buffer,
+                                                (void*)(base1 + *(u16*)(FIELD_ITEM_TYPE_TABLE_OFFSET(v) + base1 + MENU_TYPE_NAMES_ARMOR_FIRST * sizeof(u16))));
                                             break;
                                         }
                                         default:
                                         {
                                             uintptr_t base2 = ((uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES));
-                                            menu_concat_encoded_text(
-                                                text_buffer, prefix_buffer,
-                                                (void*)(base2 + *(u16*)(((g_menu_item_ptr->info.word >> 9) & 0x7E) + base2 + 23 * sizeof(u16))));
+                                            menu_concat_encoded_text(text_buffer, prefix_buffer,
+                                                                     (void*)(base2 + *(u16*)(FIELD_ITEM_TYPE_TABLE_OFFSET(g_menu_item_ptr->info.word) + base2 +
+                                                                                             MENU_TYPE_NAMES_INSTRUMENT_FIRST * sizeof(u16))));
                                             break;
                                         }
                                     }
@@ -4109,7 +4118,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
 
                                 ((SPRT*)packet_cursor)->v0 = tex_v;
                                 SET_SPRT_WH_PACKED(packet_cursor, 0x30, 0x30);
-                                SET_SPRT_CLUT(packet_cursor, (((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
+                                SET_SPRT_CLUT(packet_cursor, getClut(FIELD_PARTY_PORTRAIT_CLUT_X, (u16)g_menu_char_slot + FIELD_PARTY_PORTRAIT_CLUT_Y));
                                 addPrim(ot_entry, packet_cursor);
                                 packet_cursor = (SPRT*)packet_cursor + 1;
                                 SET_BGR0_PACKED(packet_cursor, 0);
@@ -4133,7 +4142,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
 
                                 ((SPRT*)packet_cursor)->v0 = tex_v;
                                 SET_SPRT_WH_PACKED(packet_cursor, 0x30, 0x30);
-                                SET_SPRT_CLUT(packet_cursor, (((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
+                                SET_SPRT_CLUT(packet_cursor, getClut(FIELD_PARTY_PORTRAIT_CLUT_X, (u16)g_menu_char_slot + FIELD_PARTY_PORTRAIT_CLUT_Y));
                                 addPrim(ot_entry, packet_cursor);
                                 packet_cursor = (SPRT*)packet_cursor + 1;
                                 setDrawTPage(packet_cursor, 0, 0, FIELD_UI_TPAGE(GPU_BLEND_HALF));
@@ -4316,11 +4325,11 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 content_index = (intptr_t)ptr;
                                 val = ((MenuNameSelection*)(ptr + (MENU_SKILL_OFFSET - MENU_PARTY_FIELD_SKILL_NAME_FIRST)))->packed;
 
-                                if (val != 0xFF)
+                                if (val != FIELD_SKILL_NONE)
                                 {
                                     draw_packet_cursor = packet_cursor;
 
-                                    if (val & 0x80)
+                                    if (val & FIELD_SKILL_INSTRUMENT)
                                     {
                                         u16* saved_game = (u16*)g_saved_game_ctx;
                                         void* character_record =
@@ -4342,7 +4351,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
 
                                         technique_names =
                                             (uintptr_t)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_TECHNIQUE_NAMES];
-                                        weapon_type = ((g_menu_equipment_base->info.word >> 10) & 0x3F);
+                                        weapon_type = FIELD_ITEM_TYPE(g_menu_equipment_base->info.word);
 
                                         idx = ((MenuNameSelection*)(ptr + (MENU_SKILL_OFFSET - MENU_PARTY_FIELD_SKILL_NAME_FIRST)))->fields.index;
                                         technique_offset = idx * 2;
@@ -4864,7 +4873,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
             nodes = g_menu_nodes;
             node = nodes + g_menu_scene_type;
 
-            if (node->label_id == 0x13)
+            if (node->label_id == MENU_MESSAGE_TITLE_ITEMS_STATUS)
             {
                 u8* title = (u8*)g_menu_item_ptr;
 
@@ -5365,7 +5374,7 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
                     case MENU_HELP_SKILL:
                         if (g_menu_help_skill_selection != MENU_NONE)
                         {
-                            if (g_menu_help_skill_selection & 0x80)
+                            if (g_menu_help_skill_selection & FIELD_SKILL_INSTRUMENT)
                             {
                                 prim_buf = menu_emit_content_label(
                                     prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_MAGIC_HELP), content_base[g_menu_hit_item_idx].action_type));
@@ -5423,7 +5432,7 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
 
                     if (flag != MENU_NONE)
                     {
-                        if (flag & 0x80)
+                        if (flag & FIELD_SKILL_INSTRUMENT)
                         {
                             u8* item_ptr = pad_base + (((MenuNameSelection*)(flag_addr + MENU_ACTION_SLOT_OFFSET))->fields.index * MENU_ITEM_RECORD_SIZE) +
                                            (MENU_CHARACTER_RECORD_OFFSET + OFFSETOF(FieldCharacterRecord, instruments));
@@ -5463,7 +5472,8 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
                             if (menu_item_differs_from_bare_hands(
                                     &menu_character_record(context, g_menu_char_slot)->equipment[action_type - MENU_EQUIPMENT_SUBTYPE_BASE]) != 0)
                             {
-                                s32 name_index = menu_equipped_item(g_saved_game_ctx, action_type - MENU_EQUIPMENT_SUBTYPE_BASE)->info.halves[1] & 0x3F;
+                                s32 name_index =
+                                    menu_equipped_item(g_saved_game_ctx, action_type - MENU_EQUIPMENT_SUBTYPE_BASE)->info.halves[1] & FIELD_ITEM_MATERIAL_MASK;
                                 u16 name_offset = *(u16*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_NAMES] +
                                                           name_index * 2);
                                 u8* message_table = (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES];
@@ -5485,7 +5495,7 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
                             {
                                 case FIELD_ITEM_CATEGORY_WEAPON:
                                 {
-                                    u32 idx = (item_attributes >> 9) & 0x7E;
+                                    u32 idx = FIELD_ITEM_TYPE_TABLE_OFFSET(item_attributes);
                                     uintptr_t category_help_table = (uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES);
                                     u8* str2 = (u8*)(category_help_table + *(u16*)(idx + category_help_table));
 
@@ -5496,7 +5506,7 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
                                 }
                                 case FIELD_ITEM_CATEGORY_ARMOR:
                                 {
-                                    u32 idx = (item_attributes >> 9) & 0x7E;
+                                    u32 idx = FIELD_ITEM_TYPE_TABLE_OFFSET(item_attributes);
                                     uintptr_t category_help_table = (uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES);
                                     u8* str2 = (u8*)(category_help_table + *(u16*)(idx + category_help_table + 11 * sizeof(u16)));
 
@@ -5510,7 +5520,7 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
                                     s32* category_help_offset = &((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_EQUIPMENT_TYPE_NAMES];
                                     SavedGameLayout* context = g_saved_game_ctx;
                                     u32 reloaded_item_attributes = menu_equipped_item(context, action_type - MENU_EQUIPMENT_SUBTYPE_BASE)->info.word;
-                                    u32 idx = (reloaded_item_attributes >> 9) & 0x7E;
+                                    u32 idx = FIELD_ITEM_TYPE_TABLE_OFFSET(reloaded_item_attributes);
                                     uintptr_t category_help_table = (uintptr_t)g_menu_state_ptr + *category_help_offset;
                                     u8* str2 = (u8*)(category_help_table + *(u16*)(idx + category_help_table + 23 * sizeof(u16)));
 
@@ -5706,13 +5716,13 @@ void* menu_draw_node_recursive(s32 node_index, void* prim_buf, u_long* ot)
         work_value = animation_frames - 1;
         animation_count = work_value & 3;
         work_mask = animation_count << 2;
-        updated_flags = flags & 0xFFF3;
+        updated_flags = flags & (u16)~MENU_NODE_ANIM_FRAMES_MASK;
         node->u2.word = updated_flags | work_mask;
     }
 
     if (node->layout_frames_remaining == MENU_NODE_LAYOUT_IDLE)
     {
-        s32 target_y_low_bit = node->u8_u.nav_y_packed & 0x8000;
+        s32 target_y_low_bit = node->u8_u.nav_y_packed & MENU_LAYOUT_Y0_BIT;
         u16 packed_y;
 
         node->idx_nav.nav_x_packed = (node->idx_nav.nav_x_packed & 0x7FFF) | target_y_low_bit;
@@ -6069,7 +6079,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
     list = state;
     packet_cursor = prim_buf;
 
-    if ((g_pad_input & 0x10) && (active != 0))
+    if ((g_pad_input & PAD_BTN_SQUARE) && (active != 0))
     {
         menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
 
@@ -6137,9 +6147,9 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
 
     packet_cursor = scroll_list_draw(packet_cursor, ot, list, g_menu_scroll_nav_entries, view_origin, active);
 
-    if (g_menu_scene_type < MENU_NODE_WEAPONS && (g_pad_input & 0x8000))
+    if (g_menu_scene_type < MENU_NODE_WEAPONS && (g_pad_input & PAD_BTN_LEFT))
     {
-        g_pad_input &= ~0x40;
+        g_pad_input &= ~PAD_BTN_CIRCLE;
     }
 
     if ((g_pad_input & PAD_BTN_CIRCLE) && (active != 0))
@@ -6155,13 +6165,15 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
             if (item_kind == 2)
             {
                 g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].idx_nav.s.self_idx = (s8)item_kind;
-                g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].label_id = (u8)((g_menu_char_slot * 3) + 2);
+                g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].label_id =
+                    (u8)((g_menu_char_slot * 3) + MENU_MESSAGE_TITLE_HERO_ABILITIES);
                 menu_clear_slots();
                 return packet_cursor;
             }
 
             g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].idx_nav.s.self_idx = 1;
-            g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].label_id = (u8)((g_menu_char_slot * 3) + 3);
+            g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].label_id =
+                (u8)((g_menu_char_slot * 3) + MENU_MESSAGE_TITLE_HERO_EQUIPMENT);
             menu_clear_slots();
             return packet_cursor;
         }
@@ -6172,9 +6184,9 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
         }
         else
         {
-            g_menu_nodes[MENU_NODE_WEAPONS].label_id = 0x11;
-            g_menu_nodes[MENU_NODE_ARMOR].label_id = 0x14;
-            g_menu_nodes[MENU_NODE_INSTRUMENTS].label_id = 0x16;
+            g_menu_nodes[MENU_NODE_WEAPONS].label_id = MENU_MESSAGE_TITLE_WEAPONS;
+            g_menu_nodes[MENU_NODE_ARMOR].label_id = MENU_MESSAGE_TITLE_ARMOR;
+            g_menu_nodes[MENU_NODE_INSTRUMENTS].label_id = MENU_MESSAGE_TITLE_INSTRUMENTS;
             g_menu_content_ready = 0;
             menu_play_se(SFX_CANCEL, AKAO_SFX_DEFAULT_VOLUME);
             menu_reset_content_view();
@@ -6326,7 +6338,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
         if ((u32)((list->navigation.packed >> MENU_LIST_COUNT_SHIFT) & MENU_ITEM_NAV_INDEX_MASK) <= (u32)list->navigation.fields.selected_index)
         {
             menu_step_item_selection(-1);
-            list->navigation.fields.selected_index = (u16)((list->navigation.fields.count_and_ot & 0x1FF) - 1);
+            list->navigation.fields.selected_index = (u16)((list->navigation.fields.count_and_ot & MENU_ITEM_NAV_INDEX_MASK) - 1);
 
             if (((list->navigation.fields.selected_index * MENU_LIST_ROW_HEIGHT) - scroll_y) < (list->viewport_h - MENU_LIST_ROW_HEIGHT))
             {
@@ -6340,7 +6352,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
             }
         }
 
-        g_menu_page_count = list->navigation.fields.count_and_ot & 0x1FF;
+        g_menu_page_count = list->navigation.fields.count_and_ot & MENU_ITEM_NAV_INDEX_MASK;
         g_script_repeat_last = list->navigation.fields.selected_index;
 
         if (g_menu_item_ptr != 0)
@@ -6354,7 +6366,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                 {
                     u8* resources = g_menu_state_ptr;
                     u16 name_attributes = g_menu_item_ptr->info.halves[1];
-                    s32 name_offset = (name_attributes & 0x3F) * 2;
+                    s32 name_offset = (name_attributes & FIELD_ITEM_MATERIAL_MASK) * 2;
                     s32 names_offset = ((MenuTextResources*)resources)->table_offsets[MENU_TEXT_ITEM_NAMES];
                     s32 general_offset = ((MenuTextResources*)resources)->table_offsets[MENU_TEXT_GENERAL];
                     uintptr_t name_table = (uintptr_t)resources + names_offset;
@@ -6376,7 +6388,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                 {
                     case FIELD_ITEM_CATEGORY_WEAPON:
                     {
-                        u32 category_offset = (item_attributes >> 9) & 0x7E;
+                        u32 category_offset = FIELD_ITEM_TYPE_TABLE_OFFSET(item_attributes);
                         uintptr_t description_table = (uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES);
                         u8* description = (u8*)(description_table + *(u16*)(category_offset + description_table));
 
@@ -6387,7 +6399,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                     }
                     case FIELD_ITEM_CATEGORY_ARMOR:
                     {
-                        u32 category_offset = (item_attributes >> 9) & 0x7E;
+                        u32 category_offset = FIELD_ITEM_TYPE_TABLE_OFFSET(item_attributes);
                         uintptr_t description_table = (uintptr_t)menu_text_table_base(MENU_TEXT_EQUIPMENT_TYPE_NAMES);
                         u8* description = (u8*)(description_table + *(u16*)(category_offset + description_table + 11 * sizeof(u16)));
 
@@ -6400,7 +6412,7 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                     {
                         s32* description_offset = &((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_EQUIPMENT_TYPE_NAMES];
                         u32 item_attributes = g_menu_item_ptr->info.word;
-                        u32 category_offset = (item_attributes >> 9) & 0x7E;
+                        u32 category_offset = FIELD_ITEM_TYPE_TABLE_OFFSET(item_attributes);
                         uintptr_t description_table = (uintptr_t)g_menu_state_ptr + *description_offset;
                         u8* description = (u8*)(description_table + *(u16*)(category_offset + description_table + 23 * sizeof(u16)));
 
@@ -6431,7 +6443,8 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                             (s8)((u8)g_menu_active_subtype + (FIELD_SKILL_INSTRUMENT - MENU_SKILL_SUBTYPE_BASE));
                         menu_play_se(SFX_CONFIRM, AKAO_SFX_DEFAULT_VOLUME);
                         g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].idx_nav.s.self_idx = (s8)sub;
-                        g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].label_id = (u8)((g_menu_char_slot * 3) + 2);
+                        g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].label_id =
+                            (u8)((g_menu_char_slot * 3) + MENU_MESSAGE_TITLE_HERO_ABILITIES);
                         menu_clear_slots();
                         g_menu_content_ready = 0;
                     }
@@ -6484,7 +6497,8 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                         menu_relink_pair();
                         g_menu_content_ready = 0;
                         g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].idx_nav.s.self_idx = 1;
-                        g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].label_id = (u8)((g_menu_char_slot * 3) + 3);
+                        g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].label_id =
+                            (u8)((g_menu_char_slot * 3) + MENU_MESSAGE_TITLE_HERO_EQUIPMENT);
                         return packet_cursor;
                     }
                 }
@@ -6492,9 +6506,9 @@ void* menu_inventory_list_callback(u_long* ot, ScrollListState* state, void* pri
                 {
                     u16 sel;
 
-                    g_menu_nodes[MENU_NODE_WEAPONS].label_id = 0x11;
-                    g_menu_nodes[MENU_NODE_ARMOR].label_id = 0x14;
-                    g_menu_nodes[MENU_NODE_INSTRUMENTS].label_id = 0x16;
+                    g_menu_nodes[MENU_NODE_WEAPONS].label_id = MENU_MESSAGE_TITLE_WEAPONS;
+                    g_menu_nodes[MENU_NODE_ARMOR].label_id = MENU_MESSAGE_TITLE_ARMOR;
+                    g_menu_nodes[MENU_NODE_INSTRUMENTS].label_id = MENU_MESSAGE_TITLE_INSTRUMENTS;
                     menu_play_se(SFX_CURSOR, AKAO_SFX_DEFAULT_VOLUME);
                     sel = list->navigation.fields.selected_index;
 
@@ -7094,7 +7108,7 @@ void* menu_skill_action_callback(u_long* ot, ScrollListState* state, void* prim_
 
                 menu_clear_slots();
                 g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].idx_nav.s.self_idx = 0x1A;
-                g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].label_id = 0x17;
+                g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_ABILITIES].label_id = MENU_MESSAGE_TITLE_INSTRUMENT_STATUS;
                 menu_focus_active_content_item();
 
                 g_menu_draw_early_out = 1;
@@ -7411,7 +7425,7 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
                         g_menu_item_ptr = g_menu_active_equipped_item;
                         g_menu_weapon_item = g_menu_saved_category0_item;
                         g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].idx_nav.s.self_idx = 0x14;
-                        g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].label_id = 0x12;
+                        g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].label_id = MENU_MESSAGE_TITLE_WEAPON_STATUS;
                         break;
 
                     case MENU_EQUIPMENT_SUBTYPE(1):
@@ -7420,7 +7434,7 @@ void* menu_equipment_action_callback(u_long* ot, ScrollListState* state, void* p
                         g_menu_item_ptr = g_menu_active_equipped_item;
                         g_menu_armor_item = g_menu_saved_category1_item;
                         g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].idx_nav.s.self_idx = 0x17;
-                        g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].label_id = 0x15;
+                        g_menu_nodes[(g_menu_char_slot * MENU_NODES_PER_CHARACTER) + MENU_CHARACTER_NODE_EQUIPMENT].label_id = MENU_MESSAGE_TITLE_ARMOR_STATUS;
                         break;
                 }
 

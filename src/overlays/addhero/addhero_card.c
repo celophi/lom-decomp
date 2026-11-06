@@ -39,411 +39,466 @@ s32 addhero_advance_load_sequence(void)
     {
         switch (*g_card_step)
         {
-        case CARD_MENU_STEP_CARD_INFO:
-            result = CARD_MENU_SEQUENCE_RUN_AGAIN;
-            _card_wait(g_card_slot);
-            _card_info(CARD_CHANNEL(g_card_slot));
-            g_card_step++;
-            break;
-
-        case CARD_MENU_STEP_POLL_CARD_INFO:
-            switch (poll_software_card_events())
-            {
-            case CARD_EVENT_COMPLETE:
+            case CARD_MENU_STEP_CARD_INFO:
+                result = CARD_MENU_SEQUENCE_RUN_AGAIN;
+                _card_wait(g_card_slot);
+                _card_info(CARD_CHANNEL(g_card_slot));
                 g_card_step++;
                 break;
-            case CARD_EVENT_ERROR:
-            case CARD_EVENT_TIMEOUT:
-                result = CARD_MENU_SEQUENCE_NO_CARD;
-                g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
-                g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;
-                g_card_step++;
-                break;
-            case CARD_EVENT_NEW_CARD:
-                card_reset_entry_ranks();
-                g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
-                g_card_step = g_card_steps_initial_scan;
-                break;
-            }
-            break;
 
-        case CARD_MENU_STEP_CLEAR_SOFTWARE_EVENTS:
-            clear_software_card_events();
-            g_card_step++;
-            break;
-
-        case CARD_MENU_STEP_POLL_HARDWARE_EVENTS:
-            while ((poll_status = poll_hardware_card_events()) == CARD_EVENT_NONE);
-            switch (poll_status)
-            {
-            case CARD_EVENT_COMPLETE:
-                g_card_step++;
-                break;
-            case CARD_EVENT_ERROR:
-            case CARD_EVENT_TIMEOUT:
-            case CARD_EVENT_NEW_CARD:
-                result = CARD_MENU_SEQUENCE_NO_CARD;
-                g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
-                g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;
-                break;
-            }
-            break;
-
-        case CARD_MENU_STEP_CLEAR_HARDWARE_EVENTS:
-            clear_hardware_card_events();
-            g_card_step++;
-            break;
-
-        case CARD_MENU_STEP_SCAN_ENTRIES:
-            card_erase_placeholder_files();
-            g_card_menu_entry_scan_active = 1;
-            if (card_menu_begin_entry_scan(g_card_slot) == 0)
-            {
-                result = CARD_MENU_SEQUENCE_FINISHED;
-                g_card_step = NULL;
-                g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_GAME_DATA;
-                g_card_menu_entry_scan_active = 0;
-                break;
-            }
-            g_card_step++;
-            for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
-            {
-                if (addhero_scan_next_entry(g_card_slot) == 0)
+            case CARD_MENU_STEP_POLL_CARD_INFO:
+                switch (poll_software_card_events())
                 {
-                    if (g_card_menu_mode != 0)
-                    {
-                        g_card_menu_selected_row = 0;
-                    }
+                    case CARD_EVENT_COMPLETE:
+                        g_card_step++;
+                        break;
+                    case CARD_EVENT_ERROR:
+                    case CARD_EVENT_TIMEOUT:
+                        result = CARD_MENU_SEQUENCE_NO_CARD;
+                        g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
+                        g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;
+                        g_card_step++;
+                        break;
+                    case CARD_EVENT_NEW_CARD:
+                        card_reset_entry_ranks();
+                        g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
+                        g_card_step = g_card_steps_initial_scan;
+                        break;
+                }
+
+                break;
+
+            case CARD_MENU_STEP_CLEAR_SOFTWARE_EVENTS:
+                clear_software_card_events();
+                g_card_step++;
+                break;
+
+            case CARD_MENU_STEP_POLL_HARDWARE_EVENTS:
+                while ((poll_status = poll_hardware_card_events()) == CARD_EVENT_NONE);
+
+                switch (poll_status)
+                {
+                    case CARD_EVENT_COMPLETE:
+                        g_card_step++;
+                        break;
+                    case CARD_EVENT_ERROR:
+                    case CARD_EVENT_TIMEOUT:
+                    case CARD_EVENT_NEW_CARD:
+                        result = CARD_MENU_SEQUENCE_NO_CARD;
+                        g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
+                        g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;
+                        break;
+                }
+
+                break;
+
+            case CARD_MENU_STEP_CLEAR_HARDWARE_EVENTS:
+                clear_hardware_card_events();
+                g_card_step++;
+                break;
+
+            case CARD_MENU_STEP_SCAN_ENTRIES:
+                card_erase_placeholder_files();
+                g_card_menu_entry_scan_active = 1;
+
+                if (card_menu_begin_entry_scan(g_card_slot) == 0)
+                {
+                    result = CARD_MENU_SEQUENCE_FINISHED;
+                    g_card_step = NULL;
+                    g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_GAME_DATA;
                     g_card_menu_entry_scan_active = 0;
-                    if (g_card_entry_state != CARD_MENU_ENTRY_STATE_NO_GAME_DATA && g_card_entry_state != CARD_MENU_ENTRY_STATE_CARD_FULL)
+                    break;
+                }
+
+                g_card_step++;
+
+                for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
+                {
+                    if (addhero_scan_next_entry(g_card_slot) == 0)
                     {
-                        card_menu_commit_selected_entry();
+                        if (g_card_menu_mode != 0)
+                        {
+                            g_card_menu_selected_row = 0;
+                        }
+
+                        g_card_menu_entry_scan_active = 0;
+
+                        if (g_card_entry_state != CARD_MENU_ENTRY_STATE_NO_GAME_DATA && g_card_entry_state != CARD_MENU_ENTRY_STATE_CARD_FULL)
+                        {
+                            card_menu_commit_selected_entry();
+                        }
+
+                        break;
                     }
-                    break;
                 }
-            }
-            break;
 
-        case CARD_MENU_STEP_CLEAR_CARD:
-            result = CARD_MENU_SEQUENCE_RUN_AGAIN;
-            _card_wait(g_card_slot);
-            _card_clear(CARD_CHANNEL(g_card_slot));
-            g_card_step++;
-            break;
+                break;
 
-        case CARD_MENU_STEP_LOAD_CARD:
-            result = CARD_MENU_SEQUENCE_RUN_AGAIN;
-            _card_wait(g_card_slot);
-            _card_load(CARD_CHANNEL(g_card_slot));
-            g_card_menu_new_card_retries = CARD_MENU_CARD_LOAD_RETRIES;
-            g_card_menu_load_error_retries = CARD_MENU_CARD_LOAD_RETRIES;
-            g_card_step++;
-            break;
-
-        case CARD_MENU_STEP_DONE:
-            result = CARD_MENU_SEQUENCE_FINISHED;
-            g_card_menu_write_in_progress = 0;
-            break;
-
-        case CARD_MENU_EXCHANGE_STEP_ERASE_ENTRY:
-            strcat(card_path.text, g_card_entries[g_card_slot][g_card_menu_selected_row].name);
-            CARD_ERASE_WITH_RETRIES(attempts, card_path.text);
-            g_card_step++;
-            break;
-
-        case CARD_MENU_STEP_POLL_CARD_LOAD:
-            switch (poll_software_card_events())
-            {
-            case CARD_EVENT_COMPLETE:
+            case CARD_MENU_STEP_CLEAR_CARD:
+                result = CARD_MENU_SEQUENCE_RUN_AGAIN;
+                _card_wait(g_card_slot);
+                _card_clear(CARD_CHANNEL(g_card_slot));
                 g_card_step++;
                 break;
-            case CARD_EVENT_ERROR:
-            case CARD_EVENT_TIMEOUT:
-                g_card_menu_load_error_retries--;
-                if (g_card_menu_load_error_retries != 0)
-                {
-                    _card_wait(g_card_slot);
-                    _card_clear(CARD_CHANNEL(g_card_slot));
-                    _card_wait(g_card_slot);
-                    _card_load(CARD_CHANNEL(g_card_slot));
-                }
-                else
-                {
-                    result = CARD_MENU_SEQUENCE_NO_CARD;
-                    g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
-                    g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;
-                }
-                break;
-            case CARD_EVENT_NEW_CARD:
-                g_card_menu_new_card_retries--;
-                if (g_card_menu_new_card_retries != 0)
-                {
-                    _card_wait(g_card_slot);
-                    _card_clear(CARD_CHANNEL(g_card_slot));
-                    _card_wait(g_card_slot);
-                    _card_load(CARD_CHANNEL(g_card_slot));
-                }
-                else
-                {
-                    result = CARD_MENU_SEQUENCE_UNFORMATTED;
-                    g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_SAVE_DATA;
-                    g_card_step = g_card_steps_idle;
-                }
-                break;
-            }
-            break;
 
-        case CARD_MENU_STEP_WAIT_HARDWARE_EVENTS:
-            while ((poll_status = poll_hardware_card_events()) == CARD_EVENT_NONE);
-            g_card_step++;
-            break;
-
-        case CARD_MENU_STEP_READ_ENTRY:
-            g_card_menu_io_busy = 1;
-            g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
-            _card_wait(g_card_slot);
-            g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
-            if (g_card_menu_file_handle == CARD_FILE_ERROR)
-            {
-                break;
-            }
-            clear_software_card_events();
-            _card_wait(g_card_slot);
-            if (read(g_card_menu_file_handle, &g_addhero_entry_file,
-                     g_card_menu_selected_entry_extended != 0 ? CARD_MENU_ENTRY_READ_BYTES : CARD_MENU_ENTRY_TITLE_READ_BYTES) == CARD_FILE_ERROR)
-            {
-                close(g_card_menu_file_handle);
-                break;
-            }
-            g_card_step++;
-            break;
-
-        case CARD_MENU_STEP_POLL_ENTRY_READ:
-            if (g_card_menu_io_busy != 0)
-            {
-                poll_status = poll_software_card_events();
-                if (poll_status == CARD_EVENT_COMPLETE)
-                {
-                    g_card_menu_io_busy = 0;
-                    g_card_menu_selection_status = CARD_MENU_SELECTION_ENTRY_READ;
-                    close(g_card_menu_file_handle);
-                }
-                else if (poll_status != CARD_EVENT_NONE)
-                {
-                    close(g_card_menu_file_handle);
-                    g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
-                    g_card_step = g_card_steps_initial_scan;
-                }
-            }
-            else
-            {
+            case CARD_MENU_STEP_LOAD_CARD:
+                result = CARD_MENU_SEQUENCE_RUN_AGAIN;
+                _card_wait(g_card_slot);
+                _card_load(CARD_CHANNEL(g_card_slot));
+                g_card_menu_new_card_retries = CARD_MENU_CARD_LOAD_RETRIES;
+                g_card_menu_load_error_retries = CARD_MENU_CARD_LOAD_RETRIES;
                 g_card_step++;
-            }
-            break;
-
-        case CARD_MENU_STEP_READ_SAVE:
-            g_card_menu_progress_active = 1;
-            g_card_menu_progress_start_tick = VSync(-1);
-            g_card_menu_progress_bar_active = 1;
-            _card_wait(g_card_slot);
-            g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
-            clear_software_card_events();
-            _card_wait(g_card_slot);
-            if (read(g_card_menu_file_handle, &g_addhero_save_file, SAVE_FILE_BYTES) == CARD_FILE_ERROR)
-            {
-                close(g_card_menu_file_handle);
-                g_card_menu_retry_count--;
-                if (g_card_menu_retry_count == 0)
-                {
-                    card_menu_open_status_dialog(CARD_MENU_DIALOG_LOAD_FAILED);
-                    return result;
-                }
                 break;
-            }
-            g_card_step++;
-            break;
 
-        case CARD_MENU_STEP_POLL_SAVE_READ:
-            switch (poll_software_card_events())
-            {
-            case CARD_EVENT_COMPLETE:
-                g_card_menu_progress_active = 0;
+            case CARD_MENU_STEP_DONE:
+                result = CARD_MENU_SEQUENCE_FINISHED;
+                g_card_menu_write_in_progress = 0;
+                break;
+
+            case CARD_MENU_EXCHANGE_STEP_ERASE_ENTRY:
+                strcat(card_path.text, g_card_entries[g_card_slot][g_card_menu_selected_row].name);
+                CARD_ERASE_WITH_RETRIES(attempts, card_path.text);
                 g_card_step++;
-                close(g_card_menu_file_handle);
                 break;
-            case CARD_EVENT_ERROR:
-            case CARD_EVENT_TIMEOUT:
-            case CARD_EVENT_NEW_CARD:
-                close(g_card_menu_file_handle);
-                g_card_menu_retry_count--;
-                if (g_card_menu_retry_count == 0)
-                {
-                    g_card_menu_progress_bar_active = 0;
-                    card_menu_open_status_dialog(CARD_MENU_DIALOG_LOAD_FAILED);
-                    return result;
-                }
-                /* Rewind to CARD_MENU_STEP_READ_SAVE and try again. */
-                g_card_step--;
-                break;
-            }
-            break;
 
-        case CARD_MENU_STEP_CHECK_POCKETSTATION:
-            for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
-            {
-                if (McxCardType(CARD_CHANNEL(g_card_slot)) == MCX_COMMAND_ISSUED)
+            case CARD_MENU_STEP_POLL_CARD_LOAD:
+                switch (poll_software_card_events())
+                {
+                    case CARD_EVENT_COMPLETE:
+                        g_card_step++;
+                        break;
+                    case CARD_EVENT_ERROR:
+                    case CARD_EVENT_TIMEOUT:
+                        g_card_menu_load_error_retries--;
+
+                        if (g_card_menu_load_error_retries != 0)
+                        {
+                            _card_wait(g_card_slot);
+                            _card_clear(CARD_CHANNEL(g_card_slot));
+                            _card_wait(g_card_slot);
+                            _card_load(CARD_CHANNEL(g_card_slot));
+                        }
+                        else
+                        {
+                            result = CARD_MENU_SEQUENCE_NO_CARD;
+                            g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
+                            g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_CARD;
+                        }
+
+                        break;
+                    case CARD_EVENT_NEW_CARD:
+                        g_card_menu_new_card_retries--;
+
+                        if (g_card_menu_new_card_retries != 0)
+                        {
+                            _card_wait(g_card_slot);
+                            _card_clear(CARD_CHANNEL(g_card_slot));
+                            _card_wait(g_card_slot);
+                            _card_load(CARD_CHANNEL(g_card_slot));
+                        }
+                        else
+                        {
+                            result = CARD_MENU_SEQUENCE_UNFORMATTED;
+                            g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_SAVE_DATA;
+                            g_card_step = g_card_steps_idle;
+                        }
+
+                        break;
+                }
+
+                break;
+
+            case CARD_MENU_STEP_WAIT_HARDWARE_EVENTS:
+                while ((poll_status = poll_hardware_card_events()) == CARD_EVENT_NONE);
+                g_card_step++;
+                break;
+
+            case CARD_MENU_STEP_READ_ENTRY:
+                g_card_menu_io_busy = 1;
+                g_card_menu_selection_status = CARD_MENU_SELECTION_NONE;
+                _card_wait(g_card_slot);
+                g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
+
+                if (g_card_menu_file_handle == CARD_FILE_ERROR)
                 {
                     break;
                 }
-                VSync(0);
-            }
-            if (attempts != CARD_MENU_FILE_OP_ATTEMPTS)
-            {
-                McxSync(MCX_SYNC_WAIT, &card_command, &card_result);
-                if (card_result == McxErrSuccess)
+
+                clear_software_card_events();
+                _card_wait(g_card_slot);
+
+                if (read(g_card_menu_file_handle, &g_addhero_entry_file,
+                         g_card_menu_selected_entry_extended != 0 ? CARD_MENU_ENTRY_READ_BYTES : CARD_MENU_ENTRY_TITLE_READ_BYTES) == CARD_FILE_ERROR)
+                {
+                    close(g_card_menu_file_handle);
+                    break;
+                }
+
+                g_card_step++;
+                break;
+
+            case CARD_MENU_STEP_POLL_ENTRY_READ:
+                if (g_card_menu_io_busy != 0)
+                {
+                    poll_status = poll_software_card_events();
+
+                    if (poll_status == CARD_EVENT_COMPLETE)
+                    {
+                        g_card_menu_io_busy = 0;
+                        g_card_menu_selection_status = CARD_MENU_SELECTION_ENTRY_READ;
+                        close(g_card_menu_file_handle);
+                    }
+                    else if (poll_status != CARD_EVENT_NONE)
+                    {
+                        close(g_card_menu_file_handle);
+                        g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
+                        g_card_step = g_card_steps_initial_scan;
+                    }
+                }
+                else
                 {
                     g_card_step++;
+                }
+
+                break;
+
+            case CARD_MENU_STEP_READ_SAVE:
+                g_card_menu_progress_active = 1;
+                g_card_menu_progress_start_tick = VSync(-1);
+                g_card_menu_progress_bar_active = 1;
+                _card_wait(g_card_slot);
+                g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
+                clear_software_card_events();
+                _card_wait(g_card_slot);
+
+                if (read(g_card_menu_file_handle, &g_addhero_save_file, SAVE_FILE_BYTES) == CARD_FILE_ERROR)
+                {
+                    close(g_card_menu_file_handle);
+                    g_card_menu_retry_count--;
+
+                    if (g_card_menu_retry_count == 0)
+                    {
+                        card_menu_open_status_dialog(CARD_MENU_DIALOG_LOAD_FAILED);
+                        return result;
+                    }
+
                     break;
                 }
-            }
-            card_menu_open_status_dialog(CARD_MENU_DIALOG_NOT_POCKETSTATION);
-            break;
 
-        case CARD_MENU_STEP_INIT_RETRIES:
-            g_card_menu_retry_count = CARD_MENU_SAVE_RETRIES;
-            g_card_step++;
-            break;
-
-        case CARD_MENU_EXCHANGE_STEP_READ_BEFORE_WRITE:
-            g_card_menu_progress_active = 1;
-            g_card_menu_progress_start_tick = VSync(-1);
-            g_card_menu_progress_bar_active = 1;
-            _card_wait(g_card_slot);
-            g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
-            clear_software_card_events();
-            _card_wait(g_card_slot);
-            if (read(g_card_menu_file_handle, &g_addhero_save_file, SAVE_FILE_BYTES) == CARD_FILE_ERROR)
-            {
-                close(g_card_menu_file_handle);
-                g_card_menu_retry_count--;
-                if (g_card_menu_retry_count == 0)
-                {
-                    addhero_open_exit_dialog(CARD_MENU_DIALOG_LOAD_FAILED);
-                    return result;
-                }
-                break;
-            }
-            g_card_step++;
-            break;
-
-        case CARD_MENU_EXCHANGE_STEP_POLL_PREWRITE_READ:
-            switch (poll_software_card_events())
-            {
-            case CARD_EVENT_COMPLETE:
-                g_card_menu_progress_active = 0;
                 g_card_step++;
-                close(g_card_menu_file_handle);
                 break;
-            case CARD_EVENT_ERROR:
-            case CARD_EVENT_TIMEOUT:
-            case CARD_EVENT_NEW_CARD:
-                g_card_menu_retry_count--;
-                if (g_card_menu_retry_count == 0)
-                {
-                    g_card_menu_progress_bar_active = 0;
-                    addhero_open_exit_dialog(CARD_MENU_DIALOG_LOAD_FAILED);
-                    return result;
-                }
-                /* Rewind to CARD_MENU_EXCHANGE_STEP_READ_BEFORE_WRITE and try again. */
-                close(g_card_menu_file_handle);
-                g_card_step--;
-                break;
-            }
-            break;
 
-        case CARD_MENU_EXCHANGE_STEP_WRITE_SAVE:
-            if (g_card_menu_has_free_space == 0)
-            {
+            case CARD_MENU_STEP_POLL_SAVE_READ:
+                switch (poll_software_card_events())
+                {
+                    case CARD_EVENT_COMPLETE:
+                        g_card_menu_progress_active = 0;
+                        g_card_step++;
+                        close(g_card_menu_file_handle);
+                        break;
+                    case CARD_EVENT_ERROR:
+                    case CARD_EVENT_TIMEOUT:
+                    case CARD_EVENT_NEW_CARD:
+                        close(g_card_menu_file_handle);
+                        g_card_menu_retry_count--;
+
+                        if (g_card_menu_retry_count == 0)
+                        {
+                            g_card_menu_progress_bar_active = 0;
+                            card_menu_open_status_dialog(CARD_MENU_DIALOG_LOAD_FAILED);
+                            return result;
+                        }
+
+                        /* Rewind to CARD_MENU_STEP_READ_SAVE and try again. */
+                        g_card_step--;
+                        break;
+                }
+
+                break;
+
+            case CARD_MENU_STEP_CHECK_POCKETSTATION:
+                for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
+                {
+                    if (McxCardType(CARD_CHANNEL(g_card_slot)) == MCX_COMMAND_ISSUED)
+                    {
+                        break;
+                    }
+
+                    VSync(0);
+                }
+
+                if (attempts != CARD_MENU_FILE_OP_ATTEMPTS)
+                {
+                    McxSync(MCX_SYNC_WAIT, &card_command, &card_result);
+
+                    if (card_result == McxErrSuccess)
+                    {
+                        g_card_step++;
+                        break;
+                    }
+                }
+
+                card_menu_open_status_dialog(CARD_MENU_DIALOG_NOT_POCKETSTATION);
+                break;
+
+            case CARD_MENU_STEP_INIT_RETRIES:
+                g_card_menu_retry_count = CARD_MENU_SAVE_RETRIES;
+                g_card_step++;
+                break;
+
+            case CARD_MENU_EXCHANGE_STEP_READ_BEFORE_WRITE:
+                g_card_menu_progress_active = 1;
+                g_card_menu_progress_start_tick = VSync(-1);
+                g_card_menu_progress_bar_active = 1;
                 _card_wait(g_card_slot);
-                CARD_ERASE_WITH_RETRIES(attempts, g_card_selected_save_path);
-            }
-            strcat(card_path.text, g_lom_save_dummy_filename);
-            _card_wait(g_card_slot);
-            g_card_menu_file_handle = open(card_path.text, FCREAT | CARD_FILE_BLOCKS(SAVE_FILE_BYTES / CARD_BLOCK_BYTES));
-            if (g_card_menu_file_handle == CARD_FILE_ERROR)
-            {
-                close(g_card_menu_file_handle);
-                CARD_ERASE_WITH_RETRIES(attempts, card_path.text);
-                g_card_menu_retry_count--;
-                if (g_card_menu_retry_count == 0)
-                {
-                    addhero_open_exit_dialog(CARD_MENU_DIALOG_SAVE_FAILED);
-                    return result;
-                }
-                break;
-            }
-            close(g_card_menu_file_handle);
-            strcpy(g_card_temp_save_path, card_path.text);
-            _card_wait(g_card_slot);
-            g_card_menu_file_handle = open(g_card_temp_save_path, FASYNC | FWRITE);
-            clear_software_card_events();
-            g_card_menu_progress_start_tick = VSync(-1);
-            g_card_menu_progress_bar_active = 1;
-            _card_wait(g_card_slot);
-            if (write(g_card_menu_file_handle, &g_addhero_save_file, SAVE_FILE_BYTES) == CARD_FILE_ERROR)
-            {
-                close(g_card_menu_file_handle);
-                CARD_ERASE_WITH_RETRIES(attempts, g_card_temp_save_path);
-                g_card_menu_retry_count--;
-                if (g_card_menu_retry_count == 0)
-                {
-                    addhero_open_exit_dialog(CARD_MENU_DIALOG_SAVE_FAILED);
-                    return result;
-                }
-                break;
-            }
-            g_card_step++;
-            break;
+                g_card_menu_file_handle = open(g_card_selected_save_path, FASYNC | FREAD);
+                clear_software_card_events();
+                _card_wait(g_card_slot);
 
-        case CARD_MENU_EXCHANGE_STEP_POLL_SAVE_WRITE:
-            switch (poll_software_card_events())
-            {
-            case CARD_EVENT_COMPLETE:
-                if (g_card_menu_has_free_space != 0)
+                if (read(g_card_menu_file_handle, &g_addhero_save_file, SAVE_FILE_BYTES) == CARD_FILE_ERROR)
+                {
+                    close(g_card_menu_file_handle);
+                    g_card_menu_retry_count--;
+
+                    if (g_card_menu_retry_count == 0)
+                    {
+                        addhero_open_exit_dialog(CARD_MENU_DIALOG_LOAD_FAILED);
+                        return result;
+                    }
+
+                    break;
+                }
+
+                g_card_step++;
+                break;
+
+            case CARD_MENU_EXCHANGE_STEP_POLL_PREWRITE_READ:
+                switch (poll_software_card_events())
+                {
+                    case CARD_EVENT_COMPLETE:
+                        g_card_menu_progress_active = 0;
+                        g_card_step++;
+                        close(g_card_menu_file_handle);
+                        break;
+                    case CARD_EVENT_ERROR:
+                    case CARD_EVENT_TIMEOUT:
+                    case CARD_EVENT_NEW_CARD:
+                        g_card_menu_retry_count--;
+
+                        if (g_card_menu_retry_count == 0)
+                        {
+                            g_card_menu_progress_bar_active = 0;
+                            addhero_open_exit_dialog(CARD_MENU_DIALOG_LOAD_FAILED);
+                            return result;
+                        }
+
+                        /* Rewind to CARD_MENU_EXCHANGE_STEP_READ_BEFORE_WRITE and try again. */
+                        close(g_card_menu_file_handle);
+                        g_card_step--;
+                        break;
+                }
+
+                break;
+
+            case CARD_MENU_EXCHANGE_STEP_WRITE_SAVE:
+                if (g_card_menu_has_free_space == 0)
                 {
                     _card_wait(g_card_slot);
                     CARD_ERASE_WITH_RETRIES(attempts, g_card_selected_save_path);
                 }
+
+                strcat(card_path.text, g_lom_save_dummy_filename);
                 _card_wait(g_card_slot);
-                for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
+                g_card_menu_file_handle = open(card_path.text, FCREAT | CARD_FILE_BLOCKS(SAVE_FILE_BYTES / CARD_BLOCK_BYTES));
+
+                if (g_card_menu_file_handle == CARD_FILE_ERROR)
                 {
-                    if (rename(g_card_temp_save_path, g_card_selected_save_path) != 0)
+                    close(g_card_menu_file_handle);
+                    CARD_ERASE_WITH_RETRIES(attempts, card_path.text);
+                    g_card_menu_retry_count--;
+
+                    if (g_card_menu_retry_count == 0)
                     {
-                        break;
+                        addhero_open_exit_dialog(CARD_MENU_DIALOG_SAVE_FAILED);
+                        return result;
                     }
+
+                    break;
                 }
-                g_card_menu_write_in_progress = 0;
-                g_card_step++;
+
                 close(g_card_menu_file_handle);
-                break;
-            case CARD_EVENT_ERROR:
-            case CARD_EVENT_TIMEOUT:
-            case CARD_EVENT_NEW_CARD:
-                g_card_menu_retry_count--;
-                if (g_card_menu_retry_count == 0)
+                strcpy(g_card_temp_save_path, card_path.text);
+                _card_wait(g_card_slot);
+                g_card_menu_file_handle = open(g_card_temp_save_path, FASYNC | FWRITE);
+                clear_software_card_events();
+                g_card_menu_progress_start_tick = VSync(-1);
+                g_card_menu_progress_bar_active = 1;
+                _card_wait(g_card_slot);
+
+                if (write(g_card_menu_file_handle, &g_addhero_save_file, SAVE_FILE_BYTES) == CARD_FILE_ERROR)
                 {
-                    g_card_menu_progress_bar_active = 0;
-                    addhero_open_exit_dialog(CARD_MENU_DIALOG_SAVE_FAILED);
-                    return result;
+                    close(g_card_menu_file_handle);
+                    CARD_ERASE_WITH_RETRIES(attempts, g_card_temp_save_path);
+                    g_card_menu_retry_count--;
+
+                    if (g_card_menu_retry_count == 0)
+                    {
+                        addhero_open_exit_dialog(CARD_MENU_DIALOG_SAVE_FAILED);
+                        return result;
+                    }
+
+                    break;
                 }
-                /* Rewind to CARD_MENU_EXCHANGE_STEP_WRITE_SAVE and try again. */
-                close(g_card_menu_file_handle);
-                g_card_step--;
+
+                g_card_step++;
                 break;
-            }
-            break;
+
+            case CARD_MENU_EXCHANGE_STEP_POLL_SAVE_WRITE:
+                switch (poll_software_card_events())
+                {
+                    case CARD_EVENT_COMPLETE:
+                        if (g_card_menu_has_free_space != 0)
+                        {
+                            _card_wait(g_card_slot);
+                            CARD_ERASE_WITH_RETRIES(attempts, g_card_selected_save_path);
+                        }
+
+                        _card_wait(g_card_slot);
+
+                        for (attempts = 0; attempts < CARD_MENU_FILE_OP_ATTEMPTS; attempts++)
+                        {
+                            if (rename(g_card_temp_save_path, g_card_selected_save_path) != 0)
+                            {
+                                break;
+                            }
+                        }
+
+                        g_card_menu_write_in_progress = 0;
+                        g_card_step++;
+                        close(g_card_menu_file_handle);
+                        break;
+                    case CARD_EVENT_ERROR:
+                    case CARD_EVENT_TIMEOUT:
+                    case CARD_EVENT_NEW_CARD:
+                        g_card_menu_retry_count--;
+
+                        if (g_card_menu_retry_count == 0)
+                        {
+                            g_card_menu_progress_bar_active = 0;
+                            addhero_open_exit_dialog(CARD_MENU_DIALOG_SAVE_FAILED);
+                            return result;
+                        }
+
+                        /* Rewind to CARD_MENU_EXCHANGE_STEP_WRITE_SAVE and try again. */
+                        close(g_card_menu_file_handle);
+                        g_card_step--;
+                        break;
+                }
+
+                break;
         }
     }
+
     return result;
 }
 
@@ -473,6 +528,7 @@ s32 addhero_scan_next_entry(s32 slot)
     }
 
     field_reset_input_repeat();
+
     if (g_card_menu_mode == 0 && card_has_known_entry_type() == 0)
     {
         g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_GAME_DATA;
@@ -480,9 +536,11 @@ s32 addhero_scan_next_entry(s32 slot)
     else
     {
         g_card_menu_has_free_space = 0;
+
         if (card_entry_blocks_reach_limit())
         {
             selected_entry = card_rank_entries();
+
             if (card_has_known_entry_type() == 0)
             {
                 g_card_entry_state = CARD_MENU_ENTRY_STATE_CARD_FULL;
@@ -494,6 +552,7 @@ s32 addhero_scan_next_entry(s32 slot)
                 {
                     g_card_menu_selected_row = 0;
                 }
+
                 g_card_menu_selected_row = selected_entry;
                 card_menu_scroll_to_selection();
             }
@@ -502,6 +561,7 @@ s32 addhero_scan_next_entry(s32 slot)
         {
             g_card_menu_has_free_space = 1;
             selected_entry = card_rank_entries();
+
             if (card_has_known_entry_type() == 0)
             {
                 g_card_menu_selected_row = 0;
@@ -514,11 +574,13 @@ s32 addhero_scan_next_entry(s32 slot)
                 {
                     g_card_menu_selected_row = 0;
                 }
+
                 g_card_menu_selected_row = selected_entry;
                 card_menu_scroll_to_selection();
             }
         }
     }
+
     return 0;
 }
 

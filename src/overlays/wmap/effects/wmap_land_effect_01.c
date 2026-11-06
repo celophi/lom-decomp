@@ -48,7 +48,6 @@ extern u32 g_wmap_land_effect_01_sequence_1_step;
 extern u32 g_wmap_land_effect_01_sequence_6_step;
 extern u32 g_wmap_land_effect_01_sequence_7_step;
 
-
 /**
  * @brief Project active particles and initialize the first available slot.
  * @param actors Actor configurations for the particle slots.

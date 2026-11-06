@@ -42,6 +42,7 @@ void field_reset_party_to_level(s32 level)
     s32 j;
 
     level--;
+
     for (i = 0; i < FIELD_PARTY_SIZE; i++)
     {
         g_field_game_state->characters[i].progress.level = 1;

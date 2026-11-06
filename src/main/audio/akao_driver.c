@@ -158,6 +158,7 @@ s32 akao_submit_bank(AkaoBankHeader* bank, s32 wait_for_completion)
         akao_upload_bank(bank, wait_for_completion, bank->bank_id, bank->spu_dest_addr);
         return 0;
     }
+
     return -1;
 }
 
@@ -197,6 +198,7 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
 
     akao_spu_wait();
     header_address = akao_check_magic(bank);
+
     if (header_address == 0)
     {
         header_address = (uintptr_t)bank;
@@ -206,10 +208,12 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
         articulations = bank;
         akao_spu_write(&articulations[header->articulation_count], header->sample_size);
         akao_relocate_articulations(articulations, &((AkaoArticulation*)g_akao_articulation_slots)[bank_id], spu_base, header->articulation_count);
+
         if (wait_for_completion != 0)
         {
             akao_spu_wait();
         }
+
         result = 0;
     }
     else
@@ -217,5 +221,6 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
         g_akao_spu_xfer_pending = -1;
         result = -1;
     }
+
     return result;
 }

@@ -119,6 +119,7 @@ void handle_save_slot_input(void)
     s32 prev_index;
     s32 next_index;
     s32 slide_y_step;
+
     if (g_slot_slide_frames != 0)
     {
         slide_x_lerped_ptr = &g_slot_slide_x_lerped;
@@ -129,9 +130,11 @@ void handle_save_slot_input(void)
         g_slot_slide_y_lerped += slide_y_step;
         return;
     }
+
     g_slot_slide_x_lerped = g_slot_slide_x;
     g_slot_slide_y_lerped = g_slot_slide_y;
     update_menu_input();
+
     if (g_slot_slide_x == 0)
     {
         if (g_debounced_input & (PAD_BTN_LEFT | PAD_BTN_RIGHT))
@@ -139,29 +142,35 @@ void handle_save_slot_input(void)
             SaveLayoutEntry* entry;
             play_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
             entry = g_save_layout_table;
+
             if (entry[18].type != 0)
             {
                 entry[18].type = 0;
                 entry[19].type = 1;
                 return;
             }
+
             entry[18].type = 1;
             entry[19].type = 0;
             return;
         }
+
         if (g_debounced_input & (PAD_BTN_START | PAD_CONFIRM_BUTTONS))
         {
             play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
+
             if (g_save_layout_table[18].type != 0)
             {
                 scroll_slots_right();
                 reset_save_slot_panel();
                 return;
             }
+
             scroll_slots_left();
             reset_save_slot_panel();
             return;
         }
+
         if (g_debounced_input & PAD_BTN_CIRCLE)
         {
             play_sfx(SFX_CANCEL, AKAO_PAN_CENTER);
@@ -196,6 +205,7 @@ void handle_save_slot_input(void)
                 rng_lo |= rng_hi << TITLE_RNG_HIGH_SHIFT;
                 g_saved_game.layout.identity.ids.game_id = rng_lo;
             }
+
             {
                 s32 i;
                 u8* src;
@@ -204,6 +214,7 @@ void handle_save_slot_input(void)
                 dst = (u8*)&g_saved_game.layout.characters[0].equipment[FIELD_WEAPON_SLOT];
                 src = (u8*)&g_starting_weapon_records[g_slot_selected_index];
                 i = 0;
+
                 while (i < sizeof(FieldItemRecord))
                 {
                     i++;
@@ -217,13 +228,16 @@ void handle_save_slot_input(void)
                         g_saved_game.layout.technique_bits[i] = 0;
                     }
                 }
+
                 play_sfx(SFX_CONFIRM, AKAO_PAN_CENTER);
             }
+
             g_title_menu_exit_state = 1;
         }
         else if (g_debounced_input & PAD_BTN_CIRCLE)
         {
             play_sfx(SFX_CANCEL, AKAO_PAN_CENTER);
+
             if (g_slot_slide_x > 0)
             {
                 scroll_slots_left();
@@ -242,22 +256,26 @@ void handle_save_slot_input(void)
                 play_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
                 prev_index = g_slot_selected_index - 1;
                 g_slot_selected_index = prev_index;
+
                 if (prev_index < 0)
                 {
                     g_slot_selected_index = 0xA;
                 }
             }
+
             if (g_debounced_input & PAD_BTN_DOWN)
             {
                 play_sfx(SFX_CURSOR, AKAO_PAN_CENTER);
                 next_index = g_slot_selected_index + 1;
                 g_slot_selected_index = next_index;
+
                 if (next_index >= 0xB)
                 {
                     g_slot_selected_index = 0;
                 }
             }
         }
+
         animate_save_slot_panel();
     }
 }
@@ -280,6 +298,7 @@ void animate_save_slot_panel(void)
     s32 scroll_offset;
     s32 highlight_position;
     SaveLayoutEntry* ptr;
+
     if (g_slot_highlight_frames != 0)
     {
         g_slot_highlight_x += (g_slot_highlight_target_x - g_slot_highlight_x) / g_slot_highlight_frames;
@@ -289,14 +308,18 @@ void animate_save_slot_panel(void)
     {
         g_slot_highlight_x = g_slot_highlight_target_x;
     }
+
     highlight_position = g_slot_highlight_target_x;
     target_adjusted = highlight_position;
+
     if (highlight_position < 0)
     {
         target_adjusted = highlight_position + 0xF;
     }
+
     target_adjusted >>= 4;
     scroll_offset = g_slot_selected_index;
+
     if (g_slot_selected_index < target_adjusted)
     {
         g_slot_highlight_target_x = scroll_offset * 0x10;
@@ -307,11 +330,13 @@ void animate_save_slot_panel(void)
         g_slot_highlight_target_x = (g_slot_selected_index - 6) * 0x10;
         g_slot_highlight_frames = 4;
     }
+
     ptr = g_save_layout_table;
     ptr[2].v0 = g_slot_highlight_x;
     ptr[3].v0 = (g_slot_highlight_x) + SAVE_HIGHLIGHT_SPAN;
     ptr[9].v0 = g_slot_highlight_x;
     ptr[10].v0 = (g_slot_highlight_x) + SAVE_HIGHLIGHT_SPAN;
+
     if (g_slot_highlight_x != 0)
     {
         g_save_layout_table[7].type = 1;
@@ -326,6 +351,7 @@ void animate_save_slot_panel(void)
         g_save_layout_table[14].type = 0;
         g_save_layout_table[15].type = 0;
     }
+
     if (g_slot_highlight_x != 0x40)
     {
         g_save_layout_table[4].type = 1;
@@ -340,15 +366,19 @@ void animate_save_slot_panel(void)
         g_save_layout_table[11].type = 0;
         g_save_layout_table[12].type = 0;
     }
+
     scroll_offset = (g_slot_selected_index * 0x10) - (highlight_position = g_slot_highlight_x);
+
     if (scroll_offset < 0)
     {
         scroll_offset = 0;
     }
+
     if (scroll_offset > 0x60)
     {
         scroll_offset = 0x60;
     }
+
     layout = g_save_layout_table;
     scroll_width = scroll_offset + SAVE_SCROLL_WIDTH_HOME;
     layout[6].y = scroll_width;
@@ -375,6 +405,7 @@ void animate_save_slot_panel(void)
 void reset_save_slot_panel(void)
 {
     s16 highlight_bottom_v;
+
     if (g_slot_slide_x != 0)
     {
         SaveLayoutEntry* entry = g_save_layout_table;
@@ -404,6 +435,7 @@ void reset_save_slot_panel(void)
         entry[10].v0 = highlight_bottom_v;
         return;
     }
+
     {
         SaveLayoutEntry* entry = g_save_layout_table;
         entry[0].u0 = SAVE_SLOT_HOME_V;
@@ -651,6 +683,7 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
                     }
 
                     chunk = GLYPH_CHUNK_WIDTH;
+
                     if (remaining <= GLYPH_CHUNK_WIDTH)
                     {
                         chunk = remaining;
@@ -706,6 +739,7 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
                         }
 
                         chunk = GLYPH_CHUNK_WIDTH;
+
                         if (remaining <= GLYPH_CHUNK_WIDTH)
                         {
                             chunk = remaining;
@@ -746,6 +780,7 @@ void upload_save_layout_textures(void)
     u16 clut_height;
 
     tex = g_save_layout_tex_table;
+
     for (i = 0; i < SAVE_LAYOUT_TEX_COUNT; i++)
     {
         tim = tex->src;
@@ -783,6 +818,7 @@ void load_saved_game_template(s32 field_start)
     s32* src;
     s32* dst;
     u32 i;
+
     if (field_start == 0)
     {
         src = (s32*)&g_new_game_template;
@@ -797,6 +833,7 @@ void load_saved_game_template(s32 field_start)
         g_music_track_index = 0;
         g_field_music_id = 0;
     }
+
     i = 0;
     dst = g_saved_game.words;
 

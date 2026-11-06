@@ -74,6 +74,7 @@ u32 field_script_calc_div(u32 left, u32 right)
     {
         return -1;
     }
+
     return left / right;
 }
 
@@ -89,6 +90,7 @@ u32 field_script_calc_mod(u32 left, u32 right)
     {
         return 0;
     }
+
     return left % right;
 }
 
@@ -139,6 +141,7 @@ u32 field_script_calc_random(s32 maximum)
     {
         return rand() % range;
     }
+
     return rand();
 }
 
@@ -154,6 +157,7 @@ u32 field_script_calc_max(u32 left, u32 right)
     {
         return right;
     }
+
     return left;
 }
 
@@ -169,6 +173,7 @@ u32 field_script_calc_min(u32 left, u32 right)
     {
         return right;
     }
+
     return left;
 }
 

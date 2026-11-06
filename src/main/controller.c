@@ -65,15 +65,18 @@ void initialize_controllers(s8 enable_actuators)
 
     PadStartCom();
     all_ports_ready = 0;
+
     while (all_ports_ready == 0)
     {
         VSync(0);
         controller_poll();
         all_ports_ready = 1;
+
         for (port_index = CONTROLLER_PORT_COUNT - 1; port_index != -1; port_index--)
         {
             current_port = &controller_state->ports[port_index];
             actuator_status = current_port->actuator_control.value;
+
             if ((!CONTROLLER_IS_DISCONNECTED(actuator_status)) && (CONTROLLER_ACTUATOR_SETUP_STATE(actuator_status) != CONTROLLER_ACTUATOR_SETUP_READY))
             {
                 all_ports_ready = 0;
@@ -114,42 +117,88 @@ static void poll_controller_port(ControllerPortState* port, s32* actuator_curren
     controller_state = CONTROLLER_STATE;
 
     pad_state = PadGetState(port->port_id);
+
     switch (pad_state)
     {
-    case PadStateDiscon:
-        updated_actuator_config = port->actuator_control.value | CONTROLLER_DISCONNECTED_FLAG;
-        port->current_sample.device_type = CONTROLLER_DEVICE_DISCONNECTED;
-        port->actuator_control.value = updated_actuator_config & ~CONTROLLER_ACTUATOR_SETUP_MASK;
-        return;
+        case PadStateDiscon:
+            updated_actuator_config = port->actuator_control.value | CONTROLLER_DISCONNECTED_FLAG;
+            port->current_sample.device_type = CONTROLLER_DEVICE_DISCONNECTED;
+            port->actuator_control.value = updated_actuator_config & ~CONTROLLER_ACTUATOR_SETUP_MASK;
+            return;
 
-    case PadStateFindPad:
-        port->actuator_control.value &= ~CONTROLLER_DISCONNECTED_FLAG;
-        if (port->actuator_control.value & CONTROLLER_ACTUATOR_SETUP_MASK)
-        {
-            port->actuator_control.value =
-                (port->actuator_control.value & ~(CONTROLLER_DISCONNECTED_FLAG | CONTROLLER_ACTUATOR_SETUP_MASK)) | CONTROLLER_ACTUATOR_SETUP_MODE;
-        }
-        /* Fall through while LIBPAD is negotiating the controller. */
+        case PadStateFindPad:
+            port->actuator_control.value &= ~CONTROLLER_DISCONNECTED_FLAG;
 
-    case PadStateReqInfo:
-    case PadStateExecCmd:
-        port->current_sample.device_type = CONTROLLER_DEVICE_CONFIGURING;
-        clear_controller_sample(&port->current_sample);
-        return;
-
-    case PadStateFindCTP1:
-        port->legacy_vibration_device_id = CONTROLLER_LEGACY_VIBRATION_DEVICE_ID;
-        if (port->actuators_enabled != 0)
-        {
-            if (port->small_motor_command & CONTROLLER_SMALL_MOTOR_ENABLE_FLAG)
+            if (port->actuator_control.value & CONTROLLER_ACTUATOR_SETUP_MASK)
             {
-                port->actuator_values[0] = port->small_motor_command;
-                *actuator_current_total += port->small_motor_current;
+                port->actuator_control.value =
+                    (port->actuator_control.value & ~(CONTROLLER_DISCONNECTED_FLAG | CONTROLLER_ACTUATOR_SETUP_MASK)) | CONTROLLER_ACTUATOR_SETUP_MODE;
+            }
+
+            /* Fall through while LIBPAD is negotiating the controller. */
+
+        case PadStateReqInfo:
+        case PadStateExecCmd:
+            port->current_sample.device_type = CONTROLLER_DEVICE_CONFIGURING;
+            clear_controller_sample(&port->current_sample);
+            return;
+
+        case PadStateFindCTP1:
+            port->legacy_vibration_device_id = CONTROLLER_LEGACY_VIBRATION_DEVICE_ID;
+
+            if (port->actuators_enabled != 0)
+            {
+                if (port->small_motor_command & CONTROLLER_SMALL_MOTOR_ENABLE_FLAG)
+                {
+                    port->actuator_values[0] = port->small_motor_command;
+                    *actuator_current_total += port->small_motor_current;
+                }
+                else
+                {
+                    u8 large_motor_command = port->actuator_control.fields.large_motor_command;
+
+                    if ((large_motor_command != 0) && ((large_motor_command * CONTROLLER_ACTUATOR_CYCLE_STEPS) >= controller_state->actuator_cycle))
+                    {
+                        port->actuator_values[0] = CONTROLLER_SMALL_MOTOR_ENABLE_FLAG;
+                        *actuator_current_total += port->small_motor_current;
+                    }
+                    else
+                    {
+                        port->actuator_values[0] = 0;
+                    }
+                }
             }
             else
             {
+                port->actuator_values[0] = 0;
+            }
+
+            if ((port->actuator_control.value & CONTROLLER_ACTUATOR_SETUP_MASK) != CONTROLLER_ACTUATOR_SETUP_ACTIVE)
+            {
+                PadSetAct(port->port_id, &port->legacy_vibration_device_id, 2);
+                port->small_motor_current = CONTROLLER_LEGACY_ACTUATOR_CURRENT;
+                port->actuator_control.value = (port->actuator_control.value | CONTROLLER_ACTUATOR_SETUP_ACTIVE) &
+                                               ~(CONTROLLER_ACTUATOR_SETUP_MODE | CONTROLLER_USE_DEFAULT_ANALOG_CENTER);
+            }
+
+            break;
+
+        case PadStateStable:
+            if (port->actuators_enabled != 0)
+            {
                 u8 large_motor_command = port->actuator_control.fields.large_motor_command;
-                if ((large_motor_command != 0) && ((large_motor_command * CONTROLLER_ACTUATOR_CYCLE_STEPS) >= controller_state->actuator_cycle))
+
+                if (large_motor_command != 0)
+                {
+                    port->actuator_values[1] = large_motor_command;
+                    *actuator_current_total += port->large_motor_current;
+                }
+                else
+                {
+                    port->actuator_values[1] = 0;
+                }
+
+                if (port->small_motor_command & CONTROLLER_SMALL_MOTOR_ENABLE_FLAG)
                 {
                     port->actuator_values[0] = CONTROLLER_SMALL_MOTOR_ENABLE_FLAG;
                     *actuator_current_total += port->small_motor_current;
@@ -159,129 +208,100 @@ static void poll_controller_port(ControllerPortState* port, s32* actuator_curren
                     port->actuator_values[0] = 0;
                 }
             }
-        }
-        else
-        {
-            port->actuator_values[0] = 0;
-        }
-
-        if ((port->actuator_control.value & CONTROLLER_ACTUATOR_SETUP_MASK) != CONTROLLER_ACTUATOR_SETUP_ACTIVE)
-        {
-            PadSetAct(port->port_id, &port->legacy_vibration_device_id, 2);
-            port->small_motor_current = CONTROLLER_LEGACY_ACTUATOR_CURRENT;
-            port->actuator_control.value =
-                (port->actuator_control.value | CONTROLLER_ACTUATOR_SETUP_ACTIVE) & ~(CONTROLLER_ACTUATOR_SETUP_MODE | CONTROLLER_USE_DEFAULT_ANALOG_CENTER);
-        }
-        break;
-
-    case PadStateStable:
-        if (port->actuators_enabled != 0)
-        {
-            u8 large_motor_command = port->actuator_control.fields.large_motor_command;
-            if (large_motor_command != 0)
-            {
-                port->actuator_values[1] = large_motor_command;
-                *actuator_current_total += port->large_motor_current;
-            }
-            else
-            {
-                port->actuator_values[1] = 0;
-            }
-            if (port->small_motor_command & CONTROLLER_SMALL_MOTOR_ENABLE_FLAG)
-            {
-                port->actuator_values[0] = CONTROLLER_SMALL_MOTOR_ENABLE_FLAG;
-                *actuator_current_total += port->small_motor_current;
-            }
             else
             {
                 port->actuator_values[0] = 0;
+                port->actuator_values[1] = 0;
             }
-        }
-        else
-        {
-            port->actuator_values[0] = 0;
-            port->actuator_values[1] = 0;
-        }
 
-        switch (CONTROLLER_ACTUATOR_SETUP_STATE(port->actuator_control.value))
-        {
-        case 0:
-            port->actuator_control.value = (port->actuator_control.value & ~CONTROLLER_ACTUATOR_SETUP_MASK) | CONTROLLER_ACTUATOR_SETUP_MODE;
-
-            counter = PadInfoMode(port->port_id, InfoModeIdTable, -1);
-            mode_index = 0;
-            for (counter--; counter != -1; counter--)
+            switch (CONTROLLER_ACTUATOR_SETUP_STATE(port->actuator_control.value))
             {
-                if ((PadInfoMode(port->port_id, InfoModeIdTable, mode_index) == CONTROLLER_PACKET_DUALSHOCK) &&
-                    (PadInfoMode(port->port_id, InfoModeCurExOffs, 0) != mode_index))
-                {
-                    PadSetMainMode(port->port_id, mode_index, PadModeUnlock);
+                case 0:
+                    port->actuator_control.value = (port->actuator_control.value & ~CONTROLLER_ACTUATOR_SETUP_MASK) | CONTROLLER_ACTUATOR_SETUP_MODE;
+
+                    counter = PadInfoMode(port->port_id, InfoModeIdTable, -1);
+                    mode_index = 0;
+
+                    for (counter--; counter != -1; counter--)
+                    {
+                        if ((PadInfoMode(port->port_id, InfoModeIdTable, mode_index) == CONTROLLER_PACKET_DUALSHOCK) &&
+                            (PadInfoMode(port->port_id, InfoModeCurExOffs, 0) != mode_index))
+                        {
+                            PadSetMainMode(port->port_id, mode_index, PadModeUnlock);
+                            port->current_sample.device_type = CONTROLLER_DEVICE_CONFIGURING;
+                            clear_controller_sample(&port->current_sample);
+                            return;
+                        }
+
+                        mode_index++;
+                    }
+
+                    /* Fall through to discover and align the controller's actuators. */
+
+                case 1:
+                    port->actuator_control.value = (port->actuator_control.value & ~CONTROLLER_ACTUATOR_SETUP_MASK) | CONTROLLER_ACTUATOR_SETUP_ACTIVE |
+                                                   CONTROLLER_USE_DEFAULT_ANALOG_CENTER;
+                    counter = CONTROLLER_ACTUATOR_ALIGNMENT_COUNT - 1;
+
+                    while (counter != -1)
+                    {
+                        port->actuator_alignment[counter] = CONTROLLER_ACTUATOR_UNMAPPED;
+                        counter--;
+                    }
+
+                    mode_index = 0;
+                    remaining_actuators = PadInfoAct(port->port_id, -1, mode_index);
+                    port->actuator_count = remaining_actuators;
+                    PadSetAct(port->port_id, &port->actuator_values[0], remaining_actuators);
+                    counter = mode_index;
+                    remaining_actuators--;
+                    port->small_motor_current = 0;
+                    port->large_motor_current = 0;
+
+                    while (remaining_actuators != -1)
+                    {
+                        s32 actuator_supported = PadInfoAct(port->port_id, counter, InfoActFunc);
+
+                        if (actuator_supported == 1)
+                        {
+                            switch (PadInfoAct(port->port_id, counter, InfoActSize))
+                            {
+                                case 0:
+                                    if (port->actuator_alignment[0] == CONTROLLER_ACTUATOR_UNMAPPED)
+                                    {
+                                        port->small_motor_current = PadInfoAct(port->port_id, counter, InfoActCurr);
+                                        port->actuator_alignment[0] = counter;
+                                    }
+
+                                    break;
+                                case 1:
+                                    if (port->actuator_alignment[1] == CONTROLLER_ACTUATOR_UNMAPPED)
+                                    {
+                                        port->large_motor_current = PadInfoAct(port->port_id, counter, InfoActCurr);
+                                        port->actuator_alignment[1] = counter;
+                                    }
+
+                                    break;
+                            }
+                        }
+
+                        counter++;
+                        remaining_actuators--;
+                    }
+
+                    PadSetActAlign(port->port_id, port->actuator_alignment);
                     port->current_sample.device_type = CONTROLLER_DEVICE_CONFIGURING;
                     clear_controller_sample(&port->current_sample);
                     return;
-                }
-                mode_index++;
-            }
-            /* Fall through to discover and align the controller's actuators. */
 
-        case 1:
-            port->actuator_control.value =
-                (port->actuator_control.value & ~CONTROLLER_ACTUATOR_SETUP_MASK) | CONTROLLER_ACTUATOR_SETUP_ACTIVE | CONTROLLER_USE_DEFAULT_ANALOG_CENTER;
-            counter = CONTROLLER_ACTUATOR_ALIGNMENT_COUNT - 1;
-            while (counter != -1)
-            {
-                port->actuator_alignment[counter] = CONTROLLER_ACTUATOR_UNMAPPED;
-                counter--;
+                default:
+                    break;
             }
 
-            mode_index = 0;
-            remaining_actuators = PadInfoAct(port->port_id, -1, mode_index);
-            port->actuator_count = remaining_actuators;
-            PadSetAct(port->port_id, &port->actuator_values[0], remaining_actuators);
-            counter = mode_index;
-            remaining_actuators--;
-            port->small_motor_current = 0;
-            port->large_motor_current = 0;
-            while (remaining_actuators != -1)
-            {
-                s32 actuator_supported = PadInfoAct(port->port_id, counter, InfoActFunc);
-                if (actuator_supported == 1)
-                {
-                    switch (PadInfoAct(port->port_id, counter, InfoActSize))
-                    {
-                    case 0:
-                        if (port->actuator_alignment[0] == CONTROLLER_ACTUATOR_UNMAPPED)
-                        {
-                            port->small_motor_current = PadInfoAct(port->port_id, counter, InfoActCurr);
-                            port->actuator_alignment[0] = counter;
-                        }
-                        break;
-                    case 1:
-                        if (port->actuator_alignment[1] == CONTROLLER_ACTUATOR_UNMAPPED)
-                        {
-                            port->large_motor_current = PadInfoAct(port->port_id, counter, InfoActCurr);
-                            port->actuator_alignment[1] = counter;
-                        }
-                        break;
-                    }
-                }
-                counter++;
-                remaining_actuators--;
-            }
-
-            PadSetActAlign(port->port_id, port->actuator_alignment);
-            port->current_sample.device_type = CONTROLLER_DEVICE_CONFIGURING;
-            clear_controller_sample(&port->current_sample);
-            return;
+            break;
 
         default:
             break;
-        }
-
-        break;
-
-    default:
-        break;
     }
 
     if (port->port_id & CONTROLLER_SECOND_PORT_FLAG)
@@ -292,7 +312,9 @@ static void poll_controller_port(ControllerPortState* port, s32* actuator_curren
     {
         packet.receive = &controller_state->receive_buffers[0];
     }
+
     multitap_slot = port->port_id & CONTROLLER_MULTITAP_SLOT_MASK;
+
     if (multitap_slot != 0)
     {
         if (packet.receive->packet_id == CONTROLLER_MULTITAP_PACKET_ID)
@@ -314,47 +336,42 @@ static void poll_controller_port(ControllerPortState* port, s32* actuator_curren
     {
         u8 controller_id = packet.pad->id;
         u8 controller_class = controller_id >> 4;
+
         switch (controller_class)
         {
-        case CONTROLLER_PACKET_DIGITAL:
-            device_type = CONTROLLER_DEVICE_DIGITAL;
-            break;
-        case CONTROLLER_PACKET_ANALOG_JOYSTICK:
-            device_type = CONTROLLER_DEVICE_ANALOG_JOYSTICK;
-            break;
-        case CONTROLLER_PACKET_DUALSHOCK:
-            device_type = CONTROLLER_DEVICE_ANALOG;
-            break;
-        default:
-            device_type = CONTROLLER_DEVICE_DISCONNECTED;
-            break;
+            case CONTROLLER_PACKET_DIGITAL:
+                device_type = CONTROLLER_DEVICE_DIGITAL;
+                break;
+            case CONTROLLER_PACKET_ANALOG_JOYSTICK:
+                device_type = CONTROLLER_DEVICE_ANALOG_JOYSTICK;
+                break;
+            case CONTROLLER_PACKET_DUALSHOCK:
+                device_type = CONTROLLER_DEVICE_ANALOG;
+                break;
+            default:
+                device_type = CONTROLLER_DEVICE_DISCONNECTED;
+                break;
         }
+
         decoded_state = device_type;
+
         switch (decoded_state)
         {
-        case CONTROLLER_DEVICE_DIGITAL:
-        case CONTROLLER_DEVICE_ANALOG_JOYSTICK:
-        case CONTROLLER_DEVICE_ANALOG:
-            held_buttons = ~packet.pad->buttons;
-            if (port->current_sample.device_type == decoded_state)
-            {
-                port->current_sample.pressed_buttons =
-                    (port->current_sample.repeat_buttons = held_buttons & (port->current_sample.held_buttons ^ held_buttons));
-            }
-            else
-            {
-                port->current_sample.pressed_buttons = (port->current_sample.repeat_buttons = held_buttons);
-                if (decoded_state == CONTROLLER_DEVICE_ANALOG_JOYSTICK)
+            case CONTROLLER_DEVICE_DIGITAL:
+            case CONTROLLER_DEVICE_ANALOG_JOYSTICK:
+            case CONTROLLER_DEVICE_ANALOG:
+                held_buttons = ~packet.pad->buttons;
+
+                if (port->current_sample.device_type == decoded_state)
                 {
-                    port->right_stick_center_x = packet.pad->right_stick_x;
-                    port->right_stick_center_y = packet.pad->right_stick_y;
-                    port->left_stick_center_x = packet.pad->left_stick_x;
-                    port->left_stick_center_y = packet.pad->left_stick_y;
-                    port->current_sample.analog_direction_bits = 0;
+                    port->current_sample.pressed_buttons =
+                        (port->current_sample.repeat_buttons = held_buttons & (port->current_sample.held_buttons ^ held_buttons));
                 }
-                else if (decoded_state == CONTROLLER_DEVICE_ANALOG)
+                else
                 {
-                    if (!(port->actuator_control.value & CONTROLLER_USE_DEFAULT_ANALOG_CENTER))
+                    port->current_sample.pressed_buttons = (port->current_sample.repeat_buttons = held_buttons);
+
+                    if (decoded_state == CONTROLLER_DEVICE_ANALOG_JOYSTICK)
                     {
                         port->right_stick_center_x = packet.pad->right_stick_x;
                         port->right_stick_center_y = packet.pad->right_stick_y;
@@ -362,262 +379,316 @@ static void poll_controller_port(ControllerPortState* port, s32* actuator_curren
                         port->left_stick_center_y = packet.pad->left_stick_y;
                         port->current_sample.analog_direction_bits = 0;
                     }
-                    else
+                    else if (decoded_state == CONTROLLER_DEVICE_ANALOG)
                     {
-                        port->right_stick_center_x = CONTROLLER_ANALOG_CENTER;
-                        port->right_stick_center_y = CONTROLLER_ANALOG_CENTER;
-                        port->left_stick_center_x = CONTROLLER_ANALOG_CENTER;
-                        port->left_stick_center_y = CONTROLLER_ANALOG_CENTER;
-                        port->current_sample.analog_direction_bits = 0;
+                        if (!(port->actuator_control.value & CONTROLLER_USE_DEFAULT_ANALOG_CENTER))
+                        {
+                            port->right_stick_center_x = packet.pad->right_stick_x;
+                            port->right_stick_center_y = packet.pad->right_stick_y;
+                            port->left_stick_center_x = packet.pad->left_stick_x;
+                            port->left_stick_center_y = packet.pad->left_stick_y;
+                            port->current_sample.analog_direction_bits = 0;
+                        }
+                        else
+                        {
+                            port->right_stick_center_x = CONTROLLER_ANALOG_CENTER;
+                            port->right_stick_center_y = CONTROLLER_ANALOG_CENTER;
+                            port->left_stick_center_x = CONTROLLER_ANALOG_CENTER;
+                            port->left_stick_center_y = CONTROLLER_ANALOG_CENTER;
+                            port->current_sample.analog_direction_bits = 0;
+                        }
                     }
+
+                    port->current_sample.device_type = device_type;
                 }
-                port->current_sample.device_type = device_type;
-            }
-            port->current_sample.held_buttons = held_buttons;
 
-            if (controller_state->fast_button_repeat != 0)
-            {
-                initial_repeat_delay = CONTROLLER_FAST_REPEAT_DELAY;
-                repeat_interval = CONTROLLER_FAST_REPEAT_INTERVAL;
-            }
-            else
-            {
-                initial_repeat_delay = CONTROLLER_NORMAL_REPEAT_DELAY;
-                repeat_interval = CONTROLLER_NORMAL_REPEAT_INTERVAL;
-            }
-            repeat_timer_step = 1;
+                port->current_sample.held_buttons = held_buttons;
 
-            if (held_buttons & PADRup)
-            {
-                if ((port->current_sample.pressed_buttons & PADRup) && (controller_state->sample_unavailable == 0))
+                if (controller_state->fast_button_repeat != 0)
                 {
-                    port->face_repeat_timer_up = initial_repeat_delay;
+                    initial_repeat_delay = CONTROLLER_FAST_REPEAT_DELAY;
+                    repeat_interval = CONTROLLER_FAST_REPEAT_INTERVAL;
                 }
                 else
                 {
-                    delta = port->face_repeat_timer_up - repeat_timer_step;
-                    if (delta <= 0)
-                    {
-                        delta = repeat_interval;
-                        port->current_sample.repeat_buttons |= PADRup;
-                    }
-                    port->face_repeat_timer_up = delta;
-                }
-            }
-            if (held_buttons & PADRright)
-            {
-                if ((port->current_sample.pressed_buttons & PADRright) && (controller_state->sample_unavailable == 0))
-                {
-                    port->face_repeat_timer_right = initial_repeat_delay;
-                }
-                else
-                {
-                    delta = port->face_repeat_timer_right - repeat_timer_step;
-                    if (delta <= 0)
-                    {
-                        delta = repeat_interval;
-                        port->current_sample.repeat_buttons |= PADRright;
-                    }
-                    port->face_repeat_timer_right = delta;
-                }
-            }
-            if (held_buttons & PADRdown)
-            {
-                if ((port->current_sample.pressed_buttons & PADRdown) && (controller_state->sample_unavailable == 0))
-                {
-                    port->face_repeat_timer_down = initial_repeat_delay;
-                }
-                else
-                {
-                    delta = port->face_repeat_timer_down - repeat_timer_step;
-                    if (delta <= 0)
-                    {
-                        delta = repeat_interval;
-                        port->current_sample.repeat_buttons |= PADRdown;
-                    }
-                    port->face_repeat_timer_down = delta;
-                }
-            }
-            if (held_buttons & PADRleft)
-            {
-                if ((port->current_sample.pressed_buttons & PADRleft) && (controller_state->sample_unavailable == 0))
-                {
-                    port->face_repeat_timer_left = initial_repeat_delay;
-                }
-                else
-                {
-                    delta = port->face_repeat_timer_left - repeat_timer_step;
-                    if (delta <= 0)
-                    {
-                        delta = repeat_interval;
-                        port->current_sample.repeat_buttons |= PADRleft;
-                    }
-                    port->face_repeat_timer_left = delta;
-                }
-            }
-            if (device_type != CONTROLLER_DEVICE_DIGITAL)
-            {
-                delta = packet.pad->right_stick_x - port->right_stick_center_x;
-                if (CONTROLLER_IS_WITHIN_ANALOG_DEADZONE(delta))
-                {
-                    delta = 0;
-                }
-                if (delta < CONTROLLER_ANALOG_MIN)
-                {
-                    delta = CONTROLLER_ANALOG_MIN;
-                }
-                else if (delta >= CONTROLLER_ANALOG_CENTER)
-                {
-                    delta = CONTROLLER_ANALOG_MAX;
-                }
-                port->current_sample.right_stick_x = CONTROLLER_SCALE_ANALOG(delta);
-                delta = packet.pad->right_stick_y - port->right_stick_center_y;
-                if (CONTROLLER_IS_WITHIN_ANALOG_DEADZONE(delta))
-                {
-                    delta = 0;
-                }
-                if (delta < CONTROLLER_ANALOG_MIN)
-                {
-                    delta = CONTROLLER_ANALOG_MIN;
-                }
-                else if (delta >= CONTROLLER_ANALOG_CENTER)
-                {
-                    delta = CONTROLLER_ANALOG_MAX;
-                }
-                port->current_sample.right_stick_y = CONTROLLER_SCALE_ANALOG(delta);
-
-                delta = packet.pad->left_stick_x - port->left_stick_center_x;
-                if (CONTROLLER_IS_WITHIN_ANALOG_DEADZONE(delta))
-                {
-                    delta = 0;
-                }
-                if (delta < CONTROLLER_ANALOG_MIN)
-                {
-                    delta = CONTROLLER_ANALOG_MIN;
-                }
-                else if (delta >= CONTROLLER_ANALOG_CENTER)
-                {
-                    delta = CONTROLLER_ANALOG_MAX;
-                }
-                delta = CONTROLLER_SCALE_ANALOG(delta);
-                port->current_sample.left_stick_x = delta;
-                analog_directions = PADRleft;
-                if (delta >= 0)
-                {
-                    if (delta > 0)
-                    {
-                        analog_directions = PADRright;
-                    }
-                    else
-                    {
-                        analog_directions = 0;
-                    }
-                }
-                delta = packet.pad->left_stick_y - port->left_stick_center_y;
-                if (CONTROLLER_IS_WITHIN_ANALOG_DEADZONE(delta))
-                {
-                    delta = 0;
-                }
-                if (delta < CONTROLLER_ANALOG_MIN)
-                {
-                    delta = CONTROLLER_ANALOG_MIN;
-                }
-                else if (delta >= CONTROLLER_ANALOG_CENTER)
-                {
-                    delta = CONTROLLER_ANALOG_MAX;
-                }
-                delta = CONTROLLER_SCALE_ANALOG(delta);
-                port->current_sample.left_stick_y = delta;
-                if (delta < 0)
-                {
-                    analog_directions |= PADRup;
-                }
-                else if (delta > 0)
-                {
-                    analog_directions |= PADRdown;
+                    initial_repeat_delay = CONTROLLER_NORMAL_REPEAT_DELAY;
+                    repeat_interval = CONTROLLER_NORMAL_REPEAT_INTERVAL;
                 }
 
-                delta = analog_directions & (analog_directions ^ ((port->current_sample.analog_direction_bits & CONTROLLER_ANALOG_DIRECTION_HELD_MASK)
-                                                                  << CONTROLLER_ANALOG_DIRECTION_EVENT_SHIFT));
+                repeat_timer_step = 1;
 
-                new_analog_directions = delta;
-                direction_bits = new_analog_directions | ((u8)analog_directions >> CONTROLLER_ANALOG_DIRECTION_EVENT_SHIFT);
-                if (analog_directions & PADRup)
+                if (held_buttons & PADRup)
                 {
-                    if ((new_analog_directions & PADRup) && (controller_state->sample_unavailable == 0))
+                    if ((port->current_sample.pressed_buttons & PADRup) && (controller_state->sample_unavailable == 0))
                     {
-                        port->direction_repeat_timer_up = initial_repeat_delay;
+                        port->face_repeat_timer_up = initial_repeat_delay;
                     }
                     else
                     {
-                        delta = port->direction_repeat_timer_up - repeat_timer_step;
+                        delta = port->face_repeat_timer_up - repeat_timer_step;
+
                         if (delta <= 0)
                         {
-                            direction_bits |= PADRup;
                             delta = repeat_interval;
+                            port->current_sample.repeat_buttons |= PADRup;
                         }
-                        port->direction_repeat_timer_up = delta;
+
+                        port->face_repeat_timer_up = delta;
                     }
                 }
-                if (analog_directions & PADRright)
+
+                if (held_buttons & PADRright)
                 {
-                    if ((new_analog_directions & PADRright) && (controller_state->sample_unavailable == 0))
+                    if ((port->current_sample.pressed_buttons & PADRright) && (controller_state->sample_unavailable == 0))
                     {
-                        port->direction_repeat_timer_right = initial_repeat_delay;
+                        port->face_repeat_timer_right = initial_repeat_delay;
                     }
                     else
                     {
-                        delta = port->direction_repeat_timer_right - repeat_timer_step;
+                        delta = port->face_repeat_timer_right - repeat_timer_step;
+
                         if (delta <= 0)
                         {
-                            direction_bits |= PADRright;
                             delta = repeat_interval;
+                            port->current_sample.repeat_buttons |= PADRright;
                         }
-                        port->direction_repeat_timer_right = delta;
+
+                        port->face_repeat_timer_right = delta;
                     }
                 }
-                if (analog_directions & PADRdown)
+
+                if (held_buttons & PADRdown)
                 {
-                    if ((new_analog_directions & PADRdown) && (controller_state->sample_unavailable == 0))
+                    if ((port->current_sample.pressed_buttons & PADRdown) && (controller_state->sample_unavailable == 0))
                     {
-                        port->direction_repeat_timer_down = initial_repeat_delay;
+                        port->face_repeat_timer_down = initial_repeat_delay;
                     }
                     else
                     {
-                        delta = port->direction_repeat_timer_down - repeat_timer_step;
+                        delta = port->face_repeat_timer_down - repeat_timer_step;
+
                         if (delta <= 0)
                         {
-                            direction_bits |= PADRdown;
                             delta = repeat_interval;
+                            port->current_sample.repeat_buttons |= PADRdown;
                         }
-                        port->direction_repeat_timer_down = delta;
+
+                        port->face_repeat_timer_down = delta;
                     }
                 }
-                if (analog_directions & PADRleft)
+
+                if (held_buttons & PADRleft)
                 {
-                    if ((new_analog_directions & PADRleft) && (controller_state->sample_unavailable == 0))
+                    if ((port->current_sample.pressed_buttons & PADRleft) && (controller_state->sample_unavailable == 0))
                     {
-                        port->direction_repeat_timer_left = initial_repeat_delay;
+                        port->face_repeat_timer_left = initial_repeat_delay;
                     }
                     else
                     {
-                        delta = port->direction_repeat_timer_left - repeat_timer_step;
+                        delta = port->face_repeat_timer_left - repeat_timer_step;
+
                         if (delta <= 0)
                         {
-                            direction_bits |= PADRleft;
                             delta = repeat_interval;
+                            port->current_sample.repeat_buttons |= PADRleft;
                         }
-                        port->direction_repeat_timer_left = delta;
+
+                        port->face_repeat_timer_left = delta;
                     }
                 }
-                port->current_sample.analog_direction_bits = direction_bits;
+
+                if (device_type != CONTROLLER_DEVICE_DIGITAL)
+                {
+                    delta = packet.pad->right_stick_x - port->right_stick_center_x;
+
+                    if (CONTROLLER_IS_WITHIN_ANALOG_DEADZONE(delta))
+                    {
+                        delta = 0;
+                    }
+
+                    if (delta < CONTROLLER_ANALOG_MIN)
+                    {
+                        delta = CONTROLLER_ANALOG_MIN;
+                    }
+                    else if (delta >= CONTROLLER_ANALOG_CENTER)
+                    {
+                        delta = CONTROLLER_ANALOG_MAX;
+                    }
+
+                    port->current_sample.right_stick_x = CONTROLLER_SCALE_ANALOG(delta);
+                    delta = packet.pad->right_stick_y - port->right_stick_center_y;
+
+                    if (CONTROLLER_IS_WITHIN_ANALOG_DEADZONE(delta))
+                    {
+                        delta = 0;
+                    }
+
+                    if (delta < CONTROLLER_ANALOG_MIN)
+                    {
+                        delta = CONTROLLER_ANALOG_MIN;
+                    }
+                    else if (delta >= CONTROLLER_ANALOG_CENTER)
+                    {
+                        delta = CONTROLLER_ANALOG_MAX;
+                    }
+
+                    port->current_sample.right_stick_y = CONTROLLER_SCALE_ANALOG(delta);
+
+                    delta = packet.pad->left_stick_x - port->left_stick_center_x;
+
+                    if (CONTROLLER_IS_WITHIN_ANALOG_DEADZONE(delta))
+                    {
+                        delta = 0;
+                    }
+
+                    if (delta < CONTROLLER_ANALOG_MIN)
+                    {
+                        delta = CONTROLLER_ANALOG_MIN;
+                    }
+                    else if (delta >= CONTROLLER_ANALOG_CENTER)
+                    {
+                        delta = CONTROLLER_ANALOG_MAX;
+                    }
+
+                    delta = CONTROLLER_SCALE_ANALOG(delta);
+                    port->current_sample.left_stick_x = delta;
+                    analog_directions = PADRleft;
+
+                    if (delta >= 0)
+                    {
+                        if (delta > 0)
+                        {
+                            analog_directions = PADRright;
+                        }
+                        else
+                        {
+                            analog_directions = 0;
+                        }
+                    }
+
+                    delta = packet.pad->left_stick_y - port->left_stick_center_y;
+
+                    if (CONTROLLER_IS_WITHIN_ANALOG_DEADZONE(delta))
+                    {
+                        delta = 0;
+                    }
+
+                    if (delta < CONTROLLER_ANALOG_MIN)
+                    {
+                        delta = CONTROLLER_ANALOG_MIN;
+                    }
+                    else if (delta >= CONTROLLER_ANALOG_CENTER)
+                    {
+                        delta = CONTROLLER_ANALOG_MAX;
+                    }
+
+                    delta = CONTROLLER_SCALE_ANALOG(delta);
+                    port->current_sample.left_stick_y = delta;
+
+                    if (delta < 0)
+                    {
+                        analog_directions |= PADRup;
+                    }
+                    else if (delta > 0)
+                    {
+                        analog_directions |= PADRdown;
+                    }
+
+                    delta = analog_directions & (analog_directions ^ ((port->current_sample.analog_direction_bits & CONTROLLER_ANALOG_DIRECTION_HELD_MASK)
+                                                                      << CONTROLLER_ANALOG_DIRECTION_EVENT_SHIFT));
+
+                    new_analog_directions = delta;
+                    direction_bits = new_analog_directions | ((u8)analog_directions >> CONTROLLER_ANALOG_DIRECTION_EVENT_SHIFT);
+
+                    if (analog_directions & PADRup)
+                    {
+                        if ((new_analog_directions & PADRup) && (controller_state->sample_unavailable == 0))
+                        {
+                            port->direction_repeat_timer_up = initial_repeat_delay;
+                        }
+                        else
+                        {
+                            delta = port->direction_repeat_timer_up - repeat_timer_step;
+
+                            if (delta <= 0)
+                            {
+                                direction_bits |= PADRup;
+                                delta = repeat_interval;
+                            }
+
+                            port->direction_repeat_timer_up = delta;
+                        }
+                    }
+
+                    if (analog_directions & PADRright)
+                    {
+                        if ((new_analog_directions & PADRright) && (controller_state->sample_unavailable == 0))
+                        {
+                            port->direction_repeat_timer_right = initial_repeat_delay;
+                        }
+                        else
+                        {
+                            delta = port->direction_repeat_timer_right - repeat_timer_step;
+
+                            if (delta <= 0)
+                            {
+                                direction_bits |= PADRright;
+                                delta = repeat_interval;
+                            }
+
+                            port->direction_repeat_timer_right = delta;
+                        }
+                    }
+
+                    if (analog_directions & PADRdown)
+                    {
+                        if ((new_analog_directions & PADRdown) && (controller_state->sample_unavailable == 0))
+                        {
+                            port->direction_repeat_timer_down = initial_repeat_delay;
+                        }
+                        else
+                        {
+                            delta = port->direction_repeat_timer_down - repeat_timer_step;
+
+                            if (delta <= 0)
+                            {
+                                direction_bits |= PADRdown;
+                                delta = repeat_interval;
+                            }
+
+                            port->direction_repeat_timer_down = delta;
+                        }
+                    }
+
+                    if (analog_directions & PADRleft)
+                    {
+                        if ((new_analog_directions & PADRleft) && (controller_state->sample_unavailable == 0))
+                        {
+                            port->direction_repeat_timer_left = initial_repeat_delay;
+                        }
+                        else
+                        {
+                            delta = port->direction_repeat_timer_left - repeat_timer_step;
+
+                            if (delta <= 0)
+                            {
+                                direction_bits |= PADRleft;
+                                delta = repeat_interval;
+                            }
+
+                            port->direction_repeat_timer_left = delta;
+                        }
+                    }
+
+                    port->current_sample.analog_direction_bits = direction_bits;
+                    return;
+                }
+
+                break;
+
+            default:
+                port->current_sample.device_type = CONTROLLER_DEVICE_DISCONNECTED;
                 return;
-            }
-            break;
-
-        default:
-            port->current_sample.device_type = CONTROLLER_DEVICE_DISCONNECTED;
-            return;
         }
     }
     else
@@ -702,11 +773,13 @@ void initialize_controller_vsync(void)
 void set_controller_vsync_interval(u32 interval)
 {
     ControllerState* controller_state = CONTROLLER_STATE;
+
     if (controller_state->vsync_accumulation_count >= interval)
     {
         controller_state->vsync_accumulation_count = 0;
         return;
     }
+
     controller_state->vsync_accumulation_interval = interval;
 }
 
@@ -734,6 +807,7 @@ void update_controllers(void)
     merge_latest_controller_sample(&controller_state->ports[1]);
     sample_index = controller_state->pending_sample_count;
     controller_state->published_sample_count = sample_index;
+
     for (history_index = 0, sample_index--; sample_index != -1; history_index++, sample_index--)
     {
         first_source = &controller_state->ports[0].vsync_samples[sample_index];
@@ -792,6 +866,7 @@ static void controller_vsync_callback(void)
         accumulate_controller_sample(&controller_state->ports[1]);
 
         controller_state->vsync_accumulation_count++;
+
         if (controller_state->vsync_accumulation_interval != 0 && controller_state->vsync_accumulation_count >= controller_state->vsync_accumulation_interval)
         {
             controller_state->vsync_accumulation_count = 0;
@@ -807,21 +882,23 @@ static void controller_vsync_callback(void)
 static void accumulate_controller_sample(ControllerPortState* port)
 {
     s32 device_type = port->current_sample.device_type;
+
     switch (device_type)
     {
-    case CONTROLLER_DEVICE_DIGITAL:
-        break;
-    case CONTROLLER_DEVICE_ANALOG_JOYSTICK:
-    case CONTROLLER_DEVICE_ANALOG:
-        port->accumulated_sample.right_stick_x += port->current_sample.right_stick_x;
-        port->accumulated_sample.right_stick_y += port->current_sample.right_stick_y;
-        port->accumulated_sample.left_stick_x += port->current_sample.left_stick_x;
-        port->accumulated_sample.left_stick_y += port->current_sample.left_stick_y;
-        port->accumulated_sample.analog_direction_bits |= port->current_sample.analog_direction_bits;
-        break;
-    default:
-        return;
+        case CONTROLLER_DEVICE_DIGITAL:
+            break;
+        case CONTROLLER_DEVICE_ANALOG_JOYSTICK:
+        case CONTROLLER_DEVICE_ANALOG:
+            port->accumulated_sample.right_stick_x += port->current_sample.right_stick_x;
+            port->accumulated_sample.right_stick_y += port->current_sample.right_stick_y;
+            port->accumulated_sample.left_stick_x += port->current_sample.left_stick_x;
+            port->accumulated_sample.left_stick_y += port->current_sample.left_stick_y;
+            port->accumulated_sample.analog_direction_bits |= port->current_sample.analog_direction_bits;
+            break;
+        default:
+            return;
     }
+
     port->accumulated_sample.held_buttons |= port->current_sample.held_buttons;
     port->accumulated_sample.pressed_buttons |= port->current_sample.pressed_buttons;
     port->accumulated_sample.repeat_buttons |= port->current_sample.repeat_buttons;
@@ -838,18 +915,18 @@ static void merge_latest_controller_sample(ControllerPortState* port)
 
     switch (port->published_sample.device_type)
     {
-    case CONTROLLER_DEVICE_DIGITAL:
-        break;
-    case CONTROLLER_DEVICE_ANALOG_JOYSTICK:
-    case CONTROLLER_DEVICE_ANALOG:
-        port->published_sample.right_stick_x = port->accumulated_sample.right_stick_x + port->current_sample.right_stick_x;
-        port->published_sample.right_stick_y = port->accumulated_sample.right_stick_y + port->current_sample.right_stick_y;
-        port->published_sample.left_stick_x = port->accumulated_sample.left_stick_x + port->current_sample.left_stick_x;
-        port->published_sample.left_stick_y = port->accumulated_sample.left_stick_y + port->current_sample.left_stick_y;
-        port->published_sample.analog_direction_bits = port->accumulated_sample.analog_direction_bits | port->current_sample.analog_direction_bits;
-        break;
-    default:
-        return;
+        case CONTROLLER_DEVICE_DIGITAL:
+            break;
+        case CONTROLLER_DEVICE_ANALOG_JOYSTICK:
+        case CONTROLLER_DEVICE_ANALOG:
+            port->published_sample.right_stick_x = port->accumulated_sample.right_stick_x + port->current_sample.right_stick_x;
+            port->published_sample.right_stick_y = port->accumulated_sample.right_stick_y + port->current_sample.right_stick_y;
+            port->published_sample.left_stick_x = port->accumulated_sample.left_stick_x + port->current_sample.left_stick_x;
+            port->published_sample.left_stick_y = port->accumulated_sample.left_stick_y + port->current_sample.left_stick_y;
+            port->published_sample.analog_direction_bits = port->accumulated_sample.analog_direction_bits | port->current_sample.analog_direction_bits;
+            break;
+        default:
+            return;
     }
 
     port->published_sample.held_buttons = port->accumulated_sample.held_buttons | port->current_sample.held_buttons;
@@ -870,18 +947,18 @@ static void copy_controller_sample(ControllerSample* source, ControllerSample* d
 
     switch (source->device_type)
     {
-    case CONTROLLER_DEVICE_DIGITAL:
-        break;
-    case CONTROLLER_DEVICE_ANALOG_JOYSTICK:
-    case CONTROLLER_DEVICE_ANALOG:
-        destination->right_stick_x = source->right_stick_x;
-        destination->right_stick_y = source->right_stick_y;
-        destination->left_stick_x = source->left_stick_x;
-        destination->left_stick_y = source->left_stick_y;
-        destination->analog_direction_bits = source->analog_direction_bits;
-        break;
-    default:
-        return;
+        case CONTROLLER_DEVICE_DIGITAL:
+            break;
+        case CONTROLLER_DEVICE_ANALOG_JOYSTICK:
+        case CONTROLLER_DEVICE_ANALOG:
+            destination->right_stick_x = source->right_stick_x;
+            destination->right_stick_y = source->right_stick_y;
+            destination->left_stick_x = source->left_stick_x;
+            destination->left_stick_y = source->left_stick_y;
+            destination->analog_direction_bits = source->analog_direction_bits;
+            break;
+        default:
+            return;
     }
 
     destination->held_buttons = source->held_buttons;

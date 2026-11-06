@@ -14,5 +14,6 @@ s32 validate_save_file(SaveFile* file)
             return 1;
         }
     }
+
     return 0;
 }

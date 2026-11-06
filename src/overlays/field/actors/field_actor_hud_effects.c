@@ -228,7 +228,6 @@ extern FieldObjectFlagHandler g_field_object_flag_handlers[FIELD_OBJECT_HANDLER_
     (field_start_builtin_animation((actor)->object_index, (actor)->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, (resource)),                                  \
      field_start_actor_animation((actor)->object_index + FIELD_OBJECT_EFFECT_SLOT_BASE, 0, 0))
 
-
 /** @brief Projected ground position in the field renderer scratchpad. */
 typedef struct
 {

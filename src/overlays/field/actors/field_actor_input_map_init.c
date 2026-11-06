@@ -41,18 +41,18 @@ void field_apply_weapon_action_params(s32 player_index)
     {
         switch (g_field_player_records[player_index].head.bytes.weapon_type)
         {
-        case FIELD_WEAPON_HAMMER:
-        case FIELD_WEAPON_STAFF:
-        case FIELD_WEAPON_GLOVE:
-        case FIELD_WEAPON_FLAIL:
-            g_field_resource_actions[player_index].slots[g_field_weapon_action_slots[i]].parameter = g_field_weapon_action_blunt_params[i];
-            break;
-        case FIELD_WEAPON_BOW:
-            g_field_resource_actions[player_index].slots[g_field_weapon_action_slots[i]].parameter = g_field_weapon_action_bow_params[i];
-            break;
-        default:
-            g_field_resource_actions[player_index].slots[g_field_weapon_action_slots[i]].parameter = g_field_weapon_action_default_params[i];
-            break;
+            case FIELD_WEAPON_HAMMER:
+            case FIELD_WEAPON_STAFF:
+            case FIELD_WEAPON_GLOVE:
+            case FIELD_WEAPON_FLAIL:
+                g_field_resource_actions[player_index].slots[g_field_weapon_action_slots[i]].parameter = g_field_weapon_action_blunt_params[i];
+                break;
+            case FIELD_WEAPON_BOW:
+                g_field_resource_actions[player_index].slots[g_field_weapon_action_slots[i]].parameter = g_field_weapon_action_bow_params[i];
+                break;
+            default:
+                g_field_resource_actions[player_index].slots[g_field_weapon_action_slots[i]].parameter = g_field_weapon_action_default_params[i];
+                break;
         }
     }
 }

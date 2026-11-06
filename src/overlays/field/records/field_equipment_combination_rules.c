@@ -72,12 +72,14 @@ static s32 golem_logic_block_level_step(s32* record_indices)
     items = state->items;
     armor = FIELD_ITEM_CATEGORY_ARMOR;
     record_end = record_indices + EQUIPMENT_PAIR_SIZE;
+
     do
     {
         item_index = *record_indices;
         value = (state->items + item_index)->info.word;
         value >>= 8;
         category = value & 3;
+
         if (category == FIELD_ITEM_CATEGORY_WEAPON)
         {
             total_power += items[item_index].derived.weapon.power;
@@ -92,18 +94,22 @@ static s32 golem_logic_block_level_step(s32* record_indices)
         else
         {
             value = FIELD_ITEM_CATEGORY_INSTRUMENT;
+
             if (category == value)
             {
                 total_power += items[item_index].derived.instrument.power;
             }
         }
+
         record_indices++;
     } while ((intptr_t)record_indices < (intptr_t)record_end);
 
     total_power /= GOLEM_LOGIC_BLOCK_POWER_PER_LEVEL;
+
     if (total_power >= 0)
     {
         level = GOLEM_LOGIC_BLOCK_LEVEL_STEP_MAX;
+
         if (total_power <= GOLEM_LOGIC_BLOCK_LEVEL_STEP_MAX)
         {
             level = total_power;
@@ -138,15 +144,18 @@ static s32 golem_equipment_pair_has_classes(s32 class_a, s32 class_b, s32* recor
         state = &g_saved_game.layout;
         item_type = FIELD_ITEM_TYPE((state->items + record_indices[i])->info.word);
         classes[i] = item_type;
+
         if (FIELD_ITEM_CATEGORY((state->items + record_indices[i])->info.word) == FIELD_ITEM_CATEGORY_ARMOR)
         {
             classes[i] = EQUIP_CLASS_ARMOR(item_type);
         }
+
         if (FIELD_ITEM_CATEGORY((state->items + record_indices[i])->info.word) == FIELD_ITEM_CATEGORY_INSTRUMENT)
         {
             classes[i] += EQUIP_CLASS_INSTRUMENT_BASE;
         }
     }
+
     for (i = 0; i < EQUIPMENT_PAIR_SIZE; i++)
     {
         if (classes[i] == class_a)
@@ -160,6 +169,7 @@ static s32 golem_equipment_pair_has_classes(s32 class_a, s32 class_b, s32* recor
             }
         }
     }
+
     return 0;
 }
 
@@ -181,10 +191,12 @@ s32 golem_find_logic_block_recipe(s32* record_indices, s32* level, s32* shape)
         if (g_golem_logic_block_recipe_table[rule_index](record_indices) != 0)
         {
             shape_index = golem_logic_block_shape_from_equipment(record_indices);
+
             *shape = shape_index;
             if (shape_index >= 0)
             {
                 clamped_shape = GOLEM_SHAPE_COUNT - 1;
+
                 if (shape_index < GOLEM_SHAPE_COUNT)
                 {
                     clamped_shape = shape_index;
@@ -194,11 +206,13 @@ s32 golem_find_logic_block_recipe(s32* record_indices, s32* level, s32* shape)
             {
                 clamped_shape = 0;
             }
+
             *shape = clamped_shape;
             *level = golem_logic_block_level_step(record_indices) * g_golem_logic_block_level_scale[rule_index];
             return rule_index;
         }
     }
+
     return 0;
 }
 
@@ -216,8 +230,7 @@ static s32 golem_logic_block_shape_from_equipment(s32* record_indices)
     state = &g_saved_game.layout;
     first = &state->items[record_indices[0]];
     second = &state->items[record_indices[1]];
-    return ((first->info.halves[1] & FIELD_ITEM_MATERIAL_MASK) + (second->info.halves[1] & FIELD_ITEM_MATERIAL_MASK)) %
-           GOLEM_SHAPE_COUNT;
+    return ((first->info.halves[1] & FIELD_ITEM_MATERIAL_MASK) + (second->info.halves[1] & FIELD_ITEM_MATERIAL_MASK)) % GOLEM_SHAPE_COUNT;
 }
 
 /**

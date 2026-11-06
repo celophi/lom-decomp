@@ -1757,13 +1757,15 @@ static void* field_draw_experience_ranking(u_long* ordering_table, void* cursor,
                 work.position.y = y;
                 result = field_draw_animated_icon(ordering_table, result, 0x38 - x_offset, y - 8, 1);
                 work.position.x = 0x48 - x_offset;
-                result = field_draw_number(ordering_table, result, g_field_player_records[work.order[i]].pickup_counts[FIELD_REWARD_EXPERIENCE_LARGE], 4, &work.position, FIELD_TEXT_ALIGN_LEFT);
+                result = field_draw_number(ordering_table, result, g_field_player_records[work.order[i]].pickup_counts[FIELD_REWARD_EXPERIENCE_LARGE], 4,
+                                           &work.position, FIELD_TEXT_ALIGN_LEFT);
                 result = field_draw_text(result, ordering_table, FIELD_TEXT_AT(text, g_field_ui_text_plus.low, text_base[1]), 4, 0x68 - x_offset,
                                          work.position.y, FIELD_TEXT_ALIGN_LEFT);
                 result = field_draw_animated_icon(ordering_table, result, 0x78 - x_offset, work.position.y, 0);
                 work.position.x = 0x88 - x_offset;
                 work.position.y = y;
-                result = field_draw_number(ordering_table, result, g_field_player_records[work.order[i]].pickup_counts[FIELD_REWARD_EXPERIENCE_SMALL], 4, &work.position, FIELD_TEXT_ALIGN_LEFT);
+                result = field_draw_number(ordering_table, result, g_field_player_records[work.order[i]].pickup_counts[FIELD_REWARD_EXPERIENCE_SMALL], 4,
+                                           &work.position, FIELD_TEXT_ALIGN_LEFT);
                 result = field_draw_text(result, ordering_table, FIELD_TEXT_AT(text, text[0x1A], text[0x1B]), 4, 0xA8 - x_offset, work.position.y,
                                          FIELD_TEXT_ALIGN_LEFT);
                 work.position.x = 0xE0 - x_offset;

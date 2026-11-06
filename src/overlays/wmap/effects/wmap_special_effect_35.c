@@ -107,7 +107,7 @@ typedef struct
     void name(void)                                                                                                                                            \
     {                                                                                                                                                          \
         WmapSpriteActor* actor = &g_wmap_sprite_actors[(slot)];                                                                                                \
-        WmapEffectMotion* motion = &WMAP_EFFECT35_MOTIONS[(slot)];                                                                                              \
+        WmapEffectMotion* motion = &WMAP_EFFECT35_MOTIONS[(slot)];                                                                                             \
                                                                                                                                                                \
         g_wmap_actor_animations[(slot)].data = g_wmap_animation_bank_0;                                                                                        \
         actor->scale_index = WMAP_SPRITE_SCALE_FULL;                                                                                                           \
@@ -153,7 +153,7 @@ typedef struct
         SVECTOR position;                                                                                                                                      \
         s32 screen_position;                                                                                                                                   \
         WmapSpriteActor* actor = &g_wmap_sprite_actors[(slot_index)];                                                                                          \
-        WmapEffectMotion* motion = &WMAP_EFFECT35_MOTIONS[(slot_index)];                                                                                        \
+        WmapEffectMotion* motion = &WMAP_EFFECT35_MOTIONS[(slot_index)];                                                                                       \
         WmapAnimationSlot* slots;                                                                                                                              \
                                                                                                                                                                \
         position.vx = (motion->radius * (ccos(motion->angle) >> WMAP_EFFECT35_ORBITER_TRIG_SHIFT)) >> WMAP_EFFECT35_ORBITER_PRODUCT_SHIFT;                     \

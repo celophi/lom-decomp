@@ -149,7 +149,6 @@ extern s32 g_hero_template_type_0[SAVED_CHARACTER_SIZE / 4];
 /** @brief Starting FieldCharacterRecord of the hero with character type 1. */
 extern s32 g_hero_template_type_1[SAVED_CHARACTER_SIZE / 4];
 
-
 /* Private calls that cross the title/title_save translation-unit boundary. */
 void update_menu_input(void);
 

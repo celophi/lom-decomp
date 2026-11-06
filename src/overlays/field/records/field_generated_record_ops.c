@@ -63,6 +63,7 @@ void field_write_staged_item(void)
     FieldItemRecord* record;
 
     record = g_field_item_staging->record;
+
     if (record->name[0] == 0)
     {
         field_generate_item_key(g_field_game_state->guest_origin.ids.game_id, &record->key);
@@ -100,6 +101,7 @@ void field_write_staged_item(void)
     {
         g_field_item_staging->record->special_ids[i] = g_field_item_staging->slots[i + 2];
     }
+
     g_field_item_staging->record->special_ids[3] = g_field_item_staging->slots[1];
     g_field_item_staging->record->value = 0;
 }
@@ -118,11 +120,13 @@ static void field_build_item_name(s32 type_entry, s32 material_entry, u8* dest)
     table = field_find_resource(FIELD_ITEM_NAME_TABLE);
 
     src = &table->body.text[table->body.offsets[material_entry]];
+
     while (*src != 0)
     {
         s32 code;
 
         code = *src;
+
         if (code < FIELD_TEXT_CODE_LIMIT)
         {
             if (code >= FIELD_TEXT_ARG_CODE_MIN)
@@ -132,15 +136,18 @@ static void field_build_item_name(s32 type_entry, s32 material_entry, u8* dest)
                 dest++;
             }
         }
+
         *dest++ = *src++;
     }
 
     src = &table->body.text[table->body.offsets[type_entry]];
+
     while (*src != 0)
     {
         s32 code;
 
         code = *src;
+
         if (code < FIELD_TEXT_CODE_LIMIT)
         {
             if (code >= FIELD_TEXT_ARG_CODE_MIN)
@@ -150,6 +157,7 @@ static void field_build_item_name(s32 type_entry, s32 material_entry, u8* dest)
                 dest++;
             }
         }
+
         *dest++ = *src++;
     }
 
@@ -192,6 +200,7 @@ void field_derive_weapon_values(FieldItemRecord* record)
 #else
     power = (weight * (levels + divisor) / divisor) >> 7;
     record->derived.weapon.power = power;
+
     if (power >= 1000)
     {
         record->derived.weapon.power = FIELD_DERIVED_VALUE_MAX;
@@ -202,6 +211,7 @@ void field_derive_weapon_values(FieldItemRecord* record)
     {
         record->derived.weapon.stats[i] = g_field_item_staging->properties[i];
     }
+
     record->status_flags = g_field_item_staging->power_flags;
     record->effect_index = g_field_item_staging->effect_index;
 
@@ -232,6 +242,7 @@ void field_derive_armor_values(FieldItemRecord* record)
 #else
         value = (g_field_item_tables->item.armor_types[g_field_item_staging->item_type].weights[i] * g_field_item_staging->multipliers[i]) >> 6;
         record->derived.values[i] = value;
+
         if (value >= 1000)
         {
             record->derived.values[i] = FIELD_DERIVED_VALUE_MAX;

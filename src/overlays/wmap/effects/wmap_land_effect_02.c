@@ -64,7 +64,6 @@ extern u32 g_wmap_land_effect_02_timeline_step;
 extern u32 g_wmap_land_effect_02_sequence_1_step;
 extern u32 g_wmap_land_effect_02_sequence_2_step;
 
-
 /**
  * @brief Initialize world-map globals and four per-entry state records.
  */

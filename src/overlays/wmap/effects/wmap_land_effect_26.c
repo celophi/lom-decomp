@@ -116,7 +116,6 @@ extern u32 g_wmap_land_effect_26_sequence_9_step;
 extern u32 g_wmap_land_effect_26_sequence_8_step;
 extern u32 g_wmap_land_effect_26_sequence_10_step;
 
-
 /** @brief Approach the effect depth and draw its alternating-brightness fade. */
 void wmap_land_effect_26_sequence_1_step_02(void)
 {

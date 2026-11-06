@@ -23,6 +23,7 @@ void* card_menu_draw_icon_highlight(POLY_FT4* quad, u_long* ot, s32 x, s32 y, s3
     }
 
     setRECT(&rect, index * GPU_CLUT_4BIT_COLORS, VRAM_CLUT_Y, GPU_CLUT_4BIT_COLORS, 1);
+
     if ((row == FIELD_PARTY_GUEST) && (icon < SAVE_ICON_HERO_COUNT))
     {
         field_copy_portrait_palette(g_card_menu_icon_context, icon);

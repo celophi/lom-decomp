@@ -30,25 +30,25 @@
  */
 
 /** Width of the visible screen area, excluding overscan. */
-#define SCREEN_WIDTH    320
+#define SCREEN_WIDTH 320
 
 /** Height of the visible screen area, excluding overscan. */
-#define SCREEN_HEIGHT   240
+#define SCREEN_HEIGHT 240
 
 /** Total VRAM width in 16bpp texels. */
-#define VRAM_WIDTH      1024
+#define VRAM_WIDTH 1024
 
 /** Total VRAM height in lines. */
-#define VRAM_HEIGHT     512
+#define VRAM_HEIGHT 512
 
 /** Vertical start of the back buffer's draw region. */
-#define VRAM_BACK_DRAW_Y    8
+#define VRAM_BACK_DRAW_Y 8
 
 /** Vertical start of the back buffer's display region. */
-#define VRAM_BACK_DISP_Y    232
+#define VRAM_BACK_DISP_Y 232
 
 /** Height of the draw region for each buffer. */
-#define VRAM_DRAW_HEIGHT    224
+#define VRAM_DRAW_HEIGHT 224
 
 /** GTE projection distance (SetGeomScreen) of the field and menu screens. */
 #define SCREEN_PROJECTION_DISTANCE 1500
@@ -140,7 +140,7 @@ typedef struct
 /** Y coordinate of the CLUT storage row in VRAM.
  * Overlays store their 256-entry palettes in the lines starting here,
  * below both display buffers. */
-#define VRAM_CLUT_Y         498
+#define VRAM_CLUT_Y 498
 
 /*
  * VRAM rectangle the save-data overlays clear to black on init.
@@ -150,9 +150,9 @@ typedef struct
  * (x = SCREEN_WIDTH), placing it in the texture/CLUT storage area. The exact
  * contents staged here are not yet confirmed.
  */
-#define OVERLAY_INIT_CLEAR_VRAM_X   SCREEN_WIDTH    /* 0x140 */
-#define OVERLAY_INIT_CLEAR_VRAM_Y   0
-#define OVERLAY_INIT_CLEAR_VRAM_W   0x40
-#define OVERLAY_INIT_CLEAR_VRAM_H   0x100
+#define OVERLAY_INIT_CLEAR_VRAM_X SCREEN_WIDTH /* 0x140 */
+#define OVERLAY_INIT_CLEAR_VRAM_Y 0
+#define OVERLAY_INIT_CLEAR_VRAM_W 0x40
+#define OVERLAY_INIT_CLEAR_VRAM_H 0x100
 
 #endif

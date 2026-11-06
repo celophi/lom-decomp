@@ -15,10 +15,12 @@ inline void* card_menu_draw_progress_bar(POLY_G4* quad, u_long* ot)
     if (g_card_menu_progress_bar_active != 0)
     {
         elapsed = VSync(-1) - g_card_menu_progress_start_tick;
+
         if (elapsed > CARD_MENU_PROGRESS_FULL_TICKS)
         {
             elapsed = CARD_MENU_PROGRESS_FULL_TICKS;
         }
+
         width = elapsed * CARD_MENU_MESSAGE_WIDTH;
         SET_BGR0_PACKED(quad, CARD_MENU_PROGRESS_TOP_LEFT_COLOR);
         SET_POLY_G4_BGR1_PACKED(quad, CARD_MENU_PROGRESS_TOP_RIGHT_COLOR);
@@ -32,5 +34,6 @@ inline void* card_menu_draw_progress_bar(POLY_G4* quad, u_long* ot)
         addPrim(ot, quad);
         quad++;
     }
+
     return quad;
 }

@@ -68,10 +68,10 @@ typedef struct
 /** @brief One eight-byte action slot of a resource's action row. */
 typedef struct FieldActionSlot
 {
-    u16 command;            /**< Action command; bit 15 marks a technique. */
+    u16 command; /**< Action command; bit 15 marks a technique. */
     FieldActionFlags flags;
-    u16 animation;          /**< Animation started by the action, 0 for none. */
-    u16 parameter;          /**< Animation request, sequence id or effect flags, depending on the command. */
+    u16 animation; /**< Animation started by the action, 0 for none. */
+    u16 parameter; /**< Animation request, sequence id or effect flags, depending on the command. */
 } FieldActionSlot;
 
 /** @brief Action row of one resource (g_field_resource_actions). */

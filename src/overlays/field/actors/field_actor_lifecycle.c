@@ -165,16 +165,16 @@ void field_battle_end(void)
     {
         switch (g_field_music_id)
         {
-        case FIELD_MUSIC_BOSS_BATTLE:
-        case FIELD_MUSIC_BOSS_BATTLE_2:
-        case FIELD_MUSIC_BOSS_BATTLE_3:
-        case FIELD_MUSIC_ANOTHER_DIMENSION:
-        case FIELD_MUSIC_SPARKLING_VORTEX:
-        case FIELD_MUSIC_BOSS_BATTLE_4:
-        case FIELD_MUSIC_LEAVING_SORROW_BEHIND:
-        case FIELD_MUSIC_SANCTUARY_OF_MANA:
-            akao_fade_song_volume(0, FIELD_BATTLE_MUSIC_FADE_TICKS, 0);
-            break;
+            case FIELD_MUSIC_BOSS_BATTLE:
+            case FIELD_MUSIC_BOSS_BATTLE_2:
+            case FIELD_MUSIC_BOSS_BATTLE_3:
+            case FIELD_MUSIC_ANOTHER_DIMENSION:
+            case FIELD_MUSIC_SPARKLING_VORTEX:
+            case FIELD_MUSIC_BOSS_BATTLE_4:
+            case FIELD_MUSIC_LEAVING_SORROW_BEHIND:
+            case FIELD_MUSIC_SANCTUARY_OF_MANA:
+                akao_fade_song_volume(0, FIELD_BATTLE_MUSIC_FADE_TICKS, 0);
+                break;
         }
     }
 }

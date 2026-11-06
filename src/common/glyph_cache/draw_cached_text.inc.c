@@ -24,6 +24,7 @@ void* draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s32 palet
 
     cursor = text;
     count = 0;
+
     if (*cursor >= GLYPH_TEXT_FIRST_PRINTABLE)
     {
         for (scan = cursor; *scan >= GLYPH_TEXT_FIRST_PRINTABLE; scan++)
@@ -32,22 +33,24 @@ void* draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s32 palet
             {
                 scan++;
             }
+
             count++;
         }
     }
 
     switch (alignment)
     {
-    case FIELD_TEXT_ALIGN_RIGHT:
-        x -= count * GLYPH_SIZE;
-        break;
-    case FIELD_TEXT_ALIGN_CENTER:
-        x -= count * (GLYPH_SIZE / 2);
-        break;
-    case FIELD_TEXT_ALIGN_LEFT:
-    default:
-        break;
+        case FIELD_TEXT_ALIGN_RIGHT:
+            x -= count * GLYPH_SIZE;
+            break;
+        case FIELD_TEXT_ALIGN_CENTER:
+            x -= count * (GLYPH_SIZE / 2);
+            break;
+        case FIELD_TEXT_ALIGN_LEFT:
+        default:
+            break;
     }
+
     g_glyph_line_start_x = x;
     g_glyph_cursor_x = x;
     g_glyph_cursor_y = y;
@@ -60,6 +63,7 @@ void* draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s32 palet
             g_glyph_cursor_x += GLYPH_SIZE;
             continue;
         }
+
         if (*cursor >= SJIS_LEAD_MIN)
         {
             code = cursor[0];
@@ -72,6 +76,7 @@ void* draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s32 palet
             {
                 break;
             }
+
             if (*cursor >= '0' && *cursor < SJIS_LEAD_MIN)
             {
                 code = *cursor + GLYPH_SJIS_ALNUM_OFFSET;
@@ -83,6 +88,7 @@ void* draw_cached_text(void* prim, u_long* ot, u8* text, s32 x, s32 y, s32 palet
                 cursor++;
             }
         }
+
         prim = render_cached_glyph(prim, ot, code, palette);
     }
 

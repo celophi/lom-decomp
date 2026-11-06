@@ -59,43 +59,43 @@ static s32 field_can_equip_item(FieldCharacterRecord* character, s32 slot_index,
 
     switch (category)
     {
-    case FIELD_ITEM_CATEGORY_WEAPON:
-        if (slot_index != FIELD_WEAPON_SLOT)
-        {
+        case FIELD_ITEM_CATEGORY_WEAPON:
+            if (slot_index != FIELD_WEAPON_SLOT)
+            {
+                return 0;
+            }
+
+            field_collect_equipment_conflicts(character, FIELD_WEAPON_SLOT, &conflicts);
+
+            if (g_field_weapon_type_conflicts[FIELD_ITEM_TYPE(item->info.word)] & conflicts)
+            {
+                return 0;
+            }
+
+            return -1;
+        case FIELD_ITEM_CATEGORY_ARMOR:
+            if (slot_index < FIELD_FIRST_ARMOR_SLOT || slot_index > FIELD_LAST_ARMOR_SLOT)
+            {
+                return 0;
+            }
+
+            field_collect_equipment_conflicts(character, slot_index, &conflicts);
+
+            if (g_field_armor_type_conflicts[FIELD_ITEM_TYPE(item->info.word)] & conflicts)
+            {
+                return 0;
+            }
+
+            return -1;
+        case FIELD_ITEM_CATEGORY_INSTRUMENT:
+            if (slot_index < FIELD_EQUIPMENT_SLOT_COUNT)
+            {
+                return 0;
+            }
+
+            return -1;
+        default:
             return 0;
-        }
-
-        field_collect_equipment_conflicts(character, FIELD_WEAPON_SLOT, &conflicts);
-
-        if (g_field_weapon_type_conflicts[FIELD_ITEM_TYPE(item->info.word)] & conflicts)
-        {
-            return 0;
-        }
-
-        return -1;
-    case FIELD_ITEM_CATEGORY_ARMOR:
-        if (slot_index < FIELD_FIRST_ARMOR_SLOT || slot_index > FIELD_LAST_ARMOR_SLOT)
-        {
-            return 0;
-        }
-
-        field_collect_equipment_conflicts(character, slot_index, &conflicts);
-
-        if (g_field_armor_type_conflicts[FIELD_ITEM_TYPE(item->info.word)] & conflicts)
-        {
-            return 0;
-        }
-
-        return -1;
-    case FIELD_ITEM_CATEGORY_INSTRUMENT:
-        if (slot_index < FIELD_EQUIPMENT_SLOT_COUNT)
-        {
-            return 0;
-        }
-
-        return -1;
-    default:
-        return 0;
     }
 }
 
@@ -121,12 +121,12 @@ static void field_collect_equipment_conflicts(FieldCharacterRecord* character, s
 
             switch (FIELD_ITEM_CATEGORY(info))
             {
-            case FIELD_ITEM_CATEGORY_WEAPON:
-                *conflicts |= g_field_weapon_type_conflicts[FIELD_ITEM_TYPE(info)];
-                break;
-            case FIELD_ITEM_CATEGORY_ARMOR:
-                *conflicts |= g_field_armor_type_conflicts[FIELD_ITEM_TYPE(info)];
-                break;
+                case FIELD_ITEM_CATEGORY_WEAPON:
+                    *conflicts |= g_field_weapon_type_conflicts[FIELD_ITEM_TYPE(info)];
+                    break;
+                case FIELD_ITEM_CATEGORY_ARMOR:
+                    *conflicts |= g_field_armor_type_conflicts[FIELD_ITEM_TYPE(info)];
+                    break;
             }
         }
     }
@@ -297,30 +297,30 @@ s32 field_get_equipped_stat(FieldCharacterRecord* character, u32 stat_index)
         {
             switch (stat_index)
             {
-            case 0:
-                value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n0);
-                break;
-            case 1:
-                value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n1);
-                break;
-            case 2:
-                value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n2);
-                break;
-            case 3:
-                value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n3);
-                break;
-            case 4:
-                value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n4);
-                break;
-            case 5:
-                value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n5);
-                break;
-            case 6:
-                value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n6);
-                break;
-            case 7:
-                value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n7);
-                break;
+                case 0:
+                    value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n0);
+                    break;
+                case 1:
+                    value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n1);
+                    break;
+                case 2:
+                    value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n2);
+                    break;
+                case 3:
+                    value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n3);
+                    break;
+                case 4:
+                    value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n4);
+                    break;
+                case 5:
+                    value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n5);
+                    break;
+                case 6:
+                    value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n6);
+                    break;
+                case 7:
+                    value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n7);
+                    break;
             }
         }
     }
