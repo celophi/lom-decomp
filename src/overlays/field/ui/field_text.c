@@ -3,6 +3,7 @@
 #include <libgte.h>
 
 #include "../internal/field_animation.h"
+#include "common/glyph_format.h"
 #include "common/gpu_packet.h"
 #include "main/audio/akao.h"
 #include "main/audio/akao_cmd.h"
@@ -63,7 +64,6 @@
 #define FIELD_TEXT_IMMEDIATE_WIDTH 0xFF0
 
 /* Character codes and glyph advances. Codes of 0x80 and above are two-byte characters. */
-#define FIELD_TEXT_FIRST_PRINTABLE 0x20
 #define FIELD_TEXT_WIDE_SPACE 0x80
 /** Pseudo code for FIELD_TEXT_CMD_INDENT at a line start; widened when no portrait sits on the left. */
 #define FIELD_TEXT_CODE_INDENT 0xFFFF
@@ -560,7 +560,7 @@ static void field_text_typeset(FieldTextState* state, s32 budget)
                 }
                 else
                 {
-                    if (opcode >= FIELD_TEXT_FIRST_PRINTABLE)
+                    if (opcode >= GLYPH_TEXT_FIRST_PRINTABLE)
                     {
                         code = opcode;
                         advance = 1;
@@ -754,7 +754,7 @@ static void field_text_typeset(FieldTextState* state, s32 budget)
                 opcode = *cursor;
                 cursor++;
 
-                if ((opcode < FIELD_TEXT_FIRST_PRINTABLE) && (opcode != FIELD_TEXT_CMD_WIDE_CHARACTER))
+                if ((opcode < GLYPH_TEXT_FIRST_PRINTABLE) && (opcode != FIELD_TEXT_CMD_WIDE_CHARACTER))
                 {
                     switch (opcode)
                     {
@@ -933,7 +933,7 @@ static void field_text_typeset(FieldTextState* state, s32 budget)
                 }
                 else
                 {
-                    if (opcode >= FIELD_TEXT_FIRST_PRINTABLE)
+                    if (opcode >= GLYPH_TEXT_FIRST_PRINTABLE)
                     {
                         code = opcode;
                         advance = 1;
@@ -1046,7 +1046,7 @@ static void field_text_typeset(FieldTextState* state, s32 budget)
                         opcode = *look_cursor;
                         look_cursor++;
 
-                        if ((opcode < FIELD_TEXT_FIRST_PRINTABLE) && (opcode != FIELD_TEXT_CMD_WIDE_CHARACTER))
+                        if ((opcode < GLYPH_TEXT_FIRST_PRINTABLE) && (opcode != FIELD_TEXT_CMD_WIDE_CHARACTER))
                         {
                             switch (opcode)
                             {
@@ -1136,7 +1136,7 @@ static void field_text_typeset(FieldTextState* state, s32 budget)
                         }
                         else
                         {
-                            if (opcode >= FIELD_TEXT_FIRST_PRINTABLE)
+                            if (opcode >= GLYPH_TEXT_FIRST_PRINTABLE)
                             {
                                 look_code = opcode;
                                 look_advance = 1;

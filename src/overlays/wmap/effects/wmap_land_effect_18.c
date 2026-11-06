@@ -522,7 +522,8 @@ void wmap_land_effect_18_sequence_11_step_02(void)
     s32 remaining;
     s32 intensity;
 
-    (void)((volatile VECTOR*)&g_wmap_effect_model_d_position)->vz;
+    /* The model holds still: the Z movement of the other drop steps, with a step of zero. */
+    g_wmap_effect_model_d_position.vz += 0;
     PushMatrix();
     RotMatrix(&g_wmap_camera_rotation, &base);
     TransMatrix(&base, &g_wmap_effect_model_d_position);
@@ -558,7 +559,8 @@ void wmap_land_effect_18_sequence_11_step_04(void)
     s32 remaining;
     s32 intensity;
 
-    (void)((volatile VECTOR*)&g_wmap_effect_model_d_position)->vz;
+    /* The model holds still: the Z movement of the other drop steps, with a step of zero. */
+    g_wmap_effect_model_d_position.vz += 0;
     PushMatrix();
     RotMatrix(&g_wmap_camera_rotation, &base);
     TransMatrix(&base, &g_wmap_effect_model_d_position);
@@ -787,15 +789,15 @@ WMAP_STEP_RESET(wmap_land_effect_18_sequence_7_reset, g_wmap_land_effect_18_sequ
 /** @brief World-map step handler: init a UI descriptor block, set the timer, advance the step. */
 void wmap_land_effect_18_sequence_7_step_01(void)
 {
-    u8* base = (u8*)g_wmap_sprite_actors;
+    WmapSpriteActor* actors = g_wmap_sprite_actors;
 
     g_wmap_actor_animations[5].data = g_wmap_animation_bank_0;
-    *(u8*)(base + 0xE2) = 0xF;
-    *(s16*)(base + 0xEA) = 1;
-    *(s16*)(base + 0xEC) = -1;
-    *(s16*)(base + 0xDE) = 0;
-    *(s16*)(base + 0xFE) = 0x80;
-    *(s16*)(base + 0x100) = 0x80;
+    actors[5].scale_index = WMAP_SPRITE_SCALE_FULL;
+    actors[5].sequence = 1;
+    actors[5].previous_sequence = -1;
+    actors[5].resource_index = 0;
+    actors[5].target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
+    actors[5].shade = WMAP_SPRITE_SHADE_NEUTRAL;
     g_wmap_land_effect_18_sequence_7_timer = 0xC7;
     g_wmap_land_effect_18_sequence_7_step++;
     wmap_land_effect_18_sequence_7_step_02();

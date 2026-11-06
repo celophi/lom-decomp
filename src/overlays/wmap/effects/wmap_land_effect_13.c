@@ -450,15 +450,15 @@ WMAP_STEP_RESET(wmap_land_effect_13_sequence_2_reset, g_wmap_land_effect_13_sequ
 /** @brief World-map step handler: init a UI descriptor block, set the timer, advance the step. */
 void wmap_land_effect_13_sequence_2_step_01(void)
 {
-    u8* base = (u8*)g_wmap_sprite_actors;
+    WmapSpriteActor* actors = g_wmap_sprite_actors;
 
     g_wmap_actor_animations[5].data = g_wmap_animation_bank_0;
-    *(u8*)(base + 0xE2) = 0xF;
-    *(s16*)(base + 0xEA) = 1;
-    *(s16*)(base + 0xEC) = -1;
-    *(s16*)(base + 0xDE) = 0;
-    *(s16*)(base + 0xFE) = 0x80;
-    *(s16*)(base + 0x100) = 0x80;
+    actors[5].scale_index = WMAP_SPRITE_SCALE_FULL;
+    actors[5].sequence = 1;
+    actors[5].previous_sequence = -1;
+    actors[5].resource_index = 0;
+    actors[5].target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
+    actors[5].shade = WMAP_SPRITE_SHADE_NEUTRAL;
     g_wmap_land_effect_13_sequence_2_timer = 0x36;
     g_wmap_land_effect_13_sequence_2_step++;
     wmap_land_effect_13_sequence_2_step_02();
@@ -742,14 +742,14 @@ WMAP_STEP_RESET(wmap_land_effect_13_sequence_5_reset, g_wmap_land_effect_13_sequ
 /** @brief World-map step handler: prime a sub-object and advance the step counter. */
 void wmap_land_effect_13_sequence_5_step_01(void)
 {
-    u8* base;
+    WmapSpriteActor* actor;
 
     g_wmap_actor_animations[7].data = g_wmap_animation_bank_1;
-    base = (u8*)&g_wmap_sprite_actors[7];
-    *(u8*)(base + 0x6) = 0xF;
-    *(s16*)(base + 0x2) = 0;
-    *(s16*)(base + 0xE) = 0;
-    *(s16*)(base + 0x10) = -1;
+    actor = &g_wmap_sprite_actors[7];
+    actor->scale_index = WMAP_SPRITE_SCALE_FULL;
+    actor->resource_index = 0;
+    actor->sequence = 0;
+    actor->previous_sequence = -1;
     g_wmap_effect_fade_a = 0;
     g_wmap_land_effect_13_sequence_5_timer = 0xC;
     g_wmap_land_effect_13_sequence_5_step++;
@@ -775,10 +775,12 @@ WMAP_STEP_ARM_TIMER(wmap_land_effect_13_sequence_5_step_03, g_wmap_land_effect_1
 /** @brief World-map step: build a sprite, decrement a shared budget, expire the timer. */
 void wmap_land_effect_13_sequence_5_step_04(void)
 {
-    wmap_step_actor_animation(&g_wmap_sprite_actors[7], &g_wmap_actor_animations[7]);
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[7], g_wmap_focus_screen_position.packed, 4, 0xB, 0);
-    *(s16*)((u8*)&g_wmap_sprite_actors[7] + 0x24) = g_wmap_effect_fade_a;
-    *(s16*)((u8*)&g_wmap_sprite_actors[7] + 0x22) = g_wmap_effect_fade_a;
+    WmapSpriteActor* actor = &g_wmap_sprite_actors[7];
+
+    wmap_step_actor_animation(actor, &g_wmap_actor_animations[7]);
+    wmap_draw_actor_sprite(actor, g_wmap_focus_screen_position.packed, 4, 0xB, 0);
+    actor->shade = g_wmap_effect_fade_a;
+    actor->target_shade = g_wmap_effect_fade_a;
     g_wmap_effect_fade_a -= 4;
 
     if (g_wmap_effect_fade_a < 0)
@@ -869,14 +871,14 @@ WMAP_STEP_RESET(wmap_land_effect_13_sequence_10_reset, g_wmap_land_effect_13_seq
 /** @brief World-map step handler: prime a sub-object and advance the step counter. */
 void wmap_land_effect_13_sequence_10_step_01(void)
 {
-    u8* base;
+    WmapSpriteActor* actor;
 
     g_wmap_actor_animations[9].data = g_wmap_animation_bank_2;
-    base = (u8*)&g_wmap_sprite_actors[9];
-    *(u8*)(base + 0x6) = 0xF;
-    *(s16*)(base + 0x2) = 0;
-    *(s16*)(base + 0xE) = 0;
-    *(s16*)(base + 0x10) = -1;
+    actor = &g_wmap_sprite_actors[9];
+    actor->scale_index = WMAP_SPRITE_SCALE_FULL;
+    actor->resource_index = 0;
+    actor->sequence = 0;
+    actor->previous_sequence = -1;
     g_wmap_effect_fade_c = 0;
     g_wmap_land_effect_13_sequence_10_timer = 0x10;
     g_wmap_land_effect_13_sequence_10_step++;
@@ -902,10 +904,12 @@ WMAP_STEP_ARM_TIMER(wmap_land_effect_13_sequence_10_step_03, g_wmap_land_effect_
 /** @brief World-map step: build a sprite, decrement a shared budget, expire the timer. */
 void wmap_land_effect_13_sequence_10_step_04(void)
 {
-    wmap_step_actor_animation(&g_wmap_sprite_actors[9], &g_wmap_actor_animations[9]);
-    wmap_draw_actor_sprite(&g_wmap_sprite_actors[9], g_wmap_focus_screen_position.packed, 0x10, 0xB, 0);
-    *(s16*)((u8*)&g_wmap_sprite_actors[9] + 0x24) = g_wmap_effect_fade_c;
-    *(s16*)((u8*)&g_wmap_sprite_actors[9] + 0x22) = g_wmap_effect_fade_c;
+    WmapSpriteActor* actor = &g_wmap_sprite_actors[9];
+
+    wmap_step_actor_animation(actor, &g_wmap_actor_animations[9]);
+    wmap_draw_actor_sprite(actor, g_wmap_focus_screen_position.packed, 0x10, 0xB, 0);
+    actor->shade = g_wmap_effect_fade_c;
+    actor->target_shade = g_wmap_effect_fade_c;
     g_wmap_effect_fade_c -= 0x10;
 
     if (g_wmap_effect_fade_c < 0)

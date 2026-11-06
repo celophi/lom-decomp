@@ -454,22 +454,18 @@ GosubTilePacket* gosub_emit_panel(GosubTilePacket* prim, u_long* ot, s32 x, s32 
 {
     DR_ENV* draw_env_packet;
     GosubLinePacket* outline;
-    TILE* fill;
     DR_TPAGE* draw_mode_packet;
     DRAWENV draw_env;
-    uintptr_t working_value;
 
     draw_env_packet = (DR_ENV*)prim;
 
     if (flag != 0)
     {
-        working_value = y + 0xF2;
-        SetDefDrawEnv(&draw_env, x + 2, working_value, w - 4, h - 4);
+        SetDefDrawEnv(&draw_env, x + 2, y + 0xF2, w - 4, h - 4);
     }
     else
     {
-        working_value = y + 0xA;
-        SetDefDrawEnv(&draw_env, x + 2, working_value, w - 4, h - 4);
+        SetDefDrawEnv(&draw_env, x + 2, y + 0xA, w - 4, h - 4);
     }
 
     SetDrawEnv(draw_env_packet, &draw_env);
@@ -479,25 +475,22 @@ GosubTilePacket* gosub_emit_panel(GosubTilePacket* prim, u_long* ot, s32 x, s32 
     outline = (GosubLinePacket*)gosub_emit_panel_corners((SPRT*)draw_env_packet, ot, x, y, w, h);
     outline = gosub_emit_panel_outline(outline, ot, x, y, w, h, GPU_COLOR_WHITE);
     outline = gosub_emit_panel_outline(outline, ot, x + 1, y + 1, w - 2, h - 2, GPU_COLOR_BLACK);
-    outline = gosub_emit_panel_outline(outline, ot, x - 1, y - 1, w + 2, h + 2, GPU_COLOR_BLACK);
+    prim = (GosubTilePacket*)gosub_emit_panel_outline(outline, ot, x - 1, y - 1, w + 2, h + 2, GPU_COLOR_BLACK);
 
-    do
-    {
-        working_value = (uintptr_t)outline;
-    } while (0);
-    fill = (TILE*)working_value;
+    prim->color = 0xC0C0C0;
+    setTile(prim);
+    setSemiTrans(prim, 1);
+    prim->x = x;
+    prim->y = y;
+    prim->w = w;
+    prim->h = h;
+    addPrim(ot, prim);
 
-    SET_BGR0_PACKED(fill, 0xC0C0C0);
-    setTile(fill);
-    setSemiTrans(fill, 1);
-    setXY0(fill, x, y);
-    setWH(fill, w, h);
-    addPrim(ot, fill);
-
-    draw_mode_packet = (DR_TPAGE*)(fill + 1);
+    draw_mode_packet = (DR_TPAGE*)(prim + 1);
     setDrawTPage(draw_mode_packet, 0, 0, 0x45);
     addPrim(ot, draw_mode_packet);
-    return (GosubTilePacket*)(draw_mode_packet + 1);
+    prim = (GosubTilePacket*)(draw_mode_packet + 1);
+    return prim;
 }
 
 /**

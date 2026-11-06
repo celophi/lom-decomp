@@ -174,8 +174,6 @@ void wmap_land_effect_17_sequence_8_step_01(void)
     s32 i;
     s32 angle;
     WmapSpriteActor* actor;
-    s32 actor_offset;
-    s32 resource_offset;
     WmapAnimationSlot* resource;
     WmapMotion* motion;
 
@@ -190,12 +188,10 @@ void wmap_land_effect_17_sequence_8_step_01(void)
         motion = &g_wmap_actor_motions_at_50[i];
         motion->state = 1;
         angle = rand();
-        resource_offset = (i + 50) * 8;
-        actor_offset = i * 44;
         resources = g_wmap_actor_animations;
         resource_data = g_wmap_animation_bank_2;
-        actor = (WmapSpriteActor*)((u8*)&g_wmap_sprite_actors[50] + actor_offset);
-        resource = (WmapAnimationSlot*)((u8*)resources + resource_offset);
+        resource = &resources[i + 50];
+        actor = &WMAP_ACTOR_BLOCK(50)[i];
         motion->angle = angle & 4095;
         motion->lifetime = 128;
         motion->radius = 10;
@@ -222,8 +218,6 @@ void wmap_land_effect_17_sequence_9_step_01(void)
     s32 i;
     s32 angle;
     WmapSpriteActor* actor;
-    s32 actor_offset;
-    s32 resource_offset;
     WmapAnimationSlot* resource;
     WmapMotion* motion;
 
@@ -238,12 +232,10 @@ void wmap_land_effect_17_sequence_9_step_01(void)
         motion = &g_wmap_effect_actor_motions[i];
         motion->state = 1;
         angle = rand();
-        resource_offset = (i + 20) * 8;
-        actor_offset = i * 44;
         resources = g_wmap_actor_animations;
         resource_data = g_wmap_animation_bank_2;
-        actor = (WmapSpriteActor*)((u8*)&g_wmap_sprite_actors[20] + actor_offset);
-        resource = (WmapAnimationSlot*)((u8*)resources + resource_offset);
+        resource = &resources[i + 20];
+        actor = &WMAP_ACTOR_BLOCK(20)[i];
         motion->angle = angle & 4095;
         motion->lifetime = 128;
         motion->radius = 10;

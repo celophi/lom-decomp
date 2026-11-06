@@ -1620,18 +1620,7 @@ s32 wmap_run_loop(void)
         {
             wmap_load_image_block(block);
             block = TIM_NEXT_BLOCK(block);
-            {
-                RECT rect;
-
-                rect = TIM_BLOCK_RECT(block);
-
-                if (rect.x != -1)
-                {
-                    LoadImage(&rect, (u_long*)(block + 1));
-                    DrawSync(0);
-                    g_wmap_artifact_shadows_enabled = 1;
-                }
-            }
+            wmap_load_pixel_block(block);
         }
         else
         {

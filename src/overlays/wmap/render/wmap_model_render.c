@@ -258,10 +258,10 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
 
                 gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
                 gte_rtpt();
-                *(u16*)&ft4->u0 = attributes->uv[0];
-                *(u16*)&ft4->u1 = attributes->uv[1];
-                *(u16*)&ft4->u2 = attributes->uv[2];
-                *(u16*)&ft4->u3 = attributes->uv[3];
+                SET_UV0_PACKED(ft4, attributes->uv[0]);
+                SET_UV1_PACKED(ft4, attributes->uv[1]);
+                SET_UV2_PACKED(ft4, attributes->uv[2]);
+                SET_UV3_PACKED(ft4, attributes->uv[3]);
                 gte_stsxy01(&screen_xy0, &screen_xy1);
                 gte_stsxy2(&screen_xy2);
                 gte_nclip();
@@ -354,9 +354,9 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                 gte_rtpt();
                 ft3->tpage = tpage;
                 ft3->clut = clut;
-                *(u16*)&ft3->u0 = attributes->uv[0];
-                *(u16*)&ft3->u1 = attributes->uv[1];
-                *(u16*)&ft3->u2 = attributes->uv[2];
+                SET_UV0_PACKED(ft3, attributes->uv[0]);
+                SET_UV1_PACKED(ft3, attributes->uv[1]);
+                SET_UV2_PACKED(ft3, attributes->uv[2]);
                 gte_stsxy01(&screen_xy0, &screen_xy1);
                 gte_stsxy2(&screen_xy2);
                 gte_nclip();
@@ -711,9 +711,9 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                 gt3 = g_wmap_current_frame->packet_cursor;
                 gt3->tpage = tpage;
                 gt3->clut = clut;
-                *(u16*)&gt3->u0 = attributes->uv[0];
-                *(u16*)&gt3->u1 = attributes->uv[1];
-                *(u16*)&gt3->u2 = attributes->uv[2];
+                SET_UV0_PACKED(gt3, attributes->uv[0]);
+                SET_UV1_PACKED(gt3, attributes->uv[1]);
+                SET_UV2_PACKED(gt3, attributes->uv[2]);
                 gte_stsxy01(&screen_xy0, &screen_xy1);
                 gte_stsxy2(&screen_xy2);
                 gte_nclip();
@@ -807,13 +807,13 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                 gte_rtpt();
                 gt4->tpage = tpage;
                 gt4->clut = clut;
-                *(u16*)&gt4->u0 = attributes->uv[0];
-                *(u16*)&gt4->u1 = attributes->uv[1];
-                *(u16*)&gt4->u2 = attributes->uv[2];
+                SET_UV0_PACKED(gt4, attributes->uv[0]);
+                SET_UV1_PACKED(gt4, attributes->uv[1]);
+                SET_UV2_PACKED(gt4, attributes->uv[2]);
                 gte_stsxy01(&screen_xy0, &screen_xy1);
                 gte_stsxy2(&screen_xy2);
                 gte_nclip();
-                *(u16*)&gt4->u3 = attributes->uv[3];
+                SET_UV3_PACKED(gt4, attributes->uv[3]);
                 gte_stopz(&face_order);
 
                 if (draw_backfaces == 0)

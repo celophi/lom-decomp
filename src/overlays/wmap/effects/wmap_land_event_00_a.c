@@ -1,6 +1,7 @@
 #include "common.h"
 #include <libgte.h>
 
+#include "../internal/wmap_actor_motion.h"
 #include "../internal/wmap_effect_primitives.h"
 #include "../internal/wmap_effect_resources.h"
 #include "../internal/wmap_frame_render.h"
@@ -15,13 +16,6 @@
 #include "../internal/wmap_view_effects.h"
 #include "common/saved_game.h"
 #include "main/cdrom.h"
-
-/** @brief Event actor state at the start of its parameter block. */
-typedef struct
-{
-    u8 pad[0x78];
-    s32 state;
-} WmapEventActorState;
 
 /** @brief Three color channels. */
 typedef struct
@@ -50,7 +44,6 @@ extern WmapSequenceStep g_wmap_land_event_00_a_sequence_6_steps[];
 extern WmapSequenceStep g_wmap_land_event_00_a_sequence_7_steps[];
 extern WmapSequenceStep g_wmap_land_event_00_a_sequence_8_steps[];
 extern u32 g_wmap_land_event_00_a_step;
-extern u8 g_wmap_actor_motions[];
 extern u32 g_wmap_land_event_00_a_sequence_4_step;
 extern s32 g_wmap_load_buffer[];
 extern u32 g_wmap_land_event_00_a_sequence_5_step;
@@ -93,9 +86,9 @@ void wmap_land_event_00_a_step_01(void)
  */
 void wmap_land_event_00_a_sequence_4_step_01(void)
 {
-    s16* slot;
-    u8* resource_cursor;
-    u8* actor;
+    WmapMotion* motion;
+    WmapAnimationSlot* animation;
+    s32* params;
     void* resource;
     s32 index;
     s32 setting;
@@ -103,32 +96,32 @@ void wmap_land_event_00_a_sequence_4_step_01(void)
 
     index = 0x14;
     resource = g_wmap_animation_bank_2;
-    resource_cursor = (u8*)&g_wmap_actor_animations + index * 8;
-    slot = (s16*)((u8*)&g_wmap_actor_motions + index * 20);
+    animation = &g_wmap_actor_animations[index];
+    motion = &g_wmap_actor_motions[index];
 
     for (; index < 0x78; index++)
     {
-        *slot = 0;
-        ((WmapAnimationSlot*)resource_cursor)->data = resource;
-        resource_cursor += 8;
-        slot += 0xA;
+        motion->state = 0;
+        animation->data = resource;
+        animation++;
+        motion++;
     }
 
     g_wmap_land_event_00_a_sequence_4_timer = 0xE1;
-    actor = (u8*)g_wmap_effect_params;
-    *(s32*)(actor + 0x7C) = setting = 5;
-    *(s32*)(actor + 0x8C) = setting;
-    ((WmapEventActorState*)actor)->state = 1;
-    *(s32*)(actor + 0x7C) = setting;
+    params = g_wmap_effect_params;
+    params[31] = setting = 5;
+    params[35] = setting;
+    params[30] = 1;
+    params[31] = setting;
     current = g_wmap_land_event_00_a_sequence_4_step;
-    *(s32*)(actor + 0x80) = -0x3E8;
-    *(s32*)(actor + 0x84) = 0x1770;
-    *(s32*)(actor + 0x88) = 0x1388;
-    *(s32*)(actor + 0x90) = -0x64;
-    *(s32*)(actor + 0x98) = -0x12C;
-    *(s32*)(actor + 0x94) = 0;
-    *(s32*)(actor + 0xA0) = -1;
-    *(s32*)(actor + 0xA4) = 0;
+    params[32] = -0x3E8;
+    params[33] = 0x1770;
+    params[34] = 0x1388;
+    params[36] = -0x64;
+    params[38] = -0x12C;
+    params[37] = 0;
+    params[40] = -1;
+    params[41] = 0;
     g_wmap_land_event_00_a_sequence_4_step = current + 1;
     wmap_land_event_00_a_sequence_4_step_02();
 }

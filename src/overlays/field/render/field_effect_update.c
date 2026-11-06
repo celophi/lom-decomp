@@ -4040,7 +4040,7 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
                         value0 += (uintptr_t)texture_slot_flags;
                         value1 = ((*(u16*)value0 & 3) << 7) | ((part->behavior_flags.word >> FIELD_PART_BLEND_TPAGE_SHIFT) & GPU_TPAGE_BLEND_MASK);
                         value1 |= 5;
-                        ((POLY_FT4*)packet_cursor)->tpage = value1;
+                        *(s16*)&((POLY_FT4*)packet_cursor)->tpage = value1;
                     }
                 }
                 else
