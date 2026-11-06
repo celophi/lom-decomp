@@ -445,12 +445,12 @@ void cload_scroll_to_selection(void)
     if (relative_y > CLOAD_LIST_HEIGHT - CARD_MENU_ENTRY_ROW_HEIGHT)
     {
         g_card_menu_scroll_target_y = row_y - CLOAD_LIST_LAST_ROW_Y;
-        g_card_menu_scroll_frames = CARD_MENU_SCROLL_FRAMES;
+        g_card_menu_scroll_frames = LIST_SCROLL_FRAMES;
     }
     if (relative_y < 0)
     {
         g_card_menu_scroll_target_y = g_card_menu_selected_row * CARD_MENU_ENTRY_ROW_HEIGHT;
-        g_card_menu_scroll_frames = CARD_MENU_SCROLL_FRAMES;
+        g_card_menu_scroll_frames = LIST_SCROLL_FRAMES;
     }
 }
 
@@ -581,7 +581,7 @@ void* cload_draw_entry_list(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
 
         if (g_card_menu_entry_scan_active == 0)
         {
-            TILE* tile = (TILE*)prim;
+            TILE* tile = prim;
 
             SET_BGR0_PACKED(tile, GPU_COLOR_SELECTED_ROW);
             setTile(tile);

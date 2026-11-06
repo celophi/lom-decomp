@@ -64,6 +64,7 @@ void gosub_close_elements(void)
     s32 i;
 
     element = g_gosub_elements;
+
     for (i = 0; i < GOSUB_ELEMENT_COUNT; i++)
     {
         if (element->attr.f.state != GOSUB_ELEMENT_STATE_INACTIVE)
@@ -71,6 +72,7 @@ void gosub_close_elements(void)
             element->attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
             element->attr.f.transition_step = 8;
         }
+
         element++;
     }
 }
@@ -95,6 +97,7 @@ void gosub_clear_elements(void)
     s32 i;
 
     element = g_gosub_elements;
+
     for (i = 0; i < GOSUB_ELEMENT_COUNT; i++)
     {
         element->attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
@@ -113,6 +116,7 @@ GosubElement* gosub_allocate_element(void)
     s32 i;
 
     element = &g_gosub_elements[1];
+
     for (i = 1; i < GOSUB_ELEMENT_COUNT; i++)
     {
         if (element->attr.f.state == GOSUB_ELEMENT_STATE_INACTIVE)
@@ -120,6 +124,7 @@ GosubElement* gosub_allocate_element(void)
             element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
             return element;
         }
+
         element++;
     }
 
@@ -179,6 +184,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
     for (; element_index < GOSUB_ELEMENT_COUNT; element_index++)
     {
         element_word = element->attr.word;
+
         if (element->attr.f.state != GOSUB_ELEMENT_STATE_INACTIVE)
         {
             if ((GosubElementDrawHandler)element->draw_handler == (GosubElementDrawHandler)gosub_draw_item_list)
@@ -187,6 +193,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                 element_height = (geometry_word >> 1) & 0xFF;
 
                 content_height = g_gosub_row_count * g_gosub_row_height;
+
                 if ((g_gosub_scroll_y + element_height) < content_height)
                 {
                     u32 x = (element_word >> 7) & 0x1FF;
@@ -195,6 +202,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                     packet_cursor = gosub_emit_scroll_marker((GosubScrollMarkerPacket*)packet_cursor, ordering_table,
                                                              (x + (((geometry_word & 1) << 8) | width_low)) - 16, element->attr.f.y + element_height, 0);
                 }
+
                 if (g_gosub_scroll_y != 0)
                 {
                     s32 x = element->attr.f.x;
@@ -202,6 +210,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
 
                     packet_cursor = gosub_emit_scroll_marker((GosubScrollMarkerPacket*)packet_cursor, ordering_table, x + width - 16, element->attr.f.y, 1);
                 }
+
                 SetDrawEnv((DR_ENV*)packet_cursor, &draw_env);
                 addPrim(ordering_table, packet_cursor);
                 packet_cursor = (GosubTilePacket*)((DR_ENV*)packet_cursor + 1);
@@ -221,16 +230,19 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                         initial_height = (s16)*bar_height;
                         working_word = element->geometry.word;
                         visible_height = ((u32)working_word >> 1) & 0xFF;
+
                         if (initial_height >= visible_height - 2)
                         {
                             *bar_height = visible_height;
                         }
                     }
+
                     packet_cursor->x = 1;
                     packet_cursor->y = (element->geometry.f.height * (g_gosub_scroll_y / g_gosub_row_height)) / g_gosub_row_count;
                     addPrim(ordering_table, packet_cursor);
                     packet_cursor++;
                 }
+
                 {
                     s32 x = element->attr.f.x;
                     s32 width = gosub_element_width(element);
@@ -239,6 +251,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                                                      render_context->display_buffer_index);
                 }
             }
+
             SetDrawEnv((DR_ENV*)packet_cursor, &draw_env);
             addPrim(ordering_table, packet_cursor);
 
@@ -248,80 +261,90 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
 
             switch (element->attr.f.state)
             {
-            case GOSUB_ELEMENT_STATE_ENTERING:
-                geometry = element->geometry.word;
-                element_width = ((geometry & 1) << 8) | (state_word >> 24);
-                entering_step = (state_word >> 3) & 0xF;
-                entering_scaled_width = element_width * entering_step;
-                if (entering_scaled_width < 0)
-                {
-                    entering_scaled_width += 7;
-                }
-                entering_full_height = (geometry >> 1) & 0xFF;
-                entering_scaled_height = entering_full_height * entering_step;
-                animated_width = entering_scaled_width >> 3;
-                animated_height = entering_scaled_height / GOSUB_ELEMENT_FULL_STEP;
-                entering_remaining_height = (s32)(entering_full_height - animated_height);
+                case GOSUB_ELEMENT_STATE_ENTERING:
+                    geometry = element->geometry.word;
+                    element_width = ((geometry & 1) << 8) | (state_word >> 24);
+                    entering_step = (state_word >> 3) & 0xF;
+                    entering_scaled_width = element_width * entering_step;
 
-                packet_cursor = (GosubTilePacket*)((GosubElementDrawHandler)element->draw_handler)(ordering_table, (u8*)packet_cursor, (s32)(element_width - animated_width) / 2,
-                                                                                 entering_remaining_height / 2);
-                {
-                    s32 x = element->attr.f.x;
-                    s32 width = gosub_element_width(element);
+                    if (entering_scaled_width < 0)
+                    {
+                        entering_scaled_width += 7;
+                    }
 
-                    packet_cursor = gosub_emit_panel(packet_cursor, ordering_table, x + (width - animated_width) / 2,
-                                                     element->attr.f.y + ((s32)element->geometry.f.height - animated_height) / 2, animated_width,
-                                                     animated_height, render_context->display_buffer_index);
-                }
-                element->attr.f.transition_step++;
-                if (element->attr.f.transition_step == GOSUB_ELEMENT_FULL_STEP)
-                {
-                    element->attr.f.state = GOSUB_ELEMENT_STATE_ACTIVE;
-                }
-                break;
+                    entering_full_height = (geometry >> 1) & 0xFF;
+                    entering_scaled_height = entering_full_height * entering_step;
+                    animated_width = entering_scaled_width >> 3;
+                    animated_height = entering_scaled_height / GOSUB_ELEMENT_FULL_STEP;
+                    entering_remaining_height = (s32)(entering_full_height - animated_height);
 
-            case GOSUB_ELEMENT_STATE_ACTIVE:
-                packet_cursor = (GosubTilePacket*)((GosubElementDrawHandler)element->draw_handler)(ordering_table, (u8*)packet_cursor, 0, 0);
-                packet_cursor = gosub_emit_panel(packet_cursor, ordering_table, element->attr.f.x, element->attr.f.y, gosub_element_width(element),
-                                                 element->geometry.f.height, render_context->display_buffer_index);
-                break;
+                    packet_cursor = (GosubTilePacket*)((GosubElementDrawHandler)element->draw_handler)(
+                        ordering_table, (u8*)packet_cursor, (s32)(element_width - animated_width) / 2, entering_remaining_height / 2);
+                    {
+                        s32 x = element->attr.f.x;
+                        s32 width = gosub_element_width(element);
 
-            case GOSUB_ELEMENT_STATE_EXITING:
-                geometry = element->geometry.word;
-                element_width = ((geometry & 1) << 8) | (state_word >> 24);
-                exiting_step = (state_word >> 3) & 0xF;
-                exiting_scaled_width = element_width * exiting_step;
-                if (exiting_scaled_width < 0)
-                {
-                    exiting_scaled_width += 7;
-                }
-                exiting_full_height = (geometry >> 1) & 0xFF;
-                exiting_scaled_height = exiting_full_height * exiting_step;
-                animated_width = exiting_scaled_width >> 3;
-                animated_height = exiting_scaled_height / GOSUB_ELEMENT_FULL_STEP;
-                exiting_remaining_height = (s32)(exiting_full_height - animated_height);
+                        packet_cursor = gosub_emit_panel(packet_cursor, ordering_table, x + (width - animated_width) / 2,
+                                                         element->attr.f.y + ((s32)element->geometry.f.height - animated_height) / 2, animated_width,
+                                                         animated_height, render_context->display_buffer_index);
+                    }
 
-                packet_cursor = (GosubTilePacket*)((GosubElementDrawHandler)element->draw_handler)(ordering_table, (u8*)packet_cursor, (s32)(element_width - animated_width) / 2,
-                                                                                 exiting_remaining_height / 2);
-                {
-                    s32 x = element->attr.f.x;
-                    s32 width = gosub_element_width(element);
+                    element->attr.f.transition_step++;
 
-                    packet_cursor = gosub_emit_panel(packet_cursor, ordering_table, x + (width - animated_width) / 2,
-                                                     element->attr.f.y + ((s32)element->geometry.f.height - animated_height) / 2, animated_width,
-                                                     animated_height, render_context->display_buffer_index);
-                }
-                element->attr.f.transition_step--;
-                if (element->attr.f.transition_step == 0)
-                {
-                    element->attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
-                }
-                g_gosub_dialog_accepting_input = 0;
-                break;
+                    if (element->attr.f.transition_step == GOSUB_ELEMENT_FULL_STEP)
+                    {
+                        element->attr.f.state = GOSUB_ELEMENT_STATE_ACTIVE;
+                    }
+
+                    break;
+
+                case GOSUB_ELEMENT_STATE_ACTIVE:
+                    packet_cursor = (GosubTilePacket*)((GosubElementDrawHandler)element->draw_handler)(ordering_table, (u8*)packet_cursor, 0, 0);
+                    packet_cursor = gosub_emit_panel(packet_cursor, ordering_table, element->attr.f.x, element->attr.f.y, gosub_element_width(element),
+                                                     element->geometry.f.height, render_context->display_buffer_index);
+                    break;
+
+                case GOSUB_ELEMENT_STATE_EXITING:
+                    geometry = element->geometry.word;
+                    element_width = ((geometry & 1) << 8) | (state_word >> 24);
+                    exiting_step = (state_word >> 3) & 0xF;
+                    exiting_scaled_width = element_width * exiting_step;
+
+                    if (exiting_scaled_width < 0)
+                    {
+                        exiting_scaled_width += 7;
+                    }
+
+                    exiting_full_height = (geometry >> 1) & 0xFF;
+                    exiting_scaled_height = exiting_full_height * exiting_step;
+                    animated_width = exiting_scaled_width >> 3;
+                    animated_height = exiting_scaled_height / GOSUB_ELEMENT_FULL_STEP;
+                    exiting_remaining_height = (s32)(exiting_full_height - animated_height);
+
+                    packet_cursor = (GosubTilePacket*)((GosubElementDrawHandler)element->draw_handler)(
+                        ordering_table, (u8*)packet_cursor, (s32)(element_width - animated_width) / 2, exiting_remaining_height / 2);
+                    {
+                        s32 x = element->attr.f.x;
+                        s32 width = gosub_element_width(element);
+
+                        packet_cursor = gosub_emit_panel(packet_cursor, ordering_table, x + (width - animated_width) / 2,
+                                                         element->attr.f.y + ((s32)element->geometry.f.height - animated_height) / 2, animated_width,
+                                                         animated_height, render_context->display_buffer_index);
+                    }
+
+                    element->attr.f.transition_step--;
+
+                    if (element->attr.f.transition_step == 0)
+                    {
+                        element->attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
+                    }
+
+                    g_gosub_dialog_accepting_input = 0;
+                    break;
             }
         }
 
-        element += 1;
+        element++;
     }
 
     render_context->packet_cursor = packet_cursor;
@@ -348,6 +371,7 @@ void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, u_long* ot, s32 x,
     setlen(prim, 6);
     setcode(prim, 0x4C);
     prim->mask = 0x55555555;
+
     if (g_frame_counter & 0x10)
     {
         pulse_value = g_frame_counter & 0xF;
@@ -356,11 +380,13 @@ void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, u_long* ot, s32 x,
     {
         pulse_value = (~g_frame_counter) & 0xF;
     }
+
     working_y = pulse_value * 4;
     pulse_value = working_y + 0x70;
     prim->b = pulse_value;
     prim->g = pulse_value;
     prim->r = pulse_value;
+
     if (flag != 0)
     {
         pulse_value = y - 8;
@@ -397,11 +423,12 @@ void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, u_long* ot, s32 x,
     setaddr(source_bytes, getaddr(ot) & addr_mask);
     i = 0;
     setaddr(ot, (uintptr_t)source_bytes & addr_mask);
+
     while (i < sizeof(GosubScrollFillPacket))
     {
-        i += 1;
+        i++;
         *(u8*)prim = *source_bytes;
-        source_bytes += 1;
+        source_bytes++;
         prim = (GosubScrollMarkerPacket*)((u8*)prim + 1);
     }
 
@@ -433,6 +460,7 @@ GosubTilePacket* gosub_emit_panel(GosubTilePacket* prim, u_long* ot, s32 x, s32 
     uintptr_t working_value;
 
     draw_env_packet = (DR_ENV*)prim;
+
     if (flag != 0)
     {
         working_value = y + 0xF2;
@@ -443,6 +471,7 @@ GosubTilePacket* gosub_emit_panel(GosubTilePacket* prim, u_long* ot, s32 x, s32 
         working_value = y + 0xA;
         SetDefDrawEnv(&draw_env, x + 2, working_value, w - 4, h - 4);
     }
+
     SetDrawEnv(draw_env_packet, &draw_env);
     addPrim(ot, draw_env_packet);
     draw_env_packet++;
@@ -451,6 +480,7 @@ GosubTilePacket* gosub_emit_panel(GosubTilePacket* prim, u_long* ot, s32 x, s32 
     outline = gosub_emit_panel_outline(outline, ot, x, y, w, h, GPU_COLOR_WHITE);
     outline = gosub_emit_panel_outline(outline, ot, x + 1, y + 1, w - 2, h - 2, GPU_COLOR_BLACK);
     outline = gosub_emit_panel_outline(outline, ot, x - 1, y - 1, w + 2, h + 2, GPU_COLOR_BLACK);
+
     do
     {
         working_value = (uintptr_t)outline;
@@ -776,6 +806,7 @@ u8* gosub_draw_block_preview(u_long* ot, u8* initial_prim, s32 x_off, s32 y_off)
 
     g_gosub_block_id = 0;
     prim = initial_prim;
+
     if (g_gosub_selection_count != 0)
     {
         if (g_gosub_cursor_row != g_gosub_selected_rows[0])
@@ -785,18 +816,22 @@ u8* gosub_draw_block_preview(u_long* ot, u8* initial_prim, s32 x_off, s32 y_off)
             g_gosub_block_id = golem_find_logic_block_recipe(pair, &g_gosub_block_level, &g_gosub_block_shape);
         }
     }
+
     if (g_gosub_block_id != 0)
     {
         prim = gosub_draw_composite_icon(prim, ot, GOSUB_LIST_MARGIN_X - x_off, -y_off, g_gosub_block_id, g_gosub_block_shape);
         name_cursor = result_name;
         encoded_text_copy(name_cursor, GOSUB_TEXT(GOSUB_TEXT_LOGIC_BLOCK_NAMES, g_gosub_block_id));
+
         if (g_gosub_block_level != 0)
         {
             encoded_text_append(name_cursor, FIELD_UI_TEXT_AT(D_800EC3DA, FIELD_UI_TEXT_PLUS));
             field_format_number(number_text, g_gosub_block_level, 1);
             encoded_text_append(name_cursor, number_text);
         }
+
         prim = field_draw_text((SPRT*)prim, ot, name_cursor, 4, GOSUB_BLOCK_NAME_X - x_off, 0xA - y_off, FIELD_TEXT_ALIGN_LEFT);
     }
+
     return prim;
 }

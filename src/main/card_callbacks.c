@@ -1,5 +1,5 @@
-#include "main/card_callbacks.h"
 #include "common/saved_game.h"
+#include "main/card_callbacks.h"
 
 /**
  * @brief Fill the PocketStation pet-transfer resource: the pet record, cleared
@@ -33,12 +33,15 @@ void card_prepare_pet_transfer(u8* resource, PetRecord* pet)
     transfer->growth_delta = 0;
     transfer->reward_count = 0;
     destination = transfer->rewards;
+
     for (i = CARD_REWARD_COUNT - 1; i != -1; i--)
     {
         *destination++ = 0;
     }
+
     destination = (u8*)&transfer->pet;
     source = (u8*)pet;
+
     for (i = sizeof(PetRecord) - 1; i != -1; i--)
     {
         *destination++ = *source++;
@@ -50,6 +53,7 @@ void card_prepare_pet_transfer(u8* resource, PetRecord* pet)
     land_id = 1;
     early_land_count = 0;
     land_count = 0;
+
     do
     {
         if (land_id == FIELD_LAND_UNUSED_14 || land_id == FIELD_LAND_UNUSED_20 || land_id == FIELD_LAND_UNUSED_22 || land_id == FIELD_LAND_UNUSED_28 ||
@@ -59,9 +63,11 @@ void card_prepare_pet_transfer(u8* resource, PetRecord* pet)
         }
 
         enabled = 0;
+
         if (land_id == FIELD_LAND_LUCEMIA)
         {
             land = &g_saved_game.layout.lands[FIELD_LAND_LUCEMIA_2];
+
             if (land->flags & FIELD_LAND_FLAG_04)
             {
                 enabled = 1;
@@ -69,7 +75,8 @@ void card_prepare_pet_transfer(u8* resource, PetRecord* pet)
             else
             {
                 land = &g_saved_game.layout.lands[FIELD_LAND_LUCEMIA];
-                if (land->flags & FIELD_LAND_FLAG_02)
+
+                if (land->flags & FIELD_LAND_PLACED)
                 {
                     enabled = 1;
                 }
@@ -85,7 +92,8 @@ void card_prepare_pet_transfer(u8* resource, PetRecord* pet)
             {
                 land = &g_saved_game.layout.lands[land_id];
             }
-            if (land->flags & FIELD_LAND_FLAG_02)
+
+            if (land->flags & FIELD_LAND_PLACED)
             {
                 enabled = 1;
             }
@@ -95,29 +103,35 @@ void card_prepare_pet_transfer(u8* resource, PetRecord* pet)
         {
             land_bits |= land_bit;
             land_count++;
+
             if (land_id < CARD_FIRST_SPIRIT_LAND)
             {
                 early_land_count++;
             }
         }
+
         land_bit <<= 1;
 
         if (land_id >= CARD_FIRST_SPIRIT_LAND)
         {
             /* Each spirit's bit enters at the top and shifts down, so spirit n ends in bit n. */
             spirit_mask = 0;
+
             if (enabled)
             {
                 level = land->levels;
+
                 for (i = FIELD_LAND_SPIRIT_COUNT - 1; i != -1; i--)
                 {
                     if (*level++ == FIELD_LAND_SPIRIT_MAX)
                     {
                         spirit_mask |= 1 << FIELD_LAND_SPIRIT_COUNT;
                     }
+
                     spirit_mask >>= 1;
                 }
             }
+
             *maxed_spirits++ = spirit_mask;
         }
     } while (land_id++ < CARD_LAST_LAND);

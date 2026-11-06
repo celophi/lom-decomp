@@ -2,6 +2,7 @@
 #define WMAP_RESOURCE_SUPPORT_H
 
 #include "common.h"
+
 #include "main/audio/akao.h"
 
 /** @brief One-based world-map sound numbers (wmap_play_sound; entry n - 1 of g_wmap_sfx_buffers). */
@@ -28,7 +29,7 @@ enum WmapSound
 /** @brief Sound-effect buffer of each world-map sound; entry n - 1 plays sound n. */
 extern AkaoHeader* g_wmap_sfx_buffers[];
 
-void func_80064F14();
+void wmap_report_error();
 void wmap_copy_words(s32* source, s32* destination, s32 byte_count);
 void func_80064F5C(void);
 void wmap_load_tim_file(s32 resource_index);
@@ -40,6 +41,9 @@ void wmap_clear_framebuffers(void);
 void wmap_queue_texture_page(s32 texture_page, s32 depth);
 void wmap_init_actor_display_states(void);
 s32 wmap_get_controller_repeat_buttons(void);
+
+/** @brief Size of one animation bank; g_wmap_animation_bank_0 holds several in a row. */
+#define WMAP_ANIMATION_BANK_SIZE 0x2000
 
 /** @brief Load targets for effect animations, textures and models. */
 extern u8 g_wmap_animation_bank_0[];

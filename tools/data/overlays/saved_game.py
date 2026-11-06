@@ -202,7 +202,7 @@ def layout(raw: bytes, read_text: TextReader, two_byte_codes: frozenset[int]) ->
         land = raw[at["lands"] + index * LAND_SIZE : at["lands"] + (index + 1) * LAND_SIZE]
         if any(land):
             lands.append({"index": index, "flags": f"0x{land[0]:02X}", "x": land[1] & 15, "z": land[1] >> 4,
-                          "unk2": land[2], "count": land[3], "levels": list(land[4:])})
+                          "placement_order": land[2], "artifact_order": land[3], "levels": list(land[4:])})
     characters = []
     for slot in range(PARTY_SIZE):
         start = at["characters"] + slot * CHARACTER_SIZE
@@ -233,7 +233,7 @@ def layout(raw: bytes, read_text: TextReader, two_byte_codes: frozenset[int]) ->
         "guest_loaded": word("guest_loaded", "<H"),
         "world_map_cell": word("world_map_cell", "<i"),
         "words": {f"0x{index:02X}": value for index, value in enumerate(words) if value},
-        "control": {"placed_land_count": control & 0xFF, "hero_level": (control >> 8) & 0xFF,
+        "control": {"artifact_count": control & 0xFF, "placed_land_count": (control >> 8) & 0xFF,
                     "weekday": (control >> 16) & 0x7F, "high_bits": control >> 23},
         "flag_bits": [f"0x{value:08X}" for value in struct.unpack_from("<2I", raw, at["flag_bits"])],
         "lands": lands,

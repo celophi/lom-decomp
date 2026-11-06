@@ -3,10 +3,11 @@
  * @brief Actor record lookup and allocation, reward pickup and resource lookup.
  */
 
-#include "main/audio/game_audio.h"
 #include "common.h"
+
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
+#include "main/audio/game_audio.h"
 
 /** @brief FieldActorRecord::pickup bits 0-7: counter index of a counter pickup. */
 #define FIELD_PICKUP_INDEX_MASK 0xFF
@@ -38,7 +39,6 @@ typedef struct
 
 FieldStatusState* field_find_object_state(s32 actor_id);
 u32* field_get_scene_record_table(void);
-u8* field_find_free_inventory_record(void);
 void field_append_dialog_item(u8* text, u8 quantity);
 FieldActorRecord* field_find_actor_record_or_default(s32 id);
 FieldActorRecord* field_find_actor_record(s32 id);
@@ -58,8 +58,8 @@ void field_grant_actor_pickup(s32 recipient, s32 owner_id)
     s32 index;
     FieldRewardEntry* table;
     FieldBattleContext* battle;
-    u8* found;
-    u8* handle;
+    FieldItemRecord* found;
+    FieldItemRecord* handle;
 
     actor = field_find_actor_record_or_default(owner_id);
     code = actor->pickup;
@@ -78,7 +78,7 @@ void field_grant_actor_pickup(s32 recipient, s32 owner_id)
         }
 
         battle = g_field_battle;
-        found = ((FieldRewardEntry*)(index * sizeof(FieldRewardEntry) + (uintptr_t)battle->resources))->item;
+        found = (FieldItemRecord*)((FieldRewardEntry*)(index * sizeof(FieldRewardEntry) + (uintptr_t)battle->resources))->item;
         handle = field_find_free_inventory_record();
 
         if (handle == NULL)
@@ -87,7 +87,7 @@ void field_grant_actor_pickup(s32 recipient, s32 owner_id)
         }
 
         field_copy_inventory_record(handle, found);
-        field_append_dialog_item((u8*)handle, 0);
+        field_append_dialog_item(handle->name, 0);
         return;
     }
 
@@ -105,8 +105,8 @@ void field_grant_actor_pickup(s32 recipient, s32 owner_id)
     FieldRewardEntry* cursor;
     s32 offset;
     s32 old_offset;
-    u8* found;
-    u8* handle;
+    FieldItemRecord* found;
+    FieldItemRecord* handle;
 
     actor = field_find_actor_record_or_default(owner_id);
     code = actor->pickup;
@@ -151,7 +151,7 @@ void field_grant_actor_pickup(s32 recipient, s32 owner_id)
 
                     if (cursor->key == key)
                     {
-                        found = (u8*)(old_offset + (uintptr_t)base + 8);
+                        found = (FieldItemRecord*)(old_offset + (uintptr_t)base + 8);
                         break;
                     }
 
@@ -160,7 +160,7 @@ void field_grant_actor_pickup(s32 recipient, s32 owner_id)
                         cursor++;
                     } while (0);
                     offset = old_offset + sizeof(FieldRewardEntry);
-                    index += 1;
+                    index++;
                 } while (index < n);
             }
         } while (0);
@@ -178,7 +178,7 @@ void field_grant_actor_pickup(s32 recipient, s32 owner_id)
         }
 
         field_copy_inventory_record(handle, found);
-        field_append_dialog_item((u8*)handle, 0);
+        field_append_dialog_item(handle->name, 0);
         return;
     }
 

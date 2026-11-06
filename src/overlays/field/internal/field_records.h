@@ -16,8 +16,9 @@
  */
 
 #include "common.h"
-#include "field_menu_vars.h"
+
 #include "common/saved_game.h"
+#include "field_menu_vars.h"
 #include "field_state_ops.h"
 
 /** @brief g_saved_game.layout, bound by field_bind_runtime_pointers. */
@@ -25,7 +26,8 @@ extern SavedGameLayout* g_field_game_state;
 
 #define FIELD_ACTOR_RECORD_COUNT 16
 #define FIELD_EVENT_RECORD_COUNT 2
-/** @brief Actor ids from this one up name the event records (FieldRuntimeContext::events): event record n is this plus n; record 0 runs the field's own event scripts. */
+/** @brief Actor ids from this one up name the event records (FieldRuntimeContext::events): event record n is this plus n; record 0 runs the field's own event
+ * scripts. */
 #define FIELD_EVENT_ACTOR_ID_BASE 0x80
 #define FIELD_ACTOR_SCRIPT_COUNT 16
 #define FIELD_SCRIPT_FRAME_COUNT 8
@@ -47,27 +49,15 @@ extern SavedGameLayout* g_field_game_state;
 /** @brief Value of an empty pending-effect slot in PetRecord::status. */
 #define FIELD_NO_EFFECT 0xFF
 
+/** @brief Value of a pending-effect slot whose effect was cleared; free for a new effect. */
+#define FIELD_EFFECT_CLEARED 0xFE
+
 /**
  * @brief View of a pet record shifted by @p bytes bytes.
  * @note Element 0 of a byte array member of the view is element @p bytes of the real
  *       record.
  */
 #define FIELD_PET_AT(record, bytes) ((PetRecord*)((u8*)(record) + (bytes)))
-
-/**
- * @brief Experience a character or stored companion needs to advance from @p level.
- * @param level Current level.
- * @return 10 * level * (2 * level - 1); JP: 5 * level * (5 * level - 2).
- * @note JP uses a steeper curve.
- */
-static inline s32 field_level_threshold(s32 level)
-{
-#if defined(VERSION_JP)
-    return (level - 1) * (level * 24 + level) + level * 15;
-#else
-    return (level - 1) * ((level * 5) << 2) + ((level * 5) << 1);
-#endif
-}
 
 #define FIELD_STAGING_LEVEL_COUNT 8
 #define FIELD_STAGING_STAT_COUNT 8
@@ -628,6 +618,10 @@ typedef struct FieldActionDescriptor
     FieldActionParams params;
 } FieldActionDescriptor;
 
+/** @brief Kind of an action descriptor (low nibble of its first word). */
+#define FIELD_DESCRIPTOR_KIND_MASK 0xF
+#define FIELD_DESCRIPTOR_KIND(descriptor) ((descriptor)->info.word & FIELD_DESCRIPTOR_KIND_MASK)
+
 /**
  * @brief Action descriptor bank (g_field_default_action_bank, reached through g_field_action_bank).
  * @note Holds four descriptor tables, located by byte offsets from the bank start.
@@ -701,14 +695,14 @@ extern FieldBattleContext* g_field_battle;
 #define FIELD_BATTLE_FINISHED 0x80000000
 
 /** @brief FIELD diagnostic codes passed to record_game_diagnostic. */
-#define DIAG_SCRIPT_FRAME_OVERFLOW 2 /**< A script pushed past its last frame. */
-#define DIAG_BAD_MONSTER_OBJECT 0x64 /**< A monster group member has no object state. */
-#define DIAG_BAD_COMMAND 0x66        /**< Unknown command in a character's command slot. */
-#define DIAG_NO_MONSTER_TEMPLATE 0x67 /**< No monster template has the requested id. */
-#define DIAG_BAD_MONSTER_ACTION 0x69 /**< Monster action id past the end of its template's list. */
-#define DIAG_BAD_GUEST 0x6D          /**< No guest template for the requested guest. */
-#define DIAG_BAD_COMPANION 0x6E      /**< The requested stored companion does not exist. */
-#define DIAG_BAD_LAND 0x73           /**< Land index past the land table. */
+#define DIAG_SCRIPT_FRAME_OVERFLOW 2         /**< A script pushed past its last frame. */
+#define DIAG_BAD_MONSTER_OBJECT 0x64         /**< A monster group member has no object state. */
+#define DIAG_BAD_COMMAND 0x66                /**< Unknown command in a character's command slot. */
+#define DIAG_NO_MONSTER_TEMPLATE 0x67        /**< No monster template has the requested id. */
+#define DIAG_BAD_MONSTER_ACTION 0x69         /**< Monster action id past the end of its template's list. */
+#define DIAG_BAD_GUEST 0x6D                  /**< No guest template for the requested guest. */
+#define DIAG_BAD_COMPANION 0x6E              /**< The requested stored companion does not exist. */
+#define DIAG_BAD_LAND 0x73                   /**< Land index past the land table. */
 #define DIAG_MISSING_EFFECT_THRESHOLDS 0x3E7 /**< The effect threshold resource (0x10) is not loaded. */
 
 /** @brief Script variables holding the resource variant of the guest and companion actors. */
@@ -754,9 +748,9 @@ extern FieldBattleContext* g_field_battle;
 #define FIELD_DIFFICULTY_NORMAL 0
 #define FIELD_DIFFICULTY_HARD 1
 #define FIELD_DIFFICULTY_HARDEST 2
-/** @brief Script variable: bit 7 bases every monster level on the hero's level. */
+/** @brief Script variable: bit 7 bases every monster level on the placed land count. */
 #define FIELD_VAR_LEVEL_FLAGS 0x52F0
-#define FIELD_LEVEL_FLAG_HERO 0x80
+#define FIELD_LEVEL_FLAG_LAND_COUNT 0x80
 /** @brief Script variables: lowest and highest monster level. */
 #define FIELD_VAR_MONSTER_LEVEL_MIN 0x52E0
 #define FIELD_VAR_MONSTER_LEVEL_MAX 0x52E8
@@ -785,11 +779,25 @@ extern FieldBattleContext* g_field_battle;
 #define FIELD_REGION_APPLIED_BITS 7
 #define FIELD_REGION_APPLIED_MASK (FIELD_REGION_APPLIED_BITS << FIELD_REGION_APPLIED_SHIFT)
 
-
 /** @brief Item argument of field_spawn_item_record that releases the item actor's record instead of spawning it. */
 #define FIELD_ITEM_RELEASE 0xFF
 
 /** @brief field_find_resource id of the item template table. */
 #define FIELD_RESOURCE_ITEM_TEMPLATES 5
+
+/**
+ * @brief Experience a character or stored companion needs to advance from @p level.
+ * @param level Current level.
+ * @return 10 * level * (2 * level - 1); JP: 5 * level * (5 * level - 2).
+ * @note JP uses a steeper curve.
+ */
+static inline s32 field_level_threshold(s32 level)
+{
+#if defined(VERSION_JP)
+    return (level - 1) * (level * 24 + level) + level * 15;
+#else
+    return (level - 1) * ((level * 5) << 2) + ((level * 5) << 1);
+#endif
+}
 
 #endif

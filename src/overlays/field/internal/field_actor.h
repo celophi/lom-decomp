@@ -237,28 +237,6 @@ typedef struct FieldActor
     u8 unk50[4];
 } FieldActor;
 
-/**
- * @brief Binding used by @p actor (objects 2 and up share the last binding).
- * @param actor Actor whose object index selects the binding.
- * @return The object's animation actor binding.
- */
-static inline FieldActorBinding* field_actor_binding(FieldActor* actor)
-{
-    FieldActorBinding* bindings;
-    s32 offset;
-
-    bindings = g_field_actor_bindings;
-    if (actor->object_index < FIELD_SHARED_BINDING)
-    {
-        offset = actor->object_index * sizeof(FieldActorBinding);
-    }
-    else
-    {
-        offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
-    }
-    return (FieldActorBinding*)((u8*)bindings + offset);
-}
-
 /** @brief Actor command word that performs action slot @p action. */
 #define FIELD_ACTION_COMMAND(action) (((action) << 8) | FIELD_ACTOR_COMMAND_ACTION)
 
@@ -287,5 +265,29 @@ extern s32 g_field_actions_limited;
 extern s32 g_field_battle_entry_state;
 /** @brief Frames left while the camera scroll limits ease towards their targets. */
 extern s32 g_field_scroll_ease_timer;
+
+/**
+ * @brief Binding used by @p actor (objects 2 and up share the last binding).
+ * @param actor Actor whose object index selects the binding.
+ * @return The object's animation actor binding.
+ */
+static inline FieldActorBinding* field_actor_binding(FieldActor* actor)
+{
+    FieldActorBinding* bindings;
+    s32 offset;
+
+    bindings = g_field_actor_bindings;
+
+    if (actor->object_index < FIELD_SHARED_BINDING)
+    {
+        offset = actor->object_index * sizeof(FieldActorBinding);
+    }
+    else
+    {
+        offset = FIELD_SHARED_BINDING * sizeof(FieldActorBinding);
+    }
+
+    return (FieldActorBinding*)((u8*)bindings + offset);
+}
 
 #endif

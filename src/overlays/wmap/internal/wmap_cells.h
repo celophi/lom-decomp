@@ -6,13 +6,19 @@
 /** @brief Width and height of the world map's land grid, in cells. */
 #define WMAP_GRID_SIZE 6
 
+/** @brief wmap_get_land_at_cell result and WmapCell land_id for a cell with no land, or outside the map. */
+#define WMAP_NO_LAND 0xFF
+
+/** @brief WmapCell land_id flag: draw the land at full size at once, skipping its grow-in. */
+#define WMAP_LAND_FULL_SIZE 0x100
+
 /** @brief Map distance between neighboring land cells. */
 #define WMAP_CELL_SPACING 48
 
 /** @brief One cell of the world map's land grid (40 bytes). */
 typedef struct
 {
-    /** @brief Land placed in the cell: its artifact id with bit 0x100 set; 0 when empty. */
+    /** @brief Land display id of the cell's land (g_wmap_land_display index), or WMAP_NO_LAND; may carry WMAP_LAND_FULL_SIZE. */
     s32 land_id;
     /** @brief Nonzero when the selected artifact can be placed in this cell. */
     s16 placement_allowed;

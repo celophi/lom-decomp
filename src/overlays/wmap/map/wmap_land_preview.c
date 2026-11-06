@@ -1,18 +1,20 @@
+#include "common.h"
+#include <inline_c.h>
+#include <libgpu.h>
+#include <libgte.h>
+
+#include "../internal/wmap_cells.h"
 #include "../internal/wmap_frame_render.h"
-#include "../internal/wmap_main.h"
-#include "../internal/wmap_land_transition.h"
 #include "../internal/wmap_land_preview.h"
 #include "../internal/wmap_land_preview_lines.h"
-#include "common/gpu_packet.h"
-#include "../internal/wmap_resource_support.h"
+#include "../internal/wmap_land_transition.h"
+#include "../internal/wmap_main.h"
 #include "../internal/wmap_map_labels.h"
-#include <libgte.h>
-#include <libgpu.h>
-#include <inline_c.h>
-#include "sdk/gte_dmpsx_compat.h"
-#include "../internal/wmap_cells.h"
-#include "../internal/wmap_view_effects.h"
+#include "../internal/wmap_resource_support.h"
 #include "../internal/wmap_sequence_runtime.h"
+#include "../internal/wmap_view_effects.h"
+#include "common/gpu_packet.h"
+#include "sdk/gte_dmpsx_compat.h"
 
 #define WMAP_VIEW_ROWS 3
 #define WMAP_PREVIEW_BOB_MASK 0xFF
@@ -23,7 +25,6 @@
 #define WMAP_PREVIEW_FRONT_OT 5
 #define WMAP_PREVIEW_BACK_OT 6
 #define WMAP_PREVIEW_BASE_OT 4
-#define WMAP_EMPTY_CELL 0xFF
 #define WMAP_EMPTY_MARKER_OT 173
 #define WMAP_EMPTY_MARKER_SIZE 32
 #define WMAP_EMPTY_MARKER_CLUT 0x7F2D
@@ -32,7 +33,6 @@
 #define WMAP_PREVIEW_SECOND_LAYER_V 32
 #define WMAP_ARTIFACT_PICKUP_VOLUME 143
 #define WMAP_ARTIFACT_RETURN_VOLUME 152
-#define WMAP_PREVIEW_PROJECTED_MODE 2
 /* Seven slots ahead, with whole turns retained for signed remainder arithmetic. */
 #define WMAP_PREVIEW_SLOT_OFFSET 43
 
@@ -102,15 +102,13 @@ extern WmapArtifactTransferFrame g_wmap_artifact_return_frames[];
 extern s32 g_wmap_preview_foreground;
 
 extern s32 g_wmap_preview_bob_y;
-extern s32 D_8011D504;
-extern s32 D_8011D508;
+extern s32 g_wmap_placement_preview_x;
+extern s32 g_wmap_placement_preview_y;
 
-extern s32 g_wmap_event_active;
 extern s32 g_wmap_preview_projection_x;
 extern s32 g_wmap_preview_projection_y;
 extern s32 g_wmap_focus_origin_x;
 extern s32 g_wmap_focus_origin_y;
-extern s32 g_wmap_placement_overlay_hidden;
 
 /**
  * @brief Advance the map selection preview and draw its marker and artifact.
@@ -149,7 +147,7 @@ void wmap_update_land_preview(void)
 
         if (g_wmap_artifact_placement_frame == 0)
         {
-            bob_sample = D_80051B4C[(next_frame & WMAP_PREVIEW_BOB_MASK) + WMAP_PREVIEW_BOB_PHASE];
+            bob_sample = g_wmap_cosine_wave[(next_frame & WMAP_PREVIEW_BOB_MASK) + WMAP_PREVIEW_BOB_PHASE];
             g_wmap_preview_bob_y = bob_sample / WMAP_PREVIEW_BOB_SCALE;
         }
         else
@@ -158,6 +156,7 @@ void wmap_update_land_preview(void)
             {
                 g_wmap_preview_bob_y--;
             }
+
             if (g_wmap_preview_bob_y < 0)
             {
                 g_wmap_preview_bob_y++;
@@ -169,7 +168,7 @@ void wmap_update_land_preview(void)
             g_wmap_preview_bob_y = 0;
         }
 
-        if (g_wmap_view_scroll_mode == WMAP_PREVIEW_PROJECTED_MODE)
+        if (g_wmap_view_scroll_mode == WMAP_SCROLL_SCRIPTED)
         {
             RotMatrix(&g_wmap_camera_rotation, &matrix);
             TransMatrix(&matrix, &g_wmap_camera_translation);
@@ -197,147 +196,156 @@ void wmap_update_land_preview(void)
         /* Travel follows a shared path; selected artifacts have their own transfer frames. */
         switch (g_wmap_selection_phase)
         {
-        case WMAP_SELECTION_MAP:
-            g_wmap_preview_x = g_wmap_preview_map_positions[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS].vx;
-            g_wmap_preview_y = g_wmap_preview_map_positions[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS].vy;
-            break;
+            case WMAP_SELECTION_MAP:
+                g_wmap_preview_x = g_wmap_preview_map_positions[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS].vx;
+                g_wmap_preview_y = g_wmap_preview_map_positions[g_wmap_cursor_column + g_wmap_cursor_row * WMAP_VIEW_COLUMNS].vy;
+                break;
 
-        case WMAP_SELECTION_OPENING:
-            break;
+            case WMAP_SELECTION_OPENING:
+                break;
 
-        case WMAP_SELECTION_ARTIFACTS:
-            g_wmap_preview_x = g_wmap_preview_travel_frames[g_wmap_preview_travel_frame].x;
-            g_wmap_preview_y = g_wmap_preview_travel_frames[g_wmap_preview_travel_frame].y;
-            ot_shift = WMAP_PREVIEW_OT_SHIFT;
-            break;
+            case WMAP_SELECTION_ARTIFACTS:
+                g_wmap_preview_x = g_wmap_preview_travel_frames[g_wmap_preview_travel_frame].x;
+                g_wmap_preview_y = g_wmap_preview_travel_frames[g_wmap_preview_travel_frame].y;
+                ot_shift = WMAP_PREVIEW_OT_SHIFT;
+                break;
 
-        case WMAP_SELECTION_SHOW_ARTIFACTS:
-            if (g_wmap_preview_travel_end == g_wmap_preview_travel_frame)
-            {
-                travel_frame = g_wmap_preview_travel_frame;
-                g_wmap_preview_x = g_wmap_preview_travel_frames[travel_frame].x;
-                g_wmap_preview_y = g_wmap_preview_travel_frames[travel_frame].y;
-
-                if (g_wmap_selected_artifact == WMAP_NO_ARTIFACT)
+            case WMAP_SELECTION_SHOW_ARTIFACTS:
+                if (g_wmap_preview_travel_end == g_wmap_preview_travel_frame)
                 {
-                    g_wmap_selection_phase = WMAP_SELECTION_ARTIFACTS;
-                    g_wmap_input_locked = 0;
-                    g_wmap_artifact_transfer_frame = g_wmap_selected_artifact;
-                    g_wmap_preview_texture = 0;
-                    g_wmap_preview_shape = 0;
-                }
-                else if (g_wmap_artifact_transfer_frame == -1)
-                {
-                    g_wmap_artifact_transfer_frame = g_wmap_artifact_return_offsets[g_wmap_selected_artifact];
-                    g_wmap_artifact_transfer_end = g_wmap_artifact_return_offsets[g_wmap_selected_artifact + 1] - 1;
-                }
-                else if (g_wmap_artifact_transfer_frame == g_wmap_artifact_transfer_end)
-                {
-                    wmap_play_sound(g_wmap_artifact_return_frames[g_wmap_artifact_transfer_end].sound_id, WMAP_ARTIFACT_RETURN_VOLUME);
-                    g_wmap_selection_phase = WMAP_SELECTION_ARTIFACTS;
-                    g_wmap_input_locked = 0;
-                    g_wmap_preview_texture = 0;
-                    g_wmap_artifact_transfer_frame = -1;
-                    g_wmap_preview_shape = 0;
-                    g_wmap_selected_artifact = -1;
+                    travel_frame = g_wmap_preview_travel_frame;
+                    g_wmap_preview_x = g_wmap_preview_travel_frames[travel_frame].x;
+                    g_wmap_preview_y = g_wmap_preview_travel_frames[travel_frame].y;
+
+                    if (g_wmap_selected_artifact == WMAP_NO_ARTIFACT)
+                    {
+                        g_wmap_selection_phase = WMAP_SELECTION_ARTIFACTS;
+                        g_wmap_input_locked = 0;
+                        g_wmap_artifact_transfer_frame = g_wmap_selected_artifact;
+                        g_wmap_preview_texture = 0;
+                        g_wmap_preview_shape = 0;
+                    }
+                    else if (g_wmap_artifact_transfer_frame == -1)
+                    {
+                        g_wmap_artifact_transfer_frame = g_wmap_artifact_return_offsets[g_wmap_selected_artifact];
+                        g_wmap_artifact_transfer_end = g_wmap_artifact_return_offsets[g_wmap_selected_artifact + 1] - 1;
+                    }
+                    else if (g_wmap_artifact_transfer_frame == g_wmap_artifact_transfer_end)
+                    {
+                        wmap_play_sound(g_wmap_artifact_return_frames[g_wmap_artifact_transfer_end].sound_id, WMAP_ARTIFACT_RETURN_VOLUME);
+                        g_wmap_selection_phase = WMAP_SELECTION_ARTIFACTS;
+                        g_wmap_input_locked = 0;
+                        g_wmap_preview_texture = 0;
+                        g_wmap_artifact_transfer_frame = -1;
+                        g_wmap_preview_shape = 0;
+                        g_wmap_selected_artifact = -1;
+                    }
+                    else
+                    {
+                        return_frames = g_wmap_artifact_return_frames;
+                        return_frame = &return_frames[g_wmap_artifact_transfer_frame];
+                        g_wmap_preview_x = return_frame->x;
+                        g_wmap_preview_y = return_frame->y;
+                        next_frame = g_wmap_artifact_transfer_frame + 1;
+                        g_wmap_artifact_transfer_frame = next_frame;
+                        g_wmap_preview_shape = return_frame->shape;
+                        g_wmap_preview_texture = return_frame->texture;
+                        g_wmap_preview_foreground = return_frame->foreground;
+
+                        if (next_frame == g_wmap_artifact_transfer_end)
+                        {
+                            s32* artifact_slots;
+                            carousel_frame = g_wmap_carousel_frame;
+                            artifact_slots = g_wmap_carousel_artifacts;
+
+                            if (carousel_frame < 0)
+                            {
+                                carousel_frame += WMAP_CAROUSEL_STEP_FRAMES - 1;
+                            }
+
+                            g_wmap_preview_artifact_visible = 0;
+                            artifact_slots[((carousel_frame >> WMAP_CAROUSEL_FRAME_SHIFT) + WMAP_PREVIEW_SLOT_OFFSET) % WMAP_ARTIFACT_SLOTS] =
+                                g_wmap_selected_artifact;
+                        }
+                    }
                 }
                 else
                 {
-                    return_frames = g_wmap_artifact_return_frames;
-                    return_frame = &return_frames[g_wmap_artifact_transfer_frame];
-                    g_wmap_preview_x = return_frame->x;
-                    g_wmap_preview_y = return_frame->y;
-                    next_frame = g_wmap_artifact_transfer_frame + 1;
-                    g_wmap_artifact_transfer_frame = next_frame;
-                    g_wmap_preview_shape = return_frame->shape;
-                    g_wmap_preview_texture = return_frame->texture;
-                    g_wmap_preview_foreground = return_frame->foreground;
+                    travel_frame = g_wmap_preview_travel_frame;
+                    g_wmap_preview_travel_frame = travel_frame + 1;
+                    g_wmap_preview_x = g_wmap_preview_travel_frames[travel_frame].x;
+                    g_wmap_preview_y = g_wmap_preview_travel_frames[travel_frame].y;
+                }
 
-                    if (next_frame == g_wmap_artifact_transfer_end)
+                break;
+
+            case WMAP_SELECTION_SHOW_MAP:
+            {
+                WmapPreviewPathPoint* travel_frames;
+                WmapArtifactTransferFrame* pickup_frames;
+                s32 travel_index;
+                s32 next_transfer_frame;
+
+                travel_frames = g_wmap_preview_travel_frames;
+                travel_index = g_wmap_preview_travel_frame;
+                travel_point = &travel_frames[travel_index];
+                g_wmap_preview_x = travel_point->x;
+                g_wmap_preview_y = travel_point->y;
+
+                if (g_wmap_selected_artifact == WMAP_NO_ARTIFACT)
+                {
+                    g_wmap_preview_texture = 0;
+                    g_wmap_preview_artifact_visible = 0;
+                }
+
+                if (g_wmap_preview_travel_end == travel_index)
+                {
+                    g_wmap_selection_phase = WMAP_SELECTION_MAP;
+                    g_wmap_input_locked = 0;
+                }
+                else if (g_wmap_artifact_transfer_frame == -1)
+                {
+                    g_wmap_preview_artifact_visible = 1;
+                    g_wmap_preview_travel_frame = travel_index - 1;
+                    g_wmap_preview_x = travel_point->x;
+                    g_wmap_preview_y = travel_point->y;
+
+                    if (g_wmap_selected_artifact != WMAP_NO_ARTIFACT)
                     {
                         s32* artifact_slots;
                         carousel_frame = g_wmap_carousel_frame;
-                        artifact_slots = D_80139838;
-                        if (carousel_frame < 0)
-                        {
-                            carousel_frame += WMAP_CAROUSEL_STEP_FRAMES - 1;
-                        }
-                        g_wmap_preview_artifact_visible = 0;
-                        artifact_slots[((carousel_frame >> WMAP_CAROUSEL_FRAME_SHIFT) + WMAP_PREVIEW_SLOT_OFFSET) % WMAP_ARTIFACT_SLOTS] = g_wmap_selected_artifact;
+                        artifact_slots = g_wmap_carousel_artifacts;
+                        artifact_slots[((carousel_frame / WMAP_CAROUSEL_STEP_FRAMES) + WMAP_PREVIEW_SLOT_OFFSET) % WMAP_ARTIFACT_SLOTS] = -1;
                     }
                 }
-            }
-            else
-            {
-                travel_frame = g_wmap_preview_travel_frame;
-                g_wmap_preview_travel_frame = travel_frame + 1;
-                g_wmap_preview_x = g_wmap_preview_travel_frames[travel_frame].x;
-                g_wmap_preview_y = g_wmap_preview_travel_frames[travel_frame].y;
-            }
-            break;
-
-        case WMAP_SELECTION_SHOW_MAP:
-        {
-            WmapPreviewPathPoint* travel_frames;
-            WmapArtifactTransferFrame* pickup_frames;
-            s32 travel_index;
-            s32 next_transfer_frame;
-
-            travel_frames = g_wmap_preview_travel_frames;
-            travel_index = g_wmap_preview_travel_frame;
-            travel_point = &travel_frames[travel_index];
-            g_wmap_preview_x = travel_point->x;
-            g_wmap_preview_y = travel_point->y;
-
-            if (g_wmap_selected_artifact == WMAP_NO_ARTIFACT)
-            {
-                g_wmap_preview_texture = 0;
-                g_wmap_preview_artifact_visible = 0;
-            }
-
-            if (g_wmap_preview_travel_end == travel_index)
-            {
-                g_wmap_selection_phase = WMAP_SELECTION_MAP;
-                g_wmap_input_locked = 0;
-            }
-            else if (g_wmap_artifact_transfer_frame == -1)
-            {
-                g_wmap_preview_artifact_visible = 1;
-                g_wmap_preview_travel_frame = travel_index - 1;
-                g_wmap_preview_x = travel_point->x;
-                g_wmap_preview_y = travel_point->y;
-                if (g_wmap_selected_artifact != WMAP_NO_ARTIFACT)
+                else
                 {
-                    s32* artifact_slots;
-                    carousel_frame = g_wmap_carousel_frame;
-                    artifact_slots = D_80139838;
-                    artifact_slots[((carousel_frame / WMAP_CAROUSEL_STEP_FRAMES) + WMAP_PREVIEW_SLOT_OFFSET) % WMAP_ARTIFACT_SLOTS] = -1;
+                    pickup_frames = g_wmap_artifact_pickup_frames;
+                    pickup_frame = &pickup_frames[g_wmap_artifact_transfer_frame];
+                    g_wmap_preview_x = pickup_frame->x;
+                    g_wmap_preview_y = pickup_frame->y;
+                    g_wmap_preview_shape = pickup_frame->shape;
+                    g_wmap_preview_texture = pickup_frame->texture;
+                    g_wmap_preview_foreground = pickup_frame->foreground;
+                    sound_id = pickup_frame->sound_id;
+
+                    if (sound_id != -1)
+                    {
+                        wmap_play_sound(sound_id, WMAP_ARTIFACT_PICKUP_VOLUME);
+                    }
+
+                    ot_shift = WMAP_PREVIEW_OT_SHIFT;
+                    next_transfer_frame = g_wmap_artifact_transfer_frame + 1;
+                    g_wmap_artifact_transfer_frame = next_transfer_frame;
+
+                    if (g_wmap_artifact_transfer_end == next_transfer_frame)
+                    {
+                        g_wmap_artifact_transfer_frame = -1;
+                    }
                 }
+
+                break;
             }
-            else
-            {
-                pickup_frames = g_wmap_artifact_pickup_frames;
-                pickup_frame = &pickup_frames[g_wmap_artifact_transfer_frame];
-                g_wmap_preview_x = pickup_frame->x;
-                g_wmap_preview_y = pickup_frame->y;
-                g_wmap_preview_shape = pickup_frame->shape;
-                g_wmap_preview_texture = pickup_frame->texture;
-                g_wmap_preview_foreground = pickup_frame->foreground;
-                sound_id = pickup_frame->sound_id;
-                if (sound_id != -1)
-                {
-                    wmap_play_sound(sound_id, WMAP_ARTIFACT_PICKUP_VOLUME);
-                }
-                ot_shift = WMAP_PREVIEW_OT_SHIFT;
-                next_transfer_frame = g_wmap_artifact_transfer_frame + 1;
-                g_wmap_artifact_transfer_frame = next_transfer_frame;
-                if (g_wmap_artifact_transfer_end == next_transfer_frame)
-                {
-                    g_wmap_artifact_transfer_frame = -1;
-                }
-            }
-            break;
-        }
         }
 
         g_wmap_preview_draw_x = g_wmap_preview_x;
@@ -355,7 +363,7 @@ void wmap_update_land_preview(void)
             s16 x3_offset;
             s16 y3_offset;
 
-            packet = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+            packet = g_wmap_current_frame->packet_cursor;
             *packet = g_wmap_preview_quad_template;
 
             if (g_wmap_selected_artifact == WMAP_NO_ARTIFACT)
@@ -366,7 +374,8 @@ void wmap_update_land_preview(void)
             else
             {
                 screen_x = g_wmap_preview_draw_x + g_wmap_artifact_images[g_wmap_selected_artifact].offset_x;
-                screen_y = g_wmap_preview_draw_y + g_wmap_artifact_images[g_wmap_selected_artifact].offset_y + g_wmap_artifact_placement_frame + g_wmap_preview_bob_y;
+                screen_y =
+                    g_wmap_preview_draw_y + g_wmap_artifact_images[g_wmap_selected_artifact].offset_y + g_wmap_artifact_placement_frame + g_wmap_preview_bob_y;
             }
 
             screen_x += g_wmap_preview_projection_x;
@@ -396,9 +405,11 @@ void wmap_update_land_preview(void)
             packet->u1 = packet->u0 + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT].extent.width;
             packet->v1 = packet->v0;
             packet->u2 = packet->u0;
-            packet->v2 = packet->v0 + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT].extent.height;
+            packet->v2 =
+                packet->v0 + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT].extent.height;
             packet->u3 = packet->u0 + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT].extent.width;
-            packet->v3 = packet->v0 + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT].extent.height;
+            packet->v3 =
+                packet->v0 + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT].extent.height;
 
             if (g_wmap_preview_texture != 0)
             {
@@ -420,7 +431,7 @@ void wmap_update_land_preview(void)
                 }
 
                 /* The second marker layer uses the next texture row. */
-                second_layer = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+                second_layer = g_wmap_current_frame->packet_cursor;
                 *second_layer = *packet;
                 second_layer->v0 += WMAP_PREVIEW_SECOND_LAYER_V;
                 second_layer->v1 += WMAP_PREVIEW_SECOND_LAYER_V;
@@ -455,19 +466,20 @@ void wmap_update_land_preview(void)
             {
                 SPRT* sprite;
 
-                sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
-                if ((g_wmap_placement_preview_locked != 0) && (g_wmap_view_scroll_mode != WMAP_PREVIEW_PROJECTED_MODE))
+                sprite = g_wmap_current_frame->packet_cursor;
+
+                if ((g_wmap_placement_preview_locked != 0) && (g_wmap_view_scroll_mode != WMAP_SCROLL_SCRIPTED))
                 {
-                    sprite->x0 = D_8011D504;
-                    sprite->y0 = D_8011D508;
+                    sprite->x0 = g_wmap_placement_preview_x;
+                    sprite->y0 = g_wmap_placement_preview_y;
                 }
                 else
                 {
                     sprite->x0 = (g_wmap_preview_draw_x + g_wmap_artifact_images[g_wmap_selected_artifact].anchor_x) + g_wmap_preview_projection_x;
-                    D_8011D504 = sprite->x0;
-                    sprite->y0 = ((g_wmap_preview_draw_y + g_wmap_artifact_images[g_wmap_selected_artifact].anchor_y) + g_wmap_artifact_placement_frame) + g_wmap_preview_bob_y +
-                                 g_wmap_preview_projection_y;
-                    D_8011D508 = sprite->y0;
+                    g_wmap_placement_preview_x = sprite->x0;
+                    sprite->y0 = ((g_wmap_preview_draw_y + g_wmap_artifact_images[g_wmap_selected_artifact].anchor_y) + g_wmap_artifact_placement_frame) +
+                                 g_wmap_preview_bob_y + g_wmap_preview_projection_y;
+                    g_wmap_placement_preview_y = sprite->y0;
                 }
 
                 sprite->w = g_wmap_artifact_images[g_wmap_selected_artifact].width;
@@ -485,28 +497,32 @@ void wmap_update_land_preview(void)
                     g_wmap_packet_bytes += sizeof(SPRT);
                     g_wmap_current_frame->packet_cursor += sizeof(SPRT);
                 }
+
                 wmap_queue_texture_page(WMAP_ARTIFACT_TPAGE, WMAP_PREVIEW_FRONT_OT);
             }
 
             cell_x = (g_wmap_view.x / WMAP_CELL_SPACING) + g_wmap_cursor_column;
             cell_y = (g_wmap_view.y / WMAP_CELL_SPACING) + g_wmap_cursor_row;
+
             if ((g_wmap_selection_phase == WMAP_SELECTION_MAP) && (g_wmap_land_label_updates_enabled != 0))
             {
                 land_id = g_wmap_cells[cell_x][cell_y].land_id;
-                if (land_id == WMAP_EMPTY_CELL)
+
+                if (land_id == WMAP_NO_LAND)
                 {
                     land_id = -1;
                 }
+
                 wmap_set_map_label(land_id);
             }
 
-            if ((g_wmap_cells[cell_x][cell_y].land_id == WMAP_EMPTY_CELL) && (g_wmap_selection_phase == WMAP_SELECTION_MAP) && (g_wmap_view_scroll_mode != WMAP_PREVIEW_PROJECTED_MODE) &&
-                (g_wmap_event_active == 0))
+            if ((g_wmap_cells[cell_x][cell_y].land_id == WMAP_NO_LAND) && (g_wmap_selection_phase == WMAP_SELECTION_MAP) &&
+                (g_wmap_view_scroll_mode != WMAP_SCROLL_SCRIPTED) && (g_wmap_event_active == 0))
             {
                 POLY_FT4* packet;
                 s32 row;
                 s32 column;
-                packet = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+                packet = g_wmap_current_frame->packet_cursor;
                 SET_BGR0_PACKED(packet, GPU_TINT_NEUTRAL);
                 row = g_wmap_cursor_row;
                 column = g_wmap_cursor_column;
@@ -521,7 +537,7 @@ void wmap_update_land_preview(void)
                 packet->u0 = 0;
                 packet->tpage = WMAP_EMPTY_MARKER_TPAGE;
                 /* The table and packet both store adjacent signed X/Y halfwords. */
-                *(u32*)&packet->x0 = *(u32*)&g_wmap_empty_marker_positions[row][column].vx;
+                SET_XY0_PACKED(packet, *(u32*)&g_wmap_empty_marker_positions[row][column].vx);
                 setPolyFT4(packet);
                 setSemiTrans(packet, 1);
                 packet->x2 = packet->x0;

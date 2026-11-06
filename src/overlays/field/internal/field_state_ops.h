@@ -90,7 +90,7 @@ typedef struct FieldActorTemplate
     u8 immunity_flags;
     u8 weak_elements;
     u8 resist_elements;
-    /** @brief Bit 1: not linked from the object state; bit 2: level from the hero's level instead of the land's; bit 7: FIELD_TEMPLATE_BOSS. */
+    /** @brief Bit 1: not linked from the object state; bit 2: level from the placed land count instead of the land's distance; bit 7: FIELD_TEMPLATE_BOSS. */
     u8 flags;
     FieldActorDrop drops[FIELD_ACTOR_DROP_SLOT_COUNT];
     s32 action_count;
@@ -193,8 +193,8 @@ typedef struct FieldStatusRecord
     u8 counter_reset;
     u16 status_flags;
     u32 unkC;
-    FieldStatusState *state;
-    FieldActorTemplate *template;
+    FieldStatusState* state;
+    FieldActorTemplate* template;
     u16 unk18;
     u8 unk1A;
     u8 pad1B;
@@ -238,21 +238,21 @@ enum
     FIELD_STATUS_APPLY_ALLOW_ACTIVE = 1 << 1
 };
 
-FieldStatusRecord *field_find_status_record(s32 record_id);
-FieldStatusRecord *field_find_free_status_record(void);
-void field_apply_status_effect(FieldStatusRecord *source, FieldStatusRecord *target, s32 apply_flags, s32 effect_index, s32 chance_threshold, s32 duration);
-s32 field_get_status_stat(FieldStatusRecord *record, s32 stat_index);
-s32 field_scale_status_stat(FieldStatusRecord *record, u32 stat_selector, u32 scale, s32 emit_signal);
-s32 field_roll_last_stat(FieldStatusRecord *record);
+FieldStatusRecord* field_find_status_record(s32 record_id);
+FieldStatusRecord* field_find_free_status_record(void);
+void field_apply_status_effect(FieldStatusRecord* source, FieldStatusRecord* target, s32 apply_flags, s32 effect_index, s32 chance_threshold, s32 duration);
+s32 field_get_status_stat(FieldStatusRecord* record, s32 stat_index);
+s32 field_scale_status_stat(FieldStatusRecord* record, u32 stat_selector, u32 scale, s32 emit_signal);
+s32 field_roll_last_stat(FieldStatusRecord* record);
 s32 field_is_actor_in_front(s32 actor_id, s32 observer_id);
-void field_damage_status(FieldStatusState *state, s32 damage);
-void field_heal_status(FieldStatusState *state, s32 amount);
-void field_revive_status_record(FieldStatusRecord *record);
-void field_clear_status_effect(FieldStatusRecord *record, u32 effect_index);
+void field_damage_status(FieldStatusState* state, s32 damage);
+void field_heal_status(FieldStatusState* state, s32 amount);
+void field_revive_status_record(FieldStatusRecord* record);
+void field_clear_status_effect(FieldStatusRecord* record, u32 effect_index);
 void field_golem_select_logic_cell(s32 actor_id);
 void field_golem_publish_logic_cell(s32 cell_index);
 void field_raise_companion_intensity(s32 amount);
 void field_battle_setup(s32 group);
-s32 field_compute_base_monster_level(s32 use_hero_level);
+s32 field_compute_base_monster_level(s32 use_land_count);
 
 #endif

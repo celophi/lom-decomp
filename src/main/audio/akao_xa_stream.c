@@ -10,12 +10,13 @@
  */
 #include "common.h"
 #include <libspu.h>
-#include "internal/akao_voice.h"
+
 #include "internal/akao_control.h"
-#include "main/audio/akao_cmd.h"
-#include "internal/akao_sequencer.h"
 #include "internal/akao_driver.h"
+#include "internal/akao_sequencer.h"
+#include "internal/akao_voice.h"
 #include "internal/akao_xa_stream.h"
+#include "main/audio/akao_cmd.h"
 
 /* Voice mask of SPU voices 22 and 23, the highest pair the stream may use. */
 #define XA_TOP_VOICE_PAIR_MASK 0xC00000
@@ -166,6 +167,7 @@ s32 akao_xa_alloc_voice_pair(void)
     {
         pair_mask = XA_TOP_VOICE_PAIR_MASK;
         busy_voices = g_akao_sfx_control.active_mask | g_akao_sfx_control.paused_mask;
+
         for (pair_index = XA_VOICE_PAIR_COUNT; pair_index != 0; pair_mask >>= 1, pair_index--)
         {
             if ((busy_voices & pair_mask) == 0)
@@ -173,11 +175,14 @@ s32 akao_xa_alloc_voice_pair(void)
                 break;
             }
         }
+
         if (pair_index != 0)
         {
             return pair_index + XA_FIRST_VOICE_BIAS;
         }
+
         akao_sfx_stop_channels(0, AKAO_SFX_STOP_OLDEST);
+
         if (busy_voices == (g_akao_sfx_control.active_mask | g_akao_sfx_control.paused_mask))
         {
             return -1;
@@ -220,6 +225,7 @@ void akao_xa_start_buffer(AkaoXaProgramHeader* buffer, s32 pan, s32 use_reverb)
     AkaoXaTracker* stereo_stream;
 
     voice = akao_xa_alloc_voice_pair();
+
     if (voice == -1)
     {
         return;
@@ -265,6 +271,7 @@ void akao_xa_start_buffer(AkaoXaProgramHeader* buffer, s32 pan, s32 use_reverb)
     if (stream->flags & XA_FLAG_STEREO)
     {
         stereo_stream = stream;
+
         if (stream->flags & XA_FLAG_LOOP)
         {
             loop_bytes = stream->bytes_remaining - (program->loop_offset >> 1);
@@ -273,6 +280,7 @@ void akao_xa_start_buffer(AkaoXaProgramHeader* buffer, s32 pan, s32 use_reverb)
         {
             loop_bytes = 0;
         }
+
         stereo_stream->loop_bytes = loop_bytes;
         SpuSetTransferCallback(akao_xa_begin_stereo_buffer);
         upload_bytes = XA_INITIAL_STEREO_BYTES;
@@ -287,6 +295,7 @@ void akao_xa_start_buffer(AkaoXaProgramHeader* buffer, s32 pan, s32 use_reverb)
         {
             loop_bytes = 0;
         }
+
         stream->loop_bytes = loop_bytes;
         SpuSetTransferCallback(akao_xa_upload_mono_block_b);
         upload_bytes = XA_CHANNEL_BLOCK_BYTES;
@@ -329,12 +338,12 @@ void akao_xa_setup_voice(s32 voice, s32 mode, u32 start_addr, u32 repeat_addr)
     else if (mode == XA_VOICE_LEFT)
     {
         volume_right = 0;
-        volume_left = (u32)g_akao_xa_tracker.volume >> 1;
+        volume_left = g_akao_xa_tracker.volume >> 1;
     }
     else if (mode == XA_VOICE_RIGHT)
     {
         volume_left = 0;
-        volume_right = (u32)g_akao_xa_tracker.volume >> 1;
+        volume_right = g_akao_xa_tracker.volume >> 1;
     }
     else if (mode == XA_VOICE_CENTERED_MONO)
     {
@@ -347,9 +356,9 @@ void akao_xa_setup_voice(s32 voice, s32 mode, u32 start_addr, u32 repeat_addr)
     {
         s32 pan = (g_akao_xa_tracker.pan >> AKAO_Q8_SHIFT) & AKAO_PAN_MASK;
         s32 volume = g_akao_xa_tracker.volume;
-        volume_left = (u32)(volume * g_akao_pan_gain_table[pan]) >> AKAO_Q16_SHIFT;
+        volume_left = (volume * g_akao_pan_gain_table[pan]) >> AKAO_Q16_SHIFT;
         pan ^= AKAO_PAN_MASK;
-        volume_right = (u32)(volume * g_akao_pan_gain_table[pan]) >> AKAO_Q16_SHIFT;
+        volume_right = (volume * g_akao_pan_gain_table[pan]) >> AKAO_Q16_SHIFT;
     }
 
     spu_set_voice_volume(voice, volume_left, volume_right, 0);
@@ -375,6 +384,7 @@ void akao_xa_key_on_buffer(s32 uploaded_bytes, s32 irq_addr, SpuIRQCallbackProc 
     {
         SpuSetTransferCallback(NULL);
         g_akao_spu_xfer_pending = 0;
+
         if (g_akao_xa_tracker.bytes_remaining > (2 * XA_CHANNEL_BLOCK_BYTES))
         {
             g_akao_xa_tracker.bytes_remaining -= (2 * XA_CHANNEL_BLOCK_BYTES);
@@ -387,6 +397,7 @@ void akao_xa_key_on_buffer(s32 uploaded_bytes, s32 irq_addr, SpuIRQCallbackProc 
             irq_addr = XA_SPU_SILENCE;
             g_akao_xa_tracker.bytes_remaining = 0;
         }
+
         SpuSetIRQAddr(irq_addr + XA_SPU_IRQ_STEP_BYTES);
         spu_set_key_on(g_akao_xa_tracker.voice_mask);
         SpuSetIRQ(SPU_ON);
@@ -520,6 +531,7 @@ void akao_xa_cmd_set_volume(AkaoCommandParam* params)
 
     stream->volume_fade_ticks = 0;
     stream->volume = volume;
+
     if (stream->voice_mask != 0)
     {
         spu_set_voice_volume(stream->first_voice, (volume << (AKAO_Q16_SHIFT - 1)) >> AKAO_Q16_SHIFT, 0, 0);
@@ -537,10 +549,12 @@ void akao_xa_cmd_fade_volume(AkaoCommandParam* params)
     s16 volume_delta;
 
     fade_ticks = 1;
+
     if (params[0].value != 0)
     {
         fade_ticks = params[0].value;
     }
+
     volume_delta = (u16)params[1].value - (u16)g_akao_xa_tracker.volume;
     g_akao_xa_tracker.volume_step = (s16)(volume_delta / fade_ticks);
     g_akao_xa_tracker.volume_fade_ticks = fade_ticks;
@@ -562,6 +576,7 @@ void akao_xa_cmd_set_pan(AkaoCommandParam* params)
     stream = &g_akao_xa_tracker;
     pan_q8 = params[0].value;
     stream->pan = pan_q8;
+
     if (stream->voice_mask != 0)
     {
         if (g_akao_driver_flags.output_mode & AKAO_OUTPUT_MONO)
@@ -640,6 +655,7 @@ void akao_xa_start_one_shot(AkaoXaProgramHeader* program, s32 pan, s32 spu_addr,
     u32 value;
 
     voice = akao_xa_alloc_voice_pair();
+
     if (voice == -1)
     {
         return;
@@ -667,10 +683,12 @@ void akao_xa_start_one_shot(AkaoXaProgramHeader* program, s32 pan, s32 spu_addr,
     SpuSetTransferCallback(akao_xa_key_on_one_shot);
 
     value = stream->bytes_remaining;
+
     if (value > XA_ONE_SHOT_UPLOAD_LIMIT)
     {
         value = XA_ONE_SHOT_UPLOAD_LIMIT;
     }
+
     SpuWrite(stream->data_cursor, value);
     stream->data_cursor += value;
 
@@ -682,6 +700,7 @@ void akao_xa_start_one_shot(AkaoXaProgramHeader* program, s32 pan, s32 spu_addr,
     {
         g_akao_sfx_control.reverb_mask &= ~stream->voice_mask;
     }
+
     g_akao_sfx_control.pitch_mod_mask &= ~g_akao_xa_tracker.voice_mask;
     g_akao_sfx_control.noise_mask &= ~g_akao_xa_tracker.voice_mask;
     g_akao_driver_flags.update_flags |= AKAO_EFFECT_MASKS_UPDATE_PENDING;
@@ -703,7 +722,9 @@ void akao_xa_start_staged(s32 pan, s32 use_reverb)
     {
         return;
     }
+
     voice = akao_xa_alloc_voice_pair();
+
     if (voice == -1)
     {
         return;
@@ -719,6 +740,7 @@ void akao_xa_start_staged(s32 pan, s32 use_reverb)
     program = &g_akao_xa_program_staging.header;
     g_akao_xa_tracker.flags = program->flags;
     g_akao_xa_tracker.pitch = program->pitch;
+
     if (use_reverb != 0)
     {
         g_akao_sfx_control.reverb_mask |= g_akao_xa_tracker.voice_mask;
@@ -727,6 +749,7 @@ void akao_xa_start_staged(s32 pan, s32 use_reverb)
     {
         g_akao_sfx_control.reverb_mask &= ~g_akao_xa_tracker.voice_mask;
     }
+
     g_akao_sfx_control.pitch_mod_mask &= ~g_akao_xa_tracker.voice_mask;
     g_akao_sfx_control.noise_mask &= ~g_akao_xa_tracker.voice_mask;
     g_akao_driver_flags.update_flags |= AKAO_EFFECT_MASKS_UPDATE_PENDING;
@@ -757,6 +780,7 @@ void akao_xa_start_staged(s32 pan, s32 use_reverb)
         akao_xa_setup_voice(g_akao_xa_tracker.first_voice, XA_VOICE_CENTERED_MONO, program->spu_addr, XA_SPU_SILENCE);
         akao_xa_setup_voice(g_akao_xa_tracker.first_voice + 1, XA_VOICE_CENTERED_MONO, program->spu_addr, XA_SPU_SILENCE);
     }
+
     spu_set_key_on(g_akao_xa_tracker.voice_mask);
     SpuSetIRQ(SPU_ON);
 }
@@ -790,10 +814,12 @@ s32 akao_xa_next_ring_block(u32* block_index)
 {
     g_akao_xa_tracker.uploaded_blocks++;
     (*block_index)++;
+
     if (*block_index > g_akao_xa_tracker.ring_block_count - 1)
     {
         *block_index = 0;
     }
+
     return *block_index;
 }
 
@@ -807,6 +833,7 @@ void akao_xa_start_ring_stream(void)
     s32 voice_mask;
 
     voice = akao_xa_alloc_voice_pair();
+
     if (voice == -1)
     {
         return;
@@ -861,6 +888,7 @@ void akao_xa_key_on_ring(s32 uploaded_bytes, s32 irq_addr, SpuIRQCallbackProc ne
     {
         SpuSetTransferCallback(NULL);
         g_akao_spu_xfer_pending = 0;
+
         if (g_akao_xa_tracker.bytes_remaining >= XA_RING_REFILL_MIN_BYTES)
         {
             g_akao_xa_tracker.data_cursor += uploaded_bytes;
@@ -871,6 +899,7 @@ void akao_xa_key_on_ring(s32 uploaded_bytes, s32 irq_addr, SpuIRQCallbackProc ne
             SpuSetIRQCallback(akao_xa_stop);
             irq_addr = XA_SPU_SILENCE;
         }
+
         SpuSetIRQAddr(irq_addr + XA_SPU_IRQ_STEP_BYTES);
         spu_set_key_on(g_akao_xa_tracker.voice_mask);
         SpuSetIRQ(SPU_ON);
@@ -903,8 +932,10 @@ void akao_xa_refill_ring(s32 left_addr, s32 right_addr, s32 block_bytes, SpuIRQC
     {
         return;
     }
+
     block = (AkaoXaRingBlock*)g_akao_xa_tracker.data_cursor;
     program = &block->program;
+
     if (program->magic != AKAO_MAGIC)
     {
         return;
@@ -917,10 +948,12 @@ void akao_xa_refill_ring(s32 left_addr, s32 right_addr, s32 block_bytes, SpuIRQC
     SpuWrite(((AkaoXaRingBlock*)g_akao_xa_tracker.data_cursor)->sample_data, block_bytes - OFFSETOF(AkaoXaRingBlock, sample_data));
     g_akao_xa_tracker.last_ring_block_key = program->key;
     g_akao_xa_tracker.last_program_spu_addr = program->spu_addr;
+
     if (program->sample_size > program->spu_addr)
     {
         SpuSetIRQCallback(next_callback);
         g_akao_xa_tracker.data_cursor += block_bytes;
+
         if (g_akao_xa_tracker.upload_block == 0)
         {
             g_akao_xa_tracker.data_cursor = g_akao_xa_tracker.source.ring_base;
@@ -932,6 +965,7 @@ void akao_xa_refill_ring(s32 left_addr, s32 right_addr, s32 block_bytes, SpuIRQC
         right_addr = XA_SPU_SILENCE;
         left_addr = XA_SPU_SILENCE;
     }
+
     spu_set_voice_repeat_addr(g_akao_xa_tracker.first_voice, left_addr);
     spu_set_voice_repeat_addr(g_akao_xa_tracker.first_voice + 1, right_addr);
     SpuSetIRQAddr(left_addr + XA_SPU_IRQ_STEP_BYTES);

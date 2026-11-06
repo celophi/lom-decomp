@@ -11,14 +11,15 @@
  */
 
 #include "common.h"
-#include "main/main.h"
-#include "main/controller_internal.h"
 #include <libetc.h>
 #include <strings.h>
+
 #include "../internal/field_actor.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
 #include "common/pad.h"
+#include "main/controller_internal.h"
+#include "main/main.h"
 
 /** @brief Entries in one player's history row. */
 #define FIELD_HISTORY_LENGTH 16
@@ -110,10 +111,10 @@ void field_command_history_record(s32 player, s32 age_sequence)
     s32 button_mask;
     u32 pressed_bit;
     u8 slot;
-    s32 *count;
-    ControllerPortState *ports = CONTROLLER_STATE->ports;
-    ControllerPortState *stick_x_port;
-    ControllerPortState *stick_y_port;
+    s32* count;
+    ControllerPortState* ports = CONTROLLER_STATE->ports;
+    ControllerPortState* stick_x_port;
+    ControllerPortState* stick_y_port;
 
     if (player < FIELD_PLAYER_COUNT)
     {
@@ -198,7 +199,7 @@ void field_command_history_record(s32 player, s32 age_sequence)
 
                 count = &g_field_command_history_count[player];
                 /* g_saved_game_ctx points at the saved game, the block SavedGameLayout describes. */
-                slot = ((SavedGameLayout*)g_saved_game_ctx)->characters[player].button_actions[g_field_hint_button_map[button_index]];
+                slot = (g_saved_game_ctx)->characters[player].button_actions[g_field_hint_button_map[button_index]];
                 g_field_command_history[player][*count] = g_field_action_command_codes[slot];
 
                 if (*count < FIELD_HISTORY_LENGTH - 1)
@@ -254,8 +255,8 @@ static void field_command_history_shift(s32 player)
  */
 static void field_command_history_consume(s32 player, s32 count)
 {
-    u8 (*history)[FIELD_HISTORY_LENGTH];
-    u8 *row;
+    u8(*history)[FIELD_HISTORY_LENGTH];
+    u8* row;
     s32 src;
     s32 dst;
 
@@ -296,7 +297,7 @@ s32 field_command_history_match(s32 player, s32 unused, s32 peek)
     s32 consume_count;
     s32 src;
     s32 dst;
-    u8 *history;
+    u8* history;
 
     command = FIELD_HISTORY_COMMAND_NONE;
     scan_index = 0;
@@ -341,7 +342,8 @@ s32 field_command_history_match(s32 player, s32 unused, s32 peek)
                                 /* Try the pattern against every tail of the run, longest first. */
                                 for (match_start = direction_end - pattern_length; match_start >= scan_index; match_start--)
                                 {
-                                    if (strncmp(g_field_command_patterns[pattern_index], (char *)&g_field_command_history[player][match_start], pattern_length) == 0)
+                                    if (strncmp(g_field_command_patterns[pattern_index], (char*)&g_field_command_history[player][match_start],
+                                                pattern_length) == 0)
                                     {
                                         if (peek == 0)
                                         {
@@ -383,7 +385,7 @@ s32 field_command_history_match(s32 player, s32 unused, s32 peek)
                             src = consume_count;
 
                             while (src < FIELD_HISTORY_LENGTH)
-{
+                            {
                                 history[dst++] = history[src++];
                             }
                         }
@@ -403,7 +405,7 @@ s32 field_command_history_match(s32 player, s32 unused, s32 peek)
                             src = consume_count;
 
                             while (src < FIELD_HISTORY_LENGTH)
-{
+                            {
                                 history[dst++] = history[src++];
                             }
                         }
@@ -494,7 +496,7 @@ void field_pair_indicators_reset(void)
  * @brief Return the pair indicator list.
  * @return Address of g_field_pair_indicator_list.
  */
-u8 *field_pair_indicators_get_list(void)
+u8* field_pair_indicators_get_list(void)
 {
     return g_field_pair_indicator_list;
 }

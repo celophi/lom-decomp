@@ -357,51 +357,51 @@ void field_draw_actor_hud(FieldRenderHalf* render_half)
 
     switch (panel_count)
     {
-    case 1:
-        for (i = 0; i < FIELD_PARTY_COUNT; i++)
-        {
-            if (g_field_actors[i].presence != FIELD_ACTOR_UNUSED && (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE))
+        case 1:
+            for (i = 0; i < FIELD_PARTY_COUNT; i++)
             {
-                field_draw_actor_hud_panel(FIELD_HUD_SINGLE_X, FIELD_HUD_PARTY_Y, i, render_half, FIELD_HUD_HP_PER_BAR);
-            }
-        }
-
-        break;
-    case 2:
-        panel_count = 0;
-
-        for (i = 0; i < FIELD_PARTY_COUNT; i++)
-        {
-            if (g_field_actors[i].presence != FIELD_ACTOR_UNUSED && (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE))
-            {
-                field_draw_actor_hud_panel(FIELD_HUD_PAIR_X + panel_count * FIELD_HUD_PAIR_STEP, FIELD_HUD_PARTY_Y, i, render_half, FIELD_HUD_HP_PER_BAR);
-                panel_count++;
-            }
-        }
-
-        break;
-    case 3:
-        panel_count = 0;
-
-        for (i = 0; i < FIELD_PARTY_COUNT; i++)
-        {
-            if (g_field_actors[g_field_party_hud_order[i]].presence != FIELD_ACTOR_UNUSED &&
-                (g_field_player_records[g_field_party_hud_order[i]].head.bytes.flags & FIELD_PLAYER_ACTIVE))
-            {
-                panel_y = FIELD_HUD_TRIO_LOW_Y;
-
-                if (i & 1)
+                if (g_field_actors[i].presence != FIELD_ACTOR_UNUSED && (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE))
                 {
-                    panel_y = FIELD_HUD_TRIO_HIGH_Y;
+                    field_draw_actor_hud_panel(FIELD_HUD_SINGLE_X, FIELD_HUD_PARTY_Y, i, render_half, FIELD_HUD_HP_PER_BAR);
                 }
-
-                field_draw_actor_hud_panel(FIELD_HUD_TRIO_X + panel_count * FIELD_HUD_TRIO_STEP, panel_y, g_field_party_hud_order[i], render_half,
-                                           FIELD_HUD_HP_PER_BAR);
-                panel_count++;
             }
-        }
 
-        break;
+            break;
+        case 2:
+            panel_count = 0;
+
+            for (i = 0; i < FIELD_PARTY_COUNT; i++)
+            {
+                if (g_field_actors[i].presence != FIELD_ACTOR_UNUSED && (g_field_player_records[i].head.bytes.flags & FIELD_PLAYER_ACTIVE))
+                {
+                    field_draw_actor_hud_panel(FIELD_HUD_PAIR_X + panel_count * FIELD_HUD_PAIR_STEP, FIELD_HUD_PARTY_Y, i, render_half, FIELD_HUD_HP_PER_BAR);
+                    panel_count++;
+                }
+            }
+
+            break;
+        case 3:
+            panel_count = 0;
+
+            for (i = 0; i < FIELD_PARTY_COUNT; i++)
+            {
+                if (g_field_actors[g_field_party_hud_order[i]].presence != FIELD_ACTOR_UNUSED &&
+                    (g_field_player_records[g_field_party_hud_order[i]].head.bytes.flags & FIELD_PLAYER_ACTIVE))
+                {
+                    panel_y = FIELD_HUD_TRIO_LOW_Y;
+
+                    if (i & 1)
+                    {
+                        panel_y = FIELD_HUD_TRIO_HIGH_Y;
+                    }
+
+                    field_draw_actor_hud_panel(FIELD_HUD_TRIO_X + panel_count * FIELD_HUD_TRIO_STEP, panel_y, g_field_party_hud_order[i], render_half,
+                                               FIELD_HUD_HP_PER_BAR);
+                    panel_count++;
+                }
+            }
+
+            break;
     }
 
     boss_drawn = 0;
@@ -970,43 +970,43 @@ static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* 
 
     switch (background_type)
     {
-    case 0:
-    case 1:
-        SET_SPRT_WH_PACKED(sprite_cursor, FIELD_HUD_PANEL_WIDTH, FIELD_HUD_PANEL_HEIGHT);
-        SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_PANEL_UV);
-        break;
-    case 2:
-        if (g_field_player_records[FIELD_PARTY_COMPANION].character_id >= FIELD_COMPANION_COLOR_ID_MIN)
-        {
+        case 0:
+        case 1:
             SET_SPRT_WH_PACKED(sprite_cursor, FIELD_HUD_PANEL_WIDTH, FIELD_HUD_PANEL_HEIGHT);
             SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_PANEL_UV);
-        }
-        else
-        {
-            SET_SPRT_WH_PACKED(sprite_cursor, FIELD_HUD_PANEL_WIDTH, FIELD_HUD_PANEL_HEIGHT);
-            SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_COMPANION_PANEL_UV);
-        }
+            break;
+        case 2:
+            if (g_field_player_records[FIELD_PARTY_COMPANION].character_id >= FIELD_COMPANION_COLOR_ID_MIN)
+            {
+                SET_SPRT_WH_PACKED(sprite_cursor, FIELD_HUD_PANEL_WIDTH, FIELD_HUD_PANEL_HEIGHT);
+                SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_PANEL_UV);
+            }
+            else
+            {
+                SET_SPRT_WH_PACKED(sprite_cursor, FIELD_HUD_PANEL_WIDTH, FIELD_HUD_PANEL_HEIGHT);
+                SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_COMPANION_PANEL_UV);
+            }
 
-        break;
-    default:
-        if (boss_panel != 0)
-        {
-            SET_SPRT_WH_PACKED(sprite_cursor, FIELD_HUD_BOSS_PANEL_WIDTH, FIELD_HUD_BOSS_PANEL_HEIGHT);
-            SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_BOSS_PANEL_UV);
-        }
-        else
-        {
-            SET_SPRT_WH_PACKED(sprite_cursor, FIELD_HUD_ENEMY_PANEL_WIDTH, FIELD_HUD_ENEMY_PANEL_HEIGHT);
-            SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_ENEMY_PANEL_UV);
-        }
+            break;
+        default:
+            if (boss_panel != 0)
+            {
+                SET_SPRT_WH_PACKED(sprite_cursor, FIELD_HUD_BOSS_PANEL_WIDTH, FIELD_HUD_BOSS_PANEL_HEIGHT);
+                SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_BOSS_PANEL_UV);
+            }
+            else
+            {
+                SET_SPRT_WH_PACKED(sprite_cursor, FIELD_HUD_ENEMY_PANEL_WIDTH, FIELD_HUD_ENEMY_PANEL_HEIGHT);
+                SET_SPRT_UV0_PACKED(sprite_cursor, FIELD_HUD_ENEMY_PANEL_UV);
+            }
 
-        break;
+            break;
     }
 
     sprite_cursor->clut = FIELD_HUD_CLUT;
     addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], sprite_cursor);
     sprite_cursor++;
-    setDrawTPage((DR_TPAGE*)sprite_cursor, 0, 0, FIELD_UI_TPAGE(GPU_BLEND_HALF));
+    setDrawTPage(sprite_cursor, 0, 0, FIELD_UI_TPAGE(GPU_BLEND_HALF));
     addPrim(&ctx->ordering_table[FIELD_HUD_OT_INDEX], sprite_cursor);
     render_half->primitive_cursor = (u8*)sprite_cursor + sizeof(DR_TPAGE);
 }
@@ -1045,6 +1045,16 @@ static inline void field_hud_set_faded_component(u8* component, u8 empty, u8 ful
     }
 }
 
+/**
+ * @brief Add the HUD status line, a gradient whose length and end colour follow an intensity.
+ * @param line Free primitive space for the line.
+ * @param render_half Render half whose ordering table receives the line.
+ * @param colors Start colour, then the end colour at full intensity.
+ * @param intensity 0 to 255; 0 draws nothing.
+ * @param x Panel x position.
+ * @param y Panel y position.
+ * @return The next free primitive space.
+ */
 static u8* field_emit_hud_status_line(LINE_G2* line, FieldRenderHalf* render_half, CVECTOR* colors, s32 intensity, s32 x, s32 y)
 {
     s16 line_x;
@@ -1416,30 +1426,30 @@ void field_update_object_effects(s32 index)
 
                     switch (animation_id)
                     {
-                    case FIELD_STATUS_ANIMATION_POISON:
-                        status_bit = 0;
-                        break;
-                    case FIELD_STATUS_ANIMATION_DARKNESS:
-                        status_bit = 1;
-                        break;
-                    case FIELD_STATUS_ANIMATION_PARALYSIS:
-                        status_bit = 2;
-                        break;
-                    case FIELD_STATUS_ANIMATION_CONFUSION:
-                        status_bit = 3;
-                        break;
-                    case FIELD_STATUS_ANIMATION_FLAME_BURST:
-                        status_bit = 4;
-                        break;
-                    case FIELD_STATUS_ANIMATION_HYPNOSIS:
-                        status_bit = 5;
-                        break;
-                    case FIELD_STATUS_ANIMATION_SLEEP:
-                        status_bit = 6;
-                        break;
-                    case FIELD_STATUS_ANIMATION_PETRIFIED:
-                        status_bit = 7;
-                        break;
+                        case FIELD_STATUS_ANIMATION_POISON:
+                            status_bit = 0;
+                            break;
+                        case FIELD_STATUS_ANIMATION_DARKNESS:
+                            status_bit = 1;
+                            break;
+                        case FIELD_STATUS_ANIMATION_PARALYSIS:
+                            status_bit = 2;
+                            break;
+                        case FIELD_STATUS_ANIMATION_CONFUSION:
+                            status_bit = 3;
+                            break;
+                        case FIELD_STATUS_ANIMATION_FLAME_BURST:
+                            status_bit = 4;
+                            break;
+                        case FIELD_STATUS_ANIMATION_HYPNOSIS:
+                            status_bit = 5;
+                            break;
+                        case FIELD_STATUS_ANIMATION_SLEEP:
+                            status_bit = 6;
+                            break;
+                        case FIELD_STATUS_ANIMATION_PETRIFIED:
+                            status_bit = 7;
+                            break;
                     }
 
                     if (cleared_bit == status_bit)

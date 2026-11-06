@@ -32,7 +32,7 @@ s32 niki_advance_load_sequence(void)
 
     strcpy(path.text, CARD_DEVICE_PREFIX);
     phase_result = CARD_MENU_SEQUENCE_WAIT;
-    path.device.characters.slot += (u8)g_card_slot;
+    path.device.characters.slot += g_card_slot;
 
     if (g_card_step == NULL)
     {
@@ -495,7 +495,7 @@ s32 niki_scan_next_entry(s32 page)
     if (nextfile(&g_card_entries[page][g_card_entry_state]) != 0)
     {
         field_flag_known_save(g_card_entries[page][g_card_entry_state].name);
-        g_card_entry_state += 1;
+        g_card_entry_state++;
         return 1;
     }
 

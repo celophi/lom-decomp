@@ -71,7 +71,7 @@ void* cload_emit_window_frame(void* prim, u_long* ot, s32 x, s32 y, s32 w, s32 h
     DR_TPAGE* draw_mode;
     void* next_prim;
 
-    env_packet = (DR_ENV*)prim;
+    env_packet = prim;
     if (front_buffer != 0)
     {
         SetDefDrawEnv(&draw_env, x + CLOAD_FRAME_BORDER, y + SCREEN_HEIGHT + CLOAD_FRAME_BORDER, w - 2 * CLOAD_FRAME_BORDER,

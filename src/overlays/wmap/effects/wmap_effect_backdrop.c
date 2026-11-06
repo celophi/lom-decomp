@@ -1,9 +1,12 @@
+#include "common.h"
+#include <libgpu.h>
+
+#include "../internal/wmap_effect_backdrop.h"
 #include "../internal/wmap_frame_render.h"
 #include "../internal/wmap_resource_support.h"
-#include "../internal/wmap_effect_backdrop.h"
-#include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_sequence_runtime.h"
-#include <libgpu.h>
+#include "../internal/wmap_sprite_render.h"
+#include "common/gpu_packet.h"
 
 #define WMAP_MESH_TRIANGLE_COUNT 176
 #define WMAP_MESH_VERTEX_COUNT (WMAP_MESH_TRIANGLE_COUNT * 3)
@@ -57,7 +60,6 @@ extern WmapTriangle g_wmap_transition_mesh_triangles_1[];
 extern WmapFixedPoint g_wmap_transition_mesh_positions[];
 extern WmapFixedPoint* g_wmap_transition_mesh_motion;
 
-extern s32 g_wmap_transition_mesh_hidden;
 extern WmapFixedPoint g_wmap_transition_mesh_motion_0[];
 extern WmapFixedPoint g_wmap_transition_mesh_motion_1[];
 
@@ -67,15 +69,17 @@ void wmap_init_transition_mesh(void)
     s32 i;
 
     wmap_select_mesh_motion(0);
+
     for (i = 0; i < WMAP_MESH_TRIANGLE_COUNT; i++)
     {
         g_wmap_transition_mesh_triangles_0[i].header.packet.length = WMAP_MESH_PACKET_WORDS;
         g_wmap_transition_mesh_triangles_0[i].code = WMAP_MESH_POLY_G3_CODE;
-        *(s32*)&g_wmap_transition_mesh_triangles_0[i].x0 = g_wmap_transition_mesh_vertices[i * 3].packed;
-        *(s32*)&g_wmap_transition_mesh_triangles_0[i].x1 = g_wmap_transition_mesh_vertices[i * 3 + 1].packed;
-        *(s32*)&g_wmap_transition_mesh_triangles_0[i].x2 = g_wmap_transition_mesh_vertices[i * 3 + 2].packed;
+        SET_XY0_PACKED(&g_wmap_transition_mesh_triangles_0[i], g_wmap_transition_mesh_vertices[i * 3].packed);
+        SET_XY1_PACKED(&g_wmap_transition_mesh_triangles_0[i], g_wmap_transition_mesh_vertices[i * 3 + 1].packed);
+        SET_XY2_PACKED(&g_wmap_transition_mesh_triangles_0[i], g_wmap_transition_mesh_vertices[i * 3 + 2].packed);
         g_wmap_transition_mesh_triangles_1[i] = g_wmap_transition_mesh_triangles_0[i];
     }
+
     for (i = 0; i < WMAP_MESH_VERTEX_COUNT; i++)
     {
         g_wmap_transition_mesh_positions[i].x.value = g_wmap_transition_mesh_vertices[i].point.x << 16;
@@ -86,7 +90,7 @@ void wmap_init_transition_mesh(void)
 /** @brief Update the transition mesh and append its triangles for rendering. */
 void wmap_draw_transition_mesh(void)
 {
-    WmapTriangle *triangles;
+    WmapTriangle* triangles;
     s32 i;
     s32 remaining;
 
@@ -102,6 +106,7 @@ void wmap_draw_transition_mesh(void)
             {
                 triangles = g_wmap_transition_mesh_triangles_1;
             }
+
             if (g_wmap_mesh_transition_frames >= 2)
             {
                 for (i = 0; i < WMAP_MESH_VERTEX_COUNT; i++)
@@ -110,6 +115,7 @@ void wmap_draw_transition_mesh(void)
                     g_wmap_transition_mesh_positions[i].y.value += g_wmap_mesh_transition_direction * g_wmap_transition_mesh_motion[i].y.value;
                 }
             }
+
             for (i = 0; i < WMAP_MESH_TRIANGLE_COUNT; i++)
             {
                 triangles->x0 = g_wmap_transition_mesh_positions[i * 3].x.parts.whole;
@@ -120,13 +126,16 @@ void wmap_draw_transition_mesh(void)
                 triangles->y2 = g_wmap_transition_mesh_positions[i * 3 + 2].y.parts.whole;
                 triangles++;
             }
+
             remaining = g_wmap_mesh_transition_frames - 1;
             g_wmap_mesh_transition_frames = remaining;
+
             if (remaining == 0)
             {
                 g_wmap_mesh_transition_direction = 0;
             }
         }
+
         if (g_wmap_frame_count & 1)
         {
             triangles = g_wmap_transition_mesh_triangles_0;
@@ -135,11 +144,13 @@ void wmap_draw_transition_mesh(void)
         {
             triangles = g_wmap_transition_mesh_triangles_1;
         }
+
         for (i = 0; i < WMAP_MESH_TRIANGLE_COUNT; i++)
         {
             addPrim(&g_wmap_current_frame->ordering_table[WMAP_MESH_OT_INDEX], triangles);
             triangles++;
         }
+
         wmap_queue_texture_page(WMAP_MESH_TPAGE, WMAP_MESH_OT_INDEX);
     }
 }
@@ -156,8 +167,9 @@ void wmap_start_mesh_transition(s32 selection)
     {
         if (g_wmap_mesh_transition_direction != 0)
         {
-            func_80064F14();
+            wmap_report_error();
         }
+
         if (selection == 0)
         {
             g_wmap_mesh_transition_direction = -1;
@@ -166,6 +178,7 @@ void wmap_start_mesh_transition(s32 selection)
         {
             g_wmap_mesh_transition_direction = 1;
         }
+
         g_wmap_mesh_transition_frames = WMAP_MESH_TRANSITION_FRAMES;
         previous_selection = g_wmap_mesh_transition_selection;
         g_wmap_mesh_transition_selection = selection;
@@ -184,5 +197,6 @@ void wmap_select_mesh_motion(s32 use_second)
         g_wmap_transition_mesh_motion = g_wmap_transition_mesh_motion_1;
         return;
     }
+
     g_wmap_transition_mesh_motion = g_wmap_transition_mesh_motion_0;
 }

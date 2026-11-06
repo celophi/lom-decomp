@@ -1,33 +1,16 @@
-#include "internal/font.h"
-
-#include "internal/checkps_internal.h"
-
-#include "main/display.h"
+#include "common.h"
 #include <libapi.h>
-#include <libgte.h>
 #include <libgpu.h>
-#include "common/gpu_packet.h"
+#include <libgte.h>
 
-#define CHECKPS_GLYPH_CACHE_ENTRY_COUNT 256
-#define CHECKPS_GLYPH_CACHE_USED_FLAG 0x10000
-#define CHECKPS_GLYPH_CACHE_CODE_MASK 0xFFFF
+#include "common/gpu_packet.h"
+#include "internal/checkps_internal.h"
+#include "internal/font.h"
+#include "main/display.h"
+
 #define CHECKPS_GLYPH_CLUT_Y (VRAM_HEIGHT - 1)
-#define CHECKPS_GLYPH_WIDTH 16
-#define CHECKPS_GLYPH_VRAM_WORD_WIDTH 4
-#define CHECKPS_GLYPH_RASTER_SLOT_SIZE 128
-#define CHECKPS_GLYPH_RASTER_BUFFER_SIZE (CHECKPS_GLYPH_CACHE_ENTRY_COUNT * CHECKPS_GLYPH_RASTER_SLOT_SIZE)
-#define CHECKPS_GLYPH_V_COORD_MASK 0xF0
-#define CHECKPS_GLYPH_SOURCE_MSB 0x80
-#define CHECKPS_GLYPH_SOURCE_ROW_BYTES 2
-#define CHECKPS_GLYPH_SOURCE_PIXEL_PAIRS 4
-#define CHECKPS_GLYPH_HIGH_NIBBLE_SCALE 16
-#define CHECKPS_TEXT_WRAP_LIMIT (SCREEN_WIDTH * 2)
-#define CHECKPS_TEXT_FIRST_PRINTABLE 0x20
 #define CHECKPS_TEXT_SPACE 0x20
 #define CHECKPS_SJIS_LEAD_BYTE_THRESHOLD 0x80
-#define CHECKPS_SJIS_FULLWIDTH_ZERO 0x4F82
-#define CHECKPS_SJIS_MINUS 0x5B81
-#define CHECKPS_ASCII_TO_SJIS_OFFSET 0x851F
 #define CHECKPS_HEX_RADIX 16
 #define CHECKPS_DECIMAL_FIRST_DIGIT 1
 #define CHECKPS_DECIMAL_DIGIT_COUNT 5
@@ -91,13 +74,13 @@ static CheckPSGlyphPacket* emit_glyph_sprite(CheckPSGlyphPacket* packet, u_long*
 extern u_long g_glyph_clut_prefix[3];
 
 /** CPU-side staging storage for all unpacked 4bpp glyph rasters. */
-u8 g_glyph_raster_buffer[CHECKPS_GLYPH_RASTER_BUFFER_SIZE];
+u8 g_glyph_raster_buffer[GLYPH_RASTER_BUFFER_BYTES];
 
 /**
  * Cached character-code slots for the 16x16 text renderer.
  * Bit 16 is a per-frame usage mark, not a persistent cache-validity bit.
  */
-GlyphCacheEntry g_glyph_cache[CHECKPS_GLYPH_CACHE_ENTRY_COUNT];
+GlyphCacheEntry g_glyph_cache[GLYPH_CACHE_SLOTS];
 
 /** Screen-space position of the next glyph. */
 s32 g_glyph_cursor_x;
@@ -140,6 +123,7 @@ void* draw_signed_decimal(void* primitive, u_long* ot_tag, s32 value, s32 x, s32
     s32 negative;
 
     magnitude = value;
+
     if (magnitude < 0)
     {
         magnitude = -magnitude;
@@ -149,6 +133,7 @@ void* draw_signed_decimal(void* primitive, u_long* ot_tag, s32 value, s32 x, s32
     {
         negative = 0;
     }
+
     glyph_buffer[1] = g_decimal_glyph_table[magnitude / 10000];
     glyph_buffer[2] = g_decimal_glyph_table[(magnitude % 10000) / 1000];
     glyph_buffer[3] = g_decimal_glyph_table[(magnitude % 1000) / 100];
@@ -159,7 +144,7 @@ void* draw_signed_decimal(void* primitive, u_long* ot_tag, s32 value, s32 x, s32
 
     glyph_buffer[CHECKPS_DECIMAL_TERMINATOR_INDEX] = 0;
 
-    while (first_digit < CHECKPS_DECIMAL_DIGIT_COUNT && glyph_buffer[first_digit] == CHECKPS_SJIS_FULLWIDTH_ZERO)
+    while (first_digit < CHECKPS_DECIMAL_DIGIT_COUNT && glyph_buffer[first_digit] == GLYPH_PAIR_ZERO)
     {
         first_digit++;
     }
@@ -167,8 +152,9 @@ void* draw_signed_decimal(void* primitive, u_long* ot_tag, s32 value, s32 x, s32
     if (negative != 0)
     {
         first_digit--;
-        glyph_buffer[first_digit] = CHECKPS_SJIS_MINUS;
+        glyph_buffer[first_digit] = GLYPH_PAIR_MINUS;
     }
+
     primitive = draw_cached_text(primitive, ot_tag, (const u8*)&glyph_buffer[first_digit], x, y, palette, alignment);
     return primitive;
 }
@@ -215,15 +201,18 @@ void* draw_cached_text(void* primitive, u_long* ot_tag, const u8* text, s32 x, s
 
     cursor = text;
     glyph_count = 0;
-    if (*cursor >= CHECKPS_TEXT_FIRST_PRINTABLE)
+
+    if (*cursor >= GLYPH_TEXT_FIRST_PRINTABLE)
     {
         scan = cursor;
-        while (*scan >= CHECKPS_TEXT_FIRST_PRINTABLE)
+
+        while (*scan >= GLYPH_TEXT_FIRST_PRINTABLE)
         {
             if (*scan >= CHECKPS_SJIS_LEAD_BYTE_THRESHOLD)
             {
                 scan++;
             }
+
             scan++;
             glyph_count++;
         }
@@ -231,16 +220,17 @@ void* draw_cached_text(void* primitive, u_long* ot_tag, const u8* text, s32 x, s
 
     switch (alignment)
     {
-    case CHECKPS_TEXT_ALIGN_RIGHT:
-        x -= glyph_count * CHECKPS_GLYPH_WIDTH;
-        break;
-    case CHECKPS_TEXT_ALIGN_CENTER:
-        x -= glyph_count * (CHECKPS_GLYPH_WIDTH / 2);
-        break;
-    case CHECKPS_TEXT_ALIGN_LEFT:
-    default:
-        break;
+        case CHECKPS_TEXT_ALIGN_RIGHT:
+            x -= glyph_count * GLYPH_SIZE;
+            break;
+        case CHECKPS_TEXT_ALIGN_CENTER:
+            x -= glyph_count * (GLYPH_SIZE / 2);
+            break;
+        case CHECKPS_TEXT_ALIGN_LEFT:
+        default:
+            break;
     }
+
     g_text_line_start_x = x;
     g_glyph_cursor_x = x;
     g_glyph_cursor_y = y;
@@ -250,9 +240,10 @@ void* draw_cached_text(void* primitive, u_long* ot_tag, const u8* text, s32 x, s
         if (*cursor == CHECKPS_TEXT_SPACE)
         {
             cursor++;
-            g_glyph_cursor_x += CHECKPS_GLYPH_WIDTH;
+            g_glyph_cursor_x += GLYPH_SIZE;
             continue;
         }
+
         if (*cursor >= CHECKPS_SJIS_LEAD_BYTE_THRESHOLD)
         {
             character_code = cursor[0];
@@ -261,13 +252,15 @@ void* draw_cached_text(void* primitive, u_long* ot_tag, const u8* text, s32 x, s
         }
         else
         {
-            if (*cursor < CHECKPS_TEXT_FIRST_PRINTABLE)
+            if (*cursor < GLYPH_TEXT_FIRST_PRINTABLE)
             {
                 break;
             }
-            character_code = *cursor + CHECKPS_ASCII_TO_SJIS_OFFSET;
+
+            character_code = *cursor + GLYPH_SJIS_SYMBOL_OFFSET;
             cursor++;
         }
+
         primitive = render_cached_glyph(primitive, ot_tag, character_code, palette);
     }
 
@@ -298,7 +291,7 @@ static void* render_cached_glyph(void* primitive, u_long* ot_tag, u16 character_
     u16 source_mask;
     RECT upload_rect;
 
-    for (index = 0; index < CHECKPS_GLYPH_CACHE_ENTRY_COUNT; index++)
+    for (index = 0; index < GLYPH_CACHE_SLOTS; index++)
     {
         if (character_code == g_glyph_cache[index].data.character_code)
         {
@@ -308,6 +301,7 @@ static void* render_cached_glyph(void* primitive, u_long* ot_tag, u16 character_
 
     /* Psy-Q exposes the KROM pointer as a signed integer address. */
     font_data = (const u8*)Krom2RawAdd(character_code);
+
     if (font_data == (const u8*)CHECKPS_INVALID_KROM_ADDRESS)
     {
         return primitive;
@@ -316,14 +310,16 @@ static void* render_cached_glyph(void* primitive, u_long* ot_tag, u16 character_
     raster_cursor = g_glyph_raster_cursor;
     row = 0;
     color_index = palette + 1;
-    high_nibble_color = color_index * CHECKPS_GLYPH_HIGH_NIBBLE_SCALE;
+    high_nibble_color = color_index * GLYPH_HIGH_NIBBLE_SCALE;
+
     /* Expand ROM bits to 4-bit colors, packing two pixels into each output byte. */
-    for (; row < CHECKPS_GLYPH_BITMAP_ROWS; row++)
+    for (; row < GLYPH_ROWS; row++)
     {
-        for (row_byte_index = 0; row_byte_index < CHECKPS_GLYPH_SOURCE_ROW_BYTES; row_byte_index++)
+        for (row_byte_index = 0; row_byte_index < GLYPH_FONT_ROW_BYTES; row_byte_index++)
         {
-            source_mask = CHECKPS_GLYPH_SOURCE_MSB;
-            for (index = 0; index < CHECKPS_GLYPH_SOURCE_PIXEL_PAIRS; index++)
+            source_mask = GLYPH_FONT_SOURCE_MSB;
+
+            for (index = 0; index < GLYPH_FONT_PIXEL_PAIRS; index++)
             {
                 *raster_cursor = (*font_data & source_mask) ? color_index : 0;
                 source_mask >>= 1;
@@ -331,12 +327,13 @@ static void* render_cached_glyph(void* primitive, u_long* ot_tag, u16 character_
                 source_mask >>= 1;
                 raster_cursor++;
             }
+
             font_data++;
         }
     }
 
     /* A free slot has neither a character code nor a per-frame usage mark. */
-    for (index = 0; index < CHECKPS_GLYPH_CACHE_ENTRY_COUNT; index++)
+    for (index = 0; index < GLYPH_CACHE_SLOTS; index++)
     {
         if (g_glyph_cache[index].raw == 0)
         {
@@ -344,24 +341,25 @@ static void* render_cached_glyph(void* primitive, u_long* ot_tag, u16 character_
         }
     }
 
-    if (index == CHECKPS_GLYPH_CACHE_ENTRY_COUNT)
+    if (index == GLYPH_CACHE_SLOTS)
     {
         return primitive;
     }
+
     g_glyph_cache[index].raw = character_code;
     primitive = emit_glyph_sprite(primitive, ot_tag, index);
 
-    g_glyph_upload_x = (index % CHECKPS_GLYPH_WIDTH) * CHECKPS_GLYPH_VRAM_WORD_WIDTH;
-    g_glyph_upload_y = index & CHECKPS_GLYPH_V_COORD_MASK;
+    g_glyph_upload_x = (index % GLYPH_SIZE) * GLYPH_VRAM_WORD_PIXELS;
+    g_glyph_upload_y = index & GLYPH_CACHE_ROW_MASK;
 
-    setWH(&upload_rect, CHECKPS_GLYPH_VRAM_WORD_WIDTH, CHECKPS_GLYPH_BITMAP_ROWS);
+    setWH(&upload_rect, GLYPH_VRAM_WORD_PIXELS, GLYPH_ROWS);
     upload_rect.x = g_glyph_upload_x + CHECKPS_GLYPH_VRAM_X;
     upload_rect.y = g_glyph_upload_y;
 
     LoadImage(&upload_rect, (u_long*)g_glyph_raster_cursor);
     DrawSync(0);
 
-    g_glyph_raster_cursor += CHECKPS_GLYPH_RASTER_SLOT_SIZE;
+    g_glyph_raster_cursor += GLYPH_RASTER_BYTES;
     return primitive;
 }
 
@@ -374,23 +372,24 @@ static void* render_cached_glyph(void* primitive, u_long* ot_tag, u16 character_
  */
 static CheckPSGlyphPacket* emit_glyph_sprite(CheckPSGlyphPacket* packet, u_long* ot_tag, s32 cache_slot)
 {
-    g_glyph_cache[cache_slot].raw |= CHECKPS_GLYPH_CACHE_USED_FLAG;
+    g_glyph_cache[cache_slot].raw |= GLYPH_CACHE_USED;
 
     setSprt16(&packet->sprite);
     packet->sprite.g0 = GPU_TINT_NEUTRAL_LEVEL;
     packet->sprite.b0 = GPU_TINT_NEUTRAL_LEVEL;
     packet->sprite.r0 = GPU_TINT_NEUTRAL_LEVEL;
     setXY0(&packet->sprite, g_glyph_cursor_x, g_glyph_cursor_y);
-    setUV0(&packet->sprite, (cache_slot % CHECKPS_GLYPH_WIDTH) * CHECKPS_GLYPH_WIDTH, cache_slot & CHECKPS_GLYPH_V_COORD_MASK);
+    setUV0(&packet->sprite, (cache_slot % GLYPH_SIZE) * GLYPH_SIZE, cache_slot & GLYPH_CACHE_ROW_MASK);
     packet->sprite.clut = getClut(0, CHECKPS_GLYPH_CLUT_Y);
     addPrim(ot_tag, &packet->sprite);
     packet++;
 
-    g_glyph_cursor_x += CHECKPS_GLYPH_WIDTH;
-    if (g_glyph_cursor_x + CHECKPS_GLYPH_WIDTH >= CHECKPS_TEXT_WRAP_LIMIT)
+    g_glyph_cursor_x += GLYPH_SIZE;
+
+    if (g_glyph_cursor_x + GLYPH_SIZE >= GLYPH_TEXT_WRAP_X)
     {
         g_glyph_cursor_x = g_text_line_start_x;
-        g_glyph_cursor_y += CHECKPS_GLYPH_WIDTH;
+        g_glyph_cursor_y += GLYPH_SIZE;
     }
 
     return packet;
@@ -404,9 +403,10 @@ void begin_glyph_cache_frame(void)
     s32 cache_slot;
 
     g_glyph_raster_cursor = g_glyph_raster_buffer;
-    for (cache_slot = 0; cache_slot < CHECKPS_GLYPH_CACHE_ENTRY_COUNT; cache_slot++)
+
+    for (cache_slot = 0; cache_slot < GLYPH_CACHE_SLOTS; cache_slot++)
     {
-        g_glyph_cache[cache_slot].raw &= CHECKPS_GLYPH_CACHE_CODE_MASK;
+        g_glyph_cache[cache_slot].raw &= GLYPH_CACHE_CODE_MASK;
     }
 }
 
@@ -417,9 +417,9 @@ void evict_unused_glyphs(void)
 {
     s32 cache_slot;
 
-    for (cache_slot = 0; cache_slot < CHECKPS_GLYPH_CACHE_ENTRY_COUNT; cache_slot++)
+    for (cache_slot = 0; cache_slot < GLYPH_CACHE_SLOTS; cache_slot++)
     {
-        if (!(g_glyph_cache[cache_slot].raw & CHECKPS_GLYPH_CACHE_USED_FLAG))
+        if (!(g_glyph_cache[cache_slot].raw & GLYPH_CACHE_USED))
         {
             g_glyph_cache[cache_slot].raw = 0;
         }
@@ -434,18 +434,18 @@ void reset_glyph_renderer(void)
     s32 i;
     RECT clut_rect;
 
-    for (i = CHECKPS_GLYPH_CACHE_ENTRY_COUNT - 1; i >= 0; i--)
+    for (i = GLYPH_CACHE_SLOTS - 1; i >= 0; i--)
     {
         g_glyph_cache[i].raw = 0;
     }
 
-    for (i = 0; i < CHECKPS_GLYPH_RASTER_BUFFER_SIZE; i++)
+    for (i = 0; i < GLYPH_RASTER_BUFFER_BYTES; i++)
     {
         g_glyph_raster_buffer[i] = 0;
     }
 
     clut_rect.y = CHECKPS_GLYPH_CLUT_Y;
-    clut_rect.w = CHECKPS_GLYPH_WIDTH;
+    clut_rect.w = GLYPH_SIZE;
     clut_rect.x = 0;
     clut_rect.h = 1;
 

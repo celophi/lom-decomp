@@ -8,14 +8,15 @@
  */
 
 #include "common.h"
-#include "../internal/field_effect_render_state.h"
-#include "common/saved_game.h"
-#include "main/controller_internal.h"
+
+#include "../internal/field_actor_runtime.h"
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_calls.h"
+#include "../internal/field_effect_render_state.h"
 #include "../internal/field_modal_runtime.h"
-#include "../internal/field_actor_runtime.h"
+#include "common/saved_game.h"
 #include "main/audio/akao.h"
+#include "main/controller_internal.h"
 
 /** @brief Idle checks in a row after which the pending reset completes. */
 #define FIELD_RESET_IDLE_CHECKS 15
@@ -46,23 +47,10 @@ extern s32 g_field_money_snapshot;
 extern u32 g_field_experience_snapshot[];
 
 void akao_release_all_sfx(void);
-void field_clear_actor_slots(void);
-s32 field_find_active_special_attack_actor(void);
-void field_initialize_actor_slots(void);
-void field_reset_global_color_scale(void);
 void field_restart_actor_animation(FieldActor* actor);
-s32 field_is_scene_fading(void);
-void field_show_battle_results(void);
-void field_update_object_effects(s32 object_index);
-void field_camera_select_scroll_limits(void);
-void field_command_history_clear(s32 object_index);
-void field_play_sound(s32 arg0, s32 arg1);
-void field_release_sfx_group(s32 object_index);
-void field_clear_actor_texts(void);
 void field_battle_setup(s32 mode);
 s32 field_find_defeating_actor(void);
 s32 field_defeat_animation_playing(void);
-void field_cancel_animation_bindings(void);
 
 /**
  * @brief Start a battle with a trigger group, or reset the party when a battle ends.
@@ -268,7 +256,8 @@ void field_cancel_animation_bindings(void)
                             g_field_actor_slots[j].track_mask = 0;
                             index = g_field_actors[owner].command;
 
-                            if ((index != FIELD_ACTOR_COMMAND_DEFEATED && index != FIELD_ACTOR_COMMAND_DEFEAT_END) || (g_field_object_states[owner].flags & FIELD_OBJECT_FLAG_KNOCKED_OUT))
+                            if ((index != FIELD_ACTOR_COMMAND_DEFEATED && index != FIELD_ACTOR_COMMAND_DEFEAT_END) ||
+                                (g_field_object_states[owner].flags & FIELD_OBJECT_FLAG_KNOCKED_OUT))
                             {
                                 g_field_actors[g_field_actor_slots[j].owner_object_index].presence = FIELD_ACTOR_VISIBLE;
                             }
@@ -311,10 +300,10 @@ void field_update_battle_end(void)
 
     if (g_field_actions_limited != 0)
     {
-        if ((field_find_active_special_attack_actor() == 0) && (field_find_defeating_actor() == 0) && (g_field_text_session_active == 0) && (field_is_scene_fading() == 0) &&
-            (field_defeat_animation_playing() == 0))
+        if ((field_find_active_special_attack_actor() == 0) && (field_find_defeating_actor() == 0) && (g_field_text_session_active == 0) &&
+            (field_is_scene_fading() == 0) && (field_defeat_animation_playing() == 0))
         {
-            g_field_battle_idle_checks += 1;
+            g_field_battle_idle_checks++;
         }
         else
         {

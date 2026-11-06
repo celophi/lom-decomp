@@ -1,19 +1,21 @@
-#include "main/cdrom.h"
-#include "internal/gover.h"
-#include "main/main.h"
-#include "main/audio/akao.h"
-#include "main/audio/akao_cmd.h"
-#include "main/display.h"
+#include "common.h"
+#include <libetc.h>
+#include <libgpu.h>
+#include <libgte.h>
+
+#include "common/gpu_packet.h"
 #include "common/pad.h"
 #include "common/tim.h"
-#include <libgte.h>
-#include <libgpu.h>
-#include <libetc.h>
-#include "overlays/menu/menu.h"
+#include "internal/gover.h"
+#include "main/audio/akao.h"
+#include "main/audio/akao_cmd.h"
+#include "main/cdrom.h"
 #include "main/controller.h"
-#include "common/gpu_packet.h"
+#include "main/display.h"
 #include "main/game_state.h"
+#include "main/main.h"
 #include "overlays/field/field_input.h"
+#include "overlays/menu/menu.h"
 
 /**
  * @brief Stores the active SFX offset table for the AKAO driver.
@@ -266,10 +268,12 @@ static void gover_run(void)
 
         // Present the newly selected buffer and draw the frame just built.
         next_frame = g_gover_frames;
+
         if (current_frame == g_gover_frames)
         {
             next_frame = current_frame + 1;
         }
+
         current_frame = next_frame;
         PutDispEnv(&current_frame->display_environment);
 
@@ -323,7 +327,7 @@ static void gover_build_otag(u8* frame_buffer)
     primitive_a = frame->allocation_cursor;
 
     setSprt(primitive_a);
-    left_fade_level = (u8)g_fade_level;
+    left_fade_level = g_fade_level;
 
     setXY0((SPRT*)primitive_a, 0, 0);
     setWH((SPRT*)primitive_a, GOVER_TEXTURE_PAGE_WIDTH, GOVER_IMAGE_HEIGHT);
@@ -341,7 +345,7 @@ static void gover_build_otag(u8* frame_buffer)
     primitive_a = primitive_b;
 
     setSprt(primitive_b);
-    right_fade_level = (u8)g_fade_level;
+    right_fade_level = g_fade_level;
 
     SET_BGR0((SPRT*)primitive_b, right_fade_level, right_fade_level, right_fade_level);
     setXY0((SPRT*)primitive_b, GOVER_TEXTURE_PAGE_WIDTH, 0);
@@ -391,15 +395,13 @@ static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestination* destinatio
     TimBlock* pixel_block;
     u32 clut_block_length = tim->clut_block.bnum;
 
-    setRECT(&upload_rect, destinations->clut_x, destinations->clut_y,
-            tim->clut_block.dimensions.width * tim->clut_block.dimensions.height, 1);
+    setRECT(&upload_rect, destinations->clut_x, destinations->clut_y, tim->clut_block.dimensions.width * tim->clut_block.dimensions.height, 1);
     LoadImage(&upload_rect, (u_long*)tim->clut_data);
 
     // Locate the pixel block that follows the variable-length CLUT block.
     pixel_block = TIM_PIXEL_BLOCK(tim, clut_block_length);
 
-    setRECT(&upload_rect, destinations->pixel_x, destinations->pixel_y,
-            pixel_block->dimensions.width, pixel_block->dimensions.height);
+    setRECT(&upload_rect, destinations->pixel_x, destinations->pixel_y, pixel_block->dimensions.width, pixel_block->dimensions.height);
     LoadImage(&upload_rect, (u_long*)(pixel_block + 1));
 
     return ALIGN64(pixel_block->dimensions.width);

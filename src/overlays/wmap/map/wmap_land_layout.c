@@ -1,18 +1,12 @@
 #include "../internal/wmap_land_layout.h"
 #include "../internal/wmap_land_transition.h"
 #include "common/saved_game.h"
-#include "main/main.h"
 #include "main/cdrom.h"
+#include "main/main.h"
 
 /* WMAP interprets its portion of the resident save buffer through this view. */
-#define WMAP_SAVED_GAME (*(WmapSave*)&g_saved_game)
-#define WMAP_LAND_COUNT 64
 /** @brief Event bits stored in each saved-game flag word. */
 #define WMAP_EVENT_WORD_BITS 32
-#define WMAP_GRID_SIZE 6
-#define WMAP_LAND_AVAILABLE 0x01
-#define WMAP_LAND_PLACED 0x02
-#define WMAP_LAND_ACTIVE 0x04
 #define WMAP_DAY_MASK 0x7F
 #define WMAP_LAYOUT_RESOURCE_BASE 0x12EA
 #define WMAP_TERRAIN_FLAG_0 0x01
@@ -20,7 +14,6 @@
 #define WMAP_TERRAIN_FLAG_2 0x04
 #define WMAP_ARTIFACT_TERRAIN_REQUIRED_SHIFT 10
 #define WMAP_ARTIFACT_FLAG_8_SHIFT 8
-#define WMAP_SPECIAL_LAND 31
 #define WMAP_SPIRIT_SPRITE_COLUMNS 7
 #define WMAP_SPIRIT_SPRITE_DIAGONAL 8
 #define WMAP_COORD_MASK 0x0F
@@ -36,8 +29,6 @@
 #define WMAP_LABEL_PROPOSED_INCREASE 27
 #define WMAP_LABEL_PROPOSED_CHANGE_BASE 22
 #define WMAP_LABEL_PROPOSED_GROUP 0x200
-
-#define WMAP_SAVED_SPIRITS_OFFSET ((s32) & ((WmapSave*)0)->lands[0].spirits)
 
 /** @brief Spirit strengths and placement restrictions for an artifact. */
 typedef union
@@ -69,127 +60,17 @@ typedef struct
     u8 music_ids[FIELD_LAND_COUNT * WMAP_LAND_ENTRY_SLOTS];
 } WmapLayout;
 
-/** @brief Saved land state; coordinates share a byte and flags share a word. */
-typedef union
-{
-    u32 word;
-    struct
-    {
-        u8 flags;
-        u8 position;
-        u8 placement_order;
-        u8 artifact_order;
-    } data;
-} WmapLandStatus;
-
-/** @brief Saved placement status and eight spirit levels. */
-typedef struct
-{
-    WmapLandStatus status;
-    u8 spirits[FIELD_LAND_SPIRIT_COUNT];
-} WmapSavedLand;
-
-/** @brief Save fields used by the land-layout routines. */
-typedef struct
-{
-    u8 unknown_0x000[0x2E4];
-    union
-    {
-        u32 word;
-        struct
-        {
-            u8 unknown_0x2e4;
-            u8 placed_land_count;
-            u16 day;
-        } data;
-    } calendar;
-    u32 events[2];
-    WmapSavedLand lands[WMAP_LAND_COUNT];
-} WmapSave;
-
-/** @brief Timed save record updated when a travel day elapses. */
-typedef struct
-{
-    u8 unknown_0x000[0x2EF4];
-    u8 active;
-    u8 unknown_0x2ef5[0x2F36 - 0x2EF5];
-    u16 age;
-    s32 direction;
-} WmapTimedSaveView;
-
-/** @brief Save view for the daily growth counters. */
-typedef struct
-{
-    u8 unknown_0x000[0x26F8];
-    u8 growth[8];
-} WmapGrowthSaveView;
-
-/** @brief Eight growth counters in one saved slot. */
-typedef struct
-{
-    u8 spirits[8];
-    u8 unknown_0x08[8];
-} WmapGrowthSlot;
-
-/** @brief Eight growth slots followed by twelve bytes of other saved data. */
-typedef struct
-{
-    WmapGrowthSlot slots[8];
-    u8 unknown_0x80[12];
-} WmapGrowthGroup;
-
-/** @brief Saved growth groups advanced when the party travels. */
-typedef struct
-{
-    u8 unknown_0x000[0x26F8];
-    WmapGrowthGroup groups[4];
-} WmapGrowthSave;
-
-/** @brief Save header fields used to select the map layout. */
-typedef struct
-{
-    u8 unknown_0x00[0x28];
-    unsigned int unused_flags : 2;
-    unsigned int option : 1;
-    unsigned int other_flags : 29;
-    u8 unknown_0x2c[0xE0 - 0x2C];
-    u16 layout_id;
-} WmapSaveHeader;
-
-/** @brief Saved map entry status at its original byte offsets. */
-typedef struct
-{
-    u8 pad_000[0x2F0];
-    union
-    {
-        struct
-        {
-            unsigned int available : 1;
-            unsigned int placed : 1;
-            unsigned int other_flags : 6;
-        } flags;
-        struct
-        {
-            u8 flags;
-            u8 pad[2];
-            u8 artifact_order;
-        } data;
-    } entry;
-} WmapSavedEntry;
-
 /** @brief Table of 64 world-map values copied to a local buffer. */
 typedef struct
 {
     s32 values[64];
 } WmapValueTable;
 
-extern u16 g_wmap_saved_day;
-extern u8 g_wmap_placed_land_count;
 extern u8 g_wmap_saved_map_status;
 extern s32 g_wmap_layout_selection;
-extern WmapLandAttributes g_wmap_land_attributes[WMAP_LAND_COUNT];
+extern WmapLandAttributes g_wmap_land_attributes[FIELD_LAND_COUNT];
 extern s32 g_wmap_spirit_sprites[];
-extern s32 g_wmap_proposed_spirits[WMAP_LAND_COUNT][FIELD_LAND_SPIRIT_COUNT];
+extern s32 g_wmap_proposed_spirits[FIELD_LAND_COUNT][FIELD_LAND_SPIRIT_COUNT];
 extern u8 g_wmap_land_lookup[WMAP_GRID_SIZE * WMAP_GRID_SIZE];
 extern WmapLayout* g_wmap_layout;
 extern WmapLayout g_wmap_layout_buffer;
@@ -202,9 +83,10 @@ extern s32 g_wmap_artifact_list_tail;
 extern s32 g_wmap_artifact_display_tail;
 extern s32 g_wmap_artifact_list[];
 
-void wmap_apply_land_influence(s32 land, u32 x, s32 y, s32 (*spirits)[8]);
+void wmap_apply_land_influence(s32 land, u32 x, s32 y, s32 (*spirits)[FIELD_LAND_SPIRIT_COUNT]);
 void wmap_rebuild_land_lookup(void);
-void wmap_append_land_spirit_labels(s32 mode, u32 x, s32 y, s32 mask, s32* count, s32* flags, s32* output, s32 unused, s32 (*comparison)[8]);
+void wmap_append_land_spirit_labels(s32 mode, u32 x, s32 y, s32 mask, s32* count, s32* flags, s32* output, s32 unused,
+                                    s32 (*comparison)[FIELD_LAND_SPIRIT_COUNT]);
 s32 wmap_wrap_index(s32 value, s32 minimum, s32 maximum);
 
 /**
@@ -215,9 +97,9 @@ s32 wmap_wrap_index(s32 value, s32 minimum, s32 maximum);
  */
 static inline s32 wmap_cell_has_active_land(u32 x, s32 y)
 {
-    WmapSave* save = (WmapSave*)g_saved_game.bytes;
+    SavedGameLayout* save = &g_saved_game.layout;
     s32 land = wmap_get_land_at_cell(x, y);
-    return (save->lands[land].status.data.flags >> 2) & 1;
+    return (save->lands[land].flags >> 2) & 1;
 }
 
 /**
@@ -237,7 +119,7 @@ static inline s32 wmap_get_artifact_flag(s32 land, s32 shift)
  * @param output_row Neighbor index, or WMAP_NO_LAND to skip.
  * @param output Table of proposed spirit levels.
  */
-static inline void wmap_adjust_neighbor_spirits(s32 table_row, s32 output_row, s32 (*output)[8])
+static inline void wmap_adjust_neighbor_spirits(s32 table_row, s32 output_row, s32 (*output)[FIELD_LAND_SPIRIT_COUNT])
 {
     s32* entry;
     uintptr_t table;
@@ -250,19 +132,23 @@ static inline void wmap_adjust_neighbor_spirits(s32 table_row, s32 output_row, s
     if (output_row != WMAP_NO_LAND)
     {
         index = 0;
+
         if (table_row != WMAP_NO_LAND)
         {
             table = (uintptr_t)g_wmap_land_attributes;
-            row_offset = table_row * (s32)sizeof(WmapLandAttributes);
-            entry = (s32*)((output_row * (s32)sizeof(g_wmap_proposed_spirits[0])) + (uintptr_t)output);
+            row_offset = table_row * sizeof(WmapLandAttributes);
+            entry = (s32*)((output_row * sizeof(g_wmap_proposed_spirits[0])) + (uintptr_t)output);
+
             for (; index < FIELD_LAND_SPIRIT_COUNT; index++, entry++)
             {
                 adjustment = *(u8*)(index + row_offset + table) - FIELD_LAND_SPIRIT_NEUTRAL;
                 value = *entry + adjustment;
+
                 *entry = value;
                 if (value >= 0)
                 {
                     clamped = FIELD_LAND_SPIRIT_MAX;
+
                     if (value < 7)
                     {
                         clamped = value;
@@ -272,6 +158,7 @@ static inline void wmap_adjust_neighbor_spirits(s32 table_row, s32 output_row, s
                 {
                     clamped = 0;
                 }
+
                 *entry = clamped;
             }
         }
@@ -289,6 +176,7 @@ static inline void wmap_accumulate_land_spirits(s32 record_index, s32 other_inde
 {
     s32 index;
     s32 value;
+
     if (other_index != WMAP_NO_LAND)
     {
         if (record_index != WMAP_NO_LAND)
@@ -296,7 +184,7 @@ static inline void wmap_accumulate_land_spirits(s32 record_index, s32 other_inde
             for (index = 0; index < FIELD_LAND_SPIRIT_COUNT; index++)
             {
                 value = values[index] - FIELD_LAND_SPIRIT_NEUTRAL;
-                values[index] = value + WMAP_SAVED_GAME.lands[record_index].spirits[index];
+                values[index] = value + g_saved_game.layout.lands[record_index].levels[index];
             }
         }
     }
@@ -313,10 +201,11 @@ static inline void wmap_accumulate_terrain_spirits(u32 x, s32 y, s32* values)
     s32 index;
     WmapLayout* layout;
 
-    if (x < (u32)WMAP_GRID_SIZE && y >= 0 && y < WMAP_GRID_SIZE)
+    if (x < WMAP_GRID_SIZE && y >= 0 && y < WMAP_GRID_SIZE)
     {
         index = 0;
         layout = g_wmap_layout;
+
         for (; index < FIELD_LAND_SPIRIT_COUNT; index++)
         {
             values[index] += layout->cells[x + y * WMAP_GRID_SIZE].spirits[index];
@@ -344,7 +233,6 @@ static inline s32 wmap_append_artifact(s32 land)
 void wmap_update_travel_growth(void)
 {
     s32 growth[4][FIELD_LAND_SPIRIT_COUNT];
-    WmapTimedSaveView* timed_record;
     s32 flag_word;
     s32 event;
     s32 blocked;
@@ -361,76 +249,86 @@ void wmap_update_travel_growth(void)
     s32* day_growth;
 
     blocked = 0;
-    for (event = 0; event < WMAP_LAND_COUNT; event++)
+
+    for (event = 0; event < FIELD_LAND_COUNT; event++)
     {
         flag_word = event / WMAP_EVENT_WORD_BITS;
-        if ((((WmapSave*)((flag_word * 4) + (u8*)&g_saved_game))->events[0] & (1 << (event - (flag_word << 5)))) &&
+
+        if ((g_saved_game.layout.flag_bits[flag_word] & (1 << (event - (flag_word << 5)))) &&
             (((u32)(event - 9) < (u32)WMAP_GRID_SIZE) || (event == 0x18) || (event == 0) || (event == 0x1B) || (event == 0x1C)))
         {
             blocked = 1;
         }
     }
+
     if (blocked == 0)
     {
-        day_flags =
-            (WMAP_SAVED_GAME.calendar.word & 0xFF80FFFF) | ((((((u32)WMAP_SAVED_GAME.calendar.word >> 0x10) & WMAP_DAY_MASK) + 1) & WMAP_DAY_MASK) << 0x10);
-        WMAP_SAVED_GAME.calendar.word = day_flags;
+        day_flags = (g_saved_game.layout.control.word & 0xFF80FFFF) |
+                    ((((((u32)g_saved_game.layout.control.word >> 0x10) & WMAP_DAY_MASK) + 1) & WMAP_DAY_MASK) << 0x10);
+        g_saved_game.layout.control.word = day_flags;
+
         if ((u32)((day_flags >> 0x10) & WMAP_DAY_MASK) >= 6U)
         {
-            WMAP_SAVED_GAME.calendar.word = (u32)(day_flags & 0xFF80FFFF);
+            g_saved_game.layout.control.word = (u32)(day_flags & 0xFF80FFFF);
         }
-        for (growth_group = 0; growth_group < 5; growth_group++)
+
+        for (growth_group = 0; growth_group < PET_RECORD_COUNT; growth_group++)
         {
-            timed_record = (WmapTimedSaveView*)(g_saved_game.bytes + growth_group * 96);
-            if (timed_record->active != 0)
+            if (g_saved_game.layout.pets[growth_group].name[0] != 0)
             {
-                if (timed_record->direction < 0)
+                if (g_saved_game.layout.pets[growth_group].status.bits.egg)
                 {
-                    remaining_age = timed_record->age;
+                    remaining_age = g_saved_game.layout.pets[growth_group].hatch_counter;
+
                     if (remaining_age != 0)
                     {
-                        timed_record->age = (u16)(remaining_age - 1);
+                        g_saved_game.layout.pets[growth_group].hatch_counter = (u16)(remaining_age - 1);
                     }
                 }
                 else
                 {
-                    age = timed_record->age;
+                    age = g_saved_game.layout.pets[growth_group].hatch_counter;
+
                     if (age <= 0xFFFEU)
                     {
-                        timed_record->age = (u16)(age + 1);
+                        g_saved_game.layout.pets[growth_group].hatch_counter = (u16)(age + 1);
                     }
                 }
             }
         }
+
         for (spirit = 0; spirit < FIELD_LAND_SPIRIT_COUNT; spirit++)
         {
-            growth[0][spirit] = WMAP_SAVED_GAME.lands[FIELD_LAND_HOME].spirits[spirit] - FIELD_LAND_SPIRIT_NEUTRAL;
-            growth[1][spirit] = WMAP_SAVED_GAME.lands[FIELD_LAND_ORCHARDS].spirits[spirit] - FIELD_LAND_SPIRIT_NEUTRAL;
+            growth[0][spirit] = g_saved_game.layout.lands[FIELD_LAND_HOME].levels[spirit] - FIELD_LAND_SPIRIT_NEUTRAL;
+            growth[1][spirit] = g_saved_game.layout.lands[FIELD_LAND_ORCHARDS].levels[spirit] - FIELD_LAND_SPIRIT_NEUTRAL;
             growth[2][spirit] = 0;
             growth[3][spirit] = 0;
         }
-        day = g_wmap_saved_day & WMAP_DAY_MASK;
+
+        day = g_saved_game.layout.control.fields.weekday & WMAP_DAY_MASK;
+
         switch (day)
         {
-        case 0:
-            day_bonus = 4;
-            break;
-        case 1:
-            day_bonus = 3;
-            break;
-        case 2:
-            day_bonus = 5;
-            break;
-        case 3:
-            day_bonus = 6;
-            break;
-        case 4:
-            day_bonus = 2;
-            break;
-        case 5:
-            day_bonus = 7;
-            break;
+            case 0:
+                day_bonus = 4;
+                break;
+            case 1:
+                day_bonus = 3;
+                break;
+            case 2:
+                day_bonus = 5;
+                break;
+            case 3:
+                day_bonus = 6;
+                break;
+            case 4:
+                day_bonus = 2;
+                break;
+            case 5:
+                day_bonus = 7;
+                break;
         }
+
         day_growth = &growth[0][day_bonus];
         day_growth[0] = (s32)(day_growth[0] + 1);
         day_growth[8] = (s32)(day_growth[8] + 1);
@@ -444,17 +342,20 @@ void wmap_update_travel_growth(void)
         growth[2][1]++;
         growth[3][0]++;
         growth[3][1]++;
+
         for (growth_group = 0; growth_group < 4; growth_group++)
         {
             for (growth_slot = 0; growth_slot < FIELD_LAND_SPIRIT_COUNT; growth_slot++)
             {
                 for (spirit = 0; spirit < FIELD_LAND_SPIRIT_COUNT; spirit++)
                 {
-                    total = ((WmapGrowthSave*)&g_saved_game)->groups[growth_group].slots[growth_slot].spirits[spirit];
+                    total = g_saved_game.layout.menu_slots[growth_group].slots[growth_slot].counters[spirit];
                     total += growth[growth_group][spirit];
+
                     if (total >= 0)
                     {
                         clamped = 255;
+
                         if (total < 0x100)
                         {
                             clamped = total;
@@ -464,7 +365,8 @@ void wmap_update_travel_growth(void)
                     {
                         clamped = 0;
                     }
-                    ((WmapGrowthSave*)&g_saved_game)->groups[growth_group].slots[growth_slot].spirits[spirit] = clamped;
+
+                    g_saved_game.layout.menu_slots[growth_group].slots[growth_slot].counters[spirit] = clamped;
                 }
             }
         }
@@ -483,10 +385,12 @@ s32 wmap_can_place_land(u32 x, s32 y, s32 land)
     s32 cell;
 
     cell = x + y * WMAP_GRID_SIZE;
+
     if (x >= (u32)WMAP_GRID_SIZE || y < 0 || y >= WMAP_GRID_SIZE)
     {
         return 0;
     }
+
     if (wmap_get_land_at_cell(x, y) == WMAP_NO_LAND)
     {
         if (wmap_get_artifact_flag(land, WMAP_ARTIFACT_TERRAIN_REQUIRED_SHIFT) == 1)
@@ -496,14 +400,16 @@ s32 wmap_can_place_land(u32 x, s32 y, s32 land)
                 return 0;
             }
         }
-        else if ((u32)(land - FIELD_LAND_LUCEMIA) >= 2U && land != WMAP_SPECIAL_LAND && (g_wmap_layout->cells[cell].flags & WMAP_TERRAIN_FLAG_0))
+        else if ((u32)(land - FIELD_LAND_LUCEMIA) >= 2U && land != FIELD_LAND_TREE_OF_MANA && (g_wmap_layout->cells[cell].flags & WMAP_TERRAIN_FLAG_0))
         {
             return 0;
         }
-        if (g_wmap_placed_land_count == 0)
+
+        if (g_saved_game.layout.control.fields.placed_land_count == 0)
         {
             return 1;
         }
+
         if (!(g_wmap_layout->cells[cell].flags & WMAP_TERRAIN_FLAG_1))
         {
             if (wmap_get_artifact_flag(land, WMAP_ARTIFACT_FLAG_8_SHIFT) == 1)
@@ -511,6 +417,7 @@ s32 wmap_can_place_land(u32 x, s32 y, s32 land)
                 return 0;
             }
         }
+
         if (y > 0 && wmap_get_land_at_cell(x, y - 1) != WMAP_NO_LAND)
         {
             if (wmap_cell_has_active_land(x, y - 1) == 1)
@@ -518,6 +425,7 @@ s32 wmap_can_place_land(u32 x, s32 y, s32 land)
                 return 1;
             }
         }
+
         if (y < WMAP_GRID_SIZE - 1 && wmap_get_land_at_cell(x, y + 1) != WMAP_NO_LAND)
         {
             if (wmap_cell_has_active_land(x, y + 1) == 1)
@@ -525,6 +433,7 @@ s32 wmap_can_place_land(u32 x, s32 y, s32 land)
                 return 1;
             }
         }
+
         if ((s32)x > 0 && wmap_get_land_at_cell(x - 1, y) != WMAP_NO_LAND)
         {
             if (wmap_cell_has_active_land(x - 1, y) == 1)
@@ -532,6 +441,7 @@ s32 wmap_can_place_land(u32 x, s32 y, s32 land)
                 return 1;
             }
         }
+
         if ((s32)x < WMAP_GRID_SIZE - 1 && wmap_get_land_at_cell(x + 1, y) != WMAP_NO_LAND)
         {
             if (wmap_cell_has_active_land(x + 1, y) == 1)
@@ -540,6 +450,7 @@ s32 wmap_can_place_land(u32 x, s32 y, s32 land)
             }
         }
     }
+
     return 0;
 }
 
@@ -554,40 +465,46 @@ void wmap_place_land(s32 x, s32 y, s32 index)
     s32 record;
     s32 field;
     s32 row_bits;
-    WmapSave* entry;
+    SavedGame* shifted;
     u8* save_data;
 
     save_data = g_saved_game.bytes;
-    entry = (WmapSave*)(save_data + index * (s32)sizeof(WmapSavedLand));
+    shifted = (SavedGame*)(save_data + index * sizeof(FieldLandWords));
     row_bits = y * 16;
-    entry->lands[0].status.data.position = (x & WMAP_COORD_MASK) | row_bits;
-    entry->lands[0].status.data.flags |= WMAP_LAND_PLACED;
-    WMAP_SAVED_GAME.calendar.data.placed_land_count++;
-    entry->lands[0].status.data.placement_order = WMAP_SAVED_GAME.calendar.data.placed_land_count;
-    if (WMAP_SAVED_GAME.calendar.data.placed_land_count == 1)
+    shifted->land_words.lands[0].bytes.cell = (x & WMAP_COORD_MASK) | row_bits;
+    shifted->land_words.lands[0].bytes.flags |= FIELD_LAND_PLACED;
+    g_saved_game.layout.control.fields.placed_land_count++;
+    shifted->land_words.lands[0].bytes.placement_order = g_saved_game.layout.control.fields.placed_land_count;
+
+    if (g_saved_game.layout.control.fields.placed_land_count == 1)
     {
         g_music_track_index = index;
     }
+
     /* Apply placement in a word workspace before committing the byte-sized save levels. */
-    for (record = 0; record < WMAP_LAND_COUNT; record++)
+    for (record = 0; record < FIELD_LAND_COUNT; record++)
     {
         for (field = 0; field < FIELD_LAND_SPIRIT_COUNT; field++)
         {
-            g_wmap_proposed_spirits[record][field] = WMAP_SAVED_GAME.lands[record].spirits[field];
+            g_wmap_proposed_spirits[record][field] = g_saved_game.layout.lands[record].levels[field];
         }
     }
+
     for (field = 0; field < FIELD_LAND_SPIRIT_COUNT; field++)
     {
         g_wmap_proposed_spirits[index][field] = g_wmap_land_attributes[index].data.spirits[field];
     }
+
     wmap_apply_land_influence(index, x, y, g_wmap_proposed_spirits);
-    for (record = 0; record < WMAP_LAND_COUNT; record++)
+
+    for (record = 0; record < FIELD_LAND_COUNT; record++)
     {
         for (field = 0; field < FIELD_LAND_SPIRIT_COUNT; field++)
         {
-            WMAP_SAVED_GAME.lands[record].spirits[field] = g_wmap_proposed_spirits[record][field];
+            g_saved_game.layout.lands[record].levels[field] = g_wmap_proposed_spirits[record][field];
         }
     }
+
     wmap_rebuild_land_lookup();
 }
 
@@ -598,7 +515,7 @@ void wmap_place_land(s32 x, s32 y, s32 index)
  * @param y Placement row.
  * @param spirits Spirit levels for all lands, updated in place.
  */
-void wmap_apply_land_influence(s32 land, u32 x, s32 y, s32 (*spirits)[8])
+void wmap_apply_land_influence(s32 land, u32 x, s32 y, s32 (*spirits)[FIELD_LAND_SPIRIT_COUNT])
 {
     s32 neighbor_influence[FIELD_LAND_SPIRIT_COUNT];
     s32* terrain_spirit;
@@ -613,7 +530,7 @@ void wmap_apply_land_influence(s32 land, u32 x, s32 y, s32 (*spirits)[8])
     u8 terrain_bonus;
     WmapLayout* terrain;
 
-    if ((x < (u32)WMAP_GRID_SIZE) && (y >= 0) && (y < WMAP_GRID_SIZE) && (wmap_can_place_land(x, y, land) != 0))
+    if ((x < WMAP_GRID_SIZE) && (y >= 0) && (y < WMAP_GRID_SIZE) && (wmap_can_place_land(x, y, land) != 0))
     {
         /* Neighbors receive the artifact contribution, clamped independently. */
         wmap_adjust_neighbor_spirits(land, wmap_get_land_at_cell(x - 1, y), spirits);
@@ -622,8 +539,9 @@ void wmap_apply_land_influence(s32 land, u32 x, s32 y, s32 (*spirits)[8])
         wmap_adjust_neighbor_spirits(land, wmap_get_land_at_cell(x, y + 1), spirits);
         spirit = 0;
         terrain = g_wmap_layout;
-        cell_offset = (x + y * WMAP_GRID_SIZE) * (s32)sizeof(WmapTerrainCell);
-        terrain_spirit = (s32*)(land * (s32)sizeof(spirits[0]) + (uintptr_t)spirits);
+        cell_offset = (x + y * WMAP_GRID_SIZE) * sizeof(WmapTerrainCell);
+        terrain_spirit = (s32*)(land * sizeof(spirits[0]) + (uintptr_t)spirits);
+
         while (spirit < FIELD_LAND_SPIRIT_COUNT)
         {
             terrain_bonus = ((WmapLayout*)((u8*)terrain + (spirit + cell_offset)))->cells[0].spirits[0];
@@ -631,15 +549,18 @@ void wmap_apply_land_influence(s32 land, u32 x, s32 y, s32 (*spirits)[8])
             *terrain_spirit += terrain_bonus;
             terrain_spirit++;
         }
+
         /* The new land receives half the combined influence of its four neighbors. */
         spirit = FIELD_LAND_SPIRIT_COUNT - 1;
         clear_entry = &neighbor_influence[FIELD_LAND_SPIRIT_COUNT - 1];
+
         while (spirit >= 0)
         {
             *clear_entry = 0;
             spirit--;
             clear_entry--;
         }
+
         wmap_accumulate_land_spirits(wmap_get_land_at_cell(x - 1, y), land, 0, neighbor_influence);
         wmap_accumulate_land_spirits(wmap_get_land_at_cell(x + 1, y), land, 0, neighbor_influence);
         wmap_accumulate_land_spirits(wmap_get_land_at_cell(x, y - 1), land, 0, neighbor_influence);
@@ -649,16 +570,19 @@ void wmap_apply_land_influence(s32 land, u32 x, s32 y, s32 (*spirits)[8])
         wmap_accumulate_terrain_spirits(x, y - 1, neighbor_influence);
         wmap_accumulate_terrain_spirits(x, y + 1, neighbor_influence);
         spirit = 0;
-        land_spirit = (s32*)(land * (s32)sizeof(spirits[0]) + (uintptr_t)spirits);
+        land_spirit = (s32*)(land * sizeof(spirits[0]) + (uintptr_t)spirits);
         influence = neighbor_influence;
+
         while (spirit < FIELD_LAND_SPIRIT_COUNT)
         {
             neighbor_total = *influence;
             total = *land_spirit + (neighbor_total / 2);
+
             *land_spirit = total;
             if (total >= 0)
             {
                 clamped = FIELD_LAND_SPIRIT_MAX;
+
                 if (total < 7)
                 {
                     clamped = total;
@@ -668,6 +592,7 @@ void wmap_apply_land_influence(s32 land, u32 x, s32 y, s32 (*spirits)[8])
             {
                 clamped = 0;
             }
+
             *land_spirit = clamped;
             land_spirit++;
             spirit++;
@@ -696,58 +621,69 @@ void wmap_get_proposed_spirit_sprites(u32 x, s32 y, u32 land, u32 proposed_x, s3
     s32 value;
     s32 fallback;
 
-    if (x < (u32)WMAP_GRID_SIZE && y >= 0 && y < 6 && land < (u32)WMAP_LAND_COUNT)
+    if (x < WMAP_GRID_SIZE && y >= 0 && y < WMAP_GRID_SIZE && land < FIELD_LAND_COUNT)
     {
-        if (proposed_x < (u32)WMAP_GRID_SIZE && proposed_y >= 0 && proposed_y < WMAP_GRID_SIZE)
+        if (proposed_x < WMAP_GRID_SIZE && proposed_y >= 0 && proposed_y < WMAP_GRID_SIZE)
         {
             cell = x + y * WMAP_GRID_SIZE;
             current_land = wmap_get_land_at_cell(x, y);
-            for (i = 0; i < WMAP_LAND_COUNT; i++)
+
+            for (i = 0; i < FIELD_LAND_COUNT; i++)
             {
                 for (j = 0; j < FIELD_LAND_SPIRIT_COUNT; j++)
                 {
-                    g_wmap_proposed_spirits[i][j] = WMAP_SAVED_GAME.lands[i].spirits[j];
+                    g_wmap_proposed_spirits[i][j] = g_saved_game.layout.lands[i].levels[j];
                 }
             }
+
             for (j = 0; j < FIELD_LAND_SPIRIT_COUNT; j++)
             {
                 g_wmap_proposed_spirits[land][j] = g_wmap_land_attributes[land].data.spirits[j];
             }
+
             wmap_apply_land_influence(land, proposed_x, proposed_y, g_wmap_proposed_spirits);
+
             for (i = 0; i < FIELD_LAND_SPIRIT_COUNT; i++)
             {
                 value = 0;
+
                 if (current_land == WMAP_NO_LAND)
                 {
                     if (proposed_x == x && proposed_y == y)
                     {
                         component = g_wmap_land_attributes[land].data.spirits[i];
                         level = g_wmap_proposed_spirits[land][i];
+
                         if (component >= 0 && level >= 0)
                         {
                             value = g_wmap_spirit_sprites[component * WMAP_SPIRIT_SPRITE_COLUMNS + level];
                         }
+
                         output[i] = value;
                     }
                     else
                     {
                         component = g_wmap_layout->cells[cell].spirits[i];
                         fallback = 0;
+
                         if (component >= 0)
                         {
                             fallback = g_wmap_spirit_sprites[component * WMAP_SPIRIT_SPRITE_DIAGONAL];
                         }
+
                         output[i] = fallback;
                     }
                 }
                 else
                 {
-                    component = WMAP_SAVED_GAME.lands[current_land].spirits[i];
+                    component = g_saved_game.layout.lands[current_land].levels[i];
                     level = g_wmap_proposed_spirits[current_land][i];
+
                     if (component >= 0 && level >= 0)
                     {
                         value = g_wmap_spirit_sprites[component * WMAP_SPIRIT_SPRITE_COLUMNS + level];
                     }
+
                     output[i] = value;
                 }
             }
@@ -767,7 +703,6 @@ void wmap_get_proposed_spirit_sprites(u32 x, s32 y, u32 land, u32 proposed_x, s3
  */
 s32 wmap_load_land_layout(void)
 {
-    WmapSaveHeader* header;
     s32 index;
     u8* cell;
     s32 empty;
@@ -777,59 +712,63 @@ s32 wmap_load_land_layout(void)
 
     g_wmap_event_cursor = -1;
     cdrom_wait_queue_empty();
-    header = (WmapSaveHeader*)&g_saved_game;
-    cdrom_queue_read((header->layout_id + WMAP_LAYOUT_RESOURCE_BASE) & 0xFFFF, &g_wmap_layout_buffer);
+    cdrom_queue_read(((u16)g_saved_game.layout.world_map_cell + WMAP_LAYOUT_RESOURCE_BASE) & 0xFFFF, &g_wmap_layout_buffer);
     cdrom_wait_queue_empty();
     g_wmap_layout = &g_wmap_layout_buffer;
     g_wmap_land_scenes = g_wmap_layout_buffer.scenes;
     g_wmap_land_music_ids = g_wmap_layout_buffer.music_ids;
-    if ((header->option != 1) && (WMAP_SAVED_GAME.calendar.data.placed_land_count == 1))
+
+    if ((g_saved_game.layout.options.bits.flag_2 != 1) && (g_saved_game.layout.control.fields.placed_land_count == 1))
     {
-        WMAP_SAVED_GAME.events[0] = (s32)(WMAP_SAVED_GAME.events[0] | 2);
+        g_saved_game.layout.flag_bits[0] = (g_saved_game.layout.flag_bits[0] | 2);
     }
-    if ((WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].status.word & WMAP_LAND_ACTIVE) &&
-        !(WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].status.word & WMAP_LAND_ACTIVE))
+
+    if ((g_saved_game.land_words.lands[FIELD_LAND_LUCEMIA].word & FIELD_LAND_FLAG_04) &&
+        !(g_saved_game.land_words.lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_FLAG_04))
     {
-        status = WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].status.word | 7;
+        status = g_saved_game.land_words.lands[FIELD_LAND_LUCEMIA_2].word | 7;
         status &= ~WMAP_STATUS_X_MASK;
-        status |= WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].status.word & WMAP_STATUS_X_MASK;
+        status |= g_saved_game.land_words.lands[FIELD_LAND_LUCEMIA].word & WMAP_STATUS_X_MASK;
         status &= ~WMAP_STATUS_Y_MASK;
-        status |= WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].status.word & WMAP_STATUS_Y_MASK;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].status.word = status;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].spirits[0] = 3;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].spirits[1] = 3;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].spirits[2] = 3;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].spirits[3] = 3;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].spirits[4] = 3;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].spirits[5] = 3;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].spirits[6] = 3;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].spirits[7] = 3;
-        saved_first = WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].status.data.placement_order;
-        saved_second = WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].status.data.artifact_order;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].status.word &= ~2;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].status.word &= ~1;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].status.word |= 0xFF00;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].status.data.placement_order = 0U;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].status.data.artifact_order = 0U;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].spirits[0] = 0;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].spirits[1] = 0;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].spirits[2] = 0;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].spirits[3] = 0;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].spirits[4] = 0;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].spirits[5] = 0;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].spirits[6] = 0;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA].spirits[7] = 0;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].status.data.placement_order = saved_first;
-        WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].status.data.artifact_order = saved_second;
+        status |= g_saved_game.land_words.lands[FIELD_LAND_LUCEMIA].word & WMAP_STATUS_Y_MASK;
+        g_saved_game.land_words.lands[FIELD_LAND_LUCEMIA_2].word = status;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA_2].levels[0] = 3;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA_2].levels[1] = 3;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA_2].levels[2] = 3;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA_2].levels[3] = 3;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA_2].levels[4] = 3;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA_2].levels[5] = 3;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA_2].levels[6] = 3;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA_2].levels[7] = 3;
+        saved_first = g_saved_game.layout.lands[FIELD_LAND_LUCEMIA].placement_order;
+        saved_second = g_saved_game.layout.lands[FIELD_LAND_LUCEMIA].artifact_order;
+        g_saved_game.land_words.lands[FIELD_LAND_LUCEMIA].word &= ~2;
+        g_saved_game.land_words.lands[FIELD_LAND_LUCEMIA].word &= ~1;
+        g_saved_game.land_words.lands[FIELD_LAND_LUCEMIA].word |= 0xFF00;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA].placement_order = 0U;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA].artifact_order = 0U;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA].levels[0] = 0;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA].levels[1] = 0;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA].levels[2] = 0;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA].levels[3] = 0;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA].levels[4] = 0;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA].levels[5] = 0;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA].levels[6] = 0;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA].levels[7] = 0;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA_2].placement_order = saved_first;
+        g_saved_game.layout.lands[FIELD_LAND_LUCEMIA_2].artifact_order = saved_second;
     }
+
     empty = WMAP_NO_LAND;
     index = 0x23;
     cell = g_wmap_land_lookup + index;
+
     for (; index >= 0; index--)
     {
         *cell = empty;
         cell--;
     }
+
     wmap_rebuild_land_lookup();
     wmap_build_artifact_list(0);
     return g_wmap_layout_selection;
@@ -844,31 +783,37 @@ s32 wmap_next_land_event(void)
     s32* save_words;
     s32 bank;
     s32 mask;
-    WmapSave* flags;
+    s32* words;
 
     g_wmap_event_cursor++;
-    while (g_wmap_event_cursor < WMAP_LAND_COUNT)
+
+    while (g_wmap_event_cursor < FIELD_LAND_COUNT)
     {
         save_words = g_saved_game.words;
         bank = g_wmap_event_cursor / 32;
-        flags = (WmapSave*)(save_words + bank);
+        words = save_words + bank;
         mask = 1 << (g_wmap_event_cursor - (bank << 5));
-        if (flags->events[0] & mask)
+
+        if (words[SAVED_GAME_FLAG_WORD_INDEX] & mask)
         {
             if (g_wmap_event_cursor == 0)
             {
                 g_field_secondary_music_id = 31;
             }
-            if ((u32)(g_wmap_event_cursor - 2) >= 2U && g_wmap_event_cursor != 22 && g_wmap_event_cursor != 23 && g_wmap_event_cursor != 9 &&
+
+            if ((g_wmap_event_cursor - 2) >= 2U && g_wmap_event_cursor != 22 && g_wmap_event_cursor != 23 && g_wmap_event_cursor != 9 &&
                 g_wmap_event_cursor != 10 && g_wmap_event_cursor != 11 && g_wmap_event_cursor != 12 && g_wmap_event_cursor != 13 && g_wmap_event_cursor != 14 &&
                 g_wmap_event_cursor != 24 && g_wmap_event_cursor != 0 && g_wmap_event_cursor != 27 && g_wmap_event_cursor != 28)
             {
-                flags->events[0] &= ~(1 << (g_wmap_event_cursor % 32));
+                words[SAVED_GAME_FLAG_WORD_INDEX] &= ~(1 << (g_wmap_event_cursor % 32));
             }
+
             return g_wmap_event_cursor;
         }
+
         g_wmap_event_cursor++;
     }
+
     return -1;
 }
 
@@ -876,33 +821,33 @@ s32 wmap_next_land_event(void)
 void wmap_rebuild_land_lookup(void)
 {
     s32 index;
-    WmapSave* record;
     s32 x;
     u32 y;
     u8 position;
     u32 placed;
 
-    for (index = 0; index < WMAP_LAND_COUNT; index++)
+    for (index = 0; index < FIELD_LAND_COUNT; index++)
     {
-        record = (WmapSave*)(g_saved_game.bytes + index * (s32)sizeof(WmapSavedLand));
-        placed = ((u32)record->lands[0].status.data.flags >> 1) & 1;
+        placed = (g_saved_game.land_words.lands[index].bytes.flags >> 1) & 1;
+
         if (placed == 1)
         {
             if (index == FIELD_LAND_LUCEMIA)
             {
-                if (!(WMAP_SAVED_GAME.lands[FIELD_LAND_LUCEMIA_2].status.word & WMAP_LAND_ACTIVE))
+                if (!(g_saved_game.land_words.lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_FLAG_04))
                 {
-                    position = ((WmapSave*)(g_saved_game.bytes + FIELD_LAND_LUCEMIA * (s32)sizeof(WmapSavedLand)))->lands[0].status.data.position;
+                    position = ((SavedGame*)(g_saved_game.bytes + FIELD_LAND_LUCEMIA * sizeof(FieldLandWords)))->land_words.lands[0].bytes.cell;
                     x = position & WMAP_COORD_MASK;
                     y = position >> WMAP_COORD_Y_SHIFT;
                 }
             }
             else
             {
-                position = record->lands[0].status.data.position;
+                position = g_saved_game.land_words.lands[index].bytes.cell;
                 x = position & WMAP_COORD_MASK;
                 y = position >> WMAP_COORD_Y_SHIFT;
             }
+
             g_wmap_land_lookup[x + y * WMAP_GRID_SIZE] = index;
         }
     }
@@ -923,7 +868,7 @@ void wmap_scroll_artifact_list(s32 forward, s32* visible_entries)
     {
         if (g_wmap_artifact_list[g_wmap_artifact_list_end] == -1)
         {
-            if (g_wmap_artifact_list_end >= (u32)WMAP_ARTIFACT_SLOTS)
+            if (g_wmap_artifact_list_end >= WMAP_ARTIFACT_SLOTS)
             {
                 if (g_wmap_artifact_list[g_wmap_artifact_list_head] == -1)
                 {
@@ -932,23 +877,27 @@ void wmap_scroll_artifact_list(s32 forward, s32* visible_entries)
                 }
             }
         }
+
         g_wmap_artifact_display_head++;
         g_wmap_artifact_list_head++;
     }
     else
     {
-        if (g_wmap_artifact_list[g_wmap_artifact_list_end] == -1 && g_wmap_artifact_list_end >= (u32)WMAP_ARTIFACT_SLOTS &&
+        if (g_wmap_artifact_list[g_wmap_artifact_list_end] == -1 && g_wmap_artifact_list_end >= WMAP_ARTIFACT_SLOTS &&
             g_wmap_artifact_list[g_wmap_artifact_list_tail] == -1)
         {
             g_wmap_artifact_list_end--;
         }
+
         g_wmap_artifact_display_head--;
         g_wmap_artifact_list_head--;
     }
+
     g_wmap_artifact_display_head = wmap_wrap_index(g_wmap_artifact_display_head, 0, WMAP_ARTIFACT_SLOTS - 1);
     g_wmap_artifact_list_head = wmap_wrap_index(g_wmap_artifact_list_head, 0, g_wmap_artifact_list_end);
     g_wmap_artifact_display_tail = wmap_wrap_index(g_wmap_artifact_display_head + WMAP_ARTIFACT_SLOTS - 1, 0, WMAP_ARTIFACT_SLOTS - 1);
     g_wmap_artifact_list_tail = wmap_wrap_index(g_wmap_artifact_list_head + WMAP_ARTIFACT_SLOTS - 1, 0, g_wmap_artifact_list_end);
+
     for (i = 0; i < WMAP_ARTIFACT_SLOTS; i++)
     {
         row = wmap_wrap_index(g_wmap_artifact_display_head + i, 0, WMAP_ARTIFACT_SLOTS - 1);
@@ -972,25 +921,27 @@ s32 wmap_build_artifact_list(s32 selection)
     s32* cursor;
     s32 empty;
     u32 placed;
-    WmapSavedEntry* entry;
-    WmapSavedEntry* current_record;
 
     g_wmap_artifact_list_end = 0;
     empty = -1;
+
     for (i = 63; i >= 0; i--)
     {
         g_wmap_artifact_list[i] = empty;
     }
-    for (i = 0; i < WMAP_LAND_COUNT; i++)
+
+    for (i = 0; i < FIELD_LAND_COUNT; i++)
     {
-        entry = (WmapSavedEntry*)((u8*)&g_saved_game + i * (s32)sizeof(WmapSavedLand));
-        previous_index = entry->entry.data.artifact_order != 0;
+        previous_index = g_saved_game.land_words.lands[i].bytes.artifact_order != 0;
+
         if (previous_index)
         {
-            placed = ((u32)entry->entry.data.flags >> 1) & 1;
+            placed = (g_saved_game.land_words.lands[i].bytes.flags >> 1) & 1;
+
             if (placed != 1)
             {
                 j = wmap_append_artifact(i);
+
                 while (j > 0)
                 {
                     cursor = &g_wmap_artifact_list[j];
@@ -999,24 +950,27 @@ s32 wmap_build_artifact_list(s32 selection)
                     cursor = &g_wmap_artifact_list[previous_index];
                     current = *current_slot;
                     previous = *cursor;
-                    current_record = (WmapSavedEntry*)((u8*)&g_saved_game + current * (s32)sizeof(WmapSavedLand));
                     j = previous;
-                    if (current_record->entry.data.artifact_order >
-                        ((WmapSavedEntry*)((u8*)&g_saved_game + j * (s32)sizeof(WmapSavedLand)))->entry.data.artifact_order)
+
+                    if (g_saved_game.land_words.lands[current].bytes.artifact_order > g_saved_game.land_words.lands[j].bytes.artifact_order)
                     {
                         *current_slot = previous;
                         *cursor = current;
                     }
+
                     j = previous_index;
                 }
             }
         }
     }
+
     i = g_wmap_artifact_list_end;
-    for (; (u32)i < g_wmap_artifact_list_end + WMAP_ARTIFACT_SLOTS; i++)
+
+    for (; i < g_wmap_artifact_list_end + WMAP_ARTIFACT_SLOTS; i++)
     {
         g_wmap_artifact_list[i] = -1;
     }
+
     g_wmap_artifact_list_end += WMAP_ARTIFACT_SLOTS - 1;
     g_wmap_artifact_display_head = wmap_wrap_index(selection + 3, 0, WMAP_ARTIFACT_SLOTS - 1);
     g_wmap_artifact_list_head = wmap_wrap_index(g_wmap_artifact_list_end - (WMAP_ARTIFACT_SLOTS - 1), 0, g_wmap_artifact_list_end);
@@ -1036,7 +990,8 @@ s32 wmap_build_artifact_list(s32 selection)
  * @param unused Unused argument slot.
  * @param comparison Proposed spirit levels indexed by land.
  */
-void wmap_append_land_spirit_labels(s32 mode, u32 x, s32 y, s32 mask, s32* count, s32* flags, s32* output, s32 unused, s32 (*comparison)[8])
+void wmap_append_land_spirit_labels(s32 mode, u32 x, s32 y, s32 mask, s32* count, s32* flags, s32* output, s32 unused,
+                                    s32 (*comparison)[FIELD_LAND_SPIRIT_COUNT])
 {
 
     u32 level;
@@ -1053,21 +1008,24 @@ void wmap_append_land_spirit_labels(s32 mode, u32 x, s32 y, s32 mask, s32* count
     {
         cell = WMAP_NO_LAND;
     }
+
     if (cell != WMAP_NO_LAND)
     {
         *flags |= mask;
         for (spirit = 0; spirit < FIELD_LAND_SPIRIT_COUNT; spirit++)
         {
-            level = WMAP_SAVED_GAME.lands[cell].spirits[spirit];
+            level = g_saved_game.layout.lands[cell].levels[spirit];
             output[*count] = level + (s8)label_base;
             (*count)++;
         }
+
         if (mode == 0)
         {
             for (spirit = 0; spirit < FIELD_LAND_SPIRIT_COUNT; spirit++)
             {
-                level = WMAP_SAVED_GAME.lands[cell].spirits[spirit];
+                level = g_saved_game.layout.lands[cell].levels[spirit];
                 difference = comparison[cell][spirit] - level;
+
                 if (difference == 0)
                 {
                     output[*count] = 0;
@@ -1084,9 +1042,11 @@ void wmap_append_land_spirit_labels(s32 mode, u32 x, s32 y, s32 mask, s32* count
                     {
                         output[*count] = WMAP_LABEL_INCREASE;
                     }
+
                     (*count)++;
                     output[*count] = difference + WMAP_LABEL_CHANGE_BASE;
                 }
+
                 (*count)++;
             }
         }
@@ -1138,19 +1098,22 @@ void wmap_build_placement_labels(s32 selected_cell, u32 x, s32 y, s32* groups, s
     record = 0;
 
     count = 0;
+
     *groups = 0;
-    for (record = 0; record < WMAP_LAND_COUNT; record++)
+    for (record = 0; record < FIELD_LAND_COUNT; record++)
     {
         for (spirit = 0; spirit < FIELD_LAND_SPIRIT_COUNT; spirit++)
         {
-            g_wmap_proposed_spirits[record][spirit] = WMAP_SAVED_GAME.lands[record].spirits[spirit];
+            g_wmap_proposed_spirits[record][spirit] = g_saved_game.layout.lands[record].levels[spirit];
         }
     }
+
     for (spirit = 0; spirit < FIELD_LAND_SPIRIT_COUNT; spirit++)
     {
         g_wmap_proposed_spirits[land][spirit] = g_wmap_land_attributes[land].data.spirits[spirit];
     }
-    if ((x < (u32)WMAP_GRID_SIZE) && (y >= 0) && (y < WMAP_GRID_SIZE))
+
+    if ((x < WMAP_GRID_SIZE) && (y >= 0) && (y < WMAP_GRID_SIZE))
     {
         current_land = g_wmap_land_lookup[x + y * WMAP_GRID_SIZE];
     }
@@ -1158,15 +1121,18 @@ void wmap_build_placement_labels(s32 selected_cell, u32 x, s32 y, s32* groups, s
     {
         current_land = WMAP_NO_LAND;
     }
+
     if (current_land == WMAP_NO_LAND)
     {
 
         wmap_apply_land_influence(land, x, y, g_wmap_proposed_spirits);
     }
+
     record = 0;
 
     left_x = x - (selected_cell % 3);
     top_y = y - (selected_cell / 3);
+
     while (record < 3)
     {
         spirit = 0;
@@ -1180,7 +1146,8 @@ void wmap_build_placement_labels(s32 selected_cell, u32 x, s32 y, s32* groups, s
         while (spirit < 3)
         {
             group_mask = 1 << (current_group_row + spirit);
-            if ((cell_x < (u32)WMAP_GRID_SIZE) && (cell_y >= 0) && (cell_y < WMAP_GRID_SIZE))
+
+            if ((cell_x < WMAP_GRID_SIZE) && (cell_y >= 0) && (cell_y < WMAP_GRID_SIZE))
             {
                 cell_land = *(cell_x + row_offset + (u8*)&g_wmap_land_lookup);
             }
@@ -1188,6 +1155,7 @@ void wmap_build_placement_labels(s32 selected_cell, u32 x, s32 y, s32* groups, s
             {
                 cell_land = WMAP_NO_LAND;
             }
+
             if (cell_land != WMAP_NO_LAND)
             {
 
@@ -1201,26 +1169,31 @@ void wmap_build_placement_labels(s32 selected_cell, u32 x, s32 y, s32* groups, s
                 component = 0;
                 terrain = g_wmap_layout;
                 cell_index = cell_x + row_offset;
-                component_offset = cell_index * (s32)sizeof(WmapSavedLand);
+                component_offset = cell_index * sizeof(WmapTerrainCell);
+
                 while (component < FIELD_LAND_SPIRIT_COUNT)
                 {
-                    component_offset = component + (cell_index * (s32)sizeof(WmapSavedLand));
+                    component_offset = component + (cell_index * sizeof(WmapTerrainCell));
                     terrain_total += ((WmapLayout*)((u8*)terrain + component_offset))->cells[0].spirits[0];
                     component++;
                 }
+
                 if (terrain_total > 0)
                 {
                     component = 0;
+
                     *groups |= group_mask;
                     while (component < FIELD_LAND_SPIRIT_COUNT)
                     {
-                        terrain_offset = component + ((cell_x + row_offset) * (s32)sizeof(WmapSavedLand));
+                        terrain_offset = component + ((cell_x + row_offset) * sizeof(WmapTerrainCell));
                         component++;
                         level = ((WmapLayout*)(((u8*)g_wmap_layout + terrain_offset)))->cells[0].spirits[0];
                         output[count] = level + WMAP_LABEL_TERRAIN_BASE;
                         count++;
                     }
+
                     component = 0;
+
                     while (component < 0x10)
                     {
                         component++;
@@ -1228,19 +1201,24 @@ void wmap_build_placement_labels(s32 selected_cell, u32 x, s32 y, s32* groups, s
                         count++;
                     }
                 }
+
                 cell_x++;
             }
-            spirit++;
 
+            spirit++;
         }
+
         record++;
     }
+
     record = 0;
+
     *groups |= WMAP_LABEL_PROPOSED_GROUP;
     while (record < FIELD_LAND_SPIRIT_COUNT)
     {
         level = g_wmap_land_attributes[land].data.spirits[record];
         difference = g_wmap_proposed_spirits[land][record] - level;
+
         if (difference == 0)
         {
             blank_count = count + 1;
@@ -1258,10 +1236,12 @@ void wmap_build_placement_labels(s32 selected_cell, u32 x, s32 y, s32* groups, s
             {
                 output[count] = WMAP_LABEL_PROPOSED_INCREASE;
             }
+
             next_count = count + 1;
             count = next_count;
             output[next_count] = difference + WMAP_LABEL_PROPOSED_CHANGE_BASE;
         }
+
         record++;
         count++;
     }
@@ -1308,7 +1288,7 @@ void func_8005D48C(void)
  */
 s32 wmap_get_day(void)
 {
-    return g_wmap_saved_day & WMAP_DAY_MASK;
+    return g_saved_game.layout.control.fields.weekday & WMAP_DAY_MASK;
 }
 
 /**
@@ -1321,10 +1301,12 @@ s32 wmap_get_land_count_tier(void)
     s32 value;
     s32 result;
 
-    value = table.values[g_wmap_placed_land_count];
+    value = table.values[g_saved_game.layout.control.fields.placed_land_count];
+
     if (value >= 0)
     {
         result = 9;
+
         if (value < 10)
         {
             result = value;
@@ -1334,6 +1316,7 @@ s32 wmap_get_land_count_tier(void)
     {
         result = 0;
     }
+
     return result;
 }
 
@@ -1344,7 +1327,7 @@ s32 wmap_get_land_count_tier(void)
  */
 s32 wmap_is_land_active(s32 record_index)
 {
-    return (WMAP_SAVED_GAME.lands[record_index].status.data.flags >> 2) & 1;
+    return (g_saved_game.layout.lands[record_index].flags >> 2) & 1;
 }
 
 /**
@@ -1356,10 +1339,12 @@ s32 wmap_is_land_active(s32 record_index)
 s32 wmap_is_other_land_cell(u32 x, s32 y)
 {
     s32 value;
+
     if (((g_wmap_replacement_land_status >> 8) & WMAP_COORD_MASK) == x && ((g_wmap_replacement_land_status >> 12) & WMAP_COORD_MASK) == y)
     {
         return 0;
     }
+
     if (x < 6 && y >= 0 && y < WMAP_GRID_SIZE)
     {
         value = g_wmap_land_lookup[x + y * WMAP_GRID_SIZE];
@@ -1368,35 +1353,38 @@ s32 wmap_is_other_land_cell(u32 x, s32 y)
     {
         value = WMAP_NO_LAND;
     }
+
     return value != WMAP_NO_LAND;
 }
 
 /**
  * @brief Read the remaining land count, accounting for the special saved land.
- * @return Difference from the saved progress byte, or from the current progress byte.
+ * @return The layout's land count minus the placed land count, plus one while the SS Buccaneer is placed on a cell with WMAP_TERRAIN_FLAG_2.
  */
 s32 wmap_get_remaining_land_count(void)
 {
-    u32 flags = WMAP_SAVED_GAME.lands[27].status.word;
+    u32 flags = g_saved_game.land_words.lands[FIELD_LAND_SS_BUCCANEER].word;
     WmapLayout* data;
     s32 column;
     s32 row;
     s32 cell;
     WmapLayout* entry;
 
-    if (flags & WMAP_LAND_PLACED)
+    if (flags & FIELD_LAND_PLACED)
     {
         data = g_wmap_layout;
         column = (flags >> 8) & WMAP_COORD_MASK;
         row = (flags >> 12) & WMAP_COORD_MASK;
         cell = column + row * WMAP_GRID_SIZE;
-        entry = (WmapLayout*)((u8*)data + cell * (s32)sizeof(WmapTerrainCell));
-        if (entry->cells[0].flags & 4)
+        entry = (WmapLayout*)((u8*)data + cell * sizeof(WmapTerrainCell));
+
+        if (entry->cells[0].flags & WMAP_TERRAIN_FLAG_2)
         {
-            return data->land_count - WMAP_SAVED_GAME.calendar.data.placed_land_count + 1;
+            return data->land_count - g_saved_game.layout.control.fields.placed_land_count + 1;
         }
     }
-    return g_wmap_layout->land_count - g_wmap_placed_land_count;
+
+    return g_wmap_layout->land_count - g_saved_game.layout.control.fields.placed_land_count;
 }
 
 /**
@@ -1407,10 +1395,11 @@ s32 wmap_get_remaining_land_count(void)
  */
 s32 wmap_get_land_at_cell(u32 column, s32 row)
 {
-    if (column < (u32)WMAP_GRID_SIZE && row >= 0 && row < WMAP_GRID_SIZE)
+    if (column < WMAP_GRID_SIZE && row >= 0 && row < WMAP_GRID_SIZE)
     {
         return g_wmap_land_lookup[column + row * WMAP_GRID_SIZE];
     }
+
     return WMAP_NO_LAND;
 }
 
@@ -1429,10 +1418,11 @@ s32 wmap_get_cell_spirit_sprites(u32 column, s32 row, s32* output)
     s32 value;
     s32 cell;
 
-    if (column < (u32)WMAP_GRID_SIZE && row >= 0 && row < WMAP_GRID_SIZE)
+    if (column < WMAP_GRID_SIZE && row >= 0 && row < WMAP_GRID_SIZE)
     {
         cell = column + row * WMAP_GRID_SIZE;
         record = wmap_get_land_at_cell(column, row);
+
         for (i = 0; i < FIELD_LAND_SPIRIT_COUNT; i++)
         {
             if (record == WMAP_NO_LAND)
@@ -1441,13 +1431,16 @@ s32 wmap_get_cell_spirit_sprites(u32 column, s32 row, s32* output)
             }
             else
             {
-                index = WMAP_SAVED_GAME.lands[record].spirits[i];
+                index = g_saved_game.layout.lands[record].levels[i];
             }
+
             value = 0;
+
             if (index >= 0)
             {
                 value = g_wmap_spirit_sprites[index * WMAP_SPIRIT_SPRITE_DIAGONAL];
             }
+
             output[i] = value;
         }
     }
@@ -1466,35 +1459,42 @@ void wmap_get_artifact_spirit_sprites(s32 table_index, s32* output)
     s32 index;
 
     entry = output;
+
     for (i = 0; i < FIELD_LAND_SPIRIT_COUNT; i++)
     {
         index = FIELD_LAND_SPIRIT_NEUTRAL;
+
         if (table_index != -1)
         {
             index = g_wmap_land_attributes[table_index].data.spirits[i];
         }
+
         value = 0;
-        if ((s32)index >= 0)
+
+        if (index >= 0)
         {
             value = g_wmap_spirit_sprites[index * WMAP_SPIRIT_SPRITE_DIAGONAL];
         }
+
         *entry = value;
         entry++;
     }
 }
 
 /**
- * @brief Test whether an artifact is available and has not been placed.
+ * @brief Test whether a land's artifact is obtained but the land is not placed yet.
  * @param record_index Saved land index.
  * @return One when both flag conditions hold, otherwise zero.
  */
 s32 wmap_is_artifact_unplaced(s32 record_index)
 {
-    u32 flags = WMAP_SAVED_GAME.lands[record_index].status.data.flags;
-    if (flags & WMAP_LAND_AVAILABLE)
+    u32 flags = g_saved_game.layout.lands[record_index].flags;
+
+    if (flags & FIELD_LAND_ARTIFACT_OBTAINED)
     {
         return ((flags >> 1) & 1) ^ 1;
     }
+
     return 0;
 }
 
@@ -1507,16 +1507,17 @@ s32 wmap_is_artifact_unplaced(s32 record_index)
  */
 s32 wmap_get_starting_cell(s32* x, s32* y)
 {
-    if (!(WMAP_SAVED_GAME.lands[0].status.word & WMAP_LAND_PLACED))
+    if (!(g_saved_game.land_words.lands[0].word & FIELD_LAND_PLACED))
     {
         *x = g_wmap_layout->starting_x;
         *y = g_wmap_layout->starting_y;
     }
     else
     {
-        *x = WMAP_SAVED_GAME.lands[g_music_track_index].status.data.position & WMAP_COORD_MASK;
-        *y = WMAP_SAVED_GAME.lands[g_music_track_index].status.data.position >> WMAP_COORD_Y_SHIFT;
+        *x = g_saved_game.land_words.lands[g_music_track_index].bytes.cell & WMAP_COORD_MASK;
+        *y = g_saved_game.land_words.lands[g_music_track_index].bytes.cell >> WMAP_COORD_Y_SHIFT;
     }
+
     return g_wmap_saved_map_status & WMAP_DAY_MASK;
 }
 
@@ -1539,17 +1540,20 @@ s32 wmap_get_selected_artifact(void)
 s32 wmap_wrap_index(s32 value, s32 minimum, s32 maximum)
 {
     s32 adjusted;
+
     if (value < minimum)
     {
         adjusted = value - minimum + 1;
         return wmap_wrap_index(adjusted + maximum, minimum, maximum);
     }
+
     if (maximum < value)
     {
         adjusted = value - 1;
         adjusted -= maximum;
         return wmap_wrap_index(adjusted + minimum, minimum, maximum);
     }
+
     return value;
 }
 
@@ -1562,10 +1566,12 @@ s32 wmap_wrap_index(s32 value, s32 minimum, s32 maximum)
 s32 wmap_get_spirit_sprite(s32 row, s32 column)
 {
     s32 value = 0;
+
     if (row >= 0 && column >= 0)
     {
         value = g_wmap_spirit_sprites[row * WMAP_SPIRIT_SPRITE_COLUMNS + column];
     }
+
     return value;
 }
 
@@ -1578,22 +1584,25 @@ s32 wmap_has_growth_blocking_event(void)
     s32 index;
     s32 found;
     s32 word_index;
+    s32* words;
     u32 bits;
     u32 flags;
-    WmapSave* word_base;
 
     found = 0;
-    for (index = 0; index < WMAP_LAND_COUNT; index++)
+
+    for (index = 0; index < FIELD_LAND_COUNT; index++)
     {
         word_index = index / 32;
-        word_base = (WmapSave*)(word_index * 4 + g_saved_game.bytes);
+        words = &g_saved_game.words[word_index];
         bits = 1U << (index - word_index * 32);
-        flags = word_base->events[0];
+        flags = words[SAVED_GAME_FLAG_WORD_INDEX];
+
         if ((flags & bits) && ((u32)(index - 9) < 6 || index == 24 || index == 0 || index == 27 || index == 28))
         {
             found = 1;
         }
     }
+
     return found;
 }
 
@@ -1606,22 +1615,25 @@ s32 wmap_has_persistent_land_event(void)
     s32 index;
     s32 found;
     s32 word_index;
+    s32* words;
     u32 bits;
     u32 flags;
-    WmapSave* word_base;
 
     found = 0;
-    for (index = 0; index < WMAP_LAND_COUNT; index++)
+
+    for (index = 0; index < FIELD_LAND_COUNT; index++)
     {
         word_index = index / 32;
-        word_base = (WmapSave*)(word_index * 4 + g_saved_game.bytes);
+        words = &g_saved_game.words[word_index];
         bits = 1U << (index - word_index * 32);
-        flags = word_base->events[0];
+        flags = words[SAVED_GAME_FLAG_WORD_INDEX];
+
         if ((flags & bits) && ((u32)(index - 2) < 2 || index == 22 || index == 23))
         {
             found = 1;
         }
     }
+
     return found;
 }
 

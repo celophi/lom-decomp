@@ -77,7 +77,7 @@ s32 gosub_handle_discard_dialog(s32 dialog_result)
             scroll_y = 0;
         }
         g_gosub_scroll_target_y = scroll_y;
-        g_gosub_scroll_frames_remaining = GOSUB_SCROLL_FRAMES;
+        g_gosub_scroll_frames_remaining = LIST_SCROLL_FRAMES;
         return 0;
     }
     g_gosub_selection_count = 1;
@@ -102,18 +102,18 @@ s32 gosub_handle_backtrack_dialog(s32 dialog_result)
 
     if (g_gosub_required_selection_count == g_gosub_selection_count)
     {
-        g_gosub_selection_count -= 1;
+        g_gosub_selection_count--;
     }
 
-    g_gosub_screen_sequence_index -= 1;
+    g_gosub_screen_sequence_index--;
     if (g_gosub_select_handler != 0)
     {
         g_gosub_select_handler();
-        g_gosub_result_count -= 1;
+        g_gosub_result_count--;
     }
     else
     {
-        g_gosub_result_count -= 1;
+        g_gosub_result_count--;
     }
 
     g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_EXITING;
@@ -156,7 +156,7 @@ void gosub_open_block_action_dialog(void)
     GosubElement* element;
 
     element = &g_gosub_elements[0];
-    element->draw_handler = (void*)&gosub_draw_block_action_dialog;
+    element->draw_handler = &gosub_draw_block_action_dialog;
     g_gosub_dialog_choice = 0;
     g_gosub_dialog_handler = gosub_handle_block_action_dialog;
     element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
@@ -177,7 +177,7 @@ void gosub_open_sort_dialog(void)
     GosubElement* element;
 
     element = &g_gosub_elements[0];
-    element->draw_handler = (void*)&gosub_draw_sort_dialog;
+    element->draw_handler = &gosub_draw_sort_dialog;
     g_gosub_dialog_handler = gosub_handle_sort_dialog;
     g_gosub_dialog_choice = 0;
     element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
@@ -291,7 +291,7 @@ void gosub_open_message_dialog(u8* message_text)
 
     g_gosub_dialog_text = message_text;
     element = &g_gosub_elements[0];
-    element->draw_handler = (void*)&gosub_draw_message_dialog;
+    element->draw_handler = &gosub_draw_message_dialog;
     g_gosub_dialog_choice = 0;
     g_gosub_dialog_accepting_input = 1;
     g_gosub_suppress_dialog_sound = 0;
@@ -451,7 +451,7 @@ u8* gosub_draw_equipment_details(u8* packet_cursor, u_long* ordering_table, s32 
         packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3EE, FIELD_UI_TEXT_ATTACK_POWER), FIELD_TEXT_COLOR_NORMAL,
                                         GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
         number_position.x = GOSUB_WEAPON_POWER_X - x_offset;
-        number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
+        number_position.y = (GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
         packet_cursor = field_draw_number(ordering_table, (SPRT*)packet_cursor, g_gosub_rows[g_gosub_cursor_row].primary_value, FIELD_TEXT_COLOR_NORMAL,
                                           &number_position, FIELD_TEXT_ALIGN_LEFT);
         break;
@@ -461,7 +461,7 @@ u8* gosub_draw_equipment_details(u8* packet_cursor, u_long* ordering_table, s32 
             field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3F0, FIELD_UI_TEXT_TOTAL_DEFENSE), FIELD_TEXT_COLOR_NORMAL,
                             GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
         number_position.x = GOSUB_ARMOR_DEFENSE_X - x_offset;
-        number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
+        number_position.y = (GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
         packet_cursor = field_draw_number(ordering_table, (SPRT*)packet_cursor,
                                           g_gosub_rows[g_gosub_cursor_row].stats[0] + g_gosub_rows[g_gosub_cursor_row].stats[1] +
                                               g_gosub_rows[g_gosub_cursor_row].stats[2] + g_gosub_rows[g_gosub_cursor_row].stats[3],
@@ -473,7 +473,7 @@ u8* gosub_draw_equipment_details(u8* packet_cursor, u_long* ordering_table, s32 
         packet_cursor = field_draw_text((SPRT*)packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3F2, FIELD_UI_TEXT_POWER), FIELD_TEXT_COLOR_NORMAL,
                                         GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
         number_position.x = GOSUB_INSTRUMENT_POWER_X - x_offset;
-        number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
+        number_position.y = (GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
         packet_cursor = field_draw_number(ordering_table, (SPRT*)packet_cursor, g_gosub_rows[g_gosub_cursor_row].primary_value, FIELD_TEXT_COLOR_NORMAL,
                                           &number_position, FIELD_TEXT_ALIGN_LEFT);
         packet_cursor =

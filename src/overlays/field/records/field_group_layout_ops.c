@@ -8,11 +8,13 @@
  * grid that records which logic block covers each cell.
  */
 
-#include "common/saved_game.h"
 #include "common.h"
+
 #include "../internal/field_calls.h"
-#include "../internal/field_golem_layout.h"
 #include "../internal/field_records.h"
+#include "common/golem_shape.h"
+#include "common/saved_game.h"
+#include "main/main.h"
 
 /** @brief field_golem_commit_group_edit command: move the joined group to the order slot in D_80122C00. */
 #define GOLEM_COMMAND_REORDER 0x92BC
@@ -42,7 +44,7 @@ void field_golem_commit_group_edit(s32 command)
     s32 found;
     s32 target;
     s8 joined;
-    GolemLayoutView* layout;
+    SavedGameLayout* layout;
     s32 group;
 
     i = 0;
@@ -53,28 +55,28 @@ void field_golem_commit_group_edit(s32 command)
 
         if ((u32)target < GOLEM_RECORD_COUNT)
         {
-            layout = GOLEM_LAYOUT;
-            joined = layout->header.fields.joined_group;
+            layout = &g_saved_game.layout;
+            joined = layout->joined_golem;
 
             for (; i < GOLEM_RECORD_COUNT; i++)
             {
                 /* Written index first: the address sum adds i before the base. */
-                if (*(i + layout->group_order) == joined)
+                if (*(i + layout->golem_order) == joined)
                 {
                     found = i;
                 }
             }
 
-            GOLEM.group_order[found] = GOLEM.group_order[target];
-            GOLEM.group_order[target] = GOLEM.header.fields.joined_group;
+            g_saved_game.layout.golem_order[found] = g_saved_game.layout.golem_order[target];
+            g_saved_game.layout.golem_order[target] = g_saved_game.layout.joined_golem;
 
-            if (GOLEM.group_order[found] == GOLEM.header.fields.joined_group)
+            if (g_saved_game.layout.golem_order[found] == g_saved_game.layout.joined_golem)
             {
                 D_80122C06 = GOLEM_SLOT_STATUS_UNCHANGED;
             }
             else
             {
-                D_80122C06 = GOLEM.group_order[found];
+                D_80122C06 = g_saved_game.layout.golem_order[found];
             }
 
             D_80122C1A = D_800459AF;
@@ -84,17 +86,18 @@ void field_golem_commit_group_edit(s32 command)
     {
         for (; i < GOLEM_NAME_LENGTH; i++)
         {
-            GOLEM.group_records[GOLEM.header.fields.joined_group].name[i] = GOLEM.companion.name[i];
+            g_saved_game.layout.golem_records[g_saved_game.layout.joined_golem].name[i] = g_saved_game.layout.characters[FIELD_PARTY_COMPANION].name[i];
         }
 
-        group = GOLEM.header.fields.joined_group;
+        group = g_saved_game.layout.joined_golem;
 
         if (group != GOLEM_NO_GROUP)
         {
-            GOLEM.header.word = (GOLEM.header.word & ~GOLEM_SAVED_GROUP_MASK) | ((group & 0xF) << GOLEM_SAVED_GROUP_SHIFT);
+            SAVED_GAME_GOLEM_HEADER_WORD(g_saved_game.layout) =
+                (SAVED_GAME_GOLEM_HEADER_WORD(g_saved_game.layout) & ~GOLEM_SAVED_GROUP_MASK) | ((group & 0xF) << GOLEM_SAVED_GROUP_SHIFT);
         }
 
-        GOLEM.header.fields.joined_group = GOLEM_NO_GROUP;
+        g_saved_game.layout.joined_golem = GOLEM_NO_GROUP;
     }
 }
 
@@ -106,7 +109,7 @@ void field_golem_select_logic_type(s32 type)
 {
     if (type == GOLEM_NO_GROUP)
     {
-        GOLEM.header.fields.joined_group = GOLEM.header.fields.saved_group >> GOLEM_SAVED_GROUP_SHIFT;
+        g_saved_game.layout.joined_golem = g_saved_game.layout.golem_count >> GOLEM_SAVED_GROUP_SHIFT;
     }
     else
     {
@@ -114,7 +117,7 @@ void field_golem_select_logic_type(s32 type)
     }
 
     field_golem_rebuild_current_grid();
-    field_golem_build_companion(GOLEM.header.fields.joined_group, &GOLEM.companion);
+    field_golem_build_companion(g_saved_game.layout.joined_golem, &g_saved_game.layout.characters[FIELD_PARTY_COMPANION]);
 }
 
 /** @brief Rebuild the placement grid for the logic type in D_800459AF. */
@@ -134,15 +137,15 @@ static void field_golem_rebuild_grid(s32 type)
 
     for (i = 0; i < GOLEM_GRID_CELL_COUNT; i++)
     {
-        GOLEM.grid[i].block_id = 0;
-        GOLEM.grid[i].detail = 0;
+        g_saved_game.layout.golem_grid[i].block_id = 0;
+        g_saved_game.layout.golem_grid[i].detail = 0;
     }
 
     if (type != GOLEM_NO_GROUP)
     {
-        for (i = 0; i < GOLEM.header.fields.block_count; i++)
+        for (i = 0; i < g_saved_game.layout.logic_block_count; i++)
         {
-            block = GOLEM.logic_blocks[i];
+            block = g_saved_game.layout.logic_blocks[i];
 
             if ((block.f.placed == 1) && (block.f.logic_type == type))
             {
@@ -167,20 +170,20 @@ static void field_golem_mark_grid_edges(void)
 
     for (i = GOLEM_GRID_CELL_COUNT - 1; i >= 0; i--)
     {
-        GOLEM.grid[i].edge = empty;
+        g_saved_game.layout.golem_grid[i].edge = empty;
     }
 
     for (i = 0; i < GOLEM_GRID_UPPER_CELL_COUNT; i++)
     {
-        owner = GOLEM.grid[i].owner;
+        owner = g_saved_game.layout.golem_grid[i].owner;
 
         if (owner != GOLEM_GRID_EMPTY)
         {
-            below = GOLEM.grid[i + GOLEM_GRID_WIDTH].owner;
+            below = g_saved_game.layout.golem_grid[i + GOLEM_GRID_WIDTH].owner;
 
             if ((below != GOLEM_GRID_EMPTY) && (owner != below))
             {
-                GOLEM.grid[i].edge = i + GOLEM_GRID_WIDTH;
+                g_saved_game.layout.golem_grid[i].edge = i + GOLEM_GRID_WIDTH;
             }
         }
     }
@@ -201,12 +204,12 @@ static void field_golem_stamp_block_shape(s32 index, s32 rotation, s32 x, s32 y)
 
     table = D_80051888;
 
-    for (i = 0; i < table.shapes[GOLEM.logic_blocks[index].f.shape].count; i++)
+    for (i = 0; i < table.shapes[g_saved_game.layout.logic_blocks[index].f.shape].count; i++)
     {
-        cell = x + table.shapes[GOLEM.logic_blocks[index].f.shape].rotations[rotation].parts[i].x +
-               (y + table.shapes[GOLEM.logic_blocks[index].f.shape].rotations[rotation].parts[i].y) * GOLEM_GRID_WIDTH;
-        GOLEM.grid[cell].owner = index;
-        GOLEM.grid[cell].block_id = GOLEM.logic_blocks[index].f.id;
-        GOLEM.grid[cell].detail = GOLEM.logic_blocks[index].f.level;
+        cell = x + table.shapes[g_saved_game.layout.logic_blocks[index].f.shape].rotations[rotation].parts[i].x +
+               (y + table.shapes[g_saved_game.layout.logic_blocks[index].f.shape].rotations[rotation].parts[i].y) * GOLEM_GRID_WIDTH;
+        g_saved_game.layout.golem_grid[cell].owner = index;
+        g_saved_game.layout.golem_grid[cell].block_id = g_saved_game.layout.logic_blocks[index].f.id;
+        g_saved_game.layout.golem_grid[cell].detail = g_saved_game.layout.logic_blocks[index].f.level;
     }
 }

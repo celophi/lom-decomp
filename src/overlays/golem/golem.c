@@ -20,10 +20,10 @@
 #include "overlays/menu/menu.h"
 #include "overlays/field/field_input.h"
 #include "overlays/field/field_sound.h"
+#include "common/list_scroll.h"
 
 #define GOLEM_PANEL_COUNT 154
 #define GOLEM_BLOCK_LIST_ROW_HEIGHT 40
-#define GOLEM_SCROLL_FRAMES 4
 #define GOLEM_ROTATION_COUNT 4
 #define GOLEM_GRID_SIDE 6
 #define GOLEM_GRID_CELL_SIZE 16
@@ -400,12 +400,12 @@ void golem_upload_ui_image(void)
 void golem_update_frame(GolemRenderContext* render_context)
 {
     golem_render(render_context);
-    g_frame_counter += 1;
+    g_frame_counter++;
     golem_handle_input();
     if (g_golem_interpolation_steps != 0)
     {
         g_golem_interpolation_value += (g_golem_interpolation_target - g_golem_interpolation_value) / g_golem_interpolation_steps;
-        g_golem_interpolation_steps -= 1;
+        g_golem_interpolation_steps--;
         return;
     }
     g_golem_interpolation_value = g_golem_interpolation_target;
@@ -562,14 +562,14 @@ void golem_handle_input(void)
                 {
                     if (g_golem_scroll_target_y != 0)
                     {
-                        g_golem_scroll_steps = GOLEM_SCROLL_FRAMES;
+                        g_golem_scroll_steps = LIST_SCROLL_FRAMES;
                         g_golem_scroll_target_y -= GOLEM_BLOCK_LIST_ROW_HEIGHT;
                         g_golem_panel_records[GOLEM_PANEL_SCROLL_UP].attributes = GOLEM_ACTIVATE_PANEL(g_golem_panel_records[GOLEM_PANEL_SCROLL_UP].attributes);
                     }
                 }
                 else if ((g_pad_input & PAD_BTN_DOWN) && ((g_golem_scroll_target_y / GOLEM_BLOCK_LIST_ROW_HEIGHT) != (g_golem_logic_block_count - 1)))
                 {
-                    g_golem_scroll_steps = GOLEM_SCROLL_FRAMES;
+                    g_golem_scroll_steps = LIST_SCROLL_FRAMES;
                     g_golem_scroll_target_y += GOLEM_BLOCK_LIST_ROW_HEIGHT;
                     g_golem_panel_records[GOLEM_PANEL_SCROLL_DOWN].attributes = GOLEM_ACTIVATE_PANEL(g_golem_panel_records[GOLEM_PANEL_SCROLL_DOWN].attributes);
                 }
@@ -595,7 +595,7 @@ void golem_handle_input(void)
                 }
             }
             g_golem_scroll_target_y = block_index * GOLEM_BLOCK_LIST_ROW_HEIGHT;
-            g_golem_scroll_steps = GOLEM_SCROLL_FRAMES;
+            g_golem_scroll_steps = LIST_SCROLL_FRAMES;
             g_golem_panel_records[GOLEM_PANEL_SCROLL_DOWN].attributes = GOLEM_ACTIVATE_PANEL(g_golem_panel_records[GOLEM_PANEL_SCROLL_DOWN].attributes);
             field_play_sound(SFX_CURSOR, 0x80);
             return;
@@ -618,7 +618,7 @@ void golem_handle_input(void)
                 repeat_count++;
             }
             g_golem_scroll_target_y = block_index * GOLEM_BLOCK_LIST_ROW_HEIGHT;
-            g_golem_scroll_steps = GOLEM_SCROLL_FRAMES;
+            g_golem_scroll_steps = LIST_SCROLL_FRAMES;
             g_golem_panel_records[GOLEM_PANEL_SCROLL_UP].attributes = GOLEM_ACTIVATE_PANEL(g_golem_panel_records[GOLEM_PANEL_SCROLL_UP].attributes);
             field_play_sound(SFX_CURSOR, 0x80);
             return;
@@ -1118,8 +1118,8 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
         break;
     }
 
-    ordering_table += 1;
-    ordering_table -= 1;
+    ordering_table++;
+    ordering_table--;
     y_offset = 0;
     while (y_offset < height)
     {

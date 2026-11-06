@@ -11,21 +11,22 @@
  */
 
 #include "common.h"
-#include "../internal/field_calls.h"
+#include <inline_c.h>
+#include <libgpu.h>
+#include <libgte.h>
+#include <rand.h>
+
 #include "../internal/field_actor.h"
-#include "main/controller_internal.h"
-#include "main/display.h"
+#include "../internal/field_calls.h"
 #include "../internal/field_effect_dispatch.h"
 #include "../internal/field_effect_render_state.h"
 #include "../internal/field_effect_types.h"
-#include "main/main.h"
-#include "common/pad.h"
-#include <libgte.h>
-#include <libgpu.h>
-#include <inline_c.h>
-#include "sdk/gte_dmpsx_compat.h"
-#include <rand.h>
 #include "common/gpu_packet.h"
+#include "common/pad.h"
+#include "main/controller_internal.h"
+#include "main/display.h"
+#include "main/main.h"
+#include "sdk/gte_dmpsx_compat.h"
 
 /** @brief Minimum distance between two scattered-dome points, in whole units. */
 #define SCATTER_MIN_DISTANCE 64
@@ -171,67 +172,67 @@ void field_start_object_ground_effect(FieldActor* actor, u32 kind)
 
     switch (kind)
     {
-    case GROUND_EFFECT_STRIPS:
-        SET_EFFECT_RADIUS(actor, GROUND_EFFECT_STRIPS_MIN_RADIUS);
-        return;
-    case GROUND_EFFECT_SPIRAL:
-        SET_EFFECT_RADIUS(actor, GROUND_EFFECT_SPIRAL_MIN_RADIUS);
-        return;
-    case GROUND_EFFECT_DOME:
-        SET_EFFECT_RADIUS(actor, GROUND_EFFECT_DOME_MIN_RADIUS);
-        return;
-    case GROUND_EFFECT_CURVES:
-        SET_EFFECT_RADIUS(actor, GROUND_EFFECT_CURVES_MIN_RADIUS);
-        return;
-    case GROUND_EFFECT_SCATTERED_DOMES:
-        SET_EFFECT_RADIUS(actor, GROUND_EFFECT_SCATTERED_DOMES_MIN_RADIUS);
+        case GROUND_EFFECT_STRIPS:
+            SET_EFFECT_RADIUS(actor, GROUND_EFFECT_STRIPS_MIN_RADIUS);
+            return;
+        case GROUND_EFFECT_SPIRAL:
+            SET_EFFECT_RADIUS(actor, GROUND_EFFECT_SPIRAL_MIN_RADIUS);
+            return;
+        case GROUND_EFFECT_DOME:
+            SET_EFFECT_RADIUS(actor, GROUND_EFFECT_DOME_MIN_RADIUS);
+            return;
+        case GROUND_EFFECT_CURVES:
+            SET_EFFECT_RADIUS(actor, GROUND_EFFECT_CURVES_MIN_RADIUS);
+            return;
+        case GROUND_EFFECT_SCATTERED_DOMES:
+            SET_EFFECT_RADIUS(actor, GROUND_EFFECT_SCATTERED_DOMES_MIN_RADIUS);
 
-        /* Pick each point in -128..127 around the view until it is far enough from the earlier ones. */
-        for (point_index = 0; point_index < FIELD_GROUND_EFFECT_POINT_COUNT; point_index++)
-        {
-            needs_retry = 1;
-
-            while (needs_retry != 0)
+            /* Pick each point in -128..127 around the view until it is far enough from the earlier ones. */
+            for (point_index = 0; point_index < FIELD_GROUND_EFFECT_POINT_COUNT; point_index++)
             {
-                OBJECT_STATE(actor).ground_effect_points[point_index].x = (rand() >> 7) - 128;
-                OBJECT_STATE(actor).ground_effect_points[point_index].y = (rand() >> 7) - 128;
-                OBJECT_STATE(actor).ground_effect_points[point_index].x =
-                    OBJECT_STATE(actor).ground_effect_points[point_index].x - g_field_view_offset_x / 256 - actor->x / 256;
-                OBJECT_STATE(actor).ground_effect_points[point_index].y =
-                    OBJECT_STATE(actor).ground_effect_points[point_index].y - g_field_view_offset_z / 256 - actor->z / 256;
-                for (compare_index = 0; compare_index < point_index; compare_index++)
-                {
-                    delta->vx = OBJECT_STATE(actor).ground_effect_points[compare_index].x - OBJECT_STATE(actor).ground_effect_points[point_index].x;
-                    delta->vy = OBJECT_STATE(actor).ground_effect_points[compare_index].y - OBJECT_STATE(actor).ground_effect_points[point_index].y;
-                    delta->vz = 0;
-                    gte_ldlvl(delta);
-                    gte_sqr0();
-                    gte_stlvnl(squares);
+                needs_retry = 1;
 
-                    if (SquareRoot0(squares->vx + squares->vy) < SCATTER_MIN_DISTANCE)
+                while (needs_retry != 0)
+                {
+                    OBJECT_STATE(actor).ground_effect_points[point_index].x = (rand() >> 7) - 128;
+                    OBJECT_STATE(actor).ground_effect_points[point_index].y = (rand() >> 7) - 128;
+                    OBJECT_STATE(actor).ground_effect_points[point_index].x =
+                        OBJECT_STATE(actor).ground_effect_points[point_index].x - g_field_view_offset_x / 256 - actor->x / 256;
+                    OBJECT_STATE(actor).ground_effect_points[point_index].y =
+                        OBJECT_STATE(actor).ground_effect_points[point_index].y - g_field_view_offset_z / 256 - actor->z / 256;
+                    for (compare_index = 0; compare_index < point_index; compare_index++)
                     {
-                        break;
+                        delta->vx = OBJECT_STATE(actor).ground_effect_points[compare_index].x - OBJECT_STATE(actor).ground_effect_points[point_index].x;
+                        delta->vy = OBJECT_STATE(actor).ground_effect_points[compare_index].y - OBJECT_STATE(actor).ground_effect_points[point_index].y;
+                        delta->vz = 0;
+                        gte_ldlvl(delta);
+                        gte_sqr0();
+                        gte_stlvnl(squares);
+
+                        if (SquareRoot0(squares->vx + squares->vy) < SCATTER_MIN_DISTANCE)
+                        {
+                            break;
+                        }
+                    }
+
+                    if (compare_index == point_index)
+                    {
+                        needs_retry = 0;
                     }
                 }
-
-                if (compare_index == point_index)
-                {
-                    needs_retry = 0;
-                }
             }
-        }
 
-        return;
-    case GROUND_EFFECT_DRIFTING_DOME:
-        SET_EFFECT_RADIUS(actor, GROUND_EFFECT_DRIFTING_DOME_MIN_RADIUS);
-        OBJECT_STATE(actor).ground_effect_points[0].x = 0;
-        OBJECT_STATE(actor).ground_effect_points[0].y = 0;
-        return;
-    case GROUND_EFFECT_AIMED_DOME:
-        SET_EFFECT_RADIUS(actor, GROUND_EFFECT_AIMED_DOME_MIN_RADIUS);
-        OBJECT_STATE(actor).ground_effect_points[0].x = 0;
-        OBJECT_STATE(actor).ground_effect_points[0].y = 0;
-        return;
+            return;
+        case GROUND_EFFECT_DRIFTING_DOME:
+            SET_EFFECT_RADIUS(actor, GROUND_EFFECT_DRIFTING_DOME_MIN_RADIUS);
+            OBJECT_STATE(actor).ground_effect_points[0].x = 0;
+            OBJECT_STATE(actor).ground_effect_points[0].y = 0;
+            return;
+        case GROUND_EFFECT_AIMED_DOME:
+            SET_EFFECT_RADIUS(actor, GROUND_EFFECT_AIMED_DOME_MIN_RADIUS);
+            OBJECT_STATE(actor).ground_effect_points[0].x = 0;
+            OBJECT_STATE(actor).ground_effect_points[0].y = 0;
+            return;
     }
 }
 
@@ -246,34 +247,34 @@ inline void field_get_ground_effect_radius_limits(s32 kind, s32* min_radius, s32
 {
     switch (kind)
     {
-    case GROUND_EFFECT_DOME:
-        *min_radius = GROUND_EFFECT_DOME_MIN_RADIUS;
-        *max_radius = GROUND_EFFECT_DOME_MAX_RADIUS;
-        break;
-    case GROUND_EFFECT_STRIPS:
-        *min_radius = GROUND_EFFECT_STRIPS_MIN_RADIUS;
-        *max_radius = GROUND_EFFECT_STRIPS_MAX_RADIUS;
-        break;
-    case GROUND_EFFECT_SPIRAL:
-        *min_radius = GROUND_EFFECT_SPIRAL_MIN_RADIUS;
-        *max_radius = GROUND_EFFECT_SPIRAL_MAX_RADIUS;
-        break;
-    case GROUND_EFFECT_CURVES:
-        *min_radius = GROUND_EFFECT_CURVES_MIN_RADIUS;
-        *max_radius = GROUND_EFFECT_CURVES_MAX_RADIUS;
-        break;
-    case GROUND_EFFECT_SCATTERED_DOMES:
-        *min_radius = GROUND_EFFECT_SCATTERED_DOMES_MIN_RADIUS;
-        *max_radius = GROUND_EFFECT_SCATTERED_DOMES_MAX_RADIUS;
-        break;
-    case GROUND_EFFECT_DRIFTING_DOME:
-        *min_radius = GROUND_EFFECT_DRIFTING_DOME_MIN_RADIUS;
-        *max_radius = GROUND_EFFECT_DRIFTING_DOME_MAX_RADIUS;
-        break;
-    case GROUND_EFFECT_AIMED_DOME:
-        *min_radius = GROUND_EFFECT_AIMED_DOME_MIN_RADIUS;
-        *max_radius = GROUND_EFFECT_AIMED_DOME_MAX_RADIUS;
-        break;
+        case GROUND_EFFECT_DOME:
+            *min_radius = GROUND_EFFECT_DOME_MIN_RADIUS;
+            *max_radius = GROUND_EFFECT_DOME_MAX_RADIUS;
+            break;
+        case GROUND_EFFECT_STRIPS:
+            *min_radius = GROUND_EFFECT_STRIPS_MIN_RADIUS;
+            *max_radius = GROUND_EFFECT_STRIPS_MAX_RADIUS;
+            break;
+        case GROUND_EFFECT_SPIRAL:
+            *min_radius = GROUND_EFFECT_SPIRAL_MIN_RADIUS;
+            *max_radius = GROUND_EFFECT_SPIRAL_MAX_RADIUS;
+            break;
+        case GROUND_EFFECT_CURVES:
+            *min_radius = GROUND_EFFECT_CURVES_MIN_RADIUS;
+            *max_radius = GROUND_EFFECT_CURVES_MAX_RADIUS;
+            break;
+        case GROUND_EFFECT_SCATTERED_DOMES:
+            *min_radius = GROUND_EFFECT_SCATTERED_DOMES_MIN_RADIUS;
+            *max_radius = GROUND_EFFECT_SCATTERED_DOMES_MAX_RADIUS;
+            break;
+        case GROUND_EFFECT_DRIFTING_DOME:
+            *min_radius = GROUND_EFFECT_DRIFTING_DOME_MIN_RADIUS;
+            *max_radius = GROUND_EFFECT_DRIFTING_DOME_MAX_RADIUS;
+            break;
+        case GROUND_EFFECT_AIMED_DOME:
+            *min_radius = GROUND_EFFECT_AIMED_DOME_MIN_RADIUS;
+            *max_radius = GROUND_EFFECT_AIMED_DOME_MAX_RADIUS;
+            break;
     }
 }
 
@@ -334,209 +335,209 @@ void field_draw_object_ground_effect(FieldActor* actor, u32 kind)
 
     switch (kind)
     {
-    case GROUND_EFFECT_DOME:
-        if (draw != 0)
-        {
-            packet = field_build_effect_dome(ordering_table, packet, position, radius);
-        }
+        case GROUND_EFFECT_DOME:
+            if (draw != 0)
+            {
+                packet = field_build_effect_dome(ordering_table, packet, position, radius);
+            }
 
-        OBJECT_STATE(actor).effect_angle -= EFFECT_SPIN_STEP;
+            OBJECT_STATE(actor).effect_angle -= EFFECT_SPIN_STEP;
 
-        if (EFFECT_RADIUS(actor) < max_radius)
-        {
-            SET_EFFECT_RADIUS(actor, EFFECT_RADIUS(actor) + 2);
-        }
+            if (EFFECT_RADIUS(actor) < max_radius)
+            {
+                SET_EFFECT_RADIUS(actor, EFFECT_RADIUS(actor) + 2);
+            }
 
-        break;
-    case GROUND_EFFECT_STRIPS:
-        if (draw != 0)
-        {
-            packet = field_build_effect_strips(ordering_table, packet, position, radius);
-        }
+            break;
+        case GROUND_EFFECT_STRIPS:
+            if (draw != 0)
+            {
+                packet = field_build_effect_strips(ordering_table, packet, position, radius);
+            }
 
-        OBJECT_STATE(actor).effect_angle -= EFFECT_SPIN_STEP;
+            OBJECT_STATE(actor).effect_angle -= EFFECT_SPIN_STEP;
 
-        if (EFFECT_RADIUS(actor) < max_radius)
-        {
-            SET_EFFECT_RADIUS(actor, EFFECT_RADIUS(actor) + 2);
-        }
+            if (EFFECT_RADIUS(actor) < max_radius)
+            {
+                SET_EFFECT_RADIUS(actor, EFFECT_RADIUS(actor) + 2);
+            }
 
-        break;
-    case GROUND_EFFECT_SPIRAL:
-        if (draw != 0)
-        {
-            packet = field_build_effect_spiral(ordering_table, packet, position, radius, facing);
-        }
+            break;
+        case GROUND_EFFECT_SPIRAL:
+            if (draw != 0)
+            {
+                packet = field_build_effect_spiral(ordering_table, packet, position, radius, facing);
+            }
 
-        /* For the strip effects the angle is an animation phase. */
-        OBJECT_STATE(actor).effect_angle += EFFECT_PHASE_STEP;
+            /* For the strip effects the angle is an animation phase. */
+            OBJECT_STATE(actor).effect_angle += EFFECT_PHASE_STEP;
 
-        if (OBJECT_STATE(actor).effect_angle >= EFFECT_PHASE_COUNT)
-        {
-            OBJECT_STATE(actor).effect_angle = 0;
-        }
+            if (OBJECT_STATE(actor).effect_angle >= EFFECT_PHASE_COUNT)
+            {
+                OBJECT_STATE(actor).effect_angle = 0;
+            }
 
-        if (EFFECT_RADIUS(actor) < max_radius)
-        {
-            SET_EFFECT_RADIUS(actor, EFFECT_RADIUS(actor) + 1);
-        }
+            if (EFFECT_RADIUS(actor) < max_radius)
+            {
+                SET_EFFECT_RADIUS(actor, EFFECT_RADIUS(actor) + 1);
+            }
 
-        break;
-    case GROUND_EFFECT_CURVES:
-        if (OBJECT_STATE(actor).effect_angle < 0)
-        {
-            OBJECT_STATE(actor).effect_angle = 0;
-        }
+            break;
+        case GROUND_EFFECT_CURVES:
+            if (OBJECT_STATE(actor).effect_angle < 0)
+            {
+                OBJECT_STATE(actor).effect_angle = 0;
+            }
 
-        if (draw != 0)
-        {
-            packet = field_build_effect_curves(ordering_table, packet, position, radius, 0);
-            packet = field_build_effect_curves(ordering_table, packet, position, radius, 1);
-        }
+            if (draw != 0)
+            {
+                packet = field_build_effect_curves(ordering_table, packet, position, radius, 0);
+                packet = field_build_effect_curves(ordering_table, packet, position, radius, 1);
+            }
 
-        OBJECT_STATE(actor).effect_angle += EFFECT_PHASE_STEP;
+            OBJECT_STATE(actor).effect_angle += EFFECT_PHASE_STEP;
 
-        if (OBJECT_STATE(actor).effect_angle >= EFFECT_PHASE_COUNT)
-        {
-            OBJECT_STATE(actor).effect_angle = 0;
-        }
+            if (OBJECT_STATE(actor).effect_angle >= EFFECT_PHASE_COUNT)
+            {
+                OBJECT_STATE(actor).effect_angle = 0;
+            }
 
-        if (EFFECT_RADIUS(actor) < max_radius)
-        {
-            SET_EFFECT_RADIUS(actor, EFFECT_RADIUS(actor) + 2);
-        }
+            if (EFFECT_RADIUS(actor) < max_radius)
+            {
+                SET_EFFECT_RADIUS(actor, EFFECT_RADIUS(actor) + 2);
+            }
 
-        break;
-    case GROUND_EFFECT_SCATTERED_DOMES:
-        for (i = 0; i < FIELD_GROUND_EFFECT_POINT_COUNT; i++)
-        {
-            point.vx = actor->x + (OBJECT_STATE(actor).ground_effect_points[i].x << 8);
+            break;
+        case GROUND_EFFECT_SCATTERED_DOMES:
+            for (i = 0; i < FIELD_GROUND_EFFECT_POINT_COUNT; i++)
+            {
+                point.vx = actor->x + (OBJECT_STATE(actor).ground_effect_points[i].x << 8);
+                point.vy = actor->y;
+                point.vz = actor->z + (OBJECT_STATE(actor).ground_effect_points[i].y << 8);
+
+                if (draw != 0)
+                {
+                    packet = field_build_effect_dome(ordering_table, packet, &point, radius);
+                }
+            }
+
+            if (EFFECT_RADIUS(actor) < max_radius)
+            {
+                SET_EFFECT_RADIUS(actor, EFFECT_RADIUS(actor) + 2);
+            }
+
+            OBJECT_STATE(actor).effect_angle -= EFFECT_SPIN_STEP;
+            break;
+        case GROUND_EFFECT_DRIFTING_DOME:
+            point.vx = actor->x + (OBJECT_STATE(actor).ground_effect_points[0].x << 8);
             point.vy = actor->y;
-            point.vz = actor->z + (OBJECT_STATE(actor).ground_effect_points[i].y << 8);
+            point.vz = actor->z + (OBJECT_STATE(actor).ground_effect_points[0].y << 8);
 
             if (draw != 0)
             {
                 packet = field_build_effect_dome(ordering_table, packet, &point, radius);
             }
-        }
 
-        if (EFFECT_RADIUS(actor) < max_radius)
-        {
-            SET_EFFECT_RADIUS(actor, EFFECT_RADIUS(actor) + 2);
-        }
+            OBJECT_STATE(actor).effect_angle -= EFFECT_SPIN_STEP;
 
-        OBJECT_STATE(actor).effect_angle -= EFFECT_SPIN_STEP;
-        break;
-    case GROUND_EFFECT_DRIFTING_DOME:
-        point.vx = actor->x + (OBJECT_STATE(actor).ground_effect_points[0].x << 8);
-        point.vy = actor->y;
-        point.vz = actor->z + (OBJECT_STATE(actor).ground_effect_points[0].y << 8);
-
-        if (draw != 0)
-        {
-            packet = field_build_effect_dome(ordering_table, packet, &point, radius);
-        }
-
-        OBJECT_STATE(actor).effect_angle -= EFFECT_SPIN_STEP;
-
-        if (EFFECT_RADIUS(actor) < max_radius)
-        {
-            SET_EFFECT_RADIUS(actor, EFFECT_RADIUS(actor) + 2);
-
-            if (actor->animation & FIELD_ANIMATION_FACING)
+            if (EFFECT_RADIUS(actor) < max_radius)
             {
-                OBJECT_STATE(actor).ground_effect_points[0].x += 2;
-            }
-            else
-            {
-                OBJECT_STATE(actor).ground_effect_points[0].x -= 2;
-            }
-        }
+                SET_EFFECT_RADIUS(actor, EFFECT_RADIUS(actor) + 2);
 
-        break;
-    case GROUND_EFFECT_AIMED_DOME:
-        point.vx = actor->x + (OBJECT_STATE(actor).ground_effect_points[0].x << 8);
-        point.vy = actor->y;
-        point.vz = actor->z + (OBJECT_STATE(actor).ground_effect_points[0].y << 8);
-
-        if (draw != 0)
-        {
-            packet = field_build_effect_dome(ordering_table, packet, &point, radius);
-        }
-
-        OBJECT_STATE(actor).effect_angle -= EFFECT_SPIN_STEP;
-
-        if (EFFECT_RADIUS(actor) < max_radius)
-        {
-            SET_EFFECT_RADIUS(actor, EFFECT_RADIUS(actor) + 1);
-        }
-
-        if (actor->object_index < FIELD_PLAYER_COUNT)
-        {
-            if (controller->ports[actor->object_index].published_sample.device_type >= CONTROLLER_DEVICE_CONFIGURING)
-            {
-                raw_buttons = 0;
-            }
-            else
-            {
-                held = controller->ports[actor->object_index].published_sample.held_buttons;
-                raw_buttons = PAD_SWAP_BYTES(held);
-            }
-#if defined(VERSION_JP)
-            buttons = raw_buttons;
-#else
-            buttons = PAD_REMAP_FACE_BITS_16(raw_buttons);
-#endif
-            point.vz = 0;
-            point.vy = 0;
-            point.vx = 0;
-
-            if (buttons & PAD_BTN_RIGHT)
-            {
-                point.vx = ONE;
-            }
-
-            if (buttons & PAD_BTN_LEFT)
-            {
-                point.vx -= ONE;
-            }
-
-            if (buttons & PAD_BTN_DOWN)
-            {
-                point.vy = -ONE;
-            }
-
-            if (buttons & PAD_BTN_UP)
-            {
-                point.vy += ONE;
-            }
-
-            if (controller->ports[actor->object_index].published_sample.device_type != CONTROLLER_DEVICE_DIGITAL)
-            {
-                point.vx += controller->ports[actor->object_index].published_sample.left_stick_x * 16;
-                point.vy -= controller->ports[actor->object_index].published_sample.left_stick_y * 16;
-            }
-
-            if ((point.vx | point.vy) != 0)
-            {
-                /* direction = unit direction; the dome moves one unit per 0x400 of it. */
-                VectorNormal(&point, &direction);
-                target.vx = actor->x + ((OBJECT_STATE(actor).ground_effect_points[0].x + (direction.vx >> 10)) << 8);
-                target.vy = actor->y;
-                target.vz = actor->z + ((OBJECT_STATE(actor).ground_effect_points[0].y + (direction.vy >> 10)) << 8);
-                screen.vx = FIELD_SCREEN_X(target.vx);
-                screen.vy = FIELD_SCREEN_Y(target.vy, target.vz);
-
-                if ((screen.vx > 0 || direction.vx > 0) && (screen.vy > 0 || direction.vy < 0) && (screen.vx < SCREEN_WIDTH || direction.vx < 0) &&
-                    (screen.vy < VRAM_DRAW_HEIGHT || direction.vy > 0))
+                if (actor->animation & FIELD_ANIMATION_FACING)
                 {
-                    OBJECT_STATE(actor).ground_effect_points[0].x += direction.vx >> 10;
-                    OBJECT_STATE(actor).ground_effect_points[0].y += direction.vy >> 10;
+                    OBJECT_STATE(actor).ground_effect_points[0].x += 2;
+                }
+                else
+                {
+                    OBJECT_STATE(actor).ground_effect_points[0].x -= 2;
                 }
             }
-        }
 
-        break;
+            break;
+        case GROUND_EFFECT_AIMED_DOME:
+            point.vx = actor->x + (OBJECT_STATE(actor).ground_effect_points[0].x << 8);
+            point.vy = actor->y;
+            point.vz = actor->z + (OBJECT_STATE(actor).ground_effect_points[0].y << 8);
+
+            if (draw != 0)
+            {
+                packet = field_build_effect_dome(ordering_table, packet, &point, radius);
+            }
+
+            OBJECT_STATE(actor).effect_angle -= EFFECT_SPIN_STEP;
+
+            if (EFFECT_RADIUS(actor) < max_radius)
+            {
+                SET_EFFECT_RADIUS(actor, EFFECT_RADIUS(actor) + 1);
+            }
+
+            if (actor->object_index < FIELD_PLAYER_COUNT)
+            {
+                if (controller->ports[actor->object_index].published_sample.device_type >= CONTROLLER_DEVICE_CONFIGURING)
+                {
+                    raw_buttons = 0;
+                }
+                else
+                {
+                    held = controller->ports[actor->object_index].published_sample.held_buttons;
+                    raw_buttons = PAD_SWAP_BYTES(held);
+                }
+#if defined(VERSION_JP)
+                buttons = raw_buttons;
+#else
+                buttons = PAD_REMAP_FACE_BITS_16(raw_buttons);
+#endif
+                point.vz = 0;
+                point.vy = 0;
+                point.vx = 0;
+
+                if (buttons & PAD_BTN_RIGHT)
+                {
+                    point.vx = ONE;
+                }
+
+                if (buttons & PAD_BTN_LEFT)
+                {
+                    point.vx -= ONE;
+                }
+
+                if (buttons & PAD_BTN_DOWN)
+                {
+                    point.vy = -ONE;
+                }
+
+                if (buttons & PAD_BTN_UP)
+                {
+                    point.vy += ONE;
+                }
+
+                if (controller->ports[actor->object_index].published_sample.device_type != CONTROLLER_DEVICE_DIGITAL)
+                {
+                    point.vx += controller->ports[actor->object_index].published_sample.left_stick_x * 16;
+                    point.vy -= controller->ports[actor->object_index].published_sample.left_stick_y * 16;
+                }
+
+                if ((point.vx | point.vy) != 0)
+                {
+                    /* direction = unit direction; the dome moves one unit per 0x400 of it. */
+                    VectorNormal(&point, &direction);
+                    target.vx = actor->x + ((OBJECT_STATE(actor).ground_effect_points[0].x + (direction.vx >> 10)) << 8);
+                    target.vy = actor->y;
+                    target.vz = actor->z + ((OBJECT_STATE(actor).ground_effect_points[0].y + (direction.vy >> 10)) << 8);
+                    screen.vx = FIELD_SCREEN_X(target.vx);
+                    screen.vy = FIELD_SCREEN_Y(target.vy, target.vz);
+
+                    if ((screen.vx > 0 || direction.vx > 0) && (screen.vy > 0 || direction.vy < 0) && (screen.vx < SCREEN_WIDTH || direction.vx < 0) &&
+                        (screen.vy < VRAM_DRAW_HEIGHT || direction.vy > 0))
+                    {
+                        OBJECT_STATE(actor).ground_effect_points[0].x += direction.vx >> 10;
+                        OBJECT_STATE(actor).ground_effect_points[0].y += direction.vy >> 10;
+                    }
+                }
+            }
+
+            break;
     }
 
     g_field_render_half->primitive_cursor = packet;
@@ -615,13 +616,13 @@ static u8* field_build_effect_dome(u_long* ordering_table, u8* packet, VECTOR* p
     v[0].vz = position->vz;
     PROJECT_POINT(cursor, 1, v[0]);
     center = *(s32*)&cursor->x1;
-    *(s32*)&cursor->x3 = center;
-    *(s32*)&cursor[3].x1 = center;
-    *(s32*)&cursor[3].x3 = center;
-    *(s32*)&cursor[2].x1 = center;
-    *(s32*)&cursor[2].x3 = center;
-    *(s32*)&cursor[1].x1 = center;
-    *(s32*)&cursor[1].x3 = center;
+    SET_XY3_PACKED(cursor, center);
+    SET_XY1_PACKED(&cursor[3], center);
+    SET_XY3_PACKED(&cursor[3], center);
+    SET_XY1_PACKED(&cursor[2], center);
+    SET_XY3_PACKED(&cursor[2], center);
+    SET_XY1_PACKED(&cursor[1], center);
+    SET_XY3_PACKED(&cursor[1], center);
 
     v[0].vx = position->vx + v[4].vx;
     v[0].vy = position->vy + v[4].vy;
@@ -843,7 +844,7 @@ static u8* field_build_effect_strips(u_long* ordering_table, u8* packet, VECTOR*
         SetPolyG4(cursor);
         setSemiTrans(cursor, 1);
         ADD_PRIM_BY_DEPTH(ordering_table, cursor, (p0.vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
-        setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
+        setDrawTPage(cursor, 0, 0, BLEND_ADD_TPAGE);
         ADD_PRIM_BY_DEPTH(ordering_table, cursor, (p0.vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);
 
         for (j = 1; j <= STRIP_SEGMENT_COUNT; j++)
@@ -877,7 +878,7 @@ static u8* field_build_effect_strips(u_long* ordering_table, u8* packet, VECTOR*
             SetPolyG4(cursor);
             setSemiTrans(cursor, 1);
             ADD_PRIM_BY_DEPTH(ordering_table, cursor, (p0.vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
-            setDrawTPage((DR_TPAGE*)cursor, 0, 0, BLEND_ADD_TPAGE);
+            setDrawTPage(cursor, 0, 0, BLEND_ADD_TPAGE);
             ADD_PRIM_BY_DEPTH(ordering_table, cursor, (p0.vz + v[1].vz) >> FIELD_WORLD_OT_DEPTH_SHIFT, DR_TPAGE);
             v[1].vx = v[2].vx;
             v[1].vy = v[2].vy;
@@ -971,7 +972,7 @@ static u8* field_build_effect_curves(u_long* ordering_table, u8* packet, VECTOR*
             }
 
             PROJECT_POINT(cursor, 2, world);
-            *(s32*)&cursor[1].x0 = *(s32*)&cursor->x2;
+            SET_XY0_PACKED(&cursor[1], *(s32*)&cursor->x2);
 
             if (forward != 0)
             {
@@ -991,14 +992,14 @@ static u8* field_build_effect_curves(u_long* ordering_table, u8* packet, VECTOR*
             SET_POLY_G4_BGR1_PACKED(cursor, EFFECT_BLUE(EFFECT_LEVEL));
             SET_POLY_G4_BGR2_PACKED(cursor, 0);
             SET_POLY_G4_BGR3_PACKED(cursor, EFFECT_BLUE(EFFECT_LEVEL));
-            *(s32*)&cursor[1].x1 = *(s32*)&cursor->x3;
+            SET_XY1_PACKED(&cursor[1], *(s32*)&cursor->x3);
             SetPolyG4(cursor);
             setSemiTrans(cursor, 1);
             ADD_PRIM_BY_DEPTH(ordering_table, cursor, position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
         }
 
-        *(s32*)&cursor->x2 = first_xy;
-        *(s32*)&cursor->x3 = second_xy;
+        SET_XY2_PACKED(cursor, first_xy);
+        SET_XY3_PACKED(cursor, second_xy);
         SET_BGR0_PACKED(cursor, 0);
         SET_POLY_G4_BGR1_PACKED(cursor, EFFECT_GREEN(EFFECT_LEVEL));
         SET_POLY_G4_BGR2_PACKED(cursor, 0);
@@ -1074,21 +1075,21 @@ static u8* field_build_effect_spiral(u_long* ordering_table, u8* packet, VECTOR*
             RotMatrixX(-EFFECT_SEGMENT_ANGLE, matrix);
             STRIP_POINT(radius + (radius_sum >> 5));
             PROJECT_POINT(cursor, 2, world);
-            *(s32*)&cursor[1].x0 = *(s32*)&cursor->x2;
+            SET_XY0_PACKED(&cursor[1], *(s32*)&cursor->x2);
             STRIP_POINT(radius + (radius_sum >> 5) + SPIRAL_STRIP_WIDTH);
             PROJECT_POINT(cursor, 3, world);
             SET_BGR0_PACKED(cursor, 0);
             SET_POLY_G4_BGR1_PACKED(cursor, EFFECT_BLUE(EFFECT_LEVEL));
             SET_POLY_G4_BGR2_PACKED(cursor, 0);
             SET_POLY_G4_BGR3_PACKED(cursor, EFFECT_BLUE(EFFECT_LEVEL));
-            *(s32*)&cursor[1].x1 = *(s32*)&cursor->x3;
+            SET_XY1_PACKED(&cursor[1], *(s32*)&cursor->x3);
             SetPolyG4(cursor);
             setSemiTrans(cursor, 1);
             ADD_PRIM_BY_DEPTH(ordering_table, cursor, position->vz >> FIELD_WORLD_OT_DEPTH_SHIFT, POLY_G4);
         }
 
-        *(s32*)&cursor->x2 = first_xy;
-        *(s32*)&cursor->x3 = second_xy;
+        SET_XY2_PACKED(cursor, first_xy);
+        SET_XY3_PACKED(cursor, second_xy);
         SET_BGR0_PACKED(cursor, 0);
         SET_POLY_G4_BGR1_PACKED(cursor, EFFECT_GREEN(EFFECT_LEVEL));
         SET_POLY_G4_BGR2_PACKED(cursor, 0);

@@ -1,3 +1,4 @@
+#include "common.h"
 #include <inline_c.h>
 #include <libgte.h>
 #include <rand.h>
@@ -23,6 +24,7 @@
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_travel_sequences.h"
 #include "../internal/wmap_view_effects.h"
+#include "common/saved_game.h"
 #include "main/audio/akao_cmd.h"
 #include "main/cdrom.h"
 #include "sdk/gte_dmpsx_compat.h"
@@ -104,7 +106,6 @@ extern u8 g_wmap_arrival_event_sides[WMAP_ARRIVAL_SIDES];
 extern u8 g_wmap_scripted_traveler_animation[];
 extern s32 g_wmap_vehicle_phase;
 extern WmapScreenPosition g_wmap_vehicle_screen_position;
-extern WmapAnimationSlot g_wmap_actor_animations[];
 extern WmapMotionSlot g_wmap_actor_motions[];
 /** @brief Motion slots from actor WMAP_ARRIVAL_FIRST_ACTOR on, addressed as their own array. */
 extern WmapMotionSlot g_wmap_effect_actor_motions[];
@@ -150,7 +151,7 @@ static inline s32 wmap_cell_has_land(s32 x, s32 y)
 /** @brief Start a scripted scroll that brings g_wmap_vehicle_cell_x/y into view. */
 static inline void wmap_scroll_to_vehicle_cell(void)
 {
-    g_wmap_view_scroll_mode = WMAP_STEP_SCRIPTED_SCROLL_MODE;
+    g_wmap_view_scroll_mode = WMAP_SCROLL_SCRIPTED;
     g_wmap_scroll_remaining_x = (g_wmap_vehicle_cell_x - 1) * WMAP_CELL_SPACING - g_wmap_view.x;
     g_wmap_scroll_remaining_y = (g_wmap_vehicle_cell_y - 1) * WMAP_CELL_SPACING - g_wmap_view.y;
 }
@@ -158,7 +159,7 @@ static inline void wmap_scroll_to_vehicle_cell(void)
 /** @brief Start a scripted scroll back to g_wmap_saved_view. */
 static inline void wmap_scroll_to_saved_view(void)
 {
-    g_wmap_view_scroll_mode = WMAP_STEP_SCRIPTED_SCROLL_MODE;
+    g_wmap_view_scroll_mode = WMAP_SCROLL_SCRIPTED;
     g_wmap_scroll_remaining_x = g_wmap_saved_view.x - g_wmap_view.x;
     g_wmap_scroll_remaining_y = g_wmap_saved_view.y - g_wmap_view.y;
 }
@@ -214,9 +215,9 @@ static inline void wmap_walk_event_show_traveler(void)
 {
     WmapSpriteActor* actor = &g_wmap_sprite_actors[WMAP_SCRIPTED_TRAVELER];
 
-    actor->scale_index = WMAP_STEP_ACTOR_SCALE_INDEX;
+    actor->scale_index = WMAP_SPRITE_SCALE_FULL;
     actor->previous_sequence = -1;
-    actor->target_shade = 128;
+    actor->target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
     actor->resource_index = 0;
     actor->sequence = 0;
     actor->shade = 0;
@@ -268,7 +269,7 @@ void wmap_start_pending_event(void)
         else if (g_wmap_land_event_24_pending != 0)
         {
             cdrom_queue_read(WMAP_VEHICLE_BANK_FILE, g_wmap_animation_bank_0);
-            cdrom_queue_read(WMAP_VEHICLE_BANK_FILE_2, g_wmap_animation_bank_0 + WMAP_VEHICLE_BANK_SIZE);
+            cdrom_queue_read(WMAP_VEHICLE_BANK_FILE_2, g_wmap_animation_bank_0 + WMAP_ANIMATION_BANK_SIZE);
             cdrom_wait_queue_empty();
             g_wmap_land_event_24_pending = 0;
             wmap_start_sequence(&wmap_land_event_24_run);
@@ -420,7 +421,7 @@ void wmap_arrival_event_pick_sides(s32 land_id)
 void wmap_arrival_event_step_01(void)
 {
     g_wmap_special_travel_pending = 0;
-    D_80139234 = 0;
+    g_wmap_particle_velocity_min = 0;
     g_wmap_input_locked = 1;
     g_wmap_event_active = 1;
     g_wmap_saved_view = g_wmap_view;
@@ -449,10 +450,10 @@ void wmap_arrival_event_step_03(void)
         if (g_wmap_arrival_event_sides[i] != 0)
         {
             g_wmap_actor_animations[i + WMAP_ARRIVAL_FIRST_ACTOR].data = g_wmap_animation_bank_3;
-            actor->scale_index = WMAP_STEP_ACTOR_SCALE_INDEX;
+            actor->scale_index = WMAP_SPRITE_SCALE_FULL;
             actor->sequence = i + 1;
             actor->previous_sequence = -1;
-            actor->target_shade = 128;
+            actor->target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
             actor->shade_step = 2;
             actor->resource_index = 0;
             actor->shade = 0;
@@ -532,18 +533,18 @@ void wmap_arrival_event_draw_trails(void)
 
         if (g_wmap_frame_count % 10 == 0)
         {
-            if (D_80139234 != -1)
+            if (g_wmap_particle_velocity_min != -1)
             {
                 for (i = 0; i < WMAP_ARRIVAL_SIDES; i++)
                 {
-                    destination = i + D_80139234 * WMAP_ARRIVAL_SIDES + WMAP_ARRIVAL_TRAIL_FIRST_ACTOR;
+                    destination = i + g_wmap_particle_velocity_min * WMAP_ARRIVAL_SIDES + WMAP_ARRIVAL_TRAIL_FIRST_ACTOR;
                     g_wmap_actor_motions[destination] = g_wmap_actor_motions[i + WMAP_ARRIVAL_FIRST_ACTOR];
                     g_wmap_sprite_actors[destination] = g_wmap_sprite_actors[i + WMAP_ARRIVAL_FIRST_ACTOR];
                     g_wmap_sprite_actors[destination].target_shade = 0;
                     g_wmap_sprite_actors[destination].shade_step = 2;
                 }
 
-                D_80139234 = (D_80139234 + 1) & (WMAP_ARRIVAL_TRAIL_SAMPLES - 1);
+                g_wmap_particle_velocity_min = (g_wmap_particle_velocity_min + 1) & (WMAP_ARRIVAL_TRAIL_SAMPLES - 1);
             }
         }
     }
@@ -603,7 +604,7 @@ void wmap_land_event_13_step_01(void)
 {
     wmap_select_mesh_motion(1);
     wmap_start_mesh_transition(1);
-    wmap_find_land_cell(16, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+    wmap_find_land_cell(FIELD_LAND_UNDERWORLD, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_focus_cell_x = g_wmap_vehicle_cell_x;
     g_wmap_focus_cell_y = g_wmap_vehicle_cell_y;
     wmap_scroll_to_vehicle_cell();
@@ -616,7 +617,7 @@ void wmap_land_event_12_step_01(void)
 {
     wmap_select_mesh_motion(1);
     wmap_start_mesh_transition(1);
-    wmap_find_land_cell(23, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+    wmap_find_land_cell(FIELD_LAND_FLAMES, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_focus_cell_x = g_wmap_vehicle_cell_x;
     g_wmap_focus_cell_y = g_wmap_vehicle_cell_y;
     wmap_scroll_to_vehicle_cell();
@@ -628,9 +629,9 @@ void wmap_land_event_12_step_01(void)
 void wmap_land_event_24_step_01(void)
 {
     g_wmap_vehicle_flap_sound_enabled = 0;
-    g_wmap_forced_animated_land_id = WMAP_SPECIAL_TRAVEL_LAND;
+    g_wmap_forced_animated_land_id = FIELD_LAND_LUCEMIA;
     g_wmap_land_display_limit = 0;
-    wmap_find_land_cell(WMAP_SPECIAL_TRAVEL_LAND, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
+    wmap_find_land_cell(FIELD_LAND_LUCEMIA, &g_wmap_vehicle_cell_x, &g_wmap_vehicle_cell_y);
     g_wmap_focus_cell_x = g_wmap_vehicle_cell_x;
     g_wmap_focus_cell_y = g_wmap_vehicle_cell_y;
     wmap_scroll_to_vehicle_cell();
@@ -658,7 +659,7 @@ void wmap_land_event_24_step_04(void)
 
     if ((g_wmap_frame_count & 3) == 0)
     {
-        if (vehicle->scale_index < WMAP_VEHICLE_SCALE_MAX)
+        if (vehicle->scale_index < WMAP_SPRITE_SCALE_FULL)
         {
             vehicle->scale_index++;
         }
@@ -692,8 +693,8 @@ void wmap_land_event_24_step_03(void)
     g_wmap_vehicle_actor.scale_index = 0;
     g_wmap_vehicle_actor.sequence = 0;
     g_wmap_vehicle_actor.shade_step = 0;
-    g_wmap_vehicle_actor.target_shade = WMAP_VEHICLE_SHADE_NEUTRAL;
-    g_wmap_vehicle_actor.shade = WMAP_VEHICLE_SHADE_NEUTRAL;
+    g_wmap_vehicle_actor.target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
+    g_wmap_vehicle_actor.shade = WMAP_SPRITE_SHADE_NEUTRAL;
     g_wmap_actor_motions[0].vehicle.active = 1;
     g_wmap_actor_motions[0].vehicle.radius = WMAP_VEHICLE_START_RADIUS;
     g_wmap_actor_motions[0].vehicle.height = WMAP_VEHICLE_START_HEIGHT;
@@ -825,7 +826,7 @@ void wmap_arrival_event_step_09(void)
         g_wmap_sprite_actors[i + WMAP_ARRIVAL_FIRST_ACTOR].sequence = 0;
     }
 
-    D_80139234 = -1;
+    g_wmap_particle_velocity_min = -1;
     g_wmap_arrival_event_timer = 40;
     g_wmap_arrival_event_step++;
     wmap_arrival_event_step_10();

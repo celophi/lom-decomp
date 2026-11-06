@@ -271,7 +271,6 @@ typedef struct
     unsigned int upper : 8;
 } FieldPlacementBits;
 
-
 /** @brief GPU coordinates accessed individually or as a packed XY word. */
 typedef union
 {
@@ -458,16 +457,8 @@ extern u16 g_field_texture_slot_flags[];
 void field_restart_actor_animation();
 u8* field_begin_actor_animation_forward();
 
-void field_play_set_sfx(s32 sfx_index, s32 pan, s32 unused, s32 channel_group);
-void field_command_history_clear(s32 player);
-s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* effect, FieldContactResult* contact);
-void field_start_actor_animation(s32 slot_index, s32 target_count, u8* targets);
-s32 field_start_builtin_animation(s32 object_index, s32 slot_index, s32 animation_id);
 POLY_FT4* field_render_actor_ground_shadow();
 u8* field_advance_actor_part_animation_frame();
-void field_play_object_animation();
-void field_grant_reward(s32 recipient, s32 owner, u32 kind);
-s32 field_collision_hit_markers(FieldCollisionQuery* query);
 void field_interpolate_palette_track(FieldActorSlot* slot, s32 palette_sequence, u8* palette_table, s16* output);
 void field_dispatch_actor_audio_event();
 
@@ -477,7 +468,6 @@ static s32 field_roll_effect_rotation(FieldActorSlot* actor, FieldObjectPart* pa
 static void field_face_effect_target(FieldMotionRecord* effect, FieldObjectPart* part);
 static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPart* part, FieldActorSlot* actor);
 static void field_set_action_context(s32 recipient_id, s32 source_id, s32 action);
-void field_retire_effect(FieldMotionRecord* effect, FieldObjectPart* part);
 s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, u8* item, s32 flag, FieldObjectPart* part);
 s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base, u8* item, s32 flag, FieldObjectPart* part);
 
@@ -3773,7 +3763,7 @@ void field_render_effects(FieldRenderContext* render_context)
                         object_state = &g_field_object_states[actor_or_object_index];
                     }
 
-                    object_state->linked_effect_index = (s8)(effect - g_field_effect_records);
+                    object_state->linked_effect_index = (effect - g_field_effect_records);
 
                     if (frame_data != NULL)
                     {
@@ -3830,7 +3820,7 @@ void field_render_effects(FieldRenderContext* render_context)
                     part = (FieldObjectPart*)(actor_or_object_index + part_offset);
                     frame_data = resources[g_field_actors[object_index].resource_index].start;
                     object_state = &g_field_object_states[object_index];
-                    object_state->linked_effect_index = (s8)(effect - g_field_effect_records);
+                    object_state->linked_effect_index = (effect - g_field_effect_records);
 
                     if (frame_data != NULL)
                     {
@@ -3862,7 +3852,7 @@ void field_render_effects(FieldRenderContext* render_context)
                     object_index = ((FieldActorSlot*)actor_address)->targets[value];
                     frame_data = resources[g_field_actors[object_index].resource_index].start;
                     object_state = &g_field_object_states[object_index];
-                    object_state->linked_effect_index = (s8)(effect - g_field_effect_records);
+                    object_state->linked_effect_index = (effect - g_field_effect_records);
 
                     if (frame_data != NULL)
                     {
@@ -3965,7 +3955,7 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
             {
                 value1 = packed_color.signed_word;
                 setlen(packet_cursor, 9);
-                *(s32*)&((POLY_FT4*)packet_cursor)->r0 = value1;
+                SET_BGR0_PACKED(((POLY_FT4*)packet_cursor), value1);
                 setcode(packet_cursor, 0x2C);
                 setSemiTrans((POLY_FT4*)packet_cursor, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
                 width_or_mode = frame_data[4];
@@ -3982,7 +3972,7 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
                     frame_x = -(s8)frame_data[0] - width_or_mode;
                 }
 
-                width_or_mode -= 1;
+                width_or_mode--;
 
                 if (part->track_flags.halves.high & 1)
                 {
@@ -4119,6 +4109,7 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
                 else
                 {
                     value1 = effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
+
                     if (value1 < 0)
                     {
                         addPrim(&ordering_table[0], packet_cursor);
@@ -4145,14 +4136,14 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
                 shadow_footprint[4] = ((s8)frame_data[4] * part->appearance.fields.scale_xz) >> FIELD_PART_SCALE_SHIFT;
                 shadow_footprint[5] = ((s8)frame_data[5] * part->scale_y) >> FIELD_PART_SCALE_SHIFT;
                 shadow_footprint[6] = ((s8)frame_data[6] * part->appearance.fields.scale_xz) >> FIELD_PART_SCALE_SHIFT;
-                shadow_count += 1;
+                shadow_count++;
                 shadow_footprint[7] = ((s8)frame_data[8] * part->scale_y) >> FIELD_PART_SCALE_SHIFT;
             }
 
             frame_data += 9;
-            frame_count -= 1;
+            frame_count--;
             value0 = *(s32*)&((POLY_FT4*)packet_cursor)[-1].r0;
-            *(s32*)&((POLY_FT4*)packet_cursor)->r0 = value0;
+            SET_BGR0_PACKED(((POLY_FT4*)packet_cursor), value0);
         }
     }
 
@@ -4333,12 +4324,12 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                 if (!(rec->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
                 {
                     x_offset = (s8)*item;
-                    u_extent -= 1;
+                    u_extent--;
                 }
                 else
                 {
                     x_offset = -(s8)*item - u_extent;
-                    u_extent -= 1;
+                    u_extent--;
                 }
 
                 field_project_effect_sprite_quad(rec, sxy, (POLY_FT4*)cursor, u_extent, v_extent, x_offset, y_offset, (FieldSpriteFrame*)item, mtx);
@@ -5142,7 +5133,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                         if (part->effect_flags.word & FIELD_PART_SOLID)
                         {
                             field_unpack_effect_quad_corners8(quad_bounds, rec->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED, (s8*)item);
-                            shadow_count += 1;
+                            shadow_count++;
                         }
 
                         break;
@@ -5420,7 +5411,7 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
     slot->bounds.half.right = corners[4];
     slot->bounds.half.bottom = corners[5];
     frame_count = *item;
-    item += 1;
+    item++;
 
     if (frame_count != 0)
     {
@@ -5445,7 +5436,7 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                     offset_x = -offset_x - width;
                 }
 
-                width -= 1;
+                width--;
                 field_project_effect_sprite_quad(rec, sxy, (POLY_FT4*)cursor, width, height, offset_x, offset_y, (FieldSpriteFrame*)item, mtx);
 
                 if ((item[7] ^ ((u8)rec->facing_or_reward_kind >> 1)) & 0x40)
@@ -6036,7 +6027,7 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                             if (part->effect_flags.word & FIELD_PART_SOLID)
                             {
                                 field_unpack_effect_quad_corners16(corners, rec->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED, item);
-                                shadow_count += 1;
+                                shadow_count++;
                             }
 
                             break;
@@ -6225,8 +6216,8 @@ u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* 
     gte_SetRotMatrix(&matrix);
 
     camera_x = g_field_view_offset_x / 256;
-    screen_origin.x = (u16)(camera_x + (effect->x / 256 + FIELD_SCREEN_CENTER_X));
-    screen_origin.y = (u16)FIELD_SCREEN_Y(effect->y, effect->z);
+    screen_origin.x = (camera_x + (effect->x / 256 + FIELD_SCREEN_CENTER_X));
+    screen_origin.y = FIELD_SCREEN_Y(effect->y, effect->z);
     field_resolve_effect_part_color(actor, effect, part, &packets->color0);
     setPolyG3(packets);
     setSemiTrans(packets, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
@@ -6246,15 +6237,15 @@ u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* 
         packets[0].xy1.unsigned_pair.y = screen_origin.y;
         scaled_cosine = (rcos(angle) >> 6) * radius;
         direction.vy = 0;
-        direction.vx = (s16)(scaled_cosine >> 8);
-        direction.vz = (s16)((s32)((rsin(angle) >> 6) * radius) >> 8);
+        direction.vx = (scaled_cosine >> 8);
+        direction.vz = (((rsin(angle) >> 6) * radius) >> 8);
         gte_ldv0(direction_ptr);
         gte_rtv0();
         gte_stlvnl(transformed_ptr);
-        inner_start_x = screen_origin.x + (u16)transformed.vx;
+        inner_start_x = screen_origin.x + transformed.vx;
         packets[0].xy0.signed_pair.x = inner_start_x;
         packets[1].xy0.signed_pair.x = inner_start_x;
-        inner_start_y = screen_origin.y + (u16)transformed.vy;
+        inner_start_y = screen_origin.y + transformed.vy;
         packets[0].xy0.signed_pair.y = inner_start_y;
         packets[1].xy0.signed_pair.y = inner_start_y;
 
@@ -6263,40 +6254,40 @@ u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* 
             next_scaled_cosine = (rcos(0) >> 6) * radius;
             inner_angle = 0;
             direction.vy = 0;
-            direction.vx = (s16)(next_scaled_cosine >> 8);
-            direction.vz = (s16)((s32)((rsin(inner_angle) >> 6) * radius) >> 8);
+            direction.vx = (next_scaled_cosine >> 8);
+            direction.vz = (((rsin(inner_angle) >> 6) * radius) >> 8);
         }
         else
         {
             next_scaled_cosine = (rcos(next_angle) >> 6) * radius;
             inner_angle = next_angle;
             direction.vy = 0;
-            direction.vx = (s16)(next_scaled_cosine >> 8);
-            direction.vz = (s16)((s32)((rsin(inner_angle) >> 6) * radius) >> 8);
+            direction.vx = (next_scaled_cosine >> 8);
+            direction.vz = (((rsin(inner_angle) >> 6) * radius) >> 8);
         }
 
         gte_ldv0(direction_ptr);
         gte_rtv0();
         gte_stlvnl(transformed_ptr);
         second_triangle = &packets[1];
-        inner_end_x = screen_origin.x + (u16)transformed.vx;
+        inner_end_x = screen_origin.x + transformed.vx;
         packets[0].xy2.signed_pair.x = inner_end_x;
         second_triangle[0].xy2.signed_pair.x = inner_end_x;
         packets[2].xy0.signed_pair.x = inner_end_x;
-        rim_y = screen_origin.y + (u16)transformed.vy;
+        rim_y = screen_origin.y + transformed.vy;
         packets[0].xy2.signed_pair.y = rim_y;
         second_triangle[0].xy2.signed_pair.y = rim_y;
         packets[2].xy0.signed_pair.y = rim_y;
-        direction.vx = (s16)(rcos(angle) >> 6);
+        direction.vx = (rcos(angle) >> 6);
         direction.vy = 0;
-        direction.vz = (s16)(rsin(angle) >> 6);
+        direction.vz = (rsin(angle) >> 6);
         gte_ldv0(direction_ptr);
         gte_rtv0();
         gte_stlvnl(transformed_ptr);
-        outer_start_x = screen_origin.x + (u16)transformed.vx;
+        outer_start_x = screen_origin.x + transformed.vx;
         second_triangle[0].xy1.signed_pair.x = outer_start_x;
         packets[2].xy1.signed_pair.x = outer_start_x;
-        outer_y = screen_origin.y + (u16)transformed.vy;
+        outer_y = screen_origin.y + transformed.vy;
         second_triangle[0].xy1.signed_pair.y = outer_y;
         packets[2].xy1.signed_pair.y = outer_y;
 
@@ -6304,27 +6295,27 @@ u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* 
         {
             outer_cosine = rcos(0);
             outer_angle = 0;
-            direction.vx = (s16)(outer_cosine >> 6);
+            direction.vx = (outer_cosine >> 6);
             direction.vy = 0;
-            direction.vz = (s16)(rsin(outer_angle) >> 6);
+            direction.vz = (rsin(outer_angle) >> 6);
         }
         else
         {
             outer_next_angle = angle + FIELD_RING_ANGLE_STEP;
             outer_cosine = rcos(outer_next_angle);
             outer_angle = outer_next_angle;
-            direction.vx = (s16)(outer_cosine >> 6);
+            direction.vx = (outer_cosine >> 6);
             direction.vy = 0;
-            direction.vz = (s16)(rsin(outer_angle) >> 6);
+            direction.vz = (rsin(outer_angle) >> 6);
         }
 
         gte_ldv0(direction_ptr);
         gte_rtv0();
         gte_stlvnl(transformed_ptr);
-        outer_y = (s16)(screen_origin.x + (u16)transformed.vx);
+        outer_y = (screen_origin.x + transformed.vx);
         packets[2].xy2.signed_pair.x = outer_y;
         packed_color = packets[0].color0.signed_word;
-        rim_y = (s16)(screen_origin.y + (u16)transformed.vy);
+        rim_y = (screen_origin.y + transformed.vy);
         packet_tag = packets[0].tag;
         packets[0].color1.signed_word = 0;
         packets[2].color2.signed_word = 0;
@@ -6339,7 +6330,7 @@ u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* 
         packets[3].tag = packet_tag;
         packets[3].color0.signed_word = packets[0].color0.signed_word;
         packets[2].xy2.signed_pair.y = rim_y;
-        first_depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
+        first_depth = effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
         next_packet = &packets[1];
 
         if (first_depth < 0)
@@ -6358,7 +6349,7 @@ u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* 
             packets = next_packet;
         }
 
-        second_depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
+        second_depth = effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
 
         if (second_depth < 0)
         {
@@ -6376,7 +6367,7 @@ u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* 
             packets++;
         }
 
-        third_depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
+        third_depth = effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
 
         if (third_depth < 0)
         {
@@ -6405,6 +6396,12 @@ u8* field_render_effect_ring(FieldMotionRecord* effect, u8* packet_cursor, s32* 
     return field_emit_effect_texture_page(effect, part, (u8*)packets, ordering_table);
 }
 
+/**
+ * @brief Set a horizontal direction vector from an angle.
+ * @param destination Receives (cos, 0, sin) of @p phase.
+ * @param phase Angle in 4096ths of a turn.
+ * @param shift Right shift applied to the cosine and sine.
+ */
 static inline void field_set_fan_direction(SVECTOR* destination, s32 phase, s32 shift)
 {
     destination->vx = (s16)(rcos(phase) >> shift);
@@ -6499,7 +6496,7 @@ u8* field_render_effect_fan(FieldMotionRecord* effect, u8* packet_cursor, s32* o
 
     if ((ONE % segment_count) != 0)
     {
-        angle_step += 1;
+        angle_step++;
     }
 
     segment = 0;
@@ -6729,7 +6726,7 @@ next_segment:
         goto finished;
     }
 
-    segment += 1;
+    segment++;
     half_angle += angle_step;
     angle += angle_step;
     next_angle += angle_step;
@@ -6762,8 +6759,8 @@ u8* field_render_effect_marker(FieldMotionRecord* effect, u8* packet_cursor, s32
     field_build_effect_part_matrix(effect, part, &matrix, actor);
     gte_SetRotMatrix(&matrix);
 
-    screen_origin.vx = (s16)FIELD_SCREEN_X(effect->x);
-    screen_origin.vy = (s16)FIELD_SCREEN_Y(effect->y, effect->z);
+    screen_origin.vx = FIELD_SCREEN_X(effect->x);
+    screen_origin.vy = FIELD_SCREEN_Y(effect->y, effect->z);
 
     field_resolve_effect_part_color(actor, effect, part, (FieldPrimitiveColor*)&((P_TAG*)packet_cursor)->r0);
     setLineG2((LINE_G2*)packet_cursor);
@@ -6774,8 +6771,8 @@ u8* field_render_effect_marker(FieldMotionRecord* effect, u8* packet_cursor, s32
     {
         ((FieldGouraudLine*)packet_cursor)[0].xy0.word = *(s32*)&screen_origin;
         field_resolve_effect_position(effect, part, &target_position);
-        screen_origin.vx = (s16)FIELD_SCREEN_X(target_position.vx);
-        screen_origin.vy = (s16)FIELD_SCREEN_Y(target_position.vy, target_position.vz);
+        screen_origin.vx = FIELD_SCREEN_X(target_position.vx);
+        screen_origin.vy = FIELD_SCREEN_Y(target_position.vy, target_position.vz);
         ((FieldGouraudLine*)packet_cursor)[0].xy1.word = *(s32*)&screen_origin;
     }
     else if ((part->behavior_flags.word >> FIELD_PART_ORIENTED_SHIFT) & 1)
@@ -6786,9 +6783,9 @@ u8* field_render_effect_marker(FieldMotionRecord* effect, u8* packet_cursor, s32
         gte_ldv0(&direction);
         gte_rtv0();
         gte_stlvnl(&transformed);
-        ((FieldGouraudLine*)packet_cursor)[0].xy0.signed_pair.x = screen_origin.vx + (u16)transformed.vx;
+        ((FieldGouraudLine*)packet_cursor)[0].xy0.signed_pair.x = screen_origin.vx + transformed.vx;
         {
-            s16 y = screen_origin.vy + (u16)transformed.vy;
+            s16 y = screen_origin.vy + transformed.vy;
             ((FieldGouraudLine*)packet_cursor)[0].xy1.word = *(s32*)&screen_origin;
             ((FieldGouraudLine*)packet_cursor)[0].xy0.signed_pair.y = y;
         }
@@ -6845,40 +6842,40 @@ u8* field_render_effect_trail(FieldMotionRecord* effect, u8* packet_cursor, s32*
         camera_x = g_field_view_offset_x / 256;
         effect_x = effect->x / 256 + FIELD_SCREEN_CENTER_X;
         camera_y = g_field_view_offset_y;
-        ((FieldFlatQuad*)packet_cursor)[0].xy0.unsigned_pair.x = (u16)(camera_x + effect_x);
+        ((FieldFlatQuad*)packet_cursor)[0].xy0.unsigned_pair.x = (camera_x + effect_x);
 
         ((FieldFlatQuad*)packet_cursor)[0].xy0.unsigned_pair.y =
-            (u16)(FIELD_SCREEN_CENTER_Y + camera_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512);
+            (FIELD_SCREEN_CENTER_Y + camera_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512);
 
         ((FieldFlatQuad*)packet_cursor)[0].xy2.word = ((FieldFlatQuad*)packet_cursor)[0].xy0.word;
-        ((FieldFlatQuad*)packet_cursor)[0].xy0.unsigned_pair.x = (u16)(((FieldFlatQuad*)packet_cursor)[0].xy0.unsigned_pair.x - (u16)effect->work_x);
-        ((FieldFlatQuad*)packet_cursor)[0].xy0.unsigned_pair.y = (u16)(((FieldFlatQuad*)packet_cursor)[0].xy0.unsigned_pair.y - (u16)effect->work_y);
-        ((FieldFlatQuad*)packet_cursor)[0].xy2.unsigned_pair.x = (u16)(((FieldFlatQuad*)packet_cursor)[0].xy2.unsigned_pair.x + (u16)effect->work_x);
-        ((FieldFlatQuad*)packet_cursor)[0].xy2.unsigned_pair.y = (u16)(((FieldFlatQuad*)packet_cursor)[0].xy2.unsigned_pair.y + (u16)effect->work_y);
+        ((FieldFlatQuad*)packet_cursor)[0].xy0.unsigned_pair.x = (((FieldFlatQuad*)packet_cursor)[0].xy0.unsigned_pair.x - effect->work_x);
+        ((FieldFlatQuad*)packet_cursor)[0].xy0.unsigned_pair.y = (((FieldFlatQuad*)packet_cursor)[0].xy0.unsigned_pair.y - effect->work_y);
+        ((FieldFlatQuad*)packet_cursor)[0].xy2.unsigned_pair.x = (((FieldFlatQuad*)packet_cursor)[0].xy2.unsigned_pair.x + effect->work_x);
+        ((FieldFlatQuad*)packet_cursor)[0].xy2.unsigned_pair.y = (((FieldFlatQuad*)packet_cursor)[0].xy2.unsigned_pair.y + effect->work_y);
 
         ((FieldFlatQuad*)packet_cursor)[0].xy1.unsigned_pair.x =
-            (u16)(g_field_view_offset_x / 256 + (g_field_effect_records[effect->previous_effect_index].x / 256 + FIELD_SCREEN_CENTER_X));
+            (g_field_view_offset_x / 256 + (g_field_effect_records[effect->previous_effect_index].x / 256 + FIELD_SCREEN_CENTER_X));
 
         ((FieldFlatQuad*)packet_cursor)[0].xy1.unsigned_pair.y =
-            (u16)(FIELD_SCREEN_CENTER_Y + camera_y / 256 + g_field_effect_records[effect->previous_effect_index].y / 256 -
-                  g_field_effect_records[effect->previous_effect_index].z / 512 - g_field_view_offset_z / 512);
+            (FIELD_SCREEN_CENTER_Y + camera_y / 256 + g_field_effect_records[effect->previous_effect_index].y / 256 -
+             g_field_effect_records[effect->previous_effect_index].z / 512 - g_field_view_offset_z / 512);
 
         ((FieldFlatQuad*)packet_cursor)[0].xy3.word = ((FieldFlatQuad*)packet_cursor)[0].xy1.word;
         ((FieldFlatQuad*)packet_cursor)[0].xy1.unsigned_pair.x =
-            (u16)(((FieldFlatQuad*)packet_cursor)[0].xy1.unsigned_pair.x - (u16)g_field_effect_records[effect->previous_effect_index].work_x);
+            (((FieldFlatQuad*)packet_cursor)[0].xy1.unsigned_pair.x - g_field_effect_records[effect->previous_effect_index].work_x);
         ((FieldFlatQuad*)packet_cursor)[0].xy1.unsigned_pair.y =
-            (u16)(((FieldFlatQuad*)packet_cursor)[0].xy1.unsigned_pair.y - (u16)g_field_effect_records[effect->previous_effect_index].work_y);
+            (((FieldFlatQuad*)packet_cursor)[0].xy1.unsigned_pair.y - g_field_effect_records[effect->previous_effect_index].work_y);
         ((FieldFlatQuad*)packet_cursor)[0].xy3.unsigned_pair.x =
-            (u16)(((FieldFlatQuad*)packet_cursor)[0].xy3.unsigned_pair.x + (u16)g_field_effect_records[effect->previous_effect_index].work_x);
+            (((FieldFlatQuad*)packet_cursor)[0].xy3.unsigned_pair.x + g_field_effect_records[effect->previous_effect_index].work_x);
         ((FieldFlatQuad*)packet_cursor)[0].xy3.unsigned_pair.y =
-            (u16)(((FieldFlatQuad*)packet_cursor)[0].xy3.unsigned_pair.y + (u16)g_field_effect_records[effect->previous_effect_index].work_y);
+            (((FieldFlatQuad*)packet_cursor)[0].xy3.unsigned_pair.y + g_field_effect_records[effect->previous_effect_index].work_y);
 
         field_resolve_effect_part_color(actor, effect, part, (FieldPrimitiveColor*)&((P_TAG*)packet_cursor)->r0);
 
         setPolyF4((POLY_F4*)packet_cursor);
         setSemiTrans((POLY_F4*)packet_cursor, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
 
-        depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
+        depth = effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
 
         if (depth < 0)
         {
@@ -6892,7 +6889,7 @@ u8* field_render_effect_trail(FieldMotionRecord* effect, u8* packet_cursor, s32*
         }
         else
         {
-            addPrim(&ordering_table[(s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT], (POLY_F4*)packet_cursor);
+            addPrim(&ordering_table[effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT], (POLY_F4*)packet_cursor);
             packet_cursor += sizeof(POLY_F4);
         }
 
@@ -8000,8 +7997,8 @@ void field_project_effect_sprite_quad(FieldMotionRecord* effect, Vec2s* origin, 
         gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        quad->x0 = (u16)origin->x + out->low.x;
-        quad->y0 = (u16)origin->y + out->low.y;
+        quad->x0 = origin->x + out->low.x;
+        quad->y0 = origin->y + out->low.y;
 
         rotated_vertex->vx = y;
         rotated_vertex->vy = 0;
@@ -8009,8 +8006,8 @@ void field_project_effect_sprite_quad(FieldMotionRecord* effect, Vec2s* origin, 
         gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        quad->x1 = (u16)origin->x + out->low.x;
-        quad->y1 = (u16)origin->y + out->low.y;
+        quad->x1 = origin->x + out->low.x;
+        quad->y1 = origin->y + out->low.y;
 
         rotated_vertex->vx = y + height;
         rotated_vertex->vy = 0;
@@ -8018,8 +8015,8 @@ void field_project_effect_sprite_quad(FieldMotionRecord* effect, Vec2s* origin, 
         gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        quad->x2 = (u16)origin->x + out->low.x;
-        quad->y2 = (u16)origin->y + out->low.y;
+        quad->x2 = origin->x + out->low.x;
+        quad->y2 = origin->y + out->low.y;
 
         rotated_vertex->vx = y + height;
         rotated_vertex->vy = 0;
@@ -8027,8 +8024,8 @@ void field_project_effect_sprite_quad(FieldMotionRecord* effect, Vec2s* origin, 
         gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        quad->x3 = (u16)origin->x + out->low.x;
-        quad->y3 = (u16)origin->y + out->low.y;
+        quad->x3 = origin->x + out->low.x;
+        quad->y3 = origin->y + out->low.y;
         return;
     }
 
@@ -8054,8 +8051,8 @@ void field_project_effect_sprite_quad(FieldMotionRecord* effect, Vec2s* origin, 
         gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        quad->x1 = (u16)origin->x + out->low.x;
-        quad->y1 = (u16)origin->y + out->low.y;
+        quad->x1 = origin->x + out->low.x;
+        quad->y1 = origin->y + out->low.y;
 
         vertex->vx = 0;
         vertex->vy = -(frame->tilt_16 << 4);
@@ -8073,8 +8070,8 @@ void field_project_effect_sprite_quad(FieldMotionRecord* effect, Vec2s* origin, 
         gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        quad->x0 = (u16)quad->x1 + out->low.x;
-        quad->y0 = (u16)quad->y1 + out->low.y;
+        quad->x0 = quad->x1 + out->low.x;
+        quad->y0 = quad->y1 + out->low.y;
 
         vertex->vx = height;
         vertex->vy = 0;
@@ -8087,8 +8084,8 @@ void field_project_effect_sprite_quad(FieldMotionRecord* effect, Vec2s* origin, 
         gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        quad->x3 = (u16)quad->x1 + out->low.x;
-        quad->y3 = (u16)quad->y1 + out->low.y;
+        quad->x3 = quad->x1 + out->low.x;
+        quad->y3 = quad->y1 + out->low.y;
 
         vertex->vx = height;
         vertex->vy = 0;
@@ -8101,8 +8098,8 @@ void field_project_effect_sprite_quad(FieldMotionRecord* effect, Vec2s* origin, 
         gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        quad->x2 = (u16)quad->x1 + out->low.x;
-        quad->y2 = (u16)quad->y1 + out->low.y;
+        quad->x2 = quad->x1 + out->low.x;
+        quad->y2 = quad->y1 + out->low.y;
     }
     else
     {
@@ -8126,8 +8123,8 @@ void field_project_effect_sprite_quad(FieldMotionRecord* effect, Vec2s* origin, 
         gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        quad->x0 = (u16)origin->x + out->low.x;
-        quad->y0 = (u16)origin->y + out->low.y;
+        quad->x0 = origin->x + out->low.x;
+        quad->y0 = origin->y + out->low.y;
 
         vertex->vx = 0;
         vertex->vy = frame->tilt_16 << 4;
@@ -8145,8 +8142,8 @@ void field_project_effect_sprite_quad(FieldMotionRecord* effect, Vec2s* origin, 
         gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        quad->x1 = (u16)quad->x0 + out->low.x;
-        quad->y1 = (u16)quad->y0 + out->low.y;
+        quad->x1 = quad->x0 + out->low.x;
+        quad->y1 = quad->y0 + out->low.y;
 
         vertex->vx = height;
         vertex->vy = 0;
@@ -8159,8 +8156,8 @@ void field_project_effect_sprite_quad(FieldMotionRecord* effect, Vec2s* origin, 
         gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        quad->x2 = (u16)quad->x0 + out->low.x;
-        quad->y2 = (u16)quad->y0 + out->low.y;
+        quad->x2 = quad->x0 + out->low.x;
+        quad->y2 = quad->y0 + out->low.y;
 
         vertex->vx = height;
         vertex->vy = 0;
@@ -8173,8 +8170,8 @@ void field_project_effect_sprite_quad(FieldMotionRecord* effect, Vec2s* origin, 
         gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        quad->x3 = (u16)quad->x0 + out->low.x;
-        quad->y3 = (u16)quad->y0 + out->low.y;
+        quad->x3 = quad->x0 + out->low.x;
+        quad->y3 = quad->y0 + out->low.y;
     }
 }
 
@@ -8763,6 +8760,7 @@ void field_resolve_actor_part_anchor(FieldActorSlot* actor, FieldObjectPart* par
                     out->z = g_field_effect_records[index].z;
                 }
             }
+
             return;
 
         default:
@@ -8890,8 +8888,8 @@ void field_apply_effect_quad_center_offset(FieldMotionRecord* effect, Vec2s* scr
             center_x = -center_x;
         }
 
-        screen_origin->x += (s16)rotated.vx + center_x;
-        screen_origin->y += (s16)rotated.vy + center_y;
+        screen_origin->x += rotated.vx + center_x;
+        screen_origin->y += rotated.vy + center_y;
     }
 }
 
@@ -9037,12 +9035,12 @@ void field_transform_effect_quad_vertices16(FieldMotionRecord* effect, FieldObje
 
     if (vertex_index == 0)
     {
-        object->bounds.half.left = (u16)gte_out->vx;
-        object->bounds.half.top = (u16)gte_out->vy;
+        object->bounds.half.left = gte_out->vx;
+        object->bounds.half.top = gte_out->vy;
     }
 
-    object->effect_vertices.points[vertex_index].x = (u16)gte_out->vx + (u16)screen_origin->x;
-    object->effect_vertices.points[vertex_index].y = (u16)gte_out->vy + (u16)screen_origin->y;
+    object->effect_vertices.points[vertex_index].x = gte_out->vx + screen_origin->x;
+    object->effect_vertices.points[vertex_index].y = gte_out->vy + screen_origin->y;
 
     if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
@@ -9060,8 +9058,8 @@ void field_transform_effect_quad_vertices16(FieldMotionRecord* effect, FieldObje
     gte_ldv0(direction);
     gte_rtv0();
     gte_stlvnl(gte_out);
-    object->effect_vertices.points[vertex_index + 1].x = (u16)gte_out->vx + (u16)screen_origin->x;
-    object->effect_vertices.points[vertex_index + 1].y = (u16)gte_out->vy + (u16)screen_origin->y;
+    object->effect_vertices.points[vertex_index + 1].x = gte_out->vx + screen_origin->x;
+    object->effect_vertices.points[vertex_index + 1].y = gte_out->vy + screen_origin->y;
 
     if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
@@ -9082,12 +9080,12 @@ void field_transform_effect_quad_vertices16(FieldMotionRecord* effect, FieldObje
 
     if (vertex_index == 0)
     {
-        object->bounds.half.right = (u16)gte_out->vx;
-        object->bounds.half.bottom = (u16)gte_out->vy;
+        object->bounds.half.right = gte_out->vx;
+        object->bounds.half.bottom = gte_out->vy;
     }
 
-    object->effect_vertices.points[vertex_index + 2].x = (u16)gte_out->vx + (u16)screen_origin->x;
-    object->effect_vertices.points[vertex_index + 2].y = (u16)gte_out->vy + (u16)screen_origin->y;
+    object->effect_vertices.points[vertex_index + 2].x = gte_out->vx + screen_origin->x;
+    object->effect_vertices.points[vertex_index + 2].y = gte_out->vy + screen_origin->y;
 
     if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
@@ -9105,6 +9103,6 @@ void field_transform_effect_quad_vertices16(FieldMotionRecord* effect, FieldObje
     gte_ldv0(direction);
     gte_rtv0();
     gte_stlvnl(gte_out);
-    object->effect_vertices.points[vertex_index + 3].x = (u16)gte_out->vx + (u16)screen_origin->x;
-    object->effect_vertices.points[vertex_index + 3].y = (u16)gte_out->vy + (u16)screen_origin->y;
+    object->effect_vertices.points[vertex_index + 3].x = gte_out->vx + screen_origin->x;
+    object->effect_vertices.points[vertex_index + 3].y = gte_out->vy + screen_origin->y;
 }

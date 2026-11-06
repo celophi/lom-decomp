@@ -5,11 +5,13 @@
  * @note Its own object in the original link: the libspu objects S_SNC, S_GVEX
  *       and S_SRMD sit between akao_voice.o and this file.
  */
-#include "internal/akao_voice.h"
-#include "internal/akao_sequencer.h"
-#include "internal/akao_control.h"
-#include <libspu.h>
+#include "common.h"
 #include <libapi.h>
+#include <libspu.h>
+
+#include "internal/akao_control.h"
+#include "internal/akao_sequencer.h"
+#include "internal/akao_voice.h"
 
 /**
  * @brief Resolve one u16 offset of an SFX list entry pair.
@@ -162,16 +164,20 @@ u32 akao_collect_voice_mask(AkaoChannelState* channels, s32 channel_mask)
     for (i = 0, result = 0; i < AKAO_CHANNEL_COUNT; i++)
     {
         bit = 1 << i;
+
         if (channel_mask & bit)
         {
             voice = channels->voice;
+
             if (voice < AKAO_VOICE_COUNT)
             {
                 result |= 1 << voice;
             }
         }
+
         channels++;
     }
+
     return result;
 }
 
@@ -242,6 +248,7 @@ void akao_seq_start_song(u8* sequence_data, s32 start_mask)
     cleared_flags = flags & ~(AKAO_SONG_DESCRIPTOR_FLAGS | AKAO_SONG_VOICE_DROPPED | AKAO_SONG_VOICE_STOLEN);
     song->flags = cleared_flags;
     flags = descriptor->unk14;
+
     if (flags == g_akao_song_descriptor_match_value[0])
     {
         flags = cleared_flags | AKAO_SONG_LOWER_XA_AREA_FLAG;
@@ -250,21 +257,25 @@ void akao_seq_start_song(u8* sequence_data, s32 start_mask)
     {
         flags = cleared_flags | AKAO_SONG_DESCRIPTOR_MISMATCH;
     }
+
     song->flags = flags;
 
     resolved_table = NULL;
     table_offset = descriptor->key_map_offset;
     table_owner = g_akao_seq_channel0;
     key_map_data = (u8*)&descriptor->key_map_offset + table_offset;
+
     if (table_offset != 0)
     {
         resolved_table = key_map_data;
     }
+
     table_owner->key_map_base = resolved_table;
 
     resolved_table = NULL;
     table_offset = descriptor->note_table_offset;
     note_table_data = (u8*)&descriptor->note_table_offset + table_offset;
+
     if (table_offset != 0)
     {
         resolved_table = note_table_data;
@@ -278,6 +289,7 @@ void akao_seq_start_song(u8* sequence_data, s32 start_mask)
 
     table_owner->note_table = resolved_table;
     table_owner->voice_alloc_base = 0;
+
     while (channel_index < AKAO_CHANNEL_COUNT)
     {
         if ((remaining_channels & bit_mask) & start_mask)
@@ -327,12 +339,14 @@ void akao_seq_start_song(u8* sequence_data, s32 start_mask)
             {
                 sequence_data += sizeof(*descriptor->channel_offsets);
             }
+
             channel->note_ticks = AKAO_SONG_SILENT_NOTE_TICKS;
             channel->gate_ticks = AKAO_SONG_SILENT_GATE_TICKS;
             channel->seq_cursor = silent_sequence;
             channel->update_flags |= AKAO_RELEASE_RATE_UPDATE_PENDING;
             channel->spu_adsr_high = (channel->spu_adsr_high & AKAO_RELEASE_RATE_CLEAR_MASK) | AKAO_VOICE_STOP_RELEASE_SHIFT;
         }
+
         channel->voice = AKAO_VOICE_COUNT;
         remaining_channels &= ~bit_mask;
         channel++;
@@ -379,10 +393,12 @@ void akao_seq_stop_song(AkaoSongState* song, AkaoChannelState* channels, s32 son
     {
         return;
     }
+
     if (song_key != 0 && song_key != song->song_id)
     {
         return;
     }
+
     song->key_off_mask = AKAO_ALL_CHANNELS_MASK;
 
     for (index = AKAO_CHANNEL_COUNT; index != 0; index--)
@@ -439,6 +455,7 @@ void akao_sfx_stop_channels(s32 sfx_id, s32 mode)
             if ((active_mask & channel_bit) && (channel->sfx_tag & mode))
             {
                 flags = channel->flags;
+
                 if (flags & AKAO_CH_DEFERRED_STOP)
                 {
                     channel->flags = flags | AKAO_CH_STOP_PENDING;
@@ -456,16 +473,20 @@ void akao_sfx_stop_channels(s32 sfx_id, s32 mode)
     {
         channel += sfx_id;
         channel_bit <<= sfx_id;
+
         if (active_mask & channel_bit)
         {
             akao_sfx_stop_channels(channel->sfx_id, 0);
         }
+
         channel_bit <<= 1;
         channel++;
+
         if (active_mask & channel_bit)
         {
             akao_sfx_stop_channels(channel->sfx_id, 0);
         }
+
         return;
     }
     else if (mode & AKAO_SFX_STOP_OLDEST)
@@ -481,11 +502,13 @@ void akao_sfx_stop_channels(s32 sfx_id, s32 mode)
         channel = g_sfx_channels;
         channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
         oldest_age = 0;
+
         for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
             if (active_mask & channel_bit)
             {
                 channel_age = channel->sfx_age;
+
                 if (oldest_age < channel_age)
                 {
                     oldest_age = channel_age;
@@ -495,11 +518,13 @@ void akao_sfx_stop_channels(s32 sfx_id, s32 mode)
 
         channel = g_sfx_channels;
         channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+
         for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
             if ((active_mask & channel_bit) && (oldest_age == channel->sfx_age))
             {
                 flags = channel->flags;
+
                 if (flags & AKAO_CH_DEFERRED_STOP)
                 {
                     channel->flags = flags | AKAO_CH_STOP_PENDING;
@@ -524,6 +549,7 @@ void akao_sfx_stop_channels(s32 sfx_id, s32 mode)
                     if ((s32)channel->sfx_id < 0)
                     {
                         flags = channel->flags;
+
                         if (flags & AKAO_CH_DEFERRED_STOP)
                         {
                             channel->flags = flags | AKAO_CH_STOP_PENDING;
@@ -539,6 +565,7 @@ void akao_sfx_stop_channels(s32 sfx_id, s32 mode)
                 else if ((s32)channel->sfx_id == sfx_id)
                 {
                     flags = channel->flags;
+
                     if (flags & AKAO_CH_DEFERRED_STOP)
                     {
                         channel->flags = flags | AKAO_CH_STOP_PENDING;
@@ -553,6 +580,7 @@ void akao_sfx_stop_channels(s32 sfx_id, s32 mode)
             }
         }
     }
+
     g_akao_driver_flags.update_flags |= (AKAO_EFFECT_MASKS_UPDATE_PENDING | AKAO_NOISE_CLOCK_UPDATE_PENDING);
 }
 
@@ -605,6 +633,7 @@ void akao_sfx_start_channel(AkaoChannelState* channel, AkaoCommandParam* params,
     {
         channel_mask = AKAO_SFX_FIRST_CHANNEL_BIT;
         channel = g_sfx_channels;
+
         for (channels_remaining = AKAO_SFX_CHANNEL_COUNT; channels_remaining != 0; channels_remaining--, channel++, channel_mask <<= 1)
         {
             if ((g_akao_sfx_control.active_mask & channel_mask) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
@@ -640,6 +669,7 @@ void akao_unassign_voice(AkaoChannelState* channels, u32 voice_index)
     channel_index = 0;
     unassigned_voice = AKAO_VOICE_COUNT;
     song = g_akao_seq_channel0;
+
     for (; channel_index < AKAO_CHANNEL_COUNT; channel_index++, channels++)
     {
         if (channels->voice == voice_index)
@@ -682,6 +712,7 @@ void akao_sfx_play(AkaoCommandParam* params, u8* first_sequence, u8* second_sequ
     if (skip_stop == 0)
     {
         tag_mask = params[1].value;
+
         if (tag_mask != 0)
         {
             akao_sfx_stop_channels(0, tag_mask);
@@ -693,32 +724,39 @@ void akao_sfx_play(AkaoCommandParam* params, u8* first_sequence, u8* second_sequ
         channel = &g_sfx_channels[AKAO_SFX_CHANNEL_COUNT - 1];
         channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT << (AKAO_SFX_CHANNEL_COUNT - 1);
         busy_mask = (g_akao_sfx_control.active_mask | g_akao_sfx_control.paused_mask) | g_akao_xa_tracker.voice_mask;
+
         if (first_sequence != NULL && second_sequence != NULL)
         {
             candidates_remaining = AKAO_SFX_CHANNEL_COUNT - 1;
             channel--;
             channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT << (AKAO_SFX_CHANNEL_COUNT - 2);
+
             while (1)
             {
                 second_channel_bit = channel_bit << 1;
                 channel_pair_mask = channel_bit | second_channel_bit;
+
                 if (busy_mask & channel_pair_mask)
                 {
                     candidates_remaining--;
                     channel--;
                     channel_bit >>= 1;
+
                     if (candidates_remaining == 0)
                     {
                         break;
                     }
+
                     continue;
                 }
+
                 break;
             }
         }
         else
         {
             candidates_remaining = AKAO_SFX_CHANNEL_COUNT;
+
             for (; candidates_remaining != 0; candidates_remaining--, channel--, channel_bit >>= 1)
             {
                 if (!(busy_mask & channel_bit))
@@ -727,11 +765,14 @@ void akao_sfx_play(AkaoCommandParam* params, u8* first_sequence, u8* second_sequ
                 }
             }
         }
+
         if (candidates_remaining != 0)
         {
             break;
         }
+
         akao_sfx_stop_channels(0, AKAO_SFX_STOP_OLDEST);
+
         if (busy_mask == ((g_akao_sfx_control.active_mask | g_akao_sfx_control.paused_mask) | g_akao_xa_tracker.voice_mask))
         {
             return;
@@ -743,6 +784,7 @@ void akao_sfx_play(AkaoCommandParam* params, u8* first_sequence, u8* second_sequ
         akao_sfx_start_channel(channel, params, channel_bit, first_sequence);
         akao_unassign_voice(g_akao_seq_channels, channel->voice);
     }
+
     if (second_sequence != NULL)
     {
         if (first_sequence != NULL)
@@ -750,13 +792,16 @@ void akao_sfx_play(AkaoCommandParam* params, u8* first_sequence, u8* second_sequ
             channel++;
             channel_bit <<= 1;
         }
+
         akao_sfx_start_channel(channel, params, channel_bit, second_sequence);
         akao_unassign_voice(g_akao_seq_channels, channel->voice);
+
         if (first_sequence != NULL)
         {
             channel->flags |= AKAO_CH_SFX_PITCH_MOD;
         }
     }
+
     g_akao_driver_flags.update_flags |= (AKAO_EFFECT_MASKS_UPDATE_PENDING | AKAO_NOISE_CLOCK_UPDATE_PENDING);
 }
 
@@ -785,9 +830,11 @@ void akao_resolve_program_data(u8** out_first_sequence, u8** out_second_sequence
     {
         sequence_data = NULL;
     }
+
     *out_first_sequence = sequence_data;
 
     program_index++;
+
     if (((u16*)g_akao_bank_prog_base)[program_index] != AKAO_PROGRAM_NO_SEQUENCE)
     {
         sequence_data = g_akao_bank_region_c + ((u16*)g_akao_bank_prog_base)[program_index];
@@ -796,6 +843,7 @@ void akao_resolve_program_data(u8** out_first_sequence, u8** out_second_sequence
     {
         sequence_data = NULL;
     }
+
     *out_second_sequence = sequence_data;
 }
 
@@ -811,10 +859,12 @@ void akao_seq_flag_volume_update(AkaoSongState* song, AkaoChannelState* channels
     u32 active_channels;
 
     active_channels = song->masks.active_mask;
+
     if (active_channels != 0)
     {
         remaining_channels = active_channels;
         channel_bit = 1U;
+
         while (remaining_channels != 0)
         {
             if (remaining_channels & channel_bit)
@@ -822,6 +872,7 @@ void akao_seq_flag_volume_update(AkaoSongState* song, AkaoChannelState* channels
                 remaining_channels ^= channel_bit;
                 channels->update_flags |= SPU_UPDATE_VOLUME;
             }
+
             channels++;
             channel_bit <<= 1;
         }
@@ -840,10 +891,12 @@ void akao_sfx_flag_volume_update(void)
 
     channel = g_sfx_channels;
     active_channels = g_akao_sfx_control.active_mask;
+
     if (active_channels != 0)
     {
         remaining_channels = active_channels;
         channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+
         while (remaining_channels != 0)
         {
             if (remaining_channels & channel_bit)
@@ -851,6 +904,7 @@ void akao_sfx_flag_volume_update(void)
                 remaining_channels ^= channel_bit;
                 channel->update_flags |= SPU_UPDATE_VOLUME;
             }
+
             channel++;
             channel_bit <<= 1;
         }
@@ -882,6 +936,7 @@ void akao_seq_resume_song(AkaoSongDescriptor* descriptor)
     song_flags = g_akao_seq_channel0->flags & ~AKAO_SONG_DESCRIPTOR_FLAGS;
     g_akao_seq_channel0->flags = song_flags;
     song = g_akao_seq_channel0;
+
     if (descriptor->unk14 == g_akao_song_descriptor_match_value[0])
     {
         song_flags |= AKAO_SONG_LOWER_XA_AREA_FLAG;
@@ -890,6 +945,7 @@ void akao_seq_resume_song(AkaoSongDescriptor* descriptor)
     {
         song_flags |= AKAO_SONG_DESCRIPTOR_MISMATCH;
     }
+
     song->flags = song_flags;
     g_akao_seq_channel0->song_data = (u8*)descriptor;
     g_akao_seq_channel0->masks.key_on_mask = 0;
@@ -903,6 +959,7 @@ void akao_seq_resume_song(AkaoSongDescriptor* descriptor)
     g_akao_seq_channel0->masks.key_on_mask = g_akao_seq_channel0->note_on_mask;
 
     channel = g_akao_seq_channels;
+
     for (channels_remaining = AKAO_CHANNEL_COUNT, channel_bit = 1U; channels_remaining != 0; channels_remaining--, channel++, channel_bit <<= 1)
     {
         if (active_mask & channel_bit)
@@ -923,11 +980,13 @@ void akao_seq_resume_song(AkaoSongDescriptor* descriptor)
             channel->gate_ticks = AKAO_SONG_START_GATE_TICKS;
             channel->seq_cursor = g_akao_silent_sequence;
         }
+
         channel->voice = AKAO_VOICE_COUNT;
     }
 
     /* Preserve voices used by the secondary song, SFX and XA playback. */
     active_mask = 0;
+
     if (g_akao_seq_channel1 != NULL)
     {
         active_mask =
@@ -960,10 +1019,12 @@ s32 akao_bank_find_slot(s32 key)
     s32* slot_keys;
 
     slots_remaining = 0;
+
     if (key != 0)
     {
         slots_remaining = AKAO_BANK_SLOT_COUNT;
         slot_key = &g_akao_bank_slot_keys[AKAO_BANK_SLOT_COUNT - 1];
+
         do
         {
             if (key == *slot_key)
@@ -973,6 +1034,7 @@ s32 akao_bank_find_slot(s32 key)
             }
 
             slots_remaining--;
+
             if (slots_remaining != 0)
             {
                 slot_keys = g_akao_bank_slot_keys;
@@ -1002,7 +1064,7 @@ void akao_seq_reload_song(AkaoCommandParam* params)
     else
     {
         akao_seq_start_song(params[0].buffer, AKAO_ALL_CHANNELS_MASK);
-        g_akao_seq_channel0->song_id = (u16)params[2].value;
+        g_akao_seq_channel0->song_id = params[2].value;
     }
 }
 
@@ -1021,13 +1083,15 @@ void akao_seq_start_loaded_song(AkaoCommandParam* params)
     s32 requested_advance_count;
 
     akao_seq_start_song(params[0].buffer, params[3].value);
-    g_akao_seq_channel0->song_id = (u16)params[2].value;
+    g_akao_seq_channel0->song_id = params[2].value;
     requested_advance_count = params[4].value;
     pending_advance_count = 0;
+
     if (requested_advance_count != 0)
     {
         pending_advance_count = requested_advance_count - 1;
     }
+
     g_akao_seq_pending_ticks = pending_advance_count;
 }
 
@@ -1066,8 +1130,9 @@ void akao_seq_switch_song(AkaoCommandParam* params)
         akao_copy_bytes((s32*)g_akao_seq_channel0, (s32*)&g_akao_suspended_song, sizeof(g_akao_suspended_song));
         akao_copy_bytes((s32*)g_akao_seq_channels, (s32*)g_akao_pending_channels, AKAO_CHANNEL_COUNT * sizeof(*g_akao_seq_channels));
     }
+
     akao_seq_start_song(params[0].buffer, AKAO_ALL_CHANNELS_MASK);
-    g_akao_seq_channel0->song_id = (u16)params[2].value;
+    g_akao_seq_channel0->song_id = params[2].value;
 }
 
 /**
@@ -1088,10 +1153,12 @@ void akao_seq_reload_song_with_ticks(AkaoCommandParam* params)
     akao_seq_reload_song(params);
     requested_advance_count = params[4].value;
     pending_advance_count = 0;
+
     if (requested_advance_count != 0)
     {
         pending_advance_count = requested_advance_count - 1;
     }
+
     g_akao_seq_pending_ticks = pending_advance_count;
 }
 
@@ -1195,6 +1262,7 @@ void akao_sfx_play_list(AkaoCommandParam* params)
     entries_remaining = list->entry_count;
 
     sequence_offset = (u16*)(entry_data + *entry_offset);
+
     if (*sequence_offset != AKAO_PROGRAM_NO_SEQUENCE)
     {
         first_sequence = SFX_ENTRY_DATA(sequence_offset, sizeof(AkaoSfxSequencePair));
@@ -1203,7 +1271,9 @@ void akao_sfx_play_list(AkaoCommandParam* params)
     {
         first_sequence = NULL;
     }
+
     sequence_offset++;
+
     if (*sequence_offset != AKAO_PROGRAM_NO_SEQUENCE)
     {
         second_sequence = SFX_ENTRY_DATA(sequence_offset, sizeof(*sequence_offset));
@@ -1212,16 +1282,20 @@ void akao_sfx_play_list(AkaoCommandParam* params)
     {
         second_sequence = NULL;
     }
+
     akao_sfx_play(params, first_sequence, second_sequence, 0);
 
     no_sequence = AKAO_PROGRAM_NO_SEQUENCE;
     entries_remaining--;
+
     if (entries_remaining != 0)
     {
         entry_offset++;
+
         while (entries_remaining != 0)
         {
             sequence_offset = (u16*)(entry_data + *entry_offset);
+
             if (*sequence_offset != no_sequence)
             {
                 first_sequence = SFX_ENTRY_DATA(sequence_offset, sizeof(AkaoSfxSequencePair));
@@ -1230,7 +1304,9 @@ void akao_sfx_play_list(AkaoCommandParam* params)
             {
                 first_sequence = NULL;
             }
+
             sequence_offset++;
+
             if (*sequence_offset != no_sequence)
             {
                 second_sequence = SFX_ENTRY_DATA(sequence_offset, sizeof(*sequence_offset));
@@ -1239,6 +1315,7 @@ void akao_sfx_play_list(AkaoCommandParam* params)
             {
                 second_sequence = NULL;
             }
+
             akao_sfx_play(params, first_sequence, second_sequence, 1);
             entries_remaining--;
             entry_offset++;
@@ -1270,6 +1347,7 @@ void akao_seq_set_master_volume(AkaoCommandParam* params)
     s32 volume;
 
     song_id = params[0].value;
+
     if (song_id == 0 || song_id == g_akao_seq_channel0->song_id)
     {
         volume = (params[1].value & AKAO_VOLUME_MAX) << AKAO_Q16_SHIFT;
@@ -1311,12 +1389,15 @@ void akao_seq_fade_master_volume(AkaoCommandParam* params)
 
     requested_ticks = params[1].value;
     fade_ticks = 1;
+
     if (requested_ticks != 0)
     {
         fade_ticks = requested_ticks;
     }
+
     target_volume = (params[2].value & AKAO_VOLUME_MAX) << AKAO_Q16_SHIFT;
     song_id = params[0].value;
+
     if (song_id == 0 || song_id == g_akao_seq_channel0->song_id)
     {
         current_volume = g_akao_seq_channel0->volume;
@@ -1361,11 +1442,14 @@ void akao_seq_fade_master_volume_from(AkaoCommandParam* params)
 
     requested_ticks = params[1].value;
     fade_ticks = 1;
+
     if (requested_ticks != 0)
     {
         fade_ticks = requested_ticks;
     }
+
     song_id = params[0].value;
+
     if (song_id == 0 || song_id == g_akao_seq_channel0->song_id)
     {
         song = g_akao_seq_channel0;
@@ -1380,6 +1464,7 @@ void akao_seq_fade_master_volume_from(AkaoCommandParam* params)
     {
         return;
     }
+
     start_volume = (params[2].value & AKAO_VOLUME_MAX) << AKAO_Q16_SHIFT;
     song->volume = start_volume;
     target_volume = (params[3].value & AKAO_VOLUME_MAX) << AKAO_Q16_SHIFT;
@@ -1419,10 +1504,12 @@ void akao_cd_fade_volume(AkaoCommandParam* params)
 
     requested_ticks = params[0].value;
     fade_ticks = 1;
+
     if (requested_ticks != 0)
     {
         fade_ticks = requested_ticks;
     }
+
     target_volume = (u16)params[1].value;
     target_volume = (u32)target_volume << AKAO_Q16_SHIFT;
     target_volume -= g_akao_cdvol_acc;
@@ -1446,10 +1533,12 @@ void akao_cd_fade_volume_from(AkaoCommandParam* params)
 
     requested_ticks = params[0].value;
     fade_ticks = 1;
+
     if (requested_ticks != 0)
     {
         fade_ticks = requested_ticks;
     }
+
     target_volume = (u16)params[2].value;
     start_volume = (u16)params[1].value;
     target_volume = (u32)target_volume << AKAO_Q16_SHIFT;
@@ -1481,6 +1570,7 @@ void akao_sfx_set_volume_scale(AkaoCommandParam* params)
     channel = g_sfx_channels;
     active_channels = g_akao_sfx_control.active_mask;
     channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+
     if (params[1].value != 0)
     {
         for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
@@ -1530,6 +1620,7 @@ void akao_sfx_fade_volume_scale(AkaoCommandParam* params)
     channel = g_sfx_channels;
     active_channels = g_akao_sfx_control.active_mask;
     channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+
     if (params[1].value != 0)
     {
         for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
@@ -1538,13 +1629,14 @@ void akao_sfx_fade_volume_scale(AkaoCommandParam* params)
             {
                 if (params[2].value != 0)
                 {
-                    fade_ticks = (u16)params[2].value;
+                    fade_ticks = params[2].value;
                 }
                 else
                 {
                     fade_ticks = 1;
                 }
-                target_scale = ((u16)params[3].value & AKAO_VOLUME_MAX) << AKAO_Q8_SHIFT;
+
+                target_scale = (params[3].value & AKAO_VOLUME_MAX) << AKAO_Q8_SHIFT;
                 current_scale = channel->volume_scale;
                 volume_delta = target_scale - current_scale;
                 channel->volume_scale_step = volume_delta / fade_ticks;
@@ -1556,17 +1648,18 @@ void akao_sfx_fade_volume_scale(AkaoCommandParam* params)
     {
         for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
-            if ((active_channels & channel_bit) && ((s32)channel->sfx_id == params[0].value))
+            if ((active_channels & channel_bit) && (channel->sfx_id == params[0].value))
             {
                 if (params[2].value != 0)
                 {
-                    fade_ticks = (u16)params[2].value;
+                    fade_ticks = params[2].value;
                 }
                 else
                 {
                     fade_ticks = 1;
                 }
-                target_scale = ((u16)params[3].value & AKAO_VOLUME_MAX) << AKAO_Q8_SHIFT;
+
+                target_scale = (params[3].value & AKAO_VOLUME_MAX) << AKAO_Q8_SHIFT;
                 current_scale = channel->volume_scale;
                 volume_delta = target_scale - current_scale;
                 channel->volume_scale_step = volume_delta / fade_ticks;
@@ -1594,6 +1687,7 @@ void akao_sfx_set_volume_scale_unsuppressed(AkaoCommandParam* params)
     channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
     active_channels = g_akao_sfx_control.active_mask;
     channel = g_sfx_channels;
+
     for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
     {
         if ((active_channels & channel_bit) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
@@ -1628,19 +1722,21 @@ void akao_sfx_fade_volume_scale_unsuppressed(AkaoCommandParam* params)
     channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
     active_channels = g_akao_sfx_control.active_mask;
     channel = g_sfx_channels;
+
     for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
     {
         if ((active_channels & channel_bit) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
         {
             if (params[0].value != 0)
             {
-                fade_ticks = (u16)params[0].value;
+                fade_ticks = params[0].value;
             }
             else
             {
                 fade_ticks = 1;
             }
-            target_scale = ((u16)params[1].value & AKAO_VOLUME_MAX) << AKAO_Q8_SHIFT;
+
+            target_scale = (params[1].value & AKAO_VOLUME_MAX) << AKAO_Q8_SHIFT;
             current_scale = channel->volume_scale;
             volume_delta = target_scale - current_scale;
             channel->volume_scale_step = volume_delta / fade_ticks;
@@ -1666,6 +1762,7 @@ void akao_sfx_set_pan_bias(AkaoCommandParam* params)
     channel = g_sfx_channels;
     active_channels = g_akao_sfx_control.active_mask;
     channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+
     if (params[1].value != 0)
     {
         for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
@@ -1715,6 +1812,7 @@ void akao_sfx_fade_pan_bias(AkaoCommandParam* params)
     channel = g_sfx_channels;
     active_channels = g_akao_sfx_control.active_mask;
     channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+
     if (params[1].value != 0)
     {
         for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
@@ -1729,6 +1827,7 @@ void akao_sfx_fade_pan_bias(AkaoCommandParam* params)
                 {
                     fade_ticks = 1;
                 }
+
                 target_bias = (u8)params[3].value << AKAO_Q8_SHIFT;
                 current_bias = channel->pan_bias;
                 pan_delta = target_bias - current_bias;
@@ -1751,6 +1850,7 @@ void akao_sfx_fade_pan_bias(AkaoCommandParam* params)
                 {
                     fade_ticks = 1;
                 }
+
                 target_bias = (u8)params[3].value << AKAO_Q8_SHIFT;
                 current_bias = channel->pan_bias;
                 pan_delta = target_bias - current_bias;
@@ -1779,6 +1879,7 @@ void akao_sfx_set_pan_bias_unsuppressed(AkaoCommandParam* params)
     channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
     active_channels = g_akao_sfx_control.active_mask;
     channel = g_sfx_channels;
+
     for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
     {
         if ((active_channels & channel_bit) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
@@ -1813,6 +1914,7 @@ void akao_sfx_fade_pan_bias_unsuppressed(AkaoCommandParam* params)
     channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
     active_channels = g_akao_sfx_control.active_mask;
     channel = g_sfx_channels;
+
     for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
     {
         if ((active_channels & channel_bit) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
@@ -1825,6 +1927,7 @@ void akao_sfx_fade_pan_bias_unsuppressed(AkaoCommandParam* params)
             {
                 fade_ticks = 1;
             }
+
             target_bias = (u8)params[1].value << AKAO_Q8_SHIFT;
             current_bias = channel->pan_bias;
             pan_delta = target_bias - current_bias;
@@ -1851,6 +1954,7 @@ void akao_sfx_set_pitch_bend(AkaoCommandParam* params)
     channel = g_sfx_channels;
     active_channels = g_akao_sfx_control.active_mask;
     channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+
     if (params[1].value != 0)
     {
         for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
@@ -1901,6 +2005,7 @@ void akao_sfx_fade_pitch_bend(AkaoCommandParam* params)
     channel = g_sfx_channels;
     active_channels = g_akao_sfx_control.active_mask;
     channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+
     if (params[1].value != 0)
     {
         for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
@@ -1915,6 +2020,7 @@ void akao_sfx_fade_pitch_bend(AkaoCommandParam* params)
                 {
                     fade_ticks = 1;
                 }
+
                 target_bend = (u8)params[3].value << AKAO_Q8_SHIFT;
                 current_bend = HALF_LOW_U16(channel->sfx_pitch_bend);
                 bend_delta = target_bend - current_bend;
@@ -1938,6 +2044,7 @@ void akao_sfx_fade_pitch_bend(AkaoCommandParam* params)
                 {
                     fade_ticks = 1;
                 }
+
                 target_bend = (u8)params[3].value << AKAO_Q8_SHIFT;
                 current_bend = HALF_LOW_U16(channel->sfx_pitch_bend);
                 bend_delta = target_bend - current_bend;
@@ -1964,6 +2071,7 @@ void akao_sfx_set_pitch_bend_unsuppressed(AkaoCommandParam* params)
     s32 pitch_bend;
 
     channel = g_sfx_channels;
+
     for (channels_remaining = AKAO_SFX_CHANNEL_COUNT; channels_remaining != 0; channels_remaining--, channel++)
     {
         if (!(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
@@ -1999,6 +2107,7 @@ void akao_sfx_fade_pitch_bend_unsuppressed(AkaoCommandParam* params)
     channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
     active_channels = g_akao_sfx_control.active_mask;
     channel = g_sfx_channels;
+
     for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
     {
         if ((active_channels & channel_bit) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
@@ -2011,6 +2120,7 @@ void akao_sfx_fade_pitch_bend_unsuppressed(AkaoCommandParam* params)
             {
                 fade_ticks = 1;
             }
+
             target_bend = (u8)params[1].value << AKAO_Q8_SHIFT;
             current_bend = HALF_LOW_U16(channel->sfx_pitch_bend);
             bend_delta = target_bend - current_bend;
@@ -2127,10 +2237,12 @@ void akao_master_fade_volume(AkaoCommandParam* params)
 
     requested_ticks = params[0].value;
     fade_ticks = 1;
+
     if (requested_ticks != 0)
     {
         fade_ticks = requested_ticks;
     }
+
     target_volume = (s8)params[1].value;
     target_volume = (u32)target_volume << AKAO_Q16_SHIFT;
     target_volume -= g_akao_mastervol_acc;
@@ -2158,10 +2270,12 @@ void akao_master_fade_volume_from(AkaoCommandParam* params)
 
     start_volume_param = params[1].value;
     fade_ticks = 1;
+
     if (start_volume_param != 0)
     {
         fade_ticks = params[0].value;
     }
+
     start_volume = (s8)params[1].value;
     start_volume = (u32)start_volume << AKAO_Q16_SHIFT;
     g_akao_mastervol_acc = start_volume;
@@ -2180,6 +2294,7 @@ void akao_master_fade_volume_from(AkaoCommandParam* params)
 void akao_seq_stop_all_songs(void)
 {
     akao_seq_stop_song(g_akao_seq_channel0, g_akao_seq_channels, 0);
+
     if (g_akao_seq_channel1 != NULL)
     {
         akao_seq_stop_song(g_akao_seq_channel1, g_akao_pending_channels, 0);
@@ -2196,9 +2311,11 @@ void akao_seq_stop_song_by_key(AkaoCommandParam* params)
     s32 song_key;
 
     akao_seq_stop_song(g_akao_seq_channel0, g_akao_seq_channels, params[0].value);
+
     if (g_akao_seq_channel1 != NULL)
     {
         song_key = params[0].value;
+
         if (song_key != 0)
         {
             akao_seq_stop_song(g_akao_seq_channel1, g_akao_pending_channels, song_key);
@@ -2218,6 +2335,7 @@ void akao_sfx_release_all_channels(void)
 
     channel = g_sfx_channels;
     channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+
     for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
     {
         if ((g_akao_sfx_control.active_mask & channel_bit) && !(channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
@@ -2227,6 +2345,7 @@ void akao_sfx_release_all_channels(void)
             channel->flags = 0;
         }
     }
+
     g_akao_driver_flags.update_flags |= (AKAO_EFFECT_MASKS_UPDATE_PENDING | AKAO_NOISE_CLOCK_UPDATE_PENDING);
 }
 
@@ -2237,10 +2356,12 @@ void akao_select_stereo_output(void)
 {
     g_akao_driver_flags.output_mode = AKAO_OUTPUT_STEREO;
     akao_seq_flag_volume_update(g_akao_seq_channel0, g_akao_seq_channels);
+
     if (g_akao_seq_channel1 != NULL)
     {
         akao_seq_flag_volume_update(g_akao_seq_channel1, g_akao_pending_channels);
     }
+
     akao_sfx_flag_volume_update();
 }
 
@@ -2251,10 +2372,12 @@ void akao_select_mono_output(void)
 {
     g_akao_driver_flags.output_mode = AKAO_OUTPUT_MONO;
     akao_seq_flag_volume_update(g_akao_seq_channel0, g_akao_seq_channels);
+
     if (g_akao_seq_channel1 != NULL)
     {
         akao_seq_flag_volume_update(g_akao_seq_channel1, g_akao_pending_channels);
     }
+
     akao_sfx_flag_volume_update();
 }
 
@@ -2269,6 +2392,7 @@ void akao_seq_set_muted_channels(AkaoCommandParam* params)
 
     g_akao_muted_channel_mask = params[0].value;
     channel = g_akao_seq_channels;
+
     for (channel_index = 0; channel_index < AKAO_CHANNEL_COUNT; channel_index++, channel++)
     {
         channel->update_flags |= SPU_UPDATE_VOLUME;
@@ -2281,7 +2405,7 @@ void akao_seq_set_muted_channels(AkaoCommandParam* params)
  */
 void akao_seq_set_condition(AkaoCommandParam* params)
 {
-    g_akao_seq_channel0->condition = (u16)params[0].value;
+    g_akao_seq_channel0->condition = params[0].value;
 }
 
 /**
@@ -2299,10 +2423,12 @@ void akao_seq_silence_unused_voices_and_pause(void)
     if (g_akao_seq_channel0->masks.active_mask != 0)
     {
         voices_to_silence = ~(g_akao_sfx_control.active_mask | g_akao_xa_tracker.voice_mask) & AKAO_VOICE_MASK;
+
         if (voices_to_silence != 0)
         {
             voice_bit = 1;
             voice_index = 0;
+
             while (voices_to_silence != 0)
             {
                 if (voices_to_silence & voice_bit)
@@ -2313,14 +2439,17 @@ void akao_seq_silence_unused_voices_and_pause(void)
                     spu_set_voice_sustain_mode(voice_index, AKAO_PAUSE_ENVELOPE_RATE, SPU_VOICE_LINEARDecN);
                     voices_to_silence &= ~voice_bit;
                 }
+
                 voice_bit <<= 1;
                 voice_index++;
             }
         }
+
         active_channels = g_akao_seq_channel0->masks.active_mask;
         g_akao_seq_channel0->masks.active_mask = 0;
         g_akao_seq_channel0->parked_mask = active_channels;
     }
+
     g_akao_driver_mode_flags |= AKAO_MODE_SONG_PAUSED;
 }
 
@@ -2339,11 +2468,13 @@ void akao_seq_resume_and_apply_pending_voices(void)
     s32 restored_channels;
 
     parked_channels = g_akao_seq_channel0->parked_mask;
+
     if (parked_channels != 0)
     {
         remaining_channels = parked_channels;
         channel_bit = 1;
         channel = g_akao_seq_channels;
+
         while (remaining_channels != 0)
         {
             if (remaining_channels & channel_bit)
@@ -2351,6 +2482,7 @@ void akao_seq_resume_and_apply_pending_voices(void)
                 remaining_channels &= ~channel_bit;
                 channel->update_flags |= AKAO_PAUSE_RESUME_VOICE_UPDATES;
             }
+
             channel_bit <<= 1;
             channel++;
         }
@@ -2360,6 +2492,7 @@ void akao_seq_resume_and_apply_pending_voices(void)
         g_akao_seq_channel0->masks.active_mask = restored_channels;
         g_akao_driver_flags.update_flags |= AKAO_EFFECT_MASKS_UPDATE_PENDING;
     }
+
     g_akao_driver_mode_flags &= ~AKAO_MODE_SONG_PAUSED;
 }
 
@@ -2378,11 +2511,13 @@ void akao_sfx_silence_unused_voices_and_pause(void)
     u32 channel_index;
 
     active_channels = g_akao_sfx_control.active_mask;
+
     if (active_channels != 0)
     {
         channels_to_pause = active_channels;
         channel = g_sfx_channels;
         channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+
         for (channel_index = 0; channel_index < AKAO_SFX_CHANNEL_COUNT; channel_index++, channel++, channel_bit <<= 1)
         {
             if ((channels_to_pause & channel_bit) && (channel->sfx_tag & AKAO_SFX_FLAG_SUPPRESS))
@@ -2390,10 +2525,12 @@ void akao_sfx_silence_unused_voices_and_pause(void)
                 channels_to_pause &= ~channel_bit;
             }
         }
+
         channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
         voice_index = AKAO_SFX_FIRST_VOICE;
         g_akao_sfx_control.paused_mask = channels_to_pause;
         g_akao_sfx_control.active_mask &= ~channels_to_pause;
+
         if (channels_to_pause != 0)
         {
             while (channels_to_pause != 0)
@@ -2406,11 +2543,13 @@ void akao_sfx_silence_unused_voices_and_pause(void)
                     spu_set_voice_sustain_mode(voice_index, AKAO_PAUSE_ENVELOPE_RATE, SPU_VOICE_LINEARDecN);
                     channels_to_pause &= ~channel_bit;
                 }
+
                 channel_bit <<= 1;
                 voice_index++;
             }
         }
     }
+
     g_akao_driver_mode_flags |= AKAO_MODE_SFX_PAUSED;
 }
 
@@ -2429,11 +2568,13 @@ void akao_sfx_resume_and_apply_pending_voices(void)
     s32 restored_channels;
 
     parked_channels = g_akao_sfx_control.paused_mask;
+
     if (parked_channels != 0)
     {
         remaining_channels = parked_channels;
         channel = g_sfx_channels;
         channel_bit = AKAO_SFX_FIRST_CHANNEL_BIT;
+
         while (remaining_channels != 0)
         {
             if (remaining_channels & channel_bit)
@@ -2441,6 +2582,7 @@ void akao_sfx_resume_and_apply_pending_voices(void)
                 remaining_channels &= ~channel_bit;
                 channel->update_flags |= AKAO_PAUSE_RESUME_VOICE_UPDATES;
             }
+
             channel_bit <<= 1;
             channel++;
         }
@@ -2450,6 +2592,7 @@ void akao_sfx_resume_and_apply_pending_voices(void)
         g_akao_sfx_control.active_mask |= restored_channels;
         g_akao_driver_flags.update_flags |= AKAO_EFFECT_MASKS_UPDATE_PENDING;
     }
+
     g_akao_driver_mode_flags &= ~AKAO_MODE_SFX_PAUSED;
 }
 
@@ -2494,6 +2637,7 @@ void akao_apply_reverb_type(s32 reverb_type)
     long current_mode;
 
     SpuGetReverbModeType(&current_mode);
+
     if (current_mode != reverb_type)
     {
         SpuSetReverb(SPU_OFF);
@@ -2533,90 +2677,96 @@ s32 akao_send_command(u32 opcode)
 
     switch (opcode)
     {
-    case AKAO_CMD_PLAY_SONG:
-    case AKAO_CMD_PLAY_SONG_WITH_TICKS:
-    case AKAO_CMD_START_SONG_CHANNELS:
-    case AKAO_CMD_SWITCH_SONG:
-        if (akao_check_magic(g_akao_cmd_params[0].buffer) == 0)
-        {
-            song_header = g_akao_cmd_params[0].buffer;
-            current_song_id = g_akao_seq_channel0->song_id;
-            if ((current_song_id != song_header->id) || ((g_akao_seq_channel1 != NULL) && (g_akao_seq_channel1->song_id != current_song_id)))
+        case AKAO_CMD_PLAY_SONG:
+        case AKAO_CMD_PLAY_SONG_WITH_TICKS:
+        case AKAO_CMD_START_SONG_CHANNELS:
+        case AKAO_CMD_SWITCH_SONG:
+            if (akao_check_magic(g_akao_cmd_params[0].buffer) == 0)
             {
-                akao_apply_reverb_type(song_header->reverb_type);
-                dispatch_params[0].buffer = song_header;
-                dispatch_params[2].value = song_header->id;
-                if (opcode == AKAO_CMD_PLAY_SONG_WITH_TICKS)
+                song_header = g_akao_cmd_params[0].buffer;
+                current_song_id = g_akao_seq_channel0->song_id;
+
+                if ((current_song_id != song_header->id) || ((g_akao_seq_channel1 != NULL) && (g_akao_seq_channel1->song_id != current_song_id)))
                 {
-                    dispatch_params[4].value = g_akao_cmd_params[1].value;
+                    akao_apply_reverb_type(song_header->reverb_type);
+                    dispatch_params[0].buffer = song_header;
+                    dispatch_params[2].value = song_header->id;
+
+                    if (opcode == AKAO_CMD_PLAY_SONG_WITH_TICKS)
+                    {
+                        dispatch_params[4].value = g_akao_cmd_params[1].value;
+                    }
+                    else
+                    {
+                        requested_mask = g_akao_cmd_params[1].value;
+                        start_mask = AKAO_ALL_CHANNELS_MASK;
+
+                        if (requested_mask != 0)
+                        {
+                            start_mask = requested_mask | AKAO_SONG_FIRST_CHANNEL_BIT;
+                        }
+
+                        dispatch_params[3].value = start_mask;
+                        dispatch_params[4].value = g_akao_cmd_params[2].value;
+                    }
+
+                    result = song_header->id;
                 }
                 else
                 {
-                    requested_mask = g_akao_cmd_params[1].value;
-                    start_mask = AKAO_ALL_CHANNELS_MASK;
-                    if (requested_mask != 0)
-                    {
-                        start_mask = requested_mask | AKAO_SONG_FIRST_CHANNEL_BIT;
-                    }
-                    dispatch_params[3].value = start_mask;
-                    dispatch_params[4].value = g_akao_cmd_params[2].value;
+                    opcode = AKAO_CMD_IGNORE;
+                    result = 0;
                 }
-                result = song_header->id;
             }
             else
             {
                 opcode = AKAO_CMD_IGNORE;
-                result = 0;
+                result = -1;
             }
-        }
-        else
-        {
-            opcode = AKAO_CMD_IGNORE;
-            result = -1;
-        }
-        break;
 
-    case AKAO_CMD_SET_MASTER_TEMPO_MODIFIER_AND_VOLUME:
-        dispatch_params[0].value = g_akao_cmd_params[0].value;
-        g_akao_command_handlers[AKAO_CMD_SET_MASTER_TEMPO_MODIFIER](dispatch_params);
-        opcode = AKAO_CMD_SET_MASTER_VOLUME;
-        break;
+            break;
 
-    case AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_AND_VOLUME:
-        dispatch_params[0].value = g_akao_cmd_params[0].value;
-        dispatch_params[1].value = g_akao_cmd_params[1].value;
-        g_akao_command_handlers[AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER](dispatch_params);
-        opcode = AKAO_CMD_FADE_MASTER_VOLUME;
-        break;
+        case AKAO_CMD_SET_MASTER_TEMPO_MODIFIER_AND_VOLUME:
+            dispatch_params[0].value = g_akao_cmd_params[0].value;
+            g_akao_command_handlers[AKAO_CMD_SET_MASTER_TEMPO_MODIFIER](dispatch_params);
+            opcode = AKAO_CMD_SET_MASTER_VOLUME;
+            break;
 
-    case AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_AND_VOLUME_FROM:
-        dispatch_params[0].value = g_akao_cmd_params[0].value;
-        dispatch_params[1].value = g_akao_cmd_params[1].value;
-        dispatch_params[2].value = g_akao_cmd_params[2].value;
-        g_akao_command_handlers[AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_FROM](dispatch_params);
-        opcode = AKAO_CMD_FADE_MASTER_VOLUME_FROM;
-        break;
+        case AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_AND_VOLUME:
+            dispatch_params[0].value = g_akao_cmd_params[0].value;
+            dispatch_params[1].value = g_akao_cmd_params[1].value;
+            g_akao_command_handlers[AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER](dispatch_params);
+            opcode = AKAO_CMD_FADE_MASTER_VOLUME;
+            break;
 
-    case AKAO_CMD_PAUSE_ALL:
-        g_akao_command_handlers[AKAO_CMD_PAUSE_SONG](dispatch_params);
-        g_akao_command_handlers[AKAO_CMD_PAUSE_SFX](dispatch_params);
-        opcode = AKAO_CMD_PAUSE_XA;
-        break;
+        case AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_AND_VOLUME_FROM:
+            dispatch_params[0].value = g_akao_cmd_params[0].value;
+            dispatch_params[1].value = g_akao_cmd_params[1].value;
+            dispatch_params[2].value = g_akao_cmd_params[2].value;
+            g_akao_command_handlers[AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_FROM](dispatch_params);
+            opcode = AKAO_CMD_FADE_MASTER_VOLUME_FROM;
+            break;
 
-    case AKAO_CMD_RESUME_ALL:
-        g_akao_command_handlers[AKAO_CMD_RESUME_SONG](dispatch_params);
-        g_akao_command_handlers[AKAO_CMD_RESUME_SFX](dispatch_params);
-        opcode = AKAO_CMD_RESUME_XA;
-        break;
+        case AKAO_CMD_PAUSE_ALL:
+            g_akao_command_handlers[AKAO_CMD_PAUSE_SONG](dispatch_params);
+            g_akao_command_handlers[AKAO_CMD_PAUSE_SFX](dispatch_params);
+            opcode = AKAO_CMD_PAUSE_XA;
+            break;
 
-    default:
-        dispatch_params[0].value = g_akao_cmd_params[0].value;
-        dispatch_params[1].value = g_akao_cmd_params[1].value;
-        dispatch_params[2].value = g_akao_cmd_params[2].value;
-        dispatch_params[3].value = g_akao_cmd_params[3].value;
-        dispatch_params[4].value = g_akao_cmd_params[4].value;
-        dispatch_params[5].value = g_akao_cmd_params[5].value;
-        break;
+        case AKAO_CMD_RESUME_ALL:
+            g_akao_command_handlers[AKAO_CMD_RESUME_SONG](dispatch_params);
+            g_akao_command_handlers[AKAO_CMD_RESUME_SFX](dispatch_params);
+            opcode = AKAO_CMD_RESUME_XA;
+            break;
+
+        default:
+            dispatch_params[0].value = g_akao_cmd_params[0].value;
+            dispatch_params[1].value = g_akao_cmd_params[1].value;
+            dispatch_params[2].value = g_akao_cmd_params[2].value;
+            dispatch_params[3].value = g_akao_cmd_params[3].value;
+            dispatch_params[4].value = g_akao_cmd_params[4].value;
+            dispatch_params[5].value = g_akao_cmd_params[5].value;
+            break;
     }
 
     g_akao_command_handlers[opcode](dispatch_params);

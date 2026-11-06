@@ -9,34 +9,35 @@
  */
 
 #include "common.h"
-#include "../internal/field_actor_runtime.h"
-#include "../internal/field_calls.h"
-#include "common/vector.h"
-#include <libgte.h>
 #include <libgpu.h>
-#include "overlays/field/field_text.h"
-#include "overlays/field/field_numeric_sprites.h"
-#include "overlays/field/field_ui_text.h"
-#include "../internal/field_effect_render_state.h"
-#include "../internal/field_ability_progression.h"
-#include "common/saved_game.h"
-#include "../internal/field_modal_runtime.h"
-#include "overlays/field/field_scene_transition.h"
-#include "main/cdrom.h"
-#include "../internal/field_records.h"
-#include "main/controller_internal.h"
-#include "../internal/field_menu_element.h"
-#include "../internal/field_actor_tables.h"
-#include "main/field_runtime.h"
-#include "common/pad.h"
-#include "common/gpu_packet.h"
-#include "main/game_state.h"
+#include <libgte.h>
 #include <memory.h>
-#include "main/display.h"
-#include "overlays/field/field_input.h"
-#include "overlays/field/field_portrait.h"
-#include "overlays/field/field_sound.h"
+
+#include "../internal/field_ability_progression.h"
+#include "../internal/field_actor_runtime.h"
+#include "../internal/field_actor_tables.h"
+#include "../internal/field_calls.h"
+#include "../internal/field_effect_render_state.h"
+#include "../internal/field_menu_element.h"
+#include "../internal/field_modal_runtime.h"
+#include "../internal/field_records.h"
+#include "common/gpu_packet.h"
+#include "common/pad.h"
+#include "common/saved_game.h"
+#include "common/vector.h"
 #include "main/audio/akao.h"
+#include "main/cdrom.h"
+#include "main/controller_internal.h"
+#include "main/display.h"
+#include "main/field_runtime.h"
+#include "main/game_state.h"
+#include "overlays/field/field_input.h"
+#include "overlays/field/field_numeric_sprites.h"
+#include "overlays/field/field_portrait.h"
+#include "overlays/field/field_scene_transition.h"
+#include "overlays/field/field_sound.h"
+#include "overlays/field/field_text.h"
+#include "overlays/field/field_ui_text.h"
 
 /** @brief Image resources of the timed panels (index 0 first). */
 #define FIELD_TIMED_PANEL_RESOURCE_BASE 0x1060
@@ -99,9 +100,6 @@ extern u16 g_field_timed_panel_brightness;
 extern u16 g_field_timed_panel_timer;
 extern s32 g_pad_input;
 
-s32 field_load_vram_resource(s32 id, RECT* rect, s32 mode);
-s32 rcos(s32);
-s32 rsin(s32);
 static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_table, s32 index);
 static POLY_FT4* field_draw_timed_panel_image(POLY_FT4* prim, u_long* ordering_table);
 
@@ -157,10 +155,68 @@ static POLY_FT4* field_draw_timed_panel_image(POLY_FT4* prim, u_long* ordering_t
 /**
  * @brief Address of a string in a text bank that starts with little-endian u16 offsets.
  */
-#define FIELD_TEXT_AT(bank, low, high) ((u8 *)((low) + (((high) << 8) + (uintptr_t)(bank))))
+#define FIELD_TEXT_AT(bank, low, high) ((u8*)((low) + (((high) << 8) + (uintptr_t)(bank))))
 
 /** @brief Experience a party member gained since g_field_experience_snapshot was sampled. */
 #define FIELD_EXPERIENCE_GAIN(index) ((s32)((g_saved_game_ctx->characters[index].progress.word >> 8) - g_field_experience_snapshot[index]))
+
+/** @brief Packed screen position and countdown of an actor text. */
+typedef union
+{
+    u32 word;
+    struct
+    {
+        u32 x : 9;         /**< Screen X of the text. */
+        u32 y : 8;         /**< Screen Y of the text. */
+        u32 countdown : 6; /**< Frames left to show the text; 0 when the slot is free. */
+        u32 unused : 9;
+    } bits;
+} FieldActorTextState;
+
+/** @brief One actor text slot: a string shown over an actor for a few frames. */
+typedef struct FieldActorText
+{
+    u8* text;
+    FieldActorTextState state;
+} FieldActorText;
+
+/** @brief Four ability prerequisites and a packed technique/weapon selection. */
+typedef struct
+{
+    FieldAbilityPrerequisite prerequisites[4];
+    u8 weapon;
+    u8 result;
+    u8 weapon_proficiency;
+} FieldTechniqueUnlockRule;
+
+/** @brief Drawing position and three sorted actor indices sharing the local work area. */
+typedef struct
+{
+    Vec2s position;
+    s32 unused;
+    s32 order[3];
+} FieldRankWork;
+
+/** @brief One entry of the dialog text bank's offset table (little-endian, read bytewise). */
+typedef struct PackedOffset
+{
+    u8 low;
+    u8 high;
+} PackedOffset;
+
+/** @brief Header of the unlock name resource: offsets of its two name banks. */
+typedef struct TextResource
+{
+    s32 unused;
+    s32 ability_names;
+    s32 technique_names;
+} TextResource;
+
+/** @brief Eight-frame animation table; the icon drawers copy it into a local array. */
+typedef struct
+{
+    s32 words[8];
+} FieldQuadAnimationTable;
 
 /**
  * @brief Copy one of the portrait palettes into a portrait image.
@@ -205,17 +261,17 @@ void field_start_timed_panel(s32 index)
     {
         switch (mode & FIELD_TIMED_PANEL_EFFECT_MASK)
         {
-        case 0:
-            sound_id = FIELD_SOUND_PANEL_EFFECT0_START;
-            break;
-        case 1:
-            sound_id = FIELD_SOUND_PANEL_EFFECT1_START;
-            break;
-        case 2:
-            sound_id = FIELD_SOUND_PANEL_EFFECT2_START;
-            break;
-        default:
-            return;
+            case 0:
+                sound_id = FIELD_SOUND_PANEL_EFFECT0_START;
+                break;
+            case 1:
+                sound_id = FIELD_SOUND_PANEL_EFFECT1_START;
+                break;
+            case 2:
+                sound_id = FIELD_SOUND_PANEL_EFFECT2_START;
+                break;
+            default:
+                return;
         }
     }
     else
@@ -263,15 +319,15 @@ void field_update_timed_panel(FieldRenderHalf* render)
                 {
                     switch (event_selector & FIELD_TIMED_PANEL_EFFECT_MASK)
                     {
-                    case 0:
-                        field_play_sound(FIELD_SOUND_PANEL_EFFECT0_END, AKAO_PAN_CENTER);
-                        break;
-                    case 1:
-                        field_play_sound(FIELD_SOUND_PANEL_EFFECT1_END, AKAO_PAN_CENTER);
-                        break;
-                    case 2:
-                        field_play_sound(FIELD_SOUND_PANEL_EFFECT2_END, AKAO_PAN_CENTER);
-                        break;
+                        case 0:
+                            field_play_sound(FIELD_SOUND_PANEL_EFFECT0_END, AKAO_PAN_CENTER);
+                            break;
+                        case 1:
+                            field_play_sound(FIELD_SOUND_PANEL_EFFECT1_END, AKAO_PAN_CENTER);
+                            break;
+                        case 2:
+                            field_play_sound(FIELD_SOUND_PANEL_EFFECT2_END, AKAO_PAN_CENTER);
+                            break;
                     }
                 }
                 else
@@ -383,203 +439,203 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_t
 
             switch (FIELD_TRANSITION_QUAD_EFFECT(quad->flags))
             {
-            case 0:
-                term = width * expansion;
-                scaled = term / GPU_TINT_NEUTRAL_LEVEL;
-                prim->x0 = prim->x2 = quad->x - scaled;
-                prim->x1 = prim->x3 = quad->x + width + scaled - 1;
-                prim->y0 = prim->y1 = quad->y - quad->height * expansion / GPU_TINT_NEUTRAL_LEVEL;
-                bottom_1 = quad->y + quad->height;
-                scaled = quad->height * expansion;
+                case 0:
+                    term = width * expansion;
+                    scaled = term / GPU_TINT_NEUTRAL_LEVEL;
+                    prim->x0 = prim->x2 = quad->x - scaled;
+                    prim->x1 = prim->x3 = quad->x + width + scaled - 1;
+                    prim->y0 = prim->y1 = quad->y - quad->height * expansion / GPU_TINT_NEUTRAL_LEVEL;
+                    bottom_1 = quad->y + quad->height;
+                    scaled = quad->height * expansion;
 
-                if (scaled < 0)
-                {
-                    scaled += 0x7F;
-                }
+                    if (scaled < 0)
+                    {
+                        scaled += 0x7F;
+                    }
 
-                prim->y2 = prim->y3 = bottom_1 + (scaled >> 7) - 1;
-                break;
-            case 1:
-                if (g_field_timed_panel_timer < 0x25)
-                {
-                    scaled = width * expansion;
-                    offset_1 = scaled / GPU_TINT_NEUTRAL_LEVEL;
-                    prim->x0 = prim->x2 = quad->x - offset_1;
-                    right_1 = (quad->x + width) - offset_1;
-                }
-                else
-                {
-                    scaled = width * expansion;
-                    offset_1 = scaled / GPU_TINT_NEUTRAL_LEVEL;
-                    prim->x0 = prim->x2 = quad->x + offset_1;
-                    right_1 = quad->x + width + offset_1;
-                }
+                    prim->y2 = prim->y3 = bottom_1 + (scaled >> 7) - 1;
+                    break;
+                case 1:
+                    if (g_field_timed_panel_timer < 0x25)
+                    {
+                        scaled = width * expansion;
+                        offset_1 = scaled / GPU_TINT_NEUTRAL_LEVEL;
+                        prim->x0 = prim->x2 = quad->x - offset_1;
+                        right_1 = (quad->x + width) - offset_1;
+                    }
+                    else
+                    {
+                        scaled = width * expansion;
+                        offset_1 = scaled / GPU_TINT_NEUTRAL_LEVEL;
+                        prim->x0 = prim->x2 = quad->x + offset_1;
+                        right_1 = quad->x + width + offset_1;
+                    }
 
-                prim->x1 = prim->x3 = right_1 - 1;
-                prim->y0 = prim->y1 = quad->y;
-                prim->y2 = prim->y3 = quad->y + quad->height - 1;
-                break;
-            case 2:
-                angle = expansion * 50;
-                x_cosine = rcos(angle);
-                x_sine = rsin(angle);
+                    prim->x1 = prim->x3 = right_1 - 1;
+                    prim->y0 = prim->y1 = quad->y;
+                    prim->y2 = prim->y3 = quad->y + quad->height - 1;
+                    break;
+                case 2:
+                    angle = expansion * 50;
+                    x_cosine = rcos(angle);
+                    x_sine = rsin(angle);
 
-                do
-                {
-                    width_term = width * x_cosine;
-                } while (0);
+                    do
+                    {
+                        width_term = width * x_cosine;
+                    } while (0);
 
-                if (width_term < 0)
-                {
-                    width_term += 0x1FFF;
-                }
+                    if (width_term < 0)
+                    {
+                        width_term += 0x1FFF;
+                    }
 
-                width_term >>= 13;
-                height_term = quad->height * x_sine;
+                    width_term >>= 13;
+                    height_term = quad->height * x_sine;
 
-                if (height_term < 0)
-                {
-                    height_term += 0x1FFF;
-                }
+                    if (height_term < 0)
+                    {
+                        height_term += 0x1FFF;
+                    }
 
-                rotated_x = width_term + (height_term >> 13);
-                y_sine = rsin(angle);
-                y_cosine = rcos(angle);
+                    rotated_x = width_term + (height_term >> 13);
+                    y_sine = rsin(angle);
+                    y_cosine = rcos(angle);
 
-                do
-                {
-                    width_term_y = width * y_sine;
-                } while (0);
+                    do
+                    {
+                        width_term_y = width * y_sine;
+                    } while (0);
 
-                if (width_term_y < 0)
-                {
-                    width_term_y += 0x1FFF;
-                }
+                    if (width_term_y < 0)
+                    {
+                        width_term_y += 0x1FFF;
+                    }
 
-                width_term_y >>= 13;
-                height_term_y = quad->height * y_cosine;
+                    width_term_y >>= 13;
+                    height_term_y = quad->height * y_cosine;
 
-                if (height_term_y < 0)
-                {
-                    height_term_y += 0x1FFF;
-                }
+                    if (height_term_y < 0)
+                    {
+                        height_term_y += 0x1FFF;
+                    }
 
-                scaled = expansion * rotated_x;
-                rotated_y = width_term_y - (height_term_y >> 13);
+                    scaled = expansion * rotated_x;
+                    rotated_y = width_term_y - (height_term_y >> 13);
 
-                if (scaled < 0)
-                {
-                    scaled += 0x7F;
-                }
+                    if (scaled < 0)
+                    {
+                        scaled += 0x7F;
+                    }
 
-                scaled_y = expansion * rotated_y;
-                rotated_x = rotated_x + (scaled >> 7);
+                    scaled_y = expansion * rotated_y;
+                    rotated_x = rotated_x + (scaled >> 7);
 
-                if (scaled_y < 0)
-                {
-                    scaled_y += 0x7F;
-                }
+                    if (scaled_y < 0)
+                    {
+                        scaled_y += 0x7F;
+                    }
 
-                rotated_y = rotated_y + (scaled_y >> 7);
-                half = width >> 1;
-                half_width = half;
-                prim->x0 = (u16)((quad->x + half) - rotated_x);
-                prim->x3 = (s16)(quad->x + half + rotated_x);
-                prim->y0 = (u16)(quad->y + (quad->height >> 1) + rotated_y);
-                prim->y3 = (s16)((quad->y + (quad->height >> 1)) - rotated_y);
-                x_cosine_2 = rcos(angle);
-                x_sine_2 = rsin(angle);
-                negative_width = -(s32)width;
-                width_term_2 = negative_width * x_cosine_2;
+                    rotated_y = rotated_y + (scaled_y >> 7);
+                    half = width >> 1;
+                    half_width = half;
+                    prim->x0 = (u16)((quad->x + half) - rotated_x);
+                    prim->x3 = (s16)(quad->x + half + rotated_x);
+                    prim->y0 = (u16)(quad->y + (quad->height >> 1) + rotated_y);
+                    prim->y3 = (s16)((quad->y + (quad->height >> 1)) - rotated_y);
+                    x_cosine_2 = rcos(angle);
+                    x_sine_2 = rsin(angle);
+                    negative_width = -(s32)width;
+                    width_term_2 = negative_width * x_cosine_2;
 
-                if (width_term_2 < 0)
-                {
-                    width_term_2 += 0x1FFF;
-                }
+                    if (width_term_2 < 0)
+                    {
+                        width_term_2 += 0x1FFF;
+                    }
 
-                width_term_2 >>= 13;
-                height_term_2 = quad->height * x_sine_2;
+                    width_term_2 >>= 13;
+                    height_term_2 = quad->height * x_sine_2;
 
-                if (height_term_2 < 0)
-                {
-                    height_term_2 += 0x1FFF;
-                }
+                    if (height_term_2 < 0)
+                    {
+                        height_term_2 += 0x1FFF;
+                    }
 
-                rotated_x = width_term_2 + (height_term_2 >> 13);
-                y_sine_2 = rsin(angle);
-                y_cosine_2 = rcos(angle);
-                width_term_y_2 = negative_width * y_sine_2;
+                    rotated_x = width_term_2 + (height_term_2 >> 13);
+                    y_sine_2 = rsin(angle);
+                    y_cosine_2 = rcos(angle);
+                    width_term_y_2 = negative_width * y_sine_2;
 
-                if (width_term_y_2 < 0)
-                {
-                    width_term_y_2 += 0x1FFF;
-                }
+                    if (width_term_y_2 < 0)
+                    {
+                        width_term_y_2 += 0x1FFF;
+                    }
 
-                width_term_y_2 >>= 13;
-                height_term_y_2 = quad->height * y_cosine_2;
+                    width_term_y_2 >>= 13;
+                    height_term_y_2 = quad->height * y_cosine_2;
 
-                if (height_term_y_2 < 0)
-                {
-                    height_term_y_2 += 0x1FFF;
-                }
+                    if (height_term_y_2 < 0)
+                    {
+                        height_term_y_2 += 0x1FFF;
+                    }
 
-                scaled_x_2 = expansion * rotated_x;
-                rotated_y = width_term_y_2 - (height_term_y_2 >> 13);
+                    scaled_x_2 = expansion * rotated_x;
+                    rotated_y = width_term_y_2 - (height_term_y_2 >> 13);
 
-                if (scaled_x_2 < 0)
-                {
-                    scaled_x_2 += 0x7F;
-                }
+                    if (scaled_x_2 < 0)
+                    {
+                        scaled_x_2 += 0x7F;
+                    }
 
-                scaled_y_2 = expansion * rotated_y;
-                rotated_x = rotated_x + (scaled_x_2 >> 7);
+                    scaled_y_2 = expansion * rotated_y;
+                    rotated_x = rotated_x + (scaled_x_2 >> 7);
 
-                if (scaled_y_2 < 0)
-                {
-                    scaled_y_2 += 0x7F;
-                }
+                    if (scaled_y_2 < 0)
+                    {
+                        scaled_y_2 += 0x7F;
+                    }
 
-                prim->x1 = (s16)((quad->x + half_width) - rotated_x);
-                rotated_y = rotated_y + (scaled_y_2 >> 7);
-                prim->x2 = (u16)(quad->x + half_width + rotated_x);
-                prim->y1 = (u16)(quad->y + (quad->height >> 1) + rotated_y);
-                adjusted = quad->height;
-                adjusted = (u32)adjusted >> 1;
-                bottom_2 = quad->y + adjusted - rotated_y;
-                prim->y2 = bottom_2;
-                break;
-            case 3:
-                if (g_field_timed_panel_brightness < 0x40)
-                {
-                    brightness = g_field_timed_panel_brightness * 4;
-                }
-                else
-                {
-                    brightness = ~((g_field_timed_panel_brightness - 0x40) * 2);
-                }
+                    prim->x1 = (s16)((quad->x + half_width) - rotated_x);
+                    rotated_y = rotated_y + (scaled_y_2 >> 7);
+                    prim->x2 = (u16)(quad->x + half_width + rotated_x);
+                    prim->y1 = (u16)(quad->y + (quad->height >> 1) + rotated_y);
+                    adjusted = quad->height;
+                    adjusted = (u32)adjusted >> 1;
+                    bottom_2 = quad->y + adjusted - rotated_y;
+                    prim->y2 = bottom_2;
+                    break;
+                case 3:
+                    if (g_field_timed_panel_brightness < 0x40)
+                    {
+                        brightness = g_field_timed_panel_brightness * 4;
+                    }
+                    else
+                    {
+                        brightness = ~((g_field_timed_panel_brightness - 0x40) * 2);
+                    }
 
-                prim->r0 = prim->g0 = prim->b0 = brightness;
-                prim->x0 = prim->x2 = quad->x;
-                prim->x1 = prim->x3 = quad->x + width - 1;
-                prim->y0 = prim->y1 = quad->y;
-                prim->y2 = prim->y3 = quad->y + quad->height - 1;
-                break;
-            case 4:
-                term = width * expansion;
-                scaled = term / (GPU_TINT_NEUTRAL_LEVEL / 2);
-                prim->x0 = prim->x2 = quad->x - scaled;
-                prim->x1 = prim->x3 = quad->x + width + scaled - 1;
-                prim->y0 = prim->y1 = quad->y - quad->height * expansion / GPU_TINT_NEUTRAL_LEVEL;
-                bottom_1 = quad->y + quad->height;
-                scaled = quad->height * expansion;
+                    prim->r0 = prim->g0 = prim->b0 = brightness;
+                    prim->x0 = prim->x2 = quad->x;
+                    prim->x1 = prim->x3 = quad->x + width - 1;
+                    prim->y0 = prim->y1 = quad->y;
+                    prim->y2 = prim->y3 = quad->y + quad->height - 1;
+                    break;
+                case 4:
+                    term = width * expansion;
+                    scaled = term / (GPU_TINT_NEUTRAL_LEVEL / 2);
+                    prim->x0 = prim->x2 = quad->x - scaled;
+                    prim->x1 = prim->x3 = quad->x + width + scaled - 1;
+                    prim->y0 = prim->y1 = quad->y - quad->height * expansion / GPU_TINT_NEUTRAL_LEVEL;
+                    bottom_1 = quad->y + quad->height;
+                    scaled = quad->height * expansion;
 
-                if (scaled < 0)
-                {
-                    scaled += 0x7F;
-                }
+                    if (scaled < 0)
+                    {
+                        scaled += 0x7F;
+                    }
 
-                prim->y2 = prim->y3 = bottom_1 + (scaled >> 7) - 1;
-                break;
+                    prim->y2 = prim->y3 = bottom_1 + (scaled >> 7) - 1;
+                    break;
             }
 
             prim->u0 = prim->u2 = quad->u;
@@ -597,14 +653,14 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_t
 
                 switch (term)
                 {
-                case 0:
-                    break;
-                case 1:
-                    field_add_fade_prim(prim, 0);
-                    break;
-                case 2:
-                    field_add_fade_prim(prim, 0);
-                    break;
+                    case 0:
+                        break;
+                    case 1:
+                        field_add_fade_prim(prim, 0);
+                        break;
+                    case 2:
+                        field_add_fade_prim(prim, 0);
+                        break;
                 }
             }
 
@@ -621,7 +677,7 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_t
  * @param ordering_table Ordering table receiving the quad.
  * @return Next free primitive.
  */
-static POLY_FT4* field_draw_timed_panel_image(POLY_FT4 *prim, u_long *ordering_table)
+static POLY_FT4* field_draw_timed_panel_image(POLY_FT4* prim, u_long* ordering_table)
 {
     s32 value0;
     s32 value1;
@@ -709,26 +765,6 @@ static POLY_FT4* field_draw_timed_panel_image(POLY_FT4 *prim, u_long *ordering_t
     return prim + 1;
 }
 
-/** @brief Packed screen position and countdown of an actor text. */
-typedef union
-{
-    u32 word;
-    struct
-    {
-        u32 x : 9;         /**< Screen X of the text. */
-        u32 y : 8;         /**< Screen Y of the text. */
-        u32 countdown : 6; /**< Frames left to show the text; 0 when the slot is free. */
-        u32 unused : 9;
-    } bits;
-} FieldActorTextState;
-
-/** @brief One actor text slot: a string shown over an actor for a few frames. */
-typedef struct FieldActorText
-{
-    u8* text;
-    FieldActorTextState state;
-} FieldActorText;
-
 extern FieldActorText g_field_actor_texts[FIELD_ACTOR_TEXT_COUNT];
 /** @brief Technique name bank: u16 offsets from the bank start, then the strings. */
 extern u8 g_field_technique_names[];
@@ -770,12 +806,13 @@ void field_start_actor_text(s32 index, s32 text_id)
             }
             else
             {
-                g_field_actor_texts[index].text = (u8 *)(((u16 *)g_field_technique_names)[text_id] + (uintptr_t)g_field_technique_names);
+                g_field_actor_texts[index].text = (u8*)(((u16*)g_field_technique_names)[text_id] + (uintptr_t)g_field_technique_names);
             }
 
             g_field_actor_texts[index].state.bits.countdown = FIELD_ACTOR_TEXT_FRAMES;
             point[0] = g_field_view_offset_x / 256 + (s16)(g_field_actors[index].x / 256 + FIELD_SCREEN_CENTER_X);
-            point[1] = g_field_view_offset_y / 256 + (s16)(g_field_actors[index].y / 256 + FIELD_SCREEN_CENTER_Y) - g_field_actors[index].z / 512 - g_field_view_offset_z / 512;
+            point[1] = g_field_view_offset_y / 256 + (s16)(g_field_actors[index].y / 256 + FIELD_SCREEN_CENTER_Y) - g_field_actors[index].z / 512 -
+                       g_field_view_offset_z / 512;
             width = field_count_text_glyphs(g_field_actor_texts[index].text) * 6;
 
             if (point[0] + width >= 321)
@@ -852,7 +889,7 @@ void field_update_actor_texts(FieldRenderHalf* render)
     {
         if (g_field_actor_texts[i].state.bits.countdown)
         {
-            active_count += 1;
+            active_count++;
         }
     }
 
@@ -986,15 +1023,6 @@ static void* field_draw_tinted_text(SPRT* sprite_cursor, u_long* ordering_table,
     return tpage + 1;
 }
 
-/** @brief Four ability prerequisites and a packed technique/weapon selection. */
-typedef struct
-{
-    FieldAbilityPrerequisite prerequisites[4];
-    u8 weapon;
-    u8 result;
-    u8 weapon_proficiency;
-} FieldTechniqueUnlockRule;
-
 extern FieldTechniqueUnlockRule g_field_technique_unlock_rules[];
 /* Scene image setup also uses this flag; its broader purpose is unresolved. */
 extern s32 D_80115890;
@@ -1032,7 +1060,7 @@ void field_advance_ability_progression(void)
     {
         if (g_field_player_records[party_index].head.bytes.flags & FIELD_PLAYER_ACTIVE)
         {
-            if ((u32)(g_saved_game_ctx->characters[party_index].info.actions.type & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
+            if ((g_saved_game_ctx->characters[party_index].info.actions.type & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
             {
                 weapon_category = (g_saved_game_ctx->characters[party_index].equipment[FIELD_WEAPON_SLOT].info.word >> FIELD_WEAPON_CATEGORY_SHIFT) &
                                   FIELD_WEAPON_CATEGORY_MASK;
@@ -1117,9 +1145,9 @@ void field_advance_ability_progression(void)
                 {
                     ability = ability_rule->result;
                     unlocked_ability_word = ability / SAVED_BITS_PER_WORD;
-                    context->ability_bits[unlocked_ability_word] = (s32)(context->ability_bits[unlocked_ability_word] | (1 << (ability % SAVED_BITS_PER_WORD)));
-                    g_field_progression_unlocks[g_field_progression_unlock_count] = (s16)ability;
-                    g_field_progression_unlock_count += 1;
+                    context->ability_bits[unlocked_ability_word] = (context->ability_bits[unlocked_ability_word] | (1 << (ability % SAVED_BITS_PER_WORD)));
+                    g_field_progression_unlocks[g_field_progression_unlock_count] = ability;
+                    g_field_progression_unlock_count++;
                 }
             }
         }
@@ -1167,7 +1195,7 @@ void field_advance_ability_progression(void)
                             for (; technique_party_index < FIELD_PARTY_SIZE; technique_party_index++)
                             {
                                 if ((g_field_player_records[technique_party_index].head.bytes.flags & FIELD_PLAYER_ACTIVE) &&
-                                    ((u32)(context->characters[technique_party_index].info.actions.type & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST))
+                                    ((context->characters[technique_party_index].info.actions.type & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST))
                                 {
                                     weapon_requirement = active_rule->weapon;
                                     equipped_weapon =
@@ -1180,13 +1208,13 @@ void field_advance_ability_progression(void)
                                             if (!(context->technique_bits[technique_group] & (technique_mask = 1 << (ability % SAVED_BITS_PER_WORD))))
                                             {
                                                 technique_group = weapon_requirement >> FIELD_TECHNIQUE_GROUP_SHIFT;
-                                                context->technique_bits[technique_group] = (s32)(context->technique_bits[technique_group] | technique_mask);
+                                                context->technique_bits[technique_group] = (context->technique_bits[technique_group] | technique_mask);
 
                                                 if (!(active_rule->result & FIELD_TECHNIQUE_SILENT_FLAG))
                                                 {
                                                     g_field_progression_unlocks[g_field_progression_unlock_count] =
                                                         ((technique_group * FIELD_TECHNIQUES_PER_WEAPON) + ability) | FIELD_TECHNIQUE_UNLOCK_FLAG;
-                                                    g_field_progression_unlock_count += 1;
+                                                    g_field_progression_unlock_count++;
                                                 }
                                             }
                                         }
@@ -1202,35 +1230,6 @@ void field_advance_ability_progression(void)
         technique_index++;
     } while ((intptr_t)&technique_base[technique_index] < (intptr_t)&technique_base[FIELD_TECHNIQUE_UNLOCK_RULE_COUNT]);
 }
-
-/** @brief Drawing position and three sorted actor indices sharing the local work area. */
-typedef struct
-{
-    Vec2s position;
-    s32 unused;
-    s32 order[3];
-} FieldRankWork;
-
-/** @brief One entry of the dialog text bank's offset table (little-endian, read bytewise). */
-typedef struct PackedOffset
-{
-    u8 low;
-    u8 high;
-} PackedOffset;
-
-/** @brief Header of the unlock name resource: offsets of its two name banks. */
-typedef struct TextResource
-{
-    s32 unused;
-    s32 ability_names;
-    s32 technique_names;
-} TextResource;
-
-/** @brief Eight-frame animation table; the icon drawers copy it into a local array. */
-typedef struct
-{
-    s32 words[8];
-} FieldQuadAnimationTable;
 
 extern u8 g_field_retry_snapshot[];
 /*
@@ -1250,15 +1249,14 @@ extern FieldQuadAnimationTable g_field_small_icon_frames, g_field_marker_x_offse
 extern s32 g_field_results_wait_frames;
 extern s32 g_field_dialog_item_count;
 extern s32 g_field_money_snapshot;
-extern s32 g_pad_input;
 extern s32 g_frame_counter;
-extern s32 g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_secondary_music_id, g_field_pending_scene_id, g_field_pending_object_id, g_field_pending_sound_bank_id;
+extern s32 g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_secondary_music_id, g_field_pending_scene_id, g_field_pending_object_id,
+    g_field_pending_sound_bank_id;
 
 extern void akao_release_all_sfx(void);
 /* Defined in field_resource_load.c. */
 extern s32 field_party_reload_reading(void);
 
-void field_close_battle_results(void);
 static void field_open_unlock_list(void);
 static void field_open_item_list(void);
 static void field_open_party_summary(void);
@@ -1317,8 +1315,8 @@ void field_handle_return_to_title_prompt(void)
             controller->ports[1].actuator_control.fields.large_motor_command = 0;
             controller->ports[0].actuator_control.fields.large_motor_command = 0;
             field_rebuild_party_actions(0);
-            field_set_scene_parameters(g_field_pending_scene_id, g_field_pending_object_id, g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_sound_bank_id,
-                                       g_field_pending_secondary_music_id);
+            field_set_scene_parameters(g_field_pending_scene_id, g_field_pending_object_id, g_field_pending_spawn_id, g_field_pending_music_id,
+                                       g_field_pending_sound_bank_id, g_field_pending_secondary_music_id);
             actor_index = 0;
             hp_mask = 0xFFFFFF;
             status_mask = 0xFF000000;
@@ -1365,25 +1363,25 @@ void field_update_battle_results_input(void)
     {
         switch (g_field_dialog_screen_mode)
         {
-        case FIELD_RESULTS_PARTY_SUMMARY:
-            if (g_field_results_wait_frames == 0)
-            {
-                field_close_battle_results();
-                return;
-            }
+            case FIELD_RESULTS_PARTY_SUMMARY:
+                if (g_field_results_wait_frames == 0)
+                {
+                    field_close_battle_results();
+                    return;
+                }
 
-            break;
-        case FIELD_RESULTS_UNLOCK_LIST:
-            if (g_field_dialog_item_count != 0)
-            {
-                field_open_item_list();
-                return;
-            }
+                break;
+            case FIELD_RESULTS_UNLOCK_LIST:
+                if (g_field_dialog_item_count != 0)
+                {
+                    field_open_item_list();
+                    return;
+                }
 
-            /* fallthrough */
-        case FIELD_RESULTS_ITEM_LIST:
-            field_open_party_summary();
-            break;
+                /* fallthrough */
+            case FIELD_RESULTS_ITEM_LIST:
+                field_open_party_summary();
+                break;
         }
     }
 }
@@ -1398,7 +1396,7 @@ static void field_open_unlock_list(void)
     s32 index;
     s32 saw_technique;
     s32 saw_ability;
-    FieldMenuElement *record;
+    FieldMenuElement* record;
     u32 size;
 
     cdrom_queue_read(FIELD_RES_UNLOCK_NAMES, g_field_cd_buffer);
@@ -1525,7 +1523,7 @@ void field_open_duel_results(void)
  */
 void field_setup_return_to_title_prompt(void)
 {
-    FieldMenuElement *rec;
+    FieldMenuElement* rec;
     s32 i;
 
     field_reset_menu_elements();
@@ -1570,7 +1568,7 @@ void field_setup_return_to_title_prompt(void)
  */
 static void field_open_item_list(void)
 {
-    FieldMenuElement *rec;
+    FieldMenuElement* rec;
     u32 state;
 
     g_field_dialog_screen_mode = FIELD_RESULTS_ITEM_LIST;
@@ -1597,7 +1595,7 @@ static void field_open_item_list(void)
  */
 static void field_open_party_summary(void)
 {
-    FieldMenuElement *record;
+    FieldMenuElement* record;
     s32 actor_index;
     s32 active_count;
 
@@ -1649,8 +1647,8 @@ static void* field_draw_party_totals(u_long* ot, void* cursor, s32 x_offset, s32
     s32 i;
     s32 total_x;
     s32 total_y;
-    u8 *text_base;
-    void *handle;
+    u8* text_base;
+    void* handle;
     Vec2s position;
     s16 y;
 
@@ -1724,8 +1722,8 @@ static void* field_draw_experience_ranking(u_long* ordering_table, void* cursor,
     s32 row;
     void* result;
     s16 y;
-    u8 *text;
-    u8 *text_base;
+    u8* text;
+    u8* text_base;
 
     result = field_draw_text(cursor, ordering_table, (D_800EC3C6[1] << 8) + ((D_800EC3C6 - 2) + D_800EC3C6[0]), 4, 0x10 - x_offset, -y_offset,
                              FIELD_TEXT_ALIGN_LEFT);
@@ -1870,7 +1868,7 @@ static void* field_draw_unlock_list(u_long* ordering_table, void* cursor, s32 sc
     s32 technique_row_y;
     s32 ability_row_y;
     s32 item_y;
-    u16 *entry;
+    u16* entry;
     u16 name_index;
 
     next_cursor = cursor;
@@ -1911,7 +1909,7 @@ static void* field_draw_unlock_list(u_long* ordering_table, void* cursor, s32 sc
                     }
 
                     technique_header_drawn = 1;
-                    row += 1;
+                    row++;
                     technique_row_y = row * FIELD_RESULTS_ROW_HEIGHT;
                 }
 
@@ -1942,7 +1940,7 @@ static void* field_draw_unlock_list(u_long* ordering_table, void* cursor, s32 sc
                     }
 
                     ability_header_drawn = 1;
-                    row += 1;
+                    row++;
                     ability_row_y = row * FIELD_RESULTS_ROW_HEIGHT;
                 }
 
@@ -1959,8 +1957,8 @@ static void* field_draw_unlock_list(u_long* ordering_table, void* cursor, s32 sc
                 }
             }
 
-            row += 1;
-            entry += 1;
+            row++;
+            entry++;
         }
     }
 
@@ -2108,7 +2106,7 @@ static void* field_draw_animated_marker(u_long* ordering_table, POLY_FT4* prim, 
     SET_BGR0_PACKED(prim, color);
     setPolyFT4(prim);
     phase_index = ((frame >> 2) + 3) & 7;
-    left_x = (u16)tables[1].words[phase_index] + x;
+    left_x = tables[1].words[phase_index] + x;
     prim->x2 = left_x;
     prim->x0 = left_x;
     width = tables[3].words[phase_index];

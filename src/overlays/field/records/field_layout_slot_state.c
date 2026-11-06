@@ -3,62 +3,62 @@
  * @brief Place a land on the world map and reset all lands for a new game.
  */
 
-#include "common/saved_game.h"
 #include "common.h"
+
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
-
-/** @brief g_saved_game viewed as FIELD's game state. */
-#define FIELD_SAVED_GAME ((SavedGameLayout*)&g_saved_game)
+#include "common/saved_game.h"
 
 /**
- * @brief Place a land on the map without any checks and record its placement order.
+ * @brief Give the player a land's artifact without any checks and record its artifact order.
  * @param land_index Land index, below FIELD_LAND_COUNT.
- * @see field_try_place_land for the checked version.
+ * @see field_try_award_land_artifact for the checked version.
  */
-void field_place_land(s32 land_index)
+void field_award_land_artifact(s32 land_index)
 {
-    SavedGameLayout* game = FIELD_SAVED_GAME;
+    SavedGameLayout* game = &g_saved_game.layout;
 
-    game->control.fields.placed_land_count++;
-    game->lands[land_index].flags |= FIELD_LAND_PLACED;
-    game->lands[land_index].count = game->control.fields.placed_land_count;
+    game->control.fields.artifact_count++;
+    game->lands[land_index].flags |= FIELD_LAND_ARTIFACT_OBTAINED;
+    game->lands[land_index].artifact_order = game->control.fields.artifact_count;
 }
 
 /**
- * @brief Take every land off the map and clear its levels, as for a new game.
+ * @brief Take every land off the map, take back every artifact and clear the lands' levels, as for a new game.
  *
- * Also clears the hero level. Afterwards every land has FIELD_LAND_FLAG_04
- * set except land 24.
+ * Also clears the artifact and placed land counts. Afterwards every land has
+ * FIELD_LAND_FLAG_04 set except land 24.
  */
 void field_reset_lands(void)
 {
     SavedGameLayout* game;
     s32 i;
 
-    FIELD_SAVED_GAME->control.fields.placed_land_count = 0;
-    FIELD_SAVED_GAME->control.fields.hero_level = 0;
+    g_saved_game.layout.control.fields.artifact_count = 0;
+    g_saved_game.layout.control.fields.placed_land_count = 0;
+
     for (i = 0; i < FIELD_LAND_COUNT; i++)
     {
-        FIELD_SAVED_GAME->lands[i].x = FIELD_LAND_CELL_NONE;
-        FIELD_SAVED_GAME->lands[i].z = FIELD_LAND_CELL_NONE;
-        FIELD_SAVED_GAME->lands[i].unk2 = 0;
-        FIELD_SAVED_GAME->lands[i].count = 0;
-        FIELD_SAVED_GAME->lands[i].levels[0] = 0;
-        FIELD_SAVED_GAME->lands[i].levels[1] = 0;
-        FIELD_SAVED_GAME->lands[i].levels[2] = 0;
-        FIELD_SAVED_GAME->lands[i].levels[3] = 0;
-        FIELD_SAVED_GAME->lands[i].levels[4] = 0;
-        FIELD_SAVED_GAME->lands[i].levels[5] = 0;
-        FIELD_SAVED_GAME->lands[i].levels[6] = 0;
-        FIELD_SAVED_GAME->lands[i].levels[7] = 0;
-        FIELD_SAVED_GAME->lands[i].flags &= ~(FIELD_LAND_PLACED | FIELD_LAND_FLAG_02 | FIELD_LAND_FLAG_04);
+        g_saved_game.layout.lands[i].x = FIELD_LAND_CELL_NONE;
+        g_saved_game.layout.lands[i].z = FIELD_LAND_CELL_NONE;
+        g_saved_game.layout.lands[i].placement_order = 0;
+        g_saved_game.layout.lands[i].artifact_order = 0;
+        g_saved_game.layout.lands[i].levels[0] = 0;
+        g_saved_game.layout.lands[i].levels[1] = 0;
+        g_saved_game.layout.lands[i].levels[2] = 0;
+        g_saved_game.layout.lands[i].levels[3] = 0;
+        g_saved_game.layout.lands[i].levels[4] = 0;
+        g_saved_game.layout.lands[i].levels[5] = 0;
+        g_saved_game.layout.lands[i].levels[6] = 0;
+        g_saved_game.layout.lands[i].levels[7] = 0;
+        g_saved_game.layout.lands[i].flags &= ~(FIELD_LAND_ARTIFACT_OBTAINED | FIELD_LAND_PLACED | FIELD_LAND_FLAG_04);
     }
 
     for (i = 0; i < FIELD_LAND_COUNT; i++)
     {
-        FIELD_SAVED_GAME->lands[i].flags |= FIELD_LAND_FLAG_04;
+        g_saved_game.layout.lands[i].flags |= FIELD_LAND_FLAG_04;
     }
-    game = FIELD_SAVED_GAME;
-    ((FieldLandWords *)game->lands)[24].word &= ~FIELD_LAND_FLAG_04;
+
+    game = &g_saved_game.layout;
+    ((FieldLandWords*)game->lands)[24].word &= ~FIELD_LAND_FLAG_04;
 }

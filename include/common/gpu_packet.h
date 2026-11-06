@@ -15,20 +15,16 @@
  */
 
 /** @brief Set y0, then x0 (libgpu's setXY0 writes x0 first). */
-#define SET_YX0(p, _y0, _x0) \
-    (p)->y0 = (_y0), (p)->x0 = (_x0)
+#define SET_YX0(p, _y0, _x0) (p)->y0 = (_y0), (p)->x0 = (_x0)
 
 /** @brief Set the colour of any primitive one byte at a time, blue first. The code byte is left alone. */
-#define SET_BGR0(p, _b0, _g0, _r0) \
-    (p)->b0 = _b0, (p)->g0 = _g0, (p)->r0 = _r0
+#define SET_BGR0(p, _b0, _g0, _r0) (p)->b0 = _b0, (p)->g0 = _g0, (p)->r0 = _r0
 
 /** @brief Write the whole r0/g0/b0/code word of any primitive at once (see GPU_COLOR_WORD). */
-#define SET_BGR0_PACKED(p, _word) \
-    (*(u32*)((u8*)(p) + 4) = (u32)(_word))
+#define SET_BGR0_PACKED(p, _word) (*(u32*)((u8*)(p) + 4) = (u32)(_word))
 
 /** @brief Pack a colour into a primitive colour word (0x00bbggrr), with a zero code byte. */
-#define GPU_COLOR_WORD(_r, _g, _b) \
-    (((u32)(_b) << 16) | ((u32)(_g) << 8) | (u32)(_r))
+#define GPU_COLOR_WORD(_r, _g, _b) (((u32)(_b) << 16) | ((u32)(_g) << 8) | (u32)(_r))
 
 /** @brief Colour channel level that draws a texture at its own brightness: the GPU's 1.0. */
 #define GPU_TINT_NEUTRAL_LEVEL 0x80
@@ -43,36 +39,33 @@
 #define GPU_COLOR_SELECTED_ROW GPU_COLOR_WORD(0xF0, 0x80, 0xF0)
 
 /** @brief Write vertex 1, 2 or 3's colour word of a POLY_G4 at once. Vertex 0 uses SET_BGR0_PACKED. */
-#define SET_POLY_G4_BGR1_PACKED(p, _word) \
-    (*(u32*)&(p)->r1 = (u32)(_word))
-#define SET_POLY_G4_BGR2_PACKED(p, _word) \
-    (*(u32*)&(p)->r2 = (u32)(_word))
-#define SET_POLY_G4_BGR3_PACKED(p, _word) \
-    (*(u32*)&(p)->r3 = (u32)(_word))
+#define SET_POLY_G4_BGR1_PACKED(p, _word) (*(u32*)&(p)->r1 = (u32)(_word))
+#define SET_POLY_G4_BGR2_PACKED(p, _word) (*(u32*)&(p)->r2 = (u32)(_word))
+#define SET_POLY_G4_BGR3_PACKED(p, _word) (*(u32*)&(p)->r3 = (u32)(_word))
+
+/** @brief Write vertex 0, 1, 2 or 3's x and y of any primitive from one packed word (y in the high half). */
+#define SET_XY0_PACKED(p, _xy) (*(u32*)&(p)->x0 = (u32)(_xy))
+#define SET_XY1_PACKED(p, _xy) (*(u32*)&(p)->x1 = (u32)(_xy))
+#define SET_XY2_PACKED(p, _xy) (*(u32*)&(p)->x2 = (u32)(_xy))
+#define SET_XY3_PACKED(p, _xy) (*(u32*)&(p)->x3 = (u32)(_xy))
 
 /** @brief Write an SPRT's x0 and y0 from one packed word (y0 in the high half). */
-#define SET_SPRT_XY0_WORD(p, _xy) \
-    (*(u32*)((u8*)(p) + 0x08) = (u32)(_xy))
+#define SET_SPRT_XY0_WORD(p, _xy) (*(u32*)((u8*)(p) + 0x08) = (u32)(_xy))
 
 /** @brief Write an SPRT's w and h from one packed word (h in the high half). */
-#define SET_SPRT_WH_WORD(p, _wh) \
-    (*(u32*)((u8*)(p) + 0x10) = (u32)(_wh))
+#define SET_SPRT_WH_WORD(p, _wh) (*(u32*)((u8*)(p) + 0x10) = (u32)(_wh))
 
 /** @brief Write an SPRT's w and h with one store. */
-#define SET_SPRT_WH_PACKED(p, _w, _h) \
-    (*(u32*)((u8*)(p) + 0x10) = ((u32)(u16)(_h) << 16) | (u32)(u16)(_w))
+#define SET_SPRT_WH_PACKED(p, _w, _h) (*(u32*)((u8*)(p) + 0x10) = ((u32)(u16)(_h) << 16) | (u32)(u16)(_w))
 
 /** @brief Write an SPRT's u0 and v0 from one packed halfword (v0 in the high byte). */
-#define SET_SPRT_UV0_PACKED(p, _uv) \
-    (*(u16*)((u8*)(p) + 0x0C) = (u16)(_uv))
+#define SET_SPRT_UV0_PACKED(p, _uv) (*(u16*)((u8*)(p) + 0x0C) = (u16)(_uv))
 
 /** @brief Write an SPRT's u0, v0 and clut from one packed word (clut in the high half). */
-#define SET_SPRT_UV_CLUT_WORD(p, _word) \
-    (*(u32*)((u8*)(p) + 0x0C) = (u32)(_word))
+#define SET_SPRT_UV_CLUT_WORD(p, _word) (*(u32*)((u8*)(p) + 0x0C) = (u32)(_word))
 
 /** @brief Set an SPRT's CLUT id directly; libgpu's setClut takes VRAM coordinates instead. */
-#define SET_SPRT_CLUT(p, _clut) \
-    (*(u16*)((u8*)(p) + 0x0E) = (u16)(_clut))
+#define SET_SPRT_CLUT(p, _clut) (*(u16*)((u8*)(p) + 0x0E) = (u16)(_clut))
 
 /** @brief GPU command codes, the bit that makes a primitive semi-transparent and the bit that draws a texture unshaded. */
 #define GPU_CODE_POLY_FT3 0x24

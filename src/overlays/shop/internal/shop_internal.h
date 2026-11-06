@@ -2,17 +2,19 @@
 #define SHOP_INTERNAL_H
 
 #include "common.h"
-#include "main/main.h"
-#include "overlays/shop/shop.h"
+
 #include "common/pad.h"
-#include "overlays/field/field_menu_window.h"
-#include "overlays/field/field_ui_text.h"
 #include "common/vector.h"
+#include "main/audio/game_audio.h"
+#include "main/main.h"
 #include "overlays/field/field_fade.h"
 #include "overlays/field/field_input.h"
+#include "overlays/field/field_inventory.h"
+#include "overlays/field/field_menu_window.h"
 #include "overlays/field/field_sound.h"
 #include "overlays/field/field_text.h"
-#include "main/audio/game_audio.h"
+#include "overlays/field/field_ui_text.h"
+#include "overlays/shop/shop.h"
 
 #define SHOP_WINDOW_COUNT 8
 /** @brief Window slot reserved for the notice and quantity-prompt popups. */
@@ -159,9 +161,6 @@ extern u8 D_800EC3F4[];
 extern u8 D_800EC3F8[];
 extern u8 D_800EC3FE[];
 
-void field_compact_inventory(void);
-FieldItemRecord* field_find_free_inventory_record(void);
-void field_copy_inventory_record(FieldItemRecord* dst, FieldItemRecord* src);
 u8* func_800AD850(u8* prim, u_long* ot, s32 x, s32 y, s32 width, s32 height, s32 display_buffer_index, s32 is_popup);
 u8* func_800AE76C(u8* prim, u_long* ot, s32 x, s32 y, s32 direction);
 

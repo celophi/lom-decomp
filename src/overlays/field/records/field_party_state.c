@@ -1,11 +1,12 @@
 #include "common.h"
+#include <rand.h>
+
 #include "../internal/field_calls.h"
+#include "../internal/field_records.h"
 #include "../internal/field_script.h"
 #include "main/audio/game_audio.h"
 #include "main/main.h"
-#include "../internal/field_records.h"
 #include "overlays/field/field_types.h"
-#include <rand.h>
 
 /** @brief Number of status effects; effect n owns status timer n and effect flag bit n. */
 #define FIELD_STATUS_EFFECT_COUNT 15
@@ -134,6 +135,7 @@ FieldStatusRecord* field_find_status_record(s32 record_id)
             return &g_field_battle->records[i];
         }
     }
+
     record_game_diagnostic(DIAG_ERROR, DIAG_BAD_STATUS_RECORD, record_id, -1);
     return NULL;
 }
@@ -153,6 +155,7 @@ FieldStatusRecord* field_find_free_status_record(void)
             return &g_field_battle->records[i];
         }
     }
+
     return NULL;
 }
 
@@ -185,17 +188,21 @@ void field_apply_status_effect(FieldStatusRecord* source, FieldStatusRecord* tar
     {
         return;
     }
+
     if (target->state->current == 0)
     {
         return;
     }
+
     if (!(apply_flags & FIELD_STATUS_APPLY_IGNORE_IMMUNITY))
     {
         if (target->immunity_flags & g_field_status_immunity_masks[effect_index])
         {
             return;
         }
+
         effect_mask = 0;
+
         for (slot_index = 0; slot_index < FIELD_STATUS_SLOT_COUNT; slot_index++)
         {
             if (target->status_slots[slot_index] >= FIELD_STATUS_SLOT_ID_BASE &&
@@ -204,29 +211,36 @@ void field_apply_status_effect(FieldStatusRecord* source, FieldStatusRecord* tar
                 effect_mask |= g_field_status_immunity_masks[target->status_slots[slot_index] - FIELD_STATUS_SLOT_ID_BASE];
             }
         }
+
         if (effect_mask & g_field_status_immunity_masks[effect_index])
         {
             return;
         }
     }
+
     effect_mask = 1 << effect_index;
+
     if (!(apply_flags & FIELD_STATUS_APPLY_ALLOW_ACTIVE) && (target->state->effect_flags & effect_mask))
     {
         return;
     }
+
     if ((rand() & 0xFF) >= chance_threshold)
     {
         return;
     }
+
     target->state->effect_flags |= effect_mask;
     attack = field_get_status_stat(source, g_field_status_duration_stats[effect_index] >> 4);
     defense = field_get_status_stat(target, g_field_status_duration_stats[effect_index] & 0xF);
     scaled_duration = duration * attack / defense;
     timer_record = (FieldStatusRecord*)((u8*)target + effect_index * sizeof(u16));
+
     if (scaled_duration > FIELD_STATUS_MAX_DURATION)
     {
         scaled_duration = FIELD_STATUS_MAX_DURATION;
     }
+
     timer_record->status_timers[0] = scaled_duration;
 }
 
@@ -268,19 +282,24 @@ s32 field_scale_status_stat(FieldStatusRecord* record, u32 stat_selector, u32 sc
     {
         return 0;
     }
+
     if (stat_selector < FIELD_STATUS_STAT_COUNT)
     {
         value = record->base_stats[stat_selector] * scale / FIELD_STAT_SCALE_UNIT;
+
         if (scale > FIELD_STAT_SCALE_UNIT)
         {
             if (value < record->stats[stat_selector])
             {
                 value = record->stats[stat_selector];
             }
+
             record->stats[stat_selector] = value;
+
             if (emit_signal != 0)
             {
                 record->state->signal.stat_change = g_field_stat_change_signals[scale - FIELD_STAT_SCALE_UNIT];
+
                 if (record->state->signal.stat_change != 0)
                 {
                     field_spawn_shared_animation_actor(record->meta.bytes.id, FIELD_ANIMATION_STAT_UP + stat_selector);
@@ -293,10 +312,13 @@ s32 field_scale_status_stat(FieldStatusRecord* record, u32 stat_selector, u32 sc
             {
                 value = record->stats[stat_selector];
             }
+
             record->stats[stat_selector] = value;
+
             if (emit_signal != 0)
             {
                 record->state->signal.stat_change = g_field_stat_change_signals[FIELD_STAT_SCALE_UNIT - scale];
+
                 if (record->state->signal.stat_change != 0)
                 {
                     field_spawn_shared_animation_actor(record->meta.bytes.id, FIELD_ANIMATION_STAT_DOWN + stat_selector);
@@ -308,35 +330,37 @@ s32 field_scale_status_stat(FieldStatusRecord* record, u32 stat_selector, u32 sc
     {
         switch (stat_selector)
         {
-        case FIELD_STAT_SELECT_ALL:
-            for (stat_index = 0; stat_index < FIELD_STATUS_STAT_COUNT; stat_index++)
-            {
-                field_scale_status_stat(record, stat_index, scale, 0);
-            }
-            if (emit_signal != 0)
-            {
-                if (scale > FIELD_STAT_SCALE_UNIT)
+            case FIELD_STAT_SELECT_ALL:
+                for (stat_index = 0; stat_index < FIELD_STATUS_STAT_COUNT; stat_index++)
                 {
-                    record->state->signal.stat_change = g_field_stat_change_signals[scale - FIELD_STAT_SCALE_UNIT];
-                    field_spawn_shared_animation_actor(record->meta.bytes.id, FIELD_ANIMATION_ALL_STATS_UP);
+                    field_scale_status_stat(record, stat_index, scale, 0);
                 }
-                else
+
+                if (emit_signal != 0)
                 {
-                    record->state->signal.stat_change = g_field_stat_change_signals[FIELD_STAT_SCALE_UNIT - scale];
-                    field_spawn_shared_animation_actor(record->meta.bytes.id, FIELD_ANIMATION_ALL_STATS_DOWN);
+                    if (scale > FIELD_STAT_SCALE_UNIT)
+                    {
+                        record->state->signal.stat_change = g_field_stat_change_signals[scale - FIELD_STAT_SCALE_UNIT];
+                        field_spawn_shared_animation_actor(record->meta.bytes.id, FIELD_ANIMATION_ALL_STATS_UP);
+                    }
+                    else
+                    {
+                        record->state->signal.stat_change = g_field_stat_change_signals[FIELD_STAT_SCALE_UNIT - scale];
+                        field_spawn_shared_animation_actor(record->meta.bytes.id, FIELD_ANIMATION_ALL_STATS_DOWN);
+                    }
                 }
-            }
-            break;
-        case FIELD_STAT_SELECT_GROUP_A:
-            field_scale_status_stat(record, 0, scale, 0);
-            field_scale_status_stat(record, 1, scale, 0);
-            field_scale_status_stat(record, 2, scale, 0);
-            break;
-        case FIELD_STAT_SELECT_GROUP_B:
-            field_scale_status_stat(record, 3, scale, 0);
-            field_scale_status_stat(record, 5, scale, 0);
-            field_scale_status_stat(record, 6, scale, 0);
-            break;
+
+                break;
+            case FIELD_STAT_SELECT_GROUP_A:
+                field_scale_status_stat(record, 0, scale, 0);
+                field_scale_status_stat(record, 1, scale, 0);
+                field_scale_status_stat(record, 2, scale, 0);
+                break;
+            case FIELD_STAT_SELECT_GROUP_B:
+                field_scale_status_stat(record, 3, scale, 0);
+                field_scale_status_stat(record, 5, scale, 0);
+                field_scale_status_stat(record, 6, scale, 0);
+                break;
         }
     }
 }
@@ -369,12 +393,14 @@ s32 field_is_actor_in_front(s32 actor_id, s32 observer_id)
     facing = field_get_actor_facing(observer_id);
     field_get_actor_position(actor_id, &actor_position);
     field_get_actor_position(observer_id, &observer_position);
+
     if (actor_position.x - observer_position.x < 0)
     {
         if (facing < FIELD_FACING_NEGATIVE_X_MIN || facing > FIELD_FACING_NEGATIVE_X_MAX)
         {
             return 0;
         }
+
         return -1;
     }
     else
@@ -383,6 +409,7 @@ s32 field_is_actor_in_front(s32 actor_id, s32 observer_id)
         {
             return -1;
         }
+
         return 0;
     }
 }
@@ -403,6 +430,7 @@ void field_damage_status(FieldStatusState* state, s32 damage)
     else
     {
         remaining = state->current - damage;
+
         if (remaining >= 0)
         {
             state->current = remaining;
@@ -427,6 +455,7 @@ void field_heal_status(FieldStatusState* state, s32 amount)
     maximum = state->maximum;
     sum = state->current + amount;
     state->current = sum;
+
     if (maximum < sum)
     {
         state->current = maximum;
@@ -457,7 +486,9 @@ void field_clear_status_effect(FieldStatusRecord* record, u32 effect_index)
         record->status_timers[effect_index] = 0;
         return;
     }
+
     record->state->effect_flags &= ~FIELD_STATUS_TIMED_EFFECT_FLAGS_MASK;
+
     for (timer_index = FIELD_STATUS_TIMER_COUNT - 1; timer_index >= 0; timer_index--)
     {
         record->status_timers[timer_index] = 0;
@@ -483,6 +514,7 @@ void field_golem_select_logic_cell(s32 actor_id)
     u32 row;
 
     chance = g_field_game_state->characters[FIELD_PARTY_COMPANION].unk150[0].derived.bytes[2];
+
     if (rand() % 100 < chance)
     {
         field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_LOGIC_CELL, FIELD_LOGIC_RANDOM);
@@ -490,16 +522,20 @@ void field_golem_select_logic_cell(s32 actor_id)
     else
     {
         grid_bound = g_field_game_state->characters[FIELD_PARTY_COMPANION].unk150[0].derived.bytes[0] >> 4;
+
         if (grid_bound < FIELD_LOGIC_GRID_BOUND_MIN || grid_bound > FIELD_LOGIC_GRID_BOUND_MAX)
         {
             record_game_diagnostic(DIAG_BAD_LOGIC_GRID_SIZE, grid_bound, 0, 0);
             field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_LOGIC_CELL, FIELD_LOGIC_INVALID);
         }
+
         column = field_select_distance_bucket(actor_id);
+
         if (column >= grid_bound)
         {
             column = grid_bound - 1;
         }
+
         row = field_find_status_record(FIELD_PARTY_COMPANION)->state->status_intensity * grid_bound / FIELD_INTENSITY_RANGE;
         field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_LOGIC_CELL, row * GOLEM_GRID_WIDTH + column);
     }
@@ -519,6 +555,7 @@ void field_golem_publish_logic_cell(s32 cell_index)
     s32 chance;
 
     chance = g_field_game_state->characters[FIELD_PARTY_COMPANION].unk150[0].derived.bytes[2];
+
     if (rand() * 100 / (RAND_MAX + 1) < chance)
     {
         field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_LOGIC_BLOCK, FIELD_LOGIC_FALLBACK_BLOCK);
@@ -556,18 +593,18 @@ void field_raise_companion_intensity(s32 amount)
 
     switch (value / FIELD_INTENSITY_QUARTER)
     {
-    case 0:
-        state->status_intensity = value + (amount * 4);
-        break;
-    case 1:
-        state->status_intensity = value + (amount * 3);
-        break;
-    case 2:
-        state->status_intensity = value + (amount * 2);
-        break;
-    case 3:
-        state->status_intensity = value + amount;
-        break;
+        case 0:
+            state->status_intensity = value + (amount * 4);
+            break;
+        case 1:
+            state->status_intensity = value + (amount * 3);
+            break;
+        case 2:
+            state->status_intensity = value + (amount * 2);
+            break;
+        case 3:
+            state->status_intensity = value + amount;
+            break;
     }
 
     if (record->state->status_intensity >= FIELD_INTENSITY_RANGE)
@@ -593,6 +630,7 @@ void field_battle_setup(s32 group)
     {
         field_battle_reset_context();
         count = field_build_party_records();
+
         if (g_field_duel_mode != 0)
         {
             field_set_script_var(0, FIELD_VAR_ALLY_COUNT, 1);
@@ -601,7 +639,9 @@ void field_battle_setup(s32 group)
         {
             field_set_script_var(0, FIELD_VAR_ALLY_COUNT, count);
         }
+
         count = field_build_group_monster_records(group);
+
         if (g_field_duel_mode != 0)
         {
             field_set_script_var(0, FIELD_VAR_ENEMY_COUNT, 1);
@@ -643,61 +683,65 @@ static void field_battle_reset_context(void)
 }
 
 /**
- * @brief Compute the battle's base monster level from the hero's level or the land.
+ * @brief Compute the battle's base monster level from the placed land count or the land.
  *
- * The level rank is 1.5 times the hero's level when @p use_hero_level or
- * FIELD_LEVEL_FLAG_HERO is set, otherwise the current land's distance
+ * The level rank is 1.5 times the placed land count when @p use_land_count or
+ * FIELD_LEVEL_FLAG_LAND_COUNT is set, otherwise the current land's distance
  * (field_get_land_distance). FIELD_DIFFICULTY_HARD adds FIELD_LEVEL_RANK_HARD_BONUS
  * ranks and FIELD_DIFFICULTY_HARDEST uses the top rank. The rank's level
  * from g_field_monster_level_by_rank is clamped to FIELD_VAR_MONSTER_LEVEL_MIN
  * and _MAX, then to FIELD_LEVEL_MAX.
  *
- * @param use_hero_level Nonzero to base the level on the hero's level.
+ * @param use_land_count Nonzero to base the level on the placed land count.
  * @return Base monster level, at most FIELD_LEVEL_MAX.
  */
-s32 field_compute_base_monster_level(s32 use_hero_level)
+s32 field_compute_base_monster_level(s32 use_land_count)
 {
-    s32 use_hero;
+    s32 base_on_land_count;
     s32 difficulty;
     s32 rank;
     s32 level;
     u32 level_min;
     u32 level_max;
 
-    use_hero = use_hero_level;
-    if (field_get_script_var(0, FIELD_VAR_LEVEL_FLAGS) & FIELD_LEVEL_FLAG_HERO)
+    base_on_land_count = use_land_count;
+
+    if (field_get_script_var(0, FIELD_VAR_LEVEL_FLAGS) & FIELD_LEVEL_FLAG_LAND_COUNT)
     {
-        use_hero = 1;
+        base_on_land_count = 1;
     }
+
     difficulty = field_get_script_var(0, FIELD_VAR_DIFFICULTY);
 
-    if (use_hero != 0)
+    if (base_on_land_count != 0)
     {
         switch (difficulty)
         {
-        case FIELD_DIFFICULTY_HARD:
-            rank = g_field_game_state->control.fields.hero_level + FIELD_LEVEL_RANK_HARD_BONUS;
-            break;
-        case FIELD_DIFFICULTY_HARDEST:
-            rank = FIELD_LEVEL_RANK_COUNT - 1;
-            break;
-        default:
-            rank = g_field_game_state->control.fields.hero_level;
-            break;
+            case FIELD_DIFFICULTY_HARD:
+                rank = g_field_game_state->control.fields.placed_land_count + FIELD_LEVEL_RANK_HARD_BONUS;
+                break;
+            case FIELD_DIFFICULTY_HARDEST:
+                rank = FIELD_LEVEL_RANK_COUNT - 1;
+                break;
+            default:
+                rank = g_field_game_state->control.fields.placed_land_count;
+                break;
         }
+
         rank = (rank * 3) / 2;
     }
     else
     {
         rank = field_get_land_distance(g_music_track_index);
+
         switch (difficulty)
         {
-        case FIELD_DIFFICULTY_HARD:
-            rank += FIELD_LEVEL_RANK_HARD_BONUS;
-            break;
-        case FIELD_DIFFICULTY_HARDEST:
-            rank = FIELD_LEVEL_RANK_COUNT - 1;
-            break;
+            case FIELD_DIFFICULTY_HARD:
+                rank += FIELD_LEVEL_RANK_HARD_BONUS;
+                break;
+            case FIELD_DIFFICULTY_HARDEST:
+                rank = FIELD_LEVEL_RANK_COUNT - 1;
+                break;
         }
     }
 
@@ -709,6 +753,7 @@ s32 field_compute_base_monster_level(s32 use_hero_level)
     level = g_field_monster_level_by_rank[rank];
     level_min = field_get_script_var(0, FIELD_VAR_MONSTER_LEVEL_MIN);
     level_max = field_get_script_var(0, FIELD_VAR_MONSTER_LEVEL_MAX);
+
     if (level < level_min)
     {
         level = level_min;
@@ -722,6 +767,7 @@ s32 field_compute_base_monster_level(s32 use_hero_level)
     {
         level = FIELD_LEVEL_MAX;
     }
+
     return level;
 }
 
@@ -741,6 +787,7 @@ static s32 field_build_party_records(void)
     u32 nibbles;
 
     active_count = 0;
+
     for (party_index = 0; party_index < FIELD_PARTY_SIZE; party_index++)
     {
         if (g_field_game_state->characters[party_index].name[0] != 0)
@@ -753,9 +800,11 @@ static s32 field_build_party_records(void)
             {
                 g_field_battle->records[party_index].unk0 |= FIELD_RECORD_PARTY_SIDE;
             }
+
             g_field_battle->records[party_index].race = FIELD_PARTY_RACE;
             g_field_battle->records[party_index].meta.bytes.id = party_index;
             g_field_battle->records[party_index].meta.bits.active = 1;
+
             if (g_field_duel_mode != 0)
             {
                 g_field_battle->records[party_index].meta.bits.ally = (party_index == 0) ? 0xFF : 0;
@@ -764,6 +813,7 @@ static s32 field_build_party_records(void)
             {
                 g_field_battle->records[party_index].meta.bits.ally = 1;
             }
+
             {
                 FieldBattleContext* battle = g_field_battle;
 
@@ -771,12 +821,14 @@ static s32 field_build_party_records(void)
                 battle->records[party_index].counter = FIELD_PARTY_COUNTER_START;
                 battle->records[party_index].meta.bytes.unk2 = 0;
             }
+
             g_field_battle->records[party_index].counter_reset = FIELD_PARTY_COUNTER_START;
             g_field_battle->records[party_index].status_flags = 0;
             g_field_battle->records[party_index].unkC = 0;
             g_field_battle->records[party_index].state = field_find_object_state(party_index);
             g_field_battle->records[party_index].unk18 = g_field_game_state->characters[party_index].equipment->derived.values[0];
             g_field_battle->records[party_index].unk1A = 25;
+
             for (stat_index = 0; stat_index < 4; stat_index++)
             {
                 g_field_battle->records[party_index].equipment_stats[stat_index] = 0;
@@ -795,8 +847,10 @@ static s32 field_build_party_records(void)
                     }
                 }
             }
+
             field_rebuild_equipment_status_flags(&g_field_battle->records[party_index]);
             nibbles = g_field_game_state->characters[party_index].equipment->bonus_nibbles.word;
+
             for (index = 0; index < FIELD_STATUS_STAT_COUNT; index++)
             {
                 stat = field_get_equipped_stat(&g_field_game_state->characters[party_index], index);
@@ -805,30 +859,36 @@ static s32 field_build_party_records(void)
                 nibbles >>= 4;
                 g_field_battle->records[party_index].element_attack[index] += g_field_battle->element_levels[index];
             }
+
             /* index is 8 here, so this clears unk4C (rewritten below). */
             g_field_battle->records[party_index].element_defense[index] = 0;
             g_field_battle->records[party_index].immunity_flags = 0;
             g_field_battle->records[party_index].weak_elements = 0;
             g_field_battle->records[party_index].resist_elements = 0;
+
             for (equipment_index = 1; equipment_index < FIELD_EQUIPMENT_SLOT_COUNT; equipment_index++)
             {
                 if (g_field_game_state->characters[party_index].equipment[equipment_index].name[0] != 0)
                 {
                     /* Same (equipment + index)-> form as the armor totals above. */
                     nibbles = (g_field_game_state->characters[party_index].equipment + equipment_index)->bonus_nibbles.word;
+
                     for (index = 0; index < FIELD_STATUS_STAT_COUNT; index++)
                     {
                         g_field_battle->records[party_index].element_defense[index] += nibbles & 0xF;
                         nibbles >>= 4;
                     }
+
                     g_field_battle->records[party_index].immunity_flags |=
                         (g_field_game_state->characters[party_index].equipment + equipment_index)->status_flags;
                     g_field_battle->records[party_index].resist_elements |=
                         (g_field_game_state->characters[party_index].equipment + equipment_index)->element_flags;
                 }
             }
+
             g_field_battle->records[party_index].template = NULL;
             g_field_battle->records[party_index].unk4C = g_field_game_state->characters[party_index].companion_ability;
+
             if (g_field_duel_mode != 0)
             {
                 g_field_battle->records[party_index].state->maximum = g_field_game_state->characters[party_index].hp * FIELD_DUEL_HP_SCALE;
@@ -840,15 +900,19 @@ static s32 field_build_party_records(void)
             {
                 g_field_battle->records[party_index].state->maximum = g_field_game_state->characters[party_index].hp;
             }
+
             {
                 FieldStatusState* state;
 
                 strength = g_field_battle->records[party_index].stats[3] * 2;
+
                 if (FIELD_ITEM_TYPE(g_field_game_state->characters[party_index].equipment[FIELD_WEAPON_SLOT].info.word) == FIELD_ITEM_TYPE_FOOTPRINT_BONUS)
                 {
                     strength += FIELD_FOOTPRINT_WEAPON_BONUS;
                 }
+
                 state = g_field_battle->records[party_index].state;
+
                 if (strength <= FIELD_FOOTPRINT_STRENGTH_MAX)
                 {
                     state->effect_footprint_strength = strength;
@@ -858,13 +922,16 @@ static s32 field_build_party_records(void)
                     state->effect_footprint_strength = FIELD_FOOTPRINT_STRENGTH_MAX;
                 }
             }
+
             if ((g_field_game_state->characters[party_index].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_COMPANION)
             {
                 field_publish_companion_flags();
             }
-            active_count += 1;
+
+            active_count++;
         }
     }
+
     return active_count;
 }
 
@@ -878,5 +945,6 @@ static void field_publish_companion_flags(void)
     {
         record_game_diagnostic(DIAG_ERROR, DIAG_BAD_REGION_INDEX, g_field_game_state->joined_pet, 0);
     }
+
     field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_COMPANION_FLAGS, g_field_game_state->pets[g_field_game_state->joined_pet].unk48.word);
 }

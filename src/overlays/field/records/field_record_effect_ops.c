@@ -3,11 +3,12 @@
  * @brief Menu slot effects (rolling and grading) and pending effects of the stored companion records.
  */
 
-#include "main/audio/game_audio.h"
 #include "common.h"
 #include <rand.h>
+
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
+#include "main/audio/game_audio.h"
 
 /** @brief First item id with a row of random effect picks in resource 0xB. */
 #define FIELD_EFFECT_ITEM_BASE 0x58
@@ -118,7 +119,7 @@ void field_roll_menu_slot_effect(s32 group_index, s32 slot_index)
         random_value = rand();
         effect_index = table->picks[g_field_game_state->menu_slots[group_index].items[0] - FIELD_EFFECT_ITEM_BASE][random_value & 0xF];
 
-        for (; index < (s32)g_field_game_state->menu_slots[group_index].flags.bits.item_count; index++)
+        for (; index < g_field_game_state->menu_slots[group_index].flags.bits.item_count; index++)
         {
             random_value = rand();
             selection = table->picks[g_field_game_state->menu_slots[group_index].items[index] - FIELD_EFFECT_ITEM_BASE][random_value & 0xF];
@@ -366,12 +367,12 @@ static void field_apply_region_effect(PetRecord* record, s32 effect, FieldRegion
             {
                 switch (kind)
                 {
-                case FIELD_EFFECT_KIND_WEAPON:
-                    record->weapon_id = amount;
-                    break;
-                case FIELD_EFFECT_KIND_ARMOR:
-                    record->armor_ids[0] = amount;
-                    break;
+                    case FIELD_EFFECT_KIND_WEAPON:
+                        record->weapon_id = amount;
+                        break;
+                    case FIELD_EFFECT_KIND_ARMOR:
+                        record->armor_ids[0] = amount;
+                        break;
                 }
             }
         }

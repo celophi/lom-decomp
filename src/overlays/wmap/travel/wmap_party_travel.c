@@ -1,27 +1,28 @@
+#include "common.h"
+#include <inline_c.h>
+#include <libetc.h>
+#include <libgte.h>
+
+#include "../internal/wmap_cells.h"
+#include "../internal/wmap_land_layout.h"
 #include "../internal/wmap_land_transition.h"
 #include "../internal/wmap_main.h"
+#include "../internal/wmap_map_display.h"
 #include "../internal/wmap_party_travel.h"
 #include "../internal/wmap_pathfinding.h"
-#include "../internal/wmap_map_display.h"
 #include "../internal/wmap_resource_support.h"
-#include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_sequence_runtime.h"
+#include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_travel_sequences.h"
-#include "../internal/wmap_land_layout.h"
-#include <libgte.h>
-#include <libetc.h>
-#include <inline_c.h>
-#include "sdk/gte_dmpsx_compat.h"
-#include "main/cdrom.h"
-#include "main/audio/akao_cmd.h"
-#include "../internal/wmap_cells.h"
 #include "../internal/wmap_view_effects.h"
+#include "common/saved_game.h"
 #include "main/audio/akao.h"
+#include "main/audio/akao_cmd.h"
+#include "main/cdrom.h"
+#include "sdk/gte_dmpsx_compat.h"
 
 #define WMAP_TRAVEL_STEP 4
 #define WMAP_TRAVEL_ANIMATION_BYTES 0x400
-#define WMAP_TRAVEL_SCALE_INDEX 15
-#define WMAP_TRAVEL_SHADE 128
 #define WMAP_TRAVEL_SOUND 21
 #define WMAP_TRAVEL_TEXTURE_ROW 0x100
 #define WMAP_TRAVEL_OT_FALLBACK 31
@@ -43,13 +44,6 @@ enum WmapTravelSequence
     WMAP_TRAVEL_UP
 };
 
-/** @brief Animation resource slot shared with the sequence interpreter. */
-typedef struct
-{
-    s32 unknown_00;
-    u8* data;
-} WmapTravelAnimation;
-
 /** @brief Screen coordinates in the packed format used by sprite rendering. */
 typedef union
 {
@@ -61,11 +55,10 @@ typedef union
     } point;
 } WmapTravelScreen;
 
-extern WmapTravelAnimation g_wmap_actor_animations[];
-extern const WmapTravelScreen D_8004FD04[];
-extern u8 D_800DBE98[];
-extern u8 D_800DC298[];
-extern u8 D_800DC698[];
+extern const WmapTravelScreen g_wmap_spirit_view_cell_positions[];
+extern u8 g_wmap_travel_animation_buffer[];
+extern u8 g_wmap_travel_second_animation_buffer[];
+extern u8 g_wmap_travel_third_animation_buffer[];
 extern s32 g_wmap_travel_sound_active;
 
 void wmap_update_travelers(void);
@@ -88,46 +81,55 @@ void wmap_update_travelers(void)
     s16 next_x, next_y;
 
     g_wmap_party_moving = 0;
+
     for (i = 0; i < WMAP_TRAVELER_COUNT; i++)
     {
         traveler = &g_wmap_travelers[i];
         position_x = traveler->position_x;
         target_x = traveler->target_x;
         interpolating = 0;
+
         if (position_x != target_x)
         {
             interpolating = 1;
+
             if (target_x < position_x)
             {
-                traveler->position_x = (u16)traveler->position_x - WMAP_TRAVEL_STEP;
+                traveler->position_x = traveler->position_x - WMAP_TRAVEL_STEP;
             }
             else
             {
-                traveler->position_x = (u16)traveler->position_x + WMAP_TRAVEL_STEP;
+                traveler->position_x = traveler->position_x + WMAP_TRAVEL_STEP;
             }
         }
+
         position_y = traveler->position_y;
         target_y = traveler->target_y;
+
         if (position_y != target_y)
         {
             interpolating = 1;
+
             if (target_y < position_y)
             {
-                traveler->position_y = (u16)traveler->position_y - WMAP_TRAVEL_STEP;
+                traveler->position_y = traveler->position_y - WMAP_TRAVEL_STEP;
             }
             else
             {
-                traveler->position_y = (u16)traveler->position_y + WMAP_TRAVEL_STEP;
+                traveler->position_y = traveler->position_y + WMAP_TRAVEL_STEP;
             }
         }
+
         if (interpolating == 0)
         {
             if ((traveler->cell_x != traveler->next_cell_x || traveler->cell_y != traveler->next_cell_y) && i == 0)
             {
                 g_wmap_party_cell_dirty = 1;
             }
+
             traveler->cell_x = traveler->next_cell_x;
             traveler->cell_y = traveler->next_cell_y;
+
             if (traveler->destination_x != traveler->cell_x || traveler->destination_y != traveler->cell_y)
             {
                 previous_cell_x = traveler->next_cell_x;
@@ -140,30 +142,36 @@ void wmap_update_travelers(void)
                 next_y = g_wmap_travelers[i].path_y.steps[path_index].cell;
                 traveler->next_cell_y = next_y;
                 traveler->target_y = (next_y - 1) * WMAP_CELL_SIZE;
+
                 if (g_wmap_scripted_travel_active != 0 && i == WMAP_SCRIPTED_TRAVELER)
                 {
-                    g_wmap_view_scroll_mode = 2;
-                    g_wmap_scroll_remaining_x = ((scripted_traveler = &g_wmap_travelers[WMAP_SCRIPTED_TRAVELER])->next_cell_x - previous_cell_x) * WMAP_CELL_SPACING;
+                    g_wmap_view_scroll_mode = WMAP_SCROLL_SCRIPTED;
+                    g_wmap_scroll_remaining_x =
+                        ((scripted_traveler = &g_wmap_travelers[WMAP_SCRIPTED_TRAVELER])->next_cell_x - previous_cell_x) * WMAP_CELL_SPACING;
                     g_wmap_scroll_remaining_y = (scripted_traveler->next_cell_y - previous_cell_y) * WMAP_CELL_SPACING;
                 }
+
                 traveler->moving = 1;
             }
             else
             {
                 traveler->moving = 0;
                 g_wmap_sprite_actors[i].sequence = WMAP_TRAVEL_IDLE;
+
                 if (i == WMAP_SCRIPTED_TRAVELER && g_wmap_scripted_travel_active != 0)
                 {
                     g_wmap_scripted_travel_active = 0;
                 }
             }
         }
+
         if (g_wmap_travelers[i].moving != 0)
         {
             if (traveler->target_x == traveler->position_x)
             {
                 target_y = traveler->target_y;
                 position_y = traveler->position_y;
+
                 if (target_y > position_y)
                 {
                     g_wmap_sprite_actors[i].sequence = WMAP_TRAVEL_DOWN;
@@ -173,10 +181,12 @@ void wmap_update_travelers(void)
                     g_wmap_sprite_actors[i].sequence = WMAP_TRAVEL_UP;
                 }
             }
+
             if (traveler->target_y == traveler->position_y)
             {
                 target_x = traveler->target_x;
                 position_x = traveler->position_x;
+
                 if (target_x > position_x)
                 {
                     g_wmap_sprite_actors[i].sequence = WMAP_TRAVEL_RIGHT;
@@ -187,8 +197,10 @@ void wmap_update_travelers(void)
                 }
             }
         }
+
         g_wmap_party_moving |= traveler->moving;
     }
+
     if (g_wmap_party_moving != g_wmap_travel_sound_active)
     {
         if (g_wmap_party_moving != 0 && g_wmap_sequence_count == 0)
@@ -196,12 +208,14 @@ void wmap_update_travelers(void)
             wmap_play_sound(WMAP_TRAVEL_SOUND, AKAO_SFX_DEFAULT_VOLUME);
             g_wmap_travel_sound_active = g_wmap_party_moving;
         }
+
         if (g_wmap_party_moving != g_wmap_travel_sound_active && g_wmap_party_moving == 0)
         {
             akao_release_all_sfx();
             g_wmap_travel_sound_active = g_wmap_party_moving;
         }
     }
+
     if (g_wmap_party_cell_dirty != 0)
     {
         wmap_advance_travel_day();
@@ -233,9 +247,11 @@ void wmap_update_party_travel(void)
         for (i = 0; i < WMAP_TRAVELER_COUNT; i++)
         {
             sprite = &g_wmap_sprite_actors[i];
+
             if (sprite->resource_index != -1)
             {
                 wmap_step_actor_animation(sprite, &g_wmap_actor_animations[i]);
+
                 if (g_wmap_view_mode == 0)
                 {
                     screen.point.x = g_wmap_travelers[i].position_x;
@@ -252,45 +268,52 @@ void wmap_update_party_travel(void)
                     gte_stszotz(&depth);
                     depth_index = (WMAP_TRAVEL_DEPTH_ORIGIN - depth) / 4;
                     ot_index = depth_index + WMAP_TRAVEL_OT_BASE;
+
                     if ((u32)(depth_index + 11) >= WMAP_TRAVEL_DEPTH_RANGE)
                     {
                         ot_index = WMAP_TRAVEL_OT_FALLBACK;
                     }
+
                     if (wmap_get_point_display_mode(g_wmap_travelers[i].position_x * WMAP_CELL_SPACING / WMAP_CELL_SIZE + WMAP_CELL_SPACING,
-                                                    g_wmap_travelers[i].position_y * WMAP_CELL_SPACING / WMAP_CELL_SIZE + WMAP_CELL_SPACING,
-                                                    scale) != 0)
+                                                    g_wmap_travelers[i].position_y * WMAP_CELL_SPACING / WMAP_CELL_SIZE + WMAP_CELL_SPACING, scale) != 0)
                     {
                         wmap_draw_actor_sprite(sprite, screen.packed, i, ot_index, WMAP_TRAVEL_TEXTURE_ROW + i * WMAP_TRAVEL_TEXTURE_ROW);
                     }
                 }
+
                 if (g_wmap_view_mode == 1)
                 {
-                    packed_position = D_8004FD04[g_wmap_travelers[i].cell_x + g_wmap_travelers[i].cell_y * WMAP_GRID_SIZE].packed;
+                    packed_position = g_wmap_spirit_view_cell_positions[g_wmap_travelers[i].cell_x + g_wmap_travelers[i].cell_y * WMAP_GRID_SIZE].packed;
                     flat_x_bits = packed_position + 14;
                     packed_position &= 0xFFFF0000;
                     flat_x_bits &= 0xFFFF;
                     packed_position |= flat_x_bits;
                     flat_y = packed_position >> 16;
                     packed_position &= 0xFFFF;
-                    wmap_draw_actor_sprite(sprite, (u16)packed_position | ((flat_y + 28) << 16), i, WMAP_TRAVEL_OT_FALLBACK, WMAP_TRAVEL_TEXTURE_ROW + i * WMAP_TRAVEL_TEXTURE_ROW);
+                    wmap_draw_actor_sprite(sprite, (u16)packed_position | ((flat_y + 28) << 16), i, WMAP_TRAVEL_OT_FALLBACK,
+                                           WMAP_TRAVEL_TEXTURE_ROW + i * WMAP_TRAVEL_TEXTURE_ROW);
                 }
             }
         }
     }
+
     if ((g_wmap_buttons_repeat & WMAP_PAD_CONFIRM) && g_wmap_party_moving == 0 && g_wmap_artifact_placement_active == 0)
     {
         selected_x = g_wmap_view.x / WMAP_CELL_SPACING + g_wmap_cursor_column;
         selected_y = g_wmap_view.y / WMAP_CELL_SPACING + g_wmap_cursor_row;
+
         if (g_wmap_cells[selected_x][selected_y].travel_allowed != 0 && g_wmap_view_mode == 0 && g_wmap_selection_phase == 0)
         {
             if (selected_x != g_wmap_travelers[0].cell_x || (at_destination = 1, selected_y != g_wmap_travelers[0].cell_y))
             {
                 at_destination = 0;
             }
+
             g_wmap_exit_frame = at_destination;
+
             if (at_destination == 0)
             {
-                if (g_wmap_cells[selected_x][selected_y].land_id == WMAP_SPECIAL_TRAVEL_LAND)
+                if (g_wmap_cells[selected_x][selected_y].land_id == FIELD_LAND_LUCEMIA)
                 {
                     wmap_start_sequence(wmap_run_special_travel);
                 }
@@ -298,10 +321,11 @@ void wmap_update_party_travel(void)
                 {
                     g_wmap_travelers[0].destination_x = selected_x;
                     g_wmap_travelers[0].destination_y = selected_y;
+
                     if (selected_x != g_wmap_travelers[0].cell_x || selected_y != g_wmap_travelers[0].cell_y)
                     {
                         wmap_build_route(g_wmap_travelers[0].cell_x, g_wmap_travelers[0].cell_y, selected_x, selected_y, g_wmap_travelers[0].path_x.cells,
-                                      g_wmap_travelers[0].path_y.cells);
+                                         g_wmap_travelers[0].path_y.cells);
                         g_wmap_travelers[0].moving = 1;
                         /* The route begins with the cell the party already occupies. */
                         g_wmap_travelers[0].path_index = 1;
@@ -318,6 +342,7 @@ void wmap_update_party_travel(void)
             }
         }
     }
+
     wmap_update_travelers();
 }
 
@@ -331,10 +356,11 @@ void wmap_init_party_travel(void)
     WmapTraveler* traveler;
     WmapSpriteActor* sprite;
 
-    cdrom_queue_read(WMAP_TRAVEL_ANIMATION_RESOURCE, D_800DBE98);
+    cdrom_queue_read(WMAP_TRAVEL_ANIMATION_RESOURCE, g_wmap_travel_animation_buffer);
     cdrom_wait_queue_empty();
-    resource = D_800DBE98;
+    resource = g_wmap_travel_animation_buffer;
     g_wmap_sprite_actors[0].resource_index = 0;
+
     for (i = 0; i < WMAP_TRAVELER_COUNT; i++)
     {
         traveler = &g_wmap_travelers[i];
@@ -350,15 +376,17 @@ void wmap_init_party_travel(void)
         traveler->position_x = 0;
         traveler->moving = 0;
         sprite = &g_wmap_sprite_actors[i];
-        sprite->scale_index = WMAP_TRAVEL_SCALE_INDEX;
+        sprite->scale_index = WMAP_SPRITE_SCALE_FULL;
         sprite->previous_sequence = -1;
-        sprite->target_shade = WMAP_TRAVEL_SHADE;
-        sprite->shade = WMAP_TRAVEL_SHADE;
+        sprite->target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
+        sprite->shade = WMAP_SPRITE_SHADE_NEUTRAL;
         g_wmap_actor_animations[i].data = resource + i * WMAP_TRAVEL_ANIMATION_BYTES;
     }
+
     g_wmap_entry_day = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
     wmap_set_traveler_position(0, g_wmap_travelers[0].cell_x, g_wmap_travelers[0].cell_y);
-    if (g_wmap_cells[g_wmap_travelers[0].cell_x][g_wmap_travelers[0].cell_y].land_id == WMAP_SPECIAL_TRAVEL_LAND)
+
+    if (g_wmap_cells[g_wmap_travelers[0].cell_x][g_wmap_travelers[0].cell_y].land_id == FIELD_LAND_LUCEMIA)
     {
         g_wmap_input_locked = 1;
         g_wmap_buttons_held = 0;
@@ -369,25 +397,30 @@ void wmap_init_party_travel(void)
         g_wmap_sprite_actors[0].resource_index = -1;
         g_wmap_pending_event_count++;
     }
+
     resource_id = WMAP_TRAVEL_SPRITE_RESOURCE;
+
     if (g_wmap_entry_day != 0)
     {
         resource_id = WMAP_TRAVEL_ALTERNATE_SPRITE_RESOURCE;
     }
+
     wmap_load_tim_file(resource_id);
+
     if (g_wmap_second_traveler_enabled != 0)
     {
-        cdrom_queue_read(WMAP_TRAVEL_SECOND_ANIMATION_RESOURCE, D_800DC298);
+        cdrom_queue_read(WMAP_TRAVEL_SECOND_ANIMATION_RESOURCE, g_wmap_travel_second_animation_buffer);
         g_wmap_sprite_actors[1].resource_index = 1;
-        wmap_find_land_cell(27, &first_x, &first_y);
+        wmap_find_land_cell(FIELD_LAND_SS_BUCCANEER, &first_x, &first_y);
         wmap_set_traveler_position(1, first_x, first_y);
         cdrom_wait_queue_empty();
     }
+
     if (g_wmap_third_traveler_enabled != 0)
     {
-        cdrom_queue_read(WMAP_TRAVEL_THIRD_ANIMATION_RESOURCE, D_800DC698);
+        cdrom_queue_read(WMAP_TRAVEL_THIRD_ANIMATION_RESOURCE, g_wmap_travel_third_animation_buffer);
         g_wmap_sprite_actors[2].resource_index = 2;
-        wmap_find_land_cell(3, &second_x, &second_y);
+        wmap_find_land_cell(FIELD_LAND_POLPOTA_HARBOR, &second_x, &second_y);
         wmap_set_traveler_position(2, second_x, second_y);
         cdrom_wait_queue_empty();
     }

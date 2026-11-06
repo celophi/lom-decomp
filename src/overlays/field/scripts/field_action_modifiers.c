@@ -4,13 +4,14 @@
  *        handling and the attack/defense modifiers they share.
  */
 
-#include "main/audio/game_audio.h"
 #include "common.h"
-#include "../internal/field_calls.h"
-#include "../internal/field_script.h"
-#include "../internal/field_records.h"
+
 #include "../internal/field_actor.h"
+#include "../internal/field_calls.h"
+#include "../internal/field_records.h"
+#include "../internal/field_script.h"
 #include "../internal/field_state_ops.h"
+#include "main/audio/game_audio.h"
 
 /** @brief field_battle_side_defeated results. */
 #define FIELD_BATTLE_ONGOING 0
@@ -19,7 +20,6 @@
 
 /** @brief Record id whose script variables hold the companion values. */
 #define FIELD_COMPANION_RECORD_ID 2
-
 
 /** @brief FieldStatusRecordMeta::bytes.unk2 bit: actions never apply to the record. */
 #define FIELD_STATUS_META_UNTARGETABLE 0x4000
@@ -93,9 +93,6 @@
 
 /** @brief Action kind whose extra effects need a target weak to its elements. */
 #define FIELD_ACTION_KIND_ELEMENTAL 2
-
-/** @brief Kind of an action descriptor (low nibble of its first word). */
-#define FIELD_DESCRIPTOR_KIND(descriptor) ((descriptor)->info.word & 0xF)
 
 /** @brief Side rule of an action descriptor (bits 4-5). */
 #define FIELD_DESCRIPTOR_SIDE_RULE(descriptor) (((descriptor)->info.word >> 4) & 3)
@@ -205,23 +202,23 @@ s32 field_action_target_applies(void)
 
     switch (side_rule)
     {
-    case 0:
-        if (opposed != 0)
-        {
-            return -1;
-        }
+        case 0:
+            if (opposed != 0)
+            {
+                return -1;
+            }
 
-        return 0;
-    case 1:
-        if (opposed != 0)
-        {
-            return -1;
-        }
+            return 0;
+        case 1:
+            if (opposed != 0)
+            {
+                return -1;
+            }
 
-        return 0;
-    case 2:
-    case 3:
-        return -1;
+            return 0;
+        case 2:
+        case 3:
+            return -1;
     }
 }
 
@@ -500,7 +497,8 @@ s32 field_action_damage_status(void)
 
     if ((g_field_battle->target->weak_elements & element_mask) || (FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor) != FIELD_ACTION_KIND_ELEMENTAL))
     {
-        field_apply_status_effect(g_field_battle->attacker, g_field_battle->target, 0, status.status.effect, (status.status.chance + 1) * 16, status.status.duration * 16);
+        field_apply_status_effect(g_field_battle->attacker, g_field_battle->target, 0, status.status.effect, (status.status.chance + 1) * 16,
+                                  status.status.duration * 16);
     }
 
     field_apply_on_hit_statuses();
@@ -529,7 +527,8 @@ s32 field_action_damage_drain(void)
         return 0;
     }
 
-    if ((g_field_battle->target->weak_elements & params.roll.element_mask) || (FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor) != FIELD_ACTION_KIND_ELEMENTAL))
+    if ((g_field_battle->target->weak_elements & params.roll.element_mask) ||
+        (FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor) != FIELD_ACTION_KIND_ELEMENTAL))
     {
         if (params.roll.spread == 0)
         {
@@ -640,7 +639,7 @@ s32 field_action_damage_conditional(void)
         damage = field_apply_damage(attack, defense);
 
         field_apply_status_effect(g_field_battle->attacker, g_field_battle->target, 0, params.conditional.effect, (params.conditional.chance + 1) << 4,
-                      params.conditional.duration << 4);
+                                  params.conditional.duration << 4);
     }
     else
     {
@@ -677,18 +676,18 @@ s32 field_action_damage_modify(void)
 
     switch (params.modify.operation)
     {
-    case 0:
-        g_field_battle->target->state->status_intensity = 0;
-        break;
-    case 1:
-        g_field_battle->target->unkC |= params.modify.value << 16;
-        break;
-    case 2:
-        g_field_battle->target->unkC |= params.modify.value;
-        break;
-    case 3:
-        g_field_battle->target->weak_elements |= params.modify.value;
-        break;
+        case 0:
+            g_field_battle->target->state->status_intensity = 0;
+            break;
+        case 1:
+            g_field_battle->target->unkC |= params.modify.value << 16;
+            break;
+        case 2:
+            g_field_battle->target->unkC |= params.modify.value;
+            break;
+        case 3:
+            g_field_battle->target->weak_elements |= params.modify.value;
+            break;
     }
 
     return damage;
@@ -714,7 +713,7 @@ void field_action_scale_target_hp(void)
     roll = rand() % params.roll.spread;
     state = g_field_battle->target->state;
     hp = params.roll.base + roll;
-    hp = (u32)(state->current * hp) >> 4;
+    hp = (state->current * hp) >> 4;
 
     if (hp == 0)
     {
@@ -920,7 +919,8 @@ s32 field_apply_damage(u32 attack, u32 defense)
     attack = (u32)((g_field_battle->descriptor->info.bytes.power + bonus) * attack) >> 4;
     attack = field_apply_status_multipliers(attack * g_field_battle->action->damage_scale);
 
-    if ((field_count_status_slots(g_field_battle->attacker, FIELD_STATUS_ID_DRAIN) != 0) && (FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor) < FIELD_ACTION_KIND_ELEMENTAL))
+    if ((field_count_status_slots(g_field_battle->attacker, FIELD_STATUS_ID_DRAIN) != 0) &&
+        (FIELD_DESCRIPTOR_KIND(g_field_battle->descriptor) < FIELD_ACTION_KIND_ELEMENTAL))
     {
         attacker = g_field_battle->attacker;
 
@@ -1046,7 +1046,8 @@ void field_apply_on_hit_statuses(void)
             {
                 table = g_field_on_hit_statuses;
                 entry = &table[status - FIELD_STATUS_ID_ON_HIT_FIRST];
-                field_apply_status_effect(g_field_battle->attacker, g_field_battle->target, 0, status - FIELD_STATUS_ID_ON_HIT_FIRST, entry->chance, entry->duration * 16);
+                field_apply_status_effect(g_field_battle->attacker, g_field_battle->target, 0, status - FIELD_STATUS_ID_ON_HIT_FIRST, entry->chance,
+                                          entry->duration * 16);
             }
         }
     }

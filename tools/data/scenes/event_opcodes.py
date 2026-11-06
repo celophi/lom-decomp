@@ -122,7 +122,7 @@ CALCULATIONS = ("add", "subtract", "multiply", "unsigned_divide", "unsigned_rema
                 "bit_or", "bit_xor", "random", "unsigned_maximum", "unsigned_minimum", "unused")
 FIELD_COMMANDS = (
     "clear_params", "actor_status", "script_party", "end_interaction", "set_fade", "test_area",
-    "read_nibble_table", "get_part_position", "items", "query_records", "scroll_camera", "place_lands",
+    "read_nibble_table", "get_part_position", "items", "query_records", "scroll_camera", "award_land_artifacts",
     "set_actor_position", "set_render_state", "script_pad_party", "spawn_monster", "get_actor_position",
 )
 

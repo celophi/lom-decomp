@@ -1,6 +1,8 @@
+#include "common.h"
+#include <libspu.h>
+
 #include "internal/akao_control.h"
 #include "internal/akao_voice.h"
-#include <libspu.h>
 
 #define AKAO_INITIAL_SFX_TEMPO 0x66A80000
 #define AKAO_INITIAL_REVERB_DEPTH 0x03FFF000
@@ -34,7 +36,7 @@ void akao_driver_init_state(void)
     g_akao_seq_channel0 = &g_akao_seq_master_state;
     song = g_akao_seq_channel0;
     sequence_channel = g_akao_seq_channels;
-    g_akao_seq_channels_base = (u8*)sequence_channel;
+    g_akao_seq_channels_base = sequence_channel;
 
     D_8003EC30[1] = 0;
     D_8003EC30[0] = 0;

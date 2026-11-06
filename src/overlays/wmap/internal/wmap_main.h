@@ -1,9 +1,11 @@
 #ifndef WMAP_MAIN_H
 #define WMAP_MAIN_H
 
-#include "overlays/wmap/world_map.h"
+#include "common.h"
 #include <libgpu.h>
+
 #include "main/controller_internal.h"
+#include "overlays/wmap/world_map.h"
 
 /** @brief Red, green and blue bytes of a backdrop gradient corner color. */
 typedef struct
@@ -36,6 +38,15 @@ extern ControllerPortState* g_wmap_controller_ports;
 
 /** @brief Nonzero to defer filling a missing land-image cache entry. */
 extern s32 g_wmap_land_image_load_locked;
+
+/** @brief Direction in which the fade quad's RGB intensity changes. */
+typedef enum
+{
+    WMAP_FADE_HOLD = 0,
+    WMAP_FADE_INCREASE = 1,
+    WMAP_FADE_DECREASE = 2,
+    WMAP_FADE_DISABLED = 3
+} WmapFadeMode;
 
 /** @brief Shared input, menu, and fade state managed by the world-map loop. */
 extern s32 g_wmap_buttons_repeat;
@@ -135,6 +146,13 @@ extern WmapColor3 g_wmap_backdrop_target_color_0;
 extern WmapColor3 g_wmap_backdrop_target_color_1;
 extern WmapColor3 g_wmap_backdrop_target_color_2;
 extern WmapColor3 g_wmap_backdrop_target_color_3;
+
+/** @brief Set the backdrop fade targets: top corners 0-1 and bottom corners 2-3. */
+#define WMAP_SET_BACKDROP_TARGET(top_r, top_g, top_b, bottom_r, bottom_g, bottom_b)                                                                            \
+    (g_wmap_backdrop_target_color_0.r = (top_r), g_wmap_backdrop_target_color_0.g = (top_g), g_wmap_backdrop_target_color_0.b = (top_b),                       \
+     g_wmap_backdrop_target_color_1.r = (top_r), g_wmap_backdrop_target_color_1.g = (top_g), g_wmap_backdrop_target_color_1.b = (top_b),                       \
+     g_wmap_backdrop_target_color_2.r = (bottom_r), g_wmap_backdrop_target_color_2.g = (bottom_g), g_wmap_backdrop_target_color_2.b = (bottom_b),              \
+     g_wmap_backdrop_target_color_3.r = (bottom_r), g_wmap_backdrop_target_color_3.g = (bottom_g), g_wmap_backdrop_target_color_3.b = (bottom_b))
 
 /** @brief Current map view. */
 extern WmapView g_wmap_view;

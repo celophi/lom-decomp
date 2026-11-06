@@ -79,7 +79,7 @@ class SourceTest(unittest.TestCase):
         display = REPO_ROOT / "src/overlays/wmap/internal/wmap_map_display.h"
         checks = (
             (specs["g_wmap_artifact_positions"].count, REPO_ROOT / "src/overlays/wmap/internal/wmap_land_transition.h", "WMAP_ARTIFACT_SLOTS"),
-            (specs["g_wmap_land_attributes"].count, SOURCES / "map/wmap_map_display.c", "WMAP_LAND_COUNT"),
+            (specs["g_wmap_land_attributes"].count, REPO_ROOT / "include/common/saved_game.h", "FIELD_LAND_COUNT"),
             (specs["g_wmap_menu_triangles"].count, SOURCES / "wmap_main.c", "WMAP_MENU_TRIANGLE_COUNT"),
         )
         for value, source, name in checks:

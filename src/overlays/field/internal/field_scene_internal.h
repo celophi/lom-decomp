@@ -11,8 +11,7 @@
 #include "overlays/field/field_workspace.h"
 #include "overlays/movie/movie.h"
 
-#define FIELD_COPY_TINT_COLOR(destination, source) \
-    ((destination)->rg = (source)->rg, (destination)->b = (source)->b)
+#define FIELD_COPY_TINT_COLOR(destination, source) ((destination)->rg = (source)->rg, (destination)->b = (source)->b)
 
 /**
  * @brief Halve a signed value, rounding toward zero.
@@ -1084,9 +1083,6 @@ extern s32 g_field_camera_z;
 /** @brief Pixel lookup table field_load_map applies to the next map, plus one; 0 for none. */
 extern s32 g_field_pixel_lookup_selector;
 extern s16* g_field_node_angle_table;
-
-s32 rcos(s32);
-s32 rsin(s32);
 
 /**
  * @brief Screen-space placement of the grid being drawn.

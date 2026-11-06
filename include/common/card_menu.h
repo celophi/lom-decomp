@@ -2,12 +2,14 @@
 #define CARD_MENU_H
 
 #include "common.h"
+
 #include "common/card_directory.h"
-#include "overlays/field/field_portrait.h"
+#include "common/gpu_packet.h"
+#include "common/list_scroll.h"
 #include "common/pad.h"
 #include "main/display.h"
-#include "common/gpu_packet.h"
 #include "main/field_runtime.h"
+#include "overlays/field/field_portrait.h"
 #include "overlays/field/field_text.h"
 
 /**
@@ -38,13 +40,13 @@
  * overlay; each overlay defines its own states below them.
  */
 #define CARD_MENU_ENTRY_COUNT_LIMIT 0x10
-#define CARD_MENU_ENTRY_STATE_NO_GAME_DATA 0xF8 /**< The card holds no Legend of Mana save data. */
-#define CARD_MENU_ENTRY_STATE_UNFORMATTED 0xF9  /**< The card is not formatted; the load-only menus show the no-game-data message. */
-#define CARD_MENU_ENTRY_STATE_CARD_FULL 0xFA    /**< Not enough free blocks for a new save. */
+#define CARD_MENU_ENTRY_STATE_NO_GAME_DATA 0xF8  /**< The card holds no Legend of Mana save data. */
+#define CARD_MENU_ENTRY_STATE_UNFORMATTED 0xF9   /**< The card is not formatted; the load-only menus show the no-game-data message. */
+#define CARD_MENU_ENTRY_STATE_CARD_FULL 0xFA     /**< Not enough free blocks for a new save. */
 #define CARD_MENU_ENTRY_STATE_ACCESS_FAILED 0xFB /**< The card could not be accessed. */
-#define CARD_MENU_ENTRY_STATE_NO_SAVE_DATA 0xFC /**< The card holds no save data. */
-#define CARD_MENU_ENTRY_STATE_NO_CARD 0xFD      /**< No card answers: an event error or the retries ran out. */
-#define CARD_MENU_ENTRY_STATE_BLANK 0xFE        /**< Shows nothing; no menu sets it. */
+#define CARD_MENU_ENTRY_STATE_NO_SAVE_DATA 0xFC  /**< The card holds no save data. */
+#define CARD_MENU_ENTRY_STATE_NO_CARD 0xFD       /**< No card answers: an event error or the retries ran out. */
+#define CARD_MENU_ENTRY_STATE_BLANK 0xFE         /**< Shows nothing; no menu sets it. */
 #define CARD_MENU_ENTRY_STATE_CHECKING_CARD 0xFF /**< The card is being checked; no entries yet. */
 
 /**
@@ -88,11 +90,11 @@ typedef enum
 /** @brief Step opcodes of the screens that write another player's save back (ADDHERO and NIKI). */
 typedef enum
 {
-    CARD_MENU_EXCHANGE_STEP_ERASE_ENTRY = 10,        /**< Erase the selected directory entry. */
-    CARD_MENU_EXCHANGE_STEP_WRITE_SAVE = 25,         /**< Create the placeholder file and start writing the save. */
-    CARD_MENU_EXCHANGE_STEP_POLL_SAVE_WRITE = 26,    /**< Wait for the write and rename it over the selected save. */
-    CARD_MENU_EXCHANGE_STEP_READ_BEFORE_WRITE = 27,  /**< Open the selected save and read it before writing. */
-    CARD_MENU_EXCHANGE_STEP_POLL_PREWRITE_READ = 28  /**< Wait for that read to finish, retrying. */
+    CARD_MENU_EXCHANGE_STEP_ERASE_ENTRY = 10,       /**< Erase the selected directory entry. */
+    CARD_MENU_EXCHANGE_STEP_WRITE_SAVE = 25,        /**< Create the placeholder file and start writing the save. */
+    CARD_MENU_EXCHANGE_STEP_POLL_SAVE_WRITE = 26,   /**< Wait for the write and rename it over the selected save. */
+    CARD_MENU_EXCHANGE_STEP_READ_BEFORE_WRITE = 27, /**< Open the selected save and read it before writing. */
+    CARD_MENU_EXCHANGE_STEP_POLL_PREWRITE_READ = 28 /**< Wait for that read to finish, retrying. */
 } CardMenuExchangeStep;
 
 /** @brief What running one step of the card sequence reports to its caller. */
@@ -127,13 +129,13 @@ typedef enum
  * @param path Full card path of the file to erase.
  * @note Expands to a for statement, so use it only as a braced statement of its own.
  */
-#define CARD_ERASE_WITH_RETRIES(attempts, path)                                 \
-    for ((attempts) = 0; (attempts) < CARD_MENU_FILE_OP_ATTEMPTS; (attempts)++) \
-    {                                                                           \
-        if (erase(path) != 0)                                                   \
-        {                                                                       \
-            break;                                                              \
-        }                                                                       \
+#define CARD_ERASE_WITH_RETRIES(attempts, path)                                                                                                                \
+    for ((attempts) = 0; (attempts) < CARD_MENU_FILE_OP_ATTEMPTS; (attempts)++)                                                                                \
+    {                                                                                                                                                          \
+        if (erase(path) != 0)                                                                                                                                  \
+        {                                                                                                                                                      \
+            break;                                                                                                                                             \
+        }                                                                                                                                                      \
     }
 
 /** @brief Retries of a failed asynchronous save read or write. */
@@ -167,10 +169,10 @@ typedef enum
 #define CARD_MENU_PROGRESS_FULL_TICKS 256
 
 /** @brief Corner colours of the progress bar's gradient (POLY_G4 vertices 0 to 3). */
-#define CARD_MENU_PROGRESS_TOP_LEFT_COLOR GPU_COLOR_WORD(0xFF, 0, 0)        /**< Red. */
-#define CARD_MENU_PROGRESS_TOP_RIGHT_COLOR GPU_COLOR_WORD(0xFF, 0xFF, 0)    /**< Yellow. */
-#define CARD_MENU_PROGRESS_BOTTOM_LEFT_COLOR GPU_COLOR_WORD(0, 0xFF, 0xFF)  /**< Cyan. */
-#define CARD_MENU_PROGRESS_BOTTOM_RIGHT_COLOR GPU_COLOR_WORD(0, 0, 0xFF)    /**< Blue. */
+#define CARD_MENU_PROGRESS_TOP_LEFT_COLOR GPU_COLOR_WORD(0xFF, 0, 0)       /**< Red. */
+#define CARD_MENU_PROGRESS_TOP_RIGHT_COLOR GPU_COLOR_WORD(0xFF, 0xFF, 0)   /**< Yellow. */
+#define CARD_MENU_PROGRESS_BOTTOM_LEFT_COLOR GPU_COLOR_WORD(0, 0xFF, 0xFF) /**< Cyan. */
+#define CARD_MENU_PROGRESS_BOTTOM_RIGHT_COLOR GPU_COLOR_WORD(0, 0, 0xFF)   /**< Blue. */
 
 /** @brief VRAM area, right of the display buffers, the party icons (portraits) are uploaded to side by side. */
 #define CARD_MENU_ICON_VRAM_X SCREEN_WIDTH
@@ -266,7 +268,7 @@ static inline s32 card_menu_element_width(CardMenuElement* element)
 }
 
 /** @brief Store the low eight bits of a window's width. */
-#define CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, width) \
+#define CARD_MENU_SET_ELEMENT_WIDTH_LOW(element, width)                                                                                                        \
     ((element)->attr.word = ((element)->attr.word & ((1 << CARD_MENU_ELEMENT_WIDTH_SHIFT) - 1)) | ((u32)(width) << CARD_MENU_ELEMENT_WIDTH_SHIFT))
 
 /** @brief Heights of one entry-list row and of one message-window line, in pixels. */
@@ -291,9 +293,6 @@ static inline s32 card_menu_element_width(CardMenuElement* element)
 /** @brief Scroll arrows, inset from the entry list's top and bottom. */
 #define CARD_MENU_SCROLL_ARROW_UP_Y (CARD_MENU_LIST_Y + CARD_MENU_SCROLL_ARROW_INSET)
 #define CARD_MENU_SCROLL_ARROW_DOWN_Y (CARD_MENU_LIST_Y + CARD_MENU_LIST_HEIGHT - CARD_MENU_SCROLL_ARROW_INSET)
-
-/** @brief Frames a list scroll takes to reach its target. */
-#define CARD_MENU_SCROLL_FRAMES 4
 
 /** @brief Entry list columns: the file label, the number label and the suffix value (JP moves the value right). */
 #define CARD_MENU_ENTRY_LABEL_X 1
@@ -445,7 +444,7 @@ static inline s32 card_menu_element_width(CardMenuElement* element)
 #define CARD_MENU_TEXT_DO_NOT_REMOVE_CARD 15
 #define CARD_MENU_TEXT_SAVED 16
 #define CARD_MENU_TEXT_MEMORY_CARD_IS 17 /**< JP only: subject line "The memory card is". */
-#define CARD_MENU_TEXT_NOT_FORMATTED 18 /**< Second line after a subject such as CARD_MENU_TEXT_POCKETSTATION_IS. */
+#define CARD_MENU_TEXT_NOT_FORMATTED 18  /**< Second line after a subject such as CARD_MENU_TEXT_POCKETSTATION_IS. */
 #define CARD_MENU_TEXT_FORMAT_PROMPT 19
 #define CARD_MENU_TEXT_NEW_SAVE_TITLE 20
 #define CARD_MENU_TEXT_USES_TWO_BLOCKS 21
@@ -531,7 +530,6 @@ static inline s32 card_menu_element_width(CardMenuElement* element)
 
 /** @brief Address of the text whose table offset is @p offset. */
 #define CARD_MENU_TEXT_BY_OFFSET(table, offset) ((u8*)((uintptr_t)(offset) + (uintptr_t)(table)))
-
 
 /** @brief Pool of menu windows; CARD_MENU_ELEMENT_MODAL is the primary dialog. */
 extern CardMenuElement g_card_menu_element_pool[CARD_MENU_ELEMENT_COUNT];

@@ -2,17 +2,18 @@
  * @brief Field map loading, render-context setup and the per-frame draw entry.
  */
 
+#include "common.h"
+
+#include "../internal/field_actor_tables.h"
+#include "../internal/field_animation.h"
+#include "../internal/field_calls.h"
+#include "../internal/field_scene_internal.h"
+#include "main/cd_resources.h"
+#include "main/cdrom.h"
+#include "main/overlay_memory.h"
+#include "main/scene_state.h"
 #include "overlays/field/field_text.h"
 #include "overlays/movie/movie.h"
-#include "main/cdrom.h"
-#include "common.h"
-#include "../internal/field_calls.h"
-#include "../internal/field_animation.h"
-#include "main/cd_resources.h"
-#include "main/scene_state.h"
-#include "main/overlay_memory.h"
-#include "../internal/field_scene_internal.h"
-#include "../internal/field_actor_tables.h"
 
 /** @brief Maps below this id are read with a blocking queued read instead of a stream. */
 #define FIELD_MAP_QUEUED_READ_LIMIT 15
@@ -161,7 +162,9 @@ void field_draw_frame(s32 alternate_half, FieldRenderHalf* buffer, s32 update_mo
     {
         movie_service_video_ops();
     }
+
     field_text_update(&buffer->primitive_cursor, (FieldOrderingTags*)buffer->ordering_table, update_mode);
+
     if (cd_system->audio_enabled != 0)
     {
         movie_service_video_ops();
@@ -234,7 +237,7 @@ void field_init_with_fmv(void* unused, FieldRenderHalf* buffers)
     /* Through a plain pointer: a member store would let the midpoint load move above it. */
     front_cursor = &buffers[0].primitive_cursor;
     *front_cursor = (u8*)g_field_mem_base;
-    buffers[1].primitive_cursor = (u8*)g_field_mem_midpoint;
+    buffers[1].primitive_cursor = g_field_mem_midpoint;
     field_text_reset_windows();
 }
 
@@ -267,7 +270,7 @@ void field_init_with_fmv_alloc(void)
     /* Through a plain pointer: a member store would let the midpoint load move above it. */
     front_cursor = &buffers[0].primitive_cursor;
     *front_cursor = (u8*)g_field_mem_base;
-    buffers[1].primitive_cursor = (u8*)g_field_mem_midpoint;
+    buffers[1].primitive_cursor = g_field_mem_midpoint;
     field_text_reset_windows();
 }
 
@@ -296,6 +299,7 @@ void field_load_map(u16 map_id)
     FieldMapObject** objects;
 
     DrawSync(0);
+
     if (map_id < FIELD_MAP_QUEUED_READ_LIMIT)
     {
         cdrom_queue_read((u16)(map_id + CD_RES_FIELD_MAP_BASE), FIELD_MAP_LOAD_ADDRESS);
@@ -305,11 +309,13 @@ void field_load_map(u16 map_id)
     {
         cdrom_stream((u16)(map_id + CD_RES_FIELD_MAP_BASE), FIELD_MAP_LOAD_ADDRESS);
     }
+
     texture = FIELD_MAP_HEADER->texture;
     rect.x = FIELD_MAP_TEXTURE_VRAM_X;
     rect.y = FIELD_MAP_TEXTURE_VRAM_Y;
     columns = FIELD_MAP_HEADER->texture_bytes / FIELD_MAP_TEXTURE_COLUMN_BYTES;
     rect.h = FIELD_MAP_TEXTURE_HEIGHT;
+
     while (columns != 0)
     {
         rect.w = (columns <= FIELD_MAP_TEXTURE_UPLOAD_COLUMNS) ? columns : FIELD_MAP_TEXTURE_UPLOAD_COLUMNS;
@@ -320,26 +326,32 @@ void field_load_map(u16 map_id)
     }
 
     DrawSync(0);
+
     for (objects = g_field_objects; *objects != NULL; objects++)
     {
         (*objects)->built = 0;
     }
+
     if (g_field_pixel_lookup_selector != 0)
     {
         seen_count = 0;
+
         for (objects = g_field_objects; *objects != NULL; objects++)
         {
             object = *objects;
             image = object->image;
             seen = seen_images;
+
             for (remaining = seen_count; remaining != 0; remaining--)
             {
                 if (*seen == image)
                 {
                     break;
                 }
+
                 seen++;
             }
+
             if (remaining == 0)
             {
                 seen_count++;
@@ -379,6 +391,7 @@ static void field_select_object(u16 object_index, FieldRenderHalf* buffers)
         {
             break;
         }
+
         objects++;
     }
 
@@ -386,9 +399,11 @@ static void field_select_object(u16 object_index, FieldRenderHalf* buffers)
     bounds->width = object->width;
     bounds->depth = object->depth;
     bounds->unk4 = (object->background.word >> 1) & 1;
+
     if (buffers != NULL)
     {
         buffers[0].draw_env.isbg = buffers[1].draw_env.isbg = 1;
+
         if (object->background.word & FIELD_MAP_BACKGROUND_ENABLED)
         {
             setRGB0(&buffers[0].draw_env, object->background.b.r, object->background.b.g, object->background.b.b);
@@ -400,10 +415,12 @@ static void field_select_object(u16 object_index, FieldRenderHalf* buffers)
             setRGB0(&buffers[1].draw_env, 0, 0, 0);
         }
     }
+
     image = object->image;
     rect.x = 0;
     rect.y = FIELD_OBJECT_CLUT_VRAM_Y;
     rows = object->image_size >> 8;
+
     if (rows != 0)
     {
         s32 row_count = rows;
@@ -414,13 +431,16 @@ static void field_select_object(u16 object_index, FieldRenderHalf* buffers)
         image += row_count * (FIELD_OBJECT_IMAGE_WIDTH / 2);
         rect.y += rows;
     }
+
     clut_width = object->image_size;
+
     if (clut_width != 0)
     {
         rect.w = clut_width;
         rect.h = 1;
         LoadImage(&rect, image);
     }
+
     field_build_render_records(object, object_index);
     field_collision_rebuild_spans();
 }

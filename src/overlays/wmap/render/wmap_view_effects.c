@@ -1,25 +1,26 @@
-#include "../internal/wmap_land_transition.h"
-#include "../internal/wmap_frame_render.h"
-#include "../internal/wmap_step_sequence.h"
-#include "../internal/wmap_main.h"
-#include "../internal/wmap_sprite_render.h"
-#include "../internal/wmap_view_effects.h"
 #include "common.h"
+#include <inline_c.h>
 #include <libetc.h>
 #include <libgpu.h>
-#include "common/gpu_packet.h"
-#include "main/display.h"
-#include "../internal/wmap_resource_support.h"
-#include "../internal/wmap_effect_primitives.h"
 #include <libgte.h>
 #include <rand.h>
-#include <inline_c.h>
-#include "sdk/gte_dmpsx_compat.h"
-#include "../internal/wmap_map_labels.h"
-#include "../internal/wmap_sequence_runtime.h"
-#include "../internal/wmap_effect_backdrop.h"
+
 #include "../internal/wmap_actor_motion.h"
+#include "../internal/wmap_effect_backdrop.h"
+#include "../internal/wmap_effect_primitives.h"
+#include "../internal/wmap_frame_render.h"
+#include "../internal/wmap_land_transition.h"
+#include "../internal/wmap_main.h"
+#include "../internal/wmap_map_labels.h"
+#include "../internal/wmap_resource_support.h"
+#include "../internal/wmap_sequence_runtime.h"
+#include "../internal/wmap_sprite_render.h"
+#include "../internal/wmap_step_sequence.h"
+#include "../internal/wmap_view_effects.h"
+#include "common/gpu_packet.h"
 #include "main/audio/akao.h"
+#include "main/display.h"
+#include "sdk/gte_dmpsx_compat.h"
 
 /** @brief Map tiles drawn inside the one-tile border of the grid. */
 #define WMAP_MAP_VISIBLE_FIRST 1
@@ -58,10 +59,9 @@
 /** @brief Pan position of the screen center. */
 #define WMAP_PAN_PER_COLUMN 24
 
-/** @brief Map scroll limit, map scroll speed and the map distance of one cursor step. */
+/** @brief Map scroll limit and map scroll speed. */
 #define WMAP_VIEW_SCROLL_MAX 144
 #define WMAP_VIEW_SCROLL_SPEED 4
-#define WMAP_VIEW_SCROLL_STEP 48
 /** @brief Spirit entries cycled in the spirit view (0 = none). */
 #define WMAP_SPIRIT_SELECTIONS 9
 
@@ -76,7 +76,6 @@
 #define WMAP_BURST_ACTOR_FIRST 6
 #define WMAP_BURST_CENTER_X 160
 #define WMAP_BURST_CENTER_Y 120
-#define WMAP_BURST_ACTOR_SCALE 15
 #define WMAP_BURST_ACTOR_SHADE 129
 #define WMAP_BURST_SEQUENCE_LARGE 3
 #define WMAP_BURST_OT_INDEX 4
@@ -89,7 +88,6 @@
 #define WMAP_BURST_TEXTURE_LARGE 6
 #define WMAP_BURST_TEXTURE_SMALL 7
 /** @brief Sprite shade that draws the texture unmodified. */
-#define WMAP_ACTOR_SHADE_NEUTRAL 128
 
 /** @brief Packed color word: three channels and the GPU command byte. */
 typedef union
@@ -118,7 +116,6 @@ extern s16 g_wmap_grid_vertex_indices[];
 extern WmapView g_wmap_zoom_view;
 extern WmapView g_wmap_zoom_step;
 extern s32 D_80139288;
-extern WmapAnimationSlot g_wmap_actor_animations[];
 extern s32 g_wmap_burst_spawning;
 extern WmapPoint g_wmap_cell_focus_offsets[][3];
 extern s32 g_wmap_focus_origin_x;
@@ -156,6 +153,7 @@ s32 wmap_run_view_sequence(s32 initialize)
     {
         result = 0;
     }
+
     return result;
 }
 
@@ -187,11 +185,12 @@ void wmap_init_map_packets(void)
         buffer->tpage_select.tpage = BLEND_SUBTRACT_TPAGE;
         g_wmap_current_frame = buffer;
         /* Each vertex is cleared as one packed x/y word. */
-        *(u32*)&buffer->tpage_select.x2 = 0;
-        *(u32*)&buffer->tpage_select.x1 = 0;
-        *(u32*)&buffer->tpage_select.x0 = 0;
+        SET_XY2_PACKED(&buffer->tpage_select, 0);
+        SET_XY1_PACKED(&buffer->tpage_select, 0);
+        SET_XY0_PACKED(&buffer->tpage_select, 0);
         SET_BGR0_PACKED(&buffer->tpage_select, 0);
         setPolyFT3(&g_wmap_current_frame->tpage_select);
+
         for (row = 0; row < WMAP_MAP_TILES; row++)
         {
             for (column = 0; column < WMAP_MAP_TILES; column++)
@@ -203,12 +202,14 @@ void wmap_init_map_packets(void)
                 setPolyFT4(tile);
             }
         }
+
         if (g_wmap_map_shadow_level != 0)
         {
             if (g_wmap_map_shadow_level < WMAP_SHADOW_LEVEL_MAX)
             {
                 g_wmap_map_shadow_level++;
             }
+
             for (column = 0; column < WMAP_SHADOW_POLYS; column++)
             {
                 shadow = &g_wmap_current_frame->shadow[column];
@@ -231,39 +232,47 @@ static s32 wmap_update_map_tint(s32 initialize)
     s32 changed;
 
     changed = 0;
+
     if (g_wmap_tint_target.r > g_wmap_tint.channels.r)
     {
         changed = 1;
         g_wmap_tint.channels.r += g_wmap_tint_speed;
     }
+
     if (g_wmap_tint_target.r < g_wmap_tint.channels.r)
     {
         changed = 1;
         g_wmap_tint.channels.r -= g_wmap_tint_speed;
     }
+
     if (g_wmap_tint.channels.g < g_wmap_tint_target.g)
     {
         changed = 1;
         g_wmap_tint.channels.g += g_wmap_tint_speed;
     }
+
     if (g_wmap_tint_target.g < g_wmap_tint.channels.g)
     {
         changed = 1;
         g_wmap_tint.channels.g -= g_wmap_tint_speed;
     }
+
     if (g_wmap_tint.channels.b < g_wmap_tint_target.b)
     {
         changed = 1;
         g_wmap_tint.channels.b += g_wmap_tint_speed;
     }
+
     if (g_wmap_tint_target.b < g_wmap_tint.channels.b)
     {
         changed = 1;
         g_wmap_tint.channels.b -= g_wmap_tint_speed;
     }
+
     if (g_wmap_tint_blending != 0)
     {
         color = g_wmap_tint.packed & 0xFFFFFF;
+
         if (color == GPU_TINT_NEUTRAL)
         {
             *(u32*)&g_wmap_tint_target = color;
@@ -280,6 +289,7 @@ static s32 wmap_update_map_tint(s32 initialize)
     {
         g_wmap_tint.channels.code = WMAP_TILE_CODE;
     }
+
     wmap_set_map_color(g_wmap_tint.packed);
     return changed;
 }
@@ -307,178 +317,212 @@ s32 wmap_update_map_view(s32 initialize)
         wmap_set_effect_camera_transform();
         return 1;
     }
-    if ((g_wmap_view_mode == WMAP_VIEW_MODE_MAP) && (g_wmap_view_scroll_mode == 0) && (g_wmap_selection_phase == 0))
+
+    if ((g_wmap_view_mode == WMAP_VIEW_MODE_MAP) && (g_wmap_view_scroll_mode == WMAP_SCROLL_NONE) && (g_wmap_selection_phase == 0))
     {
         if (g_wmap_buttons_repeat & PADLleft)
         {
             left_pan = ((g_wmap_cursor_column - 2) * WMAP_PAN_PER_COLUMN) + AKAO_PAN_CENTER;
             g_wmap_cursor_column--;
             wmap_play_sound(WMAP_SOUND_CURSOR, left_pan);
+
             if (g_wmap_cursor_column < 0)
             {
                 g_wmap_cursor_column = 0;
+
                 if (g_wmap_view.x > 0)
                 {
                     g_wmap_scroll_remaining_x = -WMAP_VIEW_SCROLL_STEP;
+
                     if (g_wmap_view_scroll_enabled != 0)
                     {
-                        g_wmap_view_scroll_mode = 1;
+                        g_wmap_view_scroll_mode = WMAP_SCROLL_CURSOR;
                     }
                 }
             }
         }
+
         if (g_wmap_buttons_repeat & PADLright)
         {
             right_pan = (g_wmap_cursor_column * WMAP_PAN_PER_COLUMN) + AKAO_PAN_CENTER;
             g_wmap_cursor_column++;
             wmap_play_sound(WMAP_SOUND_CURSOR, right_pan);
+
             if (g_wmap_cursor_column > g_wmap_cursor_limits[g_wmap_view_mode])
             {
                 g_wmap_cursor_column = g_wmap_cursor_limits[g_wmap_view_mode];
+
                 if (g_wmap_view.x < WMAP_VIEW_SCROLL_MAX)
                 {
                     g_wmap_scroll_remaining_x = WMAP_VIEW_SCROLL_STEP;
+
                     if (g_wmap_view_scroll_enabled != 0)
                     {
-                        g_wmap_view_scroll_mode = 1;
+                        g_wmap_view_scroll_mode = WMAP_SCROLL_CURSOR;
                     }
                 }
             }
         }
+
         if (g_wmap_buttons_repeat & PADLup)
         {
             wmap_play_sound(WMAP_SOUND_CURSOR, ((g_wmap_cursor_column - 1) * WMAP_PAN_PER_COLUMN) + AKAO_PAN_CENTER);
             row = g_wmap_cursor_row - 1;
             g_wmap_cursor_row = row;
+
             if (row < 0)
             {
                 g_wmap_cursor_row = 0;
+
                 if (g_wmap_view.y > 0)
                 {
                     g_wmap_scroll_remaining_y = -WMAP_VIEW_SCROLL_STEP;
+
                     if (g_wmap_view_scroll_enabled != 0)
                     {
-                        g_wmap_view_scroll_mode = 1;
+                        g_wmap_view_scroll_mode = WMAP_SCROLL_CURSOR;
                     }
                 }
             }
         }
+
         if (g_wmap_buttons_repeat & PADLdown)
         {
             wmap_play_sound(WMAP_SOUND_CURSOR, ((g_wmap_cursor_column - 1) * WMAP_PAN_PER_COLUMN) + AKAO_PAN_CENTER);
             g_wmap_cursor_row++;
+
             if (g_wmap_cursor_row > g_wmap_cursor_limits[g_wmap_view_mode])
             {
                 g_wmap_cursor_row = g_wmap_cursor_limits[g_wmap_view_mode];
+
                 if (g_wmap_view.y < WMAP_VIEW_SCROLL_MAX)
                 {
                     g_wmap_scroll_remaining_y = WMAP_VIEW_SCROLL_STEP;
+
                     if (g_wmap_view_scroll_enabled != 0)
                     {
-                        g_wmap_view_scroll_mode = 1;
+                        g_wmap_view_scroll_mode = WMAP_SCROLL_CURSOR;
                     }
                 }
             }
         }
     }
+
     if (g_wmap_view_mode == WMAP_VIEW_MODE_SPIRITS)
     {
         if (g_wmap_buttons_repeat & PADLleft)
         {
             selection = g_wmap_spirit_selection - 1;
             g_wmap_spirit_selection = selection;
+
             if (selection < 0)
             {
                 g_wmap_spirit_selection = WMAP_SPIRIT_SELECTIONS - 1;
             }
         }
+
         if (g_wmap_buttons_repeat & PADLright)
         {
             g_wmap_spirit_selection = (g_wmap_spirit_selection + 1) % WMAP_SPIRIT_SELECTIONS;
         }
     }
-    if (g_wmap_view_scroll_mode != 0)
+
+    if (g_wmap_view_scroll_mode != WMAP_SCROLL_NONE)
     {
         if (g_wmap_view_mode == WMAP_VIEW_MODE_SPIRITS)
         {
             g_wmap_scroll_remaining_y = 0;
-            g_wmap_view_scroll_mode = 0;
+            g_wmap_view_scroll_mode = WMAP_SCROLL_NONE;
             g_wmap_scroll_remaining_x = 0;
         }
         else
         {
             g_wmap_buttons_repeat = 0;
+
             if ((g_wmap_scroll_remaining_y | g_wmap_scroll_remaining_x) == 0)
             {
-                g_wmap_view_scroll_mode = 0;
+                g_wmap_view_scroll_mode = WMAP_SCROLL_NONE;
+
                 if (g_wmap_sequence_count == 0)
                 {
                     g_wmap_input_locked = 0;
                 }
             }
+
             if (g_wmap_scroll_remaining_y != 0)
             {
                 y_step = -WMAP_VIEW_SCROLL_SPEED;
+
                 if (g_wmap_view_scroll_enabled != 0)
                 {
                     g_wmap_input_locked = 1;
                     g_wmap_buttons_held = 0;
                     g_wmap_buttons_repeat = 0;
+
                     if (g_wmap_scroll_remaining_y > 0)
                     {
                         y_step = WMAP_VIEW_SCROLL_SPEED;
                     }
+
                     g_wmap_scroll_remaining_y -= y_step;
                     next_y = g_wmap_view.y + y_step;
                     g_wmap_view.y = next_y;
-                    if (g_wmap_view_scroll_mode == 1)
+
+                    if (g_wmap_view_scroll_mode == WMAP_SCROLL_CURSOR)
                     {
                         if (next_y < 0)
                         {
                             g_wmap_view.y = 0;
                             g_wmap_scroll_remaining_y = 0;
                             g_wmap_buttons_repeat = 0;
-                            g_wmap_view_scroll_mode = 0;
+                            g_wmap_view_scroll_mode = WMAP_SCROLL_NONE;
                         }
+
                         if (g_wmap_view.y > WMAP_VIEW_SCROLL_MAX)
                         {
                             g_wmap_view.y = WMAP_VIEW_SCROLL_MAX;
                             g_wmap_scroll_remaining_y = 0;
-                            g_wmap_view_scroll_mode = 0;
+                            g_wmap_view_scroll_mode = WMAP_SCROLL_NONE;
                             g_wmap_buttons_repeat &= ~(PADLup | PADLdown);
                         }
                     }
                 }
             }
+
             if (g_wmap_scroll_remaining_x != 0)
             {
                 x_step = -WMAP_VIEW_SCROLL_SPEED;
+
                 if (g_wmap_view_scroll_enabled != 0)
                 {
                     g_wmap_input_locked = 1;
                     g_wmap_buttons_held = 0;
                     g_wmap_buttons_repeat = 0;
+
                     if (g_wmap_scroll_remaining_x > 0)
                     {
                         x_step = WMAP_VIEW_SCROLL_SPEED;
                     }
+
                     g_wmap_scroll_remaining_x -= x_step;
                     next_x = g_wmap_view.x + x_step;
                     g_wmap_view.x = next_x;
-                    if (g_wmap_view_scroll_mode == 1)
+
+                    if (g_wmap_view_scroll_mode == WMAP_SCROLL_CURSOR)
                     {
                         if (next_x < 0)
                         {
                             g_wmap_view.x = 0;
                             g_wmap_scroll_remaining_x = 0;
                             g_wmap_buttons_repeat = 0;
-                            g_wmap_view_scroll_mode = 0;
+                            g_wmap_view_scroll_mode = WMAP_SCROLL_NONE;
                         }
+
                         if (g_wmap_view.x > WMAP_VIEW_SCROLL_MAX)
                         {
                             g_wmap_view.x = WMAP_VIEW_SCROLL_MAX;
                             g_wmap_scroll_remaining_x = 0;
-                            g_wmap_view_scroll_mode = 0;
+                            g_wmap_view_scroll_mode = WMAP_SCROLL_NONE;
                             g_wmap_buttons_repeat &= ~(PADLleft | PADLright);
                         }
                     }
@@ -486,8 +530,10 @@ s32 wmap_update_map_view(s32 initialize)
             }
         }
     }
+
     wmap_update_map_texcoords();
     wmap_project_map_grid();
+
     for (row_index = WMAP_MAP_VISIBLE_FIRST; row_index < WMAP_MAP_VISIBLE_END; row_index++)
     {
         for (column = WMAP_MAP_VISIBLE_FIRST; column < WMAP_MAP_VISIBLE_END; column++)
@@ -495,12 +541,14 @@ s32 wmap_update_map_view(s32 initialize)
             addPrim(&g_wmap_current_frame->ordering_table[WMAP_MAP_OT_INDEX], &g_wmap_current_frame->tiles.flat[row_index * WMAP_MAP_TILES + column]);
         }
     }
+
     for (column = 0; column < WMAP_SHADOW_POLYS; column++)
     {
         POLY_F4* shadow = &g_wmap_current_frame->shadow[column];
 
         addPrim(&g_wmap_current_frame->ordering_table[WMAP_MAP_OT_INDEX], shadow);
     }
+
     addPrim(&g_wmap_current_frame->ordering_table[WMAP_MAP_OT_INDEX], &g_wmap_current_frame->tpage_select);
     return 1;
 }
@@ -522,6 +570,7 @@ void wmap_project_map_grid(void)
     POLY_FT4* bottom_right;
 
     wmap_set_effect_camera_transform();
+
     for (row = 0; row < WMAP_MAP_VERTICES; row++)
     {
         top_left = g_wmap_current_frame->tiles.rows[row];
@@ -529,6 +578,7 @@ void wmap_project_map_grid(void)
         bottom_left = top_left + WMAP_MAP_TILES;
         bottom_right = top_left + WMAP_MAP_TILES + 1;
         point = (row + 1) * 4;
+
         for (column = 0; column < WMAP_MAP_VERTICES;)
         {
             position = g_wmap_grid_vertices[g_wmap_grid_vertex_indices[point]];
@@ -538,16 +588,17 @@ void wmap_project_map_grid(void)
             column++;
             gte_stsxy(&screen_position);
             /* The GTE result is one packed x/y word for each shared corner. */
-            *(s32*)&bottom_right->x0 = screen_position;
-            *(s32*)&bottom_left->x1 = screen_position;
-            *(s32*)&top_right->x2 = screen_position;
-            *(s32*)&top_left->x3 = screen_position;
+            SET_XY0_PACKED(bottom_right, screen_position);
+            SET_XY1_PACKED(bottom_left, screen_position);
+            SET_XY2_PACKED(top_right, screen_position);
+            SET_XY3_PACKED(top_left, screen_position);
             top_left++;
             top_right++;
             bottom_left++;
             bottom_right++;
         }
     }
+
     wmap_update_map_shadow();
 }
 
@@ -560,9 +611,11 @@ void wmap_update_map_shadow(void)
     POLY_F4* shadow;
 
     shadow = g_wmap_current_frame->shadow;
+
     for (row = WMAP_SHADOW_BOTTOM_ROW; row < WMAP_MAP_VISIBLE_END; row++)
     {
         tile = &g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + WMAP_MAP_VISIBLE_FIRST];
+
         for (column = WMAP_MAP_VISIBLE_FIRST; column < WMAP_MAP_VISIBLE_END; column++)
         {
             shadow->x0 = tile->x0;
@@ -577,9 +630,11 @@ void wmap_update_map_shadow(void)
             tile++;
         }
     }
+
     for (column = WMAP_SHADOW_RIGHT_COLUMN; column < WMAP_MAP_VISIBLE_END; column++)
     {
         tile = &g_wmap_current_frame->tiles.flat[column + WMAP_SHADOW_TOP_ROW * WMAP_MAP_TILES];
+
         for (row = WMAP_SHADOW_TOP_ROW; row < WMAP_SHADOW_BOTTOM_ROW + 1; row++)
         {
             shadow->x0 = tile->x0;
@@ -609,16 +664,19 @@ void wmap_update_map_texcoords(void)
     POLY_FT4 *tile, *next;
 
     wrapped = 0;
+
     for (row = 0; row < WMAP_MAP_VERTICES; row++)
     {
         next = &g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES];
         next->u0 = next->u2 = g_wmap_view.x + g_wmap_view.projection_scale / ONE;
+
         for (column = 0; column < WMAP_MAP_VERTICES; column++)
         {
             tile = &g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column];
             next = &g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column + 1];
             coordinate = column * g_wmap_view.projection_scale / ONE + g_wmap_view.x;
             edge = coordinate + WMAP_MAP_TEXEL_TILE;
+
             if (wrapped != 0)
             {
                 wrapped = 0;
@@ -635,8 +693,10 @@ void wmap_update_map_texcoords(void)
                 {
                     tile->pad2 = WMAP_MAP_PAGE_X_WRAP;
                 }
+
                 tile->u1 = tile->u3 = edge;
             }
+
             if (edge < WMAP_MAP_TEXEL_EDGE)
             {
                 next->pad2 = WMAP_MAP_PAGE_X;
@@ -645,6 +705,7 @@ void wmap_update_map_texcoords(void)
             else
             {
                 next->pad2 = WMAP_MAP_PAGE_X_WRAP;
+
                 if (edge >= WMAP_MAP_PAGE_TEXELS)
                 {
                     next->u0 = next->u2 = edge;
@@ -656,9 +717,11 @@ void wmap_update_map_texcoords(void)
                 }
             }
         }
+
         tile = &g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column];
         coordinate = column * g_wmap_view.projection_scale / ONE + g_wmap_view.x;
         edge = coordinate + WMAP_MAP_TEXEL_TILE;
+
         if (wrapped != 0)
         {
             wrapped = 0;
@@ -674,20 +737,25 @@ void wmap_update_map_texcoords(void)
             {
                 tile->pad2 = WMAP_MAP_PAGE_X_WRAP;
             }
+
             tile->u1 = tile->u3 = edge;
         }
     }
+
     wrapped = 0;
+
     for (column = 0; column < WMAP_MAP_VERTICES; column++)
     {
         next = &g_wmap_current_frame->tiles.flat[column * WMAP_MAP_TILES];
         next->v0 = next->v1 = g_wmap_view.y + g_wmap_view.projection_scale / ONE;
+
         for (row = 0; row < WMAP_MAP_VERTICES; row++)
         {
             tile = &g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column];
             next = &g_wmap_current_frame->tiles.flat[(row + 1) * WMAP_MAP_TILES + column];
             coordinate = row * g_wmap_view.projection_scale / ONE + g_wmap_view.y;
             edge = coordinate + WMAP_MAP_TEXEL_TILE;
+
             if (wrapped != 0)
             {
                 wrapped = 0;
@@ -704,8 +772,10 @@ void wmap_update_map_texcoords(void)
                 {
                     tile->pad1 = WMAP_MAP_PAGE_Y_LOW;
                 }
+
                 tile->v2 = tile->v3 = edge;
             }
+
             if (edge < WMAP_MAP_TEXEL_EDGE)
             {
                 next->pad1 = WMAP_MAP_PAGE_Y_LOW;
@@ -714,6 +784,7 @@ void wmap_update_map_texcoords(void)
             else
             {
                 next->pad1 = WMAP_MAP_PAGE_Y_LOW;
+
                 if (edge >= WMAP_MAP_PAGE_TEXELS)
                 {
                     next->v0 = next->v1 = edge;
@@ -725,9 +796,11 @@ void wmap_update_map_texcoords(void)
                 }
             }
         }
+
         tile = &g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column];
         coordinate = row * g_wmap_view.projection_scale / ONE + g_wmap_view.y;
         edge = coordinate + WMAP_MAP_TEXEL_TILE;
+
         if (wrapped != 0)
         {
             wrapped = 0;
@@ -743,15 +816,18 @@ void wmap_update_map_texcoords(void)
             {
                 tile->pad1 = WMAP_MAP_PAGE_Y_LOW;
             }
+
             tile->v2 = tile->v3 = edge;
         }
     }
+
     for (row = WMAP_MAP_VISIBLE_FIRST; row < WMAP_MAP_VISIBLE_END; row++)
     {
         for (column = WMAP_MAP_VISIBLE_FIRST; column < WMAP_MAP_VISIBLE_END; column++)
         {
-            g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column].tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column].pad2,
-                                                                                         g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column].pad1);
+            g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column].tpage =
+                getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_HALF, g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column].pad2,
+                         g_wmap_current_frame->tiles.flat[row * WMAP_MAP_TILES + column].pad1);
         }
     }
 }
@@ -768,83 +844,91 @@ void wmap_update_view_zoom(void)
     s32 out_x;
 
     mode = g_wmap_view_mode;
+
     switch (mode)
     {
-    case WMAP_VIEW_MODE_MAP:
-        if ((g_wmap_buttons_repeat & PADRup) && (g_wmap_selection_phase == 0) && (g_wmap_selected_artifact == -1))
-        {
-            g_wmap_view_mode = WMAP_VIEW_MODE_ZOOM_OUT;
-            wmap_set_map_label(-1);
-            g_wmap_saved_view = g_wmap_view;
-            g_wmap_zoom_view.x = g_wmap_view.x * WMAP_ZOOM_ONE;
-            g_wmap_zoom_view.y = g_wmap_view.y * WMAP_ZOOM_ONE;
-            g_wmap_zoom_view.projection_scale = g_wmap_view.projection_scale * WMAP_ZOOM_ONE;
-            g_wmap_zoom_step.x = -(g_wmap_view.x * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES));
-            g_wmap_zoom_step.y = -(g_wmap_view.y * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES));
-            g_wmap_zoom_step.projection_scale = WMAP_SPIRIT_VIEW_SCALE * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES) - g_wmap_view.projection_scale * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES);
-            wmap_play_sound(WMAP_SOUND_ZOOM_OUT, AKAO_PAN_CENTER);
-            g_wmap_map_button_mask = PADLleft | PADLright | PADselect | PADRup | WMAP_PAD_CANCEL;
-            g_wmap_buttons_held = 0;
-            g_wmap_buttons_repeat = 0;
-        }
-        return;
-    case WMAP_VIEW_MODE_SPIRITS:
-        if (g_wmap_buttons_repeat & (PADRup | WMAP_PAD_CANCEL))
-        {
-            g_wmap_view_mode = WMAP_VIEW_MODE_ZOOM_IN;
-            g_wmap_sprite_actors[0].target_shade = WMAP_ACTOR_SHADE_NEUTRAL;
-            wmap_play_sound(WMAP_SOUND_ZOOM_IN, AKAO_PAN_CENTER);
-            g_wmap_map_button_mask = -1;
-            g_wmap_buttons_held = 0;
-            g_wmap_buttons_repeat = 0;
-            return;
-        }
-        break;
-    case WMAP_VIEW_MODE_ZOOM_IN:
-        g_wmap_buttons_repeat = 0;
-        in_x = g_wmap_zoom_view.x - g_wmap_zoom_step.x;
-        g_wmap_zoom_view.x = in_x;
-        in_y = g_wmap_zoom_view.y - g_wmap_zoom_step.y;
-        in_scale = g_wmap_zoom_view.projection_scale - g_wmap_zoom_step.projection_scale;
-        g_wmap_zoom_view.y = in_y;
-        g_wmap_zoom_view.projection_scale = in_scale;
-        g_wmap_view.x = in_x / WMAP_ZOOM_ONE;
-        g_wmap_view.y = in_y / WMAP_ZOOM_ONE;
-        g_wmap_view.projection_scale = in_scale / WMAP_ZOOM_ONE;
-        if (in_scale == WMAP_VIEW_SCALE * WMAP_ZOOM_ONE)
-        {
-            g_wmap_view = g_wmap_saved_view;
-            g_wmap_carousel_mode = 0;
-            g_wmap_view_mode = WMAP_VIEW_MODE_MAP;
-            g_wmap_land_display_limit = mode;
-            return;
-        }
-        break;
-    case WMAP_VIEW_MODE_ZOOM_OUT:
-    {
-        s32 target_scale = WMAP_SPIRIT_VIEW_SCALE;
+        case WMAP_VIEW_MODE_MAP:
+            if ((g_wmap_buttons_repeat & PADRup) && (g_wmap_selection_phase == 0) && (g_wmap_selected_artifact == -1))
+            {
+                g_wmap_view_mode = WMAP_VIEW_MODE_ZOOM_OUT;
+                wmap_set_map_label(-1);
+                g_wmap_saved_view = g_wmap_view;
+                g_wmap_zoom_view.x = g_wmap_view.x * WMAP_ZOOM_ONE;
+                g_wmap_zoom_view.y = g_wmap_view.y * WMAP_ZOOM_ONE;
+                g_wmap_zoom_view.projection_scale = g_wmap_view.projection_scale * WMAP_ZOOM_ONE;
+                g_wmap_zoom_step.x = -(g_wmap_view.x * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES));
+                g_wmap_zoom_step.y = -(g_wmap_view.y * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES));
+                g_wmap_zoom_step.projection_scale =
+                    WMAP_SPIRIT_VIEW_SCALE * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES) - g_wmap_view.projection_scale * (WMAP_ZOOM_ONE / WMAP_ZOOM_FRAMES);
+                wmap_play_sound(WMAP_SOUND_ZOOM_OUT, AKAO_PAN_CENTER);
+                g_wmap_map_button_mask = PADLleft | PADLright | PADselect | PADRup | WMAP_PAD_CANCEL;
+                g_wmap_buttons_held = 0;
+                g_wmap_buttons_repeat = 0;
+            }
 
-        g_wmap_buttons_repeat = 0;
-        out_x = g_wmap_zoom_view.x + g_wmap_zoom_step.x;
-        g_wmap_zoom_view.x = out_x;
-        out_y = g_wmap_zoom_view.y + g_wmap_zoom_step.y;
-        out_scale = g_wmap_zoom_view.projection_scale + g_wmap_zoom_step.projection_scale;
-        g_wmap_zoom_view.y = out_y;
-        g_wmap_zoom_view.projection_scale = out_scale;
-        g_wmap_view.x = out_x / WMAP_ZOOM_ONE;
-        g_wmap_view.y = out_y / WMAP_ZOOM_ONE;
-        g_wmap_view.projection_scale = out_scale / WMAP_ZOOM_ONE;
-        if (out_scale == target_scale * WMAP_ZOOM_ONE)
+            return;
+        case WMAP_VIEW_MODE_SPIRITS:
+            if (g_wmap_buttons_repeat & (PADRup | WMAP_PAD_CANCEL))
+            {
+                g_wmap_view_mode = WMAP_VIEW_MODE_ZOOM_IN;
+                g_wmap_sprite_actors[0].target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
+                wmap_play_sound(WMAP_SOUND_ZOOM_IN, AKAO_PAN_CENTER);
+                g_wmap_map_button_mask = -1;
+                g_wmap_buttons_held = 0;
+                g_wmap_buttons_repeat = 0;
+                return;
+            }
+
+            break;
+        case WMAP_VIEW_MODE_ZOOM_IN:
+            g_wmap_buttons_repeat = 0;
+            in_x = g_wmap_zoom_view.x - g_wmap_zoom_step.x;
+            g_wmap_zoom_view.x = in_x;
+            in_y = g_wmap_zoom_view.y - g_wmap_zoom_step.y;
+            in_scale = g_wmap_zoom_view.projection_scale - g_wmap_zoom_step.projection_scale;
+            g_wmap_zoom_view.y = in_y;
+            g_wmap_zoom_view.projection_scale = in_scale;
+            g_wmap_view.x = in_x / WMAP_ZOOM_ONE;
+            g_wmap_view.y = in_y / WMAP_ZOOM_ONE;
+            g_wmap_view.projection_scale = in_scale / WMAP_ZOOM_ONE;
+
+            if (in_scale == WMAP_VIEW_SCALE * WMAP_ZOOM_ONE)
+            {
+                g_wmap_view = g_wmap_saved_view;
+                g_wmap_carousel_mode = 0;
+                g_wmap_view_mode = WMAP_VIEW_MODE_MAP;
+                g_wmap_land_display_limit = mode;
+                return;
+            }
+
+            break;
+        case WMAP_VIEW_MODE_ZOOM_OUT:
         {
-            g_wmap_view.x = 0;
-            g_wmap_view.projection_scale = target_scale;
-            g_wmap_carousel_mode = 0;
-            g_wmap_view_mode = WMAP_VIEW_MODE_SPIRITS;
-            g_wmap_view.y = 0;
-            g_wmap_land_display_limit = 1;
+            s32 target_scale = WMAP_SPIRIT_VIEW_SCALE;
+
+            g_wmap_buttons_repeat = 0;
+            out_x = g_wmap_zoom_view.x + g_wmap_zoom_step.x;
+            g_wmap_zoom_view.x = out_x;
+            out_y = g_wmap_zoom_view.y + g_wmap_zoom_step.y;
+            out_scale = g_wmap_zoom_view.projection_scale + g_wmap_zoom_step.projection_scale;
+            g_wmap_zoom_view.y = out_y;
+            g_wmap_zoom_view.projection_scale = out_scale;
+            g_wmap_view.x = out_x / WMAP_ZOOM_ONE;
+            g_wmap_view.y = out_y / WMAP_ZOOM_ONE;
+            g_wmap_view.projection_scale = out_scale / WMAP_ZOOM_ONE;
+
+            if (out_scale == target_scale * WMAP_ZOOM_ONE)
+            {
+                g_wmap_view.x = 0;
+                g_wmap_view.projection_scale = target_scale;
+                g_wmap_carousel_mode = 0;
+                g_wmap_view_mode = WMAP_VIEW_MODE_SPIRITS;
+                g_wmap_view.y = 0;
+                g_wmap_land_display_limit = 1;
+            }
+
+            break;
         }
-        break;
-    }
     }
 }
 
@@ -897,17 +981,20 @@ s32 wmap_update_burst_particles(void)
 
     active = 0;
     remaining = g_wmap_particle_intensity * WMAP_BURST_SPAWNS_PER_UNIT;
+
     for (i = 0; i < g_wmap_particle_intensity * WMAP_BURST_SLOTS_PER_UNIT; i++)
     {
         actor_index = i + WMAP_BURST_ACTOR_FIRST;
         particle = &g_wmap_actor_motions[i];
+
         if (particle->state == 0)
         {
             actor = &g_wmap_sprite_actors[actor_index];
+
             if (g_wmap_burst_spawning != 0)
             {
                 actor->resource_index = 0;
-                actor->scale_index = WMAP_BURST_ACTOR_SCALE;
+                actor->scale_index = WMAP_SPRITE_SCALE_FULL;
                 actor->sequence = ((rand() * g_wmap_particle_intensity) >> 15) + 1;
                 actor->previous_sequence = -1;
                 actor->target_shade = WMAP_BURST_ACTOR_SHADE;
@@ -918,6 +1005,7 @@ s32 wmap_update_burst_particles(void)
                 particle->velocity = rand() * g_wmap_particle_intensity;
                 random_value = rand();
                 particle->lifetime = ((random_value * ((g_wmap_particle_intensity * 5) << 2)) >> 15) + WMAP_BURST_LIFETIME_MIN;
+
                 if (--remaining == 0)
                 {
                     break;
@@ -925,16 +1013,19 @@ s32 wmap_update_burst_particles(void)
             }
         }
     }
+
     for (i = 0; i < WMAP_BURST_PARTICLES; i++)
     {
         particle = &g_wmap_actor_motions[i];
         actor = &g_wmap_sprite_actors[WMAP_BURST_ACTOR_FIRST + i];
+
         if (particle->state != 0)
         {
             particle->radius += particle->velocity;
             screen.point.x = ((particle->radius * ccos(particle->angle)) >> 24) + WMAP_BURST_CENTER_X;
             screen.point.y = ((particle->radius * csin(particle->angle)) >> 24) + WMAP_BURST_CENTER_Y;
             wmap_step_actor_animation(actor, &g_wmap_actor_animations[WMAP_BURST_ACTOR_FIRST + i]);
+
             if (g_wmap_sprite_actors[i + WMAP_BURST_ACTOR_FIRST].sequence == WMAP_BURST_SEQUENCE_LARGE)
             {
                 wmap_draw_actor_sprite(actor, screen.packed, WMAP_BURST_TEXTURE_LARGE, WMAP_BURST_OT_INDEX, 0);
@@ -943,14 +1034,18 @@ s32 wmap_update_burst_particles(void)
             {
                 wmap_draw_actor_sprite(actor, screen.packed, WMAP_BURST_TEXTURE_SMALL, WMAP_BURST_OT_INDEX, 0);
             }
+
             particle->lifetime--;
+
             if (particle->lifetime == 0)
             {
                 particle->state = 0;
             }
+
             active++;
         }
     }
+
     return active;
 }
 
@@ -959,9 +1054,7 @@ void wmap_init_burst_particles(void)
 {
     s32 i;
 
-    WMAP_RESET_PARTICLE_SLOTS(i, WMAP_BURST_PARTICLES,
-                              g_wmap_actor_motions[i].state,
-                              WMAP_BURST_ACTOR_FIRST, g_wmap_animation_bank_0);
+    WMAP_RESET_PARTICLE_SLOTS(i, WMAP_BURST_PARTICLES, g_wmap_actor_motions[i].state, WMAP_BURST_ACTOR_FIRST, g_wmap_animation_bank_0);
     g_wmap_particle_intensity = 1;
     g_wmap_burst_spawning = 1;
 }
@@ -977,7 +1070,7 @@ void wmap_begin_cell_focus(void)
     g_wmap_sequence_busy = 1;
     wmap_select_mesh_motion(1);
     wmap_start_mesh_transition(1);
-    g_wmap_view_scroll_mode = 2;
+    g_wmap_view_scroll_mode = WMAP_SCROLL_SCRIPTED;
     g_wmap_scroll_remaining_x = g_wmap_cell_focus_offsets[g_wmap_cursor_row][g_wmap_cursor_column].x;
     g_wmap_scroll_remaining_y = g_wmap_cell_focus_offsets[g_wmap_cursor_row][g_wmap_cursor_column].y;
     RotMatrix(&g_wmap_camera_rotation, &matrix);
@@ -1010,8 +1103,10 @@ void wmap_project_focus_position(void)
     SetRotMatrix(&matrix);
     SetTransMatrix(&matrix);
     position.vz = 0;
-    position.vx = (((g_wmap_focus_cell_x - 1) * WMAP_CELL_SIZE - g_wmap_view.x * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
-    position.vy = (((g_wmap_focus_cell_y - 1) * WMAP_CELL_SIZE - g_wmap_view.y * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) / g_wmap_view.projection_scale;
+    position.vx = (((g_wmap_focus_cell_x - 1) * WMAP_CELL_SIZE - g_wmap_view.x * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) /
+                  g_wmap_view.projection_scale;
+    position.vy = (((g_wmap_focus_cell_y - 1) * WMAP_CELL_SIZE - g_wmap_view.y * WMAP_MAP_PROJECTION_SCALE / g_wmap_view.projection_scale) * WMAP_VIEW_SCALE) /
+                  g_wmap_view.projection_scale;
     gte_ldv0(&position);
     gte_rtps();
     gte_stsxy(&g_wmap_focus_screen_position.packed);

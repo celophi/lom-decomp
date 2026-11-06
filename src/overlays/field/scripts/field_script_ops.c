@@ -1,20 +1,20 @@
-#include "main/audio/game_audio.h"
-#include "main/audio/akao_cmd.h"
-#include "overlays/field/field_scene_transition.h"
-#include "overlays/field/field_text.h"
-#include "main/main.h"
 #include "common.h"
+
 #include "../internal/field_actor_key_ops.h"
 #include "../internal/field_actor_runtime.h"
-#include "../internal/field_calls.h"
-#include "../internal/field_scene_internal.h"
 #include "../internal/field_actor_tables.h"
-
+#include "../internal/field_calls.h"
+#include "../internal/field_records.h"
+#include "../internal/field_scene_internal.h"
 #include "../internal/field_script.h"
 #include "../internal/field_script_ops.h"
-#include "../internal/field_records.h"
-#include "overlays/shop/shop.h"
+#include "main/audio/akao_cmd.h"
+#include "main/audio/game_audio.h"
+#include "main/main.h"
 #include "overlays/field/field_overlay_handoff.h"
+#include "overlays/field/field_scene_transition.h"
+#include "overlays/field/field_text.h"
+#include "overlays/shop/shop.h"
 
 void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s32 y, s32 z);
 void field_play_song_section();
@@ -259,12 +259,15 @@ typedef struct
     FieldItemRecord records[1];
 } FieldItemResource;
 
+/** @brief Case entries of script opcode 0x09: a key byte and a branch halfword; key FIELD_SCRIPT_CASE_DEFAULT ends the list. */
+#define FIELD_SCRIPT_CASE_ENTRY_SIZE 3
+#define FIELD_SCRIPT_CASE_DEFAULT 0xFF
+
 /* Opcodes below 0x40 dispatch through this table, indexed by opcode. */
 extern void (*g_field_script_op_table[])();
 /* Opcodes 0x40 to 0x5F dispatch through this table, indexed by opcode - 0x40. */
 extern FieldDispatchFn g_field_script_pair_op_table[];
 
-extern s32 g_field_niki_state;
 extern s32 g_field_hide_actor_panels, g_field_pair_indicators_disabled, g_field_item_drop_enabled;
 
 void field_script_op_00(void);
@@ -334,7 +337,8 @@ void field_script_run(FieldScriptContext* context)
 
     previous_context = g_field_script;
     g_field_script = context;
-    field_set_script_var(g_field_script->status.owner_id, FIELD_VAR_EVENT_ARGUMENT, field_find_actor_record_or_default(context->status.owner_id)->event_argument);
+    field_set_script_var(g_field_script->status.owner_id, FIELD_VAR_EVENT_ARGUMENT,
+                         field_find_actor_record_or_default(context->status.owner_id)->event_argument);
     waiting_record = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
 
     if (waiting_record->wait.bits.frames != 0)
@@ -463,34 +467,34 @@ static u8* field_script_decode_operand(s32 type, u8* data, s32* value)
 
     switch (type)
     {
-    case FIELD_SCRIPT_OPERAND_BYTE:
-        *value = *cursor;
-        return cursor + 1;
-    case FIELD_SCRIPT_OPERAND_HALFWORD:
-    case FIELD_SCRIPT_OPERAND_HALFWORD_ALT:
-        *value = cursor[0] + (cursor[1] << 8);
-        return cursor + 2;
-    case FIELD_SCRIPT_OPERAND_WORD:
-        *value = cursor[0] + (cursor[1] << 8) + (cursor[2] << 16) + (cursor[3] << 24);
-        return cursor + 4;
-    case FIELD_SCRIPT_OPERAND_VARIABLE:
-        *value = field_get_script_var(g_field_script->status.owner_id, cursor[0] | (cursor[1] << 8));
-        return cursor + 2;
-    case FIELD_SCRIPT_OPERAND_HALFWORD_HIGH:
-        *value = (cursor[0] + (cursor[1] << 8)) + 0x10000;
-        return cursor + 2;
-    case FIELD_SCRIPT_OPERAND_NONE_6:
-    case FIELD_SCRIPT_OPERAND_NONE_7:
-        break;
-    case FIELD_SCRIPT_OPERAND_ZERO:
-        *value = 0;
-        break;
-    case FIELD_SCRIPT_OPERAND_ONE:
-        *value = 1;
-        break;
-    case FIELD_SCRIPT_OPERAND_OWNER:
-        *value = FIELD_SCRIPT_OWNER;
-        break;
+        case FIELD_SCRIPT_OPERAND_BYTE:
+            *value = *cursor;
+            return cursor + 1;
+        case FIELD_SCRIPT_OPERAND_HALFWORD:
+        case FIELD_SCRIPT_OPERAND_HALFWORD_ALT:
+            *value = cursor[0] + (cursor[1] << 8);
+            return cursor + 2;
+        case FIELD_SCRIPT_OPERAND_WORD:
+            *value = cursor[0] + (cursor[1] << 8) + (cursor[2] << 16) + (cursor[3] << 24);
+            return cursor + 4;
+        case FIELD_SCRIPT_OPERAND_VARIABLE:
+            *value = field_get_script_var(g_field_script->status.owner_id, cursor[0] | (cursor[1] << 8));
+            return cursor + 2;
+        case FIELD_SCRIPT_OPERAND_HALFWORD_HIGH:
+            *value = (cursor[0] + (cursor[1] << 8)) + 0x10000;
+            return cursor + 2;
+        case FIELD_SCRIPT_OPERAND_NONE_6:
+        case FIELD_SCRIPT_OPERAND_NONE_7:
+            break;
+        case FIELD_SCRIPT_OPERAND_ZERO:
+            *value = 0;
+            break;
+        case FIELD_SCRIPT_OPERAND_ONE:
+            *value = 1;
+            break;
+        case FIELD_SCRIPT_OPERAND_OWNER:
+            *value = FIELD_SCRIPT_OWNER;
+            break;
     }
 
     return cursor;
@@ -612,7 +616,7 @@ void field_script_op_05(void)
  */
 void field_script_op_06(void)
 {
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc += 1;
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc++;
 }
 
 /**
@@ -656,10 +660,6 @@ void field_script_test_range(void)
         FIELD_SCRIPT_ACTIVE_RECORD_STATE()->flags &= ~FIELD_SCRIPT_COND;
     }
 }
-
-/** @brief Case entries of script opcode 0x09: a key byte and a branch halfword; key FIELD_SCRIPT_CASE_DEFAULT ends the list. */
-#define FIELD_SCRIPT_CASE_ENTRY_SIZE 3
-#define FIELD_SCRIPT_CASE_DEFAULT 0xFF
 
 /**
  * @brief Opcode 0x09: skip to the case entry that matches an operand, then take its branch.
@@ -759,32 +759,32 @@ void field_script_record_bits(void)
 
     switch (base_selector)
     {
-    case FIELD_SCRIPT_RECORD_OBJECT:
-        base = field_find_object_state(target_index);
-        break;
-    default:
-        break;
-    case FIELD_SCRIPT_RECORD_RUNTIME:
-        base = &g_field_runtime->state;
-        break;
-    case FIELD_SCRIPT_RECORD_ACTOR:
-        base = field_find_actor_record_or_default(target_index);
-        break;
-    case FIELD_SCRIPT_RECORD_ITEM:
-        base = g_field_item_staging;
-        break;
-    case FIELD_SCRIPT_RECORD_BATTLE:
-        base = g_field_battle;
-        break;
-    case FIELD_SCRIPT_RECORD_STATUS:
-        base = field_find_status_record(target_index);
-        break;
-    case FIELD_SCRIPT_RECORD_CHARACTER:
-        base = &g_field_game_state->characters[target_index];
-        break;
-    case FIELD_SCRIPT_RECORD_GAME:
-        base = g_field_game_state;
-        break;
+        case FIELD_SCRIPT_RECORD_OBJECT:
+            base = field_find_object_state(target_index);
+            break;
+        default:
+            break;
+        case FIELD_SCRIPT_RECORD_RUNTIME:
+            base = &g_field_runtime->state;
+            break;
+        case FIELD_SCRIPT_RECORD_ACTOR:
+            base = field_find_actor_record_or_default(target_index);
+            break;
+        case FIELD_SCRIPT_RECORD_ITEM:
+            base = g_field_item_staging;
+            break;
+        case FIELD_SCRIPT_RECORD_BATTLE:
+            base = g_field_battle;
+            break;
+        case FIELD_SCRIPT_RECORD_STATUS:
+            base = field_find_status_record(target_index);
+            break;
+        case FIELD_SCRIPT_RECORD_CHARACTER:
+            base = &g_field_game_state->characters[target_index];
+            break;
+        case FIELD_SCRIPT_RECORD_GAME:
+            base = g_field_game_state;
+            break;
     }
 
     if (opcode == FIELD_SCRIPT_READ_RECORD)
@@ -838,7 +838,8 @@ void field_script_op_10(void)
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->wait.bits.frames = 0;
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record - 1)->pc =
         field_script_read_u16(FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc + 1, &script_ref.value);
-    FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc = field_get_event_script(field_read_script_var(g_field_script->status.owner_id, script_ref) & FIELD_SCRIPT_ID_MASK);
+    FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc =
+        field_get_event_script(field_read_script_var(g_field_script->status.owner_id, script_ref) & FIELD_SCRIPT_ID_MASK);
 }
 
 /**
@@ -872,22 +873,22 @@ void field_script_op_11(void)
 
     switch (portrait_operand)
     {
-    case FIELD_TALK_NO_PORTRAIT:
-        portrait = -1;
-        break;
-    case FIELD_TALK_SPEAKER_PORTRAIT:
-        record = field_find_actor_record_or_default(speaker);
-        portrait = -1;
+        case FIELD_TALK_NO_PORTRAIT:
+            portrait = -1;
+            break;
+        case FIELD_TALK_SPEAKER_PORTRAIT:
+            record = field_find_actor_record_or_default(speaker);
+            portrait = -1;
 
-        if (record->selector != FIELD_NO_SELECTOR)
-        {
-            portrait = record->selector;
-        }
+            if (record->selector != FIELD_NO_SELECTOR)
+            {
+                portrait = record->selector;
+            }
 
-        break;
-    default:
-        portrait = FIELD_SCRIPT_ACTIVE_RECORD()->pc[4];
-        break;
+            break;
+        default:
+            portrait = FIELD_SCRIPT_ACTIVE_RECORD()->pc[4];
+            break;
     }
 
     layout = FIELD_SCRIPT_ACTIVE_RECORD()->pc[6];
@@ -932,48 +933,48 @@ void field_script_op_12(void)
 
     switch (selector)
     {
-    case 0:
-        wait = field_get_animation_state(FIELD_LIST_TILE_ANIMS, operand) != FIELD_ANIM_STATE_FINISHED;
-        break;
-    case 1:
-        wait = field_get_animation_state(FIELD_LIST_TILE_ANIMS, operand) != FIELD_ANIM_STATE_MOVIE_STARTING;
-        break;
-    case 2:
-        actor = operand;
+        case 0:
+            wait = field_get_animation_state(FIELD_LIST_TILE_ANIMS, operand) != FIELD_ANIM_STATE_FINISHED;
+            break;
+        case 1:
+            wait = field_get_animation_state(FIELD_LIST_TILE_ANIMS, operand) != FIELD_ANIM_STATE_MOVIE_STARTING;
+            break;
+        case 2:
+            actor = operand;
 
-        if (actor == FIELD_SCRIPT_OWNER)
-        {
-            actor = g_field_script->status.owner_id;
-        }
+            if (actor == FIELD_SCRIPT_OWNER)
+            {
+                actor = g_field_script->status.owner_id;
+            }
 
-        wait = field_read_actor_binding_state(actor) < FIELD_BINDING_READY;
-        break;
-    case 3:
-        actor = operand;
+            wait = field_read_actor_binding_state(actor) < FIELD_BINDING_READY;
+            break;
+        case 3:
+            actor = operand;
 
-        if (actor == FIELD_SCRIPT_OWNER)
-        {
-            actor = g_field_script->status.owner_id;
-        }
+            if (actor == FIELD_SCRIPT_OWNER)
+            {
+                actor = g_field_script->status.owner_id;
+            }
 
-        wait = field_read_actor_binding_state(actor) != FIELD_BINDING_LOADING;
-        break;
-    case 4:
-        actor = operand;
+            wait = field_read_actor_binding_state(actor) != FIELD_BINDING_LOADING;
+            break;
+        case 4:
+            actor = operand;
 
-        if (actor == FIELD_SCRIPT_OWNER)
-        {
-            actor = g_field_script->status.owner_id;
-        }
+            if (actor == FIELD_SCRIPT_OWNER)
+            {
+                actor = g_field_script->status.owner_id;
+            }
 
-        wait = field_read_actor_binding_state(actor) != FIELD_BINDING_IDLE;
-        break;
-    case 5:
-        wait = field_text_get_status(operand & FIELD_TALK_PLANE_MASK) != FIELD_TEXT_STATUS_BUSY;
-        break;
-    case 6:
-        wait = field_text_get_status(operand & FIELD_TALK_PLANE_MASK) != FIELD_TEXT_STATUS_DONE;
-        break;
+            wait = field_read_actor_binding_state(actor) != FIELD_BINDING_IDLE;
+            break;
+        case 5:
+            wait = field_text_get_status(operand & FIELD_TALK_PLANE_MASK) != FIELD_TEXT_STATUS_BUSY;
+            break;
+        case 6:
+            wait = field_text_get_status(operand & FIELD_TALK_PLANE_MASK) != FIELD_TEXT_STATUS_DONE;
+            break;
     }
 
     if (wait)
@@ -1004,9 +1005,9 @@ void field_script_op_13(void)
 
     switch (selector)
     {
-    case 0:
-        wait = field_read_actor_binding_state((actor != FIELD_SCRIPT_OWNER) ? actor : g_field_script->status.owner_id) < FIELD_BINDING_READY;
-        break;
+        case 0:
+            wait = field_read_actor_binding_state((actor != FIELD_SCRIPT_OWNER) ? actor : g_field_script->status.owner_id) < FIELD_BINDING_READY;
+            break;
     }
 
     if (wait)
@@ -1033,18 +1034,18 @@ void field_script_op_14(void)
 
     switch (selector)
     {
-    case 1:
-        wait = field_is_battle_active();
-        break;
-    case 2:
-        wait = g_field_gosub_state != 2;
-        break;
-    case 3:
-        wait = g_field_niki_state == 1;
-        break;
-    case 4:
-        wait = g_field_niki_state == 0;
-        break;
+        case 1:
+            wait = field_is_battle_active();
+            break;
+        case 2:
+            wait = g_field_gosub_state != 2;
+            break;
+        case 3:
+            wait = g_field_niki_state == 1;
+            break;
+        case 4:
+            wait = g_field_niki_state == 0;
+            break;
     }
 
     if (wait != 0)
@@ -1321,7 +1322,7 @@ void field_script_op_1e(void)
 void field_script_op_1f(void)
 {
     field_battle_suspend();
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc += 1;
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc++;
 }
 
 /**
@@ -1367,7 +1368,7 @@ void field_script_op_23(void)
 void field_script_op_24(void)
 {
     record_game_diagnostic(DIAG_ERROR, DIAG_SCRIPT_BAD_OPCODE, g_field_script->status.owner_id, 0x24);
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc += 1;
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc++;
 }
 
 /**
@@ -1465,7 +1466,7 @@ void field_script_op_29(void)
 
     field_set_script_var(0, FIELD_VAR_RESULT, result);
     field_queue_actor_event(FIELD_EVENT_ACTOR_ID_BASE, 0, 0x10);
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc += 1;
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc++;
 }
 
 /**
@@ -1772,7 +1773,7 @@ void field_script_op_37(void)
  */
 void field_script_op_38(void)
 {
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc += 1;
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc++;
 }
 
 /**
@@ -1851,52 +1852,52 @@ void field_script_op_0f(void)
 
     switch (FIELD_SCRIPT_ACTIVE_RECORD()->pc[1])
     {
-    case 0:
-        all_techniques = 0xFFFFFF;
+        case 0:
+            all_techniques = 0xFFFFFF;
 
-        for (i = FIELD_WEAPON_CATEGORY_COUNT - 1; i >= 0; i--)
-        {
-            g_field_game_state->technique_bits[i] = all_techniques;
-        }
+            for (i = FIELD_WEAPON_CATEGORY_COUNT - 1; i >= 0; i--)
+            {
+                g_field_game_state->technique_bits[i] = all_techniques;
+            }
 
-        g_field_game_state->ability_bits[0] = 0x500;
-        g_field_game_state->ability_bits[1] = 0xFFFF8000;
-        g_field_game_state->ability_bits[2] = 0x803F;
-        FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
-        return;
-    case 1:
-        field_battle_setup(1);
-        break;
-    case 3:
-        g_field_runtime->trigger_table = field_find_resource(FIELD_RESOURCE_TRIGGERS);
-        FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
-        return;
-    case 4:
-        field_copy_words(NULL, g_field_game_state->words, sizeof(g_field_game_state->words));
-        FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
-        return;
-    case 5:
-        field_apply_pet_level_ups(0);
-        field_apply_pet_level_ups(1);
-        field_apply_pet_level_ups(2);
-        field_apply_pet_level_ups(3);
-        field_apply_pet_level_ups(4);
-        break;
-    case 6:
-        for (i = 0; i < PET_RECORD_COUNT; i++)
-        {
-            g_field_game_state->pets[i].hatch_counter = 0;
-            g_field_game_state->pets[i].status.word &= ~PET_STATUS_EGG;
-        }
+            g_field_game_state->ability_bits[0] = 0x500;
+            g_field_game_state->ability_bits[1] = 0xFFFF8000;
+            g_field_game_state->ability_bits[2] = 0x803F;
+            FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
+            return;
+        case 1:
+            field_battle_setup(1);
+            break;
+        case 3:
+            g_field_runtime->trigger_table = field_find_resource(FIELD_RESOURCE_TRIGGERS);
+            FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
+            return;
+        case 4:
+            field_copy_words(NULL, g_field_game_state->words, sizeof(g_field_game_state->words));
+            FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
+            return;
+        case 5:
+            field_apply_pet_level_ups(0);
+            field_apply_pet_level_ups(1);
+            field_apply_pet_level_ups(2);
+            field_apply_pet_level_ups(3);
+            field_apply_pet_level_ups(4);
+            break;
+        case 6:
+            for (i = 0; i < PET_RECORD_COUNT; i++)
+            {
+                g_field_game_state->pets[i].hatch_counter = 0;
+                g_field_game_state->pets[i].status.word &= ~PET_STATUS_EGG;
+            }
 
-        break;
-    case 7:
-        for (i = 0; i < FIELD_DEBUG_ITEM_KIND_COUNT; i++)
-        {
-            g_field_game_state->item_counts[i] = ITEM_COUNT_MAX;
-        }
+            break;
+        case 7:
+            for (i = 0; i < FIELD_DEBUG_ITEM_KIND_COUNT; i++)
+            {
+                g_field_game_state->item_counts[i] = ITEM_COUNT_MAX;
+            }
 
-        break;
+            break;
     }
 
     FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
@@ -1981,273 +1982,273 @@ void field_script_misc_command(u32 command, s32 operand)
 
     switch (command)
     {
-    case FIELD_SCRIPT_CMD_RETURN_TO_TITLE:
-        field_request_return_to_title(operand);
-        return;
-    case FIELD_SCRIPT_CMD_START_TIMED_PANEL:
-        field_start_timed_panel(operand);
-        return;
-    case FIELD_SCRIPT_CMD_SET_GAME_FLAG:
-        field_set_game_flag(operand);
-        return;
-    case FIELD_SCRIPT_CMD_STOP_ACTOR:
-        field_stop_actor(operand);
-        return;
-    case FIELD_SCRIPT_CMD_EFFECT_ANIMATION_1:
-        field_play_effect_animation(operand, 1);
-        return;
-    case FIELD_SCRIPT_CMD_EFFECT_ANIMATION_0:
-        field_play_effect_animation(operand, 0);
-        return;
-    case FIELD_SCRIPT_CMD_SET_LAND_FLAG_04:
-        g_field_game_state->lands[operand].flags |= FIELD_LAND_FLAG_04;
-        return;
-    case FIELD_SCRIPT_CMD_RESTART_TILE_ANIMATION:
-        field_control_animation(FIELD_LIST_TILE_ANIMS, operand, 0, FIELD_ANIM_OP_RESTART);
-        return;
-    case FIELD_SCRIPT_CMD_FINISH_TILE_ANIMATION:
-        field_control_animation(FIELD_LIST_TILE_ANIMS, operand, FIELD_KEYFRAME_NONE, FIELD_ANIM_OP_FINISH_LOOP);
-        return;
-    case FIELD_SCRIPT_CMD_STOP_SECOND_SONG:
-        field_stop_second_song();
-        return;
-    case FIELD_SCRIPT_CMD_OPEN_ENCYCLOPEDIA:
-        field_run_zukan(operand);
-        return;
-    case FIELD_SCRIPT_CMD_MENU:
-        field_run_menu_op(operand);
-        return;
-    case FIELD_SCRIPT_CMD_SCREEN_SEQUENCE:
-        /* The screen sequence starts at runtime script variable word @p operand. */
-        field_open_gosub_screen_sequence((s32*)g_field_runtime + operand);
-        return;
-    case FIELD_SCRIPT_CMD_CREATE_ITEM:
-        field_create_item_from_gosub(operand);
-        return;
-    case FIELD_SCRIPT_CMD_PLAY_SECOND_SONG:
-        g_field_runtime->scene_entry |= 0x8000;
-        field_play_second_song();
-        return;
-    case FIELD_SCRIPT_CMD_MAKE_LAND_AVAILABLE:
-        field_make_land_available(operand);
-        return;
-    case FIELD_SCRIPT_CMD_LEAVE_PARTY:
-        field_leave_party(operand);
-        return;
-    case FIELD_SCRIPT_CMD_STOP_ACTOR_SCRIPT:
-        field_stop_actor_script(index, 0);
-        return;
-    case FIELD_SCRIPT_CMD_GET_ITEM_COUNT:
-        field_set_script_var(0, FIELD_VAR_RESULT, field_get_item_count(operand));
-        return;
-    case FIELD_SCRIPT_CMD_RECEIVE_ITEM:
-        field_receive_item(operand);
-        return;
-    case FIELD_SCRIPT_CMD_CONSUME_ITEM:
-        field_consume_item(operand);
-        return;
-    case FIELD_SCRIPT_CMD_GET_LAND_STATE:
-        field_set_script_var(0, FIELD_VAR_RESULT, field_get_land_state(operand));
-        return;
-    case FIELD_SCRIPT_CMD_TOGGLE_ACTOR_HIDDEN:
-        field_toggle_actor_hidden(index);
-        return;
-    case FIELD_SCRIPT_CMD_TURN_ACTOR:
-        field_start_actor_turn(index);
-        return;
-    case FIELD_SCRIPT_CMD_ADD_COMPANION:
-        field_set_script_var(0, FIELD_VAR_RESULT, field_add_stored_companion(operand));
-        return;
-    case FIELD_SCRIPT_CMD_RELEASE_COMPANION:
-        field_set_script_var(0, FIELD_VAR_RESULT, field_release_stored_companion());
-        return;
-    case FIELD_SCRIPT_CMD_SET_SCRIPT_ONLY:
-        field_set_actor_record_script_only(index, 2);
-        return;
-    case FIELD_SCRIPT_CMD_START_INTERACTION:
-        field_start_interaction(FIELD_EVENT_ACTOR_ID_BASE, operand & 0xFFFF);
-        return;
-    case FIELD_SCRIPT_CMD_RESTART_PALETTE_ANIMATION:
-        field_control_animation(FIELD_LIST_PALETTE_ANIMS, operand, 0, FIELD_ANIM_OP_RESTART);
-        return;
-    case FIELD_SCRIPT_CMD_STOP_PALETTE_ANIMATION:
-        field_control_animation(FIELD_LIST_PALETTE_ANIMS, operand, FIELD_KEYFRAME_NONE, FIELD_ANIM_OP_STOP);
-        return;
-    case FIELD_SCRIPT_CMD_RESTART_TINT_ANIMATION:
-        field_control_animation(FIELD_LIST_TINT_ANIMS, operand, 0, FIELD_ANIM_OP_RESTART);
-        return;
-    case FIELD_SCRIPT_CMD_STOP_TINT_ANIMATION:
-        field_control_animation(FIELD_LIST_TINT_ANIMS, operand, FIELD_KEYFRAME_NONE, FIELD_ANIM_OP_STOP);
-        return;
-    case FIELD_SCRIPT_CMD_ENABLE_NODE:
-        field_set_node_enabled(operand, 1);
-        return;
-    case FIELD_SCRIPT_CMD_DISABLE_NODE:
-        field_set_node_enabled(operand, 0);
-        return;
-    case FIELD_SCRIPT_CMD_ADD_TEMPLATE_ITEM:
-        field_set_script_var(0, FIELD_VAR_RESULT, field_add_template_item(operand));
-        return;
-    case FIELD_SCRIPT_CMD_SELECT_GOLEM_CELL:
-        field_golem_select_logic_cell(index);
-        return;
-    case FIELD_SCRIPT_CMD_PUBLISH_GOLEM_CELL:
-        field_golem_publish_logic_cell(operand);
-        return;
-    case FIELD_SCRIPT_CMD_RAISE_COMPANION_INTENSITY:
-        field_raise_companion_intensity(operand);
-        return;
-    case FIELD_SCRIPT_CMD_DISCARD_ITEM:
-        field_discard_item(operand);
-        return;
-    case FIELD_SCRIPT_CMD_STOP_NON_SCRIPT_ACTORS:
-        field_stop_non_script_actors();
-        return;
-    case FIELD_SCRIPT_CMD_ACTOR_LOOP_STUB:
-        field_actor_loop_stub();
-        return;
-    case FIELD_SCRIPT_CMD_UNLOCK_ENCYCLOPEDIA:
-        field_unlock_encyclopedia_entry(operand);
-        return;
-    case FIELD_SCRIPT_CMD_OPEN_CARDA:
-        field_open_carda(operand);
-        return;
-    case FIELD_SCRIPT_CMD_SET_VARIABLE:
-        field_set_script_var(0, operand, 1);
-        return;
-    case FIELD_SCRIPT_CMD_CLEAR_SCRIPT_ONLY:
-        field_clear_actor_record_script_only(index);
-        return;
-    case FIELD_SCRIPT_CMD_GET_COMPANION_STATUS:
-        field_set_script_var(0, FIELD_VAR_RESULT, field_get_stored_companion_status(operand));
-        return;
-    case FIELD_SCRIPT_CMD_RENAME_COMPANION:
-        field_rename_stored_companion(operand);
-        return;
-    case FIELD_SCRIPT_CMD_SET_ITEM_DROP_ENABLED:
-        g_field_item_drop_enabled = operand;
-        return;
-    case FIELD_SCRIPT_CMD_DISABLE_PAIR_INDICATORS:
-        g_field_pair_indicators_disabled = operand;
-        return;
-    case FIELD_SCRIPT_CMD_FIND_FACED_ITEM:
-        field_set_script_var(0, FIELD_VAR_RESULT, field_find_nearest_faced_item(operand));
-        return;
-    case FIELD_SCRIPT_CMD_SEQUENCE_0:
-        field_control_sequence(operand, 0);
-        return;
-    case FIELD_SCRIPT_CMD_SEQUENCE_1:
-        field_control_sequence(operand, 1);
-        return;
-    case FIELD_SCRIPT_CMD_SHOW_TIMED_TEXT:
-        field_show_timed_text(operand);
-        return;
-    case FIELD_SCRIPT_CMD_DEFEAT_ACTOR:
-        field_battle_defeat_record(index);
-        return;
-    case FIELD_SCRIPT_CMD_RECEIVE_MONEY:
-        field_set_script_var(0, FIELD_VAR_RESULT, field_receive_money(operand));
-        return;
-    case FIELD_SCRIPT_CMD_SPEND_MONEY:
-        field_set_script_var(0, FIELD_VAR_RESULT, field_spend_money(operand));
-        return;
-    case FIELD_SCRIPT_CMD_SET_MUSIC_TRACK_INDEX:
-        if (operand >= FIELD_MUSIC_TRACK_COUNT)
-        {
-            record_game_diagnostic(DIAG_ERROR, 1, 0x2C, operand);
+        case FIELD_SCRIPT_CMD_RETURN_TO_TITLE:
+            field_request_return_to_title(operand);
             return;
-        }
+        case FIELD_SCRIPT_CMD_START_TIMED_PANEL:
+            field_start_timed_panel(operand);
+            return;
+        case FIELD_SCRIPT_CMD_SET_GAME_FLAG:
+            field_set_game_flag(operand);
+            return;
+        case FIELD_SCRIPT_CMD_STOP_ACTOR:
+            field_stop_actor(operand);
+            return;
+        case FIELD_SCRIPT_CMD_EFFECT_ANIMATION_1:
+            field_play_effect_animation(operand, 1);
+            return;
+        case FIELD_SCRIPT_CMD_EFFECT_ANIMATION_0:
+            field_play_effect_animation(operand, 0);
+            return;
+        case FIELD_SCRIPT_CMD_SET_LAND_FLAG_04:
+            g_field_game_state->lands[operand].flags |= FIELD_LAND_FLAG_04;
+            return;
+        case FIELD_SCRIPT_CMD_RESTART_TILE_ANIMATION:
+            field_control_animation(FIELD_LIST_TILE_ANIMS, operand, 0, FIELD_ANIM_OP_RESTART);
+            return;
+        case FIELD_SCRIPT_CMD_FINISH_TILE_ANIMATION:
+            field_control_animation(FIELD_LIST_TILE_ANIMS, operand, FIELD_KEYFRAME_NONE, FIELD_ANIM_OP_FINISH_LOOP);
+            return;
+        case FIELD_SCRIPT_CMD_STOP_SECOND_SONG:
+            field_stop_second_song();
+            return;
+        case FIELD_SCRIPT_CMD_OPEN_ENCYCLOPEDIA:
+            field_run_zukan(operand);
+            return;
+        case FIELD_SCRIPT_CMD_MENU:
+            field_run_menu_op(operand);
+            return;
+        case FIELD_SCRIPT_CMD_SCREEN_SEQUENCE:
+            /* The screen sequence starts at runtime script variable word @p operand. */
+            field_open_gosub_screen_sequence((s32*)g_field_runtime + operand);
+            return;
+        case FIELD_SCRIPT_CMD_CREATE_ITEM:
+            field_create_item_from_gosub(operand);
+            return;
+        case FIELD_SCRIPT_CMD_PLAY_SECOND_SONG:
+            g_field_runtime->scene_entry |= 0x8000;
+            field_play_second_song();
+            return;
+        case FIELD_SCRIPT_CMD_MAKE_LAND_AVAILABLE:
+            field_unlock_land_artifact(operand);
+            return;
+        case FIELD_SCRIPT_CMD_LEAVE_PARTY:
+            field_leave_party(operand);
+            return;
+        case FIELD_SCRIPT_CMD_STOP_ACTOR_SCRIPT:
+            field_stop_actor_script(index, 0);
+            return;
+        case FIELD_SCRIPT_CMD_GET_ITEM_COUNT:
+            field_set_script_var(0, FIELD_VAR_RESULT, field_get_item_count(operand));
+            return;
+        case FIELD_SCRIPT_CMD_RECEIVE_ITEM:
+            field_receive_item(operand);
+            return;
+        case FIELD_SCRIPT_CMD_CONSUME_ITEM:
+            field_consume_item(operand);
+            return;
+        case FIELD_SCRIPT_CMD_GET_LAND_STATE:
+            field_set_script_var(0, FIELD_VAR_RESULT, field_get_land_state(operand));
+            return;
+        case FIELD_SCRIPT_CMD_TOGGLE_ACTOR_HIDDEN:
+            field_toggle_actor_hidden(index);
+            return;
+        case FIELD_SCRIPT_CMD_TURN_ACTOR:
+            field_start_actor_turn(index);
+            return;
+        case FIELD_SCRIPT_CMD_ADD_COMPANION:
+            field_set_script_var(0, FIELD_VAR_RESULT, field_add_stored_companion(operand));
+            return;
+        case FIELD_SCRIPT_CMD_RELEASE_COMPANION:
+            field_set_script_var(0, FIELD_VAR_RESULT, field_release_stored_companion());
+            return;
+        case FIELD_SCRIPT_CMD_SET_SCRIPT_ONLY:
+            field_set_actor_record_script_only(index, 2);
+            return;
+        case FIELD_SCRIPT_CMD_START_INTERACTION:
+            field_start_interaction(FIELD_EVENT_ACTOR_ID_BASE, operand & 0xFFFF);
+            return;
+        case FIELD_SCRIPT_CMD_RESTART_PALETTE_ANIMATION:
+            field_control_animation(FIELD_LIST_PALETTE_ANIMS, operand, 0, FIELD_ANIM_OP_RESTART);
+            return;
+        case FIELD_SCRIPT_CMD_STOP_PALETTE_ANIMATION:
+            field_control_animation(FIELD_LIST_PALETTE_ANIMS, operand, FIELD_KEYFRAME_NONE, FIELD_ANIM_OP_STOP);
+            return;
+        case FIELD_SCRIPT_CMD_RESTART_TINT_ANIMATION:
+            field_control_animation(FIELD_LIST_TINT_ANIMS, operand, 0, FIELD_ANIM_OP_RESTART);
+            return;
+        case FIELD_SCRIPT_CMD_STOP_TINT_ANIMATION:
+            field_control_animation(FIELD_LIST_TINT_ANIMS, operand, FIELD_KEYFRAME_NONE, FIELD_ANIM_OP_STOP);
+            return;
+        case FIELD_SCRIPT_CMD_ENABLE_NODE:
+            field_set_node_enabled(operand, 1);
+            return;
+        case FIELD_SCRIPT_CMD_DISABLE_NODE:
+            field_set_node_enabled(operand, 0);
+            return;
+        case FIELD_SCRIPT_CMD_ADD_TEMPLATE_ITEM:
+            field_set_script_var(0, FIELD_VAR_RESULT, field_add_template_item(operand));
+            return;
+        case FIELD_SCRIPT_CMD_SELECT_GOLEM_CELL:
+            field_golem_select_logic_cell(index);
+            return;
+        case FIELD_SCRIPT_CMD_PUBLISH_GOLEM_CELL:
+            field_golem_publish_logic_cell(operand);
+            return;
+        case FIELD_SCRIPT_CMD_RAISE_COMPANION_INTENSITY:
+            field_raise_companion_intensity(operand);
+            return;
+        case FIELD_SCRIPT_CMD_DISCARD_ITEM:
+            field_discard_item(operand);
+            return;
+        case FIELD_SCRIPT_CMD_STOP_NON_SCRIPT_ACTORS:
+            field_stop_non_script_actors();
+            return;
+        case FIELD_SCRIPT_CMD_ACTOR_LOOP_STUB:
+            field_actor_loop_stub();
+            return;
+        case FIELD_SCRIPT_CMD_UNLOCK_ENCYCLOPEDIA:
+            field_unlock_encyclopedia_entry(operand);
+            return;
+        case FIELD_SCRIPT_CMD_OPEN_CARDA:
+            field_open_carda(operand);
+            return;
+        case FIELD_SCRIPT_CMD_SET_VARIABLE:
+            field_set_script_var(0, operand, 1);
+            return;
+        case FIELD_SCRIPT_CMD_CLEAR_SCRIPT_ONLY:
+            field_clear_actor_record_script_only(index);
+            return;
+        case FIELD_SCRIPT_CMD_GET_COMPANION_STATUS:
+            field_set_script_var(0, FIELD_VAR_RESULT, field_get_stored_companion_status(operand));
+            return;
+        case FIELD_SCRIPT_CMD_RENAME_COMPANION:
+            field_rename_stored_companion(operand);
+            return;
+        case FIELD_SCRIPT_CMD_SET_ITEM_DROP_ENABLED:
+            g_field_item_drop_enabled = operand;
+            return;
+        case FIELD_SCRIPT_CMD_DISABLE_PAIR_INDICATORS:
+            g_field_pair_indicators_disabled = operand;
+            return;
+        case FIELD_SCRIPT_CMD_FIND_FACED_ITEM:
+            field_set_script_var(0, FIELD_VAR_RESULT, field_find_nearest_faced_item(operand));
+            return;
+        case FIELD_SCRIPT_CMD_SEQUENCE_0:
+            field_control_sequence(operand, 0);
+            return;
+        case FIELD_SCRIPT_CMD_SEQUENCE_1:
+            field_control_sequence(operand, 1);
+            return;
+        case FIELD_SCRIPT_CMD_SHOW_TIMED_TEXT:
+            field_show_timed_text(operand);
+            return;
+        case FIELD_SCRIPT_CMD_DEFEAT_ACTOR:
+            field_battle_defeat_record(index);
+            return;
+        case FIELD_SCRIPT_CMD_RECEIVE_MONEY:
+            field_set_script_var(0, FIELD_VAR_RESULT, field_receive_money(operand));
+            return;
+        case FIELD_SCRIPT_CMD_SPEND_MONEY:
+            field_set_script_var(0, FIELD_VAR_RESULT, field_spend_money(operand));
+            return;
+        case FIELD_SCRIPT_CMD_SET_MUSIC_TRACK_INDEX:
+            if (operand >= FIELD_MUSIC_TRACK_COUNT)
+            {
+                record_game_diagnostic(DIAG_ERROR, 1, 0x2C, operand);
+                return;
+            }
 
-        g_music_track_index = operand;
-        return;
-    case FIELD_SCRIPT_CMD_ADVANCE_WEEKDAY:
-        /* Advance the day of the week. */
-        g_field_game_state->control.bits.weekday++;
-        g_field_game_state->control.bits.weekday %= 6U;
-        return;
-    case FIELD_SCRIPT_CMD_HIDE_ACTOR_PANELS:
-        g_field_hide_actor_panels = operand;
-        return;
-    case FIELD_SCRIPT_CMD_OPEN_SHOP:
-        field_open_shop_mode_0(operand);
-        return;
-    case FIELD_SCRIPT_CMD_CACHE_INVENTORY_VALUES:
-        field_cache_inventory_values();
-        return;
-    case FIELD_SCRIPT_CMD_STOP_OWNER_ACTOR:
-        field_stop_actor(index);
-        return;
-    case FIELD_SCRIPT_CMD_APPLY_REGION_EFFECTS:
-        field_apply_pending_region_effects();
-        return;
-    case FIELD_SCRIPT_CMD_FADE_OUT:
-        field_begin_scene_fade_out();
-        return;
-    case FIELD_SCRIPT_CMD_PIXEL_LOOKUP_2F:
-    case FIELD_SCRIPT_CMD_PIXEL_LOOKUP_43:
-        field_set_pixel_lookup(operand);
-        return;
-    case FIELD_SCRIPT_CMD_SET_DUEL_MODE:
-        g_field_duel_mode = operand;
-        return;
-    case FIELD_SCRIPT_CMD_STOP_SONG:
-        akao_stop_song(0);
-        return;
-    case FIELD_SCRIPT_CMD_AUDIO_F1:
-        akao_release_all_sfx();
-        return;
-    case FIELD_SCRIPT_CMD_RESET_PARTY_LEVEL:
-        field_reset_party_to_level(operand);
-        return;
-    case FIELD_SCRIPT_CMD_APPLY_REGION_LEVEL_UPS:
-        field_apply_pet_level_ups(operand);
-        return;
-    case FIELD_SCRIPT_CMD_UNKNOWN_49:
-        g_script_pair_value_49 = operand;
-        return;
-    case FIELD_SCRIPT_CMD_WAIT:
-        rec = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
-        rec->wait.bits.frames = operand;
-        g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
-        return;
-    case FIELD_SCRIPT_CMD_SET_GOSUB_RESULT:
-        g_gosub_result_count = 1;
-        g_gosub_result_values[0] = operand;
-        return;
-    case FIELD_SCRIPT_CMD_SET_MONEY:
-        g_field_game_state->money = operand;
-        return;
-    case FIELD_SCRIPT_CMD_OPEN_CARDA_SCENE:
-        g_music_track_index = 0;
-        field_open_carda(0);
-        field_script_op_85(0xFFFE, 0, 0, 0);
-        return;
-    case FIELD_SCRIPT_CMD_NEW_GAME:
-        /* New game: clear the variables, the flags and the lands, then place the starting land. */
-        g_field_game_state->options.word |= SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3;
-        field_copy_words(NULL, g_field_game_state->words, sizeof(g_field_game_state->words));
-        field_copy_words(NULL, &g_field_game_state->control,
-                         sizeof(g_field_game_state->control) + sizeof(g_field_game_state->flag_bits) + sizeof(g_field_game_state->lands));
-        g_field_game_state->control.fields.placed_land_count = 1;
-        SAVED_BIT_SET(g_field_game_state->flag_bits, SAVED_EVENT_FLAG_NEW_GAME);
+            g_music_track_index = operand;
+            return;
+        case FIELD_SCRIPT_CMD_ADVANCE_WEEKDAY:
+            /* Advance the day of the week. */
+            g_field_game_state->control.bits.weekday++;
+            g_field_game_state->control.bits.weekday %= 6U;
+            return;
+        case FIELD_SCRIPT_CMD_HIDE_ACTOR_PANELS:
+            g_field_hide_actor_panels = operand;
+            return;
+        case FIELD_SCRIPT_CMD_OPEN_SHOP:
+            field_open_shop_mode_0(operand);
+            return;
+        case FIELD_SCRIPT_CMD_CACHE_INVENTORY_VALUES:
+            field_cache_inventory_values();
+            return;
+        case FIELD_SCRIPT_CMD_STOP_OWNER_ACTOR:
+            field_stop_actor(index);
+            return;
+        case FIELD_SCRIPT_CMD_APPLY_REGION_EFFECTS:
+            field_apply_pending_region_effects();
+            return;
+        case FIELD_SCRIPT_CMD_FADE_OUT:
+            field_begin_scene_fade_out();
+            return;
+        case FIELD_SCRIPT_CMD_PIXEL_LOOKUP_2F:
+        case FIELD_SCRIPT_CMD_PIXEL_LOOKUP_43:
+            field_set_pixel_lookup(operand);
+            return;
+        case FIELD_SCRIPT_CMD_SET_DUEL_MODE:
+            g_field_duel_mode = operand;
+            return;
+        case FIELD_SCRIPT_CMD_STOP_SONG:
+            akao_stop_song(0);
+            return;
+        case FIELD_SCRIPT_CMD_AUDIO_F1:
+            akao_release_all_sfx();
+            return;
+        case FIELD_SCRIPT_CMD_RESET_PARTY_LEVEL:
+            field_reset_party_to_level(operand);
+            return;
+        case FIELD_SCRIPT_CMD_APPLY_REGION_LEVEL_UPS:
+            field_apply_pet_level_ups(operand);
+            return;
+        case FIELD_SCRIPT_CMD_UNKNOWN_49:
+            g_script_pair_value_49 = operand;
+            return;
+        case FIELD_SCRIPT_CMD_WAIT:
+            rec = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
+            rec->wait.bits.frames = operand;
+            g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
+            return;
+        case FIELD_SCRIPT_CMD_SET_GOSUB_RESULT:
+            g_gosub_result_count = 1;
+            g_gosub_result_values[0] = operand;
+            return;
+        case FIELD_SCRIPT_CMD_SET_MONEY:
+            g_field_game_state->money = operand;
+            return;
+        case FIELD_SCRIPT_CMD_OPEN_CARDA_SCENE:
+            g_music_track_index = 0;
+            field_open_carda(0);
+            field_script_op_85(0xFFFE, 0, 0, 0);
+            return;
+        case FIELD_SCRIPT_CMD_NEW_GAME:
+            /* New game: clear the variables, the flags and the lands, then place the starting land. */
+            g_field_game_state->options.word |= SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3;
+            field_copy_words(NULL, g_field_game_state->words, sizeof(g_field_game_state->words));
+            field_copy_words(NULL, &g_field_game_state->control,
+                             sizeof(g_field_game_state->control) + sizeof(g_field_game_state->flag_bits) + sizeof(g_field_game_state->lands));
+            g_field_game_state->control.fields.artifact_count = 1;
+            SAVED_BIT_SET(g_field_game_state->flag_bits, SAVED_EVENT_FLAG_NEW_GAME);
 
-        for (index = 0; index < FIELD_LAND_COUNT; index++)
-        {
-            g_field_game_state->lands[index].x = FIELD_LAND_CELL_NONE;
-            g_field_game_state->lands[index].z = FIELD_LAND_CELL_NONE;
-        }
+            for (index = 0; index < FIELD_LAND_COUNT; index++)
+            {
+                g_field_game_state->lands[index].x = FIELD_LAND_CELL_NONE;
+                g_field_game_state->lands[index].z = FIELD_LAND_CELL_NONE;
+            }
 
-        FIELD_LAND_WORDS[0].word |= FIELD_LAND_PLACED;
-        g_field_game_state->lands[0].count = 1;
-        FIELD_LAND_WORDS[0].word |= FIELD_LAND_FLAG_04;
-        FIELD_LAND_WORDS[1].word |= FIELD_LAND_FLAG_04;
-        FIELD_LAND_WORDS[2].word |= FIELD_LAND_FLAG_04;
-        FIELD_LAND_WORDS[3].word |= FIELD_LAND_FLAG_04;
-        FIELD_LAND_WORDS[4].word |= FIELD_LAND_FLAG_04;
-        FIELD_LAND_WORDS[5].word |= FIELD_LAND_FLAG_04;
-        FIELD_LAND_WORDS[6].word |= FIELD_LAND_FLAG_04;
-        FIELD_LAND_WORDS[32].word |= FIELD_LAND_FLAG_04;
-        break;
+            FIELD_LAND_WORDS[0].word |= FIELD_LAND_ARTIFACT_OBTAINED;
+            g_field_game_state->lands[0].artifact_order = 1;
+            FIELD_LAND_WORDS[0].word |= FIELD_LAND_FLAG_04;
+            FIELD_LAND_WORDS[1].word |= FIELD_LAND_FLAG_04;
+            FIELD_LAND_WORDS[2].word |= FIELD_LAND_FLAG_04;
+            FIELD_LAND_WORDS[3].word |= FIELD_LAND_FLAG_04;
+            FIELD_LAND_WORDS[4].word |= FIELD_LAND_FLAG_04;
+            FIELD_LAND_WORDS[5].word |= FIELD_LAND_FLAG_04;
+            FIELD_LAND_WORDS[6].word |= FIELD_LAND_FLAG_04;
+            FIELD_LAND_WORDS[32].word |= FIELD_LAND_FLAG_04;
+            break;
     }
 }
 
@@ -2845,8 +2846,7 @@ void field_script_op_84(s32 actor_id, s32 animation, s32 builtin_animation, s32 
         actor = actor_id;
     }
 
-    field_queue_battle_entry_change(actor, FIELD_SCRIPT_OPTIONAL(animation), FIELD_SCRIPT_OPTIONAL(builtin_animation),
-                                    FIELD_SCRIPT_OPTIONAL(sound));
+    field_queue_battle_entry_change(actor, FIELD_SCRIPT_OPTIONAL(animation), FIELD_SCRIPT_OPTIONAL(builtin_animation), FIELD_SCRIPT_OPTIONAL(sound));
 }
 
 /**
@@ -2875,58 +2875,58 @@ void field_script_op_85(s32 scene_id, s32 object_id, s32 audio, s32 spawn_id)
 
     switch (sound_bank)
     {
-    case 0xFE:
-        g_field_runtime->scene_argument1 = -2;
-        break;
-    case 0xFF:
-        g_field_sound_bank_id = -1;
-        g_field_runtime->scene_argument1 = -1;
-        break;
-    default:
-        if (sound_bank == g_field_sound_bank_id)
-        {
+        case 0xFE:
             g_field_runtime->scene_argument1 = -2;
-        }
-        else
-        {
-            g_field_runtime->scene_argument1 = sound_bank;
-        }
+            break;
+        case 0xFF:
+            g_field_sound_bank_id = -1;
+            g_field_runtime->scene_argument1 = -1;
+            break;
+        default:
+            if (sound_bank == g_field_sound_bank_id)
+            {
+                g_field_runtime->scene_argument1 = -2;
+            }
+            else
+            {
+                g_field_runtime->scene_argument1 = sound_bank;
+            }
 
-        break;
+            break;
     }
 
     switch (music)
     {
-    case 0xFE:
-        g_field_runtime->scene_entry = -2;
-        break;
-    case 0xFF:
-        g_field_runtime->scene_entry = -1;
-        break;
-    default:
-        if (music == g_field_music_id)
-        {
+        case 0xFE:
+            g_field_runtime->scene_entry = -2;
+            break;
+        case 0xFF:
             g_field_runtime->scene_entry = -1;
-        }
-        else
-        {
-            g_field_runtime->scene_entry = music;
-        }
+            break;
+        default:
+            if (music == g_field_music_id)
+            {
+                g_field_runtime->scene_entry = -1;
+            }
+            else
+            {
+                g_field_runtime->scene_entry = music;
+            }
 
-        break;
+            break;
     }
 
     switch (secondary_music)
     {
-    case 0xFE:
-        g_field_runtime->scene_argument2 = -2;
-        break;
-    case 0xFF:
-        g_field_runtime->scene_argument2 = -1;
-        break;
-    default:
-        g_field_runtime->scene_argument2 = secondary_music;
-        break;
+        case 0xFE:
+            g_field_runtime->scene_argument2 = -2;
+            break;
+        case 0xFF:
+            g_field_runtime->scene_argument2 = -1;
+            break;
+        default:
+            g_field_runtime->scene_argument2 = secondary_music;
+            break;
     }
 
     g_field_runtime->transition.bits.spawn_id = spawn_id;
@@ -2972,12 +2972,12 @@ void field_script_op_87(s32 selector, s32 actor_id, s32 event_id, s32 argument)
 
     switch (selector)
     {
-    case 0:
-        field_run_actor_event(actor_id, event_id & 0xFF, argument & 0xFF);
-        break;
-    case 1:
-        field_queue_actor_event(actor_id, event_id & 0xFF, argument & 0xFF);
-        break;
+        case 0:
+            field_run_actor_event(actor_id, event_id & 0xFF, argument & 0xFF);
+            break;
+        case 1:
+            field_queue_actor_event(actor_id, event_id & 0xFF, argument & 0xFF);
+            break;
     }
 }
 

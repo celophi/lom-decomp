@@ -9,6 +9,7 @@
 #include "common/encoded_text.h"
 #include "common/golem_shape.h"
 #include "common/gpu_packet.h"
+#include "common/list_scroll.h"
 #include "common/pad.h"
 #include "common/tim.h"
 #include "common/vector.h"
@@ -17,6 +18,7 @@
 #include "main/main.h"
 #include "overlays/field/field_fade.h"
 #include "overlays/field/field_input.h"
+#include "overlays/field/field_inventory.h"
 #include "overlays/field/field_overlay_handoff.h"
 #include "overlays/field/field_portrait.h"
 #include "overlays/field/field_sound.h"
@@ -57,9 +59,6 @@ typedef struct GosubTilePacket GosubTilePacket;
 #define GOSUB_BUTTONS_NEXT (PAD_BTN_DOWN | PAD_BTN_RIGHT)
 #define GOSUB_BUTTON_PAGE_UP PAD_BTN_L1
 #define GOSUB_BUTTON_PAGE_DOWN PAD_BTN_R1
-
-/** @brief Frames a list takes to scroll to its new position. */
-#define GOSUB_SCROLL_FRAMES 4
 
 /** @brief Number of choices the dialog cursor cycles through. */
 #define GOSUB_DIALOG_CHOICE_COUNT 12
@@ -626,7 +625,6 @@ extern u32 g_golem_logic_block_icons[];
 /* External and forward function declarations. */
 
 /* FIELD exports with no project header. FIELD stays resident while GOSUB runs. */
-void field_compact_inventory(void);
 void gosub_load_screen_sequence(s32* screen_sequence);
 void gosub_build_golem_parts_elements(void);
 void gosub_build_block_components_elements(void);

@@ -2,6 +2,7 @@
 #define WMAP_ACTOR_MOTION_H
 
 #include "common.h"
+
 #include "wmap_sprite_render.h"
 
 /** @brief Spin rate stored as a word; the spiral particle setups write only its low halfword. */
@@ -39,6 +40,15 @@ typedef struct
 } WmapTrailMotion;
 
 /** @brief Motion slots, parallel to g_wmap_sprite_actors and g_wmap_actor_animations. */
-extern WmapMotion g_wmap_actor_motions[];
+extern WmapMotion g_wmap_actor_motions[WMAP_ACTOR_COUNT];
+
+/**
+ * @brief Symbols for runs of g_wmap_actor_motions that start at the slot in their name.
+ * @note Slots 10 and 60 are declared by their effects, which read them through different record views.
+ */
+extern WmapMotion g_wmap_actor_motions_at_15[];
+extern WmapMotion g_wmap_actor_motions_at_50[];
+extern WmapMotion g_wmap_actor_motions_at_120[];
+extern WmapMotion g_wmap_actor_motions_at_200[];
 
 #endif

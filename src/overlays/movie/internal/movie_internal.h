@@ -1,16 +1,18 @@
 #ifndef LOM_MOVIE_INTERNAL_H
 #define LOM_MOVIE_INTERNAL_H
 
-#include "overlays/movie/movie.h"
-#include "main/cdrom.h"
-#include "main/audio/akao_cmd.h"
-#include "overlays/movie/movie_state.h"
-#include "common/pad.h"
-#include "main/controller.h"
-#include <libgte.h>
-#include <libgpu.h>
-#include <libpress.h>
+#include "common.h"
 #include <libcd.h>
+#include <libgpu.h>
+#include <libgte.h>
+#include <libpress.h>
+
+#include "common/pad.h"
+#include "main/audio/akao_cmd.h"
+#include "main/cdrom.h"
+#include "main/controller.h"
+#include "overlays/movie/movie.h"
+#include "overlays/movie/movie_state.h"
 
 /** @brief MovieState::end_state sentinel values. */
 typedef enum
@@ -43,8 +45,7 @@ typedef enum
 #define AKAO_XA_POSITION_UNAVAILABLE (-1)
 #define AUDIO_SECTORS_PER_XA_FRAME 2
 
-/** @brief GPU and CD status values used by the MDEC output callback. */
-#define CD_READY_CALLBACK_PENDING 1
+/** @brief GPU status values used by the MDEC output callback. */
 #define DRAW_SYNC_MODE_POLL 1
 #define DRAW_SYNC_DEFER_THRESHOLD 2
 #define BREAK_DRAW_FAILURE ((u_long*)-1)

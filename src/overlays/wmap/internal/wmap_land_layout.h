@@ -3,8 +3,8 @@
 
 #include "common.h"
 
-/** @brief wmap_get_land_at_cell result for a cell with no land, or outside the map. */
-#define WMAP_NO_LAND 0xFF
+#include "wmap_cells.h"
+
 /** @brief Entry scenes each land has in the layout file's scene and music tables (see FIELD_LAND_ENTRY_SLOT). */
 #define WMAP_LAND_ENTRY_SLOTS 4
 

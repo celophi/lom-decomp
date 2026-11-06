@@ -1,6 +1,8 @@
-#include "main/field_runtime.h"
-#include <strings.h>
+#include "common.h"
 #include <memory.h>
+#include <strings.h>
+
+#include "main/field_runtime.h"
 
 #define DIGIT_TO_ASCII(d) ((d) + '0')
 #define HEX_DIGIT_TABLE_SIZE 17
@@ -24,7 +26,8 @@ void field_draw_string(u8* str, s32 x, s32 y, s32 ot_depth, s32 clut_offset)
 
     g_text_cursor_x = x;
     g_text_cursor_y = y;
-    length = strlen((const char*)str);
+    length = strlen(str);
+
     for (i = 0; i < length; i++)
     {
         field_draw_glyph(str[i], ot_depth, clut_offset);
@@ -78,6 +81,7 @@ void field_draw_uint3(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut_offset)
     g_text_cursor_y = y;
     digit_value = digit * 100;
     digit = DIGIT_TO_ASCII(digit);
+
     if (digit == DIGIT_TO_ASCII(0))
     {
         g_text_cursor_x += FIELD_GLYPH_ADVANCE;
@@ -92,6 +96,7 @@ void field_draw_uint3(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut_offset)
     digit = value / 10;
     digit_value = digit * 10;
     digit = DIGIT_TO_ASCII(digit);
+
     if (blanking != 0 && digit == DIGIT_TO_ASCII(0))
     {
         g_text_cursor_x += FIELD_GLYPH_ADVANCE;
@@ -123,10 +128,12 @@ void field_draw_hex_byte_clamped(u16 value, s32 x, s32 y, s32 ot_depth, s32 clut
     memcpy(digit_table, g_hex_digit_table, sizeof(digit_table));
     g_text_cursor_x = x;
     g_text_cursor_y = y;
+
     if (value > 0xFF)
     {
         value = 0xFF;
     }
+
     high_nibble = value >> 4;
     high_value = high_nibble << 4;
     field_draw_glyph(digit_table[high_nibble], ot_depth, clut_offset);

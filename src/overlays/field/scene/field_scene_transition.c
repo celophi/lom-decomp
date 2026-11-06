@@ -2,30 +2,32 @@
  * @brief Scene changes: reading a scene file, installing its actors and resources, and the transition tiles.
  */
 
-#include "overlays/field/field_scene_transition.h"
-#include "overlays/field/field_portrait.h"
-#include "overlays/field/field_text.h"
-#include "main/cdrom.h"
-#include "main/cd_resources.h"
-#include "main/audio/game_audio.h"
-#include "main/audio/akao_cmd.h"
 #include "common.h"
-#include "../internal/field_effect_render_state.h"
-#include "main/controller_internal.h"
-#include "main/scene_state.h"
+#include <libetc.h>
+#include <libgpu.h>
+#include <libgte.h>
+
+#include "../internal/field_actor_palette.h"
 #include "../internal/field_actor_routes.h"
 #include "../internal/field_actor_runtime.h"
 #include "../internal/field_actor_tables.h"
 #include "../internal/field_calls.h"
-#include "overlays/field/field_interaction_start.h"
+#include "../internal/field_effect_render_state.h"
 #include "../internal/field_state_ops.h"
-#include "../internal/field_actor_palette.h"
-#include <libgpu.h>
-#include <libetc.h>
-#include <libgte.h>
-#include "overlays/field/field_actor_records.h"
+#include "common/tim.h"
+#include "main/audio/akao_cmd.h"
+#include "main/audio/game_audio.h"
+#include "main/cd_resources.h"
+#include "main/cdrom.h"
+#include "main/controller_internal.h"
 #include "main/field_entry.h"
 #include "main/main.h"
+#include "main/scene_state.h"
+#include "overlays/field/field_actor_records.h"
+#include "overlays/field/field_interaction_start.h"
+#include "overlays/field/field_portrait.h"
+#include "overlays/field/field_scene_transition.h"
+#include "overlays/field/field_text.h"
 
 /** @brief Scene resource selector bit kept in g_field_scene_mode_bit (the scene runs field_battle_setup). */
 #define FIELD_SCENE_MODE_FLAG 0x8000
@@ -82,8 +84,6 @@
 #define FIELD_TRANSITION_TILE_Y1 412
 /** @brief Pixels in one transition tile image. */
 #define FIELD_TRANSITION_TILE_PIXELS 0x800
-/** @brief Bytes of the TIM file header in front of the CLUT block. */
-#define FIELD_TIM_HEADER_SIZE 8
 /** @brief Fade colour value of a white fade target. */
 #define FIELD_FADE_WHITE 0x1FF
 /** @brief Colour bits of a 15-bit VRAM pixel (without the semi-transparency bit). */
@@ -194,7 +194,6 @@ typedef struct
     FieldLayoutRecord records[1];
 } FieldSceneLayout;
 
-s32 akao_fade_song_volume(s32 song_handle, s32 frames, s32 volume);
 void* field_header_record_at(s32 index);
 void field_restart_actor_animation(FieldActor* actor);
 void field_store_entry_settings();
@@ -587,7 +586,7 @@ void field_update_scene(void)
                             action->flags.instrument = action_fields->flags.instrument;
                             action->command = action_ids->command;
                             action->flags.target_filter = action_fields->flags.target_filter;
-                            action_index += 1;
+                            action_index++;
                             action->animation = action_fields->animation;
                             action_ids++;
                             action->parameter = action_fields->parameter;
@@ -630,7 +629,7 @@ void field_update_scene(void)
                         action->flags.instrument = action_fields->flags.instrument;
                         action->command = action_ids->command;
                         action->flags.target_filter = action_fields->flags.target_filter;
-                        action_index += 1;
+                        action_index++;
                         action->animation = action_fields->animation;
                         action_ids++;
                         action->parameter = action_fields->parameter;
@@ -849,7 +848,7 @@ void field_upload_actor_image(FieldTimData* image, s32 image_slot, s32 actor_ind
         LoadImage(&rect, image->file.palette.pixels);
     }
 
-    image = (FieldTimData*)((u8*)image + size + FIELD_TIM_HEADER_SIZE);
+    image = (FieldTimData*)((u8*)image + size + TIM_HEADER_SIZE);
     width = image->block.rect.w;
     height = image->block.rect.h;
 

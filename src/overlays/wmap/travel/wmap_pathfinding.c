@@ -17,8 +17,8 @@
 
 #define WMAP_ROUTE_NODE_COUNT 64
 #define WMAP_ROUTE_UNVISITED_DISTANCE 100
-#define WMAP_NODE_X(index) ((u8)(D_800432C9[(index) * WMAP_NODE_RECORD_SIZE] & 0xF))
-#define WMAP_NODE_Y(index) ((u8)(D_800432C9[(index) * WMAP_NODE_RECORD_SIZE] >> 4))
+#define WMAP_NODE_X(index) ((u8)(g_saved_land_cells[(index) * WMAP_NODE_RECORD_SIZE] & 0xF))
+#define WMAP_NODE_Y(index) ((u8)(g_saved_land_cells[(index) * WMAP_NODE_RECORD_SIZE] >> 4))
 
 /**
  * @brief Event flags that send the world-map exit to their event land (g_wmap_flag_event_lands).
@@ -52,7 +52,8 @@ enum
     WMAP_UNDERWORLD_STASH_BELOW = 4
 };
 
-extern u8 D_800432C9[];
+/** @brief Byte 1 of each g_saved_lands record: map cell x in the low nibble, z in the high nibble. */
+extern u8 g_saved_land_cells[];
 /** @brief WMAP land id to enter when each game flag is pending (only some flag ids are used). */
 extern u8 g_wmap_flag_event_lands[SAVED_GAME_FLAG_COUNT];
 /** @brief Music track index to play when each game flag's event land is entered. */
@@ -68,7 +69,7 @@ void wmap_unlock_land_encyclopedia_entries(void)
 
     for (i = 0; i < FIELD_ENCYCLOPEDIA_LAND_COUNT; i++)
     {
-        if (FIELD_LAND_GET_FLAG_02(g_saved_lands[i].record.flags))
+        if (FIELD_LAND_GET_PLACED(g_saved_lands[i].record.flags))
         {
             SAVED_BIT_SET(g_saved_encyclopedia_bits, i + FIELD_ENCYCLOPEDIA_LAND_BIT);
         }
@@ -81,20 +82,20 @@ void wmap_unlock_land_encyclopedia_entries(void)
 
     for (i = 0; i < FIELD_ENCYCLOPEDIA_LAND_COUNT; i++)
     {
-        if (g_saved_lands[i].record.flags & FIELD_LAND_PLACED)
+        if (g_saved_lands[i].record.flags & FIELD_LAND_ARTIFACT_OBTAINED)
         {
             SAVED_BIT_SET(g_saved_encyclopedia_bits, i + FIELD_ENCYCLOPEDIA_ARTIFACT_BIT);
         }
 
-        if (FIELD_LAND_GET_FLAG_02(g_saved_lands[i].record.flags))
+        if (FIELD_LAND_GET_PLACED(g_saved_lands[i].record.flags))
         {
-            SAVED_BIT_SET(g_saved_encyclopedia_bits, i + FIELD_ENCYCLOPEDIA_ARTIFACT_FLAG_02_BIT);
+            SAVED_BIT_SET(g_saved_encyclopedia_bits, i + FIELD_ENCYCLOPEDIA_ARTIFACT_PLACED_BIT);
         }
     }
 
     if (g_saved_lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_FLAG_04)
     {
-        SAVED_BIT_SET(g_saved_encyclopedia_bits, FIELD_ENCYCLOPEDIA_ARTIFACT_FLAG_02_BIT + FIELD_LAND_LUCEMIA);
+        SAVED_BIT_SET(g_saved_encyclopedia_bits, FIELD_ENCYCLOPEDIA_ARTIFACT_PLACED_BIT + FIELD_LAND_LUCEMIA);
     }
 }
 
@@ -141,13 +142,14 @@ void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
                     column = FIELD_LAND_WORD_X(g_saved_lands[FIELD_LAND_FLAMES].word);
                     row = FIELD_LAND_WORD_Z(g_saved_lands[FIELD_LAND_FLAMES].word);
                     neighbor = wmap_get_land_at_cell(column - 1, row);
-                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.placed = (u8)(g_saved_lands[FIELD_LAND_FLAMES].record.flags & FIELD_LAND_PLACED);
-                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.flag_02 = (u8)FIELD_LAND_GET_FLAG_02(g_saved_lands[FIELD_LAND_FLAMES].word);
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.artifact_obtained =
+                        (u8)(g_saved_lands[FIELD_LAND_FLAMES].record.flags & FIELD_LAND_ARTIFACT_OBTAINED);
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.placed = (u8)FIELD_LAND_GET_PLACED(g_saved_lands[FIELD_LAND_FLAMES].word);
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.flag_04 = 1;
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.x = FIELD_LAND_WORD_X(g_saved_lands[FIELD_LAND_FLAMES].word);
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.z = FIELD_LAND_WORD_Z(g_saved_lands[FIELD_LAND_FLAMES].word);
-                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.unk2 = g_saved_lands[FIELD_LAND_FLAMES].record.unk2;
-                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.count = g_saved_lands[FIELD_LAND_FLAMES].record.count;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.placement_order = g_saved_lands[FIELD_LAND_FLAMES].record.placement_order;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.artifact_order = g_saved_lands[FIELD_LAND_FLAMES].record.artifact_order;
                     g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[FIELD_SPIRIT_WISP] = g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_WISP];
                     g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[FIELD_SPIRIT_SHADE] = g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_SHADE];
                     g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[FIELD_SPIRIT_DRYAD] = g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_DRYAD];
@@ -156,13 +158,13 @@ void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
                     g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[FIELD_SPIRIT_JINN] = g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_JINN];
                     g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[FIELD_SPIRIT_UNDINE] =
                         g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_UNDINE];
+                    g_saved_lands[FIELD_LAND_FLAMES].bits.artifact_obtained = 0;
                     g_saved_lands[FIELD_LAND_FLAMES].bits.placed = 0;
-                    g_saved_lands[FIELD_LAND_FLAMES].bits.flag_02 = 0;
                     g_saved_lands[FIELD_LAND_FLAMES].bits.flag_04 = 0;
                     g_saved_lands[FIELD_LAND_FLAMES].bits.x = FIELD_LAND_CELL_NONE;
                     g_saved_lands[FIELD_LAND_FLAMES].bits.z = FIELD_LAND_CELL_NONE;
-                    g_saved_lands[FIELD_LAND_FLAMES].record.unk2 = 0;
-                    g_saved_lands[FIELD_LAND_FLAMES].record.count = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.placement_order = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.artifact_order = 0;
                     g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_WISP] = 0;
                     g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_SHADE] = 0;
                     g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_DRYAD] = 0;
@@ -175,13 +177,14 @@ void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
 
                 if (flag == WMAP_EVENT_FLAG_UNDERWORLD_TO_FLAMES)
                 {
-                    g_saved_lands[FIELD_LAND_FLAMES].bits.placed = (u8)(g_saved_lands[FIELD_LAND_UNDERWORLD].record.flags & FIELD_LAND_PLACED);
-                    g_saved_lands[FIELD_LAND_FLAMES].bits.flag_02 = (u8)FIELD_LAND_GET_FLAG_02(g_saved_lands[FIELD_LAND_UNDERWORLD].word);
+                    g_saved_lands[FIELD_LAND_FLAMES].bits.artifact_obtained =
+                        (u8)(g_saved_lands[FIELD_LAND_UNDERWORLD].record.flags & FIELD_LAND_ARTIFACT_OBTAINED);
+                    g_saved_lands[FIELD_LAND_FLAMES].bits.placed = (u8)FIELD_LAND_GET_PLACED(g_saved_lands[FIELD_LAND_UNDERWORLD].word);
                     g_saved_lands[FIELD_LAND_FLAMES].bits.flag_04 = 0;
                     g_saved_lands[FIELD_LAND_FLAMES].bits.x = FIELD_LAND_WORD_X(g_saved_lands[FIELD_LAND_UNDERWORLD].word);
                     g_saved_lands[FIELD_LAND_FLAMES].bits.z = FIELD_LAND_WORD_Z(g_saved_lands[FIELD_LAND_UNDERWORLD].word);
-                    g_saved_lands[FIELD_LAND_FLAMES].record.unk2 = g_saved_lands[FIELD_LAND_UNDERWORLD].record.unk2;
-                    g_saved_lands[FIELD_LAND_FLAMES].record.count = g_saved_lands[FIELD_LAND_UNDERWORLD].record.count;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.placement_order = g_saved_lands[FIELD_LAND_UNDERWORLD].record.placement_order;
+                    g_saved_lands[FIELD_LAND_FLAMES].record.artifact_order = g_saved_lands[FIELD_LAND_UNDERWORLD].record.artifact_order;
                     g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_WISP] = g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[FIELD_SPIRIT_WISP];
                     g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_SHADE] = g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[FIELD_SPIRIT_SHADE];
                     g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_DRYAD] = g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[FIELD_SPIRIT_DRYAD];
@@ -197,6 +200,7 @@ void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
                     row = FIELD_LAND_WORD_Z(g_saved_lands[FIELD_LAND_UNDERWORLD].word);
 
                     neighbor = wmap_get_land_at_cell(column - 1, row);
+
                     if (neighbor != WMAP_NO_LAND)
                     {
                         g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[WMAP_UNDERWORLD_STASH_LEFT] =
@@ -208,6 +212,7 @@ void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
                     }
 
                     neighbor = wmap_get_land_at_cell(column + 1, row);
+
                     if (neighbor != WMAP_NO_LAND)
                     {
                         g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[WMAP_UNDERWORLD_STASH_RIGHT] =
@@ -219,6 +224,7 @@ void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
                     }
 
                     neighbor = wmap_get_land_at_cell(column, row - 1);
+
                     if (neighbor != WMAP_NO_LAND)
                     {
                         g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[WMAP_UNDERWORLD_STASH_ABOVE] =
@@ -230,6 +236,7 @@ void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
                     }
 
                     neighbor = wmap_get_land_at_cell(column, row + 1);
+
                     if (neighbor != WMAP_NO_LAND)
                     {
                         g_saved_lands[FIELD_LAND_UNDERWORLD].record.levels[WMAP_UNDERWORLD_STASH_BELOW] =
@@ -240,13 +247,13 @@ void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
                         }
                     }
 
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.artifact_obtained = 0;
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.placed = 0;
-                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.flag_02 = 0;
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.flag_04 = 0;
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.x = FIELD_LAND_CELL_NONE;
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.z = FIELD_LAND_CELL_NONE;
-                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.unk2 = 0;
-                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.count = 0;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.placement_order = 0;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].record.artifact_order = 0;
                 }
             }
         }
@@ -264,7 +271,7 @@ void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
  * @param out_x Output array receiving route X coordinates.
  * @param out_y Output array receiving route Y coordinates.
  */
-void wmap_build_route(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x, s32 *out_y)
+void wmap_build_route(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32* out_x, s32* out_y)
 {
     s32 i;
     s32 path_found;
@@ -280,6 +287,7 @@ void wmap_build_route(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x
         current_x = start_x;
         current_y = start_y;
         i = 0;
+
         while (current_x != end_x || current_y != end_y)
         {
             out_x[i] = current_x;
@@ -303,6 +311,7 @@ void wmap_build_route(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x
     }
 
     i = 0;
+
     while (i < WMAP_ROUTE_NODE_COUNT)
     {
         distances[i] = WMAP_ROUTE_UNVISITED_DISTANCE;
@@ -316,17 +325,20 @@ void wmap_build_route(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x
     while (path_found == 0)
     {
         i = 0;
+
         while (i < WMAP_ROUTE_NODE_COUNT)
         {
             if (distances[i] == distance)
             {
                 node_index = wmap_get_land_at_cell(WMAP_NODE_X(i) - 1, WMAP_NODE_Y(i));
+
                 if (node_index != WMAP_NO_LAND)
                 {
                     if (distances[node_index] > distance + 1)
                     {
                         distances[node_index] = distance + 1;
                     }
+
                     if (node_index == wmap_get_land_at_cell(end_x, end_y))
                     {
                         i = WMAP_ROUTE_NODE_COUNT;
@@ -335,12 +347,14 @@ void wmap_build_route(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x
                 }
 
                 node_index = wmap_get_land_at_cell(WMAP_NODE_X(i) + 1, WMAP_NODE_Y(i));
+
                 if (node_index != WMAP_NO_LAND)
                 {
                     if (distances[node_index] > distance + 1)
                     {
                         distances[node_index] = distance + 1;
                     }
+
                     if (node_index == wmap_get_land_at_cell(end_x, end_y))
                     {
                         i = WMAP_ROUTE_NODE_COUNT;
@@ -349,12 +363,14 @@ void wmap_build_route(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x
                 }
 
                 node_index = wmap_get_land_at_cell(WMAP_NODE_X(i), WMAP_NODE_Y(i) - 1);
+
                 if (node_index != WMAP_NO_LAND)
                 {
                     if (distances[node_index] > distance + 1)
                     {
                         distances[node_index] = distance + 1;
                     }
+
                     if (node_index == wmap_get_land_at_cell(end_x, end_y))
                     {
                         i = WMAP_ROUTE_NODE_COUNT;
@@ -363,12 +379,14 @@ void wmap_build_route(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x
                 }
 
                 node_index = wmap_get_land_at_cell(WMAP_NODE_X(i), WMAP_NODE_Y(i) + 1);
+
                 if (node_index != WMAP_NO_LAND)
                 {
                     if (distances[node_index] > distance + 1)
                     {
                         distances[node_index] = distance + 1;
                     }
+
                     if (node_index == wmap_get_land_at_cell(end_x, end_y))
                     {
                         i = WMAP_ROUTE_NODE_COUNT;
@@ -376,8 +394,10 @@ void wmap_build_route(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x
                     }
                 }
             }
+
             i++;
         }
+
         distance++;
     }
 
@@ -388,42 +408,45 @@ void wmap_build_route(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x
     while (distance >= 0)
     {
         i = 0;
+
         while (i < WMAP_ROUTE_NODE_COUNT)
         {
             if (distances[i] == distance - 1)
             {
-                if ((WMAP_NODE_X(i) == WMAP_NODE_X(node_index) - 1) &&
-                    (WMAP_NODE_Y(i) == WMAP_NODE_Y(node_index)))
+                if ((WMAP_NODE_X(i) == WMAP_NODE_X(node_index) - 1) && (WMAP_NODE_Y(i) == WMAP_NODE_Y(node_index)))
                 {
                     route[distance - 1] = i;
                     break;
                 }
-                if ((WMAP_NODE_X(i) == WMAP_NODE_X(node_index) + 1) &&
-                    (WMAP_NODE_Y(i) == WMAP_NODE_Y(node_index)))
+
+                if ((WMAP_NODE_X(i) == WMAP_NODE_X(node_index) + 1) && (WMAP_NODE_Y(i) == WMAP_NODE_Y(node_index)))
                 {
                     route[distance - 1] = i;
                     break;
                 }
-                if ((WMAP_NODE_X(i) == WMAP_NODE_X(node_index)) &&
-                    (WMAP_NODE_Y(i) == WMAP_NODE_Y(node_index) - 1))
+
+                if ((WMAP_NODE_X(i) == WMAP_NODE_X(node_index)) && (WMAP_NODE_Y(i) == WMAP_NODE_Y(node_index) - 1))
                 {
                     route[distance - 1] = i;
                     break;
                 }
-                if ((WMAP_NODE_X(i) == WMAP_NODE_X(node_index)) &&
-                    (WMAP_NODE_Y(i) == WMAP_NODE_Y(node_index) + 1))
+
+                if ((WMAP_NODE_X(i) == WMAP_NODE_X(node_index)) && (WMAP_NODE_Y(i) == WMAP_NODE_Y(node_index) + 1))
                 {
                     route[distance - 1] = i;
                     break;
                 }
             }
+
             i++;
         }
+
         distance--;
         node_index = route[distance];
     }
 
     i = 0;
+
     while (i <= distances[wmap_get_land_at_cell(end_x, end_y)])
     {
         out_x[i] = WMAP_NODE_X(route[i]);

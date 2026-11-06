@@ -4412,8 +4412,8 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
 
     scene = g_field_scene.scene;
     cols = scene->tile_cols;
-    row_words = ((s32)(cols + FIELD_COLLISION_GROUP_WORD_MASK) >> FIELD_COLLISION_GROUP_WORD_SHIFT) * 2;
-    ring_row_words = (((s32)(cols - 3) >> FIELD_COLLISION_GROUP_WORD_SHIFT) + 1) * (s32)(sizeof(FieldCollisionDilationMasks) / sizeof(u32));
+    row_words = ((cols + FIELD_COLLISION_GROUP_WORD_MASK) >> FIELD_COLLISION_GROUP_WORD_SHIFT) * 2;
+    ring_row_words = (((cols - 3) >> FIELD_COLLISION_GROUP_WORD_SHIFT) + 1) * (sizeof(FieldCollisionDilationMasks) / sizeof(u32));
     reach = footprint_width - 1;
 
     do
@@ -4743,7 +4743,7 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
                                 }
 
                                 shift_solid = acc_solid;
-                                count = (s32)(reach - 4) >> 1;
+                                count = (reach - 4) >> 1;
 
                                 do
                                 {
@@ -4828,7 +4828,7 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
                                 inner_touch = (carry_touch >> 30) | (carry_touch >> 31);
                                 acc_touch = carry_touch >> 29;
                                 left_bits = (carry_solid >> 29) | (carry_solid >> 30);
-                                carry_solid = (s32)carry_solid >> 31;
+                                carry_solid = carry_solid >> 31;
                                 acc_solid = left_bits | (carry_solid & 1);
 
                                 if (in_touch != 0)

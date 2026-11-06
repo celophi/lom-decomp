@@ -1,5 +1,5 @@
-#include "main/cdrom_decompress.h"
 #include "internal/cdrom_internal.h"
+#include "main/cdrom_decompress.h"
 
 #define CD_STREAM_PAYLOAD_START (CD_STREAM_BUFFER_START + 1)
 #define CD_DECOMPRESS_LOW_NIBBLE_MASK 0x0F
@@ -85,263 +85,263 @@ s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst
 
         switch (opcode)
         {
-        case CD_DECOMPRESS_REPEAT_NIBBLE:
-            pattern_first = source[1];
+            case CD_DECOMPRESS_REPEAT_NIBBLE:
+                pattern_first = source[1];
 
-            source += 2;
-            iterations = (pattern_first & CD_DECOMPRESS_LOW_NIBBLE_MASK) + 3;
-            pattern_first >>= 4;
+                source += 2;
+                iterations = (pattern_first & CD_DECOMPRESS_LOW_NIBBLE_MASK) + 3;
+                pattern_first >>= 4;
 
-            do
-            {
-                *destination++ = pattern_first;
-            } while (--iterations != 0);
-            break;
+                do
+                {
+                    *destination++ = pattern_first;
+                } while (--iterations != 0);
+                break;
 
-        case CD_DECOMPRESS_REPEAT_BYTE:
-            pattern_first = source[2];
-            count_byte = source[1];
+            case CD_DECOMPRESS_REPEAT_BYTE:
+                pattern_first = source[2];
+                count_byte = source[1];
 
-            source += 3;
-            iterations = count_byte + 4;
+                source += 3;
+                iterations = count_byte + 4;
 
-            do
-            {
-                *destination++ = pattern_first;
-            } while (--iterations != 0);
-            break;
+                do
+                {
+                    *destination++ = pattern_first;
+                } while (--iterations != 0);
+                break;
 
-        case CD_DECOMPRESS_REPEAT_NIBBLE_PAIR:
-            pattern_first = source[2];
-            count_byte = source[1];
+            case CD_DECOMPRESS_REPEAT_NIBBLE_PAIR:
+                pattern_first = source[2];
+                count_byte = source[1];
 
-            source += 3;
-            iterations = count_byte + 2;
-            value_high = pattern_first >> 4;
-            pattern_first = pattern_first & CD_DECOMPRESS_LOW_NIBBLE_MASK;
+                source += 3;
+                iterations = count_byte + 2;
+                value_high = pattern_first >> 4;
+                pattern_first = pattern_first & CD_DECOMPRESS_LOW_NIBBLE_MASK;
 
-            do
-            {
-                destination[0] = pattern_first;
-                destination[1] = value_high;
-                destination += 2;
-            } while (--iterations != 0);
-            break;
+                do
+                {
+                    destination[0] = pattern_first;
+                    destination[1] = value_high;
+                    destination += 2;
+                } while (--iterations != 0);
+                break;
 
-        case CD_DECOMPRESS_REPEAT_PAIR:
-            pattern_first = source[2];
-            pattern_second = source[3];
-            count_byte = source[1];
+            case CD_DECOMPRESS_REPEAT_PAIR:
+                pattern_first = source[2];
+                pattern_second = source[3];
+                count_byte = source[1];
 
-            source += 4;
-            iterations = count_byte + 2;
+                source += 4;
+                iterations = count_byte + 2;
 
-            do
-            {
-                destination[0] = pattern_first;
-                destination[1] = pattern_second;
-                destination += 2;
-            } while (--iterations != 0);
-            break;
+                do
+                {
+                    destination[0] = pattern_first;
+                    destination[1] = pattern_second;
+                    destination += 2;
+                } while (--iterations != 0);
+                break;
 
-        case CD_DECOMPRESS_REPEAT_TRIPLET:
-            pattern_first = source[2];
-            pattern_second = source[3];
-            pattern_third = source[4];
-            count_byte = source[1];
+            case CD_DECOMPRESS_REPEAT_TRIPLET:
+                pattern_first = source[2];
+                pattern_second = source[3];
+                pattern_third = source[4];
+                count_byte = source[1];
 
-            source += 5;
-            iterations = count_byte + 2;
+                source += 5;
+                iterations = count_byte + 2;
 
-            do
-            {
-                destination[0] = pattern_first;
-                destination[1] = pattern_second;
-                destination[2] = pattern_third;
-                destination += 3;
-            } while (--iterations != 0);
-            break;
+                do
+                {
+                    destination[0] = pattern_first;
+                    destination[1] = pattern_second;
+                    destination[2] = pattern_third;
+                    destination += 3;
+                } while (--iterations != 0);
+                break;
 
-        case CD_DECOMPRESS_INTERLEAVE_BYTE:
-            pattern_first = source[2];
-            count_byte = source[1];
+            case CD_DECOMPRESS_INTERLEAVE_BYTE:
+                pattern_first = source[2];
+                count_byte = source[1];
 
-            source += 3;
-            iterations = count_byte + 4;
+                source += 3;
+                iterations = count_byte + 4;
 
-            do
-            {
-                destination[0] = pattern_first;
-                destination[1] = *source++;
-                destination += 2;
-            } while (--iterations != 0);
-            break;
+                do
+                {
+                    destination[0] = pattern_first;
+                    destination[1] = *source++;
+                    destination += 2;
+                } while (--iterations != 0);
+                break;
 
-        case CD_DECOMPRESS_INTERLEAVE_PAIR:
-            pattern_first = source[2];
-            pattern_second = source[3];
-            count_byte = source[1];
+            case CD_DECOMPRESS_INTERLEAVE_PAIR:
+                pattern_first = source[2];
+                pattern_second = source[3];
+                count_byte = source[1];
 
-            source += 4;
-            iterations = count_byte + 3;
+                source += 4;
+                iterations = count_byte + 3;
 
-            do
-            {
-                destination[0] = pattern_first;
-                destination[1] = pattern_second;
-                destination[2] = *source++;
-                destination += 3;
-            } while (--iterations != 0);
-            break;
+                do
+                {
+                    destination[0] = pattern_first;
+                    destination[1] = pattern_second;
+                    destination[2] = *source++;
+                    destination += 3;
+                } while (--iterations != 0);
+                break;
 
-        case CD_DECOMPRESS_INTERLEAVE_TRIPLET:
-            pattern_first = source[2];
-            pattern_second = source[3];
-            pattern_third = source[4];
-            count_byte = source[1];
+            case CD_DECOMPRESS_INTERLEAVE_TRIPLET:
+                pattern_first = source[2];
+                pattern_second = source[3];
+                pattern_third = source[4];
+                count_byte = source[1];
 
-            source += 5;
-            iterations = count_byte + 2;
+                source += 5;
+                iterations = count_byte + 2;
 
-            do
-            {
-                destination[0] = pattern_first;
-                destination[1] = pattern_second;
-                destination[2] = pattern_third;
-                destination[3] = *source++;
-                destination += 4;
-            } while (--iterations != 0);
-            break;
+                do
+                {
+                    destination[0] = pattern_first;
+                    destination[1] = pattern_second;
+                    destination[2] = pattern_third;
+                    destination[3] = *source++;
+                    destination += 4;
+                } while (--iterations != 0);
+                break;
 
-        case CD_DECOMPRESS_ASCENDING_RUN:
-            pattern_first = source[2];
-            count_byte = source[1];
+            case CD_DECOMPRESS_ASCENDING_RUN:
+                pattern_first = source[2];
+                count_byte = source[1];
 
-            source += 3;
-            iterations = count_byte + 4;
+                source += 3;
+                iterations = count_byte + 4;
 
-            do
-            {
-                *destination++ = pattern_first;
-                pattern_first += 1;
-            } while (--iterations != 0);
-            break;
+                do
+                {
+                    *destination++ = pattern_first;
+                    pattern_first++;
+                } while (--iterations != 0);
+                break;
 
-        case CD_DECOMPRESS_DESCENDING_RUN:
-            pattern_first = source[2];
-            count_byte = source[1];
+            case CD_DECOMPRESS_DESCENDING_RUN:
+                pattern_first = source[2];
+                count_byte = source[1];
 
-            source += 3;
-            iterations = count_byte + 4;
+                source += 3;
+                iterations = count_byte + 4;
 
-            do
-            {
-                *destination++ = pattern_first;
-                pattern_first -= 1;
-            } while (--iterations != 0);
-            break;
+                do
+                {
+                    *destination++ = pattern_first;
+                    pattern_first--;
+                } while (--iterations != 0);
+                break;
 
-        case CD_DECOMPRESS_STEPPED_RUN:
-            pattern_first = source[2];
-            pattern_second = source[3];
-            count_byte = source[1];
+            case CD_DECOMPRESS_STEPPED_RUN:
+                pattern_first = source[2];
+                pattern_second = source[3];
+                count_byte = source[1];
 
-            source += 4;
-            iterations = count_byte + 5;
+                source += 4;
+                iterations = count_byte + 5;
 
-            do
-            {
-                *destination++ = pattern_first;
-                pattern_first += pattern_second;
-            } while (--iterations != 0);
-            break;
+                do
+                {
+                    *destination++ = pattern_first;
+                    pattern_first += pattern_second;
+                } while (--iterations != 0);
+                break;
 
-        case CD_DECOMPRESS_PAIR_DELTA_RUN:
-            value_low = source[2];
-            value_high = source[3];
-            count_byte = source[1];
-            pattern_third = source[4];
+            case CD_DECOMPRESS_PAIR_DELTA_RUN:
+                value_low = source[2];
+                value_high = source[3];
+                count_byte = source[1];
+                pattern_third = source[4];
 
-            iterations = count_byte + 3;
-            delta = pattern_third;
-            source += 5;
+                iterations = count_byte + 3;
+                delta = pattern_third;
+                source += 5;
 
-            do
-            {
-                destination[0] = value_low;
-                destination[1] = value_high;
-                destination += 2;
+                do
+                {
+                    destination[0] = value_low;
+                    destination[1] = value_high;
+                    destination += 2;
 
-                next_value = (s8)delta;
+                    next_value = (s8)delta;
 
-                high_word = value_high << 8;
-                next_value += value_low | high_word;
+                    high_word = value_high << 8;
+                    next_value += value_low | high_word;
 
-                value_low = next_value;
-                value_high = next_value >> 8;
-            } while (--iterations != 0);
-            break;
+                    value_low = next_value;
+                    value_high = next_value >> 8;
+                } while (--iterations != 0);
+                break;
 
-        case CD_DECOMPRESS_COPY_12_BIT:
-            pattern_first = source[1];
-            value_high = source[2];
+            case CD_DECOMPRESS_COPY_12_BIT:
+                pattern_first = source[1];
+                value_high = source[2];
 
-            source += 3;
-            iterations = (value_high >> 4) + 4;
+                source += 3;
+                iterations = (value_high >> 4) + 4;
 
-            distance = pattern_first | ((value_high & CD_DECOMPRESS_LOW_NIBBLE_MASK) << 8);
-            copy_source = destination - distance;
+                distance = pattern_first | ((value_high & CD_DECOMPRESS_LOW_NIBBLE_MASK) << 8);
+                copy_source = destination - distance;
 
-            do
-            {
-                *destination++ = copy_source[-1];
-                copy_source++;
-            } while (--iterations != 0);
-            break;
+                do
+                {
+                    *destination++ = copy_source[-1];
+                    copy_source++;
+                } while (--iterations != 0);
+                break;
 
-        case CD_DECOMPRESS_COPY_8_BIT:
-            value_low = source[1];
-            count_byte = source[2];
+            case CD_DECOMPRESS_COPY_8_BIT:
+                value_low = source[1];
+                count_byte = source[2];
 
-            source += 3;
-            iterations = count_byte + CD_DECOMPRESS_COPY_8_BIT_BASE_LENGTH;
-            copy_source = destination - value_low;
+                source += 3;
+                iterations = count_byte + CD_DECOMPRESS_COPY_8_BIT_BASE_LENGTH;
+                copy_source = destination - value_low;
 
-            do
-            {
-                *destination++ = copy_source[-1];
-                copy_source++;
-            } while (--iterations != 0);
-            break;
+                do
+                {
+                    *destination++ = copy_source[-1];
+                    copy_source++;
+                } while (--iterations != 0);
+                break;
 
-        case CD_DECOMPRESS_COPY_NIBBLE:
-            pattern_first = source[1];
+            case CD_DECOMPRESS_COPY_NIBBLE:
+                pattern_first = source[1];
 
-            source += 2;
-            iterations = (pattern_first & CD_DECOMPRESS_LOW_NIBBLE_MASK) + 3;
-            copy_source = destination - ((pattern_first & CD_DECOMPRESS_HIGH_NIBBLE_MASK) >> 1);
+                source += 2;
+                iterations = (pattern_first & CD_DECOMPRESS_LOW_NIBBLE_MASK) + 3;
+                copy_source = destination - ((pattern_first & CD_DECOMPRESS_HIGH_NIBBLE_MASK) >> 1);
 
-            do
-            {
-                *destination++ = copy_source[-8];
-                copy_source++;
-            } while (--iterations != 0);
-            break;
+                do
+                {
+                    *destination++ = copy_source[-8];
+                    copy_source++;
+                } while (--iterations != 0);
+                break;
 
-        case CD_DECOMPRESS_END:
-            *src_cursor = &source[1];
-            *dst_cursor = destination;
-            return FALSE;
+            case CD_DECOMPRESS_END:
+                *src_cursor = &source[1];
+                *dst_cursor = destination;
+                return FALSE;
 
-        default:
-            source++;
-            iterations = opcode + 1;
+            default:
+                source++;
+                iterations = opcode + 1;
 
-            do
-            {
-                *destination++ = *source++;
-            } while (--iterations != 0);
-            break;
+                do
+                {
+                    *destination++ = *source++;
+                } while (--iterations != 0);
+                break;
         }
 
         *src_cursor = source;
@@ -382,6 +382,7 @@ u8* cdrom_handle_stream_data(s32 byte_count, u32 bytes_remaining)
     u8* next_sector_dst;
 
     transfer_size = bytes_remaining;
+
     if (bytes_remaining > CD_DATA_SECTOR_SIZE)
     {
         transfer_size = CD_DATA_SECTOR_SIZE;
@@ -405,6 +406,7 @@ u8* cdrom_handle_stream_data(s32 byte_count, u32 bytes_remaining)
         bytes_consumed = CD_STREAM_STATE.bytes_consumed;
         wrap_overflow = CD_STREAM_STATE.wrap_overflow;
         alignment_padding = (BYTES_PER_WORD - (byte_count & BYTES_PER_WORD_MASK)) & BYTES_PER_WORD_MASK;
+
         if (wrap_overflow != 0)
         {
             wrapped_read_ptr = CD_STREAM_STATE.buffer_start;
@@ -415,12 +417,14 @@ u8* cdrom_handle_stream_data(s32 byte_count, u32 bytes_remaining)
             CD_STREAM_STATE.bytes_buffered = (wrap_overflow + byte_count) + transfer_size;
             copy_source.bytes = (wrapped_read_ptr + bytes_consumed) - alignment_padding;
             word_count = (byte_count + BYTES_PER_WORD_MASK) / BYTES_PER_WORD;
+
             for (word_count--; word_count != -1; word_count--)
             {
                 *destination.words = *copy_source.words;
                 copy_source.bytes += BYTES_PER_WORD;
                 destination.bytes += BYTES_PER_WORD;
             }
+
             destination.bytes += CD_STREAM_STATE.wrap_overflow;
             CD_STREAM_STATE.wrap_overflow = 0;
         }
@@ -434,6 +438,7 @@ u8* cdrom_handle_stream_data(s32 byte_count, u32 bytes_remaining)
             CD_STREAM_STATE.buffer_start = aligned_buffer_start;
             copy_source.bytes = (linear_read_ptr + bytes_consumed) - alignment_padding;
             word_count = (byte_count + BYTES_PER_WORD_MASK) / BYTES_PER_WORD;
+
             for (word_count--; word_count != -1; word_count--)
             {
                 *destination.words = *copy_source.words;
@@ -441,6 +446,7 @@ u8* cdrom_handle_stream_data(s32 byte_count, u32 bytes_remaining)
                 destination.bytes += BYTES_PER_WORD;
             }
         }
+
         CD_STREAM_STATE.data_ready = TRUE;
         return destination.bytes;
     }
@@ -453,6 +459,7 @@ u8* cdrom_handle_stream_data(s32 byte_count, u32 bytes_remaining)
     if ((wrap_write_offset != 0) || ((destination.bytes + transfer_size) > CD_STREAM_BUFFER_LIMIT))
     {
         destination.bytes = CD_STREAM_WRAP_START + wrap_write_offset;
+
         if (CD_STREAM_STATE.input_cursor >= (destination.bytes + transfer_size))
         {
             CD_STREAM_STATE.wrap_overflow = wrap_write_offset + transfer_size;
@@ -469,12 +476,14 @@ u8* cdrom_handle_stream_data(s32 byte_count, u32 bytes_remaining)
     }
 
     next_sector_dst = destination.bytes;
+
     if (bytes_remaining == transfer_size)
     {
         CD_STREAM_STATE.input_complete = TRUE;
         next_sector_dst = destination.bytes;
         return next_sector_dst;
     }
+
     return next_sector_dst;
 }
 

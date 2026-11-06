@@ -18,6 +18,7 @@ s32 gosub_select_companion_to_take(void)
     list = g_gosub_rows;
     row = g_gosub_cursor_row;
     row_entry = &list[row];
+
     if (row_entry->flags.half & GOSUB_COMPANION_EGG)
     {
         gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_EGG_CANNOT_LEAVE));
@@ -25,6 +26,7 @@ s32 gosub_select_companion_to_take(void)
         g_gosub_suppress_dialog_sound = 1;
         return 0;
     }
+
     if (row_entry->flags.companion.grazing)
     {
         gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_CANNOT_LEAVE));
@@ -32,12 +34,14 @@ s32 gosub_select_companion_to_take(void)
         g_gosub_suppress_dialog_sound = 1;
         return 0;
     }
+
     if (g_gosub_selection_count != 0)
     {
         g_gosub_result_values[g_gosub_result_count] = row_entry->index;
         g_gosub_result_rows[g_gosub_result_count] = row;
         g_gosub_result_count++;
     }
+
     return 1;
 }
 
@@ -56,6 +60,7 @@ s32 gosub_select_row(void)
         g_gosub_result_values[n] = g_gosub_rows[g_gosub_cursor_row].index;
         g_gosub_result_rows[n] = g_gosub_cursor_row;
     }
+
     return 1;
 }
 
@@ -73,10 +78,13 @@ s32 gosub_select_block_component(void)
             {
                 g_gosub_selection_count = 1;
             }
+
             return 0;
         }
+
         return gosub_publish_block_components();
     }
+
     return 0;
 }
 
@@ -97,10 +105,12 @@ s32 gosub_select_logic_block(void)
     {
         return 0;
     }
+
     if (g_gosub_selection_count != 2)
     {
         return 0;
     }
+
     if (g_gosub_selected_rows[0] != g_gosub_selected_rows[1])
     {
         gosub_copy_logic_block(&saved_block, &g_saved_game_ctx->logic_blocks[g_gosub_rows[g_gosub_selected_rows[0]].index]);
@@ -122,6 +132,7 @@ s32 gosub_select_logic_block(void)
         gosub_open_block_action_dialog();
         g_gosub_selection_count = 1;
     }
+
     return 0;
 }
 
@@ -144,8 +155,10 @@ s32 gosub_select_golem_part(void)
     {
         g_gosub_rows[i].text_color = FIELD_TEXT_COLOR_NORMAL;
     }
+
     weapon_count = 0;
     armor_count = 0;
+
     for (i = 0; i < g_gosub_selection_count; i++)
     {
         if (g_gosub_rows[g_gosub_selected_rows[i]].equipment_kind == GOSUB_EQUIPMENT_KIND_WEAPON)
@@ -157,6 +170,7 @@ s32 gosub_select_golem_part(void)
             armor_count++;
         }
     }
+
     if (weapon_count != 0)
     {
         for (i = 0; i < g_gosub_row_count; i++)
@@ -167,6 +181,7 @@ s32 gosub_select_golem_part(void)
             }
         }
     }
+
     if (armor_count == GOSUB_GOLEM_ARMOR_PARTS)
     {
         for (i = 0; i < g_gosub_row_count; i++)
@@ -177,6 +192,7 @@ s32 gosub_select_golem_part(void)
             }
         }
     }
+
     if (weapon_count != 0)
     {
         if (armor_count == GOSUB_GOLEM_ARMOR_PARTS)
@@ -184,8 +200,10 @@ s32 gosub_select_golem_part(void)
             gosub_publish_selection();
             return 1;
         }
+
         return 0;
     }
+
     return 0;
 }
 
@@ -200,12 +218,15 @@ s32 gosub_publish_block_components(void)
     if (g_gosub_selection_count == 2)
     {
         g_gosub_result_count = g_gosub_selection_count;
+
         for (i = 0; i < g_gosub_selection_count; i++)
         {
             g_gosub_result_values[i] = g_gosub_rows[g_gosub_selected_rows[i]].index;
         }
+
         return 1;
     }
+
     return 0;
 }
 
@@ -226,6 +247,7 @@ s32 gosub_handle_make_block_dialog(s32 dialog_result)
     if (dialog_result == 0 && (g_gosub_dialog_choice & GOSUB_CONFIRMATION_CHOICE_MASK) == 0)
     {
         count = g_saved_game_ctx->logic_block_count;
+
         if (count < LOGIC_BLOCK_CAPACITY)
         {
             g_saved_game_ctx->logic_blocks[count].f.id = g_gosub_block_id;
@@ -242,6 +264,7 @@ s32 gosub_handle_make_block_dialog(s32 dialog_result)
             g_saved_game_ctx->items[g_gosub_result_values[1]].name[0] = 0;
             field_compact_inventory();
         }
+
         if (g_saved_game_ctx->logic_block_count >= LOGIC_BLOCK_CAPACITY)
         {
             gosub_close_elements();
@@ -249,6 +272,7 @@ s32 gosub_handle_make_block_dialog(s32 dialog_result)
             gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_LOGIC_BLOCKS_FULL));
             return 0;
         }
+
         g_gosub_scroll_frames_remaining = 0;
         g_gosub_scroll_target_y = 0;
         g_gosub_scroll_y = 0;
@@ -266,7 +290,8 @@ s32 gosub_handle_make_block_dialog(s32 dialog_result)
         g_gosub_selection_mode = 2;
         g_gosub_selection_count = 0;
         g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
-        g_gosub_screen_sequence_index -= 1;
+        g_gosub_screen_sequence_index--;
+
         if (g_gosub_row_count == 0)
         {
             g_field_gosub_state = 0;
@@ -274,10 +299,12 @@ s32 gosub_handle_make_block_dialog(s32 dialog_result)
             gosub_close_elements();
             return 1;
         }
+
         return 0;
     }
-    g_gosub_selection_count -= 1;
-    g_gosub_screen_sequence_index -= 1;
+
+    g_gosub_selection_count--;
+    g_gosub_screen_sequence_index--;
     g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
     return 0;
 }
@@ -389,27 +416,28 @@ void gosub_build_equipment_list(u32 item_kind)
 
                 switch (FIELD_ITEM_CATEGORY(attributes))
                 {
-                case GOSUB_EQUIPMENT_KIND_WEAPON:
-                    encoded_text_append(g_gosub_text_buffers[row_count],
-                                        GOSUB_TEXT(GOSUB_TEXT_EQUIPMENT_TYPES, GOSUB_WEAPON_TYPE_FIRST + FIELD_ITEM_TYPE(attributes)));
-                    g_gosub_rows[row_count].primary_value = GOSUB_INVENTORY_RECORD(item_index)->derived.values[0];
-                    break;
-                case GOSUB_EQUIPMENT_KIND_ARMOR:
-                    encoded_text_append(g_gosub_text_buffers[row_count],
-                                        GOSUB_TEXT(GOSUB_TEXT_EQUIPMENT_TYPES, FIELD_ITEM_TYPE(attributes) + GOSUB_ARMOR_TYPE_FIRST));
-                    for (stat_index = 0; stat_index < COMPANION_STAT_COUNT; stat_index++)
-                    {
-                        g_gosub_rows[row_count].stats[stat_index] = GOSUB_INVENTORY_RECORD(item_index)->derived.values[stat_index];
-                    }
-                    break;
-                default:
-                    g_gosub_rows[row_count].primary_value = GOSUB_INVENTORY_RECORD(item_index)->derived.bytes[2];
-                    g_gosub_rows[row_count].stats[0] =
-                        GOSUB_INVENTORY_RECORD(item_index)->derived.bytes[1] + (GOSUB_INVENTORY_RECORD(item_index)->derived.bytes[0] * 14);
-                    encoded_text_append(
-                        g_gosub_text_buffers[row_count],
-                        GOSUB_TEXT(GOSUB_TEXT_EQUIPMENT_TYPES, FIELD_ITEM_TYPE(g_saved_game_ctx->items[item_index].info.word) + GOSUB_INSTRUMENT_TYPE_FIRST));
-                    break;
+                    case GOSUB_EQUIPMENT_KIND_WEAPON:
+                        encoded_text_append(g_gosub_text_buffers[row_count],
+                                            GOSUB_TEXT(GOSUB_TEXT_EQUIPMENT_TYPES, GOSUB_WEAPON_TYPE_FIRST + FIELD_ITEM_TYPE(attributes)));
+                        g_gosub_rows[row_count].primary_value = GOSUB_INVENTORY_RECORD(item_index)->derived.values[0];
+                        break;
+                    case GOSUB_EQUIPMENT_KIND_ARMOR:
+                        encoded_text_append(g_gosub_text_buffers[row_count],
+                                            GOSUB_TEXT(GOSUB_TEXT_EQUIPMENT_TYPES, FIELD_ITEM_TYPE(attributes) + GOSUB_ARMOR_TYPE_FIRST));
+                        for (stat_index = 0; stat_index < COMPANION_STAT_COUNT; stat_index++)
+                        {
+                            g_gosub_rows[row_count].stats[stat_index] = GOSUB_INVENTORY_RECORD(item_index)->derived.values[stat_index];
+                        }
+
+                        break;
+                    default:
+                        g_gosub_rows[row_count].primary_value = GOSUB_INVENTORY_RECORD(item_index)->derived.bytes[2];
+                        g_gosub_rows[row_count].stats[0] =
+                            GOSUB_INVENTORY_RECORD(item_index)->derived.bytes[1] + (GOSUB_INVENTORY_RECORD(item_index)->derived.bytes[0] * 14);
+                        encoded_text_append(g_gosub_text_buffers[row_count],
+                                            GOSUB_TEXT(GOSUB_TEXT_EQUIPMENT_TYPES,
+                                                       FIELD_ITEM_TYPE(g_saved_game_ctx->items[item_index].info.word) + GOSUB_INSTRUMENT_TYPE_FIRST));
+                        break;
                 }
 
                 g_gosub_rows[row_count].desc = g_gosub_text_buffers[row_count];
@@ -426,22 +454,22 @@ void gosub_build_equipment_list(u32 item_kind)
 
     switch (item_kind)
     {
-    case 0:
-        g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_WEAPON);
-        break;
-    case 1:
-        g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_ARMOR);
-        break;
-    case 2:
-        g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_INSTRUMENT);
-        break;
-    case 3:
-        g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_EQUIPMENT);
-        break;
-    case 4:
-        g_gosub_visible_row_count = 7;
-        g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_EQUIPMENT);
-        break;
+        case 0:
+            g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_WEAPON);
+            break;
+        case 1:
+            g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_ARMOR);
+            break;
+        case 2:
+            g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_INSTRUMENT);
+            break;
+        case 3:
+            g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_EQUIPMENT);
+            break;
+        case 4:
+            g_gosub_visible_row_count = 7;
+            g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_EQUIPMENT);
+            break;
     }
 
     g_gosub_row_height = GOSUB_ITEM_ROW_HEIGHT;
@@ -478,15 +506,15 @@ void gosub_build_equipment_type_list(s32 group)
 
     switch (group)
     {
-    case 0:
-        g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_WEAPON_TYPE);
-        break;
-    case 1:
-        g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_ARMOR_TYPE);
-        break;
-    case 2:
-        g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_INSTRUMENT_TYPE);
-        break;
+        case 0:
+            g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_WEAPON_TYPE);
+            break;
+        case 1:
+            g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_ARMOR_TYPE);
+            break;
+        case 2:
+            g_gosub_title_text = GOSUB_MESSAGE(GOSUB_MSG_CHOOSE_INSTRUMENT_TYPE);
+            break;
     }
 
     g_gosub_visible_row_count = GOSUB_ITEM_VISIBLE_ROWS;

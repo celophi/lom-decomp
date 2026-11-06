@@ -1014,7 +1014,7 @@ static void field_text_typeset(FieldTextState* state, s32 budget)
                     {
                         if (look_budget != -1)
                         {
-                            if ((s16)(look_budget -= look_advance) <= 0)
+                            if ((look_budget -= look_advance) <= 0)
                             {
                                 look_cursor = NULL;
                             }
@@ -2586,7 +2586,7 @@ static void field_text_build_transition_quad(FieldTextState* state, FieldTextQua
     }
 
     half_w = half_w / 2 + FIELD_TEXT_FRAME_EDGE;
-    half_h = (u32)state->height / 2;
+    half_h = state->height / 2;
     pad_h = half_h + FIELD_TEXT_FRAME_EDGE;
 
     /* Start from the full-size edges and scale each corner toward the center. */

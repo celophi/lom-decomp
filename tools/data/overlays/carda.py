@@ -57,7 +57,7 @@ SAVE_ICON_BYTES = icon_set.PALETTE_BYTES + SAVE_ICON_FRAMES * SAVE_ICON_FRAME_BY
 CARD_TITLES_NOTE = "# Shift-JIS title templates written into the memory card header.\n"
 SAVE_ICONS_NOTE = (
     "The icons shown by the console's memory card browser. CARDA picks one from "
-    "the number of placed lands: placed_land_count * 9 / 26, capped at icon 9. "
+    "the number of land artifacts obtained: artifact_count * 9 / 26, capped at icon 9. "
     "Each icon has two animation frames sharing one palette."
 )
 

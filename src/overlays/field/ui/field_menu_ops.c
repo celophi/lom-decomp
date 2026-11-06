@@ -1,14 +1,15 @@
-#include "main/audio/game_audio.h"
-#include "common/saved_game.h"
 #include "common.h"
+#include <abs.h>
+
 #include "../internal/field_calls.h"
-#include "../internal/field_script.h"
 #include "../internal/field_menu_vars.h"
 #include "../internal/field_records.h"
+#include "../internal/field_script.h"
+#include "common/saved_game.h"
+#include "main/audio/game_audio.h"
 #include "main/main.h"
-#include <abs.h>
-#include "overlays/field/field_overlay_handoff.h"
 #include "overlays/field/field_actor_records.h"
+#include "overlays/field/field_overlay_handoff.h"
 
 void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s32 y, s32 z);
 
@@ -64,8 +65,8 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 #define FIELD_MENU_OP_ITEM_NAME_ROW 0x22
 #define FIELD_MENU_OP_DESCRIBE_SELECTED_PET 0x27
 #define FIELD_MENU_OP_SEND_SELECTED_PET_GRAZING 0x29
-#define FIELD_MENU_OP_PUBLISH_PET_SLOTS 0x2E
-#define FIELD_MENU_OP_ADD_PET_SLOT 0x30
+#define FIELD_MENU_OP_PUBLISH_PET_PENDING_EFFECTS 0x2E
+#define FIELD_MENU_OP_ADD_PET_PENDING_EFFECT 0x30
 #define FIELD_MENU_OP_RECALL_JOINED_PET 0x32
 #define FIELD_MENU_OP_RECALL_CURSOR_PET 0x4B
 #define FIELD_MENU_OP_HATCH_PET 0x4C
@@ -77,9 +78,9 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 #define FIELD_AFFINITY_CATEGORIES 6        /**< Four 2-bit categories: first, first alt, second, second alt. */
 #define FIELD_AFFINITY_SELECTED_CATEGORY 7 /**< Category of the applied source. */
 #define FIELD_AFFINITY_LEVEL 8
-#define FIELD_AFFINITY_NEUTRAL 10          /**< Nonzero: every element factor is 2. */
-#define FIELD_AFFINITY_FIRST_VALUE 8       /**< Halfword index (D_80122C10). */
-#define FIELD_AFFINITY_SECOND_VALUE 9      /**< Halfword index (D_80122C12). */
+#define FIELD_AFFINITY_NEUTRAL 10     /**< Nonzero: every element factor is 2. */
+#define FIELD_AFFINITY_FIRST_VALUE 8  /**< Halfword index (D_80122C10). */
+#define FIELD_AFFINITY_SECOND_VALUE 9 /**< Halfword index (D_80122C12). */
 
 /* Script locals written by field_menu_read_ring_selection (halfword indices). */
 #define FIELD_RING_ENTRY 0xA /**< Selected ring entry. */
@@ -121,11 +122,11 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 #define FIELD_NO_CARD 0xFF
 
 /* Script locals of the pending and shared item record menus (byte indices unless noted). */
-#define FIELD_RECORD_INDEX 2       /**< Selected record. */
-#define FIELD_RECORD_STATUS 3      /**< 0 shown, 1 empty, 2 duplicate. */
-#define FIELD_PENDING_COUNT 6      /**< Number of active pending records. */
-#define FIELD_RECORD_RESULT 2      /**< Word index: pending result given to a set-aside record. */
-#define FIELD_SET_ASIDE_ACTIVE 0x19 /**< Four bytes: saved active byte of each set-aside shared record. */
+#define FIELD_RECORD_INDEX 2             /**< Selected record. */
+#define FIELD_RECORD_STATUS 3            /**< 0 shown, 1 empty, 2 duplicate. */
+#define FIELD_PENDING_COUNT 6            /**< Number of active pending records. */
+#define FIELD_RECORD_RESULT 2            /**< Word index: pending result given to a set-aside record. */
+#define FIELD_SET_ASIDE_SPECIAL_IDS 0x19 /**< Four bytes: special_ids[0] of each set-aside shared record. */
 
 /* Script locals of the pet ranch menus (byte indices). */
 #define FIELD_HATCH_SPECIES 0x11   /**< Species field_menu_hatch_pet gives the egg. */
@@ -143,7 +144,7 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 /* Script locals written by field_menu_refresh_golem_order (halfword indices). */
 #define FIELD_GOLEM_SLOT_STATUS 3       /**< Three halfwords: golem record per slot, or a FIELD_GOLEM_SLOT_* status. */
 #define FIELD_GOLEM_ACTIVE_POSITION 0xE /**< Display position of the selected slot. */
-#define FIELD_GOLEM_ACTIVE_RECORD 0xF  /**< Active golem record index. */
+#define FIELD_GOLEM_ACTIVE_RECORD 0xF   /**< Active golem record index. */
 
 /** @brief Byte local index of the four values field_menu_describe_selected_item stores. */
 #define FIELD_ITEM_DESC_INDEX 1
@@ -153,9 +154,9 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 #define FIELD_UNIFORM_ELEMENT 6 /**< Element drawn uniformly (other modes). */
 
 /* Script locals of the grazing pet cursor menus (field_menu_swap_joined_pet, field_menu_publish_cursor_pet). */
-#define FIELD_CURSOR_SPECIES 0xA      /**< Halfword index: species of the pet sent grazing. */
-#define FIELD_CURSOR_SLOT 0x1C        /**< Selected cursor slot; also the text macro index. */
-#define FIELD_CURSOR_SLOT_TABLE 0x1D  /**< Pet record index shown in each cursor slot. */
+#define FIELD_CURSOR_SPECIES 0xA     /**< Halfword index: species of the pet sent grazing. */
+#define FIELD_CURSOR_SLOT 0x1C       /**< Selected cursor slot; also the text macro index. */
+#define FIELD_CURSOR_SLOT_TABLE 0x1D /**< Pet record index shown in each cursor slot. */
 
 /** @brief Text resource @p id. */
 #define FIELD_TEXT_RESOURCE(id) ((FieldTextResource*)field_find_resource(id))
@@ -181,9 +182,6 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 /** @brief Largest value field_menu_apply_affinity stores. */
 #define FIELD_AFFINITY_VALUE_MAX 0x7FFF
 
-/** @brief The game-state workspace viewed as FieldMenuPetData. */
-#define FIELD_MENU_PETS ((FieldMenuPetData*)g_saved_game.bytes)
-
 /**
  * @brief Text @p id of the menu text table at g_field_item_name_table.
  * @note The table starts with little-endian 16-bit offsets relative to itself.
@@ -193,9 +191,6 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 
 /** @brief Item id of the first of the eight menu action items. */
 #define FIELD_ACTION_ITEM_BASE 0x58
-
-/** @brief The game-state workspace viewed as FieldMenuActionData. */
-#define FIELD_MENU_ACTIONS (*(FieldMenuActionData*)&g_saved_game)
 
 /** @brief The action item choice variables, which start at D_80122C08. */
 #define FIELD_MENU_CHOICES ((FieldMenuChoiceVars*)&D_80122C08)
@@ -208,9 +203,6 @@ void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s
 
 /** @brief The action slot variables, which start at D_80122C0D. */
 #define FIELD_MENU_ACTION_SLOT ((FieldMenuActionSlotVars*)&D_80122C0D)
-
-/** @brief The game-state workspace viewed as FieldMenuItemData. */
-#define FIELD_MENU_ITEMS ((FieldMenuItemData*)g_saved_game.bytes)
 
 /** @brief Script variables from D_80122C0C used by the menus that move a field object. */
 typedef struct
@@ -275,74 +267,11 @@ typedef struct
     s32 words[3];
 } FieldGosubSequence;
 
-/** @brief Extra slots of a pet record, and the ids that mark one unused (never set, or cleared). */
-#define FIELD_PET_EXTRA_SLOT_COUNT 3
-#define FIELD_PET_SLOT_EMPTY 0xFF
-#define FIELD_PET_SLOT_CLEARED 0xFE
-
-/**
- * @brief Pet record (main.h PetRecord) with its 0x44 status word split into bytes.
- * @note The low three bytes of the status word hold extra slot ids (FIELD_PET_SLOT_CLEARED/FIELD_PET_SLOT_EMPTY are unused).
- */
-typedef struct
-{
-    u8 name[0x15];
-    u8 species; /**< monster species. */
-    u8 unknown_0x16[0x44 - 0x16];
-    u8 extra_slots[FIELD_PET_EXTRA_SLOT_COUNT]; /**< extra slot ids; FIELD_PET_SLOT_CLEARED and FIELD_PET_SLOT_EMPTY mark an unused slot. */
-    u8 status_bits;                             /**< bits 30-31 of the status word (grazing, egg). */
-    u8 unknown_0x48[0x5A - 0x48];
-    u16 unknown_0x5A;
-    u8 unknown_0x5C[4];
-} FieldPetRecord;
-
-/** @brief Pad context view whose pet records use FieldPetRecord. */
-typedef struct
-{
-    u8 _pad0000[0x2EF4];
-    FieldPetRecord pet_records[PET_RECORD_COUNT];
-} FieldMenuPetData;
-
-/** @brief Item id of a free action slot or empty group item entry. */
-#define FIELD_MENU_ITEM_NONE 0xFF
-
-/** @brief One 0x10-byte action slot of a menu action group. */
-typedef struct
-{
-    s32 handle;
-    union
-    {
-        u32 word;
-        u8 item_index; /**< Action item (index into item_counts); FIELD_MENU_ITEM_NONE when the slot is free. */
-    } entry;
-    u8 counters[8]; /**< Per-slot counters advanced by field_menu_advance_action_counters. */
-} FieldMenuActionSlot;
-
-/** @brief FieldMenuActionGroup::flags fields: four-bit slot capacity (bits 0-3), item slot count (8-11) and item slots in use (12-15). */
+/** @brief FieldMenuSlotGroup::flags fields: four-bit slot capacity (bits 0-3), item slot count (8-11) and item slots in use (12-15). */
 #define FIELD_MENU_GROUP_FIELD_MASK 0xF
 #define FIELD_MENU_GROUP_ITEM_SLOTS_SHIFT 8
 #define FIELD_MENU_GROUP_USED_SHIFT 12
 #define FIELD_MENU_GROUP_USED_MASK (FIELD_MENU_GROUP_FIELD_MASK << FIELD_MENU_GROUP_USED_SHIFT)
-
-/**
- * @brief One 0x8C-byte menu action group of the pad context, starting at 0x26E4.
- * @note flags bits 0-3 hold the slot capacity, bits 8-11 the item slot count
- *       and bits 12-15 the number of item slots in use.
- */
-typedef struct
-{
-    u32 flags;
-    u32 unknown_0x04;
-    u8 item_slots[4]; /**< item ids of the group; FIELD_MENU_ITEM_NONE marks an empty entry. */
-    FieldMenuActionSlot slots[8];
-} FieldMenuActionGroup;
-
-/** @brief Pad context view exposing the four menu action groups. */
-typedef struct
-{
-    u8 _pad0000[0x26E4];
-    FieldMenuActionGroup groups[4];
-} FieldMenuActionData;
 
 /** @brief Script variables from D_80122C08: the action item choice mask and count. */
 typedef struct
@@ -375,56 +304,19 @@ typedef struct
     u8 kind;     /**< Item kind, bits 9:8 of the attributes. */
     u8 category; /**< Category with the kind's table offset added. */
 #if defined(VERSION_JP)
-    u8 value;    /**< Displayed stat value. */
-    u8 special;  /**< Special-item flag or instrument spirit. */
+    u8 value;   /**< Displayed stat value. */
+    u8 special; /**< Special-item flag or instrument spirit. */
 #else
-    u16 value;   /**< Displayed stat value; bit 15 marks a special item. */
+    u16 value; /**< Displayed stat value; bit 15 marks a special item. */
 #endif
-    u32 amount;  /**< Item value. */
+    u32 amount; /**< Item value. */
 } FieldMenuItemInfoVars;
 
-/** @brief 0x40-byte item record (FieldItemRecord) viewed with its identity words. */
-typedef struct
-{
-    u8 active; /**< Zero marks an empty record. */
-    u8 unknown_0x01[0x13];
-    /** @brief Item kind, category and name index (FieldItemRecord::info). */
-    union
-    {
-        u32 packed;
-        struct
-        {
-            u16 low;
-            u16 high;
-        } halves;
-    } attributes;
-    u32 nibbles[2];  /**< sixteen 4-bit values. */
-    u8 saved_active; /**< active byte kept while the record is set aside. */
-    u8 unknown_0x21[3];
-    union
-    {
-        u16 values[4];
-        u8 bytes[8];
-    } stats;              /**< 0x24: stats, read as halfwords or bytes by kind. */
-    u8 unknown_0x2C[8];
-    s32 unknown_0x34; /**< item value; for a pending record, its pending result. */
-    u32 identity[2];  /**< words that identify the item; both zero for no item. */
-} FieldMenuItemRecord;
-
 /**
- * @brief Pad context view of the item records.
- * @note The equipment block at 0x640 is scanned as eight records, twice
- *       FIELD_EQUIPMENT_SLOT_COUNT.
+ * @brief Name byte of a set-aside shared or pending item record, kept in special_ids[0].
+ * @param record FieldItemRecord lvalue; its special id is parked in the FIELD_SET_ASIDE_SPECIAL_IDS locals meanwhile.
  */
-typedef struct
-{
-    u8 _pad0000[0x640];
-    FieldMenuItemRecord equipment[8];
-    u8 _pad0840[0xCE0 - 0x840];
-    FieldMenuItemRecord inventory[FIELD_ITEM_COUNT];
-    u8 _pad25E0[0x3160 - 0x25E0];
-    FieldMenuItemRecord pending[4];
-} FieldMenuItemData;
+#define FIELD_ITEM_SET_ASIDE_NAME(record) ((record).special_ids[0])
 
 /** @brief Favored element for each saved-game weekday. */
 typedef struct
@@ -456,7 +348,6 @@ typedef struct
     u8 texts[1];
 } FieldTextResource;
 
-u8* field_find_free_inventory_record();
 extern u8 D_80122C01;
 extern u8 D_80122C02;
 extern u8 D_80122C03;
@@ -478,7 +369,6 @@ extern u8 D_80122C19;
 extern s16 D_80122C1C;
 extern u8 D_80122C1E;
 extern u8 D_80122C1F;
-extern FieldMenuItemRecord g_field_shared_items[4];
 extern FieldGosubSequence D_80051EB4;
 extern void (*g_field_menu_ops[])(s32 arg0);
 extern FieldGosubSequence D_800F19AC;
@@ -493,21 +383,23 @@ extern FieldGosubSequence D_80051ECC;
 extern void field_menu_clear_item_slots(void);
 extern s32 rand(void);
 s32 field_get_actor_facing(s32 arg0);
-extern s32 g_field_niki_state;
 extern void field_menu_compact_pending_items(void);
 extern FieldFavoredElementTable g_field_weekday_favored_elements;
-extern u16 g_music_track_index;
 extern FieldGosubSequence D_80051EF8;
 extern FieldElementTable D_80051F04;
 void field_menu_clear_gosub_request(void);
 
 /**
  * @brief Increment each of the eight counters of action slot @p slot once.
- * @param slot An action slot lvalue (FieldMenuActionSlot).
+ * @param slot An action slot lvalue (FieldMenuSlot).
  */
 #define FIELD_STEP_ACTION_COUNTERS(slot)                                                                                                                       \
     ((slot).counters[0]++, (slot).counters[1]++, (slot).counters[2]++, (slot).counters[3]++, (slot).counters[4]++, (slot).counters[5]++, (slot).counters[6]++, \
      (slot).counters[7]++)
+
+/** @brief First item-name rows of the armor and instrument types (the weapon types use rows 0 to FIELD_WEAPON_TYPE_COUNT - 1). */
+#define FIELD_ITEM_ROW_ARMOR FIELD_WEAPON_TYPE_COUNT
+#define FIELD_ITEM_ROW_INSTRUMENT 0x17
 
 /**
  * @brief Run one menu operation from the menu-op handler table.
@@ -645,18 +537,19 @@ void field_menu_create_golem(void)
 
         g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot] = free_record;
         /* The count nibble is updated with word read-modify-writes. */
-        packed_counts =
-            (*(s32*)&g_saved_game.layout.golem_count & ~GOLEM_COUNT_MASK) | (((g_saved_game.layout.golem_count & GOLEM_COUNT_MASK) + 1) & GOLEM_COUNT_MASK);
-        *(s32*)&g_saved_game.layout.golem_count = packed_counts;
+        packed_counts = (SAVED_GAME_GOLEM_HEADER_WORD(g_saved_game.layout) & ~GOLEM_COUNT_MASK) |
+                        (((g_saved_game.layout.golem_count & GOLEM_COUNT_MASK) + 1) & GOLEM_COUNT_MASK);
+        SAVED_GAME_GOLEM_HEADER_WORD(g_saved_game.layout) = packed_counts;
+
         if ((g_saved_game.layout.golem_count & GOLEM_COUNT_MASK) > GOLEM_RECORD_COUNT)
         {
-            *(s32*)&g_saved_game.layout.golem_count = (packed_counts & ~GOLEM_COUNT_MASK) | GOLEM_RECORD_COUNT;
+            SAVED_GAME_GOLEM_HEADER_WORD(g_saved_game.layout) = (packed_counts & ~GOLEM_COUNT_MASK) | GOLEM_RECORD_COUNT;
         }
 
         for (i = 0; i < g_gosub_result_count; i++)
         {
-            field_copy_inventory_record(g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name,
-                                        (u8*)&g_saved_game.layout.items[g_gosub_result_values[i]]);
+            field_copy_inventory_record(&g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i],
+                                        &g_saved_game.layout.items[g_gosub_result_values[i]]);
             g_saved_game.layout.items[g_gosub_result_values[i]].name[0] = 0;
         }
 
@@ -707,7 +600,7 @@ void field_menu_load_golem_class(void)
     ctx = &g_saved_game.layout;
     record_index = ctx->golem_order[D_80122C00.locals.golem.slot];
     D_80122C00.locals.golem.slot_status[0] = record_index;
-    D_80122C00.locals.golem.detail = ctx->golem_records[record_index].logic_layout & GOLEM_LOGIC_CLASS_MASK;
+    D_80122C00.locals.golem.detail = ctx->golem_records[record_index].logic_layout.byte & GOLEM_LOGIC_CLASS_MASK;
 }
 
 /**
@@ -766,18 +659,19 @@ void field_menu_dismiss_golem(void)
             if (field_find_free_inventory_record() != 0)
             {
                 field_copy_inventory_record(field_find_free_inventory_record(),
-                                            g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name);
+                                            &g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i]);
             }
         }
     }
 
     g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].name[0] = 0;
     g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot] = FIELD_GOLEM_NO_RECORD;
-    word = *(u32*)&g_saved_game.layout.golem_count;
+    word = SAVED_GAME_GOLEM_HEADER_WORD(g_saved_game.layout);
 
     if ((word & GOLEM_COUNT_MASK) != 0)
     {
-        *(u32*)&g_saved_game.layout.golem_count = (word & ~GOLEM_COUNT_MASK) | (((g_saved_game.layout.golem_count & GOLEM_COUNT_MASK) - 1) & GOLEM_COUNT_MASK);
+        SAVED_GAME_GOLEM_HEADER_WORD(g_saved_game.layout) =
+            (word & ~GOLEM_COUNT_MASK) | (((g_saved_game.layout.golem_count & GOLEM_COUNT_MASK) - 1) & GOLEM_COUNT_MASK);
     }
 }
 
@@ -1008,8 +902,9 @@ void field_menu_publish_golem_items(void)
     {
         if (g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name[0] != 0)
         {
-            field_set_text_macro(count, g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name, FIELD_TEXT_MACRO_UNLIMITED);
-            count += 1;
+            field_set_text_macro(count, g_saved_game.layout.golem_records[g_saved_game.layout.golem_order[D_80122C00.locals.golem.slot]].source_items[i].name,
+                                 FIELD_TEXT_MACRO_UNLIMITED);
+            count++;
         }
     }
 
@@ -1044,7 +939,7 @@ void field_menu_count_missing_inventory_space(void)
     }
     else
     {
-        remaining = (u16)*requested - free_count;
+        remaining = *requested - free_count;
     }
 
     *requested = remaining;
@@ -1188,7 +1083,7 @@ void field_menu_set_golem_palette(void)
 
     table = D_80051CBC;
     selection = g_gosub_result_values[0];
-    selection_low = *(u16*)g_gosub_result_values;
+    selection_low = *g_gosub_result_values;
     slot = table.slots[selection - 0x60];
     D_80122C08 = selection_low;
 
@@ -1362,7 +1257,7 @@ void field_menu_fill_free_inventory(void)
 {
     while (field_find_free_inventory_record() != 0)
     {
-        field_copy_inventory_record(field_find_free_inventory_record(), (u8*)g_saved_game.layout.items);
+        field_copy_inventory_record(field_find_free_inventory_record(), g_saved_game.layout.items);
     }
 
     g_saved_game.layout.golems_created += 9;
@@ -1472,10 +1367,6 @@ void field_menu_open_save_screen(void)
 {
     field_open_carda(0);
 }
-
-/** @brief First item-name rows of the armor and instrument types (the weapon types use rows 0 to FIELD_WEAPON_TYPE_COUNT - 1). */
-#define FIELD_ITEM_ROW_ARMOR FIELD_WEAPON_TYPE_COUNT
-#define FIELD_ITEM_ROW_INSTRUMENT 0x17
 
 /**
  * @brief Replace the inventory record index in the result variable with its name-table row.
@@ -1772,11 +1663,11 @@ void field_menu_publish_selected_pet_name(void)
 }
 
 /**
- * @brief Publish pet D_80122C10's extra slot texts and its name.
- * @note Unused slots (0xFE/0xFF) are skipped; the number published goes to D_80122C16.
+ * @brief Publish the texts of pet D_80122C10's pending effects and its name.
+ * @note Empty and cleared effects are skipped; the number published goes to D_80122C16.
  * @note Selections of five or greater record a diagnostic instead.
  */
-void field_menu_publish_pet_slots(void)
+void field_menu_publish_pet_pending_effects(void)
 {
     s32 selection;
     s32 slot;
@@ -1789,13 +1680,13 @@ void field_menu_publish_pet_slots(void)
     {
         count = 0;
 
-        for (slot = 0; slot < FIELD_PET_EXTRA_SLOT_COUNT; slot++)
+        for (slot = 0; slot < FIELD_REGION_PENDING_EFFECT_COUNT; slot++)
         {
-            entry = FIELD_MENU_PETS->pet_records[selection].extra_slots[slot];
+            entry = g_saved_game.layout.pets[selection].status.effects[slot];
 
-            if (entry != FIELD_PET_SLOT_EMPTY)
+            if (entry != FIELD_NO_EFFECT)
             {
-                if (entry != FIELD_PET_SLOT_CLEARED)
+                if (entry != FIELD_EFFECT_CLEARED)
                 {
                     field_set_text_macro(count, FIELD_MENU_TEXT(entry), FIELD_TEXT_MACRO_UNLIMITED);
                     count++;
@@ -1808,7 +1699,7 @@ void field_menu_publish_pet_slots(void)
         return;
     }
 
-    record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_PUBLISH_PET_SLOTS, selection, 0);
+    record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_PUBLISH_PET_PENDING_EFFECTS, selection, 0);
 }
 
 /**
@@ -1827,10 +1718,10 @@ void field_menu_clear_golem_random_chance(void)
 }
 
 /**
- * @brief Store D_80122C12 in the first unused extra slot of pet D_80122C10.
+ * @brief Store effect D_80122C12 in the first empty or cleared pending effect of pet D_80122C10.
  * @note Selections of five or greater record a diagnostic instead.
  */
-void field_menu_add_pet_slot(void)
+void field_menu_add_pet_pending_effect(void)
 {
     s32 selection;
     s32 value;
@@ -1842,13 +1733,13 @@ void field_menu_add_pet_slot(void)
 
     if (selection < PET_RECORD_COUNT)
     {
-        for (slot = 0; slot < FIELD_PET_EXTRA_SLOT_COUNT; slot++)
+        for (slot = 0; slot < FIELD_REGION_PENDING_EFFECT_COUNT; slot++)
         {
-            entry = FIELD_MENU_PETS->pet_records[selection].extra_slots[slot];
+            entry = g_saved_game.layout.pets[selection].status.effects[slot];
 
-            if (entry == FIELD_PET_SLOT_CLEARED || entry == FIELD_PET_SLOT_EMPTY)
+            if (entry == FIELD_EFFECT_CLEARED || entry == FIELD_NO_EFFECT)
             {
-                FIELD_MENU_PETS->pet_records[selection].extra_slots[slot] = value;
+                g_saved_game.layout.pets[selection].status.effects[slot] = value;
                 return;
             }
         }
@@ -1856,7 +1747,7 @@ void field_menu_add_pet_slot(void)
         return;
     }
 
-    record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_ADD_PET_SLOT, selection, 0);
+    record_game_diagnostic(FIELD_DIAG_MENU_OP, FIELD_MENU_OP_ADD_PET_PENDING_EFFECT, selection, 0);
 }
 
 /** @brief Replace the pet record index in D_80122C10 with that pet's species. */
@@ -1907,7 +1798,7 @@ void field_menu_recall_selected_pet(void)
 }
 
 /**
- * @brief Load the gosub-selected pet's 0x5A halfword into D_80122C00.locals.
+ * @brief Load the gosub-selected pet's extra_growth.halves[1] into D_80122C00.locals.
  * @note Does nothing when the gosub returned no selection.
  */
 void field_menu_load_pet_value(void)
@@ -1917,7 +1808,7 @@ void field_menu_load_pet_value(void)
     if (g_gosub_result_count != 0)
     {
         index = g_gosub_result_values[0];
-        D_80122C00.locals.words[0] = FIELD_MENU_PETS->pet_records[index].unknown_0x5A;
+        D_80122C00.locals.words[0] = g_saved_game.layout.pets[index].extra_growth.halves[1];
     }
 }
 
@@ -1973,14 +1864,14 @@ void field_menu_prepare_action_items(void)
     count = 0;
     FIELD_MENU_CHOICES->mask = mask;
     FIELD_MENU_CHOICES->count = capacity;
-    flags = FIELD_MENU_ACTIONS.groups[group].flags;
+    flags = g_saved_game.layout.menu_slots[group].flags.word;
     item_slot_count = flags >> FIELD_MENU_GROUP_ITEM_SLOTS_SHIFT;
     item_slot_count &= FIELD_MENU_GROUP_FIELD_MASK;
     capacity = flags & FIELD_MENU_GROUP_FIELD_MASK;
 
     for (i = 0; i < 8; i++)
     {
-        if (FIELD_MENU_ACTIONS.groups[group].slots[i].entry.item_index < FIELD_MENU_ITEM_NONE)
+        if (g_saved_game.layout.menu_slots[group].slots[i].entry.index < FIELD_MENU_ENTRY_EMPTY)
         {
             count++;
         }
@@ -2032,14 +1923,14 @@ void field_menu_add_action_item(void)
 
     count = 0;
     group = D_80122C1F;
-    flags = FIELD_MENU_ACTIONS.groups[group].flags;
+    flags = g_saved_game.layout.menu_slots[group].flags.word;
     item_slot_count = flags >> FIELD_MENU_GROUP_ITEM_SLOTS_SHIFT;
     item_slot_count &= FIELD_MENU_GROUP_FIELD_MASK;
     capacity = flags & FIELD_MENU_GROUP_FIELD_MASK;
 
     for (slot = 0; slot < 8; slot++)
     {
-        if (FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.item_index != FIELD_MENU_ITEM_NONE)
+        if (g_saved_game.layout.menu_slots[group].slots[slot].entry.index != FIELD_MENU_ENTRY_EMPTY)
         {
             count++;
         }
@@ -2049,7 +1940,7 @@ void field_menu_add_action_item(void)
 
     for (slot = 0; slot < item_slot_count; slot++)
     {
-        if (FIELD_MENU_ACTIONS.groups[group].item_slots[slot] == FIELD_MENU_ITEM_NONE)
+        if (g_saved_game.layout.menu_slots[group].items[slot] == FIELD_MENU_ENTRY_EMPTY)
         {
             break;
         }
@@ -2057,7 +1948,8 @@ void field_menu_add_action_item(void)
 
     used = slot + 1;
     FIELD_LOCAL_BYTE(FIELD_ACTION_USED_SLOTS) = used;
-    FIELD_MENU_ACTIONS.groups[group].flags = (FIELD_MENU_ACTIONS.groups[group].flags & ~FIELD_MENU_GROUP_USED_MASK) | ((used & FIELD_MENU_GROUP_FIELD_MASK) << FIELD_MENU_GROUP_USED_SHIFT);
+    g_saved_game.layout.menu_slots[group].flags.word = (g_saved_game.layout.menu_slots[group].flags.word & ~FIELD_MENU_GROUP_USED_MASK) |
+                                                       ((used & FIELD_MENU_GROUP_FIELD_MASK) << FIELD_MENU_GROUP_USED_SHIFT);
 
     if (capacity < slot + 3)
     {
@@ -2067,7 +1959,7 @@ void field_menu_add_action_item(void)
     selected = FIELD_LOCAL_HALF(FIELD_ACTION_SELECTED_ITEM);
     FIELD_LOCAL_BYTE(FIELD_ACTION_ITEM_COUNTS + selected)--;
     item = selected + FIELD_ACTION_ITEM_BASE;
-    FIELD_MENU_ACTIONS.groups[group].item_slots[slot] = item;
+    g_saved_game.layout.menu_slots[group].items[slot] = item;
     field_set_text_macro(0, FIELD_MENU_TEXT(item), FIELD_TEXT_MACRO_UNLIMITED);
 
     mask = 0x1FFF;
@@ -2109,7 +2001,7 @@ void field_menu_fill_action_slots(void)
 
     i = j = 0;
     group = D_80122C1F;
-    flags = FIELD_MENU_ACTIONS.groups[group].flags;
+    flags = g_saved_game.layout.menu_slots[group].flags.word;
     free_slots = flags & FIELD_MENU_GROUP_FIELD_MASK;
     item_slot_count = flags >> FIELD_MENU_GROUP_ITEM_SLOTS_SHIFT;
     item_slot_count &= FIELD_MENU_GROUP_FIELD_MASK;
@@ -2119,7 +2011,7 @@ void field_menu_fill_action_slots(void)
 
     for (; i < 8; i++)
     {
-        if (FIELD_MENU_ACTIONS.groups[group].slots[i].entry.item_index != FIELD_MENU_ITEM_NONE)
+        if (g_saved_game.layout.menu_slots[group].slots[i].entry.index != FIELD_MENU_ENTRY_EMPTY)
         {
             j++;
         }
@@ -2149,13 +2041,13 @@ void field_menu_fill_action_slots(void)
         {
             pick = rand() / 4096;
 
-            if (FIELD_MENU_ACTIONS.groups[group].slots[pick].entry.item_index == FIELD_MENU_ITEM_NONE)
+            if (g_saved_game.layout.menu_slots[group].slots[pick].entry.index == FIELD_MENU_ENTRY_EMPTY)
             {
                 break;
             }
         }
 
-        if (FIELD_MENU_ACTIONS.groups[group].slots[pick].entry.item_index == FIELD_MENU_ITEM_NONE)
+        if (g_saved_game.layout.menu_slots[group].slots[pick].entry.index == FIELD_MENU_ENTRY_EMPTY)
         {
             field_roll_menu_slot_effect(group, pick);
         }
@@ -2163,7 +2055,7 @@ void field_menu_fill_action_slots(void)
         {
             for (j = 0; j < 8; j++)
             {
-                if (FIELD_MENU_ACTIONS.groups[group].slots[j].entry.item_index == FIELD_MENU_ITEM_NONE)
+                if (g_saved_game.layout.menu_slots[group].slots[j].entry.index == FIELD_MENU_ENTRY_EMPTY)
                 {
                     field_roll_menu_slot_effect(group, j);
                     break;
@@ -2174,9 +2066,9 @@ void field_menu_fill_action_slots(void)
 
     for (i = 0; i < item_slot_count; i++)
     {
-        item = FIELD_MENU_ACTIONS.groups[group].item_slots[i];
+        item = g_saved_game.layout.menu_slots[group].items[i];
 
-        if (item < FIELD_MENU_ITEM_NONE)
+        if (item < FIELD_MENU_ENTRY_EMPTY)
         {
             g_saved_game.layout.item_counts[item]--;
         }
@@ -2192,39 +2084,39 @@ void field_menu_clear_item_slots(void)
     s32 i;
 
     group = D_80122C1F;
-    FIELD_MENU_ACTIONS.groups[group].flags &= ~FIELD_MENU_GROUP_USED_MASK;
+    g_saved_game.layout.menu_slots[group].flags.word &= ~FIELD_MENU_GROUP_USED_MASK;
 
     for (i = 0; i < 4; i++)
     {
-        FIELD_MENU_ACTIONS.groups[group].item_slots[i] = FIELD_MENU_ITEM_NONE;
+        g_saved_game.layout.menu_slots[group].items[i] = FIELD_MENU_ENTRY_EMPTY;
     }
 }
 
 /** @brief Free the eight action slots of group 0 and clear its used item-slot count. */
 void field_menu_reset_group0_slots(void)
 {
-    FieldMenuActionData* data;
+    SavedGameLayout* data;
     u32 flags;
 
-    data = &FIELD_MENU_ACTIONS;
-    flags = data->groups[0].flags;
-    data->groups[0].slots[0].handle = 0;
-    data->groups[0].slots[0].entry.item_index = FIELD_MENU_ITEM_NONE;
-    data->groups[0].slots[1].handle = 0;
-    data->groups[0].slots[1].entry.item_index = FIELD_MENU_ITEM_NONE;
-    data->groups[0].slots[2].handle = 0;
-    data->groups[0].slots[2].entry.item_index = FIELD_MENU_ITEM_NONE;
-    data->groups[0].slots[3].handle = 0;
-    data->groups[0].slots[3].entry.item_index = FIELD_MENU_ITEM_NONE;
-    data->groups[0].slots[4].handle = 0;
-    data->groups[0].slots[4].entry.item_index = FIELD_MENU_ITEM_NONE;
-    data->groups[0].slots[5].handle = 0;
-    data->groups[0].slots[5].entry.item_index = FIELD_MENU_ITEM_NONE;
-    data->groups[0].slots[6].handle = 0;
-    data->groups[0].slots[6].entry.item_index = FIELD_MENU_ITEM_NONE;
-    data->groups[0].slots[7].handle = 0;
-    data->groups[0].slots[7].entry.item_index = FIELD_MENU_ITEM_NONE;
-    data->groups[0].flags = flags & ~FIELD_MENU_GROUP_USED_MASK;
+    data = &g_saved_game.layout;
+    flags = data->menu_slots[0].flags.word;
+    data->menu_slots[0].slots[0].handle = 0;
+    data->menu_slots[0].slots[0].entry.index = FIELD_MENU_ENTRY_EMPTY;
+    data->menu_slots[0].slots[1].handle = 0;
+    data->menu_slots[0].slots[1].entry.index = FIELD_MENU_ENTRY_EMPTY;
+    data->menu_slots[0].slots[2].handle = 0;
+    data->menu_slots[0].slots[2].entry.index = FIELD_MENU_ENTRY_EMPTY;
+    data->menu_slots[0].slots[3].handle = 0;
+    data->menu_slots[0].slots[3].entry.index = FIELD_MENU_ENTRY_EMPTY;
+    data->menu_slots[0].slots[4].handle = 0;
+    data->menu_slots[0].slots[4].entry.index = FIELD_MENU_ENTRY_EMPTY;
+    data->menu_slots[0].slots[5].handle = 0;
+    data->menu_slots[0].slots[5].entry.index = FIELD_MENU_ENTRY_EMPTY;
+    data->menu_slots[0].slots[6].handle = 0;
+    data->menu_slots[0].slots[6].entry.index = FIELD_MENU_ENTRY_EMPTY;
+    data->menu_slots[0].slots[7].handle = 0;
+    data->menu_slots[0].slots[7].entry.index = FIELD_MENU_ENTRY_EMPTY;
+    data->menu_slots[0].flags.word = flags & ~FIELD_MENU_GROUP_USED_MASK;
 }
 
 /** @brief Publish the text of the chosen action item (D_80122C14) to macro 4. */
@@ -2312,9 +2204,9 @@ void field_menu_release_action_slot(void)
     slot = FIELD_MENU_ACTION_SLOT->action_slot;
     slot -= 4;
     group = FIELD_MENU_ACTION_SLOT->group;
-    item = FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.item_index;
+    item = g_saved_game.layout.menu_slots[group].slots[slot].entry.index;
     count = g_saved_game.layout.item_counts[item];
-    count += 1;
+    count++;
 
     if (count >= 0)
     {
@@ -2331,16 +2223,16 @@ void field_menu_release_action_slot(void)
     }
 
     g_saved_game.layout.item_counts[item] = clamped;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].handle = 0;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.item_index = FIELD_MENU_ITEM_NONE;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[0] = 0;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[1] = 0;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[2] = 0;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[3] = 0;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[4] = 0;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[5] = 0;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[6] = 0;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[7] = 0;
+    g_saved_game.layout.menu_slots[group].slots[slot].handle = 0;
+    g_saved_game.layout.menu_slots[group].slots[slot].entry.index = FIELD_MENU_ENTRY_EMPTY;
+    g_saved_game.layout.menu_slots[group].slots[slot].counters[0] = 0;
+    g_saved_game.layout.menu_slots[group].slots[slot].counters[1] = 0;
+    g_saved_game.layout.menu_slots[group].slots[slot].counters[2] = 0;
+    g_saved_game.layout.menu_slots[group].slots[slot].counters[3] = 0;
+    g_saved_game.layout.menu_slots[group].slots[slot].counters[4] = 0;
+    g_saved_game.layout.menu_slots[group].slots[slot].counters[5] = 0;
+    g_saved_game.layout.menu_slots[group].slots[slot].counters[6] = 0;
+    g_saved_game.layout.menu_slots[group].slots[slot].counters[7] = 0;
 }
 
 /**
@@ -2356,9 +2248,9 @@ void field_menu_load_action_slot(void)
 
     slot = FIELD_MENU_ACTION_SLOT->action_slot - 4;
     group = FIELD_MENU_ACTION_SLOT->group;
-    handle = FIELD_MENU_ACTIONS.groups[group].slots[slot].handle;
+    handle = g_saved_game.layout.menu_slots[group].slots[slot].handle;
     FIELD_MENU_ACTION_SLOT->handle = handle;
-    item = FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.item_index;
+    item = g_saved_game.layout.menu_slots[group].slots[slot].entry.index;
     field_set_text_macro(0, FIELD_MENU_TEXT(item), FIELD_TEXT_MACRO_UNLIMITED);
     FIELD_MENU_ACTION_SLOT->item_index = item;
 }
@@ -2368,7 +2260,7 @@ void field_menu_load_action_slot(void)
  *
  * Sets D_80122C1F to 0 when the gosub returned nothing, 2 when the record
  * holds no item, 3 when a pending record already holds the same item and 1
- * when the record was copied (its 0x34 word is then at least 1).
+ * when the record was copied (its value is then at least 1).
  */
 void field_menu_add_pending_record(void)
 {
@@ -2385,7 +2277,7 @@ void field_menu_add_pending_record(void)
 
     selected = g_gosub_result_values[0];
 
-    if (FIELD_MENU_ITEMS->inventory[selected].identity[0] == 0 && FIELD_MENU_ITEMS->inventory[selected].identity[1] == 0)
+    if (g_saved_game.layout.items[selected].key.first == 0 && g_saved_game.layout.items[selected].key.second == 0)
     {
         D_80122C1F = 2;
         return;
@@ -2393,8 +2285,9 @@ void field_menu_add_pending_record(void)
 
     for (i = 0; i < 4; i++)
     {
-        if (FIELD_MENU_ITEMS->pending[i].active != 0 && FIELD_MENU_ITEMS->inventory[selected].identity[0] == FIELD_MENU_ITEMS->pending[i].identity[0] &&
-            FIELD_MENU_ITEMS->inventory[selected].identity[1] == FIELD_MENU_ITEMS->pending[i].identity[1])
+        if (g_saved_game.layout.pending_items[i].name[0] != 0 &&
+            g_saved_game.layout.items[selected].key.first == g_saved_game.layout.pending_items[i].key.first &&
+            g_saved_game.layout.items[selected].key.second == g_saved_game.layout.pending_items[i].key.second)
         {
             D_80122C1F = 3;
             return;
@@ -2403,18 +2296,18 @@ void field_menu_add_pending_record(void)
 
     for (i = 0; i < 4; i++)
     {
-        if (FIELD_MENU_ITEMS->pending[i].active == 0)
+        if (g_saved_game.layout.pending_items[i].name[0] == 0)
         {
-            field_copy_inventory_record((u8*)&FIELD_MENU_ITEMS->pending[i], (u8*)&FIELD_MENU_ITEMS->inventory[selected]);
+            field_copy_inventory_record(&g_saved_game.layout.pending_items[i], &g_saved_game.layout.items[selected]);
             field_discard_item(selected);
-            value = FIELD_MENU_ITEMS->pending[i].unknown_0x34;
+            value = g_saved_game.layout.pending_items[i].value;
 
             if (value == 0)
             {
                 value = 1;
             }
 
-            FIELD_MENU_ITEMS->pending[i].unknown_0x34 = value;
+            g_saved_game.layout.pending_items[i].value = value;
             D_80122C1F = 1;
             return;
         }
@@ -2506,25 +2399,25 @@ void field_menu_advance_action_counters(void)
     {
         for (slot = 0; slot < 8; slot++)
         {
-            if (FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.item_index != FIELD_MENU_ITEM_NONE)
+            if (g_saved_game.layout.menu_slots[group].slots[slot].entry.index != FIELD_MENU_ENTRY_EMPTY)
             {
-                counter = FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[0];
+                counter = g_saved_game.layout.menu_slots[group].slots[slot].counters[0];
 
                 if (counter == 0)
                 {
-                    FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[0] = counter + 1;
+                    g_saved_game.layout.menu_slots[group].slots[slot].counters[0] = counter + 1;
                 }
                 else if (counter < 0xF0)
                 {
-                    FIELD_STEP_ACTION_COUNTERS(FIELD_MENU_ACTIONS.groups[group].slots[slot]);
-                    FIELD_STEP_ACTION_COUNTERS(FIELD_MENU_ACTIONS.groups[group].slots[slot]);
-                    FIELD_STEP_ACTION_COUNTERS(FIELD_MENU_ACTIONS.groups[group].slots[slot]);
-                    FIELD_STEP_ACTION_COUNTERS(FIELD_MENU_ACTIONS.groups[group].slots[slot]);
-                    FIELD_STEP_ACTION_COUNTERS(FIELD_MENU_ACTIONS.groups[group].slots[slot]);
-                    FIELD_STEP_ACTION_COUNTERS(FIELD_MENU_ACTIONS.groups[group].slots[slot]);
-                    FIELD_STEP_ACTION_COUNTERS(FIELD_MENU_ACTIONS.groups[group].slots[slot]);
-                    FIELD_STEP_ACTION_COUNTERS(FIELD_MENU_ACTIONS.groups[group].slots[slot]);
-                    FIELD_STEP_ACTION_COUNTERS(FIELD_MENU_ACTIONS.groups[group].slots[slot]);
+                    FIELD_STEP_ACTION_COUNTERS(g_saved_game.layout.menu_slots[group].slots[slot]);
+                    FIELD_STEP_ACTION_COUNTERS(g_saved_game.layout.menu_slots[group].slots[slot]);
+                    FIELD_STEP_ACTION_COUNTERS(g_saved_game.layout.menu_slots[group].slots[slot]);
+                    FIELD_STEP_ACTION_COUNTERS(g_saved_game.layout.menu_slots[group].slots[slot]);
+                    FIELD_STEP_ACTION_COUNTERS(g_saved_game.layout.menu_slots[group].slots[slot]);
+                    FIELD_STEP_ACTION_COUNTERS(g_saved_game.layout.menu_slots[group].slots[slot]);
+                    FIELD_STEP_ACTION_COUNTERS(g_saved_game.layout.menu_slots[group].slots[slot]);
+                    FIELD_STEP_ACTION_COUNTERS(g_saved_game.layout.menu_slots[group].slots[slot]);
+                    FIELD_STEP_ACTION_COUNTERS(g_saved_game.layout.menu_slots[group].slots[slot]);
                 }
             }
         }
@@ -2539,53 +2432,53 @@ void field_reset_menu_action_slot(void)
 
     slot = FIELD_MENU_ACTION_SLOT->action_slot - 4;
     group = FIELD_MENU_ACTION_SLOT->group;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.item_index = FIELD_MENU_ITEM_NONE;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].handle = 0;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[0] = 0;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[1] = 0;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[2] = 0;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[3] = 0;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[4] = 0;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[5] = 0;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[6] = 0;
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].counters[7] = 0;
+    g_saved_game.layout.menu_slots[group].slots[slot].entry.index = FIELD_MENU_ENTRY_EMPTY;
+    g_saved_game.layout.menu_slots[group].slots[slot].handle = 0;
+    g_saved_game.layout.menu_slots[group].slots[slot].counters[0] = 0;
+    g_saved_game.layout.menu_slots[group].slots[slot].counters[1] = 0;
+    g_saved_game.layout.menu_slots[group].slots[slot].counters[2] = 0;
+    g_saved_game.layout.menu_slots[group].slots[slot].counters[3] = 0;
+    g_saved_game.layout.menu_slots[group].slots[slot].counters[4] = 0;
+    g_saved_game.layout.menu_slots[group].slots[slot].counters[5] = 0;
+    g_saved_game.layout.menu_slots[group].slots[slot].counters[6] = 0;
+    g_saved_game.layout.menu_slots[group].slots[slot].counters[7] = 0;
     /* Bytes 5-7 of the slot are set to 0xFF as part of their word. */
-    FIELD_MENU_ACTIONS.groups[group].slots[slot].entry.word |= ~0xFF;
+    g_saved_game.layout.menu_slots[group].slots[slot].entry.word |= ~0xFF;
 }
 
-/** @brief Reset all lands and place the default set in order. */
+/** @brief Reset all lands and award the default set of land artifacts in order. */
 void field_reset_default_lands(void)
 {
     field_reset_lands();
-    field_place_land(0);
-    field_place_land(1);
-    field_place_land(2);
-    field_place_land(3);
-    field_place_land(4);
-    field_place_land(5);
-    field_place_land(7);
-    field_place_land(8);
-    field_place_land(9);
-    field_place_land(0xA);
-    field_place_land(0xB);
-    field_place_land(0xC);
-    field_place_land(0xD);
-    field_place_land(0xF);
-    field_place_land(0x10);
-    field_place_land(0x11);
-    field_place_land(0x12);
-    field_place_land(0x13);
-    field_place_land(0x15);
-    field_place_land(0x16);
-    field_place_land(0x18);
-    field_place_land(0x19);
-    field_place_land(0x1A);
-    field_place_land(0x1B);
-    field_place_land(0x1E);
-    field_place_land(0x1F);
-    field_place_land(0x20);
-    field_place_land(0x20);
-    field_place_land(0x17);
+    field_award_land_artifact(0);
+    field_award_land_artifact(1);
+    field_award_land_artifact(2);
+    field_award_land_artifact(3);
+    field_award_land_artifact(4);
+    field_award_land_artifact(5);
+    field_award_land_artifact(7);
+    field_award_land_artifact(8);
+    field_award_land_artifact(9);
+    field_award_land_artifact(0xA);
+    field_award_land_artifact(0xB);
+    field_award_land_artifact(0xC);
+    field_award_land_artifact(0xD);
+    field_award_land_artifact(0xF);
+    field_award_land_artifact(0x10);
+    field_award_land_artifact(0x11);
+    field_award_land_artifact(0x12);
+    field_award_land_artifact(0x13);
+    field_award_land_artifact(0x15);
+    field_award_land_artifact(0x16);
+    field_award_land_artifact(0x18);
+    field_award_land_artifact(0x19);
+    field_award_land_artifact(0x1A);
+    field_award_land_artifact(0x1B);
+    field_award_land_artifact(0x1E);
+    field_award_land_artifact(0x1F);
+    field_award_land_artifact(0x20);
+    field_award_land_artifact(0x20);
+    field_award_land_artifact(0x17);
 }
 
 /** @brief Restore the saved field mode through the mode dispatcher. */
@@ -2622,7 +2515,7 @@ void field_menu_list_grazing_pets(void)
 /**
  * @brief Check the selected shared item record and publish its description.
  *
- * An empty record sets status 1. A record whose identity words match an
+ * An empty record sets status 1. A record whose key matches an
  * inventory, equipment or pending record sets status 2. Otherwise the name,
  * name text, kind, category, stat value and item value go to the script
  * variables, with the value's digit count at D_80122C0C.
@@ -2651,7 +2544,7 @@ void field_menu_describe_shared_item(void)
     selection->status = 0;
     selected = selection->index;
 
-    if (g_field_shared_items[selected].active == 0)
+    if (g_field_shared_items[selected].name[0] == 0)
     {
         selection->status = 1;
         return;
@@ -2661,8 +2554,8 @@ void field_menu_describe_shared_item(void)
 
     for (i = 0; i < FIELD_ITEM_COUNT; i++)
     {
-        if (FIELD_MENU_ITEMS->inventory[i].active != 0 && FIELD_MENU_ITEMS->inventory[i].identity[0] == g_field_shared_items[selected].identity[0] &&
-            FIELD_MENU_ITEMS->inventory[i].identity[1] == g_field_shared_items[selected].identity[1])
+        if (g_saved_game.layout.items[i].name[0] != 0 && g_saved_game.layout.items[i].key.first == g_field_shared_items[selected].key.first &&
+            g_saved_game.layout.items[i].key.second == g_field_shared_items[selected].key.second)
         {
             duplicate_found = 1;
             break;
@@ -2671,8 +2564,8 @@ void field_menu_describe_shared_item(void)
 
     for (i = 0; i < 8; i++)
     {
-        if (FIELD_MENU_ITEMS->equipment[i].active != 0 && FIELD_MENU_ITEMS->equipment[i].identity[0] == g_field_shared_items[selected].identity[0] &&
-            FIELD_MENU_ITEMS->equipment[i].identity[1] == g_field_shared_items[selected].identity[1])
+        if (g_saved_game.hero_items.records[i].name[0] != 0 && g_saved_game.hero_items.records[i].key.first == g_field_shared_items[selected].key.first &&
+            g_saved_game.hero_items.records[i].key.second == g_field_shared_items[selected].key.second)
         {
             duplicate_found = 1;
             break;
@@ -2681,8 +2574,8 @@ void field_menu_describe_shared_item(void)
 
     for (i = 0; i < 4; i++)
     {
-        if (FIELD_MENU_ITEMS->pending[i].active != 0 && FIELD_MENU_ITEMS->pending[i].identity[0] == g_field_shared_items[selected].identity[0] &&
-            FIELD_MENU_ITEMS->pending[i].identity[1] == g_field_shared_items[selected].identity[1])
+        if (g_saved_game.layout.pending_items[i].name[0] != 0 && g_saved_game.layout.pending_items[i].key.first == g_field_shared_items[selected].key.first &&
+            g_saved_game.layout.pending_items[i].key.second == g_field_shared_items[selected].key.second)
         {
             duplicate_found = 1;
             break;
@@ -2691,7 +2584,7 @@ void field_menu_describe_shared_item(void)
 
     if (duplicate_found == 0)
     {
-        attributes = g_field_shared_items[selected].attributes.packed;
+        attributes = g_field_shared_items[selected].info.word;
         kind = (attributes >> 8) & 3;
         category = FIELD_ITEM_TYPE(attributes);
 
@@ -2704,26 +2597,26 @@ void field_menu_describe_shared_item(void)
             category += 0x17;
         }
 
-        name_index = g_field_shared_items[selected].attributes.halves.high & FIELD_ITEM_MATERIAL_MASK;
+        name_index = g_field_shared_items[selected].info.halves[1] & FIELD_ITEM_MATERIAL_MASK;
 
         if (kind == 0)
         {
-            value = g_field_shared_items[selected].stats.values[0];
+            value = g_field_shared_items[selected].derived.values[0];
         }
         else if (kind == 1)
         {
-            value = g_field_shared_items[selected].stats.values[0];
-            value += g_field_shared_items[selected].stats.values[1];
-            value += g_field_shared_items[selected].stats.values[2];
-            value += g_field_shared_items[selected].stats.values[3];
+            value = g_field_shared_items[selected].derived.values[0];
+            value += g_field_shared_items[selected].derived.values[1];
+            value += g_field_shared_items[selected].derived.values[2];
+            value += g_field_shared_items[selected].derived.values[3];
         }
         else
         {
-            value = g_field_shared_items[selected].stats.bytes[2];
+            value = g_field_shared_items[selected].derived.bytes[2];
         }
 
-        low_word = g_field_shared_items[selected].nibbles[0];
-        high_word = g_field_shared_items[selected].nibbles[1];
+        low_word = g_field_shared_items[selected].bonus_nibbles.word;
+        high_word = g_field_shared_items[selected].stat_nibbles.word;
         nibble_sum = (low_word & 0xF) + ((low_word >> 4) & 0xF) + ((low_word >> 8) & 0xF) + ((low_word >> 12) & 0xF) + ((low_word >> 16) & 0xF) +
                      ((low_word >> 20) & 0xF) + ((low_word >> 24) & 0xF) + (low_word >> 28) + (high_word & 0xF) + ((high_word >> 4) & 0xF) +
                      ((high_word >> 8) & 0xF) + ((high_word >> 12) & 0xF) + ((high_word >> 16) & 0xF) + ((high_word >> 20) & 0xF) + ((high_word >> 24) & 0xF) +
@@ -2732,11 +2625,11 @@ void field_menu_describe_shared_item(void)
 
         if (kind == 2)
         {
-            special = g_field_shared_items[selected].stats.bytes[0];
+            special = g_field_shared_items[selected].derived.bytes[0];
         }
 
-        amount = g_field_shared_items[selected].unknown_0x34;
-        field_set_text_macro(0, &g_field_shared_items[selected].active, FIELD_TEXT_MACRO_UNLIMITED);
+        amount = g_field_shared_items[selected].value;
+        field_set_text_macro(0, g_field_shared_items[selected].name, FIELD_TEXT_MACRO_UNLIMITED);
         info = FIELD_MENU_ITEM_INFO;
         info->kind = kind;
         info->category = category;
@@ -2763,7 +2656,7 @@ void field_menu_describe_shared_item(void)
     }
 
     D_80122C03 = 2;
-    field_set_text_macro(0, &g_field_shared_items[selected].active, FIELD_TEXT_MACRO_UNLIMITED);
+    field_set_text_macro(0, g_field_shared_items[selected].name, FIELD_TEXT_MACRO_UNLIMITED);
 }
 
 /**
@@ -2779,23 +2672,23 @@ void field_menu_compact_pending_items(void)
 
     for (i = 0; i < 4; i++)
     {
-        if (FIELD_MENU_ITEMS->pending[i].active != 0 && FIELD_MENU_ITEMS->pending[i].unknown_0x34 == 0)
+        if (g_saved_game.layout.pending_items[i].name[0] != 0 && g_saved_game.layout.pending_items[i].value == 0)
         {
-            FIELD_MENU_ITEMS->pending[i].active = 0;
+            g_saved_game.layout.pending_items[i].name[0] = 0;
         }
     }
 
     for (i = 0; i < 4; i++)
     {
-        if (FIELD_MENU_ITEMS->pending[i].active == 0 && FIELD_MENU_ITEMS->pending[i].unknown_0x34 == 0)
+        if (g_saved_game.layout.pending_items[i].name[0] == 0 && g_saved_game.layout.pending_items[i].value == 0)
         {
             for (j = i + 1; j < 4; j++)
             {
-                if (FIELD_MENU_ITEMS->pending[j].active != 0)
+                if (g_saved_game.layout.pending_items[j].name[0] != 0)
                 {
-                    field_copy_inventory_record((u8*)&FIELD_MENU_ITEMS->pending[i], (u8*)&FIELD_MENU_ITEMS->pending[j]);
-                    FIELD_MENU_ITEMS->pending[j].active = 0;
-                    FIELD_MENU_ITEMS->pending[j].unknown_0x34 = 0;
+                    field_copy_inventory_record(&g_saved_game.layout.pending_items[i], &g_saved_game.layout.pending_items[j]);
+                    g_saved_game.layout.pending_items[j].name[0] = 0;
+                    g_saved_game.layout.pending_items[j].value = 0;
                     break;
                 }
             }
@@ -2809,13 +2702,13 @@ void field_menu_compact_pending_items(void)
 void field_menu_take_pending_item(void)
 {
     s32 selected;
-    u8* free_record;
+    FieldItemRecord* free_record;
 
     selected = D_80122C02;
     free_record = field_find_free_inventory_record();
-    field_copy_inventory_record(free_record, (u8*)&FIELD_MENU_ITEMS->pending[selected]);
-    FIELD_MENU_ITEMS->pending[selected].active = 0;
-    FIELD_MENU_ITEMS->pending[selected].unknown_0x34 = 0;
+    field_copy_inventory_record(free_record, &g_saved_game.layout.pending_items[selected]);
+    g_saved_game.layout.pending_items[selected].name[0] = 0;
+    g_saved_game.layout.pending_items[selected].value = 0;
     field_menu_compact_pending_items();
 }
 
@@ -2835,12 +2728,12 @@ void field_menu_restore_pending_item(void)
 
     for (i = 0; i < 4; i++)
     {
-        if (FIELD_MENU_ITEMS->pending[i].active == 0 && FIELD_MENU_ITEMS->pending[i].unknown_0x34 != 0)
+        if (g_saved_game.layout.pending_items[i].name[0] == 0 && g_saved_game.layout.pending_items[i].value != 0)
         {
-            FIELD_MENU_ITEMS->pending[i].active = FIELD_MENU_ITEMS->pending[i].saved_active;
-            field_set_text_macro(0, &FIELD_MENU_ITEMS->pending[i].active, FIELD_TEXT_MACRO_UNLIMITED);
-            result = FIELD_MENU_ITEMS->pending[i].unknown_0x34;
-            FIELD_MENU_ITEMS->pending[i].unknown_0x34 = 0;
+            g_saved_game.layout.pending_items[i].name[0] = FIELD_ITEM_SET_ASIDE_NAME(g_saved_game.layout.pending_items[i]);
+            field_set_text_macro(0, g_saved_game.layout.pending_items[i].name, FIELD_TEXT_MACRO_UNLIMITED);
+            result = g_saved_game.layout.pending_items[i].value;
+            g_saved_game.layout.pending_items[i].value = 0;
             D_80122C02 = i;
             break;
         }
@@ -2858,7 +2751,7 @@ void field_menu_restore_pending_item(void)
  * @brief Count the pending item records and publish the selected one's description.
  *
  * The number of active pending records goes to D_80122C06. An empty selected
- * record sets status 1, one whose identity words match an inventory or
+ * record sets status 1, one whose key matches an inventory or
  * equipment record sets status 2; otherwise its name, name text, kind and
  * category go to the script variables.
  */
@@ -2879,7 +2772,7 @@ void field_menu_describe_pending_item(void)
 
     for (i = 0; i < 4; i++)
     {
-        if (FIELD_MENU_ITEMS->pending[i].active != 0)
+        if (g_saved_game.layout.pending_items[i].name[0] != 0)
         {
             count++;
         }
@@ -2888,7 +2781,7 @@ void field_menu_describe_pending_item(void)
     FIELD_LOCAL_BYTE(FIELD_PENDING_COUNT) = count;
     FIELD_LOCAL_BYTE(FIELD_RECORD_STATUS) = 0;
 
-    if (FIELD_MENU_ITEMS->pending[selected].active == 0)
+    if (g_saved_game.layout.pending_items[selected].name[0] == 0)
     {
         FIELD_LOCAL_BYTE(FIELD_RECORD_STATUS) = 1;
         return;
@@ -2898,8 +2791,8 @@ void field_menu_describe_pending_item(void)
 
     for (i = 0; i < FIELD_ITEM_COUNT; i++)
     {
-        if (FIELD_MENU_ITEMS->inventory[i].active != 0 && FIELD_MENU_ITEMS->inventory[i].identity[0] == FIELD_MENU_ITEMS->pending[selected].identity[0] &&
-            FIELD_MENU_ITEMS->inventory[i].identity[1] == FIELD_MENU_ITEMS->pending[selected].identity[1])
+        if (g_saved_game.layout.items[i].name[0] != 0 && g_saved_game.layout.items[i].key.first == g_saved_game.layout.pending_items[selected].key.first &&
+            g_saved_game.layout.items[i].key.second == g_saved_game.layout.pending_items[selected].key.second)
         {
             duplicate_found = 1;
             break;
@@ -2908,8 +2801,9 @@ void field_menu_describe_pending_item(void)
 
     for (i = 0; i < 8; i++)
     {
-        if (FIELD_MENU_ITEMS->equipment[i].active != 0 && FIELD_MENU_ITEMS->equipment[i].identity[0] == FIELD_MENU_ITEMS->pending[selected].identity[0] &&
-            FIELD_MENU_ITEMS->equipment[i].identity[1] == FIELD_MENU_ITEMS->pending[selected].identity[1])
+        if (g_saved_game.hero_items.records[i].name[0] != 0 &&
+            g_saved_game.hero_items.records[i].key.first == g_saved_game.layout.pending_items[selected].key.first &&
+            g_saved_game.hero_items.records[i].key.second == g_saved_game.layout.pending_items[selected].key.second)
         {
             duplicate_found = 1;
             break;
@@ -2918,7 +2812,7 @@ void field_menu_describe_pending_item(void)
 
     if (duplicate_found == 0)
     {
-        attributes = FIELD_MENU_ITEMS->pending[selected].attributes.packed;
+        attributes = g_saved_game.layout.pending_items[selected].info.word;
         kind = (attributes >> 8) & 3;
         category = FIELD_ITEM_TYPE(attributes);
 
@@ -2931,8 +2825,8 @@ void field_menu_describe_pending_item(void)
             category += 0x17;
         }
 
-        name_index = FIELD_MENU_ITEMS->pending[selected].attributes.halves.high & FIELD_ITEM_MATERIAL_MASK;
-        field_set_text_macro(0, &FIELD_MENU_ITEMS->pending[selected].active, FIELD_TEXT_MACRO_UNLIMITED);
+        name_index = g_saved_game.layout.pending_items[selected].info.halves[1] & FIELD_ITEM_MATERIAL_MASK;
+        field_set_text_macro(0, g_saved_game.layout.pending_items[selected].name, FIELD_TEXT_MACRO_UNLIMITED);
         info = FIELD_MENU_ITEM_INFO;
         info->kind = kind;
         info->category = category;
@@ -2940,7 +2834,7 @@ void field_menu_describe_pending_item(void)
         return;
     }
 
-    field_set_text_macro(0, &FIELD_MENU_ITEMS->pending[selected].active, FIELD_TEXT_MACRO_UNLIMITED);
+    field_set_text_macro(0, g_saved_game.layout.pending_items[selected].name, FIELD_TEXT_MACRO_UNLIMITED);
     FIELD_LOCAL_BYTE(FIELD_RECORD_STATUS) = 2;
 }
 
@@ -2990,7 +2884,7 @@ void field_menu_hatch_pet(void)
 
     if (index < PET_RECORD_COUNT)
     {
-        FIELD_MENU_PETS->pet_records[index].species = species;
+        g_saved_game.layout.pets[index].species = species;
         g_saved_game.layout.pets[index].status.bits.egg = 0;
 
         if (g_saved_game.layout.pets[index].name[0] == 0)
@@ -3044,7 +2938,7 @@ void field_menu_count_free_pending_items(void)
 
     for (i = 0; i < 4; i++)
     {
-        if (FIELD_MENU_ITEMS->pending[i].active == 0)
+        if (g_saved_game.layout.pending_items[i].name[0] == 0)
         {
             count++;
         }
@@ -3063,7 +2957,7 @@ void field_menu_count_free_inventory(void)
 
     for (i = 0; i < FIELD_ITEM_COUNT; i++)
     {
-        if (FIELD_MENU_ITEMS->inventory[i].active == 0)
+        if (g_saved_game.layout.items[i].name[0] == 0)
         {
             count++;
         }
@@ -3075,14 +2969,14 @@ void field_menu_count_free_inventory(void)
 /** @brief Clear the four shared item records and their values. */
 void field_menu_clear_shared_items(void)
 {
-    g_field_shared_items[0].active = 0;
-    g_field_shared_items[1].active = 0;
-    g_field_shared_items[2].active = 0;
-    g_field_shared_items[3].active = 0;
-    g_field_shared_items[0].unknown_0x34 = 0;
-    g_field_shared_items[1].unknown_0x34 = 0;
-    g_field_shared_items[2].unknown_0x34 = 0;
-    g_field_shared_items[3].unknown_0x34 = 0;
+    g_field_shared_items[0].name[0] = 0;
+    g_field_shared_items[1].name[0] = 0;
+    g_field_shared_items[2].name[0] = 0;
+    g_field_shared_items[3].name[0] = 0;
+    g_field_shared_items[0].value = 0;
+    g_field_shared_items[1].value = 0;
+    g_field_shared_items[2].value = 0;
+    g_field_shared_items[3].value = 0;
 }
 
 /**
@@ -3106,18 +3000,18 @@ void field_menu_sync_shared_items(void)
     {
         for (i = 0; i < 4; i++)
         {
-            if (g_field_shared_items[i].active == 0)
+            if (g_field_shared_items[i].name[0] == 0)
             {
-                entry = &FIELD_LOCAL_BYTE(FIELD_SET_ASIDE_ACTIVE + i);
+                entry = &FIELD_LOCAL_BYTE(FIELD_SET_ASIDE_SPECIAL_IDS + i);
 
-                if (g_field_shared_items[i].unknown_0x34 != 0 && *entry != 0xFA)
+                if (g_field_shared_items[i].value != 0 && *entry != 0xFA)
                 {
-                    g_field_shared_items[i].active = g_field_shared_items[i].saved_active;
-                    g_field_shared_items[i].saved_active = *entry;
+                    g_field_shared_items[i].name[0] = FIELD_ITEM_SET_ASIDE_NAME(g_field_shared_items[i]);
+                    FIELD_ITEM_SET_ASIDE_NAME(g_field_shared_items[i]) = *entry;
 
                     if (field_find_free_inventory_record() != 0)
                     {
-                        field_copy_inventory_record(field_find_free_inventory_record(), (u8*)&g_field_shared_items[i]);
+                        field_copy_inventory_record(field_find_free_inventory_record(), &g_field_shared_items[i]);
                     }
                 }
             }
@@ -3128,16 +3022,16 @@ void field_menu_sync_shared_items(void)
     {
         for (i = 0; i < 4; i++)
         {
-            if (g_field_shared_items[i].active != 0)
+            if (g_field_shared_items[i].name[0] != 0)
             {
-                result = g_field_shared_items[i].unknown_0x34;
+                result = g_field_shared_items[i].value;
 
                 if (result == 0)
                 {
                     result = 1;
                 }
 
-                g_field_shared_items[i].unknown_0x34 = result;
+                g_field_shared_items[i].value = result;
             }
         }
     }
@@ -3161,25 +3055,25 @@ void field_menu_publish_guest_presence(void)
 /**
  * @brief Set the selected shared item record aside and give it the pending result.
  *
- * Its saved active byte goes to the cursor slot table at D_80122C19, the
- * active byte is kept in saved_active, and the word at D_80122C08 becomes
+ * Its special_ids[0] goes to the FIELD_SET_ASIDE_SPECIAL_IDS locals, the
+ * name byte is kept in FIELD_ITEM_SET_ASIDE_NAME, and the word at D_80122C08 becomes
  * the record's value.
  */
 void field_menu_set_aside_shared_item(void)
 {
     s32 index;
-    FieldMenuItemRecord* record;
+    FieldItemRecord* record;
     u8 saved;
     u8 active;
 
     index = FIELD_LOCAL_BYTE(FIELD_RECORD_INDEX);
-    saved = g_field_shared_items[index].saved_active;
+    saved = FIELD_ITEM_SET_ASIDE_NAME(g_field_shared_items[index]);
     record = &g_field_shared_items[index];
-    FIELD_LOCAL_BYTE(FIELD_SET_ASIDE_ACTIVE + index) = saved;
-    active = record->active;
-    record->active = 0;
-    record->saved_active = active;
-    record->unknown_0x34 = FIELD_LOCAL_WORD(FIELD_RECORD_RESULT);
+    FIELD_LOCAL_BYTE(FIELD_SET_ASIDE_SPECIAL_IDS + index) = saved;
+    active = record->name[0];
+    record->name[0] = 0;
+    FIELD_ITEM_SET_ASIDE_NAME(*record) = active;
+    record->value = FIELD_LOCAL_WORD(FIELD_RECORD_RESULT);
 }
 
 /**
@@ -3316,9 +3210,9 @@ void field_menu_describe_selected_item(void)
     s32 category;
     s32 stat_byte0;
     s32 stat_byte2;
-    FieldMenuItemData* items;
-    FieldMenuItemRecord* inventory;
-    FieldMenuItemRecord* record;
+    SavedGameLayout* items;
+    FieldItemRecord* inventory;
+    FieldItemRecord* record;
 
     index = 0xFF;
     category = 0xFF;
@@ -3327,13 +3221,13 @@ void field_menu_describe_selected_item(void)
 
     if (g_gosub_result_count != 0)
     {
-        items = FIELD_MENU_ITEMS;
+        items = &g_saved_game.layout;
         index = g_gosub_result_values[0];
-        category = FIELD_ITEM_TYPE(items->inventory[index].attributes.packed);
-        inventory = items->inventory;
+        category = FIELD_ITEM_TYPE(items->items[index].info.word);
+        inventory = items->items;
         record = &inventory[index];
-        stat_byte0 = record->stats.bytes[0];
-        stat_byte2 = record->stats.bytes[2];
+        stat_byte0 = record->derived.bytes[0];
+        stat_byte2 = record->derived.bytes[2];
     }
 
     stat_byte2 = FIELD_CLAMP(stat_byte2, 0, 99);
@@ -3468,7 +3362,7 @@ void field_menu_apply_affinity(void)
 void field_menu_copy_resource_item(void)
 {
     s32 index;
-    u8* free_record;
+    FieldItemRecord* free_record;
     s32 offset;
 
     index = D_80122C00.locals.bytes[0];
@@ -3476,7 +3370,8 @@ void field_menu_copy_resource_item(void)
     if (field_find_free_inventory_record() != 0)
     {
         free_record = field_find_free_inventory_record();
-        field_copy_inventory_record(free_record, field_find_resource(FIELD_ITEM_RECORD_RESOURCE) + (offset = FIELD_RESOURCE_RECORD_OFFSET(index)));
+        field_copy_inventory_record(free_record,
+                                    (FieldItemRecord*)(field_find_resource(FIELD_ITEM_RECORD_RESOURCE) + (offset = FIELD_RESOURCE_RECORD_OFFSET(index))));
         field_set_text_macro(0, field_find_resource(FIELD_ITEM_RECORD_RESOURCE) + offset, FIELD_TEXT_MACRO_UNLIMITED);
     }
 }
@@ -3507,7 +3402,7 @@ void field_menu_swap_joined_pet(void)
     if (index < PET_RECORD_COUNT)
     {
         *entry = index;
-        FIELD_LOCAL_HALF(FIELD_CURSOR_SPECIES) = FIELD_MENU_PETS->pet_records[index].species;
+        FIELD_LOCAL_HALF(FIELD_CURSOR_SPECIES) = g_saved_game.layout.pets[index].species;
         g_saved_game.layout.pets[index].status.bits.grazing = 1;
         field_set_text_macro(slot, g_saved_game.layout.pets[index].name, FIELD_TEXT_MACRO_UNLIMITED);
     }
@@ -3515,14 +3410,14 @@ void field_menu_swap_joined_pet(void)
 
 /**
  * @brief Publish the name of the pet in the cursor slot to text macro 3.
- * @note Local 0x1C is replaced by the record's extra slot id at 0x48.
+ * @note Local 0x1C is replaced by the record's unk48 flag byte.
  */
 void field_menu_publish_cursor_pet(void)
 {
     s32 index;
 
     index = FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT_TABLE + FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT));
-    FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT) = FIELD_MENU_PETS->pet_records[index].unknown_0x48[0];
+    FIELD_LOCAL_BYTE(FIELD_CURSOR_SLOT) = g_saved_game.layout.pets[index].unk48.flags;
     field_set_text_macro(3, g_saved_game.layout.pets[index].name, FIELD_TEXT_MACRO_UNLIMITED);
 }
 
@@ -3571,8 +3466,8 @@ void field_menu_load_golem_saved_group(void)
  */
 void field_menu_publish_item_texts(void)
 {
-    FieldMenuItemRecord* records;
-    FieldMenuItemRecord* record;
+    FieldItemRecord* records;
+    FieldItemRecord* record;
     s32 index;
     s32 row;
     s32 column;
@@ -3580,12 +3475,12 @@ void field_menu_publish_item_texts(void)
     s32 offset;
 
     index = D_80122C10;
-    records = FIELD_MENU_ITEMS->inventory;
+    records = g_saved_game.layout.items;
     record = records + index;
-    row = record->stats.bytes[0];
-    column = record->stats.bytes[1];
+    row = record->derived.bytes[0];
+    column = record->derived.bytes[1];
     entry = row * 14 + column;
-    field_set_text_macro(0, &record->active, FIELD_TEXT_MACRO_UNLIMITED);
+    field_set_text_macro(0, record->name, FIELD_TEXT_MACRO_UNLIMITED);
     offset = FIELD_TEXT_OFFSET(FIELD_ITEM_ENTRY_TEXT_RESOURCE, entry);
     field_set_text_macro(1, FIELD_TEXT_RESOURCE(FIELD_ITEM_ENTRY_TEXT_RESOURCE)->texts + offset, FIELD_TEXT_MACRO_UNLIMITED);
     offset = FIELD_TEXT_OFFSET(FIELD_ITEM_COLUMN_TEXT_RESOURCE, column);

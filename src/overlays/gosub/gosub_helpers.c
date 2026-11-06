@@ -150,8 +150,8 @@ inline void gosub_copy_logic_block(void* dst, void* src)
     u8* src_bytes;
     u32 byte_count;
 
-    dst_bytes = (u8*)dst;
-    src_bytes = (u8*)src;
+    dst_bytes = dst;
+    src_bytes = src;
     byte_count = 0;
     while (byte_count < sizeof(LogicBlock))
     {
@@ -172,8 +172,8 @@ inline void gosub_copy_list_row(void* dst, void* src)
     u8* src_bytes;
     u32 byte_count;
 
-    dst_bytes = (u8*)dst;
-    src_bytes = (u8*)src;
+    dst_bytes = dst;
+    src_bytes = src;
     byte_count = 0;
     while (byte_count < sizeof(GosubListRow))
     {
@@ -321,7 +321,7 @@ GosubTilePacket* gosub_emit_panel_corners(SPRT* prim, u_long* ot, s32 x, s32 y, 
     setWH(prim, GOSUB_PANEL_CORNER_SIZE, GOSUB_PANEL_CORNER_SIZE);
     setClut(prim, GOSUB_FONT_CLUT_X, GOSUB_FONT_CLUT_Y);
     addPrim(ot, prim);
-    prim += 1;
+    prim++;
 
     x1 = x + w - GOSUB_PANEL_CORNER_FAR_INSET;
     y1 = y + h - GOSUB_PANEL_CORNER_FAR_INSET;
@@ -333,7 +333,7 @@ GosubTilePacket* gosub_emit_panel_corners(SPRT* prim, u_long* ot, s32 x, s32 y, 
     setWH(prim, GOSUB_PANEL_CORNER_SIZE, GOSUB_PANEL_CORNER_SIZE);
     setClut(prim, GOSUB_FONT_CLUT_X, GOSUB_FONT_CLUT_Y);
     addPrim(ot, prim);
-    prim += 1;
+    prim++;
 
     SET_BGR0_PACKED(prim, GPU_TINT_NEUTRAL);
     setSprt(prim);
@@ -342,7 +342,7 @@ GosubTilePacket* gosub_emit_panel_corners(SPRT* prim, u_long* ot, s32 x, s32 y, 
     setWH(prim, GOSUB_PANEL_CORNER_SIZE, GOSUB_PANEL_CORNER_SIZE);
     setClut(prim, GOSUB_FONT_CLUT_X, GOSUB_FONT_CLUT_Y);
     addPrim(ot, prim);
-    prim += 1;
+    prim++;
 
     SET_BGR0_PACKED(prim, GPU_TINT_NEUTRAL);
     setSprt(prim);
@@ -351,7 +351,7 @@ GosubTilePacket* gosub_emit_panel_corners(SPRT* prim, u_long* ot, s32 x, s32 y, 
     setWH(prim, GOSUB_PANEL_CORNER_SIZE, GOSUB_PANEL_CORNER_SIZE);
     setClut(prim, GOSUB_FONT_CLUT_X, GOSUB_FONT_CLUT_Y);
     addPrim(ot, prim);
-    prim += 1;
+    prim++;
 
     draw_tpage = (DR_TPAGE*)prim;
     setDrawTPage(draw_tpage, 0, 0, GOSUB_FONT_TPAGE);

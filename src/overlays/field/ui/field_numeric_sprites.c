@@ -3,10 +3,11 @@
  */
 
 #include "common.h"
-#include "common/gpu_packet.h"
-#include "overlays/field/field_numeric_sprites.h"
 #include <libgpu.h>
 #include <memory.h>
+
+#include "common/gpu_packet.h"
+#include "overlays/field/field_numeric_sprites.h"
 
 /** @brief Width and height of one digit glyph, in pixels. */
 #define FIELD_DIGIT_SIZE 8
@@ -56,18 +57,18 @@ static inline void field_set_digit_clut(SPRT* sprite, s32 flags)
 {
     switch (flags & FIELD_DIGIT_STYLE_MASK)
     {
-    case 1:
-        sprite->clut = FIELD_DIGIT_CLUT_STYLE1;
-        break;
-    case 0:
-        sprite->clut = FIELD_DIGIT_CLUT_NORMAL;
-        break;
-    case 2:
-        sprite->clut = FIELD_DIGIT_CLUT_STYLE2;
-        break;
-    default:
-        sprite->clut = FIELD_DIGIT_CLUT_NORMAL;
-        break;
+        case 1:
+            sprite->clut = FIELD_DIGIT_CLUT_STYLE1;
+            break;
+        case 0:
+            sprite->clut = FIELD_DIGIT_CLUT_NORMAL;
+            break;
+        case 2:
+            sprite->clut = FIELD_DIGIT_CLUT_STYLE2;
+            break;
+        default:
+            sprite->clut = FIELD_DIGIT_CLUT_NORMAL;
+            break;
     }
 }
 
@@ -89,21 +90,26 @@ void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 
     s32 digit_index;
 
     divisor = 1;
+
     for (digit_index = 1; digit_index < digit_count; digit_index++)
     {
         divisor *= 10;
     }
+
     for (digit_index = 0; digit_index < digit_count; digit_index++)
     {
         if (value >= divisor)
         {
             break;
         }
+
         divisor /= 10;
     }
+
     if (digit_index != digit_count)
     {
         position->x += digit_index * FIELD_DIGIT_SIZE;
+
         for (; digit_index < digit_count; digit_index++)
         {
             digit = value / divisor;
@@ -121,9 +127,10 @@ void* field_draw_sprite_number(u_long* ordering_table, void* packet_cursor, s32 
         packet_cursor = field_draw_digit(packet_cursor, ordering_table, value, position, flags);
         position->x += FIELD_DIGIT_SIZE;
     }
+
     /* Linked last, so the GPU draws it before the digits. */
-    setDrawTPage((DR_TPAGE*)packet_cursor, 0, 0, FIELD_DIGIT_TPAGE);
-    addPrim(ordering_table, (DR_TPAGE*)packet_cursor);
+    setDrawTPage(packet_cursor, 0, 0, FIELD_DIGIT_TPAGE);
+    addPrim(ordering_table, packet_cursor);
     return (DR_TPAGE*)packet_cursor + 1;
 }
 
@@ -149,10 +156,12 @@ static SPRT* field_draw_digit(SPRT* sprite, u_long* ordering_table, s32 digit, V
     field_set_digit_clut(sprite, flags);
     addPrim(ordering_table, sprite);
     sprite++;
+
     if (flags & FIELD_DIGIT_OUTLINE)
     {
         sprite = field_add_sprite_outline(ordering_table, sprite, 1);
     }
+
     return sprite;
 }
 
@@ -173,6 +182,7 @@ void* field_draw_sprite_glyph(SPRT* sprite, u_long* ordering_table, s32 glyph, V
     setSprt(sprite);
     SET_SPRT_XY0_WORD(sprite, *(u32*)position);
     u = (glyph % FIELD_GLYPHS_PER_ROW) * FIELD_DIGIT_SIZE;
+
     if (glyph >= FIELD_GLYPHS_PER_ROW)
     {
         SET_SPRT_UV0_PACKED(sprite, FIELD_GLYPH_UV(u, FIELD_SYMBOL_ROW_V));
@@ -181,14 +191,17 @@ void* field_draw_sprite_glyph(SPRT* sprite, u_long* ordering_table, s32 glyph, V
     {
         SET_SPRT_UV0_PACKED(sprite, FIELD_GLYPH_UV(u, FIELD_DIGIT_ROW_V));
     }
+
     SET_SPRT_WH_PACKED(sprite, FIELD_DIGIT_SIZE, FIELD_DIGIT_SIZE);
     field_set_digit_clut(sprite, flags);
     addPrim(ordering_table, sprite);
     sprite++;
+
     if (flags & FIELD_DIGIT_OUTLINE)
     {
         sprite = field_add_sprite_outline(ordering_table, sprite, 1);
     }
+
     return sprite;
 }
 
@@ -206,32 +219,37 @@ SPRT* field_add_sprite_outline(u_long* ordering_table, SPRT* sprite_cursor, s32 
     s32 index;
 
     template_end = sprite_cursor;
+
     for (direction = 0; direction < FIELD_OUTLINE_DIRECTION_COUNT; direction++)
     {
         bcopy((u8*)(template_end - sprite_count), (u8*)sprite_cursor, sprite_count * sizeof(SPRT));
+
         for (index = 0; index < sprite_count; index++)
         {
             sprite_cursor->b0 = 0;
             sprite_cursor->g0 = 0;
             sprite_cursor->r0 = 0;
+
             switch (direction)
             {
-            case FIELD_OUTLINE_RIGHT:
-                sprite_cursor->x0++;
-                break;
-            case FIELD_OUTLINE_LEFT:
-                sprite_cursor->x0--;
-                break;
-            case FIELD_OUTLINE_DOWN:
-                sprite_cursor->y0++;
-                break;
-            default:
-                sprite_cursor->y0--;
-                break;
+                case FIELD_OUTLINE_RIGHT:
+                    sprite_cursor->x0++;
+                    break;
+                case FIELD_OUTLINE_LEFT:
+                    sprite_cursor->x0--;
+                    break;
+                case FIELD_OUTLINE_DOWN:
+                    sprite_cursor->y0++;
+                    break;
+                default:
+                    sprite_cursor->y0--;
+                    break;
             }
+
             addPrim(ordering_table, sprite_cursor);
             sprite_cursor++;
         }
     }
+
     return sprite_cursor;
 }
