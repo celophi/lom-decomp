@@ -98,8 +98,53 @@ s32 field_get_next_level_experience(s32 index);
 #define MENU_NODE_LAYOUT_IDLE 0
 /** @brief Number of render updates used to interpolate a newly assigned row. */
 #define MENU_NODE_LAYOUT_STEPS 4
-/** @brief Index of the "browse all items" root node; Circle navigates here. */
-#define MENU_NODE_BROWSE_ALL 0x20
+/**
+ * @brief Node ids: indexes into g_menu_nodes and the value of g_menu_scene_type.
+ * @note Nodes 0-8 are the three party characters' nodes (see MENU_NODES_PER_CHARACTER); the comments give each node's title.
+ */
+typedef enum
+{
+    MENU_NODE_HERO_STATUS = 0x00,
+    MENU_NODE_HERO_EQUIPMENT = 0x01,
+    MENU_NODE_HERO_ABILITIES = 0x02, /**< "Ability/ST/Magic". */
+    /** @brief Guest slot nodes when the guest is a hero-kind player (FIELD_PLAYER_KIND_HERO). */
+    MENU_NODE_GUEST_HERO_STATUS = 0x03,
+    MENU_NODE_GUEST_HERO_EQUIPMENT = 0x04,
+    MENU_NODE_GUEST_HERO_ABILITIES = 0x05,
+    /** @brief Guest slot nodes for any other guest: two status pages and abilities, no equipment. */
+    MENU_NODE_GUEST_PARTNER_STATUS = 0x06,
+    MENU_NODE_GUEST_PARTNER_ATTRIBUTES = 0x07,
+    MENU_NODE_GUEST_PARTNER_ABILITIES = 0x08,
+    /** @brief First node after the party characters' nodes. */
+    MENU_NODE_CHARACTER_END = 0x09,
+    MENU_NODE_PET_STATUS = 0x09,     /**< "Pet: Status" of the companion slot. */
+    MENU_NODE_PET_ATTRIBUTES = 0x0A, /**< "Status": the pet's element, defense and armor values. */
+    /** @brief Copies of MENU_NODE_PET_STATUS and MENU_NODE_PET_ATTRIBUTES that are never made active. */
+    MENU_NODE_PET_STATUS_UNUSED = 0x0C,
+    MENU_NODE_PET_ATTRIBUTES_UNUSED = 0x0D,
+    MENU_NODE_GOLEM_STATUS = 0x0F,     /**< "Golem: Status" of the companion slot. */
+    MENU_NODE_GOLEM_ATTRIBUTES = 0x10, /**< "Status": the golem's element, defense and armor values. */
+    MENU_NODE_GOLEM_LOGIC_BLOCKS = 0x11,
+    MENU_NODE_ITEMS = 0x12,
+    MENU_NODE_WEAPONS = 0x13,
+    MENU_NODE_WEAPON_STATUS = 0x14,      /**< "Weapons: Status". */
+    MENU_NODE_WEAPON_ITEM_STATUS = 0x15, /**< "Items: Status" under Weapons. */
+    MENU_NODE_ARMOR = 0x16,
+    MENU_NODE_ARMOR_STATUS = 0x17,      /**< "Armor: Status". */
+    MENU_NODE_ARMOR_ITEM_STATUS = 0x18, /**< "Items: Status" under Armor. */
+    MENU_NODE_INSTRUMENTS = 0x19,
+    MENU_NODE_INSTRUMENT_STATUS = 0x1A,      /**< "Instruments: Status". */
+    MENU_NODE_INSTRUMENT_ITEM_STATUS = 0x1B, /**< "Items: Status" under Instruments. */
+    MENU_NODE_ARTIFACTS = 0x1C,
+    MENU_NODE_BACKFIELD = 0x1D, /**< "Backfield": the event list. */
+    MENU_NODE_GAME_ENVIRONMENT = 0x1E,
+    /** @brief "Key Configuration" of party slot 0. */
+    MENU_NODE_BUTTONS_CHARACTER_0 = 0x1F,
+    /** @brief Index of the "browse all items" root node; Circle navigates here. */
+    MENU_NODE_BROWSE_ALL = 0x20,
+    /** @brief "Key Configuration" of party slot 1. */
+    MENU_NODE_BUTTONS_CHARACTER_1 = 0x2B
+} MenuNodeId;
 /** @brief Sentinel value meaning "none" for parent_idx, content_id, and child indices. */
 #define MENU_NONE 0xFF
 /** @brief Vertical spacing per node in scroll-position units (19 px). */
@@ -119,9 +164,6 @@ s32 field_get_next_level_experience(s32 index);
 #define MENU_LIST_COUNT_MASK (MENU_ITEM_NAV_INDEX_MASK << MENU_LIST_COUNT_SHIFT)
 /** @brief A packed MenuListNavigation word with its item count replaced by @p count. */
 #define MENU_LIST_WITH_COUNT(packed, count) (((packed) & ~MENU_LIST_COUNT_MASK) | (((count) & MENU_ITEM_NAV_INDEX_MASK) << MENU_LIST_COUNT_SHIFT))
-/** @brief Button-assignment pages (scene node ids) of party slots 0 and 1. */
-#define MENU_SCENE_BUTTONS_CHARACTER_0 0x1F
-#define MENU_SCENE_BUTTONS_CHARACTER_1 0x2B
 /** @brief Content items of the eight bindings on a button-assignment page; item MENU_BUTTON_ITEM_FIRST + n is action n. */
 #define MENU_BUTTON_ITEM_FIRST 0x11
 #define MENU_BUTTON_COUNT 8
@@ -133,10 +175,27 @@ s32 field_get_next_level_experience(s32 index);
 #define MENU_COMMAND_SUBTYPE_BASE 1
 /** @brief Menu subtype of the first skill slot; subtypes 3-6 select FieldCharacterRecord::info.actions.skills[0-3]. */
 #define MENU_SKILL_SUBTYPE_BASE 3
+/** @brief Menu subtypes 11-13: help for the equipped weapon's derived.weapon.stats[2..4] attacks. */
+#define MENU_WEAPON_ATTACK_SUBTYPE_BASE 11
+/** @brief Menu subtype showing the pet's monster family help. */
+#define MENU_MONSTER_FAMILY_SUBTYPE 14
+/** @brief Menu subtype of the viewed item's name; confirming it opens the naming screen. */
+#define MENU_RENAME_ITEM_SUBTYPE 15
+/** @brief Menu subtypes 16-18: help for the viewed item's special_ids. */
+#define MENU_ITEM_SPECIAL_SUBTYPE_BASE 16
+/** @brief Menu subtypes 19-21: help for the viewed weapon's derived.weapon.stats[2..4] attacks. */
+#define MENU_ITEM_ATTACK_SUBTYPE_BASE 19
+/** @brief Menu subtypes showing the viewed instrument's magic, spirit and magic-shape help. */
+#define MENU_INSTRUMENT_MAGIC_SUBTYPE 22
+#define MENU_INSTRUMENT_SPIRIT_SUBTYPE 23
+#define MENU_INSTRUMENT_SHAPE_SUBTYPE 24
+/** @brief Menu subtype showing the companion ability help. */
+#define MENU_COMPANION_ABILITY_SUBTYPE 25
 /** @brief g_menu_active_item_category of the pages that do not list inventory records. */
 #define MENU_ITEM_CATEGORY_NONE 3
 /** @brief Node of party character @c slot: g_menu_nodes[slot * MENU_NODES_PER_CHARACTER + MENU_CHARACTER_NODE_*]. */
 #define MENU_NODES_PER_CHARACTER 3
+#define MENU_CHARACTER_NODE_STATUS 0
 #define MENU_CHARACTER_NODE_EQUIPMENT 1
 #define MENU_CHARACTER_NODE_ABILITIES 2
 /** @brief Ordering-table entry of the content pages opened by menu_open_content_page. */
@@ -225,8 +284,8 @@ s32 field_get_next_level_experience(s32 index);
 #define MENU_PAD_INJECT_ENABLED 0x80
 /** @brief Enables vibration feedback in g_saved_game_ctx->options.word. */
 #define MENU_OPTION_VIBRATION_ENABLED 0x01
-/** @brief Enables menu audio in g_saved_game_ctx->options.word. */
-#define MENU_OPTION_AUDIO_ENABLED 0x02
+/** @brief Stereo sound in g_saved_game_ctx->options.word; clear for mono. */
+#define MENU_OPTION_STEREO 0x02
 /** @brief Number of directional links stored by each content item. */
 #define MENU_CONTENT_DIRECTION_COUNT 4
 /** @brief Ordering-table entry used as the menu frame's list head. */
@@ -351,6 +410,236 @@ typedef enum
     MENU_PAGE_MESSAGE = 6,
     MENU_PAGE_TWO_LINE_MESSAGE = 7
 } MenuContentPage;
+
+/** @brief Codes in g_menu_content_action_codes, run when a MENU_CONTENT_KIND_ACTION item is confirmed. */
+typedef enum
+{
+    MENU_ACTION_NONE = 0,
+    /** @brief Rename the selected pet or golem in the naming screen. */
+    MENU_ACTION_RENAME = 1,
+    /** @brief First of the Game Environment option codes. */
+    MENU_ACTION_OPTION_FIRST = 6,
+    MENU_ACTION_SOUND_STEREO = 6,
+    MENU_ACTION_SOUND_MONO = 7,
+    MENU_ACTION_VIBRATION_ON = 8,
+    MENU_ACTION_VIBRATION_OFF = 9,
+    /** @brief Hand the guest to controller port 2. */
+    MENU_ACTION_GUEST_PORT_2_ON = 10,
+    MENU_ACTION_GUEST_PORT_2_OFF = 11,
+    MENU_ACTION_OPTION_END = 12
+} MenuActionCode;
+
+/** @brief MENU_CONTENT_KIND_ACTION action_type values from 0xF0: the text table the item's help line comes from. */
+typedef enum
+{
+    MENU_HELP_FIRST = 0xF0,
+    MENU_HELP_MONSTER_FAMILY = 0xF0,
+    MENU_HELP_ARTIFACT = 0xF1,
+    MENU_HELP_MAGIC_SHAPE = 0xF2,
+    MENU_HELP_SPIRIT = 0xF3,
+    MENU_HELP_MAGIC = 0xF4,
+    MENU_HELP_ITEM_SPECIAL = 0xF5,
+    MENU_HELP_MONSTER_TECHNIQUE = 0xF6,
+    MENU_HELP_WEAPON_ATTACK = 0xF7,
+    /** @brief Magic or technique help, chosen by g_menu_help_skill_selection. */
+    MENU_HELP_SKILL = 0xF8,
+    MENU_HELP_TECHNIQUE = 0xF9,
+    MENU_HELP_ABILITY = 0xFA,
+    /** @brief Four values, all item help. */
+    MENU_HELP_ITEM_FIRST = 0xFB
+} MenuHelpSource;
+
+/** @brief Icon ids of g_menu_icon_sprite_defs. */
+#define MENU_ICON_NONE 0xFF
+/** @brief "R1" page-switch hint. */
+#define MENU_ICON_R1_HINT 0x1E
+/** @brief Empty frame drawn for a clear flag or an empty equipment slot. */
+#define MENU_ICON_EMPTY 0x21
+/** @brief Eight spirit icons in FieldSpirit order. */
+#define MENU_ICON_SPIRIT_FIRST 0x35
+/** @brief Eight status-effect icons, one per status_flags bit. */
+#define MENU_ICON_STATUS_FIRST 0x3D
+/** @brief Weapon, armor and instrument icons, indexed by FIELD_ITEM_TYPE. */
+#define MENU_ICON_WEAPON_FIRST 0x45
+#define MENU_ICON_ARMOR_FIRST 0x50
+#define MENU_ICON_INSTRUMENT_FIRST 0x5C
+/** @brief "SET" marker on the chosen Game Environment option. */
+#define MENU_ICON_SET 0x6A
+
+/** @brief MENU_CONTENT_KIND_ICON action_type values: which icon the item shows. A _FIRST value starts a run of eight, one per flag bit. */
+typedef enum
+{
+    /** @brief Values 0 and 1 show MENU_ICON_R1_HINT on some pages. */
+    MENU_ICON_SELECT_R1_HINT_END = 0x02,
+    /** @brief The armor's status_flags bits, as status icons. */
+    MENU_ICON_SELECT_ARMOR_STATUS_FIRST = 0x02,
+    /** @brief The armor's element_flags bits, as spirit icons. */
+    MENU_ICON_SELECT_ARMOR_ELEMENT_FIRST = 0x0A,
+    /** @brief status_flags of armor slots 1 to 3 combined, as status icons. */
+    MENU_ICON_SELECT_ARMOR_SET_STATUS_FIRST = 0x12,
+    /** @brief element_flags of armor slots 1 to 3 combined, through g_menu_element_icon_ids. */
+    MENU_ICON_SELECT_ARMOR_SET_ELEMENT_FIRST = 0x1A,
+    /** @brief The weapon's status_flags bits, as spirit icons. */
+    MENU_ICON_SELECT_WEAPON_FLAG_FIRST = 0x22,
+    /** @brief Eight values: the button bound to action n of the button-assignment page. */
+    MENU_ICON_SELECT_BUTTON_FIRST = 0x2A,
+    /** @brief Four values: the item in equipment slot n. */
+    MENU_ICON_SELECT_SLOT_FIRST = 0x32,
+    /** @brief g_menu_item_ptr's item icon. */
+    MENU_ICON_SELECT_VIEWED_ITEM = 0x36,
+    /** @brief Values up to MENU_ICON_SELECT_ACTION_LAST read g_menu_action_icon_ids. */
+    MENU_ICON_SELECT_ACTION_FIRST = 0x37,
+    MENU_ICON_SELECT_ACTION_LAST = 0x54,
+    /** @brief MENU_ICON_SET markers of the Game Environment options. */
+    MENU_ICON_SELECT_STEREO = 0x55,
+    MENU_ICON_SELECT_MONO = 0x56,
+    MENU_ICON_SELECT_VIBRATION_ON = 0x57,
+    MENU_ICON_SELECT_VIBRATION_OFF = 0x58,
+    MENU_ICON_SELECT_GUEST_PORT_2_ON = 0x59,
+    MENU_ICON_SELECT_GUEST_PORT_2_OFF = 0x5A
+} MenuIconSelector;
+
+/** @brief Rows of the skill-slot window (menu_skill_action_callback). */
+typedef enum
+{
+    MENU_SKILL_COMMAND_TECHNIQUE = 0,
+    MENU_SKILL_COMMAND_MAGIC = 1,
+    MENU_SKILL_COMMAND_REMOVE = 2,
+    MENU_SKILL_COMMAND_STATUS = 3
+} MenuSkillCommand;
+
+/** @brief Rows of the equipment-slot window (menu_equipment_action_callback). */
+typedef enum
+{
+    MENU_EQUIPMENT_COMMAND_EQUIP = 0,
+    MENU_EQUIPMENT_COMMAND_AUTO_SELECT = 1,
+    MENU_EQUIPMENT_COMMAND_TOTAL_AUTO = 2,
+    MENU_EQUIPMENT_COMMAND_STATUS = 3,
+    MENU_EQUIPMENT_COMMAND_REMOVE = 4
+} MenuEquipmentCommand;
+
+/**
+ * @brief Content item kinds: the high nibble of MenuContentItem::packed_x.
+ * @note Kinds 13 and 14 appear in the layout data, but no MENU code draws or dispatches them.
+ */
+typedef enum
+{
+    MENU_CONTENT_KIND_NONE = 0,
+    /** @brief MENU_TEXT_MESSAGES entry action_type. */
+    MENU_CONTENT_KIND_MESSAGE = 1,
+    /** @brief Icon picked by action_type (a status, element, button or equipment icon). */
+    MENU_CONTENT_KIND_ICON = 2,
+    /** @brief MenuItemField of the item being viewed. */
+    MENU_CONTENT_KIND_ITEM_FIELD = 3,
+    /** @brief MenuPartyField of the selected party member. */
+    MENU_CONTENT_KIND_PARTY_FIELD = 4,
+    /** @brief Opens a submenu; see MENU_CONTENT_ITEM_TYPE_SUBMENU. */
+    MENU_CONTENT_KIND_SUBMENU = 5,
+    /** @brief MenuGameField: a value of the whole saved game. */
+    MENU_CONTENT_KIND_GAME_FIELD = 6,
+    /** @brief MenuAttackLabel heading of the attack lists. */
+    MENU_CONTENT_KIND_ATTACK_LABEL = 7,
+    /** @brief Dispatches a menu action code; see MENU_CONTENT_ITEM_TYPE_ACTION. */
+    MENU_CONTENT_KIND_ACTION = 15
+} MenuContentKind;
+
+/**
+ * @brief MENU_CONTENT_KIND_ITEM_FIELD values: fields of g_menu_item_ptr or of the weapon, armor and instrument being compared.
+ * @note A _FIRST value starts a run of consecutive fields, one per slot, stat or value index.
+ */
+typedef enum
+{
+    MENU_ITEM_FIELD_NAME = 0x01,
+    /** @brief Material name followed by the equipment type name. */
+    MENU_ITEM_FIELD_TYPE_NAME = 0x02,
+    /** @brief Eight fields, one per bonus_nibbles nibble. */
+    MENU_ITEM_FIELD_BONUS_FIRST = 0x03,
+    /** @brief Three fields, one per special_ids entry. */
+    MENU_ITEM_FIELD_SPECIAL_FIRST = 0x0B,
+    /** @brief Three fields: names of the weapon's derived.weapon.stats[2..4] attacks. */
+    MENU_ITEM_FIELD_WEAPON_ATTACK_FIRST = 0x0E,
+    MENU_ITEM_FIELD_WEAPON_POWER = 0x11,
+    /** @brief The armor's derived.values[0]. */
+    MENU_ITEM_FIELD_ARMOR_VALUE = 0x12,
+    MENU_ITEM_FIELD_INSTRUMENT_MAGIC_NAME = 0x13,
+    MENU_ITEM_FIELD_INSTRUMENT_SPIRIT_NAME = 0x14,
+    MENU_ITEM_FIELD_INSTRUMENT_SHAPE_NAME = 0x15,
+    MENU_ITEM_FIELD_INSTRUMENT_POWER = 0x16,
+    /** @brief Four fields, one per equipment slot: size of the derived.values[0] change. */
+    MENU_ITEM_FIELD_SLOT_CHANGE_FIRST = 0x17,
+    /** @brief Four fields, one per equipment slot: sign of the derived.values[0] change. */
+    MENU_ITEM_FIELD_SLOT_CHANGE_SIGN_FIRST = 0x1B,
+    /** @brief Eight fields, one per stat_nibbles modifier: its sign. */
+    MENU_ITEM_FIELD_MODIFIER_SIGN_FIRST = 0x1F,
+    /** @brief Eight fields, one per stat_nibbles modifier: its size. */
+    MENU_ITEM_FIELD_MODIFIER_FIRST = 0x27,
+    /** @brief Eight fields, one per stat_nibbles modifier: sign of the change from the equipped item. */
+    MENU_ITEM_FIELD_MODIFIER_CHANGE_SIGN_FIRST = 0x2F,
+    /** @brief Eight fields, one per stat_nibbles modifier: size of the change from the equipped item. */
+    MENU_ITEM_FIELD_MODIFIER_CHANGE_FIRST = 0x37,
+    /** @brief Four fields, one per armor derived.values entry. */
+    MENU_ITEM_FIELD_ARMOR_VALUE_FIRST = 0x3F,
+    /** @brief Four fields, one per derived.values entry: sign of the armor total's change. */
+    MENU_ITEM_FIELD_ARMOR_TOTAL_CHANGE_SIGN_FIRST = 0x43,
+    /** @brief Four fields, one per derived.values entry: size of the armor total's change. */
+    MENU_ITEM_FIELD_ARMOR_TOTAL_CHANGE_FIRST = 0x47
+} MenuItemField;
+
+/** @brief MENU_CONTENT_KIND_PARTY_FIELD values: fields of the party member in g_menu_char_slot. */
+typedef enum
+{
+    MENU_PARTY_FIELD_PORTRAIT = 0x01,
+    MENU_PARTY_FIELD_NAME = 0x02,
+    MENU_PARTY_FIELD_LEVEL = 0x03,
+    MENU_PARTY_FIELD_CURRENT_HP = 0x04,
+    MENU_PARTY_FIELD_MAXIMUM_HP = 0x05,
+    MENU_PARTY_FIELD_EXPERIENCE = 0x06,
+    /** @brief Eight fields, one per effective stat. */
+    MENU_PARTY_FIELD_STAT_FIRST = 0x07,
+    MENU_PARTY_FIELD_WEAPON_NAME = 0x0F,
+    /** @brief Three fields: names of the weapon's derived.weapon.stats[2..4] attacks. */
+    MENU_PARTY_FIELD_WEAPON_ATTACK_FIRST = 0x10,
+    MENU_PARTY_FIELD_WEAPON_POWER = 0x13,
+    /** @brief Three fields: names of the armor in equipment slots 1 to 3. */
+    MENU_PARTY_FIELD_ARMOR_NAME_FIRST = 0x14,
+    /** @brief Two fields, one per command slot. */
+    MENU_PARTY_FIELD_COMMAND_NAME_FIRST = 0x17,
+    /** @brief Experience still needed for the next level. */
+    MENU_PARTY_FIELD_NEXT_LEVEL_EXPERIENCE = 0x19,
+    /** @brief Four fields, one per skill slot. */
+    MENU_PARTY_FIELD_SKILL_NAME_FIRST = 0x1B,
+    /** @brief Monster name of a pet (info.actions.variant). */
+    MENU_PARTY_FIELD_MONSTER_NAME = 0x1F,
+    /** @brief Four fields, one per derived.values entry summed over the armor slots. */
+    MENU_PARTY_FIELD_ARMOR_TOTAL_FIRST = 0x20,
+    MENU_PARTY_FIELD_WEAPON_POWER_CHANGE_SIGN = 0x3F,
+    /** @brief Four fields, one per derived.values entry: sign of the armor total's change. */
+    MENU_PARTY_FIELD_ARMOR_TOTAL_CHANGE_SIGN_FIRST = 0x40,
+    MENU_PARTY_FIELD_WEAPON_POWER_CHANGE = 0x44,
+    /** @brief Four fields, one per derived.values entry: size of the armor total's change. */
+    MENU_PARTY_FIELD_ARMOR_TOTAL_CHANGE_FIRST = 0x45,
+    MENU_PARTY_FIELD_COMPANION_ABILITY_NAME = 0x49,
+    MENU_PARTY_FIELD_GOLEM_CLASS_NAME = 0x4A,
+    MENU_PARTY_FIELD_GOLEM_GRID_SIZE = 0x4B,
+    MENU_PARTY_FIELD_GOLEM_FAILURE_RATE = 0x4C,
+    MENU_PARTY_FIELD_GOLEM_PALETTE_NAME = 0x4D,
+    /** @brief Eight fields, one per bonus_nibbles nibble of the equipped weapon. */
+    MENU_PARTY_FIELD_WEAPON_BONUS_FIRST = 0x4E
+} MenuPartyField;
+
+/** @brief MENU_CONTENT_KIND_GAME_FIELD values. */
+typedef enum
+{
+    MENU_GAME_FIELD_MONEY = 1,
+    MENU_GAME_FIELD_PLAY_TIME = 2
+} MenuGameField;
+
+/** @brief MENU_CONTENT_KIND_ATTACK_LABEL values; a guest of variant 5 or 8 shows neither. */
+typedef enum
+{
+    MENU_ATTACK_LABEL_QUICK = 1,
+    MENU_ATTACK_LABEL_POWER = 2
+} MenuAttackLabel;
 
 /** @brief Text-resource directory with byte offsets relative to the resource base. */
 typedef struct
@@ -669,9 +958,9 @@ extern u8 g_item_slot_flags[FIELD_EQUIPMENT_SLOT_COUNT];
 
 /** @brief Pointer into g_saved_game_ctx item data for the current category; null = no items. */
 extern FieldItemRecord* g_menu_item_ptr;
-extern FieldItemRecord* g_menu_category0_item;
-extern FieldItemRecord* g_menu_category1_item;
-extern FieldItemRecord* g_menu_category2_item;
+extern FieldItemRecord* g_menu_weapon_item;
+extern FieldItemRecord* g_menu_armor_item;
+extern FieldItemRecord* g_menu_instrument_item;
 extern FieldItemRecord* g_menu_active_equipped_item;
 extern FieldItemRecord* g_menu_saved_category0_item;
 extern FieldItemRecord* g_menu_saved_category1_item;
@@ -749,7 +1038,10 @@ extern u8 g_field_armor_type_conflicts[];
 /** @brief Signed stat modifier for each four-bit modifier index (index 4 is 0; range -10 to +20). */
 extern s8 g_field_stat_modifier_values[];
 
-/** @brief Skill-slot selection choosing the help text of content help entry 0xF8: MENU_NONE for none, bit 0x80 for magic. TODO: MENU never writes it. */
+/**
+ * @brief Skill-slot selection choosing the help text of help source MENU_HELP_SKILL: MENU_NONE for none, bit 0x80 for magic.
+ * @note TODO: MENU never writes it.
+ */
 extern s32 g_menu_help_skill_selection;
 
 /* Rendering assets. */

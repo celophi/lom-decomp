@@ -223,7 +223,7 @@ def layout(raw: bytes, read_text: TextReader, two_byte_codes: frozenset[int]) ->
         "scene_id": word("scene_id", "<H"),
         "object_id": raw[at["object_id"]],
         "music_id": raw[at["music_id"]],
-        "options": {"word": f"0x{options:08X}", "vibration": bool(options & 1), "mono_sound": bool(options & 2),
+        "options": {"word": f"0x{options:08X}", "vibration": bool(options & 1), "stereo": bool(options & 2),
                     "flag_2": bool(options & 4), "flag_3": bool(options & 8)},
         "money": word("money"),
         "play_time": word("play_time", "<i"),

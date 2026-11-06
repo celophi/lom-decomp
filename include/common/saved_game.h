@@ -442,7 +442,13 @@ typedef struct FieldCharacterRecord
 /** @brief FieldLandRecord::flags bits. */
 #define FIELD_LAND_ARTIFACT_OBTAINED 0x01 /**< The player has the land's artifact (placed or not). */
 #define FIELD_LAND_PLACED 0x02            /**< The land is placed on the map. */
-#define FIELD_LAND_FLAG_04 0x04           /**< TODO meaning unknown; a new game sets it on lands 0-6 and 32. */
+/**
+ * @brief TODO: meaning unknown. A new game sets it on lands 0-6 and 32; scene scripts set it on
+ *        land 9 (BON_PWR0, BON_VLLG), land 13 (MHM_BDR0, just before an ending screen) and land 24
+ *        (HEL_E141, at the end of the event). Lucemia's encyclopedia and map entries unlock once
+ *        FIELD_LAND_LUCEMIA_2 has it.
+ */
+#define FIELD_LAND_FLAG_04 0x04
 #define FIELD_LAND_ARTIFACT_UNLOCKED 0x08 /**< The land's artifact can be awarded. */
 /** @brief FIELD_LAND_PLACED of a land's flags byte or word, as 0 or 1. */
 #define FIELD_LAND_GET_PLACED(flags) (((flags) >> 1) & 1)
@@ -850,7 +856,7 @@ typedef struct
         } bits;
     } logic_layout;
     u8 unknown_0x45;
-    u8 random_chance; /**< 75 - 10 * grid bound, clamped to 0-50; shown as a number by MENU. */
+    u8 failure_rate; /**< Chance out of 100 that the golem fails to act: 75 - 10 * grid bound, clamped to 0-50; MENU shows it as "Failure Rate". */
     u8 unknown_0x47;
     s32 palette;                                           /**< Portrait and sprite palette, 0-31; MENU also names it as the golem's color. */
     FieldItemRecord source_items[GOLEM_SOURCE_ITEM_COUNT]; /**< Items the golem was built from; an empty name ends the list. */
@@ -906,14 +912,14 @@ typedef struct SavedGameLayout
     u16 scene_id;
     u8 object_id;
     u8 music_id;
-    /** @brief Config menu options: controller vibration, mono sound, SAVED_OPTION_FLAG_*. */
+    /** @brief Config menu options: controller vibration, stereo sound, SAVED_OPTION_FLAG_*. */
     union
     {
         u32 word;
         struct
         {
             u32 vibration : 1;
-            u32 mono_sound : 1;
+            u32 stereo : 1;
             /** @brief SAVED_OPTION_FLAG_2. */
             u32 flag_2 : 1;
             /** @brief SAVED_OPTION_FLAG_3. */

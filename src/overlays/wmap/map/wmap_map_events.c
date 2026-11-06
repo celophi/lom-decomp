@@ -50,9 +50,9 @@
 #define WMAP_ARRIVAL_VARIANT 0x400
 
 /** @brief Land effects started by events 12, 13 and 24. */
-#define WMAP_LAND_EVENT_12_EFFECT 22
-#define WMAP_LAND_EVENT_13_EFFECT 23
-#define WMAP_LAND_EVENT_24_EFFECT 33
+#define WMAP_LAND_EVENT_12_EFFECT FIELD_LAND_UNUSED_22
+#define WMAP_LAND_EVENT_13_EFFECT FIELD_LAND_FLAMES
+#define WMAP_LAND_EVENT_24_EFFECT FIELD_LAND_LUCEMIA_2
 
 /** @brief CD files of the event sprites; each sprite is an animation (.DAT) and a texture (.TIM). */
 typedef enum

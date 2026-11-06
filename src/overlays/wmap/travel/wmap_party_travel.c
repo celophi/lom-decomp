@@ -251,7 +251,7 @@ void wmap_update_party_travel(void)
             {
                 wmap_step_actor_animation(sprite, &g_wmap_actor_animations[i]);
 
-                if (g_wmap_view_mode == 0)
+                if (g_wmap_view_mode == WMAP_VIEW_MODE_MAP)
                 {
                     screen.point.x = g_wmap_travelers[i].position_x;
                     screen.point.y = g_wmap_travelers[i].position_y;
@@ -280,7 +280,7 @@ void wmap_update_party_travel(void)
                     }
                 }
 
-                if (g_wmap_view_mode == 1)
+                if (g_wmap_view_mode == WMAP_VIEW_MODE_SPIRITS)
                 {
                     packed_position = g_wmap_spirit_view_cell_positions[g_wmap_travelers[i].cell_x + g_wmap_travelers[i].cell_y * WMAP_GRID_SIZE].packed;
                     flat_x_bits = packed_position + 14;
@@ -301,7 +301,7 @@ void wmap_update_party_travel(void)
         selected_x = g_wmap_view.x / WMAP_CELL_SPACING + g_wmap_cursor_column;
         selected_y = g_wmap_view.y / WMAP_CELL_SPACING + g_wmap_cursor_row;
 
-        if (g_wmap_cells[selected_x][selected_y].travel_allowed != 0 && g_wmap_view_mode == 0 && g_wmap_selection_phase == 0)
+        if (g_wmap_cells[selected_x][selected_y].travel_allowed != 0 && g_wmap_view_mode == WMAP_VIEW_MODE_MAP && g_wmap_selection_phase == 0)
         {
             if (selected_x != g_wmap_travelers[0].cell_x || (at_destination = 1, selected_y != g_wmap_travelers[0].cell_y))
             {

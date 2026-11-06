@@ -264,7 +264,7 @@ void wmap_update_map_game(void)
                     }
                 }
 
-                if ((g_wmap_carousel_mode != 0) || (g_wmap_view_mode != 0) || (g_wmap_selection_phase != 0) || (g_wmap_party_moving != 0) ||
+                if ((g_wmap_carousel_mode != 0) || (g_wmap_view_mode != WMAP_VIEW_MODE_MAP) || (g_wmap_selection_phase != 0) || (g_wmap_party_moving != 0) ||
                     (g_wmap_selected_artifact != -1))
                 {
                     valid = 0;
@@ -302,13 +302,13 @@ void wmap_update_map_game(void)
 
     switch (g_wmap_game_phase)
     {
-        case 0:
+        case WMAP_GAME_PROMPT:
             wmap_update_map_game_prompt();
             break;
-        case 1:
+        case WMAP_GAME_COUNTING_DOWN:
             wmap_update_map_game_countdown();
             break;
-        case 2:
+        case WMAP_GAME_PLAYING:
             wmap_update_map_game_round();
             break;
     }
@@ -872,7 +872,7 @@ void wmap_draw_land_marker(s32 map_x, s32 map_y, WmapLandDisplay* marker)
 
     switch (g_wmap_view_mode)
     {
-        case 0:
+        case WMAP_VIEW_MODE_MAP:
         {
             s32 scale;
             s32 z_bucket;
@@ -907,7 +907,7 @@ void wmap_draw_land_marker(s32 map_x, s32 map_y, WmapLandDisplay* marker)
             sprite->y0 = sprite_y;
             break;
         }
-        case 1:
+        case WMAP_VIEW_MODE_SPIRITS:
         {
             s32 sprite_x;
             s32 sprite_y;
@@ -1172,7 +1172,7 @@ void wmap_draw_lands(void)
         {
             object_id = g_wmap_cells[x][y].land_id;
 
-            if (g_wmap_view_mode == 1)
+            if (g_wmap_view_mode == WMAP_VIEW_MODE_SPIRITS)
             {
                 state = 1;
             }
@@ -1306,7 +1306,7 @@ void wmap_draw_lands(void)
 
             wmap_set_cell_effect_mode(x, y, state);
 
-            if ((g_wmap_cells[x][y].placement_allowed != 0) && (g_wmap_view_mode == 0))
+            if ((g_wmap_cells[x][y].placement_allowed != 0) && (g_wmap_view_mode == WMAP_VIEW_MODE_MAP))
             {
                 wmap_draw_cell_effect(x, y);
             }
@@ -1712,12 +1712,12 @@ void wmap_update_map_display(void)
     {
         switch (g_wmap_view_mode)
         {
-            case 0:
+            case WMAP_VIEW_MODE_MAP:
                 wmap_draw_spirit_icons(-1);
                 wmap_draw_spirit_levels();
                 wmap_draw_information_labels();
                 break;
-            case 1:
+            case WMAP_VIEW_MODE_SPIRITS:
                 if (g_wmap_spirit_selection != 0)
                 {
                     wmap_draw_spirit_icons(g_wmap_spirit_selection - 1);
@@ -2092,7 +2092,7 @@ s32 wmap_classify_map_point(s32 x, s32 y)
 
     if ((dx < 0x61U) && (dy >= 0) && (dy < 0x61))
     {
-        if ((g_wmap_view_mode == 3) || (g_wmap_view_mode == 1))
+        if ((g_wmap_view_mode == WMAP_VIEW_MODE_ZOOM_OUT) || (g_wmap_view_mode == WMAP_VIEW_MODE_SPIRITS))
         {
             return 0;
         }

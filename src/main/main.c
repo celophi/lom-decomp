@@ -1,28 +1,30 @@
-#include "main/main.h"
-#include "main/audio/akao.h"
-#include "main/audio/akao_cmd.h"
-#include "overlays/checkps/checkps.h"
-#include "main/cd_resources.h"
-#include "main/cdrom.h"
-#include "overlays/movie/movie.h"
-#include "overlays/title/title.h"
-#include "overlays/gname/gname.h"
-#include "overlays/cload/cload.h"
-#include "overlays/wsel/wsel.h"
-#include "overlays/wmap/world_map.h"
-#include "main/screen_transition.h"
-#include "main/audio/game_audio.h"
-#include "main/controller.h"
-#include "main/overlay_memory.h"
-#include "main/field_runtime.h"
-#include "main/display.h"
-#include <libgte.h>
-#include <libgpu.h>
+#include "common.h"
 #include <libapi.h>
 #include <libetc.h>
+#include <libgpu.h>
+#include <libgte.h>
 #include <libmcx.h>
 #include <libspu.h>
 #include <rand.h>
+
+#include "main/audio/akao.h"
+#include "main/audio/akao_cmd.h"
+#include "main/audio/game_audio.h"
+#include "main/cd_resources.h"
+#include "main/cdrom.h"
+#include "main/controller.h"
+#include "main/display.h"
+#include "main/field_runtime.h"
+#include "main/main.h"
+#include "main/overlay_memory.h"
+#include "main/screen_transition.h"
+#include "overlays/checkps/checkps.h"
+#include "overlays/cload/cload.h"
+#include "overlays/gname/gname.h"
+#include "overlays/movie/movie.h"
+#include "overlays/title/title.h"
+#include "overlays/wmap/world_map.h"
+#include "overlays/wsel/wsel.h"
 
 #define CD_RESOURCE_TABLE_LBA 24
 #define CD_RESOURCE_TABLE_SIZE 46488
@@ -111,174 +113,175 @@ void main_game_loop(void)
     {
         switch (g_game_state)
         {
-        case GAME_STATE_FIELD:
-        case GAME_STATE_ATTRACT_1:
-        case GAME_STATE_ATTRACT_2:
-            SetDispMask(0);
-            VSync(0);
-            DrawSync(0);
-            get_field_render_buffers();
-            cdrom_stream(CD_RES_FIELD_BIN, g_overlay_load_address);
+            case GAME_STATE_FIELD:
+            case GAME_STATE_ATTRACT_1:
+            case GAME_STATE_ATTRACT_2:
+                SetDispMask(0);
+                VSync(0);
+                DrawSync(0);
+                get_field_render_buffers();
+                cdrom_stream(CD_RES_FIELD_BIN, g_overlay_load_address);
 
-            if (g_game_state != GAME_STATE_FIELD)
-            {
-                cdrom_stream(CD_RES_MOVIE_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
-                cdrom_wait_queue_empty();
-
-                if (g_game_state == GAME_STATE_ATTRACT_1)
+                if (g_game_state != GAME_STATE_FIELD)
                 {
-                    movie_play(MOVIE_INDEX_ATTRACT_1);
+                    cdrom_stream(CD_RES_MOVIE_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
+                    cdrom_wait_queue_empty();
+
+                    if (g_game_state == GAME_STATE_ATTRACT_1)
+                    {
+                        movie_play(MOVIE_INDEX_ATTRACT_1);
+                    }
+                    else
+                    {
+                        movie_play(MOVIE_INDEX_ATTRACT_2_PART_1);
+                        movie_play(MOVIE_INDEX_ATTRACT_2_PART_2);
+                        movie_play(MOVIE_INDEX_ATTRACT_2_PART_3);
+                    }
                 }
                 else
                 {
-                    movie_play(MOVIE_INDEX_ATTRACT_2_PART_1);
-                    movie_play(MOVIE_INDEX_ATTRACT_2_PART_2);
-                    movie_play(MOVIE_INDEX_ATTRACT_2_PART_3);
+                    cdrom_wait_queue_empty();
                 }
-            }
-            else
-            {
+
+                g_field_object_id = 0;
+                g_field_spawn_id = 0;
+                g_game_state = run_field_scene();
+                akao_stop_all_songs();
+                akao_release_all_sfx();
+                akao_set_song_volume(0, AKAO_VOLUME_MAX);
+                g_previous_game_state = GAME_STATE_FIELD;
+                break;
+
+            case GAME_STATE_WORLD_MAP:
+                get_world_map_overlay_end();
+                cdrom_stream(CD_RES_WMAP_BIN, g_overlay_load_address);
+                screen_transition(0);
+                setRECT(&rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT + VRAM_DRAW_HEIGHT);
+                ClearImage(&rect, 0, 0, 0);
+                DrawSync(0);
+                VSync(0);
+                akao_stop_all_songs();
+                akao_release_all_sfx();
                 cdrom_wait_queue_empty();
-            }
+                g_game_state = run_world_map();
+                akao_stop_all_songs();
+                akao_release_all_sfx();
 
-            g_field_object_id = 0;
-            g_field_spawn_id = 0;
-            g_game_state = run_field_scene();
-            akao_stop_all_songs();
-            akao_release_all_sfx();
-            akao_set_song_volume(0, AKAO_VOLUME_MAX);
-            g_previous_game_state = GAME_STATE_FIELD;
-            break;
+                if ((g_game_state != GAME_STATE_TITLE) && (g_game_state != GAME_STATE_ATTRACT_1) && (g_game_state != GAME_STATE_ATTRACT_2))
+                {
+                    load_and_play_song(g_music_track_table[g_music_track_index]);
+                }
 
-        case GAME_STATE_WORLD_MAP:
-            get_world_map_overlay_end();
-            cdrom_stream(CD_RES_WMAP_BIN, g_overlay_load_address);
-            screen_transition(0);
-            setRECT(&rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT + VRAM_DRAW_HEIGHT);
-            ClearImage(&rect, 0, 0, 0);
-            DrawSync(0);
-            VSync(0);
-            akao_stop_all_songs();
-            akao_release_all_sfx();
-            cdrom_wait_queue_empty();
-            g_game_state = run_world_map();
-            akao_stop_all_songs();
-            akao_release_all_sfx();
+                g_field_secondary_music_id = -1;
+                g_previous_game_state = GAME_STATE_WORLD_MAP;
+                break;
 
-            if ((g_game_state != GAME_STATE_TITLE) && (g_game_state != GAME_STATE_ATTRACT_1) && (g_game_state != GAME_STATE_ATTRACT_2))
-            {
-                load_and_play_song(g_music_track_table[g_music_track_index]);
-            }
+            case GAME_STATE_TITLE:
+                title_menu_buffers = get_title_menu_buffers();
+                cdrom_stop();
+                cdrom_stream(CD_RES_TITLE_BIN, g_overlay_load_address);
+                screen_transition(0);
+                cdrom_wait_queue_empty();
+                g_game_state = run_title(title_menu_buffers);
+                DrawSync(0);
+                VSync(0);
+                g_previous_game_state = GAME_STATE_TITLE;
+                break;
 
-            g_field_secondary_music_id = -1;
-            g_previous_game_state = GAME_STATE_WORLD_MAP;
-            break;
+            case GAME_STATE_GNAME:
+                get_field_render_buffers();
+                cdrom_stream(CD_RES_FIELD_BIN, g_overlay_load_address);
+                cdrom_stream(CD_RES_GNAME_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
+                screen_transition(0);
+                cdrom_wait_queue_empty();
+                field_restore_entry_music();
+                field_scene_reset(NULL);
+                g_field_audio_timer = 0;
+                player_name = g_saved_game.layout.characters[0].name;
+                g_game_state =
+                    gname_run(GNAME_RENDER_BUFFERS, player_name, player_name, g_saved_game.layout.characters[0].info.bits.type + 4, 0, player_name, 1);
+                DrawSync(0);
+                VSync(0);
+                g_previous_game_state = GAME_STATE_GNAME;
+                break;
 
-        case GAME_STATE_TITLE:
-            title_menu_buffers = get_title_menu_buffers();
-            cdrom_stop();
-            cdrom_stream(CD_RES_TITLE_BIN, g_overlay_load_address);
-            screen_transition(0);
-            cdrom_wait_queue_empty();
-            g_game_state = run_title(title_menu_buffers);
-            DrawSync(0);
-            VSync(0);
-            g_previous_game_state = GAME_STATE_TITLE;
-            break;
-
-        case GAME_STATE_GNAME:
-            get_field_render_buffers();
-            cdrom_stream(CD_RES_FIELD_BIN, g_overlay_load_address);
-            cdrom_stream(CD_RES_GNAME_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
-            screen_transition(0);
-            cdrom_wait_queue_empty();
-            field_restore_entry_music();
-            field_scene_reset(NULL);
-            g_field_audio_timer = 0;
-            player_name = g_saved_game.layout.characters[0].name;
-            g_game_state = gname_run(GNAME_RENDER_BUFFERS, player_name, player_name, g_saved_game.layout.characters[0].info.bits.type + 4, 0, player_name, 1);
-            DrawSync(0);
-            VSync(0);
-            g_previous_game_state = GAME_STATE_GNAME;
-            break;
-
-        case GAME_STATE_WORLD_SELECT:
-            get_field_render_buffers();
-            cdrom_stream(CD_RES_WSEL_BIN, g_overlay_load_address);
-            screen_transition(0);
-            cdrom_wait_queue_empty();
-            g_game_state = wsel_main((void*)WSEL_RENDER_ADDRESS);
-            DrawSync(0);
-            VSync(0);
-            g_previous_game_state = GAME_STATE_WORLD_SELECT;
-            break;
+            case GAME_STATE_WORLD_SELECT:
+                get_field_render_buffers();
+                cdrom_stream(CD_RES_WSEL_BIN, g_overlay_load_address);
+                screen_transition(0);
+                cdrom_wait_queue_empty();
+                g_game_state = wsel_main((void*)WSEL_RENDER_ADDRESS);
+                DrawSync(0);
+                VSync(0);
+                g_previous_game_state = GAME_STATE_WORLD_SELECT;
+                break;
 
 #if defined(VERSION_JP)
-        case GAME_STATE_CHECKPS:
-            akao_init();
-            get_field_render_buffers();
-            cdrom_stream(CD_RES_CHECKPS_BIN, g_overlay_load_address);
-            screen_transition(0);
-            cdrom_wait_queue_empty();
-            g_game_state = run_checkps((CheckPSRenderState*)CHECKPS_RENDER_ADDRESS);
-            DrawSync(0);
-            VSync(0);
-            g_previous_game_state = GAME_STATE_CHECKPS;
-            break;
+            case GAME_STATE_CHECKPS:
+                akao_init();
+                get_field_render_buffers();
+                cdrom_stream(CD_RES_CHECKPS_BIN, g_overlay_load_address);
+                screen_transition(0);
+                cdrom_wait_queue_empty();
+                g_game_state = run_checkps((CheckPSRenderState*)CHECKPS_RENDER_ADDRESS);
+                DrawSync(0);
+                VSync(0);
+                g_previous_game_state = GAME_STATE_CHECKPS;
+                break;
 
 #endif
-        case GAME_STATE_MENU_LOAD:
-            get_field_render_buffers();
-            cdrom_stream(CD_RES_FIELD_BIN, g_overlay_load_address);
-            cdrom_stream(CD_RES_CLOAD_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
-            screen_transition(0);
-            cdrom_wait_queue_empty();
-            field_scene_reset(NULL);
-            spawn_id = &g_field_spawn_id;
-            g_save_compatibility_tag = SAVE_TAG_STARTUP;
+            case GAME_STATE_MENU_LOAD:
+                get_field_render_buffers();
+                cdrom_stream(CD_RES_FIELD_BIN, g_overlay_load_address);
+                cdrom_stream(CD_RES_CLOAD_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
+                screen_transition(0);
+                cdrom_wait_queue_empty();
+                field_scene_reset(NULL);
+                spawn_id = &g_field_spawn_id;
+                g_save_compatibility_tag = SAVE_TAG_STARTUP;
 
-            if (cload_main() != CLOAD_RESULT_LOADED)
-            {
-                g_game_state = GAME_STATE_TITLE;
-            }
-            else
-            {
-                *spawn_id = FIELD_SPAWN_LOAD_GAME;
-                g_field_entry_scene.id = g_saved_game.layout.scene_id;
-                g_field_object_id = g_saved_game.layout.object_id;
-                g_field_music_id = g_saved_game.layout.music_id;
-                g_field_sound_bank_id = g_saved_game.layout.sound_bank_id;
-                g_field_secondary_music_id = g_saved_game.layout.secondary_music_id;
-                g_saved_game.layout.spawn.bits.id = FIELD_SPAWN_LOAD_GAME;
-                g_music_track_index = g_saved_game.layout.track.bits.music_track;
-
-                if ((g_saved_game.layout.options.word & (SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3)) == (SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3))
+                if (cload_main() != CLOAD_RESULT_LOADED)
                 {
-                    g_game_state = GAME_STATE_WORLD_SELECT;
+                    g_game_state = GAME_STATE_TITLE;
                 }
                 else
                 {
-                    screen_transition(0);
-                    g_game_state = run_field_scene();
+                    *spawn_id = FIELD_SPAWN_LOAD_GAME;
+                    g_field_entry_scene.id = g_saved_game.layout.scene_id;
+                    g_field_object_id = g_saved_game.layout.object_id;
+                    g_field_music_id = g_saved_game.layout.music_id;
+                    g_field_sound_bank_id = g_saved_game.layout.sound_bank_id;
+                    g_field_secondary_music_id = g_saved_game.layout.secondary_music_id;
+                    g_saved_game.layout.spawn.bits.id = FIELD_SPAWN_LOAD_GAME;
+                    g_music_track_index = g_saved_game.layout.track.bits.music_track;
+
+                    if ((g_saved_game.layout.options.word & (SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3)) == (SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3))
+                    {
+                        g_game_state = GAME_STATE_WORLD_SELECT;
+                    }
+                    else
+                    {
+                        screen_transition(0);
+                        g_game_state = run_field_scene();
+                    }
                 }
-            }
 
-            DrawSync(0);
-            VSync(0);
-            g_previous_game_state = GAME_STATE_FIELD;
-            break;
+                DrawSync(0);
+                VSync(0);
+                g_previous_game_state = GAME_STATE_FIELD;
+                break;
 
-        case GAME_STATE_INTRO_MOVIE:
-            get_title_menu_buffers();
-            cdrom_stream(CD_RES_MOVIE_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
-            screen_transition(0);
-            cdrom_wait_queue_empty();
-            movie_play(MOVIE_INDEX_INTRO);
-            g_game_state = GAME_STATE_TITLE;
-            DrawSync(0);
-            VSync(0);
-            g_previous_game_state = GAME_STATE_INTRO_MOVIE;
-            break;
+            case GAME_STATE_INTRO_MOVIE:
+                get_title_menu_buffers();
+                cdrom_stream(CD_RES_MOVIE_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
+                screen_transition(0);
+                cdrom_wait_queue_empty();
+                movie_play(MOVIE_INDEX_INTRO);
+                g_game_state = GAME_STATE_TITLE;
+                DrawSync(0);
+                VSync(0);
+                g_previous_game_state = GAME_STATE_INTRO_MOVIE;
+                break;
         }
 
         if (g_game_state == GAME_STATE_RETURN_TO_TITLE)

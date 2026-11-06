@@ -824,7 +824,7 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
 
                     switch (part->kind)
                     {
-                        case 0:
+                        case FIELD_CEL_KIND_SPRITE_16:
                             stride = FIELD_CEL_RECORD_SIZE;
                             code_word = part->code_word;
                             part->records = arena.cur;
@@ -898,12 +898,12 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
 
                             arena.cur += (u16)instances * stride;
                             break;
-                        case 1:
+                        case FIELD_CEL_KIND_SPRITE:
                             break;
-                        case 2:
-                        case 3:
-                        case 4:
-                        case 5:
+                        case FIELD_CEL_KIND_QUAD_FIRST:
+                        case FIELD_CEL_KIND_QUAD_FIRST + 1:
+                        case FIELD_CEL_KIND_QUAD_FIRST + 2:
+                        case FIELD_CEL_KIND_QUAD_FIRST + 3:
                             code_word = part->code_word;
                             part->records = arena.cur;
                             quad_records = part->records;
@@ -1513,17 +1513,17 @@ static void field_build_animation_list(FieldAnimDef* def, u8** arena, FieldAnim*
             /* Sprite and quad records happen to be the same size. */
             switch (cel->kind)
             {
-                case 0:
+                case FIELD_CEL_KIND_SPRITE_16:
                     record_stride = FIELD_CEL_RECORD_SIZE;
                     break;
-                case 2:
-                case 3:
-                case 4:
-                case 5:
+                case FIELD_CEL_KIND_QUAD_FIRST:
+                case FIELD_CEL_KIND_QUAD_FIRST + 1:
+                case FIELD_CEL_KIND_QUAD_FIRST + 2:
+                case FIELD_CEL_KIND_QUAD_FIRST + 3:
                     record_stride = FIELD_CEL_RECORD_SIZE;
                     break;
-                case 1:
-                case 6:
+                case FIELD_CEL_KIND_SPRITE:
+                case FIELD_CEL_KIND_GOURAUD_QUAD:
                     break;
             }
 
@@ -1596,21 +1596,21 @@ static void field_build_animation_list(FieldAnimDef* def, u8** arena, FieldAnim*
                                     {
                                         switch (cel->kind)
                                         {
-                                            case 0:
+                                            case FIELD_CEL_KIND_SPRITE_16:
                                                 field_build_sprite_tile_record(tile_data, (FieldTileRec*)arena_cursor, FIELD_PART_DEF_DEPTH(grid->u.word),
                                                                                record_flags);
                                                 arena_cursor += record_stride;
                                                 break;
-                                            case 2:
-                                            case 3:
-                                            case 4:
-                                            case 5:
+                                            case FIELD_CEL_KIND_QUAD_FIRST:
+                                            case FIELD_CEL_KIND_QUAD_FIRST + 1:
+                                            case FIELD_CEL_KIND_QUAD_FIRST + 2:
+                                            case FIELD_CEL_KIND_QUAD_FIRST + 3:
                                                 field_build_quad_tile_record(tile_data, (FieldTileRec*)arena_cursor, FIELD_PART_DEF_DEPTH(grid->u.word),
                                                                              record_flags);
                                                 arena_cursor += record_stride;
                                                 break;
-                                            case 1:
-                                            case 6:
+                                            case FIELD_CEL_KIND_SPRITE:
+                                            case FIELD_CEL_KIND_GOURAUD_QUAD:
                                                 break;
                                         }
 
@@ -1950,16 +1950,16 @@ void field_size_work_buffer(void)
 
                 switch (kind)
                 {
-                    case 0:
+                    case FIELD_CEL_KIND_SPRITE_16:
                         total += part->instance_count * sprite_cost;
                         break;
-                    case 1:
+                    case FIELD_CEL_KIND_SPRITE:
                         total += single_cost;
                         break;
-                    case 2:
-                    case 3:
-                    case 4:
-                    case 5:
+                    case FIELD_CEL_KIND_QUAD_FIRST:
+                    case FIELD_CEL_KIND_QUAD_FIRST + 1:
+                    case FIELD_CEL_KIND_QUAD_FIRST + 2:
+                    case FIELD_CEL_KIND_QUAD_FIRST + 3:
                         total += part->instance_count * quad_cost;
                         break;
                     default:
@@ -3081,15 +3081,15 @@ static void field_draw_part(FieldPart* part, u8** cursor, FieldViewport* origin,
 {
     switch (part->kind)
     {
-        case 0:
+        case FIELD_CEL_KIND_SPRITE_16:
             field_emit_sprite_grid(part, cursor, origin, ot);
             break;
-        case 1:
+        case FIELD_CEL_KIND_SPRITE:
             break;
-        case 2:
-        case 3:
-        case 4:
-        case 5:
+        case FIELD_CEL_KIND_QUAD_FIRST:
+        case FIELD_CEL_KIND_QUAD_FIRST + 1:
+        case FIELD_CEL_KIND_QUAD_FIRST + 2:
+        case FIELD_CEL_KIND_QUAD_FIRST + 3:
             field_emit_rotated_sprite_grid(part, cursor, origin, ot);
             break;
     }

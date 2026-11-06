@@ -213,6 +213,7 @@ void field_draw_fade_prims(struct FieldRenderHalf* render_half);
 extern s32 g_field_party_hud_order[];
 s32 field_is_actor_idle(s32 key);
 u32* field_get_scene_record_table(void);
+POLY_FT4* field_render_actor_ground_shadow(struct FieldActor* actor, POLY_FT4* prim, s32* ordering_table, Vec2s* footprint);
 
 /* field_actor_idle_ops.c */
 void field_update_hit_reaction(struct FieldActor* actor);

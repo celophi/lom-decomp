@@ -95,7 +95,7 @@ void field_golem_build_companion(s32 group, FieldCharacterRecord* record)
     record->instruments[0].derived.golem.logic_class = g_saved_game.layout.golem_records[group].logic_layout.bits.logic_class;
     record->instruments[0].derived.golem.grid_bound = g_saved_game.layout.golem_records[group].logic_layout.bits.grid_bound;
     record->instruments[0].derived.bytes[1] = g_saved_game.layout.golem_records[group].unknown_0x45;
-    record->instruments[0].derived.bytes[2] = g_saved_game.layout.golem_records[group].random_chance;
+    record->instruments[0].derived.bytes[2] = g_saved_game.layout.golem_records[group].failure_rate;
     record->instruments[0].derived.bytes[3] = g_saved_game.layout.golem_records[group].unknown_0x47;
     record->instruments[0].derived.golem.palette = g_saved_game.layout.golem_records[group].palette;
 }

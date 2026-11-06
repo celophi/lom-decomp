@@ -684,6 +684,18 @@ enum
 /** FieldAnimDef::flags.word value of a palette-list blend definition. */
 #define FIELD_ANIM_PALETTE_BLEND_WORD FIELD_ANIM_GROUP_KIND(FIELD_ANIM_GROUP_PALETTE, FIELD_PALETTE_ANIM_BLEND)
 
+/**
+ * @brief FieldPart::kind: the primitive each cell of a part or cel draws with.
+ * @note TODO: kinds 2 to 5 are all POLY_FT4 cells with the same record layout; what separates them is unknown.
+ */
+typedef enum
+{
+    FIELD_CEL_KIND_SPRITE_16 = 0, /**< SPRT_16 cells. */
+    FIELD_CEL_KIND_SPRITE = 1,    /**< One SPRT of any size (a single-cell part). */
+    FIELD_CEL_KIND_QUAD_FIRST = 2,
+    FIELD_CEL_KIND_GOURAUD_QUAD = 6 /**< POLY_GT4 cells. */
+} FieldCelKind;
+
 /** Bytes of a cel tile record; each word the cel shares (code, tpage) is left out. */
 #define FIELD_CEL_RECORD_SIZE 12
 #define FIELD_CEL_SHARED_WORD_SIZE 4

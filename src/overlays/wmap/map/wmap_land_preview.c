@@ -349,7 +349,7 @@ void wmap_update_land_preview(void)
         g_wmap_preview_draw_x = g_wmap_preview_x;
         g_wmap_preview_draw_y = g_wmap_preview_y;
 
-        if ((g_wmap_event_active == 0) && (g_wmap_view_mode == 0))
+        if ((g_wmap_event_active == 0) && (g_wmap_view_mode == WMAP_VIEW_MODE_MAP))
         {
             POLY_FT4* packet;
             s16 x0_offset;
@@ -458,7 +458,7 @@ void wmap_update_land_preview(void)
             }
         }
 
-        if ((g_wmap_placement_overlay_hidden == 0) && (g_wmap_view_mode == 0))
+        if ((g_wmap_placement_overlay_hidden == 0) && (g_wmap_view_mode == WMAP_VIEW_MODE_MAP))
         {
             if (((g_wmap_selected_artifact != WMAP_NO_ARTIFACT) && (g_wmap_preview_artifact_visible != 0)) || (g_wmap_placement_preview_locked != 0))
             {

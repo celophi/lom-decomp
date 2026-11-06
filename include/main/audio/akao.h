@@ -84,66 +84,66 @@ extern AkaoCommandParam g_akao_cmd_params[];
  */
 typedef enum AkaoCmd
 {
-    AKAO_CMD_IGNORE                          = 0x00, /**< Ignore the command. */
-    AKAO_CMD_PLAY_SONG                       = 0x10, /**< Play a song (slot 0: AKAO sequence). */
-    AKAO_CMD_STOP_SONG                       = 0x11, /**< Stop the song whose key matches slot 0. */
-    AKAO_CMD_PLAY_SONG_WITH_TICKS            = 0x12, /**< Play a song and seed its pending tick count. */
-    AKAO_CMD_START_SONG_CHANNELS             = 0x14, /**< Start a song on the channels in slot 1. */
-    AKAO_CMD_SWITCH_SONG                     = 0x19, /**< Start a song, keeping the current one playing as the secondary song. */
-    AKAO_CMD_PLAY_SFX                        = 0x20, /**< Play an SFX from the loaded banks (id, tag, pan, volume). */
-    AKAO_CMD_STOP_SFX                        = 0x21, /**< Stop SFX channels by id or tag mask. */
-    AKAO_CMD_PLAY_SFX_LIST                   = 0x24, /**< Play the SFX list in an AKAO buffer (buffer, tag, pan, volume). */
-    AKAO_CMD_PLAY_SOUND                      = 0x30, /**< Play an SFX with the default tag, pan and volume. */
-    AKAO_CMD_SUSPEND_SONG                    = 0x40, /**< Save the playing song so it can be resumed. */
-    AKAO_CMD_SELECT_STEREO                   = 0x80, /**< Select stereo output. */
-    AKAO_CMD_SELECT_MONO                     = 0x81, /**< Select mono output. */
-    AKAO_CMD_MUTE_SONG_CHANNELS              = 0x90, /**< Silence the primary song channels in slot 0. */
-    AKAO_CMD_SET_SONG_CONDITION              = 0x92, /**< Set the value tested by sequence op FE 07. */
-    AKAO_CMD_RESUME_ALL                      = 0x98, /**< Resume songs, SFX and the streamed voices (0x9A, 0x9C, 0x9E). */
-    AKAO_CMD_PAUSE_ALL                       = 0x99, /**< Pause songs, SFX and the streamed voices (0x9B, 0x9D, 0x9F). */
-    AKAO_CMD_RESUME_SONG                     = 0x9A, /**< Resume the primary song. */
-    AKAO_CMD_PAUSE_SONG                      = 0x9B, /**< Pause the primary song. */
-    AKAO_CMD_RESUME_SFX                      = 0x9C, /**< Resume the SFX channels. */
-    AKAO_CMD_PAUSE_SFX                       = 0x9D, /**< Pause the SFX channels. */
-    AKAO_CMD_RESUME_XA                       = 0x9E, /**< Resume the streamed voice pair. */
-    AKAO_CMD_PAUSE_XA                        = 0x9F, /**< Pause the streamed voice pair. */
-    AKAO_CMD_SET_SFX_VOLUME                  = 0xA0, /**< Set the volume of SFX selected by id or tag mask. */
-    AKAO_CMD_FADE_SFX_VOLUME                 = 0xA1, /**< Fade the volume of SFX selected by id or tag mask. */
-    AKAO_CMD_SET_SFX_PAN                     = 0xA2, /**< Set the pan of SFX selected by id or tag mask. */
-    AKAO_CMD_FADE_SFX_PAN                    = 0xA3, /**< Fade the pan of SFX selected by id or tag mask. */
-    AKAO_CMD_SET_SFX_PITCH_BEND              = 0xA4, /**< Set the pitch bend of SFX selected by id or tag mask. */
-    AKAO_CMD_FADE_SFX_PITCH_BEND             = 0xA5, /**< Fade the pitch bend of SFX selected by id or tag mask. */
-    AKAO_CMD_SET_ALL_SFX_VOLUME              = 0xA8, /**< Set the volume of every SFX without AKAO_SFX_FLAG_SUPPRESS. */
-    AKAO_CMD_FADE_ALL_SFX_VOLUME             = 0xA9, /**< Fade the volume of every SFX without AKAO_SFX_FLAG_SUPPRESS. */
-    AKAO_CMD_SET_ALL_SFX_PAN                 = 0xAA, /**< Set the pan of every SFX without AKAO_SFX_FLAG_SUPPRESS. */
-    AKAO_CMD_FADE_ALL_SFX_PAN                = 0xAB, /**< Fade the pan of every SFX without AKAO_SFX_FLAG_SUPPRESS. */
-    AKAO_CMD_SET_ALL_SFX_PITCH_BEND          = 0xAC, /**< Set the pitch bend of every SFX without AKAO_SFX_FLAG_SUPPRESS. */
-    AKAO_CMD_FADE_ALL_SFX_PITCH_BEND         = 0xAD, /**< Fade the pitch bend of every SFX without AKAO_SFX_FLAG_SUPPRESS. */
-    AKAO_CMD_SET_SONG_VOLUME                 = 0xC0, /**< Set a song volume. */
-    AKAO_CMD_FADE_SONG_VOLUME                = 0xC1, /**< Fade a song volume. */
-    AKAO_CMD_FADE_SONG_VOLUME_FROM           = 0xC2, /**< Fade a song volume from a start level. */
-    AKAO_CMD_SET_CD_VOLUME                   = 0xC8, /**< Set the CD audio volume. */
-    AKAO_CMD_FADE_CD_VOLUME                  = 0xC9, /**< Fade the CD audio volume. */
-    AKAO_CMD_FADE_CD_VOLUME_FROM             = 0xCA, /**< Fade the CD audio volume from a start level. */
-    AKAO_CMD_SET_MASTER_TEMPO_MODIFIER                  = 0xD0, /**< Set the master tempo modifier. */
-    AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER                 = 0xD1, /**< Fade the master tempo modifier. */
-    AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_FROM            = 0xD2, /**< Fade the master tempo modifier from a start level. */
-    AKAO_CMD_SET_MASTER_VOLUME               = 0xD4, /**< Set the master volume. */
-    AKAO_CMD_FADE_MASTER_VOLUME              = 0xD5, /**< Fade the master volume. */
-    AKAO_CMD_FADE_MASTER_VOLUME_FROM         = 0xD6, /**< Fade the master volume from a start level. */
-    AKAO_CMD_SET_MASTER_TEMPO_MODIFIER_AND_VOLUME       = 0xD8, /**< 0xD0 and 0xD4 with one value. */
-    AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_AND_VOLUME      = 0xD9, /**< 0xD1 and 0xD5 with one value. */
+    AKAO_CMD_IGNORE = 0x00,                                     /**< Ignore the command. */
+    AKAO_CMD_PLAY_SONG = 0x10,                                  /**< Play a song (slot 0: AKAO sequence). */
+    AKAO_CMD_STOP_SONG = 0x11,                                  /**< Stop the song whose key matches slot 0. */
+    AKAO_CMD_PLAY_SONG_WITH_TICKS = 0x12,                       /**< Play a song and seed its pending tick count. */
+    AKAO_CMD_START_SONG_CHANNELS = 0x14,                        /**< Start a song on the channels in slot 1. */
+    AKAO_CMD_SWITCH_SONG = 0x19,                                /**< Start a song, keeping the current one playing as the secondary song. */
+    AKAO_CMD_PLAY_SFX = 0x20,                                   /**< Play an SFX from the loaded banks (id, tag, pan, volume). */
+    AKAO_CMD_STOP_SFX = 0x21,                                   /**< Stop SFX channels by id or tag mask. */
+    AKAO_CMD_PLAY_SFX_LIST = 0x24,                              /**< Play the SFX list in an AKAO buffer (buffer, tag, pan, volume). */
+    AKAO_CMD_PLAY_SOUND = 0x30,                                 /**< Play an SFX with the default tag, pan and volume. */
+    AKAO_CMD_SUSPEND_SONG = 0x40,                               /**< Save the playing song so it can be resumed. */
+    AKAO_CMD_SELECT_STEREO = 0x80,                              /**< Select stereo output. */
+    AKAO_CMD_SELECT_MONO = 0x81,                                /**< Select mono output. */
+    AKAO_CMD_MUTE_SONG_CHANNELS = 0x90,                         /**< Silence the primary song channels in slot 0. */
+    AKAO_CMD_SET_SONG_CONDITION = 0x92,                         /**< Set the value tested by sequence op FE 07. */
+    AKAO_CMD_RESUME_ALL = 0x98,                                 /**< Resume songs, SFX and the streamed voices (0x9A, 0x9C, 0x9E). */
+    AKAO_CMD_PAUSE_ALL = 0x99,                                  /**< Pause songs, SFX and the streamed voices (0x9B, 0x9D, 0x9F). */
+    AKAO_CMD_RESUME_SONG = 0x9A,                                /**< Resume the primary song. */
+    AKAO_CMD_PAUSE_SONG = 0x9B,                                 /**< Pause the primary song. */
+    AKAO_CMD_RESUME_SFX = 0x9C,                                 /**< Resume the SFX channels. */
+    AKAO_CMD_PAUSE_SFX = 0x9D,                                  /**< Pause the SFX channels. */
+    AKAO_CMD_RESUME_XA = 0x9E,                                  /**< Resume the streamed voice pair. */
+    AKAO_CMD_PAUSE_XA = 0x9F,                                   /**< Pause the streamed voice pair. */
+    AKAO_CMD_SET_SFX_VOLUME = 0xA0,                             /**< Set the volume of SFX selected by id or tag mask. */
+    AKAO_CMD_FADE_SFX_VOLUME = 0xA1,                            /**< Fade the volume of SFX selected by id or tag mask. */
+    AKAO_CMD_SET_SFX_PAN = 0xA2,                                /**< Set the pan of SFX selected by id or tag mask. */
+    AKAO_CMD_FADE_SFX_PAN = 0xA3,                               /**< Fade the pan of SFX selected by id or tag mask. */
+    AKAO_CMD_SET_SFX_PITCH_BEND = 0xA4,                         /**< Set the pitch bend of SFX selected by id or tag mask. */
+    AKAO_CMD_FADE_SFX_PITCH_BEND = 0xA5,                        /**< Fade the pitch bend of SFX selected by id or tag mask. */
+    AKAO_CMD_SET_ALL_SFX_VOLUME = 0xA8,                         /**< Set the volume of every SFX without AKAO_SFX_FLAG_SUPPRESS. */
+    AKAO_CMD_FADE_ALL_SFX_VOLUME = 0xA9,                        /**< Fade the volume of every SFX without AKAO_SFX_FLAG_SUPPRESS. */
+    AKAO_CMD_SET_ALL_SFX_PAN = 0xAA,                            /**< Set the pan of every SFX without AKAO_SFX_FLAG_SUPPRESS. */
+    AKAO_CMD_FADE_ALL_SFX_PAN = 0xAB,                           /**< Fade the pan of every SFX without AKAO_SFX_FLAG_SUPPRESS. */
+    AKAO_CMD_SET_ALL_SFX_PITCH_BEND = 0xAC,                     /**< Set the pitch bend of every SFX without AKAO_SFX_FLAG_SUPPRESS. */
+    AKAO_CMD_FADE_ALL_SFX_PITCH_BEND = 0xAD,                    /**< Fade the pitch bend of every SFX without AKAO_SFX_FLAG_SUPPRESS. */
+    AKAO_CMD_SET_SONG_VOLUME = 0xC0,                            /**< Set a song volume. */
+    AKAO_CMD_FADE_SONG_VOLUME = 0xC1,                           /**< Fade a song volume. */
+    AKAO_CMD_FADE_SONG_VOLUME_FROM = 0xC2,                      /**< Fade a song volume from a start level. */
+    AKAO_CMD_SET_CD_VOLUME = 0xC8,                              /**< Set the CD audio volume. */
+    AKAO_CMD_FADE_CD_VOLUME = 0xC9,                             /**< Fade the CD audio volume. */
+    AKAO_CMD_FADE_CD_VOLUME_FROM = 0xCA,                        /**< Fade the CD audio volume from a start level. */
+    AKAO_CMD_SET_MASTER_TEMPO_MODIFIER = 0xD0,                  /**< Set the master tempo modifier. */
+    AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER = 0xD1,                 /**< Fade the master tempo modifier. */
+    AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_FROM = 0xD2,            /**< Fade the master tempo modifier from a start level. */
+    AKAO_CMD_SET_MASTER_VOLUME = 0xD4,                          /**< Set the master volume. */
+    AKAO_CMD_FADE_MASTER_VOLUME = 0xD5,                         /**< Fade the master volume. */
+    AKAO_CMD_FADE_MASTER_VOLUME_FROM = 0xD6,                    /**< Fade the master volume from a start level. */
+    AKAO_CMD_SET_MASTER_TEMPO_MODIFIER_AND_VOLUME = 0xD8,       /**< 0xD0 and 0xD4 with one value. */
+    AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_AND_VOLUME = 0xD9,      /**< 0xD1 and 0xD5 with one value. */
     AKAO_CMD_FADE_MASTER_TEMPO_MODIFIER_AND_VOLUME_FROM = 0xDA, /**< 0xD2 and 0xD6 with one value. */
-    AKAO_CMD_PLAY_XA_BUFFER                  = 0xE0, /**< Stream an XA program from a RAM buffer. */
-    AKAO_CMD_STOP_XA                         = 0xE2, /**< Stop the streamed voice pair. */
-    AKAO_CMD_SET_XA_VOLUME                   = 0xE4, /**< Set the streamed voice volume. */
-    AKAO_CMD_FADE_XA_VOLUME                  = 0xE5, /**< Fade the streamed voice volume. */
-    AKAO_CMD_SET_XA_PAN                      = 0xE6, /**< Set the streamed voice pan. */
-    AKAO_CMD_PREPARE_XA_RING                 = 0xE8, /**< Prepare a CD-fed XA ring stream. */
-    AKAO_CMD_PLAY_XA_ONE_SHOT                = 0xEC, /**< Upload an XA program to SPU RAM and play it once. */
-    AKAO_CMD_PLAY_STAGED_XA                  = 0xED, /**< Play the XA program staged by akao_upload_xa_program. */
-    AKAO_CMD_STOP_ALL_SONGS                  = 0xF0, /**< Stop the primary and secondary songs. */
-    AKAO_CMD_RELEASE_ALL_SFX                 = 0xF1  /**< Release every SFX channel. */
+    AKAO_CMD_PLAY_XA_BUFFER = 0xE0,                             /**< Stream an XA program from a RAM buffer. */
+    AKAO_CMD_STOP_XA = 0xE2,                                    /**< Stop the streamed voice pair. */
+    AKAO_CMD_SET_XA_VOLUME = 0xE4,                              /**< Set the streamed voice volume. */
+    AKAO_CMD_FADE_XA_VOLUME = 0xE5,                             /**< Fade the streamed voice volume. */
+    AKAO_CMD_SET_XA_PAN = 0xE6,                                 /**< Set the streamed voice pan. */
+    AKAO_CMD_PREPARE_XA_RING = 0xE8,                            /**< Prepare a CD-fed XA ring stream. */
+    AKAO_CMD_PLAY_XA_ONE_SHOT = 0xEC,                           /**< Upload an XA program to SPU RAM and play it once. */
+    AKAO_CMD_PLAY_STAGED_XA = 0xED,                             /**< Play the XA program staged by akao_upload_xa_program. */
+    AKAO_CMD_STOP_ALL_SONGS = 0xF0,                             /**< Stop the primary and secondary songs. */
+    AKAO_CMD_RELEASE_ALL_SFX = 0xF1                             /**< Release every SFX channel. */
 } AkaoCmd;
 
 /** @brief Creation time embedded in every AKAO file header; all fields are BCD. */
@@ -204,8 +204,7 @@ typedef struct
 } AkaoContainerHeader;
 
 /** Locate a byte offset within an AKAO container. */
-#define AKAO_CONTAINER_DATA_AT(container, offset) \
-    ((u8*)(container) + (offset))
+#define AKAO_CONTAINER_DATA_AT(container, offset) ((u8*)(container) + (offset))
 
 /** Section of a two-section container whose data stays resident (a song sequence or sound-effect set). */
 #define AKAO_CONTAINER_RESIDENT_SECTION 0
@@ -272,14 +271,14 @@ typedef struct AkaoSongDescriptor
 {
     AkaoHeader header;
     u32 unk10;
-    s32 match_value;          /**< Compared with g_akao_song_descriptor_match_value to choose song flag 0x40 or 0x20. */
+    s32 match_value; /**< Compared with g_akao_song_descriptor_match_value to choose song flag 0x40 or 0x20. */
     u8 _pad18[8];
     s32 channel_mask;         /**< Channels the song uses. */
     s32 voice_alloc_low_mask; /**< Initial AkaoSongMasks::voice_alloc_low_mask. */
     s32 static_voice_mask;    /**< Initial AkaoSongMasks::static_voice_mask. */
     u32 unk2C;
-    s32 key_map_offset;       /**< Key map table offset, or 0 for none. */
-    s32 note_table_offset;    /**< Note table offset, or 0 for none. */
+    s32 key_map_offset;    /**< Key map table offset, or 0 for none. */
+    s32 note_table_offset; /**< Note table offset, or 0 for none. */
     u8 _pad38[8];
     u16 channel_offsets[1];
 } AkaoSongDescriptor;
@@ -314,36 +313,36 @@ typedef struct AkaoSongMasks
  */
 typedef struct AkaoSongState
 {
-    u32 flags;                         /**< AKAO_SONG_* bits. */
-    AkaoSongMasks masks;               /**< Channel masks used by the voice allocator. */
-    u32 note_on_mask;                  /**< Channels with a note sounding. */
-    u32 key_off_mask;                  /**< Channels whose voice still needs a key-off. */
-    s32 parked_mask;                   /**< active_mask while the song is paused. */
-    u32 tempo;                         /**< Q16 tick rate; the high half is added to tempo_acc per driver tick. */
-    s32 tempo_step;                    /**< Tempo slide step per tick. */
-    u32 tempo_acc;                     /**< Tick accumulator; a carry out of the low half advances one tick. */
-    u8* song_data;                     /**< Address of the song descriptor in RAM. */
-    u8* key_map_base;                  /**< Key-to-articulation map table of the song (ext op FE 14). */
-    u8* note_table;                    /**< Note/articulation table used by drum-mode channels. */
-    s32 voice_alloc_base;              /**< First voice the sequencer may allocate. */
-    u32 noise_mask;                    /**< Channels enabled in the SPU noise bitmap. */
-    u32 reverb_mask;                   /**< Channels enabled in the SPU reverb bitmap. */
-    u32 pitch_mod_mask;                /**< Channels enabled in the SPU pitch-modulation bitmap. */
-    s32 reverb_depth;                  /**< Reverb depth set by the song (Q16; SpuSetReverbModeDepth takes bits 12-27). */
-    s32 reverb_depth_step;             /**< Per-tick step of the reverb depth slide. */
-    s32 volume;                        /**< Volume set by the game (command 0xC0), Q16. */
-    s32 volume_step;                   /**< Per-tick step of the volume fade. */
-    u16 volume_fade_ticks;             /**< Ticks left in the volume fade. */
-    s16 reverb_depth_fade_ticks;       /**< Ticks left in the reverb depth slide. */
-    u16 tempo_fade_ticks;              /**< Ticks left in the tempo slide. */
-    u16 song_id;                       /**< Id from the song's AKAO header; 0 when no song is loaded. */
-    u16 condition;                     /**< Value tested by the conditional-jump opcode FE 07. */
-    u16 noise_freq;                    /**< SPU noise clock (6 bits). */
-    u16 beats_per_measure;             /**< Set by ext op FE 15. */
-    u16 beat;                          /**< Beat within the measure. */
-    u16 ticks_per_beat;                /**< Set by ext op FE 15. */
-    u16 tick;                          /**< Tick within the beat. */
-    u16 measure;                       /**< Measure counter (ext op FE 16). */
+    u32 flags;                   /**< AKAO_SONG_* bits. */
+    AkaoSongMasks masks;         /**< Channel masks used by the voice allocator. */
+    u32 note_on_mask;            /**< Channels with a note sounding. */
+    u32 key_off_mask;            /**< Channels whose voice still needs a key-off. */
+    s32 parked_mask;             /**< active_mask while the song is paused. */
+    u32 tempo;                   /**< Q16 tick rate; the high half is added to tempo_acc per driver tick. */
+    s32 tempo_step;              /**< Tempo slide step per tick. */
+    u32 tempo_acc;               /**< Tick accumulator; a carry out of the low half advances one tick. */
+    u8* song_data;               /**< Address of the song descriptor in RAM. */
+    u8* key_map_base;            /**< Key-to-articulation map table of the song (ext op FE 14). */
+    u8* note_table;              /**< Note/articulation table used by drum-mode channels. */
+    s32 voice_alloc_base;        /**< First voice the sequencer may allocate. */
+    u32 noise_mask;              /**< Channels enabled in the SPU noise bitmap. */
+    u32 reverb_mask;             /**< Channels enabled in the SPU reverb bitmap. */
+    u32 pitch_mod_mask;          /**< Channels enabled in the SPU pitch-modulation bitmap. */
+    s32 reverb_depth;            /**< Reverb depth set by the song (Q16; SpuSetReverbModeDepth takes bits 12-27). */
+    s32 reverb_depth_step;       /**< Per-tick step of the reverb depth slide. */
+    s32 volume;                  /**< Volume set by the game (command 0xC0), Q16. */
+    s32 volume_step;             /**< Per-tick step of the volume fade. */
+    u16 volume_fade_ticks;       /**< Ticks left in the volume fade. */
+    s16 reverb_depth_fade_ticks; /**< Ticks left in the reverb depth slide. */
+    u16 tempo_fade_ticks;        /**< Ticks left in the tempo slide. */
+    u16 song_id;                 /**< Id from the song's AKAO header; 0 when no song is loaded. */
+    u16 condition;               /**< Value tested by the conditional-jump opcode FE 07. */
+    u16 noise_freq;              /**< SPU noise clock (6 bits). */
+    u16 beats_per_measure;       /**< Set by ext op FE 15. */
+    u16 beat;                    /**< Beat within the measure. */
+    u16 ticks_per_beat;          /**< Set by ext op FE 15. */
+    u16 tick;                    /**< Tick within the beat. */
+    u16 measure;                 /**< Measure counter (ext op FE 16). */
     u8 _pad6E[2];
 } AkaoSongState;
 
@@ -392,77 +391,77 @@ typedef struct AkaoChannelState
     u16 articulation;           /**< Current articulation index. */
     u16 _pad6C;
 
-    u16 pan_bias; /**< Pan bias added to the pan accumulator (ext FE 17/18). */
-    u16 pan_bias_fade_ticks; /**< Pan-bias fade-tick countdown. */
-    u16 opcode_count; /**< Opcodes executed; saved/restored by the loop ops. */
-    u16 loop_count[4]; /**< Iteration counter per loop-stack level. */
-    u16 loop_opcode_count[4]; /**< Saved opcode_count per loop-stack level. */
-    u16 volume; /**< Channel volume accumulator (high byte is the level). */
-    u16 volume_fade_ticks; /**< Volume fade-tick countdown. */
+    u16 pan_bias;                  /**< Pan bias added to the pan accumulator (ext FE 17/18). */
+    u16 pan_bias_fade_ticks;       /**< Pan-bias fade-tick countdown. */
+    u16 opcode_count;              /**< Opcodes executed; saved/restored by the loop ops. */
+    u16 loop_count[4];             /**< Iteration counter per loop-stack level. */
+    u16 loop_opcode_count[4];      /**< Saved opcode_count per loop-stack level. */
+    u16 volume;                    /**< Channel volume accumulator (high byte is the level). */
+    u16 volume_fade_ticks;         /**< Volume fade-tick countdown. */
     u16 sfx_pitch_bend_fade_ticks; /**< SFX: ticks left in the pitch-bend fade. */
-    u16 expression_fade_ticks; /**< Expression fade-tick countdown. */
-    u16 note_expression_ticks; /**< Note-start expression fade length (ext FE 19). */
-    u16 volume_scale_fade_ticks; /**< Ticks left in the volume_scale fade. */
-    u16 pan; /**< Pan accumulator (high byte is the pan). */
-    u16 pan_fade_ticks; /**< Pan fade-tick countdown. */
-    u16 pitch_slide_ticks; /**< Pitch-slide ticks remaining. */
-    u16 octave; /**< Current octave. */
-    u16 pitch_slide_duration; /**< Pitch-slide duration in ticks. */
-    u16 prev_key; /**< Previous note key (portamento source). */
-    u16 portamento_speed; /**< Portamento speed; 0 disables portamento. */
-    u16 note_flags; /**< Note flags: 0x1 tie armed, 0x2 note is tied, 0x4 SFX full gate time. */
+    u16 expression_fade_ticks;     /**< Expression fade-tick countdown. */
+    u16 note_expression_ticks;     /**< Note-start expression fade length (ext FE 19). */
+    u16 volume_scale_fade_ticks;   /**< Ticks left in the volume_scale fade. */
+    u16 pan;                       /**< Pan accumulator (high byte is the pan). */
+    u16 pan_fade_ticks;            /**< Pan fade-tick countdown. */
+    u16 pitch_slide_ticks;         /**< Pitch-slide ticks remaining. */
+    u16 octave;                    /**< Current octave. */
+    u16 pitch_slide_duration;      /**< Pitch-slide duration in ticks. */
+    u16 prev_key;                  /**< Previous note key (portamento source). */
+    u16 portamento_speed;          /**< Portamento speed; 0 disables portamento. */
+    u16 note_flags;                /**< Note flags: 0x1 tie armed, 0x2 note is tied, 0x4 SFX full gate time. */
     u16 _padA0;
-    u16 pitch_lfo_delay; /**< Pitch-LFO delay. */
-    u16 pitch_lfo_delay_ticks; /**< Pitch-LFO delay countdown. */
-    s16 pitch_lfo_period; /**< Pitch-LFO period. */
-    u16 pitch_lfo_restart; /**< Pitch-LFO restart flag (1 = waveform not started). */
-    u16 pitch_lfo_waveform; /**< Pitch-LFO waveform index into g_akao_lfo_waveforms. */
+    u16 pitch_lfo_delay;               /**< Pitch-LFO delay. */
+    u16 pitch_lfo_delay_ticks;         /**< Pitch-LFO delay countdown. */
+    s16 pitch_lfo_period;              /**< Pitch-LFO period. */
+    u16 pitch_lfo_restart;             /**< Pitch-LFO restart flag (1 = waveform not started). */
+    u16 pitch_lfo_waveform;            /**< Pitch-LFO waveform index into g_akao_lfo_waveforms. */
     AkaoPitchLfoDepth pitch_lfo_depth; /**< Raw and pitch-scaled LFO depth. */
-    u16 pitch_lfo_depth_fade_ticks; /**< Pitch-LFO depth-slide tick countdown. */
-    u16 pitch_lfo_depth_step; /**< Pitch-LFO depth-slide step. */
+    u16 pitch_lfo_depth_fade_ticks;    /**< Pitch-LFO depth-slide tick countdown. */
+    u16 pitch_lfo_depth_step;          /**< Pitch-LFO depth-slide step. */
     u16 _padB4;
-    u16 volume_lfo_delay; /**< Volume-LFO delay. */
-    u16 volume_lfo_delay_ticks; /**< Volume-LFO delay countdown. */
-    s16 volume_lfo_period; /**< Volume-LFO period. */
-    u16 volume_lfo_restart; /**< Volume-LFO restart flag. */
-    u16 volume_lfo_waveform; /**< Volume-LFO waveform index. */
-    u16 volume_lfo_depth; /**< Volume-LFO depth. */
+    u16 volume_lfo_delay;            /**< Volume-LFO delay. */
+    u16 volume_lfo_delay_ticks;      /**< Volume-LFO delay countdown. */
+    s16 volume_lfo_period;           /**< Volume-LFO period. */
+    u16 volume_lfo_restart;          /**< Volume-LFO restart flag. */
+    u16 volume_lfo_waveform;         /**< Volume-LFO waveform index. */
+    u16 volume_lfo_depth;            /**< Volume-LFO depth. */
     u16 volume_lfo_depth_fade_ticks; /**< Volume-LFO depth-slide tick countdown. */
-    u16 volume_lfo_depth_step; /**< Volume-LFO depth-slide step. */
+    u16 volume_lfo_depth_step;       /**< Volume-LFO depth-slide step. */
     u16 _padC6;
-    u16 pan_lfo_period; /**< Pan-LFO period. */
-    u16 pan_lfo_restart; /**< Pan-LFO restart flag. */
-    u16 pan_lfo_waveform; /**< Pan-LFO waveform index. */
-    u16 pan_lfo_depth; /**< Pan-LFO depth. */
+    u16 pan_lfo_period;           /**< Pan-LFO period. */
+    u16 pan_lfo_restart;          /**< Pan-LFO restart flag. */
+    u16 pan_lfo_waveform;         /**< Pan-LFO waveform index. */
+    u16 pan_lfo_depth;            /**< Pan-LFO depth. */
     u16 pan_lfo_depth_fade_ticks; /**< Pan-LFO depth-slide tick countdown. */
-    u16 pan_lfo_depth_step; /**< Pan-LFO depth-slide step. */
-    u16 noise_toggle_ticks; /**< Ticks until the noise enable bit is toggled back. */
-    u16 pitch_mod_toggle_ticks; /**< Ticks until the pitch-mod enable bit is toggled back. */
-    u16 loop_depth; /**< Loop-stack index (0..3, wraps). */
-    u16 pitch_scale; /**< Pitch scalar applied to the computed pitch (Q8). */
-    s16 note_duration; /**< Last note duration set by opcode 0xA2. */
-    u16 note_duration_adjust; /**< Note-duration adjustment (opcode 0xDC). */
-    s16 volume_step; /**< Volume slide step. */
-    s16 pan_bias_step; /**< Pan-bias slide step. */
-    u16 volume_scale; /**< Extra volume scale; high byte is a signed Q7 factor. */
-    u16 volume_scale_step; /**< Per-tick step of the volume_scale fade (signed). */
-    s16 pan_step; /**< Pan slide step. */
-    u16 transpose; /**< Transpose in semitones (opcodes 0xC0/0xC1). */
-    s16 detune; /**< Fine detune (opcodes 0xD8/0xD9). */
-    u16 note_key; /**< Key of the note currently sounding. */
-    u16 pitch_slide_delta; /**< Pending pitch-slide delta in semitones. */
-    s16 prev_transpose; /**< Transpose in effect for the previous note. */
-    s16 pitch_lfo_value; /**< Current pitch-LFO output. */
-    s16 volume_lfo_value; /**< Current volume-LFO output. */
-    s16 pan_lfo_value; /**< Current pan-LFO output. */
+    u16 pan_lfo_depth_step;       /**< Pan-LFO depth-slide step. */
+    u16 noise_toggle_ticks;       /**< Ticks until the noise enable bit is toggled back. */
+    u16 pitch_mod_toggle_ticks;   /**< Ticks until the pitch-mod enable bit is toggled back. */
+    u16 loop_depth;               /**< Loop-stack index (0..3, wraps). */
+    u16 pitch_scale;              /**< Pitch scalar applied to the computed pitch (Q8). */
+    s16 note_duration;            /**< Last note duration set by opcode 0xA2. */
+    u16 note_duration_adjust;     /**< Note-duration adjustment (opcode 0xDC). */
+    s16 volume_step;              /**< Volume slide step. */
+    s16 pan_bias_step;            /**< Pan-bias slide step. */
+    u16 volume_scale;             /**< Extra volume scale; high byte is a signed Q7 factor. */
+    u16 volume_scale_step;        /**< Per-tick step of the volume_scale fade (signed). */
+    s16 pan_step;                 /**< Pan slide step. */
+    u16 transpose;                /**< Transpose in semitones (opcodes 0xC0/0xC1). */
+    s16 detune;                   /**< Fine detune (opcodes 0xD8/0xD9). */
+    u16 note_key;                 /**< Key of the note currently sounding. */
+    u16 pitch_slide_delta;        /**< Pending pitch-slide delta in semitones. */
+    s16 prev_transpose;           /**< Transpose in effect for the previous note. */
+    s16 pitch_lfo_value;          /**< Current pitch-LFO output. */
+    s16 volume_lfo_value;         /**< Current volume-LFO output. */
+    s16 pan_lfo_value;            /**< Current pan-LFO output. */
     u16 _padFA;
-    u32 voice; /**< Assigned SPU voice index (0x18 = none). */
-    s32 update_flags; /**< Pending SPU register update flags. */
-    s32 spu_sample_addr; /**< SPU sample start. */
-    s32 spu_loop_addr; /**< SPU loop point. */
-    u16 spu_pitch; /**< SPU pitch/sample-rate register image. */
-    u16 spu_adsr_low; /**< SPU ADSR low halfword. */
-    u16 spu_adsr_high; /**< SPU ADSR high halfword. */
+    u32 voice;            /**< Assigned SPU voice index (0x18 = none). */
+    s32 update_flags;     /**< Pending SPU register update flags. */
+    s32 spu_sample_addr;  /**< SPU sample start. */
+    s32 spu_loop_addr;    /**< SPU loop point. */
+    u16 spu_pitch;        /**< SPU pitch/sample-rate register image. */
+    u16 spu_adsr_low;     /**< SPU ADSR low halfword. */
+    u16 spu_adsr_high;    /**< SPU ADSR high halfword. */
     u16 spu_volume_scale; /**< Optional Q7 scale. */
     s16 spu_volume_left;
     s16 spu_volume_right;

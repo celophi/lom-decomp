@@ -1,5 +1,5 @@
-#include "overlays/field/field_text.h"
 #include "internal/gosub_internal.h"
+#include "overlays/field/field_text.h"
 
 /* Overlay BSS layout is address-sensitive; do not reorder these definitions. */
 
@@ -114,10 +114,12 @@ void gosub_load_screen_sequence(s32* screen_sequence)
     g_gosub_screen_sequence_index = 0;
     g_gosub_result_count = 0;
     g_gosub_dialog_handler = gosub_handle_backtrack_dialog;
+
     for (screen_count = 0; screen_sequence[screen_count] != GOSUB_SCREEN_SEQUENCE_END; screen_count++)
     {
         g_gosub_screen_sequence[screen_count] = screen_sequence[screen_count];
     }
+
     g_gosub_screen_sequence[screen_count] = screen_sequence[screen_count];
     g_gosub_dialog_accepting_input = 0;
     gosub_enter_screen(g_gosub_screen_sequence[g_gosub_screen_sequence_index]);
@@ -142,281 +144,315 @@ void gosub_enter_screen(s32 screen_id)
 
     switch (screen_id)
     {
-    case GOSUB_SCREEN_PRIMARY_MATERIAL:
-        gosub_close_elements();
-        gosub_build_primary_material_list();
-        g_gosub_required_selection_count = 1;
-        g_gosub_selection_mode = 1;
-        g_gosub_select_handler = gosub_select_row;
-        g_gosub_finish_handler = gosub_publish_selection;
-        gosub_build_list_screen_elements(1);
-        if (g_gosub_row_count == 0)
-        {
+        case GOSUB_SCREEN_PRIMARY_MATERIAL:
             gosub_close_elements();
-            gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_PRIMARY_MATERIAL));
-        }
-        break;
+            gosub_build_primary_material_list();
+            g_gosub_required_selection_count = 1;
+            g_gosub_selection_mode = 1;
+            g_gosub_select_handler = gosub_select_row;
+            g_gosub_finish_handler = gosub_publish_selection;
+            gosub_build_list_screen_elements(1);
 
-    case GOSUB_SCREEN_SECONDARY_MATERIAL:
-        gosub_close_elements();
-        gosub_build_secondary_material_list();
-        g_gosub_required_selection_count = 1;
-        g_gosub_selection_mode = 1;
-        g_gosub_select_handler = gosub_select_row;
-        g_gosub_finish_handler = gosub_publish_selection;
-        gosub_build_list_screen_elements(1);
-        if (g_gosub_row_count == 0)
-        {
+            if (g_gosub_row_count == 0)
+            {
+                gosub_close_elements();
+                gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_PRIMARY_MATERIAL));
+            }
+
+            break;
+
+        case GOSUB_SCREEN_SECONDARY_MATERIAL:
             gosub_close_elements();
-            gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_SECONDARY_MATERIAL));
-        }
-        break;
+            gosub_build_secondary_material_list();
+            g_gosub_required_selection_count = 1;
+            g_gosub_selection_mode = 1;
+            g_gosub_select_handler = gosub_select_row;
+            g_gosub_finish_handler = gosub_publish_selection;
+            gosub_build_list_screen_elements(1);
 
-    case GOSUB_SCREEN_WEAPON:
-        gosub_close_elements();
-        gosub_build_equipment_list(GOSUB_EQUIPMENT_KIND_WEAPON);
-        g_gosub_required_selection_count = 1;
-        g_gosub_selection_mode = 1;
-        g_gosub_select_handler = gosub_select_row;
-        g_gosub_finish_handler = gosub_publish_selection;
-        gosub_build_equipment_screen_elements();
-        if (g_gosub_row_count == 0)
-        {
+            if (g_gosub_row_count == 0)
+            {
+                gosub_close_elements();
+                gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_SECONDARY_MATERIAL));
+            }
+
+            break;
+
+        case GOSUB_SCREEN_WEAPON:
             gosub_close_elements();
-            gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_WEAPONS));
-        }
-        break;
+            gosub_build_equipment_list(GOSUB_EQUIPMENT_KIND_WEAPON);
+            g_gosub_required_selection_count = 1;
+            g_gosub_selection_mode = 1;
+            g_gosub_select_handler = gosub_select_row;
+            g_gosub_finish_handler = gosub_publish_selection;
+            gosub_build_equipment_screen_elements();
 
-    case GOSUB_SCREEN_ARMOR:
-        gosub_close_elements();
-        gosub_build_equipment_list(GOSUB_EQUIPMENT_KIND_ARMOR);
-        g_gosub_required_selection_count = 1;
-        g_gosub_selection_mode = 1;
-        g_gosub_select_handler = gosub_select_row;
-        g_gosub_finish_handler = gosub_publish_selection;
-        gosub_build_equipment_screen_elements();
-        if (g_gosub_row_count == 0)
-        {
+            if (g_gosub_row_count == 0)
+            {
+                gosub_close_elements();
+                gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_WEAPONS));
+            }
+
+            break;
+
+        case GOSUB_SCREEN_ARMOR:
             gosub_close_elements();
-            gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_ARMOR));
-        }
-        break;
+            gosub_build_equipment_list(GOSUB_EQUIPMENT_KIND_ARMOR);
+            g_gosub_required_selection_count = 1;
+            g_gosub_selection_mode = 1;
+            g_gosub_select_handler = gosub_select_row;
+            g_gosub_finish_handler = gosub_publish_selection;
+            gosub_build_equipment_screen_elements();
 
-    case GOSUB_SCREEN_INSTRUMENT:
-        gosub_close_elements();
-        gosub_build_equipment_list(GOSUB_EQUIPMENT_KIND_INSTRUMENT);
-        g_gosub_required_selection_count = 1;
-        g_gosub_selection_mode = 1;
-        g_gosub_select_handler = gosub_select_row;
-        g_gosub_finish_handler = gosub_publish_selection;
-        gosub_build_equipment_screen_elements();
-        if (g_gosub_row_count == 0)
-        {
+            if (g_gosub_row_count == 0)
+            {
+                gosub_close_elements();
+                gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_ARMOR));
+            }
+
+            break;
+
+        case GOSUB_SCREEN_INSTRUMENT:
             gosub_close_elements();
-            gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_INSTRUMENTS));
-        }
-        break;
+            gosub_build_equipment_list(GOSUB_EQUIPMENT_KIND_INSTRUMENT);
+            g_gosub_required_selection_count = 1;
+            g_gosub_selection_mode = 1;
+            g_gosub_select_handler = gosub_select_row;
+            g_gosub_finish_handler = gosub_publish_selection;
+            gosub_build_equipment_screen_elements();
 
-    case GOSUB_SCREEN_EQUIPMENT:
-        gosub_close_elements();
-        gosub_build_equipment_list(GOSUB_EQUIPMENT_KIND_ANY);
-        g_gosub_required_selection_count = 1;
-        g_gosub_selection_mode = 1;
-        g_gosub_select_handler = gosub_select_row;
-        g_gosub_finish_handler = gosub_publish_selection;
-        gosub_build_equipment_screen_elements();
-        if (g_gosub_row_count == 0)
-        {
+            if (g_gosub_row_count == 0)
+            {
+                gosub_close_elements();
+                gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_INSTRUMENTS));
+            }
+
+            break;
+
+        case GOSUB_SCREEN_EQUIPMENT:
             gosub_close_elements();
-            gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_EQUIPMENT));
-        }
-        break;
+            gosub_build_equipment_list(GOSUB_EQUIPMENT_KIND_ANY);
+            g_gosub_required_selection_count = 1;
+            g_gosub_selection_mode = 1;
+            g_gosub_select_handler = gosub_select_row;
+            g_gosub_finish_handler = gosub_publish_selection;
+            gosub_build_equipment_screen_elements();
 
-    case GOSUB_SCREEN_WEAPON_TYPE:
-    case GOSUB_SCREEN_ARMOR_TYPE:
-    case GOSUB_SCREEN_INSTRUMENT_TYPE:
-        gosub_close_elements();
-        gosub_build_equipment_type_list(screen_id - GOSUB_SCREEN_WEAPON_TYPE);
-        g_gosub_required_selection_count = 1;
-        g_gosub_selection_mode = 1;
-        g_gosub_select_handler = gosub_select_row;
-        g_gosub_finish_handler = gosub_publish_selection;
-        gosub_build_list_screen_elements(1);
-        break;
+            if (g_gosub_row_count == 0)
+            {
+                gosub_close_elements();
+                gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_EQUIPMENT));
+            }
 
-    case GOSUB_SCREEN_GOLEM_PARTS:
-        gosub_close_elements();
-        gosub_build_equipment_list(GOSUB_EQUIPMENT_KIND_GOLEM_PARTS);
-        g_gosub_required_selection_count = 4;
-        g_gosub_selection_mode = 1;
-        g_gosub_select_handler = gosub_select_golem_part;
-        g_gosub_finish_handler = gosub_publish_golem_parts;
-        gosub_build_golem_parts_elements();
-        if (g_gosub_row_count == 0)
-        {
+            break;
+
+        case GOSUB_SCREEN_WEAPON_TYPE:
+        case GOSUB_SCREEN_ARMOR_TYPE:
+        case GOSUB_SCREEN_INSTRUMENT_TYPE:
             gosub_close_elements();
-            gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_GOLEM_PARTS));
-        }
-        break;
+            gosub_build_equipment_type_list(screen_id - GOSUB_SCREEN_WEAPON_TYPE);
+            g_gosub_required_selection_count = 1;
+            g_gosub_selection_mode = 1;
+            g_gosub_select_handler = gosub_select_row;
+            g_gosub_finish_handler = gosub_publish_selection;
+            gosub_build_list_screen_elements(1);
+            break;
 
-    case GOSUB_SCREEN_BLOCK_COMPONENTS:
-        gosub_close_elements();
-        gosub_build_equipment_list(GOSUB_EQUIPMENT_KIND_ANY);
-        g_gosub_show_row_details = 1;
-        g_gosub_visible_row_count = GOSUB_COMPONENT_VISIBLE_ROWS;
-        g_gosub_row_height = GOSUB_ITEM_ROW_HEIGHT;
-        g_gosub_window_width = GOSUB_LIST_PANEL_WIDTH;
-        g_gosub_window_height = GOSUB_LIST_WINDOW_HEIGHT(GOSUB_COMPONENT_VISIBLE_ROWS, GOSUB_ITEM_ROW_HEIGHT);
-        g_gosub_block_shape = 0;
-        g_gosub_block_id = 0;
-        g_gosub_block_level = 0;
-        g_gosub_required_selection_count = 2;
-        g_gosub_selection_mode = 2;
-        g_gosub_select_handler = gosub_select_block_component;
-        g_gosub_finish_handler = gosub_publish_block_components;
-        g_gosub_dialog_handler = gosub_handle_make_block_dialog;
-        gosub_build_block_components_elements();
-        if (g_saved_game_ctx->logic_block_count >= LOGIC_BLOCK_CAPACITY)
-        {
+        case GOSUB_SCREEN_GOLEM_PARTS:
             gosub_close_elements();
-            gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_LOGIC_BLOCKS_FULL));
-        }
-        break;
+            gosub_build_equipment_list(GOSUB_EQUIPMENT_KIND_GOLEM_PARTS);
+            g_gosub_required_selection_count = 4;
+            g_gosub_selection_mode = 1;
+            g_gosub_select_handler = gosub_select_golem_part;
+            g_gosub_finish_handler = gosub_publish_golem_parts;
+            gosub_build_golem_parts_elements();
 
-    case GOSUB_SCREEN_LOGIC_BLOCKS:
-        gosub_close_elements();
-        gosub_build_logic_block_list();
-        g_gosub_required_selection_count = 2;
-        g_gosub_selection_mode = 2;
-        g_gosub_select_handler = gosub_select_logic_block;
-        g_gosub_finish_handler = gosub_publish_selection;
-        g_gosub_allow_duplicate_selection = 1;
-        gosub_build_logic_block_list_elements();
-        if (g_saved_game_ctx->logic_block_count == 0)
-        {
-            gosub_close_elements();
-            gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_LOGIC_BLOCKS));
-        }
-        break;
+            if (g_gosub_row_count == 0)
+            {
+                gosub_close_elements();
+                gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_GOLEM_PARTS));
+            }
 
-    case GOSUB_SCREEN_COMPANION_TO_TAKE:
-        gosub_close_elements();
-        gosub_build_companion_list(GOSUB_COMPANIONS_ALL);
-        g_gosub_required_selection_count = 1;
-        g_gosub_selection_mode = 1;
-        g_gosub_select_handler = gosub_select_companion_to_take;
-        g_gosub_finish_handler = gosub_publish_selection;
-        gosub_build_companion_list_elements();
-        if (g_gosub_row_count == 0)
-        {
-            gosub_close_elements();
-            gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_PETS_OR_GOLEMS));
-        }
-        break;
+            break;
 
-    case GOSUB_SCREEN_PET_TO_TAKE:
-        gosub_close_elements();
-        gosub_build_companion_list(GOSUB_COMPANIONS_PETS);
-        g_gosub_required_selection_count = 1;
-        g_gosub_selection_mode = 1;
-        g_gosub_select_handler = gosub_select_companion_to_take;
-        g_gosub_finish_handler = gosub_publish_selection;
-        gosub_build_companion_list_elements();
-        if (g_gosub_row_count == 0)
-        {
+        case GOSUB_SCREEN_BLOCK_COMPONENTS:
             gosub_close_elements();
-            gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_PETS));
-        }
-        break;
+            gosub_build_equipment_list(GOSUB_EQUIPMENT_KIND_ANY);
+            g_gosub_show_row_details = 1;
+            g_gosub_visible_row_count = GOSUB_COMPONENT_VISIBLE_ROWS;
+            g_gosub_row_height = GOSUB_ITEM_ROW_HEIGHT;
+            g_gosub_window_width = GOSUB_LIST_PANEL_WIDTH;
+            g_gosub_window_height = GOSUB_LIST_WINDOW_HEIGHT(GOSUB_COMPONENT_VISIBLE_ROWS, GOSUB_ITEM_ROW_HEIGHT);
+            g_gosub_block_shape = 0;
+            g_gosub_block_id = 0;
+            g_gosub_block_level = 0;
+            g_gosub_required_selection_count = 2;
+            g_gosub_selection_mode = 2;
+            g_gosub_select_handler = gosub_select_block_component;
+            g_gosub_finish_handler = gosub_publish_block_components;
+            g_gosub_dialog_handler = gosub_handle_make_block_dialog;
+            gosub_build_block_components_elements();
 
-    case GOSUB_SCREEN_GOLEM:
-        gosub_close_elements();
-        gosub_build_companion_list(GOSUB_COMPANIONS_GOLEMS);
-        g_gosub_required_selection_count = 1;
-        g_gosub_selection_mode = 1;
-        g_gosub_select_handler = gosub_select_row;
-        g_gosub_finish_handler = gosub_publish_selection;
-        gosub_build_companion_list_elements();
-        if (g_gosub_row_count == 0)
-        {
-            gosub_close_elements();
-            gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_GOLEMS));
-        }
-        break;
+            if (g_saved_game_ctx->logic_block_count >= LOGIC_BLOCK_CAPACITY)
+            {
+                gosub_close_elements();
+                gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_LOGIC_BLOCKS_FULL));
+            }
 
-    case GOSUB_SCREEN_COLOR_MATERIAL:
-        gosub_close_elements();
-        gosub_build_color_material_list();
-        g_gosub_required_selection_count = 1;
-        g_gosub_selection_mode = 1;
-        g_gosub_select_handler = gosub_select_row;
-        g_gosub_finish_handler = gosub_publish_selection;
-        gosub_build_list_screen_elements(1);
-        if (g_gosub_row_count == 0)
-        {
-            gosub_close_elements();
-            gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_COLOR_MATERIAL));
-        }
-        break;
+            break;
 
-    case GOSUB_SCREEN_ELEMENTAL_COIN:
-        gosub_close_elements();
-        gosub_build_elemental_coin_list();
-        g_gosub_required_selection_count = 1;
-        g_gosub_selection_mode = 1;
-        g_gosub_select_handler = gosub_select_row;
-        g_gosub_finish_handler = gosub_publish_selection;
-        gosub_build_list_screen_elements(0);
-        if (g_gosub_row_count == 0)
-        {
+        case GOSUB_SCREEN_LOGIC_BLOCKS:
             gosub_close_elements();
-            gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_ELEMENTAL_COINS));
-        }
-        break;
+            gosub_build_logic_block_list();
+            g_gosub_required_selection_count = 2;
+            g_gosub_selection_mode = 2;
+            g_gosub_select_handler = gosub_select_logic_block;
+            g_gosub_finish_handler = gosub_publish_selection;
+            g_gosub_allow_duplicate_selection = 1;
+            gosub_build_logic_block_list_elements();
 
-    case GOSUB_SCREEN_COMPANION:
-        gosub_close_elements();
-        gosub_build_companion_list(GOSUB_COMPANIONS_ALL);
-        g_gosub_required_selection_count = 1;
-        g_gosub_selection_mode = 1;
-        g_gosub_select_handler = gosub_select_row;
-        g_gosub_finish_handler = gosub_publish_selection;
-        gosub_build_companion_list_elements();
-        if (g_gosub_row_count == 0)
-        {
-            gosub_close_elements();
-            gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_PETS_OR_GOLEMS));
-        }
-        break;
+            if (g_saved_game_ctx->logic_block_count == 0)
+            {
+                gosub_close_elements();
+                gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_LOGIC_BLOCKS));
+            }
 
-    case GOSUB_SCREEN_PET:
-        gosub_close_elements();
-        gosub_build_companion_list(GOSUB_COMPANIONS_PETS);
-        g_gosub_required_selection_count = 1;
-        g_gosub_selection_mode = 1;
-        g_gosub_select_handler = gosub_select_row;
-        g_gosub_finish_handler = gosub_publish_selection;
-        gosub_build_companion_list_elements();
-        if (g_gosub_row_count == 0)
-        {
-            gosub_close_elements();
-            gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_PETS));
-        }
-        break;
+            break;
 
-    case GOSUB_SCREEN_PRODUCE:
-        gosub_close_elements();
-        gosub_build_produce_list();
-        g_gosub_required_selection_count = 1;
-        g_gosub_selection_mode = 1;
-        g_gosub_select_handler = gosub_select_row;
-        g_gosub_finish_handler = gosub_publish_selection;
-        gosub_build_list_screen_elements(1);
-        if (g_gosub_row_count == 0)
-        {
+        case GOSUB_SCREEN_COMPANION_TO_TAKE:
             gosub_close_elements();
-            gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_PRODUCE));
-        }
-        break;
+            gosub_build_companion_list(GOSUB_COMPANIONS_ALL);
+            g_gosub_required_selection_count = 1;
+            g_gosub_selection_mode = 1;
+            g_gosub_select_handler = gosub_select_companion_to_take;
+            g_gosub_finish_handler = gosub_publish_selection;
+            gosub_build_companion_list_elements();
+
+            if (g_gosub_row_count == 0)
+            {
+                gosub_close_elements();
+                gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_PETS_OR_GOLEMS));
+            }
+
+            break;
+
+        case GOSUB_SCREEN_PET_TO_TAKE:
+            gosub_close_elements();
+            gosub_build_companion_list(GOSUB_COMPANIONS_PETS);
+            g_gosub_required_selection_count = 1;
+            g_gosub_selection_mode = 1;
+            g_gosub_select_handler = gosub_select_companion_to_take;
+            g_gosub_finish_handler = gosub_publish_selection;
+            gosub_build_companion_list_elements();
+
+            if (g_gosub_row_count == 0)
+            {
+                gosub_close_elements();
+                gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_PETS));
+            }
+
+            break;
+
+        case GOSUB_SCREEN_GOLEM:
+            gosub_close_elements();
+            gosub_build_companion_list(GOSUB_COMPANIONS_GOLEMS);
+            g_gosub_required_selection_count = 1;
+            g_gosub_selection_mode = 1;
+            g_gosub_select_handler = gosub_select_row;
+            g_gosub_finish_handler = gosub_publish_selection;
+            gosub_build_companion_list_elements();
+
+            if (g_gosub_row_count == 0)
+            {
+                gosub_close_elements();
+                gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_GOLEMS));
+            }
+
+            break;
+
+        case GOSUB_SCREEN_COLOR_MATERIAL:
+            gosub_close_elements();
+            gosub_build_color_material_list();
+            g_gosub_required_selection_count = 1;
+            g_gosub_selection_mode = 1;
+            g_gosub_select_handler = gosub_select_row;
+            g_gosub_finish_handler = gosub_publish_selection;
+            gosub_build_list_screen_elements(1);
+
+            if (g_gosub_row_count == 0)
+            {
+                gosub_close_elements();
+                gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_COLOR_MATERIAL));
+            }
+
+            break;
+
+        case GOSUB_SCREEN_ELEMENTAL_COIN:
+            gosub_close_elements();
+            gosub_build_elemental_coin_list();
+            g_gosub_required_selection_count = 1;
+            g_gosub_selection_mode = 1;
+            g_gosub_select_handler = gosub_select_row;
+            g_gosub_finish_handler = gosub_publish_selection;
+            gosub_build_list_screen_elements(0);
+
+            if (g_gosub_row_count == 0)
+            {
+                gosub_close_elements();
+                gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_ELEMENTAL_COINS));
+            }
+
+            break;
+
+        case GOSUB_SCREEN_COMPANION:
+            gosub_close_elements();
+            gosub_build_companion_list(GOSUB_COMPANIONS_ALL);
+            g_gosub_required_selection_count = 1;
+            g_gosub_selection_mode = 1;
+            g_gosub_select_handler = gosub_select_row;
+            g_gosub_finish_handler = gosub_publish_selection;
+            gosub_build_companion_list_elements();
+
+            if (g_gosub_row_count == 0)
+            {
+                gosub_close_elements();
+                gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_PETS_OR_GOLEMS));
+            }
+
+            break;
+
+        case GOSUB_SCREEN_PET:
+            gosub_close_elements();
+            gosub_build_companion_list(GOSUB_COMPANIONS_PETS);
+            g_gosub_required_selection_count = 1;
+            g_gosub_selection_mode = 1;
+            g_gosub_select_handler = gosub_select_row;
+            g_gosub_finish_handler = gosub_publish_selection;
+            gosub_build_companion_list_elements();
+
+            if (g_gosub_row_count == 0)
+            {
+                gosub_close_elements();
+                gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_PETS));
+            }
+
+            break;
+
+        case GOSUB_SCREEN_PRODUCE:
+            gosub_close_elements();
+            gosub_build_produce_list();
+            g_gosub_required_selection_count = 1;
+            g_gosub_selection_mode = 1;
+            g_gosub_select_handler = gosub_select_row;
+            g_gosub_finish_handler = gosub_publish_selection;
+            gosub_build_list_screen_elements(1);
+
+            if (g_gosub_row_count == 0)
+            {
+                gosub_close_elements();
+                gosub_open_message_dialog(GOSUB_MESSAGE(GOSUB_MSG_NO_PRODUCE));
+            }
+
+            break;
     }
 }
