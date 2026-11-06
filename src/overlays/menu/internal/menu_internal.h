@@ -631,7 +631,6 @@ s32 menu_build_inventory_nav_entries(s32 item_kind);
 s32 menu_build_event_nav_entries(void);
 s32 menu_build_item_nav_entries(void);
 s32 menu_build_artifact_nav_entries(void);
-extern s32 menu_stage_stack_shape(s32, s32, s32, s32, s32, s32) __attribute__((const));
 
 /* Core menu state and shared assets. */
 

@@ -401,7 +401,7 @@ void wmap_update_land_preview(void)
             packet->y3 = y3_offset + screen_y;
 
             /* Copy the adjacent U/V bytes together from the texture record. */
-            *(u16*)&packet->u0 = g_wmap_preview_textures[g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS].uv;
+            SET_UV0_PACKED(packet, g_wmap_preview_textures[g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS].uv);
             packet->u1 = packet->u0 + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT].extent.width;
             packet->v1 = packet->v0;
             packet->u2 = packet->u0;

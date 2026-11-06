@@ -8209,9 +8209,8 @@ s32 menu_build_artifact_nav_entries(void)
  */
 s32 menu_stage_best_weapon(void)
 {
+    s32 unused_pad[2];
     FieldItemRecord* candidate;
-
-    menu_stage_stack_shape(0, 0, 0, 0, 0, 0);
 
     candidate = menu_find_best_weapon();
 
@@ -8290,16 +8289,12 @@ FieldItemRecord* menu_find_best_weapon(void)
  */
 s32 menu_stage_best_armor(void)
 {
+    s32 unused_pad[2];
     FieldItemRecord* candidate;
     FieldItemRecord** staged_items;
     SavedGameLayout* saved_game;
     s32 armor_slot;
     s32 slot_index;
-
-    if (0)
-    {
-        field_copy_inventory_record(0, 0, 0, 0, 0, 0);
-    }
 
     candidate = menu_find_best_armor();
 

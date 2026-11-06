@@ -64,9 +64,6 @@
 /** @brief Voices per sound-effect channel group. */
 #define FIELD_SFX_GROUP_VOICES 3
 
-/** @brief Previous game state 6 (no GAME_STATE_ name yet); CHECKPS also treats the bank as resident after it. */
-#define FIELD_AUDIO_BANK_RESIDENT_STATE 6
-
 /** @brief The two alternating sector buffers of the music stream. */
 #define FIELD_STREAM_SECTOR_BUFFER CD_STREAM_BUFFER_ADDRESS
 #define FIELD_STREAM_SECTOR_BUFFER_UPPER CD_STREAM_BUFFER_AT(CD_DATA_SECTOR_SIZE)
@@ -168,8 +165,7 @@ void field_restore_entry_music(void)
     u32* off;
 
     if ((g_previous_game_state != GAME_STATE_TITLE) && (g_previous_game_state != GAME_STATE_GNAME) && (g_previous_game_state != GAME_STATE_FIELD) &&
-        (g_previous_game_state != FIELD_AUDIO_BANK_RESIDENT_STATE) && (g_previous_game_state != GAME_STATE_MENU_LOAD) &&
-        (g_previous_game_state != GAME_STATE_WORLD_SELECT))
+        (g_previous_game_state != GAME_STATE_CHECKPS) && (g_previous_game_state != GAME_STATE_MENU_LOAD) && (g_previous_game_state != GAME_STATE_WORLD_SELECT))
     {
         g_field_instrument_bank = (AkaoHeader*)SOUND_BANK_ADDRESS;
         cdrom_queue_read(CD_RES_SOUND_EFFECT_SET, (void*)LOAD_BUFFER_ADDRESS);

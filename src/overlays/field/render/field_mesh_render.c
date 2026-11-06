@@ -9,20 +9,21 @@
  */
 
 #include "common.h"
+#include <inline_c.h>
+#include <libetc.h>
+#include <libgpu.h>
+#include <libgte.h>
+
+#include "../internal/field_actor_palette.h"
+#include "../internal/field_effect_render_state.h"
+#include "../internal/field_effect_transform.h"
+#include "../internal/field_effect_types.h"
+#include "../internal/field_mesh.h"
+#include "../internal/field_mesh_render.h"
+#include "../internal/field_mesh_transform.h"
+#include "common/gpu_packet.h"
 #include "main/display.h"
 #include "main/field_runtime.h"
-#include "../internal/field_effect_transform.h"
-#include "../internal/field_effect_render_state.h"
-#include "../internal/field_actor_palette.h"
-#include "../internal/field_effect_types.h"
-#include "../internal/field_mesh_render.h"
-#include "../internal/field_mesh.h"
-#include "../internal/field_mesh_transform.h"
-#include <libgte.h>
-#include <libgpu.h>
-#include <libetc.h>
-#include "common/gpu_packet.h"
-#include <inline_c.h>
 #include "sdk/gte_dmpsx_compat.h"
 
 extern FieldMotionRecord g_field_effect_records[];
@@ -51,7 +52,7 @@ extern FieldMotionRecord g_field_effect_records[];
      (poly)->y2 += (origin)->vy)
 
 /** @brief Store three packed texture coordinates (u in the low byte, v in the high byte) in a triangle primitive. */
-#define FIELD_MESH_SET_UV3(poly, uv) (*(u16*)&(poly)->u0 = (uv)[0], *(u16*)&(poly)->u1 = (uv)[1], *(u16*)&(poly)->u2 = (uv)[2])
+#define FIELD_MESH_SET_UV3(poly, uv) (SET_UV0_PACKED(poly, (uv)[0]), SET_UV1_PACKED(poly, (uv)[1]), SET_UV2_PACKED(poly, (uv)[2]))
 
 /** @brief Primitive kinds of a mesh (FIELD_MESH_FACE_KIND of its first face). */
 #define FIELD_MESH_KIND_TEXTURED 0
@@ -136,66 +137,66 @@ s32 field_update_actor_palette_animation(FieldActorSlot* actor)
 
     switch ((animation >> 4) & FIELD_PALETTE_ANIMATION_MODE_MASK)
     {
-    case FIELD_PALETTE_ANIMATION_NONE:
-    case 1:
-    case 4:
-    case 5:
-        return;
+        case FIELD_PALETTE_ANIMATION_NONE:
+        case 1:
+        case 4:
+        case 5:
+            return;
 
-    case FIELD_PALETTE_ANIMATION_CYCLE_SUBPALETTE:
-        /* Cycle colours 1-15 of one 16-colour sub-palette. */
-        if (actor->owner_object_index < FIELD_ACTOR_PALETTE_OWNERS)
-        {
-            u16 animation_word;
-            s32 owner = actor->owner_object_index;
+        case FIELD_PALETTE_ANIMATION_CYCLE_SUBPALETTE:
+            /* Cycle colours 1-15 of one 16-colour sub-palette. */
+            if (actor->owner_object_index < FIELD_ACTOR_PALETTE_OWNERS)
+            {
+                u16 animation_word;
+                s32 owner = actor->owner_object_index;
 
-            animation_word = actor->animation->palette_animation;
-            buf = &FIELD_ACTOR_CLUT_BUFFER(owner)[FIELD_PALETTE_ANIMATION_SUBPALETTE_OFFSET(animation_word)];
-            field_rotate_palette_row((u16*)buf + 1, GPU_CLUT_4BIT_COLORS - 1, FIELD_PALETTE_ANIMATION_RIGHT(animation_word));
-            rect.x = FIELD_PALETTE_ANIMATION_SUBPALETTE_X(actor->animation->palette_animation);
-            rect.y = (actor->owner_object_index * 2) + FIELD_ACTOR_CLUT_VRAM_Y;
-            rect.w = GPU_CLUT_4BIT_COLORS;
-            rect.h = 1;
-        }
-        else
-        {
-            u16 animation_word = actor->animation->palette_animation;
+                animation_word = actor->animation->palette_animation;
+                buf = &FIELD_ACTOR_CLUT_BUFFER(owner)[FIELD_PALETTE_ANIMATION_SUBPALETTE_OFFSET(animation_word)];
+                field_rotate_palette_row((u16*)buf + 1, GPU_CLUT_4BIT_COLORS - 1, FIELD_PALETTE_ANIMATION_RIGHT(animation_word));
+                rect.x = FIELD_PALETTE_ANIMATION_SUBPALETTE_X(actor->animation->palette_animation);
+                rect.y = (actor->owner_object_index * 2) + FIELD_ACTOR_CLUT_VRAM_Y;
+                rect.w = GPU_CLUT_4BIT_COLORS;
+                rect.h = 1;
+            }
+            else
+            {
+                u16 animation_word = actor->animation->palette_animation;
 
-            buf = &g_field_shared_clut_buffer[FIELD_PALETTE_ANIMATION_SUBPALETTE_OFFSET(animation_word)];
-            field_rotate_palette_row((u16*)buf + 1, GPU_CLUT_4BIT_COLORS - 1, FIELD_PALETTE_ANIMATION_RIGHT(animation_word));
-            rect.x = FIELD_PALETTE_ANIMATION_SUBPALETTE_X(actor->animation->palette_animation);
-            rect.y = VRAM_CLUT_Y;
-            rect.w = GPU_CLUT_4BIT_COLORS;
-            rect.h = 1;
-        }
+                buf = &g_field_shared_clut_buffer[FIELD_PALETTE_ANIMATION_SUBPALETTE_OFFSET(animation_word)];
+                field_rotate_palette_row((u16*)buf + 1, GPU_CLUT_4BIT_COLORS - 1, FIELD_PALETTE_ANIMATION_RIGHT(animation_word));
+                rect.x = FIELD_PALETTE_ANIMATION_SUBPALETTE_X(actor->animation->palette_animation);
+                rect.y = VRAM_CLUT_Y;
+                rect.w = GPU_CLUT_4BIT_COLORS;
+                rect.h = 1;
+            }
 
-        break;
+            break;
 
-    case FIELD_PALETTE_ANIMATION_CYCLE_CLUT:
-        /* Cycle colours 1-255 of the whole CLUT row. */
-        if (actor->owner_object_index < FIELD_ACTOR_PALETTE_OWNERS)
-        {
-            buf = FIELD_ACTOR_CLUT_BUFFER(actor->owner_object_index);
-            field_rotate_palette_row((u16*)buf + 1, GPU_CLUT_8BIT_COLORS - 1, FIELD_PALETTE_ANIMATION_RIGHT(actor->animation->palette_animation));
-            rect.x = 0;
-            rect.y = (actor->owner_object_index * 2) + FIELD_ACTOR_CLUT_VRAM_Y;
-            rect.w = GPU_CLUT_8BIT_COLORS;
-            rect.h = 1;
-        }
-        else
-        {
-            buf = g_field_shared_clut_buffer;
-            field_rotate_palette_row((u16*)buf + 1, GPU_CLUT_8BIT_COLORS - 1, FIELD_PALETTE_ANIMATION_RIGHT(actor->animation->palette_animation));
-            rect.y = VRAM_CLUT_Y;
-            rect.w = GPU_CLUT_8BIT_COLORS;
-            rect.x = 0;
-            rect.h = 1;
-        }
+        case FIELD_PALETTE_ANIMATION_CYCLE_CLUT:
+            /* Cycle colours 1-255 of the whole CLUT row. */
+            if (actor->owner_object_index < FIELD_ACTOR_PALETTE_OWNERS)
+            {
+                buf = FIELD_ACTOR_CLUT_BUFFER(actor->owner_object_index);
+                field_rotate_palette_row((u16*)buf + 1, GPU_CLUT_8BIT_COLORS - 1, FIELD_PALETTE_ANIMATION_RIGHT(actor->animation->palette_animation));
+                rect.x = 0;
+                rect.y = (actor->owner_object_index * 2) + FIELD_ACTOR_CLUT_VRAM_Y;
+                rect.w = GPU_CLUT_8BIT_COLORS;
+                rect.h = 1;
+            }
+            else
+            {
+                buf = g_field_shared_clut_buffer;
+                field_rotate_palette_row((u16*)buf + 1, GPU_CLUT_8BIT_COLORS - 1, FIELD_PALETTE_ANIMATION_RIGHT(actor->animation->palette_animation));
+                rect.y = VRAM_CLUT_Y;
+                rect.w = GPU_CLUT_8BIT_COLORS;
+                rect.x = 0;
+                rect.h = 1;
+            }
 
-        break;
+            break;
 
-    default:
-        return;
+        default:
+            return;
     }
 
     LoadImage(&rect, (u_long*)buf);
@@ -384,15 +385,103 @@ s32* field_render_effect_mesh(FieldMotionRecord* effect, s32 mesh_index, s32* pa
 
     switch (primitive_kind)
     {
-    case FIELD_MESH_KIND_TEXTURED:
-    {
-        s32 code;
-
-        face_count = FIELD_ACTOR_MESH(actor, mesh_index)->face_count;
-
-        if (face_count != 0)
+        case FIELD_MESH_KIND_TEXTURED:
         {
-            code = FIELD_MESH_FT3_CODE;
+            s32 code;
+
+            face_count = FIELD_ACTOR_MESH(actor, mesh_index)->face_count;
+
+            if (face_count != 0)
+            {
+                code = FIELD_MESH_FT3_CODE;
+
+                for (; face_count != 0; face++, face_count--, screen_vertices += 3, depth_offsets++)
+                {
+                    gte_ldsxy3(screen_vertices[0], screen_vertices[1], screen_vertices[2]);
+                    gte_nclip();
+                    gte_stopz(&triangle_area);
+
+                    if (triangle_area > 0)
+                    {
+                        u32 color = *(u32*)&base_color;
+
+                        setlen((POLY_FT3*)packet_cursor, 7);
+                        SET_BGR0_PACKED((POLY_FT3*)packet_cursor, color);
+                        setcode((POLY_FT3*)packet_cursor, code);
+
+                        if (effect->flags & FIELD_EFFECT_SEMITRANSPARENT)
+                        {
+                            setcode((POLY_FT3*)packet_cursor, FIELD_MESH_FT3_CODE | FIELD_MESH_SEMI_TRANSPARENT);
+                        }
+
+                        FIELD_MESH_SET_XY3((POLY_FT3*)packet_cursor, screen_vertices);
+                        FIELD_MESH_OFFSET_XY3((POLY_FT3*)packet_cursor, screen_origin);
+                        FIELD_MESH_SET_UV3((POLY_FT3*)packet_cursor, face->texture.uv);
+                        FIELD_MESH_SET_CLUT_TPAGE(actor, part, ((POLY_FT3*)packet_cursor)->clut, ((POLY_FT3*)packet_cursor)->tpage);
+                        packet_cursor = add_mesh_prim(ordering_table_base, effect, depth_offsets, packet_cursor, sizeof(POLY_FT3));
+                    }
+                }
+            }
+
+            return packet_cursor;
+        }
+        case FIELD_MESH_KIND_FLAT:
+        {
+            /* A POLY_F3 and then a DR_TPAGE selecting its blend mode. */
+            u_long* packet = (u_long*)packet_cursor;
+            s32 code;
+
+            face_count = FIELD_ACTOR_MESH(actor, mesh_index)->face_count;
+
+            if (face_count != 0)
+            {
+                code = FIELD_MESH_F3_CODE;
+
+                while (face_count != 0)
+                {
+                    gte_ldsxy3(screen_vertices[0], screen_vertices[1], screen_vertices[2]);
+                    gte_nclip();
+                    gte_stopz(&triangle_area);
+
+                    if (triangle_area > 0)
+                    {
+                        POLY_F3* poly = (POLY_F3*)packet;
+
+                        poly->r0 = face->texture.color[0] + base_color.r - FIELD_TINT_NEUTRAL;
+                        poly->g0 = face->texture.color[1] + base_color.g - FIELD_TINT_NEUTRAL;
+                        poly->b0 = face->texture.color[2] + base_color.b - FIELD_TINT_NEUTRAL;
+                        FIELD_MESH_SET_XY3(poly, screen_vertices);
+                        FIELD_MESH_OFFSET_XY3(poly, screen_origin);
+                        setlen(poly, 4);
+                        setcode(poly, code);
+
+                        if (effect->flags & FIELD_EFFECT_SEMITRANSPARENT)
+                        {
+                            setcode(poly, FIELD_MESH_F3_CODE | FIELD_MESH_SEMI_TRANSPARENT);
+                        }
+
+                        packet = add_mesh_prim(ordering_table_base, effect, depth_offsets, packet, sizeof(POLY_F3));
+
+                        setDrawTPage((DR_TPAGE*)packet, 0, 0, getTPage(FIELD_PART_TEXTURE_MODE(part), FIELD_PART_BLEND_MODE(part), 0, 0));
+                        packet = add_mesh_tpage(ordering_table_base, effect, depth_offsets, packet);
+                    }
+
+                    face++;
+                    face_count--;
+                    screen_vertices += 3;
+                    depth_offsets++;
+                }
+            }
+
+            packet_cursor = (s32*)packet;
+            break;
+        }
+        case FIELD_MESH_KIND_GOURAUD:
+        {
+            POLY_GT3* poly;
+
+            face_count = FIELD_ACTOR_MESH(actor, mesh_index)->face_count;
+            poly = (POLY_GT3*)packet_cursor;
 
             for (; face_count != 0; face++, face_count--, screen_vertices += 3, depth_offsets++)
             {
@@ -402,122 +491,34 @@ s32* field_render_effect_mesh(FieldMotionRecord* effect, s32 mesh_index, s32* pa
 
                 if (triangle_area > 0)
                 {
-                    u32 color = *(u32*)&base_color;
+                    s32 blue;
 
-                    setlen((POLY_FT3*)packet_cursor, 7);
-                    SET_BGR0_PACKED((POLY_FT3*)packet_cursor, color);
-                    setcode((POLY_FT3*)packet_cursor, code);
-
-                    if (effect->flags & FIELD_EFFECT_SEMITRANSPARENT)
-                    {
-                        setcode((POLY_FT3*)packet_cursor, FIELD_MESH_FT3_CODE | FIELD_MESH_SEMI_TRANSPARENT);
-                    }
-
-                    FIELD_MESH_SET_XY3((POLY_FT3*)packet_cursor, screen_vertices);
-                    FIELD_MESH_OFFSET_XY3((POLY_FT3*)packet_cursor, screen_origin);
-                    FIELD_MESH_SET_UV3((POLY_FT3*)packet_cursor, face->texture.uv);
-                    FIELD_MESH_SET_CLUT_TPAGE(actor, part, ((POLY_FT3*)packet_cursor)->clut, ((POLY_FT3*)packet_cursor)->tpage);
-                    packet_cursor = add_mesh_prim(ordering_table_base, effect, depth_offsets, packet_cursor, sizeof(POLY_FT3));
-                }
-            }
-        }
-
-        return packet_cursor;
-    }
-    case FIELD_MESH_KIND_FLAT:
-    {
-        /* A POLY_F3 and then a DR_TPAGE selecting its blend mode. */
-        u_long* packet = (u_long*)packet_cursor;
-        s32 code;
-
-        face_count = FIELD_ACTOR_MESH(actor, mesh_index)->face_count;
-
-        if (face_count != 0)
-        {
-            code = FIELD_MESH_F3_CODE;
-
-            while (face_count != 0)
-            {
-                gte_ldsxy3(screen_vertices[0], screen_vertices[1], screen_vertices[2]);
-                gte_nclip();
-                gte_stopz(&triangle_area);
-
-                if (triangle_area > 0)
-                {
-                    POLY_F3* poly = (POLY_F3*)packet;
-
-                    poly->r0 = face->texture.color[0] + base_color.r - FIELD_TINT_NEUTRAL;
-                    poly->g0 = face->texture.color[1] + base_color.g - FIELD_TINT_NEUTRAL;
-                    poly->b0 = face->texture.color[2] + base_color.b - FIELD_TINT_NEUTRAL;
+                    poly->r0 = tint_color_channel(face->vertex_colors[0][0], base_color.r);
+                    poly->g0 = tint_color_channel(face->vertex_colors[0][1], base_color.g);
+                    poly->b0 = tint_color_channel(face->vertex_colors[0][2], base_color.b);
+                    poly->r1 = tint_color_channel(face->vertex_colors[1][0], base_color.r);
+                    poly->g1 = tint_color_channel(face->vertex_colors[1][1], base_color.g);
+                    poly->b1 = tint_color_channel(face->vertex_colors[1][2], base_color.b);
+                    poly->r2 = tint_color_channel(face->vertex_colors[2][0], base_color.r);
+                    poly->g2 = tint_color_channel(face->vertex_colors[2][1], base_color.g);
+                    blue = tint_color_channel(face->vertex_colors[2][2], base_color.b);
+                    setlen(poly, 9);
+                    poly->b2 = blue;
+                    setcode(poly, FIELD_MESH_GT3_CODE);
+                    setSemiTrans(poly, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
                     FIELD_MESH_SET_XY3(poly, screen_vertices);
                     FIELD_MESH_OFFSET_XY3(poly, screen_origin);
-                    setlen(poly, 4);
-                    setcode(poly, code);
-
-                    if (effect->flags & FIELD_EFFECT_SEMITRANSPARENT)
-                    {
-                        setcode(poly, FIELD_MESH_F3_CODE | FIELD_MESH_SEMI_TRANSPARENT);
-                    }
-
-                    packet = add_mesh_prim(ordering_table_base, effect, depth_offsets, packet, sizeof(POLY_F3));
-
-                    setDrawTPage((DR_TPAGE*)packet, 0, 0, getTPage(FIELD_PART_TEXTURE_MODE(part), FIELD_PART_BLEND_MODE(part), 0, 0));
-                    packet = add_mesh_tpage(ordering_table_base, effect, depth_offsets, packet);
+                    FIELD_MESH_SET_UV3(poly, face->texture.uv);
+                    FIELD_MESH_SET_CLUT_TPAGE(actor, part, poly->clut, poly->tpage);
+                    poly = add_mesh_prim(ordering_table_base, effect, depth_offsets, poly, sizeof(POLY_GT3));
                 }
-
-                face++;
-                face_count--;
-                screen_vertices += 3;
-                depth_offsets++;
             }
+
+            packet_cursor = (s32*)poly;
+            break;
         }
-
-        packet_cursor = (s32*)packet;
-        break;
-    }
-    case FIELD_MESH_KIND_GOURAUD:
-    {
-        POLY_GT3* poly;
-
-        face_count = FIELD_ACTOR_MESH(actor, mesh_index)->face_count;
-        poly = (POLY_GT3*)packet_cursor;
-
-        for (; face_count != 0; face++, face_count--, screen_vertices += 3, depth_offsets++)
-        {
-            gte_ldsxy3(screen_vertices[0], screen_vertices[1], screen_vertices[2]);
-            gte_nclip();
-            gte_stopz(&triangle_area);
-
-            if (triangle_area > 0)
-            {
-                s32 blue;
-
-                poly->r0 = tint_color_channel(face->vertex_colors[0][0], base_color.r);
-                poly->g0 = tint_color_channel(face->vertex_colors[0][1], base_color.g);
-                poly->b0 = tint_color_channel(face->vertex_colors[0][2], base_color.b);
-                poly->r1 = tint_color_channel(face->vertex_colors[1][0], base_color.r);
-                poly->g1 = tint_color_channel(face->vertex_colors[1][1], base_color.g);
-                poly->b1 = tint_color_channel(face->vertex_colors[1][2], base_color.b);
-                poly->r2 = tint_color_channel(face->vertex_colors[2][0], base_color.r);
-                poly->g2 = tint_color_channel(face->vertex_colors[2][1], base_color.g);
-                blue = tint_color_channel(face->vertex_colors[2][2], base_color.b);
-                setlen(poly, 9);
-                poly->b2 = blue;
-                setcode(poly, FIELD_MESH_GT3_CODE);
-                setSemiTrans(poly, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
-                FIELD_MESH_SET_XY3(poly, screen_vertices);
-                FIELD_MESH_OFFSET_XY3(poly, screen_origin);
-                FIELD_MESH_SET_UV3(poly, face->texture.uv);
-                FIELD_MESH_SET_CLUT_TPAGE(actor, part, poly->clut, poly->tpage);
-                poly = add_mesh_prim(ordering_table_base, effect, depth_offsets, poly, sizeof(POLY_GT3));
-            }
-        }
-
-        packet_cursor = (s32*)poly;
-        break;
-    }
-    default:
-        return packet_cursor;
+        default:
+            return packet_cursor;
     }
 
     return packet_cursor;
@@ -634,110 +635,64 @@ s32* field_render_lit_effect_mesh(FieldMotionRecord* effect, s32 mesh_index, s32
 
     switch (primitive_kind)
     {
-    case FIELD_MESH_KIND_TEXTURED:
-    {
-        /* The CLUT and texture page are written into the first packet and carried forward. */
-        s32 code;
-
-        gte_SetBackColor(base_color.r, base_color.g, base_color.b);
-        FIELD_MESH_SET_CLUT_TPAGE(actor, part, ((POLY_FT3*)write_cursor)->clut, ((POLY_FT3*)write_cursor)->tpage);
-
-        count = FIELD_ACTOR_MESH(actor, mesh_index)->face_count;
-
-        if (count != 0)
+        case FIELD_MESH_KIND_TEXTURED:
         {
-            code = FIELD_MESH_FT3_CODE;
+            /* The CLUT and texture page are written into the first packet and carried forward. */
+            s32 code;
 
-            for (; count != 0; face++, count--, screen_vertices += 3, transformed_normals++, depth_offsets++)
+            gte_SetBackColor(base_color.r, base_color.g, base_color.b);
+            FIELD_MESH_SET_CLUT_TPAGE(actor, part, ((POLY_FT3*)write_cursor)->clut, ((POLY_FT3*)write_cursor)->tpage);
+
+            count = FIELD_ACTOR_MESH(actor, mesh_index)->face_count;
+
+            if (count != 0)
             {
-                gte_ldsxy3(screen_vertices[0], screen_vertices[1], screen_vertices[2]);
-                gte_nclip();
-                gte_stopz(&triangle_area);
+                code = FIELD_MESH_FT3_CODE;
 
-                if (triangle_area > 0)
+                for (; count != 0; face++, count--, screen_vertices += 3, transformed_normals++, depth_offsets++)
                 {
-                    gte_ldv0(transformed_normals);
-                    gte_ncs();
-                    gte_strgb(&((POLY_FT3*)write_cursor)->r0);
-                    FIELD_MESH_SET_XY3((POLY_FT3*)write_cursor, screen_vertices);
-                    FIELD_MESH_OFFSET_XY3((POLY_FT3*)write_cursor, screen_origin);
-                    setlen((POLY_FT3*)write_cursor, 7);
-                    setcode((POLY_FT3*)write_cursor, code);
+                    gte_ldsxy3(screen_vertices[0], screen_vertices[1], screen_vertices[2]);
+                    gte_nclip();
+                    gte_stopz(&triangle_area);
 
-                    if (effect->flags & FIELD_EFFECT_SEMITRANSPARENT)
+                    if (triangle_area > 0)
                     {
-                        setcode((POLY_FT3*)write_cursor, FIELD_MESH_FT3_CODE | FIELD_MESH_SEMI_TRANSPARENT);
-                    }
-                    else
-                    {
+                        gte_ldv0(transformed_normals);
+                        gte_ncs();
+                        gte_strgb(&((POLY_FT3*)write_cursor)->r0);
+                        FIELD_MESH_SET_XY3((POLY_FT3*)write_cursor, screen_vertices);
+                        FIELD_MESH_OFFSET_XY3((POLY_FT3*)write_cursor, screen_origin);
+                        setlen((POLY_FT3*)write_cursor, 7);
                         setcode((POLY_FT3*)write_cursor, code);
+
+                        if (effect->flags & FIELD_EFFECT_SEMITRANSPARENT)
+                        {
+                            setcode((POLY_FT3*)write_cursor, FIELD_MESH_FT3_CODE | FIELD_MESH_SEMI_TRANSPARENT);
+                        }
+                        else
+                        {
+                            setcode((POLY_FT3*)write_cursor, code);
+                        }
+
+                        FIELD_MESH_SET_UV3((POLY_FT3*)write_cursor, face->texture.uv);
+                        ((POLY_FT3*)write_cursor)[1].clut = ((POLY_FT3*)write_cursor)->clut;
+                        ((POLY_FT3*)write_cursor)[1].tpage = ((POLY_FT3*)write_cursor)->tpage;
+
+                        write_cursor = add_mesh_prim(ordering_table, effect, depth_offsets, write_cursor, sizeof(POLY_FT3));
                     }
-
-                    FIELD_MESH_SET_UV3((POLY_FT3*)write_cursor, face->texture.uv);
-                    ((POLY_FT3*)write_cursor)[1].clut = ((POLY_FT3*)write_cursor)->clut;
-                    ((POLY_FT3*)write_cursor)[1].tpage = ((POLY_FT3*)write_cursor)->tpage;
-
-                    write_cursor = add_mesh_prim(ordering_table, effect, depth_offsets, write_cursor, sizeof(POLY_FT3));
                 }
             }
+
+            return write_cursor;
         }
-
-        return write_cursor;
-    }
-    case FIELD_MESH_KIND_GOURAUD:
-    {
-        POLY_GT3* poly;
-
-        count = FIELD_ACTOR_MESH(actor, mesh_index)->face_count;
-        poly = (POLY_GT3*)write_cursor;
-
-        for (; count != 0; face++, count--, screen_vertices += 3, depth_offsets++)
+        case FIELD_MESH_KIND_GOURAUD:
         {
-            gte_ldsxy3(screen_vertices[0], screen_vertices[1], screen_vertices[2]);
-            gte_nclip();
-            gte_stopz(&triangle_area);
+            POLY_GT3* poly;
 
-            if (triangle_area > 0)
-            {
-                s32 blue;
+            count = FIELD_ACTOR_MESH(actor, mesh_index)->face_count;
+            poly = (POLY_GT3*)write_cursor;
 
-                poly->r0 = tint_color_channel(face->vertex_colors[0][0], base_color.r);
-                poly->g0 = tint_color_channel(face->vertex_colors[0][1], base_color.g);
-                poly->b0 = tint_color_channel(face->vertex_colors[0][2], base_color.b);
-                poly->r1 = tint_color_channel(face->vertex_colors[1][0], base_color.r);
-                poly->g1 = tint_color_channel(face->vertex_colors[1][1], base_color.g);
-                poly->b1 = tint_color_channel(face->vertex_colors[1][2], base_color.b);
-                poly->r2 = tint_color_channel(face->vertex_colors[2][0], base_color.r);
-                poly->g2 = tint_color_channel(face->vertex_colors[2][1], base_color.g);
-                blue = tint_color_channel(face->vertex_colors[2][2], base_color.b);
-                setlen(poly, 9);
-                poly->b2 = blue;
-                setcode(poly, FIELD_MESH_GT3_CODE);
-                setSemiTrans(poly, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
-                FIELD_MESH_SET_XY3(poly, screen_vertices);
-                FIELD_MESH_OFFSET_XY3(poly, screen_origin);
-                FIELD_MESH_SET_UV3(poly, face->texture.uv);
-                FIELD_MESH_SET_CLUT_TPAGE(actor, part, poly->clut, poly->tpage);
-                poly = add_mesh_prim(ordering_table, effect, depth_offsets, poly, sizeof(POLY_GT3));
-            }
-        }
-
-        write_cursor = (s32*)poly;
-        break;
-    }
-    case FIELD_MESH_KIND_FLAT:
-    {
-        /* A lit POLY_F3 and then a DR_TPAGE selecting its blend mode. */
-        u_long* packet = (u_long*)write_cursor;
-        s32 code;
-
-        count = FIELD_ACTOR_MESH(actor, mesh_index)->face_count;
-
-        if (count != 0)
-        {
-            code = FIELD_MESH_F3_CODE;
-
-            while (count != 0)
+            for (; count != 0; face++, count--, screen_vertices += 3, depth_offsets++)
             {
                 gte_ldsxy3(screen_vertices[0], screen_vertices[1], screen_vertices[2]);
                 gte_nclip();
@@ -745,46 +700,92 @@ s32* field_render_lit_effect_mesh(FieldMotionRecord* effect, s32 mesh_index, s32
 
                 if (triangle_area > 0)
                 {
-                    POLY_F3* poly = (POLY_F3*)packet;
+                    s32 blue;
 
-                    gte_SetBackColor(face->texture.color[0] + base_color.r - FIELD_TINT_NEUTRAL, face->texture.color[1] + base_color.g - FIELD_TINT_NEUTRAL,
-                                     face->texture.color[2] + base_color.b - FIELD_TINT_NEUTRAL);
-                    gte_ldv0(transformed_normals);
-                    gte_ncs();
-                    gte_strgb(&poly->r0);
+                    poly->r0 = tint_color_channel(face->vertex_colors[0][0], base_color.r);
+                    poly->g0 = tint_color_channel(face->vertex_colors[0][1], base_color.g);
+                    poly->b0 = tint_color_channel(face->vertex_colors[0][2], base_color.b);
+                    poly->r1 = tint_color_channel(face->vertex_colors[1][0], base_color.r);
+                    poly->g1 = tint_color_channel(face->vertex_colors[1][1], base_color.g);
+                    poly->b1 = tint_color_channel(face->vertex_colors[1][2], base_color.b);
+                    poly->r2 = tint_color_channel(face->vertex_colors[2][0], base_color.r);
+                    poly->g2 = tint_color_channel(face->vertex_colors[2][1], base_color.g);
+                    blue = tint_color_channel(face->vertex_colors[2][2], base_color.b);
+                    setlen(poly, 9);
+                    poly->b2 = blue;
+                    setcode(poly, FIELD_MESH_GT3_CODE);
+                    setSemiTrans(poly, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
                     FIELD_MESH_SET_XY3(poly, screen_vertices);
                     FIELD_MESH_OFFSET_XY3(poly, screen_origin);
-                    setlen(poly, 4);
-                    setcode(poly, code);
-
-                    if (effect->flags & FIELD_EFFECT_SEMITRANSPARENT)
-                    {
-                        setcode(poly, FIELD_MESH_F3_CODE | FIELD_MESH_SEMI_TRANSPARENT);
-                    }
-                    else
-                    {
-                        setcode(poly, code);
-                    }
-
-                    packet = add_mesh_prim(ordering_table, effect, depth_offsets, packet, sizeof(POLY_F3));
-
-                    setDrawTPage((DR_TPAGE*)packet, 0, 0, getTPage(FIELD_PART_TEXTURE_MODE(part), FIELD_PART_BLEND_MODE(part), 0, 0));
-                    packet = add_mesh_tpage(ordering_table, effect, depth_offsets, packet);
+                    FIELD_MESH_SET_UV3(poly, face->texture.uv);
+                    FIELD_MESH_SET_CLUT_TPAGE(actor, part, poly->clut, poly->tpage);
+                    poly = add_mesh_prim(ordering_table, effect, depth_offsets, poly, sizeof(POLY_GT3));
                 }
-
-                face++;
-                count--;
-                screen_vertices += 3;
-                transformed_normals++;
-                depth_offsets++;
             }
-        }
 
-        write_cursor = (s32*)packet;
-        break;
-    }
-    default:
-        return write_cursor;
+            write_cursor = (s32*)poly;
+            break;
+        }
+        case FIELD_MESH_KIND_FLAT:
+        {
+            /* A lit POLY_F3 and then a DR_TPAGE selecting its blend mode. */
+            u_long* packet = (u_long*)write_cursor;
+            s32 code;
+
+            count = FIELD_ACTOR_MESH(actor, mesh_index)->face_count;
+
+            if (count != 0)
+            {
+                code = FIELD_MESH_F3_CODE;
+
+                while (count != 0)
+                {
+                    gte_ldsxy3(screen_vertices[0], screen_vertices[1], screen_vertices[2]);
+                    gte_nclip();
+                    gte_stopz(&triangle_area);
+
+                    if (triangle_area > 0)
+                    {
+                        POLY_F3* poly = (POLY_F3*)packet;
+
+                        gte_SetBackColor(face->texture.color[0] + base_color.r - FIELD_TINT_NEUTRAL, face->texture.color[1] + base_color.g - FIELD_TINT_NEUTRAL,
+                                         face->texture.color[2] + base_color.b - FIELD_TINT_NEUTRAL);
+                        gte_ldv0(transformed_normals);
+                        gte_ncs();
+                        gte_strgb(&poly->r0);
+                        FIELD_MESH_SET_XY3(poly, screen_vertices);
+                        FIELD_MESH_OFFSET_XY3(poly, screen_origin);
+                        setlen(poly, 4);
+                        setcode(poly, code);
+
+                        if (effect->flags & FIELD_EFFECT_SEMITRANSPARENT)
+                        {
+                            setcode(poly, FIELD_MESH_F3_CODE | FIELD_MESH_SEMI_TRANSPARENT);
+                        }
+                        else
+                        {
+                            setcode(poly, code);
+                        }
+
+                        packet = add_mesh_prim(ordering_table, effect, depth_offsets, packet, sizeof(POLY_F3));
+
+                        setDrawTPage((DR_TPAGE*)packet, 0, 0, getTPage(FIELD_PART_TEXTURE_MODE(part), FIELD_PART_BLEND_MODE(part), 0, 0));
+                        packet = add_mesh_tpage(ordering_table, effect, depth_offsets, packet);
+                    }
+
+                    face++;
+                    count--;
+                    screen_vertices += 3;
+                    transformed_normals++;
+                    depth_offsets++;
+                }
+            }
+
+            write_cursor = (s32*)packet;
+            break;
+        }
+        default:
+            return write_cursor;
     }
 
     return write_cursor;

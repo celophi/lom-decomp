@@ -52,7 +52,7 @@
 /** @brief Pen x at which cached text wraps to the next line. */
 #define GLYPH_TEXT_WRAP_X 640
 
-/** @brief Codes below this end the text drawn by draw_cached_text. */
+/** @brief First character code of game text; lower codes are control codes (they end the text drawn by draw_cached_text). */
 #define GLYPH_TEXT_FIRST_PRINTABLE 0x20
 
 /** @brief Added to an ASCII byte to get its Shift-JIS character: letters and digits, and other symbols. */

@@ -80,6 +80,9 @@ extern WmapAnimationSlot g_wmap_actor_animations[WMAP_ACTOR_COUNT];
  */
 #define WMAP_ACTOR_BLOCK(first) (&g_wmap_sprite_actors[first])
 
+/** @brief Pool slot of the travel vehicle: g_wmap_vehicle_actor and g_wmap_vehicle_animation are this slot's entries. */
+#define WMAP_VEHICLE_ACTOR 255
+
 /** @brief Sprite actor and animation slot of the travel vehicle. */
 extern WmapSpriteActor g_wmap_vehicle_actor;
 extern WmapAnimationSlot g_wmap_vehicle_animation;

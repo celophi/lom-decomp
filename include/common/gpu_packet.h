@@ -49,6 +49,12 @@
 #define SET_XY2_PACKED(p, _xy) (*(u32*)&(p)->x2 = (u32)(_xy))
 #define SET_XY3_PACKED(p, _xy) (*(u32*)&(p)->x3 = (u32)(_xy))
 
+/** @brief Write vertex 0, 1, 2 or 3's u and v of a textured primitive from one packed halfword (v in the high byte). */
+#define SET_UV0_PACKED(p, _uv) (*(u16*)&(p)->u0 = (_uv))
+#define SET_UV1_PACKED(p, _uv) (*(u16*)&(p)->u1 = (_uv))
+#define SET_UV2_PACKED(p, _uv) (*(u16*)&(p)->u2 = (_uv))
+#define SET_UV3_PACKED(p, _uv) (*(u16*)&(p)->u3 = (_uv))
+
 /** @brief Write an SPRT's x0 and y0 from one packed word (y0 in the high half). */
 #define SET_SPRT_XY0_WORD(p, _xy) (*(u32*)((u8*)(p) + 0x08) = (u32)(_xy))
 

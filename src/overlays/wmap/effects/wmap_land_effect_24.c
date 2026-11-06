@@ -118,81 +118,43 @@ void wmap_land_effect_24_timeline_step_15(void)
 void wmap_land_effect_24_update_focus_sprites(void)
 {
     s32 index;
-    uintptr_t config_offset;
-    u16 value;
-    uintptr_t config_base;
+    uintptr_t entry_offset;
+    s16 value;
+    uintptr_t pool_address;
     WmapSpriteActor* actor;
-    void* entry;
+    WmapSpriteActor* entry;
 
     for (index = 0xAA; index < 0xB9; index++)
     {
-        config_offset = index * 0x2C + 0xB0;
-        config_base = (uintptr_t)g_wmap_sprite_actors;
-        entry = (void*)(config_offset + config_base);
+        entry_offset = index * sizeof(WmapSpriteActor) + 4 * sizeof(WmapSpriteActor);
+        pool_address = (uintptr_t)g_wmap_sprite_actors;
+        entry = (WmapSpriteActor*)(entry_offset + pool_address);
         actor = &g_wmap_sprite_actors[index + 4];
 
-        if (*(s16*)(entry + 2) == 0)
+        if (entry->resource_index == 0)
         {
             wmap_draw_actor_sprite(actor, g_wmap_focus_screen_position.packed, 0xB, 2, 0);
             value = actor->shade - 5;
             actor->shade = value;
 
-            if ((value << 0x10) <= 0)
+            if (value <= 0)
             {
-                *(s16*)(entry + 2) = (value = -1);
+                entry->resource_index = -1;
             }
         }
     }
 
-    index = 0xAA;
-
     if ((g_wmap_frame_count & 1) == 0)
     {
-        void* entry;
-        u8* copy_end;
-        uintptr_t config_offset;
-        s32 screen_offset;
-        u8* scan_base;
-        u8* screen_base;
-
-        scan_base = (u8*)g_wmap_sprite_actors;
-        copy_end = scan_base + 0x154;
-        screen_base = (u8*)g_wmap_actor_animations;
-        config_offset = 0x1DE8;
-        screen_offset = 0x570;
-
-        while (index < 0xB9)
+        for (index = 0xAA; index < 0xB9; index++)
         {
-            entry = (void*)(config_offset + (uintptr_t)scan_base);
-
-            if (((WmapSpriteActor*)entry)->resource_index != 0)
+            if (g_wmap_sprite_actors[index + 4].resource_index != 0)
             {
-                typedef struct
-                {
-                    s32 words[4];
-                } Chunk;
-                typedef struct
-                {
-                    s32 words[3];
-                } Tail;
-                u8* source;
-                source = scan_base + 0x134;
-
-                do
-                {
-                    *(Chunk*)entry = *(Chunk*)source;
-                    source += 16;
-                    entry += 16;
-                } while (source != copy_end);
-                *(Tail*)entry = *(Tail*)source;
-                *(WmapAnimationSlot*)(screen_offset + (uintptr_t)screen_base) = *(WmapAnimationSlot*)(screen_base + 0x38);
-                ((WmapSpriteActor*)(config_offset + (uintptr_t)scan_base))->target_shade = 0;
+                g_wmap_sprite_actors[index + 4] = g_wmap_sprite_actors[7];
+                g_wmap_actor_animations[index + 4] = g_wmap_actor_animations[7];
+                g_wmap_sprite_actors[index + 4].target_shade = 0;
                 return;
             }
-
-            config_offset += 0x2C;
-            index++;
-            screen_offset += 8;
         }
     }
 }

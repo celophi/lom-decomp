@@ -48,7 +48,6 @@
 #define CHECKPS_GLYPH_VRAM_HEIGHT 256
 
 #define CHECKPS_AUDIO_BANK_ADDRESS ((AkaoHeader*)SOUND_BANK_ADDRESS)
-#define CHECKPS_AUDIO_BANK_RESIDENT_STATE 6
 
 /** Advance an image packet cursor by the concrete packet just emitted. */
 #define CHECKPS_NEXT_IMAGE_PRIMITIVE(primitive, type) ((CheckPSImagePrimitive*)((u8*)(primitive) + sizeof(type)))
@@ -338,7 +337,7 @@ static void load_embedded_checkps_audio(void)
     u32* section_offsets;
 
     if (g_previous_game_state == GAME_STATE_TITLE || g_previous_game_state == GAME_STATE_GNAME || g_previous_game_state == GAME_STATE_FIELD ||
-        g_previous_game_state == CHECKPS_AUDIO_BANK_RESIDENT_STATE || g_previous_game_state == GAME_STATE_MENU_LOAD ||
+        g_previous_game_state == GAME_STATE_CHECKPS || g_previous_game_state == GAME_STATE_MENU_LOAD ||
         g_previous_game_state == GAME_STATE_WORLD_SELECT)
     {
         return;

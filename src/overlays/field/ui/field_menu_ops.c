@@ -3149,29 +3149,22 @@ next_weight:
 
     total = 0;
     work.element = FIELD_NO_ELEMENT;
-    i = total;
-    cursor = base;
-next_draw:
-    if (draw >= total && draw < total + *cursor)
-    {
-        goto found;
-    }
 
-    if (mode == 0)
+    for (i = 0, cursor = base; i < FIELD_LAND_SPIRIT_COUNT; i++, cursor++)
     {
-        total += *cursor;
-    }
-    else
-    {
-        total += FIELD_ELEMENT_UNIFORM_WEIGHT;
-    }
+        if (draw >= total && draw < total + *cursor)
+        {
+            goto found;
+        }
 
-    i++;
-    cursor++;
-
-    if (i < FIELD_LAND_SPIRIT_COUNT)
-    {
-        goto next_draw;
+        if (mode == 0)
+        {
+            total += *cursor;
+        }
+        else
+        {
+            total += FIELD_ELEMENT_UNIFORM_WEIGHT;
+        }
     }
 store:
     if (mode != 0)

@@ -492,15 +492,15 @@ WMAP_STEP_RESET(wmap_land_effect_01_sequence_3_reset, g_wmap_land_effect_01_sequ
 /** @brief World-map step handler: init substate block and advance. */
 void wmap_land_effect_01_sequence_3_step_01(void)
 {
-    u8* base = (u8*)g_wmap_sprite_actors;
+    WmapSpriteActor* actors = g_wmap_sprite_actors;
 
     g_wmap_actor_animations[5].data = g_wmap_animation_bank_0;
-    *(u8*)(base + 0xE2) = 0xF;
-    *(s16*)(base + 0xEC) = -1;
-    *(s16*)(base + 0xDE) = 0;
-    *(s16*)(base + 0xEA) = 0;
-    *(s16*)(base + 0xFE) = 0x80;
-    *(s16*)(base + 0x100) = 0x80;
+    actors[5].scale_index = WMAP_SPRITE_SCALE_FULL;
+    actors[5].previous_sequence = -1;
+    actors[5].resource_index = 0;
+    actors[5].sequence = 0;
+    actors[5].target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
+    actors[5].shade = WMAP_SPRITE_SHADE_NEUTRAL;
     g_wmap_land_effect_01_sequence_3_timer = 0x32;
     g_wmap_land_effect_01_sequence_3_step++;
     wmap_land_effect_01_sequence_3_step_02();
@@ -572,15 +572,15 @@ WMAP_STEP_RESET(wmap_land_effect_01_sequence_6_reset, g_wmap_land_effect_01_sequ
 /** @brief World-map step handler: init substate block and advance. */
 void wmap_land_effect_01_sequence_6_step_01(void)
 {
-    u8* base = (u8*)g_wmap_sprite_actors;
+    WmapSpriteActor* actors = g_wmap_sprite_actors;
 
     g_wmap_actor_animations[254].data = g_wmap_animation_bank_5;
-    *(u8*)(base + 0x2BAE) = 0xF;
-    *(s16*)(base + 0x2BB8) = -1;
-    *(s16*)(base + 0x2BAA) = 0;
-    *(s16*)(base + 0x2BB6) = 0;
-    *(s16*)(base + 0x2BCA) = 0x80;
-    *(s16*)(base + 0x2BCC) = 0;
+    actors[254].scale_index = WMAP_SPRITE_SCALE_FULL;
+    actors[254].previous_sequence = -1;
+    actors[254].resource_index = 0;
+    actors[254].sequence = 0;
+    actors[254].target_shade = WMAP_SPRITE_SHADE_NEUTRAL;
+    actors[254].shade = 0;
     g_wmap_land_effect_01_sequence_6_timer = 0x98;
     g_wmap_land_effect_01_sequence_6_step++;
     wmap_land_effect_01_sequence_6_step_02();
@@ -602,15 +602,15 @@ WMAP_STEP_RESET(wmap_land_effect_01_sequence_7_reset, g_wmap_land_effect_01_sequ
 /** @brief World-map step handler: init substate block and advance. */
 void wmap_land_effect_01_sequence_7_step_01(void)
 {
-    u8* base = (u8*)g_wmap_sprite_actors;
+    WmapSpriteActor* actors = g_wmap_sprite_actors;
 
     g_wmap_vehicle_animation.data = g_wmap_animation_bank_4;
-    *(u8*)(base + 0x2BDA) = 0xF;
-    *(s16*)(base + 0x2BE4) = -1;
-    *(s16*)(base + 0x2BD6) = 0;
-    *(s16*)(base + 0x2BE2) = 0;
-    *(s16*)(base + 0x2BF6) = 0x81;
-    *(s16*)(base + 0x2BF8) = 0x81;
+    actors[WMAP_VEHICLE_ACTOR].scale_index = WMAP_SPRITE_SCALE_FULL;
+    actors[WMAP_VEHICLE_ACTOR].previous_sequence = -1;
+    actors[WMAP_VEHICLE_ACTOR].resource_index = 0;
+    actors[WMAP_VEHICLE_ACTOR].sequence = 0;
+    actors[WMAP_VEHICLE_ACTOR].target_shade = 0x81;
+    actors[WMAP_VEHICLE_ACTOR].shade = 0x81;
     g_wmap_land_effect_01_sequence_7_timer = 0x40;
     g_wmap_land_effect_01_sequence_7_step++;
     wmap_land_effect_01_sequence_7_step_02();
