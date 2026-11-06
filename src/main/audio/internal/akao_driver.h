@@ -2,6 +2,7 @@
 #define _AKAO_DRIVER_H
 
 #include "common.h"
+
 #include "main/audio/akao.h"
 
 /** @brief Common AKAO resource magic, stored in little-endian byte order. */
@@ -98,13 +99,13 @@ typedef struct
  */
 typedef struct
 {
-    u32 magic;         /**< "AKAO" */
-    u32 key;           /**< AKAO id and length, as one word. */
+    u32 magic; /**< "AKAO" */
+    u32 key;   /**< AKAO id and length, as one word. */
     u8 _pad08[8];
-    u32 sample_size;   /**< Bytes of ADPCM data. */
-    u32 loop_offset;   /**< Loop start inside the data, in bytes. */
-    u32 flags;         /**< XA_FLAG_* bits. */
-    u16 pitch;         /**< SPU pitch register value. */
+    u32 sample_size; /**< Bytes of ADPCM data. */
+    u32 loop_offset; /**< Loop start inside the data, in bytes. */
+    u32 flags;       /**< XA_FLAG_* bits. */
+    u16 pitch;       /**< SPU pitch register value. */
     u8 _pad1E[2];
     u32 spu_addr;      /**< SPU address the program was uploaded to. */
     u32 right_offset;  /**< Start of the right channel data of a stereo program. */
@@ -128,21 +129,21 @@ typedef struct
  */
 typedef struct
 {
-    u8* data_cursor;       /**< Next block of RAM data to upload. */
-    u8* loop_cursor;       /**< Data restart point of a looping program, or 0. */
-    u32 flags;             /**< XA_FLAG_* bits. */
-    s32 voice_mask;        /**< Voice mask of the stream's voice pair; 0 when idle. */
-    s32 first_voice;       /**< First voice of the pair. */
-    u32 bytes_remaining;   /**< Data still to upload. */
+    u8* data_cursor;           /**< Next block of RAM data to upload. */
+    u8* loop_cursor;           /**< Data restart point of a looping program, or 0. */
+    u32 flags;                 /**< XA_FLAG_* bits. */
+    s32 voice_mask;            /**< Voice mask of the stream's voice pair; 0 when idle. */
+    s32 first_voice;           /**< First voice of the pair. */
+    u32 bytes_remaining;       /**< Data still to upload. */
     s32 last_program_spu_addr; /**< Copied from AkaoXaProgramHeader.spu_addr; not read. */
-    u32 loop_bytes;        /**< bytes_remaining to reload when the program loops. */
-    s32 last_ring_block_key; /**< Last uploaded ring block's AKAO id/length word; not read. */
-    s32 filled_blocks;     /**< Ring blocks reported by the CD reader. */
-    s32 uploaded_blocks;   /**< Ring blocks uploaded to the SPU. */
+    u32 loop_bytes;            /**< bytes_remaining to reload when the program loops. */
+    s32 last_ring_block_key;   /**< Last uploaded ring block's AKAO id/length word; not read. */
+    s32 filled_blocks;         /**< Ring blocks reported by the CD reader. */
+    s32 uploaded_blocks;       /**< Ring blocks uploaded to the SPU. */
     union
     {
-        s32 spu_addr;      /**< One-shot programs: SPU base address. */
-        u8* ring_base;     /**< CD ring streams: first ring block. */
+        s32 spu_addr;  /**< One-shot programs: SPU base address. */
+        u8* ring_base; /**< CD ring streams: first ring block. */
     } source;
     u32 ring_size;         /**< Ring size in bytes. */
     u32 upload_block;      /**< Index of the next ring block to upload. */
@@ -153,7 +154,7 @@ typedef struct
     s32 volume_fade_ticks; /**< Ticks left in the volume fade. */
     s32 pan;               /**< Q8 pan. */
     u8 _pad50[8];
-    s32 pitch;             /**< SPU pitch of the voice pair. */
+    s32 pitch; /**< SPU pitch of the voice pair. */
 } AkaoXaTracker;
 
 extern volatile s32 g_akao_spu_xfer_pending;
@@ -175,7 +176,7 @@ extern s32 g_akao_cdvol_acc;
 /** @brief Channel table of the secondary song (g_akao_seq_channel1). */
 extern AkaoChannelState* g_akao_pending_channels;
 extern AkaoSongState* g_akao_seq_channel1;
-extern AkaoSongState *g_akao_seq_channel0;
+extern AkaoSongState* g_akao_seq_channel0;
 /** @brief Sequence-channel table base recorded during driver initialization. */
 extern void* g_akao_seq_channels_base;
 /** @brief Song state saved by akao_seq_suspend_song (the first 0x70 bytes are used). */
@@ -198,7 +199,7 @@ extern AkaoDriverFlags g_akao_driver_flags;
  */
 extern s32 g_akao_bank_slot_keys[6];
 /** @brief Reset words: entry 0 is unknown; entry 1 aliases g_akao_song_descriptor_match_value[0]. */
-extern u32 D_8003EC30[2];
+extern u32 g_akao_song_match_words[2];
 /** @brief Channel table of the primary song (AKAO_CHANNEL_COUNT entries). */
 extern AkaoChannelState g_akao_seq_channels[];
 extern AkaoSongState g_akao_seq_master_state;

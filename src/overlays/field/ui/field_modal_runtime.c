@@ -48,7 +48,6 @@
 void field_set_cd_error_fade_target(void);
 
 /** @brief Minus sign entry in the dialog text bank. */
-#define FIELD_TEXT_MINUS_ENTRY 16
 
 /** @brief Largest number of entries in the dialog item list. */
 #define FIELD_DIALOG_ITEM_LIMIT 10
@@ -137,29 +136,6 @@ typedef enum FieldDuelPanelPhase
     FIELD_DUEL_FINISHED
 } FieldDuelPanelPhase;
 
-/**
- * @brief Entry of the dialog text bank at g_field_ui_text_table: a little-endian byte
- *        offset from the start of the bank to one string.
- */
-typedef struct
-{
-    u8 low;
-    u8 high;
-} FieldTextOffset;
-
-/* Dialog text bank entries (FieldTextOffset). */
-extern FieldTextOffset D_800EC3D2;
-extern FieldTextOffset D_800EC3D4;
-/** @brief Little-endian dialog bank offset of the minus sign for signed numbers. */
-extern FieldTextOffset g_field_minus_sign_text_offset;
-extern FieldTextOffset D_800EC400;
-extern FieldTextOffset g_field_duel_versus_text_offset;
-extern FieldTextOffset g_field_duel_wins_text_offset;
-extern FieldTextOffset g_field_duel_losses_text_offset;
-extern FieldTextOffset g_field_duel_winner_text_offset;
-extern FieldTextOffset D_800EC3E0;
-extern FieldTextOffset D_800EC3E6;
-extern FieldTextOffset D_800EC3E8;
 /* Offset tables of the ability and technique names (u16 offsets from the table start). */
 extern u8 g_field_command_names[];
 extern u8 g_field_technique_names[];
@@ -217,7 +193,8 @@ extern s32 g_field_duel_winner;
 
 /* Sub-overlay entry points, valid once their overlay is loaded at SECONDARY_OVERLAY_LOAD_ADDRESS. */
 /* GNAME and SHOP share this entry address but have different parameter lists. */
-void func_80140004();
+/** @brief Entry point of the loaded secondary overlay: gname_run or shop_init. */
+void secondary_overlay_entry();
 void golem_run(u32 work, s32 mode);
 s32 gosub_update_frame(FieldRenderHalf* render);
 s32 shop_update(FieldRenderHalf* render);
@@ -252,12 +229,12 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render);
 static s32 field_draw_duel_result(FieldRenderHalf* render);
 
 /**
- * @brief Address of the string a dialog text bank entry points at.
- * @param entry Bank entry.
- * @param index Position of @p entry in the bank; its offset counts from the bank start.
+ * @brief Address of the FIELD UI string an offset entry points at.
+ * @param entry Offset entry, one of the g_field_ui_text_* symbols.
+ * @param index FIELD_UI_TEXT_* index of @p entry; its offset counts from the table start.
  * @return The entry's string.
  */
-static inline u8* field_dialog_text(FieldTextOffset* entry, s32 index)
+static inline u8* field_dialog_text(FieldUiTextOffset* entry, s32 index)
 {
     return (u8*)(entry->low + ((entry->high << 8) + (uintptr_t)(entry - index)));
 }
@@ -393,7 +370,7 @@ inline void field_format_number(u8* text, s32 number, s32 wide_request)
     if (number < 0)
     {
         number = -number;
-        minus = field_dialog_text(&g_field_minus_sign_text_offset, FIELD_TEXT_MINUS_ENTRY);
+        minus = field_dialog_text(&g_field_ui_text_minus, FIELD_UI_TEXT_MINUS);
         field_copy_name(text, minus);
         text += field_name_byte_length(minus);
     }
@@ -449,7 +426,7 @@ inline void field_format_number(u8* text, s32 number, s32 wide_request)
     if (value < 0)
     {
         value = -value;
-        minus = field_dialog_text(&g_field_minus_sign_text_offset, FIELD_TEXT_MINUS_ENTRY);
+        minus = field_dialog_text(&g_field_ui_text_minus, FIELD_UI_TEXT_MINUS);
         field_copy_name(cursor, minus);
         cursor += field_name_byte_length(minus);
     }
@@ -661,12 +638,12 @@ inline void field_append_name(u8* destination, const u8* source)
 }
 
 /**
- * @brief Append a dialog text bank string onto a name.
+ * @brief Append a FIELD UI string onto a name.
  * @param destination Name to extend.
- * @param entry Bank entry of the string.
- * @param index Position of @p entry in the bank.
+ * @param entry Offset entry of the string, one of the g_field_ui_text_* symbols.
+ * @param index FIELD_UI_TEXT_* index of @p entry.
  */
-static inline void field_append_dialog_text(u8* destination, FieldTextOffset* entry, s32 index)
+static inline void field_append_dialog_text(u8* destination, FieldUiTextOffset* entry, s32 index)
 {
     uintptr_t text;
 
@@ -842,13 +819,13 @@ static void field_draw_cd_error_text(FieldRenderHalf* render)
     /* 2 is CdErrorStatus CD_ERROR_STATUS_DISC_CHECK_PENDING (private to cdrom.c). */
     if (cdrom_get_error_status() == 2)
     {
-        primitive = field_draw_text(primitive, ordering_table, field_dialog_text(&D_800EC3D2, 7), FIELD_TEXT_COLOR_NORMAL, SCREEN_WIDTH / 2, 100,
-                                    FIELD_TEXT_SHADOW | FIELD_TEXT_ALIGN_CENTER);
+        primitive = field_draw_text(primitive, ordering_table, field_dialog_text(&g_field_ui_text_check_disc, FIELD_UI_TEXT_CHECK_DISC),
+                                    FIELD_TEXT_COLOR_NORMAL, SCREEN_WIDTH / 2, 100, FIELD_TEXT_SHADOW | FIELD_TEXT_ALIGN_CENTER);
     }
     else
     {
-        primitive = field_draw_text(primitive, ordering_table, field_dialog_text(&D_800EC3D4, 8), FIELD_TEXT_COLOR_NORMAL, SCREEN_WIDTH / 2, 100,
-                                    FIELD_TEXT_SHADOW | FIELD_TEXT_ALIGN_CENTER);
+        primitive = field_draw_text(primitive, ordering_table, field_dialog_text(&g_field_ui_text_disc_error, FIELD_UI_TEXT_DISC_ERROR),
+                                    FIELD_TEXT_COLOR_NORMAL, SCREEN_WIDTH / 2, 100, FIELD_TEXT_SHADOW | FIELD_TEXT_ALIGN_CENTER);
     }
 
     render->primitive_cursor = (u8*)primitive;
@@ -863,7 +840,7 @@ static void field_draw_cd_error_text(FieldRenderHalf* render)
 static void field_draw_actor_labels(FieldRenderHalf* render)
 {
     Vec2s point;
-    FieldTextOffset* bank_entry;
+    FieldUiTextOffset* bank_entry;
     s32 text_color;
     u16 text_offset;
     s32 work;                /* Text index or skill; in JP also the character info byte of case 0. */
@@ -958,9 +935,9 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
 
                                     if ((secondary_action == 5) || (secondary_action == 8))
                                     {
-                                        text_offset = D_800EC3E0.high << 8;
+                                        text_offset = g_field_ui_text_dashes.high << 8;
                                         text_part = text_offset + bank;
-                                        text_value = D_800EC3E0.low;
+                                        text_value = g_field_ui_text_dashes.low;
                                         text_or_state = text_part + text_value;
                                         break;
                                     }
@@ -968,9 +945,9 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                                     /* Other guests use the normal action label. */
                                     /* fallthrough */
                                 default:
-                                    bank_entry = &D_800EC3E6;
+                                    bank_entry = &g_field_ui_text_quick_attacks;
                                     text_part = bank_entry->high;
-                                    text_value = D_800EC3E6.low;
+                                    text_value = g_field_ui_text_quick_attacks.low;
                                     text_part <<= 8;
                                     text_part += bank;
                                     text_or_state = text_part + text_value;
@@ -986,9 +963,9 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
 
                                     if ((secondary_action_alt == 5) || (secondary_action_alt == 8))
                                     {
-                                        text_offset = D_800EC3E0.high << 8;
+                                        text_offset = g_field_ui_text_dashes.high << 8;
                                         text_part = text_offset + bank;
-                                        text_value = D_800EC3E0.low;
+                                        text_value = g_field_ui_text_dashes.low;
                                         text_or_state = text_part + text_value;
                                         break;
                                     }
@@ -996,10 +973,10 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                                     /* Other guests use the normal action label. */
                                     /* fallthrough */
                                 default:
-                                    text_part = D_800EC3E8.high;
+                                    text_part = g_field_ui_text_power_attacks.high;
                                     text_part <<= 8;
                                     text_part += bank;
-                                    text_value = D_800EC3E8.low;
+                                    text_value = g_field_ui_text_power_attacks.low;
                                     text_or_state = text_part + text_value;
                                     break;
                             }
@@ -1011,9 +988,9 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
 
                             if (work == FIELD_SKILL_NONE)
                             {
-                                text_offset = D_800EC3E0.high << 8;
+                                text_offset = g_field_ui_text_dashes.high << 8;
                                 text_part = text_offset + bank;
-                                text_value = D_800EC3E0.low;
+                                text_value = g_field_ui_text_dashes.low;
                                 text_or_state = text_part + text_value;
                             }
                             else
@@ -1021,7 +998,7 @@ static void field_draw_actor_labels(FieldRenderHalf* render)
                                 if (work & FIELD_SKILL_INSTRUMENT)
                                 {
                                     text_offset = work & ~FIELD_SKILL_INSTRUMENT;
-                                    text_or_state = (uintptr_t)&((FieldCharacterRecord*)((u8*)g_saved_game_ctx + record_base_offset))->unk150[text_offset];
+                                    text_or_state = (uintptr_t)&((FieldCharacterRecord*)((u8*)g_saved_game_ctx + record_base_offset))->instruments[text_offset];
                                 }
                                 else
                                 {
@@ -1623,13 +1600,13 @@ static void field_run_menu(void* render_buffers, s32 controller)
 
             if ((screen_id == FIELD_MENU_NAME_EQUIPMENT_ITEM) || (screen_id == FIELD_MENU_NAME_ABILITY_ITEM))
             {
-                func_80140004(GNAME_RENDER_BUFFERS, g_field_rename_initial_name, g_field_rename_target, FIELD_MENU_NAME_ITEM, g_field_rename_source,
-                              g_field_rename_custom_name, 0);
+                secondary_overlay_entry(GNAME_RENDER_BUFFERS, g_field_rename_initial_name, g_field_rename_target, FIELD_MENU_NAME_ITEM, g_field_rename_source,
+                                        g_field_rename_custom_name, 0);
             }
             else
             {
-                func_80140004(GNAME_RENDER_BUFFERS, g_field_rename_initial_name, g_field_rename_target, screen_id, g_field_rename_source,
-                              g_field_rename_custom_name, 0);
+                secondary_overlay_entry(GNAME_RENDER_BUFFERS, g_field_rename_initial_name, g_field_rename_target, screen_id, g_field_rename_source,
+                                        g_field_rename_custom_name, 0);
             }
 
             field_text_reset_windows();
@@ -1950,7 +1927,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                             instrument_action->command = 0;
                             instrument_action->flags.instrument = 1;
                             instrument = (FieldItemRecord*)(save_base + (skill_character_offset + OFFSETOF(SavedGameLayout, characters)) +
-                                                            (((skill & ~FIELD_SKILL_INSTRUMENT) << 6) + OFFSETOF(FieldCharacterRecord, unk150)));
+                                                            (((skill & ~FIELD_SKILL_INSTRUMENT) << 6) + OFFSETOF(FieldCharacterRecord, instruments)));
                             instrument_action->flags.target_filter = instrument->derived.bytes[1] >> 1;
                             instrument_icons = g_field_instrument_icons;
                             instrument_action->animation = instrument_icons[instrument->derived.bytes[0]];
@@ -2012,7 +1989,7 @@ void field_run_name_entry(u8* initial_name, u8* active_name, s32 source_mode, s3
     field_reset_actor_resources();
     cdrom_stream(CD_RES_GNAME_BIN, SECONDARY_OVERLAY_LOAD_ADDRESS);
     cdrom_wait_queue_empty();
-    func_80140004(GNAME_RENDER_BUFFERS, initial_name, active_name, source_mode, history_index, custom_name, 0);
+    secondary_overlay_entry(GNAME_RENDER_BUFFERS, initial_name, active_name, source_mode, history_index, custom_name, 0);
     field_text_reset_windows();
     field_reset_actor_resources();
 }
@@ -2095,7 +2072,7 @@ void field_open_shop_mode_0(s32 shop_options)
             cdrom_wait_queue_empty();
             g_field_shop_active = 1;
             g_field_modal_state = FIELD_MODAL_SHOP;
-            func_80140004(FIELD_SHOP_WORK_BUFFER, 0, 0, 0, 0, shop_options);
+            secondary_overlay_entry(FIELD_SHOP_WORK_BUFFER, 0, 0, 0, 0, shop_options);
         }
     }
 }
@@ -2116,7 +2093,7 @@ void field_open_shop_mode_1(s32 entry_count, struct ShopEntry* entries, struct F
         cdrom_wait_queue_empty();
         g_field_shop_active = 1;
         g_field_modal_state = FIELD_MODAL_SHOP;
-        func_80140004(FIELD_SHOP_WORK_BUFFER, 1, entry_count, entries, item_records, shop_options);
+        secondary_overlay_entry(FIELD_SHOP_WORK_BUFFER, 1, entry_count, entries, item_records, shop_options);
     }
 }
 
@@ -2322,8 +2299,8 @@ static void field_draw_empty_shop_notice(FieldRenderHalf* render)
 
     if (g_field_shop_notice_hidden == 0)
     {
-        packet_cursor = field_draw_text(packet_cursor, render->ordering_table, field_dialog_text(&D_800EC400, 30), FIELD_TEXT_COLOR_NORMAL, SCREEN_WIDTH / 2,
-                                        104, FIELD_TEXT_ALIGN_CENTER);
+        packet_cursor = field_draw_text(packet_cursor, render->ordering_table, field_dialog_text(&g_field_ui_text_no_items, FIELD_UI_TEXT_NO_ITEMS),
+                                        FIELD_TEXT_COLOR_NORMAL, SCREEN_WIDTH / 2, 104, FIELD_TEXT_ALIGN_CENTER);
     }
 
     render->primitive_cursor = (u8*)packet_cursor;
@@ -2434,16 +2411,16 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render)
                                                 g_field_duel_panel_offset + 108, 50, FIELD_TEXT_ALIGN_LEFT, 5, 384, 384, -4, FIELD_DUEL_PANEL_MOVING);
 
     field_format_number(record_text, g_saved_game_ctx->characters[0].duel_wins, FIELD_DUEL_WIDE_NUMBERS);
-    field_append_dialog_text(record_text, &g_field_duel_wins_text_offset, 34);
+    field_append_dialog_text(record_text, &g_field_ui_text_wins, FIELD_UI_TEXT_WINS);
     field_format_number(loss_text, g_saved_game_ctx->characters[0].duel_losses, FIELD_DUEL_WIDE_NUMBERS);
     field_append_name(record_text, loss_text);
-    field_append_dialog_text(record_text, &g_field_duel_losses_text_offset, 35);
+    field_append_dialog_text(record_text, &g_field_ui_text_losses, FIELD_UI_TEXT_LOSSES);
 
     packet_cursor =
         field_text_draw_scaled_quad(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 108, 66, FIELD_TEXT_ALIGN_LEFT, 6,
                                     FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     packet_cursor =
-        field_text_draw_scaled_quad(packet_cursor, ot, field_dialog_text(&g_field_duel_versus_text_offset, 33), FIELD_TEXT_COLOR_NORMAL, 160, 100,
+        field_text_draw_scaled_quad(packet_cursor, ot, field_dialog_text(&g_field_ui_text_versus, FIELD_UI_TEXT_VERSUS), FIELD_TEXT_COLOR_NORMAL, 160, 100,
                                     FIELD_TEXT_ALIGN_CENTER, 7, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     packet_cursor = field_draw_player_icon(packet_cursor, ot, 1, 222 - g_field_duel_panel_offset, 134, 0);
     packet_cursor =
@@ -2453,10 +2430,10 @@ static s32 field_draw_duel_intro(FieldRenderHalf* render)
     if ((g_saved_game_ctx->characters[1].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
     {
         field_format_number(record_text, g_saved_game_ctx->characters[1].duel_wins, FIELD_DUEL_WIDE_NUMBERS);
-        field_append_dialog_text(record_text, &g_field_duel_wins_text_offset, 34);
+        field_append_dialog_text(record_text, &g_field_ui_text_wins, FIELD_UI_TEXT_WINS);
         field_format_number(loss_text, g_saved_game_ctx->characters[1].duel_losses, FIELD_DUEL_WIDE_NUMBERS);
         field_append_name(record_text, loss_text);
-        field_append_dialog_text(record_text, &g_field_duel_losses_text_offset, 35);
+        field_append_dialog_text(record_text, &g_field_ui_text_losses, FIELD_UI_TEXT_LOSSES);
         packet_cursor =
             field_text_draw_scaled_quad(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, 212 - g_field_duel_panel_offset, 166, FIELD_TEXT_ALIGN_RIGHT,
                                         9, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
@@ -2518,7 +2495,7 @@ static s32 field_draw_duel_result(FieldRenderHalf* render)
     }
 
     packet_cursor =
-        field_text_draw_scaled_quad(packet_cursor, ot, field_dialog_text(&g_field_duel_winner_text_offset, 36), FIELD_TEXT_COLOR_NORMAL, 160, 52,
+        field_text_draw_scaled_quad(packet_cursor, ot, field_dialog_text(&g_field_ui_text_winner, FIELD_UI_TEXT_WINNER), FIELD_TEXT_COLOR_NORMAL, 160, 52,
                                     FIELD_TEXT_ALIGN_CENTER, 5, FIELD_DUEL_TITLE_SCALE, FIELD_DUEL_TITLE_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);
     packet_cursor = field_draw_player_icon(packet_cursor, ot, g_field_duel_winner, g_field_duel_panel_offset + 50, 84, 1);
     packet_cursor = field_text_draw_scaled_quad(packet_cursor, ot, g_saved_game_ctx->characters[g_field_duel_winner].name, FIELD_TEXT_COLOR_NORMAL,
@@ -2528,10 +2505,10 @@ static s32 field_draw_duel_result(FieldRenderHalf* render)
     if ((g_saved_game_ctx->characters[g_field_duel_winner].info.bytes[0] & FIELD_CHARACTER_TYPE_MASK) < FIELD_CHARACTER_GUEST)
     {
         field_format_number(record_text, g_saved_game_ctx->characters[g_field_duel_winner].duel_wins, FIELD_DUEL_WIDE_NUMBERS);
-        field_append_dialog_text(record_text, &g_field_duel_wins_text_offset, 34);
+        field_append_dialog_text(record_text, &g_field_ui_text_wins, FIELD_UI_TEXT_WINS);
         field_format_number(loss_text, g_saved_game_ctx->characters[g_field_duel_winner].duel_losses, FIELD_DUEL_WIDE_NUMBERS);
         field_append_name(record_text, loss_text);
-        field_append_dialog_text(record_text, &g_field_duel_losses_text_offset, 35);
+        field_append_dialog_text(record_text, &g_field_ui_text_losses, FIELD_UI_TEXT_LOSSES);
         packet_cursor =
             field_text_draw_scaled_quad(packet_cursor, ot, record_text, FIELD_TEXT_COLOR_NORMAL, g_field_duel_panel_offset + 140, 132, FIELD_TEXT_ALIGN_LEFT, 7,
                                         FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SCALE, FIELD_DUEL_TEXT_SLANT, FIELD_DUEL_PANEL_MOVING);

@@ -16,17 +16,14 @@
 #include "common/saved_game.h"
 #include "main/main.h"
 
-/** @brief field_golem_commit_group_edit command: move the joined group to the order slot in D_80122C00. */
+/** @brief field_golem_commit_group_edit command: move the joined group to the order slot in the script locals' golem.slot. */
 #define GOLEM_COMMAND_REORDER 0x92BC
 /** @brief Number of cells whose lower neighbour is still on the grid. */
 #define GOLEM_GRID_UPPER_CELL_COUNT (GOLEM_GRID_CELL_COUNT - GOLEM_GRID_WIDTH)
-/** @brief D_80122C06 value when the joined group kept its order slot. */
+/** @brief golem.slot_status[0] value when the joined group kept its order slot. */
 #define GOLEM_SLOT_STATUS_UNCHANGED 3
 
-extern s16 D_80122C06;
-extern s16 D_80122C1A;
-extern s8 D_800459AF;
-extern GolemShapeTable D_80051888;
+extern GolemShapeTable g_field_golem_stamp_shapes;
 
 static void field_golem_rebuild_grid(s32 type);
 static void field_golem_mark_grid_edges(void);
@@ -35,7 +32,7 @@ static void field_golem_stamp_block_shape(s32 index, s32 rotation, s32 x, s32 y)
 /**
  * @brief Move the joined golem group to a new order slot, or save it when it leaves.
  * @param command GOLEM_COMMAND_REORDER swaps the joined group into the order
- *        slot in D_80122C00; any other value copies the companion name back
+ *        slot in the script locals' golem.slot; any other value copies the companion name back
  *        into the group record and marks no group as joined.
  */
 void field_golem_commit_group_edit(s32 command)
@@ -51,7 +48,7 @@ void field_golem_commit_group_edit(s32 command)
 
     if (command == GOLEM_COMMAND_REORDER)
     {
-        target = D_80122C00.locals.golem.slot;
+        target = g_field_runtime_context.locals.golem.slot;
 
         if ((u32)target < GOLEM_RECORD_COUNT)
         {
@@ -72,14 +69,14 @@ void field_golem_commit_group_edit(s32 command)
 
             if (g_saved_game.layout.golem_order[found] == g_saved_game.layout.joined_golem)
             {
-                D_80122C06 = GOLEM_SLOT_STATUS_UNCHANGED;
+                g_field_runtime_context.locals.golem.slot_status[0] = GOLEM_SLOT_STATUS_UNCHANGED;
             }
             else
             {
-                D_80122C06 = g_saved_game.layout.golem_order[found];
+                g_field_runtime_context.locals.golem.slot_status[0] = g_saved_game.layout.golem_order[found];
             }
 
-            D_80122C1A = D_800459AF;
+            g_field_runtime_context.locals.golem.joined_group = g_saved_game.layout.joined_golem;
         }
     }
     else
@@ -113,17 +110,17 @@ void field_golem_select_logic_type(s32 type)
     }
     else
     {
-        D_800459AF = type;
+        g_saved_game.layout.joined_golem = type;
     }
 
     field_golem_rebuild_current_grid();
     field_golem_build_companion(g_saved_game.layout.joined_golem, &g_saved_game.layout.characters[FIELD_PARTY_COMPANION]);
 }
 
-/** @brief Rebuild the placement grid for the logic type in D_800459AF. */
+/** @brief Rebuild the placement grid for the joined golem's logic type. */
 void field_golem_rebuild_current_grid(void)
 {
-    field_golem_rebuild_grid(D_800459AF);
+    field_golem_rebuild_grid(g_saved_game.layout.joined_golem);
 }
 
 /**
@@ -202,7 +199,7 @@ static void field_golem_stamp_block_shape(s32 index, s32 rotation, s32 x, s32 y)
     s32 i;
     s32 cell;
 
-    table = D_80051888;
+    table = g_field_golem_stamp_shapes;
 
     for (i = 0; i < table.shapes[g_saved_game.layout.logic_blocks[index].f.shape].count; i++)
     {

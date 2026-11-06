@@ -6,7 +6,8 @@
 /** @brief Sprite actor: animation state (see wmap_step_actor_animation) and shading. */
 typedef struct
 {
-    s16 unknown_00;
+    /** @brief The actor's own slot index. */
+    s16 index;
     /** @brief Resource the actor draws from; -1 for none. */
     s16 resource_index;
     u8 unknown_04[2];
@@ -41,7 +42,8 @@ typedef struct
 /** @brief Animation resource slot of a sprite actor. */
 typedef struct
 {
-    s32 unknown_00;
+    /** @brief The slot's own index. */
+    s32 index;
     u8* data;
 } WmapAnimationSlot;
 

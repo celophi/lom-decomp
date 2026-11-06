@@ -818,7 +818,7 @@ u8* gosub_draw_block_preview(u_long* ot, u8* initial_prim, s32 x_off, s32 y_off)
 
         if (g_gosub_block_level != 0)
         {
-            encoded_text_append(name_cursor, FIELD_UI_TEXT_AT(D_800EC3DA, FIELD_UI_TEXT_PLUS));
+            encoded_text_append(name_cursor, FIELD_UI_TEXT_AT(g_field_ui_text_plus, FIELD_UI_TEXT_PLUS));
             field_format_number(number_text, g_gosub_block_level, 1);
             encoded_text_append(name_cursor, number_text);
         }

@@ -66,7 +66,7 @@ void field_init_monster_record(s32 actor_id, FieldStatusRecord* record, FieldSta
     FieldBattleContext* ctx;
 
     record->meta.bytes.id = actor_id;
-    record->unk0 = FIELD_RECORD_MONSTER_SIDE;
+    record->side = FIELD_RECORD_MONSTER_SIDE;
     record->state = state;
     flags = record->meta.packed;
     flags |= FIELD_STATUS_META_ACTIVE;
@@ -75,14 +75,14 @@ void field_init_monster_record(s32 actor_id, FieldStatusRecord* record, FieldSta
     ctx = g_field_battle;
     flags |= FIELD_STATUS_KIND_MONSTER << FIELD_STATUS_META_KIND_SHIFT;
     record->meta.packed = flags;
-    record->meta.bytes.unk2 = 0;
+    record->meta.bytes.guard_flags = 0;
     template = field_find_actor_template(ctx->templates, state->template_index);
     record->template = template;
-    record->race = template->unk1A;
+    record->race = template->race;
     record->counter = template->counter_reset;
     record->counter_reset = template->counter_reset;
     record->status_flags = 0;
-    record->unkC = 0;
+    record->modifier_flags = 0;
     level = field_compute_monster_level(template);
     clamped = FIELD_LEVEL_MAX;
 
@@ -99,8 +99,8 @@ void field_init_monster_record(s32 actor_id, FieldStatusRecord* record, FieldSta
         level = work;
     }
 
-    record->unk18 = (u32)((template->unk20_base * 0x10) + (template->unk20_growth * level)) >> 4;
-    record->unk1A = template->unk19;
+    record->power = (u32)((template->power_base * 0x10) + (template->power_growth * level)) >> 4;
+    record->evasion = template->evasion;
 
     for (work = 0; work < 4; work++)
     {

@@ -33,7 +33,7 @@
 s32 wmap_run_view_sequence(s32 initialize);
 void wmap_reset_view_sequence(void);
 void wmap_advance_view_sequence(void);
-void func_800654EC(void);
+void wmap_clear_view_unused(void);
 void wmap_init_map_packets(void);
 s32 wmap_update_map_view(s32 initialize);
 void wmap_update_view_zoom(void);

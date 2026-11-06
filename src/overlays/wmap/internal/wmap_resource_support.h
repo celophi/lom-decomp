@@ -31,7 +31,7 @@ extern AkaoHeader* g_wmap_sfx_buffers[];
 
 void wmap_report_error();
 void wmap_copy_words(s32* source, s32* destination, s32 byte_count);
-void func_80064F5C(void);
+void wmap_resource_stub(void);
 void wmap_load_tim_file(s32 resource_index);
 void wmap_stream_tim_file(s32 resource_index);
 void wmap_queue_load_buffer_read(s32 resource_index);

@@ -513,7 +513,7 @@ void field_golem_select_logic_cell(s32 actor_id)
     u32 column;
     u32 row;
 
-    chance = g_field_game_state->characters[FIELD_PARTY_COMPANION].unk150[0].derived.bytes[2];
+    chance = g_field_game_state->characters[FIELD_PARTY_COMPANION].instruments[0].derived.bytes[2];
 
     if (rand() % 100 < chance)
     {
@@ -521,7 +521,7 @@ void field_golem_select_logic_cell(s32 actor_id)
     }
     else
     {
-        grid_bound = g_field_game_state->characters[FIELD_PARTY_COMPANION].unk150[0].derived.bytes[0] >> 4;
+        grid_bound = g_field_game_state->characters[FIELD_PARTY_COMPANION].instruments[0].derived.bytes[0] >> 4;
 
         if (grid_bound < FIELD_LOGIC_GRID_BOUND_MIN || grid_bound > FIELD_LOGIC_GRID_BOUND_MAX)
         {
@@ -554,7 +554,7 @@ void field_golem_publish_logic_cell(s32 cell_index)
 {
     s32 chance;
 
-    chance = g_field_game_state->characters[FIELD_PARTY_COMPANION].unk150[0].derived.bytes[2];
+    chance = g_field_game_state->characters[FIELD_PARTY_COMPANION].instruments[0].derived.bytes[2];
 
     if (rand() * 100 / (RAND_MAX + 1) < chance)
     {
@@ -794,11 +794,11 @@ static s32 field_build_party_records(void)
         {
             if (g_field_duel_mode != 0 && party_index == 0)
             {
-                g_field_battle->records[0].unk0 |= FIELD_RECORD_MONSTER_SIDE;
+                g_field_battle->records[0].side |= FIELD_RECORD_MONSTER_SIDE;
             }
             else
             {
-                g_field_battle->records[party_index].unk0 |= FIELD_RECORD_PARTY_SIDE;
+                g_field_battle->records[party_index].side |= FIELD_RECORD_PARTY_SIDE;
             }
 
             g_field_battle->records[party_index].race = FIELD_PARTY_RACE;
@@ -819,15 +819,15 @@ static s32 field_build_party_records(void)
 
                 battle->records[party_index].meta.bits.kind = g_field_game_state->characters[party_index].info.bytes[0];
                 battle->records[party_index].counter = FIELD_PARTY_COUNTER_START;
-                battle->records[party_index].meta.bytes.unk2 = 0;
+                battle->records[party_index].meta.bytes.guard_flags = 0;
             }
 
             g_field_battle->records[party_index].counter_reset = FIELD_PARTY_COUNTER_START;
             g_field_battle->records[party_index].status_flags = 0;
-            g_field_battle->records[party_index].unkC = 0;
+            g_field_battle->records[party_index].modifier_flags = 0;
             g_field_battle->records[party_index].state = field_find_object_state(party_index);
-            g_field_battle->records[party_index].unk18 = g_field_game_state->characters[party_index].equipment->derived.values[0];
-            g_field_battle->records[party_index].unk1A = 25;
+            g_field_battle->records[party_index].power = g_field_game_state->characters[party_index].equipment->derived.values[0];
+            g_field_battle->records[party_index].evasion = 25;
 
             for (stat_index = 0; stat_index < 4; stat_index++)
             {
@@ -860,7 +860,7 @@ static s32 field_build_party_records(void)
                 g_field_battle->records[party_index].element_attack[index] += g_field_battle->element_levels[index];
             }
 
-            /* index is 8 here, so this clears unk4C (rewritten below). */
+            /* index is 8 here, so this clears companion_ability (rewritten below). */
             g_field_battle->records[party_index].element_defense[index] = 0;
             g_field_battle->records[party_index].immunity_flags = 0;
             g_field_battle->records[party_index].weak_elements = 0;
@@ -887,7 +887,7 @@ static s32 field_build_party_records(void)
             }
 
             g_field_battle->records[party_index].template = NULL;
-            g_field_battle->records[party_index].unk4C = g_field_game_state->characters[party_index].companion_ability;
+            g_field_battle->records[party_index].companion_ability = g_field_game_state->characters[party_index].companion_ability;
 
             if (g_field_duel_mode != 0)
             {
@@ -946,5 +946,5 @@ static void field_publish_companion_flags(void)
         record_game_diagnostic(DIAG_ERROR, DIAG_BAD_REGION_INDEX, g_field_game_state->joined_pet, 0);
     }
 
-    field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_COMPANION_FLAGS, g_field_game_state->pets[g_field_game_state->joined_pet].unk48.word);
+    field_set_script_var(FIELD_PARTY_COMPANION, FIELD_VAR_COMPANION_FLAGS, g_field_game_state->pets[g_field_game_state->joined_pet].companion_flags.word);
 }

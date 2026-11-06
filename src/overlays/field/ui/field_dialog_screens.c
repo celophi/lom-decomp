@@ -197,13 +197,6 @@ typedef struct
     s32 order[3];
 } FieldRankWork;
 
-/** @brief One entry of the dialog text bank's offset table (little-endian, read bytewise). */
-typedef struct PackedOffset
-{
-    u8 low;
-    u8 high;
-} PackedOffset;
-
 /** @brief Header of the unlock name resource: offsets of its two name banks. */
 typedef struct TextResource
 {
@@ -802,7 +795,7 @@ void field_start_actor_text(s32 index, s32 text_id)
             if (text_id < 0)
             {
                 /* Bits 16-23 pick a party character, bits 0-7 one of its 64-byte records. */
-                g_field_actor_texts[index].text = (u8*)&g_saved_game_ctx->characters[((u32)text_id >> 16) & 0xFF].unk150[text_id & 0xFF];
+                g_field_actor_texts[index].text = (u8*)&g_saved_game_ctx->characters[((u32)text_id >> 16) & 0xFF].instruments[text_id & 0xFF];
             }
             else
             {
@@ -1025,11 +1018,12 @@ static void* field_draw_tinted_text(SPRT* sprite_cursor, u_long* ordering_table,
 
 extern FieldTechniqueUnlockRule g_field_technique_unlock_rules[];
 /* Scene image setup also uses this flag; its broader purpose is unresolved. */
-extern s32 D_80115890;
+/** @brief Set while the last scene actor loaded has more than one image. */
+extern s32 g_field_last_actor_multi_image;
 
 /**
  * @brief Advance active player proficiency and queue newly learned abilities and techniques.
- * @note Proficiency saturates at 100, advancing by four when D_80115890 is set, or one otherwise.
+ * @note Proficiency saturates at 100, advancing by four when g_field_last_actor_multi_image is set, or one otherwise.
  * @note A technique rule can unlock silently, without adding a dialog entry.
  */
 void field_advance_ability_progression(void)
@@ -1070,7 +1064,7 @@ void field_advance_ability_progression(void)
 
                     if (weapon_proficiency < FIELD_PROFICIENCY_MAX)
                     {
-                        if (D_80115890 != 0)
+                        if (g_field_last_actor_multi_image != 0)
                         {
                             g_saved_game_ctx->weapon_proficiency[weapon_category] = weapon_proficiency + FIELD_PROFICIENCY_BONUS;
 
@@ -1096,7 +1090,7 @@ void field_advance_ability_progression(void)
 
                     if (ability_proficiency < FIELD_PROFICIENCY_MAX)
                     {
-                        if (D_80115890 != 0)
+                        if (g_field_last_actor_multi_image != 0)
                         {
                             g_saved_game_ctx->ability_proficiency[g_saved_game_ctx->characters[party_index].info.actions.commands[ability]] =
                                 ability_proficiency + FIELD_PROFICIENCY_BONUS;
@@ -1232,19 +1226,9 @@ void field_advance_ability_progression(void)
 }
 
 extern u8 g_field_retry_snapshot[];
-/*
- * The dialog text bank g_field_ui_text_table starts with PackedOffset entries (offsets
- * from the bank start); the entries used here are referenced by their own
- * address symbols, which the code needs for its address arithmetic.
- */
-extern u8 D_800EC3D6[];
-extern u8 D_800EC3C6[], D_800EC3DA[];
 extern u8 g_field_dialog_item_quantities[];
 extern u8* g_field_dialog_item_texts[];
 extern s32 g_field_experience_snapshot[];
-extern PackedOffset D_800EC3D8;
-extern PackedOffset D_800EC3CC;
-extern PackedOffset D_800EC3CE;
 extern FieldQuadAnimationTable g_field_small_icon_frames, g_field_marker_x_offsets, g_field_marker_u_offsets, g_field_marker_widths;
 extern s32 g_field_results_wait_frames;
 extern s32 g_field_dialog_item_count;
@@ -1682,8 +1666,11 @@ static void* field_draw_party_totals(u_long* ot, void* cursor, s32 x_offset, s32
         }
     }
 
-    handle = field_draw_text(handle, ot, D_800EC3D6[0] + (D_800EC3D6 - 0x12) + (D_800EC3D6[1] << 8), 4, 0x10 - x_offset, -y_offset, FIELD_TEXT_ALIGN_LEFT);
-    text_base = D_800EC3D6 - 0x12;
+    handle = field_draw_text(handle, ot,
+                             g_field_ui_text_results_money.low + FIELD_UI_TEXT_TABLE(g_field_ui_text_results_money, FIELD_UI_TEXT_RESULTS_MONEY) +
+                                 (g_field_ui_text_results_money.high << 8),
+                             4, 0x10 - x_offset, -y_offset, FIELD_TEXT_ALIGN_LEFT);
+    text_base = FIELD_UI_TEXT_TABLE(g_field_ui_text_results_money, FIELD_UI_TEXT_RESULTS_MONEY);
 
     y = 0x10 - y_offset;
     position.y = y;
@@ -1725,8 +1712,10 @@ static void* field_draw_experience_ranking(u_long* ordering_table, void* cursor,
     u8* text;
     u8* text_base;
 
-    result = field_draw_text(cursor, ordering_table, (D_800EC3C6[1] << 8) + ((D_800EC3C6 - 2) + D_800EC3C6[0]), 4, 0x10 - x_offset, -y_offset,
-                             FIELD_TEXT_ALIGN_LEFT);
+    result = field_draw_text(cursor, ordering_table,
+                             (g_field_ui_text_experience.high << 8) +
+                                 (FIELD_UI_TEXT_TABLE(g_field_ui_text_experience, FIELD_UI_TEXT_EXPERIENCE) + g_field_ui_text_experience.low),
+                             4, 0x10 - x_offset, -y_offset, FIELD_TEXT_ALIGN_LEFT);
     count = 0;
 
     for (i = 0; i < 3; i++)
@@ -1765,8 +1754,8 @@ static void* field_draw_experience_ranking(u_long* ordering_table, void* cursor,
 
     if (i < count)
     {
-        text_base = D_800EC3DA;
-        text = text_base - 0x16;
+        text_base = &g_field_ui_text_plus.low;
+        text = text_base - FIELD_UI_TEXT_PLUS * 2;
 
         for (row = 0; i < count; i++)
         {
@@ -1782,8 +1771,8 @@ static void* field_draw_experience_ranking(u_long* ordering_table, void* cursor,
                 result = field_draw_animated_icon(ordering_table, result, 0x38 - x_offset, y - 8, 1);
                 work.position.x = 0x48 - x_offset;
                 result = field_draw_number(ordering_table, result, g_field_player_records[work.order[i]].unk25A, 4, &work.position, FIELD_TEXT_ALIGN_LEFT);
-                result = field_draw_text(result, ordering_table, FIELD_TEXT_AT(text, D_800EC3DA[0], text_base[1]), 4, 0x68 - x_offset, work.position.y,
-                                         FIELD_TEXT_ALIGN_LEFT);
+                result = field_draw_text(result, ordering_table, FIELD_TEXT_AT(text, g_field_ui_text_plus.low, text_base[1]), 4, 0x68 - x_offset,
+                                         work.position.y, FIELD_TEXT_ALIGN_LEFT);
                 result = field_draw_animated_icon(ordering_table, result, 0x78 - x_offset, work.position.y, 0);
                 work.position.x = 0x88 - x_offset;
                 work.position.y = y;
@@ -1820,8 +1809,8 @@ static void* field_draw_item_list(u_long* ot, void* prim, s32 x_offset, s32 y_of
     uintptr_t offset;
     u8* tex;
 
-    low = D_800EC3D8.low;
-    offset = (D_800EC3D8.high << 8) + (uintptr_t)((u8*)&D_800EC3D8 - 0x14);
+    low = g_field_ui_text_spoils.low;
+    offset = (g_field_ui_text_spoils.high << 8) + (uintptr_t)FIELD_UI_TEXT_TABLE(g_field_ui_text_spoils, FIELD_UI_TEXT_SPOILS);
     tex = (u8*)(low + offset);
     prim = field_draw_text(prim, ot, tex, 4, 0x20 - x_offset, -y_offset, FIELD_TEXT_ALIGN_LEFT);
 
@@ -1901,9 +1890,9 @@ static void* field_draw_unlock_list(u_long* ordering_table, void* cursor, s32 sc
                         uintptr_t offset;
                         u8* base;
 
-                        low = D_800EC3CE.low;
+                        low = g_field_ui_text_technique_mastered.low;
                         base = g_field_ui_text_table;
-                        offset = (D_800EC3CE.high << 8) + (uintptr_t)base;
+                        offset = (g_field_ui_text_technique_mastered.high << 8) + (uintptr_t)base;
                         next_cursor =
                             field_draw_text(next_cursor, ordering_table, (void*)(low + offset), 4, header_x, technique_header_y, FIELD_TEXT_ALIGN_LEFT);
                     }
@@ -1935,8 +1924,10 @@ static void* field_draw_unlock_list(u_long* ordering_table, void* cursor, s32 sc
 
                     if ((ability_header_y > -FIELD_RESULTS_ROW_HEIGHT) && (ability_header_y < viewport_height))
                     {
-                        next_cursor = field_draw_text(next_cursor, ordering_table, g_field_ui_text_table + D_800EC3CC.low + (D_800EC3CC.high << 8), 4, header_x,
-                                                      ability_header_y, FIELD_TEXT_ALIGN_LEFT);
+                        next_cursor =
+                            field_draw_text(next_cursor, ordering_table,
+                                            g_field_ui_text_table + g_field_ui_text_ability_mastered.low + (g_field_ui_text_ability_mastered.high << 8), 4,
+                                            header_x, ability_header_y, FIELD_TEXT_ALIGN_LEFT);
                     }
 
                     ability_header_drawn = 1;

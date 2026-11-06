@@ -15,7 +15,8 @@ g_gover_frame_header = 0x80140710;
 g_gover_frame_tail = 0x801407A0;
 g_fade_level = 0x80141048;
 g_fade_step = 0x80140708;
-D_8014070C = 0x8014070C;
+g_gover_unused_a = 0x80140704;
+g_gover_unused_b = 0x8014070C;
 g_sfx_table_offset = 0x80180004;
 g_sfx_table_buffer = 0x801169A8;
 
@@ -27,8 +28,7 @@ D_80180000 = 0x80180000; // ignore:true
 D_80180001 = 0x80180001; // ignore:true
 D_80180004 = 0x80180004; // ignore:true
 
-// US ELF names not listed above (splat placeholders shared with the C sources).
-func_800A368C = 0x800A353C;
-func_800A380C = 0x800A36BC;
-func_800A39A8 = 0x800A3858;
-D_80140704    = 0x80140704;
+// FIELD functions GOVER calls.
+field_load_song = 0x800A353C;
+field_play_song = 0x800A36BC;
+field_play_set_sfx = 0x800A3858;

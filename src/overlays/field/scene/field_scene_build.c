@@ -1344,12 +1344,12 @@ static void field_build_animation_list(FieldAnimDef* def, u8** arena, FieldAnim*
 
         if (def->flags.word & FIELD_ANIM_DEF_SPAN_INDEXED)
         {
-            anim->flags.b.state = def->head.b.unk1;
+            anim->flags.b.state = def->head.b.start_frame;
             anim->flags.b.keyframe = 0;
         }
         else
         {
-            initial_state = def->head.b.unk1;
+            initial_state = def->head.b.start_frame;
             anim->flags.b.state = initial_state;
             anim->flags.b.keyframe = initial_state;
         }

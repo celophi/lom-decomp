@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-void func_8005B540(void);
+void wmap_land_preview_stub(void);
 void wmap_init_preview_lines(void);
 
 #endif

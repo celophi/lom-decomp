@@ -34,7 +34,7 @@ void field_golem_build_companion(s32 group, FieldCharacterRecord* record)
     }
 
     record->info.word = ((record->info.word & ~FIELD_CHARACTER_TYPE_MASK) | FIELD_CHARACTER_GOLEM) & ~FIELD_CHARACTER_PAD_CONTROLLED;
-    record->info.actions.unk19 = g_saved_game.layout.golem_records[group].logic_layout.bits.logic_class;
+    record->info.actions.variant = g_saved_game.layout.golem_records[group].logic_layout.bits.logic_class;
 
     for (i = 0; i < FIELD_COMMAND_SLOT_COUNT; i++)
     {
@@ -64,9 +64,9 @@ void field_golem_build_companion(s32 group, FieldCharacterRecord* record)
         ((FieldStat*)record->stats)[i].bits.effective = g_saved_game.layout.golem_records[group].stats[i].bits.effective;
     }
 
-    record->equipment[FIELD_ARMOR_SLOT].status_flags = record->unk40 = g_saved_game.layout.golem_records[group].armor_flags;
-    record->equipment[FIELD_WEAPON_SLOT].status_flags = record->unk41 = g_saved_game.layout.golem_records[group].weapon_flags;
-    record->equipment[FIELD_ARMOR_SLOT].element_flags = record->unk42 = g_saved_game.layout.golem_records[group].armor_flags2;
+    record->equipment[FIELD_ARMOR_SLOT].status_flags = record->status_immunities = g_saved_game.layout.golem_records[group].armor_flags;
+    record->equipment[FIELD_WEAPON_SLOT].status_flags = record->weapon_flags = g_saved_game.layout.golem_records[group].weapon_flags;
+    record->equipment[FIELD_ARMOR_SLOT].element_flags = record->element_resistances = g_saved_game.layout.golem_records[group].armor_flags2;
     record->companion_ability = g_saved_game.layout.golem_records[group].companion_ability;
     record->button_actions[0] = 0;
     record->button_actions[1] = 0;
@@ -92,10 +92,10 @@ void field_golem_build_companion(s32 group, FieldCharacterRecord* record)
     record->equipment[FIELD_ARMOR_SLOT].bonus_nibbles.bits.n5 = g_saved_game.layout.golem_records[group].armor_bonus.n5;
     record->equipment[FIELD_ARMOR_SLOT].bonus_nibbles.bits.n6 = g_saved_game.layout.golem_records[group].armor_bonus.n6;
     record->equipment[FIELD_ARMOR_SLOT].bonus_nibbles.bits.n7 = g_saved_game.layout.golem_records[group].armor_bonus.n7;
-    record->unk150[0].derived.golem.logic_class = g_saved_game.layout.golem_records[group].logic_layout.bits.logic_class;
-    record->unk150[0].derived.golem.grid_bound = g_saved_game.layout.golem_records[group].logic_layout.bits.grid_bound;
-    record->unk150[0].derived.bytes[1] = g_saved_game.layout.golem_records[group].unknown_0x45;
-    record->unk150[0].derived.bytes[2] = g_saved_game.layout.golem_records[group].unknown_0x46;
-    record->unk150[0].derived.bytes[3] = g_saved_game.layout.golem_records[group].unknown_0x47;
-    record->unk150[0].derived.golem.palette = g_saved_game.layout.golem_records[group].palette;
+    record->instruments[0].derived.golem.logic_class = g_saved_game.layout.golem_records[group].logic_layout.bits.logic_class;
+    record->instruments[0].derived.golem.grid_bound = g_saved_game.layout.golem_records[group].logic_layout.bits.grid_bound;
+    record->instruments[0].derived.bytes[1] = g_saved_game.layout.golem_records[group].unknown_0x45;
+    record->instruments[0].derived.bytes[2] = g_saved_game.layout.golem_records[group].random_chance;
+    record->instruments[0].derived.bytes[3] = g_saved_game.layout.golem_records[group].unknown_0x47;
+    record->instruments[0].derived.golem.palette = g_saved_game.layout.golem_records[group].palette;
 }

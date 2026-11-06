@@ -96,9 +96,9 @@ g_scroll_target      = 0x8014FE30;
 g_scroll_steps       = 0x8014FE34;
 g_kanji_cat          = 0x8014FE38;
 g_char_cursor        = 0x8014FE3C;
-pad_8014F8B1         = 0x8014FE21;
-pad_8014F8B9         = 0x8014FE29;
-D_8014F8D4           = 0x8014FE40;
+g_gname_unused_bytes0         = 0x8014FE21;
+g_gname_unused_bytes1         = 0x8014FE29;
+g_gname_unused_word           = 0x8014FE40;
 
 // Field dialogue/text renderer exports used by this overlay.
 field_text_reset_scratch             = 0x800640EC;

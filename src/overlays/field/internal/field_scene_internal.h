@@ -120,7 +120,8 @@ typedef union
     s32 word;
     struct
     {
-        u8 unk0;
+        /** FIELD_OBJ_VISIBLE and the other low flag bits. */
+        u8 low_flags;
         /** number of attached FieldNode instances, the object-level
             counterpart of FieldPart::node_count. */
         u8 node_count;
@@ -514,7 +515,7 @@ struct FieldAnimDef
             /** low seven bits: keyframes covered by the first span. */
             u8 span_count;
             /** starting frame; the movie handler (list 0 kind 4) reads it as a file pair index. */
-            u8 unk1;
+            u8 start_frame;
             /** duration of the first keyframe span, in frames. */
             u16 duration;
         } b;
@@ -1044,7 +1045,7 @@ void field_collision_rebuild_spans(void);
  * @brief Header words of the scene resource block loaded at 0x80180000.
  *
  * The same words are also reachable as the standalone symbols g_field_resource_version,
- * g_field_dyn_count, g_field_scene, D_80180018 and g_field_node_angle_table.
+ * g_field_dyn_count, g_field_scene, g_field_seq_defs and g_field_node_angle_table.
  */
 typedef struct
 {

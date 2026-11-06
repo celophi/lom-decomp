@@ -54,15 +54,15 @@ typedef struct GoverFrameHalf
 
 /* Audio helpers used while presenting the Game Over screen. */
 /** @brief Loads and registers a music sequence. */
-extern void func_800A368C(s32 music_index, s32 destination_index);
+extern void field_load_song(s32 music_index, s32 destination_index);
 
 /** @brief Starts the registered music sequence. */
-extern void func_800A380C(void);
+extern void field_play_song(void);
 
 /** @brief Plays an SFX from the staged bank. */
-extern void func_800A39A8(s32 sfx_index, s32 pan, s32 unused, s32 channel_group);
+extern void field_play_set_sfx(s32 sfx_index, s32 pan, s32 unused, s32 channel_group);
 
-/** @brief AKAO music volume applied by func_800A380C. */
+/** @brief AKAO music volume applied by field_play_song. */
 extern s32 g_akao_music_volume;
 
 extern SfxTableBuffer g_sfx_table_buffer;
@@ -120,11 +120,13 @@ extern SfxTableBuffer g_sfx_table_buffer;
 /** Locates the first nested offset table within the staged resource. */
 #define GOVER_SFX_TABLE_OFFSET (*(u32*)LOAD_BUFFER_AT(0x4))
 
-s32 D_80140704;
+/** @brief Never read or written by GOVER. */
+s32 g_gover_unused_a;
 
 s32 g_fade_step;
 
-s32 D_8014070C;
+/** @brief Never read or written by GOVER. */
+s32 g_gover_unused_b;
 
 /* Target-visible storage for the contiguous pair of Game Over frames. */
 u8 g_gover_frame_header[GOVER_FRAME_VRAM_RECT_OFFSET];
@@ -200,14 +202,14 @@ void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 
     if (sfx_bank_index != GOVER_SFX_DISABLED)
     {
         gover_load_sfx_bank(sfx_bank_index);
-        func_800A39A8(0, AKAO_PAN_CENTER, 0, 0);
+        field_play_set_sfx(0, AKAO_PAN_CENTER, 0, 0);
     }
 
     if (music_index != GOVER_MUSIC_DISABLED)
     {
-        func_800A368C(music_index, 0);
+        field_load_song(music_index, 0);
         g_akao_music_volume = AKAO_VOLUME_MAX;
-        func_800A380C();
+        field_play_song();
         akao_set_song_volume(0, AKAO_VOLUME_MAX);
     }
 

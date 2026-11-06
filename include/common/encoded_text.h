@@ -20,6 +20,13 @@
  */
 
 /**
+ * @brief String @p index of a text table: little-endian u16 offsets from the table start, one per string, then the strings.
+ * @param table Start of the table.
+ * @param index String number.
+ */
+#define TEXT_TABLE_STRING(table, index) ((u8*)(table) + ((u16*)(table))[index])
+
+/**
  * @brief First code these functions treat as the start of a two-byte code.
  * @note In the US renderer only 0x19 (a two-byte character) and 0x1F (an extended dictionary entry)
  *       take a second byte, and 0x1A-0x1E are one-byte dictionary entries; the Japanese text uses

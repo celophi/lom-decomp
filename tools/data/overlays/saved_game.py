@@ -55,8 +55,9 @@ ITEM_OFFSETS = {
 # FieldCharacterRecord members.
 CHARACTER_OFFSETS = {
     "name": 0x00, "info": 0x18, "progress": 0x20, "hp": 0x24, "power": 0x26, "equipment_totals": 0x28,
-    "stats": 0x30, "unk40": 0x40, "duel_wins": 0x44, "duel_losses": 0x46, "button_actions": 0x48,
-    "equipment": 0x50, "unk150": 0x150,
+    "stats": 0x30, "status_immunities": 0x40, "weapon_flags": 0x41, "element_resistances": 0x42,
+    "companion_ability": 0x43, "duel_wins": 0x44, "duel_losses": 0x46, "button_actions": 0x48,
+    "equipment": 0x50, "instruments": 0x150,
 }
 
 # SavedGameLayout members.
@@ -156,13 +157,13 @@ def character_record(raw: bytes, read_text: TextReader, two_byte_codes: frozense
     progress, hp, power = struct.unpack_from("<IHH", raw, CHARACTER_OFFSETS["progress"])
     stats = struct.unpack_from(f"<{STAT_COUNT}H", raw, CHARACTER_OFFSETS["stats"])
     wins, losses = struct.unpack_from("<HH", raw, CHARACTER_OFFSETS["duel_wins"])
-    equipment = raw[CHARACTER_OFFSETS["equipment"] : CHARACTER_OFFSETS["unk150"]]
-    extra = raw[CHARACTER_OFFSETS["unk150"] :]
+    equipment = raw[CHARACTER_OFFSETS["equipment"] : CHARACTER_OFFSETS["instruments"]]
+    instruments = raw[CHARACTER_OFFSETS["instruments"] :]
     return {
         "name": text_field(raw[:CHARACTER_NAME_LENGTH], read_text, two_byte_codes),
         "character_type": info[0] & 0x7F,
         "pad_controlled": bool(info[0] & 0x80),
-        "info_byte_1": info[1],
+        "variant": info[1],
         "commands": list(info[2:4]),
         "skills": list(info[4:8]),
         "level": progress & 0xFF,
@@ -171,13 +172,16 @@ def character_record(raw: bytes, read_text: TextReader, two_byte_codes: frozense
         "power": power,
         "equipment_totals": list(struct.unpack_from("<4H", raw, CHARACTER_OFFSETS["equipment_totals"])),
         "stats": [{"base": value & STAT_BASE_MASK, "effective": value >> STAT_EFFECTIVE_SHIFT} for value in stats],
-        "unk40": list(raw[0x40:0x44]),
+        "status_immunities": raw[0x40],
+        "weapon_flags": raw[0x41],
+        "element_resistances": raw[0x42],
+        "companion_ability": raw[0x43],
         "duel_wins": wins,
         "duel_losses": losses,
         "button_actions": list(raw[0x48:0x50]),
         "equipment": [item_record(equipment[slot * ITEM_SIZE : (slot + 1) * ITEM_SIZE], read_text, two_byte_codes)
                       for slot in range(EQUIPMENT_SLOT_COUNT)],
-        "unk150": item_list(extra, len(extra) // ITEM_SIZE, read_text, two_byte_codes),
+        "instruments": item_list(instruments, len(instruments) // ITEM_SIZE, read_text, two_byte_codes),
     }
 
 

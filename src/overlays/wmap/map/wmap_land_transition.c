@@ -62,7 +62,6 @@ enum WmapCarouselTextureWord
 };
 
 extern const WmapPoint g_wmap_cell_focus_offsets[];
-extern u16 D_800CC776;
 extern s32 g_wmap_artifact_transfer_frame_bounds[];
 extern WmapRouteCell g_wmap_cell_effects[6][6];
 extern s32 g_wmap_carousel_position;
@@ -146,7 +145,7 @@ void wmap_update_artifact_selection(void)
         }
 
         g_wmap_carousel_turn_frames--;
-        D_800CC776 = g_wmap_carousel_angles[g_wmap_carousel_frame].angle;
+        g_wmap_carousel_rotation.vy = g_wmap_carousel_angles[g_wmap_carousel_frame].angle;
 
         if (g_wmap_carousel_turn_frames == 0)
         {

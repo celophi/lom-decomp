@@ -88,7 +88,7 @@ TABLES = (
     ), "Artifact texture rectangle and drawing offsets for the carousel, its shadow and the map."),
     TableSpec("g_wmap_carousel_translation", "4i", 1, ("vx", "vy", "vz", "pad"), "Carousel translation vector."),
     TableSpec("g_wmap_carousel_rotation", "4h", 1, ("vx", "vy", "vz", "pad"),
-              "Carousel rotation; the code writes vy (also named D_800CC776) from the carousel angle table."),
+              "Carousel rotation; the code writes vy from the carousel angle table."),
     TableSpec("g_wmap_preview_travel_frames", "2h4B", 126, ("x", "y", "pad_04", "pad_05", "pad_06", "pad_07"),
               "Path from the map to the artifact carousel."),
     TableSpec("g_wmap_artifact_transfer_frame_bounds", "i", 65, note="First pickup frame of each artifact; the next entry minus one is the last."),

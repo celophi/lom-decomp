@@ -704,7 +704,7 @@ void wmap_effect35_emitter_b_start(void)
 
 /**
  * @brief Run the current step of special effect 35.
- * @param arg0 Nonzero restarts the effect instead of running a step.
+ * @param reset Nonzero restarts the effect instead of running a step.
  * @return 1 while the effect runs, 0 once it has finished.
  */
 WMAP_STEP_RUNNER(wmap_effect35_run, g_wmap_effect35_steps, WMAP_EFFECT35_MAIN_STEPS, g_wmap_effect35_step, g_wmap_effect35_timer)
@@ -744,7 +744,7 @@ WMAP_STEP_BEGIN_EXIT(wmap_effect35_finish, g_wmap_effect35_step, WMAP_EXIT_DIREC
 
 /**
  * @brief Run the current step of the timeline sequence.
- * @param arg0 Nonzero restarts the sequence instead of running a step.
+ * @param reset Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
 static WMAP_STEP_RUNNER(wmap_effect35_run_timeline, g_wmap_effect35_timeline_steps, WMAP_EFFECT35_TIMELINE_STEPS, g_wmap_effect35_timeline_step,
@@ -982,7 +982,7 @@ WMAP_STEP_FINISH_BLOCKING(wmap_effect35_timeline_finish, g_wmap_effect35_timelin
 
 /**
  * @brief Run the current step of the model drop A sequence.
- * @param arg0 Nonzero restarts the sequence instead of running a step.
+ * @param reset Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
 static WMAP_STEP_RUNNER(wmap_effect35_run_drop_a, g_wmap_effect35_drop_a_steps, WMAP_EFFECT35_DROP_STEPS, g_wmap_effect35_drop_a_step,
@@ -1013,7 +1013,7 @@ WMAP_STEP_ADVANCE(wmap_effect35_drop_a_end, g_wmap_effect35_drop_a_step)
 
 /**
  * @brief Run the current step of the model drop B sequence.
- * @param arg0 Nonzero restarts the sequence instead of running a step.
+ * @param reset Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
 static WMAP_STEP_RUNNER(wmap_effect35_run_drop_b, g_wmap_effect35_drop_b_steps, WMAP_EFFECT35_DROP_STEPS, g_wmap_effect35_drop_b_step,
@@ -1044,7 +1044,7 @@ WMAP_STEP_ADVANCE(wmap_effect35_drop_b_end, g_wmap_effect35_drop_b_step)
 
 /**
  * @brief Run the current step of the sprite A sequence.
- * @param arg0 Nonzero restarts the sequence instead of running a step.
+ * @param reset Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
 static WMAP_STEP_RUNNER(wmap_effect35_run_sprite_a, g_wmap_effect35_sprite_a_steps, WMAP_EFFECT35_SPRITE_STEPS, g_wmap_effect35_sprite_a_step,
@@ -1088,7 +1088,7 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_sprite_a, g_wmap_effect35_sprite_a_ste
 
     /**
      * @brief Run the current step of the sprite B sequence.
-     * @param arg0 Nonzero restarts the sequence instead of running a step.
+     * @param reset Nonzero restarts the sequence instead of running a step.
      * @return 1 while the sequence runs, 0 once it has finished.
      */
     static WMAP_STEP_RUNNER(wmap_effect35_run_sprite_b, g_wmap_effect35_sprite_b_steps, WMAP_EFFECT35_SPRITE_STEPS, g_wmap_effect35_sprite_b_step,
@@ -1146,7 +1146,7 @@ WMAP_STEP_ADVANCE(wmap_effect35_sprite_b_end, g_wmap_effect35_sprite_b_step)
 
 /**
  * @brief Run the current step of the sprite C sequence.
- * @param arg0 Nonzero restarts the sequence instead of running a step.
+ * @param reset Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
 static WMAP_STEP_RUNNER(wmap_effect35_run_sprite_c, g_wmap_effect35_sprite_c_steps, WMAP_EFFECT35_SPRITE_STEPS, g_wmap_effect35_sprite_c_step,
@@ -1190,7 +1190,7 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_sprite_c, g_wmap_effect35_sprite_c_ste
 
     /**
      * @brief Run the current step of the spinning model A sequence.
-     * @param arg0 Nonzero restarts the sequence instead of running a step.
+     * @param reset Nonzero restarts the sequence instead of running a step.
      * @return 1 while the sequence runs, 0 once it has finished.
      */
     static WMAP_STEP_RUNNER(wmap_effect35_run_spin_a, g_wmap_effect35_spin_a_steps, WMAP_EFFECT35_SPIN_STEPS, g_wmap_effect35_spin_a_step,
@@ -1226,7 +1226,7 @@ WMAP_STEP_ADVANCE(wmap_effect35_spin_a_end, g_wmap_effect35_spin_a_step)
 
 /**
  * @brief Run the current step of the spinning model B sequence.
- * @param arg0 Nonzero restarts the sequence instead of running a step.
+ * @param reset Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
 static WMAP_STEP_RUNNER(wmap_effect35_run_spin_b, g_wmap_effect35_spin_b_steps, WMAP_EFFECT35_SPIN_STEPS, g_wmap_effect35_spin_b_step,
@@ -1262,7 +1262,7 @@ WMAP_STEP_ADVANCE(wmap_effect35_spin_b_end, g_wmap_effect35_spin_b_step)
 
 /**
  * @brief Run the current step of the orbit particle 1 sequence.
- * @param arg0 Nonzero restarts the sequence instead of running a step.
+ * @param reset Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
 static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_1, g_wmap_effect35_orbiter_1_steps, WMAP_EFFECT35_ORBITER_STEPS, g_wmap_effect35_orbiter_1_step,
@@ -1286,7 +1286,7 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_1, g_wmap_effect35_orbiter_1_s
 
     /**
      * @brief Run the current step of the orbit particle 2 sequence.
-     * @param arg0 Nonzero restarts the sequence instead of running a step.
+     * @param reset Nonzero restarts the sequence instead of running a step.
      * @return 1 while the sequence runs, 0 once it has finished.
      */
     static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_2, g_wmap_effect35_orbiter_2_steps, WMAP_EFFECT35_ORBITER_STEPS, g_wmap_effect35_orbiter_2_step,
@@ -1310,7 +1310,7 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_1, g_wmap_effect35_orbiter_1_s
 
     /**
      * @brief Run the current step of the orbit particle 3 sequence.
-     * @param arg0 Nonzero restarts the sequence instead of running a step.
+     * @param reset Nonzero restarts the sequence instead of running a step.
      * @return 1 while the sequence runs, 0 once it has finished.
      */
     static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_3, g_wmap_effect35_orbiter_3_steps, WMAP_EFFECT35_ORBITER_STEPS, g_wmap_effect35_orbiter_3_step,
@@ -1334,7 +1334,7 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_1, g_wmap_effect35_orbiter_1_s
 
     /**
      * @brief Run the current step of the orbit particle 4 sequence.
-     * @param arg0 Nonzero restarts the sequence instead of running a step.
+     * @param reset Nonzero restarts the sequence instead of running a step.
      * @return 1 while the sequence runs, 0 once it has finished.
      */
     static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_4, g_wmap_effect35_orbiter_4_steps, WMAP_EFFECT35_ORBITER_STEPS, g_wmap_effect35_orbiter_4_step,
@@ -1358,7 +1358,7 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_1, g_wmap_effect35_orbiter_1_s
 
     /**
      * @brief Run the current step of the orbit particle 5 sequence.
-     * @param arg0 Nonzero restarts the sequence instead of running a step.
+     * @param reset Nonzero restarts the sequence instead of running a step.
      * @return 1 while the sequence runs, 0 once it has finished.
      */
     static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_5, g_wmap_effect35_orbiter_5_steps, WMAP_EFFECT35_ORBITER_STEPS, g_wmap_effect35_orbiter_5_step,
@@ -1382,7 +1382,7 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_1, g_wmap_effect35_orbiter_1_s
 
     /**
      * @brief Run the current step of the orbit particle 6 sequence.
-     * @param arg0 Nonzero restarts the sequence instead of running a step.
+     * @param reset Nonzero restarts the sequence instead of running a step.
      * @return 1 while the sequence runs, 0 once it has finished.
      */
     static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_6, g_wmap_effect35_orbiter_6_steps, WMAP_EFFECT35_ORBITER_STEPS, g_wmap_effect35_orbiter_6_step,
@@ -1406,7 +1406,7 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_1, g_wmap_effect35_orbiter_1_s
 
     /**
      * @brief Run the current step of the orbit particle 7 sequence.
-     * @param arg0 Nonzero restarts the sequence instead of running a step.
+     * @param reset Nonzero restarts the sequence instead of running a step.
      * @return 1 while the sequence runs, 0 once it has finished.
      */
     static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_7, g_wmap_effect35_orbiter_7_steps, WMAP_EFFECT35_ORBITER_STEPS, g_wmap_effect35_orbiter_7_step,
@@ -1432,7 +1432,7 @@ static WMAP_STEP_RUNNER(wmap_effect35_run_orbiter_1, g_wmap_effect35_orbiter_1_s
 
     /**
      * @brief Run the current step of the particle emitter A sequence.
-     * @param arg0 Nonzero restarts the sequence instead of running a step.
+     * @param reset Nonzero restarts the sequence instead of running a step.
      * @return 1 while the sequence runs, 0 once it has finished.
      */
     static WMAP_STEP_RUNNER(wmap_effect35_run_emitter_a, g_wmap_effect35_emitter_a_steps, WMAP_EFFECT35_EMITTER_STEPS, g_wmap_effect35_emitter_a_step,
@@ -1473,7 +1473,7 @@ WMAP_STEP_ADVANCE(wmap_effect35_emitter_a_end, g_wmap_effect35_emitter_a_step)
 
 /**
  * @brief Run the current step of the particle emitter B sequence.
- * @param arg0 Nonzero restarts the sequence instead of running a step.
+ * @param reset Nonzero restarts the sequence instead of running a step.
  * @return 1 while the sequence runs, 0 once it has finished.
  */
 static WMAP_STEP_RUNNER(wmap_effect35_run_emitter_b, g_wmap_effect35_emitter_b_steps, WMAP_EFFECT35_EMITTER_STEPS, g_wmap_effect35_emitter_b_step,

@@ -72,4 +72,17 @@ g_shop_scroll_frames = 0x80145CE0;
 
 // FIELD UI string entry used by this overlay.
 g_field_ui_text_table = 0x800EC3C4;
+
+// FIELD menu window functions SHOP calls.
+field_draw_menu_frame = 0x800AD850;
+field_draw_menu_scroll_arrow = 0x800AE76C;
+
+// FIELD UI string table entries.
 g_field_ui_text_cant_hold_more = 0x800EC3D0;
+g_field_ui_text_times = 0x800EC3DC;
+g_field_ui_text_dashes = 0x800EC3E0;
+g_field_ui_text_space = 0x800EC3E2;
+g_field_ui_text_power = 0x800EC3F2;
+g_field_ui_text_you_have = 0x800EC3F4;
+g_field_ui_text_confirm = 0x800EC3F8;
+g_field_ui_text_cant_buy_more = 0x800EC3FE;

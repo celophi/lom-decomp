@@ -17,20 +17,24 @@ inline void* card_menu_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y)
     s32 color;
 
     color = FIELD_TEXT_COLOR_NORMAL;
-    yes_text = FIELD_UI_TEXT_AT(g_text_choice_glyph_offsets, FIELD_UI_TEXT_YES);
-    text_table = FIELD_UI_TEXT_TABLE(g_text_choice_glyph_offsets, FIELD_UI_TEXT_YES);
+    yes_text = FIELD_UI_TEXT_AT(g_field_ui_text_yes, FIELD_UI_TEXT_YES);
+    text_table = FIELD_UI_TEXT_TABLE(g_field_ui_text_yes, FIELD_UI_TEXT_YES);
+
     if (g_card_menu_choice_toggle != 0)
     {
         color = FIELD_TEXT_COLOR_DIM;
     }
+
     prim = field_draw_text(prim, ot, yes_text, color, x - CARD_MENU_CHOICE_YES_GAP, y, FIELD_TEXT_ALIGN_RIGHT);
 
     color = FIELD_TEXT_COLOR_NORMAL;
     no_text = FIELD_UI_TEXT(text_table, FIELD_UI_TEXT_NO);
+
     if (g_card_menu_choice_toggle == 0)
     {
         color = FIELD_TEXT_COLOR_DIM;
     }
+
     prim = field_draw_text(prim, ot, no_text, color, x + CARD_MENU_CHOICE_NO_GAP, y, FIELD_TEXT_ALIGN_LEFT);
 
     if (g_pad_input & CARD_MENU_CHOICE_BUTTON_MASK)
@@ -39,5 +43,6 @@ inline void* card_menu_draw_choice_prompt(void* prim, u_long* ot, s32 x, s32 y)
         field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
         g_pad_input = 0;
     }
+
     return prim;
 }

@@ -351,7 +351,7 @@ static void field_apply_region_effect(PetRecord* record, s32 effect, FieldRegion
 
                 if (value < amount)
                 {
-                    record->unk48.flags |= 1 << kind;
+                    record->companion_flags.low |= 1 << kind;
                 }
             }
             else if (effect < FIELD_EFFECT_CLEAR_END)
@@ -360,7 +360,7 @@ static void field_apply_region_effect(PetRecord* record, s32 effect, FieldRegion
 
                 if (value < amount)
                 {
-                    record->unk48.flags &= ~(1 << (kind - FIELD_EFFECT_SET_END));
+                    record->companion_flags.low &= ~(1 << (kind - FIELD_EFFECT_SET_END));
                 }
             }
             else

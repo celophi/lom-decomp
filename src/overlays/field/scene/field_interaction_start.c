@@ -152,7 +152,7 @@ s32 field_get_actor_facing(s32 actor_id);
 FieldActorRecord* field_find_actor_record();
 FieldActorRecord* field_find_actor_record_or_default(u32 actor_id, FieldRuntimeContext* context);
 void field_script_run(FieldScriptState* state);
-s32 akao_fade_song_volume(s32 arg0, s32 arg1, s32 arg2);
+s32 akao_fade_song_volume(s32 song_handle, s32 ticks, s32 volume);
 
 /* Public functions of this file that other files call without a prototype. */
 void field_begin_party_script_control(s32 mode);
@@ -207,7 +207,7 @@ static void field_runtime_init(void)
 static void field_bind_runtime_pointers(void)
 {
     g_field_game_state = (SavedGameLayout*)&g_saved_game;
-    g_field_runtime = &D_80122C00;
+    g_field_runtime = &g_field_runtime_context;
     g_field_scene_state = SCENE_STATE;
 }
 

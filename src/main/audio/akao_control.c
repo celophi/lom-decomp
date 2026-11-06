@@ -247,7 +247,7 @@ void akao_seq_start_song(u8* sequence_data, s32 start_mask)
     flags = song->flags;
     cleared_flags = flags & ~(AKAO_SONG_DESCRIPTOR_FLAGS | AKAO_SONG_VOICE_DROPPED | AKAO_SONG_VOICE_STOLEN);
     song->flags = cleared_flags;
-    flags = descriptor->unk14;
+    flags = descriptor->match_value;
 
     if (flags == g_akao_song_descriptor_match_value[0])
     {
@@ -937,7 +937,7 @@ void akao_seq_resume_song(AkaoSongDescriptor* descriptor)
     g_akao_seq_channel0->flags = song_flags;
     song = g_akao_seq_channel0;
 
-    if (descriptor->unk14 == g_akao_song_descriptor_match_value[0])
+    if (descriptor->match_value == g_akao_song_descriptor_match_value[0])
     {
         song_flags |= AKAO_SONG_LOWER_XA_AREA_FLAG;
     }

@@ -143,8 +143,6 @@ g_card_save_title_sjis  = 0x80140594;
 g_card_test_payload     = 0x801405A8;
 
 
-g_menu_label_key_a     = 0x800EC3DA;
-g_menu_label_key_b     = 0x800EC3E4;
 g_field_weapon_type_conflicts = 0x800F0BE0;
 g_field_armor_type_conflicts = 0x800F0BEC;
 field_text_reset_windows = 0x800643E0;
@@ -238,3 +236,7 @@ field_text_build_sprites             = 0x800644FC;
 field_draw_sprite_number = 0x800AD208;
 field_draw_sprite_glyph = 0x800AD524;
 g_playtime_vsync_origin = 0x80042FB4;
+
+// FIELD UI string table entries.
+g_field_ui_text_plus = 0x800EC3DA;
+g_field_ui_text_minus = 0x800EC3E4;

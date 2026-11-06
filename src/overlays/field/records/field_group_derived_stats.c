@@ -64,7 +64,7 @@ typedef struct
 /** @brief The golem name text table. */
 #define GOLEM_NAME_TEXT ((GolemNameText*)field_find_resource(FIELD_RESOURCE_GOLEM_NAME_TEXT))
 
-extern GolemWeaponClassTable D_80051C50;
+extern GolemWeaponClassTable g_field_golem_weapon_classes;
 /** @brief Signed stat modifier for each four-bit modifier index (index 4 is 0; range -10 to +20). */
 extern s8 g_field_stat_modifier_values[];
 
@@ -100,7 +100,7 @@ void field_golem_build_group_record(s32 group)
     s32 hundreds;
     s32 index;
 
-    weapon_classes = D_80051C50;
+    weapon_classes = g_field_golem_weapon_classes;
 
     length = 0;
     work[15] = g_saved_game.layout.golems_created;
@@ -425,7 +425,7 @@ void field_golem_build_group_record(s32 group)
     g_saved_game.layout.golem_records[group].unknown_0x45 = 0;
     work[0] = 75 - g_saved_game.layout.golem_records[group].logic_layout.bits.grid_bound * 10;
     work[0] = work[0] < 0 ? 0 : work[0] > 50 ? 50 : work[0];
-    g_saved_game.layout.golem_records[group].unknown_0x46 = work[0];
+    g_saved_game.layout.golem_records[group].random_chance = work[0];
     g_saved_game.layout.golem_records[group].unknown_0x47 = 0;
     g_saved_game.layout.golem_records[group].palette = 0;
 

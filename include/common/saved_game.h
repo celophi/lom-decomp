@@ -350,7 +350,7 @@ typedef struct FieldItemRecord
             u8 spell;
             u8 power;
         } instrument;
-        /** @brief Golem companion (party slot 2, unk150[0]): GolemRecord bytes 0x44-0x4B. */
+        /** @brief Golem companion (party slot 2, instruments[0]): GolemRecord bytes 0x44-0x4B. */
         struct
         {
             u32 logic_class : 4;
@@ -392,7 +392,8 @@ typedef struct FieldCharacterRecord
         struct
         {
             u8 type;
-            u8 unk19;
+            /** @brief Which guest, the golem's logic class, or the pet's species. */
+            u8 variant;
             /** @brief Commands of battle actions 0 and 1. */
             u8 commands[FIELD_COMMAND_SLOT_COUNT];
             /** @brief Battle actions 4 to 7: a technique of the weapon type, FIELD_SKILL_INSTRUMENT plus an item slot, or FIELD_SKILL_NONE. */
@@ -417,9 +418,12 @@ typedef struct FieldCharacterRecord
     u16 equipment_totals[4];
     /** @brief Bits 0-8: base value in quarter units, bits 9-15: effective value with equipment. */
     u16 stats[FIELD_CHARACTER_STAT_COUNT];
-    u8 unk40;
-    u8 unk41;
-    u8 unk42;
+    /** @brief Status immunities, as in the armor's status_flags. */
+    u8 status_immunities;
+    /** @brief Battle power flags, as in the weapon's status_flags. */
+    u8 weapon_flags;
+    /** @brief Element resistances, as in the armor's element_flags. */
+    u8 element_resistances;
     /** @brief Companion ability (MENU_TEXT_COMPANION_ABILITY_NAMES), copied from the pet record; golems copy GolemRecord::companion_ability. */
     u8 companion_ability;
     /** @brief Duels won and lost against the other player. */
@@ -428,8 +432,11 @@ typedef struct FieldCharacterRecord
     /** @brief Action slot bound to each pad button (see g_field_hint_button_map); reset to identity when a companion joins. */
     u8 button_actions[8];
     FieldItemRecord equipment[FIELD_EQUIPMENT_SLOT_COUNT];
-    /** @brief Four further item records; the hero's are scanned with the equipment as one run of eight. */
-    FieldItemRecord unk150[4];
+    /**
+     * @brief Instrument records indexed by FIELD_SKILL_INSTRUMENT skills; the hero's are scanned with the equipment as one run of eight.
+     * @note The golem companion keeps its golem data in instruments[0].
+     */
+    FieldItemRecord instruments[4];
 } FieldCharacterRecord;
 
 /** @brief FieldLandRecord::flags bits. */
@@ -695,7 +702,14 @@ typedef struct PetRecord
     u16 equipment_totals[4];
     /** @brief Bits 0-8: stat value (times four), bits 9-15: growth. */
     u16 stats[FIELD_CHARACTER_STAT_COUNT];
-    u8 unk38[4];
+    /** @brief Copied to the party record's status_immunities and the armor's status_flags when the pet joins. */
+    u8 status_immunities;
+    /** @brief Copied to the party record's weapon_flags. */
+    u8 weapon_flags;
+    /** @brief Copied to the party record's element_resistances and the armor's element_flags. */
+    u8 element_resistances;
+    /** @brief Copied to the party record's companion_ability. */
+    u8 companion_ability;
     /** @brief Resource 0xD index of equipment[0]. */
     u8 weapon_id;
     /** @brief Resource 0xE indexes of equipment[1] to equipment[3]. */
@@ -713,12 +727,12 @@ typedef struct PetRecord
         u8 effects[4];
         PetStatusFlags bits;
     } status;
-    /** @brief Low byte: flag bits set or cleared by effects. */
+    /** @brief Flag word scripts read as FIELD_VAR_COMPANION_FLAGS; effects set and clear bits of the low byte. */
     union
     {
         s32 word;
-        u8 flags;
-    } unk48;
+        u8 low;
+    } companion_flags;
     /** @brief Per-stat growth: the accumulator is added to the stat per level, then reset to the rate. */
     FieldGrowth stat_growth[FIELD_CHARACTER_STAT_COUNT];
     /** @brief Growth of equipment_totals: the accumulator carry (bit 7) is added per level. */
@@ -836,7 +850,7 @@ typedef struct
         } bits;
     } logic_layout;
     u8 unknown_0x45;
-    u8 unknown_0x46; /**< 75 - 10 * grid bound, clamped to 0-50; shown as a number by MENU. */
+    u8 random_chance; /**< 75 - 10 * grid bound, clamped to 0-50; shown as a number by MENU. */
     u8 unknown_0x47;
     s32 palette;                                           /**< Portrait and sprite palette, 0-31; MENU also names it as the golem's color. */
     FieldItemRecord source_items[GOLEM_SOURCE_ITEM_COUNT]; /**< Items the golem was built from; an empty name ends the list. */
@@ -1058,7 +1072,7 @@ typedef union
         u8 _pad[0x2F0];
         FieldLandWords lands[FIELD_LAND_COUNT];
     } land_words;
-    /** @brief The hero's equipment and unk150 records (at 0x640) scanned as one run of eight. */
+    /** @brief The hero's equipment and instrument records (at 0x640) scanned as one run of eight. */
     struct
     {
         u8 _pad[0x640];

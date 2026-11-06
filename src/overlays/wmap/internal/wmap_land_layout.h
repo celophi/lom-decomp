@@ -41,10 +41,10 @@ s32 wmap_has_persistent_land_event(void);
 void wmap_add_artifact_influence(s32 table_row, s32 output_row, u8* output_address);
 void wmap_add_saved_land_influence(s32 record_index, s32 other_index, s32 unused, s32* values);
 
-void func_8005D46C(void);
-void func_8005D474(void);
-void func_8005D47C(void);
-void func_8005D484(void);
-void func_8005D48C(void);
+void wmap_land_layout_stub_1(void);
+void wmap_land_layout_stub_2(void);
+void wmap_land_layout_stub_3(void);
+void wmap_land_layout_stub_4(void);
+void wmap_land_layout_stub_5(void);
 
 #endif

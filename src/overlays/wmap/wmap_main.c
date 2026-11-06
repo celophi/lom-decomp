@@ -191,18 +191,24 @@ extern s32 g_wmap_loop_result;
 extern s32 g_wmap_attract_1_requested;
 /** @brief Nonzero to play attract movies two through four after the map returns. */
 extern s32 g_wmap_attract_2_requested;
-extern s32 D_800DBE6C;
-extern s32 D_800DBE74;
-extern s32 D_800DCEFC;
+/** @brief Set to -1 by wmap_init_state; nothing reads it. */
+extern s32 g_wmap_unused_init_word;
+/** @brief Land image loads are refused once this reaches 10; WMAP only ever clears it. */
+extern s32 g_wmap_land_image_load_count;
+/** @brief Word between the vehicle cell coordinates; cleared by wmap_init_state, nothing reads it. */
+extern s32 g_wmap_vehicle_cell_unused;
 extern CVECTOR g_wmap_tint;
-extern s32 D_80139218;
+/** @brief Three-bit phase advanced every other spirit display frame; nothing reads it. */
+extern s32 g_wmap_spirit_unused_phase;
 extern s32* g_wmap_effect_params;
 extern s32 g_wmap_tint_blending;
 extern s32 g_wmap_carousel_position;
-extern DVECTOR D_8013B260;
-extern s32 D_8013B290;
-extern s32 D_8013B27C;
-extern s32 D_80182D88;
+/** @brief Cleared by wmap_init_state; nothing reads it. */
+extern DVECTOR g_wmap_unused_position;
+/** @brief Set to -1 by wmap_init_state; nothing reads it. */
+extern s32 g_wmap_unused_selection;
+/** @brief Cleared by wmap_init_state and wmap_clear_view_unused; nothing reads it. */
+extern s32 g_wmap_view_unused_word;
 extern s32 g_wmap_map_shadow_level;
 /** @brief Base RGB tint of the scrolling textured backdrop. */
 extern CVECTOR g_wmap_backdrop_tint;
@@ -223,7 +229,8 @@ extern s16* g_wmap_input_scripts[];
 extern POLY_FT4 g_wmap_loading_quad;
 /** @brief Loaded layout selector used to choose the entry image. */
 extern s32 g_wmap_layout_id;
-extern s32 D_800DBE7C;
+/** @brief Cleared every frame; nothing reads it. */
+extern s32 g_wmap_unused_frame_word;
 extern u8 g_wmap_load_buffer[];
 /** @brief Sixteen-color CLUT of the image loaded on map entry. */
 extern u16 g_wmap_entry_palette[16];
@@ -242,7 +249,8 @@ extern s32 g_wmap_entry_layout_id;
 extern s32 g_wmap_tint_speed;
 /** @brief World-map song loaded from the entry music resource. */
 extern AkaoHeader g_wmap_music_buffer;
-extern s32 D_801ADB08;
+/** @brief Set to -1 when the world map loads; nothing reads it. */
+extern s32 g_wmap_unused_load_word;
 /** @brief Animation data for land display 31, kept in cache slot 16. */
 extern u8 g_wmap_resident_land_animation_data[];
 extern RECT g_wmap_framebuffer_rect;
@@ -335,8 +343,8 @@ void wmap_init_state(void)
     g_wmap_forced_animated_land_id = -1;
     g_wmap_land_event_24_pending = 0;
     g_wmap_special_return_pending = 0;
-    D_800DBE6C = -1;
-    D_800DBE74 = 0;
+    g_wmap_unused_init_word = -1;
+    g_wmap_land_image_load_count = 0;
     g_wmap_land_event_10_active = 0;
     g_wmap_land_event_09_pending = 0;
     g_wmap_models_use_effect_camera = 0;
@@ -376,19 +384,19 @@ void wmap_init_state(void)
     g_wmap_map_shadow_level = WMAP_INITIAL_MAP_SHADOW_LEVEL;
     g_wmap_input_locked = 1;
     g_wmap_sequence_count = 0;
-    D_800DCEFC = 0;
-    D_80182D88 = 0;
+    g_wmap_vehicle_cell_unused = 0;
+    g_wmap_view_unused_word = 0;
     /* Prepare actor, land, and label display records. */
     wmap_select_mesh_motion(0);
     wmap_init_actor_display_states();
     wmap_init_spirit_animation();
     wmap_init_map_packets();
     g_wmap_frame_count = 0;
-    D_80139218 = 0;
+    g_wmap_spirit_unused_phase = 0;
     g_wmap_party_cell_dirty = -1;
-    D_8013B290 = -1;
+    g_wmap_unused_selection = -1;
     wmap_init_land_image_cache();
-    func_80058298();
+    wmap_map_display_stub_1();
     wmap_init_land_display();
     wmap_init_sequences();
     wmap_reset_artifact_carousel();
@@ -449,9 +457,9 @@ void wmap_init_state(void)
     g_wmap_preview_y = 0;
     g_wmap_preview_x = 0;
     g_wmap_status_panel_mode = 0;
-    D_8013B260.vy = 0;
+    g_wmap_unused_position.vy = 0;
     g_wmap_tint.r = 0;
-    D_8013B260.vx = 0;
+    g_wmap_unused_position.vx = 0;
     g_wmap_tint.g = 0;
     g_wmap_tint.b = 0;
     SetPolyFT4(g_wmap_preview_saved_quads);
@@ -1339,7 +1347,7 @@ s32 wmap_run_loop(void)
     show_loading_image = 1;
     g_wmap_layout_id = layout_id;
     g_wmap_entry_layout_id = layout_id;
-    D_801ADB08 = -1;
+    g_wmap_unused_load_word = -1;
     wmap_init_state();
     wmap_init_transition_mesh();
 
@@ -1920,7 +1928,7 @@ s32 wmap_run_loop(void)
 
             g_wmap_packet_bytes = 0;
             ClearOTagR(g_wmap_current_frame->ordering_table, WMAP_OT_COUNT);
-            D_800DBE7C = 0;
+            g_wmap_unused_frame_word = 0;
             g_wmap_frame_count++;
 
             if ((g_wmap_input_locked != 0) || (g_wmap_selection_phase >= WMAP_SELECTION_SHOW_ARTIFACTS) || (g_wmap_mesh_transition_direction != 0) ||
@@ -2178,7 +2186,7 @@ s32 wmap_run_loop(void)
                 ResetSpadStack();
             }
 
-            func_8005D46C();
+            wmap_land_layout_stub_1();
             g_wmap_land_image_cache_missed = 0;
             vsync_count = VSync(1);
             DrawSync(0);

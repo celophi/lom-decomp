@@ -47,7 +47,6 @@ ABILITY_RULE_COUNT = 18
 TECHNIQUE_RULE_COUNT = 227
 GOLEM_SHAPE_COUNT = 11
 GOLEM_SHAPE_BYTES = 88
-TITLE_CHOICE_INDEX = 19
 MENU_WIDTH = 64
 MENU_HEIGHT = 32
 MENU_PALETTE_COUNT = 2
@@ -66,7 +65,7 @@ class FieldSymbols:
     texture: int
     animations: int
     hud_colors: int
-    title_choice: int
+    ui_text: int
     abilities: int
     techniques: int
     save_codes: int
@@ -109,7 +108,7 @@ SYMBOL_NAMES = {
     "texture": "g_field_resource_buffer",
     "animations": "g_field_resource_blob",
     "hud_colors": "g_field_hud_hp_colors",
-    "title_choice": "g_field_title_choice_text_entry",
+    "ui_text": "g_field_ui_text_table",
     "abilities": "g_field_ability_unlock_rules",
     "techniques": "g_field_technique_unlock_rules",
     "save_codes": "g_field_known_save_codes",
@@ -290,7 +289,7 @@ def read_menu_image(blob: Blob[FieldSymbols]) -> list[Part]:
 def read_text(blob: Blob[FieldSymbols], chart: Chart | None) -> list[Part]:
     names = blob.symbols
     tables = (
-        ("ui", names.title_choice - TITLE_CHOICE_INDEX * 2, names.abilities),
+        ("ui", names.ui_text, names.abilities),
         ("techniques", names.technique_names, names.command_names),
         ("commands", names.command_names, names.golem_palettes),
         ("items", names.item_names, names.panel_quads),

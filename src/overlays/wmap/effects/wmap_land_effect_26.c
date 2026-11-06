@@ -528,7 +528,7 @@ void wmap_land_effect_26_sequence_9_step_01(void)
 
     for (index = 14; index < 34; index++)
     {
-        *(s16*)((u8*)g_wmap_actor_motions + index * 20) = 0;
+        g_wmap_actor_motions[index].state = 0;
         g_wmap_actor_animations[index + 14].data = g_wmap_animation_bank_0;
     }
 

@@ -41,7 +41,6 @@ class SourceTest(unittest.TestCase):
             (field.ABILITY_RULE_COUNT, "src/overlays/field/internal/field_ability_progression.h", "FIELD_ABILITY_UNLOCK_RULE_COUNT"),
             (field.TECHNIQUE_RULE_COUNT, "src/overlays/field/ui/field_dialog_screens.c", "FIELD_TECHNIQUE_UNLOCK_RULE_COUNT"),
             (field.GOLEM_SHAPE_COUNT, "include/common/golem_shape.h", "GOLEM_SHAPE_COUNT"),
-            (field.TITLE_CHOICE_INDEX, "src/overlays/field/ui/field_choice_labels.c", "FIELD_TITLE_CHOICE_FIRST_TEXT"),
             (field.MENU_HEIGHT, "src/overlays/field/ui/field_menu_windows.c", "MENU_FRAME_IMAGE_HEIGHT"),
             (field.MENU_PALETTE_COUNT, "src/overlays/field/ui/field_menu_windows.c", "MENU_FRAME_STYLES"),
             (field.TRANSITION_SIZE, "src/overlays/field/scene/field_scene_transition.c", "FIELD_TRANSITION_TILE_SIZE"),

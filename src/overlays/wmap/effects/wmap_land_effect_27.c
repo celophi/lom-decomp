@@ -180,18 +180,18 @@ void wmap_land_effect_27_sequence_8_step_01(void)
 void wmap_land_effect_27_sequence_9_step_01(void)
 {
     s32 i;
-    void* base = g_wmap_effect_params;
+    s32* params = g_wmap_effect_params;
 
-    *(s32*)((u8*)base + 0x2C) = 0;
-    *(s32*)((u8*)base + 0x30) = 0;
-    *(s32*)((u8*)base + 0x38) = 0;
-    *(s32*)((u8*)base + 0x34) = 0x80;
-    *(s32*)((u8*)base + 0x3C) = 2;
-    *(s32*)((u8*)base + 0x40) = 0x64;
-    *(s32*)((u8*)base + 0x44) = 0x3C;
-    *(s32*)((u8*)base + 0x48) = 8;
-    *(s32*)((u8*)base + 0x4C) = 1;
-    *(s32*)((u8*)base + 0x50) = 0x5DC0;
+    params[11] = 0;
+    params[12] = 0;
+    params[14] = 0;
+    params[13] = 0x80;
+    params[15] = 2;
+    params[16] = 0x64;
+    params[17] = 0x3C;
+    params[18] = 8;
+    params[19] = 1;
+    params[20] = 0x5DC0;
 
     WMAP_RESET_PARTICLE_SLOTS(i, 0x18, g_wmap_actor_motions[60 + i].state, 60, g_wmap_animation_bank_2);
 

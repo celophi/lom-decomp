@@ -1,6 +1,7 @@
 #include "common.h"
 #include <abs.h>
 
+#include "common/encoded_text.h"
 #include "internal/menu_internal.h"
 #include "main/audio/akao.h"
 #include "main/audio/akao_cmd.h"
@@ -1384,11 +1385,11 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x1D].u2.bits.expanded = 0;
     g_menu_nodes[0x2B].idx_nav.s.self_idx = 0x2B;
     g_menu_nodes[0x1D].u2.bits.depth = 0;
-    node30_flags = g_menu_nodes[0x1E].u2.unk2;
+    node30_flags = g_menu_nodes[0x1E].u2.word;
     g_menu_nodes[0x1D].u2.bits.active = 1;
     g_menu_nodes[0x1D].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0x1F].u2.bits.depth = 1;
-    g_menu_nodes[0x1E].u2.unk2 = node30_flags & ~MENU_NODE_FLAG_EXPANDED;
+    g_menu_nodes[0x1E].u2.word = node30_flags & ~MENU_NODE_FLAG_EXPANDED;
     g_menu_nodes[0x1F].u2.s.parent_idx = 0x1E;
     g_menu_nodes[0x1E].u2.bits.depth = 0;
     g_menu_nodes[0x2B].u2.bits.depth = 1;
@@ -1494,7 +1495,7 @@ void menu_collapse_all(void)
 
     for (node_index = 0; node_index < MENU_NODE_COUNT; node_index++)
     {
-        g_menu_nodes[node_index].u2.unk2 &= ~MENU_NODE_FLAG_EXPANDED;
+        g_menu_nodes[node_index].u2.word &= ~MENU_NODE_FLAG_EXPANDED;
     }
 }
 
@@ -1554,7 +1555,7 @@ s32 menu_layout_node(s32 node_index, s32 base_pos)
     MenuNode* child_source;
 
     layout_pos = base_pos;
-    is_expanded = (((&g_menu_nodes[node_index])->u2.unk2) >> 1) & 1;
+    is_expanded = (((&g_menu_nodes[node_index])->u2.word) >> 1) & 1;
     layout_y = layout_pos & 0xFFFF;
     layout_pos += MENU_ROW_HEIGHT;
     node = &g_menu_nodes[node_index];
@@ -1785,7 +1786,7 @@ s32 menu_handle_node_input(void)
 
         nodes = g_menu_nodes;
         active_node = nodes + g_menu_active_node;
-        active_node->u2.unk2 |= 0xC;
+        active_node->u2.word |= 0xC;
 
         if (active_node->u2.s.parent_idx == MENU_NONE)
         {
@@ -1938,7 +1939,7 @@ void menu_set_active_node(void)
     /* Clear the "expanded" bit (bit 1) on every node, then re-expand only the active path. */
     for (clear_index = 0; clear_index < MENU_NODE_COUNT; clear_index++)
     {
-        g_menu_nodes[clear_index].u2.unk2 &= ~MENU_NODE_FLAG_EXPANDED;
+        g_menu_nodes[clear_index].u2.word &= ~MENU_NODE_FLAG_EXPANDED;
     }
 
     /* Walk from g_menu_active_node up to the root, marking each ancestor expanded. */
@@ -1952,7 +1953,7 @@ void menu_set_active_node(void)
         {
             child_slot = ((MenuNode*)(walk_off + walk_base))->u2.s.parent_idx;
             walk_off = child_slot << 4;
-            ((MenuNode*)(walk_off + walk_base))->u2.unk2 |= MENU_NODE_FLAG_EXPANDED;
+            ((MenuNode*)(walk_off + walk_base))->u2.word |= MENU_NODE_FLAG_EXPANDED;
         } while (((MenuNode*)(walk_off + walk_base))->u2.s.parent_idx != MENU_NONE);
     }
 
@@ -1960,8 +1961,8 @@ void menu_set_active_node(void)
     active_base = g_menu_nodes;
     active_idx = g_menu_active_node;
     active_node = active_base + active_idx;
-    packed_value = active_node->u2.unk2 | MENU_NODE_FLAG_EXPANDED;
-    active_node->u2.unk2 = packed_value;
+    packed_value = active_node->u2.word | MENU_NODE_FLAG_EXPANDED;
+    active_node->u2.word = packed_value;
 
     if ((packed_value >> 1) & 1)
     {
@@ -1987,8 +1988,8 @@ void menu_set_active_node(void)
         }
     }
 
-    /* Update g_menu_char_slot from bits [5:4] of u2.unk2 (3 = preserve current value). */
-    char_slot_bits = ((g_menu_nodes[g_menu_active_node].u2.unk2) >> 4) & 3;
+    /* Update g_menu_char_slot from bits [5:4] of u2.word (3 = preserve current value). */
+    char_slot_bits = ((g_menu_nodes[g_menu_active_node].u2.word) >> 4) & 3;
 
     if (char_slot_bits != 3)
     {
@@ -2563,11 +2564,11 @@ s32 menu_handle_input(s32 process_actions)
                             {
                                 if ((slot_base[MENU_CHARACTER_INFO_OFFSET] & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GOLEM)
                                 {
-                                    g_field_rename_source = slot_base[MENU_CHARACTER_FIELD_OFFSET(info.actions.unk19)] + 0x80;
+                                    g_field_rename_source = slot_base[MENU_CHARACTER_FIELD_OFFSET(info.actions.variant)] + 0x80;
                                 }
                                 else
                                 {
-                                    g_field_rename_source = slot_base[MENU_CHARACTER_FIELD_OFFSET(info.actions.unk19)];
+                                    g_field_rename_source = slot_base[MENU_CHARACTER_FIELD_OFFSET(info.actions.variant)];
                                 }
 
                                 field_copy_name(g_field_rename_initial_name,
@@ -3635,7 +3636,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                     {
                                         void* a3 = (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_NAMES]);
                                         menu_concat_encoded_text(
-                                            prefix_buffer, (void*)((u8*)a3 + *(u16*)((u8*)a3 + (g_menu_item_ptr->info.halves[1] & 0x3F) * 2)),
+                                            prefix_buffer, TEXT_TABLE_STRING(a3, g_menu_item_ptr->info.halves[1] & 0x3F),
                                             (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] +
                                                     *(u16*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] +
                                                             0xB4)));
@@ -4312,7 +4313,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                             (void*)((u8*)saved_game + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE + MENU_CHARACTER_RECORD_OFFSET));
                                         void* text = (void*)((u8*)character_record +
                                                              ((((MenuNameSelection*)(ptr + (MENU_SKILL_OFFSET - 0x1B)))->fields.index * MENU_ITEM_RECORD_SIZE) +
-                                                              OFFSETOF(FieldCharacterRecord, unk150)));
+                                                              OFFSETOF(FieldCharacterRecord, instruments)));
                                         packet_cursor = field_draw_text(draw_packet_cursor, ot_entry, text, FIELD_TEXT_COLOR_MENU, MENU_CONTENT_X(content_item),
                                                                         MENU_CONTENT_Y(content_item), MENU_CONTENT_ALIGN(content_item));
                                     }
@@ -4339,10 +4340,11 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
 
                             break;
                             case 0x1F:
-                                packet_cursor = menu_draw_content_text(packet_cursor, ot_entry,
-                                                                       menu_text_entry(menu_text_table_base(MENU_TEXT_MONSTER_NAMES),
-                                                                                       menu_character_block()[MENU_CHARACTER_FIELD_OFFSET(info.actions.unk19)]),
-                                                                       FIELD_TEXT_COLOR_MENU, content_item);
+                                packet_cursor =
+                                    menu_draw_content_text(packet_cursor, ot_entry,
+                                                           menu_text_entry(menu_text_table_base(MENU_TEXT_MONSTER_NAMES),
+                                                                           menu_character_block()[MENU_CHARACTER_FIELD_OFFSET(info.actions.variant)]),
+                                                           FIELD_TEXT_COLOR_MENU, content_item);
                                 break;
                             case 0x20:
                             {
@@ -4618,8 +4620,8 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                     void* a2 =
                                         (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_GOLEM_CLASS_NAMES]);
                                     packet_cursor =
-                                        field_draw_text(packet_cursor, ot_entry, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), FIELD_TEXT_COLOR_MENU,
-                                                        MENU_CONTENT_X(content_item), MENU_CONTENT_Y(content_item), MENU_CONTENT_ALIGN(content_item));
+                                        field_draw_text(packet_cursor, ot_entry, TEXT_TABLE_STRING(a2, v), FIELD_TEXT_COLOR_MENU, MENU_CONTENT_X(content_item),
+                                                        MENU_CONTENT_Y(content_item), MENU_CONTENT_ALIGN(content_item));
                                 }
                             }
 
@@ -4635,8 +4637,8 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                     void* a2 =
                                         (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_GOLEM_GRID_SIZES]);
                                     packet_cursor =
-                                        field_draw_text(packet_cursor, ot_entry, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), FIELD_TEXT_COLOR_MENU,
-                                                        MENU_CONTENT_X(content_item), MENU_CONTENT_Y(content_item), MENU_CONTENT_ALIGN(content_item));
+                                        field_draw_text(packet_cursor, ot_entry, TEXT_TABLE_STRING(a2, v), FIELD_TEXT_COLOR_MENU, MENU_CONTENT_X(content_item),
+                                                        MENU_CONTENT_Y(content_item), MENU_CONTENT_ALIGN(content_item));
                                 }
                             }
 
@@ -4648,7 +4650,7 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 if (golem_index >= 0)
                                 {
                                     SavedGameLayout* context = g_saved_game_ctx;
-                                    u8 v = menu_golem_record(context, golem_index)->unknown_0x46;
+                                    u8 v = menu_golem_record(context, golem_index)->random_chance;
                                     packet_cursor =
                                         field_draw_number(ot_entry, packet_cursor, v, FIELD_TEXT_COLOR_MENU, &pos, MENU_CONTENT_ALIGN(content_item));
                                 }
@@ -4805,8 +4807,8 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 void* base = (void*)g_saved_game_ctx + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
 
                                 if ((*(u8*)((u8*)base + MENU_CHARACTER_INFO_OFFSET) & FIELD_CHARACTER_TYPE_MASK) != FIELD_CHARACTER_GUEST ||
-                                    ((*(u8*)((u8*)base + MENU_CHARACTER_FIELD_OFFSET(info.actions.unk19)) != 5) &&
-                                     (*(u8*)((u8*)base + MENU_CHARACTER_FIELD_OFFSET(info.actions.unk19)) != 8)))
+                                    ((*(u8*)((u8*)base + MENU_CHARACTER_FIELD_OFFSET(info.actions.variant)) != 5) &&
+                                     (*(u8*)((u8*)base + MENU_CHARACTER_FIELD_OFFSET(info.actions.variant)) != 8)))
                                 {
                                     packet_cursor = menu_draw_content_text(
                                         packet_cursor, ot_entry, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_QUICK_ATTACKS),
@@ -4820,8 +4822,8 @@ void* menu_draw_scene_content(void* packet_cursor, u_long* ot_entry)
                                 void* base = (void*)g_saved_game_ctx + g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
 
                                 if ((*(u8*)((u8*)base + MENU_CHARACTER_INFO_OFFSET) & FIELD_CHARACTER_TYPE_MASK) != FIELD_CHARACTER_GUEST ||
-                                    ((*(u8*)((u8*)base + MENU_CHARACTER_FIELD_OFFSET(info.actions.unk19)) != 5) &&
-                                     (*(u8*)((u8*)base + MENU_CHARACTER_FIELD_OFFSET(info.actions.unk19)) != 8)))
+                                    ((*(u8*)((u8*)base + MENU_CHARACTER_FIELD_OFFSET(info.actions.variant)) != 5) &&
+                                     (*(u8*)((u8*)base + MENU_CHARACTER_FIELD_OFFSET(info.actions.variant)) != 8)))
                                 {
                                     packet_cursor = menu_draw_content_text(
                                         packet_cursor, ot_entry, menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), MENU_MESSAGE_POWER_ATTACKS),
@@ -5408,7 +5410,7 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
                         if (flag & 0x80)
                         {
                             u8* item_ptr = pad_base + (((MenuNameSelection*)(flag_addr + MENU_ACTION_SLOT_OFFSET))->fields.index * MENU_ITEM_RECORD_SIZE) +
-                                           (MENU_CHARACTER_RECORD_OFFSET + OFFSETOF(FieldCharacterRecord, unk150));
+                                           (MENU_CHARACTER_RECORD_OFFSET + OFFSETOF(FieldCharacterRecord, instruments));
                             u8 cat = *(item_ptr + OFFSETOF(FieldItemRecord, derived.instrument.spirit));
                             u8 entry = *(item_ptr + OFFSETOF(FieldItemRecord, derived.instrument.spell));
                             u8* state44 = (u8*)g_menu_state_ptr;
@@ -5449,7 +5451,7 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
                                 u16 name_offset = *(u16*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_NAMES] +
                                                           name_index * 2);
                                 u8* message_table = (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES];
-                                u16 suffix_offset = *(u16*)((u8*)message_table + 0xB4);
+                                u16 suffix_offset = ((u16*)message_table)[MENU_MESSAGE_EQUIPPED_ITEM_SUFFIX];
                                 u8* name = (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_NAMES] + name_offset;
                                 u8* suffix = (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES] + suffix_offset;
                                 u8* out = item_name_buffer;
@@ -5526,7 +5528,7 @@ void* menu_draw_content_cursor(void* prim_buf, u_long* ot, s32 draw_label)
                 {
                     u8* text_table = menu_text_table_base(MENU_TEXT_MONSTER_FAMILIES);
                     u8* character_base = (u8*)g_saved_game_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
-                    u8 entry_index = character_base[MENU_CHARACTER_FIELD_OFFSET(info.actions.unk19)];
+                    u8 entry_index = character_base[MENU_CHARACTER_FIELD_OFFSET(info.actions.variant)];
 
                     prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));
                     break;
@@ -5676,9 +5678,9 @@ void* menu_draw_node_recursive(s32 node_index, void* prim_buf, u_long* ot)
     g_menu_nav_count++;
     next_prim = menu_emit_icon_sprite(prim_buf, ot, node->icon_id, ((node->idx_nav.nav_x_packed >> 8) & (MENU_NAV_X_MASK >> 8)) + 1,
                                       ((node->u8_u.s.nav_y_hi << 1) | (work_value = node->idx_nav.nav_x_packed >> 15)) - g_menu_content_height, 1,
-                                      ((node->u2.unk2 >> 2) & 3) != 0, g_menu_scene_type == node_index, (node->u2.unk2 >> 6) & 3);
+                                      ((node->u2.word >> 2) & 3) != 0, g_menu_scene_type == node_index, (node->u2.word >> 6) & 3);
 
-    flags = node->u2.unk2;
+    flags = node->u2.word;
     animation_frames = (flags >> 2) & 3;
 
     if (animation_frames != 0)
@@ -5688,7 +5690,7 @@ void* menu_draw_node_recursive(s32 node_index, void* prim_buf, u_long* ot)
         animation_count = work_value & 3;
         work_mask = animation_count << 2;
         updated_flags = flags & 0xFFF3;
-        node->u2.unk2 = updated_flags | work_mask;
+        node->u2.word = updated_flags | work_mask;
     }
 
     if (node->layout_frames_remaining == MENU_NODE_LAYOUT_IDLE)
@@ -5732,7 +5734,7 @@ void* menu_draw_node_recursive(s32 node_index, void* prim_buf, u_long* ot)
     tree_base = g_menu_nodes;
     tree_node = tree_base + node_index;
 
-    if ((tree_node->u2.unk2 >> 1) & 1)
+    if ((tree_node->u2.word >> 1) & 1)
     {
         s32 child_slot = 0;
         s32 child_sentinel;

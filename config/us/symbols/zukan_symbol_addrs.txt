@@ -8,7 +8,6 @@ field_draw_text = 0x800A88A0;
 field_draw_number_wide = 0x800A8B04;
 field_text_reset_windows = 0x800643E0;
 field_text_reset_scratch = 0x8006441C;
-g_field_ui_text_dashes = 0x800EC3E0;
 g_field_map_texture_bytes = 0x8018000C;
 g_zukan_overlay_id = 0x80140000;
 g_zukan_category_ranges = 0x8014001C;
@@ -67,3 +66,6 @@ g_zukan_scroll_target_y = 0x80157D74;
 g_zukan_next_resource_id = 0x80157D78;
 field_draw_sprite_number = 0x800AD208;
 field_draw_sprite_glyph = 0x800AD524;
+
+// FIELD UI string table entries.
+g_field_ui_text_dashes = 0x800EC3E0;

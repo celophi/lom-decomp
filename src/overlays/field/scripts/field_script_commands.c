@@ -118,8 +118,7 @@ enum
 /** @brief Generic view of the command parameter block. */
 typedef struct FieldCommandParams
 {
-    u16 arg0;
-    u16 arg1;
+    u16 halves[2];
     s32 words[8];
 } FieldCommandParams;
 
@@ -359,11 +358,11 @@ void field_command_actor_status(s32 command, FieldActorStatusParams* params)
                 break;
             case FIELD_ACTOR_STATUS_SET_FLAGS:
                 state->effect_flags |= params->values[0];
-                state->unk18 |= params->values[1];
+                state->script_flags |= params->values[1];
                 break;
             case FIELD_ACTOR_STATUS_MASK_FLAGS:
                 state->effect_flags &= params->values[0];
-                state->unk18 &= params->values[1];
+                state->script_flags &= params->values[1];
                 break;
             case FIELD_ACTOR_STATUS_GET_GAUGES:
                 params->values[0] = state->status_intensity;
@@ -690,7 +689,7 @@ void field_query_records_by_side(FieldKeyedList* list, FieldStatusRecord* source
 
     for (i = 0; i < FIELD_BATTLE_RECORD_COUNT; i++)
     {
-        if ((g_field_battle->records[i].unk0 & params->side_mask) && g_field_battle->records[i].state->current != 0)
+        if ((g_field_battle->records[i].side & params->side_mask) && g_field_battle->records[i].state->current != 0)
         {
             field_get_actor_position(g_field_battle->records[i].meta.bytes.id, &record_position);
             list->entries[list->count].id = g_field_battle->records[i].meta.bytes.id;

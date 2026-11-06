@@ -9,7 +9,7 @@
  * Three FIELD pointers reach these blocks:
  * - g_field_game_state points at g_saved_game (bound by field_bind_runtime_pointers) and is read
  *   through SavedGameLayout.
- * - g_field_runtime points at the field runtime context (D_80122C00):
+ * - g_field_runtime points at the field runtime context (g_field_runtime_context):
  *   FieldRuntimeContext, with its actor and event records.
  * - g_field_battle points at the field battle context (g_field_battle_context):
  *   FieldBattleContext, with its FieldStatusRecord array.
@@ -18,8 +18,8 @@
 #include "common.h"
 
 #include "common/saved_game.h"
-#include "field_menu_vars.h"
 #include "field_state_ops.h"
+#include "overlays/field/field_script_locals.h"
 
 /** @brief g_saved_game.layout, bound by field_bind_runtime_pointers. */
 extern SavedGameLayout* g_field_game_state;
@@ -408,7 +408,7 @@ typedef struct FieldTriggerTable
 #define FIELD_INTERACTION_TALK_END 0x85
 
 /**
- * @brief Field runtime context (D_80122C00, reached through g_field_runtime).
+ * @brief Field runtime context (g_field_runtime_context, reached through g_field_runtime).
  */
 typedef struct FieldRuntimeContext
 {
@@ -509,7 +509,7 @@ typedef struct FieldRuntimeContext
 } FieldRuntimeContext;
 
 /** @brief The context itself, which g_field_runtime points at. */
-extern FieldRuntimeContext D_80122C00;
+extern FieldRuntimeContext g_field_runtime_context;
 /** @brief Runtime context of the running field scene. */
 extern FieldRuntimeContext* g_field_runtime;
 

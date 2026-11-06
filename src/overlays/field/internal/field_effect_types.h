@@ -18,8 +18,7 @@
 #define FIELD_EFFECT_NO_LINK 0xFF
 
 /** @brief Retire an effect record, keeping its last state in height_or_retired_state. */
-#define FIELD_EFFECT_RETIRE(effect) \
-    ((effect)->height_or_retired_state = (effect)->state, (effect)->state = FIELD_EFFECT_RETIRED)
+#define FIELD_EFFECT_RETIRE(effect) ((effect)->height_or_retired_state = (effect)->state, (effect)->state = FIELD_EFFECT_RETIRED)
 
 /**
  * @brief Placement kinds of a part's effects (FieldObjectPart::placement_flags bits 18-23).
@@ -59,7 +58,7 @@ typedef enum
     FIELD_PLACEMENT_GROUND_POINT = 0x33,
     /** @brief At the tracked target, moved by the actor's per-track offset. */
     FIELD_PLACEMENT_TRACK_ACTION_OFFSET = 0x34,
-    /** @brief At the shared point D_80105778. */
+    /** @brief At the shared point g_field_effect_spawn_point. */
     FIELD_PLACEMENT_GLOBAL_POINT = 0x35,
     /** @brief At the part's offset, without the view offset. */
     FIELD_PLACEMENT_PART_OFFSET = 0x36,

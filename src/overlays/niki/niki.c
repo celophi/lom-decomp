@@ -47,7 +47,7 @@ void niki_build_ui_elements(void)
     g_card_menu_selection_status = 0;
     g_niki_items = g_saved_game_ctx->items;
     card_menu_clear_elements();
-    D_80164B80 = 0;
+    g_niki_confirm_skips_scan = 0;
 
     if (g_card_menu_mode != 0)
     {
@@ -150,7 +150,7 @@ s32 card_menu_update_card_sequence(void)
 
     while ((result = niki_advance_load_sequence()) == CARD_MENU_SEQUENCE_RUN_AGAIN);
 
-    if ((D_80164B80 != 0) && (g_pad_input & PAD_CONFIRM_BUTTONS))
+    if ((g_niki_confirm_skips_scan != 0) && (g_pad_input & PAD_CONFIRM_BUTTONS))
     {
         g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_GAME_DATA;
         g_card_step = g_card_steps_card_info;
@@ -163,7 +163,7 @@ s32 card_menu_update_card_sequence(void)
             break;
         case CARD_MENU_SEQUENCE_NO_CARD:
             g_card_step = g_card_steps_rescan;
-            D_80164B80 = 0;
+            g_niki_confirm_skips_scan = 0;
             break;
         case CARD_MENU_SEQUENCE_UNFORMATTED:
             g_card_entry_state = CARD_MENU_ENTRY_STATE_NO_GAME_DATA;
@@ -339,7 +339,7 @@ s32 card_menu_handle_input(void)
 /** @brief Switch to the other memory card slot and reset the card menu to check it. */
 void niki_switch_card_slot(void)
 {
-    D_80164B80 = 0;
+    g_niki_confirm_skips_scan = 0;
     g_card_step = 0;
     g_card_entry_state = CARD_MENU_ENTRY_STATE_CHECKING_CARD;
     g_card_menu_scroll_frames = 0;
@@ -523,8 +523,8 @@ void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32
                         hours = playtime / 216000;
                         result = field_draw_number(ot, result, hours, FIELD_TEXT_COLOR_NORMAL, &pos, FIELD_TEXT_ALIGN_RIGHT);
                         result = field_draw_text(result, ot,
-                                                 (u8*)(g_text_time_separator_offset_bytes[0] + ((uintptr_t)&g_text_time_separator_offset_bytes - 0x32) +
-                                                       (g_text_time_separator_offset_bytes[1] << 8)),
+                                                 (u8*)(g_field_ui_text_time_separator.low + (uintptr_t)FIELD_UI_TEXT_TABLE(g_field_ui_text_time_separator, FIELD_UI_TEXT_TIME_SEPARATOR) +
+                                                       (g_field_ui_text_time_separator.high << 8)),
                                                  FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TIME_SEPARATOR_X, y, FIELD_TEXT_ALIGN_LEFT);
                         playtime = (playtime / 3600) - (hours * 0x3C);
 
@@ -1162,7 +1162,7 @@ void* niki_draw_state_page(u_long* ot, void* prim, s32 x_offset, s32 y_offset)
     if ((g_pad_input & CARD_MENU_CARD_SWITCH_BUTTON_MASK) && (g_card_entry_state != CARD_MENU_ENTRY_STATE_CHECKING_CARD))
     {
         field_play_sound(SFX_CURSOR, AKAO_PAN_CENTER);
-        D_80164B80 = 0;
+        g_niki_confirm_skips_scan = 0;
         g_card_step = 0;
         g_card_menu_scroll_frames = 0;
         g_card_menu_scroll_target_y = 0;

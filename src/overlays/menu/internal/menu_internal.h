@@ -15,6 +15,7 @@
 #include "overlays/field/field_player_records.h"
 #include "overlays/field/field_portrait.h"
 #include "overlays/field/field_text.h"
+#include "overlays/field/field_ui_text.h"
 #include "overlays/menu/menu.h"
 
 /* Encoded-name functions of FIELD, called while FIELD is resident. */
@@ -274,19 +275,6 @@ typedef struct
     s16 h;
 } MenuRectU16;
 
-/**
- * @brief Two-byte offset into a paged string table.
- *
- * @c entry is the character/entry index within the page; @c page is the page
- * index. Together they form a string pointer via
- * @c entry + ((page << 8) + base_ptr). See @ref menu_draw_label.
- */
-typedef struct
-{
-    u8 entry; /**< Entry index within the page. */
-    u8 page;  /**< Page index. */
-} StringTableOffset;
-
 /** @brief Known table indices in the menu text-resource directory. */
 typedef enum
 {
@@ -346,6 +334,7 @@ typedef enum
     MENU_MESSAGE_CHANGE = 72,
     MENU_MESSAGE_CANCEL = 73,
     MENU_MESSAGE_INVENTORY_FULL = 86,
+    MENU_MESSAGE_EQUIPPED_ITEM_SUFFIX = 90, /**< Appended to the equipped item's name. */
     MENU_MESSAGE_NO_CONTROLLER_LINE1 = 101,
     MENU_MESSAGE_NO_CONTROLLER_LINE2 = 102
 } MenuMessage;
@@ -381,7 +370,7 @@ typedef struct
     u8 layout_frames_remaining; /**< Updates left to reach the target Y; zero snaps to the target. */
     union
     {
-        u16 unk2; /**< Full 16-bit word: low byte = flags, high byte = parent_idx. */
+        u16 word; /**< Full 16-bit word: low byte = flags, high byte = parent_idx. */
         struct
         {
             u8 flags;      /**< Bit 0: node active/enabled in layout. Bit 1: node expanded (children shown). */
@@ -702,11 +691,6 @@ extern u8 g_menu_init_content_id;
 extern s8 g_menu_equipment_conflicts;
 /** @brief Node index for the companion character's stat page (0x2B = companion present, 0xFF = none). */
 extern u8 g_menu_companion_node;
-
-/** @brief Shared string-directory entry 11: nonnegative label. */
-extern StringTableOffset g_menu_label_key_a;
-/** @brief Shared string-directory entry 16: negative label. */
-extern StringTableOffset g_menu_label_key_b;
 
 /** @brief Number of nodes in the linear navigation list. */
 extern s32 g_menu_nav_count;
@@ -1050,15 +1034,15 @@ static inline s32 menu_nav_x(u16 packed)
 }
 
 /**
- * @brief Resolve a string offset using its entry's position in the shared directory.
- * @param entry Address of the two-byte offset entry.
- * @param index Entry index in the shared string directory.
- * @return Encoded string referenced by the entry.
+ * @brief Address of the FIELD UI string an offset entry points at.
+ * @param entry Offset entry, one of the g_field_ui_text_* symbols.
+ * @param index FIELD_UI_TEXT_* index of @p entry.
+ * @return The entry's string.
  */
-static inline u8* menu_shared_text_entry(const StringTableOffset* entry, s32 index)
+static inline u8* menu_shared_text_entry(const FieldUiTextOffset* entry, s32 index)
 {
-    uintptr_t string_page_base = (entry->page << 8) + (uintptr_t)(entry - index);
-    return (u8*)(entry->entry + string_page_base);
+    uintptr_t string_page_base = (entry->high << 8) + (uintptr_t)(entry - index);
+    return (u8*)(entry->low + string_page_base);
 }
 
 /**
@@ -1073,12 +1057,12 @@ static inline void menu_copy_sign_label(u8* buffer, s32 value)
 
     if (value >= 0)
     {
-        source = menu_shared_text_entry(&g_menu_label_key_a, 11);
+        source = menu_shared_text_entry(&g_field_ui_text_plus, FIELD_UI_TEXT_PLUS);
         field_copy_name(write_cursor, source);
     }
     else
     {
-        source = menu_shared_text_entry(&g_menu_label_key_b, 16);
+        source = menu_shared_text_entry(&g_field_ui_text_minus, FIELD_UI_TEXT_MINUS);
         field_copy_name(write_cursor, source);
     }
 

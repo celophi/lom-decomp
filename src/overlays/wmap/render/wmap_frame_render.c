@@ -13,7 +13,8 @@
 /** @brief Full-screen flat quad copied for the screen fades. */
 extern POLY_F4 g_wmap_fill_quad_template;
 
-extern s32 D_800DBE7C;
+/** @brief Cleared every frame; nothing reads it. */
+extern s32 g_wmap_unused_frame_word;
 extern s32 g_wmap_projection_distance;
 
 static void wmap_draw_exit_panel_quads(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bottom, VECTOR* center_bottom, VECTOR* right_top,
@@ -271,7 +272,7 @@ void wmap_render_callback_frame(void)
 
     g_wmap_packet_bytes = 0;
     ClearOTagR(g_wmap_current_frame->ordering_table, 179);
-    D_800DBE7C = 0;
+    g_wmap_unused_frame_word = 0;
     g_wmap_frame_count++;
     wmap_update_callbacks();
     DrawSync(0);

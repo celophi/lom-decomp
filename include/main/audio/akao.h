@@ -272,7 +272,7 @@ typedef struct AkaoSongDescriptor
 {
     AkaoHeader header;
     u32 unk10;
-    s32 unk14;                /**< Compared with g_akao_song_descriptor_match_value to choose song flag 0x40 or 0x20. */
+    s32 match_value;          /**< Compared with g_akao_song_descriptor_match_value to choose song flag 0x40 or 0x20. */
     u8 _pad18[8];
     s32 channel_mask;         /**< Channels the song uses. */
     s32 voice_alloc_low_mask; /**< Initial AkaoSongMasks::voice_alloc_low_mask. */

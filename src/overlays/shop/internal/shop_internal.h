@@ -148,20 +148,4 @@ extern s32 g_shop_scroll_frames;
  * FIELD exports with no project header. FIELD stays resident while SHOP runs.
  */
 
-/*
- * FIELD's UI string archive starts with a table of unaligned little-endian u16
- * offsets. Each entry SHOP reads is its own symbol; the string for entry N of
- * the table starting at g_field_ui_text_table lies at g_field_ui_text_table + offset.
- */
-extern u8 D_800EC3DC[];
-extern u8 D_800EC3E0[];
-extern u8 D_800EC3E2[];
-extern u8 D_800EC3F2[];
-extern u8 D_800EC3F4[];
-extern u8 D_800EC3F8[];
-extern u8 D_800EC3FE[];
-
-u8* func_800AD850(u8* prim, u_long* ot, s32 x, s32 y, s32 width, s32 height, s32 display_buffer_index, s32 is_popup);
-u8* func_800AE76C(u8* prim, u_long* ot, s32 x, s32 y, s32 direction);
-
 #endif
