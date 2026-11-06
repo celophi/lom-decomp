@@ -1,5 +1,6 @@
 #include "common.h"
 #include <libgte.h>
+#include <rand.h>
 
 #include "../internal/wmap_actor_motion.h"
 #include "../internal/wmap_cells.h"
@@ -11,6 +12,7 @@
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
+#include "../internal/wmap_effect_resources.h"
 
 /** @brief Position and velocity halfwords for an effect particle. */
 typedef struct
@@ -19,14 +21,12 @@ typedef struct
     s16 vx, vy, vz, pad_0E;
 } WmapParticle;
 
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_17_sequence_3_timer;
 extern s32 g_wmap_land_effect_17_sequence_4_timer;
 extern s32 g_wmap_land_effect_17_sequence_5_timer;
 extern s32 g_wmap_land_effect_17_sequence_6_timer;
 extern s32 g_wmap_land_effect_17_sequence_7_timer;
 extern s32 g_wmap_land_effect_17_sequence_8_timer;
-extern s32 rand(void);
 extern s32 g_wmap_land_effect_17_sequence_9_timer;
 extern s32 g_wmap_land_effect_17_sequence_10_timer;
 extern s32 g_wmap_land_effect_17_timer;
@@ -52,16 +52,13 @@ extern u32 g_wmap_land_effect_17_sequence_6_step;
 extern u32 g_wmap_land_effect_17_sequence_7_step;
 extern u32 g_wmap_land_effect_17_sequence_8_step;
 extern u32 g_wmap_land_effect_17_sequence_9_step;
-extern u8 g_wmap_effect_model_buffer_8000[];
 extern u32 g_wmap_land_effect_17_sequence_10_step;
 extern u32 g_wmap_land_effect_17_step;
 extern u32 g_wmap_land_effect_17_timeline_step;
 extern u32 g_wmap_land_effect_17_sequence_1_step;
 extern u32 g_wmap_land_effect_17_sequence_2_step;
 
-extern s32* g_wmap_effect_params;
 
-extern WmapMotion g_wmap_effect_actor_motions[];
 
 /** @brief Move the model closer and fade it until the timer expires. */
 WMAP_STEP_DROP_UPDATE(wmap_land_effect_17_sequence_3_step_02, g_wmap_land_effect_17_sequence_3_step, g_wmap_land_effect_17_sequence_3_timer,

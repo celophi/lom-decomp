@@ -15,6 +15,7 @@
 #include "main/game_state.h"
 #include "main/main.h"
 #include "overlays/field/field_input.h"
+#include "overlays/field/field_sound.h"
 #include "overlays/menu/menu.h"
 
 /**
@@ -51,16 +52,6 @@ typedef struct GoverFrameHalf
     u8 primitive_buffer[0x400];
     void* allocation_cursor;
 } GoverFrameHalf;
-
-/* Audio helpers used while presenting the Game Over screen. */
-/** @brief Loads and registers a music sequence. */
-extern void field_load_song(s32 music_index, s32 destination_index);
-
-/** @brief Starts the registered music sequence. */
-extern void field_play_song(void);
-
-/** @brief Plays an SFX from the staged bank. */
-extern void field_play_set_sfx(s32 sfx_index, s32 pan, s32 unused, s32 channel_group);
 
 /** @brief AKAO music volume applied by field_play_song. */
 extern s32 g_akao_music_volume;

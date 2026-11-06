@@ -16,7 +16,6 @@
 
 extern WmapSequenceStep g_wmap_special_effect_34_steps[];
 extern WmapSequenceStep g_wmap_special_effect_34_timeline_steps[];
-extern s32 g_wmap_load_buffer[];
 extern s32 g_wmap_special_effect_34_saved_cursor_column;
 extern s32 g_wmap_special_effect_34_saved_cursor_row;
 extern u32 g_wmap_special_effect_34_step;

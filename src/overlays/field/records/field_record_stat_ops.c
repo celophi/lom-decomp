@@ -39,10 +39,6 @@ extern u8 g_field_weapon_type_conflicts[];
 
 /** @brief Conflict bits of each armor type, indexed by FIELD_ITEM_TYPE. */
 extern u8 g_field_armor_type_conflicts[];
-
-/** @brief Signed stat modifiers indexed by an item's four-bit modifier values. */
-extern s8 g_field_stat_modifier_values[];
-
 FieldStatusState* field_find_object_state(s32 index);
 
 static s32 field_can_equip_item(FieldCharacterRecord* character, s32 slot_index, FieldItemRecord* item);

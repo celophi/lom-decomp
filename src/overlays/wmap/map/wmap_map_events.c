@@ -97,15 +97,13 @@ typedef union
     WmapVehicleMotion vehicle;
 } WmapMotionSlot;
 
-extern s32 g_wmap_special_travel_pending;
 /** @brief Set when the arrival event comes from all four sides; it then also draws trails. */
 extern s32 g_wmap_arrival_event_all_sides;
 /** @brief Sides the arriving sprites come from: +x, +y, -x, -y. */
 extern u8 g_wmap_arrival_event_sides[WMAP_ARRIVAL_SIDES];
 /** @brief Animation of the scripted traveler (WMAP_SCRIPTED_TRAVELER), loaded by the walk events. */
 extern u8 g_wmap_scripted_traveler_animation[];
-extern s32 g_wmap_vehicle_phase;
-extern WmapScreenPosition g_wmap_vehicle_screen_position;
+/** @brief The actor motion pool (wmap_actor_motion.h) as this file's motion slots. */
 extern WmapMotionSlot g_wmap_actor_motions[];
 /** @brief Motion slots from actor WMAP_ARRIVAL_FIRST_ACTOR on, addressed as their own array. */
 extern WmapMotionSlot g_wmap_effect_actor_motions[];

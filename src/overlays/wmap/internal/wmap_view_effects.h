@@ -69,4 +69,38 @@ extern s32 g_wmap_view_scroll_enabled;
 extern s32 g_wmap_scroll_remaining_x;
 extern s32 g_wmap_scroll_remaining_y;
 
+extern s32 g_wmap_tint_blending;
+
+/** @brief Cleared by wmap_init_state and wmap_clear_view_unused; nothing reads it. */
+extern s32 g_wmap_view_unused_word;
+
+extern s32 g_wmap_map_shadow_level;
+
+extern s32 g_wmap_focus_origin_x;
+
+extern s32 g_wmap_focus_origin_y;
+
+extern s32 g_wmap_land_focus_timer;
+
+extern u32 g_wmap_land_focus_step;
+
+/** @brief Packed color word: three channels and the GPU command byte. */
+typedef union
+{
+    u32 packed;
+    struct
+    {
+        u8 r, g, b, code;
+    } channels;
+} WmapColor;
+
+/** @brief Current map tint, faded towards its target by wmap_update_map_tint. */
+extern WmapColor g_wmap_tint;
+
+/** @brief Amount each tint channel moves per frame towards its target. */
+extern s32 g_wmap_tint_speed;
+
+/** @brief Scroll offset that centres the view on each cell of the 3x3 cursor grid. */
+extern WmapPoint g_wmap_cell_focus_offsets[][3];
+
 #endif

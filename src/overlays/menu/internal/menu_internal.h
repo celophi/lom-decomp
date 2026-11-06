@@ -14,6 +14,7 @@
 #include "overlays/field/field_overlay_handoff.h"
 #include "overlays/field/field_player_records.h"
 #include "overlays/field/field_portrait.h"
+#include "overlays/field/field_sound.h"
 #include "overlays/field/field_text.h"
 #include "overlays/field/field_ui_text.h"
 #include "overlays/menu/menu.h"
@@ -23,7 +24,6 @@ void field_copy_name(u8* destination, u8* source);
 s32 field_name_byte_length(u8* name);
 
 /* FIELD functions run from the menu frame loop and the character panel. */
-void field_update_audio_timer(void);
 s32 field_get_next_level_experience(s32 index);
 
 /* Menu chrome CLUT ids produced by getClut for the rows uploaded in menu_upload_tim. */
@@ -333,8 +333,8 @@ typedef enum
     MENU_MESSAGE_TRASH = 69,
     MENU_MESSAGE_CHANGE = 72,
     MENU_MESSAGE_CANCEL = 73,
-    MENU_MESSAGE_INVENTORY_FULL = 86,
-    MENU_MESSAGE_EQUIPPED_ITEM_SUFFIX = 90, /**< Appended to the equipped item's name. */
+    MENU_MESSAGE_CANNOT_REMOVE_EQUIPMENT = 86,
+    MENU_MESSAGE_EQUIPPED_ITEM_SUFFIX = 90, /**< Appended to the equipped item's name; empty in the US release. */
     MENU_MESSAGE_NO_CONTROLLER_LINE1 = 101,
     MENU_MESSAGE_NO_CONTROLLER_LINE2 = 102
 } MenuMessage;

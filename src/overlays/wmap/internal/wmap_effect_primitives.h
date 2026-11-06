@@ -118,4 +118,12 @@ void wmap_update_particle_trails(s32 first, s32 count, WmapTrailConfig* config, 
 s32 wmap_run_effect_camera_move(s32 initialize);
 void wmap_update_box_particles(WmapBoxParticleConfig* config);
 
+extern MATRIX g_wmap_effect_camera_matrix;
+
+/** @brief Particle and emitter parameter words of the running effect; WMAP_SET_PARTICLE_CONFIG fills them. */
+extern s32* g_wmap_effect_params;
+
+/** @brief Shade given to new particles; the fade-out steps lower it. */
+extern s32 g_wmap_particle_shade;
+
 #endif

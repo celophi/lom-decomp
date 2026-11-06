@@ -166,12 +166,7 @@ extern s32 g_field_resource_queue_count;
 extern s32 g_field_resource_queue[FIELD_RESOURCE_QUEUE_CAPACITY];
 extern s32 g_field_loading_resource;
 extern FieldMeshTexturePart g_field_mesh_texture_parts[FIELD_OWNER_COUNT][FIELD_OWNER_TEXTURE_PARTS];
-extern u8 g_field_sound_tables[];
-extern s16 g_field_texture_slot_flags[FIELD_OWNER_COUNT];
-
 /* Local: field_contact_geometry.c calls it with a third argument, so it stays out of field_calls.h. */
-s32 field_start_interaction(s32 actor_id, s32 script);
-
 static s32 field_enqueue_resource_read(s32 resource_id);
 static void field_upload_actor_texture(u8* tim, s32 owner);
 

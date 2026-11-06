@@ -36,12 +36,7 @@ typedef struct
     s32 key;
     u8 item[0x3C];
 } FieldRewardEntry;
-
 FieldStatusState* field_find_object_state(s32 actor_id);
-u32* field_get_scene_record_table(void);
-void field_append_dialog_item(u8* text, u8 quantity);
-FieldActorRecord* field_find_actor_record_or_default(s32 id);
-FieldActorRecord* field_find_actor_record(s32 id);
 
 /**
  * @brief Hand an actor's pickup to the party: an item from the reward table or a counter.

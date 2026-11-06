@@ -30,10 +30,10 @@
 #define FIELD_CHARACTER_CONTROL_MODE(character) ((character).info.bits.pad_controlled ^ 1)
 /** @brief FieldActor::control bit set while the actor moves. */
 #define FIELD_CONTROL_MOVING 0x200
-/** @brief FieldActor::control second movement bit (placeholder name: FIELD code only clears and tests it; nothing sets it). */
-#define FIELD_CONTROL_MOVEMENT_UNK400 0x400
+/** @brief FieldActor::control second movement bit; FIELD code only clears and tests it, nothing sets it. */
+#define FIELD_CONTROL_MOVING_UNUSED 0x400
 /** @brief FieldActor::control movement bits. */
-#define FIELD_CONTROL_MOVEMENT_MASK (FIELD_CONTROL_MOVING | FIELD_CONTROL_MOVEMENT_UNK400)
+#define FIELD_CONTROL_MOVEMENT_MASK (FIELD_CONTROL_MOVING | FIELD_CONTROL_MOVING_UNUSED)
 /** @brief Shift of the two FieldActor::control movement bits. */
 #define FIELD_CONTROL_MOVEMENT_SHIFT 9
 /** @brief FieldActor::control bit: the animation stops on its last frame instead of looping. */

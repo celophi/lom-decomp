@@ -42,7 +42,6 @@ extern WmapPoint g_wmap_label_positions[];
 extern s32 g_wmap_label_width_scales[];
 extern s32 g_wmap_land_label_widths[];
 extern s32 g_wmap_label_clut_row;
-extern u16 g_wmap_land_label_cells[];
 extern WmapLabelGlyph g_wmap_auxiliary_label_glyphs[];
 extern WmapLabelChar g_wmap_auxiliary_label_chars[];
 extern s32 g_wmap_auxiliary_label_starts[];
@@ -251,7 +250,7 @@ void wmap_set_map_label(s32 selection)
         }
 
         selection &= 63;
-        selection = (s16)g_wmap_land_label_cells[selection];
+        selection = g_wmap_land_label_cells[selection];
         g_wmap_label_sprite.r0 = 8;
         g_wmap_label_sprite.u0 = (selection / 14) * 112;
         g_wmap_label_sprite.v0 = (selection % 14) * 16;

@@ -21,6 +21,7 @@
 #include "main/audio/akao.h"
 #include "main/display.h"
 #include "sdk/gte_dmpsx_compat.h"
+#include "../internal/wmap_map_display.h"
 
 /** @brief Map tiles drawn inside the one-tile border of the grid. */
 #define WMAP_MAP_VISIBLE_FIRST 1
@@ -89,29 +90,13 @@
 #define WMAP_BURST_TEXTURE_SMALL 7
 /** @brief Sprite shade that draws the texture unmodified. */
 
-/** @brief Packed color word: three channels and the GPU command byte. */
-typedef union
-{
-    u32 packed;
-    struct
-    {
-        u8 r, g, b, code;
-    } channels;
-} WmapColor;
 
 extern u32 g_wmap_view_sequence_step;
 extern s32 g_wmap_view_sequence_timer;
 extern WmapSequenceStep g_wmap_view_sequence_steps[];
-/** @brief Cleared by wmap_init_state and wmap_clear_view_unused; nothing reads it. */
-extern s32 g_wmap_view_unused_word;
 
-extern s32 g_wmap_map_shadow_level;
 extern CVECTOR g_wmap_tint_target;
-extern WmapColor g_wmap_tint;
-extern s32 g_wmap_tint_blending;
-extern u8 g_wmap_tint_speed;
 extern s32 g_wmap_cursor_limits[];
-extern s32 g_wmap_spirit_selection;
 extern SVECTOR g_wmap_grid_vertices[];
 extern s16 g_wmap_grid_vertex_indices[];
 extern WmapView g_wmap_zoom_view;
@@ -119,11 +104,6 @@ extern WmapView g_wmap_zoom_step;
 /** @brief Set when a map tint starts; nothing reads it. */
 extern s32 g_wmap_tint_started;
 extern s32 g_wmap_burst_spawning;
-extern WmapPoint g_wmap_cell_focus_offsets[][3];
-extern s32 g_wmap_focus_origin_x;
-extern s32 g_wmap_focus_origin_y;
-extern s32 g_wmap_land_focus_step;
-extern s32 g_wmap_land_focus_timer;
 
 static s32 wmap_update_map_tint(s32 initialize);
 void wmap_project_map_grid(void);

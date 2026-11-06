@@ -216,12 +216,6 @@ typedef struct FieldGlyphPrimitive
     u32 size;
 } FieldGlyphPrimitive;
 
-extern s32 g_text_cursor_x;
-extern s32 g_text_cursor_y;
-extern s32 g_text_clut_base;
-extern u8 g_hex_digit_table[17];
-extern FieldGlyphPrimitive* g_field_primitive_cursor;
-extern FieldRenderHalf* g_field_current_render_half;
 
 /**
  * @brief C reference for glyph emission and cursor advancement.

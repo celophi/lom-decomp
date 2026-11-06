@@ -25,8 +25,6 @@ extern u8 g_field_weapon_chain_limits[];
 
 static void field_release_links_to_actor(FieldActor* actor);
 static void field_end_actor_chain(FieldActor* actor);
-void field_restart_actor_animation(FieldActor* actor);
-
 /**
  * @brief Put an actor into its hit reaction and reset its motion and animation flags.
  * @param actor Actor receiving the hit.

@@ -24,6 +24,7 @@
 #include "main/cdrom.h"
 #include "main/display.h"
 #include "main/field_runtime.h"
+#include "main/main.h"
 #include "overlays/field/field_actor_records.h"
 #include "overlays/field/field_vram.h"
 
@@ -151,16 +152,12 @@ extern CVECTOR g_field_hud_status_colors[2];
 extern CVECTOR g_field_hud_effect_colors[2];
 extern CVECTOR g_field_hud_full_status_colors[2];
 extern CVECTOR g_field_hud_companion_status_colors[2];
-extern s32 g_field_party_hud_order[FIELD_PARTY_COUNT];
 extern s16 g_field_hud_shake_offsets[];
 extern s32 g_field_hud_blink_frames[FIELD_PARTY_COUNT];
 extern s32 g_field_hud_bar_height;
 extern s32 g_field_hud_bar_width;
 extern s32 g_field_hud_bar_offset_x;
 extern s32 g_field_hud_bar_offset_y;
-extern s32 g_frame_counter;
-extern u8 g_field_pair_indicator_list[];
-
 /** @brief Number of bits in FieldObjectState.flags that have a handler entry. */
 #define FIELD_OBJECT_HANDLER_COUNT 16
 
@@ -268,15 +265,12 @@ typedef struct
 extern POLY_FT4 g_field_fade_prims[FIELD_FADE_PRIM_COUNT];
 extern u16 g_field_fade_prim_depths[FIELD_FADE_PRIM_COUNT];
 extern FieldActor* g_field_updating_actor;
-extern u32* g_field_scene_record_table;
-
 static void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, FieldRenderHalf* render_half, s32 hp_per_bar);
 static u8* field_emit_hud_status_line(LINE_G2* line, FieldRenderHalf* render_half, CVECTOR* colors, s32 intensity, s32 x, s32 y);
 static void* field_emit_hud_percentage(void* packet, FieldRenderHalf* render_half, s32 value, Vec2s* position);
 static void* field_emit_hud_glyph(SPRT* sprite, FieldRenderHalf* render_half, s32 value, Vec2s* position);
 static POLY_F4* field_emit_hud_damage_quad(POLY_F4* prim, s32 y, u_long* ot);
 static POLY_F4* field_emit_hud_healing_quad(POLY_F4* prim, s32 y, u_long* ot);
-void field_restart_actor_animation(FieldActor* actor);
 static inline void field_clear_link_target_flag(s32 object_index);
 static inline void field_dispatch_object_flag(s32 index, FieldObjectState* state, s32 pending_flags);
 

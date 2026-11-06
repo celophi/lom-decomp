@@ -12,6 +12,13 @@
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
 #include "sdk/gte_dmpsx_compat.h"
+#include "../internal/wmap_actor_motion.h"
+
+/** @brief The actor motion pool from slot 10, viewed as this effect's motion records. */
+#define WMAP_EFFECT02_MOTIONS_AT_10 ((WmapEffect02Motion*)g_wmap_actor_motions_at_10)
+
+/** @brief The actor motion pool viewed as this effect's motion records. */
+#define WMAP_EFFECT02_MOTIONS ((WmapEffect02Motion*)g_wmap_actor_motions)
 
 typedef struct
 {
@@ -33,7 +40,6 @@ typedef struct
 } WmapEffect02Motion;
 
 extern s32 g_wmap_land_effect_02_sequence_3_timer;
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_02_sequence_4_timer;
 extern s32 g_wmap_land_effect_02_sequence_5_timer;
 extern s32 g_wmap_land_effect_02_sequence_6_timer;
@@ -58,8 +64,6 @@ extern u32 g_wmap_land_effect_02_timeline_step;
 extern u32 g_wmap_land_effect_02_sequence_1_step;
 extern u32 g_wmap_land_effect_02_sequence_2_step;
 
-extern WmapEffect02Motion g_wmap_actor_motions[];
-extern WmapEffect02Motion g_wmap_actor_motions_at_10[];
 
 /**
  * @brief Initialize world-map globals and four per-entry state records.
@@ -97,12 +101,12 @@ void wmap_land_effect_02_sequence_3_step_01(void)
         entry->target_shade = 0x81;
         entry->shade = 0x81;
         entry->sequence = g_wmap_particle_sequence;
-        g_wmap_actor_motions_at_10[i].state = 1;
-        g_wmap_actor_motions_at_10[i].z = g_wmap_particle_radius;
-        g_wmap_actor_motions_at_10[i].scale = 0x50;
-        g_wmap_actor_motions_at_10[i].angle = shift;
-        g_wmap_actor_motions_at_10[i].x = 0;
-        g_wmap_actor_motions_at_10[i].field_0E = 0;
+        WMAP_EFFECT02_MOTIONS_AT_10[i].state = 1;
+        WMAP_EFFECT02_MOTIONS_AT_10[i].z = g_wmap_particle_radius;
+        WMAP_EFFECT02_MOTIONS_AT_10[i].scale = 0x50;
+        WMAP_EFFECT02_MOTIONS_AT_10[i].angle = shift;
+        WMAP_EFFECT02_MOTIONS_AT_10[i].x = 0;
+        WMAP_EFFECT02_MOTIONS_AT_10[i].field_0E = 0;
     }
 
     g_wmap_land_effect_02_sequence_3_timer = 0x3C;
@@ -127,7 +131,7 @@ void wmap_land_effect_02_sequence_5_step_01(void)
 
     for (i = 20; i < 80; i++)
     {
-        g_wmap_actor_motions[i].state = 0;
+        WMAP_EFFECT02_MOTIONS[i].state = 0;
     }
 
     for (i = 20; i < 80; i += 15)
@@ -141,10 +145,10 @@ void wmap_land_effect_02_sequence_5_step_01(void)
         actor->sequence = 0;
         actor->target_shade = 1;
         actor->shade = 129;
-        g_wmap_actor_motions[i].state = 1;
-        g_wmap_actor_motions[i].z = 150000;
-        g_wmap_actor_motions[i].field_0E = 0;
-        g_wmap_actor_motions[i].angle = g_wmap_particle_lifetime_min;
+        WMAP_EFFECT02_MOTIONS[i].state = 1;
+        WMAP_EFFECT02_MOTIONS[i].z = 150000;
+        WMAP_EFFECT02_MOTIONS[i].field_0E = 0;
+        WMAP_EFFECT02_MOTIONS[i].angle = g_wmap_particle_lifetime_min;
         g_wmap_particle_lifetime_min += 1024;
     }
 
@@ -170,21 +174,21 @@ void wmap_land_effect_02_sequence_5_step_02(void)
 
     for (i = 20; i < 80; i += 15)
     {
-        position.vx = ((g_wmap_actor_motions[i].z >> 3) * (ccos(g_wmap_actor_motions[i].angle) >> 6)) >> 12;
-        position.vy = ((g_wmap_actor_motions[i].z >> 3) * (csin(g_wmap_actor_motions[i].angle) >> 6)) >> 12;
-        position.vz = g_wmap_actor_motions[i].field_0E;
+        position.vx = ((WMAP_EFFECT02_MOTIONS[i].z >> 3) * (ccos(WMAP_EFFECT02_MOTIONS[i].angle) >> 6)) >> 12;
+        position.vy = ((WMAP_EFFECT02_MOTIONS[i].z >> 3) * (csin(WMAP_EFFECT02_MOTIONS[i].angle) >> 6)) >> 12;
+        position.vz = WMAP_EFFECT02_MOTIONS[i].field_0E;
         gte_ldv0(&position);
         gte_rtps();
-        g_wmap_actor_motions[i].z -= 3000;
-        g_wmap_actor_motions[i].angle += 96;
+        WMAP_EFFECT02_MOTIONS[i].z -= 3000;
+        WMAP_EFFECT02_MOTIONS[i].angle += 96;
         gte_stsxy(&screen_position);
-        g_wmap_actor_motions[i].screen.half.x = ((u16*)&screen_position)[0];
-        g_wmap_actor_motions[i].screen.half.y = ((u16*)&screen_position)[1];
+        WMAP_EFFECT02_MOTIONS[i].screen.half.x = ((u16*)&screen_position)[0];
+        WMAP_EFFECT02_MOTIONS[i].screen.half.y = ((u16*)&screen_position)[1];
 
         if (g_wmap_particle_velocity_range == 0)
         {
             g_wmap_sprite_actors[i + g_wmap_particle_velocity_min] = g_wmap_sprite_actors[i];
-            g_wmap_actor_motions[i + g_wmap_particle_velocity_min] = g_wmap_actor_motions[i];
+            WMAP_EFFECT02_MOTIONS[i + g_wmap_particle_velocity_min] = WMAP_EFFECT02_MOTIONS[i];
             g_wmap_actor_animations[i + g_wmap_particle_velocity_min] = g_wmap_actor_animations[i];
             g_wmap_sprite_actors[i + g_wmap_particle_velocity_min].shade_step = 8;
             g_wmap_sprite_actors[i + g_wmap_particle_velocity_min].target_shade = 1;
@@ -204,7 +208,7 @@ void wmap_land_effect_02_sequence_5_step_02(void)
     }
 
     i = 20;
-    motion = &g_wmap_actor_motions[i];
+    motion = &WMAP_EFFECT02_MOTIONS[i];
     resource = &g_wmap_actor_animations[i];
     actor = &g_wmap_sprite_actors[i];
 
@@ -247,7 +251,7 @@ void wmap_land_effect_02_sequence_6_step_01(void)
 
     for (i = 100; i < 200; i++)
     {
-        g_wmap_actor_motions[i].state = 0;
+        WMAP_EFFECT02_MOTIONS[i].state = 0;
         WMAP_INIT_PARTICLE_ACTOR(i, g_wmap_animation_bank_0, 2);
     }
 

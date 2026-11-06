@@ -288,13 +288,7 @@ typedef void (*FieldRecordQuery)(FieldKeyedList* list, FieldStatusRecord* source
 
 extern FieldCommandHandler g_field_script_commands[FIELD_SCRIPT_COMMAND_COUNT];
 extern FieldRecordQuery g_field_record_queries[];
-
-extern SceneState* g_field_scene_state;
 FieldStatusState* field_find_object_state(s32 key);
-FieldActorRecord* field_find_actor_record_or_default(s32 id);
-s32 field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound);
-s32 field_award_land_artifacts(s32 first_land, s32 second_land, s32* awarded);
-void field_begin_party_script_control(s32 mode);
 
 /**
  * @brief Run a script command.

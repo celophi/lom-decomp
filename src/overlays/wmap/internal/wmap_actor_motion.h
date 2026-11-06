@@ -51,4 +51,10 @@ extern WmapMotion g_wmap_actor_motions_at_50[];
 extern WmapMotion g_wmap_actor_motions_at_120[];
 extern WmapMotion g_wmap_actor_motions_at_200[];
 
+extern WmapMotion g_wmap_effect_actor_motions[];
+
+extern WmapMotion g_wmap_actor_motions_at_10[];
+
+extern WmapMotion g_wmap_actor_motions_at_60[];
+
 #endif

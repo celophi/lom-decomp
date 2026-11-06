@@ -60,4 +60,11 @@ void wmap_queue_effect_33_resources(void);
 void wmap_queue_effect_34_resources(void);
 void wmap_queue_effect_35_resources(void);
 
+/** @brief Effect workspace view at byte offset 0x8000. */
+extern u8 g_wmap_effect_model_buffer_8000[];
+
+extern u8* g_wmap_effect_model_pack_8;
+
+extern u8* g_wmap_effect_model_pack_9;
+
 #endif

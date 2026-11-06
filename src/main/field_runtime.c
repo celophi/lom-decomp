@@ -1,5 +1,4 @@
 #include "common.h"
-
 #include <libetc.h>
 #include <libgpu.h>
 #include <libgte.h>
@@ -33,8 +32,6 @@
  */
 void field_load_vram_resource(s32 id, RECT* rect);
 
-extern FieldRenderHalf* g_field_current_render_half;
-extern void* g_field_primitive_cursor;
 extern s32 g_field_force_two_primitives;
 extern s32 g_field_draw_count;
 
@@ -61,6 +58,7 @@ s32 run_field_scene(void)
     scene_state->camera_x = 0;
     scene_state->camera_y = 0;
     scene_state->camera_z = 0;
+
     do
     {
         next_state = FIELD_ENTRY_FADE_FRAMES;
@@ -74,10 +72,12 @@ s32 run_field_scene(void)
     akao_stop_all_songs();
     akao_release_all_sfx();
     next_state = g_pending_game_state;
+
     if (next_state < GAME_STATE_WORLD_SELECT)
     {
         return next_state;
     }
+
     return GAME_STATE_WORLD_MAP;
 }
 
@@ -106,6 +106,7 @@ void field_run_frame_loop(FieldRenderHalf* render_buffers)
     PutDispEnv(&draw_half->disp_env);
     update_controllers();
     SetDispMask(1);
+
     do
     {
         field_update_scene();
@@ -113,6 +114,7 @@ void field_run_frame_loop(FieldRenderHalf* render_buffers)
         g_field_primitive_cursor = draw_half->primitive_arena;
 
         ClearOTagR(draw_half->ordering_table, FIELD_ORDERING_TABLE_SIZE);
+
         if (draw_half == render_buffers)
         {
             primitive_cursor = field_heap->primitive_buffers[0];
@@ -121,6 +123,7 @@ void field_run_frame_loop(FieldRenderHalf* render_buffers)
         {
             primitive_cursor = field_heap->primitive_buffers[1];
         }
+
         draw_half->primitive_cursor = primitive_cursor;
 #if defined(VERSION_JP)
         field_clear_node_accumulators(g_field_draw_count);
@@ -129,6 +132,7 @@ void field_run_frame_loop(FieldRenderHalf* render_buffers)
 #endif
         is_alt_half = draw_half != render_buffers;
         field_build_frame_commands(draw_half, is_alt_half);
+
         if (g_pending_game_state == 0)
         {
             VSync(1);

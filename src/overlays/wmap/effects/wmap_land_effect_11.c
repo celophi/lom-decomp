@@ -15,7 +15,6 @@
 extern s32 g_wmap_land_effect_11_sequence_3_timer;
 extern s32 g_wmap_land_effect_11_sequence_5_timer;
 extern s32 g_wmap_land_effect_11_sequence_7_timer;
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_11_sequence_6_timer;
 extern s32 g_wmap_land_effect_11_sequence_8_timer;
 extern s32 g_wmap_land_effect_11_timer;
@@ -48,8 +47,6 @@ extern u32 g_wmap_land_effect_11_sequence_1_step;
 extern u32 g_wmap_land_effect_11_sequence_2_step;
 extern u32 g_wmap_land_effect_11_sequence_4_step;
 extern u32 g_wmap_land_effect_11_sequence_9_step;
-
-extern s32* g_wmap_effect_params;
 
 /** @brief World-map step: fill a spawn descriptor, clear its slot run, then advance. */
 void wmap_land_effect_11_sequence_3_step_01(void)

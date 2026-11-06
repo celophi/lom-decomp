@@ -64,9 +64,6 @@ typedef struct
 } FieldBattleEntryChange;
 
 /* Not in field_calls.h: field_dialog_screens.c calls it with an argument. */
-s32 field_party_reload_reading(void);
-void field_restart_actor_animation(FieldActor* actor);
-
 extern s32 g_field_battle_entry_change_count;
 extern s32 g_field_party_reload_sizes[FIELD_PLAYER_COUNT];
 extern FieldBattleEntryChange g_field_battle_entry_changes[FIELD_BATTLE_ENTRY_CHANGE_COUNT];

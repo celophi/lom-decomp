@@ -3,10 +3,10 @@
 
 /**
  * @file field_calls.h
- * @brief Prototypes of FIELD functions that other FIELD translation units call.
+ * @brief FIELD functions and data that more than one FIELD translation unit uses.
  *
  * Each prototype is the signature of the definition, grouped by the file
- * that defines it. Functions with a public header of their own
+ * that defines it; data is grouped by the file that owns it. Functions with a public header of their own
  * (include/field_*.h) are declared there instead. Pointer parameters of
  * tagged record types use the struct tag, so callers need not include the
  * header that defines the record.
@@ -18,15 +18,18 @@
 #include "common/card_directory.h"
 #include "common/tim.h"
 #include "common/vector.h"
+#include "main/scene_state.h"
 #include "field_effect_dispatch.h"
 #include "field_progression_ops.h"
 #include "field_stat_counter_ops.h"
 #include "overlays/field/field_fade.h"
 #include "overlays/field/field_inventory.h"
 #include "overlays/field/field_portrait.h"
+#include "overlays/field/field_sound.h"
 
 struct AkaoHeader;
 
+struct FieldActionBank;
 struct FieldActionDescriptor;
 struct FieldActor;
 struct FieldActionSlot;
@@ -151,6 +154,10 @@ typedef struct FieldPos
     s16 z;
 } FieldPos;
 
+/* field_action_descriptors.c */
+extern struct FieldActionBank* g_field_action_bank;
+struct FieldActionDescriptor* field_select_action_descriptor(void);
+
 /* field_action_modifiers.c */
 void field_battle_set_watched_record(s32 record_id);
 s32 field_battle_handle_defeat(struct FieldStatusRecord* record);
@@ -158,6 +165,11 @@ void field_battle_finish(s32 result);
 void field_battle_defeat_record(s32 record_id);
 s32 field_run_action_handler(void);
 void field_select_coordinate_labels(void);
+/**
+ * @brief field_battle_run_party_event(void).
+ * @note Declared without parameters: field_action_descriptors.c passes an argument.
+ */
+void field_battle_run_party_event();
 
 /* field_action_setup.c */
 s32 field_battle_resolve_action(struct FieldBattleAction* action);
@@ -172,6 +184,10 @@ s32 field_rejoin_companion(void);
 
 /* field_actor_action_defaults.c */
 void field_reset_action_command_map(s32 map_index);
+
+/* field_actor_behavior.c */
+extern s32 g_field_direction_animation_modes[];
+extern s32 g_field_actor_walk_animations[];
 
 /* field_actor_camera.c */
 void field_camera_track_party(void);
@@ -193,6 +209,9 @@ s32 field_load_vram_resource(s32 id, RECT* rect, s32 mode);
 s32 field_upload_image_resource(RECT* rect, Tim* resource, s32 mode);
 void* field_emit_actor_portrait(SPRT* sprt, u_long* ot, s32 index, Vec2s* position);
 void field_draw_fade_prims(struct FieldRenderHalf* render_half);
+extern s32 g_field_party_hud_order[];
+s32 field_is_actor_idle(s32 key);
+u32* field_get_scene_record_table(void);
 
 /* field_actor_idle_ops.c */
 void field_update_hit_reaction(struct FieldActor* actor);
@@ -218,6 +237,9 @@ void field_set_actor_group(s32 key, s32 group);
 s32 field_actor_faces_actor(s32 first_key, s32 second_key);
 s32 field_get_actor_binding_state(s32 key);
 s32 field_reload_actor(s32 key, s32 resource_entry_index, s32 resource_slot_id, s32 package, s32 group, s32 x, s32 y, s32 z, s32 animation, s32 resource_flag);
+u8* field_get_event_script(s32 index);
+void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s32 y, s32 z);
+s32 field_start_actor_private_script(s32 key, u8* script);
 
 /* field_actor_lifecycle.c */
 struct FieldActorTemplate;
@@ -257,6 +279,7 @@ s32 field_get_loading_resource(void);
 void field_issue_next_resource_read(void);
 void field_free_owner_resources(s32 tag);
 void field_unpack_actor_resource(s32 owner, struct FieldActorSlot* actor);
+extern s16 g_field_texture_slot_flags[];
 
 /* field_actor_runtime.c */
 void field_restore_default_action_animation_mappings(s32 unused);
@@ -270,6 +293,18 @@ void field_render_actor_objects(FieldRenderContext* render_context);
 void field_set_global_color_scale(s16 red, s16 green, s16 blue);
 void field_unpack_resource_package(struct FieldCdBuffer* buf, s32 size, s32 slot_index, s32 palette_row);
 void field_finish_party_slot_reload(s32 actor_slot);
+/**
+ * @brief field_restart_actor_animation(struct FieldActor* actor).
+ * @note Declared without parameters: some callers pass a second argument.
+ */
+void field_restart_actor_animation();
+/**
+ * @brief field_dispatch_actor_audio_event(struct FieldActorSlot* slot, s32 event_type, s32 event_subtype).
+ * @note Declared without parameters: field_effect_update.c passes a fourth argument.
+ */
+void field_dispatch_actor_audio_event();
+u32 field_evaluate_parameter_track_at_time(struct FieldActorSlot* slot, s32 curve_index, s32 frame);
+void field_interpolate_palette_track(struct FieldActorSlot* slot, s32 palette_sequence, u8* palette_table, s16* output);
 
 /* field_actor_script_ops.c */
 void field_step_actor_script(struct FieldActor* actor);
@@ -277,6 +312,29 @@ void field_route_actor_to_object(struct FieldActor* actor, s32 target_index, s32
 s32 field_resolve_contact_hit(s32 source_index, s32 target_index);
 s32 field_resolve_object_hit(s32 source_index, s32 target_index, s32 action);
 s32 field_roll_object_evasion(s32 source_index, s32 target_index);
+/**
+ * @brief field_revive_actor(s32 key, s32 animation, s32 effect, s32 sound).
+ * @note Declared without parameters: field_party_state.c calls it with the key only.
+ */
+s32 field_revive_actor();
+s32 field_get_actor_facing(s32 key);
+s32 field_spawn_shared_animation_actor(s32 key, s32 resource_index);
+s32 field_get_actor_animation(s32 key);
+s32 field_register_actor_hit(s32 key, s32 guard);
+s32 field_start_actor_defeat_by_key(s32 key, s32 value);
+s32 field_schedule_actor_revive(s32 key, s32 animation, s32 effect, s32 sound, s32 delay);
+s32 field_read_actor_binding_state(s32 key);
+s32 field_face_actor(s32 source_key, s32 target_key);
+s32 field_spawn_targeted_animation_actor(s32 key, s32 resource_index, s32 target_keys, s32* unused);
+s32 field_start_actor_turn(s32 key);
+s32 field_toggle_actor_hidden(s32 key);
+s32 field_load_bound_animation(s32 key, s32 resource_id);
+s32 field_retire_actor(s32 key, s32 resource_index);
+/**
+ * @brief field_resolve_collected_hits(s32 object_index).
+ * @note Declared without parameters: field_actor_state_updates.c passes a second argument.
+ */
+void field_resolve_collected_hits();
 
 /* field_actor_slot_resources.c */
 /** @brief Free animation actor slots an action needs before it may start. */
@@ -333,16 +391,13 @@ void field_update_battle_end(void);
 /* field_audio_runtime.c */
 s32 field_load_instrument_bank(s32 bank_index);
 void field_upload_resource_22_bank(void);
-void field_load_song(s32 music_index, s32 second_song);
 void field_load_fixed_song(void);
 void field_stop_field_song(void);
 void field_stop_second_song(void);
-void field_play_song(void);
 void field_play_second_song(void);
 void field_fade_song(s32 song, s32 frames, s32 volume);
 void field_play_sound_half_pan(s32 sound_id, s32 pan);
 void field_play_set_sfx_group0(s32 sfx_index, s32 pan, s32 unused);
-void field_play_set_sfx(s32 sfx_index, s32 pan, s32 unused, s32 channel_group);
 void field_play_weapon_sfx(s32 sfx_index, s32 pan, s32 table_index);
 void field_release_sfx_group(s32 channel_group);
 void field_load_sfx_tables(s32 set_id);
@@ -352,6 +407,12 @@ void field_reset_music_stream(void);
 void field_start_music_stream(s32 music_index);
 void field_update_music_stream(void);
 void field_reset_ring_selections(void);
+extern u8 g_field_sound_tables[];
+/**
+ * @brief field_play_song_section(s32 section_index, s32 param1).
+ * @note Declared without parameters: field_script_ops.c calls it with none.
+ */
+void field_play_song_section();
 
 /* field_block_allocator.c */
 void field_block_pool_init(void* pool, u32 size);
@@ -379,6 +440,7 @@ s32 field_collision_find_path(struct FieldCollisionQuery* start_query, struct Fi
 void field_collision_dilate_query(struct FieldCollisionQuery* query);
 s32 field_collision_resolve_move(struct FieldCollisionMover* mover);
 void field_collision_rasterize_groups(u8** allocator_cursor, struct FieldNode* clip);
+void* field_header_record_at(s32 index);
 
 /* field_command_history.c */
 /** @brief Returned by field_command_history_match() when no command was found. */
@@ -389,10 +451,17 @@ s32 field_command_history_match(s32 player, s32 unused, s32 peek);
 void field_command_history_clear(s32 player);
 void field_pair_indicators_reset(void);
 u8* field_pair_indicators_get_list(void);
+/** @brief Physical button index to action slot binding index. */
+extern u8 g_field_hint_button_map[];
 
 /* field_coordinate_icon.c */
 void* field_draw_coordinate_panel(u_long* ot, u8* prim, s32 x_offset, s32 y_offset);
 void field_upload_player_icons(void);
+void* field_draw_player_icon(POLY_FT4* handle, u_long* ordering_table, s32 selector, s32 x, s32 y, s32 flip);
+/** @brief Nonzero while a guest is in the party; selects the coordinate panel icon. */
+extern s32 g_field_party_has_guest;
+/** @brief Label strings drawn on the coordinate panel, NULL when missing. */
+extern u8* g_field_coordinate_labels[];
 
 /* field_dialog_screens.c */
 void field_handle_return_to_title_prompt(void);
@@ -410,6 +479,19 @@ void field_setup_return_to_title_prompt(void);
 /** @brief field_start_actor_text id of name record @p record stored in saved character @p character. */
 #define FIELD_ACTOR_TEXT_SAVED_NAME(character, record) (0x80000000 | ((character) << 16) | (record))
 void field_start_actor_text(s32 index, s32 text_id);
+extern s32 g_field_dialog_item_count;
+extern u8 g_field_dialog_item_quantities[];
+extern u8* g_field_dialog_item_texts[];
+/** @brief Technique name bank: u16 offsets from the bank start, then the strings. */
+extern u8 g_field_technique_names[];
+extern s32 g_field_money_snapshot;
+/** @brief Set while an interaction runs; pad input waits until the follower routes are rebuilt. */
+extern s32 g_field_actor_text_count;
+/** @brief Experience of each party member when the battle started; the results screen shows the difference. */
+extern u32 g_field_experience_snapshot[];
+void field_update_timed_panel(struct FieldRenderHalf* render);
+void field_update_actor_texts(struct FieldRenderHalf* render);
+void field_draw_dialog_windows(struct FieldRenderHalf* render_half);
 
 /* field_draw_state.c */
 void field_reset_draw_state(void);
@@ -426,6 +508,10 @@ void field_advance_actor_effects(struct FieldActorSlot* actor);
 extern s32 g_field_action_context;
 /** @brief Action byte of g_field_action_context. */
 #define FIELD_ACTION_CONTEXT_ACTION_MASK 0xFF
+extern s32 g_field_next_path_group;
+extern s32 g_field_spawn_ground_point;
+/** @brief Suppress repeated pickup audio until the next frame-command build. */
+extern s32 g_field_pickup_sound_played;
 
 /* field_event_dispatch.c */
 s32 field_queue_actor_event(s32 owner_id, u8 event_id, s32 argument);
@@ -433,6 +519,11 @@ s32 field_run_actor_event(s32 owner_id, s32 event_id, s32 mode);
 
 /* field_fade.c */
 void field_set_fade_target_only(s16 red, s16 green, s16 blue, s16 duration);
+void field_set_cd_error_fade_target(void);
+
+/* field_frame_commands.c */
+/** @brief Nonzero while a timed panel image is shown; pauses the field runtime, actor animation and the field menu. */
+extern s32 g_field_hide_actor_panels;
 
 /* field_generated_record_ops.c */
 void field_write_staged_item(void);
@@ -460,10 +551,21 @@ void field_resolve_talk_window(s32* actor_id, s32* plane, s32* effect, s32* sele
 /** @brief Largest field_set_text_macro character limit (255 characters); used for texts that are never cut. */
 #define FIELD_TEXT_MACRO_UNLIMITED 0xFF
 void field_set_text_macro(s32 slot, u8* text, u8 character_limit);
+void field_begin_party_script_control(s32 mode);
+/**
+ * @brief field_start_interaction(s32 actor_id, s32 script).
+ * @note Declared without parameters: field_contact_geometry.c also passes g_field_object_states.
+ */
+s32 field_start_interaction();
+extern SceneState* g_field_scene_state;
 
 /* field_item_selection.c */
 void field_open_item_drop_menu(void);
 void field_pick_up_item_actor(s32 actor_index);
+extern s32 g_field_item_list_count;
+extern s32 g_field_item_list_cursor;
+extern s32 g_field_primary_repeat_delay;
+extern s32 g_field_secondary_repeat_delay;
 
 /* field_layout_slot_state.c */
 void field_award_land_artifact(s32 land_index);
@@ -481,6 +583,10 @@ void field_open_shop_mode_0(s32 shop_options);
 void field_open_shop_mode_1(s32 entry_count, struct ShopEntry* entries, struct FieldItemRecord* item_records, s32 shop_options);
 void field_run_name_entry(u8* initial_name, u8* active_name, s32 source_mode, s32 history_index, s32 custom_name);
 void field_run_zukan(s32 category);
+s32 field_read_controller_buttons(s32 index);
+extern s32 g_field_item_drop_enabled;
+void field_append_dialog_item(u8* text, u8 quantity);
+void field_merge_dialog_items(void);
 
 /* field_modal_stream_start.c */
 void field_open_carda(s32 mode);
@@ -489,8 +595,21 @@ void field_modal_frame_stub(struct FieldRenderHalf* render_half);
 void field_open_niki(s32 mode);
 void field_open_addhero(s32 mode);
 
+/* field_numeric_sprites.c */
+
 /* field_pair_indicators.c */
 void field_update_pair_indicators(struct FieldRenderHalf* render_half);
+/** @brief Actor index pairs of the close pairs (two bytes per pair), ended by FIELD_PAIR_LIST_END. */
+extern u8 g_field_pair_indicator_list[];
+/** @brief Animation frame of each pair indicator (0 and 1 share the first). */
+extern s32 g_field_pair_indicator_counters[];
+/** @brief Number of pairs in g_field_pair_indicator_list. */
+extern s32 g_field_pair_indicator_count;
+/** @brief Nonzero while a script has turned the pair indicators off. */
+extern s32 g_field_pair_indicators_disabled;
+
+/* field_party_state.c */
+extern u8 g_field_element_level_by_land_level[];
 
 /* field_record_effect_ops.c */
 void field_roll_menu_slot_effect(s32 group_index, s32 slot_index);
@@ -513,6 +632,18 @@ struct FieldActorRecord* field_alloc_actor_record(s32 id);
 void field_stop_actor_script(s32 actor_id, s32 flags);
 void field_restore_actor_capacity_fraction(s32 record_id, s32 fraction_256);
 void field_grant_actor_pickup(s32 recipient, s32 owner_id);
+/**
+ * @brief field_find_actor_record(s32 id).
+ * @note Declared without parameters: field_interaction_start.c calls it with no argument.
+ */
+struct FieldActorRecord* field_find_actor_record();
+/**
+ * @brief field_find_actor_record_or_default(s32 id).
+ * @note Declared without parameters: field_interaction_start.c also passes g_field_runtime.
+ */
+struct FieldActorRecord* field_find_actor_record_or_default();
+void field_stop_non_script_actors(void);
+void field_actor_loop_stub(void);
 
 /* field_record_position_queries.c */
 s32 field_distance_xz(Vec3i* first, Vec3i* second);
@@ -530,6 +661,8 @@ void field_temper_item(struct FieldItemRecord* record, s32 secondary_item);
 /* field_record_stat_ops.c */
 void field_refresh_party_member(s32 index);
 s32 field_get_equipped_stat(struct FieldCharacterRecord* character, u32 stat_index);
+/** @brief Signed stat modifier for each four-bit modifier index (index 4 is 0; range -10 to +20). */
+extern s8 g_field_stat_modifier_values[];
 
 /* field_record_table_ops.c */
 void field_unlock_land_artifact(s32 land_index);
@@ -540,6 +673,7 @@ s32 field_receive_money(s32 amount);
 s32 field_spend_money(u32 amount);
 s32 field_get_item_value(struct FieldItemRecord* item);
 void field_cache_inventory_values(void);
+s32 field_award_land_artifacts(s32 first_land, s32 second_land, s32* awarded);
 
 /* field_resource_load.c */
 void field_reset_battle_entry(void);
@@ -549,6 +683,7 @@ s32 field_queue_battle_entry_change(s32 actor_key, s32 animation, s32 builtin_an
 s32 field_party_reload_pending(void);
 void field_install_party_reload(s32 alternate_layout, s32 slot);
 void field_request_party_reload(s32 weapon_set);
+s32 field_party_reload_reading(void);
 
 /* field_resource_table_ops.c */
 u8* field_get_party_event_script(s32 page, u16 entry);
@@ -572,6 +707,9 @@ s32 field_update_ring_menu(struct FieldRenderHalf* render_half);
 #define FIELD_RES_COMPANION_ACTIONS 0xA9B
 void field_load_party_script_page(s32 party_slot, s32 resource_id);
 void field_upload_golem_palettes(void);
+/** @brief Ring menu state; nonzero while the ring menu is open. */
+extern s32 g_field_ring_menu_state;
+extern u8 g_field_ring_saved_selections[];
 
 /* field_saved_slot_ops.c */
 s32 field_add_stored_companion(s32 template_index);
@@ -590,12 +728,23 @@ extern s32 g_field_scene_mode_bit;
 /* field_script_ops.c */
 /** @brief Non-zero while a duel (scene script command) runs; cleared when the battle ends. */
 extern s32 g_field_duel_mode;
+void field_script_op_00(void);
 
 /* field_scene_transition.c */
 /** @brief Set while the player stands on the marker whose interaction already started; cleared when the player leaves it. */
 extern s32 g_field_scene_contact_latched;
 /** @brief Event script table of the scene: u16 offsets from the table start, then the scripts. */
 extern u16* g_field_event_scripts;
+extern u32* g_field_scene_record_table;
+extern u16* g_field_actor_scripts;
+/** @brief Number of loaded actors; the next scene actor takes this object index. */
+extern s32 g_field_loaded_actor_count;
+extern struct FieldRenderHalf* g_field_render_context;
+extern s32 g_field_preserve_entry_music;
+extern u8* g_field_scene_portraits;
+extern u8* g_field_scene_strings;
+/** @brief Set while the last scene actor loaded has more than one image. */
+extern s32 g_field_last_actor_multi_image;
 
 /* field_scene_build.c */
 void field_draw_scene_objects(u8** cursor, u_long* ot, s32 update_mode);
@@ -603,6 +752,7 @@ void field_size_work_buffer(void);
 
 /* field_scene_control.c */
 void field_set_color_scale(s32 object_index, s32 red, s32 green, s32 blue);
+void field_begin_scene_fade_in(void);
 
 /** Scene lists selected by field_control_animation and field_get_animation_state (FieldSeqDef::list_kind). */
 enum

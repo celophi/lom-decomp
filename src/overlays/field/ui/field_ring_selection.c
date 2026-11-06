@@ -132,7 +132,6 @@ extern s32 g_field_ring_icon_width;
 extern s32 g_field_ring_icon_height;
 extern s32 g_field_ring_radius;
 extern s32 g_field_ring_target_radius;
-extern u8 g_field_ring_saved_selections[];
 extern s32 g_field_ring_cursor;
 extern s32 g_field_ring_cancel_index;
 /**
@@ -142,7 +141,6 @@ extern s32 g_field_ring_cancel_index;
 extern s32 g_field_ring_unused;
 extern u8 g_field_ring_entries[];
 extern s32 g_field_ring_step;
-extern s32 g_field_ring_menu_state;
 extern s32 g_field_ring_start_angle;
 extern s32 g_field_ring_semi_trans;
 extern s32 g_field_ring_entry_count;

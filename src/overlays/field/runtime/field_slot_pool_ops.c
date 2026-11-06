@@ -33,11 +33,8 @@
 #define STAGED_STAT_LIMITS_MASK 0xF0
 #define STAGED_STAT_LIMITS_SHIFT 4
 
-/** @brief Signed stat modifier for each four-bit modifier index (index 4 is 0; range -10 to +20). */
-extern s8 g_field_stat_modifier_values[];
 /** @brief Lowest and highest modifier index a stat may have, per limits row. */
 extern u8 g_field_stat_modifier_limits[][2];
-
 void field_script_run(FieldScriptContext* context);
 
 static s32 field_shift_slot_chain(s32 slot);
@@ -60,10 +57,12 @@ void field_run_item_script(s32 offset)
     FieldScriptContext* context;
 
     depth = g_field_script->active_record;
+
     if (FIELD_SCRIPT_RECORD(depth)->pc != NULL)
     {
         g_field_script->active_record = depth + 1;
     }
+
     context = g_field_script;
     FIELD_SCRIPT_RECORD_STATE(context->active_record)->pc = g_field_item_tables->bytes + (offset & 0xFFFF);
     FIELD_SCRIPT_RECORD_STATE(context->active_record)->wait.bits.resume = 0;
@@ -80,10 +79,12 @@ void field_run_slot_scripts(void)
     s32 slot;
 
     field_shift_slot_chain(0);
+
     if (g_field_item_staging->slots[5] < FIELD_SLOT_SCRIPT_LIMIT)
     {
         field_run_item_script(g_field_item_tables->item.slot_values[g_field_item_staging->slots[5]].scripts[3]);
     }
+
     for (slot = 4; slot >= 3; slot--)
     {
         if (g_field_item_staging->slots[slot] < FIELD_SLOT_SCRIPT_LIMIT)
@@ -91,10 +92,12 @@ void field_run_slot_scripts(void)
             field_run_item_script(g_field_item_tables->item.slot_values[g_field_item_staging->slots[slot]].scripts[2]);
         }
     }
+
     if (g_field_item_staging->slots[2] < FIELD_SLOT_SCRIPT_LIMIT)
     {
         field_run_item_script(g_field_item_tables->item.slot_values[g_field_item_staging->slots[2]].scripts[1]);
     }
+
     if (g_field_item_staging->slots[1] < FIELD_SLOT_SCRIPT_LIMIT)
     {
         field_run_item_script(g_field_item_tables->item.slot_values[g_field_item_staging->slots[1]].scripts[0]);
@@ -125,6 +128,7 @@ static s32 field_shift_slot_chain(s32 slot)
         {
             return 0;
         }
+
         if (FIELD_SLOT_IS_LOW_CLASS(g_field_item_staging->slots[slot]) && g_field_item_staging->flags.bits.keep_low_slot)
         {
             return 0;
@@ -132,6 +136,7 @@ static s32 field_shift_slot_chain(s32 slot)
     }
 
     next = slot + 1;
+
     if (field_shift_slot_chain(next) != 0)
     {
         g_field_item_staging->slots[next] = g_field_item_staging->slots[slot];
@@ -143,6 +148,7 @@ static s32 field_shift_slot_chain(s32 slot)
     {
         return 0;
     }
+
     if (FIELD_SLOT_IS_LOW_CLASS(g_field_item_staging->slots[slot]) && g_field_item_staging->flags.bits.keep_low_slot)
     {
         return 0;
@@ -226,15 +232,18 @@ static void field_clamp_staged_stats(void)
         entry = FIELD_STAGING_AT(g_field_item_staging, i);
         limits = g_field_stat_modifier_limits[entry->stats.bytes[0] >> STAGED_STAT_LIMITS_SHIFT];
         result = limits[0];
+
         if (modifier >= result)
         {
             maximum = limits[1];
             result = maximum;
+
             if (modifier <= maximum)
             {
                 result = modifier;
             }
         }
+
         entry->stats.bytes[0] = (entry->stats.bytes[0] & STAGED_STAT_LIMITS_MASK) | (result & STAGED_STAT_MODIFIER_MASK);
     }
 }
@@ -276,6 +285,7 @@ void field_raise_staged_level(s32 index)
     staging = g_field_item_staging;
     entry = FIELD_STAGING_AT(staging, price);
     price = 1;
+
     if (entry->levels[0].cost != 0)
     {
         price = entry->levels[0].cost;
@@ -334,6 +344,7 @@ static void field_apply_element_flags(void)
     s32 i;
 
     g_field_item_staging->element_flags = 0;
+
     for (i = 0, mask = 1; i < 8; i++, mask <<= 1)
     {
 #if defined(VERSION_JP)
@@ -356,6 +367,7 @@ void field_lower_staged_level(s32 index)
     u8 level;
 
     level = g_field_item_staging->levels[index].level;
+
     if (level != 0)
     {
         g_field_item_staging->levels[index].level = level - 1;
@@ -373,13 +385,16 @@ s32 field_can_pay_staged_cost(s32 cost)
     FieldItemStaging* staging;
 
     staging = g_field_item_staging;
+
     if (staging->flags.bits.slot_class == 0)
     {
         cost = 0;
     }
+
     if (staging->pool < cost)
     {
         return 0;
     }
+
     return -1;
 }

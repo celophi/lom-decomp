@@ -86,8 +86,6 @@ static void field_drain_status_hp(FieldStatusRecord* record);
 static void field_recover_status_stats(FieldStatusRecord* record);
 static void field_regenerate_status_hp(FieldStatusRecord* record);
 
-s32 field_get_actor_animation(s32 key);
-
 /**
  * @brief Count one more standing record on the side of a revived actor.
  *

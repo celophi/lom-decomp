@@ -59,9 +59,6 @@ typedef struct
     SVECTOR velocity;
 } WmapMovingPoint;
 
-extern MATRIX g_wmap_effect_camera_matrix;
-extern u16 g_wmap_particle_shade;
-
 s32 rand(void);
 
 /**

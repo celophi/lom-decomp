@@ -106,9 +106,6 @@ extern FieldMoveObject g_field_object_parts[];
 /** @brief Last field_find_actor_overlap result: zero, or the object index plus FIELD_CONTACT_RESULT_PRESENT. */
 extern s32 g_field_last_actor_contact;
 
-void field_start_interaction(s32 value, u16 entry, FieldObjectState* states);
-void field_restart_actor_animation();
-
 static s32 field_intersect_screen_segments(Vec2s* first_start, Vec2s* first_end, Vec2s* second_start, Vec2s* second_end);
 static s32 field_is_outside_group_bounds(FieldActor* actor, s32* position);
 static void field_dispatch_object_state_entry(FieldActor* actor, s32 entry_index);

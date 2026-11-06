@@ -28,9 +28,6 @@
 /** @brief X position, in whole units, that parks an actor outside the map. */
 #define FIELD_PARKED_X (-1024)
 
-FieldActorRecord* field_find_actor_record(s32 id);
-FieldActorRecord* field_find_actor_record_or_default(s32 id);
-
 /**
  * @brief Spawn the actor record of a dropped item and run its spawn event, or release it.
  * @param key Object key of the item actor.

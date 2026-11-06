@@ -59,4 +59,11 @@ extern s32 g_wmap_entry_fade_level;
 /** @brief Ordering-table bucket used by the screen-covering fade. */
 extern s32 g_wmap_overlay_fade_depth;
 
+extern s32 g_wmap_projection_distance;
+
+/** @brief Cleared every frame; nothing reads it. */
+extern s32 g_wmap_unused_frame_word;
+
+extern RECT g_wmap_framebuffer_rect;
+
 #endif

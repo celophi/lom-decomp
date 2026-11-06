@@ -35,6 +35,7 @@
 #include "main/field_runtime.h"
 #include "main/game_state.h"
 #include "main/overlay_memory.h"
+#include "main/main.h"
 #include "overlays/field/field_input.h"
 #include "overlays/field/field_numeric_sprites.h"
 #include "overlays/field/field_overlay_handoff.h"
@@ -44,8 +45,6 @@
 #include "overlays/field/field_ui_text.h"
 #include "overlays/gname/gname.h"
 #include "overlays/zukan/zukan.h"
-
-void field_set_cd_error_fade_target(void);
 
 /** @brief Minus sign entry in the dialog text bank. */
 
@@ -138,9 +137,7 @@ typedef enum FieldDuelPanelPhase
 
 /* Offset tables of the ability and technique names (u16 offsets from the table start). */
 extern u8 g_field_command_names[];
-extern u8 g_field_technique_names[];
 /* Action slot bound to each hint button (index into FieldCharacterRecord::button_actions). */
-extern u8 g_field_hint_button_map[];
 /* Action icons of the instrument types. */
 extern u8 g_field_instrument_icons[];
 
@@ -149,19 +146,8 @@ extern u8 g_field_instrument_icons[];
  * pointer as SavedGameLayout, so this file does not include main.h and declares
  * the main executable globals it uses itself.
  */
-extern s32 g_pad_input;
-extern s32 g_pad_input_inject;
-extern s32 g_save_compatibility_tag;
-extern u16 g_music_track_index;
-extern s32 g_frame_counter;
-extern s32 g_active_script;
-extern s32 g_script_repeat_count;
 
 /* Dialog item list shown by the result screens. */
-extern u8* g_field_dialog_item_texts[];
-extern s32 g_field_dialog_item_count;
-extern u8 g_field_dialog_item_quantities[];
-
 /* Actor-label text session. */
 extern u8 g_field_selected_actor_label;
 extern u8 g_field_label_actor_indices[];
@@ -174,14 +160,10 @@ extern s32 g_field_draw_count;
 
 /* Input repeat state of both controllers. */
 extern s32 g_field_primary_held_buttons;
-extern s32 g_field_primary_repeat_delay;
 extern s32 g_field_secondary_held_buttons;
-extern s32 g_field_secondary_repeat_delay;
 extern u8 g_field_menu_controller_types[CONTROLLER_PORT_COUNT];
 
 /* Field state that blocks the menu. */
-extern s32 g_field_item_drop_enabled;
-
 /* Modal overlays. */
 extern s32 g_field_gosub_phase;
 extern s32 g_field_shop_active;
@@ -204,15 +186,12 @@ s32 carda_update_frame(FieldRenderHalf* render);
 s32 menu_run(RenderContext* render_buffers);
 void gosub_open_screen_sequence(void* work, void* screen_sequence);
 
-s32 field_party_reload_reading(void);
-void* field_draw_player_icon(POLY_FT4* packet_cursor, u_long* ot, s32 player, s32 x, s32 y, s32 flip);
 POLY_FT4* field_text_draw_scaled_quad(POLY_FT4* packet_cursor, u_long* ot, u8* text, s32 color, s32 x, s32 y, s32 align, s32 slot, s32 scale_x, s32 scale_y,
                                       s32 arg10, s32 visible);
 
 s32 field_name_byte_length(u8* name);
 void field_copy_name(u8* destination, u8* source);
 void field_append_name(u8* destination, const u8* source);
-s32 field_read_controller_buttons(s32 index);
 void field_draw_text_session(FieldRenderHalf* render);
 void field_restore_label_actor_parts(void);
 static void field_init_actor_labels(void);

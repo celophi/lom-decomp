@@ -63,19 +63,11 @@ extern s32 g_field_command_idle_frames[FIELD_PLAYER_COUNT];
 /** @brief Button code for each bound action slot (0x10 to 0x80). */
 extern u8 g_field_action_command_codes[];
 
-/** @brief Physical button index to action slot binding index. */
-extern u8 g_field_hint_button_map[];
-
 /** @brief Direction patterns (NUL-terminated nibble strings) that end with the finish button. */
 extern char g_field_command_patterns[FIELD_COMMAND_PATTERN_COUNT][FIELD_COMMAND_PATTERN_SIZE];
 
 /** @brief Command returned for each entry of g_field_command_patterns. */
 extern u8 g_field_command_pattern_ids[FIELD_COMMAND_PATTERN_COUNT];
-
-extern s32 g_field_pair_indicator_counters[];
-extern s32 g_field_pair_indicator_count;
-extern s32 g_field_pair_indicators_disabled;
-extern u8 g_field_pair_indicator_list[];
 
 static void field_command_history_shift(s32 player);
 static void field_command_history_consume(s32 player, s32 count);

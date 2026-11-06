@@ -1,5 +1,6 @@
 #include "common.h"
 #include <libgte.h>
+#include <rand.h>
 
 #include "../internal/wmap_actor_motion.h"
 #include "../internal/wmap_cells.h"
@@ -15,11 +16,9 @@ extern s32 g_wmap_land_effect_32_sequence_2_timer;
 extern s32 g_wmap_land_effect_32_sequence_3_timer;
 extern s32 g_wmap_land_effect_32_sequence_4_timer;
 extern s32 g_wmap_land_effect_32_sequence_5_timer;
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_32_sequence_6_timer;
 extern s32 g_wmap_land_effect_32_sequence_7_timer;
 extern s32 g_wmap_land_effect_32_sequence_10_timer;
-extern s32 rand(void);
 extern s32 g_wmap_land_effect_32_timer;
 extern WmapSequenceStep g_wmap_land_effect_32_steps[];
 extern s32 g_wmap_land_effect_32_timeline_timer;

@@ -14,7 +14,6 @@
 s32 field_compute_monster_level(FieldActorTemplate* template);
 /* Defined without a result; the value is the one it leaves in the return register. */
 FieldStatusState* field_find_object_state(s32 key);
-
 /**
  * @brief Build the battle status records of the monsters in a trigger group.
  * @param group Trigger group whose actors join the battle.

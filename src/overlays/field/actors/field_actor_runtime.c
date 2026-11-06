@@ -38,7 +38,6 @@
 #include "overlays/field/field_text.h"
 #include "overlays/field/field_types.h"
 
-void field_restart_actor_animation(FieldActor* actor);
 void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_entry_index);
 
 /** @brief Frames of the fade out before the game-over overlay loads. */
@@ -219,15 +218,11 @@ typedef struct FieldCdBuffer
  * @param audio_clip_index Sound effect bank resource index.
  */
 void secondary_overlay_entry(s32 work_address, s32 image_resource_index, s32 music_resource_index, s32 audio_clip_index);
-void field_draw_dialog_windows(FieldRenderHalf* render_half);
-void field_merge_dialog_items(void);
-
 static void field_relocate_resource_buffer(s32 resource_index);
 void field_load_actor_resource_slot(s32 resource_index, s32 slot_index, s32 resource_id, s32 alternate_layout);
 static void field_build_actor_render_commands(FieldRenderContext* render_ctx, s32 unused);
 static void field_update_actor_effects(FieldActorSlot* slot);
 static void field_update_actor_part_effects(FieldActorSlot* slot);
-void field_dispatch_actor_audio_event(FieldActorSlot* slot, s32 event_type, s32 event_subtype);
 static void field_reset_actor_track_mask(FieldActorSlot* slot);
 static void field_apply_global_color_scale(void);
 u8* field_advance_actor_animation_frame(FieldActor* actor);
@@ -239,18 +234,13 @@ static void field_append_resource_data(void* data, s32 length, s32 slot_index);
 static void field_refresh_actor_portraits();
 s32* field_render_effect_frame16(FieldActor* actor, s32* packet, u32* ordering_table, u8* frame_data, s32 unused, FieldObjectPart* part);
 s32* field_render_effect_frame8(FieldActor* actor, s32* packet, u32* ordering_table, u8* frame_data, s32 unused, FieldObjectPart* part);
-
 extern FieldColorScale g_field_color_scale;
 extern u8 g_field_color_scale_active;
 extern s32 g_field_gover_image_resource_id;
 extern s32 g_field_gover_music_resource_id;
 extern s32 g_field_gover_audio_clip_id;
 extern FieldAnimationDef g_field_object_default_animation;
-extern s32 g_field_loaded_actor_count;
 extern FieldActor g_field_effect_records[];
-extern s32 g_field_next_path_group;
-extern s32 g_field_spawn_ground_point;
-
 /**
  * @brief Advance the active field dialog runtime and finish any pending text work.
  * @param render_half Render half the dialog windows are drawn into.

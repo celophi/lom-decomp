@@ -124,14 +124,8 @@ typedef struct
 /** @brief g_field_object_states addressed from element 0's target_x. */
 #define FIELD_OBJECT_TARGETS ((FieldObjectTarget*)&g_field_object_states[0].target_x)
 
-extern s32 g_field_direction_animation_modes[];
-extern s32 g_field_actor_walk_animations[];
 extern s32 g_field_binding_restart_pending[FIELD_ACTOR_BINDING_COUNT];
-extern u16* g_field_actor_scripts;
-
 /* Unprototyped: defined with one parameter, but the spawn call passes a second argument (as in the effect code). */
-void field_restart_actor_animation();
-
 static void field_run_actor_script_command(FieldActor* actor);
 static void field_move_actor_texture_rect(FieldActor* actor, RECT* rect, s32 x, s32 y);
 

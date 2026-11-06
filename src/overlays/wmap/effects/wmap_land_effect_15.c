@@ -15,12 +15,11 @@
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
 #include "sdk/gte_dmpsx_compat.h"
+#include "../internal/wmap_effect_primitives.h"
 
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_15_sequence_4_timer;
 extern s32 g_wmap_land_effect_15_sequence_5_timer;
 extern s32 g_wmap_land_effect_15_sequence_7_timer;
-extern s32 g_wmap_particle_shade;
 extern s32 g_wmap_land_effect_15_timer;
 extern WmapSequenceStep g_wmap_land_effect_15_steps[];
 extern s32 g_wmap_land_effect_15_timeline_timer;

@@ -1,5 +1,6 @@
 #include "common.h"
 #include <libgte.h>
+#include <rand.h>
 
 #include "../internal/wmap_actor_motion.h"
 #include "../internal/wmap_cells.h"
@@ -12,14 +13,11 @@
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
 
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_30_sequence_3_timer;
 extern s32 g_wmap_land_effect_30_sequence_4_timer;
-extern s32 g_wmap_particle_shade;
 extern s32 g_wmap_land_effect_30_sequence_10_timer;
 extern s32 g_wmap_land_effect_30_sequence_11_timer;
 extern s32 g_wmap_land_effect_30_sequence_12_timer;
-extern s32 rand(void);
 extern s32 g_wmap_land_effect_30_sequence_13_timer;
 extern s32 g_wmap_land_effect_30_sequence_14_timer;
 extern s32 g_wmap_land_effect_30_timer;
@@ -64,8 +62,6 @@ extern u32 g_wmap_land_effect_30_sequence_6_step;
 extern u32 g_wmap_land_effect_30_sequence_7_step;
 extern u32 g_wmap_land_effect_30_sequence_8_step;
 extern u32 g_wmap_land_effect_30_sequence_9_step;
-
-extern s32* g_wmap_effect_params;
 
 /** @brief Move the model closer and fade it until the timer expires. */
 WMAP_STEP_DROP_UPDATE(wmap_land_effect_30_sequence_3_step_02, g_wmap_land_effect_30_sequence_3_step, g_wmap_land_effect_30_sequence_3_timer,

@@ -5,6 +5,7 @@
  */
 
 #include "common.h"
+#include <rand.h>
 
 #include "../internal/field_actor.h"
 #include "../internal/field_calls.h"
@@ -130,12 +131,6 @@ typedef struct FieldOnHitStatus
     u8 duration;
 } FieldOnHitStatus;
 
-/** @brief Nonzero while a guest is in the party; selects the coordinate panel icon. */
-extern s32 g_field_party_has_guest;
-
-/** @brief Label strings drawn on the coordinate panel, NULL when missing. */
-extern u8* g_field_coordinate_labels[FIELD_COORDINATE_LABEL_COUNT];
-
 /** @brief Action handlers indexed by FieldActionDescriptor::info.bytes.handler. */
 extern FieldActionHandler g_field_action_handlers[FIELD_ACTION_HANDLER_COUNT];
 
@@ -143,12 +138,6 @@ extern FieldActionHandler g_field_action_handlers[FIELD_ACTION_HANDLER_COUNT];
 extern u8 g_field_element_resist_slots[FIELD_ELEMENT_COUNT];
 
 extern FieldOnHitStatus g_field_on_hit_statuses[];
-
-s32 field_get_actor_animation(s32 key);
-s32 field_start_actor_defeat_by_key(s32 key, s32 value);
-s32 field_spawn_shared_animation_actor(s32 key, s32 resource_index);
-s32 field_schedule_actor_revive(s32 key, s32 value1, s32 value2, s32 value3, s32 value0);
-s32 rand(void);
 
 s32 field_battle_side_defeated(FieldStatusRecord* record);
 void field_consume_revive_item(FieldStatusRecord* record);

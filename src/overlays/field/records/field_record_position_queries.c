@@ -4,10 +4,10 @@
  */
 
 #include "common.h"
+
 #include "../internal/field_calls.h"
 #include "../internal/field_state_ops.h"
 #include "common/vector.h"
-
 FieldStatusState* field_find_object_state(s32 actor_id);
 
 /**
@@ -22,12 +22,14 @@ s32 field_distance_xz(Vec3i* first, Vec3i* second)
     s32 dz;
 
     dx = first->x - second->x;
+
     if (dx < 0)
     {
         dx = -dx;
     }
 
     dz = first->z - second->z;
+
     if (dz < 0)
     {
         dz = -dz;
@@ -50,6 +52,7 @@ s32 field_is_actor_near_stored_position(s32 actor_id, s32 half_width, s32 half_d
 
     object = field_find_object_state(actor_id);
     field_get_actor_position(actor_id, &live);
+
     if (live.x - half_width < object->position_x && object->position_x < live.x + half_width)
     {
         if (live.z - half_depth < object->position_z && object->position_z < live.z + half_depth)
@@ -57,5 +60,6 @@ s32 field_is_actor_near_stored_position(s32 actor_id, s32 half_width, s32 half_d
             return -1;
         }
     }
+
     return 0;
 }

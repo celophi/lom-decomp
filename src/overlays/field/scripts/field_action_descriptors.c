@@ -10,8 +10,6 @@
 #include "../internal/field_records.h"
 #include "main/audio/game_audio.h"
 
-void field_battle_run_party_event();
-
 /** @brief Record kind bits (FieldStatusRecordMeta bits.kind) within the packed word. */
 #define STATUS_KIND_MASK 0xFC00
 
@@ -73,8 +71,6 @@ typedef struct ItemActionRow
 {
     FieldActionDescriptor actions[ITEM_ROW_ACTION_COUNT];
 } ItemActionRow;
-
-extern FieldActionBank* g_field_action_bank;
 
 static FieldActionDescriptor* field_command_action_descriptor(s32 command);
 

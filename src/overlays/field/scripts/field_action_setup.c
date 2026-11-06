@@ -52,10 +52,10 @@ enum
 #define FIELD_GUARD_FLAG_BLOCK 0x4000   /**< Blocks every action. */
 #define FIELD_GUARD_FLAG_IGNORE 0x8000  /**< Ignores every action. */
 
-/** @brief FieldStatusRecord::status_flags bits read here; meanings unknown. */
-#define FIELD_RECORD_STATUS_10 0x10
-#define FIELD_RECORD_STATUS_80 0x80
-#define FIELD_RECORD_STATUS_100 0x100
+/** @brief FieldStatusRecord::status_flags bits (from equipment effects) read here. */
+#define FIELD_RECORD_FLAG_REPEL 0x10            /**< Repels FIELD_ANIM_REPEL_A and _B. */
+#define FIELD_RECORD_FLAG_EXTRA_EXPERIENCE 0x80 /**< Defeated targets drop one more experience pickup. */
+#define FIELD_RECORD_FLAG_EXTRA_MONEY 0x100     /**< Defeated targets drop one more money pickup. */
 
 /** @brief FieldStatusState::effect_flags bits read here. */
 #define FIELD_EFFECT_NO_INTENSITY 0x200    /**< The attacker's intensity does not rise. */
@@ -73,7 +73,7 @@ enum
 /** @brief Target animations (field_get_actor_animation) that change how an action lands. */
 #define FIELD_ANIM_WEAPON_GUARD 0x22 /**< Kind 1 fails against a spear or staff. */
 #define FIELD_ANIM_IMMUNE 0x3B       /**< Kind 1 always fails. */
-#define FIELD_ANIM_REPEL_A 10        /**< Kind 4 is repelled with FIELD_RECORD_STATUS_10. */
+#define FIELD_ANIM_REPEL_A 10        /**< Kind 4 is repelled with FIELD_RECORD_FLAG_REPEL. */
 #define FIELD_ANIM_REPEL_B 11
 
 /** @brief Effect animation (field_spawn_shared_animation_actor) of a target that repels an action. */
@@ -99,11 +99,6 @@ enum
 
 /** @brief Record ids below this are the player characters. */
 #define FIELD_PLAYER_RECORD_COUNT 2
-
-FieldActionDescriptor* field_select_action_descriptor(void);
-s32 field_get_actor_animation(s32 key);
-s32 field_register_actor_hit(s32 key, s32 reaction);
-s32 field_spawn_shared_animation_actor(s32 key, s32 resource_index);
 
 static void field_battle_bind_action(FieldBattleAction* action, s32 resolve_descriptor);
 static s32 field_battle_check_target_stance(void);
@@ -204,12 +199,12 @@ s32 field_battle_resolve_action(FieldBattleAction* action)
                 g_field_battle->target->modifier_flags |= FIELD_DEFEAT_NO_COMMON_DROPS;
             }
 
-            if (g_field_battle->attacker->status_flags & FIELD_RECORD_STATUS_100)
+            if (g_field_battle->attacker->status_flags & FIELD_RECORD_FLAG_EXTRA_MONEY)
             {
                 g_field_battle->target->modifier_flags |= FIELD_DEFEAT_MONEY_PLUS_1;
             }
 
-            if (g_field_battle->attacker->status_flags & FIELD_RECORD_STATUS_80)
+            if (g_field_battle->attacker->status_flags & FIELD_RECORD_FLAG_EXTRA_EXPERIENCE)
             {
                 g_field_battle->target->modifier_flags |= FIELD_DEFEAT_EXPERIENCE_PLUS_1;
             }
@@ -331,7 +326,7 @@ static s32 field_battle_check_target_stance(void)
                 return FIELD_STANCE_IMMUNE;
             }
 
-            if ((g_field_battle->target->status_flags & FIELD_RECORD_STATUS_10) && (animation == FIELD_ANIM_REPEL_A || animation == FIELD_ANIM_REPEL_B))
+            if ((g_field_battle->target->status_flags & FIELD_RECORD_FLAG_REPEL) && (animation == FIELD_ANIM_REPEL_A || animation == FIELD_ANIM_REPEL_B))
             {
                 g_field_battle->action_flags.bits.follow_up = 1;
                 return FIELD_STANCE_REPEL;

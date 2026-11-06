@@ -1,5 +1,6 @@
 #include "common.h"
 #include <libgte.h>
+#include <rand.h>
 
 #include "../internal/wmap_actor_motion.h"
 #include "../internal/wmap_cells.h"
@@ -13,7 +14,6 @@
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
 
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_25_sequence_3_timer;
 extern s32 g_wmap_land_effect_25_sequence_4_timer;
 extern s32 g_wmap_land_effect_25_sequence_5_timer;
@@ -22,7 +22,6 @@ extern s32 g_wmap_land_effect_25_sequence_7_timer;
 extern s32 g_wmap_land_effect_25_sequence_8_timer;
 extern s32 g_wmap_land_effect_25_sequence_9_timer;
 extern s32 g_wmap_land_effect_25_sequence_12_timer;
-extern s32 rand(void);
 extern s32 g_wmap_land_effect_25_sequence_13_timer;
 extern s32 g_wmap_land_effect_25_sequence_14_timer;
 extern s32 g_wmap_land_effect_25_sequence_15_timer;
@@ -76,10 +75,6 @@ extern u32 g_wmap_land_effect_25_sequence_10_step;
 extern u32 g_wmap_land_effect_25_sequence_11_step;
 extern u32 g_wmap_land_effect_25_sequence_16_step;
 extern u32 g_wmap_land_effect_25_sequence_18_step;
-
-extern s32* g_wmap_effect_params;
-
-extern WmapMotion g_wmap_effect_actor_motions[];
 
 /**
  * @brief Move the model along Z, draw it, and fade it until the timer expires.

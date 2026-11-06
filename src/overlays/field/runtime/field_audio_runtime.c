@@ -127,15 +127,11 @@ extern u8 g_field_second_song[];
 extern u8 g_field_sfx_set_uses_slots[];
 
 extern FieldSfxTableBuffer g_field_sfx_tables;
-extern u8 g_field_sound_tables[];
-
 /** @brief Registered AKAO instrument bank. */
 extern AkaoHeader* g_field_instrument_bank;
 
 /** @brief Song handles, indexed by FIELD_SONG_MAIN / FIELD_SONG_SECOND. */
 extern s32 g_field_song_handles[2];
-
-extern u8 g_field_ring_saved_selections[];
 
 /* Music stream state (field_start_music_stream .. field_stream_sector_callback). */
 extern s32 g_field_stream_sector_ready;

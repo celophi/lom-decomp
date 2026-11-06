@@ -97,23 +97,17 @@ typedef struct FieldBattleResource
 } FieldBattleResource;
 
 extern FieldBattleContext g_field_battle_context;
-extern FieldActionBank* g_field_action_bank;
 extern FieldActionBank g_field_default_action_bank;
 
 /** @brief Per-effect immunity masks; also indexed by status slot id - FIELD_STATUS_SLOT_ID_BASE. */
 extern u8 g_field_status_immunity_masks[FIELD_STATUS_SLOT_ID_COUNT];
 /** @brief Per-effect stats scaling the duration: high nibble the source's stat, low nibble the target's. */
 extern u8 g_field_status_duration_stats[FIELD_STATUS_SLOT_ID_COUNT];
-extern u8 g_field_element_level_by_land_level[];
 /** @brief Status signal stored for a stat change, indexed by the scale's distance from FIELD_STAT_SCALE_UNIT. */
 extern u8 g_field_stat_change_signals[];
 /** @brief Base monster level of each level rank. */
 extern u8 g_field_monster_level_by_rank[FIELD_LEVEL_RANK_COUNT];
-
-s32 field_get_actor_facing(s32 actor_id);
-s32 field_revive_actor();
 FieldStatusState* field_find_object_state(s32 actor_id);
-s32 field_spawn_shared_animation_actor(s32 key, s32 resource_index);
 
 static void field_battle_reset_context(void);
 static s32 field_build_party_records(void);

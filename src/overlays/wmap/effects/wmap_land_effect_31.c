@@ -37,8 +37,6 @@ extern WmapSequenceStep g_wmap_land_effect_31_sequence_17_steps[];
 extern WmapSequenceStep g_wmap_land_effect_31_sequence_18_steps[];
 extern WmapSequenceStep g_wmap_land_effect_31_sequence_19_steps[];
 extern WmapSequenceStep g_wmap_land_effect_31_sequence_20_steps[];
-extern s32 g_wmap_load_buffer[];
-extern s32* g_wmap_effect_model_pack_8;
 extern u32 g_wmap_land_effect_31_step;
 extern s32 g_wmap_land_effect_31_timer;
 extern u32 g_wmap_land_effect_31_timeline_step;
@@ -83,11 +81,8 @@ extern u32 g_wmap_land_effect_31_sequence_19_step;
 extern s32 g_wmap_land_effect_31_sequence_19_timer;
 extern u32 g_wmap_land_effect_31_sequence_20_step;
 extern s32 g_wmap_land_effect_31_sequence_20_timer;
-extern s32* g_wmap_effect_model_pack_9;
 
 extern SVECTOR g_wmap_land_effect_31_sequence_11_rotation;
-
-extern s32* g_wmap_effect_params;
 
 extern SVECTOR g_wmap_land_effect_31_sequence_5_rotation;
 

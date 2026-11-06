@@ -17,7 +17,6 @@ extern s32 g_wmap_land_effect_05_sequence_4_timer;
 extern s32 g_wmap_land_effect_05_sequence_5_timer;
 extern s32 g_wmap_land_effect_05_sequence_6_timer;
 extern s32 g_wmap_land_effect_05_sequence_7_timer;
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_05_sequence_8_timer;
 extern s32 g_wmap_land_effect_05_sequence_9_timer;
 extern s32 g_wmap_land_effect_05_sequence_10_timer;

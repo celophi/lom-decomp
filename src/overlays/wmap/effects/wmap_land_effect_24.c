@@ -35,7 +35,6 @@ extern WmapSequenceStep g_wmap_land_effect_24_sequence_14_steps[];
 extern WmapSequenceStep g_wmap_land_effect_24_sequence_13_steps[];
 extern WmapSequenceStep g_wmap_land_effect_24_sequence_12_steps[];
 extern WmapSequenceStep g_wmap_land_effect_24_sequence_11_steps[];
-extern s32 g_wmap_load_buffer[];
 extern u32 g_wmap_land_effect_24_step;
 extern s32 g_wmap_land_effect_24_timer;
 extern u32 g_wmap_land_effect_24_timeline_step;
@@ -70,8 +69,6 @@ extern u32 g_wmap_land_effect_24_sequence_14_step;
 extern s32 g_wmap_land_effect_24_sequence_14_timer;
 extern u32 g_wmap_land_effect_24_sequence_15_step;
 extern s32 g_wmap_land_effect_24_sequence_15_timer;
-
-extern s32* g_wmap_effect_params;
 
 /** @brief Start sequences 7, 2, 1 and 3, hide the transition mesh, tint the map and fade the backdrop to dark red. */
 void wmap_land_effect_24_timeline_step_07(void)

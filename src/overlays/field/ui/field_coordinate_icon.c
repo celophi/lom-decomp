@@ -45,11 +45,6 @@
 #define FIELD_COORDINATE_LABEL_ROW_HEIGHT 16
 #define FIELD_COORDINATE_LABEL_COLOR 4
 
-void* field_draw_player_icon(POLY_FT4* prim, u_long* ordering_table, s32 selector, s32 x, s32 y, s32 flip);
-
-extern s32 g_field_party_has_guest;
-extern u8* g_field_coordinate_labels[];
-
 /**
  * @brief Draw the coordinate panel: the second player's icon and the label rows present.
  * @param ot Ordering table passed to each draw.
@@ -64,21 +59,25 @@ void* field_draw_coordinate_panel(u_long* ot, u8* prim, s32 x_offset, s32 y_offs
     s32 unused[2];
 
     cursor = field_draw_player_icon((POLY_FT4*)prim, ot, g_field_party_has_guest, FIELD_COORDINATE_ICON_X - x_offset, -y_offset, 1);
+
     if (g_field_coordinate_labels[0] != NULL)
     {
         cursor = field_draw_text(cursor, ot, g_field_coordinate_labels[0], FIELD_COORDINATE_LABEL_COLOR, FIELD_COORDINATE_LABEL_X - x_offset,
                                  FIELD_COORDINATE_LABEL_Y - y_offset, FIELD_TEXT_ALIGN_LEFT);
     }
+
     if (g_field_coordinate_labels[1] != NULL)
     {
         cursor = field_draw_text(cursor, ot, g_field_coordinate_labels[1], FIELD_COORDINATE_LABEL_COLOR, FIELD_COORDINATE_LABEL_X - x_offset,
                                  FIELD_COORDINATE_LABEL_Y + FIELD_COORDINATE_LABEL_ROW_HEIGHT - y_offset, FIELD_TEXT_ALIGN_LEFT);
     }
+
     if (g_field_coordinate_labels[2] != NULL)
     {
         cursor = field_draw_text(cursor, ot, g_field_coordinate_labels[2], FIELD_COORDINATE_LABEL_COLOR, FIELD_COORDINATE_LABEL_X - x_offset,
                                  FIELD_COORDINATE_LABEL_Y + 2 * FIELD_COORDINATE_LABEL_ROW_HEIGHT - y_offset, FIELD_TEXT_ALIGN_LEFT);
     }
+
     return cursor;
 }
 
@@ -100,8 +99,8 @@ void field_upload_player_icons(void)
         upload_src = FIELD_PORTRAIT_UPLOAD_SOURCE(buffer, clut_offset);
         LoadImage(&rect, upload_src);
 
-        setRECT(&rect, (slot == FIELD_PARTY_PORTRAIT_COUNT - 1) ? FIELD_PARTY_PORTRAIT_VRAM_X2 : FIELD_PARTY_PORTRAIT_VRAM_X, (slot == 0) ? FIELD_PARTY_PORTRAIT_VRAM_Y0 : FIELD_PARTY_PORTRAIT_VRAM_Y1,
-                FIELD_PORTRAIT_SIZE / 4, FIELD_PORTRAIT_SIZE);
+        setRECT(&rect, (slot == FIELD_PARTY_PORTRAIT_COUNT - 1) ? FIELD_PARTY_PORTRAIT_VRAM_X2 : FIELD_PARTY_PORTRAIT_VRAM_X,
+                (slot == 0) ? FIELD_PARTY_PORTRAIT_VRAM_Y0 : FIELD_PARTY_PORTRAIT_VRAM_Y1, FIELD_PORTRAIT_SIZE / 4, FIELD_PORTRAIT_SIZE);
         upload_src = FIELD_PORTRAIT_UPLOAD_SOURCE(buffer, pixels_offset);
         LoadImage(&rect, upload_src);
 
@@ -147,6 +146,7 @@ void* field_draw_player_icon(POLY_FT4* handle, u_long* ordering_table, s32 selec
     prim->u1 = prim->u3 = prim->u0 + FIELD_PLAYER_ICON_EXTENT;
     prim->v1 = prim->v0;
     prim->v2 = prim->v3 = prim->v0 + FIELD_PLAYER_ICON_EXTENT;
+
     if (flip != 0)
     {
         u_value = prim->u0;

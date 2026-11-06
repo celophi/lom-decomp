@@ -10,8 +10,8 @@
 #include <libapi.h>
 #include <libetc.h>
 
-/** @brief Value set by field pair opcode 0x49 and cleared at boot. */
-extern s32 g_script_pair_value_49;
+/** @brief Set by field script command 0x49 and cleared at boot; nothing reads it. */
+extern s32 g_script_unused_value;
 
 /** @brief Countdown timer for delayed music/SFX trigger on field entry. */
 extern s32 g_field_audio_timer;

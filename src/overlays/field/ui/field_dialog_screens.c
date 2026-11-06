@@ -38,6 +38,8 @@
 #include "overlays/field/field_sound.h"
 #include "overlays/field/field_text.h"
 #include "overlays/field/field_ui_text.h"
+#include "main/audio/akao_cmd.h"
+#include "main/main.h"
 
 /** @brief Image resources of the timed panels (index 0 first). */
 #define FIELD_TIMED_PANEL_RESOURCE_BASE 0x1060
@@ -98,7 +100,6 @@ extern u16 g_field_timed_panel_height;
 extern s32 g_field_timed_panel_index;
 extern u16 g_field_timed_panel_brightness;
 extern u16 g_field_timed_panel_timer;
-extern s32 g_pad_input;
 
 static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_table, s32 index);
 static POLY_FT4* field_draw_timed_panel_image(POLY_FT4* prim, u_long* ordering_table);
@@ -759,11 +760,6 @@ static POLY_FT4* field_draw_timed_panel_image(POLY_FT4* prim, u_long* ordering_t
 }
 
 extern FieldActorText g_field_actor_texts[FIELD_ACTOR_TEXT_COUNT];
-/** @brief Technique name bank: u16 offsets from the bank start, then the strings. */
-extern u8 g_field_technique_names[];
-
-extern s32 g_field_actor_text_count;
-
 static void field_draw_actor_text(FieldRenderHalf* render, FieldActorText* text);
 static void* field_draw_tinted_text(SPRT* sprite_cursor, u_long* ordering_table, u8* text, s32 text_color, s32 x, s32 y, s32 alignment, s32 color);
 
@@ -1018,9 +1014,6 @@ static void* field_draw_tinted_text(SPRT* sprite_cursor, u_long* ordering_table,
 
 extern FieldTechniqueUnlockRule g_field_technique_unlock_rules[];
 /* Scene image setup also uses this flag; its broader purpose is unresolved. */
-/** @brief Set while the last scene actor loaded has more than one image. */
-extern s32 g_field_last_actor_multi_image;
-
 /**
  * @brief Advance active player proficiency and queue newly learned abilities and techniques.
  * @note Proficiency saturates at 100, advancing by four when g_field_last_actor_multi_image is set, or one otherwise.
@@ -1226,21 +1219,15 @@ void field_advance_ability_progression(void)
 }
 
 extern u8 g_field_retry_snapshot[];
-extern u8 g_field_dialog_item_quantities[];
-extern u8* g_field_dialog_item_texts[];
-extern s32 g_field_experience_snapshot[];
-extern FieldQuadAnimationTable g_field_small_icon_frames, g_field_marker_x_offsets, g_field_marker_u_offsets, g_field_marker_widths;
+extern FieldQuadAnimationTable g_field_small_icon_frames;
+extern FieldQuadAnimationTable g_field_marker_x_offsets;
+extern FieldQuadAnimationTable g_field_marker_u_offsets;
+extern FieldQuadAnimationTable g_field_marker_widths;
 extern s32 g_field_results_wait_frames;
-extern s32 g_field_dialog_item_count;
-extern s32 g_field_money_snapshot;
-extern s32 g_frame_counter;
 extern s32 g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_secondary_music_id, g_field_pending_scene_id, g_field_pending_object_id,
     g_field_pending_sound_bank_id;
 
-extern void akao_release_all_sfx(void);
 /* Defined in field_resource_load.c. */
-extern s32 field_party_reload_reading(void);
-
 static void field_open_unlock_list(void);
 static void field_open_item_list(void);
 static void field_open_party_summary(void);
@@ -1661,8 +1648,8 @@ static void* field_draw_party_totals(u_long* ot, void* cursor, s32 x_offset, s32
     {
         if (g_saved_game_ctx->characters[i].name[0] != 0)
         {
-            total_x += g_field_player_records[i].unk25C;
-            total_y += g_field_player_records[i].unk25D;
+            total_x += g_field_player_records[i].large_money_pickups;
+            total_y += g_field_player_records[i].small_money_pickups;
         }
     }
 
@@ -1770,13 +1757,13 @@ static void* field_draw_experience_ranking(u_long* ordering_table, void* cursor,
                 work.position.y = y;
                 result = field_draw_animated_icon(ordering_table, result, 0x38 - x_offset, y - 8, 1);
                 work.position.x = 0x48 - x_offset;
-                result = field_draw_number(ordering_table, result, g_field_player_records[work.order[i]].unk25A, 4, &work.position, FIELD_TEXT_ALIGN_LEFT);
+                result = field_draw_number(ordering_table, result, g_field_player_records[work.order[i]].large_experience_pickups, 4, &work.position, FIELD_TEXT_ALIGN_LEFT);
                 result = field_draw_text(result, ordering_table, FIELD_TEXT_AT(text, g_field_ui_text_plus.low, text_base[1]), 4, 0x68 - x_offset,
                                          work.position.y, FIELD_TEXT_ALIGN_LEFT);
                 result = field_draw_animated_icon(ordering_table, result, 0x78 - x_offset, work.position.y, 0);
                 work.position.x = 0x88 - x_offset;
                 work.position.y = y;
-                result = field_draw_number(ordering_table, result, g_field_player_records[work.order[i]].unk25B, 4, &work.position, FIELD_TEXT_ALIGN_LEFT);
+                result = field_draw_number(ordering_table, result, g_field_player_records[work.order[i]].small_experience_pickups, 4, &work.position, FIELD_TEXT_ALIGN_LEFT);
                 result = field_draw_text(result, ordering_table, FIELD_TEXT_AT(text, text[0x1A], text[0x1B]), 4, 0xA8 - x_offset, work.position.y,
                                          FIELD_TEXT_ALIGN_LEFT);
                 work.position.x = 0xE0 - x_offset;

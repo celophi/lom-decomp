@@ -88,4 +88,26 @@ extern s32 g_wmap_land_image_pack[];
 /** @brief Nonzero after a land-image lookup misses the cache this frame. */
 extern s32 g_wmap_land_image_cache_missed;
 
+/** @brief Land image loads are refused once this reaches 10; WMAP only ever clears it. */
+extern s32 g_wmap_land_image_load_count;
+
+/** @brief Three-bit phase advanced every other spirit display frame; nothing reads it. */
+extern s32 g_wmap_spirit_unused_phase;
+
+extern s32 g_wmap_spirit_selection;
+
+/** @brief Screen position of a map cell, read as one packed word or as two halves. */
+typedef union
+{
+    s32 packed;
+    struct
+    {
+        u16 x;
+        u16 y;
+    } point;
+} WmapCellScreenPosition;
+
+/** @brief Screen position of each cell of the 6x6 grid in the spirit view. */
+extern const WmapCellScreenPosition g_wmap_spirit_view_cell_positions[];
+
 #endif

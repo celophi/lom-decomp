@@ -230,7 +230,10 @@ enum
     FIELD_PART_VALUE_DISTANCE = 3
 };
 
-/** @brief Party-member record view: reward counters from 0x244 and shield visibility at 0x258. */
+/**
+ * @brief Party-member record view indexed by an effect's facing_or_reward_kind.
+ * @note Reward kinds start at 0x16, so counters[0x16 + FIELD_REWARD_*] is FieldPlayerRecord's pickup count of that kind.
+ */
 typedef struct
 {
     u8 pad0[0x244];
@@ -444,34 +447,20 @@ extern FieldMotionRecord g_field_actors[];
 extern FieldMotionRecord g_field_effect_records[FIELD_EFFECT_ACTIVE_RECORD_COUNT];
 /** @brief Position of the effect spawning child parts; FIELD_PLACEMENT_GLOBAL_POINT parts start there. */
 extern VECTOR g_field_effect_spawn_point;
-extern s32 g_field_spawn_ground_point;
-extern s32 g_field_next_path_group;
-
 extern s32 g_field_active_group;
 
-/** @brief Suppress repeated pickup audio until the next frame-command build. */
-extern s32 g_field_pickup_sound_played;
 extern FieldPlayerRecordView g_field_player_records[];
 
-extern u16 g_field_texture_slot_flags[];
-
-void field_restart_actor_animation();
+/** @brief field_actor_runtime.c; called here with FieldMotionRecord views of the effect records. */
 u8* field_begin_actor_animation_forward();
-
 POLY_FT4* field_render_actor_ground_shadow();
 u8* field_advance_actor_part_animation_frame();
-void field_interpolate_palette_track(FieldActorSlot* slot, s32 palette_sequence, u8* palette_table, s16* output);
-void field_dispatch_actor_audio_event();
-
-u32 field_evaluate_parameter_track_at_time(FieldActorSlot* actor, s32 track, s32 time);
-
 static s32 field_roll_effect_rotation(FieldActorSlot* actor, FieldObjectPart* part, FieldMotionRecord* effect);
 static void field_face_effect_target(FieldMotionRecord* effect, FieldObjectPart* part);
 static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPart* part, FieldActorSlot* actor);
 static void field_set_action_context(s32 recipient_id, s32 source_id, s32 action);
 s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, u8* item, s32 flag, FieldObjectPart* part);
 s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base, u8* item, s32 flag, FieldObjectPart* part);
-
 static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* packet_cursor, s32* ordering_table, u8* frame_data);
 
 /**

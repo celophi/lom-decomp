@@ -34,7 +34,6 @@
 #define FIELD_MUSIC_LEAVING_SORROW_BEHIND 46
 /** @brief Boss music of the "Sanctuary of Mana" (SEI_BSS0). */
 #define FIELD_MUSIC_SANCTUARY_OF_MANA 47
-
 FieldStatusState* field_find_object_state(s32 actor_id);
 
 /**

@@ -41,9 +41,7 @@
 
 /** @brief Per item type: eight four-bit stat increases applied on a level-up. */
 extern u32 g_field_item_type_stat_growth[];
-
 FieldStatusState* field_find_object_state(s32 actor_id);
-s32 field_spawn_shared_animation_actor(s32 key, s32 resource_index);
 
 static void field_add_guest_experience(s32 amount);
 static void field_award_grazing_pet_experience(u32 amount);

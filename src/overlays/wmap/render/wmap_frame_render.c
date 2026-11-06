@@ -13,10 +13,6 @@
 /** @brief Full-screen flat quad copied for the screen fades. */
 extern POLY_F4 g_wmap_fill_quad_template;
 
-/** @brief Cleared every frame; nothing reads it. */
-extern s32 g_wmap_unused_frame_word;
-extern s32 g_wmap_projection_distance;
-
 static void wmap_draw_exit_panel_quads(VECTOR* left_top, VECTOR* center_top, VECTOR* left_bottom, VECTOR* center_bottom, VECTOR* right_top,
                                        VECTOR* right_bottom);
 

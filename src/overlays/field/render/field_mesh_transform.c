@@ -16,8 +16,6 @@
 #include "sdk/gte_dmpsx_compat.h"
 
 /* Local view: the definition in field_actor_runtime.c takes the animation data it reads. */
-u32 field_evaluate_parameter_track_at_time(FieldActorSlot* actor, s32 track, s32 time);
-
 /** @brief FieldObjectPart track_flags fields of mesh morphing. */
 #define FIELD_PART_MESH_MORPH(flags) (((flags) >> 18) & 1)
 #define FIELD_PART_MESH_MORPH_TRACK(flags) (((flags) >> 2) & 15)
@@ -50,15 +48,18 @@ void field_transform_mesh_vertices(FieldActorSlot* actor, FieldMotionRecord* rec
     s32 mode;
     s32 dx, dy, dz;
     u32 part_flags = part->track_flags.word;
+
     if (FIELD_PART_MESH_MORPH(part_flags))
     {
         amount = field_evaluate_parameter_track_at_time(actor, FIELD_PART_MESH_MORPH_TRACK(part_flags), (u16)record->age);
         mode = FIELD_PART_MESH_MORPH_TARGET(part->track_flags.word);
+
         if (mode < FIELD_MESH_MORPH_OFFSETS)
         {
             /* Interpolate corresponding vertices with a 12-bit fractional weight. */
             count = FIELD_ACTOR_MESH(actor, index)->face_count;
             other = FIELD_ACTOR_MESH(actor, mode)->vertices;
+
             while (count != 0)
             {
                 work[0].vx = (u16)src[0].vx + (((other[0].vx - src[0].vx) * amount) >> 12);
@@ -101,6 +102,7 @@ void field_transform_mesh_vertices(FieldActorSlot* actor, FieldMotionRecord* rec
             count = FIELD_ACTOR_MESH(actor, index)->face_count;
             /* The offset mode uses one displacement vector per triangle. */
             other = FIELD_ACTOR_MESH(actor, index)->offsets;
+
             while (count != 0)
             {
                 dx = (other->vx * amount) >> 8;
@@ -145,6 +147,7 @@ void field_transform_mesh_vertices(FieldActorSlot* actor, FieldMotionRecord* rec
     else
     {
         count = FIELD_ACTOR_MESH(actor, index)->face_count;
+
         while (count != 0)
         {
             gte_ldv0(&src[0]);
@@ -194,15 +197,18 @@ void field_transform_mesh_normals(FieldActorSlot* actor, FieldMotionRecord* reco
 
     output = g_field_mesh_transformed_normals;
     source = FIELD_ACTOR_MESH(actor, index)->normals;
+
     if (FIELD_PART_MESH_MORPH(part->track_flags.word))
     {
         factor = field_evaluate_parameter_track_at_time(actor, FIELD_PART_MESH_MORPH_TRACK(part->track_flags.word), (u16)record->age);
         selected = FIELD_PART_MESH_MORPH_TARGET(part->track_flags.word);
+
         if (selected < FIELD_MESH_MORPH_OFFSETS)
         {
             count = FIELD_ACTOR_MESH(actor, index)->face_count;
             /* output walks the blend-target normals here; results go by count. */
             output = FIELD_ACTOR_MESH(actor, selected)->normals;
+
             while (count != 0)
             {
                 scratch->vx = (u16)source->vx + (((output->vx - source->vx) * factor) >> 12);
@@ -220,6 +226,7 @@ void field_transform_mesh_normals(FieldActorSlot* actor, FieldMotionRecord* reco
         else
         {
             count = FIELD_ACTOR_MESH(actor, index)->face_count;
+
             while (count != 0)
             {
                 gte_SetRotMatrix(matrix);
@@ -235,6 +242,7 @@ void field_transform_mesh_normals(FieldActorSlot* actor, FieldMotionRecord* reco
     else
     {
         count = FIELD_ACTOR_MESH(actor, index)->face_count;
+
         while (count != 0)
         {
             gte_SetRotMatrix(matrix);

@@ -2,6 +2,7 @@
 #include <inline_c.h>
 #include <libgpu.h>
 #include <libgte.h>
+#include <rand.h>
 
 #include "../internal/wmap_actor_motion.h"
 #include "../internal/wmap_cells.h"
@@ -56,11 +57,9 @@ extern s32 g_wmap_effect10_unused_count;
 extern s32 g_wmap_land_effect_10_sequence_4_timer;
 extern s32 g_wmap_land_effect_10_sequence_5_timer;
 extern s32 g_wmap_land_effect_10_sequence_8_timer;
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_10_sequence_7_timer;
 extern s32 g_wmap_land_effect_10_sequence_9_timer;
 extern s32 g_wmap_land_effect_10_sequence_10_timer;
-extern s32 rand(void);
 extern s32 g_wmap_land_effect_10_sequence_11_timer;
 extern s32 g_wmap_land_effect_10_timer;
 extern WmapSequenceStep g_wmap_land_effect_10_steps[];
@@ -96,11 +95,6 @@ extern u32 g_wmap_land_effect_10_sequence_1_step;
 extern u32 g_wmap_land_effect_10_sequence_2_step;
 extern u32 g_wmap_land_effect_10_sequence_3_step;
 extern u32 g_wmap_land_effect_10_sequence_6_step;
-
-extern s32* g_wmap_effect_params;
-
-extern WmapMotion g_wmap_effect_actor_motions[];
-extern WmapMotion g_wmap_actor_motions_at_60[];
 
 /**
  * @brief Spawn, move, and draw a batch of falling sparks, then fade them out as sprites.

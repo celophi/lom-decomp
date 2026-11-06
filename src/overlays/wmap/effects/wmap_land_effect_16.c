@@ -12,7 +12,6 @@
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
 
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_16_sequence_4_timer;
 extern s32 g_wmap_land_effect_16_sequence_5_timer;
 extern s32 g_wmap_land_effect_16_sequence_6_timer;
@@ -53,8 +52,6 @@ extern u32 g_wmap_land_effect_16_sequence_3_step;
 extern u32 g_wmap_land_effect_16_sequence_7_step;
 extern u32 g_wmap_land_effect_16_sequence_9_step;
 extern u32 g_wmap_land_effect_16_sequence_10_step;
-
-extern s32* g_wmap_effect_params;
 
 /** @brief Move the model closer and fade it until the timer expires. */
 WMAP_STEP_DROP_UPDATE(wmap_land_effect_16_sequence_4_step_02, g_wmap_land_effect_16_sequence_4_step, g_wmap_land_effect_16_sequence_4_timer,

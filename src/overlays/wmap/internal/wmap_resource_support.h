@@ -66,4 +66,7 @@ extern u8* g_wmap_effect_model_pack_5;
 extern u8* g_wmap_effect_model_pack_6;
 extern u8* g_wmap_effect_model_pack_7;
 
+/** @brief CD load target of the world map resources and effect models. */
+extern u8 g_wmap_load_buffer[];
+
 #endif

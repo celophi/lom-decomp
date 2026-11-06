@@ -48,9 +48,6 @@ enum
     FIELD_BINDING_QUERY_PLAYING = 3,
     FIELD_BINDING_QUERY_READY = 4
 };
-void field_restart_actor_animation(FieldActor* actor);
-
-
 /**
  * @brief Replace the group bits of object @p object_index.
  * @param object_index Object whose group_flags change.

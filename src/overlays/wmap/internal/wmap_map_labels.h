@@ -17,4 +17,7 @@ extern s32 g_wmap_auxiliary_label_draw_mode;
 /** @brief Nonzero to update land labels during map-cell selection. */
 extern s32 g_wmap_land_label_updates_enabled;
 
+/** @brief Label texture of each land. */
+extern s16 g_wmap_land_label_cells[];
+
 #endif

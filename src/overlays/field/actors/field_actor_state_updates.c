@@ -34,9 +34,6 @@ typedef struct
 
 extern FieldSequenceTemplate g_field_actor_templates[];
 extern FieldActorSlot g_field_shared_actor_template;
-void field_restart_actor_animation(FieldActor* actor);
-void field_resolve_collected_hits();
-
 /**
  * @brief Program the chain action slot of @p actor's resource action row.
  */

@@ -77,18 +77,8 @@ typedef struct
 
 static void field_draw_pair_indicator(s32 slot, FieldRenderHalf* render_half);
 
-extern s32 g_field_party_hud_order[];
 /** @brief Packed x/y screen corners of the four indicators, four words each. */
 extern u32 g_field_pair_indicator_corners[];
-/** @brief Animation frame of each pair indicator (0 and 1 share the first). */
-extern s32 g_field_pair_indicator_counters[];
-/** @brief Number of pairs in g_field_pair_indicator_list. */
-extern s32 g_field_pair_indicator_count;
-/** @brief Nonzero while a script has turned the pair indicators off. */
-extern s32 g_field_pair_indicators_disabled;
-/** @brief Actor index pairs of the close pairs (two bytes per pair), ended by FIELD_PAIR_LIST_END. */
-extern u8 g_field_pair_indicator_list[];
-
 /**
  * @brief Find the close party pairs of this frame and draw their indicators.
  *

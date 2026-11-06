@@ -1,5 +1,6 @@
 #include "common.h"
 #include <libgte.h>
+#include <rand.h>
 
 #include "../internal/wmap_cells.h"
 #include "../internal/wmap_effect_primitives.h"
@@ -11,6 +12,10 @@
 #include "../internal/wmap_sprite_render.h"
 #include "../internal/wmap_step_sequence.h"
 #include "../internal/wmap_view_effects.h"
+#include "../internal/wmap_actor_motion.h"
+
+/** @brief The actor motion pool viewed as this effect's swaying particles. */
+#define WMAP_EFFECT26_PARTICLES ((WmapSwayParticle*)g_wmap_actor_motions)
 
 /** @brief Screen coordinates and their packed renderer argument. */
 typedef union
@@ -22,7 +27,7 @@ typedef union
     } point;
 } WmapScreenPoint;
 
-/** @brief Screen-space particle in a g_wmap_actor_motions slot that falls and sways sideways; positions are in 1/16 pixels. */
+/** @brief Screen-space particle in a WMAP_EFFECT26_PARTICLES slot that falls and sways sideways; positions are in 1/16 pixels. */
 typedef struct
 {
     s16 state;
@@ -70,7 +75,6 @@ typedef struct
         PopMatrix();                                                                                                                                           \
     }
 
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_26_sequence_1_timer;
 extern s32 g_wmap_land_effect_26_sequence_2_timer;
 extern s32 g_wmap_land_effect_26_sequence_3_timer;
@@ -78,7 +82,6 @@ extern s32 g_wmap_land_effect_26_sequence_4_timer;
 extern s32 g_wmap_land_effect_26_sequence_5_timer;
 extern s32 g_wmap_land_effect_26_sequence_6_timer;
 extern s32 g_wmap_land_effect_26_sequence_11_timer;
-extern u32 rand(void);
 extern s32 g_wmap_land_effect_26_timer;
 extern WmapSequenceStep g_wmap_land_effect_26_steps[];
 extern s32 g_wmap_land_effect_26_timeline_timer;
@@ -113,7 +116,6 @@ extern u32 g_wmap_land_effect_26_sequence_9_step;
 extern u32 g_wmap_land_effect_26_sequence_8_step;
 extern u32 g_wmap_land_effect_26_sequence_10_step;
 
-extern WmapSwayParticle g_wmap_actor_motions[];
 
 /** @brief Approach the effect depth and draw its alternating-brightness fade. */
 void wmap_land_effect_26_sequence_1_step_02(void)
@@ -269,13 +271,13 @@ void wmap_land_effect_26_sequence_11_step_01(void)
     for (i = 124; i < 170; i++)
     {
         actor = &g_wmap_sprite_actors[i];
-        g_wmap_actor_motions[i].state = 1;
-        g_wmap_actor_motions[i].base_x = (rand() * 155) >> 10;
-        g_wmap_actor_motions[i].y = (rand() * 7) >> 6;
-        g_wmap_actor_motions[i].fall_speed = ((s32)(rand() << 6) >> 15) + 16;
-        g_wmap_actor_motions[i].sway_amplitude = rand() >> 9;
-        g_wmap_actor_motions[i].sway_step = ((s32)(rand() << 6) >> 15) + 4;
-        g_wmap_actor_motions[i].sway_phase = 0;
+        WMAP_EFFECT26_PARTICLES[i].state = 1;
+        WMAP_EFFECT26_PARTICLES[i].base_x = ((u32)rand() * 155) >> 10;
+        WMAP_EFFECT26_PARTICLES[i].y = ((u32)rand() * 7) >> 6;
+        WMAP_EFFECT26_PARTICLES[i].fall_speed = ((s32)(rand() << 6) >> 15) + 16;
+        WMAP_EFFECT26_PARTICLES[i].sway_amplitude = (u32)rand() >> 9;
+        WMAP_EFFECT26_PARTICLES[i].sway_step = ((s32)(rand() << 6) >> 15) + 4;
+        WMAP_EFFECT26_PARTICLES[i].sway_phase = 0;
         g_wmap_actor_animations[i].data = g_wmap_animation_bank_2;
         actor->scale_index = WMAP_SPRITE_SCALE_FULL;
         actor->resource_index = 0;
@@ -306,7 +308,7 @@ void wmap_land_effect_26_update_sway_particles(s32 start, s32 end, s32 depth)
     for (i = start; i < end; i++)
     {
         actor = &g_wmap_sprite_actors[i];
-        motion = &g_wmap_actor_motions[i];
+        motion = &WMAP_EFFECT26_PARTICLES[i];
         motion->y += motion->fall_speed;
 
         if (motion->y >= 3841)
@@ -528,7 +530,7 @@ void wmap_land_effect_26_sequence_9_step_01(void)
 
     for (index = 14; index < 34; index++)
     {
-        g_wmap_actor_motions[index].state = 0;
+        WMAP_EFFECT26_PARTICLES[index].state = 0;
         g_wmap_actor_animations[index + 14].data = g_wmap_animation_bank_0;
     }
 

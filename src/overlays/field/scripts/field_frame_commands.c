@@ -14,14 +14,6 @@
 #include "overlays/field/field_input.h"
 #include "overlays/field/field_text.h"
 
-void field_update_timed_panel(FieldRenderHalf* render);
-void field_update_actor_texts(FieldRenderHalf* render);
-/** @brief Nonzero while a picture screen is shown (set by field_start_timed_panel). */
-extern s32 g_field_pickup_sound_played;
-extern s32 g_field_hide_actor_panels;
-/** @brief Ring menu state; nonzero while the ring menu is open. */
-extern s32 g_field_ring_menu_state;
-
 /**
  * @brief Run one frame of field logic and build its draw commands.
  *

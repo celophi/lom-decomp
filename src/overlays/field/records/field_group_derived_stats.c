@@ -65,9 +65,6 @@ typedef struct
 #define GOLEM_NAME_TEXT ((GolemNameText*)field_find_resource(FIELD_RESOURCE_GOLEM_NAME_TEXT))
 
 extern GolemWeaponClassTable g_field_golem_weapon_classes;
-/** @brief Signed stat modifier for each four-bit modifier index (index 4 is 0; range -10 to +20). */
-extern s8 g_field_stat_modifier_values[];
-
 /**
  * @brief Start offset of a golem name text entry in GolemNameText.bytes.
  * @param entry Text entry index.

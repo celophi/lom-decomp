@@ -58,10 +58,11 @@ typedef struct FieldPlayerRecord
     u8 combo_timer;
     u8 hide_shield_sprite;
     u8 hit_state;
-    u8 unk25A;
-    u8 unk25B;
-    u8 unk25C;
-    u8 unk25D;
+    /** @brief Pickups collected this battle, one count per reward kind (FIELD_REWARD_*); the results screens show them. */
+    u8 large_experience_pickups;
+    u8 small_experience_pickups;
+    u8 large_money_pickups;
+    u8 small_money_pickups;
     /** @brief Frames spent knocked down; at revive_delay the member revives (the HUD shows it as the recovery gauge). */
     s16 revive_time;
     s16 revive_delay;

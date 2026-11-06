@@ -14,6 +14,12 @@
 #include "../internal/wmap_view_effects.h"
 #include "sdk/gte_dmpsx_compat.h"
 
+/** @brief The actor motion pool slot 60 viewed as a trail motion. */
+#define WMAP_EFFECT21_TRAIL_AT_60 (*(WmapTrailMotion*)g_wmap_actor_motions_at_60)
+
+/** @brief The effect actor motion pool viewed as trail motions. */
+#define WMAP_EFFECT21_TRAILS ((WmapTrailMotion*)g_wmap_effect_actor_motions)
+
 /** @brief The cached screen position of a g_wmap_actor_motions slot that holds a WmapTrailMotion, and the next slot's leading fields. */
 typedef struct
 {
@@ -21,7 +27,6 @@ typedef struct
     u8 _pad04[0x10];
 } WmapTrailPosition;
 
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_21_sequence_3_timer;
 extern s32 g_wmap_land_effect_21_sequence_4_timer;
 extern s32 g_wmap_land_effect_21_sequence_5_timer;
@@ -56,11 +61,6 @@ extern u32 g_wmap_land_effect_21_sequence_1_step;
 extern u32 g_wmap_land_effect_21_sequence_2_step;
 extern u32 g_wmap_land_effect_21_sequence_6_step;
 
-extern s32* g_wmap_effect_params;
-
-extern WmapTrailMotion g_wmap_effect_actor_motions[];
-extern WmapTrailMotion g_wmap_actor_motions_at_60;
-
 /** @brief Move the model closer and fade it until the timer expires. */
 WMAP_STEP_DROP_UPDATE(wmap_land_effect_21_sequence_3_step_02, g_wmap_land_effect_21_sequence_3_step, g_wmap_land_effect_21_sequence_3_timer,
                       g_wmap_effect_model_a_rotation, g_wmap_effect_model_a_position, g_wmap_effect_fade_a, g_wmap_load_buffer, -3500, 5)
@@ -81,17 +81,17 @@ void wmap_land_effect_21_sequence_5_step_02(void)
     WmapAnimationSlot* resource;
     WmapSpriteActor* actor;
 
-    position.vx = ((g_wmap_actor_motions_at_60.radius >> 3) * (ccos(g_wmap_actor_motions_at_60.angle) >> 6)) >> 12;
-    position.vy = ((g_wmap_actor_motions_at_60.radius >> 3) * (csin(g_wmap_actor_motions_at_60.angle) >> 6)) >> 12;
-    position.vz = g_wmap_actor_motions_at_60.z;
+    position.vx = ((WMAP_EFFECT21_TRAIL_AT_60.radius >> 3) * (ccos(WMAP_EFFECT21_TRAIL_AT_60.angle) >> 6)) >> 12;
+    position.vy = ((WMAP_EFFECT21_TRAIL_AT_60.radius >> 3) * (csin(WMAP_EFFECT21_TRAIL_AT_60.angle) >> 6)) >> 12;
+    position.vz = WMAP_EFFECT21_TRAIL_AT_60.z;
     gte_ldv0(&position);
     gte_rtps();
-    g_wmap_actor_motions_at_60.radius += 1500;
-    g_wmap_actor_motions_at_60.angle += 192;
+    WMAP_EFFECT21_TRAIL_AT_60.radius += 1500;
+    WMAP_EFFECT21_TRAIL_AT_60.angle += 192;
     g_wmap_particle_velocity_range--;
     gte_stsxy(&g_wmap_effect_sprite_position_a);
-    g_wmap_actor_motions_at_60.screen_position.point.x = g_wmap_effect_sprite_position_a.point.x;
-    g_wmap_actor_motions_at_60.screen_position.point.y = g_wmap_effect_sprite_position_a.point.y;
+    WMAP_EFFECT21_TRAIL_AT_60.screen_position.point.x = g_wmap_effect_sprite_position_a.point.x;
+    WMAP_EFFECT21_TRAIL_AT_60.screen_position.point.y = g_wmap_effect_sprite_position_a.point.y;
 
     if (g_wmap_particle_velocity_range == 0)
     {
@@ -102,8 +102,8 @@ void wmap_land_effect_21_sequence_5_step_02(void)
         if (next < 250)
         {
             g_wmap_particle_velocity_range = 2;
-            motion = &g_wmap_actor_motions_at_60 - 60;
-            motion[next] = g_wmap_actor_motions_at_60;
+            motion = &WMAP_EFFECT21_TRAIL_AT_60 - 60;
+            motion[next] = WMAP_EFFECT21_TRAIL_AT_60;
             g_wmap_actor_animations[g_wmap_particle_velocity_min + 60] = g_wmap_actor_animations[60];
             g_wmap_sprite_actors[g_wmap_particle_velocity_min + 60] = g_wmap_sprite_actors[60];
             g_wmap_sprite_actors[g_wmap_particle_velocity_min + 60].sequence = 0;
@@ -176,12 +176,12 @@ void wmap_land_effect_21_sequence_8_step_01(void)
 
     for (i = 0; i < 12; i++)
     {
-        g_wmap_effect_actor_motions[i].state = 1;
-        g_wmap_effect_actor_motions[i].angle = i * 341;
-        g_wmap_effect_actor_motions[i].lifetime = 128;
-        g_wmap_effect_actor_motions[i].radius = 10;
-        g_wmap_effect_actor_motions[i].velocity = 0;
-        g_wmap_effect_actor_motions[i].z = 0;
+        WMAP_EFFECT21_TRAILS[i].state = 1;
+        WMAP_EFFECT21_TRAILS[i].angle = i * 341;
+        WMAP_EFFECT21_TRAILS[i].lifetime = 128;
+        WMAP_EFFECT21_TRAILS[i].radius = 10;
+        WMAP_EFFECT21_TRAILS[i].velocity = 0;
+        WMAP_EFFECT21_TRAILS[i].z = 0;
         g_wmap_actor_animations[i + 20].data = g_wmap_animation_bank_2;
         actors[i].scale_index = WMAP_SPRITE_SCALE_FULL;
         actors[i].previous_sequence = -1;
@@ -389,10 +389,10 @@ void wmap_land_effect_21_sequence_5_step_01(void)
     actor->sequence = 0;
     actor->target_shade = 0x81;
     actor->shade = 0x81;
-    g_wmap_actor_motions_at_60.state = 1;
-    g_wmap_actor_motions_at_60.radius = 0;
-    g_wmap_actor_motions_at_60.angle = 0;
-    g_wmap_actor_motions_at_60.z = 0;
+    WMAP_EFFECT21_TRAIL_AT_60.state = 1;
+    WMAP_EFFECT21_TRAIL_AT_60.radius = 0;
+    WMAP_EFFECT21_TRAIL_AT_60.angle = 0;
+    WMAP_EFFECT21_TRAIL_AT_60.z = 0;
     g_wmap_land_effect_21_sequence_5_timer = 0x70;
     g_wmap_land_effect_21_sequence_5_step++;
     wmap_land_effect_21_sequence_5_step_02();

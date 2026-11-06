@@ -15,6 +15,7 @@
 #include "overlays/field/field_interaction_start.h"
 #include "overlays/field/field_scene_transition.h"
 #include "overlays/field/field_text.h"
+#include "main/audio/akao_cmd.h"
 
 /** @brief Text macro holding the name of the current day of the week. */
 #define FIELD_TEXT_MACRO_WEEKDAY 12
@@ -52,13 +53,17 @@
 
 /** @brief Script variables written or read by the field runtime. */
 #define FIELD_VAR_RANDOM_SEED 0xFA
-#define FIELD_VAR_UNKA00 0xA00
-#define FIELD_VAR_UNKA02 0xA02
-#define FIELD_VAR_UNKA03 0xA03
+/** @brief Set to 1 once 18 or more lands are placed. */
+#define FIELD_VAR_PLACED_LANDS_AT_LEAST_18 0xA00
+/** @brief Nonzero makes FIELD_VAR_GUEST_PAD_CONTROLLED 1 even when the guest is scripted. */
+#define FIELD_VAR_GUEST_PAD_CONTROL_OVERRIDE 0xA02
+/** @brief 1 while the guest (party slot 1) is controller-driven (US only). */
+#define FIELD_VAR_GUEST_PAD_CONTROLLED 0xA03
 #define FIELD_VAR_WEEKDAY 0x429C
 /** @brief First of eight words (4 bytes apart) with the element levels of the current land. */
 #define FIELD_VAR_ELEMENT_LEVELS 0x4300
-#define FIELD_VAR_UNK5320 0x5320
+/** @brief Distance of the current land (field_get_land_distance). */
+#define FIELD_VAR_LAND_DISTANCE 0x5320
 #define FIELD_VAR_MUSIC_TRACK 0x5328
 /** @brief Non-zero while talk and trigger interactions are blocked. */
 #define FIELD_VAR_INTERACTIONS_BLOCKED 0xFE1
@@ -140,24 +145,13 @@ typedef struct
     u16 z;
 } FieldMapPoint;
 
-extern SceneState* g_field_scene_state;
 extern u8 g_field_weekday_names[];
-extern u8 g_field_element_level_by_land_level[];
 extern u8 g_field_talk_plane_masks[];
 extern FieldMapPoint g_field_player_map_position;
 
 /* Functions of other FIELD files without a shared prototype. */
-u8* field_get_event_script(s32 script_id);
-s32 field_get_actor_facing(s32 actor_id);
-FieldActorRecord* field_find_actor_record();
-FieldActorRecord* field_find_actor_record_or_default(u32 actor_id, FieldRuntimeContext* context);
 void field_script_run(FieldScriptState* state);
-s32 akao_fade_song_volume(s32 song_handle, s32 ticks, s32 volume);
-
 /* Public functions of this file that other files call without a prototype. */
-void field_begin_party_script_control(s32 mode);
-s32 field_start_interaction(s32 actor_id, s32 script);
-
 static void field_runtime_init(void);
 static void field_bind_runtime_pointers(void);
 static void field_reset_scene_fade(void);
@@ -243,13 +237,13 @@ static void field_init_text_macros(void)
         FIELD_OFFSET_TABLE_TEXT(g_field_weekday_names, g_field_game_state->control.fields.weekday & FIELD_WEEKDAY_MASK);
 
 #if !defined(VERSION_JP)
-    if ((field_get_script_var(0, FIELD_VAR_UNKA02) != 0) || ((g_field_game_state->characters[1].info.word & FIELD_CHARACTER_PAD_CONTROLLED) != 0))
+    if ((field_get_script_var(0, FIELD_VAR_GUEST_PAD_CONTROL_OVERRIDE) != 0) || ((g_field_game_state->characters[1].info.word & FIELD_CHARACTER_PAD_CONTROLLED) != 0))
     {
-        field_set_script_var(0, FIELD_VAR_UNKA03, 1);
+        field_set_script_var(0, FIELD_VAR_GUEST_PAD_CONTROLLED, 1);
     }
     else
     {
-        field_set_script_var(0, FIELD_VAR_UNKA03, 0);
+        field_set_script_var(0, FIELD_VAR_GUEST_PAD_CONTROLLED, 0);
     }
 #endif
 }
@@ -329,7 +323,7 @@ static void field_init_script_variables(void)
 
     if (g_field_game_state->control.fields.placed_land_count >= 18)
     {
-        field_set_script_var(0, FIELD_VAR_UNKA00, 1);
+        field_set_script_var(0, FIELD_VAR_PLACED_LANDS_AT_LEAST_18, 1);
     }
 
     field_set_script_var(0, FIELD_VAR_WEEKDAY, g_field_game_state->control.fields.weekday & FIELD_WEEKDAY_MASK);
@@ -341,7 +335,7 @@ static void field_init_script_variables(void)
     field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x14, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[5]]);
     field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x18, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[6]]);
     field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x1C, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[7]]);
-    field_set_script_var(0, FIELD_VAR_UNK5320, field_get_land_distance(g_music_track_index));
+    field_set_script_var(0, FIELD_VAR_LAND_DISTANCE, field_get_land_distance(g_music_track_index));
     field_set_script_var(0, FIELD_VAR_MUSIC_TRACK, g_music_track_index);
 }
 

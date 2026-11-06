@@ -6,10 +6,7 @@
 #include "common.h"
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
-
 void field_script_run(FieldScriptState* state);
-u8* field_get_event_script(s32 script_id);
-FieldActorRecord* field_find_actor_record_or_default(s32 id);
 
 /**
  * @brief Queue an event on an actor when the event is enabled and nothing is pending.
@@ -25,6 +22,7 @@ s32 field_queue_actor_event(s32 owner_id, u8 event_id, s32 argument)
 
     actor = field_find_actor_record_or_default(owner_id);
     index = event_id;
+
     if ((actor->enabled_events >> index) & 1)
     {
         if (actor->event == FIELD_NO_EVENT)
@@ -54,17 +52,21 @@ s32 field_run_actor_event(s32 owner_id, s32 event_id, s32 mode)
     FieldActorRecord* actor;
 
     event_index = event_id & 0xFF;
+
     if (event_index < FIELD_ACTOR_SCRIPT_COUNT)
     {
         actor = field_find_actor_record_or_default(owner_id);
+
         if ((actor->enabled_events >> event_index) & 1)
         {
             depth = actor->script.depth;
             actor->script.status.owner_id = owner_id;
+
             if (actor->script.frames[depth].pc != NULL)
             {
                 next_depth = depth + 1;
                 actor->script.depth = next_depth;
+
                 if (next_depth >= FIELD_SCRIPT_FRAME_COUNT)
                 {
                     actor->script.depth = FIELD_SCRIPT_FRAME_COUNT - 1;
@@ -72,6 +74,7 @@ s32 field_run_actor_event(s32 owner_id, s32 event_id, s32 mode)
                     return -1;
                 }
             }
+
             if ((g_field_runtime->state.flags & FIELD_STATE_PARTY_PAGE_SCRIPTS) && (owner_id < FIELD_PARTY_SIZE))
             {
                 actor->script.frames[actor->script.depth].pc = field_get_party_event_script(owner_id, event_id & 0xFF);
@@ -79,12 +82,15 @@ s32 field_run_actor_event(s32 owner_id, s32 event_id, s32 mode)
             else
             {
                 script_id = actor->scripts[event_id & 0xFF];
+
                 if (script_id == FIELD_NO_SCRIPT)
                 {
                     return -1;
                 }
+
                 actor->script.frames[actor->script.depth].pc = field_get_event_script(script_id & FIELD_SCRIPT_ID_MASK);
             }
+
             actor->script.frames[actor->script.depth].wait.bits.resume = 0;
             actor->script.frames[actor->script.depth].wait.bits.frames = 0;
             actor->event_argument = mode;
@@ -94,5 +100,6 @@ s32 field_run_actor_event(s32 owner_id, s32 event_id, s32 mode)
             return event_id & 0xFF;
         }
     }
+
     return -1;
 }

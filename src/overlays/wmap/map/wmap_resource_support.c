@@ -20,9 +20,6 @@ typedef struct
     u8 bytes[8];
 } WmapTextureRect;
 
-extern u8 g_wmap_load_buffer[];
-extern RECT g_wmap_framebuffer_rect;
-
 /**
  * @brief Report invalid data or a full table; empty in the retail build.
  * @note Called for a bad sprite part count, a bad model face, and a full sequence table; some calls pass the model's face attributes.

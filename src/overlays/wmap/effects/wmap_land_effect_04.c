@@ -1,6 +1,7 @@
 #include "common.h"
 #include <inline_c.h>
 #include <libgte.h>
+#include <rand.h>
 
 #include "../internal/wmap_actor_motion.h"
 #include "../internal/wmap_cells.h"
@@ -16,12 +17,10 @@
 #include "sdk/gte_dmpsx_compat.h"
 
 extern s32 g_wmap_land_effect_04_sequence_5_timer;
-extern u8 g_wmap_load_buffer[];
 extern s32 g_wmap_land_effect_04_sequence_6_timer;
 extern s32 g_wmap_land_effect_04_sequence_7_timer;
 extern s32 g_wmap_land_effect_04_sequence_8_timer;
 extern s32 g_wmap_land_effect_04_sequence_9_timer;
-extern s32 rand(void);
 extern s32 g_wmap_land_effect_04_timer;
 extern WmapSequenceStep g_wmap_land_effect_04_steps[];
 extern s32 g_wmap_land_effect_04_timeline_timer;
@@ -51,8 +50,6 @@ extern u32 g_wmap_land_effect_04_sequence_1_step;
 extern u32 g_wmap_land_effect_04_sequence_2_step;
 extern u32 g_wmap_land_effect_04_sequence_3_step;
 extern u32 g_wmap_land_effect_04_sequence_4_step;
-
-extern s32* g_wmap_effect_params;
 
 /** @brief Initialize four effect actors and their angular spacing. */
 void wmap_land_effect_04_sequence_5_step_01(void)

@@ -1,5 +1,6 @@
 #include "common.h"
 #include <abs.h>
+#include <rand.h>
 
 #include "../internal/field_calls.h"
 #include "../internal/field_records.h"
@@ -10,8 +11,6 @@
 #include "overlays/field/field_actor_records.h"
 #include "overlays/field/field_overlay_handoff.h"
 #include "overlays/field/field_script_locals.h"
-
-void field_reset_actor_at(s32 key, s32 resource_entry_index, s32 group, s32 x, s32 y, s32 z);
 
 /** @brief Value at which SavedGameLayout::golems_created saturates. */
 #define FIELD_GOLEMS_CREATED_MAX 200
@@ -408,8 +407,6 @@ extern FieldLogicClassTable g_field_logic_block_unused_classes;
 extern FieldGosubSequence g_field_gosub_produce_sequence;
 extern FieldGosubSequence g_field_gosub_pet_sequence;
 extern void field_menu_clear_item_slots(void);
-extern s32 rand(void);
-s32 field_get_actor_facing(s32 actor_id);
 extern void field_menu_compact_pending_items(void);
 extern FieldFavoredElementTable g_field_weekday_favored_elements;
 extern FieldGosubSequence g_field_gosub_instrument_sequence;
