@@ -15,11 +15,11 @@ typedef struct
     s32 initial_angle;
     s32 radial_step;
     u16 angle_step;
-    u8 unknown_16[2];
+    u8 unused_16[2]; /**< High halfword of the angle_step parameter word; only the low halfword is read. */
     u16 shade_step;
-    u8 unknown_1a[2];
+    u8 unused_1a[2]; /**< High halfword of the shade_step parameter word; only the low halfword is read. */
     u16 target_shade;
-    u8 unknown_1e[2];
+    u8 unused_1e[2]; /**< High halfword of the target_shade parameter word; only the low halfword is read. */
     s32 depth;
     s32 texture_index;
 } WmapTrailConfig;
@@ -30,24 +30,24 @@ typedef struct
     s32 count;
     s32 first;
     u16 x_min;
-    u8 unknown_0a[2];
+    u8 unused_0a[2];
     s32 x_range;
     u16 y_min;
-    u8 unknown_12[2];
+    u8 unused_12[2];
     s32 y_range;
     u16 z_min;
-    u8 unknown_1a[2];
+    u8 unused_1a[2];
     s32 z_range;
     u16 target_shade;
-    u8 unknown_22[2];
+    u8 unused_22[2];
     u16 shade;
-    u8 unknown_26[2];
+    u8 unused_26[2];
     u16 shade_step;
-    u8 unknown_2a[2];
+    u8 unused_2a[2];
     s32 depth;
     s32 texture_index;
     u16 sequence;
-    u8 unknown_36[2];
+    u8 unused_36[2];
 } WmapBoxParticleConfig;
 
 /** @brief Effect camera rotation offset that wmap_run_effect_camera_move steps toward. */
@@ -64,7 +64,7 @@ extern s32 g_wmap_effect_camera_move_active;
 /** @brief Particle settings that wmap_update_particle_system reads from the shared effect parameter words. */
 typedef struct
 {
-    s32 unknown_00;
+    s32 unused_00; /**< Word 0 of the config; neither WMAP_SET_PARTICLE_CONFIG nor wmap_update_particle_system uses it. */
     s32 velocity_min;
     s32 velocity_range;
     s32 lifetime_min;

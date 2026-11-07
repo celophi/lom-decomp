@@ -186,7 +186,7 @@ typedef struct AkaoBankHeader
     u32 sample_size;        /**< Bytes of sample data. */
     u32 bank_id;            /**< First entry of the driver articulation table to fill. */
     u32 articulation_count; /**< Number of articulation entries. */
-    u32 unknown_0x20;
+    u32 unused_20;          /**< Zero in all 122 sample banks on the disc; no code reads it. */
     u8 reserved[0x1C];
 } AkaoBankHeader;
 
@@ -255,7 +255,7 @@ typedef struct AkaoArticulation
 #define AKAO_SONG_VOICE_STOLEN 0x2
 /** @brief Song flag selecting the lower XA SPU area while channels are active or parked. */
 #define AKAO_SONG_LOWER_XA_AREA_FLAG 0x40
-/** @brief Song flag set when descriptor unk14 differs from g_akao_song_descriptor_match_value[0]. */
+/** @brief Song flag set when the descriptor's match_value differs from g_akao_song_descriptor_match_value[0]. */
 #define AKAO_SONG_DESCRIPTOR_MISMATCH 0x20
 /** @brief Song flags selected by comparing the descriptor with g_akao_song_descriptor_match_value[0]. */
 #define AKAO_SONG_DESCRIPTOR_FLAGS 0x60
@@ -270,13 +270,15 @@ typedef struct AkaoArticulation
 typedef struct AkaoSongDescriptor
 {
     AkaoHeader header;
-    u32 unk10;
+    /** @brief 85 to 127 in every MUSIC*.SET song on the disc; no code reads it. */
+    u32 unused_10;
     s32 match_value; /**< Compared with g_akao_song_descriptor_match_value to choose song flag 0x40 or 0x20. */
     u8 _pad18[8];
     s32 channel_mask;         /**< Channels the song uses. */
     s32 voice_alloc_low_mask; /**< Initial AkaoSongMasks::voice_alloc_low_mask. */
     s32 static_voice_mask;    /**< Initial AkaoSongMasks::static_voice_mask. */
-    u32 unk2C;
+    /** @brief Zero in every MUSIC*.SET song on the disc; no code reads it. */
+    u32 unused_2c;
     s32 key_map_offset;    /**< Key map table offset, or 0 for none. */
     s32 note_table_offset; /**< Note table offset, or 0 for none. */
     u8 _pad38[8];

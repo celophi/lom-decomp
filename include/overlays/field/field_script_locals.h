@@ -26,10 +26,13 @@ typedef union
         s32 slot; /**< Selected golem slot, an index into golem_order. */
         s16 state;
         s16 slot_status[3];
-        u8 unk0C[4];
+        /** @brief Locals 0x0C-0x0F: object_id and variant of the object-menu variables, which the workshop scripts set; no golem op reads them. */
+        u8 _pad0c[4];
         s16 result;
-        u8 unk12[6];
-        s16 unk18;
+        /** @brief Locals 0x12-0x17: object-menu target and ring-menu variables of the workshop scripts; no golem op reads them. */
+        u8 _pad12[6];
+        /** @brief Local 0x18: target_height of the object-menu variables; no golem op reads it. */
+        s16 _pad18;
         s16 joined_group; /**< Group of the joined golem after a reorder. */
         s16 order_position;
         s16 detail;
@@ -47,7 +50,8 @@ typedef union
         u8 owned_count;
         u8 used_slots; /**< Item slots in use in the active group. */
         u8 group_full; /**< Set when fewer than three item slots stay free. */
-        u8 unk0D[7];
+        /** @brief Locals 0x0D-0x13: the action slot (0x0D) and FIELD_ACTION_ITEM_SLOTS (0x0F), read through FIELD_LOCAL_BYTE, plus script-only state. */
+        u8 _pad0d[7];
         s16 selected_item; /**< Chosen action item, 0-7. */
     } actions;
 } FieldMenuVars;

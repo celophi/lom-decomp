@@ -733,7 +733,10 @@ extern u8* g_field_actor_heap;
 extern s32 g_field_scene_mode_bit;
 
 /* field_script_ops.c */
-/** @brief Non-zero while a duel (scene script command) runs; cleared when the battle ends. */
+/**
+ * @brief Non-zero while a duel runs: set by misc command 0x44 (only MGC_BS01, value 1), cleared at battle end and
+ *        scene load; the hero fights on the monsters' side and party HP is tripled (FIELD_DUEL_HP_SCALE).
+ */
 extern s32 g_field_duel_mode;
 void field_script_op_00(void);
 void field_script_run(struct FieldScriptState* context);
@@ -751,7 +754,10 @@ extern struct FieldRenderHalf* g_field_render_context;
 extern s32 g_field_preserve_entry_music;
 extern u8* g_field_scene_portraits;
 extern u8* g_field_scene_strings;
-/** @brief Set while the last scene actor loaded has more than one image. */
+/**
+ * @brief Set while the last scene actor loaded has more than one image.
+ * @note Also selects the proficiency gain in field_advance_ability_progression: FIELD_PROFICIENCY_BONUS (4) while set, 1 otherwise.
+ */
 extern s32 g_field_last_actor_multi_image;
 
 /* field_scene_build.c */

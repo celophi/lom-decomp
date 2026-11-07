@@ -11,7 +11,7 @@
 typedef struct
 {
     ScreenFrame screen;
-    u8 unknown_0x80bc[0x10];
+    u8 unused_80bc[0x10]; /**< No code reads or writes it. */
 } WselRenderBuffer;
 
 /**

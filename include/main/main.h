@@ -17,8 +17,9 @@ extern s32 g_script_unused_value;
 extern s32 g_field_audio_timer;
 /** @brief The running game's save compatibility tag (see SAVE_TAG_ANY in saved_game.h). */
 extern s32 g_save_compatibility_tag;
-/** @brief Index into g_music_track_table[] selecting the current music track. */
-extern u16 g_music_track_index;
+/** @brief Land the party is in (FieldLandId; WMAP also uses event lands 56-63): selects the land's levels, distance, location name and world-map song
+ * (g_land_songs). */
+extern u16 g_current_land;
 
 /*
  * Shared input / frame / script state.

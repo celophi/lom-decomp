@@ -381,7 +381,7 @@ void field_golem_build_group_record(s32 group)
 
     g_saved_game.layout.golem_records[group].armor_flags2 = work[0];
     g_saved_game.layout.golem_records[group].companion_ability = 1;
-    g_saved_game.layout.golem_records[group].unknown_0x40 = 0;
+    g_saved_game.layout.golem_records[group].unused_40 = 0;
 
     g_saved_game.layout.golem_records[group].logic_layout.bits.logic_class = 0;
 
@@ -419,11 +419,11 @@ void field_golem_build_group_record(s32 group)
         g_saved_game.layout.golem_records[group].logic_layout.bits.grid_bound = GOLEM_GRID_BOUND_BASE + 2;
     }
 
-    g_saved_game.layout.golem_records[group].unknown_0x45 = 0;
+    g_saved_game.layout.golem_records[group].unused_45 = 0;
     work[0] = 75 - g_saved_game.layout.golem_records[group].logic_layout.bits.grid_bound * 10;
     work[0] = work[0] < 0 ? 0 : work[0] > 50 ? 50 : work[0];
     g_saved_game.layout.golem_records[group].failure_rate = work[0];
-    g_saved_game.layout.golem_records[group].unknown_0x47 = 0;
+    g_saved_game.layout.golem_records[group].unused_47 = 0;
     g_saved_game.layout.golem_records[group].palette = 0;
 
     work[0] = g_saved_game.layout.golem_records[group].power;

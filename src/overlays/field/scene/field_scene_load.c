@@ -398,7 +398,7 @@ static void field_select_object(u16 object_index, FieldRenderHalf* buffers)
     object = *objects;
     bounds->width = object->width;
     bounds->depth = object->depth;
-    bounds->unk4 = (object->background.word >> 1) & 1;
+    bounds->unused_4 = (object->background.word >> 1) & 1;
 
     if (buffers != NULL)
     {

@@ -102,7 +102,7 @@ TABLES = (
               note="Spirit influence sprites: component * 7 + level, plus a diagonal entry."),
     # Event lands (wmap_pathfinding.c) and map labels (wmap_map_labels.c).
     TableSpec("g_wmap_flag_event_lands", "B", 64, note="Land entered for each pending world event flag."),
-    TableSpec("g_wmap_flag_event_music_tracks", "B", 64, note="Music track index set for each pending world event flag."),
+    TableSpec("g_wmap_flag_event_current_lands", "B", 64, note="Land id stored as the current land for each pending world event flag."),
     TableSpec("g_wmap_label_width_scales", "i", 9, note="Label width scale for each cursor cell of the 3 x 3 selection."),
     TableSpec("g_wmap_land_label_widths", "i", 69, note="Label width of each land name, scaled by g_wmap_label_width_scales."),
     TableSpec("g_wmap_label_clut_row", "i", 1, note="Label palette row; the code switches it between 506 and 508."),

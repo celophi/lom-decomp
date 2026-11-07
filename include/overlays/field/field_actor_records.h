@@ -34,7 +34,8 @@ typedef struct
         /** @brief High nibble: cue kind; low 12 bits: sound id. */
         u16 sound_cue;
     } attribute;
-    u16 unkC;
+    /** @brief Zero in FIELD.BIN; no code reads or writes it. */
+    u16 unused_c;
     /** @brief Passed to the animation starters; FIELD_REQUEST_BOUND selects a bound animation. */
     u16 bound_animation_flags;
     u32 flags;
@@ -110,10 +111,16 @@ typedef union
         u32 scale : 10;
         /** @brief The action's charge animation has started (FIELD_MOVEMENT_CHARGED). */
         u32 charged : 1;
-        u32 unk11 : 4;
+        /** @brief Running action sequence (FIELD_MOVEMENT_SEQUENCE_MASK). */
+        u32 sequence : 2;
+        /** @brief The object stands outside its group bounds (FIELD_MOVEMENT_OUTSIDE_BOUNDS). */
+        u32 outside_bounds : 1;
+        /** @brief The object overlaps another (FIELD_MOVEMENT_OVERLAPPING). */
+        u32 overlapping : 1;
         /** @brief The object cannot be hit or targeted (FIELD_MOVEMENT_INVULNERABLE). */
         u32 invulnerable : 1;
-        u32 unk16 : 16;
+        /** @brief Same bits as half.height. */
+        u32 height : 16;
     } bits;
     struct
     {
@@ -178,7 +185,12 @@ typedef union
         u32 action_pending : 1;
         /** @brief FIELD_CONTACT_TARGETED. */
         u32 targeted : 1;
-        u32 unk8 : 24;
+        /** @brief Same bits as bytes.animation_actor_index. */
+        u32 animation_actor_index : 8;
+        /** @brief Same bits as bytes.controller_index. */
+        u32 controller_index : 8;
+        /** @brief Same bits as bytes.target_count. */
+        u32 target_count : 8;
     } bits;
     struct
     {
@@ -273,7 +285,8 @@ typedef struct FieldObjectState
     u16 enabled_events;
     /** @brief Interaction scripts, event scripts and actor parameters copied from FieldLayoutRecord::scripts. */
     u16 scripts[16];
-    u8 unk3A[2];
+    /** @brief Padding before action_parameter; no code reads or writes it. */
+    u8 unused_3a[2];
     s32 action_parameter;
     s32 sequence_id;
     s32 sequence_position;
@@ -288,8 +301,10 @@ typedef struct FieldObjectState
         {
             u8 flags;
             u8 object_index;
-            u8 unk4E;
-            u8 unk4F;
+            /** @brief Never read; hud word updates keep it unchanged. */
+            u8 unused_4e;
+            /** @brief Never read; hud word updates keep it unchanged. */
+            u8 unused_4f;
         } bytes;
         struct
         {
@@ -318,7 +333,8 @@ typedef struct FieldObjectState
     } label;
     /** @brief Stat-derived footprint strength, saturated to 255 during setup. */
     u16 effect_footprint_strength;
-    u8 unk6A[2];
+    /** @brief No code reads or writes it. */
+    u8 unused_6a[2];
     FieldRoutePoint route_history[FIELD_ROUTE_HISTORY_LENGTH];
     FieldCollisionWord collision;
     Vec2s attachment_points[4];
@@ -360,7 +376,8 @@ typedef struct FieldObjectState
     u8 retry_count;
     /** @brief Non-zero when the player can interact with the object; FIELD_INTERACTION_ITEM for an item to pick up. */
     u8 interaction_kind;
-    u8 unk18F;
+    /** @brief Padding before ground_effect_points; no code reads or writes it. */
+    u8 unused_18f;
     /**
      * @brief Ground effect centres as X/Z offsets from the object, in whole units.
      * @note The scattered domes use all of them, the drifting and aimed domes the first; spawned effects can be placed on them.
@@ -460,9 +477,12 @@ typedef struct FieldObjectPart
         } bytes;
         struct
         {
-            u32 unk0 : 24;
-            u32 mode : 2;
-            u32 unk26 : 6;
+            /** @brief Flags and track selectors whose meaning depends on the part kind; read through word with the FIELD_PART_* shifts. */
+            u32 flags : 24;
+            /** @brief FieldRotationAxis of the part's rotation. */
+            u32 rotation_axis : 2;
+            /** @brief Rotation parameter track or spin step (FIELD_PART_ROTATION_TRACK_SHIFT); line effects read it as the arc height. */
+            u32 rotation_track : 6;
         } bits;
     } track_flags;
     union
@@ -482,12 +502,38 @@ typedef struct FieldObjectPart
         } bytes;
         struct
         {
-            u32 unk0 : 11;
-            u32 flag11 : 1;
-            u32 unk12 : 10;
+            /** @brief FIELD_PART_TEXTURE_SCROLLS. */
+            u32 texture_scrolls : 1;
+            /** @brief FIELD_PART_SEMITRANSPARENT_BIT. */
+            u32 semitransparent : 1;
+            /** @brief FIELD_PART_PITCH_ACCELERATION_BIT. */
+            u32 pitch_acceleration : 1;
+            /** @brief FIELD_PART_ORIENTED_SHIFT. */
+            u32 oriented : 1;
+            /** @brief FIELD_PART_END_MODE. */
+            u32 end_mode : 2;
+            /** @brief FIELD_PART_GROUND_BOUNCE_BIT. */
+            u32 ground_bounce : 1;
+            /** @brief Scale comes from parameter tracks (FIELD_PART_SCALE_TRACK_SHIFT). */
+            u32 scale_tracked : 1;
+            /** @brief FIELD_PART_POSITION_SOURCE_SHIFT. */
+            u32 position_source : 3;
+            /** @brief The part keeps its own colour; its effects do not take the owner's tint (FIELD_PART_OWN_COLOR_SHIFT). */
+            u32 own_color : 1;
+            /** @brief FIELD_PART_RGB_TRACKS_SHIFT. */
+            u32 rgb_tracks : 1;
+            /** @brief FIELD_PART_MOTION_KIND_SHIFT. */
+            u32 motion_kind : 3;
+            /** @brief FIELD_PART_COLOR_TRACK_INDEX_SHIFT. */
+            u32 color_track : 4;
+            /** @brief FieldPartScaleMode. */
+            u32 scale_mode : 2;
             /** @brief FIELD_PART_BLEND_MODE. */
             u32 blend_mode : 2;
-            u32 unk24 : 8;
+            /** @brief Spawn period (FIELD_PART_PERIOD_MASK of bytes.high). */
+            u32 spawn_period : 4;
+            /** @brief First parameter track of the scale (word >> 28). */
+            u32 scale_track : 4;
         } bits;
     } behavior_flags;
     /** @brief FieldActor::animation_active given to each spawned effect; fan effects use it as their segment count. */
@@ -528,9 +574,17 @@ typedef struct FieldObjectPart
         } bytes;
         struct
         {
-            u32 unk0 : 4;
+            /** @brief FieldEffectFlags::parameter_mode of spawned effects. */
+            u32 parameter_mode : 2;
+            /** @brief FIELD_PART_FIRST_TRACK_ONLY. */
+            u32 first_track_only : 1;
+            /** @brief FIELD_EFFECT_ORIENTATION_LOCK. */
+            u32 orientation_lock : 1;
             u32 mode : 4;
-            u32 unk8 : 24;
+            /** @brief Zero in every part on disc; no code reads it. */
+            u32 unused_8 : 8;
+            /** @brief Same bits as halves.high. */
+            u32 motion_parameter : 16;
         } bits;
     } orientation_flags;
     /** @brief Motion scale given to spawned effects, 0x100 for 1.0 (a track index with effect parameter mode 1). */
@@ -538,7 +592,8 @@ typedef struct FieldObjectPart
     /** @brief FieldMotionRecord::facing_or_reward_kind of spawned effects (their animation or reward kind); the first of a range with
      * FIELD_PART_KIND_RANGE_BIT. */
     u8 facing_or_reward_kind;
-    u8 unk1B;
+    /** @brief Zero in every part on disc; no code reads it. */
+    u8 unused_1b;
     /** @brief Palette track, angular divisions, footprint flags, and extent low bits. */
     union
     {
@@ -606,7 +661,8 @@ typedef struct FieldObjectPart
     s16 offset_x;
     s16 offset_y;
     s16 offset_z;
-    s16 unk3E;
+    /** @brief Zero in every part on disc; no code reads it. */
+    s16 unused_3e;
     /** @brief Initial work_x/work_y/work_z of spawned effects in whole units: the target point offset of the offset position sources. */
     s16 target_offset_x;
     s16 target_offset_y;
@@ -825,7 +881,8 @@ typedef struct FieldActorSlot
     u8 mesh_texture_frames[FIELD_ACTOR_PART_COUNT];
     /** @brief Live effects per track and part: spawning one adds one, retiring one takes it away. */
     u8 active_counts[FIELD_ACTOR_TRACK_COUNT][FIELD_ACTOR_PART_COUNT];
-    u8 unkCB;
+    /** @brief Padding before track_counters; only whole-slot copies touch it. */
+    u8 unused_cb;
     /** @brief Effects per track and part counted against the part's spawn cap. */
     u16 track_counters[FIELD_ACTOR_TRACK_COUNT][FIELD_ACTOR_PART_COUNT];
     /** @brief Frame counter of each track. */
@@ -851,7 +908,8 @@ typedef struct FieldActorSlot
     u16 track_interval;
     u8 track_mask;
     u8 pending_track_mask;
-    u8 unk23C[4];
+    /** @brief No code reads or writes it; only whole-slot copies move it. */
+    u8 unused_23c[4];
     /** @brief Per animation, the mask of parts it drives. */
     u16* part_masks;
 } FieldActorSlot;
@@ -1030,9 +1088,9 @@ enum
     FIELD_ACTOR_COMMAND_IDLE_AFTER_RELOAD = 0x9A,
     /** Second jump of a Double Jump, started while recovering from the first. */
     FIELD_ACTOR_COMMAND_SECOND_JUMP = 0x9B,
-    /** Raise the actor by command_param each frame for unk26 frames. */
+    /** Raise the actor by command_param each frame for lift_timer frames. */
     FIELD_ACTOR_COMMAND_TIMED_LIFT = 0x9C,
-    /** Lower the actor by command_param each frame until it reaches the ground (or unk26 runs out). */
+    /** Lower the actor by command_param each frame until it reaches the ground (or lift_timer runs out). */
     FIELD_ACTOR_COMMAND_DESCEND_TO_GROUND = 0x9D,
     FIELD_ACTOR_COMMAND_APPROACH_TARGET = 0xA0,
     FIELD_ACTOR_COMMAND_ACTION_END = 0xA4,

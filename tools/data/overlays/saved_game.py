@@ -63,7 +63,7 @@ CHARACTER_OFFSETS = {
 # SavedGameLayout members.
 LAYOUT_OFFSETS = {
     "summary_name": 0x00, "summary_slot_count": 0x17, "spawn": 0x18, "sound_bank_id": 0x1C,
-    "secondary_music_id": 0x1E, "icon_palette": 0x1F, "track": 0x20, "scene_id": 0x24, "object_id": 0x26,
+    "secondary_music_id": 0x1E, "icon_palette": 0x1F, "location": 0x20, "scene_id": 0x24, "object_id": 0x26,
     "music_id": 0x27, "options": 0x28, "money": 0x2C, "play_time": 0x30, "technique_bits": 0x34,
     "ability_bits": 0x60, "ability_proficiency": 0x6C, "weapon_proficiency": 0xC4, "compatibility_tag": 0xCF,
     "identity": 0xD4, "guest_origin": 0xD8, "guest_loaded": 0xDE, "world_map_cell": 0xE0, "words": 0xE4,
@@ -194,7 +194,7 @@ def layout(raw: bytes, read_text: TextReader, two_byte_codes: frozenset[int]) ->
     def word(name: str, fmt: str = "<I") -> int:
         return struct.unpack_from(fmt, raw, at[name])[0]
 
-    spawn, track, options = word("spawn"), word("track"), word("options")
+    spawn, track, options = word("spawn"), word("location"), word("options")
     game_id, save_id = struct.unpack_from("<HH", raw, at["identity"])
     guest_game, guest_save = struct.unpack_from("<HH", raw, at["guest_origin"])
     control = word("control")
@@ -219,12 +219,12 @@ def layout(raw: bytes, read_text: TextReader, two_byte_codes: frozenset[int]) ->
         "sound_bank_id": word("sound_bank_id", "<h"),
         "secondary_music_id": word("secondary_music_id", "<b"),
         "icon_palette": raw[at["icon_palette"]],
-        "track": {"music_track": track & 0x3FFFF, "party_icon_1": (track >> 18) & 0x7F, "party_icon_2": track >> 25},
+        "location": {"current_land": track & 0x3FFFF, "party_icon_1": (track >> 18) & 0x7F, "party_icon_2": track >> 25},
         "scene_id": word("scene_id", "<H"),
         "object_id": raw[at["object_id"]],
         "music_id": raw[at["music_id"]],
         "options": {"word": f"0x{options:08X}", "vibration": bool(options & 1), "stereo": bool(options & 2),
-                    "flag_2": bool(options & 4), "flag_3": bool(options & 8)},
+                    "game_cleared": bool(options & 4), "world_select_pending": bool(options & 8)},
         "money": word("money"),
         "play_time": word("play_time", "<i"),
         "technique_bits": {name: f"0x{value:08X}" for name, value in zip(WEAPON_CATEGORIES, techniques)},

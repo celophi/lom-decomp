@@ -4,14 +4,7 @@
 #include "common.h"
 #include "main/main.h"
 #include "main/display.h"
-
-/** @brief Frame context the host passes to shop_update; its first word is the ordering-table entry. */
-typedef struct
-{
-    u_long ot;
-    u8 unknown_0x0004[0x40AE];
-    s16 display_buffer_index;
-} ShopFrameContext;
+#include "main/field_runtime.h"
 
 /** @brief One of the two double-buffered packet heaps at the start of the shop work buffer. */
 typedef struct
@@ -33,6 +26,6 @@ typedef struct ShopEntry
 } ShopEntry;
 
 void shop_init(u8* work, s32 is_buying, s32 entry_count, ShopEntry* entries, FieldItemRecord* item_records, s32 title_text_id);
-s32 shop_update(ShopFrameContext* ctx);
+s32 shop_update(FieldRenderHalf* render);
 
 #endif

@@ -36,10 +36,10 @@ typedef struct
     s16 heading;
     s32 ot_override;
     s32 radius;
-    s16 unknown_0c;
+    s16 unused_0c; /**< Motion-slot lifetime halfword; vehicle code never reads or writes it. */
     s16 height;
     s16 ot_index;
-    s16 unknown_12;
+    s16 unused_12; /**< High halfword of the slot's last word; vehicle code never reads or writes it. */
 } WmapVehicleMotion;
 
 WmapSpriteActor* wmap_turn_vehicle(s32 advance);

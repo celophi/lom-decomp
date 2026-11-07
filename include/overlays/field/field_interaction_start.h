@@ -56,7 +56,8 @@ typedef struct
         {
             u32 x : 16;
             u32 z : 11;
-            u32 unk27 : 3;
+            /** @brief Zero in every layout record on disc; no code reads it. */
+            u32 unused_27 : 3;
             u32 y : 2;
         } bits;
     } position;

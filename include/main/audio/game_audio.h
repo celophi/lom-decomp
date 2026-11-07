@@ -3,8 +3,8 @@
 
 #include "common.h"
 
-/** @brief Music resource selected by each field music index. */
-extern u8 g_music_track_table[];
+/** @brief World-map song of each land (indexed by g_current_land); 0xFF for none. */
+extern u8 g_land_songs[];
 /** @brief Resident storage for an AKAO sequence or a section-offset song container. */
 extern u8 g_resident_song_buffer[];
 /** @brief Section offsets in g_resident_song_buffer while it holds a song container. */

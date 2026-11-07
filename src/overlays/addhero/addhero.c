@@ -483,8 +483,8 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
 
             party_entry = &g_addhero_entry_file.saved_game;
             icons[0] = party_entry->spawn.bits.party_icon_0;
-            icons[1] = party_entry->track.bits.party_icon_1;
-            icons[2] = party_entry->track.bits.party_icon_2;
+            icons[1] = party_entry->location.bits.party_icon_1;
+            icons[2] = party_entry->location.bits.party_icon_2;
             g_card_menu_icon_palette = party_entry->icon_palette;
 
             icon_x = 0;
@@ -588,8 +588,8 @@ void* addhero_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, 
             }
             else
             {
-                result = field_draw_text(result, ot, CARD_MENU_TEXT(g_card_menu_location_names, summary_entry->track.bits.music_track), FIELD_TEXT_COLOR_NORMAL,
-                                         x + CARD_MENU_DETAILS_TEXT_X, y + FIELD_TEXT_LINE_SPACING * 2, FIELD_TEXT_ALIGN_LEFT);
+                result = field_draw_text(result, ot, CARD_MENU_TEXT(g_card_menu_location_names, summary_entry->location.bits.current_land),
+                                         FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TEXT_X, y + FIELD_TEXT_LINE_SPACING * 2, FIELD_TEXT_ALIGN_LEFT);
             }
         }
         else

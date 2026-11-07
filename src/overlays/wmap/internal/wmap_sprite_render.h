@@ -10,12 +10,12 @@ typedef struct
     s16 index;
     /** @brief Resource the actor draws from; -1 for none. */
     s16 resource_index;
-    u8 unknown_04[2];
+    u8 unused_04[2]; /**< Zero at load; only whole-actor copies touch it. */
     s8 scale_index;
-    u8 unknown_07[7];
+    u8 unused_07[7]; /**< Zero at load; only whole-actor copies touch it. */
     s16 sequence;
     s16 previous_sequence;
-    u8 unknown_12[2];
+    u8 unused_12[2]; /**< Zero at load; only whole-actor copies touch it. */
     u8* cursor;
     u8* sequence_start;
     /** @brief Current animation frame: a part count followed by WmapSpritePart records. */
@@ -24,7 +24,7 @@ typedef struct
     s16 target_shade;
     s16 shade;
     s16 shade_step;
-    u8 unknown_28[4];
+    u8 unused_28[4]; /**< Zero at load; only whole-actor copies touch it. */
 } WmapSpriteActor;
 
 /** @brief Scale-table entry that draws a sprite at full size. */

@@ -26,7 +26,7 @@ s32 wmap_build_artifact_list(s32 selection);
 void wmap_build_placement_labels(s32 selected_cell, u32 x, s32 y, s32* groups, s32* output, s32 land);
 s32 wmap_get_day(void);
 s32 wmap_get_land_count_tier(void);
-s32 wmap_is_land_active(s32 record_index);
+s32 wmap_is_land_cleared(s32 record_index);
 s32 wmap_is_other_land_cell(u32 x, s32 y);
 s32 wmap_get_remaining_land_count(void);
 s32 wmap_get_land_at_cell(u32 column, s32 row);

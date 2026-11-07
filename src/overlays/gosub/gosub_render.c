@@ -82,7 +82,7 @@ void gosub_close_elements(void)
  * @param render_context Field render context and packet cursor.
  * @see decomp.me (100%) https://decomp.me/scratch/nVefu
  */
-void gosub_render_elements(GosubRenderContext* render_context)
+void gosub_render_elements(FieldRenderHalf* render_context)
 {
     gosub_update_and_render_elements(render_context);
 }
@@ -136,7 +136,7 @@ GosubElement* gosub_allocate_element(void)
  * @param render_context Field render context and packet cursor.
  * @see decomp.me (100%) https://decomp.me/scratch/t79hi
  */
-void gosub_update_and_render_elements(GosubRenderContext* render_context)
+void gosub_update_and_render_elements(FieldRenderHalf* render_context)
 {
     GosubTilePacket* packet_cursor;
     s32 animated_width;
@@ -166,10 +166,10 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
     s32 exiting_scaled_height;
     s32 exiting_remaining_height;
 
-    packet_cursor = render_context->packet_cursor;
-    ordering_table = &render_context->tag;
+    packet_cursor = (GosubTilePacket*)render_context->primitive_cursor;
+    ordering_table = render_context->ordering_table;
 
-    if (render_context->display_buffer_index != 0)
+    if (render_context->display_rect.y != 0)
     {
         SetDefDrawEnv(&draw_env, 0, 0xF0, 0x140, 0xE0);
     }
@@ -248,7 +248,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                     s32 width = gosub_element_width(element);
 
                     packet_cursor = gosub_emit_panel(packet_cursor, ordering_table, x + width + 3, element->attr.f.y, 10, element->geometry.f.height,
-                                                     render_context->display_buffer_index);
+                                                     render_context->display_rect.y);
                 }
             }
 
@@ -286,7 +286,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
 
                         packet_cursor = gosub_emit_panel(packet_cursor, ordering_table, x + (width - animated_width) / 2,
                                                          element->attr.f.y + ((s32)element->geometry.f.height - animated_height) / 2, animated_width,
-                                                         animated_height, render_context->display_buffer_index);
+                                                         animated_height, render_context->display_rect.y);
                     }
 
                     element->attr.f.transition_step++;
@@ -301,7 +301,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                 case GOSUB_ELEMENT_STATE_ACTIVE:
                     packet_cursor = (GosubTilePacket*)((GosubElementDrawHandler)element->draw_handler)(ordering_table, (u8*)packet_cursor, 0, 0);
                     packet_cursor = gosub_emit_panel(packet_cursor, ordering_table, element->attr.f.x, element->attr.f.y, gosub_element_width(element),
-                                                     element->geometry.f.height, render_context->display_buffer_index);
+                                                     element->geometry.f.height, render_context->display_rect.y);
                     break;
 
                 case GOSUB_ELEMENT_STATE_EXITING:
@@ -329,7 +329,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
 
                         packet_cursor = gosub_emit_panel(packet_cursor, ordering_table, x + (width - animated_width) / 2,
                                                          element->attr.f.y + ((s32)element->geometry.f.height - animated_height) / 2, animated_width,
-                                                         animated_height, render_context->display_buffer_index);
+                                                         animated_height, render_context->display_rect.y);
                     }
 
                     element->attr.f.transition_step--;
@@ -347,7 +347,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
         element++;
     }
 
-    render_context->packet_cursor = packet_cursor;
+    render_context->primitive_cursor = (u8*)packet_cursor;
 }
 
 /**

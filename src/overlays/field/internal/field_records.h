@@ -322,7 +322,8 @@ typedef struct FieldTriggerRegion
     u16 max_z;
     /** @brief FIELD_TRIGGER_SCRIPT set: script id for field_start_interaction; otherwise a monster group for field_battle_start. */
     u16 command;
-    u16 unk0A;
+    /** @brief Zero in all 318 trigger regions on the disc; no code reads it. */
+    u16 unused_0a;
 } FieldTriggerRegion;
 
 /** @brief Command bit of a FieldTriggerRegion that starts a script instead of a battle. */
@@ -331,13 +332,16 @@ typedef struct FieldTriggerRegion
 /** @brief Scene trigger table (resource 6): a count, then the regions. */
 typedef struct FieldTriggerTable
 {
-    u16 unk0;
+    u16 resource_id;
     u16 count;
     FieldTriggerRegion regions[1];
 } FieldTriggerTable;
 
-/** @brief Runtime state flag: party actors take event scripts from their resource pages. */
-#define FIELD_STATE_PARTY_PAGE_SCRIPTS 0x10000
+/**
+ * @brief Runtime state bit (state.bits.battle_active): a group battle runs, between field_battle_start and
+ *        field_battle_end. Party actors then take event scripts from their resource pages.
+ */
+#define FIELD_STATE_BATTLE_ACTIVE 0x10000
 
 /** @brief Both party mode bits of the runtime state (party mode 3). */
 #define FIELD_STATE_PARTY_MODE_MASK 0x60000
@@ -399,10 +403,12 @@ typedef struct FieldRuntimeContext
         struct
         {
             u32 actor_count : 16;
-            u32 group_active : 1;
+            /** @brief FIELD_STATE_BATTLE_ACTIVE. */
+            u32 battle_active : 1;
             u32 party_mode : 2;
             u32 talking : 1;
-            u32 unk20 : 4;
+            /** @brief Never set or read, by code or by scripts (record kind 1). */
+            u32 unused_20 : 4;
             u32 trigger_group : 8;
         } bits;
     } state;
@@ -417,7 +423,8 @@ typedef struct FieldRuntimeContext
             u32 red : 10;
             u32 green : 10;
             u32 blue : 10;
-            u32 unk30 : 2;
+            /** @brief Never set or read. */
+            u32 unused_30 : 2;
         } bits;
     } fade_color;
     s32 fade_timer;
@@ -453,7 +460,8 @@ typedef struct FieldRuntimeContext
         {
             u32 selector : 8;
             u32 plane : 2;
-            u32 unk10 : 22;
+            /** @brief Never set or read. */
+            u32 unused_10 : 22;
         } bits;
     } talk_window;
     u8 pad420[4];
@@ -561,7 +569,7 @@ typedef struct FieldActionDescriptor
 {
     /**
      * @brief Bits 0-3: kind; bits 4-5: side rule; bits 6-7: defense slot;
-     *        bits 8-10: status intensity shift; byte 2: power; byte 3: handler.
+     *        bits 8-10: technique gauge gain shift; byte 2: power; byte 3: handler.
      */
     union
     {
@@ -569,7 +577,8 @@ typedef struct FieldActionDescriptor
         struct
         {
             u8 flags;
-            u8 unk1;
+            /** @brief Bits 0-2: shift of the attacker's technique gauge gain (4 or 8 << shift, FIELD_DESCRIPTOR_SHIFT); bits 3-7 unread. */
+            u8 intensity_shift;
             u8 power;
             u8 handler;
         } bytes;
@@ -634,7 +643,8 @@ typedef struct FieldBattleContext
             u32 side : 1;
             /** @brief Set when field_battle_check_target_stance marks a follow-up action. */
             u32 follow_up : 1;
-            u32 unk3 : 29;
+            /** @brief Cleared with the word for every action; never set or read. */
+            u32 unused_3 : 29;
         } bits;
     } action_flags;
     FieldBattleAction* action;

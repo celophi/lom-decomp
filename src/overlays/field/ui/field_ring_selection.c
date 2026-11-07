@@ -135,8 +135,8 @@ extern s32 g_field_ring_target_radius;
 extern s32 g_field_ring_cursor;
 extern s32 g_field_ring_cancel_index;
 /**
- * @brief Ring menu word that field_open_ring_menu clears and nothing reads.
- * @note TODO: original purpose unknown; no code in either version reads it.
+ * @brief Ring menu word that field_open_ring_menu clears.
+ * @note No code in either version reads it.
  */
 extern s32 g_field_ring_unused;
 extern u8 g_field_ring_entries[];

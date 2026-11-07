@@ -82,7 +82,7 @@ typedef union
 /** @brief Resource header followed by offsets relative to the resource base. */
 typedef struct
 {
-    s32 unknown_0;
+    s32 model_count; /**< Number of model_offsets entries (1, 4 or 8 in the disc's BTP files); wmap_draw_model does not read it. */
     s32 model_offsets[1];
 } WmapModelDirectory;
 

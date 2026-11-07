@@ -40,7 +40,10 @@ extern s32 g_field_card_overlay_mode;
 /** @brief Ranch pet slot CARDA transfers to or from a PocketStation. */
 extern s32 g_field_card_pet_slot;
 
-/** @brief NIKI and ADDHERO progress: FIELD sets 1 when it opens them. TODO: later values unknown. */
+/**
+ * @brief NIKI/ADDHERO run flag: FIELD sets 1 when it opens either and 0 when it closes; NIKI stores 3 on cancel.
+ * @note Every reader only tests it for non-zero.
+ */
 extern s32 g_field_niki_addhero_state;
 
 /**

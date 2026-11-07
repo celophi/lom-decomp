@@ -22,18 +22,22 @@
 
 /**
  * @brief Event flags that send the world-map exit to their event land (g_wmap_flag_event_lands).
- * @note Placeholder names: the flags' story meaning and their event lands are not identified yet.
+ * @note Event lands and their scenes: flag 24 -> land 56, WAL_NST1 "Cancun Bird's Nest" (set in ESL_BS01);
+ *       flags 0, 27, 28 -> land 57, END_0057 (ending); flag 13 -> 58, DRL_OS00 "Entrance of the Flames"
+ *       (HEL_BS11); flag 12 -> 59, HEL_OS10 "Macabre Tombstone" (DRL_E190); flag 11 -> 60, DST_E000
+ *       "The Invincible Cannon" (set there); flag 10 -> 61, MHM_WND1 (Home, set there); flag 9 -> 62,
+ *       MHM_WNDW (Home, set in JUL_BS32); flag 14 -> 63, WST_EVT0 (no scene sets it with a literal).
  */
 #define WMAP_EVENT_FLAG_00 0
 #define WMAP_EVENT_FLAG_09 9
 #define WMAP_EVENT_FLAG_10 10
-#define WMAP_EVENT_FLAG_11 11
+#define WMAP_EVENT_FLAG_INVINCIBLE_CANNON 11
 /** @brief Event flag whose event moves the Flames land record into the Underworld record. */
 #define WMAP_EVENT_FLAG_FLAMES_TO_UNDERWORLD 12
 /** @brief Event flag whose event moves the Underworld land record back into the Flames record. */
 #define WMAP_EVENT_FLAG_UNDERWORLD_TO_FLAMES 13
 #define WMAP_EVENT_FLAG_14 14
-#define WMAP_EVENT_FLAG_24 24
+#define WMAP_EVENT_FLAG_BIRDS_NEST 24
 #define WMAP_EVENT_FLAG_27 27
 
 /** @brief Salamander level the Flames land gives its four neighbours when it returns. */
@@ -56,12 +60,12 @@ enum
 extern u8 g_saved_land_cells[];
 /** @brief WMAP land id to enter when each game flag is pending (only some flag ids are used). */
 extern u8 g_wmap_flag_event_lands[SAVED_GAME_FLAG_COUNT];
-/** @brief Music track index to play when each game flag's event land is entered. */
-extern u8 g_wmap_flag_event_music_tracks[SAVED_GAME_FLAG_COUNT];
+/** @brief Land id stored as the current land (g_current_land) when each flag's event land is entered. */
+extern u8 g_wmap_flag_event_current_lands[SAVED_GAME_FLAG_COUNT];
 
 /**
  * @brief Unlock the encyclopedia entries of the lands and their artifacts from the land records.
- * @note Lucemia's entries are unlocked from FIELD_LAND_LUCEMIA_2 once it has FIELD_LAND_FLAG_04.
+ * @note Lucemia's entries are unlocked from FIELD_LAND_LUCEMIA_2 once it has FIELD_LAND_CLEARED.
  */
 void wmap_unlock_land_encyclopedia_entries(void)
 {
@@ -75,7 +79,7 @@ void wmap_unlock_land_encyclopedia_entries(void)
         }
     }
 
-    if (g_saved_lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_FLAG_04)
+    if (g_saved_lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_CLEARED)
     {
         SAVED_BIT_SET(g_saved_encyclopedia_bits, FIELD_ENCYCLOPEDIA_LAND_BIT + FIELD_LAND_LUCEMIA);
     }
@@ -93,7 +97,7 @@ void wmap_unlock_land_encyclopedia_entries(void)
         }
     }
 
-    if (g_saved_lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_FLAG_04)
+    if (g_saved_lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_CLEARED)
     {
         SAVED_BIT_SET(g_saved_encyclopedia_bits, FIELD_ENCYCLOPEDIA_ARTIFACT_PLACED_BIT + FIELD_LAND_LUCEMIA);
     }
@@ -118,18 +122,18 @@ void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
     entry_index = (land * WMAP_LAND_ENTRY_SLOTS) + FIELD_LAND_ENTRY_SLOT(g_saved_lands[land].record.flags);
     g_field_entry_scene.id = g_wmap_land_scenes[entry_index];
     g_field_music_id = g_wmap_land_music_ids[entry_index];
-    g_music_track_index = wmap_get_land_at_cell(cell_x, cell_y);
+    g_current_land = wmap_get_land_at_cell(cell_x, cell_y);
 
     for (flag = 0; flag < SAVED_GAME_FLAG_COUNT; flag++)
     {
         if (SAVED_BIT_IS_SET(g_saved_flag_bits, flag))
         {
-            if (flag == WMAP_EVENT_FLAG_09 || flag == WMAP_EVENT_FLAG_10 || flag == WMAP_EVENT_FLAG_11 || flag == WMAP_EVENT_FLAG_FLAMES_TO_UNDERWORLD ||
-                flag == WMAP_EVENT_FLAG_UNDERWORLD_TO_FLAMES || flag == WMAP_EVENT_FLAG_14 || flag == WMAP_EVENT_FLAG_24 || flag == WMAP_EVENT_FLAG_00 ||
-                flag == WMAP_EVENT_FLAG_27 || flag == SAVED_EVENT_FLAG_NEW_GAME)
+            if (flag == WMAP_EVENT_FLAG_09 || flag == WMAP_EVENT_FLAG_10 || flag == WMAP_EVENT_FLAG_INVINCIBLE_CANNON ||
+                flag == WMAP_EVENT_FLAG_FLAMES_TO_UNDERWORLD || flag == WMAP_EVENT_FLAG_UNDERWORLD_TO_FLAMES || flag == WMAP_EVENT_FLAG_14 ||
+                flag == WMAP_EVENT_FLAG_BIRDS_NEST || flag == WMAP_EVENT_FLAG_00 || flag == WMAP_EVENT_FLAG_27 || flag == SAVED_EVENT_FLAG_NEW_GAME)
             {
                 SAVED_BIT_CLEAR(g_saved_flag_bits, flag);
-                g_music_track_index = g_wmap_flag_event_music_tracks[flag];
+                g_current_land = g_wmap_flag_event_current_lands[flag];
                 land = g_wmap_flag_event_lands[flag];
                 entry_index = (land * WMAP_LAND_ENTRY_SLOTS) + FIELD_LAND_ENTRY_SLOT(g_saved_lands[land].record.flags);
                 g_field_entry_scene.id = g_wmap_land_scenes[entry_index];
@@ -145,7 +149,7 @@ void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.artifact_obtained =
                         (u8)(g_saved_lands[FIELD_LAND_FLAMES].record.flags & FIELD_LAND_ARTIFACT_OBTAINED);
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.placed = (u8)FIELD_LAND_GET_PLACED(g_saved_lands[FIELD_LAND_FLAMES].word);
-                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.flag_04 = 1;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.cleared = 1;
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.x = FIELD_LAND_WORD_X(g_saved_lands[FIELD_LAND_FLAMES].word);
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.z = FIELD_LAND_WORD_Z(g_saved_lands[FIELD_LAND_FLAMES].word);
                     g_saved_lands[FIELD_LAND_UNDERWORLD].record.placement_order = g_saved_lands[FIELD_LAND_FLAMES].record.placement_order;
@@ -160,7 +164,7 @@ void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
                         g_saved_lands[FIELD_LAND_FLAMES].record.levels[FIELD_SPIRIT_UNDINE];
                     g_saved_lands[FIELD_LAND_FLAMES].bits.artifact_obtained = 0;
                     g_saved_lands[FIELD_LAND_FLAMES].bits.placed = 0;
-                    g_saved_lands[FIELD_LAND_FLAMES].bits.flag_04 = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].bits.cleared = 0;
                     g_saved_lands[FIELD_LAND_FLAMES].bits.x = FIELD_LAND_CELL_NONE;
                     g_saved_lands[FIELD_LAND_FLAMES].bits.z = FIELD_LAND_CELL_NONE;
                     g_saved_lands[FIELD_LAND_FLAMES].record.placement_order = 0;
@@ -180,7 +184,7 @@ void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
                     g_saved_lands[FIELD_LAND_FLAMES].bits.artifact_obtained =
                         (u8)(g_saved_lands[FIELD_LAND_UNDERWORLD].record.flags & FIELD_LAND_ARTIFACT_OBTAINED);
                     g_saved_lands[FIELD_LAND_FLAMES].bits.placed = (u8)FIELD_LAND_GET_PLACED(g_saved_lands[FIELD_LAND_UNDERWORLD].word);
-                    g_saved_lands[FIELD_LAND_FLAMES].bits.flag_04 = 0;
+                    g_saved_lands[FIELD_LAND_FLAMES].bits.cleared = 0;
                     g_saved_lands[FIELD_LAND_FLAMES].bits.x = FIELD_LAND_WORD_X(g_saved_lands[FIELD_LAND_UNDERWORLD].word);
                     g_saved_lands[FIELD_LAND_FLAMES].bits.z = FIELD_LAND_WORD_Z(g_saved_lands[FIELD_LAND_UNDERWORLD].word);
                     g_saved_lands[FIELD_LAND_FLAMES].record.placement_order = g_saved_lands[FIELD_LAND_UNDERWORLD].record.placement_order;
@@ -249,7 +253,7 @@ void wmap_commit_land_entry(s32 cell_x, s32 cell_y)
 
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.artifact_obtained = 0;
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.placed = 0;
-                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.flag_04 = 0;
+                    g_saved_lands[FIELD_LAND_UNDERWORLD].bits.cleared = 0;
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.x = FIELD_LAND_CELL_NONE;
                     g_saved_lands[FIELD_LAND_UNDERWORLD].bits.z = FIELD_LAND_CELL_NONE;
                     g_saved_lands[FIELD_LAND_UNDERWORLD].record.placement_order = 0;

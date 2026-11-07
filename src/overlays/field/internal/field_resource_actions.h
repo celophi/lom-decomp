@@ -62,7 +62,7 @@ typedef struct
     u16 target_filter : 8; /**< Ground effect (GroundEffectKind) whose area selects the targets, FIELD_ACTION_TARGET_NONE for none. */
     u16 target_group : 2;  /**< Target group mode (opposite / same group). */
     u16 instrument : 1;    /**< Action plays an instrument (charge) animation. */
-    u16 unknown_0xb : 5;
+    u16 unused_11 : 5;     /**< Zero in every scene action slot; no code reads it. */
 } FieldActionFlags;
 
 /** @brief One eight-byte action slot of a resource's action row. */

@@ -36,7 +36,10 @@ typedef union FieldPlayerHead
         u16 active : 1;
         /** @brief Selects the hero's alternate sprite and portrait set. */
         u16 alt_appearance : 1;
-        u16 unk2 : 14;
+        /** @brief Never set or read. */
+        u16 unused_2 : 6;
+        /** @brief Same bits as bytes.weapon_type. */
+        u16 weapon_type : 8;
     } bits;
 } FieldPlayerHead;
 
@@ -51,7 +54,13 @@ typedef struct FieldPlayerRecord
     u8 character_id;
     /** @brief FIELD_PLAYER_KIND_* value selecting the resource set. */
     u8 character_kind;
-    u8 unk4[0x254 - 4];
+    /**
+     * @brief Actor slot template (a FieldActorSlot) of this member's technique sequences: the same bytes as
+     *        g_field_actor_templates[i].actor; record 2's is g_field_shared_actor_template.
+     */
+    u8 sequence_template[0x244];
+    /** @brief No code reads or writes these bytes. */
+    u8 unused_248[0xC];
     /** @brief CD resource id of the loaded sprite package. */
     u16 resource_id;
     /** @brief Portrait currently cached for this member, FIELD_PORTRAIT_NONE for none. */

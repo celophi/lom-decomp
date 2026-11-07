@@ -74,7 +74,7 @@ typedef enum
  */
 typedef struct
 {
-    u16 unknown;          /**< First halfword of the stream header. */
+    u16 magic;            /**< 0x0160 in all 135560 sectors of the disc's STR files; MOVIE never reads it. */
     u16 sector_type;      /**< Video or audio sector type. */
     u16 chunk_sector_idx; /**< Sector position within a multi-sector frame. */
     u16 sector_count;     /**< Sectors comprising this frame. */

@@ -65,10 +65,10 @@
 
 /**
  * @brief Draw every active window and advance its open or close animation.
- * @param ctx Host frame context; its ordering-table entry receives every packet.
+ * @param render FIELD render half; its first ordering-table entry receives every packet.
  * @param buffer Packet buffer for this frame.
  */
-void shop_draw_windows(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
+void shop_draw_windows(FieldRenderHalf* render, ShopPacketBuffer* buffer)
 {
     u8* prim;
     u_long* ot;
@@ -83,10 +83,10 @@ void shop_draw_windows(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
     s32 open_width_low;
     DRAWENV draw_env;
 
-    ot = &ctx->ot;
+    ot = render->ordering_table;
     prim = buffer->prim_cursor;
 
-    if (ctx->display_buffer_index != 0)
+    if (render->display_rect.y != 0)
     {
         SetDefDrawEnv(&draw_env, 0, 240, 320, 224);
     }
@@ -142,7 +142,7 @@ void shop_draw_windows(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
                 list_x = window->frame.bits.x;
                 list_width_low = SHOP_WINDOW_WIDTH_LOW_BYTE(window);
                 prim = field_draw_menu_frame(prim, ot, list_x + SHOP_WINDOW_JOIN_WIDTH(window, list_width_low) + 3, window->frame.bits.y,
-                                             SHOP_SCROLLBAR_FRAME_WIDTH, window->extent.bits.height, ctx->display_buffer_index, i == 0);
+                                             SHOP_SCROLLBAR_FRAME_WIDTH, window->extent.bits.height, render->display_rect.y, i == 0);
             }
 
             SetDrawEnv((DR_ENV*)prim, &draw_env);
@@ -159,7 +159,7 @@ void shop_draw_windows(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
                     opening_width_low = SHOP_WINDOW_WIDTH_LOW_BYTE(window);
                     prim = field_draw_menu_frame(prim, ot, opening_x + (SHOP_WINDOW_JOIN_WIDTH(window, opening_width_low) - inset_width) / 2,
                                                  window->frame.bits.y + (window->extent.bits.height - inset_height) / 2, inset_width, inset_height,
-                                                 ctx->display_buffer_index, i == 0);
+                                                 render->display_rect.y, i == 0);
                     window->frame.bits.anim_step++;
 
                     if (window->frame.bits.anim_step == SHOP_WINDOW_ANIM_STEPS)
@@ -174,7 +174,7 @@ void shop_draw_windows(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
                     prim = window->draw(ot, prim, 0, 0);
                     open_width_low = SHOP_WINDOW_WIDTH_LOW_BYTE(window);
                     prim = field_draw_menu_frame(prim, ot, window->frame.bits.x, window->frame.bits.y, SHOP_WINDOW_JOIN_WIDTH(window, open_width_low),
-                                                 window->extent.bits.height, ctx->display_buffer_index, i == 0);
+                                                 window->extent.bits.height, render->display_rect.y, i == 0);
                     break;
 
                 case SHOP_WINDOW_CLOSING:
@@ -185,7 +185,7 @@ void shop_draw_windows(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
                     closing_width_low = SHOP_WINDOW_WIDTH_LOW_BYTE(window);
                     prim = field_draw_menu_frame(prim, ot, closing_x + (SHOP_WINDOW_JOIN_WIDTH(window, closing_width_low) - inset_width) / 2,
                                                  window->frame.bits.y + (window->extent.bits.height - inset_height) / 2, inset_width, inset_height,
-                                                 ctx->display_buffer_index, i == 0);
+                                                 render->display_rect.y, i == 0);
                     window->frame.bits.anim_step--;
 
                     if (window->frame.bits.anim_step == 0)

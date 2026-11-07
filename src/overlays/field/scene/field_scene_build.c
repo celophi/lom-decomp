@@ -614,7 +614,7 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
             part->x = part_def->x << 8;
             part->y = part_def->y << 8;
             part->z = part_def->z << 8;
-            part->unk34 = 0;
+            part->unused_34 = 0;
             part->sweep_period = part_def->sweep_period;
             part->sweep_phase = 1;
             part->row_angle = 0;
@@ -996,7 +996,7 @@ void field_build_render_records(FieldMapObject* map, u16 object_index)
     }
 
     scene->vlc_table = NULL;
-    scene->unk3C = 0;
+    scene->unused_3c = 0;
     field_build_animation_list(map->anim_defs[0], &arena.cur, &scene->anims);
     field_build_animation_list(map->anim_defs[1], &arena.cur, &scene->strips);
     field_build_animation_list(map->anim_defs[2], &arena.cur, &scene->sprites);

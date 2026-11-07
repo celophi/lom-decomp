@@ -45,7 +45,7 @@ class GameStateTemplate:
     field_config: int
     option_id: int
     sub_mode: int
-    music_track: int
+    current_land: int
     scene_mode: int
     field_flags: int
     layout_flags: int
@@ -130,7 +130,7 @@ class GameStateTemplate:
             "field_config",
             "option_id",
             "sub_mode",
-            "music_track",
+            "current_land",
             "scene_mode",
             "field_flags",
             "layout_flags",
@@ -154,7 +154,7 @@ class GameStateTemplate:
             _validate_u32("known_fields.field_config", fields["field_config"]),
             _validate_s16("known_fields.option_id", fields["option_id"]),
             _validate_s8("known_fields.sub_mode", fields["sub_mode"]),
-            _validate_u32("known_fields.music_track", fields["music_track"]),
+            _validate_u32("known_fields.current_land", fields["current_land"]),
             _validate_u16("known_fields.scene_mode", fields["scene_mode"]),
             _validate_u8("known_fields.field_flags", fields["field_flags"]),
             _validate_u8("known_fields.layout_flags", fields["layout_flags"]),
@@ -177,7 +177,7 @@ class GameStateTemplate:
         struct.pack_into("<I", output, 0x18, _validate_u32("field_config", self.field_config))
         struct.pack_into("<h", output, 0x1C, _validate_s16("option_id", self.option_id))
         struct.pack_into("<b", output, 0x1E, _validate_s8("sub_mode", self.sub_mode))
-        struct.pack_into("<I", output, 0x20, _validate_u32("music_track", self.music_track))
+        struct.pack_into("<I", output, 0x20, _validate_u32("current_land", self.current_land))
         struct.pack_into("<H", output, 0x24, _validate_u16("scene_mode", self.scene_mode))
         output[0x26] = _validate_u8("field_flags", self.field_flags)
         output[0x27] = _validate_u8("layout_flags", self.layout_flags)
@@ -207,7 +207,7 @@ class GameStateTemplate:
                 "field_config": self.field_config,
                 "option_id": self.option_id,
                 "sub_mode": self.sub_mode,
-                "music_track": self.music_track,
+                "current_land": self.current_land,
                 "scene_mode": self.scene_mode,
                 "field_flags": self.field_flags,
                 "layout_flags": self.layout_flags,
@@ -282,7 +282,7 @@ def dump_game_state_template_yaml(template: GameStateTemplate) -> str:
     fields = document["known_fields"]
     for name in (
         "field_config",
-        "music_track",
+        "current_land",
         "state_flags",
         "mode_flags",
         "slot_flags",

@@ -169,7 +169,7 @@ void main_game_loop(void)
 
                 if ((g_game_state != GAME_STATE_TITLE) && (g_game_state != GAME_STATE_ATTRACT_1) && (g_game_state != GAME_STATE_ATTRACT_2))
                 {
-                    load_and_play_song(g_music_track_table[g_music_track_index]);
+                    load_and_play_song(g_land_songs[g_current_land]);
                 }
 
                 g_field_secondary_music_id = -1;
@@ -253,9 +253,10 @@ void main_game_loop(void)
                     g_field_sound_bank_id = g_saved_game.layout.sound_bank_id;
                     g_field_secondary_music_id = g_saved_game.layout.secondary_music_id;
                     g_saved_game.layout.spawn.bits.id = FIELD_SPAWN_LOAD_GAME;
-                    g_music_track_index = g_saved_game.layout.track.bits.music_track;
+                    g_current_land = g_saved_game.layout.location.bits.current_land;
 
-                    if ((g_saved_game.layout.options.word & (SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3)) == (SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3))
+                    if ((g_saved_game.layout.options.word & (SAVED_OPTION_GAME_CLEARED | SAVED_OPTION_WORLD_SELECT_PENDING)) ==
+                        (SAVED_OPTION_GAME_CLEARED | SAVED_OPTION_WORLD_SELECT_PENDING))
                     {
                         g_game_state = GAME_STATE_WORLD_SELECT;
                     }

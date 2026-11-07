@@ -297,7 +297,8 @@ struct FieldPart
     s32 x; /* x offset within the object */
     s32 y; /* y offset within the object */
     s32 z; /* z offset within the object */
-    s16 unk34;
+    /** Cleared by the scene build; no code reads it. */
+    s16 unused_34;
     /** reload period for @c sweep_phase. */
     u16 sweep_period;
     /** sweep phase; counts down each frame, reloads from @c sweep_period at zero. */
@@ -313,10 +314,10 @@ struct FieldPart
     /** vertical scale, 4.12 fixed point. */
     u16 scale_y;
     /**
-     * the four corner CLUT ids, bilinearly interpolated across the
-     * grid. Derived from the interpolation endpoints: the row weight resolves
-     * to unk46 on the first (topmost) row and unk44 on the last, and the
-     * column weight to the "left" pair on the first (leftmost) column.
+     * the four corner CLUT ids, bilinearly interpolated across the grid:
+     * down the rows each side runs from mostly clut_bl/clut_br on row 0 to
+     * exactly clut_tl/clut_tr on the last row, and across a row from mostly
+     * the right value on column 0 to exactly the left value on the last column.
      */
     s16 clut_bl; /* bottom left */
     s16 clut_tl; /* top left */
@@ -403,9 +404,8 @@ typedef struct FieldSceneHeader
 /**
  * @brief Per-marker record hanging off FieldMarker::def.
  *
- * unk4/unk6 and unk8/unkA are two screen-space point pairs; unk10 is a depth
- * bias folded into the marker's vertical origin and unk14 the numeric label
- * drawn next to it.
+ * x0/y0 and x1/y1 are two screen-space points; depth_bias is folded into the
+ * marker's vertical origin and label is the number drawn next to it.
  */
 struct FieldMarkerDef
 {
@@ -686,7 +686,8 @@ enum
 
 /**
  * @brief FieldPart::kind: the primitive each cell of a part or cel draws with.
- * @note TODO: kinds 2 to 5 are all POLY_FT4 cells with the same record layout; what separates them is unknown.
+ * @note Kinds 2-5 are FieldPartDef kinds 2 and 4, plus one for a single-cell part; every switch treats them
+ *       alike as rotated POLY_FT4 grids, so the 2/4 and grid/single distinctions have no effect.
  */
 typedef enum
 {
@@ -1007,7 +1008,7 @@ typedef union
     u32 word;
     struct
     {
-        /** Bit 0: the colour below is used; bit 1: copied to FieldMapBounds::unk4. */
+        /** Bit 0: the colour below is used; bit 1: copied to FieldMapBounds::unused_4 (never read). */
         u8 flags;
         u8 r;
         u8 g;
@@ -1208,7 +1209,8 @@ typedef struct
     FieldSfxWord sound;
     /** bits 0-9 sound id, used when control carries no channel slot. */
     u16 sfx_id;
-    u16 unk6;
+    /** @brief No code reads it. */
+    u16 unused_6;
 } FieldSfxKey;
 
 #endif

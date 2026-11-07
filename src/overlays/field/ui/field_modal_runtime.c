@@ -446,7 +446,7 @@ void field_bind_saved_game_context(void)
 }
 
 /**
- * @brief Save the field entry settings, music track, and current save slot.
+ * @brief Save the field entry settings, current land, and current save slot.
  * @param scene_id Scene to re-enter.
  * @param object_id Field object selected for the render context.
  * @param music_id Primary music resource.
@@ -462,7 +462,7 @@ void field_store_entry_settings(s16 scene_id, s8 object_id, s8 music_id, s32 spa
     g_saved_game_ctx->spawn.bits.id = spawn_id;
     g_saved_game_ctx->sound_bank_id = sound_bank_id;
     g_saved_game_ctx->secondary_music_id = secondary_music_id;
-    g_saved_game_ctx->track.bits.music_track = g_music_track_index;
+    g_saved_game_ctx->location.bits.current_land = g_current_land;
     g_saved_game_ctx->compatibility_tag = g_save_compatibility_tag;
 }
 
@@ -2079,7 +2079,7 @@ void field_update_modal(FieldRenderHalf* render)
     switch (g_field_modal_state)
     {
         case FIELD_MODAL_SHOP:
-            if ((g_field_shop_active != 0) && (shop_update((ShopFrameContext*)render) != 0))
+            if ((g_field_shop_active != 0) && (shop_update(render) != 0))
             {
                 g_field_shop_active = 0;
                 g_field_modal_state = FIELD_MODAL_NONE;
@@ -2093,7 +2093,7 @@ void field_update_modal(FieldRenderHalf* render)
             {
                 if (g_field_gosub_phase >= FIELD_GOSUB_RUNNING)
                 {
-                    if (gosub_update_frame((struct GosubRenderContext*)render) != 0)
+                    if (gosub_update_frame(render) != 0)
                     {
                         DrawSync(0);
                         g_field_gosub_phase = FIELD_GOSUB_CLOSING;
@@ -2129,7 +2129,7 @@ void field_update_modal(FieldRenderHalf* render)
                             g_field_player_records[index].portrait_index = FIELD_PORTRAIT_NONE;
                         }
 
-                        g_music_track_index = g_saved_game_ctx->track.bits.music_track;
+                        g_current_land = g_saved_game_ctx->location.bits.current_land;
                         field_set_scene_parameters(g_saved_game_ctx->scene_id, g_saved_game_ctx->object_id, g_saved_game_ctx->spawn.bits.id,
                                                    g_saved_game_ctx->music_id, g_saved_game_ctx->sound_bank_id, g_saved_game_ctx->secondary_music_id);
                         field_set_fade_target_only(FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, FIELD_COLOR_SCALE_NEUTRAL, 8);

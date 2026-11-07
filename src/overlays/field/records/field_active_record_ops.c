@@ -57,7 +57,7 @@ typedef struct
 /** @brief Guest template table (resource 3). */
 typedef struct
 {
-    u16 unk0;
+    u16 resource_id;
     u16 count;
     FieldGuestTemplate guests[1];
 } FieldGuestTemplateTable;
@@ -65,7 +65,7 @@ typedef struct
 /** @brief Item template table (resources 0xD and 0xE). */
 typedef struct
 {
-    u16 unk0;
+    u16 resource_id;
     u16 count;
     FieldItemRecord templates[1];
 } FieldItemTemplateTable;

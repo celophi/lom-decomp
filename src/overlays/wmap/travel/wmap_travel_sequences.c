@@ -655,7 +655,7 @@ void wmap_special_travel_wait_party(void)
 /** @brief Special travel step 9: start the turn to the departure heading. */
 WMAP_STEP_ARM_TIMER(wmap_special_travel_start_turn, g_wmap_special_travel_step, g_wmap_special_travel_timer, WMAP_VEHICLE_TURN_FRAMES, wmap_special_travel_turn)
 
-/** @brief Special travel step 10: turn to the departure heading (sets actor 0 unknown_02 to -1 there). */
+/** @brief Special travel step 10: turn to the departure heading (hides actor 0: resource_index = -1 there). */
 void wmap_special_travel_turn(void)
 {
     s32 remaining_ticks;
@@ -703,7 +703,7 @@ void wmap_special_travel_wait_land(void)
 WMAP_STEP_ARM_TIMER(wmap_special_travel_start_cruise, g_wmap_special_travel_step, g_wmap_special_travel_timer, WMAP_VEHICLE_WAIT_FRAMES,
                     wmap_special_travel_cruise)
 
-/** @brief Special travel step 14: circle over the land (clears actor 0 unknown_02 at the cruise heading). */
+/** @brief Special travel step 14: circle over the land (shows actor 0 again: resource_index = 0 at the cruise heading). */
 void wmap_special_travel_cruise(void)
 {
     wmap_turn_vehicle(1);
@@ -808,7 +808,7 @@ void wmap_special_return_wait_home(void)
 WMAP_STEP_ARM_TIMER(wmap_special_return_start_cruise, g_wmap_special_return_step, g_wmap_special_return_timer, WMAP_VEHICLE_WAIT_FRAMES,
                     wmap_special_return_cruise)
 
-/** @brief Special return step 8: circle over the land (clears actor 0 unknown_02 at the cruise heading). */
+/** @brief Special return step 8: circle over the land (shows actor 0 again: resource_index = 0 at the cruise heading). */
 void wmap_special_return_cruise(void)
 {
     wmap_turn_vehicle(1);

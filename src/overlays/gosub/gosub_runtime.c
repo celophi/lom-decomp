@@ -6,7 +6,7 @@
  *
  * @param render_context Rendering context forwarded to the draw handler.
  */
-void gosub_update_screen(GosubRenderContext* render_context)
+void gosub_update_screen(FieldRenderHalf* render_context)
 {
     gosub_handle_input();
 

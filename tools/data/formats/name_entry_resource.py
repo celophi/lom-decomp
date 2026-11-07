@@ -167,7 +167,7 @@ class RecordTable:
 class NameEntryResource:
     """GNAME header and its four ordered self-relative record tables."""
 
-    unknown_0x00: int
+    offset_count: int
     tables: tuple[RecordTable, ...]
 
     @classmethod
@@ -178,7 +178,7 @@ class NameEntryResource:
                 f"0x{HEADER_SIZE:X}"
             )
 
-        unknown_0x00, *table_offsets = struct.unpack_from("<IIIII", data, 0)
+        offset_count, *table_offsets = struct.unpack_from("<IIIII", data, 0)
         if table_offsets[0] != HEADER_SIZE:
             raise NameEntryResourceError(
                 f"first table offset must be 0x{HEADER_SIZE:X}, got "
@@ -205,7 +205,7 @@ class NameEntryResource:
             )
             for index, start in enumerate(table_offsets)
         )
-        resource = cls(unknown_0x00, tables)
+        resource = cls(offset_count, tables)
         if resource.to_bytes() != data:
             raise NameEntryResourceError("parsed resource does not rebuild exactly")
         return resource
@@ -214,7 +214,7 @@ class NameEntryResource:
     def parse_document(cls, document: object) -> "NameEntryResource":
         if not isinstance(document, dict):
             raise NameEntryResourceError("YAML root must be a mapping")
-        expected_keys = {"format", "version", "unknown_0x00", "tables"}
+        expected_keys = {"format", "version", "offset_count", "tables"}
         actual_keys = set(document)
         if actual_keys != expected_keys:
             missing = sorted(expected_keys - actual_keys)
@@ -237,8 +237,8 @@ class NameEntryResource:
                 f"version must be {FORMAT_VERSION}, got {document['version']!r}"
             )
 
-        unknown_0x00 = _validate_int(
-            "unknown_0x00", document["unknown_0x00"], 0, 0xFFFFFFFF
+        offset_count = _validate_int(
+            "offset_count", document["offset_count"], 0, 0xFFFFFFFF
         )
         raw_tables = document["tables"]
         if not isinstance(raw_tables, dict):
@@ -251,11 +251,11 @@ class NameEntryResource:
         tables = tuple(
             RecordTable.parse_document(raw_tables[name], name) for name in TABLE_NAMES
         )
-        return cls(unknown_0x00, tables)
+        return cls(offset_count, tables)
 
     def to_bytes(self) -> bytes:
-        unknown_0x00 = _validate_int(
-            "unknown_0x00", self.unknown_0x00, 0, 0xFFFFFFFF
+        offset_count = _validate_int(
+            "offset_count", self.offset_count, 0, 0xFFFFFFFF
         )
         if len(self.tables) != len(TABLE_NAMES):
             raise NameEntryResourceError(
@@ -272,14 +272,14 @@ class NameEntryResource:
             offsets.append(offset)
             offset += len(data)
 
-        header = struct.pack("<IIIII", unknown_0x00, *offsets)
+        header = struct.pack("<IIIII", offset_count, *offsets)
         return header + b"".join(table_data)
 
     def document(self) -> dict[str, object]:
         return {
             "format": FORMAT_NAME,
             "version": FORMAT_VERSION,
-            "unknown_0x00": self.unknown_0x00,
+            "offset_count": self.offset_count,
             "tables": {
                 name: self.tables[index].document(name)
                 for index, name in enumerate(TABLE_NAMES)

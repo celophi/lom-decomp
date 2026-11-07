@@ -124,11 +124,11 @@ typedef union
 
 /**
  * @brief One display buffer of a standalone screen: ordering table, display state and packet area.
- * @note TODO: the contents of the leading 0x40 bytes are unknown.
  */
 typedef struct
 {
-    u8 unknown_header[0x40];
+    /** @brief No code reads or writes it (CHECKPS, TITLE, WSEL or the shared fade code). */
+    u8 unused_00[0x40];
     u_long ot[FRAME_ORDERING_TABLE_LENGTH];
     DISPENV disp_env;
     DRAWENV draw_env;

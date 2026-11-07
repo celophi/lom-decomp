@@ -1451,11 +1451,11 @@ void wmap_init_land_display(void)
         {
             WmapEffectCell cell;
 
-            g_wmap_cell_effects[x][y].unk00 = i;
+            g_wmap_cell_effects[x][y].unused_00 = i;
             g_wmap_cell_effects[x][y].frame = 0;
             g_wmap_cell_effects[x][y].state = 0;
             g_wmap_cell_effects[x][y].mode = 0;
-            g_wmap_cell_effects[x][y].unk10 = 0;
+            g_wmap_cell_effects[x][y].unused_10 = 0;
             cell = g_wmap_cell_effects[x][y];
         }
     }

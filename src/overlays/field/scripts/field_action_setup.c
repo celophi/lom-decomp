@@ -40,7 +40,7 @@ enum
     FIELD_STANCE_REPEL = 3
 };
 
-/** @brief Status intensity shift of an action descriptor (bits 8-10). */
+/** @brief Technique gauge gain shift of an action descriptor (bits 8-10). */
 #define FIELD_DESCRIPTOR_SHIFT(descriptor) (((descriptor)->info.word >> 8) & 7)
 
 /** @brief Both defense slot bits of an action descriptor (bits 6-7). */

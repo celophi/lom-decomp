@@ -273,7 +273,7 @@ typedef struct
 typedef struct
 {
     s16 index;
-    s16 unk02;
+    s16 _pad02; /**< Local 0x14; not used by this op. */
     u16 count;
 } FieldMenuResultVars;
 
@@ -281,9 +281,9 @@ typedef struct
 typedef struct
 {
     u8 macro_index;
-    u8 unk01[0xD];
+    u8 _pad01[0xD]; /**< Locals not used by this op. */
     s16 index;
-    u8 unk10[4];
+    u8 _pad10[4]; /**< Locals not used by this op. */
     u16 count;
 } FieldMenuNamedVars;
 
@@ -297,7 +297,7 @@ typedef struct
 typedef struct
 {
     s16 selected_position;
-    u8 unk02[0x10];
+    u8 _pad02[0x10]; /**< Locals not used by this op. */
     s16 active_slot;
 } FieldMenuSwapVars;
 
@@ -330,11 +330,11 @@ typedef struct
 typedef struct
 {
     u8 action_slot; /**< Action slot number plus 4. */
-    u8 unk01[0xE];
-    u8 item_index; /**< item of the slot, read by field_menu_load_action_slot. */
-    u8 handle;     /**< low byte of the slot handle. */
-    u8 unk11;
-    u8 group; /**< action group index. */
+    u8 _pad01[0xE]; /**< Locals not used by the action slot ops. */
+    u8 item_index;  /**< item of the slot, read by field_menu_load_action_slot. */
+    u8 handle;      /**< low byte of the slot handle. */
+    u8 _pad11;      /**< Local 0x1E; not used by the action slot ops. */
+    u8 group;       /**< action group index. */
 } FieldMenuActionSlotVars;
 
 /** @brief Script locals from byte 0x02 that select a record and report the result. */
@@ -2866,11 +2866,11 @@ void field_menu_describe_pending_item(void)
 }
 
 /**
- * @brief Reset the current music track index to zero.
+ * @brief Make Home (land 0) the current land.
  */
-void field_reset_music_track_index(void)
+void field_reset_current_land(void)
 {
-    g_music_track_index = 0;
+    g_current_land = 0;
 }
 
 /**
@@ -3127,7 +3127,7 @@ void field_menu_draw_land_element(void)
     i = total;
     work.view = &g_saved_game.layout;
     mode = g_field_runtime_context.locals.bytes[0];
-    land = g_music_track_index;
+    land = g_current_land;
     favored = g_field_weekday_favored_elements;
     land_offset = land * FIELD_LAND_RECORD_SIZE;
 next_weight:

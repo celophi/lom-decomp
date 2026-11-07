@@ -301,14 +301,15 @@ inline void field_play_song(void)
 /**
  * @brief Play one section of the container in g_resident_song_buffer through AKAO command 0x14.
  * @param section_index Section of the resident container.
- * @param param1 TODO: forwarded to AKAO command 0x14 as its second value.
+ * @param channel_mask Channels to start (AKAO command 0x14); 0 starts every channel.
  */
-void field_play_song_section(s32 section_index, s32 param1)
+void field_play_song_section(s32 section_index, s32 channel_mask)
 {
     s32 song_handle;
 
-    song_handle = akao_start_song_channels(
-        (u8*)g_resident_song_section_offsets - OFFSETOF(AkaoContainerHeader, section_offsets) + g_resident_song_section_offsets[section_index], param1, 0);
+    song_handle = akao_start_song_channels((u8*)g_resident_song_section_offsets - OFFSETOF(AkaoContainerHeader, section_offsets) +
+                                               g_resident_song_section_offsets[section_index],
+                                           channel_mask, 0);
     g_field_song_handles[FIELD_SONG_MAIN] = song_handle;
 
     if (song_handle == -1)

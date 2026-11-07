@@ -73,7 +73,7 @@ s32 field_run_actor_event(s32 owner_id, s32 event_id, s32 mode)
                 }
             }
 
-            if ((g_field_runtime->state.flags & FIELD_STATE_PARTY_PAGE_SCRIPTS) && (owner_id < FIELD_PARTY_SIZE))
+            if ((g_field_runtime->state.flags & FIELD_STATE_BATTLE_ACTIVE) && (owner_id < FIELD_PARTY_SIZE))
             {
                 actor->script.frames[actor->script.depth].pc = field_get_party_event_script(owner_id, event_id & 0xFF);
             }

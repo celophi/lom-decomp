@@ -234,7 +234,7 @@ void wmap_set_map_label(s32 selection)
             g_wmap_label_texture_page = 43;
             g_wmap_label_sprite = g_wmap_land_label_template;
 
-            if (wmap_is_land_active(selection) == 0)
+            if (wmap_is_land_cleared(selection) == 0)
             {
                 g_wmap_label_clut_row = 508;
             }

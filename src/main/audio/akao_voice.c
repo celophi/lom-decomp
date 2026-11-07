@@ -86,9 +86,9 @@ typedef struct
 /** @brief Voice-allocation bookkeeping entry used by the AKAO mixer. */
 typedef struct AkaoVoiceAllocation
 {
-    s32 unknown_0x00;
+    s32 unused_0; /**< No code reads or writes it. */
     s16 envelope_level;
-    s16 unknown_0x06;
+    s16 unused_6; /**< No code reads or writes it. */
 } AkaoVoiceAllocation;
 
 /** @brief One 16-byte SPU voice register block. */

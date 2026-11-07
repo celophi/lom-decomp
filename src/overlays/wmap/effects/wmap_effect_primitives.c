@@ -16,7 +16,7 @@ typedef union
     struct
     {
         u16 step;
-        u16 unknown_02;
+        u16 unused_02; /**< High halfword of value; the falling step reads only the low halfword. */
     } parts;
 } WmapFallingVelocity;
 
@@ -27,9 +27,9 @@ typedef union
 typedef struct
 {
     s16 state;
-    u8 unknown_02[2];
+    u8 unused_02[2]; /**< WmapMotion angle bytes; falling particles never touch them. */
     WmapFallingVelocity velocity;
-    u8 unknown_08[6];
+    u8 unused_08[6]; /**< WmapMotion radius and lifetime bytes; falling particles never touch them. */
     u16 z;
     u16 x;
     u16 y;
@@ -46,7 +46,7 @@ typedef struct
 typedef struct
 {
     s16 state;
-    u8 unknown_02[12];
+    u8 unused_02[12]; /**< WmapMotion angle-to-lifetime bytes; box particles never touch them. */
     u16 y;
     u16 x;
     u16 z;

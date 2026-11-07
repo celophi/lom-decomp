@@ -33,7 +33,7 @@ typedef struct
     s16 state;
     s16 base_x;
     s32 fall_speed;
-    s32 unknown_08;
+    s32 unused_08; /**< WmapMotion radius word; the sway particles never use it. */
     s16 sway_amplitude;
     s16 y;
     s16 sway_step;

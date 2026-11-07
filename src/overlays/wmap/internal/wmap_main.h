@@ -21,7 +21,7 @@ typedef struct
     s32 x;
     s32 y;
     s32 projection_scale;
-    s32 unknown_0c;
+    s32 unused_0c; /**< Zero at load; only whole-view copies touch it. */
 } WmapView;
 
 /** @brief Map units between two land cells. */

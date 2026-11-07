@@ -102,7 +102,7 @@ typedef struct
     u16 second_offset;
 } AkaoSfxSequencePair;
 
-/** @brief Reference compared with descriptor unk14 to select the song's area flags. */
+/** @brief Reference compared with the descriptor's match_value to select the song's area flags. */
 extern s32 g_akao_song_descriptor_match_value[];
 extern u8 g_akao_silent_sequence[];
 extern AkaoCommandParam g_akao_dispatch_params[6];

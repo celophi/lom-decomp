@@ -39,8 +39,8 @@ enum
     FIELD_LAND_STATE_LOCKED = 0,   /**< Artifact not unlocked, or the index is out of range. */
     FIELD_LAND_STATE_UNLOCKED = 1, /**< Artifact unlocked but not obtained. */
     FIELD_LAND_STATE_OBTAINED = 2, /**< Artifact obtained, land not placed. */
-    FIELD_LAND_STATE_PLACED = 3,   /**< Land placed, FIELD_LAND_FLAG_04 clear. */
-    FIELD_LAND_STATE_FLAG_04 = 4   /**< Land placed with FIELD_LAND_FLAG_04. */
+    FIELD_LAND_STATE_PLACED = 3,   /**< Land placed, not cleared yet. */
+    FIELD_LAND_STATE_CLEARED = 4   /**< Land placed and FIELD_LAND_CLEARED. */
 };
 
 /** @brief Item value tables (resource FIELD_RESOURCE_ITEM_VALUES). */
@@ -125,10 +125,10 @@ s32 field_award_land_artifacts(s32 first_land, s32 second_land, s32* awarded)
     if (awarded_count == 0)
     {
 #if defined(VERSION_JP)
-        i = field_get_land_distance(g_music_track_index);
+        i = field_get_land_distance(g_current_land);
         field_receive_item(g_field_land_distance_items[i]);
 #else
-        i = field_get_land_distance(g_music_track_index);
+        i = field_get_land_distance(g_current_land);
         table_index = FIELD_LAND_DISTANCE_MAX;
 
         if (i <= FIELD_LAND_DISTANCE_MAX)
@@ -215,7 +215,7 @@ s32 field_get_land_state(s32 land_index)
                 return FIELD_LAND_STATE_PLACED;
             }
 
-            return FIELD_LAND_STATE_FLAG_04;
+            return FIELD_LAND_STATE_CLEARED;
         }
     }
     else
