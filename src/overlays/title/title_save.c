@@ -7,53 +7,43 @@
 #include "common/gpu_packet.h"
 #include "main/audio/akao.h"
 
-void reset_save_slot_panel(void);
-void handle_save_slot_input(void);
-void animate_save_slot_panel(void);
-
-/* Width in pixels of a single save-slot panel; one horizontal slide moves the
- * stage by exactly this much. */
 #define SLOT_PANEL_WIDTH 160
-
-/* Number of frames the slide-lerper takes to animate a full panel scroll. */
 #define SLOT_SLIDE_FRAMES 8
 
-/* Words in a hero template (SAVED_CHARACTER_SIZE bytes). */
+/* SAVED_CHARACTER_SIZE / 4 */
 #define HERO_TEMPLATE_WORDS 0x94U
 
-/* Words in a saved-game template (SAVED_GAME_DATA_SIZE bytes). */
+/* SAVED_GAME_DATA_SIZE / 4 */
 #define SAVED_GAME_TEMPLATE_WORDS 0xC9AU
 
-/* Entries in g_save_layout_tex_table. */
 #define SAVE_LAYOUT_TEX_COUNT 11
-
-/**
- * @brief One UV/size descriptor in the save-slot panel and sprite UV tables.
- *
- * @note Every field is in 8-pixel units; the renderer multiplies by 8 on use.
- */
-typedef struct
-{
-    u8 u;  /**< source U, in 8-pixel units */
-    u8 v;  /**< source V, in 8-pixel units */
-    u8 w;  /**< width, in 8-pixel units */
-    u8 h;  /**< height, in 8-pixel units */
-    u8 ox; /**< X origin offset, in 8-pixel units */
-    u8 oy; /**< Y origin offset, in 8-pixel units */
-} SlotUvRect;
-
-/** Number of entries in g_save_layout_table. */
 #define SAVE_LAYOUT_ENTRIES 0x1B
 
-/** A glyph strip wider than this is split into chunks of this many pixels. */
 #define GLYPH_CHUNK_WIDTH 0x80
 
-/** Primitive selectors stored in SaveLayoutEntry::type. */
+/* SaveLayoutEntry::type; any other nonzero value is a glyph strip. */
 #define SAVE_LAYOUT_PRIM_NONE 0
 #define SAVE_LAYOUT_PRIM_TILE 2
 #define SAVE_LAYOUT_PRIM_POLY_FT4 3
 #define SAVE_LAYOUT_PRIM_SPRT 4
 
+/** @brief Texture rectangle and origin of a picker sprite, all in 8-pixel units. */
+typedef struct
+{
+    u8 u;
+    u8 v;
+    u8 w;
+    u8 h;
+    u8 ox;
+    u8 oy;
+} SlotUvRect;
+
+extern SlotUvRect g_save_slot_panel_uv_table[];
+extern SlotUvRect g_save_slot_sprite_uv_table[];
+
+void reset_save_slot_panel(void);
+void handle_save_slot_input(void);
+void animate_save_slot_panel(void);
 static void scroll_slots_right(void);
 static void scroll_slots_left(void);
 void load_hero_template(s32 hero_type);
@@ -95,20 +85,12 @@ void render_save_slot_menu(TitleMenuContext* context)
 }
 
 /**
- * @brief Per-frame input dispatcher for the save-slot sub-menu.
+ * @brief Handle one frame of new-game picker input.
  *
- * @details While a slide is in flight (g_slot_slide_frames != 0) it only steps
- * the X/Y slide lerpers and returns. Once settled it snaps the lerpers to
- * their targets, reads input, and branches on whether the stage is at its
- * home column (g_slot_slide_x == 0) or scrolled to a side panel:
- *  - Home column: confirm toggles the new-game expand entries (18/19), a
- *    left/right press scrolls to a side panel, and cancel quits the sub-menu
- *    (g_title_menu_exit_state = 2).
- *  - Side panel: confirm loads the hero of that side, seeds the game id,
- *    copies the selected starting weapon into the hero's weapon slot, clears the
- *    technique bits of every other weapon category, and confirms (exit state 1);
- *    cancel scrolls back home; up/down move the slot cursor (wrapping over
- *    the 11 slots). Always re-runs the highlight-panel animation.
+ * @details On the home panel, left/right toggles between the two heroes
+ * (layout entries 18 and 19) and confirm slides to the chosen hero's weapon
+ * list. On a weapon list, up/down picks a weapon and confirm starts the game
+ * with that hero and weapon; the other weapon categories lose their techniques.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/Xl8gF
  */
@@ -281,13 +263,8 @@ void handle_save_slot_input(void)
 }
 
 /**
- * @brief Animate the save-slot highlight and scroll window.
- *
- * Lerps g_slot_highlight_x toward g_slot_highlight_target_x over
- * g_slot_highlight_frames frames, pans the scroll window so the selected
- * slot is always visible, then writes the updated V-coordinate and
- * visibility flags for the highlight-bar layout entries in g_save_layout_table.
- *
+ * @brief Scroll the weapon list to keep the selection visible and move the highlight.
+ * @note The list shows seven 16-pixel rows at a time.
  * @see decomp.me (100%) https://decomp.me/scratch/d3s3Q
  */
 void animate_save_slot_panel(void)
@@ -388,18 +365,7 @@ void animate_save_slot_panel(void)
 }
 
 /**
- * @brief Snap the save-slot panel back to its home position and clear its
- *        highlight/selection state.
- *
- * @details When a horizontal slide is in progress (g_slot_slide_x != 0) this
- * rebuilds the panel's layout entries in g_save_layout_table: it re-homes the
- * scroll window (entries 6 and 13 reset to SAVE_SCROLL_WIDTH_HOME), shows the
- * right highlight halves (entries 4/5/11/12) while hiding the left halves
- * (entries 7/8/14/15), and rewrites the highlight-bar V coordinates (entries
- * 2/3/9/10) from the now-zeroed g_slot_highlight_x. The selection/highlight
- * globals are all cleared. When no slide is active it only resets entry 0's
- * U/V to their home values.
- *
+ * @brief Reset the weapon-list selection and scroll after a panel slide.
  * @see decomp.me (100%) https://decomp.me/scratch/0YgmZ
  */
 void reset_save_slot_panel(void)
@@ -444,12 +410,7 @@ void reset_save_slot_panel(void)
 }
 
 /**
- * @brief Begins a slide of the save-slot stage one panel to the right.
- *
- * @details Sets the slide target to +SLOT_PANEL_WIDTH and seeds the lerper
- * with SLOT_SLIDE_FRAMES frames of remaining travel. If the lerper is
- * already showing the right-hand panel (g_slot_slide_x_lerped == SLOT_PANEL_WIDTH),
- * the call is a no-op so we don't accumulate further offset off the edge.
+ * @brief Start sliding the picker one panel right, unless already at the right panel.
  * @see decomp.me (100%) https://decomp.me/scratch/SRP9z
  */
 static void scroll_slots_right(void)
@@ -462,12 +423,7 @@ static void scroll_slots_right(void)
 }
 
 /**
- * @brief Begins a slide of the save-slot stage one panel to the left.
- *
- * @details Mirror of scroll_slots_right: nudges the slide target by
- * -SLOT_PANEL_WIDTH and re-arms the lerper with SLOT_SLIDE_FRAMES of
- * travel. No-ops when the lerper is already at the left-hand limit so
- * the offset cannot run away off-stage.
+ * @brief Start sliding the picker one panel left, unless already at the left panel.
  * @see decomp.me (100%) https://decomp.me/scratch/W1iA5
  */
 static void scroll_slots_left(void)
@@ -478,11 +434,6 @@ static void scroll_slots_left(void)
         g_slot_slide_frames = SLOT_SLIDE_FRAMES;
     }
 }
-
-/** @brief UV rectangles of the save-slot background panel quads. */
-extern SlotUvRect g_save_slot_panel_uv_table[];
-/** @brief UV rectangles of the save-slot free-size sprites. */
-extern SlotUvRect g_save_slot_sprite_uv_table[];
 
 /**
  * @brief Texture page of a save-layout texture at a given VRAM x.
@@ -508,12 +459,10 @@ static inline u32 get_save_layout_base_tpage(SaveLayoutTex* tex, u32 flags)
 }
 
 /**
- * @brief Build the GPU primitive stream for the save-slot layout.
- *
- * @param ptr Pointer to the next free byte in the primitive buffer.
- * @param ot Pointer to the ordering-table entry receiving each primitive.
- * @return Pointer to the byte just past the last primitive emitted.
- *
+ * @brief Draw every entry of g_save_layout_table.
+ * @param ptr Next free byte in the primitive buffer.
+ * @param ot OT entry to link the primitives into.
+ * @return Pointer just past the last primitive.
  */
 void* render_save_layout_prims(u8* ptr, u_long* ot)
 {
@@ -529,7 +478,7 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
 
         if (type == SAVE_LAYOUT_PRIM_POLY_FT4)
         {
-            /* Slot panel background: a single textured quad. */
+            /* Drawn flipped: the left corners take the texture's right edge. */
             POLY_FT4* poly;
             u16 vx;
             s32 offx;
@@ -557,7 +506,6 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
 
             setSemiTrans(poly, *(u32*)entry & 2);
 
-            /* Share each truncated base coordinate across its two corners. */
             vx = entry->x + g_slot_slide_x_lerped;
             offx = uv->ox * 8 - 0x20;
             poly->x2 = poly->x0 = vx - offx;
@@ -580,8 +528,7 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
             setClut(poly, *(u16*)&tex->clut_x, *(u16*)&tex->clut_y);
 
             tex2 = &(g_save_layout_tex_table)[entry->tex_slot];
-            /* Form the texture-page value from the complete layout flags word. */
-            tpw = getTPage(*(u8*)&tex2->control & 3, *(u32*)entry >> 2, *(u16*)&tex2->tex_x, *(u16*)&tex2->tex_y);
+            tpw =getTPage(*(u8*)&tex2->control & 3, *(u32*)entry >> 2, *(u16*)&tex2->tex_x, *(u16*)&tex2->tex_y);
             poly->tpage = tpw;
 
             addPrim(ot, poly);
@@ -590,7 +537,6 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
         {
             if (type == SAVE_LAYOUT_PRIM_SPRT)
             {
-                /* Slot cursor / decoration: one free-size sprite. */
                 u16 vx;
                 s32 offx;
                 u16 vy;
@@ -639,7 +585,6 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
             {
                 if (type == SAVE_LAYOUT_PRIM_TILE)
                 {
-                    /* Dimmed backdrop behind the slot list: one solid tile. */
                     TILE* tile = (TILE*)ptr;
                     DR_TPAGE* tp;
 
@@ -660,7 +605,8 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
                 }
                 else if (type != SAVE_LAYOUT_PRIM_NONE)
                 {
-                    /* Glyph strip: one SPRT + DR_TPAGE per GLYPH_CHUNK_WIDTH pixels. */
+                    /* A sprite cannot sample across a texture page, so the
+                       strip is drawn in 128-pixel chunks. */
                     s32 remaining = entry->width;
                     u16 u0 = entry->u0;
                     SaveLayoutTex* tex;
@@ -722,9 +668,8 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
                             break;
                         }
 
-                        /* Next chunk: flip to the other half of the texture page, or
-                           step the page origin on when the mode bits say the strip
-                           spans pages. */
+                        /* A 4-bit page holds two chunks; in other modes each
+                           chunk starts a new page. */
                         u0 ^= 0x80;
                         tex = &(g_save_layout_tex_table)[entry->tex_slot];
 
@@ -759,12 +704,7 @@ void* render_save_layout_prims(u8* ptr, u_long* ot)
 }
 
 /**
- * @brief Upload every g_save_layout_tex_table entry's CLUT and pixel data to VRAM.
- *
- * @details For each of the SAVE_LAYOUT_TEX_COUNT entries, uploads the CLUT and pixel blocks of the
- * entry's source TIM with LoadImage and records the TIM pixel mode and the
- * image size in SaveLayoutTex::control.
- *
+ * @brief Upload the picker TIMs and record each one's mode and size.
  * @see decomp.me (100%) https://decomp.me/scratch/lzJHa
  */
 void upload_save_layout_textures(void)
@@ -802,15 +742,8 @@ void upload_save_layout_textures(void)
 }
 
 /**
- * @brief Replace the saved game with one of TITLE's two saved-game templates.
- *
- * Copies SAVED_GAME_DATA_SIZE bytes over g_saved_game and selects the first
- * field scene; the music state is cleared either way.
- *
- * @param field_start Zero loads the new-game template (scene 0xD); non-zero
- *                    loads the template TITLE uses to start directly in FIELD
- *                    (scene 0).
- *
+ * @brief Replace the saved game with the new-game or the field-start template.
+ * @param field_start Zero for a new game (scene 0xD), nonzero to start directly in FIELD (scene 0).
  * @see decomp.me (100%) https://decomp.me/scratch/aPcbW
  */
 void load_saved_game_template(s32 field_start)
@@ -845,13 +778,9 @@ void load_saved_game_template(s32 field_start)
 }
 
 /**
- * @brief Copy the starting record of the chosen hero into the first party slot.
- *
- * The two hero templates are full FieldCharacterRecords whose character type
- * is 0 and 1; picking the second also sets bit 0 of the saved game's mode flags.
- *
- * @param hero_type Character type of the chosen hero (0 or 1).
- *
+ * @brief Copy the chosen hero's starting record into the first party slot.
+ * @param hero_type Character type of the hero (0 or 1).
+ * @note Hero 1 also sets bit 0 of the saved game's mode flags.
  * @see decomp.me (100%) https://decomp.me/scratch/CU7Ml
  */
 void load_hero_template(s32 hero_type)

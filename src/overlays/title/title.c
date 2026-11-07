@@ -13,6 +13,34 @@
 #include "common/gpu_packet.h"
 #include "main/audio/akao.h"
 
+#define TITLE_MENU_ITEM_NEW_GAME 0
+#define TITLE_MENU_ITEM_CONTINUE 1
+
+/* Selection set when the idle countdown runs out; starts the intro movie. */
+#define TITLE_SELECTION_SENTINEL 0xFF
+
+#define TITLE_BACKDROP_STRIPS 5
+#define TITLE_BACKDROP_STRIP_WIDTH 0x40
+#define TITLE_BACKDROP_TEXTURE_X 0x140
+
+#if defined(VERSION_JP)
+#define TITLE_MENU_HEADER_X 0x70
+#else
+#define TITLE_MENU_HEADER_X 0x64
+#endif
+
+#define TITLE_AUDIO_BANK ((u8*)SOUND_BANK_ADDRESS)
+
+#define SAVE_SLOT_MENU_EXIT_CANCEL 2
+
+#define TITLE_SELECTION_SFX_ID 0x3C
+
+/* g_title_menu_item_flags has two bytes per slot; only the first is tested. */
+#define TITLE_MENU_SLOT_COUNT 16
+
+/* 60 seconds at 60 Hz. */
+#define TITLE_IDLE_COUNTDOWN_FRAMES 0xE10
+
 void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y);
 void start_title_music(void);
 void render_title_menu_items(TitleMenuContext* ctx);
@@ -23,52 +51,6 @@ void load_title_seq(s32 seq_variant);
 void load_title_audio_bank(void);
 void init_title_menu_state(void);
 void handle_title_menu_input(void);
-
-/* Title-menu selection values dispatched by run_title. */
-#define TITLE_MENU_ITEM_NEW_GAME 0
-#define TITLE_MENU_ITEM_CONTINUE 1
-
-/* Value g_title_selected_item holds when the idle countdown expires. */
-#define TITLE_SELECTION_SENTINEL 0xFF
-
-/* Title backdrop: five 64-pixel strips textured from VRAM x 0x140 onwards. */
-#define TITLE_BACKDROP_STRIPS 5
-#define TITLE_BACKDROP_STRIP_WIDTH 0x40
-#define TITLE_BACKDROP_TEXTURE_X 0x140
-
-/**
- * @brief Screen X of the title menu's header quad (texture row 0).
- * @note JP moves it to 0x70.
- */
-#if defined(VERSION_JP)
-#define TITLE_MENU_HEADER_X 0x70
-#else
-#define TITLE_MENU_HEADER_X 0x64
-#endif
-
-#define TITLE_AUDIO_BANK ((u8*)SOUND_BANK_ADDRESS)
-
-/* run_save_slot_menu result that returns from the picker to the title menu. */
-#define SAVE_SLOT_MENU_EXIT_CANCEL 2
-
-/* AKAO sound command used before the fallback field-entry path. */
-#define TITLE_SELECTION_SFX_ID 0x3C
-
-/* Number of selectable slots in the title menu item-flag table
- * (g_title_menu_item_flags), each occupying 2 bytes. */
-#define TITLE_MENU_SLOT_COUNT 16
-
-/* Idle countdown loaded by init_title_menu_state: 0xE10 == 3600 frames (~60 s at
- * 60 Hz) before the title times out to the attract loop. */
-#define TITLE_IDLE_COUNTDOWN_FRAMES 0xE10
-
-/* Full-screen fade encoding and blend modes. */
-
-/* The complete .data payload is one databin (title_data), linked unchanged
- * and exported by tools/data/overlays/title.py. Symbols used by the code are
- * declared in title_internal.h and assigned fixed overlay addresses by
- * config/<version>/symbols/title_symbol_addrs.txt. */
-
 void init_title_display(TitleMenuContext* context);
 void render_menu(TitleMenuContext* context);
 s32 run_save_slot_menu(TitleMenuContext* context);
@@ -217,19 +199,9 @@ void render_menu(TitleMenuContext* context)
 }
 
 /**
- * @brief Save-slot picker sub-screen shown after selecting "New Game".
- *
- * @details Same double-buffered render loop shape as @ref render_menu, but
- * drives the save-slot layout/highlight instead of the main title menu.
- * Loops rendering and swapping the two display buffers until
- * g_title_menu_exit_state becomes non-zero (set by handle_save_slot_input),
- * then resets the frame-queue state and returns.
- *
- * @param ctx_base Base address of the double-buffered TitleMenuContext render
- *        buffer, forwarded as-is from run_title.
- * @return The final value of g_title_menu_exit_state: 1 after confirmation or
- *         SAVE_SLOT_MENU_EXIT_CANCEL when returning to the title menu.
- *
+ * @brief Run the new-game picker until the player confirms or backs out.
+ * @param ctx_base Title display buffers.
+ * @return 1 on confirm, SAVE_SLOT_MENU_EXIT_CANCEL to go back to the title menu.
  * @see decomp.me (100%) https://decomp.me/scratch/AKk7x
  */
 s32 run_save_slot_menu(TitleMenuContext* ctx_base)
@@ -285,17 +257,8 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
 }
 
 /**
- * @brief Set up the title overlay's double-buffered display/draw environments.
- *
- * @details Counterpart of init_checkps_display in the CHECKPS overlay. Clears
- * the hardware display registers, configures the geometry screen/offset,
- * clears all of VRAM, and sets up the front and back DISPENV/DRAWENV pairs
- * (front at ctx_base->screen.disp_env/draw_env, back at ctx_base->disp_env2/draw_env2).
- * Called once per title-menu iteration from run_title.
- *
- * @param ctx_base Base address of the double-buffered TitleMenuContext render
- *        buffer, forwarded as-is from run_title.
- *
+ * @brief Clear VRAM, set up both display buffers, and reset the title menu.
+ * @param ctx_base Title display buffers.
  * @see decomp.me (100%) https://decomp.me/scratch/evJur
  */
 void init_title_display(TitleMenuContext* ctx_base)
@@ -303,7 +266,6 @@ void init_title_display(TitleMenuContext* ctx_base)
     RECT rect;
     u8* hw = (u8*)SCD_REGS; /* bytes of the controller block past the SCDRegs fields */
 
-    /* Clear hardware register bytes */
     hw[0x13F] = 0;
     hw[0x91] = 0;
     hw[0x140] = 0;
@@ -326,19 +288,15 @@ void init_title_display(TitleMenuContext* ctx_base)
     DrawSync(0);
     VSync(0);
 
-    /* Clear the full VRAM extent */
     setRECT(&rect, 0, 0, VRAM_WIDTH, VRAM_HEIGHT);
     ClearImage(&rect, 0, 0, 0);
 
-    /* Set display environments */
     SetDefDispEnv(&ctx_base->screen.disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     SetDefDispEnv(&ctx_base->disp_env2, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    /* Set drawing environments */
     SetDefDrawEnv(&ctx_base->screen.draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
     SetDefDrawEnv(&ctx_base->draw_env2, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
-    /* Clear two more bytes */
     ctx_base->draw_env2.dtd = 0;
     ctx_base->screen.draw_env.dtd = 0;
 
@@ -350,16 +308,8 @@ void init_title_display(TitleMenuContext* ctx_base)
 }
 
 /**
- * @brief Load and register the title overlay's AKAO instrument/sample bank.
- *
- * @details Counterpart of CHECKPS load_embedded_checkps_audio. Skipped if g_previous_game_state
- * indicates the bank is already resident (values 2, 3, 5, 6, 7). Otherwise
- * loads SOUND/EFFECT.SET from CD-ROM into the 0x80180000 scratch buffer,
- * splits the blob via its self-referential offset table, copies the
- * instrument/sample sub-block to g_title_audio_bank_base (0x8013C000) and
- * registers it as the active AKAO bank, then uploads the trailing instrument
- * bank to the SPU.
- *
+ * @brief Load the sound-effect bank from disc and upload it to the SPU.
+ * @note Skipped when arriving from a screen that leaves the bank resident.
  * @see decomp.me (100%) https://decomp.me/scratch/6zUZp
  */
 void load_title_audio_bank(void)
@@ -387,15 +337,8 @@ void load_title_audio_bank(void)
 }
 
 /**
- * @brief Load a title-screen sequence and its instrument bank from CD-ROM.
- *
- * @details Counterpart of load_song_from_disc. Reads CD resource
- * @c CD_RES_MUSIC_FILE(seq_variant) into the 0x80180000 scratch
- * buffer, splits it via its self-referential offset table, copies the
- * sequence sub-block to g_resident_song_buffer, then uploads the trailing instrument bank.
- *
+ * @brief Load a song into g_resident_song_buffer and upload its instruments.
  * @param seq_variant Music-file index; 0 selects MSC_DATA.DAT.
- *
  * @see decomp.me (100%) https://decomp.me/scratch/mBQ6i
  */
 void load_title_seq(s32 seq_variant)
@@ -416,12 +359,7 @@ void load_title_seq(s32 seq_variant)
 #include "../../common/overlay_audio/stop_song.inc.c"
 
 /**
- * @brief Start playback of the title-screen background music.
- *
- * @details Counterpart of play_loaded_song. Plays the SEQ loaded into
- * g_resident_song_buffer (by load_title_seq) and sets the song volume to maximum via
- * akao_set_song_volume.
- *
+ * @brief Play the song loaded by load_title_seq at full volume.
  * @see decomp.me (100%) https://decomp.me/scratch/xYPkq
  */
 void start_title_music(void)
@@ -439,13 +377,8 @@ void start_title_music(void)
 #include "../../common/screen_fade_words/set_fade_target.inc.c"
 
 /**
- * @brief Emit the title screen's tiled backdrop strip.
- *
- * @details Emits TITLE_BACKDROP_STRIPS POLY_FT4 quads, each linked into the
- * active OT's last entry.
- *
- * @param ctx Active TitleMenuContext render buffer.
- *
+ * @brief Draw the title backdrop as a row of 16-bit texture strips.
+ * @param ctx Active title display buffer.
  * @see decomp.me (100%) https://decomp.me/scratch/aKAFU
  */
 void render_title_backdrop(TitleMenuContext* ctx)
@@ -489,12 +422,7 @@ void render_title_backdrop(TitleMenuContext* ctx)
 }
 
 /**
- * @brief Per-frame input dispatcher for the main title menu.
- *
- * @details Ticks the idle countdown (dispatching the idle-quit item once it
- * expires), then debounces the confirm/cancel and cursor up/down button
- * combos and moves the cursor or arms g_title_menu_exit_state accordingly.
- *
+ * @brief Handle one frame of title-menu input and the idle timeout.
  * @see decomp.me (100%) https://decomp.me/scratch/vmcmD
  */
 void handle_title_menu_input(void)
@@ -530,12 +458,7 @@ void handle_title_menu_input(void)
 }
 
 /**
- * @brief Move the menu cursor to the next enabled slot, wrapping to slot 0
- *        if none remain.
- *
- * @details Linear-search g_title_menu_item_flags forward for the next enabled
- * menu slot. If none remain, the cursor is reset to slot 0 with rank 0.
- *
+ * @brief Move the cursor to the next enabled item, wrapping to the first.
  * @see decomp.me (100%) https://decomp.me/scratch/6k8uV
  */
 void menu_cursor_down(void)
@@ -563,16 +486,7 @@ void menu_cursor_down(void)
 }
 
 /**
- * @brief Move the menu cursor to the previous enabled slot, wrapping to the
- *        last enabled slot if already at the top.
- *
- * @details Mirror of menu_cursor_down searching backward. Scans
- * g_title_menu_item_flags from the slot before the current selection toward 0
- * for the next enabled slot, decrementing the visible rank. If the search
- * runs past slot 0, it wraps: a forward pass over all TITLE_MENU_SLOT_COUNT
- * slots counts the enabled ones and records the last enabled index, then the
- * cursor is parked on that slot with rank = count - 1.
- *
+ * @brief Move the cursor to the previous enabled item, wrapping to the last.
  * @see decomp.me (100%) https://decomp.me/scratch/mmzjI
  */
 void menu_cursor_up(void)
@@ -591,7 +505,6 @@ void menu_cursor_up(void)
 
     if (item < 0)
     {
-        /* Wrap to the last enabled slot; its rank is the number of enabled slots minus one. */
         enabled_count = 0;
 
         for (item = 0; item < TITLE_MENU_SLOT_COUNT; item++)
@@ -613,19 +526,9 @@ void menu_cursor_up(void)
 }
 
 /**
- * @brief Emit the title-menu header, each enabled item, and the cursor.
- *
- * @details Walks the 16-slot g_title_menu_item_flags table and emits one
- * emit_menu_item_quad per enabled slot, stacking them vertically (item_y += 0xC
- * each). The currently selected item (visible_index == g_title_visible_item_rank)
- * uses CLUT 1, the rest CLUT 2. A fixed header quad is emitted first, and the
- * cursor quad last; the cursor's U coordinate cycles through
- * g_cursor_blink_u_offsets[(g_title_anim_frame >> 2) & 3] for a 4-frame blink, and
- * its Y tracks the selected rank. The advanced prim cursor is written back to
- * ScreenFrame::prim_cursor.
- *
- * @param ctx Active TitleMenuContext render buffer.
- *
+ * @brief Draw the menu header, the enabled items, and the animated cursor.
+ * @param ctx Active title display buffer.
+ * @note Item quads use texture row slot + 1; the selected item uses CLUT 1, the others CLUT 2.
  * @see decomp.me (100%) https://decomp.me/scratch/qegw7
  */
 void render_title_menu_items(TitleMenuContext* ctx)
@@ -672,24 +575,16 @@ void render_title_menu_items(TitleMenuContext* ctx)
 }
 
 /**
- * @brief Build one menu-item POLY_FT4 (textured quad) and link it into the OT.
- *
- * @details Builds a POLY_FT4 at screen (x, y) with size @p width, samples a
- * 16-pixel-tall texture row selected by @p tex_row (V = tex_row * 16 .. +16),
- * and links it at the head of @p ot_head. The quad is neutral-grey (0x80) flat
- * shaded, textured from page (0x140, 0) with a CLUT from row 480.
- *
- * @param ot_head    OT entry to link this primitive in front of.
- * @param prim       Destination primitive buffer (>= 0x28 bytes).
- * @param tex_row    Texture row index; selects V = tex_row*16 (top) .. +16.
- * @param x          Screen X of the quad's left edge.
- * @param y          Screen Y of the quad's top edge.
- * @param u0_base    Base U texture coordinate (left edge).
- * @param width      Quad width in pixels, added to x and u0_base for the
- *                   right edge.
- * @param clut_index CLUT x index (low 6 bits) packed into the CLUT word.
- * @return Pointer just past the emitted primitive (prim + 0x28).
- *
+ * @brief Add one 16-pixel-tall row of the menu texture as a quad.
+ * @param ot_head OT entry to link the quad into.
+ * @param prim Primitive buffer to build the quad in.
+ * @param tex_row Texture row, in 16-pixel steps.
+ * @param x Screen X.
+ * @param y Screen Y.
+ * @param u0_base Left texture U.
+ * @param width Width in pixels, on screen and in the texture.
+ * @param clut_index CLUT within VRAM row 480.
+ * @return Pointer just past the quad.
  * @see decomp.me (100%) https://decomp.me/scratch/FcuOZ
  */
 void* emit_menu_item_quad(u_long* ot_head, void* prim, s32 tex_row, s32 x, s32 y, s32 u0_base, s32 width, s32 clut_index)
@@ -736,15 +631,8 @@ void* emit_menu_item_quad(u_long* ot_head, void* prim, s32 tex_row, s32 x, s32 y
 }
 
 /**
- * @brief Initialise the title-menu state globals and upload its TIMs.
- *
- * @details Zeros the per-slot flag table (TITLE_MENU_SLOT_COUNT entries),
- * enables the first two slots (two flag bytes each), resets cursor/input/animation globals, arms the
- * idle countdown to TITLE_IDLE_COUNTDOWN_FRAMES, and uploads the two menu TIMs
- * from g_title_menu_tim_table[1..2] to VRAM. When re-entering from the attract
- * loop (g_previous_game_state == 0) it advances the cursor to the first enabled
- * slot (same forward scan as menu_cursor_down).
- *
+ * @brief Enable New Game and Continue, reset the cursor, and upload the menu TIMs.
+ * @note Coming back from FIELD starts the cursor on Continue.
  * @see decomp.me (100%) https://decomp.me/scratch/HW23j
  */
 void init_title_menu_state(void)
@@ -803,27 +691,13 @@ void init_title_menu_state(void)
 }
 
 /**
- * @brief Upload a standard PSX TIM image (optional CLUT + pixel block) to VRAM.
- *
- * @details Reads the TIM flag word at +4: if the CLUT-present bit is set,
- * loads the CLUT (clut_width x clut_height entries as a single VRAM row) at
- * (clut_x, clut_y), then advances @c p past the CLUT block by its byte length.
- * The pixel block that follows is then loaded at (x, y) using its own
- * width/height header.
- *
- * The TIM layout used here (offsets from @c p):
- *  - +0x04 flag word (bit 3 = has CLUT; happens to equal TIM_HEADER_SIZE)
- *  - CLUT block: +0x08 block byte length, +0x0C/0x0E VRAM x/y,
- *    +0x10/0x12 width/height, +0x14 entries
- *  - pixel block: +0x08 VRAM x/y, +0x10/0x12 width/height (here read as
- *    +0x08/0x0A after @c p is advanced), +0x0C pixels
- *
- * @param tim   Pointer to the TIM image header.
- * @param x     Destination VRAM X for the pixel block.
- * @param y     Destination VRAM Y for the pixel block.
- * @param clut_x Destination VRAM X for the CLUT.
- * @param clut_y Destination VRAM Y for the CLUT.
- *
+ * @brief Upload a TIM to VRAM at the given positions instead of its own.
+ * @param tim TIM image.
+ * @param x Pixel-block VRAM X.
+ * @param y Pixel-block VRAM Y.
+ * @param clut_x CLUT VRAM X.
+ * @param clut_y CLUT VRAM Y.
+ * @note The CLUT is loaded as one VRAM row, however many rows the TIM gives it.
  * @see decomp.me (100%) https://decomp.me/scratch/fzh5x
  */
 void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
@@ -861,21 +735,9 @@ void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
 #include "../../common/pad_repeat/read_pad_buttons.inc.c"
 
 /**
- * @brief Read the SCD pad, debounce it, and publish the result in g_debounced_input.
- *
- * @details Counterpart of CHECKPS update_controller_input. Builds the remapped
- * button bitmap (byte-swap + face-bit remap + analog-stick to d-pad
- * thresholding) exactly like init_pad_repeat, then runs an auto-repeat state
- * machine over g_last_input_state / g_input_repeat_timer:
- *  - If this frame matches the previous state (or shares any repeat-eligible
- *    bit with it), only the d-pad directions auto-repeat: g_debounced_input
- *    fires every (2 + 1) frames while held, otherwise it is suppressed.
- *  - A fresh, different press is published immediately and arms the longer
- *    initial-repeat delay (15 frames).
- *  - No input clears all three globals.
- *
+ * @brief Read the pad into g_debounced_input with menu auto-repeat.
+ * @note A new press fires at once; held, only the d-pad repeats, after PAD_REPEAT_INITIAL_DELAY frames.
  * @see decomp.me (100%) https://decomp.me/scratch/geg1v
- * @note JP reads the face buttons as they are (no PAD_REMAP_FACE_BITS swap).
  */
 void update_menu_input(void)
 {
@@ -927,7 +789,6 @@ void update_menu_input(void)
     if (((input_state == g_last_input_state) || ((g_last_input_state != 0) && (input_state & (g_last_input_state | PAD_REPEAT_HOLD_BUTTONS)))) &&
         (input_state != 0))
     {
-        /* Held input repeats directional buttons only. */
         if ((input_state & PAD_BTN_DPAD) != 0)
         {
             input_state &= PAD_BTN_DPAD;
