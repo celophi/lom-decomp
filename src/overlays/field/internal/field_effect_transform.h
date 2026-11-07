@@ -22,7 +22,8 @@ typedef struct
     u8 v;
     u8 width;
     u8 height;
-    u8 unknown_0x6;
+    /** @brief CLUT column of the frame's palette; 0xB draws semi-transparent. */
+    u8 clut_column;
     u8 flags;
     u8 tilt_16;
 } FieldSpriteFrame;

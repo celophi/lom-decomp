@@ -88,9 +88,14 @@ A few things that aren't obvious from the table:
   four entry slots, picked by the land's state. Every other land puts the
   same scene in all four, but Underworld uses `HEL_OS00`, `HEL_OS01`,
   `HEL_OS11` and `HEL_OS00` again.
-- **Unused IDs fall back to Luon Highway.** IDs 14, 20, 22, 28, 29 and 33, and
-  everything from 34 to 63, point at `WST_EVT0`. It looks like a default value
-  more than anything meaningful.
+- **Unused IDs fall back to Luon Highway.** IDs 14, 20, 22, 28, 29 and 33,
+  34 to 55, and 63 point at `WST_EVT0`. It looks like a default value more
+  than anything meaningful.
+- **IDs 56 to 62 are story events, not lands.** The world map sends the party
+  to them when an event flag is pending: 56 is `WAL_NST1` (Cancun Bird's Nest),
+  57 `END_0057` (the ending), 58 `DRL_OS00` (Entrance of the Flames), 59
+  `HEL_OS10` (Macabre Tombstone), 60 `DST_E000` (The Invincible Cannon), and
+  61 and 62 are `MHM_WND1` and `MHM_WNDW` at Home.
 
 ## Prefixes that aren't lands
 

@@ -32,10 +32,11 @@
  */
 typedef struct
 {
+    /** @brief The FIELD globals between 0x80100000 and g_field_object_states; this view does not touch them. */
 #if defined(VERSION_JP)
-    u8 unk0[0x5588];
+    u8 before_object_states[0x5588];
 #else
-    u8 unk0[0x5AE0];
+    u8 before_object_states[0x5AE0];
 #endif
     FieldObjectState object_states[FIELD_ACTOR_COUNT];
 } FieldStatePage;

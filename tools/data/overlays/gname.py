@@ -220,7 +220,7 @@ def read_names(blob: Blob[GnameSymbols], chart: Chart | None) -> Part:
         if boundaries[-1] != len(resource.tables[table_index].records):
             raise ValueError(f"{key} final boundary differs from its record count")
     header = {
-        "unknown_0x00": unknown,
+        "offset_count": unknown,
         "tables": [{"name": name, "offset": f"0x{offset:X}", "file": f"{name}.yaml"}
                    for name, offset in zip(TABLE_NAMES, offsets)],
     }

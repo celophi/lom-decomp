@@ -557,7 +557,7 @@ extern s32 g_card_menu_icon_palette;
 extern u16 g_card_menu_text_card_slot0_label;
 extern u16 g_card_menu_text_card_slot1_label;
 
-/** @brief Location names of the save list, as a u16 offset table indexed by a save's music track (see CARD_MENU_TEXT). */
+/** @brief Location names of the save list, as a u16 offset table indexed by a save's current land (see CARD_MENU_TEXT). */
 extern u16 g_card_menu_location_names[];
 
 /** @brief Party icon offsets, counted from the icon count word just before them (see CARD_MENU_ICON_IMAGE). */

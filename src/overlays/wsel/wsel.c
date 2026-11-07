@@ -918,7 +918,7 @@ static void wsel_update_input(void)
                 return;
             }
 
-            if ((g_debounced_input & WSEL_CANCEL_BUTTONS) && !g_saved_game.layout.options.bits.flag_3)
+            if ((g_debounced_input & WSEL_CANCEL_BUTTONS) && !g_saved_game.layout.options.bits.world_select_pending)
             {
                 play_sfx(SFX_CANCEL, AKAO_PAN_CENTER);
                 g_wsel_exit_state = WSEL_EXIT_CANCELLED;
@@ -1041,7 +1041,7 @@ static void wsel_update_input(void)
                 row = WSEL_CURSOR_CELL_ROW();
                 g_saved_game.layout.world_map_cell = WSEL_CELL_INDEX(column, row);
                 g_wsel_exit_state = WSEL_EXIT_CELL_CHOSEN;
-                g_saved_game.layout.options.word &= ~SAVED_OPTION_FLAG_3;
+                g_saved_game.layout.options.word &= ~SAVED_OPTION_WORLD_SELECT_PENDING;
                 return;
             }
 

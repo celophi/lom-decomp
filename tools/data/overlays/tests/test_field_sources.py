@@ -70,7 +70,7 @@ class SourceTest(unittest.TestCase):
         source = (REPO_ROOT / "src/overlays/field/actors/field_actor_slot_resources.c").read_text()
         entry = re.search(r"typedef struct\s*\{([^}]+)\} FieldBuiltinEntry;", source).group(1)
         self.assertEqual(len(re.findall(r"\bu16\s+\w+;", entry)), 4)
-        self.assertIn("u8 unk9[7]", entry)
+        self.assertIn("u8 unused_9[7]", entry)
         self.assertEqual(field.BUILTIN_ENTRY.size, 16)
         self.assertEqual(field.ANIMATION_DEFINITION.size, 28)
         self.assertEqual(field.ACTION_DESCRIPTOR.size, 8)

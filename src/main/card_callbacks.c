@@ -68,7 +68,7 @@ void card_prepare_pet_transfer(u8* resource, PetRecord* pet)
         {
             land = &g_saved_game.layout.lands[FIELD_LAND_LUCEMIA_2];
 
-            if (land->flags & FIELD_LAND_FLAG_04)
+            if (land->flags & FIELD_LAND_CLEARED)
             {
                 enabled = 1;
             }

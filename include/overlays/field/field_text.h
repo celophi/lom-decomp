@@ -133,10 +133,14 @@ void field_format_number(u8* text, s32 number, s32 wide_request);
 #define FIELD_TEXT_CONFIG_PORTRAIT_RIGHT 0x400
 #define FIELD_TEXT_CONFIG_PORTRAIT_OUTSIDE 0x800
 #define FIELD_TEXT_CONFIG_PORTRAIT_MASK (FIELD_TEXT_CONFIG_PORTRAIT_RIGHT | FIELD_TEXT_CONFIG_PORTRAIT_OUTSIDE)
-#define FIELD_TEXT_CONFIG_FLAG_1000 0x1000
-#define FIELD_TEXT_CONFIG_FLAG_2000 0x2000
-#define FIELD_TEXT_CONFIG_FLAG_4000 0x4000
-#define FIELD_TEXT_CONFIG_MODE_MASK (FIELD_TEXT_CONFIG_FLAG_1000 | FIELD_TEXT_CONFIG_FLAG_2000 | FIELD_TEXT_CONFIG_FLAG_4000)
+/**
+ * @brief Config bits 12-14: no code sets them. Every opener clears them; field_text_apply_config copies them to
+ *        window flag bits 8-10 (never read) and counts them as an anchor request.
+ */
+#define FIELD_TEXT_CONFIG_UNUSED_12 0x1000
+#define FIELD_TEXT_CONFIG_UNUSED_13 0x2000
+#define FIELD_TEXT_CONFIG_UNUSED_14 0x4000
+#define FIELD_TEXT_CONFIG_UNUSED_MASK (FIELD_TEXT_CONFIG_UNUSED_12 | FIELD_TEXT_CONFIG_UNUSED_13 | FIELD_TEXT_CONFIG_UNUSED_14)
 
 /** @brief field_text_set_string option that closes the window when its text ends. */
 #define FIELD_TEXT_OPTION_AUTO_CLOSE 1
@@ -248,7 +252,7 @@ typedef struct
     u16 dirty_end_v;
     u16 row_carry[14];
     s32 transition_anchor_x;
-    u32 unknown_0x90;
+    u32 unused_90; /**< Zeroed with the transition anchor by field_text_apply_config; no code reads it. */
     s32 transition_anchor_y;
 } FieldTextState;
 

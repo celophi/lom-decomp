@@ -34,16 +34,16 @@ extern WmapCell g_wmap_cells[WMAP_GRID_SIZE][WMAP_GRID_SIZE];
 /** @brief Per-cell display mode and effect animation counters. */
 typedef struct
 {
-    s16 unk00;
+    s16 unused_00; /**< Set to FIELD_LAND_COUNT by wmap_init_land_display; no code reads it. */
     s16 mode;
     s16 state;
     s16 frame;
-    s32 unk08;
-    s32 unk0c;
-    s16 unk10;
+    s32 unused_08; /**< Zero at load; no code reads or writes it. */
+    s32 unused_0c; /**< Zero at load; no code reads or writes it. */
+    s16 unused_10; /**< Cleared by wmap_init_land_display; no code reads it. */
     u8 pad12[2];
-    s32 unk14;
-    s32 unk18;
+    s32 unused_14; /**< Zero at load; no code reads or writes it. */
+    s32 unused_18; /**< Zero at load; no code reads or writes it. */
 } WmapEffectCell;
 
 /** @brief Display mode and effect animation state of each cell of the visible 6x6 grid. */

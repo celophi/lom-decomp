@@ -808,8 +808,8 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
 
             icon_x = 0;
             party_icon[0] = save->spawn.bits.party_icon_0;
-            party_icon[1] = save->track.bits.party_icon_1;
-            party_icon[2] = save->track.bits.party_icon_2;
+            party_icon[1] = save->location.bits.party_icon_1;
+            party_icon[2] = save->location.bits.party_icon_2;
             g_card_menu_icon_palette = save->icon_palette;
 
             icon_count = 0;
@@ -904,7 +904,7 @@ void* cload_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s3
             result = field_draw_number(ot, result, time, FIELD_TEXT_COLOR_MENU, &pos, FIELD_TEXT_ALIGN_RIGHT);
             result = field_draw_text(result, ot, summary->summary_name, FIELD_TEXT_COLOR_MENU, x + CARD_MENU_DETAILS_TEXT_X, y + FIELD_TEXT_LINE_SPACING,
                                      FIELD_TEXT_ALIGN_LEFT);
-            result = field_draw_text(result, ot, CARD_MENU_TEXT(g_card_menu_location_names, summary->track.bits.music_track), FIELD_TEXT_COLOR_MENU,
+            result = field_draw_text(result, ot, CARD_MENU_TEXT(g_card_menu_location_names, summary->location.bits.current_land), FIELD_TEXT_COLOR_MENU,
                                      x + CARD_MENU_DETAILS_TEXT_X, y + FIELD_TEXT_LINE_SPACING * 2, FIELD_TEXT_ALIGN_LEFT);
         }
         else

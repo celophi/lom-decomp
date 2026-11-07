@@ -153,7 +153,7 @@ extern char g_card_full_entry_name[];
 /** @brief Bytes of g_carda_save_title_template; the save number follows them on the first title line. */
 #define CARDA_TITLE_TEMPLATE_BYTES 18
 
-/** @brief Byte index of the fifth character of the first title line, which gets SJIS_NOTE_SIGN when carda_test_option_flag_2 is set. */
+/** @brief Byte index of the fifth character of the first title line, which gets SJIS_NOTE_SIGN when the saved game is cleared (SAVED_OPTION_GAME_CLEARED). */
 #define CARDA_TITLE_NOTE_INDEX (4 * SJIS_MULTIBYTE_CHAR_BYTES)
 
 /* CARDA text offset-table entries. */

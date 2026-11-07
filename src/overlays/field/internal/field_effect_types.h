@@ -250,7 +250,8 @@ typedef struct FieldMotionRecord
     u8 sprite_height_minus_one;
     u8 previous_effect_index;
     u8 next_effect_index;
-    u8 pad3F;
+    /** @brief Bit 0 (FIELD_FRAME_UNCHANGED): the displayed frame did not change this tick, so frame events do not fire. */
+    u8 frame_status;
     /** @brief Displayed frame data (FieldActor::frame_data), written through the actor role by the animation functions. */
     uintptr_t frame_data;
     u32 work_x;
@@ -258,6 +259,14 @@ typedef struct FieldMotionRecord
     u32 work_z;
     u8 pad50[0x54 - 0x50];
 } FieldMotionRecord;
+
+/**
+ * @brief Word view of bytes 0x3C-0x3F of a FieldMotionRecord or FieldActor (sprite_height_minus_one to frame_status).
+ * @note The original code tests and sets frame_status through this word.
+ */
+#define FIELD_FRAME_WORD(record) (*(u32*)&(record)->sprite_height_minus_one)
+/** @brief FIELD_FRAME_WORD bit of frame_status bit 0: the displayed frame did not change this tick. */
+#define FIELD_FRAME_UNCHANGED 0x1000000
 
 /** @brief The effect records: FIELD_EFFECT_ACTIVE_RECORD_COUNT records in the effect role of the actor record layout. */
 extern FieldMotionRecord g_field_effect_records[];

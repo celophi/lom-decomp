@@ -1412,7 +1412,7 @@ s32 wmap_run_loop(void)
                 g_wmap_spirit_brightness = g_wmap_spirit_target_brightness = 0;
                 g_wmap_event_active = 1;
                 g_wmap_entry_music_enabled = 0;
-                g_wmap_entry_day = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
+                g_wmap_hero_type = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
                 g_wmap_land_event_12_pending = 1;
                 g_wmap_event_active = 1;
                 break;
@@ -1427,7 +1427,7 @@ s32 wmap_run_loop(void)
                 g_wmap_screen_fade_mode = WMAP_FADE_DISABLED;
                 g_wmap_spirit_brightness = g_wmap_spirit_target_brightness = 0;
                 g_wmap_event_active = 1;
-                g_wmap_entry_day = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
+                g_wmap_hero_type = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
                 g_wmap_land_event_13_pending = 1;
                 g_wmap_event_active = 1;
                 break;

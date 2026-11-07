@@ -39,12 +39,12 @@
 /** @brief Header of the built-in animation resource; it overlays entry 0. */
 typedef struct
 {
-    u32 unk0;
+    u32 unused_0; /**< Zero in the built-in resource (US and JP); no code reads it. */
     /** @brief Offset of the frame data from the start of the resource. */
     u32 track_data_offset;
     /** @brief Offset of the animation table: FIELD_BUILTIN_INDEX_SIZE index bytes, then the definitions. */
     u32 animation_table_offset;
-    u32 unkC;
+    u32 unused_c; /**< Zero in the built-in resource (US and JP); no code reads it. */
 } FieldBuiltinHeader;
 
 /** @brief Built-in animation entry (0x10 bytes), indexed by animation number. */
@@ -57,7 +57,7 @@ typedef struct
     u16 duration;
     /** @brief Number of parts; 0 marks an unused entry. */
     u8 part_count;
-    u8 unk9[7];
+    u8 unused_9[7]; /**< Zero in every entry (US and JP); no code reads it. */
 } FieldBuiltinEntry;
 
 /** @brief Built-in animation resource: a header, then the entries. */

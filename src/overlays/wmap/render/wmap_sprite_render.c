@@ -26,10 +26,10 @@
 /** @brief Texture page and palettes of one sprite texture. */
 typedef struct
 {
-    u8 unknown_00[8];
+    u8 unused_00[8]; /**< VRAM rectangle (x, y, w, h) of the texture; matches the tpage column in 47 of 48 entries; no code reads it. */
     u16 clut[8];
     u16 tpage;
-    u16 unknown_1a;
+    u16 unused_1a; /**< Zero in every entry; no code reads it. */
 } WmapSpriteTexture;
 
 /** @brief One quad of a sprite frame; x/y are the low bytes of the offsets from the actor. */

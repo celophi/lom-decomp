@@ -740,7 +740,7 @@ typedef struct
         {
             u8 layout_y_hi;                 /**< Layout Y bits 8:1. */
             u8 children[MENU_MAX_CHILDREN]; /**< Child indices, terminated by MENU_NONE. */
-            u8 unknown_0xf;
+            u8 unused_0f;                   /**< No code reads or writes it. */
         } s;
     } layout;
 } MenuNode;
@@ -762,12 +762,13 @@ typedef struct
     u32 layout_x : 7;
     u32 layout_y : 9;
     u8 children[MENU_MAX_CHILDREN];
-    u8 unknown_0xf;
+    u8 unused_0f;
 } __attribute__((packed, aligned(2))) MenuNodeCoordinateView;
 
 typedef struct
 {
-    u16 packed_x;   /**< Bottom 9 bits = X screen position; upper bits unknown. */
+    u16 packed_x;   /**< Bits 0-8: X screen position; bits 9-11: index into the group's g_menu_content_action_codes row; bits 12-15: item type
+                       (MENU_CONTENT_ITEM_TYPE_MASK). */
     u8 y;           /**< Y position; caller subtracts 8 when using as display offset. */
     u8 action_type; /**< Content/action selector interpreted by the active scene. */
     u8 params[4];   /**< Remaining content-specific parameter bytes. */
@@ -776,7 +777,8 @@ typedef struct
 typedef struct
 {
     u16 x : 9;
-    u16 upper : 7;
+    u16 action_index : 3;
+    u16 type : 4;
     u8 y;
     u8 pad[5];
 } MenuContentItemBits;
@@ -964,7 +966,7 @@ extern u8 g_menu_element_icon_ids[];
 extern u8 g_menu_button_icon_ids[];
 /** @brief Active character's equipment[], as the armor columns and stat totals of the content pages read it (slots 1-3). */
 extern FieldItemRecord* g_menu_shown_armor;
-/** @brief Set with g_menu_shown_equipment; MENU never reads it. TODO: purpose unknown. */
+/** @brief Set with g_menu_shown_equipment; no code in either version reads it. */
 extern FieldItemRecord* g_menu_shown_equipment_copy;
 /** @brief Active character's equipment[], as the weapon and power comparison columns of the content pages read it. */
 extern FieldItemRecord* g_menu_shown_equipment;
@@ -1078,7 +1080,7 @@ extern s8 g_field_stat_modifier_values[];
 
 /**
  * @brief Skill-slot selection choosing the help text of help source MENU_HELP_SKILL: MENU_NONE for none, bit 0x80 for magic.
- * @note TODO: MENU never writes it.
+ * @note No code in either version writes it, so it keeps its initial 0 from MENU's data.
  */
 extern s32 g_menu_help_skill_selection;
 

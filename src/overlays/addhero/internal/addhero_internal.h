@@ -52,7 +52,7 @@ extern s32 g_save_compatibility_tag;
 
 /**
  * @brief FIELD data word next to g_field_item_drop_menu_open; ADDHERO stores ADDHERO_RESULT_CANCELLED into it when Circle cancels the browser.
- * @note TODO: purpose unknown; no code in the main executable or any overlay reads it.
+ * @note No code in the main executable or any overlay of either version reads it.
  */
 extern s32 g_field_addhero_cancel_result;
 extern s32 g_pad_input;

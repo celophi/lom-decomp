@@ -9,7 +9,7 @@
 struct CardMenuElement;
 
 void carda_build_save_file(void);
-s32 carda_test_option_flag_2(void);
+s32 carda_is_cleared_game_save(void);
 void* carda_draw_load_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset);
 void* carda_draw_progress_bar(POLY_G4* quad, u_long* ot);
 void* carda_draw_save_prompt(u_long* ot, void* prim, s32 x_offset, s32 y_offset);

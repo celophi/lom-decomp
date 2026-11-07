@@ -163,7 +163,7 @@ typedef struct
  */
 typedef struct
 {
-    s32 unk0;
+    s32 offset_count; /**< Number of offsets that follow: 4 in all 1018 entry resources; ZUKAN never reads it. */
     s32 sprites_offset;
     s32 text_offset;
     s32 image_offset;

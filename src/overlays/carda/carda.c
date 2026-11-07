@@ -916,8 +916,8 @@ static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_off
 
                 icon_x = 0;
                 icons[0] = save->spawn.bits.party_icon_0;
-                icons[1] = save->track.bits.party_icon_1;
-                icons[2] = save->track.bits.party_icon_2;
+                icons[1] = save->location.bits.party_icon_1;
+                icons[2] = save->location.bits.party_icon_2;
                 g_card_menu_icon_palette = save->icon_palette;
 
                 icon_count = 0;
@@ -1017,7 +1017,7 @@ static void* carda_draw_selected_entry_details(u_long* ot, void* prim, s32 x_off
                     result = field_draw_text(result, ot, shown_save->summary_name, FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TEXT_X,
                                              y + FIELD_TEXT_LINE_SPACING, FIELD_TEXT_ALIGN_LEFT);
                     result =
-                        field_draw_text(result, ot, CARD_MENU_TEXT(g_card_menu_location_names, shown_save->track.bits.music_track), FIELD_TEXT_COLOR_NORMAL,
+                        field_draw_text(result, ot, CARD_MENU_TEXT(g_card_menu_location_names, shown_save->location.bits.current_land), FIELD_TEXT_COLOR_NORMAL,
                                         x + CARD_MENU_DETAILS_TEXT_X, y + FIELD_TEXT_LINE_SPACING * 2, FIELD_TEXT_ALIGN_LEFT);
                 }
             }
@@ -1287,7 +1287,7 @@ void carda_build_save_file(void)
     /* Title: template text, optional marker, save number, play time and the player's name. */
     strcpy(blob->header.title[0], g_carda_save_title_template);
 
-    if (g_saved_game_ctx->options.bits.flag_2)
+    if (g_saved_game_ctx->options.bits.game_cleared)
     {
         blob->header.title[0][CARDA_TITLE_NOTE_INDEX] = SJIS_NOTE_SIGN >> SJIS_CODE_LEAD_SHIFT;
         blob->header.title[0][CARDA_TITLE_NOTE_INDEX + 1] = SJIS_NOTE_SIGN & SJIS_CODE_TRAIL_MASK;
@@ -1320,33 +1320,33 @@ void carda_build_save_file(void)
 
         if (party_icon < SAVE_ICON_HERO_COUNT)
         {
-            g_saved_game_ctx->track.bits.party_icon_1 = party_icon;
+            g_saved_game_ctx->location.bits.party_icon_1 = party_icon;
         }
         else
         {
-            g_saved_game_ctx->track.bits.party_icon_1 = g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.bytes[1] + SAVE_ICON_HERO_COUNT;
+            g_saved_game_ctx->location.bits.party_icon_1 = g_saved_game_ctx->characters[FIELD_PARTY_GUEST].info.bytes[1] + SAVE_ICON_HERO_COUNT;
         }
     }
     else
     {
-        g_saved_game_ctx->track.bits.party_icon_1 = SAVE_NO_ICON;
+        g_saved_game_ctx->location.bits.party_icon_1 = SAVE_NO_ICON;
     }
 
     if (g_saved_game_ctx->characters[FIELD_PARTY_COMPANION].name[0] != 0)
     {
         if (g_saved_game_ctx->characters[FIELD_PARTY_COMPANION].info.bits.type == FIELD_CHARACTER_GOLEM)
         {
-            g_saved_game_ctx->track.bits.party_icon_2 = g_saved_game_ctx->characters[FIELD_PARTY_COMPANION].info.bytes[1] + SAVE_ICON_GOLEM_BASE;
+            g_saved_game_ctx->location.bits.party_icon_2 = g_saved_game_ctx->characters[FIELD_PARTY_COMPANION].info.bytes[1] + SAVE_ICON_GOLEM_BASE;
             g_saved_game_ctx->icon_palette = g_saved_game_ctx->golem_records[g_saved_game_ctx->joined_golem].palette;
         }
         else
         {
-            g_saved_game_ctx->track.bits.party_icon_2 = g_saved_game_ctx->characters[FIELD_PARTY_COMPANION].info.bytes[1] + SAVE_ICON_PET_BASE;
+            g_saved_game_ctx->location.bits.party_icon_2 = g_saved_game_ctx->characters[FIELD_PARTY_COMPANION].info.bytes[1] + SAVE_ICON_PET_BASE;
         }
     }
     else
     {
-        g_saved_game_ctx->track.bits.party_icon_2 = SAVE_NO_ICON;
+        g_saved_game_ctx->location.bits.party_icon_2 = SAVE_NO_ICON;
     }
 
     for (i = 0; i < SAVED_GAME_SUMMARY_NAME_BYTES; i++)
@@ -1391,12 +1391,12 @@ void carda_build_save_file(void)
 #include "../../common/save_file/skip_hex_digits.inc.c"
 
 /**
- * @brief Test SAVED_OPTION_FLAG_2 of the live saved game in overlay mode 0.
- * @return 1 when g_card_menu_mode is 0 and the flag is set, otherwise 0.
+ * @brief Test whether CARDA is saving a cleared game (SAVED_OPTION_GAME_CLEARED).
+ * @return 1 when g_card_menu_mode is CARDA_MODE_SAVE and the flag is set, otherwise 0.
  */
-s32 carda_test_option_flag_2(void)
+s32 carda_is_cleared_game_save(void)
 {
-    if (g_card_menu_mode == CARDA_MODE_SAVE && g_saved_game_ctx->options.bits.flag_2)
+    if (g_card_menu_mode == CARDA_MODE_SAVE && g_saved_game_ctx->options.bits.game_cleared)
     {
         return 1;
     }

@@ -291,7 +291,7 @@ typedef struct
  */
 typedef struct
 {
-    u32 unknown_0x00;
+    u32 offset_count; /**< Number of table offsets that follow: 4 in both versions; GNAME never reads it. */
     u32 panel_records_offset;
     u32 kanji_records_offset;
     u32 history_names_offset;

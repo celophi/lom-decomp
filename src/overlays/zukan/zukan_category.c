@@ -130,7 +130,7 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
             }
         }
 
-        if (g_saved_lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_FLAG_04)
+        if (g_saved_lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_CLEARED)
         {
             ZUKAN_UNLOCK_ENTRY(FIELD_ENCYCLOPEDIA_LAND_BIT + FIELD_LAND_LUCEMIA);
         }
@@ -159,7 +159,7 @@ s32 zukan_build_category_entries(s32 category, s32* entry_values, s32* entry_ind
             }
         }
 
-        if (g_saved_lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_FLAG_04)
+        if (g_saved_lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_CLEARED)
         {
             ZUKAN_UNLOCK_ENTRY(FIELD_ENCYCLOPEDIA_ARTIFACT_PLACED_BIT + FIELD_LAND_LUCEMIA);
         }

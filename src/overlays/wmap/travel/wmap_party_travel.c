@@ -382,7 +382,7 @@ void wmap_init_party_travel(void)
         g_wmap_actor_animations[i].data = resource + i * WMAP_TRAVEL_ANIMATION_BYTES;
     }
 
-    g_wmap_entry_day = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
+    g_wmap_hero_type = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
     wmap_set_traveler_position(0, g_wmap_travelers[0].cell_x, g_wmap_travelers[0].cell_y);
 
     if (g_wmap_cells[g_wmap_travelers[0].cell_x][g_wmap_travelers[0].cell_y].land_id == FIELD_LAND_LUCEMIA)
@@ -399,7 +399,7 @@ void wmap_init_party_travel(void)
 
     resource_id = WMAP_TRAVEL_SPRITE_RESOURCE;
 
-    if (g_wmap_entry_day != 0)
+    if (g_wmap_hero_type != 0)
     {
         resource_id = WMAP_TRAVEL_ALTERNATE_SPRITE_RESOURCE;
     }

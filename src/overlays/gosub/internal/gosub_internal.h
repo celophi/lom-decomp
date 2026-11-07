@@ -16,6 +16,7 @@
 #include "overlays/gosub/gosub.h"
 #include "main/audio/game_audio.h"
 #include "main/display.h"
+#include "main/field_runtime.h"
 #include "main/main.h"
 #include "overlays/field/field_fade.h"
 #include "overlays/field/field_input.h"
@@ -400,16 +401,6 @@ struct GosubTilePacket
     u16 h;
 };
 
-/** @brief Render context fields used by the gosub element renderer. */
-typedef struct GosubRenderContext
-{
-    u_long tag;
-    u8 reserved_0004[0x40AE];
-    s16 display_buffer_index;
-    u8 reserved_40b4[4];
-    GosubTilePacket* packet_cursor;
-} GosubRenderContext;
-
 /** @brief Draw callback installed on a gosub element. */
 typedef u8* (*GosubElementDrawHandler)(u_long* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset);
 
@@ -646,7 +637,7 @@ s32 gosub_publish_selection(void);
 s32 gosub_is_row_unselected(s32 row);
 void gosub_build_equipment_list(u32 item_kind);
 void gosub_build_equipment_type_list(s32 group);
-void gosub_update_screen(GosubRenderContext* render_context);
+void gosub_update_screen(FieldRenderHalf* render_context);
 void gosub_enter_screen(s32 screen_id);
 s32 gosub_handle_input(void);
 void gosub_scroll_to_cursor(void);
@@ -655,8 +646,8 @@ s32 gosub_advance_screen_sequence(void);
 s32 gosub_are_elements_idle(void);
 void gosub_close_elements(void);
 void gosub_clear_elements(void);
-void gosub_render_elements(GosubRenderContext* render_context);
-void gosub_update_and_render_elements(GosubRenderContext* render_context);
+void gosub_render_elements(FieldRenderHalf* render_context);
+void gosub_update_and_render_elements(FieldRenderHalf* render_context);
 void gosub_open_message_dialog(u8* message_text);
 u8* gosub_draw_message_dialog(u_long* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset);
 u8* gosub_draw_block_components_header(u_long* ordering_table, u8* packet_cursor, s32 x_offset, s32 y_offset);

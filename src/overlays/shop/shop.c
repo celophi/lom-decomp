@@ -31,10 +31,10 @@
 
 static u8* shop_build_sell_list(u8* work_end);
 static u8* shop_build_buy_list(u8* work_end, s32 entry_count, ShopEntry* entries, FieldItemRecord* item_records);
-static void shop_run_frame(ShopFrameContext* ctx, ShopPacketBuffer* buffer);
+static void shop_run_frame(FieldRenderHalf* render, ShopPacketBuffer* buffer);
 static s32 shop_handle_list_input(void);
 static void shop_open_notice(s32 notice_id);
-static void shop_draw(ShopFrameContext* ctx, ShopPacketBuffer* buffer);
+static void shop_draw(FieldRenderHalf* render, ShopPacketBuffer* buffer);
 static void shop_reset_windows(void);
 static ShopWindow* shop_alloc_window(void);
 
@@ -72,17 +72,17 @@ void shop_init(u8* work, s32 is_buying, s32 entry_count, ShopEntry* entries, Fie
 
 /**
  * @brief Run one shop frame into the current packet buffer and flip buffers.
- * @param ctx Host frame context whose ordering-table entry receives the packets.
+ * @param render FIELD render half whose first ordering-table entry receives the packets.
  * @return Non-zero once the shop has closed.
  */
-s32 shop_update(ShopFrameContext* ctx)
+s32 shop_update(FieldRenderHalf* render)
 {
     ShopPacketBuffer* buffer;
 
     buffer = &g_shop_work_buffer[g_shop_frame_index];
     buffer->prim_cursor = buffer->packets;
     field_text_reset_scratch();
-    shop_run_frame(ctx, buffer);
+    shop_run_frame(render, buffer);
     field_text_upload_immediate_cache();
     g_shop_frame_index ^= 1;
 
@@ -273,12 +273,12 @@ static u8* shop_build_buy_list(u8* work_end, s32 entry_count, ShopEntry* entries
 
 /**
  * @brief Draw the windows, process list input, and advance the list scroll animation.
- * @param ctx Host frame context.
+ * @param render FIELD render half being drawn.
  * @param buffer Packet buffer for this frame.
  */
-static void shop_run_frame(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
+static void shop_run_frame(FieldRenderHalf* render, ShopPacketBuffer* buffer)
 {
-    shop_draw(ctx, buffer);
+    shop_draw(render, buffer);
     shop_handle_list_input();
 
     if (g_shop_scroll_frames != 0)
@@ -529,12 +529,12 @@ static void shop_open_notice(s32 notice_id)
 
 /**
  * @brief Draw every active shop window into this frame's packet buffer.
- * @param ctx Host frame context.
+ * @param render FIELD render half being drawn.
  * @param buffer Packet buffer for this frame.
  */
-static void shop_draw(ShopFrameContext* ctx, ShopPacketBuffer* buffer)
+static void shop_draw(FieldRenderHalf* render, ShopPacketBuffer* buffer)
 {
-    shop_draw_windows(ctx, buffer);
+    shop_draw_windows(render, buffer);
 }
 
 /**

@@ -434,8 +434,8 @@ void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32
                     {
                         SavedGameLayout* record = &g_niki_entry_file.saved_game;
                         icons[0] = (u32)(record->spawn.word) >> 0x19;
-                        icons[1] = (record->track.word >> 0x12) & 0x7F;
-                        icons[2] = record->track.word >> 0x19;
+                        icons[1] = (record->location.word >> 0x12) & 0x7F;
+                        icons[2] = record->location.word >> 0x19;
                         g_card_menu_icon_palette = (s32)record->icon_palette;
                     }
 
@@ -555,7 +555,7 @@ void* niki_draw_selected_entry_details(u_long* ot, void* prim, s32 x_offset, s32
                         }
                         else
                         {
-                            result = field_draw_text(result, ot, CARD_MENU_TEXT(g_card_menu_location_names, preview->track.bits.music_track),
+                            result = field_draw_text(result, ot, CARD_MENU_TEXT(g_card_menu_location_names, preview->location.bits.current_land),
                                                      FIELD_TEXT_COLOR_NORMAL, x + CARD_MENU_DETAILS_TEXT_X, y + 0x20, FIELD_TEXT_ALIGN_LEFT);
                         }
                     }

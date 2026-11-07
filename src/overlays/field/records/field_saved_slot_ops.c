@@ -48,7 +48,7 @@ enum
 /** @brief Companion template table (resource 7). */
 typedef struct
 {
-    u16 unk0;
+    u16 resource_id;
     u16 count;
     PetRecord templates[1];
 } FieldCompanionTemplateTable;

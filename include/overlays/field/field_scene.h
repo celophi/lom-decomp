@@ -29,8 +29,8 @@ typedef struct
     struct FieldImageReq* uploads; /* head of the pending upload list */
     /** set by a movie animation while the scene builds, then the MDEC VLC table it gets. */
     u8* vlc_table;
-    /** cleared by the scene build. */
-    s32 unk3C;
+    /** Cleared by the scene build; no code reads it. */
+    s32 unused_3c;
     /** tile edge in pixels, 4 or 8. */
     u8 tile_size;
     /** number of active groups; 0 or 1 when the scan found nothing. */

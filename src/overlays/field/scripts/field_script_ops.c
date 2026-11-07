@@ -31,15 +31,12 @@ s32 field_set_actor_animation();
 /** @brief Half extent (x and z) of the stored-position test of opcode 0x43. */
 #define FIELD_STORED_POSITION_RANGE 0x1100
 
-/** @brief Field music tracks a script can select (g_music_track_index). */
-#define FIELD_MUSIC_TRACK_COUNT 64
-
 /** @brief Loudest volume of field_fade_song. */
 #define FIELD_SONG_VOLUME_MAX 0x7F
 
-/** @brief Bits 4-5 of FieldLandRecord::flags, set by opcode 0x56 (TODO meaning unknown). */
-#define FIELD_LAND_VALUE_MASK 0x30
-#define FIELD_LAND_VALUE_SHIFT 4
+/** @brief FieldLandRecord::flags bits 4-5: the entry slot (FIELD_LAND_ENTRY_SLOT) that opcode 0x56 sets. */
+#define FIELD_LAND_ENTRY_SLOT_MASK 0x30
+#define FIELD_LAND_ENTRY_SLOT_SHIFT 4
 
 /** @brief Most entries a scripted shop list can hold. */
 #define FIELD_SHOP_LIST_CAPACITY 32
@@ -138,7 +135,7 @@ enum
     FIELD_SCRIPT_CMD_STOP_ACTOR = 0x03,
     FIELD_SCRIPT_CMD_EFFECT_ANIMATION_1 = 0x04,
     FIELD_SCRIPT_CMD_EFFECT_ANIMATION_0 = 0x05,
-    FIELD_SCRIPT_CMD_SET_LAND_FLAG_04 = 0x06,
+    FIELD_SCRIPT_CMD_SET_LAND_CLEARED = 0x06,
     FIELD_SCRIPT_CMD_RESTART_TILE_ANIMATION = 0x07,
     FIELD_SCRIPT_CMD_FINISH_TILE_ANIMATION = 0x08,
     FIELD_SCRIPT_CMD_STOP_SECOND_SONG = 0x09,
@@ -189,7 +186,7 @@ enum
     FIELD_SCRIPT_CMD_DEFEAT_ACTOR = 0x38,
     FIELD_SCRIPT_CMD_RECEIVE_MONEY = 0x39,
     FIELD_SCRIPT_CMD_SPEND_MONEY = 0x3A,
-    FIELD_SCRIPT_CMD_SET_MUSIC_TRACK_INDEX = 0x3B,
+    FIELD_SCRIPT_CMD_SET_CURRENT_LAND = 0x3B,
     FIELD_SCRIPT_CMD_ADVANCE_WEEKDAY = 0x3C,
     FIELD_SCRIPT_CMD_HIDE_ACTOR_PANELS = 0x3D,
     FIELD_SCRIPT_CMD_OPEN_SHOP = 0x3E,
@@ -339,7 +336,7 @@ static inline void field_script_reject_opcode(FieldScriptState* context, FieldSc
  */
 static inline s32 field_is_battle_active(void)
 {
-    return g_field_runtime->state.bits.group_active;
+    return g_field_runtime->state.bits.battle_active;
 }
 
 /**
@@ -2021,8 +2018,8 @@ void field_script_misc_command(u32 command, s32 operand)
         case FIELD_SCRIPT_CMD_EFFECT_ANIMATION_0:
             field_play_effect_animation(operand, 0);
             return;
-        case FIELD_SCRIPT_CMD_SET_LAND_FLAG_04:
-            g_field_game_state->lands[operand].flags |= FIELD_LAND_FLAG_04;
+        case FIELD_SCRIPT_CMD_SET_LAND_CLEARED:
+            g_field_game_state->lands[operand].flags |= FIELD_LAND_CLEARED;
             return;
         case FIELD_SCRIPT_CMD_RESTART_TILE_ANIMATION:
             field_control_animation(FIELD_LIST_TILE_ANIMS, operand, 0, FIELD_ANIM_OP_RESTART);
@@ -2173,14 +2170,14 @@ void field_script_misc_command(u32 command, s32 operand)
         case FIELD_SCRIPT_CMD_SPEND_MONEY:
             field_set_script_var(0, FIELD_VAR_RESULT, field_spend_money(operand));
             return;
-        case FIELD_SCRIPT_CMD_SET_MUSIC_TRACK_INDEX:
-            if (operand >= FIELD_MUSIC_TRACK_COUNT)
+        case FIELD_SCRIPT_CMD_SET_CURRENT_LAND:
+            if (operand >= FIELD_LAND_COUNT)
             {
                 record_game_diagnostic(DIAG_ERROR, 1, 0x2C, operand);
                 return;
             }
 
-            g_music_track_index = operand;
+            g_current_land = operand;
             return;
         case FIELD_SCRIPT_CMD_ADVANCE_WEEKDAY:
             /* Advance the day of the week. */
@@ -2240,13 +2237,13 @@ void field_script_misc_command(u32 command, s32 operand)
             g_field_game_state->money = operand;
             return;
         case FIELD_SCRIPT_CMD_OPEN_CARDA_SCENE:
-            g_music_track_index = 0;
+            g_current_land = 0;
             field_open_carda(0);
             field_script_op_85(0xFFFE, 0, 0, 0);
             return;
         case FIELD_SCRIPT_CMD_NEW_GAME:
-            /* New game: clear the variables, the flags and the lands, then place the starting land. */
-            g_field_game_state->options.word |= SAVED_OPTION_FLAG_2 | SAVED_OPTION_FLAG_3;
+            /* Cleared-game save at the end of the game: clear the variables, the flags and the lands, then place the starting land. */
+            g_field_game_state->options.word |= SAVED_OPTION_GAME_CLEARED | SAVED_OPTION_WORLD_SELECT_PENDING;
             field_copy_words(NULL, g_field_game_state->words, sizeof(g_field_game_state->words));
             field_copy_words(NULL, &g_field_game_state->control,
                              sizeof(g_field_game_state->control) + sizeof(g_field_game_state->flag_bits) + sizeof(g_field_game_state->lands));
@@ -2261,14 +2258,14 @@ void field_script_misc_command(u32 command, s32 operand)
 
             FIELD_LAND_WORDS[0].word |= FIELD_LAND_ARTIFACT_OBTAINED;
             g_field_game_state->lands[0].artifact_order = 1;
-            FIELD_LAND_WORDS[0].word |= FIELD_LAND_FLAG_04;
-            FIELD_LAND_WORDS[1].word |= FIELD_LAND_FLAG_04;
-            FIELD_LAND_WORDS[2].word |= FIELD_LAND_FLAG_04;
-            FIELD_LAND_WORDS[3].word |= FIELD_LAND_FLAG_04;
-            FIELD_LAND_WORDS[4].word |= FIELD_LAND_FLAG_04;
-            FIELD_LAND_WORDS[5].word |= FIELD_LAND_FLAG_04;
-            FIELD_LAND_WORDS[6].word |= FIELD_LAND_FLAG_04;
-            FIELD_LAND_WORDS[32].word |= FIELD_LAND_FLAG_04;
+            FIELD_LAND_WORDS[0].word |= FIELD_LAND_CLEARED;
+            FIELD_LAND_WORDS[1].word |= FIELD_LAND_CLEARED;
+            FIELD_LAND_WORDS[2].word |= FIELD_LAND_CLEARED;
+            FIELD_LAND_WORDS[3].word |= FIELD_LAND_CLEARED;
+            FIELD_LAND_WORDS[4].word |= FIELD_LAND_CLEARED;
+            FIELD_LAND_WORDS[5].word |= FIELD_LAND_CLEARED;
+            FIELD_LAND_WORDS[6].word |= FIELD_LAND_CLEARED;
+            FIELD_LAND_WORDS[32].word |= FIELD_LAND_CLEARED;
             break;
     }
 }
@@ -2438,7 +2435,7 @@ void field_script_start_actor_script(s32 actor_id, s32 entry)
 
     party_index = actor & 0xFF;
 
-    if ((g_field_runtime->state.flags & FIELD_STATE_PARTY_PAGE_SCRIPTS) && party_index < FIELD_PARTY_SIZE)
+    if ((g_field_runtime->state.flags & FIELD_STATE_BATTLE_ACTIVE) && party_index < FIELD_PARTY_SIZE)
     {
         field_start_actor_private_script(party_index, field_get_party_private_script(party_index, entry));
     }
@@ -2664,13 +2661,15 @@ void field_script_op_55(s32 volume, s32 frames)
 }
 
 /**
- * @brief Opcode 0x56: set the two-bit value in bits 4-5 of a land's flags.
+ * @brief Opcode 0x56: choose which of a land's four entry scenes the world map enters (FIELD_LAND_ENTRY_SLOT).
  * @param land Land index.
- * @param value New value; only the low 2 bits are stored.
+ * @param value New entry slot; only the low 2 bits are stored.
+ * @note Only the Underworld (land 16) uses it, set to 1 in WD1_BS10 and END_0004 and to 2 in WD1_BS12 and DMY_MAP1.
  */
 void field_script_op_56(s32 land, s32 value)
 {
-    g_field_game_state->lands[land].flags = (g_field_game_state->lands[land].flags & ~FIELD_LAND_VALUE_MASK) | ((value & 3) << FIELD_LAND_VALUE_SHIFT);
+    g_field_game_state->lands[land].flags =
+        (g_field_game_state->lands[land].flags & ~FIELD_LAND_ENTRY_SLOT_MASK) | ((value & 3) << FIELD_LAND_ENTRY_SLOT_SHIFT);
 }
 
 /**

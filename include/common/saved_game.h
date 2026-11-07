@@ -15,8 +15,17 @@
 #define SAVED_GAME_BUFFER_SIZE 0x4000
 #define SAVED_CHARACTER_SIZE 0x250
 
-#define SAVED_OPTION_FLAG_2 0x04
-#define SAVED_OPTION_FLAG_3 0x08
+/**
+ * @brief SavedGameLayout::options bit set by the event-script new-game command at the end of the
+ *        game (END_0057, SEI_OS00): the save starts a cleared game. CARDA marks its save title with
+ *        a note sign, and WMAP skips the first-placement event flag for it.
+ */
+#define SAVED_OPTION_GAME_CLEARED 0x04
+/**
+ * @brief SavedGameLayout::options bit set with SAVED_OPTION_GAME_CLEARED: loading the save opens the
+ *        world select screen, which cannot be cancelled until WSEL clears the bit on a chosen cell.
+ */
+#define SAVED_OPTION_WORLD_SELECT_PENDING 0x08
 
 #define FIELD_WEEKDAY_MASK 0x7F
 
@@ -290,12 +299,17 @@ typedef struct FieldNibbles
 /** @brief Item identity word of a FieldItemRecord. */
 typedef struct FieldItemInfo
 {
-    unsigned unk0 : 8;
+    /** @brief Zero in all 421 item templates on the disc; no code reads it. */
+    unsigned unused_0 : 8;
     unsigned category : 2;
     unsigned item_type : 6;
     /** @brief Material the item was made from (an item kind below FIELD_SECONDARY_ITEM_FIRST). */
     unsigned material : 6;
-    unsigned unk22 : 10;
+    /**
+     * @brief No code reads it. Only three unique ring templates set it: Forbidden Ring (3),
+     *        Fastest Wheel (6) and Draupnir (10).
+     */
+    unsigned unused_22 : 10;
 } FieldItemInfo;
 
 /** @brief Pair of words that identifies one item record. */
@@ -357,7 +371,11 @@ typedef struct FieldItemRecord
         {
             u32 logic_class : 4;
             u32 grid_bound : 4;
-            u32 unknown_bits : 24;
+            /** @brief GolemRecord::unused_45. */
+            u32 unused_8 : 8;
+            u32 failure_rate : 8;
+            /** @brief GolemRecord::unused_47. */
+            u32 unused_24 : 8;
             s32 palette;
         } golem;
     } derived;
@@ -416,7 +434,7 @@ typedef struct FieldCharacterRecord
     u16 hp;
     /** @brief Weapon power: copy of the weapon slot's derived.weapon.power. */
     u16 power;
-    /** @brief Sums of unk24.values[] over the equipped armor slots. */
+    /** @brief Sums of derived.values[] over the equipped armor slots. */
     u16 equipment_totals[4];
     /** @brief Bits 0-8: base value in quarter units, bits 9-15: effective value with equipment. */
     u16 stats[FIELD_CHARACTER_STAT_COUNT];
@@ -445,12 +463,13 @@ typedef struct FieldCharacterRecord
 #define FIELD_LAND_ARTIFACT_OBTAINED 0x01 /**< The player has the land's artifact (placed or not). */
 #define FIELD_LAND_PLACED 0x02            /**< The land is placed on the map. */
 /**
- * @brief TODO: meaning unknown. A new game sets it on lands 0-6 and 32; scene scripts set it on
- *        land 9 (BON_PWR0, BON_VLLG), land 13 (MHM_BDR0, just before an ending screen) and land 24
- *        (HEL_E141, at the end of the event). Lucemia's encyclopedia and map entries unlock once
- *        FIELD_LAND_LUCEMIA_2 has it.
+ * @brief The land's story is cleared. A new game starts the towns (lands 0-6 and 32) cleared; the
+ *        event-script command set_land_cleared clears the others, mostly in boss scenes (Du'Cate in
+ *        JGL_BS00, Count Dovula in RUI_BS10, Du'inke in CV1_BS10, Jewel Beast in TWR_I100).
+ * @note WMAP only places a new land next to a cleared one, and draws an uncleared land's label with
+ *       the other label palette. Lucemia becomes FIELD_LAND_LUCEMIA_2 once it is cleared.
  */
-#define FIELD_LAND_FLAG_04 0x04
+#define FIELD_LAND_CLEARED 0x04
 #define FIELD_LAND_ARTIFACT_UNLOCKED 0x08 /**< The land's artifact can be awarded. */
 /** @brief FIELD_LAND_PLACED of a land's flags byte or word, as 0 or 1. */
 #define FIELD_LAND_GET_PLACED(flags) (((flags) >> 1) & 1)
@@ -510,7 +529,7 @@ typedef enum FieldLandId
     FIELD_LAND_JUNGLE = 21,
     FIELD_LAND_UNUSED_22 = 22,
     FIELD_LAND_FLAMES = 23,
-    /** @brief Moves to FIELD_LAND_LUCEMIA_2 once it gains FIELD_LAND_FLAG_04. */
+    /** @brief Moves to FIELD_LAND_LUCEMIA_2 once it is FIELD_LAND_CLEARED. */
     FIELD_LAND_LUCEMIA = 24,
     FIELD_LAND_BEJEWELED_CITY = 25,
     FIELD_LAND_FIEG_SNOWFIELDS = 26,
@@ -552,10 +571,11 @@ typedef union FieldLandWords
     {
         u32 artifact_obtained : 1;
         u32 placed : 1;
-        u32 flag_04 : 1;
+        u32 cleared : 1;
         u32 artifact_unlocked : 1;
         u32 entry_slot : 2;
-        u32 unk6 : 2;
+        /** @brief Never set: the templates leave it clear and every writer masks it out. */
+        u32 unused_6 : 2;
         u32 x : 4;
         u32 z : 4;
         u32 placement_order : 8;
@@ -608,7 +628,8 @@ typedef struct FieldMenuSlot
         {
             u32 index : 8;
             u32 result_type : 2;
-            u32 unk10 : 22;
+            /** @brief Never read; bits 10-15 are only set by the 0xFFFF word of an empty slot. */
+            u32 unused_10 : 22;
         } bits;
     } entry;
     /** @brief Per-slot counters advanced by field_menu_advance_action_counters. */
@@ -633,11 +654,13 @@ typedef struct FieldMenuSlotGroup
         struct
         {
             u32 capacity : 4;
-            u32 unk4 : 4;
+            /** @brief Zero in the templates and never read; writers keep it unchanged. */
+            u32 unused_4 : 4;
             u32 item_slot_count : 4;
             /** @brief Number of valid entries in @c items. */
             u32 item_count : 4;
-            u32 unk16 : 16;
+            /** @brief Zero in the templates and never read; writers keep it unchanged. */
+            u32 unused_16 : 16;
         } bits;
     } flags;
     u8 pad4[4];
@@ -666,7 +689,12 @@ typedef union FieldGrowth
 /** @brief Status flags of a PetRecord (the high bits of PetRecord::status). */
 typedef struct
 {
-    u32 unknown_bits : 30;
+    /** @brief PetRecord::status effects[0] to effects[2]: pending effect ids. */
+    u32 pending_effects : 24;
+    /** @brief One bit per pending effect already applied (FIELD_REGION_APPLIED_MASK). */
+    u32 applied_effects : 3;
+    /** @brief Zero in every companion template; no code sets it. */
+    u32 unused_27 : 3;
     /** @brief Left grazing at the ranch: the pet cannot join the party and gains experience. */
     u32 grazing : 1;
     /** @brief The pet has not hatched yet; it hatches when hatch_counter reaches 0. */
@@ -692,7 +720,8 @@ typedef struct PetRecord
     u8 species;
     /** @brief Species of the egg's portrait while the pet is still an egg. */
     u8 egg_species;
-    u8 unk17;
+    /** @brief 0xB1 in every companion template on the disc; no code reads it. */
+    u8 unused_17;
     /** @brief Low byte: level; bits 8-31: experience. */
     union
     {
@@ -722,7 +751,8 @@ typedef struct PetRecord
     u8 weapon_id;
     /** @brief Resource 0xE indexes of equipment[1] to equipment[3]. */
     u8 armor_ids[3];
-    u8 pad40[2];
+    /** @brief 100 in every companion template on the disc; no code reads it. */
+    u8 unused_34[2];
     /** @brief Egg hatching countdown; low values mean the egg is nearly ready. */
     u16 hatch_counter;
     /**
@@ -745,7 +775,10 @@ typedef struct PetRecord
     FieldGrowth stat_growth[FIELD_CHARACTER_STAT_COUNT];
     /** @brief Growth of equipment_totals: the accumulator carry (bit 7) is added per level. */
     FieldGrowth total_growth[4];
-    /** @brief Byte 0 like total_growth for power; byte 1 added to halfword 1 per level. */
+    /**
+     * @brief Byte 0 like total_growth for power; bytes[1] (price_growth) is added to halves[1]
+     *        (sale_price) per level.
+     */
     union
     {
         u32 word;
@@ -756,7 +789,13 @@ typedef struct PetRecord
         {
             u8 rate : 4;
             u32 accumulator : 4;
-            u32 unk8 : 24;
+            /** @brief Increase of sale_price per level. */
+            u32 price_growth : 8;
+            /**
+             * @brief Lucre the ranch pays for the pet: the corral's sell choice loads it with
+             *        field_menu_load_pet_value, then pays it and shows "Sold for ... Lucre."
+             */
+            u32 sale_price : 16;
         } growth;
     } extra_growth;
     /** @brief Random identifier, unique among the pet records. */
@@ -811,7 +850,7 @@ typedef union
         u32 rotation : 2;   /**< Placed rotation, 0-3. */
         s32 grid_x : 5;     /**< Placed grid column, relative to the layout origin. */
         s32 grid_y : 5;     /**< Placed grid row, relative to the layout origin. */
-        u32 unknown_bits : 3;
+        u32 unused_29 : 3;  /**< Cleared when GOSUB creates a block; no code reads it. */
     } f;
 } LogicBlock;
 
@@ -834,11 +873,11 @@ typedef union
 typedef struct
 {
     u8 name[GOLEM_NAME_LENGTH];
-    u8 unknown_0x15;
-    u16 hp;                                     /**< Hit points; the second stat column of the GOSUB roster. */
-    u16 power;                                  /**< Weapon power; the first stat column of the GOSUB roster. */
-    u16 equipment_totals[COMPANION_STAT_COUNT]; /**< Summed armor values, 0-99. */
-    u8 unknown_0x22[2];
+    u8 unused_15;                                /**< No code reads or writes it. */
+    u16 hp;                                      /**< Hit points; the second stat column of the GOSUB roster. */
+    u16 power;                                   /**< Weapon power; the first stat column of the GOSUB roster. */
+    u16 equipment_totals[COMPANION_STAT_COUNT];  /**< Summed armor values, 0-99. */
+    u8 unused_22[2];                             /**< No code reads or writes it. */
     FieldNibbles weapon_bonus;                   /**< Summed weapon bonus nibbles, 0-9. */
     FieldNibbles armor_bonus;                    /**< Summed armor bonus nibbles, 0-9. */
     FieldStat stats[FIELD_CHARACTER_STAT_COUNT]; /**< Effective values 20-99; base values 0. */
@@ -846,7 +885,7 @@ typedef struct
     u8 weapon_flags;                             /**< OR of the source weapon items' status_flags. */
     u8 armor_flags2;                             /**< OR of the source armor items' element_flags. */
     u8 companion_ability;                        /**< Copied to the companion's FieldCharacterRecord::companion_ability. */
-    u32 unknown_0x40;
+    u32 unused_40;                               /**< Cleared when the golem is built; no code reads it. */
     /** @brief Low nibble: logic class a class-bound logic block must match; high nibble: grid bound. */
     union
     {
@@ -857,10 +896,10 @@ typedef struct
             u8 grid_bound : 4;  /**< Usable width and height of the placement grid. */
         } bits;
     } logic_layout;
-    u8 unknown_0x45;
+    u8 unused_45;    /**< Cleared when the golem is built and copied to the companion's derived.golem.unused_8; never read. */
     u8 failure_rate; /**< Chance out of 100 that the golem fails to act: 75 - 10 * grid bound, clamped to 0-50; MENU shows it as "Failure Rate". */
-    u8 unknown_0x47;
-    s32 palette;                                           /**< Portrait and sprite palette, 0-31; MENU also names it as the golem's color. */
+    u8 unused_47;    /**< Cleared when the golem is built and copied to the companion's derived.golem.unused_24; never read. */
+    s32 palette;     /**< Portrait and sprite palette, 0-31; MENU also names it as the golem's color. */
     FieldItemRecord source_items[GOLEM_SOURCE_ITEM_COUNT]; /**< Items the golem was built from; an empty name ends the list. */
 } GolemRecord;
 
@@ -895,26 +934,26 @@ typedef struct SavedGameLayout
     /** @brief Palette of the save-browser party icons. */
     u8 icon_palette;
     /**
-     * @brief Word 0x20: music track of the current field scene, and the second and
-     *        third party icons. The save browsers also use the track to pick the
-     *        location name.
+     * @brief Word 0x20: the current land (g_current_land), and the second and third party
+     *        icons. The save browsers show the land's location name.
      */
     union
     {
         u32 word;
         struct
         {
-            u32 music_track : 18;
+            /** @brief g_current_land when the game was saved. */
+            u32 current_land : 18;
             /** @brief Save-browser icon of party slot 1; SAVE_NO_ICON when empty. */
             u32 party_icon_1 : 7;
             /** @brief Save-browser icon of party slot 2; SAVE_NO_ICON when empty. */
             u32 party_icon_2 : 7;
         } bits;
-    } track;
+    } location;
     u16 scene_id;
     u8 object_id;
     u8 music_id;
-    /** @brief Config menu options: controller vibration, stereo sound, SAVED_OPTION_FLAG_*. */
+    /** @brief Config menu options (controller vibration, stereo sound) and the cleared-game state bits. */
     union
     {
         u32 word;
@@ -922,11 +961,12 @@ typedef struct SavedGameLayout
         {
             u32 vibration : 1;
             u32 stereo : 1;
-            /** @brief SAVED_OPTION_FLAG_2. */
-            u32 flag_2 : 1;
-            /** @brief SAVED_OPTION_FLAG_3. */
-            u32 flag_3 : 1;
-            u32 unk4 : 28;
+            /** @brief SAVED_OPTION_GAME_CLEARED. */
+            u32 game_cleared : 1;
+            /** @brief SAVED_OPTION_WORLD_SELECT_PENDING. */
+            u32 world_select_pending : 1;
+            /** @brief Zero in the templates; no code sets it. */
+            u32 unused_4 : 28;
         } bits;
     } options;
     /** @brief Money, saturated at SAVED_MONEY_MAX. */
@@ -971,7 +1011,10 @@ typedef struct SavedGameLayout
             u32 placed_land_count : 8;
             /** @brief Day of the week (index into g_field_weekday_names). */
             u32 weekday : 7;
-            u32 unk23 : 9;
+            /** @brief FIELD_CONTROL_RESET_WORDS. */
+            u32 reset_words : 1;
+            /** @brief Zero in the templates; no code sets it. */
+            u32 unused_24 : 8;
         } bits;
     } control;
     /**

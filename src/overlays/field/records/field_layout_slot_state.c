@@ -27,7 +27,7 @@ void field_award_land_artifact(s32 land_index)
  * @brief Take every land off the map, take back every artifact and clear the lands' levels, as for a new game.
  *
  * Also clears the artifact and placed land counts. Afterwards every land has
- * FIELD_LAND_FLAG_04 set except land 24.
+ * FIELD_LAND_CLEARED set except land 24.
  */
 void field_reset_lands(void)
 {
@@ -51,14 +51,14 @@ void field_reset_lands(void)
         g_saved_game.layout.lands[i].levels[5] = 0;
         g_saved_game.layout.lands[i].levels[6] = 0;
         g_saved_game.layout.lands[i].levels[7] = 0;
-        g_saved_game.layout.lands[i].flags &= ~(FIELD_LAND_ARTIFACT_OBTAINED | FIELD_LAND_PLACED | FIELD_LAND_FLAG_04);
+        g_saved_game.layout.lands[i].flags &= ~(FIELD_LAND_ARTIFACT_OBTAINED | FIELD_LAND_PLACED | FIELD_LAND_CLEARED);
     }
 
     for (i = 0; i < FIELD_LAND_COUNT; i++)
     {
-        g_saved_game.layout.lands[i].flags |= FIELD_LAND_FLAG_04;
+        g_saved_game.layout.lands[i].flags |= FIELD_LAND_CLEARED;
     }
 
     game = &g_saved_game.layout;
-    ((FieldLandWords*)game->lands)[24].word &= ~FIELD_LAND_FLAG_04;
+    ((FieldLandWords*)game->lands)[24].word &= ~FIELD_LAND_CLEARED;
 }

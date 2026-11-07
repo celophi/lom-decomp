@@ -141,9 +141,6 @@
 #define FIELD_SPRITE_FRAME_FLIP_Y 0x80
 #define FIELD_SPRITE_TEXTURE_MODE_MASK 3
 
-/** @brief Word view of FieldMotionRecord bytes 0x3C-0x3F; bit 24 is a flag in the 0x3F byte. */
-#define FIELD_MOTION_WORD_3C(rec) (*(u32*)&(rec)->sprite_height_minus_one)
-
 /* Untextured effect renderers: ring, fan, marker, trail, radial fan, and radial lines. */
 #define FIELD_RING_SEGMENTS 32
 #define FIELD_RING_ANGLE_STEP (ONE / FIELD_RING_SEGMENTS)
@@ -225,7 +222,8 @@ typedef enum
 #define FIELD_PART_RED_TRACK 0x4
 #define FIELD_PART_GREEN_TRACK 0x2
 #define FIELD_PART_BLUE_TRACK 0x1
-#define FIELD_ATTACHMENT_GROUP_COUNT 8
+/** @brief Range width from FIELD_PLACEMENT_TRACK_BOUNDS of the kinds whose extent uses the tracked target's bounds; below FIELD_PLACEMENT_SIBLING only 10-19
+ * reach it. */
 #define FIELD_ATTACHMENT_LINKED_BOUNDS_COUNT 28
 #define FIELD_PART_OWNER_BOUNDS 2
 
@@ -241,19 +239,19 @@ typedef union
     {
         unsigned distance : 9;      /* spawn distance along the rotated direction */
         unsigned distance_mode : 2; /* 2: distance comes from a parameter track */
-        unsigned unknown_11 : 1;
+        unsigned play_once : 1;     /* FIELD_CONTROL_PLAY_ONCE of the actor role; effects only clear it */
         unsigned screen_space : 1;
         unsigned ground_point : 2; /* ground attachment point for placement 0x33 */
         unsigned effect_color : 1;
         unsigned group : 2;
-        unsigned unknown_18 : 1;
-        unsigned kind : 4; /* copied from the source record */
+        unsigned petrified : 1; /* FIELD_CONTROL_PETRIFIED: drawn with the petrified CLUT column; cleared at spawn */
+        unsigned kind : 4;      /* copied from the source record */
         unsigned semitransparent : 1;
         unsigned motion_kind : 3;
         unsigned retire_on_hit : 1;
         unsigned literal_color : 1;
         unsigned parameter_mode : 2;
-        unsigned unknown_31 : 1;
+        unsigned unused_31 : 1; /* no code reads or writes it */
     } bits;
 } FieldEffectFlags;
 
@@ -380,16 +378,6 @@ typedef struct
     SVECTOR direction;
     MATRIX matrices[FIELD_RADIAL_MAX_SEGMENTS];
 } FieldRadialScratch;
-
-/** @brief Attachment category boundaries encoded in part placement flags. */
-typedef enum
-{
-    FIELD_ATTACHMENT_LINKED_BOUNDS_FIRST = 10,
-    FIELD_ATTACHMENT_POINT_FIRST = 20,
-    FIELD_ATTACHMENT_POINT_SECOND_BIAS = 34,
-    FIELD_ATTACHMENT_POINT_SECOND = 42,
-    FIELD_ATTACHMENT_UNRESOLVED_FIRST = 55
-} FieldEffectAttachmentCategory;
 
 /** @brief SDK angle vector with word access to paired halfwords. */
 typedef union
@@ -723,7 +711,7 @@ s32 field_spawn_actor_effect(FieldActorSlot* actor, s32 part_index, s32 start)
 
     FIELD_EFFECT_FLAGS(effect).bits.retire_on_hit = part->spawn_flags.word >> FIELD_PART_RETIRE_ON_HIT_BIT;
     FIELD_EFFECT_FLAGS(effect).bits.ground_point = 0;
-    FIELD_EFFECT_FLAGS(effect).bits.unknown_18 = 0;
+    FIELD_EFFECT_FLAGS(effect).bits.petrified = 0;
 
     FIELD_EFFECT_FLAGS(effect).bits.kind = 0;
 
@@ -4694,7 +4682,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
                             (((rec->motion_parameter == FIELD_ACTOR_COMMAND_TECHNIQUE) &&
                               ((rec->facing_or_reward_kind & FIELD_ANIMATION_INDEX_MASK) == 0x2E)) ||
                              (rec->motion_parameter == FIELD_ACTOR_COMMAND_ACTION) || (rec->motion_parameter == FIELD_ACTOR_COMMAND_98)) &&
-                            !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
+                            !(FIELD_FRAME_WORD(rec) & FIELD_FRAME_UNCHANGED))
                         {
                             x_offset = field_find_free_actor_slot(rec->source_object_index, 0);
 
@@ -5111,7 +5099,7 @@ s32* field_render_effect_frame8(FieldMotionRecord* rec, s32* cursor, s32* base, 
 
                         break;
                     case 5:
-                        if ((rec->frame_ticks == 0) && !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
+                        if ((rec->frame_ticks == 0) && !(FIELD_FRAME_WORD(rec) & FIELD_FRAME_UNCHANGED))
                         {
                             sound_kind = g_field_resource_entries[rec->resource_index].attribute.sound_cue >> FIELD_SOUND_CUE_KIND_SHIFT;
 
@@ -5913,7 +5901,7 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
                             if (!(slot->action_parameter & FIELD_ACTION_PARAMETER_TRANSIENT_ACTOR) && (slot->action_parameter != FIELD_ACTION_PARAMETER_NONE) &&
                                 ((rec->motion_parameter == FIELD_ACTOR_COMMAND_TECHNIQUE) || (rec->motion_parameter == FIELD_ACTOR_COMMAND_ACTION) ||
                                  (rec->motion_parameter == FIELD_ACTOR_COMMAND_RECOVER) || (rec->motion_parameter == FIELD_ACTOR_COMMAND_98)) &&
-                                !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
+                                !(FIELD_FRAME_WORD(rec) & FIELD_FRAME_UNCHANGED))
                             {
                                 offset_x = field_find_free_actor_slot(rec->source_object_index, 0);
 
@@ -6005,7 +5993,7 @@ s32* field_render_effect_frame16(FieldMotionRecord* rec, s32* cursor, s32* base,
 
                             break;
                         case 5:
-                            if ((rec->frame_ticks == 0) && !(FIELD_MOTION_WORD_3C(rec) & 0x01000000))
+                            if ((rec->frame_ticks == 0) && !(FIELD_FRAME_WORD(rec) & FIELD_FRAME_UNCHANGED))
                             {
                                 FieldResourceEntry* resources = g_field_resource_entries;
                                 u8 idx = rec->resource_index;
@@ -8252,7 +8240,8 @@ void field_unpack_effect_quad_corners16(Vec2s* out, s32 mirror, u8* item)
  * @param actor Owner supplying tracks and linked object indices.
  * @param part Packed extent value, modifiers, and attachment category.
  * @return Extent after scaling and optional bounding-box half-extents.
- * @note TODO: categories 55-62 do not initialize the part index on this path.
+ * @note Sibling-offset placements (FIELD_PLACEMENT_SIBLING_OFFSET to +7) never set part_index, so the
+ *       half-extent test reads parts[] at an uninitialized index (a bug in the original code).
  */
 s32 field_resolve_effect_extent(FieldActorSlot* actor, FieldObjectPart* part)
 {
@@ -8317,11 +8306,11 @@ s32 field_resolve_effect_extent(FieldActorSlot* actor, FieldObjectPart* part)
     {
         s32 category = (flags >> FIELD_PART_PLACEMENT_KIND_SHIFT) & FIELD_PART_PLACEMENT_KIND_MASK;
 
-        if (category < FIELD_ATTACHMENT_POINT_FIRST)
+        if (category < FIELD_PLACEMENT_SIBLING)
         {
             if ((flags >> FIELD_PART_ADD_HALF_WIDTH_SHIFT) & 1)
             {
-                if ((u32)(category - FIELD_ATTACHMENT_LINKED_BOUNDS_FIRST) >= FIELD_ATTACHMENT_LINKED_BOUNDS_COUNT)
+                if ((u32)(category - FIELD_PLACEMENT_TRACK_BOUNDS) >= FIELD_ATTACHMENT_LINKED_BOUNDS_COUNT)
                 {
                     half_extent = (g_field_object_states[owner->owner_object_index].bounds.half.right -
                                    g_field_object_states[owner->owner_object_index].bounds.half.left) >>
@@ -8344,7 +8333,7 @@ s32 field_resolve_effect_extent(FieldActorSlot* actor, FieldObjectPart* part)
 
             if ((part->placement_flags.word >> FIELD_PART_ADD_HALF_HEIGHT_SHIFT) & 1)
             {
-                if ((u32)(FIELD_PART_PLACEMENT_KIND(part) - FIELD_ATTACHMENT_LINKED_BOUNDS_FIRST) >= FIELD_ATTACHMENT_LINKED_BOUNDS_COUNT)
+                if ((u32)(FIELD_PART_PLACEMENT_KIND(part) - FIELD_PLACEMENT_TRACK_BOUNDS) >= FIELD_ATTACHMENT_LINKED_BOUNDS_COUNT)
                 {
                     half_extent = (g_field_object_states[owner->owner_object_index].bounds.half.bottom -
                                    g_field_object_states[owner->owner_object_index].bounds.half.top) >>
@@ -8370,19 +8359,19 @@ s32 field_resolve_effect_extent(FieldActorSlot* actor, FieldObjectPart* part)
     {
         s32 category = FIELD_PART_PLACEMENT_KIND(part);
 
-        if ((u32)(category - FIELD_ATTACHMENT_POINT_SECOND) < FIELD_ATTACHMENT_GROUP_COUNT ||
-            (u32)(category - FIELD_ATTACHMENT_POINT_FIRST) < FIELD_ATTACHMENT_GROUP_COUNT ||
-            (u32)(category - FIELD_ATTACHMENT_UNRESOLVED_FIRST) < FIELD_ATTACHMENT_GROUP_COUNT)
+        if ((u32)(category - FIELD_PLACEMENT_SIBLING_HIGH) < FIELD_PLACEMENT_SIBLING_COUNT ||
+            (u32)(category - FIELD_PLACEMENT_SIBLING) < FIELD_PLACEMENT_SIBLING_COUNT ||
+            (u32)(category - FIELD_PLACEMENT_SIBLING_OFFSET) < FIELD_PLACEMENT_SIBLING_COUNT)
         {
             s32 attachment_category = FIELD_PART_PLACEMENT_KIND(part);
 
-            if (attachment_category < FIELD_ATTACHMENT_UNRESOLVED_FIRST)
+            if (attachment_category < FIELD_PLACEMENT_SIBLING_OFFSET)
             {
-                part_index = attachment_category - FIELD_ATTACHMENT_POINT_FIRST;
+                part_index = attachment_category - FIELD_PLACEMENT_SIBLING;
 
-                if (attachment_category >= FIELD_ATTACHMENT_POINT_SECOND)
+                if (attachment_category >= FIELD_PLACEMENT_SIBLING_HIGH)
                 {
-                    part_index = attachment_category - FIELD_ATTACHMENT_POINT_SECOND_BIAS;
+                    part_index = attachment_category - (FIELD_PLACEMENT_SIBLING_HIGH - FIELD_PLACEMENT_SIBLING_COUNT);
                 }
             }
 

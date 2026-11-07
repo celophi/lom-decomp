@@ -75,9 +75,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 #define FIELD_PORTRAIT_PARTNER_BASE 2
 #define FIELD_PORTRAIT_COMPANION_BASE 0xE
 
-/** @brief Frame-status word bit (FIELD_ACTOR_FRAME_WORD): the displayed frame did not change this tick. */
-#define FIELD_FRAME_UNCHANGED 0x1000000
-
 /** @brief Initial X of an actor record that is not placed yet. */
 #define FIELD_ACTOR_UNPLACED_X 0xFFFB0000
 
@@ -180,9 +177,6 @@ void field_load_resource_package(s32 resource_id, s32 slot_index, s32 resource_e
 
 /** @brief Sound command of sound event @p event of an animation; the commands follow the event types in FieldAnimationDef::sound_events. */
 #define FIELD_SOUND_COMMAND(animation, event) ((animation)->sound_events[FIELD_SOUND_EVENT_COUNT + (event)])
-
-/** @brief Word view of FieldActor bytes 0x3C..0x3F; bit 24 is FIELD_FRAME_UNCHANGED. */
-#define FIELD_ACTOR_FRAME_WORD(actor) (*(u32*)&(actor)->sprite_height_minus_one)
 
 /** @brief Global colour scale applied to every actor; w views red and green together. */
 typedef union
@@ -2319,9 +2313,9 @@ void field_initialize_actor_part(s32 part_index, s32 timer_mode)
     g_field_object_parts[part_index].effect_flags.bytes[0] = 8;
     g_field_object_parts[part_index].rotation_extent.fields.linked_part = 8;
     g_field_object_parts[part_index].motion_scale = 0x100;
-    g_field_object_parts[part_index].behavior_flags.bits.flag11 = 1;
+    g_field_object_parts[part_index].behavior_flags.bits.own_color = 1;
     g_field_object_parts[part_index].behavior_flags.bits.blend_mode = 1;
-    g_field_object_parts[part_index].track_flags.bits.mode = 2;
+    g_field_object_parts[part_index].track_flags.bits.rotation_axis = 2;
 
     if (timer_mode != 0)
     {
@@ -2345,7 +2339,7 @@ void field_initialize_actor_part(s32 part_index, s32 timer_mode)
  * @param red Red component.
  * @param green Green component.
  * @param blue Blue component.
- * @param color_flag Low bit becomes the actors' FIELD_CONTROL_TINTED bit.
+ * @param color_flag Low bit becomes the actors' FIELD_CONTROL_SEMITRANSPARENT bit.
  * @param blend_mode Two-bit GPU blend mode of the parts (FIELD_PART_BLEND_MODE).
  */
 void field_set_all_actor_render_state(s32 red, s32 green, s32 blue, s32 color_flag, s32 blend_mode)
@@ -2369,8 +2363,8 @@ void field_set_all_actor_render_state(s32 red, s32 green, s32 blue, s32 color_fl
 
     for (i = 0; i < FIELD_ACTOR_COUNT; i++)
     {
-        color_flag_bits = (color_flag & 1) << FIELD_CONTROL_TINTED_SHIFT;
-        g_field_actors[i].control.word = (g_field_actors[i].control.word & ~FIELD_CONTROL_TINTED) | color_flag_bits;
+        color_flag_bits = (color_flag & 1) << FIELD_CONTROL_SEMITRANSPARENT_SHIFT;
+        g_field_actors[i].control.word = (g_field_actors[i].control.word & ~FIELD_CONTROL_SEMITRANSPARENT) | color_flag_bits;
     }
 }
 
@@ -2379,7 +2373,7 @@ void field_set_all_actor_render_state(s32 red, s32 green, s32 blue, s32 color_fl
  * @param red Red component.
  * @param green Green component.
  * @param blue Blue component.
- * @param color_flag Low bit becomes the actor's FIELD_CONTROL_TINTED bit.
+ * @param color_flag Low bit becomes the actor's FIELD_CONTROL_SEMITRANSPARENT bit.
  * @param blend_mode Two-bit GPU blend mode of the part (FIELD_PART_BLEND_MODE).
  * @param actor_selector Key of the object.
  * @return 0 on success, or -1 when no object has the key.
@@ -2403,7 +2397,7 @@ s32 field_set_actor_render_state(s32 red, s32 green, s32 blue, s32 color_flag, s
     g_field_object_parts[actor->object_index].tint_blue = blue;
     g_field_object_parts[actor->object_index].behavior_flags.word =
         (g_field_object_parts[actor->object_index].behavior_flags.word & ~FIELD_PART_BLEND_MODE_MASK) | ((blend_mode & 3) << FIELD_PART_BLEND_MODE_SHIFT);
-    actor->control.word = (actor->control.word & ~FIELD_CONTROL_TINTED) | ((color_flag & 1) << FIELD_CONTROL_TINTED_SHIFT);
+    actor->control.word = (actor->control.word & ~FIELD_CONTROL_SEMITRANSPARENT) | ((color_flag & 1) << FIELD_CONTROL_SEMITRANSPARENT_SHIFT);
     return 0;
 }
 
@@ -2512,7 +2506,7 @@ void field_update_actor_objects(void)
             }
             else
             {
-                FIELD_ACTOR_FRAME_WORD(actor) |= FIELD_FRAME_UNCHANGED;
+                FIELD_FRAME_WORD(actor) |= FIELD_FRAME_UNCHANGED;
             }
 
             group = state->group.flags & FIELD_OBJECT_GROUP_MASK;
@@ -2732,7 +2726,7 @@ u8* field_advance_actor_animation_frame(FieldActor* actor)
     offset_high = entry[1];
     entry = FIELD_ANIMATION_FRAMES(resource_base, offset_low, offset_high);
     entry_shift = FIELD_ANIMATION_FRAME_SHIFT(offset_high);
-    FIELD_ACTOR_FRAME_WORD(actor) |= FIELD_FRAME_UNCHANGED;
+    FIELD_FRAME_WORD(actor) |= FIELD_FRAME_UNCHANGED;
 
     if (actor->animation_active != 0)
     {
@@ -2763,7 +2757,7 @@ u8* field_advance_actor_animation_frame(FieldActor* actor)
         }
 
         frame = actor->animation_frame;
-        FIELD_ACTOR_FRAME_WORD(actor) &= ~FIELD_FRAME_UNCHANGED;
+        FIELD_FRAME_WORD(actor) &= ~FIELD_FRAME_UNCHANGED;
         at_end = (frame + 1) >= entry[0];
         entry = entry + ((frame << entry_shift) + 1);
         duration = entry[1];
@@ -2912,7 +2906,7 @@ u8* field_begin_actor_animation_forward(FieldActor* actor, u8* resource_base)
         actor->frame_length = 1;
     }
 
-    FIELD_ACTOR_FRAME_WORD(actor) &= ~FIELD_FRAME_UNCHANGED;
+    FIELD_FRAME_WORD(actor) &= ~FIELD_FRAME_UNCHANGED;
 
     frame_offsets = FIELD_ANIMATION_FRAME_OFFSET(resource_base, entry[0]);
 
@@ -3007,7 +3001,7 @@ static u8* field_begin_actor_animation_reverse(FieldActor* actor, u8* resource_b
         actor->speed_accumulator = default_motion;
     }
 
-    FIELD_ACTOR_FRAME_WORD(actor) &= ~FIELD_FRAME_UNCHANGED;
+    FIELD_FRAME_WORD(actor) &= ~FIELD_FRAME_UNCHANGED;
 
     frame_offsets = FIELD_ANIMATION_FRAME_OFFSET(resource_base, entry[0]);
 
@@ -3093,7 +3087,7 @@ u8* field_advance_actor_part_animation_frame(FieldActor* actor, u8* resource_bas
     offset_low = entry[0];
     offset_high = entry[1];
     entry = FIELD_ANIMATION_FRAMES(resource_base, offset_low, offset_high);
-    FIELD_ACTOR_FRAME_WORD(actor) |= FIELD_FRAME_UNCHANGED;
+    FIELD_FRAME_WORD(actor) |= FIELD_FRAME_UNCHANGED;
     entry_shift = FIELD_ANIMATION_FRAME_SHIFT(offset_high);
 
     if (g_field_timed_panel_active == 0 && g_field_modal_state == 0 && g_field_text_session_active == 0 && actor->animation_active != 0)
@@ -3121,7 +3115,7 @@ u8* field_advance_actor_part_animation_frame(FieldActor* actor, u8* resource_bas
         }
 
         frame = actor->animation_frame;
-        FIELD_ACTOR_FRAME_WORD(actor) &= ~FIELD_FRAME_UNCHANGED;
+        FIELD_FRAME_WORD(actor) &= ~FIELD_FRAME_UNCHANGED;
         at_end = (frame + 1) == entry[0];
         entry = entry + ((frame << entry_shift) + 1);
         duration = entry[1] * actor->animation_active;
@@ -3587,6 +3581,7 @@ static void field_update_actor_part_effects(FieldActorSlot* slot)
  * @param effect Spawned effect record.
  * @param part Emitting part.
  * @param owner Field object that owns the emitter.
+ * @note Nothing calls it in either version; the original binary keeps it as an unused static function.
  */
 static void field_apply_actor_part_color(FieldActor* effect, FieldObjectPart* part, FieldActor* owner)
 {

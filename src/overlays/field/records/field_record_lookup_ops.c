@@ -26,12 +26,13 @@
 
 /**
  * @brief Battle reward entry, 0x44 bytes from the table base.
- * @note Entry 0's count field holds the number of entries; each entry's item
+ * @note Entry 0's marker and count are the table header; each entry's item
  *       starts at offset 8 and runs into the next entry.
  */
 typedef struct
 {
-    u16 unk0;
+    /** @brief Entry 0: 0xAAAA in every battle resource on the disc; no code reads it. */
+    u16 marker;
     u16 count;
     s32 key;
     u8 item[0x3C];

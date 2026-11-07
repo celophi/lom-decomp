@@ -62,7 +62,7 @@ static inline void field_text_open_layout_window(FieldTextConfig* cfg, s32 windo
 
     cfg->flags.word =
         ((cfg->flags.word & ~FIELD_TEXT_CONFIG_PORTRAIT_MASK) | ((portrait_selector << FIELD_TEXT_PORTRAIT_SELECT_SHIFT) & FIELD_TEXT_CONFIG_PORTRAIT_RIGHT)) &
-        ~FIELD_TEXT_CONFIG_MODE_MASK;
+        ~FIELD_TEXT_CONFIG_UNUSED_MASK;
 
     cfg->x = g_field_text_window_layouts[layout_index][window_slot].x;
     cfg->y = g_field_text_window_layouts[layout_index][window_slot].y;
@@ -183,7 +183,7 @@ void field_show_timed_text(s32 string_index)
     cfg->portrait = NULL;
     cfg->flags.word &= ~FIELD_TEXT_CONFIG_STYLE_MASK;
     cfg->flags.word &= ~FIELD_TEXT_CONFIG_PORTRAIT_MASK;
-    cfg->flags.word &= ~FIELD_TEXT_CONFIG_MODE_MASK;
+    cfg->flags.word &= ~FIELD_TEXT_CONFIG_UNUSED_MASK;
     cfg->x = g_field_text_window_layouts[FIELD_TEXT_LAYOUT_TIMED][0].x;
     cfg->y = g_field_text_window_layouts[FIELD_TEXT_LAYOUT_TIMED][0].y;
     cfg->width = g_field_text_window_layouts[FIELD_TEXT_LAYOUT_TIMED][0].width;

@@ -516,7 +516,7 @@ s32 carda_advance_card_sequence(void)
                 strcpy(file_name.text, g_lom_save_filename_prefix);
                 format_hex(&file_name.text[CARD_SAVE_FILENAME_PREFIX_LENGTH], g_card_entry_value_limit, CARD_SERIAL_DIGITS);
                 strcat(card_path.text, file_name.text);
-                if (carda_test_option_flag_2() != 0)
+                if (carda_is_cleared_game_save() != 0)
                 {
                     file_name.text[0] = '+';
                 }
@@ -558,7 +558,7 @@ s32 carda_advance_card_sequence(void)
                         attempts++;
                         *title_dst++ = *title_src++;
                     }
-                    if (carda_test_option_flag_2() != 0)
+                    if (carda_is_cleared_game_save() != 0)
                     {
                         title_frame[CARDA_TITLE_NOTE_OFFSET] = SJIS_NOTE_SIGN >> SJIS_CODE_LEAD_SHIFT;
                         title_frame[CARDA_TITLE_NOTE_OFFSET + 1] = SJIS_NOTE_SIGN & SJIS_CODE_TRAIL_MASK;

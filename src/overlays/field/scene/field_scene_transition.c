@@ -133,7 +133,7 @@ enum
 /** @brief Actor image list and variable-length action records in a scene file. */
 typedef struct
 {
-    u8 unk0;
+    u8 unused_00; /**< Zero in every actor description on disc; no code reads it. */
     /** @brief Bit 7: the resource has an action table (FIELD_RESOURCE_HAS_ACTIONS). */
     u8 flags;
     /** @brief Image indices, FIELD_ACTOR_IMAGE_END-terminated when shorter than six. */
@@ -184,7 +184,8 @@ typedef union
         u32 xy;
         u32 z : 16;
         u32 facing : 4;
-        u32 unk20 : 12;
+        /** @brief High nibble of h.facing and h.flags; no code reads them. */
+        u32 unused_20 : 12;
     } bits;
 } FieldSceneSpawn;
 
@@ -206,10 +207,7 @@ extern u16 g_field_transition_tiles[FIELD_TRANSITION_TILE_PIXELS];
 extern u16 g_field_transition_tiles_alt[FIELD_TRANSITION_TILE_PIXELS];
 /** @brief Non-zero uploads g_field_transition_tiles_alt next; flips on every upload. */
 extern s32 g_field_transition_tile_bank;
-/**
- * @brief Set while the last scene actor loaded has more than one image.
- * @note TODO: field_dialog_screens also reads it to raise ability growth from 1 to 4.
- */
+/** @brief Spawn point of the scene entry being loaded. */
 extern s32 g_field_pending_spawn_id;
 extern s32 g_field_pending_music_id;
 extern s32 g_field_pending_secondary_music_id;
@@ -217,7 +215,6 @@ extern s32 g_field_pending_scene_id;
 extern s32 g_field_pending_object_id;
 extern s32 g_field_pending_sound_bank_id;
 extern s32 g_field_scene_data_size;
-/* TODO: Script command 0x44 selects alternate party control and triple HP. */
 extern u8 g_field_scene_data_buffer[];
 extern s32 g_field_previous_song_volume;
 extern s32 g_field_party_palette_index;

@@ -22,13 +22,13 @@
 #define FIELD_CD_BUFFER_AREA ((u8*)SECONDARY_OVERLAY_ADDRESS)
 #define FIELD_ACTOR_HEAP_AREA ((u8*)SECONDARY_OVERLAY_AT(0x18000))
 
-/** @brief g_music_track_table entry of a track index that has no music. */
-#define FIELD_MUSIC_TRACK_NONE 0xFF
+/** @brief g_land_songs entry of a land that has no world-map song. */
+#define FIELD_LAND_SONG_NONE 0xFF
 
 /**
  * @brief Scene word between the pending sound bank and the portrait count.
- * @note TODO: purpose unknown; it is only ever cleared here, and no code in the
- *       main executable or any overlay reads it.
+ * @note It is only ever cleared here, and no code in the main executable or any
+ *       overlay of either version reads it.
  */
 extern s32 g_field_unused_scene_word;
 /**
@@ -85,7 +85,7 @@ void field_initialize_subsystems(FieldRenderHalf* render_context)
     g_field_audio_timer = 0;
     previous_state = g_previous_game_state;
 
-    if (previous_state == GAME_STATE_WORLD_MAP && g_music_track_table[g_music_track_index] != FIELD_MUSIC_TRACK_NONE)
+    if (previous_state == GAME_STATE_WORLD_MAP && g_land_songs[g_current_land] != FIELD_LAND_SONG_NONE)
     {
         g_field_preserve_entry_music = previous_state;
     }

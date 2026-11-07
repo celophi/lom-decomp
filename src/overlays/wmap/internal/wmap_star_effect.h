@@ -12,12 +12,12 @@ typedef struct
     s16 state;
     s16 angle;
     u16 angle_step;
-    s16 unknown_06;
+    s16 unused_06; /**< High halfword of the motion velocity word; the star update reads only angle_step. */
     s32 radius;
-    s16 unknown_0c;
+    s16 unused_0c; /**< WmapMotion lifetime slot; star code never reads or writes it. */
     u16 depth;
-    s16 unknown_10;
-    s16 unknown_12;
+    s16 unused_10; /**< WmapMotion angular_velocity bytes; star code never reads or writes them. */
+    s16 unused_12; /**< WmapMotion angular_velocity bytes; star code never reads or writes them. */
 } WmapOrbitingStar;
 
 #define WMAP_STAR_OPERAND_SHIFT 6

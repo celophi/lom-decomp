@@ -91,7 +91,8 @@ enum
 /** @brief Header of the FIELD_RESOURCE_BATTLE resource: byte offsets of its tables from the resource start. */
 typedef struct FieldBattleResource
 {
-    s32 unk0;
+    u16 resource_id; /**< FIELD_RESOURCE_BATTLE (1); matched by field_find_resource. */
+    u16 marker;      /**< 0xAAAA in every battle resource on disc; no code reads it. */
     s32 templates_offset;
     s32 rewards_offset;
 } FieldBattleResource;
@@ -665,7 +666,7 @@ static void field_battle_reset_context(void)
 
     for (i = 0; i < FIELD_ELEMENT_COUNT; i++)
     {
-        g_field_battle->element_levels[i] = g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[i]];
+        g_field_battle->element_levels[i] = g_field_element_level_by_land_level[g_field_game_state->lands[g_current_land].levels[i]];
     }
 
     resource = field_find_resource(FIELD_RESOURCE_BATTLE);
@@ -724,7 +725,7 @@ s32 field_compute_base_monster_level(s32 use_land_count)
     }
     else
     {
-        rank = field_get_land_distance(g_music_track_index);
+        rank = field_get_land_distance(g_current_land);
 
         switch (difficulty)
         {

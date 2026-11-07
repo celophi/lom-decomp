@@ -29,8 +29,8 @@ typedef struct
     s32 resource_id;
     /** @brief Object that owns the bound animation. */
     s32 owner;
-    s32 unk10;
-    s32 unk14;
+    s32 unused_10; /**< No code reads or writes it. */
+    s32 unused_14; /**< No code reads or writes it. */
     /** @brief Animation actor slot (g_field_actor_slots) playing the bound animation. */
     s32 slot;
 } FieldActorBinding;

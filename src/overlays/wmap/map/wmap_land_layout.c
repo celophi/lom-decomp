@@ -9,11 +9,16 @@
 #define WMAP_EVENT_WORD_BITS 32
 #define WMAP_DAY_MASK 0x7F
 #define WMAP_LAYOUT_RESOURCE_BASE 0x12EA
-#define WMAP_TERRAIN_FLAG_0 0x01
-#define WMAP_TERRAIN_FLAG_1 0x02
-#define WMAP_TERRAIN_FLAG_2 0x04
-#define WMAP_ARTIFACT_TERRAIN_REQUIRED_SHIFT 10
-#define WMAP_ARTIFACT_FLAG_8_SHIFT 8
+/** @brief Map cell flag: no ordinary land may be placed here (every sea cell has it; Lucemia and the Tree of Mana ignore it). */
+#define WMAP_TERRAIN_NO_LAND 0x01
+/** @brief Map cell flag: coast, where WMAP_ARTIFACT_COAST_ONLY lands may go. */
+#define WMAP_TERRAIN_COAST 0x02
+/** @brief Map cell flag: sea, where the WMAP_ARTIFACT_SEA_ONLY ship goes without using up a land slot. */
+#define WMAP_TERRAIN_SEA 0x04
+/** @brief Artifact flag bit: the land goes only on WMAP_TERRAIN_SEA cells (only SS Buccaneer has it). */
+#define WMAP_ARTIFACT_SEA_ONLY_SHIFT 10
+/** @brief Artifact flag bit: after the first land, the land goes only on WMAP_TERRAIN_COAST cells (Polpota Harbor and Madora Beach). */
+#define WMAP_ARTIFACT_COAST_ONLY_SHIFT 8
 #define WMAP_SPIRIT_SPRITE_COLUMNS 7
 #define WMAP_SPIRIT_SPRITE_DIAGONAL 8
 #define WMAP_COORD_MASK 0x0F
@@ -46,7 +51,7 @@ typedef struct
 {
     u8 spirits[FIELD_LAND_SPIRIT_COUNT];
     u16 flags;
-    u16 unknown_0x0a;
+    u16 unused_0a; /**< 0-15 in the WM_D*.DAT layouts, tracing the edges of the placeable area; no code reads it. */
 } WmapTerrainCell;
 
 /** @brief Layout file header followed by the six-by-six terrain grid. */
@@ -66,7 +71,8 @@ typedef struct
     s32 values[64];
 } WmapValueTable;
 
-extern u8 g_wmap_saved_map_status;
+/** @brief Byte 0 of the hero's FieldCharacterRecord::info in g_saved_game: the character type and the pad-controlled bit. */
+extern u8 g_wmap_hero_character_info;
 extern s32 g_wmap_layout_selection;
 extern WmapLandAttributes g_wmap_land_attributes[FIELD_LAND_COUNT];
 extern s32 g_wmap_spirit_sprites[];
@@ -90,12 +96,12 @@ void wmap_append_land_spirit_labels(s32 mode, u32 x, s32 y, s32 mask, s32* count
 s32 wmap_wrap_index(s32 value, s32 minimum, s32 maximum);
 
 /**
- * @brief Test the active flag of the land occupying a known occupied cell.
+ * @brief Test FIELD_LAND_CLEARED of the land occupying a known occupied cell.
  * @param x Cell column.
  * @param y Cell row.
- * @return One if the land is active, otherwise zero.
+ * @return One if the land is cleared, otherwise zero.
  */
-static inline s32 wmap_cell_has_active_land(u32 x, s32 y)
+static inline s32 wmap_cell_has_cleared_land(u32 x, s32 y)
 {
     SavedGameLayout* save = &g_saved_game.layout;
     s32 land = wmap_get_land_at_cell(x, y);
@@ -393,14 +399,14 @@ s32 wmap_can_place_land(u32 x, s32 y, s32 land)
 
     if (wmap_get_land_at_cell(x, y) == WMAP_NO_LAND)
     {
-        if (wmap_get_artifact_flag(land, WMAP_ARTIFACT_TERRAIN_REQUIRED_SHIFT) == 1)
+        if (wmap_get_artifact_flag(land, WMAP_ARTIFACT_SEA_ONLY_SHIFT) == 1)
         {
-            if (!(g_wmap_layout->cells[cell].flags & WMAP_TERRAIN_FLAG_2))
+            if (!(g_wmap_layout->cells[cell].flags & WMAP_TERRAIN_SEA))
             {
                 return 0;
             }
         }
-        else if ((u32)(land - FIELD_LAND_LUCEMIA) >= 2U && land != FIELD_LAND_TREE_OF_MANA && (g_wmap_layout->cells[cell].flags & WMAP_TERRAIN_FLAG_0))
+        else if ((u32)(land - FIELD_LAND_LUCEMIA) >= 2U && land != FIELD_LAND_TREE_OF_MANA && (g_wmap_layout->cells[cell].flags & WMAP_TERRAIN_NO_LAND))
         {
             return 0;
         }
@@ -410,9 +416,9 @@ s32 wmap_can_place_land(u32 x, s32 y, s32 land)
             return 1;
         }
 
-        if (!(g_wmap_layout->cells[cell].flags & WMAP_TERRAIN_FLAG_1))
+        if (!(g_wmap_layout->cells[cell].flags & WMAP_TERRAIN_COAST))
         {
-            if (wmap_get_artifact_flag(land, WMAP_ARTIFACT_FLAG_8_SHIFT) == 1)
+            if (wmap_get_artifact_flag(land, WMAP_ARTIFACT_COAST_ONLY_SHIFT) == 1)
             {
                 return 0;
             }
@@ -420,7 +426,7 @@ s32 wmap_can_place_land(u32 x, s32 y, s32 land)
 
         if (y > 0 && wmap_get_land_at_cell(x, y - 1) != WMAP_NO_LAND)
         {
-            if (wmap_cell_has_active_land(x, y - 1) == 1)
+            if (wmap_cell_has_cleared_land(x, y - 1) == 1)
             {
                 return 1;
             }
@@ -428,7 +434,7 @@ s32 wmap_can_place_land(u32 x, s32 y, s32 land)
 
         if (y < WMAP_GRID_SIZE - 1 && wmap_get_land_at_cell(x, y + 1) != WMAP_NO_LAND)
         {
-            if (wmap_cell_has_active_land(x, y + 1) == 1)
+            if (wmap_cell_has_cleared_land(x, y + 1) == 1)
             {
                 return 1;
             }
@@ -436,7 +442,7 @@ s32 wmap_can_place_land(u32 x, s32 y, s32 land)
 
         if ((s32)x > 0 && wmap_get_land_at_cell(x - 1, y) != WMAP_NO_LAND)
         {
-            if (wmap_cell_has_active_land(x - 1, y) == 1)
+            if (wmap_cell_has_cleared_land(x - 1, y) == 1)
             {
                 return 1;
             }
@@ -444,7 +450,7 @@ s32 wmap_can_place_land(u32 x, s32 y, s32 land)
 
         if ((s32)x < WMAP_GRID_SIZE - 1 && wmap_get_land_at_cell(x + 1, y) != WMAP_NO_LAND)
         {
-            if (wmap_cell_has_active_land(x + 1, y) == 1)
+            if (wmap_cell_has_cleared_land(x + 1, y) == 1)
             {
                 return 1;
             }
@@ -478,7 +484,7 @@ void wmap_place_land(s32 x, s32 y, s32 index)
 
     if (g_saved_game.layout.control.fields.placed_land_count == 1)
     {
-        g_music_track_index = index;
+        g_current_land = index;
     }
 
     /* Apply placement in a word workspace before committing the byte-sized save levels. */
@@ -718,13 +724,13 @@ s32 wmap_load_land_layout(void)
     g_wmap_land_scenes = g_wmap_layout_buffer.scenes;
     g_wmap_land_music_ids = g_wmap_layout_buffer.music_ids;
 
-    if ((g_saved_game.layout.options.bits.flag_2 != 1) && (g_saved_game.layout.control.fields.placed_land_count == 1))
+    if ((g_saved_game.layout.options.bits.game_cleared != 1) && (g_saved_game.layout.control.fields.placed_land_count == 1))
     {
         g_saved_game.layout.flag_bits[0] = (g_saved_game.layout.flag_bits[0] | 2);
     }
 
-    if ((g_saved_game.land_words.lands[FIELD_LAND_LUCEMIA].word & FIELD_LAND_FLAG_04) &&
-        !(g_saved_game.land_words.lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_FLAG_04))
+    if ((g_saved_game.land_words.lands[FIELD_LAND_LUCEMIA].word & FIELD_LAND_CLEARED) &&
+        !(g_saved_game.land_words.lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_CLEARED))
     {
         status = g_saved_game.land_words.lands[FIELD_LAND_LUCEMIA_2].word | 7;
         status &= ~WMAP_STATUS_X_MASK;
@@ -834,7 +840,7 @@ void wmap_rebuild_land_lookup(void)
         {
             if (index == FIELD_LAND_LUCEMIA)
             {
-                if (!(g_saved_game.land_words.lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_FLAG_04))
+                if (!(g_saved_game.land_words.lands[FIELD_LAND_LUCEMIA_2].word & FIELD_LAND_CLEARED))
                 {
                     position = ((SavedGame*)(g_saved_game.bytes + FIELD_LAND_LUCEMIA * sizeof(FieldLandWords)))->land_words.lands[0].bytes.cell;
                     x = position & WMAP_COORD_MASK;
@@ -1321,11 +1327,11 @@ s32 wmap_get_land_count_tier(void)
 }
 
 /**
- * @brief Test the active flag of a saved land.
+ * @brief Test FIELD_LAND_CLEARED of a saved land.
  * @param record_index Saved land index.
- * @return One when bit two is set, otherwise zero.
+ * @return One when the land is cleared, otherwise zero.
  */
-s32 wmap_is_land_active(s32 record_index)
+s32 wmap_is_land_cleared(s32 record_index)
 {
     return (g_saved_game.layout.lands[record_index].flags >> 2) & 1;
 }
@@ -1359,7 +1365,7 @@ s32 wmap_is_other_land_cell(u32 x, s32 y)
 
 /**
  * @brief Read the remaining land count, accounting for the special saved land.
- * @return The layout's land count minus the placed land count, plus one while the SS Buccaneer is placed on a cell with WMAP_TERRAIN_FLAG_2.
+ * @return The layout's land count minus the placed land count, plus one while the SS Buccaneer is placed on a cell with WMAP_TERRAIN_SEA.
  */
 s32 wmap_get_remaining_land_count(void)
 {
@@ -1378,7 +1384,7 @@ s32 wmap_get_remaining_land_count(void)
         cell = column + row * WMAP_GRID_SIZE;
         entry = (WmapLayout*)((u8*)data + cell * sizeof(WmapTerrainCell));
 
-        if (entry->cells[0].flags & WMAP_TERRAIN_FLAG_2)
+        if (entry->cells[0].flags & WMAP_TERRAIN_SEA)
         {
             return data->land_count - g_saved_game.layout.control.fields.placed_land_count + 1;
         }
@@ -1502,8 +1508,8 @@ s32 wmap_is_artifact_unplaced(s32 record_index)
  * @brief Read the starting land coordinates, falling back to the layout defaults.
  * @param x Receives the starting column.
  * @param y Receives the starting row.
- * @return Low seven bits of the saved status byte; its meaning is unresolved.
- * @note WMAP uses the resident music-index slot to hold its starting land index.
+ * @return The hero's character type (FIELD_CHARACTER_TYPE_MASK of info byte 0); nonzero selects the alternate traveler sprites.
+ * @note The starting land is g_current_land.
  */
 s32 wmap_get_starting_cell(s32* x, s32* y)
 {
@@ -1514,11 +1520,11 @@ s32 wmap_get_starting_cell(s32* x, s32* y)
     }
     else
     {
-        *x = g_saved_game.land_words.lands[g_music_track_index].bytes.cell & WMAP_COORD_MASK;
-        *y = g_saved_game.land_words.lands[g_music_track_index].bytes.cell >> WMAP_COORD_Y_SHIFT;
+        *x = g_saved_game.land_words.lands[g_current_land].bytes.cell & WMAP_COORD_MASK;
+        *y = g_saved_game.land_words.lands[g_current_land].bytes.cell >> WMAP_COORD_Y_SHIFT;
     }
 
-    return g_wmap_saved_map_status & WMAP_DAY_MASK;
+    return g_wmap_hero_character_info & FIELD_CHARACTER_TYPE_MASK;
 }
 
 /**

@@ -258,7 +258,7 @@ s32 gosub_handle_make_block_dialog(s32 dialog_result)
             g_saved_game_ctx->logic_blocks[count].f.rotation = 0;
             g_saved_game_ctx->logic_blocks[count].f.grid_x = 0;
             g_saved_game_ctx->logic_blocks[count].f.grid_y = 0;
-            g_saved_game_ctx->logic_blocks[count].f.unknown_bits = 0;
+            g_saved_game_ctx->logic_blocks[count].f.unused_29 = 0;
             g_saved_game_ctx->logic_block_count = g_saved_game_ctx->logic_block_count + 1;
             g_saved_game_ctx->items[g_gosub_result_values[0]].name[0] = 0;
             g_saved_game_ctx->items[g_gosub_result_values[1]].name[0] = 0;

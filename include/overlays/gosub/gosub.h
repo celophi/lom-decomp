@@ -8,7 +8,7 @@
  * @brief GOSUB's entry points, called by FIELD once the overlay is loaded.
  */
 
-struct GosubRenderContext;
+struct FieldRenderHalf;
 
 /**
  * @brief Open a sequence of GOSUB selection screens.
@@ -22,6 +22,6 @@ void gosub_open_screen_sequence(void* unused, s32* screen_sequence);
  * @param render_context Render context of the frame (FIELD's render half).
  * @return Nonzero once GOSUB has finished.
  */
-s32 gosub_update_frame(struct GosubRenderContext* render_context);
+s32 gosub_update_frame(struct FieldRenderHalf* render_context);
 
 #endif

@@ -15,7 +15,7 @@
 /** @brief Header of the save-icon set resource; all offsets are bytes from its start. */
 typedef struct
 {
-    s32 unknown_0; /**< TODO: unknown; CLOAD never reads it. */
+    s32 offset_count; /**< Number of offsets that follow (4 in LOADSET.DAT); CLOAD never reads it. */
     s32 icon_table_offset;
     s32 image_offsets[CLOAD_ICON_SET_IMAGE_COUNT];
 } CloadIconSetHeader;

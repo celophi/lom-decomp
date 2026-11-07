@@ -64,7 +64,7 @@
 #define FIELD_VAR_ELEMENT_LEVELS 0x4300
 /** @brief Distance of the current land (field_get_land_distance). */
 #define FIELD_VAR_LAND_DISTANCE 0x5320
-#define FIELD_VAR_MUSIC_TRACK 0x5328
+#define FIELD_VAR_CURRENT_LAND 0x5328
 /** @brief Non-zero while talk and trigger interactions are blocked. */
 #define FIELD_VAR_INTERACTIONS_BLOCKED 0xFE1
 /** @brief Non-zero while the party stays under script control after an interaction. */
@@ -327,16 +327,16 @@ static void field_init_script_variables(void)
     }
 
     field_set_script_var(0, FIELD_VAR_WEEKDAY, g_field_game_state->control.fields.weekday & FIELD_WEEKDAY_MASK);
-    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x00, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[0]]);
-    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x04, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[1]]);
-    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x08, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[2]]);
-    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x0C, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[3]]);
-    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x10, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[4]]);
-    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x14, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[5]]);
-    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x18, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[6]]);
-    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x1C, g_field_element_level_by_land_level[g_field_game_state->lands[g_music_track_index].levels[7]]);
-    field_set_script_var(0, FIELD_VAR_LAND_DISTANCE, field_get_land_distance(g_music_track_index));
-    field_set_script_var(0, FIELD_VAR_MUSIC_TRACK, g_music_track_index);
+    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x00, g_field_element_level_by_land_level[g_field_game_state->lands[g_current_land].levels[0]]);
+    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x04, g_field_element_level_by_land_level[g_field_game_state->lands[g_current_land].levels[1]]);
+    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x08, g_field_element_level_by_land_level[g_field_game_state->lands[g_current_land].levels[2]]);
+    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x0C, g_field_element_level_by_land_level[g_field_game_state->lands[g_current_land].levels[3]]);
+    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x10, g_field_element_level_by_land_level[g_field_game_state->lands[g_current_land].levels[4]]);
+    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x14, g_field_element_level_by_land_level[g_field_game_state->lands[g_current_land].levels[5]]);
+    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x18, g_field_element_level_by_land_level[g_field_game_state->lands[g_current_land].levels[6]]);
+    field_set_script_var(0, FIELD_VAR_ELEMENT_LEVELS + 0x1C, g_field_element_level_by_land_level[g_field_game_state->lands[g_current_land].levels[7]]);
+    field_set_script_var(0, FIELD_VAR_LAND_DISTANCE, field_get_land_distance(g_current_land));
+    field_set_script_var(0, FIELD_VAR_CURRENT_LAND, g_current_land);
 }
 
 /**
@@ -654,7 +654,7 @@ void field_runtime_update(void)
     field_update_main_script();
     field_update_event_records();
 
-    if (g_field_runtime->state.flags & FIELD_STATE_PARTY_PAGE_SCRIPTS)
+    if (g_field_runtime->state.flags & FIELD_STATE_BATTLE_ACTIVE)
     {
         field_tick_battle_status();
     }

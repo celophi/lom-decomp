@@ -62,8 +62,8 @@ typedef struct
 {
     s16 width;
     u16 depth;
-    /** Bit 1 of the selected object's background flags (field_select_object). */
-    u8 unk4;
+    /** Bit 1 of the selected object's background flags (set in every map on disc); never read. */
+    u8 unused_4;
 } FieldMapBounds;
 
 /** @brief Fixed address of the field map header block. */

@@ -80,7 +80,7 @@ void gosub_open_screen_sequence(void* unused, s32* screen_sequence)
  * @return Nonzero after the current gosub sequence finishes.
  * @see decomp.me (100%) https://decomp.me/scratch/ykfW4
  */
-s32 gosub_update_frame(GosubRenderContext* render_context)
+s32 gosub_update_frame(FieldRenderHalf* render_context)
 {
     s32 parity;
     s32 finished;

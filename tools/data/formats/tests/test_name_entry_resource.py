@@ -40,7 +40,7 @@ class NameEntryResourceTests(unittest.TestCase):
         document = yaml.safe_load(dump_resource_yaml(resource))
         rebuilt = NameEntryResource.parse_document(document)
 
-        self.assertEqual(resource.unknown_0x00, 4)
+        self.assertEqual(resource.offset_count, 4)
         self.assertEqual(len(resource.tables[0].records), 2)
         self.assertEqual(resource.tables[0].records[1], b"BC")
         self.assertEqual(rebuilt.to_bytes(), SOURCE)

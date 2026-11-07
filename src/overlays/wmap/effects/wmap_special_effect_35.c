@@ -68,7 +68,7 @@ typedef struct
     s32 radius;
     s16 delay;
     s16 height;
-    u8 unknown_10[4];
+    u8 unused_10[4]; /**< WmapMotion angular_velocity bytes; effect 35 never uses them. */
 } WmapEffectMotion;
 
 /** @brief Particle emitter: a range of particle slots and the parameters of new particles. */

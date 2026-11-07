@@ -193,15 +193,15 @@ typedef struct FieldNibbleTableParams
 typedef struct FieldNibbleTable
 {
     u16 resource_id;
-    u16 unk2;
+    u16 unused_02; /**< Zero in all 25 copies on disc; no code reads it. */
     u8 cells[1][FIELD_NIBBLE_TABLE_COLUMNS];
 } FieldNibbleTable;
 
 /** @brief Parameters of field_command_get_part_position. */
 typedef struct FieldPartPositionParams
 {
-    u16 unk0;
-    u16 unk2;
+    u16 unused_00; /**< Not read or written by command 7 or its scripts. */
+    u16 unused_02; /**< Not read or written by command 7 or its scripts. */
     s32 x;
     s32 y;
     s32 z;
@@ -224,7 +224,7 @@ typedef struct FieldRecordQueryParams
     /** @brief Actor id on input, the selected record's actor id on output. */
     u16 actor;
     u16 query;
-    /** @brief FieldStatusRecord::unk0 side bits of the records to collect. */
+    /** @brief FieldStatusRecord::side bits (FIELD_RECORD_MONSTER_SIDE, FIELD_RECORD_PARTY_SIDE) of the records to collect. */
     s32 side_mask;
 } FieldRecordQueryParams;
 
@@ -245,7 +245,7 @@ typedef struct FieldAwardLandArtifactsParams
     u16 pad2;
     s32 first_land;
     s32 second_land;
-    s32 unkC;
+    s32 unused_0c; /**< Not read or written by command 11 or its scripts. */
     /** @brief Lands whose artifacts were awarded, as written by field_award_land_artifacts. */
     s32 awarded[4];
 } FieldAwardLandArtifactsParams;

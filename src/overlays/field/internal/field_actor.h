@@ -42,9 +42,9 @@
  * field_effect_types.h. */
 /** @brief FieldActor::control bit 18: set while the actor holds the petrified pose (field_handle_object_petrification). */
 #define FIELD_CONTROL_PETRIFIED 0x40000
-/** @brief FieldActor::control bit 23: the actor uses its own tint. */
-#define FIELD_CONTROL_TINTED_SHIFT 23
-#define FIELD_CONTROL_TINTED 0x800000
+/** @brief FieldActor::control bit 23: the sprite is drawn semi-transparent (FIELD_EFFECT_SEMITRANSPARENT of the record). */
+#define FIELD_CONTROL_SEMITRANSPARENT_SHIFT 23
+#define FIELD_CONTROL_SEMITRANSPARENT 0x800000
 /* FieldActor::direction headings. */
 /** @brief Shift from a 4096-step angle to a heading. */
 #define FIELD_HEADING_ANGLE_SHIFT 4
@@ -151,14 +151,30 @@ typedef union
     {
         /** @brief Control mode (FIELD_CONTROL_PLAYER, FIELD_CONTROL_FOLLOWER or FIELD_CONTROL_SCRIPTED). */
         u32 mode : 9;
-        u32 unk9 : 7;
+        /** @brief FIELD_CONTROL_MOVING. */
+        u32 moving : 1;
+        /** @brief FIELD_CONTROL_MOVING_UNUSED. */
+        u32 moving_unused : 1;
+        /** @brief FIELD_CONTROL_PLAY_ONCE. */
+        u32 play_once : 1;
+        /** @brief Never set or read on actors. */
+        u32 unused_12 : 3;
+        /** @brief FIELD_CONTROL_EFFECT_COLOR. */
+        u32 effect_color : 1;
         /** @brief Golem colour (FIELD_GOLEM_COLOR): the joined golem on the companion, copied from FieldLayoutRecord on a layout actor. */
         u32 golem_color : 2;
         /** @brief FIELD_CONTROL_PETRIFIED. */
         u32 petrified : 1;
         /** @brief CLUT column of the actor's sprite palette. */
         u32 palette : 4;
-        u32 unk23 : 9;
+        /** @brief FIELD_CONTROL_SEMITRANSPARENT. */
+        u32 semitransparent : 1;
+        /** @brief Never read on actors. */
+        u32 unused_24 : 4;
+        /** @brief FIELD_CONTROL_LITERAL_COLOR. */
+        u32 literal_color : 1;
+        /** @brief Never read on actors. */
+        u32 unused_29 : 3;
     } bits;
 } FieldActorControl;
 
@@ -175,8 +191,10 @@ typedef struct FieldActor
     u32 texture_slot;
     /** @brief Non-zero while an actor script blocks scene scripts that wait for this actor (scene opcode 0x16). */
     s16 script_busy;
-    s16 unk12;
-    s16 unk14;
+    /** @brief Effect role: heading. Cleared at init and never set for actors. */
+    s16 unused_12;
+    /** @brief Effect role: pitch. Cleared at init and never set for actors. */
+    s16 unused_14;
     /** @brief Ticks left on the current animation frame; speed_accumulator is spread over them. */
     s16 frame_timer;
     /** @brief Actor tint, refreshed from the object part every frame. */
@@ -200,7 +218,8 @@ typedef struct FieldActor
     u8 lift_timer;
     u8 animation_frame;
     u8 script_index;
-    u8 unk29;
+    /** @brief Effect role: track_index. Always 0 for actors; effects copying an actor's animation copy that 0. */
+    u8 unused_29;
     s16 command;
     u16 script_offset;
     /** @brief Non-zero while the current animation is still playing. */
@@ -229,15 +248,18 @@ typedef struct FieldActor
     u8 sprite_height_minus_one;
     /** @brief Frames left before a retiring actor is removed. */
     u8 removal_delay;
-    u8 unk3E;
-    u8 unk3F;
+    /** @brief Effect role: next_effect_index. Zeroed at init and never used for actors. */
+    u8 unused_3e;
+    /** @brief Bit 0 (FIELD_FRAME_UNCHANGED): the displayed frame did not change this tick, so frame events do not fire. */
+    u8 frame_status;
     /** @brief Address of the displayed frame's data; bit 31 set selects the alternate (8-bit) renderer. */
     uintptr_t frame_data;
     /** @brief Working position of an effect record (FieldMotionRecord::work_x..work_z); cleared on actor records. */
     u32 work_x;
     u32 work_y;
     u32 work_z;
-    u8 unk50[4];
+    /** @brief Zeroed with the record; no code reads it in either role. */
+    u8 unused_50[4];
 } FieldActor;
 
 /** @brief Actor command word that performs action slot @p action. */

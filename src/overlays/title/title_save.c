@@ -823,14 +823,14 @@ void load_saved_game_template(s32 field_start)
     {
         src = (s32*)&g_new_game_template;
         g_field_entry_scene.id = 0xD;
-        g_music_track_index = 0;
+        g_current_land = 0;
         g_field_music_id = 0;
     }
     else
     {
         src = (s32*)&g_field_start_template;
         g_field_entry_scene.id = 0;
-        g_music_track_index = 0;
+        g_current_land = 0;
         g_field_music_id = 0;
     }
 

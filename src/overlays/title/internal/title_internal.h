@@ -24,7 +24,8 @@
 struct TitleMenuContext
 {
     ScreenFrame screen;
-    char unknown_0x80BC[0x3C10];
+    /** @brief Same gap as CheckPSFrame::reserved_tail; TITLE never reads or writes it. */
+    char unused_80bc[0x3C10];
 
     char second_buffer_header[0x40];
     u_long otag_buffer2[FRAME_ORDERING_TABLE_LENGTH];

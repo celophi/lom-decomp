@@ -81,9 +81,11 @@ typedef struct FieldScriptState
         struct
         {
             u32 owner_id : 8;
-            u32 unk8 : 1;
+            /** @brief Never set or read. */
+            u32 unused_8 : 1;
             u32 local_base : 7;
-            u32 unk16 : 15;
+            /** @brief Never set or read. */
+            u32 unused_16 : 15;
             u32 running : 1;
         } bits;
     } status;
@@ -94,8 +96,10 @@ typedef struct FieldScriptState
 /** @brief One script record: the program counter lives at offset 8. */
 typedef struct
 {
-    s32 unk0;
-    s32 unk4;
+    /** @brief frames[n - 1].flags of the state (the status word for record 0); not accessed through this view. */
+    s32 previous_flags;
+    /** @brief frames[n - 1].wait of the state (the depth for record 0); not accessed through this view. */
+    s32 previous_wait;
     u8* pc;
 } FieldScriptRecord;
 
@@ -105,8 +109,10 @@ typedef struct
  */
 typedef struct
 {
-    s32 unk0;
-    s32 unk4;
+    /** @brief frames[n - 1].flags of the state (the status word for record 0); not accessed through this view. */
+    s32 previous_flags;
+    /** @brief frames[n - 1].wait of the state (the depth for record 0); not accessed through this view. */
+    s32 previous_wait;
     u8* pc;
     u32 flags;
     union

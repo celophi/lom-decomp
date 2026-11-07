@@ -25,7 +25,7 @@ typedef struct
 /** @brief Item template table (resource FIELD_RESOURCE_ITEM_TEMPLATES). */
 typedef struct
 {
-    u16 unk0;
+    u16 resource_id;
     u16 count;
     FieldItemRecord templates[1];
 } FieldItemTemplateTable;

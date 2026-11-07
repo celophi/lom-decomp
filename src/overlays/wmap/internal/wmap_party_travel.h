@@ -59,8 +59,8 @@ extern s32 g_wmap_second_traveler_enabled;
 /** @brief Nonzero to load the third traveler at land 3. */
 extern s32 g_wmap_third_traveler_enabled;
 
-/** @brief Saved entry day; nonzero selects the alternate first-traveler sprite. */
-extern s32 g_wmap_entry_day;
+/** @brief Hero character type from wmap_get_starting_cell; nonzero loads the alternate traveler sprites. */
+extern s32 g_wmap_hero_type;
 
 /** @brief Nonzero to play flap sounds on vehicle wing animation frames. */
 extern s32 g_wmap_vehicle_flap_sound_enabled;

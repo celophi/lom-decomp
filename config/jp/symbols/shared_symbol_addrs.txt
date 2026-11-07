@@ -993,7 +993,7 @@ PadInitDirect                       = 0x80030F68;
 McxStartCom                         = 0x80031B48;
 
 // Globals
-g_music_track_table                = 0x80035310;
+g_land_songs                = 0x80035310;
 g_game_state                         = 0x8003539C;
 g_disc_validation_id                = 0x800353A0;
 GPU_printf                         = 0x80036468;
@@ -1052,7 +1052,7 @@ g_field_object_id                  = 0x8004313C;
 g_saved_game                        = 0x80043140; // size:0x4000 allow_addend:True
 g_field_secondary_music_id                   = 0x80047140;
 g_last_error_status                 = 0x80047144;
-g_music_track_index                 = 0x80047146;
+g_current_land                 = 0x80047146;
 g_music_sequence                    = 0x80047148;
 g_script_unused_value                          = 0x80047548;
 g_text_clut_base                    = 0x80047568;

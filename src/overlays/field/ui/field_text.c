@@ -32,8 +32,8 @@
 #define FIELD_TEXT_STYLE_MASK (FIELD_TEXT_STYLE_BOLD | FIELD_TEXT_STYLE_PLAIN)
 /** @brief Style bits (FIELD_TEXT_STYLE_*) of a flags word; zero draws the framed window. */
 #define FIELD_TEXT_STYLE(flags) ((flags) & FIELD_TEXT_STYLE_MASK)
-/** FIELD_TEXT_CONFIG_MODE_MASK bits of the config, copied by field_text_apply_config. */
-#define FIELD_TEXT_CONFIG_BITS (FIELD_TEXT_CONFIG_MODE_MASK >> 4)
+/** FIELD_TEXT_CONFIG_UNUSED_MASK bits of the config, copied by field_text_apply_config. */
+#define FIELD_TEXT_CONFIG_BITS (FIELD_TEXT_CONFIG_UNUSED_MASK >> 4)
 #define FIELD_TEXT_INSTANT 0x800
 #define FIELD_TEXT_AUTO_CLOSE_SHIFT 12
 #define FIELD_TEXT_AUTO_CLOSE (1 << FIELD_TEXT_AUTO_CLOSE_SHIFT)
@@ -2148,7 +2148,7 @@ static void field_text_apply_config(FieldTextState* state)
     state->x = config->x;
     state->y = config->y;
     state->transition_anchor_x = config->anchor.pos.x;
-    state->unknown_0x90 = 0;
+    state->unused_90 = 0;
     state->transition_anchor_y = config->anchor.pos.y;
     state->flags.b.config_low = (u8)config->flags.word;
     flags = (state->flags.word & ~FIELD_TEXT_STYLE_MASK) | ((config->flags.word >> 2) & FIELD_TEXT_STYLE_MASK);
@@ -2199,7 +2199,7 @@ static void field_text_apply_config(FieldTextState* state)
     state->glyph_cursor = NULL;
     state->last_was_break = 1;
 #endif
-    if ((config->anchor.word == 0) && ((config->flags.word & (FIELD_TEXT_CONFIG_MODE_MASK | FIELD_TEXT_CONFIG_LOW_MASK)) == 0))
+    if ((config->anchor.word == 0) && ((config->flags.word & (FIELD_TEXT_CONFIG_UNUSED_MASK | FIELD_TEXT_CONFIG_LOW_MASK)) == 0))
     {
         state->flags.b.anchored = 0;
     }

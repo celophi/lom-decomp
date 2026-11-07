@@ -67,7 +67,7 @@ void field_battle_start(s32 group)
     }
 
     context = g_field_runtime;
-    context->state.bits.group_active = 1;
+    context->state.bits.battle_active = 1;
     context->state.bits.trigger_group = group;
     field_set_battle_group(group, context);
 
@@ -129,7 +129,7 @@ void field_battle_end(void)
     s32 j;
 
     g_field_battle = NULL;
-    g_field_runtime->state.bits.group_active = 0;
+    g_field_runtime->state.bits.battle_active = 0;
     g_field_runtime->state.bits.trigger_group = 0;
 
     for (i = 0; i < FIELD_PARTY_SIZE; i++)
