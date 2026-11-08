@@ -43,10 +43,10 @@ TEXTURE_COUNT = 11  # upload_save_layout_textures uploads 11 entries
 TEXTURE_SYMBOL = "g_save_layout_tim_{:02d}"
 WEAPON_SLOT_COUNT = 11  # handle_save_slot_input wraps the cursor at 11
 UV_UNIT_PIXELS = 8  # SlotUvRect fields are in 8-pixel units
-LAYOUT_ENTRY_COUNT = 27  # SAVE_LAYOUT_ENTRIES
+LAYOUT_ENTRY_COUNT = 27  # SAVE_LAYOUT_ENTRY_COUNT
 NEW_GAME_SIZE = 0x50BC
-COPIED_WORDS = 0xC9A  # SAVED_GAME_TEMPLATE_WORDS
-HERO_WORDS = 0x94  # HERO_TEMPLATE_WORDS
+COPIED_WORDS = 0xC9A  # SAVED_GAME_TEMPLATE_WORDS (SAVED_GAME_DATA_SIZE / 4)
+HERO_WORDS = 0x94  # HERO_TEMPLATE_WORDS (SAVED_CHARACTER_SIZE / 4)
 
 # upload_tim(table + offset, x, y, clut_x, clut_y) in init_title_menu_state.
 MENU_UPLOADS = {

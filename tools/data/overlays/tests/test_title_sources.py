@@ -10,7 +10,8 @@ from tools.data.overlays import cload, saved_game, splat_config, title
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 TITLE_SOURCE = REPO_ROOT / "src/overlays/title/title.c"
-MENU_STATE_SIZE = 0x8C  # g_title_menu_exit_state through g_slot_highlight_frames
+TITLE_INTERNAL = REPO_ROOT / "src/overlays/title/internal/title_internal.h"
+MENU_STATE_SIZE = 0x8C  # g_title_menu_exit_state through g_weapon_list_scroll_frames
 
 
 def define(path: Path, name: str) -> int:
@@ -19,6 +20,22 @@ def define(path: Path, name: str) -> int:
     if match is None:
         raise AssertionError(f"{path} has no integer #define {name}")
     return int(match.group(1), 0)
+
+
+def enum_value(path: Path, name: str) -> int:
+    """An enumerator with an explicit integer value."""
+    match = re.search(rf"^\s*{name}\s*=\s*(0x[0-9A-Fa-f]+|\d+)\s*,?", path.read_text(encoding="ascii"), re.MULTILINE)
+    if match is None:
+        raise AssertionError(f"{path} has no enumerator {name} with a value")
+    return int(match.group(1), 0)
+
+
+def define_text(path: Path, name: str) -> str:
+    """The replacement text of a #define."""
+    match = re.search(rf"^#define {name}\s+(.+?)\s*$", path.read_text(encoding="ascii"), re.MULTILINE)
+    if match is None:
+        raise AssertionError(f"{path} has no #define {name}")
+    return match.group(1)
 
 
 class SourceTest(unittest.TestCase):
@@ -59,9 +76,9 @@ class SourceTest(unittest.TestCase):
 
     def test_counts_follow_the_c_sources(self):
         header = saved_game.HEADER
-        self.assertEqual(title.LAYOUT_ENTRY_COUNT, define(title.SAVE_SOURCE, "SAVE_LAYOUT_ENTRIES"))
-        self.assertEqual(title.COPIED_WORDS, define(title.SAVE_SOURCE, "SAVED_GAME_TEMPLATE_WORDS"))
-        self.assertEqual(title.HERO_WORDS, define(title.SAVE_SOURCE, "HERO_TEMPLATE_WORDS"))
+        self.assertEqual(title.LAYOUT_ENTRY_COUNT, enum_value(TITLE_INTERNAL, "SAVE_LAYOUT_ENTRY_COUNT"))
+        self.assertEqual(define_text(title.SAVE_SOURCE, "SAVED_GAME_TEMPLATE_WORDS"), "(SAVED_GAME_DATA_SIZE / sizeof(s32))")
+        self.assertEqual(define_text(title.SAVE_SOURCE, "HERO_TEMPLATE_WORDS"), "(SAVED_CHARACTER_SIZE / sizeof(s32))")
         self.assertEqual(title.HERO_WORDS * 4, define(header, "SAVED_CHARACTER_SIZE"))
         self.assertEqual(title.COPIED_WORDS * 4, define(header, "SAVED_GAME_DATA_SIZE"))
         self.assertEqual(saved_game.CHARACTER_SIZE, define(header, "SAVED_CHARACTER_SIZE"))
@@ -87,7 +104,8 @@ class SourceTest(unittest.TestCase):
     def test_loop_bounds_and_uploads_follow_the_code(self):
         save = title.SAVE_SOURCE.read_text(encoding="ascii")
         self.assertEqual(title.TEXTURE_COUNT, define(title.SAVE_SOURCE, "SAVE_LAYOUT_TEX_COUNT"))
-        self.assertIn(f"next_index >= 0x{title.WEAPON_SLOT_COUNT:X}", save)
+        self.assertIn("++g_slot_selected_index >= FIELD_WEAPON_CATEGORY_COUNT", save)
+        self.assertEqual(title.WEAPON_SLOT_COUNT, define(saved_game.HEADER, "FIELD_WEAPON_CATEGORY_COUNT"))
         self.assertIn(f"uv->u * {title.UV_UNIT_PIXELS}", save)
         menu = TITLE_SOURCE.read_text(encoding="ascii")
         self.assertIn(f"g_cursor_blink_u_offsets[(g_title_anim_frame >> 2) & {title.CURSOR_FRAME_COUNT - 1}]", menu)

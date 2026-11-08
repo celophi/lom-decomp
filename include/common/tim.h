@@ -22,6 +22,12 @@
 /** @brief Advance to the next TIM block by skipping @p block->bnum bytes. */
 #define TIM_NEXT_BLOCK(block) ((TimBlock*)((u8*)(block) + (block)->bnum))
 
+/** @brief The TIM block after @p block, given its already-loaded length @p bnum. */
+#define TIM_SKIP_BLOCK(block, bnum) ((TimBlock*)((u8*)(block) + (bnum)))
+
+/** @brief Payload of a TIM block (palette entries or pixels), as the LoadImage source. */
+#define TIM_BLOCK_DATA(block) ((u_long*)((block) + 1))
+
 /** @brief The first block of a TIM file, right after its header. */
 #define TIM_FIRST_BLOCK(tim) ((TimBlock*)((u8*)(tim) + TIM_HEADER_SIZE))
 
@@ -30,6 +36,9 @@
 
 /** @brief Nonzero when a TIM file has a CLUT block; tests the low byte of its flag word. */
 #define TIM_HAS_CLUT(tim) (*(u8*)&(tim)->flags & TIM_FLAG_HAS_CLUT)
+
+/** @brief Pixel mode of a TIM file; reads the low byte of its flag word. */
+#define TIM_PIXEL_MODE(tim) (*(u8*)&(tim)->flags & TIM_FLAG_PIXEL_MODE_MASK)
 
 /** @brief Locate the pixel block given the TIM base and a pre-loaded CLUT bnum. */
 #define TIM_PIXEL_BLOCK(tim, bnum) ((TimBlock*)((u8*)(tim) + ((bnum) + TIM_HEADER_SIZE)))
