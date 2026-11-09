@@ -244,118 +244,84 @@ u8* shop_draw_money_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
 u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
 {
     Vec2s position;
-    Vec2s* position_ptr;
+    TILE* tile;
+    s32 price;
     s32 i;
     s32 y;
-    ShopEntry* entry;
     u16 id;
-    s32 price;
-    s32 row_y;
     s32 row_top;
-    s32 x;
-    u8* empty_text;
-    TILE* tile;
+    s32 cursor_y;
+    s32 cursor_top;
+    FieldUiTextOffset* empty_text;
+    u8* packet;
 
     i = 0;
-    x = x_inset;
+    packet = prim;
 
-    if (g_shop_entry_count > 0)
+    if (i < g_shop_entry_count)
     {
-        s32 name_x;
-        uintptr_t text_base;
-
-        empty_text = &g_field_ui_text_dashes.low;
+        empty_text = (FieldUiTextOffset*)g_field_ui_text_table + FIELD_UI_TEXT_DASHES;
 
         do
         {
-            ShopEntry** entries = &g_shop_entries;
-
-            name_x = 80 - x;
-            text_base = (uintptr_t)&g_shop_text_archive;
-            position_ptr = &position;
-            ot++;
-            ot--;
-            row_y = i * SHOP_ROW_HEIGHT;
             row_top = y_inset - FIELD_TEXT_ROW_INSET;
-            row_top += i;
-            row_top -= i;
-            row_y -= row_top;
-            y = row_y - g_shop_scroll_y;
+            y = i * SHOP_ROW_HEIGHT - row_top - g_shop_scroll_y;
 
-            if ((u32)(y + 15) < 131)
+            if (y > -SHOP_ROW_HEIGHT && y < SHOP_LIST_VIEW_HEIGHT)
             {
-                do
-                {
-                    entry = (ShopEntry*)(i * sizeof(ShopEntry) + (uintptr_t)*entries);
-                } while (0);
-                id = entry->id;
+                id = g_shop_entries[i].id;
 
                 if (id == SHOP_ENTRY_EMPTY)
                 {
-                    s32 low;
-                    s32 high;
-                    uintptr_t base_addr;
-                    uintptr_t based;
-
-                    low = g_field_ui_text_dashes.low;
-                    high = empty_text[1];
-                    base_addr = (uintptr_t)g_field_ui_text_table;
-                    based = (high << 8) + base_addr;
-                    prim = field_draw_text((SPRT*)prim, ot, (u8*)(low + based), FIELD_TEXT_COLOR_NORMAL, name_x, y, FIELD_TEXT_ALIGN_CENTER);
+                    packet = field_draw_text((SPRT*)packet, ot, g_field_ui_text_table + g_field_ui_text_dashes.low + (empty_text->high << 8),
+                                             FIELD_TEXT_COLOR_NORMAL, 80 - x_inset, y, FIELD_TEXT_ALIGN_CENTER);
                 }
                 else
                 {
                     if (id & SHOP_ENTRY_RECORD_FLAG)
                     {
-                        prim = field_draw_text((SPRT*)prim, ot, (u8*)&g_shop_item_records[id & SHOP_ENTRY_RECORD_INDEX_MASK], FIELD_TEXT_COLOR_NORMAL, name_x,
-                                               y, FIELD_TEXT_ALIGN_CENTER);
+                        packet = field_draw_text((SPRT*)packet, ot, (u8*)&g_shop_item_records[id & SHOP_ENTRY_RECORD_INDEX_MASK], FIELD_TEXT_COLOR_NORMAL,
+                                                 80 - x_inset, y, FIELD_TEXT_ALIGN_CENTER);
                     }
                     else
                     {
-                        do
-                        {
-                            /* Header word 2 is section_offsets[SHOP_TEXT_ITEM_NAMES]. */
-                            s32 section = ((u32*)&g_shop_text_archive)[2];
-                            s32 name_index = entry->id;
+                        /* Header word 2 is section_offsets[SHOP_TEXT_ITEM_NAMES]. */
+                        s32 section = ((u32*)&g_shop_text_archive)[2];
 
-                            name_index *= sizeof(u16);
-                            prim = field_draw_text((SPRT*)prim, ot, SHOP_ARCHIVE_TEXT(text_base, section, name_index), FIELD_TEXT_COLOR_NORMAL, name_x, y,
-                                                   FIELD_TEXT_ALIGN_CENTER);
-                        } while (0);
+                        packet = field_draw_text((SPRT*)packet, ot, TEXT_TABLE_STRING((u8*)&g_shop_text_archive + section, g_shop_entries[i].id),
+                                                 FIELD_TEXT_COLOR_NORMAL, 80 - x_inset, y, FIELD_TEXT_ALIGN_CENTER);
                     }
 
-                    position.x = 208 - x;
+                    position.x = 208 - x_inset;
                     position.y = y;
 
                     if (i == g_shop_cursor)
                     {
-                        price = SHOP_SELECTED_ENTRY()->price * g_shop_quantity;
+                        price = g_shop_entries[i].price * g_shop_quantity;
 
                         if (g_saved_game_ctx->money >= (u32)price || g_shop_is_buying == 0)
                         {
-                            prim = field_draw_number(ot, (SPRT*)prim, price, FIELD_TEXT_COLOR_NORMAL, position_ptr, FIELD_TEXT_ALIGN_LEFT);
+                            packet = field_draw_number(ot, (SPRT*)packet, price, FIELD_TEXT_COLOR_NORMAL, &position, FIELD_TEXT_ALIGN_LEFT);
                         }
                         else
                         {
-                            prim = field_draw_number(ot, (SPRT*)prim, price, FIELD_TEXT_COLOR_DIM, position_ptr, FIELD_TEXT_ALIGN_LEFT);
+                            packet = field_draw_number(ot, (SPRT*)packet, price, FIELD_TEXT_COLOR_DIM, &position, FIELD_TEXT_ALIGN_LEFT);
                         }
 
-                        prim = field_draw_text((SPRT*)prim, ot, g_field_ui_text_table + g_field_ui_text_times.low + (g_field_ui_text_times.high << 8),
-                                               FIELD_TEXT_COLOR_NORMAL, 172 - x, y, FIELD_TEXT_ALIGN_LEFT);
-                        position.x = 184 - x;
-                        prim = field_draw_number(ot, (SPRT*)prim, g_shop_quantity, FIELD_TEXT_COLOR_NORMAL, position_ptr, FIELD_TEXT_ALIGN_LEFT);
+                        packet = field_draw_text((SPRT*)packet, ot, g_field_ui_text_table + g_field_ui_text_times.low + (g_field_ui_text_times.high << 8),
+                                                 FIELD_TEXT_COLOR_NORMAL, 172 - x_inset, y, FIELD_TEXT_ALIGN_LEFT);
+                        position.x = 184 - x_inset;
+                        packet = field_draw_number(ot, (SPRT*)packet, g_shop_quantity, FIELD_TEXT_COLOR_NORMAL, &position, FIELD_TEXT_ALIGN_LEFT);
                     }
                     else
                     {
-                        ShopEntry* price_entry = (ShopEntry*)(i * sizeof(ShopEntry) + (uintptr_t)g_shop_entries);
-
-                        if ((u32)price_entry->price <= g_saved_game_ctx->money || g_shop_is_buying == 0)
+                        if ((u32)g_shop_entries[i].price <= g_saved_game_ctx->money || g_shop_is_buying == 0)
                         {
-                            prim = field_draw_number(ot, (SPRT*)prim, price_entry->price, FIELD_TEXT_COLOR_NORMAL, position_ptr, FIELD_TEXT_ALIGN_LEFT);
+                            packet = field_draw_number(ot, (SPRT*)packet, g_shop_entries[i].price, FIELD_TEXT_COLOR_NORMAL, &position, FIELD_TEXT_ALIGN_LEFT);
                         }
                         else
                         {
-                            prim = field_draw_number(ot, (SPRT*)prim, price_entry->price, FIELD_TEXT_COLOR_DIM, position_ptr, FIELD_TEXT_ALIGN_LEFT);
+                            packet = field_draw_number(ot, (SPRT*)packet, g_shop_entries[i].price, FIELD_TEXT_COLOR_DIM, &position, FIELD_TEXT_ALIGN_LEFT);
                         }
                     }
                 }
@@ -363,23 +329,18 @@ u8* shop_draw_list_window(u_long* ot, u8* prim, s32 x_inset, s32 y_inset)
         } while (++i < g_shop_entry_count);
     }
 
-    {
-        s32 cursor = g_shop_cursor;
-        s32 scroll = g_shop_scroll_y;
-        s32 cursor_y = cursor * SHOP_ROW_HEIGHT;
-        s32 cursor_top = y_inset - FIELD_TEXT_ROW_INSET;
+    cursor_y = g_shop_cursor * SHOP_ROW_HEIGHT;
+    cursor_top = y_inset - FIELD_TEXT_ROW_INSET;
+    y = (cursor_y - cursor_top) - g_shop_scroll_y;
 
-        y = (cursor_y - cursor_top) - scroll;
-    }
-
-    tile = (TILE*)prim;
+    tile = (TILE*)packet;
     SET_BGR0_PACKED(tile, GPU_COLOR_SELECTED_ROW);
     setlen(tile, 3);
     setcode(tile, GPU_CODE_TILE | GPU_CODE_SEMI_TRANS);
     setXY0(tile, 0, y - 1);
     setWH(tile, 294, 14);
     addPrim(ot, tile);
-    return prim + sizeof(TILE);
+    return packet + sizeof(TILE);
 }
 
 /**
