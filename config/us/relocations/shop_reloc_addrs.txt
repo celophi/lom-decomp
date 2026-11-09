@@ -1,0 +1,5 @@
+// shop_draw_list_window points at the dashes entry of the FIELD UI text table as
+// g_field_ui_text_table + FIELD_UI_TEXT_DASHES; keep the symbol/addend pair GCC 2.7.2
+// emits for that address instead of the g_field_ui_text_dashes alias.
+rom:0x16B5 reloc:MIPS_HI16 symbol:g_field_ui_text_table addend:0x1C
+rom:0x16B9 reloc:MIPS_LO16 symbol:g_field_ui_text_table addend:0x1C
