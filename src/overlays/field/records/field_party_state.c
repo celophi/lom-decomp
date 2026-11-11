@@ -671,7 +671,7 @@ static void field_battle_reset_context(void)
 
     resource = field_find_resource(FIELD_RESOURCE_BATTLE);
     g_field_battle->templates = (FieldActorTemplateTable*)((u8*)resource + resource->templates_offset);
-    g_field_battle->resources = (u8*)resource + resource->rewards_offset;
+    g_field_battle->rewards = (FieldRewardTable*)((u8*)resource + resource->rewards_offset);
     field_set_script_var(0, FIELD_VAR_WATCHED_RECORD, -1);
 }
 

@@ -616,6 +616,21 @@ typedef union FieldPartyScriptPage
 
 extern FieldPartyScriptPage g_field_party_script_pages[];
 
+/** @brief Item a battle hands over for one pickup key (0x44 bytes). */
+typedef struct FieldRewardEntry
+{
+    s32 key;
+    FieldItemRecord item;
+} FieldRewardEntry;
+
+/** @brief Reward table of a battle resource: a count, then the entries. */
+typedef struct FieldRewardTable
+{
+    u16 marker;
+    u16 count;
+    FieldRewardEntry entries[1];
+} FieldRewardTable;
+
 /**
  * @brief Field battle context (g_field_battle_context, reached through g_field_battle).
  * @note field_battle_reset_context clears 0x4A4 bytes and rebuilds the header.
@@ -629,7 +644,7 @@ typedef struct FieldBattleContext
         u8 level;
     } state;
     FieldActorTemplateTable* templates;
-    u8* resources;
+    FieldRewardTable* rewards;
     u8 element_levels[8];
     /** @brief Flags of the action being resolved; cleared by field_battle_bind_action. */
     union
