@@ -3028,7 +3028,7 @@ s32 field_get_next_animation_frame_count(FieldActor* actor)
     resource_base = g_field_resource_entries[actor->resource_index].start;
     entry = resource_base + 4;
 
-    /* This seems to be an unused variable */
+    /* This is never used, but the animation start/advance functions decode it the same way and apply it. */
     default_motion = entry[1] >> 1;
 
     if (default_motion & FIELD_ANIMATION_MODE_OFFSET)
