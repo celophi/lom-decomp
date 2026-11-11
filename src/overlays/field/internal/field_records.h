@@ -619,7 +619,6 @@ extern FieldPartyScriptPage g_field_party_script_pages[];
 /** @brief Item a battle hands over for one pickup key (0x44 bytes). */
 typedef struct FieldRewardEntry
 {
-    /** @brief Matched against FieldActorRecord::pickup. */
     s32 key;
     FieldItemRecord item;
 } FieldRewardEntry;
@@ -627,7 +626,6 @@ typedef struct FieldRewardEntry
 /** @brief Reward table of a battle resource: a count, then the entries. */
 typedef struct FieldRewardTable
 {
-    /** @brief 0xAAAA in every battle resource on the disc; no code reads it. */
     u16 marker;
     u16 count;
     FieldRewardEntry entries[1];
