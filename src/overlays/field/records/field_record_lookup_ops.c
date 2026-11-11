@@ -25,144 +25,50 @@
 #define DIAG_MISSING_RESOURCE 0x6B
 
 /**
- * @brief Battle reward entry, 0x44 bytes from the table base.
- * @note Entry 0's marker and count are the table header; each entry's item
- *       starts at offset 8 and runs into the next entry.
- */
-typedef struct
-{
-    /** @brief Entry 0: 0xAAAA in every battle resource on the disc; no code reads it. */
-    u16 marker;
-    u16 count;
-    s32 key;
-    u8 item[0x3C];
-} FieldRewardEntry;
-/**
- * @brief Hand an actor's pickup to the party: an item from the reward table or a counter.
+ * @brief Hand an actor's pickup to the party: an item from the battle's reward table or a counter.
  * @param recipient Unused (the reward recipient the caller passes through).
  * @param owner_id Actor whose pickup code is resolved.
  * @note JP takes the entry the search stopped at without checking for a miss, so an
  *       unknown key hands over the item past the last entry.
  */
-#if defined(VERSION_JP)
 void field_grant_actor_pickup(s32 recipient, s32 owner_id)
 {
     FieldActorRecord* actor;
-    u16 code;
     s32 index;
-    FieldRewardEntry* table;
-    FieldBattleContext* battle;
     FieldItemRecord* found;
     FieldItemRecord* handle;
 
     actor = field_find_actor_record_or_default(owner_id);
-    code = actor->pickup;
-    index = code & FIELD_PICKUP_INDEX_MASK;
 
-    if (!(code & FIELD_PICKUP_COUNTER))
+    if (!(actor->pickup & FIELD_PICKUP_COUNTER))
     {
-        table = (FieldRewardEntry*)g_field_battle->resources;
-
-        for (index = 0; index < ((FieldRewardEntry*)g_field_battle->resources)->count; index++, table++)
+#if defined(VERSION_JP)
+        for (index = 0; index < g_field_battle->rewards->count; index++)
         {
-            if (table->key == code)
+            if (g_field_battle->rewards->entries[index].key == actor->pickup)
             {
                 break;
             }
         }
 
-        battle = g_field_battle;
-        found = (FieldItemRecord*)((FieldRewardEntry*)(index * sizeof(FieldRewardEntry) + (uintptr_t)battle->resources))->item;
-        handle = field_find_free_inventory_record();
-
-        if (handle == NULL)
-        {
-            return;
-        }
-
-        field_copy_inventory_record(handle, found);
-        field_append_dialog_item(handle->name, 0);
-        return;
-    }
-
-    ((void (*)(s32, FieldActorRecord*))field_receive_item)(index, actor);
-    field_append_dialog_item(g_field_item_name_table.bytes + g_field_item_name_table.offsets[index], 1);
-}
+        found = &g_field_battle->rewards->entries[index].item;
 #else
-void field_grant_actor_pickup(s32 recipient, s32 owner_id)
-{
-    FieldActorRecord* actor;
-    u16 code;
-    s32 index;
-    s32 count;
-    FieldRewardEntry* table;
-    FieldRewardEntry* cursor;
-    s32 offset;
-    s32 old_offset;
-    FieldItemRecord* found;
-    FieldItemRecord* handle;
+        found = NULL;
 
-    actor = field_find_actor_record_or_default(owner_id);
-    code = actor->pickup;
-    index = code & FIELD_PICKUP_INDEX_MASK;
-
-    if (!(code & FIELD_PICKUP_COUNTER))
-    {
-        s32 key;
-
-        table = (FieldRewardEntry*)g_field_battle->resources;
-
-        do
+        for (index = 0; index < g_field_battle->rewards->count; index++)
         {
-            found = NULL;
-        } while (0);
-        count = table->count;
-
-        do
-        {
-            index = 0;
-
-            if (count != 0)
+            if (g_field_battle->rewards->entries[index].key == actor->pickup)
             {
-                s32 n;
-                FieldRewardEntry* base;
-
-                key = code & 0xFFFF;
-                base = table;
-                n = count;
-                cursor = base;
-                offset = 0;
-
-                do
-                {
-                    do
-                    {
-                        do
-                        {
-                            old_offset = offset;
-                        } while (0);
-                    } while (0);
-
-                    if (cursor->key == key)
-                    {
-                        found = (FieldItemRecord*)(old_offset + (uintptr_t)base + 8);
-                        break;
-                    }
-
-                    do
-                    {
-                        cursor++;
-                    } while (0);
-                    offset = old_offset + sizeof(FieldRewardEntry);
-                    index++;
-                } while (index < n);
+                found = &g_field_battle->rewards->entries[index].item;
+                break;
             }
-        } while (0);
+        }
 
         if (found == NULL)
         {
             return;
         }
+#endif
 
         handle = field_find_free_inventory_record();
 
@@ -173,13 +79,14 @@ void field_grant_actor_pickup(s32 recipient, s32 owner_id)
 
         field_copy_inventory_record(handle, found);
         field_append_dialog_item(handle->name, 0);
-        return;
     }
-
-    ((void (*)(s32, FieldActorRecord*))field_receive_item)(index, actor);
-    field_append_dialog_item(g_field_item_name_table.bytes + g_field_item_name_table.offsets[index], 1);
+    else
+    {
+        index = actor->pickup & FIELD_PICKUP_INDEX_MASK;
+        field_receive_item(index);
+        field_append_dialog_item(g_field_item_name_table.bytes + g_field_item_name_table.offsets[index], 1);
+    }
 }
-#endif
 
 /**
  * @brief Restore a fraction of an actor's maximum capacity, capped at that maximum.
