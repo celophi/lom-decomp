@@ -56,6 +56,8 @@
 /** @brief Confirm skips to the fade-out while the timer is below this. */
 #define FIELD_TIMED_PANEL_SKIP_END 103
 #define FIELD_TIMED_PANEL_FADE_LIMIT 0x7C
+/** @brief Spin effect: angle per step of expansion (4096 is a full turn). */
+#define FIELD_TIMED_PANEL_SPIN_STEP 50
 /** @brief Mode byte: bit 7 selects a quad effect group (low bits), else the plain image. */
 #define FIELD_TIMED_PANEL_EFFECT 0x80
 #define FIELD_TIMED_PANEL_EFFECT_MASK 0x7F
@@ -82,6 +84,7 @@ typedef struct
 #define FIELD_TRANSITION_QUAD_UNUSED 0xFFFF
 /** @brief FieldTransitionQuad::flags: bits 0-1 texture mode, 4-7 palette column, 9-10 blend, 11-14 effect. */
 #define FIELD_TRANSITION_QUAD_HALF_WIDTH 0xF
+#define FIELD_TRANSITION_QUAD_PALETTE_MASK 0xF0
 #define FIELD_TRANSITION_QUAD_SEMI_TRANSPARENT 0x100
 #define FIELD_TRANSITION_QUAD_EFFECT(flags) (((flags) >> 11) & 0xF)
 
@@ -373,41 +376,14 @@ void field_update_timed_panel(FieldRenderHalf* render)
 static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_table, s32 index)
 {
     s32 quad_index;
-    u32 half_width;
-    s32 bottom_2;
-    s32 x_sine;
-    s32 y_cosine;
-    s32 x_sine_2;
-    s32 y_cosine_2;
-    s32 rotated_y;
-    s32 term;
-    s32 x_cosine, y_sine, x_cosine_2, y_sine_2;
-    s32 rotated_x;
-    u8 brightness;
     s32 expansion;
-    s32 angle;
-    s32 negative_width;
-    s32 offset_1;
-    s32 scaled;
-    u16 bottom_1;
-    s32 scaled_x_2;
-    s32 right_1;
-    s32 height_term;
-    s32 height_term_y;
-    s32 height_term_2;
-    s32 height_term_y_2;
-    s32 adjusted;
-    s32 width_term;
-    s32 palette_mask;
-    s32 width_term_y;
-    s32 scaled_y;
-    s32 width_term_2;
-    s32 width_term_y_2;
-    s32 scaled_y_2;
     FieldTransitionQuad* quad;
-    s32 raw_width;
-    u32 half;
-    u32 width;
+    u16 raw_width;
+    s32 width;
+    s32 rotated_x;
+    s32 rotated_y;
+    u8 brightness;
+    s32 palette_mask;
 
     quad = g_field_timed_panel_quads[index];
 
@@ -419,11 +395,11 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_t
 
             if (quad->flags & FIELD_TRANSITION_QUAD_HALF_WIDTH)
             {
-                raw_width = (u16)(raw_width >> 1);
+                raw_width >>= 1;
             }
 
+            width = raw_width;
             setPolyFT4(prim);
-            width = raw_width & 0xFFFF;
             prim->r0 = prim->g0 = prim->b0 = g_field_timed_panel_brightness;
 
             if ((g_field_timed_panel_brightness != GPU_TINT_NEUTRAL_LEVEL) || (quad->flags & FIELD_TRANSITION_QUAD_SEMI_TRANSPARENT))
@@ -436,169 +412,47 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_t
             switch (FIELD_TRANSITION_QUAD_EFFECT(quad->flags))
             {
                 case 0:
-                    term = width * expansion;
-                    scaled = term / GPU_TINT_NEUTRAL_LEVEL;
-                    prim->x0 = prim->x2 = quad->x - scaled;
-                    prim->x1 = prim->x3 = quad->x + width + scaled - 1;
+                    prim->x0 = prim->x2 = quad->x - width * expansion / GPU_TINT_NEUTRAL_LEVEL;
+                    prim->x1 = prim->x3 = quad->x + width + width * expansion / GPU_TINT_NEUTRAL_LEVEL - 1;
                     prim->y0 = prim->y1 = quad->y - quad->height * expansion / GPU_TINT_NEUTRAL_LEVEL;
-                    bottom_1 = quad->y + quad->height;
-                    scaled = quad->height * expansion;
-
-                    if (scaled < 0)
-                    {
-                        scaled += 0x7F;
-                    }
-
-                    prim->y2 = prim->y3 = bottom_1 + (scaled >> 7) - 1;
+                    prim->y2 = prim->y3 = quad->y + quad->height + quad->height * expansion / GPU_TINT_NEUTRAL_LEVEL - 1;
                     break;
                 case 1:
                     if (g_field_timed_panel_timer < 0x25)
                     {
-                        scaled = width * expansion;
-                        offset_1 = scaled / GPU_TINT_NEUTRAL_LEVEL;
-                        prim->x0 = prim->x2 = quad->x - offset_1;
-                        right_1 = (quad->x + width) - offset_1;
+                        prim->x0 = prim->x2 = quad->x - width * expansion / GPU_TINT_NEUTRAL_LEVEL;
+                        prim->x1 = prim->x3 = quad->x + width - width * expansion / GPU_TINT_NEUTRAL_LEVEL - 1;
                     }
                     else
                     {
-                        scaled = width * expansion;
-                        offset_1 = scaled / GPU_TINT_NEUTRAL_LEVEL;
-                        prim->x0 = prim->x2 = quad->x + offset_1;
-                        right_1 = quad->x + width + offset_1;
+                        prim->x0 = prim->x2 = quad->x + width * expansion / GPU_TINT_NEUTRAL_LEVEL;
+                        prim->x1 = prim->x3 = quad->x + width + width * expansion / GPU_TINT_NEUTRAL_LEVEL - 1;
                     }
 
-                    prim->x1 = prim->x3 = right_1 - 1;
                     prim->y0 = prim->y1 = quad->y;
                     prim->y2 = prim->y3 = quad->y + quad->height - 1;
                     break;
                 case 2:
-                    angle = expansion * 50;
-                    x_cosine = rcos(angle);
-                    x_sine = rsin(angle);
-
-                    do
-                    {
-                        width_term = width * x_cosine;
-                    } while (0);
-
-                    if (width_term < 0)
-                    {
-                        width_term += 0x1FFF;
-                    }
-
-                    width_term >>= 13;
-                    height_term = quad->height * x_sine;
-
-                    if (height_term < 0)
-                    {
-                        height_term += 0x1FFF;
-                    }
-
-                    rotated_x = width_term + (height_term >> 13);
-                    y_sine = rsin(angle);
-                    y_cosine = rcos(angle);
-
-                    do
-                    {
-                        width_term_y = width * y_sine;
-                    } while (0);
-
-                    if (width_term_y < 0)
-                    {
-                        width_term_y += 0x1FFF;
-                    }
-
-                    width_term_y >>= 13;
-                    height_term_y = quad->height * y_cosine;
-
-                    if (height_term_y < 0)
-                    {
-                        height_term_y += 0x1FFF;
-                    }
-
-                    scaled = expansion * rotated_x;
-                    rotated_y = width_term_y - (height_term_y >> 13);
-
-                    if (scaled < 0)
-                    {
-                        scaled += 0x7F;
-                    }
-
-                    scaled_y = expansion * rotated_y;
-                    rotated_x = rotated_x + (scaled >> 7);
-
-                    if (scaled_y < 0)
-                    {
-                        scaled_y += 0x7F;
-                    }
-
-                    rotated_y = rotated_y + (scaled_y >> 7);
-                    half = width >> 1;
-                    half_width = half;
-                    prim->x0 = (u16)((quad->x + half) - rotated_x);
-                    prim->x3 = (s16)(quad->x + half + rotated_x);
-                    prim->y0 = (u16)(quad->y + (quad->height >> 1) + rotated_y);
-                    prim->y3 = (s16)((quad->y + (quad->height >> 1)) - rotated_y);
-                    x_cosine_2 = rcos(angle);
-                    x_sine_2 = rsin(angle);
-                    negative_width = -(s32)width;
-                    width_term_2 = negative_width * x_cosine_2;
-
-                    if (width_term_2 < 0)
-                    {
-                        width_term_2 += 0x1FFF;
-                    }
-
-                    width_term_2 >>= 13;
-                    height_term_2 = quad->height * x_sine_2;
-
-                    if (height_term_2 < 0)
-                    {
-                        height_term_2 += 0x1FFF;
-                    }
-
-                    rotated_x = width_term_2 + (height_term_2 >> 13);
-                    y_sine_2 = rsin(angle);
-                    y_cosine_2 = rcos(angle);
-                    width_term_y_2 = negative_width * y_sine_2;
-
-                    if (width_term_y_2 < 0)
-                    {
-                        width_term_y_2 += 0x1FFF;
-                    }
-
-                    width_term_y_2 >>= 13;
-                    height_term_y_2 = quad->height * y_cosine_2;
-
-                    if (height_term_y_2 < 0)
-                    {
-                        height_term_y_2 += 0x1FFF;
-                    }
-
-                    scaled_x_2 = expansion * rotated_x;
-                    rotated_y = width_term_y_2 - (height_term_y_2 >> 13);
-
-                    if (scaled_x_2 < 0)
-                    {
-                        scaled_x_2 += 0x7F;
-                    }
-
-                    scaled_y_2 = expansion * rotated_y;
-                    rotated_x = rotated_x + (scaled_x_2 >> 7);
-
-                    if (scaled_y_2 < 0)
-                    {
-                        scaled_y_2 += 0x7F;
-                    }
-
-                    prim->x1 = (s16)((quad->x + half_width) - rotated_x);
-                    rotated_y = rotated_y + (scaled_y_2 >> 7);
-                    prim->x2 = (u16)(quad->x + half_width + rotated_x);
-                    prim->y1 = (u16)(quad->y + (quad->height >> 1) + rotated_y);
-                    adjusted = quad->height;
-                    adjusted = (u32)adjusted >> 1;
-                    bottom_2 = quad->y + adjusted - rotated_y;
-                    prim->y2 = bottom_2;
+                    rotated_x = width * rcos(expansion * FIELD_TIMED_PANEL_SPIN_STEP) / (2 * ONE) +
+                                quad->height * rsin(expansion * FIELD_TIMED_PANEL_SPIN_STEP) / (2 * ONE);
+                    rotated_y = width * rsin(expansion * FIELD_TIMED_PANEL_SPIN_STEP) / (2 * ONE) -
+                                quad->height * rcos(expansion * FIELD_TIMED_PANEL_SPIN_STEP) / (2 * ONE);
+                    rotated_x += expansion * rotated_x / GPU_TINT_NEUTRAL_LEVEL;
+                    rotated_y += expansion * rotated_y / GPU_TINT_NEUTRAL_LEVEL;
+                    prim->x0 = quad->x + width / 2 - rotated_x;
+                    prim->x3 = quad->x + width / 2 + rotated_x;
+                    prim->y0 = quad->y + quad->height / 2 + rotated_y;
+                    prim->y3 = quad->y + quad->height / 2 - rotated_y;
+                    rotated_x = -width * rcos(expansion * FIELD_TIMED_PANEL_SPIN_STEP) / (2 * ONE) +
+                                quad->height * rsin(expansion * FIELD_TIMED_PANEL_SPIN_STEP) / (2 * ONE);
+                    rotated_y = -width * rsin(expansion * FIELD_TIMED_PANEL_SPIN_STEP) / (2 * ONE) -
+                                quad->height * rcos(expansion * FIELD_TIMED_PANEL_SPIN_STEP) / (2 * ONE);
+                    rotated_x += expansion * rotated_x / GPU_TINT_NEUTRAL_LEVEL;
+                    rotated_y += expansion * rotated_y / GPU_TINT_NEUTRAL_LEVEL;
+                    prim->x1 = quad->x + width / 2 - rotated_x;
+                    prim->x2 = quad->x + width / 2 + rotated_x;
+                    prim->y1 = quad->y + quad->height / 2 + rotated_y;
+                    prim->y2 = quad->y + quad->height / 2 - rotated_y;
                     break;
                 case 3:
                     if (g_field_timed_panel_brightness < 0x40)
@@ -617,37 +471,25 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_t
                     prim->y2 = prim->y3 = quad->y + quad->height - 1;
                     break;
                 case 4:
-                    term = width * expansion;
-                    scaled = term / (GPU_TINT_NEUTRAL_LEVEL / 2);
-                    prim->x0 = prim->x2 = quad->x - scaled;
-                    prim->x1 = prim->x3 = quad->x + width + scaled - 1;
+                    prim->x0 = prim->x2 = quad->x - width * expansion / (GPU_TINT_NEUTRAL_LEVEL / 2);
+                    prim->x1 = prim->x3 = quad->x + width + width * expansion / (GPU_TINT_NEUTRAL_LEVEL / 2) - 1;
                     prim->y0 = prim->y1 = quad->y - quad->height * expansion / GPU_TINT_NEUTRAL_LEVEL;
-                    bottom_1 = quad->y + quad->height;
-                    scaled = quad->height * expansion;
-
-                    if (scaled < 0)
-                    {
-                        scaled += 0x7F;
-                    }
-
-                    prim->y2 = prim->y3 = bottom_1 + (scaled >> 7) - 1;
+                    prim->y2 = prim->y3 = quad->y + quad->height + quad->height * expansion / GPU_TINT_NEUTRAL_LEVEL - 1;
                     break;
             }
 
             prim->u0 = prim->u2 = quad->u;
             prim->u1 = prim->u3 = quad->u + width - 1;
             prim->v0 = prim->v1 = quad->v;
-            palette_mask = 0xF0;
             prim->v2 = prim->v3 = quad->v + quad->height - 1;
+            palette_mask = FIELD_TRANSITION_QUAD_PALETTE_MASK;
             prim->clut = getClut(quad->flags & palette_mask, VRAM_CLUT_Y);
             prim->tpage = getTPage(quad->flags & 3, (quad->flags >> 9) & 3, FIELD_TIMED_PANEL_VRAM_X, 0);
             addPrim(ordering_table, prim);
 
             if (g_field_timed_panel_brightness < FIELD_TIMED_PANEL_FADE_LIMIT)
             {
-                term = FIELD_TRANSITION_QUAD_EFFECT(quad->flags);
-
-                switch (term)
+                switch (FIELD_TRANSITION_QUAD_EFFECT(quad->flags))
                 {
                     case 0:
                         break;
