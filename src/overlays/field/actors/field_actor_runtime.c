@@ -3022,13 +3022,20 @@ s32 field_get_next_animation_frame_count(FieldActor* actor)
 {
     u8* resource_base;
     u8* entry;
+    u32 default_motion;
     s32 animation_index;
 
-    do
-    {
-        resource_base = g_field_resource_entries[actor->resource_index].start;
-    } while (0);
+    resource_base = g_field_resource_entries[actor->resource_index].start;
     entry = resource_base + 4;
+
+    /* This is never used, but the animation start/advance functions decode it the same way and apply it. */
+    default_motion = entry[1] >> 1;
+
+    if (default_motion & FIELD_ANIMATION_MODE_OFFSET)
+    {
+        default_motion -= FIELD_ANIMATION_MODE_OFFSET;
+    }
+
     animation_index = (actor->animation & FIELD_ANIMATION_INDEX_MASK) + 1;
 
     if (animation_index >= resource_base[4])
@@ -3038,8 +3045,7 @@ s32 field_get_next_animation_frame_count(FieldActor* actor)
 
     entry = entry + (animation_index * 2 + 2);
     entry = FIELD_ANIMATION_FRAMES(resource_base, entry[0], entry[1]);
-    actor = (FieldActor*)(uintptr_t)entry[0];
-    return (intptr_t)actor;
+    return entry[0];
 }
 
 /**
