@@ -45,6 +45,8 @@
 #define FIELD_TIMED_PANEL_RESOURCE_BASE 0x1060
 /** @brief VRAM position of the panel image and its palette row. */
 #define FIELD_TIMED_PANEL_VRAM_X 320
+/** @brief Texels in one VRAM word of the 4-bit panel image; g_field_timed_panel_width counts words. */
+#define FIELD_TIMED_PANEL_TEXELS_PER_WORD 4
 /** @brief Frames a panel stays up, and the lengths of its fades. */
 #define FIELD_TIMED_PANEL_FRAMES 150
 #define FIELD_TIMED_PANEL_FADE_IN_FRAMES 32
@@ -673,85 +675,29 @@ static POLY_FT4* field_draw_timed_panel_quads(POLY_FT4* prim, u_long* ordering_t
  */
 static POLY_FT4* field_draw_timed_panel_image(POLY_FT4* prim, u_long* ordering_table)
 {
-    s32 value0;
-    s32 value1;
-    s32 value2;
-    s32 value3;
-    s32 value4;
-    s32 value5;
-    u32 address_mask;
+    s32 expansion;
 
-    value0 = 9;
-    setlen(prim, value0);
-    value0 = 0x2C;
-    setcode(prim, value0);
-    value0 = (u8)g_field_timed_panel_brightness;
-    prim->b0 = value0;
-    prim->g0 = value0;
-    prim->r0 = value0;
-    value1 = getcode(prim);
-    value1 |= 2;
-    setcode(prim, value1);
-    value1 = GPU_TINT_NEUTRAL_LEVEL;
-    value0 = (u16)g_field_timed_panel_brightness;
-    value4 = g_field_timed_panel_width;
-    value5 = value1 - value0;
-    value3 = value4 * value5;
-    value2 = value3 / 32;
-    value0 = 0xA0;
-    value0 -= value2;
-    value1 = value4 * 2;
-    value0 -= value1;
-    prim->x2 = value0;
-    prim->x0 = value0;
-    value0 = value4 * 4;
-    value0 += 0xA0;
+    setPolyFT4(prim);
+    prim->r0 = prim->g0 = prim->b0 = g_field_timed_panel_brightness;
+    setSemiTrans(prim, 1);
+    expansion = GPU_TINT_NEUTRAL_LEVEL - g_field_timed_panel_brightness;
+    prim->x0 = prim->x2 = FIELD_SCREEN_CENTER_X - g_field_timed_panel_width * FIELD_TIMED_PANEL_TEXELS_PER_WORD / 2 -
+                          g_field_timed_panel_width * expansion / (GPU_TINT_NEUTRAL_LEVEL / FIELD_TIMED_PANEL_TEXELS_PER_WORD);
+    prim->x1 = prim->x3 = FIELD_SCREEN_CENTER_X - g_field_timed_panel_width * FIELD_TIMED_PANEL_TEXELS_PER_WORD / 2 +
+                          g_field_timed_panel_width * FIELD_TIMED_PANEL_TEXELS_PER_WORD +
+                          g_field_timed_panel_width * expansion / (GPU_TINT_NEUTRAL_LEVEL / FIELD_TIMED_PANEL_TEXELS_PER_WORD) - 1;
+    prim->y0 = prim->y1 = FIELD_SCREEN_CENTER_Y - g_field_timed_panel_height / 2 - g_field_timed_panel_height * expansion / GPU_TINT_NEUTRAL_LEVEL;
+    prim->y2 = prim->y3 = FIELD_SCREEN_CENTER_Y - g_field_timed_panel_height / 2 + g_field_timed_panel_height +
+                          g_field_timed_panel_height * expansion / GPU_TINT_NEUTRAL_LEVEL - 1;
+    prim->u0 = prim->u2 = 0;
+    prim->u1 = prim->u3 = g_field_timed_panel_width * FIELD_TIMED_PANEL_TEXELS_PER_WORD - 1;
+    prim->v0 = prim->v1 = 0;
+    prim->v2 = prim->v3 = g_field_timed_panel_height - 1;
+    prim->clut = getClut(0, VRAM_CLUT_Y);
+    prim->tpage = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, FIELD_TIMED_PANEL_VRAM_X, 0);
+    addPrim(ordering_table, prim);
 
-    do
-    {
-        value0 -= value1;
-    } while (0);
-    value3 = g_field_timed_panel_height;
-    value1 = value3 * value5;
-    value0 += value2;
-    value0--;
-    prim->x3 = value0;
-    prim->x1 = value0;
-    value0 = 0x70;
-    value2 = (u32)value3 >> 1;
-    value0 -= value2;
-    value5 = value1 / GPU_TINT_NEUTRAL_LEVEL;
-    value0 -= value5;
-    prim->y1 = value0;
-    prim->y0 = value0;
-    value0 = value2 - 0x70;
-    value0 = value3 - value0;
-    address_mask = 0xFFFFFF;
-    value0 += value5;
-    value0--;
-    prim->y3 = value0;
-    prim->y2 = value0;
-    value0 = getClut(0, VRAM_CLUT_Y);
-    prim->u2 = 0;
-    prim->u0 = 0;
-    value1 = g_field_timed_panel_width;
-    prim->v1 = 0;
-    prim->v0 = 0;
-    prim->clut = value0;
-    value1 <<= 2;
-    value1--;
-    prim->u3 = value1;
-    prim->u1 = value1;
-    value0 = (u8)g_field_timed_panel_height;
-    value1 = getTPage(GPU_TEXTURE_4BIT, GPU_BLEND_ADD, FIELD_TIMED_PANEL_VRAM_X, 0);
-    prim->tpage = value1;
-    value0--;
-    prim->v3 = value0;
-    prim->v2 = value0;
-    setaddr(prim, *ordering_table & address_mask);
-    setaddr(ordering_table, prim);
-
-    if ((u16)g_field_timed_panel_brightness < FIELD_TIMED_PANEL_FADE_LIMIT)
+    if (g_field_timed_panel_brightness < FIELD_TIMED_PANEL_FADE_LIMIT)
     {
         field_add_fade_prim(prim, 0);
     }
