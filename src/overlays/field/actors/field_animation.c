@@ -1147,18 +1147,13 @@ static void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
     s32 sfx_id;
     s32 channel_mask;
     s32 key_type;
-    s32 camera_screen_y;
-    s32 grid_y_offset;
+    s32 camera_y;
     s32 x;
     s32 y;
     u32 pan;
     u32 volume;
     u32 adjusted_value;
-    s32 grid_x_offset;
-    s32 camera_component;
-    s32 object_y;
     s32 keyframe_offset;
-    FieldPartDef* part_definition;
 
     part = anim->cels;
     object = anim->owner.object;
@@ -1202,88 +1197,21 @@ static void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
                 if (object->def->flags.word & FIELD_OBJ_DEF_SCREEN_FIXED)
                 {
                     x = 0;
-                    camera_screen_y = 0;
+                    camera_y = 0;
                     y = 0;
                 }
                 else
                 {
                     x = SCENE_STATE->camera_x;
-                    camera_screen_y = SCENE_STATE->camera_y;
+                    camera_y = SCENE_STATE->camera_y;
                     y = SCENE_STATE->camera_z;
                 }
 
-                if (x >= 0)
-                {
-                    camera_component = x >> 8;
-                }
-                else
-                {
-                    camera_component = (x + 0xFF) >> 8;
-                }
-
-                x = camera_component;
-
-                if (camera_screen_y >= 0)
-                {
-                    camera_screen_y = camera_screen_y >> 8;
-                }
-                else
-                {
-                    camera_screen_y = (camera_screen_y + 0xFF) >> 8;
-                }
-
-                if (y >= 0)
-                {
-                    camera_component = y >> 9;
-                    camera_screen_y = camera_screen_y - camera_component;
-                }
-                else
-                {
-                    camera_component = (y + 0x1FF) >> 9;
-                    camera_screen_y = camera_screen_y - camera_component;
-                }
-
-                y = camera_screen_y;
-                {
-                    s32 position;
-                    s32 mid;
-                    s32 columns;
-                    FieldPartDef* geometry_definition;
-
-                    geometry_definition = part->def;
-                    columns = geometry_definition->u.b.cols;
-                    position = object->x + part->x;
-                    grid_x_offset = columns * 8;
-
-                    do
-                    {
-                        mid = x + position / 256;
-                    } while (0);
-                    x = mid + grid_x_offset;
-
-                    do
-                    {
-                        part_definition = *(FieldPartDef* volatile*)&part->def;
-                    } while (0);
-                }
-
-                object_y = object->y;
-                {
-                    s32 coordinate;
-                    s32 part_value;
-                    s32 y_sum;
-                    s32 mid;
-
-                    part_value = part_definition->u.b.rows;
-                    coordinate = part->y;
-                    volume = part_value * 8;
-                    y_sum = object_y + coordinate;
-                    coordinate = object->z;
-                    part_value = part->z;
-                    mid = y + (y_sum * 2 - (coordinate + part_value)) / 512;
-                    grid_y_offset = volume - 0xE0;
-                    y = mid - grid_y_offset;
-                }
+                x = SHIFT_TOWARD_ZERO(x, 8);
+                y = SHIFT_TOWARD_ZERO(camera_y, 8) - SHIFT_TOWARD_ZERO(y, 9);
+                x = x + SHIFT_TOWARD_ZERO(object->x + part->x, 8) + ((part->def->u.b.cols * FIELD_TILE_SIZE) >> 1);
+                y = y + SHIFT_TOWARD_ZERO((object->y + part->y) * 2 - (object->z + part->z), 9) + VRAM_DRAW_HEIGHT -
+                    ((part->def->u.b.rows * FIELD_TILE_SIZE) >> 1);
 
                 if (x < -0x20)
                 {
